@@ -17,7 +17,7 @@ npm install -g janissary
 janus
 ```
 
-### Built-in commands
+### Commands
 
 | Command      | Description                        |
 | ------------ | ---------------------------------- |
@@ -25,8 +25,25 @@ janus
 | `settings`   | Show settings                      |
 | `about`      | Show information about the tool    |
 | `help`       | List available commands            |
+| `state`      | Show agent state fields (truncated) |
 | `clear`      | Clear the output log               |
 | `quit`       | Exit the application               |
+| `close`      | Close the current tab (exits if last) |
+| `agent`      | Create a new agent tab             |
+| `next`       | Switch to the next tab             |
+| `hist`       | Open command history picker        |
+
+### State persistence
+
+Per-agent data (command history, transcript, shell working directory) is persisted to `.janussary/state/<name>.json`. On normal startup the state directory is cleared automatically.
+
+Reopen previous state with the `--relaunch` flag:
+
+```
+janus --relaunch
+```
+
+This restores all agent tabs with their command history, transcripts, and shell working directories from the previous session, so you pick up exactly where you left off.
 
 Prefix any command with `` ` `` to run it directly in your shell:
 
@@ -36,7 +53,7 @@ Prefix any command with `` ` `` to run it directly in your shell:
  `npm install
 ```
 
-### Key bindings
+### Key Bindings
 
 | Key            | Action                           |
 | -------------- | -------------------------------- |

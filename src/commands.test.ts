@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getOutput, availableCommands } from './commands.js';
+import { getOutput, resolveAgentName, agentNames } from './commands.js';
 
 describe('getOutput', () => {
   it('returns dashboard message', () => {
@@ -14,12 +14,12 @@ describe('getOutput', () => {
     expect(getOutput('about')).toBe('Custom CLI built with Ink & React.');
   });
 
-  it('returns help with all commands listed', () => {
+  it('returns help with commands and key bindings', () => {
     const result = getOutput('help');
-    for (const cmd of availableCommands) {
-      expect(result).toContain(cmd);
-    }
-    expect(result).toContain('Prefix a command with');
+    expect(result).toContain('Commands');
+    expect(result).toContain('Key Bindings');
+    expect(result).toContain('dashboard');
+    expect(result).toContain('Ctrl+C');
   });
 
   it('returns null for clear', () => {
@@ -34,6 +34,19 @@ describe('getOutput', () => {
     expect(getOutput('exit')).toBeNull();
   });
 
+  it('returns null for close', () => {
+    expect(getOutput('close')).toBeNull();
+  });
+
+  it('returns null for agent commands', () => {
+    expect(getOutput('agent')).toBeNull();
+    expect(getOutput('agent Bob')).toBeNull();
+  });
+
+  it('returns null for next', () => {
+    expect(getOutput('next')).toBeNull();
+  });
+
   it('returns null for empty string', () => {
     expect(getOutput('')).toBeNull();
   });
@@ -45,7 +58,7 @@ describe('getOutput', () => {
   it('is case insensitive', () => {
     expect(getOutput('DASHBOARD')).toBe('Welcome to the CLI dashboard.');
     expect(getOutput('About')).toBe('Custom CLI built with Ink & React.');
-    expect(getOutput('HELP')).toContain('Prefix a command with');
+    expect(getOutput('HELP')).toContain('Commands');
   });
 
   it('returns error for unknown commands', () => {
@@ -57,5 +70,36 @@ describe('getOutput', () => {
 
   it('returns error for gibberish', () => {
     expect(getOutput('xyzzy')).toContain('Unknown command');
+  });
+});
+
+describe('resolveAgentName', () => {
+  it('returns the provided name lowercased for `agent <name>`', () => {
+    expect(resolveAgentName('agent Bob', ['janus'])).toBe('bob');
+  });
+
+  it('returns a lowercased name from the pool for bare `agent`', () => {
+    const name = resolveAgentName('agent', ['janus']);
+    expect(name).not.toBeNull();
+    expect(agentNames.map((n) => n.toLowerCase())).toContain(name);
+  });
+
+  it('does not return a name already in use for bare `agent`', () => {
+    const existing = ['janus', ...agentNames.slice(0, 5)];
+    const name = resolveAgentName('agent', existing);
+    expect(name).not.toBeNull();
+    if (name) {
+      expect(existing.map((l) => l.toLowerCase())).not.toContain(name.toLowerCase());
+    }
+  });
+
+  it('returns null when all names are in use', () => {
+    const result = resolveAgentName('agent', agentNames);
+    expect(result).toBeNull();
+  });
+
+  it('returns the lowercased name for `agent <name>` even if in pool', () => {
+    const result = resolveAgentName('agent Ahmed', ['janus']);
+    expect(result).toBe('ahmed');
   });
 });
