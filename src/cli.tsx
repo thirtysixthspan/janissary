@@ -1,33 +1,12 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { exec } from 'node:child_process';
 import { render, Text, Box, useInput, useApp, useWindowSize } from 'ink';
+import { getOutput } from './commands.js';
 
 type LogEntry = {
   input: string;
   output: string;
   running?: boolean;
-};
-
-const availableCommands = [
-  { cmd: 'dashboard', desc: 'Show dashboard' },
-  { cmd: 'settings', desc: 'Show settings' },
-  { cmd: 'about', desc: 'Show about info' },
-  { cmd: 'help', desc: 'Show available commands' },
-  { cmd: 'clear', desc: 'Clear the output log' },
-  { cmd: 'quit', desc: 'Exit the application' },
-];
-
-const getOutput = (cmd: string): string | null => {
-  const trimmed = cmd.trim().toLowerCase();
-
-  if (trimmed === 'dashboard') return 'Welcome to the CLI dashboard.';
-  if (trimmed === 'settings') return 'Settings panel — no settings yet.';
-  if (trimmed === 'about') return 'Custom CLI built with Ink & React.';
-  if (trimmed === 'help') return 'Built-in: ' + availableCommands.map((c) => c.cmd).join(', ') + '. Prefix a command with ` to run it in the shell.';
-  if (trimmed === 'clear') return null;
-  if (trimmed === 'quit' || trimmed === 'exit') return null;
-  if (trimmed === '') return null;
-  return `Unknown command: "${trimmed}". Type "help" for available commands.`;
 };
 
 export const App = () => {
@@ -40,15 +19,25 @@ export const App = () => {
   const [cursor, setCursor] = useState(0);
   const [cmdHistory, setCmdHistory] = useState<string[]>([]);
   const [cmdHistoryIdx, setCmdHistoryIdx] = useState(-1);
+  const unmountedRef = useRef(false);
+
+  useEffect(() => {
+    return () => {
+      unmountedRef.current = true;
+    };
+  }, []);
 
   const visibleLog = scrollOffset === 0
     ? log
     : log.slice(0, Math.max(0, log.length - scrollOffset));
 
-  const executeRef = useRef<(cmd: string) => void>();
+  const executeRef = useRef<((cmd: string) => void) | null>(null);
   executeRef.current = (cmd: string) => {
     const trimmed = cmd.trim();
-    setCmdHistory((prev) => [...prev, trimmed]);
+    setCmdHistory((prev) => {
+      const next = [...prev, trimmed];
+      return next.length > 100 ? next.slice(-100) : next;
+    });
     setCmdHistoryIdx(-1);
 
     if (trimmed.startsWith('`')) {
@@ -57,10 +46,14 @@ export const App = () => {
       setLog((prev) => [...prev, { input, output: '', running: true }]);
       setScrollOffset(0);
 
-      exec(shellCmd, (error, stdout, stderr) => {
+      exec(shellCmd, { timeout: 30_000 }, (error, stdout, stderr) => {
+        if (unmountedRef.current) return;
+
         const result = stdout || stderr || '';
         const output = error
-          ? `Error: ${error.message}${result ? '\n' + result : ''}`
+          ? error.killed
+            ? `Command timed out after 30s:\n${result || shellCmd}`
+            : `Error: ${error.message}${result ? '\n' + result : ''}`
           : result || '(no output)';
 
         setLog((prev) => {
@@ -178,7 +171,7 @@ export const App = () => {
   return (
     <Box flexDirection="column" height={rows}>
       <Box borderStyle="round" paddingX={1}>
-        <Text bold>Custom CLI</Text>
+        <Text bold>Janissary</Text>
         <Text dimColor>  —  {log.length} commands executed</Text>
       </Box>
 

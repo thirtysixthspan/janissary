@@ -2,12 +2,13 @@
   "name": "janissary",
   "version": "1.0.0",
   "description": "A terminal UI shell with built-in commands and shell execution",
-  "main": "./src/cli.tsx",
   "bin": {
-    "janus": "./bin/janus.cjs"
+    "janus": "./bin/janus.mjs"
   },
   "scripts": {
-    "start": "node bin/janus.cjs",
+    "build": "tsc",
+    "clean": "rm -rf dist",
+    "start": "tsx src/cli.tsx",
     "test": "vitest run",
     "lint": "eslint .",
     "format": "prettier --write ."
@@ -21,9 +22,11 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@types/node": "^26.0.0",
     "@types/react": "^19.2.17",
     "eslint": "^10.5.0",
     "eslint-config-prettier": "^10.1.8",
+    "globals": "^17.6.0",
     "ink-testing-library": "^4.0.0",
     "prettier": "^3.8.4",
     "tsx": "^4.22.4",
