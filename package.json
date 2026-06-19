@@ -1,10 +1,13 @@
 {
-  "name": "custom-cli",
+  "name": "janissary",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "A terminal UI shell with built-in commands and shell execution",
+  "main": "./src/cli.tsx",
+  "bin": {
+    "janus": "./bin/janus.cjs"
+  },
   "scripts": {
-    "start": "tsx cli.tsx",
+    "start": "node bin/janus.cjs",
     "test": "vitest run",
     "lint": "eslint .",
     "format": "prettier --write ."

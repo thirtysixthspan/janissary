@@ -12,6 +12,6 @@ export default ts.config(
     },
   },
   {
-    ignores: ['dist/', 'node_modules/'],
+    ignores: ['dist/', 'node_modules/', 'bin/'],
   },
 );

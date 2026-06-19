@@ -9,5 +9,5 @@
     "skipLibCheck": true,
     "outDir": "dist"
   },
-  "include": ["*.tsx"]
+  "include": ["src/**/*.tsx"]
 }
