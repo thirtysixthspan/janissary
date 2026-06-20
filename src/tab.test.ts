@@ -1,5 +1,28 @@
 import { describe, it, expect } from 'vitest';
-import { makeTab, swapTabsLeft, swapTabsRight, renumberTabs, expandTabs, flattenBuffer } from './tab.js';
+import { makeTab, swapTabsLeft, swapTabsRight, renumberTabs, expandTabs, flattenBuffer, wordWrap } from './tab.js';
+
+describe('wordWrap', () => {
+  it('leaves text within the width untouched', () => {
+    expect(wordWrap('short line', 20)).toBe('short line');
+  });
+
+  it('wraps on word boundaries', () => {
+    expect(wordWrap('the quick brown fox jumps', 10)).toBe('the quick\nbrown fox\njumps');
+  });
+
+  it('keeps every wrapped line within the width', () => {
+    const wrapped = wordWrap('alpha beta gamma delta epsilon zeta eta theta', 12);
+    for (const line of wrapped.split('\n')) expect(line.length).toBeLessThanOrEqual(12);
+  });
+
+  it('hard-breaks words longer than the width', () => {
+    expect(wordWrap('supercalifragilistic', 5)).toBe('super\ncalif\nragil\nistic');
+  });
+
+  it('preserves existing newlines', () => {
+    expect(wordWrap('one\ntwo', 10)).toBe('one\ntwo');
+  });
+});
 
 describe('expandTabs', () => {
   it('leaves tab-free text untouched', () => {

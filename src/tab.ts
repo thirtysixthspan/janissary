@@ -78,6 +78,38 @@ export function expandTabs(text: string, tabWidth = 8): string {
   return out;
 }
 
+// Hard word-wrap text to `width` columns, inserting newlines. Used for agent output
+// (e.g. ACP responses) that arrives as one long line with no carriage returns — the
+// transcript is line-based, so it must be pre-split rather than relying on terminal wrap.
+export function wordWrap(text: string, width: number): string {
+  if (width <= 0) return text;
+  const out: string[] = [];
+  for (const line of text.split('\n')) {
+    if (line.length <= width) {
+      out.push(line);
+      continue;
+    }
+    let cur = '';
+    for (const word of line.split(' ')) {
+      if (word.length > width) {
+        if (cur) out.push(cur);
+        let w = word;
+        while (w.length > width) { out.push(w.slice(0, width)); w = w.slice(width); }
+        cur = w;
+      } else if (cur === '') {
+        cur = word;
+      } else if (cur.length + 1 + word.length <= width) {
+        cur += ' ' + word;
+      } else {
+        out.push(cur);
+        cur = word;
+      }
+    }
+    if (cur) out.push(cur);
+  }
+  return out.join('\n');
+}
+
 export function flattenBuffer(log: LogEntry[]): BufferLine[] {
   const lines: BufferLine[] = [];
   for (const entry of log) {

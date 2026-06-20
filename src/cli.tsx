@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { render, Box, useApp, useWindowSize, useStdin } from 'ink';
 import { isInteractive, runInteractive, type InteractiveSession } from './interactive.js';
 import { useMessaging, parseMsgCommand, parseBroadcastCommand } from './messaging.js';
+import { connectAcp, type AcpSession } from './acp.js';
 import { resolveAgentName } from './commands.js';
 import { resolveCommand } from './resolve.js';
 import { type ThemeColors, darkTheme } from './theme.js';
@@ -11,7 +12,7 @@ import { useInputHandler, type InputHandlerDeps } from './useInputHandler.js';
 import { TabStrip } from './TabStrip.js';
 import { Transcript } from './Transcript.js';
 import { PromptBar } from './PromptBar.js';
-import { getFrequentHistory, flattenBuffer, type Tab, type LogEntry, dotColors, makeTab } from './tab.js';
+import { getFrequentHistory, flattenBuffer, wordWrap, type Tab, type LogEntry, dotColors, makeTab } from './tab.js';
 
 export const App = () => {
   const { exit } = useApp();
@@ -49,6 +50,7 @@ export const App = () => {
   const { stdin } = useStdin();
   const [interactive, setInteractive] = useState<{ cmd: string; cwd?: string } | null>(null);
   const interactiveRef = useRef<InteractiveSession | null>(null);
+  const acpRef = useRef<Map<number, AcpSession>>(new Map());
 
   const getShell = (tabIndex: number, label?: string): import('node:child_process').ChildProcess | null => {
     let shell = shellsRef.current.get(tabIndex);
@@ -78,6 +80,8 @@ export const App = () => {
       unmountedRef.current = true;
       for (const [, shell] of shellsRef.current) shell.kill();
       shellsRef.current.clear();
+      for (const [, session] of acpRef.current) session.kill();
+      acpRef.current.clear();
     };
   }, []);
 
@@ -435,6 +439,54 @@ export const App = () => {
         updateCurrentTab((tab) => ({ ...tab, log: [...tab.log, { input: trimmed, output: result }], scrollOffset: 0 }));
         return;
       }
+      case 'acp': {
+        const prompt = cliTrimmed.replace(/^acp\b\s*/i, '').trim();
+        if (!prompt) {
+          updateCurrentTab((tab) => ({ ...tab, log: [...tab.log, { input: trimmed, output: 'Usage: acp <prompt>. Set JANUS_ACP_CMD to the agent command, e.g. `npx @agentclientprotocol/claude-agent-acp`.' }], scrollOffset: 0 }));
+          return;
+        }
+        // Stream the agent reply into a running log entry, keyed by this prompt text.
+        appendLog(tabLabel, { input: prompt, output: '', running: true });
+        const update = (output: string, running: boolean) => {
+          setTabs((prev) => prev.map((t) => {
+            if (t.label !== tabLabel) return t;
+            const log = [...t.log];
+            const i = log.findLastIndex((e) => e.input === prompt && e.running);
+            if (i >= 0) log[i] = { ...log[i], output, running };
+            saveTabLog(t.label, log);
+            return { ...t, log };
+          }));
+        };
+        let session = acpRef.current.get(tabIndex);
+        if (!session) {
+          const raw = process.env.JANUS_ACP_CMD;
+          if (!raw) {
+            update('JANUS_ACP_CMD is not set. Example: export JANUS_ACP_CMD="npx @agentclientprotocol/claude-agent-acp"', false);
+            return;
+          }
+          const [command, ...args] = raw.split(/\s+/);
+          session = connectAcp({
+            command,
+            args,
+            cwd: cwdRef.current[tabLabel] ?? process.cwd(),
+            onError: (msg) => appendLog(tabLabel, { input: '', output: `ACP: ${msg}` }),
+            env: { OPENCODE_CONFIG_CONTENT: '{"model":"opencode/deepseek-v4-flash-free"}' },
+          });
+          acpRef.current.set(tabIndex, session);
+        }
+        // ACP replies stream as one long line with no newlines, so word-wrap to the
+        // transcript's content width (terminal minus borders/padding/scrollbar).
+        const wrapWidth = Math.max(20, (columns || 80) - 6);
+        let buffer = '';
+        // Flash the tab's busy indicator while waiting on the agent.
+        setAgentActive(tabLabel, true);
+        session.prompt(prompt, {
+          onChunk: (text) => { buffer += text; update(wordWrap(buffer, wrapWidth), true); },
+          onEnd: () => { update(wordWrap(buffer || '(no output)', wrapWidth), false); setAgentActive(tabLabel, false); },
+          onError: (msg) => { update(wordWrap(`ACP error: ${msg}`, wrapWidth), false); setAgentActive(tabLabel, false); },
+        });
+        return;
+      }
       case 'clear':
         updateCurrentTab((tab) => ({ ...tab, log: [], scrollOffset: 0 }));
         return;
@@ -487,6 +539,8 @@ export const App = () => {
           const tabIdx = activeTabRef.current;
           shellsRef.current.get(tabIdx)?.kill();
           shellsRef.current.delete(tabIdx);
+          acpRef.current.get(tabIdx)?.kill();
+          acpRef.current.delete(tabIdx);
           const closedLabel = tabs[tabIdx].label;
           setTabs((prev) => prev.filter((_, i) => i !== tabIdx));
           setAgentStates((prev) => { const copy = { ...prev }; delete copy[closedLabel]; return copy; });
@@ -496,6 +550,8 @@ export const App = () => {
       case 'quit':
         for (const [, shell] of shellsRef.current) shell.kill();
         shellsRef.current.clear();
+        for (const [, session] of acpRef.current) session.kill();
+        acpRef.current.clear();
         exit();
         return;
     }

@@ -2,7 +2,7 @@ import { getOutput } from './commands.js';
 import shellCommands from './shell-commands.js';
 
 // App/tab-management built-ins that require live application state to run.
-export type AppCommand = 'agent' | 'next' | 'msg' | 'broadcast' | 'clear' | 'state' | 'hist' | 'close' | 'quit';
+export type AppCommand = 'agent' | 'next' | 'msg' | 'broadcast' | 'acp' | 'clear' | 'state' | 'hist' | 'close' | 'quit';
 
 export type Resolution =
   | { kind: 'empty' }
@@ -35,6 +35,7 @@ export function resolveCommand(raw: string): Resolution {
   if (lower === 'next') return { kind: 'app', name: 'next', cmd };
   if (/^msg\b/i.test(cmd)) return { kind: 'app', name: 'msg', cmd };
   if (/^broadcast\b/i.test(cmd)) return { kind: 'app', name: 'broadcast', cmd };
+  if (/^acp\b/i.test(cmd)) return { kind: 'app', name: 'acp', cmd };
 
   const output = getOutput(cmd);
   if (output === null) {

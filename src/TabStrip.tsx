@@ -36,7 +36,10 @@ export const TabStrip = ({ tabs, agentStates, activeTab, theme, scrollBoundaryHi
       {tabs.map((tab, i) => {
         const isActive = i === activeTab;
         const agentActive = agentStates[tab.label]?.active ?? false;
-        const dotColor = scrollBoundaryHit && isActive ? 'red' : agentActive && !flash ? theme.bgSoft : tab.dotColor;
+        // When busy, blink the dot fully on/off by hiding it against the tab's own
+        // background (content bg for the active tab, bar bg for the rest).
+        const offColor = isActive ? theme.bg : theme.bgSoft;
+        const dotColor = scrollBoundaryHit && isActive ? 'red' : agentActive && !flash ? offColor : tab.dotColor;
         return (
           <Box
             key={tab.label}
