@@ -53,16 +53,32 @@ Prefix any command with `` ` `` to run it directly in your shell:
  `npm install
 ```
 
+Common shell commands (`ls`, `grep`, `cat`, …) also run automatically without the backtick when they don't collide with a built-in. Conversely, prefix a command with `/` to force the built-in dispatcher (e.g. `/clear` to clear the log even though `clear` is also a shell command).
+
+### Interactive programs
+
+Full-screen / interactive programs that need a real terminal — pagers (`less`, `more`, `man`), editors (`vim`, `nano`), monitors (`top`, `htop`), REPLs (`python`, `node`, `psql`), and the like — run in a pseudo-terminal (via [node-pty](https://github.com/microsoft/node-pty)) that takes over the screen for the duration of the session:
+
+```
+ `less SPEC.md
+ `vim src/cli.tsx
+ `git log | less
+```
+
+The Janissary UI is suspended while the program runs (keystrokes go straight to it) and is restored when you exit (e.g. `q` in `less`). Interactive programs are detected by the command name, including through pipelines and wrappers like `sudo`/`env`.
+
 ### Key Bindings
 
-| Key            | Action                           |
-| -------------- | -------------------------------- |
-| `↑` / `↓`      | Scroll through output history    |
-| `Ctrl+P`       | Previous command in history       |
-| `Ctrl+N`       | Next command in history           |
-| `←` / `→`      | Move cursor in the input field    |
-| `Enter`        | Execute the current command       |
-| `Ctrl+C`       | Exit                             |
+| Key                 | Action                            |
+| ------------------- | --------------------------------- |
+| `←` / `→`           | Move cursor in the input field    |
+| `↑` / `↓`           | Previous / next command in history |
+| `Shift+←` / `Shift+→` | Switch to the previous / next tab |
+| `Ctrl+←` / `Ctrl+→` | Move the current tab left / right  |
+| `Ctrl+↑` / `Ctrl+↓` | Scroll the transcript up / down    |
+| `Ctrl+R`            | Open command history picker        |
+| `Enter`             | Execute the current command        |
+| `Ctrl+C`            | Exit                              |
 
 ## Development
 

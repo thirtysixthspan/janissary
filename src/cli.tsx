@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { render, Box, useApp, useWindowSize } from 'ink';
+import { render, Box, useApp, useWindowSize, useStdin } from 'ink';
+import { isInteractive, runInteractive, type InteractiveSession } from './interactive.js';
 import { getOutput, resolveAgentName } from './commands.js';
 import shellCommands from './shell-commands.js';
 import { type ThemeColors, darkTheme } from './theme.js';
@@ -40,6 +41,9 @@ export const App = () => {
   activeTabRef.current = activeTab;
   const shellsRef = useRef<Map<number, import('node:child_process').ChildProcess>>(new Map());
   const cwdRef = useRef<Record<string, string>>({});
+  const { stdin } = useStdin();
+  const [interactive, setInteractive] = useState<{ cmd: string; cwd?: string } | null>(null);
+  const interactiveRef = useRef<InteractiveSession | null>(null);
 
   const getShell = (tabIndex: number, label?: string): import('node:child_process').ChildProcess | null => {
     let shell = shellsRef.current.get(tabIndex);
@@ -71,6 +75,43 @@ export const App = () => {
       shellsRef.current.clear();
     };
   }, []);
+
+  // Run interactive programs (less, vim, top, ...) in a PTY that owns the real
+  // terminal. While `interactive` is set the App renders nothing (see below), so
+  // the program's full-screen output is not fought over by Ink.
+  useEffect(() => {
+    if (!interactive) return;
+    const { cmd, cwd } = interactive;
+    const out = process.stdout;
+    out.write('\x1b[2J\x1b[3J\x1b[H'); // clear the handed-over screen
+    const onStdin = (data: Buffer) => interactiveRef.current?.write(data.toString('utf8'));
+    stdin?.on('data', onStdin);
+    const session = runInteractive({
+      cmd,
+      cwd,
+      cols: columns || 80,
+      rows: rows || 24,
+      onData: (d) => out.write(d),
+      onExit: () => {
+        stdin?.removeListener('data', onStdin);
+        interactiveRef.current = null;
+        out.write('\x1b[2J\x1b[3J\x1b[H');
+        updateCurrentTab((tab) => ({ ...tab, log: [...tab.log, { input: cmd, output: '', cwd }], scrollOffset: 0 }));
+        setInteractive(null);
+      },
+    });
+    interactiveRef.current = session;
+    return () => {
+      stdin?.removeListener('data', onStdin);
+      session.kill();
+      interactiveRef.current = null;
+    };
+  }, [interactive]);
+
+  // Keep the PTY sized to the terminal when it is resized mid-session.
+  useEffect(() => {
+    interactiveRef.current?.resize(columns || 80, rows || 24);
+  }, [columns, rows]);
 
   const cur = tabs[activeTab] ?? tabs[0];
   const buffer = flattenBuffer(cur.log);
@@ -162,6 +203,10 @@ export const App = () => {
       const shellCmd = trimmed.slice(1).trim();
       const tabIndex = activeTabRef.current;
       const tabLabel = tabs[tabIndex].label;
+      if (shellCmd && isInteractive(shellCmd)) {
+        setInteractive({ cmd: shellCmd, cwd: cwdRef.current[tabLabel] ?? process.cwd() });
+        return;
+      }
       const shell = getShell(tabIndex, tabLabel);
       const shellCwd = cwdRef.current[tabLabel] ?? process.cwd();
         if (!shell || !shell.stdin!.writable) {
@@ -334,6 +379,8 @@ export const App = () => {
     visibleHeight, exit,
     historyPickerOpen, historyPickerIdx, setHistoryPickerOpen, setHistoryPickerIdx,
     frequentHistory, flashScrollBoundary,
+    interactive: interactive !== null,
+    cwd: cwdRef.current[cur.label] ?? process.cwd(),
   };
   useInputHandler(inputHandlerDeps);
 
@@ -346,6 +393,10 @@ export const App = () => {
   const scrollChars = Array.from({ length: visibleHeight }, (_, i) =>
     i >= thumbPos && i < thumbPos + thumbSize ? '█' : '·',
   );
+
+  // An interactive program (less/vim/...) owns the terminal; render nothing so
+  // Ink does not draw over its full-screen output.
+  if (interactive) return null;
 
   return (
     <Box flexDirection="column" height={rows}>
@@ -362,5 +413,5 @@ const relaunch = process.argv.includes('--relaunch');
 if (!relaunch) clearStateDir();
 
 if (!process.env.VITEST) {
-  render(<App />, { alternateScreen: true });
+  render(<App />, { alternateScreen: true, exitOnCtrlC: false });
 }

@@ -38,7 +38,7 @@ The active tab shows full-intensity foreground text on the content background co
 
 ### Tab switching with arrow keys
 
-Left and right arrow keys cycle through open tabs. No-op when only one tab exists.
+Shift+Left and Shift+Right arrow keys cycle through open tabs. No-op when only one tab exists. (Unmodified Left/Right move the input cursor; Ctrl+Left/Right reorder the current tab.)
 
 ### `next` command
 
@@ -126,7 +126,11 @@ Each tab stores its own command history array and navigation index. Switching ta
 
 ### History navigation
 
-Ctrl+P walks backward through the history (most recent first). Ctrl+N walks forward. Past the newest entry, the input line clears.
+The Up arrow walks backward through the history (most recent first). The Down arrow walks forward. Past the newest entry, the input line clears. Each recalled entry is placed on the input line with the cursor at its end.
+
+### History picker
+
+`Ctrl+R` (or the `hist` command) opens an overlay listing the tab's most frequent history entries. Up/Down move the selection, Return runs the selected command, and Escape closes the overlay without running anything. The picker is suppressed when the history is empty.
 
 ### Consecutive duplicate suppression
 
@@ -156,7 +160,7 @@ Built-in commands and the shell execution gateway.
 
 ### `help`
 
-Returns the string `Built-in: dashboard, settings, about, help, state, clear, quit, agent. Prefix a command with \` to run it in the shell.`
+Returns the **Commands** and **Key Bindings** sections extracted from `README.md` (parsed and cached on first use). If the README cannot be read, it falls back to a generated summary listing the built-in commands and the `` ` `` / `/` prefixes and `Ctrl+R` history shortcut.
 
 ### `state`
 
@@ -165,6 +169,14 @@ Reads the agent state file for the current tab from `.janussary/state/<name>.jso
 ### `clear`
 
 Empties the current tab's transcript log. Other tabs are unaffected.
+
+### `close`
+
+Closes the current tab: kills its shell, removes it and its in-memory agent state, and selects an adjacent tab. If it is the last remaining tab, the application exits.
+
+### `hist`
+
+Opens the command history picker (same overlay as `Ctrl+R`). See the Command History section.
 
 ### `quit` / `exit`
 
@@ -184,11 +196,19 @@ Programmatically switches to the next tab.
 
 ### Shell execution
 
-Any command prefixed with a backtick is forwarded to the system shell. See the Window Transcript section.
+Any command prefixed with a backtick (`` ` ``) is forwarded to the tab's persistent system shell. See the Window Transcript section.
+
+### `/` built-in prefix
+
+A command may be prefixed with `/` to force it through the built-in command dispatcher (the leading `/` is stripped before matching). This lets a built-in be invoked explicitly even when its name would otherwise collide with a shell command.
+
+### Shell-command auto-run
+
+If an input is not a built-in and its first word matches an enabled entry in the shell-command registry (`src/shell-commands.ts`, ~165 common Unix commands such as `ls`, `grep`, `git` wrappers, etc.), it is run through the shell automatically — no backtick required. This only applies when the built-in lookup returns `Unknown command`.
 
 ### Fallback
 
-Commands not matched by built-ins are looked up via the commands module. Unknown commands return `Unknown command: "<cmd>". Type "help" for available commands.`
+Commands matched by neither a built-in nor the shell-command registry return `Unknown command: "<cmd>". Type "help" for available commands.`
 
 ### Case-insensitive matching
 
@@ -220,19 +240,23 @@ The entire UI is keyboard-driven. There is no mouse interaction.
 |---|---|
 | Return | Execute input |
 | Ctrl+C | Quit application |
-| ← | Switch to previous tab (no-op if one tab) |
-| → | Switch to next tab (no-op if one tab) |
-| Ctrl+B | Move input cursor left |
-| Ctrl+F | Move input cursor right |
-| ↑ | Scroll transcript up one line |
-| ↓ | Scroll transcript down one line |
-| Ctrl+P | Walk backward through command history |
-| Ctrl+N | Walk forward through command history |
+| ← / Ctrl+B | Move input cursor left |
+| → / Ctrl+F | Move input cursor right |
+| Shift+← | Switch to previous tab (no-op if one tab) |
+| Shift+→ | Switch to next tab (no-op if one tab) |
+| Ctrl+← | Move the current tab one position left |
+| Ctrl+→ | Move the current tab one position right |
+| ↑ | Walk backward through command history |
+| ↓ | Walk forward through command history |
+| Ctrl+↑ / Ctrl+P | Scroll transcript up one line |
+| Ctrl+↓ / Ctrl+N | Scroll transcript down one line |
+| Ctrl+R | Open command history picker |
 | PageUp | Scroll transcript up by half terminal height |
 | PageDown | Scroll transcript down by half terminal height |
+| Escape | Reset scroll to bottom |
 | Backspace / Delete | Delete character before cursor |
 | (printable) | Insert character at cursor |
-| Tab, Escape, Shift | Ignored |
+| Tab | Ignored |
 
 ---
 
@@ -343,9 +367,12 @@ Compiled with `tsc` targeting ES2023 with NodeNext module resolution. Source in 
 
 ### Test suite
 
-Twenty unit tests across two files using vitest and `ink-testing-library`:
-- `src/commands.test.ts` — tests `getOutput` for each built-in command, case insensitivity, empty/whitespace input, unknown commands, and `resolveAgentName` for random selection, provided names, duplicate guard, and exhaustion.
-- `src/cli.test.tsx` — smoke test verifying initial render shows the `janus` tab, hide `refactor`/`scratch`, show the `Type "help"` placeholder, and show the `>` prompt.
+35 tests across five files using vitest and `ink-testing-library`:
+- `src/commands.test.ts` — tests `getOutput` for each built-in command, case insensitivity, empty/whitespace input, unknown commands, and `resolveAgentName` for random selection, provided names (lowercased), duplicate guard, and exhaustion.
+- `src/cli.test.tsx` — smoke test verifying initial render shows the `janus` tab, the `Type "help"` placeholder, and the `>` prompt.
+- `src/cli.integration.test.tsx` — drives `App` via simulated keystrokes (e.g. `Ctrl+Left`/`Ctrl+Right` tab reordering) against restored `--relaunch` state.
+- `src/tab.test.ts` — `tab.ts` helpers: `makeTab`, `flattenBuffer`, history helpers, and `swapTabsLeft`/`swapTabsRight`.
+- `src/shell.test.ts` — persistent shell behavior.
 
 ### Lint and format
 

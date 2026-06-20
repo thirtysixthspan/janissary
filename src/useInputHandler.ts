@@ -2,6 +2,7 @@ import { useInput } from 'ink';
 import type { ChildProcess } from 'node:child_process';
 import type { Tab } from './tab.js';
 import { flattenBuffer, swapTabsLeft, swapTabsRight } from './tab.js';
+import { completeCommandLine } from './completion.js';
 
 export type InputHandlerDeps = {
   input: string;
@@ -23,6 +24,8 @@ export type InputHandlerDeps = {
   setHistoryPickerIdx: (fn: ((prev: number) => number) | number) => void;
   frequentHistory: string[];
   flashScrollBoundary: () => void;
+  interactive: boolean;
+  cwd: string;
 };
 
 export function useInputHandler(deps: InputHandlerDeps): void {
@@ -32,10 +35,14 @@ export function useInputHandler(deps: InputHandlerDeps): void {
     updateCurrentTab, executeRef, shellsRef,
     visibleHeight, exit,
     historyPickerOpen, historyPickerIdx, setHistoryPickerOpen, setHistoryPickerIdx,
-    frequentHistory, flashScrollBoundary,
+    frequentHistory, flashScrollBoundary, interactive, cwd,
   } = deps;
 
   useInput((inputChar, key) => {
+    // While an interactive program owns the terminal, its keystrokes are forwarded
+    // straight to the PTY; Ink should not act on them.
+    if (interactive) return;
+
     if (key.ctrl && inputChar === 'c') {
       for (const [, shell] of shellsRef.current) {
         shell.kill();
@@ -94,19 +101,20 @@ export function useInputHandler(deps: InputHandlerDeps): void {
       return;
     }
 
-    if (key.shift && key.leftArrow) {
+    if (key.ctrl && key.leftArrow) {
       setTabs((prev) => swapTabsLeft(prev, activeTab));
       setActiveTab((prev) => Math.max(0, prev - 1));
       return;
     }
 
-    if (key.shift && key.rightArrow) {
+    if (key.ctrl && key.rightArrow) {
       setTabs((prev) => swapTabsRight(prev, activeTab));
       setActiveTab((prev) => Math.min(prev + 1, tabs.length - 1));
       return;
     }
 
-    if (key.shift && key.upArrow) {
+    // Scroll the transcript with Shift or Ctrl + arrow (whichever the terminal sends).
+    if ((key.ctrl || key.shift) && key.upArrow) {
       updateCurrentTab((tab) => {
         const len = flattenBuffer(tab.log).length;
         const maxOff = Math.max(0, len - visibleHeight);
@@ -116,7 +124,7 @@ export function useInputHandler(deps: InputHandlerDeps): void {
       return;
     }
 
-    if (key.shift && key.downArrow) {
+    if ((key.ctrl || key.shift) && key.downArrow) {
       updateCurrentTab((tab) => {
         if (tab.scrollOffset <= 0) { process.stderr.write('\x07'); flashScrollBoundary(); return tab; }
         return { ...tab, scrollOffset: Math.max(0, tab.scrollOffset - 1) };
@@ -124,26 +132,26 @@ export function useInputHandler(deps: InputHandlerDeps): void {
       return;
     }
 
-    if (key.leftArrow) {
+    if (key.shift && key.leftArrow) {
       if (tabs.length > 1) {
         setActiveTab((prev: number) => (prev - 1 + tabs.length) % tabs.length);
       }
       return;
     }
 
-    if (key.rightArrow) {
+    if (key.shift && key.rightArrow) {
       if (tabs.length > 1) {
         setActiveTab((prev: number) => (prev + 1) % tabs.length);
       }
       return;
     }
 
-    if (key.ctrl && inputChar === 'b') {
+    if (key.leftArrow || (key.ctrl && inputChar === 'b')) {
       setCursor((prev) => (prev > 0 ? prev - 1 : 0));
       return;
     }
 
-    if (key.ctrl && inputChar === 'f') {
+    if (key.rightArrow || (key.ctrl && inputChar === 'f')) {
       setCursor((prev) => (prev < input.length ? prev + 1 : input.length));
       return;
     }
@@ -226,13 +234,32 @@ export function useInputHandler(deps: InputHandlerDeps): void {
       return;
     }
 
-    if (key.tab || key.shift) {
+    if (key.tab) {
+      const { newInput, newCursor, matches } = completeCommandLine(input, cursor, cwd);
+      if (newInput !== input) {
+        setInput(newInput);
+        setCursor(newCursor);
+      } else if (matches.length > 1) {
+        // Nothing more to fill in: show the candidate files in the transcript.
+        updateCurrentTab((tab) => ({
+          ...tab,
+          log: [...tab.log, { input: '', output: matches.join('  ') }],
+          scrollOffset: 0,
+        }));
+      }
       return;
     }
 
-    if (inputChar.length === 1) {
-      setInput((prev) => prev.slice(0, cursor) + inputChar + prev.slice(cursor));
-      setCursor((prev) => prev + 1);
+    // Printable input: a single typed character or a multi-character chunk pasted
+    // from the clipboard. Strip control characters (stray escape / bracketed-paste
+    // markers, newlines, tabs) so pasted text lands cleanly on the command line.
+    if (inputChar && !key.ctrl && !key.meta) {
+      // eslint-disable-next-line no-control-regex -- intentionally stripping control chars from pasted input
+      const text = inputChar.replace(/[\x00-\x1f\x7f]/g, '');
+      if (text) {
+        setInput((prev) => prev.slice(0, cursor) + text + prev.slice(cursor));
+        setCursor((prev) => prev + text.length);
+      }
     }
   });
 }

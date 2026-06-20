@@ -11,14 +11,16 @@
     "start": "tsx src/cli.tsx",
     "test": "vitest run",
     "lint": "eslint .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "postinstall": "chmod +x node_modules/node-pty/prebuilds/*/spawn-helper 2>/dev/null || true"
   },
   "keywords": [],
   "author": "",
   "license": "UNLICENSED",
   "type": "module",
   "dependencies": {
-    "ink": "^7.1.0"
+    "ink": "^7.1.0",
+    "node-pty": "^1.1.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
