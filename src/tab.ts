@@ -28,6 +28,7 @@ export type Tab = {
   cmdHistory: string[];
   cmdHistoryIdx: number;
   scrollOffset: number;
+  workspaceDir?: string;
 };
 
 export const dotColors = [
@@ -36,7 +37,7 @@ export const dotColors = [
   '#ff9f43', '#54a0ff', '#5f27cd', '#01a3a4', '#ee5a24',
 ];
 
-export const makeTab = (label: string, dotColor: string, number: number = 1, cmdHistory: string[] = [], log: LogEntry[] = []): Tab => ({
+export const makeTab = (label: string, dotColor: string, number: number = 1, cmdHistory: string[] = [], log: LogEntry[] = [], workspaceDir?: string): Tab => ({
   label,
   dotColor,
   number,
@@ -44,6 +45,7 @@ export const makeTab = (label: string, dotColor: string, number: number = 1, cmd
   cmdHistory,
   cmdHistoryIdx: -1,
   scrollOffset: 0,
+  workspaceDir,
 });
 
 export function getFrequentHistory(history: string[], count: number): string[] {

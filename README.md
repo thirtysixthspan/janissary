@@ -29,7 +29,7 @@ janus
 | `clear`      | Clear the output log               |
 | `quit`       | Exit the application               |
 | `close`      | Close the current tab (exits if last) |
-| `agent`      | Create a new agent tab             |
+| `agent`      | Create a new agent tab (add `--workspace` to clone the repo) |
 | `next`       | Switch to the next tab             |
 | `hist`       | Open command history picker        |
 | `msg`        | Send a message to another agent    |
@@ -94,6 +94,16 @@ Prefix any command with `` ` `` to run it directly in your shell:
 ```
 
 Common shell commands (`ls`, `grep`, `cat`, …) also run automatically without the backtick when they don't collide with a built-in. Conversely, prefix a command with `/` to force the built-in dispatcher (e.g. `/clear` to clear the log even though `clear` is also a shell command).
+
+### Workspace
+
+Use `agent --workspace` (or `agent -w`) to create an agent tab with a disposable git workspace:
+
+```
+agent bilal -w
+```
+
+This clones the root repo (detected from the current directory) into `.janussary/workspace/bilal/` via `git clone --shared` — no network needed, completes in milliseconds. The agent's shell spawns inside the workspace. Make changes, commit, push, then close the tab — the workspace is automatically removed.
 
 ### Interactive programs
 

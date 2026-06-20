@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getOutput, resolveAgentName, agentNames } from './commands.js';
+import { getOutput, resolveAgentName, parseAgentCommand, agentNames } from './commands.js';
 
 describe('getOutput', () => {
   it('returns dashboard message', () => {
@@ -101,5 +101,42 @@ describe('resolveAgentName', () => {
   it('returns the lowercased name for `agent <name>` even if in pool', () => {
     const result = resolveAgentName('agent Ahmed', ['janus']);
     expect(result).toBe('ahmed');
+  });
+});
+
+describe('parseAgentCommand', () => {
+  it('extracts name from bare agent command', () => {
+    const result = parseAgentCommand('agent');
+    expect(result).toEqual({ name: '', workspace: false });
+  });
+
+  it('extracts name from agent <name>', () => {
+    const result = parseAgentCommand('agent bilal');
+    expect(result).toEqual({ name: 'bilal', workspace: false });
+  });
+
+  it('extracts name and workspace flag from agent <name> --workspace', () => {
+    const result = parseAgentCommand('agent bilal --workspace');
+    expect(result).toEqual({ name: 'bilal', workspace: true });
+  });
+
+  it('extracts name and workspace flag from agent <name> -w', () => {
+    const result = parseAgentCommand('agent bilal -w');
+    expect(result).toEqual({ name: 'bilal', workspace: true });
+  });
+
+  it('extracts workspace flag with bare agent', () => {
+    const result = parseAgentCommand('agent --workspace');
+    expect(result).toEqual({ name: '', workspace: true });
+  });
+
+  it('extracts workspace flag with bare agent -w', () => {
+    const result = parseAgentCommand('agent -w');
+    expect(result).toEqual({ name: '', workspace: true });
+  });
+
+  it('lowercases the name', () => {
+    const result = parseAgentCommand('agent Ahmed -w');
+    expect(result).toEqual({ name: 'ahmed', workspace: true });
   });
 });

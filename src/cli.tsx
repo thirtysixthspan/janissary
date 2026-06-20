@@ -2,8 +2,9 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { render, Box, useApp, useWindowSize, useStdin } from 'ink';
 import { isInteractive, runInteractive, type InteractiveSession } from './interactive.js';
 import { useMessaging, parseMsgCommand, parseBroadcastCommand } from './messaging.js';
-import { connectAcp, type AcpSession } from './acp.js';
-import { resolveAgentName } from './commands.js';
+import { connectAcp, type AcpSession, type AcpInfo } from './acp.js';
+import { StatusPopup } from './StatusPopup.js';
+import { resolveAgentName, parseAgentCommand } from './commands.js';
 import { resolveCommand } from './resolve.js';
 import { type ThemeColors, darkTheme } from './theme.js';
 import { spawnShell, executeShellCmd, queryShellPwd } from './shell.js';
@@ -13,6 +14,7 @@ import { TabStrip } from './TabStrip.js';
 import { Transcript } from './Transcript.js';
 import { PromptBar } from './PromptBar.js';
 import { getFrequentHistory, flattenBuffer, wordWrap, type Tab, type LogEntry, dotColors, makeTab } from './tab.js';
+import { findRepoRoot, createWorkspace, removeWorkspace as removeWorkspaceDir, initWorkspaceDir, clearWorkspaceDir } from './workspace.js';
 
 export const App = () => {
   const { exit } = useApp();
@@ -26,7 +28,7 @@ export const App = () => {
       // Restore in the saved tab-number order, preserving each tab's recorded number.
       const sorted = [...agents].sort((a, b) => (a.number ?? 0) - (b.number ?? 0));
       return sorted.map((a, i) =>
-        makeTab(a.name, a.dotColor ?? dotColors[i % dotColors.length], a.number ?? i + 1, a.cmdHistory ?? [], a.log ?? []),
+        makeTab(a.name, a.dotColor ?? dotColors[i % dotColors.length], a.number ?? i + 1, a.cmdHistory ?? [], a.log ?? [], a.workspaceDir),
       );
     }
     return [makeTab('janus', dotColors[0], 1)];
@@ -51,15 +53,19 @@ export const App = () => {
   const [interactive, setInteractive] = useState<{ cmd: string; cwd?: string } | null>(null);
   const interactiveRef = useRef<InteractiveSession | null>(null);
   const acpRef = useRef<Map<number, AcpSession>>(new Map());
+  const [acpInfo, setAcpInfo] = useState<Record<number, AcpInfo>>({});
+  const [shellActive, setShellActive] = useState<Record<number, boolean>>({});
+  const workspaceRef = useRef<Set<string>>(new Set());
 
   const getShell = (tabIndex: number, label?: string): import('node:child_process').ChildProcess | null => {
     let shell = shellsRef.current.get(tabIndex);
     const isNew = !shell || shell.exitCode !== null || shell.signalCode !== null;
     if (isNew) {
-      shell = spawnShell(tabIndex);
+      shell = spawnShell(tabIndex, label ? { JANUS_AGENT_NAME: label } : undefined);
       shell.on('exit', () => shellsRef.current.delete(tabIndex));
       shell.on('error', () => shellsRef.current.delete(tabIndex));
       shellsRef.current.set(tabIndex, shell);
+      setShellActive((prev) => (prev[tabIndex] ? prev : { ...prev, [tabIndex]: true }));
       if (label && cwdRef.current[label]) {
         shell.stdin!.write(`cd "${cwdRef.current[label]}"\n`);
       }
@@ -72,12 +78,17 @@ export const App = () => {
       for (const tab of tabs) {
         const state = initAgentState(tab.label, tab.dotColor);
         if (state.cwd) cwdRef.current[tab.label] = state.cwd;
+        if (state.workspaceDir) {
+          cwdRef.current[tab.label] = state.workspaceDir;
+        }
       }
     } else {
       initAgentState('janus', dotColors[0]);
     }
     return () => {
       unmountedRef.current = true;
+      for (const dir of workspaceRef.current) removeWorkspaceDir(dir);
+      workspaceRef.current.clear();
       for (const [, shell] of shellsRef.current) shell.kill();
       shellsRef.current.clear();
       for (const [, session] of acpRef.current) session.kill();
@@ -322,7 +333,7 @@ export const App = () => {
       try { saveAgentState(state); } catch { /* ignore */ }
     }
     setAgentStates((prev) => ({ ...prev, [name]: state }));
-    return { cmdHistory: state.cmdHistory, log: state.log, cwd: state.cwd };
+    return { cmdHistory: state.cmdHistory, log: state.log, cwd: state.cwd, workspaceDir: state.workspaceDir };
   };
 
   const executeRef = useRef<((cmd: string) => void) | null>(null);
@@ -377,7 +388,9 @@ export const App = () => {
     switch (res.name) {
       case 'agent': {
         const existingLabels = tabs.map((t) => t.label);
-        const resolved = resolveAgentName(cliTrimmed, existingLabels);
+        const parsed = parseAgentCommand(cliTrimmed);
+        const cleanInput = parsed.name ? `agent ${parsed.name}` : 'agent';
+        const resolved = parsed.name || resolveAgentName(cleanInput, existingLabels);
         if (resolved === null) {
           updateCurrentTab((tab) => ({ ...tab, log: [...tab.log, { input: trimmed, output: 'All agent names are in use.' }], scrollOffset: 0 }));
           return;
@@ -386,12 +399,37 @@ export const App = () => {
           updateCurrentTab((tab) => ({ ...tab, log: [...tab.log, { input: trimmed, output: `Agent "${resolved}" is already active.` }], scrollOffset: 0 }));
           return;
         }
+        let workspaceDir: string | undefined;
+        if (parsed.workspace) {
+          const repoRoot = findRepoRoot(process.cwd());
+          if (!repoRoot) {
+            updateCurrentTab((tab) => ({ ...tab, log: [...tab.log, { input: trimmed, output: 'No git repository found. Cannot create workspace.' }], scrollOffset: 0 }));
+            return;
+          }
+          try {
+            workspaceDir = createWorkspace(resolved, repoRoot);
+          } catch (e) {
+            updateCurrentTab((tab) => ({ ...tab, log: [...tab.log, { input: trimmed, output: `Failed to create workspace: ${e instanceof Error ? e.message : String(e)}` }], scrollOffset: 0 }));
+            return;
+          }
+        }
         const newTabIndex = tabs.length;
         const dotColor = dotColors[newTabIndex % dotColors.length];
         const { cmdHistory, log } = initAgentState(resolved, dotColor);
-        setTabs((prev) => [...prev, makeTab(resolved, dotColor, newTabIndex + 1, cmdHistory ?? [], log ?? [])]);
-        // Stay on the current tab; the new agent is created in the background.
-        updateCurrentTab((tab) => ({ ...tab, log: [...tab.log, { input: trimmed, output: `Agent "${resolved}" ready.` }], scrollOffset: 0 }));
+        setTabs((prev) => [...prev, makeTab(resolved, dotColor, newTabIndex + 1, cmdHistory ?? [], log ?? [], workspaceDir)]);
+        if (workspaceDir) {
+          cwdRef.current[resolved] = workspaceDir;
+          workspaceRef.current.add(workspaceDir);
+          setAgentStates((prev) => {
+            const cur = prev[resolved];
+            if (!cur) return prev;
+            const updated = { ...cur, workspaceDir };
+            try { saveAgentState(updated); } catch { /* ignore */ }
+            return { ...prev, [resolved]: updated };
+          });
+        }
+        const suffix = workspaceDir ? ` (workspace: ${workspaceDir})` : '';
+        updateCurrentTab((tab) => ({ ...tab, log: [...tab.log, { input: trimmed, output: `Agent "${resolved}" ready.${suffix}` }], scrollOffset: 0 }));
         return;
       }
       case 'next':
@@ -465,12 +503,19 @@ export const App = () => {
             return;
           }
           const [command, ...args] = raw.split(/\s+/);
+          // OpenCode model config (`provider/model`); the popup label is derived from it.
+          const opencodeConfig = { model: 'opencode/deepseek-v4-flash-free' };
+          const slash = opencodeConfig.model.indexOf('/');
+          const acpLabel: AcpInfo = slash >= 0
+            ? { provider: opencodeConfig.model.slice(0, slash), model: opencodeConfig.model.slice(slash + 1) }
+            : { model: opencodeConfig.model };
           session = connectAcp({
             command,
             args,
             cwd: cwdRef.current[tabLabel] ?? process.cwd(),
             onError: (msg) => appendLog(tabLabel, { input: '', output: `ACP: ${msg}` }),
-            env: { OPENCODE_CONFIG_CONTENT: '{"model":"opencode/deepseek-v4-flash-free"}' },
+            onConnect: () => setAcpInfo((prev) => ({ ...prev, [tabIndex]: acpLabel })),
+            env: { OPENCODE_CONFIG_CONTENT: JSON.stringify(opencodeConfig) },
           });
           acpRef.current.set(tabIndex, session);
         }
@@ -532,22 +577,35 @@ export const App = () => {
         return;
       case 'close':
         if (tabs.length <= 1) {
+          for (const dir of workspaceRef.current) removeWorkspaceDir(dir);
+          workspaceRef.current.clear();
           for (const [, shell] of shellsRef.current) shell.kill();
           shellsRef.current.clear();
+          for (const [, session] of acpRef.current) session.kill();
+          acpRef.current.clear();
           exit();
         } else {
           const tabIdx = activeTabRef.current;
+          const closedTab = tabs[tabIdx];
+          if (closedTab.workspaceDir) {
+            removeWorkspaceDir(closedTab.workspaceDir);
+            workspaceRef.current.delete(closedTab.workspaceDir);
+          }
           shellsRef.current.get(tabIdx)?.kill();
           shellsRef.current.delete(tabIdx);
           acpRef.current.get(tabIdx)?.kill();
           acpRef.current.delete(tabIdx);
-          const closedLabel = tabs[tabIdx].label;
+          setAcpInfo((prev) => { const copy = { ...prev }; delete copy[tabIdx]; return copy; });
+          setShellActive((prev) => { const copy = { ...prev }; delete copy[tabIdx]; return copy; });
+          const closedLabel = closedTab.label;
           setTabs((prev) => prev.filter((_, i) => i !== tabIdx));
           setAgentStates((prev) => { const copy = { ...prev }; delete copy[closedLabel]; return copy; });
           setActiveTab((prev) => Math.min(prev, tabs.length - 2));
         }
         return;
       case 'quit':
+        for (const dir of workspaceRef.current) removeWorkspaceDir(dir);
+        workspaceRef.current.clear();
         for (const [, shell] of shellsRef.current) shell.kill();
         shellsRef.current.clear();
         for (const [, session] of acpRef.current) session.kill();
@@ -589,14 +647,27 @@ export const App = () => {
       <TabStrip tabs={tabs} agentStates={agentStates} activeTab={activeTab} theme={theme} scrollBoundaryHit={scrollBoundaryHit} />
       <Transcript visibleLines={visibleLines} scrollChars={scrollChars} visibleHeight={visibleHeight} dotColor={cur.dotColor} theme={theme} />
       <PromptBar beforeCursor={beforeCursor} afterCursor={afterCursor} dotColor={cur.dotColor} theme={theme} historyItems={frequentHistory} historySelectedIdx={historyPickerIdx} historyOpen={historyPickerOpen} />
+      {(shellActive[activeTab] || acpInfo[activeTab]) && (
+        <StatusPopup
+          shell={shellActive[activeTab] ? process.env.SHELL || 'bash' : undefined}
+          cwd={cwdRef.current[cur.label] ?? process.cwd()}
+          provider={acpInfo[activeTab]?.provider}
+          model={acpInfo[activeTab]?.model}
+          theme={theme}
+        />
+      )}
     </Box>
   );
 };
 
 initAgentStateDir(process.cwd());
+initWorkspaceDir(process.cwd());
 
 const relaunch = process.argv.includes('--relaunch');
-if (!relaunch) clearStateDir();
+if (!relaunch) {
+  clearStateDir();
+  clearWorkspaceDir();
+}
 
 if (!process.env.VITEST) {
   render(<App />, { alternateScreen: true, exitOnCtrlC: false });

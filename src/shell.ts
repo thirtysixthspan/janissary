@@ -1,8 +1,9 @@
 import { spawn, type ChildProcess } from 'node:child_process';
 
-export function spawnShell(_tabIndex: number): ChildProcess {
+export function spawnShell(_tabIndex: number, extraEnv?: Record<string, string>): ChildProcess {
   const shell = spawn(process.env.SHELL || 'bash', ['--norc', '--noprofile'], {
     stdio: ['pipe', 'pipe', 'pipe'],
+    env: { ...process.env, ...extraEnv },
   });
   shell.stdout!.setEncoding('utf8');
   shell.stderr!.setEncoding('utf8');

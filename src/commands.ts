@@ -79,3 +79,25 @@ export function resolveAgentName(
   if (pool.length === 0) return null;
   return pool[Math.floor(Math.random() * pool.length)];
 }
+
+export type AgentCommand = {
+  name: string;
+  workspace: boolean;
+};
+
+/**
+ * Parse a full `agent` command string into its name and flags.
+ * Accepts: `agent`, `agent <name>`, `agent <name> --workspace`, `agent <name> -w`,
+ * `agent --workspace`, `agent -w`.
+ * Flags are stripped; the name is returned lowercased (empty string means bare agent).
+ */
+export function parseAgentCommand(input: string): AgentCommand {
+  const trimmed = input.trim();
+  const workspace = /\s(-w|--workspace)\b/i.test(trimmed);
+  const stripped = trimmed.replace(/\s+(-w|--workspace)\s*/gi, ' ').trim();
+  const nameMatch = stripped.match(/^agent\s+(.+)/i);
+  return {
+    name: nameMatch ? nameMatch[1].trim().toLowerCase() : '',
+    workspace,
+  };
+}

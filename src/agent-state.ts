@@ -10,6 +10,7 @@ export type AgentState = {
   log?: { input: string; output: string; running?: boolean }[];
   cwd?: string;
   context?: string[];
+  workspaceDir?: string;
 };
 
 let stateDir = '';

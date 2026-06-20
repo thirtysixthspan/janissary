@@ -19,12 +19,16 @@ export type AcpSession = {
   kill: () => void;
 };
 
+export type AcpInfo = { provider?: string; model?: string };
+
 export type AcpOptions = {
   command: string;
   args: string[];
   cwd: string;
   // Connection-level errors (failed spawn, protocol errors outside a prompt).
   onError: (message: string) => void;
+  // Called once the session handshake completes, with the agent's reported identity.
+  onConnect?: (info: AcpInfo) => void;
   // Extra environment variables to pass to the subprocess.
   env?: Record<string, string>;
 };
@@ -71,9 +75,17 @@ export function connectAcp(opts: AcpOptions): AcpSession {
   const ensureSession = (): Promise<void> => {
     if (!ready) {
       ready = (async () => {
-        await conn.initialize({ protocolVersion: PROTOCOL_VERSION, clientCapabilities: {} });
+        const init = await conn.initialize({ protocolVersion: PROTOCOL_VERSION, clientCapabilities: {} });
         const res = await conn.newSession({ cwd: opts.cwd, mcpServers: [] });
         sessionId = res.sessionId;
+        // Provider from the agent's reported name (fallback: the command basename);
+        // model is best-effort from the session's current mode (ACP has no model field).
+        const provider = init.agentInfo?.name ?? opts.command.replace(/^.*[\\/]/, '');
+        const modes = res.modes;
+        const model = modes
+          ? modes.availableModes.find((m) => m.id === modes.currentModeId)?.name ?? modes.currentModeId
+          : undefined;
+        opts.onConnect?.({ provider, model });
       })();
     }
     return ready;

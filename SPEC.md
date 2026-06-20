@@ -20,6 +20,20 @@ Running `agent` creates a new tab with a random unused name chosen from a 52-nam
 
 `agent <name>` creates a tab with the given name (always lowercased). Focus stays on the current tab; switch to the new agent with the arrow keys or `next`.
 
+### Workspace agent tab
+
+`agent <name> --workspace` (or `-w`) creates a tab with a cloned workspace — a `git clone --shared` of the root repository detected from the current directory. The workspace is created at `.janussary/workspace/<name>/` and the agent's shell spawns there. Bare `agent --workspace` picks a random unused name with a workspace.
+
+If no git repository is found from the current directory, an error is shown and no tab is created.
+
+### Workspace lifecycle
+
+Workspace directories are ephemeral:
+- **Normal launch**: `.janussary/workspace/` is cleared before rendering.
+- **Tab close**: The workspace directory is removed when the tab is closed.
+- **App quit**: All workspace directories are removed.
+- **`--relaunch`**: Workspace directories are not recreated; restore falls back to the tab's last known working directory.
+
 ### Duplicate name rejection
 
 Creating a tab with a name already in use prints `Agent "<name>" is already active.` and does not create a duplicate tab.
@@ -188,7 +202,7 @@ Creates a new agent tab with a random unused name from the pool. See the Tabs se
 
 ### `agent <name>`
 
-Creates a new agent tab with the specified name. See the Tabs section.
+Creates a new agent tab with the specified name. See the Tabs section. Add `--workspace` (or `-w`) to clone the root repo into a disposable workspace at `.janussary/workspace/<name>/`.
 
 ### `next`
 
@@ -308,9 +322,11 @@ A `design/` directory at project root contains reference screenshots (`dark.png`
 
 ### State directory
 
-Agent state is stored in `.janussary/state/`. Each agent has one JSON file named `<agent-name>.json` with fields: `name`, `dotColor`, `active`, `number` (the tab's position in the strip), `cmdHistory[]`, `log[]` (the full transcript of commands and outputs), `cwd` (the shell working directory after the last command), and `context[]` (informational messages received from other agents).
+Agent state is stored in `.janussary/state/`. Each agent has one JSON file named `<agent-name>.json` with fields: `name`, `dotColor`, `active`, `number` (the tab's position in the strip), `cmdHistory[]`, `log[]` (the full transcript of commands and outputs), `cwd` (the shell working directory after the last command), `context[]` (informational messages received from other agents), and `workspaceDir` (path to the agent's disposable workspace clone).
 
-On a normal `janus` launch the state directory is recursively deleted before rendering. On `janus --relaunch` the directory is preserved and all agent files are loaded to recreate tabs with their saved command history, transcripts, and working directories.
+Workspace clones live in `.janussary/workspace/<name>/` and are removed on tab close or app exit.
+
+On a normal `janus` launch the state directory and workspace directory are recursively deleted before rendering. On `janus --relaunch` the directories are preserved and all agent files are loaded to recreate tabs with their saved command history, transcripts, and working directories.
 
 ---
 
