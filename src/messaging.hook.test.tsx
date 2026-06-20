@@ -15,7 +15,7 @@ const setup = (over: Partial<MessagingDeps> = {}) => {
   const appendContext = vi.fn();
   // Default runners complete synchronously.
   const runShell = vi.fn((_label: string, cmd: string, onComplete: (o: string) => void) => onComplete(`ran:${cmd}`));
-  const runWindow = vi.fn((_label: string, _text: string, onComplete: () => void) => onComplete());
+  const runCapture = vi.fn((_label: string, text: string, onResult: (o: string) => void) => onResult(`out:${text}`));
   const deps: MessagingDeps = {
     hasAgent: () => true,
     agentColor: (label) => (label === 'aslan' ? '#ff0000' : '#00ff00'),
@@ -23,18 +23,18 @@ const setup = (over: Partial<MessagingDeps> = {}) => {
     appendLog,
     appendContext,
     runShell,
-    runWindow,
+    runCapture,
     ...over,
   };
   render(<Harness deps={deps} />);
-  return { appendLog, appendContext, runShell, runWindow };
+  return { appendLog, appendContext, runShell, runCapture };
 };
 
 describe('useMessaging', () => {
   it('displays informational messages with the sender color and stores them in context', () => {
     const { appendLog, appendContext } = setup();
     messaging.send({ from: 'aslan', to: 'bilal', kind: 'info', text: 'standby' });
-    expect(appendLog).toHaveBeenCalledWith('bilal', { input: '', output: 'standby', from: 'aslan', fromColor: '#ff0000' });
+    expect(appendLog).toHaveBeenCalledWith('bilal', { input: '', output: 'standby', from: 'aslan', fromColor: '#ff0000', msgKind: 'info' });
     expect(appendContext).toHaveBeenCalledWith('bilal', 'aslan: standby');
   });
 
@@ -47,13 +47,15 @@ describe('useMessaging', () => {
     expect(appendLog).not.toHaveBeenCalled();
   });
 
-  it('processes a request through the recipient window with no reply to the sender', () => {
-    const { appendLog, runWindow, runShell } = setup();
+  it('shows a request in the recipient, executes it, and returns the output as a response', () => {
+    const { appendLog, runCapture } = setup();
     messaging.send({ from: 'aslan', to: 'bilal', kind: 'request', text: 'about' });
-    expect(runWindow).toHaveBeenCalledWith('bilal', 'about', expect.any(Function));
-    expect(runShell).not.toHaveBeenCalled();
-    // nothing is returned to the sender
-    expect(appendLog).not.toHaveBeenCalledWith('aslan', expect.anything());
+    // recipient displays `● request from aslan: about` (sender's color)
+    expect(appendLog).toHaveBeenCalledWith('bilal', { input: '', output: 'about', from: 'aslan', fromColor: '#ff0000', msgKind: 'request' });
+    // recipient executes the command, capturing output
+    expect(runCapture).toHaveBeenCalledWith('bilal', 'about', expect.any(Function));
+    // sender receives the captured output as a response (responder's color)
+    expect(appendLog).toHaveBeenCalledWith('aslan', { input: '', output: 'out:about', from: 'bilal', fromColor: '#00ff00', msgKind: 'response' });
   });
 
   it('refuses to run interactive commands remotely', () => {
@@ -76,7 +78,7 @@ describe('useMessaging', () => {
     messaging.send({ from: 'aslan', to: 'bilal', kind: 'info', text: 'two' });
     // The first is handled synchronously; the rest drain on subsequent ticks.
     await new Promise((r) => setTimeout(r, 20));
-    expect(appendLog).toHaveBeenCalledWith('bilal', { input: '', output: 'one', from: 'aslan', fromColor: '#ff0000' });
-    expect(appendLog).toHaveBeenCalledWith('bilal', { input: '', output: 'two', from: 'aslan', fromColor: '#ff0000' });
+    expect(appendLog).toHaveBeenCalledWith('bilal', { input: '', output: 'one', from: 'aslan', fromColor: '#ff0000', msgKind: 'info' });
+    expect(appendLog).toHaveBeenCalledWith('bilal', { input: '', output: 'two', from: 'aslan', fromColor: '#ff0000', msgKind: 'info' });
   });
 });

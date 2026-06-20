@@ -37,22 +37,70 @@ const splitToken = (token: string, cwd: string): { dir: string; base: string } =
   return { dir: cwd, base: expanded };
 };
 
+// Build a CompletionResult by replacing the current token (from tokenStart to the cursor)
+// with `prefix + completion + suffix`.
+const replaceToken = (
+  before: string,
+  after: string,
+  tokenStart: number,
+  newToken: string,
+  matches: string[],
+): CompletionResult => {
+  const newBefore = before.slice(0, tokenStart) + newToken;
+  return { newInput: newBefore + after, newCursor: newBefore.length, matches };
+};
+
+// Complete a partial word against a fixed candidate list (e.g. agent names). For a single
+// match the full name is filled in plus `suffix`; multiple matches fill in their common
+// prefix and are returned for display. `keepPrefix` is preserved verbatim (used for the
+// already-typed part of a comma-separated list).
+const completeWord = (
+  partial: string,
+  keepPrefix: string,
+  candidates: string[],
+  suffix: string,
+  before: string,
+  after: string,
+  tokenStart: number,
+): CompletionResult => {
+  const matches = candidates.filter((c) => c.startsWith(partial)).sort();
+  if (matches.length === 0) return { newInput: before + after, newCursor: before.length, matches: [] };
+  const completed = matches.length === 1 ? matches[0] + suffix : longestCommonPrefix(matches);
+  return replaceToken(before, after, tokenStart, keepPrefix + completed, matches);
+};
+
 /**
- * Tab-complete the path token ending at the cursor against the filesystem,
- * resolving relative paths against `cwd`.
+ * Tab-complete the token ending at the cursor.
  *
- * - A single match is filled in fully (trailing `/` for directories, space for files).
- * - Multiple matches fill in their longest common prefix; `matches` lists them all so
- *   the caller can display the options when no further completion is possible.
+ * - For the recipient argument of `msg`/`broadcast`, completes against active agent names
+ *   (`broadcast` also offers `all` and supports a comma-separated list).
+ * - Otherwise completes a filesystem path relative to `cwd`.
+ *
+ * A single match is filled in fully; multiple matches fill in their longest common prefix
+ * and are returned via `matches` so the caller can display the options.
  */
-export function completeCommandLine(input: string, cursor: number, cwd: string): CompletionResult {
+export function completeCommandLine(input: string, cursor: number, cwd: string, agents: string[] = []): CompletionResult {
   const before = input.slice(0, cursor);
   const after = input.slice(cursor);
   const tokenStart = Math.max(before.lastIndexOf(' '), before.lastIndexOf('\t')) + 1;
   const token = before.slice(tokenStart);
 
-  const { dir, base } = splitToken(token, cwd);
+  // Determine the command word and which argument position the cursor is in.
+  const preceding = before.slice(0, tokenStart).trim().split(/\s+/).filter(Boolean);
+  const command = preceding[0]?.replace(/^\//, '').toLowerCase();
+  const argIndex = preceding.length;
 
+  // Agent-name completion for the recipient argument.
+  if (argIndex === 1 && (command === 'msg' || command === 'broadcast')) {
+    if (command === 'broadcast') {
+      const segStart = token.lastIndexOf(',') + 1; // complete the segment after the last comma
+      return completeWord(token.slice(segStart), token.slice(0, segStart), [...agents, 'all'], '', before, after, tokenStart);
+    }
+    return completeWord(token, '', agents, ' ', before, after, tokenStart);
+  }
+
+  // Filesystem path completion.
+  const { dir, base } = splitToken(token, cwd);
   let entries: string[];
   try {
     entries = readdirSync(dir);
@@ -74,7 +122,5 @@ export function completeCommandLine(input: string, cursor: number, cwd: string):
   }
 
   const typedDirPrefix = token.slice(0, token.length - base.length);
-  const newToken = typedDirPrefix + completedName + suffix;
-  const newBefore = before.slice(0, tokenStart) + newToken;
-  return { newInput: newBefore + after, newCursor: newBefore.length, matches };
+  return replaceToken(before, after, tokenStart, typedDirPrefix + completedName + suffix, matches);
 }

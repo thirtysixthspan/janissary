@@ -14,11 +14,11 @@ A single `janus` tab is open on launch with dot color `#5b9cff`. No other tabs e
 
 ### Agent tab creation
 
-Running `agent` creates a new tab with a random unused name chosen from a 52-name pool. The name is always lowercased. The new tab is immediately selected (switched to). On `--relaunch`, agent tabs are restored from saved state rather than created manually.
+Running `agent` creates a new tab with a random unused name chosen from a 52-name pool. The name is always lowercased. The new tab is created in the background — focus stays on the current tab, where an `Agent "<name>" ready.` confirmation is shown. On `--relaunch`, agent tabs are restored from saved state rather than created manually.
 
 ### Named agent tab
 
-`agent <name>` creates a tab with the given name (always lowercased) and selects it immediately.
+`agent <name>` creates a tab with the given name (always lowercased). Focus stays on the current tab; switch to the new agent with the arrow keys or `next`.
 
 ### Duplicate name rejection
 
@@ -193,6 +193,16 @@ Creates a new agent tab with the specified name. See the Tabs section.
 ### `next`
 
 Programmatically switches to the next tab.
+
+### `msg` / `broadcast`
+
+`msg <agent> <info|request|command> <text>` sends a message to another agent. Each agent has a FIFO queue processed one message at a time:
+
+- **info** — shown in the recipient's transcript (`● <from>: <text>`, dot and left border in the sender's color) and appended to the recipient's `context[]` state.
+- **request** — the recipient displays the incoming request as `● request from <sender>: <command>` (dot and left border in the sender's color), executes it (built-ins and shell, interactive/PTY commands skipped) capturing its output rather than displaying it, and returns the output to the sender as a **response** message. A response renders as a `● <recipient>:` header followed by the output on its own lines, every line bordered in the recipient's color, and is appended to the sender's `context[]`.
+- **command** — run as a raw shell command in the recipient's shell; interactive/PTY commands are skipped.
+
+`broadcast <all|agent[,agent...]> <info|request|command> <text>` sends the same message to multiple agents at once. `all` (or `*`) targets every other agent; a comma-separated list targets a specific set. The sender is always excluded, and the result reports which recipients were reached and any unknown names. The kind accepts the same `i`/`r`/`c` aliases as `msg`.
 
 ### Shell execution
 

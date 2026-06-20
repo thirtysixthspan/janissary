@@ -33,6 +33,7 @@ janus
 | `next`       | Switch to the next tab             |
 | `hist`       | Open command history picker        |
 | `msg`        | Send a message to another agent    |
+| `broadcast`  | Send a message to several or all agents |
 
 ### State persistence
 
@@ -57,7 +58,7 @@ msg <agent> <info|request|command> <text>
 | Kind | Behavior |
 | ---- | -------- |
 | `info` | Displayed in the recipient's transcript and appended to that agent's `context` (persisted in its state, visible via `state`). |
-| `request` | Processed in the recipient's window as if typed into its prompt — built-in commands and auto-run shell commands both work. The result is shown in the recipient's window; nothing is returned to the sender. |
+| `request` | The recipient shows the incoming request as `● request from <sender>: <command>` (in the sender's color), executes it (built-ins + shell), and returns the output to the **sender** as a `response` message — a `● <recipient>:` header with the output on the following lines, bordered in the recipient's color. |
 | `command` | Run as a shell command in the recipient's own shell (as if that agent typed it), with no response. |
 
 Examples:
@@ -68,7 +69,20 @@ msg bilal request git status
 msg bilal command npm run build
 ```
 
-The kind accepts short aliases (`i`/`r`/`c`). A `command` runs as a raw shell command in the recipient's shell, while a `request` is processed through the recipient's full window logic (built-ins and shell). Both stream into the recipient's transcript. Commands that need an interactive PTY (`less`, `vim`, `top`, …) are **not** run remotely — those only work in a foreground tab.
+The kind accepts short aliases (`i`/`r`/`c`). A `command` runs as a raw shell command in the recipient's shell (streamed into its transcript, no reply); a `request` shows `● request from <sender>: <command>` in the recipient, runs through its full window logic (built-ins and shell), and returns the captured output to the sender as a `response`. Commands that need an interactive PTY (`less`, `vim`, `top`, …) are **not** run remotely — those only work in a foreground tab.
+
+To message several agents at once, use `broadcast`:
+
+```
+broadcast <all|agent[,agent...]> <info|request|command> <text>
+```
+
+Use `all` (or `*`) to reach every other agent, or a comma-separated list to target a specific set. The sender is always excluded. Examples:
+
+```
+broadcast all info standby for deploy
+broadcast bilal,aslan request git status
+```
 
 Prefix any command with `` ` `` to run it directly in your shell:
 
@@ -102,8 +116,11 @@ The Janissary UI is suspended while the program runs (keystrokes go straight to 
 | `Ctrl+←` / `Ctrl+→` | Move the current tab left / right  |
 | `Ctrl+↑` / `Ctrl+↓` | Scroll the transcript up / down    |
 | `Ctrl+R`            | Open command history picker        |
+| `Tab`               | Complete a file path, or an agent name for `msg` / `broadcast` |
 | `Enter`             | Execute the current command        |
 | `Ctrl+C`            | Exit                              |
+
+`Tab` completes the word at the cursor: filesystem paths against the tab's working directory, or — at the recipient position of `msg` / `broadcast` — active agent names (`broadcast` also offers `all` and completes each entry of a comma-separated list).
 
 ## Development
 

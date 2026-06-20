@@ -28,6 +28,7 @@ export type InputHandlerDeps = {
   flashScrollBoundary: () => void;
   interactive: boolean;
   cwd: string;
+  agents: string[];
 };
 
 export function useInputHandler(deps: InputHandlerDeps): void {
@@ -37,7 +38,7 @@ export function useInputHandler(deps: InputHandlerDeps): void {
     updateCurrentTab, executeRef, shellsRef,
     visibleHeight, exit,
     historyPickerOpen, historyPickerIdx, setHistoryPickerOpen, setHistoryPickerIdx,
-    frequentHistory, flashScrollBoundary, interactive, cwd,
+    frequentHistory, flashScrollBoundary, interactive, cwd, agents,
   } = deps;
 
   // Tracks continuous-scroll timing so the step accelerates the longer you keep scrolling.
@@ -239,7 +240,7 @@ export function useInputHandler(deps: InputHandlerDeps): void {
     }
 
     if (key.tab) {
-      const { newInput, newCursor, matches } = completeCommandLine(input, cursor, cwd);
+      const { newInput, newCursor, matches } = completeCommandLine(input, cursor, cwd, agents);
       if (newInput !== input) {
         setInput(newInput);
         setCursor(newCursor);

@@ -3,10 +3,13 @@ export type LogEntry = {
   output: string;
   running?: boolean;
   cwd?: string;
-  // Set when this entry is an incoming informational message from another agent.
+  // Set when this entry is a cross-agent message from another agent.
   from?: string;
   fromColor?: string;
+  msgKind?: 'info' | 'request' | 'response';
 };
+
+export type MessageRenderKind = 'info' | 'request' | 'response';
 
 export type BufferLine = {
   type: 'prompt' | 'output' | 'spacer' | 'message';
@@ -14,6 +17,7 @@ export type BufferLine = {
   cwd?: string;
   from?: string;
   fromColor?: string;
+  msgKind?: MessageRenderKind;
 };
 
 export type Tab = {
@@ -81,11 +85,21 @@ export function flattenBuffer(log: LogEntry[]): BufferLine[] {
     // math counts it — using an Ink marginTop would overflow the fixed-height transcript).
     if (lines.length > 0) lines.push({ type: 'spacer', text: '' });
     if (entry.from) {
-      // Incoming message: `● <from>: <text>`, with extra output lines below it.
+      const kind = entry.msgKind ?? 'info';
       const parts = entry.output.split('\n');
-      lines.push({ type: 'message', text: expandTabs(parts[0] ?? ''), from: entry.from, fromColor: entry.fromColor });
-      for (const extra of parts.slice(1)) {
-        lines.push({ type: 'output', text: expandTabs(extra) });
+      if (kind === 'response') {
+        // Response: a `● <from>:` header, then the output starting on the next line,
+        // every line bordered in the responder's color.
+        lines.push({ type: 'message', text: '', from: entry.from, fromColor: entry.fromColor, msgKind: 'response' });
+        for (const line of parts) {
+          lines.push({ type: 'output', text: expandTabs(line), fromColor: entry.fromColor });
+        }
+      } else {
+        // info: `● <from>: <text>`; request: `● request from <from>: <text>`.
+        lines.push({ type: 'message', text: expandTabs(parts[0] ?? ''), from: entry.from, fromColor: entry.fromColor, msgKind: kind });
+        for (const extra of parts.slice(1)) {
+          lines.push({ type: 'output', text: expandTabs(extra), fromColor: entry.fromColor });
+        }
       }
       continue;
     }

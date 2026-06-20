@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseKind, parseMsgCommand } from './messaging.js';
+import { parseKind, parseMsgCommand, parseBroadcastCommand } from './messaging.js';
 
 describe('parseKind', () => {
   it('accepts canonical names and aliases', () => {
@@ -38,5 +38,30 @@ describe('parseMsgCommand', () => {
 
   it('reports an unknown message type', () => {
     expect(parseMsgCommand('msg bilal yell hi')).toEqual({ error: expect.stringContaining('Unknown message type') });
+  });
+});
+
+describe('parseBroadcastCommand', () => {
+  it('parses a comma-separated set of recipients', () => {
+    expect(parseBroadcastCommand('broadcast bilal,aslan info standby')).toEqual({
+      targets: ['bilal', 'aslan'],
+      kind: 'info',
+      text: 'standby',
+    });
+  });
+
+  it('treats "all" and "*" as every other agent', () => {
+    expect(parseBroadcastCommand('broadcast all command npm test')).toEqual({ targets: 'all', kind: 'command', text: 'npm test' });
+    expect(parseBroadcastCommand('broadcast * info go')).toEqual({ targets: 'all', kind: 'info', text: 'go' });
+  });
+
+  it('lowercases recipient names', () => {
+    const r = parseBroadcastCommand('broadcast Bilal,ASLAN info hi');
+    expect(r).toEqual({ targets: ['bilal', 'aslan'], kind: 'info', text: 'hi' });
+  });
+
+  it('reports usage and unknown-kind errors', () => {
+    expect(parseBroadcastCommand('broadcast all')).toEqual({ error: expect.stringContaining('Usage') });
+    expect(parseBroadcastCommand('broadcast all yell hi')).toEqual({ error: expect.stringContaining('Unknown message type') });
   });
 });

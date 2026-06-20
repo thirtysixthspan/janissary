@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { render, Box, useApp, useWindowSize, useStdin } from 'ink';
 import { isInteractive, runInteractive, type InteractiveSession } from './interactive.js';
-import { useMessaging, parseMsgCommand } from './messaging.js';
+import { useMessaging, parseMsgCommand, parseBroadcastCommand } from './messaging.js';
 import { resolveAgentName } from './commands.js';
 import { resolveCommand } from './resolve.js';
 import { type ThemeColors, darkTheme } from './theme.js';
@@ -215,20 +215,28 @@ export const App = () => {
     });
   };
 
-  // Run a shell command in a tab's persistent shell, streaming output into that tab's
-  // transcript (matched by label so it works for non-active tabs too). onComplete
-  // receives the final output once the command finishes.
-  const runShellInTab = (tabIndex: number, tabLabel: string, shellCmd: string, onComplete?: (output: string) => void) => {
+  // Run a shell command in a tab's persistent shell. When `display` is true the command
+  // and its output stream into that tab's transcript (matched by label so it works for
+  // non-active tabs too); when false the command runs silently and only the captured
+  // output is delivered via onComplete. onComplete receives the final output.
+  const runShellInTab = (
+    tabIndex: number,
+    tabLabel: string,
+    shellCmd: string,
+    onComplete?: (output: string) => void,
+    display = true,
+  ) => {
     const shell = getShell(tabIndex, tabLabel);
     const shellCwd = cwdRef.current[tabLabel] ?? process.cwd();
     if (!shell || !shell.stdin!.writable) {
-      appendLog(tabLabel, { input: shellCmd, output: 'Failed to start shell.', running: false, cwd: shellCwd });
+      if (display) appendLog(tabLabel, { input: shellCmd, output: 'Failed to start shell.', running: false, cwd: shellCwd });
       onComplete?.('Failed to start shell.');
       return;
     }
-    appendLog(tabLabel, { input: shellCmd, output: '', running: true, cwd: shellCwd });
+    if (display) appendLog(tabLabel, { input: shellCmd, output: '', running: true, cwd: shellCwd });
     setAgentActive(tabLabel, true);
     const updateRunning = (output: string, running: boolean) => {
+      if (!display) return;
       setTabs((prev) => prev.map((t) => {
         if (t.label !== tabLabel) return t;
         const log = [...t.log];
@@ -260,30 +268,27 @@ export const App = () => {
     );
   };
 
-  // Process text in a tab's window as if it were typed into that tab's prompt, using the
-  // shared command resolver. Interactive (PTY) and app/tab-management commands cannot be
-  // run on behalf of another agent and are refused.
-  const runWindowInTab = (index: number, label: string, text: string, onComplete?: () => void) => {
+  // Execute text in a tab's window using the shared command resolver, capturing the output
+  // instead of displaying it (used to fulfil a request whose output is returned to the
+  // sender). Interactive (PTY) and app/tab-management commands are refused.
+  const runCaptureInTab = (index: number, label: string, text: string, onResult: (output: string) => void) => {
     const res = resolveCommand(text);
     switch (res.kind) {
       case 'empty':
-        onComplete?.();
+        onResult('');
         return;
       case 'shell':
         if (res.cmd && isInteractive(res.cmd)) {
-          appendLog(label, { input: res.cmd, output: `Cannot run interactive command remotely: ${res.cmd}` });
-          onComplete?.();
+          onResult(`Cannot run interactive command remotely: ${res.cmd}`);
           return;
         }
-        runShellInTab(index, label, res.cmd, () => onComplete?.());
+        runShellInTab(index, label, res.cmd, (out) => onResult(out), false);
         return;
       case 'output':
-        appendLog(label, { input: res.cmd, output: res.output });
-        onComplete?.();
+        onResult(res.output);
         return;
       case 'app':
-        appendLog(label, { input: res.cmd, output: `Command not available remotely: ${res.cmd}` });
-        onComplete?.();
+        onResult(`Command not available remotely: ${res.cmd}`);
         return;
     }
   };
@@ -299,10 +304,10 @@ export const App = () => {
       if (idx < 0) { onComplete(`No agent named "${label}".`); return; }
       runShellInTab(idx, label, cmd, onComplete);
     },
-    runWindow: (label, text, onComplete) => {
+    runCapture: (label, text, onResult) => {
       const idx = tabsRef.current.findIndex((t) => t.label === label);
-      if (idx < 0) { onComplete(); return; }
-      runWindowInTab(idx, label, text, onComplete);
+      if (idx < 0) { onResult(`No agent named "${label}".`); return; }
+      runCaptureInTab(idx, label, text, onResult);
     },
   });
 
@@ -381,7 +386,7 @@ export const App = () => {
         const dotColor = dotColors[newTabIndex % dotColors.length];
         const { cmdHistory, log } = initAgentState(resolved, dotColor);
         setTabs((prev) => [...prev, makeTab(resolved, dotColor, newTabIndex + 1, cmdHistory ?? [], log ?? [])]);
-        setActiveTab(newTabIndex);
+        // Stay on the current tab; the new agent is created in the background.
         updateCurrentTab((tab) => ({ ...tab, log: [...tab.log, { input: trimmed, output: `Agent "${resolved}" ready.` }], scrollOffset: 0 }));
         return;
       }
@@ -400,6 +405,32 @@ export const App = () => {
           result = `No agent named "${parsed.to}".`;
         } else {
           result = `Sent ${parsed.kind} to ${parsed.to}.`;
+        }
+        updateCurrentTab((tab) => ({ ...tab, log: [...tab.log, { input: trimmed, output: result }], scrollOffset: 0 }));
+        return;
+      }
+      case 'broadcast': {
+        const fromLabel = tabs[activeTabRef.current].label;
+        const parsed = parseBroadcastCommand(cliTrimmed);
+        let result: string;
+        if ('error' in parsed) {
+          result = parsed.error;
+        } else {
+          const targets = (parsed.targets === 'all'
+            ? tabs.map((t) => t.label)
+            : parsed.targets
+          ).filter((to) => to !== fromLabel);
+          const sent: string[] = [];
+          const missing: string[] = [];
+          for (const to of targets) {
+            if (sendMessage({ from: fromLabel, to, kind: parsed.kind, text: parsed.text })) sent.push(to);
+            else missing.push(to);
+          }
+          const segments: string[] = [];
+          if (sent.length) segments.push(`Sent ${parsed.kind} to ${sent.join(', ')}.`);
+          if (missing.length) segments.push(`No agent named: ${missing.join(', ')}.`);
+          if (!segments.length) segments.push('No other agents to broadcast to.');
+          result = segments.join(' ');
         }
         updateCurrentTab((tab) => ({ ...tab, log: [...tab.log, { input: trimmed, output: result }], scrollOffset: 0 }));
         return;
@@ -479,6 +510,7 @@ export const App = () => {
     frequentHistory, flashScrollBoundary,
     interactive: interactive !== null,
     cwd: cwdRef.current[cur.label] ?? process.cwd(),
+    agents: tabs.map((t) => t.label),
   };
   useInputHandler(inputHandlerDeps);
 

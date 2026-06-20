@@ -1,7 +1,8 @@
 import { useRef } from 'react';
 import type { LogEntry } from './tab.js';
 
-export type MessageKind = 'info' | 'request' | 'command';
+// `response` is system-generated (the reply to a request), not something a user sends.
+export type MessageKind = 'info' | 'request' | 'command' | 'response';
 
 export type Message = {
   id: number;
@@ -36,6 +37,26 @@ export function parseMsgCommand(input: string): ParsedMsg | { error: string } {
   return { to, kind, text };
 }
 
+export type ParsedBroadcast = { targets: string[] | 'all'; kind: MessageKind; text: string };
+
+/**
+ * Parse a `broadcast <all|agent[,agent...]> <kind> <text>` command. The first token is
+ * either `all`/`*` (every other agent) or a comma-separated list of recipient names.
+ */
+export function parseBroadcastCommand(input: string): ParsedBroadcast | { error: string } {
+  const body = input.trim().replace(/^broadcast\s+/i, '');
+  const parts = body.split(/\s+/).filter(Boolean);
+  if (parts.length < 3) return { error: 'Usage: broadcast <all|agent[,agent...]> <info|request|command> <text>' };
+  const spec = parts[0].toLowerCase();
+  const kind = parseKind(parts[1]);
+  if (!kind) return { error: `Unknown message type "${parts[1]}". Use info, request, or command.` };
+  const text = parts.slice(2).join(' ');
+  if (!text) return { error: 'Message text is empty.' };
+  const targets = spec === 'all' || spec === '*' ? 'all' : spec.split(',').filter(Boolean);
+  if (targets !== 'all' && targets.length === 0) return { error: 'No broadcast recipients specified.' };
+  return { targets, kind, text };
+}
+
 export type MessagingDeps = {
   hasAgent: (label: string) => boolean;
   agentColor: (label: string) => string;
@@ -47,9 +68,9 @@ export type MessagingDeps = {
   // Run a shell command in the recipient's own persistent shell, streaming output to its
   // transcript, and invoke onComplete with the final output.
   runShell: (label: string, cmd: string, onComplete: (output: string) => void) => void;
-  // Process text through the recipient's window as if typed into its prompt (built-ins +
-  // shell, interactive commands skipped). Invokes onComplete when finished.
-  runWindow: (label: string, text: string, onComplete: () => void) => void;
+  // Execute text in the recipient's window (built-ins + shell, interactive commands
+  // skipped) capturing the output instead of displaying it. Used to fulfil a request.
+  runCapture: (label: string, text: string, onResult: (output: string) => void) => void;
 };
 
 export type Messaging = {
@@ -73,8 +94,10 @@ export function useMessaging(deps: MessagingDeps): Messaging {
   // shell command in the recipient and may complete asynchronously.
   const handle = (msg: Message, done: () => void): void => {
     const d = depsRef.current;
-    if (msg.kind === 'info') {
-      d.appendLog(msg.to, { input: '', output: msg.text, from: msg.from, fromColor: d.agentColor(msg.from) });
+    // info and response are both informational: shown in the recipient's transcript and
+    // appended to its context.
+    if (msg.kind === 'info' || msg.kind === 'response') {
+      d.appendLog(msg.to, { input: '', output: msg.text, from: msg.from, fromColor: d.agentColor(msg.from), msgKind: msg.kind });
       d.appendContext(msg.to, `${msg.from}: ${msg.text}`);
       done();
       return;
@@ -84,16 +107,20 @@ export function useMessaging(deps: MessagingDeps): Messaging {
       // Interactive programs need a foreground tab, so they are refused remotely.
       if (d.isInteractive(msg.text)) {
         const note = `Cannot run interactive command remotely: ${msg.text}`;
-        d.appendLog(msg.to, { input: '', output: note, from: msg.from, fromColor: d.agentColor(msg.from) });
+        d.appendLog(msg.to, { input: '', output: note, from: msg.from, fromColor: d.agentColor(msg.from), msgKind: 'info' });
         done();
         return;
       }
       d.runShell(msg.to, msg.text, () => done());
       return;
     }
-    // request: process through the recipient's window as if typed into its prompt
-    // (built-ins + shell; interactive commands are skipped). No response is returned.
-    d.runWindow(msg.to, msg.text, () => done());
+    // request: show `● request from <sender>: <command>` in the recipient, execute it
+    // there capturing the output, and return that output to the sender as a response.
+    d.appendLog(msg.to, { input: '', output: msg.text, from: msg.from, fromColor: d.agentColor(msg.from), msgKind: 'request' });
+    d.runCapture(msg.to, msg.text, (output) => {
+      send({ from: msg.to, to: msg.from, kind: 'response', text: output });
+      done();
+    });
   };
 
   const pump = (label: string): void => {

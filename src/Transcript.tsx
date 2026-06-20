@@ -53,10 +53,14 @@ export const Transcript = ({ visibleLines, scrollChars, visibleHeight, dotColor,
           </Box>
         );
       } else if (line.type === 'message') {
+        const label =
+          line.msgKind === 'request' ? `request from ${line.from}: ${line.text}`
+          : line.msgKind === 'response' ? `${line.from}:`
+          : `${line.from}: ${line.text}`;
         content = (
           <Box>
             <Text color={line.fromColor ?? dotColor}>{'● '}</Text>
-            <Text wrap="truncate" color={theme.fg}>{line.from}: {line.text}</Text>
+            <Text wrap="truncate" color={theme.fg}>{label}</Text>
           </Box>
         );
       } else if (line.type === 'output') {
@@ -72,8 +76,9 @@ export const Transcript = ({ visibleLines, scrollChars, visibleHeight, dotColor,
           </Box>
         );
       }
-      // The left border follows the sending agent's color for incoming messages.
-      const borderColor = line.type === 'message' ? (line.fromColor ?? dotColor) : dotColor;
+      // The left border follows the sending agent's color for message lines and the
+      // output lines that belong to them (those carry fromColor).
+      const borderColor = line.fromColor ?? dotColor;
       return (
         <Box key={row} flexDirection="row">
           <Box flexShrink={0} width={1}>

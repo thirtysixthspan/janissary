@@ -30,6 +30,7 @@ describe('resolveCommand', () => {
     expect(resolveCommand('agent bilal')).toEqual({ kind: 'app', name: 'agent', cmd: 'agent bilal' });
     expect(resolveCommand('next')).toEqual({ kind: 'app', name: 'next', cmd: 'next' });
     expect(resolveCommand('msg bilal info hi')).toEqual({ kind: 'app', name: 'msg', cmd: 'msg bilal info hi' });
+    expect(resolveCommand('broadcast all info hi')).toEqual({ kind: 'app', name: 'broadcast', cmd: 'broadcast all info hi' });
     expect(resolveCommand('clear')).toEqual({ kind: 'app', name: 'clear', cmd: 'clear' });
     expect(resolveCommand('state')).toEqual({ kind: 'app', name: 'state', cmd: 'state' });
     expect(resolveCommand('hist')).toEqual({ kind: 'app', name: 'hist', cmd: 'hist' });
