@@ -3,12 +3,17 @@ export type LogEntry = {
   output: string;
   running?: boolean;
   cwd?: string;
+  // Set when this entry is an incoming informational message from another agent.
+  from?: string;
+  fromColor?: string;
 };
 
 export type BufferLine = {
-  type: 'prompt' | 'output' | 'spacer';
+  type: 'prompt' | 'output' | 'spacer' | 'message';
   text: string;
   cwd?: string;
+  from?: string;
+  fromColor?: string;
 };
 
 export type Tab = {
@@ -48,16 +53,46 @@ export function getFrequentHistory(history: string[], count: number): string[] {
     .slice(-count);
 }
 
+// Expand tab characters to spaces (8-column tab stops). Terminals render a tab as
+// several columns but Ink measures it as width 1, so leaving tabs in causes lines to
+// overflow and wrap (shifting the scrollbar onto the next row). Expanding keeps the
+// measured width in step with what is drawn.
+export function expandTabs(text: string, tabWidth = 8): string {
+  if (!text.includes('\t')) return text;
+  let col = 0;
+  let out = '';
+  for (const ch of text) {
+    if (ch === '\t') {
+      const spaces = tabWidth - (col % tabWidth);
+      out += ' '.repeat(spaces);
+      col += spaces;
+    } else {
+      out += ch;
+      col += ch === '\n' ? 0 : 1;
+    }
+  }
+  return out;
+}
+
 export function flattenBuffer(log: LogEntry[]): BufferLine[] {
   const lines: BufferLine[] = [];
   for (const entry of log) {
     // Blank separator line above each command (a real buffer line so the scroll/viewport
     // math counts it — using an Ink marginTop would overflow the fixed-height transcript).
     if (lines.length > 0) lines.push({ type: 'spacer', text: '' });
-    lines.push({ type: 'prompt', text: entry.input, cwd: entry.cwd });
+    if (entry.from) {
+      // Incoming message: `● <from>: <text>`, with extra output lines below it.
+      const parts = entry.output.split('\n');
+      lines.push({ type: 'message', text: expandTabs(parts[0] ?? ''), from: entry.from, fromColor: entry.fromColor });
+      for (const extra of parts.slice(1)) {
+        lines.push({ type: 'output', text: expandTabs(extra) });
+      }
+      continue;
+    }
+    lines.push({ type: 'prompt', text: expandTabs(entry.input), cwd: entry.cwd });
     if (entry.output) {
       for (const outLine of entry.output.split('\n')) {
-        lines.push({ type: 'output', text: outLine });
+        lines.push({ type: 'output', text: expandTabs(outLine) });
       }
     }
   }

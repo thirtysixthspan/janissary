@@ -51,6 +51,7 @@ const shellCommands: Record<string, { enabled: boolean }> = {
   fold: { enabled: true },
   free: { enabled: true },
   getopts: { enabled: true },
+  git: { enabled: true },
   grep: { enabled: true },
   groups: { enabled: true },
   gunzip: { enabled: true },

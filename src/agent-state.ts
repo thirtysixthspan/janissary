@@ -5,9 +5,11 @@ export type AgentState = {
   name: string;
   dotColor: string;
   active: boolean;
+  number?: number;
   cmdHistory?: string[];
   log?: { input: string; output: string; running?: boolean }[];
   cwd?: string;
+  context?: string[];
 };
 
 let stateDir = '';

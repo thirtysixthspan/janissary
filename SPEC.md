@@ -146,7 +146,7 @@ Pressing Return saves the trimmed input to history before executing.
 
 ### Persistence
 
-Command history is persisted per-agent to `.janussary/state/<name>.json`. Each agent state file stores `name`, `dotColor`, `active`, `cmdHistory[]`, `log[]` (the full transcript), and `cwd` (the shell's working directory).
+Command history is persisted per-agent to `.janussary/state/<name>.json`. Each agent state file stores `name`, `dotColor`, `active`, `number` (the tab's position), `cmdHistory[]`, `log[]` (the full transcript), `cwd` (the shell's working directory), and `context[]` (informational messages received from other agents).
 
 On a normal launch the state directory is cleared before the UI renders, so every session starts fresh.
 
@@ -298,7 +298,7 @@ A `design/` directory at project root contains reference screenshots (`dark.png`
 
 ### State directory
 
-Agent state is stored in `.janussary/state/`. Each agent has one JSON file named `<agent-name>.json` with fields: `name`, `dotColor`, `active`, `cmdHistory[]`, `log[]` (the full transcript of commands and outputs), and `cwd` (the shell working directory after the last command).
+Agent state is stored in `.janussary/state/`. Each agent has one JSON file named `<agent-name>.json` with fields: `name`, `dotColor`, `active`, `number` (the tab's position in the strip), `cmdHistory[]`, `log[]` (the full transcript of commands and outputs), `cwd` (the shell working directory after the last command), and `context[]` (informational messages received from other agents).
 
 On a normal `janus` launch the state directory is recursively deleted before rendering. On `janus --relaunch` the directory is preserved and all agent files are loaded to recreate tabs with their saved command history, transcripts, and working directories.
 
@@ -316,11 +316,15 @@ On a normal `janus` launch the state directory is recursively deleted before ren
 
 1. Preserve `.janussary/state/` directory.
 2. List all `.json` files in the state directory.
-3. Create a tab for each agent, assigning dot colors from the palette in order.
+3. Sort the saved agents by their recorded tab `number` and create a tab for each, preserving its saved `number` and `dotColor`.
 4. Load each agent's `cmdHistory` and `log` into its tab, and populate the cwd ref for shell restoration.
 5. If no state files exist, fall back to a single `janus` tab.
 6. Render the UI with all restored tabs.
 7. When a shell is spawned for a restored tab, `cd` to the saved working directory.
+
+### Restored tab order
+
+Each tab's `number` is recorded in its state file and kept in sync as tabs are created, reordered (`Ctrl+←`/`Ctrl+→`), or renumbered. On `--relaunch`, tabs are rebuilt in ascending `number` order and each tab keeps its previously assigned `number` and dot color, so the tab strip reappears exactly as it was left. State files predating this field fall back to array order with palette-assigned colors.
 
 ---
 

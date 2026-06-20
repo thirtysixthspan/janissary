@@ -1,5 +1,26 @@
 import { describe, it, expect } from 'vitest';
-import { makeTab, swapTabsLeft, swapTabsRight, renumberTabs } from './tab.js';
+import { makeTab, swapTabsLeft, swapTabsRight, renumberTabs, expandTabs, flattenBuffer } from './tab.js';
+
+describe('expandTabs', () => {
+  it('leaves tab-free text untouched', () => {
+    expect(expandTabs('modified: src/x.ts')).toBe('modified: src/x.ts');
+  });
+
+  it('expands a leading tab to the next 8-column stop', () => {
+    expect(expandTabs('\tmodified')).toBe('        modified');
+  });
+
+  it('aligns to tab stops rather than inserting a fixed count', () => {
+    expect(expandTabs('ab\tc')).toBe('ab      c'); // 2 chars + 6 spaces = column 8
+  });
+
+  it('contains no tab characters in flattened output lines', () => {
+    const lines = flattenBuffer([{ input: 'git status', output: '\tmodified: a\n\tmodified: b' }]);
+    for (const line of lines) {
+      expect(line.text).not.toContain('\t');
+    }
+  });
+});
 
 describe('swapTabsLeft', () => {
   it('swaps tab at idx with its left neighbor', () => {

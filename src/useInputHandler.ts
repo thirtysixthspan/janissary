@@ -1,8 +1,10 @@
 import { useInput } from 'ink';
 import type { ChildProcess } from 'node:child_process';
 import type { Tab } from './tab.js';
+import { useRef } from 'react';
 import { flattenBuffer, swapTabsLeft, swapTabsRight } from './tab.js';
 import { completeCommandLine } from './completion.js';
+import { nextScrollStep, initialScrollAccel, type ScrollAccel } from './scroll.js';
 
 export type InputHandlerDeps = {
   input: string;
@@ -37,6 +39,32 @@ export function useInputHandler(deps: InputHandlerDeps): void {
     historyPickerOpen, historyPickerIdx, setHistoryPickerOpen, setHistoryPickerIdx,
     frequentHistory, flashScrollBoundary, interactive, cwd,
   } = deps;
+
+  // Tracks continuous-scroll timing so the step accelerates the longer you keep scrolling.
+  const accelRef = useRef<ScrollAccel>(initialScrollAccel);
+  const scrollStep = (dir: number): number => {
+    const { step, state } = nextScrollStep(accelRef.current, dir, Date.now());
+    accelRef.current = state;
+    return step;
+  };
+
+  const scrollUp = () => {
+    const step = scrollStep(1);
+    updateCurrentTab((tab) => {
+      const len = flattenBuffer(tab.log).length;
+      const maxOff = Math.max(0, len - visibleHeight);
+      if (tab.scrollOffset >= maxOff) { process.stderr.write('\x07'); flashScrollBoundary(); return tab; }
+      return { ...tab, scrollOffset: Math.min(tab.scrollOffset + step, maxOff) };
+    });
+  };
+
+  const scrollDown = () => {
+    const step = scrollStep(-1);
+    updateCurrentTab((tab) => {
+      if (tab.scrollOffset <= 0) { process.stderr.write('\x07'); flashScrollBoundary(); return tab; }
+      return { ...tab, scrollOffset: Math.max(0, tab.scrollOffset - step) };
+    });
+  };
 
   useInput((inputChar, key) => {
     // While an interactive program owns the terminal, its keystrokes are forwarded
@@ -115,20 +143,12 @@ export function useInputHandler(deps: InputHandlerDeps): void {
 
     // Scroll the transcript with Shift or Ctrl + arrow (whichever the terminal sends).
     if ((key.ctrl || key.shift) && key.upArrow) {
-      updateCurrentTab((tab) => {
-        const len = flattenBuffer(tab.log).length;
-        const maxOff = Math.max(0, len - visibleHeight);
-        if (tab.scrollOffset >= maxOff) { process.stderr.write('\x07'); flashScrollBoundary(); return tab; }
-        return { ...tab, scrollOffset: Math.min(tab.scrollOffset + 1, maxOff) };
-      });
+      scrollUp();
       return;
     }
 
     if ((key.ctrl || key.shift) && key.downArrow) {
-      updateCurrentTab((tab) => {
-        if (tab.scrollOffset <= 0) { process.stderr.write('\x07'); flashScrollBoundary(); return tab; }
-        return { ...tab, scrollOffset: Math.max(0, tab.scrollOffset - 1) };
-      });
+      scrollDown();
       return;
     }
 
@@ -194,38 +214,22 @@ export function useInputHandler(deps: InputHandlerDeps): void {
     }
 
     if (key.ctrl && inputChar === 'p') {
-      updateCurrentTab((tab) => {
-        const len = flattenBuffer(tab.log).length;
-        const maxOff = Math.max(0, len - visibleHeight);
-        if (tab.scrollOffset >= maxOff) { process.stderr.write('\x07'); flashScrollBoundary(); return tab; }
-        return { ...tab, scrollOffset: Math.min(tab.scrollOffset + 1, maxOff) };
-      });
+      scrollUp();
       return;
     }
 
     if (key.ctrl && inputChar === 'n') {
-      updateCurrentTab((tab) => {
-        if (tab.scrollOffset <= 0) { process.stderr.write('\x07'); flashScrollBoundary(); return tab; }
-        return { ...tab, scrollOffset: Math.max(0, tab.scrollOffset - 1) };
-      });
+      scrollDown();
       return;
     }
 
     if (key.pageUp) {
-      updateCurrentTab((tab) => {
-        const len = flattenBuffer(tab.log).length;
-        const maxOff = Math.max(0, len - visibleHeight);
-        if (tab.scrollOffset >= maxOff) { process.stderr.write('\x07'); flashScrollBoundary(); return tab; }
-        return { ...tab, scrollOffset: Math.min(tab.scrollOffset + 1, maxOff) };
-      });
+      scrollUp();
       return;
     }
 
     if (key.pageDown) {
-      updateCurrentTab((tab) => {
-        if (tab.scrollOffset <= 0) { process.stderr.write('\x07'); flashScrollBoundary(); return tab; }
-        return { ...tab, scrollOffset: Math.max(0, tab.scrollOffset - 1) };
-      });
+      scrollDown();
       return;
     }
 

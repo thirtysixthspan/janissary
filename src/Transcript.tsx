@@ -52,6 +52,13 @@ export const Transcript = ({ visibleLines, scrollChars, visibleHeight, dotColor,
             <Text wrap="truncate" backgroundColor={theme.bgSoft}>{line.text}</Text>
           </Box>
         );
+      } else if (line.type === 'message') {
+        content = (
+          <Box>
+            <Text color={line.fromColor ?? dotColor}>{'● '}</Text>
+            <Text wrap="truncate" color={theme.fg}>{line.from}: {line.text}</Text>
+          </Box>
+        );
       } else if (line.type === 'output') {
         content = (
           <Box paddingLeft={2}>
@@ -65,10 +72,12 @@ export const Transcript = ({ visibleLines, scrollChars, visibleHeight, dotColor,
           </Box>
         );
       }
+      // The left border follows the sending agent's color for incoming messages.
+      const borderColor = line.type === 'message' ? (line.fromColor ?? dotColor) : dotColor;
       return (
         <Box key={row} flexDirection="row">
           <Box flexShrink={0} width={1}>
-            <Text color={dotColor}>│</Text>
+            <Text color={borderColor}>│</Text>
           </Box>
           <Box flexGrow={1}>{content}</Box>
         </Box>
