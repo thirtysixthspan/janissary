@@ -1,0 +1,112 @@
+// Autonomous tool loop for an ACP agent: the agent emits a single command, the
+// host runs it, feeds the output back, and repeats until the agent answers
+// without a command (or a step cap is reached). The control flow is pure — all
+// side effects (rendering the transcript, executing the command) are injected,
+// which keeps it testable independently of Ink/React and the live agent.
+
+export type AcpPromptHandlers = {
+  onChunk: (text: string) => void;
+  onEnd: (stopReason: string) => void;
+  onError: (message: string) => void;
+};
+
+// Structural subset of `AcpSession` (src/acp.ts) the loop needs.
+export type AcpLoopSession = {
+  prompt: (text: string, handlers: AcpPromptHandlers) => void;
+};
+
+export type AcpLoopDeps = {
+  // Prepended to the first prompt (e.g. the db primer) when starting a new session.
+  primer?: string;
+  // Execute an extracted command and return its textual output.
+  runCommand: (cmd: string) => string;
+  // Pull a runnable command out of an agent reply, or null when there is none.
+  extractCommand: (text: string) => string | null;
+  // Maximum number of auto-run command steps before stopping (default 8).
+  maxSteps?: number;
+};
+
+export type AcpLoopHandlers = {
+  // A new agent turn is starting; `isFirst` is true only for the opening turn.
+  startTurn: (isFirst: boolean) => void;
+  // Cumulative streamed text for the current turn.
+  chunk: (cumulative: string) => void;
+  // The current turn finished with this final text.
+  endTurn: (final: string) => void;
+  // A command was auto-run; show it and its result.
+  ranCommand: (cmd: string, result: string) => void;
+  // The loop ended: `answered` (no command emitted) or `capped` (hit `maxSteps`).
+  finished: (reason: 'answered' | 'capped', maxSteps: number) => void;
+  // A connection/prompt error occurred.
+  error: (message: string) => void;
+};
+
+/**
+ * Drive the loop. Each turn streams the agent reply, then looks for a command:
+ * if one is found and the step budget remains, it is executed, its output is
+ * fed back as a follow-up prompt, and the loop continues; otherwise the loop
+ * ends. The primer is prepended only to the very first prompt.
+ */
+export function runAcpToolLoop(
+  session: AcpLoopSession,
+  userPrompt: string,
+  deps: AcpLoopDeps,
+  h: AcpLoopHandlers,
+): void {
+  const maxSteps = deps.maxSteps ?? 8;
+
+  // Start a turn's transcript entry, then issue the prompt into it.
+  function turn(turnPrompt: string, isFirst: boolean, step: number) {
+    h.startTurn(isFirst);
+    promptOnce(turnPrompt, isFirst, step, 0);
+  }
+
+  // Send one prompt for the current turn. A freshly connected agent sometimes
+  // returns an empty first reply (cold start — the model/provider loads lazily on
+  // the first prompt); retry the first turn once, reusing the same entry, before
+  // treating an empty reply as a final (no-command) answer.
+  function promptOnce(turnPrompt: string, isFirst: boolean, step: number, attempt: number) {
+    let buffer = '';
+    const sent = isFirst && deps.primer ? `${deps.primer}\n\n${userPrompt}` : turnPrompt;
+    session.prompt(sent, {
+      onChunk: (text) => { buffer += text; h.chunk(buffer); },
+      onEnd: () => {
+        if (!buffer.trim() && isFirst && attempt === 0) {
+          promptOnce(turnPrompt, isFirst, step, attempt + 1);
+          return;
+        }
+        const cmd = deps.extractCommand(buffer);
+        let display = buffer;
+        if (cmd) {
+          const lines = display.split('\n');
+          const cleaned = lines.map((l) => l.replace(/^[\s`$>]+/, '').replace(/`+\s*$/, '').trim());
+          const idx = cleaned.findIndex((l) => l === cmd);
+          if (idx !== -1) {
+            lines.splice(idx, 1);
+            // Remove adjacent code fence markers left behind by the removed command.
+            if (idx < lines.length && /^`{3,}\s*$/.test(lines[idx])) lines.splice(idx, 1);
+            if (idx > 0 && /^`{3,}\s*$/.test(lines[idx - 1])) lines.splice(idx - 1, 1);
+            while (lines.length > 0 && lines[lines.length - 1].trim() === '') lines.pop();
+            display = lines.join('\n');
+          }
+        }
+        h.endTurn(display);
+        if (cmd && step < maxSteps) {
+          const result = deps.runCommand(cmd);
+          h.ranCommand(cmd, result);
+          const followUp =
+            `Output of \`${cmd}\`:\n${result}\n\n` +
+            'If the task is complete, reply with the final answer and no command. ' +
+            'Otherwise issue the next command. ' +
+            'Be concise: do not explain what you are doing. Only output `db` commands and the final answer.';
+          turn(followUp, false, step + 1);
+        } else {
+          h.finished(cmd ? 'capped' : 'answered', maxSteps);
+        }
+      },
+      onError: (msg) => h.error(msg),
+    });
+  }
+
+  turn(userPrompt, true, 0);
+}

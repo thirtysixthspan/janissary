@@ -19,6 +19,8 @@ export const availableCommands = [
   'msg',
   'broadcast',
   'acp',
+  'db',
+  'connection',
 ];
 
 let helpOutput: string | null = null;
@@ -56,6 +58,8 @@ export const getOutput = (cmd: string): string | null => {
   if (trimmed.startsWith('msg')) return null;
   if (trimmed.startsWith('broadcast')) return null;
   if (trimmed.startsWith('acp')) return null;
+  if (/^db\b/.test(trimmed)) return null;
+  if (/^connection\b/.test(trimmed)) return null;
   if (trimmed === 'next') return null;
   if (trimmed === '') return null;
   return `Unknown command: "${trimmed}". Type "help" for available commands.`;

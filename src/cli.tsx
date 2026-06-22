@@ -15,6 +15,19 @@ import { Transcript } from './Transcript.js';
 import { PromptBar } from './PromptBar.js';
 import { getFrequentHistory, flattenBuffer, wordWrap, type Tab, type LogEntry, dotColors, makeTab } from './tab.js';
 import { findRepoRoot, createWorkspace, removeWorkspace as removeWorkspaceDir, initWorkspaceDir, clearWorkspaceDir } from './workspace.js';
+import { runDbCommand, parseDbCommand, DB_PRIMER, extractDbCommand } from './db.js';
+import { runAcpToolLoop } from './acp-loop.js';
+import {
+  initDbDir,
+  closeConnection,
+  closeAllConnections,
+  listOpenConnections,
+  isConnectionOpen,
+  parseConnectionCommand,
+} from './connections.js';
+
+// Identifier for a tab's shell connection, e.g. `shell:bash` / `shell:zsh`.
+const shellName = (process.env.SHELL || 'bash').split('/').pop() || 'bash';
 
 export const App = () => {
   const { exit } = useApp();
@@ -55,6 +68,10 @@ export const App = () => {
   const acpRef = useRef<Map<number, AcpSession>>(new Map());
   const [acpInfo, setAcpInfo] = useState<Record<number, AcpInfo>>({});
   const [shellActive, setShellActive] = useState<Record<number, boolean>>({});
+  // SQLite databases each tab has opened a connection to (keyed by tab label).
+  // Connections are global, but this attributes them to the tab that accessed
+  // them so the status popup reflects that tab's connections.
+  const [tabDbConns, setTabDbConns] = useState<Record<string, string[]>>({});
   const workspaceRef = useRef<Set<string>>(new Set());
 
   const getShell = (tabIndex: number, label?: string): import('node:child_process').ChildProcess | null => {
@@ -93,6 +110,7 @@ export const App = () => {
       shellsRef.current.clear();
       for (const [, session] of acpRef.current) session.kill();
       acpRef.current.clear();
+      closeAllConnections();
     };
   }, []);
 
@@ -230,6 +248,38 @@ export const App = () => {
     });
   };
 
+  // Drop a closed SQLite connection from every tab's tracked list.
+  const forgetDbConn = (name: string) => {
+    setTabDbConns((prev) => {
+      let changed = false;
+      const next: Record<string, string[]> = {};
+      for (const [label, names] of Object.entries(prev)) {
+        const filtered = names.filter((n) => n !== name);
+        if (filtered.length !== names.length) changed = true;
+        next[label] = filtered;
+      }
+      return changed ? next : prev;
+    });
+  };
+
+  // Run a `db` command on behalf of a tab and keep that tab's tracked SQLite
+  // connections in sync so the status popup reflects what it has open.
+  const runDbInTab = (label: string, cmd: string): string => {
+    const output = runDbCommand(cmd);
+    const parsed = parseDbCommand(cmd);
+    if (!('error' in parsed)) {
+      if (parsed.action === 'delete') forgetDbConn(parsed.name);
+      else if (parsed.action !== 'list' && isConnectionOpen(parsed.name)) {
+        setTabDbConns((prev) => {
+          const cur = prev[label] ?? [];
+          if (cur.includes(parsed.name)) return prev;
+          return { ...prev, [label]: [...cur, parsed.name].sort() };
+        });
+      }
+    }
+    return output;
+  };
+
   // Run a shell command in a tab's persistent shell. When `display` is true the command
   // and its output stream into that tab's transcript (matched by label so it works for
   // non-active tabs too); when false the command runs silently and only the captured
@@ -303,6 +353,12 @@ export const App = () => {
         onResult(res.output);
         return;
       case 'app':
+        // `db` is self-contained (no live tab state), so it is dispatchable;
+        // other app/tab-management commands are not runnable through this path.
+        if (res.name === 'db') {
+          onResult(runDbInTab(label, res.cmd));
+          return;
+        }
         onResult(`Command not available remotely: ${res.cmd}`);
         return;
     }
@@ -483,18 +539,7 @@ export const App = () => {
           updateCurrentTab((tab) => ({ ...tab, log: [...tab.log, { input: trimmed, output: 'Usage: acp <prompt>.' }], scrollOffset: 0 }));
           return;
         }
-        // Stream the agent reply into a running log entry, keyed by this prompt text.
-        appendLog(tabLabel, { input: prompt, output: '', running: true });
-        const update = (output: string, running: boolean) => {
-          setTabs((prev) => prev.map((t) => {
-            if (t.label !== tabLabel) return t;
-            const log = [...t.log];
-            const i = log.findLastIndex((e) => e.input === prompt && e.running);
-            if (i >= 0) log[i] = { ...log[i], output, running };
-            saveTabLog(t.label, log);
-            return { ...t, log };
-          }));
-        };
+        // Connect on first use.
         let session = acpRef.current.get(tabIndex);
         if (!session) {
           // OpenCode is the hardcoded ACP agent (`opencode acp`).
@@ -516,17 +561,99 @@ export const App = () => {
           });
           acpRef.current.set(tabIndex, session);
         }
+        const acpSession = session;
         // ACP replies stream as one long line with no newlines, so word-wrap to the
         // transcript's content width (terminal minus borders/padding/scrollbar).
         const wrapWidth = Math.max(20, (columns || 80) - 6);
-        let buffer = '';
-        // Flash the tab's busy indicator while waiting on the agent.
-        setAgentActive(tabLabel, true);
-        session.prompt(prompt, {
-          onChunk: (text) => { buffer += text; update(wordWrap(buffer, wrapWidth), true); },
-          onEnd: () => { update(wordWrap(buffer || '(no output)', wrapWidth), false); setAgentActive(tabLabel, false); },
-          onError: (msg) => { update(wordWrap(`ACP error: ${msg}`, wrapWidth), false); setAgentActive(tabLabel, false); },
-        });
+        // Update the current turn's running log entry (only one runs at a time).
+        const updateRunning = (output: string, running: boolean) => {
+          setTabs((prev) => prev.map((t) => {
+            if (t.label !== tabLabel) return t;
+            const log = [...t.log];
+            const i = log.findLastIndex((e) => e.running);
+            if (i >= 0) log[i] = { ...log[i], output, running };
+            saveTabLog(t.label, log);
+            return { ...t, log };
+          }));
+        };
+        // Autonomous tool loop: the agent issues a single `db` command, the host
+        // runs it, feeds the output back, and repeats until it answers without a
+        // command — capped to avoid runaway loops.
+        runAcpToolLoop(
+          acpSession,
+          prompt,
+          // Prepend the `db` primer to every user prompt (the loop only applies it
+          // to the first turn, not the tool-result follow-ups) so the agent stays
+          // aware of the grammar even when the session is reused.
+          { primer: DB_PRIMER, runCommand: (cmd) => runDbInTab(tabLabel, cmd), extractCommand: extractDbCommand },
+          {
+            // First turn shows the user's prompt; continuation turns have no prompt line.
+            startTurn: (isFirst) => {
+              setAgentActive(tabLabel, true);
+              appendLog(tabLabel, { input: isFirst ? prompt : '', output: '', running: true });
+            },
+            chunk: (buf) => updateRunning(wordWrap(buf, wrapWidth), true),
+            endTurn: (final) => updateRunning(wordWrap(final, wrapWidth), false),
+            // Show the auto-run command like a terminal command with its result.
+            ranCommand: (cmd, _result) => appendLog(tabLabel, { input: cmd, output: '', acp: true }),
+            finished: (reason, maxSteps) => {
+              setAgentActive(tabLabel, false);
+              if (reason === 'capped') appendLog(tabLabel, { input: '', output: `(stopped after ${maxSteps} db steps)` });
+            },
+            error: (msg) => { updateRunning(wordWrap(`ACP error: ${msg}`, wrapWidth), false); setAgentActive(tabLabel, false); },
+          },
+        );
+        return;
+      }
+      case 'db': {
+        const output = runDbInTab(tabLabel, cliTrimmed);
+        updateCurrentTab((tab) => ({ ...tab, log: [...tab.log, { input: trimmed, output }], scrollOffset: 0 }));
+        return;
+      }
+      case 'connection': {
+        const parsed = parseConnectionCommand(cliTrimmed);
+        let output: string;
+        if ('error' in parsed) {
+          output = parsed.error;
+        } else if (parsed.action === 'list') {
+          // SQLite connections are global; shell/acp are this tab's.
+          const lines: string[] = [];
+          if (shellsRef.current.get(tabIndex)) lines.push(`shell:${shellName}`);
+          if (acpRef.current.get(tabIndex)) lines.push('acp:opencode');
+          for (const n of listOpenConnections()) lines.push(`sqlite:${n}`);
+          output = lines.length ? lines.join('\n') : 'No open connections.';
+        } else if (parsed.kind === 'sqlite') {
+          if (closeConnection(parsed.id)) {
+            forgetDbConn(parsed.id);
+            output = `Closed connection sqlite:${parsed.id}.`;
+          } else {
+            output = `No open connection sqlite:${parsed.id}.`;
+          }
+        } else if (parsed.kind === 'shell') {
+          if (parsed.id !== shellName) {
+            output = `No open connection shell:${parsed.id} (this tab's shell is "${shellName}").`;
+          } else if (shellsRef.current.get(tabIndex)) {
+            shellsRef.current.get(tabIndex)?.kill();
+            shellsRef.current.delete(tabIndex);
+            setShellActive((prev) => { const c = { ...prev }; delete c[tabIndex]; return c; });
+            output = `Closed connection shell:${shellName}.`;
+          } else {
+            output = `No open connection shell:${shellName}.`;
+          }
+        } else {
+          // acp — hardcoded to the OpenCode agent.
+          if (parsed.id !== 'opencode') {
+            output = `No open connection acp:${parsed.id} (the acp agent is "opencode").`;
+          } else if (acpRef.current.get(tabIndex)) {
+            acpRef.current.get(tabIndex)?.kill();
+            acpRef.current.delete(tabIndex);
+            setAcpInfo((prev) => { const c = { ...prev }; delete c[tabIndex]; return c; });
+            output = 'Closed connection acp:opencode.';
+          } else {
+            output = 'No open connection acp:opencode.';
+          }
+        }
+        updateCurrentTab((tab) => ({ ...tab, log: [...tab.log, { input: trimmed, output }], scrollOffset: 0 }));
         return;
       }
       case 'clear':
@@ -580,6 +707,7 @@ export const App = () => {
           shellsRef.current.clear();
           for (const [, session] of acpRef.current) session.kill();
           acpRef.current.clear();
+          closeAllConnections();
           exit();
         } else {
           const tabIdx = activeTabRef.current;
@@ -597,6 +725,7 @@ export const App = () => {
           const closedLabel = closedTab.label;
           setTabs((prev) => prev.filter((_, i) => i !== tabIdx));
           setAgentStates((prev) => { const copy = { ...prev }; delete copy[closedLabel]; return copy; });
+          setTabDbConns((prev) => { const copy = { ...prev }; delete copy[closedLabel]; return copy; });
           setActiveTab((prev) => Math.min(prev, tabs.length - 2));
         }
         return;
@@ -607,10 +736,19 @@ export const App = () => {
         shellsRef.current.clear();
         for (const [, session] of acpRef.current) session.kill();
         acpRef.current.clear();
+        closeAllConnections();
         exit();
         return;
     }
   };
+
+  // Open connection strings for the active tab — its shell/agent plus all open
+  // SQLite connections — offered as `connection close` completions.
+  const connectionStrings: string[] = [
+    ...(shellsRef.current.get(activeTab) ? [`shell:${shellName}`] : []),
+    ...(acpRef.current.get(activeTab) ? ['acp:opencode'] : []),
+    ...listOpenConnections().map((n) => `sqlite:${n}`),
+  ];
 
   const inputHandlerDeps: InputHandlerDeps = {
     input, cursor, setInput, setCursor,
@@ -622,6 +760,7 @@ export const App = () => {
     interactive: interactive !== null,
     cwd: cwdRef.current[cur.label] ?? process.cwd(),
     agents: tabs.map((t) => t.label),
+    connections: connectionStrings,
   };
   useInputHandler(inputHandlerDeps);
 
@@ -639,17 +778,20 @@ export const App = () => {
   // Ink does not draw over its full-screen output.
   if (interactive) return null;
 
+  // SQLite connections this tab has open (filtered against the live registry).
+  const dbConns = (tabDbConns[cur.label] ?? []).filter(isConnectionOpen);
+
   return (
     <Box flexDirection="column" height={rows}>
       <TabStrip tabs={tabs} agentStates={agentStates} activeTab={activeTab} theme={theme} scrollBoundaryHit={scrollBoundaryHit} />
       <Transcript visibleLines={visibleLines} scrollChars={scrollChars} visibleHeight={visibleHeight} dotColor={cur.dotColor} theme={theme} />
       <PromptBar beforeCursor={beforeCursor} afterCursor={afterCursor} dotColor={cur.dotColor} theme={theme} historyItems={frequentHistory} historySelectedIdx={historyPickerIdx} historyOpen={historyPickerOpen} />
-      {(shellActive[activeTab] || acpInfo[activeTab]) && (
+      {(shellActive[activeTab] || acpInfo[activeTab] || dbConns.length > 0) && (
         <StatusPopup
           shell={shellActive[activeTab] ? process.env.SHELL || 'bash' : undefined}
           cwd={cwdRef.current[cur.label] ?? process.cwd()}
           provider={acpInfo[activeTab]?.provider}
-          model={acpInfo[activeTab]?.model}
+          dbConnections={dbConns}
           theme={theme}
         />
       )}
@@ -657,8 +799,17 @@ export const App = () => {
   );
 };
 
+// node:sqlite emits an ExperimentalWarning on first use; adding any 'warning'
+// listener suppresses Node's default stderr printer, which would corrupt the
+// Ink alternate-screen UI.
+process.on('warning', (w) => {
+  if (w.name === 'ExperimentalWarning' && /SQLite/i.test(w.message)) return;
+});
+
 initAgentStateDir(process.cwd());
 initWorkspaceDir(process.cwd());
+// Databases persist across launches, so the db dir is initialized but never cleared.
+initDbDir(process.cwd());
 
 const relaunch = process.argv.includes('--relaunch');
 if (!relaunch) {

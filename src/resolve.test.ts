@@ -32,6 +32,8 @@ describe('resolveCommand', () => {
     expect(resolveCommand('msg bilal info hi')).toEqual({ kind: 'app', name: 'msg', cmd: 'msg bilal info hi' });
     expect(resolveCommand('broadcast all info hi')).toEqual({ kind: 'app', name: 'broadcast', cmd: 'broadcast all info hi' });
     expect(resolveCommand('acp summarize this repo')).toEqual({ kind: 'app', name: 'acp', cmd: 'acp summarize this repo' });
+    expect(resolveCommand('db sqlite query mydb SELECT 1')).toEqual({ kind: 'app', name: 'db', cmd: 'db sqlite query mydb SELECT 1' });
+    expect(resolveCommand('connection close sqlite:mydb')).toEqual({ kind: 'app', name: 'connection', cmd: 'connection close sqlite:mydb' });
     expect(resolveCommand('clear')).toEqual({ kind: 'app', name: 'clear', cmd: 'clear' });
     expect(resolveCommand('state')).toEqual({ kind: 'app', name: 'state', cmd: 'state' });
     expect(resolveCommand('hist')).toEqual({ kind: 'app', name: 'hist', cmd: 'hist' });

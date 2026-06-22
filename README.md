@@ -35,6 +35,8 @@ janus
 | `msg`        | Send a message to another agent    |
 | `broadcast`  | Send a message to several or all agents |
 | `acp`        | Send a prompt to the OpenCode ACP agent |
+| `db`         | Create, delete, query, or list SQLite databases |
+| `connection` | List or close open connections (sqlite/shell/acp) |
 
 ### State persistence
 
@@ -105,6 +107,53 @@ agent bilal -w
 
 This clones the root repo (detected from the current directory) into `.janussary/workspace/bilal/` via `git clone --shared` — no network needed, completes in milliseconds. The agent's shell spawns inside the workspace. Make changes, commit, push, then close the tab — the workspace is automatically removed.
 
+### Databases
+
+Janissary can create and query [SQLite](https://www.sqlite.org) databases directly from the command line. Databases are stored at `.janussary/db/sqlite/<name>.sqlite` and — unlike agent state and workspaces — **persist across launches** (they are never cleared automatically).
+
+```
+db sqlite create <name>          # create an empty database
+db sqlite delete <name>          # delete a database file
+db sqlite query  <name> <sql>    # run SQL against a database
+db sqlite list                   # list existing databases
+```
+
+The `query` subcommand runs any SQL. Statements that return rows (`SELECT`, `PRAGMA`, `WITH`, `EXPLAIN`) are printed as an aligned table with a row count; other statements (`CREATE`, `INSERT`, `UPDATE`, …) report `OK.` and may contain several semicolon-separated statements at once.
+
+```
+db sqlite create shop
+db sqlite query shop CREATE TABLE items (id INTEGER PRIMARY KEY, name TEXT)
+db sqlite query shop INSERT INTO items (name) VALUES ('widget'), ('gadget')
+db sqlite query shop SELECT * FROM items
+```
+
+Database names are restricted to letters, numbers, `-`, and `_` (so a name can never escape the storage directory). SQLite is provided by Node's built-in `node:sqlite` module — no extra dependency is required.
+
+**Persistent connections.** The first `db` command for a database opens a connection that stays open — across commands and tabs — until you close it explicitly or quit the app. Many databases can be connected at once, so connection-scoped state (transactions, `TEMP` tables, pragmas) survives between commands. See the Connections section for managing them.
+
+### Connections
+
+Janissary keeps long-lived connections open: SQLite databases, each tab's shell, and each tab's ACP agent. The `connection` command lists and closes them.
+
+```
+connection list                       # list open connections
+connection close sqlite:<name>        # close a database connection
+connection close shell:<shell>        # close this tab's shell (e.g. shell:bash)
+connection close acp:opencode         # close this tab's ACP agent
+```
+
+Connections are addressed as `<kind>:<id>`:
+
+| Kind | Id | Scope |
+| ---- | -- | ----- |
+| `sqlite` | database name | Global — shared across all tabs. |
+| `shell` | shell program (`bash`, `zsh`, …) | The current tab. |
+| `acp` | `opencode` | The current tab. |
+
+Closing a connection is safe: a SQLite connection reopens on the next `db` command, a shell respawns on the next shell command (restoring its working directory), and an ACP agent reconnects on the next `acp` prompt. All connections are closed automatically when the owning tab is closed or the app exits.
+
+A small `connections` panel floats at the top-right of each tab, listing that tab's live connections — its shell, its ACP agent, and each `sqlite:<name>` database it has accessed — so opening a database is reflected there immediately.
+
 ### Interactive programs
 
 Full-screen / interactive programs that need a real terminal — pagers (`less`, `more`, `man`), editors (`vim`, `nano`), monitors (`top`, `htop`), REPLs (`python`, `node`, `psql`), and the like — run in a pseudo-terminal (via [node-pty](https://github.com/microsoft/node-pty)) that takes over the screen for the duration of the session:
@@ -126,6 +175,16 @@ acp summarize the architecture of this repo
 ```
 
 Janissary acts as the ACP client: it spawns the agent as a subprocess, speaks JSON-RPC over stdio, and streams the agent's reply into the tab. The connection is per-tab and reused across prompts. This MVP is read-only — tool-permission requests are auto-declined and filesystem/terminal callbacks are not yet offered.
+
+#### Database help (autonomous tool loop)
+
+The agent is primed with the `db` command syntax on every prompt, so you can ask for database work in plain language:
+
+```
+acp list the actors in the movies database
+```
+
+The agent issues a single `db` command, Janissary runs it automatically, and the output is fed back to the agent as context. It keeps issuing commands and reading results in a loop until it can answer — then it replies with no trailing command and the loop stops. Each executed command and its result appear in the transcript so you can see exactly what ran. The loop is capped (8 `db` steps) to avoid runaway sessions, and only `db` commands are auto-run — the agent cannot execute arbitrary shell.
 
 #### Setting up OpenCode
 
@@ -155,11 +214,11 @@ OpenCode ships an ACP server mode, so it works as a drop-in agent. Before using 
 | `Ctrl+←` / `Ctrl+→` | Move the current tab left / right  |
 | `Ctrl+↑` / `Ctrl+↓` | Scroll the transcript up / down    |
 | `Ctrl+R`            | Open command history picker        |
-| `Tab`               | Complete a file path, or an agent name for `msg` / `broadcast` |
+| `Tab`               | Complete a file path, an agent name for `msg` / `broadcast`, or a connection string for `connection close` |
 | `Enter`             | Execute the current command        |
 | `Ctrl+C`            | Exit                              |
 
-`Tab` completes the word at the cursor: filesystem paths against the tab's working directory, or — at the recipient position of `msg` / `broadcast` — active agent names (`broadcast` also offers `all` and completes each entry of a comma-separated list).
+`Tab` completes the word at the cursor: filesystem paths against the tab's working directory; at the recipient position of `msg` / `broadcast`, active agent names (`broadcast` also offers `all` and completes each entry of a comma-separated list); and at the target of `connection close`, the tab's open connection strings (`sqlite:<name>`, `shell:<shell>`, `acp:opencode`).
 
 ## Development
 

@@ -7,6 +7,8 @@ export type LogEntry = {
   from?: string;
   fromColor?: string;
   msgKind?: 'info' | 'request' | 'response';
+  // Set when this entry is an auto-ran agent command (e.g. ACP db loop).
+  acp?: boolean;
 };
 
 export type MessageRenderKind = 'info' | 'request' | 'response';
@@ -18,6 +20,7 @@ export type BufferLine = {
   from?: string;
   fromColor?: string;
   msgKind?: MessageRenderKind;
+  acp?: boolean;
 };
 
 export type Tab = {
@@ -115,10 +118,9 @@ export function wordWrap(text: string, width: number): string {
 export function flattenBuffer(log: LogEntry[]): BufferLine[] {
   const lines: BufferLine[] = [];
   for (const entry of log) {
-    // Blank separator line above each command (a real buffer line so the scroll/viewport
-    // math counts it — using an Ink marginTop would overflow the fixed-height transcript).
-    if (lines.length > 0) lines.push({ type: 'spacer', text: '' });
     if (entry.from) {
+      // Blank separator line above each message.
+      if (lines.length > 0) lines.push({ type: 'spacer', text: '' });
       const kind = entry.msgKind ?? 'info';
       const parts = entry.output.split('\n');
       if (kind === 'response') {
@@ -137,10 +139,17 @@ export function flattenBuffer(log: LogEntry[]): BufferLine[] {
       }
       continue;
     }
-    lines.push({ type: 'prompt', text: expandTabs(entry.input), cwd: entry.cwd });
+    // Skip entries with no input and no output (e.g. empty ACP continuation turns).
+    if (!entry.input && !entry.output) continue;
+    // Blank separator line above each entry.
+    if (lines.length > 0) lines.push({ type: 'spacer', text: '' });
+    // Continuation turns with empty input render output without a prompt line.
+    if (entry.input) {
+      lines.push({ type: 'prompt', text: expandTabs(entry.input), cwd: entry.cwd, acp: entry.acp });
+    }
     if (entry.output) {
       for (const outLine of entry.output.split('\n')) {
-        lines.push({ type: 'output', text: expandTabs(outLine) });
+        lines.push({ type: 'output', text: expandTabs(outLine), acp: entry.acp });
       }
     }
   }

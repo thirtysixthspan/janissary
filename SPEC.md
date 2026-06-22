@@ -222,6 +222,21 @@ Programmatically switches to the next tab.
 
 `acp <prompt>` drives an external [Agent Client Protocol](https://agentclientprotocol.com) agent from the current tab. The agent is hardcoded to OpenCode (`opencode acp`) — no configuration or environment variable is required. With no prompt, `acp` prints `Usage: acp <prompt>.`. See the External ACP Agents section for details.
 
+### `db`
+
+`db sqlite <create|delete|query|list> [name] [sql]` manages SQLite databases (the engine — `sqlite` — is the first parameter). See the Databases section for details. Subcommands:
+
+- `db sqlite create <name>` — create an empty database (reports if it already exists).
+- `db sqlite delete <name>` — delete the database file (reports if it does not exist).
+- `db sqlite query <name> <sql>` — run SQL; row-returning statements print a table, others report `OK.`.
+- `db sqlite list` — list existing database names.
+
+Only the `sqlite` engine is supported; any other engine name is rejected. Database names are validated against `^[A-Za-z0-9_-]+$` (preventing path traversal). Malformed invocations return a `Usage:` message.
+
+### `connection`
+
+`connection <list|close> [kind:id]` lists or closes open connections. See the Connections section. `connection list` shows every open connection; `connection close <kind>:<id>` closes one, where `<kind>` is `sqlite`, `shell`, or `acp`. Malformed invocations return a `Usage:` message.
+
 ### Shell execution
 
 Any command prefixed with a backtick (`` ` ``) is forwarded to the tab's persistent system shell. See the Window Transcript section.
@@ -284,7 +299,7 @@ The entire UI is keyboard-driven. There is no mouse interaction.
 | Escape | Reset scroll to bottom |
 | Backspace / Delete | Delete character before cursor |
 | (printable) | Insert character at cursor |
-| Tab | Ignored |
+| Tab | Complete the token at the cursor: a file path, a `msg`/`broadcast` agent name, or a `connection close` connection string |
 
 ---
 
@@ -374,13 +389,92 @@ Only backtick-prefixed shell commands trigger a pwd inquiry. Built-in commands d
 
 ---
 
+## Databases
+
+SQLite database management via the `db` command (`src/db.ts`), backed by Node's built-in `node:sqlite` module (no external dependency). The underlying connection registry lives in `src/connections.ts` and is shared with the `connection` command (see the Connections section).
+
+### Storage location
+
+Each database is a single file at `.janussary/db/sqlite/<name>.sqlite`. The directory is created on demand. The path base is set at startup via `initDbDir(process.cwd())`.
+
+### Persistence
+
+Unlike `.janussary/state/` and `.janussary/workspace/`, the database directory is **never cleared** — not on normal launch, not on `--relaunch`, not on quit. Databases persist across sessions by design.
+
+### Connection model
+
+Connections are persistent, not per-command. The first `db` command targeting a database opens a `DatabaseSync` connection that is cached in a module-level `Map` keyed by database name and kept open across subsequent commands and tabs. Connections are global (a database is a shared resource, not tab-scoped) and several may be open at once. A connection is closed only by `connection close sqlite:<name>`, by `db delete` (which closes before removing the file), or at app exit (`closeAllConnections`). Because the connection is reused, connection-scoped state — transactions, `TEMP` tables, pragmas — survives between commands. `db create` opens (and lazily creates the file for) a connection; `db query` reuses or opens one; `db delete` closes any open connection first so the file is not locked.
+
+### Name validation
+
+Database names must match `^[A-Za-z0-9_-]+$`. This restricts names to safe filename characters and blocks path traversal (`..`, `/`). Invalid names return `Invalid database name "<name>". …`.
+
+### Engine
+
+Only `sqlite` is accepted as the engine token. Any other engine returns `Unsupported engine "<engine>". Only "sqlite" is supported.`
+
+### Query handling
+
+`db sqlite query <name> <sql>` runs the SQL verbatim (whitespace within the SQL is preserved) on the database's persistent connection:
+
+- **Row-returning statements** — those beginning with `SELECT`, `PRAGMA`, `WITH`, or `EXPLAIN` (case-insensitive) — are executed with a prepared statement and rendered as an aligned text table: a header row, a dashed separator, one row per record, and a trailing `(<n> row[s])` count. A result with no rows renders `(0 rows)`.
+- **Other statements** are executed with `exec`, which supports multiple semicolon-separated statements, and report `OK.` on success.
+- Errors (bad SQL, missing tables) are caught and returned as `Query error: <message>` without crashing the app.
+- Querying or deleting a database that does not exist reports a friendly message rather than failing.
+
+### Experimental-warning suppression
+
+`node:sqlite` emits a one-time `ExperimentalWarning` on first use. Because the app runs in Ink's alternate-screen mode, a stray stderr write would corrupt the display, so a `process.on('warning', …)` listener is registered at startup to swallow that warning (registering any listener also disables Node's default stderr printer).
+
+---
+
+## Connections
+
+The `connection` command (parsed by `parseConnectionCommand` in `src/connections.ts`, dispatched in `src/cli.tsx`) inspects and closes the three kinds of long-lived connection the app holds. Each connection is addressed as `<kind>:<id>`.
+
+### Kinds
+
+| Kind | Id | Scope | Backing store |
+|---|---|---|---|
+| `sqlite` | database name | Global (shared across tabs) | connection registry in `connections.ts` |
+| `shell` | shell program basename (`bash`, `zsh`, …) | Current tab | `shellsRef` (keyed by tab index) |
+| `acp` | `opencode` | Current tab | `acpRef` (keyed by tab index) |
+
+The shell id is derived from `process.env.SHELL` (default `bash`); the acp id is always `opencode` (the hardcoded agent).
+
+### `connection list`
+
+Lists all open connections, one per line: the current tab's shell (`shell:<name>`) if a shell is running, the current tab's agent (`acp:opencode`) if connected, and every open SQLite connection (`sqlite:<name>`, from `listOpenConnections`). When none are open it returns `No open connections.`
+
+### `connection close <kind>:<id>`
+
+- `sqlite:<name>` — closes the database connection via `closeConnection(name)`. Returns `Closed connection sqlite:<name>.` or `No open connection sqlite:<name>.` if none was open. The connection reopens on the next `db` command.
+- `shell:<name>` — if `<name>` matches this tab's shell, kills the tab's shell process and clears its busy indicator; the shell respawns (restoring its cwd) on the next shell command. A mismatched or absent shell reports a `No open connection …` message.
+- `acp:<name>` — if `<name>` is `opencode`, kills the tab's ACP session and clears its status-popup info; it reconnects on the next `acp` prompt. Otherwise reports `No open connection …`.
+
+Pressing `Tab` at the target of `connection close` completes against the active tab's open connection strings (its shell and agent plus every open `sqlite:<name>`), so a connection can be closed by completing and running `connection close <string>`.
+
+### Lifecycle integration
+
+Closing a tab kills that tab's shell and ACP connections (SQLite connections, being global, are untouched). Quitting the app, closing the last tab, and the component-unmount cleanup all additionally call `closeAllConnections()` to close every open SQLite connection.
+
+### Validation
+
+A close target must be `<kind>:<id>` with a known kind (`sqlite`, `shell`, `acp`) and a non-empty id; otherwise a descriptive error is returned. A bare `connection` or an unrecognized action returns the `Usage:` message.
+
+### Status popup
+
+A small titled `connections` panel (`StatusPopup`) floats at the top-right of the active tab, listing that tab's live connections on separate lines: the shell + working directory (`bash:~/dir`) once a shell is running, the ACP agent as `acp:<agent>` (e.g. `acp:opencode`) once connected, and `sqlite:<name>` for each database the tab has accessed. The popup appears whenever any of these exist. Although SQLite connections are global, each is attributed to the tab(s) that ran a `db` command against it (tracked in `tabDbConns`), so a tab's popup reflects the databases it has opened; the list is filtered against the live registry (`isConnectionOpen`), so closing a connection (`connection close sqlite:<name>` or `db sqlite delete`) removes it from the popup.
+
+---
+
 ## External ACP Agents
 
 A tab can drive an [Agent Client Protocol](https://agentclientprotocol.com) agent via the `acp <prompt>` command. This is an experimental, read-only MVP.
 
 ### Hardcoded agent
 
-The agent command is hardcoded to OpenCode: `opencode acp`. There is no configuration or environment variable — `opencode` must be installed, authenticated (`opencode auth login`), and on `PATH`. OpenCode's model is configured via the `OPENCODE_CONFIG_CONTENT` env var passed to the subprocess (currently `opencode/deepseek-v4-flash-free`), and the `provider/model` is shown in the tab's status popup.
+The agent command is hardcoded to OpenCode: `opencode acp`. There is no configuration or environment variable — `opencode` must be installed, authenticated (`opencode auth login`), and on `PATH`. OpenCode's model is configured via the `OPENCODE_CONFIG_CONTENT` env var passed to the subprocess (currently `opencode/deepseek-v4-flash-free`), and the agent connection is shown as `acp:<agent>` in the tab's status popup.
 
 ### Connection lifecycle
 
@@ -389,6 +483,21 @@ Janissary acts as the ACP client: on the first `acp` prompt in a tab it spawns t
 ### Reply streaming
 
 The agent reply streams into a running log entry keyed by the prompt text. ACP replies arrive as one long line with no newlines, so output is word-wrapped to the transcript's content width (terminal columns minus borders/padding/scrollbar). While awaiting the agent, the tab's busy indicator flashes. On completion the entry is finalized; empty output renders as `(no output)`.
+
+### Database assistance (autonomous tool loop)
+
+The `db` command grammar (`DB_PRIMER` in `src/db.ts`) is prepended to every user `acp` prompt (but not to the tool-result follow-ups within a loop), so the agent stays aware of the syntax even when a session is reused, and is instructed to end a reply with exactly one `db` command on its own final line when it needs data.
+
+The `acp` handler then drives an autonomous loop (`runAcpToolLoop` in `src/acp-loop.ts`, wired with rendering/execution callbacks in `src/cli.tsx`):
+
+1. The agent's reply streams into a transcript entry (the first turn shows the user's prompt; continuation turns have no prompt line).
+2. On completion, `extractDbCommand` scans the reply bottom-up (tolerating a code fence or a `$ `/`> ` prefix) for a `db sqlite create|delete|query|list …` line.
+3. If a command is found, it is executed immediately via `runDbCommand`, shown in the transcript as its own command entry (input = the command, output = the result), and the output is sent back to the agent as a follow-up prompt asking it to continue or give a final answer.
+4. The loop repeats until the agent replies with no `db` command, or a cap of 8 `db` steps is reached (a `(stopped after 8 db steps)` notice is logged in that case).
+
+A freshly connected agent (e.g. OpenCode loading its model on the first prompt) sometimes returns an empty first reply; the loop retries the first turn once — reusing the same transcript entry — before treating an empty reply as a final answer, so the first `acp` request no longer comes back empty.
+
+Only `db` commands are auto-run — the agent cannot execute arbitrary shell. `db` is also dispatchable through `runCaptureInTab` (the shared command-capture path used by `msg …request`), which executes a resolved `db` command via `runDbCommand` rather than refusing it as an app command, so a `db` command also works as an inter-agent `request`.
 
 ### Scope and limits
 
@@ -423,12 +532,15 @@ Compiled with `tsc` targeting ES2023 with NodeNext module resolution. Source in 
 
 ### Test suite
 
-35 tests across five files using vitest and `ink-testing-library`:
-- `src/commands.test.ts` — tests `getOutput` for each built-in command, case insensitivity, empty/whitespace input, unknown commands, and `resolveAgentName` for random selection, provided names (lowercased), duplicate guard, and exhaustion.
-- `src/cli.test.tsx` — smoke test verifying initial render shows the `janus` tab, the `Type "help"` placeholder, and the `>` prompt.
-- `src/cli.integration.test.tsx` — drives `App` via simulated keystrokes (e.g. `Ctrl+Left`/`Ctrl+Right` tab reordering) against restored `--relaunch` state.
-- `src/tab.test.ts` — `tab.ts` helpers: `makeTab`, `flattenBuffer`, history helpers, and `swapTabsLeft`/`swapTabsRight`.
-- `src/shell.test.ts` — persistent shell behavior.
+144 tests across 17 files using vitest and `ink-testing-library`. Highlights:
+- `src/commands.test.ts` — `getOutput` for each built-in, case insensitivity, empty/whitespace input, unknown commands, and `resolveAgentName` (random selection, provided names lowercased, duplicate guard, exhaustion).
+- `src/resolve.test.ts` — `resolveCommand` classification (shell/app/output/empty), including `db`/`connection` routing.
+- `src/db.test.ts` — `parseDbCommand` (engine-first word order, quoted-SQL unwrapping, name validation, usage hints), `runDbCommand` lifecycle (create/list/query/delete, persistent connections, TEMP-table persistence, errors), and `extractDbCommand`.
+- `src/connections.test.ts` — `parseConnectionCommand` for each kind and its error cases.
+- `src/acp-loop.test.ts` — `runAcpToolLoop`: runs an extracted command and feeds the output back, prepends the primer only on the first turn, stops on a final answer, caps at `maxSteps`, and surfaces errors.
+- `src/tab.test.ts` — `tab.ts` helpers: `makeTab`, `flattenBuffer`, `wordWrap`, history helpers, `swapTabsLeft`/`swapTabsRight`.
+- `src/cli.test.tsx`, `src/cli.integration.test.tsx`, `src/cli.relaunch.test.tsx` — render smoke test, simulated-keystroke integration (e.g. `Ctrl+Left`/`Ctrl+Right` tab reordering), and `--relaunch` restore.
+- Plus `completion`, `interactive`, `messaging`(+hook), `scroll`, `shell`, `useInputHandler`, and `workspace` suites.
 
 ### Lint and format
 

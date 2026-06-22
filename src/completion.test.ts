@@ -93,3 +93,30 @@ describe('completeCommandLine — agent names', () => {
     expect(completeCommandLine('msg bilal jan', 13, noFiles, agents).newInput).toBe('msg bilal jan');
   });
 });
+
+describe('completeCommandLine — connection strings', () => {
+  const noFiles = '/no/such/dir/xyz';
+  const conns = ['shell:bash', 'acp:opencode', 'sqlite:movies', 'sqlite:shop'];
+
+  it('completes a unique connection string and adds a space', () => {
+    expect(completeCommandLine('connection close acp', 20, noFiles, [], conns).newInput).toBe(
+      'connection close acp:opencode ',
+    );
+  });
+
+  it('fills the common prefix when several connections match', () => {
+    const r = completeCommandLine('connection close sq', 19, noFiles, [], conns);
+    expect(r.newInput).toBe('connection close sqlite:');
+    expect(r.matches.sort()).toEqual(['sqlite:movies', 'sqlite:shop']);
+  });
+
+  it('offers every open connection for an empty target', () => {
+    const r = completeCommandLine('connection close ', 17, noFiles, [], conns);
+    expect(r.matches.sort()).toEqual(['acp:opencode', 'shell:bash', 'sqlite:movies', 'sqlite:shop']);
+  });
+
+  it('does not offer connections for `connection list` or the command word', () => {
+    expect(completeCommandLine('connection lis', 14, noFiles, [], conns).matches).toEqual([]);
+    expect(completeCommandLine('connection close ', 17, noFiles, [], []).matches).toEqual([]);
+  });
+});

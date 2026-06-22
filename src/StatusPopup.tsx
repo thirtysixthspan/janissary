@@ -20,27 +20,42 @@ type Props = {
   shell?: string;
   cwd: string;
   provider?: string;
-  model?: string;
+  dbConnections?: string[];
   theme: ThemeColors;
 };
 
 /**
- * A small titled status panel anchored to the bottom-right, floating just above the
- * prompt bar. Shows the shell + working directory once a shell is running, and the
- * connected ACP provider/model, on separate lines. Ink's Box has no border title, so the
- * rounded border is drawn manually with the title embedded in the top edge.
+ * Build the popup's body lines: shell + cwd, the ACP agent as a connection string
+ * (`acp:<agent>`), and one line per open SQLite connection. Pure, so it can be
+ * unit-tested without rendering.
  */
-export const StatusPopup = ({ shell, cwd, provider, model, theme }: Props) => {
+export const statusLines = (
+  { shell, cwd, provider, dbConnections, theme }: Props,
+): { text: string; color: string }[] => {
   const lines: { text: string; color: string }[] = [];
   if (shell) lines.push({ text: `${basename(shell)}:${shortCwd(cwd)}`, color: theme.muted });
-  if (provider) lines.push({ text: `${provider}:${model ?? '?'}`, color: theme.accent });
+  if (provider) lines.push({ text: `acp:${provider}`, color: theme.accent });
+  for (const name of dbConnections ?? []) lines.push({ text: `sqlite:${name}`, color: theme.fg });
+  return lines;
+};
+
+/**
+ * A small titled status panel anchored to the top-right, floating just below the tab
+ * strip. Shows, on separate lines, the shell + working directory once a shell is
+ * running, the connected ACP agent (`acp:<agent>`), and any open SQLite connections
+ * this tab has accessed. Ink's Box has no border title, so the rounded border is drawn
+ * manually with the title embedded in the top edge.
+ */
+export const StatusPopup = (props: Props) => {
+  const { theme } = props;
+  const lines = statusLines(props);
 
   const bodyWidth = Math.max(TITLE.length, 0, ...lines.map((l) => l.text.length));
   const span = bodyWidth + 2; // a space of padding on each side
   const topFill = '─'.repeat(Math.max(0, span - 1 - TITLE.length));
 
   return (
-    <Box position="absolute" right={2} bottom={3} flexDirection="column" backgroundColor={theme.bgSoft}>
+    <Box position="absolute" right={2} top={3} flexDirection="column" backgroundColor={theme.bgSoft}>
       <Box>
         <Text color={theme.faint}>╭─</Text>
         <Text color={theme.muted}>{TITLE}</Text>

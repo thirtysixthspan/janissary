@@ -74,12 +74,20 @@ const completeWord = (
  *
  * - For the recipient argument of `msg`/`broadcast`, completes against active agent names
  *   (`broadcast` also offers `all` and supports a comma-separated list).
+ * - For the target of `connection close`, completes against open connection strings
+ *   (e.g. `sqlite:movies`, `shell:bash`, `acp:opencode`).
  * - Otherwise completes a filesystem path relative to `cwd`.
  *
  * A single match is filled in fully; multiple matches fill in their longest common prefix
  * and are returned via `matches` so the caller can display the options.
  */
-export function completeCommandLine(input: string, cursor: number, cwd: string, agents: string[] = []): CompletionResult {
+export function completeCommandLine(
+  input: string,
+  cursor: number,
+  cwd: string,
+  agents: string[] = [],
+  connections: string[] = [],
+): CompletionResult {
   const before = input.slice(0, cursor);
   const after = input.slice(cursor);
   const tokenStart = Math.max(before.lastIndexOf(' '), before.lastIndexOf('\t')) + 1;
@@ -97,6 +105,11 @@ export function completeCommandLine(input: string, cursor: number, cwd: string, 
       return completeWord(token.slice(segStart), token.slice(0, segStart), [...agents, 'all'], '', before, after, tokenStart);
     }
     return completeWord(token, '', agents, ' ', before, after, tokenStart);
+  }
+
+  // Connection-string completion for `connection close <kind>:<id>`.
+  if (argIndex === 2 && command === 'connection' && preceding[1]?.toLowerCase() === 'close') {
+    return completeWord(token, '', connections, ' ', before, after, tokenStart);
   }
 
   // Filesystem path completion.

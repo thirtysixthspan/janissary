@@ -35,6 +35,8 @@ const makeDeps = (over: Partial<InputHandlerDeps> = {}): InputHandlerDeps => ({
   flashScrollBoundary: vi.fn(),
   interactive: false,
   cwd: '/tmp',
+  agents: [],
+  connections: [],
   ...over,
 });
 

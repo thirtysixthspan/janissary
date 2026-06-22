@@ -43,11 +43,11 @@ export const Transcript = ({ visibleLines, scrollChars, visibleHeight, dotColor,
       let content: React.ReactNode;
       if (line.type === 'prompt') {
         content = (
-          <Box flexGrow={1} paddingX={2} backgroundColor={theme.bgSoft}>
+          <Box flexGrow={1} paddingLeft={line.acp ? 4 : 2} paddingRight={2} backgroundColor={theme.bgSoft}>
             {line.cwd && (
               <Text color={theme.muted} backgroundColor={theme.bgSoft}>{formatCwd(line.cwd)} </Text>
             )}
-            <Text bold color={dotColor} backgroundColor={theme.bgSoft}>{'>'}</Text>
+            <Text bold color={dotColor} backgroundColor={theme.bgSoft}>{line.acp ? '+' : '>'}</Text>
             <Text backgroundColor={theme.bgSoft}> </Text>
             <Text wrap="truncate" backgroundColor={theme.bgSoft}>{line.text}</Text>
           </Box>
@@ -65,7 +65,7 @@ export const Transcript = ({ visibleLines, scrollChars, visibleHeight, dotColor,
         );
       } else if (line.type === 'output') {
         content = (
-          <Box paddingLeft={2}>
+          <Box paddingLeft={line.acp ? 4 : 2}>
             <Text wrap="truncate" color={theme.fg}>{line.text}</Text>
           </Box>
         );
@@ -76,14 +76,14 @@ export const Transcript = ({ visibleLines, scrollChars, visibleHeight, dotColor,
           </Box>
         );
       }
-      // The left border follows the sending agent's color for message lines and the
-      // output lines that belong to them (those carry fromColor).
       const borderColor = line.fromColor ?? dotColor;
       return (
         <Box key={row} flexDirection="row">
-          <Box flexShrink={0} width={1}>
-            <Text color={borderColor}>│</Text>
-          </Box>
+          {!line.acp && (
+            <Box flexShrink={0} width={1}>
+              <Text color={borderColor}>│</Text>
+            </Box>
+          )}
           <Box flexGrow={1}>{content}</Box>
         </Box>
       );
