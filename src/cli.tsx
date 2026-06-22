@@ -17,6 +17,7 @@ import { getFrequentHistory, flattenBuffer, wordWrap, type Tab, type LogEntry, d
 import { findRepoRoot, createWorkspace, removeWorkspace as removeWorkspaceDir, initWorkspaceDir, clearWorkspaceDir } from './workspace.js';
 import { runDbCommand, parseDbCommand, DB_PRIMER, extractDbCommand } from './db.js';
 import { runAcpToolLoop } from './acp-loop.js';
+import { loadConfig, getConfig } from './config.js';
 import {
   initDbDir,
   closeConnection,
@@ -33,6 +34,11 @@ export const App = () => {
   const { exit } = useApp();
   const { rows, columns } = useWindowSize();
   const theme: ThemeColors = darkTheme;
+  const maxLines = getConfig().transcriptMaxLines;
+  const capLog = useCallback((log: LogEntry[]): LogEntry[] => {
+    if (log.length <= maxLines) return log;
+    return log.slice(log.length - maxLines);
+  }, [maxLines]);
 
   const [tabs, setTabs] = useState<Tab[]>(() => {
     if (relaunch) {
@@ -190,7 +196,8 @@ export const App = () => {
         const updated = updater(t);
         if (updated.log !== t.log) {
           savedLabel = updated.label;
-          savedLog = updated.log;
+          savedLog = capLog(updated.log);
+          return { ...updated, log: savedLog };
         }
         return updated;
       });
@@ -229,7 +236,7 @@ export const App = () => {
       let savedLog: LogEntry[] | undefined;
       const result = prev.map((t) => {
         if (t.label !== label) return t;
-        const log = [...t.log, entry];
+        const log = capLog([...t.log, entry]);
         savedLog = log;
         return { ...t, log, scrollOffset: 0 };
       });
@@ -810,6 +817,8 @@ initAgentStateDir(process.cwd());
 initWorkspaceDir(process.cwd());
 // Databases persist across launches, so the db dir is initialized but never cleared.
 initDbDir(process.cwd());
+
+loadConfig(process.cwd());
 
 const relaunch = process.argv.includes('--relaunch');
 if (!relaunch) {

@@ -507,6 +507,14 @@ This MVP is read-only: tool-permission requests are auto-declined and filesystem
 
 ## Tooling and Configuration
 
+### Application config
+
+Application settings are stored in `.janussary/config.json`. On first launch a default config is created if the file does not exist. The config is loaded after the `.janussary/` subdirectories are initialized and before the `App` component renders.
+
+| Setting | Type | Default | Description |
+| ------- | ---- | ------- | ----------- |
+| `transcriptMaxLines` | `number` | `25000` | Maximum number of `LogEntry` objects retained per tab's transcript. When exceeded, the oldest entries are dropped (the most recent N are kept). Applied in both `appendLog` and `updateCurrentTab` so all log mutation paths are capped. |
+
 ### Node version
 
 Requires Node 24 (specified in `.nvmrc`).
@@ -532,7 +540,7 @@ Compiled with `tsc` targeting ES2023 with NodeNext module resolution. Source in 
 
 ### Test suite
 
-144 tests across 17 files using vitest and `ink-testing-library`. Highlights:
+162 tests across 19 files using vitest and `ink-testing-library`. Highlights:
 - `src/commands.test.ts` — `getOutput` for each built-in, case insensitivity, empty/whitespace input, unknown commands, and `resolveAgentName` (random selection, provided names lowercased, duplicate guard, exhaustion).
 - `src/resolve.test.ts` — `resolveCommand` classification (shell/app/output/empty), including `db`/`connection` routing.
 - `src/db.test.ts` — `parseDbCommand` (engine-first word order, quoted-SQL unwrapping, name validation, usage hints), `runDbCommand` lifecycle (create/list/query/delete, persistent connections, TEMP-table persistence, errors), and `extractDbCommand`.
@@ -540,7 +548,7 @@ Compiled with `tsc` targeting ES2023 with NodeNext module resolution. Source in 
 - `src/acp-loop.test.ts` — `runAcpToolLoop`: runs an extracted command and feeds the output back, prepends the primer only on the first turn, stops on a final answer, caps at `maxSteps`, and surfaces errors.
 - `src/tab.test.ts` — `tab.ts` helpers: `makeTab`, `flattenBuffer`, `wordWrap`, history helpers, `swapTabsLeft`/`swapTabsRight`.
 - `src/cli.test.tsx`, `src/cli.integration.test.tsx`, `src/cli.relaunch.test.tsx` — render smoke test, simulated-keystroke integration (e.g. `Ctrl+Left`/`Ctrl+Right` tab reordering), and `--relaunch` restore.
-- Plus `completion`, `interactive`, `messaging`(+hook), `scroll`, `shell`, `useInputHandler`, and `workspace` suites.
+- Plus `completion`, `config`, `interactive`, `messaging`(+hook), `scroll`, `shell`, `useInputHandler`, and `workspace` suites.
 
 ### Lint and format
 

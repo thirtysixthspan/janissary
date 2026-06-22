@@ -38,6 +38,20 @@ janus
 | `db`         | Create, delete, query, or list SQLite databases |
 | `connection` | List or close open connections (sqlite/shell/acp) |
 
+### Configuration
+
+Application settings are stored in `.janussary/config.json`. A default config is created automatically on first launch if the file does not exist:
+
+```json
+{
+  "transcriptMaxLines": 25000
+}
+```
+
+| Setting | Default | Description |
+| ------- | ------- | ----------- |
+| `transcriptMaxLines` | `25000` | Maximum number of transcript log entries kept per tab. When the limit is exceeded, the oldest entries are trimmed. |
+
 ### State persistence
 
 Per-agent data (command history, transcript, shell working directory, tab number, and received message context) is persisted to `.janussary/state/<name>.json`. On normal startup the state directory is cleared automatically.
