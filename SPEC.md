@@ -291,9 +291,13 @@ Commands matched by neither a built-in nor the shell-command registry return `Un
 
 All built-in command names are matched case-insensitively.
 
+### Command comments
+
+Before a submitted command is saved to history or executed, `##`-delimited comments are stripped from it by `stripComments` (`src/tab.ts`), applied in `executeRef` (`src/cli.tsx`). A **terminated** comment (`## text ##`) is removed wherever it appears in the line, with the surrounding whitespace collapsed to a single space; an **unterminated** comment (`## text` with no closing `##`) removes everything from `##` to the end. The result is trimmed. For example, `## comment ## clear` and `clear ## comment` both reduce to `clear`. A command stripped to empty falls through to the empty-input rule.
+
 ### Empty or whitespace input
 
-Empty or whitespace-only input is silently discarded (no log entry, no history entry).
+Empty or whitespace-only input is silently discarded (no log entry, no history entry). This applies after comment stripping, so a line consisting solely of a comment is discarded.
 
 ### `dashboard`
 
@@ -574,13 +578,13 @@ Compiled with `tsc` targeting ES2023 with NodeNext module resolution. Source in 
 
 ### Test suite
 
-169 tests across 20 files using vitest and `ink-testing-library`. Highlights:
+180 tests across 20 files using vitest and `ink-testing-library`. Highlights:
 - `src/commands.test.ts` — `getOutput` for each built-in, case insensitivity, empty/whitespace input, unknown commands, and `resolveAgentName` (random selection, provided names lowercased, duplicate guard, exhaustion).
 - `src/resolve.test.ts` — `resolveCommand` classification (shell/app/output/empty), including `db`/`connection` routing.
 - `src/db.test.ts` — `parseDbCommand` (engine-first word order, quoted-SQL unwrapping, name validation, usage hints), `runDbCommand` lifecycle (create/list/query/delete, persistent connections, TEMP-table persistence, errors), and `extractDbCommand`.
 - `src/connections.test.ts` — `parseConnectionCommand` for each kind and its error cases.
 - `src/acp-loop.test.ts` — `runAcpToolLoop`: runs an extracted command and feeds the output back, prepends the primer only on the first turn, stops on a final answer, caps at `maxSteps`, and surfaces errors.
-- `src/tab.test.ts` — `tab.ts` helpers: `makeTab`, `flattenBuffer`, `wordWrap`, history helpers, `swapTabsLeft`/`swapTabsRight`.
+- `src/tab.test.ts` — `tab.ts` helpers: `makeTab`, `flattenBuffer`, `wordWrap`, history helpers, `swapTabsLeft`/`swapTabsRight`, and `stripComments` (terminated, unterminated, and mid-command `##` comments).
 - `src/config.test.ts` — config file creation, reading, missing-field defaults, parse-error fallback.
 - `src/logger.test.ts` — log directory init, JSON-line appending, daily file name, special characters.
 - `src/cli.test.tsx`, `src/cli.integration.test.tsx`, `src/cli.relaunch.test.tsx` — render smoke test, simulated-keystroke integration (e.g. `Ctrl+Left`/`Ctrl+Right` tab reordering), and `--relaunch` restore.

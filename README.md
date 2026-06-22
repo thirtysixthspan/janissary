@@ -129,6 +129,18 @@ Prefix any command with `` ` `` to run it directly in your shell:
 
 Common shell commands (`ls`, `grep`, `cat`, …) also run automatically without the backtick when they don't collide with a built-in. Conversely, prefix a command with `/` to force the built-in dispatcher (e.g. `/clear` to clear the log even though `clear` is also a shell command).
 
+### Command comments
+
+Text wrapped in `##` delimiters is stripped from a command before it runs (and before it is saved to history). A comment can sit anywhere in the line:
+
+```
+## run a clean build ## npm run build      → npm run build
+npm run build ## once the deps are ready    → npm run build
+echo hello ## inline note ## world          → echo hello world
+```
+
+A terminated comment (`## … ##`) is removed wherever it appears, collapsing the surrounding whitespace. An unterminated comment (`## …` with no closing `##`) removes everything from `##` to the end of the line. This lets you annotate or temporarily disable part of a command without retyping it.
+
 ### Workspace
 
 Use `agent --workspace` (or `agent -w`) to create an agent tab with a disposable git workspace:

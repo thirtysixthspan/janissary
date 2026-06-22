@@ -13,7 +13,7 @@ import { useInputHandler, type InputHandlerDeps } from './useInputHandler.js';
 import { TabStrip } from './TabStrip.js';
 import { Transcript } from './Transcript.js';
 import { PromptBar } from './PromptBar.js';
-import { getFrequentHistory, flattenBuffer, wordWrap, type Tab, type LogEntry, dotColors, makeTab } from './tab.js';
+import { getFrequentHistory, flattenBuffer, wordWrap, stripComments, type Tab, type LogEntry, dotColors, makeTab } from './tab.js';
 import { findRepoRoot, createWorkspace, removeWorkspace as removeWorkspaceDir, initWorkspaceDir, clearWorkspaceDir } from './workspace.js';
 import { runDbCommand, parseDbCommand, DB_PRIMER, extractDbCommand } from './db.js';
 import { runAcpToolLoop } from './acp-loop.js';
@@ -410,7 +410,7 @@ export const App = () => {
 
   const executeRef = useRef<((cmd: string) => void) | null>(null);
   executeRef.current = (cmd: string) => {
-    const trimmed = cmd.trim();
+    const trimmed = stripComments(cmd);
     const curTab = tabs[activeTabRef.current];
     const newHistory = curTab && curTab.cmdHistory[curTab.cmdHistory.length - 1] !== trimmed
       ? [...curTab.cmdHistory, trimmed].slice(-100)

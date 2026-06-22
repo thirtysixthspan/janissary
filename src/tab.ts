@@ -156,6 +156,14 @@ export function flattenBuffer(log: LogEntry[]): BufferLine[] {
   return lines;
 }
 
+// Strip ## comments from a command. A terminated comment `## text ##` is removed
+// wherever it appears; an unterminated `## text` removes everything from `##` to the
+// end. Each alternative consumes a `##`, then either runs non-greedily to a closing
+// `##` or, failing that, to the end of the string.
+export function stripComments(cmd: string): string {
+  return cmd.replace(/\s*##(?:[\s\S]*?##\s*|[\s\S]*)/g, ' ').trim();
+}
+
 export function renumberTabs(tabs: Tab[]): Tab[] {
   return tabs.map((t, i) => ({ ...t, number: i + 1 }));
 }

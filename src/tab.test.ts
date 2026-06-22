@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { makeTab, swapTabsLeft, swapTabsRight, renumberTabs, expandTabs, flattenBuffer, wordWrap } from './tab.js';
+import { makeTab, swapTabsLeft, swapTabsRight, renumberTabs, expandTabs, flattenBuffer, wordWrap, stripComments } from './tab.js';
 
 describe('wordWrap', () => {
   it('leaves text within the width untouched', () => {
@@ -123,5 +123,47 @@ describe('renumberTabs', () => {
     const result = renumberTabs(tabs);
     expect(result[0].label).toBe('a');
     expect(result[0].dotColor).toBe('#red');
+  });
+});
+
+describe('stripComments', () => {
+  it('strips a ## comment prefix', () => {
+    expect(stripComments('## comment ## This is the command to run.')).toBe('This is the command to run.');
+  });
+
+  it('strips a ## comment with no trailing space before the command', () => {
+    expect(stripComments('## comment ##command')).toBe('command');
+  });
+
+  it('leaves commands without ## comments untouched', () => {
+    expect(stripComments('ls -la')).toBe('ls -la');
+  });
+
+  it('trims whitespace after stripping', () => {
+    expect(stripComments('## note ##   clear')).toBe('clear');
+  });
+
+  it('handles empty input', () => {
+    expect(stripComments('')).toBe('');
+  });
+
+  it('handles ## only (no actual comment text)', () => {
+    expect(stripComments('#### command')).toBe('command');
+  });
+
+  it('strips comment from middle of command', () => {
+    expect(stripComments('echo hello ##comment## world')).toBe('echo hello world');
+  });
+
+  it('strips an unterminated trailing comment', () => {
+    expect(stripComments('This is the command to run ## comment')).toBe('This is the command to run');
+  });
+
+  it('strips an unterminated comment with no leading space', () => {
+    expect(stripComments('clear ##note')).toBe('clear');
+  });
+
+  it('strips a whole-line unterminated comment', () => {
+    expect(stripComments('## just a note')).toBe('');
   });
 });
