@@ -18,6 +18,7 @@ import { findRepoRoot, createWorkspace, removeWorkspace as removeWorkspaceDir, i
 import { runDbCommand, parseDbCommand, DB_PRIMER, extractDbCommand } from './db.js';
 import { runAcpToolLoop } from './acp-loop.js';
 import { loadConfig, getConfig } from './config.js';
+import { initLogDir, appendEntry, getTimeStr } from './logger.js';
 import {
   initDbDir,
   closeConnection,
@@ -196,6 +197,11 @@ export const App = () => {
         const updated = updater(t);
         if (updated.log !== t.log) {
           savedLabel = updated.label;
+          for (let j = t.log.length; j < updated.log.length; j++) {
+            const e = updated.log[j];
+            if (e.input) appendEntry({ timestamp: getTimeStr(), agent: savedLabel, text: e.input });
+            if (e.output) appendEntry({ timestamp: getTimeStr(), agent: savedLabel, text: e.output });
+          }
           savedLog = capLog(updated.log);
           return { ...updated, log: savedLog };
         }
@@ -236,6 +242,8 @@ export const App = () => {
       let savedLog: LogEntry[] | undefined;
       const result = prev.map((t) => {
         if (t.label !== label) return t;
+        if (entry.input) appendEntry({ timestamp: getTimeStr(), agent: label, text: entry.input });
+        if (entry.output) appendEntry({ timestamp: getTimeStr(), agent: label, text: entry.output });
         const log = capLog([...t.log, entry]);
         savedLog = log;
         return { ...t, log, scrollOffset: 0 };
@@ -309,6 +317,7 @@ export const App = () => {
     setAgentActive(tabLabel, true);
     const updateRunning = (output: string, running: boolean) => {
       if (!display) return;
+      if (!running && output) appendEntry({ timestamp: getTimeStr(), agent: tabLabel, text: output });
       setTabs((prev) => prev.map((t) => {
         if (t.label !== tabLabel) return t;
         const log = [...t.log];
@@ -574,6 +583,7 @@ export const App = () => {
         const wrapWidth = Math.max(20, (columns || 80) - 6);
         // Update the current turn's running log entry (only one runs at a time).
         const updateRunning = (output: string, running: boolean) => {
+          if (!running && output) appendEntry({ timestamp: getTimeStr(), agent: tabLabel, text: output });
           setTabs((prev) => prev.map((t) => {
             if (t.label !== tabLabel) return t;
             const log = [...t.log];
@@ -602,7 +612,10 @@ export const App = () => {
             chunk: (buf) => updateRunning(wordWrap(buf, wrapWidth), true),
             endTurn: (final) => updateRunning(wordWrap(final, wrapWidth), false),
             // Show the auto-run command like a terminal command with its result.
-            ranCommand: (cmd, _result) => appendLog(tabLabel, { input: cmd, output: '', acp: true }),
+            ranCommand: (cmd, result) => {
+              appendLog(tabLabel, { input: cmd, output: '', acp: true });
+              if (result) appendEntry({ timestamp: getTimeStr(), agent: tabLabel, text: result });
+            },
             finished: (reason, maxSteps) => {
               setAgentActive(tabLabel, false);
               if (reason === 'capped') appendLog(tabLabel, { input: '', output: `(stopped after ${maxSteps} db steps)` });
@@ -817,6 +830,7 @@ initAgentStateDir(process.cwd());
 initWorkspaceDir(process.cwd());
 // Databases persist across launches, so the db dir is initialized but never cleared.
 initDbDir(process.cwd());
+initLogDir(process.cwd());
 
 loadConfig(process.cwd());
 

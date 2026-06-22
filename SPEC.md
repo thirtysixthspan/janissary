@@ -154,6 +154,40 @@ If a command matches the last entry in the tab's history, it is not appended aga
 
 History is capped at 100 entries per tab. Older entries beyond the cap are dropped from the front.
 
+---
+
+## Append-only Log
+
+All tab transcript text is recorded in append-only JSON files stored in `.janussary/log/`. The log is written alongside the in-memory tab state and serves as a persistent, chronological record of every session.
+
+### Storage format
+
+One file per day, named `<YYYY-MM-DD>.json`. Each line is a single JSON object representing one content event:
+
+```
+{"timestamp":"22:55:20.690","agent":"janus","text":"ls -la"}
+```
+
+### Entry fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `timestamp` | string | Local time when the content was logged, formatted as `HH:MM:SS.mmm` |
+| `agent` | string | The label of the tab (agent) where the content appeared |
+| `text` | string | The content text (command input, shell output, message text, etc.) |
+
+### Coverage
+
+Both command inputs and their resulting outputs are logged as separate entries, so the log captures the full back-and-forth of each tab session. Messages sent between agents, ACP prompts and responses, and shell command output are all included.
+
+### Log rotation
+
+A new file is created each UTC day. Entries written before midnight go to today's file; entries after midnight go to the next day's file. There is no retention or rotation beyond daily file naming — old files accumulate until manually cleaned.
+
+### Lifecycle
+
+The log directory is initialized at startup (`initLogDir` in `src/logger.ts`) alongside the other `.janussary/` subdirectories. The directory is never cleared. The append-only log is a flat file — no indexing, no compaction.
+
 ### History on return
 
 Pressing Return saves the trimmed input to history before executing.
@@ -540,13 +574,15 @@ Compiled with `tsc` targeting ES2023 with NodeNext module resolution. Source in 
 
 ### Test suite
 
-162 tests across 19 files using vitest and `ink-testing-library`. Highlights:
+169 tests across 20 files using vitest and `ink-testing-library`. Highlights:
 - `src/commands.test.ts` — `getOutput` for each built-in, case insensitivity, empty/whitespace input, unknown commands, and `resolveAgentName` (random selection, provided names lowercased, duplicate guard, exhaustion).
 - `src/resolve.test.ts` — `resolveCommand` classification (shell/app/output/empty), including `db`/`connection` routing.
 - `src/db.test.ts` — `parseDbCommand` (engine-first word order, quoted-SQL unwrapping, name validation, usage hints), `runDbCommand` lifecycle (create/list/query/delete, persistent connections, TEMP-table persistence, errors), and `extractDbCommand`.
 - `src/connections.test.ts` — `parseConnectionCommand` for each kind and its error cases.
 - `src/acp-loop.test.ts` — `runAcpToolLoop`: runs an extracted command and feeds the output back, prepends the primer only on the first turn, stops on a final answer, caps at `maxSteps`, and surfaces errors.
 - `src/tab.test.ts` — `tab.ts` helpers: `makeTab`, `flattenBuffer`, `wordWrap`, history helpers, `swapTabsLeft`/`swapTabsRight`.
+- `src/config.test.ts` — config file creation, reading, missing-field defaults, parse-error fallback.
+- `src/logger.test.ts` — log directory init, JSON-line appending, daily file name, special characters.
 - `src/cli.test.tsx`, `src/cli.integration.test.tsx`, `src/cli.relaunch.test.tsx` — render smoke test, simulated-keystroke integration (e.g. `Ctrl+Left`/`Ctrl+Right` tab reordering), and `--relaunch` restore.
 - Plus `completion`, `config`, `interactive`, `messaging`(+hook), `scroll`, `shell`, `useInputHandler`, and `workspace` suites.
 

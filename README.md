@@ -64,6 +64,24 @@ janus --relaunch
 
 This restores all agent tabs with their command history, transcripts, and shell working directories from the previous session, so you pick up exactly where you left off. Tabs are restored in their saved order — each tab's recorded number, position, and dot color are preserved, so the tab strip reappears exactly as you left it.
 
+### Append-only log
+
+All tab transcript text is automatically logged to append-only JSON files in `.janussary/log/`. Each line is a JSON object with a UTC timestamp, the tab name, and the content text:
+
+```
+.janussary/log/
+  2026-06-22.json
+  2026-06-23.json
+```
+
+The log rotates daily — entries go to `YYYY-MM-DD.json` based on the current UTC date. Each JSON line contains:
+
+```json
+{"timestamp":"22:55:20.690","agent":"janus","text":"ls -la"}
+```
+
+Both command inputs and their outputs are logged as separate entries, so the log captures a complete record of everything that appeared in each tab. The log directory is created on first launch and persists across sessions.
+
 ### Agent messaging
 
 Agents (tabs) can send messages to one another. Each agent has its own FIFO queue, and messages are processed one at a time:
