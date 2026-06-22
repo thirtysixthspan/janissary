@@ -218,6 +218,10 @@ Programmatically switches to the next tab.
 
 `broadcast <all|agent[,agent...]> <info|request|command> <text>` sends the same message to multiple agents at once. `all` (or `*`) targets every other agent; a comma-separated list targets a specific set. The sender is always excluded, and the result reports which recipients were reached and any unknown names. The kind accepts the same `i`/`r`/`c` aliases as `msg`.
 
+### `acp`
+
+`acp <prompt>` drives an external [Agent Client Protocol](https://agentclientprotocol.com) agent from the current tab. The agent is hardcoded to OpenCode (`opencode acp`) — no configuration or environment variable is required. With no prompt, `acp` prints `Usage: acp <prompt>.`. See the External ACP Agents section for details.
+
 ### Shell execution
 
 Any command prefixed with a backtick (`` ` ``) is forwarded to the tab's persistent system shell. See the Window Transcript section.
@@ -367,6 +371,28 @@ On `--relaunch`, saved cwd values are loaded from agent state files into `cwdRef
 ### Scope
 
 Only backtick-prefixed shell commands trigger a pwd inquiry. Built-in commands do not affect the working directory.
+
+---
+
+## External ACP Agents
+
+A tab can drive an [Agent Client Protocol](https://agentclientprotocol.com) agent via the `acp <prompt>` command. This is an experimental, read-only MVP.
+
+### Hardcoded agent
+
+The agent command is hardcoded to OpenCode: `opencode acp`. There is no configuration or environment variable — `opencode` must be installed, authenticated (`opencode auth login`), and on `PATH`. OpenCode's model is configured via the `OPENCODE_CONFIG_CONTENT` env var passed to the subprocess (currently `opencode/deepseek-v4-flash-free`), and the `provider/model` is shown in the tab's status popup.
+
+### Connection lifecycle
+
+Janissary acts as the ACP client: on the first `acp` prompt in a tab it spawns the agent as a subprocess, speaks JSON-RPC over stdio, and reuses the per-tab connection across subsequent prompts. The subprocess inherits the tab's current working directory.
+
+### Reply streaming
+
+The agent reply streams into a running log entry keyed by the prompt text. ACP replies arrive as one long line with no newlines, so output is word-wrapped to the transcript's content width (terminal columns minus borders/padding/scrollbar). While awaiting the agent, the tab's busy indicator flashes. On completion the entry is finalized; empty output renders as `(no output)`.
+
+### Scope and limits
+
+This MVP is read-only: tool-permission requests are auto-declined and filesystem/terminal callbacks are not yet offered. With no prompt, `acp` prints `Usage: acp <prompt>.`.
 
 ---
 

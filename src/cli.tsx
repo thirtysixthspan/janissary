@@ -480,7 +480,7 @@ export const App = () => {
       case 'acp': {
         const prompt = cliTrimmed.replace(/^acp\b\s*/i, '').trim();
         if (!prompt) {
-          updateCurrentTab((tab) => ({ ...tab, log: [...tab.log, { input: trimmed, output: 'Usage: acp <prompt>. Set JANUS_ACP_CMD to the agent command, e.g. `npx @agentclientprotocol/claude-agent-acp`.' }], scrollOffset: 0 }));
+          updateCurrentTab((tab) => ({ ...tab, log: [...tab.log, { input: trimmed, output: 'Usage: acp <prompt>.' }], scrollOffset: 0 }));
           return;
         }
         // Stream the agent reply into a running log entry, keyed by this prompt text.
@@ -497,12 +497,9 @@ export const App = () => {
         };
         let session = acpRef.current.get(tabIndex);
         if (!session) {
-          const raw = process.env.JANUS_ACP_CMD;
-          if (!raw) {
-            update('JANUS_ACP_CMD is not set. Example: export JANUS_ACP_CMD="npx @agentclientprotocol/claude-agent-acp"', false);
-            return;
-          }
-          const [command, ...args] = raw.split(/\s+/);
+          // OpenCode is the hardcoded ACP agent (`opencode acp`).
+          const command = 'opencode';
+          const args = ['acp'];
           // OpenCode model config (`provider/model`); the popup label is derived from it.
           const opencodeConfig = { model: 'opencode/deepseek-v4-flash-free' };
           const slash = opencodeConfig.model.indexOf('/');

@@ -34,7 +34,7 @@ janus
 | `hist`       | Open command history picker        |
 | `msg`        | Send a message to another agent    |
 | `broadcast`  | Send a message to several or all agents |
-| `acp`        | Send a prompt to an external ACP agent |
+| `acp`        | Send a prompt to the OpenCode ACP agent |
 
 ### State persistence
 
@@ -119,18 +119,17 @@ The Janissary UI is suspended while the program runs (keystrokes go straight to 
 
 ### External ACP agents (experimental)
 
-A tab can drive any [Agent Client Protocol](https://agentclientprotocol.com) agent (e.g. Claude Code via `@agentclientprotocol/claude-agent-acp`, or `opencode acp`). Point `JANUS_ACP_CMD` at the agent command, then prompt it with `acp`:
+A tab can drive an [Agent Client Protocol](https://agentclientprotocol.com) agent. Janissary uses [OpenCode](https://opencode.ai) (`opencode acp`) as its built-in agent — just prompt it with `acp`:
 
 ```
-export JANUS_ACP_CMD="npx @agentclientprotocol/claude-agent-acp"
 acp summarize the architecture of this repo
 ```
 
 Janissary acts as the ACP client: it spawns the agent as a subprocess, speaks JSON-RPC over stdio, and streams the agent's reply into the tab. The connection is per-tab and reused across prompts. This MVP is read-only — tool-permission requests are auto-declined and filesystem/terminal callbacks are not yet offered.
 
-#### Using OpenCode
+#### Setting up OpenCode
 
-[OpenCode](https://opencode.ai) ships an ACP server mode, so it works as a drop-in agent:
+OpenCode ships an ACP server mode, so it works as a drop-in agent. Before using `acp`, install and authenticate it:
 
 1. Install it (binary `opencode`, npm package `opencode-ai`):
 
@@ -144,14 +143,7 @@ Janissary acts as the ACP client: it spawns the agent as a subprocess, speaks JS
    opencode auth login
    ```
 
-3. Point Janissary at it and prompt from a tab:
-
-   ```
-   export JANUS_ACP_CMD="opencode acp"
-   acp summarize the architecture of this repo
-   ```
-
-To sanity-check the agent independently, run `opencode acp` in a plain terminal — it should start and silently wait for JSON-RPC on stdin (Ctrl+C to exit). If `opencode` isn't on your `PATH`, use `JANUS_ACP_CMD="npx opencode-ai acp"` (the first run may be slow while npx fetches it).
+`opencode` must be on your `PATH`. To sanity-check the agent independently, run `opencode acp` in a plain terminal — it should start and silently wait for JSON-RPC on stdin (Ctrl+C to exit).
 
 ### Key Bindings
 
