@@ -26,9 +26,9 @@ type Props = {
 };
 
 /**
- * Build the popup's body lines: shell + cwd, the ACP agent as a connection string
- * (`acp:<agent>`), one line per open browser window (`browser:<id> (<mode>)`), and one
- * line per open SQLite connection. Pure, so it can be unit-tested without rendering.
+ * Build the connection window's body lines: shell + cwd, the ACP agent as a connection
+ * string (`acp:<agent>`), one line per open browser window (`browser:<id> (<mode>)`),
+ * and one line per open SQLite connection. Pure, so it can be unit-tested without rendering.
  */
 export const statusLines = (
   { shell, cwd, provider, dbConnections, browserWindows, theme }: Props,
@@ -42,13 +42,13 @@ export const statusLines = (
 };
 
 /**
- * A small titled status panel anchored to the top-right, floating just below the tab
- * strip. Shows, on separate lines, the shell + working directory once a shell is
+ * A small titled connection window anchored to the top-right, floating just below the
+ * tab strip. Shows, on separate lines, the shell + working directory once a shell is
  * running, the connected ACP agent (`acp:<agent>`), and any open SQLite connections
  * this tab has accessed. Ink's Box has no border title, so the rounded border is drawn
  * manually with the title embedded in the top edge.
  */
-export const StatusPopup = (props: Props) => {
+export const ConnectionWindow = (props: Props) => {
   const { theme } = props;
   const lines = statusLines(props);
 

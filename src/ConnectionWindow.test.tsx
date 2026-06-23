@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { statusLines } from './StatusPopup.js';
+import { statusLines } from './ConnectionWindow.js';
 import { darkTheme } from './theme.js';
 
 const texts = (p: Parameters<typeof statusLines>[0]) => statusLines(p).map((l) => l.text);

@@ -3,7 +3,7 @@ import { render, Box, useApp, useWindowSize, useStdin } from 'ink';
 import { isInteractive, runInteractive, type InteractiveSession } from './interactive.js';
 import { useMessaging, parseMsgCommand, parseBroadcastCommand } from './messaging.js';
 import { connectAcp, type AcpSession, type AcpInfo } from './acp.js';
-import { StatusPopup } from './StatusPopup.js';
+import { ConnectionWindow } from './ConnectionWindow.js';
 import { resolveAgentName, parseAgentCommand } from './commands.js';
 import { resolveCommand } from './resolve.js';
 import { type ThemeColors, darkTheme } from './theme.js';
@@ -974,7 +974,7 @@ export const App = () => {
       <Transcript visibleLines={visibleLines} scrollChars={scrollChars} visibleHeight={visibleHeight} dotColor={cur.dotColor} theme={theme} />
       <PromptBar beforeCursor={beforeCursor} afterCursor={afterCursor} dotColor={cur.dotColor} theme={theme} historyItems={frequentHistory} historySelectedIdx={historyPickerIdx} historyOpen={historyPickerOpen} />
       {(shellActive[activeTab] || acpInfo[activeTab] || dbConns.length > 0 || (browserInfo[activeTab]?.windows.length ?? 0) > 0) && (
-        <StatusPopup
+        <ConnectionWindow
           shell={shellActive[activeTab] ? process.env.SHELL || 'bash' : undefined}
           cwd={cwdRef.current[cur.label] ?? process.cwd()}
           provider={acpInfo[activeTab]?.provider}
