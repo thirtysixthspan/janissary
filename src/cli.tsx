@@ -3,6 +3,7 @@ import { render, Box, useApp, useWindowSize, useStdin } from 'ink';
 import { isInteractive, runInteractive } from './interactive.js';
 import { useMessaging } from './messaging.js';
 import { ConnectionWindow } from './ConnectionWindow.js';
+import type { RouteChoice } from './recognizers/types.js';
 import { ScheduleWindow } from './ScheduleWindow.js';
 import { darkTheme } from './theme.js';
 import { executeShellCmd, queryShellPwd } from './shell.js';
@@ -58,6 +59,10 @@ export const App = () => {
   const [cursor, setCursor] = useState(0);
   const [historyPickerOpen, setHistoryPickerOpen] = useState(false);
   const [historyPickerIdx, setHistoryPickerIdx] = useState(0);
+  // Route chooser: shown when an unprefixed command's route can't be guessed reliably. Holds the
+  // command and the routes to choose between; `routeChooserIdx` is the highlighted option.
+  const [routeChooser, setRouteChooser] = useState<{ cmd: string; choices: RouteChoice[] } | null>(null);
+  const [routeChooserIdx, setRouteChooserIdx] = useState(0);
   const [scrollBoundaryHit, setScrollBoundaryHit] = useState(false);
   const flashScrollBoundary = useCallback(() => {
     setScrollBoundaryHit(true);
@@ -149,7 +154,9 @@ export const App = () => {
   const frequentHistory = getFrequentHistory(cur.cmdHistory, 10);
   const totalTabsWidth = tabs.reduce((w, t) => w + 6 + t.label.length, 0);
   const tabRows = Math.max(1, Math.ceil(totalTabsWidth / (columns || 80)));
-  const pickerHeight = historyPickerOpen ? Math.min(frequentHistory.length, 10) + 2 : 0;
+  const pickerHeight = historyPickerOpen
+    ? Math.min(frequentHistory.length, 10) + 2
+    : routeChooser ? routeChooser.choices.length + 1 : 0;
   const visibleHeight = Math.max(1, rows - tabRows * 3 - 3 - pickerHeight);
   const maxOffset = Math.max(0, buffer.length - visibleHeight);
   const viewportStart = maxOffset - Math.min(cur.scrollOffset, maxOffset);
@@ -370,6 +377,7 @@ export const App = () => {
         runShellInTab(index, label, res.cmd, (out) => onResult(out), false);
         return;
       case 'output':
+      case 'unknown':
         onResult(res.output);
         return;
       case 'app':
@@ -438,6 +446,11 @@ export const App = () => {
     shellName,
     columns,
     frequentHistory,
+    getOpenDbs: (label: string) => (tabDbConns[label] ?? []).filter(isConnectionOpen),
+    openRouteChooser: (cmd: string, choices: RouteChoice[]) => {
+      setRouteChooser({ cmd, choices });
+      setRouteChooserIdx(0);
+    },
   });
 
   useScheduler({ tabsRef, agentStates, setAgentStates, executeRef });
@@ -462,6 +475,7 @@ export const App = () => {
     cwd: cwdRef.current[cur.label] ?? process.cwd(),
     agents: tabs.map((t) => t.label),
     connections: connectionStrings,
+    routeChooser, routeChooserIdx, setRouteChooser, setRouteChooserIdx,
   };
   useInputHandler(inputHandlerDeps);
 
@@ -498,7 +512,7 @@ export const App = () => {
     <Box flexDirection="column" height={rows}>
       <TabStrip tabs={tabs} agentStates={agentStates} activeTab={activeTab} theme={theme} scrollBoundaryHit={scrollBoundaryHit} />
       <Transcript visibleLines={visibleLines} scrollChars={scrollChars} visibleHeight={visibleHeight} dotColor={cur.dotColor} theme={theme} />
-      <CommandWindow beforeCursor={beforeCursor} afterCursor={afterCursor} dotColor={cur.dotColor} theme={theme} historyItems={frequentHistory} historySelectedIdx={historyPickerIdx} historyOpen={historyPickerOpen} />
+      <CommandWindow beforeCursor={beforeCursor} afterCursor={afterCursor} dotColor={cur.dotColor} theme={theme} historyItems={frequentHistory} historySelectedIdx={historyPickerIdx} historyOpen={historyPickerOpen} routeCmd={routeChooser?.cmd ?? null} routeItems={(routeChooser?.choices ?? []).map((c) => c.label)} routeSelectedIdx={routeChooserIdx} />
       {connShown && (
         <ConnectionWindow
           shell={shellActive[activeTab] ? process.env.SHELL || 'bash' : undefined}

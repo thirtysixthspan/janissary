@@ -5,7 +5,7 @@ import { execSync } from 'node:child_process';
 let workspaceBaseDir = '';
 
 export function initWorkspaceDir(projectDir: string): void {
-  workspaceBaseDir = join(projectDir, '.janussary', 'workspace');
+  workspaceBaseDir = join(projectDir, '.janissary', 'workspace');
 }
 
 export function ensureWorkspaceDir(): void {

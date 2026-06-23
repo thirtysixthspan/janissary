@@ -110,7 +110,7 @@ describe('runDbCommand', () => {
 
   it('creates, lists, persists data, queries, and deletes a database', () => {
     expect(runDbCommand('db sqlite create shop')).toContain('Created');
-    expect(existsSync(join(dir, '.janussary', 'db', 'sqlite', 'shop.sqlite'))).toBe(true);
+    expect(existsSync(join(dir, '.janissary', 'db', 'sqlite', 'shop.sqlite'))).toBe(true);
 
     // Duplicate create is reported, not an error.
     expect(runDbCommand('db sqlite create shop')).toContain('already exists');
@@ -127,7 +127,7 @@ describe('runDbCommand', () => {
     expect(out).toContain('(1 row)');
 
     expect(runDbCommand('db sqlite delete shop')).toContain('Deleted');
-    expect(existsSync(join(dir, '.janussary', 'db', 'sqlite', 'shop.sqlite'))).toBe(false);
+    expect(existsSync(join(dir, '.janissary', 'db', 'sqlite', 'shop.sqlite'))).toBe(false);
   });
 
   it('reports a missing database on query/delete', () => {

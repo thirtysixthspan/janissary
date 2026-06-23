@@ -3,12 +3,12 @@ import { mkdirSync, rmSync, existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import type { ConnectionKind, ConnectionParsed } from './types.js';
 
-// SQLite databases live under .janussary/db/sqlite/<name>.sqlite and, unlike
+// SQLite databases live under .janissary/db/sqlite/<name>.sqlite and, unlike
 // agent state and workspaces, persist across launches — that is the whole point.
 let dbDir = '';
 
 export function initDbDir(projectDir: string): void {
-  dbDir = join(projectDir, '.janussary', 'db', 'sqlite');
+  dbDir = join(projectDir, '.janissary', 'db', 'sqlite');
 }
 
 export function dbPath(name: string): string {

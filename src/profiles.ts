@@ -5,7 +5,7 @@ import type { AgentState, ProfileParsed } from './types.js';
 // A profile is a named, reusable set of agents for a particular use case (writing code,
 // surfing the web, authoring a book, …). Each profile is a directory under the profiles
 // directory holding one `<agentname>.json` file per agent, in the agent-state schema.
-// Profiles live in a top-level, committable `profiles/` dir (not `.janussary/`, which is
+// Profiles live in a top-level, committable `profiles/` dir (not `.janissary/`, which is
 // gitignored and whose `state/` is cleared each launch).
 
 let profileDir = '';

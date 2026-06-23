@@ -69,7 +69,7 @@ This produces commits like:
 ```
 feat: add workspace-backed agent tabs
 
-Clones the root repo via git clone --shared into .janussary/workspace/<name>
+Clones the root repo via git clone --shared into .janissary/workspace/<name>
 when agent --workspace is used. The agent shell spawns in the workspace,
 and the directory is cleaned up on tab close or app exit. Adds
 findRepoRoot, createWorkspace, and removeWorkspace to workspace.ts.

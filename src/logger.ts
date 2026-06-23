@@ -5,7 +5,7 @@ import type { LogRecord } from './types.js';
 let logDir = '';
 
 export function initLogDir(projectDir: string): void {
-  logDir = join(projectDir, '.janussary', 'log');
+  logDir = join(projectDir, '.janissary', 'log');
   mkdirSync(logDir, { recursive: true });
 }
 

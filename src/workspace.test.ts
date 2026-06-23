@@ -56,7 +56,7 @@ describe('clearWorkspaceDir', () => {
     createWorkspace('agent-a', repoDir);
     createWorkspace('agent-b', repoDir);
     clearWorkspaceDir();
-    expect(existsSync(join(tmpDir, '.janussary', 'workspace', 'agent-a'))).toBe(false);
-    expect(existsSync(join(tmpDir, '.janussary', 'workspace', 'agent-b'))).toBe(false);
+    expect(existsSync(join(tmpDir, '.janissary', 'workspace', 'agent-a'))).toBe(false);
+    expect(existsSync(join(tmpDir, '.janissary', 'workspace', 'agent-b'))).toBe(false);
   });
 });

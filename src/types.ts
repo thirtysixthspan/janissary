@@ -5,6 +5,7 @@
 
 import type { ChildProcess } from 'node:child_process';
 import type { Command, CommandHandlerContext } from './commands/types.js';
+import type { RouteChoice } from './recognizers/types.js';
 
 // --- tab.ts ---------------------------------------------------------------
 
@@ -277,7 +278,10 @@ export type Resolution =
   | { kind: 'empty' }
   | { kind: 'shell'; cmd: string }
   | { kind: 'app'; name: AppCommand; cmd: string }
-  | { kind: 'output'; cmd: string; output: string };
+  | { kind: 'output'; cmd: string; output: string }
+  // An unprefixed command that matches no built-in. The interactive dispatcher runs probabilistic
+  // recognition on it; other callers fall back to `output` (the unknown-command message).
+  | { kind: 'unknown'; cmd: string; output: string };
 
 // --- command-handler.ts ---------------------------------------------------
 
@@ -393,6 +397,10 @@ export type InputHandlerDeps = {
   cwd: string;
   agents: string[];
   connections: string[];
+  routeChooser: { cmd: string; choices: RouteChoice[] } | null;
+  routeChooserIdx: number;
+  setRouteChooser: (v: { cmd: string; choices: RouteChoice[] } | null) => void;
+  setRouteChooserIdx: (fn: ((prev: number) => number) | number) => void;
 };
 
 // --- logger.ts ------------------------------------------------------------

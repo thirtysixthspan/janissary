@@ -4,6 +4,7 @@ import { useRef } from 'react';
 import { flattenBuffer, swapTabsLeft, swapTabsRight, canMoveTab } from './tab.js';
 import { completeCommandLine } from './completion.js';
 import { nextScrollStep, initialScrollAccel } from './scroll.js';
+import { toPrefixedCommand } from './recognizers/index.js';
 import type { ScrollAccel, InputHandlerDeps } from './types.js';
 
 type Binding = {
@@ -19,6 +20,7 @@ export function useInputHandler(deps: InputHandlerDeps): void {
     visibleHeight, exit,
     historyPickerOpen, historyPickerIdx, setHistoryPickerOpen, setHistoryPickerIdx,
     frequentHistory, flashScrollBoundary, interactive, cwd, agents, connections,
+    routeChooser, routeChooserIdx, setRouteChooser, setRouteChooserIdx,
   } = deps;
 
   const accelRef = useRef<ScrollAccel>(initialScrollAccel);
@@ -48,6 +50,30 @@ export function useInputHandler(deps: InputHandlerDeps): void {
 
   useInput((inputChar, key) => {
     if (interactive) return;
+
+    // Route chooser: pick the dispatch route for an unprefixed command whose route was
+    // ambiguous. Up/down move, Enter dispatches the chosen (prefixed) command, Esc cancels.
+    if (routeChooser) {
+      const { cmd, choices } = routeChooser;
+      const chooserBindings: Binding[] = [
+        { test: (_, k) => k.upArrow!, run: () => setRouteChooserIdx((prev) => Math.max(0, prev - 1)) },
+        { test: (_, k) => k.downArrow!, run: () => setRouteChooserIdx((prev) => Math.min(choices.length - 1, prev + 1)) },
+        { test: (_, k) => k.return!, run: () => {
+          const choice = choices[routeChooserIdx];
+          if (choice) {
+            executeRef.current?.(toPrefixedCommand(cmd, choice));
+            setInput('');
+            setCursor(0);
+          }
+          setRouteChooser(null);
+        }},
+        { test: (_, k) => k.escape!, run: () => setRouteChooser(null) },
+      ];
+      for (const b of chooserBindings) {
+        if (b.test(inputChar, key)) { b.run(); return; }
+      }
+      return;
+    }
 
     if (historyPickerOpen) {
       const historyBindings: Binding[] = [

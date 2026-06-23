@@ -2,6 +2,7 @@ import type { ChildProcess } from 'node:child_process';
 import type {
   Tab, LogEntry, AgentState, AcpInfo, AcpSession, TabBrowser, MessageKind,
 } from '../types.js';
+import type { RouteChoice } from '../recognizers/types.js';
 
 export type CommandHandlerContext = {
   tabs: Tab[];
@@ -40,6 +41,10 @@ export type CommandHandlerContext = {
   shellName: string;
   columns: number;
   frequentHistory: string[];
+  // Names of sqlite databases with an open connection in `label`'s tab (for db recognition).
+  getOpenDbs: (label: string) => string[];
+  // Open the route-chooser window for an unprefixed command whose route is ambiguous.
+  openRouteChooser: (cmd: string, choices: RouteChoice[]) => void;
 };
 
 export interface Command {

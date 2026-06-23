@@ -25,7 +25,7 @@ export const command: Command = {
     if (!session) {
       const command = 'opencode';
       const args = ['acp'];
-      const opencodeConfig = { model: 'opencode/deepseek-v4-flash-free' };
+      const opencodeConfig = { model: 'google/gemini-3.1-flash-lite' };
       const slash = opencodeConfig.model.indexOf('/');
       const acpLabel: AcpInfo = slash >= 0
         ? { provider: opencodeConfig.model.slice(0, slash), model: opencodeConfig.model.slice(slash + 1) }

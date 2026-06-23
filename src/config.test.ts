@@ -20,14 +20,14 @@ describe('loadConfig', () => {
     const config = loadConfig(tmpDir);
     expect(config.transcriptMaxLines).toBe(DEFAULT_TRANSCRIPT_MAX_LINES);
 
-    const configPath = join(tmpDir, '.janussary', 'config.json');
+    const configPath = join(tmpDir, '.janissary', 'config.json');
     expect(existsSync(configPath)).toBe(true);
     const parsed = JSON.parse(readFileSync(configPath, 'utf-8'));
     expect(parsed.transcriptMaxLines).toBe(DEFAULT_TRANSCRIPT_MAX_LINES);
   });
 
   it('reads an existing config.json', () => {
-    const configDir = join(tmpDir, '.janussary');
+    const configDir = join(tmpDir, '.janissary');
     mkdirSync(configDir, { recursive: true });
     writeFileSync(join(configDir, 'config.json'), JSON.stringify({ transcriptMaxLines: 100 }) + '\n');
 
@@ -36,7 +36,7 @@ describe('loadConfig', () => {
   });
 
   it('falls back to defaults for missing fields in existing config', () => {
-    const configDir = join(tmpDir, '.janussary');
+    const configDir = join(tmpDir, '.janissary');
     mkdirSync(configDir, { recursive: true });
     writeFileSync(join(configDir, 'config.json'), JSON.stringify({}) + '\n');
 
@@ -45,7 +45,7 @@ describe('loadConfig', () => {
   });
 
   it('falls back to defaults on parse error', () => {
-    const configDir = join(tmpDir, '.janussary');
+    const configDir = join(tmpDir, '.janissary');
     mkdirSync(configDir, { recursive: true });
     writeFileSync(join(configDir, 'config.json'), 'not-json');
 

@@ -11,7 +11,7 @@ const DEFAULT_CONFIG: Config = {
 let config: Config = { ...DEFAULT_CONFIG };
 
 export function loadConfig(projectDir: string): Config {
-  const configDir = join(projectDir, '.janussary');
+  const configDir = join(projectDir, '.janissary');
   const configPath = join(configDir, 'config.json');
 
   if (!existsSync(configPath)) {

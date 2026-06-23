@@ -4,7 +4,7 @@ import { basename } from 'node:path';
 import { Box, Text } from 'ink';
 import type { ThemeColors } from './types.js';
 
-const WORKSPACE_MARKER = '.janussary/';
+const WORKSPACE_MARKER = '.janissary/';
 const TITLE = 'connections';
 
 // Shorten a working directory for display: if it lives inside an agent workspace, show it

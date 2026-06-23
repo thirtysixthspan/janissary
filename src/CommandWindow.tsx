@@ -9,10 +9,13 @@ type Props = {
   historyItems: string[];
   historySelectedIdx: number;
   historyOpen: boolean;
+  routeCmd: string | null;
+  routeItems: string[];
+  routeSelectedIdx: number;
   theme: ThemeColors;
 };
 
-export const CommandWindow = ({ beforeCursor, afterCursor, dotColor, historyItems, historySelectedIdx, historyOpen, theme }: Props) => (
+export const CommandWindow = ({ beforeCursor, afterCursor, dotColor, historyItems, historySelectedIdx, historyOpen, routeCmd, routeItems, routeSelectedIdx, theme }: Props) => (
   <Box borderStyle="single" paddingX={1} flexShrink={0} flexDirection="column">
     {historyOpen && historyItems.length > 0 && (
       <Box flexDirection="column">
@@ -23,6 +26,21 @@ export const CommandWindow = ({ beforeCursor, afterCursor, dotColor, historyItem
               <Text color={isSelected ? theme.bg : theme.fg}>
                 {cmd}
               </Text>
+            </Box>
+          );
+        })}
+      </Box>
+    )}
+    {routeCmd !== null && (
+      <Box flexDirection="column">
+        <Box marginLeft={-1} marginRight={-1} paddingX={2}>
+          <Text color={theme.muted}>{`How should "${routeCmd}" run?`}</Text>
+        </Box>
+        {routeItems.map((label, i) => {
+          const isSelected = i === routeSelectedIdx;
+          return (
+            <Box key={i} backgroundColor={isSelected ? theme.accent : undefined} marginLeft={-1} marginRight={-1} paddingX={2}>
+              <Text color={isSelected ? theme.bg : theme.fg}>{label}</Text>
             </Box>
           );
         })}

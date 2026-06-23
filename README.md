@@ -40,7 +40,7 @@ janus
 
 ### Configuration
 
-Application settings are stored in `.janussary/config.json`. A default config is created automatically on first launch if the file does not exist:
+Application settings are stored in `.janissary/config.json`. A default config is created automatically on first launch if the file does not exist:
 
 ```json
 {
@@ -54,7 +54,7 @@ Application settings are stored in `.janussary/config.json`. A default config is
 
 ### State persistence
 
-Per-agent data (command history, transcript, shell working directory, tab number, and received message context) is persisted to `.janussary/state/<name>.json`. On normal startup the state directory is cleared automatically.
+Per-agent data (command history, transcript, shell working directory, tab number, and received message context) is persisted to `.janissary/state/<name>.json`. On normal startup the state directory is cleared automatically.
 
 Reopen previous state with the `--relaunch` flag:
 
@@ -66,10 +66,10 @@ This restores all agent tabs with their command history, transcripts, and shell 
 
 ### Append-only log
 
-All tab transcript text is automatically logged to append-only JSON files in `.janussary/log/`. Each line is a JSON object with a UTC timestamp, the tab name, and the content text:
+All tab transcript text is automatically logged to append-only JSON files in `.janissary/log/`. Each line is a JSON object with a UTC timestamp, the tab name, and the content text:
 
 ```
-.janussary/log/
+.janissary/log/
   2026-06-22.json
   2026-06-23.json
 ```
@@ -180,9 +180,9 @@ next run time. It disappears once the schedule is empty.
 
 A profile is a reusable set of agents for a particular use case — writing code, surfing the
 web, authoring a book, a specific task. Profiles live in a top-level `profiles/` directory
-(committable, unlike `.janussary/`). Each profile is its own dasherized-name directory
+(committable, unlike `.janissary/`). Each profile is its own dasherized-name directory
 holding one `<agent>.json` file per agent, in the agent-state schema (the same format as
-`.janussary/state/<name>.json`). The filename is the agent's name.
+`.janissary/state/<name>.json`). The filename is the agent's name.
 
 ```
 profiles/
@@ -210,11 +210,11 @@ Use `agent --workspace` (or `agent -w`) to create an agent tab with a disposable
 agent bilal -w
 ```
 
-This clones the root repo (detected from the current directory) into `.janussary/workspace/bilal/` via `git clone --shared` — no network needed, completes in milliseconds. The agent's shell spawns inside the workspace. Make changes, commit, push, then close the tab — the workspace is automatically removed.
+This clones the root repo (detected from the current directory) into `.janissary/workspace/bilal/` via `git clone --shared` — no network needed, completes in milliseconds. The agent's shell spawns inside the workspace. Make changes, commit, push, then close the tab — the workspace is automatically removed.
 
 ### Databases
 
-Janissary can create and query [SQLite](https://www.sqlite.org) databases directly from the command line. Databases are stored at `.janussary/db/sqlite/<name>.sqlite` and — unlike agent state and workspaces — **persist across launches** (they are never cleared automatically).
+Janissary can create and query [SQLite](https://www.sqlite.org) databases directly from the command line. Databases are stored at `.janissary/db/sqlite/<name>.sqlite` and — unlike agent state and workspaces — **persist across launches** (they are never cleared automatically).
 
 ```
 db sqlite create <name>          # create an empty database

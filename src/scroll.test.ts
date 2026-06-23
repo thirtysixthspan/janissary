@@ -7,15 +7,15 @@ describe('nextScrollStep', () => {
     expect(step).toBe(1);
   });
 
-  it('accelerates by one line every 2 seconds of continuous scrolling', () => {
+  it('doubles the step every 2 seconds of continuous scrolling', () => {
     // Simulate continuous ticks (small gaps) starting at t=0.
     let state = initialScrollAccel;
     let step = 0;
     for (let t = 0; t <= 4000; t += 100) {
       ({ step, state } = nextScrollStep(state, 1, t));
     }
-    // At ~4s of continuous scrolling the step should be 3 (1 + floor(4000/2000)).
-    expect(step).toBe(3);
+    // At ~4s of continuous scrolling the step should be 4 (2 ** floor(4000/2000)).
+    expect(step).toBe(4);
   });
 
   it('reports step 2 once 2 seconds have elapsed continuously', () => {

@@ -26,12 +26,12 @@ describe('logger', () => {
 
   it('creates the log directory on init', () => {
     initLogDir(tmpDir);
-    expect(existsSync(join(tmpDir, '.janussary', 'log'))).toBe(true);
+    expect(existsSync(join(tmpDir, '.janissary', 'log'))).toBe(true);
   });
 
   it('getLogDir returns the log directory path', () => {
     initLogDir(tmpDir);
-    expect(getLogDir()).toBe(join(tmpDir, '.janussary', 'log'));
+    expect(getLogDir()).toBe(join(tmpDir, '.janissary', 'log'));
   });
 
   it('appends a JSON line to today\'s log file', () => {
@@ -39,7 +39,7 @@ describe('logger', () => {
     appendEntry({ timestamp: '22:55:20.690', agent: 'janus', text: 'hello' });
     appendEntry({ timestamp: '22:55:21.123', agent: 'bilal', text: 'world' });
 
-    const logPath = join(tmpDir, '.janussary', 'log', `${getDateStr()}.json`);
+    const logPath = join(tmpDir, '.janissary', 'log', `${getDateStr()}.json`);
     expect(existsSync(logPath)).toBe(true);
     const lines = readFileSync(logPath, 'utf-8').trim().split('\n');
     expect(lines).toHaveLength(2);
@@ -52,7 +52,7 @@ describe('logger', () => {
     appendEntry({ timestamp: '22:55:20.690', agent: 'janus', text: 'first' });
     appendEntry({ timestamp: '22:55:21.000', agent: 'janus', text: 'second' });
 
-    const logPath = join(tmpDir, '.janussary', 'log', `${getDateStr()}.json`);
+    const logPath = join(tmpDir, '.janissary', 'log', `${getDateStr()}.json`);
     const lines = readFileSync(logPath, 'utf-8').trim().split('\n');
     expect(lines).toHaveLength(2);
   });
@@ -62,7 +62,7 @@ describe('logger', () => {
     appendEntry({ timestamp: '22:55:20.690', agent: 'janus', text: 'line1' });
     appendEntry({ timestamp: '22:55:21.000', agent: 'bilal', text: 'line2' });
 
-    const logPath = join(tmpDir, '.janussary', 'log', `${getDateStr()}.json`);
+    const logPath = join(tmpDir, '.janissary', 'log', `${getDateStr()}.json`);
     const content = readFileSync(logPath, 'utf-8').trim();
     for (const line of content.split('\n')) {
       expect(() => JSON.parse(line)).not.toThrow();
@@ -73,7 +73,7 @@ describe('logger', () => {
     initLogDir(tmpDir);
     appendEntry({ timestamp: '22:55:20.690', agent: 'janus', text: '' });
 
-    const logPath = join(tmpDir, '.janussary', 'log', `${getDateStr()}.json`);
+    const logPath = join(tmpDir, '.janissary', 'log', `${getDateStr()}.json`);
     const lines = readFileSync(logPath, 'utf-8').trim().split('\n');
     expect(lines).toHaveLength(1);
     expect(JSON.parse(lines[0]).text).toBe('');
@@ -84,7 +84,7 @@ describe('logger', () => {
     const text = 'line1\nline2\twith\ttabs\u2603';
     appendEntry({ timestamp: '22:55:20.690', agent: 'janus', text });
 
-    const logPath = join(tmpDir, '.janussary', 'log', `${getDateStr()}.json`);
+    const logPath = join(tmpDir, '.janissary', 'log', `${getDateStr()}.json`);
     const lines = readFileSync(logPath, 'utf-8').trim().split('\n');
     expect(JSON.parse(lines[0]).text).toBe(text);
   });

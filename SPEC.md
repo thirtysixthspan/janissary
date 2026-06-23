@@ -22,14 +22,14 @@ Running `agent` creates a new tab with a random unused name chosen from a 52-nam
 
 ### Workspace agent tab
 
-`agent <name> --workspace` (or `-w`) creates a tab with a cloned workspace — a `git clone --shared` of the root repository detected from the current directory. The workspace is created at `.janussary/workspace/<name>/` and the agent's shell spawns there. Bare `agent --workspace` picks a random unused name with a workspace.
+`agent <name> --workspace` (or `-w`) creates a tab with a cloned workspace — a `git clone --shared` of the root repository detected from the current directory. The workspace is created at `.janissary/workspace/<name>/` and the agent's shell spawns there. Bare `agent --workspace` picks a random unused name with a workspace.
 
 If no git repository is found from the current directory, an error is shown and no tab is created.
 
 ### Workspace lifecycle
 
 Workspace directories are ephemeral:
-- **Normal launch**: `.janussary/workspace/` is cleared before rendering.
+- **Normal launch**: `.janissary/workspace/` is cleared before rendering.
 - **Tab close**: The workspace directory is removed when the tab is closed.
 - **App quit**: All workspace directories are removed.
 - **`--relaunch`**: Workspace directories are not recreated; restore falls back to the tab's last known working directory.
@@ -164,7 +164,7 @@ History is capped at 100 entries per tab. Older entries beyond the cap are dropp
 
 ## Append-only Log
 
-All tab transcript text is recorded in append-only JSON files stored in `.janussary/log/`. The log is written alongside the in-memory tab state and serves as a persistent, chronological record of every session.
+All tab transcript text is recorded in append-only JSON files stored in `.janissary/log/`. The log is written alongside the in-memory tab state and serves as a persistent, chronological record of every session.
 
 ### Storage format
 
@@ -192,7 +192,7 @@ A new file is created each UTC day. Entries written before midnight go to today'
 
 ### Lifecycle
 
-The log directory is initialized at startup (`initLogDir` in `src/logger.ts`) alongside the other `.janussary/` subdirectories. The directory is never cleared. The append-only log is a flat file — no indexing, no compaction.
+The log directory is initialized at startup (`initLogDir` in `src/logger.ts`) alongside the other `.janissary/` subdirectories. The directory is never cleared. The append-only log is a flat file — no indexing, no compaction.
 
 ### History on return
 
@@ -200,7 +200,7 @@ Pressing Return saves the trimmed input to history before executing.
 
 ### Persistence
 
-Command history is persisted per-agent to `.janussary/state/<name>.json`. Each agent state file stores `name`, `dotColor`, `active`, `number` (the tab's position), `cmdHistory[]`, `log[]` (the full transcript), `cwd` (the shell's working directory), and `context[]` (informational messages received from other agents).
+Command history is persisted per-agent to `.janissary/state/<name>.json`. Each agent state file stores `name`, `dotColor`, `active`, `number` (the tab's position), `cmdHistory[]`, `log[]` (the full transcript), `cwd` (the shell's working directory), and `context[]` (informational messages received from other agents).
 
 On a normal launch the state directory is cleared before the UI renders, so every session starts fresh.
 
@@ -218,7 +218,7 @@ Returns the **Commands** and **Key Bindings** sections extracted from `README.md
 
 ### `state`
 
-Reads the agent state file for the current tab from `.janussary/state/<name>.json` and displays each field. Array and object values are JSON-formatted and truncated to the last 10 lines. If no state file exists for the current agent, a message is shown.
+Reads the agent state file for the current tab from `.janissary/state/<name>.json` and displays each field. Array and object values are JSON-formatted and truncated to the last 10 lines. If no state file exists for the current agent, a message is shown.
 
 ### `clear`
 
@@ -242,7 +242,7 @@ Creates a new agent tab with a random unused name from the pool. See the Tabs se
 
 ### `agent <name>`
 
-Creates a new agent tab with the specified name. See the Tabs section. Add `--workspace` (or `-w`) to clone the root repo into a disposable workspace at `.janussary/workspace/<name>/`.
+Creates a new agent tab with the specified name. See the Tabs section. Add `--workspace` (or `-w`) to clone the root repo into a disposable workspace at `.janissary/workspace/<name>/`.
 
 ### `next`
 
@@ -393,9 +393,9 @@ A `design/` directory at project root contains reference screenshots (`dark.png`
 
 ### State directory
 
-Agent state is stored in `.janussary/state/`. Each agent has one JSON file named `<agent-name>.json` with fields: `name`, `dotColor`, `active`, `number` (the tab's position in the strip), `cmdHistory[]`, `log[]` (the full transcript of commands and outputs), `cwd` (the shell working directory after the last command), `context[]` (informational messages received from other agents), and `workspaceDir` (path to the agent's disposable workspace clone).
+Agent state is stored in `.janissary/state/`. Each agent has one JSON file named `<agent-name>.json` with fields: `name`, `dotColor`, `active`, `number` (the tab's position in the strip), `cmdHistory[]`, `log[]` (the full transcript of commands and outputs), `cwd` (the shell working directory after the last command), `context[]` (informational messages received from other agents), and `workspaceDir` (path to the agent's disposable workspace clone).
 
-Workspace clones live in `.janussary/workspace/<name>/` and are removed on tab close or app exit.
+Workspace clones live in `.janissary/workspace/<name>/` and are removed on tab close or app exit.
 
 On a normal `janus` launch the state directory and workspace directory are recursively deleted before rendering. On `janus --relaunch` the directories are preserved and all agent files are loaded to recreate tabs with their saved command history, transcripts, and working directories.
 
@@ -405,13 +405,13 @@ On a normal `janus` launch the state directory and workspace directory are recur
 
 ### Normal (`janus`)
 
-1. Clear `.janussary/state/` directory.
+1. Clear `.janissary/state/` directory.
 2. Create a single `janus` tab.
 3. Render the UI.
 
 ### Relaunch (`janus --relaunch`)
 
-1. Preserve `.janussary/state/` directory.
+1. Preserve `.janissary/state/` directory.
 2. List all `.json` files in the state directory.
 3. Sort the saved agents by their recorded tab `number` and create a tab for each, preserving its saved `number` and `dotColor`.
 4. Load each agent's `cmdHistory` and `log` into its tab, and populate the cwd ref for shell restoration.
@@ -447,11 +447,11 @@ SQLite database management via the `db` command (`src/db.ts`), backed by Node's 
 
 ### Storage location
 
-Each database is a single file at `.janussary/db/sqlite/<name>.sqlite`. The directory is created on demand. The path base is set at startup via `initDbDir(process.cwd())`.
+Each database is a single file at `.janissary/db/sqlite/<name>.sqlite`. The directory is created on demand. The path base is set at startup via `initDbDir(process.cwd())`.
 
 ### Persistence
 
-Unlike `.janussary/state/` and `.janussary/workspace/`, the database directory is **never cleared** — not on normal launch, not on `--relaunch`, not on quit. Databases persist across sessions by design.
+Unlike `.janissary/state/` and `.janissary/workspace/`, the database directory is **never cleared** — not on normal launch, not on `--relaunch`, not on quit. Databases persist across sessions by design.
 
 ### Connection model
 
@@ -566,7 +566,7 @@ A small titled `connections` panel (`ConnectionWindow`) floats at the top-right 
 
 ## Scheduling
 
-The `schedule` command (parsed by `parseScheduleCommand` in `src/schedule.ts`, dispatched by `src/commands/schedule.ts`) queues commands to run later in the issuing agent's tab. Each agent owns its schedule; entries are stored in the `schedule` array of its state file (`.janussary/state/<name>.json`) and survive `--relaunch`.
+The `schedule` command (parsed by `parseScheduleCommand` in `src/schedule.ts`, dispatched by `src/commands/schedule.ts`) queues commands to run later in the issuing agent's tab. Each agent owns its schedule; entries are stored in the `schedule` array of its state file (`.janissary/state/<name>.json`) and survive `--relaunch`.
 
 ### Schedule forms
 
@@ -600,7 +600,7 @@ A profile is a reusable, named set of agents for a particular use case (writing 
 
 ### Storage
 
-Profiles live in a top-level `profiles/` directory (`initProfileDir` in `src/cli.tsx`), kept separate from `.janussary/` so they are committable and are **not** cleared on launch. Each profile is its own directory named in dasherized text (e.g. `writing-code/`), containing one `<agentname>.json` file per agent. Each file uses the agent-state schema — the same format as `.janussary/state/<name>.json`. The filename (minus `.json`) is the authoritative agent name and overrides any `name` field inside the file.
+Profiles live in a top-level `profiles/` directory (`initProfileDir` in `src/cli.tsx`), kept separate from `.janissary/` so they are committable and are **not** cleared on launch. Each profile is its own directory named in dasherized text (e.g. `writing-code/`), containing one `<agentname>.json` file per agent. Each file uses the agent-state schema — the same format as `.janissary/state/<name>.json`. The filename (minus `.json`) is the authoritative agent name and overrides any `name` field inside the file.
 
 ### `profile launch <name>`
 
@@ -614,7 +614,7 @@ A tab can drive an [Agent Client Protocol](https://agentclientprotocol.com) agen
 
 ### Hardcoded agent
 
-The agent command is hardcoded to OpenCode: `opencode acp`. There is no configuration or environment variable — `opencode` must be installed, authenticated (`opencode auth login`), and on `PATH`. OpenCode's model is configured via the `OPENCODE_CONFIG_CONTENT` env var passed to the subprocess (currently `opencode/deepseek-v4-flash-free`), and the agent connection is shown as `acp:<agent>` in the tab's status popup.
+The agent command is hardcoded to OpenCode: `opencode acp`. There is no configuration or environment variable — `opencode` must be installed, authenticated (`opencode auth login`), and on `PATH`. OpenCode's model is configured via the `OPENCODE_CONFIG_CONTENT` env var passed to the subprocess (currently `google/gemini-3.1-flash-lite`), and the agent connection is shown as `acp:<agent>` in the tab's status popup.
 
 ### Connection lifecycle
 
@@ -649,7 +649,7 @@ This MVP is read-only: tool-permission requests are auto-declined and filesystem
 
 ### Application config
 
-Application settings are stored in `.janussary/config.json`. On first launch a default config is created if the file does not exist. The config is loaded after the `.janussary/` subdirectories are initialized and before the `App` component renders.
+Application settings are stored in `.janissary/config.json`. On first launch a default config is created if the file does not exist. The config is loaded after the `.janissary/` subdirectories are initialized and before the `App` component renders.
 
 | Setting | Type | Default | Description |
 | ------- | ---- | ------- | ----------- |

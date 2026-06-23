@@ -5,7 +5,7 @@ import type { AgentState } from './types.js';
 let stateDir = '';
 
 export function initAgentStateDir(projectDir: string): void {
-  stateDir = join(projectDir, '.janussary', 'state');
+  stateDir = join(projectDir, '.janissary', 'state');
 }
 
 export function ensureStateDir(): void {

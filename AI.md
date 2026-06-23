@@ -47,7 +47,7 @@ Key modules:
 - `src/theme.ts` — `darkTheme` color tokens (single theme, no switcher yet).
 - UI components: `src/TabStrip.tsx`, `src/Transcript.tsx`, `src/CommandWindow.tsx`, `src/ConnectionWindow.tsx`, `src/ScheduleWindow.tsx` (floating schedule list).
 
-State: per-agent data (command history, transcript, shell cwd, schedule) persists to `.janussary/state/<name>.json`. Normal launch clears this dir; `janus --relaunch` restores all tabs from it.
+State: per-agent data (command history, transcript, shell cwd, schedule) persists to `.janissary/state/<name>.json`. Normal launch clears this dir; `janus --relaunch` restores all tabs from it.
 
 ## Conventions
 
