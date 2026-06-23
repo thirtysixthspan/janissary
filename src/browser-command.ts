@@ -3,17 +3,7 @@
 // (src/connections.ts) and the `db` equivalents in src/db.ts. Pure — no I/O. The host
 // (src/cli.tsx) performs the actual Playwright actions against the tab's browser.
 
-export type BrowserParsed =
-  | { error: string }
-  | { action: 'open'; name?: string; headed: boolean }
-  | { action: 'list' }
-  | { action: 'use'; id: string }
-  | { action: 'goto'; url: string }
-  | { action: 'eval'; js: string }
-  | { action: 'shot' }
-  | { action: 'content' }
-  | { action: 'close' }
-  | { action: 'closeWindow'; id: string };
+import type { BrowserParsed } from './types.js';
 
 const USAGE =
   'Usage: browser <open [name] [--headed]|list|use <id>|goto <url>|eval <js>|shot|content|close [id]|window close <id>>';

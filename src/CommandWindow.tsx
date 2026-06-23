@@ -1,6 +1,6 @@
 import React from 'react';
 import { Text, Box } from 'ink';
-import type { ThemeColors } from './theme.js';
+import type { ThemeColors } from './types.js';
 
 type Props = {
   beforeCursor: string;

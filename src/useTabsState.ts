@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
-import { type AgentState, saveAgentState, loadAgentState, listAgentStates } from './agent-state.js';
+import { saveAgentState, loadAgentState, listAgentStates } from './agent-state.js';
 import { appendEntry, getTimeStr } from './logger.js';
-import { dotColors, makeTab, type Tab, type LogEntry } from './tab.js';
+import { dotColors, makeTab } from './tab.js';
+import type { AgentState, Tab, LogEntry } from './types.js';
 
 export function useTabsState(relaunch: boolean, capLog: (log: LogEntry[]) => LogEntry[]) {
   const [tabs, setTabs] = useState<Tab[]>(() => {

@@ -1,37 +1,10 @@
 import { useInput } from 'ink';
 import type { Key } from 'ink';
-import type { ChildProcess } from 'node:child_process';
-import type { Tab } from './tab.js';
 import { useRef } from 'react';
 import { flattenBuffer, swapTabsLeft, swapTabsRight } from './tab.js';
 import { completeCommandLine } from './completion.js';
-import { nextScrollStep, initialScrollAccel, type ScrollAccel } from './scroll.js';
-
-export type InputHandlerDeps = {
-  input: string;
-  cursor: number;
-  setInput: (fn: ((prev: string) => string) | string) => void;
-  setCursor: (fn: ((prev: number) => number) | number) => void;
-  tabs: Tab[];
-  activeTab: number;
-  setTabs: (updater: (prev: Tab[]) => Tab[]) => void;
-  setActiveTab: (fn: ((prev: number) => number) | number) => void;
-  updateCurrentTab: (updater: (tab: Tab) => Tab) => void;
-  executeRef: { current: ((cmd: string) => void) | null };
-  shellsRef: { current: Map<number, ChildProcess> };
-  visibleHeight: number;
-  exit: () => void;
-  historyPickerOpen: boolean;
-  historyPickerIdx: number;
-  setHistoryPickerOpen: (open: boolean) => void;
-  setHistoryPickerIdx: (fn: ((prev: number) => number) | number) => void;
-  frequentHistory: string[];
-  flashScrollBoundary: () => void;
-  interactive: boolean;
-  cwd: string;
-  agents: string[];
-  connections: string[];
-};
+import { nextScrollStep, initialScrollAccel } from './scroll.js';
+import type { ScrollAccel, InputHandlerDeps } from './types.js';
 
 type Binding = {
   test: (inputChar: string, key: Key) => boolean;

@@ -1,42 +1,4 @@
-export type LogEntry = {
-  input: string;
-  output: string;
-  running?: boolean;
-  cwd?: string;
-  // Set when this entry is a cross-agent message from another agent.
-  from?: string;
-  fromColor?: string;
-  msgKind?: 'info' | 'request' | 'response';
-  // Set when this entry is an auto-ran agent command (e.g. ACP db loop).
-  acp?: boolean;
-};
-
-export type MessageRenderKind = 'info' | 'request' | 'response';
-
-export type BufferLine = {
-  type: 'prompt' | 'output' | 'spacer' | 'message' | 'collapsed';
-  text: string;
-  cwd?: string;
-  from?: string;
-  fromColor?: string;
-  msgKind?: MessageRenderKind;
-  acp?: boolean;
-};
-
-export type Tab = {
-  label: string;
-  dotColor: string;
-  number: number;
-  log: LogEntry[];
-  cmdHistory: string[];
-  cmdHistoryIdx: number;
-  scrollOffset: number;
-  workspaceDir?: string;
-  // When false/undefined, contiguous runs of auto-run agent tool steps (acp entries) are
-  // collapsed into a single summary line in the transcript. Toggled with Ctrl+T. In-memory
-  // only (like scrollOffset) — not persisted to agent state.
-  toolStepsExpanded?: boolean;
-};
+import type { LogEntry, BufferLine, Tab } from './types.js';
 
 export const dotColors = [
   '#5b9cff', '#ff6b6b', '#ffd93d', '#6bcb77', '#4d96ff',

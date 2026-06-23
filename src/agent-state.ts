@@ -1,17 +1,6 @@
 import { mkdirSync, writeFileSync, existsSync, readFileSync, readdirSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
-
-export type AgentState = {
-  name: string;
-  dotColor: string;
-  active: boolean;
-  number?: number;
-  cmdHistory?: string[];
-  log?: { input: string; output: string; running?: boolean }[];
-  cwd?: string;
-  context?: string[];
-  workspaceDir?: string;
-};
+import type { AgentState } from './types.js';
 
 let stateDir = '';
 

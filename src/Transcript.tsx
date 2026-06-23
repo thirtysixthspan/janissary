@@ -1,8 +1,7 @@
 import React from 'react';
 import { homedir } from 'node:os';
 import { Text, Box } from 'ink';
-import type { BufferLine } from './tab.js';
-import type { ThemeColors } from './theme.js';
+import type { BufferLine, ThemeColors } from './types.js';
 
 const formatCwd = (cwd: string): string => {
   const home = homedir();

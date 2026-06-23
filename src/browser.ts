@@ -9,6 +9,7 @@ import type { Browser, BrowserContext, Page } from 'playwright';
 import { chromium } from 'playwright-extra';
 import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 import { randomBrowserProfile, acceptLanguage, DEFAULT_CHROME_MAJOR } from './user-agent.js';
+import type { BrowserWindow, TabBrowser } from './types.js';
 
 // Register the stealth plugin once for the process. `chromium.use` is idempotent per
 // plugin name, so importing this module more than once is safe.
@@ -26,29 +27,6 @@ function chromeMajor(version: string): number {
 // windows. A "window" is a BrowserContext (its own cookies/storage) plus a single Page —
 // the viewport. The Browser handle stays private to the TabBrowser; callers only ever see
 // the BrowserWindow surface and the TabBrowser lifecycle methods.
-
-export type BrowserWindow = {
-  id: string;
-  // Navigate to a URL (waits for load); returns a short "title — url" summary.
-  goto: (url: string) => Promise<string>;
-  // Run JavaScript in the page and return the (JSON-stringified) result.
-  eval: (js: string) => Promise<string>;
-  // Screenshot the viewport to a temp PNG and (on macOS) open it in Preview; returns the path.
-  shot: () => Promise<string>;
-  // The page's rendered text (title + body innerText), truncated for agent consumption.
-  content: () => Promise<string>;
-  // Current page URL, for `connection list` display.
-  url: () => string;
-};
-
-export type TabBrowser = {
-  mode: 'headless' | 'headed';
-  openWindow: (id: string) => Promise<BrowserWindow>;
-  window: (id: string) => BrowserWindow | undefined;
-  closeWindow: (id: string) => Promise<void>;
-  windowIds: () => string[];
-  close: () => Promise<void>;
-};
 
 // Cap on `content()` output so a large page does not blow up the prompt fed back to an
 // ACP agent. Truncation is flagged in the returned text.

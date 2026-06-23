@@ -1,12 +1,4 @@
-export type ThemeColors = {
-  bg: string;
-  bgSoft: string;
-  fg: string;
-  muted: string;
-  faint: string;
-  border: string;
-  accent: string;
-};
+import type { ThemeColors } from './types.js';
 
 export const darkTheme: ThemeColors = {
   bg: '#17181b',

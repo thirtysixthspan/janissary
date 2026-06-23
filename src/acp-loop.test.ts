@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import { runAcpToolLoop, type AcpLoopSession, type AcpLoopHandlers } from './acp-loop.js';
+import { runAcpToolLoop } from './acp-loop.js';
+import type { AcpLoopSession, AcpLoopHandlers } from './types.js';
 import { extractDbCommand } from './db.js';
 import { extractBrowserCommand } from './browser-command.js';
 

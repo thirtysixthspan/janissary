@@ -1,16 +1,7 @@
 import { useRef } from 'react';
-import type { LogEntry } from './tab.js';
-
-// `response` is system-generated (the reply to a request), not something a user sends.
-export type MessageKind = 'info' | 'request' | 'command' | 'response';
-
-export type Message = {
-  id: number;
-  from: string;
-  to: string;
-  kind: MessageKind;
-  text: string;
-};
+import type {
+  MessageKind, Message, ParsedMsg, ParsedBroadcast, MessagingDeps, Messaging,
+} from './types.js';
 
 const KIND_ALIASES: Record<string, MessageKind> = {
   i: 'info', info: 'info', informational: 'info',
@@ -21,8 +12,6 @@ const KIND_ALIASES: Record<string, MessageKind> = {
 export function parseKind(token: string): MessageKind | null {
   return KIND_ALIASES[token.trim().toLowerCase()] ?? null;
 }
-
-export type ParsedMsg = { to: string; kind: MessageKind; text: string };
 
 /** Parse a `msg <agent> <kind> <text...>` command (the leading `msg` is optional). */
 export function parseMsgCommand(input: string): ParsedMsg | { error: string } {
@@ -36,8 +25,6 @@ export function parseMsgCommand(input: string): ParsedMsg | { error: string } {
   if (!text) return { error: 'Message text is empty.' };
   return { to, kind, text };
 }
-
-export type ParsedBroadcast = { targets: string[] | 'all'; kind: MessageKind; text: string };
 
 /**
  * Parse a `broadcast <all|agent[,agent...]> <kind> <text>` command. The first token is
@@ -56,27 +43,6 @@ export function parseBroadcastCommand(input: string): ParsedBroadcast | { error:
   if (targets !== 'all' && targets.length === 0) return { error: 'No broadcast recipients specified.' };
   return { targets, kind, text };
 }
-
-export type MessagingDeps = {
-  hasAgent: (label: string) => boolean;
-  agentColor: (label: string) => string;
-  // Whether a command needs an interactive PTY (those cannot be run on behalf of a
-  // non-foreground agent and are rejected).
-  isInteractive: (cmd: string) => boolean;
-  appendLog: (label: string, entry: LogEntry) => void;
-  appendContext: (label: string, text: string) => void;
-  // Run a shell command in the recipient's own persistent shell, streaming output to its
-  // transcript, and invoke onComplete with the final output.
-  runShell: (label: string, cmd: string, onComplete: (output: string) => void) => void;
-  // Execute text in the recipient's window (built-ins + shell, interactive commands
-  // skipped) capturing the output instead of displaying it. Used to fulfil a request.
-  runCapture: (label: string, text: string, onResult: (output: string) => void) => void;
-};
-
-export type Messaging = {
-  /** Enqueue a message for delivery. Returns false if the recipient does not exist. */
-  send: (msg: Omit<Message, 'id'>) => boolean;
-};
 
 /**
  * In-process messaging between agents. Each agent has its own FIFO queue that is

@@ -1,11 +1,6 @@
 import { mkdirSync, appendFileSync } from 'node:fs';
 import { join } from 'node:path';
-
-export type LogRecord = {
-  timestamp: string;
-  agent: string;
-  text: string;
-};
+import type { LogRecord } from './types.js';
 
 let logDir = '';
 

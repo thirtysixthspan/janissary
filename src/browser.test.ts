@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { chromium } from 'playwright';
-import { launchTabBrowser, type TabBrowser } from './browser.js';
+import { launchTabBrowser } from './browser.js';
+import type { TabBrowser } from './types.js';
 
 // Live browser tests need the chromium binary (installed via postinstall). Skip the whole
 // suite when it is unavailable so a binary-less CI run does not fail.

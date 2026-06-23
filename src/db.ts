@@ -8,18 +8,13 @@ import {
   isConnectionOpen,
 } from './connections.js';
 import { type DatabaseSync } from 'node:sqlite';
+import type { DbParsed } from './types.js';
 
 // Database names become filenames, so restrict them to a safe character set —
 // this also blocks path traversal (`..`, `/`).
 const VALID_NAME = /^[A-Za-z0-9_-]+$/;
 const USAGE = 'Usage: db sqlite <create|delete|query|list> [name] [query]';
 const ACTIONS = ['create', 'delete', 'query', 'list'];
-
-export type DbParsed =
-  | { error: string }
-  | { action: 'create' | 'delete'; name: string }
-  | { action: 'list' }
-  | { action: 'query'; name: string; query: string };
 
 function engineError(engine: string): { error: string } {
   return { error: `Unsupported engine "${engine}". Only "sqlite" is supported.` };

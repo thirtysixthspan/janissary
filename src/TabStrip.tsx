@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Text, Box } from 'ink';
-import type { Tab } from './tab.js';
-import type { AgentState } from './agent-state.js';
-import type { ThemeColors } from './theme.js';
+import type { Tab, AgentState, ThemeColors } from './types.js';
 
 type Props = {
   tabs: Tab[];

@@ -1,14 +1,6 @@
 import { getOutput } from './commands.js';
 import { commands } from './commands/index.js';
-import type { Command } from './commands/index.js';
-
-export type AppCommand = Command['name'];
-
-export type Resolution =
-  | { kind: 'empty' }
-  | { kind: 'shell'; cmd: string }
-  | { kind: 'app'; name: AppCommand; cmd: string }
-  | { kind: 'output'; cmd: string; output: string };
+import type { Resolution } from './types.js';
 
 /**
  * Classify a prompt input into the action it represents, mirroring the dispatch order

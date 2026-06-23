@@ -1,15 +1,6 @@
-export type ScrollAccel = { dir: number; start: number; last: number };
+import type { ScrollAccel, AccelOptions } from './types.js';
 
 export const initialScrollAccel: ScrollAccel = { dir: 0, start: 0, last: 0 };
-
-export type AccelOptions = {
-  // Max gap (ms) between ticks that still counts as continuous scrolling.
-  gapMs?: number;
-  // The step grows by one every `rampMs` of continuous scrolling.
-  rampMs?: number;
-  // Upper bound on the step size.
-  maxStep?: number;
-};
 
 /**
  * Compute the scroll step for a tick in direction `dir` (+1 = back/up, -1 = forward/down)

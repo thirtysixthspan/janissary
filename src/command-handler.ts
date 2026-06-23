@@ -3,9 +3,7 @@ import { resolveCommand } from './resolve.js';
 import { saveAgentState } from './agent-state.js';
 import { isInteractive } from './interactive.js';
 import { commands } from './commands/index.js';
-import type { CommandHandlerContext } from './commands/index.js';
-
-export type CommandHandlerDeps = CommandHandlerContext;
+import type { CommandHandlerDeps } from './types.js';
 
 export function createCommandHandler(deps: CommandHandlerDeps): (cmd: string) => void {
   return (cmd: string) => {

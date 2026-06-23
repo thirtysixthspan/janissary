@@ -2,7 +2,7 @@ import React from 'react';
 import { homedir } from 'node:os';
 import { basename } from 'node:path';
 import { Box, Text } from 'ink';
-import type { ThemeColors } from './theme.js';
+import type { ThemeColors } from './types.js';
 
 const WORKSPACE_MARKER = '.janussary/';
 const TITLE = 'connections';

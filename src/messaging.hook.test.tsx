@@ -1,7 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
 import React from 'react';
 import { render } from 'ink-testing-library';
-import { useMessaging, type Messaging, type MessagingDeps } from './messaging.js';
+import { useMessaging } from './messaging.js';
+import type { Messaging, MessagingDeps } from './types.js';
 
 let messaging: Messaging;
 

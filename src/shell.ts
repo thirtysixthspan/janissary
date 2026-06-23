@@ -10,11 +10,6 @@ export function spawnShell(_tabIndex: number, extraEnv?: Record<string, string>)
   return shell;
 }
 
-export type ShellCmdCallbacks = {
-  onProgress: (outputBuffer: string) => void;
-  onComplete: (result: string) => void;
-};
-
 export function executeShellCmd(
   shell: ChildProcess,
   cmd: string,

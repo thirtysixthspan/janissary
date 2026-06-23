@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import agentNames from '../agent-names.json' with { type: 'json' };
+import type { AgentCommand } from './types.js';
 
 export { agentNames };
 
@@ -77,11 +78,6 @@ export function resolveAgentName(
   if (pool.length === 0) return null;
   return pool[Math.floor(Math.random() * pool.length)];
 }
-
-export type AgentCommand = {
-  name: string;
-  workspace: boolean;
-};
 
 /**
  * Parse a full `agent` command string into its name and flags.

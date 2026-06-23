@@ -1,4 +1,5 @@
 import * as pty from 'node-pty';
+import type { InteractiveSession, RunInteractiveOptions } from './types.js';
 
 // Full-screen / interactive programs that need a real TTY and live keystroke
 // forwarding (a pager like `less`, an editor like `vim`, a monitor like `top`).
@@ -35,21 +36,6 @@ export function isInteractive(cmd: string): boolean {
   }
   return false;
 }
-
-export type InteractiveSession = {
-  write: (data: string) => void;
-  resize: (cols: number, rows: number) => void;
-  kill: () => void;
-};
-
-export type RunInteractiveOptions = {
-  cmd: string;
-  cwd?: string;
-  cols: number;
-  rows: number;
-  onData: (data: string) => void;
-  onExit: (exitCode: number) => void;
-};
 
 /**
  * Run a command in a pseudo-terminal so it sees a real TTY. Output is delivered

@@ -1,9 +1,6 @@
 import { mkdirSync, writeFileSync, existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-
-export type Config = {
-  transcriptMaxLines: number;
-};
+import type { Config } from './types.js';
 
 export const DEFAULT_TRANSCRIPT_MAX_LINES = 25000;
 

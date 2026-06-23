@@ -1,23 +1,25 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { render, Box, useApp, useWindowSize, useStdin } from 'ink';
-import { isInteractive, runInteractive, type InteractiveSession } from './interactive.js';
+import { isInteractive, runInteractive } from './interactive.js';
 import { useMessaging } from './messaging.js';
-import { type AcpSession, type AcpInfo } from './acp.js';
 import { ConnectionWindow } from './ConnectionWindow.js';
-import { type ThemeColors, darkTheme } from './theme.js';
+import { darkTheme } from './theme.js';
 import { executeShellCmd, queryShellPwd } from './shell.js';
 import { useShellManager } from './useShellManager.js';
 import { saveAgentState, initAgentStateDir, clearStateDir } from './agent-state.js';
-import { useInputHandler, type InputHandlerDeps } from './useInputHandler.js';
+import { useInputHandler } from './useInputHandler.js';
 import { createCommandHandler } from './command-handler.js';
 import { useTabsState } from './useTabsState.js';
 import { TabStrip } from './TabStrip.js';
 import { Transcript } from './Transcript.js';
 import { CommandWindow } from './CommandWindow.js';
-import { getFrequentHistory, flattenBuffer, type LogEntry, dotColors } from './tab.js';
+import { getFrequentHistory, flattenBuffer, dotColors } from './tab.js';
 import { initWorkspaceDir, clearWorkspaceDir, removeWorkspace as removeWorkspaceDir } from './workspace.js';
 import { runDbCommand, parseDbCommand } from './db.js';
-import { launchTabBrowser, type TabBrowser } from './browser.js';
+import { launchTabBrowser } from './browser.js';
+import type {
+  InteractiveSession, AcpSession, AcpInfo, ThemeColors, InputHandlerDeps, LogEntry, TabBrowser,
+} from './types.js';
 import { parseBrowserCommand } from './browser-command.js';
 import { resolveCommand } from './resolve.js';
 import { loadConfig, getConfig } from './config.js';

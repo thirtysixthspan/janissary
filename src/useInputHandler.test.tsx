@@ -1,8 +1,9 @@
 import { describe, it, expect, vi } from 'vitest';
 import React from 'react';
 import { render } from 'ink-testing-library';
-import { useInputHandler, type InputHandlerDeps } from './useInputHandler.js';
-import { makeTab, type Tab, type LogEntry } from './tab.js';
+import { useInputHandler } from './useInputHandler.js';
+import { makeTab } from './tab.js';
+import type { InputHandlerDeps, Tab, LogEntry } from './types.js';
 
 // Enough entries that the flattened buffer exceeds the visible height (so there is
 // somewhere to scroll).

@@ -2,12 +2,7 @@ import { readdirSync, statSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 import { homedir } from 'node:os';
 import { BROWSER_SUBCOMMANDS } from './browser-command.js';
-
-export type CompletionResult = {
-  newInput: string;
-  newCursor: number;
-  matches: string[];
-};
+import type { CompletionResult } from './types.js';
 
 const isDir = (p: string): boolean => {
   try {

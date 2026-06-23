@@ -1,9 +1,7 @@
 import type { ChildProcess } from 'node:child_process';
-import type { Tab, LogEntry } from '../tab.js';
-import type { AgentState } from '../agent-state.js';
-import type { AcpInfo, AcpSession } from '../acp.js';
-import type { TabBrowser } from '../browser.js';
-import type { MessageKind } from '../messaging.js';
+import type {
+  Tab, LogEntry, AgentState, AcpInfo, AcpSession, TabBrowser, MessageKind,
+} from '../types.js';
 
 export type CommandHandlerContext = {
   tabs: Tab[];

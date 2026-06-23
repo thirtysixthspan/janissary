@@ -1,14 +1,7 @@
 import { useState, useRef } from 'react';
 import type { ChildProcess } from 'node:child_process';
 import { spawnShell } from './shell.js';
-
-export type ShellManager = {
-  shellsRef: { current: Map<number, ChildProcess> };
-  cwdRef: { current: Record<string, string> };
-  shellActive: Record<number, boolean>;
-  setShellActive: (updater: (prev: Record<number, boolean>) => Record<number, boolean>) => void;
-  getShell: (tabIndex: number, label?: string) => ChildProcess | null;
-};
+import type { ShellManager } from './types.js';
 
 export function useShellManager(): ShellManager {
   const shellsRef = useRef<Map<number, ChildProcess>>(new Map());

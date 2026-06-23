@@ -1,6 +1,7 @@
 import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync, rmSync, existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
+import type { ConnectionKind, ConnectionParsed } from './types.js';
 
 // SQLite databases live under .janussary/db/sqlite/<name>.sqlite and, unlike
 // agent state and workspaces, persist across launches — that is the whole point.
@@ -75,13 +76,6 @@ export function listOpenConnections(): string[] {
 }
 
 // --- The generic `connection` command -------------------------------------
-
-export type ConnectionKind = 'sqlite' | 'shell' | 'acp' | 'browser';
-
-export type ConnectionParsed =
-  | { error: string }
-  | { action: 'list' }
-  | { action: 'close'; kind: ConnectionKind; id: string };
 
 const KINDS: ConnectionKind[] = ['sqlite', 'shell', 'acp', 'browser'];
 const USAGE = 'Usage: connection <list|close> [kind:id]  (e.g. connection close sqlite:mydb)';

@@ -6,32 +6,7 @@ import {
   PROTOCOL_VERSION,
   type Client,
 } from '@agentclientprotocol/sdk';
-
-export type PromptHandlers = {
-  onChunk: (text: string) => void;
-  onEnd: (stopReason: string) => void;
-  onError: (message: string) => void;
-};
-
-export type AcpSession = {
-  // Send a prompt and stream the agent's text reply through `handlers`.
-  prompt: (text: string, handlers: PromptHandlers) => void;
-  kill: () => void;
-};
-
-export type AcpInfo = { provider?: string; model?: string };
-
-export type AcpOptions = {
-  command: string;
-  args: string[];
-  cwd: string;
-  // Connection-level errors (failed spawn, protocol errors outside a prompt).
-  onError: (message: string) => void;
-  // Called once the session handshake completes, with the agent's reported identity.
-  onConnect?: (info: AcpInfo) => void;
-  // Extra environment variables to pass to the subprocess.
-  env?: Record<string, string>;
-};
+import type { PromptHandlers, AcpSession, AcpOptions } from './types.js';
 
 /**
  * Connect to an arbitrary ACP agent launched as a subprocess and drive it as an ACP
