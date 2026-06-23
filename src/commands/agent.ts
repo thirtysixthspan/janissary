@@ -1,5 +1,5 @@
 import type { Command } from './types.js';
-import { dotColors, makeTab } from '../tab.js';
+import { distinctColor, makeTab, insertTabInGroup } from '../tab.js';
 import { resolveAgentName, parseAgentCommand } from '../commands.js';
 import { findRepoRoot, createWorkspace } from '../workspace.js';
 import { saveAgentState } from '../agent-state.js';
@@ -8,8 +8,12 @@ export const command: Command = {
   name: 'agent',
   match: (cmd) => /^agent\b/i.test(cmd),
   handler: (cmd, ctx) => {
-    const { updateCurrentTab, tabs, setTabs, cwdRef, workspaceRef, setAgentStates, initAgentState } = ctx;
+    const { updateCurrentTab, tabs, activeTab, setTabs, cwdRef, workspaceRef, setAgentStates, initAgentState } = ctx;
     const existingLabels = tabs.map((t) => t.label);
+    // A newly created agent joins the group of the agent that created it (the tab the `agent`
+    // command ran in), inheriting that group's number and its fixed bar color.
+    const creator = tabs[activeTab];
+    const creatorGroup = creator?.group ?? 1;
     const parsed = parseAgentCommand(cmd);
     const resolved = parsed.name || resolveAgentName(`agent ${parsed.name}`, existingLabels);
     if (resolved === null) {
@@ -42,10 +46,12 @@ export const command: Command = {
         return;
       }
     }
-    const newTabIndex = tabs.length;
-    const dotColor = dotColors[newTabIndex % dotColors.length];
-    const { cmdHistory, log } = initAgentState(resolved, dotColor);
-    setTabs((prev) => [...prev, makeTab(resolved, dotColor, newTabIndex + 1, cmdHistory ?? [], log ?? [], workspaceDir)]);
+    // Pick a color clearly distinct from every tab already on screen.
+    const dotColor = distinctColor(tabs.map((t) => t.dotColor));
+    const creatorGroupColor = creator?.groupColor ?? dotColor;
+    const { cmdHistory, log, group, groupColor } = initAgentState(resolved, dotColor, creatorGroup, creatorGroupColor);
+    // Insert next to the creator's group so the group stays a single connected run.
+    setTabs((prev) => insertTabInGroup(prev, makeTab(resolved, dotColor, prev.length + 1, cmdHistory ?? [], log ?? [], workspaceDir, group, groupColor)));
     if (workspaceDir) {
       cwdRef.current[resolved] = workspaceDir;
       workspaceRef.current.add(workspaceDir);

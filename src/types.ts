@@ -37,6 +37,12 @@ export type Tab = {
   label: string;
   dotColor: string;
   number: number;
+  // Group number, shared by an agent and every agent it (transitively) creates. The root agent
+  // is group 1; a launched profile forms its own group.
+  group: number;
+  // The group's bar color, fixed when the group is first assigned (the color of its first
+  // agent). Stored per tab so it never shifts when tabs are moved or a group member is closed.
+  groupColor: string;
   log: LogEntry[];
   cmdHistory: string[];
   cmdHistoryIdx: number;
@@ -55,6 +61,8 @@ export type AgentState = {
   dotColor: string;
   active: boolean;
   number?: number;
+  group?: number;
+  groupColor?: string;
   cmdHistory?: string[];
   log?: { input: string; output: string; running?: boolean }[];
   cwd?: string;

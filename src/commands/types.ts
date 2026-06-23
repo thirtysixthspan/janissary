@@ -32,8 +32,8 @@ export type CommandHandlerContext = {
   forgetDbConn: (name: string) => void;
   appendLog: (label: string, entry: LogEntry) => void;
   initAgentState: (
-    name: string, dotColor: string,
-  ) => { cmdHistory?: string[]; log?: LogEntry[]; cwd?: string; workspaceDir?: string };
+    name: string, dotColor: string, group?: number, groupColor?: string,
+  ) => { cmdHistory?: string[]; log?: LogEntry[]; cwd?: string; workspaceDir?: string; group?: number; groupColor?: string };
   sendMessage: (msg: { from: string; to: string; kind: MessageKind; text: string }) => boolean;
   saveTabLog: (label: string, log: LogEntry[]) => void;
   setAgentActive: (name: string, active: boolean) => void;

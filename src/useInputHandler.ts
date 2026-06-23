@@ -1,7 +1,7 @@
 import { useInput } from 'ink';
 import type { Key } from 'ink';
 import { useRef } from 'react';
-import { flattenBuffer, swapTabsLeft, swapTabsRight } from './tab.js';
+import { flattenBuffer, swapTabsLeft, swapTabsRight, canMoveTab } from './tab.js';
 import { completeCommandLine } from './completion.js';
 import { nextScrollStep, initialScrollAccel } from './scroll.js';
 import type { ScrollAccel, InputHandlerDeps } from './types.js';
@@ -104,8 +104,8 @@ export function useInputHandler(deps: InputHandlerDeps): void {
           }
         },
       },
-      { test: (_, k) => k.ctrl && !!k.leftArrow, run: () => { setTabs((prev) => swapTabsLeft(prev, activeTab)); setActiveTab((prev) => Math.max(0, prev - 1)); } },
-      { test: (_, k) => k.ctrl && !!k.rightArrow, run: () => { setTabs((prev) => swapTabsRight(prev, activeTab)); setActiveTab((prev) => Math.min(prev + 1, tabs.length - 1)); } },
+      { test: (_, k) => k.ctrl && !!k.leftArrow, run: () => { if (!canMoveTab(tabs, activeTab, -1)) return; setTabs((prev) => swapTabsLeft(prev, activeTab)); setActiveTab((prev) => Math.max(0, prev - 1)); } },
+      { test: (_, k) => k.ctrl && !!k.rightArrow, run: () => { if (!canMoveTab(tabs, activeTab, 1)) return; setTabs((prev) => swapTabsRight(prev, activeTab)); setActiveTab((prev) => Math.min(prev + 1, tabs.length - 1)); } },
       { test: (_, k) => (k.ctrl || k.shift) && !!k.upArrow, run: () => scrollUp() },
       { test: (_, k) => (k.ctrl || k.shift) && !!k.downArrow, run: () => scrollDown() },
       { test: (_, k) => k.shift && !!k.leftArrow, run: () => { if (tabs.length > 1) setActiveTab((prev: number) => (prev - 1 + tabs.length) % tabs.length); } },

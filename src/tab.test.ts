@@ -1,5 +1,51 @@
 import { describe, it, expect } from 'vitest';
-import { makeTab, swapTabsLeft, swapTabsRight, renumberTabs, expandTabs, flattenBuffer, wordWrap, stripComments, formatMarkdownTables, formatAgentOutput } from './tab.js';
+import { makeTab, dotColors, distinctColor, canMoveTab, insertTabInGroup, swapTabsLeft, swapTabsRight, renumberTabs, expandTabs, flattenBuffer, wordWrap, stripComments, formatMarkdownTables, formatAgentOutput } from './tab.js';
+
+describe('group', () => {
+  it('defaults a tab to group 1', () => {
+    expect(makeTab('a', '#red', 1).group).toBe(1);
+  });
+
+  it('records the supplied group number', () => {
+    expect(makeTab('a', '#red', 1, [], [], undefined, 3).group).toBe(3);
+  });
+
+  it('keeps a tab group when renumbering position', () => {
+    const tabs = [makeTab('a', '#red', 1, [], [], undefined, 2), makeTab('b', '#blue', 2, [], [], undefined, 2)];
+    expect(renumberTabs(tabs).map((t) => t.group)).toEqual([2, 2]);
+  });
+
+  it('defaults the group color to the tab dot color', () => {
+    expect(makeTab('a', '#red', 1).groupColor).toBe('#red');
+  });
+
+  it('stores an explicit group color independent of the dot color', () => {
+    expect(makeTab('a', '#red', 1, [], [], undefined, 2, '#abc123').groupColor).toBe('#abc123');
+  });
+});
+
+describe('distinctColor', () => {
+  it('keeps a preferred color that is far from those in use', () => {
+    expect(distinctColor(['#000000'], dotColors[2])).toBe(dotColors[2]);
+  });
+
+  it('replaces a preferred color that matches one already in use', () => {
+    expect(distinctColor([dotColors[0]], dotColors[0])).not.toBe(dotColors[0]);
+  });
+
+  it('picks a palette color substantially different from every color in use', () => {
+    const used = [dotColors[0], dotColors[1]];
+    const picked = distinctColor(used);
+    expect(used).not.toContain(picked);
+    // The pick is clearly distinct from each used color.
+    const dist = (a: string, b: string) => {
+      const p = (h: string) => { const n = parseInt(h.slice(1), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; };
+      const [r1, g1, b1] = p(a), [r2, g2, b2] = p(b);
+      return Math.hypot(r1 - r2, g1 - g2, b1 - b2);
+    };
+    expect(Math.min(...used.map((u) => dist(picked, u)))).toBeGreaterThan(60);
+  });
+});
 
 describe('wordWrap', () => {
   it('leaves text within the width untouched', () => {
@@ -170,6 +216,51 @@ describe('swapTabsRight', () => {
     const tabs = [makeTab('a', '#red', 1)];
     const result = swapTabsRight(tabs, 5);
     expect(result).toBe(tabs);
+  });
+});
+
+describe('group moves', () => {
+  // g1=[a], g2=[b, c]
+  const grouped = () => [
+    makeTab('a', '#red', 1, [], [], undefined, 1),
+    makeTab('b', '#blue', 2, [], [], undefined, 2),
+    makeTab('c', '#green', 3, [], [], undefined, 2),
+  ];
+
+  it('allows a swap within the same group', () => {
+    expect(canMoveTab(grouped(), 2, -1)).toBe(true); // c <-> b (both g2)
+    expect(swapTabsRight(grouped(), 1).map((t) => t.label)).toEqual(['a', 'c', 'b']);
+  });
+
+  it('blocks a swap across a group boundary (no-op)', () => {
+    const tabs = grouped();
+    expect(canMoveTab(tabs, 1, -1)).toBe(false); // b (g2) cannot move into a (g1)
+    expect(swapTabsLeft(tabs, 1)).toBe(tabs);
+    expect(canMoveTab(tabs, 0, 1)).toBe(false); // a (g1) cannot move into b (g2)
+    expect(swapTabsRight(tabs, 0)).toBe(tabs);
+  });
+
+  it('keeps groups assigned when reordering within a group', () => {
+    expect(swapTabsRight(grouped(), 1).map((t) => t.group)).toEqual([1, 2, 2]);
+  });
+});
+
+describe('insertTabInGroup', () => {
+  it('inserts a new tab next to its group so the group stays connected', () => {
+    // g1=[a], g2=[b]; a new g1 tab must land beside a, not at the end.
+    const tabs = [
+      makeTab('a', '#red', 1, [], [], undefined, 1),
+      makeTab('b', '#blue', 2, [], [], undefined, 2),
+    ];
+    const result = insertTabInGroup(tabs, makeTab('a2', '#pink', 0, [], [], undefined, 1));
+    expect(result.map((t) => t.label)).toEqual(['a', 'a2', 'b']);
+    expect(result.map((t) => t.number)).toEqual([1, 2, 3]);
+  });
+
+  it('appends a brand-new group at the end', () => {
+    const tabs = [makeTab('a', '#red', 1, [], [], undefined, 1)];
+    const result = insertTabInGroup(tabs, makeTab('b', '#blue', 0, [], [], undefined, 2));
+    expect(result.map((t) => t.label)).toEqual(['a', 'b']);
   });
 });
 

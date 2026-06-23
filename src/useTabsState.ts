@@ -10,9 +10,10 @@ export function useTabsState(relaunch: boolean, capLog: (log: LogEntry[]) => Log
       const agents = listAgentStates();
       if (agents.length === 0) return [makeTab('janus', dotColors[0], 1)];
       const sorted = [...agents].sort((a, b) => (a.number ?? 0) - (b.number ?? 0));
-      return sorted.map((a, i) =>
-        makeTab(a.name, a.dotColor ?? dotColors[i % dotColors.length], a.number ?? i + 1, a.cmdHistory ?? [], a.log ?? [], a.workspaceDir),
-      );
+      return sorted.map((a, i) => {
+        const dotColor = a.dotColor ?? dotColors[i % dotColors.length];
+        return makeTab(a.name, dotColor, a.number ?? i + 1, a.cmdHistory ?? [], a.log ?? [], a.workspaceDir, a.group ?? 1, a.groupColor ?? dotColor);
+      });
     }
     return [makeTab('janus', dotColors[0], 1)];
   });
@@ -112,14 +113,14 @@ export function useTabsState(relaunch: boolean, capLog: (log: LogEntry[]) => Log
     });
   };
 
-  const initAgentState = (name: string, dotColor: string) => {
+  const initAgentState = (name: string, dotColor: string, group: number = 1, groupColor: string = dotColor) => {
     const existing = loadAgentState(name);
-    const state = existing ?? { name, dotColor, active: false };
+    const state: AgentState = existing ?? { name, dotColor, active: false, group, groupColor };
     if (!existing) {
       try { saveAgentState(state); } catch { /* ignore */ }
     }
     setAgentStates((prev) => ({ ...prev, [name]: state }));
-    return { cmdHistory: state.cmdHistory, log: state.log, cwd: state.cwd, workspaceDir: state.workspaceDir };
+    return { cmdHistory: state.cmdHistory, log: state.log, cwd: state.cwd, workspaceDir: state.workspaceDir, group: state.group ?? group, groupColor: state.groupColor ?? groupColor };
   };
 
   const finishRunning = (label: string, output: string) => {
