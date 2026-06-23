@@ -5,7 +5,8 @@ import { useMessaging } from './messaging.js';
 import { type AcpSession, type AcpInfo } from './acp.js';
 import { ConnectionWindow } from './ConnectionWindow.js';
 import { type ThemeColors, darkTheme } from './theme.js';
-import { spawnShell, executeShellCmd, queryShellPwd } from './shell.js';
+import { executeShellCmd, queryShellPwd } from './shell.js';
+import { useShellManager } from './useShellManager.js';
 import { saveAgentState, initAgentStateDir, clearStateDir } from './agent-state.js';
 import { useInputHandler, type InputHandlerDeps } from './useInputHandler.js';
 import { createCommandHandler } from './command-handler.js';
@@ -58,8 +59,7 @@ export const App = () => {
     setTimeout(() => setScrollBoundaryHit(false), 200);
   }, []);
   const unmountedRef = useRef(false);
-  const shellsRef = useRef<Map<number, import('node:child_process').ChildProcess>>(new Map());
-  const cwdRef = useRef<Record<string, string>>({});
+  const { shellsRef, cwdRef, shellActive, setShellActive, getShell } = useShellManager();
   const { stdin } = useStdin();
   const [interactive, setInteractive] = useState<{ cmd: string; cwd?: string } | null>(null);
   const interactiveRef = useRef<InteractiveSession | null>(null);
@@ -70,28 +70,11 @@ export const App = () => {
   // state into React for the status popup / connection completions.
   const browserRef = useRef<Map<number, { browser: TabBrowser; current?: string; counter: number }>>(new Map());
   const [browserInfo, setBrowserInfo] = useState<Record<number, { mode: string; windows: string[] }>>({});
-  const [shellActive, setShellActive] = useState<Record<number, boolean>>({});
   // SQLite databases each tab has opened a connection to (keyed by tab label).
   // Connections are global, but this attributes them to the tab that accessed
   // them so the status popup reflects that tab's connections.
   const [tabDbConns, setTabDbConns] = useState<Record<string, string[]>>({});
   const workspaceRef = useRef<Set<string>>(new Set());
-
-  const getShell = (tabIndex: number, label?: string): import('node:child_process').ChildProcess | null => {
-    let shell = shellsRef.current.get(tabIndex);
-    const isNew = !shell || shell.exitCode !== null || shell.signalCode !== null;
-    if (isNew) {
-      shell = spawnShell(tabIndex, label ? { JANUS_AGENT_NAME: label } : undefined);
-      shell.on('exit', () => shellsRef.current.delete(tabIndex));
-      shell.on('error', () => shellsRef.current.delete(tabIndex));
-      shellsRef.current.set(tabIndex, shell);
-      setShellActive((prev) => (prev[tabIndex] ? prev : { ...prev, [tabIndex]: true }));
-      if (label && cwdRef.current[label]) {
-        shell.stdin!.write(`cd "${cwdRef.current[label]}"\n`);
-      }
-    }
-    return shell ?? null;
-  };
 
   useEffect(() => {
     if (relaunch) {
