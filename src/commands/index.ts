@@ -1,0 +1,32 @@
+import type { Command } from './types.js';
+import { command as agent } from './agent.js';
+import { command as next } from './next.js';
+import { command as msg } from './msg.js';
+import { command as broadcast } from './broadcast.js';
+import { command as acp } from './acp.js';
+import { command as db } from './db.js';
+import { command as browser } from './browser.js';
+import { command as connection } from './connection.js';
+import { command as clear } from './clear.js';
+import { command as state } from './state.js';
+import { command as hist } from './hist.js';
+import { command as close } from './close.js';
+import { command as quit } from './quit.js';
+
+export const commands: Command[] = [
+  agent,
+  next,
+  msg,
+  broadcast,
+  acp,
+  db,
+  browser,
+  connection,
+  clear,
+  state,
+  hist,
+  close,
+  quit,
+];
+
+export type { Command, CommandHandlerContext } from './types.js';
