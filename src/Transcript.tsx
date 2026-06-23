@@ -20,14 +20,12 @@ export const Transcript = ({ visibleLines, scrollChars, visibleHeight, dotColor,
   <Box flexGrow={1} flexDirection="column" paddingX={1} paddingY={0}>
     {Array.from({ length: visibleHeight }, (_, row) => {
       const line = visibleLines[row];
-      // Trailing placeholder rows keep the left border running the full height.
+      // No content for this row: render it blank (no left rail) so an empty or short transcript
+      // doesn't draw a full-height border column around nothing.
       if (!line) {
         return (
-          <Box key={row} flexDirection="row">
-            <Box flexShrink={0} width={1}>
-              <Text color={dotColor}>│</Text>
-            </Box>
-            <Box flexGrow={1} />
+          <Box key={row}>
+            <Text> </Text>
           </Box>
         );
       }

@@ -485,8 +485,10 @@ export const App = () => {
   const thumbSize = Math.max(1, Math.round((visibleHeight / Math.max(buffer.length, 1)) * visibleHeight));
   const maxThumbOffset = visibleHeight - thumbSize;
   const thumbPos = Math.round((1 - scrollPct / 100) * maxThumbOffset);
+  // Only draw the scrollbar when the transcript actually overflows; otherwise (e.g. the empty
+  // startup screen) the thumb fills the whole height as a solid bar around nothing.
   const scrollChars = Array.from({ length: visibleHeight }, (_, i) =>
-    i >= thumbPos && i < thumbPos + thumbSize ? '█' : '·',
+    maxOffset === 0 ? ' ' : i >= thumbPos && i < thumbPos + thumbSize ? '█' : '·',
   );
 
   // An interactive program (less/vim/...) owns the terminal; render nothing so
