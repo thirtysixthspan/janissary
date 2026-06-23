@@ -3,6 +3,7 @@ import { render, Box, useApp, useWindowSize, useStdin } from 'ink';
 import { isInteractive, runInteractive } from './interactive.js';
 import { useMessaging } from './messaging.js';
 import { ConnectionWindow } from './ConnectionWindow.js';
+import { ScheduleWindow } from './ScheduleWindow.js';
 import { darkTheme } from './theme.js';
 import { executeShellCmd, queryShellPwd } from './shell.js';
 import { useShellManager } from './useShellManager.js';
@@ -10,6 +11,7 @@ import { saveAgentState, initAgentStateDir, clearStateDir } from './agent-state.
 import { useInputHandler } from './useInputHandler.js';
 import { createCommandHandler } from './command-handler.js';
 import { useTabsState } from './useTabsState.js';
+import { useScheduler } from './useScheduler.js';
 import { TabStrip } from './TabStrip.js';
 import { Transcript } from './Transcript.js';
 import { CommandWindow } from './CommandWindow.js';
@@ -47,7 +49,7 @@ export const App = () => {
 
   const {
     tabs, setTabs, agentStates, setAgentStates, activeTab, setActiveTab,
-    tabsRef, updateCurrentTab, setAgentActive, saveTabLog,
+    tabsRef, updateCurrentTab, updateTab, setAgentActive, saveTabLog,
     appendLog, appendContext, initAgentState, finishRunning,
   } = useTabsState(relaunch, capLog);
 
@@ -399,11 +401,12 @@ export const App = () => {
     },
   });
 
-  const executeRef = useRef<((cmd: string) => void) | null>(null);
+  const executeRef = useRef<((cmd: string, targetIdx?: number) => void) | null>(null);
   executeRef.current = createCommandHandler({
     tabs,
     activeTab,
     updateCurrentTab,
+    updateTab,
     setTabs,
     setActiveTab,
     setInteractive,
@@ -435,6 +438,8 @@ export const App = () => {
     columns,
     frequentHistory,
   });
+
+  useScheduler({ tabsRef, agentStates, setAgentStates, executeRef });
 
   // Open connection strings for the active tab — its shell/agent plus all open
   // SQLite connections — offered as `connection close` completions.
@@ -476,12 +481,24 @@ export const App = () => {
   // SQLite connections this tab has open (filtered against the live registry).
   const dbConns = (tabDbConns[cur.label] ?? []).filter(isConnectionOpen);
 
+  // The connection window floats at top=3; the schedule window stacks directly below it, so
+  // its top offset depends on the connection window's rendered height (border + body lines).
+  const connShown =
+    shellActive[activeTab] || !!acpInfo[activeTab] || dbConns.length > 0
+    || (browserInfo[activeTab]?.windows.length ?? 0) > 0;
+  const connBodyLines =
+    (shellActive[activeTab] ? 1 : 0)
+    + (acpInfo[activeTab]?.provider ? 1 : 0)
+    + (browserInfo[activeTab]?.windows.length ?? 0)
+    + dbConns.length;
+  const schedule = agentStates[cur.label]?.schedule ?? [];
+
   return (
     <Box flexDirection="column" height={rows}>
       <TabStrip tabs={tabs} agentStates={agentStates} activeTab={activeTab} theme={theme} scrollBoundaryHit={scrollBoundaryHit} />
       <Transcript visibleLines={visibleLines} scrollChars={scrollChars} visibleHeight={visibleHeight} dotColor={cur.dotColor} theme={theme} />
       <CommandWindow beforeCursor={beforeCursor} afterCursor={afterCursor} dotColor={cur.dotColor} theme={theme} historyItems={frequentHistory} historySelectedIdx={historyPickerIdx} historyOpen={historyPickerOpen} />
-      {(shellActive[activeTab] || acpInfo[activeTab] || dbConns.length > 0 || (browserInfo[activeTab]?.windows.length ?? 0) > 0) && (
+      {connShown && (
         <ConnectionWindow
           shell={shellActive[activeTab] ? process.env.SHELL || 'bash' : undefined}
           cwd={cwdRef.current[cur.label] ?? process.cwd()}
@@ -492,6 +509,9 @@ export const App = () => {
           )}
           theme={theme}
         />
+      )}
+      {schedule.length > 0 && (
+        <ScheduleWindow entries={schedule} top={3 + (connShown ? connBodyLines + 2 : 0)} theme={theme} />
       )}
     </Box>
   );

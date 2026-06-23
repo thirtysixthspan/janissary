@@ -37,14 +37,16 @@ Key modules:
 - `src/browser.ts` — per-tab Playwright browser (`launchTabBrowser`): isolated windows with goto/eval/shot/content; headless or headed.
 - `src/browser-command.ts` — `browser` command parser (`parseBrowserCommand`) plus the ACP-loop helpers `extractBrowserCommand`/`BROWSER_PRIMER`.
 - `src/connections.ts` — persistent SQLite connection registry (open/close/list) plus the `connection` command parser (kinds: sqlite/shell/acp/browser).
+- `src/schedule.ts` — `schedule` command parser (`parseScheduleCommand`) and next-run math (`computeNextRun`, time/date helpers); pure, no I/O.
+- `src/useScheduler.ts` — one-second tick that fires each open agent's due scheduled commands via the dispatcher (target-tab `createCommandHandler`).
 - `src/acp.ts` — ACP client: spawn/drive an agent subprocess over JSON-RPC (`connectAcp`).
 - `src/acp-loop.ts` — autonomous agent tool loop (`runAcpToolLoop`): run a proposed command, feed output back, repeat until done/capped.
 - `src/tab.ts` — `Tab`/`LogEntry` types, `makeTab`, `dotColors`, transcript line-buffer flattening (`flattenBuffer`), history helpers.
 - `src/useInputHandler.ts` — keyboard input handling hook.
 - `src/theme.ts` — `darkTheme` color tokens (single theme, no switcher yet).
-- UI components: `src/TabStrip.tsx`, `src/Transcript.tsx`, `src/CommandWindow.tsx`.
+- UI components: `src/TabStrip.tsx`, `src/Transcript.tsx`, `src/CommandWindow.tsx`, `src/ConnectionWindow.tsx`, `src/ScheduleWindow.tsx` (floating schedule list).
 
-State: per-agent data (command history, transcript, shell cwd) persists to `.janussary/state/<name>.json`. Normal launch clears this dir; `janus --relaunch` restores all tabs from it.
+State: per-agent data (command history, transcript, shell cwd, schedule) persists to `.janussary/state/<name>.json`. Normal launch clears this dir; `janus --relaunch` restores all tabs from it.
 
 ## Conventions
 

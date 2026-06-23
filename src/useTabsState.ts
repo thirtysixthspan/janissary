@@ -40,12 +40,12 @@ export function useTabsState(relaunch: boolean, capLog: (log: LogEntry[]) => Log
     });
   }, [tabs]);
 
-  const updateCurrentTab = (updater: (tab: Tab) => Tab) => {
+  const updateTab = (idx: number, updater: (tab: Tab) => Tab) => {
     setTabs((prev) => {
       let savedLabel: string | undefined;
       let savedLog: LogEntry[] | undefined;
       const result = prev.map((t, i) => {
-        if (i !== activeTab) return t;
+        if (i !== idx) return t;
         const updated = updater(t);
         if (updated.log !== t.log) {
           savedLabel = updated.label;
@@ -63,6 +63,8 @@ export function useTabsState(relaunch: boolean, capLog: (log: LogEntry[]) => Log
       return result;
     });
   };
+
+  const updateCurrentTab = (updater: (tab: Tab) => Tab) => updateTab(activeTab, updater);
 
   const setAgentActive = (name: string, active: boolean) => {
     setAgentStates((prev) => {
@@ -138,6 +140,7 @@ export function useTabsState(relaunch: boolean, capLog: (log: LogEntry[]) => Log
     activeTab, setActiveTab,
     tabsRef,
     updateCurrentTab,
+    updateTab,
     setAgentActive,
     saveTabLog,
     appendLog,

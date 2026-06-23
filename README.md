@@ -35,6 +35,7 @@ janus
 | `db`         | Create, delete, query, or list SQLite databases |
 | `browser`    | Drive a headless/headed web browser (open, goto, content, eval, shot) |
 | `connection` | List or close open connections (sqlite/shell/acp/browser) |
+| `schedule`   | Run a command later — once or on a recurring schedule |
 
 ### Configuration
 
@@ -138,6 +139,41 @@ echo hello ## inline note ## world          → echo hello world
 ```
 
 A terminated comment (`## … ##`) is removed wherever it appears, collapsing the surrounding whitespace. An unterminated comment (`## …` with no closing `##`) removes everything from `##` to the end of the line. This lets you annotate or temporarily disable part of a command without retyping it.
+
+### Scheduling
+
+`schedule` queues a command to run later in the current agent's tab. Each agent keeps its
+own schedule in its state file. When an entry fires, the command runs in that tab exactly
+as if you had typed it, tagged with a `## scheduled ##` comment.
+
+Every timer is named — the name is the first word after `schedule`. The name is the timer's
+id, so it shows in the schedule window and you cancel it by name. Names must be unique per
+agent (and can't be `list`, `cancel`, or `clear`).
+
+```
+schedule deploy   at 3:35pm npm run deploy            # once, today (or tomorrow if passed)
+schedule pull     on august 12th at 2pm shell git pull # once, at a date (default 9:00am)
+schedule fetch    every 5m shell git fetch            # recurring interval (m / h / d / w)
+schedule status   every day at 9am shell git status   # recurring at a clock time
+schedule standup  every monday at 9am broadcast all info standup  # recurring on a weekday
+```
+
+Times accept `3:35pm`, `2pm`, or `14:00`; dates accept `august 12th`, `aug 12`, or `8/12`.
+
+Manage entries with:
+
+```
+schedule list           # show this agent's entries (name, schedule, next run, command)
+schedule cancel deploy  # remove one entry by name
+schedule clear          # remove all of this agent's entries
+```
+
+Firing is checked once a second. A schedule only runs while its agent's tab is open; if the
+agent isn't open as a tab, that firing is skipped and the entry stays in the state file.
+
+While the active agent has any scheduled timers, a small `schedule` window floats at the
+top-right (just below the `connections` window) listing each timer's id/name, schedule, and
+next run time. It disappears once the schedule is empty.
 
 ### Workspace
 

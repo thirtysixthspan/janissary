@@ -3,12 +3,17 @@ import { resolveCommand } from './resolve.js';
 import { saveAgentState } from './agent-state.js';
 import { isInteractive } from './interactive.js';
 import { commands } from './commands/index.js';
-import type { CommandHandlerDeps } from './types.js';
+import type { CommandHandlerDeps, Tab } from './types.js';
 
-export function createCommandHandler(deps: CommandHandlerDeps): (cmd: string) => void {
-  return (cmd: string) => {
+export function createCommandHandler(deps: CommandHandlerDeps): (cmd: string, targetIdx?: number) => void {
+  return (cmd: string, targetIdx?: number) => {
     const trimmed = stripComments(cmd);
-    const { tabs, activeTab, updateCurrentTab, setAgentStates } = deps;
+    // When a target tab is given (scheduled execution) run "as if typed" in that tab by
+    // overriding the active-tab and its updater; otherwise act on the focused tab.
+    const ctx = targetIdx === undefined
+      ? deps
+      : { ...deps, activeTab: targetIdx, updateCurrentTab: (u: (tab: Tab) => Tab) => deps.updateTab(targetIdx, u) };
+    const { tabs, activeTab, updateCurrentTab, setAgentStates } = ctx;
     const curTab = tabs[activeTab];
     const newHistory = curTab && curTab.cmdHistory[curTab.cmdHistory.length - 1] !== trimmed
       ? [...curTab.cmdHistory, trimmed].slice(-100)
@@ -36,10 +41,10 @@ export function createCommandHandler(deps: CommandHandlerDeps): (cmd: string) =>
     if (res.kind === 'shell') {
       const tabLabel = tabs[activeTab].label;
       if (res.cmd && isInteractive(res.cmd)) {
-        deps.setInteractive({ cmd: res.cmd, cwd: deps.cwdRef.current[tabLabel] ?? process.cwd() });
+        ctx.setInteractive({ cmd: res.cmd, cwd: ctx.cwdRef.current[tabLabel] ?? process.cwd() });
         return;
       }
-      deps.runShellInTab(activeTab, tabLabel, res.cmd);
+      ctx.runShellInTab(activeTab, tabLabel, res.cmd);
       return;
     }
 
@@ -52,7 +57,7 @@ export function createCommandHandler(deps: CommandHandlerDeps): (cmd: string) =>
 
     const command = commands.find((c) => c.name === res.name);
     if (command) {
-      command.handler(res.cmd, deps);
+      command.handler(res.cmd, ctx);
     }
   };
 }

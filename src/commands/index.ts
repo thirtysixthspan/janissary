@@ -12,6 +12,7 @@ import { command as state } from './state.js';
 import { command as hist } from './hist.js';
 import { command as close } from './close.js';
 import { command as quit } from './quit.js';
+import { command as schedule } from './schedule.js';
 
 export const commands: Command[] = [
   agent,
@@ -27,6 +28,7 @@ export const commands: Command[] = [
   hist,
   close,
   quit,
+  schedule,
 ];
 
 export type { Command, CommandHandlerContext } from './types.js';

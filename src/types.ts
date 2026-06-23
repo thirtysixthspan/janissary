@@ -60,7 +60,30 @@ export type AgentState = {
   cwd?: string;
   context?: string[];
   workspaceDir?: string;
+  schedule?: ScheduleEntry[];
 };
+
+// --- schedule.ts ----------------------------------------------------------
+
+export type TimeOfDay = { hour: number; minute: number };
+
+export type ScheduleEntry = {
+  id: string; // 's1', 's2', ...
+  command: string; // raw command text to dispatch
+  spec: string; // human-readable schedule, e.g. "every 5m", "every day at 3:35pm"
+  nextRun: number; // epoch ms of the next execution
+  recurring: boolean;
+  intervalMs?: number; // interval recurrence
+  timeOfDay?: TimeOfDay; // clock-time recurrence
+  weekday?: number; // 0-6 (Sun-Sat) when "every <weekday>"
+};
+
+export type ScheduleParseResult =
+  | { action: 'add'; entry: Omit<ScheduleEntry, 'id'>; name: string }
+  | { action: 'list' }
+  | { action: 'cancel'; id: string }
+  | { action: 'clear' }
+  | { error: string };
 
 // --- acp.ts ---------------------------------------------------------------
 

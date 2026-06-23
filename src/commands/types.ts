@@ -7,6 +7,7 @@ export type CommandHandlerContext = {
   tabs: Tab[];
   activeTab: number;
   updateCurrentTab: (updater: (tab: Tab) => Tab) => void;
+  updateTab: (idx: number, updater: (tab: Tab) => Tab) => void;
   setTabs: (updater: (prev: Tab[]) => Tab[]) => void;
   setActiveTab: (fn: ((prev: number) => number) | number) => void;
   setInteractive: (v: { cmd: string; cwd?: string } | null) => void;
