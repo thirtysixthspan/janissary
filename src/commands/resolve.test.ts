@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { resolveCommand } from './resolve.js';
+import { resolveCommand } from '../resolve.js';
 
 describe('resolveCommand', () => {
   it('treats empty/whitespace input as empty', () => {
@@ -22,15 +22,13 @@ describe('resolveCommand', () => {
     if (res.kind === 'output') expect(res.output).toContain('Unknown command');
   });
 
-  it('does not run a backtick-prefixed command in the shell (backtick is not supported)', () => {
+  it('does not run a backtick-prefixed command in the shell', () => {
     const res = resolveCommand('`ls -la');
     expect(res.kind).toBe('output');
     if (res.kind === 'output') expect(res.output).toContain('Unknown command');
   });
 
   it('requires the `shell` keyword: a bare command name is not auto-run', () => {
-    // Without the keyword, even a common command like `ls` is treated as unknown rather
-    // than run in the shell.
     const res = resolveCommand('ls');
     expect(res.kind).toBe('output');
     if (res.kind === 'output') expect(res.output).toContain('Unknown command');
