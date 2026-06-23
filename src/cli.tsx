@@ -13,9 +13,11 @@ import { useInputHandler, type InputHandlerDeps } from './useInputHandler.js';
 import { TabStrip } from './TabStrip.js';
 import { Transcript } from './Transcript.js';
 import { PromptBar } from './PromptBar.js';
-import { getFrequentHistory, flattenBuffer, wordWrap, stripComments, type Tab, type LogEntry, dotColors, makeTab } from './tab.js';
+import { getFrequentHistory, flattenBuffer, wordWrap, formatAgentOutput, stripComments, type Tab, type LogEntry, dotColors, makeTab } from './tab.js';
 import { findRepoRoot, createWorkspace, removeWorkspace as removeWorkspaceDir, initWorkspaceDir, clearWorkspaceDir } from './workspace.js';
 import { runDbCommand, parseDbCommand, DB_PRIMER, extractDbCommand } from './db.js';
+import { launchTabBrowser, type TabBrowser } from './browser.js';
+import { parseBrowserCommand, extractBrowserCommand, BROWSER_PRIMER } from './browser-command.js';
 import { runAcpToolLoop } from './acp-loop.js';
 import { loadConfig, getConfig } from './config.js';
 import { initLogDir, appendEntry, getTimeStr } from './logger.js';
@@ -74,6 +76,11 @@ export const App = () => {
   const interactiveRef = useRef<InteractiveSession | null>(null);
   const acpRef = useRef<Map<number, AcpSession>>(new Map());
   const [acpInfo, setAcpInfo] = useState<Record<number, AcpInfo>>({});
+  // Per-tab Playwright browser: each tab launches its own process (so modes can differ),
+  // holds one or more windows, and tracks the current one. `browserInfo` mirrors the live
+  // state into React for the status popup / connection completions.
+  const browserRef = useRef<Map<number, { browser: TabBrowser; current?: string; counter: number }>>(new Map());
+  const [browserInfo, setBrowserInfo] = useState<Record<number, { mode: string; windows: string[] }>>({});
   const [shellActive, setShellActive] = useState<Record<number, boolean>>({});
   // SQLite databases each tab has opened a connection to (keyed by tab label).
   // Connections are global, but this attributes them to the tab that accessed
@@ -117,6 +124,8 @@ export const App = () => {
       shellsRef.current.clear();
       for (const [, session] of acpRef.current) session.kill();
       acpRef.current.clear();
+      for (const [, e] of browserRef.current) void e.browser.close();
+      browserRef.current.clear();
       closeAllConnections();
     };
   }, []);
@@ -178,7 +187,7 @@ export const App = () => {
   }, [columns, rows]);
 
   const cur = tabs[activeTab] ?? tabs[0];
-  const buffer = flattenBuffer(cur.log);
+  const buffer = flattenBuffer(cur.log, !cur.toolStepsExpanded);
   const frequentHistory = getFrequentHistory(cur.cmdHistory, 10);
   const totalTabsWidth = tabs.reduce((w, t) => w + 6 + t.label.length, 0);
   const tabRows = Math.max(1, Math.ceil(totalTabsWidth / (columns || 80)));
@@ -293,6 +302,132 @@ export const App = () => {
       }
     }
     return output;
+  };
+
+  // Finalize a tab's most recent `running` log entry with its output (used by async
+  // browser commands, mirroring the acp/shell running-entry pattern).
+  const finishRunning = (label: string, output: string) => {
+    if (output) appendEntry({ timestamp: getTimeStr(), agent: label, text: output });
+    setTabs((prev) => prev.map((t) => {
+      if (t.label !== label) return t;
+      const log = [...t.log];
+      const i = log.findLastIndex((e) => e.running);
+      if (i >= 0) log[i] = { ...log[i], output, running: false };
+      saveTabLog(t.label, log);
+      return { ...t, log };
+    }));
+  };
+
+  // Mirror a tab's live browser state (mode + window ids) into React state.
+  const refreshBrowserInfo = (tabIndex: number) => {
+    const entry = browserRef.current.get(tabIndex);
+    setBrowserInfo((prev) => {
+      const copy = { ...prev };
+      if (!entry) delete copy[tabIndex];
+      else copy[tabIndex] = { mode: entry.browser.mode, windows: entry.browser.windowIds() };
+      return copy;
+    });
+  };
+
+  // Close one of a tab's browser windows; when it was the last, end that tab's browser
+  // process. Shared by `browser close`, `browser window close`, and `connection close`.
+  const closeBrowserWindow = async (tabIndex: number, id: string): Promise<string> => {
+    const entry = browserRef.current.get(tabIndex);
+    if (!entry || !entry.browser.window(id)) return `No open connection browser:${id}.`;
+    await entry.browser.closeWindow(id);
+    if (entry.current === id) entry.current = entry.browser.windowIds()[0];
+    if (entry.browser.windowIds().length === 0) {
+      await entry.browser.close();
+      browserRef.current.delete(tabIndex);
+    }
+    refreshBrowserInfo(tabIndex);
+    return `Closed connection browser:${id}.`;
+  };
+
+  // End a tab's browser process entirely (tab close / app exit). Fire-and-forget.
+  const closeTabBrowser = (tabIndex: number) => {
+    const entry = browserRef.current.get(tabIndex);
+    if (entry) {
+      void entry.browser.close();
+      browserRef.current.delete(tabIndex);
+    }
+    refreshBrowserInfo(tabIndex);
+  };
+
+  // Execute a `browser ...` command against a tab's own browser, returning the text to
+  // show/return. Used by both the interactive `browser` command and the ACP tool loop.
+  // For page actions (goto/eval/shot/content) the tab's browser is auto-launched headless
+  // and a window auto-opened if none exists yet, so an agent can just say `browser goto`.
+  const runBrowserInTab = async (tabIndex: number, cmd: string): Promise<string> => {
+    const parsed = parseBrowserCommand(cmd);
+    if ('error' in parsed) return parsed.error;
+
+    const ensureCurrent = async () => {
+      let entry = browserRef.current.get(tabIndex);
+      if (!entry) {
+        entry = { browser: await launchTabBrowser(true), counter: 0 };
+        browserRef.current.set(tabIndex, entry);
+      }
+      if (!entry.current || !entry.browser.window(entry.current)) {
+        const id = `w${++entry.counter}`;
+        await entry.browser.openWindow(id);
+        entry.current = id;
+      }
+      refreshBrowserInfo(tabIndex);
+      return entry.browser.window(entry.current)!;
+    };
+
+    try {
+      switch (parsed.action) {
+        case 'open': {
+          let entry = browserRef.current.get(tabIndex);
+          const notice = entry && parsed.headed && entry.browser.mode === 'headless'
+            ? ' (this tab is already running headless; close all windows to relaunch headed)'
+            : '';
+          if (!entry) {
+            entry = { browser: await launchTabBrowser(!parsed.headed), counter: 0 };
+            browserRef.current.set(tabIndex, entry);
+          }
+          const id = `w${++entry.counter}`;
+          await entry.browser.openWindow(id);
+          entry.current = id;
+          refreshBrowserInfo(tabIndex);
+          return `Opened browser window ${id} (${entry.browser.mode}).${notice}`;
+        }
+        case 'list': {
+          const entry = browserRef.current.get(tabIndex);
+          const ids = entry?.browser.windowIds() ?? [];
+          if (ids.length === 0) return 'No browser windows.';
+          return ids.map((id) => `${id === entry!.current ? '* ' : '  '}browser:${id}`).join('\n');
+        }
+        case 'use': {
+          const entry = browserRef.current.get(tabIndex);
+          if (!entry || !entry.browser.window(parsed.id)) return `No browser window ${parsed.id}.`;
+          entry.current = parsed.id;
+          return `Using browser window ${parsed.id}.`;
+        }
+        case 'close': {
+          const entry = browserRef.current.get(tabIndex);
+          if (!entry?.current) return 'No browser window to close.';
+          return await closeBrowserWindow(tabIndex, entry.current);
+        }
+        case 'closeWindow':
+          return await closeBrowserWindow(tabIndex, parsed.id);
+        case 'goto':
+          return await (await ensureCurrent()).goto(parsed.url);
+        case 'eval':
+          return await (await ensureCurrent()).eval(parsed.js);
+        case 'content':
+          return await (await ensureCurrent()).content();
+        case 'shot': {
+          const path = await (await ensureCurrent()).shot();
+          const opened = process.platform === 'darwin' ? ' (opening in Preview)' : '';
+          return `Screenshot saved: ${path}${opened}`;
+        }
+      }
+    } catch (e) {
+      return `Browser error: ${e instanceof Error ? e.message : String(e)}`;
+    }
   };
 
   // Run a shell command in a tab's persistent shell. When `display` is true the command
@@ -599,26 +734,33 @@ export const App = () => {
         runAcpToolLoop(
           acpSession,
           prompt,
-          // Prepend the `db` primer to every user prompt (the loop only applies it
-          // to the first turn, not the tool-result follow-ups) so the agent stays
-          // aware of the grammar even when the session is reused.
-          { primer: DB_PRIMER, runCommand: (cmd) => runDbInTab(tabLabel, cmd), extractCommand: extractDbCommand },
+          // Prime the agent with both the `db` and `browser` grammars (the loop only
+          // applies the primer to the first turn). Each turn it may emit one command of
+          // either kind; dispatch by prefix — browser is async, db is sync.
+          {
+            primer: `${DB_PRIMER}\n\n${BROWSER_PRIMER}`,
+            runCommand: (cmd) =>
+              /^browser\b/i.test(cmd) ? runBrowserInTab(tabIndex, cmd) : runDbInTab(tabLabel, cmd),
+            extractCommand: (text) => extractBrowserCommand(text) ?? extractDbCommand(text),
+          },
           {
             // First turn shows the user's prompt; continuation turns have no prompt line.
             startTurn: (isFirst) => {
               setAgentActive(tabLabel, true);
               appendLog(tabLabel, { input: isFirst ? prompt : '', output: '', running: true });
             },
-            chunk: (buf) => updateRunning(wordWrap(buf, wrapWidth), true),
-            endTurn: (final) => updateRunning(wordWrap(final, wrapWidth), false),
-            // Show the auto-run command like a terminal command with its result.
+            chunk: (buf) => updateRunning(formatAgentOutput(buf, wrapWidth), true),
+            endTurn: (final) => updateRunning(formatAgentOutput(final, wrapWidth), false),
+            // Record the auto-run command together with its result as one acp entry, so the
+            // response shows beneath the command when the (collapsed-by-default) tool-step
+            // run is expanded. `appendLog` writes both the command and the result to the
+            // append-only log.
             ranCommand: (cmd, result) => {
-              appendLog(tabLabel, { input: cmd, output: '', acp: true });
-              if (result) appendEntry({ timestamp: getTimeStr(), agent: tabLabel, text: result });
+              appendLog(tabLabel, { input: cmd, output: result, acp: true });
             },
             finished: (reason, maxSteps) => {
               setAgentActive(tabLabel, false);
-              if (reason === 'capped') appendLog(tabLabel, { input: '', output: `(stopped after ${maxSteps} db steps)` });
+              if (reason === 'capped') appendLog(tabLabel, { input: '', output: `(stopped after ${maxSteps} tool steps)` });
             },
             error: (msg) => { updateRunning(wordWrap(`ACP error: ${msg}`, wrapWidth), false); setAgentActive(tabLabel, false); },
           },
@@ -630,16 +772,35 @@ export const App = () => {
         updateCurrentTab((tab) => ({ ...tab, log: [...tab.log, { input: trimmed, output }], scrollOffset: 0 }));
         return;
       }
+      case 'browser': {
+        // Browser actions are async (launch/navigate take time): show a running entry,
+        // then finalize it with the result.
+        appendLog(tabLabel, { input: trimmed, output: '', running: true });
+        setAgentActive(tabLabel, true);
+        void (async () => {
+          const output = await runBrowserInTab(tabIndex, cliTrimmed);
+          finishRunning(tabLabel, output);
+          setAgentActive(tabLabel, false);
+        })();
+        return;
+      }
       case 'connection': {
         const parsed = parseConnectionCommand(cliTrimmed);
+        // Closing a browser window is async; handle it separately with a running entry.
+        if (!('error' in parsed) && parsed.action === 'close' && parsed.kind === 'browser') {
+          appendLog(tabLabel, { input: trimmed, output: '', running: true });
+          void (async () => finishRunning(tabLabel, await closeBrowserWindow(tabIndex, parsed.id)))();
+          return;
+        }
         let output: string;
         if ('error' in parsed) {
           output = parsed.error;
         } else if (parsed.action === 'list') {
-          // SQLite connections are global; shell/acp are this tab's.
+          // SQLite connections are global; shell/acp/browser are this tab's.
           const lines: string[] = [];
           if (shellsRef.current.get(tabIndex)) lines.push(`shell:${shellName}`);
           if (acpRef.current.get(tabIndex)) lines.push('acp:opencode');
+          for (const id of browserRef.current.get(tabIndex)?.browser.windowIds() ?? []) lines.push(`browser:${id}`);
           for (const n of listOpenConnections()) lines.push(`sqlite:${n}`);
           output = lines.length ? lines.join('\n') : 'No open connections.';
         } else if (parsed.kind === 'sqlite') {
@@ -727,6 +888,8 @@ export const App = () => {
           shellsRef.current.clear();
           for (const [, session] of acpRef.current) session.kill();
           acpRef.current.clear();
+          for (const [, e] of browserRef.current) void e.browser.close();
+          browserRef.current.clear();
           closeAllConnections();
           exit();
         } else {
@@ -740,6 +903,7 @@ export const App = () => {
           shellsRef.current.delete(tabIdx);
           acpRef.current.get(tabIdx)?.kill();
           acpRef.current.delete(tabIdx);
+          closeTabBrowser(tabIdx);
           setAcpInfo((prev) => { const copy = { ...prev }; delete copy[tabIdx]; return copy; });
           setShellActive((prev) => { const copy = { ...prev }; delete copy[tabIdx]; return copy; });
           const closedLabel = closedTab.label;
@@ -756,6 +920,8 @@ export const App = () => {
         shellsRef.current.clear();
         for (const [, session] of acpRef.current) session.kill();
         acpRef.current.clear();
+        for (const [, e] of browserRef.current) void e.browser.close();
+        browserRef.current.clear();
         closeAllConnections();
         exit();
         return;
@@ -767,6 +933,7 @@ export const App = () => {
   const connectionStrings: string[] = [
     ...(shellsRef.current.get(activeTab) ? [`shell:${shellName}`] : []),
     ...(acpRef.current.get(activeTab) ? ['acp:opencode'] : []),
+    ...(browserInfo[activeTab]?.windows ?? []).map((id) => `browser:${id}`),
     ...listOpenConnections().map((n) => `sqlite:${n}`),
   ];
 
@@ -806,12 +973,15 @@ export const App = () => {
       <TabStrip tabs={tabs} agentStates={agentStates} activeTab={activeTab} theme={theme} scrollBoundaryHit={scrollBoundaryHit} />
       <Transcript visibleLines={visibleLines} scrollChars={scrollChars} visibleHeight={visibleHeight} dotColor={cur.dotColor} theme={theme} />
       <PromptBar beforeCursor={beforeCursor} afterCursor={afterCursor} dotColor={cur.dotColor} theme={theme} historyItems={frequentHistory} historySelectedIdx={historyPickerIdx} historyOpen={historyPickerOpen} />
-      {(shellActive[activeTab] || acpInfo[activeTab] || dbConns.length > 0) && (
+      {(shellActive[activeTab] || acpInfo[activeTab] || dbConns.length > 0 || (browserInfo[activeTab]?.windows.length ?? 0) > 0) && (
         <StatusPopup
           shell={shellActive[activeTab] ? process.env.SHELL || 'bash' : undefined}
           cwd={cwdRef.current[cur.label] ?? process.cwd()}
           provider={acpInfo[activeTab]?.provider}
           dbConnections={dbConns}
+          browserWindows={(browserInfo[activeTab]?.windows ?? []).map(
+            (id) => `browser:${id} (${browserInfo[activeTab]?.mode})`,
+          )}
           theme={theme}
         />
       )}

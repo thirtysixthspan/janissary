@@ -2,23 +2,11 @@ import { describe, it, expect } from 'vitest';
 import { getOutput, resolveAgentName, parseAgentCommand, agentNames } from './commands.js';
 
 describe('getOutput', () => {
-  it('returns dashboard message', () => {
-    expect(getOutput('dashboard')).toBe('Welcome to the CLI dashboard.');
-  });
-
-  it('returns settings message', () => {
-    expect(getOutput('settings')).toBe('Settings panel — no settings yet.');
-  });
-
-  it('returns about message', () => {
-    expect(getOutput('about')).toBe('Custom CLI built with Ink & React.');
-  });
-
   it('returns help with commands and key bindings', () => {
     const result = getOutput('help');
     expect(result).toContain('Commands');
     expect(result).toContain('Key Bindings');
-    expect(result).toContain('dashboard');
+    expect(result).toContain('connection');
     expect(result).toContain('Ctrl+C');
   });
 
@@ -56,8 +44,6 @@ describe('getOutput', () => {
   });
 
   it('is case insensitive', () => {
-    expect(getOutput('DASHBOARD')).toBe('Welcome to the CLI dashboard.');
-    expect(getOutput('About')).toBe('Custom CLI built with Ink & React.');
     expect(getOutput('HELP')).toContain('Commands');
   });
 

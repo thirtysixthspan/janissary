@@ -34,7 +34,9 @@ Key modules:
 - `src/shell.ts` — persistent per-tab shell process: `spawnShell`, `executeShellCmd`, `queryShellPwd`.
 - `src/agent-state.ts` — load/save/list agent state files; state-dir lifecycle.
 - `src/db.ts` — the `db` command: parse/execute SQLite create/delete/query/list (`runDbCommand`).
-- `src/connections.ts` — persistent SQLite connection registry (open/close/list) plus the `connection` command parser.
+- `src/browser.ts` — per-tab Playwright browser (`launchTabBrowser`): isolated windows with goto/eval/shot/content; headless or headed.
+- `src/browser-command.ts` — `browser` command parser (`parseBrowserCommand`) plus the ACP-loop helpers `extractBrowserCommand`/`BROWSER_PRIMER`.
+- `src/connections.ts` — persistent SQLite connection registry (open/close/list) plus the `connection` command parser (kinds: sqlite/shell/acp/browser).
 - `src/acp.ts` — ACP client: spawn/drive an agent subprocess over JSON-RPC (`connectAcp`).
 - `src/acp-loop.ts` — autonomous agent tool loop (`runAcpToolLoop`): run a proposed command, feed output back, repeat until done/capped.
 - `src/tab.ts` — `Tab`/`LogEntry` types, `makeTab`, `dotColors`, transcript line-buffer flattening (`flattenBuffer`), history helpers.

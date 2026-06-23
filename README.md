@@ -21,9 +21,6 @@ janus
 
 | Command      | Description                        |
 | ------------ | ---------------------------------- |
-| `dashboard`  | Show the dashboard                 |
-| `settings`   | Show settings                      |
-| `about`      | Show information about the tool    |
 | `help`       | List available commands            |
 | `state`      | Show agent state fields (truncated) |
 | `clear`      | Clear the output log               |
@@ -36,7 +33,8 @@ janus
 | `broadcast`  | Send a message to several or all agents |
 | `acp`        | Send a prompt to the OpenCode ACP agent |
 | `db`         | Create, delete, query, or list SQLite databases |
-| `connection` | List or close open connections (sqlite/shell/acp) |
+| `browser`    | Drive a headless/headed web browser (open, goto, content, eval, shot) |
+| `connection` | List or close open connections (sqlite/shell/acp/browser) |
 
 ### Configuration
 
@@ -93,18 +91,18 @@ msg <agent> <info|request|command> <text>
 | Kind | Behavior |
 | ---- | -------- |
 | `info` | Displayed in the recipient's transcript and appended to that agent's `context` (persisted in its state, visible via `state`). |
-| `request` | The recipient shows the incoming request as `● request from <sender>: <command>` (in the sender's color), executes it (built-ins + shell), and returns the output to the **sender** as a `response` message — a `● <recipient>:` header with the output on the following lines, bordered in the recipient's color. |
+| `request` | The recipient shows the incoming request as `● request from <sender>: <command>` (in the sender's color), executes it (built-ins, or a `shell`-prefixed shell command), and returns the output to the **sender** as a `response` message — a `● <recipient>:` header with the output on the following lines, bordered in the recipient's color. |
 | `command` | Run as a shell command in the recipient's own shell (as if that agent typed it), with no response. |
 
 Examples:
 
 ```
 msg bilal info build finished, your turn
-msg bilal request git status
+msg bilal request shell git status
 msg bilal command npm run build
 ```
 
-The kind accepts short aliases (`i`/`r`/`c`). A `command` runs as a raw shell command in the recipient's shell (streamed into its transcript, no reply); a `request` shows `● request from <sender>: <command>` in the recipient, runs through its full window logic (built-ins and shell), and returns the captured output to the sender as a `response`. Commands that need an interactive PTY (`less`, `vim`, `top`, …) are **not** run remotely — those only work in a foreground tab.
+The kind accepts short aliases (`i`/`r`/`c`). A `command` runs as a raw shell command in the recipient's shell (streamed into its transcript, no reply); a `request` shows `● request from <sender>: <command>` in the recipient, runs through its full window logic (built-ins, or a `shell`-prefixed shell command), and returns the captured output to the sender as a `response`. Commands that need an interactive PTY (`less`, `vim`, `top`, …) are **not** run remotely — those only work in a foreground tab.
 
 To message several agents at once, use `broadcast`:
 
@@ -116,18 +114,18 @@ Use `all` (or `*`) to reach every other agent, or a comma-separated list to targ
 
 ```
 broadcast all info standby for deploy
-broadcast bilal,aslan request git status
+broadcast bilal,aslan request shell git status
 ```
 
-Prefix any command with `` ` `` to run it directly in your shell:
+Prefix a command with the `shell` keyword to run it in your shell:
 
 ```
- `ls -la
- `echo hello world
- `npm install
+shell ls -la
+shell echo hello world
+shell npm install
 ```
 
-Common shell commands (`ls`, `grep`, `cat`, …) also run automatically without the backtick when they don't collide with a built-in. Conversely, prefix a command with `/` to force the built-in dispatcher (e.g. `/clear` to clear the log even though `clear` is also a shell command).
+The `shell` keyword is required — a bare command that isn't a built-in (e.g. `ls`) is reported as an unknown command rather than run in the shell, so a stray word never executes anything. Conversely, prefix a command with `/` to force the built-in dispatcher (e.g. `/clear` to clear the log even though `clear` is also a shell command).
 
 ### Command comments
 
@@ -175,15 +173,42 @@ Database names are restricted to letters, numbers, `-`, and `_` (so a name can n
 
 **Persistent connections.** The first `db` command for a database opens a connection that stays open — across commands and tabs — until you close it explicitly or quit the app. Many databases can be connected at once, so connection-scoped state (transactions, `TEMP` tables, pragmas) survives between commands. See the Connections section for managing them.
 
+### Web browser
+
+Each tab can drive a real [Playwright](https://playwright.dev) browser to fetch web pages as a regular user — running JavaScript, inspecting the viewport, and reading rendered content. Every tab launches its **own** browser process the first time it is used, so one tab can run headless while another runs headed.
+
+```
+browser open [name] [--headed]   # open a window (launches this tab's browser); -H = visible
+browser list                     # this tab's windows (current marked with *)
+browser use <id>                 # switch the current window
+browser goto <url>               # navigate the current window
+browser content                  # the current page's rendered text
+browser eval <js>                # run JavaScript in the page and print the result
+browser shot                     # screenshot to a temp file and open it in Preview (macOS)
+browser close [id]               # close the current window, or window <id>
+browser window close <id>        # close a specific window (same as browser close <id>)
+```
+
+A "window" is an isolated browsing context (its own cookies/storage). Page actions (`goto`, `content`, `eval`, `shot`) auto-open a window if the tab has none. The mode (headless/headed) is fixed when a tab's browser launches; to switch it, close all of that tab's windows (which ends the process) and `browser open` again. Browser windows are per-tab and live — they are not restored on `--relaunch`.
+
+To look like an ordinary browser rather than automation, the browser applies several **bot-detection countermeasures**:
+
+- Launches in Chromium's **new headless** mode (`channel: 'chromium'`), which behaves like a real browser instead of the easily-detected legacy headless shell.
+- Disables the automation flag (`--disable-blink-features=AutomationControlled`) and runs the [stealth plugin](https://github.com/berstend/puppeteer-extra/tree/master/packages/puppeteer-extra-plugin-stealth) (via `playwright-extra`), which masks the usual tells — `navigator.webdriver`, a missing `window.chrome`, and inconsistent permissions/plugins/WebGL fingerprints.
+- Gives **each window its own coherent fingerprint**: a randomized desktop Chrome user agent (varied platform, version pinned to the real engine so it matches the client hints), with a matching `Sec-CH-UA-Platform`, `Accept-Language`, timezone, and viewport — so isolated windows never share an identical signature and no field contradicts another.
+
+The browser is also available to the tab's **ACP agent**: ask it to "visit a URL and summarize it" and it will issue `browser goto` / `browser content` commands in its tool loop, the host runs them against that tab's browser, and the page text is fed back for the answer. See [External ACP agents](#external-acp-agents-experimental).
+
 ### Connections
 
-Janissary keeps long-lived connections open: SQLite databases, each tab's shell, and each tab's ACP agent. The `connection` command lists and closes them.
+Janissary keeps long-lived connections open: SQLite databases, each tab's shell, each tab's ACP agent, and each tab's browser windows. The `connection` command lists and closes them.
 
 ```
 connection list                       # list open connections
 connection close sqlite:<name>        # close a database connection
 connection close shell:<shell>        # close this tab's shell (e.g. shell:bash)
 connection close acp:opencode         # close this tab's ACP agent
+connection close browser:<id>         # close one of this tab's browser windows (e.g. browser:w1)
 ```
 
 Connections are addressed as `<kind>:<id>`:
@@ -193,10 +218,11 @@ Connections are addressed as `<kind>:<id>`:
 | `sqlite` | database name | Global — shared across all tabs. |
 | `shell` | shell program (`bash`, `zsh`, …) | The current tab. |
 | `acp` | `opencode` | The current tab. |
+| `browser` | window id (`w1`, `w2`, …) | The current tab. |
 
-Closing a connection is safe: a SQLite connection reopens on the next `db` command, a shell respawns on the next shell command (restoring its working directory), and an ACP agent reconnects on the next `acp` prompt. All connections are closed automatically when the owning tab is closed or the app exits.
+Closing a connection is safe: a SQLite connection reopens on the next `db` command, a shell respawns on the next shell command (restoring its working directory), and an ACP agent reconnects on the next `acp` prompt. Closing a tab's last browser window ends that tab's browser process. All connections are closed automatically when the owning tab is closed or the app exits.
 
-A small `connections` panel floats at the top-right of each tab, listing that tab's live connections — its shell, its ACP agent, and each `sqlite:<name>` database it has accessed — so opening a database is reflected there immediately.
+A small `connections` panel floats at the top-right of each tab, listing that tab's live connections — its shell, its ACP agent, each open browser window (`browser:<id> (<mode>)`), and each `sqlite:<name>` database it has accessed — so opening a connection is reflected there immediately.
 
 ### Interactive programs
 
@@ -220,15 +246,16 @@ acp summarize the architecture of this repo
 
 Janissary acts as the ACP client: it spawns the agent as a subprocess, speaks JSON-RPC over stdio, and streams the agent's reply into the tab. The connection is per-tab and reused across prompts. This MVP is read-only — tool-permission requests are auto-declined and filesystem/terminal callbacks are not yet offered.
 
-#### Database help (autonomous tool loop)
+#### Database and browser help (autonomous tool loop)
 
-The agent is primed with the `db` command syntax on every prompt, so you can ask for database work in plain language:
+The agent is primed with the `db` and `browser` command syntax on every prompt, so you can ask for database or web work in plain language:
 
 ```
 acp list the actors in the movies database
+acp visit https://example.com and summarize the page
 ```
 
-The agent issues a single `db` command, Janissary runs it automatically, and the output is fed back to the agent as context. It keeps issuing commands and reading results in a loop until it can answer — then it replies with no trailing command and the loop stops. Each executed command and its result appear in the transcript so you can see exactly what ran. The loop is capped (8 `db` steps) to avoid runaway sessions, and only `db` commands are auto-run — the agent cannot execute arbitrary shell.
+The agent issues a single command, Janissary runs it automatically, and the output is fed back to the agent as context. It keeps issuing commands and reading results in a loop until it can answer — then it replies with no trailing command and the loop stops. Each run of auto-executed steps is **collapsed by default** into a single `▸ N tool steps` summary line so the transcript stays focused on your prompt and the agent's answer; press `Ctrl+T` to expand (or re-collapse) the steps for the current tab and see each command together with its response. The loop is capped (8 tool steps) to avoid runaway sessions, and only `db` and `browser` commands are auto-run — the agent cannot execute arbitrary shell. For the browser the agent sees a simplified surface (`browser goto`, `browser content`, `browser eval`); the host launches the tab's browser (headless) and opens a window automatically, and large pages are truncated before being fed back.
 
 #### Setting up OpenCode
 
@@ -258,11 +285,12 @@ OpenCode ships an ACP server mode, so it works as a drop-in agent. Before using 
 | `Ctrl+←` / `Ctrl+→` | Move the current tab left / right  |
 | `Ctrl+↑` / `Ctrl+↓` | Scroll the transcript up / down    |
 | `Ctrl+R`            | Open command history picker        |
-| `Tab`               | Complete a file path, an agent name for `msg` / `broadcast`, or a connection string for `connection close` |
+| `Ctrl+T`            | Expand / collapse agent tool steps in the transcript |
+| `Tab`               | Complete a file path, an agent name for `msg` / `broadcast`, a connection string for `connection close`, or a `browser` subcommand / window id |
 | `Enter`             | Execute the current command        |
 | `Ctrl+C`            | Exit                              |
 
-`Tab` completes the word at the cursor: filesystem paths against the tab's working directory; at the recipient position of `msg` / `broadcast`, active agent names (`broadcast` also offers `all` and completes each entry of a comma-separated list); and at the target of `connection close`, the tab's open connection strings (`sqlite:<name>`, `shell:<shell>`, `acp:opencode`).
+`Tab` completes the word at the cursor: filesystem paths against the tab's working directory; at the recipient position of `msg` / `broadcast`, active agent names (`broadcast` also offers `all` and completes each entry of a comma-separated list); at the target of `connection close`, the tab's open connection strings (`sqlite:<name>`, `shell:<shell>`, `acp:opencode`, `browser:<id>`); and for the `browser` command, its subcommands (`open`, `goto`, `content`, …) plus the tab's open window ids where one is expected (`browser use`, `browser window close`).
 
 ## Development
 

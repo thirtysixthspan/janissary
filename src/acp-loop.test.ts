@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { runAcpToolLoop, type AcpLoopSession, type AcpLoopHandlers } from './acp-loop.js';
 import { extractDbCommand } from './db.js';
+import { extractBrowserCommand } from './browser-command.js';
 
 // A fake ACP session that replies synchronously from a scripted list (the last
 // reply repeats once exhausted) and records every prompt it was sent.
@@ -190,6 +191,27 @@ describe('runAcpToolLoop', () => {
     // Fence lines removed along with the command.
     expect(endTurns[0]).toEqual(['endTurn', 'Looking up.\nDone.']);
     expect(endTurns[1]).toEqual(['endTurn', 'Final answer.']);
+  });
+
+  it('awaits an async runCommand and feeds its output into the follow-up prompt', async () => {
+    const { session, sent } = makeSession([
+      'Fetching.\nbrowser content',
+      'The page is about widgets.',
+    ]);
+    const { h, events } = makeHandlers();
+    // An async command (e.g. a browser action) resolves on a later tick.
+    const runCommand = vi.fn(() => Promise.resolve('Widgets — https://example.com\n\nWelcome to widgets.'));
+
+    runAcpToolLoop(session, 'summarize example.com', { runCommand, extractCommand: extractBrowserCommand }, h);
+
+    // The loop suspends on the async command, so the follow-up has not been sent yet.
+    expect(sent).toHaveLength(1);
+    await vi.waitFor(() => expect(events.at(-1)).toEqual(['finished', 'answered', 8]));
+
+    expect(runCommand).toHaveBeenCalledExactlyOnceWith('browser content');
+    expect(sent[1]).toContain('Output of `browser content`');
+    expect(sent[1]).toContain('Welcome to widgets.');
+    expect(events).toContainEqual(['endTurn', 'The page is about widgets.']);
   });
 
   it('surfaces session errors without running a command', () => {

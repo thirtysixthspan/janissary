@@ -76,14 +76,14 @@ export function listOpenConnections(): string[] {
 
 // --- The generic `connection` command -------------------------------------
 
-export type ConnectionKind = 'sqlite' | 'shell' | 'acp';
+export type ConnectionKind = 'sqlite' | 'shell' | 'acp' | 'browser';
 
 export type ConnectionParsed =
   | { error: string }
   | { action: 'list' }
   | { action: 'close'; kind: ConnectionKind; id: string };
 
-const KINDS: ConnectionKind[] = ['sqlite', 'shell', 'acp'];
+const KINDS: ConnectionKind[] = ['sqlite', 'shell', 'acp', 'browser'];
 const USAGE = 'Usage: connection <list|close> [kind:id]  (e.g. connection close sqlite:mydb)';
 
 /** Parse a `connection ...` command. Pure — performs no I/O. */

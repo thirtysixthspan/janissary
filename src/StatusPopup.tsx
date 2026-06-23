@@ -21,20 +21,22 @@ type Props = {
   cwd: string;
   provider?: string;
   dbConnections?: string[];
+  browserWindows?: string[];
   theme: ThemeColors;
 };
 
 /**
  * Build the popup's body lines: shell + cwd, the ACP agent as a connection string
- * (`acp:<agent>`), and one line per open SQLite connection. Pure, so it can be
- * unit-tested without rendering.
+ * (`acp:<agent>`), one line per open browser window (`browser:<id> (<mode>)`), and one
+ * line per open SQLite connection. Pure, so it can be unit-tested without rendering.
  */
 export const statusLines = (
-  { shell, cwd, provider, dbConnections, theme }: Props,
+  { shell, cwd, provider, dbConnections, browserWindows, theme }: Props,
 ): { text: string; color: string }[] => {
   const lines: { text: string; color: string }[] = [];
   if (shell) lines.push({ text: `${basename(shell)}:${shortCwd(cwd)}`, color: theme.muted });
   if (provider) lines.push({ text: `acp:${provider}`, color: theme.accent });
+  for (const win of browserWindows ?? []) lines.push({ text: win, color: theme.accent });
   for (const name of dbConnections ?? []) lines.push({ text: `sqlite:${name}`, color: theme.fg });
   return lines;
 };

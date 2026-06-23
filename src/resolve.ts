@@ -1,8 +1,7 @@
 import { getOutput } from './commands.js';
-import shellCommands from './shell-commands.js';
 
 // App/tab-management built-ins that require live application state to run.
-export type AppCommand = 'agent' | 'next' | 'msg' | 'broadcast' | 'acp' | 'db' | 'connection' | 'clear' | 'state' | 'hist' | 'close' | 'quit';
+export type AppCommand = 'agent' | 'next' | 'msg' | 'broadcast' | 'acp' | 'db' | 'browser' | 'connection' | 'clear' | 'state' | 'hist' | 'close' | 'quit';
 
 export type Resolution =
   | { kind: 'empty' }
@@ -15,7 +14,8 @@ export type Resolution =
  * used when a command is typed into a tab. Pure: callers decide the side effects (a
  * foreground tab can run interactive/app commands; a remote agent refuses them).
  *
- * - `shell`: run in a shell (backtick-prefixed, or a known shell command typed bare).
+ * - `shell`: run in a shell. Explicitly requested via a leading `shell ` keyword — there
+ *   is no bare auto-run, so a non-built-in typed without the keyword is unknown.
  * - `app`: an application built-in that needs live state (agent/next/msg/clear/…).
  * - `output`: a built-in with textual output to display (also the "unknown command" reply).
  * - `empty`: nothing to do.
@@ -24,8 +24,10 @@ export function resolveCommand(raw: string): Resolution {
   const trimmed = raw.trim();
   if (!trimmed) return { kind: 'empty' };
 
-  if (trimmed.startsWith('`')) {
-    return { kind: 'shell', cmd: trimmed.slice(1).trim() };
+  // Shell commands are launched with the `shell` keyword, which is stripped before the
+  // command reaches the shell.
+  if (/^shell\b/i.test(trimmed)) {
+    return { kind: 'shell', cmd: trimmed.replace(/^shell\b\s*/i, '') };
   }
 
   const cmd = trimmed.replace(/^\//, '');
@@ -37,6 +39,7 @@ export function resolveCommand(raw: string): Resolution {
   if (/^broadcast\b/i.test(cmd)) return { kind: 'app', name: 'broadcast', cmd };
   if (/^acp\b/i.test(cmd)) return { kind: 'app', name: 'acp', cmd };
   if (/^db\b/i.test(cmd)) return { kind: 'app', name: 'db', cmd };
+  if (/^browser\b/i.test(cmd)) return { kind: 'app', name: 'browser', cmd };
   if (/^connection\b/i.test(cmd)) return { kind: 'app', name: 'connection', cmd };
 
   const output = getOutput(cmd);
@@ -49,11 +52,7 @@ export function resolveCommand(raw: string): Resolution {
     return { kind: 'empty' };
   }
 
-  // An unknown built-in that names an enabled shell command is run in the shell.
-  const baseCmd = cmd.split(/\s+/)[0]?.toLowerCase();
-  if (output.startsWith('Unknown command') && baseCmd && shellCommands[baseCmd]?.enabled) {
-    return { kind: 'shell', cmd };
-  }
-
+  // Shell commands require the `shell` keyword (handled above); a bare non-built-in is
+  // reported as unknown rather than auto-run in the shell.
   return { kind: 'output', cmd, output };
 }

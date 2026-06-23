@@ -53,7 +53,7 @@ export function useInputHandler(deps: InputHandlerDeps): void {
   const scrollUp = () => {
     const step = scrollStep(1);
     updateCurrentTab((tab) => {
-      const len = flattenBuffer(tab.log).length;
+      const len = flattenBuffer(tab.log, !tab.toolStepsExpanded).length;
       const maxOff = Math.max(0, len - visibleHeight);
       if (tab.scrollOffset >= maxOff) { process.stderr.write('\x07'); flashScrollBoundary(); return tab; }
       return { ...tab, scrollOffset: Math.min(tab.scrollOffset + step, maxOff) };
@@ -183,6 +183,13 @@ export function useInputHandler(deps: InputHandlerDeps): void {
         setHistoryPickerIdx(frequentHistory.length - 1);
         setHistoryPickerOpen(true);
       }
+      return;
+    }
+
+    // Toggle expansion of collapsed agent tool-step runs for the current tab. Reset scroll
+    // to the bottom since the line count changes.
+    if (key.ctrl && inputChar === 't') {
+      updateCurrentTab((tab) => ({ ...tab, toolStepsExpanded: !tab.toolStepsExpanded, scrollOffset: 0 }));
       return;
     }
 

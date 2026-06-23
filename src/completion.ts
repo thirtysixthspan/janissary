@@ -1,6 +1,7 @@
 import { readdirSync, statSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 import { homedir } from 'node:os';
+import { BROWSER_SUBCOMMANDS } from './browser-command.js';
 
 export type CompletionResult = {
   newInput: string;
@@ -75,7 +76,9 @@ const completeWord = (
  * - For the recipient argument of `msg`/`broadcast`, completes against active agent names
  *   (`broadcast` also offers `all` and supports a comma-separated list).
  * - For the target of `connection close`, completes against open connection strings
- *   (e.g. `sqlite:movies`, `shell:bash`, `acp:opencode`).
+ *   (e.g. `sqlite:movies`, `shell:bash`, `acp:opencode`, `browser:w1`).
+ * - For the `browser` command, completes subcommands and, where a window id is expected
+ *   (`browser use`, `browser window close`), the current tab's open window ids.
  * - Otherwise completes a filesystem path relative to `cwd`.
  *
  * A single match is filled in fully; multiple matches fill in their longest common prefix
@@ -110,6 +113,28 @@ export function completeCommandLine(
   // Connection-string completion for `connection close <kind>:<id>`.
   if (argIndex === 2 && command === 'connection' && preceding[1]?.toLowerCase() === 'close') {
     return completeWord(token, '', connections, ' ', before, after, tokenStart);
+  }
+
+  // `browser` command completion: subcommands, then window ids where one is expected.
+  if (command === 'browser') {
+    const sub = preceding[1]?.toLowerCase();
+    // Window ids are derived from the active tab's `browser:<id>` connection strings.
+    const windowIds = connections
+      .filter((c) => c.startsWith('browser:'))
+      .map((c) => c.slice('browser:'.length));
+    if (argIndex === 1) {
+      return completeWord(token, '', BROWSER_SUBCOMMANDS, ' ', before, after, tokenStart);
+    }
+    if (argIndex === 2 && sub === 'use') {
+      return completeWord(token, '', windowIds, ' ', before, after, tokenStart);
+    }
+    if (argIndex === 2 && sub === 'window') {
+      return completeWord(token, '', ['close'], ' ', before, after, tokenStart);
+    }
+    if (argIndex === 3 && sub === 'window' && preceding[2]?.toLowerCase() === 'close') {
+      return completeWord(token, '', windowIds, ' ', before, after, tokenStart);
+    }
+    // Other positions (goto url, eval js, open name) fall through to path completion.
   }
 
   // Filesystem path completion.

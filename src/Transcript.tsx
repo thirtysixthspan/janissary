@@ -63,6 +63,15 @@ export const Transcript = ({ visibleLines, scrollChars, visibleHeight, dotColor,
             <Text wrap="truncate" color={theme.fg}>{label}</Text>
           </Box>
         );
+      } else if (line.type === 'collapsed') {
+        // A collapsed run of auto-run agent tool steps. Indented like an acp line, no
+        // left border, with a hint showing the toggle key.
+        content = (
+          <Box paddingLeft={4}>
+            <Text color={dotColor}>{'▸ '}</Text>
+            <Text wrap="truncate" color={theme.muted}>{line.text}  (ctrl+t to expand)</Text>
+          </Box>
+        );
       } else if (line.type === 'output') {
         content = (
           <Box paddingLeft={line.acp ? 4 : 2}>

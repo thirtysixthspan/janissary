@@ -120,3 +120,40 @@ describe('completeCommandLine — connection strings', () => {
     expect(completeCommandLine('connection close ', 17, noFiles, [], []).matches).toEqual([]);
   });
 });
+
+describe('completeCommandLine — browser command', () => {
+  const noFiles = '/no/such/dir/xyz';
+  const conns = ['shell:bash', 'browser:w1', 'browser:w2', 'sqlite:movies'];
+
+  it('completes a unique subcommand and adds a space', () => {
+    expect(completeCommandLine('browser co', 10, noFiles, [], conns).newInput).toBe('browser content ');
+  });
+
+  it('fills the common prefix when several subcommands match', () => {
+    const r = completeCommandLine('browser c', 9, noFiles, [], conns);
+    expect(r.newInput).toBe('browser c'); // close/content -> common prefix "c"
+    expect(r.matches.sort()).toEqual(['close', 'content']);
+  });
+
+  it('offers every subcommand for an empty argument', () => {
+    const r = completeCommandLine('browser ', 8, noFiles, [], conns);
+    expect(r.matches).toContain('goto');
+    expect(r.matches).toContain('window');
+  });
+
+  it('completes window ids (without the browser: prefix) for `browser use`', () => {
+    const r = completeCommandLine('browser use ', 12, noFiles, [], conns);
+    expect(r.matches.sort()).toEqual(['w1', 'w2']);
+    expect(completeCommandLine('browser use w1', 14, noFiles, [], conns).newInput).toBe('browser use w1 ');
+  });
+
+  it('completes `close` after `browser window`, then a window id', () => {
+    expect(completeCommandLine('browser window ', 15, noFiles, [], conns).newInput).toBe(
+      'browser window close ',
+    );
+    expect(completeCommandLine('browser window close ', 21, noFiles, [], conns).matches.sort()).toEqual([
+      'w1',
+      'w2',
+    ]);
+  });
+});

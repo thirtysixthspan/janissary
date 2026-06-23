@@ -22,6 +22,11 @@ describe('parseConnectionCommand', () => {
       kind: 'acp',
       id: 'opencode',
     });
+    expect(parseConnectionCommand('connection close browser:w1')).toEqual({
+      action: 'close',
+      kind: 'browser',
+      id: 'w1',
+    });
   });
 
   it('requires a usage hint when empty', () => {

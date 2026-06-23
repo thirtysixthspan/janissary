@@ -6,9 +6,6 @@ import agentNames from '../agent-names.json' with { type: 'json' };
 export { agentNames };
 
 export const availableCommands = [
-  'dashboard',
-  'settings',
-  'about',
   'help',
   'state',
   'clear',
@@ -36,16 +33,13 @@ function buildHelp(): string {
     const keySection = keyMatch ? keyMatch[0].trim() : '';
     return cmdSection + '\n\n' + keySection;
   } catch {
-    return 'Built-in: ' + availableCommands.join(', ') + '. Prefix a command with ` to run it in the shell, or / to run a built-in command. Press Ctrl+R or type hist to browse command history.';
+    return 'Built-in: ' + availableCommands.join(', ') + '. Prefix a command with "shell " to run it in the shell, or / to run a built-in command. Press Ctrl+R or type hist to browse command history.';
   }
 }
 
 export const getOutput = (cmd: string): string | null => {
   const trimmed = cmd.trim().toLowerCase();
 
-  if (trimmed === 'dashboard') return 'Welcome to the CLI dashboard.';
-  if (trimmed === 'settings') return 'Settings panel — no settings yet.';
-  if (trimmed === 'about') return 'Custom CLI built with Ink & React.';
   if (trimmed === 'help') {
     if (!helpOutput) helpOutput = buildHelp();
     return helpOutput;

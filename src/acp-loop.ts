@@ -18,8 +18,9 @@ export type AcpLoopSession = {
 export type AcpLoopDeps = {
   // Prepended to the first prompt (e.g. the db primer) when starting a new session.
   primer?: string;
-  // Execute an extracted command and return its textual output.
-  runCommand: (cmd: string) => string;
+  // Execute an extracted command and return its textual output. May be async (e.g. a
+  // browser command); the loop awaits the result before continuing.
+  runCommand: (cmd: string) => string | Promise<string>;
   // Pull a runnable command out of an agent reply, or null when there is none.
   extractCommand: (text: string) => string | null;
   // Maximum number of auto-run command steps before stopping (default 8).
@@ -70,7 +71,7 @@ export function runAcpToolLoop(
     const sent = isFirst && deps.primer ? `${deps.primer}\n\n${userPrompt}` : turnPrompt;
     session.prompt(sent, {
       onChunk: (text) => { buffer += text; h.chunk(buffer); },
-      onEnd: () => {
+      onEnd: async () => {
         if (!buffer.trim() && isFirst && attempt === 0) {
           promptOnce(turnPrompt, isFirst, step, attempt + 1);
           return;
@@ -92,13 +93,17 @@ export function runAcpToolLoop(
         }
         h.endTurn(display);
         if (cmd && step < maxSteps) {
-          const result = deps.runCommand(cmd);
+          // Only await when the command is actually async (e.g. browser); a sync command
+          // (db) must complete in the same tick so callers/tests observing synchronously
+          // see the full loop.
+          const ret = deps.runCommand(cmd);
+          const result = ret instanceof Promise ? await ret : ret;
           h.ranCommand(cmd, result);
           const followUp =
             `Output of \`${cmd}\`:\n${result}\n\n` +
             'If the task is complete, reply with the final answer and no command. ' +
             'Otherwise issue the next command. ' +
-            'Be concise: do not explain what you are doing. Only output `db` commands and the final answer.';
+            'Be concise: do not explain what you are doing. Only output commands and the final answer.';
           turn(followUp, false, step + 1);
         } else {
           h.finished(cmd ? 'capped' : 'answered', maxSteps);

@@ -12,7 +12,7 @@
     "test": "vitest run",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "postinstall": "chmod +x node_modules/node-pty/prebuilds/*/spawn-helper 2>/dev/null || true"
+    "postinstall": "chmod +x node_modules/node-pty/prebuilds/*/spawn-helper 2>/dev/null || true; npx playwright install chromium || true"
   },
   "keywords": [],
   "author": "",
@@ -21,7 +21,10 @@
   "dependencies": {
     "@agentclientprotocol/sdk": "^0.28.1",
     "ink": "^7.1.0",
-    "node-pty": "^1.1.0"
+    "node-pty": "^1.1.0",
+    "playwright": "^1.50.0",
+    "playwright-extra": "^4.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
