@@ -36,6 +36,7 @@ janus
 | `browser`    | Drive a headless/headed web browser (open, goto, content, eval, shot) |
 | `connection` | List or close open connections (sqlite/shell/acp/browser) |
 | `schedule`   | Run a command later — once or on a recurring schedule |
+| `profile`    | Launch a saved set of agents for a use case |
 
 ### Configuration
 
@@ -174,6 +175,32 @@ agent isn't open as a tab, that firing is skipped and the entry stays in the sta
 While the active agent has any scheduled timers, a small `schedule` window floats at the
 top-right (just below the `connections` window) listing each timer's id/name, schedule, and
 next run time. It disappears once the schedule is empty.
+
+### Profiles
+
+A profile is a reusable set of agents for a particular use case — writing code, surfing the
+web, authoring a book, a specific task. Profiles live in a top-level `profiles/` directory
+(committable, unlike `.janussary/`). Each profile is its own dasherized-name directory
+holding one `<agent>.json` file per agent, in the agent-state schema (the same format as
+`.janussary/state/<name>.json`). The filename is the agent's name.
+
+```
+profiles/
+  writing-code/
+    builder.json
+    reviewer.json
+  surfing-the-web/
+    scout.json
+```
+
+`profile launch <name>` opens a tab for each agent in the profile, restoring its saved state
+(command history, transcript, working directory, schedule). Agents already open as tabs are
+skipped. `profile list` shows the available profiles.
+
+```
+profile launch writing-code
+profile list
+```
 
 ### Workspace
 

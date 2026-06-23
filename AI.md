@@ -39,6 +39,7 @@ Key modules:
 - `src/connections.ts` — persistent SQLite connection registry (open/close/list) plus the `connection` command parser (kinds: sqlite/shell/acp/browser).
 - `src/schedule.ts` — `schedule` command parser (`parseScheduleCommand`) and next-run math (`computeNextRun`, time/date helpers); pure, no I/O.
 - `src/useScheduler.ts` — one-second tick that fires each open agent's due scheduled commands via the dispatcher (target-tab `createCommandHandler`).
+- `src/profiles.ts` — profiles (reusable agent sets): profile-dir lifecycle, `listProfiles`/`loadProfileAgents`, and the `profile` command parser (`parseProfileCommand`). Profiles live in a top-level `profiles/<name>/<agent>.json` (agent-state schema), launched by `src/commands/profile.ts`.
 - `src/acp.ts` — ACP client: spawn/drive an agent subprocess over JSON-RPC (`connectAcp`).
 - `src/acp-loop.ts` — autonomous agent tool loop (`runAcpToolLoop`): run a proposed command, feed output back, repeat until done/capped.
 - `src/tab.ts` — `Tab`/`LogEntry` types, `makeTab`, `dotColors`, transcript line-buffer flattening (`flattenBuffer`), history helpers.

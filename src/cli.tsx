@@ -17,6 +17,7 @@ import { Transcript } from './Transcript.js';
 import { CommandWindow } from './CommandWindow.js';
 import { getFrequentHistory, flattenBuffer, dotColors } from './tab.js';
 import { initWorkspaceDir, clearWorkspaceDir, removeWorkspace as removeWorkspaceDir } from './workspace.js';
+import { initProfileDir } from './profiles.js';
 import { runDbCommand, parseDbCommand } from './db.js';
 import { launchTabBrowser } from './browser.js';
 import type {
@@ -529,6 +530,8 @@ initWorkspaceDir(process.cwd());
 // Databases persist across launches, so the db dir is initialized but never cleared.
 initDbDir(process.cwd());
 initLogDir(process.cwd());
+// Profiles are user-authored and persistent, so the dir is initialized but never cleared.
+initProfileDir(process.cwd());
 
 loadConfig(process.cwd());
 

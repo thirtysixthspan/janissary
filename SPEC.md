@@ -296,6 +296,10 @@ Malformed invocations return a `Usage:` message.
 
 `schedule` queues a command for later execution in the issuing agent's tab. See the Scheduling section. Every scheduled command is named by the first token after `schedule`. Forms: `schedule <name> at <time> <cmd>` (one-shot today/next day), `schedule <name> on <date> [at <time>] <cmd>` (one-shot date), `schedule <name> every <N><m|h|d|w> <cmd>` (recurring interval), `schedule <name> every <day|weekday> at <time> <cmd>` (recurring clock time), plus `schedule list`, `schedule cancel <name>`, and `schedule clear`. Malformed invocations return a `Usage:` message.
 
+### `profile`
+
+`profile` launches a saved set of agents. See the Profiles section. `profile launch <name>` opens a tab for each agent in the named profile (restoring its agent state), skipping agents already open; `profile list` lists the available profiles. Malformed invocations return a `Usage:` message.
+
 ### Shell execution
 
 Running a shell command **requires** the `shell` keyword: an input beginning with `shell ` is forwarded to the tab's persistent system shell (see the Window Transcript section), with the keyword stripped first. The `shell` match is word-bounded, so `shellcheck …` is not treated as the keyword. There is no bare auto-run and no backtick prefix — a non-built-in typed without the keyword is treated as unknown, so a stray word never reaches the shell.
@@ -590,7 +594,21 @@ While the active agent has at least one scheduled entry, a small titled `schedul
 
 ---
 
-## External ACP Agents
+## Profiles
+
+A profile is a reusable, named set of agents for a particular use case (writing code, surfing the web, authoring a book, a specific task). Profiles are managed by `src/profiles.ts` and the `profile` command (`src/commands/profile.ts`).
+
+### Storage
+
+Profiles live in a top-level `profiles/` directory (`initProfileDir` in `src/cli.tsx`), kept separate from `.janussary/` so they are committable and are **not** cleared on launch. Each profile is its own directory named in dasherized text (e.g. `writing-code/`), containing one `<agentname>.json` file per agent. Each file uses the agent-state schema — the same format as `.janussary/state/<name>.json`. The filename (minus `.json`) is the authoritative agent name and overrides any `name` field inside the file.
+
+### `profile launch <name>`
+
+Opens a tab for each agent in the named profile. For each agent file, its state is written into the live state dir and the agent is initialized (`initAgentState`) and restored into a new tab — recovering its command history, transcript, working directory, schedule, and dot color (the profile's `dotColor` is used, falling back to the position-based color when absent) — then focus moves to the first newly opened tab. Agents are opened in `number` order. An agent whose label is already open as a tab is skipped (reported as `Already open: …`). A missing profile returns `No profile named "<name>".` and an empty one returns `Profile "<name>" has no agents.`.
+
+### `profile list`
+
+Lists the available profile directory names (sorted), or `No profiles.` when none exist.
 
 A tab can drive an [Agent Client Protocol](https://agentclientprotocol.com) agent via the `acp <prompt>` command. This is an experimental, read-only MVP.
 

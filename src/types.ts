@@ -246,6 +246,13 @@ export type AgentCommand = {
   workspace: boolean;
 };
 
+// --- profiles.ts ----------------------------------------------------------
+
+export type ProfileParsed =
+  | { error: string }
+  | { action: 'list' }
+  | { action: 'launch'; name: string };
+
 // --- db.ts ----------------------------------------------------------------
 
 export type DbParsed =
