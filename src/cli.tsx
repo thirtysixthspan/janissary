@@ -12,7 +12,7 @@ import { type AgentState, saveAgentState, loadAgentState, initAgentStateDir, cle
 import { useInputHandler, type InputHandlerDeps } from './useInputHandler.js';
 import { TabStrip } from './TabStrip.js';
 import { Transcript } from './Transcript.js';
-import { PromptBar } from './PromptBar.js';
+import { CommandWindow } from './CommandWindow.js';
 import { getFrequentHistory, flattenBuffer, wordWrap, formatAgentOutput, stripComments, type Tab, type LogEntry, dotColors, makeTab } from './tab.js';
 import { findRepoRoot, createWorkspace, removeWorkspace as removeWorkspaceDir, initWorkspaceDir, clearWorkspaceDir } from './workspace.js';
 import { runDbCommand, parseDbCommand, DB_PRIMER, extractDbCommand } from './db.js';
@@ -972,7 +972,7 @@ export const App = () => {
     <Box flexDirection="column" height={rows}>
       <TabStrip tabs={tabs} agentStates={agentStates} activeTab={activeTab} theme={theme} scrollBoundaryHit={scrollBoundaryHit} />
       <Transcript visibleLines={visibleLines} scrollChars={scrollChars} visibleHeight={visibleHeight} dotColor={cur.dotColor} theme={theme} />
-      <PromptBar beforeCursor={beforeCursor} afterCursor={afterCursor} dotColor={cur.dotColor} theme={theme} historyItems={frequentHistory} historySelectedIdx={historyPickerIdx} historyOpen={historyPickerOpen} />
+      <CommandWindow beforeCursor={beforeCursor} afterCursor={afterCursor} dotColor={cur.dotColor} theme={theme} historyItems={frequentHistory} historySelectedIdx={historyPickerIdx} historyOpen={historyPickerOpen} />
       {(shellActive[activeTab] || acpInfo[activeTab] || dbConns.length > 0 || (browserInfo[activeTab]?.windows.length ?? 0) > 0) && (
         <ConnectionWindow
           shell={shellActive[activeTab] ? process.env.SHELL || 'bash' : undefined}

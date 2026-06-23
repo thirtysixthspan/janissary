@@ -42,7 +42,7 @@ Key modules:
 - `src/tab.ts` — `Tab`/`LogEntry` types, `makeTab`, `dotColors`, transcript line-buffer flattening (`flattenBuffer`), history helpers.
 - `src/useInputHandler.ts` — keyboard input handling hook.
 - `src/theme.ts` — `darkTheme` color tokens (single theme, no switcher yet).
-- UI components: `src/TabStrip.tsx`, `src/Transcript.tsx`, `src/PromptBar.tsx`.
+- UI components: `src/TabStrip.tsx`, `src/Transcript.tsx`, `src/CommandWindow.tsx`.
 
 State: per-agent data (command history, transcript, shell cwd) persists to `.janussary/state/<name>.json`. Normal launch clears this dir; `janus --relaunch` restores all tabs from it.
 

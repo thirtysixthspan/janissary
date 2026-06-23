@@ -12,7 +12,7 @@ type Props = {
   theme: ThemeColors;
 };
 
-export const PromptBar = ({ beforeCursor, afterCursor, dotColor, historyItems, historySelectedIdx, historyOpen, theme }: Props) => (
+export const CommandWindow = ({ beforeCursor, afterCursor, dotColor, historyItems, historySelectedIdx, historyOpen, theme }: Props) => (
   <Box borderStyle="single" paddingX={1} flexShrink={0} flexDirection="column">
     {historyOpen && historyItems.length > 0 && (
       <Box flexDirection="column">
