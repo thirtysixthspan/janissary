@@ -17,7 +17,7 @@ import { TabStrip } from './TabStrip.js';
 import { Transcript } from './Transcript.js';
 import { CommandWindow } from './CommandWindow.js';
 import { getFrequentHistory, flattenBuffer, dotColors } from './tab.js';
-import { initWorkspaceDir, clearWorkspaceDir, removeWorkspace as removeWorkspaceDir } from './workspace.js';
+import { initWorkspaceDir, clearWorkspaceDir, removeWorkspace as removeWorkspaceDir } from './server/workspace.js';
 import { initProfileDir } from './profiles.js';
 import { runDbCommand, parseDbCommand } from './db.js';
 import { launchTabBrowser } from './browser.js';

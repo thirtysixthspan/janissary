@@ -31,6 +31,20 @@ describe('startServer (WS + RPC + security)', () => {
     ws.close();
   });
 
+  it('replies to a complete request with completion results', async () => {
+    server = await startServer({ webDir: tmpdir() });
+    const ws = new WebSocket(`ws://127.0.0.1:${server.port}/?token=${server.token}`);
+    const events: ServerEvent[] = [];
+    ws.on('message', (d) => events.push(JSON.parse(d.toString())));
+    await new Promise((res, rej) => { ws.on('open', res); ws.on('error', rej); });
+
+    ws.send(JSON.stringify({ t: 'rpc', id: 5, method: 'complete', params: { text: 'shell READ', cursor: 10 } }));
+    await waitFor(() => events.some((e) => e.t === 'rpc-reply' && e.id === 5));
+    const reply = events.find((e): e is Extract<ServerEvent, { t: 'rpc-reply' }> => e.t === 'rpc-reply' && e.id === 5);
+    expect((reply?.result as { newInput: string }).newInput).toBe('shell README.md ');
+    ws.close();
+  });
+
   it('rejects a connection with a bad token', async () => {
     server = await startServer({ webDir: tmpdir() });
     const ws = new WebSocket(`ws://127.0.0.1:${server.port}/?token=wrong`);

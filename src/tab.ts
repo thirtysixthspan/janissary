@@ -249,7 +249,7 @@ export function flattenBuffer(log: LogEntry[], collapseToolSteps = false): Buffe
     if (lines.length > 0) lines.push({ type: 'spacer', text: '' });
     // Continuation turns with empty input render output without a prompt line.
     if (entry.input) {
-      lines.push({ type: 'prompt', text: expandTabs(entry.input), cwd: entry.cwd, acp: entry.acp });
+      lines.push({ type: 'prompt', text: expandTabs(entry.input), cwd: entry.cwd, acp: entry.acp, running: entry.running });
     }
     if (entry.output) {
       for (const outLine of entry.output.split('\n')) {

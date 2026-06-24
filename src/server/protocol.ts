@@ -34,7 +34,9 @@ export type StateEvent = { t: 'state'; tabs: TabView[]; activeTab: number };
 export type PtyDataEvent = { t: 'pty'; id: string; data: string };
 export type PtyExitEvent = { t: 'pty-exit'; id: string; exitCode: number };
 export type RpcReply = { t: 'rpc-reply'; id: number; result?: unknown; error?: string };
-export type ServerEvent = StateEvent | PtyDataEvent | PtyExitEvent | RpcReply;
+// Tells the client to close its window; the server then stops (the `quit`/`exit` command).
+export type ByeEvent = { t: 'bye' };
+export type ServerEvent = StateEvent | PtyDataEvent | PtyExitEvent | RpcReply | ByeEvent;
 
 // Client -> server requests. Tab creation/closing flow through `command` (`agent`, `close`);
 // `setActiveTab`/`moveTab`/`toggleCollapse` are pure-UI shortcuts.
@@ -45,6 +47,7 @@ export type RpcCall =
   | { method: 'moveTab'; params: { dir: -1 | 1 } }
   | { method: 'reorderTab'; params: { dir: -1 | 1 } }
   | { method: 'toggleCollapse'; params?: Record<string, never> }
+  | { method: 'complete'; params: { text: string; cursor: number } }
   | { method: 'resize'; params: { cols: number; rows: number } }
   | { method: 'ptyInput'; params: { id: string; data: string } }
   | { method: 'ptyResize'; params: { id: string; cols: number; rows: number } }

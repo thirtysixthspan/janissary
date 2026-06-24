@@ -13,6 +13,10 @@ import { connectAcp } from '../acp.js';
 import { runAcpToolLoop } from '../acp-loop.js';
 import { analyzeCommand, toPrefixedCommand } from '../recognizers/index.js';
 import { spawnShell, executeShellCmd, queryShellPwd } from '../shell.js';
+import { findRepoRoot, createWorkspace, removeWorkspace } from './workspace.js';
+import { completeCommandLine } from './completion.js';
+import { appendEntry, getTimeStr } from '../logger.js';
+import type { CompletionResult } from '../types.js';
 import { spawnPty, type PtySession } from './pty.js';
 import { saveAgentState, loadAgentState, listAgentStates } from '../agent-state.js';
 import { homedir } from 'node:os';
@@ -26,14 +30,14 @@ import { BrowserManager } from './browser-tab.js';
 import { formatState } from './state-format.js';
 import type { TabView, ConnectionView, ScheduleView } from './protocol.js';
 
-// Built-ins not yet ported to the web UI; recognized so they give an honest notice.
-const UNPORTED = new Set(['hist', 'quit']);
 const SHELL_NAME = (process.env.SHELL || 'bash').split('/').pop() || 'bash';
 
 type Sinks = {
   emitState: () => void;
   sendPty: (id: string, data: string) => void;
   sendPtyExit: (id: string, exitCode: number) => void;
+  // Stop the whole app (the `quit` command). Optional so tests can omit it.
+  exit?: () => void;
 };
 
 export class Controller {
@@ -52,11 +56,10 @@ export class Controller {
   private timer: ReturnType<typeof setInterval>;
   private bus: MessageBus;
   private browsers = new BrowserManager();
+  private workspaces = new Set<string>();
 
   constructor(private sinks: Sinks) {
-    const tab = makeTab('janus', distinctColor([]));
-    tab.toolStepsExpanded = false;
-    this.tabs = [tab];
+    this.tabs = [this.makeRootTab()];
     this.cwd.set('janus', process.cwd());
     this.bus = new MessageBus({
       hasAgent: (l) => this.tabs.some((t) => t.label === l),
@@ -134,6 +137,13 @@ export class Controller {
 
   private cur(): Tab { return this.tabs[this.activeTab] ?? this.tabs[0]; }
 
+  // The fresh root `janus` tab, used at startup and when the last tab is closed.
+  private makeRootTab(): Tab {
+    const tab = makeTab('janus', distinctColor([]));
+    tab.toolStepsExpanded = false;
+    return tab;
+  }
+
   // Append a `running` transcript entry and mark the tab busy; the matching call to
   // `finishRunning` fills in its output. Used by async commands (browser, connection-close).
   private startRunning(label: string, input: string): void {
@@ -151,6 +161,7 @@ export class Controller {
       this.busy.delete(label);
       this.persist(t);
     }
+    this.log(label, output); // log the finalized output (browser / connection-close results)
     this.sinks.emitState();
   }
 
@@ -159,8 +170,17 @@ export class Controller {
     if (!tab) return;
     tab.log = [...tab.log, entry];
     tab.scrollOffset = 0;
+    // Record the content in the append-only log (command input + output as separate entries).
+    this.log(label, entry.input);
+    this.log(label, entry.output);
     this.persist(tab);
     this.sinks.emitState();
+  }
+
+  // Append one content event to the append-only log (.janissary/log/<date>.json). No-op for empty
+  // text or until initLogDir has run.
+  private log(label: string, text: string): void {
+    if (text) appendEntry({ timestamp: getTimeStr(), agent: label, text });
   }
 
   private persist(tab: Tab): void {
@@ -240,10 +260,12 @@ export class Controller {
       case 'profile': this.runProfile(cmd, label); return;
       case 'connection': this.runConnection(cmd, label); return;
       case 'browser': this.runBrowser(cmd, label); return;
-    }
-    if (UNPORTED.has(name)) {
-      this.append(label, { input: cmd, output: `"${name}" is not yet available in the web UI (migration in progress).` });
-      return;
+      // `quit` and `exit` both close the app window and stop the server. `close` (handled above)
+      // is reserved for closing tabs.
+      case 'quit': this.sinks.exit?.(); return;
+      // The `hist` picker is interactive (handled client-side via Ctrl+R); reaching the server
+      // non-interactively (e.g. scheduled) is a no-op.
+      case 'hist': return;
     }
     this.append(label, { input: cmd, output: getOutput(cmd) ?? `"${name}" did nothing.` });
   }
@@ -304,6 +326,7 @@ export class Controller {
         t.log = log;
         if (!running) this.persist(t);
       }
+      if (!running) this.log(label, output); // log each finalized agent turn once
       this.sinks.emitState();
     };
 
@@ -464,8 +487,12 @@ export class Controller {
   private getShell(label: string): ChildProcess {
     let shell = this.shells.get(label);
     if (!shell || !shell.stdin?.writable) {
-      shell = spawnShell(0);
+      shell = spawnShell(0, { JANUS_AGENT_NAME: label });
       this.shells.set(label, shell);
+      // Start the shell in the tab's working directory — the workspace clone for a workspaced
+      // agent, or the saved cwd for a `--relaunch`'d tab (mirrors the Ink useShellManager).
+      const cwd = this.cwd.get(label);
+      if (cwd) shell.stdin!.write(`cd "${cwd}"\n`);
     }
     return shell;
   }
@@ -479,7 +506,7 @@ export class Controller {
     const cwd = this.cwd.get(label) ?? process.cwd();
     const tab = this.tabs.find((t) => t.label === label);
     if (!tab) { opts.onComplete?.(''); return; }
-    if (display) tab.log = [...tab.log, { input: cmd, output: '', running: true, cwd }];
+    if (display) { tab.log = [...tab.log, { input: cmd, output: '', running: true, cwd }]; this.log(label, cmd); }
     this.busy.add(label);
     this.sinks.emitState();
     const update = (output: string, running: boolean) => {
@@ -499,6 +526,7 @@ export class Controller {
       (buf) => update(buf, true),
       (result) => {
         update(result, false);
+        if (display) this.log(label, result); // log the final shell output (capture runs aren't logged)
         opts.onComplete?.(result);
         queryShellPwd(shell, index, (pwd) => { if (pwd) { this.cwd.set(label, pwd); this.sinks.emitState(); } });
       },
@@ -570,19 +598,28 @@ export class Controller {
     if (resolved === null) { out('All agent names are in use.'); return; }
     if (existing.some((l) => l.toLowerCase() === resolved.toLowerCase())) { out(`Agent "${resolved}" is already active.`); return; }
 
+    // `--workspace` gives the agent a `git clone --shared` of the repo detected from cwd, and its
+    // shell starts there. Bail with a message if there's no repo or the clone fails.
+    let workspaceDir: string | undefined;
+    if (parsed.workspace) {
+      const root = findRepoRoot(process.cwd());
+      if (!root) { out('No git repository found. Cannot create workspace.'); return; }
+      try { workspaceDir = createWorkspace(resolved, root); this.workspaces.add(workspaceDir); }
+      catch (e) { out(`Failed to create workspace: ${e instanceof Error ? e.message : String(e)}`); return; }
+    }
+
     const dotColor = distinctColor(this.tabs.map((t) => t.dotColor));
     const group = creator?.group ?? 1;
     const groupColor = creator?.groupColor ?? dotColor;
-    const tab = makeTab(resolved, dotColor, this.tabs.length + 1, [], [], undefined, group, groupColor);
+    const tab = makeTab(resolved, dotColor, this.tabs.length + 1, [], [], workspaceDir, group, groupColor);
     tab.toolStepsExpanded = false;
     // Insert next to the creator's group so the group stays one contiguous run; keep focus on the
     // creator (the insertion can shift indices, so re-find it by label).
     this.tabs = insertTabInGroup(this.tabs, tab);
-    this.cwd.set(resolved, process.cwd());
+    this.cwd.set(resolved, workspaceDir ?? process.cwd());
     this.activeTab = this.tabs.findIndex((t) => t.label === creator.label);
     this.persist(tab);
-    const note = parsed.workspace ? ' (workspace clones are not yet available in the web UI)' : '';
-    out(`Agent "${resolved}" ready.${note}`);
+    out(`Agent "${resolved}" ready.${workspaceDir ? ` (workspace: ${workspaceDir})` : ''}`);
   }
 
   setActiveTab(index: number): void {
@@ -612,8 +649,10 @@ export class Controller {
   }
 
   closeTab(index: number): void {
-    if (this.tabs.length <= 1) return;
     const tab = this.tabs[index];
+    if (!tab) return;
+    // Tear down everything tab-scoped (SQLite connections are global and left open).
+    if (tab.workspaceDir) { removeWorkspace(tab.workspaceDir); this.workspaces.delete(tab.workspaceDir); }
     this.shells.get(tab.label)?.kill();
     this.shells.delete(tab.label);
     this.acpSessions.get(tab.label)?.kill();
@@ -623,6 +662,14 @@ export class Controller {
     for (const [id, e] of this.ptys) if (e.tabLabel === tab.label) { e.session.kill(); this.ptys.delete(id); }
     this.harnessOf.delete(tab.label);
     this.schedules.delete(tab.label);
+    // Closing the last tab resets to a fresh `janus` tab, just like launch.
+    if (this.tabs.length <= 1) {
+      this.tabs = [this.makeRootTab()];
+      this.cwd.set('janus', process.cwd());
+      this.activeTab = 0;
+      this.sinks.emitState();
+      return;
+    }
     this.tabs = this.tabs.filter((_, i) => i !== index).map((t, i) => ({ ...t, number: i + 1 }));
     this.activeTab = Math.min(this.activeTab, this.tabs.length - 1);
     this.sinks.emitState();
@@ -634,11 +681,34 @@ export class Controller {
     this.sinks.emitState();
   }
 
+  // Tab-completion for the command line (reuses the shared `completeCommandLine`): filesystem
+  // paths against the active tab's cwd, `msg`/`broadcast` agent names, `connection close` targets,
+  // and `browser` subcommands / window ids.
+  complete(text: string, cursor: number): CompletionResult {
+    const tab = this.cur();
+    const cwd = this.cwd.get(tab.label) ?? process.cwd();
+    const agents = this.tabs.map((t) => t.label);
+    return completeCommandLine(text, cursor, cwd, agents, this.completionConnections(tab.label));
+  }
+
+  // Canonical connection strings for `connection close` completion (shell/acp/browser/sqlite).
+  private completionConnections(label: string): string[] {
+    const out: string[] = [];
+    if (this.shells.has(label)) out.push(`shell:${SHELL_NAME}`);
+    if (this.acpSessions.has(label)) out.push('acp:opencode');
+    const b = this.browsers.info(label);
+    if (b) for (const id of b.ids) out.push(`browser:${id}`);
+    for (const n of listOpenConnections()) out.push(`sqlite:${n}`);
+    return out;
+  }
+
   shutdown(): void {
     clearInterval(this.timer);
     for (const [, shell] of this.shells) shell.kill();
     for (const [, session] of this.acpSessions) session.kill();
     for (const [, e] of this.ptys) e.session.kill();
     this.browsers.closeAll();
+    for (const dir of this.workspaces) removeWorkspace(dir);
+    this.workspaces.clear();
   }
 }

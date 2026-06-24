@@ -91,6 +91,25 @@ describe('expandTabs', () => {
   });
 });
 
+describe('flattenBuffer running indicator', () => {
+  it('does not emit a Running... line for an in-flight command', () => {
+    const lines = flattenBuffer([{ input: 'sleep 5', output: '', running: true }]);
+    expect(lines.some((l) => l.type === 'prompt' && l.text === 'sleep 5' && l.running)).toBe(true);
+    expect(lines.some((l) => l.type === 'output' && l.text === 'Running...')).toBe(false);
+  });
+
+  it('shows streamed output', () => {
+    const lines = flattenBuffer([{ input: 'echo hi', output: 'hi', running: true }]);
+    expect(lines.some((l) => l.text === 'Running...')).toBe(false);
+    expect(lines.some((l) => l.type === 'output' && l.text === 'hi')).toBe(true);
+  });
+
+  it('does not mark a completed command as running', () => {
+    const lines = flattenBuffer([{ input: 'echo hi', output: 'hi', running: false }]);
+    expect(lines.some((l) => l.running)).toBe(false);
+  });
+});
+
 describe('flattenBuffer tool-step collapsing', () => {
   const log = [
     { input: 'summarize example.com', output: 'Looking.' }, // user prompt + agent prose

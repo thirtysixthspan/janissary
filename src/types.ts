@@ -43,6 +43,8 @@ export type BufferLine = {
   fromColor?: string;
   msgKind?: MessageRenderKind;
   acp?: boolean;
+  // A shell command still in flight: the prompt line and its `Running...` indicator line.
+  running?: boolean;
   // Populated for `type: 'terminal'` lines.
   terminal?: TerminalEntry;
 };

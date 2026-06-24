@@ -25,10 +25,13 @@ export async function startServer(opts: ServerOptions): Promise<RunningServer> {
     for (const c of clients) if (c.readyState === WebSocket.OPEN) c.send(s);
   };
 
+  // Reassigned below once `close` exists, so the `quit` command can shut the server down cleanly.
+  let requestExit: () => void = () => process.exit(0);
   const controller = new Controller({
     emitState: () => broadcast({ t: 'state', tabs: controller.view(), activeTab: controller.activeTab }),
     sendPty: (id, data) => broadcast({ t: 'pty', id, data }),
     sendPtyExit: (id, exitCode) => broadcast({ t: 'pty-exit', id, exitCode }),
+    exit: () => requestExit(),
   });
   if (opts.relaunch) controller.rehydrate();
 
@@ -80,16 +83,18 @@ export async function startServer(opts: ServerOptions): Promise<RunningServer> {
     });
   });
 
-  return {
-    url: `http://${host}:${port}/?token=${token}`,
-    port,
-    token,
-    close: () => new Promise((resolve) => {
-      controller.shutdown();
-      for (const c of clients) c.close();
-      wss.close(() => http.close(() => resolve()));
-    }),
+  const close = (): Promise<void> => new Promise((resolve) => {
+    controller.shutdown();
+    for (const c of clients) c.close();
+    wss.close(() => http.close(() => resolve()));
+  });
+  requestExit = () => {
+    // Ask connected windows to close themselves, then stop the server and process.
+    broadcast({ t: 'bye' });
+    setTimeout(() => { void close().then(() => process.exit(0)); }, 100);
   };
+
+  return { url: `http://${host}:${port}/?token=${token}`, port, token, close };
 }
 
 // Apply one client request to the controller and reply. State changes are broadcast by the
@@ -104,6 +109,9 @@ function handle(controller: Controller, msg: ClientMessage, reply: (ev: ServerEv
     case 'moveTab': controller.moveTab(msg.params.dir); break;
     case 'reorderTab': controller.reorderTab(msg.params.dir); break;
     case 'toggleCollapse': controller.toggleCollapse(); break;
+    case 'complete':
+      reply({ t: 'rpc-reply', id: msg.id, result: controller.complete(msg.params.text, msg.params.cursor) });
+      return;
     case 'resize': controller.resize(msg.params.cols, msg.params.rows); break;
     case 'ptyInput': controller.ptyInput(msg.params.id, msg.params.data); break;
     case 'ptyResize': controller.ptyResize(msg.params.id, msg.params.cols, msg.params.rows); break;

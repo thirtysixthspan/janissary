@@ -1,6 +1,6 @@
 import type { Command } from './types.js';
 import { closeAllConnections } from '../connections.js';
-import { removeWorkspace } from '../workspace.js';
+import { removeWorkspace } from '../server/workspace.js';
 
 export const command: Command = {
   name: 'close',

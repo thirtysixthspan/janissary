@@ -65,11 +65,33 @@ html, body, #root {
 .line.prompt { color: var(--accent); }
 .line.prompt .cwd { color: var(--faint); margin-right: 6px; }
 .line.output { color: var(--fg); }
+.line.output.running { color: #ffd93d; }
+.line.empty-state { color: var(--faint); }
 .line.spacer { height: 8px; }
-.line.collapsed { color: var(--faint); font-style: italic; cursor: pointer; }
+/* Collapsed agent tool steps: a prominent, clickable summary line. */
+.line.collapsed { color: var(--accent); cursor: pointer; }
+.line.collapsed:hover { text-decoration: underline; }
+/* Expanded agent tool steps: dimmed + indented, click anywhere to re-collapse. */
+.line.prompt.acp { color: var(--muted); cursor: pointer; }
+.line.output.acp { color: var(--faint); cursor: pointer; padding-left: 1.5em; }
 .line.message { font-weight: 600; }
 
+/* History picker overlay (Ctrl+R / hist) */
+.picker {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 40;
+  max-height: 70%; overflow-y: auto;
+  background: var(--bg-soft); border-top: 1px solid var(--border);
+  box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.4);
+}
+.picker-title { padding: 4px 10px; color: var(--muted); border-bottom: 1px solid var(--border); }
+.picker-row { padding: 3px 10px; cursor: pointer; white-space: nowrap; }
+.picker-row.picker-empty { color: var(--muted); cursor: default; }
+.picker-row.selected { background: var(--accent); color: var(--bg); }
+.picker-row:hover { background: var(--border); }
+
 /* Command input */
+.command-area { display: flex; flex-direction: column; }
+.completions { padding: 2px 12px; color: var(--muted); white-space: pre-wrap; word-break: break-word; border-top: 1px solid var(--border); }
 .command { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-top: 1px solid var(--border); }
 .command .dot { font-size: 10px; }
 .command input {

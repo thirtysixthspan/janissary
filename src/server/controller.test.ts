@@ -1,10 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, readdirSync, realpathSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Controller } from './controller.js';
-import { initAgentStateDir } from '../agent-state.js';
+import { initAgentStateDir, saveAgentState } from '../agent-state.js';
 import { initProfileDir } from '../profiles.js';
+import { initLogDir, getLogDir } from '../logger.js';
 import { agentNames } from '../commands.js';
 
 // Sinks that just count state emissions; no PTY/shell spawning is exercised here.
@@ -82,16 +83,87 @@ describe('Controller', () => {
     expect(writer.group).not.toBe(janus.group);
   });
 
+  it('quit asks the host to exit', () => {
+    let exited = false;
+    const c = new Controller({ emitState() {}, sendPty() {}, sendPtyExit() {}, exit() { exited = true; } });
+    c.dispatch('quit');
+    expect(exited).toBe(true);
+  });
+
+  it('exit also stops the host (closes the window + server)', () => {
+    let exited = false;
+    const c = new Controller({ emitState() {}, sendPty() {}, sendPtyExit() {}, exit() { exited = true; } });
+    c.dispatch('exit');
+    expect(exited).toBe(true);
+  });
+
+  it('close removes the active tab and its connections', () => {
+    const { c } = makeController();
+    c.dispatch('agent bob');
+    c.setActiveTab(1);
+    c.dispatch('close');
+    expect(c.view().map((t) => t.label)).toEqual(['janus']);
+  });
+
+  it('closing the last tab opens a fresh janus tab', () => {
+    const { c } = makeController();
+    c.dispatch('help'); // give janus some transcript
+    expect(c.view()[0].bufferLines.length).toBeGreaterThan(0);
+    c.dispatch('close'); // last tab -> reset to a fresh janus
+    expect(c.view().map((t) => t.label)).toEqual(['janus']);
+    expect(c.view()[0].bufferLines).toHaveLength(0);
+  });
+
+  it('starts an agent shell in its saved/workspace cwd', async () => {
+    initAgentStateDir(mkdtempSync(join(tmpdir(), 'janus-st-')));
+    const workCwd = realpathSync(mkdtempSync(join(tmpdir(), 'janus-work-')));
+    saveAgentState({ name: 'bob', dotColor: '#6bcb77', active: false, number: 1, cwd: workCwd });
+    const { c } = makeController();
+    c.rehydrate(); // restores the bob tab with cwd = workCwd
+    c.dispatch('shell pwd'); // runs in bob's shell, which should have cd'd into workCwd
+    const deadline = Date.now() + 4000;
+    while (!allText(c).includes(workCwd) && Date.now() < deadline) await new Promise((r) => setTimeout(r, 20));
+    expect(allText(c)).toContain(workCwd);
+    c.shutdown();
+  });
+
+  it('records transcript content in the append-only log', () => {
+    initLogDir(mkdtempSync(join(tmpdir(), 'janus-log-')));
+    const { c } = makeController();
+    c.dispatch('help');
+    const files = readdirSync(getLogDir()).filter((f) => f.endsWith('.json'));
+    expect(files.length).toBe(1);
+    const entries = readFileSync(join(getLogDir(), files[0]), 'utf8').trim().split('\n').map((l) => JSON.parse(l));
+    // The command input and its output are logged as separate entries, each timestamped HH:MM:SS.mmm.
+    expect(entries.some((e) => e.agent === 'janus' && e.text === 'help')).toBe(true);
+    expect(entries.length).toBeGreaterThanOrEqual(2);
+    expect(entries.every((e) => /^\d{2}:\d{2}:\d{2}\.\d{3}$/.test(e.timestamp))).toBe(true);
+  });
+
   it('reports an unknown harness without launching a PTY', () => {
     const { c } = makeController();
     c.dispatch('harness gemini');
     expect(allText(c)).toContain('Unknown harness');
   });
 
-  it('gives an honest notice for not-yet-ported commands', () => {
+  it('treats a non-interactive hist as a no-op (the picker is client-side)', () => {
     const { c } = makeController();
-    c.dispatch('hist'); // history picker UI not ported yet
-    expect(allText(c)).toContain('not yet available in the web UI');
+    c.dispatch('hist');
+    expect(allText(c)).toBe('');
+  });
+
+  it('tab-completes a msg recipient against agent names', () => {
+    const { c } = makeController();
+    c.dispatch('agent bob');
+    const res = c.complete('msg b', 5);
+    expect(res.newInput).toBe('msg bob ');
+    expect(res.matches).toEqual(['bob']);
+  });
+
+  it('tab-completes a filesystem path for shell commands', () => {
+    const { c } = makeController(); // cwd is the repo root, which has README.md
+    const res = c.complete('shell READ', 10);
+    expect(res.newInput).toBe('shell README.md ');
   });
 
   it('cycles and toggles via UI shortcuts', () => {

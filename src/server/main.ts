@@ -6,7 +6,22 @@ import { makeToken } from './security.js';
 import { initAgentStateDir, clearStateDir } from '../agent-state.js';
 import { initDbDir } from '../connections.js';
 import { initProfileDir } from '../profiles.js';
+import { initWorkspaceDir, clearWorkspaceDir } from './workspace.js';
+import { initLogDir } from '../logger.js';
 import { loadConfig } from '../config.js';
+import type { ChildProcess } from 'node:child_process';
+
+// The Chrome "app" window we launched, so we can close it on shutdown (quit/exit/Ctrl+C).
+let appChild: ChildProcess | undefined;
+
+function killApp(): void {
+  if (!appChild?.pid) return;
+  // Chrome is spawned detached (its own process group), so kill the group to take down its
+  // renderers too. Fall back to a direct kill (e.g. on Windows where group kill isn't available).
+  try { process.kill(-appChild.pid, 'SIGTERM'); }
+  catch { try { appChild.kill(); } catch { /* already gone */ } }
+  appChild = undefined;
+}
 
 // Fallback: open a URL in the default browser.
 function openUrl(url: string): void {
@@ -72,6 +87,7 @@ function openApp(url: string, projectDir: string): void {
   ], { stdio: 'ignore', detached: true });
   child.on('error', () => openUrl(url));
   child.unref();
+  appChild = child;
 }
 
 export async function boot(argv = process.argv.slice(2)): Promise<void> {
@@ -84,8 +100,10 @@ export async function boot(argv = process.argv.slice(2)): Promise<void> {
   initAgentStateDir(cwd);
   initDbDir(cwd);
   initProfileDir(cwd);
+  initWorkspaceDir(cwd);
+  initLogDir(cwd); // append-only transcript log under .janissary/log/ (never cleared)
   loadConfig(cwd);
-  if (!relaunch) clearStateDir();
+  if (!relaunch) { clearStateDir(); clearWorkspaceDir(); }
 
   const webDir = join(import.meta.dirname, '..', '..', 'web', 'dist');
   const server = await startServer({ webDir, token: makeToken(), port, relaunch });
@@ -98,6 +116,8 @@ export async function boot(argv = process.argv.slice(2)): Promise<void> {
   const stop = () => { void server.close().then(() => process.exit(0)); };
   process.on('SIGINT', stop);
   process.on('SIGTERM', stop);
+  // Close the app window whenever the process exits (quit/exit, Ctrl+C, or normal shutdown).
+  process.on('exit', killApp);
 }
 
 // Run when executed directly (node dist/server/main.js or tsx src/server/main.ts).

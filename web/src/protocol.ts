@@ -15,10 +15,13 @@ export type BufferLine = {
   fromColor?: string;
   msgKind?: 'info' | 'request' | 'response';
   acp?: boolean;
+  running?: boolean;
   terminal?: TerminalEntry;
 };
 
 export type ConnectionView = { text: string; kind: 'shell' | 'acp' | 'browser' | 'terminal' | 'sqlite' };
+// Result of a Tab-completion request (mirrors src/types.ts CompletionResult).
+export type CompletionResult = { newInput: string; newCursor: number; matches: string[] };
 export type ScheduleView = { id: string; spec: string; next: string; recurring: boolean };
 
 export type TabView = {
@@ -42,7 +45,8 @@ export type ServerEvent =
   | { t: 'state'; tabs: TabView[]; activeTab: number }
   | { t: 'pty'; id: string; data: string }
   | { t: 'pty-exit'; id: string; exitCode: number }
-  | { t: 'rpc-reply'; id: number; result?: unknown; error?: string };
+  | { t: 'rpc-reply'; id: number; result?: unknown; error?: string }
+  | { t: 'bye' };
 
 export type RpcCall =
   | { method: 'init'; params?: Record<string, never> }
@@ -51,6 +55,7 @@ export type RpcCall =
   | { method: 'moveTab'; params: { dir: -1 | 1 } }
   | { method: 'reorderTab'; params: { dir: -1 | 1 } }
   | { method: 'toggleCollapse'; params?: Record<string, never> }
+  | { method: 'complete'; params: { text: string; cursor: number } }
   | { method: 'resize'; params: { cols: number; rows: number } }
   | { method: 'ptyInput'; params: { id: string; data: string } }
   | { method: 'ptyResize'; params: { id: string; cols: number; rows: number } }

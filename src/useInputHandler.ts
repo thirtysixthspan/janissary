@@ -2,7 +2,7 @@ import { useInput } from 'ink';
 import type { Key } from 'ink';
 import { useRef } from 'react';
 import { flattenBuffer, swapTabsLeft, swapTabsRight, canMoveTab } from './tab.js';
-import { completeCommandLine } from './completion.js';
+import { completeCommandLine } from './server/completion.js';
 import { nextScrollStep, initialScrollAccel } from './scroll.js';
 import { toPrefixedCommand } from './recognizers/index.js';
 import type { ScrollAccel, InputHandlerDeps } from './types.js';
