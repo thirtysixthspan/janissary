@@ -1,0 +1,99 @@
+/* Tokens mirror src/theme.ts (darkTheme). */
+:root {
+  --bg: #17181b;
+  --bg-soft: #26292f;
+  --fg: #e4e5e7;
+  --muted: #8a8d94;
+  --faint: #5b5e66;
+  --border: #292b30;
+  --accent: #5b9cff;
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--mono);
+  /* Default UI font size. */
+  font-size: 13.1625px;
+}
+
+.app { display: flex; flex-direction: column; height: 100%; }
+
+/* Tab strip */
+.tabstrip { display: flex; flex-wrap: wrap; background: var(--bg-soft); align-items: stretch; }
+.tab {
+  display: flex; align-items: center; gap: 6px;
+  padding: 4px 14px 6px; cursor: pointer; color: var(--muted);
+  border-top: 3px solid var(--accent);
+}
+.tab.active { background: var(--bg); color: var(--fg); }
+.tab .dot { font-size: 10px; line-height: 1; }
+
+/* The active tab's window body (transcript + command line), with the agent-colored left edge. */
+.tab-body { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+
+/* Main area (transcript + floating status panels) */
+.main { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; }
+
+/* Transcript */
+.transcript { flex: 1; overflow-y: auto; padding: 8px 12px; }
+
+/* Floating connection / schedule panels, top-right over the transcript */
+.status-panels {
+  position: absolute; top: 6px; right: 10px; z-index: 20;
+  display: flex; flex-direction: column; gap: 6px;
+  pointer-events: none; max-width: 60%;
+}
+.panel {
+  background: var(--bg-soft); border: 1px solid var(--border); border-radius: 6px;
+  padding: 3px 8px 5px; font-size: 12px; min-width: 120px;
+}
+.panel-title { color: var(--muted); margin-bottom: 2px; }
+.panel-row { white-space: nowrap; color: var(--fg); }
+.panel-row.conn-shell { color: var(--muted); }
+.panel-row.conn-acp { color: var(--accent); }
+.panel-row.conn-browser { color: var(--accent); }
+.panel-row.conn-terminal { color: var(--accent); }
+.panel-row.conn-sqlite { color: var(--fg); }
+.panel-row.recurring { color: var(--accent); }
+.line { white-space: pre-wrap; word-break: break-word; line-height: 1.4; }
+.line.prompt { color: var(--accent); }
+.line.prompt .cwd { color: var(--faint); margin-right: 6px; }
+.line.output { color: var(--fg); }
+.line.spacer { height: 8px; }
+.line.collapsed { color: var(--faint); font-style: italic; cursor: pointer; }
+.line.message { font-weight: 600; }
+
+/* Command input */
+.command { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-top: 1px solid var(--border); }
+.command .dot { font-size: 10px; }
+.command input {
+  flex: 1; background: transparent; border: none; outline: none;
+  color: var(--fg); font-family: var(--mono); font-size: 13.1625px;
+}
+
+/* Terminal cards */
+.terminal-card { border: 1px solid var(--border); border-radius: 6px; margin: 6px 0; overflow: hidden; }
+.terminal-card.maximized {
+  position: fixed; inset: 8px; z-index: 50; margin: 0; background: var(--bg);
+  display: flex; flex-direction: column;
+}
+.terminal-card .head {
+  display: flex; align-items: center; gap: 8px;
+  padding: 4px 8px; background: var(--bg-soft); font-size: 12px;
+}
+.terminal-card .head .name { color: var(--accent); }
+.terminal-card .head .status { color: var(--muted); }
+.terminal-card .head .status.exited { color: var(--faint); }
+.terminal-card .head .spacer { flex: 1; }
+.terminal-card .head button {
+  background: transparent; border: 1px solid var(--border); color: var(--muted);
+  border-radius: 4px; cursor: pointer; font-size: 11px; padding: 1px 6px;
+}
+.terminal-card .body { height: 360px; }
+.terminal-card.maximized .body { flex: 1; height: auto; }

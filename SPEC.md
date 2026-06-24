@@ -14,7 +14,7 @@ A single `janus` tab is open on launch with dot color `#5b9cff`. No other tabs e
 
 ### Agent tab creation
 
-Running `agent` creates a new tab with a random unused name chosen from a 52-name pool. The name is always lowercased. The new tab is created in the background — focus stays on the current tab, where an `Agent "<name>" ready.` confirmation is shown. On `--relaunch`, agent tabs are restored from saved state rather than created manually.
+Running `agent` creates a new tab with a random unused name chosen from a 52-name pool. The name is always lowercased. The new tab is created in the background — focus stays on the current tab, where an `Agent "<name>" ready.` confirmation is shown. The new tab joins the group of the tab it was created from (see Tab grouping). On `--relaunch`, agent tabs are restored from saved state rather than created manually.
 
 ### Named agent tab
 
@@ -44,7 +44,18 @@ When all 52 pool names are used, bare `agent` prints `All agent names are in use
 
 ### Tab dot colors
 
-Each tab has a colored dot drawn from a 15-color palette, cycling as tabs are added. The default `janus` tab uses the first palette color.
+Each tab has a colored dot drawn from a 15-color palette, cycling as tabs are added. The default `janus` tab uses the first palette color. A new tab's dot color is chosen to be perceptually distinct from the colors already on screen (`distinctColor` in `src/tab.ts`), rather than strictly cycling, so adjacent tabs stay easy to tell apart.
+
+### Tab grouping
+
+Every tab belongs to a **group**, identified by a `group` number and a fixed `groupColor` (the group's bar color). A group renders as a colored top border spanning each member tab's full width, drawn at full strength on every tab in the group — active or inactive, never faded — so related tabs read as a connected band in the strip.
+
+- **Root group.** The startup `janus` tab is group 1, and its group color is its own dot color.
+- **Inheritance.** An agent created with `agent` / `agent <name>` joins the group of the tab it was created from (the active tab), inheriting that group's number and bar color. Because creation is transitive, a chain of agents spawned from one another all share a single group.
+- **Profiles form a group.** Launching a profile creates one new group (the next free group number) shared by all of that profile's agents; the group's bar color is fixed to the first launched agent's color. See Profiles.
+- **Fixed color.** A group's bar color is set when the group is first created (the color of its first member) and stored per tab, so it never shifts when tabs are reordered or a member is closed.
+- **Contiguity.** A new tab is inserted directly after the last tab of its group (`insertTabInGroup` in `src/tab.ts`) so each group stays a single connected run in the strip. Reordering (`Ctrl+←` / `Ctrl+→`) may only swap a tab with a neighbor **in the same group** (`canMoveTab`), so groups always stay contiguous and a tab can never be dragged out of its group.
+- **Persistence.** `group` and `groupColor` are saved in each agent's state file and restored on `--relaunch`, so groupings reappear exactly as they were left.
 
 ### Active tab highlight
 
@@ -52,7 +63,7 @@ The active tab shows full-intensity foreground text on the content background co
 
 ### Tab switching with arrow keys
 
-Shift+Left and Shift+Right arrow keys cycle through open tabs. No-op when only one tab exists. (Unmodified Left/Right move the input cursor; Ctrl+Left/Right reorder the current tab.)
+Shift+Left and Shift+Right arrow keys cycle through open tabs. No-op when only one tab exists. (Unmodified Left/Right move the input cursor; Ctrl+Left/Right reorder the current tab within its group — see Tab grouping.)
 
 ### `next` command
 
@@ -393,7 +404,7 @@ A `design/` directory at project root contains reference screenshots (`dark.png`
 
 ### State directory
 
-Agent state is stored in `.janissary/state/`. Each agent has one JSON file named `<agent-name>.json` with fields: `name`, `dotColor`, `active`, `number` (the tab's position in the strip), `cmdHistory[]`, `log[]` (the full transcript of commands and outputs), `cwd` (the shell working directory after the last command), `context[]` (informational messages received from other agents), and `workspaceDir` (path to the agent's disposable workspace clone).
+Agent state is stored in `.janissary/state/`. Each agent has one JSON file named `<agent-name>.json` with fields: `name`, `dotColor`, `active`, `number` (the tab's position in the strip), `group` (the tab's group number) and `groupColor` (the group's fixed bar color — see Tab grouping), `cmdHistory[]`, `log[]` (the full transcript of commands and outputs), `cwd` (the shell working directory after the last command), `context[]` (informational messages received from other agents), and `workspaceDir` (path to the agent's disposable workspace clone).
 
 Workspace clones live in `.janissary/workspace/<name>/` and are removed on tab close or app exit.
 
@@ -421,7 +432,7 @@ On a normal `janus` launch the state directory and workspace directory are recur
 
 ### Restored tab order
 
-Each tab's `number` is recorded in its state file and kept in sync as tabs are created, reordered (`Ctrl+←`/`Ctrl+→`), or renumbered. On `--relaunch`, tabs are rebuilt in ascending `number` order and each tab keeps its previously assigned `number` and dot color, so the tab strip reappears exactly as it was left. State files predating this field fall back to array order with palette-assigned colors.
+Each tab's `number` is recorded in its state file and kept in sync as tabs are created, reordered (`Ctrl+←`/`Ctrl+→`), or renumbered. On `--relaunch`, tabs are rebuilt in ascending `number` order and each tab keeps its previously assigned `number`, dot color, and group (`group` number and `groupColor` bar color), so the tab strip — including its group bands — reappears exactly as it was left. State files predating these fields fall back to array order with palette-assigned colors and group 1.
 
 ---
 
@@ -604,7 +615,9 @@ Profiles live in a top-level `profiles/` directory (`initProfileDir` in `src/cli
 
 ### `profile launch <name>`
 
-Opens a tab for each agent in the named profile. For each agent file, its state is written into the live state dir and the agent is initialized (`initAgentState`) and restored into a new tab — recovering its command history, transcript, working directory, schedule, and dot color (the profile's `dotColor` is used, falling back to the position-based color when absent) — then focus moves to the first newly opened tab. Agents are opened in `number` order. An agent whose label is already open as a tab is skipped (reported as `Already open: …`). A missing profile returns `No profile named "<name>".` and an empty one returns `Profile "<name>" has no agents.`.
+Opens a tab for each agent in the named profile. For each agent file, its state is written into the live state dir and the agent is initialized (`initAgentState`) and restored into a new tab — recovering its command history, transcript, working directory, schedule, and dot color (the profile's `dotColor` is used when it is distinct enough from the colors already on screen, otherwise the most distinct palette color is chosen) — then focus moves to the first newly opened tab. Agents are opened in `number` order. An agent whose label is already open as a tab is skipped (reported as `Already open: …`). A missing profile returns `No profile named "<name>".` and an empty one returns `Profile "<name>" has no agents.`.
+
+All of a launched profile's agents are placed into a single **new group** (the next free group number, or a group number authored on the profile's agent files), kept contiguous in the tab strip. The group's bar color is fixed to the first opened agent's color and shared by the rest, so a profile's tabs read as one band distinct from the root group and from other profiles. See Tab grouping.
 
 ### `profile list`
 

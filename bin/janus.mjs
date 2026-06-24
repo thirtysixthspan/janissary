@@ -3,17 +3,26 @@ import { spawnSync } from 'node:child_process';
 import { join } from 'node:path';
 import { existsSync } from 'node:fs';
 
-const compiled = join(import.meta.dirname, '..', 'dist', 'cli.js');
-const source = join(import.meta.dirname, '..', 'src', 'cli.tsx');
-const localTsx = join(import.meta.dirname, '..', 'node_modules', 'tsx', 'dist', 'cli.mjs');
+// Janissary now runs as a local web app: this launcher boots the Node server (which opens the
+// browser to a token-gated localhost URL) and stays attached so Ctrl+C shuts it down. The legacy
+// Ink TUI still lives at src/cli.tsx (run `npm run start:ink`).
+const root = join(import.meta.dirname, '..');
+const compiled = join(root, 'dist', 'server', 'main.js');
+const source = join(root, 'src', 'server', 'main.ts');
+const localTsx = join(root, 'node_modules', 'tsx', 'dist', 'cli.mjs');
+const args = process.argv.slice(2);
 
+let cmd, cmdArgs;
 if (existsSync(compiled)) {
-  const result = spawnSync(process.execPath, [compiled], { stdio: 'inherit' });
-  process.exit(result.status ?? 1);
+  cmd = process.execPath;
+  cmdArgs = [compiled, ...args];
 } else if (existsSync(localTsx)) {
-  const result = spawnSync(process.execPath, [localTsx, source], { stdio: 'inherit' });
-  process.exit(result.status ?? 1);
+  cmd = process.execPath;
+  cmdArgs = [localTsx, source, ...args];
 } else {
-  const result = spawnSync('npx', ['tsx', source], { stdio: 'inherit' });
-  process.exit(result.status ?? 1);
+  cmd = 'npx';
+  cmdArgs = ['tsx', source, ...args];
 }
+
+const result = spawnSync(cmd, cmdArgs, { stdio: 'inherit' });
+process.exit(result.status ?? 1);

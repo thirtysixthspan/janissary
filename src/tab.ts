@@ -214,6 +214,14 @@ export function flattenBuffer(log: LogEntry[], collapseToolSteps = false): Buffe
       continue;
     }
 
+    // An inline terminal card (interactive program / harness PTY). Rendered as its own line
+    // type so the web client can mount an xterm.js pane; carries no flattened text.
+    if (entry.terminal) {
+      if (lines.length > 0) lines.push({ type: 'spacer', text: '' });
+      lines.push({ type: 'terminal', text: '', terminal: entry.terminal });
+      continue;
+    }
+
     if (entry.from) {
       // Blank separator line above each message.
       if (lines.length > 0) lines.push({ type: 'spacer', text: '' });

@@ -20,18 +20,31 @@ export type LogEntry = {
   msgKind?: 'info' | 'request' | 'response';
   // Set when this entry is an auto-ran agent command (e.g. ACP db loop).
   acp?: boolean;
+  // Set when this entry hosts an inline terminal card (an interactive program or AI harness
+  // running in a PTY). Used by the web renderer to mount an xterm.js pane; the Ink path never
+  // creates these. `ptyId` keys the live PTY stream.
+  terminal?: TerminalEntry;
+};
+
+export type TerminalEntry = {
+  ptyId: string;
+  program: string;
+  status: 'running' | 'exited';
+  exitCode?: number;
 };
 
 export type MessageRenderKind = 'info' | 'request' | 'response';
 
 export type BufferLine = {
-  type: 'prompt' | 'output' | 'spacer' | 'message' | 'collapsed';
+  type: 'prompt' | 'output' | 'spacer' | 'message' | 'collapsed' | 'terminal';
   text: string;
   cwd?: string;
   from?: string;
   fromColor?: string;
   msgKind?: MessageRenderKind;
   acp?: boolean;
+  // Populated for `type: 'terminal'` lines.
+  terminal?: TerminalEntry;
 };
 
 export type Tab = {
