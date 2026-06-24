@@ -53,3 +53,7 @@ The `next` command programmatically switches to the next tab.
 ### Per-tab state isolation
 
 Each tab carries its own transcript log, command history (including navigation index), and scroll offset. Switching tabs preserves each tab's state.
+
+### `close` command
+
+Closes the current tab and all of its associated connections — its shell, ACP session, browser, harness/interactive terminals, and scheduled timers — removes any workspace clone and its in-memory agent state, and selects an adjacent tab. `close` is reserved for closing tabs (not exiting the app). Closing the last remaining tab opens a fresh `janus` tab, exactly as on launch. (Open SQLite connections are global, not tab-scoped, so they are left open — close them with `connection close sqlite:<name>`.)

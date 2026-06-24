@@ -21,3 +21,13 @@ Shell `data` event listeners check an unmount flag before updating React state. 
 ### Tab-safe async
 
 Shell output uses the tab index captured at execution time via a ref, so output updates are routed to the correct tab's log even if the user switches tabs while a shell command runs.
+
+## Shell Working Directory Persistence
+
+### Per-agent cwd tracking
+
+After each shell command completes, `queryShellPwd` sends `pwd` to the shell and captures the response. The working directory is saved to the agent state file's `cwd` field and kept in a `cwdRef` map keyed by agent label.
+
+### Restoration on relaunch
+
+On `--relaunch`, saved cwd values are loaded from agent state files into `cwdRef`. When `getShell` creates a new shell for a tab, it checks `cwdRef` for the tab's label and sends `cd "<cwd>"` to the shell before any user commands.
