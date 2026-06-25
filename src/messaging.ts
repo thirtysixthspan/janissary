@@ -62,27 +62,26 @@ export function useMessaging(deps: MessagingDeps): Messaging {
     const d = depsRef.current;
     // info and response are both informational: shown in the recipient's transcript and
     // appended to its context.
-    if (msg.kind === 'info' || msg.kind === 'response') {
-      d.appendLog(msg.to, { input: '', output: msg.text, from: msg.from, fromColor: d.agentColor(msg.from), msgKind: msg.kind });
+    if (msg.kind === 'info') {
+      d.appendLog(msg.to, { input: '', output: msg.text, from: msg.from, fromColor: d.agentColor(msg.from), msgKind: 'info' });
+      d.appendContext(msg.to, `${msg.from}: ${msg.text}`);
+      done();
+      return;
+    }
+    if (msg.kind === 'response') {
+      d.appendLog(msg.to, { input: '', output: msg.text, from: `response from ${msg.from}`, fromColor: d.agentColor(msg.from), msgKind: 'response' });
       d.appendContext(msg.to, `${msg.from}: ${msg.text}`);
       done();
       return;
     }
     if (msg.kind === 'command') {
-      // Run the shell command in the recipient's shell as if it issued it; no response.
-      // Interactive programs need a foreground tab, so they are refused remotely.
-      if (d.isInteractive(msg.text)) {
-        const note = `Cannot run interactive command remotely: ${msg.text}`;
-        d.appendLog(msg.to, { input: '', output: note, from: msg.from, fromColor: d.agentColor(msg.from), msgKind: 'info' });
-        done();
-        return;
-      }
-      d.runShell(msg.to, msg.text, () => done());
+      d.appendLog(msg.to, { input: '', output: `sent command: ${msg.text}`, from: msg.from, fromColor: d.agentColor(msg.from), msgKind: 'info' });
+      d.runCapture(msg.to, msg.text, () => done());
       return;
     }
-    // request: show `● request from <sender>: <command>` in the recipient, execute it
-    // there capturing the output, and return that output to the sender as a response.
-    d.appendLog(msg.to, { input: '', output: msg.text, from: msg.from, fromColor: d.agentColor(msg.from), msgKind: 'request' });
+    // request: show the command in the recipient's transcript as if the user typed it (full
+    // dispatch including routing, acp, browser, etc.), then return the output to the sender.
+    d.appendLog(msg.to, { input: '', output: `sent request: ${msg.text}`, from: msg.from, fromColor: d.agentColor(msg.from), msgKind: 'info' });
     d.runCapture(msg.to, msg.text, (output) => {
       send({ from: msg.to, to: msg.from, kind: 'response', text: output });
       done();

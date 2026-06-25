@@ -40,32 +40,31 @@ describe('useMessaging', () => {
   });
 
   it('runs commands in the recipient shell without replying to the sender', () => {
-    const { appendLog, appendContext, runShell } = setup();
+    const { appendLog, appendContext, runCapture } = setup();
     messaging.send({ from: 'aslan', to: 'bilal', kind: 'command', text: 'ls -la' });
-    expect(runShell).toHaveBeenCalledWith('bilal', 'ls -la', expect.any(Function));
+    expect(runCapture).toHaveBeenCalledWith('bilal', 'ls -la', expect.any(Function));
     // command produces no reply: the sender's transcript/context are untouched by us
     expect(appendContext).not.toHaveBeenCalled();
-    expect(appendLog).not.toHaveBeenCalled();
+    expect(appendLog).toHaveBeenCalledWith('bilal', { input: '', output: 'sent command: ls -la', from: 'aslan', fromColor: '#ff0000', msgKind: 'info' });
   });
 
   it('shows a request in the recipient, executes it, and returns the output as a response', () => {
     const { appendLog, runCapture } = setup();
     messaging.send({ from: 'aslan', to: 'bilal', kind: 'request', text: 'about' });
-    // recipient displays `● request from aslan: about` (sender's color)
-    expect(appendLog).toHaveBeenCalledWith('bilal', { input: '', output: 'about', from: 'aslan', fromColor: '#ff0000', msgKind: 'request' });
-    // recipient executes the command, capturing output
+    // recipient displays `● aslan: sent request: about` (sender's color)
+    expect(appendLog).toHaveBeenCalledWith('bilal', { input: '', output: 'sent request: about', from: 'aslan', fromColor: '#ff0000', msgKind: 'info' });
+    // recipient executes the command through full dispatch
     expect(runCapture).toHaveBeenCalledWith('bilal', 'about', expect.any(Function));
     // sender receives the captured output as a response (responder's color)
-    expect(appendLog).toHaveBeenCalledWith('aslan', { input: '', output: 'out:about', from: 'bilal', fromColor: '#00ff00', msgKind: 'response' });
+    expect(appendLog).toHaveBeenCalledWith('aslan', { input: '', output: 'out:about', from: 'response from bilal', fromColor: '#00ff00', msgKind: 'response' });
   });
 
   it('refuses to run interactive commands remotely', () => {
-    const { appendLog, runShell } = setup({ isInteractive: () => true });
+    const { appendLog, runCapture } = setup({ isInteractive: () => true });
     messaging.send({ from: 'aslan', to: 'bilal', kind: 'command', text: 'less file' });
-    expect(runShell).not.toHaveBeenCalled();
-    expect(appendLog).toHaveBeenCalledWith('bilal', expect.objectContaining({
-      output: expect.stringContaining('Cannot run interactive command remotely'),
-    }));
+    // Interactivity is now checked inside runCapture; the messaging layer always delegates
+    expect(runCapture).toHaveBeenCalledWith('bilal', 'less file', expect.any(Function));
+    expect(appendLog).toHaveBeenCalledWith('bilal', { input: '', output: 'sent command: less file', from: 'aslan', fromColor: '#ff0000', msgKind: 'info' });
   });
 
   it('refuses to send to an unknown agent', () => {

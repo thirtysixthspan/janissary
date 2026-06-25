@@ -8,6 +8,7 @@ import { resolveCommand } from './resolve.js';
 import { isInteractive } from './interactive.js';
 import { parseHarnessCommand, HARNESS_COMMANDS } from './harness.js';
 import { parseAgentCommand, resolveAgentName, getOutput } from './commands.js';
+import { commands } from './commands/index.js';
 import { runDbCommand, parseDbCommand, DB_PRIMER, extractDbCommand } from './db.js';
 import { connectAcp } from './acp.js';
 import { runAcpToolLoop } from './acp-loop.js';
@@ -383,7 +384,10 @@ export class Controller {
     if ('error' in parsed) { this.append(label, { input: cmd, output: parsed.error }); return; }
     if (!this.bus.send({ from: label, to: parsed.to, kind: parsed.kind, text: parsed.text })) {
       this.append(label, { input: cmd, output: `No agent named "${parsed.to}".` });
+      return;
     }
+    // Show the sent message in the sender's transcript
+    this.append(label, { input: cmd, output: `→ ${parsed.to} (${parsed.kind}): ${parsed.text}` });
   }
 
   private runBroadcast(cmd: string, label: string): void {
@@ -401,7 +405,7 @@ export class Controller {
 
   // --- acp (autonomous agent tool loop) ------------------------------------
 
-  private runAcp(cmd: string, label: string): void {
+  private runAcp(cmd: string, label: string, onDone?: (output: string) => void): void {
     const prompt = cmd.replace(/^acp\b\s*/i, '').trim();
     if (!prompt) { this.append(label, { input: cmd, output: 'Usage: acp <prompt>.' }); return; }
 
@@ -436,6 +440,7 @@ export class Controller {
       this.sinks.emitState();
     };
 
+    let lastAnswer = '';
     runAcpToolLoop(session, prompt, {
       primer: `${DB_PRIMER}\n\n${BROWSER_PRIMER}\n\nWrite your replies in GitHub-flavored Markdown (headings, lists, tables, fenced code blocks, etc.); the tab renders them as formatted Markdown.`,
       runCommand: (c) => (/^browser\b/i.test(c) ? this.browsers.run(label, c) : this.runDbInTab(label, c)),
@@ -445,14 +450,15 @@ export class Controller {
       // text is kept verbatim (no terminal-style table/word-wrap rewriting).
       startTurn: (isFirst) => { this.busy.add(label); this.append(label, { input: isFirst ? prompt : '', output: '', running: true, markdown: true }); },
       chunk: (buf) => updateRunning(buf, true),
-      endTurn: (final) => updateRunning(final, false),
+      endTurn: (final) => { updateRunning(final, false); lastAnswer = final; },
       ranCommand: (c, result) => this.append(label, { input: c, output: result, acp: true }),
       finished: (reason, maxSteps) => {
         this.busy.delete(label);
         if (reason === 'capped') this.append(label, { input: '', output: `(stopped after ${maxSteps} tool steps)` });
         this.sinks.emitState();
+        onDone?.(lastAnswer);
       },
-      error: (m) => { updateRunning(`ACP error: ${m}`, false); this.busy.delete(label); },
+      error: (m) => { updateRunning(`ACP error: ${m}`, false); this.busy.delete(label); onDone?.(`ACP error: ${m}`); },
     });
   }
 
@@ -460,11 +466,11 @@ export class Controller {
 
   // Browser actions are async (navigation, eval, screenshots): show a running entry, then fill
   // it with the result when the Playwright call resolves.
-  private runBrowser(cmd: string, label: string): void {
+  private runBrowser(cmd: string, label: string, onDone?: (output: string) => void): void {
     this.startRunning(label, cmd);
     void this.browsers.run(label, cmd)
-      .then((out) => this.finishRunning(label, out))
-      .catch((e) => this.finishRunning(label, `Browser error: ${e instanceof Error ? e.message : String(e)}`));
+      .then((out) => { this.finishRunning(label, out); onDone?.(out); })
+      .catch((e) => { const msg = `Browser error: ${e instanceof Error ? e.message : String(e)}`; this.finishRunning(label, msg); onDone?.(msg); });
   }
 
   // --- schedule ------------------------------------------------------------
@@ -645,21 +651,57 @@ export class Controller {
     );
   }
 
-  // Run text in a tab capturing output instead of displaying it (fulfils a `request`).
+  // Run text in a tab dispatching it as if the user typed it (full command routing, acp, browser,
+  // etc.), showing output in the transcript and calling back with the captured result.
   private runCapture(label: string, text: string, cb: (out: string) => void): void {
-    const res = resolveCommand(text);
-    switch (res.kind) {
-      case 'empty': cb(''); return;
-      case 'shell':
-        if (res.cmd && isInteractive(res.cmd)) { cb(`Cannot run interactive command remotely: ${res.cmd}`); return; }
-        this.runShell(label, res.cmd, { display: false, onComplete: cb });
-        return;
-      case 'output':
-      case 'unknown': cb(res.output); return;
-      case 'app':
-        cb(res.name === 'db' ? this.runDbInTab(label, res.cmd) : `Command not available remotely: ${res.cmd}`);
-        return;
+    // Shell commands (explicit `shell` keyword)
+    if (/^shell\b/i.test(text)) {
+      const cmd = text.replace(/^shell\b\s*/i, '');
+      if (cmd && isInteractive(cmd)) { cb(`Cannot run interactive command remotely: ${cmd}`); return; }
+      this.runShell(label, cmd, { display: true, onComplete: cb });
+      return;
     }
+
+    const trimmed = text.replace(/^\//, '');
+    const index = this.tabs.findIndex((t) => t.label === label);
+    if (index < 0) { cb('Tab not found'); return; }
+
+    // App commands — check against the command registry
+    for (const c of commands) {
+      if (c.match(trimmed)) {
+        // Async commands that need completion callbacks
+        if (c.name === 'acp') { this.runAcp(trimmed, label, cb); return; }
+        if (c.name === 'browser') { this.runBrowser(trimmed, label, cb); return; }
+        // Sync commands: dispatch and capture output from the last log entry
+        const tab = this.tabs.find((t) => t.label === label);
+        const before = tab?.log.length ?? 0;
+        this.runApp(c.name, trimmed, label, index);
+        const after = this.tabs.find((t) => t.label === label)?.log.length ?? 0;
+        cb(after > before ? this.tabs.find((t) => t.label === label)!.log[after - 1].output : '');
+        return;
+      }
+    }
+
+    // Output commands (help) — the only real output command is `help`; everything else
+    // `getOutput` returns is an "Unknown command" message that needs probabilistic routing.
+    const output = getOutput(trimmed);
+    if (output !== null && !output.startsWith('Unknown command:')) {
+      this.append(label, { input: text, output, markdown: trimmed === 'help' });
+      cb(output);
+      return;
+    }
+
+    // Probabilistic routing for unprefixed commands (bare `ls`, `df`, etc.)
+    const openDbs = this.openDbsFor(label);
+    const decision = analyzeCommand(trimmed, { openDbs });
+    if (decision.kind === 'route' && (decision.route !== 'db' || openDbs.length === 1)) {
+      const choice: RouteChoice = decision.route === 'db'
+        ? { label: '', route: 'db', dbName: openDbs[0] }
+        : { label: '', route: decision.route };
+      this.runCapture(label, toPrefixedCommand(trimmed, choice), cb);
+      return;
+    }
+    cb(output ?? `Unknown command: "${trimmed}".`);
   }
 
   // --- inline terminal cards (PTY) -----------------------------------------

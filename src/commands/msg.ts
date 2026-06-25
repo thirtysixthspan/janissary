@@ -14,7 +14,7 @@ export const command: Command = {
         ? 'Cannot message yourself.'
         : !sendMessage({ from: fromLabel, to: parsed.to, kind: parsed.kind, text: parsed.text })
           ? `No agent named "${parsed.to}".`
-          : `Sent ${parsed.kind} to ${parsed.to}.`;
+          : `→ ${parsed.to} (${parsed.kind}): ${parsed.text}`;
     updateCurrentTab((tab) => ({ ...tab, log: [...tab.log, { input: cmd, output: result }], scrollOffset: 0 }));
   },
 };

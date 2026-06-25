@@ -1,8 +1,9 @@
 import type { LogEntry, MessageKind } from './types.js';
 
 // Server-side port of useMessaging (the React hook): per-recipient FIFO queues drained one
-// message at a time. info/response are shown in the recipient's transcript; command runs a shell
-// command there; request runs and returns its output to the sender as a response.
+// message at a time. info/response are shown in the recipient's transcript; command runs the
+// command through full dispatch (as if typed by the user); request runs it and returns the
+// output to the sender as a response.
 type Message = { id: number; from: string; to: string; kind: MessageKind; text: string };
 
 export type MessageBusDeps = {
@@ -46,26 +47,30 @@ export class MessageBus {
 
   private handle(msg: Message, done: () => void): void {
     const d = this.deps;
-    if (msg.kind === 'info' || msg.kind === 'response') {
-      d.appendLog(msg.to, { input: '', output: msg.text, from: msg.from, fromColor: d.agentColor(msg.from), msgKind: msg.kind });
+    if (msg.kind === 'info') {
+      d.appendLog(msg.to, { input: '', output: msg.text, from: msg.from, fromColor: d.agentColor(msg.from), msgKind: 'info' });
+      d.appendContext(msg.to, `${msg.from}: ${msg.text}`);
+      done();
+      return;
+    }
+    if (msg.kind === 'response') {
+      d.appendLog(msg.to, { input: '', output: msg.text, from: `response from ${msg.from}`, fromColor: d.agentColor(msg.from), msgKind: 'response' });
       d.appendContext(msg.to, `${msg.from}: ${msg.text}`);
       done();
       return;
     }
     if (msg.kind === 'command') {
-      if (d.isInteractive(msg.text)) {
-        d.appendLog(msg.to, { input: '', output: `Cannot run interactive command remotely: ${msg.text}`, from: msg.from, fromColor: d.agentColor(msg.from), msgKind: 'info' });
-        done();
-        return;
-      }
-      d.runShell(msg.to, msg.text, () => done());
+      d.appendLog(msg.to, { input: '', output: `sent command: ${msg.text}`, from: msg.from, fromColor: d.agentColor(msg.from), msgKind: 'info' });
+      d.runCapture(msg.to, msg.text, () => done());
       return;
     }
-    // request: show it in the recipient, run it capturing output, return that to the sender.
-    d.appendLog(msg.to, { input: '', output: msg.text, from: msg.from, fromColor: d.agentColor(msg.from), msgKind: 'request' });
-    d.runCapture(msg.to, msg.text, (output) => {
-      this.send({ from: msg.to, to: msg.from, kind: 'response', text: output });
-      done();
-    });
+    if (msg.kind === 'request') {
+      d.appendLog(msg.to, { input: '', output: `sent request: ${msg.text}`, from: msg.from, fromColor: d.agentColor(msg.from), msgKind: 'info' });
+      d.runCapture(msg.to, msg.text, (output) => {
+        this.send({ from: msg.to, to: msg.from, kind: 'response', text: output });
+        done();
+      });
+      return;
+    }
   }
 }

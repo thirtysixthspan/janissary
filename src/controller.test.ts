@@ -29,7 +29,7 @@ describe('Controller', () => {
   it('routes a built-in with output into the transcript', () => {
     const { c } = makeController();
     c.dispatch('help');
-    expect(c.view()[0].bufferLines.some((l) => l.type === 'output')).toBe(true);
+    expect(c.view()[0].bufferLines.some((l) => l.type === 'markdown')).toBe(true);
   });
 
   it('clears the transcript with clear', () => {
