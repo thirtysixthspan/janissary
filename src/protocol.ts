@@ -1,8 +1,8 @@
 // Wire types shared between the Node server and the React web client. The web bundle mirrors
 // these locally (it cannot import across the bundler boundary cleanly), so keep them in sync.
-import type { BufferLine } from './types.js';
+import type { BufferLine, ImageView } from './types.js';
 
-export type { BufferLine };
+export type { BufferLine, ImageView };
 
 // One row in the floating "connections" panel (shell / acp / terminal card / sqlite).
 export type ConnectionView = { text: string; kind: 'shell' | 'acp' | 'browser' | 'terminal' | 'sqlite' };
@@ -30,6 +30,12 @@ export type TabView = {
   bufferLines: BufferLine[];
   cmdHistory: string[];
   toolStepsExpanded: boolean;
+  // Body kind: undefined/`'agent'` for a normal tab, `'image'` for an image view.
+  view?: 'agent' | 'image';
+  // Display name when it differs from `label` (image tabs are all titled `image`).
+  title?: string;
+  // Image-view payload, present only when `view === 'image'`.
+  image?: ImageView;
 };
 
 export type StateEvent = { t: 'state'; tabs: TabView[]; activeTab: number; route: RouteChooserView | null };
@@ -46,6 +52,7 @@ export type RpcCall =
   | { method: 'init'; params?: Record<string, never> }
   | { method: 'command'; params: { text: string } }
   | { method: 'setActiveTab'; params: { index: number } }
+  | { method: 'closeTab'; params: { index: number } }
   | { method: 'moveTab'; params: { dir: -1 | 1 } }
   | { method: 'reorderTab'; params: { dir: -1 | 1 } }
   | { method: 'toggleCollapse'; params?: Record<string, never> }

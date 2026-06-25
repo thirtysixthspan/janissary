@@ -3,6 +3,7 @@ import { JanusClient } from './ws';
 import type { TabView, RouteChooserView } from './protocol';
 import { TabStrip } from './TabStrip';
 import { Transcript } from './Transcript';
+import { ImageTab } from './ImageTab';
 import { CommandInput } from './CommandInput';
 import { StatusPanels } from './StatusPanels';
 import { HistoryPicker } from './HistoryPicker';
@@ -47,6 +48,8 @@ export function App() {
     client.send({ method: 'setActiveTab', params: { index } });
     inputRef.current?.focus();
   };
+
+  const closeTab = (index: number) => client.send({ method: 'closeTab', params: { index } });
 
   const chooseRoute = (index: number) => client.send({ method: 'chooseRoute', params: { index } });
 
@@ -131,9 +134,21 @@ export function App() {
 
   if (!cur) return <div className="app" style={{ padding: 16, color: 'var(--muted)' }}>Connecting…</div>;
 
+  // An image tab renders its image view in place of the transcript + command line (no command bar).
+  if (cur.view === 'image' && cur.image) {
+    return (
+      <div className="app">
+        <TabStrip tabs={tabs} activeTab={activeTab} onSelect={selectTab} onClose={closeTab} />
+        <div className="tab-body" style={{ borderLeft: `4px solid ${cur.dotColor}` }}>
+          <ImageTab image={cur.image} />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="app">
-      <TabStrip tabs={tabs} activeTab={activeTab} onSelect={selectTab} />
+      <TabStrip tabs={tabs} activeTab={activeTab} onSelect={selectTab} onClose={closeTab} />
       <div
         className="tab-body"
         style={{ borderLeft: `4px solid ${cur.dotColor}` }}

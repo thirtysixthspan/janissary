@@ -33,6 +33,22 @@ html, body, #root {
 }
 .tab.active { background: var(--bg); color: var(--fg); }
 .tab .dot { font-size: 10px; line-height: 1; }
+/* Close button on an image tab, pushed to the tab's right edge, adjacent to the name. */
+.tab .tab-close {
+  margin-left: auto; padding: 0 2px; border: none; background: none; cursor: pointer;
+  color: var(--muted); font-size: 14px; line-height: 1;
+}
+.tab .tab-close:hover { color: var(--fg); }
+
+/* Image view tab: a metadata header above the image, which fills the remaining space. */
+.image-tab { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 8px 12px; gap: 8px; }
+.image-meta { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; color: var(--muted); }
+.image-meta .image-name { color: var(--fg); font-weight: 600; }
+.image-meta .image-loc { font-size: 12px; word-break: break-all; }
+.image-stage { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+/* Landscape: span the full width. Portrait: fill the full remaining height. Aspect ratio preserved. */
+.image-stage .image-landscape { width: 100%; height: auto; }
+.image-stage .image-portrait { height: 100%; width: auto; }
 /* While the agent is busy, blink the dot fully on/off (600ms each), mirroring the Ink tab strip. */
 .tab .dot.busy { animation: dot-blink 1.2s step-end infinite; }
 @keyframes dot-blink { 0% { opacity: 1; } 50% { opacity: 0; } }

@@ -34,6 +34,7 @@ janus
 | `acp`        | Send a prompt to the OpenCode ACP agent |
 | `db`         | Create, delete, query, or list SQLite databases |
 | `browser`    | Drive a headless/headed web browser (open, goto, content, eval, shot) |
+| `open`       | Open a file by type — images in a tab, or `open external` in the OS viewer |
 | `connection` | List or close open connections (sqlite/shell/acp/browser) |
 | `schedule`   | Run a command later — once or on a recurring schedule |
 | `profile`    | Launch a saved set of agents for a use case |
@@ -261,6 +262,22 @@ To look like an ordinary browser rather than automation, the browser applies sev
 - Gives **each window its own coherent fingerprint**: a randomized desktop Chrome user agent (varied platform, version pinned to the real engine so it matches the client hints), with a matching `Sec-CH-UA-Platform`, `Accept-Language`, timezone, and viewport — so isolated windows never share an identical signature and no field contradicts another.
 
 The browser is also available to the tab's **ACP agent**: ask it to "visit a URL and summarize it" and it will issue `browser goto` / `browser content` commands in its tool loop, the host runs them against that tab's browser, and the page text is fed back for the answer. See [External ACP agents](#external-acp-agents-experimental).
+
+### Opening files
+
+The `open` command opens a file according to its type. It is a dispatcher: each file type is handled by its own **opener**, so supporting a new type is just a matter of adding one — the command itself never changes. Images are supported today.
+
+```
+open <path>            # open the file in the app (images: a new image tab)
+open external <path>   # hand the file to the OS viewer (images: Preview on macOS)
+open '*.png'           # a wildcard opens each matching file (up to 10)
+```
+
+- **`open <image>`** mounts a new **image tab** showing the image's name, size, and location alongside the image itself. The tab has no command bar; it is named `image` with a close (`×`) button on the tab, and otherwise behaves like any tab — reorder it within its group with `Ctrl+←` / `Ctrl+→`. A landscape image fills the full width; a portrait image fills the remaining height. Image tabs are live and in-memory — they are not restored on `--relaunch`.
+- **`open external <image>`** launches the file in the operating system's image viewer.
+- **Wildcards** are expanded by the shell (in the tab's working directory), and `open` then acts on each matched file in turn, up to a maximum of **10** — extra matches are skipped with a note, and a pattern that matches nothing reports no matching files. A path with no wildcard is always a single literal target.
+
+An unrecognized file type reports that no opener is registered for it.
 
 ### Connections
 

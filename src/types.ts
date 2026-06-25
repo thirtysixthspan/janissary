@@ -52,10 +52,32 @@ export type BufferLine = {
   terminal?: TerminalEntry;
 };
 
+// An in-app file view mounted in a tab instead of the agent transcript/command-line body. Image
+// tabs (opened via `open <image>`) use `view: 'image'` and carry an `image` payload; ordinary agent
+// tabs leave `view` undefined.
+export type ImageView = {
+  // Display name (basename), e.g. "diagram.png".
+  name: string;
+  // Absolute path of the file (the "location").
+  path: string;
+  // Human-readable file size, e.g. "1.4 MB".
+  size: string;
+  // App-relative ref the web client loads to fetch the image bytes (see the `/open/<id>` route).
+  url: string;
+};
+
 export type Tab = {
   label: string;
   dotColor: string;
   number: number;
+  // The tab's body kind. Undefined/`'agent'` renders the normal transcript + command line; `'image'`
+  // renders the image view (no command bar). View tabs are live and in-memory — not persisted.
+  view?: 'agent' | 'image';
+  // Display name shown in the tab strip when it differs from the (unique) internal `label` — e.g.
+  // every image tab is titled `image` while keeping a distinct label (`image`, `image-2`, …).
+  title?: string;
+  // The image-view payload, present only when `view === 'image'`.
+  image?: ImageView;
   // Group number, shared by an agent and every agent it (transitively) creates. The root agent
   // is group 1; a launched profile forms its own group.
   group: number;

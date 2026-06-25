@@ -10,6 +10,9 @@ import { initDbDir, isConnectionOpen, closeAllConnections } from './connections.
 import { loadConfig } from './config.js';
 import { agentNames } from './commands.js';
 
+// The external-open path shells out to the OS image viewer; stub it so tests never launch an app.
+vi.mock('./openers/os-open.js', () => ({ osOpen: () => true }));
+
 // Sinks that just count state emissions; no PTY/shell spawning is exercised here.
 const makeController = () => {
   let states = 0;
@@ -433,5 +436,108 @@ describe('Controller', () => {
     c.dispatch('help'); // triggers a persist of the janus tab
     c.dispatch('state');
     expect(allText(c)).toContain('name:');
+  });
+});
+
+describe('Controller open command', () => {
+  // Write a throwaway image file and return its absolute path.
+  const tmpImage = (name = 'pic.png') => {
+    const file = join(mkdtempSync(join(tmpdir(), 'janus-open-')), name);
+    writeFileSync(file, Buffer.alloc(10));
+    return file;
+  };
+
+  it('open <image> creates a focused image tab titled "image"', () => {
+    const file = tmpImage();
+    const { c } = makeController();
+    c.dispatch(`open ${file}`);
+    expect(c.view()).toHaveLength(2);
+    const img = c.view()[1];
+    expect(img.view).toBe('image');
+    expect(img.title).toBe('image');
+    expect(img.image?.name).toBe('pic.png');
+    expect(img.image?.path).toBe(file);
+    expect(c.activeTab).toBe(1); // focus moves to the new image tab
+  });
+
+  it('gives each image tab a unique internal label while titling them all "image"', () => {
+    const { c } = makeController();
+    c.dispatch(`open ${tmpImage('a.png')}`);
+    c.dispatch(`open ${tmpImage('b.png')}`);
+    const imgs = c.view().filter((t) => t.view === 'image');
+    expect(imgs).toHaveLength(2);
+    expect(new Set(imgs.map((t) => t.label)).size).toBe(2); // distinct labels
+    expect(imgs.every((t) => t.title === 'image')).toBe(true); // same display name
+  });
+
+  it('does not persist an image tab to agent state', () => {
+    initAgentStateDir(mkdtempSync(join(tmpdir(), 'janus-open-state-')));
+    const { c } = makeController();
+    c.dispatch(`open ${tmpImage()}`);
+    expect(loadAgentState('image')).toBeFalsy();
+  });
+
+  it('open external <image> confirms without creating a tab', () => {
+    const { c } = makeController();
+    c.dispatch(`open external ${tmpImage()}`);
+    expect(c.view()).toHaveLength(1);
+    expect(allText(c)).toContain('Opening pic.png');
+  });
+
+  it('reports no opener for an unsupported file type', () => {
+    const file = tmpImage('notes.txt');
+    const { c } = makeController();
+    c.dispatch(`open ${file}`);
+    expect(allText(c)).toContain('No opener for ".txt" files');
+    expect(c.view()).toHaveLength(1);
+  });
+
+  it('reports a missing file before dispatching to an opener', () => {
+    const { c } = makeController();
+    c.dispatch('open /no/such/pic.png');
+    expect(allText(c)).toContain('no such file');
+    expect(c.view()).toHaveLength(1);
+  });
+
+  it('closeTab removes an image tab and unregisters its served file', () => {
+    const { c } = makeController();
+    c.dispatch(`open ${tmpImage()}`);
+    const id = c.view()[1].image!.url.replace('/open/', '');
+    expect(c.openFilePath(id)).toBeTruthy();
+    c.closeTab(1);
+    expect(c.view().map((t) => t.label)).toEqual(['janus']);
+    expect(c.openFilePath(id)).toBeUndefined();
+  });
+
+  // Create a temp directory with the given files and return its absolute path.
+  const tmpDirWith = (names: string[]) => {
+    const dir = mkdtempSync(join(tmpdir(), 'janus-glob-'));
+    for (const n of names) writeFileSync(join(dir, n), Buffer.alloc(5));
+    return dir;
+  };
+
+  it('open <glob> expands via the shell and opens a tab per matching file', () => {
+    const dir = tmpDirWith(['a.png', 'b.png', 'c.png', 'notes.txt']);
+    const { c } = makeController();
+    c.dispatch(`open ${dir}/*.png`);
+    const imgs = c.view().filter((t) => t.view === 'image');
+    expect(imgs).toHaveLength(3); // the .txt is not matched by *.png
+    expect(imgs.map((t) => t.image!.name).sort()).toEqual(['a.png', 'b.png', 'c.png']);
+  });
+
+  it('caps a wildcard open at 10 files and notes the overflow', () => {
+    const dir = tmpDirWith(Array.from({ length: 15 }, (_, i) => `f${i}.png`));
+    const { c } = makeController();
+    c.dispatch(`open ${dir}/*.png`);
+    expect(c.view().filter((t) => t.view === 'image')).toHaveLength(10);
+    expect(allText(c)).toContain('first 10 of 15 matching files');
+  });
+
+  it('reports when a wildcard matches nothing', () => {
+    const dir = tmpDirWith([]);
+    const { c } = makeController();
+    c.dispatch(`open ${dir}/*.png`);
+    expect(c.view().filter((t) => t.view === 'image')).toHaveLength(0);
+    expect(allText(c)).toContain('no matching files');
   });
 });

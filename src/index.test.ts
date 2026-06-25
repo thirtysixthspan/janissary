@@ -27,7 +27,8 @@ describe('startServer (WS + RPC + security)', () => {
     await waitFor(() => events.some((e) => e.t === 'state' && e.tabs[0]?.label === 'janus'));
 
     ws.send(JSON.stringify({ t: 'rpc', id: 2, method: 'command', params: { text: 'help' } }));
-    await waitFor(() => events.some((e) => e.t === 'state' && e.tabs[0].bufferLines.some((l) => l.type === 'output')));
+    // `help` output is rendered as Markdown (see Controller.runApp), so it arrives as `markdown` lines.
+    await waitFor(() => events.some((e) => e.t === 'state' && e.tabs[0].bufferLines.some((l) => l.type === 'markdown')));
     ws.close();
   });
 

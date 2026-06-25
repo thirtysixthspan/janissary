@@ -25,6 +25,8 @@ export type ConnectionView = { text: string; kind: 'shell' | 'acp' | 'browser' |
 export type CompletionResult = { newInput: string; newCursor: number; matches: string[] };
 export type ScheduleView = { id: string; spec: string; next: string; recurring: boolean };
 export type RouteChooserView = { cmd: string; choices: string[] };
+// Image-view payload carried by an image tab (mirrors src/types.ts ImageView).
+export type ImageView = { name: string; path: string; size: string; url: string };
 
 export type TabView = {
   label: string;
@@ -41,6 +43,12 @@ export type TabView = {
   bufferLines: BufferLine[];
   cmdHistory: string[];
   toolStepsExpanded: boolean;
+  // Body kind: undefined/'agent' for a normal tab, 'image' for an image view.
+  view?: 'agent' | 'image';
+  // Display name when it differs from label (image tabs are all titled 'image').
+  title?: string;
+  // Image-view payload, present only when view === 'image'.
+  image?: ImageView;
 };
 
 export type ServerEvent =
@@ -54,6 +62,7 @@ export type RpcCall =
   | { method: 'init'; params?: Record<string, never> }
   | { method: 'command'; params: { text: string } }
   | { method: 'setActiveTab'; params: { index: number } }
+  | { method: 'closeTab'; params: { index: number } }
   | { method: 'moveTab'; params: { dir: -1 | 1 } }
   | { method: 'reorderTab'; params: { dir: -1 | 1 } }
   | { method: 'toggleCollapse'; params?: Record<string, never> }

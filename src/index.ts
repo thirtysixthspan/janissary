@@ -10,6 +10,9 @@ const MIME: Record<string, string> = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css',
   '.json': 'application/json', '.svg': 'image/svg+xml', '.ico': 'image/x-icon',
   '.woff2': 'font/woff2', '.map': 'application/json',
+  // Image types served via the `/open/<id>` route (opened files).
+  '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.gif': 'image/gif',
+  '.webp': 'image/webp', '.bmp': 'image/bmp', '.avif': 'image/avif',
 };
 
 export type ServerOptions = { webDir: string; host?: string; port?: number; token?: string; relaunch?: boolean };
@@ -38,6 +41,20 @@ export async function startServer(opts: ServerOptions): Promise<RunningServer> {
   const serveStatic = async (req: IncomingMessage, res: ServerResponse) => {
     if (!originAllowed(req)) { res.writeHead(403).end('forbidden'); return; }
     const urlPath = new URL(req.url ?? '/', 'http://localhost').pathname;
+    // A file explicitly opened in the app (`open <file>`). Guarded by the session token and served
+    // only from the controller's allow-list — an arbitrary local path is never reachable.
+    if (urlPath.startsWith('/open/')) {
+      if (!tokenMatches(token, tokenFromReq(req))) { res.writeHead(403).end('forbidden'); return; }
+      const id = decodeURIComponent(urlPath.slice('/open/'.length));
+      const path = controller.openFilePath(id);
+      if (!path) { res.writeHead(404).end('not found'); return; }
+      let bytes: Buffer;
+      try { bytes = await readFile(path); }
+      catch { res.writeHead(404).end('not found'); return; }
+      res.writeHead(200, { 'content-type': MIME[extname(path).toLowerCase()] ?? 'application/octet-stream' });
+      res.end(bytes);
+      return;
+    }
     // Resolve within webDir; fall back to index.html for SPA routes / unknown assets.
     const rel = normalize(urlPath).replace(/^(\.\.[/\\])+/, '').replace(/^\/+/, '');
     let file = join(opts.webDir, rel || 'index.html');
@@ -106,6 +123,7 @@ function handle(controller: Controller, msg: ClientMessage, reply: (ev: ServerEv
       break;
     case 'command': controller.dispatch(msg.params.text); break;
     case 'setActiveTab': controller.setActiveTab(msg.params.index); break;
+    case 'closeTab': controller.closeTab(msg.params.index); break;
     case 'moveTab': controller.moveTab(msg.params.dir); break;
     case 'reorderTab': controller.reorderTab(msg.params.dir); break;
     case 'toggleCollapse': controller.toggleCollapse(); break;

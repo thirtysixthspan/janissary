@@ -1,9 +1,15 @@
-import type { ChildProcess } from 'node:child_process';
-import type { Tab, LogEntry, ScheduleEntry, AcpSession, AcpInfo } from './types.js';
+import { spawnSync, type ChildProcess } from 'node:child_process';
+import type { Tab, LogEntry, ScheduleEntry, AcpSession, AcpInfo, ImageView } from './types.js';
 import {
-  makeTab, distinctColor, insertTabInGroup, flattenBuffer, stripComments,
+  makeTab, makeImageTab, distinctColor, insertTabInGroup, flattenBuffer, stripComments,
   swapTabsLeft, swapTabsRight,
 } from './tab.js';
+import { existsSync, statSync } from 'node:fs';
+import { extname, isAbsolute, resolve as resolvePath } from 'node:path';
+import { openerForExtension } from './openers/index.js';
+import { osOpen } from './openers/os-open.js';
+import type { OpenContext } from './openers/index.js';
+import { parseOpen, isGlobPattern } from './commands/open.js';
 import { resolveCommand } from './resolve.js';
 import { isInteractive } from './interactive.js';
 import { parseHarnessCommand, HARNESS_COMMANDS } from './harness.js';
@@ -69,6 +75,12 @@ export class Controller {
   private bus: MessageBus;
   private browsers = new BrowserManager();
   private workspaces = new Set<string>();
+  // Local files exposed to the web client by an opener (`open <file>`), keyed by a monotonic id. The
+  // `/open/<id>` route serves only files in this allow-list — arbitrary paths are never reachable.
+  private openFiles = new Map<string, string>();
+  private openFileCounter = 0;
+  // Most files a single wildcard `open` will act on; extra matches are skipped with a note.
+  private static readonly OPEN_MAX_FILES = 10;
 
   constructor(private sinks: Sinks) {
     this.tabs = [this.makeRootTab()];
@@ -114,6 +126,7 @@ export class Controller {
       connections: this.connectionsFor(t.label), schedule: this.scheduleFor(t.label),
       bufferLines: flattenBuffer(t.log, !t.toolStepsExpanded),
       cmdHistory: t.cmdHistory, toolStepsExpanded: !!t.toolStepsExpanded,
+      view: t.view, title: t.title, image: t.image,
     }));
   }
 
@@ -339,6 +352,7 @@ export class Controller {
       case 'profile': this.runProfile(cmd, label); return;
       case 'connection': this.runConnection(cmd, label); return;
       case 'browser': this.runBrowser(cmd, label); return;
+      case 'open': this.runOpen(cmd, label); return;
       // `quit` and `exit` both close the app window and stop the server. `close` (handled above)
       // is reserved for closing tabs.
       case 'quit': this.sinks.exit?.(); return;
@@ -471,6 +485,101 @@ export class Controller {
     void this.browsers.run(label, cmd)
       .then((out) => { this.finishRunning(label, out); onDone?.(out); })
       .catch((e) => { const msg = `Browser error: ${e instanceof Error ? e.message : String(e)}`; this.finishRunning(label, msg); onDone?.(msg); });
+  }
+
+  // --- open (file viewers) -------------------------------------------------
+
+  // Dispatch `open [external] <path>` to the opener registered for the file's type. A wildcard path is
+  // expanded by the shell into the matching files; `open` then acts on each in turn, capped at
+  // OPEN_MAX_FILES. The dispatcher resolves files and surfaces parse/lookup errors; the opener owns
+  // the rest (launch an external viewer, or mount an in-app view). Adding a file type means adding an
+  // opener — this never changes.
+  private runOpen(cmd: string, label: string): void {
+    const parsed = parseOpen(cmd);
+    if ('error' in parsed) { this.append(label, { input: cmd, output: parsed.error }); return; }
+    const cwd = this.cwd.get(label) ?? process.cwd();
+    const ctx: OpenContext = {
+      note: (text) => this.append(label, { input: cmd, output: text }),
+      openImageTab: (image) => this.openImageTab(image),
+      registerFile: (absPath) => this.registerFile(absPath),
+      openExternally: (absPath) => osOpen(absPath),
+    };
+
+    if (isGlobPattern(parsed.path)) {
+      const matches = this.expandGlob(parsed.path, cwd);
+      if (matches.length === 0) { this.append(label, { input: cmd, output: `open: ${parsed.path}: no matching files` }); return; }
+      const files = matches.slice(0, Controller.OPEN_MAX_FILES);
+      if (matches.length > files.length) {
+        this.append(label, { input: cmd, output: `Opening the first ${files.length} of ${matches.length} matching files.` });
+      }
+      for (const file of files) this.openOne(cmd, label, file, parsed.external, ctx);
+      return;
+    }
+
+    const file = isAbsolute(parsed.path) ? parsed.path : resolvePath(cwd, parsed.path);
+    this.openOne(cmd, label, file, parsed.external, ctx);
+  }
+
+  // Act on a single resolved file: report a missing file or an unsupported type, else hand it to the
+  // matching opener's external/inline surface. Shared by the single-path and wildcard branches.
+  private openOne(cmd: string, label: string, file: string, external: boolean, ctx: OpenContext): void {
+    if (!existsSync(file)) { this.append(label, { input: cmd, output: `open: ${file}: no such file` }); return; }
+    const opener = openerForExtension(extname(file));
+    if (!opener) { this.append(label, { input: cmd, output: `No opener for "${extname(file) || '(none)'}" files.` }); return; }
+    void (external ? opener.external(file, ctx) : opener.inline(file, ctx));
+  }
+
+  // Expand a shell wildcard pattern into its matching regular files (absolute, deduped, sorted), run
+  // through the tab's shell so globbing matches what the user would get on the command line. A
+  // pattern that matches nothing yields an empty list.
+  private expandGlob(pattern: string, cwd: string): string[] {
+    let stdout: string;
+    try {
+      const res = spawnSync(SHELL_NAME, ['-c', `for f in ${pattern}; do printf '%s\\n' "$f"; done`], {
+        cwd, encoding: 'utf8', timeout: 5000,
+      });
+      stdout = res.stdout ?? '';
+    } catch { return []; }
+    const files = stdout.split('\n').map((s) => s.trim()).filter(Boolean)
+      .map((p) => (isAbsolute(p) ? p : resolvePath(cwd, p)))
+      .filter((p) => { try { return statSync(p).isFile(); } catch { return false; } });
+    return [...new Set(files)].sort();
+  }
+
+  // Register a local file for serving to the web client; returns the app-relative ref (`/open/<id>`).
+  private registerFile(absPath: string): string {
+    const id = String(++this.openFileCounter);
+    this.openFiles.set(id, absPath);
+    return `/open/${id}`;
+  }
+
+  // The absolute path behind an `/open/<id>` ref, or undefined when not registered (drives the route).
+  openFilePath(id: string): string | undefined {
+    return this.openFiles.get(id);
+  }
+
+  // Create and focus an image view tab adjacent to the active tab's group (mirrors `newAgent`'s
+  // placement and color choice). Image tabs are in-memory and never persisted — no `persist` call.
+  private openImageTab(image: ImageView): void {
+    const creator = this.cur();
+    const label = this.uniqueImageLabel();
+    const dotColor = distinctColor(this.tabs.map((t) => t.dotColor));
+    const group = creator?.group ?? 1;
+    const groupColor = creator?.groupColor ?? dotColor;
+    const tab = makeImageTab(label, dotColor, this.tabs.length + 1, group, groupColor, image);
+    this.tabs = insertTabInGroup(this.tabs, tab);
+    this.activeTab = this.tabs.findIndex((t) => t.label === label);
+    this.sinks.emitState();
+  }
+
+  // A unique internal label for a new image tab: `image`, then `image-2`, `image-3`, … The displayed
+  // name stays `image` (the tab's `title`); only the internal key is disambiguated so several coexist.
+  private uniqueImageLabel(): string {
+    const used = new Set(this.tabs.map((t) => t.label));
+    if (!used.has('image')) return 'image';
+    let n = 2;
+    while (used.has(`image-${n}`)) n++;
+    return `image-${n}`;
   }
 
   // --- schedule ------------------------------------------------------------
@@ -806,6 +915,9 @@ export class Controller {
     const tab = this.tabs[index];
     if (!tab) return;
     // Tear down everything tab-scoped (SQLite connections are global and left open).
+    // An image tab owns no shell/acp/browser/workspace, so those steps below are no-ops for it; just
+    // drop its served file from the allow-list so the `/open/<id>` ref stops resolving.
+    if (tab.image) { const id = tab.image.url.replace(/^\/open\//, ''); this.openFiles.delete(id); }
     if (tab.workspaceDir) { removeWorkspace(tab.workspaceDir); this.workspaces.delete(tab.workspaceDir); }
     this.shells.get(tab.label)?.kill();
     this.shells.delete(tab.label);

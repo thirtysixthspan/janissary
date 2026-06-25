@@ -1,4 +1,4 @@
-import type { LogEntry, BufferLine, Tab } from './types.js';
+import type { LogEntry, BufferLine, Tab, ImageView } from './types.js';
 
 export const dotColors = [
   '#5b9cff', '#ff6b6b', '#ffd93d', '#6bcb77', '#4d96ff',
@@ -59,6 +59,15 @@ export const makeTab = (label: string, dotColor: string, number: number = 1, cmd
   cmdHistoryIdx: -1,
   scrollOffset: 0,
   workspaceDir,
+});
+
+// An image view tab (opened via `open <image>`). It carries no transcript/history/shell — just the
+// image payload — and is always titled `image` while keeping a unique `label` so several can coexist.
+export const makeImageTab = (label: string, dotColor: string, number: number, group: number, groupColor: string, image: ImageView): Tab => ({
+  ...makeTab(label, dotColor, number, [], [], undefined, group, groupColor),
+  view: 'image',
+  title: 'image',
+  image,
 });
 
 export function getFrequentHistory(history: string[], count: number): string[] {
