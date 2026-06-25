@@ -27,7 +27,6 @@
   "dependencies": {
     "@agentclientprotocol/sdk": "^0.28.1",
     "dompurify": "^3.4.11",
-    "ink": "^7.1.0",
     "marked": "^18.0.5",
     "node-pty": "^1.1.0",
     "playwright": "^1.50.0",
@@ -51,7 +50,6 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-unicorn": "^69.0.0",
     "globals": "^17.6.0",
-    "ink-testing-library": "^4.0.0",
     "prettier": "^3.8.4",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",

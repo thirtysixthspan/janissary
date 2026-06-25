@@ -1,23 +1,13 @@
 import { describe, it, expect, vi } from 'vitest';
-import React from 'react';
-import { render } from 'ink-testing-library';
-import { useMessaging } from './messaging.js';
-import type { Messaging, MessagingDeps as MessagingDependencies } from './types.js';
+import { MessageBus } from './message-bus.js';
+import type { MessageBusDeps } from './message-bus.js';
 
-let messaging: Messaging;
-
-const Harness = ({ deps }: { deps: MessagingDependencies }) => {
-  messaging = useMessaging(deps);
-  // no return needed
-};
-
-const setup = (over: Partial<MessagingDependencies> = {}) => {
+const setup = (over: Partial<MessageBusDeps> = {}) => {
   const appendLog = vi.fn();
   const appendContext = vi.fn();
-  // Default runners complete synchronously.
   const runShell = vi.fn((_label: string, command: string, onComplete: (o: string) => void) => onComplete(`ran:${command}`));
   const runCapture = vi.fn((_label: string, text: string, onResult: (o: string) => void) => onResult(`out:${text}`));
-  const dependencies: MessagingDependencies = {
+  const dependencies: MessageBusDeps = {
     hasAgent: () => true,
     agentColor: (label) => (label === 'aslan' ? '#ff0000' : '#00ff00'),
     isInteractive: () => false,
@@ -27,56 +17,49 @@ const setup = (over: Partial<MessagingDependencies> = {}) => {
     runCapture,
     ...over,
   };
-  render(<Harness deps={dependencies} />);
-  return { appendLog, appendContext, runShell, runCapture };
+  return { bus: new MessageBus(dependencies), appendLog, appendContext, runShell, runCapture };
 };
 
-describe('useMessaging', () => {
+describe('MessageBus', () => {
   it('displays informational messages with the sender color and stores them in context', () => {
-    const { appendLog, appendContext } = setup();
-    messaging.send({ from: 'aslan', to: 'bilal', kind: 'info', text: 'standby' });
+    const { bus, appendLog, appendContext } = setup();
+    bus.send({ from: 'aslan', to: 'bilal', kind: 'info', text: 'standby' });
     expect(appendLog).toHaveBeenCalledWith('bilal', { input: '', output: 'standby', from: 'aslan', fromColor: '#ff0000', msgKind: 'info' });
     expect(appendContext).toHaveBeenCalledWith('bilal', 'aslan: standby');
   });
 
   it('runs commands in the recipient shell without replying to the sender', () => {
-    const { appendLog, appendContext, runCapture } = setup();
-    messaging.send({ from: 'aslan', to: 'bilal', kind: 'command', text: 'ls -la' });
+    const { bus, appendLog, appendContext, runCapture } = setup();
+    bus.send({ from: 'aslan', to: 'bilal', kind: 'command', text: 'ls -la' });
     expect(runCapture).toHaveBeenCalledWith('bilal', 'ls -la', expect.any(Function));
-    // command produces no reply: the sender's transcript/context are untouched by us
     expect(appendContext).not.toHaveBeenCalled();
     expect(appendLog).toHaveBeenCalledWith('bilal', { input: '', output: 'sent command: ls -la', from: 'aslan', fromColor: '#ff0000', msgKind: 'info' });
   });
 
   it('shows a request in the recipient, executes it, and returns the output as a response', () => {
-    const { appendLog, runCapture } = setup();
-    messaging.send({ from: 'aslan', to: 'bilal', kind: 'request', text: 'about' });
-    // recipient displays `● aslan: sent request: about` (sender's color)
+    const { bus, appendLog, runCapture } = setup();
+    bus.send({ from: 'aslan', to: 'bilal', kind: 'request', text: 'about' });
     expect(appendLog).toHaveBeenCalledWith('bilal', { input: '', output: 'sent request: about', from: 'aslan', fromColor: '#ff0000', msgKind: 'info' });
-    // recipient executes the command through full dispatch
     expect(runCapture).toHaveBeenCalledWith('bilal', 'about', expect.any(Function));
-    // sender receives the captured output as a response (responder's color)
     expect(appendLog).toHaveBeenCalledWith('aslan', { input: '', output: 'out:about', from: 'response from bilal', fromColor: '#00ff00', msgKind: 'response' });
   });
 
-  it('refuses to run interactive commands remotely', () => {
-    const { appendLog, runCapture } = setup({ isInteractive: () => true });
-    messaging.send({ from: 'aslan', to: 'bilal', kind: 'command', text: 'less file' });
-    // Interactivity is now checked inside runCapture; the messaging layer always delegates
+  it('delegates interactive commands to runCapture (interactivity checked by the recipient)', () => {
+    const { bus, appendLog, runCapture } = setup({ isInteractive: () => true });
+    bus.send({ from: 'aslan', to: 'bilal', kind: 'command', text: 'less file' });
     expect(runCapture).toHaveBeenCalledWith('bilal', 'less file', expect.any(Function));
     expect(appendLog).toHaveBeenCalledWith('bilal', { input: '', output: 'sent command: less file', from: 'aslan', fromColor: '#ff0000', msgKind: 'info' });
   });
 
   it('refuses to send to an unknown agent', () => {
-    setup({ hasAgent: () => false });
-    expect(messaging.send({ from: 'aslan', to: 'ghost', kind: 'info', text: 'x' })).toBe(false);
+    const { bus } = setup({ hasAgent: () => false });
+    expect(bus.send({ from: 'aslan', to: 'ghost', kind: 'info', text: 'x' })).toBe(false);
   });
 
   it('drains multiple queued messages one at a time', async () => {
-    const { appendLog } = setup();
-    messaging.send({ from: 'aslan', to: 'bilal', kind: 'info', text: 'one' });
-    messaging.send({ from: 'aslan', to: 'bilal', kind: 'info', text: 'two' });
-    // The first is handled synchronously; the rest drain on subsequent ticks.
+    const { bus, appendLog } = setup();
+    bus.send({ from: 'aslan', to: 'bilal', kind: 'info', text: 'one' });
+    bus.send({ from: 'aslan', to: 'bilal', kind: 'info', text: 'two' });
     await new Promise((r) => setTimeout(r, 20));
     expect(appendLog).toHaveBeenCalledWith('bilal', { input: '', output: 'one', from: 'aslan', fromColor: '#ff0000', msgKind: 'info' });
     expect(appendLog).toHaveBeenCalledWith('bilal', { input: '', output: 'two', from: 'aslan', fromColor: '#ff0000', msgKind: 'info' });

@@ -1,316 +1,219 @@
 # Code Security Assessment Plan
 
+## Threat model first (the part that makes findings actionable)
+
+This app is a **terminal shell, a browser driver, and a SQL runner**. Spawning shells, cloning repos, and executing SQL are the *product*, not vulnerabilities. A generic SAST tool will flag all of them; most are intentional. To avoid drowning real issues in noise, every finding is triaged against one question:
+
+> **Does untrusted input reach this sink?**
+
+The trust boundary for Janissary:
+
+| Source | Trust | Notes |
+|---|---|---|
+| The local user typing in their own terminal | **Trusted** | They already have a shell. `db`, `open`, shell exec on their own input is the product. |
+| ACP agent output rendered in the web client | **Untrusted** | A model can emit arbitrary markdown/HTML. This is the primary untrusted channel. |
+| Agent/tab **names** that flow into file paths | **Semi-trusted** | Validate defensively — a name reaching a filesystem path is a traversal sink. |
+| Anything reachable over the bound port | **Untrusted** | Mitigated today by loopback origin allow-list + session token. |
+
+Severity is driven by this table, **not** by how scary the sink looks in isolation. Shell/SQL exec on local-user input is low priority; agent-controlled markdown and agent-controlled names reaching the DOM/filesystem are high.
+
+---
+
 ## Current State
 
-### Security-relevant attack surfaces
+> ⚠️ **References below are keyed to `file:function`, not bare line numbers.** These files churn heavily (in the last 50 commits: `controller.ts` 9×, `agent-state.ts` 7×, `workspace.ts` 5×). The previous draft of this plan cited `src/db.ts:137` — that file has since been split into `src/database.ts` and `src/commands/db.ts`, so the reference was already dead. **Verify the symbol exists before acting on any row.**
 
-| Surface | File | Risk |
-|---|---|---|
-| Shell command injection | `src/controller.ts:546` | User glob pattern interpolated into shell command string |
-| Shell command injection | `src/workspace.ts:33` | `repoPath` interpolated into `git clone --shared` |
-| SQL injection | `src/db.ts:137,141` | User SQL executed verbatim via `node:sqlite` |
-| Path traversal (agent state) | `src/agent-state.ts:16` | Agent name in file path without validation |
-| Markdown XSS | `web/src/Transcript.tsx:14,20` | ACP output rendered as Markdown (mitigated by DOMPurify) |
-| Missing CSP | `src/index.ts:69` | No Content-Security-Policy on HTTP responses |
-| Token in URL | `src/index.ts:114`, `web/src/ImageTab.tsx` | Session token in query parameter |
+### Security-relevant attack surfaces (verified 2026-06-25)
 
-### Existing defenses
+| Surface | Location (symbol) | Untrusted input reaches it? | Priority |
+|---|---|---|---|
+| Markdown → HTML XSS | `web/src/Transcript.tsx` → `render()` (`marked.parse` → `dangerouslySetInnerHTML`) | **Yes** — ACP agent output | **High** (mitigated by DOMPurify — verify config) |
+| Path traversal | `src/agent-state.ts` → `agentStatePath(name)` (`join(dir, \`${name}.json\`)`, no validation) | **Maybe** — agent/tab name | **High** |
+| DB name → path | `src/connections.ts` → `dbPath(name)` (`join(dbDir, \`${name}.sqlite\`)`, no validation) | **Maybe** — connection name | **Medium** (missed by previous draft) |
+| Missing CSP | `src/index.ts` → static response handler (no `Content-Security-Policy` header) | n/a (defense-in-depth for the XSS path above) | **Medium** |
+| Token in URL | `src/index.ts` → `startServer` return (`?token=...`), `web/src/ImageTab.tsx` | Leak via referrer/logs/history | **Medium** |
+| Shell glob injection | `src/controller.ts` → `expandGlob(pattern, cwd)` (`spawnSync(SHELL_NAME, ['-c', \`for f in ${pattern}…\`])`) | Local user only (unless an agent can drive `open`) | **Low\*** |
+| Git clone injection | `src/workspace.ts` → `createWorkspace(name, repoPath)` (`execSync(\`git clone --shared "${repoPath}" "${target}"\`)`) | Local user only (unless agent-driven) | **Low\*** |
+| SQL execution | `src/database.ts` → `database.prepare(query)` / `database.exec(query)` | Local user only (unless agent-driven) | **Low\*** |
+
+> **\* The single most important open question:** can an **ACP agent** cause the controller to run `open <glob>`, `db <sql>`, or a workspace clone with attacker-influenced arguments? If yes, every Low\* row jumps to High. Resolve this before scanning — it decides the whole priority order. (Check what command strings an agent can inject through `src/controller.ts` / `src/acp*.ts`.)
+
+### Existing defenses (verified)
 
 | Defense | Where | Status |
 |---|---|---|
-| Token auth (constant-time compare) | `src/security.ts` | ✅ |
-| Origin allow-list (loopback only) | `src/security.ts` | ✅ |
-| Token required for file serving | `src/index.ts:46-47` | ✅ |
-| File path allow-list for `/open/<id>` | `src/controller.ts:83` | ✅ |
-| Static file path traversal guard | `src/index.ts:59-61` | ✅ |
-| DOMPurify for Markdown HTML | `web/src/Transcript.tsx:14` | ✅ |
-| DB name validation (regex) | `src/db.ts:59` | ✅ |
+| Token auth (constant-time compare) | `src/security.ts` → `tokenMatches` | ✅ |
+| Origin allow-list (loopback only) | `src/security.ts` → `originAllowed` | ✅ |
+| Token required for `/open` file serving | `src/index.ts` (`tokenMatches(token, tokenFromRequest(req))`) | ✅ |
+| WebSocket origin + token check | `src/index.ts` (upgrade handler) | ✅ |
+| `/open/<id>` allow-list (no arbitrary paths) | `src/controller.ts` → `registerOpen` / `openPath` | ✅ |
+| Static-file traversal guard | `src/index.ts` (`normalize().replace(/^(\.\.[/\\])+/, '')` + `startsWith(webDir)`) | ✅ |
+| DOMPurify on agent markdown | `web/src/Transcript.tsx` → `DOMPurify.sanitize(marked.parse(...))` | ✅ (verify allowed tags/attrs) |
+| ~~DB name validation (regex)~~ | claimed `src/db.ts:59` | ❌ **Not found** — `dbPath(name)` has no guard. Either re-add it or treat the DB-name row above as open. |
 
-### Test & lint coverage
+### Tooling coverage
 
 | Layer | Tool | Status |
 |---|---|---|
-| Correctness linting | ESLint (basic + typescript-eslint) | Partially covers security (no-unsafe-assignment is warn) |
+| Correctness linting | ESLint + typescript-eslint | Partial; not security-focused |
 | Security SAST | None | ❌ |
 | Dependency audit | None | ❌ |
-| Secrets scanning | None | ❌ |
-
-## Tool Selection
-
-**Opengrep** is the optimal choice. It is a fully open-source (LGPL 2.1) fork of Semgrep, created when Semgrep moved critical SAST features behind a commercial license.
-
-| Factor | Opengrep | Semgrep CE | Other tools |
-|---|---|---|---|
-| License | LGPL 2.1 (fully open) | LGPL 2.1 (but features removed) | Various |
-| JS/TS support | ✅ Full (JSX, TSX) | ✅ Full | Varies |
-| Taint analysis (intrafile) | ✅ Cross-function | ❌ (Pro only) | Stryx (limited) |
-| Semgrep rule compatible | ✅ 2000+ rules | ✅ 2000+ rules | N/A |
-| JSON / SARIF output | ✅ | ✅ | Varies |
-| Self-contained binary | ✅ (no Python) | ❌ (needs Python) | Varies |
-| Speed | Fast (OCaml) | Moderate | Varies |
-| Community | Growing (consortium-backed) | Large but feature-gated | Niche |
-
-**Why not alternatives:**
-- **Semgrep CE** — critical features removed behind paywall (cross-function taint, many languages)
-- **Stryx** — promising but very new, narrow focus on backend patterns only
-- **NodeSecure/js-x-ray** — focused on supply chain / malicious packages, not general SAST
-- **CodeSlick** — pre-commit focused, fewer rules
-
-**Supplementary for dependency scanning:** `npm audit` (already available via npm) covers known CVE checking for dependencies at no extra cost.
+| Secrets scanning | None | ❌ (the previous draft flagged this and then never addressed it) |
 
 ---
 
-## Phase 1 — Install Opengrep
+## Strategy: fix-first, then gate
+
+The surfaces above are **already known**. A scanner that re-discovers them is motion without progress. So the work order is:
+
+1. **Phase 1 — Remediate the known High/Medium surfaces** (with regression tests). This is where the security improvement actually happens.
+2. **Phase 2 — Stand up a lightweight, low-noise gate** so *new* issues are caught going forward.
+3. **Phase 3 — One-time broad audit** to surface anything the manual review missed.
+
+A scanner is Phase 2/3, not Phase 1.
+
+---
+
+## Phase 1 — Remediate known surfaces (do this first)
+
+Each item is a concrete change plus the test that locks it in. Tests matter more than the scanner: they encode the decision and never produce false positives.
+
+| # | Surface | Fix | Regression test |
+|---|---|---|---|
+| 1 | `agentStatePath(name)` traversal | Reject names not matching `/^[A-Za-z0-9_-]+$/` (or basename-and-confirm-within-dir) before building the path | Assert `agentStatePath('../../etc/x')` throws / is rejected |
+| 2 | `dbPath(name)` traversal | Same name validation as #1 | Assert a `..`-containing connection name is rejected |
+| 3 | Markdown XSS | Confirm DOMPurify config forbids `javascript:`/event handlers and that `marked` isn't bypassed; pin an allow-list of tags if not already | Feed `<img src=x onerror=alert(1)>` and `[x](javascript:...)` through `render()`, assert sanitized |
+| 4 | Missing CSP | Add a strict `Content-Security-Policy` (e.g. `default-src 'self'; script-src 'self'; object-src 'none'; base-uri 'none'`) to the static/HTML response | Assert the header is present on `/` |
+| 5 | Token in URL | Decide & document: move token to `Authorization`/cookie, or accept the loopback-only risk explicitly with a comment. At minimum set `Referrer-Policy: no-referrer` | Assert `Referrer-Policy` header present |
+| 6 | Shell/SQL/git sinks | **Only if Phase 0 shows an agent can drive them.** Then: validate/escape, or gate behind explicit user confirmation. If they're local-user-only, add a one-line comment documenting the intentional trust boundary so the scanner finding can be suppressed with a reason | Per sink, as applicable |
+
+Land these before adding the scanner so the first scan reflects the *fixed* state, not a baseline full of issues you already plan to fix.
+
+---
+
+## Phase 2 — Standing gate (low-noise, runs every change)
+
+Three cheap, high-signal tools. None require GitHub (this repo has no remote) or a running service.
+
+### 2.1 Security lint — author-time, zero new infra
+
+Add **`eslint-plugin-security`** to the **existing** `eslint.config.mjs` rather than building a parallel pipeline. It flags new dangerous patterns (`child_process` with non-literals, `fs` with tainted paths, non-literal RegExp) the moment they're written, inside the `npm run lint` you already run.
+
+```bash
+npm install --save-dev eslint-plugin-security
+```
+
+Enable only the rules that fit (it's noisy by default in a shell app — turn off `detect-child-process` if it just re-flags the intentional sinks, keep `detect-non-literal-fs-filename`, `detect-unsafe-regex`, etc.).
+
+### 2.2 Secrets scanning — the gap the old plan never filled
+
+**`gitleaks`** (single Go binary, offline) scans the tree and history for committed credentials. This is the one category generic SAST doesn't cover and the previous plan left unaddressed.
+
+```bash
+gitleaks detect --no-banner --redact      # working tree + history
+gitleaks protect --staged --no-banner      # pre-commit: block new secrets
+```
+
+### 2.3 Dependency CVEs
+
+`npm audit` is already available (zero install). For an offline/airtight alternative use **`osv-scanner`** against `package-lock.json`. Keep this; it's cheap.
+
+```bash
+npm audit --omit=dev
+```
+
+---
+
+## Phase 3 — One-time SAST audit (broad, manual review)
+
+For a deeper sweep, run a SAST engine once and triage by hand. **Opengrep** is the right engine *for this repo specifically*: the repo has **no GitHub remote**, so CodeQL (GitHub-Actions-only, and the strongest free option) is unavailable; Semgrep CE has cross-function taint paywalled; Opengrep is a self-contained binary that runs offline. (If you later push to GitHub, switch this phase to **CodeQL** — better taint analysis, maintained, results in the Security tab, no local binary to babysit.)
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/opengrep/opengrep/main/install.sh | bash
-```
-
-This installs a self-contained binary to `/usr/local/bin/opengrep`. No Python or runtime dependencies needed.
-
-Verify:
-
-```bash
 opengrep --version
 ```
 
----
-
-## Phase 2 — Initial Baseline Scans
-
-### 2.1 Full security scan on server code
+Run the **default** rulesets for the gate-style pass, and reserve the noisy **audit** pack for the one-time manual review:
 
 ```bash
-opengrep scan --config p/security-audit --config p/typescript --config p/javascript \
-  --output docs/security/server-baseline.json --json src/
+# One-time broad audit (expect false positives — review by hand, don't gate on it)
+opengrep scan --config p/javascript --config p/typescript --config p/nodejs \
+  --config p/security-audit --sarif --output security-audit.sarif src/ web/src/
 ```
 
-### 2.2 Full security scan on client code
+Use `--sarif` (or `--json`) and read it directly — Opengrep already groups by rule and severity, so **no bespoke ranking script is needed.** (The previous draft's `scripts/security-report.ts` was new unmaintained code that re-implemented what the reporter already does — dropped.)
 
-```bash
-opengrep scan --config p/security-audit --config p/typescript --config p/javascript \
-  --output docs/security/client-baseline.json --json web/src/
-```
+### Custom rules — only if they target a real sink, written against the real shape
 
-### 2.3 Review findings
+The previous draft's custom rules were written without checking the code and would have failed:
 
-Each finding includes:
-```
-{
-  "check_id": "typescript.lang.security.audit.detect-non-literal-require",
-  "path": "src/controller.ts",
-  "start": { "line": 546, "col": 9 },
-  "end": { "line": 549, "col": 14 },
-  "extra": {
-    "message": "Detected non-literal argument to spawnSync",
-    "severity": "WARNING",
-    "metadata": {
-      "cwe": ["CWE-78"],
-      "references": ["https://owasp.org/www-community/attacks/Command_Injection"]
-    }
-  }
-}
-```
+- `pattern: join($DIR, ...)` matches *almost every* `path.join` in 6k LOC — a false-positive flood. **Drop it**; Phase 1 #1/#2 (validation + tests) covers traversal far better than a rule that cries wolf on every join.
+- `pattern: db.prepare($QUERY).all()` never matches the real sink `database.prepare(query)` (receiver is `database`, not `db`). Use a metavariable for the receiver.
+- The shell rule used `["-lc", $CMD]`, but the real sink is `['-c', \`for f in ${pattern}…\`]` — wrong flag, and a template literal won't bind a bare metavariable.
 
----
-
-## Phase 3 — Custom Rules for Codebase-Specific Risks
-
-Opengrep uses YAML rules. Create `opengrep-rules/` with rules tuned to this repo's architecture.
-
-### `opengrep-rules/shell-injection.yaml`
+If you keep any custom rule, target the actual sinks:
 
 ```yaml
+# opengrep-rules/sql-exec.yaml — matches `database.prepare(query)` and `database.exec(query)`
 rules:
-  - id: janissary-shell-injection
+  - id: janissary-sql-exec
     patterns:
       - pattern-either:
-          - pattern: spawnSync($SHELL, ["-c", ...], ...)
-          - pattern: spawn($SHELL, ["-lc", $CMD], ...)
-          - pattern: execSync(...)
-    message: >
-      Shell command constructed from user input. Ensure the command string
-      is validated or use safe APIs (spawn with argument array, not -c).
-    languages: [ts, js]
-    severity: WARNING
-```
-
-### `opengrep-rules/file-path-traversal.yaml`
-
-```yaml
-rules:
-  - id: janissary-path-traversal
-    patterns:
-      - pattern-either:
-          - pattern: join($DIR, ...)
-          - pattern: resolve($DIR, ...)
-    message: >
-      File path constructed from user-influenced data. Validate the
-      input does not contain path traversal sequences (../).
-    languages: [ts, js]
-    severity: WARNING
-```
-
-### `opengrep-rules/sql-execution.yaml`
-
-```yaml
-rules:
-  - id: janissary-sql-execution
-    patterns:
-      - pattern: db.prepare($QUERY).all()
-      - pattern: db.prepare($QUERY).run()
-      - pattern: db.exec($QUERY)
-    message: >
-      SQL executed directly. If $QUERY contains user or agent input,
-      this is SQL injection. Use prepared statements with parameters.
-    languages: [ts, js]
-    severity: WARNING
-```
-
-Run custom rules:
-
-```bash
-opengrep scan --config opengrep-rules/ --config p/security-audit \
-  --output docs/security/custom-findings.json --json src/ web/src/
+          - pattern: $DB.prepare($Q).all()
+          - pattern: $DB.prepare($Q).run()
+          - pattern: $DB.exec($Q)
+    message: SQL executed from a variable. Confirm $Q is local-user input, not agent/remote.
+    languages: [ts]
+    severity: INFO   # INFO, not WARNING — it's the product unless Phase 0 says otherwise
 ```
 
 ---
 
-## Phase 4 — npm Scripts
+## Phase 4 — Minimal npm scripts
+
+Collapse to what's actually maintained. No committed baseline JSONs, no per-area split, no report script.
 
 ```json
 {
   "scripts": {
-    "security": "npm run security:server && npm run security:client && npm run security:deps",
-    "security:server": "opengrep scan --config p/security-audit --config p/typescript --config p/javascript --config opengrep-rules/ --output docs/security/server.json --json src/",
-    "security:client": "opengrep scan --config p/security-audit --config p/typescript --config opengrep-rules/ --output docs/security/client.json --json web/src/",
-    "security:deps": "npm audit --json > docs/security/deps.json 2>/dev/null; echo 'Dependency audit complete'",
-    "security:report": "npm run security:server && npm run security:client && npx tsx scripts/security-report.ts",
-    "security:custom": "opengrep scan --config opengrep-rules/ --output docs/security/custom.json --json src/ web/src/"
+    "security": "npm run lint && npm run security:secrets && npm run security:deps",
+    "security:secrets": "gitleaks detect --no-banner --redact",
+    "security:deps": "npm audit --omit=dev",
+    "security:sast": "opengrep scan --config p/javascript --config p/typescript --config p/nodejs --sarif --output security-audit.sarif src/ web/src/"
   }
 }
 ```
 
-Usage:
+| Command | Purpose | Cadence |
+|---|---|---|
+| `npm run security` | lint (incl. eslint-plugin-security) + secrets + deps | every change / pre-push |
+| `npm run security:sast` | broad Opengrep audit → SARIF for manual review | periodic / on demand |
 
-| Command | What it does |
-|---|---|
-| `npm run security` | Full security assessment (server + client + deps) |
-| `npm run security:server` | SAST scan on `src/` with security + language rules |
-| `npm run security:client` | SAST scan on `web/src/` with security + language rules |
-| `npm run security:deps` | `npm audit` for dependency vulnerabilities |
-| `npm run security:report` | Full SAST scan + generate refactoring report |
-| `npm run security:custom` | Custom rules only (codebase-specific patterns) |
+Since there's no CI, wire `npm run security` into a **pre-push git hook** so the gate actually runs. Add `gitleaks protect --staged` as a pre-commit hook to block new secrets at the source.
 
 ---
 
-## Phase 5 — Refactoring Guidance Script
+## Suppressions (when you genuinely keep a flagged-but-intentional sink)
 
-`scripts/security-report.ts` processes the Opengrep JSON output and produces a ranked action plan:
+For Opengrep, use inline `// nosemgrep: <rule-id>` comments **with a reason on the line above**, co-located with the code — not a separate suppressions file that drifts out of sync:
 
-```
-Priority 1 — Command Injection (src/controller.ts:546)
-  Rule:      typescript.lang.security.audit.detect-non-literal-require
-  Severity:  WARNING
-  CWE:       CWE-78 (OS Command Injection)
-  Finding:   User-supplied glob pattern interpolated into
-             `spawnSync(SHELL_NAME, ['-c', 'for f in ${pattern}...'])`
-  Fix:       Use `glob` library instead of shell expansion, or
-             validate pattern with a strict allow-list before
-             passing to the shell.
-
-Priority 2 — SQL Injection (src/db.ts:137)
-  Rule:      janissary-sql-execution
-  Severity:  WARNING
-  Finding:   `db.prepare(query).all()` with user-supplied query
-  Fix:       For read-only user queries, use a read-only connection
-             or parse the query to verify it starts with SELECT/PRAGMA.
-             For agent queries, sandbox the SQLite database.
-
-Priority 3 — Path Traversal (src/agent-state.ts:16)
-  Rule:      janissary-path-traversal
-  Severity:  WARNING
-  Finding:   Agent name used in file path without traversal validation
-  Fix:       Validate agent name against /^[a-zA-Z0-9_-]+$/ before
-             constructing the path.
+```ts
+// Intentional: user-driven shell glob; only the local user (who already owns this shell) reaches it.
+// nosemgrep: javascript.lang.security.detect-child-process
+const res = spawnSync(SHELL_NAME, ['-c', expr], { cwd, encoding: 'utf8', timeout: 5000 });
 ```
 
-Run with:
-
-```bash
-npx tsx scripts/security-report.ts
-```
-
----
-
-## Phase 6 — Suppression & Tuning
-
-Not every Opengrep finding is actionable. Suppress known-safe patterns:
-
-### `opengrep-suppressions.yaml`
-
-```yaml
-# Intentional shell execution — the app is a shell. The command string
-# is user-typed and the user controls the shell, so injection is by design.
-suppressions:
-  - path: src/shell.ts
-    check_id: typescript.lang.security.audit.detect-non-literal-require
-    reason: Intentional user shell execution
-  - path: src/pty.ts
-    check_id: typescript.lang.security.audit.detect-non-literal-require
-    reason: Intentional PTY spawn for interactive programs
-  - path: src/interactive.ts
-    check_id: typescript.lang.security.audit.detect-non-literal-require
-    reason: Intentional PTY spawn for interactive programs
-```
-
-Run with suppression:
-
-```bash
-opengrep scan --config p/security-audit --suppressions opengrep-suppressions.yaml src/
-```
-
----
-
-## Phase 7 — Outputs & Reports
-
-| File | Purpose |
-|---|---|
-| `docs/security/server.json` | Server SAST findings (machine-readable) |
-| `docs/security/client.json` | Client SAST findings (machine-readable) |
-| `docs/security/custom.json` | Findings from codebase-specific custom rules |
-| `docs/security/deps.json` | `npm audit` dependency vulnerability report |
-| `opengrep-rules/*.yaml` | Custom rules for this codebase |
-| `opengrep-suppressions.yaml` | Suppressed findings with reasons |
-
----
-
-## Directory Layout
-
-```
-opengrep-rules/
-├── shell-injection.yaml
-├── file-path-traversal.yaml
-└── sql-execution.yaml
-opengrep-suppressions.yaml
-docs/security/
-├── server.json            # latest server scan (gitignored)
-├── client.json            # latest client scan (gitignored)
-├── custom.json            # custom rules findings (gitignored)
-├── deps.json              # npm audit output (gitignored)
-├── server-baseline.json   # committed baseline snapshot
-└── client-baseline.json   # committed baseline snapshot
-scripts/
-└── security-report.ts     # ranked refactoring guidance from Opengrep findings
-```
+Inline suppression keeps the justification next to the code, so it travels with refactors instead of pointing at a stale line number — the exact failure mode that broke the old plan's `db.ts:137` reference.
 
 ---
 
 ## Summary
 
-| Layer | Tool | What it detects | Run command |
+| Phase | Action | Tool | Output |
 |---|---|---|---|
-| First-party SAST | Opengrep | Shell injection, path traversal, SQL injection, XSS, unsafe crypto, bad patterns | `npm run security` |
-| Custom codebase rules | Opengrep (YAML) | Janissary-specific: spawn patterns, path joins, db.exec calls | `npm run security:custom` |
-| Dependency audit | `npm audit` | Known CVEs in dependencies | `npm run security:deps` |
-| Refactoring guidance | `scripts/security-report.ts` | Ranked priority list with fix recommendations | `npm run security:report` |
+| 0 | Answer: can an agent drive shell/SQL/git sinks? | manual code read | re-rank Low\* rows |
+| 1 | **Fix** known High/Med surfaces + regression tests | hand-written code + vitest | real risk reduction |
+| 2 | Standing gate: security lint, secrets, deps | eslint-plugin-security, gitleaks, npm audit | `npm run security` |
+| 3 | Periodic broad SAST audit (manual triage) | Opengrep (CodeQL if/when on GitHub) | `security-audit.sarif` |
+
+The shift from the previous draft: **fix the already-known issues first**, drive severity from a **threat model** (untrusted = agent output, not the local user), integrate security checks into the **existing lint/hook** flow instead of a bespoke parallel pipeline, **add the missing secrets track**, and **drop** the stale line-number references, the buggy custom rules, the committed baselines, and the homegrown report script.
