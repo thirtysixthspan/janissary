@@ -11,16 +11,21 @@ See `README.md` for user-facing docs and `SPEC.md` for the authoritative, detail
 ## Commands
 
 ```bash
-npm start          # Run in dev via tsx (src/cli.tsx)
+npm start          # Run in dev via tsx (src/main.ts)
 npm test           # Run the vitest suite once
 npm run build      # Compile TypeScript to dist/ with tsc
 npm run clean      # Remove dist/
-npm run lint       # ESLint
+npm run lint       # ESLint over the whole tree
+npm run lint:files # ESLint over just the uncommitted files, or named files
 npm run format     # Prettier --write
 ```
 
 - Node 24 is required (see `.nvmrc`).
 - Run a single test file: `npx vitest run src/commands.test.ts`.
+- Lint only what changed: `npm run lint:files` (staged + unstaged + untracked). Lint a
+  chosen set instead: `npm run lint:files -- src/foo.ts src/bar.ts`. Autofix either form by
+  adding `-- --fix`. Non-lintable paths (`.md`, `.json`, …) are skipped. See
+  `scripts/lint-files.mjs`.
 
 ## Architecture
 

@@ -17,33 +17,33 @@ describe('resolveCommand', () => {
   });
 
   it('does not treat a word merely starting with "shell" as the keyword', () => {
-    const res = resolveCommand('shellcheck script.sh');
-    expect(res.kind).toBe('unknown');
-    if (res.kind === 'unknown') expect(res.output).toContain('Unknown command');
+    const result = resolveCommand('shellcheck script.sh');
+    expect(result.kind).toBe('unknown');
+    if (result.kind === 'unknown') expect(result.output).toContain('Unknown command');
   });
 
   it('does not run a backtick-prefixed command in the shell', () => {
-    const res = resolveCommand('`ls -la');
-    expect(res.kind).toBe('unknown');
-    if (res.kind === 'unknown') expect(res.output).toContain('Unknown command');
+    const result = resolveCommand('`ls -la');
+    expect(result.kind).toBe('unknown');
+    if (result.kind === 'unknown') expect(result.output).toContain('Unknown command');
   });
 
   it('requires the `shell` keyword: a bare command name is not auto-run', () => {
-    const res = resolveCommand('ls');
-    expect(res.kind).toBe('unknown');
-    if (res.kind === 'unknown') expect(res.output).toContain('Unknown command');
+    const result = resolveCommand('ls');
+    expect(result.kind).toBe('unknown');
+    if (result.kind === 'unknown') expect(result.output).toContain('Unknown command');
   });
 
   it('returns textual output for the help built-in', () => {
-    const res = resolveCommand('help');
-    expect(res.kind).toBe('output');
-    if (res.kind === 'output') expect(res.output).toContain('Commands');
+    const result = resolveCommand('help');
+    expect(result.kind).toBe('output');
+    if (result.kind === 'output') expect(result.output).toContain('Commands');
   });
 
   it('returns the unknown-command message for unrecognized non-shell input', () => {
-    const res = resolveCommand('definitelynotacommand');
-    expect(res.kind).toBe('unknown');
-    if (res.kind === 'unknown') expect(res.output).toContain('Unknown command');
+    const result = resolveCommand('definitelynotacommand');
+    expect(result.kind).toBe('unknown');
+    if (result.kind === 'unknown') expect(result.output).toContain('Unknown command');
   });
 
   it('classifies app/tab-management built-ins', () => {

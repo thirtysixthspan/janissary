@@ -11,8 +11,8 @@ function fakeContext(overrides: Partial<OpenContext> = {}) {
   const notes: string[] = [];
   const opened: ImageView[] = [];
   const context: OpenContext = {
-    note: (t) => notes.push(t),
-    openImageTab: (v) => opened.push(v),
+    note: (t) => { notes.push(t); },
+    openImageTab: (v) => { opened.push(v); },
     registerFile: (p) => `/open/test-${p.length}`,
     openExternally: () => true,
     ...overrides,

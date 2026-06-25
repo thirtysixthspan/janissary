@@ -11,5 +11,5 @@ export function getRecentHistory(history: string[], count: number): string[] {
 
     seen.add(history[index]); out.push(history[index]);
   }
-  return out.reverse();
+  return out.toReversed();
 }

@@ -40,7 +40,7 @@ export default ts.config(
       'unicorn/prefer-ternary': 'warn',
       'unicorn/prefer-iterator-to-array': 'warn',
       'unicorn/no-top-level-side-effects': 'warn',
-      'unicorn/prefer-uint': 'warn',
+
       'unicorn/prefer-top-level-await': 'warn',
       'unicorn/prefer-includes-over-repeated-comparisons': 'warn',
       'unicorn/prefer-dom-node-text-content': 'warn',
@@ -51,6 +51,7 @@ export default ts.config(
       'unicorn/no-computed-property-existence-check': 'warn',
       'unicorn/no-array-reverse': 'warn',
       'unicorn/no-array-callback-reference': 'warn',
+      'unicorn/prefer-uint8array-base64': 'off',
       eqeqeq: ['error', 'smart'],
       // Surfaces the 200-line guideline (CODE_GUIDELINES.md) as a warning so oversized files are
       // visible without blocking; known offenders (controller.ts, types.ts) await decomposition.

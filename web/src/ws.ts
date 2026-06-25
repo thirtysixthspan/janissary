@@ -17,14 +17,14 @@ export class JanusClient {
   constructor() {
     const token = new URLSearchParams(location.search).get('token') ?? '';
     this.ws = new WebSocket(`ws://${location.host}/?token=${encodeURIComponent(token)}`);
-    this.ws.onmessage = (e) => this.onEvent(JSON.parse(e.data) as ServerEvent);
+    this.ws.addEventListener('message', (event) => this.onEvent(JSON.parse(event.data) as ServerEvent));
     this.ws.addEventListener('open', () => this.send({ method: 'init', params: {} }));
   }
 
   private onEvent(event: ServerEvent): void {
     switch (event.t) {
     case 'state': {
-      for (const l of this.stateListeners) l(event.tabs, event.activeTab, event.route ?? null);
+      for (const l of this.stateListeners) l(event.tabs, event.activeTab, event.route ?? undefined);
     
     break;
     }

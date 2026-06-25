@@ -16,6 +16,7 @@
     "dev": "npm run dev:web & npm run dev:server",
     "test": "vitest run",
     "lint": "eslint .",
+    "lint:files": "node scripts/lint-files.mjs",
     "format": "prettier --write .",
     "postinstall": "chmod +x node_modules/node-pty/prebuilds/*/spawn-helper 2>/dev/null || true; npx playwright install chromium || true"
   },

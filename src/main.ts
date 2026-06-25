@@ -121,7 +121,9 @@ export async function boot(argv = process.argv.slice(2)): Promise<void> {
 }
 
 // Run when executed directly (node dist/server/main.js or tsx src/server/main.ts).
-boot().catch((error) => {
+try {
+  await boot();
+} catch (error) {
   process.stderr.write(`Failed to start Janissary: ${error instanceof Error ? error.message : String(error)}\n`);
   process.exit(1);
-});
+}

@@ -41,7 +41,7 @@ describe('logger', () => {
 
     const logPath = join(tmpDir, '.janissary', 'log', `${getDateString()}.json`);
     expect(existsSync(logPath)).toBe(true);
-    const lines = readFileSync(logPath, 'utf-8').trim().split('\n');
+    const lines = readFileSync(logPath, 'utf8').trim().split('\n');
     expect(lines).toHaveLength(2);
     expect(JSON.parse(lines[0])).toEqual({ timestamp: '22:55:20.690', agent: 'janus', text: 'hello' });
     expect(JSON.parse(lines[1])).toEqual({ timestamp: '22:55:21.123', agent: 'bilal', text: 'world' });
@@ -53,7 +53,7 @@ describe('logger', () => {
     appendEntry({ timestamp: '22:55:21.000', agent: 'janus', text: 'second' });
 
     const logPath = join(tmpDir, '.janissary', 'log', `${getDateString()}.json`);
-    const lines = readFileSync(logPath, 'utf-8').trim().split('\n');
+    const lines = readFileSync(logPath, 'utf8').trim().split('\n');
     expect(lines).toHaveLength(2);
   });
 
@@ -63,7 +63,7 @@ describe('logger', () => {
     appendEntry({ timestamp: '22:55:21.000', agent: 'bilal', text: 'line2' });
 
     const logPath = join(tmpDir, '.janissary', 'log', `${getDateString()}.json`);
-    const content = readFileSync(logPath, 'utf-8').trim();
+    const content = readFileSync(logPath, 'utf8').trim();
     for (const line of content.split('\n')) {
       expect(() => JSON.parse(line)).not.toThrow();
     }
@@ -74,7 +74,7 @@ describe('logger', () => {
     appendEntry({ timestamp: '22:55:20.690', agent: 'janus', text: '' });
 
     const logPath = join(tmpDir, '.janissary', 'log', `${getDateString()}.json`);
-    const lines = readFileSync(logPath, 'utf-8').trim().split('\n');
+    const lines = readFileSync(logPath, 'utf8').trim().split('\n');
     expect(lines).toHaveLength(1);
     expect(JSON.parse(lines[0]).text).toBe('');
   });
@@ -85,7 +85,7 @@ describe('logger', () => {
     appendEntry({ timestamp: '22:55:20.690', agent: 'janus', text });
 
     const logPath = join(tmpDir, '.janissary', 'log', `${getDateString()}.json`);
-    const lines = readFileSync(logPath, 'utf-8').trim().split('\n');
+    const lines = readFileSync(logPath, 'utf8').trim().split('\n');
     expect(JSON.parse(lines[0]).text).toBe(text);
   });
 

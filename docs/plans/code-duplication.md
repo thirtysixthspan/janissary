@@ -1,47 +1,85 @@
-# Code Duplication Assessment Plan
+# Code Duplication Plan
 
-## Current State
+## What changed from the prior draft (and why)
 
-### Duplication patterns identified
+The prior draft selected the right tool (jscpd) but described its *Current State* from
+guesswork, not a scan — and most of the patterns it headlined are ones jscpd structurally
+cannot detect. Everything below was measured against this repo with `jscpd@5.0.11` (the
+Rust version; `jscpd@4.x` is the TypeScript one).
 
-| Pattern | Severity | Files |
+| Prior draft | Problem | Fix in this plan |
 |---|---|---|
-| Command handler boilerplate (same `import` + `export const command: Command` skeleton) | HIGH | All 17 `src/commands/*.ts` (except `types.ts` / `index.ts`) |
-| Test file boilerplate (near-identical test blocks for simple commands) | HIGH | `clear.test.ts`, `next.test.ts`, `close.test.ts` and likely more |
-| Recognizer export skeleton (same `Set` + `export const xyzRecognizer` pattern) | MEDIUM | `bash.ts`, `db.ts`, `acp.ts` in `src/recognizers/` |
-| `match` function copy-paste (exact-string variant) | MEDIUM | `clear.ts`, `next.ts`, `hist.ts`, `close.ts`, `state.ts` |
-| `match` function copy-paste (regex-prefix variant) | MEDIUM | `db.ts`, `msg.ts`, `broadcast.ts`, `browser.ts`, `connection.ts`, `agent.ts`, `schedule.ts`, `profile.ts`, `acp.ts`, `open.ts` |
-| Duplicate test context literal (`const noDb = { openDbs: [] }`) | MEDIUM | `bash.test.ts`, `acp.test.ts`, `db.test.ts` |
-| Subprocess handling overlap (`INTERACTIVE_PROGRAMS` set vs shell dispatch) | LOW | `shell.ts`, `interactive.ts` |
+| "Current State" centers on command-handler skeletons (×17), recognizer skeletons, `match` copy-paste | **jscpd does not detect these.** It is a Rabin-Karp **token** matcher — different command names/strings are different tokens, so renamed boilerplate is never flagged. A real scan finds **none** of them. | Replaced with the **measured** clone list (see *Current State*). |
+| `mode` table: `mild` = "structural clones (same shape, different names)", `weak` = "structural clones ignoring comments" | **Wrong semantics.** The modes only control comment/whitespace token skipping (`--skip-comments` is literally an alias for `--mode weak`). jscpd finds **Type-1** (verbatim) clones only — no identifier normalization. | Corrected mode description; expectations set to Type-1 detection. |
+| `--output docs/duplication/server-baseline.json` | `-o` is an **output directory**, not a filename; jscpd always writes `jscpd-report.json` into it. | Point `-o` at a directory. |
+| Illustrative "3.2%, 14 clones, 45 files" + Phase 6 "controller.ts: 0% duplication (unique file), FTA 61.6" | Fabricated. Real total is **2.33%/21 clones/105 files**; controller.ts is in **4** of the 10 production clones and its real FTA score is **94.4** (per the code-quality plan). | Real numbers; controller.ts identified as the genuine hotspot. |
+| Separate `.jscpd.client.json`, `duplication:client` script, client baseline | `web/src` duplication is **0.00%** — there is nothing to track. | Dropped the entire client apparatus; one config covers both. |
+| `scripts/duplication-report.ts` (custom ranked report) | Redundant — jscpd ships `console-full`, `markdown`, `html`, `sarif`, and `threshold` reporters that already produce the ranked breakdown and the gate. | Dropped. Use built-in reporters + `--threshold`. |
+| Committed baseline JSON + 5 npm scripts + 2 config files | Heavy machinery for 2.5% duplication concentrated in ~4 real clones. | One config, two scripts, a CI threshold gate (see *Recommended*). |
 
-No duplication detection tool is currently configured.
+### Was there a better alternative?
+
+**Tool: no — jscpd is the right and standard choice** (PMD-CPD is Java-oriented; jscpd is
+the JS/TS norm, and v5 is the current Rust build). The better alternative is about **scope**,
+not tooling. Measured duplication is only **2.48%** in production code, **0%** in the web
+client, and concentrated in a handful of clones. That does not warrant a tracked subsystem
+with committed baselines and a custom report script.
+
+- **Recommended — one-time cleanup + thin gate.** Fix the ~4 meaningful clones now
+  (Phase 4), add a single `--threshold` CI gate to prevent regression, and skip the
+  baselines/custom script/client config. This is the leanest path that captures the value.
+- **Prior draft — tracked duplication subsystem.** Two configs, baselines, a custom
+  cross-referencing script. Disproportionate to a clean-ish codebase; rejected.
+
+The genuinely useful cross-reference is real and simple: the largest clones
+(`schedule.ts`/`profile.ts` ↔ `controller.ts`) sit inside `controller.ts`, which is *also*
+the code-quality plan's #1 complexity target (FTA 94.4). Deduplicating them advances both
+plans at once.
 
 ---
 
-## Tool Selection: jscpd
+## Current State (measured 2026-06-25, `--min-lines 5 --mode mild`)
 
-jscpd is the most mature, widely-used copy/paste detector for source code. Available in two versions:
+| Scope | Files | Duplication | Clones |
+|---|---|---|---|
+| `src/` (incl. tests) | 105 | 2.33% | 21 |
+| `src/` (production, tests ignored) | 61 | **2.48%** | **10** |
+| `web/src/` | 13 | **0.00%** | 0 |
 
-| Factor | jscpd v5 (Rust) | jscpd v4 (TypeScript) |
-|---|---|---|
-| Speed | 24-37x faster | Baseline |
-| Runtime | Self-contained binary (no Node.js) | Node.js |
-| Formats | 223 | 224 |
-| API | CLI only + Rust crate | CLI + Node.js API |
-| Status | Active | Maintenance |
-| Install as devDep | `npm i -D jscpd@5` | `npm i -D jscpd@4` |
+Production clones, by size (the actual backlog):
 
-**v5 (Rust) is recommended** — faster, no runtime overhead, and this project only needs CLI usage.
+| Lines | Clone |
+|---|---|
+| 32 | `commands/schedule.ts:22-53` ↔ `controller.ts:618-635` |
+| 26 | `commands/profile.ts:14-39` ↔ `controller.ts:663-672` |
+| 24 | `commands/state.ts:11-34` ↔ `state-format.ts:4-24` |
+| 18 | `message-bus.ts:49-66` ↔ `messaging.ts:62-81` |
+| 11 | `shell.ts:28-38` ↔ `shell.ts:40-50` (within-file) |
+| 7 | `commands/close.ts:17-23` ↔ `commands/quit.ts:13-19` |
+| 7 | `message-bus.ts:9-15` ↔ `types.ts:260-270` |
+| 6 | `controller.ts:216-221` ↔ `controller.ts:471-476` (within-file) |
+| 6 | `controller.ts:329-334` ↔ `controller.ts:847-852` (within-file) |
+| 6 | `messaging.ts:21-26` ↔ `messaging.ts:37-42` (within-file) |
 
-### How jscpd works
+The remaining 11 clones (in the full scan) are test-file duplication
+(`acp-loop.test.ts`, `controller.test.ts`, `index.test.ts`, `tab.test.ts`,
+`profile.test.ts` ↔ `profiles.test.ts`) plus test↔source mirrors
+(`logger.test.ts`↔`logger.ts`, `shell.test.ts`↔`shell.ts`). Lower priority — see Phase 4.
 
-Uses the **Rabin-Karp rolling hash algorithm** to efficiently find duplicate token sequences across files. Supports three detection modes:
+### How jscpd actually works (set expectations)
 
-| Mode | What it detects | Use case |
-|---|---|---|
-| `strict` | Exact token-for-token matches | Finding verbatim copy-paste |
-| `mild` (default) | Structural clones (same shape, different names) | Finding repeated patterns with different identifiers |
-| `weak` | Structural clones ignoring comments | Finding logic duplication where only comments differ |
+jscpd finds **verbatim token sequences** (Type-1 clones). `--mode` only changes which
+tokens are skipped before matching:
+
+| Mode | Behavior |
+|---|---|
+| `strict` | match all tokens, including comments |
+| `mild` (used here) | skip empty lines |
+| `weak` | also skip comment tokens (`--skip-comments` is an alias) |
+
+It will **not** flag code that is structurally identical but uses different names — so don't
+expect it to catch the command/recognizer boilerplate. That boilerplate is best handled (if
+at all) by a factory helper for ergonomics, not because a duplication tool demands it.
 
 ---
 
@@ -51,273 +89,96 @@ Uses the **Rabin-Karp rolling hash algorithm** to efficiently find duplicate tok
 npm install --save-dev jscpd@5
 ```
 
-This installs both `jscpd` and `cpd` commands (same binary, different name). Verify:
-
-```bash
-npx jscpd --version
-```
+Verify: `npx jscpd --version` (the binary is also exposed as `cpd`).
 
 ---
 
-## Phase 2 — Initial Baseline Scans
-
-### 2.1 Full server scan
-
-```bash
-npx jscpd src/ \
-  --format typescript,tsx \
-  --min-lines 5 \
-  --mode mild \
-  --reporters json,console-full \
-  --output docs/duplication/server-baseline.json
-```
-
-### 2.2 Full client scan
-
-```bash
-npx jscpd web/src/ \
-  --format typescript,tsx \
-  --min-lines 5 \
-  --mode mild \
-  --reporters json,console-full \
-  --output docs/duplication/client-baseline.json
-```
-
-### 2.3 Examine output
-
-```json
-{
-  "statistics": {
-    "total": {
-      "sources": 45,
-      "lines": 5200,
-      "tokens": 21000
-    },
-    "clones": [
-      {
-        "id": "abc123",
-        "lines": 12,
-        "tokens": 48,
-        "fragment": "export const command: Command = {\n  name: 'clear',\n  match: (cmd) => cmd.toLowerCase() === 'clear',\n  ...",
-        "firstFile": {
-          "name": "src/commands/clear.ts",
-          "start": 3,
-          "end": 9,
-          "startLoc": { "line": 3, "column": 1 },
-          "endLoc": { "line": 9, "column": 2 }
-        },
-        "secondFile": {
-          "name": "src/commands/next.ts",
-          "start": 3,
-          "end": 9,
-          "startLoc": { "line": 3, "column": 1 },
-          "endLoc": { "line": 9, "column": 2 }
-        }
-      }
-    ],
-    "duplication": {
-      "total": {
-        "lines": 85,
-        "percentage": 1.6
-      }
-    }
-  }
-}
-```
-
-Terminal output includes a clone-by-clone breakdown:
-
-```
-Found 14 clones (3.2% duplication):
-
-src/commands/clear.ts:3-9  ↔  src/commands/next.ts:3-9   (7 lines)
-src/commands/clear.ts:3-9  ↔  src/commands/hist.ts:3-9   (7 lines)
-src/commands/clear.ts:3-9  ↔  src/commands/close.ts:3-9  (7 lines)
-src/recognizers/bash.ts:1-6  ↔  src/recognizers/db.ts:1-6  (6 lines)
-src/browser.test.ts:1-5  ↔  src/shell.test.ts:1-5   (5 lines)
-```
-
----
-
-## Phase 3 — Configuration
-
-### Create `.jscpd.json`
+## Phase 2 — Config: single `.jscpd.json`
 
 ```json
 {
   "minLines": 5,
   "minTokens": 50,
-  "maxLines": 500,
-  "maxSize": "100kb",
-  "mode": "mild",
   "format": ["typescript", "tsx"],
+  "mode": "mild",
   "ignore": [
+    "**/*.test.ts",
+    "**/*.test.tsx",
     "**/*.d.ts",
-    "**/node_modules/**",
     "**/dist/**",
     "**/web/dist/**",
     "**/.janissary/**"
   ],
-  "ignorePattern": [
-    "import type \\{.*\\} from",
-    "^\\s*$"
-  ],
-  "reporters": ["json", "console-full"],
-  "threshold": 5
-}
-```
-
-| Field | Purpose |
-|---|---|
-| `minLines` | Minimum clone length (5 lines catches command handler boilerplate) |
-| `minTokens` | Minimum tokens (higher = fewer false positives) |
-| `mode` | `mild` detects structural clones (same shape, diff names) |
-| `format` | Restrict to TypeScript/TSX |
-| `ignore` | Skip generated files and build output |
-| `ignorePattern` | Regex to skip irrelevant patterns (type imports, blank lines) |
-| `threshold` | Max duplication percentage before non-zero exit |
-
-### Separate client config — `.jscpd.client.json`
-
-```json
-{
-  "minLines": 5,
-  "minTokens": 50,
-  "mode": "mild",
-  "format": ["typescript", "tsx"],
-  "ignore": ["**/*.d.ts", "**/node_modules/**", "**/dist/**"],
-  "reporters": ["json", "console-full"],
+  "reporters": ["console-full"],
   "threshold": 3
 }
 ```
 
+- `ignore` excludes **test files** so the tracked metric is production duplication (2.48%),
+  not test scaffolding. (jscpd also respects `.gitignore` by default, so `.janissary`/`dist`
+  are skipped anyway; listing them is belt-and-suspenders.)
+- `format` values `typescript` and `tsx` are both valid (verified via `jscpd --list`).
+- `threshold: 3` fails the run (exit 1) when duplication exceeds 3% — just above today's
+  2.48%, so it blocks **regression**. Ratchet it down toward 2% as Phase 4 clones are
+  removed (mirrors the coverage/quality plans' ratchets).
+- `web/src` is clean (0%); no separate client config is needed. To spot-check the client ad
+  hoc: `npx jscpd web/src`.
+
 ---
 
-## Phase 4 — npm Scripts
+## Phase 3 — npm scripts
 
-```json
+```jsonc
 {
   "scripts": {
-    "duplication": "npm run duplication:server && npm run duplication:client",
-    "duplication:server": "jscpd src/ --output docs/duplication/server.json --reporters json,console-full",
-    "duplication:client": "jscpd web/src/ --output docs/duplication/client.json --reporters json,console-full",
-    "duplication:report": "npm run duplication:server && npm run duplication:client && npx tsx scripts/duplication-report.ts",
-    "duplication:baseline": "jscpd src/ --output docs/duplication/baseline-server.json && jscpd web/src/ --output docs/duplication/baseline-client.json"
+    "duplication": "jscpd src web/src",         // uses .jscpd.json; prints clone breakdown
+    "duplication:gate": "jscpd src web/src --exit-code"   // same, exits 1 if threshold exceeded (CI)
   }
 }
 ```
 
-Usage:
+No baseline snapshots, no custom report script: `console-full` prints the ranked clone list,
+and `--threshold`/`--exit-code` is the gate. For a shareable artifact, add `markdown` or
+`html` to `reporters` and pass `-o docs/duplication` (jscpd writes `jscpd-report.*` there).
 
-| Command | What it does |
+---
+
+## Phase 4 — Refactoring backlog (measured, ranked)
+
+Production clones first; re-run `npm run duplication` after each.
+
+1. **`commands/schedule.ts` ↔ `controller.ts` (32L)** and **`commands/profile.ts` ↔
+   `controller.ts` (26L)** — the same logic lives in both the command module and the
+   controller. Extract each into a single shared function (in the command module or a small
+   helper) and have `controller.ts` call it. **Highest value:** removes 58 duplicated lines
+   *and* shrinks `controller.ts`, the code-quality plan's #1 complexity target (FTA 94.4).
+2. **`commands/state.ts` ↔ `state-format.ts` (24L)** — formatting logic duplicated;
+   consolidate into `state-format.ts` and import it from the command.
+3. **`message-bus.ts` ↔ `messaging.ts` (18L)** + `message-bus.ts` ↔ `types.ts` (7L) +
+   `messaging.ts` internal (6L) — the messaging layer has repeated blocks; extract a shared
+   helper and a shared type.
+4. **`shell.ts:28-38` ↔ `shell.ts:40-50` (11L)** — two adjacent near-identical blocks;
+   collapse into a loop or local helper.
+5. **`controller.ts` internal clones (6L ×2)** — minor; fold in during the controller
+   decomposition (code-quality Phase 4).
+6. **`commands/close.ts` ↔ `commands/quit.ts` (7L)** — the only real command-pair overlap;
+   small, optional. A `defineCommand(...)` factory would remove it *and* tidy the other
+   command modules, but it's ergonomics, not a duplication emergency.
+
+**Tests (full-scan clones):** `profile.test.ts` ↔ `profiles.test.ts` (10L) and the
+test↔source mirrors (`logger`, `shell`) are worth a look — a test re-implementing source
+logic can drift. The intra-test clones (`acp-loop.test.ts`, etc.) are typically fine; use
+`test.each` only where it improves readability. Not gated.
+
+---
+
+## Outputs
+
+| Path | Purpose |
 |---|---|
-| `npm run duplication` | Full scan (server + client), terminal + JSON output |
-| `npm run duplication:server` | Server only, clones listed in terminal |
-| `npm run duplication:client` | Client only, clones listed in terminal |
-| `npm run duplication:report` | Full scan + generate ranked refactoring report |
-| `npm run duplication:baseline` | Save initial baselines |
-
----
-
-## Phase 5 — Refactoring Guidance Script
-
-`scripts/duplication-report.ts` processes the jscpd JSON output and produces a ranked plan organized by refactoring opportunity:
-
-```
-Duplication: 3.2% (14 clones across 45 source files)
-
-Priority 1 — Template boilerplate (7 clones, 12% of all duplication)
-  Pattern:  export const command: Command = { name, match, handler }
-  Files:    src/commands/clear.ts, next.ts, hist.ts, close.ts
-  Lines:    7 lines each, identical structure
-  Fix:      Use a helper factory: `defineCommand('clear', handler)`
-
-Priority 2 — Test boilerplate (3 clones)
-  Pattern:  describe('x command') / it('matches "x"') / it('does not match')
-  Files:    src/commands/clear.test.ts, next.test.ts, close.test.ts
-  Lines:    20 lines each
-  Fix:      Generate tests from a shared template or use test.each
-
-Priority 3 — Recognizer skeleton (2 clones)
-  Pattern:  Set + export const xyzRecognizer: CommandRecognizer
-  Files:    src/recognizers/bash.ts, db.ts, acp.ts
-  Lines:    6 lines each (imports + type annotation)
-  Fix:      Extract shared RecognizerFactory or base class
-
-Priority 4 — Test context literal (2 clones)
-  Pattern:  const noDb = { openDbs: [] as string[] }
-  Files:    src/recognizers/bash.test.ts, db.test.ts, acp.test.ts
-  Lines:    1 line each
-  Fix:      Move to a shared test helper or beforeEach
-```
-
-Run with:
-
-```bash
-npx tsx scripts/duplication-report.ts --threshold 3
-```
-
-The script cross-references `--threshold` to flag files whose individual duplication ratio exceeds the target.
-
----
-
-## Phase 6 — Cross-Reference with FTA Quality Scores
-
-The real insight comes from combining duplication data with complexity scores. `scripts/duplication-report.ts` can also read `docs/quality/server.json` (from FTA) to produce a matrix:
-
-```
-High-value refactoring targets (complex + duplicated):
-
-  src/commands/*.ts (17 files)
-    FTA score: 15-20 (OK — low complexity)
-    Duplication: 12% of files is boilerplate skeleton
-    Verdict:  LOW value — the boilerplate is lightweight.
-    Action:   Consider factory helper, but low urgency.
-
-  src/recognizers/*.ts (3 files)
-    FTA score: 25-35 (OK)
-    Duplication: 8% shared skeleton
-    Verdict:  MEDIUM value — small files, low complexity.
-    Action:   Quick win with a shared base class.
-
-  src/controller.ts
-    FTA score: 61.6 (Needs improvement — highest in codebase)
-    Duplication: 0% (unique file)
-    Verdict:  Complexity is from size, not duplication.
-    Action:   Refactor into smaller modules (no duplication fix).
-```
-
-This prevents wasting effort on low-impact deduplication (the command boilerplate is tiny and cheap) and focuses on patterns that actually reduce maintenance burden.
-
----
-
-## Phase 7 — Outputs & Reports
-
-| File | Purpose |
-|---|---|
-| `docs/duplication/server.json` | Server scan (gitignored) |
-| `docs/duplication/client.json` | Client scan (gitignored) |
-| `docs/duplication/baseline-server.json` | Committed server baseline |
-| `docs/duplication/baseline-client.json` | Committed client baseline |
-| `.jscpd.json` | Shared config |
-| `.jscpd.client.json` | Client-only config |
-
----
-
-## Directory Layout
-
-```
-.jscpd.json
-.jscpd.client.json
-docs/
-└── duplication/
-    ├── baseline-server.json    # committed
-    ├── baseline-client.json    # committed
-    ├── server.json             # latest (gitignored)
-    └── client.json             # latest (gitignored)
-scripts/
-    └── duplication-report.ts  # ranked refactoring guidance
-```
+| `.jscpd.json` | Single shared config (production scope) |
+| terminal (`console-full`) | Ranked clone breakdown + duplication % |
+| `docs/duplication/jscpd-report.*` | Optional artifact when `-o docs/duplication` + a file reporter is used (gitignore it) |
 
 ---
 
@@ -325,14 +186,10 @@ scripts/
 
 | Layer | Tool | What it measures | Run command |
 |---|---|---|---|
-| Server duplication | jscpd v5 | Clone count, duplication %, per-file breakdown | `npm run duplication:server` |
-| Client duplication | jscpd v5 | Clone count, duplication %, per-file breakdown | `npm run duplication:client` |
-| Refactoring guidance | `scripts/duplication-report.ts` | Ranked list cross-referenced with FTA complexity scores | `npm run duplication:report` |
-| Baseline | JSON snapshots | Track duplication % over time | `npm run duplication:baseline` |
+| Duplication scan | jscpd v5 | Type-1 clones, duplication %, per-clone breakdown | `npm run duplication` |
+| Regression gate | jscpd `--threshold`/`--exit-code` | fails CI above 3% (ratchet toward 2%) | `npm run duplication:gate` |
+| Cleanup backlog | this doc, Phase 4 | the 10 measured production clones, ranked | — |
 
-Key metrics tracked:
-- **Total duplication percentage** — overall codebase health
-- **Clone count** — number of distinct duplicate pairs
-- **Clone lines** — lines of duplicated code
-- **Per-file duplication ratio** — hotspot identification
-- **Cross-reference with FTA score** — prioritize high-complexity high-duplication files
+Current state: **2.48% production duplication, 0% in the web client** — a clean-ish
+codebase whose only meaningful duplication is the `controller.ts`↔command logic, which
+overlaps the code-quality plan's top refactoring target.

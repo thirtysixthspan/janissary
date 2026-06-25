@@ -27,7 +27,7 @@ function buildHelp(): string {
   const __dirname = dirname(fileURLToPath(import.meta.url));
   const readmePath = join(__dirname, '..', 'README.md');
   try {
-    const md = readFileSync(readmePath, 'utf-8');
+    const md = readFileSync(readmePath, 'utf8');
     const commandMatch = md.match(/### Commands[\s\S]*?(?=^## |^### |$(?![\s\S]))/m);
     const keyMatch = md.match(/### Key Bindings[\s\S]*?(?=^## |^### |$(?![\s\S]))/m);
     const commandSection = commandMatch ? commandMatch[0].trim() : '';
@@ -48,7 +48,7 @@ export const getOutput = (command: string): string | null => {
   if (trimmed === 'clear') return null;
   if (trimmed === 'state') return null;
   if (trimmed === 'hist') return null;
-  if (trimmed === 'quit' || trimmed === 'exit' || trimmed === 'close') return null;
+  if (['quit', 'exit', 'close'].includes(trimmed)) return null;
   if (trimmed.startsWith('agent')) return null;
   if (trimmed.startsWith('msg')) return null;
   if (trimmed.startsWith('broadcast')) return null;

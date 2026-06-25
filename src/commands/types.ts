@@ -12,7 +12,7 @@ export type CommandHandlerContext = {
   setTabs: (updater: (previous: Tab[]) => Tab[]) => void;
   setActiveTab: (function_: ((previous: number) => number) | number) => void;
   setInteractive: (v: { cmd: string; cwd?: string } | null) => void;
-  setHistoryPickerOpen: (open: boolean) => void;
+  setHistoryPickerOpen: (isOpen: boolean) => void;
   setHistoryPickerIdx: (function_: ((previous: number) => number) | number) => void;
   setAgentStates: (updater: (previous: Record<string, AgentState>) => Record<string, AgentState>) => void;
   setAcpInfo: (updater: (previous: Record<number, AcpInfo>) => Record<number, AcpInfo>) => void;
@@ -24,7 +24,7 @@ export type CommandHandlerContext = {
   browserRef: { current: Map<number, { browser: TabBrowser; current?: string; counter: number }> };
   cwdRef: { current: Record<string, string> };
   workspaceRef: { current: Set<string> };
-  runShellInTab: (tabIndex: number, tabLabel: string, shellCommand: string, onComplete?: (output: string) => void, display?: boolean) => void;
+  runShellInTab: (tabIndex: number, tabLabel: string, shellCommand: string, onComplete?: (output: string) => void, shouldDisplay?: boolean) => void;
   runBrowserInTab: (tabIndex: number, command: string) => Promise<string>;
   runDbInTab: (label: string, command: string) => string;
   finishRunning: (label: string, output: string) => void;
@@ -37,7 +37,7 @@ export type CommandHandlerContext = {
   ) => { cmdHistory?: string[]; log?: LogEntry[]; cwd?: string; workspaceDir?: string; group?: number; groupColor?: string };
   sendMessage: (message: { from: string; to: string; kind: MessageKind; text: string }) => boolean;
   saveTabLog: (label: string, log: LogEntry[]) => void;
-  setAgentActive: (name: string, active: boolean) => void;
+  setAgentActive: (name: string, isActive: boolean) => void;
   shellName: string;
   columns: number;
   frequentHistory: string[];

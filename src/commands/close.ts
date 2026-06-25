@@ -14,13 +14,13 @@ export const command: Command = {
     } = context;
     const tabIndex = activeTab;
     if (tabs.length <= 1) {
-      for (const dir of workspaceRef.current) removeWorkspace(dir);
+      for (const directory of workspaceRef.current) removeWorkspace(directory);
       workspaceRef.current.clear();
       for (const [, shell] of shellsRef.current) shell.kill();
       shellsRef.current.clear();
       for (const [, session] of acpRef.current) session.kill();
       acpRef.current.clear();
-      for (const [, e] of browserRef.current) void e.browser.close();
+      for (const [, entry] of browserRef.current) void entry.browser.close();
       browserRef.current.clear();
       closeAllConnections();
       exit();

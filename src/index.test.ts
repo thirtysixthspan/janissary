@@ -20,7 +20,7 @@ describe('startServer (WS + RPC + security)', () => {
     server = await startServer({ webDir: tmpdir() });
     const ws = new WebSocket(`ws://127.0.0.1:${server.port}/?token=${server.token}`);
     const events: ServerEvent[] = [];
-    ws.on('message', (d) => events.push(JSON.parse(d.toString())));
+    ws.on('message', (d) => { events.push(JSON.parse(d.toString())); });
     await new Promise((res, rej) => { ws.on('open', res); ws.on('error', rej); });
 
     ws.send(JSON.stringify({ t: 'rpc', id: 1, method: 'init', params: {} }));
@@ -36,7 +36,7 @@ describe('startServer (WS + RPC + security)', () => {
     server = await startServer({ webDir: tmpdir() });
     const ws = new WebSocket(`ws://127.0.0.1:${server.port}/?token=${server.token}`);
     const events: ServerEvent[] = [];
-    ws.on('message', (d) => events.push(JSON.parse(d.toString())));
+    ws.on('message', (d) => { events.push(JSON.parse(d.toString())); });
     await new Promise((res, rej) => { ws.on('open', res); ws.on('error', rej); });
 
     ws.send(JSON.stringify({ t: 'rpc', id: 5, method: 'complete', params: { text: 'shell READ', cursor: 10 } }));

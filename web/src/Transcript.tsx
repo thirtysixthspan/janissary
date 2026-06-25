@@ -13,10 +13,10 @@ function Markdown({ text }: { text: string }) {
     try {
       return DOMPurify.sanitize(marked.parse(text, { gfm: true, breaks: true, async: false }));
     } catch {
-      return null;
+      // skip parsing on error
     }
   }, [text]);
-  if (html == undefined) return <div className="line output">{text}</div>;
+  if (html === undefined) return <div className="line output">{text}</div>;
   return <div className="line markdown" dangerouslySetInnerHTML={{ __html: html }} />;
 }
 

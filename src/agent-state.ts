@@ -20,7 +20,7 @@ export function loadAgentState(name: string): AgentState | null {
   const path = agentStatePath(name);
   if (!existsSync(path)) return null;
   try {
-    return JSON.parse(readFileSync(path, 'utf-8'));
+    return JSON.parse(readFileSync(path, 'utf8'));
   } catch {
     return null;
   }

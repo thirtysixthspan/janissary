@@ -426,7 +426,7 @@ export type InputHandlerDeps = {
   exit: () => void;
   historyPickerOpen: boolean;
   historyPickerIdx: number;
-  setHistoryPickerOpen: (open: boolean) => void;
+  setHistoryPickerOpen: (isOpen: boolean) => void;
   setHistoryPickerIdx: (function_: ((previous: number) => number) | number) => void;
   frequentHistory: string[];
   flashScrollBoundary: () => void;

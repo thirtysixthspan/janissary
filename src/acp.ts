@@ -23,10 +23,10 @@ export function connectAcp(options: AcpOptions): AcpSession {
     stdio: ['pipe', 'pipe', 'pipe'],
     env: options.env ? { ...process.env, ...options.env } : process.env,
   });
-  proc.on('error', (e) => options.onError(`failed to start ACP agent: ${e.message}`));
+  proc.on('error', (error) => options.onError(`failed to start ACP agent: ${error.message}`));
 
   // The current in-flight prompt's handlers; session updates are routed here.
-  let current: PromptHandlers | null = null;
+  let current: PromptHandlers | undefined;
 
   const client: Client = {
     async sessionUpdate(parameters) {
@@ -45,17 +45,17 @@ export function connectAcp(options: AcpOptions): AcpSession {
   const output = Writable.toWeb(proc.stdin) as WritableStream<Uint8Array>;
   const conn = new ClientSideConnection(() => client, ndJsonStream(output, input));
 
-  let sessionId: string | null = null;
-  let ready: Promise<void> | null = null;
+  let sessionId: string | undefined;
+  let ready: Promise<void> | undefined;
   const ensureSession = (): Promise<void> => {
     ready ??= (async () => {
       const init = await conn.initialize({ protocolVersion: PROTOCOL_VERSION, clientCapabilities: {} });
-      const res = await conn.newSession({ cwd: options.cwd, mcpServers: [] });
-      sessionId = res.sessionId;
+      const response = await conn.newSession({ cwd: options.cwd, mcpServers: [] });
+      sessionId = response.sessionId;
       // Provider from the agent's reported name (fallback: the command basename);
       // model is best-effort from the session's current mode (ACP has no model field).
       const provider = init.agentInfo?.name ?? options.command.replace(/^.*[\\/]/, '');
-      const modes = res.modes;
+      const modes = response.modes;
       const model = modes
         ? modes.availableModes.find((m) => m.id === modes.currentModeId)?.name ?? modes.currentModeId
         : undefined;
@@ -70,12 +70,12 @@ export function connectAcp(options: AcpOptions): AcpSession {
       void (async () => {
         try {
           await ensureSession();
-          const res = await conn.prompt({ sessionId: sessionId!, prompt: [{ type: 'text', text }] });
-          handlers.onEnd(res.stopReason);
+          const response = await conn.prompt({ sessionId: sessionId!, prompt: [{ type: 'text', text }] });
+          handlers.onEnd(response.stopReason);
         } catch (error) {
           handlers.onError(error instanceof Error ? error.message : String(error));
         } finally {
-          if (current === handlers) current = null;
+          if (current === handlers) current = undefined;
         }
       })();
     },

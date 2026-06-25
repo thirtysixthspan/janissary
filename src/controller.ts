@@ -180,7 +180,7 @@ export class Controller {
     if (acp) rows.push({ text: `acp:${acp}`, kind: 'acp' });
     const b = this.browsers.info(label);
     if (b) for (const id of b.ids) rows.push({ text: `browser:${id} (${b.mode})`, kind: 'browser' });
-    for (const [, e] of this.ptys) if (e.tabLabel === label) rows.push({ text: `terminal:${e.session.program}`, kind: 'terminal' });
+    for (const [, entry] of this.ptys) if (entry.tabLabel === label) rows.push({ text: `terminal:${entry.session.program}`, kind: 'terminal' });
     for (const n of this.openDbsFor(label)) rows.push({ text: `sqlite:${n}`, kind: 'sqlite' });
     return rows;
   }
@@ -405,7 +405,7 @@ export class Controller {
       if (parsed.action === 'delete') this.forgetDbConn(parsed.name);
       else if (parsed.action !== 'list' && isConnectionOpen(parsed.name)) {
         const current = this.tabDbConns.get(label) ?? [];
-        if (!current.includes(parsed.name)) this.tabDbConns.set(label, [...current, parsed.name].toSorted());
+        if (!current.includes(parsed.name)) this.tabDbConns.set(label, [...current, parsed.name].toSorted((a, b) => a.localeCompare(b)));
       }
     }
     return output;
@@ -570,7 +570,7 @@ export class Controller {
     const files = stdout.split('\n').map((s) => s.trim()).filter(Boolean)
       .map((p) => (isAbsolute(p) ? p : resolvePath(cwd, p)))
       .filter((p) => { try { return statSync(p).isFile(); } catch { return false; } });
-    return [...new Set(files)].toSorted();
+    return [...new Set(files)].toSorted((a, b) => a.localeCompare(b));
   }
 
   // Register a local file for serving to the web client; returns the app-relative ref (`/open/<id>`).

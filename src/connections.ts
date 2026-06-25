@@ -16,7 +16,7 @@ export function dbPath(name: string): string {
 }
 
 /** Whether a database file exists on disk. */
-export function dbFileExists(name: string): boolean {
+export function databaseFileExists(name: string): boolean {
   return !!dbDir && existsSync(dbPath(name));
 }
 
@@ -26,7 +26,7 @@ export function listDatabaseFiles(): string[] {
   return readdirSync(dbDir)
     .filter((f) => f.endsWith('.sqlite'))
     .map((f) => f.slice(0, -'.sqlite'.length))
-    .toSorted();
+    .toSorted((a, b) => a.localeCompare(b));
 }
 
 export function removeDatabaseFile(name: string): void {
@@ -72,7 +72,7 @@ export function closeAllConnections(): void {
 
 /** Names of databases with an open connection, sorted. */
 export function listOpenConnections(): string[] {
-  return [...connections.keys()].toSorted();
+  return [...connections.keys()].toSorted((a, b) => a.localeCompare(b));
 }
 
 // --- The generic `connection` command -------------------------------------
@@ -97,10 +97,10 @@ export function parseConnectionCommand(input: string): ConnectionParsed {
       return { error: `Invalid connection "${target}". Expected <kind>:<id>, e.g. sqlite:mydb.` };
     }
     const kind = target.slice(0, index).toLowerCase();
-    const id = target.slice(index + 1);
     if (!KINDS.includes(kind as ConnectionKind)) {
       return { error: `Unknown connection kind "${kind}". Expected one of: ${KINDS.join(', ')}.` };
     }
+    const id = target.slice(index + 1);
     if (!id) return { error: `Missing id in "${target}".` };
     return { action: 'close', kind: kind as ConnectionKind, id };
   }

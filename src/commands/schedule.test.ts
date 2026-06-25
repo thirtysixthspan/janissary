@@ -74,7 +74,7 @@ describe('schedule command handler', () => {
     run('schedule a every 5m echo a');
     run('schedule b at 3pm echo b');
     const saved = loadAgentState('janus')?.schedule ?? [];
-    expect(saved.map((e) => e.id)).toEqual(['a', 'b']);
+    expect(saved.map((entry) => entry.id)).toEqual(['a', 'b']);
 
     run('schedule list');
     const listing = outputs.at(-1);
@@ -88,7 +88,7 @@ describe('schedule command handler', () => {
     run('schedule b every 1h echo b');
     run('schedule cancel a');
     const saved = loadAgentState('janus')?.schedule ?? [];
-    expect(saved.map((e) => e.id)).toEqual(['b']);
+    expect(saved.map((entry) => entry.id)).toEqual(['b']);
     expect(outputs.at(-1)).toBe('Cancelled a.');
   });
 

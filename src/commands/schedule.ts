@@ -29,7 +29,7 @@ export const command: Command = {
     let next: ScheduleEntry[];
     let message: string;
     if (parsed.action === 'add') {
-      if (current.some((e) => e.id === parsed.name)) {
+      if (current.some((entry) => entry.id === parsed.name)) {
         out(`A scheduled command named "${parsed.name}" already exists.`);
         return;
       }
@@ -37,7 +37,7 @@ export const command: Command = {
       next = [...current, entry];
       message = `Scheduled ${entry.id}: ${entry.spec} — ${entry.command}`;
     } else if (parsed.action === 'cancel') {
-      next = current.filter((e) => e.id !== parsed.id);
+      next = current.filter((entry) => entry.id !== parsed.id);
       if (next.length === current.length) {
         out(`No scheduled command "${parsed.id}".`);
         return;

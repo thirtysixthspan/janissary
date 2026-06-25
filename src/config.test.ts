@@ -22,7 +22,7 @@ describe('loadConfig', () => {
 
     const configPath = join(tmpDir, '.janissary', 'config.json');
     expect(existsSync(configPath)).toBe(true);
-    const parsed = JSON.parse(readFileSync(configPath, 'utf-8'));
+    const parsed = JSON.parse(readFileSync(configPath, 'utf8'));
     expect(parsed.transcriptMaxLines).toBe(DEFAULT_TRANSCRIPT_MAX_LINES);
   });
 

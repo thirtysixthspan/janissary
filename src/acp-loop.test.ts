@@ -24,12 +24,12 @@ function makeSession(replies: string[]) {
 function makeHandlers() {
   const events: unknown[][] = [];
   const h: AcpLoopHandlers = {
-    startTurn: (isFirst) => events.push(['startTurn', isFirst]),
-    chunk: (c) => events.push(['chunk', c]),
-    endTurn: (f) => events.push(['endTurn', f]),
-    ranCommand: (command, result) => events.push(['ranCommand', command, result]),
-    finished: (reason, max) => events.push(['finished', reason, max]),
-    error: (m) => events.push(['error', m]),
+    startTurn: (isFirst) => { events.push(['startTurn', isFirst]); },
+    chunk: (c) => { events.push(['chunk', c]); },
+    endTurn: (f) => { events.push(['endTurn', f]); },
+    ranCommand: (command, result) => { events.push(['ranCommand', command, result]); },
+    finished: (reason, max) => { events.push(['finished', reason, max]); },
+    error: (m) => { events.push(['error', m]); },
   };
   return { h, events };
 }
@@ -56,7 +56,7 @@ describe('runAcpToolLoop', () => {
     expect(sent[1]).toContain('Output of `db sqlite query movies SELECT name FROM actors`');
     expect(sent[1]).toContain('(2 rows)');
     // Two turns ran, then the loop finished because the second reply had no command.
-    expect(events.filter((e) => e[0] === 'startTurn')).toEqual([
+    expect(events.filter((event) => event[0] === 'startTurn')).toEqual([
       ['startTurn', true],
       ['startTurn', false],
     ]);
@@ -64,7 +64,7 @@ describe('runAcpToolLoop', () => {
 
     // The extracted command line is stripped from the agent reply shown to the user.
     // First endTurn: command removed, only prose remains.
-    const firstEnd = events.find((e) => e[0] === 'endTurn');
+    const firstEnd = events.find((event) => event[0] === 'endTurn');
     expect(firstEnd).toEqual(['endTurn', 'Looking it up.']);
     // ranCommand appears after the first endTurn.
     const firstEndIndex = events.indexOf(firstEnd!);
@@ -85,7 +85,7 @@ describe('runAcpToolLoop', () => {
     runAcpToolLoop(session, 'q', { runCommand: () => 'r', extractCommand: extractDatabaseCommand }, h);
 
     // The command line is removed; trailing blank lines after removal are trimmed.
-    const endTurns = events.filter((e) => e[0] === 'endTurn');
+    const endTurns = events.filter((event) => event[0] === 'endTurn');
     expect(endTurns[0]).toEqual(['endTurn', 'First line.\nSecond line.']);
     // Second turn has no command, full text preserved.
     expect(endTurns[1]).toEqual(['endTurn', 'Final answer.']);
@@ -97,7 +97,7 @@ describe('runAcpToolLoop', () => {
 
     runAcpToolLoop(session, 'q', { runCommand: () => 'r', extractCommand: extractDatabaseCommand }, h);
 
-    const endTurns = events.filter((e) => e[0] === 'endTurn');
+    const endTurns = events.filter((event) => event[0] === 'endTurn');
     expect(endTurns[0]).toEqual(['endTurn', 'Just prose here.']);
     // Only one turn: loop finishes when no command is found.
     expect(endTurns).toHaveLength(1);
@@ -113,7 +113,7 @@ describe('runAcpToolLoop', () => {
 
     runAcpToolLoop(session, 'q', { runCommand: () => 'r', extractCommand: extractDatabaseCommand }, h);
 
-    const endTurns = events.filter((e) => e[0] === 'endTurn');
+    const endTurns = events.filter((event) => event[0] === 'endTurn');
     // Only the command line exists, stripping leaves empty string.
     expect(endTurns[0]).toEqual(['endTurn', '']);
     expect(endTurns[1]).toEqual(['endTurn', 'Done.']);
@@ -150,7 +150,7 @@ describe('runAcpToolLoop', () => {
     runAcpToolLoop(session, 'q', { runCommand, extractCommand: extractDatabaseCommand }, h);
 
     expect(runCommand).not.toHaveBeenCalled();
-    expect(events.some((e) => e[0] === 'ranCommand')).toBe(false);
+    expect(events.some((event) => event[0] === 'ranCommand')).toBe(false);
     expect(events.at(-1)).toEqual(['finished', 'answered', 8]);
   });
 
@@ -163,7 +163,7 @@ describe('runAcpToolLoop', () => {
 
     // The prompt was re-sent, but only one transcript entry was started.
     expect(sent).toHaveLength(2);
-    expect(events.filter((e) => e[0] === 'startTurn')).toEqual([['startTurn', true]]);
+    expect(events.filter((event) => event[0] === 'startTurn')).toEqual([['startTurn', true]]);
     expect(events).toContainEqual(['endTurn', 'The actors are Keanu and Carrie.']);
     expect(events.at(-1)).toEqual(['finished', 'answered', 8]);
   });
@@ -188,7 +188,7 @@ describe('runAcpToolLoop', () => {
 
     runAcpToolLoop(session, 'q', { runCommand: () => 'r', extractCommand: extractDatabaseCommand }, h);
 
-    const endTurns = events.filter((e) => e[0] === 'endTurn');
+    const endTurns = events.filter((event) => event[0] === 'endTurn');
     // Fence lines removed along with the command.
     expect(endTurns[0]).toEqual(['endTurn', 'Looking up.\nDone.']);
     expect(endTurns[1]).toEqual(['endTurn', 'Final answer.']);

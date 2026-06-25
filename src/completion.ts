@@ -59,7 +59,7 @@ const completeWord = (
   after: string,
   tokenStart: number,
 ): CompletionResult => {
-  const matches = candidates.filter((c) => c.startsWith(partial)).toSorted();
+  const matches = candidates.filter((c) => c.startsWith(partial)).toSorted((a, b) => a.localeCompare(b));
   if (matches.length === 0) return { newInput: before + after, newCursor: before.length, matches: [] };
   const completed = matches.length === 1 ? matches[0] + suffix : longestCommonPrefix(matches);
   return replaceToken(before, after, tokenStart, keepPrefix + completed, matches);
@@ -112,14 +112,14 @@ export function completeCommandLine(
 
   // `browser` command completion: subcommands, then window ids where one is expected.
   if (command === 'browser') {
+    if (argumentIndex === 1) {
+      return completeWord(token, '', BROWSER_SUBCOMMANDS, ' ', before, after, tokenStart);
+    }
     const sub = preceding[1]?.toLowerCase();
     // Window ids are derived from the active tab's `browser:<id>` connection strings.
     const windowIds = connections
       .filter((c) => c.startsWith('browser:'))
       .map((c) => c.slice('browser:'.length));
-    if (argumentIndex === 1) {
-      return completeWord(token, '', BROWSER_SUBCOMMANDS, ' ', before, after, tokenStart);
-    }
     if (argumentIndex === 2 && sub === 'use') {
       return completeWord(token, '', windowIds, ' ', before, after, tokenStart);
     }
@@ -143,8 +143,8 @@ export function completeCommandLine(
 
   // Hide dotfiles unless the partial name explicitly starts with a dot (bash-like).
   const matches = entries
-    .filter((e) => e.startsWith(base) && (base.startsWith('.') || !e.startsWith('.')))
-    .toSorted();
+    .filter((entry) => entry.startsWith(base) && (base.startsWith('.') || !entry.startsWith('.')))
+    .toSorted((a, b) => a.localeCompare(b));
   if (matches.length === 0) return { newInput: input, newCursor: cursor, matches: [] };
 
   let completedName = longestCommonPrefix(matches);

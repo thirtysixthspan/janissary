@@ -42,12 +42,12 @@ export const command: Command = {
     }
     const acpSession = session;
     const wrapWidth = Math.max(20, (columns || 80) - 6);
-    const updateRunning = (output: string, running: boolean) => {
-      if (!running && output) appendEntry({ timestamp: getTimeString(), agent: tabLabel, text: output });
+    const updateRunning = (output: string, isRunning: boolean) => {
+      if (!isRunning && output) appendEntry({ timestamp: getTimeString(), agent: tabLabel, text: output });
       setTabs((previous) => previous.map((t) => {
         if (t.label !== tabLabel) return t;
         const log = [...t.log];
-        const index = log.findLastIndex((e) => e.running);
+        const index = log.findLastIndex((entry) => entry.running);
         if (index !== -1) log[index] = { ...log[index], output, running };
         saveTabLog(t.label, log);
         return { ...t, log };

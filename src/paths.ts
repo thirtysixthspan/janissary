@@ -17,7 +17,6 @@ export type RootContext = {
 export function abbreviatePath(p: string, context: RootContext): string {
   const { root } = context;
   const state = join(root, '.janissary');
-  const home = context.home ?? homedir();
   // State directory inside the root (longest, checked first).
   if (p === state) return '$root/';
   if (p.startsWith(state + sep)) return '$root' + p.slice(state.length);
@@ -25,6 +24,7 @@ export function abbreviatePath(p: string, context: RootContext): string {
   if (p === root) return '$root/';
   if (p.startsWith(root + sep)) return '$root' + p.slice(root.length);
   // Elsewhere under home.
+  const home = context.home ?? homedir();
   if (p === home) return '~';
   if (p.startsWith(home + sep)) return '~' + p.slice(home.length);
   return p;

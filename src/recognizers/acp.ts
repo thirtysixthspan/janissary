@@ -26,7 +26,7 @@ export const acpRecognizer: CommandRecognizer = {
     const alphaRatio = trimmed.length > 0 ? letters / trimmed.length : 0;
 
     let score = 0;
-    if (/\?\s*$/.test(trimmed)) score = 0.8;
+    score = /\?\s*$/.test(trimmed) ? 0.8 : score;
     if (PROMPT_WORDS.has(first)) score = Math.max(score, 0.6);
     if (words.length >= 3 && !SYMBOLIC.test(trimmed) && alphaRatio > 0.7) {
       score = Math.max(score, 0.5);

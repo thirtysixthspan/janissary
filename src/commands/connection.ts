@@ -29,7 +29,8 @@ export const command: Command = {
       const lines: string[] = [];
       if (shellsRef.current.get(tabIndex)) lines.push(`shell:${shellName}`);
       if (acpRef.current.get(tabIndex)) lines.push('acp:opencode');
-      for (const id of browserRef.current.get(tabIndex)?.browser.windowIds() ?? []) lines.push(`browser:${id}`);
+      const browserIds = browserRef.current.get(tabIndex)?.browser.windowIds() ?? [];
+      for (const id of browserIds) lines.push(`browser:${id}`);
       for (const n of listOpenConnections()) lines.push(`sqlite:${n}`);
       output = lines.length > 0 ? lines.join('\n') : 'No open connections.';
     } else if (parsed.kind === 'sqlite') {

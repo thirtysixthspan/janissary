@@ -281,9 +281,9 @@ describe('Controller', () => {
     expect(files.length).toBe(1);
     const entries = readFileSync(join(getLogDir(), files[0]), 'utf8').trim().split('\n').map((l) => JSON.parse(l));
     // The command input and its output are logged as separate entries, each timestamped HH:MM:SS.mmm.
-    expect(entries.some((e) => e.agent === 'janus' && e.text === 'help')).toBe(true);
+    expect(entries.some((entry) => entry.agent === 'janus' && entry.text === 'help')).toBe(true);
     expect(entries.length).toBeGreaterThanOrEqual(2);
-    expect(entries.every((e) => /^\d{2}:\d{2}:\d{2}\.\d{3}$/.test(e.timestamp))).toBe(true);
+    expect(entries.every((entry) => /^\d{2}:\d{2}:\d{2}\.\d{3}$/.test(entry.timestamp))).toBe(true);
   });
 
   it('reports an unknown harness without launching a PTY', () => {
@@ -522,7 +522,7 @@ describe('Controller open command', () => {
     c.dispatch(`open ${dir}/*.png`);
     const imgs = c.view().filter((t) => t.view === 'image');
     expect(imgs).toHaveLength(3); // the .txt is not matched by *.png
-    expect(imgs.map((t) => t.image!.name).toSorted()).toEqual(['a.png', 'b.png', 'c.png']);
+    expect(imgs.map((t) => t.image!.name).toSorted((a, b) => a.localeCompare(b))).toEqual(['a.png', 'b.png', 'c.png']);
   });
 
   it('caps a wildcard open at 10 files and notes the overflow', () => {

@@ -22,7 +22,7 @@ export function loadConfig(projectDir: string): Config {
   }
 
   try {
-    const parsed = JSON.parse(readFileSync(configPath, 'utf-8')) as Partial<Config>;
+    const parsed = JSON.parse(readFileSync(configPath, 'utf8')) as Partial<Config>;
     config = { ...DEFAULT_CONFIG, ...parsed };
     return config;
   } catch {

@@ -1,6 +1,6 @@
 import {
   
-  dbFileExists as databaseFileExists,
+  databaseFileExists as databaseFileExists,
   listDatabaseFiles,
   removeDatabaseFile,
   getConnection,
@@ -65,8 +65,8 @@ export function parseDbCommand(input: string): DatabaseParsed {
     const m = rest.match(/^sqlite\s+query\s+(\S+)\s+([\s\S]+)$/i);
     if (!m) return { error: 'Usage: db sqlite query <name> <sql>' };
     const name = m[1];
-    const query = unwrapQuotes(m[2].trim());
     if (!VALID_NAME.test(name)) return nameError(name);
+    const query = unwrapQuotes(m[2].trim());
     return { action: 'query', name, query };
   }
 

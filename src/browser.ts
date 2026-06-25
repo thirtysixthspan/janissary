@@ -18,7 +18,7 @@ chromium.use(StealthPlugin());
 // Pull the major version out of a Playwright version string like "149.0.7827.55" so the
 // generated UA claims the same Chrome version the engine actually reports via client hints.
 function chromeMajor(version: string): number {
-  const major = parseInt(version.split('.', 1)[0], 10);
+  const major = Number(version.split('.', 1)[0]);
   return Number.isFinite(major) ? major : DEFAULT_CHROME_MAJOR;
 }
 
@@ -58,7 +58,7 @@ function makeWindow(id: string, page: Page): BrowserWindow {
     },
     content: async () => {
       const title = await page.title();
-      const body = await page.evaluate(() => document.body?.innerText ?? '');
+      const body = await page.evaluate(() => document.body?.textContent ?? ''); // eslint-disable-line unicorn/no-optional-chaining-on-undeclared-variable
       const text = `${title}\n\n${body}`.trim();
       return text.length > CONTENT_LIMIT
         ? `${text.slice(0, CONTENT_LIMIT)}\n… (truncated, ${text.length - CONTENT_LIMIT} more chars)`
@@ -73,7 +73,7 @@ function makeWindow(id: string, page: Page): BrowserWindow {
  * Playwright process; to switch modes, close all windows (which ends the process) and
  * launch again.
  */
-export async function launchTabBrowser(headless: boolean): Promise<TabBrowser> {
+export async function launchTabBrowser(isHeadless: boolean): Promise<TabBrowser> {
   // `channel: 'chromium'` selects Chromium's new headless mode (a real browser run
   // headless) rather than the legacy headless shell, which is far more detectable.
   // `--disable-blink-features=AutomationControlled` drops the automation flag that sets
@@ -81,14 +81,14 @@ export async function launchTabBrowser(headless: boolean): Promise<TabBrowser> {
   // banner.
   const browser: Browser = await chromium.launch({
     channel: 'chromium',
-    headless,
+    isHeadless,
     args: ['--disable-blink-features=AutomationControlled'],
   });
   const major = chromeMajor(browser.version());
   const windows = new Map<string, { window: BrowserWindow; context: BrowserContext }>();
 
   return {
-    mode: headless ? 'headless' : 'headed',
+    mode: isHeadless ? 'headless' : 'headed',
     openWindow: async (id) => {
       // A fresh, internally consistent fingerprint per window so isolated windows don't
       // share an identical signature: UA (version pinned to the real engine), matching

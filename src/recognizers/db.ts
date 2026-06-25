@@ -20,7 +20,7 @@ export const dbRecognizer: CommandRecognizer = {
     const first = /^([A-Za-z]+)\b/.exec(trimmed)?.[1]?.toUpperCase();
 
     let score = 0;
-    if (first && SQL_START.has(first)) score = 0.8;
+    score = first && SQL_START.has(first) ? 0.8 : score;
 
     const hits = SQL_KEYWORDS.filter((k) =>
       new RegExp(String.raw`\b${k.replace(' ', String.raw`\s+`)}\b`, 'i').test(trimmed),

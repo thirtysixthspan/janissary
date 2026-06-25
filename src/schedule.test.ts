@@ -29,10 +29,10 @@ describe('parseTimeOfDay', () => {
   });
 
   it('rejects invalid times', () => {
-    expect(parseTimeOfDay('abc')).toBeNull();
-    expect(parseTimeOfDay('25:00')).toBeNull();
-    expect(parseTimeOfDay('13pm')).toBeNull();
-    expect(parseTimeOfDay('3:99')).toBeNull();
+    expect(parseTimeOfDay('abc')).toBeUndefined();
+    expect(parseTimeOfDay('25:00')).toBeUndefined();
+    expect(parseTimeOfDay('13pm')).toBeUndefined();
+    expect(parseTimeOfDay('3:99')).toBeUndefined();
   });
 });
 
@@ -45,9 +45,9 @@ describe('parseInterval', () => {
   });
 
   it('rejects invalid intervals', () => {
-    expect(parseInterval('0m')).toBeNull();
-    expect(parseInterval('5x')).toBeNull();
-    expect(parseInterval('m')).toBeNull();
+    expect(parseInterval('0m')).toBeUndefined();
+    expect(parseInterval('5x')).toBeUndefined();
+    expect(parseInterval('m')).toBeUndefined();
   });
 });
 
@@ -62,9 +62,9 @@ describe('parseMonthDay', () => {
   });
 
   it('rejects invalid dates', () => {
-    expect(parseMonthDay(['notamonth', '12'])).toBeNull();
-    expect(parseMonthDay(['august', 'x'])).toBeNull();
-    expect(parseMonthDay(['13/40'])).toBeNull();
+    expect(parseMonthDay(['notamonth', '12'])).toBeUndefined();
+    expect(parseMonthDay(['august', 'x'])).toBeUndefined();
+    expect(parseMonthDay(['13/40'])).toBeUndefined();
   });
 });
 

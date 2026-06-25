@@ -40,11 +40,11 @@ export function TerminalCard({ entry, client }: Properties) {
     const detach = client.attachPty(id, (data) => term.write(data));
     const onInput = term.onData((data) => client.send({ method: 'ptyInput', params: { id, data } }));
     // Let app-level chords fall through to the window handler instead of the PTY.
-    term.attachCustomKeyEventHandler((e) => {
-      if (e.type !== 'keydown') return true;
+    term.attachCustomKeyEventHandler((event) => {
+      if (event.type !== 'keydown') return true;
       // Let app-level chords reach the window handler (Shift/Ctrl+Arrow for tab switch, scroll,
       // reorder; Ctrl+T for collapse) instead of sending them to the PTY.
-      return !(e.shiftKey || e.ctrlKey);
+      return !(event.shiftKey || event.ctrlKey);
     });
 
     const ro = new ResizeObserver(() => syncSize());
@@ -64,7 +64,7 @@ export function TerminalCard({ entry, client }: Properties) {
       <div className="head">
         <span className="name">▸{entry.program}</span>
         <span className={`status${isExited ? ' exited' : ''}`}>
-          {isExited ? `exited${entry.exitCode == undefined ? '' : ` (${entry.exitCode})`}` : 'running'}
+          {isExited ? `exited${entry.exitCode === undefined ? '' : ` (${entry.exitCode})`}` : 'running'}
         </span>
         <span className="spacer" />
         <button onClick={() => setMaximized((m) => !m)}>{maximized ? 'restore' : 'maximize'}</button>

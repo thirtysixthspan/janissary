@@ -37,7 +37,7 @@ function nearestUsedDistance(color: string, used: [number, number, number][]): n
 // it is already far enough from all of them; otherwise returns the palette color whose nearest
 // used color is the farthest away (the most distinct option available).
 export function distinctColor(used: Iterable<string>, preferred?: string): string {
-  const usedRgb = [...used].map(hexToRgb).filter((c): c is [number, number, number] => c !== null);
+  const usedRgb = [...used].map((c) => hexToRgb(c)).filter((c): c is [number, number, number] => c !== null);
   if (preferred && nearestUsedDistance(preferred, usedRgb) >= COLOR_MIN_DIST) return preferred;
   let best = dotColors[0];
   let bestDistribution = -1;
@@ -239,14 +239,18 @@ export function canMoveTab(tabs: Tab[], index: number, dir: -1 | 1): boolean {
 export function swapTabsLeft(tabs: Tab[], index: number): Tab[] {
   if (!canMoveTab(tabs, index, -1)) return tabs;
   const next = [...tabs];
-  [next[index - 1], next[index]] = [next[index], next[index - 1]];
+  const left = next[index - 1];
+  next[index - 1] = next[index];
+  next[index] = left;
   return renumberTabs(next);
 }
 
 export function swapTabsRight(tabs: Tab[], index: number): Tab[] {
   if (!canMoveTab(tabs, index, 1)) return tabs;
   const next = [...tabs];
-  [next[index], next[index + 1]] = [next[index + 1], next[index]];
+  const right = next[index + 1];
+  next[index + 1] = next[index];
+  next[index] = right;
   return renumberTabs(next);
 }
 

@@ -17,13 +17,13 @@ export function workspacePath(name: string): string {
   return join(workspaceBaseDir, name);
 }
 
-export function findRepoRoot(from: string): string | null {
-  let dir = from;
+export function findRepoRoot(from: string): string | undefined {
+  let directory = from;
   while (true) {
-    if (existsSync(join(dir, '.git'))) return dir;
-    const parent = dirname(dir);
-    if (parent === dir) return null;
-    dir = parent;
+    if (existsSync(join(directory, '.git'))) return directory;
+    const parent = dirname(directory);
+    if (parent === directory) return undefined;
+    directory = parent;
   }
 }
 
@@ -34,8 +34,8 @@ export function createWorkspace(name: string, repoPath: string): string {
   return target;
 }
 
-export function removeWorkspace(dir: string): void {
-  try { rmSync(dir, { recursive: true, force: true }); } catch { /* ignore */ }
+export function removeWorkspace(directory: string): void {
+  try { rmSync(directory, { recursive: true, force: true }); } catch { /* ignore */ }
 }
 
 export function clearWorkspaceDir(): void {

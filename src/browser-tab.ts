@@ -17,17 +17,17 @@ export class BrowserManager {
 
   // Live window state for a tab (for the connections panel / `connection list`).
   info(label: string): { ids: string[]; mode: string; current?: string } | null {
-    const e = this.browsers.get(label);
-    return e ? { ids: e.browser.windowIds(), mode: e.browser.mode, current: e.current } : null;
+    const entry = this.browsers.get(label);
+    return entry ? { ids: entry.browser.windowIds(), mode: entry.browser.mode, current: entry.current } : null;
   }
 
   closeTab(label: string): void {
-    const e = this.browsers.get(label);
-    if (e) { void e.browser.close(); this.browsers.delete(label); }
+    const entry = this.browsers.get(label);
+    if (entry) { void entry.browser.close(); this.browsers.delete(label); }
   }
 
   closeAll(): void {
-    for (const [, e] of this.browsers) void e.browser.close();
+    for (const [, entry] of this.browsers) void entry.browser.close();
     this.browsers.clear();
   }
 
@@ -81,16 +81,20 @@ export class BrowserManager {
           return await this.closeWindow(label, parsed.id);
         }
         case 'goto': {
-          return await (await ensureCurrent()).goto(parsed.url);
+          const page = await ensureCurrent();
+          return await page.goto(parsed.url);
         }
         case 'eval': {
-          return await (await ensureCurrent()).eval(parsed.js);
+          const page = await ensureCurrent();
+          return await page.eval(parsed.js);
         }
         case 'content': {
-          return await (await ensureCurrent()).content();
+          const page = await ensureCurrent();
+          return await page.content();
         }
         case 'shot': {
-          const path = await (await ensureCurrent()).shot();
+          const page = await ensureCurrent();
+          const path = await page.shot();
           const opened = process.platform === 'darwin' ? ' (opening in Preview)' : '';
           return `Screenshot saved: ${path}${opened}`;
         }

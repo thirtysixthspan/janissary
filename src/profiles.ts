@@ -32,7 +32,7 @@ export function listProfiles(): string[] {
     return readdirSync(profileDir, { withFileTypes: true })
       .filter((d) => d.isDirectory())
       .map((d) => d.name)
-      .toSorted();
+      .toSorted((a, b) => a.localeCompare(b));
   } catch {
     return [];
   }
@@ -43,20 +43,20 @@ export function listProfiles(): string[] {
 // their `number` field (mirroring `--relaunch` tab restoration) so a profile controls the
 // order its tabs open; files without a number keep their (alphabetical) readdir order.
 export function loadProfileAgents(name: string): AgentState[] {
-  const dir = profilePath(name);
-  if (!existsSync(dir)) return [];
+  const directory = profilePath(name);
+  if (!existsSync(directory)) return [];
   try {
-    return readdirSync(dir)
+    return readdirSync(directory)
       .filter((f) => f.endsWith('.json'))
       .map((f) => {
         try {
-          const state = JSON.parse(readFileSync(join(dir, f), 'utf-8')) as AgentState;
+          const state = JSON.parse(readFileSync(join(directory, f), 'utf8')) as AgentState;
           return { ...state, name: f.replace(/\.json$/, '') };
         } catch {
-          return null;
+          // skip invalid agent state files
         }
       })
-      .filter((s): s is AgentState => s !== null)
+      .filter((s): s is AgentState => s !== undefined)
       .toSorted((a, b) => (a.number ?? Infinity) - (b.number ?? Infinity));
   } catch {
     return [];
