@@ -12,3 +12,9 @@ tab switching should still be supported
 upon closing the harness, the cli in the terminal should be restored
 
 
+## root path
+the path from where the application is launched is the root path.
+shortcut the root path as $root in the transcript
+examples:
+$root/ = /Users/name/dev/janissary
+$root/workspace/emrah = /Users/name/dev/janissary/.janissary/workspace/emrah

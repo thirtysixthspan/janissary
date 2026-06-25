@@ -2,7 +2,7 @@ import type { ChildProcess } from 'node:child_process';
 import type { Tab, LogEntry, ScheduleEntry, AcpSession, AcpInfo } from './types.js';
 import {
   makeTab, distinctColor, insertTabInGroup, flattenBuffer, stripComments,
-  swapTabsLeft, swapTabsRight, formatAgentOutput,
+  swapTabsLeft, swapTabsRight,
 } from './tab.js';
 import { resolveCommand } from './resolve.js';
 import { isInteractive } from './interactive.js';
@@ -294,7 +294,7 @@ export class Controller {
         if (res.cmd && isInteractive(res.cmd)) this.openPty(label, res.cmd, res.cmd.split(/\s+/)[0]);
         else this.runShell(label, res.cmd);
         return;
-      case 'output': this.append(label, { input, output: res.output }); return;
+      case 'output': this.append(label, { input, output: res.output, markdown: true }); return;
       case 'unknown': {
         // Probabilistic routing of an unprefixed command (mirrors the Ink command handler). Auto-run
         // a confident non-db route, or a confident db route when exactly one database is open (the
@@ -345,7 +345,12 @@ export class Controller {
       // non-interactively (e.g. scheduled) is a no-op.
       case 'hist': return;
     }
-    this.append(label, { input: cmd, output: getOutput(cmd) ?? `"${name}" did nothing.` });
+    const trimmed = cmd.trim().toLowerCase();
+    this.append(label, { 
+      input: cmd, 
+      output: getOutput(cmd) ?? `"${name}" did nothing.`,
+      markdown: trimmed === 'help'
+    });
   }
 
   // Run a `db` command on behalf of a tab, keeping that tab's tracked SQLite connections in sync so
@@ -432,13 +437,15 @@ export class Controller {
     };
 
     runAcpToolLoop(session, prompt, {
-      primer: `${DB_PRIMER}\n\n${BROWSER_PRIMER}`,
+      primer: `${DB_PRIMER}\n\n${BROWSER_PRIMER}\n\nWrite your replies in GitHub-flavored Markdown (headings, lists, tables, fenced code blocks, etc.); the tab renders them as formatted Markdown.`,
       runCommand: (c) => (/^browser\b/i.test(c) ? this.browsers.run(label, c) : this.runDbInTab(label, c)),
       extractCommand: (t) => extractBrowserCommand(t) ?? extractDbCommand(t),
     }, {
-      startTurn: (isFirst) => { this.busy.add(label); this.append(label, { input: isFirst ? prompt : '', output: '', running: true }); },
-      chunk: (buf) => updateRunning(formatAgentOutput(buf, 100000), true),
-      endTurn: (final) => updateRunning(formatAgentOutput(final, 100000), false),
+      // The reply entry is flagged `markdown` so the renderer interprets it as Markdown; the raw
+      // text is kept verbatim (no terminal-style table/word-wrap rewriting).
+      startTurn: (isFirst) => { this.busy.add(label); this.append(label, { input: isFirst ? prompt : '', output: '', running: true, markdown: true }); },
+      chunk: (buf) => updateRunning(buf, true),
+      endTurn: (final) => updateRunning(final, false),
       ranCommand: (c, result) => this.append(label, { input: c, output: result, acp: true }),
       finished: (reason, maxSteps) => {
         this.busy.delete(label);

@@ -20,6 +20,9 @@ export type LogEntry = {
   msgKind?: 'info' | 'request' | 'response';
   // Set when this entry is an auto-ran agent command (e.g. ACP db loop).
   acp?: boolean;
+  // Set when this entry's output is Markdown (an ACP agent reply): the renderer keeps it as one
+  // block and interprets the Markdown rather than splitting it into plain text lines.
+  markdown?: boolean;
   // Set when this entry hosts an inline terminal card (an interactive program or AI harness
   // running in a PTY). Used by the web renderer to mount an xterm.js pane; the Ink path never
   // creates these. `ptyId` keys the live PTY stream.
@@ -36,7 +39,7 @@ export type TerminalEntry = {
 export type MessageRenderKind = 'info' | 'request' | 'response';
 
 export type BufferLine = {
-  type: 'prompt' | 'output' | 'spacer' | 'message' | 'collapsed' | 'terminal';
+  type: 'prompt' | 'output' | 'spacer' | 'message' | 'collapsed' | 'terminal' | 'markdown';
   text: string;
   cwd?: string;
   from?: string;

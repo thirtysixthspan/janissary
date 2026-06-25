@@ -12,7 +12,7 @@ Janissary acts as the ACP client: on the first `acp` prompt in a tab it spawns t
 
 ### Reply streaming
 
-The agent reply streams into a running log entry keyed by the prompt text. The text is passed through `formatAgentOutput` (`src/tab.ts`): GitHub-flavored markdown tables (a `|`-delimited header row followed by a `---` separator row) are re-rendered as aligned, box-drawn tables, and the remaining prose — which arrives as one long line with no newlines — is word-wrapped to the transcript's content width (terminal columns minus borders/padding/scrollbar). Rendered table rows are left unwrapped so their columns stay aligned even when wider than the wrap width. While awaiting the agent, the tab's busy indicator flashes. On completion the entry is finalized; empty output renders as `(no output)`.
+The agent is instructed (via the prompt primer) to write its replies in **GitHub-flavored Markdown**, and the tab renders them as formatted Markdown. The reply streams into a running log entry keyed by the prompt text; that entry is flagged `markdown` so the raw Markdown is kept verbatim (not split into plain-text lines) and `flattenBuffer` (`src/tab.ts`) emits it as a single `markdown` buffer line. The web client renders that line by converting the Markdown to HTML (`marked`, GFM enabled) and sanitizing it (`DOMPurify`) before insertion — so headings, lists, tables, fenced code blocks, blockquotes, and links all render, with partial Markdown rendering progressively as it streams. While awaiting the agent, the tab's busy indicator flashes (the dot blinks). On completion the entry is finalized.
 
 ### Database and browser assistance (autonomous tool loop)
 

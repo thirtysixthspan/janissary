@@ -125,67 +125,6 @@ export function wordWrap(text: string, width: number): string {
   return out.join('\n');
 }
 
-// Box-drawing characters that begin a rendered table line — used to tell a formatted
-// table row apart from prose so it isn't word-wrapped.
-const TABLE_LINE = /^[┌├└│┬┼┴┐┤┘─]/;
-
-// Split a markdown table row into trimmed cells, dropping the optional leading/trailing pipe.
-function splitTableRow(line: string): string[] {
-  let s = line.trim();
-  if (s.startsWith('|')) s = s.slice(1);
-  if (s.endsWith('|')) s = s.slice(0, -1);
-  return s.split('|').map((c) => c.trim());
-}
-
-// A markdown header/body delimiter row: every cell is dashes with optional alignment colons.
-function isSeparatorRow(cells: string[]): boolean {
-  return cells.length > 0 && cells.every((c) => /^:?-+:?$/.test(c));
-}
-
-// Render a parsed table (header + body rows) as box-drawn lines with padded columns.
-function renderTable(header: string[], rows: string[][]): string[] {
-  const ncol = header.length;
-  const norm = (r: string[]) => Array.from({ length: ncol }, (_, i) => r[i] ?? '');
-  const all = [header, ...rows].map(norm);
-  const widths = Array.from({ length: ncol }, (_, i) => Math.max(1, ...all.map((r) => r[i].length)));
-  const bar = (l: string, m: string, r: string) => l + widths.map((w) => '─'.repeat(w + 2)).join(m) + r;
-  const fmt = (r: string[]) => '│' + norm(r).map((c, i) => ` ${c.padEnd(widths[i])} `).join('│') + '│';
-  return [bar('┌', '┬', '┐'), fmt(header), bar('├', '┼', '┤'), ...rows.map(fmt), bar('└', '┴', '┘')];
-}
-
-// Replace GitHub-flavored markdown tables in `text` with aligned, box-drawn tables. A table
-// is a row containing `|` immediately followed by a `---` separator row; body rows continue
-// until a line without a `|`. Non-table text is returned untouched. Used for agent (ACP)
-// replies, which often answer with markdown tables.
-export function formatMarkdownTables(text: string): string {
-  const lines = text.split('\n');
-  const out: string[] = [];
-  for (let i = 0; i < lines.length; i++) {
-    const header = lines[i];
-    const next = lines[i + 1];
-    if (header.includes('|') && next !== undefined && isSeparatorRow(splitTableRow(next))) {
-      const headerCells = splitTableRow(header);
-      const rows: string[][] = [];
-      let j = i + 2;
-      for (; j < lines.length && lines[j].includes('|'); j++) rows.push(splitTableRow(lines[j]));
-      out.push(...renderTable(headerCells, rows));
-      i = j - 1;
-      continue;
-    }
-    out.push(header);
-  }
-  return out.join('\n');
-}
-
-// Prepare agent output for the transcript: render any markdown tables as aligned tables,
-// and word-wrap the remaining prose lines (table lines are left intact so their columns
-// stay aligned).
-export function formatAgentOutput(text: string, width: number): string {
-  return formatMarkdownTables(text)
-    .split('\n')
-    .map((line) => (TABLE_LINE.test(line) ? line : wordWrap(line, width)))
-    .join('\n');
-}
 
 // An entry that contributes nothing to the transcript (e.g. an empty ACP continuation
 // turn). Such entries are skipped when rendering and do not break a run of tool steps.
@@ -252,8 +191,14 @@ export function flattenBuffer(log: LogEntry[], collapseToolSteps = false): Buffe
       lines.push({ type: 'prompt', text: expandTabs(entry.input), cwd: entry.cwd, acp: entry.acp, running: entry.running });
     }
     if (entry.output) {
-      for (const outLine of entry.output.split('\n')) {
-        lines.push({ type: 'output', text: expandTabs(outLine), acp: entry.acp });
+      if (entry.markdown) {
+        // An ACP agent reply: keep the whole turn as one block so the client renders the Markdown
+        // (splitting into per-line plain text would destroy lists, tables, code fences, etc.).
+        lines.push({ type: 'markdown', text: entry.output });
+      } else {
+        for (const outLine of entry.output.split('\n')) {
+          lines.push({ type: 'output', text: expandTabs(outLine), acp: entry.acp });
+        }
       }
     }
   }

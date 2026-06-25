@@ -4,7 +4,7 @@ import { connectAcp } from '../acp.js';
 import { runAcpToolLoop } from '../acp-loop.js';
 import { DB_PRIMER, extractDbCommand } from '../db.js';
 import { extractBrowserCommand, BROWSER_PRIMER } from '../browser-command.js';
-import { formatAgentOutput, wordWrap } from '../tab.js';
+import { wordWrap } from '../tab.js';
 import { appendEntry, getTimeStr } from '../logger.js';
 
 export const command: Command = {
@@ -67,8 +67,8 @@ export const command: Command = {
           setAgentActive(tabLabel, true);
           appendLog(tabLabel, { input: isFirst ? prompt : '', output: '', running: true });
         },
-        chunk: (buf) => updateRunning(formatAgentOutput(buf, wrapWidth), true),
-        endTurn: (final) => updateRunning(formatAgentOutput(final, wrapWidth), false),
+        chunk: (buf) => updateRunning(buf, true),
+        endTurn: (final) => updateRunning(final, false),
         ranCommand: (runCmd, result) => {
           appendLog(tabLabel, { input: runCmd, output: result, acp: true });
         },

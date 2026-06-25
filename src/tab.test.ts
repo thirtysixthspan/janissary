@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { makeTab, dotColors, distinctColor, canMoveTab, insertTabInGroup, swapTabsLeft, swapTabsRight, renumberTabs, expandTabs, flattenBuffer, wordWrap, stripComments, formatMarkdownTables, formatAgentOutput } from './tab.js';
+import { makeTab, dotColors, distinctColor, canMoveTab, insertTabInGroup, swapTabsLeft, swapTabsRight, renumberTabs, expandTabs, flattenBuffer, wordWrap, stripComments } from './tab.js';
 
 describe('group', () => {
   it('defaults a tab to group 1', () => {
@@ -107,6 +107,20 @@ describe('flattenBuffer running indicator', () => {
   it('does not mark a completed command as running', () => {
     const lines = flattenBuffer([{ input: 'echo hi', output: 'hi', running: false }]);
     expect(lines.some((l) => l.running)).toBe(false);
+  });
+});
+
+describe('flattenBuffer markdown (ACP reply)', () => {
+  it('keeps a markdown entry as one block instead of splitting into output lines', () => {
+    const md = '# Title\n\n- one\n- two\n\n| a | b |\n|---|---|\n| 1 | 2 |';
+    const lines = flattenBuffer([{ input: 'acp hi', output: md, markdown: true }]);
+    const mdLines = lines.filter((l) => l.type === 'markdown');
+    expect(mdLines).toHaveLength(1);
+    expect(mdLines[0].text).toBe(md); // raw markdown preserved verbatim
+    // The prose is not split into per-line plain `output` entries.
+    expect(lines.some((l) => l.type === 'output')).toBe(false);
+    // The user's prompt line still renders above it.
+    expect(lines.some((l) => l.type === 'prompt' && l.text === 'acp hi')).toBe(true);
   });
 });
 
@@ -346,59 +360,3 @@ describe('stripComments', () => {
   });
 });
 
-describe('formatMarkdownTables', () => {
-  const md = ['| Name | Role |', '|---|---|', '| Cirie | legend |', '| Lisa | |'].join('\n');
-
-  it('renders a markdown table as an aligned box-drawn table', () => {
-    expect(formatMarkdownTables(md)).toBe(
-      [
-        '┌───────┬────────┐',
-        '│ Name  │ Role   │',
-        '├───────┼────────┤',
-        '│ Cirie │ legend │',
-        '│ Lisa  │        │',
-        '└───────┴────────┘',
-      ].join('\n'),
-    );
-  });
-
-  it('leaves an empty cell as blank, keeping every row the same width', () => {
-    const lines = formatMarkdownTables(md).split('\n');
-    const widths = new Set(lines.map((l) => l.length));
-    expect(widths.size).toBe(1);
-  });
-
-  it('preserves surrounding prose and only converts the table', () => {
-    const out = formatMarkdownTables(`Here you go:\n${md}\nDone.`);
-    expect(out.startsWith('Here you go:\n┌')).toBe(true);
-    expect(out.endsWith('┘\nDone.')).toBe(true);
-  });
-
-  it('handles separator rows with alignment colons', () => {
-    const aligned = ['| A | B |', '|:--|--:|', '| 1 | 2 |'].join('\n');
-    expect(formatMarkdownTables(aligned)).toContain('│ A │ B │');
-  });
-
-  it('ignores a separator row with no preceding header', () => {
-    expect(formatMarkdownTables('just --- text')).toBe('just --- text');
-  });
-
-  it('leaves text without tables untouched', () => {
-    expect(formatMarkdownTables('no tables here')).toBe('no tables here');
-  });
-});
-
-describe('formatAgentOutput', () => {
-  it('renders tables and does not word-wrap their rows', () => {
-    const md = ['| Name | Role |', '|---|---|', '| Cirie | a legend of the game |'].join('\n');
-    const out = formatAgentOutput(md, 10);
-    // Table rows are wider than the wrap width but must stay on a single line each.
-    for (const line of out.split('\n')) expect(line).not.toMatch(/^[^┌├└│┬┼┴┐┤┘─].{0,9}$/);
-    expect(out).toContain('│ Cirie │ a legend of the game │');
-  });
-
-  it('word-wraps prose around a table', () => {
-    const out = formatAgentOutput('the quick brown fox jumps over', 10);
-    expect(out).toBe('the quick\nbrown fox\njumps over');
-  });
-});

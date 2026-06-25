@@ -1,7 +1,24 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
+import { marked } from 'marked';
+import DOMPurify from 'dompurify';
 import type { JanusClient } from './ws';
 import type { BufferLine } from './protocol';
 import { TerminalCard } from './TerminalCard';
+
+// An ACP agent reply rendered as Markdown. `marked` produces HTML (GFM tables/lists/code, single
+// newlines as line breaks); DOMPurify strips any script/handler markup the model might emit before
+// it is inserted. Falls back to plain text if parsing fails.
+function Markdown({ text }: { text: string }) {
+  const html = useMemo(() => {
+    try {
+      return DOMPurify.sanitize(marked.parse(text, { gfm: true, breaks: true, async: false }));
+    } catch {
+      return null;
+    }
+  }, [text]);
+  if (html == null) return <div className="line output">{text}</div>;
+  return <div className="line markdown" dangerouslySetInnerHTML={{ __html: html }} />;
+}
 
 type Props = {
   lines: BufferLine[];
@@ -15,10 +32,28 @@ export function Transcript({ lines, client, onToggleCollapse, scrollRef }: Props
   // Stick to the bottom as new output arrives, unless the user has scrolled up (spec: auto-scroll
   // on output; Escape / scroll-down return to the bottom).
   const stick = useRef(true);
-  useEffect(() => {
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  // Scroll to the very bottom, but only while "pinned" (the user hasn't scrolled up).
+  const pin = useCallback(() => {
     const el = scrollRef.current;
     if (el && stick.current) el.scrollTop = el.scrollHeight;
-  }, [lines, scrollRef]);
+  }, [scrollRef]);
+
+  // Pin on every new render (new output).
+  useEffect(() => { pin(); }, [lines, pin]);
+
+  // A plain post-render scroll can fall short of the final bottom: the content reflows *after* the
+  // scroll when long lines re-wrap (e.g. the vertical scrollbar appearing shrinks the width) or
+  // other late layout. Re-pin whenever the content's size actually changes — the observer fires
+  // after layout, so the view always lands at the true bottom while pinned.
+  useEffect(() => {
+    const content = contentRef.current;
+    if (!content) return;
+    const ro = new ResizeObserver(() => pin());
+    ro.observe(content);
+    return () => ro.disconnect();
+  }, [pin]);
 
   const onScroll = () => {
     const el = scrollRef.current;
@@ -27,6 +62,7 @@ export function Transcript({ lines, client, onToggleCollapse, scrollRef }: Props
 
   return (
     <div className="transcript" ref={scrollRef} onScroll={onScroll}>
+      <div ref={contentRef}>
       {lines.length === 0 && (
         <div className="line empty-state">Type "help" for available commands.</div>
       )}
@@ -35,6 +71,7 @@ export function Transcript({ lines, client, onToggleCollapse, scrollRef }: Props
           return <TerminalCard key={line.terminal.ptyId} entry={line.terminal} client={client} />;
         }
         if (line.type === 'spacer') return <div key={i} className="line spacer" />;
+        if (line.type === 'markdown') return <Markdown key={i} text={line.text} />;
         // Collapsed run of agent tool steps — click (or Ctrl+T) to expand.
         if (line.type === 'collapsed') {
           return (
@@ -84,6 +121,7 @@ export function Transcript({ lines, client, onToggleCollapse, scrollRef }: Props
           </div>
         );
       })}
+      </div>
     </div>
   );
 }

@@ -8,13 +8,14 @@ export type TerminalEntry = {
 };
 
 export type BufferLine = {
-  type: 'prompt' | 'output' | 'spacer' | 'message' | 'collapsed' | 'terminal';
+  type: 'prompt' | 'output' | 'spacer' | 'message' | 'collapsed' | 'terminal' | 'markdown';
   text: string;
   cwd?: string;
   from?: string;
   fromColor?: string;
   msgKind?: 'info' | 'request' | 'response';
   acp?: boolean;
+  markdown?: boolean;
   running?: boolean;
   terminal?: TerminalEntry;
 };
