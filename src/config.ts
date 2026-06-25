@@ -10,13 +10,13 @@ const DEFAULT_CONFIG: Config = {
 
 let config: Config = { ...DEFAULT_CONFIG };
 
-export function loadConfig(projectDir: string): Config {
-  const configDir = join(projectDir, '.janissary');
-  const configPath = join(configDir, 'config.json');
+export function loadConfig(projectDirectory: string): Config {
+  const configDirectory = join(projectDirectory, '.janissary');
+  const configPath = join(configDirectory, 'config.json');
 
   if (!existsSync(configPath)) {
-    mkdirSync(configDir, { recursive: true });
-    writeFileSync(configPath, JSON.stringify(DEFAULT_CONFIG, null, 2) + '\n');
+    mkdirSync(configDirectory, { recursive: true });
+    writeFileSync(configPath, JSON.stringify(DEFAULT_CONFIG, undefined, 2) + '\n');
     config = { ...DEFAULT_CONFIG };
     return config;
   }

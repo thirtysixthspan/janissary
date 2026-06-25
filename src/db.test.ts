@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { mkdtempSync, rmSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { parseDbCommand as parseDatabaseCommand, runDbCommand as runDatabaseCommand, extractDbCommand as extractDatabaseCommand } from './db.js';
+import { parseDatabaseCommand, runDatabaseCommand, extractDatabaseCommand } from './database.js';
 import { initDbDir, closeConnection, closeAllConnections, listOpenConnections } from './connections.js';
 
 describe('parseDbCommand', () => {
@@ -91,9 +91,9 @@ describe('extractDbCommand', () => {
     expect(extractDatabaseCommand(reply)).toBe('db sqlite query a SELECT 1');
   });
 
-  it('returns null when there is no db command', () => {
-    expect(extractDatabaseCommand('I cannot help with that.')).toBeNull();
-    expect(extractDatabaseCommand('the database is ready')).toBeNull();
+  it('returns undefined when there is no db command', () => {
+    expect(extractDatabaseCommand('I cannot help with that.')).toBeUndefined();
+    expect(extractDatabaseCommand('the database is ready')).toBeUndefined();
   });
 });
 

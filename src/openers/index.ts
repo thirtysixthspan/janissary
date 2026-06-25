@@ -10,8 +10,8 @@ export const openers: Opener[] = [
 
 // Find the opener registered for a file extension (lowercased, dot-prefixed), or undefined.
 export function openerForExtension(extension: string): Opener | undefined {
-  const e = extension.toLowerCase();
-  return openers.find((o) => o.extensions.includes(e));
+  const lowerExtension = extension.toLowerCase();
+  return openers.find((o) => o.extensions.includes(lowerExtension));
 }
 
 export type { Opener, OpenContext } from './types.js';

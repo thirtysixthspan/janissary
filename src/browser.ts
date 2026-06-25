@@ -42,11 +42,11 @@ function makeWindow(id: string, page: Page): BrowserWindow {
     },
     eval: async (js) => {
       const result = await page.evaluate(js);
-      return result === undefined ? 'undefined' : JSON.stringify(result, null, 2);
+      return result === undefined ? 'undefined' : JSON.stringify(result, undefined, 2);
     },
     shot: async () => {
-      const dir = mkdtempSync(join(tmpdir(), 'janissary-'));
-      const path = join(dir, `${id}-${Date.now()}.png`);
+      const temporaryDirectory = mkdtempSync(join(tmpdir(), 'janissary-'));
+      const path = join(temporaryDirectory, `${id}-${Date.now()}.png`);
       await page.screenshot({ path });
       if (process.platform === 'darwin') {
         // Open the screenshot detached so it never blocks the Ink render loop.

@@ -9,10 +9,10 @@ function formatValue(v: unknown, maxLines = 10): string {
     if (v.length === 0) return '<empty>';
     const lines = v.flatMap((item) => {
       if (typeof item === 'object' && item !== null) {
-        const e = item as Record<string, unknown>;
+        const entry = item as Record<string, unknown>;
         return [
-          `> ${e.input ?? ''}`,
-          ...(typeof e.output === 'string' && e.output ? e.output.split('\n').map((l) => `  ${l}`) : ['  <empty>']),
+          `> ${entry.input ?? ''}`,
+          ...(typeof entry.output === 'string' && entry.output ? entry.output.split('\n').map((l) => `  ${l}`) : ['  <empty>']),
         ];
       }
       return [`  - ${JSON.stringify(item)}`];

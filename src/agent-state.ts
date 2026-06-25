@@ -2,47 +2,47 @@ import { mkdirSync, writeFileSync, existsSync, readFileSync, readdirSync, rmSync
 import { join } from 'node:path';
 import type { AgentState } from './types.js';
 
-let stateDir = '';
+let stateDirectory = '';
 
-export function initAgentStateDir(projectDir: string): void {
-  stateDir = join(projectDir, '.janissary', 'state');
+export function initAgentStateDirectory(projectDirectory: string): void {
+  stateDirectory = join(projectDirectory, '.janissary', 'state');
 }
 
-export function ensureStateDir(): void {
-  mkdirSync(stateDir, { recursive: true });
+export function ensureStateDirectory(): void {
+  mkdirSync(stateDirectory, { recursive: true });
 }
 
 export function agentStatePath(name: string): string {
-  return join(stateDir, `${name}.json`);
+  return join(stateDirectory, `${name}.json`);
 }
 
-export function loadAgentState(name: string): AgentState | null {
+export function loadAgentState(name: string): AgentState | undefined {
   const path = agentStatePath(name);
-  if (!existsSync(path)) return null;
+  if (!existsSync(path)) return undefined;
   try {
     return JSON.parse(readFileSync(path, 'utf8'));
   } catch {
-    return null;
+    // skip invalid agent state files
   }
 }
 
 export function saveAgentState(state: AgentState): void {
-  ensureStateDir();
+  ensureStateDirectory();
   writeFileSync(agentStatePath(state.name), JSON.stringify(state, null, 2) + '\n');
 }
 
-export function clearStateDir(): void {
-  if (!stateDir) return;
-  try { rmSync(stateDir, { recursive: true, force: true }); } catch { /* ignore */ }
+export function clearStateDirectory(): void {
+  if (!stateDirectory) return;
+  try { rmSync(stateDirectory, { recursive: true, force: true }); } catch { /* ignore */ }
 }
 
 export function listAgentStates(): AgentState[] {
-  if (!existsSync(stateDir)) return [];
+  if (!existsSync(stateDirectory)) return [];
   try {
-    return readdirSync(stateDir)
+    return readdirSync(stateDirectory)
       .filter((f) => f.endsWith('.json'))
       .map((f) => loadAgentState(f.replace(/\.json$/, '')))
-      .filter((s): s is AgentState => s !== null);
+      .filter((s): s is AgentState => s !== undefined);
   } catch {
     return [];
   }

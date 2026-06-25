@@ -8,7 +8,7 @@ let messaging: Messaging;
 
 const Harness = ({ deps }: { deps: MessagingDependencies }) => {
   messaging = useMessaging(deps);
-  return null;
+  // no return needed
 };
 
 const setup = (over: Partial<MessagingDependencies> = {}) => {

@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { command } from './schedule.js';
-import { initAgentStateDir, saveAgentState, loadAgentState } from '../agent-state.js';
+import { initAgentStateDirectory, saveAgentState, loadAgentState } from '../agent-state.js';
 import type { AgentState } from '../types.js';
 import type { CommandHandlerContext } from './types.js';
 
@@ -32,7 +32,7 @@ describe('schedule command handler', () => {
 
   beforeEach(() => {
     dir = mkdtempSync(join(tmpdir(), 'janus-sched-'));
-    initAgentStateDir(dir);
+    initAgentStateDirectory(dir);
     const initial: AgentState = { name: 'janus', dotColor: 'red', active: false };
     saveAgentState(initial);
     states = { janus: initial };

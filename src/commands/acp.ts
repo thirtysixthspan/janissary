@@ -2,7 +2,7 @@ import type { Command } from './types.js';
 import type { AcpInfo } from '../types.js';
 import { connectAcp } from '../acp.js';
 import { runAcpToolLoop } from '../acp-loop.js';
-import { DB_PRIMER, extractDbCommand as extractDatabaseCommand } from '../db.js';
+import { DB_PRIMER, extractDatabaseCommand } from '../database.js';
 import { extractBrowserCommand, BROWSER_PRIMER } from '../browser-command.js';
 import { wordWrap } from '../tab.js';
 import { appendEntry, getTimeStr as getTimeString } from '../logger.js';

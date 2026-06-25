@@ -7,7 +7,7 @@ import {
 import { existsSync, statSync } from 'node:fs';
 import { extname, isAbsolute, resolve as resolvePath } from 'node:path';
 import { openerForExtension } from './openers/index.js';
-import { osOpen } from './openers/os-open.js';
+import { didOsOpen } from './openers/os-open.js';
 import { abbreviatePath } from './paths.js';
 import type { OpenContext } from './openers/index.js';
 import { parseOpen, isGlobPattern } from './commands/open.js';
@@ -16,7 +16,7 @@ import { isInteractive } from './interactive.js';
 import { parseHarnessCommand, HARNESS_COMMANDS } from './harness.js';
 import { parseAgentCommand, resolveAgentName, getOutput } from './commands.js';
 import { commands } from './commands/index.js';
-import { runDbCommand as runDatabaseCommand, parseDbCommand as parseDatabaseCommand, DB_PRIMER, extractDbCommand as extractDatabaseCommand } from './db.js';
+import { runDatabaseCommand, parseDatabaseCommand, DB_PRIMER, extractDatabaseCommand } from './database.js';
 import { connectAcp } from './acp.js';
 import { runAcpToolLoop } from './acp-loop.js';
 import { analyzeCommand, toPrefixedCommand, routeChoices } from './recognizers/index.js';
@@ -529,7 +529,7 @@ export class Controller {
       note: (text) => this.append(label, { input: command, output: text }),
       openImageTab: (image) => this.openImageTab(image),
       registerFile: (absPath) => this.registerFile(absPath),
-      openExternally: (absPath) => osOpen(absPath),
+      openExternally: (absPath) => didOsOpen(absPath),
     };
 
     if (isGlobPattern(parsed.path)) {

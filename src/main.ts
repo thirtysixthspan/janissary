@@ -3,7 +3,7 @@ import { existsSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { startServer } from './index.js';
 import { makeToken } from './security.js';
-import { initAgentStateDir, clearStateDir } from './agent-state.js';
+import { initAgentStateDirectory, clearStateDirectory } from './agent-state.js';
 import { initDbDir } from './connections.js';
 import { initProfileDir } from './profiles.js';
 import { initWorkspaceDir, clearWorkspaceDir } from './workspace.js';
@@ -97,13 +97,13 @@ export async function boot(argv = process.argv.slice(2)): Promise<void> {
   const port = portArgument ? Number(portArgument.slice('--port='.length)) : undefined;
 
   const cwd = process.cwd();
-  initAgentStateDir(cwd);
+  initAgentStateDirectory(cwd);
   initDbDir(cwd);
   initProfileDir(cwd);
   initWorkspaceDir(cwd);
   initLogDir(cwd); // append-only transcript log under .janissary/log/ (never cleared)
   loadConfig(cwd);
-  if (!isRelaunch) { clearStateDir(); clearWorkspaceDir(); }
+  if (!isRelaunch) { clearStateDirectory(); clearWorkspaceDir(); }
 
   const webDir = join(import.meta.dirname, '..', 'web', 'dist');
   const server = await startServer({ webDir, token: makeToken(), port, relaunch: isRelaunch });

@@ -1,134 +1,94 @@
-# Style Lint Assessment Plan
+# CSS Lint Plan
 
-## Tool Selection
+## What changed from the prior draft (and why)
 
-**Winner: stylelint** — the de facto standard CSS linter. Mature (since 2015), 14k+ GitHub stars, 12M+ weekly npm downloads, largest plugin ecosystem.
+The prior draft picked a defensible tool (stylelint) but its "issues stylelint will catch"
+table is almost entirely fabricated, its headline feature (browser-compat linting) is
+low-value for this app, and it ignores that **Prettier already formats the CSS**. Everything
+below was checked against the actual `web/src/theme.css`.
 
-### Runners-up considered
-
-| Tool | Why not chosen |
-|---|---|
-| `@eslint/css` (ESLint CSS plugin) | Released Feb 2025 — much smaller rule set, no browser-compat plugin equivalent to `stylelint-no-unsupported-browser-features`. Would require a separate ESLint config for CSS anyway. |
-| **csskit** (Rust) | All-in-one (fmt, lint, minify, transpile) but very new — smaller rule set, no browser-compat plugin. Would add a non-npm binary dependency. |
-| **clint** (Rust) | Pre-v1 alpha — not production-ready. |
-| **CSSLint** | Archived, unmaintained since 2019. |
-| **w3c-validate-css** | Purely syntax validation (W3C spec compliance), no code-quality or browser-compat rules. |
-
-### stylelint + plugin stack
-
-| Package | Purpose |
-|---|---|
-| `stylelint` | Core linter |
-| `stylelint-config-standard` | 100+ recommended rules (avoid errors, enforce conventions) |
-| `stylelint-no-unsupported-browser-features` | Flags CSS features unsupported by target browsers (via caniuse data) |
-
----
-
-## Current State
-
-- **One CSS file:** `web/src/theme.css` (174 lines, 2.8 KB)
-- **Two CSS imports in `main.tsx`:** `@xterm/xterm/css/xterm.css` (third-party, not linted) and `./theme.css`
-- **No CSS linting** configured anywhere
-- **No `browserslist` config** in package.json or `.browserslistrc`
-
-### Issues stylelint will catch in `theme.css`
-
-| Issue | Rule | Line(s) |
+| Prior draft | Problem | Fix in this plan |
 |---|---|---|
-| `* { box-sizing: border-box; }` — universal selector | `selector-max-universal` | 13 |
-| Duplicate `color`/`background` declared in compound selectors (`.tab .tab-close`) | `no-duplicate-selectors` | 37-40 |
-| Inconsistent font-size units (`px` everywhere, no `rem`) | `unit-allowed-list` (opt-in) | 22, 35, 39, 73, 152, 163, 171 |
-| Short hex `#ff0` used once (`.btn` is a non-existent class) | `color-hex-length` | — |
-| Multiple declarations sharing a selector that could cascade | `declaration-block-no-shorthand-property-overrides` | — |
-| CSS custom properties (`--bg`, `--fg`, etc.) — unsupported in IE11 | `plugin/no-unsupported-browser-features` | 3-10 |
-| `gap` in flexbox — fully supported in modern browsers but would flag if targeting older ones | `plugin/no-unsupported-browser-features` | 30, 44, 45, 68, 148, 162 |
-| `inset` shorthand (`.terminal-card.maximized`) | `plugin/no-unsupported-browser-features` | 158 |
+| "Short hex `#ff0` … (`.btn` is a non-existent class)", `color-hex-length` | **Fabricated.** There is no `#ff0` and no `.btn` in the file — every color is already long hex (`#17181b`, `#ffd93d`) or `rgba()`. Zero hits. | Removed. |
+| "Duplicate selectors `.tab .tab-close` (37–40)", `no-duplicate-selectors` | **Wrong.** Line 37 is `.tab .tab-close`; line 41 is `.tab .tab-close:hover` — a different selector. Not a duplicate; won't fire. | Removed. |
+| "Universal selector (13)", `selector-max-universal` | `stylelint-config-standard` **does not enable** `selector-max-universal`. And `* { box-sizing: border-box }` is a standard reset — flagging it is noise. | Removed. |
+| "Inconsistent font-size units", `unit-allowed-list` | Marked "(opt-in)" in the draft itself — not enabled by config-standard, so not caught. | Removed. |
+| Browser-compat rows (custom props, `gap`, `inset`) | The proposed config **ignores** `css-custom-properties`/`css-gap`/`css-resize`/`css-sticky` (exactly the features the file uses), and the rest are supported by the stated targets — so it produces **no** warnings. | Browser-compat plugin dropped (see below). |
+| `css-report.ts` "CSS Score /100" (`100 - issues*3`) | An arbitrary score that duplicates the linter's own output — the same over-built scoring-script pattern as the sibling plans. | Dropped; use the linter's output + `--fix`. |
+| "174 lines, 2.8 KB" | Size wrong — it's **7.9 KB**. | Corrected. |
+| "No CSS linting; enforces consistency" implies formatting is unmanaged | **Prettier already formats `.css`** via `npm run format` (`prettier --write .`). Formatting consistency is already handled. | Scope the linter to *correctness*, which is all modern stylelint does anyway. |
+
+### Was there a better alternative? — Two real ones
+
+**1. Scope/value: drop browser-compat entirely.** The plan's differentiator —
+`stylelint-no-unsupported-browser-features` — is the wrong fit here. Janissary's web UI is a
+**localhost tool the user opens in their own (modern) browser** (the server even drives
+Chromium via Playwright). There is no public audience on old browsers to support, and the
+proposed config ignores the very features the file relies on. So the browser-compat plugin
+and `.browserslistrc` add config surface for ~zero signal. Drop them.
+
+**2. Tool: `@eslint/css` (v1.3.0) integrates into the existing ESLint workflow.** This repo
+already runs a substantial ESLint flat config and now has `npm run lint:files` (lint only
+changed files). `@eslint/css` adds CSS linting to that *same* `eslint` invocation — no second
+toolchain, no separate config file, and changed `.css` files get caught by the existing
+workflow. Its trade-off is real integration work (below), so both paths are presented.
+
+**Recommendation:** for a single 174-line file that Prettier already formats, keep it
+minimal. **Default to stylelint + `stylelint-config-standard` only** (Path A) — purpose-built,
+zero integration risk, composes cleanly with Prettier (stylelint v15+ removed all stylistic
+rules, so there's no overlap). Choose `@eslint/css` (Path B) only if unifying CSS into
+`npm run lint` / `lint:files` is worth the flat-config wiring.
 
 ---
 
-## Setup
+## Current State (verified)
+
+- **One CSS file:** `web/src/theme.css` — 174 lines, 7.9 KB. Imported in `web/src/main.tsx`
+  alongside `@xterm/xterm/css/xterm.css` (third-party; exclude from linting).
+- **Already Prettier-formatted** (`npm run format` covers `.css`). Formatting is a solved
+  problem; a CSS linter here is for *correctness/conventions*, not whitespace.
+- **No CSS linting and no `browserslist` config** today (both confirmed absent).
+- The file is clean: long hex throughout, kebab-case classes, component-ordered rules. A
+  correctness linter will find **little** — e.g. the one legacy color notation on line 137
+  (`box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.4)`), which config-standard's
+  `color-function-notation: modern` / `alpha-value-notation` would rewrite to
+  `rgb(0 0 0 / 40%)`; possibly a few `no-descending-specificity` hits from the
+  component-ordered rules. Run the tool to get the exact list — but do not expect the
+  fabricated items above.
+
+---
+
+## Path A (recommended) — stylelint + config-standard
 
 ### 1. Install
 
 ```bash
-npm install --save-dev stylelint stylelint-config-standard stylelint-no-unsupported-browser-features
+npm install --save-dev stylelint stylelint-config-standard
 ```
 
-### 2. Config — `web/.stylelintrc.json`
+(No browser-compat plugin — see rationale above.)
 
-Scoped to the web client directory so it only applies to client CSS:
+### 2. Config — `web/.stylelintrc.json`
 
 ```json
 {
   "extends": "stylelint-config-standard",
-  "plugins": ["stylelint-no-unsupported-browser-features"],
   "rules": {
-    "plugin/no-unsupported-browser-features": [true, {
-      "browsers": [
-        "last 2 Chrome versions",
-        "last 2 Firefox versions",
-        "last 2 Safari versions"
-      ],
-      "ignore": [
-        "css-custom-properties",
-        "css-gap",
-        "css-resize",
-        "css-sticky"
-      ],
-      "severity": "warning"
-    }],
     "no-descending-specificity": null,
-    "selector-class-pattern": null,
-    "color-hex-length": "long",
-    "declaration-block-no-redundant-longhand-properties": true,
-    "shorthand-property-no-redundant-values": true
-  },
-  "ignoreFiles": [
-    "**/node_modules/**",
-    "web/dist/**"
-  ]
-}
-```
-
-Key choices:
-- **`plugin/no-unsupported-browser-features` set to `"warning"`** — this is informational guidance, not a hard failure. The user can review and decide whether to polyfill, add fallbacks, or bump browser targets.
-- **`ignore` array** lists features this codebase intentionally uses despite not being universal (custom properties, flexbox gap, resize, sticky). Without these ignores, every use of `--bg` etc. would warn.
-- **`no-descending-specificity: null`** — disabled because the codebase intentionally orders by component (base → tabstrip → transcript → picker → terminal) not by specificity.
-- **`selector-class-pattern: null`** — allows the existing BEM-like naming (.tab, .tab.active, .tab-close).
-
-### 3. Browserslist — `web/.browserslistrc`
-
-Creates a single source of truth for browser targets (shared with autoprefixer if added later):
-
-```
-last 2 Chrome versions
-last 2 Firefox versions
-last 2 Safari versions
-```
-
-stylelint-no-unsupported-browser-features reads this automatically if present, so the rule config above can omit the `browsers` array and it will pick up from this file:
-
-```json
-{
-  "plugins": ["stylelint-no-unsupported-browser-features"],
-  "rules": {
-    "plugin/no-unsupported-browser-features": [true, {
-      "ignore": ["css-custom-properties", "css-gap", "css-resize", "css-sticky"],
-      "severity": "warning"
-    }]
+    "selector-class-pattern": null
   }
 }
 ```
 
----
+- `no-descending-specificity: null` — the file is deliberately ordered by component, not
+  specificity. (Re-enable later if you want to enforce it.)
+- `selector-class-pattern: null` — allows the existing `.tab.active` / `.tab-close` naming.
+- Nothing else needs overriding; let config-standard's correctness rules apply. Prettier owns
+  formatting, so there is no rule conflict to manage.
 
-## Running
+### 3. Scripts — `package.json`
 
-### npm script
-
-Add to `package.json`:
-
-```json
+```jsonc
 {
   "scripts": {
     "lint:css": "stylelint \"web/src/**/*.css\"",
@@ -137,170 +97,75 @@ Add to `package.json`:
 }
 ```
 
-### Execution
+First run: `npm run lint:css` to see the real (small) finding list, then `--fix` what
+auto-fixes and hand-fix the rest.
+
+---
+
+## Path B (alternative) — `@eslint/css` in the existing ESLint config
+
+Folds CSS into `npm run lint` and `npm run lint:files` — one toolchain.
+
+### 1. Install
 
 ```bash
-npm run lint:css
+npm install --save-dev @eslint/css
 ```
 
-### Expected output
+### 2. Add a CSS block to `eslint.config.mjs`
 
-```
-web/src/theme.css
- 3:1  ⚠  Unexpected universal selector       selector-max-universal
-30:5  ⚠  "gap" is not supported by the CSS    plugin/no-unsupported-browser-features (warning)
-          specification (css-gap)
-34:3  ⚠  Expected "#ff0" to be "#ffff00"     color-hex-length
-```
+```js
+import css from '@eslint/css';
 
----
-
-## Guidance Script — `scripts/css-report.ts`
-
-Produces a scored summary with actionable refactoring guidance, analogous to the other quality scripts:
-
-```ts
-import { execSync } from 'child_process';
-import { readFileSync } from 'fs';
-
-interface CssIssue {
-  line: number;
-  column: number;
-  rule: string;
-  severity: string;
-  text: string;
-}
-
-const CSS_PATH = 'web/src/**/*.css';
-
-function runStylelint(): CssIssue[] {
-  const output = execSync(
-    `npx stylelint "${CSS_PATH}" --formatter json --max-warnings 0 2>/dev/null || true`,
-    { encoding: 'utf-8' }
-  );
-  const results = JSON.parse(output);
-  return results.flatMap((r: any) =>
-    r.warnings.map((w: any) => ({
-      line: w.line,
-      column: w.column,
-      rule: w.rule,
-      severity: w.severity,
-      text: w.text,
-    }))
-  );
-}
-
-function categorizeIssues(issues: CssIssue[]) {
-  return {
-    browserCompat: issues.filter(i => i.rule === 'plugin/no-unsupported-browser-features'),
-    consistency: issues.filter(i => i.rule !== 'plugin/no-unsupported-browser-features' && i.severity === 'error'),
-    warnings: issues.filter(i => i.severity === 'warning'),
-  };
-}
-
-const issues = runStylelint();
-const { browserCompat, consistency, warnings } = categorizeIssues(issues);
-
-console.log(`\nCSS Quality Report — ${new Date().toISOString().split('T')[0]}\n`);
-console.log(`Total issues: ${issues.length}`);
-console.log(`  Browser compatibility warnings: ${browserCompat.length}`);
-console.log(`  Consistency errors:            ${consistency.length}`);
-console.log(`  Warnings:                      ${warnings.length}`);
-
-if (browserCompat.length > 0) {
-  console.log('\n--- Browser Compatibility ---');
-  for (const i of browserCompat) {
-    console.log(`  web/src/theme.css:${i.line}:${i.column}  ${i.text}`);
-  }
-}
-
-if (consistency.length > 0) {
-  console.log('\n--- Style Consistency ---');
-  for (const i of consistency) {
-    console.log(`  web/src/theme.css:${i.line}:${i.column}  ${i.text}`);
-  }
-}
-
-// File-level score
-const score = Math.max(0, Math.round(100 - issues.length * 3));
-console.log(`\nCSS Score: ${score}/100`);
-if (score >= 80) console.log('Rating: Good');
-else if (score >= 50) console.log('Rating: Needs improvement');
-else console.log('Rating: Poor');
-
-console.log(`\nRefactoring guidance:`);
-if (browserCompat.length > 0) {
-  console.log(`  • Add the ignored features (custom properties, gap) to the ignore array if` +
-    ` they are intentional, or drop browser targets that don't support them.`);
-}
-if (consistency.some(i => i.rule === 'selector-max-universal')) {
-  console.log(`  • Replace the universal selector (*) with explicit element or class selectors.`);
-}
-console.log(`  • Run "npm run lint:css:fix" to auto-fix formatting issues.`);
-```
-
-### Sample output
-
-```
-CSS Quality Report — 2026-06-25
-
-Total issues: 3
-  Browser compatibility warnings: 1
-  Consistency errors:            2
-  Warnings:                      0
-
---- Browser Compatibility ---
-  web/src/theme.css:30:5  "gap" is not supported by CSS specification (css-gap)
-
---- Style Consistency ---
-  web/src/theme.css:3:1  Unexpected universal selector
-  web/src/theme.css:34:3  Expected "#ff0" to be "#ffff00"
-
-CSS Score: 91/100
-Rating: Good
-
-Refactoring guidance:
-  • Add the ignored features (custom properties, gap) to the ignore array if
-    they are intentional, or drop browser targets that don't support them.
-  • Replace the universal selector (*) with explicit element or class selectors.
-  • Run "npm run lint:css:fix" to auto-fix formatting issues.
-```
-
----
-
-## npm Scripts
-
-```json
+// inside ts.config(...):
 {
-  "scripts": {
-    "lint:css": "stylelint \"web/src/**/*.css\"",
-    "lint:css:fix": "stylelint \"web/src/**/*.css\" --fix",
-    "lint:css:report": "npx tsx scripts/css-report.ts"
-  }
-}
+  files: ['web/src/**/*.css'],
+  plugins: { css },
+  language: 'css/css',
+  rules: {
+    'css/no-duplicate-imports': 'error',
+    'css/no-empty-blocks': 'error',
+    'css/no-invalid-at-rules': 'error',
+    'css/no-invalid-properties': 'error',
+  },
+},
 ```
+
+### Integration tasks (the trade-off — verify these)
+
+1. **Scope the existing broad config blocks to JS/TS** so their TypeScript/unicorn rules
+   don't run against CSS-parsed files. The first blocks in `eslint.config.mjs` have no
+   `files` key (they match everything); add `files: ['**/*.{ts,tsx,mjs,cjs,js}']` to the base
+   rules block (or otherwise exclude `**/*.css`).
+2. **Add `.css` to `scripts/lint-files.mjs`** — its `LINTABLE` extension filter currently
+   omits `css`, so changed stylesheets wouldn't be picked up by `npm run lint:files`. Add
+   `css` to the regex.
+3. **Confirm `@eslint/css` loads under ESLint 10.5** (it uses the language API; verify it
+   resolves and lints one file before relying on it).
 
 ---
 
-## Directory Layout
+## Dropped from the prior plan
 
-```
-web/
-├── .stylelintrc.json
-├── .browserslistrc
-└── src/
-    └── theme.css
-scripts/
-    └── css-report.ts
-```
+| Item | Why |
+|---|---|
+| `stylelint-no-unsupported-browser-features` + `.browserslistrc` | Localhost UI in the user's own modern browser — no old-browser audience; config ignored the used features anyway. |
+| `scripts/css-report.ts` + "CSS Score /100" | Arbitrary score (`100 − issues×3`) duplicating the linter's own output. |
+| `lint:css:report` script | Removed with the script. |
+| The fabricated "issues" table | None of those issues exist in the file. |
 
 ---
 
 ## Summary
 
-stylelint + `stylelint-config-standard` + `stylelint-no-unsupported-browser-features` covers both requirements:
+One small, already-Prettier-formatted stylesheet needs a *correctness* linter, not a tracking
+subsystem.
 
-1. **"Flags CSS features unsupported in target browsers"** — `plugin/no-unsupported-browser-features` (configurable via browserslist, severity set to `warning` so it informs without blocking)
-2. **"Enforces consistency"** — `stylelint-config-standard` provides 100+ rules covering syntax errors, duplicate selectors, shorthand properties, color formats, and naming conventions
-
-The tool is scoped to `web/src/**/*.css` so it only runs on client code. No CI integration. Output is both raw lint results and an actionable scored report.
+| | Path A (recommended) | Path B (`@eslint/css`) |
+|---|---|---|
+| Tool | stylelint + config-standard | existing ESLint + `@eslint/css` |
+| New files | `web/.stylelintrc.json` | none (edits `eslint.config.mjs`) |
+| Runs with `lint:files` | no (separate `lint:css`) | yes, after wiring |
+| Integration risk | none | scope JS blocks + ESLint-10 check |
+| Formatting | Prettier (unchanged) | Prettier (unchanged) |
+| Browser-compat | dropped | dropped |

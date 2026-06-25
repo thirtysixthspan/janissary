@@ -10,10 +10,10 @@ export const dotColors = [
 // different. Used to keep a new tab's color clearly distinct from those already on screen.
 const COLOR_MIN_DIST = 110;
 
-function hexToRgb(hex?: string): [number, number, number] | null {
-  if (!hex) return null;
+function hexToRgb(hex?: string): [number, number, number] | undefined {
+  if (!hex) return undefined;
   const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
-  if (!m) return null;
+  if (!m) return undefined;
   const n = Number.parseInt(m[1], 16);
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
 }
@@ -37,7 +37,7 @@ function nearestUsedDistance(color: string, used: [number, number, number][]): n
 // it is already far enough from all of them; otherwise returns the palette color whose nearest
 // used color is the farthest away (the most distinct option available).
 export function distinctColor(used: Iterable<string>, preferred?: string): string {
-  const usedRgb = [...used].map((c) => hexToRgb(c)).filter((c): c is [number, number, number] => c !== null);
+  const usedRgb = [...used].map((c) => hexToRgb(c)).filter((c): c is [number, number, number] => c !== undefined);
   if (preferred && nearestUsedDistance(preferred, usedRgb) >= COLOR_MIN_DIST) return preferred;
   let best = dotColors[0];
   let bestDistribution = -1;
@@ -48,7 +48,7 @@ export function distinctColor(used: Iterable<string>, preferred?: string): strin
   return best;
 }
 
-export const makeTab = (label: string, dotColor: string, number: number = 1, commandHistory: string[] = [], log: LogEntry[] = [], workspaceDir?: string, group: number = 1, groupColor: string = dotColor): Tab => ({
+export const makeTab = (label: string, dotColor: string, number: number = 1, commandHistory: string[] = [], log: LogEntry[] = [], workspaceDirectory?: string, group: number = 1, groupColor: string = dotColor): Tab => ({
   label,
   dotColor,
   number,
@@ -58,7 +58,7 @@ export const makeTab = (label: string, dotColor: string, number: number = 1, com
   cmdHistory: commandHistory,
   cmdHistoryIdx: -1,
   scrollOffset: 0,
-  workspaceDir,
+  workspaceDir: workspaceDirectory,
 });
 
 // An image view tab (opened via `open <image>`). It carries no transcript/history/shell — just the
@@ -137,9 +137,9 @@ export function wordWrap(text: string, width: number): string {
 
 // An entry that contributes nothing to the transcript (e.g. an empty ACP continuation
 // turn). Such entries are skipped when rendering and do not break a run of tool steps.
-const isEmptyEntry = (e: LogEntry): boolean => !e.from && !e.input && !e.output;
+const isEmptyEntry = (entry: LogEntry): boolean => !entry.from && !entry.input && !entry.output;
 
-export function flattenBuffer(log: LogEntry[], collapseToolSteps = false): BufferLine[] {
+export function flattenBuffer(log: LogEntry[], shouldCollapseToolSteps = false): BufferLine[] {
   const lines: BufferLine[] = [];
   for (let index = 0; index < log.length; index++) {
     const entry = log[index];
@@ -147,13 +147,13 @@ export function flattenBuffer(log: LogEntry[], collapseToolSteps = false): Buffe
     // Collapse a contiguous run of auto-run agent tool steps (acp entries) into one
     // summary line. Empty entries interspersed in the run (continuation turns that
     // produced no prose) are absorbed without breaking the run.
-    if (collapseToolSteps && entry.acp && !entry.from) {
+    if (shouldCollapseToolSteps && entry.acp && !entry.from) {
       let count = 0;
       let index_ = index;
       while (index_ < log.length) {
-        const e = log[index_];
-        if (isEmptyEntry(e)) { index_++; continue; }
-        if (e.acp && !e.from) { count++; index_++; continue; }
+        const logEntry = log[index_];
+        if (isEmptyEntry(logEntry)) { index_++; continue; }
+        if (logEntry.acp && !logEntry.from) { count++; index_++; continue; }
         break;
       }
       if (lines.length > 0) lines.push({ type: 'spacer', text: '' });
@@ -230,8 +230,8 @@ export function renumberTabs(tabs: Tab[]): Tab[] {
 
 // A tab may only swap with a neighbor in the same group, so groups stay contiguous and a tab can
 // never be dragged out of its group.
-export function canMoveTab(tabs: Tab[], index: number, dir: -1 | 1): boolean {
-  const index_ = index + dir;
+export function canMoveTab(tabs: Tab[], index: number, direction: -1 | 1): boolean {
+  const index_ = index + direction;
   if (index < 0 || index_ < 0 || index_ >= tabs.length) return false;
   return tabs[index].group === tabs[index_].group;
 }

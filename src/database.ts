@@ -36,7 +36,7 @@ function unwrapQuotes(s: string): string {
 }
 
 /** Parse a `db sqlite ...` command into an action. Pure — performs no I/O. */
-export function parseDbCommand(input: string): DatabaseParsed {
+export function parseDatabaseCommand(input: string): DatabaseParsed {
   const rest = input.trim().replace(/^db\b\s*/i, '').trim();
   if (!rest) return { error: USAGE };
 
@@ -73,8 +73,8 @@ export function parseDbCommand(input: string): DatabaseParsed {
   return { error: USAGE };
 }
 
-function errorMessage(e: unknown): string {
-  return e instanceof Error ? e.message : String(e);
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
 
 function createDatabase(name: string): string {
@@ -146,8 +146,8 @@ function queryDatabase(name: string, query: string): string {
 }
 
 /** Execute a `db ...` command and return the text to show in the transcript. */
-export function runDbCommand(input: string): string {
-  const parsed = parseDbCommand(input);
+export function runDatabaseCommand(input: string): string {
+  const parsed = parseDatabaseCommand(input);
   if ('error' in parsed) return parsed.error;
   switch (parsed.action) {
     case 'create': {
@@ -187,13 +187,13 @@ export const DB_PRIMER = [
  * bottom-up (the primer asks for the command on the last line) and tolerates a
  * surrounding code fence or a leading `$ `/`> ` prompt marker.
  */
-export function extractDbCommand(text: string): string | null {
+export function extractDatabaseCommand(text: string): string | undefined {
   const lines = text.split('\n');
   for (let index = lines.length - 1; index >= 0; index--) {
     const line = lines[index].replace(/^[\s`$>]+/, '').replace(/`+\s*$/, '').trim();
     if (/^db\s+sqlite\s+(create|delete|query|list)\b/i.test(line)) return line;
   }
-  return null;
+  // not a db command
 }
 
 // `dbPath` is re-exported for callers (and tests) that need the on-disk location.

@@ -3,7 +3,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, readdirSync, realp
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Controller } from './controller.js';
-import { initAgentStateDir, saveAgentState, loadAgentState } from './agent-state.js';
+import { initAgentStateDirectory, saveAgentState, loadAgentState } from './agent-state.js';
 import { initProfileDir } from './profiles.js';
 import { initLogDir, getLogDir } from './logger.js';
 import { initDbDir, isConnectionOpen, closeAllConnections } from './connections.js';
@@ -11,7 +11,7 @@ import { loadConfig } from './config.js';
 import { agentNames } from './commands.js';
 
 // The external-open path shells out to the OS image viewer; stub it so tests never launch an app.
-vi.mock('./openers/os-open.js', () => ({ osOpen: () => true }));
+vi.mock('./openers/os-open.js', () => ({ didOsOpen: () => true }));
 
 // Sinks that just count state emissions; no PTY/shell spawning is exercised here.
 const makeController = () => {
@@ -198,7 +198,7 @@ describe('Controller', () => {
   });
 
   it('records an info message in the recipient context[] and persists it', () => {
-    initAgentStateDir(mkdtempSync(join(tmpdir(), 'janus-ctx-')));
+    initAgentStateDirectory(mkdtempSync(join(tmpdir(), 'janus-ctx-')));
     const { c } = makeController();
     c.dispatch('agent bob');
     c.dispatch('msg bob info hello there');
@@ -206,7 +206,7 @@ describe('Controller', () => {
   });
 
   it('preserves saved (non-contiguous) tab numbers on relaunch', () => {
-    initAgentStateDir(mkdtempSync(join(tmpdir(), 'janus-relaunch-')));
+    initAgentStateDirectory(mkdtempSync(join(tmpdir(), 'janus-relaunch-')));
     saveAgentState({ name: 'ahmed', dotColor: '#5b9cff', active: false, number: 1 });
     saveAgentState({ name: 'bekir', dotColor: '#6bcb77', active: false, number: 3 });
     saveAgentState({ name: 'cafer', dotColor: '#ff6b6b', active: false, number: 5 });
@@ -219,7 +219,7 @@ describe('Controller', () => {
   it('records a fired scheduled command in the tab history (as if typed there)', () => {
     vi.useFakeTimers();
     try {
-      initAgentStateDir(mkdtempSync(join(tmpdir(), 'janus-sched-')));
+      initAgentStateDirectory(mkdtempSync(join(tmpdir(), 'janus-sched-')));
       const { c } = makeController(); // starts the 1s scheduler interval (fake)
       c.dispatch('schedule t1 every 1m clear'); // recurring; first run ~60s out, no shell spawn
       vi.advanceTimersByTime(61_000); // let the scheduler tick fire it
@@ -261,7 +261,7 @@ describe('Controller', () => {
   });
 
   it('starts an agent shell in its saved/workspace cwd', async () => {
-    initAgentStateDir(mkdtempSync(join(tmpdir(), 'janus-st-')));
+    initAgentStateDirectory(mkdtempSync(join(tmpdir(), 'janus-st-')));
     const workCwd = realpathSync(mkdtempSync(join(tmpdir(), 'janus-work-')));
     saveAgentState({ name: 'bob', dotColor: '#6bcb77', active: false, number: 1, cwd: workCwd });
     const { c } = makeController();
@@ -431,7 +431,7 @@ describe('Controller', () => {
   });
 
   it('shows persisted state with the state command', () => {
-    initAgentStateDir(mkdtempSync(join(tmpdir(), 'janus-state-')));
+    initAgentStateDirectory(mkdtempSync(join(tmpdir(), 'janus-state-')));
     const { c } = makeController();
     c.dispatch('help'); // triggers a persist of the janus tab
     c.dispatch('state');
@@ -471,7 +471,7 @@ describe('Controller open command', () => {
   });
 
   it('does not persist an image tab to agent state', () => {
-    initAgentStateDir(mkdtempSync(join(tmpdir(), 'janus-open-state-')));
+    initAgentStateDirectory(mkdtempSync(join(tmpdir(), 'janus-open-state-')));
     const { c } = makeController();
     c.dispatch(`open ${temporaryImage()}`);
     expect(loadAgentState('image')).toBeFalsy();

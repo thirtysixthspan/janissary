@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { command } from './profile.js';
 import { initProfileDir } from '../profiles.js';
-import { initAgentStateDir, loadAgentState } from '../agent-state.js';
+import { initAgentStateDirectory, loadAgentState } from '../agent-state.js';
 import type { AgentState, Tab } from '../types.js';
 import type { CommandHandlerContext } from './types.js';
 
@@ -43,7 +43,7 @@ describe('profile command handler', () => {
   beforeEach(() => {
     root = mkdtempSync(join(tmpdir(), 'janus-profcmd-'));
     initProfileDir(root);
-    initAgentStateDir(root);
+    initAgentStateDirectory(root);
     baseTabs = [{ label: 'janus' } as Tab];
     appended = [];
     active = undefined;
