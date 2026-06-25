@@ -20,7 +20,7 @@ export type Recognition = {
 
 export type CommandRecognizer = {
   route: CommandRoute;
-  recognize: (cmd: string, ctx: RecognizerContext) => Recognition;
+  recognize: (command: string, context: RecognizerContext) => Recognition;
 };
 
 // One option in the route-chooser window. `dbName` is set only for `db` choices (the database

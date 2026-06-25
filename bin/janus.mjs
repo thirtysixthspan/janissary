@@ -9,19 +9,19 @@ const root = join(import.meta.dirname, '..');
 const compiled = join(root, 'dist', 'main.js');
 const source = join(root, 'src', 'main.ts');
 const localTsx = join(root, 'node_modules', 'tsx', 'dist', 'cli.mjs');
-const args = process.argv.slice(2);
+const arguments_ = process.argv.slice(2);
 
-let cmd, cmdArgs;
+let command, commandArguments;
 if (existsSync(compiled)) {
-  cmd = process.execPath;
-  cmdArgs = [compiled, ...args];
+  command = process.execPath;
+  commandArguments = [compiled, ...arguments_];
 } else if (existsSync(localTsx)) {
-  cmd = process.execPath;
-  cmdArgs = [localTsx, source, ...args];
+  command = process.execPath;
+  commandArguments = [localTsx, source, ...arguments_];
 } else {
-  cmd = 'npx';
-  cmdArgs = ['tsx', source, ...args];
+  command = 'npx';
+  commandArguments = ['tsx', source, ...arguments_];
 }
 
-const result = spawnSync(cmd, cmdArgs, { stdio: 'inherit' });
+const result = spawnSync(command, commandArguments, { stdio: 'inherit' });
 process.exit(result.status ?? 1);

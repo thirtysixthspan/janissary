@@ -5,14 +5,14 @@ import { parseScheduleCommand, formatSchedule } from '../schedule.js';
 
 export const command: Command = {
   name: 'schedule',
-  match: (cmd) => /^schedule\b/i.test(cmd),
-  handler: (cmd, ctx) => {
-    const { tabs, activeTab, updateCurrentTab, setAgentStates } = ctx;
+  match: (command_) => /^schedule\b/i.test(command_),
+  handler: (command_, context) => {
+    const { tabs, activeTab, updateCurrentTab, setAgentStates } = context;
     const label = tabs[activeTab]?.label;
-    const rest = cmd.replace(/^schedule\b\s*/i, '');
+    const rest = command_.replace(/^schedule\b\s*/i, '');
     const parsed = parseScheduleCommand(rest, new Date());
     const out = (text: string) =>
-      updateCurrentTab((tab) => ({ ...tab, log: [...tab.log, { input: cmd, output: text }], scrollOffset: 0 }));
+      updateCurrentTab((tab) => ({ ...tab, log: [...tab.log, { input: command_, output: text }], scrollOffset: 0 }));
 
     if ('error' in parsed) {
       out(parsed.error);
@@ -44,7 +44,7 @@ export const command: Command = {
       }
       message = `Cancelled ${parsed.id}.`;
     } else {
-      if (!current.length) {
+      if (current.length === 0) {
         out('No scheduled commands.');
         return;
       }
@@ -52,12 +52,12 @@ export const command: Command = {
       message = `Cleared ${current.length} scheduled command${current.length === 1 ? '' : 's'}.`;
     }
 
-    setAgentStates((prev) => {
-      const cur = prev[label];
-      if (!cur) return prev;
-      const updated = { ...cur, schedule: next };
+    setAgentStates((previous) => {
+      const current_ = previous[label];
+      if (!current_) return previous;
+      const updated = { ...current_, schedule: next };
       try { saveAgentState(updated); } catch { /* ignore */ }
-      return { ...prev, [label]: updated };
+      return { ...previous, [label]: updated };
     });
     out(message);
   },

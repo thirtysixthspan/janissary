@@ -14,10 +14,10 @@ export type RootContext = {
 // workspace clone at `<root>/.janissary/workspace/<name>` shows as `$root/workspace/<name>`). A path
 // elsewhere under home reads as `~`. The longest matching prefix wins. Returns the path unchanged
 // when none applies. Display-only — callers keep the real path.
-export function abbreviatePath(p: string, ctx: RootContext): string {
-  const { root } = ctx;
+export function abbreviatePath(p: string, context: RootContext): string {
+  const { root } = context;
   const state = join(root, '.janissary');
-  const home = ctx.home ?? homedir();
+  const home = context.home ?? homedir();
   // State directory inside the root (longest, checked first).
   if (p === state) return '$root/';
   if (p.startsWith(state + sep)) return '$root' + p.slice(state.length);

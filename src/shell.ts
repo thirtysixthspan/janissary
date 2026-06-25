@@ -1,18 +1,18 @@
 import { spawn, type ChildProcess } from 'node:child_process';
 
-export function spawnShell(_tabIndex: number, extraEnv?: Record<string, string>): ChildProcess {
+export function spawnShell(_tabIndex: number, extraEnvironment?: Record<string, string>): ChildProcess {
   const shell = spawn(process.env.SHELL || 'bash', ['--norc', '--noprofile'], {
     stdio: ['pipe', 'pipe', 'pipe'],
-    env: { ...process.env, ...extraEnv },
+    env: { ...process.env, ...extraEnvironment },
   });
-  shell.stdout!.setEncoding('utf8');
-  shell.stderr!.setEncoding('utf8');
+  shell.stdout.setEncoding('utf8');
+  shell.stderr.setEncoding('utf8');
   return shell;
 }
 
 export function executeShellCmd(
   shell: ChildProcess,
-  cmd: string,
+  command: string,
   tabIndex: number,
   onProgress: (outputBuffer: string) => void,
   onComplete: (result: string) => void,
@@ -27,31 +27,31 @@ export function executeShellCmd(
 
   const onStdout = (chunk: string) => {
     outputBuffer += chunk;
-    const endIdx = outputBuffer.indexOf(prompt);
-    if (endIdx >= 0) {
-      const result = outputBuffer.substring(0, endIdx).trim();
+    const endIndex = outputBuffer.indexOf(prompt);
+    if (endIndex === -1) {
+      onProgress(outputBuffer);
+    } else {
+      const result = outputBuffer.slice(0, Math.max(0, endIndex)).trim();
       done();
       onComplete(result);
-    } else {
-      onProgress(outputBuffer);
     }
   };
 
   const onStderr = (chunk: string) => {
     outputBuffer += chunk;
-    const endIdx = outputBuffer.indexOf(prompt);
-    if (endIdx >= 0) {
-      const result = outputBuffer.substring(0, endIdx).trim();
+    const endIndex = outputBuffer.indexOf(prompt);
+    if (endIndex === -1) {
+      onProgress(outputBuffer);
+    } else {
+      const result = outputBuffer.slice(0, Math.max(0, endIndex)).trim();
       done();
       onComplete(result);
-    } else {
-      onProgress(outputBuffer);
     }
   };
 
   shell.stdout!.on('data', onStdout);
   shell.stderr!.on('data', onStderr);
-  shell.stdin!.write(`${cmd} 2>&1\necho "${prompt}"\n`);
+  shell.stdin!.write(`${command} 2>&1\necho "${prompt}"\n`);
 }
 
 export function queryShellPwd(
@@ -64,11 +64,11 @@ export function queryShellPwd(
 
   const onData = (chunk: string) => {
     buffer += chunk;
-    const endIdx = buffer.indexOf(prompt);
-    if (endIdx >= 0) {
+    const endIndex = buffer.indexOf(prompt);
+    if (endIndex !== -1) {
       shell.stdout!.removeListener('data', onData);
       shell.stderr!.removeListener('data', onData);
-      onResult(buffer.substring(0, endIdx).trim());
+      onResult(buffer.slice(0, Math.max(0, endIndex)).trim());
     }
   };
 

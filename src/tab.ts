@@ -14,15 +14,15 @@ function hexToRgb(hex?: string): [number, number, number] | null {
   if (!hex) return null;
   const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
   if (!m) return null;
-  const n = parseInt(m[1], 16);
+  const n = Number.parseInt(m[1], 16);
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
 }
 
 // Perceptually weighted RGB distance ("redmean"), cheap and good enough to rank palette colors.
 function colorDistance(a: [number, number, number], b: [number, number, number]): number {
   const rmean = (a[0] + b[0]) / 2;
-  const dr = a[0] - b[0], dg = a[1] - b[1], db = a[2] - b[2];
-  return Math.sqrt((2 + rmean / 256) * dr * dr + 4 * dg * dg + (2 + (255 - rmean) / 256) * db * db);
+  const dr = a[0] - b[0], dg = a[1] - b[1], database = a[2] - b[2];
+  return Math.sqrt((2 + rmean / 256) * dr * dr + 4 * dg * dg + (2 + (255 - rmean) / 256) * database * database);
 }
 
 // Distance from `color` to the nearest of `used` (Infinity when nothing comparable is in use).
@@ -40,22 +40,22 @@ export function distinctColor(used: Iterable<string>, preferred?: string): strin
   const usedRgb = [...used].map(hexToRgb).filter((c): c is [number, number, number] => c !== null);
   if (preferred && nearestUsedDistance(preferred, usedRgb) >= COLOR_MIN_DIST) return preferred;
   let best = dotColors[0];
-  let bestDist = -1;
+  let bestDistribution = -1;
   for (const c of dotColors) {
     const d = nearestUsedDistance(c, usedRgb);
-    if (d > bestDist) { bestDist = d; best = c; }
+    if (d > bestDistribution) { bestDistribution = d; best = c; }
   }
   return best;
 }
 
-export const makeTab = (label: string, dotColor: string, number: number = 1, cmdHistory: string[] = [], log: LogEntry[] = [], workspaceDir?: string, group: number = 1, groupColor: string = dotColor): Tab => ({
+export const makeTab = (label: string, dotColor: string, number: number = 1, commandHistory: string[] = [], log: LogEntry[] = [], workspaceDir?: string, group: number = 1, groupColor: string = dotColor): Tab => ({
   label,
   dotColor,
   number,
   group,
   groupColor,
   log,
-  cmdHistory,
+  cmdHistory: commandHistory,
   cmdHistoryIdx: -1,
   scrollOffset: 0,
   workspaceDir,
@@ -72,12 +72,12 @@ export const makeImageTab = (label: string, dotColor: string, number: number, gr
 
 export function getFrequentHistory(history: string[], count: number): string[] {
   const freq = new Map<string, number>();
-  for (const cmd of history) {
-    freq.set(cmd, (freq.get(cmd) || 0) + 1);
+  for (const command of history) {
+    freq.set(command, (freq.get(command) ?? 0) + 1);
   }
-  return [...freq.entries()]
+  return [...freq]
     .sort((a, b) => a[1] - b[1] || a[0].localeCompare(b[0]))
-    .map(([cmd]) => cmd)
+    .map(([command]) => command)
     .slice(-count);
 }
 
@@ -113,23 +113,23 @@ export function wordWrap(text: string, width: number): string {
       out.push(line);
       continue;
     }
-    let cur = '';
+    let current = '';
     for (const word of line.split(' ')) {
       if (word.length > width) {
-        if (cur) out.push(cur);
+        if (current) out.push(current);
         let w = word;
         while (w.length > width) { out.push(w.slice(0, width)); w = w.slice(width); }
-        cur = w;
-      } else if (cur === '') {
-        cur = word;
-      } else if (cur.length + 1 + word.length <= width) {
-        cur += ' ' + word;
+        current = w;
+      } else if (current === '') {
+        current = word;
+      } else if (current.length + 1 + word.length <= width) {
+        current += ' ' + word;
       } else {
-        out.push(cur);
-        cur = word;
+        out.push(current);
+        current = word;
       }
     }
-    if (cur) out.push(cur);
+    if (current) out.push(current);
   }
   return out.join('\n');
 }
@@ -141,24 +141,24 @@ const isEmptyEntry = (e: LogEntry): boolean => !e.from && !e.input && !e.output;
 
 export function flattenBuffer(log: LogEntry[], collapseToolSteps = false): BufferLine[] {
   const lines: BufferLine[] = [];
-  for (let idx = 0; idx < log.length; idx++) {
-    const entry = log[idx];
+  for (let index = 0; index < log.length; index++) {
+    const entry = log[index];
 
     // Collapse a contiguous run of auto-run agent tool steps (acp entries) into one
     // summary line. Empty entries interspersed in the run (continuation turns that
     // produced no prose) are absorbed without breaking the run.
     if (collapseToolSteps && entry.acp && !entry.from) {
       let count = 0;
-      let j = idx;
-      while (j < log.length) {
-        const e = log[j];
-        if (isEmptyEntry(e)) { j++; continue; }
-        if (e.acp && !e.from) { count++; j++; continue; }
+      let index_ = index;
+      while (index_ < log.length) {
+        const e = log[index_];
+        if (isEmptyEntry(e)) { index_++; continue; }
+        if (e.acp && !e.from) { count++; index_++; continue; }
         break;
       }
       if (lines.length > 0) lines.push({ type: 'spacer', text: '' });
       lines.push({ type: 'collapsed', text: `${count} tool step${count === 1 ? '' : 's'}`, acp: true });
-      idx = j - 1;
+      index = index_ - 1;
       continue;
     }
 
@@ -218,35 +218,35 @@ export function flattenBuffer(log: LogEntry[], collapseToolSteps = false): Buffe
 // wherever it appears; an unterminated `## text` removes everything from `##` to the
 // end. Each alternative consumes a `##`, then either runs non-greedily to a closing
 // `##` or, failing that, to the end of the string.
-export function stripComments(cmd: string): string {
-  return cmd.replace(/\s*##(?:[\s\S]*?##\s*|[\s\S]*)/g, ' ').trim();
+export function stripComments(command: string): string {
+  return command.replaceAll(/\s*##(?:[\s\S]*?##\s*|[\s\S]*)/g, ' ').trim();
 }
 
 // Renumber tabs by position. Only `number` (the position) changes — `group` is left untouched,
 // so a tab keeps its group through any reorder.
 export function renumberTabs(tabs: Tab[]): Tab[] {
-  return tabs.map((t, i) => ({ ...t, number: i + 1 }));
+  return tabs.map((t, index) => ({ ...t, number: index + 1 }));
 }
 
 // A tab may only swap with a neighbor in the same group, so groups stay contiguous and a tab can
 // never be dragged out of its group.
-export function canMoveTab(tabs: Tab[], idx: number, dir: -1 | 1): boolean {
-  const j = idx + dir;
-  if (idx < 0 || j < 0 || j >= tabs.length) return false;
-  return tabs[idx].group === tabs[j].group;
+export function canMoveTab(tabs: Tab[], index: number, dir: -1 | 1): boolean {
+  const index_ = index + dir;
+  if (index < 0 || index_ < 0 || index_ >= tabs.length) return false;
+  return tabs[index].group === tabs[index_].group;
 }
 
-export function swapTabsLeft(tabs: Tab[], idx: number): Tab[] {
-  if (!canMoveTab(tabs, idx, -1)) return tabs;
+export function swapTabsLeft(tabs: Tab[], index: number): Tab[] {
+  if (!canMoveTab(tabs, index, -1)) return tabs;
   const next = [...tabs];
-  [next[idx - 1], next[idx]] = [next[idx], next[idx - 1]];
+  [next[index - 1], next[index]] = [next[index], next[index - 1]];
   return renumberTabs(next);
 }
 
-export function swapTabsRight(tabs: Tab[], idx: number): Tab[] {
-  if (!canMoveTab(tabs, idx, 1)) return tabs;
+export function swapTabsRight(tabs: Tab[], index: number): Tab[] {
+  if (!canMoveTab(tabs, index, 1)) return tabs;
   const next = [...tabs];
-  [next[idx], next[idx + 1]] = [next[idx + 1], next[idx]];
+  [next[index], next[index + 1]] = [next[index + 1], next[index]];
   return renumberTabs(next);
 }
 
@@ -254,8 +254,8 @@ export function swapTabsRight(tabs: Tab[], idx: number): Tab[] {
 // connected run. When the group isn't present yet (a brand-new group), the tab goes at the end.
 export function insertTabInGroup(tabs: Tab[], tab: Tab): Tab[] {
   let insertAt = tabs.length;
-  for (let i = 0; i < tabs.length; i++) {
-    if (tabs[i].group === tab.group) insertAt = i + 1;
+  for (const [index, tab_] of tabs.entries()) {
+    if (tab_.group === tab.group) insertAt = index + 1;
   }
   return renumberTabs([...tabs.slice(0, insertAt), tab, ...tabs.slice(insertAt)]);
 }

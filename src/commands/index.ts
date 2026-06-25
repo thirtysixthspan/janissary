@@ -1,10 +1,10 @@
 import type { Command } from './types.js';
 import { command as agent } from './agent.js';
 import { command as next } from './next.js';
-import { command as msg } from './msg.js';
+import { command as message } from './msg.js';
 import { command as broadcast } from './broadcast.js';
 import { command as acp } from './acp.js';
-import { command as db } from './db.js';
+import { command as database } from './db.js';
 import { command as browser } from './browser.js';
 import { command as connection } from './connection.js';
 import { command as clear } from './clear.js';
@@ -19,10 +19,10 @@ import { command as open } from './open.js';
 export const commands: Command[] = [
   agent,
   next,
-  msg,
+  message,
   broadcast,
   acp,
-  db,
+  database,
   browser,
   connection,
   clear,

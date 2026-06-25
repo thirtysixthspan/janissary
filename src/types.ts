@@ -4,7 +4,6 @@
 // constants) stay in their respective modules; only types are collected here.
 
 import type { ChildProcess } from 'node:child_process';
-import type { Command, CommandHandlerContext } from './commands/types.js';
 import type { RouteChoice } from './recognizers/types.js';
 
 // --- tab.ts ---------------------------------------------------------------
@@ -180,7 +179,7 @@ export type AcpLoopDeps = {
   primer?: string;
   // Execute an extracted command and return its textual output. May be async (e.g. a
   // browser command); the loop awaits the result before continuing.
-  runCommand: (cmd: string) => string | Promise<string>;
+  runCommand: (command: string) => string | Promise<string>;
   // Pull a runnable command out of an agent reply, or null when there is none.
   extractCommand: (text: string) => string | null;
   // Maximum number of auto-run command steps before stopping (default 8).
@@ -195,7 +194,7 @@ export type AcpLoopHandlers = {
   // The current turn finished with this final text.
   endTurn: (final: string) => void;
   // A command was auto-run; show it and its result.
-  ranCommand: (cmd: string, result: string) => void;
+  ranCommand: (command: string, result: string) => void;
   // The loop ended: `answered` (no command emitted) or `capped` (hit `maxSteps`).
   finished: (reason: 'answered' | 'capped', maxSteps: number) => void;
   // A connection/prompt error occurred.
@@ -263,12 +262,12 @@ export type MessagingDeps = {
   agentColor: (label: string) => string;
   // Whether a command needs an interactive PTY (those cannot be run on behalf of a
   // non-foreground agent and are rejected).
-  isInteractive: (cmd: string) => boolean;
+  isInteractive: (command: string) => boolean;
   appendLog: (label: string, entry: LogEntry) => void;
   appendContext: (label: string, text: string) => void;
   // Run a shell command in the recipient's own persistent shell, streaming output to its
   // transcript, and invoke onComplete with the final output.
-  runShell: (label: string, cmd: string, onComplete: (output: string) => void) => void;
+  runShell: (label: string, command: string, onComplete: (output: string) => void) => void;
   // Execute text in the recipient's window (built-ins + shell, interactive commands
   // skipped) capturing the output instead of displaying it. Used to fulfil a request.
   runCapture: (label: string, text: string, onResult: (output: string) => void) => void;
@@ -276,7 +275,7 @@ export type MessagingDeps = {
 
 export type Messaging = {
   /** Enqueue a message for delivery. Returns false if the recipient does not exist. */
-  send: (msg: Omit<Message, 'id'>) => boolean;
+  send: (message: Omit<Message, 'id'>) => boolean;
 };
 
 // --- connections.ts -------------------------------------------------------
@@ -312,7 +311,9 @@ export type DbParsed =
 
 // --- resolve.ts -----------------------------------------------------------
 
-export type AppCommand = Command['name'];
+// A built-in command's name. Mirrors `Command['name']` (a string) without importing from
+// `commands/types.ts`, which would create a `types.ts` ↔ `commands/types.ts` import cycle.
+export type AppCommand = string;
 
 export type Resolution =
   | { kind: 'empty' }
@@ -322,10 +323,6 @@ export type Resolution =
   // An unprefixed command that matches no built-in. The interactive dispatcher runs probabilistic
   // recognition on it; other callers fall back to `output` (the unknown-command message).
   | { kind: 'unknown'; cmd: string; output: string };
-
-// --- command-handler.ts ---------------------------------------------------
-
-export type CommandHandlerDeps = CommandHandlerContext;
 
 // --- config.ts ------------------------------------------------------------
 
@@ -389,7 +386,7 @@ export type ShellManager = {
   shellsRef: { current: Map<number, ChildProcess> };
   cwdRef: { current: Record<string, string> };
   shellActive: Record<number, boolean>;
-  setShellActive: (updater: (prev: Record<number, boolean>) => Record<number, boolean>) => void;
+  setShellActive: (updater: (previous: Record<number, boolean>) => Record<number, boolean>) => void;
   getShell: (tabIndex: number, label?: string) => ChildProcess | null;
 };
 
@@ -416,21 +413,21 @@ export type BrowserProfile = {
 export type InputHandlerDeps = {
   input: string;
   cursor: number;
-  setInput: (fn: ((prev: string) => string) | string) => void;
-  setCursor: (fn: ((prev: number) => number) | number) => void;
+  setInput: (function_: ((previous: string) => string) | string) => void;
+  setCursor: (function_: ((previous: number) => number) | number) => void;
   tabs: Tab[];
   activeTab: number;
-  setTabs: (updater: (prev: Tab[]) => Tab[]) => void;
-  setActiveTab: (fn: ((prev: number) => number) | number) => void;
+  setTabs: (updater: (previous: Tab[]) => Tab[]) => void;
+  setActiveTab: (function_: ((previous: number) => number) | number) => void;
   updateCurrentTab: (updater: (tab: Tab) => Tab) => void;
-  executeRef: { current: ((cmd: string) => void) | null };
+  executeRef: { current: ((command: string) => void) | null };
   shellsRef: { current: Map<number, ChildProcess> };
   visibleHeight: number;
   exit: () => void;
   historyPickerOpen: boolean;
   historyPickerIdx: number;
   setHistoryPickerOpen: (open: boolean) => void;
-  setHistoryPickerIdx: (fn: ((prev: number) => number) | number) => void;
+  setHistoryPickerIdx: (function_: ((previous: number) => number) | number) => void;
   frequentHistory: string[];
   flashScrollBoundary: () => void;
   interactive: boolean;
@@ -440,7 +437,7 @@ export type InputHandlerDeps = {
   routeChooser: { cmd: string; choices: RouteChoice[] } | null;
   routeChooserIdx: number;
   setRouteChooser: (v: { cmd: string; choices: RouteChoice[] } | null) => void;
-  setRouteChooserIdx: (fn: ((prev: number) => number) | number) => void;
+  setRouteChooserIdx: (function_: ((previous: number) => number) | number) => void;
 };
 
 // --- logger.ts ------------------------------------------------------------

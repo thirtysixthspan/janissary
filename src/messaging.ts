@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 import type {
-  MessageKind, Message, ParsedMsg, ParsedBroadcast, MessagingDeps, Messaging,
+  MessageKind, Message, ParsedMsg as ParsedMessage, ParsedBroadcast, MessagingDeps as MessagingDependencies, Messaging,
 } from './types.js';
 
 const KIND_ALIASES: Record<string, MessageKind> = {
@@ -14,7 +14,7 @@ export function parseKind(token: string): MessageKind | null {
 }
 
 /** Parse a `msg <agent> <kind> <text...>` command (the leading `msg` is optional). */
-export function parseMsgCommand(input: string): ParsedMsg | { error: string } {
+export function parseMsgCommand(input: string): ParsedMessage | { error: string } {
   const body = input.trim().replace(/^msg\s+/i, '');
   const parts = body.split(/\s+/).filter(Boolean);
   if (parts.length < 3) return { error: 'Usage: msg <agent> <info|request|command> <text>' };
@@ -49,41 +49,41 @@ export function parseBroadcastCommand(input: string): ParsedBroadcast | { error:
  * drained one message at a time (yielding between messages so processing stays serial
  * and observable).
  */
-export function useMessaging(deps: MessagingDeps): Messaging {
+export function useMessaging(dependencies: MessagingDependencies): Messaging {
   const queues = useRef<Record<string, Message[]>>({});
   const processing = useRef<Record<string, boolean>>({});
-  const idRef = useRef(0);
-  const depsRef = useRef(deps);
-  depsRef.current = deps;
+  const idReference = useRef(0);
+  const dependenciesReference = useRef(dependencies);
+  dependenciesReference.current = dependencies;
 
   // Handle one message, calling `done` when finished. Commands/requests run a real
   // shell command in the recipient and may complete asynchronously.
-  const handle = (msg: Message, done: () => void): void => {
-    const d = depsRef.current;
+  const handle = (message: Message, done: () => void): void => {
+    const d = dependenciesReference.current;
     // info and response are both informational: shown in the recipient's transcript and
     // appended to its context.
-    if (msg.kind === 'info') {
-      d.appendLog(msg.to, { input: '', output: msg.text, from: msg.from, fromColor: d.agentColor(msg.from), msgKind: 'info' });
-      d.appendContext(msg.to, `${msg.from}: ${msg.text}`);
+    if (message.kind === 'info') {
+      d.appendLog(message.to, { input: '', output: message.text, from: message.from, fromColor: d.agentColor(message.from), msgKind: 'info' });
+      d.appendContext(message.to, `${message.from}: ${message.text}`);
       done();
       return;
     }
-    if (msg.kind === 'response') {
-      d.appendLog(msg.to, { input: '', output: msg.text, from: `response from ${msg.from}`, fromColor: d.agentColor(msg.from), msgKind: 'response' });
-      d.appendContext(msg.to, `${msg.from}: ${msg.text}`);
+    if (message.kind === 'response') {
+      d.appendLog(message.to, { input: '', output: message.text, from: `response from ${message.from}`, fromColor: d.agentColor(message.from), msgKind: 'response' });
+      d.appendContext(message.to, `${message.from}: ${message.text}`);
       done();
       return;
     }
-    if (msg.kind === 'command') {
-      d.appendLog(msg.to, { input: '', output: `sent command: ${msg.text}`, from: msg.from, fromColor: d.agentColor(msg.from), msgKind: 'info' });
-      d.runCapture(msg.to, msg.text, () => done());
+    if (message.kind === 'command') {
+      d.appendLog(message.to, { input: '', output: `sent command: ${message.text}`, from: message.from, fromColor: d.agentColor(message.from), msgKind: 'info' });
+      d.runCapture(message.to, message.text, () => done());
       return;
     }
     // request: show the command in the recipient's transcript as if the user typed it (full
     // dispatch including routing, acp, browser, etc.), then return the output to the sender.
-    d.appendLog(msg.to, { input: '', output: `sent request: ${msg.text}`, from: msg.from, fromColor: d.agentColor(msg.from), msgKind: 'info' });
-    d.runCapture(msg.to, msg.text, (output) => {
-      send({ from: msg.to, to: msg.from, kind: 'response', text: output });
+    d.appendLog(message.to, { input: '', output: `sent request: ${message.text}`, from: message.from, fromColor: d.agentColor(message.from), msgKind: 'info' });
+    d.runCapture(message.to, message.text, (output) => {
+      send({ from: message.to, to: message.from, kind: 'response', text: output });
       done();
     });
   };
@@ -93,18 +93,18 @@ export function useMessaging(deps: MessagingDeps): Messaging {
     const queue = queues.current[label];
     if (!queue || queue.length === 0) return;
     processing.current[label] = true;
-    const msg = queue.shift()!;
-    handle(msg, () => {
+    const message = queue.shift()!;
+    handle(message, () => {
       processing.current[label] = false;
       if ((queues.current[label]?.length ?? 0) > 0) setTimeout(() => pump(label), 0);
     });
   };
 
-  const send = (msg: Omit<Message, 'id'>): boolean => {
-    if (!depsRef.current.hasAgent(msg.to)) return false;
-    const full: Message = { ...msg, id: ++idRef.current };
-    (queues.current[msg.to] ??= []).push(full);
-    pump(msg.to);
+  const send = (message: Omit<Message, 'id'>): boolean => {
+    if (!dependenciesReference.current.hasAgent(message.to)) return false;
+    const full: Message = { ...message, id: ++idReference.current };
+    (queues.current[message.to] ??= []).push(full);
+    pump(message.to);
     return true;
   };
 

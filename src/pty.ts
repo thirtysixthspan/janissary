@@ -25,7 +25,7 @@ let counter = 0;
  */
 export function spawnPty(
   program: string,
-  cmd: string,
+  command: string,
   cwd: string,
   handlers: PtyHandlers,
   cols = 80,
@@ -33,12 +33,12 @@ export function spawnPty(
 ): PtySession {
   const id = `pty${++counter}`;
   const shell = process.env.SHELL || 'bash';
-  const proc = pty.spawn(shell, ['-lc', cmd], {
+  const proc = pty.spawn(shell, ['-lc', command], {
     name: 'xterm-256color',
     cols: Math.max(1, cols),
     rows: Math.max(1, rows),
     cwd: cwd || process.cwd(),
-    env: process.env as Record<string, string>,
+    env: process.env,
   });
 
   proc.onData((d) => handlers.onData(id, d));

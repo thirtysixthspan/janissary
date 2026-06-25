@@ -26,7 +26,7 @@ const longestCommonPrefix = (items: string[]): string => {
 const splitToken = (token: string, cwd: string): { dir: string; base: string } => {
   const expanded = token.startsWith('~') ? homedir() + token.slice(1) : token;
   const slash = expanded.lastIndexOf('/');
-  if (slash >= 0) {
+  if (slash !== -1) {
     const dirPart = expanded.slice(0, slash + 1) || '/';
     return { dir: resolve(cwd, dirPart), base: expanded.slice(slash + 1) };
   }
@@ -94,10 +94,10 @@ export function completeCommandLine(
   // Determine the command word and which argument position the cursor is in.
   const preceding = before.slice(0, tokenStart).trim().split(/\s+/).filter(Boolean);
   const command = preceding[0]?.replace(/^\//, '').toLowerCase();
-  const argIndex = preceding.length;
+  const argumentIndex = preceding.length;
 
   // Agent-name completion for the recipient argument.
-  if (argIndex === 1 && (command === 'msg' || command === 'broadcast')) {
+  if (argumentIndex === 1 && (command === 'msg' || command === 'broadcast')) {
     if (command === 'broadcast') {
       const segStart = token.lastIndexOf(',') + 1; // complete the segment after the last comma
       return completeWord(token.slice(segStart), token.slice(0, segStart), [...agents, 'all'], '', before, after, tokenStart);
@@ -106,7 +106,7 @@ export function completeCommandLine(
   }
 
   // Connection-string completion for `connection close <kind>:<id>`.
-  if (argIndex === 2 && command === 'connection' && preceding[1]?.toLowerCase() === 'close') {
+  if (argumentIndex === 2 && command === 'connection' && preceding[1]?.toLowerCase() === 'close') {
     return completeWord(token, '', connections, ' ', before, after, tokenStart);
   }
 
@@ -117,16 +117,16 @@ export function completeCommandLine(
     const windowIds = connections
       .filter((c) => c.startsWith('browser:'))
       .map((c) => c.slice('browser:'.length));
-    if (argIndex === 1) {
+    if (argumentIndex === 1) {
       return completeWord(token, '', BROWSER_SUBCOMMANDS, ' ', before, after, tokenStart);
     }
-    if (argIndex === 2 && sub === 'use') {
+    if (argumentIndex === 2 && sub === 'use') {
       return completeWord(token, '', windowIds, ' ', before, after, tokenStart);
     }
-    if (argIndex === 2 && sub === 'window') {
+    if (argumentIndex === 2 && sub === 'window') {
       return completeWord(token, '', ['close'], ' ', before, after, tokenStart);
     }
-    if (argIndex === 3 && sub === 'window' && preceding[2]?.toLowerCase() === 'close') {
+    if (argumentIndex === 3 && sub === 'window' && preceding[2]?.toLowerCase() === 'close') {
       return completeWord(token, '', windowIds, ' ', before, after, tokenStart);
     }
     // Other positions (goto url, eval js, open name) fall through to path completion.

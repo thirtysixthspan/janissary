@@ -11,10 +11,10 @@ export function makeToken(): string {
 // reach the shell server with a spoofed Host header.
 const LOOPBACK = /^(127\.0\.0\.1|\[::1\]|::1|localhost)(:\d+)?$/i;
 
-export function originAllowed(req: IncomingMessage): boolean {
-  const host = req.headers.host ?? '';
+export function originAllowed(request: IncomingMessage): boolean {
+  const host = request.headers.host ?? '';
   if (!LOOPBACK.test(host)) return false;
-  const origin = req.headers.origin;
+  const origin = request.headers.origin;
   if (origin) {
     try {
       if (!LOOPBACK.test(new URL(origin).host)) return false;
@@ -26,9 +26,9 @@ export function originAllowed(req: IncomingMessage): boolean {
 }
 
 /** Extract the `token` query param from a request URL. */
-export function tokenFromReq(req: IncomingMessage): string | null {
+export function tokenFromReq(request: IncomingMessage): string | null {
   try {
-    return new URL(req.url ?? '', 'http://localhost').searchParams.get('token');
+    return new URL(request.url ?? '', 'http://localhost').searchParams.get('token');
   } catch {
     return null;
   }

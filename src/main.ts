@@ -25,17 +25,17 @@ function killApp(): void {
 
 // Fallback: open a URL in the default browser.
 function openUrl(url: string): void {
-  const cmd = process.platform === 'darwin' ? 'open'
+  const command = process.platform === 'darwin' ? 'open'
     : process.platform === 'win32' ? 'cmd' : 'xdg-open';
-  const args = process.platform === 'win32' ? ['/c', 'start', '', url] : [url];
-  try { spawn(cmd, args, { stdio: 'ignore', detached: true }).unref(); } catch { /* ignore */ }
+  const arguments_ = process.platform === 'win32' ? ['/c', 'start', '', url] : [url];
+  try { spawn(command, arguments_, { stdio: 'ignore', detached: true }).unref(); } catch { /* ignore */ }
 }
 
 // Resolve a `which <bin>` to an absolute path (POSIX), or null.
 function which(bin: string): string | null {
   try {
     const r = spawnSync('which', [bin], { encoding: 'utf8' });
-    const out = (r.stdout || '').trim().split('\n')[0];
+    const out = (r.stdout || '').trim().split('\n', 1)[0];
     return r.status === 0 && out ? out : null;
   } catch {
     return null;
@@ -58,7 +58,7 @@ function findSystemChrome(): string | null {
   }
   if (process.platform === 'win32') {
     const roots = [process.env.PROGRAMFILES, process.env['PROGRAMFILES(X86)'], process.env.LOCALAPPDATA].filter(Boolean) as string[];
-    const rels = ['Google\\Chrome\\Application\\chrome.exe', 'Microsoft\\Edge\\Application\\msedge.exe'];
+    const rels = [String.raw`Google\Chrome\Application\chrome.exe`, String.raw`Microsoft\Edge\Application\msedge.exe`];
     for (const root of roots) for (const rel of rels) { const p = join(root, rel); if (existsSync(p)) return p; }
     return null;
   }
@@ -91,10 +91,10 @@ function openApp(url: string, projectDir: string): void {
 }
 
 export async function boot(argv = process.argv.slice(2)): Promise<void> {
-  const relaunch = argv.includes('--relaunch');
-  const noOpen = argv.includes('--no-open');
-  const portArg = argv.find((a) => a.startsWith('--port='));
-  const port = portArg ? Number(portArg.slice('--port='.length)) : undefined;
+  const isRelaunch = argv.includes('--relaunch');
+  const isNoOpen = argv.includes('--no-open');
+  const portArgument = argv.find((a) => a.startsWith('--port='));
+  const port = portArgument ? Number(portArgument.slice('--port='.length)) : undefined;
 
   const cwd = process.cwd();
   initAgentStateDir(cwd);
@@ -103,15 +103,15 @@ export async function boot(argv = process.argv.slice(2)): Promise<void> {
   initWorkspaceDir(cwd);
   initLogDir(cwd); // append-only transcript log under .janissary/log/ (never cleared)
   loadConfig(cwd);
-  if (!relaunch) { clearStateDir(); clearWorkspaceDir(); }
+  if (!isRelaunch) { clearStateDir(); clearWorkspaceDir(); }
 
   const webDir = join(import.meta.dirname, '..', 'web', 'dist');
-  const server = await startServer({ webDir, token: makeToken(), port, relaunch });
+  const server = await startServer({ webDir, token: makeToken(), port, relaunch: isRelaunch });
 
   // Machine-readable line first (the launcher may parse it), then a human line.
   process.stdout.write(`__JANUS_URL__ ${server.url}\n`);
   process.stderr.write(`\nJanissary is running at:\n  ${server.url}\n\nPress Ctrl+C to stop.\n`);
-  if (!noOpen) openApp(server.url, cwd);
+  if (!isNoOpen) openApp(server.url, cwd);
 
   const stop = () => { void server.close().then(() => process.exit(0)); };
   process.on('SIGINT', stop);
@@ -121,7 +121,7 @@ export async function boot(argv = process.argv.slice(2)): Promise<void> {
 }
 
 // Run when executed directly (node dist/server/main.js or tsx src/server/main.ts).
-boot().catch((e) => {
-  process.stderr.write(`Failed to start Janissary: ${e instanceof Error ? e.message : String(e)}\n`);
+boot().catch((error) => {
+  process.stderr.write(`Failed to start Janissary: ${error instanceof Error ? error.message : String(error)}\n`);
   process.exit(1);
 });

@@ -4,8 +4,12 @@
 export function getRecentHistory(history: string[], count: number): string[] {
   const seen = new Set<string>();
   const out: string[] = [];
-  for (let i = history.length - 1; i >= 0 && out.length < count; i--) {
-    if (!seen.has(history[i])) { seen.add(history[i]); out.push(history[i]); }
+  for (let index = history.length - 1; index >= 0 && out.length < count; index--) {
+    if (seen.has(history[index])) {
+    	continue;
+    }
+
+    seen.add(history[index]); out.push(history[index]);
   }
   return out.reverse();
 }

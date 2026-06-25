@@ -106,13 +106,13 @@ describe('Controller', () => {
       loadConfig(root);
       const { c } = makeController();
       // Each `agent <name>` appends exactly one transcript entry to the creator (janus).
-      for (let i = 0; i < 6; i++) c.dispatch(`agent foo${i}`);
+      for (let index = 0; index < 6; index++) c.dispatch(`agent foo${index}`);
       const janus = c.view().find((t) => t.label === 'janus')!;
-      const buf = janus.bufferLines.map((l) => l.text).join('\n');
-      expect(buf).not.toContain('foo0'); // oldest entries dropped beyond the 3-entry cap
-      expect(buf).not.toContain('foo2');
-      expect(buf).toContain('foo3');
-      expect(buf).toContain('foo5');
+      const buffer = janus.bufferLines.map((l) => l.text).join('\n');
+      expect(buffer).not.toContain('foo0'); // oldest entries dropped beyond the 3-entry cap
+      expect(buffer).not.toContain('foo2');
+      expect(buffer).toContain('foo3');
+      expect(buffer).toContain('foo5');
     } finally {
       loadConfig(mkdtempSync(join(tmpdir(), 'janus-cap-reset-'))); // restore the default cap for later tests
     }
@@ -169,9 +169,9 @@ describe('Controller', () => {
       c.dispatch('select 1 as n');
       const rv = c.routeView();
       expect(rv).not.toBeNull();
-      const idx = rv!.choices.findIndex((l) => l.includes('d1'));
-      expect(idx).toBeGreaterThan(-1);
-      c.chooseRoute(idx);
+      const index = rv!.choices.findIndex((l) => l.includes('d1'));
+      expect(index).toBeGreaterThan(-1);
+      c.chooseRoute(index);
       expect(c.routeView()).toBeNull();
       expect(allText(c)).toContain('(1 row)'); // ran the query against d1
     } finally {
@@ -230,17 +230,17 @@ describe('Controller', () => {
   });
 
   it('quit asks the host to exit', () => {
-    let exited = false;
-    const c = new Controller({ emitState() {}, sendPty() {}, sendPtyExit() {}, exit() { exited = true; } });
+    let isExited = false;
+    const c = new Controller({ emitState() {}, sendPty() {}, sendPtyExit() {}, exit() { isExited = true; } });
     c.dispatch('quit');
-    expect(exited).toBe(true);
+    expect(isExited).toBe(true);
   });
 
   it('exit also stops the host (closes the window + server)', () => {
-    let exited = false;
-    const c = new Controller({ emitState() {}, sendPty() {}, sendPtyExit() {}, exit() { exited = true; } });
+    let isExited = false;
+    const c = new Controller({ emitState() {}, sendPty() {}, sendPtyExit() {}, exit() { isExited = true; } });
     c.dispatch('exit');
-    expect(exited).toBe(true);
+    expect(isExited).toBe(true);
   });
 
   it('close removes the active tab and its connections', () => {
@@ -379,8 +379,8 @@ describe('Controller', () => {
     c.setActiveTab(0);
     c.dispatch('msg bob info hello there');
     const bob = c.view().find((t) => t.label === 'bob')!;
-    const msgLine = bob.bufferLines.find((l) => l.type === 'message' && l.from === 'janus');
-    expect(msgLine?.text).toContain('hello there');
+    const messageLine = bob.bufferLines.find((l) => l.type === 'message' && l.from === 'janus');
+    expect(messageLine?.text).toContain('hello there');
   });
 
   it('broadcasts info to all other agents', () => {
@@ -441,14 +441,14 @@ describe('Controller', () => {
 
 describe('Controller open command', () => {
   // Write a throwaway image file and return its absolute path.
-  const tmpImage = (name = 'pic.png') => {
+  const temporaryImage = (name = 'pic.png') => {
     const file = join(mkdtempSync(join(tmpdir(), 'janus-open-')), name);
     writeFileSync(file, Buffer.alloc(10));
     return file;
   };
 
   it('open <image> creates a focused image tab titled "image"', () => {
-    const file = tmpImage();
+    const file = temporaryImage();
     const { c } = makeController();
     c.dispatch(`open ${file}`);
     expect(c.view()).toHaveLength(2);
@@ -462,8 +462,8 @@ describe('Controller open command', () => {
 
   it('gives each image tab a unique internal label while titling them all "image"', () => {
     const { c } = makeController();
-    c.dispatch(`open ${tmpImage('a.png')}`);
-    c.dispatch(`open ${tmpImage('b.png')}`);
+    c.dispatch(`open ${temporaryImage('a.png')}`);
+    c.dispatch(`open ${temporaryImage('b.png')}`);
     const imgs = c.view().filter((t) => t.view === 'image');
     expect(imgs).toHaveLength(2);
     expect(new Set(imgs.map((t) => t.label)).size).toBe(2); // distinct labels
@@ -473,19 +473,19 @@ describe('Controller open command', () => {
   it('does not persist an image tab to agent state', () => {
     initAgentStateDir(mkdtempSync(join(tmpdir(), 'janus-open-state-')));
     const { c } = makeController();
-    c.dispatch(`open ${tmpImage()}`);
+    c.dispatch(`open ${temporaryImage()}`);
     expect(loadAgentState('image')).toBeFalsy();
   });
 
   it('open external <image> confirms without creating a tab', () => {
     const { c } = makeController();
-    c.dispatch(`open external ${tmpImage()}`);
+    c.dispatch(`open external ${temporaryImage()}`);
     expect(c.view()).toHaveLength(1);
     expect(allText(c)).toContain('Opening pic.png');
   });
 
   it('reports no opener for an unsupported file type', () => {
-    const file = tmpImage('notes.txt');
+    const file = temporaryImage('notes.txt');
     const { c } = makeController();
     c.dispatch(`open ${file}`);
     expect(allText(c)).toContain('No opener for ".txt" files');
@@ -501,7 +501,7 @@ describe('Controller open command', () => {
 
   it('closeTab removes an image tab and unregisters its served file', () => {
     const { c } = makeController();
-    c.dispatch(`open ${tmpImage()}`);
+    c.dispatch(`open ${temporaryImage()}`);
     const id = c.view()[1].image!.url.replace('/open/', '');
     expect(c.openFilePath(id)).toBeTruthy();
     c.closeTab(1);
@@ -526,7 +526,7 @@ describe('Controller open command', () => {
   });
 
   it('caps a wildcard open at 10 files and notes the overflow', () => {
-    const dir = tmpDirWith(Array.from({ length: 15 }, (_, i) => `f${i}.png`));
+    const dir = tmpDirWith(Array.from({ length: 15 }, (_, index) => `f${index}.png`));
     const { c } = makeController();
     c.dispatch(`open ${dir}/*.png`);
     expect(c.view().filter((t) => t.view === 'image')).toHaveLength(10);

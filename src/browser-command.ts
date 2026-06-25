@@ -29,42 +29,51 @@ export function parseBrowserCommand(input: string): BrowserParsed {
   const [actionRaw, ...tail] = rest.split(/\s+/);
   const action = actionRaw.toLowerCase();
   // The argument text after the action verb, with original spacing preserved.
-  const arg = rest.slice(actionRaw.length).trim();
+  const argument = rest.slice(actionRaw.length).trim();
 
   switch (action) {
     case 'open': {
       const tokens = tail;
-      const headed = tokens.some((t) => t === '--headed' || t === '-H');
+      const isHeaded = tokens.some((t) => t === '--headed' || t === '-H');
       const name = tokens.find((t) => !t.startsWith('-'));
-      return { action: 'open', name, headed };
+      return { action: 'open', name, headed: isHeaded };
     }
-    case 'list':
+    case 'list': {
       return { action: 'list' };
-    case 'use':
+    }
+    case 'use': {
       if (!tail[0]) return { error: 'Usage: browser use <id>' };
       return { action: 'use', id: tail[0] };
-    case 'goto':
-      if (!arg) return { error: 'Usage: browser goto <url>' };
-      return { action: 'goto', url: arg };
-    case 'eval':
-      if (!arg) return { error: 'Usage: browser eval <js>' };
-      return { action: 'eval', js: arg };
-    case 'shot':
+    }
+    case 'goto': {
+      if (!argument) return { error: 'Usage: browser goto <url>' };
+      return { action: 'goto', url: argument };
+    }
+    case 'eval': {
+      if (!argument) return { error: 'Usage: browser eval <js>' };
+      return { action: 'eval', js: argument };
+    }
+    case 'shot': {
       return { action: 'shot' };
-    case 'content':
+    }
+    case 'content': {
       return { action: 'content' };
-    case 'close':
+    }
+    case 'close': {
       // `browser close <id>` is an alias for `browser window close <id>`; bare
       // `browser close` closes the current window.
       if (tail[0]) return { action: 'closeWindow', id: tail[0] };
       return { action: 'close' };
-    case 'window':
+    }
+    case 'window': {
       if (tail[0]?.toLowerCase() !== 'close' || !tail[1]) {
         return { error: 'Usage: browser window close <id>' };
       }
       return { action: 'closeWindow', id: tail[1] };
-    default:
+    }
+    default: {
       return { error: USAGE };
+    }
   }
 }
 
@@ -76,8 +85,8 @@ export function parseBrowserCommand(input: string): BrowserParsed {
  */
 export function extractBrowserCommand(text: string): string | null {
   const lines = text.split('\n');
-  for (let i = lines.length - 1; i >= 0; i--) {
-    const line = lines[i].replace(/^[\s`$>]+/, '').replace(/`+\s*$/, '').trim();
+  for (let index = lines.length - 1; index >= 0; index--) {
+    const line = lines[index].replace(/^[\s`$>]+/, '').replace(/`+\s*$/, '').trim();
     if (/^browser\s+(open|list|use|goto|eval|shot|content|close|window)\b/i.test(line)) return line;
   }
   return null;

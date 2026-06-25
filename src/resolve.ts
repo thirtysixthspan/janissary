@@ -23,20 +23,20 @@ export function resolveCommand(raw: string): Resolution {
     return { kind: 'shell', cmd: trimmed.replace(/^shell\b\s*/i, '') };
   }
 
-  const cmd = trimmed.replace(/^\//, '');
+  const command = trimmed.replace(/^\//, '');
 
   for (const c of commands) {
-    if (c.match(cmd)) {
-      return { kind: 'app', name: c.name, cmd };
+    if (c.match(command)) {
+      return { kind: 'app', name: c.name, cmd: command };
     }
   }
 
-  const output = getOutput(cmd);
+  const output = getOutput(command);
   if (output !== null) {
     // `getOutput` returns the "Unknown command: ..." message for anything unrecognized; surface
     // that as `unknown` so the interactive dispatcher can run command recognition on it.
     const kind = output.startsWith('Unknown command:') ? 'unknown' : 'output';
-    return { kind, cmd, output };
+    return { kind, cmd: command, output };
   }
 
   // Shell commands require the `shell` keyword (handled above); a bare non-built-in is

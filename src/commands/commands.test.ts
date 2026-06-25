@@ -40,7 +40,7 @@ describe('getOutput', () => {
   });
 
   it('returns null for whitespace-only input', () => {
-    expect(getOutput('   ')).toBeNull();
+    expect(getOutput(' '.repeat(3))).toBeNull();
   });
 
   it('is case insensitive', () => {

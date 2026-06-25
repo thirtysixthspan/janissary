@@ -40,13 +40,13 @@ export function removeDatabaseFile(name: string): void {
 const connections = new Map<string, DatabaseSync>();
 
 export function getConnection(name: string): DatabaseSync {
-  let db = connections.get(name);
-  if (!db) {
+  let database = connections.get(name);
+  if (!database) {
     mkdirSync(dbDir, { recursive: true });
-    db = new DatabaseSync(dbPath(name));
-    connections.set(name, db);
+    database = new DatabaseSync(dbPath(name));
+    connections.set(name, database);
   }
-  return db;
+  return database;
 }
 
 export function isConnectionOpen(name: string): boolean {
@@ -55,17 +55,17 @@ export function isConnectionOpen(name: string): boolean {
 
 /** Close one open SQLite connection. Returns whether one was actually open. */
 export function closeConnection(name: string): boolean {
-  const db = connections.get(name);
-  if (!db) return false;
-  try { db.close(); } catch { /* ignore */ }
+  const database = connections.get(name);
+  if (!database) return false;
+  try { database.close(); } catch { /* ignore */ }
   connections.delete(name);
   return true;
 }
 
 /** Close every open SQLite connection (called on app exit). */
 export function closeAllConnections(): void {
-  for (const [, db] of connections) {
-    try { db.close(); } catch { /* ignore */ }
+  for (const [, database] of connections) {
+    try { database.close(); } catch { /* ignore */ }
   }
   connections.clear();
 }
@@ -92,12 +92,12 @@ export function parseConnectionCommand(input: string): ConnectionParsed {
 
   if (action === 'close') {
     if (!target) return { error: 'Usage: connection close <kind>:<id>' };
-    const idx = target.indexOf(':');
-    if (idx < 0) {
+    const index = target.indexOf(':');
+    if (index === -1) {
       return { error: `Invalid connection "${target}". Expected <kind>:<id>, e.g. sqlite:mydb.` };
     }
-    const kind = target.slice(0, idx).toLowerCase();
-    const id = target.slice(idx + 1);
+    const kind = target.slice(0, index).toLowerCase();
+    const id = target.slice(index + 1);
     if (!KINDS.includes(kind as ConnectionKind)) {
       return { error: `Unknown connection kind "${kind}". Expected one of: ${KINDS.join(', ')}.` };
     }

@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { join, extname, normalize } from 'node:path';
 import { WebSocketServer, WebSocket } from 'ws';
 import { Controller } from './controller.js';
-import { makeToken, originAllowed, tokenFromReq, tokenMatches } from './security.js';
+import { makeToken, originAllowed, tokenFromReq as tokenFromRequest, tokenMatches } from './security.js';
 import type { ClientMessage, ServerEvent } from './protocol.js';
 
 const MIME: Record<string, string> = {
@@ -18,13 +18,13 @@ const MIME: Record<string, string> = {
 export type ServerOptions = { webDir: string; host?: string; port?: number; token?: string; relaunch?: boolean };
 export type RunningServer = { url: string; port: number; token: string; close: () => Promise<void> };
 
-export async function startServer(opts: ServerOptions): Promise<RunningServer> {
-  const token = opts.token ?? makeToken();
-  const host = opts.host ?? '127.0.0.1';
+export async function startServer(options: ServerOptions): Promise<RunningServer> {
+  const token = options.token ?? makeToken();
+  const host = options.host ?? '127.0.0.1';
   const clients = new Set<WebSocket>();
 
-  const broadcast = (ev: ServerEvent) => {
-    const s = JSON.stringify(ev);
+  const broadcast = (event: ServerEvent) => {
+    const s = JSON.stringify(event);
     for (const c of clients) if (c.readyState === WebSocket.OPEN) c.send(s);
   };
 
@@ -36,15 +36,15 @@ export async function startServer(opts: ServerOptions): Promise<RunningServer> {
     sendPtyExit: (id, exitCode) => broadcast({ t: 'pty-exit', id, exitCode }),
     exit: () => requestExit(),
   });
-  if (opts.relaunch) controller.rehydrate();
+  if (options.relaunch) controller.rehydrate();
 
-  const serveStatic = async (req: IncomingMessage, res: ServerResponse) => {
-    if (!originAllowed(req)) { res.writeHead(403).end('forbidden'); return; }
-    const urlPath = new URL(req.url ?? '/', 'http://localhost').pathname;
+  const serveStatic = async (request: IncomingMessage, res: ServerResponse) => {
+    if (!originAllowed(request)) { res.writeHead(403).end('forbidden'); return; }
+    const urlPath = new URL(request.url ?? '/', 'http://localhost').pathname;
     // A file explicitly opened in the app (`open <file>`). Guarded by the session token and served
     // only from the controller's allow-list — an arbitrary local path is never reachable.
     if (urlPath.startsWith('/open/')) {
-      if (!tokenMatches(token, tokenFromReq(req))) { res.writeHead(403).end('forbidden'); return; }
+      if (!tokenMatches(token, tokenFromRequest(request))) { res.writeHead(403).end('forbidden'); return; }
       const id = decodeURIComponent(urlPath.slice('/open/'.length));
       const path = controller.openFilePath(id);
       if (!path) { res.writeHead(404).end('not found'); return; }
@@ -57,36 +57,36 @@ export async function startServer(opts: ServerOptions): Promise<RunningServer> {
     }
     // Resolve within webDir; fall back to index.html for SPA routes / unknown assets.
     const rel = normalize(urlPath).replace(/^(\.\.[/\\])+/, '').replace(/^\/+/, '');
-    let file = join(opts.webDir, rel || 'index.html');
-    if (!file.startsWith(opts.webDir)) file = join(opts.webDir, 'index.html');
+    let file = join(options.webDir, rel || 'index.html');
+    if (!file.startsWith(options.webDir)) file = join(options.webDir, 'index.html');
     let body: Buffer;
     try {
       body = await readFile(file);
     } catch {
-      try { body = await readFile(join(opts.webDir, 'index.html')); file = 'index.html'; }
+      try { body = await readFile(join(options.webDir, 'index.html')); file = 'index.html'; }
       catch { res.writeHead(404).end('not found'); return; }
     }
     res.writeHead(200, { 'content-type': MIME[extname(file)] ?? 'application/octet-stream' });
     res.end(body);
   };
 
-  const http = createServer((req, res) => { void serveStatic(req, res); });
+  const http = createServer((request, res) => { void serveStatic(request, res); });
   const wss = new WebSocketServer({ noServer: true });
 
-  http.on('upgrade', (req, socket, head) => {
-    if (!originAllowed(req) || !tokenMatches(token, tokenFromReq(req))) { socket.destroy(); return; }
-    wss.handleUpgrade(req, socket, head, (ws) => wss.emit('connection', ws, req));
+  http.on('upgrade', (request, socket, head) => {
+    if (!originAllowed(request) || !tokenMatches(token, tokenFromRequest(request))) { socket.destroy(); return; }
+    wss.handleUpgrade(request, socket, head, (ws) => wss.emit('connection', ws, request));
   });
 
   wss.on('connection', (ws: WebSocket) => {
     clients.add(ws);
     ws.on('message', (raw) => {
-      let msg: ClientMessage;
-      try { msg = JSON.parse(raw.toString()); } catch { return; }
+      let message: ClientMessage;
+      try { message = JSON.parse(raw.toString()) as ClientMessage; } catch { return; }
       try {
-        handle(controller, msg, (ev) => ws.send(JSON.stringify(ev)));
-      } catch (e) {
-        ws.send(JSON.stringify({ t: 'rpc-reply', id: msg.id, error: e instanceof Error ? e.message : String(e) }));
+        handle(controller, message, (event) => ws.send(JSON.stringify(event)));
+      } catch (error) {
+        ws.send(JSON.stringify({ t: 'rpc-reply', id: message.id, error: error instanceof Error ? error.message : String(error) }));
       }
     });
     ws.on('close', () => clients.delete(ws));
@@ -94,7 +94,7 @@ export async function startServer(opts: ServerOptions): Promise<RunningServer> {
 
   const port = await new Promise<number>((resolve, reject) => {
     http.on('error', reject);
-    http.listen(opts.port ?? 0, host, () => {
+    http.listen(options.port ?? 0, host, () => {
       const addr = http.address();
       resolve(typeof addr === 'object' && addr ? addr.port : 0);
     });
@@ -116,25 +116,38 @@ export async function startServer(opts: ServerOptions): Promise<RunningServer> {
 
 // Apply one client request to the controller and reply. State changes are broadcast by the
 // controller's sinks, so the reply itself only acknowledges.
-function handle(controller: Controller, msg: ClientMessage, reply: (ev: ServerEvent) => void): void {
-  switch (msg.method) {
-    case 'init':
+function handle(controller: Controller, message: ClientMessage, reply: (event: ServerEvent) => void): void {
+  switch (message.method) {
+    case 'init': {
       reply({ t: 'state', tabs: controller.view(), activeTab: controller.activeTab, route: controller.routeView() });
       break;
-    case 'command': controller.dispatch(msg.params.text); break;
-    case 'setActiveTab': controller.setActiveTab(msg.params.index); break;
-    case 'closeTab': controller.closeTab(msg.params.index); break;
-    case 'moveTab': controller.moveTab(msg.params.dir); break;
-    case 'reorderTab': controller.reorderTab(msg.params.dir); break;
-    case 'toggleCollapse': controller.toggleCollapse(); break;
-    case 'chooseRoute': controller.chooseRoute(msg.params.index); break;
-    case 'complete':
-      reply({ t: 'rpc-reply', id: msg.id, result: controller.complete(msg.params.text, msg.params.cursor) });
+    }
+    case 'command': { controller.dispatch(message.params.text); break;
+    }
+    case 'setActiveTab': { controller.setActiveTab(message.params.index); break;
+    }
+    case 'closeTab': { controller.closeTab(message.params.index); break;
+    }
+    case 'moveTab': { controller.moveTab(message.params.dir); break;
+    }
+    case 'reorderTab': { controller.reorderTab(message.params.dir); break;
+    }
+    case 'toggleCollapse': { controller.toggleCollapse(); break;
+    }
+    case 'chooseRoute': { controller.chooseRoute(message.params.index); break;
+    }
+    case 'complete': {
+      reply({ t: 'rpc-reply', id: message.id, result: controller.complete(message.params.text, message.params.cursor) });
       return;
-    case 'resize': controller.resize(msg.params.cols, msg.params.rows); break;
-    case 'ptyInput': controller.ptyInput(msg.params.id, msg.params.data); break;
-    case 'ptyResize': controller.ptyResize(msg.params.id, msg.params.cols, msg.params.rows); break;
-    case 'ptyKill': controller.ptyKill(msg.params.id); break;
+    }
+    case 'resize': { controller.resize(message.params.cols, message.params.rows); break;
+    }
+    case 'ptyInput': { controller.ptyInput(message.params.id, message.params.data); break;
+    }
+    case 'ptyResize': { controller.ptyResize(message.params.id, message.params.cols, message.params.rows); break;
+    }
+    case 'ptyKill': { controller.ptyKill(message.params.id); break;
+    }
   }
-  reply({ t: 'rpc-reply', id: msg.id, result: 'ok' });
+  reply({ t: 'rpc-reply', id: message.id, result: 'ok' });
 }

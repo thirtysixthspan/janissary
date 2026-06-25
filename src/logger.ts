@@ -9,7 +9,7 @@ export function initLogDir(projectDir: string): void {
   mkdirSync(logDir, { recursive: true });
 }
 
-function getDateStr(): string {
+function getDateString(): string {
   const now = new Date();
   const y = now.getFullYear();
   const m = String(now.getMonth() + 1).padStart(2, '0');
@@ -19,7 +19,7 @@ function getDateStr(): string {
 
 export function appendEntry(entry: LogRecord): void {
   if (!logDir) return;
-  const path = join(logDir, `${getDateStr()}.json`);
+  const path = join(logDir, `${getDateString()}.json`);
   appendFileSync(path, JSON.stringify(entry) + '\n');
 }
 

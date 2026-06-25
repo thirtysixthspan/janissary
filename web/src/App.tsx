@@ -11,42 +11,42 @@ import { RouteChooser } from './RouteChooser';
 import { getRecentHistory } from './history';
 
 export function App() {
-  const clientRef = useRef<JanusClient | null>(null);
-  if (!clientRef.current) clientRef.current = new JanusClient();
-  const client = clientRef.current;
+  const clientReference = useRef<JanusClient | null>(null);
+  clientReference.current ??= new JanusClient();
+  const client = clientReference.current;
 
   const [tabs, setTabs] = useState<TabView[]>([]);
   const [activeTab, setActiveTab] = useState(0);
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [pickerIdx, setPickerIdx] = useState(0);
+  const [pickerIndex, setPickerIndex] = useState(0);
   // Server-driven route chooser (null when closed); `routeIdx` is the highlighted option.
   const [route, setRoute] = useState<RouteChooserView | null>(null);
-  const [routeIdx, setRouteIdx] = useState(0);
-  const routeRef = useRef<RouteChooserView | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const transcriptRef = useRef<HTMLDivElement>(null);
+  const [routeIndex, setRouteIndex] = useState(0);
+  const routeReference = useRef<RouteChooserView | null>(null);
+  const inputReference = useRef<HTMLInputElement>(null);
+  const transcriptReference = useRef<HTMLDivElement>(null);
   const scrollAccel = useRef<{ start: number; dir: -1 | 1 } | null>(null);
 
-  const cur = tabs[activeTab] ?? tabs[0];
-  const lines = useMemo(() => cur?.bufferLines ?? [], [cur]);
+  const current = tabs[activeTab] ?? tabs[0];
+  const lines = useMemo(() => current?.bufferLines ?? [], [current]);
   // The picker lists the tab's recent history, most recent at the bottom (suppressed when empty).
-  const recent = useMemo(() => getRecentHistory(cur?.cmdHistory ?? [], 10), [cur]);
+  const recent = useMemo(() => getRecentHistory(current?.cmdHistory ?? [], 10), [current]);
 
   // Live snapshot read by the window key handler, so it never has to re-register.
-  const stateRef = useRef({ pickerOpen, pickerIdx, recent, route, routeIdx });
-  stateRef.current = { pickerOpen, pickerIdx, recent, route, routeIdx };
+  const stateReference = useRef({ pickerOpen, pickerIdx: pickerIndex, recent, route, routeIdx: routeIndex });
+  stateReference.current = { pickerOpen, pickerIdx: pickerIndex, recent, route, routeIdx: routeIndex };
 
   const runCommand = (text: string) => client.send({ method: 'command', params: { text } });
   const openPicker = () => {
     // Always open on hist / Ctrl+R; highlight the most recent (bottom) entry.
-    setPickerIdx(Math.max(0, stateRef.current.recent.length - 1));
+    setPickerIndex(Math.max(0, stateReference.current.recent.length - 1));
     setPickerOpen(true);
   };
-  const pick = (cmd: string) => { runCommand(cmd); setPickerOpen(false); };
+  const pick = (command: string) => { runCommand(command); setPickerOpen(false); };
 
   const selectTab = (index: number) => {
     client.send({ method: 'setActiveTab', params: { index } });
-    inputRef.current?.focus();
+    inputReference.current?.focus();
   };
 
   const closeTab = (index: number) => client.send({ method: 'closeTab', params: { index } });
@@ -58,48 +58,70 @@ export function App() {
     setActiveTab(active);
     setRoute(nextRoute);
     // Highlight the first option when a chooser newly opens (or its command changes).
-    const prev = routeRef.current;
-    routeRef.current = nextRoute;
-    if (nextRoute && (!prev || prev.cmd !== nextRoute.cmd)) setRouteIdx(0);
+    const previous = routeReference.current;
+    routeReference.current = nextRoute;
+    if (nextRoute && (!previous || previous.cmd !== nextRoute.cmd)) setRouteIndex(0);
   }), [client]);
 
   // Switching tabs (click, Shift+Arrow, `next`, reorder) returns focus to the command line.
-  useEffect(() => { inputRef.current?.focus(); }, [activeTab]);
+  useEffect(() => { inputReference.current?.focus(); }, [activeTab]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       // Route chooser is modal while open: Up/Down move, Return runs the chosen route, Escape cancels.
-      const rc = stateRef.current.route;
+      const rc = stateReference.current.route;
       if (rc) {
-        if (e.key === 'ArrowUp') { e.preventDefault(); setRouteIdx((i) => Math.max(0, i - 1)); }
-        else if (e.key === 'ArrowDown') { e.preventDefault(); setRouteIdx((i) => Math.min(rc.choices.length - 1, i + 1)); }
-        else if (e.key === 'Enter') { e.preventDefault(); chooseRoute(stateRef.current.routeIdx); }
-        else if (e.key === 'Escape') { e.preventDefault(); chooseRoute(-1); }
+        switch (e.key) {
+        case 'ArrowUp': { e.preventDefault(); setRouteIndex((index) => Math.max(0, index - 1)); 
+        break;
+        }
+        case 'ArrowDown': { e.preventDefault(); setRouteIndex((index) => Math.min(rc.choices.length - 1, index + 1)); 
+        break;
+        }
+        case 'Enter': { e.preventDefault(); chooseRoute(stateReference.current.routeIdx); 
+        break;
+        }
+        case 'Escape': { e.preventDefault(); chooseRoute(-1); 
+        break;
+        }
+        // No default
+        }
         return;
       }
       // History picker is modal while open: Up/Down move, Return runs, Escape closes.
-      if (stateRef.current.pickerOpen) {
-        const items = stateRef.current.recent;
-        if (e.key === 'ArrowUp') { e.preventDefault(); setPickerIdx((i) => Math.max(0, i - 1)); }
-        else if (e.key === 'ArrowDown') { e.preventDefault(); setPickerIdx((i) => Math.min(items.length - 1, i + 1)); }
-        else if (e.key === 'Enter') { e.preventDefault(); const cmd = items[stateRef.current.pickerIdx]; if (cmd) runCommand(cmd); setPickerOpen(false); }
-        else if (e.key === 'Escape') { e.preventDefault(); setPickerOpen(false); }
+      if (stateReference.current.pickerOpen) {
+        const items = stateReference.current.recent;
+        switch (e.key) {
+        case 'ArrowUp': { e.preventDefault(); setPickerIndex((index) => Math.max(0, index - 1)); 
+        break;
+        }
+        case 'ArrowDown': { e.preventDefault(); setPickerIndex((index) => Math.min(items.length - 1, index + 1)); 
+        break;
+        }
+        case 'Enter': { e.preventDefault(); const command = items[stateReference.current.pickerIdx]; if (command) runCommand(command); setPickerOpen(false); 
+        break;
+        }
+        case 'Escape': { e.preventDefault(); setPickerOpen(false); 
+        break;
+        }
+        // No default
+        }
         return;
       }
       if (e.ctrlKey && e.key.toLowerCase() === 'r') { e.preventDefault(); openPicker(); return; }
 
       // Transcript scrolling: PageUp/Down half-screen, Shift/Ctrl+Up/Down one line (with
       // acceleration that doubles every second while held), Escape jumps back to the bottom.
-      const el = transcriptRef.current;
-      if (el) {
-        if (e.key === 'PageUp') { e.preventDefault(); el.scrollTop -= el.clientHeight / 2; return; }
-        if (e.key === 'PageDown') { e.preventDefault(); el.scrollTop += el.clientHeight / 2; return; }
+      const element = transcriptReference.current;
+      if (element) {
+        if (e.key === 'PageUp') { e.preventDefault(); element.scrollTop -= element.clientHeight / 2; return; }
+        if (e.key === 'PageDown') { e.preventDefault(); element.scrollTop += element.clientHeight / 2; return; }
         if ((e.shiftKey || e.ctrlKey) && e.key === 'ArrowUp') {
           e.preventDefault();
           if (!scrollAccel.current || scrollAccel.current.dir !== -1) scrollAccel.current = { start: Date.now(), dir: -1 };
           const elapsed = Date.now() - scrollAccel.current.start;
           const step = Math.min(220, Math.max(22, Math.round(22 * Math.pow(2, elapsed / 1000))));
-          el.scrollTop -= step;
+          element.scrollTop -= step;
           return;
         }
         if ((e.shiftKey || e.ctrlKey) && e.key === 'ArrowDown') {
@@ -107,12 +129,12 @@ export function App() {
           if (!scrollAccel.current || scrollAccel.current.dir !== 1) scrollAccel.current = { start: Date.now(), dir: 1 };
           const elapsed = Date.now() - scrollAccel.current.start;
           const step = Math.min(220, Math.max(22, Math.round(22 * Math.pow(2, elapsed / 1000))));
-          el.scrollTop += step;
+          element.scrollTop += step;
           return;
         }
-        if (e.ctrlKey && e.key.toLowerCase() === 'p') { e.preventDefault(); el.scrollTop -= 22; return; }
-        if (e.ctrlKey && e.key.toLowerCase() === 'n') { e.preventDefault(); el.scrollTop += 22; return; }
-        if (e.key === 'Escape') { e.preventDefault(); el.scrollTop = el.scrollHeight; return; }
+        if (e.ctrlKey && e.key.toLowerCase() === 'p') { e.preventDefault(); element.scrollTop -= 22; return; }
+        if (e.ctrlKey && e.key.toLowerCase() === 'n') { e.preventDefault(); element.scrollTop += 22; return; }
+        if (e.key === 'Escape') { e.preventDefault(); element.scrollTop = element.scrollHeight; return; }
       }
       // Shift+Arrow switches tabs, Ctrl+Arrow reorders within group, Ctrl+T toggles collapse.
       if (e.ctrlKey && !e.shiftKey && e.key === 'ArrowLeft') { e.preventDefault(); client.send({ method: 'reorderTab', params: { dir: -1 } }); }
@@ -124,23 +146,23 @@ export function App() {
     const onUp = (e: KeyboardEvent) => {
       if (e.key === 'ArrowUp' || e.key === 'ArrowDown') scrollAccel.current = null;
     };
-    window.addEventListener('keydown', onKey);
-    window.addEventListener('keyup', onUp);
+    globalThis.addEventListener('keydown', onKey);
+    globalThis.addEventListener('keyup', onUp);
     return () => {
-      window.removeEventListener('keydown', onKey);
-      window.removeEventListener('keyup', onUp);
+      globalThis.removeEventListener('keydown', onKey);
+      globalThis.removeEventListener('keyup', onUp);
     };
   }, [client]);
 
-  if (!cur) return <div className="app" style={{ padding: 16, color: 'var(--muted)' }}>Connecting…</div>;
+  if (!current) return <div className="app" style={{ padding: 16, color: 'var(--muted)' }}>Connecting…</div>;
 
   // An image tab renders its image view in place of the transcript + command line (no command bar).
-  if (cur.view === 'image' && cur.image) {
+  if (current.view === 'image' && current.image) {
     return (
       <div className="app">
         <TabStrip tabs={tabs} activeTab={activeTab} onSelect={selectTab} onClose={closeTab} />
-        <div className="tab-body" style={{ borderLeft: `4px solid ${cur.dotColor}` }}>
-          <ImageTab image={cur.image} />
+        <div className="tab-body" style={{ borderLeft: `4px solid ${current.dotColor}` }}>
+          <ImageTab image={current.image} />
         </div>
       </div>
     );
@@ -151,10 +173,10 @@ export function App() {
       <TabStrip tabs={tabs} activeTab={activeTab} onSelect={selectTab} onClose={closeTab} />
       <div
         className="tab-body"
-        style={{ borderLeft: `4px solid ${cur.dotColor}` }}
-        onClick={() => inputRef.current?.focus()}
+        style={{ borderLeft: `4px solid ${current.dotColor}` }}
+        onClick={() => inputReference.current?.focus()}
         onMouseUp={() => {
-          const selection = window.getSelection()?.toString();
+          const selection = globalThis.getSelection()?.toString();
           if (selection) {
             navigator.clipboard.writeText(selection);
           }
@@ -165,17 +187,17 @@ export function App() {
             lines={lines}
             client={client}
             onToggleCollapse={() => client.send({ method: 'toggleCollapse', params: {} })}
-            scrollRef={transcriptRef}
+            scrollRef={transcriptReference}
           />
-          <StatusPanels tab={cur} />
-          {route && <RouteChooser cmd={route.cmd} choices={route.choices} selected={routeIdx} onPick={chooseRoute} />}
-          {!route && pickerOpen && <HistoryPicker items={recent} selected={pickerIdx} onPick={pick} />}
+          <StatusPanels tab={current} />
+          {route && <RouteChooser cmd={route.cmd} choices={route.choices} selected={routeIndex} onPick={chooseRoute} />}
+          {!route && pickerOpen && <HistoryPicker items={recent} selected={pickerIndex} onPick={pick} />}
         </div>
         <CommandInput
-          dotColor={cur.dotColor}
-          history={cur.cmdHistory}
+          dotColor={current.dotColor}
+          history={current.cmdHistory}
           onSubmit={(text) => { if (text.trim().toLowerCase() === 'hist') openPicker(); else runCommand(text); }}
-          inputRef={inputRef}
+          inputRef={inputReference}
           complete={(text, cursor) => client.request({ method: 'complete', params: { text, cursor } })}
           pickerOpen={pickerOpen || route !== null}
         />

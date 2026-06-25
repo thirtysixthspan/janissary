@@ -2,9 +2,9 @@ import type { Command } from './types.js';
 
 export const command: Command = {
   name: 'hist',
-  match: (cmd) => cmd.toLowerCase() === 'hist',
-  handler: (_cmd, ctx) => {
-    const { frequentHistory, setHistoryPickerIdx, setHistoryPickerOpen } = ctx;
+  match: (command_) => command_.toLowerCase() === 'hist',
+  handler: (_command, context) => {
+    const { frequentHistory, setHistoryPickerIdx, setHistoryPickerOpen } = context;
     if (frequentHistory.length > 0) {
       setHistoryPickerIdx(frequentHistory.length - 1);
       setHistoryPickerOpen(true);

@@ -90,9 +90,9 @@ export function computeNextRun(entry: ScheduleEntry, now: Date): number {
   if (entry.intervalMs) return now.getTime() + entry.intervalMs;
   if (entry.timeOfDay) {
     const { hour, minute } = entry.timeOfDay;
-    return entry.weekday !== undefined
-      ? nextWeekday(entry.weekday, hour, minute, now)
-      : nextOccurrenceOfTime(hour, minute, now);
+    return entry.weekday === undefined
+      ? nextOccurrenceOfTime(hour, minute, now)
+      : nextWeekday(entry.weekday, hour, minute, now);
   }
   return now.getTime();
 }
@@ -111,7 +111,7 @@ export function fmtNextRun(ts: number): string {
 }
 
 export function formatSchedule(entries: ScheduleEntry[]): string {
-  if (!entries.length) return 'No scheduled commands.';
+  if (entries.length === 0) return 'No scheduled commands.';
   return entries
     .map((e) => `${e.id}  ${e.spec}  (next: ${fmtNextRun(e.nextRun)})  ${e.command}`)
     .join('\n');
@@ -158,15 +158,15 @@ function parseScheduleBody(rest: string, now: Date): ScheduleBodyResult {
   if (head === 'on') {
     const md = parseMonthDay(tokens.slice(1));
     if (!md) return { error: 'Invalid date. Try "on august 12th" or "on 8/12".' };
-    let idx = 1 + md.consumed;
+    let index = 1 + md.consumed;
     let tod: TimeOfDay = { hour: 9, minute: 0 };
-    if (tokens[idx]?.toLowerCase() === 'at') {
-      const t = parseTimeOfDay(tokens[idx + 1] ?? '');
-      if (!t) return { error: `Invalid time: "${tokens[idx + 1] ?? ''}".` };
+    if (tokens[index]?.toLowerCase() === 'at') {
+      const t = parseTimeOfDay(tokens[index + 1] ?? '');
+      if (!t) return { error: `Invalid time: "${tokens[index + 1] ?? ''}".` };
       tod = t;
-      idx += 2;
+      index += 2;
     }
-    const command = tokens.slice(idx).join(' ').trim();
+    const command = tokens.slice(index).join(' ').trim();
     if (!command) return { error: 'No command to schedule.' };
     return { action: 'add', entry: {
       command, spec: `on ${MONTHS[md.month].slice(0, 3)} ${md.day} at ${fmtTime(tod)}`, recurring: false,
@@ -197,13 +197,13 @@ function parseScheduleBody(rest: string, now: Date): ScheduleBodyResult {
     if (!tod) return { error: `Invalid time: "${tokens[3] ?? ''}".` };
     const command = tokens.slice(4).join(' ').trim();
     if (!command) return { error: 'No command to schedule.' };
-    const label = weekday !== undefined ? WEEKDAYS[weekday] : 'day';
+    const label = weekday === undefined ? 'day' : WEEKDAYS[weekday];
     return { action: 'add', entry: {
       command, spec: `every ${label} at ${fmtTime(tod)}`, recurring: true,
       timeOfDay: tod, weekday,
-      nextRun: weekday !== undefined
-        ? nextWeekday(weekday, tod.hour, tod.minute, now)
-        : nextOccurrenceOfTime(tod.hour, tod.minute, now),
+      nextRun: weekday === undefined
+        ? nextOccurrenceOfTime(tod.hour, tod.minute, now)
+        : nextWeekday(weekday, tod.hour, tod.minute, now),
     } };
   }
 

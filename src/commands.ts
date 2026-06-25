@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import agentNames from '../agent-names.json' with { type: 'json' };
 import type { AgentCommand } from './types.js';
 
-export { agentNames };
+
 
 export const availableCommands = [
   'help',
@@ -28,18 +28,18 @@ function buildHelp(): string {
   const readmePath = join(__dirname, '..', 'README.md');
   try {
     const md = readFileSync(readmePath, 'utf-8');
-    const cmdMatch = md.match(/### Commands[\s\S]*?(?=^## |^### |$(?![\s\S]))/m);
+    const commandMatch = md.match(/### Commands[\s\S]*?(?=^## |^### |$(?![\s\S]))/m);
     const keyMatch = md.match(/### Key Bindings[\s\S]*?(?=^## |^### |$(?![\s\S]))/m);
-    const cmdSection = cmdMatch ? cmdMatch[0].trim() : '';
+    const commandSection = commandMatch ? commandMatch[0].trim() : '';
     const keySection = keyMatch ? keyMatch[0].trim() : '';
-    return cmdSection + '\n\n' + keySection;
+    return commandSection + '\n\n' + keySection;
   } catch {
     return 'Built-in: ' + availableCommands.join(', ') + '. Prefix a command with "shell " to run it in the shell, or / to run a built-in command. Press Ctrl+R or type hist to browse command history.';
   }
 }
 
-export const getOutput = (cmd: string): string | null => {
-  const trimmed = cmd.trim().toLowerCase();
+export const getOutput = (command: string): string | null => {
+  const trimmed = command.trim().toLowerCase();
 
   if (trimmed === 'help') {
     if (!helpOutput) helpOutput = buildHelp();
@@ -73,8 +73,8 @@ export function resolveAgentName(
   }
 
   // bare `agent` — pick random unused name from the pool (stored lowercase)
-  const lowerExisting = existingLabels.map((l) => l.toLowerCase());
-  const pool = agentNames.filter((n) => !lowerExisting.includes(n));
+  const lowerExisting = new Set(existingLabels.map((l) => l.toLowerCase()));
+  const pool = agentNames.filter((n) => !lowerExisting.has(n));
   if (pool.length === 0) return null;
   return pool[Math.floor(Math.random() * pool.length)];
 }
@@ -87,11 +87,13 @@ export function resolveAgentName(
  */
 export function parseAgentCommand(input: string): AgentCommand {
   const trimmed = input.trim();
-  const workspace = /\s(-w|--workspace)\b/i.test(trimmed);
-  const stripped = trimmed.replace(/\s+(-w|--workspace)\s*/gi, ' ').trim();
+  const isWorkspace = /\s(-w|--workspace)\b/i.test(trimmed);
+  const stripped = trimmed.replaceAll(/\s+(-w|--workspace)\s*/gi, ' ').trim();
   const nameMatch = stripped.match(/^agent\s+(.+)/i);
   return {
     name: nameMatch ? nameMatch[1].trim().toLowerCase() : '',
-    workspace,
+    workspace: isWorkspace,
   };
 }
+
+export {default as agentNames} from '../agent-names.json' with { type: 'json' };

@@ -1,19 +1,19 @@
 import { describe, it, expect, vi } from 'vitest';
 import { runAcpToolLoop } from './acp-loop.js';
 import type { AcpLoopSession, AcpLoopHandlers } from './types.js';
-import { extractDbCommand } from './db.js';
+import { extractDbCommand as extractDatabaseCommand } from './db.js';
 import { extractBrowserCommand } from './browser-command.js';
 
 // A fake ACP session that replies synchronously from a scripted list (the last
 // reply repeats once exhausted) and records every prompt it was sent.
 function makeSession(replies: string[]) {
   const sent: string[] = [];
-  let i = 0;
+  let index = 0;
   const session: AcpLoopSession = {
     prompt(text, h) {
       sent.push(text);
-      const reply = replies[Math.min(i, replies.length - 1)] ?? '';
-      i++;
+      const reply = replies[Math.min(index, replies.length - 1)] ?? '';
+      index++;
       h.onChunk(reply);
       h.onEnd('end_turn');
     },
@@ -27,7 +27,7 @@ function makeHandlers() {
     startTurn: (isFirst) => events.push(['startTurn', isFirst]),
     chunk: (c) => events.push(['chunk', c]),
     endTurn: (f) => events.push(['endTurn', f]),
-    ranCommand: (cmd, result) => events.push(['ranCommand', cmd, result]),
+    ranCommand: (command, result) => events.push(['ranCommand', command, result]),
     finished: (reason, max) => events.push(['finished', reason, max]),
     error: (m) => events.push(['error', m]),
   };
@@ -43,7 +43,7 @@ describe('runAcpToolLoop', () => {
     const { h, events } = makeHandlers();
     const runCommand = vi.fn(() => 'name\n----\nKeanu\nCarrie\n\n(2 rows)');
 
-    runAcpToolLoop(session, 'list actors', { runCommand, extractCommand: extractDbCommand }, h);
+    runAcpToolLoop(session, 'list actors', { runCommand, extractCommand: extractDatabaseCommand }, h);
 
     // The command was executed and surfaced with its result.
     expect(runCommand).toHaveBeenCalledExactlyOnceWith('db sqlite query movies SELECT name FROM actors');
@@ -67,8 +67,8 @@ describe('runAcpToolLoop', () => {
     const firstEnd = events.find((e) => e[0] === 'endTurn');
     expect(firstEnd).toEqual(['endTurn', 'Looking it up.']);
     // ranCommand appears after the first endTurn.
-    const firstEndIdx = events.indexOf(firstEnd!);
-    expect(events[firstEndIdx + 1]).toEqual([
+    const firstEndIndex = events.indexOf(firstEnd!);
+    expect(events[firstEndIndex + 1]).toEqual([
       'ranCommand',
       'db sqlite query movies SELECT name FROM actors',
       'name\n----\nKeanu\nCarrie\n\n(2 rows)',
@@ -82,7 +82,7 @@ describe('runAcpToolLoop', () => {
     ]);
     const { h, events } = makeHandlers();
 
-    runAcpToolLoop(session, 'q', { runCommand: () => 'r', extractCommand: extractDbCommand }, h);
+    runAcpToolLoop(session, 'q', { runCommand: () => 'r', extractCommand: extractDatabaseCommand }, h);
 
     // The command line is removed; trailing blank lines after removal are trimmed.
     const endTurns = events.filter((e) => e[0] === 'endTurn');
@@ -95,7 +95,7 @@ describe('runAcpToolLoop', () => {
     const { session } = makeSession(['Just prose here.']);
     const { h, events } = makeHandlers();
 
-    runAcpToolLoop(session, 'q', { runCommand: () => 'r', extractCommand: extractDbCommand }, h);
+    runAcpToolLoop(session, 'q', { runCommand: () => 'r', extractCommand: extractDatabaseCommand }, h);
 
     const endTurns = events.filter((e) => e[0] === 'endTurn');
     expect(endTurns[0]).toEqual(['endTurn', 'Just prose here.']);
@@ -111,7 +111,7 @@ describe('runAcpToolLoop', () => {
     ]);
     const { h, events } = makeHandlers();
 
-    runAcpToolLoop(session, 'q', { runCommand: () => 'r', extractCommand: extractDbCommand }, h);
+    runAcpToolLoop(session, 'q', { runCommand: () => 'r', extractCommand: extractDatabaseCommand }, h);
 
     const endTurns = events.filter((e) => e[0] === 'endTurn');
     // Only the command line exists, stripping leaves empty string.
@@ -124,7 +124,7 @@ describe('runAcpToolLoop', () => {
     runAcpToolLoop(
       session,
       'hi',
-      { primer: 'PRIMER', runCommand: () => 'r', extractCommand: extractDbCommand },
+      { primer: 'PRIMER', runCommand: () => 'r', extractCommand: extractDatabaseCommand },
       makeHandlers().h,
     );
     expect(sent[0]).toBe('PRIMER\n\nhi');
@@ -136,7 +136,7 @@ describe('runAcpToolLoop', () => {
     const { h, events } = makeHandlers();
     const runCommand = vi.fn(() => 'r');
 
-    runAcpToolLoop(session, 'go', { runCommand, extractCommand: extractDbCommand, maxSteps: 2 }, h);
+    runAcpToolLoop(session, 'go', { runCommand, extractCommand: extractDatabaseCommand, maxSteps: 2 }, h);
 
     expect(runCommand).toHaveBeenCalledTimes(2);
     expect(events.at(-1)).toEqual(['finished', 'capped', 2]);
@@ -147,7 +147,7 @@ describe('runAcpToolLoop', () => {
     const { h, events } = makeHandlers();
     const runCommand = vi.fn();
 
-    runAcpToolLoop(session, 'q', { runCommand, extractCommand: extractDbCommand }, h);
+    runAcpToolLoop(session, 'q', { runCommand, extractCommand: extractDatabaseCommand }, h);
 
     expect(runCommand).not.toHaveBeenCalled();
     expect(events.some((e) => e[0] === 'ranCommand')).toBe(false);
@@ -159,7 +159,7 @@ describe('runAcpToolLoop', () => {
     const { session, sent } = makeSession(['', 'The actors are Keanu and Carrie.']);
     const { h, events } = makeHandlers();
 
-    runAcpToolLoop(session, 'list actors', { runCommand: () => 'r', extractCommand: extractDbCommand }, h);
+    runAcpToolLoop(session, 'list actors', { runCommand: () => 'r', extractCommand: extractDatabaseCommand }, h);
 
     // The prompt was re-sent, but only one transcript entry was started.
     expect(sent).toHaveLength(2);
@@ -173,7 +173,7 @@ describe('runAcpToolLoop', () => {
     const { session, sent } = makeSession(['']);
     const { h, events } = makeHandlers();
 
-    runAcpToolLoop(session, 'q', { runCommand: () => 'r', extractCommand: extractDbCommand }, h);
+    runAcpToolLoop(session, 'q', { runCommand: () => 'r', extractCommand: extractDatabaseCommand }, h);
 
     expect(sent).toHaveLength(2); // initial + one retry
     expect(events.at(-1)).toEqual(['finished', 'answered', 8]);
@@ -186,7 +186,7 @@ describe('runAcpToolLoop', () => {
     ]);
     const { h, events } = makeHandlers();
 
-    runAcpToolLoop(session, 'q', { runCommand: () => 'r', extractCommand: extractDbCommand }, h);
+    runAcpToolLoop(session, 'q', { runCommand: () => 'r', extractCommand: extractDatabaseCommand }, h);
 
     const endTurns = events.filter((e) => e[0] === 'endTurn');
     // Fence lines removed along with the command.
@@ -220,7 +220,7 @@ describe('runAcpToolLoop', () => {
     const { h, events } = makeHandlers();
     const runCommand = vi.fn();
 
-    runAcpToolLoop(session, 'q', { runCommand, extractCommand: extractDbCommand }, h);
+    runAcpToolLoop(session, 'q', { runCommand, extractCommand: extractDatabaseCommand }, h);
 
     expect(events).toContainEqual(['error', 'boom']);
     expect(runCommand).not.toHaveBeenCalled();

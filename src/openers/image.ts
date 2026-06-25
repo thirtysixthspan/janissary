@@ -7,9 +7,9 @@ function humanSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   const units = ['KB', 'MB', 'GB', 'TB'];
   let value = bytes / 1024;
-  let i = 0;
-  while (value >= 1024 && i < units.length - 1) { value /= 1024; i++; }
-  return `${value.toFixed(value >= 10 ? 0 : 1)} ${units[i]}`;
+  let index = 0;
+  while (value >= 1024 && index < units.length - 1) { value /= 1024; index++; }
+  return `${value.toFixed(value >= 10 ? 0 : 1)} ${units[index]}`;
 }
 
 // The first opener: handles common raster and vector image types. `external` hands the image to the
@@ -17,15 +17,15 @@ function humanSize(bytes: number): string {
 export const opener: Opener = {
   name: 'image',
   extensions: ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp', '.svg', '.avif', '.ico'],
-  external: (file, ctx) => {
+  external: (file, context) => {
     const name = basename(file);
-    if (ctx.openExternally(file)) ctx.note(`Opening ${name} in your image viewer…`);
-    else ctx.note(`No image viewer available. The file is at ${file}`);
+    if (context.openExternally(file)) context.note(`Opening ${name} in your image viewer…`);
+    else context.note(`No image viewer available. The file is at ${file}`);
   },
-  inline: (file, ctx) => {
+  inline: (file, context) => {
     const name = basename(file);
     let size: string;
     try { size = humanSize(statSync(file).size); } catch { size = 'unknown'; }
-    ctx.openImageTab({ name, path: file, size, url: ctx.registerFile(file) });
+    context.openImageTab({ name, path: file, size, url: context.registerFile(file) });
   },
 };

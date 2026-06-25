@@ -18,8 +18,8 @@ const SYMBOLIC = /[|&;<>`$\\]|\$\(/;
 // words all read as a prompt.
 export const acpRecognizer: CommandRecognizer = {
   route: 'acp',
-  recognize: (cmd) => {
-    const trimmed = cmd.trim();
+  recognize: (command) => {
+    const trimmed = command.trim();
     const words = trimmed.split(/\s+/);
     const first = words[0]?.toLowerCase() ?? '';
     const letters = (trimmed.match(/[A-Za-z]/g) ?? []).length;
@@ -34,8 +34,8 @@ export const acpRecognizer: CommandRecognizer = {
 
     // A question/instruction opener followed by grammatical words reads as a real sentence
     // ("which file is the longest"), not a command — strong enough to dispatch on its own.
-    const fnInRest = words.slice(1).filter((w) => FUNCTION_WORDS.has(w.toLowerCase())).length;
-    if (PROMPT_WORDS.has(first) && fnInRest >= 1) score += 0.2;
+    const functionInRest = words.slice(1).filter((w) => FUNCTION_WORDS.has(w.toLowerCase())).length;
+    if (PROMPT_WORDS.has(first) && functionInRest >= 1) score += 0.2;
 
     score = Math.min(score, 0.95);
     return { match: score >= 0.4, reliability: score };

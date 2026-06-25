@@ -1,33 +1,34 @@
 import { describe, it, expect, afterAll } from 'vitest';
-import { spawn } from 'child_process';
-import { mkdtempSync, writeFileSync, rmSync } from 'fs';
-import { join } from 'path';
-import { tmpdir } from 'os';
+import { spawn } from 'node:child_process';
+import type { ChildProcess } from 'node:child_process';
+import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
 
 function runCommand(
-  shell: import('child_process').ChildProcess,
-  cmd: string,
+  shell: ChildProcess,
+  command: string,
   delimiter: string,
 ): Promise<string> {
   return new Promise((resolve, reject) => {
-    const timeout = setTimeout(() => reject(new Error('Timed out')), 10000);
+    const timeout = setTimeout(() => reject(new Error('Timed out')), 10_000);
     let buffer = '';
 
     const onData = (chunk: string) => {
       buffer += chunk;
-      const endIdx = buffer.indexOf(delimiter);
-      if (endIdx >= 0) {
+      const endIndex = buffer.indexOf(delimiter);
+      if (endIndex !== -1) {
         clearTimeout(timeout);
         shell.stdout!.removeListener('data', onData);
         shell.stderr!.removeListener('data', onData);
-        resolve(buffer.substring(0, endIdx).trim());
+        resolve(buffer.slice(0, Math.max(0, endIndex)).trim());
       }
     };
 
     shell.stdout!.on('data', onData);
     shell.stderr!.on('data', onData);
 
-    shell.stdin!.write(`${cmd} 2>&1\necho "${delimiter}"\n`);
+    shell.stdin!.write(`${command} 2>&1\necho "${delimiter}"\n`);
   });
 }
 
@@ -56,5 +57,5 @@ describe('persistent shell', () => {
     } finally {
       shell.kill();
     }
-  }, 15000);
+  }, 15_000);
 });

@@ -2,8 +2,8 @@ import type { Command } from './types.js';
 
 export const command: Command = {
   name: 'next',
-  match: (cmd) => cmd.toLowerCase() === 'next',
-  handler: (_cmd, ctx) => {
-    ctx.setActiveTab((ctx.activeTab + 1) % ctx.tabs.length);
+  match: (command_) => command_.toLowerCase() === 'next',
+  handler: (_command, context) => {
+    context.setActiveTab((context.activeTab + 1) % context.tabs.length);
   },
 };

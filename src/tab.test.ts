@@ -38,12 +38,12 @@ describe('distinctColor', () => {
     const picked = distinctColor(used);
     expect(used).not.toContain(picked);
     // The pick is clearly distinct from each used color.
-    const dist = (a: string, b: string) => {
-      const p = (h: string) => { const n = parseInt(h.slice(1), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; };
+    const distribution = (a: string, b: string) => {
+      const p = (h: string) => { const n = Number.parseInt(h.slice(1), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; };
       const [r1, g1, b1] = p(a), [r2, g2, b2] = p(b);
       return Math.hypot(r1 - r2, g1 - g2, b1 - b2);
     };
-    expect(Math.min(...used.map((u) => dist(picked, u)))).toBeGreaterThan(60);
+    expect(Math.min(...used.map((u) => distribution(picked, u)))).toBeGreaterThan(60);
   });
 });
 

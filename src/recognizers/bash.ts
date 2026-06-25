@@ -33,16 +33,16 @@ const FLAG = /^-{1,2}[A-Za-z]/;
 // ("which", "find", …) at the head of a prose sentence is discounted so it routes to the agent.
 export const bashRecognizer: CommandRecognizer = {
   route: 'shell',
-  recognize: (cmd) => {
-    const trimmed = cmd.trim();
+  recognize: (command) => {
+    const trimmed = command.trim();
     const tokens = trimmed.split(/\s+/);
     const first = (tokens[0] ?? '').toLowerCase();
     const proseWords = tokens.slice(1).filter((t) => FUNCTION_WORDS.has(t.toLowerCase())).length;
-    const looksProse = tokens.length >= 3 && proseWords >= 1;
+    const isLooksProse = tokens.length >= 3 && proseWords >= 1;
 
     let score = 0;
     if (COMMON_COMMANDS.has(first)) {
-      score = AMBIGUOUS_COMMANDS.has(first) && looksProse ? 0.25 : 0.9;
+      score = AMBIGUOUS_COMMANDS.has(first) && isLooksProse ? 0.25 : 0.9;
     } else if (PATH_LIKE.test(first)) {
       score = 0.85;
     }

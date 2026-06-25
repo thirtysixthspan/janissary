@@ -5,18 +5,18 @@ import type { TabBrowser } from './types.js';
 
 // Live browser tests need the chromium binary (installed via postinstall). Skip the whole
 // suite when it is unavailable so a binary-less CI run does not fail.
-let available: boolean;
+let isAvailable: boolean;
 try {
   const probe = await chromium.launch({ headless: true });
   await probe.close();
-  available = true;
+  isAvailable = true;
 } catch {
-  available = false;
+  isAvailable = false;
 }
 
 const PAGE = 'data:text/html,<title>Widgets</title><body><h1>Hello</h1><p>Welcome to widgets.</p></body>';
 
-describe.skipIf(!available)('TabBrowser', () => {
+describe.skipIf(!isAvailable)('TabBrowser', () => {
   let browser: TabBrowser;
 
   beforeAll(async () => {

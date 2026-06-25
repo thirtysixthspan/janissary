@@ -24,7 +24,7 @@ export interface Opener {
   // The file extensions this opener claims, lowercased and dot-prefixed (e.g. '.png').
   extensions: string[];
   // Hand the file to a program outside the app.
-  external: (file: string, ctx: OpenContext) => void | Promise<void>;
+  external: (file: string, context: OpenContext) => void | Promise<void>;
   // Perform an in-app UI action for the file (e.g. open a tab).
-  inline: (file: string, ctx: OpenContext) => void | Promise<void>;
+  inline: (file: string, context: OpenContext) => void | Promise<void>;
 }

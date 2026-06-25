@@ -17,20 +17,20 @@ import type { PromptHandlers, AcpSession, AcpOptions } from './types.js';
  * permission requests, and advertises no fs/terminal capabilities (so the agent never
  * calls those back).
  */
-export function connectAcp(opts: AcpOptions): AcpSession {
-  const proc = spawn(opts.command, opts.args, {
-    cwd: opts.cwd,
+export function connectAcp(options: AcpOptions): AcpSession {
+  const proc = spawn(options.command, options.args, {
+    cwd: options.cwd,
     stdio: ['pipe', 'pipe', 'pipe'],
-    env: opts.env ? { ...process.env, ...opts.env } : process.env,
+    env: options.env ? { ...process.env, ...options.env } : process.env,
   });
-  proc.on('error', (e) => opts.onError(`failed to start ACP agent: ${e.message}`));
+  proc.on('error', (e) => options.onError(`failed to start ACP agent: ${e.message}`));
 
   // The current in-flight prompt's handlers; session updates are routed here.
   let current: PromptHandlers | null = null;
 
   const client: Client = {
-    async sessionUpdate(params) {
-      const update = params.update;
+    async sessionUpdate(parameters) {
+      const update = parameters.update;
       if (update.sessionUpdate === 'agent_message_chunk' && update.content.type === 'text') {
         current?.onChunk(update.content.text);
       }
@@ -41,28 +41,26 @@ export function connectAcp(opts: AcpOptions): AcpSession {
     },
   };
 
-  const input = Readable.toWeb(proc.stdout!) as ReadableStream<Uint8Array>;
-  const output = Writable.toWeb(proc.stdin!) as WritableStream<Uint8Array>;
+  const input = Readable.toWeb(proc.stdout) as ReadableStream<Uint8Array>;
+  const output = Writable.toWeb(proc.stdin) as WritableStream<Uint8Array>;
   const conn = new ClientSideConnection(() => client, ndJsonStream(output, input));
 
   let sessionId: string | null = null;
   let ready: Promise<void> | null = null;
   const ensureSession = (): Promise<void> => {
-    if (!ready) {
-      ready = (async () => {
-        const init = await conn.initialize({ protocolVersion: PROTOCOL_VERSION, clientCapabilities: {} });
-        const res = await conn.newSession({ cwd: opts.cwd, mcpServers: [] });
-        sessionId = res.sessionId;
-        // Provider from the agent's reported name (fallback: the command basename);
-        // model is best-effort from the session's current mode (ACP has no model field).
-        const provider = init.agentInfo?.name ?? opts.command.replace(/^.*[\\/]/, '');
-        const modes = res.modes;
-        const model = modes
-          ? modes.availableModes.find((m) => m.id === modes.currentModeId)?.name ?? modes.currentModeId
-          : undefined;
-        opts.onConnect?.({ provider, model });
-      })();
-    }
+    ready ??= (async () => {
+      const init = await conn.initialize({ protocolVersion: PROTOCOL_VERSION, clientCapabilities: {} });
+      const res = await conn.newSession({ cwd: options.cwd, mcpServers: [] });
+      sessionId = res.sessionId;
+      // Provider from the agent's reported name (fallback: the command basename);
+      // model is best-effort from the session's current mode (ACP has no model field).
+      const provider = init.agentInfo?.name ?? options.command.replace(/^.*[\\/]/, '');
+      const modes = res.modes;
+      const model = modes
+        ? modes.availableModes.find((m) => m.id === modes.currentModeId)?.name ?? modes.currentModeId
+        : undefined;
+      options.onConnect?.({ provider, model });
+    })();
     return ready;
   };
 
@@ -74,8 +72,8 @@ export function connectAcp(opts: AcpOptions): AcpSession {
           await ensureSession();
           const res = await conn.prompt({ sessionId: sessionId!, prompt: [{ type: 'text', text }] });
           handlers.onEnd(res.stopReason);
-        } catch (e) {
-          handlers.onError(e instanceof Error ? e.message : String(e));
+        } catch (error) {
+          handlers.onError(error instanceof Error ? error.message : String(error));
         } finally {
           if (current === handlers) current = null;
         }

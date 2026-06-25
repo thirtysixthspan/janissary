@@ -1,7 +1,7 @@
 import type { AgentState } from './types.js';
 
 // Format an agent's persisted state for the `state` command (ported from commands/state.ts).
-function formatVal(v: unknown, maxLines = 10): string {
+function formatValue(v: unknown, maxLines = 10): string {
   if (v === undefined || v === null) return '<empty>';
   if (typeof v === 'string') return v || '<empty>';
   if (typeof v === 'boolean' || typeof v === 'number') return String(v);
@@ -21,7 +21,7 @@ function formatVal(v: unknown, maxLines = 10): string {
     return `... (${lines.length - maxLines} lines omitted)\n${lines.slice(-maxLines).join('\n')}`;
   }
   if (typeof v === 'object') {
-    const lines = Object.entries(v as Record<string, unknown>).map(([k, val]) => `  ${k}: ${formatVal(val)}`);
+    const lines = Object.entries(v as Record<string, unknown>).map(([k, value]) => `  ${k}: ${formatValue(value)}`);
     if (lines.length <= maxLines) return lines.join('\n');
     return `... (${lines.length - maxLines} lines omitted)\n${lines.slice(-maxLines).join('\n')}`;
   }
@@ -30,5 +30,5 @@ function formatVal(v: unknown, maxLines = 10): string {
 
 export function formatState(label: string, state: AgentState | null): string {
   if (!state) return `No state file found for "${label}".`;
-  return Object.entries(state).map(([k, v]) => `${k}:\n${formatVal(v)}`).join('\n\n');
+  return Object.entries(state).map(([k, v]) => `${k}:\n${formatValue(v)}`).join('\n\n');
 }

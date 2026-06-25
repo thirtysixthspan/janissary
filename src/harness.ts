@@ -14,7 +14,7 @@ export type HarnessParsed = { name: string } | { error: string };
 export function parseHarnessCommand(input: string): HarnessParsed {
   const rest = input.replace(/^harness\b\s*/i, '').trim();
   if (!rest) return { error: `Usage: harness <${HARNESS_NAMES.join('|')}>.` };
-  const name = rest.split(/\s+/)[0].toLowerCase();
+  const name = rest.split(/\s+/, 1)[0].toLowerCase();
   if (!(name in HARNESS_COMMANDS)) {
     return { error: `Unknown harness "${name}". Choose from: ${HARNESS_NAMES.join(', ')}.` };
   }

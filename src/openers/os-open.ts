@@ -5,15 +5,15 @@ import { spawn } from 'node:child_process';
 // swallowed — a missing opener must not crash the app. Returns false on a platform with no known
 // opener so the caller can fall back to reporting the path.
 export function osOpen(path: string): boolean {
-  const cmd = process.platform === 'darwin' ? 'open'
+  const command = process.platform === 'darwin' ? 'open'
     : process.platform === 'win32' ? 'start'
     : process.platform === 'linux' ? 'xdg-open'
     : null;
-  if (!cmd) return false;
+  if (!command) return false;
   // `start` is a cmd.exe builtin; the empty title arg avoids it consuming a quoted path as the title.
-  const args = cmd === 'start' ? ['', path] : [path];
+  const arguments_ = command === 'start' ? ['', path] : [path];
   try {
-    const child = spawn(cmd, args, { stdio: 'ignore', detached: true, shell: cmd === 'start' });
+    const child = spawn(command, arguments_, { stdio: 'ignore', detached: true, shell: command === 'start' });
     child.on('error', () => {});
     child.unref();
     return true;

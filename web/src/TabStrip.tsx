@@ -1,22 +1,22 @@
 import React from 'react';
 import type { TabView } from './protocol';
 
-type Props = {
+type Properties = {
   tabs: TabView[];
   activeTab: number;
   onSelect: (index: number) => void;
   onClose: (index: number) => void;
 };
 
-export function TabStrip({ tabs, activeTab, onSelect, onClose }: Props) {
+export function TabStrip({ tabs, activeTab, onSelect, onClose }: Properties) {
   return (
     <div className="tabstrip">
-      {tabs.map((tab, i) => (
+      {tabs.map((tab, index) => (
         <div
           key={tab.label}
-          className={`tab${i === activeTab ? ' active' : ''}`}
+          className={`tab${index === activeTab ? ' active' : ''}`}
           style={{ borderTopColor: tab.groupColor }}
-          onClick={() => onSelect(i)}
+          onClick={() => onSelect(index)}
         >
           <span className={`dot${tab.busy ? ' busy' : ''}`} style={{ color: tab.dotColor }}>●</span>
           <span>{tab.title ?? tab.label}</span>
@@ -26,7 +26,7 @@ export function TabStrip({ tabs, activeTab, onSelect, onClose }: Props) {
               className="tab-close"
               title="Close tab"
               aria-label="Close tab"
-              onClick={(e) => { e.stopPropagation(); onClose(i); }}
+              onClick={(e) => { e.stopPropagation(); onClose(index); }}
             >
               ×
             </button>

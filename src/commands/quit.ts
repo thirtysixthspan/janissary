@@ -4,12 +4,12 @@ import { removeWorkspace } from '../workspace.js';
 
 export const command: Command = {
   name: 'quit',
-  match: (cmd) => {
-    const lower = cmd.toLowerCase();
+  match: (command_) => {
+    const lower = command_.toLowerCase();
     return lower === 'quit' || lower === 'exit';
   },
-  handler: (_cmd, ctx) => {
-    const { shellsRef, acpRef, browserRef, workspaceRef, exit } = ctx;
+  handler: (_command, context) => {
+    const { shellsRef, acpRef, browserRef, workspaceRef, exit } = context;
     for (const dir of workspaceRef.current) removeWorkspace(dir);
     workspaceRef.current.clear();
     for (const [, shell] of shellsRef.current) shell.kill();

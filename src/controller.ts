@@ -16,22 +16,22 @@ import { isInteractive } from './interactive.js';
 import { parseHarnessCommand, HARNESS_COMMANDS } from './harness.js';
 import { parseAgentCommand, resolveAgentName, getOutput } from './commands.js';
 import { commands } from './commands/index.js';
-import { runDbCommand, parseDbCommand, DB_PRIMER, extractDbCommand } from './db.js';
+import { runDbCommand as runDatabaseCommand, parseDbCommand as parseDatabaseCommand, DB_PRIMER, extractDbCommand as extractDatabaseCommand } from './db.js';
 import { connectAcp } from './acp.js';
 import { runAcpToolLoop } from './acp-loop.js';
 import { analyzeCommand, toPrefixedCommand, routeChoices } from './recognizers/index.js';
 import type { RouteChoice } from './recognizers/types.js';
-import { spawnShell, executeShellCmd, queryShellPwd } from './shell.js';
+import { spawnShell, executeShellCmd as executeShellCommand, queryShellPwd } from './shell.js';
 import { findRepoRoot, createWorkspace, removeWorkspace } from './workspace.js';
 import { completeCommandLine } from './completion.js';
-import { appendEntry, getTimeStr } from './logger.js';
+import { appendEntry, getTimeStr as getTimeString } from './logger.js';
 import type { CompletionResult } from './types.js';
 import { spawnPty, type PtySession } from './pty.js';
 import { saveAgentState, loadAgentState, listAgentStates } from './agent-state.js';
 import { parseScheduleCommand, formatSchedule, computeNextRun, fmtNextRun } from './schedule.js';
 import { parseProfileCommand, loadProfileAgents, listProfiles, profileExists } from './profiles.js';
 import { parseConnectionCommand, closeConnection, closeAllConnections, isConnectionOpen, listOpenConnections } from './connections.js';
-import { parseMsgCommand, parseBroadcastCommand } from './messaging.js';
+import { parseMsgCommand as parseMessageCommand, parseBroadcastCommand } from './messaging.js';
 import { extractBrowserCommand, BROWSER_PRIMER } from './browser-command.js';
 import { MessageBus } from './message-bus.js';
 import { BrowserManager } from './browser-tab.js';
@@ -93,8 +93,8 @@ export class Controller {
       agentColor: (l) => this.tabs.find((t) => t.label === l)?.dotColor ?? '#e4e5e7',
       isInteractive,
       appendLog: (l, entry) => this.append(l, entry),
-      runShell: (l, cmd, done) => this.runShell(l, cmd, { onComplete: done }),
-      runCapture: (l, text, cb) => this.runCapture(l, text, cb),
+      runShell: (l, command, done) => this.runShell(l, command, { onComplete: done }),
+      runCapture: (l, text, callback) => this.runCapture(l, text, callback),
       appendContext: (l, text) => this.appendContext(l, text),
     });
     this.timer = setInterval(() => this.tick(), 1000);
@@ -104,12 +104,12 @@ export class Controller {
   // Restore tabs from persisted agent state (for `--relaunch`). Called before any client connects.
   rehydrate(): void {
     const states = listAgentStates().sort((a, b) => (a.number ?? Infinity) - (b.number ?? Infinity));
-    if (!states.length) return;
-    this.tabs = states.map((s, i) => {
+    if (states.length === 0) return;
+    this.tabs = states.map((s, index) => {
       // Preserve each tab's saved `number`; fall back to array order only for state files predating
       // the field (mirrors the Ink rehydration), so the strip reappears exactly as it was left.
-      const tab = makeTab(s.name, s.dotColor || distinctColor([]), s.number ?? i + 1, s.cmdHistory ?? [],
-        this.capLog((s.log as LogEntry[] | undefined) ?? []), s.workspaceDir, s.group ?? 1, s.groupColor || s.dotColor || '#5b9cff');
+      const tab = makeTab(s.name, s.dotColor || distinctColor([]), s.number ?? index + 1, s.cmdHistory ?? [],
+        this.capLog((s.log) ?? []), s.workspaceDir, s.group ?? 1, s.groupColor || s.dotColor || '#5b9cff');
       tab.toolStepsExpanded = false;
       return tab;
     });
@@ -149,8 +149,8 @@ export class Controller {
     const pending = this.pendingRoute;
     this.pendingRoute = null;
     if (pending && index >= 0 && index < pending.choices.length) {
-      const i = this.tabs.findIndex((t) => t.label === pending.label);
-      if (i >= 0) this.run(toPrefixedCommand(pending.cmd, pending.choices[index]), pending.label, i);
+      const index_ = this.tabs.findIndex((t) => t.label === pending.label);
+      if (index_ !== -1) this.run(toPrefixedCommand(pending.cmd, pending.choices[index]), pending.label, index_);
     }
     this.sinks.emitState();
   }
@@ -217,8 +217,8 @@ export class Controller {
     const t = this.tabs.find((x) => x.label === label);
     if (t) {
       const log = [...t.log];
-      const i = log.findLastIndex((e) => e.running);
-      if (i >= 0) log[i] = { ...log[i], output, running: false };
+      const index = log.findLastIndex((e) => e.running);
+      if (index !== -1) log[index] = { ...log[index], output, running: false };
       t.log = log;
       this.busy.delete(label);
       this.persist(t);
@@ -250,7 +250,7 @@ export class Controller {
   // Append one content event to the append-only log (.janissary/log/<date>.json). No-op for empty
   // text or until initLogDir has run.
   private log(label: string, text: string): void {
-    if (text) appendEntry({ timestamp: getTimeStr(), agent: label, text });
+    if (text) appendEntry({ timestamp: getTimeString(), agent: label, text });
   }
 
   // Append an informational message (info/response from another agent) to a tab's context and
@@ -283,7 +283,7 @@ export class Controller {
   // which records history even for a targeted/scheduled dispatch).
   private dispatchTo(label: string, text: string): void {
     const index = this.tabs.findIndex((t) => t.label === label);
-    if (index < 0) return;
+    if (index === -1) return;
     this.run(this.recordHistory(index, text), label, index);
   }
 
@@ -294,7 +294,7 @@ export class Controller {
     const trimmed = stripComments(text);
     const tab = this.tabs[index];
     if (tab) {
-      if (trimmed && tab.cmdHistory[tab.cmdHistory.length - 1] !== trimmed) {
+      if (trimmed && tab.cmdHistory.at(-1) !== trimmed) {
         tab.cmdHistory = [...tab.cmdHistory, trimmed].slice(-100);
       }
       tab.cmdHistoryIdx = -1;
@@ -311,12 +311,15 @@ export class Controller {
     }
     const res = resolveCommand(input);
     switch (res.kind) {
-      case 'empty': return;
-      case 'shell':
-        if (res.cmd && isInteractive(res.cmd)) this.openPty(label, res.cmd, res.cmd.split(/\s+/)[0]);
+      case 'empty': { return;
+      }
+      case 'shell': {
+        if (res.cmd && isInteractive(res.cmd)) this.openPty(label, res.cmd, res.cmd.split(/\s+/, 1)[0]);
         else this.runShell(label, res.cmd);
         return;
-      case 'output': this.append(label, { input, output: res.output, markdown: true }); return;
+      }
+      case 'output': { this.append(label, { input, output: res.output, markdown: true }); return;
+      }
       case 'unknown': {
         // Probabilistic routing of an unprefixed command (mirrors the Ink command handler). Auto-run
         // a confident non-db route, or a confident db route when exactly one database is open (the
@@ -337,41 +340,57 @@ export class Controller {
         }
         return;
       }
-      case 'app': this.runApp(res.name, res.cmd, label, index); return;
+      case 'app': { this.runApp(res.name, res.cmd, label, index); return;
+      }
     }
   }
 
-  private runApp(name: string, cmd: string, label: string, index: number): void {
+  private runApp(name: string, command: string, label: string, index: number): void {
     switch (name) {
       case 'clear': {
         const tab = this.tabs.find((t) => t.label === label);
         if (tab) { tab.log = []; this.persist(tab); this.sinks.emitState(); }
         return;
       }
-      case 'db': this.append(label, { input: cmd, output: this.runDbInTab(label, cmd) }); return;
-      case 'agent': this.newAgent(cmd); return;
-      case 'next': this.setActiveTab((this.activeTab + 1) % this.tabs.length); return;
-      case 'close': this.closeTab(index); return;
-      case 'msg': this.runMsg(cmd, label); return;
-      case 'broadcast': this.runBroadcast(cmd, label); return;
-      case 'acp': this.runAcp(cmd, label); return;
-      case 'state': this.append(label, { input: cmd, output: formatState(label, loadAgentState(label)) }); return;
-      case 'schedule': this.runSchedule(cmd, label); return;
-      case 'profile': this.runProfile(cmd, label); return;
-      case 'connection': this.runConnection(cmd, label); return;
-      case 'browser': this.runBrowser(cmd, label); return;
-      case 'open': this.runOpen(cmd, label); return;
+      case 'db': { this.append(label, { input: command, output: this.runDbInTab(label, command) }); return;
+      }
+      case 'agent': { this.newAgent(command); return;
+      }
+      case 'next': { this.setActiveTab((this.activeTab + 1) % this.tabs.length); return;
+      }
+      case 'close': { this.closeTab(index); return;
+      }
+      case 'msg': { this.runMsg(command, label); return;
+      }
+      case 'broadcast': { this.runBroadcast(command, label); return;
+      }
+      case 'acp': { this.runAcp(command, label); return;
+      }
+      case 'state': { this.append(label, { input: command, output: formatState(label, loadAgentState(label)) }); return;
+      }
+      case 'schedule': { this.runSchedule(command, label); return;
+      }
+      case 'profile': { this.runProfile(command, label); return;
+      }
+      case 'connection': { this.runConnection(command, label); return;
+      }
+      case 'browser': { this.runBrowser(command, label); return;
+      }
+      case 'open': { this.runOpen(command, label); return;
+      }
       // `quit` and `exit` both close the app window and stop the server. `close` (handled above)
       // is reserved for closing tabs.
-      case 'quit': this.sinks.exit?.(); return;
+      case 'quit': { this.sinks.exit?.(); return;
+      }
       // The `hist` picker is interactive (handled client-side via Ctrl+R); reaching the server
       // non-interactively (e.g. scheduled) is a no-op.
-      case 'hist': return;
+      case 'hist': { return;
+      }
     }
-    const trimmed = cmd.trim().toLowerCase();
+    const trimmed = command.trim().toLowerCase();
     this.append(label, { 
-      input: cmd, 
-      output: getOutput(cmd) ?? `"${name}" did nothing.`,
+      input: command, 
+      output: getOutput(command) ?? `"${name}" did nothing.`,
       markdown: trimmed === 'help'
     });
   }
@@ -379,14 +398,14 @@ export class Controller {
   // Run a `db` command on behalf of a tab, keeping that tab's tracked SQLite connections in sync so
   // its connections panel reflects what it has open (mirrors Ink's `runDbInTab`). `delete` forgets
   // the connection; any opening command (create/query) records it once.
-  private runDbInTab(label: string, cmd: string): string {
-    const output = runDbCommand(cmd);
-    const parsed = parseDbCommand(cmd);
+  private runDbInTab(label: string, command: string): string {
+    const output = runDatabaseCommand(command);
+    const parsed = parseDatabaseCommand(command);
     if (!('error' in parsed)) {
       if (parsed.action === 'delete') this.forgetDbConn(parsed.name);
       else if (parsed.action !== 'list' && isConnectionOpen(parsed.name)) {
-        const cur = this.tabDbConns.get(label) ?? [];
-        if (!cur.includes(parsed.name)) this.tabDbConns.set(label, [...cur, parsed.name].sort());
+        const current = this.tabDbConns.get(label) ?? [];
+        if (!current.includes(parsed.name)) this.tabDbConns.set(label, [...current, parsed.name].sort());
       }
     }
     return output;
@@ -401,20 +420,20 @@ export class Controller {
 
   // --- messaging -----------------------------------------------------------
 
-  private runMsg(cmd: string, label: string): void {
-    const parsed = parseMsgCommand(cmd);
-    if ('error' in parsed) { this.append(label, { input: cmd, output: parsed.error }); return; }
+  private runMsg(command: string, label: string): void {
+    const parsed = parseMessageCommand(command);
+    if ('error' in parsed) { this.append(label, { input: command, output: parsed.error }); return; }
     if (!this.bus.send({ from: label, to: parsed.to, kind: parsed.kind, text: parsed.text })) {
-      this.append(label, { input: cmd, output: `No agent named "${parsed.to}".` });
+      this.append(label, { input: command, output: `No agent named "${parsed.to}".` });
       return;
     }
     // Show the sent message in the sender's transcript
-    this.append(label, { input: cmd, output: `→ ${parsed.to} (${parsed.kind}): ${parsed.text}` });
+    this.append(label, { input: command, output: `→ ${parsed.to} (${parsed.kind}): ${parsed.text}` });
   }
 
-  private runBroadcast(cmd: string, label: string): void {
-    const parsed = parseBroadcastCommand(cmd);
-    if ('error' in parsed) { this.append(label, { input: cmd, output: parsed.error }); return; }
+  private runBroadcast(command: string, label: string): void {
+    const parsed = parseBroadcastCommand(command);
+    if ('error' in parsed) { this.append(label, { input: command, output: parsed.error }); return; }
     const targets = parsed.targets === 'all'
       ? this.tabs.map((t) => t.label).filter((l) => l !== label)
       : parsed.targets;
@@ -422,22 +441,22 @@ export class Controller {
     for (const to of targets) {
       if (!this.bus.send({ from: label, to, kind: parsed.kind, text: parsed.text })) missing.push(to);
     }
-    if (missing.length) this.append(label, { input: cmd, output: `No agent named: ${missing.join(', ')}.` });
+    if (missing.length > 0) this.append(label, { input: command, output: `No agent named: ${missing.join(', ')}.` });
   }
 
   // --- acp (autonomous agent tool loop) ------------------------------------
 
-  private runAcp(cmd: string, label: string, onDone?: (output: string) => void): void {
-    const prompt = cmd.replace(/^acp\b\s*/i, '').trim();
-    if (!prompt) { this.append(label, { input: cmd, output: 'Usage: acp <prompt>.' }); return; }
+  private runAcp(command: string, label: string, onDone?: (output: string) => void): void {
+    const prompt = command.replace(/^acp\b\s*/i, '').trim();
+    if (!prompt) { this.append(label, { input: command, output: 'Usage: acp <prompt>.' }); return; }
 
     let session = this.acpSessions.get(label);
     if (!session) {
       const config = { model: 'google/gemini-3.1-flash-lite' };
       const slash = config.model.indexOf('/');
-      const info: AcpInfo = slash >= 0
-        ? { provider: config.model.slice(0, slash), model: config.model.slice(slash + 1) }
-        : { model: config.model };
+      const info: AcpInfo = slash === -1
+        ? { model: config.model }
+        : { provider: config.model.slice(0, slash), model: config.model.slice(slash + 1) };
       session = connectAcp({
         command: 'opencode', args: ['acp'],
         cwd: this.cwd.get(label) ?? process.cwd(),
@@ -453,8 +472,8 @@ export class Controller {
       const t = this.tabs.find((x) => x.label === label);
       if (t) {
         const log = [...t.log];
-        const i = log.findLastIndex((e) => e.running);
-        if (i >= 0) log[i] = { ...log[i], output, running };
+        const index = log.findLastIndex((e) => e.running);
+        if (index !== -1) log[index] = { ...log[index], output, running };
         t.log = log;
         if (!running) this.persist(t);
       }
@@ -466,12 +485,12 @@ export class Controller {
     runAcpToolLoop(session, prompt, {
       primer: `${DB_PRIMER}\n\n${BROWSER_PRIMER}\n\nWrite your replies in GitHub-flavored Markdown (headings, lists, tables, fenced code blocks, etc.); the tab renders them as formatted Markdown.`,
       runCommand: (c) => (/^browser\b/i.test(c) ? this.browsers.run(label, c) : this.runDbInTab(label, c)),
-      extractCommand: (t) => extractBrowserCommand(t) ?? extractDbCommand(t),
+      extractCommand: (t) => extractBrowserCommand(t) ?? extractDatabaseCommand(t),
     }, {
       // The reply entry is flagged `markdown` so the renderer interprets it as Markdown; the raw
       // text is kept verbatim (no terminal-style table/word-wrap rewriting).
       startTurn: (isFirst) => { this.busy.add(label); this.append(label, { input: isFirst ? prompt : '', output: '', running: true, markdown: true }); },
-      chunk: (buf) => updateRunning(buf, true),
+      chunk: (buffer) => updateRunning(buffer, true),
       endTurn: (final) => { updateRunning(final, false); lastAnswer = final; },
       ranCommand: (c, result) => this.append(label, { input: c, output: result, acp: true }),
       finished: (reason, maxSteps) => {
@@ -488,11 +507,11 @@ export class Controller {
 
   // Browser actions are async (navigation, eval, screenshots): show a running entry, then fill
   // it with the result when the Playwright call resolves.
-  private runBrowser(cmd: string, label: string, onDone?: (output: string) => void): void {
-    this.startRunning(label, cmd);
-    void this.browsers.run(label, cmd)
+  private runBrowser(command: string, label: string, onDone?: (output: string) => void): void {
+    this.startRunning(label, command);
+    void this.browsers.run(label, command)
       .then((out) => { this.finishRunning(label, out); onDone?.(out); })
-      .catch((e) => { const msg = `Browser error: ${e instanceof Error ? e.message : String(e)}`; this.finishRunning(label, msg); onDone?.(msg); });
+      .catch((error) => { const message = `Browser error: ${error instanceof Error ? error.message : String(error)}`; this.finishRunning(label, message); onDone?.(message); });
   }
 
   // --- open (file viewers) -------------------------------------------------
@@ -502,12 +521,12 @@ export class Controller {
   // OPEN_MAX_FILES. The dispatcher resolves files and surfaces parse/lookup errors; the opener owns
   // the rest (launch an external viewer, or mount an in-app view). Adding a file type means adding an
   // opener — this never changes.
-  private runOpen(cmd: string, label: string): void {
-    const parsed = parseOpen(cmd);
-    if ('error' in parsed) { this.append(label, { input: cmd, output: parsed.error }); return; }
+  private runOpen(command: string, label: string): void {
+    const parsed = parseOpen(command);
+    if ('error' in parsed) { this.append(label, { input: command, output: parsed.error }); return; }
     const cwd = this.cwd.get(label) ?? process.cwd();
-    const ctx: OpenContext = {
-      note: (text) => this.append(label, { input: cmd, output: text }),
+    const context: OpenContext = {
+      note: (text) => this.append(label, { input: command, output: text }),
       openImageTab: (image) => this.openImageTab(image),
       registerFile: (absPath) => this.registerFile(absPath),
       openExternally: (absPath) => osOpen(absPath),
@@ -515,26 +534,26 @@ export class Controller {
 
     if (isGlobPattern(parsed.path)) {
       const matches = this.expandGlob(parsed.path, cwd);
-      if (matches.length === 0) { this.append(label, { input: cmd, output: `open: ${parsed.path}: no matching files` }); return; }
+      if (matches.length === 0) { this.append(label, { input: command, output: `open: ${parsed.path}: no matching files` }); return; }
       const files = matches.slice(0, Controller.OPEN_MAX_FILES);
       if (matches.length > files.length) {
-        this.append(label, { input: cmd, output: `Opening the first ${files.length} of ${matches.length} matching files.` });
+        this.append(label, { input: command, output: `Opening the first ${files.length} of ${matches.length} matching files.` });
       }
-      for (const file of files) this.openOne(cmd, label, file, parsed.external, ctx);
+      for (const file of files) this.openOne(command, label, file, parsed.external, context);
       return;
     }
 
     const file = isAbsolute(parsed.path) ? parsed.path : resolvePath(cwd, parsed.path);
-    this.openOne(cmd, label, file, parsed.external, ctx);
+    this.openOne(command, label, file, parsed.external, context);
   }
 
   // Act on a single resolved file: report a missing file or an unsupported type, else hand it to the
   // matching opener's external/inline surface. Shared by the single-path and wildcard branches.
-  private openOne(cmd: string, label: string, file: string, external: boolean, ctx: OpenContext): void {
-    if (!existsSync(file)) { this.append(label, { input: cmd, output: `open: ${file}: no such file` }); return; }
+  private openOne(command: string, label: string, file: string, external: boolean, context: OpenContext): void {
+    if (!existsSync(file)) { this.append(label, { input: command, output: `open: ${file}: no such file` }); return; }
     const opener = openerForExtension(extname(file));
-    if (!opener) { this.append(label, { input: cmd, output: `No opener for "${extname(file) || '(none)'}" files.` }); return; }
-    void (external ? opener.external(file, ctx) : opener.inline(file, ctx));
+    if (!opener) { this.append(label, { input: command, output: `No opener for "${extname(file) || '(none)'}" files.` }); return; }
+    void (external ? opener.external(file, context) : opener.inline(file, context));
   }
 
   // Expand a shell wildcard pattern into its matching regular files (absolute, deduped, sorted), run
@@ -543,7 +562,7 @@ export class Controller {
   private expandGlob(pattern: string, cwd: string): string[] {
     let stdout: string;
     try {
-      const res = spawnSync(SHELL_NAME, ['-c', `for f in ${pattern}; do printf '%s\\n' "$f"; done`], {
+      const res = spawnSync(SHELL_NAME, ['-c', String.raw`for f in ${pattern}; do printf '%s\n' "$f"; done`], {
         cwd, encoding: 'utf8', timeout: 5000,
       });
       stdout = res.stdout ?? '';
@@ -592,9 +611,9 @@ export class Controller {
 
   // --- schedule ------------------------------------------------------------
 
-  private runSchedule(cmd: string, label: string): void {
-    const parsed = parseScheduleCommand(cmd.replace(/^schedule\b\s*/i, ''), new Date());
-    const out = (text: string) => this.append(label, { input: cmd, output: text });
+  private runSchedule(command: string, label: string): void {
+    const parsed = parseScheduleCommand(command.replace(/^schedule\b\s*/i, ''), new Date());
+    const out = (text: string) => this.append(label, { input: command, output: text });
     if ('error' in parsed) { out(parsed.error); return; }
     const current = this.schedules.get(label) ?? [];
     if (parsed.action === 'list') { out(formatSchedule(current)); return; }
@@ -610,7 +629,7 @@ export class Controller {
       if (next.length === current.length) { out(`No scheduled command "${parsed.id}".`); return; }
       message = `Cancelled ${parsed.id}.`;
     } else {
-      if (!current.length) { out('No scheduled commands.'); return; }
+      if (current.length === 0) { out('No scheduled commands.'); return; }
       next = [];
       message = `Cleared ${current.length} scheduled command${current.length === 1 ? '' : 's'}.`;
     }
@@ -624,29 +643,29 @@ export class Controller {
     const now = Date.now();
     for (const tab of this.tabs) {
       const sched = this.schedules.get(tab.label);
-      if (!sched || !sched.length) continue;
-      let changed = false;
+      if (!sched || sched.length === 0) continue;
+      let isChanged = false;
       const remaining: ScheduleEntry[] = [];
       for (const e of sched) {
         if (e.nextRun > now) { remaining.push(e); continue; }
-        changed = true;
+        isChanged = true;
         this.dispatchTo(tab.label, `${e.command} ## scheduled ##`);
         if (e.recurring) remaining.push({ ...e, nextRun: computeNextRun(e, new Date()) });
       }
-      if (changed) { this.schedules.set(tab.label, remaining); this.persist(tab); }
+      if (isChanged) { this.schedules.set(tab.label, remaining); this.persist(tab); }
     }
   }
 
   // --- profile -------------------------------------------------------------
 
-  private runProfile(cmd: string, label: string): void {
-    const parsed = parseProfileCommand(cmd);
-    const out = (text: string) => this.append(label, { input: cmd, output: text });
+  private runProfile(command: string, label: string): void {
+    const parsed = parseProfileCommand(command);
+    const out = (text: string) => this.append(label, { input: command, output: text });
     if ('error' in parsed) { out(parsed.error); return; }
-    if (parsed.action === 'list') { const names = listProfiles(); out(names.length ? names.join('\n') : 'No profiles.'); return; }
+    if (parsed.action === 'list') { const names = listProfiles(); out(names.length > 0 ? names.join('\n') : 'No profiles.'); return; }
     if (!profileExists(parsed.name)) { out(`No profile named "${parsed.name}".`); return; }
     const agents = loadProfileAgents(parsed.name);
-    if (!agents.length) { out(`Profile "${parsed.name}" has no agents.`); return; }
+    if (agents.length === 0) { out(`Profile "${parsed.name}" has no agents.`); return; }
 
     // A launched profile forms one group shared by all its agents. Honor a group number authored
     // on the profile's agent files; otherwise mint the next free group number.
@@ -664,7 +683,7 @@ export class Controller {
       used.add(dotColor);
       groupColor ??= dotColor;
       const tab = makeTab(state.name, dotColor, this.tabs.length + 1, state.cmdHistory ?? [],
-        this.capLog((state.log as LogEntry[] | undefined) ?? []), state.workspaceDir, group, groupColor);
+        this.capLog((state.log) ?? []), state.workspaceDir, group, groupColor);
       tab.toolStepsExpanded = false;
       this.tabs = [...this.tabs, tab];
       if (state.cwd) this.cwd.set(state.name, state.cwd);
@@ -674,18 +693,18 @@ export class Controller {
       open.add(state.name.toLowerCase());
       opened.push(state.name);
     }
-    if (opened.length) this.activeTab = firstNew;
+    if (opened.length > 0) this.activeTab = firstNew;
     const parts: string[] = [];
-    if (opened.length) parts.push(`Launched profile "${parsed.name}": ${opened.join(', ')}.`);
-    if (skipped.length) parts.push(`Already open: ${skipped.join(', ')}.`);
-    out(parts.length ? parts.join(' ') : `Profile "${parsed.name}" has no agents to open.`);
+    if (opened.length > 0) parts.push(`Launched profile "${parsed.name}": ${opened.join(', ')}.`);
+    if (skipped.length > 0) parts.push(`Already open: ${skipped.join(', ')}.`);
+    out(parts.length > 0 ? parts.join(' ') : `Profile "${parsed.name}" has no agents to open.`);
   }
 
   // --- connection ----------------------------------------------------------
 
-  private runConnection(cmd: string, label: string): void {
-    const parsed = parseConnectionCommand(cmd);
-    const out = (text: string) => this.append(label, { input: cmd, output: text });
+  private runConnection(command: string, label: string): void {
+    const parsed = parseConnectionCommand(command);
+    const out = (text: string) => this.append(label, { input: command, output: text });
     if ('error' in parsed) { out(parsed.error); return; }
     if (parsed.action === 'list') {
       const lines: string[] = [];
@@ -695,25 +714,36 @@ export class Controller {
       if (b) for (const id of b.ids) lines.push(`browser:${id}`);
       for (const [, e] of this.ptys) if (e.tabLabel === label) lines.push(`terminal:${e.session.program}`);
       for (const n of listOpenConnections()) lines.push(`sqlite:${n}`);
-      out(lines.length ? lines.join('\n') : 'No open connections.');
+      out(lines.length > 0 ? lines.join('\n') : 'No open connections.');
       return;
     }
     // Closing a browser window is async (Playwright); show a running entry and finalize it.
     if (parsed.kind === 'browser') {
-      this.startRunning(label, cmd);
+      this.startRunning(label, command);
       void this.browsers.run(label, `browser window close ${parsed.id}`).then((o) => this.finishRunning(label, o));
       return;
     }
-    if (parsed.kind === 'sqlite') {
+    switch (parsed.kind) {
+    case 'sqlite': {
       out(closeConnection(parsed.id) ? `Closed connection sqlite:${parsed.id}.` : `No open connection sqlite:${parsed.id}.`);
-    } else if (parsed.kind === 'shell') {
+    
+    break;
+    }
+    case 'shell': {
       if (this.shells.has(label)) { this.shells.get(label)?.kill(); this.shells.delete(label); out(`Closed connection shell:${SHELL_NAME}.`); }
       else out(`No open connection shell:${parsed.id}.`);
-    } else if (parsed.kind === 'acp') {
+    
+    break;
+    }
+    case 'acp': {
       if (this.acpSessions.has(label)) { this.acpSessions.get(label)?.kill(); this.acpSessions.delete(label); this.acpInfo.delete(label); this.sinks.emitState(); out('Closed connection acp:opencode.'); }
       else out('No open connection acp:opencode.');
-    } else {
+    
+    break;
+    }
+    default: {
       out(`Closing ${parsed.kind} connections is not yet available in the web UI.`);
+    }
     }
   }
 
@@ -734,67 +764,71 @@ export class Controller {
 
   // Run a shell command in a tab's persistent shell. `display` streams it into the transcript;
   // `onComplete` receives the final captured output regardless.
-  private runShell(label: string, cmd: string, opts: { display?: boolean; onComplete?: (out: string) => void } = {}): void {
-    const display = opts.display ?? true;
+  private runShell(label: string, command: string, options: { display?: boolean; onComplete?: (out: string) => void } = {}): void {
+    const isDisplay = options.display ?? true;
     const index = Math.max(0, this.tabs.findIndex((t) => t.label === label));
     const shell = this.getShell(label);
     const cwd = this.cwd.get(label) ?? process.cwd();
     const tab = this.tabs.find((t) => t.label === label);
-    if (!tab) { opts.onComplete?.(''); return; }
-    if (display) { tab.log = this.capLog([...tab.log, { input: cmd, output: '', running: true, cwd }]); this.log(label, cmd); }
+    if (!tab) { options.onComplete?.(''); return; }
+    if (isDisplay) { tab.log = this.capLog([...tab.log, { input: command, output: '', running: true, cwd }]); this.log(label, command); }
     this.busy.add(label);
     this.sinks.emitState();
     const update = (output: string, running: boolean) => {
-      if (display) {
+      if (isDisplay) {
         const t = this.tabs.find((x) => x.label === label);
         if (t) {
           const log = [...t.log];
-          const i = log.findLastIndex((e) => e.input === cmd && e.running);
-          if (i >= 0) log[i] = { ...log[i], output, running };
+          const index_ = log.findLastIndex((e) => e.input === command && e.running);
+          if (index_ !== -1) log[index_] = { ...log[index_], output, running };
           t.log = log;
         }
       }
-      if (!running) { this.busy.delete(label); if (display && tab) this.persist(tab); }
+      if (!running) { this.busy.delete(label); if (isDisplay && tab) this.persist(tab); }
       this.sinks.emitState();
     };
-    executeShellCmd(shell, cmd, index,
-      (buf) => update(buf, true),
+    executeShellCommand(shell, command, index,
+      (buffer) => update(buffer, true),
       (result) => {
         update(result, false);
-        if (display) this.log(label, result); // log the final shell output (capture runs aren't logged)
-        opts.onComplete?.(result);
-        queryShellPwd(shell, index, (pwd) => { if (pwd) { this.cwd.set(label, pwd); this.sinks.emitState(); } });
+        if (isDisplay) this.log(label, result); // log the final shell output (capture runs aren't logged)
+        options.onComplete?.(result);
+        queryShellPwd(shell, index, (pwd) => { if (!pwd) {
+        	return;
+        }
+
+        this.cwd.set(label, pwd); this.sinks.emitState(); });
       },
     );
   }
 
   // Run text in a tab dispatching it as if the user typed it (full command routing, acp, browser,
   // etc.), showing output in the transcript and calling back with the captured result.
-  private runCapture(label: string, text: string, cb: (out: string) => void): void {
+  private runCapture(label: string, text: string, callback: (out: string) => void): void {
     // Shell commands (explicit `shell` keyword)
     if (/^shell\b/i.test(text)) {
-      const cmd = text.replace(/^shell\b\s*/i, '');
-      if (cmd && isInteractive(cmd)) { cb(`Cannot run interactive command remotely: ${cmd}`); return; }
-      this.runShell(label, cmd, { display: true, onComplete: cb });
+      const command = text.replace(/^shell\b\s*/i, '');
+      if (command && isInteractive(command)) { callback(`Cannot run interactive command remotely: ${command}`); return; }
+      this.runShell(label, command, { display: true, onComplete: callback });
       return;
     }
 
     const trimmed = text.replace(/^\//, '');
     const index = this.tabs.findIndex((t) => t.label === label);
-    if (index < 0) { cb('Tab not found'); return; }
+    if (index === -1) { callback('Tab not found'); return; }
 
     // App commands — check against the command registry
     for (const c of commands) {
       if (c.match(trimmed)) {
         // Async commands that need completion callbacks
-        if (c.name === 'acp') { this.runAcp(trimmed, label, cb); return; }
-        if (c.name === 'browser') { this.runBrowser(trimmed, label, cb); return; }
+        if (c.name === 'acp') { this.runAcp(trimmed, label, callback); return; }
+        if (c.name === 'browser') { this.runBrowser(trimmed, label, callback); return; }
         // Sync commands: dispatch and capture output from the last log entry
         const tab = this.tabs.find((t) => t.label === label);
         const before = tab?.log.length ?? 0;
         this.runApp(c.name, trimmed, label, index);
         const after = this.tabs.find((t) => t.label === label)?.log.length ?? 0;
-        cb(after > before ? this.tabs.find((t) => t.label === label)!.log[after - 1].output : '');
+        callback(after > before ? this.tabs.find((t) => t.label === label)!.log[after - 1].output : '');
         return;
       }
     }
@@ -804,7 +838,7 @@ export class Controller {
     const output = getOutput(trimmed);
     if (output !== null && !output.startsWith('Unknown command:')) {
       this.append(label, { input: text, output, markdown: trimmed === 'help' });
-      cb(output);
+      callback(output);
       return;
     }
 
@@ -815,17 +849,17 @@ export class Controller {
       const choice: RouteChoice = decision.route === 'db'
         ? { label: '', route: 'db', dbName: openDbs[0] }
         : { label: '', route: decision.route };
-      this.runCapture(label, toPrefixedCommand(trimmed, choice), cb);
+      this.runCapture(label, toPrefixedCommand(trimmed, choice), callback);
       return;
     }
-    cb(output ?? `Unknown command: "${trimmed}".`);
+    callback(output ?? `Unknown command: "${trimmed}".`);
   }
 
   // --- inline terminal cards (PTY) -----------------------------------------
 
-  private openPty(label: string, cmd: string, program: string, harness?: string): void {
+  private openPty(label: string, command: string, program: string, harness?: string): void {
     const cwd = this.cwd.get(label) ?? process.cwd();
-    const session = spawnPty(program, cmd, cwd, {
+    const session = spawnPty(program, command, cwd, {
       onData: (id, data) => this.sinks.sendPty(id, data),
       onExit: (id, exitCode) => this.onPtyExit(id, exitCode),
     }, this.cols, this.rows);
@@ -839,10 +873,10 @@ export class Controller {
     this.ptys.delete(id);
     if (entry) this.harnessOf.delete(entry.tabLabel);
     for (const tab of this.tabs) {
-      const i = tab.log.findIndex((e) => e.terminal?.ptyId === id);
-      if (i >= 0) {
+      const index = tab.log.findIndex((e) => e.terminal?.ptyId === id);
+      if (index !== -1) {
         const log = [...tab.log];
-        log[i] = { ...log[i], terminal: { ...log[i].terminal!, status: 'exited', exitCode } };
+        log[index] = { ...log[index], terminal: { ...log[index].terminal!, status: 'exited', exitCode } };
         tab.log = log;
         this.persist(tab);
       }
@@ -858,14 +892,14 @@ export class Controller {
 
   // --- tab management ------------------------------------------------------
 
-  private newAgent(cmd: string): void {
-    const parsed = parseAgentCommand(cmd);
+  private newAgent(command: string): void {
+    const parsed = parseAgentCommand(command);
     const existing = this.tabs.map((t) => t.label);
     // A new agent joins the group of the agent that created it (the active tab), inheriting that
     // group's number and fixed bar color. A bare `agent` draws a random unused name from the pool.
     const creator = this.cur();
     const resolved = parsed.name || resolveAgentName(`agent ${parsed.name}`, existing);
-    const out = (text: string) => this.append(creator.label, { input: cmd, output: text });
+    const out = (text: string) => this.append(creator.label, { input: command, output: text });
     if (resolved === null) { out('All agent names are in use.'); return; }
     if (existing.some((l) => l.toLowerCase() === resolved.toLowerCase())) { out(`Agent "${resolved}" is already active.`); return; }
 
@@ -876,7 +910,7 @@ export class Controller {
       const root = findRepoRoot(process.cwd());
       if (!root) { out('No git repository found. Cannot create workspace.'); return; }
       try { workspaceDir = createWorkspace(resolved, root); this.workspaces.add(workspaceDir); }
-      catch (e) { out(`Failed to create workspace: ${e instanceof Error ? e.message : String(e)}`); return; }
+      catch (error) { out(`Failed to create workspace: ${error instanceof Error ? error.message : String(error)}`); return; }
     }
 
     const dotColor = distinctColor(this.tabs.map((t) => t.dotColor));
@@ -949,7 +983,7 @@ export class Controller {
       this.sinks.emitState();
       return;
     }
-    this.tabs = this.tabs.filter((_, i) => i !== index).map((t, i) => ({ ...t, number: i + 1 }));
+    this.tabs = this.tabs.filter((_, index_) => index_ !== index).map((t, index_) => ({ ...t, number: index_ + 1 }));
     this.activeTab = Math.min(this.activeTab, this.tabs.length - 1);
     this.sinks.emitState();
   }

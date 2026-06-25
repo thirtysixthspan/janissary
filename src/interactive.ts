@@ -22,16 +22,16 @@ const basename = (token: string): string => token.replace(/^.*\//, '');
  * Decide whether a shell command should run in an interactive PTY session.
  * Inspects each pipeline/sequence segment so things like `git log | less` are caught.
  */
-export function isInteractive(cmd: string): boolean {
-  const segments = cmd.split(/\|\||&&|[|;&]/);
+export function isInteractive(command: string): boolean {
+  const segments = command.split(/\|\||&&|[|;&]/);
   for (const seg of segments) {
     const tokens = seg.trim().split(/\s+/).filter(Boolean);
-    let i = 0;
+    let index = 0;
     // Skip leading `VAR=value` assignments and wrapper commands.
-    while (i < tokens.length && (/^[A-Za-z_][A-Za-z0-9_]*=/.test(tokens[i]) || WRAPPERS.has(basename(tokens[i])))) {
-      i++;
+    while (index < tokens.length && (/^[A-Za-z_][A-Za-z0-9_]*=/.test(tokens[index]) || WRAPPERS.has(basename(tokens[index])))) {
+      index++;
     }
-    const first = tokens[i];
+    const first = tokens[index];
     if (first && INTERACTIVE_PROGRAMS.has(basename(first))) return true;
   }
   return false;
@@ -41,18 +41,18 @@ export function isInteractive(cmd: string): boolean {
  * Run a command in a pseudo-terminal so it sees a real TTY. Output is delivered
  * via onData (caller pipes it to the real stdout); call write() to forward keystrokes.
  */
-export function runInteractive(opts: RunInteractiveOptions): InteractiveSession {
+export function runInteractive(options: RunInteractiveOptions): InteractiveSession {
   const shell = process.env.SHELL || 'bash';
-  const proc = pty.spawn(shell, ['-c', opts.cmd], {
+  const proc = pty.spawn(shell, ['-c', options.cmd], {
     name: 'xterm-256color',
-    cols: Math.max(1, opts.cols),
-    rows: Math.max(1, opts.rows),
-    cwd: opts.cwd || process.cwd(),
-    env: process.env as Record<string, string>,
+    cols: Math.max(1, options.cols),
+    rows: Math.max(1, options.rows),
+    cwd: options.cwd || process.cwd(),
+    env: process.env,
   });
 
-  proc.onData(opts.onData);
-  proc.onExit(({ exitCode }) => opts.onExit(exitCode));
+  proc.onData(options.onData);
+  proc.onExit(({ exitCode }) => options.onExit(exitCode));
 
   return {
     write: (data) => proc.write(data),

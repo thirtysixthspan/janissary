@@ -33,8 +33,8 @@ export class BrowserManager {
 
   // Run a `browser ...` command against a tab's browser, returning text to show/return. Shared by
   // the interactive `browser` command, `connection close browser:*`, and the ACP tool loop.
-  async run(label: string, cmd: string): Promise<string> {
-    const parsed = parseBrowserCommand(cmd);
+  async run(label: string, command: string): Promise<string> {
+    const parsed = parseBrowserCommand(command);
     if ('error' in parsed) return parsed.error;
 
     const ensureCurrent = async (): Promise<BrowserWindow> => {
@@ -77,22 +77,26 @@ export class BrowserManager {
           if (!entry?.current) return 'No browser window to close.';
           return await this.closeWindow(label, entry.current);
         }
-        case 'closeWindow':
+        case 'closeWindow': {
           return await this.closeWindow(label, parsed.id);
-        case 'goto':
+        }
+        case 'goto': {
           return await (await ensureCurrent()).goto(parsed.url);
-        case 'eval':
+        }
+        case 'eval': {
           return await (await ensureCurrent()).eval(parsed.js);
-        case 'content':
+        }
+        case 'content': {
           return await (await ensureCurrent()).content();
+        }
         case 'shot': {
           const path = await (await ensureCurrent()).shot();
           const opened = process.platform === 'darwin' ? ' (opening in Preview)' : '';
           return `Screenshot saved: ${path}${opened}`;
         }
       }
-    } catch (e) {
-      return `Browser error: ${e instanceof Error ? e.message : String(e)}`;
+    } catch (error) {
+      return `Browser error: ${error instanceof Error ? error.message : String(error)}`;
     }
     return '';
   }

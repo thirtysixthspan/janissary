@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseKind, parseMsgCommand, parseBroadcastCommand } from './messaging.js';
+import { parseKind, parseMsgCommand as parseMessageCommand, parseBroadcastCommand } from './messaging.js';
 
 describe('parseKind', () => {
   it('accepts canonical names and aliases', () => {
@@ -17,7 +17,7 @@ describe('parseKind', () => {
 
 describe('parseMsgCommand', () => {
   it('parses agent, kind, and text', () => {
-    expect(parseMsgCommand('msg bilal info hello there')).toEqual({
+    expect(parseMessageCommand('msg bilal info hello there')).toEqual({
       to: 'bilal',
       kind: 'info',
       text: 'hello there',
@@ -25,7 +25,7 @@ describe('parseMsgCommand', () => {
   });
 
   it('works without the leading msg keyword and lowercases the recipient', () => {
-    expect(parseMsgCommand('Bilal request what is your status')).toEqual({
+    expect(parseMessageCommand('Bilal request what is your status')).toEqual({
       to: 'bilal',
       kind: 'request',
       text: 'what is your status',
@@ -33,11 +33,11 @@ describe('parseMsgCommand', () => {
   });
 
   it('reports usage when too few arguments', () => {
-    expect(parseMsgCommand('msg bilal')).toEqual({ error: expect.stringContaining('Usage') });
+    expect(parseMessageCommand('msg bilal')).toEqual({ error: expect.stringContaining('Usage') });
   });
 
   it('reports an unknown message type', () => {
-    expect(parseMsgCommand('msg bilal yell hi')).toEqual({ error: expect.stringContaining('Unknown message type') });
+    expect(parseMessageCommand('msg bilal yell hi')).toEqual({ error: expect.stringContaining('Unknown message type') });
   });
 });
 

@@ -43,8 +43,8 @@ const LOCALES = ['en-US', 'en-GB'];
 // Fallback when the real Chromium version can't be read; kept recent.
 export const DEFAULT_CHROME_MAJOR = 149;
 
-function pick<T>(arr: T[], rand: () => number): T {
-  return arr[Math.floor(rand() * arr.length)];
+function pick<T>(array: T[], rand: () => number): T {
+  return array[Math.floor(rand() * array.length)];
 }
 
 /**
@@ -76,6 +76,6 @@ export function randomUserAgent(
 
 /** Build an `Accept-Language` header value consistent with a profile's locale. */
 export function acceptLanguage(locale: string): string {
-  const base = locale.split('-')[0];
+  const base = locale.split('-', 1)[0];
   return locale === base ? `${locale};q=0.9` : `${locale},${base};q=0.9`;
 }

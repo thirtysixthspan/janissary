@@ -18,7 +18,7 @@ chromium.use(StealthPlugin());
 // Pull the major version out of a Playwright version string like "149.0.7827.55" so the
 // generated UA claims the same Chrome version the engine actually reports via client hints.
 function chromeMajor(version: string): number {
-  const major = parseInt(version.split('.')[0], 10);
+  const major = parseInt(version.split('.', 1)[0], 10);
   return Number.isFinite(major) ? major : DEFAULT_CHROME_MAJOR;
 }
 
@@ -30,7 +30,7 @@ function chromeMajor(version: string): number {
 
 // Cap on `content()` output so a large page does not blow up the prompt fed back to an
 // ACP agent. Truncation is flagged in the returned text.
-const CONTENT_LIMIT = 10000;
+const CONTENT_LIMIT = 10_000;
 
 function makeWindow(id: string, page: Page): BrowserWindow {
   return {

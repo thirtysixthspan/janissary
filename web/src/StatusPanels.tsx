@@ -12,8 +12,8 @@ export function StatusPanels({ tab }: { tab: TabView }) {
       {connections.length > 0 && (
         <div className="panel">
           <div className="panel-title">connections</div>
-          {connections.map((c, i) => (
-            <div key={i} className={`panel-row conn-${c.kind}`}>{c.text}</div>
+          {connections.map((c, index) => (
+            <div key={index} className={`panel-row conn-${c.kind}`}>{c.text}</div>
           ))}
         </div>
       )}

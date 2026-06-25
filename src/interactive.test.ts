@@ -33,6 +33,6 @@ describe('isInteractive', () => {
 
   it('handles empty input', () => {
     expect(isInteractive('')).toBe(false);
-    expect(isInteractive('   ')).toBe(false);
+    expect(isInteractive(' '.repeat(3))).toBe(false);
   });
 });

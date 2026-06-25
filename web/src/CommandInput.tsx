@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react';
 import type { CompletionResult } from './protocol';
 
-type Props = {
+type Properties = {
   dotColor: string;
   history: string[];
   onSubmit: (text: string) => void;
@@ -15,15 +15,15 @@ type Props = {
 
 // The bottom command line. Up/Down walk this tab's history (server-provided); Enter dispatches;
 // Tab completes. Shift+Arrow / Ctrl+T are left to the window handler (tab switch / collapse).
-export function CommandInput({ dotColor, history, onSubmit, inputRef, complete, pickerOpen }: Props) {
+export function CommandInput({ dotColor, history, onSubmit, inputRef, complete, pickerOpen }: Properties) {
   const [value, setValue] = useState('');
   const [completions, setCompletions] = useState<string[]>([]);
-  const histIdx = useRef(-1);
+  const histIndex = useRef(-1);
 
   // Recall a history entry onto the input with the cursor at its end.
   const recall = (text: string) => {
     setValue(text);
-    requestAnimationFrame(() => { const el = inputRef.current; if (el) el.selectionStart = el.selectionEnd = text.length; });
+    requestAnimationFrame(() => { const element = inputRef.current; if (element) element.selectionStart = element.selectionEnd = text.length; });
   };
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -43,13 +43,14 @@ export function CommandInput({ dotColor, history, onSubmit, inputRef, complete, 
         // A single match fills in fully; multiple matches fill the common prefix and are listed.
         setCompletions(res.matches.length > 1 ? res.matches : []);
         requestAnimationFrame(() => {
-          const el = inputRef.current;
-          if (el) el.selectionStart = el.selectionEnd = res.newCursor;
+          const element = inputRef.current;
+          if (element) element.selectionStart = element.selectionEnd = res.newCursor;
         });
       });
       return;
     }
-    if (e.key === 'Enter') {
+    switch (e.key) {
+    case 'Enter': {
       // Don't let the window key handler also see this Enter: submitting `hist` opens the picker,
       // and React flushes that state before the event bubbles to window — which would otherwise
       // immediately run the selected (most recent) entry.
@@ -58,18 +59,28 @@ export function CommandInput({ dotColor, history, onSubmit, inputRef, complete, 
       if (text) onSubmit(text);
       setValue('');
       setCompletions([]);
-      histIdx.current = -1;
-    } else if (e.key === 'ArrowUp') {
+      histIndex.current = -1;
+    
+    break;
+    }
+    case 'ArrowUp': {
       e.preventDefault();
       if (history.length === 0) return;
-      histIdx.current = histIdx.current === -1 ? history.length - 1 : Math.max(0, histIdx.current - 1);
-      recall(history[histIdx.current]);
-    } else if (e.key === 'ArrowDown') {
+      histIndex.current = histIndex.current === -1 ? history.length - 1 : Math.max(0, histIndex.current - 1);
+      recall(history[histIndex.current]);
+    
+    break;
+    }
+    case 'ArrowDown': {
       e.preventDefault();
-      if (histIdx.current === -1) return;
-      histIdx.current += 1;
-      if (histIdx.current >= history.length) { histIdx.current = -1; setValue(''); }
-      else recall(history[histIdx.current]);
+      if (histIndex.current === -1) return;
+      histIndex.current += 1;
+      if (histIndex.current >= history.length) { histIndex.current = -1; setValue(''); }
+      else recall(history[histIndex.current]);
+    
+    break;
+    }
+    // No default
     }
   };
 

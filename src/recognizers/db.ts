@@ -13,17 +13,17 @@ const SQL_KEYWORDS = ['FROM', 'WHERE', 'JOIN', 'INTO', 'VALUES', 'SET', 'TABLE',
 // there is nothing to run the query against, so the route is not offered (per design).
 export const dbRecognizer: CommandRecognizer = {
   route: 'db',
-  recognize: (cmd, ctx) => {
-    if (ctx.openDbs.length === 0) return { match: false, reliability: 0 };
+  recognize: (command, context) => {
+    if (context.openDbs.length === 0) return { match: false, reliability: 0 };
 
-    const trimmed = cmd.trim();
+    const trimmed = command.trim();
     const first = /^([A-Za-z]+)\b/.exec(trimmed)?.[1]?.toUpperCase();
 
     let score = 0;
     if (first && SQL_START.has(first)) score = 0.8;
 
     const hits = SQL_KEYWORDS.filter((k) =>
-      new RegExp(`\\b${k.replace(' ', '\\s+')}\\b`, 'i').test(trimmed),
+      new RegExp(String.raw`\b${k.replace(' ', String.raw`\s+`)}\b`, 'i').test(trimmed),
     ).length;
     score += Math.min(0.18, hits * 0.09);
     if (/;\s*$/.test(trimmed)) score += 0.05;

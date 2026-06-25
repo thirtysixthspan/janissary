@@ -8,7 +8,7 @@ import type { ImageView } from './protocol';
 export function ImageTab({ image }: { image: ImageView }) {
   const [orientation, setOrientation] = useState<'image-landscape' | 'image-portrait'>('image-landscape');
   const token = new URLSearchParams(location.search).get('token') ?? '';
-  const src = `${image.url}?token=${encodeURIComponent(token)}`;
+  const source = `${image.url}?token=${encodeURIComponent(token)}`;
 
   return (
     <div className="image-tab">
@@ -20,7 +20,7 @@ export function ImageTab({ image }: { image: ImageView }) {
       <div className="image-stage">
         <img
           className={orientation}
-          src={src}
+          src={source}
           alt={image.name}
           onLoad={(e) => {
             const img = e.currentTarget;

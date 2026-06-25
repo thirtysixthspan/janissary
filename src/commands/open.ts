@@ -5,19 +5,19 @@ export type ParsedOpen = { external: boolean; path: string } | { error: string }
 // Parse an `open` command line: `open <path>` (inline) or `open external <path>` (external). The
 // leading `open` keyword is stripped; an optional `external` keyword immediately after it selects the
 // external surface. Everything remaining is the file path (kept verbatim, including spaces).
-export function parseOpen(cmd: string): ParsedOpen {
-  const rest = cmd.replace(/^open\b\s*/i, '');
-  const ext = rest.match(/^external\b\s*/i);
-  const external = !!ext;
-  const path = (external ? rest.slice(ext![0].length) : rest).trim();
+export function parseOpen(command_: string): ParsedOpen {
+  const rest = command_.replace(/^open\b\s*/i, '');
+  const extension = rest.match(/^external\b\s*/i);
+  const isExternal = !!extension;
+  const path = (isExternal ? rest.slice(extension[0].length) : rest).trim();
   if (!path) return { error: 'Usage: open [external] <path>' };
-  return { external, path };
+  return { external: isExternal, path };
 }
 
 // Whether an `open` argument is a shell wildcard pattern (expanded to a list of files) rather than a
 // single literal path. Detects the common glob metacharacters: `* ? [ ] { }`.
-export function isGlobPattern(arg: string): boolean {
-  return /[*?[\]{}]/.test(arg);
+export function isGlobPattern(argument: string): boolean {
+  return /[*?[\]{}]/.test(argument);
 }
 
 // Registry descriptor for command resolution (`resolveCommand` uses `match`/`name`). The behavior is
@@ -25,6 +25,6 @@ export function isGlobPattern(arg: string): boolean {
 // this handler is intentionally a no-op placeholder.
 export const command: Command = {
   name: 'open',
-  match: (cmd) => /^open\b/i.test(cmd),
+  match: (command_) => /^open\b/i.test(command_),
   handler: () => { /* behavior lives in Controller.runOpen */ },
 };

@@ -40,14 +40,14 @@ describe('randomBrowserProfile', () => {
   });
 
   it('only emits known platform hint values', () => {
-    for (let i = 0; i < 50; i++) {
+    for (let index = 0; index < 50; index++) {
       expect(['Windows', 'macOS', 'Linux']).toContain(randomBrowserProfile().platform);
     }
   });
 
   it('varies across instances', () => {
     const seen = new Set<string>();
-    for (let i = 0; i < 200; i++) {
+    for (let index = 0; index < 200; index++) {
       const p = randomBrowserProfile();
       seen.add(`${p.userAgent}|${p.locale}|${p.timezoneId}|${p.viewport.width}`);
     }

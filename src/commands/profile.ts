@@ -6,12 +6,12 @@ import { parseProfileCommand, loadProfileAgents, listProfiles, profileExists } f
 
 export const command: Command = {
   name: 'profile',
-  match: (cmd) => /^profile\b/i.test(cmd),
-  handler: (cmd, ctx) => {
-    const { updateCurrentTab, tabs, setTabs, setActiveTab, cwdRef, initAgentState } = ctx;
+  match: (command_) => /^profile\b/i.test(command_),
+  handler: (command_, context) => {
+    const { updateCurrentTab, tabs, setTabs, setActiveTab, cwdRef, initAgentState } = context;
     const out = (text: string) =>
-      updateCurrentTab((tab) => ({ ...tab, log: [...tab.log, { input: cmd, output: text }], scrollOffset: 0 }));
-    const parsed = parseProfileCommand(cmd);
+      updateCurrentTab((tab) => ({ ...tab, log: [...tab.log, { input: command_, output: text }], scrollOffset: 0 }));
+    const parsed = parseProfileCommand(command_);
 
     if ('error' in parsed) {
       out(parsed.error);
@@ -20,7 +20,7 @@ export const command: Command = {
 
     if (parsed.action === 'list') {
       const names = listProfiles();
-      out(names.length ? names.join('\n') : 'No profiles.');
+      out(names.length > 0 ? names.join('\n') : 'No profiles.');
       return;
     }
 
@@ -29,7 +29,7 @@ export const command: Command = {
       return;
     }
     const agents = loadProfileAgents(parsed.name);
-    if (!agents.length) {
+    if (agents.length === 0) {
       out(`Profile "${parsed.name}" has no agents.`);
       return;
     }
@@ -72,16 +72,16 @@ export const command: Command = {
       index++;
     }
 
-    if (newTabs.length) {
+    if (newTabs.length > 0) {
       const firstNew = tabs.length;
-      setTabs((prev) => [...prev, ...newTabs]);
+      setTabs((previous) => [...previous, ...newTabs]);
       setActiveTab(firstNew);
     }
 
     const parts: string[] = [];
-    if (opened.length) parts.push(`Launched profile "${parsed.name}": ${opened.join(', ')}.`);
-    if (skipped.length) parts.push(`Already open: ${skipped.join(', ')}.`);
-    if (!parts.length) parts.push(`Profile "${parsed.name}" has no agents to open.`);
+    if (opened.length > 0) parts.push(`Launched profile "${parsed.name}": ${opened.join(', ')}.`);
+    if (skipped.length > 0) parts.push(`Already open: ${skipped.join(', ')}.`);
+    if (parts.length === 0) parts.push(`Profile "${parsed.name}" has no agents to open.`);
     out(parts.join(' '));
   },
 };

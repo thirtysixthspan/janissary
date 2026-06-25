@@ -4,14 +4,14 @@ import { removeWorkspace } from '../workspace.js';
 
 export const command: Command = {
   name: 'close',
-  match: (cmd) => cmd.toLowerCase() === 'close',
-  handler: (_cmd, ctx) => {
+  match: (command_) => command_.toLowerCase() === 'close',
+  handler: (_command, context) => {
     const {
       tabs, activeTab, setTabs, setActiveTab, setAcpInfo, setShellActive,
       setAgentStates, setTabDbConns, exit,
       shellsRef, acpRef, browserRef, workspaceRef,
       closeTabBrowser,
-    } = ctx;
+    } = context;
     const tabIndex = activeTab;
     if (tabs.length <= 1) {
       for (const dir of workspaceRef.current) removeWorkspace(dir);
@@ -35,13 +35,13 @@ export const command: Command = {
       acpRef.current.get(tabIndex)?.kill();
       acpRef.current.delete(tabIndex);
       closeTabBrowser(tabIndex);
-      setAcpInfo((prev) => { const copy = { ...prev }; delete copy[tabIndex]; return copy; });
-      setShellActive((prev) => { const copy = { ...prev }; delete copy[tabIndex]; return copy; });
+      setAcpInfo((previous) => { const copy = { ...previous }; delete copy[tabIndex]; return copy; });
+      setShellActive((previous) => { const copy = { ...previous }; delete copy[tabIndex]; return copy; });
       const closedLabel = closedTab.label;
-      setTabs((prev) => prev.filter((_, i) => i !== tabIndex));
-      setAgentStates((prev) => { const copy = { ...prev }; delete copy[closedLabel]; return copy; });
-      setTabDbConns((prev) => { const copy = { ...prev }; delete copy[closedLabel]; return copy; });
-      setActiveTab((prev) => Math.min(prev, tabs.length - 2));
+      setTabs((previous) => previous.filter((_, index) => index !== tabIndex));
+      setAgentStates((previous) => { const copy = { ...previous }; delete copy[closedLabel]; return copy; });
+      setTabDbConns((previous) => { const copy = { ...previous }; delete copy[closedLabel]; return copy; });
+      setActiveTab((previous) => Math.min(previous, tabs.length - 2));
     }
   },
 };

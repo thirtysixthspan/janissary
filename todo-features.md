@@ -1,8 +1,4 @@
 
-## scrolling
-mouse scroll wheel to scroll back the tab transcript not the command history
-assure that the up arrow continues to scroll through the command history
-
 ## embedded ai harness
 create a new command called harness.
 called: harness harnessname 
@@ -12,20 +8,16 @@ tab switching should still be supported
 upon closing the harness, the cli in the terminal should be restored
 
 
-## root path
-the path from where the application is launched is the root path.
-shortcut the root path as $root in the transcript
-examples:
-$root/ = /Users/name/dev/janissary
-$root/workspace/emrah = /Users/name/dev/janissary/.janissary/workspace/emrah
-create a root-path spec
-update the readme
-
 ## tasks on images 
 zoom
 
 
 ## web page tabs
+build a spec for web page tabs. a web page tab should 
 
 
 ## bugs
+
+
+separate slow automated tests into a slow test suite only run at the end of feature development as a verification
+

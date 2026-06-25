@@ -2,22 +2,22 @@ import { describe, it, expect, vi } from 'vitest';
 import React from 'react';
 import { render } from 'ink-testing-library';
 import { useMessaging } from './messaging.js';
-import type { Messaging, MessagingDeps } from './types.js';
+import type { Messaging, MessagingDeps as MessagingDependencies } from './types.js';
 
 let messaging: Messaging;
 
-const Harness = ({ deps }: { deps: MessagingDeps }) => {
+const Harness = ({ deps }: { deps: MessagingDependencies }) => {
   messaging = useMessaging(deps);
   return null;
 };
 
-const setup = (over: Partial<MessagingDeps> = {}) => {
+const setup = (over: Partial<MessagingDependencies> = {}) => {
   const appendLog = vi.fn();
   const appendContext = vi.fn();
   // Default runners complete synchronously.
-  const runShell = vi.fn((_label: string, cmd: string, onComplete: (o: string) => void) => onComplete(`ran:${cmd}`));
+  const runShell = vi.fn((_label: string, command: string, onComplete: (o: string) => void) => onComplete(`ran:${command}`));
   const runCapture = vi.fn((_label: string, text: string, onResult: (o: string) => void) => onResult(`out:${text}`));
-  const deps: MessagingDeps = {
+  const dependencies: MessagingDependencies = {
     hasAgent: () => true,
     agentColor: (label) => (label === 'aslan' ? '#ff0000' : '#00ff00'),
     isInteractive: () => false,
@@ -27,7 +27,7 @@ const setup = (over: Partial<MessagingDeps> = {}) => {
     runCapture,
     ...over,
   };
-  render(<Harness deps={deps} />);
+  render(<Harness deps={dependencies} />);
   return { appendLog, appendContext, runShell, runCapture };
 };
 

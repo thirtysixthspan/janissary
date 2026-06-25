@@ -4,7 +4,7 @@ import { resolveCommand } from '../resolve.js';
 describe('resolveCommand', () => {
   it('treats empty/whitespace input as empty', () => {
     expect(resolveCommand('')).toEqual({ kind: 'empty' });
-    expect(resolveCommand('   ')).toEqual({ kind: 'empty' });
+    expect(resolveCommand(' '.repeat(3))).toEqual({ kind: 'empty' });
   });
 
   it('classifies the `shell` keyword as a shell command, stripping the keyword', () => {

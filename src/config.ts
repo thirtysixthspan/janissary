@@ -2,7 +2,7 @@ import { mkdirSync, writeFileSync, existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Config } from './types.js';
 
-export const DEFAULT_TRANSCRIPT_MAX_LINES = 25000;
+export const DEFAULT_TRANSCRIPT_MAX_LINES = 25_000;
 
 const DEFAULT_CONFIG: Config = {
   transcriptMaxLines: DEFAULT_TRANSCRIPT_MAX_LINES,
@@ -22,7 +22,7 @@ export function loadConfig(projectDir: string): Config {
   }
 
   try {
-    const parsed = JSON.parse(readFileSync(configPath, 'utf-8'));
+    const parsed = JSON.parse(readFileSync(configPath, 'utf-8')) as Partial<Config>;
     config = { ...DEFAULT_CONFIG, ...parsed };
     return config;
   } catch {

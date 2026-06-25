@@ -1,6 +1,6 @@
 import {
-  dbPath,
-  dbFileExists,
+  
+  dbFileExists as databaseFileExists,
   listDatabaseFiles,
   removeDatabaseFile,
   getConnection,
@@ -8,13 +8,13 @@ import {
   isConnectionOpen,
 } from './connections.js';
 import { type DatabaseSync } from 'node:sqlite';
-import type { DbParsed } from './types.js';
+import type { DbParsed as DatabaseParsed } from './types.js';
 
 // Database names become filenames, so restrict them to a safe character set —
 // this also blocks path traversal (`..`, `/`).
 const VALID_NAME = /^[A-Za-z0-9_-]+$/;
 const USAGE = 'Usage: db sqlite <create|delete|query|list> [name] [query]';
-const ACTIONS = ['create', 'delete', 'query', 'list'];
+const ACTIONS = new Set(['create', 'delete', 'query', 'list']);
 
 function engineError(engine: string): { error: string } {
   return { error: `Unsupported engine "${engine}". Only "sqlite" is supported.` };
@@ -29,14 +29,14 @@ function nameError(name: string): { error: string } {
 // SQLite. Only strips when the whole string is wrapped in the same quote char.
 function unwrapQuotes(s: string): string {
   const q = s[0];
-  if (s.length >= 2 && (q === '"' || q === "'") && s[s.length - 1] === q) {
+  if (s.length >= 2 && (q === '"' || q === "'") && s.at(-1) === q) {
     return s.slice(1, -1);
   }
   return s;
 }
 
 /** Parse a `db sqlite ...` command into an action. Pure — performs no I/O. */
-export function parseDbCommand(input: string): DbParsed {
+export function parseDbCommand(input: string): DatabaseParsed {
   const rest = input.trim().replace(/^db\b\s*/i, '').trim();
   if (!rest) return { error: USAGE };
 
@@ -45,7 +45,7 @@ export function parseDbCommand(input: string): DbParsed {
   if (engine !== 'sqlite') {
     // A leading action (old word order) gets the usage hint; anything else is
     // reported as an unsupported engine.
-    return ACTIONS.includes(engine) ? { error: USAGE } : engineError(engine);
+    return ACTIONS.has(engine) ? { error: USAGE } : engineError(engine);
   }
 
   const action = tail[0]?.toLowerCase();
@@ -73,34 +73,34 @@ export function parseDbCommand(input: string): DbParsed {
   return { error: USAGE };
 }
 
-function errMsg(e: unknown): string {
+function errorMessage(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
 }
 
-function createDb(name: string): string {
-  const existed = dbFileExists(name);
+function createDatabase(name: string): string {
+  const isExisted = databaseFileExists(name);
   try {
     getConnection(name); // creates the file if missing and opens a connection
-    return existed ? `Database "${name}" already exists.` : `Created sqlite database "${name}".`;
-  } catch (e) {
-    return `Failed to create database "${name}": ${errMsg(e)}`;
+    return isExisted ? `Database "${name}" already exists.` : `Created sqlite database "${name}".`;
+  } catch (error) {
+    return `Failed to create database "${name}": ${errorMessage(error)}`;
   }
 }
 
-function deleteDb(name: string): string {
+function deleteDatabase(name: string): string {
   closeConnection(name); // release the file handle before removing it
-  if (!dbFileExists(name)) return `Database "${name}" does not exist.`;
+  if (!databaseFileExists(name)) return `Database "${name}" does not exist.`;
   try {
     removeDatabaseFile(name);
     return `Deleted sqlite database "${name}".`;
-  } catch (e) {
-    return `Failed to delete database "${name}": ${errMsg(e)}`;
+  } catch (error) {
+    return `Failed to delete database "${name}": ${errorMessage(error)}`;
   }
 }
 
 function listDbs(): string {
   const names = listDatabaseFiles();
-  return names.length ? names.join('\n') : 'No databases.';
+  return names.length > 0 ? names.join('\n') : 'No databases.';
 }
 
 /** Render row objects as a simple aligned text table. */
@@ -109,39 +109,39 @@ function formatRows(rows: Record<string, unknown>[]): string {
   const cols = Object.keys(rows[0]);
   const cell = (v: unknown) => (v === null || v === undefined ? '' : String(v));
   const widths = cols.map((c) => Math.max(c.length, ...rows.map((r) => cell(r[c]).length)));
-  const fmt = (cells: string[]) => cells.map((s, i) => s.padEnd(widths[i])).join('  ');
+  const fmt = (cells: string[]) => cells.map((s, index) => s.padEnd(widths[index])).join('  ');
   const header = fmt(cols);
-  const sep = widths.map((w) => '-'.repeat(w)).join('  ');
+  const separator = widths.map((w) => '-'.repeat(w)).join('  ');
   const body = rows.map((r) => fmt(cols.map((c) => cell(r[c]))));
   const count = `(${rows.length} row${rows.length === 1 ? '' : 's'})`;
-  return [header, sep, ...body, '', count].join('\n');
+  return [header, separator, ...body, '', count].join('\n');
 }
 
 // Statements that yield rows; everything else is executed for its side effects.
 const READ_QUERY = /^\s*(select|pragma|with|explain)\b/i;
 
-function queryDb(name: string, query: string): string {
+function queryDatabase(name: string, query: string): string {
   // Require the database to exist (a typo shouldn't silently create one); an
   // already-open connection counts as existence even mid-session.
-  if (!dbFileExists(name) && !isConnectionOpen(name)) {
+  if (!databaseFileExists(name) && !isConnectionOpen(name)) {
     return `Database "${name}" does not exist. Create it with: db sqlite create ${name}`;
   }
-  let db: DatabaseSync;
+  let database: DatabaseSync;
   try {
-    db = getConnection(name); // reuse the persistent connection
-  } catch (e) {
-    return `Failed to open database "${name}": ${errMsg(e)}`;
+    database = getConnection(name); // reuse the persistent connection
+  } catch (error) {
+    return `Failed to open database "${name}": ${errorMessage(error)}`;
   }
   try {
     if (READ_QUERY.test(query)) {
-      const rows = db.prepare(query).all() as Record<string, unknown>[];
+      const rows = database.prepare(query).all() as Record<string, unknown>[];
       return formatRows(rows);
     }
     // exec handles writes and multiple semicolon-separated statements.
-    db.exec(query);
+    database.exec(query);
     return 'OK.';
-  } catch (e) {
-    return `Query error: ${errMsg(e)}`;
+  } catch (error) {
+    return `Query error: ${errorMessage(error)}`;
   }
 }
 
@@ -150,14 +150,18 @@ export function runDbCommand(input: string): string {
   const parsed = parseDbCommand(input);
   if ('error' in parsed) return parsed.error;
   switch (parsed.action) {
-    case 'create':
-      return createDb(parsed.name);
-    case 'delete':
-      return deleteDb(parsed.name);
-    case 'list':
+    case 'create': {
+      return createDatabase(parsed.name);
+    }
+    case 'delete': {
+      return deleteDatabase(parsed.name);
+    }
+    case 'list': {
       return listDbs();
-    case 'query':
-      return queryDb(parsed.name, parsed.query);
+    }
+    case 'query': {
+      return queryDatabase(parsed.name, parsed.query);
+    }
   }
 }
 
@@ -185,12 +189,14 @@ export const DB_PRIMER = [
  */
 export function extractDbCommand(text: string): string | null {
   const lines = text.split('\n');
-  for (let i = lines.length - 1; i >= 0; i--) {
-    const line = lines[i].replace(/^[\s`$>]+/, '').replace(/`+\s*$/, '').trim();
+  for (let index = lines.length - 1; index >= 0; index--) {
+    const line = lines[index].replace(/^[\s`$>]+/, '').replace(/`+\s*$/, '').trim();
     if (/^db\s+sqlite\s+(create|delete|query|list)\b/i.test(line)) return line;
   }
   return null;
 }
 
 // `dbPath` is re-exported for callers (and tests) that need the on-disk location.
-export { dbPath };
+
+
+export {dbPath} from './connections.js';

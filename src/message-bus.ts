@@ -9,11 +9,11 @@ type Message = { id: number; from: string; to: string; kind: MessageKind; text: 
 export type MessageBusDeps = {
   hasAgent: (label: string) => boolean;
   agentColor: (label: string) => string;
-  isInteractive: (cmd: string) => boolean;
+  isInteractive: (command: string) => boolean;
   appendLog: (label: string, entry: LogEntry) => void;
   appendContext: (label: string, text: string) => void;
-  runShell: (label: string, cmd: string, done: (output: string) => void) => void;
-  runCapture: (label: string, text: string, cb: (output: string) => void) => void;
+  runShell: (label: string, command: string, done: (output: string) => void) => void;
+  runCapture: (label: string, text: string, callback: (output: string) => void) => void;
 };
 
 export class MessageBus {
@@ -21,15 +21,15 @@ export class MessageBus {
   private processing = new Set<string>();
   private nextId = 0;
 
-  constructor(private deps: MessageBusDeps) {}
+  constructor(private dependencies: MessageBusDeps) {}
 
-  send(msg: Omit<Message, 'id'>): boolean {
-    if (!this.deps.hasAgent(msg.to)) return false;
-    const full: Message = { ...msg, id: ++this.nextId };
-    const q = this.queues.get(msg.to) ?? [];
+  send(message: Omit<Message, 'id'>): boolean {
+    if (!this.dependencies.hasAgent(message.to)) return false;
+    const full: Message = { ...message, id: ++this.nextId };
+    const q = this.queues.get(message.to) ?? [];
     q.push(full);
-    this.queues.set(msg.to, q);
-    this.pump(msg.to);
+    this.queues.set(message.to, q);
+    this.pump(message.to);
     return true;
   }
 
@@ -38,36 +38,36 @@ export class MessageBus {
     const queue = this.queues.get(label);
     if (!queue || queue.length === 0) return;
     this.processing.add(label);
-    const msg = queue.shift()!;
-    this.handle(msg, () => {
+    const message = queue.shift()!;
+    this.handle(message, () => {
       this.processing.delete(label);
       if ((this.queues.get(label)?.length ?? 0) > 0) setTimeout(() => this.pump(label), 0);
     });
   }
 
-  private handle(msg: Message, done: () => void): void {
-    const d = this.deps;
-    if (msg.kind === 'info') {
-      d.appendLog(msg.to, { input: '', output: msg.text, from: msg.from, fromColor: d.agentColor(msg.from), msgKind: 'info' });
-      d.appendContext(msg.to, `${msg.from}: ${msg.text}`);
+  private handle(message: Message, done: () => void): void {
+    const d = this.dependencies;
+    if (message.kind === 'info') {
+      d.appendLog(message.to, { input: '', output: message.text, from: message.from, fromColor: d.agentColor(message.from), msgKind: 'info' });
+      d.appendContext(message.to, `${message.from}: ${message.text}`);
       done();
       return;
     }
-    if (msg.kind === 'response') {
-      d.appendLog(msg.to, { input: '', output: msg.text, from: `response from ${msg.from}`, fromColor: d.agentColor(msg.from), msgKind: 'response' });
-      d.appendContext(msg.to, `${msg.from}: ${msg.text}`);
+    if (message.kind === 'response') {
+      d.appendLog(message.to, { input: '', output: message.text, from: `response from ${message.from}`, fromColor: d.agentColor(message.from), msgKind: 'response' });
+      d.appendContext(message.to, `${message.from}: ${message.text}`);
       done();
       return;
     }
-    if (msg.kind === 'command') {
-      d.appendLog(msg.to, { input: '', output: `sent command: ${msg.text}`, from: msg.from, fromColor: d.agentColor(msg.from), msgKind: 'info' });
-      d.runCapture(msg.to, msg.text, () => done());
+    if (message.kind === 'command') {
+      d.appendLog(message.to, { input: '', output: `sent command: ${message.text}`, from: message.from, fromColor: d.agentColor(message.from), msgKind: 'info' });
+      d.runCapture(message.to, message.text, () => done());
       return;
     }
-    if (msg.kind === 'request') {
-      d.appendLog(msg.to, { input: '', output: `sent request: ${msg.text}`, from: msg.from, fromColor: d.agentColor(msg.from), msgKind: 'info' });
-      d.runCapture(msg.to, msg.text, (output) => {
-        this.send({ from: msg.to, to: msg.from, kind: 'response', text: output });
+    if (message.kind === 'request') {
+      d.appendLog(message.to, { input: '', output: `sent request: ${message.text}`, from: message.from, fromColor: d.agentColor(message.from), msgKind: 'info' });
+      d.runCapture(message.to, message.text, (output) => {
+        this.send({ from: message.to, to: message.from, kind: 'response', text: output });
         done();
       });
       return;

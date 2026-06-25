@@ -4,7 +4,7 @@ import '@xterm/xterm/css/xterm.css';
 import './theme.css';
 import { App } from './App';
 
-createRoot(document.getElementById('root')!).render(
+createRoot(document.querySelector('#root')!).render(
   <React.StrictMode>
     <App />
   </React.StrictMode>,

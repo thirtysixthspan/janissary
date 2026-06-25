@@ -1,20 +1,20 @@
 import type { Command } from './types.js';
-import { parseMsgCommand } from '../messaging.js';
+import { parseMsgCommand as parseMessageCommand } from '../messaging.js';
 
 export const command: Command = {
   name: 'msg',
-  match: (cmd) => /^msg\b/i.test(cmd),
-  handler: (cmd, ctx) => {
-    const { updateCurrentTab, tabs, activeTab, sendMessage } = ctx;
+  match: (command_) => /^msg\b/i.test(command_),
+  handler: (command_, context) => {
+    const { updateCurrentTab, tabs, activeTab, sendMessage } = context;
     const fromLabel = tabs[activeTab].label;
-    const parsed = parseMsgCommand(cmd);
+    const parsed = parseMessageCommand(command_);
     const result = 'error' in parsed
       ? parsed.error
       : parsed.to === fromLabel
         ? 'Cannot message yourself.'
-        : !sendMessage({ from: fromLabel, to: parsed.to, kind: parsed.kind, text: parsed.text })
-          ? `No agent named "${parsed.to}".`
-          : `→ ${parsed.to} (${parsed.kind}): ${parsed.text}`;
-    updateCurrentTab((tab) => ({ ...tab, log: [...tab.log, { input: cmd, output: result }], scrollOffset: 0 }));
+        : sendMessage({ from: fromLabel, to: parsed.to, kind: parsed.kind, text: parsed.text })
+          ? `→ ${parsed.to} (${parsed.kind}): ${parsed.text}`
+          : `No agent named "${parsed.to}".`;
+    updateCurrentTab((tab) => ({ ...tab, log: [...tab.log, { input: command_, output: result }], scrollOffset: 0 }));
   },
 };

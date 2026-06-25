@@ -3,14 +3,14 @@ import { parseBroadcastCommand } from '../messaging.js';
 
 export const command: Command = {
   name: 'broadcast',
-  match: (cmd) => /^broadcast\b/i.test(cmd),
-  handler: (cmd, ctx) => {
-    const { updateCurrentTab, tabs, activeTab, sendMessage } = ctx;
+  match: (command_) => /^broadcast\b/i.test(command_),
+  handler: (command_, context) => {
+    const { updateCurrentTab, tabs, activeTab, sendMessage } = context;
     const fromLabel = tabs[activeTab].label;
-    const parsed = parseBroadcastCommand(cmd);
+    const parsed = parseBroadcastCommand(command_);
     if ('error' in parsed) {
       updateCurrentTab((tab) => (
-        { ...tab, log: [...tab.log, { input: cmd, output: parsed.error }], scrollOffset: 0 }
+        { ...tab, log: [...tab.log, { input: command_, output: parsed.error }], scrollOffset: 0 }
       ));
       return;
     }
@@ -25,11 +25,11 @@ export const command: Command = {
       else missing.push(to);
     }
     const segments: string[] = [];
-    if (sent.length) segments.push(`Sent ${parsed.kind} to ${sent.join(', ')}.`);
-    if (missing.length) segments.push(`No agent named: ${missing.join(', ')}.`);
-    if (!segments.length) segments.push('No other agents to broadcast to.');
+    if (sent.length > 0) segments.push(`Sent ${parsed.kind} to ${sent.join(', ')}.`);
+    if (missing.length > 0) segments.push(`No agent named: ${missing.join(', ')}.`);
+    if (segments.length === 0) segments.push('No other agents to broadcast to.');
     updateCurrentTab((tab) => (
-      { ...tab, log: [...tab.log, { input: cmd, output: segments.join(' ') }], scrollOffset: 0 }
+      { ...tab, log: [...tab.log, { input: command_, output: segments.join(' ') }], scrollOffset: 0 }
     ));
   },
 };

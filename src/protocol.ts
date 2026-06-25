@@ -2,7 +2,7 @@
 // these locally (it cannot import across the bundler boundary cleanly), so keep them in sync.
 import type { BufferLine, ImageView } from './types.js';
 
-export type { BufferLine, ImageView };
+
 
 // One row in the floating "connections" panel (shell / acp / terminal card / sqlite).
 export type ConnectionView = { text: string; kind: 'shell' | 'acp' | 'browser' | 'terminal' | 'sqlite' };
@@ -64,3 +64,5 @@ export type RpcCall =
   | { method: 'ptyKill'; params: { id: string } };
 
 export type ClientMessage = { t: 'rpc'; id: number } & RpcCall;
+
+export {type BufferLine, type ImageView} from './types.js';

@@ -1,6 +1,6 @@
-import type { ServerEvent, RpcCall, RouteChooserView } from './protocol';
+import type { ServerEvent, RpcCall, RouteChooserView, TabView } from './protocol';
 
-type StateListener = (tabs: import('./protocol').TabView[], activeTab: number, route: RouteChooserView | null) => void;
+type StateListener = (tabs: TabView[], activeTab: number, route: RouteChooserView | null) => void;
 type ExitListener = (id: string, exitCode: number) => void;
 
 // Thin WebSocket client. State snapshots fan out to subscribers; PTY output is routed per-id to
@@ -18,24 +18,41 @@ export class JanusClient {
     const token = new URLSearchParams(location.search).get('token') ?? '';
     this.ws = new WebSocket(`ws://${location.host}/?token=${encodeURIComponent(token)}`);
     this.ws.onmessage = (e) => this.onEvent(JSON.parse(e.data) as ServerEvent);
-    this.ws.onopen = () => this.send({ method: 'init', params: {} });
+    this.ws.addEventListener('open', () => this.send({ method: 'init', params: {} }));
   }
 
-  private onEvent(ev: ServerEvent): void {
-    if (ev.t === 'state') {
-      for (const l of this.stateListeners) l(ev.tabs, ev.activeTab, ev.route ?? null);
-    } else if (ev.t === 'pty') {
-      const h = this.ptyHandlers.get(ev.id);
-      if (h) h(ev.data);
-      else { const b = this.ptyBuffers.get(ev.id) ?? []; b.push(ev.data); this.ptyBuffers.set(ev.id, b); }
-    } else if (ev.t === 'pty-exit') {
-      for (const l of this.exitListeners) l(ev.id, ev.exitCode);
-    } else if (ev.t === 'bye') {
+  private onEvent(event: ServerEvent): void {
+    switch (event.t) {
+    case 'state': {
+      for (const l of this.stateListeners) l(event.tabs, event.activeTab, event.route ?? null);
+    
+    break;
+    }
+    case 'pty': {
+      const h = this.ptyHandlers.get(event.id);
+      if (h) h(event.data);
+      else { const b = this.ptyBuffers.get(event.id) ?? []; b.push(event.data); this.ptyBuffers.set(event.id, b); }
+    
+    break;
+    }
+    case 'pty-exit': {
+      for (const l of this.exitListeners) l(event.id, event.exitCode);
+    
+    break;
+    }
+    case 'bye': {
       // The server is shutting down (quit/exit); close this window.
       window.close();
-    } else if (ev.t === 'rpc-reply') {
-      const cb = this.pending.get(ev.id);
-      if (cb) { this.pending.delete(ev.id); cb(ev.result); }
+    
+    break;
+    }
+    case 'rpc-reply': {
+      const callback = this.pending.get(event.id);
+      if (callback) { this.pending.delete(event.id); callback(event.result); }
+    
+    break;
+    }
+    // No default
     }
   }
 

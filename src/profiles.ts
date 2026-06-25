@@ -65,8 +65,8 @@ export function loadProfileAgents(name: string): AgentState[] {
 
 export const PROFILE_USAGE = 'Usage: profile launch <name> | profile list';
 
-export function parseProfileCommand(cmd: string): ProfileParsed {
-  const rest = cmd.replace(/^profile\b\s*/i, '').trim();
+export function parseProfileCommand(command: string): ProfileParsed {
+  const rest = command.replace(/^profile\b\s*/i, '').trim();
   if (!rest) return { error: PROFILE_USAGE };
   const tokens = rest.split(/\s+/);
   const head = tokens[0].toLowerCase();

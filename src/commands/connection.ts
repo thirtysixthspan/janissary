@@ -6,16 +6,16 @@ import {
 
 export const command: Command = {
   name: 'connection',
-  match: (cmd) => /^connection\b/i.test(cmd),
-  handler: (cmd, ctx) => {
+  match: (command_) => /^connection\b/i.test(command_),
+  handler: (command_, context) => {
     const {
       updateCurrentTab, tabs, activeTab, shellsRef, acpRef, browserRef,
       appendLog, finishRunning, closeBrowserWindow,
       forgetDbConn, setShellActive, setAcpInfo, shellName,
-    } = ctx;
+    } = context;
     const tabIndex = activeTab;
     const tabLabel = tabs[tabIndex].label;
-    const trimmed = cmd;
+    const trimmed = command_;
     const parsed = parseConnectionCommand(trimmed);
     if (!('error' in parsed) && parsed.action === 'close' && parsed.kind === 'browser') {
       appendLog(tabLabel, { input: trimmed, output: '', running: true });
@@ -31,7 +31,7 @@ export const command: Command = {
       if (acpRef.current.get(tabIndex)) lines.push('acp:opencode');
       for (const id of browserRef.current.get(tabIndex)?.browser.windowIds() ?? []) lines.push(`browser:${id}`);
       for (const n of listOpenConnections()) lines.push(`sqlite:${n}`);
-      output = lines.length ? lines.join('\n') : 'No open connections.';
+      output = lines.length > 0 ? lines.join('\n') : 'No open connections.';
     } else if (parsed.kind === 'sqlite') {
       if (closeConnection(parsed.id)) {
         forgetDbConn(parsed.id);
@@ -45,7 +45,7 @@ export const command: Command = {
       } else if (shellsRef.current.get(tabIndex)) {
         shellsRef.current.get(tabIndex)?.kill();
         shellsRef.current.delete(tabIndex);
-        setShellActive((prev) => { const c = { ...prev }; delete c[tabIndex]; return c; });
+        setShellActive((previous) => { const c = { ...previous }; delete c[tabIndex]; return c; });
         output = `Closed connection shell:${shellName}.`;
       } else {
         output = `No open connection shell:${shellName}.`;
@@ -56,7 +56,7 @@ export const command: Command = {
       } else if (acpRef.current.get(tabIndex)) {
         acpRef.current.get(tabIndex)?.kill();
         acpRef.current.delete(tabIndex);
-        setAcpInfo((prev) => { const c = { ...prev }; delete c[tabIndex]; return c; });
+        setAcpInfo((previous) => { const c = { ...previous }; delete c[tabIndex]; return c; });
         output = 'Closed connection acp:opencode.';
       } else {
         output = 'No open connection acp:opencode.';
