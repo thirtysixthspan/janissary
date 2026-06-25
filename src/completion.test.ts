@@ -35,13 +35,13 @@ describe('completeCommandLine', () => {
   it('extends to the longest common prefix for multiple matches', () => {
     const r = completeCommandLine('cat da', 6, dir);
     expect(r.newInput).toBe('cat data'); // data1.csv / data2.csv share the prefix "data"
-    expect(r.matches.sort()).toEqual(['data1.csv', 'data2.csv']);
+    expect(r.matches.toSorted()).toEqual(['data1.csv', 'data2.csv']);
   });
 
   it('reports all matches when no further completion is possible', () => {
     const r = completeCommandLine('cat data', 8, dir);
     expect(r.newInput).toBe('cat data');
-    expect(r.matches.sort()).toEqual(['data1.csv', 'data2.csv']);
+    expect(r.matches.toSorted()).toEqual(['data1.csv', 'data2.csv']);
   });
 
   it('completes a unique deeper match fully', () => {
@@ -79,7 +79,7 @@ describe('completeCommandLine — agent names', () => {
     expect(completeCommandLine('msg a', 5, noFiles, agents).newInput).toBe('msg aslan '); // only aslan starts with "a"
     const r = completeCommandLine('msg ', 4, noFiles, ['ahmed', 'aslan']);
     expect(r.newInput).toBe('msg a'); // ahmed/aslan -> common prefix "a"
-    expect(r.matches.sort()).toEqual(['ahmed', 'aslan']);
+    expect(r.matches.toSorted()).toEqual(['ahmed', 'aslan']);
   });
 
   it('offers "all" and supports comma lists for broadcast', () => {
@@ -107,12 +107,12 @@ describe('completeCommandLine — connection strings', () => {
   it('fills the common prefix when several connections match', () => {
     const r = completeCommandLine('connection close sq', 19, noFiles, [], conns);
     expect(r.newInput).toBe('connection close sqlite:');
-    expect(r.matches.sort()).toEqual(['sqlite:movies', 'sqlite:shop']);
+    expect(r.matches.toSorted()).toEqual(['sqlite:movies', 'sqlite:shop']);
   });
 
   it('offers every open connection for an empty target', () => {
     const r = completeCommandLine('connection close ', 17, noFiles, [], conns);
-    expect(r.matches.sort()).toEqual(['acp:opencode', 'shell:bash', 'sqlite:movies', 'sqlite:shop']);
+    expect(r.matches.toSorted()).toEqual(['acp:opencode', 'shell:bash', 'sqlite:movies', 'sqlite:shop']);
   });
 
   it('does not offer connections for `connection list` or the command word', () => {
@@ -132,7 +132,7 @@ describe('completeCommandLine — browser command', () => {
   it('fills the common prefix when several subcommands match', () => {
     const r = completeCommandLine('browser c', 9, noFiles, [], conns);
     expect(r.newInput).toBe('browser c'); // close/content -> common prefix "c"
-    expect(r.matches.sort()).toEqual(['close', 'content']);
+    expect(r.matches.toSorted()).toEqual(['close', 'content']);
   });
 
   it('offers every subcommand for an empty argument', () => {
@@ -143,7 +143,7 @@ describe('completeCommandLine — browser command', () => {
 
   it('completes window ids (without the browser: prefix) for `browser use`', () => {
     const r = completeCommandLine('browser use ', 12, noFiles, [], conns);
-    expect(r.matches.sort()).toEqual(['w1', 'w2']);
+    expect(r.matches.toSorted()).toEqual(['w1', 'w2']);
     expect(completeCommandLine('browser use w1', 14, noFiles, [], conns).newInput).toBe('browser use w1 ');
   });
 
@@ -151,7 +151,7 @@ describe('completeCommandLine — browser command', () => {
     expect(completeCommandLine('browser window ', 15, noFiles, [], conns).newInput).toBe(
       'browser window close ',
     );
-    expect(completeCommandLine('browser window close ', 21, noFiles, [], conns).matches.sort()).toEqual([
+    expect(completeCommandLine('browser window close ', 21, noFiles, [], conns).matches.toSorted()).toEqual([
       'w1',
       'w2',
     ]);

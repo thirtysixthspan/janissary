@@ -67,7 +67,7 @@ describe.skipIf(!isAvailable)('TabBrowser', () => {
 
   it('closes a window and isolates separate windows', async () => {
     await browser.openWindow('w2');
-    expect(browser.windowIds().sort()).toEqual(['w1', 'w2']);
+    expect(browser.windowIds().toSorted()).toEqual(['w1', 'w2']);
     await browser.closeWindow('w1');
     expect(browser.windowIds()).toEqual(['w2']);
     expect(browser.window('w1')).toBeUndefined();

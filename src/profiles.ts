@@ -32,7 +32,7 @@ export function listProfiles(): string[] {
     return readdirSync(profileDir, { withFileTypes: true })
       .filter((d) => d.isDirectory())
       .map((d) => d.name)
-      .sort();
+      .toSorted();
   } catch {
     return [];
   }
@@ -57,7 +57,7 @@ export function loadProfileAgents(name: string): AgentState[] {
         }
       })
       .filter((s): s is AgentState => s !== null)
-      .sort((a, b) => (a.number ?? Infinity) - (b.number ?? Infinity));
+      .toSorted((a, b) => (a.number ?? Infinity) - (b.number ?? Infinity));
   } catch {
     return [];
   }

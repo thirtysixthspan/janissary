@@ -76,7 +76,7 @@ export function getFrequentHistory(history: string[], count: number): string[] {
     freq.set(command, (freq.get(command) ?? 0) + 1);
   }
   return [...freq]
-    .sort((a, b) => a[1] - b[1] || a[0].localeCompare(b[0]))
+    .toSorted((a, b) => a[1] - b[1] || a[0].localeCompare(b[0]))
     .map(([command]) => command)
     .slice(-count);
 }

@@ -75,7 +75,7 @@ describe('profile command handler', () => {
     writeAgent('coding', 'carol', {});
     run('profile launch coding');
 
-    expect(appended.map((t) => t.label).sort()).toEqual(['bob', 'carol']);
+    expect(appended.map((t) => t.label).toSorted()).toEqual(['bob', 'carol']);
     expect(active).toBe(1);
     expect(cwdReference.current.bob).toBe('/work/bob');
     expect(appended.find((t) => t.label === 'bob')?.dotColor).toBe('#abcdef');

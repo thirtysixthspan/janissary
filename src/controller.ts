@@ -103,7 +103,7 @@ export class Controller {
 
   // Restore tabs from persisted agent state (for `--relaunch`). Called before any client connects.
   rehydrate(): void {
-    const states = listAgentStates().sort((a, b) => (a.number ?? Infinity) - (b.number ?? Infinity));
+    const states = listAgentStates().toSorted((a, b) => (a.number ?? Infinity) - (b.number ?? Infinity));
     if (states.length === 0) return;
     this.tabs = states.map((s, index) => {
       // Preserve each tab's saved `number`; fall back to array order only for state files predating
@@ -405,7 +405,7 @@ export class Controller {
       if (parsed.action === 'delete') this.forgetDbConn(parsed.name);
       else if (parsed.action !== 'list' && isConnectionOpen(parsed.name)) {
         const current = this.tabDbConns.get(label) ?? [];
-        if (!current.includes(parsed.name)) this.tabDbConns.set(label, [...current, parsed.name].sort());
+        if (!current.includes(parsed.name)) this.tabDbConns.set(label, [...current, parsed.name].toSorted());
       }
     }
     return output;
@@ -570,7 +570,7 @@ export class Controller {
     const files = stdout.split('\n').map((s) => s.trim()).filter(Boolean)
       .map((p) => (isAbsolute(p) ? p : resolvePath(cwd, p)))
       .filter((p) => { try { return statSync(p).isFile(); } catch { return false; } });
-    return [...new Set(files)].sort();
+    return [...new Set(files)].toSorted();
   }
 
   // Register a local file for serving to the web client; returns the app-relative ref (`/open/<id>`).

@@ -59,7 +59,7 @@ const completeWord = (
   after: string,
   tokenStart: number,
 ): CompletionResult => {
-  const matches = candidates.filter((c) => c.startsWith(partial)).sort();
+  const matches = candidates.filter((c) => c.startsWith(partial)).toSorted();
   if (matches.length === 0) return { newInput: before + after, newCursor: before.length, matches: [] };
   const completed = matches.length === 1 ? matches[0] + suffix : longestCommonPrefix(matches);
   return replaceToken(before, after, tokenStart, keepPrefix + completed, matches);
@@ -144,7 +144,7 @@ export function completeCommandLine(
   // Hide dotfiles unless the partial name explicitly starts with a dot (bash-like).
   const matches = entries
     .filter((e) => e.startsWith(base) && (base.startsWith('.') || !e.startsWith('.')))
-    .sort();
+    .toSorted();
   if (matches.length === 0) return { newInput: input, newCursor: cursor, matches: [] };
 
   let completedName = longestCommonPrefix(matches);

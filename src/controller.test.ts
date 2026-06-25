@@ -522,7 +522,7 @@ describe('Controller open command', () => {
     c.dispatch(`open ${dir}/*.png`);
     const imgs = c.view().filter((t) => t.view === 'image');
     expect(imgs).toHaveLength(3); // the .txt is not matched by *.png
-    expect(imgs.map((t) => t.image!.name).sort()).toEqual(['a.png', 'b.png', 'c.png']);
+    expect(imgs.map((t) => t.image!.name).toSorted()).toEqual(['a.png', 'b.png', 'c.png']);
   });
 
   it('caps a wildcard open at 10 files and notes the overflow', () => {

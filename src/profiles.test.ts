@@ -62,7 +62,7 @@ describe('profile directory', () => {
     writeAgent('coding', 'bob', { cmdHistory: ['ls'], name: 'WRONG' });
     writeAgent('coding', 'carol', {});
     const agents = loadProfileAgents('coding');
-    expect(agents.map((a) => a.name).sort()).toEqual(['bob', 'carol']);
+    expect(agents.map((a) => a.name).toSorted()).toEqual(['bob', 'carol']);
     expect(agents.find((a) => a.name === 'bob')?.cmdHistory).toEqual(['ls']);
   });
 

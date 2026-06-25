@@ -25,7 +25,7 @@ export function analyzeCommand(command: string, context: RecognizerContext): Ana
     .map((r) => ({ route: r.route, ...r.recognize(command, context) }))
     .filter((r) => r.match)
     .map(({ route, reliability }) => ({ route, reliability }))
-    .sort((a, b) => b.reliability - a.reliability);
+    .toSorted((a, b) => b.reliability - a.reliability);
 
   const top = matches[0];
   const runnerUp = matches[1];

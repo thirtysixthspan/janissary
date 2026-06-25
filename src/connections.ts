@@ -26,7 +26,7 @@ export function listDatabaseFiles(): string[] {
   return readdirSync(dbDir)
     .filter((f) => f.endsWith('.sqlite'))
     .map((f) => f.slice(0, -'.sqlite'.length))
-    .sort();
+    .toSorted();
 }
 
 export function removeDatabaseFile(name: string): void {
@@ -72,7 +72,7 @@ export function closeAllConnections(): void {
 
 /** Names of databases with an open connection, sorted. */
 export function listOpenConnections(): string[] {
-  return [...connections.keys()].sort();
+  return [...connections.keys()].toSorted();
 }
 
 // --- The generic `connection` command -------------------------------------
