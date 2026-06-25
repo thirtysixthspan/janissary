@@ -12,8 +12,10 @@
 | Ctrl+→ | Move the current tab one position right |
 | ↑ | Walk backward through command history |
 | ↓ | Walk forward through command history |
-| Ctrl+↑ / Ctrl+P | Scroll transcript up one line |
-| Ctrl+↓ / Ctrl+N | Scroll transcript down one line |
+| Shift+↑ / Ctrl+↑ | Scroll transcript up (accelerated — distance doubles each second held) |
+| Shift+↓ / Ctrl+↓ | Scroll transcript down (accelerated — distance doubles each second held) |
+| Ctrl+P | Scroll transcript up (fixed — one line per press) |
+| Ctrl+N | Scroll transcript down (fixed — one line per press) |
 | Ctrl+R | Open command history picker |
 | Ctrl+T | Expand / collapse the current tab's agent tool-step runs |
 | PageUp | Scroll transcript up by half terminal height |

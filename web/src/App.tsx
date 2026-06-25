@@ -24,6 +24,7 @@ export function App() {
   const routeRef = useRef<RouteChooserView | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const transcriptRef = useRef<HTMLDivElement>(null);
+  const scrollAccel = useRef<{ start: number; dir: -1 | 1 } | null>(null);
 
   const cur = tabs[activeTab] ?? tabs[0];
   const lines = useMemo(() => cur?.bufferLines ?? [], [cur]);
@@ -84,15 +85,30 @@ export function App() {
       }
       if (e.ctrlKey && e.key.toLowerCase() === 'r') { e.preventDefault(); openPicker(); return; }
 
-      // Transcript scrolling: PageUp/Down half-screen, Ctrl+Up/Down (or Ctrl+P/N) one line,
-      // Escape jumps back to the bottom.
+      // Transcript scrolling: PageUp/Down half-screen, Shift/Ctrl+Up/Down one line (with
+      // acceleration that doubles every second while held), Escape jumps back to the bottom.
       const el = transcriptRef.current;
       if (el) {
-        const line = 22;
         if (e.key === 'PageUp') { e.preventDefault(); el.scrollTop -= el.clientHeight / 2; return; }
         if (e.key === 'PageDown') { e.preventDefault(); el.scrollTop += el.clientHeight / 2; return; }
-        if (e.ctrlKey && (e.key === 'ArrowUp' || e.key.toLowerCase() === 'p')) { e.preventDefault(); el.scrollTop -= line; return; }
-        if (e.ctrlKey && (e.key === 'ArrowDown' || e.key.toLowerCase() === 'n')) { e.preventDefault(); el.scrollTop += line; return; }
+        if ((e.shiftKey || e.ctrlKey) && e.key === 'ArrowUp') {
+          e.preventDefault();
+          if (!scrollAccel.current || scrollAccel.current.dir !== -1) scrollAccel.current = { start: Date.now(), dir: -1 };
+          const elapsed = Date.now() - scrollAccel.current.start;
+          const step = Math.min(220, Math.max(22, Math.round(22 * Math.pow(2, elapsed / 1000))));
+          el.scrollTop -= step;
+          return;
+        }
+        if ((e.shiftKey || e.ctrlKey) && e.key === 'ArrowDown') {
+          e.preventDefault();
+          if (!scrollAccel.current || scrollAccel.current.dir !== 1) scrollAccel.current = { start: Date.now(), dir: 1 };
+          const elapsed = Date.now() - scrollAccel.current.start;
+          const step = Math.min(220, Math.max(22, Math.round(22 * Math.pow(2, elapsed / 1000))));
+          el.scrollTop += step;
+          return;
+        }
+        if (e.ctrlKey && e.key.toLowerCase() === 'p') { e.preventDefault(); el.scrollTop -= 22; return; }
+        if (e.ctrlKey && e.key.toLowerCase() === 'n') { e.preventDefault(); el.scrollTop += 22; return; }
         if (e.key === 'Escape') { e.preventDefault(); el.scrollTop = el.scrollHeight; return; }
       }
       // Shift+Arrow switches tabs, Ctrl+Arrow reorders within group, Ctrl+T toggles collapse.
@@ -102,8 +118,15 @@ export function App() {
       else if (e.shiftKey && !e.ctrlKey && e.key === 'ArrowRight') { e.preventDefault(); client.send({ method: 'moveTab', params: { dir: 1 } }); }
       else if (e.ctrlKey && e.key.toLowerCase() === 't') { e.preventDefault(); client.send({ method: 'toggleCollapse', params: {} }); }
     };
+    const onUp = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowUp' || e.key === 'ArrowDown') scrollAccel.current = null;
+    };
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    window.addEventListener('keyup', onUp);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener('keyup', onUp);
+    };
   }, [client]);
 
   if (!cur) return <div className="app" style={{ padding: 16, color: 'var(--muted)' }}>Connecting…</div>;

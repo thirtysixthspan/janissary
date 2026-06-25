@@ -42,10 +42,9 @@ export function TerminalCard({ entry, client }: Props) {
     // Let app-level chords fall through to the window handler instead of the PTY.
     term.attachCustomKeyEventHandler((e) => {
       if (e.type !== 'keydown') return true;
-      // Let app-level chords reach the window handler: Shift+Arrow (switch tab), Ctrl+Arrow
-      // (reorder tab), Ctrl+T (collapse) — instead of sending them to the PTY.
-      if ((e.shiftKey || e.ctrlKey) && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) return false;
-      if (e.ctrlKey && e.key.toLowerCase() === 't') return false;
+      // Let app-level chords reach the window handler (Shift/Ctrl+Arrow for tab switch, scroll,
+      // reorder; Ctrl+T for collapse) instead of sending them to the PTY.
+      if (e.shiftKey || e.ctrlKey) return false;
       return true;
     });
 

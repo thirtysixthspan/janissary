@@ -28,8 +28,8 @@ export function CommandInput({ dotColor, history, onSubmit, inputRef, complete, 
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (pickerOpen) return; // history picker is modal; the window handler owns the keys
-    // Defer tab chords (Shift+Arrow switch, Ctrl+Arrow reorder) to the window handler.
-    if ((e.shiftKey || e.ctrlKey) && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) return;
+    // Defer tab chords (Shift+Arrow switch, Ctrl+Arrow reorder) and Shift+Up/Down (scroll) to the window handler.
+    if (e.shiftKey || e.ctrlKey) return;
     if (e.key === 'Tab') {
       e.preventDefault();
       const cursor = inputRef.current?.selectionStart ?? value.length;

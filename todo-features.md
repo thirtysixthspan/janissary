@@ -18,3 +18,6 @@ shortcut the root path as $root in the transcript
 examples:
 $root/ = /Users/name/dev/janissary
 $root/workspace/emrah = /Users/name/dev/janissary/.janissary/workspace/emrah
+
+
+## bugs

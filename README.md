@@ -346,7 +346,9 @@ OpenCode ships an ACP server mode, so it works as a drop-in agent. Before using 
 | `↑` / `↓`           | Previous / next command in history |
 | `Shift+←` / `Shift+→` | Switch to the previous / next tab |
 | `Ctrl+←` / `Ctrl+→` | Move the current tab left / right  |
-| `Ctrl+↑` / `Ctrl+↓` | Scroll the transcript up / down    |
+| `Shift+↑` / `Shift+↓` | Scroll the transcript up / down (accelerated — distance doubles each second) |
+| `Ctrl+↑` / `Ctrl+↓` | Scroll the transcript up / down (accelerated) |
+| `Ctrl+P` / `Ctrl+N` | Scroll the transcript up / down one line (fixed) |
 | `Ctrl+R`            | Open command history picker        |
 | `Ctrl+T`            | Expand / collapse agent tool steps in the transcript |
 | `Tab`               | Complete a file path, an agent name for `msg` / `broadcast`, a connection string for `connection close`, or a `browser` subcommand / window id |

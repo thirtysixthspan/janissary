@@ -18,11 +18,15 @@ New output resets scroll offset to 0 (bottom), showing the latest lines.
 
 ### Scroll up
 
-`Ctrl+↑` (or `Ctrl+P`) increments scroll offset by one line, hiding the newest line and revealing older content further up the buffer. The plain ↑/↓ arrows are reserved for command-history navigation; the mouse scroll wheel also scrolls the transcript (one line per tick).
+`Ctrl+↑` (or `Shift+ArrowUp`) increments scroll offset with acceleration (see below). `Ctrl+P` increments by exactly one line (no acceleration). The plain ↑/↓ arrows are reserved for command-history navigation; the mouse scroll wheel also scrolls the transcript (one line per tick).
 
 ### Scroll down
 
-`Ctrl+↓` (or `Ctrl+N`) decrements scroll offset by one line, returning toward the bottom.
+`Ctrl+↓` (or `Shift+ArrowDown`) decrements scroll offset with acceleration (see below). `Ctrl+N` decrements by exactly one line (no acceleration).
+
+### Accelerated scrolling
+
+`Shift+ArrowUp`, `Shift+ArrowDown`, `Ctrl+ArrowUp`, and `Ctrl+ArrowDown` use **accelerated scrolling**: the scroll distance starts at one line (22px) and doubles every second the key is held (22px → 44px → 88px → …), capped at 10 lines (220px). The acceleration resets when you release the key or change direction (a new press in the opposite direction restarts from 22px). `Ctrl+P` and `Ctrl+N` are not accelerated — they always scroll one line per press (useful for precise positioning).
 
 ### Page scroll
 
