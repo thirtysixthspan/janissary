@@ -1,7 +1,7 @@
 import type { Command } from './types.js';
 import { distinctColor, makeTab, insertTabInGroup } from '../tab.js';
 import { resolveAgentName, parseAgentCommand } from '../commands.js';
-import { findRepoRoot, createWorkspace } from '../server/workspace.js';
+import { findRepoRoot, createWorkspace } from '../workspace.js';
 import { saveAgentState } from '../agent-state.js';
 
 export const command: Command = {

@@ -3,12 +3,12 @@ import { existsSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { startServer } from './index.js';
 import { makeToken } from './security.js';
-import { initAgentStateDir, clearStateDir } from '../agent-state.js';
-import { initDbDir } from '../connections.js';
-import { initProfileDir } from '../profiles.js';
+import { initAgentStateDir, clearStateDir } from './agent-state.js';
+import { initDbDir } from './connections.js';
+import { initProfileDir } from './profiles.js';
 import { initWorkspaceDir, clearWorkspaceDir } from './workspace.js';
-import { initLogDir } from '../logger.js';
-import { loadConfig } from '../config.js';
+import { initLogDir } from './logger.js';
+import { loadConfig } from './config.js';
 import type { ChildProcess } from 'node:child_process';
 
 // The Chrome "app" window we launched, so we can close it on shutdown (quit/exit/Ctrl+C).
@@ -105,7 +105,7 @@ export async function boot(argv = process.argv.slice(2)): Promise<void> {
   loadConfig(cwd);
   if (!relaunch) { clearStateDir(); clearWorkspaceDir(); }
 
-  const webDir = join(import.meta.dirname, '..', '..', 'web', 'dist');
+  const webDir = join(import.meta.dirname, '..', 'web', 'dist');
   const server = await startServer({ webDir, token: makeToken(), port, relaunch });
 
   // Machine-readable line first (the launcher may parse it), then a human line.

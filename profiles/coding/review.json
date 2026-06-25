@@ -8,11 +8,12 @@
   ],
   "schedule": [
     {
-      "command": "shell ls",
+      "command": "ls",
       "spec": "every 1m",
       "recurring": true,
       "intervalMs": 60000,
+      "nextRun": 1782280999860,
       "id": "files"
     }
-  ]  
+  ]
 }

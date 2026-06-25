@@ -1,6 +1,6 @@
-import type { ServerEvent, RpcCall } from './protocol';
+import type { ServerEvent, RpcCall, RouteChooserView } from './protocol';
 
-type StateListener = (tabs: import('./protocol').TabView[], activeTab: number) => void;
+type StateListener = (tabs: import('./protocol').TabView[], activeTab: number, route: RouteChooserView | null) => void;
 type ExitListener = (id: string, exitCode: number) => void;
 
 // Thin WebSocket client. State snapshots fan out to subscribers; PTY output is routed per-id to
@@ -23,7 +23,7 @@ export class JanusClient {
 
   private onEvent(ev: ServerEvent): void {
     if (ev.t === 'state') {
-      for (const l of this.stateListeners) l(ev.tabs, ev.activeTab);
+      for (const l of this.stateListeners) l(ev.tabs, ev.activeTab, ev.route ?? null);
     } else if (ev.t === 'pty') {
       const h = this.ptyHandlers.get(ev.id);
       if (h) h(ev.data);

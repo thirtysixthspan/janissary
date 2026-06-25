@@ -1,11 +1,12 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { JanusClient } from './ws';
-import type { TabView } from './protocol';
+import type { TabView, RouteChooserView } from './protocol';
 import { TabStrip } from './TabStrip';
 import { Transcript } from './Transcript';
 import { CommandInput } from './CommandInput';
 import { StatusPanels } from './StatusPanels';
 import { HistoryPicker } from './HistoryPicker';
+import { RouteChooser } from './RouteChooser';
 import { getRecentHistory } from './history';
 
 export function App() {
@@ -17,6 +18,10 @@ export function App() {
   const [activeTab, setActiveTab] = useState(0);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerIdx, setPickerIdx] = useState(0);
+  // Server-driven route chooser (null when closed); `routeIdx` is the highlighted option.
+  const [route, setRoute] = useState<RouteChooserView | null>(null);
+  const [routeIdx, setRouteIdx] = useState(0);
+  const routeRef = useRef<RouteChooserView | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const transcriptRef = useRef<HTMLDivElement>(null);
 
@@ -26,8 +31,8 @@ export function App() {
   const recent = useMemo(() => getRecentHistory(cur?.cmdHistory ?? [], 10), [cur]);
 
   // Live snapshot read by the window key handler, so it never has to re-register.
-  const stateRef = useRef({ pickerOpen, pickerIdx, recent });
-  stateRef.current = { pickerOpen, pickerIdx, recent };
+  const stateRef = useRef({ pickerOpen, pickerIdx, recent, route, routeIdx });
+  stateRef.current = { pickerOpen, pickerIdx, recent, route, routeIdx };
 
   const runCommand = (text: string) => client.send({ method: 'command', params: { text } });
   const openPicker = () => {
@@ -42,13 +47,32 @@ export function App() {
     inputRef.current?.focus();
   };
 
-  useEffect(() => client.onState((nextTabs, active) => { setTabs(nextTabs); setActiveTab(active); }), [client]);
+  const chooseRoute = (index: number) => client.send({ method: 'chooseRoute', params: { index } });
+
+  useEffect(() => client.onState((nextTabs, active, nextRoute) => {
+    setTabs(nextTabs);
+    setActiveTab(active);
+    setRoute(nextRoute);
+    // Highlight the first option when a chooser newly opens (or its command changes).
+    const prev = routeRef.current;
+    routeRef.current = nextRoute;
+    if (nextRoute && (!prev || prev.cmd !== nextRoute.cmd)) setRouteIdx(0);
+  }), [client]);
 
   // Switching tabs (click, Shift+Arrow, `next`, reorder) returns focus to the command line.
   useEffect(() => { inputRef.current?.focus(); }, [activeTab]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      // Route chooser is modal while open: Up/Down move, Return runs the chosen route, Escape cancels.
+      const rc = stateRef.current.route;
+      if (rc) {
+        if (e.key === 'ArrowUp') { e.preventDefault(); setRouteIdx((i) => Math.max(0, i - 1)); }
+        else if (e.key === 'ArrowDown') { e.preventDefault(); setRouteIdx((i) => Math.min(rc.choices.length - 1, i + 1)); }
+        else if (e.key === 'Enter') { e.preventDefault(); chooseRoute(stateRef.current.routeIdx); }
+        else if (e.key === 'Escape') { e.preventDefault(); chooseRoute(-1); }
+        return;
+      }
       // History picker is modal while open: Up/Down move, Return runs, Escape closes.
       if (stateRef.current.pickerOpen) {
         const items = stateRef.current.recent;
@@ -106,7 +130,8 @@ export function App() {
             scrollRef={transcriptRef}
           />
           <StatusPanels tab={cur} />
-          {pickerOpen && <HistoryPicker items={recent} selected={pickerIdx} onPick={pick} />}
+          {route && <RouteChooser cmd={route.cmd} choices={route.choices} selected={routeIdx} onPick={chooseRoute} />}
+          {!route && pickerOpen && <HistoryPicker items={recent} selected={pickerIdx} onPick={pick} />}
         </div>
         <CommandInput
           dotColor={cur.dotColor}
@@ -114,7 +139,7 @@ export function App() {
           onSubmit={(text) => { if (text.trim().toLowerCase() === 'hist') openPicker(); else runCommand(text); }}
           inputRef={inputRef}
           complete={(text, cursor) => client.request({ method: 'complete', params: { text, cursor } })}
-          pickerOpen={pickerOpen}
+          pickerOpen={pickerOpen || route !== null}
         />
       </div>
     </div>

@@ -17,7 +17,7 @@ export function TabStrip({ tabs, activeTab, onSelect }: Props) {
           style={{ borderTopColor: tab.groupColor }}
           onClick={() => onSelect(i)}
         >
-          <span className="dot" style={{ color: tab.busy ? 'transparent' : tab.dotColor }}>●</span>
+          <span className={`dot${tab.busy ? ' busy' : ''}`} style={{ color: tab.dotColor }}>●</span>
           <span>{tab.label}</span>
         </div>
       ))}

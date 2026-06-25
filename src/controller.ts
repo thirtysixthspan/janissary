@@ -1,33 +1,35 @@
 import type { ChildProcess } from 'node:child_process';
-import type { Tab, LogEntry, ScheduleEntry, AcpSession, AcpInfo } from '../types.js';
+import type { Tab, LogEntry, ScheduleEntry, AcpSession, AcpInfo } from './types.js';
 import {
   makeTab, distinctColor, insertTabInGroup, flattenBuffer, stripComments,
   swapTabsLeft, swapTabsRight, formatAgentOutput,
-} from '../tab.js';
-import { resolveCommand } from '../resolve.js';
-import { isInteractive } from '../interactive.js';
-import { parseHarnessCommand, HARNESS_COMMANDS } from '../harness.js';
-import { parseAgentCommand, resolveAgentName, getOutput } from '../commands.js';
-import { runDbCommand, DB_PRIMER, extractDbCommand } from '../db.js';
-import { connectAcp } from '../acp.js';
-import { runAcpToolLoop } from '../acp-loop.js';
-import { analyzeCommand, toPrefixedCommand } from '../recognizers/index.js';
-import { spawnShell, executeShellCmd, queryShellPwd } from '../shell.js';
+} from './tab.js';
+import { resolveCommand } from './resolve.js';
+import { isInteractive } from './interactive.js';
+import { parseHarnessCommand, HARNESS_COMMANDS } from './harness.js';
+import { parseAgentCommand, resolveAgentName, getOutput } from './commands.js';
+import { runDbCommand, parseDbCommand, DB_PRIMER, extractDbCommand } from './db.js';
+import { connectAcp } from './acp.js';
+import { runAcpToolLoop } from './acp-loop.js';
+import { analyzeCommand, toPrefixedCommand, routeChoices } from './recognizers/index.js';
+import type { RouteChoice } from './recognizers/types.js';
+import { spawnShell, executeShellCmd, queryShellPwd } from './shell.js';
 import { findRepoRoot, createWorkspace, removeWorkspace } from './workspace.js';
 import { completeCommandLine } from './completion.js';
-import { appendEntry, getTimeStr } from '../logger.js';
-import type { CompletionResult } from '../types.js';
+import { appendEntry, getTimeStr } from './logger.js';
+import type { CompletionResult } from './types.js';
 import { spawnPty, type PtySession } from './pty.js';
-import { saveAgentState, loadAgentState, listAgentStates } from '../agent-state.js';
+import { saveAgentState, loadAgentState, listAgentStates } from './agent-state.js';
 import { homedir } from 'node:os';
-import { parseScheduleCommand, formatSchedule, computeNextRun, fmtNextRun } from '../schedule.js';
-import { parseProfileCommand, loadProfileAgents, listProfiles, profileExists } from '../profiles.js';
-import { parseConnectionCommand, closeConnection, listOpenConnections } from '../connections.js';
-import { parseMsgCommand, parseBroadcastCommand } from '../messaging.js';
-import { extractBrowserCommand, BROWSER_PRIMER } from '../browser-command.js';
-import { MessageBus } from './messaging.js';
+import { parseScheduleCommand, formatSchedule, computeNextRun, fmtNextRun } from './schedule.js';
+import { parseProfileCommand, loadProfileAgents, listProfiles, profileExists } from './profiles.js';
+import { parseConnectionCommand, closeConnection, closeAllConnections, isConnectionOpen, listOpenConnections } from './connections.js';
+import { parseMsgCommand, parseBroadcastCommand } from './messaging.js';
+import { extractBrowserCommand, BROWSER_PRIMER } from './browser-command.js';
+import { MessageBus } from './message-bus.js';
 import { BrowserManager } from './browser-tab.js';
 import { formatState } from './state-format.js';
+import { getConfig } from './config.js';
 import type { TabView, ConnectionView, ScheduleView } from './protocol.js';
 
 const SHELL_NAME = (process.env.SHELL || 'bash').split('/').pop() || 'bash';
@@ -51,6 +53,15 @@ export class Controller {
   private acpInfo = new Map<string, AcpInfo>();
   private ptys = new Map<string, { session: PtySession; tabLabel: string }>();
   private schedules = new Map<string, ScheduleEntry[]>();
+  // SQLite connections (global) attributed to the tab(s) that ran a `db` command against them, so a
+  // tab's connections panel reflects only the databases it has opened (mirrors Ink's `tabDbConns`).
+  private tabDbConns = new Map<string, string[]>();
+  // Informational messages (info/response) received from other agents, per tab, persisted to agent
+  // state's `context[]` and shown by the `state` command.
+  private context = new Map<string, string[]>();
+  // A command awaiting route disambiguation: shown as a chooser overlay in the client, resolved by
+  // `chooseRoute`. Null when no chooser is open (only one at a time, like the Ink route chooser).
+  private pendingRoute: { label: string; cmd: string; choices: RouteChoice[] } | null = null;
   private cols = 80;
   private rows = 24;
   private timer: ReturnType<typeof setInterval>;
@@ -68,6 +79,7 @@ export class Controller {
       appendLog: (l, entry) => this.append(l, entry),
       runShell: (l, cmd, done) => this.runShell(l, cmd, { onComplete: done }),
       runCapture: (l, text, cb) => this.runCapture(l, text, cb),
+      appendContext: (l, text) => this.appendContext(l, text),
     });
     this.timer = setInterval(() => this.tick(), 1000);
     this.timer.unref?.();
@@ -78,14 +90,17 @@ export class Controller {
     const states = listAgentStates().sort((a, b) => (a.number ?? Infinity) - (b.number ?? Infinity));
     if (!states.length) return;
     this.tabs = states.map((s, i) => {
-      const tab = makeTab(s.name, s.dotColor || distinctColor([]), i + 1, s.cmdHistory ?? [],
-        (s.log as LogEntry[] | undefined) ?? [], s.workspaceDir, s.group ?? 1, s.groupColor || s.dotColor || '#5b9cff');
+      // Preserve each tab's saved `number`; fall back to array order only for state files predating
+      // the field (mirrors the Ink rehydration), so the strip reappears exactly as it was left.
+      const tab = makeTab(s.name, s.dotColor || distinctColor([]), s.number ?? i + 1, s.cmdHistory ?? [],
+        this.capLog((s.log as LogEntry[] | undefined) ?? []), s.workspaceDir, s.group ?? 1, s.groupColor || s.dotColor || '#5b9cff');
       tab.toolStepsExpanded = false;
       return tab;
     });
     for (const s of states) {
       if (s.cwd) this.cwd.set(s.name, s.cwd);
       if (s.schedule) this.schedules.set(s.name, s.schedule);
+      if (s.context) this.context.set(s.name, s.context);
     }
     this.activeTab = 0;
   }
@@ -99,6 +114,25 @@ export class Controller {
       bufferLines: flattenBuffer(t.log, !t.toolStepsExpanded),
       cmdHistory: t.cmdHistory, toolStepsExpanded: !!t.toolStepsExpanded,
     }));
+  }
+
+  // The pending route chooser for the client (the command and the option labels), or null. The
+  // client picks an index and replies via `chooseRoute`, which maps it back to the route.
+  routeView(): { cmd: string; choices: string[] } | null {
+    if (!this.pendingRoute) return null;
+    return { cmd: this.pendingRoute.cmd, choices: this.pendingRoute.choices.map((c) => c.label) };
+  }
+
+  // Resolve an open route chooser: run the chosen route's explicit command in the originating tab,
+  // or cancel (index < 0) without running anything. Clears the chooser either way.
+  chooseRoute(index: number): void {
+    const pending = this.pendingRoute;
+    this.pendingRoute = null;
+    if (pending && index >= 0 && index < pending.choices.length) {
+      const i = this.tabs.findIndex((t) => t.label === pending.label);
+      if (i >= 0) this.run(toPrefixedCommand(pending.cmd, pending.choices[index]), pending.label, i);
+    }
+    this.sinks.emitState();
   }
 
   private acpLabel(label: string): string | undefined {
@@ -125,8 +159,14 @@ export class Controller {
     const b = this.browsers.info(label);
     if (b) for (const id of b.ids) rows.push({ text: `browser:${id} (${b.mode})`, kind: 'browser' });
     for (const [, e] of this.ptys) if (e.tabLabel === label) rows.push({ text: `terminal:${e.session.program}`, kind: 'terminal' });
-    for (const n of listOpenConnections()) rows.push({ text: `sqlite:${n}`, kind: 'sqlite' });
+    for (const n of this.openDbsFor(label)) rows.push({ text: `sqlite:${n}`, kind: 'sqlite' });
     return rows;
+  }
+
+  // The SQLite databases a tab has opened that are still live (filtered against the registry so a
+  // closed/deleted db drops out). Drives the per-tab connections panel and command recognition.
+  private openDbsFor(label: string): string[] {
+    return (this.tabDbConns.get(label) ?? []).filter(isConnectionOpen);
   }
 
   private scheduleFor(label: string): ScheduleView[] {
@@ -165,10 +205,18 @@ export class Controller {
     this.sinks.emitState();
   }
 
+  // Cap a tab's transcript to `transcriptMaxLines` (config.json), dropping the oldest entries so
+  // the most recent N are kept. Applied at every log-mutation path so transcripts never grow
+  // unbounded (mirrors the Ink app's `capLog`).
+  private capLog(log: LogEntry[]): LogEntry[] {
+    const max = getConfig().transcriptMaxLines;
+    return log.length > max ? log.slice(log.length - max) : log;
+  }
+
   private append(label: string, entry: LogEntry): void {
     const tab = this.tabs.find((t) => t.label === label);
     if (!tab) return;
-    tab.log = [...tab.log, entry];
+    tab.log = this.capLog([...tab.log, entry]);
     tab.scrollOffset = 0;
     // Record the content in the append-only log (command input + output as separate entries).
     this.log(label, entry.input);
@@ -183,13 +231,21 @@ export class Controller {
     if (text) appendEntry({ timestamp: getTimeStr(), agent: label, text });
   }
 
+  // Append an informational message (info/response from another agent) to a tab's context and
+  // persist it (mirrors Ink's `appendContext`); surfaced by the `state` command and on `--relaunch`.
+  private appendContext(label: string, text: string): void {
+    this.context.set(label, [...(this.context.get(label) ?? []), text]);
+    const tab = this.tabs.find((t) => t.label === label);
+    if (tab) this.persist(tab);
+  }
+
   private persist(tab: Tab): void {
     try {
       saveAgentState({
         name: tab.label, dotColor: tab.dotColor, active: this.busy.has(tab.label),
         number: tab.number, group: tab.group, groupColor: tab.groupColor,
         cmdHistory: tab.cmdHistory, log: tab.log, cwd: this.cwd.get(tab.label),
-        schedule: this.schedules.get(tab.label),
+        context: this.context.get(tab.label), schedule: this.schedules.get(tab.label),
       });
     } catch { /* ignore */ }
   }
@@ -197,20 +253,31 @@ export class Controller {
   // --- command dispatch ----------------------------------------------------
 
   dispatch(text: string): void {
-    const trimmed = stripComments(text);
-    const tab = this.cur();
-    if (trimmed && tab.cmdHistory[tab.cmdHistory.length - 1] !== trimmed) {
-      tab.cmdHistory = [...tab.cmdHistory, trimmed].slice(-100);
-    }
-    tab.cmdHistoryIdx = -1;
-    this.run(trimmed, tab.label, this.activeTab);
+    this.run(this.recordHistory(this.activeTab, text), this.cur().label, this.activeTab);
   }
 
-  // Run a command in a specific tab (used by the scheduler) without touching the active tab.
+  // Run a command in a specific tab (used by the scheduler) without touching the active tab. The
+  // command is recorded in that tab's history "as if typed there" (mirrors the Ink command handler,
+  // which records history even for a targeted/scheduled dispatch).
   private dispatchTo(label: string, text: string): void {
     const index = this.tabs.findIndex((t) => t.label === label);
     if (index < 0) return;
-    this.run(stripComments(text), label, index);
+    this.run(this.recordHistory(index, text), label, index);
+  }
+
+  // Strip comments, append the command to the tab's history (consecutive-dup suppressed, capped at
+  // 100), reset the history cursor, and return the cleaned command. Shared by interactive dispatch
+  // and scheduled firing so both record history identically.
+  private recordHistory(index: number, text: string): string {
+    const trimmed = stripComments(text);
+    const tab = this.tabs[index];
+    if (tab) {
+      if (trimmed && tab.cmdHistory[tab.cmdHistory.length - 1] !== trimmed) {
+        tab.cmdHistory = [...tab.cmdHistory, trimmed].slice(-100);
+      }
+      tab.cmdHistoryIdx = -1;
+    }
+    return trimmed;
   }
 
   private run(input: string, label: string, index: number): void {
@@ -229,11 +296,22 @@ export class Controller {
         return;
       case 'output': this.append(label, { input, output: res.output }); return;
       case 'unknown': {
-        const decision = analyzeCommand(res.cmd, { openDbs: [] });
-        if (decision.kind === 'route' && decision.route !== 'db') {
-          this.run(toPrefixedCommand(res.cmd, { label: '', route: decision.route }), label, index);
+        // Probabilistic routing of an unprefixed command (mirrors the Ink command handler). Auto-run
+        // a confident non-db route, or a confident db route when exactly one database is open (the
+        // query needs a single concrete target). The web UI has no interactive route chooser, so the
+        // otherwise-ambiguous cases fall back to a hint asking the user to prefix explicitly.
+        const openDbs = this.openDbsFor(label);
+        const decision = analyzeCommand(res.cmd, { openDbs });
+        if (decision.kind === 'route' && (decision.route !== 'db' || openDbs.length === 1)) {
+          const choice: RouteChoice = decision.route === 'db'
+            ? { label: '', route: 'db', dbName: openDbs[0] }
+            : { label: '', route: decision.route };
+          this.run(toPrefixedCommand(res.cmd, choice), label, index);
         } else {
-          this.append(label, { input, output: 'Unrecognized command. Prefix with `shell `, `db `, or `acp ` to choose how to run it.' });
+          // Ambiguous (or a db route with 0/multiple open dbs): open the route chooser so the user
+          // picks shell / db (per open connection) / acp. Resolved via `chooseRoute`.
+          this.pendingRoute = { label, cmd: res.cmd, choices: routeChoices(openDbs) };
+          this.sinks.emitState();
         }
         return;
       }
@@ -248,7 +326,7 @@ export class Controller {
         if (tab) { tab.log = []; this.persist(tab); this.sinks.emitState(); }
         return;
       }
-      case 'db': this.append(label, { input: cmd, output: runDbCommand(cmd) }); return;
+      case 'db': this.append(label, { input: cmd, output: this.runDbInTab(label, cmd) }); return;
       case 'agent': this.newAgent(cmd); return;
       case 'next': this.setActiveTab((this.activeTab + 1) % this.tabs.length); return;
       case 'close': this.closeTab(index); return;
@@ -268,6 +346,29 @@ export class Controller {
       case 'hist': return;
     }
     this.append(label, { input: cmd, output: getOutput(cmd) ?? `"${name}" did nothing.` });
+  }
+
+  // Run a `db` command on behalf of a tab, keeping that tab's tracked SQLite connections in sync so
+  // its connections panel reflects what it has open (mirrors Ink's `runDbInTab`). `delete` forgets
+  // the connection; any opening command (create/query) records it once.
+  private runDbInTab(label: string, cmd: string): string {
+    const output = runDbCommand(cmd);
+    const parsed = parseDbCommand(cmd);
+    if (!('error' in parsed)) {
+      if (parsed.action === 'delete') this.forgetDbConn(parsed.name);
+      else if (parsed.action !== 'list' && isConnectionOpen(parsed.name)) {
+        const cur = this.tabDbConns.get(label) ?? [];
+        if (!cur.includes(parsed.name)) this.tabDbConns.set(label, [...cur, parsed.name].sort());
+      }
+    }
+    return output;
+  }
+
+  // Drop a database name from every tab's tracked connections (on `db delete`).
+  private forgetDbConn(name: string): void {
+    for (const [label, names] of this.tabDbConns) {
+      if (names.includes(name)) this.tabDbConns.set(label, names.filter((n) => n !== name));
+    }
   }
 
   // --- messaging -----------------------------------------------------------
@@ -332,7 +433,7 @@ export class Controller {
 
     runAcpToolLoop(session, prompt, {
       primer: `${DB_PRIMER}\n\n${BROWSER_PRIMER}`,
-      runCommand: (c) => (/^browser\b/i.test(c) ? this.browsers.run(label, c) : runDbCommand(c)),
+      runCommand: (c) => (/^browser\b/i.test(c) ? this.browsers.run(label, c) : this.runDbInTab(label, c)),
       extractCommand: (t) => extractBrowserCommand(t) ?? extractDbCommand(t),
     }, {
       startTurn: (isFirst) => { this.busy.add(label); this.append(label, { input: isFirst ? prompt : '', output: '', running: true }); },
@@ -417,7 +518,10 @@ export class Controller {
     const agents = loadProfileAgents(parsed.name);
     if (!agents.length) { out(`Profile "${parsed.name}" has no agents.`); return; }
 
-    const group = Math.max(0, ...this.tabs.map((t) => t.group)) + 1;
+    // A launched profile forms one group shared by all its agents. Honor a group number authored
+    // on the profile's agent files; otherwise mint the next free group number.
+    const authored = agents.map((a) => a.group).find((g): g is number => typeof g === 'number');
+    const group = authored ?? Math.max(0, ...this.tabs.map((t) => t.group)) + 1;
     const open = new Set(this.tabs.map((t) => t.label.toLowerCase()));
     const used = new Set(this.tabs.map((t) => t.dotColor));
     const opened: string[] = [];
@@ -430,11 +534,12 @@ export class Controller {
       used.add(dotColor);
       groupColor ??= dotColor;
       const tab = makeTab(state.name, dotColor, this.tabs.length + 1, state.cmdHistory ?? [],
-        (state.log as LogEntry[] | undefined) ?? [], state.workspaceDir, group, groupColor);
+        this.capLog((state.log as LogEntry[] | undefined) ?? []), state.workspaceDir, group, groupColor);
       tab.toolStepsExpanded = false;
       this.tabs = [...this.tabs, tab];
       if (state.cwd) this.cwd.set(state.name, state.cwd);
       if (state.schedule) this.schedules.set(state.name, state.schedule);
+      if (state.context) this.context.set(state.name, state.context);
       this.persist(tab);
       open.add(state.name.toLowerCase());
       opened.push(state.name);
@@ -506,7 +611,7 @@ export class Controller {
     const cwd = this.cwd.get(label) ?? process.cwd();
     const tab = this.tabs.find((t) => t.label === label);
     if (!tab) { opts.onComplete?.(''); return; }
-    if (display) { tab.log = [...tab.log, { input: cmd, output: '', running: true, cwd }]; this.log(label, cmd); }
+    if (display) { tab.log = this.capLog([...tab.log, { input: cmd, output: '', running: true, cwd }]); this.log(label, cmd); }
     this.busy.add(label);
     this.sinks.emitState();
     const update = (output: string, running: boolean) => {
@@ -545,7 +650,7 @@ export class Controller {
       case 'output':
       case 'unknown': cb(res.output); return;
       case 'app':
-        cb(res.name === 'db' ? runDbCommand(res.cmd) : `Command not available remotely: ${res.cmd}`);
+        cb(res.name === 'db' ? this.runDbInTab(label, res.cmd) : `Command not available remotely: ${res.cmd}`);
         return;
     }
   }
@@ -662,8 +767,13 @@ export class Controller {
     for (const [id, e] of this.ptys) if (e.tabLabel === tab.label) { e.session.kill(); this.ptys.delete(id); }
     this.harnessOf.delete(tab.label);
     this.schedules.delete(tab.label);
-    // Closing the last tab resets to a fresh `janus` tab, just like launch.
+    this.tabDbConns.delete(tab.label);
+    this.context.delete(tab.label);
+    // Closing the last tab resets to a fresh `janus` tab, just like launch; the global SQLite
+    // connections are closed too (mirrors the Ink last-tab cleanup), since no tab references them.
     if (this.tabs.length <= 1) {
+      closeAllConnections();
+      this.tabDbConns.clear();
       this.tabs = [this.makeRootTab()];
       this.cwd.set('janus', process.cwd());
       this.activeTab = 0;
@@ -708,6 +818,8 @@ export class Controller {
     for (const [, session] of this.acpSessions) session.kill();
     for (const [, e] of this.ptys) e.session.kill();
     this.browsers.closeAll();
+    closeAllConnections(); // SQLite connections are global; close them all at app exit
+    this.tabDbConns.clear();
     for (const dir of this.workspaces) removeWorkspace(dir);
     this.workspaces.clear();
   }

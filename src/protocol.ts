@@ -1,6 +1,6 @@
 // Wire types shared between the Node server and the React web client. The web bundle mirrors
 // these locally (it cannot import across the bundler boundary cleanly), so keep them in sync.
-import type { BufferLine } from '../types.js';
+import type { BufferLine } from './types.js';
 
 export type { BufferLine };
 
@@ -8,6 +8,8 @@ export type { BufferLine };
 export type ConnectionView = { text: string; kind: 'shell' | 'acp' | 'browser' | 'terminal' | 'sqlite' };
 // One row in the floating "schedule" panel.
 export type ScheduleView = { id: string; spec: string; next: string; recurring: boolean };
+// A pending route chooser: the unprefixed command plus the option labels to pick from.
+export type RouteChooserView = { cmd: string; choices: string[] };
 
 // A tab as the client renders it: presentation metadata plus the already-flattened transcript
 // lines (the server owns `flattenBuffer`, so the client never needs it).
@@ -30,7 +32,7 @@ export type TabView = {
   toolStepsExpanded: boolean;
 };
 
-export type StateEvent = { t: 'state'; tabs: TabView[]; activeTab: number };
+export type StateEvent = { t: 'state'; tabs: TabView[]; activeTab: number; route: RouteChooserView | null };
 export type PtyDataEvent = { t: 'pty'; id: string; data: string };
 export type PtyExitEvent = { t: 'pty-exit'; id: string; exitCode: number };
 export type RpcReply = { t: 'rpc-reply'; id: number; result?: unknown; error?: string };
@@ -47,6 +49,7 @@ export type RpcCall =
   | { method: 'moveTab'; params: { dir: -1 | 1 } }
   | { method: 'reorderTab'; params: { dir: -1 | 1 } }
   | { method: 'toggleCollapse'; params?: Record<string, never> }
+  | { method: 'chooseRoute'; params: { index: number } }
   | { method: 'complete'; params: { text: string; cursor: number } }
   | { method: 'resize'; params: { cols: number; rows: number } }
   | { method: 'ptyInput'; params: { id: string; data: string } }

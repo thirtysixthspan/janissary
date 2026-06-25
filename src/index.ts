@@ -28,7 +28,7 @@ export async function startServer(opts: ServerOptions): Promise<RunningServer> {
   // Reassigned below once `close` exists, so the `quit` command can shut the server down cleanly.
   let requestExit: () => void = () => process.exit(0);
   const controller = new Controller({
-    emitState: () => broadcast({ t: 'state', tabs: controller.view(), activeTab: controller.activeTab }),
+    emitState: () => broadcast({ t: 'state', tabs: controller.view(), activeTab: controller.activeTab, route: controller.routeView() }),
     sendPty: (id, data) => broadcast({ t: 'pty', id, data }),
     sendPtyExit: (id, exitCode) => broadcast({ t: 'pty-exit', id, exitCode }),
     exit: () => requestExit(),
@@ -102,13 +102,14 @@ export async function startServer(opts: ServerOptions): Promise<RunningServer> {
 function handle(controller: Controller, msg: ClientMessage, reply: (ev: ServerEvent) => void): void {
   switch (msg.method) {
     case 'init':
-      reply({ t: 'state', tabs: controller.view(), activeTab: controller.activeTab });
+      reply({ t: 'state', tabs: controller.view(), activeTab: controller.activeTab, route: controller.routeView() });
       break;
     case 'command': controller.dispatch(msg.params.text); break;
     case 'setActiveTab': controller.setActiveTab(msg.params.index); break;
     case 'moveTab': controller.moveTab(msg.params.dir); break;
     case 'reorderTab': controller.reorderTab(msg.params.dir); break;
     case 'toggleCollapse': controller.toggleCollapse(); break;
+    case 'chooseRoute': controller.chooseRoute(msg.params.index); break;
     case 'complete':
       reply({ t: 'rpc-reply', id: msg.id, result: controller.complete(msg.params.text, msg.params.cursor) });
       return;

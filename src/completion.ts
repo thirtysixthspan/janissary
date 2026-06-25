@@ -1,8 +1,8 @@
 import { readdirSync, statSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 import { homedir } from 'node:os';
-import { BROWSER_SUBCOMMANDS } from '../browser-command.js';
-import type { CompletionResult } from '../types.js';
+import { BROWSER_SUBCOMMANDS } from './browser-command.js';
+import type { CompletionResult } from './types.js';
 
 const isDir = (p: string): boolean => {
   try {

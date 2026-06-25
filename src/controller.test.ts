@@ -1,12 +1,14 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, readdirSync, realpathSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Controller } from './controller.js';
-import { initAgentStateDir, saveAgentState } from '../agent-state.js';
-import { initProfileDir } from '../profiles.js';
-import { initLogDir, getLogDir } from '../logger.js';
-import { agentNames } from '../commands.js';
+import { initAgentStateDir, saveAgentState, loadAgentState } from './agent-state.js';
+import { initProfileDir } from './profiles.js';
+import { initLogDir, getLogDir } from './logger.js';
+import { initDbDir, isConnectionOpen, closeAllConnections } from './connections.js';
+import { loadConfig } from './config.js';
+import { agentNames } from './commands.js';
 
 // Sinks that just count state emissions; no PTY/shell spawning is exercised here.
 const makeController = () => {
@@ -81,6 +83,147 @@ describe('Controller', () => {
     const writer = c.view().find((t) => t.label === 'writer')!;
     expect(writer).toBeDefined();
     expect(writer.group).not.toBe(janus.group);
+  });
+
+  it('honors a group number authored on a profile agent file', () => {
+    const root = mkdtempSync(join(tmpdir(), 'janus-prof-grp-'));
+    initProfileDir(root);
+    mkdirSync(join(root, 'profiles', 'team'), { recursive: true });
+    writeFileSync(join(root, 'profiles', 'team', 'writer.json'), JSON.stringify({ name: 'writer', dotColor: '#6bcb77', active: false, group: 7 }));
+    const { c } = makeController();
+    c.dispatch('profile launch team');
+    expect(c.view().find((t) => t.label === 'writer')!.group).toBe(7);
+  });
+
+  it('caps a tab transcript at transcriptMaxLines, dropping the oldest entries', () => {
+    const root = mkdtempSync(join(tmpdir(), 'janus-cap-'));
+    mkdirSync(join(root, '.janissary'), { recursive: true });
+    writeFileSync(join(root, '.janissary', 'config.json'), JSON.stringify({ transcriptMaxLines: 3 }));
+    try {
+      loadConfig(root);
+      const { c } = makeController();
+      // Each `agent <name>` appends exactly one transcript entry to the creator (janus).
+      for (let i = 0; i < 6; i++) c.dispatch(`agent foo${i}`);
+      const janus = c.view().find((t) => t.label === 'janus')!;
+      const buf = janus.bufferLines.map((l) => l.text).join('\n');
+      expect(buf).not.toContain('foo0'); // oldest entries dropped beyond the 3-entry cap
+      expect(buf).not.toContain('foo2');
+      expect(buf).toContain('foo3');
+      expect(buf).toContain('foo5');
+    } finally {
+      loadConfig(mkdtempSync(join(tmpdir(), 'janus-cap-reset-'))); // restore the default cap for later tests
+    }
+  });
+
+  it('attributes a SQLite connection only to the tab that opened it', () => {
+    initDbDir(mkdtempSync(join(tmpdir(), 'janus-db-')));
+    const { c } = makeController();
+    c.dispatch('agent bob'); // focus stays on janus
+    c.dispatch('db sqlite create panel_db'); // runs on the active tab (janus)
+    try {
+      const janus = c.view().find((t) => t.label === 'janus')!;
+      const bob = c.view().find((t) => t.label === 'bob')!;
+      expect(janus.connections.some((x) => x.text === 'sqlite:panel_db')).toBe(true);
+      expect(bob.connections.some((x) => x.text === 'sqlite:panel_db')).toBe(false);
+    } finally {
+      closeAllConnections();
+    }
+  });
+
+  it('auto-runs a bare SQL command as a db query when exactly one database is open', () => {
+    initDbDir(mkdtempSync(join(tmpdir(), 'janus-route-')));
+    const { c } = makeController();
+    c.dispatch('db sqlite create routedb');
+    try {
+      c.dispatch('select 1 as n'); // recognized as a db query; one db open → runs against it
+      const text = allText(c);
+      expect(text).toContain('(1 row)');
+      expect(text).not.toContain('Unrecognized command');
+    } finally {
+      closeAllConnections();
+    }
+  });
+
+  it('opens a route chooser for an ambiguous command and cancels without running', () => {
+    const { c } = makeController();
+    const before = c.view()[0].bufferLines.length;
+    c.dispatch('select 1 as n'); // SQL-shaped but no db open → ambiguous
+    const rv = c.routeView();
+    expect(rv).not.toBeNull();
+    expect(rv!.cmd).toBe('select 1 as n');
+    expect(rv!.choices).toEqual(['shell', 'acp (agent prompt)']);
+    c.chooseRoute(-1); // cancel
+    expect(c.routeView()).toBeNull();
+    expect(c.view()[0].bufferLines.length).toBe(before); // nothing was run or appended
+  });
+
+  it('runs the chosen db route from the chooser when multiple databases are open', () => {
+    initDbDir(mkdtempSync(join(tmpdir(), 'janus-chooser-db-')));
+    const { c } = makeController();
+    c.dispatch('db sqlite create d1');
+    c.dispatch('db sqlite create d2'); // two open dbs → a db query needs the user to pick one
+    try {
+      c.dispatch('select 1 as n');
+      const rv = c.routeView();
+      expect(rv).not.toBeNull();
+      const idx = rv!.choices.findIndex((l) => l.includes('d1'));
+      expect(idx).toBeGreaterThan(-1);
+      c.chooseRoute(idx);
+      expect(c.routeView()).toBeNull();
+      expect(allText(c)).toContain('(1 row)'); // ran the query against d1
+    } finally {
+      closeAllConnections();
+    }
+  });
+
+  it('closes all SQLite connections when the last tab is closed', () => {
+    initDbDir(mkdtempSync(join(tmpdir(), 'janus-db2-')));
+    const { c } = makeController();
+    c.dispatch('db sqlite create lastdb');
+    expect(isConnectionOpen('lastdb')).toBe(true);
+    c.dispatch('close'); // last tab → reset to fresh janus + closeAllConnections
+    expect(isConnectionOpen('lastdb')).toBe(false);
+  });
+
+  it('shutdown closes all SQLite connections (quit)', () => {
+    initDbDir(mkdtempSync(join(tmpdir(), 'janus-db3-')));
+    const { c } = makeController();
+    c.dispatch('db sqlite create shutdb');
+    expect(isConnectionOpen('shutdb')).toBe(true);
+    c.shutdown();
+    expect(isConnectionOpen('shutdb')).toBe(false);
+  });
+
+  it('records an info message in the recipient context[] and persists it', () => {
+    initAgentStateDir(mkdtempSync(join(tmpdir(), 'janus-ctx-')));
+    const { c } = makeController();
+    c.dispatch('agent bob');
+    c.dispatch('msg bob info hello there');
+    expect(loadAgentState('bob')?.context).toContain('janus: hello there');
+  });
+
+  it('preserves saved (non-contiguous) tab numbers on relaunch', () => {
+    initAgentStateDir(mkdtempSync(join(tmpdir(), 'janus-relaunch-')));
+    saveAgentState({ name: 'ahmed', dotColor: '#5b9cff', active: false, number: 1 });
+    saveAgentState({ name: 'bekir', dotColor: '#6bcb77', active: false, number: 3 });
+    saveAgentState({ name: 'cafer', dotColor: '#ff6b6b', active: false, number: 5 });
+    const { c } = makeController();
+    c.rehydrate();
+    const byLabel = Object.fromEntries(c.view().map((t) => [t.label, t.number]));
+    expect(byLabel).toEqual({ ahmed: 1, bekir: 3, cafer: 5 });
+  });
+
+  it('records a fired scheduled command in the tab history (as if typed there)', () => {
+    vi.useFakeTimers();
+    try {
+      initAgentStateDir(mkdtempSync(join(tmpdir(), 'janus-sched-')));
+      const { c } = makeController(); // starts the 1s scheduler interval (fake)
+      c.dispatch('schedule t1 every 1m clear'); // recurring; first run ~60s out, no shell spawn
+      vi.advanceTimersByTime(61_000); // let the scheduler tick fire it
+      expect(c.view().find((t) => t.label === 'janus')!.cmdHistory).toContain('clear');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('quit asks the host to exit', () => {

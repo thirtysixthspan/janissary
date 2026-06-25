@@ -1,6 +1,6 @@
-import { launchTabBrowser } from '../browser.js';
-import { parseBrowserCommand } from '../browser-command.js';
-import type { BrowserWindow, TabBrowser } from '../types.js';
+import { launchTabBrowser } from './browser.js';
+import { parseBrowserCommand } from './browser-command.js';
+import type { BrowserWindow, TabBrowser } from './types.js';
 
 type Entry = { browser: TabBrowser; current?: string; counter: number };
 

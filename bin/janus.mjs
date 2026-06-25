@@ -3,12 +3,11 @@ import { spawnSync } from 'node:child_process';
 import { join } from 'node:path';
 import { existsSync } from 'node:fs';
 
-// Janissary now runs as a local web app: this launcher boots the Node server (which opens the
-// browser to a token-gated localhost URL) and stays attached so Ctrl+C shuts it down. The legacy
-// Ink TUI still lives at src/cli.tsx (run `npm run start:ink`).
+// Janissary runs as a local web app: this launcher boots the Node server (which opens the
+// browser to a token-gated localhost URL) and stays attached so Ctrl+C shuts it down.
 const root = join(import.meta.dirname, '..');
-const compiled = join(root, 'dist', 'server', 'main.js');
-const source = join(root, 'src', 'server', 'main.ts');
+const compiled = join(root, 'dist', 'main.js');
+const source = join(root, 'src', 'main.ts');
 const localTsx = join(root, 'node_modules', 'tsx', 'dist', 'cli.mjs');
 const args = process.argv.slice(2);
 

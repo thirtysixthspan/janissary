@@ -42,6 +42,10 @@ Every tab belongs to a **group**, identified by a `group` number and a fixed `gr
 
 The active tab shows full-intensity foreground text on the content background color; inactive tabs show muted text on the bar background.
 
+### Busy indicator
+
+While a tab's agent is busy — running a shell command, an ACP turn, or any other in-flight work (the `busy` flag on the tab) — its colored dot **blinks**, toggling fully on and off (600ms each), so an at-a-glance scan of the strip shows which agents are working even when their tabs are not focused. The blink applies to every tab regardless of focus; when the work finishes the dot returns to a steady fill in the tab's dot color.
+
 ### Tab switching with arrow keys
 
 Shift+Left and Shift+Right arrow keys cycle through open tabs. No-op when only one tab exists. (Unmodified Left/Right move the input cursor; Ctrl+Left/Right reorder the current tab within its group — see Tab grouping.)

@@ -1,4 +1,4 @@
-import type { LogEntry, MessageKind } from '../types.js';
+import type { LogEntry, MessageKind } from './types.js';
 
 // Server-side port of useMessaging (the React hook): per-recipient FIFO queues drained one
 // message at a time. info/response are shown in the recipient's transcript; command runs a shell
@@ -10,6 +10,7 @@ export type MessageBusDeps = {
   agentColor: (label: string) => string;
   isInteractive: (cmd: string) => boolean;
   appendLog: (label: string, entry: LogEntry) => void;
+  appendContext: (label: string, text: string) => void;
   runShell: (label: string, cmd: string, done: (output: string) => void) => void;
   runCapture: (label: string, text: string, cb: (output: string) => void) => void;
 };
@@ -47,6 +48,7 @@ export class MessageBus {
     const d = this.deps;
     if (msg.kind === 'info' || msg.kind === 'response') {
       d.appendLog(msg.to, { input: '', output: msg.text, from: msg.from, fromColor: d.agentColor(msg.from), msgKind: msg.kind });
+      d.appendContext(msg.to, `${msg.from}: ${msg.text}`);
       done();
       return;
     }

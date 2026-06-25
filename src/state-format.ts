@@ -1,4 +1,4 @@
-import type { AgentState } from '../types.js';
+import type { AgentState } from './types.js';
 
 // Format an agent's persisted state for the `state` command (ported from commands/state.ts).
 function formatVal(v: unknown, maxLines = 10): string {
