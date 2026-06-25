@@ -81,7 +81,7 @@ export async function launchTabBrowser(isHeadless: boolean): Promise<TabBrowser>
   // banner.
   const browser: Browser = await chromium.launch({
     channel: 'chromium',
-    isHeadless,
+    headless: isHeadless,
     args: ['--disable-blink-features=AutomationControlled'],
   });
   const major = chromeMajor(browser.version());

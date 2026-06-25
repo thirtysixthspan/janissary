@@ -24,7 +24,9 @@ export class JanusClient {
   private onEvent(event: ServerEvent): void {
     switch (event.t) {
     case 'state': {
-      for (const l of this.stateListeners) l(event.tabs, event.activeTab, event.route ?? undefined);
+      // Must be `null`, not `undefined`: App gates the command line with `route !== null`, so an
+      // `undefined` route reads as "chooser open" and silently swallows every keystroke (incl. Enter).
+      for (const l of this.stateListeners) l(event.tabs, event.activeTab, event.route ?? null);
     
     break;
     }

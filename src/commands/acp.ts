@@ -48,7 +48,7 @@ export const command: Command = {
         if (t.label !== tabLabel) return t;
         const log = [...t.log];
         const index = log.findLastIndex((entry) => entry.running);
-        if (index !== -1) log[index] = { ...log[index], output, running };
+        if (index !== -1) log[index] = { ...log[index], output, running: isRunning };
         saveTabLog(t.label, log);
         return { ...t, log };
       }));

@@ -36,8 +36,8 @@ describe('findRepoRoot', () => {
     expect(findRepoRoot(sub)).toBe(repoDir);
   });
 
-  it('returns null when no .git is found', () => {
-    expect(findRepoRoot(tmpDir)).toBeNull();
+  it('returns undefined when no .git is found', () => {
+    expect(findRepoRoot(tmpDir)).toBeUndefined();
   });
 });
 
