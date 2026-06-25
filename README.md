@@ -65,6 +65,17 @@ janus --relaunch
 
 This restores all agent tabs with their command history, transcripts, and shell working directories from the previous session, so you pick up exactly where you left off. Tabs are restored in their saved order — each tab's recorded number, position, and dot color are preserved, so the tab strip reappears exactly as you left it.
 
+### Root path
+
+The directory you launch from is the **root path**, and the transcript abbreviates it to `$root` so paths stay short and the project is obvious at a glance:
+
+```
+$root/                  = /Users/name/dev/janissary
+$root/workspace/emrah   = /Users/name/dev/janissary/.janissary/workspace/emrah
+```
+
+The hidden state directory (`.janissary`) inside the root folds into `$root` too, so internal locations like a workspaced agent's clone read as `$root/workspace/<name>` instead of exposing `.janissary`. The shortcut is applied wherever Janissary renders a path into the transcript — the working directory on each command prompt, the connections panel, and its own status messages — and composes with the `~` home shortcut, with the more specific `$root` winning for paths inside the root. It is display-only: the underlying paths are unchanged, and a shell command's own output is shown verbatim.
+
 ### Append-only log
 
 All tab transcript text is automatically logged to append-only JSON files in `.janissary/log/`. Each line is a JSON object with a UTC timestamp, the tab name, and the content text:

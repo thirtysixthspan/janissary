@@ -21,9 +21,11 @@ $root/workspace/emrah = /Users/name/dev/janissary/.janissary/workspace/emrah
 create a root-path spec
 update the readme
 
+## tasks on images 
+zoom
 
-## image tabs
 
 ## web page tabs
+
 
 ## bugs

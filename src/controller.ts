@@ -8,6 +8,7 @@ import { existsSync, statSync } from 'node:fs';
 import { extname, isAbsolute, resolve as resolvePath } from 'node:path';
 import { openerForExtension } from './openers/index.js';
 import { osOpen } from './openers/os-open.js';
+import { abbreviatePath } from './paths.js';
 import type { OpenContext } from './openers/index.js';
 import { parseOpen, isGlobPattern } from './commands/open.js';
 import { resolveCommand } from './resolve.js';
@@ -27,7 +28,6 @@ import { appendEntry, getTimeStr } from './logger.js';
 import type { CompletionResult } from './types.js';
 import { spawnPty, type PtySession } from './pty.js';
 import { saveAgentState, loadAgentState, listAgentStates } from './agent-state.js';
-import { homedir } from 'node:os';
 import { parseScheduleCommand, formatSchedule, computeNextRun, fmtNextRun } from './schedule.js';
 import { parseProfileCommand, loadProfileAgents, listProfiles, profileExists } from './profiles.js';
 import { parseConnectionCommand, closeConnection, closeAllConnections, isConnectionOpen, listOpenConnections } from './connections.js';
@@ -75,6 +75,9 @@ export class Controller {
   private bus: MessageBus;
   private browsers = new BrowserManager();
   private workspaces = new Set<string>();
+  // The root path: the directory the app was launched from. Transcript paths under it (including the
+  // hidden `.janissary` state directory) are abbreviated to `$root` for display. See `shorten`.
+  private readonly rootDir = process.cwd();
   // Local files exposed to the web client by an opener (`open <file>`), keyed by a monotonic id. The
   // `/open/<id>` route serves only files in this allow-list — arbitrary paths are never reachable.
   private openFiles = new Map<string, string>();
@@ -124,7 +127,10 @@ export class Controller {
       busy: this.busy.has(t.label), cwd: this.cwd.get(t.label) ?? process.cwd(),
       harness: this.harnessOf.get(t.label), acp: this.acpLabel(t.label),
       connections: this.connectionsFor(t.label), schedule: this.scheduleFor(t.label),
-      bufferLines: flattenBuffer(t.log, !t.toolStepsExpanded),
+      // Prompt lines carry the working directory; abbreviate it to `$root`/`~` for display only
+      // (the stored cwd stays the real absolute path).
+      bufferLines: flattenBuffer(t.log, !t.toolStepsExpanded)
+        .map((l) => (l.cwd ? { ...l, cwd: this.shorten(l.cwd) } : l)),
       cmdHistory: t.cmdHistory, toolStepsExpanded: !!t.toolStepsExpanded,
       view: t.view, title: t.title, image: t.image,
     }));
@@ -155,10 +161,12 @@ export class Controller {
     return info.provider ? `${info.provider}/${info.model ?? ''}` : info.model;
   }
 
-  // Abbreviate a cwd to `~` form for the connections panel.
-  private shortCwd(p: string): string {
-    const home = homedir();
-    return p === home ? '~' : p.startsWith(home + '/') ? '~' + p.slice(home.length) : p;
+  // Abbreviate an absolute path for display in the transcript: the launch (root) directory and the
+  // state directory inside it read as `$root`, and home elsewhere reads as `~`. Display-only — the
+  // stored path is unchanged. Used for the connections panel, prompt working directory, and status
+  // messages that name a path.
+  private shorten(p: string): string {
+    return abbreviatePath(p, { root: this.rootDir });
   }
 
   // The active connections for a tab's floating "connections" panel: its shell + cwd, a
@@ -166,7 +174,7 @@ export class Controller {
   private connectionsFor(label: string): ConnectionView[] {
     const rows: ConnectionView[] = [];
     if (this.shells.has(label)) {
-      rows.push({ text: `${SHELL_NAME}:${this.shortCwd(this.cwd.get(label) ?? process.cwd())}`, kind: 'shell' });
+      rows.push({ text: `${SHELL_NAME}:${this.shorten(this.cwd.get(label) ?? process.cwd())}`, kind: 'shell' });
     }
     const acp = this.acpLabel(label);
     if (acp) rows.push({ text: `acp:${acp}`, kind: 'acp' });
@@ -882,7 +890,7 @@ export class Controller {
     this.cwd.set(resolved, workspaceDir ?? process.cwd());
     this.activeTab = this.tabs.findIndex((t) => t.label === creator.label);
     this.persist(tab);
-    out(`Agent "${resolved}" ready.${workspaceDir ? ` (workspace: ${workspaceDir})` : ''}`);
+    out(`Agent "${resolved}" ready.${workspaceDir ? ` (workspace: ${this.shorten(workspaceDir)})` : ''}`);
   }
 
   setActiveTab(index: number): void {
