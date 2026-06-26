@@ -25,7 +25,9 @@
     "test:client": "vitest run --project client",
     "quality": "fta src && fta web/src",
     "quality:gate": "fta src && fta web/src",
-    "quality:snapshot": "fta src --json > docs/quality/baseline-server.json && fta web/src --json > docs/quality/baseline-client.json"
+    "quality:snapshot": "fta src --json > docs/quality/baseline-server.json && fta web/src --json > docs/quality/baseline-client.json",
+    "duplication": "jscpd src web/src",
+    "duplication:gate": "jscpd src web/src --exit-code"
   },
   "keywords": [],
   "author": "",
@@ -63,6 +65,7 @@
     "eslint-plugin-unicorn": "^69.0.0",
     "fta-cli": "^3.0.0",
     "globals": "^17.6.0",
+    "jscpd": "^5.0.11",
     "jsdom": "^29.1.1",
     "prettier": "^3.8.4",
     "react": "^19.2.0",

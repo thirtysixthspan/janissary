@@ -1,0 +1,16 @@
+{
+  "minLines": 5,
+  "minTokens": 50,
+  "format": ["typescript", "tsx"],
+  "mode": "mild",
+  "ignore": [
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/*.d.ts",
+    "**/dist/**",
+    "**/web/dist/**",
+    "**/.janissary/**"
+  ],
+  "reporters": ["console-full"],
+  "threshold": 3
+}

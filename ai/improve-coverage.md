@@ -34,17 +34,19 @@ If any of 1–5 is true: do NOT write code. Show the user your plan (from Step 4
 
 ---
 
-## Step 1 — Run coverage
+## Step 1 — Run coverage and lint
 
-Run this command and read all of its output:
+Run both commands and read all of their output:
 
 ```bash
 npm run coverage 2>&1
+npm run lint 2>&1
 ```
 
-Always run it fresh. Do not trust an old `coverage/` folder.
+Always run them fresh. Do not trust an old `coverage/` folder or earlier output in the conversation.
 
-This run also executes the **whole test suite**. Confirm it is green (every test passes) before you add anything. If tests are already failing, stop and tell the user — do not build on a broken suite.
+- **Tests:** `npm run coverage` executes the whole test suite. Every test must be passing before you add anything. If any test is already failing, STOP and tell the user — do not build on a broken suite.
+- **Lint:** note the summary line — `✖ N problems (E errors, W warnings)`. Write down E and W. There must be **0 errors** to proceed. Warnings are pre-existing guidance and are expected.
 
 ---
 
@@ -118,19 +120,23 @@ describe('functionUnderTest', () => {
 
 ## Step 6 — Verify
 
-Run coverage again (this runs the **whole test suite** too):
+Run both commands again, in this order:
 
 ```bash
+npm run lint 2>&1
 npm run coverage 2>&1
 ```
 
+Fix any lint issues before looking at coverage — a lint error in a new test file will also distort the coverage output.
+
 Then check, in this order:
 
-1. **The whole test suite passes** — every test, including ones you did not write. Adding tests must **never** make a previously-passing test fail.
+1. **Lint is no worse** — errors must be 0 (same as Step 1). Warnings must be equal to or fewer than Step 1. If a new lint error or warning appeared in a file you added or edited, fix it in that file. Do **not** suppress with `eslint-disable` — fix the underlying code.
+2. **The whole test suite passes** — every test, including ones you did not write. Adding tests must **never** make a previously-passing test fail.
    - If one of **your new** tests fails because the test itself is wrong, fix the test and re-run.
    - If a test fails because the real source code looks buggy, do **not** change the source — stop and report the suspected bug to the user.
    - If you broke a previously-passing test, or the suite will not go green without editing source code or other tests, **delete the test file(s) you added** and report what blocked you. Never edit source or existing tests just to make the suite pass.
-2. **Coverage went up** — the target file's `% Lines` is higher than in Step 2.
+3. **Coverage went up** — the target file's `% Lines` is higher than in Step 2.
 
 ---
 
@@ -143,7 +149,8 @@ Target file: <path>
 Tests added: <count> in <test file path>
 % Lines:    <before> -> <after>
 % Branch:   <before> -> <after>
-Test suite: all pass / <what failed>
+Lint:       <before E errors, W warnings> -> <after>
+Tests:      all pass / <what failed>
 ```
 
 Keep it brief. Done.

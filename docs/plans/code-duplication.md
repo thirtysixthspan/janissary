@@ -1,43 +1,5 @@
 # Code Duplication Plan
 
-## What changed from the prior draft (and why)
-
-The prior draft selected the right tool (jscpd) but described its *Current State* from
-guesswork, not a scan — and most of the patterns it headlined are ones jscpd structurally
-cannot detect. Everything below was measured against this repo with `jscpd@5.0.11` (the
-Rust version; `jscpd@4.x` is the TypeScript one).
-
-| Prior draft | Problem | Fix in this plan |
-|---|---|---|
-| "Current State" centers on command-handler skeletons (×17), recognizer skeletons, `match` copy-paste | **jscpd does not detect these.** It is a Rabin-Karp **token** matcher — different command names/strings are different tokens, so renamed boilerplate is never flagged. A real scan finds **none** of them. | Replaced with the **measured** clone list (see *Current State*). |
-| `mode` table: `mild` = "structural clones (same shape, different names)", `weak` = "structural clones ignoring comments" | **Wrong semantics.** The modes only control comment/whitespace token skipping (`--skip-comments` is literally an alias for `--mode weak`). jscpd finds **Type-1** (verbatim) clones only — no identifier normalization. | Corrected mode description; expectations set to Type-1 detection. |
-| `--output docs/duplication/server-baseline.json` | `-o` is an **output directory**, not a filename; jscpd always writes `jscpd-report.json` into it. | Point `-o` at a directory. |
-| Illustrative "3.2%, 14 clones, 45 files" + Phase 6 "controller.ts: 0% duplication (unique file), FTA 61.6" | Fabricated. Real total is **2.33%/21 clones/105 files**; controller.ts is in **4** of the 10 production clones and its real FTA score is **94.4** (per the code-quality plan). | Real numbers; controller.ts identified as the genuine hotspot. |
-| Separate `.jscpd.client.json`, `duplication:client` script, client baseline | `web/src` duplication is **0.00%** — there is nothing to track. | Dropped the entire client apparatus; one config covers both. |
-| `scripts/duplication-report.ts` (custom ranked report) | Redundant — jscpd ships `console-full`, `markdown`, `html`, `sarif`, and `threshold` reporters that already produce the ranked breakdown and the gate. | Dropped. Use built-in reporters + `--threshold`. |
-| Committed baseline JSON + 5 npm scripts + 2 config files | Heavy machinery for 2.5% duplication concentrated in ~4 real clones. | One config, two scripts, a CI threshold gate (see *Recommended*). |
-
-### Was there a better alternative?
-
-**Tool: no — jscpd is the right and standard choice** (PMD-CPD is Java-oriented; jscpd is
-the JS/TS norm, and v5 is the current Rust build). The better alternative is about **scope**,
-not tooling. Measured duplication is only **2.48%** in production code, **0%** in the web
-client, and concentrated in a handful of clones. That does not warrant a tracked subsystem
-with committed baselines and a custom report script.
-
-- **Recommended — one-time cleanup + thin gate.** Fix the ~4 meaningful clones now
-  (Phase 4), add a single `--threshold` CI gate to prevent regression, and skip the
-  baselines/custom script/client config. This is the leanest path that captures the value.
-- **Prior draft — tracked duplication subsystem.** Two configs, baselines, a custom
-  cross-referencing script. Disproportionate to a clean-ish codebase; rejected.
-
-The genuinely useful cross-reference is real and simple: the largest clones
-(`schedule.ts`/`profile.ts` ↔ `controller.ts`) sit inside `controller.ts`, which is *also*
-the code-quality plan's #1 complexity target (FTA 94.4). Deduplicating them advances both
-plans at once.
-
----
-
 ## Current State (measured 2026-06-25, `--min-lines 5 --mode mild`)
 
 | Scope | Files | Duplication | Clones |
