@@ -11,14 +11,11 @@ upon closing the harness, the cli in the terminal should be restored
 ## tasks on images 
 zoom
 
-
 ## web page tabs
 build a spec for web page tabs. a web page tab should 
 
 
-## imrpovements
+## improvements
 
 separate slow automated tests into a slow test suite only run at the end of feature development as a verification
-
-unicorn lint warns to errors
 

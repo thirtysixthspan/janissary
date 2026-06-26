@@ -397,6 +397,34 @@ Run tests:
 npm test
 ```
 
+### Testing
+
+Run all tests (server + client):
+
+```bash
+npm test
+```
+
+Run tests for a specific project:
+
+```bash
+npm run test:server   # Node/Ink TUI tests (src/)
+npm run test:client   # React web client tests (web/src/)
+npm run test:watch    # watch mode — reruns on file changes
+```
+
+### Code Coverage
+
+Generate a merged HTML + LCOV + JSON coverage report:
+
+```bash
+npm run coverage
+```
+
+Output lands in `coverage/` (gitignored). Open `coverage/index.html` in a browser to browse the interactive report, which breaks down coverage by directory (`src/` vs `web/src/`).
+
+Coverage is enforced with **per-area thresholds** — separate floors for `src/**` (server) and `web/src/**` (client). If a change drops coverage below the recorded floor the run fails. Thresholds are stored in `vitest.config.ts` and ratchet upward automatically (`autoUpdate: true`) whenever a run exceeds them, so the floor can only rise over time.
+
 ### Linting
 
 ```bash

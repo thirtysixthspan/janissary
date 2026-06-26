@@ -132,6 +132,6 @@ export default ts.config(
     },
   },
   {
-    ignores: ['dist/', 'web/dist/', 'node_modules/', '.janissary/'],
+    ignores: ['dist/', 'web/dist/', 'node_modules/', '.janissary/', 'coverage/'],
   },
 );
