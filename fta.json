@@ -1,0 +1,5 @@
+{
+  "exclude_filenames": ["**/*.test.ts", "**/*.test.tsx"],
+  "exclude_directories": ["dist", "web/dist", ".janissary"],
+  "score_cap": 95
+}

@@ -6,6 +6,7 @@ import importX from 'eslint-plugin-import-x';
 import { createTypeScriptImportResolver } from 'eslint-import-resolver-typescript';
 import reactHooks from 'eslint-plugin-react-hooks';
 import unicorn from 'eslint-plugin-unicorn';
+import sonarjs from 'eslint-plugin-sonarjs';
 
 export default ts.config(
   js.configs.recommended,
@@ -82,6 +83,18 @@ export default ts.config(
       '@typescript-eslint/no-unnecessary-type-assertion': 'error',
       '@typescript-eslint/no-unsafe-assignment': 'error',
       '@typescript-eslint/no-unsafe-member-access': 'error',
+    },
+  },
+  // Complexity and duplication signal. Kept as warn (not error) — guidance, not a hard block.
+  // controller.ts will light up heavily; that is the intended signal.
+  {
+    files: ['src/**/*.ts', 'src/**/*.tsx', 'web/src/**/*.ts', 'web/src/**/*.tsx'],
+    ignores: ['**/*.test.ts', '**/*.test.tsx'],
+    plugins: { sonarjs },
+    rules: {
+      'sonarjs/cognitive-complexity': ['warn', 15],
+      'sonarjs/no-duplicate-string': ['warn', { threshold: 5 }],
+      'sonarjs/no-identical-functions': 'warn',
     },
   },
   // Test files are exempt from the line-count guideline (they often grow long with cases).

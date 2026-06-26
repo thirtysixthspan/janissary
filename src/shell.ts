@@ -21,11 +21,11 @@ export function executeShellCmd(
   let outputBuffer = '';
 
   const done = () => {
-    shell.stdout!.removeListener('data', onStdout);
-    shell.stderr!.removeListener('data', onStderr);
+    shell.stdout!.removeListener('data', onChunk);
+    shell.stderr!.removeListener('data', onChunk);
   };
 
-  const onStdout = (chunk: string) => {
+  const onChunk = (chunk: string) => {
     outputBuffer += chunk;
     const endIndex = outputBuffer.indexOf(prompt);
     if (endIndex === -1) {
@@ -37,20 +37,8 @@ export function executeShellCmd(
     }
   };
 
-  const onStderr = (chunk: string) => {
-    outputBuffer += chunk;
-    const endIndex = outputBuffer.indexOf(prompt);
-    if (endIndex === -1) {
-      onProgress(outputBuffer);
-    } else {
-      const result = outputBuffer.slice(0, Math.max(0, endIndex)).trim();
-      done();
-      onComplete(result);
-    }
-  };
-
-  shell.stdout!.on('data', onStdout);
-  shell.stderr!.on('data', onStderr);
+  shell.stdout!.on('data', onChunk);
+  shell.stderr!.on('data', onChunk);
   shell.stdin!.write(`${command} 2>&1\necho "${prompt}"\n`);
 }
 

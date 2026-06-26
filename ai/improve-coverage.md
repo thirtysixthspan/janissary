@@ -44,6 +44,8 @@ npm run coverage 2>&1
 
 Always run it fresh. Do not trust an old `coverage/` folder.
 
+This run also executes the **whole test suite**. Confirm it is green (every test passes) before you add anything. If tests are already failing, stop and tell the user — do not build on a broken suite.
+
 ---
 
 ## Step 2 — Read the coverage table
@@ -116,19 +118,19 @@ describe('functionUnderTest', () => {
 
 ## Step 6 — Verify
 
-Run coverage again:
+Run coverage again (this runs the **whole test suite** too):
 
 ```bash
 npm run coverage 2>&1
 ```
 
-Then check:
+Then check, in this order:
 
-- **All tests pass.** If a new test fails:
-  - If it fails because your test is wrong, fix the test and re-run.
-  - If it fails because the real source code looks buggy, do **not** change the source. Stop and report the suspected bug to the user.
-  - If after a few tries you cannot make it pass without changing source code, delete the test file you added and report what blocked you.
-- **The target file's `% Lines` went up** compared to Step 2.
+1. **The whole test suite passes** — every test, including ones you did not write. Adding tests must **never** make a previously-passing test fail.
+   - If one of **your new** tests fails because the test itself is wrong, fix the test and re-run.
+   - If a test fails because the real source code looks buggy, do **not** change the source — stop and report the suspected bug to the user.
+   - If you broke a previously-passing test, or the suite will not go green without editing source code or other tests, **delete the test file(s) you added** and report what blocked you. Never edit source or existing tests just to make the suite pass.
+2. **Coverage went up** — the target file's `% Lines` is higher than in Step 2.
 
 ---
 
@@ -139,9 +141,9 @@ Give the user a short report in this exact shape:
 ```
 Target file: <path>
 Tests added: <count> in <test file path>
-% Lines:   <before> -> <after>
-% Branch:  <before> -> <after>
-Result:    all tests pass / <what failed>
+% Lines:    <before> -> <after>
+% Branch:   <before> -> <after>
+Test suite: all pass / <what failed>
 ```
 
 Keep it brief. Done.

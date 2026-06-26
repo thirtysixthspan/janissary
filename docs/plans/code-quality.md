@@ -1,50 +1,5 @@
 # Code Quality Plan
 
-## What changed from the prior draft (and why)
-
-The prior draft picked reasonable tools but its example data was fabricated, its CI gate
-was a no-op, and it pulled test files into the refactoring signal. All findings below were
-measured against this repo (`fta-cli@3.0.0`, `eslint@10.5.0`, `eslint-plugin-sonarjs@4.1.0`).
-
-| Prior draft | Problem | Fix in this plan |
-|---|---|---|
-| `controller.ts`: cyclo 42, fta_score 61.6, 995 lines; `tab.ts`: "OK", 38.2 | **All fabricated.** Real: `controller.ts` cyclo **216**, score **94.4**, **815** lines; `tab.ts` "Needs improvement", score **60.3**, cyclo 58. | Replaced with measured numbers (see *Current State*). |
-| `quality:check` "exits non-zero if any FTA score exceeds threshold" | **No-op.** The script is just `fta … ; fta …` — it writes JSON and reprints a table; it never checks anything or fails. | Use FTA's real gate: `score_cap` (in `fta.json`) / `--score-cap`, verified to exit 1 with a clear message. |
-| `fta src/` with no config | FTA ranks **test files too** — 4 of the top 8 by score are `*.test.ts`. They distort a refactoring signal. | `fta.json` with `exclude_filenames: ["**/*.test.ts","**/*.test.tsx"]` (verified: 104 → 60 files). |
-| `scripts/quality-report.ts` (ranked list) | Redundant — `fta src` **already** prints a score-sorted, assessment-labeled table. | Dropped. The ranked targets live in this doc (Phase 4); FTA's own table is the live version. |
-| `scripts/check-baseline.ts` in the layout | Phantom — no phase ever creates it; baseline-diffing is unspecified. | Dropped. Regression is gated by `score_cap` (ratchet the cap down over time). |
-| `sonarjs.configs.recommended` spread into config, no version | Unpinned; spreading the full recommended set turns on ~many rules at error severity → a warning/error flood on 105 files that can break `npm run lint`. | Pin `eslint-plugin-sonarjs@^4.1` (peer `eslint ^10`); register the plugin and enable **only** the chosen rules as warnings. |
-| `quality:lint … --max-warnings 20` | Unrealistic — `controller.ts` (cyclo 216) alone emits many cognitive-complexity warnings; a cap of 20 fails instantly. | Don't gate on a guessed warning cap; gate regression via FTA `score_cap`. Measure the warning count first if a cap is ever wanted. |
-
-### Was there a better alternative?
-
-**Yes — a leaner, ESLint-only path is worth considering, and the recommendation rebalances
-toward it.** The measured reality is a *healthy* codebase with one dramatic outlier:
-of 60 non-test source files, **52 are "OK"**, 6 "Could be better", and only **2 "Needs
-improvement"** (`controller.ts` at 94.4 is the extreme; `tab.ts` at 60.3 the other). That
-does not justify heavy machinery (two custom scripts + committed JSON baselines + six npm
-scripts). Options:
-
-- **Alternative A — ESLint-only.** Add `eslint-plugin-sonarjs` to the existing mature
-  ESLint config (`cognitive-complexity`, `no-duplicate-string`). Complexity then surfaces
-  **per-function, with exact line numbers, in the editor and in `npm run lint`** — far more
-  actionable than a whole-file 0–100 score. No new tool, no scripts, no JSON ritual.
-  *Trade-off:* loses the single trend number and the per-file ranking, and the code-coverage
-  plan's optional Phase 8 (coverage × FTA cross-reference) would need reworking.
-- **Alternative B — FTA-led (the prior draft).** Whole-file composite score + Halstead +
-  custom ranking/baseline scripts. Heavier; the composite score is hard to action directly.
-- **Recommended — rebalanced hybrid.** Lead with **sonarjs inside the existing ESLint
-  config** as the actionable, line-precise layer (Phase 1). Keep **FTA as a thin optional
-  layer** (Phase 2): one devDep, no custom scripts — `fta` table for the ranked snapshot,
-  `score_cap` for the regression gate, committed JSON as the trend baseline that also feeds
-  the coverage plan's Phase 8. This is most of Alternative A's leanness while preserving the
-  trend metric and cross-plan link.
-
-Rejected outright: standalone tools with ~0 adoption from the prior draft's table
-(Codopsy-ts, Qualitas, Codexray) — niche, unproven, and redundant with sonarjs + FTA.
-
----
-
 ## Current State (measured 2026-06-25)
 
 ESLint is already substantial (`typescript-eslint` type-aware rules, `unicorn/flat/recommended`,
@@ -120,7 +75,7 @@ intended signal, not noise.
 
 ## Phase 2 — FTA (optional: trend snapshot + regression gate)
 
-Thin layer — one devDep, no custom scripts. Skip entirely if you adopt Alternative A.
+Thin layer — one devDep, no custom scripts.
 
 ### 2.1 Install
 
