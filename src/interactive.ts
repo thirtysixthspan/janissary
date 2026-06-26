@@ -1,6 +1,3 @@
-import * as pty from 'node-pty';
-import type { InteractiveSession, RunInteractiveOptions } from './types.js';
-
 // Full-screen / interactive programs that need a real TTY and live keystroke
 // forwarding (a pager like `less`, an editor like `vim`, a monitor like `top`).
 // These cannot run through the piped persistent shell, which only scrapes output.
@@ -35,32 +32,4 @@ export function isInteractive(command: string): boolean {
     if (first && INTERACTIVE_PROGRAMS.has(basename(first))) return true;
   }
   return false;
-}
-
-/**
- * Run a command in a pseudo-terminal so it sees a real TTY. Output is delivered
- * via onData (caller pipes it to the real stdout); call write() to forward keystrokes.
- */
-export function runInteractive(options: RunInteractiveOptions): InteractiveSession {
-  const shell = process.env.SHELL || 'bash';
-  const proc = pty.spawn(shell, ['-c', options.cmd], {
-    name: 'xterm-256color',
-    cols: Math.max(1, options.cols),
-    rows: Math.max(1, options.rows),
-    cwd: options.cwd || process.cwd(),
-    env: process.env,
-  });
-
-  proc.onData(options.onData);
-  proc.onExit(({ exitCode }) => options.onExit(exitCode));
-
-  return {
-    write: (data) => proc.write(data),
-    resize: (cols, rows) => {
-      try { proc.resize(Math.max(1, cols), Math.max(1, rows)); } catch { /* process may have exited */ }
-    },
-    kill: () => {
-      try { proc.kill(); } catch { /* already gone */ }
-    },
-  };
 }

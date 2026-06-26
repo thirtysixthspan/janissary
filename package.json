@@ -27,7 +27,9 @@
     "quality:gate": "fta src && fta web/src",
     "quality:snapshot": "fta src --json > docs/quality/baseline-server.json && fta web/src --json > docs/quality/baseline-client.json",
     "duplication": "jscpd src web/src",
-    "duplication:gate": "jscpd src web/src --exit-code"
+    "duplication:gate": "jscpd src web/src --exit-code",
+    "knip": "knip",
+    "knip:fix": "knip --fix"
   },
   "keywords": [],
   "author": "",
@@ -67,6 +69,7 @@
     "globals": "^17.6.0",
     "jscpd": "^5.0.11",
     "jsdom": "^29.1.1",
+    "knip": "^6.21.0",
     "prettier": "^3.8.4",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",

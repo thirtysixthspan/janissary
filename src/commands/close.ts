@@ -1,5 +1,6 @@
 import type { Command } from './types.js';
 import { cleanupResources } from '../cleanup-handlers.js';
+import { removeWorkspace } from '../workspace.js';
 
 export const command: Command = {
   name: 'close',

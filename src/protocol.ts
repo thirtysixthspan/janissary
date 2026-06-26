@@ -4,6 +4,7 @@ import type { BufferLine, ImageView } from './types.js';
 
 
 
+
 // One row in the floating "connections" panel (shell / acp / terminal card / sqlite).
 export type ConnectionView = { text: string; kind: 'shell' | 'acp' | 'browser' | 'terminal' | 'sqlite' };
 // One row in the floating "schedule" panel.
@@ -64,5 +65,3 @@ export type RpcCall =
   | { method: 'ptyKill'; params: { id: string } };
 
 export type ClientMessage = { t: 'rpc'; id: number } & RpcCall;
-
-export {type BufferLine, type ImageView} from './types.js';

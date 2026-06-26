@@ -1,4 +1,4 @@
-import { mkdirSync, existsSync, readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import type { AgentState, ProfileParsed } from './types.js';
 
@@ -12,10 +12,6 @@ let profileDir = '';
 
 export function initProfileDir(projectDir: string): void {
   profileDir = path.join(projectDir, 'profiles');
-}
-
-export function ensureProfileDir(): void {
-  mkdirSync(profileDir, { recursive: true });
 }
 
 export function profilePath(name: string): string {

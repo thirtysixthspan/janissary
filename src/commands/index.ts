@@ -35,4 +35,4 @@ export const commands: Command[] = [
   open,
 ];
 
-export type { Command, CommandHandlerContext } from './types.js';
+export type { Command } from './types.js';

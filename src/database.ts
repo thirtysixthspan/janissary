@@ -196,7 +196,3 @@ export function extractDatabaseCommand(text: string): string | undefined {
   // not a db command
 }
 
-// `dbPath` is re-exported for callers (and tests) that need the on-disk location.
-
-
-export {dbPath} from './connections.js';

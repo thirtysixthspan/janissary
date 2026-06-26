@@ -1,0 +1,6 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "project": ["src/**/*.{ts,tsx}", "web/src/**/*.{ts,tsx}"],
+  "ignoreExportsUsedInFile": true,
+  "ignoreBinaries": ["open", "which"]
+}

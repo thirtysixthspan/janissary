@@ -70,17 +70,6 @@ export const makeImageTab = (label: string, dotColor: string, number: number, gr
   image,
 });
 
-export function getFrequentHistory(history: string[], count: number): string[] {
-  const freq = new Map<string, number>();
-  for (const command of history) {
-    freq.set(command, (freq.get(command) ?? 0) + 1);
-  }
-  return [...freq]
-    .toSorted((a, b) => a[1] - b[1] || a[0].localeCompare(b[0]))
-    .map(([command]) => command)
-    .slice(-count);
-}
-
 // Expand tab characters to spaces (8-column tab stops). Terminals render a tab as
 // several columns but Ink measures it as width 1, so leaving tabs in causes lines to
 // overflow and wrap (shifting the scrollbar onto the next row). Expanding keeps the

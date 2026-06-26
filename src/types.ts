@@ -4,8 +4,6 @@
 // `src/commands/` directory has its own `commands/types.ts`). Runtime values (functions,
 // constants) stay in their respective modules; only types are collected here.
 
-import type { ChildProcess } from 'node:child_process';
-import type { RouteChoice } from './recognizers/types.js';
 
 // --- tab.ts ---------------------------------------------------------------
 
@@ -246,38 +244,10 @@ export type BrowserParsed =
 // `response` is system-generated (the reply to a request), not something a user sends.
 export type MessageKind = 'info' | 'request' | 'command' | 'response';
 
-export type Message = {
-  id: number;
-  from: string;
-  to: string;
-  kind: MessageKind;
-  text: string;
-};
-
 export type ParsedMsg = { to: string; kind: MessageKind; text: string };
 
 export type ParsedBroadcast = { targets: string[] | 'all'; kind: MessageKind; text: string };
 
-export type MessagingDeps = {
-  hasAgent: (label: string) => boolean;
-  agentColor: (label: string) => string;
-  // Whether a command needs an interactive PTY (those cannot be run on behalf of a
-  // non-foreground agent and are rejected).
-  isInteractive: (command: string) => boolean;
-  appendLog: (label: string, entry: LogEntry) => void;
-  appendContext: (label: string, text: string) => void;
-  // Run a shell command in the recipient's own persistent shell, streaming output to its
-  // transcript, and invoke onComplete with the final output.
-  runShell: (label: string, command: string, onComplete: (output: string) => void) => void;
-  // Execute text in the recipient's window (built-ins + shell, interactive commands
-  // skipped) capturing the output instead of displaying it. Used to fulfil a request.
-  runCapture: (label: string, text: string, onResult: (output: string) => void) => void;
-};
-
-export type Messaging = {
-  /** Enqueue a message for delivery. Returns false if the recipient does not exist. */
-  send: (message: Omit<Message, 'id'>) => boolean;
-};
 
 // --- connections.ts -------------------------------------------------------
 
@@ -339,64 +309,7 @@ export type CompletionResult = {
   matches: string[];
 };
 
-// --- interactive.ts -------------------------------------------------------
 
-export type InteractiveSession = {
-  write: (data: string) => void;
-  resize: (cols: number, rows: number) => void;
-  kill: () => void;
-};
-
-export type RunInteractiveOptions = {
-  cmd: string;
-  cwd?: string;
-  cols: number;
-  rows: number;
-  onData: (data: string) => void;
-  onExit: (exitCode: number) => void;
-};
-
-// --- scroll.ts ------------------------------------------------------------
-
-export type ScrollAccel = { dir: number; start: number; last: number };
-
-export type AccelOptions = {
-  // Max gap (ms) between ticks that still counts as continuous scrolling.
-  gapMs?: number;
-  // The step grows by one every `rampMs` of continuous scrolling.
-  rampMs?: number;
-  // Upper bound on the step size.
-  maxStep?: number;
-};
-
-// --- theme.ts -------------------------------------------------------------
-
-export type ThemeColors = {
-  bg: string;
-  bgSoft: string;
-  fg: string;
-  muted: string;
-  faint: string;
-  border: string;
-  accent: string;
-};
-
-// --- useShellManager.ts ---------------------------------------------------
-
-export type ShellManager = {
-  shellsRef: { current: Map<number, ChildProcess> };
-  cwdRef: { current: Record<string, string> };
-  shellActive: Record<number, boolean>;
-  setShellActive: (updater: (previous: Record<number, boolean>) => Record<number, boolean>) => void;
-  getShell: (tabIndex: number, label?: string) => ChildProcess | null;
-};
-
-// --- shell.ts -------------------------------------------------------------
-
-export type ShellCmdCallbacks = {
-  onProgress: (outputBuffer: string) => void;
-  onComplete: (result: string) => void;
-};
 
 // --- user-agent.ts --------------------------------------------------------
 
@@ -409,37 +322,6 @@ export type BrowserProfile = {
   viewport: { width: number; height: number };
 };
 
-// --- useInputHandler.ts ---------------------------------------------------
-
-export type InputHandlerDeps = {
-  input: string;
-  cursor: number;
-  setInput: (function_: ((previous: string) => string) | string) => void;
-  setCursor: (function_: ((previous: number) => number) | number) => void;
-  tabs: Tab[];
-  activeTab: number;
-  setTabs: (updater: (previous: Tab[]) => Tab[]) => void;
-  setActiveTab: (function_: ((previous: number) => number) | number) => void;
-  updateCurrentTab: (updater: (tab: Tab) => Tab) => void;
-  executeRef: { current: ((command: string) => void) | null };
-  shellsRef: { current: Map<number, ChildProcess> };
-  visibleHeight: number;
-  exit: () => void;
-  historyPickerOpen: boolean;
-  historyPickerIdx: number;
-  setHistoryPickerOpen: (isOpen: boolean) => void;
-  setHistoryPickerIdx: (function_: ((previous: number) => number) | number) => void;
-  frequentHistory: string[];
-  flashScrollBoundary: () => void;
-  interactive: boolean;
-  cwd: string;
-  agents: string[];
-  connections: string[];
-  routeChooser: { cmd: string; choices: RouteChoice[] } | null;
-  routeChooserIdx: number;
-  setRouteChooser: (v: { cmd: string; choices: RouteChoice[] } | null) => void;
-  setRouteChooserIdx: (function_: ((previous: number) => number) | number) => void;
-};
 
 // --- logger.ts ------------------------------------------------------------
 
