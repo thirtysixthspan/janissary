@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import type { CompletionResult } from './protocol';
+import type { CompletionResult } from '@shared/protocol';
 
 type Properties = {
   dotColor: string;

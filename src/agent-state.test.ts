@@ -50,11 +50,19 @@ describe('agent-state', () => {
 
   it('loadAgentState parses JSON from file', () => {
     initAgentStateDirectory('/test');
-    const testState = { name: 'agent1', data: 'test' };
+    const testState = { name: 'agent1', dotColor: '#fff', active: false };
     mockFs.existsSync.mockReturnValue(true);
     mockFs.readFileSync.mockReturnValue(JSON.stringify(testState));
     const result = loadAgentState('agent1');
     expect(result).toEqual(testState);
+  });
+
+  it('loadAgentState returns undefined for malformed state shape', () => {
+    initAgentStateDirectory('/test');
+    mockFs.existsSync.mockReturnValue(true);
+    mockFs.readFileSync.mockReturnValue(JSON.stringify({ name: 'agent1' }));
+    const result = loadAgentState('agent1');
+    expect(result).toBeUndefined();
   });
 
   it('loadAgentState returns undefined on invalid JSON', () => {

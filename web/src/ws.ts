@@ -1,4 +1,4 @@
-import type { ServerEvent, RpcCall, RouteChooserView, TabView } from './protocol';
+import type { ServerEvent, RpcCall, RouteChooserView, TabView } from '@shared/protocol';
 
 type StateListener = (tabs: TabView[], activeTab: number, route: RouteChooserView | null) => void;
 type ExitListener = (id: string, exitCode: number) => void;

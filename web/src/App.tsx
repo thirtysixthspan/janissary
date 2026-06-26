@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { JanusClient } from './ws';
-import type { TabView, RouteChooserView } from './protocol';
+import type { TabView, RouteChooserView } from '@shared/protocol';
 import { TabStrip } from './TabStrip';
 import { Transcript } from './Transcript';
 import { ImageTab } from './ImageTab';

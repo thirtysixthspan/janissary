@@ -1,5 +1,5 @@
 import React from 'react';
-import type { TabView } from './protocol';
+import type { TabView } from '@shared/protocol';
 
 // Floating top-right panels mirroring the Ink ConnectionWindow / ScheduleWindow: the active
 // tab's open connections (shell / acp / terminal cards / sqlite) and its scheduled timers.

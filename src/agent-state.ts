@@ -16,11 +16,21 @@ export function agentStatePath(name: string): string {
   return path.join(stateDirectory, `${name}.json`);
 }
 
+function isAgentState(x: unknown): x is AgentState {
+  return (
+    typeof x === 'object' && x !== null &&
+    typeof (x as AgentState).name === 'string' &&
+    typeof (x as AgentState).dotColor === 'string' &&
+    typeof (x as AgentState).active === 'boolean'
+  );
+}
+
 export function loadAgentState(name: string): AgentState | undefined {
   const path = agentStatePath(name);
   if (!existsSync(path)) return undefined;
   try {
-    return JSON.parse(readFileSync(path, 'utf8'));
+    const parsed: unknown = JSON.parse(readFileSync(path, 'utf8'));
+    return isAgentState(parsed) ? parsed : undefined;
   } catch {
     // skip invalid agent state files
   }

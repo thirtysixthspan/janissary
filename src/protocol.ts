@@ -1,9 +1,10 @@
-// Wire types shared between the Node server and the React web client. The web bundle mirrors
-// these locally (it cannot import across the bundler boundary cleanly), so keep them in sync.
-import type { BufferLine, ImageView } from './types.js';
+// Wire types shared between the Node server and the React web client.
+// The web client imports these directly via the @shared path alias — no mirror needed.
+import type { BufferLine, ImageView, TerminalEntry, CompletionResult } from './types.js';
 
-
-
+// Used locally in TabView below, so separate import + export is required.
+// eslint-disable-next-line unicorn/prefer-export-from
+export type { BufferLine, ImageView, TerminalEntry, CompletionResult };
 
 // One row in the floating "connections" panel (shell / acp / terminal card / sqlite).
 export type ConnectionView = { text: string; kind: 'shell' | 'acp' | 'browser' | 'terminal' | 'sqlite' };
@@ -65,3 +66,4 @@ export type RpcCall =
   | { method: 'ptyKill'; params: { id: string } };
 
 export type ClientMessage = { t: 'rpc'; id: number } & RpcCall;
+

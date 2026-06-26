@@ -31,7 +31,8 @@
     "knip": "knip",
     "knip:fix": "knip --fix",
     "lint:css": "stylelint \"web/src/**/*.css\"",
-    "lint:css:fix": "stylelint \"web/src/**/*.css\" --fix"
+    "lint:css:fix": "stylelint \"web/src/**/*.css\" --fix",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p web/tsconfig.json"
   },
   "keywords": [],
   "author": "",

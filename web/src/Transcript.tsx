@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import type { JanusClient } from './ws';
-import type { BufferLine } from './protocol';
+import type { BufferLine } from '@shared/protocol';
 import { TerminalCard } from './TerminalCard';
 
 // An ACP agent reply rendered as Markdown. `marked` produces HTML (GFM tables/lists/code, single

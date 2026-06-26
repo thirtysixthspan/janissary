@@ -1,4 +1,3 @@
-/* eslint-disable max-lines */
 // Shared type declarations for the top-level `src/` modules. Types live here rather than
 // alongside their implementations so each directory has a single types file (the
 // `src/commands/` directory has its own `commands/types.ts`). Runtime values (functions,

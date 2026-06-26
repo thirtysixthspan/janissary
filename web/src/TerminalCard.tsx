@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import type { JanusClient } from './ws';
-import type { TerminalEntry } from './protocol';
+import type { TerminalEntry } from '@shared/protocol';
 
 type Properties = { entry: TerminalEntry; client: JanusClient };
 

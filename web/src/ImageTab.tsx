@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import type { ImageView } from './protocol';
+import type { ImageView } from '@shared/protocol';
 
 // An image view tab body: a compact metadata header (name, size, location) above the image, which
 // fills the remaining space. Orientation is intrinsic to the image and read once it loads: a

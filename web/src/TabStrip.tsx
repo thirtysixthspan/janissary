@@ -1,5 +1,5 @@
 import React from 'react';
-import type { TabView } from './protocol';
+import type { TabView } from '@shared/protocol';
 
 type Properties = {
   tabs: TabView[];
