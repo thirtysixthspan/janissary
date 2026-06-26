@@ -7,7 +7,7 @@
   --faint: #5b5e66;
   --border: #292b30;
   --accent: #5b9cff;
-  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  --mono: ui-monospace, "SFMono-Regular", "SF Mono", "Menlo", "Consolas", "Liberation Mono", monospace;
 }
 
 * { box-sizing: border-box; }
@@ -80,7 +80,7 @@ html, body, #root {
 .panel-row.conn-terminal { color: var(--accent); }
 .panel-row.conn-sqlite { color: var(--fg); }
 .panel-row.recurring { color: var(--accent); }
-.line { white-space: pre-wrap; word-break: break-word; line-height: 1.4; }
+.line { white-space: pre-wrap; overflow-wrap: break-word; line-height: 1.4; }
 .line.prompt { color: var(--accent); }
 .line.prompt .cwd { color: var(--faint); margin-right: 6px; }
 .line.output { color: var(--fg); }
@@ -134,7 +134,7 @@ html, body, #root {
   position: absolute; left: 0; right: 0; bottom: 0; z-index: 40;
   max-height: 70%; overflow-y: auto;
   background: var(--bg-soft); border-top: 1px solid var(--border);
-  box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 -6px 24px rgb(0 0 0 / 40%);
 }
 .picker-title { padding: 4px 10px; color: var(--muted); border-bottom: 1px solid var(--border); }
 .picker-row { padding: 3px 10px; cursor: pointer; white-space: nowrap; }
@@ -144,7 +144,7 @@ html, body, #root {
 
 /* Command input */
 .command-area { display: flex; flex-direction: column; }
-.completions { padding: 2px 12px; color: var(--muted); white-space: pre-wrap; word-break: break-word; border-top: 1px solid var(--border); }
+.completions { padding: 2px 12px; color: var(--muted); white-space: pre-wrap; overflow-wrap: break-word; border-top: 1px solid var(--border); }
 .command { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-top: 1px solid var(--border); }
 .command .dot { font-size: 10px; }
 .command input {

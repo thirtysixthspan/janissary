@@ -522,6 +522,17 @@ The **Duplicated lines %** is the key number. Under 3% is acceptable for this co
 
 Configuration lives in `.jscpd.json`. The minimum clone size is 5 lines / 50 tokens — shorter matches are noise, not duplication.
 
+### CSS Linting
+
+Lint `web/src/theme.css` for correctness with [stylelint](https://stylelint.io) + `stylelint-config-standard`. Prettier already handles formatting; stylelint covers correctness conventions (modern color notation, deprecated property values, etc.).
+
+```bash
+npm run lint:css        # check for issues — exits non-zero if any are found
+npm run lint:css:fix    # auto-fix what stylelint can fix, then review the diff
+```
+
+Configuration lives in `web/.stylelintrc.json`. Purely formatting rules (`declaration-block-single-line-max-declarations`, `*-empty-line-before`) are disabled because the stylesheet uses a deliberate compact single-line style that Prettier preserves.
+
 ### Dead Code
 
 Detect unused exports, files, types, and dependencies with [Knip](https://knip.dev). A single scan covers both `src/` and `web/src/`.

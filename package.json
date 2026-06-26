@@ -29,7 +29,9 @@
     "duplication": "jscpd src web/src",
     "duplication:gate": "jscpd src web/src --exit-code",
     "knip": "knip",
-    "knip:fix": "knip --fix"
+    "knip:fix": "knip --fix",
+    "lint:css": "stylelint \"web/src/**/*.css\"",
+    "lint:css:fix": "stylelint \"web/src/**/*.css\" --fix"
   },
   "keywords": [],
   "author": "",
@@ -73,6 +75,8 @@
     "prettier": "^3.8.4",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
+    "stylelint": "^17.14.0",
+    "stylelint-config-standard": "^40.0.0",
     "tsx": "^4.22.4",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.61.1",
