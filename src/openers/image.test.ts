@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import path from 'node:path';
 import { openerForExtension, openers } from './index.js';
 import { opener as image } from './image.js';
 import type { OpenContext, ImageView } from './index.js';
@@ -39,8 +39,8 @@ describe('opener registry', () => {
 
 describe('image opener', () => {
   it('inline builds an image-view payload with metadata and a serve ref', () => {
-    const dir = mkdtempSync(join(tmpdir(), 'janus-img-'));
-    const file = join(dir, 'diagram.png');
+    const dir = mkdtempSync(path.join(tmpdir(), 'janus-img-'));
+    const file = path.join(dir, 'diagram.png');
     writeFileSync(file, Buffer.alloc(1500)); // 1500 bytes -> "1.5 KB"
     const { ctx, opened } = fakeContext();
     image.inline(file, ctx);

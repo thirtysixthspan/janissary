@@ -60,7 +60,7 @@ export const command: Command = {
         primer: `${DB_PRIMER}\n\n${BROWSER_PRIMER}`,
         runCommand: (runCommand) =>
           /^browser\b/i.test(runCommand) ? context.runBrowserInTab(tabIndex, runCommand) : context.runDbInTab(tabLabel, runCommand),
-        extractCommand: (text) => extractBrowserCommand(text) ?? extractDatabaseCommand(text),
+        extractCommand: (text) => extractBrowserCommand(text) ?? extractDatabaseCommand(text) ?? null,
       },
       {
         startTurn: (isFirst) => {

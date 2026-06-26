@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { execSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
+import path from 'node:path';
 import { chromium, type Browser } from 'playwright';
 import { startServer, type RunningServer } from './index.js';
 
@@ -10,8 +10,8 @@ import { startServer, type RunningServer } from './index.js';
 // the server over a raw WebSocket), this exercises the actual React UI — so it catches frontend
 // regressions where the wire protocol works but the rendered app does not.
 
-const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const webDist = join(root, 'web', 'dist');
+const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
+const webDist = path.join(root, 'web', 'dist');
 
 let browser: Browser;
 let server: RunningServer | null = null;
@@ -35,7 +35,7 @@ describe('UI smoke', () => {
 
     // Surface anything the bundle throws at load or while handling the command.
     const pageErrors: string[] = [];
-    page.on('pageerror', (error) => pageErrors.push(String(error)));
+    page.on('pageerror', (error) => { pageErrors.push(String(error)); });
     page.on('console', (message) => { if (message.type() === 'error') pageErrors.push(`console.error: ${message.text()}`); });
 
     await page.goto(server.url);

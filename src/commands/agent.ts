@@ -28,7 +28,7 @@ export const command: Command = {
       ));
       return;
     }
-    let workspaceDir: string | undefined;
+    let workspaceDirectory: string | undefined;
     if (parsed.workspace) {
       const repoRoot = findRepoRoot(process.cwd());
       if (!repoRoot) {
@@ -38,7 +38,7 @@ export const command: Command = {
         return;
       }
       try {
-        workspaceDir = createWorkspace(resolved, repoRoot);
+        workspaceDirectory = createWorkspace(resolved, repoRoot);
       } catch (error) {
         updateCurrentTab((tab) => (
           { ...tab, log: [...tab.log, { input: command_, output: `Failed to create workspace: ${error instanceof Error ? error.message : String(error)}` }], scrollOffset: 0 }
@@ -51,19 +51,19 @@ export const command: Command = {
     const creatorGroupColor = creator?.groupColor ?? dotColor;
     const { cmdHistory, log, group, groupColor } = initAgentState(resolved, dotColor, creatorGroup, creatorGroupColor);
     // Insert next to the creator's group so the group stays a single connected run.
-    setTabs((previous) => insertTabInGroup(previous, makeTab(resolved, dotColor, previous.length + 1, cmdHistory ?? [], log ?? [], workspaceDir, group, groupColor)));
-    if (workspaceDir) {
-      cwdRef.current[resolved] = workspaceDir;
-      workspaceRef.current.add(workspaceDir);
+    setTabs((previous) => insertTabInGroup(previous, makeTab(resolved, dotColor, previous.length + 1, cmdHistory ?? [], log ?? [], workspaceDirectory, group, groupColor)));
+    if (workspaceDirectory) {
+      cwdRef.current[resolved] = workspaceDirectory;
+      workspaceRef.current.add(workspaceDirectory);
       setAgentStates((previous) => {
         const current = previous[resolved];
         if (!current) return previous;
-        const updated = { ...current, workspaceDir };
+        const updated = { ...current, workspaceDir: workspaceDirectory };
         try { saveAgentState(updated); } catch { /* ignore */ }
         return { ...previous, [resolved]: updated };
       });
     }
-    const suffix = workspaceDir ? ` (workspace: ${workspaceDir})` : '';
+    const suffix = workspaceDirectory ? ` (workspace: ${workspaceDirectory})` : '';
     updateCurrentTab((tab) => (
       { ...tab, log: [...tab.log, { input: command_, output: `Agent "${resolved}" ready.${suffix}` }], scrollOffset: 0 }
     ));

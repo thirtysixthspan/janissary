@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { mkdtempSync, rmSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import path from 'node:path';
 import { parseDatabaseCommand, runDatabaseCommand, extractDatabaseCommand } from './database.js';
 import { initDbDir, closeConnection, closeAllConnections, listOpenConnections } from './connections.js';
 
@@ -100,7 +100,7 @@ describe('extractDbCommand', () => {
 describe('runDbCommand', () => {
   let dir = '';
   beforeAll(() => {
-    dir = mkdtempSync(join(tmpdir(), 'janus-db-'));
+    dir = mkdtempSync(path.join(tmpdir(), 'janus-db-'));
     initDbDir(dir);
   });
   afterAll(() => {
@@ -110,7 +110,7 @@ describe('runDbCommand', () => {
 
   it('creates, lists, persists data, queries, and deletes a database', () => {
     expect(runDatabaseCommand('db sqlite create shop')).toContain('Created');
-    expect(existsSync(join(dir, '.janissary', 'db', 'sqlite', 'shop.sqlite'))).toBe(true);
+    expect(existsSync(path.join(dir, '.janissary', 'db', 'sqlite', 'shop.sqlite'))).toBe(true);
 
     // Duplicate create is reported, not an error.
     expect(runDatabaseCommand('db sqlite create shop')).toContain('already exists');
@@ -127,7 +127,7 @@ describe('runDbCommand', () => {
     expect(out).toContain('(1 row)');
 
     expect(runDatabaseCommand('db sqlite delete shop')).toContain('Deleted');
-    expect(existsSync(join(dir, '.janissary', 'db', 'sqlite', 'shop.sqlite'))).toBe(false);
+    expect(existsSync(path.join(dir, '.janissary', 'db', 'sqlite', 'shop.sqlite'))).toBe(false);
   });
 
   it('reports a missing database on query/delete', () => {

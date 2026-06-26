@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterAll } from 'vitest';
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import path from 'node:path';
 import { command } from './profile.js';
 import { initProfileDir } from '../profiles.js';
 import { initAgentStateDirectory, loadAgentState } from '../agent-state.js';
@@ -35,13 +35,13 @@ describe('profile command handler', () => {
   let context: CommandHandlerContext;
 
   const writeAgent = (profile: string, name: string, state: Partial<AgentState>) => {
-    const dir = join(root, 'profiles', profile);
+    const dir = path.join(root, 'profiles', profile);
     mkdirSync(dir, { recursive: true });
-    writeFileSync(join(dir, `${name}.json`), JSON.stringify({ name, dotColor: 'red', active: false, ...state }));
+    writeFileSync(path.join(dir, `${name}.json`), JSON.stringify({ name, dotColor: 'red', active: false, ...state }));
   };
 
   beforeEach(() => {
-    root = mkdtempSync(join(tmpdir(), 'janus-profcmd-'));
+    root = mkdtempSync(path.join(tmpdir(), 'janus-profcmd-'));
     initProfileDir(root);
     initAgentStateDirectory(root);
     baseTabs = [{ label: 'janus' } as Tab];

@@ -1,5 +1,5 @@
 import { mkdirSync, writeFileSync, existsSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import path from 'node:path';
 import type { Config } from './types.js';
 
 export const DEFAULT_TRANSCRIPT_MAX_LINES = 25_000;
@@ -11,8 +11,8 @@ const DEFAULT_CONFIG: Config = {
 let config: Config = { ...DEFAULT_CONFIG };
 
 export function loadConfig(projectDirectory: string): Config {
-  const configDirectory = join(projectDirectory, '.janissary');
-  const configPath = join(configDirectory, 'config.json');
+  const configDirectory = path.join(projectDirectory, '.janissary');
+  const configPath = path.join(configDirectory, 'config.json');
 
   if (!existsSync(configPath)) {
     mkdirSync(configDirectory, { recursive: true });

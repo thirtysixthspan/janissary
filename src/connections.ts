@@ -1,6 +1,6 @@
 import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync, rmSync, existsSync, readdirSync } from 'node:fs';
-import { join } from 'node:path';
+import path from 'node:path';
 import type { ConnectionKind, ConnectionParsed } from './types.js';
 
 // SQLite databases live under .janissary/db/sqlite/<name>.sqlite and, unlike
@@ -8,11 +8,11 @@ import type { ConnectionKind, ConnectionParsed } from './types.js';
 let dbDir = '';
 
 export function initDbDir(projectDir: string): void {
-  dbDir = join(projectDir, '.janissary', 'db', 'sqlite');
+  dbDir = path.join(projectDir, '.janissary', 'db', 'sqlite');
 }
 
 export function dbPath(name: string): string {
-  return join(dbDir, `${name}.sqlite`);
+  return path.join(dbDir, `${name}.sqlite`);
 }
 
 /** Whether a database file exists on disk. */

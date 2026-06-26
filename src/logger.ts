@@ -1,11 +1,11 @@
 import { mkdirSync, appendFileSync } from 'node:fs';
-import { join } from 'node:path';
+import path from 'node:path';
 import type { LogRecord } from './types.js';
 
 let logDir = '';
 
 export function initLogDir(projectDir: string): void {
-  logDir = join(projectDir, '.janissary', 'log');
+  logDir = path.join(projectDir, '.janissary', 'log');
   mkdirSync(logDir, { recursive: true });
 }
 
@@ -19,8 +19,8 @@ function getDateString(): string {
 
 export function appendEntry(entry: LogRecord): void {
   if (!logDir) return;
-  const path = join(logDir, `${getDateString()}.json`);
-  appendFileSync(path, JSON.stringify(entry) + '\n');
+  const logPath = path.join(logDir, `${getDateString()}.json`);
+  appendFileSync(logPath, JSON.stringify(entry) + '\n');
 }
 
 export function getLogDir(): string {

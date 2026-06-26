@@ -1,11 +1,11 @@
 import { mkdirSync, writeFileSync, existsSync, readFileSync, readdirSync, rmSync } from 'node:fs';
-import { join } from 'node:path';
+import path from 'node:path';
 import type { AgentState } from './types.js';
 
 let stateDirectory = '';
 
 export function initAgentStateDirectory(projectDirectory: string): void {
-  stateDirectory = join(projectDirectory, '.janissary', 'state');
+  stateDirectory = path.join(projectDirectory, '.janissary', 'state');
 }
 
 export function ensureStateDirectory(): void {
@@ -13,7 +13,7 @@ export function ensureStateDirectory(): void {
 }
 
 export function agentStatePath(name: string): string {
-  return join(stateDirectory, `${name}.json`);
+  return path.join(stateDirectory, `${name}.json`);
 }
 
 export function loadAgentState(name: string): AgentState | undefined {

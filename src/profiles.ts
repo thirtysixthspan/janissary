@@ -1,5 +1,5 @@
 import { mkdirSync, existsSync, readFileSync, readdirSync } from 'node:fs';
-import { join } from 'node:path';
+import path from 'node:path';
 import type { AgentState, ProfileParsed } from './types.js';
 
 // A profile is a named, reusable set of agents for a particular use case (writing code,
@@ -11,7 +11,7 @@ import type { AgentState, ProfileParsed } from './types.js';
 let profileDir = '';
 
 export function initProfileDir(projectDir: string): void {
-  profileDir = join(projectDir, 'profiles');
+  profileDir = path.join(projectDir, 'profiles');
 }
 
 export function ensureProfileDir(): void {
@@ -19,7 +19,7 @@ export function ensureProfileDir(): void {
 }
 
 export function profilePath(name: string): string {
-  return join(profileDir, name);
+  return path.join(profileDir, name);
 }
 
 export function profileExists(name: string): boolean {
@@ -50,7 +50,7 @@ export function loadProfileAgents(name: string): AgentState[] {
       .filter((f) => f.endsWith('.json'))
       .map((f) => {
         try {
-          const state = JSON.parse(readFileSync(join(directory, f), 'utf8')) as AgentState;
+          const state = JSON.parse(readFileSync(path.join(directory, f), 'utf8')) as AgentState;
           return { ...state, name: f.replace(/\.json$/, '') };
         } catch {
           // skip invalid agent state files

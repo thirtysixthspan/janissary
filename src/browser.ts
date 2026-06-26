@@ -1,7 +1,7 @@
 import { spawn } from 'node:child_process';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import path from 'node:path';
 import type { Browser, BrowserContext, Page } from 'playwright';
 // playwright-extra wraps Playwright's chromium so plugins can patch the browser. The
 // stealth plugin masks the most common headless-automation tells (navigator.webdriver,
@@ -45,16 +45,16 @@ function makeWindow(id: string, page: Page): BrowserWindow {
       return result === undefined ? 'undefined' : JSON.stringify(result, undefined, 2);
     },
     shot: async () => {
-      const temporaryDirectory = mkdtempSync(join(tmpdir(), 'janissary-'));
-      const path = join(temporaryDirectory, `${id}-${Date.now()}.png`);
-      await page.screenshot({ path });
+      const temporaryDirectory = mkdtempSync(path.join(tmpdir(), 'janissary-'));
+      const screenshotPath = path.join(temporaryDirectory, `${id}-${Date.now()}.png`);
+      await page.screenshot({ path: screenshotPath });
       if (process.platform === 'darwin') {
         // Open the screenshot detached so it never blocks the Ink render loop.
-        const child = spawn('open', ['-a', 'Preview', path], { stdio: 'ignore', detached: true });
+        const child = spawn('open', ['-a', 'Preview', screenshotPath], { stdio: 'ignore', detached: true });
         child.on('error', () => {});
         child.unref();
       }
-      return path;
+      return screenshotPath;
     },
     content: async () => {
       const title = await page.title();

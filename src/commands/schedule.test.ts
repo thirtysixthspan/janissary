@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterAll } from 'vitest';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import path from 'node:path';
 import { command } from './schedule.js';
 import { initAgentStateDirectory, saveAgentState, loadAgentState } from '../agent-state.js';
 import type { AgentState } from '../types.js';
@@ -31,7 +31,7 @@ describe('schedule command handler', () => {
   let context: CommandHandlerContext;
 
   beforeEach(() => {
-    dir = mkdtempSync(join(tmpdir(), 'janus-sched-'));
+    dir = mkdtempSync(path.join(tmpdir(), 'janus-sched-'));
     initAgentStateDirectory(dir);
     const initial: AgentState = { name: 'janus', dotColor: 'red', active: false };
     saveAgentState(initial);

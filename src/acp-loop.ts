@@ -51,7 +51,7 @@ export function runAcpToolLoop(
             // Remove adjacent code fence markers left behind by the removed command.
             if (index < lines.length && /^`{3,}\s*$/.test(lines[index])) lines.splice(index, 1);
             if (index > 0 && /^`{3,}\s*$/.test(lines[index - 1])) lines.splice(index - 1, 1);
-            while (lines.length > 0 && lines.at(-1).trim() === '') lines.pop();
+            while (lines.length > 0 && lines.at(-1)!.trim() === '') lines.pop();
             display = lines.join('\n');
           }
         }

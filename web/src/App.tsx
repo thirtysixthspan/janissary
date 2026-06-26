@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { JanusClient } from './ws';
 import type { TabView, RouteChooserView } from './protocol';
 import { TabStrip } from './TabStrip';
@@ -36,7 +36,7 @@ export function App() {
   const stateReference = useRef({ pickerOpen, pickerIdx: pickerIndex, recent, route, routeIdx: routeIndex });
   stateReference.current = { pickerOpen, pickerIdx: pickerIndex, recent, route, routeIdx: routeIndex };
 
-  const runCommand = (text: string) => client.send({ method: 'command', params: { text } });
+  const runCommand = useCallback((text: string) => client.send({ method: 'command', params: { text } }), [client]);
   const openPicker = () => {
     // Always open on hist / Ctrl+R; highlight the most recent (bottom) entry.
     setPickerIndex(Math.max(0, stateReference.current.recent.length - 1));
@@ -51,7 +51,7 @@ export function App() {
 
   const closeTab = (index: number) => client.send({ method: 'closeTab', params: { index } });
 
-  const chooseRoute = (index: number) => client.send({ method: 'chooseRoute', params: { index } });
+  const chooseRoute = useCallback((index: number) => client.send({ method: 'chooseRoute', params: { index } }), [client]);
 
   useEffect(() => client.onState((nextTabs, active, nextRoute) => {
     setTabs(nextTabs);
@@ -152,7 +152,7 @@ export function App() {
       globalThis.removeEventListener('keydown', onKey);
       globalThis.removeEventListener('keyup', onUp);
     };
-  }, [client]);
+  }, [client, chooseRoute, runCommand]);
 
   if (!current) return <div className="app" style={{ padding: 16, color: 'var(--muted)' }}>Connecting…</div>;
 

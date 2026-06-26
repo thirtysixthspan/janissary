@@ -1,6 +1,6 @@
 import { spawn, spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync } from 'node:fs';
-import { join } from 'node:path';
+import path from 'node:path';
 import { startServer } from './index.js';
 import { makeToken } from './security.js';
 import { initAgentStateDirectory, clearStateDirectory } from './agent-state.js';
@@ -59,7 +59,7 @@ function findSystemChrome(): string | null {
   if (process.platform === 'win32') {
     const roots = [process.env.PROGRAMFILES, process.env['PROGRAMFILES(X86)'], process.env.LOCALAPPDATA].filter(Boolean) as string[];
     const rels = [String.raw`Google\Chrome\Application\chrome.exe`, String.raw`Microsoft\Edge\Application\msedge.exe`];
-    for (const root of roots) for (const rel of rels) { const p = join(root, rel); if (existsSync(p)) return p; }
+    for (const root of roots) for (const rel of rels) { const p = path.join(root, rel); if (existsSync(p)) return p; }
     return null;
   }
   for (const bin of ['google-chrome', 'google-chrome-stable', 'chromium', 'chromium-browser', 'microsoft-edge', 'brave-browser']) {
@@ -76,7 +76,7 @@ function findSystemChrome(): string | null {
 function openApp(url: string, projectDir: string): void {
   const exe = findSystemChrome();
   if (!exe) { openUrl(url); return; }
-  const profile = join(projectDir, '.janissary', 'chrome');
+  const profile = path.join(projectDir, '.janissary', 'chrome');
   mkdirSync(profile, { recursive: true });
   const child = spawn(exe, [
     `--app=${url}`,
@@ -105,7 +105,7 @@ export async function boot(argv = process.argv.slice(2)): Promise<void> {
   loadConfig(cwd);
   if (!isRelaunch) { clearStateDirectory(); clearWorkspaceDir(); }
 
-  const webDir = join(import.meta.dirname, '..', 'web', 'dist');
+  const webDir = path.join(import.meta.dirname, '..', 'web', 'dist');
   const server = await startServer({ webDir, token: makeToken(), port, relaunch: isRelaunch });
 
   // Machine-readable line first (the launcher may parse it), then a human line.

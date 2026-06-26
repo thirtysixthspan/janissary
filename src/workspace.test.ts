@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import path from 'node:path';
 import { execSync } from 'node:child_process';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -10,13 +10,13 @@ let tmpDir: string;
 let repoDir: string;
 
 beforeAll(() => {
-  tmpDir = mkdtempSync(join(tmpdir(), 'workspace-test-'));
-  repoDir = join(tmpDir, 'repo');
+  tmpDir = mkdtempSync(path.join(tmpdir(), 'workspace-test-'));
+  repoDir = path.join(tmpDir, 'repo');
   mkdirSync(repoDir, { recursive: true });
   execSync('git init', { cwd: repoDir, stdio: 'pipe' });
   execSync('git config user.email test@test.com', { cwd: repoDir, stdio: 'pipe' });
   execSync('git config user.name test', { cwd: repoDir, stdio: 'pipe' });
-  writeFileSync(join(repoDir, 'README.md'), '# Test Repo');
+  writeFileSync(path.join(repoDir, 'README.md'), '# Test Repo');
   execSync('git add . && git commit -m "init"', { cwd: repoDir, stdio: 'pipe' });
   initWorkspaceDir(tmpDir);
 });
@@ -31,7 +31,7 @@ describe('findRepoRoot', () => {
   });
 
   it('finds root from a subdirectory', () => {
-    const sub = join(repoDir, 'a', 'b', 'c');
+    const sub = path.join(repoDir, 'a', 'b', 'c');
     mkdirSync(sub, { recursive: true });
     expect(findRepoRoot(sub)).toBe(repoDir);
   });
@@ -45,8 +45,8 @@ describe('createWorkspace', () => {
   it('creates a git clone --shared of the repo', () => {
     const ws = createWorkspace('test-agent', repoDir);
     expect(existsSync(ws)).toBe(true);
-    expect(existsSync(join(ws, '.git'))).toBe(true);
-    expect(existsSync(join(ws, 'README.md'))).toBe(true);
+    expect(existsSync(path.join(ws, '.git'))).toBe(true);
+    expect(existsSync(path.join(ws, 'README.md'))).toBe(true);
     removeWorkspace(ws);
   });
 });
@@ -56,7 +56,7 @@ describe('clearWorkspaceDir', () => {
     createWorkspace('agent-a', repoDir);
     createWorkspace('agent-b', repoDir);
     clearWorkspaceDir();
-    expect(existsSync(join(tmpDir, '.janissary', 'workspace', 'agent-a'))).toBe(false);
-    expect(existsSync(join(tmpDir, '.janissary', 'workspace', 'agent-b'))).toBe(false);
+    expect(existsSync(path.join(tmpDir, '.janissary', 'workspace', 'agent-a'))).toBe(false);
+    expect(existsSync(path.join(tmpDir, '.janissary', 'workspace', 'agent-b'))).toBe(false);
   });
 });

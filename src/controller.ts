@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { spawnSync, type ChildProcess } from 'node:child_process';
 import type { Tab, LogEntry, ScheduleEntry, AcpSession, AcpInfo, ImageView } from './types.js';
 import {
@@ -5,7 +6,7 @@ import {
   swapTabsLeft, swapTabsRight,
 } from './tab.js';
 import { existsSync, statSync } from 'node:fs';
-import { extname, isAbsolute, resolve as resolvePath } from 'node:path';
+import path from 'node:path';
 import { openerForExtension } from './openers/index.js';
 import { didOsOpen } from './openers/os-open.js';
 import { abbreviatePath } from './paths.js';
@@ -366,7 +367,7 @@ export class Controller {
       }
       case 'acp': { this.runAcp(command, label); return;
       }
-      case 'state': { this.append(label, { input: command, output: formatState(label, loadAgentState(label)) }); return;
+      case 'state': { this.append(label, { input: command, output: formatState(label, loadAgentState(label) ?? null) }); return;
       }
       case 'schedule': { this.runSchedule(command, label); return;
       }
@@ -485,7 +486,7 @@ export class Controller {
     runAcpToolLoop(session, prompt, {
       primer: `${DB_PRIMER}\n\n${BROWSER_PRIMER}\n\nWrite your replies in GitHub-flavored Markdown (headings, lists, tables, fenced code blocks, etc.); the tab renders them as formatted Markdown.`,
       runCommand: (c) => (/^browser\b/i.test(c) ? this.browsers.run(label, c) : this.runDbInTab(label, c)),
-      extractCommand: (t) => extractBrowserCommand(t) ?? extractDatabaseCommand(t),
+      extractCommand: (t) => extractBrowserCommand(t) ?? extractDatabaseCommand(t) ?? null,
     }, {
       // The reply entry is flagged `markdown` so the renderer interprets it as Markdown; the raw
       // text is kept verbatim (no terminal-style table/word-wrap rewriting).
@@ -543,7 +544,7 @@ export class Controller {
       return;
     }
 
-    const file = isAbsolute(parsed.path) ? parsed.path : resolvePath(cwd, parsed.path);
+    const file = path.isAbsolute(parsed.path) ? parsed.path : path.resolve(cwd, parsed.path);
     this.openOne(command, label, file, parsed.external, context);
   }
 
@@ -551,8 +552,8 @@ export class Controller {
   // matching opener's external/inline surface. Shared by the single-path and wildcard branches.
   private openOne(command: string, label: string, file: string, external: boolean, context: OpenContext): void {
     if (!existsSync(file)) { this.append(label, { input: command, output: `open: ${file}: no such file` }); return; }
-    const opener = openerForExtension(extname(file));
-    if (!opener) { this.append(label, { input: command, output: `No opener for "${extname(file) || '(none)'}" files.` }); return; }
+    const opener = openerForExtension(path.extname(file));
+    if (!opener) { this.append(label, { input: command, output: `No opener for "${path.extname(file) || '(none)'}" files.` }); return; }
     void (external ? opener.external(file, context) : opener.inline(file, context));
   }
 
@@ -568,7 +569,7 @@ export class Controller {
       stdout = res.stdout ?? '';
     } catch { return []; }
     const files = stdout.split('\n').map((s) => s.trim()).filter(Boolean)
-      .map((p) => (isAbsolute(p) ? p : resolvePath(cwd, p)))
+      .map((p) => (path.isAbsolute(p) ? p : path.resolve(cwd, p)))
       .filter((p) => { try { return statSync(p).isFile(); } catch { return false; } });
     return [...new Set(files)].toSorted((a, b) => a.localeCompare(b));
   }

@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { join, dirname } from 'node:path';
+import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import agentNames from '../agent-names.json' with { type: 'json' };
 import type { AgentCommand } from './types.js';
@@ -24,8 +24,8 @@ export const availableCommands = [
 let helpOutput: string | null = null;
 
 function buildHelp(): string {
-  const __dirname = dirname(fileURLToPath(import.meta.url));
-  const readmePath = join(__dirname, '..', 'README.md');
+  const __dirname = path.dirname(fileURLToPath(import.meta.url));
+  const readmePath = path.join(__dirname, '..', 'README.md');
   try {
     const md = readFileSync(readmePath, 'utf8');
     const commandMatch = md.match(/### Commands[\s\S]*?(?=^## |^### |$(?![\s\S]))/m);

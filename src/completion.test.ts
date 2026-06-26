@@ -1,19 +1,19 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import path from 'node:path';
 import { completeCommandLine } from './completion.js';
 
 let dir: string;
 
 beforeAll(() => {
-  dir = mkdtempSync(join(tmpdir(), 'compl-'));
-  writeFileSync(join(dir, 'report.txt'), '');
-  writeFileSync(join(dir, 'unique.log'), '');
-  writeFileSync(join(dir, 'data1.csv'), '');
-  writeFileSync(join(dir, 'data2.csv'), '');
-  writeFileSync(join(dir, '.hidden'), '');
-  mkdirSync(join(dir, 'srcdir'));
+  dir = mkdtempSync(path.join(tmpdir(), 'compl-'));
+  writeFileSync(path.join(dir, 'report.txt'), '');
+  writeFileSync(path.join(dir, 'unique.log'), '');
+  writeFileSync(path.join(dir, 'data1.csv'), '');
+  writeFileSync(path.join(dir, 'data2.csv'), '');
+  writeFileSync(path.join(dir, '.hidden'), '');
+  mkdirSync(path.join(dir, 'srcdir'));
 });
 
 afterAll(() => {

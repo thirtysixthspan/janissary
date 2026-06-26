@@ -1,5 +1,5 @@
 import { readdirSync, statSync } from 'node:fs';
-import { resolve, join } from 'node:path';
+import path from 'node:path';
 import { homedir } from 'node:os';
 import { BROWSER_SUBCOMMANDS } from './browser-command.js';
 import type { CompletionResult } from './types.js';
@@ -28,7 +28,7 @@ const splitToken = (token: string, cwd: string): { dir: string; base: string } =
   const slash = expanded.lastIndexOf('/');
   if (slash !== -1) {
     const dirPart = expanded.slice(0, slash + 1) || '/';
-    return { dir: resolve(cwd, dirPart), base: expanded.slice(slash + 1) };
+    return { dir: path.resolve(cwd, dirPart), base: expanded.slice(slash + 1) };
   }
   return { dir: cwd, base: expanded };
 };
@@ -151,7 +151,7 @@ export function completeCommandLine(
   let suffix = '';
   if (matches.length === 1) {
     completedName = matches[0];
-    suffix = isDir(join(dir, matches[0])) ? '/' : ' ';
+    suffix = isDir(path.join(dir, matches[0])) ? '/' : ' ';
   }
 
   const typedDirPrefix = token.slice(0, token.length - base.length);

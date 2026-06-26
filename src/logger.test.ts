@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { readFileSync, existsSync, rmSync } from 'node:fs';
-import { join } from 'node:path';
+import path from 'node:path';
 import { tmpdir } from 'node:os';
 import { mkdtempSync } from 'node:fs';
 import { initLogDir, appendEntry, getLogDir, getTimeStr as getTimeString } from './logger.js';
@@ -17,7 +17,7 @@ describe('logger', () => {
   let tmpDir: string;
 
   beforeEach(() => {
-    tmpDir = mkdtempSync(join(tmpdir(), 'logger-test-'));
+    tmpDir = mkdtempSync(path.join(tmpdir(), 'logger-test-'));
   });
 
   afterEach(() => {
@@ -26,12 +26,12 @@ describe('logger', () => {
 
   it('creates the log directory on init', () => {
     initLogDir(tmpDir);
-    expect(existsSync(join(tmpDir, '.janissary', 'log'))).toBe(true);
+    expect(existsSync(path.join(tmpDir, '.janissary', 'log'))).toBe(true);
   });
 
   it('getLogDir returns the log directory path', () => {
     initLogDir(tmpDir);
-    expect(getLogDir()).toBe(join(tmpDir, '.janissary', 'log'));
+    expect(getLogDir()).toBe(path.join(tmpDir, '.janissary', 'log'));
   });
 
   it('appends a JSON line to today\'s log file', () => {
@@ -39,7 +39,7 @@ describe('logger', () => {
     appendEntry({ timestamp: '22:55:20.690', agent: 'janus', text: 'hello' });
     appendEntry({ timestamp: '22:55:21.123', agent: 'bilal', text: 'world' });
 
-    const logPath = join(tmpDir, '.janissary', 'log', `${getDateString()}.json`);
+    const logPath = path.join(tmpDir, '.janissary', 'log', `${getDateString()}.json`);
     expect(existsSync(logPath)).toBe(true);
     const lines = readFileSync(logPath, 'utf8').trim().split('\n');
     expect(lines).toHaveLength(2);
@@ -52,7 +52,7 @@ describe('logger', () => {
     appendEntry({ timestamp: '22:55:20.690', agent: 'janus', text: 'first' });
     appendEntry({ timestamp: '22:55:21.000', agent: 'janus', text: 'second' });
 
-    const logPath = join(tmpDir, '.janissary', 'log', `${getDateString()}.json`);
+    const logPath = path.join(tmpDir, '.janissary', 'log', `${getDateString()}.json`);
     const lines = readFileSync(logPath, 'utf8').trim().split('\n');
     expect(lines).toHaveLength(2);
   });
@@ -62,7 +62,7 @@ describe('logger', () => {
     appendEntry({ timestamp: '22:55:20.690', agent: 'janus', text: 'line1' });
     appendEntry({ timestamp: '22:55:21.000', agent: 'bilal', text: 'line2' });
 
-    const logPath = join(tmpDir, '.janissary', 'log', `${getDateString()}.json`);
+    const logPath = path.join(tmpDir, '.janissary', 'log', `${getDateString()}.json`);
     const content = readFileSync(logPath, 'utf8').trim();
     for (const line of content.split('\n')) {
       expect(() => JSON.parse(line)).not.toThrow();
@@ -73,7 +73,7 @@ describe('logger', () => {
     initLogDir(tmpDir);
     appendEntry({ timestamp: '22:55:20.690', agent: 'janus', text: '' });
 
-    const logPath = join(tmpDir, '.janissary', 'log', `${getDateString()}.json`);
+    const logPath = path.join(tmpDir, '.janissary', 'log', `${getDateString()}.json`);
     const lines = readFileSync(logPath, 'utf8').trim().split('\n');
     expect(lines).toHaveLength(1);
     expect(JSON.parse(lines[0]).text).toBe('');
@@ -84,7 +84,7 @@ describe('logger', () => {
     const text = 'line1\nline2\twith\ttabs\u{2603}';
     appendEntry({ timestamp: '22:55:20.690', agent: 'janus', text });
 
-    const logPath = join(tmpDir, '.janissary', 'log', `${getDateString()}.json`);
+    const logPath = path.join(tmpDir, '.janissary', 'log', `${getDateString()}.json`);
     const lines = readFileSync(logPath, 'utf8').trim().split('\n');
     expect(JSON.parse(lines[0]).text).toBe(text);
   });

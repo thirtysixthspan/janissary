@@ -2,7 +2,7 @@ import { describe, it, expect, afterAll } from 'vitest';
 import { spawn } from 'node:child_process';
 import type { ChildProcess } from 'node:child_process';
 import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
-import { join } from 'node:path';
+import path from 'node:path';
 import { tmpdir } from 'node:os';
 
 function runCommand(
@@ -33,9 +33,9 @@ function runCommand(
 }
 
 describe('persistent shell', () => {
-  const tmpDir = mkdtempSync(join(tmpdir(), 'janus-test-'));
+  const tmpDir = mkdtempSync(path.join(tmpdir(), 'janus-test-'));
   const markerFile = 'i_was_here.txt';
-  writeFileSync(join(tmpDir, markerFile), 'hello');
+  writeFileSync(path.join(tmpDir, markerFile), 'hello');
 
   afterAll(() => {
     rmSync(tmpDir, { recursive: true, force: true });

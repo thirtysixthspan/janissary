@@ -1,11 +1,11 @@
 import { existsSync, mkdirSync, rmSync, readdirSync } from 'node:fs';
-import { join, dirname } from 'node:path';
+import path from 'node:path';
 import { execSync } from 'node:child_process';
 
 let workspaceBaseDir = '';
 
 export function initWorkspaceDir(projectDir: string): void {
-  workspaceBaseDir = join(projectDir, '.janissary', 'workspace');
+  workspaceBaseDir = path.join(projectDir, '.janissary', 'workspace');
 }
 
 export function ensureWorkspaceDir(): void {
@@ -14,14 +14,14 @@ export function ensureWorkspaceDir(): void {
 
 export function workspacePath(name: string): string {
   if (!workspaceBaseDir) throw new Error('Workspace dir not initialized. Call initWorkspaceDir first.');
-  return join(workspaceBaseDir, name);
+  return path.join(workspaceBaseDir, name);
 }
 
 export function findRepoRoot(from: string): string | undefined {
   let directory = from;
   while (true) {
-    if (existsSync(join(directory, '.git'))) return directory;
-    const parent = dirname(directory);
+    if (existsSync(path.join(directory, '.git'))) return directory;
+    const parent = path.dirname(directory);
     if (parent === directory) return undefined;
     directory = parent;
   }
@@ -43,7 +43,7 @@ export function clearWorkspaceDir(): void {
   try {
     const entries = readdirSync(workspaceBaseDir);
     for (const entry of entries) {
-      rmSync(join(workspaceBaseDir, entry), { recursive: true, force: true });
+      rmSync(path.join(workspaceBaseDir, entry), { recursive: true, force: true });
     }
   } catch { /* ignore */ }
 }

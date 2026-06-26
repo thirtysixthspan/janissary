@@ -1,6 +1,6 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { readFile } from 'node:fs/promises';
-import { join, extname, normalize } from 'node:path';
+import path from 'node:path';
 import { WebSocketServer, WebSocket } from 'ws';
 import { Controller } from './controller.js';
 import { makeToken, originAllowed, tokenFromReq as tokenFromRequest, tokenMatches } from './security.js';
@@ -46,27 +46,27 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
     if (urlPath.startsWith('/open/')) {
       if (!tokenMatches(token, tokenFromRequest(request))) { res.writeHead(403).end('forbidden'); return; }
       const id = decodeURIComponent(urlPath.slice('/open/'.length));
-      const path = controller.openFilePath(id);
-      if (!path) { res.writeHead(404).end('not found'); return; }
+      const filePath = controller.openFilePath(id);
+      if (!filePath) { res.writeHead(404).end('not found'); return; }
       let bytes: Buffer;
-      try { bytes = await readFile(path); }
+      try { bytes = await readFile(filePath); }
       catch { res.writeHead(404).end('not found'); return; }
-      res.writeHead(200, { 'content-type': MIME[extname(path).toLowerCase()] ?? 'application/octet-stream' });
+      res.writeHead(200, { 'content-type': MIME[path.extname(filePath).toLowerCase()] ?? 'application/octet-stream' });
       res.end(bytes);
       return;
     }
     // Resolve within webDir; fall back to index.html for SPA routes / unknown assets.
-    const rel = normalize(urlPath).replace(/^(\.\.[/\\])+/, '').replace(/^\/+/, '');
-    let file = join(options.webDir, rel || 'index.html');
-    if (!file.startsWith(options.webDir)) file = join(options.webDir, 'index.html');
+    const rel = path.normalize(urlPath).replace(/^(\.\.[/\\])+/, '').replace(/^\/+/, '');
+    let file = path.join(options.webDir, rel || 'index.html');
+    if (!file.startsWith(options.webDir)) file = path.join(options.webDir, 'index.html');
     let body: Buffer;
     try {
       body = await readFile(file);
     } catch {
-      try { body = await readFile(join(options.webDir, 'index.html')); file = 'index.html'; }
+      try { body = await readFile(path.join(options.webDir, 'index.html')); file = 'index.html'; }
       catch { res.writeHead(404).end('not found'); return; }
     }
-    res.writeHead(200, { 'content-type': MIME[extname(file)] ?? 'application/octet-stream' });
+    res.writeHead(200, { 'content-type': MIME[path.extname(file)] ?? 'application/octet-stream' });
     res.end(body);
   };
 
