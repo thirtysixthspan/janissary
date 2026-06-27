@@ -1,8 +1,14 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { tmpdir } from 'node:os';
+import { mkdtempSync, writeFileSync } from 'node:fs';
+import path from 'node:path';
+import http from 'node:http';
 import { WebSocket } from 'ws';
 import { startServer, type RunningServer } from './index.js';
 import type { ServerEvent } from './protocol.js';
+
+const webDir = mkdtempSync(path.join(tmpdir(), 'janus-test-'));
+writeFileSync(path.join(webDir, 'index.html'), '<!DOCTYPE html><html><body></body></html>');
 
 let server: RunningServer | null = null;
 afterEach(async () => { await server?.close(); server = null; });
@@ -44,6 +50,18 @@ describe('startServer (WS + RPC + security)', () => {
     const reply = events.find((e): e is Extract<ServerEvent, { t: 'rpc-reply' }> => e.t === 'rpc-reply' && e.id === 5);
     expect((reply?.result as { newInput: string }).newInput).toBe('shell README.md ');
     ws.close();
+  });
+
+  it('serves security headers on HTTP responses', async () => {
+    server = await startServer({ webDir });
+    const headers = await new Promise<http.IncomingMessage['headers']>((res, rej) => {
+      const req = http.get(`http://127.0.0.1:${server!.port}/`, (r) => { r.resume(); res(r.headers); });
+      req.on('error', rej);
+    });
+    expect(headers['referrer-policy']).toBe('no-referrer');
+    expect(headers['content-security-policy']).toContain("default-src 'self'");
+    expect(headers['content-security-policy']).toContain("object-src 'none'");
+    expect(headers['content-security-policy']).toContain("frame-ancestors 'none'");
   });
 
   it('rejects a connection with a bad token', async () => {

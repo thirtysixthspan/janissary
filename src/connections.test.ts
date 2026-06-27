@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseConnectionCommand } from './connections.js';
+import { parseConnectionCommand, dbPath, initDbDir } from './connections.js';
 
 describe('parseConnectionCommand', () => {
   it('parses list', () => {
@@ -51,5 +51,20 @@ describe('parseConnectionCommand', () => {
   it('rejects a missing close target', () => {
     const r = parseConnectionCommand('connection close');
     expect('error' in r && r.error).toContain('Usage');
+  });
+});
+
+describe('dbPath', () => {
+  it('constructs a valid path for a well-formed name', () => {
+    initDbDir('/base');
+    expect(dbPath('mydb')).toContain('mydb.sqlite');
+    expect(dbPath('my-db_1')).toContain('my-db_1.sqlite');
+  });
+
+  it('rejects traversal names', () => {
+    initDbDir('/base');
+    expect(() => dbPath('../../etc/shadow')).toThrow();
+    expect(() => dbPath('../sibling')).toThrow();
+    expect(() => dbPath('db/sub')).toThrow();
   });
 });

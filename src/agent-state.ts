@@ -12,7 +12,10 @@ export function ensureStateDirectory(): void {
   mkdirSync(stateDirectory, { recursive: true });
 }
 
+const VALID_NAME = /^[\w-]+$/;
+
 export function agentStatePath(name: string): string {
+  if (!VALID_NAME.test(name)) throw new Error(`Invalid agent name: "${name}"`);
   return path.join(stateDirectory, `${name}.json`);
 }
 

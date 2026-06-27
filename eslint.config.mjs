@@ -7,6 +7,7 @@ import { createTypeScriptImportResolver } from 'eslint-import-resolver-typescrip
 import reactHooks from 'eslint-plugin-react-hooks';
 import unicorn from 'eslint-plugin-unicorn';
 import sonarjs from 'eslint-plugin-sonarjs';
+import security from 'eslint-plugin-security';
 
 export default ts.config(
   js.configs.recommended,
@@ -95,6 +96,17 @@ export default ts.config(
       'sonarjs/cognitive-complexity': ['warn', 15],
       'sonarjs/no-duplicate-string': ['warn', { threshold: 5 }],
       'sonarjs/no-identical-functions': 'warn',
+    },
+  },
+  // Security lint: targeted rules that have low false-positive rates in a shell app.
+  // detect-child-process is intentionally off — shell/git exec on local-user input is the product.
+  {
+    files: ['src/**/*.ts', 'src/**/*.tsx', 'web/src/**/*.ts', 'web/src/**/*.tsx'],
+    plugins: { security },
+    rules: {
+      'security/detect-unsafe-regex': 'error',
+      'security/detect-eval-with-expression': 'error',
+      'security/detect-non-literal-fs-filename': 'warn',
     },
   },
   // Test files are exempt from the line-count guideline (they often grow long with cases).

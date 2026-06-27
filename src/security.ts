@@ -9,6 +9,8 @@ export function makeToken(): string {
 // A request is only accepted when its Host (and Origin, when present) are loopback. This is the
 // DNS-rebinding / stray-tab guard: even bound to 127.0.0.1, a remote page could otherwise try to
 // reach the shell server with a spoofed Host header.
+// Anchored at both ends; no nested quantifiers — not a ReDoS risk.
+// eslint-disable-next-line security/detect-unsafe-regex
 const LOOPBACK = /^(127\.0\.0\.1|\[::1\]|::1|localhost)(:\d+)?$/i;
 
 export function originAllowed(request: IncomingMessage): boolean {

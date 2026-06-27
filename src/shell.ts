@@ -7,6 +7,8 @@ export function spawnShell(_tabIndex: number, extraEnvironment?: Record<string, 
   });
   shell.stdout.setEncoding('utf8');
   shell.stderr.setEncoding('utf8');
+  // Swallow EPIPE on stdin: the shell may exit while a write is in flight (e.g. during test cleanup).
+  shell.stdin.on('error', (err: NodeJS.ErrnoException) => { if (err.code !== 'EPIPE') throw err; });
   return shell;
 }
 
@@ -39,7 +41,7 @@ export function executeShellCmd(
 
   shell.stdout!.on('data', onChunk);
   shell.stderr!.on('data', onChunk);
-  shell.stdin!.write(`${command} 2>&1\necho "${prompt}"\n`);
+  if (shell.stdin?.writable) shell.stdin.write(`${command} 2>&1\necho "${prompt}"\n`);
 }
 
 export function queryShellPwd(
@@ -62,5 +64,5 @@ export function queryShellPwd(
 
   shell.stdout!.on('data', onData);
   shell.stderr!.on('data', onData);
-  shell.stdin!.write(`pwd\necho "${prompt}"\n`);
+  if (shell.stdin?.writable) shell.stdin.write(`pwd\necho "${prompt}"\n`);
 }

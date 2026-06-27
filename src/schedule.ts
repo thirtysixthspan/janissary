@@ -19,6 +19,8 @@ const WEEKDAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'frida
 const UNIT_MS: Record<string, number> = { m: 60_000, h: 3_600_000, d: 86_400_000, w: 604_800_000 };
 
 export function parseTimeOfDay(tok: string): TimeOfDay | undefined {
+  // Anchored at both ends; bounded quantifiers only — not a ReDoS risk.
+  // eslint-disable-next-line security/detect-unsafe-regex
   const m = /^(\d{1,2})(?::(\d{2}))?\s*(am|pm)?$/i.exec(tok.trim());
   if (!m) return undefined;
   let hour = Number(m[1]);

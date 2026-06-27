@@ -6,6 +6,12 @@ import { Controller } from './controller.js';
 import { makeToken, originAllowed, tokenFromReq as tokenFromRequest, tokenMatches } from './security.js';
 import type { ClientMessage, ServerEvent } from './protocol.js';
 
+// Applied to every HTTP response: defence-in-depth for the XSS path and token leak.
+const SECURITY_HEADERS = {
+  'Referrer-Policy': 'no-referrer',
+  'Content-Security-Policy': "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'",
+} as const;
+
 const MIME: Record<string, string> = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css',
   '.json': 'application/json', '.svg': 'image/svg+xml', '.ico': 'image/x-icon',
@@ -51,7 +57,7 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
       let bytes: Buffer;
       try { bytes = await readFile(filePath); }
       catch { res.writeHead(404).end('not found'); return; }
-      res.writeHead(200, { 'content-type': MIME[path.extname(filePath).toLowerCase()] ?? 'application/octet-stream' });
+      res.writeHead(200, { ...SECURITY_HEADERS, 'content-type': MIME[path.extname(filePath).toLowerCase()] ?? 'application/octet-stream' });
       res.end(bytes);
       return;
     }
@@ -66,7 +72,7 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
       try { body = await readFile(path.join(options.webDir, 'index.html')); file = 'index.html'; }
       catch { res.writeHead(404).end('not found'); return; }
     }
-    res.writeHead(200, { 'content-type': MIME[path.extname(file)] ?? 'application/octet-stream' });
+    res.writeHead(200, { ...SECURITY_HEADERS, 'content-type': MIME[path.extname(file)] ?? 'application/octet-stream' });
     res.end(body);
   };
 

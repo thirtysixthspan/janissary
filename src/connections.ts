@@ -11,7 +11,10 @@ export function initDbDir(projectDir: string): void {
   dbDir = path.join(projectDir, '.janissary', 'db', 'sqlite');
 }
 
+const VALID_DB_NAME = /^[\w-]+$/;
+
 export function dbPath(name: string): string {
+  if (!VALID_DB_NAME.test(name)) throw new Error(`Invalid database name: "${name}"`);
   return path.join(dbDir, `${name}.sqlite`);
 }
 

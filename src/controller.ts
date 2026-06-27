@@ -563,6 +563,7 @@ export class Controller {
   private expandGlob(pattern: string, cwd: string): string[] {
     let stdout: string;
     try {
+      // Intentional: user-driven glob; the ACP tool loop cannot invoke `open`, so only the local user (who already owns this shell) reaches this sink.
       const res = spawnSync(SHELL_NAME, ['-c', String.raw`for f in ${pattern}; do printf '%s\n' "$f"; done`], {
         cwd, encoding: 'utf8', timeout: 5000,
       });

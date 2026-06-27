@@ -32,6 +32,13 @@ describe('agent-state', () => {
     expect(path).toContain('myagent.json');
   });
 
+  it('agentStatePath rejects traversal names', () => {
+    initAgentStateDirectory('/base');
+    expect(() => agentStatePath('../../etc/passwd')).toThrow();
+    expect(() => agentStatePath('../sibling')).toThrow();
+    expect(() => agentStatePath('agent/sub')).toThrow();
+  });
+
   it('ensureStateDirectory calls mkdirSync with recursive option', () => {
     mockFs.mkdirSync.mockImplementation(() => {});
     initAgentStateDirectory('/test');

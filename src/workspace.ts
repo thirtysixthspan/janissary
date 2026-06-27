@@ -30,6 +30,7 @@ export function findRepoRoot(from: string): string | undefined {
 export function createWorkspace(name: string, repoPath: string): string {
   ensureWorkspaceDir();
   const target = workspacePath(name);
+  // Intentional: user-driven workspace creation; only local-user commands reach this sink.
   execSync(`git clone --shared "${repoPath}" "${target}"`, { stdio: 'pipe' });
   return target;
 }
