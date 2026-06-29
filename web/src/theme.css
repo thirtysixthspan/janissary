@@ -49,6 +49,10 @@ html, body, #root {
 /* Landscape: span the full width. Portrait: fill the full remaining height. Aspect ratio preserved. */
 .image-stage .image-landscape { width: 100%; height: auto; }
 .image-stage .image-portrait { height: 100%; width: auto; }
+/* Page view tab: full-height iframe with no chrome. */
+.page-tab { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.page-frame { flex: 1; width: 100%; height: 100%; border: 0; background: #fff; }
+
 /* While the agent is busy, blink the dot fully on/off (600ms each), mirroring the Ink tab strip. */
 .tab .dot.busy { animation: dot-blink 1.2s step-end infinite; }
 @keyframes dot-blink { 0% { opacity: 1; } 50% { opacity: 0; } }

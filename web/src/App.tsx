@@ -4,6 +4,7 @@ import type { TabView, RouteChooserView } from '@shared/protocol';
 import { TabStrip } from './TabStrip';
 import { Transcript } from './Transcript';
 import { ImageTab } from './ImageTab';
+import { PageTab } from './PageTab';
 import { CommandInput } from './CommandInput';
 import { StatusPanels } from './StatusPanels';
 import { HistoryPicker } from './HistoryPicker';
@@ -163,6 +164,18 @@ export function App() {
         <TabStrip tabs={tabs} activeTab={activeTab} onSelect={selectTab} onClose={closeTab} />
         <div className="tab-body" style={{ borderLeft: `4px solid ${current.dotColor}` }}>
           <ImageTab image={current.image} />
+        </div>
+      </div>
+    );
+  }
+
+  // A page tab renders an embedded iframe in place of the transcript + command line (no command bar).
+  if (current.view === 'page' && current.page) {
+    return (
+      <div className="app">
+        <TabStrip tabs={tabs} activeTab={activeTab} onSelect={selectTab} onClose={closeTab} />
+        <div className="tab-body" style={{ borderLeft: `4px solid ${current.dotColor}` }}>
+          <PageTab page={current.page} />
         </div>
       </div>
     );

@@ -60,6 +60,13 @@ describe('TabStrip', () => {
     expect(screen.queryAllByRole('button', { name: /close/i })).toHaveLength(1);
   });
 
+  it('shows a close button for page tabs and renders the title', () => {
+    const tab = makeTab({ label: 'page-1', view: 'page', title: '1) slashdot.org' });
+    render(<TabStrip tabs={[tab]} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()} />);
+    expect(screen.getByText('1) slashdot.org')).toBeInTheDocument();
+    expect(screen.queryAllByRole('button', { name: /close/i })).toHaveLength(1);
+  });
+
   it('calls onClose and stops propagation when the close button is clicked', async () => {
     const onClose = vi.fn();
     const onSelect = vi.fn();

@@ -1,8 +1,8 @@
 /* eslint-disable max-lines */
 import { spawnSync, type ChildProcess } from 'node:child_process';
-import type { Tab, LogEntry, ScheduleEntry, AcpSession, AcpInfo, ImageView } from './types.js';
+import type { Tab, LogEntry, ScheduleEntry, AcpSession, AcpInfo, ImageView, PageView } from './types.js';
 import {
-  makeTab, makeImageTab, distinctColor, insertTabInGroup, flattenBuffer, stripComments,
+  makeTab, makeImageTab, makePageTab, distinctColor, insertTabInGroup, flattenBuffer, stripComments,
   swapTabsLeft, swapTabsRight,
 } from './tab.js';
 import { existsSync, statSync } from 'node:fs';
@@ -12,6 +12,8 @@ import { didOsOpen } from './openers/os-open.js';
 import { abbreviatePath } from './paths.js';
 import type { OpenContext } from './openers/index.js';
 import { parseOpen, isGlobPattern } from './commands/open.js';
+import { parseClose } from './commands/close.js';
+import { webOpener } from './openers/page.js';
 import { resolveCommand } from './resolve.js';
 import { isInteractive } from './interactive.js';
 import { parseHarnessCommand, HARNESS_COMMANDS } from './harness.js';
@@ -133,7 +135,7 @@ export class Controller {
       bufferLines: flattenBuffer(t.log, !t.toolStepsExpanded)
         .map((l) => (l.cwd ? { ...l, cwd: this.shorten(l.cwd) } : l)),
       cmdHistory: t.cmdHistory, toolStepsExpanded: !!t.toolStepsExpanded,
-      view: t.view, title: t.title, image: t.image,
+      view: t.view, title: t.title, image: t.image, page: t.page,
     }));
   }
 
@@ -359,7 +361,17 @@ export class Controller {
       }
       case 'next': { this.setActiveTab((this.activeTab + 1) % this.tabs.length); return;
       }
-      case 'close': { this.closeTab(index); return;
+      case 'close': {
+        const closeParsed = parseClose(command);
+        if ('error' in closeParsed) { this.append(label, { input: command, output: closeParsed.error }); return; }
+        if (closeParsed.target === 'page') {
+          const pageTab = this.tabs.findIndex((t) => t.page?.number === closeParsed.number);
+          if (pageTab === -1) { this.append(label, { input: command, output: `No page numbered ${closeParsed.number}.` }); return; }
+          this.closeTab(pageTab);
+        } else {
+          this.closeTab(index);
+        }
+        return;
       }
       case 'msg': { this.runMsg(command, label); return;
       }
@@ -529,13 +541,19 @@ export class Controller {
     const context: OpenContext = {
       note: (text) => this.append(label, { input: command, output: text }),
       openImageTab: (image) => this.openImageTab(image),
+      openPageTab: (view) => this.openPageTab(view),
       registerFile: (absPath) => this.registerFile(absPath),
       openExternally: (absPath) => didOsOpen(absPath),
     };
 
-    if (isGlobPattern(parsed.path)) {
-      const matches = this.expandGlob(parsed.path, cwd);
-      if (matches.length === 0) { this.append(label, { input: command, output: `open: ${parsed.path}: no matching files` }); return; }
+    if (parsed.web) {
+      void (parsed.external ? webOpener.external(parsed.target, context) : webOpener.inline(parsed.target, context));
+      return;
+    }
+
+    if (isGlobPattern(parsed.target)) {
+      const matches = this.expandGlob(parsed.target, cwd);
+      if (matches.length === 0) { this.append(label, { input: command, output: `open: ${parsed.target}: no matching files` }); return; }
       const files = matches.slice(0, Controller.OPEN_MAX_FILES);
       if (matches.length > files.length) {
         this.append(label, { input: command, output: `Opening the first ${files.length} of ${matches.length} matching files.` });
@@ -544,7 +562,7 @@ export class Controller {
       return;
     }
 
-    const file = path.isAbsolute(parsed.path) ? parsed.path : path.resolve(cwd, parsed.path);
+    const file = path.isAbsolute(parsed.target) ? parsed.target : path.resolve(cwd, parsed.target);
     this.openOne(command, label, file, parsed.external, context);
   }
 
@@ -609,6 +627,31 @@ export class Controller {
     let n = 2;
     while (used.has(`image-${n}`)) n++;
     return `image-${n}`;
+  }
+
+  // Create and focus a page view tab adjacent to the active tab's group. Page tabs are in-memory
+  // and never persisted — no `persist` call.
+  private openPageTab({ url, domain }: Pick<PageView, 'url' | 'domain'>): void {
+    const creator = this.cur();
+    const number = this.uniquePageNumber();
+    const label = `page-${number}`;
+    const dotColor = distinctColor(this.tabs.map((t) => t.dotColor));
+    const group = creator?.group ?? 1;
+    const groupColor = creator?.groupColor ?? dotColor;
+    const page: PageView = { url, domain, number };
+    const tab = makePageTab(label, dotColor, this.tabs.length + 1, group, groupColor, page);
+    this.tabs = insertTabInGroup(this.tabs, tab);
+    this.activeTab = this.tabs.findIndex((t) => t.label === label);
+    this.sinks.emitState();
+  }
+
+  // Smallest positive integer not already in use as a page tab number; reused after close so
+  // numbering stays tidy (1, 2, 3 …) rather than growing monotonically.
+  private uniquePageNumber(): number {
+    const used = new Set(this.tabs.filter((t) => t.page).map((t) => t.page!.number));
+    let n = 1;
+    while (used.has(n)) n++;
+    return n;
   }
 
   // --- schedule ------------------------------------------------------------

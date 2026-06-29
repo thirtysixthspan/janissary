@@ -23,7 +23,7 @@ janus
 | `state`      | Show agent state fields (truncated) |
 | `clear`      | Clear the output log               |
 | `quit`       | Exit the application               |
-| `close`      | Close the current tab (exits if last) |
+| `close`      | Close the current tab (exits if last); `close page #` closes a numbered page tab |
 | `agent`      | Create a new agent tab (add `--workspace` to clone the repo) |
 | `next`       | Switch to the next tab             |
 | `hist`       | Open command history picker        |
@@ -32,7 +32,7 @@ janus
 | `acp`        | Send a prompt to the OpenCode ACP agent |
 | `db`         | Create, delete, query, or list SQLite databases |
 | `browser`    | Drive a headless/headed web browser (open, goto, content, eval, shot) |
-| `open`       | Open a file by type — images in a tab, or `open external` in the OS viewer |
+| `open`       | Open images/files in a tab, or web pages embedded (`open https://…` / `open page …`); `open external` uses the OS viewer/browser |
 | `connection` | List or close open connections (sqlite/shell/acp/browser) |
 | `schedule`   | Run a command later — once or on a recurring schedule |
 | `profile`    | Launch a saved set of agents for a use case |

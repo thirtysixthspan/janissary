@@ -63,18 +63,25 @@ export type ImageView = {
   url: string;
 };
 
+// Embedded web page view (opened via `open https://…` or `open page …`); renders an iframe.
+// `url`: URL loaded in the iframe; `domain`: registrable domain for the display name;
+// `number`: 1-based page number shown in the tab title (e.g. "1) slashdot.org").
+export type PageView = { url: string; domain: string; number: number };
+
 export type Tab = {
   label: string;
   dotColor: string;
   number: number;
   // The tab's body kind. Undefined/`'agent'` renders the normal transcript + command line; `'image'`
   // renders the image view (no command bar). View tabs are live and in-memory — not persisted.
-  view?: 'agent' | 'image';
+  view?: 'agent' | 'image' | 'page';
   // Display name shown in the tab strip when it differs from the (unique) internal `label` — e.g.
   // every image tab is titled `image` while keeping a distinct label (`image`, `image-2`, …).
   title?: string;
   // The image-view payload, present only when `view === 'image'`.
   image?: ImageView;
+  // The page-view payload, present only when `view === 'page'`.
+  page?: PageView;
   // Group number, shared by an agent and every agent it (transitively) creates. The root agent
   // is group 1; a launched profile forms its own group.
   group: number;

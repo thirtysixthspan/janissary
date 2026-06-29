@@ -1,17 +1,28 @@
 import type { Command } from './types.js';
 
-export type ParsedOpen = { external: boolean; path: string } | { error: string };
+export type ParsedOpen = { external: boolean; web: boolean; target: string } | { error: string };
 
-// Parse an `open` command line: `open <path>` (inline) or `open external <path>` (external). The
-// leading `open` keyword is stripped; an optional `external` keyword immediately after it selects the
-// external surface. Everything remaining is the file path (kept verbatim, including spaces).
+// Parse an `open` command line. The leading `open` keyword is stripped; the optional `external` and
+// `page` keywords (in any order) are consumed; everything remaining is the target. A target with an
+// http/https scheme, or preceded by `page`, is routed to the web opener (`web: true`); otherwise it
+// goes to the file opener. The target is kept verbatim (paths may contain spaces).
 export function parseOpen(command_: string): ParsedOpen {
-  const rest = command_.replace(/^open\b\s*/i, '');
-  const extension = rest.match(/^external\b\s*/i);
-  const isExternal = !!extension;
-  const path = (isExternal ? rest.slice(extension[0].length) : rest).trim();
-  if (!path) return { error: 'Usage: open [external] <path>' };
-  return { external: isExternal, path };
+  let rest = command_.replace(/^open\b\s*/i, '');
+  let isExternal = false;
+  let isPage = false;
+  // Consume optional keywords in any order.
+  let changed = true;
+  while (changed) {
+    changed = false;
+    const extMatch = rest.match(/^external\b\s*/i);
+    if (extMatch) { isExternal = true; rest = rest.slice(extMatch[0].length); changed = true; }
+    const pageMatch = rest.match(/^page\b\s*/i);
+    if (pageMatch) { isPage = true; rest = rest.slice(pageMatch[0].length); changed = true; }
+  }
+  const target = rest.trim();
+  if (!target) return { error: 'Usage: open [external] [page] <target>' };
+  const web = isPage || /^https?:\/\//i.test(target);
+  return { external: isExternal, web, target };
 }
 
 // Whether an `open` argument is a shell wildcard pattern (expanded to a list of files) rather than a

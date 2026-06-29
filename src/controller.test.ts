@@ -542,6 +542,73 @@ describe('Controller open command', () => {
   });
 });
 
+describe('Controller page tabs', () => {
+  it('open https URL creates a page tab with view:page and correct title', () => {
+    const { c } = makeController();
+    c.dispatch('open https://slashdot.org');
+    const pages = c.view().filter((t) => t.view === 'page');
+    expect(pages).toHaveLength(1);
+    expect(pages[0].title).toBe('1) slashdot.org');
+    expect(pages[0].page?.url).toContain('slashdot.org');
+  });
+
+  it('open page <domain> creates a page tab (page keyword + bare domain)', () => {
+    const { c } = makeController();
+    c.dispatch('open page slashdot.org');
+    const pages = c.view().filter((t) => t.view === 'page');
+    expect(pages).toHaveLength(1);
+    expect(pages[0].title).toBe('1) slashdot.org');
+  });
+
+  it('second page tab gets number 2', () => {
+    const { c } = makeController();
+    c.dispatch('open https://slashdot.org');
+    c.dispatch('open https://example.com');
+    const pages = c.view().filter((t) => t.view === 'page');
+    expect(pages).toHaveLength(2);
+    const titles = pages.map((t) => t.title).toSorted((a, b) => String(a).localeCompare(String(b)));
+    expect(titles).toEqual(['1) slashdot.org', '2) example.com']);
+  });
+
+  it('open external https URL confirms in transcript without creating a tab', () => {
+    const { c } = makeController();
+    c.dispatch('open external https://x.com');
+    expect(c.view()).toHaveLength(1);
+    expect(allText(c)).toMatch(/x\.com/);
+  });
+
+  it('close page <n> closes the numbered page tab', () => {
+    const { c } = makeController();
+    c.dispatch('open https://slashdot.org');
+    expect(c.view().filter((t) => t.view === 'page')).toHaveLength(1);
+    c.dispatch('close page 1');
+    expect(c.view().filter((t) => t.view === 'page')).toHaveLength(0);
+  });
+
+  it('close page <n> reports an error for an unknown page number', () => {
+    const { c } = makeController();
+    c.dispatch('close page 99');
+    expect(allText(c)).toContain('No page numbered 99');
+  });
+
+  it('page numbers are reused after close', () => {
+    const { c } = makeController();
+    c.dispatch('open https://slashdot.org');
+    c.dispatch('close page 1');
+    c.dispatch('open https://example.com');
+    const pages = c.view().filter((t) => t.view === 'page');
+    expect(pages).toHaveLength(1);
+    expect(pages[0].title).toBe('1) example.com');
+  });
+
+  it('open page with an invalid scheme reports an error', () => {
+    const { c } = makeController();
+    c.dispatch('open page javascript:alert(1)');
+    expect(c.view().filter((t) => t.view === 'page')).toHaveLength(0);
+    expect(allText(c)).toContain('invalid URL');
+  });
+});
+
 describe('Controller root-path display', () => {
   it('abbreviates the working directory on a command prompt to $root', () => {
     const { c } = makeController(); // janus cwd is the launch (root) directory

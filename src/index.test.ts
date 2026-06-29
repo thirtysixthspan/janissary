@@ -61,6 +61,7 @@ describe('startServer (WS + RPC + security)', () => {
     expect(headers['referrer-policy']).toBe('no-referrer');
     expect(headers['content-security-policy']).toContain("default-src 'self'");
     expect(headers['content-security-policy']).toContain("object-src 'none'");
+    expect(headers['content-security-policy']).toContain("frame-src https: http:");
     expect(headers['content-security-policy']).toContain("frame-ancestors 'none'");
   });
 

@@ -1,4 +1,4 @@
-import type { LogEntry, BufferLine, Tab, ImageView } from './types.js';
+import type { LogEntry, BufferLine, Tab, ImageView, PageView } from './types.js';
 
 export const dotColors = [
   '#5b9cff', '#ff6b6b', '#ffd93d', '#6bcb77', '#4d96ff',
@@ -68,6 +68,15 @@ export const makeImageTab = (label: string, dotColor: string, number: number, gr
   view: 'image',
   title: 'image',
   image,
+});
+
+// A page view tab (opened via `open https://…` or `open page …`). Renders an iframe; carries no
+// transcript/history/shell. The title shows the page number and domain (e.g. "1) slashdot.org").
+export const makePageTab = (label: string, dotColor: string, number: number, group: number, groupColor: string, page: PageView): Tab => ({
+  ...makeTab(label, dotColor, number, [], [], undefined, group, groupColor),
+  view: 'page',
+  title: `${page.number}) ${page.domain}`,
+  page,
 });
 
 // Expand tab characters to spaces (8-column tab stops). Terminals render a tab as

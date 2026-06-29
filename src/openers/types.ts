@@ -1,4 +1,4 @@
-import type { ImageView } from '../types.js';
+import type { ImageView, PageView } from '../types.js';
 
 // Capabilities an opener may use, supplied by the dispatcher (the Controller). Kept deliberately
 // narrow so an opener can only do the two things its surfaces promise — launch an external viewer
@@ -9,6 +9,8 @@ export type OpenContext = {
   note: (text: string) => void;
   // Create and focus an in-app image view tab.
   openImageTab: (image: ImageView) => void;
+  // Create and focus an in-app embedded web page tab.
+  openPageTab: (view: Pick<PageView, 'url' | 'domain'>) => void;
   // Register a local file to be served to the web client; returns the app-relative ref to load it.
   registerFile: (absPath: string) => string;
   // Hand a file to the operating system's default viewer (detached). Returns false when no viewer

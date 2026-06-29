@@ -2,7 +2,7 @@
 
 The `open` command opens a web address **inside a tab**, embedding the live page in the app (see
 Open). A page tab is a passive viewer: the user browses the site within the tab and closes it
-manually. It is a non-agent **view tab**, modelled on the image tab (see Open → Image tab) but
+manually. It is a non-agent **view tab**, modelled on the image tab (see [[image-tab]]) but
 showing a web page instead of an image file.
 
 Page viewing is intentionally minimal. The app does not communicate with, control, script, or
