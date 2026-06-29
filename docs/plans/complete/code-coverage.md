@@ -2,9 +2,7 @@
 
 ## What changed from the prior draft (and why)
 
-The earlier draft chose the right *tool* (Vitest v8 coverage) but its setup was written
-for Vitest 1–2 and does not run on the installed version. Verified against this repo
-(`vitest@4.1.9`):
+The earlier draft chose the right *tool* (Vitest v8 coverage) but its setup was written for Vitest 1–2 and does not run on the installed version. Verified against this repo (`vitest@4.1.9`):
 
 | Prior draft | Problem | Fix in this plan |
 |---|---|---|
@@ -18,9 +16,7 @@ for Vitest 1–2 and does not run on the installed version. Verified against thi
 
 ### Was there a better alternative?
 
-The *strategy* is sound — there is no better tool or architecture, so this is a
-correction-and-simplification of the existing plan rather than a replacement.
-Alternatives considered and rejected:
+The *strategy* is sound — there is no better tool or architecture, so this is a correction-and-simplification of the existing plan rather than a replacement. Alternatives considered and rejected:
 
 - **Istanbul provider** — 3× runtime overhead vs ~10% for v8, no accuracy benefit since
   Vitest ≥3.2 AST-remaps v8 output. Rejected.
@@ -51,9 +47,7 @@ Alternatives considered and rejected:
 
 ## Tool Selection
 
-**Vitest's built-in v8 coverage** (`@vitest/coverage-v8`). Already on Node/V8, ~10%
-overhead, and since Vitest ≥3.2 the AST-remapped output matches Istanbul. No new runner,
-no new config system. (Full rationale and rejected alternatives above.)
+**Vitest's built-in v8 coverage** (`@vitest/coverage-v8`). Already on Node/V8, ~10% overhead, and since Vitest ≥3.2 the AST-remapped output matches Istanbul. No new runner, no new config system. (Full rationale and rejected alternatives above.)
 
 ---
 
@@ -63,20 +57,16 @@ no new config system. (Full rationale and rejected alternatives above.)
 npm install --save-dev @vitest/coverage-v8
 ```
 
-This is the **only** dependency needed to start. `jsdom` is deferred to Phase 7 (no web
-tests exist yet, so nothing exercises it).
+This is the **only** dependency needed to start. `jsdom` is deferred to Phase 7 (no web tests exist yet, so nothing exercises it).
 
 ---
 
 ## Phase 2 — Configure projects + one global coverage block
 
-Replace the current `vitest.config.ts` (which only carries the `.janissary` exclusion) with
-the version below. It keeps that exclusion, adds the `server` project, and configures
-coverage once at the root. The `client` project is left commented out until Phase 7.
+Replace the current `vitest.config.ts` (which only carries the `.janissary` exclusion) with the version below. It keeps that exclusion, adds the `server` project, and configures coverage once at the root. The `client` project is left commented out until Phase 7.
 
 ```ts
-// vitest.config.ts
-import { defineConfig, configDefaults, coverageConfigDefaults } from 'vitest/config';
+// vitest.config.ts import { defineConfig, configDefaults, coverageConfigDefaults } from 'vitest/config';
 
 export default defineConfig({
   test: {
@@ -143,30 +133,22 @@ Notes:
 ## Phase 3 — Measure the baseline (before setting any threshold)
 
 ```bash
-npm install --save-dev @vitest/coverage-v8   # if not already done
-npx vitest run --coverage
+npm install --save-dev @vitest/coverage-v8   # if not already done npx vitest run --coverage
 ```
 
-Record the resulting `% Lines / Functions / Branches / Statements` for `src/` and for
-`web/src/` from the terminal summary (or `coverage/index.html`). This is the input to
-Phase 4 — **do not invent thresholds; derive them from this run.**
+Record the resulting `% Lines / Functions / Branches / Statements` for `src/` and for `web/src/` from the terminal summary (or `coverage/index.html`). This is the input to Phase 4 — **do not invent thresholds; derive them from this run.**
 
 Expected shape (illustrative — fill in with real numbers):
 
 ```
-File          | % Stmts | % Branch | % Funcs | % Lines
-src/          |   <X>   |   <X>    |   <X>   |   <X>
-web/src/      |    0    |    0     |    0    |    0     (no client tests yet)
+File          | % Stmts | % Branch | % Funcs | % Lines src/          |   <X>   |   <X>    |   <X>   |   <X> web/src/      |    0    |    0     |    0    |    0     (no client tests yet)
 ```
 
 ---
 
 ## Phase 4 — Set ratchet thresholds from the baseline
 
-Set each threshold at (or just below) the measured value so the suite locks in current
-coverage and fails only on **regression**. Use **per-glob thresholds** to gate server and
-client independently inside the one report, and `autoUpdate` to ratchet upward
-automatically as coverage improves.
+Set each threshold at (or just below) the measured value so the suite locks in current coverage and fails only on **regression**. Use **per-glob thresholds** to gate server and client independently inside the one report, and `autoUpdate` to ratchet upward automatically as coverage improves.
 
 ```ts
 coverage: {
@@ -189,8 +171,7 @@ coverage: {
 },
 ```
 
-With `autoUpdate: true`, a green run that exceeds a threshold rewrites the higher number
-into this file, so coverage can only ratchet up. Review those diffs in code review.
+With `autoUpdate: true`, a green run that exceeds a threshold rewrites the higher number into this file, so coverage can only ratchet up. Review those diffs in code review.
 
 ---
 
@@ -209,9 +190,7 @@ into this file, so coverage can only ratchet up. Review those diffs in code revi
 }
 ```
 
-The earlier draft's `coverage:server` / `coverage:client` scripts are dropped: coverage is
-global, so they would not produce separate reports. One `npm run coverage` yields the merged
-report; per-area numbers come from its directory breakdown and per-glob thresholds.
+The earlier draft's `coverage:server` / `coverage:client` scripts are dropped: coverage is global, so they would not produce separate reports. One `npm run coverage` yields the merged report; per-area numbers come from its directory breakdown and per-glob thresholds.
 
 ---
 
@@ -238,8 +217,7 @@ Do this only when writing the first `web/src` test — not before.
    only if you choose RTL; `@vitejs/plugin-react` is already a devDep).
 2. Uncomment the `client` project block in `vitest.config.ts` (Phase 2) and add
    `import react from '@vitejs/plugin-react';`.
-3. Add `"test:client": "vitest run --project client"` to `package.json`.
-4. Add a setup file (`web/src/test/setup.ts`) **only if** using RTL/jest-dom matchers, and
+3. Add `"test:client": "vitest run --project client"` to `package.json`. 4. Add a setup file (`web/src/test/setup.ts`) **only if** using RTL/jest-dom matchers, and
    wire it via the client project's `test.setupFiles`. Leave it out otherwise.
 5. As real tests land, the `web/src/**` thresholds (Phase 4) ratchet up automatically.
 
@@ -247,13 +225,9 @@ Do this only when writing the first `web/src` test — not before.
 
 ## Phase 8 — (Optional) coverage × complexity refactoring guidance
 
-> **Depends on `docs/plans/code-quality.md` being executed first.** That plan installs FTA
-> (`fta-cli`) and writes `docs/quality/*.json`. Neither exists yet; do not build this phase
-> until they do.
+> **Depends on `docs/plans/code-quality.md` being executed first.** That plan installs FTA > (`fta-cli`) and writes `docs/quality/*.json`. Neither exists yet; do not build this phase > until they do.
 
-Once FTA scores exist, `scripts/coverage-guidance.ts` can cross-reference
-`coverage/coverage-final.json` (line/branch %) with `docs/quality/*.json` (FTA complexity)
-to rank refactoring targets — complex **and** untested code first:
+Once FTA scores exist, `scripts/coverage-guidance.ts` can cross-reference `coverage/coverage-final.json` (line/branch %) with `docs/quality/*.json` (FTA complexity) to rank refactoring targets — complex **and** untested code first:
 
 | Signal | Meaning | Action |
 |---|---|---|
@@ -269,19 +243,14 @@ Priority 2 — tab.ts          FTA 38.2             coverage <fill from baseline
   Action: add unit tests.
 ```
 
-(FTA numbers above are illustrative, carried from the code-quality plan; replace with the
-actual `docs/quality/*.json` output.)
+(FTA numbers above are illustrative, carried from the code-quality plan; replace with the actual `docs/quality/*.json` output.)
 
 ---
 
 ## Directory Layout (after Phases 1–6)
 
 ```
-vitest.config.ts          # single config: test.projects + global coverage
-coverage/                 # gitignored build artifact
-├── index.html
-├── coverage-final.json
-└── lcov.info
+vitest.config.ts          # single config: test.projects + global coverage coverage/                 # gitignored build artifact ├── index.html ├── coverage-final.json └── lcov.info
 # added later:
 # web/src/test/setup.ts   # only if Phase 7 chooses RTL
 # scripts/coverage-guidance.ts  # only after code-quality plan (Phase 8)

@@ -17,11 +17,7 @@
 
 ## Plan — stylelint + config-standard
 
-**stylelint** is purpose-built for CSS, has no overlap with Prettier (v15+ removed all
-stylistic rules), and requires no integration work in the existing ESLint config. The
-browser-compat plugin is omitted — Janissary's web UI runs in the user's own modern browser
-(the server even drives Chromium via Playwright), so there is no old-browser audience to
-support.
+**stylelint** is purpose-built for CSS, has no overlap with Prettier (v15+ removed all stylistic rules), and requires no integration work in the existing ESLint config. The browser-compat plugin is omitted — Janissary's web UI runs in the user's own modern browser (the server even drives Chromium via Playwright), so there is no old-browser audience to support.
 
 ### 1. Install
 
@@ -57,5 +53,4 @@ npm install --save-dev stylelint stylelint-config-standard
 }
 ```
 
-First run: `npm run lint:css` to see the real finding list, then `--fix` what auto-fixes
-and hand-fix the rest.
+First run: `npm run lint:css` to see the real finding list, then `--fix` what auto-fixes and hand-fix the rest.

@@ -23,15 +23,11 @@ Production clones, by size (the actual backlog):
 | 6 | `controller.ts:329-334` ↔ `controller.ts:847-852` (within-file) |
 | 6 | `messaging.ts:21-26` ↔ `messaging.ts:37-42` (within-file) |
 
-The remaining 11 clones (in the full scan) are test-file duplication
-(`acp-loop.test.ts`, `controller.test.ts`, `index.test.ts`, `tab.test.ts`,
-`profile.test.ts` ↔ `profiles.test.ts`) plus test↔source mirrors
-(`logger.test.ts`↔`logger.ts`, `shell.test.ts`↔`shell.ts`). Lower priority — see Phase 4.
+The remaining 11 clones (in the full scan) are test-file duplication (`acp-loop.test.ts`, `controller.test.ts`, `index.test.ts`, `tab.test.ts`, `profile.test.ts` ↔ `profiles.test.ts`) plus test↔source mirrors (`logger.test.ts`↔`logger.ts`, `shell.test.ts`↔`shell.ts`). Lower priority — see Phase 4.
 
 ### How jscpd actually works (set expectations)
 
-jscpd finds **verbatim token sequences** (Type-1 clones). `--mode` only changes which
-tokens are skipped before matching:
+jscpd finds **verbatim token sequences** (Type-1 clones). `--mode` only changes which tokens are skipped before matching:
 
 | Mode | Behavior |
 |---|---|
@@ -39,9 +35,7 @@ tokens are skipped before matching:
 | `mild` (used here) | skip empty lines |
 | `weak` | also skip comment tokens (`--skip-comments` is an alias) |
 
-It will **not** flag code that is structurally identical but uses different names — so don't
-expect it to catch the command/recognizer boilerplate. That boilerplate is best handled (if
-at all) by a factory helper for ergonomics, not because a duplication tool demands it.
+It will **not** flag code that is structurally identical but uses different names — so don't expect it to catch the command/recognizer boilerplate. That boilerplate is best handled (if at all) by a factory helper for ergonomics, not because a duplication tool demands it.
 
 ---
 
@@ -99,9 +93,7 @@ Verify: `npx jscpd --version` (the binary is also exposed as `cpd`).
 }
 ```
 
-No baseline snapshots, no custom report script: `console-full` prints the ranked clone list,
-and `--threshold`/`--exit-code` is the gate. For a shareable artifact, add `markdown` or
-`html` to `reporters` and pass `-o docs/duplication` (jscpd writes `jscpd-report.*` there).
+No baseline snapshots, no custom report script: `console-full` prints the ranked clone list, and `--threshold`/`--exit-code` is the gate. For a shareable artifact, add `markdown` or `html` to `reporters` and pass `-o docs/duplication` (jscpd writes `jscpd-report.*` there).
 
 ---
 
@@ -127,10 +119,7 @@ Production clones first; re-run `npm run duplication` after each.
    small, optional. A `defineCommand(...)` factory would remove it *and* tidy the other
    command modules, but it's ergonomics, not a duplication emergency.
 
-**Tests (full-scan clones):** `profile.test.ts` ↔ `profiles.test.ts` (10L) and the
-test↔source mirrors (`logger`, `shell`) are worth a look — a test re-implementing source
-logic can drift. The intra-test clones (`acp-loop.test.ts`, etc.) are typically fine; use
-`test.each` only where it improves readability. Not gated.
+**Tests (full-scan clones):** `profile.test.ts` ↔ `profiles.test.ts` (10L) and the test↔source mirrors (`logger`, `shell`) are worth a look — a test re-implementing source logic can drift. The intra-test clones (`acp-loop.test.ts`, etc.) are typically fine; use `test.each` only where it improves readability. Not gated.
 
 ---
 
@@ -152,6 +141,4 @@ logic can drift. The intra-test clones (`acp-loop.test.ts`, etc.) are typically 
 | Regression gate | jscpd `--threshold`/`--exit-code` | fails CI above 3% (ratchet toward 2%) | `npm run duplication:gate` |
 | Cleanup backlog | this doc, Phase 4 | the 10 measured production clones, ranked | — |
 
-Current state: **2.48% production duplication, 0% in the web client** — a clean-ish
-codebase whose only meaningful duplication is the `controller.ts`↔command logic, which
-overlaps the code-quality plan's top refactoring target.
+Current state: **2.48% production duplication, 0% in the web client** — a clean-ish codebase whose only meaningful duplication is the `controller.ts`↔command logic, which overlaps the code-quality plan's top refactoring target.

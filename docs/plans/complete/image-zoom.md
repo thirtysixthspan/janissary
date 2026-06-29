@@ -9,9 +9,7 @@ Let the user zoom an image tab in and out:
 - **Escape** → reset zoom to 100%.
 - While zoomed (≠ 100%), show the current **zoom percentage** on the view.
 
-100% means the image's current **fit-to-tab** size (today's behavior); zooming scales relative to
-that. The feature is entirely client-side and local to the image view — no server, protocol, or
-controller changes.
+100% means the image's current **fit-to-tab** size (today's behavior); zooming scales relative to that. The feature is entirely client-side and local to the image view — no server, protocol, or controller changes.
 
 ---
 
@@ -34,13 +32,9 @@ controller changes.
 
 ## Design
 
-Keep zoom **local to `ImageTab`** (a `useState` zoom multiplier + its own input listeners),
-because the component is already scoped to "an image is showing." This avoids lifting state into
-`App` or touching the global key handler.
+Keep zoom **local to `ImageTab`** (a `useState` zoom multiplier + its own input listeners), because the component is already scoped to "an image is showing." This avoids lifting state into `App` or touching the global key handler.
 
-> Alternative considered: lift zoom into `App` and extend the global key handler. Rejected — it
-> spreads image-only behavior across the app and risks colliding with the transcript/tab bindings.
-> The only `App` change needed is remounting `ImageTab` per image (below).
+> Alternative considered: lift zoom into `App` and extend the global key handler. Rejected — it > spreads image-only behavior across the app and risks colliding with the transcript/tab bindings. > The only `App` change needed is remounting `ImageTab` per image (below).
 
 ### Zoom model
 - `zoom` is a multiplier; `1` = current fit. Apply it by scaling the **rendered size**, not a CSS

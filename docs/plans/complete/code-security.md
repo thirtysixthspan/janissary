@@ -67,8 +67,7 @@ Severity is driven by this table, **not** by how scary the sink looks in isolati
 The surfaces above are **already known**. A scanner that re-discovers them is motion without progress. So the work order is:
 
 1. **Phase 1 — Remediate the known High/Medium surfaces** (with regression tests). This is where the security improvement actually happens.
-2. **Phase 2 — Stand up a lightweight, low-noise gate** so *new* issues are caught going forward.
-3. **Phase 3 — One-time broad audit** to surface anything the manual review missed.
+2. **Phase 2 — Stand up a lightweight, low-noise gate** so *new* issues are caught going forward. 3. **Phase 3 — One-time broad audit** to surface anything the manual review missed.
 
 A scanner is Phase 2/3, not Phase 1.
 
@@ -110,8 +109,7 @@ Enable only the rules that fit (it's noisy by default in a shell app — turn of
 **`gitleaks`** (single Go binary, offline) scans the tree and history for committed credentials. This is the one category generic SAST doesn't cover and the previous plan left unaddressed.
 
 ```bash
-gitleaks detect --no-banner --redact      # working tree + history
-gitleaks protect --staged --no-banner      # pre-commit: block new secrets
+gitleaks detect --no-banner --redact      # working tree + history gitleaks protect --staged --no-banner      # pre-commit: block new secrets
 ```
 
 ### 2.3 Dependency CVEs
@@ -129,8 +127,7 @@ npm audit --omit=dev
 For a deeper sweep, run a SAST engine once and triage by hand. **Opengrep** is the right engine *for this repo specifically*: the repo has **no GitHub remote**, so CodeQL (GitHub-Actions-only, and the strongest free option) is unavailable; Semgrep CE has cross-function taint paywalled; Opengrep is a self-contained binary that runs offline. (If you later push to GitHub, switch this phase to **CodeQL** — better taint analysis, maintained, results in the Security tab, no local binary to babysit.)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/opengrep/opengrep/main/install.sh | bash
-opengrep --version
+curl -fsSL https://raw.githubusercontent.com/opengrep/opengrep/main/install.sh | bash opengrep --version
 ```
 
 Run the **default** rulesets for the gate-style pass, and reserve the noisy **audit** pack for the one-time manual review:
@@ -198,9 +195,7 @@ Since there's no CI, wire `npm run security` into a **pre-push git hook** so the
 For Opengrep, use inline `// nosemgrep: <rule-id>` comments **with a reason on the line above**, co-located with the code — not a separate suppressions file that drifts out of sync:
 
 ```ts
-// Intentional: user-driven shell glob; only the local user (who already owns this shell) reaches it.
-// nosemgrep: javascript.lang.security.detect-child-process
-const res = spawnSync(SHELL_NAME, ['-c', expr], { cwd, encoding: 'utf8', timeout: 5000 });
+// Intentional: user-driven shell glob; only the local user (who already owns this shell) reaches it. // nosemgrep: javascript.lang.security.detect-child-process const res = spawnSync(SHELL_NAME, ['-c', expr], { cwd, encoding: 'utf8', timeout: 5000 });
 ```
 
 Inline suppression keeps the justification next to the code, so it travels with refactors instead of pointing at a stale line number — the exact failure mode that broke the old plan's `db.ts:137` reference.

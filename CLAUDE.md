@@ -71,6 +71,10 @@ echo "$output" | tail -3
 
 This applies to any slow command: lint, typecheck, test runs, builds. Capture to a variable (or scratchpad file for very large output), then grep/filter the captured result.
 
+## Plan and task formatting
+
+When writing implementation plans or creating tasks, use natural line breaks only — do not artificially wrap lines at a fixed column width. Let long lines flow naturally so content remains readable in any viewport.
+
 ## Code guidelines
 
 Follow the conventions in [`CODE_GUIDELINES.md`](CODE_GUIDELINES.md), including the

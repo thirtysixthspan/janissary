@@ -2,14 +2,10 @@
 
 ## Goal
 
-A fast, **change-scoped** version of the lint + typecheck + test checks for the inner development
-loop, so a change can be verified in seconds instead of running the whole `check` suite each time.
-The full `npm run check` stays the end-of-work gate. Includes guidance telling AIs to use the fast
-command while working and run the full `check` only once, at the end.
+A fast, **change-scoped** version of the lint + typecheck + test checks for the inner development loop, so a change can be verified in seconds instead of running the whole `check` suite each time. The full `npm run check` stays the end-of-work gate. Includes guidance telling AIs to use the fast command while working and run the full `check` only once, at the end.
 
 ```
-npm run check:diff   # lint changed files + typecheck affected projects (incremental) + related tests
-npm run check        # full gate — run once when all work is done
+npm run check:diff   # lint changed files + typecheck affected projects (incremental) + related tests npm run check        # full gate — run once when all work is done
 ```
 
 ## Current state
@@ -29,21 +25,16 @@ npm run check        # full gate — run once when all work is done
 
 ## Design — `check:diff`
 
-Three change-scoped checks over the git working tree (uncommitted + untracked), plus an
-orchestrator that computes the change set once and reports a single pass/fail.
+Three change-scoped checks over the git working tree (uncommitted + untracked), plus an orchestrator that computes the change set once and reports a single pass/fail.
 
 ### 1. Changed-file detection (shared)
-Extract the git logic from `lint-files.mjs` into `scripts/changed-files.mjs` exporting
-`changedFiles()`; have `lint-files.mjs` import it (no behavior change) and the orchestrator reuse
-it. One source of truth — keeps `jscpd`/`knip` happy.
+Extract the git logic from `lint-files.mjs` into `scripts/changed-files.mjs` exporting `changedFiles()`; have `lint-files.mjs` import it (no behavior change) and the orchestrator reuse it. One source of truth — keeps `jscpd`/`knip` happy.
 
 ### 2. Lint — changed files
-Reuse `lint:files` (already lints the uncommitted set). The orchestrator can pass it the
-precomputed file list to avoid recomputing.
+Reuse `lint:files` (already lints the uncommitted set). The orchestrator can pass it the precomputed file list to avoid recomputing.
 
 ### 3. Typecheck — affected projects, incremental
-TypeScript **cannot** typecheck an arbitrary subset of files — it needs the whole program for a
-project. Two legitimate speedups instead of file-scoping:
+TypeScript **cannot** typecheck an arbitrary subset of files — it needs the whole program for a project. Two legitimate speedups instead of file-scoping:
 - **Project scoping:** run only the affected project(s):
   - server (`tsconfig.json`) when any non-test `src/**` changed;
   - web (`web/tsconfig.json`) when any `web/**` changed **or** any `src/**` changed (web consumes
@@ -52,13 +43,10 @@ project. Two legitimate speedups instead of file-scoping:
   re-check what moved. Cache under `node_modules/.cache/tsc/{server,web}.tsbuildinfo` (gitignored —
   `node_modules/` is in `.gitignore`).
 
-Add `typecheck:diff` that runs both projects incrementally (simple + always-correct); the
-orchestrator may skip an untouched project for extra speed.
+Add `typecheck:diff` that runs both projects incrementally (simple + always-correct); the orchestrator may skip an untouched project for extra speed.
 
 ### 4. Tests — related only
-`test:diff` → `vitest run --changed`: runs only tests whose module graph touches the working
-changes, across both projects. `passWithNoTests: true` means a change with no related test passes
-immediately. **Coverage thresholds are not enforced here** (coverage runs only in the full gate).
+`test:diff` → `vitest run --changed`: runs only tests whose module graph touches the working changes, across both projects. `passWithNoTests: true` means a change with no related test passes immediately. **Coverage thresholds are not enforced here** (coverage runs only in the full gate).
 
 ### 5. Orchestrator — `scripts/check-diff.mjs`
 - `changedFiles()` once; if empty → print `check:diff: no changes` and exit `0`.
@@ -75,15 +63,11 @@ immediately. **Coverage thresholds are not enforced here** (coverage runs only i
 - (optional) `lint:diff` — alias of `lint:files` for naming symmetry.
 
 ## Deliberately omitted from `check:diff` (only in full `check`)
-`lint:css` (stylelint), `quality` (fta complexity), `duplication` (jscpd), `knip` (dead exports),
-the full test suite, and coverage thresholds. These are holistic/whole-tree and belong to the
-end-of-work gate, not the per-edit loop. (Changed-file `stylelint` could be added later if CSS
-churn warrants it.)
+`lint:css` (stylelint), `quality` (fta complexity), `duplication` (jscpd), `knip` (dead exports), the full test suite, and coverage thresholds. These are holistic/whole-tree and belong to the end-of-work gate, not the per-edit loop. (Changed-file `stylelint` could be added later if CSS churn warrants it.)
 
 ## AI guidance
 
-`AI.md` was removed and there is no `CLAUDE.md`. Create **`CLAUDE.md`** at the repo root (the file
-Claude Code auto-loads) with a short **"Verifying changes"** section:
+`AI.md` was removed and there is no `CLAUDE.md`. Create **`CLAUDE.md`** at the repo root (the file Claude Code auto-loads) with a short **"Verifying changes"** section:
 
 - **During development**, after each change, run `npm run check:diff` for fast feedback — it lints
   the changed files, typechecks the affected project(s) incrementally, and runs the related tests.
@@ -93,8 +77,7 @@ Claude Code auto-loads) with a short **"Verifying changes"** section:
 - `check:diff` scopes to the **uncommitted** working tree; committing or reverting mid-task
   rescopes it automatically.
 
-Also add a brief **Development** note in `README.md` pointing to the same two commands, so the
-workflow is discoverable to humans too.
+Also add a brief **Development** note in `README.md` pointing to the same two commands, so the workflow is discoverable to humans too.
 
 ## Gotchas
 - **No file-level tsc.** tsc needs the whole project program; the speedup is project-scope +
@@ -108,9 +91,7 @@ workflow is discoverable to humans too.
   (treat as "everything" or "nothing" — mirror `lint-files.mjs`'s behavior and document it).
 
 ## Verification
-Exercise `check:diff` with: no changes (fast exit 0); a lint error (fails); a type error including
-a `src` change that breaks `web` types (web tsc fails); a change whose related test fails (fails);
-a change with no related test (passes). Time it against `npm run check` to confirm the speedup.
+Exercise `check:diff` with: no changes (fast exit 0); a lint error (fails); a type error including a `src` change that breaks `web` types (web tsc fails); a change whose related test fails (fails); a change with no related test (passes). Time it against `npm run check` to confirm the speedup.
 
 ## Checklist
 - [ ] `scripts/changed-files.mjs` — extract `changedFiles()`; refactor `lint-files.mjs` to use it

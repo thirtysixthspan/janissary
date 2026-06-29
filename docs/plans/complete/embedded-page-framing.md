@@ -1,8 +1,6 @@
 # Embedded page tab — render sites that refuse framing
 
-Follow-up to the shipped embedded web page feature (`docs/plans/complete/embedded-web-page.md`,
-`spec/embedded-web-page.md`). That feature renders only sites that permit being framed; this plan
-makes sites that **refuse** framing render too.
+Follow-up to the shipped embedded web page feature (`docs/plans/complete/embedded-web-page.md`, `spec/embedded-web-page.md`). That feature renders only sites that permit being framed; this plan makes sites that **refuse** framing render too.
 
 ## Problem
 
@@ -23,8 +21,7 @@ makes sites that **refuse** framing render too.
 | Reverse proxy | Server fetches the page and re-serves it from our origin with headers stripped | Rejected — URL/asset rewriting, breaks SPAs and logged-in sites, SSRF surface |
 | App under CDP | Launch the app in a Playwright/CDP browser and strip headers via `Fetch` interception | Rejected here — changes the whole app launch model for one viewer feature |
 
-The extension keeps the simple in-app iframe model and is the smallest change that loads the real
-site with the user's session.
+The extension keeps the simple in-app iframe model and is the smallest change that loads the real site with the user's session.
 
 ## Approach — bundled `declarativeNetRequest` extension
 

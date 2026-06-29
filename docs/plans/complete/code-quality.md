@@ -2,9 +2,7 @@
 
 ## Current State (measured 2026-06-25)
 
-ESLint is already substantial (`typescript-eslint` type-aware rules, `unicorn/flat/recommended`,
-`react-hooks`, `import-x`, `eqeqeq`, and **`max-lines` warn at 200**). What it lacks is any
-**complexity** rule — the one real gap.
+ESLint is already substantial (`typescript-eslint` type-aware rules, `unicorn/flat/recommended`, `react-hooks`, `import-x`, `eqeqeq`, and **`max-lines` warn at 200**). What it lacks is any **complexity** rule — the one real gap.
 
 FTA distribution (`*.test.*` excluded):
 
@@ -25,15 +23,13 @@ Top refactoring targets (non-test, by FTA score):
 | `src/index.ts` | 54.1 | 34 | 132 | Could be better |
 | `src/completion.ts` | 51.6 | 33 | 116 | Could be better |
 
-`controller.ts` is a true outlier — score 94.4 and cyclomatic 216 dwarf everything else.
-It is the single highest-leverage refactoring target.
+`controller.ts` is a true outlier — score 94.4 and cyclomatic 216 dwarf everything else. It is the single highest-leverage refactoring target.
 
 ---
 
 ## Phase 1 — ESLint complexity rules (primary, actionable)
 
-Adds the missing complexity signal to the config the team already uses daily. Surfaces
-in-editor and in `npm run lint`, with exact line locations.
+Adds the missing complexity signal to the config the team already uses daily. Surfaces in-editor and in `npm run lint`, with exact line locations.
 
 ### 1.1 Install
 
@@ -43,15 +39,12 @@ npm install --save-dev eslint-plugin-sonarjs@^4.1   # peer: eslint ^8 || ^9 || ^
 
 ### 1.2 Add to `eslint.config.mjs`
 
-Register the plugin and enable **only** the chosen rules (do **not** spread
-`sonarjs.configs.recommended` — on this codebase that floods `npm run lint`). Add near the
-other rule blocks in the existing `ts.config(...)`:
+Register the plugin and enable **only** the chosen rules (do **not** spread `sonarjs.configs.recommended` — on this codebase that floods `npm run lint`). Add near the other rule blocks in the existing `ts.config(...)`:
 
 ```js
 import sonarjs from 'eslint-plugin-sonarjs';
 
-// inside ts.config(...), as a new flat-config object:
-{
+// inside ts.config(...), as a new flat-config object: {
   files: ['src/**/*.ts', 'src/**/*.tsx', 'web/src/**/*.ts', 'web/src/**/*.tsx'],
   ignores: ['**/*.test.ts', '**/*.test.tsx'],
   plugins: { sonarjs },
@@ -63,13 +56,9 @@ import sonarjs from 'eslint-plugin-sonarjs';
 },
 ```
 
-Keep these as `warn`, consistent with how `max-lines` and the unicorn rules are already
-treated (guidance, not a hard block). `controller.ts` will light up heavily — that is the
-intended signal, not noise.
+Keep these as `warn`, consistent with how `max-lines` and the unicorn rules are already treated (guidance, not a hard block). `controller.ts` will light up heavily — that is the intended signal, not noise.
 
-> Do not add `--max-warnings N` to `npm run lint` yet: the new warnings make any guessed cap
-> fail immediately. If a cap is wanted later, measure the count first (`eslint . 2>&1 | tail`)
-> and set the cap at that floor, ratcheting down as warnings are resolved.
+> Do not add `--max-warnings N` to `npm run lint` yet: the new warnings make any guessed cap > fail immediately. If a cap is wanted later, measure the count first (`eslint . 2>&1 | tail`) > and set the cap at that floor, ratcheting down as warnings are resolved.
 
 ---
 
@@ -106,15 +95,10 @@ npm install --save-dev fta-cli@^3
 ### 2.3 Baseline snapshot (committed, feeds coverage Phase 8)
 
 ```bash
-mkdir -p docs/quality
-fta src --json > docs/quality/baseline-server.json
-fta web/src --json > docs/quality/baseline-client.json
+mkdir -p docs/quality fta src --json > docs/quality/baseline-server.json fta web/src --json > docs/quality/baseline-client.json
 ```
 
-JSON shape (field names verified): `file_name`, `cyclo`, `line_count`, `fta_score`,
-`assessment`, and `halstead` (`volume`, `difficulty`, `effort`, `time`, `bugs`, plus
-operator/operand counts). Commit these as the trend reference; the code-coverage plan's
-optional Phase 8 cross-references `fta_score` against coverage to rank refactor risk.
+JSON shape (field names verified): `file_name`, `cyclo`, `line_count`, `fta_score`, `assessment`, and `halstead` (`volume`, `difficulty`, `effort`, `time`, `bugs`, plus operator/operand counts). Commit these as the trend reference; the code-coverage plan's optional Phase 8 cross-references `fta_score` against coverage to rank refactor risk.
 
 ---
 
@@ -163,11 +147,7 @@ Everything else (52 "OK" server files, 12 "OK" web files) is fine — leave it a
 ## Directory layout
 
 ```
-fta.json                         # FTA config: exclude tests/dirs, score_cap gate
-eslint.config.mjs                # + sonarjs complexity rules (Phase 1)
-docs/quality/
-├── baseline-server.json         # committed FTA snapshot for src/  (trend + coverage Phase 8)
-└── baseline-client.json         # committed FTA snapshot for web/src/
+fta.json                         # FTA config: exclude tests/dirs, score_cap gate eslint.config.mjs                # + sonarjs complexity rules (Phase 1) docs/quality/ ├── baseline-server.json         # committed FTA snapshot for src/  (trend + coverage Phase 8) └── baseline-client.json         # committed FTA snapshot for web/src/
 ```
 
 No custom scripts: FTA's table output is the ranked report; `score_cap` is the gate.

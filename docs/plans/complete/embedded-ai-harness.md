@@ -2,15 +2,10 @@
 
 ## Goal
 
-`harness <name>` (name ∈ `claude` | `opencode` | `codex`) opens a new **harness tab** whose entire
-body is the running harness — a PTY rendered with xterm.js, taking over the tab like an image/page
-view tab. **All** keys, clicks, and mouse go to the harness **except** the tab-switch chord (and
-clicks on the tab strip); tab switching still works. Document the feature in the README/help and
-add a harness spec.
+`harness <name>` (name ∈ `claude` | `opencode` | `codex`) opens a new **harness tab** whose entire body is the running harness — a PTY rendered with xterm.js, taking over the tab like an image/page view tab. **All** keys, clicks, and mouse go to the harness **except** the tab-switch chord (and clicks on the tab strip); tab switching still works. Document the feature in the README/help and add a harness spec.
 
 ```
-harness claude     → new tab "claude" running the claude CLI, full-tab
-harness codex      → new tab "codex"
+harness claude     → new tab "claude" running the claude CLI, full-tab harness codex      → new tab "codex"
 # Shift+←/→ switches tabs; the tab's × or `close` quits the harness
 ```
 
@@ -25,10 +20,7 @@ harness codex      → new tab "codex"
 | xterm card (input fwd, resize, chord fall-through) | `web/src/TerminalCard.tsx` |
 | View-tab pattern | `Tab.view` `'image'`/`'page'`, `makeImageTab`/`makePageTab`, App render branch, TabStrip title + × |
 
-**Today's `harness` behavior:** `run()` (`src/controller.ts:309-314`) parses the name and calls
-`openPty(...)`, which appends an **inline terminal card to the current tab's transcript**. This plan
-changes `harness <name>` to open a **dedicated full-tab harness view**; the interactive-shell PTY
-path (vim/less via `isInteractive`, `controller.ts:320`) keeps using inline cards — unchanged.
+**Today's `harness` behavior:** `run()` (`src/controller.ts:309-314`) parses the name and calls `openPty(...)`, which appends an **inline terminal card to the current tab's transcript**. This plan changes `harness <name>` to open a **dedicated full-tab harness view**; the interactive-shell PTY path (vim/less via `isInteractive`, `controller.ts:320`) keeps using inline cards — unchanged.
 
 ---
 
@@ -81,13 +73,9 @@ path (vim/less via `isInteractive`, `controller.ts:320`) keeps using inline card
 ## Web client
 
 ### `web/src/HarnessTab.tsx` (new) — full-body terminal
-Reuse `TerminalCard`'s xterm logic but as the **whole tab body** (no card head/maximize/kill chrome;
-optional slim "exited" banner). Factor the shared setup — create `Terminal` + `FitAddon`,
-`attachPty`, `onData → ptyInput`, `ResizeObserver → ptyResize` — into a `useXterm(ptyId, client)`
-hook used by **both** `TerminalCard` and `HarnessTab` (avoids `jscpd` duplication).
+Reuse `TerminalCard`'s xterm logic but as the **whole tab body** (no card head/maximize/kill chrome; optional slim "exited" banner). Factor the shared setup — create `Terminal` + `FitAddon`, `attachPty`, `onData → ptyInput`, `ResizeObserver → ptyResize` — into a `useXterm(ptyId, client)` hook used by **both** `TerminalCard` and `HarnessTab` (avoids `jscpd` duplication).
 
-**Input routing — the key detail.** A real harness must receive `Ctrl+C`/`Ctrl+D`/`Ctrl+R`/`Ctrl+Z`,
-so the fall-through must be **narrow** — only the tab-switch chord bubbles to the window:
+**Input routing — the key detail.** A real harness must receive `Ctrl+C`/`Ctrl+D`/`Ctrl+R`/`Ctrl+Z`, so the fall-through must be **narrow** — only the tab-switch chord bubbles to the window:
 
 ```ts
 term.attachCustomKeyEventHandler((e) => {
@@ -97,9 +85,7 @@ term.attachCustomKeyEventHandler((e) => {
 });
 ```
 
-> `TerminalCard` bubbles **all** Shift/Ctrl chords (`!(shift||ctrl)`) — that is too broad for a
-> harness and would hijack `Ctrl+C` etc. **Do not copy it here.** (Optionally also bubble
-> `Ctrl+←/→` for tab reorder, at the cost of the harness's own word-nav — default to switch-only.)
+> `TerminalCard` bubbles **all** Shift/Ctrl chords (`!(shift||ctrl)`) — that is too broad for a > harness and would hijack `Ctrl+C` etc. **Do not copy it here.** (Optionally also bubble > `Ctrl+←/→` for tab reorder, at the cost of the harness's own word-nav — default to switch-only.)
 
 - **Focus** the terminal on mount/activation (a harness tab has no command line to focus), so
   keystrokes land in the harness.
@@ -107,10 +93,7 @@ term.attachCustomKeyEventHandler((e) => {
   terminal. Clicking a tab in the strip (outside the body) switches tabs.
 
 ### Preserving screen state across tab switches (decision)
-If `HarnessTab` renders only while active (like the image/page early-return), switching away
-unmounts xterm and returning shows a blank screen until the harness redraws — full-screen TUIs use
-the alternate buffer and only repaint on input/`SIGWINCH`. No bytes are lost (the client buffers PTY
-data per id), only the static frame. Options:
+If `HarnessTab` renders only while active (like the image/page early-return), switching away unmounts xterm and returning shows a blank screen until the harness redraws — full-screen TUIs use the alternate buffer and only repaint on input/`SIGWINCH`. No bytes are lost (the client buffers PTY data per id), only the static frame. Options:
 - **Simple (recommended first):** remount on activation and **nudge a redraw** by sending a
   `ptyResize` (SIGWINCH) right after attach — claude/codex are Ink TUIs that repaint on resize.
 - **Robust:** keep all harness terminals mounted in a layer and toggle visibility (`display:none`

@@ -2,20 +2,13 @@
 
 ## Goal
 
-Teach the existing `open` dispatcher to recognize **web addresses** and open them as an embedded,
-in-app **page tab** (a passive viewer). There is no standalone `page` command — pages are opened
-through `open`:
+Teach the existing `open` dispatcher to recognize **web addresses** and open them as an embedded, in-app **page tab** (a passive viewer). There is no standalone `page` command — pages are opened through `open`:
 
 ```
-open https://slashdot.org     → embedded page tab "1) slashdot.org"  (recognized by scheme)
-open page slashdot.org         → embedded page tab "2) slashdot.org"  (page keyword; defaults https)
-open external https://x.com    → opens x.com in the OS default browser
-close page 1                   → closes the page tab numbered 1
+open https://slashdot.org     → embedded page tab "1) slashdot.org"  (recognized by scheme) open page slashdot.org         → embedded page tab "2) slashdot.org"  (page keyword; defaults https) open external https://x.com    → opens x.com in the OS default browser close page 1                   → closes the page tab numbered 1
 ```
 
-A page tab is a near-clone of the existing **image tab** (a `view` tab with no command bar,
-in-memory only, with a × close), swapping `<img>` for `<iframe>`. Opening is a new **web opener**
-in the `open` dispatcher, parallel to the image opener.
+A page tab is a near-clone of the existing **image tab** (a `view` tab with no command bar, in-memory only, with a × close), swapping `<img>` for `<iframe>`. Opening is a new **web opener** in the `open` dispatcher, parallel to the image opener.
 
 ### Non-goals (unchanged from the simplified scope)
 - No communication/control/reading of the embedded page (no postMessage bridge, no CDP/automation).
@@ -27,9 +20,7 @@ in the `open` dispatcher, parallel to the image opener.
 
 ## How it fits `open`
 
-`open` is already a dispatcher that routes a target to an **opener** (`src/commands/open.ts`,
-`src/openers/`, dispatch in `Controller.runOpen` `src/controller.ts:520-558`). Today openers are
-keyed by file **extension** (`openerForExtension`, `src/openers/index.ts:12`). We add:
+`open` is already a dispatcher that routes a target to an **opener** (`src/commands/open.ts`, `src/openers/`, dispatch in `Controller.runOpen` `src/controller.ts:520-558`). Today openers are keyed by file **extension** (`openerForExtension`, `src/openers/index.ts:12`). We add:
 
 1. **Target classification** in the dispatcher: a target with an `http`/`https` scheme, or any
    target preceded by the new **`page`** keyword, is a *web address* → routed to the **web opener**.
@@ -58,23 +49,20 @@ Mirror the image tab for everything downstream (the view tab itself):
 
 ## ⚠️ Required: our own CSP
 
-The server's CSP has **no `frame-src`** (`src/index.ts:12`), so it falls back to
-`default-src 'self'` and blocks every external iframe — even compliant sites. Add `frame-src`:
+The server's CSP has **no `frame-src`** (`src/index.ts:12`), so it falls back to `default-src 'self'` and blocks every external iframe — even compliant sites. Add `frame-src`:
 
 ```
 …; img-src 'self'; frame-src https: http:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'
 ```
 
-Keep `frame-ancestors 'none'` (`index.test.ts:64` still holds). This only lets compliant sites
-load; sites that refuse framing remain blocked (accepted non-goal).
+Keep `frame-ancestors 'none'` (`index.test.ts:64` still holds). This only lets compliant sites load; sites that refuse framing remain blocked (accepted non-goal).
 
 ---
 
 ## Dispatch & opener changes
 
 ### `src/commands/open.ts` — `parseOpen`
-Extend the parser to consume an optional `page` keyword (alongside `external`) and to surface the
-classification. New result shape:
+Extend the parser to consume an optional `page` keyword (alongside `external`) and to surface the classification. New result shape:
 
 ```ts
 export type ParsedOpen = { external: boolean; web: boolean; target: string } | { error: string };
@@ -85,14 +73,10 @@ export type ParsedOpen = { external: boolean; web: boolean; target: string } | {
 - `isGlobPattern` is unchanged and only consulted on the file branch.
 
 ### `src/openers/page.ts` (new) — web opener
-Pure helpers + the opener surface. Not registered in the extension array; exported for the
-dispatcher to invoke directly.
+Pure helpers + the opener surface. Not registered in the extension array; exported for the dispatcher to invoke directly.
 
 ```ts
-export function normalizeWebUrl(target: string): { url: string } | { error: string };
-// http/https kept; bare (no scheme) → prepend https://; any other scheme → error; validate via new URL().
-export function rootDomain(hostname: string): string;
-// strip leading "www."; registrable-domain heuristic (last 2 labels; keep 3 when SLD ∈ co|com|org|net|gov|ac|edu and ≥3 labels).
+export function normalizeWebUrl(target: string): { url: string } | { error: string }; // http/https kept; bare (no scheme) → prepend https://; any other scheme → error; validate via new URL(). export function rootDomain(hostname: string): string; // strip leading "www."; registrable-domain heuristic (last 2 labels; keep 3 when SLD ∈ co|com|org|net|gov|ac|edu and ≥3 labels).
 
 export const webOpener = {
   name: 'page',
@@ -110,13 +94,10 @@ export const webOpener = {
 };
 ```
 
-Test table for `normalizeWebUrl`/`rootDomain`: `www.website.com`→`https://www.website.com/`,
-`website.com`; `http://example.com/x` kept, `example.com`; `docs.example.com`→`example.com`;
-`foo.example.co.uk`→`example.co.uk`; `javascript:alert(1)`→error.
+Test table for `normalizeWebUrl`/`rootDomain`: `www.website.com`→`https://www.website.com/`, `website.com`; `http://example.com/x` kept, `example.com`; `docs.example.com`→`example.com`; `foo.example.co.uk`→`example.co.uk`; `javascript:alert(1)`→error.
 
 ### `OpenContext` — `src/openers/types.ts`
-Add one capability (external reuses the existing `openExternally`, which already accepts a URL via
-`didOsOpen`, `src/openers/os-open.ts`):
+Add one capability (external reuses the existing `openExternally`, which already accepts a URL via `didOsOpen`, `src/openers/os-open.ts`):
 
 ```ts
 openPageTab: (view: { url: string; domain: string }) => void;
@@ -130,8 +111,7 @@ if (parsed.web) {
   const opener = webOpener;
   void (parsed.external ? opener.external(parsed.target, context) : opener.inline(parsed.target, context));
   return;
-}
-// …existing file flow (glob, resolve, existsSync, openerForExtension)…
+} // …existing file flow (glob, resolve, existsSync, openerForExtension)…
 ```
 Add `openPageTab` to the `context` object built in `runOpen` (`src/controller.ts:529-534`).
 
@@ -197,8 +177,7 @@ Add `openPageTab` to the `context` object built in `runOpen` (`src/controller.ts
 | CSP | `src/index.test.ts` (extends `:64`) | header has `frame-src` **and** `frame-ancestors 'none'` |
 | Web | `web/src/test/` | `<PageTab>` renders `<iframe src=url>`; `<TabStrip>` shows `1) domain` + × on `view:'page'` |
 
-Run `npm run check`. Keep web-opener logic factored vs. the image opener / `openImageTab` to
-satisfy `jscpd`/`knip`.
+Run `npm run check`. Keep web-opener logic factored vs. the image opener / `openImageTab` to satisfy `jscpd`/`knip`.
 
 ---
 

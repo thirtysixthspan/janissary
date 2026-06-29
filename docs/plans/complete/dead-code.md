@@ -138,9 +138,7 @@ Add scripts to `package.json`:
 Knip already orders output by category, so no custom ranking script is needed. Work the categories in this order — safest and highest-signal first:
 
 1. **Unused dependencies** — remove from `package.json`, re-run `npm install`. Confirmed starting point: **`ink`** (imported nowhere) and, once `src/messaging.hook.test.tsx` is accounted for, decide whether **`ink-testing-library`** (one test) is worth keeping. These are the kind of finding the plan exists to surface — don't suppress them.
-2. **Unused files** — a file no entry reaches. Confirm with a quick `grep` for the basename, then delete. Lowest risk: nothing imports it.
-3. **Unused exports / types** — drop the `export` keyword (keep the symbol if used in-file) or delete it. If an export is an intentional public surface, annotate it with a JSDoc `@public` tag so Knip stops reporting it, or list it under config `ignore` — **do not** invent directives (`// knipignore`, `@knipignore`, and a `knipIgnore` config field are not real Knip features).
-4. **Duplicate exports** — the same symbol re-exported from two paths. Consolidate to one and update importers.
+2. **Unused files** — a file no entry reaches. Confirm with a quick `grep` for the basename, then delete. Lowest risk: nothing imports it. 3. **Unused exports / types** — drop the `export` keyword (keep the symbol if used in-file) or delete it. If an export is an intentional public surface, annotate it with a JSDoc `@public` tag so Knip stops reporting it, or list it under config `ignore` — **do not** invent directives (`// knipignore`, `@knipignore`, and a `knipIgnore` config field are not real Knip features). 4. **Duplicate exports** — the same symbol re-exported from two paths. Consolidate to one and update importers.
 
 For most of categories 1–3, `npm run knip:fix` does the mechanical removal; always review the resulting diff and run the test suite before committing.
 
@@ -171,8 +169,7 @@ A committed `baseline.json` diff workflow is intentionally **not** part of this 
 ## Directory layout (after this plan)
 
 ```
-knip.json          # single root config — minimal, comments justify any suppression
-package.json       # adds "knip" and "knip:fix" scripts; loses unused deps (ink, …)
+knip.json          # single root config — minimal, comments justify any suppression package.json       # adds "knip" and "knip:fix" scripts; loses unused deps (ink, …)
 ```
 
 No `knip.client.json`, no `docs/dead-code/` report directory, and no `scripts/dead-code-report.ts`. Knip's built-in reporters and `--fix` replace the homegrown JSON pipeline and ranking script the previous draft proposed.

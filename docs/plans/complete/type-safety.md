@@ -20,9 +20,7 @@ Two wire-type files exist and **have already drifted**:
 - There is **no web typecheck** today: `npm run build` runs `tsc` (server) then `vite build`
   (web, esbuild — no full typecheck). Drift in the mirror is currently caught by nothing.
 
-All 8 web imports from `./protocol` are `import type` (verified) — erased at build — so
-importing them from a shared file adds **zero** code to the web bundle. A path alias and a few
-import edits are all that is needed.
+All 8 web imports from `./protocol` are `import type` (verified) — erased at build — so importing them from a shared file adds **zero** code to the web bundle. A path alias and a few import edits are all that is needed.
 
 ---
 
@@ -30,15 +28,13 @@ import edits are all that is needed.
 
 Make `src/protocol.ts` the single source of truth and delete the mirror.
 
-**1. Re-export the two domain types the web also needs** — in `src/protocol.ts`, extend the
-final re-export:
+**1. Re-export the two domain types the web also needs** — in `src/protocol.ts`, extend the final re-export:
 
 ```ts
 export { type BufferLine, type ImageView, type TerminalEntry, type CompletionResult } from './types.js';
 ```
 
-`src/protocol.ts` already exports `TabView`, `RouteChooserView`, `ConnectionView`,
-`ScheduleView`, `ServerEvent`, `RpcCall` — together these cover every web import.
+`src/protocol.ts` already exports `TabView`, `RouteChooserView`, `ConnectionView`, `ScheduleView`, `ServerEvent`, `RpcCall` — together these cover every web import.
 
 **2. Add a path alias** in `web/tsconfig.json` so web imports stay clean:
 
@@ -53,8 +49,7 @@ export { type BufferLine, type ImageView, type TerminalEntry, type CompletionRes
 }
 ```
 
-(`src/protocol.ts` is pulled into the web typecheck via the import graph; its NodeNext-style
-`.js` specifiers resolve fine under `bundler` resolution.)
+(`src/protocol.ts` is pulled into the web typecheck via the import graph; its NodeNext-style `.js` specifiers resolve fine under `bundler` resolution.)
 
 **3. Repoint the 8 imports** from `'./protocol'` to `'@shared/protocol'`:
 
@@ -71,24 +66,19 @@ export { type BufferLine, type ImageView, type TerminalEntry, type CompletionRes
 
 **4. Delete `web/src/protocol.ts`.**
 
-**5. (Optional, future-proofing)** add the same alias to `web/vite.config.ts` so a *runtime*
-import from `@shared/*` would also resolve. Not required while all imports are type-only
-(Vite never sees erased imports):
+**5. (Optional, future-proofing)** add the same alias to `web/vite.config.ts` so a *runtime* import from `@shared/*` would also resolve. Not required while all imports are type-only (Vite never sees erased imports):
 
 ```ts
 resolve: { alias: { '@shared': fileURLToPath(new URL('../src', import.meta.url)) } }
 ```
 
-**6. Verify:** `npx tsc --noEmit -p web/tsconfig.json` (should surface any place the web
-relied on a shape the server doesn't actually send) and `npm run build:web` (should still
-build). Fix anything the typecheck flags — that *is* the drift being caught.
+**6. Verify:** `npx tsc --noEmit -p web/tsconfig.json` (should surface any place the web relied on a shape the server doesn't actually send) and `npm run build:web` (should still build). Fix anything the typecheck flags — that *is* the drift being caught.
 
 ---
 
 ## Phase 2 — Typecheck script + CI gate
 
-There is no full web typecheck today; add one and run both in CI. This is what makes the
-shared types self-enforcing — no codegen or diff-check needed.
+There is no full web typecheck today; add one and run both in CI. This is what makes the shared types self-enforcing — no codegen or diff-check needed.
 
 ```jsonc
 {
@@ -98,17 +88,13 @@ shared types self-enforcing — no codegen or diff-check needed.
 }
 ```
 
-CI runs `npm run typecheck`. After Phase 1, any misuse of the shared wire types — on either
-side — fails the build.
+CI runs `npm run typecheck`. After Phase 1, any misuse of the shared wire types — on either side — fails the build.
 
 ---
 
 ## Phase 3 — (Optional) harden state rehydration
 
-The one place runtime validation genuinely earns its keep: `controller.ts:105 rehydrate()`
-reads `.janissary/state/*.json`. The state dir is cleared on a normal launch, so drift only
-bites on `janus --relaunch` **after an upgrade**, when an old file's shape can mismatch new
-code and crash rehydration.
+The one place runtime validation genuinely earns its keep: `controller.ts:105 rehydrate()` reads `.janissary/state/*.json`. The state dir is cleared on a normal launch, so drift only bites on `janus --relaunch` **after an upgrade**, when an old file's shape can mismatch new code and crash rehydration.
 
 - Wrap per-file load in a guard so a malformed/stale file is **skipped and logged**, not fatal,
   and the other tabs still restore. A small hand-written `isAgentState(x): x is AgentState`

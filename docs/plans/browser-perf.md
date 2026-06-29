@@ -49,6 +49,7 @@
 ## 1. Lighthouse — Performance Audit
 
 ### Why
+
 The gold standard for web performance measurement. Runs headless Chrome locally, produces a scored report (0-100) across five categories, each with specific recommendations.
 
 ### Setup
@@ -114,6 +115,7 @@ SEO:  90
 ## 2. vite-bundle-visualizer — Bundle Analysis
 
 ### Why
+
 The Vite production bundle is opaque without a visualizer. This tool generates an interactive treemap showing exactly which modules consume space, revealing code-splitting opportunities.
 
 ### Setup
@@ -166,6 +168,7 @@ Opens an interactive treemap in the browser:
 ## 3. Playwright — Cross-Browser Tests
 
 ### Why
+
 Playwright is already installed as a dependency (used by the server for browser automation). It supports Chromium, Firefox, and WebKit with the same API. Adding a cross-browser test script catches rendering differences before they reach users.
 
 ### Setup
@@ -230,6 +233,7 @@ npx playwright test --browser=chromium --browser=firefox --browser=webkit
 ## 4. stylelint — CSS Quality & Browser Compatibility
 
 ### Why
+
 The app has a custom `theme.css` that uses modern CSS (custom properties, flexbox, `@keyframes`). stylelint catches errors, enforces consistent patterns, and `stylelint-no-unsupported-browser-features` flags CSS features not supported in target browsers.
 
 ### Setup
@@ -285,6 +289,7 @@ npx stylelint "web/src/**/*.css"
 ## 5. size-limit — Bundle Size Budgeting
 
 ### Why
+
 Prevents bundle size regressions. Set a size cap for the JS bundle; `size-limit` exits non-zero if exceeded. This makes performance a hard constraint rather than an afterthought.
 
 ### Setup
