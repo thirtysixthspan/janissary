@@ -2,6 +2,7 @@
 // unit-testable; callers (the command + the scheduler tick) own the side effects.
 
 import type { ScheduleEntry, TimeOfDay, ScheduleParseResult } from './types.js';
+import { parseAtSchedule, parseOnSchedule, parseEverySchedule } from './schedule-helpers.js';
 
 // The body parser produces an add result without a name; the wrapper attaches the leading
 // positional name afterwards.
@@ -15,7 +16,6 @@ const MONTHS = [
   'january', 'february', 'march', 'april', 'may', 'june',
   'july', 'august', 'september', 'october', 'november', 'december',
 ];
-const WEEKDAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 const UNIT_MS: Record<string, number> = { m: 60_000, h: 3_600_000, d: 86_400_000, w: 604_800_000 };
 
 export function parseTimeOfDay(tok: string): TimeOfDay | undefined {
@@ -147,66 +147,15 @@ function parseScheduleBody(rest: string, now: Date): ScheduleBodyResult {
   const head = tokens[0].toLowerCase();
 
   if (head === 'at') {
-    const tod = parseTimeOfDay(tokens[1] ?? '');
-    if (!tod) return { error: `Invalid time: "${tokens[1] ?? ''}".` };
-    const command = tokens.slice(2).join(' ').trim();
-    if (!command) return { error: 'No command to schedule.' };
-    return { action: 'add', entry: {
-      command, spec: `at ${fmtTime(tod)}`, recurring: false,
-      nextRun: nextOccurrenceOfTime(tod.hour, tod.minute, now),
-    } };
+    return parseAtSchedule(tokens, now, parseTimeOfDay, fmtTime, nextOccurrenceOfTime);
   }
 
   if (head === 'on') {
-    const md = parseMonthDay(tokens.slice(1));
-    if (!md) return { error: 'Invalid date. Try "on august 12th" or "on 8/12".' };
-    let index = 1 + md.consumed;
-    let tod: TimeOfDay = { hour: 9, minute: 0 };
-    if (tokens[index]?.toLowerCase() === 'at') {
-      const t = parseTimeOfDay(tokens[index + 1] ?? '');
-      if (!t) return { error: `Invalid time: "${tokens[index + 1] ?? ''}".` };
-      tod = t;
-      index += 2;
-    }
-    const command = tokens.slice(index).join(' ').trim();
-    if (!command) return { error: 'No command to schedule.' };
-    return { action: 'add', entry: {
-      command, spec: `on ${MONTHS[md.month].slice(0, 3)} ${md.day} at ${fmtTime(tod)}`, recurring: false,
-      nextRun: nextDateTime(md.month, md.day, tod.hour, tod.minute, now),
-    } };
+    return parseOnSchedule(tokens, now, parseMonthDay, parseTimeOfDay, fmtTime, nextDateTime);
   }
 
   if (head === 'every') {
-    const second = tokens[1] ?? '';
-    const interval = parseInterval(second);
-    if (interval !== undefined) {
-      const command = tokens.slice(2).join(' ').trim();
-      if (!command) return { error: 'No command to schedule.' };
-      return { action: 'add', entry: {
-        command, spec: `every ${second.toLowerCase()}`, recurring: true,
-        intervalMs: interval, nextRun: now.getTime() + interval,
-      } };
-    }
-    const dayWord = second.toLowerCase();
-    let weekday: number | undefined;
-    if (dayWord !== 'day') {
-      const wd = dayWord.length >= 3 ? WEEKDAYS.findIndex((w) => w.startsWith(dayWord)) : -1;
-      if (wd < 0) return { error: `Invalid interval or day: "${second}".` };
-      weekday = wd;
-    }
-    if (tokens[2]?.toLowerCase() !== 'at') return { error: SCHEDULE_USAGE };
-    const tod = parseTimeOfDay(tokens[3] ?? '');
-    if (!tod) return { error: `Invalid time: "${tokens[3] ?? ''}".` };
-    const command = tokens.slice(4).join(' ').trim();
-    if (!command) return { error: 'No command to schedule.' };
-    const label = weekday === undefined ? 'day' : WEEKDAYS[weekday];
-    return { action: 'add', entry: {
-      command, spec: `every ${label} at ${fmtTime(tod)}`, recurring: true,
-      timeOfDay: tod, weekday,
-      nextRun: weekday === undefined
-        ? nextOccurrenceOfTime(tod.hour, tod.minute, now)
-        : nextWeekday(weekday, tod.hour, tod.minute, now),
-    } };
+    return parseEverySchedule(tokens, now, parseInterval, parseTimeOfDay, fmtTime, nextOccurrenceOfTime, nextWeekday);
   }
 
   return { error: SCHEDULE_USAGE };
