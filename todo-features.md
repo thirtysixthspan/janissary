@@ -1,14 +1,14 @@
 
-## embedded ai harness
-create a new command called harness.
-called: harness harnessname 
-where harnessname is [claude, opencode, codex] 
-calling the harness opens a new harness tab.
-like the image tab, the executing harness takes over the entire tab body.
-all keys, clicks and mouse movements should be sent to the harness except for those that control tab switching 
-tab switching should still be supported
-document how to use the harness tabs in the readme and help
-create a harness spec
+## open markdown preview
+commands like `open markdown.md` will open a a markdown tab.
+markdown tab is similar in behavior to an image tab except the markdown file is rendered into the tab.
+the markdown tab should have a scrollbar and be scrollable.
+up and down arrows should be bound to scrolling.
+page up and page down should scroll the markdown by a page.
+mouse wheel upd and down should scroll the markdown.
+markdown should be white backgroun with black text.
+selecting text in the markdown preview should be in a different highlight color from the background.
+
 
 ## improvements
 

@@ -1,4 +1,5 @@
 import type { LogEntry, BufferLine, Tab, ImageView, PageView, HarnessView } from './types.js';
+import { formatMessageContent, tryCollapseToolSteps } from './buffer.js';
 
 export const dotColors = [
   '#5b9cff', '#ff6b6b', '#ffd93d', '#6bcb77', '#4d96ff',
@@ -139,31 +140,19 @@ export function wordWrap(text: string, width: number): string {
 }
 
 
-// An entry that contributes nothing to the transcript (e.g. an empty ACP continuation
-// turn). Such entries are skipped when rendering and do not break a run of tool steps.
-const isEmptyEntry = (entry: LogEntry): boolean => !entry.from && !entry.input && !entry.output;
-
 export function flattenBuffer(log: LogEntry[], shouldCollapseToolSteps = false): BufferLine[] {
   const lines: BufferLine[] = [];
   for (let index = 0; index < log.length; index++) {
     const entry = log[index];
 
-    // Collapse a contiguous run of auto-run agent tool steps (acp entries) into one
-    // summary line. Empty entries interspersed in the run (continuation turns that
-    // produced no prose) are absorbed without breaking the run.
-    if (shouldCollapseToolSteps && entry.acp && !entry.from) {
-      let count = 0;
-      let index_ = index;
-      while (index_ < log.length) {
-        const logEntry = log[index_];
-        if (isEmptyEntry(logEntry)) { index_++; continue; }
-        if (logEntry.acp && !logEntry.from) { count++; index_++; continue; }
-        break;
+    if (shouldCollapseToolSteps) {
+      const collapse = tryCollapseToolSteps(log, index);
+      if (collapse) {
+        if (lines.length > 0) lines.push({ type: 'spacer', text: '' });
+        lines.push({ type: 'collapsed', text: `${collapse.count} tool step${collapse.count === 1 ? '' : 's'}`, acp: true });
+        index = collapse.newIndex;
+        continue;
       }
-      if (lines.length > 0) lines.push({ type: 'spacer', text: '' });
-      lines.push({ type: 'collapsed', text: `${count} tool step${count === 1 ? '' : 's'}`, acp: true });
-      index = index_ - 1;
-      continue;
     }
 
     // An inline terminal card (interactive program / harness PTY). Rendered as its own line
@@ -177,22 +166,8 @@ export function flattenBuffer(log: LogEntry[], shouldCollapseToolSteps = false):
     if (entry.from) {
       // Blank separator line above each message.
       if (lines.length > 0) lines.push({ type: 'spacer', text: '' });
-      const kind = entry.msgKind ?? 'info';
       const parts = entry.output.split('\n');
-      if (kind === 'response') {
-        // Response: a `● <from>:` header, then the output starting on the next line,
-        // every line bordered in the responder's color.
-        lines.push({ type: 'message', text: '', from: entry.from, fromColor: entry.fromColor, msgKind: 'response' });
-        for (const line of parts) {
-          lines.push({ type: 'output', text: expandTabs(line), fromColor: entry.fromColor });
-        }
-      } else {
-        // info: `● <from>: <text>`; request: `● request from <from>: <text>`.
-        lines.push({ type: 'message', text: expandTabs(parts[0] ?? ''), from: entry.from, fromColor: entry.fromColor, msgKind: kind });
-        for (const extra of parts.slice(1)) {
-          lines.push({ type: 'output', text: expandTabs(extra), fromColor: entry.fromColor });
-        }
-      }
+      lines.push(...formatMessageContent(entry, parts));
       continue;
     }
     // Skip entries with no input and no output (e.g. empty ACP continuation turns).

@@ -42,6 +42,25 @@ This completes in seconds and is the entire development loop. `check:diff` is sc
 | `npm run check:diff` | After each change | AI (always) | ~10-40s |
 | `npm run check` | Once, end of work | Human only | ~2min |
 
+## Capturing command output
+
+**Never re-run a slow command multiple times to filter its output differently.** Capture once, filter as needed:
+
+```bash
+# ❌ Antipattern — runs npm 3 times
+npm run lint 2>&1 | grep "sonarjs"
+npm run lint 2>&1 | grep "buffer.ts"
+npm run lint 2>&1 | tail -3
+
+# ✅ Correct — run once, filter repeatedly
+output=$(npm run lint 2>&1)
+echo "$output" | grep "sonarjs"
+echo "$output" | grep "buffer.ts"
+echo "$output" | tail -3
+```
+
+This applies to any slow command: lint, typecheck, test runs, builds. Capture to a variable (or scratchpad file for very large output), then grep/filter the captured result.
+
 ## Code guidelines
 
 Follow the conventions in [`CODE_GUIDELINES.md`](CODE_GUIDELINES.md), including the
