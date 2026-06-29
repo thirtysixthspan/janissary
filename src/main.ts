@@ -72,18 +72,22 @@ function findSystemChrome(): string | null {
 // Open the app in a frameless headed Chrome "app" window (no tabs/omnibox/nav bar) using the
 // user's installed system Chrome/Chromium. Uses a dedicated profile under `.janissary/chrome` so
 // it launches a clean, independent instance (and keeps logins across launches). Falls back to the
-// default browser if no system Chrome is found.
+// default browser if no system Chrome is found. The bundled declarativeNetRequest extension strips
+// X-Frame-Options / CSP frame-ancestors from sub-frame responses so all sites render in page tabs.
 function openApp(url: string, projectDir: string): void {
   const exe = findSystemChrome();
   if (!exe) { openUrl(url); return; }
   const profile = path.join(projectDir, '.janissary', 'chrome');
   mkdirSync(profile, { recursive: true });
+  const extDir = path.join(import.meta.dirname, '..', 'chrome-extension');
   const child = spawn(exe, [
     `--app=${url}`,
     `--user-data-dir=${profile}`,
     '--no-first-run',
     '--no-default-browser-check',
     '--window-size=1280,800',
+    `--load-extension=${extDir}`,
+    `--disable-extensions-except=${extDir}`,
   ], { stdio: 'ignore', detached: true });
   child.on('error', () => openUrl(url));
   child.unref();

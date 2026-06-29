@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, readdirSync, realpathSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -9,9 +9,13 @@ import { initLogDir, getLogDir } from './logger.js';
 import { initDbDir, isConnectionOpen, closeAllConnections } from './connections.js';
 import { loadConfig } from './config.js';
 import { agentNames } from './commands.js';
+import { spawnPty } from './pty.js';
+import type { PtyHandlers } from './pty.js';
 
 // The external-open path shells out to the OS image viewer; stub it so tests never launch an app.
 vi.mock('./openers/os-open.js', () => ({ didOsOpen: () => true }));
+// Mock spawnPty so harness tests never spawn real processes.
+vi.mock('./pty.js');
 
 // Sinks that just count state emissions; no PTY/shell spawning is exercised here.
 const makeController = () => {
@@ -624,5 +628,88 @@ describe('Controller root-path display', () => {
     const shellConn = c.view()[0].connections.find((r) => r.kind === 'shell');
     expect(shellConn?.text).toContain('$root/');
     c.shutdown();
+  });
+});
+
+describe('Controller harness view', () => {
+  let capturedHandlers: PtyHandlers | null;
+  let capturedKill: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    capturedHandlers = null;
+    capturedKill = vi.fn();
+    vi.mocked(spawnPty).mockClear();
+    vi.mocked(spawnPty).mockImplementation((program, _command, _cwd, handlers) => {
+      capturedHandlers = handlers;
+      return { id: 'mock-pty-1', program, write: vi.fn(), resize: vi.fn(), kill: capturedKill };
+    });
+  });
+
+  it('harness claude opens a harness view tab with view, title, status, and ptyId', () => {
+    const { c } = makeController();
+    c.dispatch('harness claude');
+    const tab = c.view().find((t) => t.label === 'claude');
+    expect(tab).toBeDefined();
+    expect(tab!.view).toBe('harness');
+    expect(tab!.title).toBe('claude');
+    expect(tab!.harness?.status).toBe('running');
+    expect(tab!.harness?.ptyId).toBe('mock-pty-1');
+  });
+
+  it('focuses the new harness tab', () => {
+    const { c } = makeController();
+    c.dispatch('harness claude');
+    expect(c.view()[c.activeTab].label).toBe('claude');
+  });
+
+  it('a second harness claude gets a unique label', () => {
+    vi.mocked(spawnPty)
+      .mockImplementationOnce((program, _cmd, _cwd, handlers) => {
+        capturedHandlers = handlers;
+        return { id: 'mock-pty-1', program, write: vi.fn(), resize: vi.fn(), kill: vi.fn() };
+      })
+      .mockImplementationOnce((program, _cmd, _cwd, _handlers) => {
+        return { id: 'mock-pty-2', program, write: vi.fn(), resize: vi.fn(), kill: vi.fn() };
+      });
+    const { c } = makeController();
+    c.dispatch('harness claude');
+    c.dispatch('harness claude');
+    const labels = c.view().map((t) => t.label);
+    expect(labels).toContain('claude');
+    expect(labels).toContain('claude-2');
+  });
+
+  it('PTY exit sets harness status to exited with exit code', () => {
+    const { c } = makeController();
+    c.dispatch('harness claude');
+    expect(capturedHandlers).not.toBeNull();
+    capturedHandlers!.onExit('mock-pty-1', 0);
+    const tab = c.view().find((t) => t.label === 'claude');
+    expect(tab!.harness?.status).toBe('exited');
+    expect(tab!.harness?.exitCode).toBe(0);
+  });
+
+  it('closing a harness tab kills its PTY', () => {
+    const { c } = makeController();
+    c.dispatch('harness claude');
+    const index = c.view().findIndex((t) => t.label === 'claude');
+    c.closeTab(index);
+    expect(capturedKill).toHaveBeenCalled();
+    expect(c.view().map((t) => t.label)).not.toContain('claude');
+  });
+
+  it('unknown harness name produces an error in the transcript (not a tab)', () => {
+    const { c } = makeController();
+    c.dispatch('harness gemini');
+    expect(allText(c)).toContain('Unknown harness');
+    expect(c.view().map((t) => t.label)).not.toContain('gemini');
+    expect(vi.mocked(spawnPty)).not.toHaveBeenCalled();
+  });
+
+  it('harness tab appears in the connections panel as terminal:<name>', () => {
+    const { c } = makeController();
+    c.dispatch('harness claude');
+    const tab = c.view().find((t) => t.label === 'claude');
+    expect(tab!.connections.some((r) => r.kind === 'terminal' && r.text.includes('claude'))).toBe(true);
   });
 });

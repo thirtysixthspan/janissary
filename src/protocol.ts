@@ -1,10 +1,10 @@
 // Wire types shared between the Node server and the React web client.
 // The web client imports these directly via the @shared path alias — no mirror needed.
-import type { BufferLine, ImageView, PageView, TerminalEntry, CompletionResult } from './types.js';
+import type { BufferLine, ImageView, PageView, HarnessView, TerminalEntry, CompletionResult } from './types.js';
 
 // Used locally in TabView below, so separate import + export is required.
 // eslint-disable-next-line unicorn/prefer-export-from
-export type { BufferLine, ImageView, PageView, TerminalEntry, CompletionResult };
+export type { BufferLine, ImageView, PageView, HarnessView, TerminalEntry, CompletionResult };
 
 // One row in the floating "connections" panel (shell / acp / terminal card / sqlite).
 export type ConnectionView = { text: string; kind: 'shell' | 'acp' | 'browser' | 'terminal' | 'sqlite' };
@@ -23,8 +23,6 @@ export type TabView = {
   groupColor: string;
   busy: boolean;
   cwd: string;
-  // Name of a running AI harness on this tab, if any (for the tab-strip marker).
-  harness?: string;
   // provider/model of a connected ACP agent on this tab, if any.
   acp?: string;
   connections: ConnectionView[];
@@ -32,14 +30,16 @@ export type TabView = {
   bufferLines: BufferLine[];
   cmdHistory: string[];
   toolStepsExpanded: boolean;
-  // Body kind: undefined/`'agent'` for a normal tab, `'image'` for an image view, `'page'` for an embedded web page.
-  view?: 'agent' | 'image' | 'page';
+  // Body kind: undefined/`'agent'` for a normal tab, `'image'` for an image view, `'page'` for an embedded web page, `'harness'` for a full-tab AI harness terminal.
+  view?: 'agent' | 'image' | 'page' | 'harness';
   // Display name when it differs from `label` (image tabs are all titled `image`).
   title?: string;
   // Image-view payload, present only when `view === 'image'`.
   image?: ImageView;
   // Page-view payload, present only when `view === 'page'`.
   page?: PageView;
+  // Harness-view payload, present only when `view === 'harness'`.
+  harness?: HarnessView;
 };
 
 export type StateEvent = { t: 'state'; tabs: TabView[]; activeTab: number; route: RouteChooserView | null };

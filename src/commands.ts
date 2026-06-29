@@ -19,6 +19,7 @@ export const availableCommands = [
   'acp',
   'db',
   'connection',
+  'harness',
 ];
 
 let helpOutput: string | null = null;

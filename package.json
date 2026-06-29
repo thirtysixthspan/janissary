@@ -49,6 +49,12 @@
   "keywords": [],
   "author": "",
   "license": "UNLICENSED",
+  "files": [
+    "bin",
+    "dist",
+    "chrome-extension",
+    "agent-names.json"
+  ],
   "type": "module",
   "dependencies": {
     "@agentclientprotocol/sdk": "^0.28.1",

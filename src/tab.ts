@@ -1,4 +1,4 @@
-import type { LogEntry, BufferLine, Tab, ImageView, PageView } from './types.js';
+import type { LogEntry, BufferLine, Tab, ImageView, PageView, HarnessView } from './types.js';
 
 export const dotColors = [
   '#5b9cff', '#ff6b6b', '#ffd93d', '#6bcb77', '#4d96ff',
@@ -77,6 +77,12 @@ export const makePageTab = (label: string, dotColor: string, number: number, gro
   view: 'page',
   title: `${page.number}) ${page.domain}`,
   page,
+});
+
+// A harness view tab (opened via `harness <name>`). The entire tab body is a live PTY terminal.
+export const makeHarnessTab = (label: string, dotColor: string, number: number, group: number, groupColor: string, harness: HarnessView): Tab => ({
+  ...makeTab(label, dotColor, number, [], [], undefined, group, groupColor),
+  view: 'harness', title: harness.name, harness,
 });
 
 // Expand tab characters to spaces (8-column tab stops). Terminals render a tab as

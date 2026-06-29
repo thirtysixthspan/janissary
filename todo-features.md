@@ -3,10 +3,12 @@
 create a new command called harness.
 called: harness harnessname 
 where harnessname is [claude, opencode, codex] 
-calling the harness should take over the tab and allow the harness to render within the tab.
+calling the harness opens a new harness tab.
+like the image tab, the executing harness takes over the entire tab body.
+all keys, clicks and mouse movements should be sent to the harness except for those that control tab switching 
 tab switching should still be supported
-upon closing the harness, the cli in the terminal should be restored
-
+document how to use the harness tabs in the readme and help
+create a harness spec
 
 ## improvements
 

@@ -160,6 +160,14 @@ html, body, #root {
   color: var(--fg); font-family: var(--mono); font-size: 13.1625px;
 }
 
+/* Harness tab: full-body PTY terminal with no transcript or command bar. */
+.harness-tab { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.harness-body { flex: 1; min-height: 0; background: #17181b; }
+.harness-exited {
+  padding: 4px 10px; background: var(--bg-soft); font-size: 12px; color: var(--faint);
+  border-bottom: 1px solid var(--border);
+}
+
 /* Terminal cards */
 .terminal-card { border: 1px solid var(--border); border-radius: 6px; margin: 6px 0; overflow: hidden; }
 .terminal-card.maximized {

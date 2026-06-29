@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 // Shared type declarations for the top-level `src/` modules. Types live here rather than
 // alongside their implementations so each directory has a single types file (the
 // `src/commands/` directory has its own `commands/types.ts`). Runtime values (functions,
@@ -52,6 +53,9 @@ export type BufferLine = {
 // An in-app file view mounted in a tab instead of the agent transcript/command-line body. Image
 // tabs (opened via `open <image>`) use `view: 'image'` and carry an `image` payload; ordinary agent
 // tabs leave `view` undefined.
+// Full-tab AI coding harness view (opened via `harness <name>`); the body is a live PTY terminal.
+export type HarnessView = { name: string; program: string; ptyId: string; status: 'running' | 'exited'; exitCode?: number };
+
 export type ImageView = {
   // Display name (basename), e.g. "diagram.png".
   name: string;
@@ -74,7 +78,7 @@ export type Tab = {
   number: number;
   // The tab's body kind. Undefined/`'agent'` renders the normal transcript + command line; `'image'`
   // renders the image view (no command bar). View tabs are live and in-memory — not persisted.
-  view?: 'agent' | 'image' | 'page';
+  view?: 'agent' | 'image' | 'page' | 'harness';
   // Display name shown in the tab strip when it differs from the (unique) internal `label` — e.g.
   // every image tab is titled `image` while keeping a distinct label (`image`, `image-2`, …).
   title?: string;
@@ -82,6 +86,8 @@ export type Tab = {
   image?: ImageView;
   // The page-view payload, present only when `view === 'page'`.
   page?: PageView;
+  // The harness-view payload, present only when `view === 'harness'`.
+  harness?: HarnessView;
   // Group number, shared by an agent and every agent it (transitively) creates. The root agent
   // is group 1; a launched profile forms its own group.
   group: number;

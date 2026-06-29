@@ -5,6 +5,7 @@ import { TabStrip } from './TabStrip';
 import { Transcript } from './Transcript';
 import { ImageTab } from './ImageTab';
 import { PageTab } from './PageTab';
+import { HarnessTab, type HarnessTabHandle } from './HarnessTab';
 import { CommandInput } from './CommandInput';
 import { StatusPanels } from './StatusPanels';
 import { HistoryPicker } from './HistoryPicker';
@@ -26,9 +27,12 @@ export function App() {
   const routeReference = useRef<RouteChooserView | null>(null);
   const inputReference = useRef<HTMLInputElement>(null);
   const transcriptReference = useRef<HTMLDivElement>(null);
+  const harnessHandles = useRef<Map<string, HarnessTabHandle>>(new Map());
+  const currentRef = useRef<TabView | undefined>(undefined);
   const scrollAccel = useRef<{ start: number; dir: -1 | 1 } | null>(null);
 
   const current = tabs[activeTab] ?? tabs[0];
+  currentRef.current = current;
   const lines = useMemo(() => current?.bufferLines ?? [], [current]);
   // The picker lists the tab's recent history, most recent at the bottom (suppressed when empty).
   const recent = useMemo(() => getRecentHistory(current?.cmdHistory ?? [], 10), [current]);
@@ -45,10 +49,7 @@ export function App() {
   };
   const pick = (command: string) => { runCommand(command); setPickerOpen(false); };
 
-  const selectTab = (index: number) => {
-    client.send({ method: 'setActiveTab', params: { index } });
-    inputReference.current?.focus();
-  };
+  const selectTab = (index: number) => client.send({ method: 'setActiveTab', params: { index } });
 
   const closeTab = (index: number) => client.send({ method: 'closeTab', params: { index } });
 
@@ -64,8 +65,12 @@ export function App() {
     if (nextRoute && (!previous || previous.cmd !== nextRoute.cmd)) setRouteIndex(0);
   }), [client]);
 
-  // Switching tabs (click, Shift+Arrow, `next`, reorder) returns focus to the command line.
-  useEffect(() => { inputReference.current?.focus(); }, [activeTab]);
+  // Switching tabs: harness tabs focus the terminal; all others focus the command line.
+  useEffect(() => {
+    const cur = currentRef.current;
+    const ptyId = cur?.view === 'harness' ? cur.harness?.ptyId : undefined;
+    if (ptyId) harnessHandles.current.get(ptyId)?.focus(); else inputReference.current?.focus();
+  }, [activeTab]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -157,64 +162,70 @@ export function App() {
 
   if (!current) return <div className="app" style={{ padding: 16, color: 'var(--muted)' }}>Connecting…</div>;
 
-  // An image tab renders its image view in place of the transcript + command line (no command bar).
-  if (current.view === 'image' && current.image) {
-    return (
-      <div className="app">
-        <TabStrip tabs={tabs} activeTab={activeTab} onSelect={selectTab} onClose={closeTab} />
-        <div className="tab-body" style={{ borderLeft: `4px solid ${current.dotColor}` }}>
-          <ImageTab key={current.image.url} image={current.image} />
-        </div>
-      </div>
-    );
-  }
-
-  // A page tab renders an embedded iframe in place of the transcript + command line (no command bar).
-  if (current.view === 'page' && current.page) {
-    return (
-      <div className="app">
-        <TabStrip tabs={tabs} activeTab={activeTab} onSelect={selectTab} onClose={closeTab} />
-        <div className="tab-body" style={{ borderLeft: `4px solid ${current.dotColor}` }}>
-          <PageTab page={current.page} />
-        </div>
-      </div>
-    );
-  }
+  const isViewTab = (['image', 'page', 'harness'] as const).includes(current.view as 'image' | 'page' | 'harness');
 
   return (
     <div className="app">
       <TabStrip tabs={tabs} activeTab={activeTab} onSelect={selectTab} onClose={closeTab} />
-      <div
-        className="tab-body"
-        style={{ borderLeft: `4px solid ${current.dotColor}` }}
-        onClick={() => inputReference.current?.focus()}
-        onMouseUp={() => {
-          const selection = globalThis.getSelection()?.toString();
-          if (selection) {
-            navigator.clipboard.writeText(selection);
-          }
-        }}
-      >
-        <div className="main">
-          <Transcript
-            lines={lines}
-            client={client}
-            onToggleCollapse={() => client.send({ method: 'toggleCollapse', params: {} })}
-            scrollRef={transcriptReference}
-          />
-          <StatusPanels tab={current} />
-          {route && <RouteChooser cmd={route.cmd} choices={route.choices} selected={routeIndex} onPick={chooseRoute} />}
-          {!route && pickerOpen && <HistoryPicker items={recent} selected={pickerIndex} onPick={pick} />}
+
+      {current.view === 'image' && current.image && (
+        <div className="tab-body" style={{ borderLeft: `4px solid ${current.dotColor}` }}>
+          <ImageTab key={current.image.url} image={current.image} />
         </div>
-        <CommandInput
-          dotColor={current.dotColor}
-          history={current.cmdHistory}
-          onSubmit={(text) => { if (text.trim().toLowerCase() === 'hist') openPicker(); else runCommand(text); }}
-          inputRef={inputReference}
-          complete={(text, cursor) => client.request({ method: 'complete', params: { text, cursor } })}
-          pickerOpen={pickerOpen || route !== null}
-        />
-      </div>
+      )}
+
+      {current.view === 'page' && current.page && (
+        <div className="tab-body" style={{ borderLeft: `4px solid ${current.dotColor}` }}>
+          <PageTab page={current.page} />
+        </div>
+      )}
+
+      {/* Harness layer: all harness tabs stay mounted; only the active one is visible.
+          This preserves xterm state (alternate buffer, cursor position) across tab switches. */}
+      {tabs.filter((t) => t.view === 'harness' && t.harness).map((t) => (
+        <div
+          key={t.harness!.ptyId}
+          className="tab-body"
+          style={{ borderLeft: `4px solid ${t.dotColor}`, display: t.label === current.label ? 'flex' : 'none' }}
+        >
+          <HarnessTab harness={t.harness!} client={client}
+            ref={(h) => { if (h) harnessHandles.current.set(t.harness!.ptyId, h); else harnessHandles.current.delete(t.harness!.ptyId); }} />
+        </div>
+      ))}
+
+      {!isViewTab && (
+        <div
+          className="tab-body"
+          style={{ borderLeft: `4px solid ${current.dotColor}` }}
+          onClick={() => inputReference.current?.focus()}
+          onMouseUp={() => {
+            const selection = globalThis.getSelection()?.toString();
+            if (selection) {
+              navigator.clipboard.writeText(selection);
+            }
+          }}
+        >
+          <div className="main">
+            <Transcript
+              lines={lines}
+              client={client}
+              onToggleCollapse={() => client.send({ method: 'toggleCollapse', params: {} })}
+              scrollRef={transcriptReference}
+            />
+            <StatusPanels tab={current} />
+            {route && <RouteChooser cmd={route.cmd} choices={route.choices} selected={routeIndex} onPick={chooseRoute} />}
+            {!route && pickerOpen && <HistoryPicker items={recent} selected={pickerIndex} onPick={pick} />}
+          </div>
+          <CommandInput
+            dotColor={current.dotColor}
+            history={current.cmdHistory}
+            onSubmit={(text) => { if (text.trim().toLowerCase() === 'hist') openPicker(); else runCommand(text); }}
+            inputRef={inputReference}
+            complete={(text, cursor) => client.request({ method: 'complete', params: { text, cursor } })}
+            pickerOpen={pickerOpen || route !== null}
+          />
+        </div>
+      )}
     </div>
   );
 }

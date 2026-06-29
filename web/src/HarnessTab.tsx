@@ -1,0 +1,41 @@
+import React, { forwardRef, useImperativeHandle, useRef } from 'react';
+import type { JanusClient } from './ws';
+import type { HarnessView } from '@shared/protocol';
+import { useXterm } from './useXterm';
+
+type Properties = { harness: HarnessView; client: JanusClient };
+export type HarnessTabHandle = { focus(): void };
+
+// Returns true to send to PTY, false to bubble (switch tabs).
+function harnessKeyFilter(e: KeyboardEvent): boolean {
+  if (e.type !== 'keydown') return true;
+  const isTabSwitch = e.shiftKey && !e.ctrlKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight');
+  return !isTabSwitch;
+}
+
+// Full-tab harness terminal: no card chrome, no command bar — the body is the PTY. All keys reach
+// the harness except the tab-switch chord (Shift+←/→), which bubbles to the window handler.
+export const HarnessTab = forwardRef<HarnessTabHandle, Properties>(function HarnessTab({ harness, client }, ref) {
+  const hostReference = useRef<HTMLDivElement>(null);
+  const focusTerm = useXterm({
+    ptyId: harness.ptyId,
+    client,
+    containerRef: hostReference,
+    keyFilter: harnessKeyFilter,
+    onMount: (term) => { term.focus(); },
+  });
+
+  useImperativeHandle(ref, () => ({ focus: focusTerm }), [focusTerm]);
+
+  const isExited = harness.status === 'exited';
+  return (
+    <div className="harness-tab">
+      {isExited && (
+        <div className="harness-exited">
+          exited{harness.exitCode === undefined ? '' : ` (${harness.exitCode})`}
+        </div>
+      )}
+      <div className="harness-body" ref={hostReference} onClick={() => { /* focus handled by xterm */ }} />
+    </div>
+  );
+});

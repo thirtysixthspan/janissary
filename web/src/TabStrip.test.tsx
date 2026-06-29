@@ -60,6 +60,13 @@ describe('TabStrip', () => {
     expect(screen.queryAllByRole('button', { name: /close/i })).toHaveLength(1);
   });
 
+  it('shows a close button for harness tabs and renders the harness name', () => {
+    const tab = makeTab({ label: 'claude', view: 'harness', title: 'claude' });
+    render(<TabStrip tabs={[tab]} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()} />);
+    expect(screen.getByText('claude')).toBeInTheDocument();
+    expect(screen.queryAllByRole('button', { name: /close/i })).toHaveLength(1);
+  });
+
   it('shows a close button for page tabs and renders the title', () => {
     const tab = makeTab({ label: 'page-1', view: 'page', title: '1) slashdot.org' });
     render(<TabStrip tabs={[tab]} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()} />);

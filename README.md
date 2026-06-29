@@ -32,10 +32,23 @@ janus
 | `acp`        | Send a prompt to the OpenCode ACP agent |
 | `db`         | Create, delete, query, or list SQLite databases |
 | `browser`    | Drive a headless/headed web browser (open, goto, content, eval, shot) |
-| `open`       | Open images/files in a tab, or web pages embedded (`open https://…` / `open page …`); `open external` uses the OS viewer/browser |
+| `open`       | Open images/files in a tab, or web pages embedded (`open https://…` / `open page …`) — sites that refuse framing render too; `open external` uses the OS viewer/browser |
 | `connection` | List or close open connections (sqlite/shell/acp/browser) |
 | `schedule`   | Run a command later — once or on a recurring schedule |
 | `profile`    | Launch a saved set of agents for a use case |
+| `harness`    | Open an AI coding harness (claude/opencode/codex) in a full-tab terminal |
+
+### Harness tabs
+
+`harness <name>` opens a new tab whose entire body is a running AI coding harness:
+
+```
+harness claude     → new tab "claude" running the claude CLI, full-tab
+harness opencode   → new tab "opencode"
+harness codex      → new tab "codex"
+```
+
+The harness fills the tab and receives all keyboard input, clicks, and mouse events. **Switching to a harness tab automatically focuses the terminal** — you can start typing immediately without clicking. Switch away with Shift+←/→ or by clicking a tab in the strip. Ctrl-combinations (including Ctrl+C) are sent to the harness. Close the tab with the tab strip's × or the `close` command (this quits the harness). Note that reorder/collapse chords are unavailable while a harness tab is focused — switch away first. The harness binary must be on `PATH`.
 
 ### Configuration
 
@@ -282,7 +295,7 @@ open external <path>   # hand the file to the OS viewer (images: Preview on macO
 open '*.png'           # a wildcard opens each matching file (up to 10)
 ```
 
-- **`open <image>`** mounts a new **image tab** showing the image's name, size, and location alongside the image itself. The tab has no command bar; it is named `image` with a close (`×`) button on the tab, and otherwise behaves like any tab — reorder it within its group with `Ctrl+←` / `Ctrl+→`. A landscape image fills the full width; a portrait image fills the remaining height. Image tabs are live and in-memory — they are not restored on `--relaunch`.
+- **`open <image>`** mounts a new **image tab** showing the image's name, size, and location alongside the image itself. The tab has no command bar; it is named `image` with a close (`×`) button on the tab, and otherwise behaves like any tab — reorder it within its group with `Ctrl+←` / `Ctrl+→`. A landscape image fills the full width; a portrait image fills the remaining height. While an image tab is active: **Page Up / Page Down** (or the scroll wheel) zoom in and out in 10% steps (10%–800%); **arrow keys** pan the view; **click and drag** pans freely; **Escape** resets to 100% and centers. A zoom badge (e.g. `150%`) appears when zoomed. Image tabs are live and in-memory — they are not restored on `--relaunch`.
 - **`open external <image>`** launches the file in the operating system's image viewer.
 - **Wildcards** are expanded by the shell (in the tab's working directory), and `open` then acts on each matched file in turn, up to a maximum of **10** — extra matches are skipped with a note, and a pattern that matches nothing reports no matching files. A path with no wildcard is always a single literal target.
 
@@ -381,6 +394,16 @@ OpenCode ships an ACP server mode, so it works as a drop-in agent. Before using 
 | `Enter`             | Execute the current command        |
 | `Ctrl+C`            | Exit                              |
 
+**Image tab controls** (active only while an image tab is focused):
+
+| Key | Action |
+| --- | ------ |
+| `Page Up` / scroll-wheel up | Zoom in (10% per step, up to 800%) |
+| `Page Down` / scroll-wheel down | Zoom out (10% per step, down to 10%) |
+| `↑` / `↓` / `←` / `→` | Pan the image |
+| Click and drag | Pan freely |
+| `Escape` | Reset zoom to 100% and center the view |
+
 `Tab` completes the word at the cursor: filesystem paths against the tab's working directory; at the recipient position of `msg` / `broadcast`, active agent names (`broadcast` also offers `all` and completes each entry of a comma-separated list); at the target of `connection close`, the tab's open connection strings (`sqlite:<name>`, `shell:<shell>`, `acp:opencode`, `browser:<id>`); and for the `browser` command, its subcommands (`open`, `goto`, `content`, …) plus the tab's open window ids where one is expected (`browser use`, `browser window close`).
 
 ## Development
@@ -435,10 +458,10 @@ Completes in seconds. You can also run individual commands above if you want to 
 **At the end of work** — run once when all changes are complete:
 
 ```bash
-npm run check        # full gate — lint all, typecheck all, test all, plus complexity/duplication/dead code
+npm run check        # full gate (humans only) — lint all, typecheck all, test all, plus complexity/duplication/dead code
 ```
 
-This adds CSS linting, code complexity metrics, duplication detection, dead code scanning, the full test suite, and coverage thresholds. Use `check:diff` dozens of times while working, but run `check` only once, at the very end.
+This adds CSS linting, code complexity metrics, duplication detection, dead code scanning, the full test suite, and coverage thresholds. **Use `check:diff` dozens of times while working, but run `check` only once, at the very end.** AI developers should never run `check` — leave it for the human to verify before shipping.
 
 ### Code Coverage
 

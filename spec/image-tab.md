@@ -2,7 +2,7 @@
 
 An **image tab** displays a single image opened with the `open` command (see Open → Image opener).
 It is a non-agent **view tab**: it shows the image and its metadata in place of the usual
-transcript and command bar, and is controlled by direct interaction (zoom keys and the wheel)
+transcript and command bar, and is controlled by direct interaction (zoom, pan, and the scroll wheel)
 rather than a command line.
 
 An image tab is created like an agent tab (see Tabs) — placed contiguously within the active tab's
@@ -66,23 +66,29 @@ aspect ratio. The fit is recomputed when the image loads and when the tab is res
 The image can be zoomed in and out about its fit. **100%** is the fit-to-tab size described under
 Sizing; zooming scales the image relative to that baseline, preserving aspect ratio.
 
-Controls, active while the image tab is showing:
+**Zoom controls**, active while the image tab is showing:
 
-- **Up arrow** or **scroll-wheel up** — zoom **in** (more).
-- **Down arrow** or **scroll-wheel down** — zoom **out** (less).
-- **Escape** — reset zoom to **100%**.
+- **Page Up** or **scroll-wheel up** — zoom **in** (more).
+- **Page Down** or **scroll-wheel down** — zoom **out** (less).
+- **Escape** — reset zoom to **100%** and center the view.
 
-Each arrow press or wheel notch changes the zoom by a fixed step (10%); holding an arrow repeats.
-Zoom is clamped to the range **10%–800%** and saturates at those bounds. The arrow keys and the
-wheel act on the image only while an image tab is active; they do not scroll a transcript or switch
-tabs there.
+Each key press or wheel notch changes zoom by a fixed step of 10%; holding Page Up / Page Down
+repeats. Zoom is clamped to the range **10%–800%** and saturates at those bounds.
 
-While zoomed (any level other than 100%) the current **zoom percentage** is indicated on the view
-(for example, `150%`); at 100% no indicator is shown.
+While zoomed (any level other than 100%) the current **zoom percentage** is shown on the view (for
+example, `150%`); at 100% no indicator is shown.
 
-When the image is zoomed in beyond the tab area, the parts outside the visible region can be reached
-by scrolling within the view. Zoom is a live, in-memory property of the view: a newly opened image
-tab starts at 100%, and zoom is not persisted or restored.
+### Panning
+
+When the image is zoomed in beyond the tab area, the out-of-view parts are reached by panning:
+
+- **Arrow keys** (↑ / ↓ / ← / →) — pan in that direction; hold an arrow to pan continuously.
+- **Click and drag** — press the primary mouse button on the image and drag to pan freely in any
+  direction.
+
+No scrollbars are shown; panning is via the arrow keys and drag. Zoom and pan are live, in-memory:
+a newly opened image tab starts at 100% zoom with no offset, and the state is not persisted or
+restored on `--relaunch`. Switching to a different image tab resets zoom and pan to their defaults.
 
 ### Tab strip: name and close button
 

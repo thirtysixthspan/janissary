@@ -1,8 +1,8 @@
 /* eslint-disable max-lines */
 import { spawnSync, type ChildProcess } from 'node:child_process';
-import type { Tab, LogEntry, ScheduleEntry, AcpSession, AcpInfo, ImageView, PageView } from './types.js';
+import type { Tab, LogEntry, ScheduleEntry, AcpSession, AcpInfo, ImageView, PageView, HarnessView } from './types.js';
 import {
-  makeTab, makeImageTab, makePageTab, distinctColor, insertTabInGroup, flattenBuffer, stripComments,
+  makeTab, makeImageTab, makePageTab, makeHarnessTab, distinctColor, insertTabInGroup, flattenBuffer, stripComments,
   swapTabsLeft, swapTabsRight,
 } from './tab.js';
 import { existsSync, statSync } from 'node:fs';
@@ -128,14 +128,14 @@ export class Controller {
     return this.tabs.map((t) => ({
       label: t.label, number: t.number, dotColor: t.dotColor, group: t.group, groupColor: t.groupColor,
       busy: this.busy.has(t.label), cwd: this.cwd.get(t.label) ?? process.cwd(),
-      harness: this.harnessOf.get(t.label), acp: this.acpLabel(t.label),
+      acp: this.acpLabel(t.label),
       connections: this.connectionsFor(t.label), schedule: this.scheduleFor(t.label),
       // Prompt lines carry the working directory; abbreviate it to `$root`/`~` for display only
       // (the stored cwd stays the real absolute path).
       bufferLines: flattenBuffer(t.log, !t.toolStepsExpanded)
         .map((l) => (l.cwd ? { ...l, cwd: this.shorten(l.cwd) } : l)),
       cmdHistory: t.cmdHistory, toolStepsExpanded: !!t.toolStepsExpanded,
-      view: t.view, title: t.title, image: t.image, page: t.page,
+      view: t.view, title: t.title, image: t.image, page: t.page, harness: t.harness,
     }));
   }
 
@@ -309,7 +309,7 @@ export class Controller {
     if (/^harness\b/i.test(input)) {
       const parsed = parseHarnessCommand(input);
       if ('error' in parsed) this.append(label, { input, output: parsed.error });
-      else this.openPty(label, HARNESS_COMMANDS[parsed.name], parsed.name, parsed.name);
+      else this.openHarnessTab(parsed.name);
       return;
     }
     const res = resolveCommand(input);
@@ -654,6 +654,40 @@ export class Controller {
     return n;
   }
 
+  // Create and focus a harness view tab adjacent to the active tab's group. The tab body is a live
+  // PTY terminal (no transcript or command bar). Harness tabs are in-memory and never persisted.
+  private openHarnessTab(name: string): void {
+    const creator = this.cur();
+    const program = HARNESS_COMMANDS[name];
+    const cwd = this.cwd.get(creator.label) ?? process.cwd();
+    const label = this.uniqueHarnessLabel(name);
+    const dotColor = distinctColor(this.tabs.map((t) => t.dotColor));
+    const group = creator?.group ?? 1;
+    const groupColor = creator?.groupColor ?? dotColor;
+    const harness: HarnessView = { name, program, ptyId: '', status: 'running' };
+    const tab = makeHarnessTab(label, dotColor, this.tabs.length + 1, group, groupColor, harness);
+    this.tabs = insertTabInGroup(this.tabs, tab);
+    this.activeTab = this.tabs.findIndex((t) => t.label === label);
+    const session = spawnPty(program, program, cwd, {
+      onData: (id, data) => this.sinks.sendPty(id, data),
+      onExit: (id, exitCode) => this.onPtyExit(id, exitCode),
+    }, this.cols, this.rows);
+    this.ptys.set(session.id, { session, tabLabel: label });
+    const liveTab = this.tabs.find((t) => t.label === label);
+    if (liveTab?.harness) liveTab.harness.ptyId = session.id;
+    this.sinks.emitState();
+  }
+
+  // Unique internal label for a harness tab: `claude`, `claude-2`, … The displayed title is the
+  // name only; only the internal label is disambiguated so several harness tabs can coexist.
+  private uniqueHarnessLabel(name: string): string {
+    const used = new Set(this.tabs.map((t) => t.label));
+    if (!used.has(name)) return name;
+    let n = 2;
+    while (used.has(`${name}-${n}`)) n++;
+    return `${name}-${n}`;
+  }
+
   // --- schedule ------------------------------------------------------------
 
   private runSchedule(command: string, label: string): void {
@@ -916,14 +950,22 @@ export class Controller {
   private onPtyExit(id: string, exitCode: number): void {
     const entry = this.ptys.get(id);
     this.ptys.delete(id);
-    if (entry) this.harnessOf.delete(entry.tabLabel);
+    // Handle harness view tabs: update status in the harness payload.
     for (const tab of this.tabs) {
-      const index = tab.log.findIndex((e) => e.terminal?.ptyId === id);
-      if (index !== -1) {
-        const log = [...tab.log];
-        log[index] = { ...log[index], terminal: { ...log[index].terminal!, status: 'exited', exitCode } };
-        tab.log = log;
-        this.persist(tab);
+      if (tab.harness?.ptyId === id) {
+        tab.harness = { ...tab.harness, status: 'exited', exitCode };
+      }
+    }
+    // Handle inline terminal cards: update status in the log entry.
+    if (entry) {
+      for (const tab of this.tabs) {
+        const index = tab.log.findIndex((e) => e.terminal?.ptyId === id);
+        if (index !== -1) {
+          const log = [...tab.log];
+          log[index] = { ...log[index], terminal: { ...log[index].terminal!, status: 'exited', exitCode } };
+          tab.log = log;
+          this.persist(tab);
+        }
       }
     }
     this.sinks.sendPtyExit(id, exitCode);

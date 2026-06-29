@@ -2,39 +2,51 @@
 
 ## Verifying changes
 
-This project uses two complementary commands for checking code:
+### ✅ AI workflow — use these commands while developing
 
-### During development — `npm run check:diff` (fast)
+**Always use the fast diff-scoped commands** after each change:
 
-After each change, run **`npm run check:diff`** for fast feedback:
+```bash
+npm run lint:diff           # lint changed files
+npm run typecheck:diff      # typecheck affected projects (incremental)
+npm run test:diff:server    # server tests for changes
+npm run test:diff:web       # web tests for changes
+npm run check:diff          # orchestrator: runs all four above concurrently
+```
 
-- **Lints** only the files you changed
-- **Typechecks** the affected project(s) incrementally (fast on repeated runs)
-- **Tests** related tests from the affected area(s):
-  - Server tests (`test:diff:server`) if `src/` files changed
-  - Web tests (`test:diff:web`) if `web/src/` files changed
+Pick the one(s) you want, or just run **`npm run check:diff`** which automatically:
+
+- Lints only the files you changed
+- Typechecks the affected project(s) incrementally (fast on repeated runs)
+- Tests related tests from the affected area(s):
+  - Server tests if `src/` files changed
+  - Web tests if `web/src/` files changed
   - Both if changes touch both areas
 
-This completes in seconds and is meant for the inner development loop. `check:diff` is scoped to the uncommitted working tree; committing or reverting mid-task rescopes it automatically.
+This completes in seconds and is the entire development loop. `check:diff` is scoped to the uncommitted working tree; committing or reverting mid-task rescopes it automatically.
 
-### At the very end — `npm run check` (full gate)
+### ❌ `npm run check` — HUMANS ONLY
 
-When all work is complete, run the full **`npm run check`** exactly once. It adds:
+**Do NOT run `npm run check` while developing.** This is the end-of-work gate meant only for humans or CI:
 
-- Full CSS linting (`stylelint`)
-- Code complexity checks (`fta`)
-- Duplication detection (`jscpd`)
-- Dead export detection (`knip`)
-- Full test suite (all tests, all projects)
-- Coverage thresholds
+- Slow: lints all files, typechecks both full projects, runs the entire test suite
+- Coverage thresholds enforced
+- Also adds CSS linting, code complexity checks, duplication detection, dead code scanning
 
-This is the actual gate; `check:diff` is a speed optimization for development, not a substitute.
+**Leave it for the human to run exactly once, after all work is complete.** If you run it while iterating, it wastes time and blocks the human's workflow.
 
-## Why two commands?
+## Summary
 
-- **`check:diff`** is designed to be run dozens of times while working (after each edit).
-- **`check`** is thorough but slow; running it after every change kills developer velocity.
-- Using both together gives fast feedback during development + comprehensive assurance before shipping.
+| Command | When | Who | Speed |
+| --- | --- | --- | --- |
+| `npm run check:diff` | After each change | AI (always) | ~10-40s |
+| `npm run check` | Once, end of work | Human only | ~2min |
+
+## Code guidelines
+
+Follow the conventions in [`CODE_GUIDELINES.md`](CODE_GUIDELINES.md), including the
+file-size limit and how to respond to it (extract code into a new module — never compact
+code, strip comments, or delete spacing to get under the limit).
 
 ## Project structure
 
