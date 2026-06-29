@@ -128,9 +128,9 @@ Record the PR number/URL that `gh` prints.
 
 ---
 
-## Step 6 — Determine mergeability
+## Step 6 — Check for conflicts
 
-GitHub computes mergeability asynchronously, so poll until it is known:
+GitHub computes conflict status asynchronously, so poll until it is known:
 
 ```bash
 for i in 1 2 3 4 5 6; do
@@ -141,14 +141,14 @@ done
 echo "mergeable: $STATE"
 ```
 
-- `MERGEABLE` → **no conflicts with master.** Skip to **Step 8 (merge)**.
-- `CONFLICTING` → **conflicts with master.** Go to **Step 7 (rebase loop)**.
+- `MERGEABLE` → **no conflicts with master, ready for automerge.** Skip to **Step 8 (report)**.
+- `CONFLICTING` → **conflicts with master.** Go to **Step 7 (resolve conflicts)**.
 
 ---
 
 ## Step 7 — Resolve conflicts against master (repeat up to 5 times)
 
-Run the loop below **at most 5 times**. Stop as soon as the PR becomes `MERGEABLE`.
+Run the loop below **at most 5 times**. Stop as soon as the PR becomes `MERGEABLE` (ready for automerge).
 
 For each attempt:
 
@@ -179,7 +179,7 @@ For each attempt:
    npm run check 2>&1
    ```
 
-   It must be green. Fix any fallout from the merge before continuing.
+   It must be green. Fix any fallout from the rebase before continuing.
 
 5. **Push the rebased branch** (history was rewritten, so force is required, but safely):
 
@@ -187,31 +187,13 @@ For each attempt:
    git push --force-with-lease "$GH" "$BRANCH" 2>&1
    ```
 
-6. **Re-check mergeability** (poll as in Step 6). If `MERGEABLE`, leave the loop and go to Step 8. If still `CONFLICTING`, start the next attempt.
+6. **Re-check conflict status** (poll as in Step 6). If `MERGEABLE`, leave the loop and go to Step 8. If still `CONFLICTING`, start the next attempt.
 
-If the PR is **still conflicting after 5 attempts**, **STOP**: do not merge. Report that conflicts could not be resolved automatically and leave the PR open for a human.
-
----
-
-## Step 8 — Merge the PR (squash only)
-
-Always merge with **squash** — the whole PR lands as a single commit on `master`. Reuse the commit subject/body from Step 3 (including the `AI-Task:` trailer and no co-authors) as the squash commit message:
-
-```bash
-gh pr merge "$BRANCH" -R "$OWNER_REPO" --squash 2>&1
-```
-
-Confirm it actually merged:
-
-```bash
-gh pr view "$BRANCH" -R "$OWNER_REPO" --json state,merged,mergedAt 2>&1
-```
-
-If the merge is blocked (branch protection, required reviews/checks), report the exact reason and leave the PR open — do not try to bypass protections.
+If the PR is **still conflicting after 5 attempts**, **STOP**: report that conflicts could not be resolved automatically and leave the PR open for a human.
 
 ---
 
-## Step 9 — Report
+## Step 8 — Report
 
 Give the user a short report in this exact shape:
 
@@ -221,7 +203,7 @@ Branch:         <branch>
 PR:             <url> (#<number>)
 npm run check:  pass
 Conflicts:      none | resolved in <n> rebase attempt(s) | unresolved after 5 attempts
-Merged:         yes / no (<reason if no>)
+Status:         ready for automerge
 ```
 
 Keep it brief. Done.
