@@ -1,6 +1,8 @@
-# Improve Code Quality (one safe fix per run)
+# Improve Code Quality (one safe extraction per run)
 
-Your job: make **one** small, safe change that removes **one** code-quality warning — then prove you did not break anything. Do exactly one fix, then verify.
+Your job: make **one** small, safe change that lowers the complexity of **one** high-complexity file by **moving a cohesive group of its code out into a new, focused module file** — then prove you did not break anything. Do exactly one extraction, then verify.
+
+This is the **only** way we reduce a file's size and complexity here: extract a cohesive group of related code into a new file and import it back. Never compact code, strip comments, or delete blank lines to shrink a file — that hurts readability without improving the design (see [`CODE_GUIDELINES.md`](../CODE_GUIDELINES.md)).
 
 Refactoring edits real code, so the rule is simple: **the tests must pass before you start and still pass after. If you cannot keep them passing, put the code back the way it was.**
 
@@ -14,25 +16,21 @@ There are two kinds of work: **safe** and **needs-permission**.
 
 When your plan is **only** safe work, you **must carry it out yourself, start to finish, without stopping.** Do **not** ask "Do you want me to proceed?". Do **not** pause to show the plan for approval. Do **not** wait for confirmation. Just make the change and verify it. Asking for permission on safe work is a mistake.
 
-Safe work is exactly these three fixes (and nothing else), each done by its Recipe in Step 5:
-
-- **Recipe A** — replace a repeated string with a named constant (warning `sonarjs/no-duplicate-string`).
-- **Recipe B** — merge two identical local functions into one (warning `sonarjs/no-identical-functions`).
-- **Recipe C** — move one self-contained block out of a too-complex function into a small helper (warning `sonarjs/cognitive-complexity`).
+Safe work is exactly this: **extract one cohesive group of code from a high-complexity source file into one (or more) new module files you create, and import it back** — done by the Recipe in Step 5, and nothing else.
 
 ### Needs-permission work — STOP and ask first
 
-**STOP and ask the user first** if doing the fix would require any of these:
+**STOP and ask the user first** if doing the extraction would require any of these:
 
-1. Renaming, removing, or changing the arguments of anything declared with **`export`** (other files import it — that is a public API change).
-2. Editing **more than 2 source files**, or changing import paths in more than 3 files (a new helper file does not count as one of the 2).
-3. Touching **`src/controller.ts`** (the biggest, riskiest file).
+1. Changing the **public API** of a file other files depend on — i.e. you cannot keep every existing `import` working. (If you move an `export`ed symbol but **re-export it from the original file** so no other file changes, that is still safe.)
+2. Editing **more than 1 existing source file**, or changing import paths in more than 3 files (the new module file(s) you create do not count).
+3. Touching **`src/controller.ts`** (the biggest, riskiest file) — even though it has the highest score.
 4. Editing **any test file** (`*.test.ts`, `*.test.tsx`).
 5. Touching **security, password/crypto, shell-execution, PTY/terminal, or network/browser** code.
 
 If any of 1–5 is true: do NOT change any code. Show the user your plan (from Step 4), say which of 1–5 applies, and ask: **"Do you want me to proceed?"** Then wait. (This is the **only** time you ever stop to ask.)
 
-> You may edit **only** the one source file you picked, plus (optionally) **one** new helper file you create. Never edit `fta.json`, `eslint.config.mjs`, `package.json`, `tsconfig.json`, or any other config or test file. Leave the `score_cap` in `fta.json` alone.
+> You may edit **only** the one existing source file you picked, plus the **new module file(s)** you create to receive the extracted code. Never edit `fta.json`, `eslint.config.mjs`, `package.json`, `tsconfig.json`, or any other config or test file. Leave the `score_cap` in `fta.json` alone.
 
 ---
 
@@ -49,54 +47,58 @@ npm run quality 2>&1
 Then record these starting numbers — you will compare against them at the end. Put them straight into your report draft (Step 7):
 
 - **Tests:** they must be **green** (all passing). If any test is already failing **before** you touch anything, STOP and tell the user — do not start a refactor on a broken suite.
-- **Lint:** near the end of `npm run lint` there is a summary line like `✖ 16 problems (0 errors, 16 warnings)`. Write down the **errors** count and the **warnings** count.
-- **Quality (FTA):** `npm run quality` prints a table per area, sorted worst-first. Lower score = better. You only need the score of the file you end up picking.
+- **Quality (FTA):** `npm run quality` prints a table per area, sorted worst-first, with each file's **line count** and **FTA score** (lower = better). This is your **primary** signal for what to extract from. Write down the score and line count of the file you end up picking.
+- **Lint:** near the end of `npm run lint` there is a summary line like `✖ 16 problems (0 errors, 16 warnings)`. Write down the **errors** count and the **warnings** count. Note especially any `max-lines` (file over 200 lines) and `sonarjs/cognitive-complexity` warnings — these point straight at extraction targets.
 
 Always run these fresh. Do not trust earlier output in the conversation.
 
 ---
 
-## Step 2 — Read the warnings
+## Step 2 — Read the signals
 
-Each `sonarjs` warning in the `npm run lint` output looks like this:
+You are looking for the file that most needs code moved out of it. Two places tell you:
+
+- The **FTA table** (`npm run quality`): the top rows are the worst files. A high score usually means the file is both long and complex — a prime candidate to split.
+- The **lint warnings** (`npm run lint`): a `max-lines` error means the file is over the 200-line limit and *must* shed code into a new module; a `sonarjs/cognitive-complexity` warning marks a function that has grown too tangled and often signals a cluster worth lifting out whole.
+
+A `max-lines` or `cognitive-complexity` finding looks like this in the lint output:
 
 ```
 src/foo.ts
-  42:11  warning  Refactor this function to reduce its Cognitive Complexity
-                  from 30 to the 15 allowed  sonarjs/cognitive-complexity
+  1:1   error    File has too many lines (243). Maximum allowed is 200  max-lines
+  42:11 warning  Refactor this function to reduce its Cognitive Complexity
+                 from 30 to the 15 allowed  sonarjs/cognitive-complexity
 ```
 
-It tells you the **file**, the **line**, the problem, and the **rule name** at the end. The rule name tells you which Recipe to use:
-
-- `sonarjs/no-duplicate-string` → Recipe A
-- `sonarjs/no-identical-functions` → Recipe B
-- `sonarjs/cognitive-complexity` → Recipe C
+It tells you the **file** (and, for complexity, the **function line**) that is carrying too much.
 
 ---
 
-## Step 3 — Pick exactly one warning to fix
+## Step 3 — Pick exactly one file to extract from
 
-1. List every `sonarjs/...` warning from Step 1.
-2. **Cross out** any warning whose file is:
+1. From the FTA table, list the worst `src/` files together with any that carry a `max-lines` or `cognitive-complexity` warning.
+2. **Cross out** any file that is:
    - a `*.test.ts` / `*.test.tsx` file,
    - `src/main.ts`,
-   - `src/controller.ts`,
+   - `src/controller.ts` (needs-permission — only with the user's go-ahead),
    - `src/pty.ts`, `src/shell.ts`, or any file whose main job is spawning processes, running a terminal, doing network, or driving a browser,
-   - under `web/src/` (only consider these if no `src/` warning is left),
-   - already fine (no warning).
-3. From what remains, pick **one** warning, preferring this order:
-   1. `sonarjs/no-duplicate-string` (Recipe A — easiest and safest)
-   2. `sonarjs/no-identical-functions` (Recipe B)
-   3. `sonarjs/cognitive-complexity` (Recipe C — hardest; pick only if no A or B is available)
-   - If several warnings tie, pick the one in the file with the **highest FTA score** (most worth fixing).
+   - under `web/src/` (only consider these if no `src/` candidate is left),
+   - already small and simple (low score, comfortably under 200 lines).
+3. From what remains, pick the **one** file with the **highest FTA score** — that is the one most worth splitting. Prefer a file that is over (or near) the 200-line limit, since extraction there also clears a `max-lines` error.
 
-State your pick in one short sentence: the file, the line, the rule name, and which Recipe you will use. Write the file's current FTA score into your report draft.
+State your pick in one short sentence: the file, its current FTA score and line count, and the warning(s) it carries. Write those numbers into your report draft.
 
 ---
 
-## Step 4 — Plan the fix (a quick note to yourself, then keep going)
+## Step 4 — Plan the extraction (a quick note to yourself, then keep going)
 
-Jot a one- or two-line plan: which function or string you will change, and the name of any new constant or helper. This is a note for **you**, not a message to send — do **not** post it and wait for a reply.
+Find **one cohesive group of code** to lift out whole — code that belongs together and reads naturally as its own module. Good clusters:
+
+- a set of related pure helpers (e.g. all the parsing/formatting functions for one concern),
+- the body and helpers of one over-complex function flagged by `cognitive-complexity`,
+- a group of related types/constants plus the small functions that operate on them.
+
+Jot a one- or two-line plan: **which** group of code you will move, the **name of the new file** (`kebab-case.ts`, focused on that concern), and **what the original file will import back** from it. This is a note for **you**, not a message to send — do **not** post it and wait for a reply.
 
 Check the plan against **The one safety rule**:
 
@@ -107,39 +109,28 @@ Check the plan against **The one safety rule**:
 
 ## Step 5 — Make the change
 
-**First, back up every file you are about to edit**, so you can restore it exactly if anything goes wrong:
+**First, back up the existing file you are about to edit**, so you can restore it exactly if anything goes wrong:
 
 ```bash
 cp src/foo.ts src/foo.ts.bak
 ```
 
-Then apply the Recipe that matches your warning. Keep the diff as small as possible — do not reformat or "tidy" unrelated lines.
+Then perform the extraction. Keep the diff focused — move the chosen group of code, and do not reformat or "tidy" unrelated lines.
 
-### Recipe A — repeated string → constant
+### Recipe — extract a cohesive group into a new module file
 
-1. Choose an `UPPER_SNAKE_CASE` name that describes the string.
-2. Just below the imports, add `const NAME = '<the exact string>';`.
-3. Replace **each** exact occurrence of that string literal with `NAME`. Replace whole-string matches only — never a piece of a longer string.
-
-### Recipe B — two identical functions → one
-
-1. Find the two functions the warning says are identical and confirm their bodies really are the same.
-2. If **either** is `export`ed → STOP and ask (rule 1).
-3. Otherwise keep one, delete the other, and update every caller of the deleted one to call the kept one.
-
-### Recipe C — too-complex function → extract one helper
-
-1. Open the flagged function at the given line.
-2. Find **one** self-contained block — the body of a single `if`/`else` branch, one loop body, or a short run of statements that computes a single value — that uses **only** local variables and the function's parameters.
-3. Add a new helper function **below** the current one (same file). Give it the values that block needs as parameters, and have it `return` the value the block produced. Move the block's code into it.
-4. Replace the block in the original function with a call to the new helper.
-5. Do **not** change the original function's parameters or what it returns. Do **not** move code that uses `this`, that reads or writes variables declared outside the block, or that contains `await` where order matters.
-6. If you cannot find a clean self-contained block like that, do **not** force it — restore your backup, go back to Step 3, and pick a different warning (or report that no safe fix was available).
+1. **Create the new module file** next to the original, with a focused `kebab-case` name describing the concern (e.g. `src/foo-parsing.ts`). Keep it under 200 lines too — if the group you want to move is itself huge, move a smaller cohesive subset.
+2. **Move the chosen code** (functions, and the types/constants only they use) into the new file. Add whatever `import`s that code needs at the top of the new file.
+3. **Export** from the new file exactly the symbols the original file still needs.
+4. **In the original file**, delete the moved code and add an `import { … } from './foo-parsing.js';` for the symbols you now call.
+5. **Preserve the public API.** If any moved symbol was `export`ed and is imported by *other* files, **re-export it from the original file** (`export { thing } from './foo-parsing.js';`) so no other file has to change. If you cannot keep every existing import working without editing other files → STOP and ask (rule 1).
+6. Do **not** change behavior, call signatures, or what anything returns. Do **not** move code in a way that breaks ordering of side effects or shared module state.
+7. If you cannot find a clean, self-contained group to move like this, do **not** force it — restore your backup, go back to Step 3, and pick a different file (or report that no safe extraction was available).
 
 ### Style
 
-- Match nearby naming: `camelCase` functions, `kebab-case` filenames.
-- Relative imports use a **`.js`** extension even though the source is `.ts` (e.g. `import { x } from './foo.js'`). A new helper file must follow this too.
+- Match nearby naming: `camelCase` functions, `PascalCase` types, `kebab-case` filenames.
+- Relative imports use a **`.js`** extension even though the source is `.ts` (e.g. `import { x } from './foo.js'`). The new module file and the import that points to it must both follow this.
 - Add a comment only if the *why* is non-obvious; never a comment that just restates *what* the code does.
 
 ---
@@ -154,11 +145,11 @@ npm run quality 2>&1
 
 Check each, in order:
 
-1. **Tests pass.** If a test now fails: try a quick, obvious fix in your source file (do **not** edit the test). If it does not pass quickly, **restore your backup** (`cp src/foo.ts.bak src/foo.ts`, and delete any new helper file you added) and report what blocked you. Never edit a test to make it pass.
-2. **Lint is no worse.** Look at the `✖ … problems (… errors, … warnings)` line again. **Errors must be 0.** **Warnings must be exactly one fewer than Step 1** (the warning you fixed is gone) and never higher. If a new warning or error appeared — often a missing `.js` import extension, a now-unused variable, or complexity pushed into your new helper — fix it in your source file. Never silence a warning with an `eslint-disable` comment.
-3. **Quality did not regress.** The target file's FTA score should be the same or lower than Step 1, never higher. (Recipes A and B may leave the score unchanged — that is fine.)
+1. **Tests pass.** If a test now fails: try a quick, obvious fix in your source files (do **not** edit the test). If it does not pass quickly, **restore your backup** (`cp src/foo.ts.bak src/foo.ts`, and delete the new module file(s) you added) and report what blocked you. Never edit a test to make it pass.
+2. **Lint is no worse.** Look at the `✖ … problems (… errors, … warnings)` line again. **Errors must be 0** (if you were clearing a `max-lines` error, it should now be gone). **Warnings must be the same or fewer** than Step 1, never higher. If a new warning or error appeared — often a missing `.js` import extension, a now-unused import, or complexity that rode along into the new file — fix it in your source files. Never silence a warning with an `eslint-disable` comment.
+3. **Quality improved.** The original file's FTA score and line count should be **lower** than Step 1. The new module file should land at a reasonable score and stay under 200 lines. If the original's score did not drop, the extraction was too small to matter — restore the backup and pick a more substantial group (or a different file).
 
-When all three pass, **delete the backup file(s)**: `rm src/foo.ts.bak`.
+When all three pass, **delete the backup file**: `rm src/foo.ts.bak`.
 
 ---
 
@@ -168,9 +159,10 @@ Give the user a short report in this exact shape:
 
 ```
 Target file:      <path>
-Fix:              <one sentence — e.g. "extracted parseSpec() helper from loadConfig()">
-Lint warnings:    <before> -> <after>   (errors: <before> -> <after>)
-FTA score:        <before> -> <after>
+New module:       <path of the file you created>
+Extraction:       <one sentence — e.g. "moved the 4 query-parsing helpers out of database.ts into database-parsing.ts">
+FTA score:        <before> -> <after>   (lines: <before> -> <after>)
+Lint problems:    <before> -> <after>   (errors: <before> -> <after>)
 Tests:            all pass / <what failed>
 ```
 
