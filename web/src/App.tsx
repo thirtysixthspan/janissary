@@ -163,7 +163,7 @@ export function App() {
       <div className="app">
         <TabStrip tabs={tabs} activeTab={activeTab} onSelect={selectTab} onClose={closeTab} />
         <div className="tab-body" style={{ borderLeft: `4px solid ${current.dotColor}` }}>
-          <ImageTab image={current.image} />
+          <ImageTab key={current.image.url} image={current.image} />
         </div>
       </div>
     );

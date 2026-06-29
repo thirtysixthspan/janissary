@@ -85,12 +85,15 @@ The page view shows, stacked top to bottom:
 
 ### What renders
 
-The app permits embedding external `http`/`https` sites in a page view. Whether a given site
-actually appears is up to that site: a site that forbids being embedded (by the framing controls
-it sends in its own responses) shows a blank or blocked area instead of its content. This is
-expected — the viewer renders the sites that permit it and does not attempt to bypass a site's
-embedding restrictions. The page's own embedding rules and login/session behavior are otherwise
-unchanged from visiting it directly.
+The app embeds external `http`/`https` sites in a page view. Sites commonly refuse to be framed by
+sending framing controls in their responses — `X-Frame-Options`, or the CSP `frame-ancestors`
+directive. When running in its own managed browser, the app removes those framing headers from
+embedded page responses, so such sites render anyway. The page still loads directly from its real
+origin, so the site's own login and session behavior is unchanged; the app only displays the page
+and does not read or script its contents.
+
+This relaxation is scoped to embedded pages and to the app's managed browser. If the app falls back
+to the system default browser, a site that refuses framing may instead show a blank or blocked area.
 
 ### Tab strip: name and close button
 

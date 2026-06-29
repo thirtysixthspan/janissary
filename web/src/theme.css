@@ -45,10 +45,14 @@ html, body, #root {
 .image-meta { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; color: var(--muted); }
 .image-meta .image-name { color: var(--fg); font-weight: 600; }
 .image-meta .image-loc { font-size: 12px; word-break: break-all; }
-.image-stage { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; }
-/* Landscape: span the full width. Portrait: fill the full remaining height. Aspect ratio preserved. */
-.image-stage .image-landscape { width: 100%; height: auto; }
-.image-stage .image-portrait { height: 100%; width: auto; }
+.image-stage { flex: 1; min-height: 0; position: relative; display: flex; align-items: safe center; justify-content: safe center; overflow: auto; cursor: grab; scrollbar-width: none; }
+.image-stage::-webkit-scrollbar { display: none; }
+/* Landscape: span the full width. Portrait: fill the full remaining height. Aspect ratio preserved.
+   flex-shrink: 0 prevents the flex algorithm from compressing a zoomed image back into the container
+   (which would suppress overflow and break arrow-key / drag panning). */
+.image-stage .image-landscape { width: 100%; height: auto; flex-shrink: 0; }
+.image-stage .image-portrait { height: 100%; width: auto; flex-shrink: 0; }
+.image-zoom-badge { position: absolute; top: 8px; right: 8px; padding: 2px 6px; border-radius: 4px; background: rgb(0 0 0 / 45%); color: var(--fg); font-size: 12px; pointer-events: none; }
 /* Page view tab: full-height iframe with no chrome. */
 .page-tab { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .page-frame { flex: 1; width: 100%; height: 100%; border: 0; background: #fff; }

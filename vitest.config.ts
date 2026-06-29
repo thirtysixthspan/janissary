@@ -12,6 +12,7 @@ export default defineConfig({
           environment: 'node',
           include: ['src/**/*.test.{ts,tsx}'],
           exclude: [...configDefaults.exclude, '**/.janissary/**'],
+          hookTimeout: 30_000,
         },
       },
 

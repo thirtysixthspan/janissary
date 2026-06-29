@@ -11,6 +11,7 @@
 // can lint (.ts/.tsx/.js/.jsx/.mjs/.cjs) are passed on; anything else (.md, .json, dirs)
 // is left to ESLint's own handling.
 import { execFileSync } from 'node:child_process';
+import { changedFiles } from './changed-files.mjs';
 
 const LINTABLE = /\.(?:ts|tsx|js|jsx|mjs|cjs)$/;
 
@@ -19,14 +20,7 @@ const flags = arguments_.filter((a) => a.startsWith('-'));
 let paths = arguments_.filter((a) => !a.startsWith('-'));
 
 if (paths.length === 0) {
-  // No explicit paths: lint everything not yet committed. `git diff HEAD` covers both
-  // staged and unstaged changes; `--diff-filter=d` drops deletions (can't lint a gone
-  // file); `ls-files --others --exclude-standard` adds new, non-ignored files.
-  const fromGit = (command, commandArguments) =>
-    execFileSync(command, commandArguments, { encoding: 'utf8' }).split('\n').filter(Boolean);
-  const changed = fromGit('git', ['diff', '--name-only', '--diff-filter=d', 'HEAD']);
-  const untracked = fromGit('git', ['ls-files', '--others', '--exclude-standard']);
-  paths = [...new Set([...changed, ...untracked])];
+  paths = changedFiles();
 }
 
 // Keep paths ESLint can act on: lintable extensions, plus extension-less paths (likely
