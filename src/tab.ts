@@ -1,4 +1,4 @@
-import type { LogEntry, BufferLine, Tab, ImageView, PageView, HarnessView } from './types.js';
+import type { LogEntry, BufferLine, Tab, ImageView, MarkdownView, PageView, HarnessView } from './types.js';
 import { formatMessageContent, tryCollapseToolSteps } from './buffer.js';
 
 export const dotColors = [
@@ -78,6 +78,14 @@ export const makePageTab = (label: string, dotColor: string, number: number, gro
   view: 'page',
   title: `${page.number}) ${page.domain}`,
   page,
+});
+
+// A markdown view tab (opened via `open <file>.md`). Renders the file as formatted Markdown.
+export const makeMarkdownTab = (label: string, dotColor: string, number: number, group: number, groupColor: string, markdown: MarkdownView): Tab => ({
+  ...makeTab(label, dotColor, number, [], [], undefined, group, groupColor),
+  view: 'markdown',
+  title: 'markdown',
+  markdown,
 });
 
 // A harness view tab (opened via `harness <name>`). The entire tab body is a live PTY terminal.

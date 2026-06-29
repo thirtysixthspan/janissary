@@ -3,8 +3,7 @@ import { JanusClient } from './ws';
 import type { TabView, RouteChooserView } from '@shared/protocol';
 import { TabStrip } from './TabStrip';
 import { Transcript } from './Transcript';
-import { ImageTab } from './ImageTab';
-import { PageTab } from './PageTab';
+import { ViewTabBody } from './ViewTabBody';
 import { HarnessTab, type HarnessTabHandle } from './HarnessTab';
 import { CommandInput } from './CommandInput';
 import { StatusPanels } from './StatusPanels';
@@ -162,23 +161,13 @@ export function App() {
 
   if (!current) return <div className="app" style={{ padding: 16, color: 'var(--muted)' }}>Connecting…</div>;
 
-  const isViewTab = (['image', 'page', 'harness'] as const).includes(current.view as 'image' | 'page' | 'harness');
+  const isViewTab = (['image', 'page', 'harness', 'markdown'] as const).includes(current.view as 'image' | 'page' | 'harness' | 'markdown');
 
   return (
     <div className="app">
       <TabStrip tabs={tabs} activeTab={activeTab} onSelect={selectTab} onClose={closeTab} />
 
-      {current.view === 'image' && current.image && (
-        <div className="tab-body" style={{ borderLeft: `4px solid ${current.dotColor}` }}>
-          <ImageTab key={current.image.url} image={current.image} />
-        </div>
-      )}
-
-      {current.view === 'page' && current.page && (
-        <div className="tab-body" style={{ borderLeft: `4px solid ${current.dotColor}` }}>
-          <PageTab page={current.page} />
-        </div>
-      )}
+      <ViewTabBody tab={current} />
 
       {/* Harness layer: all harness tabs stay mounted; only the active one is visible.
           This preserves xterm state (alternate buffer, cursor position) across tab switches. */}

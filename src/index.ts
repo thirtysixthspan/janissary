@@ -19,6 +19,8 @@ const MIME: Record<string, string> = {
   // Image types served via the `/open/<id>` route (opened files).
   '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.gif': 'image/gif',
   '.webp': 'image/webp', '.bmp': 'image/bmp', '.avif': 'image/avif',
+  // Markdown files served via the `/open/<id>` route.
+  '.md': 'text/markdown; charset=utf-8', '.markdown': 'text/markdown; charset=utf-8',
 };
 
 export type ServerOptions = { webDir: string; host?: string; port?: number; token?: string; relaunch?: boolean };

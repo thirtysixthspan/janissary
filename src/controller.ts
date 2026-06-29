@@ -1,8 +1,8 @@
 /* eslint-disable max-lines */
 import { spawnSync, type ChildProcess } from 'node:child_process';
-import type { Tab, LogEntry, ScheduleEntry, AcpSession, AcpInfo, ImageView, PageView, HarnessView } from './types.js';
+import type { Tab, LogEntry, ScheduleEntry, AcpSession, AcpInfo, ImageView, MarkdownView, PageView, HarnessView } from './types.js';
 import {
-  makeTab, makeImageTab, makePageTab, makeHarnessTab, distinctColor, insertTabInGroup, flattenBuffer, stripComments,
+  makeTab, makeImageTab, makeMarkdownTab, makePageTab, makeHarnessTab, distinctColor, insertTabInGroup, flattenBuffer, stripComments,
   swapTabsLeft, swapTabsRight,
 } from './tab.js';
 import { existsSync, statSync } from 'node:fs';
@@ -135,7 +135,7 @@ export class Controller {
       bufferLines: flattenBuffer(t.log, !t.toolStepsExpanded)
         .map((l) => (l.cwd ? { ...l, cwd: this.shorten(l.cwd) } : l)),
       cmdHistory: t.cmdHistory, toolStepsExpanded: !!t.toolStepsExpanded,
-      view: t.view, title: t.title, image: t.image, page: t.page, harness: t.harness,
+      view: t.view, title: t.title, image: t.image, page: t.page, harness: t.harness, markdown: t.markdown,
     }));
   }
 
@@ -541,6 +541,7 @@ export class Controller {
     const context: OpenContext = {
       note: (text) => this.append(label, { input: command, output: text }),
       openImageTab: (image) => this.openImageTab(image),
+      openMarkdownTab: (view) => this.openMarkdownTab(view),
       openPageTab: (view) => this.openPageTab(view),
       registerFile: (absPath) => this.registerFile(absPath),
       openExternally: (absPath) => didOsOpen(absPath),
@@ -627,6 +628,26 @@ export class Controller {
     let n = 2;
     while (used.has(`image-${n}`)) n++;
     return `image-${n}`;
+  }
+
+  private openMarkdownTab(view: MarkdownView): void {
+    const creator = this.cur();
+    const label = this.uniqueMarkdownLabel();
+    const dotColor = distinctColor(this.tabs.map((t) => t.dotColor));
+    const group = creator?.group ?? 1;
+    const groupColor = creator?.groupColor ?? dotColor;
+    const tab = makeMarkdownTab(label, dotColor, this.tabs.length + 1, group, groupColor, view);
+    this.tabs = insertTabInGroup(this.tabs, tab);
+    this.activeTab = this.tabs.findIndex((t) => t.label === label);
+    this.sinks.emitState();
+  }
+
+  private uniqueMarkdownLabel(): string {
+    const used = new Set(this.tabs.map((t) => t.label));
+    if (!used.has('markdown')) return 'markdown';
+    let n = 2;
+    while (used.has(`markdown-${n}`)) n++;
+    return `markdown-${n}`;
   }
 
   // Create and focus a page view tab adjacent to the active tab's group. Page tabs are in-memory
@@ -1047,6 +1068,7 @@ export class Controller {
     // An image tab owns no shell/acp/browser/workspace, so those steps below are no-ops for it; just
     // drop its served file from the allow-list so the `/open/<id>` ref stops resolving.
     if (tab.image) { const id = tab.image.url.replace(/^\/open\//, ''); this.openFiles.delete(id); }
+    if (tab.markdown) { const id = tab.markdown.url.replace(/^\/open\//, ''); this.openFiles.delete(id); }
     if (tab.workspaceDir) { removeWorkspace(tab.workspaceDir); this.workspaces.delete(tab.workspaceDir); }
     this.shells.get(tab.label)?.kill();
     this.shells.delete(tab.label);

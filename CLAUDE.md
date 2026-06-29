@@ -1,5 +1,15 @@
 # Development Guide for Claude Code
 
+## ESLint rules
+
+Before writing code, review [`eslint.config.mjs`](eslint.config.mjs) to understand the linting rules that apply. Write code on the first pass that conforms to these rules to avoid rework:
+
+- **Type-aware rules** (`src/**/*.ts`, `src/**/*.tsx`, `web/src/**/*.ts`, `web/src/**/*.tsx`): `@typescript-eslint/prefer-nullish-coalescing`, `@typescript-eslint/no-unnecessary-type-assertion`, `@typescript-eslint/no-unsafe-assignment`, `@typescript-eslint/no-unsafe-member-access`
+- **Security rules** (`src/` and `web/src/`): `security/detect-unsafe-regex`, `security/detect-eval-with-expression`
+- **Code complexity** (`src/` and `web/src/`): `sonarjs/cognitive-complexity` (warn, limit ~15), `sonarjs/no-duplicate-string` (warn)
+- **File size limit**: `max-lines` max 200 lines (skipping blanks/comments) — extract into new modules rather than compacting code
+- **Import extensions** (`src/`): NodeNext style — relative imports must carry `.js` (and `.json`), never `.ts`/`.tsx`
+
 ## Verifying changes
 
 ### ✅ AI workflow — use these commands while developing

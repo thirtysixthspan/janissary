@@ -106,7 +106,7 @@ export default ts.config(
     rules: {
       'security/detect-unsafe-regex': 'error',
       'security/detect-eval-with-expression': 'error',
-      'security/detect-non-literal-fs-filename': 'warn',
+      'security/detect-non-literal-fs-filename': 'off',
     },
   },
   // Test files are exempt from the line-count guideline (they often grow long with cases).

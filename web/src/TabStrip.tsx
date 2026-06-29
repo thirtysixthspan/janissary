@@ -20,7 +20,7 @@ export function TabStrip({ tabs, activeTab, onSelect, onClose }: Properties) {
         >
           <span className={`dot${tab.busy ? ' busy' : ''}`} style={{ color: tab.dotColor }}>●</span>
           <span>{tab.title ?? tab.label}</span>
-          {(['image', 'page', 'harness'] as const).includes(tab.view as 'image' | 'page' | 'harness') && (
+          {(['image', 'page', 'harness', 'markdown'] as const).includes(tab.view as 'image' | 'page' | 'harness' | 'markdown') && (
             <button
               type="button"
               className="tab-close"

@@ -287,16 +287,18 @@ The browser is also available to the tab's **ACP agent**: ask it to "visit a URL
 
 ### Opening files
 
-The `open` command opens a file according to its type. It is a dispatcher: each file type is handled by its own **opener**, so supporting a new type is just a matter of adding one — the command itself never changes. Images are supported today.
+The `open` command opens a file according to its type. It is a dispatcher: each file type is handled by its own **opener**, so supporting a new type is just a matter of adding one — the command itself never changes. Images and Markdown files are supported today.
 
 ```
-open <path>            # open the file in the app (images: a new image tab)
-open external <path>   # hand the file to the OS viewer (images: Preview on macOS)
+open <path>            # open the file in the app (images: image tab; .md/.markdown: markdown tab)
+open external <path>   # hand the file to the OS viewer
 open '*.png'           # a wildcard opens each matching file (up to 10)
 ```
 
 - **`open <image>`** mounts a new **image tab** showing the image's name, size, and location alongside the image itself. The tab has no command bar; it is named `image` with a close (`×`) button on the tab, and otherwise behaves like any tab — reorder it within its group with `Ctrl+←` / `Ctrl+→`. A landscape image fills the full width; a portrait image fills the remaining height. While an image tab is active: **Page Up / Page Down** (or the scroll wheel) zoom in and out in 10% steps (10%–800%); **arrow keys** pan the view; **click and drag** pans freely; **Escape** resets to 100% and centers. A zoom badge (e.g. `150%`) appears when zoomed. Image tabs are live and in-memory — they are not restored on `--relaunch`.
 - **`open external <image>`** launches the file in the operating system's image viewer.
+- **`open <file>.md`** / **`open <file>.markdown`** mounts a new **markdown tab** rendering the file as formatted Markdown (headings, lists, tables, fenced code, blockquotes, links) on a white page with dark text. The tab has no command bar; it is named `markdown` with a close (`×`) button on the tab. While a markdown tab is active: **↑ / ↓ arrows** scroll a line; **Page Up / Page Down** scroll a page; the **mouse wheel** scrolls natively. Selecting text highlights it light-blue. Markdown tabs are live and in-memory — they are not restored on `--relaunch`.
+- **`open external <file>.md`** hands the file to the operating system's default viewer.
 - **Wildcards** are expanded by the shell (in the tab's working directory), and `open` then acts on each matched file in turn, up to a maximum of **10** — extra matches are skipped with a note, and a pattern that matches nothing reports no matching files. A path with no wildcard is always a single literal target.
 
 An unrecognized file type reports that no opener is registered for it.
@@ -403,6 +405,14 @@ OpenCode ships an ACP server mode, so it works as a drop-in agent. Before using 
 | `↑` / `↓` / `←` / `→` | Pan the image |
 | Click and drag | Pan freely |
 | `Escape` | Reset zoom to 100% and center the view |
+
+**Markdown tab controls** (active only while a markdown tab is focused):
+
+| Key | Action |
+| --- | ------ |
+| `↑` / `↓` | Scroll up / down by a line |
+| `Page Up` / `Page Down` | Scroll up / down by a page |
+| Mouse wheel | Scroll up / down |
 
 `Tab` completes the word at the cursor: filesystem paths against the tab's working directory; at the recipient position of `msg` / `broadcast`, active agent names (`broadcast` also offers `all` and completes each entry of a comma-separated list); at the target of `connection close`, the tab's open connection strings (`sqlite:<name>`, `shell:<shell>`, `acp:opencode`, `browser:<id>`); and for the `browser` command, its subcommands (`open`, `goto`, `content`, …) plus the tab's open window ids where one is expected (`browser use`, `browser window close`).
 

@@ -1,21 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useRef } from 'react';
-import { marked } from 'marked';
-import DOMPurify from 'dompurify';
 import type { JanusClient } from './ws';
 import type { BufferLine } from '@shared/protocol';
 import { TerminalCard } from './TerminalCard';
+import { renderMarkdown } from './markdown';
 
-// An ACP agent reply rendered as Markdown. `marked` produces HTML (GFM tables/lists/code, single
-// newlines as line breaks); DOMPurify strips any script/handler markup the model might emit before
-// it is inserted. Falls back to plain text if parsing fails.
+// An ACP agent reply rendered as Markdown. Falls back to plain text if parsing fails.
 function Markdown({ text }: { text: string }) {
-  const html = useMemo(() => {
-    try {
-      return DOMPurify.sanitize(marked.parse(text, { gfm: true, breaks: true, async: false }));
-    } catch {
-      // skip parsing on error
-    }
-  }, [text]);
+  const html = useMemo(() => renderMarkdown(text), [text]);
   if (html === undefined) return <div className="line output">{text}</div>;
   return <div className="line markdown" dangerouslySetInnerHTML={{ __html: html }} />;
 }

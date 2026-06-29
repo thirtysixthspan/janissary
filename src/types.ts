@@ -72,13 +72,20 @@ export type ImageView = {
 // `number`: 1-based page number shown in the tab title (e.g. "1) slashdot.org").
 export type PageView = { url: string; domain: string; number: number };
 
+export type MarkdownView = {
+  name: string;
+  path: string;
+  size: string;
+  url: string;
+};
+
 export type Tab = {
   label: string;
   dotColor: string;
   number: number;
   // The tab's body kind. Undefined/`'agent'` renders the normal transcript + command line; `'image'`
   // renders the image view (no command bar). View tabs are live and in-memory — not persisted.
-  view?: 'agent' | 'image' | 'page' | 'harness';
+  view?: 'agent' | 'image' | 'page' | 'harness' | 'markdown';
   // Display name shown in the tab strip when it differs from the (unique) internal `label` — e.g.
   // every image tab is titled `image` while keeping a distinct label (`image`, `image-2`, …).
   title?: string;
@@ -88,6 +95,8 @@ export type Tab = {
   page?: PageView;
   // The harness-view payload, present only when `view === 'harness'`.
   harness?: HarnessView;
+  // The markdown-view payload, present only when `view === 'markdown'`.
+  markdown?: MarkdownView;
   // Group number, shared by an agent and every agent it (transitively) creates. The root agent
   // is group 1; a launched profile forms its own group.
   group: number;

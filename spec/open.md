@@ -75,6 +75,20 @@ Opens the image in an **image tab**: a non-agent view tab that displays the imag
 
 ---
 
+## Markdown opener
+
+The Markdown opener claims the `.md` and `.markdown` extensions (case-insensitive) and implements both presentations.
+
+### `open external <file>.md`
+
+Hands the file to the operating system's default viewer, launched detached so it never blocks the app. A failure to launch is swallowed rather than crashing the app, and a short confirmation is shown in the active tab. On platforms without a known viewer, the file path is reported instead.
+
+### `open <file>.md` — markdown tab
+
+Opens the file in a **markdown tab**: a non-agent view tab that renders the file's text as formatted Markdown (headings, lists, tables, fenced code, blockquotes, links) on a white paper background with dark text, with no command bar. The new tab is created and focused like an agent tab (placed within the active tab's group, distinct dot color); it is a live, in-memory view and is not persisted or restored on `--relaunch`. The markdown tab — its layout, scrolling controls, the tab-strip name and close button, how it is closed, and how its text is served — is described in [[markdown-tab]].
+
+---
+
 ## Web opener
 
 The web opener handles **web addresses** (`http`/`https`) rather than a file extension, and implements both presentations. The address is normalized first: an explicit `http`/`https` scheme is kept; a bare address (only possible via the `page` keyword) is given a default `https://`; any other scheme is rejected as invalid.
