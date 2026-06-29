@@ -634,7 +634,7 @@ Three automated checks run in `npm run security`: security-focused lint rules, s
 ```bash
 npm run security          # lint + secrets + deps (pre-push gate)
 npm run security:deps     # npm audit --omit=dev (dependency CVEs)
-npm run security:secrets  # gitleaks scan (requires gitleaks to be installed)
+npm run security:secrets  # gitleaks scan (requires gitleaks: brew install gitleaks)
 npm run security:sast     # Opengrep one-time audit → security-audit.sarif (on demand)
 ```
 

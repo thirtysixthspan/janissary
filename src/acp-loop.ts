@@ -41,20 +41,7 @@ export function runAcpToolLoop(
           return;
         }
         const command = dependencies.extractCommand(buffer);
-        let display = buffer;
-        if (command) {
-          const lines = display.split('\n');
-          const cleaned = lines.map((l) => l.replace(/^[\s`$>]+/, '').replace(/`+\s*$/, '').trim());
-          const index = cleaned.indexOf(command);
-          if (index !== -1) {
-            lines.splice(index, 1);
-            // Remove adjacent code fence markers left behind by the removed command.
-            if (index < lines.length && /^`{3,}\s*$/.test(lines[index])) lines.splice(index, 1);
-            if (index > 0 && /^`{3,}\s*$/.test(lines[index - 1])) lines.splice(index - 1, 1);
-            while (lines.length > 0 && lines.at(-1)!.trim() === '') lines.pop();
-            display = lines.join('\n');
-          }
-        }
+        const display = filterCommandFromDisplay(buffer, command);
         h.endTurn(display);
         if (command && step < maxSteps) {
           // Only await when the command is actually async (e.g. browser); a sync command
@@ -78,4 +65,18 @@ export function runAcpToolLoop(
   }
 
   turn(userPrompt, true, 0);
+}
+
+function filterCommandFromDisplay(display: string, command: string | null | undefined): string {
+  if (!command) return display;
+  const lines = display.split('\n');
+  const cleaned = lines.map((l) => l.replace(/^[\s`$>]+/, '').replace(/`+\s*$/, '').trim());
+  const index = cleaned.indexOf(command);
+  if (index === -1) return display;
+  lines.splice(index, 1);
+  // Remove adjacent code fence markers left behind by the removed command.
+  if (index < lines.length && /^`{3,}\s*$/.test(lines[index])) lines.splice(index, 1);
+  if (index > 0 && /^`{3,}\s*$/.test(lines[index - 1])) lines.splice(index - 1, 1);
+  while (lines.length > 0 && lines.at(-1)!.trim() === '') lines.pop();
+  return lines.join('\n');
 }
