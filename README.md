@@ -2,8 +2,6 @@
 
 > A [Janissary](https://en.wikipedia.org/wiki/Janissary) was an elite infantry soldier in the Ottoman Empire — a servant of the gate, loyal, and ever-ready. This tool channels that same spirit as your terminal's loyal servant.
 
-**Janissary** is a terminal UI shell built with [Ink](https://github.com/vadimdemedes/ink) and React. It provides a full-screen interactive interface with built-in commands and the ability to execute arbitrary shell commands.
-
 ## Usage
 
 ```
@@ -653,6 +651,3 @@ Arguments after `--` that start with `-` are passed straight to ESLint; everythi
 treated as a path. Non-lintable paths (`.md`, `.json`, directories) are filtered out
 automatically. The script lives at `scripts/lint-files.mjs`.
 
-## License
-
-UNLICENSED — proprietary
