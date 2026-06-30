@@ -1,8 +1,8 @@
 import path from 'node:path';
 import { readdirSync } from 'node:fs';
-import { BROWSER_SUBCOMMANDS } from './browser-command.js';
 import type { CompletionResult } from './types.js';
-import { isDir, longestCommonPrefix, splitToken, replaceToken, completeWord } from './completion-helpers.js';
+import { isDir, longestCommonPrefix, splitToken, replaceToken } from './completion-helpers.js';
+import { completeAgentName, completeConnectionClose, completeBrowserCommand } from './completion-handlers.js';
 
 /**
  * Tab-complete the token ending at the cursor.
@@ -35,40 +35,12 @@ export function completeCommandLine(
   const command = preceding[0]?.replace(/^\//, '').toLowerCase();
   const argumentIndex = preceding.length;
 
-  // Agent-name completion for the recipient argument.
-  if (argumentIndex === 1 && (command === 'msg' || command === 'broadcast')) {
-    if (command === 'broadcast') {
-      const segStart = token.lastIndexOf(',') + 1; // complete the segment after the last comma
-      return completeWord(token.slice(segStart), token.slice(0, segStart), [...agents, 'all'], '', before, after, tokenStart);
-    }
-    return completeWord(token, '', agents, ' ', before, after, tokenStart);
-  }
-
-  // Connection-string completion for `connection close <kind>:<id>`.
-  if (argumentIndex === 2 && command === 'connection' && preceding[1]?.toLowerCase() === 'close') {
-    return completeWord(token, '', connections, ' ', before, after, tokenStart);
-  }
-
-  // `browser` command completion: subcommands, then window ids where one is expected.
-  if (command === 'browser') {
-    if (argumentIndex === 1) {
-      return completeWord(token, '', BROWSER_SUBCOMMANDS, ' ', before, after, tokenStart);
-    }
-    const sub = preceding[1]?.toLowerCase();
-    // Window ids are derived from the active tab's `browser:<id>` connection strings.
-    const windowIds = connections
-      .filter((c) => c.startsWith('browser:'))
-      .map((c) => c.slice('browser:'.length));
-    if (argumentIndex === 2 && sub === 'use') {
-      return completeWord(token, '', windowIds, ' ', before, after, tokenStart);
-    }
-    if (argumentIndex === 2 && sub === 'window') {
-      return completeWord(token, '', ['close'], ' ', before, after, tokenStart);
-    }
-    if (argumentIndex === 3 && sub === 'window' && preceding[2]?.toLowerCase() === 'close') {
-      return completeWord(token, '', windowIds, ' ', before, after, tokenStart);
-    }
-    // Other positions (goto url, eval js, open name) fall through to path completion.
+  // Try command-specific handlers.
+  const result = completeAgentName(command, argumentIndex, token, agents, before, after, tokenStart) ??
+    completeConnectionClose(command, argumentIndex, preceding, token, connections, before, after, tokenStart) ??
+    completeBrowserCommand(command, argumentIndex, preceding, token, connections, before, after, tokenStart);
+  if (result !== null) {
+    return result;
   }
 
   // Filesystem path completion.
