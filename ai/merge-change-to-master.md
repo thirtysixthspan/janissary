@@ -6,6 +6,8 @@ The changes may have been made manually or produced by a preceding task — eith
 
 Every step is a script in `scripts/pr-*.sh`, invoked through the script runner. The steps below contain **no inline shell logic** — each one invokes its script.
 
+**Always run scripts in the foreground.** Never use `run_in_background` — each script must complete and return its exit code before the next step begins.
+
 ---
 
 ## Fast path — one command runs the whole flow
