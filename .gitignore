@@ -4,4 +4,4 @@ dist/
 .env.*
 .janissary/
 /coverage
-.claude
+.claude/settings.local.json
