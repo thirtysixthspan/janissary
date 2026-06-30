@@ -42,6 +42,9 @@ export type TabView = {
   harness?: HarnessView;
   // Markdown-view payload, present only when `view === 'markdown'`.
   markdown?: MarkdownView;
+  // Set while a full-tab interactive PTY (htop, vim, etc.) is running on this agent tab.
+  // Cleared on exit; the client hides the transcript while this is set.
+  activePty?: string;
 };
 
 export type StateEvent = { t: 'state'; tabs: TabView[]; activeTab: number; route: RouteChooserView | null };

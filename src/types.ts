@@ -88,6 +88,9 @@ export type Tab = {
   // Display name shown in the tab strip when it differs from the (unique) internal `label` — e.g.
   // every image tab is titled `image` while keeping a distinct label (`image`, `image-2`, …).
   title?: string;
+  // Set while an interactive PTY (htop, vim, etc.) is running full-tab on this agent tab.
+  // Cleared when the process exits, restoring the transcript view.
+  activePty?: string;
   // The image-view payload, present only when `view === 'image'`.
   image?: ImageView;
   // The page-view payload, present only when `view === 'page'`.

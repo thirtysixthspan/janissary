@@ -136,6 +136,7 @@ export class Controller {
         .map((l) => (l.cwd ? { ...l, cwd: this.shorten(l.cwd) } : l)),
       cmdHistory: t.cmdHistory, toolStepsExpanded: !!t.toolStepsExpanded,
       view: t.view, title: t.title, image: t.image, page: t.page, harness: t.harness, markdown: t.markdown,
+      activePty: t.activePty,
     }));
   }
 
@@ -974,15 +975,16 @@ export class Controller {
 
   // --- inline terminal cards (PTY) -----------------------------------------
 
-  private openPty(label: string, command: string, program: string, harness?: string): void {
+  private openPty(label: string, command: string, program: string): void {
     const cwd = this.cwd.get(label) ?? process.cwd();
     const session = spawnPty(program, command, cwd, {
       onData: (id, data) => this.sinks.sendPty(id, data),
       onExit: (id, exitCode) => this.onPtyExit(id, exitCode),
     }, this.cols, this.rows);
     this.ptys.set(session.id, { session, tabLabel: label });
-    if (harness) this.harnessOf.set(label, harness);
-    this.append(label, { input: '', output: '', terminal: { ptyId: session.id, program, status: 'running' } });
+    const tab = this.tabs.find((t) => t.label === label);
+    if (tab) tab.activePty = session.id;
+    this.sinks.emitState();
   }
 
   private onPtyExit(id: string, exitCode: number): void {
@@ -993,6 +995,10 @@ export class Controller {
       if (tab.harness?.ptyId === id) {
         tab.harness = { ...tab.harness, status: 'exited', exitCode };
       }
+    }
+    // Handle full-tab interactive PTY takeovers: clear activePty to restore the transcript.
+    for (const tab of this.tabs) {
+      if (tab.activePty === id) tab.activePty = undefined;
     }
     // Handle inline terminal cards: update status in the log entry.
     if (entry) {

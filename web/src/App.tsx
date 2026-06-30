@@ -5,6 +5,8 @@ import { TabStrip } from './TabStrip';
 import { Transcript } from './Transcript';
 import { ViewTabBody } from './ViewTabBody';
 import { HarnessTab, type HarnessTabHandle } from './HarnessTab';
+import type { ShellTabHandle } from './ShellTab';
+import { ShellTabLayer } from './ShellTabLayer';
 import { CommandInput } from './CommandInput';
 import { StatusPanels } from './StatusPanels';
 import { HistoryPicker } from './HistoryPicker';
@@ -27,6 +29,7 @@ export function App() {
   const inputReference = useRef<HTMLInputElement>(null);
   const transcriptReference = useRef<HTMLDivElement>(null);
   const harnessHandles = useRef<Map<string, HarnessTabHandle>>(new Map());
+  const shellHandles = useRef<Map<string, ShellTabHandle>>(new Map());
   const currentRef = useRef<TabView | undefined>(undefined);
   const scrollAccel = useRef<{ start: number; dir: -1 | 1 } | null>(null);
 
@@ -64,11 +67,13 @@ export function App() {
     if (nextRoute && (!previous || previous.cmd !== nextRoute.cmd)) setRouteIndex(0);
   }), [client]);
 
-  // Switching tabs: harness tabs focus the terminal; all others focus the command line.
+  // Switching tabs: harness/shell PTY tabs focus the terminal; all others focus the command line.
   useEffect(() => {
     const cur = currentRef.current;
-    const ptyId = cur?.view === 'harness' ? cur.harness?.ptyId : undefined;
-    if (ptyId) harnessHandles.current.get(ptyId)?.focus(); else inputReference.current?.focus();
+    const harnessPtyId = cur?.view === 'harness' ? cur.harness?.ptyId : undefined;
+    if (harnessPtyId) harnessHandles.current.get(harnessPtyId)?.focus();
+    else if (cur?.activePty) shellHandles.current.get(cur.activePty)?.focus();
+    else inputReference.current?.focus();
   }, [activeTab]);
 
   useEffect(() => {
@@ -169,6 +174,9 @@ export function App() {
 
       <ViewTabBody tab={current} />
 
+      <ShellTabLayer tabs={tabs} activeLabel={current.label} client={client}
+        onHandle={(id, h) => { if (h) shellHandles.current.set(id, h); else shellHandles.current.delete(id); }} />
+
       {/* Harness layer: all harness tabs stay mounted; only the active one is visible.
           This preserves xterm state (alternate buffer, cursor position) across tab switches. */}
       {tabs.filter((t) => t.view === 'harness' && t.harness).map((t) => (
@@ -182,7 +190,7 @@ export function App() {
         </div>
       ))}
 
-      {!isViewTab && (
+      {!isViewTab && !current.activePty && (
         <div
           className="tab-body"
           style={{ borderLeft: `4px solid ${current.dotColor}` }}
