@@ -6,6 +6,7 @@
       "Read",
       "Edit",
       "Write(./temp/**)",
+      "Write(temp/**)",
       "Bash(gh *)",
       "Bash(/usr/local/opt/gh/bin/gh *)"
     ]

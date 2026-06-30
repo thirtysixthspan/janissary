@@ -8,6 +8,8 @@ Every step is a script in `scripts/pr-*.sh`, invoked through the script runner. 
 
 **Always run scripts in the foreground.** Never use `run_in_background` — each script must complete and return its exit code before the next step begins.
 
+**Do not ask the user for input at any point.** Make all decisions autonomously — branch names, commit messages, PR titles and bodies. The only valid reason to stop is an unresolvable error.
+
 ---
 
 ## Step 0 — Confirm there are changes to ship
@@ -36,7 +38,7 @@ The hard checks **must pass**. If they fail **because of the changes**, fix the 
 
 ## Step 2 — Create a feature branch
 
-Pick a short, **descriptive** `kebab-case` name that reflects the actual change, ideally prefixed by the change area. Avoid generic names like `fix` or `update`.
+Pick a short, **descriptive** `kebab-case` name that reflects the actual change, ideally prefixed by the change area. Avoid generic names like `fix` or `update`. **Choose the name yourself — do not ask the user.**
 
 Good: `quality/extract-parsespec-helper`, `style/modern-color-notation`, `dedup/buffer-writer`
 Bad: `patch-1`, `changes`, `wip`
