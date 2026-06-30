@@ -34,10 +34,11 @@ If every remaining candidate is blocked, report which files you considered and w
 
 ## Step 1 — See the starting state (run these, write the numbers down)
 
-Run all three and read the output:
+Run all four and read the output:
 
 ```bash
 npm test 2>&1
+npm run typecheck:diff 2>&1
 npm run lint 2>&1
 npm run quality 2>&1
 ```
@@ -45,6 +46,7 @@ npm run quality 2>&1
 Then record these starting numbers — you will compare against them at the end. Put them straight into your report draft (Step 7):
 
 - **Tests:** they must be **green** (all passing). If any test is already failing **before** you touch anything, STOP and tell the user — do not start a refactor on a broken suite.
+- **TypeScript:** `npm run typecheck:diff` must finish with **no errors**. If it errors before you touch anything, STOP and tell the user.
 - **Quality (FTA):** `npm run quality` prints a table per area, sorted worst-first, with each file's **line count** and **FTA score** (lower = better). This is your **primary** signal for what to extract from. Write down the score and line count of the file you end up picking.
 - **Lint:** near the end of `npm run lint` there is a summary line like `✖ 16 problems (0 errors, 16 warnings)`. Write down the **errors** count and the **warnings** count. Note especially any `max-lines` (file over 200 lines) and `sonarjs/cognitive-complexity` warnings — these point straight at extraction targets.
 
@@ -137,6 +139,7 @@ Then perform the extraction. Keep the diff focused — move the chosen group of 
 
 ```bash
 npm test 2>&1
+npm run typecheck:diff 2>&1
 npm run lint 2>&1
 npm run quality 2>&1
 ```
@@ -144,8 +147,9 @@ npm run quality 2>&1
 Check each, in order:
 
 1. **Tests pass.** If a test now fails: try a quick, obvious fix in your source files (do **not** edit the test). If it does not pass quickly, **restore your backup** (`cp src/foo.ts.bak src/foo.ts`, and delete the new module file(s) you added) and report what blocked you. Never edit a test to make it pass.
-2. **Lint is no worse.** Look at the `✖ … problems (… errors, … warnings)` line again. **Errors must be 0** (if you were clearing a `max-lines` error, it should now be gone). **Warnings must be the same or fewer** than Step 1, never higher. If a new warning or error appeared — often a missing `.js` import extension, a now-unused import, or complexity that rode along into the new file — fix it in your source files. Never silence a warning with an `eslint-disable` comment.
-3. **Quality improved.** The original file's FTA score and line count should be **lower** than Step 1. The new module file should land at a reasonable score and stay under 200 lines. If the original's score did not drop, the extraction was too small to matter — restore the backup and pick a more substantial group (or a different file).
+2. **TypeScript is clean.** `npm run typecheck:diff` must have no errors. A type error here almost always means a moved symbol's type is missing an import in the new file, or a re-export was forgotten — fix it in your source files. If you cannot make it clean quickly, restore your backup and report.
+3. **Lint is no worse.** Look at the `✖ … problems (… errors, … warnings)` line again. **Errors must be 0** (if you were clearing a `max-lines` error, it should now be gone). **Warnings must be the same or fewer** than Step 1, never higher. If a new warning or error appeared — often a missing `.js` import extension, a now-unused import, or complexity that rode along into the new file — fix it in your source files. Never silence a warning with an `eslint-disable` comment.
+4. **Quality improved.** The original file's FTA score and line count should be **lower** than Step 1. The new module file should land at a reasonable score and stay under 200 lines. If the original's score did not drop, the extraction was too small to matter — restore the backup and pick a more substantial group (or a different file).
 
 When all three pass, **delete the backup file**: `rm src/foo.ts.bak`.
 
@@ -161,6 +165,7 @@ New module:       <path of the file you created>
 Extraction:       <one sentence — e.g. "moved the 4 query-parsing helpers out of database.ts into database-parsing.ts">
 FTA score:        <before> -> <after>   (lines: <before> -> <after>)
 Lint problems:    <before> -> <after>   (errors: <before> -> <after>)
+TypeScript:       clean / <errors, if any>
 Tests:            all pass / <what failed>
 ```
 
