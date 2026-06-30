@@ -1,5 +1,5 @@
 /* eslint-disable max-lines */
-import { spawnSync, type ChildProcess } from 'node:child_process';
+import { spawnSync } from 'node:child_process';
 import type { Tab, LogEntry, ScheduleEntry, AcpSession, AcpInfo, ImageView, MarkdownView, PageView, HarnessView } from './types.js';
 import {
   makeTab, makeImageTab, makeMarkdownTab, makePageTab, makeHarnessTab, distinctColor, insertTabInGroup, flattenBuffer, stripComments,
@@ -25,7 +25,7 @@ import { connectAcp } from './acp.js';
 import { runAcpToolLoop } from './acp-loop.js';
 import { analyzeCommand, toPrefixedCommand, routeChoices } from './recognizers/index.js';
 import type { RouteChoice } from './recognizers/types.js';
-import { spawnShell, executeShellCmd as executeShellCommand, queryShellPwd } from './shell.js';
+import { ShellManager, SHELL_NAME } from './shell-manager.js';
 import { findRepoRoot, createWorkspace, removeWorkspace } from './workspace.js';
 import { completeCommandLine } from './completion.js';
 import type { CompletionResult } from './types.js';
@@ -42,8 +42,6 @@ import { BrowserManager } from './browser-tab.js';
 import { getConfig } from './config.js';
 import type { TabView, ConnectionView, ScheduleView } from './protocol.js';
 
-const SHELL_NAME = (process.env.SHELL || 'bash').split('/').pop() || 'bash';
-
 type Sinks = {
   emitState: () => void;
   sendPty: (id: string, data: string) => void;
@@ -55,7 +53,7 @@ type Sinks = {
 export class Controller {
   tabs: Tab[] = [];
   activeTab = 0;
-  private shells = new Map<string, ChildProcess>();
+  private shells = new ShellManager();
   private cwd = new Map<string, string>();
   private busy = new Set<string>();
   private harnessOf = new Map<string, string>();
@@ -807,9 +805,9 @@ export class Controller {
     break;
     }
     case 'shell': {
-      if (this.shells.has(label)) { this.shells.get(label)?.kill(); this.shells.delete(label); out(`Closed connection shell:${SHELL_NAME}.`); }
+      if (this.shells.close(label)) out(`Closed connection shell:${SHELL_NAME}.`);
       else out(`No open connection shell:${parsed.id}.`);
-    
+
     break;
     }
     case 'acp': {
@@ -826,25 +824,11 @@ export class Controller {
 
   // --- scraped shell -------------------------------------------------------
 
-  private getShell(label: string): ChildProcess {
-    let shell = this.shells.get(label);
-    if (!shell || !shell.stdin?.writable) {
-      shell = spawnShell(0, { JANUS_AGENT_NAME: label });
-      this.shells.set(label, shell);
-      // Start the shell in the tab's working directory — the workspace clone for a workspaced
-      // agent, or the saved cwd for a `--relaunch`'d tab.
-      const cwd = this.cwd.get(label);
-      if (cwd) shell.stdin!.write(`cd "${cwd}"\n`);
-    }
-    return shell;
-  }
-
-  // Run a shell command in a tab's persistent shell. `display` streams it into the transcript;
-  // `onComplete` receives the final captured output regardless.
+  // Run a shell command in a tab's persistent shell (owned by the ShellManager). `display` streams
+  // it into the transcript; `onComplete` receives the final captured output regardless.
   private runShell(label: string, command: string, options: { display?: boolean; onComplete?: (out: string) => void } = {}): void {
     const isDisplay = options.display ?? true;
     const index = Math.max(0, this.tabs.findIndex((t) => t.label === label));
-    const shell = this.getShell(label);
     const cwd = this.cwd.get(label) ?? process.cwd();
     const tab = this.tabs.find((t) => t.label === label);
     if (!tab) { options.onComplete?.(''); return; }
@@ -870,19 +854,15 @@ export class Controller {
       if (!running) { this.busy.delete(label); if (isDisplay && tab) this.persist(tab); }
       this.sinks.emitState();
     };
-    executeShellCommand(shell, command, index,
-      (buffer) => update(buffer, true),
-      (result) => {
+    this.shells.run(label, command, index, this.cwd.get(label), {
+      onChunk: (buffer) => update(buffer, true),
+      onDone: (result) => {
         update(result, false);
         if (isDisplay && result && tab) messageBus.emit('transcript', { type: 'entry:appended', tabLabel: label, entry: { input: '', output: result }, tab });
         options.onComplete?.(result);
-        queryShellPwd(shell, index, (pwd) => { if (!pwd) {
-        	return;
-        }
-
-        this.cwd.set(label, pwd); this.sinks.emitState(); });
       },
-    );
+      onPwd: (pwd) => { this.cwd.set(label, pwd); this.sinks.emitState(); },
+    });
   }
 
   // Run text in a tab dispatching it as if the user typed it (full command routing, acp, browser,
@@ -1060,8 +1040,7 @@ export class Controller {
     if (tab.image) { const id = tab.image.url.replace(/^\/open\//, ''); this.openFiles.delete(id); }
     if (tab.markdown) { const id = tab.markdown.url.replace(/^\/open\//, ''); this.openFiles.delete(id); }
     if (tab.workspaceDir) { removeWorkspace(tab.workspaceDir); this.workspaces.delete(tab.workspaceDir); }
-    this.shells.get(tab.label)?.kill();
-    this.shells.delete(tab.label);
+    this.shells.close(tab.label);
     this.acpSessions.get(tab.label)?.kill();
     this.acpSessions.delete(tab.label);
     this.acpInfo.delete(tab.label);
@@ -1117,7 +1096,7 @@ export class Controller {
   shutdown(): void {
     messageBus.clear();
     clearInterval(this.timer);
-    for (const [, shell] of this.shells) shell.kill();
+    this.shells.closeAll();
     for (const [, session] of this.acpSessions) session.kill();
     for (const [, e] of this.ptys) e.session.kill();
     this.browsers.closeAll();
