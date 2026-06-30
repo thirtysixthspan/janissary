@@ -6,7 +6,7 @@ import type { LogEntry, MessageKind } from './types.js';
 // output to the sender as a response.
 type Message = { id: number; from: string; to: string; kind: MessageKind; text: string };
 
-export type MessageBusDeps = {
+export type AgentBusDeps = {
   hasAgent: (label: string) => boolean;
   agentColor: (label: string) => string;
   isInteractive: (command: string) => boolean;
@@ -16,12 +16,12 @@ export type MessageBusDeps = {
   runCapture: (label: string, text: string, callback: (output: string) => void) => void;
 };
 
-export class MessageBus {
+export class AgentBus {
   private queues = new Map<string, Message[]>();
   private processing = new Set<string>();
   private nextId = 0;
 
-  constructor(private dependencies: MessageBusDeps) {}
+  constructor(private dependencies: AgentBusDeps) {}
 
   send(message: Omit<Message, 'id'>): boolean {
     if (!this.dependencies.hasAgent(message.to)) return false;

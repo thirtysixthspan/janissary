@@ -53,16 +53,42 @@ The companion plan `monitoring-ai.md` adds monitor state as `Controller` fields 
 
 A `TranscriptBus` class — a small typed event emitter scoped to transcript-lifecycle events — instantiated once by the `Controller`. Each transcript-mutation site emits the event for what it did, immediately after mutating `tab.log` and **before** `emitState()`. Subscribers register with a returned `Subscription` handle and tear down via `unsubscribe()`.
 
-Design choices that differ from the original draft:
+All downstream consumers of transcript mutations — including the append-only file logger — are bus subscribers, not inline `Controller` calls. The `Controller` never imports `logger.ts`.
+
+Design choices:
 
 - **Covers all new-entry paths, not just `append()`.** Because `runShell`'s display push bypasses `append()`, emitting only from `append()` would silently drop shell command entries. Both new-entry sites emit `entry:appended`, so the bus genuinely spans every tab's transcript. (See [Emission sites](#emission-sites-in-controller).)
-- **Subscriber errors are isolated.** The bus now sits on the UI-critical append path (it fires just before `emitState()`). A throwing subscriber must **not** break transcript mutation or state broadcast, so `emit()` wraps each listener in `try/catch`. This is a deliberate departure from Node's `EventEmitter` "throw breaks the chain" contract.
+- **Subscriber errors are isolated.** The bus sits on the UI-critical append path (it fires just before `emitState()`). A throwing subscriber must **not** break transcript mutation or state broadcast, so `emit()` wraps each listener in `try/catch`. This is a deliberate departure from Node's `EventEmitter` "throw breaks the chain" contract.
 - **Minimal surface.** The teardown mechanism is the `Subscription` handle returned by `on`/`once`/`onTab`. There is no separate `off(type, fn)` — one teardown path, less surface.
 - **Synchronous fan-out.** Listeners run in the same tick as the mutation. A subscriber needing async work (e.g. an ACP prompt) schedules its own microtask; it must not block the append path.
+- **File logger is a subscriber.** The existing `append-entry` file log (`.janissary/log/<date>.json`) is registered by `main.ts` via `controller.transcriptBus.on('entry:appended', …)` at startup. The `Controller` itself never imports `logger.ts`, calls `appendEntry`, or knows about the file-log mechanism.
+
+### Architecture: how recording works
+
+```
+main.ts
+  │
+  ├── new Controller()
+  │     └── controller.transcriptBus (TranscriptBus instance)
+  │
+  ├── controller.transcriptBus.on('entry:appended', fileLoggerSubscriber)
+  │     └── writes to .janissary/log/<date>.json
+  │
+  └── controller.transcriptBus.on('entry:appended', monitorSubscriber)
+        └── feeds ACP agent, stores suggestions
+  
+Controller.append()
+  └── tab.log.push → capLog → bus.emit(entry:appended) → [fileLogger, monitor, …]
+                                          ↑
+Controller.runShell (display push)
+  └── tab.log.push → capLog → bus.emit(entry:appended) ──┘
+```
+
+The file-logger subscriber is the first subscriber registered on the bus, so it sees every appended entry regardless of which code path created it. The controller never calls `appendEntry` or `getTimeStr` directly.
 
 ### Phasing
 
-- **Phase 1 (this plan's core):** the `src/transcript/` module + emission of `entry:appended`, `entries:trimmed`, `tab:cleared`, `tab:removed`. This is everything the monitor feature and a transcript logger need.
+- **Phase 1 (this plan's core):** the `src/transcript/` module + emission of `entry:appended`, `entries:trimmed`, `tab:cleared`, `tab:removed`. This is everything the monitor feature and the file-logger need.
 - **Phase 2 (optional, deferred):** an `entry:updated` event for in-flight streaming edits (`updateRunning`, `runShell` `update`, `finishRunning`, `onPtyExit`), for consumers that need to observe partial output. Deferred because the monitor only acts on finalized entries, and streaming emits would fire at the same high cadence as `emitState()`. Listed in [Open questions](#open-questions).
 
 ---
@@ -198,7 +224,7 @@ export class Controller {
 
 ### Emission sites in Controller
 
-**`append()`** — compute the cap-driven drop count from the real `capLog` (which slices), then emit trim → append before `emitState()`:
+**`append()`** — compute the cap-driven drop count from the real `capLog` (which slices), then emit trim → append before `emitState()`. No longer calls `this.log()` — file recording is the file-logger subscriber's job:
 
 ```ts
 private append(label: string, entry: LogEntry): void {
@@ -207,8 +233,6 @@ private append(label: string, entry: LogEntry): void {
   const before = tab.log.length;
   tab.log = this.capLog([...tab.log, entry]);
   tab.scrollOffset = 0;
-  this.log(label, entry.input);
-  this.log(label, entry.output);
   this.persist(tab);
   const trimmed = before + 1 - tab.log.length; // entries capLog dropped (0 when under the cap)
   if (trimmed > 0) this.transcriptBus.emit({ type: 'entries:trimmed', tabLabel: label, count: trimmed });
@@ -217,13 +241,12 @@ private append(label: string, entry: LogEntry): void {
 }
 ```
 
-**`runShell` display push** — the new-entry path that bypasses `append()`. Emit the same events so shell command entries are observable across all tabs:
+**`runShell` display push** — the new-entry path that bypasses `append()`. Emit the same events so shell command entries are observable across all tabs. No `this.log()` call:
 
 ```ts
 if (isDisplay) {
   const before = tab.log.length;
   tab.log = this.capLog([...tab.log, { input: command, output: '', running: true, cwd }]);
-  this.log(label, command);
   const trimmed = before + 1 - tab.log.length;
   if (trimmed > 0) this.transcriptBus.emit({ type: 'entries:trimmed', tabLabel: label, count: trimmed });
   this.transcriptBus.emit({ type: 'entry:appended', tabLabel: label, entry: tab.log.at(-1)!, tab });
@@ -324,13 +347,40 @@ The monitor never appears on the append path, and its tests can subscribe to a b
 
 ### Changed
 
-5. **`src/controller.ts`** — import `TranscriptBus`; add `readonly transcriptBus` field; emit at the four sites (`append`, `runShell` display push, `clear`, `closeTab`); `clear()` in `shutdown()`. (Optional: extract `pushEntry` helper.)
-6. **`src/controller.test.ts`** — integration tests asserting the Controller emits the right events (see below).
-7. **`docs/plans/monitoring-ai.md`** — edit per [Reconciling with `monitoring-ai.md`](#reconciling-with-monitoring-aimd): drop the `append()` hook / `notifyMonitors()`, subscribe via `controller.transcriptBus` instead.
+5. **`src/transcript/file-logger.ts`** — New subscriber module. Imports `appendEntry` and `getTimeStr` from `../logger.js`. Exports a function `createFileLoggerSubscriber()` that returns the bus subscription and wires `entry:appended` → file write:
+```ts
+import { appendEntry, getTimeStr as getTimeString } from '../logger.js';
+import type { TranscriptBus, TranscriptEvent } from './index.js';
+
+export function createFileLoggerSubscriber(bus: TranscriptBus): { unsubscribe: () => void } {
+  return bus.on('entry:appended', (event: TranscriptEvent) => {
+    if (event.type !== 'entry:appended') return;
+    const ts = getTimeString();
+    if (event.entry.input) appendEntry({ timestamp: ts, agent: event.tabLabel, text: event.entry.input });
+    if (event.entry.output) appendEntry({ timestamp: ts, agent: event.tabLabel, text: event.entry.output });
+  });
+}
+```
+
+6. **`src/main.ts`** — After `new Controller()`, register the file-logger subscriber:
+```ts
+import { createFileLoggerSubscriber } from './transcript/file-logger.js';
+
+// Wire the append-only file log to the transcript bus instead of inline calls in Controller.
+createFileLoggerSubscriber(controller.transcriptBus);
+// Other subscribers (e.g. monitor subsystem) register here too.
+```
+
+7. **`src/controller.ts`** — import `TranscriptBus`; add `readonly transcriptBus` field; emit at the four sites (`append`, `runShell` display push, `clear`, `closeTab`); `clear()` in `shutdown()`. Remove `import { appendEntry, getTimeStr }` and the `private log()` method and its call sites, since file recording is now a bus subscriber. (Optional: extract `pushEntry` helper.)
+8. **`src/controller.test.ts`** — integration tests asserting the Controller emits the right events (see below).
+9. **`docs/plans/monitoring-ai.md`** — edit per [Reconciling with `monitoring-ai.md`](#reconciling-with-monitoring-aimd): drop the `append()` hook / `notifyMonitors()`, subscribe via `controller.transcriptBus` instead.
+10. **`src/commands/acp.ts`** — Note: this file has a direct `appendEntry` call for ACP final output (line ~46). That call is needed because the ACP handler updates running entries via `setTabs` (not through `append()`), so no `entry:appended` event fires for the final output text. This direct call stays until Phase 2 adds `entry:updated` events for in-flight edits. (The initial `appendLog` from `startTurn` does go through `append()` and is covered by the bus.)
 
 ### Explicitly unchanged
 
 - **`src/types.ts`** — no change; event types live in `src/transcript/types.ts`.
+- **`src/logger.ts`** — no change; `appendEntry`/`initLogDir`/`getTimeStr` remain the same low-level file append API. Only the caller changes.
+- **`src/commands/acp.ts`** — the direct `appendEntry` call remains for now (see note above). Cleaned up in Phase 2.
 - **`src/protocol.ts`, `web/src/ws.ts`, `web/**`** — no change; the bus is server-internal and does not alter the wire protocol or `TabView`.
 
 ---
@@ -384,7 +434,7 @@ Per `CLAUDE.md`, use the fast diff-scoped loop after each change:
 
 ## Non-goals
 
-- **Phase-2 streaming events** (`entry:updated` for in-flight `running` edits) — deferred; the monitor only needs finalized entries.
+- **Phase-2 streaming events** (`entry:updated` for in-flight `running` edits) — deferred; the monitor only needs finalized entries. Phase 2 would also let us remove the direct `appendEntry` call in `src/commands/acp.ts` since the ACP final output would ride `entry:updated`.
 - **Async / queued delivery** — `emit()` is synchronous fan-out; async subscribers schedule their own work.
 - **Event history / replay** — no buffer; subscribers only get events fired while subscribed.
 - **Cross-process / cross-`Controller` routing** — the bus is per-`Controller` (which is already the all-tabs scope). Multi-process buses are out of scope.

@@ -27,7 +27,6 @@ import type { RouteChoice } from './recognizers/types.js';
 import { spawnShell, executeShellCmd as executeShellCommand, queryShellPwd } from './shell.js';
 import { findRepoRoot, createWorkspace, removeWorkspace } from './workspace.js';
 import { completeCommandLine } from './completion.js';
-import { appendEntry, getTimeStr as getTimeString } from './logger.js';
 import type { CompletionResult } from './types.js';
 import { spawnPty, type PtySession } from './pty.js';
 import { saveAgentState, loadAgentState, listAgentStates } from './agent-state.js';
@@ -36,7 +35,9 @@ import { parseProfileCommand, loadProfileAgents, listProfiles, profileExists } f
 import { parseConnectionCommand, closeConnection, closeAllConnections, isConnectionOpen, listOpenConnections } from './connections.js';
 import { parseMsgCommand as parseMessageCommand, parseBroadcastCommand } from './messaging.js';
 import { extractBrowserCommand, BROWSER_PRIMER } from './browser-command.js';
-import { MessageBus } from './message-bus.js';
+import { AgentBus } from './message-bus.js';
+import { messageBus } from './bus.js';
+import { TranscriptStore } from './transcript/store.js';
 import { BrowserManager } from './browser-tab.js';
 import { formatState } from './state-format.js';
 import { getConfig } from './config.js';
@@ -75,7 +76,7 @@ export class Controller {
   private cols = 80;
   private rows = 24;
   private timer: ReturnType<typeof setInterval>;
-  private bus: MessageBus;
+  private bus: AgentBus;
   private browsers = new BrowserManager();
   private workspaces = new Set<string>();
   // The root path: the directory the app was launched from. Transcript paths under it (including the
@@ -91,7 +92,7 @@ export class Controller {
   constructor(private sinks: Sinks) {
     this.tabs = [this.makeRootTab()];
     this.cwd.set('janus', process.cwd());
-    this.bus = new MessageBus({
+    this.bus = new AgentBus({
       hasAgent: (l) => this.tabs.some((t) => t.label === l),
       agentColor: (l) => this.tabs.find((t) => t.label === l)?.dotColor ?? '#e4e5e7',
       isInteractive,
@@ -100,6 +101,7 @@ export class Controller {
       runCapture: (l, text, callback) => this.runCapture(l, text, callback),
       appendContext: (l, text) => this.appendContext(l, text),
     });
+    messageBus.on('transcript', 'entry:appended', (event) => { if (event.type === 'entry:appended') this.persist(event.tab); });
     this.timer = setInterval(() => this.tick(), 1000);
     this.timer.unref?.();
   }
@@ -111,8 +113,9 @@ export class Controller {
     this.tabs = states.map((s, index) => {
       // Preserve each tab's saved `number`; fall back to array order only for state files predating
       // the field, so the strip reappears exactly as it was left.
+      const log = this.capLog(TranscriptStore.load(s.name) ?? s.log ?? []);
       const tab = makeTab(s.name, s.dotColor || distinctColor([]), s.number ?? index + 1, s.cmdHistory ?? [],
-        this.capLog((s.log) ?? []), s.workspaceDir, s.group ?? 1, s.groupColor || s.dotColor || '#5b9cff');
+        log, s.workspaceDir, s.group ?? 1, s.groupColor || s.dotColor || '#5b9cff');
       tab.toolStepsExpanded = false;
       return tab;
     });
@@ -227,7 +230,7 @@ export class Controller {
       this.busy.delete(label);
       this.persist(t);
     }
-    this.log(label, output); // log the finalized output (browser / connection-close results)
+    if (output && t) messageBus.emit('transcript', { type: 'entry:appended', tabLabel: label, entry: { input: '', output }, tab: t });
     this.sinks.emitState();
   }
 
@@ -242,19 +245,13 @@ export class Controller {
   private append(label: string, entry: LogEntry): void {
     const tab = this.tabs.find((t) => t.label === label);
     if (!tab) return;
+    const before = tab.log.length;
     tab.log = this.capLog([...tab.log, entry]);
     tab.scrollOffset = 0;
-    // Record the content in the append-only log (command input + output as separate entries).
-    this.log(label, entry.input);
-    this.log(label, entry.output);
-    this.persist(tab);
+    const trimmed = before + 1 - tab.log.length;
+    if (trimmed > 0) messageBus.emit('transcript', { type: 'entries:trimmed', tabLabel: label, count: trimmed });
+    messageBus.emit('transcript', { type: 'entry:appended', tabLabel: label, entry, tab });
     this.sinks.emitState();
-  }
-
-  // Append one content event to the append-only log (.janissary/log/<date>.json). No-op for empty
-  // text or until initLogDir has run.
-  private log(label: string, text: string): void {
-    if (text) appendEntry({ timestamp: getTimeString(), agent: label, text });
   }
 
   // Append an informational message (info/response from another agent) to a tab's context and
@@ -265,12 +262,12 @@ export class Controller {
     if (tab) this.persist(tab);
   }
 
-  private persist(tab: Tab): void {
+  private persist(tab: Readonly<Tab>): void {
     try {
       saveAgentState({
         name: tab.label, dotColor: tab.dotColor, active: this.busy.has(tab.label),
         number: tab.number, group: tab.group, groupColor: tab.groupColor,
-        cmdHistory: tab.cmdHistory, log: tab.log, cwd: this.cwd.get(tab.label),
+        cmdHistory: tab.cmdHistory, cwd: this.cwd.get(tab.label),
         context: this.context.get(tab.label), schedule: this.schedules.get(tab.label),
       });
     } catch { /* ignore */ }
@@ -353,7 +350,12 @@ export class Controller {
     switch (name) {
       case 'clear': {
         const tab = this.tabs.find((t) => t.label === label);
-        if (tab) { tab.log = []; this.persist(tab); this.sinks.emitState(); }
+        if (tab) {
+          tab.log = [];
+          this.persist(tab);
+          messageBus.emit('transcript', { type: 'tab:cleared', tabLabel: label });
+          this.sinks.emitState();
+        }
         return;
       }
       case 'db': { this.append(label, { input: command, output: this.runDbInTab(label, command) }); return;
@@ -491,7 +493,7 @@ export class Controller {
         t.log = log;
         if (!running) this.persist(t);
       }
-      if (!running) this.log(label, output); // log each finalized agent turn once
+      if (!running && output && t) messageBus.emit('transcript', { type: 'entry:appended', tabLabel: label, entry: { input: '', output }, tab: t });
       this.sinks.emitState();
     };
 
@@ -889,7 +891,13 @@ export class Controller {
     const cwd = this.cwd.get(label) ?? process.cwd();
     const tab = this.tabs.find((t) => t.label === label);
     if (!tab) { options.onComplete?.(''); return; }
-    if (isDisplay) { tab.log = this.capLog([...tab.log, { input: command, output: '', running: true, cwd }]); this.log(label, command); }
+    if (isDisplay) {
+      const before = tab.log.length;
+      tab.log = this.capLog([...tab.log, { input: command, output: '', running: true, cwd }]);
+      const trimmed = before + 1 - tab.log.length;
+      if (trimmed > 0) messageBus.emit('transcript', { type: 'entries:trimmed', tabLabel: label, count: trimmed });
+      messageBus.emit('transcript', { type: 'entry:appended', tabLabel: label, entry: tab.log.at(-1)!, tab });
+    }
     this.busy.add(label);
     this.sinks.emitState();
     const update = (output: string, running: boolean) => {
@@ -909,7 +917,7 @@ export class Controller {
       (buffer) => update(buffer, true),
       (result) => {
         update(result, false);
-        if (isDisplay) this.log(label, result); // log the final shell output (capture runs aren't logged)
+        if (isDisplay && result && tab) messageBus.emit('transcript', { type: 'entry:appended', tabLabel: label, entry: { input: '', output: result }, tab });
         options.onComplete?.(result);
         queryShellPwd(shell, index, (pwd) => { if (!pwd) {
         	return;
@@ -1009,6 +1017,7 @@ export class Controller {
           log[index] = { ...log[index], terminal: { ...log[index].terminal!, status: 'exited', exitCode } };
           tab.log = log;
           this.persist(tab);
+          messageBus.emit('transcript', { type: 'entry:appended', tabLabel: tab.label, entry: log[index], tab });
         }
       }
     }
@@ -1087,6 +1096,7 @@ export class Controller {
   closeTab(index: number): void {
     const tab = this.tabs[index];
     if (!tab) return;
+    messageBus.emit('transcript', { type: 'tab:removed', tabLabel: tab.label });
     // Tear down everything tab-scoped (SQLite connections are global and left open).
     // An image tab owns no shell/acp/browser/workspace, so those steps below are no-ops for it; just
     // drop its served file from the allow-list so the `/open/<id>` ref stops resolving.
@@ -1148,6 +1158,7 @@ export class Controller {
   }
 
   shutdown(): void {
+    messageBus.clear();
     clearInterval(this.timer);
     for (const [, shell] of this.shells) shell.kill();
     for (const [, session] of this.acpSessions) session.kill();

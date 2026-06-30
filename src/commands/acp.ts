@@ -5,7 +5,7 @@ import { runAcpToolLoop } from '../acp-loop.js';
 import { DB_PRIMER, extractDatabaseCommand } from '../database.js';
 import { extractBrowserCommand, BROWSER_PRIMER } from '../browser-command.js';
 import { wordWrap } from '../tab.js';
-import { appendEntry, getTimeStr as getTimeString } from '../logger.js';
+import { messageBus } from '../bus.js';
 
 export const command: Command = {
   name: 'acp',
@@ -43,14 +43,15 @@ export const command: Command = {
     const acpSession = session;
     const wrapWidth = Math.max(20, (columns || 80) - 6);
     const updateRunning = (output: string, isRunning: boolean) => {
-      if (!isRunning && output) appendEntry({ timestamp: getTimeString(), agent: tabLabel, text: output });
       setTabs((previous) => previous.map((t) => {
         if (t.label !== tabLabel) return t;
         const log = [...t.log];
         const index = log.findLastIndex((entry) => entry.running);
         if (index !== -1) log[index] = { ...log[index], output, running: isRunning };
         saveTabLog(t.label, log);
-        return { ...t, log };
+        const updated = { ...t, log };
+        if (!isRunning && output) messageBus.emit('transcript', { type: 'entry:appended', tabLabel, entry: { input: '', output }, tab: updated });
+        return updated;
       }));
     };
     runAcpToolLoop(

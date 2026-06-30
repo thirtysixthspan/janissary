@@ -5,12 +5,14 @@ import path from 'node:path';
 import { Controller } from './controller.js';
 import { initAgentStateDirectory, saveAgentState, loadAgentState } from './agent-state.js';
 import { initProfileDir } from './profiles.js';
-import { initLogDir, getLogDir } from './logger.js';
+import { messageBus } from './bus.js';
+import { TranscriptLogger } from './transcript/logger.js';
 import { initDbDir, isConnectionOpen, closeAllConnections } from './connections.js';
 import { loadConfig } from './config.js';
 import { agentNames } from './commands.js';
 import { spawnPty } from './pty.js';
 import type { PtyHandlers } from './pty.js';
+import type { BusEvent } from './bus.js';
 
 // The external-open path shells out to the OS image viewer; stub it so tests never launch an app.
 vi.mock('./openers/os-open.js', () => ({ didOsOpen: () => true }));
@@ -278,16 +280,20 @@ describe('Controller', () => {
   });
 
   it('records transcript content in the append-only log', () => {
-    initLogDir(mkdtempSync(path.join(tmpdir(), 'janus-log-')));
-    const { c } = makeController();
-    c.dispatch('help');
-    const files = readdirSync(getLogDir()).filter((f) => f.endsWith('.json'));
-    expect(files.length).toBe(1);
-    const entries = readFileSync(path.join(getLogDir(), files[0]), 'utf8').trim().split('\n').map((l) => JSON.parse(l));
-    // The command input and its output are logged as separate entries, each timestamped HH:MM:SS.mmm.
-    expect(entries.some((entry) => entry.agent === 'janus' && entry.text === 'help')).toBe(true);
-    expect(entries.length).toBeGreaterThanOrEqual(2);
-    expect(entries.every((entry) => /^\d{2}:\d{2}:\d{2}\.\d{3}$/.test(entry.timestamp))).toBe(true);
+    const tl = new TranscriptLogger(mkdtempSync(path.join(tmpdir(), 'janus-log-')));
+    try {
+      const { c } = makeController();
+      c.dispatch('help');
+      const files = readdirSync(TranscriptLogger.logDir).filter((f) => f.endsWith('.json'));
+      expect(files.length).toBe(1);
+      const entries = readFileSync(path.join(TranscriptLogger.logDir, files[0]), 'utf8').trim().split('\n').map((l) => JSON.parse(l));
+      // The command input and its output are logged as separate entries, each timestamped HH:MM:SS.mmm.
+      expect(entries.some((entry) => entry.agent === 'janus' && entry.text === 'help')).toBe(true);
+      expect(entries.length).toBeGreaterThanOrEqual(2);
+      expect(entries.every((entry) => /^\d{2}:\d{2}:\d{2}\.\d{3}$/.test(entry.timestamp))).toBe(true);
+    } finally {
+      tl.unsubscribe();
+    }
   });
 
   it('reports an unknown harness without launching a PTY', () => {
@@ -711,5 +717,82 @@ describe('Controller harness view', () => {
     c.dispatch('harness claude');
     const tab = c.view().find((t) => t.label === 'claude');
     expect(tab!.connections.some((r) => r.kind === 'terminal' && r.text.includes('claude'))).toBe(true);
+  });
+});
+
+describe('Controller messageBus', () => {
+  const collect = () => {
+    const events: BusEvent[] = [];
+    messageBus.on('transcript', ['entry:appended', 'entries:trimmed', 'tab:cleared', 'tab:removed'], (e) => { events.push(e); });
+    return events;
+  };
+
+  it('emits entry:appended with correct tabLabel and entry when a command appends', () => {
+    const { c } = makeController();
+    const events = collect();
+    c.dispatch('help');
+    const appended = events.filter((e) => e.type === 'entry:appended');
+    expect(appended.length).toBeGreaterThan(0);
+    expect(appended[0].tabLabel).toBe('janus');
+    expect(appended[0].type).toBe('entry:appended');
+  });
+
+  it('emitted entry:appended carries a tab reflecting the post-append log', () => {
+    const { c } = makeController();
+    const events = collect();
+    c.dispatch('help');
+    const appended = events.find((e) => e.type === 'entry:appended');
+    expect(appended).toBeDefined();
+    if (appended?.type === 'entry:appended') {
+      expect(appended.tab.log.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('emits tab:cleared when the clear command runs', () => {
+    const { c } = makeController();
+    const events = collect();
+    c.dispatch('help');
+    c.dispatch('clear');
+    expect(events.some((e) => e.type === 'tab:cleared' && e.tabLabel === 'janus')).toBe(true);
+  });
+
+  it('emits tab:removed when closeTab is called', () => {
+    const { c } = makeController();
+    c.dispatch('agent bob');
+    const events = collect();
+    const index = c.view().findIndex((t) => t.label === 'bob');
+    c.closeTab(index);
+    expect(events.some((e) => e.type === 'tab:removed' && e.tabLabel === 'bob')).toBe(true);
+  });
+
+  it('emits entries:trimmed before entry:appended when cap is exceeded', () => {
+    const root = mkdtempSync(path.join(tmpdir(), 'janus-bus-cap-'));
+    mkdirSync(path.join(root, '.janissary'), { recursive: true });
+    writeFileSync(path.join(root, '.janissary', 'config.json'), JSON.stringify({ transcriptMaxLines: 3 }));
+    try {
+      loadConfig(root);
+      const { c } = makeController();
+      // `agent fooN` appends one transcript entry per dispatch; fill to the cap
+      c.dispatch('agent foo1');
+      c.dispatch('agent foo2');
+      c.dispatch('agent foo3');
+      const events: BusEvent[] = [];
+      messageBus.on('transcript', ['entry:appended', 'entries:trimmed'], (e) => { events.push(e); });
+      // 4th dispatch exceeds cap=3, triggering entries:trimmed then entry:appended
+      c.dispatch('agent foo4');
+      const trimIdx = events.findIndex((e) => e.type === 'entries:trimmed');
+      const appendIdx = events.findIndex((e) => e.type === 'entry:appended');
+      expect(trimIdx).toBeGreaterThanOrEqual(0);
+      expect(appendIdx).toBeGreaterThan(trimIdx);
+    } finally {
+      loadConfig(mkdtempSync(path.join(tmpdir(), 'janus-bus-cap-reset-')));
+    }
+  });
+
+  it('existing controller tests are unaffected (no-subscriber safety)', () => {
+    const { c } = makeController();
+    // No subscriber — dispatch runs normally
+    c.dispatch('help');
+    expect(c.view()[0].bufferLines.some((l) => l.type === 'markdown')).toBe(true);
   });
 });

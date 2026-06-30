@@ -1,13 +1,13 @@
 import { describe, it, expect, vi } from 'vitest';
-import { MessageBus } from './message-bus.js';
-import type { MessageBusDeps } from './message-bus.js';
+import { AgentBus } from './message-bus.js';
+import type { AgentBusDeps } from './message-bus.js';
 
-const setup = (over: Partial<MessageBusDeps> = {}) => {
+const setup = (over: Partial<AgentBusDeps> = {}) => {
   const appendLog = vi.fn();
   const appendContext = vi.fn();
   const runShell = vi.fn((_label: string, command: string, onComplete: (o: string) => void) => onComplete(`ran:${command}`));
   const runCapture = vi.fn((_label: string, text: string, onResult: (o: string) => void) => onResult(`out:${text}`));
-  const dependencies: MessageBusDeps = {
+  const dependencies: AgentBusDeps = {
     hasAgent: () => true,
     agentColor: (label) => (label === 'aslan' ? '#ff0000' : '#00ff00'),
     isInteractive: () => false,
@@ -17,10 +17,10 @@ const setup = (over: Partial<MessageBusDeps> = {}) => {
     runCapture,
     ...over,
   };
-  return { bus: new MessageBus(dependencies), appendLog, appendContext, runShell, runCapture };
+  return { bus: new AgentBus(dependencies), appendLog, appendContext, runShell, runCapture };
 };
 
-describe('MessageBus', () => {
+describe('AgentBus', () => {
   it('displays informational messages with the sender color and stores them in context', () => {
     const { bus, appendLog, appendContext } = setup();
     bus.send({ from: 'aslan', to: 'bilal', kind: 'info', text: 'standby' });

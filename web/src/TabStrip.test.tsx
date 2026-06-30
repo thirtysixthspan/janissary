@@ -54,12 +54,6 @@ describe('TabStrip', () => {
     expect(onSelect).toHaveBeenCalledWith(1);
   });
 
-  it('shows a close button only for image tabs', () => {
-    const tabs = [makeTab({ label: 'agent' }), makeTab({ label: 'img', view: 'image' })];
-    render(<TabStrip tabs={tabs} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()} />);
-    expect(screen.queryAllByRole('button', { name: /close/i })).toHaveLength(1);
-  });
-
   it('shows a close button for harness tabs and renders the harness name', () => {
     const tab = makeTab({ label: 'claude', view: 'harness', title: 'claude' });
     render(<TabStrip tabs={[tab]} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()} />);

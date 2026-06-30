@@ -4,10 +4,11 @@ import path from 'node:path';
 import { startServer } from './index.js';
 import { makeToken } from './security.js';
 import { initAgentStateDirectory, clearStateDirectory } from './agent-state.js';
+import { TranscriptLogger } from './transcript/logger.js';
+import { TranscriptStore } from './transcript/store.js';
 import { initDbDir } from './connections.js';
 import { initProfileDir } from './profiles.js';
 import { initWorkspaceDir, clearWorkspaceDir } from './workspace.js';
-import { initLogDir } from './logger.js';
 import { loadConfig } from './config.js';
 import type { ChildProcess } from 'node:child_process';
 
@@ -105,9 +106,10 @@ export async function boot(argv = process.argv.slice(2)): Promise<void> {
   initDbDir(cwd);
   initProfileDir(cwd);
   initWorkspaceDir(cwd);
-  initLogDir(cwd); // append-only transcript log under .janissary/log/ (never cleared)
+  new TranscriptLogger(cwd); // append-only transcript log under .janissary/log/ (never cleared)
+  new TranscriptStore(cwd);
   loadConfig(cwd);
-  if (!isRelaunch) { clearStateDirectory(); clearWorkspaceDir(); }
+  if (!isRelaunch) { clearStateDirectory(); TranscriptStore.clear(); clearWorkspaceDir(); }
 
   const webDir = path.join(import.meta.dirname, '..', 'web', 'dist');
   const server = await startServer({ webDir, token: makeToken(), port, relaunch: isRelaunch });

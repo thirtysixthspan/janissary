@@ -174,16 +174,33 @@ suggestions: this.getSuggestionsFor(t.label),
 - `stopMonitor(monitorLabel, targetLabel?)`: removes subscriptions
 - `stopAllMonitors(monitorLabel)`: clears all
 
-**`append()` method**: After appending a new `LogEntry` to a tab, check if any monitors are watching it. If so, feed the new entry text to each monitoring agent's ACP session:
+**Monitor as a `transcriptBus` subscriber**: Rather than hooking `append()` directly, the monitor subsystem subscribes to `controller.transcriptBus` for `entry:appended` events. This keeps the producer (`append()`) free of any monitor-specific logic. The subscription is set up in `startMonitor()` and torn down in `stopMonitor()`:
 
 ```ts
-private notifyMonitors(label: string, entry: LogEntry): void {
-  for (const [monitorLabel, targets] of this.monitors) {
-    if (!targets.has(label)) continue;
-    this.feedMonitor(monitorLabel, label, entry);
+startMonitor(monitorLabel: string, targetLabels: string[]): void {
+  const targets = new Set(targetLabels);
+  const sub = this.controller.transcriptBus.on('entry:appended', (event) => {
+    if (targets.has(event.tabLabel)) this.feedMonitor(monitorLabel, event.tabLabel, event.entry);
+  });
+  const cleanup = this.controller.transcriptBus.on('tab:removed', (event) => {
+    if (targets.has(event.tabLabel)) this.stopMonitor(monitorLabel, event.tabLabel);
+  });
+  this.subscriptions.set(monitorLabel, { sub, cleanup, targets });
+}
+
+stopMonitor(monitorLabel: string, targetLabel?: string): void {
+  const reg = this.subscriptions.get(monitorLabel);
+  if (!reg) return;
+  if (targetLabel) reg.targets.delete(targetLabel);
+  if (!targetLabel || reg.targets.size === 0) {
+    reg.sub.unsubscribe();
+    reg.cleanup.unsubscribe();
+    this.subscriptions.delete(monitorLabel);
   }
 }
 ```
+
+No `notifyMonitors()` method and no `append()` hook are needed — the bus carries the event to any number of subscribers without `append()` knowing monitors exist.
 
 **`feedMonitor()`**: Send the new entry's text into the monitoring agent's ACP session as a prompt, parse the response for `[SUGGESTION]` markers, and store parsed suggestions:
 
@@ -356,7 +373,7 @@ Server-side handler removes the suggestion and emits updated state.
 ### 2. `src/protocol.ts` — Add `SuggestionView` type, extend `TabView`, add `dismissSuggestion` to `RpcCall`
 ### 3. `src/commands/monitor.ts` — New file: parsers for `monitor`/`unmonitor`, suggestion extraction
 ### 4. `src/commands/index.ts` — Register `monitor`, `unmonitor`
-### 5. `src/controller.ts` — Monitor subscription state, `feedMonitor()`, `notifyMonitors()`, new command branches, `dismissSuggestion` handler, `view()` suggestions projection, `append()` hook
+### 5. `src/controller.ts` — Monitor subscription state, `feedMonitor()`, new command branches, `dismissSuggestion` handler, `view()` suggestions projection; subscribe to `controller.transcriptBus` in `startMonitor()` rather than adding an `append()` hook — the bus decouples producers from consumers
 ### 6. `src/completion.ts` — Tab completion for `monitor`/`unmonitor` labels
 ### 7. `web/src/MonitorPanel.tsx` — New component
 ### 8. `web/src/App.tsx` — Render `MonitorPanel`, wire events
