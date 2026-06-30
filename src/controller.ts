@@ -1,8 +1,8 @@
 /* eslint-disable max-lines */
 import { spawnSync } from 'node:child_process';
-import type { Tab, LogEntry, ScheduleEntry, ImageView, MarkdownView, PageView, HarnessView } from './types.js';
+import type { Tab, LogEntry, ScheduleEntry, ImageView, MarkdownView, PageView } from './types.js';
 import {
-  makeTab, makeImageTab, makeMarkdownTab, makePageTab, makeHarnessTab, distinctColor, insertTabInGroup, flattenBuffer, stripComments,
+  makeTab, makeImageTab, makeMarkdownTab, makePageTab, distinctColor, insertTabInGroup, flattenBuffer, stripComments,
   swapTabsLeft, swapTabsRight,
 } from './tab.js';
 import { existsSync, statSync } from 'node:fs';
@@ -16,31 +16,31 @@ import { parseClose } from './commands/close.js';
 import { webOpener } from './openers/page.js';
 import { resolveCommand } from './resolve.js';
 import { isInteractive } from './interactive.js';
-import { parseHarnessCommand, HARNESS_COMMANDS } from './harness.js';
+import { HarnessManager } from './harness-manager.js';
 import { parseAgentCommand, resolveAgentName, getOutput } from './commands.js';
 import { commands } from './commands/index.js';
 import type { CommandContext } from './commands/types.js';
-import { runDatabaseCommand, parseDatabaseCommand, DB_PRIMER, extractDatabaseCommand } from './database.js';
+import { DatabaseManager } from './database-manager.js';
 import { AcpManager } from './acp-manager.js';
 import { runAcpToolLoop } from './acp-loop.js';
 import { analyzeCommand, toPrefixedCommand, routeChoices } from './recognizers/index.js';
 import type { RouteChoice } from './recognizers/types.js';
 import { ShellManager, SHELL_NAME } from './shell-manager.js';
-import { findRepoRoot, createWorkspace, removeWorkspace } from './workspace.js';
+import { WorkspaceManager } from './workspace-manager.js';
 import { completeCommandLine } from './completion.js';
 import type { CompletionResult } from './types.js';
-import { spawnPty, type PtySession } from './pty.js';
+import { PseudoterminalManager } from './pseudoterminal-manager.js';
 import { saveAgentState, listAgentStates } from './agent-state.js';
-import { computeNextRun, fmtNextRun } from './schedule.js';
+import { ScheduleManager } from './schedule-manager.js';
 import { parseProfileCommand, loadProfileAgents, listProfiles, profileExists } from './profiles.js';
-import { parseConnectionCommand, closeConnection, closeAllConnections, isConnectionOpen, listOpenConnections } from './connections.js';
+import { parseConnectionCommand } from './connections.js';
 import { extractBrowserCommand, BROWSER_PRIMER } from './browser-command.js';
 import { AgentBus } from './message-bus.js';
 import { messageBus } from './bus.js';
 import { TranscriptStore } from './transcript/store.js';
 import { BrowserManager } from './browser-tab.js';
 import { getConfig } from './config.js';
-import type { TabView, ConnectionView, ScheduleView } from './protocol.js';
+import type { TabView, ConnectionView } from './protocol.js';
 
 type Sinks = {
   emitState: () => void;
@@ -56,25 +56,20 @@ export class Controller {
   private shells = new ShellManager();
   private cwd = new Map<string, string>();
   private busy = new Set<string>();
-  private harnessOf = new Map<string, string>();
   private acp = new AcpManager();
-  private ptys = new Map<string, { session: PtySession; tabLabel: string }>();
-  private schedules = new Map<string, ScheduleEntry[]>();
-  // SQLite connections (global) attributed to the tab(s) that ran a `db` command against them, so a
-  // tab's connections panel reflects only the databases it has opened.
-  private tabDbConns = new Map<string, string[]>();
+  private db = new DatabaseManager();
   // Informational messages (info/response) received from other agents, per tab, persisted to agent
   // state's `context[]` and shown by the `state` command.
   private context = new Map<string, string[]>();
   // A command awaiting route disambiguation: shown as a chooser overlay in the client, resolved by
   // `chooseRoute`. Null when no chooser is open (only one at a time).
   private pendingRoute: { label: string; cmd: string; choices: RouteChoice[] } | null = null;
-  private cols = 80;
-  private rows = 24;
-  private timer: ReturnType<typeof setInterval>;
   private bus: AgentBus;
+  private harness: HarnessManager;
+  private schedule: ScheduleManager;
+  private pty: PseudoterminalManager;
   private browsers = new BrowserManager();
-  private workspaces = new Set<string>();
+  private workspace = new WorkspaceManager();
   // The root path: the directory the app was launched from. Transcript paths under it (including the
   // hidden `.janissary` state directory) are abbreviated to `$root` for display. See `shorten`.
   private readonly rootDir = process.cwd();
@@ -97,9 +92,25 @@ export class Controller {
       runCapture: (l, text, callback) => this.runCapture(l, text, callback),
       appendContext: (l, text) => this.appendContext(l, text),
     });
+    this.harness = new HarnessManager({
+      tabs: () => this.tabs,
+      creator: () => this.cur(),
+      cwdOf: (l) => this.cwd.get(l),
+      createWorkspace: (name) => this.workspace.create(name),
+      openTab: (tab) => { this.tabs = insertTabInGroup(this.tabs, tab); this.activeTab = this.tabs.findIndex((t) => t.label === tab.label); },
+      startPty: (label, program, cwd) => this.spawnHarnessPty(label, program, cwd),
+    });
+    this.schedule = new ScheduleManager({
+      labels: () => this.tabs.map((t) => t.label),
+      dispatch: (label, command) => this.dispatchTo(label, command),
+      persisted: (label) => { const tab = this.tabs.find((t) => t.label === label); if (tab) this.persist(tab); },
+    });
+    this.pty = new PseudoterminalManager({
+      onData: (id, data) => this.sinks.sendPty(id, data),
+      onExit: (id, exitCode, hadEntry) => this.onPtyExit(id, exitCode, hadEntry),
+    });
     messageBus.on('transcript', 'entry:appended', (event) => { if (event.type === 'entry:appended') this.persist(event.tab); });
-    this.timer = setInterval(() => this.tick(), 1000);
-    this.timer.unref?.();
+    this.schedule.start();
   }
 
   // Restore tabs from persisted agent state (for `--relaunch`). Called before any client connects.
@@ -117,7 +128,7 @@ export class Controller {
     });
     for (const s of states) {
       if (s.cwd) this.cwd.set(s.name, s.cwd);
-      if (s.schedule) this.schedules.set(s.name, s.schedule);
+      if (s.schedule) this.schedule.set(s.name, s.schedule);
       if (s.context) this.context.set(s.name, s.context);
     }
     this.activeTab = 0;
@@ -128,7 +139,7 @@ export class Controller {
       label: t.label, number: t.number, dotColor: t.dotColor, group: t.group, groupColor: t.groupColor,
       busy: this.busy.has(t.label), cwd: this.cwd.get(t.label) ?? process.cwd(),
       acp: this.acp.label(t.label),
-      connections: this.connectionsFor(t.label), schedule: this.scheduleFor(t.label),
+      connections: this.connectionsFor(t.label), schedule: this.schedule.view(t.label),
       // Prompt lines carry the working directory; abbreviate it to `$root`/`~` for display only
       // (the stored cwd stays the real absolute path).
       bufferLines: flattenBuffer(t.log, !t.toolStepsExpanded)
@@ -177,21 +188,9 @@ export class Controller {
     if (acp) rows.push({ text: `acp:${acp}`, kind: 'acp' });
     const b = this.browsers.info(label);
     if (b) for (const id of b.ids) rows.push({ text: `browser:${id} (${b.mode})`, kind: 'browser' });
-    for (const [, entry] of this.ptys) if (entry.tabLabel === label) rows.push({ text: `terminal:${entry.session.program}`, kind: 'terminal' });
-    for (const n of this.openDbsFor(label)) rows.push({ text: `sqlite:${n}`, kind: 'sqlite' });
+    for (const program of this.pty.terminalsFor(label)) rows.push({ text: `terminal:${program}`, kind: 'terminal' });
+    for (const n of this.db.openDbs(label)) rows.push({ text: `sqlite:${n}`, kind: 'sqlite' });
     return rows;
-  }
-
-  // The SQLite databases a tab has opened that are still live (filtered against the registry so a
-  // closed/deleted db drops out). Drives the per-tab connections panel and command recognition.
-  private openDbsFor(label: string): string[] {
-    return (this.tabDbConns.get(label) ?? []).filter(isConnectionOpen);
-  }
-
-  private scheduleFor(label: string): ScheduleView[] {
-    return (this.schedules.get(label) ?? []).map((e) => ({
-      id: e.id, spec: e.spec, next: fmtNextRun(e.nextRun), recurring: e.recurring,
-    }));
   }
 
   private cur(): Tab { return this.tabs[this.activeTab] ?? this.tabs[0]; }
@@ -258,7 +257,7 @@ export class Controller {
         name: tab.label, dotColor: tab.dotColor, active: this.busy.has(tab.label),
         number: tab.number, group: tab.group, groupColor: tab.groupColor,
         cmdHistory: tab.cmdHistory, cwd: this.cwd.get(tab.label),
-        context: this.context.get(tab.label), schedule: this.schedules.get(tab.label),
+        context: this.context.get(tab.label), schedule: this.schedule.get(tab.label),
       });
     } catch { /* ignore */ }
   }
@@ -295,9 +294,8 @@ export class Controller {
 
   private run(input: string, label: string, index: number): void {
     if (/^harness\b/i.test(input)) {
-      const parsed = parseHarnessCommand(input);
-      if ('error' in parsed) this.append(label, { input, output: parsed.error });
-      else this.openHarnessTab(parsed.name, parsed.workspace, label, input);
+      const error = this.harness.run(input);
+      if (error) this.append(label, { input, output: error });
       return;
     }
     const res = resolveCommand(input);
@@ -316,7 +314,7 @@ export class Controller {
         // a confident non-db route, or a confident db route when exactly one database is open (the
         // query needs a single concrete target). The web UI has no interactive route chooser, so the
         // otherwise-ambiguous cases fall back to a hint asking the user to prefix explicitly.
-        const openDbs = this.openDbsFor(label);
+        const openDbs = this.db.openDbs(label);
         const decision = analyzeCommand(res.cmd, { openDbs });
         if (decision.kind === 'route' && (decision.route !== 'db' || openDbs.length === 1)) {
           const choice: RouteChoice = decision.route === 'db'
@@ -390,9 +388,9 @@ export class Controller {
       clearTranscript: () => this.clearTranscript(label),
       send: (message) => this.bus.send(message),
       agentLabels: () => this.tabs.map((t) => t.label),
-      getSchedule: () => this.schedules.get(label) ?? [],
+      getSchedule: () => this.schedule.get(label) ?? [],
       setSchedule: (next) => this.setSchedule(label, next),
-      runDb: (command) => this.runDbInTab(label, command),
+      runDb: (command) => this.db.runInTab(label, command),
     };
   }
 
@@ -408,32 +406,9 @@ export class Controller {
 
   // Replace a tab's scheduled commands and persist the new list (the `schedule` add/cancel/clear path).
   private setSchedule(label: string, next: ScheduleEntry[]): void {
-    this.schedules.set(label, next);
+    this.schedule.set(label, next);
     const tab = this.tabs.find((t) => t.label === label);
     if (tab) this.persist(tab);
-  }
-
-  // Run a `db` command on behalf of a tab, keeping that tab's tracked SQLite connections in sync so
-  // its connections panel reflects what it has open. `delete` forgets
-  // the connection; any opening command (create/query) records it once.
-  private runDbInTab(label: string, command: string): string {
-    const output = runDatabaseCommand(command);
-    const parsed = parseDatabaseCommand(command);
-    if (!('error' in parsed)) {
-      if (parsed.action === 'delete') this.forgetDbConn(parsed.name);
-      else if (parsed.action !== 'list' && isConnectionOpen(parsed.name)) {
-        const current = this.tabDbConns.get(label) ?? [];
-        if (!current.includes(parsed.name)) this.tabDbConns.set(label, [...current, parsed.name].toSorted((a, b) => a.localeCompare(b)));
-      }
-    }
-    return output;
-  }
-
-  // Drop a database name from every tab's tracked connections (on `db delete`).
-  private forgetDbConn(name: string): void {
-    for (const [label, names] of this.tabDbConns) {
-      if (names.includes(name)) this.tabDbConns.set(label, names.filter((n) => n !== name));
-    }
   }
 
   // --- acp (autonomous agent tool loop) ------------------------------------
@@ -463,9 +438,9 @@ export class Controller {
 
     let lastAnswer = '';
     runAcpToolLoop(session, prompt, {
-      primer: `${DB_PRIMER}\n\n${BROWSER_PRIMER}\n\nWrite your replies in GitHub-flavored Markdown (headings, lists, tables, fenced code blocks, etc.); the tab renders them as formatted Markdown.`,
-      runCommand: (c) => (/^browser\b/i.test(c) ? this.browsers.run(label, c) : this.runDbInTab(label, c)),
-      extractCommand: (t) => extractBrowserCommand(t) ?? extractDatabaseCommand(t) ?? null,
+      primer: `${this.db.primer}\n\n${BROWSER_PRIMER}\n\nWrite your replies in GitHub-flavored Markdown (headings, lists, tables, fenced code blocks, etc.); the tab renders them as formatted Markdown.`,
+      runCommand: (c) => (/^browser\b/i.test(c) ? this.browsers.run(label, c) : this.db.runInTab(label, c)),
+      extractCommand: (t) => extractBrowserCommand(t) ?? this.db.extract(t) ?? null,
     }, {
       // The reply entry is flagged `markdown` so the renderer interprets it as Markdown; the raw
       // text is kept verbatim (no terminal-style table/word-wrap rewriting).
@@ -642,74 +617,14 @@ export class Controller {
     return n;
   }
 
-  // Create and focus a harness view tab adjacent to the active tab's group. The tab body is a live
-  // PTY terminal (no transcript or command bar). Harness tabs are in-memory and never persisted.
-  private openHarnessTab(name: string, workspace: boolean, creatorLabel: string, input: string): void {
-    const creator = this.cur();
-    const program = HARNESS_COMMANDS[name];
-    const label = this.uniqueHarnessLabel(name);
-    const out = (text: string) => this.append(creatorLabel, { input, output: text });
-
-    let cwd: string;
-    if (workspace) {
-      const root = findRepoRoot(process.cwd());
-      if (!root) { out('No git repository found. Cannot create workspace.'); return; }
-      try {
-        const wsDir = createWorkspace(label, root);
-        this.workspaces.add(wsDir);
-        cwd = wsDir;
-      } catch (error) {
-        out(`Failed to create workspace: ${error instanceof Error ? error.message : String(error)}`);
-        return;
-      }
-    } else {
-      cwd = this.cwd.get(creator.label) ?? process.cwd();
-    }
-
-    const dotColor = distinctColor(this.tabs.map((t) => t.dotColor));
-    const group = creator?.group ?? 1;
-    const groupColor = creator?.groupColor ?? dotColor;
-    const harness: HarnessView = { name, program, ptyId: '', status: 'running' };
-    const tab = makeHarnessTab(label, dotColor, this.tabs.length + 1, group, groupColor, harness);
-    this.tabs = insertTabInGroup(this.tabs, tab);
-    this.activeTab = this.tabs.findIndex((t) => t.label === label);
-    const session = spawnPty(program, program, cwd, {
-      onData: (id, data) => this.sinks.sendPty(id, data),
-      onExit: (id, exitCode) => this.onPtyExit(id, exitCode),
-    }, this.cols, this.rows);
-    this.ptys.set(session.id, { session, tabLabel: label });
+  // Spawn the PTY backing a harness tab (the HarnessManager owns the rest of the open flow): launch
+  // `program` in `cwd`, register the session under `label`, attach its id to the tab's harness
+  // payload, and re-render. The tab body is a live PTY terminal; harness tabs are never persisted.
+  private spawnHarnessPty(label: string, program: string, cwd: string): void {
+    const id = this.pty.spawn(label, program, program, cwd);
     const liveTab = this.tabs.find((t) => t.label === label);
-    if (liveTab?.harness) liveTab.harness.ptyId = session.id;
+    if (liveTab?.harness) liveTab.harness.ptyId = id;
     this.sinks.emitState();
-  }
-
-  // Unique internal label for a harness tab: `claude`, `claude-2`, … The displayed title is the
-  // name only; only the internal label is disambiguated so several harness tabs can coexist.
-  private uniqueHarnessLabel(name: string): string {
-    const used = new Set(this.tabs.map((t) => t.label));
-    if (!used.has(name)) return name;
-    let n = 2;
-    while (used.has(`${name}-${n}`)) n++;
-    return `${name}-${n}`;
-  }
-
-  // --- schedule (firing) ---------------------------------------------------
-
-  private tick(): void {
-    const now = Date.now();
-    for (const tab of this.tabs) {
-      const sched = this.schedules.get(tab.label);
-      if (!sched || sched.length === 0) continue;
-      let isChanged = false;
-      const remaining: ScheduleEntry[] = [];
-      for (const e of sched) {
-        if (e.nextRun > now) { remaining.push(e); continue; }
-        isChanged = true;
-        this.dispatchTo(tab.label, `${e.command} ## scheduled ##`);
-        if (e.recurring) remaining.push({ ...e, nextRun: computeNextRun(e, new Date()) });
-      }
-      if (isChanged) { this.schedules.set(tab.label, remaining); this.persist(tab); }
-    }
   }
 
   // --- profile -------------------------------------------------------------
@@ -743,7 +658,7 @@ export class Controller {
       tab.toolStepsExpanded = false;
       this.tabs = [...this.tabs, tab];
       if (state.cwd) this.cwd.set(state.name, state.cwd);
-      if (state.schedule) this.schedules.set(state.name, state.schedule);
+      if (state.schedule) this.schedule.set(state.name, state.schedule);
       if (state.context) this.context.set(state.name, state.context);
       this.persist(tab);
       open.add(state.name.toLowerCase());
@@ -768,8 +683,8 @@ export class Controller {
       if (this.acp.has(label)) lines.push('acp:opencode');
       const b = this.browsers.info(label);
       if (b) for (const id of b.ids) lines.push(`browser:${id}`);
-      for (const [, e] of this.ptys) if (e.tabLabel === label) lines.push(`terminal:${e.session.program}`);
-      for (const n of listOpenConnections()) lines.push(`sqlite:${n}`);
+      for (const program of this.pty.terminalsFor(label)) lines.push(`terminal:${program}`);
+      for (const n of this.db.listOpen()) lines.push(`sqlite:${n}`);
       out(lines.length > 0 ? lines.join('\n') : 'No open connections.');
       return;
     }
@@ -781,7 +696,7 @@ export class Controller {
     }
     switch (parsed.kind) {
     case 'sqlite': {
-      out(closeConnection(parsed.id) ? `Closed connection sqlite:${parsed.id}.` : `No open connection sqlite:${parsed.id}.`);
+      out(this.db.close(parsed.id) ? `Closed connection sqlite:${parsed.id}.` : `No open connection sqlite:${parsed.id}.`);
     
     break;
     }
@@ -887,7 +802,7 @@ export class Controller {
     }
 
     // Probabilistic routing for unprefixed commands (bare `ls`, `df`, etc.)
-    const openDbs = this.openDbsFor(label);
+    const openDbs = this.db.openDbs(label);
     const decision = analyzeCommand(trimmed, { openDbs });
     if (decision.kind === 'route' && (decision.route !== 'db' || openDbs.length === 1)) {
       const choice: RouteChoice = decision.route === 'db'
@@ -903,19 +818,15 @@ export class Controller {
 
   private openPty(label: string, command: string, program: string): void {
     const cwd = this.cwd.get(label) ?? process.cwd();
-    const session = spawnPty(program, command, cwd, {
-      onData: (id, data) => this.sinks.sendPty(id, data),
-      onExit: (id, exitCode) => this.onPtyExit(id, exitCode),
-    }, this.cols, this.rows);
-    this.ptys.set(session.id, { session, tabLabel: label });
+    const id = this.pty.spawn(label, program, command, cwd);
     const tab = this.tabs.find((t) => t.label === label);
-    if (tab) tab.activePty = session.id;
+    if (tab) tab.activePty = id;
     this.sinks.emitState();
   }
 
-  private onPtyExit(id: string, exitCode: number): void {
-    const entry = this.ptys.get(id);
-    this.ptys.delete(id);
+  // Apply a PTY exit to the owning tab and notify the client (the PseudoterminalManager has already
+  // dropped the session). `hadEntry` is false when the PTY was already torn down via a tab close.
+  private onPtyExit(id: string, exitCode: number, hadEntry: boolean): void {
     // Handle harness view tabs: update status in the harness payload.
     for (const tab of this.tabs) {
       if (tab.harness?.ptyId === id) {
@@ -927,7 +838,7 @@ export class Controller {
       if (tab.activePty === id) tab.activePty = undefined;
     }
     // Handle inline terminal cards: update status in the log entry.
-    if (entry) {
+    if (hadEntry) {
       for (const tab of this.tabs) {
         const index = tab.log.findIndex((e) => e.terminal?.ptyId === id);
         if (index !== -1) {
@@ -943,10 +854,10 @@ export class Controller {
     this.sinks.emitState();
   }
 
-  ptyInput(id: string, data: string): void { this.ptys.get(id)?.session.write(data); }
-  ptyResize(id: string, cols: number, rows: number): void { this.ptys.get(id)?.session.resize(cols, rows); }
-  ptyKill(id: string): void { this.ptys.get(id)?.session.kill(); }
-  resize(cols: number, rows: number): void { this.cols = cols; this.rows = rows; }
+  ptyInput(id: string, data: string): void { this.pty.input(id, data); }
+  ptyResize(id: string, cols: number, rows: number): void { this.pty.resizeOne(id, cols, rows); }
+  ptyKill(id: string): void { this.pty.kill(id); }
+  resize(cols: number, rows: number): void { this.pty.resize(cols, rows); }
 
   // --- tab management ------------------------------------------------------
 
@@ -965,10 +876,9 @@ export class Controller {
     // shell starts there. Bail with a message if there's no repo or the clone fails.
     let workspaceDir: string | undefined;
     if (parsed.workspace) {
-      const root = findRepoRoot(process.cwd());
-      if (!root) { out('No git repository found. Cannot create workspace.'); return; }
-      try { workspaceDir = createWorkspace(resolved, root); this.workspaces.add(workspaceDir); }
-      catch (error) { out(`Failed to create workspace: ${error instanceof Error ? error.message : String(error)}`); return; }
+      const result = this.workspace.create(resolved);
+      if ('error' in result) { out(result.error); return; }
+      workspaceDir = result.dir;
     }
 
     const dotColor = distinctColor(this.tabs.map((t) => t.dotColor));
@@ -1020,20 +930,18 @@ export class Controller {
     // drop its served file from the allow-list so the `/open/<id>` ref stops resolving.
     if (tab.image) { const id = tab.image.url.replace(/^\/open\//, ''); this.openFiles.delete(id); }
     if (tab.markdown) { const id = tab.markdown.url.replace(/^\/open\//, ''); this.openFiles.delete(id); }
-    if (tab.workspaceDir) { removeWorkspace(tab.workspaceDir); this.workspaces.delete(tab.workspaceDir); }
+    if (tab.workspaceDir) this.workspace.remove(tab.workspaceDir);
     this.shells.close(tab.label);
     this.acp.close(tab.label);
     this.browsers.closeTab(tab.label);
-    for (const [id, e] of this.ptys) if (e.tabLabel === tab.label) { e.session.kill(); this.ptys.delete(id); }
-    this.harnessOf.delete(tab.label);
-    this.schedules.delete(tab.label);
-    this.tabDbConns.delete(tab.label);
+    this.pty.closeTab(tab.label);
+    this.schedule.delete(tab.label);
+    this.db.forgetTab(tab.label);
     this.context.delete(tab.label);
     // Closing the last tab resets to a fresh `janus` tab, just like launch; the global SQLite
     // connections are closed too (no tab references them after the last tab closes).
     if (this.tabs.length <= 1) {
-      closeAllConnections();
-      this.tabDbConns.clear();
+      this.db.closeAll();
       this.tabs = [this.makeRootTab()];
       this.cwd.set('janus', process.cwd());
       this.activeTab = 0;
@@ -1068,20 +976,18 @@ export class Controller {
     if (this.acp.has(label)) out.push('acp:opencode');
     const b = this.browsers.info(label);
     if (b) for (const id of b.ids) out.push(`browser:${id}`);
-    for (const n of listOpenConnections()) out.push(`sqlite:${n}`);
+    for (const n of this.db.listOpen()) out.push(`sqlite:${n}`);
     return out;
   }
 
   shutdown(): void {
     messageBus.clear();
-    clearInterval(this.timer);
+    this.schedule.stop();
     this.shells.closeAll();
     this.acp.closeAll();
-    for (const [, e] of this.ptys) e.session.kill();
+    this.pty.closeAll();
     this.browsers.closeAll();
-    closeAllConnections(); // SQLite connections are global; close them all at app exit
-    this.tabDbConns.clear();
-    for (const dir of this.workspaces) removeWorkspace(dir);
-    this.workspaces.clear();
+    this.db.closeAll(); // SQLite connections are global; close them all at app exit
+    this.workspace.removeAll();
   }
 }
