@@ -79,7 +79,7 @@ fi
 
 # Step 4 — resolve GitHub remote and push
 echo "==> Resolving GitHub remote..."
-eval "$("$SCRIPT_DIR/pr-resolve-remote.sh")"
+read -r GH_REMOTE OWNER_REPO BRANCH GH_URL <<< "$("$SCRIPT_DIR/pr-resolve-remote.sh")"
 echo "    remote: $GH_REMOTE -> $OWNER_REPO ; branch: $BRANCH"
 echo "==> Pushing branch..."
 "$SCRIPT_DIR/pr-push-branch.sh" "$GH_REMOTE" "$BRANCH"
