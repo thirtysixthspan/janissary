@@ -12,6 +12,13 @@ A workspaced agent is an agent tab with its own cloned workspace. This workspace
 
 If no git repository is found from the current directory, an error is shown and no tab is created.
 
+### Workspace harness tab
+
+`harness <name> -w` (or `--workspace`) creates a harness tab with a cloned workspace using the same
+mechanism. The workspace is named after the harness tab's unique label (e.g. `claude`, `claude-2`)
+and the harness PTY starts there. Otherwise identical to an agent workspace: `git clone --shared`,
+stored at `.janissary/workspace/<label>/`, removed when the tab is closed.
+
 ### Workspace lifecycle
 
 Workspace directories are ephemeral:

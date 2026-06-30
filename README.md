@@ -36,7 +36,7 @@ janus
 | `connection` | List or close open connections (sqlite/shell/acp/browser) |
 | `schedule`   | Run a command later — once or on a recurring schedule |
 | `profile`    | Launch a saved set of agents for a use case |
-| `harness`    | Open an AI coding harness (claude/opencode/codex) in a full-tab terminal |
+| `harness`    | Open an AI coding harness (claude/opencode/codex) in a full-tab terminal (add `-w` to clone the repo) |
 
 ### Harness tabs
 
@@ -49,6 +49,14 @@ harness codex      → new tab "codex"
 ```
 
 The harness fills the tab and receives all keyboard input, clicks, and mouse events. **Switching to a harness tab automatically focuses the terminal** — you can start typing immediately without clicking. Switch away with Shift+←/→ or by clicking a tab in the strip. Ctrl-combinations (including Ctrl+C) are sent to the harness. Close the tab with the tab strip's × or the `close` command (this quits the harness). Note that reorder/collapse chords are unavailable while a harness tab is focused — switch away first. The harness binary must be on `PATH`.
+
+Add `-w` (or `--workspace`) to start the harness in a disposable git workspace, identical to `agent -w`:
+
+```
+harness claude -w
+```
+
+This clones the root repo into `.janissary/workspace/claude/` (or `claude-2`, etc. for subsequent tabs). The workspace is removed when the tab is closed.
 
 ### Configuration
 
@@ -227,13 +235,14 @@ profile list
 
 ### Workspace
 
-Use `agent --workspace` (or `agent -w`) to create an agent tab with a disposable git workspace:
+Use `-w` (or `--workspace`) on `agent` or `harness` to get a disposable git workspace:
 
 ```
-agent bilal -w
+agent bilal -w          → agent tab with workspace at .janissary/workspace/bilal/
+harness claude -w       → harness tab with workspace at .janissary/workspace/claude/
 ```
 
-This clones the root repo (detected from the current directory) into `.janissary/workspace/bilal/` via `git clone --shared` — no network needed, completes in milliseconds. The agent's shell spawns inside the workspace. Make changes, commit, push, then close the tab — the workspace is automatically removed.
+This clones the root repo (detected from the current directory) via `git clone --shared` — no network needed, completes in milliseconds. The shell or harness PTY starts inside the workspace. Make changes, commit, push, then close the tab — the workspace is automatically removed.
 
 ### Databases
 

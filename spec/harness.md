@@ -6,14 +6,27 @@ a live PTY terminal that takes over the tab in place of the usual transcript and
 ## Command
 
 ```
-harness <name>
+harness <name> [-w]
 ```
 
 Valid names: `claude`, `opencode`, `codex`. The binary must be on `PATH`; if it is not found, the
 PTY exits immediately and the tab freezes showing the exit status.
 
-- `harness` with no name — error: `Usage: harness <claude|opencode|codex>.`
+- `harness` with no name — error: `Usage: harness <claude|opencode|codex> [-w].`
 - `harness foo` — error: `Unknown harness "foo". Choose from: claude, opencode, codex.`
+
+### Workspace flag (`-w` / `--workspace`)
+
+Adding `-w` (or `--workspace`) clones the root repository (detected from the current directory) into
+a disposable workspace named after the harness tab's unique label, identically to `agent --workspace`:
+
+```
+harness claude -w    → tab "claude"   with workspace at .janissary/workspace/claude/
+harness claude -w    → tab "claude-2" with workspace at .janissary/workspace/claude-2/
+```
+
+The harness PTY starts in the workspace directory. The workspace is removed when the tab is closed.
+If no git repository is found from the current directory, an error is shown and no tab is created.
 
 ## Harness tab data
 
@@ -60,9 +73,9 @@ switch to another tab first.
 
 ## Tab strip
 
-The tab's name in the strip is the harness name (`claude`, `opencode`, `codex`) with no type
-marker appended — per [[tab-label-no-markers]], the name only. A **× close button** is shown in
-the strip (identical to image/page view tabs).
+The tab's name in the strip is the tab's unique label — `claude`, `claude-2`, `claude-3`, etc. —
+with no type marker appended (per [[tab-label-no-markers]]). A **× close button** is shown in the
+strip (identical to image/page view tabs).
 
 ## Lifecycle
 

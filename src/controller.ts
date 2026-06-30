@@ -309,7 +309,7 @@ export class Controller {
     if (/^harness\b/i.test(input)) {
       const parsed = parseHarnessCommand(input);
       if ('error' in parsed) this.append(label, { input, output: parsed.error });
-      else this.openHarnessTab(parsed.name);
+      else this.openHarnessTab(parsed.name, parsed.workspace, label, input);
       return;
     }
     const res = resolveCommand(input);
@@ -677,11 +677,28 @@ export class Controller {
 
   // Create and focus a harness view tab adjacent to the active tab's group. The tab body is a live
   // PTY terminal (no transcript or command bar). Harness tabs are in-memory and never persisted.
-  private openHarnessTab(name: string): void {
+  private openHarnessTab(name: string, workspace: boolean, creatorLabel: string, input: string): void {
     const creator = this.cur();
     const program = HARNESS_COMMANDS[name];
-    const cwd = this.cwd.get(creator.label) ?? process.cwd();
     const label = this.uniqueHarnessLabel(name);
+    const out = (text: string) => this.append(creatorLabel, { input, output: text });
+
+    let cwd: string;
+    if (workspace) {
+      const root = findRepoRoot(process.cwd());
+      if (!root) { out('No git repository found. Cannot create workspace.'); return; }
+      try {
+        const wsDir = createWorkspace(label, root);
+        this.workspaces.add(wsDir);
+        cwd = wsDir;
+      } catch (error) {
+        out(`Failed to create workspace: ${error instanceof Error ? error.message : String(error)}`);
+        return;
+      }
+    } else {
+      cwd = this.cwd.get(creator.label) ?? process.cwd();
+    }
+
     const dotColor = distinctColor(this.tabs.map((t) => t.dotColor));
     const group = creator?.group ?? 1;
     const groupColor = creator?.groupColor ?? dotColor;
