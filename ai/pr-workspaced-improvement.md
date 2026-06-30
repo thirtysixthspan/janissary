@@ -141,7 +141,7 @@ done
 echo "mergeable: $STATE"
 ```
 
-- `MERGEABLE` → **no conflicts with master, ready for automerge.** Skip to **Step 8 (report)**.
+- `MERGEABLE` → **no conflicts with master.** Go to **Step 8 (merge)**.
 - `CONFLICTING` → **conflicts with master.** Go to **Step 7 (resolve conflicts)**.
 
 ---
@@ -193,7 +193,19 @@ If the PR is **still conflicting after 5 attempts**, **STOP**: report that confl
 
 ---
 
-## Step 8 — Report
+## Step 8 — Merge the PR
+
+The PR is `MERGEABLE`. Merge it now and delete the remote branch:
+
+```bash
+gh pr merge "$BRANCH" -R "$OWNER_REPO" --merge --delete-branch 2>&1
+```
+
+If the merge fails (e.g. a required check hasn't passed), report the error and leave the PR open for a human.
+
+---
+
+## Step 9 — Report
 
 Give the user a short report in this exact shape:
 
@@ -203,7 +215,7 @@ Branch:         <branch>
 PR:             <url> (#<number>)
 npm run check:  pass
 Conflicts:      none | resolved in <n> rebase attempt(s) | unresolved after 5 attempts
-Status:         ready for automerge
+Status:         merged | open (merge failed — see error above) | open (conflicts unresolved after 5 attempts)
 ```
 
 Keep it brief. Done.
