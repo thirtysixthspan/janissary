@@ -44,14 +44,7 @@
     "security": "npm run lint && npm run security:secrets && npm run security:deps",
     "security:secrets": "gitleaks detect --no-banner --redact",
     "security:deps": "npm audit --omit=dev",
-    "security:sast": "opengrep scan --config p/javascript --config p/typescript --config p/nodejs --sarif --output security-audit.sarif src/ web/src/",
-    "pr:land-task": "bash scripts/pr-land-task.sh",
-    "pr:check-changes": "bash scripts/pr-check-changes.sh",
-    "pr:commit": "bash scripts/pr-commit-task.sh",
-    "pr:resolve-remote": "bash scripts/pr-resolve-remote.sh",
-    "pr:push": "bash scripts/pr-push-branch.sh",
-    "pr:create": "bash scripts/pr-create-pr.sh",
-    "pr:check-mergeable": "bash scripts/pr-check-mergeable.sh"
+    "security:sast": "opengrep scan --config p/javascript --config p/typescript --config p/nodejs --sarif --output security-audit.sarif src/ web/src/"
   },
   "keywords": [],
   "author": "",
