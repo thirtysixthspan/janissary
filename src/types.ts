@@ -22,8 +22,7 @@ export type LogEntry = {
   // block and interprets the Markdown rather than splitting it into plain text lines.
   markdown?: boolean;
   // Set when this entry hosts an inline terminal card (an interactive program or AI harness
-  // running in a PTY). Used by the web renderer to mount an xterm.js pane; the Ink path never
-  // creates these. `ptyId` keys the live PTY stream.
+  // running in a PTY). Used by the web renderer to mount an xterm.js pane. `ptyId` keys the live PTY stream.
   terminal?: TerminalEntry;
 };
 

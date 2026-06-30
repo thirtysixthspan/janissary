@@ -20,7 +20,7 @@ let counter = 0;
 
 /**
  * Spawn `cmd` in a pseudo-terminal. `program` is the display label for the card. Unlike the old
- * Ink takeover, output is delivered to a callback (the server forwards it to the client's xterm)
+ * output is delivered to a callback (the server forwards it to the client's xterm)
  * rather than written to the real stdout, so many can run concurrently across tabs.
  */
 export function spawnPty(

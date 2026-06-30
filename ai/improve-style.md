@@ -67,7 +67,7 @@ Keep the diff as small as possible — do not reformat or tidy unrelated lines.
 
 ---
 
-## Step 5 — Assess risk
+## Step 5 — Assess risk and decide
 
 Rate the plan **Low risk** or **High risk** using these criteria.
 
@@ -77,13 +77,13 @@ Rate the plan **Low risk** or **High risk** using these criteria.
 - Zero TypeScript, zero test files, zero config files are touched.
 - The visual result in the browser is identical — no layout, color, or spacing change.
 
-**High risk** (stop and ask the user first):
+**High risk** (skip and pick the next rule):
 - The fix could change rendered output — for example, changing a `color` value where the browser interprets the old and new forms differently, changing a `font-family` ordering, or restructuring a selector.
 - More than one file must be edited.
 - You are unsure whether the old and new forms are semantically identical.
 - The fix requires deleting or restructuring a rule block, not just rewriting a value.
 
-If **High risk**: write out the plan clearly (file, line, old → new for each change), state which risk criterion applies, and ask: **"Do you want me to proceed?"** Then wait.
+If **High risk**: do **not** apply the fix and do **not** ask the user. Go back to Step 3, remove this rule from the ranked list, and pick the next-ranked rule. If every rule is High risk, list all of them in your report under "Skipped (high risk)" and stop without making any changes.
 
 If **Low risk**: proceed directly to Step 6 without asking.
 
@@ -123,10 +123,10 @@ When all three pass, delete the backup: `rm web/src/theme.css.bak`.
 ## Step 8 — Report
 
 ```
-Rule fixed:    <rule name>
+Rule fixed:    <rule name, or "none — all rules were high risk">
 Findings:      <count before> -> <count after>
-Changes:       <one line per edit: file:line old → new>
-Risk level:    Low / High
+Changes:       <one line per edit: file:line old → new, or "none">
+Skipped:       <rules skipped as high risk, or "none">
 Tests:         all pass / <what failed>
 ```
 

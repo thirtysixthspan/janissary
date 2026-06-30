@@ -38,9 +38,9 @@ The *strategy* is sound — there is no better tool or architecture, so this is 
 | Aspect | Server (`src/`) | Client (`web/src/`) |
 |---|---|---|
 | Test framework | Vitest 4.1.9 | none |
-| Test files | 44 (`src/**/*.test.{ts,tsx}`, incl. one Ink `.tsx` via `ink-testing-library`) | 0 |
+| Test files | 44 (`src/**/*.test.{ts,tsx}`) | 0 |
 | Coverage tool | none (`@vitest/coverage-v8` not installed) | none |
-| Test env needed | `node` (Ink renders to terminal; esbuild handles JSX — no React plugin) | `jsdom` + `@vitejs/plugin-react` (already a devDep) when tests exist |
+| Test env needed | `node` (esbuild handles JSX — no React plugin) | `jsdom` + `@vitejs/plugin-react` (already a devDep) when tests exist |
 | Config | root `vitest.config.ts` (excludes `**/.janissary/**`) | — |
 
 ---
@@ -76,7 +76,7 @@ export default defineConfig({
 
     projects: [
       {
-        // Node server + Ink TUI tests. Vitest's esbuild transform handles JSX, so the
+        // Node server tests. Vitest's esbuild transform handles JSX, so the
         // React plugin is not needed here.
         test: {
           name: 'server',
