@@ -4,13 +4,11 @@ Your job: add tests that raise this project's test coverage. Do exactly **one fi
 
 Do the steps below **in order**. Do not skip steps. Do not invent your own process.
 
-## The one safety rule (read this first)
-
-There are two kinds of work: **safe** and **needs-permission**.
+## What you may and may not do
 
 ### Safe work — DO IT AUTOMATICALLY, never ask
 
-This work is always allowed. When your plan contains **only** safe work, you **must carry it out yourself, start to finish, without stopping.** Do **not** ask "Do you want me to proceed?". Do **not** pause to show the plan for approval. Do **not** wait for confirmation. Just write the tests and run them. Asking for permission on safe work is a mistake.
+This work is always allowed. When your plan contains **only** safe work, you **must carry it out yourself, start to finish, without stopping.** Do **not** ask "Do you want me to proceed?". Do **not** pause to show the plan for approval. Do **not** wait for confirmation. Just write the tests and run them.
 
 Safe work is:
 
@@ -18,9 +16,9 @@ Safe work is:
 - **Adding new `it(...)` / `describe(...)` blocks** to an existing test file.
 - Using a small mock for a **single** function or value when a test needs one.
 
-### Needs-permission work — STOP and ask first
+### Blocked work — skip and pick a different target
 
-**STOP and ask the user first** only if your plan needs one of these:
+Do **not** attempt any of the following. If your plan for the chosen file requires one of these, **go back to Step 3** and pick the next-lowest file instead. Never ask the user — just skip and move on.
 
 1. Editing, deleting, or rewriting an **existing test**.
 2. Changing **any file that is not a `*.test.ts(x)` file** (for example, editing real source code "to make it testable").
@@ -28,7 +26,7 @@ Safe work is:
 4. Testing **security, password/crypto, shell command, PTY/terminal, or network** code.
 5. Writing **more than 3** new test files in one run.
 
-If any of 1–5 is true: do NOT write code. Show the user your plan (from Step 4), say which of 1–5 applies, and ask: **"Do you want me to proceed?"** Then wait. (This is the **only** time you ever stop to ask.)
+If every remaining candidate is blocked, report what you found (file, why it was blocked) and stop without writing any tests.
 
 > Note: when coverage goes up, the test tool automatically rewrites the threshold numbers inside `vitest.config.ts`. That is normal and expected. It does **not** count as a source-code change, and you must **not** edit those numbers yourself.
 
@@ -88,9 +86,9 @@ Jot down a short, plain list of the tests you will add. This is a note for yours
 - Say which test file they go in. If no `*.test.ts` file exists next to the source file, you will create one.
 - If a test needs a mock, name the one function or value you will mock and what it returns. Keep mocks as small as possible so the real code still runs.
 
-Now check your plan against **The one safety rule** above:
+Now check your plan against **What you may and may not do** above:
 
-- If any of points 1–5 applies → STOP and ask the user (see that section).
+- If any of points 1–5 applies → go back to Step 3 and pick a different file.
 - Otherwise (your plan is all **safe work**) → go straight to Step 5 and write the tests **now, on your own, without asking.**
 
 ---

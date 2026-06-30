@@ -95,7 +95,7 @@ term.attachCustomKeyEventHandler((e) => {
 ### Preserving screen state across tab switches (decision)
 If `HarnessTab` renders only while active (like the image/page early-return), switching away unmounts xterm and returning shows a blank screen until the harness redraws — full-screen TUIs use the alternate buffer and only repaint on input/`SIGWINCH`. No bytes are lost (the client buffers PTY data per id), only the static frame. Options:
 - **Simple (recommended first):** remount on activation and **nudge a redraw** by sending a
-  `ptyResize` (SIGWINCH) right after attach — claude/codex are Ink TUIs that repaint on resize.
+  `ptyResize` (SIGWINCH) right after attach — claude/codex repaint on resize.
 - **Robust:** keep all harness terminals mounted in a layer and toggle visibility (`display:none`
   for inactive), so xterm state + the live stream persist across switches.
 

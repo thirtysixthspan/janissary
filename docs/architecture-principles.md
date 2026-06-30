@@ -32,7 +32,7 @@ The codebase's biggest strength: `parseXCommand` functions (`parseDbCommand`, `p
 
 ## 5. One command, one definition — delete shadow systems
 
-There are currently **two** command systems. The live one: pure parsers plus the controller's `runApp`. The dead one: `src/commands/*.ts`, whose `handler` functions and the 40-field `CommandHandlerContext` are vestigial Ink-era code — `.handler()` is never called anywhere outside tests, and the context describes a React-hook world that no longer exists. Only `match`/`name` are used. Dead parallel abstractions are where bugs hide and readers get misled.
+There are currently **two** command systems. The live one: pure parsers plus the controller's `runApp`. The dead one: `src/commands/*.ts`, whose `handler` functions and the 40-field `CommandHandlerContext` are vestigial dead code — `.handler()` is never called anywhere outside tests, and the context describes a React-hook world that no longer exists. Only `match`/`name` are used. Dead parallel abstractions are where bugs hide and readers get misled.
 
 **Rule.** Each command has exactly one definition and one execution path. When a migration leaves scaffolding behind, removing it is part of finishing the migration — not a separate "cleanup" someday. No code path that the system never takes.
 
@@ -62,7 +62,7 @@ The strongest boundary in the system: the server binds to `127.0.0.1`, requires 
 
 ## 10. Specs and docs are source of truth — and they evolve with the code
 
-`spec/` is declared authoritative ("when behavior is ambiguous, SPEC.md is the source of truth"), yet `AI.md` still describes `cli.tsx`, `shell-commands.ts`, `useInputHandler.ts`, and Ink components that no longer exist, and `docs/migration/web-app.md` references `src/server/*` paths that have been flattened into `src/`. Documentation that lies about the code is worse than none — it actively misleads both humans and AI agents.
+`spec/` is declared authoritative ("when behavior is ambiguous, SPEC.md is the source of truth"), yet `AI.md` still describes `cli.tsx`, `shell-commands.ts`, `useInputHandler.ts`, and components that no longer exist, and `docs/migration/web-app.md` references `src/server/*` paths that have been flattened into `src/`. Documentation that lies about the code is worse than none — it actively misleads both humans and AI agents.
 
 **Rule.** A behavior change updates its `spec/` file in the same change; a structural change updates the architecture docs (`AI.md`, the migration map) in the same change. Behavior ships with a test (vitest, colocated `*.test.ts(x)`) — the suite is the executable half of the spec. Stale architecture docs are bugs; fix them on sight.
 

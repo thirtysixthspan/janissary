@@ -6,13 +6,11 @@ Deduplication edits real code that other files may import, so the rule is simple
 
 Do the steps below **in order**. Do not skip steps. Do not invent your own process.
 
-## The one safety rule (read this first)
-
-There are two kinds of work: **safe** and **needs-permission**.
+## What you may and may not do
 
 ### Safe work — DO IT AUTOMATICALLY, never ask
 
-When your plan is **only** safe work, you **must carry it out yourself, start to finish, without stopping.** Do **not** ask "Do you want me to proceed?". Do **not** pause to show the plan for approval. Do **not** wait for confirmation. Just make the change and verify it. Asking for permission on safe work is a mistake.
+When your plan is **only** safe work, you **must carry it out yourself, start to finish, without stopping.** Do **not** ask "Do you want me to proceed?". Do **not** pause to show the plan for approval. Do **not** wait for confirmation. Just make the change and verify it.
 
 Safe work is exactly these three fixes (and nothing else), each done by its Recipe in Step 5:
 
@@ -22,9 +20,9 @@ Safe work is exactly these three fixes (and nothing else), each done by its Reci
 
 Adding a **new** function (even an exported one) is safe. Renaming or removing an **existing** export is not (see below).
 
-### Needs-permission work — STOP and ask first
+### Blocked work — skip and pick a different clone
 
-**STOP and ask the user first** if removing the clone would require any of these:
+If removing the clone would require any of the following, **go back to Step 3** and pick the next clone instead. Never ask the user — just skip and move on.
 
 1. Renaming, removing, or changing the arguments of an **existing** `export` (other files import it).
 2. Editing **more than 3 files** in total.
@@ -33,7 +31,7 @@ Adding a **new** function (even an exported one) is safe. Renaming or removing a
 5. Editing **any test file** (`*.test.ts`, `*.test.tsx`).
 6. Touching **security, password/crypto, shell-execution, PTY/terminal, or network/browser** code.
 
-If any of 1–6 is true: do NOT change any code. Show the user your plan (from Step 4), say which of 1–6 applies, and ask: **"Do you want me to proceed?"** Then wait. (This is the **only** time you ever stop to ask.)
+If every remaining clone is blocked, list each one and why it was blocked in your report, and stop without changing any code.
 
 > You may edit **only** the clone-site files, plus (optionally) **one** new helper file you create. Never edit `.jscpd.json`, `fta.json`, `eslint.config.mjs`, `package.json`, `tsconfig.json`, any other config file, or any test file. Leave the `threshold` in `.jscpd.json` alone.
 
@@ -100,9 +98,9 @@ State your pick in one sentence: both file paths (with the real `src/` prefix), 
 
 Jot a one- or two-line plan: the name of the helper you will create and which file it lives in, and what each clone site becomes (a call to the helper). This is a note for **you**, not a message to send — do **not** post it and wait for a reply.
 
-Check the plan against **The one safety rule**:
+Check the plan against **What you may and may not do**:
 
-- If any of points 1–6 applies → STOP and ask the user (see that section).
+- If any of points 1–6 applies → go back to Step 3 and pick a different clone.
 - Otherwise (all safe work) → go straight to Step 5 and make the change **now, on your own, without asking.**
 
 ---
