@@ -17,14 +17,14 @@ Before writing code, review [`eslint.config.mjs`](eslint.config.mjs) to understa
 **Always use the fast diff-scoped commands** after each change:
 
 ```bash
-node scripts/run.mjs lint-files   # lint changed files
-npm run typecheck:diff             # typecheck affected projects (incremental)
-npm run test:diff:server           # server tests for changes
-npm run test:diff:web              # web tests for changes
-node scripts/run.mjs check-diff   # orchestrator: runs all four above concurrently
+./scripts/run.mjs lint-files   # lint changed files
+npm run typecheck:diff        # typecheck affected projects (incremental)
+npm run test:diff:server      # server tests for changes
+npm run test:diff:web         # web tests for changes
+./scripts/run.mjs check-diff   # orchestrator: runs all four above concurrently
 ```
 
-Pick the one(s) you want, or just run **`node scripts/run.mjs check-diff`** which automatically:
+Pick the one(s) you want, or just run **`./scripts/run.mjs check-diff`** which automatically:
 
 - Lints only the files you changed
 - Typechecks the affected project(s) incrementally (fast on repeated runs)
@@ -49,7 +49,7 @@ This completes in seconds and is the entire development loop. `check-diff` is sc
 
 | Command | When | Who | Speed |
 | --- | --- | --- | --- |
-| `node scripts/run.mjs check-diff` | After each change | AI (always) | ~10-40s |
+| `./scripts/run.mjs check-diff` | After each change | AI (always) | ~10-40s |
 | `npm run check` | Once, end of work | Human only | ~2min |
 
 ## Capturing command output
@@ -83,12 +83,12 @@ code, strip comments, or delete spacing to get under the limit).
 
 ## Running scripts
 
-Use `node scripts/run.mjs <name>` to run any script in `scripts/`. This is the only way to invoke scripts — it is pre-approved in `.claude/settings.json` so no permission prompt is needed.
+Use `./scripts/run.mjs <name>` to run any script in `scripts/`. This is the only way to invoke scripts — it is pre-approved in `.claude/settings.json` so no permission prompt is needed.
 
 ```bash
-node scripts/run.mjs pr-merge-to-master   # runs scripts/pr-merge-to-master.sh
-node scripts/run.mjs check-diff           # runs scripts/check-diff.mjs
-node scripts/run.mjs                      # lists all available scripts
+./scripts/run.mjs pr-merge-to-master   # runs scripts/pr-merge-to-master.sh
+./scripts/run.mjs check-diff           # runs scripts/check-diff.mjs
+./scripts/run.mjs                      # lists all available scripts
 ```
 
 All scripts in `scripts/` are considered trusted. Do not invoke them directly with `bash scripts/foo.sh` or `node scripts/foo.mjs` — use the runner so the single permission covers everything.
