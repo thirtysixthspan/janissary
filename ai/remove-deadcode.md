@@ -4,6 +4,8 @@ Your job: run Knip, delete the dead code it reports, then prove the project is s
 
 The rule is simple: **the compiler, the linter, and the tests must be green before you start and green again after you finish.** If the project is not green before you start, stop and tell the user. If you cannot keep it green, put the code back.
 
+**Shell hygiene:** run every command on its own line — no `&&` chaining, no `; echo "Exit code: $?"` suffixes, no subshell captures. The exit code and output are visible in the tool result. To run a project script, always use `./scripts/run.mjs <name>` — never call `node scripts/<name>.mjs` directly.
+
 Do the steps below **in order**. Do not skip steps. Do not invent your own process.
 
 ## The one safety rule (read this first)

@@ -4,6 +4,8 @@ Your job: remove **one** duplicated block of code, then prove nothing broke. Do 
 
 Deduplication edits real code that other files may import, so the rule is simple: **the tests must pass before you start and still pass after. If you cannot keep them passing, put the code back the way it was.**
 
+**Shell hygiene:** run every command on its own line — no `&&` chaining, no `; echo "Exit code: $?"` suffixes, no subshell captures. The exit code and output are visible in the tool result. To run a project script, always use `./scripts/run.mjs <name>` — never call `node scripts/<name>.mjs` directly.
+
 Do the steps below **in order**. Do not skip steps. Do not invent your own process.
 
 ## What you may and may not do

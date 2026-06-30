@@ -4,6 +4,8 @@ Your job: add tests that raise this project's test coverage. Do exactly **one fi
 
 Do the steps below **in order**. Do not skip steps. Do not invent your own process.
 
+**Shell hygiene:** run every command on its own line — no `&&` chaining, no `; echo "Exit code: $?"` suffixes, no subshell captures. The exit code and output are visible in the tool result. To run a project script, always use `./scripts/run.mjs <name>` — never call `node scripts/<name>.mjs` directly.
+
 ## What you may and may not do
 
 ### Safe work — DO IT AUTOMATICALLY, never ask
