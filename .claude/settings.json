@@ -5,8 +5,7 @@
       "Bash(npm run *)",
       "Read",
       "Edit",
-      "Write(./temp/**)",
-      "Write(temp/**)",
+      "Write",
       "Bash(gh *)",
       "Bash(/usr/local/opt/gh/bin/gh *)"
     ]
