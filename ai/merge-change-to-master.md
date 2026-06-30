@@ -85,7 +85,7 @@ If earlier commits already exist on the branch, consolidate so the **final** sta
 In a workspaced clone, `origin` is the local root repo. `pr:resolve-remote` exposes the real GitHub remote as `github` (or reuses `origin` when it already points at GitHub) and prints the variables to carry through the rest of the task:
 
 ```bash
-eval "$(./scripts/run.mjs pr-resolve-remote)"   # sets GH_REMOTE, OWNER_REPO, BRANCH
+read -r GH_REMOTE OWNER_REPO BRANCH GH_URL <<< "$(./scripts/run.mjs pr-resolve-remote)"
 ./scripts/run.mjs pr-push-branch "$GH_REMOTE" "$BRANCH"
 ```
 

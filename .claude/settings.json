@@ -4,7 +4,8 @@
       "Bash(./scripts/run.mjs *)",
       "Bash(npm run *)",
       "Read",
-      "Edit"
+      "Edit",
+      "Bash(/usr/local/opt/gh/bin/gh *)"
     ]
   }
 }
