@@ -34,7 +34,7 @@ Prints the working-tree status and any commits ahead of `master`, and **exits no
 
 ---
 
-## Step 1 — Make the full check gate pass
+## Step 1 — Make the check gate pass
 
 This is the one place where running the slow, full gate is correct: this task *is* the end-of-work step, not iterative development.
 
@@ -42,7 +42,9 @@ This is the one place where running the slow, full gate is correct: this task *i
 ./scripts/pr-check-gate.sh
 ```
 
-It **must finish green**. If it fails **because of the changes**, fix the offending code and re-run until it is green. If you cannot get it green, **STOP** — do not open a PR on a red gate — and report exactly what failed. Never weaken a test, threshold, or lint rule to make it pass.
+The gate runs the **hard** checks (typecheck, lint errors, tests, CSS) and the **advisory** quality checks (complexity, duplication, dead code). **Warnings do not fail the gate** — only hard errors do, so the script surfaces advisory findings without blocking on them.
+
+The hard checks **must pass**. If they fail **because of the changes**, fix the offending code and re-run until green. If you cannot get them green, **STOP** — do not open a PR on a red gate — and report exactly what failed. Never weaken a test or lint rule to make a hard check pass.
 
 ---
 
@@ -97,7 +99,7 @@ Carry `$GH_REMOTE`, `$OWNER_REPO`, and `$BRANCH` through the remaining steps.
 ./scripts/pr-create-pr.sh "$OWNER_REPO" "$BRANCH" "<title>" "<body>"
 ```
 
-Use the commit subject as `<title>`. The `<body>` should have a **What** (one or two sentences on the change), a **Why** (the warning/goal it addresses), and a **Notes** line that `npm run check` passes. Record the PR number/URL that the command prints.
+Use the commit subject as `<title>`. The `<body>` should have a **What** (one or two sentences on the change), a **Why** (the warning/goal it addresses), and a **Notes** line that the check gate passes. Record the PR number/URL that the command prints.
 
 ---
 
@@ -163,7 +165,7 @@ Give the user a short report in this exact shape:
 ```
 Branch:         <branch>
 PR:             <url> (#<number>)
-npm run check:  pass
+Check gate:     pass (warnings allowed)
 Conflicts:      none | resolved in <n> rebase attempt(s) | unresolved after 5 attempts
 PR checks:      passed | failed (see error above)
 Status:         merged | open (checks failed — see error above) | open (merge failed — see error above) | open (conflicts unresolved after 5 attempts)

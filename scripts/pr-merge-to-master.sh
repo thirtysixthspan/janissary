@@ -10,7 +10,7 @@
 # Arguments:
 #   PR_TITLE    - Title for the PR (also the commit subject)
 #   BRANCH      - (optional) explicit branch name; default derived from the title
-#   --no-check  - skip the npm run check gate (use only for pre-existing red)
+#   --no-check  - skip the check gate (use only for pre-existing red)
 
 set -euo pipefail
 
@@ -91,7 +91,7 @@ PR_BODY=$(cat <<EOF
 $PR_TITLE
 
 ## Notes
-- \`npm run check\` passes.
+- Check gate passes (warnings allowed).
 EOF
 )
 PR_URL=$("$SCRIPT_DIR/pr-create-pr.sh" "$OWNER_REPO" "$BRANCH" "$PR_TITLE" "$PR_BODY")

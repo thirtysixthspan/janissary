@@ -13,7 +13,7 @@ From the repo (or a workspace clone) with changes ready to ship:
 This single command runs Steps 0–9 of the workflow:
 
 1. ✅ Verifies there are changes (`pr-check-changes.sh`)
-2. ✅ Runs the check gate (`pr-check-gate.sh`; skip with `--no-check`)
+2. ✅ Runs the check gate (`pr-check-gate.sh`; warnings don't fail it; skip with `--no-check`)
 3. ✅ Creates a feature branch (`pr-create-branch.sh`; from the title, or reuses the current non-`master` branch)
 4. ✅ Commits with a single author — **no co-authors** (`pr-commit.sh`)
 5. ✅ Resolves the GitHub remote and pushes (`pr-resolve-remote.sh`, `pr-push-branch.sh`)
@@ -38,7 +38,7 @@ Each step is also a standalone script for finer control or manual conflict resol
 Print uncommitted changes and commits ahead of `master`. Exits non-zero when there is nothing to ship.
 
 ### `./scripts/pr-check-gate.sh`
-Run the full check gate (`npm run check`). Exits non-zero if it fails.
+Run the check gate. Hard checks (typecheck, lint errors, tests, CSS) fail it; advisory quality checks (complexity, duplication, dead code) are surfaced but **never fail the gate** — it does not fail on warnings. Exits non-zero only on a hard-check failure.
 
 ### `./scripts/pr-create-branch.sh <branch>`
 Create and switch to a feature branch (`git checkout -b`). No-op if already on it.
