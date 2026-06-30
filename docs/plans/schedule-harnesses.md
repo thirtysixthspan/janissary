@@ -62,31 +62,17 @@ send <label> <text...>
 
 ### 1. `src/commands/send.ts` — new file
 
-Parser + Ink command handler.
+Parser only — `parseSendCommand` is the public surface; the controller owns execution.
 
 ```ts
 export function parseSendCommand(input: string): { label: string; text: string } | { error: string }
 ```
 
-The Ink handler needs access to a PTY write function. The Ink side does not currently expose PTY write via `CommandHandlerContext` (the harness command opens PTYs directly in the Ink app), so this needs a new context field (see §4).
-
-### 2. `src/commands/types.ts`
-
-Add to `CommandHandlerContext`:
-
-```ts
-// Write a line of text to a named harness tab's PTY. Returns false when the tab does not exist
-// or its PTY is not running.
-sendToHarness: (label: string, text: string) => boolean;
-```
-
-The Ink app (`src/main.ts` or the component that owns PTYs) passes the real implementation; tests can stub it.
-
-### 3. `src/commands/index.ts`
+### 2. `src/commands/index.ts`
 
 Import and register the `send` command alongside the existing list.
 
-### 4. `src/controller.ts`
+### 3. `src/controller.ts`
 
 Add a `case 'send':` branch in `runApp`:
 
@@ -105,11 +91,11 @@ case 'send': {
 }
 ```
 
-### 5. `src/completion.ts`
+### 4. `src/completion.ts`
 
 When the command line starts with `send ` and the cursor is on the first argument, complete against labels of tabs where `tab.view === 'harness'`. Wire this into `completeCommandLine` alongside the existing `msg`/`broadcast` agent-name completion.
 
-### 6. `src/commands/send.test.ts` — new file
+### 5. `src/commands/send.test.ts` — new file
 
 Unit tests for `parseSendCommand`:
 
@@ -118,21 +104,9 @@ Unit tests for `parseSendCommand`:
 - `send` (no args) → `{ error: 'Usage: send <harness> <text>' }`
 - `send claude` (no text) → `{ error: 'No text to send.' }`
 
-### 7. `src/controller.test.ts`
+### 6. `src/controller.test.ts`
 
 Integration test: create a harness tab with a spy PTY, schedule `send claude /foo`, advance the tick past due time, assert the spy received `/foo\n`.
-
----
-
-## Ink-side wiring
-
-The Ink app owns PTY sessions in a ref (similar to `shellsRef`). The `sendToHarness` context function should:
-
-1. Look up the PTY session for the named harness tab from the Ink app's PTY map
-2. Call `session.write(text + '\n')`
-3. Return `true` on success, `false` when not found or not running
-
-This is threaded in alongside the existing context fields at the `CommandHandlerContext` construction site.
 
 ---
 

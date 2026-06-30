@@ -2,12 +2,16 @@
   "permissions": {
     "allow": [
       "Bash(./scripts/run.mjs *)",
-      "Bash(npm run *)",
+      "Bash(npm *)",
       "Read",
       "Edit",
       "Write",
+      "Bash(ls *)",
+      "Bash(cp *)",
+      "Bash(git *)",
       "Bash(gh *)",
-      "Bash(/usr/local/opt/gh/bin/gh *)"
+      "Bash(/usr/local/opt/gh/bin/gh *)",
+      "Bash(rm */.janissary/workspace/*)"
     ]
   }
 }

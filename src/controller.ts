@@ -64,13 +64,13 @@ export class Controller {
   private ptys = new Map<string, { session: PtySession; tabLabel: string }>();
   private schedules = new Map<string, ScheduleEntry[]>();
   // SQLite connections (global) attributed to the tab(s) that ran a `db` command against them, so a
-  // tab's connections panel reflects only the databases it has opened (mirrors Ink's `tabDbConns`).
+  // tab's connections panel reflects only the databases it has opened.
   private tabDbConns = new Map<string, string[]>();
   // Informational messages (info/response) received from other agents, per tab, persisted to agent
   // state's `context[]` and shown by the `state` command.
   private context = new Map<string, string[]>();
   // A command awaiting route disambiguation: shown as a chooser overlay in the client, resolved by
-  // `chooseRoute`. Null when no chooser is open (only one at a time, like the Ink route chooser).
+  // `chooseRoute`. Null when no chooser is open (only one at a time).
   private pendingRoute: { label: string; cmd: string; choices: RouteChoice[] } | null = null;
   private cols = 80;
   private rows = 24;
@@ -110,7 +110,7 @@ export class Controller {
     if (states.length === 0) return;
     this.tabs = states.map((s, index) => {
       // Preserve each tab's saved `number`; fall back to array order only for state files predating
-      // the field (mirrors the Ink rehydration), so the strip reappears exactly as it was left.
+      // the field, so the strip reappears exactly as it was left.
       const tab = makeTab(s.name, s.dotColor || distinctColor([]), s.number ?? index + 1, s.cmdHistory ?? [],
         this.capLog((s.log) ?? []), s.workspaceDir, s.group ?? 1, s.groupColor || s.dotColor || '#5b9cff');
       tab.toolStepsExpanded = false;
@@ -232,7 +232,7 @@ export class Controller {
 
   // Cap a tab's transcript to `transcriptMaxLines` (config.json), dropping the oldest entries so
   // the most recent N are kept. Applied at every log-mutation path so transcripts never grow
-  // unbounded (mirrors the Ink app's `capLog`).
+  // unbounded.
   private capLog(log: LogEntry[]): LogEntry[] {
     const max = getConfig().transcriptMaxLines;
     return log.length > max ? log.slice(log.length - max) : log;
@@ -257,7 +257,7 @@ export class Controller {
   }
 
   // Append an informational message (info/response from another agent) to a tab's context and
-  // persist it (mirrors Ink's `appendContext`); surfaced by the `state` command and on `--relaunch`.
+  // persist it; surfaced by the `state` command and on `--relaunch`.
   private appendContext(label: string, text: string): void {
     this.context.set(label, [...(this.context.get(label) ?? []), text]);
     const tab = this.tabs.find((t) => t.label === label);
@@ -282,8 +282,8 @@ export class Controller {
   }
 
   // Run a command in a specific tab (used by the scheduler) without touching the active tab. The
-  // command is recorded in that tab's history "as if typed there" (mirrors the Ink command handler,
-  // which records history even for a targeted/scheduled dispatch).
+  // command is recorded in that tab's history "as if typed there" (history is recorded even for
+  // targeted/scheduled dispatches).
   private dispatchTo(label: string, text: string): void {
     const index = this.tabs.findIndex((t) => t.label === label);
     if (index === -1) return;
@@ -324,7 +324,7 @@ export class Controller {
       case 'output': { this.append(label, { input, output: res.output, markdown: true }); return;
       }
       case 'unknown': {
-        // Probabilistic routing of an unprefixed command (mirrors the Ink command handler). Auto-run
+        // Probabilistic routing of an unprefixed command. Auto-run
         // a confident non-db route, or a confident db route when exactly one database is open (the
         // query needs a single concrete target). The web UI has no interactive route chooser, so the
         // otherwise-ambiguous cases fall back to a hint asking the user to prefix explicitly.
@@ -409,7 +409,7 @@ export class Controller {
   }
 
   // Run a `db` command on behalf of a tab, keeping that tab's tracked SQLite connections in sync so
-  // its connections panel reflects what it has open (mirrors Ink's `runDbInTab`). `delete` forgets
+  // its connections panel reflects what it has open. `delete` forgets
   // the connection; any opening command (create/query) records it once.
   private runDbInTab(label: string, command: string): string {
     const output = runDatabaseCommand(command);
@@ -855,7 +855,7 @@ export class Controller {
       shell = spawnShell(0, { JANUS_AGENT_NAME: label });
       this.shells.set(label, shell);
       // Start the shell in the tab's working directory — the workspace clone for a workspaced
-      // agent, or the saved cwd for a `--relaunch`'d tab (mirrors the Ink useShellManager).
+      // agent, or the saved cwd for a `--relaunch`'d tab.
       const cwd = this.cwd.get(label);
       if (cwd) shell.stdin!.write(`cd "${cwd}"\n`);
     }
@@ -1045,7 +1045,7 @@ export class Controller {
     this.setActiveTab((this.activeTab + dir + this.tabs.length) % this.tabs.length);
   }
 
-  // Reorder the active tab within its group (mirrors the Ink Ctrl+Arrow binding). swapTabsLeft/
+  // Reorder the active tab within its group (Ctrl+Arrow binding). swapTabsLeft/
   // Right enforce the group boundary (returning the same array when the move isn't allowed) and
   // renumber the tabs; the active tab follows the one it moved.
   reorderTab(dir: -1 | 1): void {
@@ -1082,7 +1082,7 @@ export class Controller {
     this.tabDbConns.delete(tab.label);
     this.context.delete(tab.label);
     // Closing the last tab resets to a fresh `janus` tab, just like launch; the global SQLite
-    // connections are closed too (mirrors the Ink last-tab cleanup), since no tab references them.
+    // connections are closed too (no tab references them after the last tab closes).
     if (this.tabs.length <= 1) {
       closeAllConnections();
       this.tabDbConns.clear();

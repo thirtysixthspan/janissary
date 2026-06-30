@@ -8,19 +8,17 @@ Refactoring edits real code, so the rule is simple: **the tests must pass before
 
 Do the steps below **in order**. Do not skip steps. Do not invent your own process.
 
-## The one safety rule (read this first)
-
-There are two kinds of work: **safe** and **needs-permission**.
+## What you may and may not do
 
 ### Safe work — DO IT AUTOMATICALLY, never ask
 
-When your plan is **only** safe work, you **must carry it out yourself, start to finish, without stopping.** Do **not** ask "Do you want me to proceed?". Do **not** pause to show the plan for approval. Do **not** wait for confirmation. Just make the change and verify it. Asking for permission on safe work is a mistake.
+When your plan is **only** safe work, you **must carry it out yourself, start to finish, without stopping.** Do **not** ask "Do you want me to proceed?". Do **not** pause to show the plan for approval. Do **not** wait for confirmation. Just make the change and verify it.
 
 Safe work is exactly this: **extract one cohesive group of code from a high-complexity source file into one (or more) new module files you create, and import it back** — done by the Recipe in Step 5, and nothing else.
 
-### Needs-permission work — STOP and ask first
+### Blocked work — skip and pick a different file
 
-**STOP and ask the user first** if doing the extraction would require any of these:
+If doing the extraction would require any of the following, **go back to Step 3** and pick the next-best file instead. Never ask the user — just skip and move on.
 
 1. Changing the **public API** of a file other files depend on — i.e. you cannot keep every existing `import` working. (If you move an `export`ed symbol but **re-export it from the original file** so no other file changes, that is still safe.)
 2. Editing **more than 1 existing source file**, or changing import paths in more than 3 files (the new module file(s) you create do not count).
@@ -28,7 +26,7 @@ Safe work is exactly this: **extract one cohesive group of code from a high-comp
 4. Editing **any test file** (`*.test.ts`, `*.test.tsx`).
 5. Touching **security, password/crypto, shell-execution, PTY/terminal, or network/browser** code.
 
-If any of 1–5 is true: do NOT change any code. Show the user your plan (from Step 4), say which of 1–5 applies, and ask: **"Do you want me to proceed?"** Then wait. (This is the **only** time you ever stop to ask.)
+If every remaining candidate is blocked, report which files you considered and why each was blocked, and stop without changing any code.
 
 > You may edit **only** the one existing source file you picked, plus the **new module file(s)** you create to receive the extracted code. Never edit `fta.json`, `eslint.config.mjs`, `package.json`, `tsconfig.json`, or any other config or test file. Leave the `score_cap` in `fta.json` alone.
 
@@ -100,9 +98,9 @@ Find **one cohesive group of code** to lift out whole — code that belongs toge
 
 Jot a one- or two-line plan: **which** group of code you will move, the **name of the new file** (`kebab-case.ts`, focused on that concern), and **what the original file will import back** from it. This is a note for **you**, not a message to send — do **not** post it and wait for a reply.
 
-Check the plan against **The one safety rule**:
+Check the plan against **What you may and may not do**:
 
-- If any of points 1–5 applies → STOP and ask the user (see that section).
+- If any of points 1–5 applies → go back to Step 3 and pick a different file.
 - Otherwise (all safe work) → go straight to Step 5 and make the change **now, on your own, without asking.**
 
 ---

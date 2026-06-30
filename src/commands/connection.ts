@@ -1,8 +1,14 @@
 import type { Command } from './types.js';
 import {
-  closeConnection, listOpenConnections,
   parseConnectionCommand,
 } from '../connections.js';
+import {
+  handleListConnections,
+  handleSqliteConnection,
+  handleShellConnection,
+  handleAcpConnection,
+  type HandlerContext,
+} from './connection-handlers.js';
 
 export const command: Command = {
   name: 'connection',
@@ -26,42 +32,29 @@ export const command: Command = {
     if ('error' in parsed) {
       output = parsed.error;
     } else if (parsed.action === 'list') {
-      const lines: string[] = [];
-      if (shellsRef.current.get(tabIndex)) lines.push(`shell:${shellName}`);
-      if (acpRef.current.get(tabIndex)) lines.push('acp:opencode');
-      const browserIds = browserRef.current.get(tabIndex)?.browser.windowIds() ?? [];
-      for (const id of browserIds) lines.push(`browser:${id}`);
-      for (const n of listOpenConnections()) lines.push(`sqlite:${n}`);
-      output = lines.length > 0 ? lines.join('\n') : 'No open connections.';
+      const handlerContext: HandlerContext = {
+        activeTab, shellsRef, acpRef, browserRef,
+        forgetDbConn, setShellActive, setAcpInfo, shellName,
+      };
+      output = handleListConnections(handlerContext);
     } else if (parsed.kind === 'sqlite') {
-      if (closeConnection(parsed.id)) {
-        forgetDbConn(parsed.id);
-        output = `Closed connection sqlite:${parsed.id}.`;
-      } else {
-        output = `No open connection sqlite:${parsed.id}.`;
-      }
+      const handlerContext: HandlerContext = {
+        activeTab, shellsRef, acpRef, browserRef,
+        forgetDbConn, setShellActive, setAcpInfo, shellName,
+      };
+      output = handleSqliteConnection(parsed, handlerContext);
     } else if (parsed.kind === 'shell') {
-      if (parsed.id !== shellName) {
-        output = `No open connection shell:${parsed.id} (this tab's shell is "${shellName}").`;
-      } else if (shellsRef.current.get(tabIndex)) {
-        shellsRef.current.get(tabIndex)?.kill();
-        shellsRef.current.delete(tabIndex);
-        setShellActive((previous) => { const c = { ...previous }; delete c[tabIndex]; return c; });
-        output = `Closed connection shell:${shellName}.`;
-      } else {
-        output = `No open connection shell:${shellName}.`;
-      }
+      const handlerContext: HandlerContext = {
+        activeTab, shellsRef, acpRef, browserRef,
+        forgetDbConn, setShellActive, setAcpInfo, shellName,
+      };
+      output = handleShellConnection(parsed, handlerContext);
     } else {
-      if (parsed.id !== 'opencode') {
-        output = `No open connection acp:${parsed.id} (the acp agent is "opencode").`;
-      } else if (acpRef.current.get(tabIndex)) {
-        acpRef.current.get(tabIndex)?.kill();
-        acpRef.current.delete(tabIndex);
-        setAcpInfo((previous) => { const c = { ...previous }; delete c[tabIndex]; return c; });
-        output = 'Closed connection acp:opencode.';
-      } else {
-        output = 'No open connection acp:opencode.';
-      }
+      const handlerContext: HandlerContext = {
+        activeTab, shellsRef, acpRef, browserRef,
+        forgetDbConn, setShellActive, setAcpInfo, shellName,
+      };
+      output = handleAcpConnection(parsed, handlerContext);
     }
     updateCurrentTab((tab) => ({ ...tab, log: [...tab.log, { input: trimmed, output }], scrollOffset: 0 }));
   },

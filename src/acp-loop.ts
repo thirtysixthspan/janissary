@@ -2,7 +2,7 @@
 // host runs it, feeds the output back, and repeats until the agent answers
 // without a command (or a step cap is reached). The control flow is pure — all
 // side effects (rendering the transcript, executing the command) are injected,
-// which keeps it testable independently of Ink/React and the live agent.
+// which keeps it testable independently of the live agent.
 
 import type { AcpLoopSession, AcpLoopDeps as AcpLoopDependencies, AcpLoopHandlers } from './types.js';
 

@@ -49,7 +49,7 @@ function makeWindow(id: string, page: Page): BrowserWindow {
       const screenshotPath = path.join(temporaryDirectory, `${id}-${Date.now()}.png`);
       await page.screenshot({ path: screenshotPath });
       if (process.platform === 'darwin') {
-        // Open the screenshot detached so it never blocks the Ink render loop.
+        // Open the screenshot detached so it never blocks the main process.
         const child = spawn('open', ['-a', 'Preview', screenshotPath], { stdio: 'ignore', detached: true });
         child.on('error', () => {});
         child.unref();

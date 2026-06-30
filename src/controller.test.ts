@@ -50,7 +50,7 @@ describe('Controller', () => {
     const { c } = makeController();
     c.dispatch('agent bob');
     expect(c.view().map((t) => t.label)).toContain('bob');
-    // Focus stays on the creator (janus), mirroring the Ink behavior.
+    // Focus stays on the creator (janus).
     expect(c.view()[c.activeTab].label).toBe('janus');
   });
 

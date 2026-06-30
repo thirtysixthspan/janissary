@@ -439,7 +439,7 @@ npm test
 Run tests for a specific project:
 
 ```bash
-npm run test:server   # Node/Ink TUI tests (src/)
+npm run test:server   # Node server tests (src/)
 npm run test:client   # React web client tests (web/src/)
 npm run test:watch    # watch mode — reruns on file changes
 ```
