@@ -1,22 +1,7 @@
 import type { LogEntry, BufferLine } from './types.js';
-import { formatMessageContent, tryCollapseToolSteps } from './buffer.js';
+import { handleCollapsedToolSteps, handleTerminalEntry, handleMessageEntry, handleInputOutput } from './tab-formatting-handlers.js';
 
-export function expandTabs(text: string, tabWidth = 8): string {
-  if (!text.includes('\t')) return text;
-  let col = 0;
-  let out = '';
-  for (const ch of text) {
-    if (ch === '\t') {
-      const spaces = tabWidth - (col % tabWidth);
-      out += ' '.repeat(spaces);
-      col += spaces;
-    } else {
-      out += ch;
-      col += ch === '\n' ? 0 : 1;
-    }
-  }
-  return out;
-}
+export { expandTabs } from './tab-formatting-handlers.js';
 
 export function wordWrap(text: string, width: number): string {
   if (width <= 0) return text;
@@ -52,42 +37,15 @@ export function flattenBuffer(log: LogEntry[], shouldCollapseToolSteps = false):
   for (let index = 0; index < log.length; index++) {
     const entry = log[index];
 
-    if (shouldCollapseToolSteps) {
-      const collapse = tryCollapseToolSteps(log, index);
-      if (collapse) {
-        if (lines.length > 0) lines.push({ type: 'spacer', text: '' });
-        lines.push({ type: 'collapsed', text: `${collapse.count} tool step${collapse.count === 1 ? '' : 's'}`, acp: true });
-        index = collapse.newIndex;
-        continue;
-      }
-    }
-
-    if (entry.terminal) {
-      if (lines.length > 0) lines.push({ type: 'spacer', text: '' });
-      lines.push({ type: 'terminal', text: '', terminal: entry.terminal });
+    const collapsed = handleCollapsedToolSteps(log, index, lines, shouldCollapseToolSteps);
+    if (collapsed.handled) {
+      index = collapsed.newIndex;
       continue;
     }
 
-    if (entry.from) {
-      if (lines.length > 0) lines.push({ type: 'spacer', text: '' });
-      const parts = entry.output.split('\n');
-      lines.push(...formatMessageContent(entry, parts));
-      continue;
-    }
-    if (!entry.input && !entry.output) continue;
-    if (lines.length > 0) lines.push({ type: 'spacer', text: '' });
-    if (entry.input) {
-      lines.push({ type: 'prompt', text: expandTabs(entry.input), cwd: entry.cwd, acp: entry.acp, running: entry.running });
-    }
-    if (entry.output) {
-      if (entry.markdown) {
-        lines.push({ type: 'markdown', text: entry.output });
-      } else {
-        for (const outLine of entry.output.split('\n')) {
-          lines.push({ type: 'output', text: expandTabs(outLine), acp: entry.acp });
-        }
-      }
-    }
+    if (handleTerminalEntry(entry, lines)) continue;
+    if (handleMessageEntry(entry, lines)) continue;
+    if (handleInputOutput(entry, lines)) continue;
   }
   return lines;
 }
