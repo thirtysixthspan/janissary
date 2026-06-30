@@ -6,8 +6,7 @@
       "Read",
       "Edit",
       "Bash(gh *)",
-      "Bash(/usr/local/opt/gh/bin/gh *)",
-      "Bash(read -r GH_REMOTE OWNER_REPO BRANCH GH_URL <<< \"$(./scripts/run.mjs pr-resolve-remote)\"*)"
+      "Bash(/usr/local/opt/gh/bin/gh *)"
     ]
   }
 }

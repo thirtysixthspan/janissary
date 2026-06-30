@@ -3,7 +3,7 @@
 # Usage: pr-merge.sh <BRANCH> <OWNER_REPO>
 #
 # Only call this once the PR is MERGEABLE (no conflicts) and all checks have
-# passed. A merge commit is used and the remote branch is deleted on success.
+# passed. A squash merge is used and the remote branch is deleted on success.
 
 if [[ $# -lt 2 ]]; then
   echo "Usage: $0 <BRANCH> <OWNER_REPO>"
@@ -19,4 +19,4 @@ if ! command -v "$GH_CMD" &> /dev/null; then
   GH_CMD="/usr/local/opt/gh/bin/gh"
 fi
 
-"$GH_CMD" pr merge "$BRANCH" -R "$OWNER_REPO" --merge --delete-branch 2>&1
+"$GH_CMD" pr merge "$BRANCH" -R "$OWNER_REPO" --squash --delete-branch 2>&1

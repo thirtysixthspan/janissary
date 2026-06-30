@@ -10,22 +10,6 @@ Every step is a script in `scripts/pr-*.sh`, invoked through the script runner. 
 
 ---
 
-## Fast path — one command runs the whole flow
-
-The one-shot orchestrator runs Steps 0–9 end to end:
-
-```bash
-./scripts/run.mjs pr-merge-to-master "<PR title>"
-# optional explicit branch, and --no-check to skip the gate:
-./scripts/run.mjs pr-merge-to-master "<PR title>" <branch> --no-check
-```
-
-It checks for changes, runs the gate, creates a branch, commits with **no co-authors**, resolves the GitHub remote, pushes, opens the PR, polls for conflicts, **waits for all checks to pass, merges, and deletes the branch** — then prints the Step 10 report. It stops and leaves the PR open if the gate is red, if there are conflicts (Step 7 resolution stays manual), or if a check fails.
-
-Drive the steps by hand only when you need finer control or to resolve conflicts. Do them **in order** — do not skip steps or invent your own process.
-
----
-
 ## Step 0 — Confirm there are changes to ship
 
 ```bash
@@ -87,11 +71,14 @@ If earlier commits already exist on the branch, consolidate so the **final** sta
 In a workspaced clone, `origin` is the local root repo. `pr:resolve-remote` exposes the real GitHub remote as `github` (or reuses `origin` when it already points at GitHub) and prints the variables to carry through the rest of the task:
 
 ```bash
-read -r GH_REMOTE OWNER_REPO BRANCH GH_URL <<< "$(./scripts/run.mjs pr-resolve-remote)"
-./scripts/run.mjs pr-push-branch "$GH_REMOTE" "$BRANCH"
+./scripts/run.mjs pr-resolve-remote
 ```
 
-Carry `$GH_REMOTE`, `$OWNER_REPO`, and `$BRANCH` through the remaining steps.
+This prints a single space-separated line: `GH_REMOTE OWNER_REPO BRANCH GH_URL`. Read those values and carry them through the remaining steps, then push:
+
+```bash
+./scripts/run.mjs pr-push-branch "$GH_REMOTE" "$BRANCH"
+```
 
 ---
 
@@ -150,7 +137,7 @@ It blocks until every check finishes and **exits non-zero** if any check failed 
 
 ## Step 9 — Merge the PR
 
-The PR is `MERGEABLE` and all checks have passed. Merge it and delete the remote branch:
+The PR is `MERGEABLE` and all checks have passed. Squash-merge it and delete the remote branch:
 
 ```bash
 ./scripts/run.mjs pr-merge "$BRANCH" "$OWNER_REPO"
