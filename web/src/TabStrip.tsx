@@ -20,17 +20,15 @@ export function TabStrip({ tabs, activeTab, onSelect, onClose }: Properties) {
         >
           <span className={`dot${tab.busy ? ' busy' : ''}`} style={{ color: tab.dotColor }}>●</span>
           <span>{tab.title ?? tab.label}</span>
-          {(['agent', 'image', 'page', 'harness', 'markdown'] as const).includes(tab.view as 'agent' | 'image' | 'page' | 'harness' | 'markdown') && (
-            <button
-              type="button"
-              className="tab-close"
-              title="Close tab"
-              aria-label="Close tab"
-              onClick={(e) => { e.stopPropagation(); onClose(index); }}
-            >
-              ×
-            </button>
-          )}
+          <button
+            type="button"
+            className="tab-close"
+            title="Close tab"
+            aria-label="Close tab"
+            onClick={(e) => { e.stopPropagation(); onClose(index); }}
+          >
+            ×
+          </button>
         </div>
       ))}
     </div>
