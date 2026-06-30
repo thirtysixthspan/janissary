@@ -1,6 +1,6 @@
 /* eslint-disable max-lines */
 import { spawnSync } from 'node:child_process';
-import type { Tab, LogEntry, ScheduleEntry, AcpSession, AcpInfo, ImageView, MarkdownView, PageView, HarnessView } from './types.js';
+import type { Tab, LogEntry, ScheduleEntry, ImageView, MarkdownView, PageView, HarnessView } from './types.js';
 import {
   makeTab, makeImageTab, makeMarkdownTab, makePageTab, makeHarnessTab, distinctColor, insertTabInGroup, flattenBuffer, stripComments,
   swapTabsLeft, swapTabsRight,
@@ -21,7 +21,7 @@ import { parseAgentCommand, resolveAgentName, getOutput } from './commands.js';
 import { commands } from './commands/index.js';
 import type { CommandContext } from './commands/types.js';
 import { runDatabaseCommand, parseDatabaseCommand, DB_PRIMER, extractDatabaseCommand } from './database.js';
-import { connectAcp } from './acp.js';
+import { AcpManager } from './acp-manager.js';
 import { runAcpToolLoop } from './acp-loop.js';
 import { analyzeCommand, toPrefixedCommand, routeChoices } from './recognizers/index.js';
 import type { RouteChoice } from './recognizers/types.js';
@@ -57,8 +57,7 @@ export class Controller {
   private cwd = new Map<string, string>();
   private busy = new Set<string>();
   private harnessOf = new Map<string, string>();
-  private acpSessions = new Map<string, AcpSession>();
-  private acpInfo = new Map<string, AcpInfo>();
+  private acp = new AcpManager();
   private ptys = new Map<string, { session: PtySession; tabLabel: string }>();
   private schedules = new Map<string, ScheduleEntry[]>();
   // SQLite connections (global) attributed to the tab(s) that ran a `db` command against them, so a
@@ -128,7 +127,7 @@ export class Controller {
     return this.tabs.map((t) => ({
       label: t.label, number: t.number, dotColor: t.dotColor, group: t.group, groupColor: t.groupColor,
       busy: this.busy.has(t.label), cwd: this.cwd.get(t.label) ?? process.cwd(),
-      acp: this.acpLabel(t.label),
+      acp: this.acp.label(t.label),
       connections: this.connectionsFor(t.label), schedule: this.scheduleFor(t.label),
       // Prompt lines carry the working directory; abbreviate it to `$root`/`~` for display only
       // (the stored cwd stays the real absolute path).
@@ -159,12 +158,6 @@ export class Controller {
     this.sinks.emitState();
   }
 
-  private acpLabel(label: string): string | undefined {
-    const info = this.acpInfo.get(label);
-    if (!info) return undefined;
-    return info.provider ? `${info.provider}/${info.model ?? ''}` : info.model;
-  }
-
   // Abbreviate an absolute path for display in the transcript: the launch (root) directory and the
   // state directory inside it read as `$root`, and home elsewhere reads as `~`. Display-only — the
   // stored path is unchanged. Used for the connections panel, prompt working directory, and status
@@ -180,7 +173,7 @@ export class Controller {
     if (this.shells.has(label)) {
       rows.push({ text: `${SHELL_NAME}:${this.shorten(this.cwd.get(label) ?? process.cwd())}`, kind: 'shell' });
     }
-    const acp = this.acpLabel(label);
+    const acp = this.acp.label(label);
     if (acp) rows.push({ text: `acp:${acp}`, kind: 'acp' });
     const b = this.browsers.info(label);
     if (b) for (const id of b.ids) rows.push({ text: `browser:${id} (${b.mode})`, kind: 'browser' });
@@ -449,22 +442,10 @@ export class Controller {
     const prompt = command.replace(/^acp\b\s*/i, '').trim();
     if (!prompt) { this.append(label, { input: command, output: 'Usage: acp <prompt>.' }); return; }
 
-    let session = this.acpSessions.get(label);
-    if (!session) {
-      const config = { model: 'google/gemini-3.1-flash-lite' };
-      const slash = config.model.indexOf('/');
-      const info: AcpInfo = slash === -1
-        ? { model: config.model }
-        : { provider: config.model.slice(0, slash), model: config.model.slice(slash + 1) };
-      session = connectAcp({
-        command: 'opencode', args: ['acp'],
-        cwd: this.cwd.get(label) ?? process.cwd(),
-        onError: (m) => this.append(label, { input: '', output: `ACP: ${m}` }),
-        onConnect: () => { this.acpInfo.set(label, info); this.sinks.emitState(); },
-        env: { OPENCODE_CONFIG_CONTENT: JSON.stringify(config) },
-      });
-      this.acpSessions.set(label, session);
-    }
+    const session = this.acp.session(label, this.cwd.get(label) ?? process.cwd(), {
+      onError: (m) => this.append(label, { input: '', output: `ACP: ${m}` }),
+      onConnect: () => this.sinks.emitState(),
+    });
 
     // Update the current turn's streaming entry (the last `running` one) with new text.
     const updateRunning = (output: string, running: boolean) => {
@@ -784,7 +765,7 @@ export class Controller {
     if (parsed.action === 'list') {
       const lines: string[] = [];
       if (this.shells.has(label)) lines.push(`shell:${SHELL_NAME}`);
-      if (this.acpSessions.has(label)) lines.push('acp:opencode');
+      if (this.acp.has(label)) lines.push('acp:opencode');
       const b = this.browsers.info(label);
       if (b) for (const id of b.ids) lines.push(`browser:${id}`);
       for (const [, e] of this.ptys) if (e.tabLabel === label) lines.push(`terminal:${e.session.program}`);
@@ -811,9 +792,9 @@ export class Controller {
     break;
     }
     case 'acp': {
-      if (this.acpSessions.has(label)) { this.acpSessions.get(label)?.kill(); this.acpSessions.delete(label); this.acpInfo.delete(label); this.sinks.emitState(); out('Closed connection acp:opencode.'); }
+      if (this.acp.close(label)) { this.sinks.emitState(); out('Closed connection acp:opencode.'); }
       else out('No open connection acp:opencode.');
-    
+
     break;
     }
     default: {
@@ -1041,9 +1022,7 @@ export class Controller {
     if (tab.markdown) { const id = tab.markdown.url.replace(/^\/open\//, ''); this.openFiles.delete(id); }
     if (tab.workspaceDir) { removeWorkspace(tab.workspaceDir); this.workspaces.delete(tab.workspaceDir); }
     this.shells.close(tab.label);
-    this.acpSessions.get(tab.label)?.kill();
-    this.acpSessions.delete(tab.label);
-    this.acpInfo.delete(tab.label);
+    this.acp.close(tab.label);
     this.browsers.closeTab(tab.label);
     for (const [id, e] of this.ptys) if (e.tabLabel === tab.label) { e.session.kill(); this.ptys.delete(id); }
     this.harnessOf.delete(tab.label);
@@ -1086,7 +1065,7 @@ export class Controller {
   private completionConnections(label: string): string[] {
     const out: string[] = [];
     if (this.shells.has(label)) out.push(`shell:${SHELL_NAME}`);
-    if (this.acpSessions.has(label)) out.push('acp:opencode');
+    if (this.acp.has(label)) out.push('acp:opencode');
     const b = this.browsers.info(label);
     if (b) for (const id of b.ids) out.push(`browser:${id}`);
     for (const n of listOpenConnections()) out.push(`sqlite:${n}`);
@@ -1097,7 +1076,7 @@ export class Controller {
     messageBus.clear();
     clearInterval(this.timer);
     this.shells.closeAll();
-    for (const [, session] of this.acpSessions) session.kill();
+    this.acp.closeAll();
     for (const [, e] of this.ptys) e.session.kill();
     this.browsers.closeAll();
     closeAllConnections(); // SQLite connections are global; close them all at app exit
