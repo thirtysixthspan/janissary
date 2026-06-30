@@ -86,10 +86,10 @@ This prints a single space-separated line: `GH_REMOTE OWNER_REPO BRANCH GH_URL`.
 
 Use the commit subject as `<title>`. Write the PR body to a file first — this avoids shell quoting issues with multi-line content. The body should have a **What** (one or two sentences on the change), a **Why** (the warning/goal it addresses), and a **Notes** line that the check gate passes.
 
-Write the body to `/tmp/pr-body.md`, then open the PR:
+Write the body to `./temp/pr-body.md`, then open the PR:
 
 ```bash
-./scripts/run.mjs pr-create-pr "$OWNER_REPO" "$BRANCH" "<title>" /tmp/pr-body.md
+./scripts/run.mjs pr-create-pr "$OWNER_REPO" "$BRANCH" "<title>" ./temp/pr-body.md
 ```
 
 Record the PR number/URL that the command prints.
