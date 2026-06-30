@@ -82,6 +82,6 @@ export type BusEvent =
   | { type: 'tab:removed'; tabLabel: string };
 
 export type BusChannels = { transcript: BusEvent };
-export type Bus = MessageBus<BusChannels>;
-export type BusEventType = BusEvent['type'];
+type Bus = MessageBus<BusChannels>;
+type BusEventType = BusEvent['type'];
 export const messageBus = new MessageBus<BusChannels>();
