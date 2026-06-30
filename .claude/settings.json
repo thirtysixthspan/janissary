@@ -6,11 +6,12 @@
       "Read",
       "Edit",
       "Write",
+      "Bash(ls *)",
       "Bash(cp *)",
       "Bash(git *)",
       "Bash(gh *)",
       "Bash(/usr/local/opt/gh/bin/gh *)",
-      "Bash(rm * .janissary/workspace/*)"
+      "Bash(rm */.janissary/workspace/*)"
     ]
   }
 }
