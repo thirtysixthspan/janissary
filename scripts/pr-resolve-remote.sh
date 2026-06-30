@@ -15,7 +15,4 @@ GH_URL=$(git remote get-url "$GH_REMOTE")
 OWNER_REPO=$(echo "${GH_URL%.git}" | sed -E 's#.*[:/]([^/]+/[^/]+)$#\1#')
 BRANCH=$(git rev-parse --abbrev-ref HEAD)
 
-echo "GH_REMOTE=$GH_REMOTE"
-echo "OWNER_REPO=$OWNER_REPO"
-echo "BRANCH=$BRANCH"
-echo "GH_URL=$GH_URL"
+echo "$GH_REMOTE $OWNER_REPO $BRANCH $GH_URL"

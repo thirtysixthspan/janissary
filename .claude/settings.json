@@ -4,7 +4,10 @@
       "Bash(./scripts/run.mjs *)",
       "Bash(npm run *)",
       "Read",
-      "Edit"
+      "Edit",
+      "Bash(gh *)",
+      "Bash(/usr/local/opt/gh/bin/gh *)",
+      "Bash(read -r GH_REMOTE OWNER_REPO BRANCH GH_URL <<< \"$(./scripts/run.mjs pr-resolve-remote)\"*)"
     ]
   }
 }
