@@ -31,11 +31,9 @@ export function isGlobPattern(argument: string): boolean {
   return /[*?[\]{}]/.test(argument);
 }
 
-// Registry descriptor for command resolution (`resolveCommand` uses `match`/`name`). The behavior is
-// implemented in the Controller (`runOpen`), which has the tab/serving capabilities openers need, so
-// this handler is intentionally a no-op placeholder.
+// Behavior lives in the Controller (`runOpen`), which has the tab/serving capabilities openers need.
+// This is the registry descriptor (plus the pure parse helpers) used for command resolution.
 export const command: Command = {
   name: 'open',
   match: (command_) => /^open\b/i.test(command_),
-  handler: () => { /* behavior lives in Controller.runOpen */ },
 };

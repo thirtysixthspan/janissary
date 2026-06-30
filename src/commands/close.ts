@@ -1,6 +1,4 @@
 import type { Command } from './types.js';
-import { cleanupResources } from '../cleanup-handlers.js';
-import { removeWorkspace } from '../workspace.js';
 
 export type ParsedClose =
   | { target: 'active' }
@@ -17,38 +15,9 @@ export function parseClose(command_: string): ParsedClose {
   return { error: 'Usage: close [page <n>]' };
 }
 
+// Behavior lives in the Controller (`closeTab`), which disposes the tab's owned resources (shell,
+// ACP session, browser, terminals, workspace). This is the registry descriptor for resolution.
 export const command: Command = {
   name: 'close',
   match: (command_) => /^close\b/i.test(command_),
-  handler: (_command, context) => {
-    const {
-      tabs, activeTab, setTabs, setActiveTab, setAcpInfo, setShellActive,
-      setAgentStates, setTabDbConns, exit,
-      shellsRef, acpRef, browserRef, workspaceRef,
-      closeTabBrowser,
-    } = context;
-    const tabIndex = activeTab;
-    if (tabs.length <= 1) {
-      cleanupResources({ workspaceRef, shellsRef, acpRef, browserRef });
-      exit();
-    } else {
-      const closedTab = tabs[tabIndex];
-      if (closedTab.workspaceDir) {
-        removeWorkspace(closedTab.workspaceDir);
-        workspaceRef.current.delete(closedTab.workspaceDir);
-      }
-      shellsRef.current.get(tabIndex)?.kill();
-      shellsRef.current.delete(tabIndex);
-      acpRef.current.get(tabIndex)?.kill();
-      acpRef.current.delete(tabIndex);
-      closeTabBrowser(tabIndex);
-      setAcpInfo((previous) => { const copy = { ...previous }; delete copy[tabIndex]; return copy; });
-      setShellActive((previous) => { const copy = { ...previous }; delete copy[tabIndex]; return copy; });
-      const closedLabel = closedTab.label;
-      setTabs((previous) => previous.filter((_, index) => index !== tabIndex));
-      setAgentStates((previous) => { const copy = { ...previous }; delete copy[closedLabel]; return copy; });
-      setTabDbConns((previous) => { const copy = { ...previous }; delete copy[closedLabel]; return copy; });
-      setActiveTab((previous) => Math.min(previous, tabs.length - 2));
-    }
-  },
 };

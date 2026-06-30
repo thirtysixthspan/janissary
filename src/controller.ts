@@ -19,6 +19,7 @@ import { isInteractive } from './interactive.js';
 import { parseHarnessCommand, HARNESS_COMMANDS } from './harness.js';
 import { parseAgentCommand, resolveAgentName, getOutput } from './commands.js';
 import { commands } from './commands/index.js';
+import type { CommandContext } from './commands/types.js';
 import { runDatabaseCommand, parseDatabaseCommand, DB_PRIMER, extractDatabaseCommand } from './database.js';
 import { connectAcp } from './acp.js';
 import { runAcpToolLoop } from './acp-loop.js';
@@ -29,17 +30,15 @@ import { findRepoRoot, createWorkspace, removeWorkspace } from './workspace.js';
 import { completeCommandLine } from './completion.js';
 import type { CompletionResult } from './types.js';
 import { spawnPty, type PtySession } from './pty.js';
-import { saveAgentState, loadAgentState, listAgentStates } from './agent-state.js';
-import { parseScheduleCommand, formatSchedule, computeNextRun, fmtNextRun } from './schedule.js';
+import { saveAgentState, listAgentStates } from './agent-state.js';
+import { computeNextRun, fmtNextRun } from './schedule.js';
 import { parseProfileCommand, loadProfileAgents, listProfiles, profileExists } from './profiles.js';
 import { parseConnectionCommand, closeConnection, closeAllConnections, isConnectionOpen, listOpenConnections } from './connections.js';
-import { parseMsgCommand as parseMessageCommand, parseBroadcastCommand } from './messaging.js';
 import { extractBrowserCommand, BROWSER_PRIMER } from './browser-command.js';
 import { AgentBus } from './message-bus.js';
 import { messageBus } from './bus.js';
 import { TranscriptStore } from './transcript/store.js';
 import { BrowserManager } from './browser-tab.js';
-import { formatState } from './state-format.js';
 import { getConfig } from './config.js';
 import type { TabView, ConnectionView, ScheduleView } from './protocol.js';
 
@@ -347,22 +346,12 @@ export class Controller {
   }
 
   private runApp(name: string, command: string, label: string, index: number): void {
+    // Migrated commands carry their own `run`; delegate to it. The rest still live in the switch
+    // below (and the agent/profile/close/connection/acp/open/browser cases that the Controller owns).
+    const migrated = commands.find((c) => c.name === name)?.run;
+    if (migrated) { migrated(command, this.buildCommandContext(label, command)); return; }
     switch (name) {
-      case 'clear': {
-        const tab = this.tabs.find((t) => t.label === label);
-        if (tab) {
-          tab.log = [];
-          this.persist(tab);
-          messageBus.emit('transcript', { type: 'tab:cleared', tabLabel: label });
-          this.sinks.emitState();
-        }
-        return;
-      }
-      case 'db': { this.append(label, { input: command, output: this.runDbInTab(label, command) }); return;
-      }
       case 'agent': { this.newAgent(command); return;
-      }
-      case 'next': { this.setActiveTab((this.activeTab + 1) % this.tabs.length); return;
       }
       case 'close': {
         const closeParsed = parseClose(command);
@@ -376,15 +365,7 @@ export class Controller {
         }
         return;
       }
-      case 'msg': { this.runMsg(command, label); return;
-      }
-      case 'broadcast': { this.runBroadcast(command, label); return;
-      }
       case 'acp': { this.runAcp(command, label); return;
-      }
-      case 'state': { this.append(label, { input: command, output: formatState(label, loadAgentState(label) ?? null) }); return;
-      }
-      case 'schedule': { this.runSchedule(command, label); return;
       }
       case 'profile': { this.runProfile(command, label); return;
       }
@@ -394,21 +375,51 @@ export class Controller {
       }
       case 'open': { this.runOpen(command, label); return;
       }
-      // `quit` and `exit` both close the app window and stop the server. `close` (handled above)
-      // is reserved for closing tabs.
-      case 'quit': { this.sinks.exit?.(); return;
-      }
-      // The `hist` picker is interactive (handled client-side via Ctrl+R); reaching the server
-      // non-interactively (e.g. scheduled) is a no-op.
-      case 'hist': { return;
-      }
     }
     const trimmed = command.trim().toLowerCase();
-    this.append(label, { 
-      input: command, 
+    this.append(label, {
+      input: command,
       output: getOutput(command) ?? `"${name}" did nothing.`,
       markdown: trimmed === 'help'
     });
+  }
+
+  // The capabilities a migrated command needs, scoped to the tab it runs in. Each closure routes
+  // back through the Controller's existing primitives, so a command's module owns the logic while
+  // the Controller keeps owning the state.
+  private buildCommandContext(label: string, input: string): CommandContext {
+    return {
+      label, input,
+      activeTab: this.activeTab,
+      tabCount: this.tabs.length,
+      out: (text, options) => this.append(label, { input, output: text, markdown: options?.markdown }),
+      append: (entry) => this.append(label, entry),
+      setActiveTab: (i) => this.setActiveTab(i),
+      exit: () => this.sinks.exit?.(),
+      clearTranscript: () => this.clearTranscript(label),
+      send: (message) => this.bus.send(message),
+      agentLabels: () => this.tabs.map((t) => t.label),
+      getSchedule: () => this.schedules.get(label) ?? [],
+      setSchedule: (next) => this.setSchedule(label, next),
+      runDb: (command) => this.runDbInTab(label, command),
+    };
+  }
+
+  // Empty a tab's transcript: reset its log, persist, notify the transcript stream, and re-render.
+  private clearTranscript(label: string): void {
+    const tab = this.tabs.find((t) => t.label === label);
+    if (!tab) return;
+    tab.log = [];
+    this.persist(tab);
+    messageBus.emit('transcript', { type: 'tab:cleared', tabLabel: label });
+    this.sinks.emitState();
+  }
+
+  // Replace a tab's scheduled commands and persist the new list (the `schedule` add/cancel/clear path).
+  private setSchedule(label: string, next: ScheduleEntry[]): void {
+    this.schedules.set(label, next);
+    const tab = this.tabs.find((t) => t.label === label);
+    if (tab) this.persist(tab);
   }
 
   // Run a `db` command on behalf of a tab, keeping that tab's tracked SQLite connections in sync so
@@ -432,32 +443,6 @@ export class Controller {
     for (const [label, names] of this.tabDbConns) {
       if (names.includes(name)) this.tabDbConns.set(label, names.filter((n) => n !== name));
     }
-  }
-
-  // --- messaging -----------------------------------------------------------
-
-  private runMsg(command: string, label: string): void {
-    const parsed = parseMessageCommand(command);
-    if ('error' in parsed) { this.append(label, { input: command, output: parsed.error }); return; }
-    if (!this.bus.send({ from: label, to: parsed.to, kind: parsed.kind, text: parsed.text })) {
-      this.append(label, { input: command, output: `No agent named "${parsed.to}".` });
-      return;
-    }
-    // Show the sent message in the sender's transcript
-    this.append(label, { input: command, output: `→ ${parsed.to} (${parsed.kind}): ${parsed.text}` });
-  }
-
-  private runBroadcast(command: string, label: string): void {
-    const parsed = parseBroadcastCommand(command);
-    if ('error' in parsed) { this.append(label, { input: command, output: parsed.error }); return; }
-    const targets = parsed.targets === 'all'
-      ? this.tabs.map((t) => t.label).filter((l) => l !== label)
-      : parsed.targets;
-    const missing: string[] = [];
-    for (const to of targets) {
-      if (!this.bus.send({ from: label, to, kind: parsed.kind, text: parsed.text })) missing.push(to);
-    }
-    if (missing.length > 0) this.append(label, { input: command, output: `No agent named: ${missing.join(', ')}.` });
   }
 
   // --- acp (autonomous agent tool loop) ------------------------------------
@@ -729,35 +714,7 @@ export class Controller {
     return `${name}-${n}`;
   }
 
-  // --- schedule ------------------------------------------------------------
-
-  private runSchedule(command: string, label: string): void {
-    const parsed = parseScheduleCommand(command.replace(/^schedule\b\s*/i, ''), new Date());
-    const out = (text: string) => this.append(label, { input: command, output: text });
-    if ('error' in parsed) { out(parsed.error); return; }
-    const current = this.schedules.get(label) ?? [];
-    if (parsed.action === 'list') { out(formatSchedule(current)); return; }
-    let next: ScheduleEntry[];
-    let message: string;
-    if (parsed.action === 'add') {
-      if (current.some((e) => e.id === parsed.name)) { out(`A scheduled command named "${parsed.name}" already exists.`); return; }
-      const entry: ScheduleEntry = { ...parsed.entry, id: parsed.name };
-      next = [...current, entry];
-      message = `Scheduled ${entry.id}: ${entry.spec} — ${entry.command}`;
-    } else if (parsed.action === 'cancel') {
-      next = current.filter((e) => e.id !== parsed.id);
-      if (next.length === current.length) { out(`No scheduled command "${parsed.id}".`); return; }
-      message = `Cancelled ${parsed.id}.`;
-    } else {
-      if (current.length === 0) { out('No scheduled commands.'); return; }
-      next = [];
-      message = `Cleared ${current.length} scheduled command${current.length === 1 ? '' : 's'}.`;
-    }
-    this.schedules.set(label, next);
-    const tab = this.tabs.find((t) => t.label === label);
-    if (tab) this.persist(tab);
-    out(message);
-  }
+  // --- schedule (firing) ---------------------------------------------------
 
   private tick(): void {
     const now = Date.now();

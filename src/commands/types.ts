@@ -1,54 +1,38 @@
-import type { ChildProcess } from 'node:child_process';
-import type {
-  Tab, LogEntry, AgentState, AcpInfo, AcpSession, TabBrowser, MessageKind,
-} from '../types.js';
-import type { RouteChoice } from '../recognizers/types.js';
+import type { LogEntry, MessageKind, ScheduleEntry } from '../types.js';
 
-export type CommandHandlerContext = {
-  tabs: Tab[];
+// Controller-facing context for a command's `run`. The Controller provides each capability scoped to
+// the tab the command runs in. Every field is exercised by a migrated command.
+export interface CommandContext {
+  // The tab the command runs in, and the raw command text (the `input` of any log entries it adds).
+  label: string;
+  input: string;
   activeTab: number;
-  updateCurrentTab: (updater: (tab: Tab) => Tab) => void;
-  updateTab: (index: number, updater: (tab: Tab) => Tab) => void;
-  setTabs: (updater: (previous: Tab[]) => Tab[]) => void;
-  setActiveTab: (function_: ((previous: number) => number) | number) => void;
-  setInteractive: (v: { cmd: string; cwd?: string } | null) => void;
-  setHistoryPickerOpen: (isOpen: boolean) => void;
-  setHistoryPickerIdx: (function_: ((previous: number) => number) | number) => void;
-  setAgentStates: (updater: (previous: Record<string, AgentState>) => Record<string, AgentState>) => void;
-  setAcpInfo: (updater: (previous: Record<number, AcpInfo>) => Record<number, AcpInfo>) => void;
-  setShellActive: (updater: (previous: Record<number, boolean>) => Record<number, boolean>) => void;
-  setTabDbConns: (updater: (previous: Record<string, string[]>) => Record<string, string[]>) => void;
+  tabCount: number;
+  // Append a plain (or markdown) output line for `input` to this tab's transcript.
+  out: (text: string, options?: { markdown?: boolean }) => void;
+  // Append an arbitrary log entry to this tab's transcript.
+  append: (entry: LogEntry) => void;
+  setActiveTab: (index: number) => void;
+  // Stop the whole app (the `quit`/`exit` command).
   exit: () => void;
-  shellsRef: { current: Map<number, ChildProcess> };
-  acpRef: { current: Map<number, AcpSession> };
-  browserRef: { current: Map<number, { browser: TabBrowser; current?: string; counter: number }> };
-  cwdRef: { current: Record<string, string> };
-  workspaceRef: { current: Set<string> };
-  runShellInTab: (tabIndex: number, tabLabel: string, shellCommand: string, onComplete?: (output: string) => void, shouldDisplay?: boolean) => void;
-  runBrowserInTab: (tabIndex: number, command: string) => Promise<string>;
-  runDbInTab: (label: string, command: string) => string;
-  finishRunning: (label: string, output: string) => void;
-  closeBrowserWindow: (tabIndex: number, id: string) => Promise<string>;
-  closeTabBrowser: (tabIndex: number) => void;
-  forgetDbConn: (name: string) => void;
-  appendLog: (label: string, entry: LogEntry) => void;
-  initAgentState: (
-    name: string, dotColor: string, group?: number, groupColor?: string,
-  ) => { cmdHistory?: string[]; log?: LogEntry[]; cwd?: string; workspaceDir?: string; group?: number; groupColor?: string };
-  sendMessage: (message: { from: string; to: string; kind: MessageKind; text: string }) => boolean;
-  saveTabLog: (label: string, log: LogEntry[]) => void;
-  setAgentActive: (name: string, isActive: boolean) => void;
-  shellName: string;
-  columns: number;
-  frequentHistory: string[];
-  // Names of sqlite databases with an open connection in `label`'s tab (for db recognition).
-  getOpenDbs: (label: string) => string[];
-  // Open the route-chooser window for an unprefixed command whose route is ambiguous.
-  openRouteChooser: (command: string, choices: RouteChoice[]) => void;
-};
+  // Empty this tab's transcript (log reset + persist + event); the plumbing stays Controller-owned.
+  clearTranscript: () => void;
+  // Enqueue a message to another agent; false when no such agent exists.
+  send: (message: { from: string; to: string; kind: MessageKind; text: string }) => boolean;
+  // Labels of every open tab (for `broadcast all` and recipient lookup).
+  agentLabels: () => string[];
+  // This tab's scheduled commands, and a setter that persists the replacement list.
+  getSchedule: () => ScheduleEntry[];
+  setSchedule: (next: ScheduleEntry[]) => void;
+  // Run a `db` command for this tab, keeping its tracked SQLite connections in sync.
+  runDb: (command: string) => string;
+}
 
 export interface Command {
   name: string;
   match: (command: string) => boolean;
-  handler: (command: string, context: CommandHandlerContext) => void;
+  // Controller-facing execution. Present for commands whose logic lives in their module; the
+  // remaining built-ins (agent, profile, close, connection, acp, open, browser) are executed by the
+  // Controller, which owns the tab/PTY/session machinery they need, and carry only `name`/`match`.
+  run?: (command: string, context: CommandContext) => void;
 }

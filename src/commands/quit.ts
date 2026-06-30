@@ -1,5 +1,4 @@
 import type { Command } from './types.js';
-import { cleanupResources } from '../cleanup-handlers.js';
 
 export const command: Command = {
   name: 'quit',
@@ -7,9 +6,7 @@ export const command: Command = {
     const lower = command_.toLowerCase();
     return lower === 'quit' || lower === 'exit';
   },
-  handler: (_command, context) => {
-    const { shellsRef, acpRef, browserRef, workspaceRef, exit } = context;
-    cleanupResources({ workspaceRef, shellsRef, acpRef, browserRef });
-    exit();
-  },
+  // The Controller owns resource teardown (it kills every tab's shell/ACP/browser/PTY in `shutdown`);
+  // the command just asks the host to exit.
+  run: (_command, context) => { context.exit(); },
 };

@@ -1,11 +1,7 @@
-import { describe, it, expect, beforeEach, afterAll } from 'vitest';
-import { mkdtempSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import path from 'node:path';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { command } from './schedule.js';
-import { initAgentStateDirectory, saveAgentState, loadAgentState } from '../agent-state.js';
-import type { AgentState } from '../types.js';
-import type { CommandHandlerContext } from './types.js';
+import type { ScheduleEntry } from '../types.js';
+import type { CommandContext } from './types.js';
 
 describe('schedule command', () => {
   it('has the correct name', () => {
@@ -24,57 +20,41 @@ describe('schedule command', () => {
   });
 });
 
-describe('schedule command handler', () => {
-  let dir: string;
-  let states: Record<string, AgentState>;
+describe('schedule command run', () => {
+  let schedule: ScheduleEntry[];
   let outputs: string[];
-  let context: CommandHandlerContext;
+  let context: CommandContext;
 
   beforeEach(() => {
-    dir = mkdtempSync(path.join(tmpdir(), 'janus-sched-'));
-    initAgentStateDirectory(dir);
-    const initial: AgentState = { name: 'janus', dotColor: 'red', active: false };
-    saveAgentState(initial);
-    states = { janus: initial };
+    schedule = [];
     outputs = [];
     context = {
-      tabs: [{ label: 'janus' }],
-      activeTab: 0,
-      updateCurrentTab: (u: (tab: { label: string; log: { output: string }[]; scrollOffset: number }) => { log: { output: string }[] }) => {
-        const tab = u({ label: 'janus', log: [], scrollOffset: 0 });
-        outputs.push(tab.log.at(-1).output);
-      },
-      setAgentStates: (u: (previous: Record<string, AgentState>) => Record<string, AgentState>) => {
-        states = u(states);
-      },
-    } as unknown as CommandHandlerContext;
+      label: 'janus',
+      out: (text: string) => { outputs.push(text); },
+      getSchedule: () => schedule,
+      setSchedule: (next: ScheduleEntry[]) => { schedule = next; },
+    } as unknown as CommandContext;
   });
 
-  afterAll(() => {
-    if (dir) rmSync(dir, { recursive: true, force: true });
-  });
+  const run = (command_: string) => command.run!(command_, context);
 
-  const run = (command_: string) => command.handler(command_, context);
-
-  it('adds a named entry and persists it to the state file', () => {
+  it('adds a named entry and records it', () => {
     run('schedule fetch every 5m echo hi');
-    const saved = loadAgentState('janus')?.schedule ?? [];
-    expect(saved).toHaveLength(1);
-    expect(saved[0]).toMatchObject({ id: 'fetch', command: 'echo hi', spec: 'every 5m', recurring: true });
+    expect(schedule).toHaveLength(1);
+    expect(schedule[0]).toMatchObject({ id: 'fetch', command: 'echo hi', spec: 'every 5m', recurring: true });
     expect(outputs.at(-1)).toContain('Scheduled fetch');
   });
 
   it('errors on a named timer with no schedule form and leaves state untouched', () => {
     run('schedule deploy');
     expect(outputs.at(-1)).toContain('Usage:');
-    expect(loadAgentState('janus')?.schedule).toBeUndefined();
+    expect(schedule).toHaveLength(0);
   });
 
   it('lists entries by name', () => {
     run('schedule a every 5m echo a');
     run('schedule b at 3pm echo b');
-    const saved = loadAgentState('janus')?.schedule ?? [];
-    expect(saved.map((entry) => entry.id)).toEqual(['a', 'b']);
+    expect(schedule.map((entry) => entry.id)).toEqual(['a', 'b']);
 
     run('schedule list');
     const listing = outputs.at(-1);
@@ -87,8 +67,7 @@ describe('schedule command handler', () => {
     run('schedule a every 5m echo a');
     run('schedule b every 1h echo b');
     run('schedule cancel a');
-    const saved = loadAgentState('janus')?.schedule ?? [];
-    expect(saved.map((entry) => entry.id)).toEqual(['b']);
+    expect(schedule.map((entry) => entry.id)).toEqual(['b']);
     expect(outputs.at(-1)).toBe('Cancelled a.');
   });
 
@@ -100,21 +79,21 @@ describe('schedule command handler', () => {
   it('clears all entries', () => {
     run('schedule a every 5m echo a');
     run('schedule clear');
-    expect(loadAgentState('janus')?.schedule ?? []).toHaveLength(0);
+    expect(schedule).toHaveLength(0);
     expect(outputs.at(-1)).toContain('Cleared 1');
   });
 
   it('rejects a duplicate name', () => {
     run('schedule deploy at 3pm npm run deploy');
     run('schedule deploy every 5m echo hi');
-    expect(loadAgentState('janus')?.schedule ?? []).toHaveLength(1);
+    expect(schedule).toHaveLength(1);
     expect(outputs.at(-1)).toContain('already exists');
   });
 
   it('cancels a named entry by name', () => {
     run('schedule deploy at 3pm npm run deploy');
     run('schedule cancel deploy');
-    expect(loadAgentState('janus')?.schedule ?? []).toHaveLength(0);
+    expect(schedule).toHaveLength(0);
     expect(outputs.at(-1)).toBe('Cancelled deploy.');
   });
 });

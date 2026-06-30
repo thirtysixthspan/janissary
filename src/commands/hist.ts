@@ -3,11 +3,7 @@ import type { Command } from './types.js';
 export const command: Command = {
   name: 'hist',
   match: (command_) => command_.toLowerCase() === 'hist',
-  handler: (_command, context) => {
-    const { frequentHistory, setHistoryPickerIdx, setHistoryPickerOpen } = context;
-    if (frequentHistory.length > 0) {
-      setHistoryPickerIdx(frequentHistory.length - 1);
-      setHistoryPickerOpen(true);
-    }
-  },
+  // The history picker is interactive (client-side, Ctrl+R); reaching the server non-interactively
+  // (e.g. via a scheduled dispatch) is a no-op.
+  run: () => { /* no-op on the server */ },
 };
