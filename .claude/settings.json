@@ -13,7 +13,8 @@
       "Bash(/usr/local/opt/gh/bin/gh *)",
       "Bash(rm */.janissary/workspace/*)",
       "Bash(mkdir *)",
-      "Bash(npx eslint *)"
+      "Bash(npx eslint *)",
+      "Bash(find *)"
     ]
   }
 }
