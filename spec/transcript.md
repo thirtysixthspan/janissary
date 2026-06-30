@@ -12,6 +12,10 @@ Auto-run agent tool steps (entries flagged `acp`, produced by the ACP tool loop)
 
 `Ctrl+T` toggles the per-tab `Tab.toolStepsExpanded` flag (in-memory, like `scrollOffset`, not persisted), resetting scroll to the bottom. When expanded, each step renders as its `+ <command>` line followed by the command's response on the indented output lines beneath it (the `ranCommand` handler stores the command in the entry's `input` and the result in its `output`). Both the render path and the scroll-length calculation pass the same `!toolStepsExpanded` flag to `flattenBuffer`, so scrolling math matches what is drawn.
 
+### Hidden during interactive PTY takeover
+
+When an interactive program (htop, vim, less, etc.) is running in full-tab PTY mode on the current agent tab, the transcript and command bar are hidden and replaced by the full-tab terminal. When the program exits, the transcript is restored to exactly the state it was in before the PTY launched — no new entries are added.
+
 ### Auto-scroll on output
 
 New output resets scroll offset to 0 (bottom), showing the latest lines.

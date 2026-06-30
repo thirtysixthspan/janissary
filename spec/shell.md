@@ -22,6 +22,25 @@ Shell `data` event listeners check an unmount flag before updating React state. 
 
 Shell output uses the tab index captured at execution time via a ref, so output updates are routed to the correct tab's log even if the user switches tabs while a shell command runs.
 
+## Interactive PTY takeover
+
+Full-screen and interactive programs — `htop`, `vim`, `less`, `top`, `man`, `python`, REPLs, etc. — cannot run through the persistent piped shell. When a shell command is detected as interactive (see `src/interactive.ts`), the tab switches into **PTY takeover mode**:
+
+- The transcript and command bar are hidden.
+- A full-tab xterm.js terminal takes over the tab body, exactly like a harness tab.
+- All keyboard input — including `Ctrl+C`, `Ctrl+D`, `Ctrl+Z` — is forwarded to the PTY. Only the tab-switch chord (`Shift+←/→`) bubbles out to the window handler.
+- The xterm terminal is focused automatically on launch and whenever the tab is switched back to.
+
+When the program exits, the tab returns to the normal transcript view exactly as it was before the PTY launched. No log entry is appended — the transcript is simply restored.
+
+### Multi-tab persistence
+
+All agent tabs with a running interactive PTY stay mounted simultaneously (only the active tab is visible, the rest use `display: none`). This preserves xterm state — alternate-screen TUIs like `htop` keep their cursor position and screen buffer intact across tab switches.
+
+### Closing a tab with a running PTY
+
+`close` kills the PTY (SIGTERM) and removes the tab, the same as closing any other connection. The PTY exit fires `onPtyExit`, which clears `activePty` — but since the tab is already gone this is a no-op.
+
 ## Shell Working Directory Persistence
 
 ### Per-agent cwd tracking
