@@ -1,5 +1,6 @@
-import { existsSync, mkdirSync, rmSync, readdirSync } from 'node:fs';
+import { existsSync, mkdirSync, rmSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
+import { homedir } from 'node:os';
 import { execSync } from 'node:child_process';
 
 let workspaceBaseDir = '';
@@ -27,15 +28,41 @@ export function findRepoRoot(from: string): string | undefined {
   }
 }
 
+export function trustWorkspace(workspaceDir: string): void {
+  const claudeJson = path.join(homedir(), '.claude.json');
+  let data: Record<string, unknown> = {};
+  try {
+    data = JSON.parse(readFileSync(claudeJson, 'utf8')) as Record<string, unknown>;
+  } catch { /* file absent or unparseable — start fresh */ }
+  const projects = (data['projects'] ?? {}) as Record<string, Record<string, unknown>>;
+  projects[workspaceDir] = { ...projects[workspaceDir], hasTrustDialogAccepted: true };
+  data['projects'] = projects;
+  writeFileSync(claudeJson, JSON.stringify(data, null, 2) + '\n', 'utf8');
+}
+
 export function createWorkspace(name: string, repoPath: string): string {
   ensureWorkspaceDir();
   const target = workspacePath(name);
   // Intentional: user-driven workspace creation; only local-user commands reach this sink.
   execSync(`git clone --shared "${repoPath}" "${target}"`, { stdio: 'pipe' });
+  trustWorkspace(target);
   return target;
 }
 
+export function untrustWorkspace(workspaceDir: string): void {
+  const claudeJson = path.join(homedir(), '.claude.json');
+  let data: Record<string, unknown>;
+  try {
+    data = JSON.parse(readFileSync(claudeJson, 'utf8')) as Record<string, unknown>;
+  } catch { return; }
+  const projects = data['projects'] as Record<string, unknown> | undefined;
+  if (!projects || !Object.hasOwn(projects, workspaceDir)) return;
+  delete projects[workspaceDir];
+  writeFileSync(claudeJson, JSON.stringify(data, null, 2) + '\n', 'utf8');
+}
+
 export function removeWorkspace(directory: string): void {
+  untrustWorkspace(directory);
   try { rmSync(directory, { recursive: true, force: true }); } catch { /* ignore */ }
 }
 

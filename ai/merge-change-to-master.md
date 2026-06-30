@@ -4,7 +4,7 @@ Your job: take the code changes present in this workspaced tab, package them int
 
 The changes may have been made manually or produced by a preceding task — either way, this runs in a workspaced agent tab. That tab is a disposable `git clone --shared` of the root repo living under `.janissary/workspace/<name>/`, so **its `origin` points at the local root repo, not at GitHub.** You will resolve the real GitHub remote before pushing.
 
-Every step is a script in `scripts/pr-*.sh`, called directly (they are executable). The steps below contain **no inline shell logic** — each one invokes its script.
+Every step is a script in `scripts/pr-*.sh`, invoked through the script runner. The steps below contain **no inline shell logic** — each one invokes its script.
 
 ---
 
@@ -13,9 +13,9 @@ Every step is a script in `scripts/pr-*.sh`, called directly (they are executabl
 The one-shot orchestrator runs Steps 0–9 end to end:
 
 ```bash
-./scripts/pr-merge-to-master.sh "<PR title>"
+./scripts/run.mjs pr-merge-to-master "<PR title>"
 # optional explicit branch, and --no-check to skip the gate:
-./scripts/pr-merge-to-master.sh "<PR title>" <branch> --no-check
+./scripts/run.mjs pr-merge-to-master "<PR title>" <branch> --no-check
 ```
 
 It checks for changes, runs the gate, creates a branch, commits with **no co-authors**, resolves the GitHub remote, pushes, opens the PR, polls for conflicts, **waits for all checks to pass, merges, and deletes the branch** — then prints the Step 10 report. It stops and leaves the PR open if the gate is red, if there are conflicts (Step 7 resolution stays manual), or if a check fails.
@@ -27,7 +27,7 @@ Drive the steps by hand only when you need finer control or to resolve conflicts
 ## Step 0 — Confirm there are changes to ship
 
 ```bash
-./scripts/pr-check-changes.sh
+./scripts/run.mjs pr-check-changes
 ```
 
 Prints the working-tree status and any commits ahead of `master`, and **exits non-zero** when there is nothing to ship. If it reports **"No changes to open a PR for"**, stop.
@@ -39,7 +39,7 @@ Prints the working-tree status and any commits ahead of `master`, and **exits no
 This is the one place where running the slow, full gate is correct: this task *is* the end-of-work step, not iterative development.
 
 ```bash
-./scripts/pr-check-gate.sh
+./scripts/run.mjs pr-check-gate
 ```
 
 The gate runs the **hard** checks (typecheck, lint errors, tests, CSS) and the **advisory** quality checks (complexity, duplication, dead code). **Warnings do not fail the gate** — only hard errors do, so the script surfaces advisory findings without blocking on them.
@@ -56,7 +56,7 @@ Good: `quality/extract-parsespec-helper`, `style/modern-color-notation`, `dedup/
 Bad: `patch-1`, `changes`, `wip`
 
 ```bash
-./scripts/pr-create-branch.sh <branch>
+./scripts/run.mjs pr-create-branch <branch>
 ```
 
 Any uncommitted changes carry over onto the new branch. (If the changes were already committed on the default branch, the new branch starts at those commits — that is fine.)
@@ -68,7 +68,7 @@ Any uncommitted changes carry over onto the new branch. (If the changes were alr
 Write **one** commit with a descriptive subject and a body explaining *what* changed and *why*. `pr:commit` stages everything (`git add -A`) and commits with a **single author**:
 
 ```bash
-./scripts/pr-commit.sh "Extract parseSpec() helper to cut loadConfig cognitive complexity" \
+./scripts/run.mjs pr-commit "Extract parseSpec() helper to cut loadConfig cognitive complexity" \
   "loadConfig exceeded the complexity limit; the spec-parsing block is now a small pure helper. No behavior change."
 ```
 
@@ -85,8 +85,8 @@ If earlier commits already exist on the branch, consolidate so the **final** sta
 In a workspaced clone, `origin` is the local root repo. `pr:resolve-remote` exposes the real GitHub remote as `github` (or reuses `origin` when it already points at GitHub) and prints the variables to carry through the rest of the task:
 
 ```bash
-eval "$(./scripts/pr-resolve-remote.sh)"   # sets GH_REMOTE, OWNER_REPO, BRANCH
-./scripts/pr-push-branch.sh "$GH_REMOTE" "$BRANCH"
+eval "$(./scripts/run.mjs pr-resolve-remote)"   # sets GH_REMOTE, OWNER_REPO, BRANCH
+./scripts/run.mjs pr-push-branch "$GH_REMOTE" "$BRANCH"
 ```
 
 Carry `$GH_REMOTE`, `$OWNER_REPO`, and `$BRANCH` through the remaining steps.
@@ -96,7 +96,7 @@ Carry `$GH_REMOTE`, `$OWNER_REPO`, and `$BRANCH` through the remaining steps.
 ## Step 5 — Open the PR against `master`
 
 ```bash
-./scripts/pr-create-pr.sh "$OWNER_REPO" "$BRANCH" "<title>" "<body>"
+./scripts/run.mjs pr-create-pr "$OWNER_REPO" "$BRANCH" "<title>" "<body>"
 ```
 
 Use the commit subject as `<title>`. The `<body>` should have a **What** (one or two sentences on the change), a **Why** (the warning/goal it addresses), and a **Notes** line that the check gate passes. Record the PR number/URL that the command prints.
@@ -108,7 +108,7 @@ Use the commit subject as `<title>`. The `<body>` should have a **What** (one or
 GitHub computes conflict status asynchronously; `pr:check-mergeable` polls until it is known:
 
 ```bash
-./scripts/pr-check-mergeable.sh "$BRANCH" "$OWNER_REPO"
+./scripts/run.mjs pr-check-mergeable "$BRANCH" "$OWNER_REPO"
 ```
 
 - `MERGEABLE` → **no conflicts with master.** Go to **Step 8 (wait for checks)**.
@@ -121,7 +121,7 @@ GitHub computes conflict status asynchronously; `pr:check-mergeable` polls until
 `pr:rebase` fetches `master`, rebases your branch onto it, re-runs the check gate, and force-pushes (with `--force-with-lease`) when the result is clean:
 
 ```bash
-./scripts/pr-rebase.sh "$GH_REMOTE" "$BRANCH"
+./scripts/run.mjs pr-rebase "$GH_REMOTE" "$BRANCH"
 ```
 
 - **Exit 0** → rebased cleanly and pushed. Re-check conflict status (Step 6); when `MERGEABLE`, go to Step 8.
@@ -136,7 +136,7 @@ Run this loop **at most 5 times**. If the PR is **still conflicting after 5 atte
 The PR is `MERGEABLE` (no conflicts). Before merging, **every required check must pass**:
 
 ```bash
-./scripts/pr-wait-checks.sh "$BRANCH" "$OWNER_REPO"
+./scripts/run.mjs pr-wait-checks "$BRANCH" "$OWNER_REPO"
 ```
 
 It blocks until every check finishes and **exits non-zero** if any check failed (a PR with no checks counts as passed).
@@ -151,7 +151,7 @@ It blocks until every check finishes and **exits non-zero** if any check failed 
 The PR is `MERGEABLE` and all checks have passed. Merge it and delete the remote branch:
 
 ```bash
-./scripts/pr-merge.sh "$BRANCH" "$OWNER_REPO"
+./scripts/run.mjs pr-merge "$BRANCH" "$OWNER_REPO"
 ```
 
 If the merge fails, report the error and leave the PR open for a human.

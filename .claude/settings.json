@@ -1,7 +1,7 @@
 {
   "permissions": {
     "allow": [
-      "Bash(node scripts/run.mjs *)",
+      "Bash(./scripts/run.mjs *)",
       "Bash(npm run *)",
       "Read",
       "Edit"
