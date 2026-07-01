@@ -48,4 +48,27 @@ describe('parseHarnessCommand', () => {
     const result = parseHarnessCommand('harness claude');
     expect('workspace' in result && (result as { workspace: boolean }).workspace).toBe(false);
   });
+
+  it('sets a custom label with `as <label>`', () => {
+    const result = parseHarnessCommand('harness opencode as quality');
+    expect('name' in result && result.name).toBe('opencode');
+    expect('label' in result && result.label).toBe('quality');
+  });
+
+  it('leaves label undefined when `as` is not given', () => {
+    const result = parseHarnessCommand('harness claude');
+    expect('name' in result && result.label).toBeUndefined();
+  });
+
+  it('combines `as <label>` with `-w`', () => {
+    const result = parseHarnessCommand('harness opencode as quality -w');
+    expect('label' in result && result.label).toBe('quality');
+    expect('workspace' in result && (result as { workspace: boolean }).workspace).toBe(true);
+  });
+
+  it('returns an error when `as` has no label', () => {
+    const result = parseHarnessCommand('harness claude as');
+    expect('error' in result).toBe(true);
+    expect((result as { error: string }).error).toMatch(/Usage/i);
+  });
 });

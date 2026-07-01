@@ -6,19 +6,39 @@ a live PTY terminal that takes over the tab in place of the usual transcript and
 ## Command
 
 ```
-harness <name> [-w]
+harness <name> [as <label>] [-w]
 ```
 
 Valid names: `claude`, `opencode`, `codex`. The binary must be on `PATH`; if it is not found, the
 PTY exits immediately and the tab closes (see [Lifecycle](#lifecycle)).
 
-- `harness` with no name — error: `Usage: harness <claude|opencode|codex> [-w].`
+- `harness` with no name — error: `Usage: harness <claude|opencode|codex> [as <label>] [-w].`
 - `harness foo` — error: `Unknown harness "foo". Choose from: claude, opencode, codex.`
 
-Before the harness tab opens, the `harness <name> [-w]` command itself is recorded in the
-**creator's** transcript — the tab `harness` was run from, not the new harness tab (which has no
-transcript of its own). This happens synchronously ahead of the PTY spawn, so the launch is always
-visible even if the harness exits — and its tab closes — immediately after.
+Before the harness tab opens, the `harness <name> [as <label>] [-w]` command itself is recorded
+in the **creator's** transcript — the tab `harness` was run from, not the new harness tab (which
+has no transcript of its own). This happens synchronously ahead of the PTY spawn, so the launch
+is always visible even if the harness exits — and its tab closes — immediately after.
+
+### Custom tab label (`as <label>`)
+
+By default a harness tab's label is the harness name (`claude`, `opencode`, `codex`), disambiguated
+with `-2`, `-3`, … if that label is already in use. `as <label>` overrides this with an arbitrary
+label instead, still disambiguated the same way if it collides with an existing tab:
+
+```
+harness opencode as quality   → tab "quality" running opencode
+harness opencode as quality   → tab "quality-2" running opencode (label already taken)
+```
+
+The harness identity (`name`, the binary launched) is unaffected by `as` — only the tab's label
+and title change. `as` and `-w`/`--workspace` may be combined in either order:
+
+```
+harness opencode as quality -w
+```
+
+- `harness claude as` (no label after `as`) — error: `Usage: harness <claude|opencode|codex> as <label>.`
 
 ### Workspace flag (`-w` / `--workspace`)
 
@@ -77,9 +97,10 @@ switch to another tab first.
 
 ## Tab strip
 
-The tab's name in the strip is the tab's unique label — `claude`, `claude-2`, `claude-3`, etc. —
-with no type marker appended (per [[tab-label-no-markers]]). A **× close button** is shown in the
-strip (identical to image/page view tabs).
+The tab's name in the strip is the tab's unique label — the harness name by default (`claude`,
+`claude-2`, `claude-3`, …) or the custom `as <label>` if one was given — with no type marker
+appended (per [[tab-label-no-markers]]). A **× close button** is shown in the strip (identical to
+image/page view tabs).
 
 ## Lifecycle
 

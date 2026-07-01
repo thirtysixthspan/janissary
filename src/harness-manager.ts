@@ -5,25 +5,27 @@ import { messageBus } from './bus.js';
 import type { Managers } from './managers.js';
 
 // Owns harness command handling: launching a harness `<name>` as a PTY-backed tab (optionally in a
-// fresh `--workspace` git clone) and naming it uniquely. The controller owns the shared tab and PTY
-// state; this module owns the harness-specific decisions and wiring.
+// fresh `--workspace` git clone, and optionally under a custom `as <label>`) and naming it uniquely.
+// The controller owns the shared tab and PTY state; this module owns the harness-specific decisions
+// and wiring.
 export class HarnessManager {
   constructor(private managers: Managers) {}
 
-  // Handle a `harness <name> [--workspace]` command. Returns an error message to surface in the
-  // creator's transcript, or undefined once the harness tab has been opened.
+  // Handle a `harness <name> [as <label>] [--workspace]` command. Returns an error message to
+  // surface in the creator's transcript, or undefined once the harness tab has been opened.
   run(input: string): string | undefined {
     const parsed = parseHarnessCommand(input);
     if ('error' in parsed) return parsed.error;
-    return this.open(parsed.name, parsed.workspace);
+    return this.open(parsed.name, parsed.workspace, parsed.label);
   }
 
-  // Open (and focus) a harness tab running `name`. With `workspace`, the harness starts in a fresh
-  // `git clone --shared` of the repo detected from cwd; otherwise it inherits the creator's cwd.
-  private open(name: string, workspace: boolean): string | undefined {
+  // Open (and focus) a harness tab running `name`, labeled `label` if given (otherwise `name`).
+  // With `workspace`, the harness starts in a fresh `git clone --shared` of the repo detected
+  // from cwd; otherwise it inherits the creator's cwd.
+  private open(name: string, workspace: boolean, label_?: string): string | undefined {
     const creator = this.managers.tab.cur();
     const program = HARNESS_COMMANDS[name];
-    const label = this.uniqueLabel(name);
+    const label = this.uniqueLabel(label_ ?? name);
 
     const resolved = this.resolveCwd(workspace, label, creator);
     if (typeof resolved !== 'string' && 'error' in resolved) return resolved.error;
@@ -53,13 +55,14 @@ export class HarnessManager {
     return this.managers.workspace.create(label);
   }
 
-  // A unique internal label for a new harness tab: `claude`, `claude-2`, … The displayed title is the
-  // name only; only the internal label is disambiguated so several harness tabs can coexist.
-  private uniqueLabel(name: string): string {
+  // A unique internal label for a new harness tab, derived from `base` (the harness name, or a
+  // custom `as <label>`): `claude`, `claude-2`, … The displayed title is the label itself; only
+  // the internal label is disambiguated so several harness tabs can coexist.
+  private uniqueLabel(base: string): string {
     const used = new Set(this.managers.tab.tabs.map((t) => t.label));
-    if (!used.has(name)) return name;
+    if (!used.has(base)) return base;
     let n = 2;
-    while (used.has(`${name}-${n}`)) n++;
-    return `${name}-${n}`;
+    while (used.has(`${base}-${n}`)) n++;
+    return `${base}-${n}`;
   }
 }

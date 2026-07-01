@@ -8,17 +8,26 @@ export const HARNESS_COMMANDS: Record<string, string> = {
 
 export const HARNESS_NAMES = Object.keys(HARNESS_COMMANDS);
 
-export type HarnessParsed = { name: string; workspace: boolean } | { error: string };
+export type HarnessParsed = { name: string; workspace: boolean; label?: string } | { error: string };
 
-/** Parse a `harness <name> [-w|--workspace]` command, validating the harness name against the known set. */
+/**
+ * Parse a `harness <name> [as <label>] [-w|--workspace]` command, validating the harness name
+ * against the known set. `as <label>` gives the new tab a custom label instead of the harness
+ * name (still de-duplicated against existing tab labels).
+ */
 export function parseHarnessCommand(input: string): HarnessParsed {
   const rest = input.replace(/^harness\b\s*/i, '').trim();
-  if (!rest) return { error: `Usage: harness <${HARNESS_NAMES.join('|')}> [-w].` };
+  if (!rest) return { error: `Usage: harness <${HARNESS_NAMES.join('|')}> [as <label>] [-w].` };
   const tokens = rest.split(/\s+/);
   const name = tokens[0].toLowerCase();
   if (HARNESS_COMMANDS[name] === undefined) {
     return { error: `Unknown harness "${name}". Choose from: ${HARNESS_NAMES.join(', ')}.` };
   }
-  const workspace = tokens.slice(1).some((t) => t === '-w' || t === '--workspace');
-  return { name, workspace };
+  const rest_ = tokens.slice(1);
+  const workspace = rest_.some((t) => t === '-w' || t === '--workspace');
+  const asIndex = rest_.findIndex((t) => t.toLowerCase() === 'as');
+  if (asIndex === -1) return { name, workspace };
+  const label = rest_[asIndex + 1];
+  if (!label) return { error: `Usage: harness <${HARNESS_NAMES.join('|')}> as <label>.` };
+  return { name, workspace, label };
 }

@@ -668,6 +668,15 @@ describe('Controller harness view', () => {
     expect(c.view()[c.managers.tab.activeTab].label).toBe('claude');
   });
 
+  it('harness opencode as quality opens a tab labeled quality running opencode', () => {
+    const { c } = makeController();
+    c.dispatch('harness opencode as quality');
+    const tab = c.view().find((t) => t.label === 'quality');
+    expect(tab).toBeDefined();
+    expect(tab!.title).toBe('quality');
+    expect(tab!.harness?.name).toBe('opencode');
+  });
+
   it('a second harness claude gets a unique label', () => {
     vi.mocked(spawnPty)
       .mockImplementationOnce((program, _cmd, _cwd, handlers) => {
