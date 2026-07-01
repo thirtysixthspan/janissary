@@ -8,74 +8,8 @@ import {
   isConnectionOpen,
 } from './connections.js';
 import { type DatabaseSync } from 'node:sqlite';
-import type { DbParsed as DatabaseParsed } from './types.js';
-
-// Database names become filenames, so restrict them to a safe character set —
-// this also blocks path traversal (`..`, `/`).
-const VALID_NAME = /^[A-Za-z0-9_-]+$/;
-const USAGE = 'Usage: db sqlite <create|delete|query|list> [name] [query]';
-const ACTIONS = new Set(['create', 'delete', 'query', 'list']);
-
-function engineError(engine: string): { error: string } {
-  return { error: `Unsupported engine "${engine}". Only "sqlite" is supported.` };
-}
-
-function nameError(name: string): { error: string } {
-  return { error: `Invalid database name "${name}". Use letters, numbers, "-" and "_" only.` };
-}
-
-// Remove one layer of matching surrounding quotes so a user (or agent) can wrap
-// the SQL — `query movies "SELECT * FROM actors"` — without the quotes reaching
-// SQLite. Only strips when the whole string is wrapped in the same quote char.
-function unwrapQuotes(s: string): string {
-  const q = s[0];
-  if (s.length >= 2 && (q === '"' || q === "'") && s.at(-1) === q) {
-    return s.slice(1, -1);
-  }
-  return s;
-}
-
-/** Parse a `db sqlite ...` command into an action. Pure — performs no I/O. */
-export function parseDatabaseCommand(input: string): DatabaseParsed {
-  const rest = input.trim().replace(/^db\b\s*/i, '').trim();
-  if (!rest) return { error: USAGE };
-
-  const [engineRaw, ...tail] = rest.split(/\s+/);
-  const engine = engineRaw.toLowerCase();
-  if (engine !== 'sqlite') {
-    // A leading action (old word order) gets the usage hint; anything else is
-    // reported as an unsupported engine.
-    return ACTIONS.has(engine) ? { error: USAGE } : engineError(engine);
-  }
-
-  const action = tail[0]?.toLowerCase();
-  if (!action) return { error: USAGE };
-
-  if (action === 'list') return { action: 'list' };
-
-  if (action === 'create' || action === 'delete') {
-    const name = tail[1];
-    if (!name) return { error: `Usage: db sqlite ${action} <name>` };
-    if (!VALID_NAME.test(name)) return nameError(name);
-    return { action, name };
-  }
-
-  if (action === 'query') {
-    return parseQueryAction(rest);
-  }
-
-  return { error: USAGE };
-}
-
-function parseQueryAction(rest: string): DatabaseParsed {
-  // Engine + action are words; keep the rest verbatim as the SQL.
-  const m = rest.match(/^sqlite\s+query\s+(\S+)\s+([\s\S]+)$/i);
-  if (!m) return { error: 'Usage: db sqlite query <name> <sql>' };
-  const name = m[1];
-  if (!VALID_NAME.test(name)) return nameError(name);
-  const query = unwrapQuotes(m[2].trim());
-  return { action: 'query', name, query };
-}
+import { parseDatabaseCommand } from './database-parsing.js';
+export { parseDatabaseCommand } from './database-parsing.js';
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
