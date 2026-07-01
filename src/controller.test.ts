@@ -718,6 +718,17 @@ describe('Controller harness view', () => {
     const tab = c.view().find((t) => t.label === 'claude');
     expect(tab!.connections.some((r) => r.kind === 'terminal' && r.text.includes('claude'))).toBe(true);
   });
+
+  it('records the harness command in the creator\'s transcript before the PTY spawns', () => {
+    const { c } = makeController();
+    vi.mocked(spawnPty).mockImplementationOnce((program, _command, _cwd, handlers) => {
+      expect(allText(c)).toContain('harness claude');
+      capturedHandlers = handlers;
+      return { id: 'mock-pty-1', program, write: vi.fn(), resize: vi.fn(), kill: vi.fn() };
+    });
+    c.dispatch('harness claude');
+    expect(allText(c)).toContain('harness claude');
+  });
 });
 
 describe('Controller send command', () => {

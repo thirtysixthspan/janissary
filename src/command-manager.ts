@@ -38,8 +38,9 @@ export class CommandManager {
 
   private run(input: string, label: string, index: number): void {
     if (/^harness\b/i.test(input)) {
+      this.managers.tab.append(label, { input, output: '' });
       const error = this.managers.harness.run(input);
-      if (error) this.managers.tab.append(label, { input, output: error });
+      if (error) this.managers.tab.append(label, { input: '', output: error });
       return;
     }
     const res = resolveCommand(input);
