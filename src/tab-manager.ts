@@ -2,7 +2,7 @@
 import type { Tab, LogEntry, AgentState, ImageView, MarkdownView, PageView } from './types.js';
 import type { ConnectionView, ScheduleView, TabView } from './protocol.js';
 import {
-  makeTab, makeImageTab, makeMarkdownTab, makePageTab, distinctColor, insertTabInGroup,
+  makeTab, distinctColor, insertTabInGroup,
   flattenBuffer, swapTabsLeft, swapTabsRight, stripComments,
 } from './tab.js';
 import { saveAgentState, listAgentStates } from './agent-state.js';
@@ -10,6 +10,9 @@ import { abbreviatePath } from './paths.js';
 import { getConfig } from './config.js';
 import { messageBus } from './bus.js';
 import type { Managers } from './managers.js';
+import {
+  addImageTab, addMarkdownTab, addPageTab,
+} from './tab-creators.js';
 
 export class TabManager {
   tabs: Tab[] = [];
@@ -268,64 +271,24 @@ export class TabManager {
     }));
   }
 
-  uniqueImageLabel(): string {
-    const used = new Set(this.tabs.map((t) => t.label));
-    if (!used.has('image')) return 'image';
-    let n = 2;
-    while (used.has(`image-${n}`)) n++;
-    return `image-${n}`;
-  }
-
-  uniqueMarkdownLabel(): string {
-    const used = new Set(this.tabs.map((t) => t.label));
-    if (!used.has('markdown')) return 'markdown';
-    let n = 2;
-    while (used.has(`markdown-${n}`)) n++;
-    return `markdown-${n}`;
-  }
-
-  uniquePageNumber(): number {
-    const used = new Set(this.tabs.filter((t) => t.page).map((t) => t.page!.number));
-    let n = 1;
-    while (used.has(n)) n++;
-    return n;
-  }
-
   openImageTab(image: ImageView): void {
-    const creator = this.cur();
-    const label = this.uniqueImageLabel();
-    const dotColor = distinctColor(this.tabs.map((t) => t.dotColor));
-    const group = creator?.group ?? 1;
-    const groupColor = creator?.groupColor ?? dotColor;
-    const tab = makeImageTab(label, dotColor, this.tabs.length + 1, group, groupColor, image);
-    this.tabs = insertTabInGroup(this.tabs, tab);
-    this.activeTab = this.tabs.findIndex((t) => t.label === label);
+    const { tabs, activeTab } = addImageTab(this.tabs, this.activeTab, image);
+    this.tabs = tabs;
+    this.activeTab = activeTab;
     messageBus.emit('state', { type: 'dirty' });
   }
 
   openMarkdownTab(view: MarkdownView): void {
-    const creator = this.cur();
-    const label = this.uniqueMarkdownLabel();
-    const dotColor = distinctColor(this.tabs.map((t) => t.dotColor));
-    const group = creator?.group ?? 1;
-    const groupColor = creator?.groupColor ?? dotColor;
-    const tab = makeMarkdownTab(label, dotColor, this.tabs.length + 1, group, groupColor, view);
-    this.tabs = insertTabInGroup(this.tabs, tab);
-    this.activeTab = this.tabs.findIndex((t) => t.label === label);
+    const { tabs, activeTab } = addMarkdownTab(this.tabs, this.activeTab, view);
+    this.tabs = tabs;
+    this.activeTab = activeTab;
     messageBus.emit('state', { type: 'dirty' });
   }
 
   openPageTab({ url, domain }: Pick<PageView, 'url' | 'domain'>): void {
-    const creator = this.cur();
-    const number = this.uniquePageNumber();
-    const label = `page-${number}`;
-    const dotColor = distinctColor(this.tabs.map((t) => t.dotColor));
-    const group = creator?.group ?? 1;
-    const groupColor = creator?.groupColor ?? dotColor;
-    const page: PageView = { url, domain, number };
-    const tab = makePageTab(label, dotColor, this.tabs.length + 1, group, groupColor, page);
-    this.tabs = insertTabInGroup(this.tabs, tab);
-    this.activeTab = this.tabs.findIndex((t) => t.label === label);
+    const { tabs, activeTab } = addPageTab(this.tabs, this.activeTab, url, domain);
+    this.tabs = tabs;
+    this.activeTab = activeTab;
     messageBus.emit('state', { type: 'dirty' });
   }
 
