@@ -1,15 +1,13 @@
 import {
-  
   databaseFileExists as databaseFileExists,
   listDatabaseFiles,
   removeDatabaseFile,
   getConnection,
   closeConnection,
-  isConnectionOpen,
 } from './connections.js';
-import { type DatabaseSync } from 'node:sqlite';
 import { parseDatabaseCommand } from './database-parsing.js';
 export { parseDatabaseCommand } from './database-parsing.js';
+import { queryDatabase } from './database-query.js';
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
@@ -18,7 +16,7 @@ function errorMessage(error: unknown): string {
 function createDatabase(name: string): string {
   const isExisted = databaseFileExists(name);
   try {
-    getConnection(name); // creates the file if missing and opens a connection
+    getConnection(name);
     return isExisted ? `Database "${name}" already exists.` : `Created sqlite database "${name}".`;
   } catch (error) {
     return `Failed to create database "${name}": ${errorMessage(error)}`;
@@ -26,7 +24,7 @@ function createDatabase(name: string): string {
 }
 
 function deleteDatabase(name: string): string {
-  closeConnection(name); // release the file handle before removing it
+  closeConnection(name);
   if (!databaseFileExists(name)) return `Database "${name}" does not exist.`;
   try {
     removeDatabaseFile(name);
@@ -39,48 +37,6 @@ function deleteDatabase(name: string): string {
 function listDbs(): string {
   const names = listDatabaseFiles();
   return names.length > 0 ? names.join('\n') : 'No databases.';
-}
-
-/** Render row objects as a simple aligned text table. */
-function formatRows(rows: Record<string, unknown>[]): string {
-  if (rows.length === 0) return '(0 rows)';
-  const cols = Object.keys(rows[0]);
-  const cell = (v: unknown) => (v === null || v === undefined ? '' : String(v));
-  const widths = cols.map((c) => Math.max(c.length, ...rows.map((r) => cell(r[c]).length)));
-  const fmt = (cells: string[]) => cells.map((s, index) => s.padEnd(widths[index])).join('  ');
-  const header = fmt(cols);
-  const separator = widths.map((w) => '-'.repeat(w)).join('  ');
-  const body = rows.map((r) => fmt(cols.map((c) => cell(r[c]))));
-  const count = `(${rows.length} row${rows.length === 1 ? '' : 's'})`;
-  return [header, separator, ...body, '', count].join('\n');
-}
-
-// Statements that yield rows; everything else is executed for its side effects.
-const READ_QUERY = /^\s*(select|pragma|with|explain)\b/i;
-
-function queryDatabase(name: string, query: string): string {
-  // Require the database to exist (a typo shouldn't silently create one); an
-  // already-open connection counts as existence even mid-session.
-  if (!databaseFileExists(name) && !isConnectionOpen(name)) {
-    return `Database "${name}" does not exist. Create it with: db sqlite create ${name}`;
-  }
-  let database: DatabaseSync;
-  try {
-    database = getConnection(name); // reuse the persistent connection
-  } catch (error) {
-    return `Failed to open database "${name}": ${errorMessage(error)}`;
-  }
-  try {
-    if (READ_QUERY.test(query)) {
-      const rows = database.prepare(query).all() as Record<string, unknown>[];
-      return formatRows(rows);
-    }
-    // exec handles writes and multiple semicolon-separated statements.
-    database.exec(query);
-    return 'OK.';
-  } catch (error) {
-    return `Query error: ${errorMessage(error)}`;
-  }
 }
 
 /** Execute a `db ...` command and return the text to show in the transcript. */
