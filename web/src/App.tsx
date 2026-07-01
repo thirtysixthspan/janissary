@@ -11,7 +11,10 @@ import { CommandInput } from './CommandInput';
 import { StatusPanels } from './StatusPanels';
 import { HistoryPicker } from './HistoryPicker';
 import { RouteChooser } from './RouteChooser';
+import { QuitDialog } from './QuitDialog/QuitDialog';
 import { getRecentHistory } from './history';
+import { useTranscriptScroll } from './useTranscriptScroll';
+import { useQuitConfirm } from './QuitDialog/useQuitConfirm';
 
 export function App() {
   const clientReference = useRef<JanusClient | null>(null);
@@ -31,7 +34,7 @@ export function App() {
   const harnessHandles = useRef<Map<string, HarnessTabHandle>>(new Map());
   const shellHandles = useRef<Map<string, ShellTabHandle>>(new Map());
   const currentRef = useRef<TabView | undefined>(undefined);
-  const scrollAccel = useRef<{ start: number; dir: -1 | 1 } | null>(null);
+  const { handleScrollKey, handleScrollKeyUp } = useTranscriptScroll(transcriptReference);
 
   const current = tabs[activeTab] ?? tabs[0];
   currentRef.current = current;
@@ -50,6 +53,7 @@ export function App() {
     setPickerOpen(true);
   };
   const pick = (command: string) => { runCommand(command); setPickerOpen(false); };
+  const { quitConfirmOpen, openQuitConfirm, confirmQuit, cancelQuit } = useQuitConfirm(runCommand, inputReference);
 
   const selectTab = (index: number) => client.send({ method: 'setActiveTab', params: { index } });
 
@@ -120,32 +124,7 @@ export function App() {
       }
       if (e.ctrlKey && e.key.toLowerCase() === 'r') { e.preventDefault(); openPicker(); return; }
 
-      // Transcript scrolling: PageUp/Down half-screen, Shift/Ctrl+Up/Down one line (with
-      // acceleration that doubles every second while held), Escape jumps back to the bottom.
-      const element = transcriptReference.current;
-      if (element) {
-        if (e.key === 'PageUp') { e.preventDefault(); element.scrollTop -= element.clientHeight / 2; return; }
-        if (e.key === 'PageDown') { e.preventDefault(); element.scrollTop += element.clientHeight / 2; return; }
-        if ((e.shiftKey || e.ctrlKey) && e.key === 'ArrowUp') {
-          e.preventDefault();
-          if (!scrollAccel.current || scrollAccel.current.dir !== -1) scrollAccel.current = { start: Date.now(), dir: -1 };
-          const elapsed = Date.now() - scrollAccel.current.start;
-          const step = Math.min(220, Math.max(22, Math.round(22 * Math.pow(2, elapsed / 1000))));
-          element.scrollTop -= step;
-          return;
-        }
-        if ((e.shiftKey || e.ctrlKey) && e.key === 'ArrowDown') {
-          e.preventDefault();
-          if (!scrollAccel.current || scrollAccel.current.dir !== 1) scrollAccel.current = { start: Date.now(), dir: 1 };
-          const elapsed = Date.now() - scrollAccel.current.start;
-          const step = Math.min(220, Math.max(22, Math.round(22 * Math.pow(2, elapsed / 1000))));
-          element.scrollTop += step;
-          return;
-        }
-        if (e.ctrlKey && e.key.toLowerCase() === 'p') { e.preventDefault(); element.scrollTop -= 22; return; }
-        if (e.ctrlKey && e.key.toLowerCase() === 'n') { e.preventDefault(); element.scrollTop += 22; return; }
-        if (e.key === 'Escape') { e.preventDefault(); element.scrollTop = element.scrollHeight; return; }
-      }
+      if (handleScrollKey(e)) return;
       // Shift+Arrow switches tabs, Ctrl+Arrow reorders within group, Ctrl+T toggles collapse.
       if (e.ctrlKey && !e.shiftKey && e.key === 'ArrowLeft') { e.preventDefault(); client.send({ method: 'reorderTab', params: { dir: -1 } }); }
       else if (e.ctrlKey && !e.shiftKey && e.key === 'ArrowRight') { e.preventDefault(); client.send({ method: 'reorderTab', params: { dir: 1 } }); }
@@ -153,16 +132,13 @@ export function App() {
       else if (e.shiftKey && !e.ctrlKey && e.key === 'ArrowRight') { e.preventDefault(); client.send({ method: 'moveTab', params: { dir: 1 } }); }
       else if (e.ctrlKey && e.key.toLowerCase() === 't') { e.preventDefault(); client.send({ method: 'toggleCollapse', params: {} }); }
     };
-    const onUp = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowUp' || e.key === 'ArrowDown') scrollAccel.current = null;
-    };
     globalThis.addEventListener('keydown', onKey);
-    globalThis.addEventListener('keyup', onUp);
+    globalThis.addEventListener('keyup', handleScrollKeyUp);
     return () => {
       globalThis.removeEventListener('keydown', onKey);
-      globalThis.removeEventListener('keyup', onUp);
+      globalThis.removeEventListener('keyup', handleScrollKeyUp);
     };
-  }, [client, chooseRoute, runCommand]);
+  }, [client, chooseRoute, runCommand, handleScrollKey, handleScrollKeyUp]);
 
   if (!current) return <div className="app" style={{ padding: 16, color: 'var(--muted)' }}>Connecting…</div>;
 
@@ -216,13 +192,19 @@ export function App() {
           <CommandInput
             dotColor={current.dotColor}
             history={current.cmdHistory}
-            onSubmit={(text) => { if (text.trim().toLowerCase() === 'hist') openPicker(); else runCommand(text); }}
+            onSubmit={(text) => {
+              const trimmed = text.trim().toLowerCase();
+              if (trimmed === 'hist') openPicker();
+              else if (trimmed === 'quit') openQuitConfirm();
+              else runCommand(text);
+            }}
             inputRef={inputReference}
             complete={(text, cursor) => client.request({ method: 'complete', params: { text, cursor } })}
-            pickerOpen={pickerOpen || route !== null}
+            pickerOpen={pickerOpen || route !== null || quitConfirmOpen}
           />
         </div>
       )}
+      {quitConfirmOpen && <QuitDialog onConfirm={confirmQuit} onCancel={cancelQuit} />}
     </div>
   );
 }

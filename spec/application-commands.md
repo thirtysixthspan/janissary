@@ -12,6 +12,6 @@ Reads the agent state file for the current tab from `.janissary/state/<name>.jso
 
 Empties the current tab's transcript log. Other tabs are unaffected.
 
-### `quit` / `exit`
+### `quit`
 
-Exits the application: closes the app window (the web page) and stops the server, after killing every tab's shell, ACP session, browser, and terminals and closing all connections. `exit` is an alias of `quit`. (To close a single tab, use `close`.)
+Exits the application: closes the app window (the web page) and stops the server, after killing every tab's shell, ACP session, browser, and terminals and closing all connections. Requires confirmation first — see `quit-confirmation.md`. (To close a single tab, use `close`; `exit` is an alias of `close`, not `quit`.)

@@ -1,0 +1,25 @@
+# Quit Confirmation
+
+Guards against accidentally exiting the application from the `quit` command.
+
+### Trigger
+
+Typing `quit` at the command line does not immediately exit. It opens a confirmation dialog reading "Are you sure you want to quit?" with two buttons, **Quit (y)** and **Cancel (n)**. The application only exits once the dialog is confirmed.
+
+### `exit` is not `quit`
+
+`exit` is an alias of `close` (closes the current tab, or `exit page <n>` for a numbered page tab) — it does not exit the application and does not show this dialog. `quit` is the only command that exits the app.
+
+### Selection and confirming/cancelling
+
+**Cancel** is selected by default (visually highlighted) — quitting is the one-way, destructive option, so an unmodified `Enter` is safe. `←`/`→` move the selection between the two buttons; `Enter` runs whichever is currently selected.
+
+- **Confirm:** pressing `y` (regardless of the current selection), pressing `Enter` while **Quit** is selected, or clicking **Quit (y)**. The dialog closes and the application performs its normal exit sequence (tears down every tab's shell/ACP/browser/terminal connections, closes the server, closes the app window).
+- **Cancel:** pressing `n` (regardless of selection) or `Escape`, pressing `Enter` while **Cancel** is selected (the default), or clicking **Cancel (n)**. The dialog closes, nothing else happens, and focus returns to the command line. Clicking outside the dialog (e.g. the backdrop) does *not* cancel it — see Modal behavior below.
+
+### Modal behavior
+
+While the dialog is open it traps input — nothing but y/n/Enter/Escape/←/→ or a click on the dialog itself has any effect. Both input modalities are trapped the same way: a window-level *capture*-phase listener intercepts the event before it can reach anything else (the command line, a tab-strip click, keyboard shortcuts, a focused harness terminal, etc.), ahead of any other handler and the browser's own default action. This doesn't depend on z-index/paint order or on focus having actually landed on the dialog, so there's no gap for an event to slip through underneath.
+
+- **Mouse:** a click is checked against the dialog's bounds; a click on the dialog itself (its buttons) behaves normally, anything else — including the backdrop — is swallowed outright (blocked from reaching whatever is underneath) without cancelling the dialog. Only the **Cancel** button (or `n`/`Escape`) closes it.
+- **Keyboard:** only y/n/Enter/Escape/←/→ do anything; every other key is swallowed outright.

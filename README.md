@@ -22,8 +22,8 @@ janus
 | `help`       | List available commands            |
 | `state`      | Show agent state fields (truncated) |
 | `clear`      | Clear the output log               |
-| `quit`       | Exit the application               |
-| `close`      | Close the current tab (exits if last); `close page #` closes a numbered page tab |
+| `quit`       | Exit the application (asks for confirmation) |
+| `close`      | Close the current tab (exits if last); `close page #` closes a numbered page tab. `exit` is an alias |
 | `agent`      | Create a new agent tab (add `--workspace` to clone the repo) |
 | `next`       | Switch to the next tab             |
 | `hist`       | Open command history picker        |

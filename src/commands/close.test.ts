@@ -17,9 +17,16 @@ describe('close command', () => {
     expect(command.match('CLOSE PAGE 3')).toBe(true);
   });
 
+  it('matches "exit" case-insensitively, as an alias of close', () => {
+    expect(command.match('exit')).toBe(true);
+    expect(command.match('EXIT')).toBe(true);
+    expect(command.match('exit page 2')).toBe(true);
+  });
+
   it('does not match non-close input', () => {
     expect(command.match('closer')).toBe(false);
     expect(command.match('clos')).toBe(false);
+    expect(command.match('exits')).toBe(false);
     expect(command.match('quit')).toBe(false);
   });
 });
@@ -47,5 +54,10 @@ describe('parseClose', () => {
 
   it('returns error for unknown subcommands', () => {
     expect(parseClose('close tab 2')).toHaveProperty('error');
+  });
+
+  it('treats "exit" as an alias of "close"', () => {
+    expect(parseClose('exit')).toEqual({ target: 'active' });
+    expect(parseClose('EXIT PAGE 2')).toEqual({ target: 'page', number: 2 });
   });
 });
