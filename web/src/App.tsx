@@ -4,6 +4,7 @@ import type { TabView, RouteChooserView } from '@shared/protocol';
 import { TabStrip } from './TabStrip';
 import { Transcript } from './Transcript';
 import { ViewTabBody } from './ViewTabBody';
+import { ReportingSection, isReportingTab } from './ReportingSection';
 import { HarnessTab, type HarnessTabHandle } from './HarnessTab';
 import type { ShellTabHandle } from './ShellTab';
 import { ShellTabLayer } from './ShellTabLayer';
@@ -36,7 +37,12 @@ export function App() {
   const currentRef = useRef<TabView | undefined>(undefined);
   const { handleScrollKey, handleScrollKeyUp } = useTranscriptScroll(transcriptReference);
 
-  const current = tabs[activeTab] ?? tabs[0];
+  // Action tabs (above the command bar, take commands) vs. reporting tabs (below it,
+  // report-only). Each entry keeps its index in the server's full tab list for RPCs.
+  const actionEntries = useMemo(() => tabs.map((tab, index) => ({ tab, index })).filter((e) => !isReportingTab(e.tab)), [tabs]);
+  const reportingEntries = useMemo(() => tabs.map((tab, index) => ({ tab, index })).filter((e) => isReportingTab(e.tab)), [tabs]);
+
+  const current = tabs[activeTab] ?? actionEntries[0]?.tab;
   currentRef.current = current;
   const lines = useMemo(() => current?.bufferLines ?? [], [current]);
   // The picker lists the tab's recent history, most recent at the bottom (suppressed when empty).
@@ -146,7 +152,12 @@ export function App() {
 
   return (
     <div className="app">
-      <TabStrip tabs={tabs} activeTab={activeTab} onSelect={selectTab} onClose={closeTab} />
+      <TabStrip
+        tabs={actionEntries.map((e) => e.tab)}
+        activeTab={actionEntries.findIndex((e) => e.index === activeTab)}
+        onSelect={(index) => selectTab(actionEntries[index].index)}
+        onClose={(index) => closeTab(actionEntries[index].index)}
+      />
 
       <ViewTabBody tab={current} />
 
@@ -206,6 +217,11 @@ export function App() {
           />
         </div>
       )}
+      <ReportingSection
+        entries={reportingEntries}
+        onClose={closeTab}
+        onRun={(id) => client.send({ method: 'runSuggestion', params: { id } })}
+      />
       {quitConfirmOpen && <QuitDialog onConfirm={confirmQuit} onCancel={cancelQuit} />}
     </div>
   );

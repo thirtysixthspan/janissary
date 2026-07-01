@@ -267,6 +267,7 @@ export class TabManager {
       page: t.page,
       harness: t.harness,
       markdown: t.markdown,
+      monitor: t.monitor,
       activePty: t.activePty,
     }));
   }

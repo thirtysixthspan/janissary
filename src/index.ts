@@ -156,6 +156,8 @@ function handle(controller: Controller, message: ClientMessage, reply: (event: S
     }
     case 'ptyKill': { controller.ptyKill(message.params.id); break;
     }
+    case 'runSuggestion': { controller.runSuggestion(message.params.id); break;
+    }
   }
   reply({ t: 'rpc-reply', id: message.id, result: 'ok' });
 }

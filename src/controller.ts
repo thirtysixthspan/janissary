@@ -16,6 +16,7 @@ import { AgentCommunicationManager } from './agent-communication-manager.js';
 import { messageBus } from './bus.js';
 import { BrowserManager } from './browser-tab.js';
 import { CommandManager } from './command-manager.js';
+import { runSuggestion } from './monitor-window.js';
 import type { TabView } from './protocol.js';
 import { TabManager } from './tab-manager.js';
 import type { Managers } from './managers.js';
@@ -90,6 +91,12 @@ export class Controller {
   // The absolute path behind an `/open/<id>` ref, or undefined when not registered (drives the route).
   openFilePath(id: string): string | undefined {
     return this.managers.tab.openFilePath(id);
+  }
+
+  // --- monitor reporting tabs ------------------------------------------------
+
+  runSuggestion(id: string): void {
+    runSuggestion(this.managers, id);
   }
 
   // --- inline terminal cards (PTY) -----------------------------------------

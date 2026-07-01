@@ -5,7 +5,8 @@ import { MarkdownTab } from './MarkdownTab';
 import { PageTab } from './PageTab';
 
 // Renders the body for image, page, and markdown view tabs. Harness tabs are rendered separately
-// in App because they must all stay mounted simultaneously for xterm state preservation.
+// in App because they must all stay mounted simultaneously for xterm state preservation; monitor
+// tabs are reporting tabs, rendered in the ReportingSection below the command bar.
 export function ViewTabBody({ tab }: { tab: TabView }) {
   const border = { borderLeft: `4px solid ${tab.dotColor}` };
   if (tab.view === 'image' && tab.image) {

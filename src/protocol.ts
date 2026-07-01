@@ -13,6 +13,17 @@ export type ScheduleView = { id: string; spec: string; next: string; recurring: 
 // A pending route chooser: the unprefixed command plus the option labels to pick from.
 export type RouteChooserView = { cmd: string; choices: string[] };
 
+// One AI-monitor suggestion in the monitor window's feed: which persona produced it, which
+// tab's activity it is about, and the optional one-click command.
+export type SuggestionView = {
+  id: string;
+  text: string;
+  command?: string;
+  timestamp: number;
+  persona: string;
+  about: string;
+};
+
 // A tab as the client renders it: presentation metadata plus the already-flattened transcript
 // lines (the server owns `flattenBuffer`, so the client never needs it).
 export type TabView = {
@@ -30,8 +41,8 @@ export type TabView = {
   bufferLines: BufferLine[];
   cmdHistory: string[];
   toolStepsExpanded: boolean;
-  // Body kind: undefined/`'agent'` for a normal tab, `'image'` for an image view, `'page'` for an embedded web page, `'harness'` for a full-tab AI harness terminal, `'markdown'` for a rendered Markdown file.
-  view?: 'agent' | 'image' | 'page' | 'harness' | 'markdown';
+  // Body kind: undefined/`'agent'` for a normal tab, `'image'` for an image view, `'page'` for an embedded web page, `'harness'` for a full-tab AI harness terminal, `'markdown'` for a rendered Markdown file, `'monitor'` for the AI-monitor suggestion feed.
+  view?: 'agent' | 'image' | 'page' | 'harness' | 'markdown' | 'monitor';
   // Display name when it differs from `label` (image tabs are all titled `image`).
   title?: string;
   // Image-view payload, present only when `view === 'image'`.
@@ -42,6 +53,8 @@ export type TabView = {
   harness?: HarnessView;
   // Markdown-view payload, present only when `view === 'markdown'`.
   markdown?: MarkdownView;
+  // Monitor-window payload, present only when `view === 'monitor'`: the suggestion feed.
+  monitor?: { suggestions: SuggestionView[] };
   // Set while a full-tab interactive PTY (htop, vim, etc.) is running on this agent tab.
   // Cleared on exit; the client hides the transcript while this is set.
   activePty?: string;
@@ -70,7 +83,10 @@ export type RpcCall =
   | { method: 'resize'; params: { cols: number; rows: number } }
   | { method: 'ptyInput'; params: { id: string; data: string } }
   | { method: 'ptyResize'; params: { id: string; cols: number; rows: number } }
-  | { method: 'ptyKill'; params: { id: string } };
+  | { method: 'ptyKill'; params: { id: string } }
+  // Run a monitor suggestion's command in the tab the suggestion is about (the
+  // suggestion is removed from the feed once run).
+  | { method: 'runSuggestion'; params: { id: string } };
 
 export type ClientMessage = { t: 'rpc'; id: number } & RpcCall;
 
