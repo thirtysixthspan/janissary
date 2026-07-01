@@ -685,14 +685,12 @@ describe('Controller harness view', () => {
     expect(labels).toContain('claude-2');
   });
 
-  it('PTY exit sets harness status to exited with exit code', () => {
+  it('PTY exit closes the harness tab', () => {
     const { c } = makeController();
     c.dispatch('harness claude');
     expect(capturedHandlers).not.toBeNull();
     capturedHandlers!.onExit('mock-pty-1', 0);
-    const tab = c.view().find((t) => t.label === 'claude');
-    expect(tab!.harness?.status).toBe('exited');
-    expect(tab!.harness?.exitCode).toBe(0);
+    expect(c.view().map((t) => t.label)).not.toContain('claude');
   });
 
   it('closing a harness tab kills its PTY', () => {

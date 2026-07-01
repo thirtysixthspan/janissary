@@ -48,10 +48,11 @@ export class Controller {
     messageBus.on('app', 'exit', () => this.sinks.exit?.());
     messageBus.on('pty', ['data', 'exit'], (event) => {
       if (event.type === 'data') { this.sinks.sendPty(event.id, event.data); return; }
-      for (const tab of this.managers.tab.tabs) {
-        if (tab.harness?.ptyId === event.id) {
-          tab.harness = { ...tab.harness, status: 'exited', exitCode: event.exitCode };
-        }
+      const harnessIndex = this.managers.tab.tabs.findIndex((tab) => tab.harness?.ptyId === event.id);
+      if (harnessIndex !== -1) {
+        this.sinks.sendPtyExit(event.id, event.exitCode);
+        this.managers.tab.closeTab(harnessIndex);
+        return;
       }
       this.sinks.sendPtyExit(event.id, event.exitCode);
     });

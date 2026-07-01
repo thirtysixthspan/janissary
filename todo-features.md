@@ -55,7 +55,4 @@ When an inactive tab receives a new message or its shell command finishes while 
 
 separate slow automated tests into a slow test suite only run at the end of feature development as a verification
 
-closing a harness should close the harness tab
-
-harness commands should make it into the transcript before launching the harness
 
