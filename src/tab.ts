@@ -1,53 +1,6 @@
 import type { LogEntry, Tab, ImageView, MarkdownView, PageView, HarnessView } from './types.js';
 export { expandTabs, wordWrap, flattenBuffer } from './tab-formatting.js';
-
-export const dotColors = [
-  '#5b9cff', '#ff6b6b', '#ffd93d', '#6bcb77', '#4d96ff',
-  '#ff8a5c', '#a66cff', '#ff6f91', '#00d2d3', '#f368e0',
-  '#ff9f43', '#54a0ff', '#5f27cd', '#01a3a4', '#ee5a24',
-];
-
-// Colors at least this far apart (weighted RGB distance, ~0–765) read as substantially
-// different. Used to keep a new tab's color clearly distinct from those already on screen.
-const COLOR_MIN_DIST = 110;
-
-function hexToRgb(hex?: string): [number, number, number] | undefined {
-  if (!hex) return undefined;
-  const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
-  if (!m) return undefined;
-  const n = Number.parseInt(m[1], 16);
-  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
-}
-
-// Perceptually weighted RGB distance ("redmean"), cheap and good enough to rank palette colors.
-function colorDistance(a: [number, number, number], b: [number, number, number]): number {
-  const rmean = (a[0] + b[0]) / 2;
-  const dr = a[0] - b[0], dg = a[1] - b[1], database = a[2] - b[2];
-  return Math.sqrt((2 + rmean / 256) * dr * dr + 4 * dg * dg + (2 + (255 - rmean) / 256) * database * database);
-}
-
-// Distance from `color` to the nearest of `used` (Infinity when nothing comparable is in use).
-function nearestUsedDistance(color: string, used: [number, number, number][]): number {
-  const rgb = hexToRgb(color);
-  if (!rgb) return 0;
-  if (used.length === 0) return Infinity;
-  return Math.min(...used.map((u) => colorDistance(rgb, u)));
-}
-
-// Choose a dot color substantially different from every color in `used`. Keeps `preferred` when
-// it is already far enough from all of them; otherwise returns the palette color whose nearest
-// used color is the farthest away (the most distinct option available).
-export function distinctColor(used: Iterable<string>, preferred?: string): string {
-  const usedRgb = [...used].map((c) => hexToRgb(c)).filter((c): c is [number, number, number] => c !== undefined);
-  if (preferred && nearestUsedDistance(preferred, usedRgb) >= COLOR_MIN_DIST) return preferred;
-  let best = dotColors[0];
-  let bestDistribution = -1;
-  for (const c of dotColors) {
-    const d = nearestUsedDistance(c, usedRgb);
-    if (d > bestDistribution) { bestDistribution = d; best = c; }
-  }
-  return best;
-}
+export { distinctColor, dotColors } from './tab-colors.js';
 
 export const makeTab = (label: string, dotColor: string, number: number = 1, commandHistory: string[] = [], log: LogEntry[] = [], workspaceDirectory?: string, group: number = 1, groupColor: string = dotColor): Tab => ({
   label,
