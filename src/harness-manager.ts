@@ -25,14 +25,16 @@ export class HarnessManager {
     const program = HARNESS_COMMANDS[name];
     const label = this.uniqueLabel(name);
 
-    const cwd = this.resolveCwd(workspace, label, creator);
-    if (typeof cwd !== 'string') return cwd.error;
+    const resolved = this.resolveCwd(workspace, label, creator);
+    if (typeof resolved !== 'string' && 'error' in resolved) return resolved.error;
+    const cwd = typeof resolved === 'string' ? resolved : resolved.dir;
+    const workspaceDir = typeof resolved === 'string' ? undefined : resolved.dir;
 
     const dotColor = distinctColor(this.managers.tab.tabs.map((t) => t.dotColor));
     const group = creator?.group ?? 1;
     const groupColor = creator?.groupColor ?? dotColor;
     const harness: HarnessView = { name, program, ptyId: '', status: 'running' };
-    const tab = makeHarnessTab(label, dotColor, this.managers.tab.tabs.length + 1, group, groupColor, harness);
+    const tab = makeHarnessTab(label, dotColor, this.managers.tab.tabs.length + 1, group, groupColor, harness, workspaceDir);
     this.managers.tab.insertTabInGroup(tab);
     this.managers.tab.activeTab = this.managers.tab.findIndex(tab.label);
     const id = this.managers.pty.spawn(label, program, program, cwd);
@@ -44,10 +46,11 @@ export class HarnessManager {
 
   // The harness's starting directory: a new workspace clone (with `--workspace`) or the creator's
   // cwd. Returns the directory, or an `{ error }` to surface when there's no repo or the clone fails.
-  private resolveCwd(workspace: boolean, label: string, creator: Tab): string | { error: string } {
+  // A workspace clone is returned as `{ dir }` (not a bare string) so the caller can tell it apart
+  // from the creator's cwd and record it on the tab for cleanup on close.
+  private resolveCwd(workspace: boolean, label: string, creator: Tab): string | { dir: string } | { error: string } {
     if (!workspace) return this.managers.tab.cwdOf(creator.label) ?? process.cwd();
-    const result = this.managers.workspace.create(label);
-    return 'error' in result ? result : result.dir;
+    return this.managers.workspace.create(label);
   }
 
   // A unique internal label for a new harness tab: `claude`, `claude-2`, … The displayed title is the

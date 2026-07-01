@@ -6,9 +6,9 @@ export type ParsedClose =
   | { error: string };
 
 // Parse a `close` command: bare `close` closes the active tab; `close page <n>` closes the
-// numbered page tab; anything else is a usage error.
+// numbered page tab; anything else is a usage error. `exit` is an alias of `close`.
 export function parseClose(command_: string): ParsedClose {
-  const rest = command_.replace(/^close\b\s*/i, '').trim();
+  const rest = command_.replace(/^(?:close|exit)\b\s*/i, '').trim();
   if (!rest) return { target: 'active' };
   const pageMatch = rest.match(/^page\b\s*(\d+)\s*$/i);
   if (pageMatch) return { target: 'page', number: Number(pageMatch[1]) };
@@ -17,7 +17,7 @@ export function parseClose(command_: string): ParsedClose {
 
 export const command: Command = {
   name: 'close',
-  match: (command_) => /^close\b/i.test(command_),
+  match: (command_) => /^(?:close|exit)\b/i.test(command_),
   run: (command_, tab, managers) => {
     const parsed = parseClose(command_);
     if ('error' in parsed) { managers.tab.append(tab.label, { input: command_, output: parsed.error }); return; }

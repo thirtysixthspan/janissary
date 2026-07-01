@@ -6,17 +6,15 @@ describe('quit command', () => {
     expect(command.name).toBe('quit');
   });
 
-  it('matches "quit" and "exit" case-insensitively', () => {
+  it('matches "quit" case-insensitively', () => {
     expect(command.match('quit')).toBe(true);
     expect(command.match('QUIT')).toBe(true);
-    expect(command.match('exit')).toBe(true);
-    expect(command.match('EXIT')).toBe(true);
-    expect(command.match('Exit')).toBe(true);
+    expect(command.match('  quit  ')).toBe(true);
   });
 
-  it('does not match non-quit input', () => {
+  it('does not match non-quit input, including "exit" (now an alias of close)', () => {
     expect(command.match('quits')).toBe(false);
-    expect(command.match('exits')).toBe(false);
+    expect(command.match('exit')).toBe(false);
     expect(command.match('close')).toBe(false);
   });
 });

@@ -42,8 +42,8 @@ export const makeMarkdownTab = (label: string, dotColor: string, number: number,
 });
 
 // A harness view tab (opened via `harness <name>`). The entire tab body is a live PTY terminal.
-export const makeHarnessTab = (label: string, dotColor: string, number: number, group: number, groupColor: string, harness: HarnessView): Tab => ({
-  ...makeTab(label, dotColor, number, [], [], undefined, group, groupColor),
+export const makeHarnessTab = (label: string, dotColor: string, number: number, group: number, groupColor: string, harness: HarnessView, workspaceDirectory?: string): Tab => ({
+  ...makeTab(label, dotColor, number, [], [], workspaceDirectory, group, groupColor),
   view: 'harness', title: label, harness,
 });
 

@@ -48,6 +48,9 @@ task add <agent> <command> enqueues a command to run as soon as the agent become
 ## Unread badge on inactive tabs
 When an inactive tab receives a new message or its shell command finishes while not focused, a small badge appears on its dot until the tab is visited. Gives at-a-glance awareness of which background agents have new output. Implemented as a hasUnread boolean on TabView, set on append and cleared when setActiveTab targets that tab.
 
+## schedule a command to execute in a harness
+the schedule command allows the injection of a command into the current agent tab. update the schedule command to accept a target tab. In this way the command is sent to the taget tab. The target tab may be a harness tab. If it is a harness tab, the command should be injected into the harness as if it were regular human input.
+
 
 ## improvements
 
