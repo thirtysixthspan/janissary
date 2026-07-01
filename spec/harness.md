@@ -10,10 +10,15 @@ harness <name> [-w]
 ```
 
 Valid names: `claude`, `opencode`, `codex`. The binary must be on `PATH`; if it is not found, the
-PTY exits immediately and the tab freezes showing the exit status.
+PTY exits immediately and the tab closes (see [Lifecycle](#lifecycle)).
 
 - `harness` with no name — error: `Usage: harness <claude|opencode|codex> [-w].`
 - `harness foo` — error: `Unknown harness "foo". Choose from: claude, opencode, codex.`
+
+Before the harness tab opens, the `harness <name> [-w]` command itself is recorded in the
+**creator's** transcript — the tab `harness` was run from, not the new harness tab (which has no
+transcript of its own). This happens synchronously ahead of the PTY spawn, so the launch is always
+visible even if the harness exits — and its tab closes — immediately after.
 
 ### Workspace flag (`-w` / `--workspace`)
 
@@ -35,17 +40,16 @@ A harness tab is distinguished by `view: 'harness'` and carries a **harness payl
 - **name** — the harness identifier (`claude`, `opencode`, or `codex`).
 - **program** — the binary that was launched.
 - **ptyId** — the live PTY stream id used by xterm.js to attach.
-- **status** — `running` while the process is alive; `exited` once it terminates.
-- **exitCode** — set when `status` is `exited`.
+- **status** — `running` while the process is alive. The tab is closed as soon as the process
+  exits, so `exited` is not observed in normal operation.
+- **exitCode** — would be set alongside an `exited` status; unused in practice since the tab
+  closes before it could be read.
 
 ## Layout
 
 A harness tab has **no command bar and no transcript**. When the active tab is a harness view, the
 app renders the tab strip above a full-body terminal. Every other tab renders unchanged. Tab
 switching continues to work via the tab strip or the Shift+←/→ chord.
-
-When the harness exits, a slim **"exited (code)"** banner appears above the frozen terminal so the
-last session is still visible for scrolling.
 
 ## Focus
 
@@ -79,12 +83,14 @@ strip (identical to image/page view tabs).
 
 ## Lifecycle
 
-- **Created** by `harness <name>` — a new tab is opened, focused, and the PTY starts.
+- **Created** by `harness <name>` — the command is first recorded in the creator's transcript,
+  then a new tab is opened, focused, and the PTY starts.
 - **Running** — the harness receives all input; the connections panel lists `terminal:<name>`.
-- **Exited** — when the harness process terminates, the tab freezes showing the exit status and an
-  optional exit-code banner; the tab remains open for inspection.
-- **Closed** — the tab's × button or `close` command kills the PTY (if still running) and removes
-  the tab. Closing the last tab opens a fresh default tab.
+- **Closed** — the tab closes as soon as the harness process exits, whether from the harness
+  quitting normally, crashing, or the binary not being found on `PATH`. The tab's × button or
+  `close` command closes it the same way while the process is still running (killing the PTY
+  first). Closing the last tab opens a fresh default tab. There is no frozen "exited" state to
+  inspect — the harness's own scrollback is gone once its tab closes.
 
 ## Placement and grouping
 
