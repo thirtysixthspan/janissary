@@ -21,6 +21,19 @@ export function completeAgentName(
   return completeWord(token, '', agents, ' ', before, after, tokenStart);
 }
 
+export function completeSendTarget(
+  command: string,
+  argumentIndex: number,
+  token: string,
+  labels: string[],
+  before: string,
+  after: string,
+  tokenStart: number,
+): CompletionResult | null {
+  if (argumentIndex !== 1 || command !== 'send') return null;
+  return completeWord(token, '', labels, ' ', before, after, tokenStart);
+}
+
 export function completeConnectionClose(
   command: string,
   argumentIndex: number,

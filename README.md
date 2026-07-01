@@ -37,6 +37,7 @@ janus
 | `schedule`   | Run a command later — once or on a recurring schedule |
 | `profile`    | Launch a saved set of agents for a use case |
 | `harness`    | Open an AI coding harness (claude/opencode/codex) in a full-tab terminal (add `-w` to clone the repo) |
+| `send`       | Deliver a line of input to any tab — types into a harness, or runs a command in an agent tab |
 
 ### Harness tabs
 
@@ -206,6 +207,31 @@ agent isn't open as a tab, that firing is skipped and the entry stays in the sta
 While the active agent has any scheduled timers, a small `schedule` window floats at the
 top-right (just below the `connections` window) listing each timer's id/name, schedule, and
 next run time. It disappears once the schedule is empty.
+
+### Sending input to another tab
+
+`send <label> <text>` delivers a line of input to any named tab. Delivery depends on the
+target's kind:
+
+- **Harness tab** — the text is typed into the harness PTY as if a human had typed it
+  (`text` followed by Enter).
+- **Agent tab** — the text is run as a command in that tab, exactly like `msg <agent> command <text>`
+  but without the messaging envelope.
+
+```
+send claude /standup     # types "/standup" into the claude harness
+send worker db vacuum    # runs "db vacuum" in the worker agent tab
+```
+
+Because `send` is an ordinary command, it composes with `schedule` for free:
+
+```
+schedule standup every day at 9am send claude /standup
+```
+
+If the target tab doesn't exist, isn't a running harness, or is a view (image/page/markdown)
+that doesn't accept input, `send` reports an error in the sender's transcript instead of
+silently doing nothing — so a scheduled `send` that fails is still visible.
 
 ### Profiles
 

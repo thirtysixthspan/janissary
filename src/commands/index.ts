@@ -15,6 +15,7 @@ import { command as quit } from './quit.js';
 import { command as schedule } from './schedule.js';
 import { command as profile } from './profile.js';
 import { command as open } from './open.js';
+import { command as send } from './send.js';
 
 export const commands: Command[] = [
   agent,
@@ -33,6 +34,7 @@ export const commands: Command[] = [
   schedule,
   profile,
   open,
+  send,
 ];
 
 export type { Command } from './types.js';

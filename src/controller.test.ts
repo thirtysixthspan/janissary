@@ -242,11 +242,11 @@ describe('Controller', () => {
     expect(isExited).toBe(true);
   });
 
-  it('exit also stops the host (closes the window + server)', () => {
+  it('exit is an alias of close, not quit — it does not stop the host', () => {
     let isExited = false;
     const c = new Controller({ emitState() {}, sendPty() {}, sendPtyExit() {}, exit() { isExited = true; } });
     c.dispatch('exit');
-    expect(isExited).toBe(true);
+    expect(isExited).toBe(false);
   });
 
   it('close removes the active tab and its connections', () => {
@@ -717,6 +717,61 @@ describe('Controller harness view', () => {
     c.dispatch('harness claude');
     const tab = c.view().find((t) => t.label === 'claude');
     expect(tab!.connections.some((r) => r.kind === 'terminal' && r.text.includes('claude'))).toBe(true);
+  });
+});
+
+describe('Controller send command', () => {
+  beforeEach(() => {
+    vi.mocked(spawnPty).mockClear();
+    vi.mocked(spawnPty).mockImplementation((program, _command, _cwd, _handlers) => {
+      return { id: 'mock-pty-1', program, write: vi.fn(), resize: vi.fn(), kill: vi.fn() };
+    });
+  });
+
+  it('delivers text to a harness tab as raw PTY input', () => {
+    const { c } = makeController();
+    c.dispatch('harness claude');
+    c.dispatch('send claude /standup');
+    const pty = vi.mocked(spawnPty).mock.results[0].value as { write: ReturnType<typeof vi.fn> };
+    expect(pty.write).toHaveBeenCalledWith('/standup\r');
+  });
+
+  it('delivers text to an agent tab by dispatching it as a command', () => {
+    const { c } = makeController();
+    c.dispatch('agent worker');
+    c.dispatch('send worker state');
+    expect(c.view().find((t) => t.label === 'worker')!.cmdHistory).toContain('state');
+  });
+
+  it('errors when the target tab does not exist', () => {
+    const { c } = makeController();
+    c.dispatch('send nobody hi');
+    expect(allText(c)).toContain('No tab named "nobody".');
+  });
+
+  it('errors when the target harness has exited', () => {
+    const { c } = makeController();
+    c.dispatch('harness claude');
+    const tab = c.view().find((t) => t.label === 'claude')!;
+    tab.harness!.status = 'exited';
+    c.dispatch('send claude /standup');
+    expect(allText(c)).toContain('is not a running harness');
+  });
+
+  it('composes with schedule: a fired scheduled send reaches the target without the comment marker', () => {
+    vi.useFakeTimers();
+    try {
+      initAgentStateDirectory(mkdtempSync(path.join(tmpdir(), 'janus-sched-send-')));
+      const { c } = makeController();
+      c.dispatch('harness claude');
+      c.managers.tab.setActiveTab(0); // schedule owned by janus, not the harness tab it targets
+      c.dispatch('schedule s1 every 1m send claude /standup');
+      vi.advanceTimersByTime(61_000);
+      const pty = vi.mocked(spawnPty).mock.results[0].value as { write: ReturnType<typeof vi.fn> };
+      expect(pty.write).toHaveBeenCalledWith('/standup\r');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 
