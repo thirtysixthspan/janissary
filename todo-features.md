@@ -48,6 +48,11 @@ task add <agent> <command> enqueues a command to run as soon as the agent become
 ## Unread badge on inactive tabs
 When an inactive tab receives a new message or its shell command finishes while not focused, a small badge appears on its dot until the tab is visited. Gives at-a-glance awareness of which background agents have new output. Implemented as a hasUnread boolean on TabView, set on append and cleared when setActiveTab targets that tab.
 
+## support sshing to other computers in an agent tab
+list the connection in the connection window
+close the ssh connection upon closing of the tab or application
+ssh command should open a ssh connection in a new tab similar to how the harness command creates a new tab. 
+exiting the ssh closes that tab.
 
 
 

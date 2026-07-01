@@ -1,4 +1,4 @@
-import type { ScheduleEntry } from './types.js';
+import type { ScheduleEntry, Tab } from './types.js';
 import type { ScheduleView } from './protocol.js';
 import { computeNextRun, fmtNextRun } from './schedule.js';
 import type { Managers } from './managers.js';
@@ -47,25 +47,44 @@ export class ScheduleManager {
   }
 
   // Fire any commands whose next-run time has passed, in every still-open tab. A recurring entry is
-  // rescheduled to its next run; a one-shot drops off. Tabs whose schedule changed are persisted.
+  // rescheduled to its next run; a one-shot drops off. Tabs whose schedule changed are persisted
+  // (harness tabs excepted — they have no persisted agent state).
   private tick(): void {
     const now = Date.now();
     for (const label of this.managers.tab.allLabels()) {
+      const tab = this.managers.tab.tabs.find((t) => t.label === label);
       const sched = this.schedules.get(label);
-      if (!sched || sched.length === 0) continue;
-      let isChanged = false;
-      const remaining: ScheduleEntry[] = [];
-      for (const e of sched) {
-        if (e.nextRun > now) { remaining.push(e); continue; }
-        isChanged = true;
-        this.managers.command.dispatchTo(label, `${e.command} ## scheduled ##`);
-        if (e.recurring) remaining.push({ ...e, nextRun: computeNextRun(e, new Date()) });
-      }
-      if (isChanged) {
-        this.schedules.set(label, remaining);
-        const tab = this.managers.tab.tabs.find((t) => t.label === label);
-        if (tab) this.managers.tab.persist(this.managers.tab.buildAgentState(tab, { schedule: this.get(tab.label) }));
-      }
+      if (!tab || !sched || sched.length === 0) continue;
+      const remaining = this.fireDue(tab, sched, now);
+      if (!remaining) continue;
+      this.schedules.set(label, remaining);
+      if (tab.view !== 'harness') this.managers.tab.persist(this.managers.tab.buildAgentState(tab, { schedule: this.get(label) }));
     }
+  }
+
+  // Fire one tab's due entries, returning the surviving schedule (recurring entries rescheduled,
+  // one-shots dropped), or undefined when nothing fired.
+  private fireDue(tab: Tab, sched: ScheduleEntry[], now: number): ScheduleEntry[] | undefined {
+    let isChanged = false;
+    const remaining: ScheduleEntry[] = [];
+    for (const e of sched) {
+      if (e.nextRun > now || !this.fire(tab, e)) { remaining.push(e); continue; }
+      isChanged = true;
+      if (e.recurring) remaining.push({ ...e, nextRun: computeNextRun(e, new Date()) });
+    }
+    return isChanged ? remaining : undefined;
+  }
+
+  // Deliver a due entry to its tab: typed into a harness PTY as a line of input, or dispatched
+  // through an agent tab's command pipeline. Returns false when delivery must wait (the harness
+  // is not running), leaving the entry due so it retries on a later tick.
+  private fire(tab: Tab, e: ScheduleEntry): boolean {
+    if (tab.view === 'harness') {
+      if (tab.harness?.status !== 'running' || !tab.harness.ptyId) return false;
+      this.managers.pty.input(tab.harness.ptyId, `${e.command}\r`);
+      return true;
+    }
+    this.managers.command.dispatchTo(tab.label, `${e.command} ## scheduled ##`);
+    return true;
   }
 }

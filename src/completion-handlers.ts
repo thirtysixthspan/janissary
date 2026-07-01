@@ -34,6 +34,25 @@ export function completeSendTarget(
   return completeWord(token, '', labels, ' ', before, after, tokenStart);
 }
 
+// Complete the target of a `schedule … in <tab>` clause against open tab labels. The clause
+// sits right after the timer name (or `list`/`clear`) at argument 3, or after `cancel <name>`
+// at argument 4 — anywhere else the word `in` belongs to the scheduled command itself.
+export function completeScheduleTarget(
+  command: string,
+  argumentIndex: number,
+  preceding: string[],
+  token: string,
+  labels: string[],
+  before: string,
+  after: string,
+  tokenStart: number,
+): CompletionResult | null {
+  if (command !== 'schedule' || preceding.at(-1)?.toLowerCase() !== 'in') return null;
+  const isClause = argumentIndex === 3 || (argumentIndex === 4 && preceding[1]?.toLowerCase() === 'cancel');
+  if (!isClause) return null;
+  return completeWord(token, '', labels, ' ', before, after, tokenStart);
+}
+
 export function completeConnectionClose(
   command: string,
   argumentIndex: number,

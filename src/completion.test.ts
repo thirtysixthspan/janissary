@@ -94,6 +94,22 @@ describe('completeCommandLine — agent names', () => {
   });
 });
 
+describe('completeCommandLine — schedule `in <tab>` target', () => {
+  const labels = ['janus', 'claude', 'worker'];
+  const noFiles = '/no/such/dir/xyz';
+
+  it('completes the tab label after `in` for add, list/clear, and cancel forms', () => {
+    expect(completeCommandLine('schedule standup in cl', 22, noFiles, labels).newInput).toBe('schedule standup in claude ');
+    expect(completeCommandLine('schedule list in wo', 19, noFiles, labels).newInput).toBe('schedule list in worker ');
+    expect(completeCommandLine('schedule cancel standup in cl', 29, noFiles, labels).newInput).toBe('schedule cancel standup in claude ');
+  });
+
+  it('does not treat `in` inside the scheduled command as a target slot', () => {
+    const r = completeCommandLine('schedule t every 5m echo built in cl', 36, noFiles, labels);
+    expect(r.newInput).toBe('schedule t every 5m echo built in cl');
+  });
+});
+
 describe('completeCommandLine — connection strings', () => {
   const noFiles = '/no/such/dir/xyz';
   const conns = ['shell:bash', 'acp:opencode', 'sqlite:movies', 'sqlite:shop'];

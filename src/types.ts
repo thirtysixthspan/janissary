@@ -148,11 +148,13 @@ export type ScheduleEntry = {
   weekday?: number; // 0-6 (Sun-Sat) when "every <weekday>"
 };
 
+// `target` carries the optional `in <tab>` clause: the label of the tab the operation
+// applies to (defaulting to the issuing tab when absent).
 export type ScheduleParseResult =
-  | { action: 'add'; entry: Omit<ScheduleEntry, 'id'>; name: string }
-  | { action: 'list' }
-  | { action: 'cancel'; id: string }
-  | { action: 'clear' }
+  | { action: 'add'; entry: Omit<ScheduleEntry, 'id'>; name: string; target?: string }
+  | { action: 'list'; target?: string }
+  | { action: 'cancel'; id: string; target?: string }
+  | { action: 'clear'; target?: string }
   | { error: string };
 
 // --- acp.ts ---------------------------------------------------------------

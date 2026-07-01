@@ -193,6 +193,16 @@ schedule standup  every monday at 9am broadcast all info standup  # recurring on
 
 Times accept `3:35pm`, `2pm`, or `14:00`; dates accept `august 12th`, `aug 12`, or `8/12`.
 
+An optional `in <tab>` right after the name schedules the timer **in another tab**: the entry
+belongs to that tab — it shows in that tab's schedule window and fires there, not in the tab
+that ran `schedule`. Harness tabs can be scheduled too: when the entry fires, the command is
+typed into the harness PTY as a line of input (like `send`).
+
+```
+schedule standup in claude every day at 9am /standup   # types /standup into the claude harness
+schedule sweep   in worker every 1h db vacuum          # runs `db vacuum` in the worker agent tab
+```
+
 Manage entries with:
 
 ```
@@ -201,12 +211,25 @@ schedule cancel deploy  # remove one entry by name
 schedule clear          # remove all of this agent's entries
 ```
 
+Each management form also takes `in <tab>` to operate on another tab's schedule — the only
+way to manage a harness tab's timers, since a harness can't run commands itself:
+
+```
+schedule list in claude
+schedule cancel standup in claude
+schedule clear in claude
+```
+
 Firing is checked once a second. A schedule only runs while its agent's tab is open; if the
 agent isn't open as a tab, that firing is skipped and the entry stays in the state file.
+Agent schedules persist in the agent's state file; a harness tab's schedule lives in memory
+only and ends with the tab. A timer due while its harness isn't accepting input yet stays
+due and delivers as soon as the harness is running.
 
 While the active agent has any scheduled timers, a small `schedule` window floats at the
 top-right (just below the `connections` window) listing each timer's id/name, schedule, and
-next run time. It disappears once the schedule is empty.
+next run time. It disappears once the schedule is empty. On a harness tab the window floats
+over the top-right of the terminal, so a harness's timers stay visible too.
 
 ### Sending input to another tab
 

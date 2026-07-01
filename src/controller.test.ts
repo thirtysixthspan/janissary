@@ -793,6 +793,42 @@ describe('Controller send command', () => {
   });
 });
 
+describe('Controller schedule in another tab', () => {
+  beforeEach(() => {
+    vi.mocked(spawnPty).mockClear();
+    vi.mocked(spawnPty).mockImplementation((program, _command, _cwd, _handlers) => {
+      return { id: 'mock-pty-1', program, write: vi.fn(), resize: vi.fn(), kill: vi.fn() };
+    });
+  });
+
+  it('an `in <tab>` entry shows in the target tab view, not the issuing tab', () => {
+    initAgentStateDirectory(mkdtempSync(path.join(tmpdir(), 'janus-sched-in-')));
+    const { c } = makeController();
+    c.dispatch('agent worker');
+    c.dispatch('schedule sweep in worker every 1h db vacuum');
+    expect(c.view().find((t) => t.label === 'worker')!.schedule.map((s) => s.id)).toContain('sweep');
+    expect(c.view().find((t) => t.label === 'janus')!.schedule).toHaveLength(0);
+    expect(allText(c)).toContain('Scheduled sweep in worker');
+  });
+
+  it('a schedule attached to a harness tab types the due command into its PTY', () => {
+    vi.useFakeTimers();
+    try {
+      initAgentStateDirectory(mkdtempSync(path.join(tmpdir(), 'janus-sched-harness-')));
+      const { c } = makeController();
+      c.dispatch('harness claude');
+      c.managers.tab.setActiveTab(0);
+      c.dispatch('schedule standup in claude every 1m /standup');
+      expect(c.view().find((t) => t.label === 'claude')!.schedule.map((s) => s.id)).toContain('standup');
+      vi.advanceTimersByTime(61_000);
+      const pty = vi.mocked(spawnPty).mock.results[0].value as { write: ReturnType<typeof vi.fn> };
+      expect(pty.write).toHaveBeenCalledWith('/standup\r');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
 describe('Controller messageBus', () => {
   const collect = () => {
     const events: BusEvent[] = [];

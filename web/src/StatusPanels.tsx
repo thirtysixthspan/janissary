@@ -4,8 +4,11 @@ import type { TabView } from '@shared/protocol';
 // Floating top-right panels mirroring the Ink ConnectionWindow / ScheduleWindow: the active
 // tab's open connections (shell / acp / terminal cards / sqlite) and its scheduled timers.
 // Each is shown only when it has rows; the schedule panel stacks below the connections panel.
-export function StatusPanels({ tab }: { tab: TabView }) {
-  const { connections, schedule } = tab;
+// `scheduleOnly` drops the connections panel — used over harness tabs, where the whole tab
+// *is* the terminal connection and only the timers are worth overlaying.
+export function StatusPanels({ tab, scheduleOnly = false }: { tab: TabView; scheduleOnly?: boolean }) {
+  const { schedule } = tab;
+  const connections = scheduleOnly ? [] : tab.connections;
   if (connections.length === 0 && schedule.length === 0) return null;
   return (
     <div className="status-panels">

@@ -2,14 +2,15 @@ import path from 'node:path';
 import { readdirSync } from 'node:fs';
 import type { CompletionResult } from './types.js';
 import { isDir, longestCommonPrefix, splitToken, replaceToken } from './completion-helpers.js';
-import { completeAgentName, completeSendTarget, completeConnectionClose, completeBrowserCommand } from './completion-handlers.js';
+import { completeAgentName, completeSendTarget, completeScheduleTarget, completeConnectionClose, completeBrowserCommand } from './completion-handlers.js';
 
 /**
  * Tab-complete the token ending at the cursor.
  *
  * - For the recipient argument of `msg`/`broadcast`, completes against active agent names
  *   (`broadcast` also offers `all` and supports a comma-separated list).
- * - For the target argument of `send`, completes against all open tab labels.
+ * - For the target argument of `send` and the `in <tab>` clause of `schedule`, completes
+ *   against all open tab labels.
  * - For the target of `connection close`, completes against open connection strings
  *   (e.g. `sqlite:movies`, `shell:bash`, `acp:opencode`, `browser:w1`).
  * - For the `browser` command, completes subcommands and, where a window id is expected
@@ -39,6 +40,7 @@ export function completeCommandLine(
   // Try command-specific handlers.
   const result = completeAgentName(command, argumentIndex, token, agents, before, after, tokenStart) ??
     completeSendTarget(command, argumentIndex, token, agents, before, after, tokenStart) ??
+    completeScheduleTarget(command, argumentIndex, preceding, token, agents, before, after, tokenStart) ??
     completeConnectionClose(command, argumentIndex, preceding, token, connections, before, after, tokenStart) ??
     completeBrowserCommand(command, argumentIndex, preceding, token, connections, before, after, tokenStart);
   if (result !== null) {

@@ -57,6 +57,10 @@ schedule sweep   every 1h        send worker db vacuum    → runs `db vacuum` i
 The scheduler's `## scheduled ##` comment marker is stripped before the command runs (see
 [[comments]]), so `send`'s parser never sees it.
 
+Alternatively, `schedule NAME in <tab> <form> <cmd>` attaches the timer to the target tab
+directly — the entry then lives in (and its schedule window shows in) the target tab rather
+than the sender's (see [[scheduling]]).
+
 ## Tab-completion
 
 Typing `send <partial>` completes the first argument against every open tab's label (all

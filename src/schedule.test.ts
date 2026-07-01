@@ -145,6 +145,34 @@ describe('parseScheduleCommand', () => {
     expect(fetch.name).toBe('fetch');
   });
 
+  it('parses an `in <tab>` clause on add', () => {
+    const r = parseScheduleCommand('standup in claude every day at 9am /standup', NOW);
+    if (r.action !== 'add') throw new Error('expected add');
+    expect(r.name).toBe('standup');
+    expect(r.target).toBe('claude');
+    expect(r.entry).toMatchObject({ command: '/standup', spec: 'every day at 9:00am' });
+  });
+
+  it('parses an `in <tab>` clause on management subcommands', () => {
+    expect(parseScheduleCommand('list in claude', NOW)).toEqual({ action: 'list', target: 'claude' });
+    expect(parseScheduleCommand('clear in claude', NOW)).toEqual({ action: 'clear', target: 'claude' });
+    expect(parseScheduleCommand('cancel s2 in claude', NOW)).toEqual({ action: 'cancel', id: 's2', target: 'claude' });
+  });
+
+  it('errors on a malformed `in` clause', () => {
+    expect(parseScheduleCommand('standup in', NOW)).toHaveProperty('error');
+    expect(parseScheduleCommand('list in', NOW)).toHaveProperty('error');
+    expect(parseScheduleCommand('list in claude extra', NOW)).toHaveProperty('error');
+    expect(parseScheduleCommand('cancel s2 in', NOW)).toHaveProperty('error');
+  });
+
+  it('leaves `in` inside the scheduled command untouched', () => {
+    const r = parseScheduleCommand('t every 5m echo built in five', NOW);
+    if (r.action !== 'add') throw new Error('expected add');
+    expect(r.target).toBeUndefined();
+    expect(r.entry.command).toBe('echo built in five');
+  });
+
   it('errors when a named timer has no valid schedule form', () => {
     expect(parseScheduleCommand('deploy', NOW)).toHaveProperty('error');
     expect(parseScheduleCommand('deploy notawhen echo hi', NOW)).toHaveProperty('error');

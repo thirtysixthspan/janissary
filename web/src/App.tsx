@@ -154,15 +154,17 @@ export function App() {
         onHandle={(id, h) => { if (h) shellHandles.current.set(id, h); else shellHandles.current.delete(id); }} />
 
       {/* Harness layer: all harness tabs stay mounted; only the active one is visible.
-          This preserves xterm state (alternate buffer, cursor position) across tab switches. */}
+          This preserves xterm state (alternate buffer, cursor position) across tab switches.
+          The schedule panel floats over the terminal so a harness's timers stay visible. */}
       {tabs.filter((t) => t.view === 'harness' && t.harness).map((t) => (
         <div
           key={t.harness!.ptyId}
           className="tab-body"
-          style={{ borderLeft: `4px solid ${t.dotColor}`, display: t.label === current.label ? 'flex' : 'none' }}
+          style={{ borderLeft: `4px solid ${t.dotColor}`, position: 'relative', display: t.label === current.label ? 'flex' : 'none' }}
         >
           <HarnessTab harness={t.harness!} client={client}
             ref={(h) => { if (h) harnessHandles.current.set(t.harness!.ptyId, h); else harnessHandles.current.delete(t.harness!.ptyId); }} />
+          <StatusPanels tab={t} scheduleOnly />
         </div>
       ))}
 
