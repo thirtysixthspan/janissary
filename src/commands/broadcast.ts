@@ -4,16 +4,16 @@ import { parseBroadcastCommand } from '../messaging.js';
 export const command: Command = {
   name: 'broadcast',
   match: (command_) => /^broadcast\b/i.test(command_),
-  run: (command_, context) => {
+  run: (command_, tab, managers) => {
     const parsed = parseBroadcastCommand(command_);
-    if ('error' in parsed) { context.out(parsed.error); return; }
+    if ('error' in parsed) { managers.tab.append(tab.label, { input: command_, output: parsed.error }); return; }
     const targets = parsed.targets === 'all'
-      ? context.agentLabels().filter((l) => l !== context.label)
+      ? managers.tab.allLabels().filter((l) => l !== tab.label)
       : parsed.targets;
     const missing: string[] = [];
     for (const to of targets) {
-      if (!context.send({ from: context.label, to, kind: parsed.kind, text: parsed.text })) missing.push(to);
+      if (!managers.communication.send({ from: tab.label, to, kind: parsed.kind, text: parsed.text })) missing.push(to);
     }
-    if (missing.length > 0) context.out(`No agent named: ${missing.join(', ')}.`);
+    if (missing.length > 0) managers.tab.append(tab.label, { input: command_, output: `No agent named: ${missing.join(', ')}.` });
   },
 };

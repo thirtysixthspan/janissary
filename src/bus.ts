@@ -81,7 +81,8 @@ export type BusEvent =
   | { type: 'tab:cleared'; tabLabel: string }
   | { type: 'tab:removed'; tabLabel: string };
 
-export type BusChannels = { transcript: BusEvent };
-type Bus = MessageBus<BusChannels>;
-type BusEventType = BusEvent['type'];
+type StateEvent = { type: 'dirty' };
+type AppEvent = { type: 'exit' };
+type PtyEvent = { type: 'data'; id: string; data: string } | { type: 'exit'; id: string; exitCode: number };
+export type BusChannels = { transcript: BusEvent; state: StateEvent; app: AppEvent; pty: PtyEvent };
 export const messageBus = new MessageBus<BusChannels>();

@@ -353,3 +353,10 @@ export type LogRecord = {
   agent: string;
   text: string;
 };
+
+export type Sinks = {
+  emitState: () => void;
+  sendPty: (id: string, data: string) => void;
+  sendPtyExit: (id: string, exitCode: number) => void;
+  exit?: () => void;
+};

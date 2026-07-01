@@ -53,7 +53,7 @@ describe('Controller', () => {
     c.dispatch('agent bob');
     expect(c.view().map((t) => t.label)).toContain('bob');
     // Focus stays on the creator (janus).
-    expect(c.view()[c.activeTab].label).toBe('janus');
+    expect(c.view()[c.managers.tab.activeTab].label).toBe('janus');
   });
 
   it('draws a random pool name for a bare agent command', () => {
@@ -326,9 +326,9 @@ describe('Controller', () => {
     const { c } = makeController();
     c.dispatch('agent bob');
     c.setActiveTab(0);
-    expect(c.activeTab).toBe(0);
+    expect(c.managers.tab.activeTab).toBe(0);
     c.moveTab(1);
-    expect(c.activeTab).toBe(1);
+    expect(c.managers.tab.activeTab).toBe(1);
     c.toggleCollapse();
     expect(c.view()[1].toolStepsExpanded).toBe(true);
   });
@@ -340,7 +340,7 @@ describe('Controller', () => {
     c.setActiveTab(2); // carol
     c.reorderTab(-1);
     expect(c.view().map((t) => t.label)).toEqual(['janus', 'carol', 'bob']);
-    expect(c.view()[c.activeTab].label).toBe('carol'); // focus follows the moved tab
+    expect(c.view()[c.managers.tab.activeTab].label).toBe('carol'); // focus follows the moved tab
     expect(c.view().map((t) => t.number)).toEqual([1, 2, 3]); // renumbered by position
   });
 
@@ -350,7 +350,7 @@ describe('Controller', () => {
     c.setActiveTab(0);
     c.reorderTab(-1); // janus is already leftmost
     expect(c.view().map((t) => t.label)).toEqual(['janus', 'bob']);
-    expect(c.activeTab).toBe(0);
+    expect(c.managers.tab.activeTab).toBe(0);
   });
 
   it('will not reorder a tab across a group boundary', () => {
@@ -377,7 +377,7 @@ describe('Controller', () => {
   it('exposes schedule rows (and a connections array) in the tab view', () => {
     const { c } = makeController();
     c.dispatch('schedule nightly every 1h echo hi');
-    const v = c.view()[c.activeTab];
+    const v = c.view()[c.managers.tab.activeTab];
     expect(v.schedule.map((s) => s.id)).toContain('nightly');
     expect(v.schedule[0].next).toBeTruthy();
     expect(Array.isArray(v.connections)).toBe(true);
@@ -467,7 +467,7 @@ describe('Controller open command', () => {
     expect(img.title).toBe('image');
     expect(img.image?.name).toBe('pic.png');
     expect(img.image?.path).toBe(file);
-    expect(c.activeTab).toBe(1); // focus moves to the new image tab
+    expect(c.managers.tab.activeTab).toBe(1); // focus moves to the new image tab
   });
 
   it('gives each image tab a unique internal label while titling them all "image"', () => {
@@ -665,7 +665,7 @@ describe('Controller harness view', () => {
   it('focuses the new harness tab', () => {
     const { c } = makeController();
     c.dispatch('harness claude');
-    expect(c.view()[c.activeTab].label).toBe('claude');
+    expect(c.view()[c.managers.tab.activeTab].label).toBe('claude');
   });
 
   it('a second harness claude gets a unique label', () => {

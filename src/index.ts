@@ -39,7 +39,7 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
   // Reassigned below once `close` exists, so the `quit` command can shut the server down cleanly.
   let requestExit: () => void = () => process.exit(0);
   const controller = new Controller({
-    emitState: () => broadcast({ t: 'state', tabs: controller.view(), activeTab: controller.activeTab, route: controller.routeView() }),
+    emitState: () => broadcast({ t: 'state', tabs: controller.view(),         activeTab: controller.managers.tab.activeTab, route: controller.routeView() }),
     sendPty: (id, data) => broadcast({ t: 'pty', id, data }),
     sendPtyExit: (id, exitCode) => broadcast({ t: 'pty-exit', id, exitCode }),
     exit: () => requestExit(),
@@ -127,7 +127,7 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
 function handle(controller: Controller, message: ClientMessage, reply: (event: ServerEvent) => void): void {
   switch (message.method) {
     case 'init': {
-      reply({ t: 'state', tabs: controller.view(), activeTab: controller.activeTab, route: controller.routeView() });
+      reply({ t: 'state', tabs: controller.view(), activeTab: controller.managers.tab.activeTab, route: controller.routeView() });
       break;
     }
     case 'command': { controller.dispatch(message.params.text); break;

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { command } from './schedule.js';
-import type { ScheduleEntry } from '../types.js';
-import type { CommandContext } from './types.js';
+import type { ScheduleEntry, LogEntry } from '../types.js';
+
 
 describe('schedule command', () => {
   it('has the correct name', () => {
@@ -23,20 +23,28 @@ describe('schedule command', () => {
 describe('schedule command run', () => {
   let schedule: ScheduleEntry[];
   let outputs: string[];
-  let context: CommandContext;
+  let tab: { label: string; index: number };
+  let managers: unknown;
 
   beforeEach(() => {
     schedule = [];
     outputs = [];
-    context = {
-      label: 'janus',
-      out: (text: string) => { outputs.push(text); },
-      getSchedule: () => schedule,
-      setSchedule: (next: ScheduleEntry[]) => { schedule = next; },
-    } as unknown as CommandContext;
+    tab = { label: 'janus', index: 0 };
+    managers = {
+      schedule: {
+        get: () => schedule,
+        set: (_label: string, next: ScheduleEntry[]) => { schedule = next; },
+      },
+      tab: {
+        append: (_label: string, entry: LogEntry) => { outputs.push(entry.output); },
+        tabs: [{ label: 'janus' }],
+        persist: () => {},
+        buildAgentState: () => ({}),
+      },
+    };
   });
 
-  const run = (command_: string) => command.run!(command_, context);
+  const run = (command_: string) => command.run!(command_, tab, managers as never);
 
   it('adds a named entry and records it', () => {
     run('schedule fetch every 5m echo hi');

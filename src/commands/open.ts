@@ -31,9 +31,8 @@ export function isGlobPattern(argument: string): boolean {
   return /[*?[\]{}]/.test(argument);
 }
 
-// Behavior lives in the Controller (`runOpen`), which has the tab/serving capabilities openers need.
-// This is the registry descriptor (plus the pure parse helpers) used for command resolution.
 export const command: Command = {
   name: 'open',
   match: (command_) => /^open\b/i.test(command_),
+  run: (command, tab, managers) => { managers.openFile.run(command, tab.label); },
 };

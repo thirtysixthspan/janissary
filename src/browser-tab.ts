@@ -1,15 +1,14 @@
 import { launchTabBrowser } from './browser.js';
 import { parseBrowserCommand } from './browser-command.js';
 import type { BrowserWindow, TabBrowser } from './types.js';
+import type { Managers } from './managers.js';
 
 type Entry = { browser: TabBrowser; current?: string; counter: number };
 
-// Per-tab Playwright browsers, keyed by tab label. Ported from the `runBrowserInTab` /
-// `closeBrowserWindow` / `closeTabBrowser` glue that lived in src/cli.tsx. Each tab owns its own
-// browser process (so headless/headed can differ) holding one or more isolated windows. Page
-// actions (goto/eval/shot/content) auto-launch a headless browser and a window on first use.
 export class BrowserManager {
   private browsers = new Map<string, Entry>();
+
+  constructor(private managers: Managers) {}
 
   has(label: string): boolean {
     return this.browsers.has(label);
@@ -103,6 +102,17 @@ export class BrowserManager {
       return `Browser error: ${error instanceof Error ? error.message : String(error)}`;
     }
     return '';
+  }
+
+  runInteractive(command: string, label: string, onDone?: (output: string) => void): void {
+    this.managers.tab.startRunning(label, command);
+    void this.run(label, command)
+      .then((out) => { this.managers.tab.finishRunning(label, out); onDone?.(out); })
+      .catch((error) => {
+        const message = `Browser error: ${error instanceof Error ? error.message : String(error)}`;
+        this.managers.tab.finishRunning(label, message);
+        onDone?.(message);
+      });
   }
 
   private async closeWindow(label: string, id: string): Promise<string> {

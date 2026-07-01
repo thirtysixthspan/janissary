@@ -1,18 +1,7 @@
 import type { ScheduleEntry } from './types.js';
 import type { ScheduleView } from './protocol.js';
 import { computeNextRun, fmtNextRun } from './schedule.js';
-
-// The controller capabilities the scheduler needs when a command fires. The manager owns the
-// schedule state and the firing timer, but routing a command into a tab and persisting that tab are
-// controller concerns, so they come back through these hooks (mirrors how AgentBus is wired).
-export type ScheduleHost = {
-  // Labels of all open tabs — the scheduler only fires for tabs that still exist.
-  labels: () => string[];
-  // Run a scheduled command in the named tab (routed as if typed there).
-  dispatch: (label: string, command: string) => void;
-  // Persist a tab's state after its schedule list changed (recurring rescheduled / one-shot dropped).
-  persisted: (label: string) => void;
-};
+import type { Managers } from './managers.js';
 
 // Owns the per-tab scheduled commands (keyed by tab label) and the 1-second firing loop: at each tick
 // it fires any entry whose next-run time has passed, reschedules recurring ones, and drops one-shots.
@@ -20,8 +9,7 @@ export type ScheduleHost = {
 export class ScheduleManager {
   private schedules = new Map<string, ScheduleEntry[]>();
   private timer: ReturnType<typeof setInterval> | undefined;
-
-  constructor(private host: ScheduleHost) {}
+  constructor(private managers: Managers) {}
 
   // Begin the firing loop. `unref` so a pending tick never keeps the process alive on its own.
   start(): void {
@@ -62,7 +50,7 @@ export class ScheduleManager {
   // rescheduled to its next run; a one-shot drops off. Tabs whose schedule changed are persisted.
   private tick(): void {
     const now = Date.now();
-    for (const label of this.host.labels()) {
+    for (const label of this.managers.tab.allLabels()) {
       const sched = this.schedules.get(label);
       if (!sched || sched.length === 0) continue;
       let isChanged = false;
@@ -70,10 +58,14 @@ export class ScheduleManager {
       for (const e of sched) {
         if (e.nextRun > now) { remaining.push(e); continue; }
         isChanged = true;
-        this.host.dispatch(label, `${e.command} ## scheduled ##`);
+        this.managers.command.dispatchTo(label, `${e.command} ## scheduled ##`);
         if (e.recurring) remaining.push({ ...e, nextRun: computeNextRun(e, new Date()) });
       }
-      if (isChanged) { this.schedules.set(label, remaining); this.host.persisted(label); }
+      if (isChanged) {
+        this.schedules.set(label, remaining);
+        const tab = this.managers.tab.tabs.find((t) => t.label === label);
+        if (tab) this.managers.tab.persist(this.managers.tab.buildAgentState(tab, { schedule: this.get(tab.label) }));
+      }
     }
   }
 }

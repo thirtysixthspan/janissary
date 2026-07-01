@@ -15,9 +15,18 @@ export function parseClose(command_: string): ParsedClose {
   return { error: 'Usage: close [page <n>]' };
 }
 
-// Behavior lives in the Controller (`closeTab`), which disposes the tab's owned resources (shell,
-// ACP session, browser, terminals, workspace). This is the registry descriptor for resolution.
 export const command: Command = {
   name: 'close',
   match: (command_) => /^close\b/i.test(command_),
+  run: (command_, tab, managers) => {
+    const parsed = parseClose(command_);
+    if ('error' in parsed) { managers.tab.append(tab.label, { input: command_, output: parsed.error }); return; }
+    if (parsed.target === 'page') {
+      const pageTab = managers.tab.tabs.findIndex((t) => t.page?.number === parsed.number);
+      if (pageTab === -1) { managers.tab.append(tab.label, { input: command_, output: `No page numbered ${parsed.number}.` }); return; }
+      managers.tab.closeTab(pageTab);
+    } else {
+      managers.tab.closeTab(tab.index);
+    }
+  },
 };

@@ -1,0 +1,33 @@
+import type { TabManager } from './tab-manager.js';
+import type { ShellManager } from './shell-manager.js';
+import type { AcpManager } from './acp-manager.js';
+import type { DatabaseManager } from './database-manager.js';
+import type { AgentCommunicationManager } from './agent-communication-manager.js';
+import type { HarnessManager } from './harness-manager.js';
+import type { ScheduleManager } from './schedule-manager.js';
+import type { PseudoterminalManager } from './pseudoterminal-manager.js';
+import type { BrowserManager } from './browser-tab.js';
+import type { ProfileManager } from './profile-manager.js';
+import type { ConnectionManager } from './connection-manager.js';
+import type { OpenFileManager } from './open-file-manager.js';
+import type { CaptureManager } from './capture-manager.js';
+import type { CommandManager } from './command-manager.js';
+import type { WorkspaceManager } from './workspace-manager.js';
+
+export interface Managers {
+  tab: TabManager;
+  shell: ShellManager;
+  acp: AcpManager;
+  database: DatabaseManager;
+  communication: AgentCommunicationManager;
+  harness: HarnessManager;
+  schedule: ScheduleManager;
+  pty: PseudoterminalManager;
+  browser: BrowserManager;
+  profile: ProfileManager;
+  connection: ConnectionManager;
+  openFile: OpenFileManager;
+  capture: CaptureManager;
+  command: CommandManager;
+  workspace: WorkspaceManager;
+}

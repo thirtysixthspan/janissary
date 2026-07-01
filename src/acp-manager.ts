@@ -1,5 +1,9 @@
 import type { AcpSession, AcpInfo } from './types.js';
 import { connectAcp } from './acp.js';
+import { runAcpToolLoop } from './acp-loop.js';
+import { extractBrowserCommand, BROWSER_PRIMER } from './browser-command.js';
+import { messageBus } from './bus.js';
+import type { Managers } from './managers.js';
 
 // The ACP agent the manager connects to and the model it runs. Hardcoded for now (the only provider
 // wired up); the model string drives the `provider/model` label shown in the connections panel.
@@ -29,6 +33,8 @@ type ConnectHooks = {
 export class AcpManager {
   private sessions = new Map<string, AcpSession>();
   private info = new Map<string, AcpInfo>();
+
+  constructor(private managers: Managers) {}
 
   // Whether a tab has a connected (or connecting) ACP session. Drives the connections panel and completion.
   has(label: string): boolean {
@@ -77,5 +83,47 @@ export class AcpManager {
     for (const [, session] of this.sessions) session.kill();
     this.sessions.clear();
     this.info.clear();
+  }
+
+  run(label: string, command: string, onDone?: (output: string) => void): void {
+    const prompt = command.replace(/^acp\b\s*/i, '').trim();
+    if (!prompt) { this.managers.tab.append(label, { input: command, output: 'Usage: acp <prompt>.' }); return; }
+
+    const session = this.session(label, this.managers.tab.cwdOf(label) ?? process.cwd(), {
+      onError: (m) => this.managers.tab.append(label, { input: '', output: `ACP: ${m}` }),
+      onConnect: () => messageBus.emit('state', { type: 'dirty' }),
+    });
+
+    const updateRunning = (output: string, running: boolean) => {
+      const t = this.managers.tab.tabs.find((x) => x.label === label);
+      if (t) {
+        const log = [...t.log];
+        const index = log.findLastIndex((e) => e.running);
+        if (index !== -1) log[index] = { ...log[index], output, running };
+        t.log = log;
+        if (!running) this.managers.tab.persist(this.managers.tab.buildAgentState(t));
+      }
+      if (!running && output && t) messageBus.emit('transcript', { type: 'entry:appended', tabLabel: label, entry: { input: '', output }, tab: t });
+      messageBus.emit('state', { type: 'dirty' });
+    };
+
+    let lastAnswer = '';
+    runAcpToolLoop(session, prompt, {
+      primer: `${this.managers.database.primer}\n\n${BROWSER_PRIMER}\n\nWrite your replies in GitHub-flavored Markdown (headings, lists, tables, fenced code blocks, etc.); the tab renders them as formatted Markdown.`,
+      runCommand: (c) => (/^browser\b/i.test(c) ? this.managers.browser.run(label, c) : this.managers.database.runInTab(label, c)),
+      extractCommand: (t) => extractBrowserCommand(t) ?? this.managers.database.extract(t) ?? null,
+    }, {
+      startTurn: (isFirst) => { this.managers.tab.addBusy(label); this.managers.tab.append(label, { input: isFirst ? prompt : '', output: '', running: true, markdown: true }); },
+      chunk: (buffer) => updateRunning(buffer, true),
+      endTurn: (final) => { updateRunning(final, false); lastAnswer = final; },
+      ranCommand: (c, result) => this.managers.tab.append(label, { input: c, output: result, acp: true }),
+      finished: (reason, maxSteps) => {
+        this.managers.tab.deleteBusy(label);
+        if (reason === 'capped') this.managers.tab.append(label, { input: '', output: `(stopped after ${maxSteps} tool steps)` });
+        messageBus.emit('state', { type: 'dirty' });
+        onDone?.(lastAnswer);
+      },
+      error: (m) => { updateRunning(`ACP error: ${m}`, false); this.managers.tab.deleteBusy(label); onDone?.(`ACP error: ${m}`); },
+    });
   }
 }
