@@ -2,9 +2,10 @@ import type { AcpInfo, AcpSession, LogEntry, MonitorSuggestion, MonitorTarget } 
 import type { Subscription } from './bus.js';
 import { messageBus } from './bus.js';
 import { loadPersona, type Persona } from './personas.js';
-import { spawnMonitorSession } from './monitor-acp.js';
-import { parseSuggestion, SUGGESTION_FORMAT } from './monitor-parsing.js';
+import { parseSuggestion } from './monitor-parsing.js';
 import { openMonitorTab, closeMonitorTab, pushSuggestion, findSuggestion, removeSuggestion } from './monitor-window.js';
+import { openMonitorSession, respawnMonitorSession } from './monitor-session.js';
+import { spawnMonitorSession } from './monitor-acp.js';
 import { validateTargets, matchesTargets, targetColor } from './monitor-targets.js';
 import { listMonitors, monitorConnections } from './monitor-info.js';
 import type { ConnectionView } from './protocol.js';
@@ -78,23 +79,13 @@ export class MonitorManager {
   // Spawn the monitor's dedicated session and prime it with the persona body + reply
   // format; `inFlight` holds flushes off until priming settles.
   private openSession(reg: MonitorSub): void {
-    reg.inFlight = true;
-    reg.session = this.spawn(reg.persona, this.managers.tab.cwdOf(reg.owner) ?? process.cwd(), {
-      onError: (message) => this.managers.tab.append(reg.owner, { input: '', output: `monitor ${reg.persona.name}: ${message}` }),
-      onConnect: (info) => { reg.info = info; messageBus.emit('state', { type: 'dirty' }); },
-    });
-    reg.session.prompt(`${reg.persona.body}\n\n${SUGGESTION_FORMAT}`, {
-      onChunk: () => {},
-      onEnd: () => { reg.inFlight = false; },
-      onError: () => { reg.inFlight = false; },
-    });
+    openMonitorSession(reg, this.managers, this.spawn);
   }
 
   // A prompt failed (typically the ACP subprocess died). Replace the session with a
   // fresh, re-primed one so the monitor recovers instead of staying dead.
   private respawn(reg: MonitorSub): void {
-    reg.session.kill();
-    this.openSession(reg);
+    respawnMonitorSession(reg, this.managers, this.spawn);
   }
 
   private subscribe(key: string, reg: MonitorSub): void {
