@@ -41,7 +41,7 @@ export function renderLine(
       <div
         key={index}
         className="line prompt"
-        title="Click to re-run this command"
+        title="Click to execute this command"
         onClick={() => {
           const selection = globalThis.getSelection()?.toString();
           if (selection) return;

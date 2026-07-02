@@ -10,9 +10,9 @@ Each tab stores its own command history array and navigation index. Switching ta
 
 The Up arrow walks backward through the history (most recent first). The Down arrow walks forward. Past the newest entry, the input line clears. Each recalled entry is placed on the input line with the cursor at its end.
 
-### Click to pre-fill
+### Click to execute
 
-Clicking any prompt line (`❯ <command>`) in the transcript copies that command into the command bar, ready to re-run or edit. The pre-fill replaces whatever text is currently in the input, resets the history navigation index, and parks the cursor at the end of the text. Drag-selecting text on a prompt line still copies to the clipboard and does not trigger pre-fill. ACP prompt lines (agent tool steps) keep their collapse-toggle click behavior.
+Clicking any prompt line (`❯ <command>`) in the transcript immediately executes that command again, as if it were typed into the command bar and Enter was pressed. Drag-selecting text on a prompt line still copies to the clipboard and does not trigger execution. ACP prompt lines (agent tool steps) keep their collapse-toggle click behavior.
 
 ### History picker
 

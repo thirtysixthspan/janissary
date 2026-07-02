@@ -7,12 +7,11 @@ type Properties = {
   history: string[];
   onSubmit: (text: string) => void;
   inputRef: React.RefObject<HTMLInputElement | null>;
-  prefillRef: React.RefObject<((text: string) => void) | null>;
   complete: (text: string, cursor: number) => Promise<CompletionResult>;
   pickerOpen: boolean;
 };
 
-export function CommandInput({ dotColor, history, onSubmit, inputRef, prefillRef, complete, pickerOpen }: Properties) {
+export function CommandInput({ dotColor, history, onSubmit, inputRef, complete, pickerOpen }: Properties) {
   const [value, setValue] = useState('');
   const [completions, setCompletions] = useState<string[]>([]);
   const histIndex = useRef(-1);
@@ -20,12 +19,6 @@ export function CommandInput({ dotColor, history, onSubmit, inputRef, prefillRef
   const recall = (text: string) => {
     setValue(text);
     requestAnimationFrame(() => { const element = inputRef.current; if (element) element.selectionStart = element.selectionEnd = text.length; });
-  };
-
-  prefillRef.current = (text: string) => {
-    recall(text);
-    histIndex.current = -1;
-    setCompletions([]);
   };
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
