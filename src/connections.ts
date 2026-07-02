@@ -1,7 +1,7 @@
 import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync, rmSync, existsSync, readdirSync } from 'node:fs';
 import path from 'node:path';
-import type { ConnectionKind, ConnectionParsed } from './types.js';
+export { parseConnectionCommand } from './connection-parsing.js';
 
 // SQLite databases live under .janissary/db/sqlite/<name>.sqlite and, unlike
 // agent state and workspaces, persist across launches — that is the whole point.
@@ -78,35 +78,4 @@ export function listOpenConnections(): string[] {
   return [...connections.keys()].toSorted((a, b) => a.localeCompare(b));
 }
 
-// --- The generic `connection` command -------------------------------------
 
-const KINDS: ConnectionKind[] = ['sqlite', 'shell', 'acp', 'browser'];
-const USAGE = 'Usage: connection <list|close> [kind:id]  (e.g. connection close sqlite:mydb)';
-
-/** Parse a `connection ...` command. Pure — performs no I/O. */
-export function parseConnectionCommand(input: string): ConnectionParsed {
-  const rest = input.trim().replace(/^connection\b\s*/i, '').trim();
-  if (!rest) return { error: USAGE };
-
-  const [actionRaw, target] = rest.split(/\s+/);
-  const action = actionRaw.toLowerCase();
-
-  if (action === 'list') return { action: 'list' };
-
-  if (action === 'close') {
-    if (!target) return { error: 'Usage: connection close <kind>:<id>' };
-    const index = target.indexOf(':');
-    if (index === -1) {
-      return { error: `Invalid connection "${target}". Expected <kind>:<id>, e.g. sqlite:mydb.` };
-    }
-    const kind = target.slice(0, index).toLowerCase();
-    if (!KINDS.includes(kind as ConnectionKind)) {
-      return { error: `Unknown connection kind "${kind}". Expected one of: ${KINDS.join(', ')}.` };
-    }
-    const id = target.slice(index + 1);
-    if (!id) return { error: `Missing id in "${target}".` };
-    return { action: 'close', kind: kind as ConnectionKind, id };
-  }
-
-  return { error: USAGE };
-}
