@@ -13,6 +13,7 @@ function makeTab(overrides: Partial<TabView> = {}): TabView {
     group: 0,
     groupColor: '#000',
     busy: false,
+    hasUnread: false,
     cwd: '/tmp',
     connections: [],
     schedule: [],
@@ -84,5 +85,19 @@ describe('TabStrip', () => {
       <TabStrip tabs={[tab]} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()} />,
     );
     expect(container.querySelector('.dot.busy')).toBeInTheDocument();
+  });
+
+  it('shows the unread badge when hasUnread is set', () => {
+    const { container } = render(
+      <TabStrip tabs={[makeTab({ hasUnread: true })]} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()} />,
+    );
+    expect(container.querySelector('.tab-badge')).toBeInTheDocument();
+  });
+
+  it('shows no badge when hasUnread is false', () => {
+    const { container } = render(
+      <TabStrip tabs={[makeTab({ hasUnread: false })]} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()} />,
+    );
+    expect(container.querySelector('.tab-badge')).not.toBeInTheDocument();
   });
 });

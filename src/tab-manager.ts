@@ -96,9 +96,21 @@ export class TabManager {
     };
   }
 
+  private activeLabel(): string | undefined {
+    return this.tabs[this.activeTab]?.label;
+  }
+
+  markUnread(label: string): void {
+    if (label === this.activeLabel()) return;
+    const tab = this.tabs.find((t) => t.label === label);
+    if (tab) tab.hasUnread = true;
+  }
+
   setActiveTab(index: number): void {
     if (index < 0 || index >= this.tabs.length) return;
     this.activeTab = index;
+    const tab = this.tabs[index];
+    if (tab) tab.hasUnread = false;
     messageBus.emit('state', { type: 'dirty' });
   }
 
@@ -113,6 +125,8 @@ export class TabManager {
     this.tabs = next;
     const to = dir < 0 ? Math.max(0, from - 1) : Math.min(from + 1, this.tabs.length - 1);
     this.activeTab = to;
+    const active = this.tabs[to];
+    if (active) active.hasUnread = false;
     this.persist(this.buildAgentState(this.tabs[from]));
     this.persist(this.buildAgentState(this.tabs[to]));
     messageBus.emit('state', { type: 'dirty' });
@@ -129,6 +143,8 @@ export class TabManager {
     }
     this.tabs = this.tabs.filter((_, index_) => index_ !== index).map((t, index_) => ({ ...t, number: index_ + 1 }));
     this.activeTab = Math.min(this.activeTab, this.tabs.length - 1);
+    const active = this.tabs[this.activeTab];
+    if (active) active.hasUnread = false;
     messageBus.emit('state', { type: 'dirty' });
   }
 
@@ -168,6 +184,7 @@ export class TabManager {
         type: 'entry:appended', tabLabel: label, entry: { input: '', output }, tab: t,
       });
     }
+    this.markUnread(label);
     messageBus.emit('state', { type: 'dirty' });
   }
 
@@ -185,6 +202,7 @@ export class TabManager {
     const trimmed = before + 1 - tab.log.length;
     if (trimmed > 0) messageBus.emit('transcript', { type: 'entries:trimmed', tabLabel: label, count: trimmed });
     messageBus.emit('transcript', { type: 'entry:appended', tabLabel: label, entry, tab });
+    this.markUnread(label);
     messageBus.emit('state', { type: 'dirty' });
   }
 
@@ -235,6 +253,7 @@ export class TabManager {
       group: t.group,
       groupColor: t.groupColor,
       busy: this.busy.has(t.label),
+      hasUnread: !!t.hasUnread,
       cwd: this.cwd.get(t.label) ?? process.cwd(),
       acp: acpLabel(t.label),
       connections: connectionsFor(t.label),

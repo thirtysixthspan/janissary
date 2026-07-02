@@ -95,6 +95,7 @@ html, body, #root {
 /* While the agent is busy, blink the dot fully on/off (600ms each), mirroring the Ink tab strip. */
 .tab .dot.busy { animation: dot-blink 1.2s step-end infinite; }
 @keyframes dot-blink { 0% { opacity: 1; } 50% { opacity: 0; } }
+.tab .tab-badge { font-size: 0.8em; line-height: 1; }
 
 /* The active tab's window body (transcript + command line), with the agent-colored left edge. */
 .tab-body { flex: 1; min-height: 0; display: flex; flex-direction: column; }

@@ -82,6 +82,7 @@ export class ShellManager {
       onChunk: (buffer) => update(buffer, true),
       onDone: (result) => {
         update(result, false);
+        this.managers.tab.markUnread(label);
         if (result && tab) messageBus.emit('transcript', { type: 'entry:appended', tabLabel: label, entry: { input: '', output: result }, tab });
         options?.onComplete?.(result);
       },

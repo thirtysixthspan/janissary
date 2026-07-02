@@ -33,6 +33,8 @@ export type TabView = {
   group: number;
   groupColor: string;
   busy: boolean;
+  // True when the tab has unseen output (see Tab.hasUnread). Drives the tab-strip badge.
+  hasUnread: boolean;
   cwd: string;
   // provider/model of a connected ACP agent on this tab, if any.
   acp?: string;

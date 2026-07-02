@@ -46,6 +46,16 @@ The active tab shows full-intensity foreground text on the content background co
 
 While a tab's agent is busy — running a shell command, an ACP turn, or any other in-flight work (the `busy` flag on the tab) — its colored dot **blinks**, toggling fully on and off (600ms each), so an at-a-glance scan of the strip shows which agents are working even when their tabs are not focused. The blink applies to every tab regardless of focus; when the work finishes the dot returns to a steady fill in the tab's dot color.
 
+### Unread badge
+
+When an **inactive** tab receives new transcript content — a message from another agent (`msg`/`broadcast`), ACP/agent output, a shell command finishing, or a browser/connection command completing — a **sparkle badge (✨)** appears on that tab in the tab strip, rendered as a sibling of the tab name so it does not inherit the busy-dot blink. The badge stays until the tab is focused, then clears. The active tab never shows the sparkle.
+
+**Marking.** Content delivery marks a tab unread via a single `TabManager.markUnread(label)` helper, which sets `hasUnread` only when the target tab is not the active tab. The helper is called from `append` (messages, command output, ACP output), `finishRunning` (browser/connection completion), and the shell manager's `onDone` callback (shell command completion). In-progress shell output (`onChunk`) does not mark — the busy dot already conveys that state; the badge signals completed new output.
+
+**Clearing.** Focusing a tab always clears its badge, regardless of the activation path: click, `next`, Shift+←/→, or any other route through `setActiveTab`. Paths that set `activeTab` directly (`reorderTab`, `closeTab`) clear the badge explicitly as well, so the invariant "the focused tab never shows the sparkle" holds without exception.
+
+**Persistence.** `hasUnread` is in-memory only — not persisted to agent state — so tabs rehydrate with no badge on `--relaunch` (same policy as `scrollOffset` and `toolStepsExpanded`).
+
 ### Tab switching with arrow keys
 
 Shift+Left and Shift+Right arrow keys cycle through open tabs. No-op when only one tab exists. (Unmodified Left/Right move the input cursor; Ctrl+Left/Right reorder the current tab within its group — see Tab grouping.)

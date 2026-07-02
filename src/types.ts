@@ -134,6 +134,10 @@ export type Tab = {
   // collapsed into a single summary line in the transcript. Toggled with Ctrl+T. In-memory
   // only (like scrollOffset) — not persisted to agent state.
   toolStepsExpanded?: boolean;
+  // Set when new transcript content arrives on this tab while it is NOT the active tab; cleared
+  // when the tab is activated. Drives the unread badge in the tab strip. In-memory only (like
+  // scrollOffset) — not persisted to agent state.
+  hasUnread?: boolean;
 };
 
 // --- agent-state.ts -------------------------------------------------------
