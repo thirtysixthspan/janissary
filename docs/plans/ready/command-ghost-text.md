@@ -1,5 +1,7 @@
 # Command bar ghost text
 
+**Complexity: 3/10** — entirely client-side in one component, but correctness depends on the CSS mirror-overlay alignment (shared font rule, paint-order via `position: relative`), the caret-position gate on acceptance, and the `preventDefault`-only-on-accept discipline in the key switch.
+
 ## Goal
 
 As the user types in the command bar, the most recent matching history entry appears as greyed **ghost text** after the cursor — **→ (ArrowRight) or End accepts it**, any other key ignores it. Familiar from fish shell and modern browser address bars.
@@ -21,7 +23,7 @@ Entirely client-side in `web/src/CommandInput.tsx`: derive the suggestion from t
 
 **Accepting behaves exactly like having typed the suggestion.** Reuse the existing `recall` (`web/src/CommandInput.tsx:25-28`) to set the value and park the cursor at the end, and clear `completions` — because typing clears them too (`onChange`, `web/src/CommandInput.tsx:85`). Leave `histIndex` alone — typing doesn't touch it either.
 
-**Render via a mirror overlay; one CSS rule owns the font metrics.** The command line is a real `<input>`, so the ghost can't live inside it. Overlay an absolutely-positioned, `pointer-events: none` span containing the typed text rendered invisible (`visibility: hidden`) followed by the ghost remainder in `var(--muted)`. Alignment holds only if the overlay and the input share identical font metrics, so do **not** duplicate the font declarations — move them into a combined selector (`.command input, .command .ghost`) so there is a single source of truth that cannot drift. The input already has `background: transparent` and no padding/border of its own (`web/src/theme.css:213-216`; the padding lives on `.command`, `:211`), which is what makes the overlay technique work here without compensating offsets. Long lines degrade gracefully (`overflow: hidden` — the ghost simply clips).
+**Render via a mirror overlay; one CSS rule owns the font metrics.** The command line is a real `<input>`, so the ghost can't live inside it. Overlay an absolutely-positioned, `pointer-events: none` span containing the typed text rendered invisible (`visibility: hidden`) followed by the ghost remainder in `var(--muted)`. Alignment holds only if the overlay and the input share identical font metrics, so do **not** duplicate the font declarations — move them into a combined selector (`.command input, .command .ghost`) so there is a single source of truth that cannot drift. The input already has `background: transparent` and no padding/border of its own (`web/src/theme.css:214-217`; the padding lives on `.command`, `:212`), which is what makes the overlay technique work here without compensating offsets. Long lines degrade gracefully (`overflow: hidden` — the ghost simply clips).
 
 **Extract the matcher into a module.** Mirrors the repo pattern (`history.ts`, `command-completion.ts`, recent extraction commits): a tiny pure function in a new `web/src/ghost-suggestion.ts`, unit-tested like `history.test.ts`. Keeps `CommandInput.tsx` well under the 200-line limit and the logic trivially testable without DOM.
 
@@ -31,16 +33,16 @@ Entirely client-side in `web/src/CommandInput.tsx`: derive the suggestion from t
 |---|---|
 | Command input component (all component changes land here) | `web/src/CommandInput.tsx` |
 | Per-tab history prop (server-provided `cmdHistory`, newest last) | `web/src/App.tsx:177` → `history` prop |
-| Proof of history order (ArrowUp starts at the end) | `web/src/CommandInput.tsx:56` |
-| Key switch to extend (add cases before `// No default`) | `web/src/CommandInput.tsx:39-71` |
-| Shift/Ctrl early-return (protects chords & selection keys) | `web/src/CommandInput.tsx:33` |
-| `recall` — set value + cursor at end (reuse for acceptance) | `web/src/CommandInput.tsx:25-28` |
-| Typing clears completions (acceptance must match) | `web/src/CommandInput.tsx:85` |
-| Command-line DOM to wrap | `web/src/CommandInput.tsx:77-88` |
-| Input CSS rule to split (transparent bg, mono font) | `web/src/theme.css:213-216` |
+| Proof of history order (ArrowUp starts at the end) | `web/src/CommandInput.tsx:56` (`histIndex.current === -1 ? history.length - 1`) |
+| Key switch to extend (add cases before `// No default`) | `web/src/CommandInput.tsx:39-71` (`switch (e.key)` through `// No default`) |
+| Shift/Ctrl early-return (protects chords & selection keys) | `web/src/CommandInput.tsx:33` (`if (e.shiftKey || e.ctrlKey) return;`) |
+| `recall` — set value + cursor at end (reuse for acceptance) | `web/src/CommandInput.tsx:25-28` (`const recall = (text: string) => { … }`) |
+| Typing clears completions (acceptance must match) | `web/src/CommandInput.tsx:85` (`setCompletions([])` in `onChange`) |
+| Command-line DOM to wrap | `web/src/CommandInput.tsx:77-88` (`.command` div containing the `<input>`) |
+| Input CSS rule to split (transparent bg, mono font) | `web/src/theme.css:214-217` |
 | Pure-function + test pattern to mirror | `web/src/history.ts`, `web/src/history.test.ts` |
 | Component test pattern to mirror | `web/src/TabStrip.test.tsx` (vitest + `@testing-library/react` + `userEvent`) |
-| Muted color token | `var(--muted)` (used by `.completions`, `theme.css:210`) |
+| Muted color token | `var(--muted)` (used by `.completions`, `theme.css:211`) |
 
 ## Implementation steps
 
@@ -68,7 +70,7 @@ Do them in this order; the checkpoint after step 4 proves the wiring compiles, l
 
    - `case 'ArrowRight': case 'End':` — read the caret from `inputRef.current`; if a ghost exists and `selectionStart === selectionEnd === value.length`, call `e.preventDefault()`, then `recall(ghost)` and `setCompletions([])`; otherwise just `break` so the key keeps its native behavior. Do **not** call `preventDefault` on the fall-through path, do **not** touch `histIndex`, and do **not** re-implement `recall`.
 
-3. **`web/src/CommandInput.tsx` — render the overlay.** Wrap the `<input>` (`:80-87`) in a `<div className="input-wrap">`; when `ghost` is set, render before the input:
+3. **`web/src/CommandInput.tsx` — render the overlay.** Wrap the `<input>` (`:80-87`) in a `<div className="input-wrap">`; when `ghost` is set, render the ghost span **inside** `.input-wrap`, before the `<input>`:
 
    ```tsx
    <span className="ghost" aria-hidden="true">
@@ -78,9 +80,9 @@ Do them in this order; the checkpoint after step 4 proves the wiring compiles, l
 
    `aria-hidden` keeps the mirror out of the accessibility tree; the real input's value is unchanged until acceptance. Change nothing else about the input element or its props.
 
-4. **`web/src/theme.css`** — extend the `/* Command input */` block (`:208-216`) only:
+4. **`web/src/theme.css`** — extend the `/* Command input */` block (`:209-217`) only:
 
-   - Split the existing `.command input` rule (`:213-216`): keep `flex: 1; background: transparent; border: none; outline: none; color: var(--fg);` on `.command input`, and move the two font declarations (`font-family: var(--mono); font-size: 13.1625px;`) into a new combined rule `.command input, .command .ghost { … }` — the single source of truth for alignment. Do not retype the font-size; cut and paste it.
+    - Split the existing `.command input` rule (`:214-217`): keep `flex: 1; background: transparent; border: none; outline: none; color: var(--fg);` on `.command input`, and move the two font declarations (`font-family: var(--mono); font-size: 13.1625px;`) into a new combined rule `.command input, .command .ghost { … }` — the single source of truth for alignment. Do not retype the font-size; cut and paste it.
    - Add `position: relative;` to `.command input`. Without it the absolutely-positioned ghost paints **on top of** the input (positioned elements paint above in-flow siblings regardless of DOM order) and can obscure the caret; making the input positioned too restores DOM-order painting, putting the ghost behind.
    - New rules:
      - `.command .input-wrap { position: relative; flex: 1; display: flex; }`
@@ -101,7 +103,7 @@ Do them in this order; the checkpoint after step 4 proves the wiring compiles, l
 - Returns `undefined` for: empty input; no matching entry; an exact match with nothing to extend (`['ls']`, typed `'ls'`).
 - Matching is case-sensitive (`['Git status']`, typed `'git'` → `undefined`) and anchored at the start (`['agent foo']`, typed `'gent'` → `undefined`).
 
-**`CommandInput.test.tsx`** (extend it if the prompt-click-prefill plan already created it, else create it, mirroring `TabStrip.test.tsx` imports). Notes to avoid jsdom dead ends:
+**`CommandInput.test.tsx`** (extend it if the transcript-click-prefill plan already created it, else create it, mirroring `TabStrip.test.tsx` imports). Notes to avoid jsdom dead ends:
 
 - The ghost is `aria-hidden`, so query it with `container.querySelector('.ghost')`, not `screen.getByText`.
 - `userEvent.type` leaves the caret at the end — the accepting position. For the mid-text case, call `input.setSelectionRange(n, n)` first, then `fireEvent.keyDown(input, { key: 'ArrowRight' })`.
