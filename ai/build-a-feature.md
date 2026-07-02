@@ -4,6 +4,8 @@ Your job: pick the simplest available plan from `docs/plans/ready/`, implement i
 
 **Shell hygiene:** run every command on its own line — no `&&` chaining, no `; echo "Exit code: $?"` suffixes, no subshell captures. To run a project script, always use `./scripts/run.mjs <name>` — never call `node scripts/<name>.mjs` directly.
 
+**Run autonomously.** This task runs unattended — do not ask the user questions or wait for feedback at any step. Make the best judgment call yourself, using the rules in this document, and keep going. Only stop early for the conditions explicitly listed under "Forbidden" below (e.g. no plans available, only 7+ complexity plans, discovering out-of-scope file edits).
+
 ## What you may and may not do
 
 ### Allowed — do it automatically, never ask
@@ -20,7 +22,13 @@ Read any file in the repo. Edit source, tests, CSS, and spec files as the plan d
 
 ---
 
-## Step 1 — List ready plans and pick the simplest
+## Step 1 — Install dependencies
+
+Run `npm install` to ensure dependencies are up to date before doing anything else.
+
+---
+
+## Step 2 — List ready plans and pick the simplest
 
 1. List every `.md` file in `docs/plans/ready/`.
 2. For each file, read the first few lines to find the complexity rating line: `**Complexity: N/10**`.
@@ -32,7 +40,7 @@ State your pick and its complexity in one sentence.
 
 ---
 
-## Step 2 — Read the plan and the project constraints
+## Step 3 — Read the plan and the project constraints
 
 1. Read the entire chosen plan.
 2. Read the project constraints that shape implementation: the ESLint rules and file-size limit in [`CLAUDE.md`](../CLAUDE.md) (200-line `max-lines`, `.js` import extensions in `src/`, type-aware rules), and the test conventions (`src/**/*.test.ts`, `web/src/**/*.test.tsx`).
@@ -40,7 +48,7 @@ State your pick and its complexity in one sentence.
 
 ---
 
-## Step 3 — Implement the plan
+## Step 4 — Implement the plan
 
 Follow the plan's implementation steps **in order**. After each step:
 
@@ -57,7 +65,7 @@ Key rules during implementation:
 
 ---
 
-## Step 4 — Write the tests
+## Step 5 — Write the tests
 
 If the plan has a Tests section, implement every test case listed. Mirror the test style of the referenced test files (imports, helper patterns, assertion style).
 
@@ -65,7 +73,7 @@ Run `./scripts/run.mjs check-diff` after writing tests. All tests must pass.
 
 ---
 
-## Step 5 — Update or create spec files
+## Step 6 — Update or create spec files
 
 Every feature must be reflected in the functional specs under `spec/`. After implementation and tests:
 
@@ -77,14 +85,14 @@ Spec files are markdown and do not affect `check-diff`, so no verification run i
 
 ---
 
-## Step 6 — Final verification
+## Step 7 — Final verification
 
 1. Run `./scripts/run.mjs check-diff` one last time. It must pass clean.
 2. Manually verify the behavior if the plan's Verification section describes manual steps. If manual verification is not possible in this environment, note that in the report.
 
 ---
 
-## Step 7 — Promote the plan
+## Step 8 — Promote the plan
 
 Move the plan file from `docs/plans/ready/` to `docs/plans/complete/`:
 
@@ -94,13 +102,13 @@ git mv docs/plans/ready/<plan-file> docs/plans/complete/<plan-file>
 
 ---
 
-## Step 8 — Open the pull request
+## Step 9 — Open the pull request
 
 Execute `ai/open-feature-pull-request.md` in full. That document owns the PR workflow — follow its steps without deviation.
 
 ---
 
-## Step 9 — Report
+## Step 10 — Report
 
 Give the user a short report in this exact shape:
 

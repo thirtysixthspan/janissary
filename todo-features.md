@@ -53,3 +53,6 @@ update or remove next run time in schedule after a run
 
 web links in agent windows should open web view tabs rather than chrome tabs.
 
+remove tool tip on hover of commands in the transcript
+automatically excute the commands by sending them through the command line: dont require a return jeypress to execute.
+
