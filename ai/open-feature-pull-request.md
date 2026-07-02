@@ -152,10 +152,10 @@ If earlier commits already exist on the branch, consolidate so the **final** sta
 ./scripts/run.mjs pr-resolve-remote
 ```
 
-This prints a single space-separated line: `GH_REMOTE OWNER_REPO BRANCH GH_URL`. Read those four values directly from the command's stdout output and carry them as `GH_REMOTE`, `OWNER_REPO`, `BRANCH`, and `GH_URL` through the remaining steps, then push:
+This prints a single space-separated line: `GH_REMOTE OWNER_REPO BRANCH GH_URL`. Read those four values directly from the command's stdout output. Each Bash command runs in its own fresh shell with no state persisted from the previous one, so do not reference them as shell variables (`$GH_REMOTE`) in later commands — substitute the actual literal values you read into each subsequent command:
 
 ```bash
-./scripts/run.mjs pr-push-branch "$GH_REMOTE" "$BRANCH"
+./scripts/run.mjs pr-push-branch origin my-branch-name
 ```
 
 ---
@@ -176,10 +176,10 @@ Use natural line breaks — never wrap lines at a fixed column.
 
 ## Step 6 — Open the PR against `master`
 
-Use the commit subject as `<title>`. Pass the body file:
+Use the commit subject as `<title>`. Substitute the actual `OWNER_REPO` and `BRANCH` values you read in Step 4, and pass the body file:
 
 ```bash
-./scripts/run.mjs pr-create-pr "$OWNER_REPO" "$BRANCH" "<title>" ./temp/pr-body.md
+./scripts/run.mjs pr-create-pr owner/repo my-branch-name "<title>" ./temp/pr-body.md
 ```
 
 Record the PR number and URL that the command prints.
