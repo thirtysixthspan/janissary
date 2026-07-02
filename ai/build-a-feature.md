@@ -2,7 +2,7 @@
 
 Your job: pick the simplest available plan from `docs/plans/ready/`, implement it end to end, update the functional specs, promote the plan to `docs/plans/complete/`, and open a pull request. You change source code, tests, spec files, and the plan file's location — nothing else.
 
-**Shell hygiene:** run every command on its own line — no `&&` chaining, no `; echo "Exit code: $?"` suffixes, no subshell captures. To run a project script, always use `./scripts/run.mjs <name>` — never call `node scripts/<name>.mjs` directly.
+**Shell hygiene:** run every command on its own line — no `&&` chaining, no `; echo "Exit code: $?"` suffixes, no subshell captures, no `for`/`while` loops, no variable expansion (`$var`, `$(...)`). Commands with control-flow or expansion require manual approval and will stall an unattended run. To run a project script, always use `./scripts/run.mjs <name>` — never call `node scripts/<name>.mjs` directly.
 
 **Run autonomously.** This task runs unattended — do not ask the user questions or wait for feedback at any step. Make the best judgment call yourself, using the rules in this document, and keep going. Only stop early for the conditions explicitly listed under "Forbidden" below (e.g. no plans available, only 7+ complexity plans, discovering out-of-scope file edits).
 
@@ -31,7 +31,7 @@ Run `npm install` to ensure dependencies are up to date before doing anything el
 ## Step 2 — List ready plans and pick the simplest
 
 1. List every `.md` file in `docs/plans/ready/`.
-2. For each file, read the first few lines to find the complexity rating line: `**Complexity: N/10**`.
+2. For each file, use the `Read` tool to read the first few lines and find the complexity rating line: `**Complexity: N/10**`. Do not use a shell loop to do this.
 3. If no plans exist, report "No plans in `docs/plans/ready/`" and stop.
 4. If the lowest complexity found is **7 or above**, report the list with ratings and stop — do not pick one.
 5. Otherwise, pick the plan with the **lowest** complexity number. On a tie, pick whichever plan name comes first alphabetically.
