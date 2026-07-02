@@ -62,6 +62,9 @@ Options:
   --relaunch    Reattach to existing state instead of clearing it
   --help        Show this help
   --version     Show version
+
+Environment:
+  JANUS_DEBUG=1  print stack traces on failure
 `;
 }
 

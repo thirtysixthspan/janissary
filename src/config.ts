@@ -26,6 +26,7 @@ export function loadConfig(projectDirectory: string): Config {
     config = { ...DEFAULT_CONFIG, ...parsed };
     return config;
   } catch {
+    process.stderr.write('warning: .janissary/config.json is invalid JSON — using defaults (file left untouched)\n');
     config = { ...DEFAULT_CONFIG };
     return config;
   }

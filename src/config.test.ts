@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { mkdirSync, writeFileSync, rmSync, existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { tmpdir } from 'node:os';
@@ -51,6 +51,22 @@ describe('loadConfig', () => {
 
     const config = loadConfig(tmpDir);
     expect(config.transcriptMaxLines).toBe(DEFAULT_TRANSCRIPT_MAX_LINES);
+  });
+
+  it('warns on stderr and leaves the file untouched on parse error', () => {
+    const configDir = path.join(tmpDir, '.janissary');
+    mkdirSync(configDir, { recursive: true });
+    const configPath = path.join(configDir, 'config.json');
+    writeFileSync(configPath, 'not-json');
+
+    const writeSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    loadConfig(tmpDir);
+    expect(writeSpy).toHaveBeenCalledWith(
+      expect.stringContaining('.janissary/config.json is invalid JSON — using defaults (file left untouched)'),
+    );
+    writeSpy.mockRestore();
+
+    expect(readFileSync(configPath, 'utf8')).toBe('not-json');
   });
 
   it('getConfig returns the last loaded config', () => {
