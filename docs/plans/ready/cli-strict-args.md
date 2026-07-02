@@ -1,5 +1,7 @@
 # CLI: reject malformed and unknown arguments
 
+**Complexity: 2/10** — flips `parseArgs` to strict mode, adds a `CliUsageError` class, port validation, and an exit-code branch; small and well-bounded, but depends on [cli-help-version.md](cli-help-version.md) landing first.
+
 ## Goal
 
 `janus` exits with code 2 and a one-line pointer to `--help` when given an argument it does not understand, instead of silently ignoring it and booting the server. Today (`src/main.ts:99-102`):

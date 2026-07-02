@@ -1,5 +1,7 @@
 # Unread badge on inactive tabs
 
+**Complexity: 3/10** — one boolean flag with a tiny render change, but correctness depends on catching every content-delivery path (`append`, `finishRunning`, shell `onDone`) and every activation path (`setActiveTab`, `reorderTab`, `closeTab`) on the server.
+
 ## Goal
 
 When an **inactive** tab receives new transcript content — a message from another agent (`msg`/`broadcast`), ACP/agent output, or a shell/browser command finishing — a **sparkle badge (✨)** appears on that tab in the tab strip. The badge stays until the tab is focused, then clears. This gives at-a-glance awareness of which background agents have produced new output while you were elsewhere.

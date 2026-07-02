@@ -1,5 +1,7 @@
 # Plan: Editor Tab
 
+**Complexity: 9/10** — a hand-rolled text editor (cursor/selection model, undo coalescing, mouse caret mapping, ~20 keybindings, hidden-textarea input capture) plus the first file-write RPC, a new opener, a new command, and persistent tab mounting; six new web modules, three new server modules, and a dozen touched files.
+
 ## Goal
 
 A new `editor` view tab for editing plain-text files — markdown, source code, configuration files, `.txt` — in the app. The tab shows the file's name, size, and location in the same metadata header the image tab uses; the body is a hand-rolled text editor with a numbered line gutter, soft-wrapped long lines, mouse-wheel scrolling, full cursor/selection keyboard support, an undo/redo buffer, and Cmd+S / Ctrl+S save back to disk.

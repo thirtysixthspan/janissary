@@ -28,12 +28,6 @@ reset kills the current tab's ACP subprocess and starts fresh on the next prompt
 ## Multi-line input mode
 Shift+Return inserts a newline in the command bar rather than submitting, letting you compose multi-line ACP prompts or shell heredocs before sending. A visible line count and a Ctrl+Return-to-submit hint appear in the bar. Requires changing the <input> to an auto-resizing <textarea> while keeping all existing chord handlers intact.
 
-## Input pre-fill from transcript click
-Clicking any prompt line (❯ <command>) in the transcript copies that command into the command bar, ready to re-run or edit. Eliminates scrolling back through history to re-run a command seen on screen. Wired as an onClick on type === 'prompt' lines in Transcript.tsx.
-
-## Command bar ghost text
-As the user types, the most recent matching history entry appears as greyed ghost text after the cursor — → or End accepts it, any other key ignores it. Familiar from fish shell and modern browser address bars. Entirely client-side in CommandInput.tsx: scan cmdHistory for the longest prefix match and render the remainder as a muted <span>.
-
 ## Agent task queue
 task add <agent> <command> enqueues a command to run as soon as the agent becomes non-busy, rather than firing immediately like msg … command. Prevents dropped commands when an agent is mid-turn. Extends the existing per-tab message FIFO with a held-until-idle gating layer.
 
@@ -42,8 +36,6 @@ list the connection in the connection window
 close the ssh connection upon closing of the tab or application
 ssh command should open a ssh connection in a new tab similar to how the harness command creates a new tab. 
 exiting the ssh closes that tab.
-
-
 
 ## improvements
 
@@ -58,4 +50,6 @@ harness tabs should have a tab transcript
 monitors should have access to the tab transcript
 
 update or remove next run time in schedule after a run
+
+web links in agent windows should open web view tabs rather than chrome tabs.
 

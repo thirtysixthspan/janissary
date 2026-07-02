@@ -1,5 +1,7 @@
 # CLI: add `--help` and `--version` flags
 
+**Complexity: 2/10** — one new module around Node's built-in `parseArgs`, two early returns in `boot()`, straightforward unit tests; no protocol or UI surface.
+
 ## Goal
 
 `janus --help` prints a usage summary and exits 0. `janus --version` prints the version from `package.json` and exits 0. Today neither flag is recognized: `boot()` in `src/main.ts:98` only looks for `--relaunch`, `--no-open`, and `--port=`, so `janus --help` silently boots the whole server and opens a browser window — the opposite of what the user asked for.

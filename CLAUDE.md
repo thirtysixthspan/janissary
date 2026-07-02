@@ -75,6 +75,15 @@ This applies to any slow command: lint, typecheck, test runs, builds. Capture to
 
 When writing implementation plans or creating tasks, use natural line breaks only — do not artificially wrap lines at a fixed column width. Let long lines flow naturally so content remains readable in any viewport.
 
+## Plan storage
+
+Implementation plans live in `docs/plans/`, organized into folders by status. Each plan is a single markdown file; move the file between folders as its status changes:
+
+- `docs/plans/draft/` — the plan itself is still being drafted and refined
+- `docs/plans/ready/` — the plan is finalized and ready to implement
+- `docs/plans/complete/` — the plan has been implemented
+- `docs/plans/deferred/` — intentionally put on hold; not planned for near-term work
+
 ## Code guidelines
 
 Follow the conventions in [`CODE_GUIDELINES.md`](CODE_GUIDELINES.md), including the

@@ -1,5 +1,7 @@
 # Actionable startup errors
 
+**Complexity: 3/10** — one small new module plus surgical edits to three existing files; the logic is a simple error-code mapper, but it coordinates with two companion plans (help/version, strict-args) in the same catch block.
+
 ## Goal
 
 When `janus` fails to start, the message tells the user what went wrong *and what to do about it*, and includes enough context (version, stack in debug mode) to file a useful report. Today the entire failure surface is one line (`src/main.ts:130-135`):

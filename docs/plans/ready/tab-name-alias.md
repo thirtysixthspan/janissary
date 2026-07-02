@@ -1,5 +1,7 @@
 # Tab name alias
 
+**Complexity: 4/10** — display path already exists (`Tab.title`), but the feature spans a new command, a new RPC, persistence round-trip, and an inline-edit state machine in the tab strip (focus/commit/cancel/double-commit guard) across server and web.
+
 ## Goal
 
 Give any tab a **display alias** without changing its internal `label`. The label stays the unique key used everywhere — `msg`/`broadcast` routing, agent-state persistence filenames, monitor targets, shell/ACP/browser session keys. Only the tab strip shows the alias.
