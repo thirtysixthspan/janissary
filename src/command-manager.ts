@@ -2,8 +2,9 @@ import type { RouteChoice } from './recognizers/types.js';
 import { resolveCommand } from './resolve.js';
 import { isInteractive } from './interactive.js';
 import { commands } from './commands/index.js';
-import { analyzeCommand, toPrefixedCommand, routeChoices } from './recognizers/index.js';
+import { toPrefixedCommand } from './recognizers/index.js';
 import { messageBus } from './bus.js';
+import { resolveUnknownCommand } from './command-router.js';
 import type { Managers } from './managers.js';
 
 export class CommandManager {
@@ -55,17 +56,7 @@ export class CommandManager {
       case 'output': { this.managers.tab.append(label, { input, output: res.output, markdown: true }); return;
       }
       case 'unknown': {
-        const openDbs = this.managers.database.openDbs(label);
-        const decision = analyzeCommand(res.cmd, { openDbs });
-        if (decision.kind === 'route' && (decision.route !== 'db' || openDbs.length === 1)) {
-          const choice: RouteChoice = decision.route === 'db'
-            ? { label: '', route: 'db', dbName: openDbs[0] }
-            : { label: '', route: decision.route };
-          this.run(toPrefixedCommand(res.cmd, choice), label, index);
-        } else {
-          this.pendingRoute = { label, cmd: res.cmd, choices: routeChoices(openDbs) };
-          messageBus.emit('state', { type: 'dirty' });
-        }
+        resolveUnknownCommand(res.cmd, label, this.managers, (input, l, idx) => this.run(input, l, idx), (p) => { this.pendingRoute = p; });
         return;
       }
       case 'app': { this.executeCommand(res.name, res.cmd, label, index); return;
