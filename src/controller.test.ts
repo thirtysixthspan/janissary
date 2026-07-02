@@ -906,3 +906,38 @@ describe('Controller messageBus', () => {
     expect(c.view()[0].bufferLines.some((l) => l.type === 'markdown')).toBe(true);
   });
 });
+
+describe('Controller unread badge', () => {
+  it('append to a non-active tab sets hasUnread', () => {
+    const { c } = makeController();
+    c.dispatch('agent bob');
+    const bobIndex = c.view().findIndex((t) => t.label === 'bob');
+    expect(c.managers.tab.activeTab).not.toBe(bobIndex);
+    c.managers.tab.append('bob', { input: 'hello', output: 'world' });
+    expect(c.view().find((t) => t.label === 'bob')!.hasUnread).toBe(true);
+  });
+
+  it('append to the active tab does not set hasUnread', () => {
+    const { c } = makeController();
+    c.managers.tab.append('janus', { input: 'test', output: 'out' });
+    expect(c.view().find((t) => t.label === 'janus')!.hasUnread).toBe(false);
+  });
+
+  it('setActiveTab clears hasUnread on the newly active tab', () => {
+    const { c } = makeController();
+    c.dispatch('agent bob');
+    c.managers.tab.append('bob', { input: 'hello', output: 'world' });
+    expect(c.view().find((t) => t.label === 'bob')!.hasUnread).toBe(true);
+    const bobIndex = c.view().findIndex((t) => t.label === 'bob');
+    c.managers.tab.setActiveTab(bobIndex);
+    expect(c.view().find((t) => t.label === 'bob')!.hasUnread).toBe(false);
+  });
+
+  it('finishRunning to a non-active tab sets hasUnread', () => {
+    const { c } = makeController();
+    c.dispatch('agent bob');
+    c.managers.tab.startRunning('bob', 'sleep 1');
+    c.managers.tab.finishRunning('bob', 'done');
+    expect(c.view().find((t) => t.label === 'bob')!.hasUnread).toBe(true);
+  });
+});

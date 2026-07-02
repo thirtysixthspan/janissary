@@ -20,6 +20,7 @@ export function TabStrip({ tabs, activeTab, onSelect, onClose }: Properties) {
         >
           <span className={`dot${tab.busy ? ' busy' : ''}`} style={{ color: tab.dotColor }}>●</span>
           <span>{tab.title ?? tab.label}</span>
+          {tab.hasUnread && <span className="tab-badge" role="img" aria-label="unread">✨</span>}
           <button
             type="button"
             className="tab-close"
