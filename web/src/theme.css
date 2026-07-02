@@ -213,8 +213,12 @@ html, body, #root {
 .command .dot { font-size: 10px; }
 .command input {
   flex: 1; background: transparent; border: none; outline: none;
-  color: var(--fg); font-family: var(--mono); font-size: 13.1625px;
+  color: var(--fg); position: relative;
 }
+.command input, .command .ghost { font-family: var(--mono); font-size: 13.1625px; }
+.command .input-wrap { position: relative; flex: 1; display: flex; }
+.command .ghost { position: absolute; inset: 0; display: flex; align-items: center; color: var(--muted); white-space: pre; overflow: hidden; pointer-events: none; }
+.command .ghost .ghost-typed { visibility: hidden; }
 
 /* Harness tab: full-body PTY terminal with no transcript or command bar. */
 .harness-tab { flex: 1; min-height: 0; display: flex; flex-direction: column; }
