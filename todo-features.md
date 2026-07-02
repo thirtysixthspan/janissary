@@ -3,13 +3,6 @@
 ## File tree sidebar
 A collapsible sidebar showing the directory tree rooted at the current tab's cwd, updated after each shell command. Clicking a file opens it with the existing open command (image, markdown, or OS viewer). Populated by a readdir call on the server after each queryShellPwd, sent as part of TabView.
 
-## basic file navigation sidebar
-## basic text file editor tab
-
-## Tab name alias
-rename <newname> gives a tab a display alias without changing its internal label (used for msg, persistence, routing). The strip shows the alias; everything else uses the original. title already exists on Tab for view tabs — same field, extended to agent tabs.
-display alias can be changed with mouse click on the tab that transforms into an edit field populated with the current name, grabs the input focus. hitting enter or defocusing the input saves the current value.
-
 
 ## Transcript search
 `search transcript regex_pattern` command pattern.
@@ -44,9 +37,6 @@ As the user types, the most recent matching history entry appears as greyed ghos
 ## Agent task queue
 task add <agent> <command> enqueues a command to run as soon as the agent becomes non-busy, rather than firing immediately like msg … command. Prevents dropped commands when an agent is mid-turn. Extends the existing per-tab message FIFO with a held-until-idle gating layer.
 
-## Unread badge on inactive tabs
-When an inactive tab receives a new message or its shell command finishes while not focused, a small badge appears on its dot until the tab is visited. Gives at-a-glance awareness of which background agents have new output. Implemented as a hasUnread boolean on TabView, set on append and cleared when setActiveTab targets that tab.
-
 ## support sshing to other computers in an agent tab
 list the connection in the connection window
 close the ssh connection upon closing of the tab or application
@@ -64,4 +54,8 @@ separate slow automated tests into a slow test suite only run at the end of feat
   monitoring using the same assistant may happen multiple time but for different targets.
   in this case a new monitoring window should be opened
 
-  
+harness tabs should have a tab transcript
+monitors should have access to the tab transcript
+
+update or remove next run time in schedule after a run
+

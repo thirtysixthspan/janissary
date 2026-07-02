@@ -2,14 +2,14 @@
 
 ## Goal
 
-When an **inactive** tab receives new transcript content — a message from another agent (`msg`/`broadcast`), ACP/agent output, or a shell/browser command finishing — a small **badge** appears on that tab's dot in the tab strip. The badge stays until the tab is visited, then clears. This gives at-a-glance awareness of which background agents have produced new output while you were elsewhere.
+When an **inactive** tab receives new transcript content — a message from another agent (`msg`/`broadcast`), ACP/agent output, or a shell/browser command finishing — a **sparkle badge (✨)** appears on that tab in the tab strip. The badge stays until the tab is focused, then clears. This gives at-a-glance awareness of which background agents have produced new output while you were elsewhere.
 
 ```
-[● janus] [● claude•] [● opencode]   ← claude has unread output; janus is active/clean
-   ^active         ^badge
+[● janus] [● claude ✨] [● opencode]   ← claude has unread output; janus is active/clean
+   ^active          ^sparkle badge
 ```
 
-The active tab never shows a badge (you're already looking at it). Switching to a badged tab — by click, `next`, Shift+←/→, or any path — clears it.
+The active tab never shows the sparkle (you're already looking at it). **Focusing a badged tab always removes the sparkle badge** — by click, `next`, Shift+←/→, or any other activation path, without exception.
 
 ## Design decisions
 
@@ -26,9 +26,9 @@ The active tab never shows a badge (you're already looking at it). Switching to 
 
 A single `TabManager.markUnread(label)` helper, called from each content-delivery site, keeps the rule in one place and covers all triggers. It sets `hasUnread` only when the target tab is **not** the active tab.
 
-**Clear on the server, in `setActiveTab`.** The server owns `activeTab` and re-broadcasts state on every change, so clearing there means every activation path (click → `setActiveTab` RPC, `next` command, `moveTab` keyboard chord — all funnel through `setActiveTab`) clears the badge for free. The client stays a pure renderer.
+**Clear on the server, in `setActiveTab` — focusing always clears, no exceptions.** The server owns `activeTab` and re-broadcasts state on every change, so clearing there means every activation path (click → `setActiveTab` RPC, `next` command, `moveTab` keyboard chord — all funnel through `setActiveTab`) removes the sparkle badge for free. Paths that set `activeTab` directly (`reorderTab`, `closeTab`) get the same clear explicitly (step 7), keeping the invariant airtight: the focused tab never shows the sparkle. The client stays a pure renderer.
 
-**Badge is a sibling element, not a modifier on the blinking dot.** The busy state animates `.dot.busy` (opacity blink). A tab can be both busy and unread (e.g. a `msg` arrives while a command runs), so rendering the badge as a child of `.dot` would make it inherit the blink. Render it as a separate element positioned over the dot instead.
+**Badge is the ✨ emoji rendered as a sibling element, not a modifier on the blinking dot.** The busy state animates `.dot.busy` (opacity blink). A tab can be both busy and unread (e.g. a `msg` arrives while a command runs), so rendering the badge as a child of `.dot` would make it inherit the blink. Render ✨ as a separate `<span>` after the tab name instead — an emoji glyph needs no positioning tricks or shape CSS, just a font-size that fits the strip.
 
 ## What already exists (reuse, don't rebuild)
 
@@ -108,25 +108,19 @@ A single `TabManager.markUnread(label)` helper, called from each content-deliver
 
 ## Web changes
 
-8. **`web/src/TabStrip.tsx:21`** — render the badge next to the dot when unread. Make the dot a positioning context and add a sibling badge:
+8. **`web/src/TabStrip.tsx:21`** — render the sparkle emoji after the tab name when unread:
    ```tsx
-   <span className="dot-wrap">
-     <span className={`dot${tab.busy ? ' busy' : ''}`} style={{ color: tab.dotColor }}>●</span>
-     {tab.hasUnread && <span className="tab-badge" aria-label="unread" />}
-   </span>
+   <span className={`dot${tab.busy ? ' busy' : ''}`} style={{ color: tab.dotColor }}>●</span>
+   <span>{tab.title ?? tab.label}</span>
+   {tab.hasUnread && <span className="tab-badge" role="img" aria-label="unread">✨</span>}
    ```
-   Gate on `tab.hasUnread` only — the server guarantees the active tab is already cleared, so no `index !== activeTab` check is needed on the client.
+   Gate on `tab.hasUnread` only — the server guarantees the focused tab is already cleared, so no `index !== activeTab` check is needed on the client.
 
 9. **`web/src/theme.css`** (near `:35`/`:96`) — badge styles:
    ```css
-   .tab .dot-wrap { position: relative; display: inline-flex; }
-   .tab .tab-badge {
-     position: absolute; top: -2px; right: -3px;
-     width: 6px; height: 6px; border-radius: 50%;
-     background: var(--accent); /* or a fixed unread color if no accent var exists */
-   }
+   .tab .tab-badge { font-size: 0.8em; line-height: 1; }
    ```
-   Confirm an accent/notification color variable exists in `theme.css`; if not, use a literal (e.g. `#5b9cff`). The badge is a sibling of `.dot`, so the `.dot.busy` blink does not affect it.
+   The emoji is its own glyph, so no shape/positioning CSS is needed — just size it to sit comfortably in the strip. It is a sibling of `.dot`, so the `.dot.busy` blink does not affect it.
 
 ## Tests
 
@@ -153,7 +147,7 @@ A single `TabManager.markUnread(label)` helper, called from each content-deliver
 ## Verification
 
 - `./scripts/run.mjs check-diff` — lints changed files, incrementally typechecks affected projects, and runs the related server + web tests.
-- Manual: launch the app; open a second agent (`agent foo`) and a harness/shell tab. From the active tab, `msg foo hello` (or run a long shell command on `foo`, then switch away). Confirm a badge appears on `foo`'s dot while it is inactive, that it clears the moment you switch to `foo` (click / `next` / Shift+→), and that the active tab never badges. Verify a badged tab that is also busy shows the badge without it inheriting the dot blink.
+- Manual: launch the app; open a second agent (`agent foo`) and a harness/shell tab. From the active tab, `msg foo hello` (or run a long shell command on `foo`, then switch away). Confirm the ✨ appears on `foo`'s tab while it is inactive, that focusing `foo` always removes it (click / `next` / Shift+→ — every path), and that the focused tab never shows the sparkle. Verify a badged tab that is also busy shows the ✨ without it inheriting the dot blink.
 
 ## Out of scope
 

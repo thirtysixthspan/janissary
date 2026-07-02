@@ -119,8 +119,8 @@ A page tab can be closed three ways, all equivalent in their teardown:
 Closing performs the same teardown the `close` command does for a non-last tab: the tab is removed
 from the strip, its in-memory state is dropped, and an adjacent tab is selected. Because a page tab
 owns no shell, agent session, browser, workspace, or served file, those teardown steps simply do
-nothing for it. Closing the last remaining tab falls back to opening a fresh default tab, exactly
-as the `close` command does.
+nothing for it. Closing the last remaining tab quits the app, exactly as the `close` command does
+(see `tabs.md`).
 
 ### `close page` command
 

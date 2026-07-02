@@ -190,7 +190,7 @@ describe('Controller', () => {
     const { c } = makeController();
     c.dispatch('db sqlite create lastdb');
     expect(isConnectionOpen('lastdb')).toBe(true);
-    c.dispatch('close'); // last tab → reset to fresh janus + closeAllConnections
+    c.dispatch('close'); // last tab → closeAllConnections, then app exit
     expect(isConnectionOpen('lastdb')).toBe(false);
   });
 
@@ -242,11 +242,14 @@ describe('Controller', () => {
     expect(isExited).toBe(true);
   });
 
-  it('exit is an alias of close, not quit — it does not stop the host', () => {
+  it('exit is an alias of close — with other tabs open it closes the tab, not the host', () => {
     let isExited = false;
     const c = new Controller({ emitState() {}, sendPty() {}, sendPtyExit() {}, exit() { isExited = true; } });
+    c.dispatch('agent bob');
+    c.setActiveTab(1);
     c.dispatch('exit');
     expect(isExited).toBe(false);
+    expect(c.view().map((t) => t.label)).toEqual(['janus']);
   });
 
   it('close removes the active tab and its connections', () => {
@@ -257,13 +260,11 @@ describe('Controller', () => {
     expect(c.view().map((t) => t.label)).toEqual(['janus']);
   });
 
-  it('closing the last tab opens a fresh janus tab', () => {
-    const { c } = makeController();
-    c.dispatch('help'); // give janus some transcript
-    expect(c.view()[0].bufferLines.length).toBeGreaterThan(0);
-    c.dispatch('close'); // last tab -> reset to a fresh janus
-    expect(c.view().map((t) => t.label)).toEqual(['janus']);
-    expect(c.view()[0].bufferLines).toHaveLength(0);
+  it('closing the last tab quits the app', () => {
+    let isExited = false;
+    const c = new Controller({ emitState() {}, sendPty() {}, sendPtyExit() {}, exit() { isExited = true; } });
+    c.dispatch('close'); // only tab open -> behaves like quit
+    expect(isExited).toBe(true);
   });
 
   it('starts an agent shell in its saved/workspace cwd', async () => {

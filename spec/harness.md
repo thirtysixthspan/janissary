@@ -95,6 +95,13 @@ Ctrl-combinations (`Ctrl+C`, `Ctrl+D`, `Ctrl+R`, `Ctrl+Z`, etc.) are sent to the
 Reorder/collapse chords (`Ctrl+←/→`, `Ctrl+T`) are **not** available while a harness is focused;
 switch to another tab first.
 
+**Shift+Enter** is translated before it reaches the PTY: instead of a bare carriage return
+(which would submit), the terminal sends `ESC` + `CR` — the same sequence Alt/Option+Enter
+produces in native terminals — which harnesses like claude read as a line continuation. This lets
+multi-line prompts be composed in the harness without any harness-side terminal setup. This
+applies to every xterm.js terminal in the app (harness tabs, interactive PTY takeover, terminal
+cards).
+
 ## Tab strip
 
 The tab's name in the strip is the tab's unique label — the harness name by default (`claude`,
@@ -110,8 +117,9 @@ image/page view tabs).
 - **Closed** — the tab closes as soon as the harness process exits, whether from the harness
   quitting normally, crashing, or the binary not being found on `PATH`. The tab's × button or
   `close` command closes it the same way while the process is still running (killing the PTY
-  first). Closing the last tab opens a fresh default tab. There is no frozen "exited" state to
-  inspect — the harness's own scrollback is gone once its tab closes.
+  first). If the harness tab is the last remaining tab, closing it — including the harness
+  process exiting on its own — quits the app (see `tabs.md`). There is no frozen "exited" state
+  to inspect — the harness's own scrollback is gone once its tab closes.
 
 ## Placement and grouping
 

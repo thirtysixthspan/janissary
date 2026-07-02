@@ -122,11 +122,9 @@ export class TabManager {
     const tab = this.tabs[index];
     if (!tab) return;
     closeTabResources(tab, this.managers, this.openFiles, this.context, this.tabs.length);
+    // Closing the last remaining tab quits the app (same as the `quit` command).
     if (this.tabs.length <= 1) {
-      this.tabs = [this.makeRootTab()];
-      this.cwd.set('janus', process.cwd());
-      this.activeTab = 0;
-      messageBus.emit('state', { type: 'dirty' });
+      messageBus.emit('app', { type: 'exit' });
       return;
     }
     this.tabs = this.tabs.filter((_, index_) => index_ !== index).map((t, index_) => ({ ...t, number: index_ + 1 }));

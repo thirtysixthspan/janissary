@@ -177,8 +177,10 @@ export function App() {
             history={current.cmdHistory}
             onSubmit={(text) => {
               const trimmed = text.trim().toLowerCase();
+              // close/exit on the last tab quits the app, so confirm it like `quit`.
+              const closesLastTab = (trimmed === 'close' || trimmed === 'exit') && tabs.length === 1;
               if (trimmed === 'hist') openPicker();
-              else if (trimmed === 'quit') openQuitConfirm();
+              else if (trimmed === 'quit' || closesLastTab) openQuitConfirm();
               else runCommand(text);
             }}
             inputRef={inputReference}

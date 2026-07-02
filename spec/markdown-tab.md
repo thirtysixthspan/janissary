@@ -116,8 +116,8 @@ The close button closes a tab by position, which need not be the active tab, per
 teardown the `close` command does for a non-last tab: the tab is removed from the strip, its
 in-memory state is dropped, its registered file is unregistered, and an adjacent tab is selected.
 Because a markdown tab owns no shell, agent session, browser, or workspace, those teardown steps
-simply do nothing for it. Closing the last remaining tab falls back to opening a fresh default tab,
-exactly as the `close` command does.
+simply do nothing for it. Closing the last remaining tab quits the app, exactly as the `close`
+command does (see `tabs.md`).
 
 ### Reordering and grouping
 

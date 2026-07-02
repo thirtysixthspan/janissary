@@ -44,6 +44,12 @@ export function useXterm({ ptyId, client, containerRef, keyFilter, onMount }: Us
     const onInput = term.onData((data) => client.send({ method: 'ptyInput', params: { id: ptyId, data } }));
     term.attachCustomKeyEventHandler((e) => {
       if (e.type !== 'keydown') return true;
+      // Shift+Enter inserts a newline rather than submitting: send ESC+CR (the Alt+Enter
+      // sequence), which harnesses like Claude Code read as a line continuation.
+      if (e.key === 'Enter' && e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey) {
+        client.send({ method: 'ptyInput', params: { id: ptyId, data: '\u{1B}\r' } });
+        return false;
+      }
       return keyFilterRef.current ? keyFilterRef.current(e) : true;
     });
 

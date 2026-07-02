@@ -6,9 +6,11 @@ Guards against accidentally exiting the application from the `quit` command.
 
 Typing `quit` at the command line does not immediately exit. It opens a confirmation dialog reading "Are you sure you want to quit?" with two buttons, **Quit (y)** and **Cancel (n)**. The application only exits once the dialog is confirmed.
 
+Typing `close` (or its alias `exit`) when only a single tab is open triggers the same dialog, because closing the last tab quits the app (see `tabs.md`). Cancelling leaves the tab open. Non-typed last-tab closes — the tab strip's × button, or the tab's process exiting — quit directly without the dialog.
+
 ### `exit` is not `quit`
 
-`exit` is an alias of `close` (closes the current tab, or `exit page <n>` for a numbered page tab) — it does not exit the application and does not show this dialog. `quit` is the only command that exits the app.
+`exit` is an alias of `close` (closes the current tab, or `exit page <n>` for a numbered page tab) — while more than one tab is open it does not exit the application and does not show this dialog. Only `quit`, or closing the last remaining tab, exits the app.
 
 ### Selection and confirming/cancelling
 
