@@ -1,5 +1,5 @@
 import React, { createRef } from 'react';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { CommandInput } from './CommandInput';
@@ -34,5 +34,53 @@ describe('CommandInput — recall', () => {
     const input = screen.getByRole('textbox');
     await userEvent.type(input, '{ArrowUp}');
     expect(input).toHaveValue('second');
+  });
+});
+
+describe('CommandInput — ghost text', () => {
+  it('renders a ghost when typed text matches a history entry prefix', async () => {
+    const { inputRef } = renderCommandInput({ history: ['git status'] });
+    const input = screen.getByRole('textbox');
+    await userEvent.type(input, 'git');
+    expect(inputRef.current?.parentElement?.querySelector('.ghost')).not.toBeNull();
+  });
+
+  it('renders no ghost when nothing matches', async () => {
+    const { inputRef } = renderCommandInput({ history: ['git status'] });
+    const input = screen.getByRole('textbox');
+    await userEvent.type(input, 'ls');
+    expect(inputRef.current?.parentElement?.querySelector('.ghost')).toBeNull();
+  });
+
+  it('ArrowRight at end-of-input accepts the ghost', async () => {
+    renderCommandInput({ history: ['git status'] });
+    const input = screen.getByRole('textbox') as HTMLInputElement;
+    await userEvent.type(input, 'git');
+    fireEvent.keyDown(input, { key: 'ArrowRight' });
+    expect(input).toHaveValue('git status');
+  });
+
+  it('ArrowRight mid-text does not accept the ghost', async () => {
+    renderCommandInput({ history: ['git status'] });
+    const input = screen.getByRole('textbox') as HTMLInputElement;
+    await userEvent.type(input, 'git');
+    input.setSelectionRange(1, 1);
+    fireEvent.keyDown(input, { key: 'ArrowRight' });
+    expect(input).toHaveValue('git');
+  });
+
+  it('End at end-of-input accepts the ghost', async () => {
+    renderCommandInput({ history: ['git status'] });
+    const input = screen.getByRole('textbox') as HTMLInputElement;
+    await userEvent.type(input, 'git');
+    fireEvent.keyDown(input, { key: 'End' });
+    expect(input).toHaveValue('git status');
+  });
+
+  it('submits only the typed value when Enter is pressed without accepting', async () => {
+    const { onSubmit } = renderCommandInput({ history: ['git status'] });
+    const input = screen.getByRole('textbox');
+    await userEvent.type(input, 'git{Enter}');
+    expect(onSubmit).toHaveBeenCalledWith('git');
   });
 });

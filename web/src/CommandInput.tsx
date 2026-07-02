@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import type { CompletionResult } from '@shared/protocol';
 import { handleTabCompletion } from './command-completion';
+import { findGhostSuggestion } from './ghost-suggestion';
 
 type Properties = {
   dotColor: string;
@@ -15,6 +16,7 @@ export function CommandInput({ dotColor, history, onSubmit, inputRef, complete, 
   const [value, setValue] = useState('');
   const [completions, setCompletions] = useState<string[]>([]);
   const histIndex = useRef(-1);
+  const ghost = findGhostSuggestion(history, value);
 
   const recall = (text: string) => {
     setValue(text);
@@ -58,7 +60,17 @@ export function CommandInput({ dotColor, history, onSubmit, inputRef, complete, 
       histIndex.current += 1;
       if (histIndex.current >= history.length) { histIndex.current = -1; setValue(''); }
       else recall(history[histIndex.current]);
-    
+
+    break;
+    }
+    case 'ArrowRight': case 'End': {
+      const element = inputRef.current;
+      if (ghost && element && element.selectionStart === value.length && element.selectionEnd === value.length) {
+        e.preventDefault();
+        recall(ghost);
+        setCompletions([]);
+      }
+
     break;
     }
     // No default
@@ -71,14 +83,21 @@ export function CommandInput({ dotColor, history, onSubmit, inputRef, complete, 
       <div className="command" onClick={() => inputRef.current?.focus()}>
         <span className="dot" style={{ color: dotColor }}>●</span>
         <span>❯</span>
-        <input
-          ref={inputRef}
-          value={value}
-          autoFocus
-          spellCheck={false}
-          onChange={(e) => { setValue(e.target.value); setCompletions([]); }}
-          onKeyDown={onKeyDown}
-        />
+        <div className="input-wrap">
+          {ghost && (
+            <span className="ghost" aria-hidden="true">
+              <span className="ghost-typed">{value}</span>{ghost.slice(value.length)}
+            </span>
+          )}
+          <input
+            ref={inputRef}
+            value={value}
+            autoFocus
+            spellCheck={false}
+            onChange={(e) => { setValue(e.target.value); setCompletions([]); }}
+            onKeyDown={onKeyDown}
+          />
+        </div>
       </div>
     </div>
   );
