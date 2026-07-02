@@ -1,6 +1,7 @@
 import type { LogEntry, Tab, ImageView, MarkdownView, PageView, HarnessView } from './types.js';
 export { expandTabs, wordWrap, flattenBuffer } from './tab-formatting.js';
 export { distinctColor, dotColors } from './tab-colors.js';
+export { stripComments, renumberTabs, canMoveTab, swapTabsLeft, swapTabsRight, insertTabInGroup } from './tab-utils.js';
 
 export const makeTab = (label: string, dotColor: string, number: number = 1, commandHistory: string[] = [], log: LogEntry[] = [], workspaceDirectory?: string, group: number = 1, groupColor: string = dotColor): Tab => ({
   label,
@@ -48,52 +49,4 @@ export const makeHarnessTab = (label: string, dotColor: string, number: number, 
 });
 
 
-// Strip ## comments from a command. A terminated comment `## text ##` is removed
-// wherever it appears; an unterminated `## text` removes everything from `##` to the
-// end. Each alternative consumes a `##`, then either runs non-greedily to a closing
-// `##` or, failing that, to the end of the string.
-export function stripComments(command: string): string {
-  return command.replaceAll(/\s*##(?:[\s\S]*?##\s*|[\s\S]*)/g, ' ').trim();
-}
 
-// Renumber tabs by position. Only `number` (the position) changes — `group` is left untouched,
-// so a tab keeps its group through any reorder.
-export function renumberTabs(tabs: Tab[]): Tab[] {
-  return tabs.map((t, index) => ({ ...t, number: index + 1 }));
-}
-
-// A tab may only swap with a neighbor in the same group, so groups stay contiguous and a tab can
-// never be dragged out of its group.
-export function canMoveTab(tabs: Tab[], index: number, direction: -1 | 1): boolean {
-  const index_ = index + direction;
-  if (index < 0 || index_ < 0 || index_ >= tabs.length) return false;
-  return tabs[index].group === tabs[index_].group;
-}
-
-export function swapTabsLeft(tabs: Tab[], index: number): Tab[] {
-  if (!canMoveTab(tabs, index, -1)) return tabs;
-  const next = [...tabs];
-  const left = next[index - 1];
-  next[index - 1] = next[index];
-  next[index] = left;
-  return renumberTabs(next);
-}
-
-export function swapTabsRight(tabs: Tab[], index: number): Tab[] {
-  if (!canMoveTab(tabs, index, 1)) return tabs;
-  const next = [...tabs];
-  const right = next[index + 1];
-  next[index + 1] = next[index];
-  next[index] = right;
-  return renumberTabs(next);
-}
-
-// Insert a new tab into `tabs` directly after the last tab of `group`, so a group stays a single
-// connected run. When the group isn't present yet (a brand-new group), the tab goes at the end.
-export function insertTabInGroup(tabs: Tab[], tab: Tab): Tab[] {
-  let insertAt = tabs.length;
-  for (const [index, tab_] of tabs.entries()) {
-    if (tab_.group === tab.group) insertAt = index + 1;
-  }
-  return renumberTabs([...tabs.slice(0, insertAt), tab, ...tabs.slice(insertAt)]);
-}
