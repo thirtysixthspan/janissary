@@ -3,6 +3,7 @@ import { connectAcp } from './acp.js';
 import { runAcpToolLoop } from './acp-loop.js';
 import { extractBrowserCommand, BROWSER_PRIMER } from './browser-command.js';
 import { messageBus } from './bus.js';
+import { makeUpdateRunning } from './acp-runner.js';
 import type { Managers } from './managers.js';
 
 // The ACP agent the manager connects to and the model it runs. Hardcoded for now (the only provider
@@ -94,18 +95,7 @@ export class AcpManager {
       onConnect: () => messageBus.emit('state', { type: 'dirty' }),
     });
 
-    const updateRunning = (output: string, running: boolean) => {
-      const t = this.managers.tab.tabs.find((x) => x.label === label);
-      if (t) {
-        const log = [...t.log];
-        const index = log.findLastIndex((e) => e.running);
-        if (index !== -1) log[index] = { ...log[index], output, running };
-        t.log = log;
-        if (!running) this.managers.tab.persist(this.managers.tab.buildAgentState(t));
-      }
-      if (!running && output && t) messageBus.emit('transcript', { type: 'entry:appended', tabLabel: label, entry: { input: '', output }, tab: t });
-      messageBus.emit('state', { type: 'dirty' });
-    };
+    const updateRunning = makeUpdateRunning(label, this.managers);
 
     let lastAnswer = '';
     runAcpToolLoop(session, prompt, {
