@@ -15,6 +15,7 @@ export function renderLine(
   index: number,
   client: JanusClient,
   onToggleCollapse: () => void,
+  onPromptClick: (text: string) => void,
 ) {
   if (line.type === 'terminal' && line.terminal) {
     return <TerminalCard key={line.terminal.ptyId} entry={line.terminal} client={client} />;
@@ -37,7 +38,16 @@ export function renderLine(
       );
     }
     return (
-      <div key={index} className="line prompt">
+      <div
+        key={index}
+        className="line prompt"
+        title="Click to re-run this command"
+        onClick={() => {
+          const selection = globalThis.getSelection()?.toString();
+          if (selection) return;
+          onPromptClick(line.text);
+        }}
+      >
         {line.cwd && <span className="cwd">{line.cwd}</span>}
         <span>{'❯'} {line.text}</span>
       </div>

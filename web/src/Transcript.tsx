@@ -7,10 +7,11 @@ type Properties = {
   lines: BufferLine[];
   client: JanusClient;
   onToggleCollapse: () => void;
+  onPromptClick: (text: string) => void;
   scrollRef: React.RefObject<HTMLDivElement | null>;
 };
 
-export function Transcript({ lines, client, onToggleCollapse, scrollRef }: Properties) {
+export function Transcript({ lines, client, onToggleCollapse, onPromptClick, scrollRef }: Properties) {
   const stick = useRef(true);
   const contentReference = useRef<HTMLDivElement>(null);
 
@@ -40,7 +41,7 @@ export function Transcript({ lines, client, onToggleCollapse, scrollRef }: Prope
       {lines.length === 0 && (
         <div className="line empty-state">Type "help" for available commands.</div>
       )}
-      {lines.map((line, index) => renderLine(line, index, client, onToggleCollapse))}
+      {lines.map((line, index) => renderLine(line, index, client, onToggleCollapse, onPromptClick))}
       </div>
     </div>
   );

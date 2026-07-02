@@ -33,6 +33,7 @@ export function App() {
   const routeReference = useRef<RouteChooserView | null>(null);
   const inputReference = useRef<HTMLInputElement>(null);
   const transcriptReference = useRef<HTMLDivElement>(null);
+  const prefillReference = useRef<((text: string) => void) | null>(null);
   const harnessHandles = useRef<Map<string, HarnessTabHandle>>(new Map());
   const shellHandles = useRef<Map<string, ShellTabHandle>>(new Map());
   const currentRef = useRef<TabView | undefined>(undefined);
@@ -166,6 +167,7 @@ export function App() {
               lines={lines}
               client={client}
               onToggleCollapse={() => client.send({ method: 'toggleCollapse', params: {} })}
+              onPromptClick={(text) => prefillReference.current?.(text)}
               scrollRef={transcriptReference}
             />
             <StatusPanels tab={current} />
@@ -184,6 +186,7 @@ export function App() {
               else runCommand(text);
             }}
             inputRef={inputReference}
+            prefillRef={prefillReference}
             complete={(text, cursor) => client.request({ method: 'complete', params: { text, cursor } })}
             pickerOpen={pickerOpen || route !== null || quitConfirmOpen}
           />
