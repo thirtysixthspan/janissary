@@ -1,14 +1,14 @@
 // Parsing and next-run math for the `schedule` command. Pure (no I/O) so it is fully
 // unit-testable; callers (the command + the scheduler tick) own the side effects.
 
-import type { ScheduleEntry, TimeOfDay, ScheduleParseResult } from './types.js';
+import type { ScheduleEntry, ScheduleParseResult } from './types.js';
 import { parseAtSchedule, parseOnSchedule, parseEverySchedule } from './schedule-helpers.js';
-import {
-  parseTimeOfDay, parseInterval, parseMonthDay, MONTHS,
-} from './schedule-parsing.js';
+import { parseTimeOfDay, parseInterval, parseMonthDay } from './schedule-parsing.js';
 export { parseTimeOfDay, parseInterval, parseMonthDay } from './schedule-parsing.js';
 import { nextOccurrenceOfTime, nextWeekday, nextDateTime } from './schedule-time.js';
 export { nextOccurrenceOfTime, nextWeekday, computeNextRun } from './schedule-time.js';
+import { fmtTime } from './schedule-display.js';
+export { fmtNextRun, formatSchedule } from './schedule-display.js';
 
 // The body parser produces an add result without a name; the wrapper attaches the leading
 // positional name afterwards.
@@ -18,25 +18,7 @@ export const SCHEDULE_USAGE =
   'Usage: schedule NAME [in TAB] <at TIME | on DATE [at TIME] | every N(m|h|d|w) | every DAY at TIME> COMMAND'
   + ' | schedule list [in TAB] | schedule cancel <name> [in TAB] | schedule clear [in TAB]';
 
-function fmtTime({ hour, minute }: TimeOfDay): string {
-  const ap = hour < 12 ? 'am' : 'pm';
-  const h = hour % 12 === 0 ? 12 : hour % 12;
-  return `${h}:${String(minute).padStart(2, '0')}${ap}`;
-}
 
-export function fmtNextRun(ts: number): string {
-  const d = new Date(ts);
-  const mon = MONTHS[d.getMonth()];
-  const month = mon[0].toUpperCase() + mon.slice(1, 3);
-  return `${month} ${d.getDate()} ${fmtTime({ hour: d.getHours(), minute: d.getMinutes() })}`;
-}
-
-export function formatSchedule(entries: ScheduleEntry[]): string {
-  if (entries.length === 0) return 'No scheduled commands.';
-  return entries
-    .map((e) => `${e.id}  ${e.spec}  (next: ${fmtNextRun(e.nextRun)})  ${e.command}`)
-    .join('\n');
-}
 
 // Parse a trailing `in <tab>` clause starting at `tokens[index]`. Returns the target label,
 // an empty object when the clause is absent, or an error when it is malformed or followed
