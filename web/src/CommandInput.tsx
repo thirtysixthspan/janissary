@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
 import type { CompletionResult } from '@shared/protocol';
+import { handleTabCompletion } from './command-completion';
 
 type Properties = {
   dotColor: string;
@@ -32,21 +33,7 @@ export function CommandInput({ dotColor, history, onSubmit, inputRef, complete, 
     if (e.shiftKey || e.ctrlKey) return;
     if (e.key === 'Tab') {
       e.preventDefault();
-      const cursor = inputRef.current?.selectionStart ?? value.length;
-      // Only complete when at least one character of the current token is typed (don't list
-      // everything on an empty input or right after a space). Mirrors completeCommandLine's token.
-      const before = value.slice(0, cursor);
-      const token = before.slice(Math.max(before.lastIndexOf(' '), before.lastIndexOf('\t')) + 1);
-      if (token.length === 0) { setCompletions([]); return; }
-      void complete(value, cursor).then((res) => {
-        setValue(res.newInput);
-        // A single match fills in fully; multiple matches fill the common prefix and are listed.
-        setCompletions(res.matches.length > 1 ? res.matches : []);
-        requestAnimationFrame(() => {
-          const element = inputRef.current;
-          if (element) element.selectionStart = element.selectionEnd = res.newCursor;
-        });
-      });
+      handleTabCompletion(value, inputRef.current?.selectionStart ?? value.length, complete, setValue, setCompletions, inputRef);
       return;
     }
     switch (e.key) {
