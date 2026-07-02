@@ -135,6 +135,11 @@ monitor <persona> <target> [target...]
 **External mode**: watch the named targets, where each target is a **tab label** or a **tab group** (`group:<n>`). Group targets subscribe by group number, so tabs added to the group later are covered automatically. Opens the monitor window (or reuses the existing one); suggestions appear there.
 
 ```
+monitor ask <persona> <question>
+```
+Query a running monitor's ACP session directly; the answer is appended to the asking tab's transcript as a `💡 <persona>: …` reply. Shares the monitor's single in-flight prompt slot (reports busy rather than interleaving with a batch flush).
+
+```
 monitors
 ```
 List active monitors: for each monitor, show the starting tab, mode (inline/external), persona, targets, and the count of suggestions it has produced.
@@ -142,7 +147,7 @@ List active monitors: for each monitor, show the starting tab, mode (inline/exte
 ```
 unmonitor <persona> [target]
 ```
-Stop the named persona's monitor started from the current tab, or just remove one target from it. Removing the last target closes the monitor's ACP connection. Already-produced suggestions remain (transcript entries are permanent; reporting-tab suggestions stay in the feed until run or the tab is closed).
+Stop the named persona's monitor started from the current tab, or just remove one target from it. Removing the last target closes the monitor's ACP connection. Already-produced suggestions remain (transcript entries are permanent; reporting-tab suggestions stay in the feed until the tab is closed).
 
 ```
 unmonitor --all
@@ -255,7 +260,7 @@ Self-monitor suggestions need no wire type — they arrive as ordinary transcrip
 - `stopAllMonitors(ownerLabel)`: clears every persona's monitor for this owner
 - `flushMonitor(key)`: sends the buffered entries as one prompt (see below)
 - `openMonitorWindow()`: creates (or returns) the `view: 'monitor'` tab, labeled `monitor`
-- `runSuggestion(id)` (RPC): runs a suggestion's command in its `about` tab, then removes it from the feed (internal `dismissSuggestion(id)` helper)
+- `runSuggestion(id)` (RPC): runs a suggestion's command in its `about` tab; the suggestion stays in the feed
 
 The monitor's ACP connection appears in the connections panel as its own row (e.g. `monitor:security (claude/Sonnet)`), distinct from any interactive ACP row, and is torn down when the monitor stops or its owner tab closes.
 
@@ -422,7 +427,8 @@ Props:
 
 Behavior:
 - Suggestions flow as plain text — no row chrome, no per-row persona/tab/time meta, no buttons
-- A suggestion that carries a command shows it as a clickable line; clicking dispatches `onRun` with the suggestion's id (the server runs the command in the `about` tab and removes the suggestion from the feed)
+- A suggestion that carries a command shows it as a clickable line; clicking dispatches `onRun` with the suggestion's id (the server runs the command in the `about` tab; the suggestion stays in the feed)
+- Every suggestion carries 👍/👎 buttons (`onRate(id, up)` → `rateSuggestion` RPC): the rating is queued into the monitor's buffer as a `[user feedback]` entry and reaches the AI on its next batched prompt; the rated suggestion is removed from the feed either way (rating = done with it)
 - Suggestions without a command are informational only
 
 #### 10. Inline suggestions (use case 1) — no new component
@@ -433,7 +439,7 @@ Self-monitor suggestions arrive as ordinary transcript entries in the agent tab 
 
 - Split tabs into action entries and reporting entries (`isReportingTab`: `view === 'monitor'`); the main `TabStrip` shows only action tabs (indices mapped back to the server's full list)
 - Render `ReportingSection` at the bottom of the app column, after the tab bodies/command bar
-- Wire `onRun` to the new `runSuggestion` RPC (the server executes the command in the tab the suggestion is about, then removes the suggestion)
+- Wire `onRun` to the new `runSuggestion` RPC (the server executes the command in the tab the suggestion is about)
 
 #### 12. `src/protocol.ts` — New RPC method (shared with the client via `@shared`)
 
@@ -441,7 +447,7 @@ Self-monitor suggestions arrive as ordinary transcript entries in the agent tab 
 | { method: 'runSuggestion'; params: { id: string } }
 ```
 
-Server-side handler runs the suggestion's command in its `about` tab, removes it from the feed, and emits updated state.
+Server-side handler runs the suggestion's command in its `about` tab; the suggestion stays in the feed.
 
 #### 13. `web/src/theme.css` — Styling
 
@@ -541,11 +547,11 @@ Ordered so every step leaves the tree compiling and testable (`./scripts/run.mjs
 2. **Suggestion frequency** → Transcript entries **accumulate in a buffer and are flushed as one batched prompt every 30 seconds**. No per-entry prompting. **If no new transcript entries are available, the flush is skipped — the monitoring ACP is not queried or updated at all.**
 3. **Suggestion deduplication** → **No suppression.** Repeated suggestions are delivered as-is; older ones scroll down the history.
 4. **Async ACP prompt** → At most **one monitor prompt in flight per monitor**: if the 30s flush fires while a previous prompt is still streaming, the flush is skipped and the buffer keeps accumulating until the next tick.
-5. **Two use cases / suggestion destination** → `monitor <persona>` from an **agent tab** self-monitors that tab and reports suggestions **inline in its transcript**; `monitor <persona> <targets...>` reports suggestions **into that monitor's own reporting tab** (opened on demand). Reporting-tab suggestions stay in the feed until run or the tab is closed; inline suggestions are ordinary transcript entries.
+5. **Two use cases / suggestion destination** → `monitor <persona>` from an **agent tab** self-monitors that tab and reports suggestions **inline in its transcript**; `monitor <persona> <targets...>` reports suggestions **into that monitor's own reporting tab** (opened on demand). Reporting-tab suggestions stay in the feed until the tab is closed (running one does not remove it); inline suggestions are ordinary transcript entries.
 6. **Monitoring scope** → Targets can be individual **tabs or entire tab groups** (`group:<n>`); group targets track membership dynamically, covering tabs added to the group after the monitor starts.
 7. **Personas** → Monitoring behavior is dictated by an **AI persona**: a markdown file in `ai/personas/` fed to the monitoring ACP session as its startup prompt. Different monitoring styles (security watch, work-at-hand assistant, …) are just different persona files; one monitor per persona per owner.
 8. **Dedicated connection** → Each monitor spawns a **new ACP connection used only for monitoring**, never reusing the tab's interactive session; it is closed when the monitor stops.
 9. **Harness/model per persona** → The persona file's **first line** is a required directive `[//]: # <harness>:<model>:<variant>` (e.g. `[//]: # opencode:DeepSeek V4 Flash:max`, `[//]: # claude:Sonnet:high`) that determines which ACP harness, model, and variant/effort the monitoring connection is opened with.
-10. **Monitor tabs are view-only** → Only for viewing suggestions: no command bar, no commands accepted, no buttons. Opened by executing an external-mode `monitor` command in an agent tab. The only interaction is clicking a suggested command, which runs it in the tab the suggestion is about (via a `runSuggestion` RPC routed server-side) and removes it from the feed.
-11. **Two tab classes** → **Action tabs** (take commands) live in the strip above the command bar; **reporting tabs** (report-only) live in a separate reporting section **below the command bar**, sized to **1/4 the height of the action-tab area**, with its own strip and selection. The section hides when no reporting tabs exist.
+10. **Monitor tabs are view-only** → Only for viewing suggestions: no command bar, no commands accepted. Opened by executing an external-mode `monitor` command in an agent tab. Interactions: clicking a suggested command runs it in the tab the suggestion is about (via a `runSuggestion` RPC routed server-side; the suggestion stays in the feed as history), and per-suggestion 👍/👎 buttons rate it — feedback is delivered to the monitoring AI through its next batched prompt, and the rated suggestion is removed either way.
+11. **Two tab classes** → **Action tabs** (take commands) live in the strip above the command bar; **reporting tabs** (report-only) live in a separate reporting section **below the command bar**, defaulting to **1/4 the height of the action-tab area**, with its own strip and selection. The divider above the section drags up/down to resize it (the action area shrinks/grows in opposition), clamped so **neither area drops below 15% of the viewport height**. The section hides when no reporting tabs exist.
 12. **One reporting tab per monitor** → Each monitor gets its own reporting tab **named after its persona** (e.g. `security`) and **colored after the monitored tab** (strip dot/border, body left-border). Feed rows show just the suggestion text and optional command — no persona/tab/time columns.

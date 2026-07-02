@@ -38,6 +38,9 @@ janus
 | `profile`    | Launch a saved set of agents for a use case |
 | `harness`    | Open an AI coding harness (claude/opencode/codex) in a full-tab terminal (add `-w` to clone the repo) |
 | `send`       | Deliver a line of input to any tab — types into a harness, or runs a command in an agent tab |
+| `monitor`    | Start a persona-driven AI monitor — inline on the current tab, or watching other tabs/groups into a reporting tab |
+| `unmonitor`  | Stop a monitor (`unmonitor <persona>`) or all monitors started from this tab (`--all`) |
+| `monitors`   | List active monitors with their targets and suggestion counts |
 
 ### Harness tabs
 
@@ -384,7 +387,7 @@ Connections are addressed as `<kind>:<id>`:
 
 Closing a connection is safe: a SQLite connection reopens on the next `db` command, a shell respawns on the next shell command (restoring its working directory), and an ACP agent reconnects on the next `acp` prompt. Closing a tab's last browser window ends that tab's browser process. All connections are closed automatically when the owning tab is closed or the app exits.
 
-A small `connections` panel floats at the top-right of each tab, listing that tab's live connections — its shell, its ACP agent, each open browser window (`browser:<id> (<mode>)`), and each `sqlite:<name>` database it has accessed — so opening a connection is reflected there immediately.
+A small `connections` panel floats at the top-right of each tab, listing that tab's live connections — its shell, its ACP agent, each AI monitor it started (`monitor:<persona>`), each open browser window (`browser:<id> (<mode>)`), and each `sqlite:<name>` database it has accessed — so opening a connection is reflected there immediately. Monitors are closed with `unmonitor` rather than `connection close`.
 
 ### Interactive programs
 
@@ -437,6 +440,40 @@ OpenCode ships an ACP server mode, so it works as a drop-in agent. Before using 
 
 `opencode` must be on your `PATH`. To sanity-check the agent independently, run `opencode acp` in a plain terminal — it should start and silently wait for JSON-RPC on stdin (Ctrl+C to exit).
 
+### AI monitoring (experimental)
+
+A **monitor** is an AI that continuously watches tab activity and offers suggestions. Each monitor is driven by a **persona** — a markdown file in `ai/personas/` that defines its focus (e.g. a security watcher, a pair-programming assistant) — and runs on its own dedicated ACP connection, separate from any interactive `acp` session. Monitors are strictly observational: their sessions have no tool access, so they can only read context and suggest.
+
+```
+monitor <persona>                      # inline: watch this tab, suggest in its transcript
+monitor <persona> <tab|group:N> ...    # external: watch other tabs/groups, suggest in a reporting tab
+monitor ask <persona> <question>       # query a running monitor's AI directly
+monitors                               # list active monitors
+unmonitor <persona> [target]           # stop a monitor (or drop one target from it)
+unmonitor --all                        # stop everything started from this tab
+```
+
+**Inline mode** (`monitor security`) watches the current tab and appends suggestions straight into its transcript as `💡 security: …` lines, in the flow of the work they comment on.
+
+**External mode** (`monitor assistant agent2 group:2`) watches the named tabs and/or tab groups (`group:<n>` covers tabs added to the group later) and reports into the persona's own **reporting tab**. Reporting tabs are a second class of tab: they appear in a separate strip **below the command bar** (starting at 1/4 of the action-tab area — drag the divider above the strip to resize; neither area shrinks below 15% of the viewport), take no commands, and carry the color of the tab they monitor. Suggestions appear newest-first; a suggested command renders as a clickable line that runs it in the tab the suggestion is about (the suggestion stays in the feed). Each suggestion has **👍/👎** buttons — the rating is fed back to the monitoring AI on its next batch so it learns what you find useful, and the rated suggestion leaves the feed either way.
+
+Monitors batch their input: transcript entries from the watched tabs accumulate and are sent to the monitoring AI as one prompt every 30 seconds. Quiet tabs cost nothing — if nothing new happened, the AI is not queried at all.
+
+`monitor ask <persona> <question>` puts a question straight to a running monitor's AI — useful for "what have you seen so far?" or "anything I should worry about?". The answer lands in your transcript as a `💡 <persona>: …` reply. Questions share the monitor's single prompt slot, so one that arrives while a batch is streaming reports busy rather than interleaving.
+
+#### Personas
+
+A persona file's **first line** is a required directive naming the ACP harness, model, and variant/effort to run the monitor on; the rest of the file is the monitor's role prompt, fed to the session on startup:
+
+```
+[//]: # opencode:DeepSeek V4 Flash:max
+[//]: # claude:Sonnet:high
+```
+
+Two personas ship in `ai/personas/`: `security` (watches for leaked secrets, risky commands, unsafe patterns) and `assistant` (suggests next steps on the work at hand). Add your own by dropping a new `.md` file there — the filename is the persona name used on the command line.
+
+Active monitors show in the tab's connections panel as `monitor:<persona> (provider/model)` rows and are closed by `unmonitor`, closing the owning tab, or quitting the app. Monitors are session state — they are not restored on `--relaunch`.
+
 ### Key Bindings
 
 | Key                 | Action                            |
@@ -450,7 +487,7 @@ OpenCode ships an ACP server mode, so it works as a drop-in agent. Before using 
 | `Ctrl+P` / `Ctrl+N` | Scroll the transcript up / down one line (fixed) |
 | `Ctrl+R`            | Open command history picker        |
 | `Ctrl+T`            | Expand / collapse agent tool steps in the transcript |
-| `Tab`               | Complete a file path, an agent name for `msg` / `broadcast`, a connection string for `connection close`, or a `browser` subcommand / window id |
+| `Tab`               | Complete a file path, an agent name for `msg` / `broadcast`, a connection string for `connection close`, a `browser` subcommand / window id, or a `monitor` persona / target |
 | `Enter`             | Execute the current command        |
 | `Ctrl+C`            | Exit                              |
 
@@ -472,7 +509,7 @@ OpenCode ships an ACP server mode, so it works as a drop-in agent. Before using 
 | `Page Up` / `Page Down` | Scroll up / down by a page |
 | Mouse wheel | Scroll up / down |
 
-`Tab` completes the word at the cursor: filesystem paths against the tab's working directory; at the recipient position of `msg` / `broadcast`, active agent names (`broadcast` also offers `all` and completes each entry of a comma-separated list); at the target of `connection close`, the tab's open connection strings (`sqlite:<name>`, `shell:<shell>`, `acp:opencode`, `browser:<id>`); and for the `browser` command, its subcommands (`open`, `goto`, `content`, …) plus the tab's open window ids where one is expected (`browser use`, `browser window close`).
+`Tab` completes the word at the cursor: filesystem paths against the tab's working directory; at the recipient position of `msg` / `broadcast`, active agent names (`broadcast` also offers `all` and completes each entry of a comma-separated list); at the target of `connection close`, the tab's open connection strings (`sqlite:<name>`, `shell:<shell>`, `acp:opencode`, `browser:<id>`); and for the `browser` command, its subcommands (`open`, `goto`, `content`, …) plus the tab's open window ids where one is expected (`browser use`, `browser window close`). For `monitor` / `unmonitor`, the first argument completes against persona names (from `ai/personas/`) and later arguments against tab labels and `group:<n>` tokens (`unmonitor` also offers `--all`).
 
 ## Development
 

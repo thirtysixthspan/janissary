@@ -158,6 +158,8 @@ function handle(controller: Controller, message: ClientMessage, reply: (event: S
     }
     case 'runSuggestion': { controller.runSuggestion(message.params.id); break;
     }
+    case 'rateSuggestion': { controller.rateSuggestion(message.params.id, message.params.up); break;
+    }
   }
   reply({ t: 'rpc-reply', id: message.id, result: 'ok' });
 }

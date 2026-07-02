@@ -221,6 +221,7 @@ export function App() {
         entries={reportingEntries}
         onClose={closeTab}
         onRun={(id) => client.send({ method: 'runSuggestion', params: { id } })}
+        onRate={(id, up) => client.send({ method: 'rateSuggestion', params: { id, up } })}
       />
       {quitConfirmOpen && <QuitDialog onConfirm={confirmQuit} onCancel={cancelQuit} />}
     </div>

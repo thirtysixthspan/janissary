@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import type { TabView } from '@shared/protocol';
 import { MonitorTab } from './MonitorTab';
 
@@ -12,22 +12,47 @@ export function isReportingTab(tab: TabView): boolean {
 // One reporting tab plus its index in the server's full tab list (close RPCs need it).
 export type ReportingEntry = { tab: TabView; index: number };
 
-// The reporting section: a second tab area rendered below the command bar at 1/4 the
-// height of the action-tab area. It has its own strip and its own (client-side) selection,
-// independent of the server's active action tab. Hidden entirely while no reporting tabs
-// exist. Each reporting tab carries the color of the tab it monitors — in its strip dot,
-// strip border, and the body's left border.
-export function ReportingSection({ entries, onClose, onRun }: {
+// Neither the reporting section nor the action area may shrink below 15% of the
+// viewport height; the divider drag clamps to this band.
+const MIN_PCT = 15;
+const MAX_PCT = 100 - MIN_PCT;
+const DEFAULT_PCT = 20;
+
+// The reporting section: a second tab area rendered below the command bar. It has its
+// own strip and its own (client-side) selection, independent of the server's active
+// action tab. Hidden entirely while no reporting tabs exist. Each reporting tab carries
+// the color of the tab it monitors — in its strip dot, strip border, and the body's
+// left border. The top edge is a draggable divider: pulling it up grows the reporting
+// body while the action area shrinks (and vice versa), within the 15% floors.
+export function ReportingSection({ entries, onClose, onRun, onRate }: {
   entries: ReportingEntry[];
   onClose: (index: number) => void;
   onRun: (id: string) => void;
+  onRate: (id: string, up: boolean) => void;
 }) {
   const [selected, setSelected] = useState(0);
+  const [heightPct, setHeightPct] = useState(DEFAULT_PCT);
+
+  const onDividerDown = useCallback((down: React.MouseEvent) => {
+    down.preventDefault();
+    const onMove = (move: MouseEvent) => {
+      const pct = ((globalThis.innerHeight - move.clientY) / globalThis.innerHeight) * 100;
+      setHeightPct(Math.min(MAX_PCT, Math.max(MIN_PCT, pct)));
+    };
+    const onUp = () => {
+      globalThis.removeEventListener('mousemove', onMove);
+      globalThis.removeEventListener('mouseup', onUp);
+    };
+    globalThis.addEventListener('mousemove', onMove);
+    globalThis.addEventListener('mouseup', onUp);
+  }, []);
+
   if (entries.length === 0) return null;
   const current = entries[Math.min(selected, entries.length - 1)];
 
   return (
-    <div className="reporting-section">
+    <div className="reporting-section" style={{ flex: `0 0 ${heightPct}%` }}>
+      <div className="reporting-resize" onMouseDown={onDividerDown} />
       <div className="tabstrip reporting-strip">
         {entries.map((entry, index) => (
           <div
@@ -52,7 +77,7 @@ export function ReportingSection({ entries, onClose, onRun }: {
       </div>
       {current.tab.view === 'monitor' && current.tab.monitor && (
         <div className="reporting-body" style={{ borderLeft: `4px solid ${current.tab.dotColor}` }}>
-          <MonitorTab suggestions={current.tab.monitor.suggestions} onRun={onRun} />
+          <MonitorTab suggestions={current.tab.monitor.suggestions} onRun={onRun} onRate={onRate} />
         </div>
       )}
     </div>

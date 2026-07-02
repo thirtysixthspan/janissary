@@ -2,7 +2,7 @@ import path from 'node:path';
 import { readdirSync } from 'node:fs';
 import type { CompletionResult } from './types.js';
 import { isDir, longestCommonPrefix, splitToken, replaceToken } from './completion-helpers.js';
-import { completeAgentName, completeSendTarget, completeScheduleTarget, completeConnectionClose, completeBrowserCommand } from './completion-handlers.js';
+import { completeAgentName, completeSendTarget, completeScheduleTarget, completeConnectionClose, completeBrowserCommand, completeMonitorCommand } from './completion-handlers.js';
 
 /**
  * Tab-complete the token ending at the cursor.
@@ -26,6 +26,7 @@ export function completeCommandLine(
   cwd: string,
   agents: string[] = [],
   connections: string[] = [],
+  monitor?: { personas: string[]; targets: string[] },
 ): CompletionResult {
   const before = input.slice(0, cursor);
   const after = input.slice(cursor);
@@ -42,7 +43,8 @@ export function completeCommandLine(
     completeSendTarget(command, argumentIndex, token, agents, before, after, tokenStart) ??
     completeScheduleTarget(command, argumentIndex, preceding, token, agents, before, after, tokenStart) ??
     completeConnectionClose(command, argumentIndex, preceding, token, connections, before, after, tokenStart) ??
-    completeBrowserCommand(command, argumentIndex, preceding, token, connections, before, after, tokenStart);
+    completeBrowserCommand(command, argumentIndex, preceding, token, connections, before, after, tokenStart) ??
+    completeMonitorCommand(command, argumentIndex, preceding, token, monitor, before, after, tokenStart);
   if (result !== null) {
     return result;
   }

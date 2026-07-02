@@ -13,6 +13,7 @@ import type { OpenFileManager } from './open-file-manager.js';
 import type { CaptureManager } from './capture-manager.js';
 import type { CommandManager } from './command-manager.js';
 import type { WorkspaceManager } from './workspace-manager.js';
+import type { MonitorManager } from './monitor-manager.js';
 
 export interface Managers {
   tab: TabManager;
@@ -30,4 +31,5 @@ export interface Managers {
   capture: CaptureManager;
   command: CommandManager;
   workspace: WorkspaceManager;
+  monitor: MonitorManager;
 }

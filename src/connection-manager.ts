@@ -14,6 +14,7 @@ export class ConnectionManager {
     }
     const acp = this.managers.acp.label(label);
     if (acp) rows.push({ text: `acp:${acp}`, kind: 'acp' });
+    rows.push(...this.managers.monitor.connectionsFor(label));
     const b = this.managers.browser.info(label);
     if (b) for (const id of b.ids) rows.push({ text: `browser:${id} (${b.mode})`, kind: 'browser' });
     for (const program of this.managers.pty.terminalsFor(label)) rows.push({ text: `terminal:${program}`, kind: 'terminal' });

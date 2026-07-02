@@ -78,8 +78,14 @@ export type MarkdownView = {
   url: string;
 };
 
+// A monitor target: a single tab by label, or a whole tab group by number (group targets
+// track membership dynamically — tabs added to the group later are covered).
+export type MonitorTarget =
+  | { kind: 'tab'; label: string }
+  | { kind: 'group'; group: number };
+
 // One AI-monitor suggestion: produced by a persona-primed monitoring ACP session, shown either
-// inline in an agent tab's transcript or in the monitor window's feed.
+// inline in an agent tab's transcript or in the monitor reporting tab's feed.
 export type MonitorSuggestion = {
   id: string;
   text: string;

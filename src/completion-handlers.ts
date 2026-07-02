@@ -53,6 +53,33 @@ export function completeScheduleTarget(
   return completeWord(token, '', labels, ' ', before, after, tokenStart);
 }
 
+// Complete `monitor`/`unmonitor` arguments: the first argument is a persona name (or
+// `ask` / `--all`), later arguments are targets (tab labels or `group:<n>` tokens) —
+// except after `monitor ask`, where the persona comes second.
+export function completeMonitorCommand(
+  command: string,
+  argumentIndex: number,
+  preceding: string[],
+  token: string,
+  monitor: { personas: string[]; targets: string[] } | undefined,
+  before: string,
+  after: string,
+  tokenStart: number,
+): CompletionResult | null {
+  if (!monitor || (command !== 'monitor' && command !== 'unmonitor')) return null;
+  if (argumentIndex === 1) {
+    const extra = command === 'unmonitor' ? ['--all'] : ['ask'];
+    return completeWord(token, '', [...monitor.personas, ...extra], ' ', before, after, tokenStart);
+  }
+  if (argumentIndex === 2 && command === 'monitor' && preceding[1]?.toLowerCase() === 'ask') {
+    return completeWord(token, '', monitor.personas, ' ', before, after, tokenStart);
+  }
+  if (argumentIndex >= 2 && preceding[1]?.toLowerCase() !== 'ask') {
+    return completeWord(token, '', monitor.targets, ' ', before, after, tokenStart);
+  }
+  return null;
+}
+
 export function completeConnectionClose(
   command: string,
   argumentIndex: number,

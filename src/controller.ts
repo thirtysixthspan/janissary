@@ -17,6 +17,8 @@ import { messageBus } from './bus.js';
 import { BrowserManager } from './browser-tab.js';
 import { CommandManager } from './command-manager.js';
 import { runSuggestion } from './monitor-window.js';
+import { MonitorManager } from './monitor-manager.js';
+import { listPersonas } from './personas.js';
 import type { TabView } from './protocol.js';
 import { TabManager } from './tab-manager.js';
 import type { Managers } from './managers.js';
@@ -40,6 +42,7 @@ export class Controller {
     this.managers.communication = new AgentCommunicationManager(this.managers);
     this.managers.command = new CommandManager(this.managers);
     this.managers.capture = new CaptureManager(this.managers);
+    this.managers.monitor = new MonitorManager(this.managers);
     
     messageBus.on('state', 'dirty', () => this.sinks.emitState());
     messageBus.on('transcript', 'entry:appended', (event) => {
@@ -99,6 +102,10 @@ export class Controller {
     runSuggestion(this.managers, id);
   }
 
+  rateSuggestion(id: string, up: boolean): void {
+    this.managers.monitor.rate(id, up);
+  }
+
   // --- inline terminal cards (PTY) -----------------------------------------
 
   ptyInput(id: string, data: string): void { this.managers.pty.input(id, data); }
@@ -135,7 +142,14 @@ export class Controller {
     const tab = this.managers.tab.cur();
     const cwd = this.managers.tab.cwdOf(tab.label) ?? process.cwd();
     const agents = this.managers.tab.allLabels();
-    return completeCommandLine(text, cursor, cwd, agents, this.managers.connection.completionConnections(tab.label));
+    // Monitor targets: every other action tab, plus `group:<n>` for each existing group.
+    const actionTabs = this.managers.tab.tabs.filter((t) => t.view !== 'monitor');
+    const groups = [...new Set(actionTabs.map((t) => t.group))].toSorted((a, b) => a - b).map((g) => `group:${g}`);
+    const targets = [...actionTabs.map((t) => t.label).filter((l) => l !== tab.label), ...groups];
+    return completeCommandLine(
+      text, cursor, cwd, agents, this.managers.connection.completionConnections(tab.label),
+      { personas: listPersonas(), targets },
+    );
   }
 
   // Canonical connection strings for `connection close` completion (shell/acp/browser/sqlite).
@@ -144,6 +158,7 @@ export class Controller {
   }
 
   shutdown(): void {
+    this.managers.monitor.closeAll();
     messageBus.clear();
     this.managers.schedule.stop();
     this.managers.shell.closeAll();

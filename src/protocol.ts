@@ -84,9 +84,12 @@ export type RpcCall =
   | { method: 'ptyInput'; params: { id: string; data: string } }
   | { method: 'ptyResize'; params: { id: string; cols: number; rows: number } }
   | { method: 'ptyKill'; params: { id: string } }
-  // Run a monitor suggestion's command in the tab the suggestion is about (the
-  // suggestion is removed from the feed once run).
-  | { method: 'runSuggestion'; params: { id: string } };
+  // Run a monitor suggestion's command in the tab the suggestion is about. The
+  // suggestion stays in the feed.
+  | { method: 'runSuggestion'; params: { id: string } }
+  // Rate a suggestion 👍/👎; feedback reaches the monitoring AI on its next batch and
+  // the suggestion is removed from the feed (either direction).
+  | { method: 'rateSuggestion'; params: { id: string; up: boolean } };
 
 export type ClientMessage = { t: 'rpc'; id: number } & RpcCall;
 

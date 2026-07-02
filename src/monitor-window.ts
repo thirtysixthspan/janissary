@@ -18,6 +18,17 @@ const makeMonitorTab = (name: string, dotColor: string, number: number): Tab => 
   monitor: { suggestions: [] },
 });
 
+// A unique label for a new monitor's reporting tab: the persona name, suffixed
+// (`assistant-2`, …) when that label is already taken by any tab. Each monitor instance
+// gets its own window, so the same persona can watch different targets side by side.
+export function allocateMonitorLabel(managers: Managers, persona: string): string {
+  const used = new Set(managers.tab.tabs.map((t) => t.label));
+  if (!used.has(persona)) return persona;
+  let n = 2;
+  while (used.has(`${persona}-${n}`)) n++;
+  return `${persona}-${n}`;
+}
+
 // All monitor reporting tabs currently open.
 export function monitorTabs(managers: Managers): Tab[] {
   return managers.tab.tabs.filter((t) => t.view === 'monitor');
@@ -43,8 +54,22 @@ export function pushSuggestion(managers: Managers, name: string, dotColor: strin
   messageBus.emit('state', { type: 'dirty' });
 }
 
-// Remove a suggestion from whichever monitor feed holds it (the × button).
-export function dismissSuggestion(managers: Managers, id: string): void {
+// Close a persona's reporting tab (used when the last monitor feeding it goes away
+// with its owning agent tab).
+export function closeMonitorTab(managers: Managers, name: string): void {
+  const index = managers.tab.tabs.findIndex((t) => t.view === 'monitor' && t.label === name);
+  if (index !== -1) managers.tab.closeTab(index);
+}
+
+// Find a suggestion anywhere in the monitor feeds by id.
+export function findSuggestion(managers: Managers, id: string): MonitorSuggestion | undefined {
+  return monitorTabs(managers)
+    .flatMap((t) => t.monitor!.suggestions)
+    .find((s) => s.id === id);
+}
+
+// Remove a suggestion from whichever feed holds it (thumbs-down).
+export function removeSuggestion(managers: Managers, id: string): void {
   for (const tab of monitorTabs(managers)) {
     const before = tab.monitor!.suggestions.length;
     tab.monitor!.suggestions = tab.monitor!.suggestions.filter((s) => s.id !== id);
@@ -52,13 +77,11 @@ export function dismissSuggestion(managers: Managers, id: string): void {
   }
 }
 
-// Run a suggestion's command in the tab the suggestion is about (the Run button), then
-// remove it from the feed. Monitor tabs themselves never execute commands.
+// Run a suggestion's command in the tab the suggestion is about (a clicked command
+// line). The suggestion stays in the feed — the history of what was suggested (and run)
+// is part of the record. Monitor tabs themselves never execute commands.
 export function runSuggestion(managers: Managers, id: string): void {
-  const suggestion = monitorTabs(managers)
-    .flatMap((t) => t.monitor!.suggestions)
-    .find((s) => s.id === id);
+  const suggestion = findSuggestion(managers, id);
   if (!suggestion?.command) return;
   managers.command.dispatchTo(suggestion.about, suggestion.command);
-  dismissSuggestion(managers, id);
 }
