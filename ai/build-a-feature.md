@@ -1,6 +1,6 @@
 # Build a Feature
 
-Your job: pick the simplest available plan from `docs/plans/ready/`, implement it end to end, promote the plan to `docs/plans/complete/`, and open a pull request. You change source code, tests, and the plan file's location — nothing else.
+Your job: pick the simplest available plan from `docs/plans/ready/`, implement it end to end, update the functional specs, promote the plan to `docs/plans/complete/`, and open a pull request. You change source code, tests, spec files, and the plan file's location — nothing else.
 
 **Shell hygiene:** run every command on its own line — no `&&` chaining, no `; echo "Exit code: $?"` suffixes, no subshell captures. To run a project script, always use `./scripts/run.mjs <name>` — never call `node scripts/<name>.mjs` directly.
 
@@ -8,7 +8,7 @@ Your job: pick the simplest available plan from `docs/plans/ready/`, implement i
 
 ### Allowed — do it automatically, never ask
 
-Read any file in the repo. Edit source, tests, and CSS as the plan directs. Move the chosen plan file from `docs/plans/ready/` to `docs/plans/complete/`. Run `./scripts/run.mjs check-diff` after each change. Run the full PR workflow via `ai/open-feature-pull-request.md` when implementation is done.
+Read any file in the repo. Edit source, tests, CSS, and spec files as the plan directs. Move the chosen plan file from `docs/plans/ready/` to `docs/plans/complete/`. Run `./scripts/run.mjs check-diff` after each change. Run the full PR workflow via `ai/open-feature-pull-request.md` when implementation is done.
 
 ### Forbidden — no exceptions
 
@@ -65,14 +65,26 @@ Run `./scripts/run.mjs check-diff` after writing tests. All tests must pass.
 
 ---
 
-## Step 5 — Final verification
+## Step 5 — Update or create spec files
+
+Every feature must be reflected in the functional specs under `spec/`. After implementation and tests:
+
+1. **Check the plan.** If the plan names specific spec files to update or create, do exactly that.
+2. **Otherwise, find the right spec.** Read the existing specs in `spec/` and identify which one(s) the feature belongs to. Most features extend an existing spec (e.g. a new keyboard shortcut belongs in `spec/keyboard-navigation.md`, a new tab behavior belongs in `spec/tabs.md`). If no existing spec covers the area, create a new one.
+3. **Write or update the spec.** Follow the existing conventions: `# Title` at the top, `### Subsection` for each aspect, prose describing user-visible behavior only — no code, no implementation details, no file paths. The spec is what the feature *does*, not how it is built. Keep additions concise and factual.
+
+Spec files are markdown and do not affect `check-diff`, so no verification run is needed after this step.
+
+---
+
+## Step 6 — Final verification
 
 1. Run `./scripts/run.mjs check-diff` one last time. It must pass clean.
 2. Manually verify the behavior if the plan's Verification section describes manual steps. If manual verification is not possible in this environment, note that in the report.
 
 ---
 
-## Step 6 — Promote the plan
+## Step 7 — Promote the plan
 
 Move the plan file from `docs/plans/ready/` to `docs/plans/complete/`:
 
@@ -82,13 +94,13 @@ git mv docs/plans/ready/<plan-file> docs/plans/complete/<plan-file>
 
 ---
 
-## Step 7 — Open the pull request
+## Step 8 — Open the pull request
 
 Execute `ai/open-feature-pull-request.md` in full. That document owns the PR workflow — follow its steps without deviation.
 
 ---
 
-## Step 8 — Report
+## Step 9 — Report
 
 Give the user a short report in this exact shape:
 
@@ -97,6 +109,7 @@ Plan:           docs/plans/ready/<file> → docs/plans/complete/<file>
 Complexity:     N/10
 Implementation: <one-line summary of what was built>
 Tests:          <count> new tests across <files>
+Spec:           <spec file(s) created or updated, with one-line description of change>
 PR:             <url> (#<number>)
 Status:         open
 ```
