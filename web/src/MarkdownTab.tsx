@@ -1,8 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import type { MarkdownView } from '@shared/protocol';
 import { renderMarkdown } from './markdown';
-
-const LINE_STEP = 40;
+import { onMarkdownKey } from './markdown-handlers';
 
 export function MarkdownTab({ markdown }: { markdown: MarkdownView }) {
   const [html, setHtml] = useState<string | undefined>(undefined);
@@ -25,33 +24,7 @@ export function MarkdownTab({ markdown }: { markdown: MarkdownView }) {
   }, [markdown.url, markdown.name, token]);
 
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      const stage = stageRef.current;
-      if (!stage) return;
-      switch (e.key) {
-        case 'ArrowUp': {
-          e.preventDefault();
-          stage.scrollTop -= LINE_STEP;
-          break;
-        }
-        case 'ArrowDown': {
-          e.preventDefault();
-          stage.scrollTop += LINE_STEP;
-          break;
-        }
-        case 'PageUp': {
-          e.preventDefault();
-          stage.scrollTop -= stage.clientHeight;
-          break;
-        }
-        case 'PageDown': {
-          e.preventDefault();
-          stage.scrollTop += stage.clientHeight;
-          break;
-        }
-        // No default
-      }
-    };
+    const onKey = (e: KeyboardEvent) => onMarkdownKey(e, stageRef.current);
     globalThis.addEventListener('keydown', onKey);
     return () => { globalThis.removeEventListener('keydown', onKey); };
   }, []);
