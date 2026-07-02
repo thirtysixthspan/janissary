@@ -10,6 +10,7 @@ import { initDbDir } from './connections.js';
 import { initProfileDir } from './profiles.js';
 import { initWorkspaceDir, clearWorkspaceDir } from './workspace.js';
 import { loadConfig } from './config.js';
+import { parseCliArgs, usageText, appVersion } from './cli-args.js';
 import type { ChildProcess } from 'node:child_process';
 
 // The Chrome "app" window we launched, so we can close it on shutdown (quit/exit/Ctrl+C).
@@ -96,10 +97,17 @@ function openApp(url: string, projectDir: string): void {
 }
 
 export async function boot(argv = process.argv.slice(2)): Promise<void> {
-  const isRelaunch = argv.includes('--relaunch');
-  const isNoOpen = argv.includes('--no-open');
-  const portArgument = argv.find((a) => a.startsWith('--port='));
-  const port = portArgument ? Number(portArgument.slice('--port='.length)) : undefined;
+  const args = parseCliArgs(argv);
+
+  if (args.help) {
+    process.stdout.write(usageText());
+    return;
+  }
+
+  if (args.version) {
+    process.stdout.write(`${appVersion()}\n`);
+    return;
+  }
 
   const cwd = process.cwd();
   initAgentStateDirectory(cwd);
@@ -109,15 +117,15 @@ export async function boot(argv = process.argv.slice(2)): Promise<void> {
   new TranscriptLogger(cwd); // append-only transcript log under .janissary/log/ (never cleared)
   new TranscriptStore(cwd);
   loadConfig(cwd);
-  if (!isRelaunch) { clearStateDirectory(); TranscriptStore.clear(); clearWorkspaceDir(); }
+  if (!args.relaunch) { clearStateDirectory(); TranscriptStore.clear(); clearWorkspaceDir(); }
 
   const webDir = path.join(import.meta.dirname, '..', 'web', 'dist');
-  const server = await startServer({ webDir, token: makeToken(), port, relaunch: isRelaunch });
+  const server = await startServer({ webDir, token: makeToken(), port: args.port, relaunch: args.relaunch });
 
   // Machine-readable line first (the launcher may parse it), then a human line.
   process.stdout.write(`__JANUS_URL__ ${server.url}\n`);
   process.stderr.write(`\nJanissary is running at:\n  ${server.url}\n\nPress Ctrl+C to stop.\n`);
-  if (!isNoOpen) openApp(server.url, cwd);
+  if (!args.noOpen) openApp(server.url, cwd);
 
   const stop = () => { void server.close().then(() => process.exit(0)); };
   process.on('SIGINT', stop);
