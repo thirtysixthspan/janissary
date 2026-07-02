@@ -6,25 +6,26 @@ type Properties = {
   dotColor: string;
   history: string[];
   onSubmit: (text: string) => void;
-  // Owned by App so other UI (e.g. clicking a tab) can focus the command line.
   inputRef: React.RefObject<HTMLInputElement | null>;
-  // Server-side Tab completion (paths / agent names / connections / browser subcommands).
+  prefillRef: React.RefObject<((text: string) => void) | null>;
   complete: (text: string, cursor: number) => Promise<CompletionResult>;
-  // While the history picker is open it is modal, so the command line ignores keys.
   pickerOpen: boolean;
 };
 
-// The bottom command line. Up/Down walk this tab's history (server-provided); Enter dispatches;
-// Tab completes. Shift+Arrow / Ctrl+T are left to the window handler (tab switch / collapse).
-export function CommandInput({ dotColor, history, onSubmit, inputRef, complete, pickerOpen }: Properties) {
+export function CommandInput({ dotColor, history, onSubmit, inputRef, prefillRef, complete, pickerOpen }: Properties) {
   const [value, setValue] = useState('');
   const [completions, setCompletions] = useState<string[]>([]);
   const histIndex = useRef(-1);
 
-  // Recall a history entry onto the input with the cursor at its end.
   const recall = (text: string) => {
     setValue(text);
     requestAnimationFrame(() => { const element = inputRef.current; if (element) element.selectionStart = element.selectionEnd = text.length; });
+  };
+
+  prefillRef.current = (text: string) => {
+    recall(text);
+    histIndex.current = -1;
+    setCompletions([]);
   };
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
