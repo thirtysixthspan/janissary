@@ -1,6 +1,7 @@
 import { makeTab, distinctColor } from './tab.js';
 import { parseProfileCommand, loadProfileAgents, listProfiles, profileExists } from './profiles.js';
 import { parseAgentCommand, resolveAgentName } from './commands.js';
+import { openProfileAgents } from './profile-agent-opener.js';
 import type { Managers } from './managers.js';
 
 export class ProfileManager {
@@ -25,38 +26,7 @@ export class ProfileManager {
       return;
     }
 
-    const authored = agents.map((a) => a.group).find((g): g is number => typeof g === 'number');
-    const group = authored ?? Math.max(0, ...this.managers.tab.tabs.map((t) => t.group)) + 1;
-    const open = new Set(this.managers.tab.tabs.map((t) => t.label.toLowerCase()));
-    const used = new Set(this.managers.tab.tabs.map((t) => t.dotColor));
-    const opened: string[] = [];
-    const skipped: string[] = [];
-    let groupColor: string | undefined;
-    const firstNew = this.managers.tab.tabs.length;
-
-    for (const state of agents) {
-      if (open.has(state.name.toLowerCase())) { skipped.push(state.name); continue; }
-      const dotColor = distinctColor(used, state.dotColor);
-      used.add(dotColor);
-      groupColor ??= dotColor;
-      const log = state.log ?? [];
-      const tab = makeTab(state.name, dotColor, this.managers.tab.tabs.length + 1, state.cmdHistory ?? [],
-        log, state.workspaceDir, group, groupColor);
-      tab.toolStepsExpanded = false;
-      this.managers.tab.tabs = [...this.managers.tab.tabs, tab];
-      if (state.cwd) this.managers.tab.setCwd(state.name, state.cwd);
-      if (state.context) this.managers.tab.setContext(state.name, state.context);
-      if (state.schedule) this.managers.schedule.set(state.name, state.schedule);
-      this.managers.tab.persist(this.managers.tab.buildAgentState(tab, { schedule: state.schedule }));
-      open.add(state.name.toLowerCase());
-      opened.push(state.name);
-    }
-
-    if (opened.length > 0) this.managers.tab.setActiveTab(firstNew);
-    const parts: string[] = [];
-    if (opened.length > 0) parts.push(`Launched profile "${parsed.name}": ${opened.join(', ')}.`);
-    if (skipped.length > 0) parts.push(`Already open: ${skipped.join(', ')}.`);
-    out(parts.length > 0 ? parts.join(' ') : `Profile "${parsed.name}" has no agents to open.`);
+    openProfileAgents(agents, this.managers, parsed.name, out);
   }
 
   newAgent(command: string): void {
