@@ -39,6 +39,11 @@ html, body, #root {
   color: var(--muted); font-size: 14px; line-height: 1;
 }
 .tab .tab-close:hover { color: var(--fg); }
+/* Inline tab-rename input: matches the label's font so it reads as an in-place edit. */
+.tab-rename-input {
+  font: inherit; color: inherit; background: transparent; border: none; outline: none;
+  padding: 0; margin: 0; width: 10em;
+}
 
 /* Image view tab: a metadata header above the image, which fills the remaining space. */
 .image-tab { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 8px 12px; gap: 8px; }

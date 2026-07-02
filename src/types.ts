@@ -155,6 +155,7 @@ export type AgentState = {
   context?: string[];
   workspaceDir?: string;
   schedule?: ScheduleEntry[];
+  title?: string;
 };
 
 // --- schedule.ts ----------------------------------------------------------

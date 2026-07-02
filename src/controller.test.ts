@@ -222,6 +222,29 @@ describe('Controller', () => {
     expect(byLabel).toEqual({ ahmed: 1, bekir: 3, cafer: 5 });
   });
 
+  it('rename sets a display alias without changing the label', () => {
+    const { c } = makeController();
+    c.dispatch('rename reviewer');
+    expect(c.view()[0].label).toBe('janus');
+    expect(c.view()[0].title).toBe('reviewer');
+  });
+
+  it('bare rename clears the alias', () => {
+    const { c } = makeController();
+    c.dispatch('rename reviewer');
+    c.dispatch('rename');
+    expect(c.view()[0].title).toBeUndefined();
+  });
+
+  it('persists and restores the alias across rehydrate', () => {
+    initAgentStateDirectory(mkdtempSync(path.join(tmpdir(), 'janus-alias-')));
+    const { c } = makeController();
+    c.dispatch('rename reviewer');
+    const c2 = makeController().c;
+    c2.rehydrate();
+    expect(c2.view().find((t) => t.label === 'janus')?.title).toBe('reviewer');
+  });
+
   it('records a fired scheduled command in the tab history (as if typed there)', () => {
     vi.useFakeTimers();
     try {
