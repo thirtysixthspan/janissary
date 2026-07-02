@@ -10,7 +10,7 @@ import { initDbDir } from './connections.js';
 import { initProfileDir } from './profiles.js';
 import { initWorkspaceDir, clearWorkspaceDir } from './workspace.js';
 import { loadConfig } from './config.js';
-import { parseCliArgs, usageText, appVersion } from './cli-args.js';
+import { parseCliArgs, usageText, appVersion, CliUsageError } from './cli-args.js';
 import type { ChildProcess } from 'node:child_process';
 
 // The Chrome "app" window we launched, so we can close it on shutdown (quit/exit/Ctrl+C).
@@ -138,6 +138,10 @@ export async function boot(argv = process.argv.slice(2)): Promise<void> {
 try {
   await boot();
 } catch (error) {
+  if (error instanceof CliUsageError) {
+    process.stderr.write(`${error.message}\nTry 'janus --help' for more information.\n`);
+    process.exit(2);
+  }
   process.stderr.write(`Failed to start Janissary: ${error instanceof Error ? error.message : String(error)}\n`);
   process.exit(1);
 }

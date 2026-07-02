@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
-import { parseCliArgs, usageText, appVersion } from './cli-args.js';
+import { parseCliArgs, usageText, appVersion, CliUsageError } from './cli-args.js';
 
 describe('parseCliArgs', () => {
   it('returns all defaults for an empty argv', () => {
@@ -44,6 +44,30 @@ describe('parseCliArgs', () => {
     expect(args.port).toBe(8080);
     expect(args.help).toBe(false);
     expect(args.version).toBe(false);
+  });
+
+  it('throws CliUsageError on unknown flag', () => {
+    expect(() => parseCliArgs(['--no-opne'])).toThrow(CliUsageError);
+  });
+
+  it('throws CliUsageError on bare --port', () => {
+    expect(() => parseCliArgs(['--port'])).toThrow(CliUsageError);
+  });
+
+  it('throws CliUsageError on --port=abc', () => {
+    expect(() => parseCliArgs(['--port=abc'])).toThrow(CliUsageError);
+  });
+
+  it('throws CliUsageError on --port=0', () => {
+    expect(() => parseCliArgs(['--port=0'])).toThrow(CliUsageError);
+  });
+
+  it('throws CliUsageError on --port=70000', () => {
+    expect(() => parseCliArgs(['--port=70000'])).toThrow(CliUsageError);
+  });
+
+  it('throws CliUsageError on positional argument', () => {
+    expect(() => parseCliArgs(['foo'])).toThrow(CliUsageError);
   });
 });
 
