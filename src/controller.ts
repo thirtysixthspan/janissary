@@ -131,6 +131,10 @@ export class Controller {
     this.managers.tab.closeTab(index);
   }
 
+  renameTab(index: number, title: string): void {
+    this.managers.tab.renameTab(index, title);
+  }
+
   toggleCollapse(): void {
     this.managers.tab.toggleCollapse();
   }

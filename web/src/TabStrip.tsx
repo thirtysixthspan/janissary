@@ -1,36 +1,28 @@
 import React from 'react';
 import type { TabView } from '@shared/protocol';
+import { TabItem } from './TabItem';
 
 type Properties = {
   tabs: TabView[];
   activeTab: number;
   onSelect: (index: number) => void;
   onClose: (index: number) => void;
+  onRename: (index: number, title: string) => void;
 };
 
-export function TabStrip({ tabs, activeTab, onSelect, onClose }: Properties) {
+export function TabStrip({ tabs, activeTab, onSelect, onClose, onRename }: Properties) {
   return (
     <div className="tabstrip">
       {tabs.map((tab, index) => (
-        <div
+        <TabItem
           key={tab.label}
-          className={`tab${index === activeTab ? ' active' : ''}`}
-          style={{ borderTopColor: tab.groupColor }}
-          onClick={() => onSelect(index)}
-        >
-          <span className={`dot${tab.busy ? ' busy' : ''}`} style={{ color: tab.dotColor }}>●</span>
-          <span>{tab.title ?? tab.label}</span>
-          {tab.hasUnread && <span className="tab-badge" role="img" aria-label="unread">✨</span>}
-          <button
-            type="button"
-            className="tab-close"
-            title="Close tab"
-            aria-label="Close tab"
-            onClick={(e) => { e.stopPropagation(); onClose(index); }}
-          >
-            ×
-          </button>
-        </div>
+          tab={tab}
+          index={index}
+          active={index === activeTab}
+          onSelect={onSelect}
+          onClose={onClose}
+          onRename={onRename}
+        />
       ))}
     </div>
   );

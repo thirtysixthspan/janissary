@@ -77,6 +77,7 @@ export type RpcCall =
   | { method: 'command'; params: { text: string } }
   | { method: 'setActiveTab'; params: { index: number } }
   | { method: 'closeTab'; params: { index: number } }
+  | { method: 'renameTab'; params: { index: number; title: string } }
   | { method: 'moveTab'; params: { dir: -1 | 1 } }
   | { method: 'reorderTab'; params: { dir: -1 | 1 } }
   | { method: 'toggleCollapse'; params?: Record<string, never> }

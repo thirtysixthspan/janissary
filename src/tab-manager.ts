@@ -92,6 +92,7 @@ export class TabManager {
       cmdHistory: tab.cmdHistory,
       cwd: this.cwd.get(tab.label),
       context: this.context.get(tab.label),
+      title: tab.title,
       ...extra,
     };
   }
@@ -145,6 +146,16 @@ export class TabManager {
     this.activeTab = Math.min(this.activeTab, this.tabs.length - 1);
     const active = this.tabs[this.activeTab];
     if (active) active.hasUnread = false;
+    messageBus.emit('state', { type: 'dirty' });
+  }
+
+  renameTab(index: number, title: string): void {
+    const tab = this.tabs[index];
+    if (!tab) return;
+    const trimmed = title.trim();
+    if (trimmed && trimmed !== tab.label) tab.title = trimmed;
+    else delete tab.title;
+    this.persist(this.buildAgentState(tab));
     messageBus.emit('state', { type: 'dirty' });
   }
 
@@ -307,6 +318,7 @@ export class TabManager {
         log, s.workspaceDir, s.group ?? 1, s.groupColor || s.dotColor || '#5b9cff',
       );
       tab.toolStepsExpanded = false;
+      if (s.title) tab.title = s.title;
       return tab;
     });
     for (const s of states) {

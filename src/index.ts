@@ -136,6 +136,8 @@ function handle(controller: Controller, message: ClientMessage, reply: (event: S
     }
     case 'closeTab': { controller.closeTab(message.params.index); break;
     }
+    case 'renameTab': { controller.renameTab(message.params.index, message.params.title); break;
+    }
     case 'moveTab': { controller.moveTab(message.params.dir); break;
     }
     case 'reorderTab': { controller.reorderTab(message.params.dir); break;

@@ -68,6 +68,19 @@ The `next` command programmatically switches to the next tab.
 
 Each tab carries its own transcript log, command history (including navigation index), and scroll offset. Switching tabs preserves each tab's state.
 
+### Tab display alias
+
+Any tab can be given a **display alias**: a name shown in the tab strip in place of its internal label, without changing the label itself. The label remains the identifier used everywhere else — `msg`/`broadcast` routing, the monitor feed, and every other tab-targeting feature keep working against the original name; only the strip's appearance changes.
+
+An alias can be set two ways:
+
+- **`rename <newname>`**, typed into a tab, sets that tab's alias and prints a confirmation reminding you that routing still uses the original name. Bare `rename` (no argument) clears the alias, reverting the strip to the label.
+- **Clicking the label of the already-active tab** turns it into an editable text field, pre-filled with the current display name. Pressing Enter or clicking elsewhere commits the new value; pressing Escape cancels and leaves the alias unchanged. Clicking the label of an inactive tab still just selects it, as before.
+
+Setting the alias to an empty value, or to the same text as the label, clears it rather than storing a redundant alias. Aliases are display-only — they need not be unique, and two tabs may show the same alias while remaining distinct by label.
+
+An alias persists across `--relaunch`, restored alongside the rest of the tab's saved state.
+
 ### `close` command
 
 Closes the current tab and all of its associated connections — its shell, ACP session, browser, harness/interactive terminals, and scheduled timers — removes any workspace clone and its in-memory agent state, and selects an adjacent tab. While more than one tab is open, `close` (or its alias `exit`) only closes tabs — exiting the app is `quit`, which asks for confirmation first (see `quit-confirmation.md`). **Closing the last remaining tab quits the app**: it behaves exactly like `quit`, whether the close came from the command, the tab strip's × button, or the tab's process exiting. When `close`/`exit` is *typed* on the last tab, the quit confirmation dialog is shown first, same as typing `quit`; the × button and a process exit quit directly. `close page <n>` (or `exit page <n>`) closes a numbered page tab instead of the active one. (Open SQLite connections are global, not tab-scoped, so they are left open — close them with `connection close sqlite:<name>` — except when the last tab closes, which closes all of them as part of app shutdown.)

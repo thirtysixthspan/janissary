@@ -72,6 +72,8 @@ export class JanusClient {
     });
   }
 
+  renameTab(index: number, title: string): void { this.send({ method: 'renameTab', params: { index, title } }); }
+
   onState(l: StateListener): () => void { this.stateListeners.add(l); return () => this.stateListeners.delete(l); }
   onPtyExit(l: ExitListener): () => void { this.exitListeners.add(l); return () => this.exitListeners.delete(l); }
 

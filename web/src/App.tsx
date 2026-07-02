@@ -127,6 +127,7 @@ export function App() {
         activeTab={actionEntries.findIndex((e) => e.index === activeTab)}
         onSelect={(index) => selectTab(actionEntries[index].index)}
         onClose={(index) => closeTab(actionEntries[index].index)}
+        onRename={(index, title) => client.renameTab(actionEntries[index].index, title)}
       />
 
       <ViewTabBody tab={current} />
