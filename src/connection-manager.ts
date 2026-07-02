@@ -1,7 +1,7 @@
 import type { ConnectionView } from './protocol.js';
 import { parseConnectionCommand } from './connections.js';
 import { SHELL_NAME } from './shell-manager.js';
-import { messageBus } from './bus.js';
+import { closeConnection } from './connection-close.js';
 import type { Managers } from './managers.js';
 
 export class ConnectionManager {
@@ -42,28 +42,7 @@ export class ConnectionManager {
       void this.managers.browser.run(label, `browser window close ${parsed.id}`).then((o) => this.managers.tab.finishRunning(label, o));
       return;
     }
-    switch (parsed.kind) {
-    case 'sqlite': {
-      out(this.managers.database.close(parsed.id) ? `Closed connection sqlite:${parsed.id}.` : `No open connection sqlite:${parsed.id}.`);
-
-    break;
-    }
-    case 'shell': {
-      if (this.managers.shell.close(label)) out(`Closed connection shell:${SHELL_NAME}.`);
-      else out(`No open connection shell:${parsed.id}.`);
-
-    break;
-    }
-    case 'acp': {
-      if (this.managers.acp.close(label)) { messageBus.emit('state', { type: 'dirty' }); out('Closed connection acp:opencode.'); }
-      else out('No open connection acp:opencode.');
-
-    break;
-    }
-    default: {
-      out(`Closing ${parsed.kind} connections is not yet available in the web UI.`);
-    }
-    }
+    closeConnection(parsed.kind, parsed.id, this.managers, label, out);
   }
 
   completionConnections(label: string): string[] {
