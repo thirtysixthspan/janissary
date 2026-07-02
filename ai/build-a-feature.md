@@ -2,7 +2,9 @@
 
 Your job: pick the simplest available plan from `docs/plans/ready/`, implement it end to end, update the functional specs, promote the plan to `docs/plans/complete/`, and open a pull request. You change source code, tests, spec files, and the plan file's location — nothing else.
 
-**Shell hygiene:** run every command on its own line — no `&&` chaining, no `; echo "Exit code: $?"` suffixes, no subshell captures, no `for`/`while` loops, no variable expansion (`$var`, `$(...)`). Commands with control-flow or expansion require manual approval and will stall an unattended run. To run a project script, always use `./scripts/run.mjs <name>` — never call `node scripts/<name>.mjs` directly.
+**Shell hygiene:** run every command on its own line — no `&&` chaining, no `; echo "Exit code: $?"` suffixes, no subshell captures, no `for`/`while` loops, no variable expansion (`$var`, `$(...)`), no pipes (`|`). Commands with control-flow, expansion, or pipes require manual approval and will stall an unattended run. To run a project script, always use `./scripts/run.mjs <name>` — never call `node scripts/<name>.mjs` directly.
+
+This overrides CLAUDE.md's "Capturing command output" guidance (capture to a variable, then `grep` it repeatedly) for this task: that pattern relies on `$(...)` and pipes, which stall an unattended run. Instead, run the command plain and read the full tool output directly — filter it yourself while reading, don't shell out to `grep`.
 
 **Run autonomously.** This task runs unattended — do not ask the user questions or wait for feedback at any step. Make the best judgment call yourself, using the rules in this document, and keep going. Only stop early for the conditions explicitly listed under "Forbidden" below (e.g. no plans available, only 7+ complexity plans, discovering out-of-scope file edits).
 

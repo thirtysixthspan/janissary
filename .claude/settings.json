@@ -19,5 +19,18 @@
       "Bash(kill *)",
       "Bash(screencapture *)"
     ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/block-unsafe-bash.mjs"
+          }
+        ]
+      }
+    ]
   }
 }
