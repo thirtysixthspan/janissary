@@ -2,7 +2,7 @@
 
 Your job: pick the simplest available plan from `docs/plans/ready/`, implement it end to end, update the functional specs, promote the plan to `docs/plans/complete/`, and open a pull request. You change source code, tests, spec files, and the plan file's location — nothing else.
 
-**Shell hygiene:** run every command on its own line — no `&&` chaining, no `; echo "Exit code: $?"` suffixes, no subshell captures, no `for`/`while` loops, no variable expansion (`$var`, `$(...)`). Commands with control-flow or expansion require manual approval and will stall an unattended run. To run a project script, always use `./scripts/run.mjs <name>` — never call `node scripts/<name>.mjs` directly.
+**Shell hygiene:** run every command on its own line — no `&&` chaining, no `; echo "Exit code: $?"` suffixes, no subshell captures, no `for`/`while` loops, no variable expansion (`$var`, `$(...)`), no redirects (`2>/dev/null`, `>file`, `>>file`). Commands with control-flow, expansion, or redirects require manual approval and will stall an unattended run. To run a project script, always use `./scripts/run.mjs <name>` — never call `node scripts/<name>.mjs` directly.
 
 **Run autonomously.** This task runs unattended — do not ask the user questions or wait for feedback at any step. Make the best judgment call yourself, using the rules in this document, and keep going. Only stop early for the conditions explicitly listed under "Forbidden" below (e.g. no plans available, only 7+ complexity plans, discovering out-of-scope file edits).
 

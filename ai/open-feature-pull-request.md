@@ -149,11 +149,10 @@ If earlier commits already exist on the branch, consolidate so the **final** sta
 `pr-resolve-remote` exposes the real GitHub remote as `github` and prints variables:
 
 ```bash
-./scripts/run.mjs pr-resolve-remote > temp/remote-info.txt
-cat temp/remote-info.txt
+./scripts/run.mjs pr-resolve-remote
 ```
 
-This prints a single space-separated line: `GH_REMOTE OWNER_REPO BRANCH GH_URL`. Read those four values from the output and carry them as `GH_REMOTE`, `OWNER_REPO`, `BRANCH`, and `GH_URL` through the remaining steps, then push:
+This prints a single space-separated line: `GH_REMOTE OWNER_REPO BRANCH GH_URL`. Read those four values directly from the command's stdout output and carry them as `GH_REMOTE`, `OWNER_REPO`, `BRANCH`, and `GH_URL` through the remaining steps, then push:
 
 ```bash
 ./scripts/run.mjs pr-push-branch "$GH_REMOTE" "$BRANCH"
