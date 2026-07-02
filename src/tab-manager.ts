@@ -9,6 +9,7 @@ import { saveAgentState, listAgentStates } from './agent-state.js';
 import { abbreviatePath } from './paths.js';
 import { getConfig } from './config.js';
 import { messageBus } from './bus.js';
+import { closeTabResources } from './tab-cleanup.js';
 import type { Managers } from './managers.js';
 import {
   addImageTab, addMarkdownTab, addPageTab,
@@ -120,24 +121,7 @@ export class TabManager {
   closeTab(index: number): void {
     const tab = this.tabs[index];
     if (!tab) return;
-    if (tab.workspaceDir) this.managers.workspace.remove(tab.workspaceDir);
-    this.managers.shell.close(tab.label);
-    this.managers.acp.close(tab.label);
-    this.managers.browser.closeTab(tab.label);
-    this.managers.pty.closeTab(tab.label);
-    this.managers.schedule.delete(tab.label);
-    this.managers.database.forgetTab(tab.label);
-    if (this.tabs.length <= 1) this.managers.database.closeAll();
-    messageBus.emit('transcript', { type: 'tab:removed', tabLabel: tab.label });
-    if (tab.image) {
-      const id = tab.image.url.replace(/^\/open\//, '');
-      this.openFiles.delete(id);
-    }
-    if (tab.markdown) {
-      const id = tab.markdown.url.replace(/^\/open\//, '');
-      this.openFiles.delete(id);
-    }
-    this.context.delete(tab.label);
+    closeTabResources(tab, this.managers, this.openFiles, this.context, this.tabs.length);
     if (this.tabs.length <= 1) {
       this.tabs = [this.makeRootTab()];
       this.cwd.set('janus', process.cwd());
