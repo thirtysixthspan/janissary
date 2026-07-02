@@ -16,6 +16,7 @@ import { QuitDialog } from './QuitDialog/QuitDialog';
 import { getRecentHistory } from './history';
 import { useTranscriptScroll } from './useTranscriptScroll';
 import { useQuitConfirm } from './QuitDialog/useQuitConfirm';
+import { handleRouteChooserKey, handlePickerKey } from './keyboard-handlers';
 
 export function App() {
   const clientReference = useRef<JanusClient | null>(null);
@@ -88,44 +89,13 @@ export function App() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      // Route chooser is modal while open: Up/Down move, Return runs the chosen route, Escape cancels.
       const rc = stateReference.current.route;
       if (rc) {
-        switch (e.key) {
-        case 'ArrowUp': { e.preventDefault(); setRouteIndex((index) => Math.max(0, index - 1)); 
-        break;
-        }
-        case 'ArrowDown': { e.preventDefault(); setRouteIndex((index) => Math.min(rc.choices.length - 1, index + 1)); 
-        break;
-        }
-        case 'Enter': { e.preventDefault(); chooseRoute(stateReference.current.routeIdx); 
-        break;
-        }
-        case 'Escape': { e.preventDefault(); chooseRoute(-1); 
-        break;
-        }
-        // No default
-        }
+        handleRouteChooserKey(e, rc, stateReference.current.routeIdx, setRouteIndex, chooseRoute);
         return;
       }
-      // History picker is modal while open: Up/Down move, Return runs, Escape closes.
       if (stateReference.current.pickerOpen) {
-        const items = stateReference.current.recent;
-        switch (e.key) {
-        case 'ArrowUp': { e.preventDefault(); setPickerIndex((index) => Math.max(0, index - 1)); 
-        break;
-        }
-        case 'ArrowDown': { e.preventDefault(); setPickerIndex((index) => Math.min(items.length - 1, index + 1)); 
-        break;
-        }
-        case 'Enter': { e.preventDefault(); const command = items[stateReference.current.pickerIdx]; if (command) runCommand(command); setPickerOpen(false); 
-        break;
-        }
-        case 'Escape': { e.preventDefault(); setPickerOpen(false); 
-        break;
-        }
-        // No default
-        }
+        handlePickerKey(e, stateReference.current.recent, stateReference.current.pickerIdx, setPickerIndex, runCommand, setPickerOpen);
         return;
       }
       if (e.ctrlKey && e.key.toLowerCase() === 'r') { e.preventDefault(); openPicker(); return; }
