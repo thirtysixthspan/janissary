@@ -2,6 +2,8 @@ import { parseArgs } from 'node:util';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 
+export class CliUsageError extends Error {}
+
 export interface CliArgs {
   help: boolean;
   version: boolean;
@@ -11,24 +13,41 @@ export interface CliArgs {
 }
 
 export function parseCliArgs(argv: string[]): CliArgs {
-  const { values } = parseArgs({
-    args: argv,
-    options: {
-      help: { type: 'boolean' },
-      version: { type: 'boolean' },
-      relaunch: { type: 'boolean' },
-      'no-open': { type: 'boolean' },
-      port: { type: 'string' },
-    },
-    strict: false,
-  });
+  let values;
+  try {
+    ({ values } = parseArgs({
+      args: argv,
+      options: {
+        help: { type: 'boolean' },
+        version: { type: 'boolean' },
+        relaunch: { type: 'boolean' },
+        'no-open': { type: 'boolean' },
+        port: { type: 'string' },
+      },
+      strict: true,
+      allowPositionals: false,
+    }));
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    if (typeof code === 'string' && code.startsWith('ERR_PARSE_ARGS')) {
+      const raw = error instanceof Error ? error.message : String(error);
+      const cleaned = raw.replace(/^TypeError \[[^\]]+]: /, '');
+      throw new CliUsageError(cleaned);
+    }
+    throw error;
+  }
+
+  const port = typeof values.port === 'string' ? Number(values.port) : undefined;
+  if (port !== undefined && !(Number.isSafeInteger(port) && port >= 1 && port <= 65_535)) {
+    throw new CliUsageError(`invalid --port value: ${values.port}`);
+  }
 
   return {
     help: Boolean(values.help),
     version: Boolean(values.version),
     relaunch: Boolean(values.relaunch),
     noOpen: Boolean(values['no-open']),
-    port: typeof values.port === 'string' ? Number(values.port) : undefined,
+    port,
   };
 }
 

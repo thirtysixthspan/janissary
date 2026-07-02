@@ -20,6 +20,10 @@ Prints the usage summary to stdout and exits immediately with code 0. No side ef
 
 Prints `<name> <version>` (read from `package.json` at runtime) to stdout and exits immediately with code 0. No side effects, same as `--help`.
 
+### Usage errors
+
+Unknown flags, malformed flags (e.g. bare `--port` with no value), positional arguments, and invalid `--port` values (non-integer, out of range 1–65535) are rejected before the server starts. The error message is printed to stderr followed by a pointer to `--help`, and the process exits with code 2.
+
 ### Startup sequence
 
 When neither `--help` nor `--version` is given, `janus` boots the full application:
