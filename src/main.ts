@@ -11,10 +11,15 @@ import { initProfileDir } from './profiles.js';
 import { initWorkspaceDir, clearWorkspaceDir } from './workspace.js';
 import { loadConfig } from './config.js';
 import { parseCliArgs, usageText, appVersion, CliUsageError } from './cli-args.js';
+import { explainStartupError, formatFatal, maybeStack } from './startup-errors.js';
 import type { ChildProcess } from 'node:child_process';
 
 // The Chrome "app" window we launched, so we can close it on shutdown (quit/exit/Ctrl+C).
 let appChild: ChildProcess | undefined;
+
+// Set once args are parsed in boot(), so the top-level catch can include the attempted port
+// in startup-error messages even though the catch itself sits outside boot()'s scope.
+let parsedPort: number | undefined;
 
 function killApp(): void {
   if (!appChild?.pid) return;
@@ -98,6 +103,7 @@ function openApp(url: string, projectDir: string): void {
 
 export async function boot(argv = process.argv.slice(2)): Promise<void> {
   const args = parseCliArgs(argv);
+  parsedPort = args.port;
 
   if (args.help) {
     process.stdout.write(usageText());
@@ -120,6 +126,9 @@ export async function boot(argv = process.argv.slice(2)): Promise<void> {
   if (!args.relaunch) { clearStateDirectory(); TranscriptStore.clear(); clearWorkspaceDir(); }
 
   const webDir = path.join(import.meta.dirname, '..', 'web', 'dist');
+  if (!existsSync(path.join(webDir, 'index.html'))) {
+    throw new Error('web UI bundle not found (web/dist).\n  Run `npm run build:web` (or use `npm start`, which builds it first).');
+  }
   const server = await startServer({ webDir, token: makeToken(), port: args.port, relaunch: args.relaunch });
 
   // Machine-readable line first (the launcher may parse it), then a human line.
@@ -142,6 +151,8 @@ try {
     process.stderr.write(`${error.message}\nTry 'janus --help' for more information.\n`);
     process.exit(2);
   }
-  process.stderr.write(`Failed to start Janissary: ${error instanceof Error ? error.message : String(error)}\n`);
+  const explained = explainStartupError(error, { port: parsedPort });
+  const message = explained ?? (error instanceof Error ? error.message : String(error));
+  process.stderr.write(`${formatFatal(message)}\n${maybeStack(error)}`);
   process.exit(1);
 }

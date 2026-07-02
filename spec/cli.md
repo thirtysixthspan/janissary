@@ -24,6 +24,15 @@ Prints `<name> <version>` (read from `package.json` at runtime) to stdout and ex
 
 Unknown flags, malformed flags (e.g. bare `--port` with no value), positional arguments, and invalid `--port` values (non-integer, out of range 1–65535) are rejected before the server starts. The error message is printed to stderr followed by a pointer to `--help`, and the process exits with code 2.
 
+### Startup failures
+
+When `janus` fails to start, stderr shows `<name> <version> — failed to start: <reason>` so every report is self-identifying, followed by guidance on what to do next, and the process exits with code 1. Two failures are recognized specifically:
+
+- The requested port is already in use: the message names the port and suggests picking another with `--port=<n>` or omitting `--port` to choose one automatically.
+- The web UI bundle is missing (a dev checkout where the web assets have not been built): the message points at `npm run build:web` or `npm start`.
+
+Any other failure falls back to the underlying error's message with the same banner. Setting the `JANUS_DEBUG=1` environment variable additionally prints the full stack trace after the message.
+
 ### Startup sequence
 
 When neither `--help` nor `--version` is given, `janus` boots the full application:
