@@ -42,6 +42,20 @@ exiting the ssh closes that tab.
 separate slow automated tests into a slow test suite only run at the end of feature development as a verification
 
 
+## global history buffer
+in memory storage
+used for ghost text 
+saved across application runs in ~/.janissary/history.json
+creates file and directory if doesnt exist
+history stored as json objects in a json array
+  json objects with fields 
+    command
+    tab
+    timestamp
+
+
+## other
+
  saw this error: Already monitoring with persona "assistant".
   monitoring using the same assistant may happen multiple time but for different targets.
   in this case a new monitoring window should be opened
