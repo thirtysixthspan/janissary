@@ -6,6 +6,10 @@ buffer in place of the usual transcript and command bar, controlled by direct ke
 mouse selection. It behaves like a markdown tab — same lifecycle and tab-strip treatment — differing
 in the editable content and keyboard handling.
 
+When the `edit` command runs, a transcript entry for the command appears in the originating tab
+before the editor tab opens and takes focus. The command text is recorded as the entry's input; the
+output is empty since the editor tab is the side-effect.
+
 An editor tab is created like an agent tab (see Tabs) — placed contiguously within the active tab's
 group, inheriting that group's number and bar color and taking a distinct dot color. Focus moves to
 the new editor tab.
