@@ -55,7 +55,7 @@ export function EditorTab({ editor, client, active }: { editor: EditorView; clie
 
   const loaded = state !== null;
   useEffect(() => { if (active && loaded) textareaRef.current?.focus(); }, [active, loaded]);
-  useEffect(() => { if (active) caretRef.current?.scrollIntoView({ block: 'nearest' }); }, [active, state?.cursor]);
+  useEffect(() => { if (active) caretRef.current?.scrollIntoView({ block: 'nearest' }); }, [active, state?.cursor.line, state?.cursor.col]);
 
   const dirty = useMemo(() => state !== null && lastSaved !== null && toText(state) !== lastSaved, [state, lastSaved]);
 
