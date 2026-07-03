@@ -45,7 +45,6 @@ export class OpenFileManager {
   edit(command: string, target: string, label: string): void {
     const cwd = this.managers.tab.cwdOf(label) ?? process.cwd();
     const file = path.isAbsolute(target) ? target : path.resolve(cwd, target);
-    if (!existsSync(file)) { this.managers.tab.append(label, { input: command, output: `edit: ${file}: no such file` }); return; }
     openInEditor(file, this.buildContext(command, label));
   }
 

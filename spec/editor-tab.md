@@ -25,6 +25,14 @@ up/down, etc.) are not.
 - **Metadata header** — the file's name, size, and location.
 - **Editor body** — fills the remaining space. Scrolls independently.
 
+### New files
+
+The `edit <file>` command can open a path that does not yet exist on disk. The editor opens with
+an empty buffer showing the file's name, a size of "unknown", and the resolved path in the metadata
+header. The file is not written to disk until the user explicitly saves (Ctrl+S / Cmd+S). On the
+first save, the file is created at the given path and the size display updates to reflect the new
+on-disk size. Subsequent saves overwrite the file as usual.
+
 ### Scrolling
 
 The editor body scrolls vertically within the tab. After typing, the scroll position stays where it

@@ -71,7 +71,7 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
       if (!filePath) { res.writeHead(404).end('not found'); return; }
       let bytes: Buffer;
       try { bytes = await readFile(filePath); }
-      catch { res.writeHead(404).end('not found'); return; }
+      catch { bytes = Buffer.alloc(0); }
       res.writeHead(200, { ...SECURITY_HEADERS, 'content-type': MIME[path.extname(filePath).toLowerCase()] ?? 'application/octet-stream' });
       res.end(bytes);
       return;

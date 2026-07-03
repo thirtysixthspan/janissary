@@ -1,7 +1,5 @@
 # small issues
 
-* edit command should be able to open a new text file. the file will not be saved to disk until saved by the user.
-
 * pressing and holding a key in the editor should repeat the key.
 
 * the flashing editor cursor is too low, it splits lines instead of being aligned with the text
