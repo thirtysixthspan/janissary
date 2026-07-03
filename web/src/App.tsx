@@ -6,7 +6,7 @@ import { Transcript } from './Transcript';
 import { ViewTabBody } from './ViewTabBody';
 import { ReportingSection, isReportingTab } from './ReportingSection';
 import { HarnessTab, type HarnessTabHandle } from './HarnessTab';
-import { EditorTab } from './EditorTab';
+import { EditorTab, type EditorTabHandle } from './EditorTab';
 import type { ShellTabHandle } from './ShellTab';
 import { ShellTabLayer } from './ShellTabLayer';
 import { CommandInput } from './CommandInput';
@@ -14,6 +14,7 @@ import { StatusPanels } from './StatusPanels';
 import { HistoryPicker } from './HistoryPicker';
 import { RouteChooser } from './RouteChooser';
 import { QuitDialog } from './QuitDialog/QuitDialog';
+import { CloseSaveGuard } from './CloseSaveGuard';
 import { getRecentHistory } from './history';
 import { useCmdW } from './useCmdW';
 import { useTranscriptScroll } from './useTranscriptScroll';
@@ -65,19 +66,17 @@ export function App() {
   };
   const pick = (command: string) => { runCommand(command); setPickerOpen(false); };
   const { quitConfirmOpen, openQuitConfirm, confirmQuit, cancelQuit } = useQuitConfirm(runCommand, inputReference);
+  const editorHandles = useRef<Map<string, EditorTabHandle>>(new Map());
+  const guardRef = useRef<((index: number) => boolean) | null>(null);
+  const activeTabRef = useRef(activeTab); activeTabRef.current = activeTab;
+  const quitConfirmOpenRef = useRef(quitConfirmOpen); quitConfirmOpenRef.current = quitConfirmOpen;
+  const pickerOpenRef = useRef(pickerOpen); pickerOpenRef.current = pickerOpen;
+  const routeRef = useRef(route); routeRef.current = route;
 
-  const activeTabRef = useRef(activeTab);
-  activeTabRef.current = activeTab;
-  const quitConfirmOpenRef = useRef(quitConfirmOpen);
-  quitConfirmOpenRef.current = quitConfirmOpen;
-  const pickerOpenRef = useRef(pickerOpen);
-  pickerOpenRef.current = pickerOpen;
-  const routeRef = useRef(route);
-  routeRef.current = route;
-
-  const selectTab = (index: number) => client.send({ method: 'setActiveTab', params: { index } });
-
-  const closeTab = useCallback((index: number) => client.send({ method: 'closeTab', params: { index } }), [client]);
+  const closeTab = useCallback((index: number) => {
+    if (guardRef.current?.(index)) return;
+    client.send({ method: 'closeTab', params: { index } });
+  }, [client]);
 
   const chooseRoute = useCallback((index: number) => client.send({ method: 'chooseRoute', params: { index } }), [client]);
 
@@ -141,7 +140,7 @@ export function App() {
       <TabStrip
         tabs={actionEntries.map((e) => e.tab)}
         activeTab={actionEntries.findIndex((e) => e.index === activeTab)}
-        onSelect={(index) => selectTab(actionEntries[index].index)}
+        onSelect={(index) => client.send({ method: 'setActiveTab', params: { index: actionEntries[index].index } })}
         onClose={(index) => closeTab(actionEntries[index].index)}
         onRename={(index, title) => client.renameTab(actionEntries[index].index, title)}
         tabNameMaxLength={tabNameMaxLength}
@@ -175,7 +174,8 @@ export function App() {
           className="tab-body"
           style={{ borderLeft: `4px solid ${t.dotColor}`, display: t.label === current.label ? 'flex' : 'none' }}
         >
-          <EditorTab editor={t.editor!} client={client} active={t.label === current.label} />
+          <EditorTab editor={t.editor!} client={client} active={t.label === current.label}
+            ref={(h) => { if (h) editorHandles.current.set(t.label, h); else editorHandles.current.delete(t.label); }} />
         </div>
       ))}
 
@@ -208,10 +208,9 @@ export function App() {
             history={current.cmdHistory}
             onSubmit={(text) => {
               const trimmed = text.trim().toLowerCase();
-              // close/exit on the last tab quits the app, so confirm it like `quit`.
-              const closesLastTab = (trimmed === 'close' || trimmed === 'exit') && tabs.length === 1;
               if (trimmed === 'hist') openPicker();
-              else if (trimmed === 'quit' || closesLastTab) openQuitConfirm();
+              else if (trimmed === 'quit' || ((trimmed === 'close' || trimmed === 'exit') && tabs.length === 1)) openQuitConfirm();
+              else if ((trimmed === 'close' || trimmed === 'exit') && guardRef.current?.(activeTab)) return;
               else runCommand(text);
             }}
             inputRef={inputReference}
@@ -227,6 +226,7 @@ export function App() {
         onRate={(id, up) => client.send({ method: 'rateSuggestion', params: { id, up } })}
       />
       {quitConfirmOpen && <QuitDialog onConfirm={confirmQuit} onCancel={cancelQuit} />}
+      <CloseSaveGuard tabs={tabs} editorHandles={editorHandles} client={client} guardRef={guardRef} />
     </div>
   );
 }

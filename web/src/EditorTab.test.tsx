@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { createRef } from 'react';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { EditorView } from '@shared/protocol';
-import { EditorTab } from './EditorTab';
+import { EditorTab, type EditorTabHandle } from './EditorTab';
 import type { JanusClient } from './ws';
 
 function makeView(overrides: Partial<EditorView> = {}): EditorView {
@@ -120,6 +120,28 @@ describe('EditorTab', () => {
     for (const row of otherRows) {
       expect(row.querySelector('.editor-caret')).toBeNull();
     }
+  });
+
+  it('exposes isDirty() returning false after load and true after edit', async () => {
+    const { client } = makeClient();
+    const ref = createRef<EditorTabHandle>();
+    render(<EditorTab editor={makeView()} client={client} active ref={ref} />);
+    await waitFor(() => expect(screen.getByText('line one')).toBeInTheDocument());
+    expect(ref.current?.isDirty()).toBe(false);
+    type('x');
+    await waitFor(() => expect(ref.current?.isDirty()).toBe(true));
+  });
+
+  it('exposes save() that calls saveFile and marks clean', async () => {
+    const { client, saveFile } = makeClient();
+    const ref = createRef<EditorTabHandle>();
+    render(<EditorTab editor={makeView()} client={client} active ref={ref} />);
+    await waitFor(() => expect(screen.getByText('line one')).toBeInTheDocument());
+    type('x');
+    await waitFor(() => expect(ref.current?.isDirty()).toBe(true));
+    await ref.current?.save();
+    expect(saveFile).toHaveBeenCalled();
+    await waitFor(() => expect(ref.current?.isDirty()).toBe(false));
   });
 
   it('undoes an edit with Cmd+Z', async () => {
