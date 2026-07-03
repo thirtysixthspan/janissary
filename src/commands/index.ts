@@ -4,6 +4,7 @@ import { command as next } from './next.js';
 import { command as message } from './msg.js';
 import { command as broadcast } from './broadcast.js';
 import { command as acp } from './acp.js';
+import { command as acpReset } from './acp-reset.js';
 import { command as database } from './db.js';
 import { command as browser } from './browser.js';
 import { command as connection } from './connection.js';
@@ -25,6 +26,7 @@ export const commands: Command[] = [
   next,
   message,
   broadcast,
+  acpReset,
   acp,
   database,
   browser,
