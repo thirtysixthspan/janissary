@@ -6,6 +6,11 @@
 
 * use filenames on image and markdown preview tab as tab labels just like in editor tabs.
 
+* the agent command that opens a new agent tab should select that tab and focus it.
+
+* require double clicking on a tab label to trigger the renaming functionality.
+
+
 
 
 
