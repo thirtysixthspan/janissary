@@ -1,7 +1,5 @@
 # small issues
 
-* the flashing editor cursor is too low, it splits lines instead of being aligned with the text
-
 * harness tabs should have a tab transcript
 
 * monitors should have access to the tab transcript
