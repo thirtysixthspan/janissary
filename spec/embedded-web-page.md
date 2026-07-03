@@ -20,6 +20,11 @@ ways:
   `https://` scheme, so a bare address works. Example: `open page slashdot.org` opens
   `https://slashdot.org`.
 
+Pages can also be opened by clicking a web link in the agent transcript's rendered Markdown output.
+Clicking an `http` or `https` link in a Markdown-rendered message sends `open <url>` as a command,
+creating a page tab — the same as typing it manually. The click does not navigate the app away from
+its own page.
+
 Only `http` and `https` addresses are viewable; any other scheme (for example `javascript:`,
 `data:`, or `file:`) is rejected. An argument without a scheme and without the `page` keyword is
 treated as a file path, not a web address — the `page` keyword is what makes a bare address a web

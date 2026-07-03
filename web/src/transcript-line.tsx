@@ -1,13 +1,19 @@
-import React, { useMemo } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import type { JanusClient } from './ws';
 import type { BufferLine } from '@shared/protocol';
 import { TerminalCard } from './TerminalCard';
 import { renderMarkdown } from './markdown';
 
-function Markdown({ text }: { text: string }) {
+function Markdown({ text, onLinkClick }: { text: string; onLinkClick: (url: string) => void }) {
   const html = useMemo(() => renderMarkdown(text), [text]);
+  const onClick = useCallback((e: React.MouseEvent) => {
+    const anchor = (e.target as HTMLElement).closest('a');
+    if (!anchor) return;
+    const href = anchor.getAttribute('href');
+    if (href && /^https?:\/\//i.test(href)) { e.preventDefault(); onLinkClick(href); }
+  }, [onLinkClick]);
   if (html === undefined) return <div className="line output">{text}</div>;
-  return <div className="line markdown" dangerouslySetInnerHTML={{ __html: html }} />;
+  return <div className="line markdown" dangerouslySetInnerHTML={{ __html: html }} onClick={onClick} />;
 }
 
 export function renderLine(
@@ -21,7 +27,7 @@ export function renderLine(
     return <TerminalCard key={line.terminal.ptyId} entry={line.terminal} client={client} />;
   }
   if (line.type === 'spacer') return <div key={index} className="line spacer" />;
-  if (line.type === 'markdown') return <Markdown key={index} text={line.text} />;
+  if (line.type === 'markdown') return <Markdown key={index} text={line.text} onLinkClick={(url) => client.send({ method: 'command', params: { text: `open ${url}` } })} />;
   if (line.type === 'collapsed') {
     return (
       <div key={index} className="line collapsed" onClick={onToggleCollapse} title="Click or Ctrl+T to expand">
