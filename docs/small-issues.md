@@ -1,7 +1,5 @@
 # small issues
 
-* the editor tab has no blinking cursor to indicate the current position of edit in the editor window.
-
 * clicking in the editor tab, but outside of a current line or on the metadata line should not steal the focus from the edit cursor position.
 
 * urls for example https://www.google.com should be clickable and open the url in a web tab, not a native chrome tab.
