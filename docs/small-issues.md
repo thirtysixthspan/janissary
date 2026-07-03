@@ -1,7 +1,5 @@
 # small issues
 
-* pressing and holding a key in the editor should repeat the key.
-
 * the flashing editor cursor is too low, it splits lines instead of being aligned with the text
 
 * harness tabs should have a tab transcript

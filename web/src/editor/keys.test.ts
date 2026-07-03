@@ -42,10 +42,14 @@ describe('actionForKey', () => {
     expect(actionForKey(key('ArrowUp', { metaKey: true }))).toEqual({ kind: 'docEdge', edge: 'start', extend: false });
   });
 
-  it('leaves paste and printable characters to the hidden textarea', () => {
+  it('maps printable characters to insert actions and leaves paste to the textarea', () => {
+    expect(actionForKey(key('a'))).toEqual({ kind: 'insert', text: 'a' });
+    expect(actionForKey(key('1'))).toEqual({ kind: 'insert', text: '1' });
+    expect(actionForKey(key(' '))).toEqual({ kind: 'insert', text: ' ' });
+    expect(actionForKey(key('A', { shiftKey: true }))).toEqual({ kind: 'insert', text: 'A' });
     // Cmd+V must NOT be intercepted: the paste flows through the textarea's input event.
     expect(actionForKey(key('v', { metaKey: true }))).toBeNull();
-    expect(actionForKey(key('a'))).toBeNull();
+    // Alt+letter is suppressed — the altKey guard in actionForKey returns null before plainAction.
     expect(actionForKey(key('x', { altKey: true }))).toBeNull();
   });
 });
