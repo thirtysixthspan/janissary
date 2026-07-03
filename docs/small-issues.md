@@ -1,7 +1,5 @@
 # small issues
 
-* urls for example https://www.google.com should be clickable and open the url in a web tab, not a native chrome tab.
-
 * use filenames on image and markdown preview tab as tab labels just like in editor tabs.
 
 * the agent command that opens a new agent tab should select that tab and focus it.

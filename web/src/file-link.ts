@@ -3,7 +3,8 @@ import type { JanusClient } from './ws';
 
 export type FileLinkSegment =
   | { type: 'text'; content: string }
-  | { type: 'link'; fullMatch: string; path: string; line: number };
+  | { type: 'link'; fullMatch: string; path: string; line: number }
+  | { type: 'url'; fullMatch: string; url: string };
 
 function slurpLineNumber(text: string, start: number): { line: number; col?: number; length: number } | null {
   if (start >= text.length || !/\d/.test(text[start])) return null;
@@ -23,27 +24,27 @@ function slurpLineNumber(text: string, start: number): { line: number; col?: num
   return { line, col, length: pos - start };
 }
 
-export function fileLineSegments(text: string): FileLinkSegment[] {
+function fileLineSegmentsCore(text: string, start: number, end: number): FileLinkSegment[] {
   const segments: FileLinkSegment[] = [];
-  let pos = 0;
+  let pos = start;
 
-  function emitText(end: number) {
-    if (end <= pos) return;
-    const content = text.slice(pos, end);
+  function emitText(to: number) {
+    if (to <= pos) return;
+    const content = text.slice(pos, to);
     const last = segments.at(-1);
     if (last && last.type === 'text') {
       last.content += content;
     } else {
       segments.push({ type: 'text', content });
     }
-    pos = end;
+    pos = to;
   }
 
-  while (pos < text.length) {
+  while (pos < end) {
     const colonIdx = text.indexOf(':', pos);
-    if (colonIdx === -1) break;
+    if (colonIdx === -1 || colonIdx >= end) break;
 
-    if (colonIdx + 1 >= text.length || !/\d/.test(text[colonIdx + 1])) {
+    if (colonIdx + 1 >= end || !/\d/.test(text[colonIdx + 1])) {
       emitText(colonIdx + 1);
       pos = colonIdx + 1;
       continue;
@@ -76,15 +77,34 @@ export function fileLineSegments(text: string): FileLinkSegment[] {
     pos = colonIdx + 1 + parsed.length;
   }
 
-  emitText(text.length);
+  emitText(end);
+  return segments;
+}
 
+export function fileLineSegments(text: string): FileLinkSegment[] {
+  const segments: FileLinkSegment[] = [];
+  let pos = 0;
+  const urlRe = /https?:\/\/[^\s()<>"']+/g;
+  let m: RegExpExecArray | null;
+  while ((m = urlRe.exec(text)) !== null) {
+    const before = fileLineSegmentsCore(text, pos, m.index);
+    if (before.length > 0) segments.push(...before);
+    segments.push({ type: 'url', fullMatch: m[0], url: m[0] });
+    pos = m.index + m[0].length;
+  }
+  const after = fileLineSegmentsCore(text, pos, text.length);
+  if (after.length > 0) segments.push(...after);
   return segments;
 }
 
 export function linkifyMarkdown(text: string): string {
   const segments = fileLineSegments(text);
   if (segments.every((s) => s.type === 'text')) return text;
-  return segments.map((s) => (s.type === 'link' ? `[${s.fullMatch}](${s.fullMatch})` : s.content)).join('');
+  return segments.map((s) => {
+    if (s.type === 'link') return `[${s.fullMatch}](${s.fullMatch})`;
+    if (s.type === 'url') return s.fullMatch;
+    return s.content;
+  }).join('');
 }
 
 export function renderFileLinkSegments(
@@ -95,7 +115,8 @@ export function renderFileLinkSegments(
     if (seg.type === 'text') {
       return seg.content || null;
     }
-    const editCmd = `edit ${seg.path}`;
+    const isUrl = seg.type === 'url';
+    const cmd = isUrl ? `open ${seg.url}` : `edit ${seg.path}`;
     return React.createElement(
       'span',
       {
@@ -104,7 +125,7 @@ export function renderFileLinkSegments(
         title: `${seg.fullMatch} — click to open`,
         onClick: (e: React.MouseEvent) => {
           e.stopPropagation();
-          client.send({ method: 'command', params: { text: editCmd } });
+          client.send({ method: 'command', params: { text: cmd } });
         },
       },
       seg.fullMatch,
