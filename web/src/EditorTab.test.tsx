@@ -144,6 +144,17 @@ describe('EditorTab', () => {
     await waitFor(() => expect(ref.current?.isDirty()).toBe(false));
   });
 
+  it('keeps the textarea focused when clicking empty space in the editor body', async () => {
+    const { client } = makeClient();
+    const { container } = await renderLoaded(client);
+    const textareaEl = textarea();
+    textareaEl.focus();
+    expect(textareaEl).toHaveFocus();
+    const body = container.querySelector('.editor-body') as HTMLElement;
+    fireEvent.mouseDown(body);
+    expect(textareaEl).toHaveFocus();
+  });
+
   it('undoes an edit with Cmd+Z', async () => {
     const { client } = makeClient();
     await renderLoaded(client);

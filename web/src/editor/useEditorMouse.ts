@@ -53,12 +53,12 @@ export function useEditorMouse(api: EditorApi, bodyRef: React.RefObject<HTMLDivE
   };
 
   const onMouseDown = (e: React.MouseEvent) => {
+    focus();
     const s = api.stateRef.current;
     const hit = hitFromEvent(e);
     if (!s || !hit) return;
-    // Keep focus on the hidden textarea and suppress native text selection.
+    // Suppress native text selection when a text line was hit.
     e.preventDefault();
-    focus();
     api.sealUndo();
     if (hit.inGutter) {
       api.setState(linesSelection(s, hit.line, hit.line));
