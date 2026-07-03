@@ -101,10 +101,19 @@ describe('TabStrip', () => {
     expect(container.querySelector('.tab-badge')).not.toBeInTheDocument();
   });
 
-  it('clicking the active tab label shows an input pre-filled with the current display name', async () => {
+  it('single-clicking an active tab label does not start renaming', async () => {
+    const onSelect = vi.fn();
+    const tab = makeTab({ label: 'internal', title: 'Display Name' });
+    render(<TabStrip tabs={[tab]} activeTab={0} onSelect={onSelect} onClose={vi.fn()} onRename={vi.fn()} tabNameMaxLength={100} />);
+    await userEvent.click(screen.getByText('Display Name'));
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+    expect(onSelect).toHaveBeenCalledTimes(1);
+  });
+
+  it('double-clicking the active tab label shows an input pre-filled with the current display name', async () => {
     const tab = makeTab({ label: 'internal', title: 'Display Name' });
     render(<TabStrip tabs={[tab]} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()} onRename={vi.fn()} tabNameMaxLength={100} />);
-    await userEvent.click(screen.getByText('Display Name'));
+    await userEvent.dblClick(screen.getByText('Display Name'));
     expect(screen.getByDisplayValue('Display Name')).toBeInTheDocument();
   });
 
@@ -121,7 +130,7 @@ describe('TabStrip', () => {
     const onRename = vi.fn();
     const tab = makeTab({ label: 'internal', title: 'Display Name' });
     render(<TabStrip tabs={[tab]} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()} onRename={onRename} tabNameMaxLength={100} />);
-    await userEvent.click(screen.getByText('Display Name'));
+    await userEvent.dblClick(screen.getByText('Display Name'));
     const input = screen.getByRole('textbox');
     await userEvent.clear(input);
     await userEvent.type(input, '  reviewer  {Enter}');
@@ -133,7 +142,7 @@ describe('TabStrip', () => {
     const onRename = vi.fn();
     const tab = makeTab({ label: 'internal', title: 'Display Name' });
     render(<TabStrip tabs={[tab]} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()} onRename={onRename} tabNameMaxLength={4} />);
-    await userEvent.click(screen.getByText('Display Name'));
+    await userEvent.dblClick(screen.getByText('Display Name'));
     const input = screen.getByRole('textbox');
     await userEvent.clear(input);
     await userEvent.type(input, 'abcdefgh{Enter}');
@@ -144,7 +153,7 @@ describe('TabStrip', () => {
     const onRename = vi.fn();
     const tab = makeTab({ label: 'internal', title: 'Display Name' });
     render(<TabStrip tabs={[tab]} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()} onRename={onRename} tabNameMaxLength={100} />);
-    await userEvent.click(screen.getByText('Display Name'));
+    await userEvent.dblClick(screen.getByText('Display Name'));
     const input = screen.getByRole('textbox');
     await userEvent.type(input, 'x{Escape}');
     expect(onRename).not.toHaveBeenCalled();
@@ -161,7 +170,7 @@ describe('TabStrip', () => {
         <button type="button">elsewhere</button>
       </>,
     );
-    await userEvent.click(screen.getByText('Display Name'));
+    await userEvent.dblClick(screen.getByText('Display Name'));
     const input = screen.getByRole('textbox');
     await userEvent.type(input, 'reviewer');
     await userEvent.click(screen.getByText('elsewhere'));

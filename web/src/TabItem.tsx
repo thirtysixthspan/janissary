@@ -50,7 +50,7 @@ export function TabItem({ tab, index, active, onSelect, onClose, onRename, tabNa
           }}
         />
       ) : (
-        <span onClick={(e) => {
+        <span onDoubleClick={(e) => {
           if (!active) return;
           e.stopPropagation();
           startEdit();

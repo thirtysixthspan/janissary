@@ -4,7 +4,7 @@
 
 * the agent command that opens a new agent tab should select that tab and focus it.
 
-* require double clicking on a tab label to trigger the renaming functionality.
+
 
 
 
