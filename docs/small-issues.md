@@ -6,8 +6,6 @@
 
 * harness tabs should have a tab transcript that records the harness output.
 
-* Monitors should have access to tab transcripts.
-
 
 
 
