@@ -52,7 +52,7 @@ export class ProfileManager {
     tab.toolStepsExpanded = false;
     this.managers.tab.insertTabInGroup(tab);
     this.managers.tab.setCwd(resolved, workspaceDir ?? process.cwd());
-    this.managers.tab.setActiveTab(this.managers.tab.findIndex(creator.label));
+    this.managers.tab.setActiveTab(this.managers.tab.findIndex(resolved));
     this.managers.tab.persist(this.managers.tab.buildAgentState(tab));
     out(`Agent "${resolved}" ready.${workspaceDir ? ` (workspace: ${this.managers.tab.shorten(workspaceDir)})` : ''}`);
   }

@@ -49,12 +49,12 @@ describe('Controller', () => {
     expect(c.view()[0].bufferLines).toHaveLength(0);
   });
 
-  it('creates a named agent tab without switching focus to it', () => {
+  it('creates a named agent tab and switches focus to it', () => {
     const { c } = makeController();
     c.dispatch('agent bob');
     expect(c.view().map((t) => t.label)).toContain('bob');
-    // Focus stays on the creator (janus).
-    expect(c.view()[c.managers.tab.activeTab].label).toBe('janus');
+    // Focus switches to the new agent tab.
+    expect(c.view()[c.managers.tab.activeTab].label).toBe('bob');
   });
 
   it('draws a random pool name for a bare agent command', () => {
@@ -112,8 +112,8 @@ describe('Controller', () => {
     try {
       loadConfig(root);
       const { c } = makeController();
-      // Each `agent <name>` appends exactly one transcript entry to the creator (janus).
-      for (let index = 0; index < 6; index++) c.dispatch(`agent foo${index}`);
+      // Each `agent <name>` is dispatched from janus so the transcript entry goes to janus.
+      for (let index = 0; index < 6; index++) { c.dispatch(`agent foo${index}`); c.setActiveTab(0); }
       const janus = c.view().find((t) => t.label === 'janus')!;
       const buffer = janus.bufferLines.map((l) => l.text).join('\n');
       expect(buffer).not.toContain('foo0'); // oldest entries dropped beyond the 3-entry cap
@@ -128,7 +128,8 @@ describe('Controller', () => {
   it('attributes a SQLite connection only to the tab that opened it', () => {
     initDbDir(mkdtempSync(path.join(tmpdir(), 'janus-db-')));
     const { c } = makeController();
-    c.dispatch('agent bob'); // focus stays on janus
+    c.dispatch('agent bob'); // focus moves to bob
+    c.setActiveTab(0);
     c.dispatch('db sqlite create panel_db'); // runs on the active tab (janus)
     try {
       const janus = c.view().find((t) => t.label === 'janus')!;
@@ -208,6 +209,7 @@ describe('Controller', () => {
     initAgentStateDirectory(mkdtempSync(path.join(tmpdir(), 'janus-ctx-')));
     const { c } = makeController();
     c.dispatch('agent bob');
+    c.setActiveTab(0);
     c.dispatch('msg bob info hello there');
     expect(loadAgentState('bob')?.context).toContain('janus: hello there');
   });
@@ -892,6 +894,7 @@ describe('Controller schedule in another tab', () => {
     initAgentStateDirectory(mkdtempSync(path.join(tmpdir(), 'janus-sched-in-')));
     const { c } = makeController();
     c.dispatch('agent worker');
+    c.setActiveTab(0);
     c.dispatch('schedule sweep in worker every 1h db vacuum');
     expect(c.view().find((t) => t.label === 'worker')!.schedule.map((s) => s.id)).toContain('sweep');
     expect(c.view().find((t) => t.label === 'janus')!.schedule).toHaveLength(0);
@@ -968,10 +971,13 @@ describe('Controller messageBus', () => {
     try {
       loadConfig(root);
       const { c } = makeController();
-      // `agent fooN` appends one transcript entry per dispatch; fill to the cap
+      // `agent fooN` appended to the creator tab (janus) each time
       c.dispatch('agent foo1');
+      c.setActiveTab(0);
       c.dispatch('agent foo2');
+      c.setActiveTab(0);
       c.dispatch('agent foo3');
+      c.setActiveTab(0);
       const events: BusEvent[] = [];
       messageBus.on('transcript', ['entry:appended', 'entries:trimmed'], (e) => { events.push(e); });
       // 4th dispatch exceeds cap=3, triggering entries:trimmed then entry:appended
@@ -997,6 +1003,7 @@ describe('Controller unread badge', () => {
   it('append to a non-active tab sets hasUnread', () => {
     const { c } = makeController();
     c.dispatch('agent bob');
+    c.setActiveTab(0);
     const bobIndex = c.view().findIndex((t) => t.label === 'bob');
     expect(c.managers.tab.activeTab).not.toBe(bobIndex);
     c.managers.tab.append('bob', { input: 'hello', output: 'world' });
@@ -1012,6 +1019,7 @@ describe('Controller unread badge', () => {
   it('setActiveTab clears hasUnread on the newly active tab', () => {
     const { c } = makeController();
     c.dispatch('agent bob');
+    c.setActiveTab(0);
     c.managers.tab.append('bob', { input: 'hello', output: 'world' });
     expect(c.view().find((t) => t.label === 'bob')!.hasUnread).toBe(true);
     const bobIndex = c.view().findIndex((t) => t.label === 'bob');
@@ -1022,6 +1030,7 @@ describe('Controller unread badge', () => {
   it('finishRunning to a non-active tab sets hasUnread', () => {
     const { c } = makeController();
     c.dispatch('agent bob');
+    c.setActiveTab(0);
     c.managers.tab.startRunning('bob', 'sleep 1');
     c.managers.tab.finishRunning('bob', 'done');
     expect(c.view().find((t) => t.label === 'bob')!.hasUnread).toBe(true);
