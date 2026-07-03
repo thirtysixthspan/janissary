@@ -1,7 +1,5 @@
 # small issues
 
-* in the editor window, after typing, the scroll bar resets to the top when it should not.
-
 * edit command should be able to open a new text file. the file will not be saved to disk until saved by the user.
 
 * pressing and holding a key in the editor should repeat the key.

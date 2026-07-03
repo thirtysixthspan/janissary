@@ -85,6 +85,15 @@ describe('EditorTab', () => {
     await waitFor(() => expect(container.querySelectorAll('.editor-gutter')).toHaveLength(3));
   });
 
+  it('scrolls the caret into view when the cursor moves', async () => {
+    const { client } = makeClient();
+    await renderLoaded(client);
+    const scrollMock = Element.prototype.scrollIntoView as ReturnType<typeof vi.fn>;
+    scrollMock.mockClear();
+    type('x');
+    await waitFor(() => expect(scrollMock).toHaveBeenCalledWith({ block: 'nearest' }));
+  });
+
   it('undoes an edit with Cmd+Z', async () => {
     const { client } = makeClient();
     await renderLoaded(client);
