@@ -276,6 +276,68 @@ describe('MonitorManager', () => {
     expect(manager.ask('janus', 'security', 'hello?')).toMatch(/No "security" monitor/);
   });
 
+  it('primes the buffer with existing transcript entries from a tab target', () => {
+    const janusWithLog = makeTab('janus', '#aaa', 1, [], [{ input: 'ls', output: 'a b c' }, { input: 'pwd', output: '/tmp' }]);
+    const { managers } = makeFakeManagers([janusWithLog]);
+    const { spawn, sessions } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+
+    manager.start('janus', 'security', []);
+    expect(sessions[0].prompts[0]).toContain('[SUGGESTION]');
+
+    emitEntry(janusWithLog, 'echo hello', 'hello');
+    vi.advanceTimersByTime(FLUSH_MS);
+    expect(sessions[0].prompts[1]).toContain('ls');
+    expect(sessions[0].prompts[1]).toContain('pwd');
+    expect(sessions[0].prompts[1]).toContain('echo hello');
+  });
+
+  it('primes the buffer with entries from an external tab target', () => {
+    const tabs = [janus, makeTab('agent2', '#bbb', 1, [], [{ input: 'npm test', output: '1 failing' }])];
+    const { managers } = makeFakeManagers(tabs);
+    const { spawn, sessions } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+
+    manager.start('janus', 'assistant', [{ kind: 'tab', label: 'agent2' }]);
+
+    emitEntry(tabs[1], 'npm run lint', 'clean');
+    vi.advanceTimersByTime(FLUSH_MS);
+    expect(sessions[0].prompts[1]).toContain('npm test');
+    expect(sessions[0].prompts[1]).toContain('npm run lint');
+  });
+
+  it('primes the buffer with entries from all members of a group target', () => {
+    const member1 = { ...makeTab('agent2', '#bbb', 1, [], [{ input: 'ls', output: 'x' }]), group: 2, groupColor: '#bbb' };
+    const member2 = { ...makeTab('agent3', '#ccc', 1, [], [{ input: 'pwd', output: '/tmp' }]), group: 2, groupColor: '#bbb' };
+    const { managers } = makeFakeManagers([janus, member1, member2]);
+    const { spawn, sessions } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+
+    manager.start('janus', 'assistant', [{ kind: 'group', group: 2 }]);
+
+    vi.advanceTimersByTime(FLUSH_MS);
+    expect(sessions[0].prompts[1]).toContain('[agent2]');
+    expect(sessions[0].prompts[1]).toContain('[agent3]');
+    expect(sessions[0].prompts[1]).toContain('ls');
+    expect(sessions[0].prompts[1]).toContain('pwd');
+  });
+
+  it('existing entries appear before new entries in the buffer', () => {
+    const janusWithLog = makeTab('janus', '#aaa', 1, [], [{ input: 'existing', output: 'old' }]);
+    const { managers } = makeFakeManagers([janusWithLog]);
+    const { spawn, sessions } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+
+    manager.start('janus', 'security', []);
+    emitEntry(janusWithLog, 'new', 'fresh');
+    vi.advanceTimersByTime(FLUSH_MS);
+
+    const prompt = sessions[0].prompts[1];
+    const existingIndex = prompt.indexOf('existing');
+    const newIndex = prompt.indexOf('new');
+    expect(existingIndex).toBeLessThan(newIndex);
+  });
+
   it('lists monitors with mode and delivery counts', () => {
     const { managers } = makeFakeManagers([janus, agent2]);
     const { spawn, sessions } = fakeSpawnFactory();

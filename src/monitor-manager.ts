@@ -68,6 +68,14 @@ export class MonitorManager {
     };
     this.openSession(reg);
     this.subscribe(key, reg);
+    for (const target of resolved) {
+      const tabs = target.kind === 'tab'
+        ? this.managers.tab.tabs.filter((t) => t.label === target.label)
+        : this.managers.tab.tabs.filter((t) => t.group === target.group);
+      for (const t of tabs) {
+        for (const entry of t.log) reg.buffer.push({ tabLabel: t.label, entry });
+      }
+    }
     reg.timer = setInterval(() => this.flush(key), this.flushMs);
     this.monitors.set(key, reg);
     // External mode: open the reporting tab right away (empty feed) so starting the
