@@ -14,13 +14,19 @@ export class AgentCommunicationManager {
 
   constructor(private managers: Managers) {}
 
+  // Recipients may be addressed by their label or by their display alias (see `rename`);
+  // either way, routing and queuing key off the tab's canonical label.
   send(message: Omit<Message, 'id'>): boolean {
-    if (this.managers.tab.tabs.every((t) => t.label !== message.to)) return false;
-    const full: Message = { ...message, id: ++this.nextId };
-    const q = this.queues.get(message.to) ?? [];
+    const to = message.to.toLowerCase();
+    const target = this.managers.tab.tabs.find(
+      (t) => t.label.toLowerCase() === to || t.title?.toLowerCase() === to,
+    );
+    if (!target) return false;
+    const full: Message = { ...message, to: target.label, id: ++this.nextId };
+    const q = this.queues.get(target.label) ?? [];
     q.push(full);
-    this.queues.set(message.to, q);
-    this.pump(message.to);
+    this.queues.set(target.label, q);
+    this.pump(target.label);
     return true;
   }
 

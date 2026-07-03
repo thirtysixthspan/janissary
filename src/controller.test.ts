@@ -236,6 +236,12 @@ describe('Controller', () => {
     expect(c.view()[0].title).toBeUndefined();
   });
 
+  it('truncates a rename to the configured tab name max length', () => {
+    const { c } = makeController();
+    c.dispatch('rename abcdefghijklmnopqrstuvwxyz');
+    expect(c.view()[0].title).toBe('abcdefghijklmnop'); // 16 chars, the default tabNameMaxLength
+  });
+
   it('persists and restores the alias across rehydrate', () => {
     initAgentStateDirectory(mkdtempSync(path.join(tmpdir(), 'janus-alias-')));
     const { c } = makeController();
@@ -412,6 +418,18 @@ describe('Controller', () => {
     c.dispatch('agent bob');
     c.setActiveTab(0);
     c.dispatch('msg bob info hello there');
+    const bob = c.view().find((t) => t.label === 'bob')!;
+    const messageLine = bob.bufferLines.find((l) => l.type === 'message' && l.from === 'janus');
+    expect(messageLine?.text).toContain('hello there');
+  });
+
+  it('delivers a message to an agent addressed by its display alias', () => {
+    const { c } = makeController();
+    c.dispatch('agent bob');
+    c.setActiveTab(c.view().findIndex((t) => t.label === 'bob'));
+    c.dispatch('rename buddy'); // bob now displays as "buddy"
+    c.setActiveTab(c.view().findIndex((t) => t.label === 'janus'));
+    c.dispatch('msg buddy info hello there');
     const bob = c.view().find((t) => t.label === 'bob')!;
     const messageLine = bob.bufferLines.find((l) => l.type === 'message' && l.from === 'janus');
     expect(messageLine?.text).toContain('hello there');
@@ -789,6 +807,16 @@ describe('Controller send command', () => {
     const { c } = makeController();
     c.dispatch('send nobody hi');
     expect(allText(c)).toContain('No tab named "nobody".');
+  });
+
+  it('delivers text to a tab addressed by its display alias', () => {
+    const { c } = makeController();
+    c.dispatch('agent worker');
+    c.setActiveTab(c.view().findIndex((t) => t.label === 'worker'));
+    c.dispatch('rename reviewer'); // worker now displays as "reviewer"
+    c.setActiveTab(c.view().findIndex((t) => t.label === 'janus'));
+    c.dispatch('send reviewer state'); // addressed by alias, not label
+    expect(c.view().find((t) => t.label === 'worker')!.cmdHistory).toContain('state');
   });
 
   it('errors when the target harness has exited', () => {

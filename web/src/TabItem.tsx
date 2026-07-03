@@ -8,9 +8,10 @@ type Properties = {
   onSelect: (index: number) => void;
   onClose: (index: number) => void;
   onRename: (index: number, title: string) => void;
+  tabNameMaxLength: number;
 };
 
-export function TabItem({ tab, index, active, onSelect, onClose, onRename }: Properties) {
+export function TabItem({ tab, index, active, onSelect, onClose, onRename, tabNameMaxLength }: Properties) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState('');
   // Escape cancels and blurs the input; the resulting blur event must not also commit.
@@ -37,10 +38,11 @@ export function TabItem({ tab, index, active, onSelect, onClose, onRename }: Pro
         <input
           className="tab-rename-input"
           value={draft}
+          maxLength={tabNameMaxLength}
           autoFocus
           onFocus={(e) => e.currentTarget.select()}
           onClick={(e) => e.stopPropagation()}
-          onChange={(e) => setDraft(e.currentTarget.value)}
+          onChange={(e) => setDraft(e.currentTarget.value.slice(0, tabNameMaxLength))}
           onBlur={commit}
           onKeyDown={(e) => {
             if (e.key === 'Enter') { e.currentTarget.blur(); }

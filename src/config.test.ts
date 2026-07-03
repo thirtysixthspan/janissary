@@ -3,7 +3,7 @@ import { mkdirSync, writeFileSync, rmSync, existsSync, readFileSync } from 'node
 import path from 'node:path';
 import { tmpdir } from 'node:os';
 import { mkdtempSync } from 'node:fs';
-import { loadConfig, getConfig, DEFAULT_TRANSCRIPT_MAX_LINES } from './config.js';
+import { loadConfig, getConfig, DEFAULT_TRANSCRIPT_MAX_LINES, DEFAULT_TAB_NAME_MAX_LENGTH } from './config.js';
 
 describe('loadConfig', () => {
   let tmpDir: string;
@@ -19,11 +19,22 @@ describe('loadConfig', () => {
   it('creates a default config.json when none exists', () => {
     const config = loadConfig(tmpDir);
     expect(config.transcriptMaxLines).toBe(DEFAULT_TRANSCRIPT_MAX_LINES);
+    expect(config.tabNameMaxLength).toBe(DEFAULT_TAB_NAME_MAX_LENGTH);
 
     const configPath = path.join(tmpDir, '.janissary', 'config.json');
     expect(existsSync(configPath)).toBe(true);
     const parsed = JSON.parse(readFileSync(configPath, 'utf8'));
     expect(parsed.transcriptMaxLines).toBe(DEFAULT_TRANSCRIPT_MAX_LINES);
+    expect(parsed.tabNameMaxLength).toBe(DEFAULT_TAB_NAME_MAX_LENGTH);
+  });
+
+  it('reads a custom tabNameMaxLength from an existing config.json', () => {
+    const configDir = path.join(tmpDir, '.janissary');
+    mkdirSync(configDir, { recursive: true });
+    writeFileSync(path.join(configDir, 'config.json'), JSON.stringify({ tabNameMaxLength: 8 }) + '\n');
+
+    const config = loadConfig(tmpDir);
+    expect(config.tabNameMaxLength).toBe(8);
   });
 
   it('reads an existing config.json', () => {

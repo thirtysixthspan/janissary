@@ -1,5 +1,6 @@
 import type { AgentCommand } from './types.js';
 import agentNames from '../agent-names.json' with { type: 'json' };
+import { getConfig } from './config.js';
 
 export function resolveAgentName(
   input: string,
@@ -9,7 +10,7 @@ export function resolveAgentName(
   const match = trimmed.match(/^agent\s+(.+)/i);
 
   if (match) {
-    return match[1].trim().toLowerCase();
+    return match[1].trim().toLowerCase().slice(0, getConfig().tabNameMaxLength);
   }
 
   const lowerExisting = new Set(existingLabels.map((l) => l.toLowerCase()));
@@ -24,7 +25,7 @@ export function parseAgentCommand(input: string): AgentCommand {
   const stripped = trimmed.replaceAll(/\s+(-w|--workspace)\s*/gi, ' ').trim();
   const nameMatch = stripped.match(/^agent\s+(.+)/i);
   return {
-    name: nameMatch ? nameMatch[1].trim().toLowerCase() : '',
+    name: nameMatch ? nameMatch[1].trim().toLowerCase().slice(0, getConfig().tabNameMaxLength) : '',
     workspace: isWorkspace,
   };
 }

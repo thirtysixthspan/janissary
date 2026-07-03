@@ -25,6 +25,8 @@ export function App() {
 
   const [tabs, setTabs] = useState<TabView[]>([]);
   const [activeTab, setActiveTab] = useState(0);
+  // Default until the first state event arrives; the server value (from application config) wins.
+  const [tabNameMaxLength, setTabNameMaxLength] = useState(16);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerIndex, setPickerIndex] = useState(0);
   // Server-driven route chooser (null when closed); `routeIdx` is the highlighted option.
@@ -68,10 +70,11 @@ export function App() {
 
   const chooseRoute = useCallback((index: number) => client.send({ method: 'chooseRoute', params: { index } }), [client]);
 
-  useEffect(() => client.onState((nextTabs, active, nextRoute) => {
+  useEffect(() => client.onState((nextTabs, active, nextRoute, nextTabNameMaxLength) => {
     setTabs(nextTabs);
     setActiveTab(active);
     setRoute(nextRoute);
+    setTabNameMaxLength(nextTabNameMaxLength);
     // Highlight the first option when a chooser newly opens (or its command changes).
     const previous = routeReference.current;
     routeReference.current = nextRoute;
@@ -128,6 +131,7 @@ export function App() {
         onSelect={(index) => selectTab(actionEntries[index].index)}
         onClose={(index) => closeTab(actionEntries[index].index)}
         onRename={(index, title) => client.renameTab(actionEntries[index].index, title)}
+        tabNameMaxLength={tabNameMaxLength}
       />
 
       <ViewTabBody tab={current} />

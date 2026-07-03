@@ -2,10 +2,10 @@ import { describe, it, expect, vi } from 'vitest';
 import { AgentCommunicationManager } from './agent-communication-manager.js';
 import type { Tab } from './types.js';
 
-const makeTab = (label: string, dotColor: string): Tab => ({
+const makeTab = (label: string, dotColor: string, title?: string): Tab => ({
   label, dotColor, log: [], activePty: undefined, toolStepsExpanded: false,
   cmdHistory: [], cmdHistoryIdx: -1, group: 1, groupColor: dotColor,
-  number: 1, scrollOffset: 0,
+  number: 1, scrollOffset: 0, title,
 } as Tab);
 
 const setup = () => {
@@ -51,6 +51,19 @@ describe('AgentCommunicationManager', () => {
   it('refuses to send to an unknown agent', () => {
     const { bus } = setup();
     expect(bus.send({ from: 'aslan', to: 'ghost', kind: 'info', text: 'x' })).toBe(false);
+  });
+
+  it('routes to a tab by its display alias, keying the recipient by its true label', () => {
+    const append = vi.fn();
+    const tabs: Tab[] = [makeTab('aslan', '#ff0000'), makeTab('bilal', '#00ff00', 'reviewer')];
+    const managers = {
+      tab: { tabs, append, appendContext: vi.fn(), persist: vi.fn(), buildAgentState: vi.fn() },
+      schedule: { get: vi.fn() },
+      capture: { run: vi.fn() },
+    } as never;
+    const bus = new AgentCommunicationManager(managers);
+    expect(bus.send({ from: 'aslan', to: 'reviewer', kind: 'info', text: 'standby' })).toBe(true);
+    expect(append).toHaveBeenCalledWith('bilal', { input: '', output: 'standby', from: 'aslan', fromColor: '#ff0000', msgKind: 'info' });
   });
 
   it('drains multiple queued messages one at a time', async () => {

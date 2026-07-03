@@ -349,6 +349,7 @@ export type Resolution =
 
 export type Config = {
   transcriptMaxLines: number;
+  tabNameMaxLength: number;
 };
 
 // --- completion.ts --------------------------------------------------------

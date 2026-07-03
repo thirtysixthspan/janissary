@@ -152,7 +152,7 @@ export class TabManager {
   renameTab(index: number, title: string): void {
     const tab = this.tabs[index];
     if (!tab) return;
-    const trimmed = title.trim();
+    const trimmed = title.trim().slice(0, getConfig().tabNameMaxLength);
     if (trimmed && trimmed !== tab.label) tab.title = trimmed;
     else delete tab.title;
     this.persist(this.buildAgentState(tab));
