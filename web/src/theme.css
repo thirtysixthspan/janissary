@@ -47,7 +47,7 @@ html, body, #root {
 
 /* Image view tab: a metadata header above the image, which fills the remaining space. */
 .image-tab { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 8px 12px; gap: 8px; }
-.image-meta { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; color: var(--muted); }
+.image-meta { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; color: var(--muted); user-select: none; }
 .image-meta .image-name { color: var(--fg); font-weight: 600; }
 .image-meta .image-loc { font-size: 12px; word-break: break-all; }
 .image-stage { flex: 1; min-height: 0; position: relative; display: flex; align-items: safe center; justify-content: safe center; overflow: auto; cursor: grab; scrollbar-width: none; }
