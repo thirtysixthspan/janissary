@@ -39,6 +39,7 @@ export function addImageTab(tabs: Tab[], activeTab: number, image: ImageView): T
   const group = creator?.group ?? 1;
   const groupColor = creator?.groupColor ?? dotColor;
   const tab = makeImageTab(label, dotColor, tabs.length + 1, group, groupColor, image);
+  tab.title = image.name.slice(0, getConfig().tabNameMaxLength);
   const newTabs = insertTabInGroup(tabs, tab);
   return { tabs: newTabs, activeTab: newTabs.findIndex((t) => t.label === label) };
 }
@@ -50,6 +51,7 @@ export function addMarkdownTab(tabs: Tab[], activeTab: number, view: MarkdownVie
   const group = creator?.group ?? 1;
   const groupColor = creator?.groupColor ?? dotColor;
   const tab = makeMarkdownTab(label, dotColor, tabs.length + 1, group, groupColor, view);
+  tab.title = view.name.slice(0, getConfig().tabNameMaxLength);
   const newTabs = insertTabInGroup(tabs, tab);
   return { tabs: newTabs, activeTab: newTabs.findIndex((t) => t.label === label) };
 }
