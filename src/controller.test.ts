@@ -482,6 +482,12 @@ describe('Controller', () => {
     expect(text).not.toContain('not yet available');
   });
 
+  it('acp reset reports no session when none is active', () => {
+    const { c } = makeController();
+    c.dispatch('acp reset');
+    expect(allText(c)).toContain('No active ACP session to reset');
+  });
+
   it('shows persisted state with the state command', () => {
     initAgentStateDirectory(mkdtempSync(path.join(tmpdir(), 'janus-state-')));
     const { c } = makeController();

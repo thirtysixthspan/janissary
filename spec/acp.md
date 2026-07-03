@@ -32,3 +32,7 @@ Only `db` and `browser` commands are auto-run — the agent cannot execute arbit
 ### `acp` command
 
 `acp <prompt>` drives an external [Agent Client Protocol](https://agentclientprotocol.com) agent from the current tab. The agent is hardcoded to OpenCode (`opencode acp`) — no configuration or environment variable is required. With no prompt, `acp` prints `Usage: acp <prompt>.`. See the External ACP Agents section for details.
+
+### `acp reset` command
+
+`acp reset` kills the current tab's ACP subprocess and forgets the session. The next `acp <prompt>` will spawn a fresh subprocess and start a new conversation, clearing the accumulated context window. When no ACP session is active, `acp reset` reports that there is nothing to reset rather than failing.
