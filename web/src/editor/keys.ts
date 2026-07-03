@@ -1,7 +1,9 @@
 // keydown → symbolic editor action. Pure (takes only the event's key fields) so the whole
-// binding table is unit-testable. Printable characters and paste are NOT handled here — they
-// arrive through the hidden textarea's input/paste events. Bindings target macOS conventions:
-// Cmd for app chords, Ctrl free for the Emacs-style subset.
+// binding table is unit-testable. Special keys (arrows, page, home, end, enter, tab, backspace,
+// delete, escape) and printable characters are handled here so preventDefault() supresses the
+// browser's native behaviour (including macOS Press-and-Hold) and key-repeat works. Paste
+// (Cmd/Ctrl+V) is deliberately not handled — it flows through the hidden textarea's paste event.
+// Bindings target macOS conventions: Cmd for app chords, Ctrl free for the Emacs-style subset.
 
 import type { Direction } from './motion';
 
@@ -78,7 +80,7 @@ function plainAction(e: KeyLike): KeyAction | null {
     case 'Backspace': { return { kind: 'deleteBackward' }; }
     case 'Delete': { return { kind: 'deleteForward' }; }
     case 'Escape': { return { kind: 'escape' }; }
-    default: { return null; }
+    default: { return e.key.length === 1 ? { kind: 'insert', text: e.key } : null; }
   }
 }
 

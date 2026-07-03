@@ -33,6 +33,19 @@ header. The file is not written to disk until the user explicitly saves (Ctrl+S 
 first save, the file is created at the given path and the size display updates to reflect the new
 on-disk size. Subsequent saves overwrite the file as usual.
 
+### Keyboard input
+
+Printable characters (letters, digits, symbols, and space) and special keys (arrows, page up/down,
+home, end, enter, tab, backspace, delete, escape) are handled by the editor. Pressing and holding
+a printable key repeats the character — the key press is applied directly to the buffer on each
+repeat event.
+
+During IME composition, key events are deferred to the compositing text input and are not processed
+as editor actions until composition ends.
+
+Paste (Cmd+V / Ctrl+V) flows through the browser's native paste event and is not captured by the
+editor's key bindings.
+
 ### Scrolling
 
 The editor body scrolls vertically within the tab. After typing, the scroll position stays where it
