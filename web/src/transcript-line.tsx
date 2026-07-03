@@ -34,9 +34,11 @@ export function renderLine(
   }
   if (line.type === 'spacer') return <div key={index} className="line spacer" />;
   if (line.type === 'markdown') return <Markdown key={index} text={line.text} onLinkClick={(url) => {
-      const colon = FILE_LINE_LINK.test(url) ? url.lastIndexOf(':') : -1;
+      const isFile = FILE_LINE_LINK.test(url);
+      const colon = isFile ? url.lastIndexOf(':') : -1;
       const path = colon > -1 ? url.slice(0, colon) : url;
-      client.send({ method: 'command', params: { text: `open ${path}` } });
+      const cmd = isFile ? 'edit' : 'open';
+      client.send({ method: 'command', params: { text: `${cmd} ${path}` } });
     }} />;
   if (line.type === 'collapsed') {
     return (
