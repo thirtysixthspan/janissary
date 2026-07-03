@@ -513,20 +513,20 @@ describe('Controller open command', () => {
     expect(c.view()).toHaveLength(2);
     const img = c.view()[1];
     expect(img.view).toBe('image');
-    expect(img.title).toBe('image');
+    expect(img.title).toBe('pic.png');
     expect(img.image?.name).toBe('pic.png');
     expect(img.image?.path).toBe(file);
     expect(c.managers.tab.activeTab).toBe(1); // focus moves to the new image tab
   });
 
-  it('gives each image tab a unique internal label while titling them all "image"', () => {
+  it('gives each image tab a unique internal label while using the filename as display title', () => {
     const { c } = makeController();
     c.dispatch(`open ${temporaryImage('a.png')}`);
     c.dispatch(`open ${temporaryImage('b.png')}`);
     const imgs = c.view().filter((t) => t.view === 'image');
     expect(imgs).toHaveLength(2);
     expect(new Set(imgs.map((t) => t.label)).size).toBe(2); // distinct labels
-    expect(imgs.every((t) => t.title === 'image')).toBe(true); // same display name
+    expect(imgs.map((t) => t.title)).toEqual(['a.png', 'b.png']); // filenames as display names
   });
 
   it('does not persist an image tab to agent state', () => {
