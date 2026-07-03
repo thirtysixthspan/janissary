@@ -22,6 +22,15 @@ const MIME: Record<string, string> = {
   '.webp': 'image/webp', '.bmp': 'image/bmp', '.avif': 'image/avif',
   // Markdown files served via the `/open/<id>` route.
   '.md': 'text/markdown; charset=utf-8', '.markdown': 'text/markdown; charset=utf-8',
+  // Text types with their own registered MIME, served via the `/open/<id>` route (editor opener).
+  '.mjs': 'text/javascript', '.cjs': 'text/javascript', '.xml': 'application/xml',
+  '.csv': 'text/csv; charset=utf-8',
+  // The rest of the editor opener's plain-text extensions all serve as text/plain.
+  ...Object.fromEntries([
+    '.txt', '.text', '.log', '.yaml', '.yml', '.toml', '.ini', '.conf', '.cfg', '.env',
+    '.ts', '.tsx', '.jsx', '.py', '.rb', '.go', '.rs', '.c', '.h', '.cpp', '.hpp', '.java',
+    '.sh', '.bash', '.zsh', '.sql',
+  ].map((extension) => [extension, 'text/plain; charset=utf-8'])),
 };
 
 export type ServerOptions = { webDir: string; host?: string; port?: number; token?: string; relaunch?: boolean };
@@ -168,6 +177,8 @@ function handle(controller: Controller, message: ClientMessage, reply: (event: S
     case 'runSuggestion': { controller.runSuggestion(message.params.id); break;
     }
     case 'rateSuggestion': { controller.rateSuggestion(message.params.id, message.params.up); break;
+    }
+    case 'saveFile': { controller.saveFile(message.params.url, message.params.content); break;
     }
   }
   reply({ t: 'rpc-reply', id: message.id, result: 'ok' });

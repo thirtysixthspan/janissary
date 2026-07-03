@@ -12,7 +12,7 @@ export class JanusClient {
   private exitListeners = new Set<ExitListener>();
   private ptyHandlers = new Map<string, (data: string) => void>();
   private ptyBuffers = new Map<string, string[]>();
-  private pending = new Map<number, (result: unknown) => void>();
+  private pending = new Map<number, (result: unknown, error?: string) => void>();
 
   constructor() {
     const token = new URLSearchParams(location.search).get('token') ?? '';
@@ -50,7 +50,7 @@ export class JanusClient {
     }
     case 'rpc-reply': {
       const callback = this.pending.get(event.id);
-      if (callback) { this.pending.delete(event.id); callback(event.result); }
+      if (callback) { this.pending.delete(event.id); callback(event.result, event.error); }
     
     break;
     }
@@ -73,6 +73,17 @@ export class JanusClient {
   }
 
   renameTab(index: number, title: string): void { this.send({ method: 'renameTab', params: { index, title } }); }
+
+  // Write an editor buffer back to disk. Resolves with the server's error message, or undefined
+  // on success (including when the socket is down, which surfaces as a generic failure).
+  saveFile(url: string, content: string): Promise<string | undefined> {
+    const id = this.nextId++;
+    return new Promise((resolve) => {
+      if (this.ws.readyState !== WebSocket.OPEN) { resolve('not connected'); return; }
+      this.pending.set(id, (_result, error) => resolve(error));
+      this.ws.send(JSON.stringify({ t: 'rpc', id, method: 'saveFile', params: { url, content } }));
+    });
+  }
 
   onState(l: StateListener): () => void { this.stateListeners.add(l); return () => this.stateListeners.delete(l); }
   onPtyExit(l: ExitListener): () => void { this.exitListeners.add(l); return () => this.exitListeners.delete(l); }

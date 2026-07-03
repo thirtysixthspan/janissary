@@ -11,6 +11,7 @@ import { ScheduleManager } from './schedule-manager.js';
 import { ProfileManager } from './profile-manager.js';
 import { ConnectionManager } from './connection-manager.js';
 import { OpenFileManager } from './open-file-manager.js';
+import { saveFile } from './editor-save.js';
 import { CaptureManager } from './capture-manager.js';
 import { AgentCommunicationManager } from './agent-communication-manager.js';
 import { messageBus } from './bus.js';
@@ -94,6 +95,12 @@ export class Controller {
   // The absolute path behind an `/open/<id>` ref, or undefined when not registered (drives the route).
   openFilePath(id: string): string | undefined {
     return this.managers.tab.openFilePath(id);
+  }
+
+  // Write an editor tab's buffer back to disk (the `saveFile` RPC). Throws on error; the RPC
+  // layer relays the message to the client.
+  saveFile(url: string, content: string): void {
+    saveFile(this.managers, url, content);
   }
 
   // --- monitor reporting tabs ------------------------------------------------

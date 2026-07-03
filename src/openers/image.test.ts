@@ -28,7 +28,7 @@ describe('opener registry', () => {
   });
 
   it('returns no opener for an unregistered extension', () => {
-    expect(openerForExtension('.txt')).toBeUndefined();
+    expect(openerForExtension('.xyz')).toBeUndefined();
     expect(openerForExtension('')).toBeUndefined();
   });
 

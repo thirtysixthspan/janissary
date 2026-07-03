@@ -15,6 +15,7 @@ import { command as quit } from './quit.js';
 import { command as schedule } from './schedule.js';
 import { command as profile } from './profile.js';
 import { command as open } from './open.js';
+import { command as edit } from './edit.js';
 import { command as send } from './send.js';
 import { command as rename } from './rename.js';
 import { monitor, unmonitor, monitors } from './monitor.js';
@@ -36,6 +37,7 @@ export const commands: Command[] = [
   schedule,
   profile,
   open,
+  edit,
   send,
   rename,
   monitors,

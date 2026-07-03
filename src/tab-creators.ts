@@ -1,6 +1,6 @@
-import type { Tab, ImageView, MarkdownView, PageView } from './types.js';
+import type { Tab, ImageView, MarkdownView, EditorView, PageView } from './types.js';
 import {
-  makeImageTab, makeMarkdownTab, makePageTab, distinctColor, insertTabInGroup,
+  makeImageTab, makeMarkdownTab, makeEditorTab, makePageTab, distinctColor, insertTabInGroup,
 } from './tab.js';
 
 function uniqueLabel(used: Set<string>, prefix: string): string {
@@ -16,6 +16,10 @@ export function uniqueImageLabel(tabs: Tab[]): string {
 
 export function uniqueMarkdownLabel(tabs: Tab[]): string {
   return uniqueLabel(new Set(tabs.map((t) => t.label)), 'markdown');
+}
+
+export function uniqueEditorLabel(tabs: Tab[]): string {
+  return uniqueLabel(new Set(tabs.map((t) => t.label)), 'editor');
 }
 
 export function uniquePageNumber(tabs: Tab[]): number {
@@ -45,6 +49,17 @@ export function addMarkdownTab(tabs: Tab[], activeTab: number, view: MarkdownVie
   const group = creator?.group ?? 1;
   const groupColor = creator?.groupColor ?? dotColor;
   const tab = makeMarkdownTab(label, dotColor, tabs.length + 1, group, groupColor, view);
+  const newTabs = insertTabInGroup(tabs, tab);
+  return { tabs: newTabs, activeTab: newTabs.findIndex((t) => t.label === label) };
+}
+
+export function addEditorTab(tabs: Tab[], activeTab: number, view: EditorView): TabAndActive {
+  const creator = tabs[activeTab];
+  const label = uniqueEditorLabel(tabs);
+  const dotColor = distinctColor(tabs.map((t) => t.dotColor));
+  const group = creator?.group ?? 1;
+  const groupColor = creator?.groupColor ?? dotColor;
+  const tab = makeEditorTab(label, dotColor, tabs.length + 1, group, groupColor, view);
   const newTabs = insertTabInGroup(tabs, tab);
   return { tabs: newTabs, activeTab: newTabs.findIndex((t) => t.label === label) };
 }

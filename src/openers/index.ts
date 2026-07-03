@@ -1,6 +1,7 @@
 import type { Opener } from './types.js';
 import { opener as image } from './image.js';
 import { opener as markdown } from './markdown.js';
+import { opener as editor } from './editor.js';
 
 // The opener registry. The `open` dispatcher walks this list in order and picks the first opener
 // whose `extensions` include the target file's extension. Supporting a new file type is additive:
@@ -8,6 +9,7 @@ import { opener as markdown } from './markdown.js';
 export const openers: Opener[] = [
   image,
   markdown,
+  editor,
 ];
 
 // Find the opener registered for a file extension (lowercased, dot-prefixed), or undefined.
