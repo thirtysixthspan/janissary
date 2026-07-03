@@ -300,7 +300,7 @@ html, body, #root {
 /* Zero-width inline caret: the ::after paints the blinking bar without shifting text. */
 .editor-caret { display: inline-block; width: 0; position: relative; }
 .editor-caret::after {
-  content: ''; position: absolute; left: -1px; top: -0.1em; width: 2px; height: 1.3em;
+  content: ''; position: absolute; left: -1px; top: 0; width: 2px; height: 100%;
   background: var(--accent); animation: editor-caret-blink 1s steps(1) infinite;
 }
 @keyframes editor-caret-blink { 50% { opacity: 0; } }
