@@ -2,6 +2,7 @@ import type { Tab, ImageView, MarkdownView, EditorView, PageView } from './types
 import {
   makeImageTab, makeMarkdownTab, makeEditorTab, makePageTab, distinctColor, insertTabInGroup,
 } from './tab.js';
+import { getConfig } from './config.js';
 
 function uniqueLabel(used: Set<string>, prefix: string): string {
   if (!used.has(prefix)) return prefix;
@@ -60,6 +61,7 @@ export function addEditorTab(tabs: Tab[], activeTab: number, view: EditorView): 
   const group = creator?.group ?? 1;
   const groupColor = creator?.groupColor ?? dotColor;
   const tab = makeEditorTab(label, dotColor, tabs.length + 1, group, groupColor, view);
+  tab.title = view.name.slice(0, getConfig().tabNameMaxLength);
   const newTabs = insertTabInGroup(tabs, tab);
   return { tabs: newTabs, activeTab: newTabs.findIndex((t) => t.label === label) };
 }

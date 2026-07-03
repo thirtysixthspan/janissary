@@ -46,7 +46,7 @@ export const makeMarkdownTab = (label: string, dotColor: string, number: number,
 export const makeEditorTab = (label: string, dotColor: string, number: number, group: number, groupColor: string, editor: EditorView): Tab => ({
   ...makeTab(label, dotColor, number, [], [], undefined, group, groupColor),
   view: 'editor',
-  title: 'editor',
+  title: editor.name,
   editor,
 });
 

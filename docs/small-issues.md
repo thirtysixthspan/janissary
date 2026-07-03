@@ -1,7 +1,5 @@
 # small issues
 
-* The filename of the edited file should be the name on the editor tab. The length on the tab name will be restricted to the configured max tab name length.
-
 * in the editor window, after typing, the scroll bar resets to the top when it should not.
 
 * edit command should be able to open a new text file. the file will not be saved to disk until saved by the user.
