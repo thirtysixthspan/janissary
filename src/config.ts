@@ -3,9 +3,11 @@ import path from 'node:path';
 import type { Config } from './types.js';
 
 export const DEFAULT_TRANSCRIPT_MAX_LINES = 25_000;
+export const DEFAULT_TAB_NAME_MAX_LENGTH = 16;
 
 const DEFAULT_CONFIG: Config = {
   transcriptMaxLines: DEFAULT_TRANSCRIPT_MAX_LINES,
+  tabNameMaxLength: DEFAULT_TAB_NAME_MAX_LENGTH,
 };
 
 let config: Config = { ...DEFAULT_CONFIG };

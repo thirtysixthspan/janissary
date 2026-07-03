@@ -62,7 +62,11 @@ export type TabView = {
   activePty?: string;
 };
 
-export type StateEvent = { t: 'state'; tabs: TabView[]; activeTab: number; route: RouteChooserView | null };
+export type StateEvent = {
+  t: 'state'; tabs: TabView[]; activeTab: number; route: RouteChooserView | null;
+  // Application config, applied client-side to the rename input (server is authoritative).
+  tabNameMaxLength: number;
+};
 export type PtyDataEvent = { t: 'pty'; id: string; data: string };
 export type PtyExitEvent = { t: 'pty-exit'; id: string; exitCode: number };
 export type RpcReply = { t: 'rpc-reply'; id: number; result?: unknown; error?: string };
