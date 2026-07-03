@@ -133,6 +133,8 @@ html, body, #root {
 .line.prompt { color: var(--accent); cursor: pointer; }
 .line.prompt .cwd { color: var(--faint); margin-right: 6px; }
 .line.output { color: var(--fg); }
+.line.output .file-link { color: var(--accent); cursor: pointer; text-decoration: underline; }
+.line.output .file-link:hover { color: var(--fg); }
 .line.output.running { color: #ffd93d; }
 .line.empty-state { color: var(--faint); }
 .line.spacer { height: 8px; }
