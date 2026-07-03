@@ -56,7 +56,7 @@ export function useEditorMouse(api: EditorApi, bodyRef: React.RefObject<HTMLDivE
     focus();
     const s = api.stateRef.current;
     const hit = hitFromEvent(e);
-    if (!s || !hit) return;
+    if (!s || !hit) { e.preventDefault(); return; }
     // Suppress native text selection when a text line was hit.
     e.preventDefault();
     api.sealUndo();

@@ -29,6 +29,10 @@ up/down, etc.) are not.
 - **Metadata header** — the file's name, size, and location.
 - **Editor body** — fills the remaining space. Scrolls independently.
 
+### Focus protection
+
+Clicking the metadata header or in the editor body outside any text line (blank space below the last line) must not steal focus from the hidden textarea — the cursor position and keyboard input remain uninterrupted. The metadata header is non-selectable (text cannot be selected in it) to prevent accidental browser focus changes.
+
 ### New files
 
 The `edit <file>` command can open a path that does not yet exist on disk. The editor opens with

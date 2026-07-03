@@ -163,4 +163,26 @@ describe('EditorTab', () => {
     fireEvent.keyDown(textarea(), { key: 'z', metaKey: true });
     await waitFor(() => expect(screen.queryByText('abc')).not.toBeInTheDocument());
   });
+
+  it('clicking the metadata header does not steal focus from the textarea', async () => {
+    const { client } = makeClient();
+    const { container } = await renderLoaded(client);
+    const ta = textarea();
+    ta.focus();
+    expect(document.activeElement).toBe(ta);
+    const meta = container.querySelector('.image-meta')!;
+    fireEvent.mouseDown(meta);
+    expect(document.activeElement).toBe(ta);
+  });
+
+  it('clicking the editor body outside any line does not steal focus from the textarea', async () => {
+    const { client } = makeClient();
+    const { container } = await renderLoaded(client);
+    const ta = textarea();
+    ta.focus();
+    expect(document.activeElement).toBe(ta);
+    const body = container.querySelector('.editor-body')!;
+    fireEvent.mouseDown(body);
+    expect(document.activeElement).toBe(ta);
+  });
 });
