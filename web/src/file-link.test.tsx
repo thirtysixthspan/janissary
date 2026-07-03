@@ -102,6 +102,61 @@ describe('fileLineSegments', () => {
       { type: 'text', content: ')' },
     ]);
   });
+
+  it('detects an https URL', () => {
+    const segments = fileLineSegments('Check https://example.com for details');
+    expect(segments).toEqual([
+      { type: 'text', content: 'Check ' },
+      { type: 'url', fullMatch: 'https://example.com', url: 'https://example.com' },
+      { type: 'text', content: ' for details' },
+    ]);
+  });
+
+  it('detects a URL with path and trailing text', () => {
+    const segments = fileLineSegments('open https://site.com/path/to/page?q=1');
+    expect(segments).toEqual([
+      { type: 'text', content: 'open ' },
+      { type: 'url', fullMatch: 'https://site.com/path/to/page?q=1', url: 'https://site.com/path/to/page?q=1' },
+    ]);
+  });
+
+  it('detects URLs with port numbers without confusing them with file:line patterns', () => {
+    const segments = fileLineSegments('Server at https://localhost:8080');
+    expect(segments).toEqual([
+      { type: 'text', content: 'Server at ' },
+      { type: 'url', fullMatch: 'https://localhost:8080', url: 'https://localhost:8080' },
+    ]);
+  });
+
+  it('detects multiple URLs', () => {
+    const segments = fileLineSegments('a https://a.com b https://b.com c');
+    expect(segments).toEqual([
+      { type: 'text', content: 'a ' },
+      { type: 'url', fullMatch: 'https://a.com', url: 'https://a.com' },
+      { type: 'text', content: ' b ' },
+      { type: 'url', fullMatch: 'https://b.com', url: 'https://b.com' },
+      { type: 'text', content: ' c' },
+    ]);
+  });
+
+  it('detects URLs alongside file:line patterns', () => {
+    const segments = fileLineSegments('Bug at src/foo.ts:42 — see https://tracker.com/issue/1');
+    expect(segments).toEqual([
+      { type: 'text', content: 'Bug at ' },
+      { type: 'link', fullMatch: 'src/foo.ts:42', path: 'src/foo.ts', line: 42 },
+      { type: 'text', content: ' — see ' },
+      { type: 'url', fullMatch: 'https://tracker.com/issue/1', url: 'https://tracker.com/issue/1' },
+    ]);
+  });
+
+  it('URL detection does not break file:line before it', () => {
+    const segments = fileLineSegments('src/bar.ts:10 then https://example.com');
+    expect(segments).toEqual([
+      { type: 'link', fullMatch: 'src/bar.ts:10', path: 'src/bar.ts', line: 10 },
+      { type: 'text', content: ' then ' },
+      { type: 'url', fullMatch: 'https://example.com', url: 'https://example.com' },
+    ]);
+  });
 });
 
 describe('linkifyMarkdown', () => {
@@ -118,6 +173,12 @@ describe('linkifyMarkdown', () => {
   it('handles file:line:col patterns', () => {
     expect(linkifyMarkdown('src/app.ts:10:5 error')).toBe(
       '[src/app.ts:10:5](src/app.ts:10:5) error',
+    );
+  });
+
+  it('passes URLs through unchanged in markdown links', () => {
+    expect(linkifyMarkdown('Visit https://example.com now')).toBe(
+      'Visit https://example.com now',
     );
   });
 });
@@ -140,5 +201,14 @@ describe('renderFileLinkSegments', () => {
     const segments = [{ type: 'text' as const, content: 'just text' }];
     render(<>{renderFileLinkSegments(segments, client)}</>);
     expect(screen.getByText('just text')).toBeDefined();
+  });
+
+  it('sends an open command when a url segment is clicked', async () => {
+    const send = vi.fn();
+    const client = { send } as unknown as JanusClient;
+    const segments = [{ type: 'text' as const, content: 'Visit ' }, { type: 'url' as const, fullMatch: 'https://example.com', url: 'https://example.com' }];
+    render(<>{renderFileLinkSegments(segments, client)}</>);
+    await userEvent.click(screen.getByText('https://example.com'));
+    expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'open https://example.com' } });
   });
 });
