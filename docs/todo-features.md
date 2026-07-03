@@ -17,9 +17,6 @@ An agent should only be able to access files in the workspace.
 ## harness tab transcripts
 harness tabs should have a tab transcript that records the harness output.
 For example, if claude or opencode are running in the harness, it is expected that the output of their work is captured in the transcript.
-
- ## Multi-line input mode
-  Shift+Return inserts a newline in the command bar rather than submitting, letting you compose multi-line ACP prompts or shell heredocs before sending. Requires changing the <input> to an auto-resizing <textarea> while keeping all existing chord handlers intact.
   
 # deferred
 
