@@ -94,6 +94,34 @@ describe('EditorTab', () => {
     await waitFor(() => expect(scrollMock).toHaveBeenCalledWith({ block: 'nearest' }));
   });
 
+  it('renders a caret span in the active editor', async () => {
+    const { client } = makeClient();
+    const { container } = await renderLoaded(client);
+    expect(container.querySelector('.editor-caret')).toBeInTheDocument();
+  });
+
+  it('does not render a caret span when the editor is inactive', async () => {
+    const { client } = makeClient();
+    const view = makeView();
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      text: () => Promise.resolve('line one\nline two'),
+    } as unknown as Response));
+    const { container } = render(<EditorTab editor={view} client={client} active={false} />);
+    await waitFor(() => expect(container.querySelector('.editor-caret')).toBeNull());
+  });
+
+  it('renders the caret only on the cursor line, not on other lines', async () => {
+    const { client } = makeClient();
+    const { container } = await renderLoaded(client);
+    const currentRow = container.querySelector('.editor-row-current');
+    const otherRows = container.querySelectorAll('.editor-row:not(.editor-row-current)');
+    expect(currentRow?.querySelector('.editor-caret')).toBeInTheDocument();
+    for (const row of otherRows) {
+      expect(row.querySelector('.editor-caret')).toBeNull();
+    }
+  });
+
   it('undoes an edit with Cmd+Z', async () => {
     const { client } = makeClient();
     await renderLoaded(client);

@@ -46,6 +46,10 @@ as editor actions until composition ends.
 Paste (Cmd+V / Ctrl+V) flows through the browser's native paste event and is not captured by the
 editor's key bindings.
 
+### Caret
+
+A blinking vertical bar marks the cursor position — where text will be inserted when typing. The caret is an accent-colored vertical line, 2 pixels wide, that blinks hard on/off on a 1-second cycle. It sits at the exact character column in the text flow without shifting the surrounding text. The caret is only visible when the editor tab is active; switching to another tab or opening a picker hides it.
+
 ### Scrolling
 
 The editor body scrolls vertically within the tab. After typing, the scroll position stays where it
