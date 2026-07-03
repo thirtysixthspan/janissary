@@ -56,6 +56,11 @@ history stored as json objects in a json array
 
 ## other
 
+ limit tab name lengths to 16 characters. make this an application configuration parameter. this should impact when any tab is created or renamed either in the ui or the server.
+
+ tab aliases should work everwhere including msg/routing
+
+
  saw this error: Already monitoring with persona "assistant".
   monitoring using the same assistant may happen multiple time but for different targets.
   in this case a new monitoring window should be opened

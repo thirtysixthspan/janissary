@@ -32,52 +32,6 @@ $ some-command --flag
 
 For UI changes, describe the flow step by step: what the user clicks, what they see, what happens next. Use ASCII diagrams when spatial relationships matter.
 
-### Screenshots
-
-If the PR introduces or changes **any visual surface** — a new tab type, a widget, a badge, a style change, a layout — include screenshots. Capture them from the running app and commit the image files alongside the code.
-
-**Capture each screenshot in these exact steps:**
-
-1. Start the app in a background process so it stays running while you capture:
-
-   ```bash
-   npm start &
-   ```
-
-   Wait a few seconds for the browser window to open and the server to settle. (If `npm start` opens the default OS browser, the window will be visible and capturable.)
-
-2. Use the app to get into the state you want to show — run commands, open tabs, trigger the feature — so the window reflects exactly what the reviewer needs to see.
-
-3. Capture the window with macOS `screencapture`:
-
-   ```bash
-   # Capture the full Chrome window (interactive — click the window):
-   screencapture -w temp/screenshot-feature-name.png
-
-   # Or capture just the app content area by selecting a region:
-   screencapture -s temp/screenshot-feature-name.png
-   ```
-
-   - `-w` lets you click the target window (Chrome showing Janissary).
-   - `-s` lets you drag a rectangle over the region you want.
-   - On Linux use `import` (ImageMagick) or `gnome-screenshot -w`; on Windows use the Snipping Tool or `Win+Shift+S`.
-
-   Save each screenshot under `temp/` with a descriptive kebab-case name (`temp/screenshot-unread-badge.png`, `temp/screenshot-tab-strip.png`).
-
-4. Kill the background server when you have all the shots:
-
-   ```bash
-   kill %1
-   ```
-
-5. Commit the screenshot files along with the code changes. Reference them in the PR body with Markdown image syntax — use a relative path that resolves when viewing the PR on GitHub:
-
-   ```markdown
-   ![tab strip with unread badge sparkle](../blob/<branch>/temp/screenshot-unread-badge.png)
-   ```
-
-**If you cannot capture screenshots** (headless environment, no display server): note that under this section with "No display available — screenshots omitted" and describe the visual change in words, including CSS classes, colors, layout changes, and which elements appear or move.
-
 ### How to verify
 
 A short list of manual verification steps a reviewer can follow. Keep each step concrete and testable — "open the app, run `foo`, confirm you see `bar`" rather than "make sure it works." Include edge cases: empty states, error paths, interactions with existing features.
@@ -166,8 +120,7 @@ Write the full PR body to `./temp/pr-body.md` following the structure at the top
 
 1. **What** — 3-5 paragraphs
 2. **Behavior examples** — CLI transcripts or user flows
-3. **Screenshots** — for any visual change, follow the capture steps above (start the app, set up the state, `screencapture -w`, kill the server, commit the PNGs). If headless, note "No display available — screenshots omitted" and describe the UI in words.
-4. **How to verify** — concrete manual verification steps
+3. **How to verify** — concrete manual verification steps
 5. **Files changed** — grouped summary
 
 Use natural line breaks — never wrap lines at a fixed column.
