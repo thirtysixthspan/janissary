@@ -3,6 +3,7 @@ import { existsSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { openerForExtension, type OpenContext } from './openers/index.js';
 import { didOsOpen } from './openers/os-open.js';
+import { openInEditor } from './openers/editor.js';
 import { parseOpen, isGlobPattern } from './commands/open.js';
 import { webOpener } from './openers/page.js';
 import { SHELL_NAME } from './shell-manager.js';
@@ -16,14 +17,7 @@ export class OpenFileManager {
     const parsed = parseOpen(command);
     if ('error' in parsed) { this.managers.tab.append(label, { input: command, output: parsed.error }); return; }
     const cwd = this.managers.tab.cwdOf(label) ?? process.cwd();
-    const context: OpenContext = {
-      note: (text) => this.managers.tab.append(label, { input: command, output: text }),
-      openImageTab: (image) => this.managers.tab.openImageTab(image),
-      openMarkdownTab: (view) => this.managers.tab.openMarkdownTab(view),
-      openPageTab: (view) => this.managers.tab.openPageTab(view),
-      registerFile: (absPath) => this.managers.tab.registerFile(absPath),
-      openExternally: (absPath) => didOsOpen(absPath),
-    };
+    const context = this.buildContext(command, label);
 
     if (parsed.web) {
       void (parsed.external ? webOpener.external(parsed.target, context) : webOpener.inline(parsed.target, context));
@@ -43,6 +37,28 @@ export class OpenFileManager {
 
     const file = path.isAbsolute(parsed.target) ? parsed.target : path.resolve(cwd, parsed.target);
     this.openOne(command, label, file, parsed.external, context);
+  }
+
+  // The `edit <file>` command: resolve the target like `open` does, but bypass the opener
+  // registry and hand the file straight to the editor — this is how markdown and extensionless
+  // files (Makefile, .gitignore) get edited.
+  edit(command: string, target: string, label: string): void {
+    const cwd = this.managers.tab.cwdOf(label) ?? process.cwd();
+    const file = path.isAbsolute(target) ? target : path.resolve(cwd, target);
+    if (!existsSync(file)) { this.managers.tab.append(label, { input: command, output: `edit: ${file}: no such file` }); return; }
+    openInEditor(file, this.buildContext(command, label));
+  }
+
+  private buildContext(command: string, label: string): OpenContext {
+    return {
+      note: (text) => this.managers.tab.append(label, { input: command, output: text }),
+      openImageTab: (image) => this.managers.tab.openImageTab(image),
+      openMarkdownTab: (view) => this.managers.tab.openMarkdownTab(view),
+      openEditorTab: (view) => this.managers.tab.openEditorTab(view),
+      openPageTab: (view) => this.managers.tab.openPageTab(view),
+      registerFile: (absPath) => this.managers.tab.registerFile(absPath),
+      openExternally: (absPath) => didOsOpen(absPath),
+    };
   }
 
   private openOne(command: string, label: string, file: string, external: boolean, context: OpenContext): void {

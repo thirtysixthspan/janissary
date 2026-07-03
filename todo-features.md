@@ -41,7 +41,6 @@ exiting the ssh closes that tab.
 
 separate slow automated tests into a slow test suite only run at the end of feature development as a verification
 
-
 ## global history buffer
 in memory storage
 used for ghost text 
@@ -53,25 +52,9 @@ history stored as json objects in a json array
     tab
     timestamp
 
-
-## other
-
- limit tab name lengths to 16 characters. make this an application configuration parameter. this should impact when any tab is created or renamed either in the ui or the server.
-
- tab aliases should work everwhere including msg/routing
-
-
  saw this error: Already monitoring with persona "assistant".
   monitoring using the same assistant may happen multiple time but for different targets.
   in this case a new monitoring window should be opened
 
-harness tabs should have a tab transcript
-monitors should have access to the tab transcript
 
-update or remove next run time in schedule after a run
-
-web links in agent windows should open web view tabs rather than chrome tabs.
-
-remove tool tip on hover of commands in the transcript
-automatically excute the commands by sending them through the command line: dont require a return jeypress to execute.
 

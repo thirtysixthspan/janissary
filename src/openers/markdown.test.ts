@@ -14,6 +14,7 @@ function fakeContext(overrides: Partial<OpenContext> = {}) {
     note: (t) => { notes.push(t); },
     openImageTab: (_v: ImageView) => {},
     openMarkdownTab: (v) => { opened.push(v); },
+    openEditorTab: () => {},
     registerFile: (p) => `/open/test-${p.length}`,
     openExternally: () => true,
     openPageTab: () => {},

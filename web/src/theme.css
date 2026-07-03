@@ -284,3 +284,30 @@ html, body, #root {
   color: var(--accent); font-family: var(--mono); font-size: 12px; cursor: pointer;
 }
 .monitor-suggestion .cmd:hover { text-decoration: underline; }
+
+/* Editor tab: metadata header (image-tab classes) above a scrollable numbered-gutter text body. */
+.editor-body { flex: 1; min-height: 0; overflow-y: auto; position: relative; cursor: text; font-family: var(--mono); line-height: 1.45; }
+.editor-row { display: flex; min-height: 1.45em; }
+.editor-row-current { background: rgb(255 255 255 / 4%); }
+.editor-gutter {
+  flex: none; text-align: right; padding-right: 14px; color: var(--faint);
+  user-select: none; cursor: default;
+}
+.editor-row-current .editor-gutter { color: var(--muted); }
+/* Soft-wrap long lines within the cell; the gutter number stays on the first visual row. */
+.editor-content { flex: 1; min-width: 0; white-space: pre-wrap; word-break: break-all; }
+.editor-sel { background: rgb(91 156 255 / 30%); }
+/* Zero-width inline caret: the ::after paints the blinking bar without shifting text. */
+.editor-caret { display: inline-block; width: 0; position: relative; }
+.editor-caret::after {
+  content: ''; position: absolute; left: -1px; top: -0.1em; width: 2px; height: 1.3em;
+  background: var(--accent); animation: editor-caret-blink 1s steps(1) infinite;
+}
+@keyframes editor-caret-blink { 50% { opacity: 0; } }
+/* Hidden always-focused textarea that captures keystrokes, paste, and IME composition. */
+.editor-textarea {
+  position: absolute; left: 0; top: 0; width: 1px; height: 1px;
+  opacity: 0; border: none; padding: 0; margin: 0; resize: none; outline: none;
+}
+.editor-saved { color: #58c07a; }
+.editor-error { color: #e06c75; }

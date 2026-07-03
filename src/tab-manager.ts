@@ -1,5 +1,5 @@
 /* eslint-disable max-lines */
-import type { Tab, LogEntry, AgentState, ImageView, MarkdownView, PageView } from './types.js';
+import type { Tab, LogEntry, AgentState, ImageView, MarkdownView, EditorView, PageView } from './types.js';
 import type { ConnectionView, ScheduleView, TabView } from './protocol.js';
 import {
   makeTab, distinctColor, insertTabInGroup,
@@ -12,7 +12,7 @@ import { messageBus } from './bus.js';
 import { closeTabResources } from './tab-cleanup.js';
 import type { Managers } from './managers.js';
 import {
-  addImageTab, addMarkdownTab, addPageTab,
+  addImageTab, addMarkdownTab, addEditorTab, addPageTab,
 } from './tab-creators.js';
 
 export class TabManager {
@@ -279,6 +279,7 @@ export class TabManager {
       page: t.page,
       harness: t.harness,
       markdown: t.markdown,
+      editor: t.editor,
       monitor: t.monitor,
       activePty: t.activePty,
     }));
@@ -293,6 +294,13 @@ export class TabManager {
 
   openMarkdownTab(view: MarkdownView): void {
     const { tabs, activeTab } = addMarkdownTab(this.tabs, this.activeTab, view);
+    this.tabs = tabs;
+    this.activeTab = activeTab;
+    messageBus.emit('state', { type: 'dirty' });
+  }
+
+  openEditorTab(view: EditorView): void {
+    const { tabs, activeTab } = addEditorTab(this.tabs, this.activeTab, view);
     this.tabs = tabs;
     this.activeTab = activeTab;
     messageBus.emit('state', { type: 'dirty' });

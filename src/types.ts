@@ -78,6 +78,15 @@ export type MarkdownView = {
   url: string;
 };
 
+// Plain-text editor view (opened via `open <file>` for text extensions, or `edit <file>` for any
+// file). Same shape as MarkdownView: metadata for the header plus the `/open/<id>` content ref.
+export type EditorView = {
+  name: string;
+  path: string;
+  size: string;
+  url: string;
+};
+
 // A monitor target: a single tab by label, or a whole tab group by number (group targets
 // track membership dynamically — tabs added to the group later are covered).
 export type MonitorTarget =
@@ -102,7 +111,7 @@ export type Tab = {
   number: number;
   // The tab's body kind. Undefined/`'agent'` renders the normal transcript + command line; `'image'`
   // renders the image view (no command bar). View tabs are live and in-memory — not persisted.
-  view?: 'agent' | 'image' | 'page' | 'harness' | 'markdown' | 'monitor';
+  view?: 'agent' | 'image' | 'page' | 'harness' | 'markdown' | 'editor' | 'monitor';
   // Display name shown in the tab strip when it differs from the (unique) internal `label` — e.g.
   // every image tab is titled `image` while keeping a distinct label (`image`, `image-2`, …).
   title?: string;
@@ -117,6 +126,8 @@ export type Tab = {
   harness?: HarnessView;
   // The markdown-view payload, present only when `view === 'markdown'`.
   markdown?: MarkdownView;
+  // The editor-view payload, present only when `view === 'editor'`.
+  editor?: EditorView;
   // The monitor-window payload, present only when `view === 'monitor'`: the suggestion feed.
   monitor?: { suggestions: MonitorSuggestion[] };
   // Group number, shared by an agent and every agent it (transitively) creates. The root agent

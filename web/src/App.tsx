@@ -6,6 +6,7 @@ import { Transcript } from './Transcript';
 import { ViewTabBody } from './ViewTabBody';
 import { ReportingSection, isReportingTab } from './ReportingSection';
 import { HarnessTab, type HarnessTabHandle } from './HarnessTab';
+import { EditorTab } from './EditorTab';
 import type { ShellTabHandle } from './ShellTab';
 import { ShellTabLayer } from './ShellTabLayer';
 import { CommandInput } from './CommandInput';
@@ -121,7 +122,7 @@ export function App() {
 
   if (!current) return <div className="app" style={{ padding: 16, color: 'var(--muted)' }}>Connecting…</div>;
 
-  const isViewTab = (['image', 'page', 'harness', 'markdown'] as const).includes(current.view as 'image' | 'page' | 'harness' | 'markdown');
+  const isViewTab = (['image', 'page', 'harness', 'markdown', 'editor'] as const).includes(current.view as 'image' | 'page' | 'harness' | 'markdown' | 'editor');
 
   return (
     <div className="app">
@@ -151,6 +152,18 @@ export function App() {
           <HarnessTab harness={t.harness!} client={client}
             ref={(h) => { if (h) harnessHandles.current.set(t.harness!.ptyId, h); else harnessHandles.current.delete(t.harness!.ptyId); }} />
           <StatusPanels tab={t} scheduleOnly />
+        </div>
+      ))}
+
+      {/* Editor layer: like harness tabs, every editor tab stays mounted (hidden when inactive)
+          so the buffer, undo stacks, cursor, and scroll position survive tab switches. */}
+      {tabs.filter((t) => t.view === 'editor' && t.editor).map((t) => (
+        <div
+          key={t.editor!.url}
+          className="tab-body"
+          style={{ borderLeft: `4px solid ${t.dotColor}`, display: t.label === current.label ? 'flex' : 'none' }}
+        >
+          <EditorTab editor={t.editor!} client={client} active={t.label === current.label} />
         </div>
       ))}
 

@@ -1,4 +1,4 @@
-import type { LogEntry, Tab, ImageView, MarkdownView, PageView, HarnessView } from './types.js';
+import type { LogEntry, Tab, ImageView, MarkdownView, EditorView, PageView, HarnessView } from './types.js';
 export { expandTabs, wordWrap, flattenBuffer } from './tab-formatting.js';
 export { distinctColor, dotColors } from './tab-colors.js';
 export { stripComments, renumberTabs, canMoveTab, swapTabsLeft, swapTabsRight, insertTabInGroup } from './tab-utils.js';
@@ -40,6 +40,14 @@ export const makeMarkdownTab = (label: string, dotColor: string, number: number,
   view: 'markdown',
   title: 'markdown',
   markdown,
+});
+
+// An editor view tab (opened via `open <text file>` or `edit <file>`). Hosts the plain-text editor.
+export const makeEditorTab = (label: string, dotColor: string, number: number, group: number, groupColor: string, editor: EditorView): Tab => ({
+  ...makeTab(label, dotColor, number, [], [], undefined, group, groupColor),
+  view: 'editor',
+  title: editor.name,
+  editor,
 });
 
 // A harness view tab (opened via `harness <name>`). The entire tab body is a live PTY terminal.

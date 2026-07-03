@@ -537,10 +537,10 @@ describe('Controller open command', () => {
   });
 
   it('reports no opener for an unsupported file type', () => {
-    const file = temporaryImage('notes.txt');
+    const file = temporaryImage('notes.xyz');
     const { c } = makeController();
     c.dispatch(`open ${file}`);
-    expect(allText(c)).toContain('No opener for ".txt" files');
+    expect(allText(c)).toContain('No opener for ".xyz" files');
     expect(c.view()).toHaveLength(1);
   });
 

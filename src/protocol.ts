@@ -1,10 +1,10 @@
 // Wire types shared between the Node server and the React web client.
 // The web client imports these directly via the @shared path alias — no mirror needed.
-import type { BufferLine, ImageView, PageView, HarnessView, MarkdownView, TerminalEntry, CompletionResult } from './types.js';
+import type { BufferLine, ImageView, PageView, HarnessView, MarkdownView, EditorView, TerminalEntry, CompletionResult } from './types.js';
 
 // Used locally in TabView below, so separate import + export is required.
 // eslint-disable-next-line unicorn/prefer-export-from
-export type { BufferLine, ImageView, PageView, HarnessView, MarkdownView, TerminalEntry, CompletionResult };
+export type { BufferLine, ImageView, PageView, HarnessView, MarkdownView, EditorView, TerminalEntry, CompletionResult };
 
 // One row in the floating "connections" panel (shell / acp / terminal card / sqlite).
 export type ConnectionView = { text: string; kind: 'shell' | 'acp' | 'browser' | 'terminal' | 'sqlite' };
@@ -44,7 +44,7 @@ export type TabView = {
   cmdHistory: string[];
   toolStepsExpanded: boolean;
   // Body kind: undefined/`'agent'` for a normal tab, `'image'` for an image view, `'page'` for an embedded web page, `'harness'` for a full-tab AI harness terminal, `'markdown'` for a rendered Markdown file, `'monitor'` for the AI-monitor suggestion feed.
-  view?: 'agent' | 'image' | 'page' | 'harness' | 'markdown' | 'monitor';
+  view?: 'agent' | 'image' | 'page' | 'harness' | 'markdown' | 'editor' | 'monitor';
   // Display name when it differs from `label` (image tabs are all titled `image`).
   title?: string;
   // Image-view payload, present only when `view === 'image'`.
@@ -55,6 +55,8 @@ export type TabView = {
   harness?: HarnessView;
   // Markdown-view payload, present only when `view === 'markdown'`.
   markdown?: MarkdownView;
+  // Editor-view payload, present only when `view === 'editor'`.
+  editor?: EditorView;
   // Monitor-window payload, present only when `view === 'monitor'`: the suggestion feed.
   monitor?: { suggestions: SuggestionView[] };
   // Set while a full-tab interactive PTY (htop, vim, etc.) is running on this agent tab.
@@ -96,7 +98,10 @@ export type RpcCall =
   | { method: 'runSuggestion'; params: { id: string } }
   // Rate a suggestion 👍/👎; feedback reaches the monitoring AI on its next batch and
   // the suggestion is removed from the feed (either direction).
-  | { method: 'rateSuggestion'; params: { id: string; up: boolean } };
+  | { method: 'rateSuggestion'; params: { id: string; up: boolean } }
+  // Write an editor tab's buffer back to disk. `url` is the tab's `/open/<id>` ref — the server
+  // resolves it through the open-file allow-list, so only explicitly opened files are writable.
+  | { method: 'saveFile'; params: { url: string; content: string } };
 
 export type ClientMessage = { t: 'rpc'; id: number } & RpcCall;
 
