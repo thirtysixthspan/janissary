@@ -95,7 +95,7 @@ export function renderFileLinkSegments(
     if (seg.type === 'text') {
       return seg.content || null;
     }
-    const openCmd = `open ${seg.path}`;
+    const editCmd = `edit ${seg.path}`;
     return React.createElement(
       'span',
       {
@@ -104,7 +104,7 @@ export function renderFileLinkSegments(
         title: `${seg.fullMatch} — click to open`,
         onClick: (e: React.MouseEvent) => {
           e.stopPropagation();
-          client.send({ method: 'command', params: { text: openCmd } });
+          client.send({ method: 'command', params: { text: editCmd } });
         },
       },
       seg.fullMatch,

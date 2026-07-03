@@ -1,5 +1,9 @@
-import { describe, it, expect } from 'vitest';
-import { fileLineSegments, linkifyMarkdown } from './file-link';
+import React from 'react';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { describe, it, expect, vi } from 'vitest';
+import type { JanusClient } from './ws';
+import { fileLineSegments, linkifyMarkdown, renderFileLinkSegments } from './file-link';
 
 describe('fileLineSegments', () => {
   it('returns a plain text segment when no file:line pattern is found', () => {
@@ -115,5 +119,26 @@ describe('linkifyMarkdown', () => {
     expect(linkifyMarkdown('src/app.ts:10:5 error')).toBe(
       '[src/app.ts:10:5](src/app.ts:10:5) error',
     );
+  });
+});
+
+describe('renderFileLinkSegments', () => {
+  const linkSegment = { type: 'link' as const, fullMatch: 'src/foo.ts:42', path: 'src/foo.ts', line: 42 };
+
+  it('sends an edit command when a file:line link is clicked', async () => {
+    const send = vi.fn();
+    const client = { send } as unknown as JanusClient;
+    const segments = [{ type: 'text' as const, content: 'Error in ' }, linkSegment];
+    render(<>{renderFileLinkSegments(segments, client)}</>);
+    await userEvent.click(screen.getByText('src/foo.ts:42'));
+    expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'edit src/foo.ts' } });
+  });
+
+  it('renders plain text segments without click handlers', () => {
+    const send = vi.fn();
+    const client = { send } as unknown as JanusClient;
+    const segments = [{ type: 'text' as const, content: 'just text' }];
+    render(<>{renderFileLinkSegments(segments, client)}</>);
+    expect(screen.getByText('just text')).toBeDefined();
   });
 });
