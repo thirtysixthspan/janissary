@@ -44,16 +44,24 @@ describe('parseClose', () => {
     expect(parseClose('CLOSE PAGE 5')).toEqual({ target: 'page', number: 5 });
   });
 
-  it('returns error for "close page" with no number', () => {
-    expect(parseClose('close page')).toHaveProperty('error');
+  it('returns tabname target for "close page" with no number', () => {
+    expect(parseClose('close page')).toEqual({ target: 'tabname', name: 'page' });
   });
 
-  it('returns error for "close page abc"', () => {
-    expect(parseClose('close page abc')).toHaveProperty('error');
+  it('returns tabname target for "close page abc"', () => {
+    expect(parseClose('close page abc')).toEqual({ target: 'tabname', name: 'page abc' });
   });
 
-  it('returns error for unknown subcommands', () => {
-    expect(parseClose('close tab 2')).toHaveProperty('error');
+  it('returns tabname target for "close <name>"', () => {
+    expect(parseClose('close tab 2')).toEqual({ target: 'tabname', name: 'tab 2' });
+  });
+
+  it('returns tabname target for single-word tab name', () => {
+    expect(parseClose('close janus')).toEqual({ target: 'tabname', name: 'janus' });
+  });
+
+  it('returns tabname target for multi-word tab name', () => {
+    expect(parseClose('close my tab')).toEqual({ target: 'tabname', name: 'my tab' });
   });
 
   it('treats "exit" as an alias of "close"', () => {

@@ -643,6 +643,34 @@ describe('Controller page tabs', () => {
     expect(allText(c)).toContain('No page numbered 99');
   });
 
+  it('close <tabname> closes the named tab', () => {
+    const { c } = makeController();
+    c.dispatch('agent bob');
+    expect(c.view().map((t) => t.label)).toContain('bob');
+    c.dispatch('close bob');
+    expect(c.view().map((t) => t.label)).toEqual(['janus']);
+  });
+
+  it('exit <tabname> closes the named tab (alias)', () => {
+    const { c } = makeController();
+    c.dispatch('agent bob');
+    c.dispatch('exit bob');
+    expect(c.view().map((t) => t.label)).toEqual(['janus']);
+  });
+
+  it('close <tabname> reports an error for an unknown tab name', () => {
+    const { c } = makeController();
+    c.dispatch('close nobody');
+    expect(allText(c)).toContain('No tab named "nobody".');
+  });
+
+  it('close <tabname> is case-insensitive', () => {
+    const { c } = makeController();
+    c.dispatch('agent bob');
+    c.dispatch('close BOB');
+    expect(c.view().map((t) => t.label)).toEqual(['janus']);
+  });
+
   it('page numbers are reused after close', () => {
     const { c } = makeController();
     c.dispatch('open https://slashdot.org');

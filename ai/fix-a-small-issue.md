@@ -21,7 +21,7 @@ Read any file in the repo. Edit source, tests, CSS, and spec files as the fix re
 1. **Editing files the fix does not touch.** Stay in scope. If you discover a fix requires changes beyond what you planned, update the plan first — do not silently expand scope.
 2. **Running `npm run check`.** That is the human's end-of-work gate. Use `./scripts/run.mjs check-diff` during development.
 3. **Skipping tests.** Every fix needs tests that cover the changed behavior. Verify with `./scripts/run.mjs check-diff`.
-4. **Choosing an issue that requires significant new architecture.** If an issue would require a complexity rating of 7+, pick a simpler issue instead and report why.
+4. **Choosing an issue that requires significant new architecture.** If an issue would require high complexity error or prone work, pick a simpler issue instead and report why.
 5. **Editing `docs/small-issues.md` beyond removing the fixed entry.** Only remove the line for the issue you fixed — do not reorder, rephrase, or otherwise modify the remaining entries.
 6. **Merging before all checks pass.** The `ai/merge-change-to-master.md` workflow handles merge; do not bypass it.
 
