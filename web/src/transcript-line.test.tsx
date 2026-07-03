@@ -14,6 +14,10 @@ function makePromptLine(overrides: Partial<BufferLine> = {}): BufferLine {
   };
 }
 
+function makeMarkdownLine(text: string): BufferLine {
+  return { type: 'markdown', text };
+}
+
 const clientStub = {} as JanusClient;
 const noop = () => {};
 
@@ -44,5 +48,25 @@ describe('renderLine — prompt click', () => {
     await userEvent.click(screen.getByText(/git status/));
     expect(onPromptClick).not.toHaveBeenCalled();
     spy.mockRestore();
+  });
+});
+
+describe('renderLine — markdown link click', () => {
+  it('sends an open command when an https link is clicked in markdown', async () => {
+    const send = vi.fn();
+    const client = { send } as unknown as JanusClient;
+    const line = makeMarkdownLine('Here is [a link](https://example.com) for you');
+    render(<>{renderLine(line, 0, client, noop, vi.fn())}</>);
+    await userEvent.click(screen.getByText('a link'));
+    expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'open https://example.com' } });
+  });
+
+  it('does not send a command when plain text without a link is clicked', async () => {
+    const send = vi.fn();
+    const client = { send } as unknown as JanusClient;
+    const line = makeMarkdownLine('Just some plain text with no link');
+    render(<>{renderLine(line, 0, client, noop, vi.fn())}</>);
+    await userEvent.click(screen.getByText('Just some plain text with no link'));
+    expect(send).not.toHaveBeenCalled();
   });
 });
