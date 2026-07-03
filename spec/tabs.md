@@ -75,7 +75,7 @@ Any tab can be given a **display alias**: a name shown in the tab strip in place
 An alias can be set two ways:
 
 - **`rename <newname>`**, typed into a tab, sets that tab's alias and prints a confirmation reminding you that routing still uses the original name. Bare `rename` (no argument) clears the alias, reverting the strip to the label.
-- **Clicking the label of the already-active tab** turns it into an editable text field, pre-filled with the current display name. Pressing Enter or clicking elsewhere commits the new value; pressing Escape cancels and leaves the alias unchanged. Clicking the label of an inactive tab still just selects it, as before.
+- **Double-clicking the label of the already-active tab** turns it into an editable text field, pre-filled with the current display name. Pressing Enter or clicking elsewhere commits the new value; pressing Escape cancels and leaves the alias unchanged. Single-clicking the label of an inactive tab still just selects it; single-clicking the label of the active tab also only selects it and does not begin editing.
 
 Setting the alias to an empty value, or to the same text as the label, clears it rather than storing a redundant alias. Aliases are display-only — they need not be unique, and two tabs may show the same alias while remaining distinct by label.
 
