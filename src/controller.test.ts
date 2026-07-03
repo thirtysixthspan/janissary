@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { Controller } from './controller.js';
 import { initAgentStateDirectory, saveAgentState, loadAgentState } from './agent-state.js';
+import { initGlobalHistory, globalCommands } from './global-history.js';
 import { initProfileDir } from './profiles.js';
 import { messageBus } from './bus.js';
 import { TranscriptLogger } from './transcript/logger.js';
@@ -1024,5 +1025,14 @@ describe('Controller unread badge', () => {
     c.managers.tab.startRunning('bob', 'sleep 1');
     c.managers.tab.finishRunning('bob', 'done');
     expect(c.view().find((t) => t.label === 'bob')!.hasUnread).toBe(true);
+  });
+
+  it('dispatch records a global history entry with the tab label and strips comments', () => {
+    initGlobalHistory(mkdtempSync(path.join(tmpdir(), 'janus-ghist-ctrl-')));
+    const { c } = makeController();
+    c.dispatch('echo hello ## scheduled ##');
+    const commands = globalCommands();
+    expect(commands).toContain('echo hello');
+    expect(commands).not.toContain('echo hello ## scheduled ##');
   });
 });
