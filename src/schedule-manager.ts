@@ -2,6 +2,7 @@ import type { ScheduleEntry, Tab } from './types.js';
 import type { ScheduleView } from './protocol.js';
 import { computeNextRun, fmtNextRun } from './schedule.js';
 import type { Managers } from './managers.js';
+import { messageBus } from './bus.js';
 
 // Owns the per-tab scheduled commands (keyed by tab label) and the 1-second firing loop: at each tick
 // it fires any entry whose next-run time has passed, reschedules recurring ones, and drops one-shots.
@@ -51,6 +52,7 @@ export class ScheduleManager {
   // (harness tabs excepted — they have no persisted agent state).
   private tick(): void {
     const now = Date.now();
+    let changed = false;
     for (const label of this.managers.tab.allLabels()) {
       const tab = this.managers.tab.tabs.find((t) => t.label === label);
       const sched = this.schedules.get(label);
@@ -58,8 +60,10 @@ export class ScheduleManager {
       const remaining = this.fireDue(tab, sched, now);
       if (!remaining) continue;
       this.schedules.set(label, remaining);
+      changed = true;
       if (tab.view !== 'harness') this.managers.tab.persist(this.managers.tab.buildAgentState(tab, { schedule: this.get(label) }));
     }
+    if (changed) messageBus.emit('state', { type: 'dirty' });
   }
 
   // Fire one tab's due entries, returning the surviving schedule (recurring entries rescheduled,
