@@ -3,14 +3,20 @@ import type { JanusClient } from './ws';
 import type { BufferLine } from '@shared/protocol';
 import { TerminalCard } from './TerminalCard';
 import { renderMarkdown } from './markdown';
+import { fileLineSegments, linkifyMarkdown, renderFileLinkSegments } from './file-link';
+
+const FILE_LINE_LINK = /[\\/][^:]*:\d+$/;
 
 function Markdown({ text, onLinkClick }: { text: string; onLinkClick: (url: string) => void }) {
-  const html = useMemo(() => renderMarkdown(text), [text]);
+  const linkedText = useMemo(() => linkifyMarkdown(text), [text]);
+  const html = useMemo(() => renderMarkdown(linkedText), [linkedText]);
   const onClick = useCallback((e: React.MouseEvent) => {
     const anchor = (e.target as HTMLElement).closest('a');
     if (!anchor) return;
     const href = anchor.getAttribute('href');
-    if (href && /^https?:\/\//i.test(href)) { e.preventDefault(); onLinkClick(href); }
+    if (!href) return;
+    if (/^https?:\/\//i.test(href)) { e.preventDefault(); onLinkClick(href); return; }
+    if (FILE_LINE_LINK.test(href)) { e.preventDefault(); onLinkClick(href); }
   }, [onLinkClick]);
   if (html === undefined) return <div className="line output">{text}</div>;
   return <div className="line markdown" dangerouslySetInnerHTML={{ __html: html }} onClick={onClick} />;
@@ -27,7 +33,11 @@ export function renderLine(
     return <TerminalCard key={line.terminal.ptyId} entry={line.terminal} client={client} />;
   }
   if (line.type === 'spacer') return <div key={index} className="line spacer" />;
-  if (line.type === 'markdown') return <Markdown key={index} text={line.text} onLinkClick={(url) => client.send({ method: 'command', params: { text: `open ${url}` } })} />;
+  if (line.type === 'markdown') return <Markdown key={index} text={line.text} onLinkClick={(url) => {
+      const colon = FILE_LINE_LINK.test(url) ? url.lastIndexOf(':') : -1;
+      const path = colon > -1 ? url.slice(0, colon) : url;
+      client.send({ method: 'command', params: { text: `open ${path}` } });
+    }} />;
   if (line.type === 'collapsed') {
     return (
       <div key={index} className="line collapsed" onClick={onToggleCollapse} title="Click or Ctrl+T to expand">
@@ -78,7 +88,7 @@ export function renderLine(
   }
   return (
     <div key={index} className="line output" style={line.fromColor ? { color: line.fromColor } : undefined}>
-      {line.text || ' '}
+      {renderFileLinkSegments(fileLineSegments(line.text), client)}
     </div>
   );
 }

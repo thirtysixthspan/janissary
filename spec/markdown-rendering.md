@@ -57,3 +57,7 @@ ACP replies and the `help` command output are flagged `markdown`; shell output, 
 command results, and messages are plain text and are never passed through the Markdown pipeline. 
 Auto-run agent **tool steps** (the collapsed `acp` entries) are command/result pairs, also rendered 
 as plain text — only the agent's prose turns and `help` are Markdown.
+
+### File:line links
+
+Patterns that look like `filepath:line` or `filepath:line:col` (e.g. `src/foo.ts:42`, `tests/test.py:10:5`) in any transcript output — plain text or Markdown — are detected and rendered as clickable links. The detection requires a path separator (`/` or `\`) in the text before the colon, so bare `word:42` patterns are not matched. Clicking a file:line link opens the file in an editor tab, same as typing `open <filepath>` (the `:line` portion is stripped — the editor currently opens at the top of the file). Turns compiler errors, linter output, grep results, and other tool output into directly navigable source links with no extra commands.
