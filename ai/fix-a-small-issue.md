@@ -33,13 +33,13 @@ Run `npm install` to ensure dependencies are up to date before doing anything el
 
 ---
 
-## Step 2 — List small fixes and pick the simplest
+## Step 2 — List small fixes and pick the first available
 
-1. Read `docs/small-issues.md` and list every issue.
+1. Read `docs/small-fixes.md` and list every issue.
 2. For each issue, assess the complexity by reviewing the codebase to understand what areas it touches. Do not use a shell loop for this.
-3. If no issues exist, report "No issues in `docs/small-issues.md`" and stop.
+3. If no issues exist, report "No issues in `docs/small-fixes.md`" and stop.
 4. If every issue requires significant new architecture (rating 7+), report the list with assessments and stop — do not pick one.
-5. Otherwise, pick the issue with the **lowest** estimated complexity. State your pick and why.
+5. Otherwise, pick the **first** issue listed in the file (top of the list). State your pick and why.
 
 ---
 
