@@ -15,6 +15,7 @@ import { HistoryPicker } from './HistoryPicker';
 import { RouteChooser } from './RouteChooser';
 import { QuitDialog } from './QuitDialog/QuitDialog';
 import { getRecentHistory } from './history';
+import { useCmdW } from './useCmdW';
 import { useTranscriptScroll } from './useTranscriptScroll';
 import { useQuitConfirm } from './QuitDialog/useQuitConfirm';
 import { handleRouteChooserKey, handlePickerKey } from './keyboard-handlers';
@@ -65,9 +66,18 @@ export function App() {
   const pick = (command: string) => { runCommand(command); setPickerOpen(false); };
   const { quitConfirmOpen, openQuitConfirm, confirmQuit, cancelQuit } = useQuitConfirm(runCommand, inputReference);
 
+  const activeTabRef = useRef(activeTab);
+  activeTabRef.current = activeTab;
+  const quitConfirmOpenRef = useRef(quitConfirmOpen);
+  quitConfirmOpenRef.current = quitConfirmOpen;
+  const pickerOpenRef = useRef(pickerOpen);
+  pickerOpenRef.current = pickerOpen;
+  const routeRef = useRef(route);
+  routeRef.current = route;
+
   const selectTab = (index: number) => client.send({ method: 'setActiveTab', params: { index } });
 
-  const closeTab = (index: number) => client.send({ method: 'closeTab', params: { index } });
+  const closeTab = useCallback((index: number) => client.send({ method: 'closeTab', params: { index } }), [client]);
 
   const chooseRoute = useCallback((index: number) => client.send({ method: 'chooseRoute', params: { index } }), [client]);
 
@@ -90,6 +100,8 @@ export function App() {
     else if (cur?.activePty) shellHandles.current.get(cur.activePty)?.focus();
     else inputReference.current?.focus();
   }, [activeTab]);
+
+  useCmdW(closeTab, activeTabRef, quitConfirmOpenRef, pickerOpenRef, routeRef);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
