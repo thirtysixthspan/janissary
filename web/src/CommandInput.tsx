@@ -6,17 +6,18 @@ import { findGhostSuggestion } from './ghost-suggestion';
 type Properties = {
   dotColor: string;
   history: string[];
+  ghostHistory: string[];
   onSubmit: (text: string) => void;
   inputRef: React.RefObject<HTMLInputElement | null>;
   complete: (text: string, cursor: number) => Promise<CompletionResult>;
   pickerOpen: boolean;
 };
 
-export function CommandInput({ dotColor, history, onSubmit, inputRef, complete, pickerOpen }: Properties) {
+export function CommandInput({ dotColor, history, ghostHistory, onSubmit, inputRef, complete, pickerOpen }: Properties) {
   const [value, setValue] = useState('');
   const [completions, setCompletions] = useState<string[]>([]);
   const histIndex = useRef(-1);
-  const ghost = findGhostSuggestion(history, value);
+  const ghost = findGhostSuggestion(ghostHistory, value);
 
   const recall = (text: string) => {
     setValue(text);

@@ -37,3 +37,7 @@ Pressing Return saves the trimmed input to history before executing.
 ### Persistence
 
 Command history is persisted per-agent to `.janissary/state/<name>.json`. Each agent state file stores `name`, `dotColor`, `active`, `number` (the tab's position), `cmdHistory[]`, `log[]` (the full transcript), `cwd` (the shell's working directory), and `context[]` (informational messages received from other agents).
+
+### Global history
+
+All commands across all tabs are recorded in a shared global history buffer. The buffer persists across application runs in the user's home directory. Consecutive duplicate commands are suppressed globally (regardless of which tab they were run in), and the buffer is capped at 1000 entries. The ghost-text suggestion draws from the global buffer, so a command typed in any tab (in any prior run) can ghost-complete in every tab. ArrowUp/ArrowDown recall and the `hist` picker remain per-tab.

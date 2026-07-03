@@ -5,6 +5,7 @@ import { commands } from './commands/index.js';
 import { toPrefixedCommand } from './recognizers/index.js';
 import { messageBus } from './bus.js';
 import { resolveUnknownCommand } from './command-router.js';
+import { recordGlobalHistory } from './global-history.js';
 import type { Managers } from './managers.js';
 
 export class CommandManager {
@@ -28,13 +29,17 @@ export class CommandManager {
   }
 
   dispatch(text: string): void {
-    this.run(this.managers.tab.recordHistory(this.managers.tab.activeTab, text), this.managers.tab.cur().label, this.managers.tab.activeTab);
+    const trimmed = this.managers.tab.recordHistory(this.managers.tab.activeTab, text);
+    if (trimmed) recordGlobalHistory(trimmed, this.managers.tab.cur().label);
+    this.run(trimmed, this.managers.tab.cur().label, this.managers.tab.activeTab);
   }
 
   dispatchTo(label: string, text: string): void {
     const index = this.managers.tab.findIndex(label);
     if (index === -1) return;
-    this.run(this.managers.tab.recordHistory(index, text), label, index);
+    const trimmed = this.managers.tab.recordHistory(index, text);
+    if (trimmed) recordGlobalHistory(trimmed, label);
+    this.run(trimmed, label, index);
   }
 
   private run(input: string, label: string, index: number): void {

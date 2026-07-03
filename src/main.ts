@@ -4,6 +4,7 @@ import path from 'node:path';
 import { startServer } from './index.js';
 import { makeToken } from './security.js';
 import { initAgentStateDirectory, clearStateDirectory } from './agent-state.js';
+import { initGlobalHistory } from './global-history.js';
 import { TranscriptLogger } from './transcript/logger.js';
 import { TranscriptStore } from './transcript/store.js';
 import { initDbDir } from './connections.js';
@@ -117,6 +118,7 @@ export async function boot(argv = process.argv.slice(2)): Promise<void> {
 
   const cwd = process.cwd();
   initAgentStateDirectory(cwd);
+  initGlobalHistory();
   initDbDir(cwd);
   initProfileDir(cwd);
   initWorkspaceDir(cwd);

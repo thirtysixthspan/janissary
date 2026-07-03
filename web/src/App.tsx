@@ -19,7 +19,7 @@ import { getRecentHistory } from './history';
 import { useCmdW } from './useCmdW';
 import { useTranscriptScroll } from './useTranscriptScroll';
 import { useQuitConfirm } from './QuitDialog/useQuitConfirm';
-import { handleRouteChooserKey, handlePickerKey } from './keyboard-handlers';
+import { useWindowKeys } from './useWindowKeys';
 
 export function App() {
   const clientReference = useRef<JanusClient | null>(null);
@@ -28,8 +28,8 @@ export function App() {
 
   const [tabs, setTabs] = useState<TabView[]>([]);
   const [activeTab, setActiveTab] = useState(0);
-  // Default until the first state event arrives; the server value (from application config) wins.
   const [tabNameMaxLength, setTabNameMaxLength] = useState(16);
+  const [globalHistory, setGlobalHistory] = useState<string[]>([]);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerIndex, setPickerIndex] = useState(0);
   // Server-driven route chooser (null when closed); `routeIdx` is the highlighted option.
@@ -80,11 +80,12 @@ export function App() {
 
   const chooseRoute = useCallback((index: number) => client.send({ method: 'chooseRoute', params: { index } }), [client]);
 
-  useEffect(() => client.onState((nextTabs, active, nextRoute, nextTabNameMaxLength) => {
+  useEffect(() => client.onState((nextTabs, active, nextRoute, nextTabNameMaxLength, nextGlobalHistory) => {
     setTabs(nextTabs);
     setActiveTab(active);
     setRoute(nextRoute);
     setTabNameMaxLength(nextTabNameMaxLength);
+    setGlobalHistory(nextGlobalHistory);
     // Highlight the first option when a chooser newly opens (or its command changes).
     const previous = routeReference.current;
     routeReference.current = nextRoute;
@@ -102,34 +103,10 @@ export function App() {
 
   useCmdW(closeTab, activeTabRef, quitConfirmOpenRef, pickerOpenRef, routeRef);
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      const rc = stateReference.current.route;
-      if (rc) {
-        handleRouteChooserKey(e, rc, stateReference.current.routeIdx, setRouteIndex, chooseRoute);
-        return;
-      }
-      if (stateReference.current.pickerOpen) {
-        handlePickerKey(e, stateReference.current.recent, stateReference.current.pickerIdx, setPickerIndex, runCommand, setPickerOpen);
-        return;
-      }
-      if (e.ctrlKey && e.key.toLowerCase() === 'r') { e.preventDefault(); openPicker(); return; }
+  const keyCallbacksRef = useRef({ setRouteIndex, chooseRoute, runCommand, setPickerIndex, setPickerOpen, openPicker });
+  keyCallbacksRef.current = { setRouteIndex, chooseRoute, runCommand, setPickerIndex, setPickerOpen, openPicker };
 
-      if (handleScrollKey(e)) return;
-      // Shift+Arrow switches tabs, Ctrl+Arrow reorders within group, Ctrl+T toggles collapse.
-      if (e.ctrlKey && !e.shiftKey && e.key === 'ArrowLeft') { e.preventDefault(); client.send({ method: 'reorderTab', params: { dir: -1 } }); }
-      else if (e.ctrlKey && !e.shiftKey && e.key === 'ArrowRight') { e.preventDefault(); client.send({ method: 'reorderTab', params: { dir: 1 } }); }
-      else if (e.shiftKey && !e.ctrlKey && e.key === 'ArrowLeft') { e.preventDefault(); client.send({ method: 'moveTab', params: { dir: -1 } }); }
-      else if (e.shiftKey && !e.ctrlKey && e.key === 'ArrowRight') { e.preventDefault(); client.send({ method: 'moveTab', params: { dir: 1 } }); }
-      else if (e.ctrlKey && e.key.toLowerCase() === 't') { e.preventDefault(); client.send({ method: 'toggleCollapse', params: {} }); }
-    };
-    globalThis.addEventListener('keydown', onKey);
-    globalThis.addEventListener('keyup', handleScrollKeyUp);
-    return () => {
-      globalThis.removeEventListener('keydown', onKey);
-      globalThis.removeEventListener('keyup', handleScrollKeyUp);
-    };
-  }, [client, chooseRoute, runCommand, handleScrollKey, handleScrollKeyUp]);
+  useWindowKeys(client, stateReference, keyCallbacksRef, handleScrollKey, handleScrollKeyUp);
 
   if (!current) return <div className="app" style={{ padding: 16, color: 'var(--muted)' }}>Connecting…</div>;
 
@@ -206,6 +183,7 @@ export function App() {
           <CommandInput
             dotColor={current.dotColor}
             history={current.cmdHistory}
+            ghostHistory={globalHistory}
             onSubmit={(text) => {
               const trimmed = text.trim().toLowerCase();
               if (trimmed === 'hist') openPicker();
