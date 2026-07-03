@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import type { EditorView } from '@shared/protocol';
 import type { JanusClient } from './ws';
 import { toText } from './editor/model';
@@ -7,9 +7,11 @@ import { actionForKey } from './editor/keys';
 import { useEditor } from './editor/useEditor';
 import { useEditorMouse } from './editor/useEditorMouse';
 
+export type EditorTabHandle = { isDirty(): boolean; save(): Promise<void> };
+
 // The plain-text editor tab. Mounted persistently by App (like harness tabs) so the buffer, undo
 // stacks, cursor, and scroll position survive tab switches; `active` gates focus and the caret.
-export function EditorTab({ editor, client, active }: { editor: EditorView; client: JanusClient; active: boolean }) {
+export const EditorTab = forwardRef<EditorTabHandle, { editor: EditorView; client: JanusClient; active: boolean }>(function EditorTab({ editor, client, active }, ref) {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [lastSaved, setLastSaved] = useState<string | null>(null);
@@ -58,6 +60,15 @@ export function EditorTab({ editor, client, active }: { editor: EditorView; clie
   useEffect(() => { if (active) caretRef.current?.scrollIntoView({ block: 'nearest' }); }, [active, state?.cursor.line, state?.cursor.col]);
 
   const dirty = useMemo(() => state !== null && lastSaved !== null && toText(state) !== lastSaved, [state, lastSaved]);
+  const dirtyRef = useRef(dirty);
+  dirtyRef.current = dirty;
+  const saveRef = useRef(save);
+  saveRef.current = save;
+
+  useImperativeHandle(ref, () => ({
+    isDirty: () => dirtyRef.current,
+    save: async () => { await saveRef.current(); },
+  }));
 
   // A viewport's worth of logical lines for PageUp/PageDown, from the measured row line-height.
   const pageLines = () => {
@@ -125,4 +136,4 @@ export function EditorTab({ editor, client, active }: { editor: EditorView; clie
       </div>
     </div>
   );
-}
+});

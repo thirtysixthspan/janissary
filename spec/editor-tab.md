@@ -46,6 +46,20 @@ as editor actions until composition ends.
 Paste (Cmd+V / Ctrl+V) flows through the browser's native paste event and is not captured by the
 editor's key bindings.
 
+### Saving
+
+The editor saves with Ctrl+S or Cmd+S. The save writes the current buffer content to disk at the file's path. On success a "Saved" flash appears in the metadata header; on failure the server error message is shown and the dirty indicator remains. A dirty dot (●) appears next to the file name in the header whenever there are unsaved changes.
+
+### Closing with unsaved changes
+
+Closing an editor tab that has unsaved changes triggers a confirmation dialog: "Do you want to save changes to this file?" with three buttons — Save, Don't Save, and Cancel. Save is selected by default. The dialog appears whether the close comes from the tab strip's × button, the Cmd+W / Ctrl+W keyboard shortcut, or typing `close` / `exit` at the command line.
+
+- **Save (y):** saves the file to disk, then closes the tab.
+- **Don't Save (n):** closes the tab without saving.
+- **Cancel (Esc):** dismisses the dialog and leaves the tab open with changes intact.
+
+Like the quit dialog, the save dialog is modal — all keyboard and click input is trapped until a choice is made. A click outside the dialog does nothing.
+
 ### Caret
 
 A blinking vertical bar marks the cursor position — where text will be inserted when typing. The caret is an accent-colored vertical line, 2 pixels wide, that blinks hard on/off on a 1-second cycle. It sits at the exact character column in the text flow without shifting the surrounding text. The caret is only visible when the editor tab is active; switching to another tab or opening a picker hides it.
