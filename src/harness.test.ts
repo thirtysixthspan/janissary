@@ -49,6 +49,16 @@ describe('parseHarnessCommand', () => {
     expect('workspace' in result && (result as { workspace: boolean }).workspace).toBe(false);
   });
 
+  it('sets offline true with --offline flag', () => {
+    const result = parseHarnessCommand('harness claude -w --offline');
+    expect('offline' in result && (result as { offline: boolean }).offline).toBe(true);
+  });
+
+  it('sets offline false when no flag is given', () => {
+    const result = parseHarnessCommand('harness claude');
+    expect('offline' in result && (result as { offline: boolean }).offline).toBe(false);
+  });
+
   it('sets a custom label with `as <label>`', () => {
     const result = parseHarnessCommand('harness opencode as quality');
     expect('name' in result && result.name).toBe('opencode');

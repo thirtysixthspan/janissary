@@ -4,7 +4,7 @@ import path from 'node:path';
 import { execSync } from 'node:child_process';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { findRepoRoot, initWorkspaceDir, createWorkspace, removeWorkspace, clearWorkspaceDir } from './workspace.js';
+import { findRepoRoot, initWorkspaceDir, createWorkspace, removeWorkspace, clearWorkspaceDir, workspaceTempPath } from './workspace.js';
 
 let tmpDir: string;
 let repoDir: string;
@@ -48,6 +48,23 @@ describe('createWorkspace', () => {
     expect(existsSync(path.join(ws, '.git'))).toBe(true);
     expect(existsSync(path.join(ws, 'README.md'))).toBe(true);
     removeWorkspace(ws);
+  });
+
+  it('also creates a sibling .tmp scratch dir', () => {
+    const ws = createWorkspace('test-agent-tmp', repoDir);
+    expect(existsSync(workspaceTempPath('test-agent-tmp'))).toBe(true);
+    removeWorkspace(ws);
+  });
+});
+
+describe('removeWorkspace', () => {
+  it('removes the sibling .tmp scratch dir along with the clone', () => {
+    const ws = createWorkspace('test-agent-cleanup', repoDir);
+    const tmp = workspaceTempPath('test-agent-cleanup');
+    expect(existsSync(tmp)).toBe(true);
+    removeWorkspace(ws);
+    expect(existsSync(ws)).toBe(false);
+    expect(existsSync(tmp)).toBe(false);
   });
 });
 

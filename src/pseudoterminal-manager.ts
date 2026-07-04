@@ -15,11 +15,12 @@ export class PseudoterminalManager {
 
   // Spawn a PTY running `command` (with `program` as its display label) in `cwd`, register it under
   // the owning tab's `label`, and return its id. Output and exit route back through the host.
-  spawn(label: string, program: string, command: string, cwd: string): string {
+  // `workspaceDir`/`offline`, when the owning tab is workspaced, confine the process via Seatbelt.
+  spawn(label: string, program: string, command: string, cwd: string, workspaceDir?: string, offline?: boolean): string {
     const session = spawnPty(program, command, cwd, {
       onData: (id, data) => messageBus.emit('pty', { type: 'data', id, data }),
       onExit: (id, exitCode) => this.handleExit(id, exitCode),
-    }, this.cols, this.rows);
+    }, this.cols, this.rows, { workspaceDir, offline });
     this.ptys.set(session.id, { session, tabLabel: label });
     return session.id;
   }
@@ -44,12 +45,14 @@ export class PseudoterminalManager {
   }
 
   // Create an inline terminal card: spawn a PTY running `command` in the tab's cwd and attach its
-  // id to `tab.activePty` so the client renders a terminal widget in the transcript.
+  // id to `tab.activePty` so the client renders a terminal widget in the transcript. A workspaced
+  // tab's own `workspaceDir`/`offline` carry over to inline PTYs (e.g. `shell vim` inside it).
   openInlinePty(label: string, command: string, program: string): void {
     const cwd = this.managers.tab.cwdOf(label) ?? process.cwd();
-    const id = this.spawn(label, program, command, cwd);
-    for (const tab of this.managers.tab.tabs) {
-      if (tab.label === label) { tab.activePty = id; break; }
+    const tab = this.managers.tab.tabs.find((t) => t.label === label);
+    const id = this.spawn(label, program, command, cwd, tab?.workspaceDir, tab?.offline);
+    for (const t of this.managers.tab.tabs) {
+      if (t.label === label) { t.activePty = id; break; }
     }
     messageBus.emit('state', { type: 'dirty' });
   }

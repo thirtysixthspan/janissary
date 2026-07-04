@@ -40,12 +40,20 @@ export function trustWorkspace(workspaceDir: string): void {
   writeFileSync(claudeJson, JSON.stringify(data, null, 2) + '\n', 'utf8');
 }
 
+// The workspace's private scratch dir, a sibling of the clone (`<name>.tmp`) — exported as
+// `TMPDIR` for a sandboxed workspace so scratch writes don't need to share global `/tmp` across
+// agents (see `sandbox.ts`).
+export function workspaceTempPath(name: string): string {
+  return `${workspacePath(name)}.tmp`;
+}
+
 export function createWorkspace(name: string, repoPath: string): string {
   ensureWorkspaceDir();
   const target = workspacePath(name);
   // Intentional: user-driven workspace creation; only local-user commands reach this sink.
   execSync(`git clone --shared "${repoPath}" "${target}"`, { stdio: 'pipe' });
   trustWorkspace(target);
+  mkdirSync(workspaceTempPath(name), { recursive: true });
   return target;
 }
 
@@ -64,6 +72,7 @@ export function untrustWorkspace(workspaceDir: string): void {
 export function removeWorkspace(directory: string): void {
   untrustWorkspace(directory);
   try { rmSync(directory, { recursive: true, force: true }); } catch { /* ignore */ }
+  try { rmSync(`${directory}.tmp`, { recursive: true, force: true }); } catch { /* ignore */ }
 }
 
 export function clearWorkspaceDir(): void {

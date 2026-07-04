@@ -93,6 +93,7 @@ export class TabManager {
       cwd: this.cwd.get(tab.label),
       context: this.context.get(tab.label),
       title: tab.title,
+      offline: tab.offline,
       ...extra,
     };
   }
@@ -335,6 +336,7 @@ export class TabManager {
       );
       tab.toolStepsExpanded = false;
       if (s.title) tab.title = s.title;
+      if (s.offline) tab.offline = s.offline;
       return tab;
     });
     for (const s of states) {

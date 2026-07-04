@@ -163,6 +163,9 @@ export type Tab = {
   cmdHistoryIdx: number;
   scrollOffset: number;
   workspaceDir?: string;
+  // `--offline` on the tab's creating `agent`/`harness` command: adds a network-deny rule to the
+  // tab's sandbox profile (only meaningful alongside `workspaceDir`). Kept so a relaunch restores it.
+  offline?: boolean;
   // When false/undefined, contiguous runs of auto-run agent tool steps (acp entries) are
   // collapsed into a single summary line in the transcript. Toggled with Ctrl+T. In-memory
   // only (like scrollOffset) — not persisted to agent state.
@@ -187,6 +190,7 @@ export type AgentState = {
   cwd?: string;
   context?: string[];
   workspaceDir?: string;
+  offline?: boolean;
   schedule?: ScheduleEntry[];
   title?: string;
 };
@@ -263,6 +267,10 @@ export type AcpOptions = {
   onConnect?: (info: AcpInfo) => void;
   // Extra environment variables to pass to the subprocess.
   env?: Record<string, string>;
+  // When the session belongs to a workspaced tab, confines the ACP subprocess to that workspace
+  // via a Seatbelt sandbox (see sandbox.ts). Monitor sessions never set this.
+  workspaceDir?: string;
+  offline?: boolean;
 };
 
 // --- acp-loop.ts ----------------------------------------------------------
@@ -368,6 +376,9 @@ export type ConnectionParsed =
 export type AgentCommand = {
   name: string;
   workspace: boolean;
+  // `--offline`: adds a network-deny rule to the tab's sandbox profile (workspaced tabs only —
+  // see sandbox.ts). Ignored (but still parsed and stored) when the tab isn't workspaced.
+  offline: boolean;
 };
 
 // --- profiles.ts ----------------------------------------------------------
@@ -405,6 +416,9 @@ export type Resolution =
 export type Config = {
   transcriptMaxLines: number;
   tabNameMaxLength: number;
+  // Isolate workspaced tabs (`agent --workspace`, `harness --workspace`) to their workspace clone
+  // via a Seatbelt sandbox (macOS only). Default true; the escape hatch for when it causes trouble.
+  sandboxWorkspaces: boolean;
 };
 
 // --- completion.ts --------------------------------------------------------

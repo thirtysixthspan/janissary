@@ -57,11 +57,14 @@ export class AcpManager {
     let session = this.sessions.get(label);
     if (!session) {
       const info = parseModel(ACP_MODEL);
+      const tab = this.managers.tab.tabs.find((t) => t.label === label);
       session = connectAcp({
         command: ACP_COMMAND, args: ACP_ARGS, cwd,
         onError: hooks.onError,
         onConnect: () => { this.info.set(label, info); hooks.onConnect(); },
         env: { OPENCODE_CONFIG_CONTENT: JSON.stringify({ model: ACP_MODEL }) },
+        workspaceDir: tab?.workspaceDir,
+        offline: tab?.offline,
       });
       this.sessions.set(label, session);
     }

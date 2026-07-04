@@ -1,9 +1,18 @@
 import { spawn, type ChildProcess } from 'node:child_process';
+import { sandboxSpawn, type SandboxOptions } from './sandbox.js';
 
-export function spawnShell(_tabIndex: number, extraEnvironment?: Record<string, string>): ChildProcess {
-  const shell = spawn(process.env.SHELL || 'bash', ['--norc', '--noprofile'], {
+// `sandbox`, when given a `workspaceDir`, confines the shell (and everything it spawns) to that
+// workspace (see sandbox.ts); omitted or workspaceDir-less, the shell runs exactly as before.
+export function spawnShell(
+  _tabIndex: number,
+  extraEnvironment?: Record<string, string>,
+  sandbox?: SandboxOptions,
+): ChildProcess {
+  const baseEnv = { ...process.env, ...extraEnvironment };
+  const { command, args, env } = sandboxSpawn(sandbox ?? {}, process.env.SHELL || 'bash', ['--norc', '--noprofile'], baseEnv);
+  const shell = spawn(command, args, {
     stdio: ['pipe', 'pipe', 'pipe'],
-    env: { ...process.env, ...extraEnvironment },
+    env,
   });
   shell.stdout.setEncoding('utf8');
   shell.stderr.setEncoding('utf8');

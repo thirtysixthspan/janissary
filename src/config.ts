@@ -8,6 +8,7 @@ export const DEFAULT_TAB_NAME_MAX_LENGTH = 16;
 const DEFAULT_CONFIG: Config = {
   transcriptMaxLines: DEFAULT_TRANSCRIPT_MAX_LINES,
   tabNameMaxLength: DEFAULT_TAB_NAME_MAX_LENGTH,
+  sandboxWorkspaces: true,
 };
 
 let config: Config = { ...DEFAULT_CONFIG };

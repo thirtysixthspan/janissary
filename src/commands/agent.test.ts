@@ -60,41 +60,46 @@ describe('resolveAgentName', () => {
 describe('parseAgentCommand', () => {
   it('extracts name from bare agent command', () => {
     const result = parseAgentCommand('agent');
-    expect(result).toEqual({ name: '', workspace: false });
+    expect(result).toEqual({ name: '', workspace: false, offline: false });
   });
 
   it('extracts name from agent <name>', () => {
     const result = parseAgentCommand('agent bilal');
-    expect(result).toEqual({ name: 'bilal', workspace: false });
+    expect(result).toEqual({ name: 'bilal', workspace: false, offline: false });
   });
 
   it('extracts name and workspace flag from agent <name> --workspace', () => {
     const result = parseAgentCommand('agent bilal --workspace');
-    expect(result).toEqual({ name: 'bilal', workspace: true });
+    expect(result).toEqual({ name: 'bilal', workspace: true, offline: false });
   });
 
   it('extracts name and workspace flag from agent <name> -w', () => {
     const result = parseAgentCommand('agent bilal -w');
-    expect(result).toEqual({ name: 'bilal', workspace: true });
+    expect(result).toEqual({ name: 'bilal', workspace: true, offline: false });
   });
 
   it('extracts workspace flag with bare agent', () => {
     const result = parseAgentCommand('agent --workspace');
-    expect(result).toEqual({ name: '', workspace: true });
+    expect(result).toEqual({ name: '', workspace: true, offline: false });
   });
 
   it('extracts workspace flag with bare agent -w', () => {
     const result = parseAgentCommand('agent -w');
-    expect(result).toEqual({ name: '', workspace: true });
+    expect(result).toEqual({ name: '', workspace: true, offline: false });
   });
 
   it('lowercases the name', () => {
     const result = parseAgentCommand('agent Ahmed -w');
-    expect(result).toEqual({ name: 'ahmed', workspace: true });
+    expect(result).toEqual({ name: 'ahmed', workspace: true, offline: false });
   });
 
   it('truncates the name to the configured max length', () => {
     const result = parseAgentCommand('agent abcdefghijklmnopqrstuvwxyz');
-    expect(result).toEqual({ name: 'abcdefghijklmnop', workspace: false }); // 16 chars
+    expect(result).toEqual({ name: 'abcdefghijklmnop', workspace: false, offline: false }); // 16 chars
+  });
+
+  it('extracts the offline flag', () => {
+    const result = parseAgentCommand('agent bilal -w --offline');
+    expect(result).toEqual({ name: 'bilal', workspace: true, offline: true });
   });
 });
