@@ -12,7 +12,7 @@
 | Ctrl+→ | Move the current tab one position right |
 | ↑ | Walk backward through command history |
 | ↓ | Walk forward through command history |
-| Cmd+W / Ctrl+W | Close the current tab (no-op when only a picker, route chooser, or quit dialog is open) |
+| Cmd+W / Ctrl+W | Close the current tab (also works when focus is inside an embedded web page; no-op when a picker, route chooser, or quit dialog is open) |
 | Shift+↑ / Ctrl+↑ | Scroll transcript up (accelerated — distance doubles each second held) |
 | Shift+↓ / Ctrl+↓ | Scroll transcript down (accelerated — distance doubles each second held) |
 | Ctrl+P | Scroll transcript up (fixed — one line per press) |

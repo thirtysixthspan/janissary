@@ -72,6 +72,7 @@ export function App() {
   const quitConfirmOpenRef = useRef(quitConfirmOpen); quitConfirmOpenRef.current = quitConfirmOpen;
   const pickerOpenRef = useRef(pickerOpen); pickerOpenRef.current = pickerOpen;
   const routeRef = useRef(route); routeRef.current = route;
+  const activeViewRef = useRef(current?.view); activeViewRef.current = current?.view;
 
   const closeTab = useCallback((index: number) => {
     if (guardRef.current?.(index)) return;
@@ -101,7 +102,7 @@ export function App() {
     else inputReference.current?.focus();
   }, [activeTab]);
 
-  useCmdW(closeTab, activeTabRef, quitConfirmOpenRef, pickerOpenRef, routeRef);
+  useCmdW(closeTab, activeTabRef, quitConfirmOpenRef, pickerOpenRef, routeRef, activeViewRef);
 
   const keyCallbacksRef = useRef({ setRouteIndex, chooseRoute, runCommand, setPickerIndex, setPickerOpen, openPicker });
   keyCallbacksRef.current = { setRouteIndex, chooseRoute, runCommand, setPickerIndex, setPickerOpen, openPicker };
