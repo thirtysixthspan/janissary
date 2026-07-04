@@ -80,6 +80,19 @@ export function completeMonitorCommand(
   return null;
 }
 
+// Complete `search transcript` — the only subcommand, so argument 1 always offers it.
+export function completeSearchCommand(
+  command: string,
+  argumentIndex: number,
+  token: string,
+  before: string,
+  after: string,
+  tokenStart: number,
+): CompletionResult | null {
+  if (argumentIndex !== 1 || command !== 'search') return null;
+  return completeWord(token, '', ['transcript'], ' ', before, after, tokenStart);
+}
+
 export function completeConnectionClose(
   command: string,
   argumentIndex: number,

@@ -19,6 +19,7 @@ import { command as open } from './open.js';
 import { command as edit } from './edit.js';
 import { command as send } from './send.js';
 import { command as rename } from './rename.js';
+import { command as search } from './search.js';
 import { monitor, unmonitor, monitors } from './monitor.js';
 
 export const commands: Command[] = [
@@ -42,6 +43,7 @@ export const commands: Command[] = [
   edit,
   send,
   rename,
+  search,
   monitors,
   monitor,
   unmonitor,

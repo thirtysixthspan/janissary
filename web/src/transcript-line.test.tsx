@@ -79,3 +79,33 @@ describe('renderLine — markdown link click', () => {
     expect(send).not.toHaveBeenCalled();
   });
 });
+
+describe('renderLine — search highlight', () => {
+  it('wraps only the matched substring on the current match line', () => {
+    const line: BufferLine = { type: 'output', text: 'an error occurred' };
+    const { container } = render(<>{renderLine(line, 0, clientStub, noop, vi.fn(), { lineIndex: 0, pattern: 'error' })}</>);
+    const hit = container.querySelector('.search-hit');
+    expect(hit).toBeInTheDocument();
+    expect(hit?.textContent).toBe('error');
+    expect(container.querySelector('.line')?.textContent).toBe('an error occurred');
+  });
+
+  it('does not highlight a line other than the current match', () => {
+    const line: BufferLine = { type: 'output', text: 'an error occurred' };
+    const { container } = render(<>{renderLine(line, 1, clientStub, noop, vi.fn(), { lineIndex: 0, pattern: 'error' })}</>);
+    expect(container.querySelector('.search-hit')).not.toBeInTheDocument();
+  });
+
+  it('applies the search-hit class to the whole block for a markdown match (fallback)', () => {
+    const line = makeMarkdownLine('an error occurred');
+    const { container } = render(<>{renderLine(line, 0, clientStub, noop, vi.fn(), { lineIndex: 0, pattern: 'error' })}</>);
+    const el = container.querySelector('.line.markdown');
+    expect(el).toHaveClass('search-hit');
+  });
+
+  it('sets data-search-hit on the current match line for scroll targeting', () => {
+    const line: BufferLine = { type: 'output', text: 'an error occurred' };
+    const { container } = render(<>{renderLine(line, 0, clientStub, noop, vi.fn(), { lineIndex: 0, pattern: 'error' })}</>);
+    expect(container.querySelector('[data-search-hit]')).toBeInTheDocument();
+  });
+});
