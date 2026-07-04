@@ -125,12 +125,21 @@ image/page view tabs).
 
 A harness tab is created adjacent to the active tab's group (same group number and bar color), like
 an image or page view tab. It participates in tab reordering and grouping as any ordinary tab would.
+A harness tab opened by `profile launch` instead joins the profile's own group (see Profiles).
 
 ## Persistence
 
 Harness tabs are **live and in-memory** — they are not saved to agent state and are not restored on
-`--relaunch`. Each launch starts fresh.
+`--relaunch`. Each launch starts fresh. A schedule attached to a harness tab (directly, or via a
+profile's authored `schedule`/`run` entries — see Profiles) is memory-only for the same reason: it
+ends when the harness's PTY exits and its tab closes (see Lifecycle above and Scheduling § Firing).
 
 ## Connections panel
 
 While running, the harness PTY appears in the connections panel as `terminal:<name>`.
+
+## Launching with a model (`profile launch`)
+
+`profile launch <name>` can open a harness tab with a model selected, passed to the harness binary's
+`--model` flag verbatim (currently only opencode's model catalog is populated). This is not available
+from the interactive `harness <name>` command — see Profiles for the harness-entry schema.

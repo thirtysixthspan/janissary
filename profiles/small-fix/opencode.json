@@ -1,0 +1,11 @@
+{
+  "harness": "opencode",
+  "model": "opencode-go/deepseek-v4-pro",
+  "number": 1,
+  "run": [
+    "execute ./ai/fix-a-small-issue.md"
+  ],
+  "schedule": [
+    "small-fix every 30m execute ./ai/fix-a-small-issue.md"
+  ]
+}
