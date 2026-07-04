@@ -102,12 +102,19 @@ ${writeCarveClauses})
   (regex #"^/dev/pty"))
 
 ; Reads: allowed everywhere by default (system paths, harness binaries, /usr, node, homebrew
-; all stay readable), then $HOME is denied, then the workspace/temp dir/parent-repo-objects/
-; harness-state/.gitconfig are carved back in, then secrets are denied last so they lose even
-; inside a carve-in.
+; all stay readable), then $HOME's *contents* are denied (data/xattr — metadata/stat stays
+; allowed everywhere, see below), then the workspace/temp dir/parent-repo-objects/harness-state/
+; .gitconfig are carved back in, then secrets are denied last (full file-read*, including
+; metadata, so their existence isn't observable either) so they lose even inside a carve-in.
 (allow file-read*)
-(deny file-read* (subpath (param "HOME")))
-(allow file-read*
+; Directory metadata (stat/lstat) stays allowed through all of $HOME, not just the carve-ins:
+; resolving a path — realpath, a pre-exec chdir, git's ancestor-ownership walk — requires
+; traversing every ancestor directory between $HOME and the workspace, and Seatbelt checks each
+; component individually rather than just the final target. Only actual file contents (data/xattr)
+; are denied outside the carve-ins below; metadata alone doesn't leak file contents.
+(allow file-read-metadata (subpath (param "HOME")))
+(deny file-read-data file-read-xattr (subpath (param "HOME")))
+(allow file-read-data file-read-xattr
   (subpath (param "WORKSPACE"))
   (subpath (param "TMPDIR"))
   (subpath (param "GIT_OBJECTS"))
