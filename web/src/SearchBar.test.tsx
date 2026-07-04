@@ -8,7 +8,7 @@ function renderBar(overrides: Partial<React.ComponentProps<typeof SearchBar>> = 
   const onStepOlder = vi.fn();
   const onStepNewer = vi.fn();
   const onClose = vi.fn();
-  const commandInputRef = { current: document.createElement('input') };
+  const commandInputRef = { current: document.createElement('textarea') };
   const utils = render(
     <SearchBar
       pattern="error"

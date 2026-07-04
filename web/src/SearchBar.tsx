@@ -12,7 +12,7 @@ type Properties = {
   onStepOlder: () => void;
   onStepNewer: () => void;
   onClose: () => void;
-  commandInputRef: React.RefObject<HTMLInputElement | null>;
+  commandInputRef: React.RefObject<HTMLTextAreaElement | null>;
 };
 
 function resultText(status: SearchStatus, position: Position | null, currentText: string | null): string | null {
