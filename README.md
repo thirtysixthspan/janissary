@@ -331,13 +331,13 @@ harness claude -w       → harness tab with workspace at .janissary/workspace/c
 
 This clones the root repo (detected from the current directory) via `git clone --shared` — no network needed, completes in milliseconds. The shell or harness PTY starts inside the workspace. Make changes, commit, push, then close the tab — the workspace is automatically removed.
 
-**Isolation (macOS only).** A workspaced tab's processes (its shell, harness PTY, or ACP session, and anything they spawn) are confined to the workspace by a kernel-enforced Seatbelt sandbox (`sandbox-exec`): writes are denied everywhere except the workspace and its private temp dir (narrow carve-outs exist for harness auth state — `~/.claude/projects`, `~/.codex`, etc. — and package-manager caches); reads of `$HOME` are denied by default (system paths stay readable); credential-shaped environment variables and agent-socket vars (`SSH_AUTH_SOCK`, `GPG_AGENT_INFO`, …) are stripped from the process environment. Practical consequences: no modifying the parent repo (including `git push` to the local origin — integrate by fetching from the workspace instead), no global installs, no reading sibling workspaces/other repos/dotfiles. `git commit`/`fetch`/`pull`, `npm install`, builds, and venvs inside the workspace all work normally. Add `--offline` to also deny network access for that tab:
+**Isolation (macOS only).** A workspaced tab's processes are confined to the workspace by a kernel-enforced Seatbelt sandbox. Add `--offline` to also deny network access for that tab:
 
 ```
 harness claude -w --offline    → workspaced harness tab with no network access
 ```
 
-Isolation is on by default; set `"sandboxWorkspaces": false` in `.janissary/config.json` to disable it (e.g. on a non-macOS host, or if it interferes with a particular harness). When a workspaced tab is created and isolation isn't actually active — the config key is off, or `sandbox-exec` isn't available (non-macOS) — a one-line notice is appended to the tab's transcript.
+See the [Security](#security) section below for what the sandbox confines, how to turn it off, and its known limitations.
 
 ### Databases
 
@@ -566,6 +566,36 @@ Active monitors show in the tab's connections panel as `monitor:<persona> (provi
 | Printable characters | Type-ahead: jump to the next visible row whose name starts with what's typed |
 
 `Tab` completes the word at the cursor: filesystem paths against the tab's working directory; at the recipient position of `msg` / `broadcast`, active agent names (`broadcast` also offers `all` and completes each entry of a comma-separated list); at the target of `connection close`, the tab's open connection strings (`sqlite:<name>`, `shell:<shell>`, `acp:opencode`, `browser:<id>`); and for the `browser` command, its subcommands (`open`, `goto`, `content`, …) plus the tab's open window ids where one is expected (`browser use`, `browser window close`). For `monitor` / `unmonitor`, the first argument completes against persona names (from `ai/personas/`) and later arguments against tab labels and `group:<n>` tokens (`unmonitor` also offers `--all`).
+
+## Security
+
+### Workspace sandbox (macOS only)
+
+A workspaced tab (`agent -w` / `harness -w`) confines its processes — the tab's shell, harness PTY, or ACP session, and anything they spawn — to the workspace directory using a kernel-enforced Seatbelt sandbox (`sandbox-exec`):
+
+- **Writes** are denied everywhere except the workspace and its private temp dir, plus a narrow set of harness-state carve-outs (`~/.claude/projects`, `~/.claude/session-env`, `~/.claude.json`, `~/.codex`, `~/.config/opencode`, and a few package-manager caches) and two fixed OS-level paths a harness needs regardless of `$HOME`: the real per-user Darwin cache directory (a legacy Keychain subsystem locks a file there) and the harness CLI's own scratchpad directory (`/private/tmp/claude-<uid>/`, created before *every* tool call — without this carve-in, no Bash tool call works inside a workspaced tab at all). Never the whole `~/.claude`, `~/.cache`, or `~/.npm` — broad cache write access would let a sandboxed agent poison packages a non-sandboxed process later consumes.
+- **Reads** of `$HOME`'s contents are denied by default and carved back in only for the write carve-outs above, plus `~/.gitconfig`, `~/.claude/settings.json`, and `~/Library/Keychains` (needed so a harness can look up its own OAuth credential — see [Known limitations](#known-limitations) below). System paths (`/usr`, language runtimes, Homebrew) stay readable, as does a harness's own executable directory even when it lives under `$HOME` (nvm, `~/.opencode/bin`, …).
+- A fixed list of secret paths is denied even inside a carve-in: `.ssh`, `.aws`, `.gnupg`, `.kube`, `.netrc`, cloud CLI configs (`gh`, `gcloud`, `azure`, `docker`), credential files for Cargo/PyPI/Maven/Terraform, shell/REPL history files, and browser profile directories (Chrome, Firefox, Brave, Safari).
+- **Environment variables** that could bypass the file-read denies above are stripped before spawn: `AWS_*`, `GITHUB_TOKEN`, `GH_TOKEN`, `NPM_TOKEN`, `DOCKER_*`, `KUBECONFIG`, anything ending `_SECRET`/`_PASSWORD`, `SSH_AUTH_SOCK`, `GPG_AGENT_INFO`, `GNUPGHOME`, `GIT_ASKPASS`, `GIT_CREDENTIAL_HELPER`, `KRB5CCNAME`. LLM provider keys (`ANTHROPIC_*`, `OPENAI_*`, `GEMINI_*`/`GOOGLE_*`) are deliberately kept — the harnesses need their own credentials to function. A `JANISSARY_NODE` variable is added, set to the janissary server's own Node binary path — so a script inside the sandbox (e.g. a project's own `.claude/settings.json` hook) can invoke a known-good `node` without depending on `PATH` resolution inside the sandboxed context.
+- **Network** is allowed by default; add `--offline` to a workspaced tab to deny it instead:
+
+  ```
+  harness claude -w --offline    → workspaced harness tab with no network access
+  ```
+
+**Practical consequences.** No modifying the parent repo (including `git push` to the local origin — integrate by fetching from the workspace instead), no global installs, no reading sibling workspaces/other repos/dotfiles outside the carve-ins above. `git commit`/`fetch`/`pull`, `npm install`, builds, venvs, and harness login all work normally inside the workspace.
+
+**Configuration.** Isolation is on by default; set `"sandboxWorkspaces": false` in `.janissary/config.json` to disable it (e.g. on a non-macOS host, or if it interferes with a particular harness). It also requires `sandbox-exec` to be present, which rules out non-macOS hosts. When a workspaced tab is created and isolation isn't actually active — the config key is off, or `sandbox-exec` is unavailable — a one-line notice is appended to the tab's transcript.
+
+#### Known limitations
+
+- **`~/Library/Keychains` is readable**, unlike the other secret paths above. Even "modern" Keychain Services calls fall through to a legacy implementation on macOS that reads the keychain database file directly rather than only talking to `securityd` over IPC — denying that read blocks every Keychain lookup a sandboxed process makes, including a harness's own OAuth credential, and it fails silently (the harness just reports "not logged in", with no permission error to explain why). The database itself stays encrypted and per-item ACL-enforced by `securityd` regardless of raw file readability, so this doesn't hand out plaintext secrets — but it is a materially larger read surface than the rest of the sandbox's design intends, kept as a deliberate trade-off.
+- The sandbox confines **filesystem and network** access; it does not sandbox CPU, memory, or other system resources, and a sandboxed process can still make outbound network requests (unless `--offline` is set).
+- macOS only — on other platforms, `-w` still creates the disposable git workspace, just without process confinement (a transcript notice says so).
+
+### Dev-tooling security checks
+
+See [Security Checks](#security-checks) under Development for the automated lint/secrets/dependency checks that run in this repo's own CI, and their threat model.
 
 ## Development
 

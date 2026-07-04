@@ -8,7 +8,7 @@ The agent command is hardcoded to OpenCode: `opencode acp`. There is no configur
 
 ### Connection lifecycle
 
-Janissary acts as the ACP client: on the first `acp` prompt in a tab it spawns the agent as a subprocess, speaks JSON-RPC over stdio, and reuses the per-tab connection across subsequent prompts. The subprocess inherits the tab's current working directory.
+Janissary acts as the ACP client: on the first `acp` prompt in a tab it spawns the agent as a subprocess, speaks JSON-RPC over stdio, and reuses the per-tab connection across subsequent prompts. The subprocess inherits the tab's current working directory. In a workspaced tab, the subprocess is additionally confined by the same Seatbelt sandbox as the tab's shell/harness PTY — see [[sandbox]].
 
 ### Reply streaming
 

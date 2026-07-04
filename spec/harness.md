@@ -55,6 +55,8 @@ harness claude -w    → tab "claude-2" with workspace at .janissary/workspace/c
 
 The harness PTY starts in the workspace directory. The workspace is removed when the tab is closed.
 If no git repository is found from the current directory, an error is shown and no tab is created.
+On macOS, the harness process is additionally confined to the workspace by a Seatbelt sandbox — see
+[[sandbox]] and [[workspaced-agent]].
 
 ## Harness tab data
 

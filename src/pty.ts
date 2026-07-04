@@ -37,7 +37,7 @@ export function spawnPty(
 ): PtySession {
   const id = `pty${++counter}`;
   const shell = process.env.SHELL || 'bash';
-  const { command: file, args, env } = sandboxSpawn(sandbox ?? {}, shell, ['-lc', command]);
+  const { command: file, args, env } = sandboxSpawn({ ...sandbox, selfBinaryHint: program }, shell, ['-lc', command]);
   const proc = pty.spawn(file, args, {
     name: 'xterm-256color',
     cols: Math.max(1, cols),

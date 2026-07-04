@@ -1,4 +1,5 @@
 import { existsSync, readFileSync, realpathSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import { homedir } from 'node:os';
 import path from 'node:path';
 import {
@@ -14,6 +15,12 @@ export type SandboxOptions = {
   // `sandboxSpawn` returns the input unchanged rather than requiring a branch at every call site.
   workspaceDir?: string;
   offline?: boolean;
+  // The actual program that ends up running, when `command` is a shell wrapping it (e.g. PTY
+  // callers spawn `bash -lc '<command>'`, so `command` is always `bash` — the shell itself, never
+  // the harness binary the profile actually needs to carve in self-read access for). Falls back to
+  // `command` when omitted (already the real program — e.g. the ACP agent spawn, which runs the
+  // binary directly with no shell wrapper).
+  selfBinaryHint?: string;
 };
 
 export type SandboxResult = {
@@ -46,6 +53,78 @@ export function sandboxNotice(): string | undefined {
 // fails to carve in. Falls back to the input path if it doesn't exist (yet).
 function resolvePath(p: string): string {
   try { return realpathSync(p); } catch { return p; }
+}
+
+let cachedDarwinUserCacheDir: string | undefined;
+
+// The real per-user `/var/folders/<xx>/<hash>/C/` cache directory macOS's `confstr(3)` hands out —
+// NOT the same as `$TMPDIR`, which `sandboxSpawn` overrides to a workspace-local path below, and
+// NOT its `.../T/` (temp) sibling, which stays denied (that's where `os.tmpdir()`-based scratch
+// dirs land — carving it in too would let a sandboxed process write anywhere a plain `mktemp`
+// call resolves to, defeating the outside-the-workspace write deny). System frameworks look the
+// cache path up directly via `confstr`, bypassing our `TMPDIR` override entirely, and write
+// lock/cache files into it regardless (e.g. Security.framework's legacy MDS subsystem locks
+// `.../C/mds/mds.lock` on every `SecItemCopyMatching` call — denied, the call silently fails
+// rather than erroring, so a sandboxed harness reads back "not logged in" even with a valid
+// Keychain item). Cached: it's fixed for the life of the host process.
+function darwinUserCacheDir(): string {
+  if (cachedDarwinUserCacheDir) return cachedDarwinUserCacheDir;
+  try {
+    const cacheDir = execFileSync('getconf', ['DARWIN_USER_CACHE_DIR']).toString().trim();
+    cachedDarwinUserCacheDir = resolvePath(cacheDir);
+  } catch {
+    cachedDarwinUserCacheDir = '/nonexistent-janissary-darwin-user-cache-dir-placeholder';
+  }
+  return cachedDarwinUserCacheDir;
+}
+
+let cachedClaudeScratchDir: string | undefined;
+
+// The harness CLI's own per-user scratch tree, `/private/tmp/claude-<uid>/`, under which it creates
+// a per-project/session scratchpad directory before running any tool — including a plain shell
+// command. This is a fixed, UID-keyed path entirely outside `$HOME`, our workspace-local `TMPDIR`
+// override, and the Darwin user cache dir above, so without carving it in, every tool invocation
+// inside a sandboxed harness session fails at that housekeeping step, before the tool's own command
+// ever runs. Cached: the UID is fixed for the life of the host process.
+function claudeScratchDir(): string {
+  if (cachedClaudeScratchDir) return cachedClaudeScratchDir;
+  const uid = typeof process.getuid === 'function' ? process.getuid() : 0;
+  cachedClaudeScratchDir = resolvePath(`/private/tmp/claude-${uid}`);
+  return cachedClaudeScratchDir;
+}
+
+// Resolve `command` to an absolute path the way `execvp`/`posix_spawn` would (a `PATH` search for a
+// bare name, or the path itself if it already contains a separator) so its containing directory can
+// be carved into the read allow-list. Without this, a harness binary installed under `$HOME` (e.g.
+// via nvm, or `~/.opencode/bin`) can't read its own executable — which some system frameworks need
+// to do internally (Keychain's `SecItemCopyMatching` calls `CFBundleGetMainBundle`, which reopens the
+// calling process's own binary and its directory to determine code identity for ACL matching; denied,
+// the harness looks logged out even though its Keychain item is intact). Returns both the literal
+// (unresolved — e.g. many npm-global installs are a `bin/foo` symlink into `lib/node_modules/...`)
+// and fully realpath-resolved directory, same reasoning as `dualParams` in sandbox-profile.ts: a
+// framework may `opendir`/`lstat` the symlink's own directory as well as the resolved target's.
+// Falls back to a path that matches nothing so the profile's params always have a bound value.
+function resolveExecutableDirs(command: string): { literal: string; real: string } {
+  const fallback = '/nonexistent-janissary-self-bin-placeholder';
+  const literalBin = command.includes('/')
+    ? (existsSync(command) ? command : undefined)
+    : (process.env.PATH ?? '').split(':').filter(Boolean)
+      .map((dir) => path.join(dir, command))
+      .find((candidate) => existsSync(candidate));
+  if (!literalBin) return { literal: fallback, real: fallback };
+  return { literal: path.dirname(literalBin), real: path.dirname(resolvePath(literalBin)) };
+}
+
+// The directory of the Node binary currently running the janissary server itself
+// (`process.execPath`), in both literal and realpath-resolved form (same dual reasoning as
+// `resolveExecutableDirs` above — an nvm-managed `node` is commonly a symlink). Carved into the
+// read allow-list so a script running inside the sandbox (e.g. a project's own `.claude/settings.json`
+// hook) can reliably invoke a known-good `node` via the `JANISSARY_NODE` env var below, instead of
+// hoping a bare `node` on the sandboxed process's PATH resolves to a working binary — PATH
+// resolution order inside a spawned/hook context doesn't always match the server's own.
+function serverNodeDirs(): { literal: string; real: string } {
+  const execPath = process.execPath;
+  return { literal: path.dirname(execPath), real: path.dirname(resolvePath(execPath)) };
 }
 
 // The parent repository's real git objects directory, discovered from the workspace clone's own
@@ -104,9 +183,14 @@ export function sandboxSpawn(
   const tmpDir = resolvePath(`${options.workspaceDir}.tmp`);
   const home = resolvePath(homedir());
   const gitObjects = parentGitObjectsDir(options.workspaceDir);
+  const selfDirs = resolveExecutableDirs(options.selfBinaryHint ?? command);
+  const darwinCacheDir = darwinUserCacheDir();
+  const scratchDir = claudeScratchDir();
+  const serverNodeDir = serverNodeDirs();
 
   const scrubbed = scrubEnv(env);
   scrubbed.TMPDIR = tmpDir;
+  scrubbed.JANISSARY_NODE = process.execPath;
 
   const profile = options.offline ? SANDBOX_PROFILE_OFFLINE : SANDBOX_PROFILE;
   const dParams = [
@@ -114,6 +198,12 @@ export function sandboxSpawn(
     '-D', `TMPDIR=${tmpDir}`,
     '-D', `HOME=${home}`,
     '-D', `GIT_OBJECTS=${gitObjects}`,
+    '-D', `SELF_DIR_L=${selfDirs.literal}`,
+    '-D', `SELF_DIR_R=${selfDirs.real}`,
+    '-D', `DARWIN_USER_CACHE_DIR=${darwinCacheDir}`,
+    '-D', `CLAUDE_SCRATCH_DIR=${scratchDir}`,
+    '-D', `SERVER_NODE_DIR_L=${serverNodeDir.literal}`,
+    '-D', `SERVER_NODE_DIR_R=${serverNodeDir.real}`,
     ...homeDParams(home, HOME_WRITE_CARVEOUTS, WRITE_CARVEOUT_PARAMS),
     ...homeDParams(home, HOME_READ_CARVEINS, READ_CARVEIN_PARAMS),
     ...homeDParams(home, SECRET_DENY_PATHS, SECRET_DENY_PARAMS),

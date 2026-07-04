@@ -19,6 +19,15 @@ mechanism. The workspace is named after the harness tab's unique label (e.g. `cl
 and the harness PTY starts there. Otherwise identical to an agent workspace: `git clone --shared`,
 stored at `.janissary/workspace/<label>/`, removed when the tab is closed.
 
+### Isolation
+
+On macOS, a workspaced tab's processes (shell, harness PTY, or ACP session, and anything they
+spawn) are confined to the workspace directory by a kernel-enforced Seatbelt sandbox — see
+[[sandbox]] for the full filesystem/IPC/environment policy. Isolation is on by default
+(`sandboxWorkspaces` in `.janissary/config.json`) and requires `sandbox-exec`; when it isn't
+actually active for a newly created workspaced tab, a one-line notice is appended to that tab's
+transcript. `--offline` additionally denies network access for the tab.
+
 ### Workspace lifecycle
 
 Workspace directories are ephemeral:
