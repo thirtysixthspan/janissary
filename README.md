@@ -261,11 +261,12 @@ silently doing nothing — so a scheduled `send` that fails is still visible.
 
 ### Profiles
 
-A profile is a reusable set of agents for a particular use case — writing code, surfing the
-web, authoring a book, a specific task. Profiles live in a top-level `profiles/` directory
-(committable, unlike `.janissary/`). Each profile is its own dasherized-name directory
-holding one `<agent>.json` file per agent, in the agent-state schema (the same format as
-`.janissary/state/<name>.json`). The filename is the agent's name.
+A profile is a reusable set of agents and/or AI harnesses for a particular use case — writing
+code, surfing the web, authoring a book, a specific task. Profiles live in a top-level
+`profiles/` directory (committable, unlike `.janissary/`). Each profile is its own
+dasherized-name directory holding one `<name>.json` file per entry. An agent entry uses the
+agent-state schema (the same format as `.janissary/state/<name>.json`); a harness entry is
+distinguished by a `harness` key. The filename is the entry's tab label.
 
 ```
 profiles/
@@ -274,14 +275,34 @@ profiles/
     reviewer.json
   surfing-the-web/
     scout.json
+  small-fix/
+    opencode.json
 ```
 
-`profile launch <name>` opens a tab for each agent in the profile, restoring its saved state
-(command history, transcript, working directory, schedule). Agents already open as tabs are
-skipped. `profile list` shows the available profiles.
+A harness entry (`profiles/small-fix/opencode.json`) launches a harness tab directly, optionally
+with a model and an initial/recurring schedule:
+
+```json
+{
+  "harness": "opencode",
+  "model": "opencode-go/deepseek-v4-pro",
+  "run": ["execute ./ai/fix-a-small-issue.md"],
+  "schedule": ["small-fix every 30m execute ./ai/fix-a-small-issue.md"]
+}
+```
+
+Model ids are validated against the known catalog in `harness-models.json` at the repo root —
+add a model there before referencing it in a profile.
+
+`profile launch <name>` opens a tab for each entry in the profile: an agent tab restores its
+saved state (command history, transcript, working directory, schedule); a harness tab launches
+fresh, with its `run`/`schedule` entries wired up. Relaunching a profile closes any tab whose
+label matches an entry (except the tab you launched from) and reopens it fresh. `profile list`
+shows the available profiles.
 
 ```
 profile launch writing-code
+profile launch small-fix
 profile list
 ```
 

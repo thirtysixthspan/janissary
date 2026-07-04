@@ -1045,3 +1045,143 @@ describe('Controller unread badge', () => {
     expect(commands).not.toContain('echo hello ## scheduled ##');
   });
 });
+
+describe('Controller profile launch (harness entries)', () => {
+  const writeHarnessEntry = (root: string, profile: string, filename: string, entry: Record<string, unknown>) => {
+    const dir = path.join(root, 'profiles', profile);
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(path.join(dir, `${filename}.json`), JSON.stringify({ harness: 'opencode', ...entry }));
+  };
+
+  beforeEach(() => {
+    vi.mocked(spawnPty).mockClear();
+  });
+
+  it('opens a harness tab running a command with --model, and schedules the recurring entry plus a run one-shot', () => {
+    const root = mkdtempSync(path.join(tmpdir(), 'janus-profile-harness-'));
+    initProfileDir(root);
+    writeHarnessEntry(root, 'small-fix', 'opencode', {
+      model: 'opencode-go/deepseek-v4-pro',
+      run: ['execute ./ai/fix-a-small-issue.md'],
+      schedule: ['small-fix every 30m execute ./ai/fix-a-small-issue.md'],
+    });
+    let capturedCommand = '';
+    vi.mocked(spawnPty).mockImplementation((program, command, _cwd, _handlers) => {
+      capturedCommand = command;
+      return { id: 'mock-pty-1', program, write: vi.fn(), resize: vi.fn(), kill: vi.fn() };
+    });
+    const { c } = makeController();
+    c.dispatch('profile launch small-fix');
+    const tab = c.view().find((t) => t.label === 'opencode');
+    expect(tab).toBeDefined();
+    expect(tab!.view).toBe('harness');
+    expect(capturedCommand).toContain('--model');
+    const scheduleIds = tab!.schedule.map((s) => s.id);
+    expect(scheduleIds).toContain('small-fix');
+    expect(scheduleIds).toContain('run-1');
+  });
+
+  it('the first scheduler tick types the run one-shot into the PTY and drops it', () => {
+    vi.useFakeTimers();
+    try {
+      const root = mkdtempSync(path.join(tmpdir(), 'janus-profile-harness-run-'));
+      initProfileDir(root);
+      writeHarnessEntry(root, 'small-fix', 'opencode', { run: ['execute ./ai/fix-a-small-issue.md'] });
+      const write = vi.fn();
+      vi.mocked(spawnPty).mockImplementation((program) => ({ id: 'mock-pty-1', program, write, resize: vi.fn(), kill: vi.fn() }));
+      const { c } = makeController();
+      c.dispatch('profile launch small-fix');
+      vi.advanceTimersByTime(1000);
+      expect(write).toHaveBeenCalledWith('execute ./ai/fix-a-small-issue.md\r');
+      const tab = c.view().find((t) => t.label === 'opencode');
+      expect(tab!.schedule.map((s) => s.id)).not.toContain('run-1');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('advancing 30 minutes fires the recurring entry, which stays scheduled', () => {
+    vi.useFakeTimers();
+    try {
+      const root = mkdtempSync(path.join(tmpdir(), 'janus-profile-harness-recur-'));
+      initProfileDir(root);
+      writeHarnessEntry(root, 'small-fix', 'opencode', { schedule: ['small-fix every 30m execute ./ai/fix-a-small-issue.md'] });
+      const write = vi.fn();
+      vi.mocked(spawnPty).mockImplementation((program) => ({ id: 'mock-pty-1', program, write, resize: vi.fn(), kill: vi.fn() }));
+      const { c } = makeController();
+      c.dispatch('profile launch small-fix');
+      vi.advanceTimersByTime(30 * 60 * 1000 + 1000);
+      expect(write).toHaveBeenCalledWith('execute ./ai/fix-a-small-issue.md\r');
+      const after = c.view().find((t) => t.label === 'opencode')!.schedule.find((s) => s.id === 'small-fix');
+      expect(after).toBeDefined();
+      expect(after!.recurring).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('reports and skips an unknown harness name', () => {
+    const root = mkdtempSync(path.join(tmpdir(), 'janus-profile-harness-badname-'));
+    initProfileDir(root);
+    writeHarnessEntry(root, 'bad', 'thing', { harness: 'gemini' });
+    vi.mocked(spawnPty).mockImplementation((program) => ({ id: 'mock-pty-1', program, write: vi.fn(), resize: vi.fn(), kill: vi.fn() }));
+    const { c } = makeController();
+    c.dispatch('profile launch bad');
+    expect(allText(c)).toContain('unknown harness');
+    expect(c.view().map((t) => t.label)).not.toContain('thing');
+  });
+
+  it('reports and skips a model missing from the catalog', () => {
+    const root = mkdtempSync(path.join(tmpdir(), 'janus-profile-harness-badmodel-'));
+    initProfileDir(root);
+    writeHarnessEntry(root, 'bad-model', 'opencode', { model: 'no-such-model' });
+    vi.mocked(spawnPty).mockImplementation((program) => ({ id: 'mock-pty-1', program, write: vi.fn(), resize: vi.fn(), kill: vi.fn() }));
+    const { c } = makeController();
+    c.dispatch('profile launch bad-model');
+    expect(allText(c)).toContain('Unknown model');
+    expect(c.view().map((t) => t.label)).not.toContain('opencode');
+  });
+
+  it('reports and skips a malformed schedule string, still opening the tab', () => {
+    const root = mkdtempSync(path.join(tmpdir(), 'janus-profile-harness-badsched-'));
+    initProfileDir(root);
+    writeHarnessEntry(root, 'bad-sched', 'opencode', { schedule: ['not a valid schedule line'] });
+    vi.mocked(spawnPty).mockImplementation((program) => ({ id: 'mock-pty-1', program, write: vi.fn(), resize: vi.fn(), kill: vi.fn() }));
+    const { c } = makeController();
+    c.dispatch('profile launch bad-sched');
+    expect(c.view().map((t) => t.label)).toContain('opencode');
+    expect(allText(c)).toContain('Usage');
+  });
+
+  it('relaunching the profile closes the old tab (killing its PTY) and opens a fresh one with a re-based schedule', () => {
+    const root = mkdtempSync(path.join(tmpdir(), 'janus-profile-harness-relaunch-'));
+    initProfileDir(root);
+    writeHarnessEntry(root, 'small-fix', 'opencode', { schedule: ['small-fix every 30m execute ./ai/fix-a-small-issue.md'] });
+    const kills = [vi.fn(), vi.fn()];
+    let call = 0;
+    vi.mocked(spawnPty).mockImplementation((program) => {
+      const id = `mock-pty-${++call}`;
+      return { id, program, write: vi.fn(), resize: vi.fn(), kill: kills[call - 1] };
+    });
+    const { c } = makeController();
+    c.dispatch('profile launch small-fix');
+    expect(c.view().find((t) => t.label === 'opencode')!.harness!.ptyId).toBe('mock-pty-1');
+    c.setActiveTab(0); // back to janus — relaunching from the just-opened harness tab would self-skip
+    c.dispatch('profile launch small-fix');
+    expect(kills[0]).toHaveBeenCalled();
+    const tabs = c.view().filter((t) => t.label === 'opencode');
+    expect(tabs).toHaveLength(1);
+    expect(tabs[0].harness!.ptyId).toBe('mock-pty-2');
+  });
+
+  it('a profile entry matching the issuing tab label is reported and skipped; the issuing tab stays open', () => {
+    const root = mkdtempSync(path.join(tmpdir(), 'janus-profile-harness-self-'));
+    initProfileDir(root);
+    writeHarnessEntry(root, 'self', 'janus', {});
+    vi.mocked(spawnPty).mockImplementation((program) => ({ id: 'mock-pty-1', program, write: vi.fn(), resize: vi.fn(), kill: vi.fn() }));
+    const { c } = makeController();
+    c.dispatch('profile launch self');
+    expect(c.view().map((t) => t.label)).toEqual(['janus']);
+    expect(allText(c)).toContain('issuing tab');
+  });
+});

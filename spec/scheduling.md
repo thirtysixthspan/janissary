@@ -32,6 +32,10 @@ While the active agent has at least one scheduled entry, a small titled `schedul
 
 In the web app the same panels are `StatusPanels` (`web/src/StatusPanels.tsx`). On a harness tab the schedule panel floats over the top-right of the harness terminal (rendered `scheduleOnly` — no connections panel, since the whole tab is the terminal connection), with pointer events disabled so it never intercepts terminal input.
 
+### Authored schedules in a profile
+
+A profile's harness entry can author its tab's schedule directly, without the tab existing yet: its `schedule` field is a list of strings in this same command grammar, minus the leading `schedule` keyword and the `in <tab>` clause (the tab is implicitly the entry's own, once opened). Its `run` field is a list of commands typed into the harness once, shortly after launch — each becomes a one-shot entry that fires on the first tick and then disappears from the schedule panel. A schedule string that fails to parse, or that includes an `in <tab>` clause, is reported in the launch output and skipped; a duplicate name within one entry keeps the first and reports the rest. See Profiles.
+
 ### `schedule` command
 
 `schedule` queues a command for later execution in the issuing agent's tab, or in another tab via `in <tab>`. See the Scheduling section. Every scheduled command is named by the first token after `schedule`. Forms: `schedule <name> [in <tab>] at <time> <cmd>` (one-shot today/next day), `schedule <name> [in <tab>] on <date> [at <time>] <cmd>` (one-shot date), `schedule <name> [in <tab>] every <N><m|h|d|w> <cmd>` (recurring interval), `schedule <name> [in <tab>] every <day|weekday> at <time> <cmd>` (recurring clock time), plus `schedule list [in <tab>]`, `schedule cancel <name> [in <tab>]`, and `schedule clear [in <tab>]`. Malformed invocations return a `Usage:` message.

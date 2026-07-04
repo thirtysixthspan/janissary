@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseHarnessCommand, HARNESS_NAMES } from './harness.js';
+import { parseHarnessCommand, HARNESS_NAMES, buildHarnessCommand } from './harness.js';
 
 describe('parseHarnessCommand', () => {
   it('accepts valid harness names', () => {
@@ -70,5 +70,19 @@ describe('parseHarnessCommand', () => {
     const result = parseHarnessCommand('harness claude as');
     expect('error' in result).toBe(true);
     expect((result as { error: string }).error).toMatch(/Usage/i);
+  });
+});
+
+describe('buildHarnessCommand', () => {
+  it('returns just the binary when no model is given', () => {
+    expect(buildHarnessCommand('opencode')).toBe('opencode');
+  });
+
+  it('appends a quoted --model flag when a model is given', () => {
+    expect(buildHarnessCommand('opencode', 'opencode-go/deepseek-v4-pro')).toBe("opencode --model 'opencode-go/deepseek-v4-pro'");
+  });
+
+  it('safely quotes a model value containing a single quote', () => {
+    expect(buildHarnessCommand('opencode', "a'b")).toBe(String.raw`opencode --model 'a'\''b'`);
   });
 });
