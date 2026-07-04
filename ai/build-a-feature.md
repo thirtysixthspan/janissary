@@ -28,7 +28,7 @@ Read any file in the repo. Edit source, tests, CSS, and spec files as the plan d
 
 ## Step 1 — Install dependencies
 
-Run `npm install` to ensure dependencies are up to date before doing anything else.
+Run `npm install --ignore-scripts` to ensure dependencies are up to date before doing anything else.
 
 ---
 
