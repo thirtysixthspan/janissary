@@ -11,9 +11,6 @@ when a second instance is launched in a different directory, it will create a ne
 two instances cannot be launched with overlapping file trees.
 multiple instance cannot share the same communication channels such as web sockets.
 
-## isolate workspaced agents to workspace
-An agent should only be able to access files in the workspace.
-
 ## harness tab transcripts
 harness tabs should have a tab transcript that records the harness output.
 For example, if claude or opencode are running in the harness, it is expected that the output of their work is captured in the transcript.

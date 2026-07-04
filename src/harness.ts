@@ -8,12 +8,13 @@ export const HARNESS_COMMANDS: Record<string, string> = {
 
 export const HARNESS_NAMES = Object.keys(HARNESS_COMMANDS);
 
-export type HarnessParsed = { name: string; workspace: boolean; label?: string } | { error: string };
+export type HarnessParsed = { name: string; workspace: boolean; offline: boolean; label?: string } | { error: string };
 
 /**
- * Parse a `harness <name> [as <label>] [-w|--workspace]` command, validating the harness name
- * against the known set. `as <label>` gives the new tab a custom label instead of the harness
- * name (still de-duplicated against existing tab labels).
+ * Parse a `harness <name> [as <label>] [-w|--workspace] [--offline]` command, validating the
+ * harness name against the known set. `as <label>` gives the new tab a custom label instead of
+ * the harness name (still de-duplicated against existing tab labels). `--offline` adds a
+ * network-deny rule to the tab's sandbox profile (only meaningful alongside `-w`/`--workspace`).
  */
 export function parseHarnessCommand(input: string): HarnessParsed {
   const rest = input.replace(/^harness\b\s*/i, '').trim();
@@ -25,11 +26,12 @@ export function parseHarnessCommand(input: string): HarnessParsed {
   }
   const rest_ = tokens.slice(1);
   const workspace = rest_.some((t) => t === '-w' || t === '--workspace');
+  const offline = rest_.some((t) => t.toLowerCase() === '--offline');
   const asIndex = rest_.findIndex((t) => t.toLowerCase() === 'as');
-  if (asIndex === -1) return { name, workspace };
+  if (asIndex === -1) return { name, workspace, offline };
   const label = rest_[asIndex + 1];
   if (!label) return { error: `Usage: harness <${HARNESS_NAMES.join('|')}> as <label>.` };
-  return { name, workspace, label };
+  return { name, workspace, offline, label };
 }
 
 // Single-quote a value for embedding in a `shell -lc '<command>'` string, escaping any embedded

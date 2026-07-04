@@ -22,10 +22,15 @@ export function resolveAgentName(
 export function parseAgentCommand(input: string): AgentCommand {
   const trimmed = input.trim();
   const isWorkspace = /\s(-w|--workspace)\b/i.test(trimmed);
-  const stripped = trimmed.replaceAll(/\s+(-w|--workspace)\s*/gi, ' ').trim();
+  const isOffline = /\s--offline\b/i.test(trimmed);
+  const stripped = trimmed
+    .replaceAll(/\s+(-w|--workspace|--offline)(?=\s|$)/gi, '')
+    .replaceAll(/\s+/g, ' ')
+    .trim();
   const nameMatch = stripped.match(/^agent\s+(.+)/i);
   return {
     name: nameMatch ? nameMatch[1].trim().toLowerCase().slice(0, getConfig().tabNameMaxLength) : '',
     workspace: isWorkspace,
+    offline: isOffline,
   };
 }

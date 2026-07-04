@@ -7,6 +7,7 @@ import {
   type Client,
 } from '@agentclientprotocol/sdk';
 import type { PromptHandlers, AcpSession, AcpOptions } from './types.js';
+import { sandboxSpawn } from './sandbox.js';
 
 /**
  * Connect to an arbitrary ACP agent launched as a subprocess and drive it as an ACP
@@ -16,12 +17,20 @@ import type { PromptHandlers, AcpSession, AcpOptions } from './types.js';
  * MVP scope: streams `agent_message_chunk` text into the prompt handler, auto-denies tool
  * permission requests, and advertises no fs/terminal capabilities (so the agent never
  * calls those back).
+ *
+ * `workspaceDir`/`offline` confine the subprocess to that workspace via a Seatbelt sandbox (see
+ * sandbox.ts); omitted (monitor sessions never set them), the command runs exactly as before.
  */
 export function connectAcp(options: AcpOptions): AcpSession {
-  const proc = spawn(options.command, options.args, {
+  const baseEnv = options.env ? { ...process.env, ...options.env } : process.env;
+  const { command, args, env } = sandboxSpawn(
+    { workspaceDir: options.workspaceDir, offline: options.offline },
+    options.command, options.args, baseEnv,
+  );
+  const proc = spawn(command, args, {
     cwd: options.cwd,
     stdio: ['pipe', 'pipe', 'pipe'],
-    env: options.env ? { ...process.env, ...options.env } : process.env,
+    env,
   });
   proc.on('error', (error) => options.onError(`failed to start ACP agent: ${error.message}`));
 

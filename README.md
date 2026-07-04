@@ -24,7 +24,7 @@ janus
 | `clear`      | Clear the output log               |
 | `quit`       | Exit the application (asks for confirmation) |
 | `close`      | Close the current tab (exits if last); `close page #` closes a numbered page tab. `exit` is an alias |
-| `agent`      | Create a new agent tab (add `--workspace` to clone the repo) |
+| `agent`      | Create a new agent tab (add `--workspace` to clone the repo, isolated by default — see Workspace; add `--offline` to also deny network access) |
 | `next`       | Switch to the next tab             |
 | `hist`       | Open command history picker        |
 | `msg`        | Send a message to another agent    |
@@ -62,7 +62,7 @@ Add `-w` (or `--workspace`) to start the harness in a disposable git workspace, 
 harness claude -w
 ```
 
-This clones the root repo into `.janissary/workspace/claude/` (or `claude-2`, etc. for subsequent tabs). The workspace is removed when the tab is closed.
+This clones the root repo into `.janissary/workspace/claude/` (or `claude-2`, etc. for subsequent tabs). The workspace is removed when the tab is closed. See Workspace below for what isolation a `-w` tab gets and the `--offline` flag.
 
 ### SSH tabs
 
@@ -329,6 +329,14 @@ harness claude -w       → harness tab with workspace at .janissary/workspace/c
 ```
 
 This clones the root repo (detected from the current directory) via `git clone --shared` — no network needed, completes in milliseconds. The shell or harness PTY starts inside the workspace. Make changes, commit, push, then close the tab — the workspace is automatically removed.
+
+**Isolation (macOS only).** A workspaced tab's processes (its shell, harness PTY, or ACP session, and anything they spawn) are confined to the workspace by a kernel-enforced Seatbelt sandbox (`sandbox-exec`): writes are denied everywhere except the workspace and its private temp dir (narrow carve-outs exist for harness auth state — `~/.claude/projects`, `~/.codex`, etc. — and package-manager caches); reads of `$HOME` are denied by default (system paths stay readable); credential-shaped environment variables and agent-socket vars (`SSH_AUTH_SOCK`, `GPG_AGENT_INFO`, …) are stripped from the process environment. Practical consequences: no modifying the parent repo (including `git push` to the local origin — integrate by fetching from the workspace instead), no global installs, no reading sibling workspaces/other repos/dotfiles. `git commit`/`fetch`/`pull`, `npm install`, builds, and venvs inside the workspace all work normally. Add `--offline` to also deny network access for that tab:
+
+```
+harness claude -w --offline    → workspaced harness tab with no network access
+```
+
+Isolation is on by default; set `"sandboxWorkspaces": false` in `.janissary/config.json` to disable it (e.g. on a non-macOS host, or if it interferes with a particular harness). When a workspaced tab is created and isolation isn't actually active — the config key is off, or `sandbox-exec` isn't available (non-macOS) — a one-line notice is appended to the tab's transcript.
 
 ### Databases
 

@@ -38,7 +38,8 @@ export class ShellManager {
   private getShell(label: string, cwd: string | undefined): ChildProcess {
     let shell = this.shells.get(label);
     if (!shell || !shell.stdin?.writable) {
-      shell = spawnShell(0, { JANUS_AGENT_NAME: label });
+      const tab = this.managers.tab.tabs.find((t) => t.label === label);
+      shell = spawnShell(0, { JANUS_AGENT_NAME: label }, { workspaceDir: tab?.workspaceDir, offline: tab?.offline });
       this.shells.set(label, shell);
       if (cwd) shell.stdin!.write(`cd "${cwd}"\n`);
     }

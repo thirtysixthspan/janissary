@@ -2,6 +2,7 @@ import { makeTab, distinctColor } from './tab.js';
 import { parseProfileCommand, loadProfileEntries, listProfiles, profileExists } from './profiles.js';
 import { parseAgentCommand, resolveAgentName } from './commands.js';
 import { openProfileEntries } from './profile-agent-opener.js';
+import { sandboxNotice } from './sandbox.js';
 import type { Managers } from './managers.js';
 
 export class ProfileManager {
@@ -50,10 +51,13 @@ export class ProfileManager {
     const groupColor = creator?.groupColor ?? dotColor;
     const tab = makeTab(resolved, dotColor, this.managers.tab.tabs.length + 1, [], [], workspaceDir, group, groupColor);
     tab.toolStepsExpanded = false;
+    tab.offline = parsed.offline;
     this.managers.tab.insertTabInGroup(tab);
     this.managers.tab.setCwd(resolved, workspaceDir ?? process.cwd());
     this.managers.tab.setActiveTab(this.managers.tab.findIndex(resolved));
     this.managers.tab.persist(this.managers.tab.buildAgentState(tab));
+    const notice = workspaceDir ? sandboxNotice() : undefined;
     out(`Agent "${resolved}" ready.${workspaceDir ? ` (workspace: ${this.managers.tab.shorten(workspaceDir)})` : ''}`);
+    if (notice) out(notice);
   }
 }
