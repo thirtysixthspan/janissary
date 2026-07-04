@@ -92,6 +92,21 @@ export type EditorView = {
   url: string;
 };
 
+// A single visible row in a file tree tab (opened via `files [path]`). `path` is relative to the
+// tree root — the unique key, and the argument passed to `open`/`edit` when a file row is clicked.
+// Children of a directory are included only once it is expanded (present in the row list at all).
+export type FileTreeRow = {
+  path: string;
+  name: string;
+  depth: number;
+  dir: boolean;
+  expanded?: boolean;
+};
+
+// A file tree view (opened via `files [path]`). The server owns the tree — `rows` is the
+// pre-flattened, already-sorted, currently-visible row list; the client never walks directories.
+export type FileTreeView = { root: string; rows: FileTreeRow[] };
+
 // A monitor target: a single tab by label, or a whole tab group by number (group targets
 // track membership dynamically — tabs added to the group later are covered).
 export type MonitorTarget =
@@ -116,7 +131,7 @@ export type Tab = {
   number: number;
   // The tab's body kind. Undefined/`'agent'` renders the normal transcript + command line; `'image'`
   // renders the image view (no command bar). View tabs are live and in-memory — not persisted.
-  view?: 'agent' | 'image' | 'page' | 'harness' | 'markdown' | 'editor' | 'monitor';
+  view?: 'agent' | 'image' | 'page' | 'harness' | 'markdown' | 'editor' | 'monitor' | 'files';
   // Display name shown in the tab strip when it differs from the (unique) internal `label` — e.g.
   // every image tab is titled `image` while keeping a distinct label (`image`, `image-2`, …).
   title?: string;
@@ -135,6 +150,8 @@ export type Tab = {
   editor?: EditorView;
   // The monitor-window payload, present only when `view === 'monitor'`: the suggestion feed.
   monitor?: { suggestions: MonitorSuggestion[] };
+  // The file-tree payload, present only when `view === 'files'`.
+  files?: FileTreeView;
   // Group number, shared by an agent and every agent it (transitively) creates. The root agent
   // is group 1; a launched profile forms its own group.
   group: number;

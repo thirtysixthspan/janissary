@@ -1,5 +1,5 @@
 /* eslint-disable max-lines */
-import type { Tab, LogEntry, AgentState, ImageView, MarkdownView, EditorView, PageView } from './types.js';
+import type { Tab, LogEntry, AgentState, ImageView, MarkdownView, EditorView, PageView, FileTreeView } from './types.js';
 import type { ConnectionView, ScheduleView, TabView } from './protocol.js';
 import {
   makeTab, distinctColor, insertTabInGroup,
@@ -12,7 +12,7 @@ import { messageBus } from './bus.js';
 import { closeTabResources } from './tab-cleanup.js';
 import type { Managers } from './managers.js';
 import {
-  addImageTab, addMarkdownTab, addEditorTab, addPageTab,
+  addImageTab, addMarkdownTab, addEditorTab, addPageTab, addFilesTab,
 } from './tab-creators.js';
 
 export class TabManager {
@@ -281,6 +281,7 @@ export class TabManager {
       markdown: t.markdown,
       editor: t.editor,
       monitor: t.monitor,
+      files: t.files,
       activePty: t.activePty,
     }));
   }
@@ -308,6 +309,13 @@ export class TabManager {
 
   openPageTab({ url, domain }: Pick<PageView, 'url' | 'domain'>): void {
     const { tabs, activeTab } = addPageTab(this.tabs, this.activeTab, url, domain);
+    this.tabs = tabs;
+    this.activeTab = activeTab;
+    messageBus.emit('state', { type: 'dirty' });
+  }
+
+  openFilesTab(view: FileTreeView): void {
+    const { tabs, activeTab } = addFilesTab(this.tabs, this.activeTab, view);
     this.tabs = tabs;
     this.activeTab = activeTab;
     messageBus.emit('state', { type: 'dirty' });

@@ -1,4 +1,4 @@
-import type { LogEntry, Tab, ImageView, MarkdownView, EditorView, PageView, HarnessView } from './types.js';
+import type { LogEntry, Tab, ImageView, MarkdownView, EditorView, PageView, HarnessView, FileTreeView } from './types.js';
 export { expandTabs, wordWrap, flattenBuffer } from './tab-formatting.js';
 export { distinctColor, dotColors } from './tab-colors.js';
 export { stripComments, renumberTabs, canMoveTab, swapTabsLeft, swapTabsRight, insertTabInGroup, uniqueLabel } from './tab-utils.js';
@@ -54,6 +54,14 @@ export const makeEditorTab = (label: string, dotColor: string, number: number, g
 export const makeHarnessTab = (label: string, dotColor: string, number: number, group: number, groupColor: string, harness: HarnessView, workspaceDirectory?: string): Tab => ({
   ...makeTab(label, dotColor, number, [], [], workspaceDirectory, group, groupColor),
   view: 'harness', title: label, harness,
+});
+
+// A file tree view tab (opened via `files [path]`). Shows a directory tree rooted at `files.root`.
+export const makeFilesTab = (label: string, dotColor: string, number: number, group: number, groupColor: string, files: FileTreeView): Tab => ({
+  ...makeTab(label, dotColor, number, [], [], undefined, group, groupColor),
+  view: 'files',
+  title: 'files',
+  files,
 });
 
 

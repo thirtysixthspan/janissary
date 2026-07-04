@@ -325,3 +325,26 @@ html, body, #root {
 }
 .editor-saved { color: #58c07a; }
 .editor-error { color: #e06c75; }
+
+/* File tree tab: metadata header (image-tab classes) above a scrollable, keyboard-navigable tree. */
+.files-tab { flex: 1; min-height: 0; display: flex; flex-direction: column; outline: none; }
+.files-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 6px 12px; color: var(--muted); font-size: 12px; border-bottom: 1px solid var(--border);
+}
+.files-root { font-weight: 600; color: var(--fg); }
+.files-collapse-all {
+  background: transparent; border: none; color: var(--muted); cursor: pointer; font-size: 13px;
+  padding: 0 4px; line-height: 1;
+}
+.files-collapse-all:hover { color: var(--fg); }
+.files-rows { flex: 1; min-height: 0; overflow-y: auto; padding: 4px 0; }
+.files-row {
+  display: flex; align-items: center; gap: 4px; padding: 2px 12px; cursor: pointer;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  border-left: 2px solid transparent;
+}
+.files-row:hover { background: var(--bg-soft); }
+.files-row.selected { background: var(--bg-soft); border-left-color: var(--accent); }
+.files-chevron { flex: none; width: 1em; color: var(--muted); font-size: 10px; }
+.files-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }

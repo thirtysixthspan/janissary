@@ -25,3 +25,6 @@
 | Backspace / Delete | Delete character before cursor |
 | (printable) | Insert character at cursor |
 | Tab | Complete the token at the cursor: a file path, a `msg`/`broadcast` agent name, a `connection close` connection string, or a `browser` subcommand / window id |
+
+A focused file tree tab captures arrow keys, Home/End, PageUp/PageDown, Enter, Space, and printable
+characters (type-ahead) for its own tree navigation instead of the bindings above — see File Tree Tab.
