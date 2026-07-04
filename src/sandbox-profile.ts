@@ -20,6 +20,8 @@ export const HOME_WRITE_CARVEOUTS = [
   '.local/share/opencode',
   '.local/state/opencode',
   '.npm/_cacache',
+  '.npm/_logs',
+  '.npm/_npx',
   '.cache/pip',
   '.cache/yarn',
 ];
