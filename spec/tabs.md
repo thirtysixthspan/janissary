@@ -8,11 +8,11 @@ A single `janus` tab is open on launch with dot color `#5b9cff`. No other tabs e
 
 ### Agent tab creation
 
-Running `agent` creates a new tab with a random unused name chosen from a 52-name pool. The name is always lowercased. The new tab is created in the background — focus stays on the current tab, where an `Agent "<name>" ready.` confirmation is shown. The new tab joins the group of the tab it was created from (see Tab grouping). On `--relaunch`, agent tabs are restored from saved state rather than created manually.
+Running `agent` creates a new tab with a random unused name chosen from a 52-name pool. The name is always lowercased. The new tab is focused immediately, showing its transcript. The new tab joins the group of the tab it was created from (see Tab grouping). On `--relaunch`, agent tabs are restored from saved state rather than created manually.
 
 ### Named agent tab
 
-`agent <name>` creates a tab with the given name (always lowercased). Focus stays on the current tab; switch to the new agent with the arrow keys or `next`.
+`agent <name>` creates a tab with the given name (always lowercased). The new tab is focused immediately.
 
 
 ### Duplicate name rejection
