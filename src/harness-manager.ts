@@ -1,4 +1,4 @@
-import { makeHarnessTab, distinctColor } from './tab.js';
+import { makeHarnessTab, distinctColor, uniqueLabel } from './tab.js';
 import { parseHarnessCommand, HARNESS_COMMANDS } from './harness.js';
 import type { Tab, HarnessView } from './types.js';
 import { messageBus } from './bus.js';
@@ -25,7 +25,7 @@ export class HarnessManager {
   private open(name: string, workspace: boolean, label_?: string): string | undefined {
     const creator = this.managers.tab.cur();
     const program = HARNESS_COMMANDS[name];
-    const label = this.uniqueLabel(label_ ?? name);
+    const label = uniqueLabel(this.managers.tab.tabs, label_ ?? name);
 
     const resolved = this.resolveCwd(workspace, label, creator);
     if (typeof resolved !== 'string' && 'error' in resolved) return resolved.error;
@@ -53,16 +53,5 @@ export class HarnessManager {
   private resolveCwd(workspace: boolean, label: string, creator: Tab): string | { dir: string } | { error: string } {
     if (!workspace) return this.managers.tab.cwdOf(creator.label) ?? process.cwd();
     return this.managers.workspace.create(label);
-  }
-
-  // A unique internal label for a new harness tab, derived from `base` (the harness name, or a
-  // custom `as <label>`): `claude`, `claude-2`, … The displayed title is the label itself; only
-  // the internal label is disambiguated so several harness tabs can coexist.
-  private uniqueLabel(base: string): string {
-    const used = new Set(this.managers.tab.tabs.map((t) => t.label));
-    if (!used.has(base)) return base;
-    let n = 2;
-    while (used.has(`${base}-${n}`)) n++;
-    return `${base}-${n}`;
   }
 }

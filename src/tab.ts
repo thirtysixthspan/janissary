@@ -1,7 +1,7 @@
 import type { LogEntry, Tab, ImageView, MarkdownView, EditorView, PageView, HarnessView } from './types.js';
 export { expandTabs, wordWrap, flattenBuffer } from './tab-formatting.js';
 export { distinctColor, dotColors } from './tab-colors.js';
-export { stripComments, renumberTabs, canMoveTab, swapTabsLeft, swapTabsRight, insertTabInGroup } from './tab-utils.js';
+export { stripComments, renumberTabs, canMoveTab, swapTabsLeft, swapTabsRight, insertTabInGroup, uniqueLabel } from './tab-utils.js';
 
 export const makeTab = (label: string, dotColor: string, number: number = 1, commandHistory: string[] = [], log: LogEntry[] = [], workspaceDirectory?: string, group: number = 1, groupColor: string = dotColor): Tab => ({
   label,

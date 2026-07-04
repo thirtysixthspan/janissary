@@ -49,6 +49,12 @@ export class CommandManager {
       if (error) this.managers.tab.append(label, { input: '', output: error });
       return;
     }
+    if (/^ssh\b/i.test(input)) {
+      this.managers.tab.append(label, { input, output: '' });
+      const error = this.managers.ssh.run(input);
+      if (error) this.managers.tab.append(label, { input: '', output: error });
+      return;
+    }
     const res = resolveCommand(input);
     switch (res.kind) {
       case 'empty': { return;

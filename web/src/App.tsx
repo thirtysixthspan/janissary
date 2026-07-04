@@ -139,7 +139,7 @@ export function App() {
         >
           <HarnessTab harness={t.harness!} client={client}
             ref={(h) => { if (h) harnessHandles.current.set(t.harness!.ptyId, h); else harnessHandles.current.delete(t.harness!.ptyId); }} />
-          <StatusPanels tab={t} scheduleOnly />
+          <StatusPanels tab={t} scheduleOnly={t.harness!.name !== 'ssh'} />
         </div>
       ))}
 

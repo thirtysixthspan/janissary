@@ -128,6 +128,7 @@ html, body, #root {
 .panel-row.conn-browser { color: var(--accent); }
 .panel-row.conn-terminal { color: var(--accent); }
 .panel-row.conn-sqlite { color: var(--fg); }
+.panel-row.conn-ssh { color: var(--accent); }
 .panel-row.recurring { color: var(--accent); }
 .line { white-space: pre-wrap; overflow-wrap: break-word; line-height: 1.4; }
 .line.prompt { color: var(--accent); cursor: pointer; }
