@@ -51,12 +51,16 @@ export function App() {
   const reportingEntries = useMemo(() => tabs.map((tab, index) => ({ tab, index })).filter((e) => isReportingTab(e.tab)), [tabs]);
 
   const current = tabs[activeTab] ?? actionEntries[0]?.tab;
+  // `current`'s real index in the server's tab list — usually `activeTab`, but that can point
+  // past the end transiently (e.g. right after closing the last tab, before new state arrives),
+  // in which case `current` falls back to the first action tab and this must follow it.
+  const currentIndex = activeTab < tabs.length ? activeTab : (actionEntries[0]?.index ?? 0);
   currentRef.current = current;
   const lines = useMemo(() => current?.bufferLines ?? [], [current]);
   // The picker lists the tab's recent history, most recent at the bottom (suppressed when empty).
   const recent = useMemo(() => getRecentHistory(current?.cmdHistory ?? [], 10), [current]);
 
-  const isViewTab = (['image', 'page', 'harness', 'markdown', 'editor'] as const).includes(current?.view as 'image' | 'page' | 'harness' | 'markdown' | 'editor');
+  const isViewTab = (['image', 'page', 'harness', 'markdown', 'editor', 'files'] as const).includes(current?.view as 'image' | 'page' | 'harness' | 'markdown' | 'editor' | 'files');
   const canSearch = !isViewTab && !current?.activePty;
   const search = useTranscriptSearch(lines, current?.label ?? '');
   const highlight = search.searchOpen && search.currentLineIndex !== null
@@ -132,7 +136,7 @@ export function App() {
         tabNameMaxLength={tabNameMaxLength}
       />
 
-      <ViewTabBody tab={current} />
+      <ViewTabBody tab={current} client={client} index={currentIndex} />
 
       <ShellTabLayer tabs={tabs} activeLabel={current.label} client={client}
         onHandle={(id, h) => { if (h) shellHandles.current.set(id, h); else shellHandles.current.delete(id); }} />

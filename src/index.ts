@@ -183,6 +183,10 @@ function handle(controller: Controller, message: ClientMessage, reply: (event: S
     }
     case 'saveFile': { controller.saveFile(message.params.url, message.params.content); break;
     }
+    case 'fileTreeToggle': { controller.fileTreeToggle(message.params.index, message.params.path); break;
+    }
+    case 'fileTreeCollapseAll': { controller.fileTreeCollapseAll(message.params.index); break;
+    }
   }
   reply({ t: 'rpc-reply', id: message.id, result: 'ok' });
 }

@@ -1280,3 +1280,61 @@ describe('Controller profile launch (harness entries)', () => {
     expect(allText(c)).toContain('issuing tab');
   });
 });
+
+describe('Controller files tab', () => {
+  let root: string;
+
+  beforeEach(() => {
+    root = mkdtempSync(path.join(tmpdir(), 'janus-files-'));
+  });
+
+  it('files opens a new tab with view "files" and rows in view()', () => {
+    mkdirSync(path.join(root, 'src'));
+    writeFileSync(path.join(root, 'README.md'), '');
+    const { c } = makeController();
+    c.dispatch(`files ${root}`);
+    const tab = c.view().find((t) => t.view === 'files');
+    expect(tab).toBeDefined();
+    expect(tab!.files?.root).toBe(root);
+    expect(tab!.files?.rows.map((r) => r.path)).toEqual(['src', 'README.md']);
+  });
+
+  it('errors into the transcript for a non-directory target, without opening a tab', () => {
+    writeFileSync(path.join(root, 'file.txt'), '');
+    const { c } = makeController();
+    c.dispatch(`files ${path.join(root, 'file.txt')}`);
+    expect(allText(c)).toContain('not a directory');
+    expect(c.view().some((t) => t.view === 'files')).toBe(false);
+  });
+
+  it('fileTreeToggle RPC expands a directory row', () => {
+    mkdirSync(path.join(root, 'src'));
+    writeFileSync(path.join(root, 'src', 'index.ts'), '');
+    const { c } = makeController();
+    c.dispatch(`files ${root}`);
+    const index = c.view().findIndex((t) => t.view === 'files');
+    c.fileTreeToggle(index, 'src');
+    const tab = c.view()[index];
+    expect(tab.files?.rows.some((r) => r.path === 'src/index.ts')).toBe(true);
+  });
+
+  it('fileTreeCollapseAll RPC collapses every expanded directory', () => {
+    mkdirSync(path.join(root, 'src'));
+    writeFileSync(path.join(root, 'src', 'index.ts'), '');
+    const { c } = makeController();
+    c.dispatch(`files ${root}`);
+    const index = c.view().findIndex((t) => t.view === 'files');
+    c.fileTreeToggle(index, 'src');
+    c.fileTreeCollapseAll(index);
+    const tab = c.view()[index];
+    expect(tab.files?.rows.some((r) => r.path === 'src/index.ts')).toBe(false);
+  });
+
+  it('closing a files tab disposes its watchers without throwing', () => {
+    const { c } = makeController();
+    c.dispatch(`files ${root}`);
+    const index = c.view().findIndex((t) => t.view === 'files');
+    expect(() => c.closeTab(index)).not.toThrow();
+    expect(c.view().some((t) => t.view === 'files')).toBe(false);
+  });
+});

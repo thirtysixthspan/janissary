@@ -1,10 +1,10 @@
 // Wire types shared between the Node server and the React web client.
 // The web client imports these directly via the @shared path alias — no mirror needed.
-import type { BufferLine, ImageView, PageView, HarnessView, MarkdownView, EditorView, TerminalEntry, CompletionResult } from './types.js';
+import type { BufferLine, ImageView, PageView, HarnessView, MarkdownView, EditorView, TerminalEntry, CompletionResult, FileTreeView, FileTreeRow } from './types.js';
 
 // Used locally in TabView below, so separate import + export is required.
 // eslint-disable-next-line unicorn/prefer-export-from
-export type { BufferLine, ImageView, PageView, HarnessView, MarkdownView, EditorView, TerminalEntry, CompletionResult };
+export type { BufferLine, ImageView, PageView, HarnessView, MarkdownView, EditorView, TerminalEntry, CompletionResult, FileTreeView, FileTreeRow };
 
 // One row in the floating "connections" panel (shell / acp / terminal card / sqlite).
 export type ConnectionView = { text: string; kind: 'shell' | 'acp' | 'browser' | 'terminal' | 'sqlite' | 'ssh' };
@@ -43,8 +43,8 @@ export type TabView = {
   bufferLines: BufferLine[];
   cmdHistory: string[];
   toolStepsExpanded: boolean;
-  // Body kind: undefined/`'agent'` for a normal tab, `'image'` for an image view, `'page'` for an embedded web page, `'harness'` for a full-tab AI harness terminal, `'markdown'` for a rendered Markdown file, `'monitor'` for the AI-monitor suggestion feed.
-  view?: 'agent' | 'image' | 'page' | 'harness' | 'markdown' | 'editor' | 'monitor';
+  // Body kind: undefined/`'agent'` for a normal tab, `'image'` for an image view, `'page'` for an embedded web page, `'harness'` for a full-tab AI harness terminal, `'markdown'` for a rendered Markdown file, `'monitor'` for the AI-monitor suggestion feed, `'files'` for a file tree.
+  view?: 'agent' | 'image' | 'page' | 'harness' | 'markdown' | 'editor' | 'monitor' | 'files';
   // Display name when it differs from `label` (image tabs are all titled `image`).
   title?: string;
   // Image-view payload, present only when `view === 'image'`.
@@ -59,6 +59,8 @@ export type TabView = {
   editor?: EditorView;
   // Monitor-window payload, present only when `view === 'monitor'`: the suggestion feed.
   monitor?: { suggestions: SuggestionView[] };
+  // File-tree payload, present only when `view === 'files'`.
+  files?: FileTreeView;
   // Set while a full-tab interactive PTY (htop, vim, etc.) is running on this agent tab.
   // Cleared on exit; the client hides the transcript while this is set.
   activePty?: string;
@@ -101,7 +103,12 @@ export type RpcCall =
   | { method: 'rateSuggestion'; params: { id: string; up: boolean } }
   // Write an editor tab's buffer back to disk. `url` is the tab's `/open/<id>` ref — the server
   // resolves it through the open-file allow-list, so only explicitly opened files are writable.
-  | { method: 'saveFile'; params: { url: string; content: string } };
+  | { method: 'saveFile'; params: { url: string; content: string } }
+  // Expand/collapse one directory row in a file tree tab. `index` is the tab's position in the
+  // server's full tab list (resolved to a label server-side); `path` is the row's tree-relative path.
+  | { method: 'fileTreeToggle'; params: { index: number; path: string } }
+  // Collapse every expanded directory in a file tree tab back to just its root.
+  | { method: 'fileTreeCollapseAll'; params: { index: number } };
 
 export type ClientMessage = { t: 'rpc'; id: number } & RpcCall;
 

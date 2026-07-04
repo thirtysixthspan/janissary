@@ -19,6 +19,7 @@ export const availableCommands = [
   'harness',
   'ssh',
   'search',
+  'files',
 ];
 
 let helpOutput: string | null = null;

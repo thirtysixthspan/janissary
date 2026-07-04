@@ -15,6 +15,7 @@ import type { CaptureManager } from './capture-manager.js';
 import type { CommandManager } from './command-manager.js';
 import type { WorkspaceManager } from './workspace-manager.js';
 import type { MonitorManager } from './monitor-manager.js';
+import type { FileTreeManager } from './file-tree-manager.js';
 
 export interface Managers {
   tab: TabManager;
@@ -34,4 +35,5 @@ export interface Managers {
   command: CommandManager;
   workspace: WorkspaceManager;
   monitor: MonitorManager;
+  fileTree: FileTreeManager;
 }

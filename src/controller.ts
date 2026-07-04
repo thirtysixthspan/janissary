@@ -12,6 +12,7 @@ import { ScheduleManager } from './schedule-manager.js';
 import { ProfileManager } from './profile-manager.js';
 import { ConnectionManager } from './connection-manager.js';
 import { OpenFileManager } from './open-file-manager.js';
+import { FileTreeManager } from './file-tree-manager.js';
 import { saveFile } from './editor-save.js';
 import { CaptureManager } from './capture-manager.js';
 import { AgentCommunicationManager } from './agent-communication-manager.js';
@@ -35,6 +36,7 @@ export class Controller {
     this.managers.browser = new BrowserManager(this.managers);
     this.managers.acp = new AcpManager(this.managers);
     this.managers.openFile = new OpenFileManager(this.managers);
+    this.managers.fileTree = new FileTreeManager(this.managers);
     this.managers.pty = new PseudoterminalManager(this.managers);
     this.managers.schedule = new ScheduleManager(this.managers);
     this.managers.shell = new ShellManager(this.managers);
@@ -148,6 +150,18 @@ export class Controller {
     this.managers.tab.toggleCollapse();
   }
 
+  // --- file tree tabs -------------------------------------------------------
+
+  fileTreeToggle(index: number, path: string): void {
+    const label = this.managers.tab.tabs[index]?.label;
+    if (label) this.managers.fileTree.toggle(label, path);
+  }
+
+  fileTreeCollapseAll(index: number): void {
+    const label = this.managers.tab.tabs[index]?.label;
+    if (label) this.managers.fileTree.collapseAll(label);
+  }
+
   // Tab-completion for the command line (reuses the shared `completeCommandLine`): filesystem
   // paths against the active tab's cwd, `msg`/`broadcast` agent names, `connection close` targets,
   // and `browser` subcommands / window ids.
@@ -171,6 +185,7 @@ export class Controller {
   }
 
   shutdown(): void {
+    this.managers.fileTree.dispose();
     this.managers.monitor.closeAll();
     messageBus.clear();
     this.managers.schedule.stop();
