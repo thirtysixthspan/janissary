@@ -300,10 +300,10 @@ html, body, #root {
 .editor-content { flex: 1; min-width: 0; white-space: pre-wrap; word-break: break-all; }
 .editor-sel { background: rgb(91 156 255 / 30%); }
 /* Zero-width inline caret: the ::after paints the blinking bar without shifting text. */
-.editor-caret { display: inline-block; width: 0; position: relative; }
+.editor-caret { width: 0; position: relative; }
 .editor-caret::after {
-  content: ''; position: absolute; left: -1px; top: 0; width: 2px; height: 100%;
-  background: var(--accent); animation: editor-caret-blink 1s steps(2) infinite;
+  content: ''; position: absolute; left: 0px; top: 0; width: 2px; height: 100%;
+  background: var(--accent); animation: editor-caret-blink 1s steps(1) infinite;
 }
 @keyframes editor-caret-blink { 50% { opacity: 0; } }
 /* Hidden always-focused textarea that captures keystrokes, paste, and IME composition. */
