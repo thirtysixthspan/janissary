@@ -817,6 +817,101 @@ describe('Controller harness view', () => {
   });
 });
 
+describe('Controller ssh tab', () => {
+  let capturedHandlers: PtyHandlers | null;
+  let capturedKill: ReturnType<typeof vi.fn>;
+  let capturedCommand = '';
+
+  beforeEach(() => {
+    capturedHandlers = null;
+    capturedKill = vi.fn();
+    capturedCommand = '';
+    vi.mocked(spawnPty).mockClear();
+    vi.mocked(spawnPty).mockImplementation((program, command, _cwd, handlers) => {
+      capturedHandlers = handlers;
+      capturedCommand = command;
+      return { id: 'mock-pty-1', program, write: vi.fn(), resize: vi.fn(), kill: capturedKill };
+    });
+  });
+
+  it('ssh devbox opens a harness-view tab labeled devbox, running the verbatim command', () => {
+    const { c } = makeController();
+    c.dispatch('ssh devbox');
+    const tab = c.view().find((t) => t.label === 'devbox');
+    expect(tab).toBeDefined();
+    expect(tab!.view).toBe('harness');
+    expect(tab!.harness?.name).toBe('ssh');
+    expect(tab!.harness?.destination).toBe('devbox');
+    expect(capturedCommand).toBe('ssh devbox');
+    expect(c.view()[c.managers.tab.activeTab].label).toBe('devbox');
+  });
+
+  it('view() for the ssh tab lists ssh:<destination> in connections and no terminal: row', () => {
+    const { c } = makeController();
+    c.dispatch('ssh devbox');
+    const tab = c.view().find((t) => t.label === 'devbox')!;
+    expect(tab.connections).toContainEqual({ text: 'ssh:devbox', kind: 'ssh' });
+    expect(tab.connections.some((r) => r.kind === 'terminal')).toBe(false);
+  });
+
+  it('a second ssh devbox gets a unique label', () => {
+    vi.mocked(spawnPty)
+      .mockImplementationOnce((program, _command, _cwd, handlers) => {
+        capturedHandlers = handlers;
+        return { id: 'mock-pty-1', program, write: vi.fn(), resize: vi.fn(), kill: vi.fn() };
+      })
+      .mockImplementationOnce((program, _command, _cwd, _handlers) => {
+        return { id: 'mock-pty-2', program, write: vi.fn(), resize: vi.fn(), kill: vi.fn() };
+      });
+    const { c } = makeController();
+    c.dispatch('ssh devbox');
+    c.dispatch('ssh devbox');
+    const labels = c.view().map((t) => t.label);
+    expect(labels).toContain('devbox');
+    expect(labels).toContain('devbox-2');
+  });
+
+  it('PTY exit closes the ssh tab', () => {
+    const { c } = makeController();
+    c.dispatch('ssh devbox');
+    expect(capturedHandlers).not.toBeNull();
+    capturedHandlers!.onExit('mock-pty-1', 0);
+    expect(c.view().map((t) => t.label)).not.toContain('devbox');
+  });
+
+  it('closing the ssh tab kills its PTY', () => {
+    const { c } = makeController();
+    c.dispatch('ssh devbox');
+    const index = c.view().findIndex((t) => t.label === 'devbox');
+    c.closeTab(index);
+    expect(capturedKill).toHaveBeenCalled();
+    expect(c.view().map((t) => t.label)).not.toContain('devbox');
+  });
+
+  it('connection close ssh:devbox from another tab kills the PTY', () => {
+    const { c } = makeController();
+    c.dispatch('ssh devbox');
+    c.setActiveTab(0); // dispatch from janus, not the ssh tab (which has no command bar)
+    c.dispatch('connection close ssh:devbox');
+    expect(capturedKill).toHaveBeenCalled();
+  });
+
+  it('ssh with no destination produces a usage error in the transcript (not a tab)', () => {
+    const { c } = makeController();
+    c.dispatch('ssh');
+    expect(allText(c)).toContain('Usage');
+    expect(c.view().map((t) => t.label)).not.toContain('ssh');
+    expect(vi.mocked(spawnPty)).not.toHaveBeenCalled();
+  });
+
+  it('regression: shell ssh host still opens an inline terminal card, not an ssh tab', () => {
+    const { c } = makeController();
+    c.dispatch('shell ssh host');
+    expect(c.view().map((t) => t.label)).not.toContain('host');
+    expect(c.view()[0].activePty).toBeDefined();
+  });
+});
+
 describe('Controller send command', () => {
   beforeEach(() => {
     vi.mocked(spawnPty).mockClear();

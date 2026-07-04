@@ -1,4 +1,5 @@
 import { HarnessManager } from './harness-manager.js';
+import { SshManager } from './ssh-manager.js';
 import { DatabaseManager } from './database-manager.js';
 import { AcpManager } from './acp-manager.js';
 import { ShellManager } from './shell-manager.js';
@@ -38,6 +39,7 @@ export class Controller {
     this.managers.schedule = new ScheduleManager(this.managers);
     this.managers.shell = new ShellManager(this.managers);
     this.managers.harness = new HarnessManager(this.managers);
+    this.managers.ssh = new SshManager(this.managers);
     this.managers.profile = new ProfileManager(this.managers);
     this.managers.connection = new ConnectionManager(this.managers);
     this.managers.communication = new AgentCommunicationManager(this.managers);

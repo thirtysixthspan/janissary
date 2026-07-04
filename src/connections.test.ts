@@ -27,6 +27,11 @@ describe('parseConnectionCommand', () => {
       kind: 'browser',
       id: 'w1',
     });
+    expect(parseConnectionCommand('connection close ssh:devbox')).toEqual({
+      action: 'close',
+      kind: 'ssh',
+      id: 'devbox',
+    });
   });
 
   it('requires a usage hint when empty', () => {
@@ -41,6 +46,7 @@ describe('parseConnectionCommand', () => {
   it('rejects an unknown kind', () => {
     const r = parseConnectionCommand('connection close redis:cache');
     expect('error' in r && r.error).toContain('Unknown connection kind');
+    expect('error' in r && r.error).toContain('ssh');
   });
 
   it('rejects a missing id', () => {

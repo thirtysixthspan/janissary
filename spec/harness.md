@@ -1,7 +1,10 @@
 # Harness Tab
 
 A **harness tab** opens an AI coding harness (claude, opencode, or codex) as the entire tab body —
-a live PTY terminal that takes over the tab in place of the usual transcript and command bar.
+a live PTY terminal that takes over the tab in place of the usual transcript and command bar. An
+**ssh tab** (opened via `ssh <destination>`) is a harness-view tab of the same shape, running a
+real `ssh` session instead of an AI harness — see SSH Tab for its own command grammar, connections
+row, and the one place its behavior differs (the connections panel is shown, not suppressed).
 
 ## Command
 

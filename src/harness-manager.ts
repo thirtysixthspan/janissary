@@ -1,4 +1,4 @@
-import { makeHarnessTab, distinctColor } from './tab.js';
+import { makeHarnessTab, distinctColor, uniqueLabel } from './tab.js';
 import { parseHarnessCommand, HARNESS_COMMANDS, buildHarnessCommand } from './harness.js';
 import type { HarnessView, ProfileHarnessEntry } from './types.js';
 import { messageBus } from './bus.js';
@@ -24,7 +24,7 @@ export class HarnessManager {
   // from cwd; otherwise it inherits the creator's cwd.
   private open(name: string, workspace: boolean, label_?: string): string | undefined {
     const creator = this.managers.tab.cur();
-    const label = this.uniqueLabel(label_ ?? name);
+    const label = uniqueLabel(this.managers.tab.tabs, label_ ?? name);
 
     const resolved = this.resolveCwd(workspace, label, this.managers.tab.cwdOf(creator.label) ?? process.cwd());
     if (typeof resolved !== 'string' && 'error' in resolved) return resolved.error;
@@ -44,7 +44,7 @@ export class HarnessManager {
   // an error to report and skip on, or undefined once the tab is open. Never persisted — harness
   // tabs have no agent state.
   openFromProfile(entry: ProfileHarnessEntry, label: string, group: number, groupColor: string): string | undefined {
-    const unique = this.uniqueLabel(label);
+    const unique = uniqueLabel(this.managers.tab.tabs, label);
     const resolved = this.resolveCwd(!!entry.workspace, unique, entry.cwd ?? process.cwd());
     if (typeof resolved !== 'string' && 'error' in resolved) return resolved.error;
     const cwd = typeof resolved === 'string' ? resolved : resolved.dir;
@@ -78,16 +78,5 @@ export class HarnessManager {
   private resolveCwd(workspace: boolean, label: string, fallbackCwd: string): string | { dir: string } | { error: string } {
     if (!workspace) return fallbackCwd;
     return this.managers.workspace.create(label);
-  }
-
-  // A unique internal label for a new harness tab, derived from `base` (the harness name, or a
-  // custom `as <label>`): `claude`, `claude-2`, … The displayed title is the label itself; only
-  // the internal label is disambiguated so several harness tabs can coexist.
-  private uniqueLabel(base: string): string {
-    const used = new Set(this.managers.tab.tabs.map((t) => t.label));
-    if (!used.has(base)) return base;
-    let n = 2;
-    while (used.has(`${base}-${n}`)) n++;
-    return `${base}-${n}`;
   }
 }

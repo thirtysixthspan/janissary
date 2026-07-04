@@ -7,7 +7,7 @@ import type { BufferLine, ImageView, PageView, HarnessView, MarkdownView, Editor
 export type { BufferLine, ImageView, PageView, HarnessView, MarkdownView, EditorView, TerminalEntry, CompletionResult };
 
 // One row in the floating "connections" panel (shell / acp / terminal card / sqlite).
-export type ConnectionView = { text: string; kind: 'shell' | 'acp' | 'browser' | 'terminal' | 'sqlite' };
+export type ConnectionView = { text: string; kind: 'shell' | 'acp' | 'browser' | 'terminal' | 'sqlite' | 'ssh' };
 // One row in the floating "schedule" panel.
 export type ScheduleView = { id: string; spec: string; next: string; recurring: boolean };
 // A pending route chooser: the unprefixed command plus the option labels to pick from.

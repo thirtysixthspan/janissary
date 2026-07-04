@@ -37,6 +37,7 @@ janus
 | `schedule`   | Run a command later — once or on a recurring schedule |
 | `profile`    | Launch a saved set of agents for a use case |
 | `harness`    | Open an AI coding harness (claude/opencode/codex) in a full-tab terminal (add `-w` to clone the repo) |
+| `ssh`        | Open an SSH session to a remote host in a full-tab terminal |
 | `search`     | `search transcript <pattern>` searches the current tab's transcript with a regex (Cmd+F opens it empty) |
 | `send`       | Deliver a line of input to any tab — types into a harness, or runs a command in an agent tab |
 | `monitor`    | Start a persona-driven AI monitor — inline on the current tab, or watching other tabs/groups into a reporting tab |
@@ -62,6 +63,17 @@ harness claude -w
 ```
 
 This clones the root repo into `.janissary/workspace/claude/` (or `claude-2`, etc. for subsequent tabs). The workspace is removed when the tab is closed.
+
+### SSH tabs
+
+`ssh <destination> [ssh options…]` opens a new tab whose entire body is a real `ssh` session, exactly like a harness tab:
+
+```
+ssh devbox                  → new tab "devbox", full-tab ssh session
+ssh -p 2222 admin@10.0.0.5  → new tab "10.0.0.5", args passed to ssh verbatim
+```
+
+The tab label is the destination's host (stripping a `user@` prefix and `:port` suffix); the connection appears in the connections panel as `ssh:<destination>` and can be closed from any tab with `connection close ssh:<label>`. The tab closes when the ssh process exits (logout, `exit`, connection drop) or via the tab strip's × / `close` command. `ssh` takes no `as <label>` or `-w`/`--workspace` clause — both would collide with ssh's own argument grammar (an `as label` after the destination is a *remote command*, and `-w` is a real ssh flag).
 
 ### Configuration
 

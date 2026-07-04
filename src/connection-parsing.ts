@@ -1,6 +1,6 @@
 import type { ConnectionKind, ConnectionParsed } from './types.js';
 
-const KINDS: ConnectionKind[] = ['sqlite', 'shell', 'acp', 'browser'];
+const KINDS: ConnectionKind[] = ['sqlite', 'shell', 'acp', 'browser', 'ssh'];
 const USAGE = 'Usage: connection <list|close> [kind:id]  (e.g. connection close sqlite:mydb)';
 
 export function parseConnectionCommand(input: string): ConnectionParsed {

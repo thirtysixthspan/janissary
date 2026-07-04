@@ -53,7 +53,12 @@ export type BufferLine = {
 // tabs (opened via `open <image>`) use `view: 'image'` and carry an `image` payload; ordinary agent
 // tabs leave `view` undefined.
 // Full-tab AI coding harness view (opened via `harness <name>`); the body is a live PTY terminal.
-export type HarnessView = { name: string; program: string; ptyId: string; status: 'running' | 'exited'; exitCode?: number };
+// An ssh tab (opened via `ssh <destination>`) reuses this same shape, recognized by
+// `name === 'ssh'`: `destination` carries the connection identity for the connections panel.
+export type HarnessView = {
+  name: string; program: string; ptyId: string; status: 'running' | 'exited'; exitCode?: number;
+  destination?: string;
+};
 
 export type ImageView = {
   // Display name (basename), e.g. "diagram.png".
@@ -334,7 +339,7 @@ export type ParsedBroadcast = { targets: string[] | 'all'; kind: MessageKind; te
 
 // --- connections.ts -------------------------------------------------------
 
-export type ConnectionKind = 'sqlite' | 'shell' | 'acp' | 'browser';
+export type ConnectionKind = 'sqlite' | 'shell' | 'acp' | 'browser' | 'ssh';
 
 export type ConnectionParsed =
   | { error: string }
