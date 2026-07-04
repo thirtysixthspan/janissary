@@ -1,7 +1,7 @@
 import { makeTab, distinctColor } from './tab.js';
-import { parseProfileCommand, loadProfileAgents, listProfiles, profileExists } from './profiles.js';
+import { parseProfileCommand, loadProfileEntries, listProfiles, profileExists } from './profiles.js';
 import { parseAgentCommand, resolveAgentName } from './commands.js';
-import { openProfileAgents } from './profile-agent-opener.js';
+import { openProfileEntries } from './profile-agent-opener.js';
 import type { Managers } from './managers.js';
 
 export class ProfileManager {
@@ -20,13 +20,13 @@ export class ProfileManager {
       out(`No profile named "${parsed.name}".`);
       return;
     }
-    const agents = loadProfileAgents(parsed.name);
-    if (agents.length === 0) {
+    const entries = loadProfileEntries(parsed.name);
+    if (entries.length === 0) {
       out(`Profile "${parsed.name}" has no agents.`);
       return;
     }
 
-    openProfileAgents(agents, this.managers, parsed.name, out);
+    openProfileEntries(entries, this.managers, parsed.name, label, out);
   }
 
   newAgent(command: string): void {

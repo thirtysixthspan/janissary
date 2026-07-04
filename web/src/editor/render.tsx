@@ -39,7 +39,9 @@ function contentSegments({ text, selFrom, selTo, caretCol, caretRef }: LineProps
     nodes.push(<span key={from} className={selected ? 'editor-sel' : undefined}>{text.slice(from, to)}</span>);
   }
   if (caretCol === text.length && (text.length > 0 || bounds.length === 1)) {
-    nodes.push(<span key="cend" className="editor-caret" ref={caretRef} />);
+    // Zero-width space gives the inline span text content so the browser establishes a line box
+    // height even on empty lines; without it, height:100% on ::after computes to zero.
+    nodes.push(<span key="cend" className="editor-caret" ref={caretRef}>{'\u{200B}'}</span>);
   }
   return nodes;
 }

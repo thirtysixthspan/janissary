@@ -9,7 +9,9 @@ import { HarnessTab, type HarnessTabHandle } from './HarnessTab';
 import { EditorTab, type EditorTabHandle } from './EditorTab';
 import type { ShellTabHandle } from './ShellTab';
 import { ShellTabLayer } from './ShellTabLayer';
-import { CommandInput } from './CommandInput';
+import { CommandArea } from './CommandArea';
+import { useTranscriptSearch } from './useTranscriptSearch';
+import { resolveSearchInterception } from './command-interceptions';
 import { StatusPanels } from './StatusPanels';
 import { HistoryPicker } from './HistoryPicker';
 import { RouteChooser } from './RouteChooser';
@@ -54,9 +56,16 @@ export function App() {
   // The picker lists the tab's recent history, most recent at the bottom (suppressed when empty).
   const recent = useMemo(() => getRecentHistory(current?.cmdHistory ?? [], 10), [current]);
 
+  const isViewTab = (['image', 'page', 'harness', 'markdown', 'editor'] as const).includes(current?.view as 'image' | 'page' | 'harness' | 'markdown' | 'editor');
+  const canSearch = !isViewTab && !current?.activePty;
+  const search = useTranscriptSearch(lines, current?.label ?? '');
+  const highlight = search.searchOpen && search.currentLineIndex !== null
+    ? { lineIndex: search.currentLineIndex, pattern: search.pattern }
+    : null;
+
   // Live snapshot read by the window key handler, so it never has to re-register.
-  const stateReference = useRef({ pickerOpen, pickerIdx: pickerIndex, recent, route, routeIdx: routeIndex });
-  stateReference.current = { pickerOpen, pickerIdx: pickerIndex, recent, route, routeIdx: routeIndex };
+  const stateReference = useRef({ pickerOpen, pickerIdx: pickerIndex, recent, route, routeIdx: routeIndex, canSearch, searchOpen: search.searchOpen });
+  stateReference.current = { pickerOpen, pickerIdx: pickerIndex, recent, route, routeIdx: routeIndex, canSearch, searchOpen: search.searchOpen };
 
   const runCommand = useCallback((text: string) => client.send({ method: 'command', params: { text } }), [client]);
   const openPicker = () => {
@@ -72,6 +81,7 @@ export function App() {
   const quitConfirmOpenRef = useRef(quitConfirmOpen); quitConfirmOpenRef.current = quitConfirmOpen;
   const pickerOpenRef = useRef(pickerOpen); pickerOpenRef.current = pickerOpen;
   const routeRef = useRef(route); routeRef.current = route;
+  const activeViewRef = useRef(current?.view); activeViewRef.current = current?.view;
 
   const closeTab = useCallback((index: number) => {
     if (guardRef.current?.(index)) return;
@@ -101,16 +111,15 @@ export function App() {
     else inputReference.current?.focus();
   }, [activeTab]);
 
-  useCmdW(closeTab, activeTabRef, quitConfirmOpenRef, pickerOpenRef, routeRef);
+  useCmdW(closeTab, activeTabRef, quitConfirmOpenRef, pickerOpenRef, routeRef, activeViewRef);
 
-  const keyCallbacksRef = useRef({ setRouteIndex, chooseRoute, runCommand, setPickerIndex, setPickerOpen, openPicker });
-  keyCallbacksRef.current = { setRouteIndex, chooseRoute, runCommand, setPickerIndex, setPickerOpen, openPicker };
+  const openSearch = () => search.open('');
+  const keyCallbacksRef = useRef({ setRouteIndex, chooseRoute, runCommand, setPickerIndex, setPickerOpen, openPicker, openSearch });
+  keyCallbacksRef.current = { setRouteIndex, chooseRoute, runCommand, setPickerIndex, setPickerOpen, openPicker, openSearch };
 
   useWindowKeys(client, stateReference, keyCallbacksRef, handleScrollKey, handleScrollKeyUp);
 
   if (!current) return <div className="app" style={{ padding: 16, color: 'var(--muted)' }}>Connecting…</div>;
-
-  const isViewTab = (['image', 'page', 'harness', 'markdown', 'editor'] as const).includes(current.view as 'image' | 'page' | 'harness' | 'markdown' | 'editor');
 
   return (
     <div className="app">
@@ -175,16 +184,21 @@ export function App() {
               onToggleCollapse={() => client.send({ method: 'toggleCollapse', params: {} })}
               onPromptClick={(text) => runCommand(text)}
               scrollRef={transcriptReference}
+              highlight={highlight}
             />
             <StatusPanels tab={current} />
             {route && <RouteChooser cmd={route.cmd} choices={route.choices} selected={routeIndex} onPick={chooseRoute} />}
             {!route && pickerOpen && <HistoryPicker items={recent} selected={pickerIndex} onPick={pick} />}
           </div>
-          <CommandInput
+          <CommandArea
+            search={search}
+            lines={lines}
             dotColor={current.dotColor}
             history={current.cmdHistory}
             ghostHistory={globalHistory}
             onSubmit={(text) => {
+              const searchPattern = resolveSearchInterception(text, canSearch, lines);
+              if (searchPattern !== null) { search.open(searchPattern); return; }
               const trimmed = text.trim().toLowerCase();
               if (trimmed === 'hist') openPicker();
               else if (trimmed === 'quit' || ((trimmed === 'close' || trimmed === 'exit') && tabs.length === 1)) openQuitConfirm();

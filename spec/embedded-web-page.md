@@ -115,11 +115,12 @@ highlight, and ordering — with two differences:
 
 ### Closing a page tab
 
-A page tab can be closed three ways, all equivalent in their teardown:
+A page tab can be closed four ways, all equivalent in their teardown:
 
 - the tab's **close button** (the manual affordance),
-- the **`close`** command when the page tab is active, and
-- **`close page <n>`** — close the page tab with page number `n` from any tab.
+- the **`close`** command when the page tab is active,
+- **`close page <n>`** — close the page tab with page number `n` from any tab, and
+- **Cmd+W / Ctrl+W (Keyboard Navigation)** — close the page tab from anywhere, including while interacting with the embedded page.
 
 Closing performs the same teardown the `close` command does for a non-last tab: the tab is removed
 from the strip, its in-memory state is dropped, and an adjacent tab is selected. Because a page tab

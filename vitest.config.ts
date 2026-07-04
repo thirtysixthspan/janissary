@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url';
 import react from '@vitejs/plugin-react';
 import { defineConfig, configDefaults, coverageConfigDefaults } from 'vitest/config';
 
@@ -18,6 +19,10 @@ export default defineConfig({
 
       {
         plugins: [react()],
+        // Mirrors web/vite.config.ts's alias (used there for the production build): needed
+        // because most `@shared/*` imports are type-only (erased at transpile time), but
+        // src/search-matches.ts is imported for real, runtime functions.
+        resolve: { alias: { '@shared': fileURLToPath(new URL('src', import.meta.url)) } },
         test: {
           name: 'client',
           environment: 'jsdom',

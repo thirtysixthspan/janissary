@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
-import type { AgentState, ProfileParsed } from './types.js';
+import type { ProfileEntry, ProfileParsed } from './types.js';
 
 // A profile is a named, reusable set of agents for a particular use case (writing code,
 // surfing the web, authoring a book, …). Each profile is a directory under the profiles
@@ -34,11 +34,12 @@ export function listProfiles(): string[] {
   }
 }
 
-// Load every agent-state file in a profile. The filename (minus `.json`) is the authoritative
-// agent name, so it always overrides any `name` field inside the file. Agents are ordered by
-// their `number` field (mirroring `--relaunch` tab restoration) so a profile controls the
-// order its tabs open; files without a number keep their (alphabetical) readdir order.
-export function loadProfileAgents(name: string): AgentState[] {
+// Load every entry file in a profile — agent-state files, or harness entry files (discriminated
+// by a `harness` key). The filename (minus `.json`) is the authoritative name, so it always
+// overrides any `name` field inside the file. Entries are ordered by their `number` field
+// (mirroring `--relaunch` tab restoration) so a profile controls the order its tabs open; files
+// without a number keep their (alphabetical) readdir order.
+export function loadProfileEntries(name: string): ProfileEntry[] {
   const directory = profilePath(name);
   if (!existsSync(directory)) return [];
   try {
@@ -46,13 +47,14 @@ export function loadProfileAgents(name: string): AgentState[] {
       .filter((f) => f.endsWith('.json'))
       .map((f) => {
         try {
-          const state = JSON.parse(readFileSync(path.join(directory, f), 'utf8')) as AgentState;
-          return { ...state, name: f.replace(/\.json$/, '') };
+          const parsed = JSON.parse(readFileSync(path.join(directory, f), 'utf8')) as ProfileEntry;
+          const label = f.replace(/\.json$/, '');
+          return 'harness' in parsed ? { ...parsed, label } : { ...parsed, name: label };
         } catch {
-          // skip invalid agent state files
+          // skip invalid entry files
         }
       })
-      .filter((s): s is AgentState => s !== undefined)
+      .filter((s): s is ProfileEntry => s !== undefined)
       .toSorted((a, b) => (a.number ?? Infinity) - (b.number ?? Infinity));
   } catch {
     return [];

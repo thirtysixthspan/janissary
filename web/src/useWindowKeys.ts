@@ -9,6 +9,11 @@ type StateSnapshot = {
   recent: string[];
   route: RouteChooserView | null;
   routeIdx: number;
+  // Whether the active tab shows the transcript body (Cmd+F is only meaningful there) and
+  // whether search mode is currently open (gates scroll-key handling so Arrow keys reach the
+  // search bar instead of scrolling the transcript underneath it).
+  canSearch: boolean;
+  searchOpen: boolean;
 };
 
 type Callbacks = {
@@ -18,6 +23,7 @@ type Callbacks = {
   setPickerIndex: (setter: (prev: number) => number) => void;
   setPickerOpen: (open: boolean) => void;
   openPicker: () => void;
+  openSearch: () => void;
 };
 
 export function useWindowKeys(
@@ -40,9 +46,15 @@ export function useWindowKeys(
         handlePickerKey(e, snap.recent, snap.pickerIdx, cb.setPickerIndex, cb.runCommand, cb.setPickerOpen);
         return;
       }
+      if (e.metaKey && e.key.toLowerCase() === 'f') {
+        if (!snap.canSearch) return;
+        e.preventDefault();
+        if (!snap.searchOpen) cb.openSearch();
+        return;
+      }
       if (e.ctrlKey && e.key.toLowerCase() === 'r') { e.preventDefault(); cb.openPicker(); return; }
 
-      if (handleScrollKey(e)) return;
+      if (!snap.searchOpen && handleScrollKey(e)) return;
       if (e.ctrlKey && !e.shiftKey && e.key === 'ArrowLeft') { e.preventDefault(); client.send({ method: 'reorderTab', params: { dir: -1 } }); }
       else if (e.ctrlKey && !e.shiftKey && e.key === 'ArrowRight') { e.preventDefault(); client.send({ method: 'reorderTab', params: { dir: 1 } }); }
       else if (e.shiftKey && !e.ctrlKey && e.key === 'ArrowLeft') { e.preventDefault(); client.send({ method: 'moveTab', params: { dir: -1 } }); }

@@ -174,6 +174,28 @@ export type AgentState = {
   title?: string;
 };
 
+// --- profiles.ts (harness entries) -----------------------------------------
+
+// A profile entry describing a harness tab instead of an agent (discriminated by the
+// presence of `harness`). `schedule` entries are authored strings in the `schedule` command
+// grammar (minus `in <tab>`); `run` entries are commands typed into the harness once, shortly
+// after launch.
+export type ProfileHarnessEntry = {
+  // The tab label: populated by the loader from the filename (minus `.json`), same as an
+  // agent entry's `name` — never authored inside the JSON file itself.
+  label: string;
+  harness: string;
+  model?: string;
+  number?: number;
+  dotColor?: string;
+  workspace?: boolean;
+  cwd?: string;
+  run?: string[];
+  schedule?: string[];
+};
+
+export type ProfileEntry = AgentState | ProfileHarnessEntry;
+
 // --- schedule.ts ----------------------------------------------------------
 
 export type TimeOfDay = { hour: number; minute: number };

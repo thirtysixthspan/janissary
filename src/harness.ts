@@ -31,3 +31,17 @@ export function parseHarnessCommand(input: string): HarnessParsed {
   if (!label) return { error: `Usage: harness <${HARNESS_NAMES.join('|')}> as <label>.` };
   return { name, workspace, label };
 }
+
+// Single-quote a value for embedding in a `shell -lc '<command>'` string, escaping any embedded
+// single quotes (`'` → `'\''`).
+function shellQuote(value: string): string {
+  return `'${value.replaceAll("'", String.raw`'\''`)}'`;
+}
+
+// Build the shell command string that launches a harness binary, optionally with a model flag.
+// `buildHarnessCommand('opencode', 'opencode-go/deepseek-v4-pro')` →
+// `opencode --model 'opencode-go/deepseek-v4-pro'`.
+export function buildHarnessCommand(name: string, model?: string): string {
+  const program = HARNESS_COMMANDS[name];
+  return model ? `${program} --model ${shellQuote(model)}` : program;
+}
