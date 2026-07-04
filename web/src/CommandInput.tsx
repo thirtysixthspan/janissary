@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import type { CompletionResult } from '@shared/protocol';
 import { handleTabCompletion } from './command-completion';
 import { findGhostSuggestion } from './ghost-suggestion';
@@ -8,7 +8,7 @@ type Properties = {
   history: string[];
   ghostHistory: string[];
   onSubmit: (text: string) => void;
-  inputRef: React.RefObject<HTMLInputElement | null>;
+  inputRef: React.RefObject<HTMLTextAreaElement | null>;
   complete: (text: string, cursor: number) => Promise<CompletionResult>;
   pickerOpen: boolean;
 };
@@ -19,13 +19,64 @@ export function CommandInput({ dotColor, history, ghostHistory, onSubmit, inputR
   const histIndex = useRef(-1);
   const ghost = findGhostSuggestion(ghostHistory, value);
 
+  // Auto-resize: shrink to one row first so `scrollHeight` reflects the actual content, then
+  // grow to fit. Runs after every value change (typing, paste, history recall, ghost accept,
+  // Shift+Enter newline, submit-clear).
+  useEffect(() => {
+    const element = inputRef.current;
+    if (!element) return;
+    element.style.height = '0';
+    element.style.height = `${element.scrollHeight}px`;
+  }, [value, inputRef]);
+
   const recall = (text: string) => {
     setValue(text);
     requestAnimationFrame(() => { const element = inputRef.current; if (element) element.selectionStart = element.selectionEnd = text.length; });
   };
 
-  const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const submit = () => {
+    const text = value.trim();
+    if (text) onSubmit(text);
+    setValue('');
+    setCompletions([]);
+    histIndex.current = -1;
+  };
+
+  const recallOlder = () => {
+    if (history.length === 0) return;
+    histIndex.current = histIndex.current === -1 ? history.length - 1 : Math.max(0, histIndex.current - 1);
+    recall(history[histIndex.current]);
+  };
+
+  const recallNewer = () => {
+    if (histIndex.current === -1) return;
+    histIndex.current += 1;
+    if (histIndex.current >= history.length) { histIndex.current = -1; setValue(''); }
+    else recall(history[histIndex.current]);
+  };
+
+  // Insert a newline at the caret. Prefers `execCommand` — it mutates the DOM directly, fires a
+  // real `input` event, and keeps a normal undo entry — falling back to manually mutating the
+  // element and dispatching `input` ourselves where it's unavailable (jsdom doesn't implement it
+  // at all). Either way the caret lands right after the inserted newline, synchronously — no
+  // `requestAnimationFrame` round-trip, so a fast typist's next keystroke lands in the right spot.
+  const insertNewline = () => {
+    if (typeof document.execCommand === 'function') { document.execCommand('insertText', false, '\n'); return; }
+    const element = inputRef.current;
+    if (!element) return;
+    const start = element.selectionStart ?? value.length;
+    const end = element.selectionEnd ?? value.length;
+    element.value = `${value.slice(0, start)}\n${value.slice(end)}`;
+    element.selectionStart = element.selectionEnd = start + 1;
+    element.dispatchEvent(new Event('input', { bubbles: true }));
+  };
+
+  const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (pickerOpen) return; // history picker is modal; the window handler owns the keys
+    // Shift+Enter inserts a newline and Ctrl+Enter submits — both ahead of the shift/ctrl guard
+    // below, which would otherwise swallow them.
+    if (e.key === 'Enter' && e.shiftKey) { e.preventDefault(); insertNewline(); return; }
+    if (e.key === 'Enter' && e.ctrlKey) { e.preventDefault(); e.stopPropagation(); submit(); return; }
     // Defer tab chords (Shift+Arrow switch, Ctrl+Arrow reorder) and Shift+Up/Down (scroll) to the window handler.
     if (e.shiftKey || e.ctrlKey) return;
     if (e.key === 'Tab') {
@@ -38,29 +89,27 @@ export function CommandInput({ dotColor, history, ghostHistory, onSubmit, inputR
       // Don't let the window key handler also see this Enter: submitting `hist` opens the picker,
       // and React flushes that state before the event bubbles to window — which would otherwise
       // immediately run the selected (most recent) entry.
+      e.preventDefault();
       e.stopPropagation();
-      const text = value.trim();
-      if (text) onSubmit(text);
-      setValue('');
-      setCompletions([]);
-      histIndex.current = -1;
-    
+      submit();
+
     break;
     }
     case 'ArrowUp': {
-      e.preventDefault();
-      if (history.length === 0) return;
-      histIndex.current = histIndex.current === -1 ? history.length - 1 : Math.max(0, histIndex.current - 1);
-      recall(history[histIndex.current]);
-    
+      const element = inputRef.current;
+      const onFirstLine = !value.includes('\n') || element?.selectionStart == null
+        || value.lastIndexOf('\n', element.selectionStart - 1) === -1;
+      if (onFirstLine) { e.preventDefault(); recallOlder(); }
+      // else: native ArrowUp moves the caret up one line.
+
     break;
     }
     case 'ArrowDown': {
-      e.preventDefault();
-      if (histIndex.current === -1) return;
-      histIndex.current += 1;
-      if (histIndex.current >= history.length) { histIndex.current = -1; setValue(''); }
-      else recall(history[histIndex.current]);
+      const element = inputRef.current;
+      const onLastLine = !value.includes('\n') || element?.selectionStart == null
+        || !value.includes('\n', element.selectionStart);
+      if (onLastLine) { e.preventDefault(); recallNewer(); }
+      // else: native ArrowDown moves the caret down one line.
 
     break;
     }
@@ -90,8 +139,9 @@ export function CommandInput({ dotColor, history, ghostHistory, onSubmit, inputR
               <span className="ghost-typed">{value}</span>{ghost.slice(value.length)}
             </span>
           )}
-          <input
+          <textarea
             ref={inputRef}
+            rows={1}
             value={value}
             autoFocus
             spellCheck={false}

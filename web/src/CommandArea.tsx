@@ -11,7 +11,7 @@ type Properties = {
   history: string[];
   ghostHistory: string[];
   onSubmit: (text: string) => void;
-  inputRef: React.RefObject<HTMLInputElement | null>;
+  inputRef: React.RefObject<HTMLTextAreaElement | null>;
   complete: (text: string, cursor: number) => Promise<CompletionResult>;
   pickerOpen: boolean;
 };

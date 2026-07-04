@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { CommandInput } from './CommandInput';
 
 function renderCommandInput(overrides: { history?: string[]; ghostHistory?: string[] } = {}) {
-  const inputRef = createRef<HTMLInputElement>();
+  const inputRef = createRef<HTMLTextAreaElement>();
   const onSubmit = vi.fn();
   const complete = vi.fn().mockResolvedValue({ completions: [], cursor: 0 });
   render(
@@ -55,7 +55,7 @@ describe('CommandInput — ghost text', () => {
 
   it('ArrowRight at end-of-input accepts the ghost', async () => {
     renderCommandInput({ ghostHistory: ['git status'] });
-    const input = screen.getByRole('textbox') as HTMLInputElement;
+    const input = screen.getByRole('textbox') as HTMLTextAreaElement;
     await userEvent.type(input, 'git');
     fireEvent.keyDown(input, { key: 'ArrowRight' });
     expect(input).toHaveValue('git status');
@@ -63,7 +63,7 @@ describe('CommandInput — ghost text', () => {
 
   it('ArrowRight mid-text does not accept the ghost', async () => {
     renderCommandInput({ ghostHistory: ['git status'] });
-    const input = screen.getByRole('textbox') as HTMLInputElement;
+    const input = screen.getByRole('textbox') as HTMLTextAreaElement;
     await userEvent.type(input, 'git');
     input.setSelectionRange(1, 1);
     fireEvent.keyDown(input, { key: 'ArrowRight' });
@@ -72,7 +72,7 @@ describe('CommandInput — ghost text', () => {
 
   it('End at end-of-input accepts the ghost', async () => {
     renderCommandInput({ ghostHistory: ['git status'] });
-    const input = screen.getByRole('textbox') as HTMLInputElement;
+    const input = screen.getByRole('textbox') as HTMLTextAreaElement;
     await userEvent.type(input, 'git');
     fireEvent.keyDown(input, { key: 'End' });
     expect(input).toHaveValue('git status');
@@ -101,9 +101,90 @@ describe('CommandInput — ghost text', () => {
 
   it('ArrowRight accepts a ghost sourced from ghostHistory', async () => {
     renderCommandInput({ history: [], ghostHistory: ['global cmd'] });
-    const input = screen.getByRole('textbox') as HTMLInputElement;
+    const input = screen.getByRole('textbox') as HTMLTextAreaElement;
     await userEvent.type(input, 'glo');
     fireEvent.keyDown(input, { key: 'ArrowRight' });
     expect(input).toHaveValue('global cmd');
+  });
+});
+
+describe('CommandInput — multi-line', () => {
+  it('Shift+Enter inserts a newline instead of submitting', async () => {
+    const { onSubmit } = renderCommandInput();
+    const input = screen.getByRole('textbox');
+    await userEvent.type(input, 'hello{Shift>}{Enter}{/Shift}world');
+    expect(input).toHaveValue('hello\nworld');
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it('Ctrl+Enter submits', async () => {
+    const { onSubmit } = renderCommandInput();
+    const input = screen.getByRole('textbox');
+    await userEvent.type(input, 'hello{Control>}{Enter}{/Control}');
+    expect(onSubmit).toHaveBeenCalledWith('hello');
+  });
+
+  it('submits the full multi-line text on Enter', async () => {
+    const { onSubmit } = renderCommandInput();
+    const input = screen.getByRole('textbox');
+    await userEvent.type(input, 'line1{Shift>}{Enter}{/Shift}line2{Enter}');
+    expect(onSubmit).toHaveBeenCalledWith('line1\nline2');
+  });
+
+  it('ArrowUp on the first line of multi-line text recalls history', () => {
+    renderCommandInput({ history: ['recalled'] });
+    const input = screen.getByRole('textbox') as HTMLTextAreaElement;
+    fireEvent.change(input, { target: { value: 'line1\nline2' } });
+    input.setSelectionRange(0, 0);
+    fireEvent.keyDown(input, { key: 'ArrowUp' });
+    expect(input).toHaveValue('recalled');
+  });
+
+  it('ArrowUp on an interior line of multi-line text does not recall history', () => {
+    renderCommandInput({ history: ['recalled'] });
+    const input = screen.getByRole('textbox') as HTMLTextAreaElement;
+    fireEvent.change(input, { target: { value: 'line1\nline2' } });
+    input.setSelectionRange(7, 7); // on "line2", after the newline
+    fireEvent.keyDown(input, { key: 'ArrowUp' });
+    expect(input).toHaveValue('line1\nline2');
+  });
+
+  it('ArrowDown on the last line of multi-line text recalls history', () => {
+    renderCommandInput({ history: ['first', 'second'] });
+    const input = screen.getByRole('textbox') as HTMLTextAreaElement;
+    fireEvent.keyDown(input, { key: 'ArrowUp' }); // histIndex now points at 'second'
+    fireEvent.change(input, { target: { value: 'line1\nline2' } });
+    input.setSelectionRange(11, 11); // end of text, last line
+    fireEvent.keyDown(input, { key: 'ArrowDown' });
+    expect(input).toHaveValue(''); // advanced past the end of history and cleared
+  });
+
+  it('auto-resizes to fit multi-line content', async () => {
+    renderCommandInput();
+    const input = screen.getByRole('textbox') as HTMLTextAreaElement;
+    Object.defineProperty(input, 'scrollHeight', { configurable: true, get: () => (input.value.includes('\n') ? 60 : 20) });
+    await userEvent.type(input, 'hello{Shift>}{Enter}{/Shift}world');
+    expect(input.style.height).toBe('60px');
+  });
+
+  it('does not attempt completion for an empty token at the start of a new line', () => {
+    const complete = vi.fn().mockResolvedValue({ newInput: '', newCursor: 0, matches: [] });
+    const inputRef = createRef<HTMLTextAreaElement>();
+    render(
+      <CommandInput
+        dotColor="#fff"
+        history={[]}
+        ghostHistory={[]}
+        onSubmit={vi.fn()}
+        inputRef={inputRef}
+        complete={complete}
+        pickerOpen={false}
+      />,
+    );
+    const input = screen.getByRole('textbox') as HTMLTextAreaElement;
+    fireEvent.change(input, { target: { value: 'line1\n' } });
+    input.setSelectionRange(6, 6); // right after the newline, nothing typed yet on line 2
+    fireEvent.keyDown(input, { key: 'Tab' });
+    expect(complete).not.toHaveBeenCalled();
   });
 });

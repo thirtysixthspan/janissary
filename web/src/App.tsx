@@ -38,7 +38,7 @@ export function App() {
   const [route, setRoute] = useState<RouteChooserView | null>(null);
   const [routeIndex, setRouteIndex] = useState(0);
   const routeReference = useRef<RouteChooserView | null>(null);
-  const inputReference = useRef<HTMLInputElement>(null);
+  const inputReference = useRef<HTMLTextAreaElement>(null);
   const transcriptReference = useRef<HTMLDivElement>(null);
   const harnessHandles = useRef<Map<string, HarnessTabHandle>>(new Map());
   const shellHandles = useRef<Map<string, ShellTabHandle>>(new Map());
