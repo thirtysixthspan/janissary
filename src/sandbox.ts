@@ -93,6 +93,24 @@ function claudeScratchDir(): string {
   return cachedClaudeScratchDir;
 }
 
+// Walk up from a resolved executable's path to the nearest ancestor directory literally named
+// `node_modules`, if any. A globally-installed npm package (`npm` itself included) is laid out as
+// `.../node_modules/<pkg>/bin/<script>`, where the script requires sibling files from `<pkg>/lib/`
+// and beyond — carving in only the immediate `bin/` directory (as for a single bundled binary like
+// claude.exe) leaves those sibling requires denied. Carving in the whole `node_modules/` directory
+// instead covers every globally-installed package uniformly (not just the one being run), which is
+// harmless — it's still just $HOME-scoped code, not secrets. Falls back to the script's own
+// directory when there's no `node_modules` ancestor (a single-file bundled binary).
+function packageRootDir(resolvedBin: string): string {
+  let dir = path.dirname(resolvedBin);
+  for (;;) {
+    if (path.basename(dir) === 'node_modules') return dir;
+    const parent = path.dirname(dir);
+    if (parent === dir) return path.dirname(resolvedBin);
+    dir = parent;
+  }
+}
+
 // Resolve `command` to an absolute path the way `execvp`/`posix_spawn` would (a `PATH` search for a
 // bare name, or the path itself if it already contains a separator) so its containing directory can
 // be carved into the read allow-list. Without this, a harness binary installed under `$HOME` (e.g.
@@ -101,9 +119,11 @@ function claudeScratchDir(): string {
 // calling process's own binary and its directory to determine code identity for ACL matching; denied,
 // the harness looks logged out even though its Keychain item is intact). Returns both the literal
 // (unresolved — e.g. many npm-global installs are a `bin/foo` symlink into `lib/node_modules/...`)
-// and fully realpath-resolved directory, same reasoning as `dualParams` in sandbox-profile.ts: a
-// framework may `opendir`/`lstat` the symlink's own directory as well as the resolved target's.
-// Falls back to a path that matches nothing so the profile's params always have a bound value.
+// and fully realpath-resolved directory (widened to the enclosing `node_modules/` via
+// `packageRootDir` above, for packages — like npm — that are more than a single bundled file), same
+// dual reasoning as `dualParams` in sandbox-profile.ts: a framework may `opendir`/`lstat` the
+// symlink's own directory as well as the resolved target's. Falls back to a path that matches
+// nothing so the profile's params always have a bound value.
 function resolveExecutableDirs(command: string): { literal: string; real: string } {
   const fallback = '/nonexistent-janissary-self-bin-placeholder';
   const literalBin = command.includes('/')
@@ -112,7 +132,7 @@ function resolveExecutableDirs(command: string): { literal: string; real: string
       .map((dir) => path.join(dir, command))
       .find((candidate) => existsSync(candidate));
   if (!literalBin) return { literal: fallback, real: fallback };
-  return { literal: path.dirname(literalBin), real: path.dirname(resolvePath(literalBin)) };
+  return { literal: path.dirname(literalBin), real: packageRootDir(resolvePath(literalBin)) };
 }
 
 // The directory of the Node binary currently running the janissary server itself
