@@ -100,6 +100,17 @@ describe('EditorTab', () => {
     expect(container.querySelector('.editor-caret')).toBeInTheDocument();
   });
 
+  it('renders a caret span on an empty document', async () => {
+    const { client } = makeClient();
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      text: () => Promise.resolve(''),
+    } as unknown as Response));
+    const { container } = render(<EditorTab editor={makeView()} client={client} active />);
+    await waitFor(() => expect(container.querySelectorAll('.editor-gutter')).toHaveLength(1));
+    expect(container.querySelector('.editor-caret')).toBeInTheDocument();
+  });
+
   it('does not render a caret span when the editor is inactive', async () => {
     const { client } = makeClient();
     const view = makeView();

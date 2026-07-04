@@ -99,7 +99,7 @@ export const EditorTab = forwardRef<EditorTabHandle, { editor: EditorView; clien
 
   return (
     <div className="image-tab editor-tab">
-      <div className="image-meta">
+      <div className="image-meta" onMouseDown={(e) => { e.preventDefault(); textareaRef.current?.focus(); }}>
         <span className="image-name">{editor.name}{dirty ? ' ●' : ''}</span>
         <span className="image-size">{editor.size}</span>
         <span className="image-loc">{editor.path}</span>
