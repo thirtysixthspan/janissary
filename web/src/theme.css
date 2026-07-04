@@ -227,6 +227,11 @@ html, body, #root {
 .command .ghost { position: absolute; inset: 0; display: flex; align-items: center; color: var(--muted); white-space: pre; overflow: hidden; pointer-events: none; }
 .command .ghost .ghost-typed { visibility: hidden; }
 
+/* Transcript search */
+.search-bar .command { gap: 8px; }
+.search-result { padding: 2px 12px; color: var(--muted); white-space: pre-wrap; overflow-wrap: break-word; border-top: 1px solid var(--border); }
+.search-hit { background: #6b5b00; color: #ffe27a; border-radius: 2px; }
+
 /* Harness tab: full-body PTY terminal with no transcript or command bar. */
 .harness-tab { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .harness-body { flex: 1; min-height: 0; background: #17181b; }

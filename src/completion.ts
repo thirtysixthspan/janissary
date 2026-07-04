@@ -1,5 +1,5 @@
 import type { CompletionResult } from './types.js';
-import { completeAgentName, completeSendTarget, completeScheduleTarget, completeConnectionClose, completeBrowserCommand, completeMonitorCommand } from './completion-handlers.js';
+import { completeAgentName, completeSendTarget, completeScheduleTarget, completeConnectionClose, completeBrowserCommand, completeMonitorCommand, completeSearchCommand } from './completion-handlers.js';
 import { completeFilePath } from './completion-fs.js';
 
 /**
@@ -42,7 +42,8 @@ export function completeCommandLine(
     completeScheduleTarget(command, argumentIndex, preceding, token, agents, before, after, tokenStart) ??
     completeConnectionClose(command, argumentIndex, preceding, token, connections, before, after, tokenStart) ??
     completeBrowserCommand(command, argumentIndex, preceding, token, connections, before, after, tokenStart) ??
-    completeMonitorCommand(command, argumentIndex, preceding, token, monitor, before, after, tokenStart);
+    completeMonitorCommand(command, argumentIndex, preceding, token, monitor, before, after, tokenStart) ??
+    completeSearchCommand(command, argumentIndex, token, before, after, tokenStart);
   if (result !== null) {
     return result;
   }

@@ -17,6 +17,7 @@ export const availableCommands = [
   'db',
   'connection',
   'harness',
+  'search',
 ];
 
 let helpOutput: string | null = null;

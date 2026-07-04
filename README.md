@@ -37,6 +37,7 @@ janus
 | `schedule`   | Run a command later — once or on a recurring schedule |
 | `profile`    | Launch a saved set of agents for a use case |
 | `harness`    | Open an AI coding harness (claude/opencode/codex) in a full-tab terminal (add `-w` to clone the repo) |
+| `search`     | `search transcript <pattern>` searches the current tab's transcript with a regex (Cmd+F opens it empty) |
 | `send`       | Deliver a line of input to any tab — types into a harness, or runs a command in an agent tab |
 | `monitor`    | Start a persona-driven AI monitor — inline on the current tab, or watching other tabs/groups into a reporting tab |
 | `unmonitor`  | Stop a monitor (`unmonitor <persona>`) or all monitors started from this tab (`--all`) |
