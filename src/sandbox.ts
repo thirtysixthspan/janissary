@@ -147,8 +147,9 @@ function serverNodeDirs(): { literal: string; real: string } {
   return { literal: path.dirname(execPath), real: path.dirname(resolvePath(execPath)) };
 }
 
-// The parent repository's real git objects directory, discovered from the workspace clone's own
-// `--shared` alternates file — no extra plumbing needed to track the source repo path.
+// The workspace clone's own git objects directory. Falls back to a parent repo's real objects
+// directory via a `--shared` alternates file, if one is present (older, locally-shared clones) —
+// today's independent clones of `origin` have no alternates file, so this always hits the fallback.
 function parentGitObjectsDir(workspaceDir: string): string {
   const fallback = path.join(workspaceDir, '.git', 'objects');
   try {

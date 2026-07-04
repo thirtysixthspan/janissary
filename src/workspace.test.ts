@@ -4,13 +4,16 @@ import path from 'node:path';
 import { execSync } from 'node:child_process';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { findRepoRoot, initWorkspaceDir, createWorkspace, removeWorkspace, clearWorkspaceDir, workspaceTempPath } from './workspace.js';
+import { findRepoRoot, initWorkspaceDir, createWorkspace, removeWorkspace, clearWorkspaceDir, workspaceTempPath, getRemoteUrl } from './workspace.js';
 
 let tmpDir: string;
 let repoDir: string;
 
 beforeAll(() => {
   tmpDir = mkdtempSync(path.join(tmpdir(), 'workspace-test-'));
+  const originDir = path.join(tmpDir, 'origin.git');
+  mkdirSync(originDir, { recursive: true });
+  execSync('git init --bare', { cwd: originDir, stdio: 'pipe' });
   repoDir = path.join(tmpDir, 'repo');
   mkdirSync(repoDir, { recursive: true });
   execSync('git init', { cwd: repoDir, stdio: 'pipe' });
@@ -18,6 +21,8 @@ beforeAll(() => {
   execSync('git config user.name test', { cwd: repoDir, stdio: 'pipe' });
   writeFileSync(path.join(repoDir, 'README.md'), '# Test Repo');
   execSync('git add . && git commit -m "init"', { cwd: repoDir, stdio: 'pipe' });
+  execSync(`git remote add origin "${originDir}"`, { cwd: repoDir, stdio: 'pipe' });
+  execSync('git push origin HEAD', { cwd: repoDir, stdio: 'pipe' });
   initWorkspaceDir(tmpDir);
 });
 
@@ -42,7 +47,7 @@ describe('findRepoRoot', () => {
 });
 
 describe('createWorkspace', () => {
-  it('creates a git clone --shared of the repo', () => {
+  it('creates an independent clone of the repo\'s origin remote', () => {
     const ws = createWorkspace('test-agent', repoDir);
     expect(existsSync(ws)).toBe(true);
     expect(existsSync(path.join(ws, '.git'))).toBe(true);
@@ -54,6 +59,19 @@ describe('createWorkspace', () => {
     const ws = createWorkspace('test-agent-tmp', repoDir);
     expect(existsSync(workspaceTempPath('test-agent-tmp'))).toBe(true);
     removeWorkspace(ws);
+  });
+});
+
+describe('getRemoteUrl', () => {
+  it('returns the origin remote url', () => {
+    expect(getRemoteUrl(repoDir)).toBe(path.join(tmpDir, 'origin.git'));
+  });
+
+  it('throws when no origin remote is configured', () => {
+    const noRemoteDir = path.join(tmpDir, 'no-remote-repo');
+    mkdirSync(noRemoteDir, { recursive: true });
+    execSync('git init', { cwd: noRemoteDir, stdio: 'pipe' });
+    expect(() => getRemoteUrl(noRemoteDir)).toThrow();
   });
 });
 

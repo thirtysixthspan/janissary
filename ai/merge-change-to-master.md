@@ -2,7 +2,7 @@
 
 Your job: take the code changes present in this workspaced tab, package them into a pull request against `master` on GitHub, and **merge it once there are no conflicts and all checks pass** — rebasing past any conflicts.
 
-The changes may have been made manually or produced by a preceding task — either way, this runs in a workspaced agent tab. That tab is a disposable `git clone --shared` of the root repo living under `.janissary/workspace/<name>/`, so **its `origin` points at the local root repo, not at GitHub.** You will resolve the real GitHub remote before pushing.
+The changes may have been made manually or produced by a preceding task — either way, this runs in a workspaced agent tab. That tab is a disposable, independent `git clone` of the root repo's `origin` remote living under `.janissary/workspace/<name>/`, so **its `origin` already points at GitHub.**
 
 Every step is a script in `scripts/pr-*.sh`, invoked through the script runner. The steps below contain **no inline shell logic** — each one invokes its script.
 
@@ -70,7 +70,7 @@ If earlier commits already exist on the branch, consolidate so the **final** sta
 
 ## Step 4 — Resolve the GitHub remote and push the branch
 
-In a workspaced clone, `origin` is the local root repo. `pr:resolve-remote` exposes the real GitHub remote as `github` (or reuses `origin` when it already points at GitHub) and prints the variables to carry through the rest of the task:
+`pr:resolve-remote` confirms `origin` points at GitHub (falling back to resolving a real GitHub remote as `github` for older, locally-shared clones) and prints the variables to carry through the rest of the task:
 
 ```bash
 ./scripts/run.mjs pr-resolve-remote > temp/remote-info.txt

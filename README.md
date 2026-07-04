@@ -329,7 +329,7 @@ agent bilal -w          → agent tab with workspace at .janissary/workspace/bil
 harness claude -w       → harness tab with workspace at .janissary/workspace/claude/
 ```
 
-This clones the root repo (detected from the current directory) via `git clone --shared` — no network needed, completes in milliseconds. The shell or harness PTY starts inside the workspace. Make changes, commit, push, then close the tab — the workspace is automatically removed.
+This clones the root repo's `origin` remote (detected from the current directory) via `git clone` — an independent clone with its own git objects, not sharing the root repo's `.git` directory. The shell or harness PTY starts inside the workspace. Make changes, commit, push, then close the tab — the workspace is automatically removed.
 
 **Isolation (macOS only).** A workspaced tab's processes are confined to the workspace by a kernel-enforced Seatbelt sandbox. Add `--offline` to also deny network access for that tab:
 

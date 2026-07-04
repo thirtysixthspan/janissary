@@ -1,6 +1,6 @@
 # PR Automation
 
-Scripts in `scripts/pr-*.sh` automate the `ai/merge-change-to-master.md` workflow: package the current changes into a PR against `master` and **merge it once there are no conflicts and all checks pass**. They are executable and called directly (no `npm run` wrappers). They work both in a normal checkout and in a workspaced `git clone --shared` (where `origin` points at the local root repo, not GitHub).
+Scripts in `scripts/pr-*.sh` automate the `ai/merge-change-to-master.md` workflow: package the current changes into a PR against `master` and **merge it once there are no conflicts and all checks pass**. They are executable and called directly (no `npm run` wrappers). They work both in a normal checkout and in a workspaced clone (an independent `git clone` of the root repo's `origin` remote, so `origin` already points at GitHub).
 
 ## Quick Start
 
@@ -51,7 +51,7 @@ Stage all changes and commit with a single author. Adds **no** `Co-Authored-By:`
 ```
 
 ### `./scripts/pr-resolve-remote.sh`
-Resolve the GitHub remote and print `GH_REMOTE`/`OWNER_REPO`/`BRANCH`/`GH_URL` for `eval`. Handles both direct GitHub remotes and workspace clones.
+Resolve the GitHub remote and print `GH_REMOTE`/`OWNER_REPO`/`BRANCH`/`GH_URL` for `eval`. Handles both direct GitHub remotes and older, locally-shared workspace clones.
 
 ```bash
 eval "$(./scripts/pr-resolve-remote.sh)"
@@ -78,7 +78,7 @@ Merge the PR (merge commit) and delete the remote branch. Only run once mergeabl
 ## How It Works
 
 ### Workspace clone handling
-In a workspaced tab, `origin` points at the local root repo, not GitHub. `pr-resolve-remote.sh` detects this and exposes the real GitHub URL as a `github` remote, reusing `origin` when it already points at GitHub.
+In a workspaced tab, `origin` already points at GitHub — the workspace is an independent `git clone` of the root repo's `origin` remote. `pr-resolve-remote.sh` confirms this and reuses `origin` directly; it only resolves a separate `github` remote as a fallback for older, locally-shared clones where `origin` still points at the local root repo.
 
 ### No interactive prompts
 All scripts use non-interactive `git` and `gh` commands, so they run without approval prompts.

@@ -100,7 +100,7 @@ If earlier commits already exist on the branch, consolidate so the **final** sta
 
 ## Step 4 — Resolve the GitHub remote and push the branch
 
-`pr-resolve-remote` exposes the real GitHub remote as `github` and prints variables:
+If this is a workspaced clone, `origin` already points at GitHub — the workspace is an independent `git clone` of the root repo's `origin` remote. `pr-resolve-remote` confirms that (falling back to resolving a real GitHub remote as `github` for older, locally-shared clones) and prints variables:
 
 ```bash
 ./scripts/run.mjs pr-resolve-remote

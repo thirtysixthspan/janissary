@@ -47,11 +47,19 @@ export function workspaceTempPath(name: string): string {
   return `${workspacePath(name)}.tmp`;
 }
 
+export function getRemoteUrl(repoPath: string): string {
+  // Intentional: user-driven workspace creation; only local-user commands reach this sink.
+  const url = execSync('git remote get-url origin', { cwd: repoPath, stdio: 'pipe' }).toString().trim();
+  if (!url) throw new Error(`No "origin" remote configured for ${repoPath}`);
+  return url;
+}
+
 export function createWorkspace(name: string, repoPath: string): string {
   ensureWorkspaceDir();
   const target = workspacePath(name);
+  const remoteUrl = getRemoteUrl(repoPath);
   // Intentional: user-driven workspace creation; only local-user commands reach this sink.
-  execSync(`git clone --shared "${repoPath}" "${target}"`, { stdio: 'pipe' });
+  execSync(`git clone "${remoteUrl}" "${target}"`, { stdio: 'pipe' });
   trustWorkspace(target);
   mkdirSync(workspaceTempPath(name), { recursive: true });
   return target;

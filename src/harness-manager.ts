@@ -21,8 +21,8 @@ export class HarnessManager {
   }
 
   // Open (and focus) a harness tab running `name`, labeled `label` if given (otherwise `name`).
-  // With `workspace`, the harness starts in a fresh `git clone --shared` of the repo detected
-  // from cwd; otherwise it inherits the creator's cwd.
+  // With `workspace`, the harness starts in a fresh clone of the `origin` remote of the repo
+  // detected from cwd; otherwise it inherits the creator's cwd.
   private open(name: string, workspace: boolean, offline: boolean, label_?: string): string | undefined {
     const creator = this.managers.tab.cur();
     const label = uniqueLabel(this.managers.tab.tabs, label_ ?? name);

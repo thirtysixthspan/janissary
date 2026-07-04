@@ -2,9 +2,10 @@ import { findRepoRoot, createWorkspace, removeWorkspace } from './workspace.js';
 
 const NO_REPO = 'No git repository found. Cannot create workspace.';
 
-// Owns the set of workspace clones the app has created — a `git clone --shared` of the repo, made for
-// an agent (`agent --workspace`) or a harness tab (`harness <name> --workspace`) so it works in
-// isolation. Tracks each clone so it can be removed when its tab closes or at shutdown.
+// Owns the set of workspace clones the app has created — an independent `git clone` of the repo's
+// `origin` remote, made for an agent (`agent --workspace`) or a harness tab (`harness <name>
+// --workspace`) so it works in isolation. Tracks each clone so it can be removed when its tab
+// closes or at shutdown.
 export class WorkspaceManager {
   private dirs = new Set<string>();
 
