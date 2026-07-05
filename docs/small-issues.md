@@ -2,8 +2,6 @@
 
 * ai/build-a-feature.md and ai/fix-a-small-issue.md should begin by pulling the latest changes from the primary branch.
 
-* scrolling down/up the page outside the visible window in the file navigator tab using arrow keys should cause the visible window to scroll so the currently selected line is visible.
-
 * the full path of the directory shown in file navigator should be shown using the same metadata display as used in the image tab.
 
 * Add a `..` file at the top of the directory listing that when clicked moves the file navigator root up a directory. for example from /root/src to /root. 
@@ -15,15 +13,4 @@
 * clicking the mouse once in the file navigator tab, should bring the selected line to the clicked file. 
 
 * file navigator tabs when openned, should be placed at the begining of the tab group.
-
-
-
-
-
-
-
-
-
-
-
 

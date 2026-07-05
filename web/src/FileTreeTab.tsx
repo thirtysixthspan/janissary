@@ -25,6 +25,13 @@ export function FileTreeTab({ files, client, index }: Properties) {
 
   useEffect(() => { containerRef.current?.focus(); }, []);
 
+  // Scroll the selected row into view (nearest block alignment avoids unnecessary scroll
+  // when the element is already fully visible).
+  useEffect(() => {
+    if (selected === null) return;
+    containerRef.current?.querySelector(`[data-path="${CSS.escape(selected)}"]`)?.scrollIntoView({ block: 'nearest' });
+  }, [selected]);
+
   // Selection clamp: if the selected row disappears (a watcher-driven rebuild), move to the
   // nearest surviving row instead of pointing at nothing.
   useEffect(() => {
@@ -99,6 +106,7 @@ export function FileTreeTab({ files, client, index }: Properties) {
             aria-selected={row.path === selected}
             aria-expanded={row.dir ? !!row.expanded : undefined}
             className={`files-row${row.path === selected ? ' selected' : ''}`}
+            data-path={row.path}
             style={{ paddingLeft: 12 + row.depth * 16 }}
             title={row.path}
             onClick={() => onRowClick(row)}

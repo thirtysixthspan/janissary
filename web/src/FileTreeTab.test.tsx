@@ -1,9 +1,13 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeAll } from 'vitest';
 import type { FileTreeView } from '@shared/protocol';
 import type { JanusClient } from './ws';
 import { FileTreeTab } from './FileTreeTab';
+
+beforeAll(() => {
+  Element.prototype.scrollIntoView = vi.fn();
+});
 
 function makeFiles(overrides: Partial<FileTreeView> = {}): FileTreeView {
   return {
