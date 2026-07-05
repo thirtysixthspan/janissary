@@ -90,7 +90,10 @@ surviving row rather than pointing at nothing.
 ### Tab strip: name and close button
 
 In the tab strip a file tree tab reads exactly like an ordinary tab — same dot, group bar, active
-highlight, and ordering — with two differences:
+highlight, and ordering — with three differences:
+
+- **Placement.** A file tree tab is placed at the beginning of its tab group (other tab types land
+  at the end), so the tree sits left of the content it navigates.
 
 - **Name.** The tab's name is always `files` (the tree's root directory name and full path are
   shown in the tab's own header using the standard metadata display, not in the strip). Per

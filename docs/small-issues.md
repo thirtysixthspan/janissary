@@ -4,5 +4,3 @@
 
 * clicking the mouse once in the file navigator tab, should bring the selected line to the clicked file. 
 
-* file navigator tabs when openned, should be placed at the begining of the tab group.
-
