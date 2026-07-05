@@ -30,12 +30,12 @@ describe('FileTreeTab', () => {
     expect(screen.getByText('README.md').closest('[role="treeitem"]')!.getAttribute('aria-expanded')).toBeNull();
   });
 
-  it('click on a directory row sends fileTreeToggle', () => {
+  it('click on a directory row selects but does not toggle', () => {
     const send = vi.fn();
     const client = { send } as unknown as JanusClient;
     render(<FileTreeTab files={makeFiles()} client={client} index={2} />);
     fireEvent.click(screen.getByText('src'));
-    expect(send).toHaveBeenCalledWith({ method: 'fileTreeToggle', params: { index: 2, path: 'src' } });
+    expect(send).not.toHaveBeenCalled();
   });
 
   it('double-click on a directory row sends fileTreeToggle', () => {

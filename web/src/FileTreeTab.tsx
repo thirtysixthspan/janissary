@@ -39,7 +39,6 @@ export function FileTreeTab({ files, client, index }: Properties) {
 
   const onRowClick = (row: FileTreeRow) => {
     setSelected(row.path);
-    if (row.dir) toggle(row.path);
   };
 
   const onRowDoubleClick = (row: FileTreeRow, shiftKey: boolean) => {

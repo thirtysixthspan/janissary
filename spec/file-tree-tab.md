@@ -51,10 +51,10 @@ stops refreshing automatically and can be refreshed manually by collapsing and r
 
 | Interaction | Behavior |
 |---|---|---|
-| Click a directory row (anywhere on the row) | Select it and toggle expand/collapse |
+| Click a directory row (anywhere on the row) | Select it |
 | Click a file row | Select it |
 | Double-click a file row | Select it and open it (with `open`) |
-| Double-click a directory row | Same as click — toggle expand/collapse |
+| Double-click a directory row | Select it and toggle expand/collapse |
 | Shift+double-click a file row | Select it and open it in the plain-text editor (with `edit`), even for files whose normal opener is a viewer (Markdown, images) |
 | Chevron (▸/▾) | Visual affordance only — the whole row is the click target |
 | Header collapse-all button | Collapse every expanded directory back to just the root |
