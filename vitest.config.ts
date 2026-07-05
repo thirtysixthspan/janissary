@@ -103,10 +103,10 @@ export default defineConfig({
       thresholds: {
         autoUpdate: true,
         'src/**': {
-          statements: 79.53,
-          branches: 70.46,
-          functions: 83.41,
-          lines: 83.59,
+          statements: 80.66,
+          branches: 71.71,
+          functions: 83.97,
+          lines: 84.52,
         },
         'web/src/**': {
           statements: 72.25,
