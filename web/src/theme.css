@@ -222,7 +222,7 @@ html, body, #root {
 .command .dot + span { line-height: 1.6; }
 .command textarea {
   flex: 1; background: transparent; border: none; outline: none;
-  color: var(--fg); position: relative; resize: none;
+  color: var(--fg); position: relative; resize: none; padding: 0;
   max-height: 9em; overflow-y: auto;
 }
 .command textarea, .command .ghost { font-family: var(--mono); font-size: 13.1625px; line-height: 1.6; }

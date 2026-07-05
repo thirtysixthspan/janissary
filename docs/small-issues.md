@@ -2,8 +2,6 @@
 
 * ai/build-a-feature.md and ai/fix-a-small-issue.md should begin by pulling the latest changes from the primary branch.
 
-* the ghost text and typed text in the command bar do not overlap perfectly. the ghost text is slightly above the typed text.
-
 * remove the hover tooltip with the filename in the file navigator window.
 
 * clicking the mouse once in the file navigator tab, should bring the selected line to the clicked file. 
