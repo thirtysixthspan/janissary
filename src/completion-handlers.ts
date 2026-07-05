@@ -93,6 +93,25 @@ export function completeSearchCommand(
   return completeWord(token, '', ['transcript'], ' ', before, after, tokenStart);
 }
 
+// Complete `syntax theme <name>` — argument 1 offers `theme`, argument 2 completes theme names.
+export function completeSyntaxTheme(
+  command: string,
+  argumentIndex: number,
+  preceding: string[],
+  token: string,
+  themes: string[],
+  before: string,
+  after: string,
+  tokenStart: number,
+): CompletionResult | null {
+  if (command !== 'syntax') return null;
+  if (argumentIndex === 1) return completeWord(token, '', ['theme'], ' ', before, after, tokenStart);
+  if (argumentIndex === 2 && preceding[1]?.toLowerCase() === 'theme') {
+    return completeWord(token, '', themes, ' ', before, after, tokenStart);
+  }
+  return null;
+}
+
 export function completeConnectionClose(
   command: string,
   argumentIndex: number,

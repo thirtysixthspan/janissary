@@ -6,6 +6,7 @@ import { EditorLine, lineSelection } from './editor/render';
 import { actionForKey } from './editor/keys';
 import { useEditor } from './editor/useEditor';
 import { useEditorMouse } from './editor/useEditorMouse';
+import { useSyntaxHighlight } from './editor/useSyntaxHighlight';
 
 export type EditorTabHandle = { isDirty(): boolean; save(): Promise<void> };
 
@@ -24,6 +25,7 @@ export const EditorTab = forwardRef<EditorTabHandle, { editor: EditorView; clien
   const api = useEditor(() => { void save(); });
   const { state } = api;
   const mouse = useEditorMouse(api, bodyRef, () => textareaRef.current?.focus());
+  const tokens = useSyntaxHighlight(state, editor.name);
 
   const save = async () => {
     const s = api.stateRef.current;
@@ -130,6 +132,7 @@ export const EditorTab = forwardRef<EditorTabHandle, { editor: EditorView; clien
               selTo={selTo}
               caretCol={onCursorLine && active ? state.cursor.col : -1}
               caretRef={onCursorLine ? caretRef : null}
+              tokens={tokens[index] ?? []}
             />
           );
         })}

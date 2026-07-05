@@ -196,4 +196,20 @@ describe('EditorTab', () => {
     fireEvent.mouseDown(body);
     expect(document.activeElement).toBe(ta);
   });
+
+  it('renders hljs-* spans for a .ts file after load', async () => {
+    const { client } = makeClient();
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      text: () => Promise.resolve('const x = 1;'),
+    } as unknown as Response));
+    const { container } = render(<EditorTab editor={makeView({ name: 'notes.ts' })} client={client} active />);
+    await waitFor(() => expect(container.querySelector('.hljs-keyword')).toBeInTheDocument());
+  });
+
+  it('renders no hljs-* spans for a .txt file', async () => {
+    const { client } = makeClient();
+    const { container } = await renderLoaded(client);
+    expect(container.querySelector('[class*="hljs-"]')).toBeNull();
+  });
 });

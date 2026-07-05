@@ -44,6 +44,7 @@ janus
 | `monitor`    | Start a persona-driven AI monitor — inline on the current tab, or watching other tabs/groups into a reporting tab |
 | `unmonitor`  | Stop a monitor (`unmonitor <persona>`) or all monitors started from this tab (`--all`) |
 | `monitors`   | List active monitors with their targets and suggestion counts |
+| `syntax`     | `syntax theme <name>` sets the editor tab's syntax-highlighting theme (applies to every open editor tab); `syntax theme` alone opens a theme-picker modal |
 
 ### Harness tabs
 

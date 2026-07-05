@@ -53,7 +53,7 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
     emitState: () => broadcast({
       t: 'state', tabs: controller.view(), activeTab: controller.managers.tab.activeTab,
       route: controller.routeView(), tabNameMaxLength: getConfig().tabNameMaxLength,
-      globalHistory: globalCommands(),
+      globalHistory: globalCommands(), syntaxTheme: getConfig().syntaxTheme,
     }),
     sendPty: (id, data) => broadcast({ t: 'pty', id, data }),
     sendPtyExit: (id, exitCode) => broadcast({ t: 'pty-exit', id, exitCode }),
@@ -145,7 +145,7 @@ function handle(controller: Controller, message: ClientMessage, reply: (event: S
       reply({
         t: 'state', tabs: controller.view(), activeTab: controller.managers.tab.activeTab,
         route: controller.routeView(), tabNameMaxLength: getConfig().tabNameMaxLength,
-        globalHistory: globalCommands(),
+        globalHistory: globalCommands(), syntaxTheme: getConfig().syntaxTheme,
       });
       break;
     }

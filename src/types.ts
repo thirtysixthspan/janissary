@@ -419,6 +419,9 @@ export type Config = {
   // Isolate workspaced tabs (`agent --workspace`, `harness --workspace`) to their workspace clone
   // via a Seatbelt sandbox (macOS only). Default true; the escape hatch for when it causes trouble.
   sandboxWorkspaces: boolean;
+  // The active syntax-highlighting theme name for editor tabs (see `syntax-themes.ts`), applied
+  // globally across every open editor tab.
+  syntaxTheme: string;
 };
 
 // --- completion.ts --------------------------------------------------------
