@@ -332,7 +332,12 @@ html, body, #root {
   display: flex; align-items: center; justify-content: space-between;
   padding: 6px 12px; color: var(--muted); font-size: 12px; border-bottom: 1px solid var(--border);
 }
+.files-meta {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px;
+  flex: 1; min-width: 0;
+}
 .files-root { font-weight: 600; color: var(--fg); }
+.files-loc { font-size: 12px; word-break: break-all; color: var(--muted); }
 .files-collapse-all {
   background: transparent; border: none; color: var(--muted); cursor: pointer; font-size: 13px;
   padding: 0 4px; line-height: 1;

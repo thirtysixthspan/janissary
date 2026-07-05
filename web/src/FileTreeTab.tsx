@@ -88,7 +88,10 @@ export function FileTreeTab({ files, client, index }: Properties) {
   return (
     <div className="files-tab" ref={containerRef} tabIndex={0} role="tree" onKeyDown={onKeyDown}>
       <div className="files-header">
-        <span className="files-root">{basename(files.root)}</span>
+        <div className="files-meta">
+          <span className="files-root">{basename(files.root)}</span>
+          <span className="files-loc">{files.root}</span>
+        </div>
         <button
           type="button"
           className="files-collapse-all"
