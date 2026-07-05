@@ -91,9 +91,9 @@ surviving row rather than pointing at nothing.
 In the tab strip a file tree tab reads exactly like an ordinary tab — same dot, group bar, active
 highlight, and ordering — with two differences:
 
-- **Name.** The tab's name is always `files` (the tree's root directory name is shown in the
-  tab's own header, not in the strip). Per [[tab-label-no-markers]], no type or status marker is
-  appended.
+- **Name.** The tab's name is always `files` (the tree's root directory name and full path are
+  shown in the tab's own header using the standard metadata display, not in the strip). Per
+  [[tab-label-no-markers]], no type or status marker is appended.
 - **Close button.** A close control is shown right-aligned within the tab, identical to other
   view tabs (markdown, image, editor).
 
