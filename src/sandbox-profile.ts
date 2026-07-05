@@ -29,11 +29,14 @@ export const HOME_WRITE_CARVEOUTS = [
 // Read carve-ins: the write carve-outs (a harness needs to read its own state), plus a couple of
 // read-only extras — `.gitconfig` and `.gitexcludes` (the latter is whatever `core.excludesfile`
 // in the former points to; every git invocation reads both), `.claude/settings.json` itself, which
-// a sandboxed `claude` process reads on startup but never writes, and `Library/Keychains` (see the
-// comment on `SECRET_DENY_PATHS` — read access is needed for any Keychain lookup to work at all on
-// this OS, including harness login).
+// a sandboxed `claude` process reads on startup but never writes, `.config/gh/config.yml` (`gh`'s
+// general settings — git_protocol, editor, prompt — as opposed to `hosts.yml`, which can hold a
+// plaintext OAuth token and stays denied via `SECRET_DENY_PATHS`; a workspaced `gh` authenticates
+// via the injected `GH_TOKEN` env var instead, see `github-token.ts`), and `Library/Keychains` (see
+// the comment on `SECRET_DENY_PATHS` — read access is needed for any Keychain lookup to work at all
+// on this OS, including harness login).
 export const HOME_READ_CARVEINS = [
-  ...HOME_WRITE_CARVEOUTS, '.gitconfig', '.gitexcludes', '.claude/settings.json', 'Library/Keychains',
+  ...HOME_WRITE_CARVEOUTS, '.gitconfig', '.gitexcludes', '.claude/settings.json', '.config/gh/config.yml', 'Library/Keychains',
 ];
 
 // Secret paths denied last, even inside a carve-in.
@@ -46,8 +49,20 @@ export const HOME_READ_CARVEINS = [
 // than a permission error. The DB stays encrypted and per-item ACL-enforced by securityd regardless
 // of raw file readability, so this doesn't hand out plaintext secrets — it's a materially larger
 // read surface than the other entries here, but the alternative breaks harness login outright.
+//
+// `.config/gh/hosts.yml` denies plainly here (EPERM on read) like everything else in this list —
+// `gh` reads it on every invocation regardless of `GH_TOKEN`, and its Go config loader treats *any*
+// read error there as fatal, EPERM included, so a workspaced `gh` call needs to never attempt that
+// read at all rather than have it denied a particular way. `sandbox.ts` handles this by pointing
+// `GH_CONFIG_DIR` at an empty, workspace-writable directory whenever a scoped token is injected —
+// `gh` then finds a genuinely absent `hosts.yml` there (real ENOENT, no denial involved) and falls
+// through to `GH_TOKEN` normally. (Seatbelt does have a `(with errno ...)` deny qualifier, but it
+// only takes effect when it's the *sole* matching deny for that operation+path — any other
+// unqualified deny or allow rule touching the same path, in either direction, wins over it
+// regardless of ordering. That made it too fragile to rely on here, since the same path already
+// falls under the broader `$HOME`-wide read deny.)
 export const SECRET_DENY_PATHS = [
-  '.ssh', '.aws', '.gnupg', '.kube', '.netrc', '.config/gh', '.docker',
+  '.ssh', '.aws', '.gnupg', '.kube', '.netrc', '.config/gh/hosts.yml', '.docker',
   '.config/gcloud', '.azure', '.cargo/credentials', '.cargo/credentials.toml',
   '.pypirc', '.m2/settings.xml', '.terraform.d',
   '.bash_history', '.zsh_history', '.python_history', '.node_repl_history',

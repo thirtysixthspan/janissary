@@ -31,7 +31,8 @@ carve-in allows → secret denies last (so a secret path stays denied even insid
 - **Reads** are allowed everywhere by default (system paths, language runtimes, Homebrew all stay
   readable) except `$HOME`'s *contents*, which are denied and then carved back in
   (`HOME_READ_CARVEINS` — the write carve-outs above, plus `~/.gitconfig`, `~/.gitexcludes`,
-  `~/.claude/settings.json`, and `~/Library/Keychains`). `$HOME`'s directory **metadata** (stat/lstat) stays allowed
+  `~/.claude/settings.json`, `~/.config/gh/config.yml` (`gh`'s general settings, as opposed to
+  `hosts.yml`, which stays denied), and `~/Library/Keychains`). `$HOME`'s directory **metadata** (stat/lstat) stays allowed
   everywhere, not just the carve-ins — resolving a path (`realpath`, a pre-exec `chdir`, git's
   ancestor-ownership walk) requires traversing every ancestor directory between `$HOME` and the
   workspace, and Seatbelt checks each ancestor individually rather than just the final target.
@@ -42,7 +43,7 @@ carve-in allows → secret denies last (so a secret path stays denied even insid
   (`dualParams` in `sandbox-profile.ts`) — carving in only one leaves the other operation denied.
 - **Secrets** (`SECRET_DENY_PATHS`) are denied last, with the full `file-read*` operation (including
   metadata, so their existence isn't observable either), even inside a carve-in: `.ssh`, `.aws`,
-  `.gnupg`, `.kube`, `.netrc`, `.config/gh`, `.docker`, `.config/gcloud`, `.azure`,
+  `.gnupg`, `.kube`, `.netrc`, `.config/gh/hosts.yml`, `.docker`, `.config/gcloud`, `.azure`,
   `.cargo/credentials(.toml)`, `.pypirc`, `.m2/settings.xml`, `.terraform.d`, shell/Python/Node REPL
   history files, and browser profile directories (Chrome, Firefox, Brave, Safari).
 - **`~/Library/Keychains`** is a read carve-in, not a secret deny, despite being far more sensitive
@@ -89,7 +90,17 @@ own credentials to function. If a scoped GitHub token is configured for the proj
 (`.janissary/github-token`, loaded by `src/github-token.ts`), `GH_TOKEN` is re-added after the scrub
 with that value — the one deliberate exception to "a scrubbed var never comes back": it's not the
 ambient value just stripped, it's a fresh, narrowly-scoped one chosen for this workspaced spawn (see
-[[workspaced-agent]]'s "GitHub authentication"). `TMPDIR` is overridden to the workspace's private temp dir
+[[workspaced-agent]]'s "GitHub authentication"). In the same case, `GH_CONFIG_DIR` is also set, to a
+fresh `gh-config` directory under the workspace's private temp dir: `gh` reads
+`~/.config/gh/hosts.yml` on every invocation regardless of `GH_TOKEN`, and its Go config loader
+treats the sandbox's deny on that file (`SECRET_DENY_PATHS` above) as a fatal error rather than
+falling back to `GH_TOKEN` — `gh auth status`/`gh api`/etc. refuse to run at all otherwise.
+Redirecting `GH_CONFIG_DIR` gives `gh` a directory with a genuinely absent `hosts.yml` (real ENOENT,
+no denial involved), which it handles by falling through to `GH_TOKEN` normally. (Seatbelt's
+`(with errno ...)` deny qualifier looks like a more surgical fix, but only takes effect when it's the
+*sole* matching deny for that operation+path — any other unqualified deny or allow on the same path,
+in either direction, wins over it regardless of rule ordering, and `hosts.yml` already falls under
+the broader `$HOME`-wide read deny.) `TMPDIR` is overridden to the workspace's private temp dir
 (`<workspace>.tmp`) regardless of what the caller passed in. `JANISSARY_NODE` is added, set to
 `process.execPath` — the absolute path of the Node binary running the janissary server itself —
 so a script inside the sandbox (e.g. a project's own `.claude/settings.json` hook) can invoke a

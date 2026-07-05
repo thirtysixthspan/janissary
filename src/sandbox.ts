@@ -216,7 +216,15 @@ export function sandboxSpawn(
   const scrubbed = scrubEnv(env);
   scrubbed.TMPDIR = tmpDir;
   scrubbed.JANISSARY_NODE = process.execPath;
-  if (options.githubToken) scrubbed.GH_TOKEN = options.githubToken;
+  if (options.githubToken) {
+    scrubbed.GH_TOKEN = options.githubToken;
+    // `gh` reads `~/.config/gh/hosts.yml` on every invocation regardless of `GH_TOKEN`, and its
+    // config loader treats the sandbox's EPERM deny on that file (see SECRET_DENY_PATHS in
+    // sandbox-profile.ts) as fatal, refusing to run at all. Pointing `GH_CONFIG_DIR` at an empty,
+    // workspace-private directory instead gives `gh` a genuinely absent hosts.yml (real ENOENT),
+    // which it handles by falling through to `GH_TOKEN` normally.
+    scrubbed.GH_CONFIG_DIR = path.join(tmpDir, 'gh-config');
+  }
 
   const profile = options.offline ? SANDBOX_PROFILE_OFFLINE : SANDBOX_PROFILE;
   const dParams = [
