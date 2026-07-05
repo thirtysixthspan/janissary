@@ -42,9 +42,9 @@ export function FileTreeTab({ files, client, index }: Properties) {
     if (row.dir) toggle(row.path);
   };
 
-  const onRowDoubleClick = (row: FileTreeRow, altKey: boolean) => {
+  const onRowDoubleClick = (row: FileTreeRow, shiftKey: boolean) => {
     if (row.dir) toggle(row.path);
-    else if (altKey) editFile(row.path);
+    else if (shiftKey) editFile(row.path);
     else openFile(row.path);
   };
 
@@ -62,7 +62,7 @@ export function FileTreeTab({ files, client, index }: Properties) {
       e.preventDefault();
       e.stopPropagation();
       const pageSize = Math.max(1, Math.floor((containerRef.current?.clientHeight ?? ROW_HEIGHT_PX * 10) / ROW_HEIGHT_PX));
-      const result = handleFileTreeKey(files.rows, selected, e.key, e.altKey, pageSize);
+      const result = handleFileTreeKey(files.rows, selected, e.key, e.shiftKey, pageSize);
       setSelected(result.selection);
       runAction(result.action);
       return;
@@ -103,7 +103,7 @@ export function FileTreeTab({ files, client, index }: Properties) {
             style={{ paddingLeft: 12 + row.depth * 16 }}
             title={row.path}
             onClick={() => onRowClick(row)}
-            onDoubleClick={(e) => onRowDoubleClick(row, e.altKey)}
+            onDoubleClick={(e) => onRowDoubleClick(row, e.shiftKey)}
           >
             {row.dir && <span className="files-chevron">{row.expanded ? '▾' : '▸'}</span>}
             <span className="files-name">{row.name}</span>

@@ -40,10 +40,10 @@ function onArrowLeft(rows: FileTreeRow[], index: number): FileTreeKeyOutcome {
 }
 
 // `Enter`/`Space`: dir toggles expand/collapse; file opens (or edits, with Alt).
-function onActivate(rows: FileTreeRow[], index: number, altKey: boolean): FileTreeKeyOutcome {
+function onActivate(rows: FileTreeRow[], index: number, shiftKey: boolean): FileTreeKeyOutcome {
   const row = rows[index];
   if (row.dir) return { selection: row.path, action: { type: 'toggle', path: row.path } };
-  return { selection: row.path, action: { type: altKey ? 'edit' : 'open', path: row.path } };
+  return { selection: row.path, action: { type: shiftKey ? 'edit' : 'open', path: row.path } };
 }
 
 // ARIA APG treeview keyboard pattern (VS Code-aligned) — see spec/file-tree-tab.md.
@@ -51,7 +51,7 @@ export function handleFileTreeKey(
   rows: FileTreeRow[],
   selected: string | null,
   key: string,
-  altKey: boolean,
+  shiftKey: boolean,
   pageSize: number,
 ): FileTreeKeyOutcome {
   if (rows.length === 0) return { selection: null };
@@ -65,7 +65,7 @@ export function handleFileTreeKey(
   if (key === 'PageUp') return { selection: rows[Math.max(index - pageSize, 0)].path };
   if (key === 'ArrowRight') return onArrowRight(rows, index);
   if (key === 'ArrowLeft') return onArrowLeft(rows, index);
-  if (key === 'Enter' || key === ' ') return onActivate(rows, index, altKey);
+  if (key === 'Enter' || key === ' ') return onActivate(rows, index, shiftKey);
 
   return { selection: rows[index].path };
 }

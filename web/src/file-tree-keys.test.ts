@@ -113,7 +113,7 @@ describe('handleFileTreeKey — activation', () => {
     expect(result.action).toEqual({ type: 'open', path: 'README.md' });
   });
 
-  it('Alt+Enter on a file edits it', () => {
+  it('Shift+Enter on a file edits it', () => {
     const result = handleFileTreeKey(rows, 'README.md', 'Enter', true, 10);
     expect(result.action).toEqual({ type: 'edit', path: 'README.md' });
   });

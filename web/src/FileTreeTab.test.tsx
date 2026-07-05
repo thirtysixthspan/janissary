@@ -62,11 +62,11 @@ describe('FileTreeTab', () => {
     expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'open README.md' } });
   });
 
-  it('Alt+double-click on a file row sends an edit command', () => {
+  it('Shift+double-click on a file row sends an edit command', () => {
     const send = vi.fn();
     const client = { send } as unknown as JanusClient;
     render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
-    fireEvent.dblClick(screen.getByText('README.md'), { altKey: true });
+    fireEvent.dblClick(screen.getByText('README.md'), { shiftKey: true });
     expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'edit README.md' } });
   });
 
