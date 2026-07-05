@@ -1,3 +1,7 @@
+// Spawns a real child shell process and calls ChildProcess#kill() on it. Seatbelt denies the
+// `signal` operation by default, so kill() throws EPERM when the test runner itself is executing
+// inside a sandboxed workspace. Kept out of `npm test` / `npm run check` for that reason — run via
+// `npm run test:unsandboxed` on the host.
 import { describe, it, expect, afterAll } from 'vitest';
 import { spawn } from 'node:child_process';
 import type { ChildProcess } from 'node:child_process';

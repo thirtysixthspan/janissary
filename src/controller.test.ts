@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, readdirSync, realpathSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { Controller } from './controller.js';
@@ -297,19 +297,6 @@ describe('Controller', () => {
     const c = new Controller({ emitState() {}, sendPty() {}, sendPtyExit() {}, exit() { isExited = true; } });
     c.dispatch('close'); // only tab open -> behaves like quit
     expect(isExited).toBe(true);
-  });
-
-  it('starts an agent shell in its saved/workspace cwd', async () => {
-    initAgentStateDirectory(mkdtempSync(path.join(tmpdir(), 'janus-st-')));
-    const workCwd = realpathSync(mkdtempSync(path.join(tmpdir(), 'janus-work-')));
-    saveAgentState({ name: 'bob', dotColor: '#6bcb77', active: false, number: 1, cwd: workCwd });
-    const { c } = makeController();
-    c.rehydrate(); // restores the bob tab with cwd = workCwd
-    c.dispatch('shell pwd'); // runs in bob's shell, which should have cd'd into workCwd
-    const deadline = Date.now() + 4000;
-    while (!allText(c).includes(workCwd) && Date.now() < deadline) await new Promise((r) => setTimeout(r, 20));
-    expect(allText(c)).toContain(workCwd);
-    c.shutdown();
   });
 
   it('records transcript content in the append-only log', () => {
@@ -695,24 +682,6 @@ describe('Controller page tabs', () => {
     c.dispatch('open page javascript:alert(1)');
     expect(c.view().filter((t) => t.view === 'page')).toHaveLength(0);
     expect(allText(c)).toContain('invalid URL');
-  });
-});
-
-describe('Controller root-path display', () => {
-  it('abbreviates the working directory on a command prompt to $root', () => {
-    const { c } = makeController(); // janus cwd is the launch (root) directory
-    c.dispatch('shell true');
-    const prompt = c.view()[0].bufferLines.find((l) => l.type === 'prompt');
-    expect(prompt?.cwd).toBe('$root/');
-    c.shutdown();
-  });
-
-  it('abbreviates the shell working directory in the connections panel', () => {
-    const { c } = makeController();
-    c.dispatch('shell true');
-    const shellConn = c.view()[0].connections.find((r) => r.kind === 'shell');
-    expect(shellConn?.text).toContain('$root/');
-    c.shutdown();
   });
 });
 

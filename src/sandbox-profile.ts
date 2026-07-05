@@ -10,10 +10,29 @@
 
 // Narrow write carve-outs: harness auth/state directories and package-manager cache subpaths —
 // never the whole `~/.claude`, `~/.cache`, or `~/.npm` (broad cache write access would let a
-// sandboxed agent poison packages that other, non-sandboxed processes later consume).
+// sandboxed agent poison packages/plugins that other, non-sandboxed processes later consume).
+// The `.claude/` entries are the session-state paths a sandboxed `claude` writes while running:
+// transcripts, session env, task/todo/job state, shell snapshots, edit history, debug logs,
+// plans, paste cache, and its stats/statsig telemetry caches. Deliberately absent: `.claude/plugins`
+// (write access would let a sandboxed agent replace plugin code the unsandboxed CLI later runs —
+// reads are carved in below), `daemon`/`ide`/`backups`, and the auto-updater's state files.
 export const HOME_WRITE_CARVEOUTS = [
   '.claude/projects',
   '.claude/session-env',
+  '.claude/sessions',
+  '.claude/tasks',
+  '.claude/todos',
+  '.claude/jobs',
+  '.claude/shell-snapshots',
+  '.claude/file-history',
+  '.claude/history.jsonl',
+  '.claude/debug',
+  '.claude/plans',
+  '.claude/paste-cache',
+  '.claude/cache',
+  '.claude/statsig',
+  '.claude/stats-cache.json',
+  '.claude/mcp-needs-auth-cache.json',
   '.claude.json',
   '.codex',
   '.config/opencode',
@@ -26,17 +45,20 @@ export const HOME_WRITE_CARVEOUTS = [
   '.cache/yarn',
 ];
 
-// Read carve-ins: the write carve-outs (a harness needs to read its own state), plus a couple of
-// read-only extras — `.gitconfig` and `.gitexcludes` (the latter is whatever `core.excludesfile`
-// in the former points to; every git invocation reads both), `.claude/settings.json` itself, which
-// a sandboxed `claude` process reads on startup but never writes, `.config/gh/config.yml` (`gh`'s
+// Read carve-ins: the write carve-outs (a harness needs to read its own state), plus read-only
+// extras — `.claude/settings.json` and the customization dirs a sandboxed `claude` loads on
+// startup but must not modify (`plugins`, `skills`, `agents`, `commands`, `keybindings.json`),
+// `.gitconfig` and `.gitexcludes` (the latter is whatever `core.excludesfile`
+// in the former points to; every git invocation reads both), `.config/gh/config.yml` (`gh`'s
 // general settings — git_protocol, editor, prompt — as opposed to `hosts.yml`, which can hold a
 // plaintext OAuth token and stays denied via `SECRET_DENY_PATHS`; a workspaced `gh` authenticates
 // via the injected `GH_TOKEN` env var instead, see `github-token.ts`), and `Library/Keychains` (see
 // the comment on `SECRET_DENY_PATHS` — read access is needed for any Keychain lookup to work at all
 // on this OS, including harness login).
 export const HOME_READ_CARVEINS = [
-  ...HOME_WRITE_CARVEOUTS, '.gitconfig', '.gitexcludes', '.claude/settings.json', '.config/gh/config.yml', 'Library/Keychains',
+  ...HOME_WRITE_CARVEOUTS,
+  '.claude/settings.json', '.claude/plugins', '.claude/skills', '.claude/agents', '.claude/commands', '.claude/keybindings.json',
+  '.gitconfig', '.gitexcludes', '.config/gh/config.yml', 'Library/Keychains',
 ];
 
 // Secret paths denied last, even inside a carve-in.
@@ -62,6 +84,10 @@ export const HOME_READ_CARVEINS = [
 // regardless of ordering. That made it too fragile to rely on here, since the same path already
 // falls under the broader `$HOME`-wide read deny.)
 export const SECRET_DENY_PATHS = [
+  // On installs without Keychain access (Linux, some containers) this file holds the harness
+  // OAuth token in plaintext. Already outside every carve-in above, but denied explicitly so a
+  // future widening of the `.claude/` entries can't silently expose it.
+  '.claude/.credentials.json',
   '.ssh', '.aws', '.gnupg', '.kube', '.netrc', '.config/gh/hosts.yml', '.docker',
   '.config/gcloud', '.azure', '.cargo/credentials', '.cargo/credentials.toml',
   '.pypirc', '.m2/settings.xml', '.terraform.d',

@@ -41,9 +41,10 @@ describe('findRepoRoot', () => {
     expect(findRepoRoot(sub)).toBe(repoDir);
   });
 
-  it('returns undefined when no .git is found', () => {
-    expect(findRepoRoot(tmpDir)).toBeUndefined();
-  });
+  // 'returns undefined when no .git is found' lives in workspace-repo-root.unsandboxed.test.ts —
+  // it assumes os.tmpdir() has no .git ancestor, which is false whenever the test runner itself
+  // is executing inside a sandboxed workspace (TMPDIR is overridden to a path nested inside the
+  // parent repo's own git tree).
 });
 
 describe('createWorkspace', () => {

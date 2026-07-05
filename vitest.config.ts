@@ -14,8 +14,23 @@ export default defineConfig({
           include: ['src/**/*.test.{ts,tsx}'],
           exclude: [
             ...configDefaults.exclude, '**/.janissary/**',
-            '**/*.browser.test.{ts,tsx}', '**/*.sandbox.test.{ts,tsx}',
+            '**/*.browser.test.{ts,tsx}', '**/*.sandbox.test.{ts,tsx}', '**/*.unsandboxed.test.{ts,tsx}',
           ],
+          hookTimeout: 30_000,
+        },
+      },
+
+      // Tests that need real OS process semantics Seatbelt breaks for a sandboxed workspace:
+      // ChildProcess#kill() (the `signal` operation has no `(allow ...)` rule, so it's denied by
+      // default) or os.tmpdir() (sandbox.ts overrides TMPDIR to a path nested inside the parent
+      // repo's own git tree). Not part of `npm test` or `npm run check` — run via
+      // `npm run test:unsandboxed` on the host.
+      {
+        test: {
+          name: 'unsandboxed',
+          environment: 'node',
+          include: ['src/**/*.unsandboxed.test.{ts,tsx}'],
+          exclude: [...configDefaults.exclude, '**/.janissary/**'],
           hookTimeout: 30_000,
         },
       },
@@ -62,7 +77,7 @@ export default defineConfig({
           include: ['web/src/**/*.test.{ts,tsx}'],
           exclude: [
             ...configDefaults.exclude, '**/.janissary/**',
-            '**/*.browser.test.{ts,tsx}', '**/*.sandbox.test.{ts,tsx}',
+            '**/*.browser.test.{ts,tsx}', '**/*.sandbox.test.{ts,tsx}', '**/*.unsandboxed.test.{ts,tsx}',
           ],
           setupFiles: ['web/src/test/setup.ts'],
           // Vitest stubs all CSS imports to an empty string by default; `?raw` imports (the
@@ -89,16 +104,16 @@ export default defineConfig({
       thresholds: {
         autoUpdate: true,
         'src/**': {
-          statements: 71.45,
-          branches: 63.52,
-          functions: 72.92,
-          lines: 76.99,
+          statements: 79.53,
+          branches: 70.21,
+          functions: 83.41,
+          lines: 83.46,
         },
         'web/src/**': {
-          statements: 3.43,
-          branches: 4.76,
-          functions: 5.68,
-          lines: 3.83,
+          statements: 72.25,
+          branches: 64.44,
+          functions: 71.28,
+          lines: 77.43,
         },
       },
     },
