@@ -76,17 +76,13 @@ export const HOME_READ_CARVEINS = [
 // of raw file readability, so this doesn't hand out plaintext secrets — it's a materially larger
 // read surface than the other entries here, but the alternative breaks harness login outright.
 //
-// `.config/gh/hosts.yml` denies plainly here (EPERM on read) like everything else in this list —
-// `gh` reads it on every invocation regardless of `GH_TOKEN`, and its Go config loader treats *any*
-// read error there as fatal, EPERM included, so a workspaced `gh` call needs to never attempt that
-// read at all rather than have it denied a particular way. `sandbox.ts` handles this by pointing
-// `GH_CONFIG_DIR` at an empty, workspace-writable directory whenever a scoped token is injected —
-// `gh` then finds a genuinely absent `hosts.yml` there (real ENOENT, no denial involved) and falls
-// through to `GH_TOKEN` normally. (Seatbelt does have a `(with errno ...)` deny qualifier, but it
-// only takes effect when it's the *sole* matching deny for that operation+path — any other
-// unqualified deny or allow rule touching the same path, in either direction, wins over it
-// regardless of ordering. That made it too fragile to rely on here, since the same path already
-// falls under the broader `$HOME`-wide read deny.)
+// `.config/gh/hosts.yml`'s deny below now reads as ENOENT too (see the errno qualifier on the
+// final deny rule in buildProfile), which is exactly what `gh` needs — but `sandbox.ts` still
+// separately points `GH_CONFIG_DIR` at an empty, workspace-writable directory whenever a scoped
+// token is injected, so `gh` finds a real, uncomplicated absent `hosts.yml` there rather than
+// depending on this deny rule's errno behavior. Kept as defense in depth: `gh`'s Go config loader
+// treats any read error there as fatal, so relying on a single mechanism to keep that read from
+// ever mattering felt worth avoiding.
 export const SECRET_DENY_PATHS = [
   // On installs without Keychain access (Linux, some containers) this file holds the harness
   // OAuth token in plaintext. Already outside every carve-in above, but denied explicitly so a
@@ -198,7 +194,16 @@ ${writeCarveClauses})
 ; component individually rather than just the final target. Only actual file contents (data/xattr)
 ; are denied outside the carve-ins below; metadata alone doesn't leak file contents.
 (allow file-read-metadata (subpath (param "HOME")))
-(deny file-read-data file-read-xattr (subpath (param "HOME")))
+; errno ENOENT (rather than the EPERM a plain deny produces) so a denied read looks like a normal
+; missing file to whatever called it — tools almost universally treat ENOENT as "nothing here,
+; keep going" but treat EPERM as fatal. That's the root cause behind every upward-directory-walk
+; crash this sandbox has hit (Node/vitest package-scope resolution, cosmiconfig for stylelint/
+; eslint/prettier/postcss, npm's own config search, …): the walk itself was always fine — metadata
+; is allowed throughout $HOME above — only the read of a file it happened to find was fatal.
+; Empirically verified that a later unqualified allow for the same path still overrides normally
+; — the errno qualifier only takes effect when the deny remains the last matching rule for that
+; specific read, exactly like an unqualified deny would.
+(deny file-read-data file-read-xattr (with errno ENOENT) (subpath (param "HOME")))
 ; A process reading its own executable (and the directory it lives in) is always safe to allow —
 ; frameworks the process links against may reopen its own binary for introspection (e.g. Keychain's
 ; SecItemCopyMatching calls CFBundleGetMainBundle, which does exactly this to determine code identity
@@ -208,15 +213,7 @@ ${writeCarveClauses})
 ; same self-read reasoning, and so a script running inside the sandbox can invoke the known-good
 ; node at JANISSARY_NODE (see sandbox.ts) instead of relying on PATH resolution inside the
 ; sandboxed process, which doesn't always find a working node first.
-; PARENT_PKG_L/R (the parent repo's root package.json, as-named and realpath-resolved) is carved
-; in read-only because the workspace nests inside the parent repo: Node module resolution and
-; vitest's parent-folder config discovery walk up ancestor directories probing package.json at
-; each level, and the $HOME contents deny turns that probe into a hard EPERM crash (metadata/stat
-; is allowed, so the walk can see the file exists but dies reading it) instead of a clean miss.
-; One manifest file leaks no secrets; the rest of the parent repo stays denied.
 (allow file-read-data file-read-xattr
-  (literal (param "PARENT_PKG_L"))
-  (literal (param "PARENT_PKG_R"))
   (subpath (param "WORKSPACE"))
   (subpath (param "TMPDIR"))
   (subpath (param "GIT_OBJECTS"))
@@ -225,7 +222,11 @@ ${writeCarveClauses})
   (subpath (param "SERVER_NODE_DIR_L"))
   (subpath (param "SERVER_NODE_DIR_R"))
 ${readCarveClauses})
+; errno ENOENT here too (see the $HOME-deny comment above): a secret path reads as genuinely
+; absent rather than access-denied, which is both friendlier to tools that treat EPERM as fatal
+; and better secrecy — EPERM already confirms the path exists, ENOENT reveals nothing.
 (deny file-read*
+  (with errno ENOENT)
 ${secretDenyClauses})
 
 ; IPC: mach-lookup is allowed broadly — notably securityd/Keychain, which OAuth-based harness

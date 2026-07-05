@@ -1,5 +1,5 @@
 
-## 
+## sidebars
  create a right and left sidebar that are not normally show on launch. update the files command with an option to launch the file navigator in the left or right sidebar.
  add a button in the files-header that shifts the file navigator between one of three locations, right sidebar, central tab window, and left sidebar. 
  the width of the right and left side bars should be adjustable by moving the borders using the mouse.

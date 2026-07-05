@@ -9,7 +9,6 @@ import {
   ENV_SCRUB_PATTERNS,
 } from './sandbox-profile.js';
 import { getConfig } from './config.js';
-import { findRepoRoot } from './workspace.js';
 
 export type SandboxOptions = {
   // Undefined for a non-workspaced tab — callers pass it through unconditionally and
@@ -166,20 +165,6 @@ function parentGitObjectsDir(workspaceDir: string): string {
   }
 }
 
-// The parent repo's root package.json, in literal and realpath-resolved form (same dual
-// reasoning as `resolveExecutableDirs` above). Carved in read-only — see the PARENT_PKG comment
-// in sandbox-profile.ts. The parent repo is the nearest `.git`-bearing ancestor of the
-// workspace's containing directory (the workspace itself is a clone with its own `.git`, so the
-// walk starts one level up). Falls back to a match-nothing placeholder when the workspace has no
-// parent repo (e.g. a workspace created under a temp dir in tests).
-function parentPackageJsonPaths(workspaceDir: string): { literal: string; real: string } {
-  const fallback = '/nonexistent-janissary-parent-pkg-placeholder';
-  const repoRoot = findRepoRoot(path.dirname(workspaceDir));
-  if (!repoRoot) return { literal: fallback, real: fallback };
-  const pkg = path.join(repoRoot, 'package.json');
-  return { literal: pkg, real: resolvePath(pkg) };
-}
-
 // Drop credential-shaped vars and agent-socket escape vectors (see `sandbox-profile.ts`).
 function scrubEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
   const scrubbed: NodeJS.ProcessEnv = {};
@@ -227,7 +212,6 @@ export function sandboxSpawn(
   const darwinCacheDir = darwinUserCacheDir();
   const scratchDir = claudeScratchDir();
   const serverNodeDir = serverNodeDirs();
-  const parentPkg = parentPackageJsonPaths(workspaceDir);
 
   const scrubbed = scrubEnv(env);
   scrubbed.TMPDIR = tmpDir;
@@ -254,8 +238,6 @@ export function sandboxSpawn(
     '-D', `CLAUDE_SCRATCH_DIR=${scratchDir}`,
     '-D', `SERVER_NODE_DIR_L=${serverNodeDir.literal}`,
     '-D', `SERVER_NODE_DIR_R=${serverNodeDir.real}`,
-    '-D', `PARENT_PKG_L=${parentPkg.literal}`,
-    '-D', `PARENT_PKG_R=${parentPkg.real}`,
     ...homeDParams(home, HOME_WRITE_CARVEOUTS, WRITE_CARVEOUT_PARAMS),
     ...homeDParams(home, HOME_READ_CARVEINS, READ_CARVEIN_PARAMS),
     ...homeDParams(home, SECRET_DENY_PATHS, SECRET_DENY_PARAMS),

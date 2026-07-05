@@ -50,33 +50,59 @@ describe.skipIf(!sandboxAvailable())('sandboxSpawn — live sandbox-exec integra
     rmSync(outside, { recursive: true, force: true });
   });
 
-  it('allows reading the parent repo root package.json, but nothing else in the parent repo', () => {
-    // A fake parent repo laid out the way production nests workspaces: <repo>/.janissary/workspace/<name>.
-    // It must live under $HOME — that's the only region where reads are denied by default, so a
-    // tmpdir-based repo would be readable regardless and prove nothing.
-    const repoRoot = mkdtempSync(path.join(homedir(), '.janissary-sandbox-test-'));
-    mkdirSync(path.join(repoRoot, '.git'));
+  it('an ancestor package.json probe from a nested workspace reports ENOENT, not EPERM', () => {
+    // A fake ancestor chain laid out the way production nests workspaces, two levels deep —
+    // <grandparent>/<parent-repo>/.janissary/workspace/<name> — since cosmiconfig-based tools
+    // (stylelint, eslint, prettier, postcss) and Node's own module resolution walk arbitrarily
+    // far up looking for package.json, not just one level. This used to need a dedicated carve-in
+    // (see prior sandbox-profile.ts history); now the general errno-ENOENT-on-$HOME-deny handles
+    // it for free — the ancestor package.json isn't actually readable, but the denial looks like
+    // a normal missing file instead of crashing the walk with EPERM. Must live under $HOME —
+    // that's the only region denied by default, so a tmpdir-based tree would prove nothing.
+    const grandparent = mkdtempSync(path.join(homedir(), '.janissary-sandbox-test-'));
+    writeFileSync(path.join(grandparent, 'package.json'), '{"name":"grandparent"}');
+    const repoRoot = path.join(grandparent, 'repo');
+    mkdirSync(path.join(repoRoot, '.git'), { recursive: true });
     writeFileSync(path.join(repoRoot, 'package.json'), '{"name":"parent"}');
-    writeFileSync(path.join(repoRoot, 'secrets.txt'), 'deny me');
     const nestedWorkspace = path.join(repoRoot, '.janissary', 'workspace', 'ws');
     mkdirSync(nestedWorkspace, { recursive: true });
     mkdirSync(`${nestedWorkspace}.tmp`, { recursive: true });
 
-    const run = (script: string): boolean => {
+    const stderrOf = (target: string): string => {
       const scriptPath = path.join(nestedWorkspace, 'run.sh');
-      writeFileSync(scriptPath, `#!/bin/sh\n${script}\n`, { mode: 0o755 });
+      writeFileSync(scriptPath, `#!/bin/sh\ncat "${target}"\n`, { mode: 0o755 });
       const { command, args, env } = sandboxSpawn({ workspaceDir: nestedWorkspace }, scriptPath, []);
       try {
         execFileSync(command, args, { cwd: nestedWorkspace, env: env as NodeJS.ProcessEnv, stdio: 'pipe' });
-        return true;
-      } catch {
-        return false;
+        return '';
+      } catch (error) {
+        return (error as { stderr?: Buffer }).stderr?.toString() ?? '';
       }
     };
 
-    expect(run(`cat "${repoRoot}/package.json"`)).toBe(true);
-    expect(run(`cat "${repoRoot}/secrets.txt"`)).toBe(false);
-    rmSync(repoRoot, { recursive: true, force: true });
+    for (const target of [path.join(repoRoot, 'package.json'), path.join(grandparent, 'package.json')]) {
+      const stderr = stderrOf(target);
+      expect(stderr).toContain('No such file or directory');
+      expect(stderr).not.toContain('Operation not permitted');
+    }
+    rmSync(grandparent, { recursive: true, force: true });
+  });
+
+  it('denied $HOME reads report ENOENT (looks missing), not EPERM (looks forbidden)', () => {
+    const outside = mkdtempSync(path.join(homedir(), '.janissary-sandbox-test-'));
+    writeFileSync(path.join(outside, 'secrets.txt'), 'deny me');
+    const scriptPath = path.join(workspaceDir, 'run.sh');
+    writeFileSync(scriptPath, `#!/bin/sh\ncat "${path.join(outside, 'secrets.txt')}"\n`, { mode: 0o755 });
+    const { command, args, env } = sandboxSpawn({ workspaceDir }, scriptPath, []);
+    try {
+      execFileSync(command, args, { cwd: workspaceDir, env: env as NodeJS.ProcessEnv, stdio: 'pipe' });
+      expect.unreachable('expected the read to be denied');
+    } catch (error) {
+      const stderr = (error as { stderr?: Buffer }).stderr?.toString() ?? '';
+      expect(stderr).toContain('No such file or directory');
+      expect(stderr).not.toContain('Operation not permitted');
+    }
+    rmSync(outside, { recursive: true, force: true });
   });
 
   it('denies exec of a script copied to /tmp', () => {

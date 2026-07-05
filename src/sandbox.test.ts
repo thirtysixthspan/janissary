@@ -66,7 +66,7 @@ describe('sandboxSpawn', () => {
     const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
     const result = sandboxSpawn({ workspaceDir }, 'bash', []);
     const dNames = result.args.filter((_, i) => result.args[i - 1] === '-D').map((v) => v.split('=', 1)[0]);
-    for (const required of ['WORKSPACE', 'TMPDIR', 'HOME', 'GIT_OBJECTS', 'PARENT_PKG_L', 'PARENT_PKG_R']) {
+    for (const required of ['WORKSPACE', 'TMPDIR', 'HOME', 'GIT_OBJECTS']) {
       expect(dNames).toContain(required);
     }
     rmSync(workspaceDir, { recursive: true, force: true });
