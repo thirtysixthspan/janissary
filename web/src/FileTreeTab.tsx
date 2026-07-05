@@ -43,22 +43,27 @@ export function FileTreeTab({ files, client, index }: Properties) {
   const toggle = (path: string) => client.send({ method: 'fileTreeToggle', params: { index, path } });
   const openFile = (path: string) => client.send({ method: 'command', params: { text: `open ${path}` } });
   const editFile = (path: string) => client.send({ method: 'command', params: { text: `edit ${path}` } });
+  const reroot = () => client.send({ method: 'fileTreeReroot', params: { index } });
 
   const onRowClick = (row: FileTreeRow) => {
     setSelected(row.path);
   };
 
   const onRowDoubleClick = (row: FileTreeRow, shiftKey: boolean) => {
-    if (row.dir) toggle(row.path);
+    if (row.path === '..') reroot();
+    else if (row.dir) toggle(row.path);
     else if (shiftKey) editFile(row.path);
     else openFile(row.path);
   };
 
-  const runAction = (action: { type: 'toggle' | 'open' | 'edit'; path: string } | undefined) => {
+  const runAction = (action: { type: 'toggle' | 'open' | 'edit' | 'reroot'; path: string } | undefined) => {
     if (!action) return;
-    if (action.type === 'toggle') toggle(action.path);
-    else if (action.type === 'open') openFile(action.path);
-    else editFile(action.path);
+    switch (action.type) {
+      case 'reroot': { reroot(); break; }
+      case 'toggle': { toggle(action.path); break; }
+      case 'open': { openFile(action.path); break; }
+      case 'edit': { editFile(action.path); break; }
+    }
   };
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
@@ -115,7 +120,7 @@ export function FileTreeTab({ files, client, index }: Properties) {
             onClick={() => onRowClick(row)}
             onDoubleClick={(e) => onRowDoubleClick(row, e.shiftKey)}
           >
-            {row.dir && <span className="files-chevron">{row.expanded ? '▾' : '▸'}</span>}
+            {row.dir && row.expanded !== undefined && <span className="files-chevron">{row.expanded ? '▾' : '▸'}</span>}
             <span className="files-name">{row.name}</span>
           </div>
         ))}

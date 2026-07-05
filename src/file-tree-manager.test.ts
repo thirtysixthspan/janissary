@@ -127,7 +127,7 @@ describe('FileTreeManager', () => {
     expect(closeFns[2]).toHaveBeenCalled();
     expect(closeFns[0]).not.toHaveBeenCalled();
     const tab = tabs.find((t) => t.label === label)!;
-    expect(tab.files!.rows.map((r) => r.path)).toEqual(['a', 'b']);
+    expect(tab.files!.rows.map((r) => r.path)).toEqual(['..', 'a', 'b']);
   });
 
   it('a watch event triggers exactly one rebuild after the debounce window', () => {

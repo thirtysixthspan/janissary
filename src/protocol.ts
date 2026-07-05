@@ -108,7 +108,9 @@ export type RpcCall =
   // server's full tab list (resolved to a label server-side); `path` is the row's tree-relative path.
   | { method: 'fileTreeToggle'; params: { index: number; path: string } }
   // Collapse every expanded directory in a file tree tab back to just its root.
-  | { method: 'fileTreeCollapseAll'; params: { index: number } };
+  | { method: 'fileTreeCollapseAll'; params: { index: number } }
+  // Re-root a file tree tab to the parent directory.
+  | { method: 'fileTreeReroot'; params: { index: number } };
 
 export type ClientMessage = { t: 'rpc'; id: number } & RpcCall;
 

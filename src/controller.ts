@@ -162,6 +162,11 @@ export class Controller {
     if (label) this.managers.fileTree.collapseAll(label);
   }
 
+  fileTreeReroot(index: number): void {
+    const label = this.managers.tab.tabs[index]?.label;
+    if (label) this.managers.fileTree.reroot(label);
+  }
+
   // Tab-completion for the command line (reuses the shared `completeCommandLine`): filesystem
   // paths against the active tab's cwd, `msg`/`broadcast` agent names, `connection close` targets,
   // and `browser` subcommands / window ids.

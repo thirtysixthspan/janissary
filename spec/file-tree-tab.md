@@ -55,6 +55,7 @@ stops refreshing automatically and can be refreshed manually by collapsing and r
 | Click a file row | Select it |
 | Double-click a file row | Select it and open it (with `open`) |
 | Double-click a directory row | Select it and toggle expand/collapse |
+| Double-click the `..` row | Navigate the tree up one directory |
 | Shift+double-click a file row | Select it and open it in the plain-text editor (with `edit`), even for files whose normal opener is a viewer (Markdown, images) |
 | Chevron (▸/▾) | Visual affordance only — the whole row is the click target |
 | Header collapse-all button | Collapse every expanded directory back to just the root |
@@ -74,7 +75,7 @@ A focused file tree tab captures its own keys, following the ARIA treeview patte
 | `↑` / `↓` | Move selection to the previous / next visible row |
 | `→` | Collapsed directory: expand (selection stays). Expanded directory: move to its first child. File: no-op |
 | `←` | Expanded directory: collapse. Otherwise: move selection to the parent directory |
-| `Enter` / `Space` | File: open. Directory: toggle expand/collapse |
+| `Enter` / `Space` | File: open. Directory: toggle expand/collapse. `..`: navigate to parent directory |
 | `Shift+Enter` | File: open in the plain-text editor (mirrors Shift+double-click) |
 | `Home` / `End` | Select the first / last visible row |
 | `Page Up` / `Page Down` | Move selection by one viewport of rows |

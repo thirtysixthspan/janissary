@@ -122,6 +122,15 @@ describe('handleFileTreeKey — activation', () => {
     const result = handleFileTreeKey(rows, 'README.md', ' ', false, 10);
     expect(result.action).toEqual({ type: 'open', path: 'README.md' });
   });
+
+  it('Enter on ".." reroots', () => {
+    const rowsWithDotdot: FileTreeRow[] = [
+      row('..', { dir: true }),
+      ...rows,
+    ];
+    const result = handleFileTreeKey(rowsWithDotdot, '..', 'Enter', false, 10);
+    expect(result.action).toEqual({ type: 'reroot', path: '..' });
+  });
 });
 
 describe('typeAheadMatch', () => {
