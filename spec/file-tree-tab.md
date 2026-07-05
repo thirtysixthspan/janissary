@@ -51,8 +51,8 @@ stops refreshing automatically and can be refreshed manually by collapsing and r
 
 | Interaction | Behavior |
 |---|---|---|
-| Click a directory row (anywhere on the row) | Select it |
-| Click a file row | Select it |
+| Click a directory row (anywhere on the row) | Select it and give the tree keyboard focus |
+| Click a file row | Select it and give the tree keyboard focus |
 | Double-click a file row | Select it and open it (with `open`) |
 | Double-click a directory row | Select it and toggle expand/collapse |
 | Double-click the `..` row | Navigate the tree up one directory |
