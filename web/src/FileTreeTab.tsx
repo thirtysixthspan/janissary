@@ -96,7 +96,7 @@ export function FileTreeTab({ files, client, index }: Properties) {
             aria-selected={row.path === selected}
             aria-expanded={row.dir ? !!row.expanded : undefined}
             className={`files-row${row.path === selected ? ' selected' : ''}`}
-            style={{ paddingLeft: row.depth * 16 }}
+            style={{ paddingLeft: 12 + row.depth * 16 }}
             title={row.path}
             onClick={(e) => onRowClick(row, e.altKey)}
           >

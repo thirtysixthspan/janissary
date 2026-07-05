@@ -1,7 +1,5 @@
 # small issues
 
-* there should be addition left padding in the file navigator tab, matching that other tabs like the agent tab.
-
 * it should require a double click to open/edit a file in the file navigator tab.
 
 * scrolling down/up the page outside the visible window in the file navigator tab using arrow keys should cause the visible window to scroll so the currently selected line is visible.

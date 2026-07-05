@@ -21,8 +21,11 @@ describe('FileTreeTab', () => {
   it('renders rows with indentation, chevrons on dirs, aria-expanded/aria-selected', () => {
     const client = { send: vi.fn() } as unknown as JanusClient;
     const { container } = render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
-    const srcRow = screen.getByText('src').closest('[role="treeitem"]')!;
+    const srcRow = screen.getByText('src').closest('[role="treeitem"]') as HTMLElement;
     expect(srcRow.getAttribute('aria-expanded')).toBe('true');
+    expect(srcRow.style.paddingLeft).toBe('12px');
+    const fileRow = screen.getByText('index.ts').closest('[role="treeitem"]') as HTMLElement;
+    expect(fileRow.style.paddingLeft).toBe('28px');
     expect(container.querySelectorAll('[role="treeitem"]')).toHaveLength(3);
     expect(screen.getByText('README.md').closest('[role="treeitem"]')!.getAttribute('aria-expanded')).toBeNull();
   });
