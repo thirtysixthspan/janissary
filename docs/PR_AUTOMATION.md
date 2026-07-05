@@ -78,7 +78,10 @@ Merge the PR (merge commit) and delete the remote branch. Only run once mergeabl
 ## How It Works
 
 ### Workspace clone handling
-In a workspaced tab, `origin` already points at GitHub — the workspace is an independent `git clone` of the root repo's `origin` remote. `pr-resolve-remote.sh` confirms this and reuses `origin` directly; it only resolves a separate `github` remote as a fallback for older, locally-shared clones where `origin` still points at the local root repo.
+In a workspaced tab, `origin` already points at GitHub over HTTPS — the workspace is an independent `git clone` of the root repo's `origin` remote. `pr-resolve-remote.sh` confirms this and reuses `origin` directly; it only resolves a separate `github` remote as a fallback for older, locally-shared clones where `origin` still points at the local root repo.
+
+### Authentication inside a sandboxed workspace
+`git push` and `gh` (`pr-create-pr.sh`, `pr-merge.sh`) authenticate via `GH_TOKEN`, injected into the sandboxed workspace's environment from `.janissary/github-token` (a scoped, user-provisioned fine-grained PAT — see README's "GitHub push/PR access"). The workspace clone's local `credential.helper` (`!gh auth git-credential`) picks up that same token for `git push`. Without a token configured, these scripts fail from inside a sandboxed workspace (SSH auth is unreachable there, and there's no other credential path in) but work as before outside a workspace or with sandboxing disabled.
 
 ### No interactive prompts
 All scripts use non-interactive `git` and `gh` commands, so they run without approval prompts.

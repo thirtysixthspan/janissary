@@ -54,12 +54,28 @@ export function getRemoteUrl(repoPath: string): string {
   return url;
 }
 
+// SSH auth can't work inside the workspace's sandbox (no `~/.ssh`, no SSH agent socket — see
+// `sandbox-profile.ts`), so a workspace clone always uses HTTPS regardless of the root repo's own
+// remote style. Handles `git@github.com:owner/repo.git` and `ssh://git@github.com/owner/repo.git`;
+// an already-HTTPS URL passes through unchanged.
+export function toHttpsUrl(url: string): string {
+  const scpMatch = /^git@([^:]+):(.+?)(\.git)?$/.exec(url);
+  if (scpMatch) return `https://${scpMatch[1]}/${scpMatch[2]}.git`;
+  const sshMatch = /^ssh:\/\/git@([^/]+)\/(.+?)(\.git)?$/.exec(url);
+  if (sshMatch) return `https://${sshMatch[1]}/${sshMatch[2]}.git`;
+  return url;
+}
+
 export function createWorkspace(name: string, repoPath: string): string {
   ensureWorkspaceDir();
   const target = workspacePath(name);
-  const remoteUrl = getRemoteUrl(repoPath);
+  const remoteUrl = toHttpsUrl(getRemoteUrl(repoPath));
   // Intentional: user-driven workspace creation; only local-user commands reach this sink.
   execSync(`git clone "${remoteUrl}" "${target}"`, { stdio: 'pipe' });
+  // Local-only credential helper (never touches global git config) — `gh auth git-credential`
+  // checks `GH_TOKEN` in its environment before falling back to its keychain-stored OAuth token,
+  // so once the sandbox injects `GH_TOKEN` (see sandbox.ts), `git push` authenticates via it.
+  execSync('git config --local credential.helper "!gh auth git-credential"', { cwd: target, stdio: 'pipe' });
   trustWorkspace(target);
   mkdirSync(workspaceTempPath(name), { recursive: true });
   return target;

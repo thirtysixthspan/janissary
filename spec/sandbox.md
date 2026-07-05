@@ -30,8 +30,8 @@ carve-in allows → secret denies last (so a secret path stays denied even insid
   consumes.
 - **Reads** are allowed everywhere by default (system paths, language runtimes, Homebrew all stay
   readable) except `$HOME`'s *contents*, which are denied and then carved back in
-  (`HOME_READ_CARVEINS` — the write carve-outs above, plus `~/.gitconfig`, `~/.claude/settings.json`,
-  and `~/Library/Keychains`). `$HOME`'s directory **metadata** (stat/lstat) stays allowed
+  (`HOME_READ_CARVEINS` — the write carve-outs above, plus `~/.gitconfig`, `~/.gitexcludes`,
+  `~/.claude/settings.json`, and `~/Library/Keychains`). `$HOME`'s directory **metadata** (stat/lstat) stays allowed
   everywhere, not just the carve-ins — resolving a path (`realpath`, a pre-exec `chdir`, git's
   ancestor-ownership walk) requires traversing every ancestor directory between `$HOME` and the
   workspace, and Seatbelt checks each ancestor individually rather than just the final target.
@@ -85,7 +85,11 @@ ever reading `~/.ssh`): `AWS_*`, `GITHUB_TOKEN`, `GH_TOKEN`, `NPM_TOKEN`, `DOCKE
 anything ending `_SECRET`/`_PASSWORD`, `SSH_AUTH_SOCK`, `GPG_AGENT_INFO`, `GNUPGHOME`,
 `GIT_ASKPASS`, `GIT_CREDENTIAL_HELPER`, `KRB5CCNAME`. LLM provider keys (`ANTHROPIC_*`, `OPENAI_*`,
 `GEMINI_*`/`GOOGLE_*`) are deliberately **not** matched — the harnesses and the ACP agent need their
-own credentials to function. `TMPDIR` is overridden to the workspace's private temp dir
+own credentials to function. If a scoped GitHub token is configured for the project
+(`.janissary/github-token`, loaded by `src/github-token.ts`), `GH_TOKEN` is re-added after the scrub
+with that value — the one deliberate exception to "a scrubbed var never comes back": it's not the
+ambient value just stripped, it's a fresh, narrowly-scoped one chosen for this workspaced spawn (see
+[[workspaced-agent]]'s "GitHub authentication"). `TMPDIR` is overridden to the workspace's private temp dir
 (`<workspace>.tmp`) regardless of what the caller passed in. `JANISSARY_NODE` is added, set to
 `process.execPath` — the absolute path of the Node binary running the janissary server itself —
 so a script inside the sandbox (e.g. a project's own `.claude/settings.json` hook) can invoke a
@@ -139,11 +143,13 @@ dedicated handling:
 
 ### Practical consequences
 
-No modifying the parent repo (including `git push` to the local origin — integrate by fetching from
-the workspace instead), no global installs, no reading sibling workspaces/other repos/dotfiles
-outside the carve-ins above. `git commit`/`fetch`/`pull`, `npm install`, builds, and venvs inside the
-workspace all work normally, as does logging in and running a harness (`claude`, `opencode`) that
-needs its Keychain-stored credential.
+No global installs, no reading sibling workspaces/other repos/dotfiles outside the carve-ins above.
+`git commit`/`fetch`/`pull`, `npm install`, builds, and venvs inside the workspace all work normally,
+as does logging in and running a harness (`claude`, `opencode`) that needs its Keychain-stored
+credential. The workspace's `origin` is HTTPS and points at GitHub directly (not the local root
+repo), so `git push` and `gh` (PR create/merge) work from inside the sandbox too, **if** a scoped
+GitHub token is configured (see [[workspaced-agent]]) — without one, those still fail, since `.ssh`
+and `SSH_AUTH_SOCK` are denied/scrubbed and there's no other credential path in.
 
 ### Configuration and availability
 

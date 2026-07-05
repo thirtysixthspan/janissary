@@ -21,6 +21,10 @@ export type SandboxOptions = {
   // `command` when omitted (already the real program — e.g. the ACP agent spawn, which runs the
   // binary directly with no shell wrapper).
   selfBinaryHint?: string;
+  // A scoped GitHub token to inject as `GH_TOKEN` for this spawn (see the injection site below) —
+  // the one deliberate exception to "a scrubbed env var never comes back": it isn't the ambient
+  // value `scrubEnv` just stripped, it's a fresh one we chose to hand this specific workspaced spawn.
+  githubToken?: string;
 };
 
 export type SandboxResult = {
@@ -212,6 +216,7 @@ export function sandboxSpawn(
   const scrubbed = scrubEnv(env);
   scrubbed.TMPDIR = tmpDir;
   scrubbed.JANISSARY_NODE = process.execPath;
+  if (options.githubToken) scrubbed.GH_TOKEN = options.githubToken;
 
   const profile = options.offline ? SANDBOX_PROFILE_OFFLINE : SANDBOX_PROFILE;
   const dParams = [

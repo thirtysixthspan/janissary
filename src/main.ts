@@ -11,6 +11,7 @@ import { initDbDir } from './connections.js';
 import { initProfileDir } from './profiles.js';
 import { initWorkspaceDir, clearWorkspaceDir } from './workspace.js';
 import { loadConfig } from './config.js';
+import { loadGithubToken } from './github-token.js';
 import { parseCliArgs, usageText, appVersion, CliUsageError } from './cli-args.js';
 import { explainStartupError, formatFatal, maybeStack } from './startup-errors.js';
 import type { ChildProcess } from 'node:child_process';
@@ -125,6 +126,7 @@ export async function boot(argv = process.argv.slice(2)): Promise<void> {
   new TranscriptLogger(cwd); // append-only transcript log under .janissary/log/ (never cleared)
   new TranscriptStore(cwd);
   loadConfig(cwd);
+  loadGithubToken(cwd);
   if (!args.relaunch) { clearStateDirectory(); TranscriptStore.clear(); clearWorkspaceDir(); }
 
   const webDir = path.join(import.meta.dirname, '..', 'web', 'dist');

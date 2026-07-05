@@ -1,5 +1,6 @@
 import { spawnPty, type PtySession } from './pty.js';
 import { messageBus } from './bus.js';
+import { getGithubToken } from './github-token.js';
 import type { Managers } from './managers.js';
 
 // Owns the live PTY sessions (keyed by their id) backing harness tabs, full-tab interactive command
@@ -20,7 +21,7 @@ export class PseudoterminalManager {
     const session = spawnPty(program, command, cwd, {
       onData: (id, data) => messageBus.emit('pty', { type: 'data', id, data }),
       onExit: (id, exitCode) => this.handleExit(id, exitCode),
-    }, this.cols, this.rows, { workspaceDir, offline });
+    }, this.cols, this.rows, { workspaceDir, offline, githubToken: workspaceDir ? getGithubToken() : undefined });
     this.ptys.set(session.id, { session, tabLabel: label });
     return session.id;
   }

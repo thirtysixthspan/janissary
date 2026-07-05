@@ -4,7 +4,7 @@ import path from 'node:path';
 import { execSync } from 'node:child_process';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { findRepoRoot, initWorkspaceDir, createWorkspace, removeWorkspace, clearWorkspaceDir, workspaceTempPath, getRemoteUrl } from './workspace.js';
+import { findRepoRoot, initWorkspaceDir, createWorkspace, removeWorkspace, clearWorkspaceDir, workspaceTempPath, getRemoteUrl, toHttpsUrl } from './workspace.js';
 
 let tmpDir: string;
 let repoDir: string;
@@ -59,6 +59,27 @@ describe('createWorkspace', () => {
     const ws = createWorkspace('test-agent-tmp', repoDir);
     expect(existsSync(workspaceTempPath('test-agent-tmp'))).toBe(true);
     removeWorkspace(ws);
+  });
+
+  it('sets a local credential helper on the clone', () => {
+    const ws = createWorkspace('test-agent-credhelper', repoDir);
+    const helper = execSync('git config --local credential.helper', { cwd: ws, stdio: 'pipe' }).toString().trim();
+    expect(helper).toBe('!gh auth git-credential');
+    removeWorkspace(ws);
+  });
+});
+
+describe('toHttpsUrl', () => {
+  it('converts an scp-style ssh url to https', () => {
+    expect(toHttpsUrl('git@github.com:owner/repo.git')).toBe('https://github.com/owner/repo.git');
+  });
+
+  it('converts an ssh:// url to https', () => {
+    expect(toHttpsUrl('ssh://git@github.com/owner/repo.git')).toBe('https://github.com/owner/repo.git');
+  });
+
+  it('leaves an already-https url unchanged', () => {
+    expect(toHttpsUrl('https://github.com/owner/repo.git')).toBe('https://github.com/owner/repo.git');
   });
 });
 

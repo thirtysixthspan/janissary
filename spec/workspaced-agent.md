@@ -28,6 +28,10 @@ spawn) are confined to the workspace directory by a kernel-enforced Seatbelt san
 actually active for a newly created workspaced tab, a one-line notice is appended to that tab's
 transcript. `--offline` additionally denies network access for the tab.
 
+### GitHub authentication
+
+The clone uses HTTPS regardless of the root repository's own remote style — SSH authentication cannot work inside the sandbox (see [[sandbox]]). If a scoped GitHub token is configured (`.janissary/github-token`), it is injected into the workspaced tab's environment, letting `git push` and `gh` (PR creation, merging) authenticate from inside the sandbox. Without a token configured, the workspace still works for local development (commit, fetch, pull); pushing to GitHub or using `gh` may fail depending on what credentials the sandbox otherwise permits.
+
 ### Workspace lifecycle
 
 Workspace directories are ephemeral:

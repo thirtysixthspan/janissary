@@ -1,6 +1,7 @@
 import type { ChildProcess } from 'node:child_process';
 import { spawnShell, executeShellCmd as executeShellCommand, queryShellPwd } from './shell.js';
 import { getConfig } from './config.js';
+import { getGithubToken } from './github-token.js';
 import { messageBus } from './bus.js';
 import type { Managers } from './managers.js';
 
@@ -39,7 +40,11 @@ export class ShellManager {
     let shell = this.shells.get(label);
     if (!shell || !shell.stdin?.writable) {
       const tab = this.managers.tab.tabs.find((t) => t.label === label);
-      shell = spawnShell(0, { JANUS_AGENT_NAME: label }, { workspaceDir: tab?.workspaceDir, offline: tab?.offline });
+      shell = spawnShell(0, { JANUS_AGENT_NAME: label }, {
+        workspaceDir: tab?.workspaceDir,
+        offline: tab?.offline,
+        githubToken: tab?.workspaceDir ? getGithubToken() : undefined,
+      });
       this.shells.set(label, shell);
       if (cwd) shell.stdin!.write(`cd "${cwd}"\n`);
     }

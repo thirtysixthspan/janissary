@@ -8,6 +8,7 @@ import {
 } from '@agentclientprotocol/sdk';
 import type { PromptHandlers, AcpSession, AcpOptions } from './types.js';
 import { sandboxSpawn } from './sandbox.js';
+import { getGithubToken } from './github-token.js';
 
 /**
  * Connect to an arbitrary ACP agent launched as a subprocess and drive it as an ACP
@@ -24,7 +25,11 @@ import { sandboxSpawn } from './sandbox.js';
 export function connectAcp(options: AcpOptions): AcpSession {
   const baseEnv = options.env ? { ...process.env, ...options.env } : process.env;
   const { command, args, env } = sandboxSpawn(
-    { workspaceDir: options.workspaceDir, offline: options.offline },
+    {
+      workspaceDir: options.workspaceDir,
+      offline: options.offline,
+      githubToken: options.workspaceDir ? getGithubToken() : undefined,
+    },
     options.command, options.args, baseEnv,
   );
   const proc = spawn(command, args, {

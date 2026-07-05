@@ -96,6 +96,24 @@ describe('sandboxSpawn', () => {
     rmSync(workspaceDir, { recursive: true, force: true });
   });
 
+  it('injects GH_TOKEN when githubToken is given, overriding the scrub', () => {
+    if (!sandboxAvailable()) return;
+    const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
+    const env = { PATH: '/usr/bin', GH_TOKEN: 'ambient-token' };
+    const result = sandboxSpawn({ workspaceDir, githubToken: 'scoped-token' }, 'bash', [], env);
+    expect(result.env.GH_TOKEN).toBe('scoped-token');
+    rmSync(workspaceDir, { recursive: true, force: true });
+  });
+
+  it('does not set GH_TOKEN when githubToken is omitted, even if the ambient env has one', () => {
+    if (!sandboxAvailable()) return;
+    const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
+    const env = { PATH: '/usr/bin', GH_TOKEN: 'ambient-token' };
+    const result = sandboxSpawn({ workspaceDir }, 'bash', [], env);
+    expect(result.env.GH_TOKEN).toBeUndefined();
+    rmSync(workspaceDir, { recursive: true, force: true });
+  });
+
   it('sets TMPDIR to the workspace-adjacent temp dir', () => {
     if (!sandboxAvailable()) return;
     const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));

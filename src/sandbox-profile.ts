@@ -27,11 +27,13 @@ export const HOME_WRITE_CARVEOUTS = [
 ];
 
 // Read carve-ins: the write carve-outs (a harness needs to read its own state), plus a couple of
-// read-only extras — `.claude/settings.json` itself, which a sandboxed `claude` process reads on
-// startup but never writes, and `Library/Keychains` (see the comment on `SECRET_DENY_PATHS` — read
-// access is needed for any Keychain lookup to work at all on this OS, including harness login).
+// read-only extras — `.gitconfig` and `.gitexcludes` (the latter is whatever `core.excludesfile`
+// in the former points to; every git invocation reads both), `.claude/settings.json` itself, which
+// a sandboxed `claude` process reads on startup but never writes, and `Library/Keychains` (see the
+// comment on `SECRET_DENY_PATHS` — read access is needed for any Keychain lookup to work at all on
+// this OS, including harness login).
 export const HOME_READ_CARVEINS = [
-  ...HOME_WRITE_CARVEOUTS, '.gitconfig', '.claude/settings.json', 'Library/Keychains',
+  ...HOME_WRITE_CARVEOUTS, '.gitconfig', '.gitexcludes', '.claude/settings.json', 'Library/Keychains',
 ];
 
 // Secret paths denied last, even inside a carve-in.
@@ -141,8 +143,9 @@ ${writeCarveClauses})
 ; Reads: allowed everywhere by default (system paths, harness binaries, /usr, node, homebrew
 ; all stay readable), then $HOME's *contents* are denied (data/xattr — metadata/stat stays
 ; allowed everywhere, see below), then the workspace/temp dir/parent-repo-objects/harness-state/
-; .gitconfig are carved back in, then secrets are denied last (full file-read*, including
-; metadata, so their existence isn't observable either) so they lose even inside a carve-in.
+; .gitconfig/.gitexcludes are carved back in, then secrets are denied last (full file-read*,
+; including metadata, so their existence isn't observable either) so they lose even inside a
+; carve-in.
 (allow file-read*)
 ; Directory metadata (stat/lstat) stays allowed through all of $HOME, not just the carve-ins:
 ; resolving a path — realpath, a pre-exec chdir, git's ancestor-ownership walk — requires
