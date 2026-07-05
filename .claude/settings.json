@@ -14,6 +14,7 @@
       "Bash(rm */.janissary/workspace/*)",
       "Bash(mkdir *)",
       "Bash(npx eslint *)",
+      "Bash(npx vitest *)",
       "Bash(find *)",
       "Bash(cat *)",
       "Bash(kill *)",
