@@ -116,7 +116,6 @@ export function FileTreeTab({ files, client, index }: Properties) {
             className={`files-row${row.path === selected ? ' selected' : ''}`}
             data-path={row.path}
             style={{ paddingLeft: 12 + row.depth * 16 }}
-            title={row.path}
             onClick={() => onRowClick(row)}
             onDoubleClick={(e) => onRowDoubleClick(row, e.shiftKey)}
           >
