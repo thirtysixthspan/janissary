@@ -32,10 +32,12 @@ export function swapTabsRight(tabs: Tab[], index: number): Tab[] {
   return renumberTabs(next);
 }
 
-export function insertTabInGroup(tabs: Tab[], tab: Tab): Tab[] {
+export function insertTabInGroup(tabs: Tab[], tab: Tab, position: 'start' | 'end' = 'end'): Tab[] {
   let insertAt = tabs.length;
   for (const [index, tab_] of tabs.entries()) {
-    if (tab_.group === tab.group) insertAt = index + 1;
+    if (tab_.group !== tab.group) continue;
+    if (position === 'start') { insertAt = index; break; }
+    insertAt = index + 1;
   }
   return renumberTabs([...tabs.slice(0, insertAt), tab, ...tabs.slice(insertAt)]);
 }

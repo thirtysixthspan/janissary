@@ -81,7 +81,7 @@ export function addFilesTab(tabs: Tab[], activeTab: number, view: FileTreeView):
   const groupColor = creator?.groupColor ?? dotColor;
   const tab = makeFilesTab(label, dotColor, tabs.length + 1, group, groupColor, view);
   tab.title = path.basename(view.root).slice(0, getConfig().tabNameMaxLength);
-  const newTabs = insertTabInGroup(tabs, tab);
+  const newTabs = insertTabInGroup(tabs, tab, 'start');
   return { tabs: newTabs, activeTab: newTabs.findIndex((t) => t.label === label) };
 }
 
