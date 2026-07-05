@@ -18,7 +18,8 @@
       "Bash(find *)",
       "Bash(cat *)",
       "Bash(kill *)",
-      "Bash(screencapture *)"
+      "Bash(screencapture *)",
+      "Bash(chmod +x node_modules/node-pty/prebuilds/*)"
     ]
   }
 }
