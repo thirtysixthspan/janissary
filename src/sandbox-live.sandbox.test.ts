@@ -1,0 +1,89 @@
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync, existsSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { tmpdir, homedir } from 'node:os';
+import path from 'node:path';
+import { loadConfig } from './config.js';
+import { sandboxAvailable, sandboxSpawn } from './sandbox.js';
+
+describe.skipIf(!sandboxAvailable())('sandboxSpawn — live sandbox-exec integration (darwin only)', () => {
+  let workspaceDir: string;
+  let tmpDir: string;
+
+  beforeEach(() => {
+    loadConfig(mkdtempSync(path.join(tmpdir(), 'sandbox-cfg-')));
+    workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
+    tmpDir = `${workspaceDir}.tmp`;
+    mkdirSync(tmpDir, { recursive: true });
+  });
+
+  afterEach(() => {
+    rmSync(workspaceDir, { recursive: true, force: true });
+    rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  const runSandboxed = (script: string): { status: number } => {
+    const scriptPath = path.join(workspaceDir, 'run.sh');
+    writeFileSync(scriptPath, `#!/bin/sh\n${script}\n`, { mode: 0o755 });
+    const { command, args, env } = sandboxSpawn({ workspaceDir }, scriptPath, []);
+    try {
+      execFileSync(command, args, { cwd: workspaceDir, env: env as NodeJS.ProcessEnv, stdio: 'pipe' });
+      return { status: 0 };
+    } catch (error) {
+      const status = (error as { status?: number }).status ?? 1;
+      return { status };
+    }
+  };
+
+  it('allows writing inside the workspace and its TMPDIR', () => {
+    const result = runSandboxed(`echo hi > "${workspaceDir}/ok.txt" && echo hi > "${tmpDir}/ok.txt"`);
+    expect(result.status).toBe(0);
+    expect(existsSync(path.join(workspaceDir, 'ok.txt'))).toBe(true);
+    expect(existsSync(path.join(tmpDir, 'ok.txt'))).toBe(true);
+  });
+
+  it('denies writing outside the workspace', () => {
+    const outside = mkdtempSync(path.join(tmpdir(), 'sandbox-outside-'));
+    const result = runSandboxed(`echo escape > "${outside}/bad.txt"`);
+    expect(result.status).not.toBe(0);
+    expect(existsSync(path.join(outside, 'bad.txt'))).toBe(false);
+    rmSync(outside, { recursive: true, force: true });
+  });
+
+  it('allows reading the parent repo root package.json, but nothing else in the parent repo', () => {
+    // A fake parent repo laid out the way production nests workspaces: <repo>/.janissary/workspace/<name>.
+    // It must live under $HOME — that's the only region where reads are denied by default, so a
+    // tmpdir-based repo would be readable regardless and prove nothing.
+    const repoRoot = mkdtempSync(path.join(homedir(), '.janissary-sandbox-test-'));
+    mkdirSync(path.join(repoRoot, '.git'));
+    writeFileSync(path.join(repoRoot, 'package.json'), '{"name":"parent"}');
+    writeFileSync(path.join(repoRoot, 'secrets.txt'), 'deny me');
+    const nestedWorkspace = path.join(repoRoot, '.janissary', 'workspace', 'ws');
+    mkdirSync(nestedWorkspace, { recursive: true });
+    mkdirSync(`${nestedWorkspace}.tmp`, { recursive: true });
+
+    const run = (script: string): boolean => {
+      const scriptPath = path.join(nestedWorkspace, 'run.sh');
+      writeFileSync(scriptPath, `#!/bin/sh\n${script}\n`, { mode: 0o755 });
+      const { command, args, env } = sandboxSpawn({ workspaceDir: nestedWorkspace }, scriptPath, []);
+      try {
+        execFileSync(command, args, { cwd: nestedWorkspace, env: env as NodeJS.ProcessEnv, stdio: 'pipe' });
+        return true;
+      } catch {
+        return false;
+      }
+    };
+
+    expect(run(`cat "${repoRoot}/package.json"`)).toBe(true);
+    expect(run(`cat "${repoRoot}/secrets.txt"`)).toBe(false);
+    rmSync(repoRoot, { recursive: true, force: true });
+  });
+
+  it('denies exec of a script copied to /tmp', () => {
+    const tmpScript = path.join('/tmp', `sandbox-exec-test-${Date.now()}.sh`);
+    writeFileSync(tmpScript, '#!/bin/sh\necho ran\n', { mode: 0o755 });
+    const { command, args } = sandboxSpawn({ workspaceDir }, tmpScript, []);
+    expect(() => execFileSync(command, args, { cwd: workspaceDir, stdio: 'pipe' })).toThrow();
+    rmSync(tmpScript, { force: true });
+  });
+});

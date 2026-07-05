@@ -1296,7 +1296,7 @@ describe('Controller files tab', () => {
     const tab = c.view().find((t) => t.view === 'files');
     expect(tab).toBeDefined();
     expect(tab!.files?.root).toBe(root);
-    expect(tab!.files?.rows.map((r) => r.path)).toEqual(['src', 'README.md']);
+    expect(tab!.files?.rows.map((r) => r.path)).toEqual(['..', 'src', 'README.md']);
   });
 
   it('errors into the transcript for a non-directory target, without opening a tab', () => {

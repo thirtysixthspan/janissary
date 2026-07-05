@@ -178,7 +178,15 @@ ${writeCarveClauses})
 ; same self-read reasoning, and so a script running inside the sandbox can invoke the known-good
 ; node at JANISSARY_NODE (see sandbox.ts) instead of relying on PATH resolution inside the
 ; sandboxed process, which doesn't always find a working node first.
+; PARENT_PKG_L/R (the parent repo's root package.json, as-named and realpath-resolved) is carved
+; in read-only because the workspace nests inside the parent repo: Node module resolution and
+; vitest's parent-folder config discovery walk up ancestor directories probing package.json at
+; each level, and the $HOME contents deny turns that probe into a hard EPERM crash (metadata/stat
+; is allowed, so the walk can see the file exists but dies reading it) instead of a clean miss.
+; One manifest file leaks no secrets; the rest of the parent repo stays denied.
 (allow file-read-data file-read-xattr
+  (literal (param "PARENT_PKG_L"))
+  (literal (param "PARENT_PKG_R"))
   (subpath (param "WORKSPACE"))
   (subpath (param "TMPDIR"))
   (subpath (param "GIT_OBJECTS"))

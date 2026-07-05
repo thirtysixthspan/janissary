@@ -12,7 +12,24 @@ export default defineConfig({
           name: 'server',
           environment: 'node',
           include: ['src/**/*.test.{ts,tsx}'],
-          exclude: [...configDefaults.exclude, '**/.janissary/**', '**/*.browser.test.{ts,tsx}'],
+          exclude: [
+            ...configDefaults.exclude, '**/.janissary/**',
+            '**/*.browser.test.{ts,tsx}', '**/*.sandbox.test.{ts,tsx}',
+          ],
+          hookTimeout: 30_000,
+        },
+      },
+
+      // Tests that spawn a real Seatbelt sandbox via sandbox-exec. Not part of `npm test` or
+      // `npm run check` (see the project-scoped scripts in package.json): sandbox-exec cannot
+      // nest inside an already-sandboxed workspace, so these can only run on the host, via
+      // `npm run test:sandbox`.
+      {
+        test: {
+          name: 'sandbox',
+          environment: 'node',
+          include: ['src/**/*.sandbox.test.{ts,tsx}'],
+          exclude: [...configDefaults.exclude, '**/.janissary/**'],
           hookTimeout: 30_000,
         },
       },
@@ -43,7 +60,10 @@ export default defineConfig({
           name: 'client',
           environment: 'jsdom',
           include: ['web/src/**/*.test.{ts,tsx}'],
-          exclude: [...configDefaults.exclude, '**/.janissary/**', '**/*.browser.test.{ts,tsx}'],
+          exclude: [
+            ...configDefaults.exclude, '**/.janissary/**',
+            '**/*.browser.test.{ts,tsx}', '**/*.sandbox.test.{ts,tsx}',
+          ],
           setupFiles: ['web/src/test/setup.ts'],
           // Vitest stubs all CSS imports to an empty string by default; `?raw` imports (the
           // syntax-theme stylesheets) need their actual text content, so opt them back in.
