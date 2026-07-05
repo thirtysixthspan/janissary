@@ -37,8 +37,12 @@ export function FileTreeTab({ files, client, index }: Properties) {
   const openFile = (path: string) => client.send({ method: 'command', params: { text: `open ${path}` } });
   const editFile = (path: string) => client.send({ method: 'command', params: { text: `edit ${path}` } });
 
-  const onRowClick = (row: FileTreeRow, altKey: boolean) => {
+  const onRowClick = (row: FileTreeRow) => {
     setSelected(row.path);
+    if (row.dir) toggle(row.path);
+  };
+
+  const onRowDoubleClick = (row: FileTreeRow, altKey: boolean) => {
     if (row.dir) toggle(row.path);
     else if (altKey) editFile(row.path);
     else openFile(row.path);
@@ -98,7 +102,8 @@ export function FileTreeTab({ files, client, index }: Properties) {
             className={`files-row${row.path === selected ? ' selected' : ''}`}
             style={{ paddingLeft: 12 + row.depth * 16 }}
             title={row.path}
-            onClick={(e) => onRowClick(row, e.altKey)}
+            onClick={() => onRowClick(row)}
+            onDoubleClick={(e) => onRowDoubleClick(row, e.altKey)}
           >
             {row.dir && <span className="files-chevron">{row.expanded ? '▾' : '▸'}</span>}
             <span className="files-name">{row.name}</span>
