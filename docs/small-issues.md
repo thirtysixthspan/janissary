@@ -1,5 +1,9 @@
 # small issues
 
+* shift + double click to open a file for editing, not alt+double click.
+
+* it should require a double click to expand a directory in the file navigator tab.
+
 * scrolling down/up the page outside the visible window in the file navigator tab using arrow keys should cause the visible window to scroll so the currently selected line is visible.
 
 * the full path of the directory shown in file navigator should be shown using the same metadata display as used in the image tab.
