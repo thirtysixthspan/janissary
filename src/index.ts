@@ -187,6 +187,8 @@ function handle(controller: Controller, message: ClientMessage, reply: (event: S
     }
     case 'fileTreeCollapseAll': { controller.fileTreeCollapseAll(message.params.index); break;
     }
+    case 'fileTreeReroot': { controller.fileTreeReroot(message.params.index); break;
+    }
   }
   reply({ t: 'rpc-reply', id: message.id, result: 'ok' });
 }

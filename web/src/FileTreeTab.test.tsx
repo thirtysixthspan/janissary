@@ -82,6 +82,14 @@ describe('FileTreeTab', () => {
     expect(send).toHaveBeenCalledWith({ method: 'fileTreeCollapseAll', params: { index: 1 } });
   });
 
+  it('double-click on ".." row sends fileTreeReroot', () => {
+    const send = vi.fn();
+    const client = { send } as unknown as JanusClient;
+    render(<FileTreeTab files={makeFiles({ rows: [{ path: '..', name: '..', depth: 0, dir: true }, ...makeFiles().rows] })} client={client} index={0} />);
+    fireEvent.dblClick(screen.getByText('..'));
+    expect(send).toHaveBeenCalledWith({ method: 'fileTreeReroot', params: { index: 0 } });
+  });
+
   it('ArrowDown moves selection and Enter opens the selected file', () => {
     const send = vi.fn();
     const client = { send } as unknown as JanusClient;

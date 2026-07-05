@@ -46,5 +46,8 @@ export function buildRows(root: string, expanded: Set<string>): FileTreeRow[] {
     }
   };
   walk(root, '', 0);
+  if (path.dirname(root) !== root) {
+    rows.unshift({ path: '..', name: '..', depth: 0, dir: true });
+  }
   return rows;
 }

@@ -5,7 +5,7 @@ import type { FileTreeRow } from '@shared/protocol';
 // unit-testable without rendering anything.
 export type FileTreeKeyOutcome = {
   selection: string | null;
-  action?: { type: 'toggle' | 'open' | 'edit'; path: string };
+  action?: { type: 'toggle' | 'open' | 'edit' | 'reroot'; path: string };
 };
 
 function indexOf(rows: FileTreeRow[], selected: string | null): number {
@@ -23,25 +23,28 @@ function parentOf(rows: FileTreeRow[], index: number): string | null {
   return null;
 }
 
-// `→`: collapsed dir expands (selection stays); expanded dir moves to its first child; file is a no-op.
+// `→`: collapsed dir expands (selection stays); expanded dir moves to its first child; file/".." is a no-op.
 function onArrowRight(rows: FileTreeRow[], index: number): FileTreeKeyOutcome {
   const row = rows[index];
-  if (!row.dir) return { selection: row.path };
+  if (!row.dir || row.path === '..') return { selection: row.path };
   if (!row.expanded) return { selection: row.path, action: { type: 'toggle', path: row.path } };
   const child = rows[index + 1];
   return child && child.depth === row.depth + 1 ? { selection: child.path } : { selection: row.path };
 }
 
-// `←`: expanded dir collapses; otherwise selection moves to the parent directory.
+// `←`: expanded dir collapses; otherwise selection moves to the parent directory. ".." is a no-op.
 function onArrowLeft(rows: FileTreeRow[], index: number): FileTreeKeyOutcome {
   const row = rows[index];
+  if (row.path === '..') return { selection: row.path };
   if (row.dir && row.expanded) return { selection: row.path, action: { type: 'toggle', path: row.path } };
   return { selection: parentOf(rows, index) ?? row.path };
 }
 
-// `Enter`/`Space`: dir toggles expand/collapse; file opens (or edits, with Alt).
+// `Enter`/`Space`: dir toggles expand/collapse; file opens (or edits, with Shift);
+// ".." navigates to the parent directory.
 function onActivate(rows: FileTreeRow[], index: number, shiftKey: boolean): FileTreeKeyOutcome {
   const row = rows[index];
+  if (row.path === '..') return { selection: row.path, action: { type: 'reroot', path: '..' } };
   if (row.dir) return { selection: row.path, action: { type: 'toggle', path: row.path } };
   return { selection: row.path, action: { type: shiftKey ? 'edit' : 'open', path: row.path } };
 }

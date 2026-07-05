@@ -57,6 +57,7 @@ describe('buildRows', () => {
     writeFileSync(path.join(root, 'README.md'), '');
     const rows = buildRows(root, new Set());
     expect(rows).toEqual([
+      { path: '..', name: '..', depth: 0, dir: true },
       { path: 'src', name: 'src', depth: 0, dir: true, expanded: false },
       { path: 'README.md', name: 'README.md', depth: 0, dir: false },
     ]);
@@ -68,13 +69,13 @@ describe('buildRows', () => {
     mkdirSync(path.join(root, 'src', 'nested'));
     writeFileSync(path.join(root, 'src', 'nested', 'deep.ts'), '');
     const rows = buildRows(root, new Set(['src']));
-    expect(rows.map((r) => r.path)).toEqual(['src', 'src/nested', 'src/index.ts']);
+    expect(rows.map((r) => r.path)).toEqual(['..', 'src', 'src/nested', 'src/index.ts']);
     expect(rows.find((r) => r.path === 'src/nested')?.depth).toBe(1);
   });
 
   it('skips expanded paths that no longer exist', () => {
     writeFileSync(path.join(root, 'file.txt'), '');
     const rows = buildRows(root, new Set(['gone']));
-    expect(rows.map((r) => r.path)).toEqual(['file.txt']);
+    expect(rows.map((r) => r.path)).toEqual(['..', 'file.txt']);
   });
 });

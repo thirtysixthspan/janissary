@@ -69,6 +69,21 @@ export class FileTreeManager {
     this.rebuild(label);
   }
 
+  // Re-root the tree to the parent directory. Clears expanded state and watchers, then rebuilds.
+  reroot(label: string): void {
+    const state = this.tabs.get(label);
+    if (!state) return;
+    const parent = path.resolve(state.root, '..');
+    if (parent === state.root) return; // already at filesystem root
+    for (const relPath of state.expanded) this.unwatchDir(state, relPath);
+    state.expanded.clear();
+    this.unwatchDir(state, '');
+    state.root = parent;
+    this.watchDir(label, parent, '');
+    if (this.managers.tab.tabs.some((t) => t.label === label)) this.managers.tab.setCwd(label, parent);
+    this.rebuild(label);
+  }
+
   // Tear down one tab's watchers and debounce timer (on tab close).
   closeTab(label: string): void {
     const state = this.tabs.get(label);
