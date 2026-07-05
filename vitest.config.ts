@@ -29,6 +29,9 @@ export default defineConfig({
           include: ['web/src/**/*.test.{ts,tsx}'],
           exclude: [...configDefaults.exclude, '**/.janissary/**'],
           setupFiles: ['web/src/test/setup.ts'],
+          // Vitest stubs all CSS imports to an empty string by default; `?raw` imports (the
+          // syntax-theme stylesheets) need their actual text content, so opt them back in.
+          css: { include: [/\.css\?raw$/] },
         },
       },
     ],

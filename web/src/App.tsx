@@ -5,16 +5,19 @@ import { TabStrip } from './TabStrip';
 import { Transcript } from './Transcript';
 import { ViewTabBody } from './ViewTabBody';
 import { ReportingSection, isReportingTab } from './ReportingSection';
-import { HarnessTab, type HarnessTabHandle } from './HarnessTab';
-import { EditorTab, type EditorTabHandle } from './EditorTab';
+import type { HarnessTabHandle } from './HarnessTab';
+import type { EditorTabHandle } from './EditorTab';
 import type { ShellTabHandle } from './ShellTab';
 import { ShellTabLayer } from './ShellTabLayer';
+import { MountedViewLayers } from './MountedViewLayers';
 import { CommandArea } from './CommandArea';
 import { useTranscriptSearch } from './useTranscriptSearch';
 import { resolveSearchInterception } from './command-interceptions';
 import { StatusPanels } from './StatusPanels';
 import { HistoryPicker } from './HistoryPicker';
+import { ThemePicker } from './ThemePicker';
 import { RouteChooser } from './RouteChooser';
+import { SYNTAX_THEMES } from '@shared/syntax-themes';
 import { QuitDialog } from './QuitDialog/QuitDialog';
 import { CloseSaveGuard } from './CloseSaveGuard';
 import { getRecentHistory } from './history';
@@ -22,6 +25,8 @@ import { useCmdW } from './useCmdW';
 import { useTranscriptScroll } from './useTranscriptScroll';
 import { useQuitConfirm } from './QuitDialog/useQuitConfirm';
 import { useWindowKeys } from './useWindowKeys';
+import { useThemePicker } from './useThemePicker';
+import { applySyntaxTheme } from './editor/highlight/themes';
 
 export function App() {
   const clientReference = useRef<JanusClient | null>(null);
@@ -32,6 +37,7 @@ export function App() {
   const [activeTab, setActiveTab] = useState(0);
   const [tabNameMaxLength, setTabNameMaxLength] = useState(16);
   const [globalHistory, setGlobalHistory] = useState<string[]>([]);
+  const [syntaxTheme, setSyntaxTheme] = useState('github-dark');
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerIndex, setPickerIndex] = useState(0);
   // Server-driven route chooser (null when closed); `routeIdx` is the highlighted option.
@@ -67,11 +73,20 @@ export function App() {
     ? { lineIndex: search.currentLineIndex, pattern: search.pattern }
     : null;
 
-  // Live snapshot read by the window key handler, so it never has to re-register.
-  const stateReference = useRef({ pickerOpen, pickerIdx: pickerIndex, recent, route, routeIdx: routeIndex, canSearch, searchOpen: search.searchOpen });
-  stateReference.current = { pickerOpen, pickerIdx: pickerIndex, recent, route, routeIdx: routeIndex, canSearch, searchOpen: search.searchOpen };
-
   const runCommand = useCallback((text: string) => client.send({ method: 'command', params: { text } }), [client]);
+  const { themePickerOpen, themePickerIndex, setThemePickerIndex, setThemePickerOpen, openThemePicker, pickTheme } =
+    useThemePicker(syntaxTheme, runCommand);
+
+  // Live snapshot read by the window key handler, so it never has to re-register.
+  const stateReference = useRef({
+    pickerOpen, pickerIdx: pickerIndex, recent, route, routeIdx: routeIndex, canSearch, searchOpen: search.searchOpen,
+    themePickerOpen, themePickerIdx: themePickerIndex,
+  });
+  stateReference.current = {
+    pickerOpen, pickerIdx: pickerIndex, recent, route, routeIdx: routeIndex, canSearch, searchOpen: search.searchOpen,
+    themePickerOpen, themePickerIdx: themePickerIndex,
+  };
+
   const openPicker = () => {
     // Always open on hist / Ctrl+R; highlight the most recent (bottom) entry.
     setPickerIndex(Math.max(0, stateReference.current.recent.length - 1));
@@ -94,17 +109,20 @@ export function App() {
 
   const chooseRoute = useCallback((index: number) => client.send({ method: 'chooseRoute', params: { index } }), [client]);
 
-  useEffect(() => client.onState((nextTabs, active, nextRoute, nextTabNameMaxLength, nextGlobalHistory) => {
+  useEffect(() => client.onState((nextTabs, active, nextRoute, nextTabNameMaxLength, nextGlobalHistory, nextSyntaxTheme) => {
     setTabs(nextTabs);
     setActiveTab(active);
     setRoute(nextRoute);
     setTabNameMaxLength(nextTabNameMaxLength);
     setGlobalHistory(nextGlobalHistory);
+    setSyntaxTheme(nextSyntaxTheme);
     // Highlight the first option when a chooser newly opens (or its command changes).
     const previous = routeReference.current;
     routeReference.current = nextRoute;
     if (nextRoute && (!previous || previous.cmd !== nextRoute.cmd)) setRouteIndex(0);
   }), [client]);
+
+  useEffect(() => { applySyntaxTheme(syntaxTheme); }, [syntaxTheme]);
 
   // Switching tabs: harness/shell PTY tabs focus the terminal; all others focus the command line.
   useEffect(() => {
@@ -118,8 +136,14 @@ export function App() {
   useCmdW(closeTab, activeTabRef, quitConfirmOpenRef, pickerOpenRef, routeRef, activeViewRef);
 
   const openSearch = () => search.open('');
-  const keyCallbacksRef = useRef({ setRouteIndex, chooseRoute, runCommand, setPickerIndex, setPickerOpen, openPicker, openSearch });
-  keyCallbacksRef.current = { setRouteIndex, chooseRoute, runCommand, setPickerIndex, setPickerOpen, openPicker, openSearch };
+  const keyCallbacksRef = useRef({
+    setRouteIndex, chooseRoute, runCommand, setPickerIndex, setPickerOpen, openPicker, openSearch,
+    setThemePickerIndex, setThemePickerOpen, pickTheme,
+  });
+  keyCallbacksRef.current = {
+    setRouteIndex, chooseRoute, runCommand, setPickerIndex, setPickerOpen, openPicker, openSearch,
+    setThemePickerIndex, setThemePickerOpen, pickTheme,
+  };
 
   useWindowKeys(client, stateReference, keyCallbacksRef, handleScrollKey, handleScrollKeyUp);
 
@@ -141,33 +165,7 @@ export function App() {
       <ShellTabLayer tabs={tabs} activeLabel={current.label} client={client}
         onHandle={(id, h) => { if (h) shellHandles.current.set(id, h); else shellHandles.current.delete(id); }} />
 
-      {/* Harness layer: all harness tabs stay mounted; only the active one is visible.
-          This preserves xterm state (alternate buffer, cursor position) across tab switches.
-          The schedule panel floats over the terminal so a harness's timers stay visible. */}
-      {tabs.filter((t) => t.view === 'harness' && t.harness).map((t) => (
-        <div
-          key={t.harness!.ptyId}
-          className="tab-body"
-          style={{ borderLeft: `4px solid ${t.dotColor}`, position: 'relative', display: t.label === current.label ? 'flex' : 'none' }}
-        >
-          <HarnessTab harness={t.harness!} client={client}
-            ref={(h) => { if (h) harnessHandles.current.set(t.harness!.ptyId, h); else harnessHandles.current.delete(t.harness!.ptyId); }} />
-          <StatusPanels tab={t} scheduleOnly={t.harness!.name !== 'ssh'} />
-        </div>
-      ))}
-
-      {/* Editor layer: like harness tabs, every editor tab stays mounted (hidden when inactive)
-          so the buffer, undo stacks, cursor, and scroll position survive tab switches. */}
-      {tabs.filter((t) => t.view === 'editor' && t.editor).map((t) => (
-        <div
-          key={t.editor!.url}
-          className="tab-body"
-          style={{ borderLeft: `4px solid ${t.dotColor}`, display: t.label === current.label ? 'flex' : 'none' }}
-        >
-          <EditorTab editor={t.editor!} client={client} active={t.label === current.label}
-            ref={(h) => { if (h) editorHandles.current.set(t.label, h); else editorHandles.current.delete(t.label); }} />
-        </div>
-      ))}
+      <MountedViewLayers tabs={tabs} current={current} client={client} harnessHandles={harnessHandles} editorHandles={editorHandles} />
 
       {!isViewTab && !current.activePty && (
         <div
@@ -192,7 +190,10 @@ export function App() {
             />
             <StatusPanels tab={current} />
             {route && <RouteChooser cmd={route.cmd} choices={route.choices} selected={routeIndex} onPick={chooseRoute} />}
-            {!route && pickerOpen && <HistoryPicker items={recent} selected={pickerIndex} onPick={pick} />}
+            {!route && themePickerOpen && (
+              <ThemePicker themes={SYNTAX_THEMES} active={syntaxTheme} selected={themePickerIndex} onPick={pickTheme} />
+            )}
+            {!route && !themePickerOpen && pickerOpen && <HistoryPicker items={recent} selected={pickerIndex} onPick={pick} />}
           </div>
           <CommandArea
             search={search}
@@ -205,13 +206,14 @@ export function App() {
               if (searchPattern !== null) { search.open(searchPattern); return; }
               const trimmed = text.trim().toLowerCase();
               if (trimmed === 'hist') openPicker();
+              else if (trimmed === 'syntax theme') openThemePicker();
               else if (trimmed === 'quit' || ((trimmed === 'close' || trimmed === 'exit') && tabs.length === 1)) openQuitConfirm();
               else if ((trimmed === 'close' || trimmed === 'exit') && guardRef.current?.(activeTab)) return;
               else runCommand(text);
             }}
             inputRef={inputReference}
             complete={(text, cursor) => client.request({ method: 'complete', params: { text, cursor } })}
-            pickerOpen={pickerOpen || route !== null || quitConfirmOpen}
+            pickerOpen={pickerOpen || route !== null || quitConfirmOpen || themePickerOpen}
           />
         </div>
       )}

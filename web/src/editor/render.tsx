@@ -1,6 +1,7 @@
 import React from 'react';
 import type { EditorState } from './model';
 import { selectionRange } from './model';
+import type { TokenRange } from './highlight/tokenize';
 
 // Selection column bounds for one line as primitives ([-1, -1] when the line is outside the
 // selection) so EditorLine's React.memo can compare props cheaply on large files.
@@ -23,12 +24,17 @@ type LineProps = {
   // Caret column, or -1 when the caret is not on this line.
   caretCol: number;
   caretRef: React.Ref<HTMLSpanElement> | null;
+  // Syntax-highlighting token ranges for this line; empty when highlighting is off.
+  tokens: TokenRange[];
 };
 
 // The caret is a zero-width inline span (its ::after paints the bar) inserted into the text flow
-// at the cursor column, so it sits exactly at (line, col) with no measurement code.
-function contentSegments({ text, selFrom, selTo, caretCol, caretRef }: LineProps): React.ReactNode[] {
-  const bounds = [...new Set([0, selFrom, selTo, caretCol, text.length])]
+// at the cursor column, so it sits exactly at (line, col) with no measurement code. Token
+// boundaries fold into the same bounds set as selection/caret, so a token span never needs to
+// nest around a selection — everything flattens to one list of column-bounded segments.
+function contentSegments({ text, selFrom, selTo, caretCol, caretRef, tokens }: LineProps): React.ReactNode[] {
+  const tokenBounds = tokens.flatMap((t) => [t.from, t.to]);
+  const bounds = [...new Set([0, selFrom, selTo, caretCol, text.length, ...tokenBounds])]
     .filter((b) => b >= 0 && b <= text.length)
     .toSorted((a, b) => a - b);
   const nodes: React.ReactNode[] = [];
@@ -36,7 +42,9 @@ function contentSegments({ text, selFrom, selTo, caretCol, caretRef }: LineProps
     const [from, to] = [bounds[index], bounds[index + 1]];
     if (caretCol === from) nodes.push(<span key={`c${from}`} className="editor-caret" ref={caretRef} />);
     const selected = selFrom >= 0 && from >= selFrom && to <= selTo;
-    nodes.push(<span key={from} className={selected ? 'editor-sel' : undefined}>{text.slice(from, to)}</span>);
+    const token = tokens.find((t) => from >= t.from && to <= t.to);
+    const className = [token?.scope, selected ? 'editor-sel' : undefined].filter(Boolean).join(' ');
+    nodes.push(<span key={from} className={className || undefined}>{text.slice(from, to)}</span>);
   }
   if (caretCol === text.length && (text.length > 0 || bounds.length === 1)) {
     // Zero-width space gives the inline span text content so the browser establishes a line box

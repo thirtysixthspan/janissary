@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import type { JanusClient } from './ws';
 import type { RouteChooserView } from '@shared/protocol';
+import { SYNTAX_THEMES } from '@shared/syntax-themes';
 import { handleRouteChooserKey, handlePickerKey } from './keyboard-handlers';
 
 type StateSnapshot = {
@@ -14,6 +15,8 @@ type StateSnapshot = {
   // search bar instead of scrolling the transcript underneath it).
   canSearch: boolean;
   searchOpen: boolean;
+  themePickerOpen: boolean;
+  themePickerIdx: number;
 };
 
 type Callbacks = {
@@ -24,7 +27,20 @@ type Callbacks = {
   setPickerOpen: (open: boolean) => void;
   openPicker: () => void;
   openSearch: () => void;
+  setThemePickerIndex: (setter: (prev: number) => number) => void;
+  setThemePickerOpen: (open: boolean) => void;
+  pickTheme: (name: string) => void;
 };
+
+// Ctrl/Shift+Arrow tab reorder/move shortcuts and Ctrl+T tool-step collapse — the tail of the key
+// handler once no picker/chooser/search state intercepts the key.
+function handleTabShortcuts(e: KeyboardEvent, client: JanusClient): void {
+  if (e.ctrlKey && !e.shiftKey && e.key === 'ArrowLeft') { e.preventDefault(); client.send({ method: 'reorderTab', params: { dir: -1 } }); }
+  else if (e.ctrlKey && !e.shiftKey && e.key === 'ArrowRight') { e.preventDefault(); client.send({ method: 'reorderTab', params: { dir: 1 } }); }
+  else if (e.shiftKey && !e.ctrlKey && e.key === 'ArrowLeft') { e.preventDefault(); client.send({ method: 'moveTab', params: { dir: -1 } }); }
+  else if (e.shiftKey && !e.ctrlKey && e.key === 'ArrowRight') { e.preventDefault(); client.send({ method: 'moveTab', params: { dir: 1 } }); }
+  else if (e.ctrlKey && e.key.toLowerCase() === 't') { e.preventDefault(); client.send({ method: 'toggleCollapse', params: {} }); }
+}
 
 export function useWindowKeys(
   client: JanusClient,
@@ -42,6 +58,10 @@ export function useWindowKeys(
         handleRouteChooserKey(e, snap.route, snap.routeIdx, cb.setRouteIndex, cb.chooseRoute);
         return;
       }
+      if (snap.themePickerOpen) {
+        handlePickerKey(e, SYNTAX_THEMES, snap.themePickerIdx, cb.setThemePickerIndex, cb.pickTheme, cb.setThemePickerOpen);
+        return;
+      }
       if (snap.pickerOpen) {
         handlePickerKey(e, snap.recent, snap.pickerIdx, cb.setPickerIndex, cb.runCommand, cb.setPickerOpen);
         return;
@@ -55,11 +75,7 @@ export function useWindowKeys(
       if (e.ctrlKey && e.key.toLowerCase() === 'r') { e.preventDefault(); cb.openPicker(); return; }
 
       if (!snap.searchOpen && handleScrollKey(e)) return;
-      if (e.ctrlKey && !e.shiftKey && e.key === 'ArrowLeft') { e.preventDefault(); client.send({ method: 'reorderTab', params: { dir: -1 } }); }
-      else if (e.ctrlKey && !e.shiftKey && e.key === 'ArrowRight') { e.preventDefault(); client.send({ method: 'reorderTab', params: { dir: 1 } }); }
-      else if (e.shiftKey && !e.ctrlKey && e.key === 'ArrowLeft') { e.preventDefault(); client.send({ method: 'moveTab', params: { dir: -1 } }); }
-      else if (e.shiftKey && !e.ctrlKey && e.key === 'ArrowRight') { e.preventDefault(); client.send({ method: 'moveTab', params: { dir: 1 } }); }
-      else if (e.ctrlKey && e.key.toLowerCase() === 't') { e.preventDefault(); client.send({ method: 'toggleCollapse', params: {} }); }
+      handleTabShortcuts(e, client);
     };
     globalThis.addEventListener('keydown', onKey);
     globalThis.addEventListener('keyup', handleScrollKeyUp);

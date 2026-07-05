@@ -173,3 +173,21 @@ describe('completeCommandLine — browser command', () => {
     ]);
   });
 });
+
+describe('completeCommandLine — syntax theme', () => {
+  const noFiles = '/no/such/dir/xyz';
+
+  it('completes "theme" for the first argument', () => {
+    expect(completeCommandLine('syntax th', 9, noFiles).newInput).toBe('syntax theme ');
+  });
+
+  it('completes a theme name for the second argument', () => {
+    expect(completeCommandLine('syntax theme nor', 16, noFiles).newInput).toBe('syntax theme nord ');
+  });
+
+  it('offers every theme for an empty second argument', () => {
+    const r = completeCommandLine('syntax theme ', 13, noFiles);
+    expect(r.matches).toContain('github-dark');
+    expect(r.matches).toContain('nord');
+  });
+});

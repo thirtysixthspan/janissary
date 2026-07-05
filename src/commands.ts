@@ -20,6 +20,7 @@ export const availableCommands = [
   'ssh',
   'search',
   'files',
+  'syntax',
 ];
 
 let helpOutput: string | null = null;
