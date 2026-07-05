@@ -50,17 +50,15 @@ describe.skipIf(!sandboxAvailable())('sandboxSpawn — live sandbox-exec integra
     rmSync(outside, { recursive: true, force: true });
   });
 
-  it('an ancestor package.json probe from a nested workspace reports ENOENT, not EPERM', () => {
+  it('allows reading any package.json under $HOME at any depth, but nothing else', () => {
     // A fake ancestor chain laid out the way production nests workspaces, two levels deep —
     // <grandparent>/<parent-repo>/.janissary/workspace/<name> — since cosmiconfig-based tools
     // (stylelint, eslint, prettier, postcss) and Node's own module resolution walk arbitrarily
-    // far up looking for package.json, not just one level. This used to need a dedicated carve-in
-    // (see prior sandbox-profile.ts history); now the general errno-ENOENT-on-$HOME-deny handles
-    // it for free — the ancestor package.json isn't actually readable, but the denial looks like
-    // a normal missing file instead of crashing the walk with EPERM. Must live under $HOME —
-    // that's the only region denied by default, so a tmpdir-based tree would prove nothing.
+    // far up looking for package.json, not just one level. Must live under $HOME — that's the
+    // only region denied by default, so a tmpdir-based tree would prove nothing.
     const grandparent = mkdtempSync(path.join(homedir(), '.janissary-sandbox-test-'));
     writeFileSync(path.join(grandparent, 'package.json'), '{"name":"grandparent"}');
+    writeFileSync(path.join(grandparent, 'secrets.txt'), 'deny me');
     const repoRoot = path.join(grandparent, 'repo');
     mkdirSync(path.join(repoRoot, '.git'), { recursive: true });
     writeFileSync(path.join(repoRoot, 'package.json'), '{"name":"parent"}');
@@ -68,31 +66,58 @@ describe.skipIf(!sandboxAvailable())('sandboxSpawn — live sandbox-exec integra
     mkdirSync(nestedWorkspace, { recursive: true });
     mkdirSync(`${nestedWorkspace}.tmp`, { recursive: true });
 
-    const stderrOf = (target: string): string => {
+    const run = (script: string): boolean => {
       const scriptPath = path.join(nestedWorkspace, 'run.sh');
-      writeFileSync(scriptPath, `#!/bin/sh\ncat "${target}"\n`, { mode: 0o755 });
+      writeFileSync(scriptPath, `#!/bin/sh\n${script}\n`, { mode: 0o755 });
       const { command, args, env } = sandboxSpawn({ workspaceDir: nestedWorkspace }, scriptPath, []);
       try {
         execFileSync(command, args, { cwd: nestedWorkspace, env: env as NodeJS.ProcessEnv, stdio: 'pipe' });
-        return '';
-      } catch (error) {
-        return (error as { stderr?: Buffer }).stderr?.toString() ?? '';
+        return true;
+      } catch {
+        return false;
       }
     };
 
-    for (const target of [path.join(repoRoot, 'package.json'), path.join(grandparent, 'package.json')]) {
-      const stderr = stderrOf(target);
-      expect(stderr).toContain('No such file or directory');
-      expect(stderr).not.toContain('Operation not permitted');
-    }
+    expect(run(`cat "${repoRoot}/package.json"`)).toBe(true);
+    expect(run(`cat "${grandparent}/package.json"`)).toBe(true);
+    expect(run(`cat "${grandparent}/secrets.txt"`)).toBe(false);
     rmSync(grandparent, { recursive: true, force: true });
   });
 
-  it('denied $HOME reads report ENOENT (looks missing), not EPERM (looks forbidden)', () => {
+  it('a non-secret $HOME read outside any carve-in reports EPERM, not ENOENT', () => {
+    // Directory-listing-based resolvers (esbuild, notably) walk ancestor directories under $HOME
+    // while resolving an entry point; those directories genuinely exist (metadata is allowed
+    // throughout $HOME), so denying their content read as ENOENT would falsely claim the directory
+    // doesn't exist and break that resolution (this regressed real `npm test` runs inside a
+    // workspace — see git history — before being reverted). EPERM carries no such false signal.
     const outside = mkdtempSync(path.join(homedir(), '.janissary-sandbox-test-'));
-    writeFileSync(path.join(outside, 'secrets.txt'), 'deny me');
+    writeFileSync(path.join(outside, 'ordinary.txt'), 'deny me, but say so honestly');
     const scriptPath = path.join(workspaceDir, 'run.sh');
-    writeFileSync(scriptPath, `#!/bin/sh\ncat "${path.join(outside, 'secrets.txt')}"\n`, { mode: 0o755 });
+    writeFileSync(scriptPath, `#!/bin/sh\ncat "${path.join(outside, 'ordinary.txt')}"\n`, { mode: 0o755 });
+    const { command, args, env } = sandboxSpawn({ workspaceDir }, scriptPath, []);
+    try {
+      execFileSync(command, args, { cwd: workspaceDir, env: env as NodeJS.ProcessEnv, stdio: 'pipe' });
+      expect.unreachable('expected the read to be denied');
+    } catch (error) {
+      const stderr = (error as { stderr?: Buffer }).stderr?.toString() ?? '';
+      expect(stderr).toContain('Operation not permitted');
+      expect(stderr).not.toContain('No such file or directory');
+    }
+    rmSync(outside, { recursive: true, force: true });
+  });
+
+  it('a denied secret path reports ENOENT, not EPERM', () => {
+    // Unlike the general $HOME deny above, secret paths are individual files a resolver never
+    // treats as a required ancestor of anything else, so there's no directory-existence lie in
+    // play here — ENOENT is safe, and better secrecy (EPERM already confirms the path exists).
+    // .terraform.d is a real SECRET_DENY_PATHS entry; confirmed absent on the test machine so this
+    // is safe to create and remove without touching anything real.
+    const secretDir = path.join(homedir(), '.terraform.d');
+    expect(existsSync(secretDir)).toBe(false);
+    mkdirSync(secretDir);
+    writeFileSync(path.join(secretDir, 'credentials.tfrc.json'), '{"token":"deny me"}');
+    const scriptPath = path.join(workspaceDir, 'run.sh');
+    writeFileSync(scriptPath, `#!/bin/sh\ncat "${path.join(secretDir, 'credentials.tfrc.json')}"\n`, { mode: 0o755 });
     const { command, args, env } = sandboxSpawn({ workspaceDir }, scriptPath, []);
     try {
       execFileSync(command, args, { cwd: workspaceDir, env: env as NodeJS.ProcessEnv, stdio: 'pipe' });
@@ -101,8 +126,9 @@ describe.skipIf(!sandboxAvailable())('sandboxSpawn — live sandbox-exec integra
       const stderr = (error as { stderr?: Buffer }).stderr?.toString() ?? '';
       expect(stderr).toContain('No such file or directory');
       expect(stderr).not.toContain('Operation not permitted');
+    } finally {
+      rmSync(secretDir, { recursive: true, force: true });
     }
-    rmSync(outside, { recursive: true, force: true });
   });
 
   it('denies exec of a script copied to /tmp', () => {
