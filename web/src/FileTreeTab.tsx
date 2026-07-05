@@ -47,6 +47,7 @@ export function FileTreeTab({ files, client, index }: Properties) {
 
   const onRowClick = (row: FileTreeRow) => {
     setSelected(row.path);
+    containerRef.current?.focus();
   };
 
   const onRowDoubleClick = (row: FileTreeRow, shiftKey: boolean) => {
