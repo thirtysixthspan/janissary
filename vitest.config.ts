@@ -12,8 +12,24 @@ export default defineConfig({
           name: 'server',
           environment: 'node',
           include: ['src/**/*.test.{ts,tsx}'],
-          exclude: [...configDefaults.exclude, '**/.janissary/**'],
+          exclude: [...configDefaults.exclude, '**/.janissary/**', '**/*.browser.test.{ts,tsx}'],
           hookTimeout: 30_000,
+        },
+      },
+
+      // Playwright-backed tests that launch a real chromium. Deliberately not part of `npm test`
+      // or `npm run check` (see the project-scoped scripts in package.json): workspaces install
+      // with --ignore-scripts and never download browsers, and the workspace sandbox denies
+      // access to playwright's browser cache — so these can only run on the host, via
+      // `npm run test:browser`.
+      {
+        test: {
+          name: 'browser',
+          environment: 'node',
+          include: ['src/**/*.browser.test.{ts,tsx}', 'web/src/**/*.browser.test.{ts,tsx}'],
+          exclude: [...configDefaults.exclude, '**/.janissary/**'],
+          testTimeout: 60_000,
+          hookTimeout: 60_000,
         },
       },
 
@@ -27,7 +43,7 @@ export default defineConfig({
           name: 'client',
           environment: 'jsdom',
           include: ['web/src/**/*.test.{ts,tsx}'],
-          exclude: [...configDefaults.exclude, '**/.janissary/**'],
+          exclude: [...configDefaults.exclude, '**/.janissary/**', '**/*.browser.test.{ts,tsx}'],
           setupFiles: ['web/src/test/setup.ts'],
           // Vitest stubs all CSS imports to an empty string by default; `?raw` imports (the
           // syntax-theme stylesheets) need their actual text content, so opt them back in.
