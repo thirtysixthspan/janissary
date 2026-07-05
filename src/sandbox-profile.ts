@@ -241,6 +241,14 @@ ${secretDenyClauses})
 ; hit a hard trap (SIGTRAP) rather than an error if denied, instead of falling back gracefully.
 (allow sysctl-read)
 
+; signal has no rule above, so it falls to the top-level default deny — every kill(2) call fails
+; EPERM, including a process terminating its own children (e.g. ShellManager killing the
+; persistent shell it spawned for a tab, or a package manager killing a build step it started).
+; target children allows exactly that self-inflicted case — signaling a descendant of the
+; sandboxed process tree — without opening the door to signaling arbitrary other processes on the
+; host.
+(allow signal (target children))
+
 ${networkClause}
 `;
 }
