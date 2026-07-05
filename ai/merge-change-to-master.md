@@ -70,17 +70,16 @@ If earlier commits already exist on the branch, consolidate so the **final** sta
 
 ## Step 4 — Resolve the GitHub remote and push the branch
 
-`pr:resolve-remote` confirms `origin` points at GitHub (falling back to resolving a real GitHub remote as `github` for older, locally-shared clones) and prints the variables to carry through the rest of the task:
+`origin` always points at GitHub — the workspace is an independent `git clone` of the root repo's `origin` remote. `pr-resolve-remote` reads it and prints the values to carry through the rest of the task:
 
 ```bash
-./scripts/run.mjs pr-resolve-remote > temp/remote-info.txt
-cat temp/remote-info.txt
+./scripts/run.mjs pr-resolve-remote
 ```
 
-This prints a single space-separated line: `GH_REMOTE OWNER_REPO BRANCH GH_URL`. Read those four values from the output and carry them as `GH_REMOTE`, `OWNER_REPO`, `BRANCH`, and `GH_URL` through the remaining steps, then push:
+This prints a single space-separated line: `OWNER_REPO BRANCH GH_URL`. Read those three values from the output — each Bash command runs in its own fresh shell with no state persisted from the previous one, so substitute the actual literal values you read into each subsequent command rather than referencing shell variables — then push:
 
 ```bash
-./scripts/run.mjs pr-push-branch "$GH_REMOTE" "$BRANCH"
+./scripts/run.mjs pr-push-branch origin my-branch-name
 ```
 
 ---
@@ -117,7 +116,7 @@ GitHub computes conflict status asynchronously; `pr:check-mergeable` polls until
 `pr:rebase` fetches `master`, rebases your branch onto it, re-runs the check gate, and force-pushes (with `--force-with-lease`) when the result is clean:
 
 ```bash
-./scripts/run.mjs pr-rebase "$GH_REMOTE" "$BRANCH"
+./scripts/run.mjs pr-rebase origin my-branch-name
 ```
 
 - **Exit 0** → rebased cleanly and pushed. Re-check conflict status (Step 6); when `MERGEABLE`, go to Step 8.

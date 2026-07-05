@@ -51,7 +51,7 @@ Stage all changes and commit with a single author. Adds **no** `Co-Authored-By:`
 ```
 
 ### `./scripts/pr-resolve-remote.sh`
-Resolve the GitHub remote and print `GH_REMOTE`/`OWNER_REPO`/`BRANCH`/`GH_URL` for `eval`. Handles both direct GitHub remotes and older, locally-shared workspace clones.
+Read `origin`'s URL and print `OWNER_REPO`/`BRANCH`/`GH_URL` for `eval`.
 
 ```bash
 eval "$(./scripts/pr-resolve-remote.sh)"
@@ -78,7 +78,7 @@ Merge the PR (merge commit) and delete the remote branch. Only run once mergeabl
 ## How It Works
 
 ### Workspace clone handling
-In a workspaced tab, `origin` already points at GitHub over HTTPS — the workspace is an independent `git clone` of the root repo's `origin` remote. `pr-resolve-remote.sh` confirms this and reuses `origin` directly; it only resolves a separate `github` remote as a fallback for older, locally-shared clones where `origin` still points at the local root repo.
+In a workspaced tab, `origin` already points at GitHub over HTTPS — the workspace is an independent `git clone` of the root repo's `origin` remote. `pr-resolve-remote.sh` just reads it directly; no remote detection is needed.
 
 ### Authentication inside a sandboxed workspace
 `git push` and `gh` (`pr-create-pr.sh`, `pr-merge.sh`) authenticate via `GH_TOKEN`, injected into the sandboxed workspace's environment from `.janissary/github-token` (a scoped, user-provisioned fine-grained PAT — see README's "GitHub push/PR access"). The workspace clone's local `credential.helper` (`!gh auth git-credential`) picks up that same token for `git push`. Without a token configured, these scripts fail from inside a sandboxed workspace (SSH auth is unreachable there, and there's no other credential path in) but work as before outside a workspace or with sandboxing disabled.

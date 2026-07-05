@@ -71,6 +71,17 @@ echo "$output" | tail -3
 
 This applies to any slow command: lint, typecheck, test runs, builds. Capture to a variable (or scratchpad file for very large output), then grep/filter the captured result.
 
+## Avoid unnecessary file redirects in Bash calls
+
+When a command's output just needs to be read or passed to the next step, do not redirect it to a file with `>`/`>>` and then `cat` it back in a separate call. The Bash tool already returns stdout/stderr directly in the tool result — reading a redirected file is redundant, and in permission-gated environments a redirect is a distinct file-write capability that isn't covered by an allowlisted command prefix, so it can trigger an approval prompt even when the command itself is pre-approved.
+
+Instead:
+
+- Just run the command and read its output from the tool result.
+- If a later step needs the value, re-derive it (re-run the read-only command again) rather than stashing it in a file — shell variables don't persist across separate Bash calls anyway.
+- Only write output to a file when a downstream command genuinely requires a file path as input (e.g. a script argument that must be a file, not stdin) — and prefer the Write tool for that, not a shell redirect.
+- This applies to project workflow docs (`ai/*.md`, `docs/*.md`) too: if an example command shows `> file` followed by `cat file`, treat that as a mistake to fix, not a pattern to replicate.
+
 ## Plan and task formatting
 
 When writing implementation plans or creating tasks, use natural line breaks only — do not artificially wrap lines at a fixed column width. Let long lines flow naturally so content remains readable in any viewport.

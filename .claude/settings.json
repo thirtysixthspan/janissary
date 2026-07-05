@@ -19,7 +19,13 @@
       "Bash(cat *)",
       "Bash(kill *)",
       "Bash(screencapture *)",
-      "Bash(chmod +x node_modules/node-pty/prebuilds/*)"
+      "Bash(chmod +x node_modules/node-pty/prebuilds/*)",
+      "Bash(echo *)",
+      "Bash(grep *)",
+      "Bash(head *)",
+      "Bash(tail *)",
+      "Bash(wc *)",
+      "Bash(sed *)"      
     ]
   }
 }

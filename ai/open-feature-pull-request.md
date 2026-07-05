@@ -100,13 +100,13 @@ If earlier commits already exist on the branch, consolidate so the **final** sta
 
 ## Step 4 — Resolve the GitHub remote and push the branch
 
-If this is a workspaced clone, `origin` already points at GitHub — the workspace is an independent `git clone` of the root repo's `origin` remote. `pr-resolve-remote` confirms that (falling back to resolving a real GitHub remote as `github` for older, locally-shared clones) and prints variables:
+`origin` always points at GitHub — the workspace is an independent `git clone` of the root repo's `origin` remote. `pr-resolve-remote` reads it and prints the values later steps need:
 
 ```bash
 ./scripts/run.mjs pr-resolve-remote
 ```
 
-This prints a single space-separated line: `GH_REMOTE OWNER_REPO BRANCH GH_URL`. Read those four values directly from the command's stdout output. Each Bash command runs in its own fresh shell with no state persisted from the previous one, so do not reference them as shell variables (`$GH_REMOTE`) in later commands — substitute the actual literal values you read into each subsequent command:
+This prints a single space-separated line: `OWNER_REPO BRANCH GH_URL`. Read those three values directly from the command's stdout output. Each Bash command runs in its own fresh shell with no state persisted from the previous one, so do not reference them as shell variables in later commands — substitute the actual literal values you read into each subsequent command:
 
 ```bash
 ./scripts/run.mjs pr-push-branch origin my-branch-name
