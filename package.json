@@ -28,7 +28,7 @@
     "playwright:install-chromium": "npx playwright install chromium",
     "test:server": "vitest run --project server",
     "test:watch": "vitest --project server --project client",
-    "coverage": "node -e \"require.resolve('@vitest/coverage-v8')\" && VITEST_SKIP_INSTALL_CHECKS=1 ./node_modules/.bin/vitest run --coverage --pool=threads --project server --project client",
+    "coverage": "VITEST_SKIP_INSTALL_CHECKS=1 vitest run --coverage --project server --project client",
     "test:client": "vitest run --project client",
     "quality": "fta src && fta web/src",
     "quality:gate": "fta src && fta web/src",
