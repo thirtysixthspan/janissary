@@ -8,6 +8,12 @@ Do the steps below **in order**. Do not skip steps. Do not invent your own proce
 
 ---
 
+## Step 0 — Prepare the workspace
+
+Execute `ai/prepare-workspace.md` in full before doing anything else.
+
+---
+
 ## Step 1 — Verify the baseline is green
 
 Run all three and read all output:

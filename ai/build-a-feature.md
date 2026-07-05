@@ -26,20 +26,13 @@ Read any file in the repo. Edit source, tests, CSS, and spec files as the plan d
 
 ---
 
-## Step 1 — Pull latest changes
+## Step 0 — Prepare the workspace
 
-1. Run `git checkout master` to switch to the primary branch.
-2. Run `git pull origin master` to fetch the latest commits.
-
----
-
-## Step 2 — Install dependencies
-
-Run `npm install --ignore-scripts` to ensure dependencies are up to date before doing anything else.
+Execute `ai/prepare-workspace.md` in full before doing anything else.
 
 ---
 
-## Step 3 — List ready plans and pick the simplest
+## Step 1 — List ready plans and pick the simplest
 
 1. List every `.md` file in `docs/plans/ready/`.
 2. For each file, use the `Read` tool to read the first few lines and find the complexity rating line: `**Complexity: N/10**`. Do not use a shell loop to do this.
@@ -51,7 +44,7 @@ State your pick and its complexity in one sentence.
 
 ---
 
-## Step 4 — Read the plan and the project constraints
+## Step 2 — Read the plan and the project constraints
 
 1. Read the entire chosen plan.
 2. Read the project constraints that shape implementation: the ESLint rules and file-size limit in [`CLAUDE.md`](../CLAUDE.md) (200-line `max-lines`, `.js` import extensions in `src/`, type-aware rules), and the test conventions (`src/**/*.test.ts`, `web/src/**/*.test.tsx`).
@@ -59,7 +52,7 @@ State your pick and its complexity in one sentence.
 
 ---
 
-## Step 5 — Implement the plan
+## Step 3 — Implement the plan
 
 Follow the plan's implementation steps **in order**. After each step:
 
@@ -76,7 +69,7 @@ Key rules during implementation:
 
 ---
 
-## Step 6 — Write the tests
+## Step 4 — Write the tests
 
 If the plan has a Tests section, implement every test case listed. Mirror the test style of the referenced test files (imports, helper patterns, assertion style).
 
@@ -84,7 +77,7 @@ Run `./scripts/run.mjs check-diff` after writing tests. All tests must pass.
 
 ---
 
-## Step 7 — Update or create spec files
+## Step 5 — Update or create spec files
 
 Every feature must be reflected in the functional specs under `spec/`. After implementation and tests:
 
@@ -96,14 +89,14 @@ Spec files are markdown and do not affect `check-diff`, so no verification run i
 
 ---
 
-## Step 8 — Final verification
+## Step 6 — Final verification
 
 1. Run `./scripts/run.mjs check-diff` one last time. It must pass clean.
 2. Manually verify the behavior if the plan's Verification section describes manual steps. If manual verification is not possible in this environment, note that in the report.
 
 ---
 
-## Step 9 — Promote the plan
+## Step 7 — Promote the plan
 
 Move the plan file from `docs/plans/ready/` to `docs/plans/complete/`:
 
@@ -113,13 +106,13 @@ git mv docs/plans/ready/<plan-file> docs/plans/complete/<plan-file>
 
 ---
 
-## Step 10 — Open the pull request
+## Step 8 — Open the pull request
 
 Execute `ai/open-feature-pull-request.md` in full. That document owns the PR workflow — follow its steps without deviation.
 
 ---
 
-## Step 11 — Report
+## Step 9 — Report
 
 Give the user a short report in this exact shape:
 

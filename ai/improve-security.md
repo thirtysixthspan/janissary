@@ -28,6 +28,12 @@ Each of those is a judgment call, and a wrong call hides a real problem that the
 
 ---
 
+## Step 0 — Prepare the workspace
+
+Execute `ai/prepare-workspace.md` in full before doing anything else.
+
+---
+
 ## Step 1 — Run the security tools and list every finding
 
 Detection is always safe, so do it even if the project is not green right now.

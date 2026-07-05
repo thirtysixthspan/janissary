@@ -27,20 +27,13 @@ Read any file in the repo. Edit source, tests, CSS, and spec files as the fix re
 
 ---
 
-## Step 1 — Pull latest changes
+## Step 0 — Prepare the workspace
 
-1. Run `git checkout master` to switch to the primary branch.
-2. Run `git pull origin master` to fetch the latest commits.
-
----
-
-## Step 2 — Install dependencies
-
-Run `npm install --ignore-scripts` to ensure dependencies are up to date before doing anything else.
+Execute `ai/prepare-workspace.md` in full before doing anything else.
 
 ---
 
-## Step 3 — List small fixes and pick the first available
+## Step 1 — List small fixes and pick the first available
 
 1. Read `docs/small-fixes.md` and list every issue.
 2. For each issue, assess the complexity by reviewing the codebase to understand what areas it touches. Do not use a shell loop for this.
@@ -50,7 +43,7 @@ Run `npm install --ignore-scripts` to ensure dependencies are up to date before 
 
 ---
 
-## Step 4 — Develop a plan
+## Step 2 — Develop a plan
 
 1. Read the project constraints in [`CLAUDE.md`](../CLAUDE.md): ESLint rules (200-line `max-lines`, `.js` import extensions in `src/`, type-aware rules), test conventions (`src/**/*.test.ts`, `web/src/**/*.test.tsx`).
 2. Read every file relevant to the fix to understand the code involved.
@@ -62,7 +55,7 @@ Run `npm install --ignore-scripts` to ensure dependencies are up to date before 
 
 ---
 
-## Step 5 — Implement the fix
+## Step 3 — Implement the fix
 
 Follow the plan's implementation steps **in order**. After each step:
 
@@ -78,7 +71,7 @@ Key rules during implementation:
 
 ---
 
-## Step 6 — Write the tests
+## Step 4 — Write the tests
 
 If the plan has a Tests section, implement every test case listed. Mirror the test style of the referenced test files (imports, helper patterns, assertion style).
 
@@ -86,7 +79,7 @@ Run `./scripts/run.mjs check-diff` after writing tests. All tests must pass.
 
 ---
 
-## Step 7 — Update or create spec files
+## Step 5 — Update or create spec files
 
 Every fix must be reflected in the functional specs under `spec/`. After implementation and tests:
 
@@ -98,7 +91,7 @@ Spec files are markdown and do not affect `check-diff`, so no verification run i
 
 ---
 
-## Step 8 — Promote the plan and remove the issue
+## Step 6 — Promote the plan and remove the issue
 
 1. Move the plan file from `docs/plans/ready/` to `docs/plans/complete/`:
    ```bash
@@ -108,20 +101,20 @@ Spec files are markdown and do not affect `check-diff`, so no verification run i
 
 ---
 
-## Step 9 — Final verification
+## Step 7 — Final verification
 
 1. Run `./scripts/run.mjs check-diff` one last time. It must pass clean.
 2. Manually verify the behavior if the plan's Verification section describes manual steps. If manual verification is not possible in this environment, note that in the report.
 
 ---
 
-## Step 10 — Merge the change to master
+## Step 8 — Merge the change to master
 
 Execute `ai/merge-change-to-master.md` in full. That document owns the merge workflow — follow its steps without deviation.
 
 ---
 
-## Step 11 — Report
+## Step 9 — Report
 
 Give the user a short report in this exact shape:
 

@@ -23,6 +23,12 @@ Edit the **one plan file** you picked: correct it, disambiguate it, restructure 
 
 ---
 
+## Step 0 — Prepare the workspace
+
+Execute `ai/prepare-workspace.md` in full before doing anything else.
+
+---
+
 ## Step 1 — Pick the plan
 
 - If you were pointed at a specific plan file, use that one.

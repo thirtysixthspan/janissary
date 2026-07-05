@@ -34,6 +34,12 @@ If every remaining candidate is blocked, report which files you considered and w
 
 ---
 
+## Step 0 — Prepare the workspace
+
+Execute `ai/prepare-workspace.md` in full before doing anything else.
+
+---
+
 ## Step 1 — See the starting state (run these, write the numbers down)
 
 Run all four and read the output:

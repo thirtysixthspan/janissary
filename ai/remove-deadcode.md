@@ -39,6 +39,12 @@ Do **not** remove a finding if it is any of these. Just leave it in place and li
 
 ---
 
+## Step 0 — Prepare the workspace
+
+Execute `ai/prepare-workspace.md` in full before doing anything else.
+
+---
+
 ## Step 1 — See the starting state (run these, write the numbers down)
 
 ```bash
