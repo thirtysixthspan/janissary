@@ -52,13 +52,17 @@ export const HOME_WRITE_CARVEOUTS = [
 // in the former points to; every git invocation reads both), `.config/gh/config.yml` (`gh`'s
 // general settings — git_protocol, editor, prompt — as opposed to `hosts.yml`, which can hold a
 // plaintext OAuth token and stays denied via `SECRET_DENY_PATHS`; a workspaced `gh` authenticates
-// via the injected `GH_TOKEN` env var instead, see `github-token.ts`), and `Library/Keychains` (see
+// via the injected `GH_TOKEN` env var instead, see `github-token.ts`), `Library/Keychains` (see
 // the comment on `SECRET_DENY_PATHS` — read access is needed for any Keychain lookup to work at all
-// on this OS, including harness login).
+// on this OS, including harness login), and `.nvm/versions` (every installed Node version's
+// binaries and libs — broader than SERVER_NODE_DIR_L/R in sandbox.ts, which only carves in the one
+// version the janissary server itself runs on; a sandboxed process that shells out to a bare
+// `node`/`npm`/`npx`, or to a harness installed under a different nvm-managed version, needs to
+// read that version's directory too).
 export const HOME_READ_CARVEINS = [
   ...HOME_WRITE_CARVEOUTS,
   '.claude/settings.json', '.claude/plugins', '.claude/skills', '.claude/agents', '.claude/commands', '.claude/keybindings.json',
-  '.gitconfig', '.gitexcludes', '.config/gh/config.yml', 'Library/Keychains',
+  '.gitconfig', '.gitexcludes', '.config/gh/config.yml', 'Library/Keychains', '.nvm/versions',
 ];
 
 // Secret paths denied last, even inside a carve-in.
