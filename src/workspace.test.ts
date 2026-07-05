@@ -67,6 +67,15 @@ describe('createWorkspace', () => {
     expect(helper).toBe('!gh auth git-credential');
     removeWorkspace(ws);
   });
+
+  it('clones from the origin\'s original url, then rewrites the workspace\'s own origin to https', () => {
+    // The clone itself must use whatever transport already works on the host (unsandboxed) — only
+    // the resulting workspace's origin is switched to https, for later in-sandbox git operations.
+    const ws = createWorkspace('test-agent-origin-rewrite', repoDir);
+    const wsOrigin = execSync('git remote get-url origin', { cwd: ws, stdio: 'pipe' }).toString().trim();
+    expect(wsOrigin).toBe(toHttpsUrl(getRemoteUrl(repoDir)));
+    removeWorkspace(ws);
+  });
 });
 
 describe('toHttpsUrl', () => {

@@ -30,7 +30,7 @@ transcript. `--offline` additionally denies network access for the tab.
 
 ### GitHub authentication
 
-The clone uses HTTPS regardless of the root repository's own remote style — SSH authentication cannot work inside the sandbox (see [[sandbox]]). If a scoped GitHub token is configured (`.janissary/github-token`), it is injected into the workspaced tab's environment, letting `git push` and `gh` (PR creation, merging) authenticate from inside the sandbox. Without a token configured, the workspace still works for local development (commit, fetch, pull); pushing to GitHub or using `gh` may fail depending on what credentials the sandbox otherwise permits.
+The initial clone (done outside the sandbox, by the janissary process itself) uses whatever transport the root repository's `origin` already uses — SSH included, since that step isn't sandboxed. Once cloned, the workspace's own `origin` is rewritten to HTTPS: later git operations run *inside* the workspaced tab's sandbox, which cannot authenticate over SSH (see [[sandbox]]). If a scoped GitHub token is configured (`.janissary/github-token`), it is injected into the workspaced tab's environment, letting `git push` and `gh` (PR creation, merging) authenticate over that HTTPS remote from inside the sandbox. Without a token configured, the workspace still works for local development (commit, fetch, pull); pushing to GitHub or using `gh` from inside the workspace will fail.
 
 ### Workspace lifecycle
 

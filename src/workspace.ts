@@ -54,10 +54,8 @@ export function getRemoteUrl(repoPath: string): string {
   return url;
 }
 
-// SSH auth can't work inside the workspace's sandbox (no `~/.ssh`, no SSH agent socket — see
-// `sandbox-profile.ts`), so a workspace clone always uses HTTPS regardless of the root repo's own
-// remote style. Handles `git@github.com:owner/repo.git` and `ssh://git@github.com/owner/repo.git`;
-// an already-HTTPS URL passes through unchanged.
+// Handles `git@github.com:owner/repo.git` and `ssh://git@github.com/owner/repo.git`; an
+// already-HTTPS URL passes through unchanged.
 export function toHttpsUrl(url: string): string {
   const scpMatch = /^git@([^:]+):(.+?)(\.git)?$/.exec(url);
   if (scpMatch) return `https://${scpMatch[1]}/${scpMatch[2]}.git`;
@@ -69,9 +67,15 @@ export function toHttpsUrl(url: string): string {
 export function createWorkspace(name: string, repoPath: string): string {
   ensureWorkspaceDir();
   const target = workspacePath(name);
-  const remoteUrl = toHttpsUrl(getRemoteUrl(repoPath));
-  // Intentional: user-driven workspace creation; only local-user commands reach this sink.
+  const remoteUrl = getRemoteUrl(repoPath);
+  // Clone over whatever transport already works on the host (this runs unsandboxed, so SSH is
+  // fine here) — intentional: user-driven workspace creation; only local-user commands reach this
+  // sink.
   execSync(`git clone "${remoteUrl}" "${target}"`, { stdio: 'pipe' });
+  // Rewrite the clone's own origin to HTTPS: later git operations from *inside* the workspace run
+  // in the Seatbelt sandbox, which denies `~/.ssh` and scrubs `SSH_AUTH_SOCK`, so SSH can't
+  // authenticate there — only HTTPS + the injected `GH_TOKEN` can (see sandbox.ts).
+  execSync(`git remote set-url origin "${toHttpsUrl(remoteUrl)}"`, { cwd: target, stdio: 'pipe' });
   // Local-only credential helper (never touches global git config) — `gh auth git-credential`
   // checks `GH_TOKEN` in its environment before falling back to its keychain-stored OAuth token,
   // so once the sandbox injects `GH_TOKEN` (see sandbox.ts), `git push` authenticates via it.
