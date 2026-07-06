@@ -169,6 +169,59 @@ describe('FileTreeManager', () => {
     }
   });
 
+  it('reroot walks up to the parent directory, swaps watchers, updates cwd, and rebuilds rows', () => {
+    const setCwdCalls: [string, string][] = [];
+    (managers as { tab: { setCwd: (label: string, cwd: string) => void } }).tab.setCwd = (label, cwd) => { setCwdCalls.push([label, cwd]); };
+    mkdirSync(path.join(root, 'sub'));
+    const manager = run();
+    manager.open('files sub', 'janus');
+    const label = tabs.find((t) => t.label.startsWith('files'))!.label;
+    expect(watchMock).toHaveBeenCalledTimes(1);
+
+    manager.reroot(label);
+
+    const tab = tabs.find((t) => t.label === label)!;
+    expect(tab.files!.root).toBe(root);
+    expect(tab.files!.rows.some((r) => r.path === 'sub')).toBe(true);
+    expect(watchMock).toHaveBeenCalledTimes(2);
+    expect(closeFns[0]).toHaveBeenCalled();
+    expect(setCwdCalls).toContainEqual([label, root]);
+  });
+
+  it('reroot clears expanded directories and closes their watchers too', () => {
+    mkdirSync(path.join(root, 'sub'));
+    mkdirSync(path.join(root, 'sub', 'inner'));
+    const manager = run();
+    manager.open('files sub', 'janus');
+    const label = tabs.find((t) => t.label.startsWith('files'))!.label;
+    manager.toggle(label, 'inner');
+    expect(watchMock).toHaveBeenCalledTimes(2);
+
+    manager.reroot(label);
+
+    expect(closeFns[0]).toHaveBeenCalled();
+    expect(closeFns[1]).toHaveBeenCalled();
+    expect(watchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it('reroot is a no-op once already at the filesystem root', () => {
+    const manager = run();
+    manager.open('files /', 'janus');
+    const label = tabs.find((t) => t.label.startsWith('files'))!.label;
+    watchMock.mockClear();
+
+    manager.reroot(label);
+
+    const tab = tabs.find((t) => t.label === label)!;
+    expect(tab.files!.root).toBe('/');
+    expect(watchMock).not.toHaveBeenCalled();
+  });
+
+  it('reroot on an unknown tab is a no-op', () => {
+    const manager = run();
+    expect(() => manager.reroot('ghost')).not.toThrow();
+  });
+
   it('closeTab closes every watcher for that tab', () => {
     mkdirSync(path.join(root, 'src'));
     const manager = run();
