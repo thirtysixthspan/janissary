@@ -82,6 +82,23 @@ function renderTextContent(
   return renderFileLinkSegments(fileLineSegments(text), client);
 }
 
+function hitForLine(highlight: LineHighlight | undefined, index: number): { hit: boolean; props: Record<string, unknown> } {
+  const hit = !!highlight && highlight.lineIndex === index;
+  return { hit, props: hit ? { 'data-search-hit': true } : {} };
+}
+
+function renderMarkdownLine(
+  line: { text: string },
+  index: number,
+  hit: boolean,
+  client: JanusClient,
+): React.ReactNode {
+  return <Markdown key={index} text={line.text} hit={hit} onLinkClick={(url) => {
+    const cmd = FILE_LINE_LINK.test(url) ? 'edit' : 'open';
+    client.send({ method: 'command', params: { text: `${cmd} ${url}` } });
+  }} />;
+}
+
 function renderPromptLine(
   line: { acp?: boolean; cwd?: string; text: string },
   index: number,
@@ -123,14 +140,9 @@ export function renderLine(
   }
   if (line.type === 'spacer') return <div key={index} className="line spacer" />;
 
-  const hit = !!highlight && highlight.lineIndex === index;
+  const { hit, props: hitProps } = hitForLine(highlight, index);
 
-  if (line.type === 'markdown') return <Markdown key={index} text={line.text} hit={hit} onLinkClick={(url) => {
-      const cmd = FILE_LINE_LINK.test(url) ? 'edit' : 'open';
-      client.send({ method: 'command', params: { text: `${cmd} ${url}` } });
-    }} />;
-
-  const hitProps = hit ? { 'data-search-hit': true } : {};
+  if (line.type === 'markdown') return renderMarkdownLine(line, index, hit, client);
 
   if (line.type === 'collapsed') {
     return (
