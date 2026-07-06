@@ -28,7 +28,7 @@ If doing the extraction would require any of the following, **go back to Step 3*
 2. Editing **more than 1 existing source file**, or changing import paths in more than 3 files (the new module file(s) you create do not count).
 3. Touching **`src/controller.ts`** (the biggest, riskiest file) — even though it has the highest score.
 4. Editing **any test file** (`*.test.ts`, `*.test.tsx`).
-5. Touching **security, password/crypto, shell-execution, PTY/terminal, or network/browser** code.
+5. Touching **security, password/crypto, shell-execution, PTY/terminal, or network** code.
 
 If every remaining candidate is blocked, report which files you considered and why each was blocked, and stop without changing any code.
 
@@ -91,7 +91,7 @@ It tells you the **file** (and, for complexity, the **function line**) that is c
    - a `*.test.ts` / `*.test.tsx` file,
    - `src/main.ts`,
    - `src/controller.ts` (needs-permission — only with the user's go-ahead),
-   - `src/pty.ts`, `src/shell.ts`, or any file whose main job is spawning processes, running a terminal, doing network, or driving a browser,
+   - `src/pty.ts`, `src/shell.ts`, or any file whose main job is spawning processes, running a terminal, doing network
    - under `web/src/` (only consider these if no `src/` candidate is left),
    - already small and simple (low score, comfortably under 200 lines).
 3. From what remains, pick the **one** file with the **highest FTA score** — that is the one most worth splitting. Prefer a file that is over (or near) the 200-line limit, since extraction there also clears a `max-lines` error.

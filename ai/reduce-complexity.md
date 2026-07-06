@@ -29,7 +29,7 @@ If reducing the complexity would require any of the following, **go back to Step
 3. Editing **more than 1 existing source file**.
 4. Touching **`src/controller.ts`** (the biggest, riskiest file) — even though it may have the highest score.
 5. Editing **any test file** (`*.test.ts`, `*.test.tsx`).
-6. Touching **security, password/crypto, shell-execution, PTY/terminal, or network/browser** code.
+6. Touching **security, password/crypto, shell-execution, PTY/terminal, or network** code.
 
 If every remaining candidate is blocked, report which files/functions you considered and why each was blocked, and stop without changing any code.
 
@@ -90,7 +90,7 @@ It tells you the **file** and the **function line** that is carrying too much br
    - a `*.test.ts` / `*.test.tsx` file,
    - `src/main.ts`,
    - `src/controller.ts` (needs-permission — only with the user's go-ahead),
-   - `src/pty.ts`, `src/shell.ts`, or any file whose main job is spawning processes, running a terminal, doing network, or driving a browser.
+   - `src/pty.ts`, `src/shell.ts`, or any file whose main job is spawning processes, running a terminal, or doing network.
 3. From what remains, pick the **one** function with the **highest reported complexity** (furthest over the allowed limit) — that is the one most worth breaking up.
 
 State your pick in one short sentence: the file, the function name/line, and its complexity score (e.g. "30, allowed 15"). Write those numbers into your report draft.
