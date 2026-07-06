@@ -70,6 +70,18 @@ function Markdown({ text, hit, onLinkClick }: { text: string; hit: boolean; onLi
   );
 }
 
+function renderTextContent(
+  text: string,
+  highlight: LineHighlight | undefined,
+  index: number,
+  hit: boolean,
+  client: JanusClient,
+): React.ReactNode {
+  if (hit) return highlightText(text, highlight, index);
+  if (hasAnsiCodes(text)) return renderAnsiSegments(text, client);
+  return renderFileLinkSegments(fileLineSegments(text), client);
+}
+
 function renderPromptLine(
   line: { acp?: boolean; cwd?: string; text: string },
   index: number,
@@ -149,9 +161,7 @@ export function renderLine(
   }
   return (
     <div key={index} className="line output" style={line.fromColor ? { color: line.fromColor } : undefined} {...hitProps}>
-      {hit ? highlightText(line.text, highlight, index)
-        : hasAnsiCodes(line.text) ? renderAnsiSegments(line.text, client)
-        : renderFileLinkSegments(fileLineSegments(line.text), client)}
+      {renderTextContent(line.text, highlight, index, hit, client)}
     </div>
   );
 }
