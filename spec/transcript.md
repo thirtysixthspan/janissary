@@ -49,3 +49,14 @@ When scrolled above the bottom, a scrollbar appears in the prompt bar showing a 
 Patterns like `src/foo.ts:42` or `tests/test.py:10:5` in output and markdown lines are rendered as clickable links. Patterns are detected when the text before the colon contains a directory separator (`/` or `\`) followed by one or more digits — bare `word:42` patterns are not considered file paths.
 
 Clicking a file:line link opens the file in an **editor tab** (same as typing `edit <filepath>:<line>`), with the cursor placed on the target line and scrolled to the middle of the tab (see Editor Tab → Scrolling).
+
+### ANSI-colored output
+
+Shell command output — whether run directly or by an agent — is interpreted for ANSI color and
+style codes rather than shown as raw escape text. Colored, bold, and underlined text (for
+example a test suite's colored pass/fail summary) renders with matching styling in the
+transcript, both while the command is still running and once it has finished. A colored line
+that also contains a `file:line` pattern still renders that pattern as a clickable link.
+Escape sequences that aren't color/style codes (cursor movement, clear-line, and similar
+terminal control sequences) are recognized and omitted from the displayed text rather than
+shown as garbled characters.
