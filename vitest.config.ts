@@ -105,7 +105,7 @@ export default defineConfig({
         'src/**': {
           statements: 85.99,
           branches: 77.87,
-          functions: 88.52,
+          functions: 88.64,
           lines: 89.54,
         },
         'web/src/**': {

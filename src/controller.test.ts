@@ -1304,11 +1304,85 @@ describe('Controller files tab', () => {
     expect(tab.files?.rows.some((r) => r.path === 'src/index.ts')).toBe(false);
   });
 
+  it('fileTreeReroot RPC re-roots the tree to the parent directory', () => {
+    mkdirSync(path.join(root, 'sub'));
+    const { c } = makeController();
+    c.dispatch(`files ${path.join(root, 'sub')}`);
+    const index = c.view().findIndex((t) => t.view === 'files');
+    c.fileTreeReroot(index);
+    const tab = c.view()[index];
+    expect(tab.files?.root).toBe(root);
+    expect(tab.files?.rows.some((r) => r.path === 'sub')).toBe(true);
+  });
+
+  it('fileTreeReroot RPC on an out-of-range index does nothing', () => {
+    const { c } = makeController();
+    c.dispatch(`files ${root}`);
+    expect(() => c.fileTreeReroot(99)).not.toThrow();
+  });
+
   it('closing a files tab disposes its watchers without throwing', () => {
     const { c } = makeController();
     c.dispatch(`files ${root}`);
     const index = c.view().findIndex((t) => t.view === 'files');
     expect(() => c.closeTab(index)).not.toThrow();
     expect(c.view().some((t) => t.view === 'files')).toBe(false);
+  });
+});
+
+describe('Controller rehydrate restores a persisted schedule', () => {
+  it('rehydrate re-arms a schedule persisted on the agent state', () => {
+    initAgentStateDirectory(mkdtempSync(path.join(tmpdir(), 'janus-rehydrate-schedule-')));
+    saveAgentState({
+      name: 'janus', dotColor: '#5b9cff', active: true,
+      schedule: [{ id: 's1', command: 'clear', spec: 'every 1h', nextRun: Date.now() + 3_600_000, recurring: true, intervalMs: 3_600_000 }],
+    });
+    const { c } = makeController();
+    c.rehydrate();
+    expect(c.view().find((t) => t.label === 'janus')?.schedule.map((s) => s.id)).toContain('s1');
+  });
+});
+
+describe('Controller direct RPC delegators', () => {
+  it('ptyInput/ptyResize/ptyKill/resize delegate to the pty manager without throwing on unknown ids', () => {
+    const { c } = makeController();
+    expect(() => c.ptyInput('ghost', 'x')).not.toThrow();
+    expect(() => c.ptyResize('ghost', 10, 10)).not.toThrow();
+    expect(() => c.ptyKill('ghost')).not.toThrow();
+    expect(() => c.resize(100, 30)).not.toThrow();
+  });
+
+  it('renameTab RPC sets a display alias without changing the label', () => {
+    const { c } = makeController();
+    c.renameTab(0, 'reviewer');
+    expect(c.view()[0].label).toBe('janus');
+    expect(c.view()[0].title).toBe('reviewer');
+  });
+
+  it('runSuggestion RPC on an unknown id is a no-op', () => {
+    const { c } = makeController();
+    expect(() => c.runSuggestion('ghost')).not.toThrow();
+  });
+
+  it('rateSuggestion RPC on an unknown id is a no-op', () => {
+    const { c } = makeController();
+    expect(() => c.rateSuggestion('ghost', true)).not.toThrow();
+  });
+
+  it('saveFile throws for an unregistered ref (relayed as an RPC error by the caller)', () => {
+    const { c } = makeController();
+    expect(() => c.saveFile('/open/unknown', 'x')).toThrow(/unknown file ref/);
+  });
+
+  it('complete() offers a group: target for each existing group once more than one exists', () => {
+    const root = mkdtempSync(path.join(tmpdir(), 'janus-complete-groups-'));
+    initProfileDir(root);
+    mkdirSync(path.join(root, 'profiles', 'team'), { recursive: true });
+    writeFileSync(path.join(root, 'profiles', 'team', 'writer.json'), JSON.stringify({ name: 'writer', dotColor: '#6bcb77', active: false, group: 7 }));
+    const { c } = makeController();
+    c.dispatch('profile launch team');
+    c.setActiveTab(0);
+    const res = c.complete('monitor foo ', 'monitor foo '.length);
+    expect(res.matches).toContain('group:7');
   });
 });
