@@ -89,6 +89,16 @@ Instead:
 - Only write output to a file when a downstream command genuinely requires a file path as input (e.g. a script argument that must be a file, not stdin), or when you need to filter one slow command's output multiple ways (see [Capturing command output](#capturing-command-output)) — and prefer the Write tool for that, not a shell redirect.
 - This applies to project workflow docs (`ai/*.md`, `docs/*.md`) too: if an example command shows `> file` followed by `cat file`, treat that as a mistake to fix, not a pattern to replicate.
 
+```bash
+# ❌ Antipattern — redirect triggers a permission prompt even though `npm run coverage` alone is pre-approved
+mkdir -p ./temp && npm run coverage > ./temp/coverage.txt 2>&1; echo done
+```
+
+```bash
+# ✅ Correct — no redirect; read the result straight from the tool call
+npm run coverage 2>&1
+```
+
 ## Plan and task formatting
 
 When writing implementation plans or creating tasks, use natural line breaks only — do not artificially wrap lines at a fixed column width. Let long lines flow naturally so content remains readable in any viewport.
