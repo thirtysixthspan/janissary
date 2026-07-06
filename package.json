@@ -49,7 +49,7 @@
     "security": "npm run security:secrets && npm run security:deps",
     "security:secrets": "gitleaks detect --no-banner --redact",
     "security:deps": "npm audit --omit=dev",
-    "security:sast": "opengrep scan --config p/javascript --config p/typescript --config p/nodejs --sarif --output security-audit.sarif src/ web/src/"
+    "security:sast": "opengrep scan --config p/javascript --config p/typescript --config p/nodejs src/ web/src/"
   },
   "keywords": [],
   "author": "",
