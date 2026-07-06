@@ -103,17 +103,19 @@ ${writeCarveClauses})
   (subpath (param "SERVER_NODE_DIR_L"))
   (subpath (param "SERVER_NODE_DIR_R"))
 ${readCarveClauses})
-; Any package.json anywhere under $HOME, at any depth, stays readable. The workspace nests inside
-; the parent repo (or repos, however many levels up), and config/module-resolution walks — Node's
-; package-scope resolution, cosmiconfig (stylelint, eslint, prettier, postcss all use it) — probe
-; upward for package.json indefinitely, not just one level. This is a plain file read (unlike the
+; Any package.json or tsconfig.json anywhere under $HOME, at any depth, stays readable. The
+; workspace nests inside the parent repo (or repos, however many levels up), and config/module-
+; resolution walks — Node's package-scope resolution, cosmiconfig (stylelint, eslint, prettier,
+; postcss all use it), and TypeScript-adjacent tooling (jiti/get-tsconfig, tsc itself) — probe
+; upward for these files indefinitely, not just one level. This is a plain file read (unlike the
 ; ancestor-directory-listing problem the $HOME-deny comment above describes), so there's no
 ; directory-existence lie to worry about — granting real read access is both simpler and more
 ; correct than an ENOENT trick would be, since tools that actually want the content (e.g.
-; cosmiconfig checking for a "stylelint" key) get real data instead of a fake absence. One
-; manifest per level leaks no secrets; everything else under $HOME stays denied.
+; cosmiconfig checking for a "stylelint" key, or jiti resolving compilerOptions) get real data
+; instead of a fake absence. One manifest per level leaks no secrets; everything else under $HOME
+; stays denied.
 (allow file-read-data file-read-xattr
-  (require-all (subpath (param "HOME")) (regex #"/package\.json$")))
+  (require-all (subpath (param "HOME")) (regex #"/(package|tsconfig)\.json$")))
 ; errno ENOENT here too (see the $HOME-deny comment above): a secret path reads as genuinely
 ; absent rather than access-denied, which is both friendlier to tools that treat EPERM as fatal
 ; and better secrecy — EPERM already confirms the path exists, ENOENT reveals nothing. Unlike the
