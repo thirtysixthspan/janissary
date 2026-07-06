@@ -49,6 +49,12 @@ export function addImageTab(tabs: Tab[], activeTab: number, image: ImageView): T
   return { tabs: newTabs, activeTab: newTabs.findIndex((t) => t.label === label) };
 }
 
+function finalizeTab(tabs: Tab[], tab: Tab, label: string, title: string): TabAndActive {
+  tab.title = title.slice(0, getConfig().tabNameMaxLength);
+  const newTabs = insertTabInGroup(tabs, tab);
+  return { tabs: newTabs, activeTab: newTabs.findIndex((t) => t.label === label) };
+}
+
 export function addMarkdownTab(tabs: Tab[], activeTab: number, view: MarkdownView): TabAndActive {
   const creator = tabs[activeTab];
   const label = uniqueMarkdownLabel(tabs);
@@ -56,9 +62,7 @@ export function addMarkdownTab(tabs: Tab[], activeTab: number, view: MarkdownVie
   const group = creator?.group ?? 1;
   const groupColor = creator?.groupColor ?? dotColor;
   const tab = makeMarkdownTab(label, dotColor, tabs.length + 1, group, groupColor, view);
-  tab.title = view.name.slice(0, getConfig().tabNameMaxLength);
-  const newTabs = insertTabInGroup(tabs, tab);
-  return { tabs: newTabs, activeTab: newTabs.findIndex((t) => t.label === label) };
+  return finalizeTab(tabs, tab, label, view.name);
 }
 
 export function addEditorTab(tabs: Tab[], activeTab: number, view: EditorView): TabAndActive {
@@ -68,9 +72,7 @@ export function addEditorTab(tabs: Tab[], activeTab: number, view: EditorView): 
   const group = creator?.group ?? 1;
   const groupColor = creator?.groupColor ?? dotColor;
   const tab = makeEditorTab(label, dotColor, tabs.length + 1, group, groupColor, view);
-  tab.title = view.name.slice(0, getConfig().tabNameMaxLength);
-  const newTabs = insertTabInGroup(tabs, tab);
-  return { tabs: newTabs, activeTab: newTabs.findIndex((t) => t.label === label) };
+  return finalizeTab(tabs, tab, label, view.name);
 }
 
 export function addFilesTab(tabs: Tab[], activeTab: number, view: FileTreeView): TabAndActive {
