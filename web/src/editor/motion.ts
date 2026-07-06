@@ -23,28 +23,29 @@ function horizontalTarget(s: EditorState, dir: 'left' | 'right'): Pos {
   return line < s.lines.length - 1 ? { line: line + 1, col: 0 } : s.cursor;
 }
 
-export function moveCursor(s: EditorState, dir: Direction, extend: boolean): EditorState {
-  const sel = selectionRange(s);
-  if (dir === 'left' || dir === 'right') {
-    // A plain horizontal move with a selection collapses to the selection's edge.
-    if (sel && !extend) return { ...s, cursor: dir === 'left' ? sel.start : sel.end, anchor: null, goalCol: undefined };
-    return moveTo(s, horizontalTarget(s, dir), extend);
-  }
-  const goal = s.goalCol ?? s.cursor.col;
-  const target = dir === 'up' ? s.cursor.line - 1 : s.cursor.line + 1;
+function moveToVertical(s: EditorState, target: number, goal: number, extend: boolean): EditorState {
   // Moving past the first/last line goes to the document start/end (standard behavior).
   if (target < 0) return moveTo(s, { line: 0, col: 0 }, extend);
   if (target >= s.lines.length) return moveTo(s, { line: s.lines.length - 1, col: s.lines.at(-1)!.length }, extend);
   return moveTo(s, { line: target, col: goal }, extend, goal);
 }
 
+export function moveCursor(s: EditorState, dir: Direction, extend: boolean): EditorState {
+  const sel = selectionRange(s);
+  if (dir === 'left' || dir === 'right') {
+    if (sel && !extend) return { ...s, cursor: dir === 'left' ? sel.start : sel.end, anchor: null, goalCol: undefined };
+    return moveTo(s, horizontalTarget(s, dir), extend);
+  }
+  const goal = s.goalCol ?? s.cursor.col;
+  const target = dir === 'up' ? s.cursor.line - 1 : s.cursor.line + 1;
+  return moveToVertical(s, target, goal, extend);
+}
+
 // PageUp/PageDown: jump a viewport's worth of lines, keeping the goal column.
 export function movePage(s: EditorState, dir: -1 | 1, pageLines: number, extend: boolean): EditorState {
   const goal = s.goalCol ?? s.cursor.col;
   const target = s.cursor.line + dir * Math.max(1, pageLines);
-  if (target < 0) return moveTo(s, { line: 0, col: 0 }, extend);
-  if (target >= s.lines.length) return moveTo(s, { line: s.lines.length - 1, col: s.lines.at(-1)!.length }, extend);
-  return moveTo(s, { line: target, col: goal }, extend, goal);
+  return moveToVertical(s, target, goal, extend);
 }
 
 export function moveLineEdge(s: EditorState, edge: 'home' | 'end', extend: boolean): EditorState {
