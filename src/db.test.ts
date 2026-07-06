@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { mkdtempSync, rmSync, existsSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, rmSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { parseDatabaseCommand, runDatabaseCommand, extractDatabaseCommand } from './database.js';
@@ -172,5 +172,18 @@ describe('runDbCommand', () => {
     expect(listOpenConnections()).toContain('gone');
     expect(runDatabaseCommand('db sqlite delete gone')).toContain('Deleted');
     expect(listOpenConnections()).not.toContain('gone');
+  });
+
+  it('reports a creation failure without crashing', () => {
+    // A directory at the .sqlite path makes opening it as a database throw.
+    mkdirSync(path.join(dir, '.janissary', 'db', 'sqlite', 'blocked.sqlite'), { recursive: true });
+    expect(runDatabaseCommand('db sqlite create blocked')).toContain('Failed to create database "blocked"');
+  });
+
+  it('reports a deletion failure without crashing', () => {
+    // A non-empty directory at the .sqlite path makes rmSync (non-recursive) throw.
+    const dirPath = path.join(dir, '.janissary', 'db', 'sqlite', 'stuck.sqlite');
+    mkdirSync(dirPath, { recursive: true });
+    expect(runDatabaseCommand('db sqlite delete stuck')).toContain('Failed to delete database "stuck"');
   });
 });
