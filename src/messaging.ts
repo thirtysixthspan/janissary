@@ -12,17 +12,23 @@ export function parseKind(token: string): MessageKind | null {
   return KIND_ALIASES[token.trim().toLowerCase()] ?? null;
 }
 
+function parseKindAndText(parts: string[]): { kind: MessageKind; text: string } | { error: string } {
+  const kind = parseKind(parts[1]);
+  if (!kind) return { error: `Unknown message type "${parts[1]}". Use info, request, or command.` };
+  const text = parts.slice(2).join(' ');
+  if (!text) return { error: 'Message text is empty.' };
+  return { kind, text };
+}
+
 /** Parse a `msg <agent> <kind> <text...>` command (the leading `msg` is optional). */
 export function parseMsgCommand(input: string): ParsedMessage | { error: string } {
   const body = input.trim().replace(/^msg\s+/i, '');
   const parts = body.split(/\s+/).filter(Boolean);
   if (parts.length < 3) return { error: 'Usage: msg <agent> <info|request|command> <text>' };
   const to = parts[0].toLowerCase();
-  const kind = parseKind(parts[1]);
-  if (!kind) return { error: `Unknown message type "${parts[1]}". Use info, request, or command.` };
-  const text = parts.slice(2).join(' ');
-  if (!text) return { error: 'Message text is empty.' };
-  return { to, kind, text };
+  const parsed = parseKindAndText(parts);
+  if ('error' in parsed) return parsed;
+  return { to, kind: parsed.kind, text: parsed.text };
 }
 
 /**
@@ -34,12 +40,10 @@ export function parseBroadcastCommand(input: string): ParsedBroadcast | { error:
   const parts = body.split(/\s+/).filter(Boolean);
   if (parts.length < 3) return { error: 'Usage: broadcast <all|agent[,agent...]> <info|request|command> <text>' };
   const spec = parts[0].toLowerCase();
-  const kind = parseKind(parts[1]);
-  if (!kind) return { error: `Unknown message type "${parts[1]}". Use info, request, or command.` };
-  const text = parts.slice(2).join(' ');
-  if (!text) return { error: 'Message text is empty.' };
+  const parsed = parseKindAndText(parts);
+  if ('error' in parsed) return parsed;
   const targets = spec === 'all' || spec === '*' ? 'all' : spec.split(',').filter(Boolean);
   if (targets !== 'all' && targets.length === 0) return { error: 'No broadcast recipients specified.' };
-  return { targets, kind, text };
+  return { targets, kind: parsed.kind, text: parsed.text };
 }
 
