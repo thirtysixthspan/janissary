@@ -30,6 +30,8 @@ Do **not** attempt any of the following. If your plan for the chosen file requir
 4. Testing **security, password/crypto, shell command, PTY/terminal, or network** code.
 5. Writing **more than 3** new test files in one run.
 
+**Important for `web/src/` files:** The vitest `client` project runs in a JSDOM environment that provides `document`, `window`, `DOMParser`, `requestAnimationFrame`, keyboard events, and related browser APIs. A `web/src/` file is **not** blocked just because it uses DOM APIs — the test environment already supplies them. It is only blocked when it genuinely requires a real browser (imports of `playwright`, `puppeteer`), a real terminal (`xterm`, `node-pty`), a real network connection (`ws` / WebSocket), or spawns a child process (`child_process`).
+
 If every remaining candidate is blocked, report what you found (file, why it was blocked) and stop without writing any tests.
 
 > Note: when coverage goes up, the test tool automatically rewrites the threshold numbers inside `vitest.config.ts`. That is normal and expected. It does **not** count as a source-code change, and you must **not** edit those numbers yourself.
@@ -74,7 +76,9 @@ The **right-most column ("Uncovered Line #s")** lists the exact line numbers tha
 
 Choose the target with this exact procedure:
 
-1. Look only at rows whose file path starts with **`src/`** (these are the core logic; `web/src/` is lower priority).
+**First pass — `src/` (core logic):**
+
+1. Look at rows whose file path starts with **`src/`**.
 2. **Cross out** any row that is:
    - `src/main.ts` (program entry point — nothing to test).
    - `src/pty.ts` (only runs inside a real terminal).
@@ -82,7 +86,14 @@ Choose the target with this exact procedure:
 3. From the rows that remain, pick the **one with the lowest `% Lines`**.
    - Tie? Pick the lower `% Branch`.
    - Still tied? Pick the one with the most numbers in the "Uncovered Line #s" column.
-4. **Open that source file** and look at the uncovered lines from the table. If you discover the file can only run by launching a **real web browser, a real terminal/PTY, a real network connection, or a real spawned program** (look for imports of `playwright`, `node-pty`, `ws`, or `child_process`), then skip it and go back to step 3 to take the next-lowest file.
+4. **Open that source file** and look at the uncovered lines from the table. If you discover the file can only run by launching a **real web browser (not JSDOM), a real terminal/PTY, a real network connection, or a real spawned program** (look for imports of `playwright`, `puppeteer`, `node-pty`, `ws`, `WebSocket`, or `child_process` / `node:child_process`), then skip it and go back to step 3 to take the next-lowest file.
+
+**Second pass — `web/src/` (frontend):**
+
+If **every `src/` row is crossed out** (all at ≥90% or blocked), repeat the procedure on rows whose file path starts with **`web/src/`**:
+1. **Cross out** any row already at **90% or higher** in the `% Lines` column.
+2. Pick the **one with the lowest `% Lines`** (same tie-breakers as above).
+3. **Open that source file.** Skip it only if it requires a real browser (Playwright/puppeteer import), a real terminal (xterm/node-pty import), a real network connection (ws/WebSocket import), or spawns a child process.
 
 State your pick in one short paragraph: the file path, its current `% Lines`, and the uncovered line numbers you will target.
 
@@ -108,7 +119,8 @@ Now check your plan against **What you may and may not do** above:
 Create or extend the test file. Match the project's existing style exactly:
 
 - Import test tools from vitest: `import { describe, it, expect } from 'vitest';` (add `vi` only if you mock).
-- **Relative imports must end in `.js`, even though the source file is `.ts`.** Example: to test `src/foo.ts`, import `from './foo.js'`.
+- **`src/` files:** Relative imports must end in `.js`, even though the source file is `.ts`. Example: to test `src/foo.ts`, import `from './foo.js'`.
+- **`web/src/` files:** Relative imports drop the extension. Example: to test `web/src/foo.ts`, import `from './foo'`.
 - Put the test file right next to the source file (same folder), named `<name>.test.ts` (or `.test.tsx` for a React component).
 
 Skeleton to copy:
