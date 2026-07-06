@@ -41,4 +41,22 @@ describe('OpenFileManager.edit', () => {
     expect(opened).toHaveLength(1);
     expect(opened[0]).toBe('/tmp/newfile.txt');
   });
+
+  it('forwards a target line through to the opened editor view', () => {
+    const opened: { path: string; line?: number }[] = [];
+    const managers = {
+      tab: {
+        cwdOf: () => '/working',
+        append: () => {},
+        openEditorTab: (view: { path: string; line?: number }) => { opened.push(view); },
+        registerFile: (p: string) => `/open/test-${p.length}`,
+      },
+    } as unknown as Managers;
+    const mgr = new OpenFileManager(managers);
+
+    mgr.edit('edit foo.txt:42', 'foo.txt', 'janus', 42);
+
+    expect(opened).toHaveLength(1);
+    expect(opened[0].line).toBe(42);
+  });
 });

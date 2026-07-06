@@ -192,7 +192,7 @@ describe('renderFileLinkSegments', () => {
     const segments = [{ type: 'text' as const, content: 'Error in ' }, linkSegment];
     render(<>{renderFileLinkSegments(segments, client)}</>);
     await userEvent.click(screen.getByText('src/foo.ts:42'));
-    expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'edit src/foo.ts' } });
+    expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'edit src/foo.ts:42' } });
   });
 
   it('renders plain text segments without click handlers', () => {

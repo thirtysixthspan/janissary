@@ -42,10 +42,10 @@ export class OpenFileManager {
   // The `edit <file>` command: resolve the target like `open` does, but bypass the opener
   // registry and hand the file straight to the editor — this is how markdown and extensionless
   // files (Makefile, .gitignore) get edited.
-  edit(command: string, target: string, label: string): void {
+  edit(command: string, target: string, label: string, line?: number): void {
     const cwd = this.managers.tab.cwdOf(label) ?? process.cwd();
     const file = path.isAbsolute(target) ? target : path.resolve(cwd, target);
-    openInEditor(file, this.buildContext(command, label));
+    openInEditor(file, this.buildContext(command, label), line);
   }
 
   private buildContext(command: string, label: string): OpenContext {

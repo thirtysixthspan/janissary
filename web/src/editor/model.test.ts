@@ -18,6 +18,14 @@ describe('fromText/toText', () => {
   it('treats an empty document as one empty line', () => {
     expect(fromText('').lines).toEqual(['']);
   });
+
+  it('places the cursor on the given line', () => {
+    expect(fromText('a\nb\nc', 1).cursor).toEqual({ line: 1, col: 0 });
+  });
+
+  it('clamps an out-of-range line to the last line', () => {
+    expect(fromText('a\nb', 99).cursor).toEqual({ line: 1, col: 0 });
+  });
 });
 
 describe('clampPos', () => {

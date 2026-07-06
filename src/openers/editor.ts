@@ -20,7 +20,7 @@ const EXTENSIONS = [
 
 // Shared inline handler: also the entry point for the `edit` command, which bypasses the opener
 // registry so any file (markdown, extensionless) can be edited.
-export function openInEditor(file: string, context: OpenContext): void {
+export function openInEditor(file: string, context: OpenContext, line?: number): void {
   const name = path.basename(file);
   let bytes: number | undefined;
   try { bytes = statSync(file).size; } catch { bytes = undefined; }
@@ -29,7 +29,7 @@ export function openInEditor(file: string, context: OpenContext): void {
     return;
   }
   const size = bytes === undefined ? 'unknown' : humanSize(bytes);
-  context.openEditorTab({ name, path: file, size, url: context.registerFile(file) });
+  context.openEditorTab({ name, path: file, size, url: context.registerFile(file), line });
 }
 
 export const opener: Opener = {

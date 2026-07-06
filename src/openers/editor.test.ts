@@ -78,6 +78,20 @@ describe('editor opener', () => {
     expect(opened[0]).toMatchObject({ name: 'Makefile', path: file });
   });
 
+  it('openInEditor includes a target line when given one', () => {
+    const file = temporaryFile('notes.txt', 'hello\n');
+    const { ctx, opened } = fakeContext();
+    openInEditor(file, ctx, 42);
+    expect(opened[0].line).toBe(42);
+  });
+
+  it('openInEditor leaves line undefined when none is given', () => {
+    const file = temporaryFile('notes.txt', 'hello\n');
+    const { ctx, opened } = fakeContext();
+    openInEditor(file, ctx);
+    expect(opened[0].line).toBeUndefined();
+  });
+
   it('external launches the OS viewer and confirms', () => {
     const { ctx, notes } = fakeContext({ openExternally: () => true });
     void editor.external('/tmp/notes.txt', ctx);

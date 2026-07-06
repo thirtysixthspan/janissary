@@ -47,7 +47,7 @@ export const EditorTab = forwardRef<EditorTabHandle, { editor: EditorView; clien
         const r = await fetch(`${editor.url}?token=${encodeURIComponent(token)}`);
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         const text = await r.text();
-        if (!cancelled) { api.load(text); setLastSaved(text); }
+        if (!cancelled) { api.load(text, editor.line === undefined ? undefined : editor.line - 1); setLastSaved(text); }
       } catch {
         if (!cancelled) setLoadError(`Failed to load ${editor.name}`);
       }
@@ -59,7 +59,17 @@ export const EditorTab = forwardRef<EditorTabHandle, { editor: EditorView; clien
 
   const loaded = state !== null;
   useEffect(() => { if (active && loaded) textareaRef.current?.focus(); }, [active, loaded]);
-  useEffect(() => { if (active) caretRef.current?.scrollIntoView({ block: 'nearest' }); }, [active, state?.cursor.line, state?.cursor.col]);
+  const initialScrollDone = useRef(false);
+  useEffect(() => {
+    if (!active || !state) return;
+    if (!initialScrollDone.current) {
+      initialScrollDone.current = true;
+      caretRef.current?.scrollIntoView({ block: editor.line === undefined ? 'nearest' : 'center' });
+      return;
+    }
+    caretRef.current?.scrollIntoView({ block: 'nearest' });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active, state?.cursor.line, state?.cursor.col]);
 
   const dirty = useMemo(() => state !== null && lastSaved !== null && toText(state) !== lastSaved, [state, lastSaved]);
   const dirtyRef = useRef(dirty);

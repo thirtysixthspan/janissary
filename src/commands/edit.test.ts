@@ -19,7 +19,7 @@ describe('edit command', () => {
 
 describe('edit command run', () => {
   let appended: { input: string; output: string }[];
-  let editCalls: { command: string; target: string; label: string }[];
+  let editCalls: { command: string; target: string; label: string; line?: number }[];
   let tab: { label: string };
   let managers: unknown;
 
@@ -34,8 +34,8 @@ describe('edit command run', () => {
         },
       },
       openFile: {
-        edit: (command_: string, target: string, label: string) => {
-          editCalls.push({ command: command_, target, label });
+        edit: (command_: string, target: string, label: string, line?: number) => {
+          editCalls.push({ command: command_, target, label, line });
         },
       },
     };
@@ -65,6 +65,20 @@ describe('edit command run', () => {
 
     command.run!('edit foo.txt', tab, orderedManagers as never);
     expect(callOrder).toEqual(['append', 'edit']);
+  });
+
+  it('parses a trailing line number off the target', () => {
+    run('edit src/foo.ts:42');
+
+    expect(editCalls).toHaveLength(1);
+    expect(editCalls[0]).toMatchObject({ command: 'edit src/foo.ts:42', target: 'src/foo.ts', label: 'janus', line: 42 });
+  });
+
+  it('leaves line undefined when the target has no trailing line number', () => {
+    run('edit src/foo.ts');
+
+    expect(editCalls).toHaveLength(1);
+    expect(editCalls[0]).toMatchObject({ target: 'src/foo.ts', line: undefined });
   });
 
   it('shows usage when no target is provided', () => {

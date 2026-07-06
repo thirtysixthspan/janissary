@@ -12,11 +12,15 @@ export type EditorState = {
   goalCol?: number;
 };
 
-export const fromText = (text: string): EditorState => ({ lines: text.split('\n'), cursor: { line: 0, col: 0 }, anchor: null });
+const clampNumber = (n: number, lo: number, hi: number) => Math.min(Math.max(n, lo), hi);
+
+export const fromText = (text: string, line?: number): EditorState => {
+  const lines = text.split('\n');
+  const cursorLine = line === undefined ? 0 : clampNumber(line, 0, lines.length - 1);
+  return { lines, cursor: { line: cursorLine, col: 0 }, anchor: null };
+};
 
 export const toText = (s: EditorState): string => s.lines.join('\n');
-
-const clampNumber = (n: number, lo: number, hi: number) => Math.min(Math.max(n, lo), hi);
 
 export function clampPos(lines: string[], p: Pos): Pos {
   const line = clampNumber(p.line, 0, lines.length - 1);
