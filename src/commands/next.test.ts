@@ -18,3 +18,25 @@ describe('next command', () => {
     expect(command.match('clear')).toBe(false);
   });
 });
+
+describe('next command run', () => {
+  const makeManagers = (activeTab: number, length: number) => {
+    const setActiveTab = (index: number) => { activeTab = index; };
+    return {
+      get activeTab() { return activeTab; },
+      managers: { tab: { get activeTab() { return activeTab; }, setActiveTab, tabs: { length } } },
+    };
+  };
+
+  it('advances to the next tab', () => {
+    const { managers } = makeManagers(0, 3);
+    command.run('next', { label: 'janus', index: 0 }, managers as never);
+    expect(managers.tab.activeTab).toBe(1);
+  });
+
+  it('wraps around to the first tab from the last', () => {
+    const { managers } = makeManagers(2, 3);
+    command.run('next', { label: 'janus', index: 0 }, managers as never);
+    expect(managers.tab.activeTab).toBe(0);
+  });
+});
