@@ -16,7 +16,11 @@ export function parseSendCommand(input: string): { label: string; text: string }
 function deliverTo(target: Tab, text: string, managers: CommandManagers): string | null {
   if (target.view === 'harness') {
     if (target.harness?.status !== 'running') return `Tab "${target.label}" is not a running harness.`;
-    managers.pty.input(target.harness.ptyId, `${text}\r`);
+    // Split from the text so a long line's trailing \r can't land in the same burst the harness's
+    // own input parser treats as a paste (see schedule-manager.ts's `fire`).
+    const ptyId = target.harness.ptyId;
+    managers.pty.input(ptyId, text);
+    setTimeout(() => managers.pty.input(ptyId, '\r'), 50);
     return null;
   }
   if (target.view === undefined || target.view === 'agent') {

@@ -85,7 +85,12 @@ export class ScheduleManager {
   private fire(tab: Tab, e: ScheduleEntry): boolean {
     if (tab.view === 'harness') {
       if (tab.harness?.status !== 'running' || !tab.harness.ptyId) return false;
-      this.managers.pty.input(tab.harness.ptyId, `${e.command}\r`);
+      // Sent as one write, a long command's trailing \r can land inside the same burst the harness's
+      // own input parser treats as a paste, so it's read as inserted text rather than submit. Splitting
+      // the \r into its own write after the text has been processed mimics organic typing and avoids that.
+      const ptyId = tab.harness.ptyId;
+      this.managers.pty.input(ptyId, e.command);
+      setTimeout(() => this.managers.pty.input(ptyId, '\r'), 50);
       return true;
     }
     this.managers.command.dispatchTo(tab.label, `${e.command} ## scheduled ##`);

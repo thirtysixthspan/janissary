@@ -889,12 +889,13 @@ describe('Controller send command', () => {
     });
   });
 
-  it('delivers text to a harness tab as raw PTY input', () => {
+  it('delivers text to a harness tab as raw PTY input, followed by a separate Enter', async () => {
     const { c } = makeController();
     c.dispatch('harness claude');
     c.dispatch('send claude /standup');
     const pty = vi.mocked(spawnPty).mock.results[0].value as { write: ReturnType<typeof vi.fn> };
-    expect(pty.write).toHaveBeenCalledWith('/standup\r');
+    expect(pty.write).toHaveBeenCalledWith('/standup');
+    await vi.waitFor(() => expect(pty.write).toHaveBeenCalledWith('\r'));
   });
 
   it('delivers text to an agent tab by dispatching it as a command', () => {
@@ -937,9 +938,10 @@ describe('Controller send command', () => {
       c.dispatch('harness claude');
       c.managers.tab.setActiveTab(0); // schedule owned by janus, not the harness tab it targets
       c.dispatch('schedule s1 every 1m send claude /standup');
-      vi.advanceTimersByTime(61_000);
+      vi.advanceTimersByTime(61_050);
       const pty = vi.mocked(spawnPty).mock.results[0].value as { write: ReturnType<typeof vi.fn> };
-      expect(pty.write).toHaveBeenCalledWith('/standup\r');
+      expect(pty.write).toHaveBeenCalledWith('/standup');
+      expect(pty.write).toHaveBeenCalledWith('\r');
     } finally {
       vi.useRealTimers();
     }
@@ -974,9 +976,10 @@ describe('Controller schedule in another tab', () => {
       c.managers.tab.setActiveTab(0);
       c.dispatch('schedule standup in claude every 1m /standup');
       expect(c.view().find((t) => t.label === 'claude')!.schedule.map((s) => s.id)).toContain('standup');
-      vi.advanceTimersByTime(61_000);
+      vi.advanceTimersByTime(61_050);
       const pty = vi.mocked(spawnPty).mock.results[0].value as { write: ReturnType<typeof vi.fn> };
-      expect(pty.write).toHaveBeenCalledWith('/standup\r');
+      expect(pty.write).toHaveBeenCalledWith('/standup');
+      expect(pty.write).toHaveBeenCalledWith('\r');
     } finally {
       vi.useRealTimers();
     }
@@ -1155,8 +1158,9 @@ describe('Controller profile launch (harness entries)', () => {
       vi.mocked(spawnPty).mockImplementation((program) => ({ id: 'mock-pty-1', program, write, resize: vi.fn(), kill: vi.fn() }));
       const { c } = makeController();
       c.dispatch('profile launch small-fix');
-      vi.advanceTimersByTime(1000);
-      expect(write).toHaveBeenCalledWith('execute ./ai/fix-a-small-issue.md\r');
+      vi.advanceTimersByTime(1050);
+      expect(write).toHaveBeenCalledWith('execute ./ai/fix-a-small-issue.md');
+      expect(write).toHaveBeenCalledWith('\r');
       const tab = c.view().find((t) => t.label === 'opencode');
       expect(tab!.schedule.map((s) => s.id)).not.toContain('run-1');
     } finally {
@@ -1174,8 +1178,9 @@ describe('Controller profile launch (harness entries)', () => {
       vi.mocked(spawnPty).mockImplementation((program) => ({ id: 'mock-pty-1', program, write, resize: vi.fn(), kill: vi.fn() }));
       const { c } = makeController();
       c.dispatch('profile launch small-fix');
-      vi.advanceTimersByTime(30 * 60 * 1000 + 1000);
-      expect(write).toHaveBeenCalledWith('execute ./ai/fix-a-small-issue.md\r');
+      vi.advanceTimersByTime(30 * 60 * 1000 + 1050);
+      expect(write).toHaveBeenCalledWith('execute ./ai/fix-a-small-issue.md');
+      expect(write).toHaveBeenCalledWith('\r');
       const after = c.view().find((t) => t.label === 'opencode')!.schedule.find((s) => s.id === 'small-fix');
       expect(after).toBeDefined();
       expect(after!.recurring).toBe(true);
