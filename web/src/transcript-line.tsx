@@ -5,6 +5,7 @@ import { matchRange } from '@shared/search-matches';
 import { TerminalCard } from './TerminalCard';
 import { renderMarkdown } from './markdown';
 import { fileLineSegments, linkifyMarkdown, renderFileLinkSegments } from './file-link';
+import { hasAnsiCodes, parseAnsi } from './ansi';
 
 const FILE_LINE_LINK = /[\\/][^:]*:\d+$/;
 
@@ -25,6 +26,24 @@ function highlightText(text: string, highlight: LineHighlight | undefined, index
       {text.slice(range.end)}
     </>
   );
+}
+
+// Renders ANSI-styled segments; when `client` is given, each segment's text is additionally run
+// through file-link detection (composes cleanly since segments are already escape-code-free).
+function renderAnsiSegments(text: string, client?: JanusClient): React.ReactNode[] {
+  return parseAnsi(text).map((seg, i) => {
+    const content: React.ReactNode = client ? renderFileLinkSegments(fileLineSegments(seg.text), client) : seg.text;
+    if (seg.className) return <span key={i} className={seg.className}>{content}</span>;
+    return client ? <React.Fragment key={i}>{content}</React.Fragment> : content;
+  });
+}
+
+// Shared by the `running` and `acp` branches (neither does file-link detection): the current
+// search hit still wins, then ANSI styling, then plain highlighted text as before.
+function renderOutputText(text: string, highlight: LineHighlight | undefined, index: number): React.ReactNode {
+  if (highlight && highlight.lineIndex === index) return highlightText(text, highlight, index);
+  if (hasAnsiCodes(text)) return renderAnsiSegments(text);
+  return highlightText(text, highlight, index);
 }
 
 // Markdown renders sanitized HTML via dangerouslySetInnerHTML, so a matched substring can't be
@@ -113,18 +132,20 @@ export function renderLine(
     );
   }
   if (line.running) {
-    return <div key={index} className="line output running" {...hitProps}>{highlightText(line.text, highlight, index)}</div>;
+    return <div key={index} className="line output running" {...hitProps}>{renderOutputText(line.text, highlight, index)}</div>;
   }
   if (line.acp) {
     return (
       <div key={index} className="line output acp" onClick={onToggleCollapse} title="Click or Ctrl+T to collapse" {...hitProps}>
-        {line.text ? highlightText(line.text, highlight, index) : ' '}
+        {line.text ? renderOutputText(line.text, highlight, index) : ' '}
       </div>
     );
   }
   return (
     <div key={index} className="line output" style={line.fromColor ? { color: line.fromColor } : undefined} {...hitProps}>
-      {hit ? highlightText(line.text, highlight, index) : renderFileLinkSegments(fileLineSegments(line.text), client)}
+      {hit ? highlightText(line.text, highlight, index)
+        : hasAnsiCodes(line.text) ? renderAnsiSegments(line.text, client)
+        : renderFileLinkSegments(fileLineSegments(line.text), client)}
     </div>
   );
 }

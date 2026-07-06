@@ -18,6 +18,8 @@ function makeMarkdownLine(text: string): BufferLine {
   return { type: 'markdown', text };
 }
 
+const ESC = String.fromCodePoint(27);
+
 const clientStub = {} as JanusClient;
 const noop = () => {};
 
@@ -77,6 +79,51 @@ describe('renderLine — markdown link click', () => {
     render(<>{renderLine(line, 0, client, noop, vi.fn())}</>);
     await userEvent.click(screen.getByText('Just some plain text with no link'));
     expect(send).not.toHaveBeenCalled();
+  });
+});
+
+describe('renderLine — ansi output', () => {
+  it('renders a styled span for an SGR-colored substring in a plain output line', () => {
+    const line: BufferLine = { type: 'output', text: `plain ${ESC}[32mgreen${ESC}[0m plain` };
+    const { container } = render(<>{renderLine(line, 0, clientStub, noop, vi.fn())}</>);
+    const styled = container.querySelector('.ansi-fg-2');
+    expect(styled).toBeInTheDocument();
+    expect(styled?.textContent).toBe('green');
+    expect(container.querySelector('.line')?.textContent).toBe('plain green plain');
+  });
+
+  it('still renders a clickable file-link inside a colored output line', async () => {
+    const send = vi.fn();
+    const client = { send } as unknown as JanusClient;
+    const line: BufferLine = { type: 'output', text: `${ESC}[31msrc/foo.ts:42${ESC}[0m` };
+    render(<>{renderLine(line, 0, client, noop, vi.fn())}</>);
+    await userEvent.click(screen.getByText('src/foo.ts:42'));
+    expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'edit src/foo.ts:42' } });
+  });
+
+  it('renders a styled span for a running line with ansi codes', () => {
+    const line: BufferLine = { type: 'output', running: true, text: `${ESC}[33myellow${ESC}[0m` };
+    const { container } = render(<>{renderLine(line, 0, clientStub, noop, vi.fn())}</>);
+    expect(container.querySelector('.ansi-fg-3')?.textContent).toBe('yellow');
+  });
+
+  it('renders a styled span for an acp line with ansi codes', () => {
+    const line: BufferLine = { type: 'output', acp: true, text: `${ESC}[36mcyan${ESC}[0m` };
+    const { container } = render(<>{renderLine(line, 0, clientStub, noop, vi.fn())}</>);
+    expect(container.querySelector('.ansi-fg-6')?.textContent).toBe('cyan');
+  });
+
+  it('gives priority to the search hit over ansi styling', () => {
+    const line: BufferLine = { type: 'output', text: `${ESC}[32man error occurred${ESC}[0m` };
+    const { container } = render(<>{renderLine(line, 0, clientStub, noop, vi.fn(), { lineIndex: 0, pattern: 'error' })}</>);
+    expect(container.querySelector('.search-hit')).toBeInTheDocument();
+  });
+
+  it('leaves plain output without ansi codes unaffected', () => {
+    const line: BufferLine = { type: 'output', text: 'just plain text' };
+    const { container } = render(<>{renderLine(line, 0, clientStub, noop, vi.fn())}</>);
+    expect(container.querySelector('[class*="ansi-"]')).toBeNull();
+    expect(container.querySelector('.line')?.textContent).toBe('just plain text');
   });
 });
 

@@ -137,6 +137,43 @@ html, body, #root {
 .line.output .file-link { color: var(--accent); cursor: pointer; text-decoration: underline; }
 .line.output .file-link:hover { color: var(--fg); }
 .line.output.running { color: #ffd93d; }
+/* ANSI SGR colors from shell command output (16-color palette, matching common terminal defaults).
+   ansi-fg-0/8 use the theme's own muted tones instead of literal black/gray for readability
+   against this app's fixed dark background. */
+.ansi-fg-0 { color: var(--faint); }
+.ansi-fg-1 { color: #cd3131; }
+.ansi-fg-2 { color: #0dbc79; }
+.ansi-fg-3 { color: #e5e510; }
+.ansi-fg-4 { color: #2472c8; }
+.ansi-fg-5 { color: #bc3fbc; }
+.ansi-fg-6 { color: #11a8cd; }
+.ansi-fg-7 { color: #e5e5e5; }
+.ansi-fg-8 { color: var(--muted); }
+.ansi-fg-9 { color: #f14c4c; }
+.ansi-fg-10 { color: #23d18b; }
+.ansi-fg-11 { color: #f5f543; }
+.ansi-fg-12 { color: #3b8eea; }
+.ansi-fg-13 { color: #d670d6; }
+.ansi-fg-14 { color: #29b8db; }
+.ansi-fg-15 { color: #e5e5e5; }
+.ansi-bg-0 { background: #000; }
+.ansi-bg-1 { background: #cd3131; }
+.ansi-bg-2 { background: #0dbc79; }
+.ansi-bg-3 { background: #e5e510; }
+.ansi-bg-4 { background: #2472c8; }
+.ansi-bg-5 { background: #bc3fbc; }
+.ansi-bg-6 { background: #11a8cd; }
+.ansi-bg-7 { background: #e5e5e5; }
+.ansi-bg-8 { background: #666; }
+.ansi-bg-9 { background: #f14c4c; }
+.ansi-bg-10 { background: #23d18b; }
+.ansi-bg-11 { background: #f5f543; }
+.ansi-bg-12 { background: #3b8eea; }
+.ansi-bg-13 { background: #d670d6; }
+.ansi-bg-14 { background: #29b8db; }
+.ansi-bg-15 { background: #e5e5e5; }
+.ansi-bold { font-weight: 700; }
+.ansi-underline { text-decoration: underline; }
 .line.empty-state { color: var(--faint); }
 .line.spacer { height: 8px; }
 /* Collapsed agent tool steps: a prominent, clickable summary line. */
