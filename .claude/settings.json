@@ -12,6 +12,7 @@
       "Bash(gh *)",
       "Bash(/usr/local/opt/gh/bin/gh *)",
       "Bash(rm */.janissary/workspace/*)",
+      "Bash(rm ./temp/*)",
       "Bash(mkdir *)",
       "Bash(npx *)",
       "Bash(find *)",
