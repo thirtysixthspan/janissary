@@ -90,6 +90,9 @@ export type EditorView = {
   path: string;
   size: string;
   url: string;
+  // 1-based target line to jump to on open (from a `file:line` transcript link); undefined
+  // when opened without a specific line.
+  line?: number;
 };
 
 // A single visible row in a file tree tab (opened via `files [path]`). `path` is relative to the

@@ -67,11 +67,8 @@ export function renderLine(
   const hit = !!highlight && highlight.lineIndex === index;
 
   if (line.type === 'markdown') return <Markdown key={index} text={line.text} hit={hit} onLinkClick={(url) => {
-      const isFile = FILE_LINE_LINK.test(url);
-      const colon = isFile ? url.lastIndexOf(':') : -1;
-      const path = colon > -1 ? url.slice(0, colon) : url;
-      const cmd = isFile ? 'edit' : 'open';
-      client.send({ method: 'command', params: { text: `${cmd} ${path}` } });
+      const cmd = FILE_LINE_LINK.test(url) ? 'edit' : 'open';
+      client.send({ method: 'command', params: { text: `${cmd} ${url}` } });
     }} />;
 
   const hitProps = hit ? { 'data-search-hit': true } : {};

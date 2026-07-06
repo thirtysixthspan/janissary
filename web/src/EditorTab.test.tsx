@@ -94,6 +94,20 @@ describe('EditorTab', () => {
     await waitFor(() => expect(scrollMock).toHaveBeenCalledWith({ block: 'nearest' }));
   });
 
+  it('centers the caret on initial load when opened with a target line', async () => {
+    const { client } = makeClient();
+    const scrollMock = Element.prototype.scrollIntoView as ReturnType<typeof vi.fn>;
+    await renderLoaded(client, makeView({ line: 2 }));
+    expect(scrollMock).toHaveBeenCalledWith({ block: 'center' });
+  });
+
+  it('places the cursor on the given (1-based) line when opened with a target line', async () => {
+    const { client } = makeClient();
+    const { container } = await renderLoaded(client, makeView({ line: 2 }));
+    const gutter = container.querySelector('.editor-row-current')?.querySelector('.editor-gutter');
+    expect(gutter?.textContent).toBe('2');
+  });
+
   it('renders a caret span in the active editor', async () => {
     const { client } = makeClient();
     const { container } = await renderLoaded(client);

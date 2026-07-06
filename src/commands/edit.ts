@@ -8,7 +8,10 @@ export const command: Command = {
   run: (command, tab, managers) => {
     const target = command.replace(/^edit\b\s*/i, '').trim();
     if (!target) { managers.tab.append(tab.label, { input: command, output: 'Usage: edit <file>' }); return; }
+    const lineMatch = /^(.+):(\d+)$/.exec(target);
+    const path = lineMatch ? lineMatch[1] : target;
+    const line = lineMatch ? Number(lineMatch[2]) : undefined;
     managers.tab.append(tab.label, { input: command, output: '' });
-    managers.openFile.edit(command, target, tab.label);
+    managers.openFile.edit(command, path, tab.label, line);
   },
 };

@@ -67,7 +67,7 @@ describe('renderLine — markdown link click', () => {
     const line = makeMarkdownLine('Error in [src/foo.ts:42](src/foo.ts:42)');
     render(<>{renderLine(line, 0, client, noop, vi.fn())}</>);
     await userEvent.click(screen.getByText('src/foo.ts:42'));
-    expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'edit src/foo.ts' } });
+    expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'edit src/foo.ts:42' } });
   });
 
   it('does not send a command when plain text without a link is clicked', async () => {

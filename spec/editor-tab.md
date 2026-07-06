@@ -92,3 +92,7 @@ was — the view does not jump to the top of the document.
 After any cursor movement (typing, arrow keys, mouse click, page up/down), the caret is scrolled
 into view to ensure it remains visible. Moving the cursor to a different line or column triggers the
 scroll; staying in position does not.
+
+Clicking a `path:line` link in the transcript (see Transcript) opens the editor with the cursor
+already on the target line, scrolled to the middle of the tab so the surrounding context is visible
+on first open. Subsequent cursor movement in that tab follows the normal into-view scrolling above.

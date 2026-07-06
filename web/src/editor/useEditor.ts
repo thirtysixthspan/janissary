@@ -15,7 +15,7 @@ import { UndoBuffer, type EditKind } from './undo';
 export type EditorApi = {
   state: EditorState | null;
   stateRef: React.RefObject<EditorState | null>;
-  load: (text: string) => void;
+  load: (text: string, line?: number) => void;
   setState: (s: EditorState) => void;
   insert: (text: string) => void;
   apply: (action: KeyAction, pageLines: number) => void;
@@ -29,7 +29,7 @@ export function useEditor(onSave: () => void): EditorApi {
   const kill = useRef({ text: '' }).current;
 
   const setState = (s: EditorState) => { stateRef.current = s; setStateRaw(s); };
-  const load = (text: string) => { setState(fromText(text)); };
+  const load = (text: string, line?: number) => { setState(fromText(text, line)); };
   // Cursor-only changes seal the undo coalescing group but are never undo steps themselves.
   const move = (s: EditorState) => { undo.seal(); setState(s); };
   const edit = (before: EditorState, next: EditorState, kind: EditKind) => { undo.record(before, kind); setState(next); };

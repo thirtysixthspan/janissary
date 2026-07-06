@@ -116,7 +116,7 @@ export function renderFileLinkSegments(
       return seg.content || null;
     }
     const isUrl = seg.type === 'url';
-    const cmd = isUrl ? `open ${seg.url}` : `edit ${seg.path}`;
+    const cmd = isUrl ? `open ${seg.url}` : `edit ${seg.path}:${seg.line}`;
     return React.createElement(
       'span',
       {

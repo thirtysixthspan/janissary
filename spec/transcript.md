@@ -48,4 +48,4 @@ When scrolled above the bottom, a scrollbar appears in the prompt bar showing a 
 
 Patterns like `src/foo.ts:42` or `tests/test.py:10:5` in output and markdown lines are rendered as clickable links. Patterns are detected when the text before the colon contains a directory separator (`/` or `\`) followed by one or more digits — bare `word:42` patterns are not considered file paths.
 
-Clicking a file:line link opens the file in an **editor tab** (same as typing `edit <filepath>`). The line number in the link is stripped; the editor always opens at the top of the file.
+Clicking a file:line link opens the file in an **editor tab** (same as typing `edit <filepath>:<line>`), with the cursor placed on the target line and scrolled to the middle of the tab (see Editor Tab → Scrolling).
