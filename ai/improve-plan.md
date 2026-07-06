@@ -1,6 +1,6 @@
 # Improve a Draft Plan (one plan per run)
 
-Your job: take **one** plan from `docs/plans/draft/`, check every claim it makes against the real codebase, and edit the plan so an implementer is less likely to go wrong — then assess its complexity and record it at the top of the plan. You improve the **plan document only**; you change no source code.
+Your job: take **one** plan from `plans/draft/`, check every claim it makes against the real codebase, and edit the plan so an implementer is less likely to go wrong — then assess its complexity and record it at the top of the plan. You improve the **plan document only**; you change no source code.
 
 This is a **planning** task, not pre-implementation. A good plan decides *what* to build, *where* it goes, and *which existing code to reuse* — it does not write the code. The implementer writes the code.
 
@@ -20,7 +20,7 @@ Edit the **one plan file** you picked: correct it, disambiguate it, restructure 
 
 1. **Adding code to the plan.** Never add implementation code blocks — no function bodies, no method implementations, no JSX/CSS blocks, no "here's the code to write". Name the module, function, or type and describe its contract and behavior in prose instead. (Illustrative examples of *observable output* — a CLI transcript, an error message the user will see, an ASCII sketch of UI — are fine. A type or code the implementer would paste is not.) If the draft already contains implementation code, you may leave it, but do not extend it; if it contradicts what you verified in the repo, replace it with a prose description rather than corrected code.
 2. **Editing any file other than the chosen plan.** No source, no tests, no config, no other plans.
-3. **Moving the plan out of `docs/plans/draft/`.** Promotion to `ready/` is the human's status decision (see the plan-storage section in [`CLAUDE.md`](../CLAUDE.md)).
+3. **Moving the plan out of `plans/draft/`.** Promotion to `ready/` is the human's status decision (see the plan-storage section in [`CLAUDE.md`](../CLAUDE.md)).
 4. **Deciding product scope.** If the plan's *goal* seems wrong or not worth doing, say so in your report — do not rewrite the goal.
 
 ---
@@ -34,7 +34,7 @@ Execute `ai/prepare-workspace.md` in full before doing anything else.
 ## Step 1 — Pick the plan
 
 - If you were pointed at a specific plan file, use that one.
-- Otherwise list `docs/plans/draft/`. Exactly one plan there → that is your target. More than one → report the list and stop (the human picks). None → report that and stop.
+- Otherwise list `plans/draft/`. Exactly one plan there → that is your target. More than one → report the list and stop (the human picks). None → report that and stop.
 
 State your pick in one sentence.
 
@@ -45,7 +45,7 @@ State your pick in one sentence.
 1. Read the entire plan.
 2. For **every** file path, function, type, command, line anchor, and behavioral claim the plan makes, open the real thing and check it. Grep for symbols rather than trusting quoted line numbers — line anchors drift.
 3. Read the project constraints that shape any implementation here: the ESLint rules and file-size limit in [`CLAUDE.md`](../CLAUDE.md) (200-line `max-lines`, `.js` import extensions in `src/`, type-aware rules), and the test conventions (`src/**/*.test.ts`, `web/src/**/*.test.tsx`).
-4. Skim one or two plans in `docs/plans/ready/` to match the house style — they follow a shape like: Goal, Design decisions, "What already exists (reuse, don't rebuild)" table, Implementation steps, Tests, Verification, Out of scope.
+4. Skim one or two plans in `plans/ready/` to match the house style — they follow a shape like: Goal, Design decisions, "What already exists (reuse, don't rebuild)" table, Implementation steps, Tests, Verification, Out of scope.
 
 ---
 
@@ -80,7 +80,7 @@ Edit the plan file to remove everything you found. Rules of thumb:
 
 ## Step 5 — Assess and record complexity
 
-Rate the (now improved) plan **1–10** for implementation complexity. Calibration, consistent with the ratings on the plans in `docs/plans/ready/`:
+Rate the (now improved) plan **1–10** for implementation complexity. Calibration, consistent with the ratings on the plans in `plans/ready/`:
 
 - **1–2** — one small module or pure wiring; no new protocol/persistence/UI surface. (`cli-help-version`, `prompt-click-prefill` are 2s.)
 - **3–4** — small feature, but correctness depends on catching several call sites or coordinating with other plans; or it spans server and web with a new RPC or persistence field. (`unread-badge` is a 3, `tab-name-alias` a 4.)
@@ -106,7 +106,7 @@ If the plan already has a complexity line, update it — after your improvements
 Then give the user a short report in this exact shape:
 
 ```
-Plan:        docs/plans/draft/<file>
+Plan:        plans/draft/<file>
 Complexity:  N/10 — <rationale>
 Fixed:       <short bullets — each wrong reference corrected, ambiguity resolved, decision made, gap filled>
 Open:        <anything only the human can decide, e.g. scope doubts — or "nothing">

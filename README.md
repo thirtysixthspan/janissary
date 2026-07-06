@@ -438,8 +438,8 @@ A small `connections` panel floats at the top-right of each tab, listing that ta
 Full-screen / interactive programs that need a real terminal — pagers (`less`, `more`, `man`), editors (`vim`, `nano`), monitors (`top`, `htop`), REPLs (`python`, `node`, `psql`), and the like — run in a pseudo-terminal (via [node-pty](https://github.com/microsoft/node-pty)) that takes over the screen for the duration of the session:
 
 ```
- `less SPEC.md
- `vim src/cli.tsx
+ `less README.md
+ `vim src/main.ts
  `git log | less
 ```
 
@@ -701,7 +701,7 @@ Both commands print a score-sorted table for each area:
 | 75–95 | Needs improvement | Active refactoring target; add tests before changing. |
 | > 95 | _(blocked)_ | Exceeds the regression gate — the score cap in `fta.json` prevents scores this high from landing. |
 
-The score combines cyclomatic complexity, Halstead volume, and line count. A high score means the file is both large and branchy — the highest-leverage refactoring targets. `controller.ts` (94.3) is the current outlier; see `docs/quality/` for the full per-file baseline.
+The score combines cyclomatic complexity, Halstead volume, and line count. A high score means the file is both large and branchy — the highest-leverage refactoring targets. `controller.ts` (94.3) is the current outlier; see `fta/` for the full per-file baseline.
 
 #### Regression gate
 
@@ -727,7 +727,7 @@ After intentional complexity work, commit an updated snapshot:
 npm run quality:snapshot
 ```
 
-This rewrites `docs/quality/baseline-server.json` and `docs/quality/baseline-client.json`, which track the per-file trend over time.
+This rewrites `fta/baseline-server.json` and `fta/baseline-client.json`, which track the per-file trend over time.
 
 ### Code Duplication
 

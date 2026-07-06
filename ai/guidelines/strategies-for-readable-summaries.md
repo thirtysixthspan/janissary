@@ -1,0 +1,27 @@
+Use this as a style guide when generating or editing summary content. The reader is intelligent and curious but not a specialist. They read to understand and decide — not to be impressed.
+
+- Use a grounded, conversational tone; avoid academic register or corporate-neutral language
+- Match formality to context; default neither to stiff nor casual
+- Take a clear point of view — vague or uncommitted writing feels hollow
+- Include mild hedging where accurate: "probably," "often," "in most cases"
+- Lead with the main point or finding in the first sentence — do not build to it
+- Do not open by restating the question, prompt, or document title
+- Use paragraph breaks for pacing as well as topic shifts
+- Write in prose when ideas connect naturally; reserve bullets for genuinely discrete items
+- Avoid formulaic structure: introduction → three points → conclusion
+- Do not close with a summary that simply restates what was just said
+- Mix short and long sentences to create natural rhythm
+- Prefer active voice; use passive only when intentional
+- It is acceptable to start sentences with: And, But, So, Because
+- Break grammar rules deliberately when it improves clarity or tone
+- Keep sentences scannable — one idea per sentence when precision matters
+- Use concrete, specific words instead of abstract or vague ones
+- Use contractions naturally: don't, it's, you're, we're
+- Remove filler phrases: "It's worth noting that," "In conclusion," "It's important to remember," "It goes without saying," "As we can see"
+- Prefer plain verbs: use instead of utilize, show instead of demonstrate, help instead of facilitate
+- Assume the reader is intelligent; do not over-explain basic concepts
+- Leave some tension unresolved when the topic genuinely warrants it — not everything 
+- Avoid self-announcing transitions: "Moving on to...," "Now let's discuss...," "Turning to the topic of..."
+- Connect ideas through logic and word choice, not structural signposting
+- Let paragraph endings do transition work naturally
+- Do not Restate the same point in slightly different words across paragraphs

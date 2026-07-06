@@ -2,7 +2,7 @@
 
 Your job: make **one** small, safe change that lowers the cognitive complexity of **one** high-complexity function — by **refactoring the code within its existing file**, for example via extract-method refactoring into new local functions — then prove you did not break anything. Do exactly one refactor, then verify.
 
-This task is about complexity, not file size: **all code you touch must stay in the target file.** Never move code into a new module file — that is the job of [`ai/improve-modularity.md`](improve-modularity.md), not this one. Never compact code, strip comments, or delete blank lines to shrink a function — that hurts readability without improving the design (see [`CODE_GUIDELINES.md`](../CODE_GUIDELINES.md)).
+This task is about complexity, not file size: **all code you touch must stay in the target file.** Never move code into a new module file — that is the job of [`ai/improve-modularity.md`](improve-modularity.md), not this one. Never compact code, strip comments, or delete blank lines to shrink a function — that hurts readability without improving the design (see [`code-guidelines.md`](guidelines/code-guidelines.md)).
 
 Refactoring edits real code, so the rule is simple: **the tests must pass before you start and still pass after. If you cannot keep them passing, put the code back the way it was.**
 

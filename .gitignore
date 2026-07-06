@@ -6,3 +6,5 @@ temp/
 .janissary/
 /coverage
 .claude/settings.local.json
+public-documentation/.vitepress/dist
+public-documentation/.vitepress/cache

@@ -1,6 +1,6 @@
 # Build a Feature
 
-Your job: pick the simplest available plan from `docs/plans/ready/`, implement it end to end, update the functional specs, promote the plan to `docs/plans/complete/`, and open a pull request. You change source code, tests, spec files, and the plan file's location — nothing else.
+Your job: pick the simplest available plan from `plans/ready/`, implement it end to end, update the functional specs, promote the plan to `plans/complete/`, and open a pull request. You change source code, tests, spec files, and the plan file's location — nothing else.
 
 **Shell hygiene:** run every command on its own line — no `&&` chaining, no `; echo "Exit code: $?"` suffixes, no subshell captures, no `for`/`while` loops, no variable expansion (`$var`, `$(...)`), no redirects (`2>/dev/null`, `>file`, `>>file`), no pipes (`|`). Commands with control-flow, expansion, redirects, or pipes require manual approval and will stall an unattended run. To run a project script, always use `./scripts/run.mjs <name>` — never call `node scripts/<name>.mjs` directly.
 
@@ -12,14 +12,14 @@ Your job: pick the simplest available plan from `docs/plans/ready/`, implement i
 
 ### Allowed — do it automatically, never ask
 
-Read any file in the repo. Edit source, tests, CSS, and spec files as the plan directs. Move the chosen plan file from `docs/plans/ready/` to `docs/plans/complete/`. Run `./scripts/run.mjs check-diff` after each change. Run the full PR workflow via `ai/open-feature-pull-request.md` when implementation is done.
+Read any file in the repo. Edit source, tests, CSS, and spec files as the plan directs. Move the chosen plan file from `plans/ready/` to `plans/complete/`. Run `./scripts/run.mjs check-diff` after each change. Run the full PR workflow via `ai/open-feature-pull-request.md` when implementation is done.
 
 ### Forbidden — no exceptions
 
 1. **Editing files the plan does not touch.** Stay inside the plan's scope. If you discover the plan missed a file, stop and report — do not silently expand scope.
 2. **Running `npm run check`.** That is the human's end-of-work gate. Use `./scripts/run.mjs check-diff` during development.
 3. **Skipping tests.** If the plan specifies tests, write them. If it does not, still verify with `./scripts/run.mjs check-diff`.
-4. **Choosing a plan at complexity 7 or above.** If every plan in `docs/plans/ready/` is rated 7+, stop and report — do not pick one anyway.
+4. **Choosing a plan at complexity 7 or above.** If every plan in `plans/ready/` is rated 7+, stop and report — do not pick one anyway.
 5. **Merging the PR.** `ai/open-feature-pull-request.md` opens it; merging is the human's decision.
 
 ---
@@ -32,9 +32,9 @@ Execute `ai/prepare-workspace.md` in full before doing anything else.
 
 ## Step 1 — List ready plans and pick the simplest
 
-1. List every `.md` file in `docs/plans/ready/`.
+1. List every `.md` file in `plans/ready/`.
 2. For each file, use the `Read` tool to read the first few lines and find the complexity rating line: `**Complexity: N/10**`. Do not use a shell loop to do this.
-3. If no plans exist, report "No plans in `docs/plans/ready/`" and stop.
+3. If no plans exist, report "No plans in `plans/ready/`" and stop.
 4. If the lowest complexity found is **7 or above**, report the list with ratings and stop — do not pick one.
 5. Otherwise, pick the plan with the **lowest** complexity number. On a tie, pick whichever plan name comes first alphabetically.
 
@@ -56,7 +56,7 @@ Follow the plan's implementation steps **in order**. After each step:
 
 1. Run `./scripts/run.mjs check-diff` to catch lint, typecheck, and test failures immediately.
 2. Fix any failures before moving to the next step.
-3. If a step produces a file over the 200-line limit, extract into a new module per `CODE_GUIDELINES.md` — do not compact code, strip comments, or delete spacing.
+3. If a step produces a file over the 200-line limit, extract into a new module per `ai/guidelines/code-guidelines.md` — do not compact code, strip comments, or delete spacing.
 
 Key rules during implementation:
 
@@ -77,10 +77,10 @@ Run `./scripts/run.mjs check-diff` after writing tests. All tests must pass.
 
 ## Step 5 — Update or create spec files
 
-Every feature must be reflected in the functional specs under `spec/`. After implementation and tests:
+Every feature must be reflected in the functional specs under `specs/`. After implementation and tests:
 
 1. **Check the plan.** If the plan names specific spec files to update or create, do exactly that.
-2. **Otherwise, find the right spec.** Read the existing specs in `spec/` and identify which one(s) the feature belongs to. Most features extend an existing spec (e.g. a new keyboard shortcut belongs in `spec/keyboard-navigation.md`, a new tab behavior belongs in `spec/tabs.md`). If no existing spec covers the area, create a new one.
+2. **Otherwise, find the right spec.** Read the existing specs in `specs/` and identify which one(s) the feature belongs to. Most features extend an existing spec (e.g. a new keyboard shortcut belongs in `specs/keyboard-navigation.md`, a new tab behavior belongs in `specs/tabs.md`). If no existing spec covers the area, create a new one.
 3. **Write or update the spec.** Follow the existing conventions: `# Title` at the top, `### Subsection` for each aspect, prose describing user-visible behavior only — no code, no implementation details, no file paths. The spec is what the feature *does*, not how it is built. Keep additions concise and factual.
 
 Spec files are markdown and do not affect `check-diff`, so no verification run is needed after this step.
@@ -96,10 +96,10 @@ Spec files are markdown and do not affect `check-diff`, so no verification run i
 
 ## Step 7 — Promote the plan
 
-Move the plan file from `docs/plans/ready/` to `docs/plans/complete/`:
+Move the plan file from `plans/ready/` to `plans/complete/`:
 
 ```bash
-git mv docs/plans/ready/<plan-file> docs/plans/complete/<plan-file>
+git mv plans/ready/<plan-file> plans/complete/<plan-file>
 ```
 
 ---
@@ -115,7 +115,7 @@ Execute `ai/open-feature-pull-request.md` in full. That document owns the PR wor
 Give the user a short report in this exact shape:
 
 ```
-Plan:           docs/plans/ready/<file> → docs/plans/complete/<file>
+Plan:           plans/ready/<file> → plans/complete/<file>
 Complexity:     N/10
 Implementation: <one-line summary of what was built>
 Tests:          <count> new tests across <files>

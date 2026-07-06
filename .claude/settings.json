@@ -26,6 +26,7 @@
       "Bash(tail *)",
       "Bash(wc *)",
       "Bash(sed *)",
+      "Bash(awk *)",
       "Bash(node *)"
     ]
   },

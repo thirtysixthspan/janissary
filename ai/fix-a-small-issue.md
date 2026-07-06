@@ -1,10 +1,10 @@
 # Fix a Small Issue
 
-Your job: pick the simplest issue from `docs/small-issues.md`, develop a plan to resolve it, implement the fix, update functional specs, record the plan in `docs/plans/complete/`, remove the issue from the small-issues file, and merge the change to master. You change source code, tests, spec files, the small-issues file, and the plan file's location — nothing else.
+Your job: pick the simplest issue from `plans/small-issues.md`, develop a plan to resolve it, implement the fix, update functional specs, record the plan in `plans/complete/`, remove the issue from the small-issues file, and merge the change to master. You change source code, tests, spec files, the small-issues file, and the plan file's location — nothing else.
 
 **Shell hygiene:** run every command on its own line — no `&&` chaining, no `; echo "Exit code: $?"` suffixes, no subshell captures, no `for`/`while` loops, no variable expansion (`$var`, `$(...)`), no redirects (`2>/dev/null`, `>file`, `>>file`), no pipes (`|`). Commands with control-flow, expansion, redirects, or pipes require manual approval and will stall an unattended run. To run a project script, always use `./scripts/run.mjs <name>` — never call `node scripts/<name>.mjs` directly.
 
-This overrides CLAUDE.md's "Capturing command output" guidance (capture to a variable, then `grep` it repeatedly) for this task: that pattern relies on `$(...)` and pipes, which stall an unattended run. Instead, run the command plain and read the full tool output directly — filter it yourself while reading, don't shell out to `grep`.
+This overrides CLAUDE.md's "Capturing command output" guidance (write the output to a file under `./temp/`, then `grep` it repeatedly) for this task: the follow-up `grep`/`tail` filter commands stall an unattended run. Instead, run the command plain and read the full tool output directly — filter it yourself while reading, don't shell out to `grep`.
 
 **Run autonomously.** This task runs unattended — do not ask the user questions or wait for feedback at any step. Make the best judgment call yourself, using the rules in this document, and keep going. Only stop early for the conditions explicitly listed under "Forbidden" below.
 
@@ -14,7 +14,7 @@ This overrides CLAUDE.md's "Capturing command output" guidance (capture to a var
 
 ### Allowed — do it automatically, never ask
 
-Read any file in the repo. Edit source, tests, CSS, and spec files as the fix requires. Write a plan file to `docs/plans/complete/`. Remove the fixed issue from `docs/small-issues.md`. Run `./scripts/run.mjs check-diff` after each change. Execute the full merge workflow via `ai/merge-change-to-master.md` when implementation is done.
+Read any file in the repo. Edit source, tests, CSS, and spec files as the fix requires. Write a plan file to `plans/complete/`. Remove the fixed issue from `plans/small-issues.md`. Run `./scripts/run.mjs check-diff` after each change. Execute the full merge workflow via `ai/merge-change-to-master.md` when implementation is done.
 
 ### Forbidden — no exceptions
 
@@ -22,7 +22,7 @@ Read any file in the repo. Edit source, tests, CSS, and spec files as the fix re
 2. **Running `npm run check`.** That is the human's end-of-work gate. Use `./scripts/run.mjs check-diff` during development.
 3. **Skipping tests.** Every fix needs tests that cover the changed behavior. Verify with `./scripts/run.mjs check-diff`.
 4. **Choosing an issue that requires significant new architecture.** If an issue would require high complexity error or prone work, pick a simpler issue instead and report why.
-5. **Editing `docs/small-issues.md` beyond removing the fixed entry.** Only remove the line for the issue you fixed — do not reorder, rephrase, or otherwise modify the remaining entries.
+5. **Editing `plans/small-issues.md` beyond removing the fixed entry.** Only remove the line for the issue you fixed — do not reorder, rephrase, or otherwise modify the remaining entries.
 6. **Merging before all checks pass.** The `ai/merge-change-to-master.md` workflow handles merge; do not bypass it.
 
 ---
@@ -35,9 +35,9 @@ Execute `ai/prepare-workspace.md` in full before doing anything else.
 
 ## Step 1 — List small fixes and pick the first available
 
-1. Read `docs/small-fixes.md` and list every issue.
+1. Read `plans/small-issues.md` and list every issue.
 2. For each issue, assess the complexity by reviewing the codebase to understand what areas it touches. Do not use a shell loop for this.
-3. If no issues exist, report "No issues in `docs/small-fixes.md`" and stop.
+3. If no issues exist, report "No issues in `plans/small-issues.md`" and stop.
 4. If every issue requires significant new architecture (rating 7+), report the list with assessments and stop — do not pick one.
 5. Otherwise, pick the **first** issue listed in the file (top of the list). State your pick and why.
 
@@ -47,10 +47,10 @@ Execute `ai/prepare-workspace.md` in full before doing anything else.
 
 1. Read the project constraints in [`CLAUDE.md`](../CLAUDE.md): ESLint rules (200-line `max-lines`, `.js` import extensions in `src/`, type-aware rules), test conventions (`src/**/*.test.ts`, `web/src/**/*.test.tsx`).
 2. Read every file relevant to the fix to understand the code involved.
-3. Write a plan file following the format of existing plans in `docs/plans/complete/` — include a complexity rating, goal, approach, implementation steps, tests, and out-of-scope items. Write it to `docs/plans/draft/<fix-name>.md`.
-4. After the plan is written, move it from `docs/plans/draft/` to `docs/plans/ready/`:
+3. Write a plan file following the format of existing plans in `plans/complete/` — include a complexity rating, goal, approach, implementation steps, tests, and out-of-scope items. Write it to `plans/draft/<fix-name>.md`.
+4. After the plan is written, move it from `plans/draft/` to `plans/ready/`:
    ```bash
-   git mv docs/plans/draft/<fix-name>.md docs/plans/ready/<fix-name>.md
+   git mv plans/draft/<fix-name>.md plans/ready/<fix-name>.md
    ```
 
 ---
@@ -61,7 +61,7 @@ Follow the plan's implementation steps **in order**. After each step:
 
 1. Run `./scripts/run.mjs check-diff` to catch lint, typecheck, and test failures immediately.
 2. Fix any failures before moving to the next step.
-3. If a step produces a file over the 200-line limit, extract into a new module per `CODE_GUIDELINES.md` — do not compact code, strip comments, or delete spacing.
+3. If a step produces a file over the 200-line limit, extract into a new module per `ai/guidelines/code-guidelines.md` — do not compact code, strip comments, or delete spacing.
 
 Key rules during implementation:
 
@@ -81,10 +81,10 @@ Run `./scripts/run.mjs check-diff` after writing tests. All tests must pass.
 
 ## Step 5 — Update or create spec files
 
-Every fix must be reflected in the functional specs under `spec/`. After implementation and tests:
+Every fix must be reflected in the functional specs under `specs/`. After implementation and tests:
 
 1. **Check the plan.** If the plan names specific spec files to update or create, do exactly that.
-2. **Otherwise, find the right spec.** Read the existing specs in `spec/` and identify which one(s) the fix relates to. Most fixes extend an existing spec. If no existing spec covers the area, create a new one.
+2. **Otherwise, find the right spec.** Read the existing specs in `specs/` and identify which one(s) the fix relates to. Most fixes extend an existing spec. If no existing spec covers the area, create a new one.
 3. **Write or update the spec.** Follow the existing conventions: `# Title` at the top, `### Subsection` for each aspect, prose describing user-visible behavior only — no code, no implementation details, no file paths. The spec is what the fix *does*, not how it is built. Keep additions concise and factual.
 
 Spec files are markdown and do not affect `check-diff`, so no verification run is needed after this step.
@@ -93,11 +93,11 @@ Spec files are markdown and do not affect `check-diff`, so no verification run i
 
 ## Step 6 — Promote the plan and remove the issue
 
-1. Move the plan file from `docs/plans/ready/` to `docs/plans/complete/`:
+1. Move the plan file from `plans/ready/` to `plans/complete/`:
    ```bash
-   git mv docs/plans/ready/<fix-name>.md docs/plans/complete/<fix-name>.md
+   git mv plans/ready/<fix-name>.md plans/complete/<fix-name>.md
    ```
-2. Remove the fixed issue's line from `docs/small-issues.md`. Only remove that single line — do not modify any other content in the file.
+2. Remove the fixed issue's line from `plans/small-issues.md`. Only remove that single line — do not modify any other content in the file.
 
 ---
 
@@ -120,7 +120,7 @@ Give the user a short report in this exact shape:
 
 ```
 Issue:          <the issue text from small-issues.md>
-Plan:           docs/plans/ready/<file> → docs/plans/complete/<file>
+Plan:           plans/ready/<file> → plans/complete/<file>
 Complexity:     N/10
 Implementation: <one-line summary of the fix>
 Tests:          <count> new tests across <files>

@@ -2,7 +2,7 @@
 
 Your job: make **one** small, safe change that lowers the complexity of **one** high-complexity file by **moving a cohesive group of its code out into a new, focused module file** — then prove you did not break anything. Do exactly one extraction, then verify.
 
-This is the **only** way we reduce a file's size and complexity here: extract a cohesive group of related code into a new file and import it back. Never compact code, strip comments, or delete blank lines to shrink a file — that hurts readability without improving the design (see [`CODE_GUIDELINES.md`](../CODE_GUIDELINES.md)).
+This is the **only** way we reduce a file's size and complexity here: extract a cohesive group of related code into a new file and import it back. Never compact code, strip comments, or delete blank lines to shrink a file — that hurts readability without improving the design (see [`code-guidelines.md`](guidelines/code-guidelines.md)).
 
 Refactoring edits real code, so the rule is simple: **the tests must pass before you start and still pass after. If you cannot keep them passing, put the code back the way it was.**
 

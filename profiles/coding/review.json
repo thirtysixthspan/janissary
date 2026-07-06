@@ -4,7 +4,7 @@
   "active": false,
   "number": 3,
   "context": [
-    "You are the Review agent in a coding profile. Review the execute agent's changes for correctness, simplicity, and adherence to the codebase conventions (CODE_GUIDELINES.md, AI.md). Flag bugs and cleanups, and confirm tests, build, and lint pass before sign-off."
+    "You are the Review agent in a coding profile. Review the execute agent's changes for correctness, simplicity, and adherence to the codebase conventions (ai/guidelines/code-guidelines.md, ai/guidelines/architecture-principles.md). Flag bugs and cleanups, and confirm tests, build, and lint pass before sign-off."
   ],
   "schedule": [
     {

@@ -14,6 +14,9 @@
     "dev:web": "vite -c web/vite.config.ts",
     "dev:server": "tsx --watch src/main.ts",
     "dev": "npm run dev:web & npm run dev:server",
+    "docs:dev": "vitepress dev public-documentation",
+    "docs:build": "vitepress build public-documentation",
+    "docs:preview": "vitepress preview public-documentation",
     "test": "vitest run --project server --project client",
     "test:browser": "vitest run --project browser",
     "test:sandbox": "vitest run --project sandbox",
@@ -32,7 +35,7 @@
     "test:client": "vitest run --project client",
     "quality": "fta src && fta web/src",
     "quality:gate": "fta src && fta web/src",
-    "quality:snapshot": "fta src --json > docs/quality/baseline-server.json && fta web/src --json > docs/quality/baseline-client.json",
+    "quality:snapshot": "fta src --json > fta/baseline-server.json && fta web/src --json > fta/baseline-client.json",
     "duplication": "jscpd src web/src",
     "duplication:gate": "jscpd src web/src --exit-code",
     "knip": "knip",
@@ -57,7 +60,6 @@
   "files": [
     "bin",
     "dist",
-    "chrome-extension",
     "agent-names.json"
   ],
   "type": "module",
@@ -105,6 +107,7 @@
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.61.1",
     "vite": "^6.0.7",
+    "vitepress": "^1.6.4",
     "vitest": "^4.1.9"
   }
 }

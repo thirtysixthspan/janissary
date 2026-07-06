@@ -1,5 +1,9 @@
 # Development Guide for Claude Code
 
+## Guidelines
+
+Before starting work, read every file in [`ai/guidelines/`](ai/guidelines/) — it holds the project's architecture principles, code guidelines, PR automation, and writing/summary conventions. Treat all of it as binding.
+
 ## ESLint rules
 
 Before writing code, review [`eslint.config.mjs`](eslint.config.mjs) to understand the linting rules that apply. Write code on the first pass that conforms to these rules to avoid rework:
@@ -87,7 +91,7 @@ Instead:
 - Just run the command and read its output from the tool result.
 - If a later step needs the value, re-derive it (re-run the read-only command again) rather than stashing it in a file — shell variables don't persist across separate Bash calls anyway.
 - Only write output to a file when a downstream command genuinely requires a file path as input (e.g. a script argument that must be a file, not stdin), or when you need to filter one slow command's output multiple ways (see [Capturing command output](#capturing-command-output)) — and prefer the Write tool for that, not a shell redirect.
-- This applies to project workflow docs (`ai/*.md`, `docs/*.md`) too: if an example command shows `> file` followed by `cat file`, treat that as a mistake to fix, not a pattern to replicate.
+- This applies to project workflow docs (`ai/**/*.md`, `specs/*.md`, `plans/**/*.md`) too: if an example command shows `> file` followed by `cat file`, treat that as a mistake to fix, not a pattern to replicate.
 
 ```bash
 # ❌ Antipattern — redirect triggers a permission prompt even though `npm run coverage` alone is pre-approved
@@ -105,16 +109,18 @@ When writing implementation plans or creating tasks, use natural line breaks onl
 
 ## Plan storage
 
-Implementation plans live in `docs/plans/`, organized into folders by status. Each plan is a single markdown file; move the file between folders as its status changes:
+Implementation plans live in `plans/`, organized into folders by status. Each plan is a single markdown file; move the file between folders as its status changes:
 
-- `docs/plans/draft/` — the plan itself is still being drafted and refined
-- `docs/plans/ready/` — the plan is finalized and ready to implement
-- `docs/plans/complete/` — the plan has been implemented
-- `docs/plans/deferred/` — intentionally put on hold; not planned for near-term work
+- `plans/draft/` — the plan itself is still being drafted and refined
+- `plans/ready/` — the plan is finalized and ready to implement
+- `plans/complete/` — the plan has been implemented
+- `plans/deferred/` — intentionally put on hold; not planned for near-term work
+
+Backlogs of smaller items live alongside the status folders: `plans/small-issues.md` and `plans/todo-features.md`.
 
 ## Code guidelines
 
-Follow the conventions in [`CODE_GUIDELINES.md`](CODE_GUIDELINES.md), including the
+Follow the conventions in [`ai/guidelines/code-guidelines.md`](ai/guidelines/code-guidelines.md), including the
 file-size limit and how to respond to it (extract code into a new module — never compact
 code, strip comments, or delete spacing to get under the limit).
 
@@ -132,7 +138,15 @@ All scripts in `scripts/` are considered trusted. Do not invoke them directly wi
 
 ## Project structure
 
-- `src/` — Server (Node.js, CLI, terminal UI)
-- `web/src/` — Web UI (React, Vite)
-- `src/**/*.test.ts` — Server tests
-- `web/src/**/*.test.tsx` — Web tests (currently no tests in web/)
+- `src/` — Server (Node.js, CLI, terminal UI); tests colocated as `src/**/*.test.ts` (vitest project `server`)
+- `web/src/` — Web UI (React, Vite); tests colocated as `web/src/**/*.test.ts(x)` (vitest project `client`)
+- `bin/janus.mjs` — CLI entry point (`janus`)
+- `specs/` — functional specs, one file per feature; when a change alters behavior, update the matching spec
+- `plans/` — implementation plans by status (see [Plan storage](#plan-storage))
+- `ai/` — agent workflow playbooks (`ai/*.md`), binding guidelines (`ai/guidelines/`), and personas (`ai/personas/`)
+- `public-documentation/` — user-facing docs site (VitePress; `npm run docs:dev` / `docs:build`)
+- `scripts/` — project scripts; invoke only via `./scripts/run.mjs` (see [Running scripts](#running-scripts))
+- `profiles/` — harness profiles (see `specs/profiles.md`)
+- `skills/` — project-provided agent skills
+- `fta/` — FTA code-quality baselines (regenerate with `npm run quality:snapshot`)
+- `temp/` — scratch space for captured command output; gitignored
