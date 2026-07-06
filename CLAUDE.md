@@ -54,22 +54,29 @@ This completes in seconds and is the entire development loop. `check-diff` is sc
 
 ## Capturing command output
 
-**Never re-run a slow command multiple times to filter its output differently.** Capture once, filter as needed:
+**Never re-run a slow command multiple times to filter its output differently.** Capture once, filter as needed — and don't use shell variable capture (`output=$(...)`) to do it: that syntax can't be statically matched against the Bash allowlist and triggers a permission prompt on the very first call.
+
+Instead, write the captured output to a file under `./temp/` using the **Write tool** (not a shell redirect), then filter that file with plain, redirect-free Bash commands — each one matches an allowlisted prefix (`grep *`, `tail *`, `cat *`, ...) and stays prompt-free:
 
 ```bash
 # ❌ Antipattern — runs npm 3 times
 npm run lint 2>&1 | grep "sonarjs"
 npm run lint 2>&1 | grep "buffer.ts"
 npm run lint 2>&1 | tail -3
-
-# ✅ Correct — run once, filter repeatedly
-output=$(npm run lint 2>&1)
-echo "$output" | grep "sonarjs"
-echo "$output" | grep "buffer.ts"
-echo "$output" | tail -3
 ```
 
-This applies to any slow command: lint, typecheck, test runs, builds. Capture to a variable (or scratchpad file for very large output), then grep/filter the captured result.
+```
+✅ Correct
+1. Run `npm run lint 2>&1` once via Bash, read its output from the tool result.
+2. Use the Write tool to save that output to ./temp/lint.txt.
+3. Filter it as many times as needed, each its own plain Bash call:
+   grep "sonarjs" ./temp/lint.txt
+   grep "buffer.ts" ./temp/lint.txt
+   tail -3 ./temp/lint.txt
+4. rm ./temp/lint.txt when done.
+```
+
+This applies to any slow command: lint, typecheck, test runs, builds.
 
 ## Avoid unnecessary file redirects in Bash calls
 
@@ -79,7 +86,7 @@ Instead:
 
 - Just run the command and read its output from the tool result.
 - If a later step needs the value, re-derive it (re-run the read-only command again) rather than stashing it in a file — shell variables don't persist across separate Bash calls anyway.
-- Only write output to a file when a downstream command genuinely requires a file path as input (e.g. a script argument that must be a file, not stdin) — and prefer the Write tool for that, not a shell redirect.
+- Only write output to a file when a downstream command genuinely requires a file path as input (e.g. a script argument that must be a file, not stdin), or when you need to filter one slow command's output multiple ways (see [Capturing command output](#capturing-command-output)) — and prefer the Write tool for that, not a shell redirect.
 - This applies to project workflow docs (`ai/*.md`, `docs/*.md`) too: if an example command shows `> file` followed by `cat file`, treat that as a mistake to fix, not a pattern to replicate.
 
 ## Plan and task formatting

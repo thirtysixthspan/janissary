@@ -8,6 +8,8 @@ The rule is simple: **the compiler, the linter, and the tests must be green befo
 
 Do the steps below **in order**. Do not skip steps. Do not invent your own process.
 
+**Run autonomously.** This task runs unattended — do not ask the user questions or wait for feedback at any step. Make the best judgment call yourself, using the rules in this document, and keep going. Only stop early if the project isn't green before you start, or if you cannot keep it green after a removal (put the code back and report instead of pausing).
+
 ## The one safety rule (read this first)
 
 There are two kinds of finding: **remove automatically** and **leave alone**.

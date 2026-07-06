@@ -8,6 +8,8 @@ Deduplication edits real code that other files may import, so the rule is simple
 
 Do the steps below **in order**. Do not skip steps. Do not invent your own process.
 
+**Run autonomously.** This task runs unattended — do not ask the user questions or wait for feedback at any step. Make the best judgment call yourself, using the rules in this document, and keep going. Only stop early if the project isn't green before you start (Step 1), or if every remaining candidate clone is blocked (see "Blocked work" below).
+
 ## What you may and may not do
 
 ### Safe work — DO IT AUTOMATICALLY, never ask

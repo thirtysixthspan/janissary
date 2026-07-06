@@ -1,7 +1,7 @@
 commands.md
-execute /ai/improve-quality.md and if changes are successful execute ./ai/merge-change-to-master.md 
+execute /ai/improve-modularity.md and if changes are successful execute ./ai/merge-change-to-master.md 
 
-schedule improve-quality in opencode every 15m send quality execute /ai/improve-quality.md and if changes are successful execute ./ai/merge-change-to-master.md
+schedule improve-modularity in opencode every 15m send quality execute /ai/improve-modularity.md and if changes are successful execute ./ai/merge-change-to-master.md
 
 
 

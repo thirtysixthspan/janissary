@@ -1,4 +1,4 @@
-# Improve Code Quality (one safe extraction per run)
+# Improve Code Modularity (one safe extraction per run)
 
 Your job: make **one** small, safe change that lowers the complexity of **one** high-complexity file by **moving a cohesive group of its code out into a new, focused module file** — then prove you did not break anything. Do exactly one extraction, then verify.
 
@@ -9,6 +9,8 @@ Refactoring edits real code, so the rule is simple: **the tests must pass before
 Do the steps below **in order**. Do not skip steps. Do not invent your own process.
 
 **Shell hygiene:** run every command on its own line — no `&&` chaining, no `; echo "Exit code: $?"` suffixes, no subshell captures. The exit code and output are visible in the tool result. To run a project script, always use `./scripts/run.mjs <name>` — never call `node scripts/<name>.mjs` directly.
+
+**Run autonomously.** This task runs unattended — do not ask the user questions or wait for feedback at any step. Make the best judgment call yourself, using the rules in this document, and keep going. Only stop early if the project isn't green before you start (Step 1), or if every remaining candidate file is blocked (see "Blocked work" below).
 
 ## What you may and may not do
 
@@ -45,18 +47,18 @@ Execute `ai/prepare-workspace.md` in full before doing anything else.
 Run all four and read the output:
 
 ```bash
-npm test 2>&1
-npm run typecheck:diff 2>&1
+npm run typecheck 2>&1
 npm run lint 2>&1
+npm run test 2>&1
 npm run quality 2>&1
 ```
 
 Then record these starting numbers — you will compare against them at the end. Put them straight into your report draft (Step 7):
 
-- **Tests:** they must be **green** (all passing). If any test is already failing **before** you touch anything, STOP and tell the user — do not start a refactor on a broken suite.
-- **TypeScript:** `npm run typecheck:diff` must finish with **no errors**. If it errors before you touch anything, STOP and tell the user.
-- **Quality (FTA):** `npm run quality` prints a table per area, sorted worst-first, with each file's **line count** and **FTA score** (lower = better). This is your **primary** signal for what to extract from. Write down the score and line count of the file you end up picking.
+- **TypeScript:** `npm run typecheck` must finish with **no errors**. If it errors before you touch anything, STOP and tell the user.
 - **Lint:** near the end of `npm run lint` there is a summary line like `✖ 16 problems (0 errors, 16 warnings)`. Write down the **errors** count and the **warnings** count. Note especially any `max-lines` (file over 200 lines) and `sonarjs/cognitive-complexity` warnings — these point straight at extraction targets.
+- **Tests:** they must be **green** (all passing). If any test is already failing **before** you touch anything, STOP and tell the user — do not start a refactor on a broken suite.
+- **Quality (FTA):** `npm run quality` prints a table per area, sorted worst-first, with each file's **line count** and **FTA score** (lower = better). This is your **primary** signal for what to extract from. Write down the score and line count of the file you end up picking.
 
 Always run these fresh. Do not trust earlier output in the conversation.
 
@@ -146,16 +148,16 @@ Then perform the extraction. Keep the diff focused — move the chosen group of 
 ## Step 6 — Verify (run in this order; fix or put it back)
 
 ```bash
-npm test 2>&1
 npm run typecheck:diff 2>&1
-npm run lint 2>&1
+npm run test:diff 2>&1
+npm run lint:diff 2>&1
 npm run quality 2>&1
 ```
 
 Check each, in order:
 
-1. **Tests pass.** If a test now fails: try a quick, obvious fix in your source files (do **not** edit the test). If it does not pass quickly, **restore your backup** (`cp src/foo.ts.bak src/foo.ts`, and delete the new module file(s) you added) and report what blocked you. Never edit a test to make it pass.
-2. **TypeScript is clean.** `npm run typecheck:diff` must have no errors. A type error here almost always means a moved symbol's type is missing an import in the new file, or a re-export was forgotten — fix it in your source files. If you cannot make it clean quickly, restore your backup and report.
+1. **TypeScript is clean.** `npm run typecheck:diff` must have no errors. A type error here almost always means a moved symbol's type is missing an import in the new file, or a re-export was forgotten — fix it in your source files. If you cannot make it clean quickly, restore your backup and report.
+2. **Tests pass.** If a test now fails: try a quick, obvious fix in your source files (do **not** edit the test). If it does not pass quickly, **restore your backup** (`cp src/foo.ts.bak src/foo.ts`, and delete the new module file(s) you added) and report what blocked you. Never edit a test to make it pass.
 3. **Lint is no worse.** Look at the `✖ … problems (… errors, … warnings)` line again. **Errors must be 0** (if you were clearing a `max-lines` error, it should now be gone). **Warnings must be the same or fewer** than Step 1, never higher. If a new warning or error appeared — often a missing `.js` import extension, a now-unused import, or complexity that rode along into the new file — fix it in your source files. Never silence a warning with an `eslint-disable` comment.
 4. **Quality improved.** The original file's FTA score and line count should be **lower** than Step 1. The new module file should land at a reasonable score and stay under 200 lines. If the original's score did not drop, the extraction was too small to matter — restore the backup and pick a more substantial group (or a different file).
 

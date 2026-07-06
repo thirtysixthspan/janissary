@@ -6,6 +6,8 @@ Do the steps below **in order**. Do not skip steps. Do not invent your own proce
 
 **Shell hygiene:** run every command on its own line — no `&&` chaining, no `; echo "Exit code: $?"` suffixes, no subshell captures. The exit code and output are visible in the tool result. To run a project script, always use `./scripts/run.mjs <name>` — never call `node scripts/<name>.mjs` directly.
 
+**Run autonomously.** This task runs unattended — do not ask the user questions or wait for feedback at any step. Make the best judgment call yourself, using the rules in this document, and keep going. Only stop early if the project isn't green before you start (Step 1), or if every remaining candidate target is blocked (see "Blocked work" below).
+
 ## What you may and may not do
 
 ### Safe work — DO IT AUTOMATICALLY, never ask

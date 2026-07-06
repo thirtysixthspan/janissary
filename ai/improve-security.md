@@ -8,6 +8,8 @@ Your job: run the security tools, list **every** finding, automatically apply th
 
 Do the steps below **in order**. Do not skip steps. Do not invent your own process.
 
+**Run autonomously.** This task runs unattended — do not ask the user questions or wait for feedback at any step. Make the best judgment call yourself, using the rules in this document, and keep going. There is nothing to stop for: every finding either gets the one safe dependency-patch fix, or gets reported under "Never do on your own" below — you always finish by producing the Step 3 report, never by pausing to ask.
+
 ## The one safety rule (read this first)
 
 ### Safe to do on your own — the ONLY change you may make

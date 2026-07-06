@@ -2,6 +2,8 @@
 
 Your job: take the uncommitted work in this repository, package it into a well-described pull request against `master` on GitHub, and open it. **Do not merge the PR** — just open it with a thorough description so reviewers understand exactly what changed and why.
 
+**Do not ask the user for input at any point.** Make all decisions autonomously — branch name, commit message, PR title and body. The only valid reason to stop is "No changes to open a PR for" (Step 0) or an unresolvable error.
+
 ## The PR description
 
 The PR body is the deliverable. It must be **thorough and self-contained** — a reviewer should understand the feature without reading the code. Write it to `./temp/pr-body.md`, then pass that file to the create-PR script.
