@@ -1,0 +1,143 @@
+import { describe, it, expect, vi } from 'vitest';
+import { handle } from './message-handler.js';
+import type { Controller } from './controller.js';
+import type { ClientMessage, ServerEvent, RpcCall } from './protocol.js';
+
+const makeController = () =>
+  ({
+    view: vi.fn(() => []),
+    routeView: vi.fn(() => null),
+    managers: { tab: { activeTab: 0 } },
+    dispatch: vi.fn(),
+    setActiveTab: vi.fn(),
+    closeTab: vi.fn(),
+    renameTab: vi.fn(),
+    moveTab: vi.fn(),
+    reorderTab: vi.fn(),
+    toggleCollapse: vi.fn(),
+    chooseRoute: vi.fn(),
+    complete: vi.fn(() => ({ suggestions: [] })),
+    resize: vi.fn(),
+    ptyInput: vi.fn(),
+    ptyResize: vi.fn(),
+    ptyKill: vi.fn(),
+    runSuggestion: vi.fn(),
+    rateSuggestion: vi.fn(),
+    saveFile: vi.fn(),
+    fileTreeToggle: vi.fn(),
+    fileTreeCollapseAll: vi.fn(),
+    fileTreeReroot: vi.fn(),
+  }) as unknown as Controller;
+
+const dispatchCall = (controller: Controller, id: number, call: RpcCall) => {
+  const replies: ServerEvent[] = [];
+  handle(controller, { t: 'rpc', id, ...call } as ClientMessage, (event) => {
+    replies.push(event);
+  });
+  return replies;
+};
+
+describe('handle', () => {
+  it('routes setActiveTab and acknowledges', () => {
+    const controller = makeController();
+    const replies = dispatchCall(controller, 1, { method: 'setActiveTab', params: { index: 2 } });
+    expect(controller.setActiveTab).toHaveBeenCalledWith(2);
+    expect(replies).toEqual([{ t: 'rpc-reply', id: 1, result: 'ok' }]);
+  });
+
+  it('routes closeTab', () => {
+    const controller = makeController();
+    dispatchCall(controller, 2, { method: 'closeTab', params: { index: 3 } });
+    expect(controller.closeTab).toHaveBeenCalledWith(3);
+  });
+
+  it('routes renameTab', () => {
+    const controller = makeController();
+    dispatchCall(controller, 3, { method: 'renameTab', params: { index: 1, title: 'bob' } });
+    expect(controller.renameTab).toHaveBeenCalledWith(1, 'bob');
+  });
+
+  it('routes moveTab', () => {
+    const controller = makeController();
+    dispatchCall(controller, 4, { method: 'moveTab', params: { dir: 1 } });
+    expect(controller.moveTab).toHaveBeenCalledWith(1);
+  });
+
+  it('routes reorderTab', () => {
+    const controller = makeController();
+    dispatchCall(controller, 5, { method: 'reorderTab', params: { dir: -1 } });
+    expect(controller.reorderTab).toHaveBeenCalledWith(-1);
+  });
+
+  it('routes toggleCollapse', () => {
+    const controller = makeController();
+    dispatchCall(controller, 6, { method: 'toggleCollapse' });
+    expect(controller.toggleCollapse).toHaveBeenCalled();
+  });
+
+  it('routes chooseRoute', () => {
+    const controller = makeController();
+    dispatchCall(controller, 7, { method: 'chooseRoute', params: { index: 0 } });
+    expect(controller.chooseRoute).toHaveBeenCalledWith(0);
+  });
+
+  it('routes resize', () => {
+    const controller = makeController();
+    dispatchCall(controller, 8, { method: 'resize', params: { cols: 80, rows: 24 } });
+    expect(controller.resize).toHaveBeenCalledWith(80, 24);
+  });
+
+  it('routes ptyInput', () => {
+    const controller = makeController();
+    dispatchCall(controller, 9, { method: 'ptyInput', params: { id: 'p1', data: 'ls\n' } });
+    expect(controller.ptyInput).toHaveBeenCalledWith('p1', 'ls\n');
+  });
+
+  it('routes ptyResize', () => {
+    const controller = makeController();
+    dispatchCall(controller, 10, { method: 'ptyResize', params: { id: 'p1', cols: 100, rows: 40 } });
+    expect(controller.ptyResize).toHaveBeenCalledWith('p1', 100, 40);
+  });
+
+  it('routes ptyKill', () => {
+    const controller = makeController();
+    dispatchCall(controller, 11, { method: 'ptyKill', params: { id: 'p1' } });
+    expect(controller.ptyKill).toHaveBeenCalledWith('p1');
+  });
+
+  it('routes runSuggestion', () => {
+    const controller = makeController();
+    dispatchCall(controller, 12, { method: 'runSuggestion', params: { id: 's1' } });
+    expect(controller.runSuggestion).toHaveBeenCalledWith('s1');
+  });
+
+  it('routes rateSuggestion', () => {
+    const controller = makeController();
+    dispatchCall(controller, 13, { method: 'rateSuggestion', params: { id: 's1', up: true } });
+    expect(controller.rateSuggestion).toHaveBeenCalledWith('s1', true);
+  });
+
+  it('routes saveFile', () => {
+    const controller = makeController();
+    dispatchCall(controller, 14, { method: 'saveFile', params: { url: 'file:///a.ts', content: 'x' } });
+    expect(controller.saveFile).toHaveBeenCalledWith('file:///a.ts', 'x');
+  });
+
+  it('routes fileTreeToggle', () => {
+    const controller = makeController();
+    dispatchCall(controller, 15, { method: 'fileTreeToggle', params: { index: 0, path: '/a' } });
+    expect(controller.fileTreeToggle).toHaveBeenCalledWith(0, '/a');
+  });
+
+  it('routes fileTreeCollapseAll', () => {
+    const controller = makeController();
+    dispatchCall(controller, 16, { method: 'fileTreeCollapseAll', params: { index: 0 } });
+    expect(controller.fileTreeCollapseAll).toHaveBeenCalledWith(0);
+  });
+
+  it('routes fileTreeReroot', () => {
+    const controller = makeController();
+    dispatchCall(controller, 17, { method: 'fileTreeReroot', params: { index: 0 } });
+    expect(controller.fileTreeReroot).toHaveBeenCalledWith(0);
+  });
+});
