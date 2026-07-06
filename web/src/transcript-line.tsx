@@ -70,6 +70,34 @@ function Markdown({ text, hit, onLinkClick }: { text: string; hit: boolean; onLi
   );
 }
 
+function renderPromptLine(
+  line: { acp?: boolean; cwd?: string; text: string },
+  index: number,
+  highlight: LineHighlight | undefined,
+  onToggleCollapse: () => void,
+  onPromptClick: (text: string) => void,
+  hit: boolean,
+  hitProps: Record<string, unknown>,
+): React.ReactNode {
+  if (line.acp) {
+    return (
+      <div key={index} className="line prompt acp" onClick={onToggleCollapse} title="Click or Ctrl+T to collapse" {...hitProps}>
+        + {highlightText(line.text, highlight, index)}
+      </div>
+    );
+  }
+  return (
+    <div key={index} className="line prompt" title="Click to execute this command" onClick={() => {
+      const selection = globalThis.getSelection()?.toString();
+      if (selection) return;
+      onPromptClick(line.text);
+    }} {...hitProps}>
+      {line.cwd && <span className="cwd">{line.cwd}</span>}
+      <span>{'❯'} {highlightText(line.text, highlight, index)}</span>
+    </div>
+  );
+}
+
 export function renderLine(
   line: BufferLine,
   index: number,
@@ -100,29 +128,7 @@ export function renderLine(
     );
   }
   if (line.type === 'prompt') {
-    if (line.acp) {
-      return (
-        <div key={index} className="line prompt acp" onClick={onToggleCollapse} title="Click or Ctrl+T to collapse" {...hitProps}>
-          + {highlightText(line.text, highlight, index)}
-        </div>
-      );
-    }
-    return (
-      <div
-        key={index}
-        className="line prompt"
-        title="Click to execute this command"
-        onClick={() => {
-          const selection = globalThis.getSelection()?.toString();
-          if (selection) return;
-          onPromptClick(line.text);
-        }}
-        {...hitProps}
-      >
-        {line.cwd && <span className="cwd">{line.cwd}</span>}
-        <span>{'❯'} {highlightText(line.text, highlight, index)}</span>
-      </div>
-    );
+    return renderPromptLine(line, index, highlight, onToggleCollapse, onPromptClick, hit, hitProps);
   }
   if (line.type === 'message') {
     return (
