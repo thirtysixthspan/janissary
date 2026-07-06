@@ -2,18 +2,10 @@ import { spawn } from 'node:child_process';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { chromium } from 'playwright';
 import type { Browser, BrowserContext, Page } from 'playwright';
-// playwright-extra wraps Playwright's chromium so plugins can patch the browser. The
-// stealth plugin masks the most common headless-automation tells (navigator.webdriver,
-// missing window.chrome, permissions/plugins/WebGL inconsistencies, userAgentData, …).
-import { chromium } from 'playwright-extra';
-import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 import { randomBrowserProfile, acceptLanguage, DEFAULT_CHROME_MAJOR } from './user-agent.js';
 import type { BrowserWindow, TabBrowser } from './types.js';
-
-// Register the stealth plugin once for the process. `chromium.use` is idempotent per
-// plugin name, so importing this module more than once is safe.
-chromium.use(StealthPlugin());
 
 // Pull the major version out of a Playwright version string like "149.0.7827.55" so the
 // generated UA claims the same Chrome version the engine actually reports via client hints.
@@ -104,8 +96,7 @@ export async function launchTabBrowser(isHeadless: boolean): Promise<TabBrowser>
           'Sec-CH-UA-Platform': `"${profile.platform}"`,
         },
       });
-      // Belt-and-suspenders alongside the stealth plugin: ensure navigator.webdriver is
-      // never true in any frame of this context.
+      // Ensure navigator.webdriver is never true in any frame of this context.
       await context.addInitScript(() => {
         Object.defineProperty(navigator, 'webdriver', { get: () => false });
       });

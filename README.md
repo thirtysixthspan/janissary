@@ -385,7 +385,7 @@ A "window" is an isolated browsing context (its own cookies/storage). Page actio
 To look like an ordinary browser rather than automation, the browser applies several **bot-detection countermeasures**:
 
 - Launches in Chromium's **new headless** mode (`channel: 'chromium'`), which behaves like a real browser instead of the easily-detected legacy headless shell.
-- Disables the automation flag (`--disable-blink-features=AutomationControlled`) and runs the [stealth plugin](https://github.com/berstend/puppeteer-extra/tree/master/packages/puppeteer-extra-plugin-stealth) (via `playwright-extra`), which masks the usual tells — `navigator.webdriver`, a missing `window.chrome`, and inconsistent permissions/plugins/WebGL fingerprints.
+- Disables the automation flag (`--disable-blink-features=AutomationControlled`) and forces `navigator.webdriver` to `false` via an init script in every context.
 - Gives **each window its own coherent fingerprint**: a randomized desktop Chrome user agent (varied platform, version pinned to the real engine so it matches the client hints), with a matching `Sec-CH-UA-Platform`, `Accept-Language`, timezone, and viewport — so isolated windows never share an identical signature and no field contradicts another.
 
 The browser is also available to the tab's **ACP agent**: ask it to "visit a URL and summarize it" and it will issue `browser goto` / `browser content` commands in its tool loop, the host runs them against that tab's browser, and the page text is fed back for the answer. See [External ACP agents](#external-acp-agents-experimental).
