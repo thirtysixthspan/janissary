@@ -48,11 +48,13 @@ describe('hitFromEvent', () => {
 
   it('returns line and col for a click on the content cell', () => {
     const row = makeRow(5);
+    document.body.appendChild(row);
     const content = row.querySelector('.editor-content')!;
-    const result = hitFromEvent({ target: content.firstChild, clientX: 10, clientY: 10 });
+    const result = hitFromEvent({ target: content, clientX: 10, clientY: 10 });
     expect(result).toBeTruthy();
     expect(result!.line).toBe(5);
     expect(result!.inGutter).toBe(false);
+    document.body.removeChild(row);
   });
 
   it('detects gutter clicks', () => {
