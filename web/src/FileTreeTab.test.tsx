@@ -99,4 +99,56 @@ describe('FileTreeTab', () => {
     fireEvent.keyDown(tree, { key: 'Enter' });
     expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'open src/index.ts' } });
   });
+
+  it('ArrowRight on a collapsed dir sends fileTreeToggle', () => {
+    const send = vi.fn();
+    const client = { send } as unknown as JanusClient;
+    const files = makeFiles({ rows: [{ path: 'src', name: 'src', depth: 0, dir: true }] });
+    const { container } = render(<FileTreeTab files={files} client={client} index={0} />);
+    const tree = container.querySelector('[role="tree"]')!;
+    fireEvent.keyDown(tree, { key: 'ArrowDown' });
+    fireEvent.keyDown(tree, { key: 'ArrowRight' });
+    expect(send).toHaveBeenCalledWith({ method: 'fileTreeToggle', params: { index: 0, path: 'src' } });
+  });
+
+  it('Enter on ".." row sends fileTreeReroot', () => {
+    const send = vi.fn();
+    const client = { send } as unknown as JanusClient;
+    const files = makeFiles({ rows: [{ path: '..', name: '..', depth: 0, dir: true }] });
+    const { container } = render(<FileTreeTab files={files} client={client} index={0} />);
+    const tree = container.querySelector('[role="tree"]')!;
+    fireEvent.keyDown(tree, { key: 'ArrowDown' });
+    fireEvent.keyDown(tree, { key: 'Enter' });
+    expect(send).toHaveBeenCalledWith({ method: 'fileTreeReroot', params: { index: 0 } });
+  });
+
+  it('Shift+Enter on a file sends an edit command', () => {
+    const send = vi.fn();
+    const client = { send } as unknown as JanusClient;
+    const { container } = render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+    const tree = container.querySelector('[role="tree"]')!;
+    fireEvent.keyDown(tree, { key: 'ArrowDown' });
+    fireEvent.keyDown(tree, { key: 'ArrowDown' });
+    fireEvent.keyDown(tree, { key: 'Enter', shiftKey: true });
+    expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'edit README.md' } });
+  });
+
+  it('type-ahead jumps to a matching row', () => {
+    const send = vi.fn();
+    const client = { send } as unknown as JanusClient;
+    const { container } = render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+    const tree = container.querySelector('[role="tree"]')!;
+    fireEvent.keyDown(tree, { key: 'r' });
+    expect(screen.getByText('README.md').closest('[role="treeitem"]')!.getAttribute('aria-selected')).toBe('true');
+  });
+
+  it('resets selected to first row when selected row disappears', () => {
+    const send = vi.fn();
+    const client = { send } as unknown as JanusClient;
+    const { rerender } = render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+    const files1 = makeFiles();
+    rerender(<FileTreeTab files={files1} client={client} index={0} />);
+    const files2 = makeFiles({ rows: files1.rows.slice(1) });
+    rerender(<FileTreeTab files={files2} client={client} index={0} />);
+  });
 });
