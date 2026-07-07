@@ -164,3 +164,34 @@ describe('AcpManager.run', () => {
     expect(append).toHaveBeenCalledWith('tab1', { input: '', output: 'ACP: connection refused' });
   });
 });
+
+describe('AcpManager.label', () => {
+  it('returns undefined when no session exists for a tab', () => {
+    const { acp } = setup();
+    expect(acp.label('unknown')).toBeUndefined();
+  });
+
+  it('returns provider/model string when a session is connected', () => {
+    const { acp } = setup();
+    mocks.connectAcp.mockImplementation((opts: Record<string, unknown>) => {
+      if (typeof opts.onConnect === 'function') opts.onConnect();
+      return makeSession();
+    });
+    acp.run('tab1', 'acp hello');
+    expect(acp.label('tab1')).toContain('/');
+  });
+});
+
+describe('AcpManager.close', () => {
+  it('returns false when no session exists', () => {
+    const { acp } = setup();
+    expect(acp.close('nonexistent')).toBe(false);
+  });
+
+  it('closes the session and returns true', () => {
+    const { acp } = setup();
+    acp.run('tab1', 'acp hello');
+    expect(acp.close('tab1')).toBe(true);
+    expect(acp.has('tab1')).toBe(false);
+  });
+});
