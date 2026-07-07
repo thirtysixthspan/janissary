@@ -131,6 +131,32 @@ describe.skipIf(!sandboxAvailable())('sandboxSpawn — live sandbox-exec integra
     }
   });
 
+  it('lists ~/.claude (opendir) but still denies reading a non-carved-in file inside it', () => {
+    // .claude/settings.json is carved into HOME_READ_CARVEINS, but opening a *directory* node for
+    // listing is a separate Seatbelt operation from opening a file at a known path — this proves
+    // both: `.claude` itself is listable (HOME_READ_LISTING_DIRS), and that doesn't widen into
+    // reading arbitrary files inside it that aren't otherwise carved in.
+    const claudeDir = path.join(homedir(), '.claude');
+    const uncarvedFile = path.join(claudeDir, `sandbox-test-uncarved-${Date.now()}.txt`);
+    writeFileSync(uncarvedFile, 'not carved in, should stay denied');
+    const scriptPath = path.join(workspaceDir, 'run.sh');
+    writeFileSync(
+      scriptPath,
+      `#!/bin/sh\nls "${claudeDir}" >/dev/null && cat "${path.join(claudeDir, 'settings.json')}" >/dev/null && cat "${uncarvedFile}"\n`,
+      { mode: 0o755 },
+    );
+    const { command, args, env } = sandboxSpawn({ workspaceDir }, scriptPath, []);
+    try {
+      execFileSync(command, args, { cwd: workspaceDir, env: env as NodeJS.ProcessEnv, stdio: 'pipe' });
+      expect.unreachable('expected the uncarved file read to be denied');
+    } catch (error) {
+      const stderr = (error as { stderr?: Buffer }).stderr?.toString() ?? '';
+      expect(stderr).toContain('Operation not permitted');
+    } finally {
+      rmSync(uncarvedFile, { force: true });
+    }
+  });
+
   it('denies exec of a script copied to /tmp', () => {
     const tmpScript = path.join('/tmp', `sandbox-exec-test-${Date.now()}.sh`);
     writeFileSync(tmpScript, '#!/bin/sh\necho ran\n', { mode: 0o755 });

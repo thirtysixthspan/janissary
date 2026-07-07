@@ -8,11 +8,16 @@
 // read/write allow → `$HOME` read-deny → carve-in allows → secret denies last (so a secret path
 // stays denied even inside a carve-in).
 
-import { WRITE_CARVEOUT_PARAMS, READ_CARVEIN_PARAMS, SECRET_DENY_PARAMS, clausesFor } from './sandbox-paths.js';
+import {
+  WRITE_CARVEOUT_PARAMS, READ_CARVEIN_PARAMS, SECRET_DENY_PARAMS, LISTING_DIR_PARAMS, WRITE_PREFIX_PARAMS,
+  clausesFor, literalClausesFor, prefixClausesFor,
+} from './sandbox-paths.js';
 
 const writeCarveClauses = clausesFor(WRITE_CARVEOUT_PARAMS);
 const readCarveClauses = clausesFor(READ_CARVEIN_PARAMS);
 const secretDenyClauses = clausesFor(SECRET_DENY_PARAMS);
+const listingClauses = literalClausesFor(LISTING_DIR_PARAMS);
+const writePrefixClauses = prefixClausesFor(WRITE_PREFIX_PARAMS);
 
 function buildProfile(networkClause: string): string {
   return String.raw`(version 1)
@@ -43,7 +48,8 @@ function buildProfile(networkClause: string): string {
   (subpath (param "TMPDIR"))
   (subpath (param "DARWIN_USER_CACHE_DIR"))
   (subpath (param "CLAUDE_SCRATCH_DIR"))
-${writeCarveClauses})
+${writeCarveClauses}
+${writePrefixClauses})
 (allow file-read-data file-write-data
   (literal "/dev/null")
   (regex #"^/dev/tty")
@@ -102,7 +108,8 @@ ${writeCarveClauses})
   (subpath (param "SELF_DIR_R"))
   (subpath (param "SERVER_NODE_DIR_L"))
   (subpath (param "SERVER_NODE_DIR_R"))
-${readCarveClauses})
+${readCarveClauses}
+${listingClauses})
 ; Any package.json or tsconfig.json anywhere under $HOME, at any depth, stays readable. The
 ; workspace nests inside the parent repo (or repos, however many levels up), and config/module-
 ; resolution walks — Node's package-scope resolution, cosmiconfig (stylelint, eslint, prettier,

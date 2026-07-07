@@ -58,6 +58,30 @@ export const HOME_READ_CARVEINS = [
   '.gitconfig', '.gitexcludes', '.config/gh/config.yml', 'Library/Keychains', '.nvm/versions',
 ];
 
+// Directories where `opendir`/`readdir` must work even though most of their *contents* aren't
+// separately carved in. `.claude` itself: a settings read-modify-write (e.g. `claude --effort`, or
+// any tool following this project's own "read raw settings before writing" convention) opens the
+// directory node itself to enumerate settings files before touching `settings.json` — a plain
+// `subpath` carve-in of the file alone only covers `open()`ing that one path, not the parent
+// directory's `file-read-data` (Seatbelt's listing operation, distinct from the `file-read-metadata`
+// stat access already allowed HOME-wide — see the deny-then-carve-in comment in sandbox-profile.ts).
+// These use `literal`, not `subpath`: the directory node itself becomes listable, but files inside
+// it stay gated by the specific carve-ins in HOME_READ_CARVEINS above (or stay denied).
+export const HOME_READ_LISTING_DIRS = ['.claude'];
+
+// Write carve-outs matched by Seatbelt `prefix` (string prefix on the full path) rather than
+// `subpath` (path-component match) or `literal` (exact match). `.claude/settings.json` itself is
+// deliberately absent from HOME_WRITE_CARVEOUTS above — but a settings read-modify-write (e.g.
+// `claude --effort`) writes it via an atomic-rename pattern: create a sibling temp file
+// (`settings.json.tmp.<pid>.<random>`, a fresh, unpredictable name every write), fsync it, then
+// rename it over the target. `subpath`/`literal` can't carve in a name that doesn't exist yet and
+// varies per write; `prefix` matches both the base filename and every `<base>.tmp.*` sibling
+// because the base string is a literal character-prefix of each. Narrower than carving in the
+// whole `.claude` directory for writes (still deliberately avoided, per the comment on
+// HOME_WRITE_CARVEOUTS above) — this only ever matches paths starting with the exact
+// `settings.json` string.
+export const HOME_WRITE_PREFIX_CARVEOUTS = ['.claude/settings.json'];
+
 // Secret paths denied last, even inside a carve-in.
 //
 // `Library/Keychains` is deliberately NOT here (writes stay denied by the top-level deny-default —
@@ -123,6 +147,20 @@ export function dualParams(prefix: string, count: number): { literal: string[]; 
 export const WRITE_CARVEOUT_PARAMS = dualParams('W', HOME_WRITE_CARVEOUTS.length);
 export const READ_CARVEIN_PARAMS = dualParams('R', HOME_READ_CARVEINS.length);
 export const SECRET_DENY_PARAMS = dualParams('S', SECRET_DENY_PATHS.length);
+export const LISTING_DIR_PARAMS = dualParams('D', HOME_READ_LISTING_DIRS.length);
+export const WRITE_PREFIX_PARAMS = dualParams('P', HOME_WRITE_PREFIX_CARVEOUTS.length);
 
 export const clausesFor = (params: { literal: string[]; real: string[] }): string =>
   [...params.literal, ...params.real].map((p) => `  (subpath (param "${p}"))`).join('\n');
+
+// Same shape as `clausesFor`, but matches only the exact path (Seatbelt `literal`) — used for
+// HOME_READ_LISTING_DIRS, where a directory node must be listable without granting recursive
+// access to everything under it (that's what `subpath` would do).
+export const literalClausesFor = (params: { literal: string[]; real: string[] }): string =>
+  [...params.literal, ...params.real].map((p) => `  (literal (param "${p}"))`).join('\n');
+
+// Same shape again, but Seatbelt `prefix` (string-prefix match) — used for
+// HOME_WRITE_PREFIX_CARVEOUTS, where the writable path's exact name isn't known ahead of time
+// (a randomly-named atomic-write temp sibling of a fixed base filename).
+export const prefixClausesFor = (params: { literal: string[]; real: string[] }): string =>
+  [...params.literal, ...params.real].map((p) => `  (prefix (param "${p}"))`).join('\n');
