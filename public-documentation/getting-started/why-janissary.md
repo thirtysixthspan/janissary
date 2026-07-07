@@ -56,7 +56,7 @@ All of these categories solve real problems. But they all miss something:
 
 That's the gap Janissary fills.
 
-<img class="agent-float" src="/agents/cedar-south.png" alt="" />
+<img class="agent-float" src="/agents/yusuf-south.png" alt="" />
 
 You might:
 - Run an agent that writes tests while another refactors a module
