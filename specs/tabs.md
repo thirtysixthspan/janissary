@@ -64,6 +64,10 @@ Shift+Left and Shift+Right arrow keys cycle through open tabs. No-op when only o
 
 The `next` command programmatically switches to the next tab.
 
+### Keyboard focus on tab press
+
+Pressing a tab's label, or pressing anywhere in the body of an agent tab, immediately moves keyboard input focus to that tab's command bar. This happens on mouse-down (before the click is released), so it fires reliably even when the app window itself was unfocused and is being brought forward by the same press. If the pressed tab is a harness or shell PTY tab, focus subsequently moves to that tab's terminal instead, once the tab becomes active.
+
 ### Per-tab state isolation
 
 Each tab carries its own transcript log, command history (including navigation index), and scroll offset. Switching tabs preserves each tab's state.

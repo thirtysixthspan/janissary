@@ -9,9 +9,10 @@ type Properties = {
   onClose: (index: number) => void;
   onRename: (index: number, title: string) => void;
   tabNameMaxLength: number;
+  onFocusCommandBar?: () => void;
 };
 
-export function TabStrip({ tabs, activeTab, onSelect, onClose, onRename, tabNameMaxLength }: Properties) {
+export function TabStrip({ tabs, activeTab, onSelect, onClose, onRename, tabNameMaxLength, onFocusCommandBar }: Properties) {
   return (
     <div className="tabstrip" data-doc-shot="tab-strip">
       {tabs.map((tab, index) => (
@@ -24,6 +25,7 @@ export function TabStrip({ tabs, activeTab, onSelect, onClose, onRename, tabName
           onClose={onClose}
           onRename={onRename}
           tabNameMaxLength={tabNameMaxLength}
+          onFocusCommandBar={onFocusCommandBar}
         />
       ))}
     </div>

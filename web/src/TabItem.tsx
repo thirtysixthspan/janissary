@@ -9,9 +9,10 @@ type Properties = {
   onClose: (index: number) => void;
   onRename: (index: number, title: string) => void;
   tabNameMaxLength: number;
+  onFocusCommandBar?: () => void;
 };
 
-export function TabItem({ tab, index, active, onSelect, onClose, onRename, tabNameMaxLength }: Properties) {
+export function TabItem({ tab, index, active, onSelect, onClose, onRename, tabNameMaxLength, onFocusCommandBar }: Properties) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState('');
   // Escape cancels and blurs the input; the resulting blur event must not also commit.
@@ -31,7 +32,7 @@ export function TabItem({ tab, index, active, onSelect, onClose, onRename, tabNa
     <div
       className={`tab${active ? ' active' : ''}`}
       style={{ borderTopColor: tab.groupColor }}
-      onMouseDown={() => onSelect(index)}
+      onMouseDown={() => { onFocusCommandBar?.(); onSelect(index); }}
     >
       <span className={`dot${tab.busy ? ' busy' : ''}`} style={{ color: tab.dotColor }}>●</span>
       {editing ? (
