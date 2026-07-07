@@ -18,7 +18,8 @@ closed as a side effect of docking.
 
 A sidebar is **not** an independent on/off setting: it renders exactly when some tab is docked to
 it, and disappears the moment that tab is undocked or closed. There is no way to show an empty
-sidebar.
+sidebar. A docked tab does **not** prevent the app from quitting — closing the last non-docked
+tab quits the app, the same as if no sidebar existed.
 
 ### Leaving the strip
 

@@ -172,9 +172,10 @@ export class TabManager {
   closeTab(index: number): void {
     const tab = this.tabs[index];
     if (!tab) return;
-    closeTabResources(tab, this.managers, this.openFiles, this.context, this.tabs.length);
-    // Closing the last remaining tab quits the app (same as the `quit` command).
-    if (this.tabs.length <= 1) {
+    const nonDockedCount = this.tabs.filter((t) => !t.dock).length;
+    closeTabResources(tab, this.managers, this.openFiles, this.context, nonDockedCount);
+    // Closing the last remaining non-docked tab quits the app (same as the `quit` command).
+    if (!tab.dock && nonDockedCount <= 1) {
       messageBus.emit('app', { type: 'exit' });
       return;
     }

@@ -1,7 +1,5 @@
 # small issues
 
-* when close is called on a tab, if it is the only tab in the tab strip, quit the application. If the file navigator is open in a sidebar, this hsould not stop the application from closing
-
 * files should recognize ~ an $root as valid segments in paths passed as parameters
 
 * the file navigator metadat shows dirname then full path. remove the dirname and only show the full path. paths that include $root should use the $root shortcut.
