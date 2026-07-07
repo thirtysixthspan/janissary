@@ -64,6 +64,9 @@ export type TabView = {
   // Set while a full-tab interactive PTY (htop, vim, etc.) is running on this agent tab.
   // Cleared on exit; the client hides the transcript while this is set.
   activePty?: string;
+  // Set when this tab is docked into a sidebar instead of living in the central tab strip.
+  // Absent means center. A docked tab is never the active tab. See specs/sidebars.md.
+  dock?: 'left' | 'right';
 };
 
 export type StateEvent = {
@@ -111,7 +114,10 @@ export type RpcCall =
   // Collapse every expanded directory in a file tree tab back to just its root.
   | { method: 'fileTreeCollapseAll'; params: { index: number } }
   // Re-root a file tree tab to the parent directory.
-  | { method: 'fileTreeReroot'; params: { index: number } };
+  | { method: 'fileTreeReroot'; params: { index: number } }
+  // Dock a file tree tab into a sidebar (`'left'` | `'right'`), or undock it back to the
+  // center tab strip (`null`). Explicit set, not "cycle" — the cycle order lives client-side.
+  | { method: 'fileTreeSetDock'; params: { index: number; dock: 'left' | 'right' | null } };
 
 export type ClientMessage = { t: 'rpc'; id: number } & RpcCall;
 

@@ -23,10 +23,16 @@ export class FileTreeManager {
 
   constructor(private managers: Managers) {}
 
-  // Handle a `files [path]` command: open a new tree tab rooted at `path` (or the issuing tab's
-  // cwd), or focus the existing tab if one is already open on that root.
+  // Handle a `files [left|right] [path]` command: open a new tree tab rooted at `path` (or the
+  // issuing tab's cwd), or focus/redock the existing tab if one is already open on that root.
+  // A leading `left`/`right` keyword docks the tab into that sidebar; a directory literally named
+  // `left`/`right` is still reachable via a path form (`files ./left`), since the keyword is only
+  // recognized as the first word.
   open(command: string, label: string): void {
-    const target = command.replace(/^files\b\s*/i, '').trim();
+    const rest = command.replace(/^files\b\s*/i, '');
+    const keyword = /^(left|right)\b\s*/i.exec(rest);
+    const dock = keyword ? (keyword[1].toLowerCase() as 'left' | 'right') : null;
+    const target = (keyword ? rest.slice(keyword[0].length) : rest).trim();
     const cwd = this.managers.tab.cwdOf(label) ?? process.cwd();
     const root = target ? (path.isAbsolute(target) ? target : path.resolve(cwd, target)) : cwd;
     const out = (text: string) => this.managers.tab.append(label, { input: command, output: text });
@@ -36,7 +42,7 @@ export class FileTreeManager {
     if (!stat?.isDirectory()) { out(`files: ${root}: not a directory`); return; }
 
     const existing = this.managers.tab.tabs.find((t) => t.files?.root === root);
-    if (existing) { this.managers.tab.setActiveTab(this.managers.tab.findIndex(existing.label)); return; }
+    if (existing) { this.managers.tab.setDock(this.managers.tab.findIndex(existing.label), dock); return; }
 
     const expanded = new Set<string>();
     this.managers.tab.openFilesTab({ root, rows: buildRows(root, expanded) });
@@ -44,6 +50,7 @@ export class FileTreeManager {
     this.managers.tab.setCwd(newLabel, root);
     this.tabs.set(newLabel, { root, expanded, watchers: new Map() });
     this.watchDir(newLabel, root, '');
+    if (dock) this.managers.tab.setDock(this.managers.tab.findIndex(newLabel), dock);
   }
 
   // Expand/collapse one directory row.

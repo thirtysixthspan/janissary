@@ -65,6 +65,12 @@ export default [
     target: 'file-tree-view',
     clipHeight: 380,
   },
+  {
+    name: 'file-tree-sidebar',
+    setup: ['files left .'],
+    settle: 1000,
+    target: 'sidebar-left',
+  },
 
   // Advanced agents and automation.
   {

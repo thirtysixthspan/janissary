@@ -53,6 +53,8 @@ export function handle(controller: Controller, message: ClientMessage, reply: (e
     }
     case 'fileTreeReroot': { controller.fileTreeReroot(message.params.index); break;
     }
+    case 'fileTreeSetDock': { controller.fileTreeSetDock(message.params.index, message.params.dock); break;
+    }
   }
   reply({ t: 'rpc-reply', id: message.id, result: 'ok' });
 }

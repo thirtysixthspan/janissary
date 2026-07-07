@@ -1330,6 +1330,74 @@ describe('Controller files tab', () => {
   });
 });
 
+describe('Controller sidebar docking', () => {
+  let root: string;
+
+  beforeEach(() => {
+    root = mkdtempSync(path.join(tmpdir(), 'janus-dock-'));
+  });
+
+  it('files left docks a new tab into the left sidebar without making it active', () => {
+    const { c } = makeController();
+    c.dispatch(`files left ${root}`);
+    const index = c.view().findIndex((t) => t.view === 'files');
+    expect(c.view()[index].dock).toBe('left');
+    expect(c.managers.tab.activeTab).not.toBe(index);
+  });
+
+  it('fileTreeSetDock RPC docks an existing files tab into the right sidebar', () => {
+    const { c } = makeController();
+    c.dispatch(`files ${root}`);
+    const index = c.view().findIndex((t) => t.view === 'files');
+    c.fileTreeSetDock(index, 'right');
+    expect(c.view()[index].dock).toBe('right');
+  });
+
+  it('docking into an occupied side displaces the previous occupant back to center', () => {
+    const rootB = mkdtempSync(path.join(tmpdir(), 'janus-dock-b-'));
+    const { c } = makeController();
+    c.dispatch(`files left ${root}`);
+    c.dispatch(`files left ${rootB}`);
+    expect(c.view().find((t) => t.files?.root === root)?.dock).toBeUndefined();
+    expect(c.view().find((t) => t.files?.root === rootB)?.dock).toBe('left');
+  });
+
+  it('bare files on a docked root undocks it to center and activates it', () => {
+    const { c } = makeController();
+    c.dispatch(`files left ${root}`);
+    const index = c.view().findIndex((t) => t.view === 'files');
+    c.dispatch(`files ${root}`);
+    expect(c.view()[index].dock).toBeUndefined();
+    expect(c.managers.tab.activeTab).toBe(index);
+  });
+
+  it('setActiveTab RPC is a no-op against a docked tab index', () => {
+    const { c } = makeController();
+    c.dispatch(`files left ${root}`);
+    const index = c.view().findIndex((t) => t.view === 'files');
+    const before = c.managers.tab.activeTab;
+    c.setActiveTab(index);
+    expect(c.managers.tab.activeTab).toBe(before);
+  });
+
+  it('moveTab (next-tab cycling) skips a docked tab', () => {
+    const { c } = makeController();
+    c.dispatch(`agent bob`);
+    c.dispatch(`files left ${root}`);
+    c.setActiveTab(0); // janus
+    c.moveTab(1);
+    expect(c.view()[c.managers.tab.activeTab].dock).toBeUndefined();
+  });
+
+  it('closing a docked tab via its index works even though it is never active', () => {
+    const { c } = makeController();
+    c.dispatch(`files left ${root}`);
+    const index = c.view().findIndex((t) => t.view === 'files');
+    expect(() => c.closeTab(index)).not.toThrow();
+    expect(c.view().some((t) => t.view === 'files')).toBe(false);
+  });
+});
+
 describe('Controller rehydrate restores a persisted schedule', () => {
   it('rehydrate re-arms a schedule persisted on the agent state', () => {
     initAgentStateDirectory(mkdtempSync(path.join(tmpdir(), 'janus-rehydrate-schedule-')));

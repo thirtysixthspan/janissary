@@ -7,6 +7,13 @@ type Properties = {
   files: FileTreeView;
   client: JanusClient;
   index: number;
+  // The tab's current dock location (undefined means center). Drives the location-cycle
+  // button's destination and whether the header close button is shown.
+  dock?: 'left' | 'right';
+  // Whether the tree grabs keyboard focus on mount. True for a center tab (the default); false
+  // for a sidebar mount, where stealing focus would yank it away from the command bar every time
+  // a dock move remounts the tree.
+  autoFocus?: boolean;
 };
 
 const TYPEAHEAD_RESET_MS = 700;
@@ -18,12 +25,24 @@ function basename(root: string): string {
   return root.replace(/[/\\]+$/, '').split(/[/\\]/).pop() || root;
 }
 
-export function FileTreeTab({ files, client, index }: Properties) {
+// Cycle order: left -> center -> right -> left.
+function nextDock(current?: 'left' | 'right'): 'left' | 'right' | null {
+  if (current === 'left') return null;
+  if (current === 'right') return 'left';
+  return 'right';
+}
+
+function dockTooltip(next: 'left' | 'right' | null): string {
+  if (next === null) return 'Move to center';
+  return next === 'left' ? 'Move to left sidebar' : 'Move to right sidebar';
+}
+
+export function FileTreeTab({ files, client, index, dock, autoFocus = true }: Properties) {
   const [selected, setSelected] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const typeahead = useRef<{ buffer: string; timer?: ReturnType<typeof setTimeout> }>({ buffer: '' });
 
-  useEffect(() => { containerRef.current?.focus(); }, []);
+  useEffect(() => { if (autoFocus) containerRef.current?.focus(); }, [autoFocus]);
 
   // Scroll the selected row into view (nearest block alignment avoids unnecessary scroll
   // when the element is already fully visible).
@@ -98,14 +117,35 @@ export function FileTreeTab({ files, client, index }: Properties) {
           <span className="files-root">{basename(files.root)}</span>
           <span className="files-loc">{files.root}</span>
         </div>
-        <button
-          type="button"
-          className="files-collapse-all"
-          title="Collapse all"
-          onClick={() => client.send({ method: 'fileTreeCollapseAll', params: { index } })}
-        >
-          ⊟
-        </button>
+        <div className="files-actions">
+          <button
+            type="button"
+            className="files-dock-cycle"
+            title={dockTooltip(nextDock(dock))}
+            onClick={() => client.send({ method: 'fileTreeSetDock', params: { index, dock: nextDock(dock) } })}
+          >
+            ⇄
+          </button>
+          {dock && (
+            <button
+              type="button"
+              className="files-close"
+              title="Close"
+              aria-label="Close tab"
+              onClick={() => client.send({ method: 'closeTab', params: { index } })}
+            >
+              ×
+            </button>
+          )}
+          <button
+            type="button"
+            className="files-collapse-all"
+            title="Collapse all"
+            onClick={() => client.send({ method: 'fileTreeCollapseAll', params: { index } })}
+          >
+            ⊟
+          </button>
+        </div>
       </div>
       <div className="files-rows">
         {files.rows.map((row) => (

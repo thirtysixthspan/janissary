@@ -27,6 +27,7 @@ const makeController = () =>
     fileTreeToggle: vi.fn(),
     fileTreeCollapseAll: vi.fn(),
     fileTreeReroot: vi.fn(),
+    fileTreeSetDock: vi.fn(),
   }) as unknown as Controller;
 
 const dispatchCall = (controller: Controller, id: number, call: RpcCall) => {
@@ -139,5 +140,11 @@ describe('handle', () => {
     const controller = makeController();
     dispatchCall(controller, 17, { method: 'fileTreeReroot', params: { index: 0 } });
     expect(controller.fileTreeReroot).toHaveBeenCalledWith(0);
+  });
+
+  it('routes fileTreeSetDock', () => {
+    const controller = makeController();
+    dispatchCall(controller, 18, { method: 'fileTreeSetDock', params: { index: 0, dock: 'left' } });
+    expect(controller.fileTreeSetDock).toHaveBeenCalledWith(0, 'left');
   });
 });
