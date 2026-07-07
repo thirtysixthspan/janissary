@@ -31,7 +31,7 @@ export function TabItem({ tab, index, active, onSelect, onClose, onRename, tabNa
     <div
       className={`tab${active ? ' active' : ''}`}
       style={{ borderTopColor: tab.groupColor }}
-      onClick={() => onSelect(index)}
+      onMouseDown={() => onSelect(index)}
     >
       <span className={`dot${tab.busy ? ' busy' : ''}`} style={{ color: tab.dotColor }}>●</span>
       {editing ? (
@@ -64,6 +64,7 @@ export function TabItem({ tab, index, active, onSelect, onClose, onRename, tabNa
         title="Close tab"
         aria-label="Close tab"
         onClick={(e) => { e.stopPropagation(); onClose(index); }}
+        onMouseDown={(e) => e.stopPropagation()}
       >
         ×
       </button>
