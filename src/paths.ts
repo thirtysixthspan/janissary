@@ -8,6 +8,22 @@ export type RootContext = {
   home?: string;
 };
 
+// Expand a user-authored path by replacing `~` with the home directory and `$root` with the
+// project root. Only the path start is expanded — `~` and `$root` appearing mid-path are left
+// as-is. This is the inverse of `abbreviatePath()`.
+export function expandUserPath(input: string, context: RootContext): string {
+  const { root } = context;
+
+  if (input === '$root' || input === '$root/') return root;
+  if (input.startsWith('$root/')) return root + input.slice(5);
+
+  const home = context.home ?? homedir();
+  if (input === '~') return home;
+  if (input.startsWith('~/')) return home + input.slice(1);
+
+  return input;
+}
+
 // Abbreviate an absolute path for display in the transcript. The launch (root) directory reads as
 // `$root`, and the application's hidden state directory inside it (`.janissary`) folds into the root
 // too — its `.janissary` segment is elided so its contents read directly under `$root` (e.g. a

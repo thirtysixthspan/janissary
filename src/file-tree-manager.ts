@@ -2,6 +2,7 @@ import { watch, statSync, type FSWatcher } from 'node:fs';
 import path from 'node:path';
 import { messageBus } from './bus.js';
 import { buildRows } from './file-tree.js';
+import { expandUserPath } from './paths.js';
 import type { Managers } from './managers.js';
 
 const DEBOUNCE_MS = 100;
@@ -34,7 +35,8 @@ export class FileTreeManager {
     const dock = keyword ? (keyword[1].toLowerCase() as 'left' | 'right') : null;
     const target = (keyword ? rest.slice(keyword[0].length) : rest).trim();
     const cwd = this.managers.tab.cwdOf(label) ?? process.cwd();
-    const root = target ? (path.isAbsolute(target) ? target : path.resolve(cwd, target)) : cwd;
+    const expandedPath = target ? expandUserPath(target, { root: this.managers.tab.launchDir }) : '';
+    const root = target ? (path.isAbsolute(expandedPath) ? expandedPath : path.resolve(cwd, expandedPath)) : cwd;
     const out = (text: string) => this.managers.tab.append(label, { input: command, output: text });
 
     let stat;
