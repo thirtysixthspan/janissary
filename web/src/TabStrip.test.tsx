@@ -126,6 +126,15 @@ describe('TabStrip', () => {
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
   });
 
+  it('double-clicking an inactive tab label selects it but does not start renaming', async () => {
+    const onSelect = vi.fn();
+    const tabs = [makeTab({ label: 'a' }), makeTab({ label: 'b' })];
+    render(<TabStrip tabs={tabs} activeTab={0} onSelect={onSelect} onClose={vi.fn()} onRename={vi.fn()} tabNameMaxLength={100} />);
+    await userEvent.dblClick(screen.getByText('b'));
+    expect(onSelect).toHaveBeenCalled();
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+  });
+
   it('commits the trimmed value once on Enter', async () => {
     const onRename = vi.fn();
     const tab = makeTab({ label: 'internal', title: 'Display Name' });
