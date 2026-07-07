@@ -103,6 +103,25 @@ describe('App syntax theme picker', () => {
   }, 15_000);
 });
 
+describe('App agent tab body click focuses command input', () => {
+  beforeEach(() => {
+    sendMock.mockClear();
+    stateListener = null;
+  });
+
+  it('mousedown on the agent tab body focuses the command input textarea', async () => {
+    const { App } = await import('./App');
+    const { container } = render(<App />);
+    act(() => {
+      stateListener!([makeTab()], 0, null, 16, [], 'github-dark');
+    });
+    const tabBody = container.querySelector('.tab-body') as HTMLElement;
+    expect(tabBody).not.toBeNull();
+    fireEvent.mouseDown(tabBody);
+    expect(document.activeElement).toBe(screen.getByRole('textbox'));
+  }, 15_000);
+});
+
 describe('App sidebar docking', () => {
   beforeEach(() => {
     sendMock.mockClear();
