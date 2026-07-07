@@ -1,7 +1,5 @@
 # small issues
 
-* clicking the body of the agent tab should set the input focus on the command line
-
 * when close is called on a tab, if it is the only tab in the tab strip, quit the application. If the file navigator is open in a sidebar, this hsould not stop the application from closing
 
 * files should recognize ~ an $root as valid segments in paths passed as parameters
