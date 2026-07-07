@@ -118,6 +118,7 @@ describe('App agent tab body click focuses command input', () => {
     const tabBody = container.querySelector('.tab-body') as HTMLElement;
     expect(tabBody).not.toBeNull();
     fireEvent.mouseDown(tabBody);
+    await new Promise<void>((resolve) => setTimeout(resolve, 10));
     expect(document.activeElement).toBe(screen.getByRole('textbox'));
   }, 15_000);
 });
