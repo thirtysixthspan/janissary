@@ -92,7 +92,7 @@ export function FileTreeTab({ files, client, index }: Properties) {
   };
 
   return (
-    <div className="files-tab" ref={containerRef} tabIndex={0} role="tree" onKeyDown={onKeyDown}>
+    <div className="files-tab" data-doc-shot="file-tree-view" ref={containerRef} tabIndex={0} role="tree" onKeyDown={onKeyDown}>
       <div className="files-header">
         <div className="files-meta">
           <span className="files-root">{basename(files.root)}</span>

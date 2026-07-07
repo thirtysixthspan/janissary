@@ -147,3 +147,15 @@ Every file in `specs/` is accounted for, so the follow-up phase doesn't have to 
 
 - As each phase lands, update Phase 0's sidebar config to add the new pages under the right group.
 - Apply [[developer-documentation]]'s docs-as-code rule to this plan itself: move it to `plans/ready/` once the phase breakdown and page-type decisions above are confirmed, and to `plans/complete/` once Phase 7 ships (or split completion per-phase if that reads better once underway).
+
+## Completion notes
+
+All phases (0 through 7) shipped together in one pass, nested-by-section layout as recommended (`getting-started/`, `command-bar/`, `tab-types/`, `advanced-agents/`, `automation/`). Deviations and decisions made during implementation:
+
+- **Capture scale and cropping.** Shots are captured at 2× (retina) device scale, uniformly across the set, so doc pages stay crisp without oversized PNGs. Two manifest options were added beyond the illustrative shape: `cropToChildren` (the tab strip spans the viewport but its tabs occupy the left edge — the crop narrows to the tabs' extent) and `clipHeight` (tall bodies whose content sits at the top, like the file tree, would otherwise be mostly empty space).
+- **One app process per shot.** Each manifest entry gets a fresh scratch directory (cwd and `HOME` both scratch-scoped) and its own `janus` process, so captures are deterministic and independent of shot order — earlier shots' commands can't leak into a later shot's ghost-text/history state.
+- **The server is spawned directly** (`dist/main.js`, or `tsx src/main.ts` in a dev checkout) rather than via `bin/janus.mjs`, whose `spawnSync` child would outlive a kill of the launcher and leave an orphaned server.
+- **The harness shot auto-captures when `claude` is on `PATH`** (the skip-with-warning path only fires when it's absent). With `HOME` scratch-scoped the harness shows its first-run screen, which is what a fresh `harness claude` looks like — replace `harness-tab.png` with a manually captured working-session shot if that ever reads as misleading.
+- **The workspaced-agent shot** stages a real clone: the scratch directory is a git repo with a local bare `origin`, so `agent emrah --workspace` works without network access.
+- **Setup commands always use the explicit `shell ` prefix** where a shell command is intended, so probabilistic routing can never open the route chooser mid-capture.
+- The follow-up phase (messaging, send, connection, db, browser, acp, monitoring) remains open, as planned.

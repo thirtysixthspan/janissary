@@ -128,7 +128,7 @@ export function CommandInput({ dotColor, history, ghostHistory, onSubmit, inputR
   };
 
   return (
-    <div className="command-area">
+    <div className="command-area" data-doc-shot="command-bar">
       {completions.length > 0 && <div className="completions">{completions.join('  ')}</div>}
       <div className="command" onClick={() => inputRef.current?.focus()}>
         <span className="dot" style={{ color: dotColor }}>●</span>

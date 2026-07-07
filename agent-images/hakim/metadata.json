@@ -1,0 +1,36 @@
+{
+  "group_id": null,
+  "states": [
+    {
+      "character": {
+        "id": "6da91c02-00b1-405a-a8f8-c33bc7fe4041",
+        "name": "Full-body character reference sheet of",
+        "prompt": "Full-body character reference sheet of a single Janissary soldier, standing at attention on a flat neutral grey background with even studio lighting, no environment. Male, late 20s, lean athletic build, light olive complexion, sharp cheekbones, prominent nose, thick well-groomed mustache with clean-shaven chin, dark brown hair cropped short beneath a tall white bork headdress with a polished brass holder and a single white plume. Wearing a deep crimson wool kaftan open at the chest to show a white linen undershirt, a leather sash bound tight at the waist holding a curved yataghan sword in a brass-trimmed scabbard, dark blue sirwal trousers loose to the knee, brown leather knee-high boots. A wooden-handled matchlock musket rests vertically against his right shoulder. Minimal ornamentation \u2014 this is a common soldier, not an officer. Expression neutral, alert, disciplined. Symmetrical A-pose, front-facing, evenly lit from three-point light rig, no cast shadow on background. Hyperrealistic, 8K, clean character design sheet style, no background detail, no environment.",
+        "size": {
+          "width": 128,
+          "height": 128
+        },
+        "template_id": "mannequin",
+        "directions": 8,
+        "view": "low top-down",
+        "created_at": "2026-07-07T02:26:12.946391+00:00"
+      },
+      "folder": "Full-body_character_reference_sheet_of",
+      "frames": {
+        "rotations": {
+          "south": "Full-body_character_reference_sheet_of/rotations/south.png",
+          "south-east": "Full-body_character_reference_sheet_of/rotations/south-east.png",
+          "east": "Full-body_character_reference_sheet_of/rotations/east.png",
+          "north-east": "Full-body_character_reference_sheet_of/rotations/north-east.png",
+          "north": "Full-body_character_reference_sheet_of/rotations/north.png",
+          "north-west": "Full-body_character_reference_sheet_of/rotations/north-west.png",
+          "west": "Full-body_character_reference_sheet_of/rotations/west.png",
+          "south-west": "Full-body_character_reference_sheet_of/rotations/south-west.png"
+        },
+        "animations": {}
+      }
+    }
+  ],
+  "export_version": "3.0",
+  "export_date": "2026-07-07T02:30:47.255969"
+}

@@ -11,7 +11,7 @@ export function StatusPanels({ tab, scheduleOnly = false }: { tab: TabView; sche
   const connections = scheduleOnly ? [] : tab.connections;
   if (connections.length === 0 && schedule.length === 0) return null;
   return (
-    <div className="status-panels">
+    <div className="status-panels" data-doc-shot="status-panels">
       {connections.length > 0 && (
         <div className="panel">
           <div className="panel-title">connections</div>

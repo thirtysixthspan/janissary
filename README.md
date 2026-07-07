@@ -612,6 +612,26 @@ Run tests:
 npm test
 ```
 
+### Documentation
+
+User-facing docs live in `public-documentation/`, a [VitePress](https://vitepress.dev) site (content conventions in `ai/guidelines/user-documentation.md`):
+
+```bash
+npm run docs:dev       # local dev server with live reload
+npm run docs:build     # static build → public-documentation/.vitepress/dist/
+npm run docs:preview   # serve the built site locally
+```
+
+The screenshots on the doc pages are generated, not hand-taken: a manifest (`scripts/docs-screenshots/manifest.mjs`) drives the real app against fixture data with Playwright and writes PNGs to `public-documentation/public/screenshots/`:
+
+```bash
+npm run build:web                      # captures show the built web UI — build it first
+npm run playwright:install-chromium    # one-time, if Chromium isn't installed yet
+./scripts/run.mjs docs-screenshots     # regenerate every shot (or pass specific shot names)
+```
+
+The script is host-only (sandboxed workspaces can't reach Playwright's browser cache). When a UI change alters what a screenshot shows, regenerate and commit the PNGs in the same PR — same rule as any other doc change. Shots that need a harness binary (e.g. `claude`) are skipped with a warning when it isn't on `PATH`.
+
 ### Testing
 
 Run all tests (server + client):

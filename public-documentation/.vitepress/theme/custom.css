@@ -1,0 +1,38 @@
+/* Decorative agent sprites floated in doc pages, with the body text wrapping around them.
+   The build step trims each PNG to the figure and upscales it 2x (see .vitepress/config.mts),
+   so natural size is already the display size and the box hugs the character — keep margins
+   tight so the text sits close. */
+.agent-float {
+  float: right;
+  width: auto;
+  height: auto;
+  margin: 2px 0 6px 14px;
+  image-rendering: pixelated;
+}
+
+.agent-float.left {
+  float: left;
+  margin: 2px 14px 6px 0;
+}
+
+/* The animated gif can't be trimmed by the build step; double it from its 128px source. */
+.agent-float[src$=".gif"] {
+  width: 256px;
+}
+
+/* The animated archer in the landing-page hero: blown up from its 128px source to match the
+   hero text block beside it, with the chunky pixelation kept sharp on purpose. */
+.VPHome .VPHero .image-src {
+  width: min(460px, 100%);
+  max-width: 460px;
+  max-height: 460px;
+  height: auto;
+  image-rendering: pixelated;
+}
+
+@media (min-width: 960px) {
+  .VPHome .VPHero .image-container {
+    width: 460px;
+    height: 460px;
+  }
+}

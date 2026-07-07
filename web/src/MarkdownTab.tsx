@@ -30,7 +30,7 @@ export function MarkdownTab({ markdown }: { markdown: MarkdownView }) {
   }, []);
 
   return (
-    <div className="image-tab">
+    <div className="image-tab" data-doc-shot="markdown-view">
       <div className="image-meta">
         <span className="image-name">{markdown.name}</span>
         <span className="image-size">{markdown.size}</span>

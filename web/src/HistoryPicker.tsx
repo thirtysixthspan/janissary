@@ -7,7 +7,7 @@ type Properties = { items: string[]; selected: number; onPick: (command: string)
 
 export function HistoryPicker({ items, selected, onPick }: Properties) {
   return (
-    <div className="picker">
+    <div className="picker" data-doc-shot="history-overlay">
       <div className="picker-title">history</div>
       {items.length === 0 ? (
         <div className="picker-row picker-empty">(no history)</div>

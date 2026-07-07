@@ -157,6 +157,7 @@ export default ts.config(
     },
   },
   {
-    ignores: ['dist/', 'web/dist/', 'node_modules/', '.janissary/', 'coverage/'],
+    // docs-screenshots fixtures are capture *content* (files the app opens on screen), not code.
+    ignores: ['dist/', 'web/dist/', 'node_modules/', '.janissary/', 'coverage/', 'scripts/docs-screenshots/fixtures/'],
   },
 );

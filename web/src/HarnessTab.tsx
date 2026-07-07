@@ -29,7 +29,7 @@ export const HarnessTab = forwardRef<HarnessTabHandle, Properties>(function Harn
 
   const isExited = harness.status === 'exited';
   return (
-    <div className="harness-tab">
+    <div className="harness-tab" data-doc-shot="harness-view">
       {isExited && (
         <div className="harness-exited">
           exited{harness.exitCode === undefined ? '' : ` (${harness.exitCode})`}

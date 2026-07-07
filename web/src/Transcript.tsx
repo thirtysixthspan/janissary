@@ -50,7 +50,7 @@ export function Transcript({ lines, client, onToggleCollapse, onPromptClick, scr
   };
 
   return (
-    <div className="transcript" ref={scrollRef} onScroll={onScroll}>
+    <div className="transcript" data-doc-shot="transcript" ref={scrollRef} onScroll={onScroll}>
       <div ref={contentReference}>
       {lines.length === 0 && (
         <div className="line empty-state">Type "help" for available commands.</div>

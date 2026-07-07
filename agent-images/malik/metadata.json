@@ -1,0 +1,36 @@
+{
+  "group_id": null,
+  "states": [
+    {
+      "character": {
+        "id": "162f2dc1-04a3-4585-840e-5587283bcd1c",
+        "name": "Full-body figure of a single",
+        "prompt": "Full-body figure of a single Janissary solak archer, standing in an A-pose on a flat neutral off-white background with diffused soft-box lighting, no environment. Male, mid-20s, wiry and lean, fair complexion with a reddish undertone suggesting Bosnian or Slavic origin, deep-set blue-grey eyes, angular jaw, a thick upturned mustache worn alone with no beard, medium brown hair visible at the temples below the white bork headdress which features a narrow brass plate and a short black plume. Wearing a short indigo kaftan with cropped sleeves and simple copper buttons, a broad leather belt cinched tight, loose cream-colored sirwal trousers gathered at the knee, soft leather ankle boots. A composite recurve bow is held loosely in his left hand, and a cylindrical leather quiver packed with fletched arrows slung crossbody from right shoulder to left hip. Bare forearms show faded geometric tattoos. Expression watchful, slightly weary \u2014 the look of a sentry approaching the end of his watch. Symmetrical pose, full frontal, clean lighting with no cast shadow. Hyperrealistic, 8K, character reference sheet style, no background, no environment.",
+        "size": {
+          "width": 128,
+          "height": 128
+        },
+        "template_id": "mannequin",
+        "directions": 8,
+        "view": "low top-down",
+        "created_at": "2026-07-07T02:33:32.059207+00:00"
+      },
+      "folder": "Full-body_figure_of_a_single",
+      "frames": {
+        "rotations": {
+          "south": "Full-body_figure_of_a_single/rotations/south.png",
+          "south-east": "Full-body_figure_of_a_single/rotations/south-east.png",
+          "east": "Full-body_figure_of_a_single/rotations/east.png",
+          "north-east": "Full-body_figure_of_a_single/rotations/north-east.png",
+          "north": "Full-body_figure_of_a_single/rotations/north.png",
+          "north-west": "Full-body_figure_of_a_single/rotations/north-west.png",
+          "west": "Full-body_figure_of_a_single/rotations/west.png",
+          "south-west": "Full-body_figure_of_a_single/rotations/south-west.png"
+        },
+        "animations": {}
+      }
+    }
+  ],
+  "export_version": "3.0",
+  "export_date": "2026-07-07T02:36:25.221278"
+}

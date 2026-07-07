@@ -64,7 +64,7 @@ export function ImageTab({ image }: { image: ImageView }) {
       : { height: `${zoom * 100}%`, width: 'auto' };
 
   return (
-    <div className="image-tab">
+    <div className="image-tab" data-doc-shot="image-view">
       <div className="image-meta">
         <span className="image-name">{image.name}</span>
         <span className="image-size">{image.size}</span>

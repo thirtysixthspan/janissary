@@ -13,7 +13,7 @@ type Properties = {
 
 export function TabStrip({ tabs, activeTab, onSelect, onClose, onRename, tabNameMaxLength }: Properties) {
   return (
-    <div className="tabstrip">
+    <div className="tabstrip" data-doc-shot="tab-strip">
       {tabs.map((tab, index) => (
         <TabItem
           key={tab.label}

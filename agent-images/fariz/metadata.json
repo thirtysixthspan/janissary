@@ -1,0 +1,36 @@
+{
+  "group_id": null,
+  "states": [
+    {
+      "character": {
+        "id": "39e5fc8b-8e23-4527-b252-ea5d732fdee0",
+        "name": "A historically accurate Ottoman Janissary",
+        "prompt": "A historically accurate Ottoman Janissary soldier, standing in a dignified martial pose against a neutral background. A fit man in his late 20s or early 30s with sharp, disciplined features. He has a prominent, well-groomed mustache and a trimmed beard, with light olive to fair skin reflecting Balkan or Anatolian origins. He wears the traditional Janissary uniform: a tall white felt bork headdress with a brass holder and a flowing plume, a long blue or red wool kaftan coat with decorative frogging, a sash around the waist, and baggy sirwal trousers tucked into short leather boots. He carries a curved yataghan sword tucked into his sash and a long-barreled matchlock musket resting on his shoulder. His expression is stern, resolute, and proud \u2014 the look of an elite warrior raised from childhood in the ocak (hearth) brotherhood. The lighting is soft directional light, cinematic, hyperrealistic, 8K detail, emphasizing fabric texture, polished brass, and weathered leather.",
+        "size": {
+          "width": 124,
+          "height": 124
+        },
+        "template_id": "mannequin",
+        "directions": 8,
+        "view": "low top-down",
+        "created_at": "2026-07-07T02:11:52.531403+00:00"
+      },
+      "folder": "A_historically_accurate_Ottoman_Janissary",
+      "frames": {
+        "rotations": {
+          "south": "A_historically_accurate_Ottoman_Janissary/rotations/south.png",
+          "south-east": "A_historically_accurate_Ottoman_Janissary/rotations/south-east.png",
+          "east": "A_historically_accurate_Ottoman_Janissary/rotations/east.png",
+          "north-east": "A_historically_accurate_Ottoman_Janissary/rotations/north-east.png",
+          "north": "A_historically_accurate_Ottoman_Janissary/rotations/north.png",
+          "north-west": "A_historically_accurate_Ottoman_Janissary/rotations/north-west.png",
+          "west": "A_historically_accurate_Ottoman_Janissary/rotations/west.png",
+          "south-west": "A_historically_accurate_Ottoman_Janissary/rotations/south-west.png"
+        },
+        "animations": {}
+      }
+    }
+  ],
+  "export_version": "3.0",
+  "export_date": "2026-07-07T02:17:33.774254"
+}

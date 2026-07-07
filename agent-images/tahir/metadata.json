@@ -1,0 +1,36 @@
+{
+  "group_id": null,
+  "states": [
+    {
+      "character": {
+        "id": "9937bbaf-32ac-4582-a404-c9a8f08b9d8f",
+        "name": "Full-body portrait of a single",
+        "prompt": "Full-body portrait of a single Janissary cavalry scout on a flat warm-grey background, studio lighting with no environment. Male, late 20s, lean sinewy build \u2014 a rider's body, long-limbed and narrow-hipped \u2014 dark olive complexion with high color in the cheeks, Tatar or Crimean origin with epicanthic folds, coal-black eyes, a thin disciplined mustache, clean-shaven chin, black hair oiled back beneath a low fur-trimmed kalpak cap rather than the standard bork headdress. Wearing a short dark brown leather riding coat over a faded yellow wool kaftan, a wide leather sword belt slung diagonally across the chest, tight grey sirwal trousers reinforced with leather inner-thigh patches, tall black riding boots with iron spurs. His right hand rests on the pommel of a long curved kilij saber sheathed at his left hip \u2014 a slender blade with a pronounced yelman (broadened tip) visible at the scabbard mouth, the hilt wrapped in dark sharkskin with brass crossguard and a distinctive pistol-shaped pommel. A flintlock pistol is tucked into his sash. Expression sharp, restless, the distant stare of a man who has spent weeks riding ahead of the main column. Symmetrical A-pose, three-point neutral light, no cast shadow. Hyperrealistic, 8K, clean character sheet, no background, no environment.",
+        "size": {
+          "width": 124,
+          "height": 124
+        },
+        "template_id": "mannequin",
+        "directions": 8,
+        "view": "low top-down",
+        "created_at": "2026-07-07T02:46:35.498601+00:00"
+      },
+      "folder": "Full-body_portrait_of_a_single",
+      "frames": {
+        "rotations": {
+          "south": "Full-body_portrait_of_a_single/rotations/south.png",
+          "south-east": "Full-body_portrait_of_a_single/rotations/south-east.png",
+          "east": "Full-body_portrait_of_a_single/rotations/east.png",
+          "north-east": "Full-body_portrait_of_a_single/rotations/north-east.png",
+          "north": "Full-body_portrait_of_a_single/rotations/north.png",
+          "north-west": "Full-body_portrait_of_a_single/rotations/north-west.png",
+          "west": "Full-body_portrait_of_a_single/rotations/west.png",
+          "south-west": "Full-body_portrait_of_a_single/rotations/south-west.png"
+        },
+        "animations": {}
+      }
+    }
+  ],
+  "export_version": "3.0",
+  "export_date": "2026-07-07T02:51:35.479427"
+}
