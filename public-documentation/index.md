@@ -9,8 +9,8 @@ hero:
     alt: Animated pixel-art Janissary archer firing a bow
   actions:
     - theme: brand
-      text: What is Janissary?
-      link: /getting-started/application
+      text: Why Janissary?
+      link: /getting-started/why-janissary
     - theme: alt
       text: Starting the app
       link: /getting-started/startup
