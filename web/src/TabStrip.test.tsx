@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
 import { describe, expect, it, vi } from 'vitest';
@@ -168,6 +168,32 @@ describe('TabStrip', () => {
     expect(onRename).not.toHaveBeenCalled();
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
     expect(screen.getByText('Display Name')).toBeInTheDocument();
+  });
+
+  it('calls onFocusCommandBar on mousedown of a tab label', () => {
+    const onFocusCommandBar = vi.fn();
+    const tabs = [makeTab({ label: 'a' }), makeTab({ label: 'b' })];
+    render(
+      <TabStrip
+        tabs={tabs}
+        activeTab={0}
+        onSelect={vi.fn()}
+        onClose={vi.fn()}
+        onRename={vi.fn()}
+        tabNameMaxLength={100}
+        onFocusCommandBar={onFocusCommandBar}
+      />,
+    );
+    fireEvent.mouseDown(screen.getByText('b'));
+    expect(onFocusCommandBar).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not crash on mousedown of a tab label when onFocusCommandBar is omitted', () => {
+    const onSelect = vi.fn();
+    const tabs = [makeTab({ label: 'a' }), makeTab({ label: 'b' })];
+    render(<TabStrip tabs={tabs} activeTab={0} onSelect={onSelect} onClose={vi.fn()} onRename={vi.fn()} tabNameMaxLength={100} />);
+    fireEvent.mouseDown(screen.getByText('b'));
+    expect(onSelect).toHaveBeenCalledWith(1);
   });
 
   it('commits on blur', async () => {

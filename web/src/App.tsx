@@ -158,6 +158,7 @@ export function App() {
         onClose={(index) => closeTab(actionEntries[index].index)}
         onRename={(index, title) => client.renameTab(actionEntries[index].index, title)}
         tabNameMaxLength={tabNameMaxLength}
+        onFocusCommandBar={() => inputReference.current?.focus()}
       />
 
       <ViewTabBody tab={current} client={client} index={currentIndex} />
