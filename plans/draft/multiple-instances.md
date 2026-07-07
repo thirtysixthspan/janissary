@@ -1,83 +1,87 @@
 # Spin Up Multiple Independent Instances of Janissary
 
+**Complexity: 3/10** — one small new module (a PID-based lock file) plus wiring a directory-override flag through code paths that already take a `projectDir`/`cwd` parameter; no new protocol, persistence format, or UI surface.
+
 ## Summary
 
-Make it easy to launch Janissary in a target directory such that each instance — server + UI — runs independently, bound to its own files, ports, and state. No two instances may share overlapping file trees or communication channels. A `janus --here` flag replaces the need for manual coordination between instances.
+Make it easy to launch Janissary in a target directory such that each instance — server + UI — runs independently, bound to its own files, ports, and state. Two instances must never run against the same on-disk `.janissary/` directory at once (they'd race on state-directory clearing, the database, the transcript log, and the Chrome profile). A `janus --here=<directory>` flag lets a user start an instance targeting a directory without first `cd`-ing there.
 
-## Decisions (to be confirmed with user)
+**Verified against the repo, most of the plan's original premise does not hold** — see "Verified codebase facts" below. The server already self-isolates by port and by `cwd`; the only real gap is (a) a way to target a directory other than `cwd`, and (b) a guard against two processes sharing the same `cwd` concurrently.
 
-1. **Isolation model: per-directory server.** Each Janissary instance binds to its own `cwd`. The server reads/writes `.janissary/` in its own working directory. Port binding uses a dynamic allocation scheme — the first instance gets a default port (5173), subsequent instances get `5174`, `5175`, etc., with collision detection.
-2. **Launch mechanism: `janus --here`.** `janus --here` starts a new Janissary server in the current directory, opens a browser window pointing at the allocated port. `janus` without `--here` behaves as today (opens or connects to the existing instance for the current directory's root). `janus --here <directory>` starts an instance in the specified directory.
-3. **Port allocation: sequential + detective.** On startup, the server attempts to bind to `PORT_BASE + n` for `n = 0, 1, 2, …`. If the port is in use, increments and retries up to a limit of 10. The allocated port is written to a `.janissary/port` file so the `janus` CLI (when run from the same directory) can connect to the right instance.
-4. **State isolation: fully independent.** Each instance has its own `.janissary/state/`, `.janissary/workspace/`, `.janissary/config.json`, `.janissary/transcripts/`. No sharing, no cross-instance communication. The user manages each instance independently.
-5. **Overlap detection: reject overlapping roots.** If `janus --here /foo` is issued and an instance already running in `/foo` or `/foo/subdir` has a locked port, the new instance detects this (via the `.janissary/port` file comparison) and refuses to start. Similarly, an instance will not start inside a directory that is already an ancestor of another running instance's root.
+## Decisions
+
+1. **Isolation model: per-directory server, already true today.** Each Janissary instance is a separate OS process that reads/writes `.janissary/` under whichever directory it was told to treat as its root (`process.cwd()` today, or the resolved `--here` path once this lands). This requires no new code — `src/main.ts:120-136` already threads a single `cwd` value through every per-instance initializer (state, db, profiles, workspace, transcript logger/store, config, github token). The only change is *where that `cwd` value comes from* (see decision 2).
+2. **Launch mechanism: `--here=<directory>` flag, required value.** `janus --here=<path>` resolves `<path>` (via `path.resolve`, relative to `process.cwd()`) and uses it as the instance's root directory everywhere `main.ts` currently uses `process.cwd()`. A bare `--here` with no directory is **not** supported — plain `janus` (no flag) already targets `process.cwd()` today (`src/main.ts:120`), so a no-argument `--here` would be a redundant alias for existing default behavior. `--here` is validated in `parseCliArgs` (`src/cli-args.ts`) the same way `--port` is validated today (`src/cli-args.ts:40-43`): if the resolved path does not exist or is not a directory, throw `CliUsageError` before anything starts.
+3. **Port allocation: already automatic, no new code.** `src/index.ts:38,119-123` already binds with `options.port ?? 0` — passing `0` to `http.listen` asks the OS for a free ephemeral port. `src/cli-args.ts` already exposes `--port=<n>` (optional; omit it to auto-select), and this is already documented in `specs/cli.md:9,31,44`. There is no port-collision problem to solve and no `port-allocator.ts` module to write.
+4. **State isolation: per-directory for project state, intentionally shared for global history.** `.janissary/state/`, `.janissary/workspace/`, `.janissary/config.json`, `.janissary/db/`, `.janissary/log/` are all rooted at the instance's directory (see decision 1) and are naturally independent across directories — no code changes needed. The one exception, by existing design, is **global command history**: `initGlobalHistory()` (`src/global-history.ts:21-23`) stores `~/.janissary/history.json` under the user's home directory regardless of `cwd`, and is meant to be shared across every instance on the machine. Do not attempt to isolate it — that would be a behavior change outside this plan's scope.
+5. **Overlap detection: same-directory lock, not ancestor/descendant tree-walking.** Because state is isolated per exact directory (decision 4) rather than by directory-tree ancestry, a parent directory and a subdirectory each get their own independent `.janissary/`, and running instances in both simultaneously is safe and requires no rejection. The only real hazard is **two instances targeting the exact same directory**, which would race on `clearStateDirectory()` (`src/agent-state.ts:47-50`), the workspace clear (`src/workspace.ts`), the transcript store/logger, and the shared Chrome profile directory (`src/main.ts:89`, `path.join(projectDir, '.janissary', 'chrome')`). Guard this with a PID lock file, not a directory-tree walk (see "Proposed changes" below).
+
+## What already exists (reuse, don't rebuild)
+
+| Need | Existing mechanism | Location |
+| --- | --- | --- |
+| Ephemeral/explicit port binding | `startServer({ port })` passes `options.port ?? 0` to `http.listen` | `src/index.ts:119-123` |
+| `--port` CLI parsing + validation pattern to mirror for `--here` | `parseCliArgs` | `src/cli-args.ts:15-52` |
+| Per-instance directory threading | `boot()` passes one `cwd` value into every `init*`/`load*` call | `src/main.ts:106-136` |
+| Startup error formatting (no changes needed — a plain `Error` thrown before the server starts already renders correctly) | `explainStartupError` / `formatFatal` | `src/startup-errors.ts` |
+| Process-exit cleanup pattern to extend for lock release | `process.on('exit', killApp)` | `src/main.ts:147` |
+| Cross-platform browser opening (already implemented, nothing to add) | `openApp` / `openUrl` | `src/main.ts:36-104` |
 
 ## Verified codebase facts that shape the design
 
-- **Server already binds to a configurable port.** `src/index.ts` starts the HTTP/WebSocket server. The port is currently determined by `JANUS_PORT` env var or defaults. Adding dynamic allocation is a startup-time change.
-- **CLI entry point is `bin/janus.mjs`.** This script spawns the server and opens the browser. `--here` is a natural addition here.
-- **`cli-args.test.ts` already tests parse behavior.** Adding `--here` and its variants follows the existing test pattern.
-- **Process singleton pattern exists informally.** The `janus` CLI currently assumes one server per project root. Breaking this assumption cleanly requires the port file as a registry.
-- **State directory is rooted at `cwd`.** `.janissary/` is a local directory. Each instance at a different `cwd` is naturally isolated. No code changes needed for state isolation — it's inherent in the current architecture.
-- **`specs/startup.md` might have relevant documentation.** The startup flow is documented; it would need updating.
+- **No `JANUS_PORT` env var exists anywhere in `src/`.** The port comes from `--port=<n>` or auto-selection (`options.port ?? 0`), never an env var. (Original plan's claim was wrong — verified by grepping `src/` and `bin/`.)
+- **There is no "connect to an existing instance" behavior today.** Every `janus` invocation spawns a brand-new server process (`src/main.ts:136`); `--relaunch` only reattaches *persisted agent state* on a fresh process (`specs/relaunch.md`), it does not discover or attach to an already-running server. The original plan's claim that plain `janus` "opens or connects to the existing instance" is fabricated — there is nothing to preserve here.
+- **`specs/startup.md` does not exist.** The real startup-sequence documentation lives in `specs/cli.md:36-47`, which already lists 8 numbered boot steps in the same order `boot()` executes them. This plan's new lock-acquisition step slots in as a new step 1 (before `.janissary/` subdirectory initialization), and `--here` needs a row in the flags table (`specs/cli.md:5-13`).
+- **`bin/janus.mjs` does no argument handling** — it only decides whether to run compiled `dist/main.js` or `src/main.ts` via `tsx`, forwarding `argv` untouched. All flag parsing and directory resolution happens in `src/cli-args.ts` / `src/main.ts`, not `bin/janus.mjs`.
+- **State-directory clearing is a real, unguarded hazard today.** `clearStateDirectory()` (`src/agent-state.ts:47-50`) and the equivalent workspace/transcript clears in `boot()` (`src/main.ts:130`) run unconditionally (unless `--relaunch`) with no check for another live process using the same directory. Two `janus` processes started back-to-back in the same directory would have the second one delete state out from under the first while it's actively serving clients.
 
 ## Proposed changes
 
-### 1. Port allocation
+### 1. Same-directory instance lock
 
-- New module `src/port-allocator.ts`:
-  - `allocatePort(basePort: number = 5173, maxAttempts: number = 10): Promise<number>` — attempts to bind to `basePort + n` for n=0..maxAttempts. Returns the first free port, or throws if all are occupied.
-  - `writePortFile(cwd: string, port: number): void` — writes `.janissary/port` containing the allocated port number.
-  - `readPortFile(cwd: string): number | null` — reads `.janissary/port` if it exists.
-- `src/index.ts` startup: before creating HTTP server, call `allocatePort()` instead of reading `JANUS_PORT` directly. Write the port file after successful bind.
+- New module `src/instance-lock.ts`:
+  - `acquireLock(projectDir: string): void` — path is `path.join(projectDir, '.janissary', 'lock')`. If the lock file exists, read the PID it contains and check liveness with `process.kill(pid, 0)` wrapped in try/catch (`ESRCH` means the process is dead). If alive, throw a plain `Error` (no new error-code branch needed in `src/startup-errors.ts` — the existing fallback in `src/main.ts`'s top-level catch already renders any thrown `Error`'s `.message` via `formatFatal`) with a message naming the directory and the live PID, e.g. `another janus instance is already running in this directory (pid <n>). Use --here=<other-directory> to run a second instance elsewhere.` If the file is missing, or present but stale (dead PID), write the current process's PID to it (creating `.janissary/` first with `mkdirSync(..., { recursive: true })`, mirroring `ensureStateDirectory()` in `src/agent-state.ts:11-13`).
+  - `releaseLock(projectDir: string): void` — reads the lock file; deletes it only if the PID inside matches `process.pid`. This makes release idempotent and safe to call even when `acquireLock` failed (in which case the file holds someone else's PID and is correctly left untouched) — no separate "did we acquire it" flag needs to be threaded through `boot()`.
+- `src/main.ts`: call `acquireLock(targetDir)` as the **first** action inside `boot()`, before `initAgentStateDirectory` and the other `init*`/`load*` calls (so a rejected lock never touches another live instance's directories). Add `releaseLock(targetDir)` to the existing `process.on('exit', killApp)` handler at `src/main.ts:147` (extend that single handler to call both, rather than registering a second `exit` listener).
 
-### 2. Overlap detection
+### 2. CLI: `--here` flag
 
-- New module `src/instance-guard.ts`:
-  - `detectCollision(cwd: string): string | null` — walks up the directory tree from `cwd` to the filesystem root, checking each ancestor for a `.janissary/port` file. If found, attempts to connect to that port to verify the server is alive. Returns the conflicting directory path, or null if no collision.
-  - Called at startup before server creation. If a collision is detected, the process exits with a clear error message: `Another janus instance is already running at /path/to/ancestor (port 5173). Use 'janus --here' from a directory outside that tree.`
-  - Also checks child directories: if any descendant has a `.janissary/port` pointing to a live server, refuses to start (prevents a parent instance from shadowing a child).
+- `src/cli-args.ts`: add a `here: { type: 'string' }` entry to the `parseArgs` options (alongside `port` at `cli-args.ts:25`), and a `here: string | undefined` field on `CliArgs`. Validate immediately after parsing, the same way `port` is validated at `cli-args.ts:40-43`: if `values.here` is set, resolve it with `path.resolve(values.here)` and check `existsSync(resolved) && statSync(resolved).isDirectory()`; if either check fails, throw `CliUsageError` with a message naming the path. Store the *resolved* path on `CliArgs.here` so `main.ts` never has to re-resolve it.
+- `src/main.ts`: replace the single `const cwd = process.cwd();` at `main.ts:120` with `const cwd = args.here ?? process.cwd();`, so every downstream call that already takes `cwd` (`initAgentStateDirectory`, `initDbDir`, `initProfileDir`, `initWorkspaceDir`, `TranscriptLogger`, `TranscriptStore`, `loadConfig`, `loadGithubToken`, `openApp`) picks up the override with no further changes. Do **not** change the `initGlobalHistory()` call — it takes no `cwd` argument today and must keep reading `~/.janissary/history.json` regardless of `--here` (decision 4).
+- `src/cli-args.ts`: add `--here=<dir>    Run against a different directory instead of the current one` to `usageText()` (`cli-args.ts:54-69`), next to the existing `--port` line.
 
-### 3. CLI changes
+### 3. Specs
 
-- `bin/janus.mjs`: parse `--here [directory]` flag.
-  - `--here` with no argument: start instance in `process.cwd()`.
-  - `--here <path>`: start instance in resolved path.
-  - Without `--here`: connect to existing instance (today's behavior). If no port file found, start an instance in the current directory (also today's behavior).
-- `src/cli-args.ts` / `bin/janus.mjs`: add `--here` flag to the argument parser with an optional value.
+- `specs/cli.md`: add a `--here=<dir>` row to the flags table (`cli.md:5-13`); insert a new step 1 in the numbered startup sequence (`cli.md:36-47`) for lock acquisition, renumbering the existing 8 steps to 2-9; add a new "Startup failures" bullet (`cli.md:27-34`) for the same-directory-lock case, matching the existing `EADDRINUSE` bullet's format.
+- `specs/state-directory.md`: add a sentence noting that concurrent `janus` processes are only safe against distinct directories, and that a PID lock file (`.janissary/lock`) prevents two processes from sharing one.
+- Do not add a new `specs/multiple-instances.md` — the behavior is small enough to fold into the existing `cli.md` and `state-directory.md`, matching how `--relaunch` (a comparably-sized flag) is documented across `cli.md` and `specs/relaunch.md` rather than getting its own top-level "multi-launch" doc. If reviewers prefer a dedicated doc, `specs/relaunch.md` is the size/shape precedent to follow.
 
-### 4. Browser launch
+### 4. Tests (colocated, run via `./scripts/run.mjs check-diff`)
 
-- `bin/janus.mjs`: after server start, call `open(url)` or equivalent to open a browser window at the allocated port's address. This replaces the current assumption that the user opens the browser manually or that the instance connects to an existing session.
-- Cross-platform: use a minimal helper that works on macOS (`open`), Linux (`xdg-open`), and Windows (`start`).
+- `src/instance-lock.test.ts`: use a fresh `mkdtempSync(path.join(tmpdir(), 'instance-lock-test-'))` per test, matching the pattern in `src/workspace.test.ts:13`. Cover: `acquireLock` succeeds and writes `process.pid` when no lock file exists; a second `acquireLock` call against the same directory (still within the same test process, so the PID is provably alive) throws; `acquireLock` succeeds when the lock file contains a PID that is not alive — use a clearly-invalid/never-assigned PID such as `999999` rather than spawning and killing a real process; `releaseLock` removes a lock file whose PID matches `process.pid`; `releaseLock` leaves a lock file untouched when its PID does not match `process.pid` (simulating a failed-acquire release).
+- `src/cli-args.test.ts`: add cases alongside the existing `--port` tests (`cli-args.test.ts:24-31`) — parses `--here=<existing-dir>` to the resolved absolute path, throws `CliUsageError` for a nonexistent path, throws `CliUsageError` for a path that exists but is a file, not a directory.
+- No new `main.test.ts` is proposed — `main.ts`'s `boot()` has process-level side effects (spawning a browser, registering signal handlers) with no existing colocated test file, so it is not a precedent to extend here. The lock and flag-resolution logic being introduced is fully covered by the two unit-test files above; wiring inside `boot()` itself is exercised manually (see Verification).
 
-### 5. Cleanup
+## Out of scope
 
-- On server shutdown (`SIGINT`, `SIGTERM`, normal exit), delete the `.janissary/port` file so the port is released for future instances.
-- Register a `process.on('exit', ...)` handler in `src/index.ts`.
-- If the server crashes (unhandled rejection, fatal error), the port file may linger. A startup-time check verifies the port is alive; if not, the stale file is removed and allocation proceeds.
-
-### 6. Specs
-
-- New `specs/multiple-instances.md`: port allocation strategy, overlap detection, `--here` flag, cleanup, process lifecycle.
-- `specs/root-path.md` or `specs/state-directory.md`: cross-reference that multiple instances use separate state directories.
-- `specs/application-commands.md` (or a new `specs/startup.md`): document `--here` flag.
-
-### 7. Tests (colocated, run via `./scripts/run.mjs check-diff`)
-
-- `src/port-allocator.test.ts`: allocation increments correctly, max-attempts exhaustion, port file write/read round-trip.
-- `src/instance-guard.test.ts`: collision detection (ancestor with live port), child collision, no collision in dirty directory, stale port file cleanup.
-- `src/cli-args.test.ts`: parsing `--here`, `--here <path>`, no `--here`.
-- Integration test: start two instances in different directories, verify both respond on different ports, verify state files are independent, verify ancestor collision is rejected.
+- Any UI change. `--here` and the lock are CLI/server-only.
+- Discovering or listing other running instances (e.g. a `janus --list` command).
+- Cross-instance communication or shared state beyond the existing shared global history.
+- Changing `--relaunch` semantics; the lock applies identically whether or not `--relaunch` is passed.
+- Windows-specific process-liveness edge cases beyond what `process.kill(pid, 0)` already provides (Node documents this as cross-platform, including Windows).
 
 ## Implementation order
 
-1. Port allocator: `src/port-allocator.ts` + integration into `src/index.ts`, tests.
-2. Overlap detection: `src/instance-guard.ts` + startup guard, tests.
-3. CLI: `--here` flag in `bin/janus.mjs` / `src/cli-args.ts`, tests.
-4. Browser launch: cross-platform `open` helper.
-5. Cleanup: port file deletion on exit.
-6. Specs: new `multiple-instances.md` + amendments to root-path, state-directory.
-7. Public documentation.
+1. `src/instance-lock.ts` + tests.
+2. Wire `acquireLock`/`releaseLock` into `src/main.ts`'s `boot()` and exit handler.
+3. `--here` flag in `src/cli-args.ts` (parsing, validation, usage text) + tests.
+4. Wire `args.here` into `src/main.ts`'s `cwd` resolution.
+5. Specs: `cli.md` and `state-directory.md` amendments.
+6. Public documentation, if `public-documentation/` documents CLI flags (check for an existing `--port`/`--relaunch` entry there and mirror it).
 
-Run `./scripts/run.mjs check-diff` after each step.
+Run `./scripts/run.mjs check-diff` after each step so typecheck/tests stay green incrementally.
+
+## Verification
+
+- `./scripts/run.mjs check-diff` after each implementation step (per CLAUDE.md, this is the AI development loop — do not run the full `npm run check`).
+- Manual end-to-end check: run `janus` in one terminal from directory A, leave it running; in a second terminal run `janus --here=<A>` (the same directory) and confirm it fails fast with the lock error instead of clearing A's state out from under the first instance. Then run `janus --here=<B>` for a different directory B and confirm it starts normally, on its own auto-selected port, with its own `.janissary/` tree, while the first instance keeps running unaffected. Quit both and confirm `.janissary/lock` is removed from both A and B.
