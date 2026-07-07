@@ -2,8 +2,8 @@
 layout: home
 hero:
   name: Janissary
-  text: A tab-based shell for you and your agents
-  tagline: Run shell commands, AI coding harnesses, and background agents side by side — each in its own tab, with scheduling, messaging, and disposable workspaces built in.
+  text: An Agentic Working Environment
+  tagline: An interface to enhance your creative workflow by supplementing and automating the tedius parts of your work.
   image:
     src: /agents/archer-firing.gif
     alt: Animated pixel-art Janissary archer firing a bow

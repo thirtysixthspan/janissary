@@ -1,6 +1,6 @@
 # Starting the app
 
-Run `janus` from the directory you want to work in:
+See [Prerequisites](/getting-started/prerequisites) if you haven't set up Janissary yet. Run `janus` from the directory you want to work in:
 
 ```
 npx janus

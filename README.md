@@ -2,6 +2,17 @@
 
 > A [Janissary](https://en.wikipedia.org/wiki/Janissary) was an elite infantry soldier in the Ottoman Empire — a servant of the gate, loyal, and ever-ready. This tool channels that same spirit as your terminal's loyal servant.
 
+## Prerequisites
+
+- **macOS.** Janissary currently runs on macOS only.
+- **Node.js 24 or newer.**
+- **A Chromium-based browser** — Google Chrome, Chromium, Microsoft Edge, or Brave. Janissary opens its UI in a dedicated app window hosted by whichever of these it finds installed; without one it falls back to your OS default browser instead.
+- **Playwright's Chromium browser**, for the `browser` command (headless/headed web browsing) and for regenerating doc screenshots. Install it once with:
+
+  ```
+  npx playwright install chromium
+  ```
+
 ## Usage
 
 ```

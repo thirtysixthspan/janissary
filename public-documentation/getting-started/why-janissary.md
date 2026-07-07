@@ -126,6 +126,7 @@ Spawn an agent in an isolated git clone of your repo. If it breaks things, your 
 
 ## Next Steps
 
+- [Design principles](/getting-started/design-principles) — The tenets behind how Janissary is built
 - [Starting the app](/getting-started/startup) — Get Janissary running
 - [Tabs](/getting-started/tabs) — Understand how tabs work
 - [Agents](/getting-started/agents) — Spawn and manage AI agents

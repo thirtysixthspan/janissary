@@ -51,6 +51,9 @@ export default defineConfig({
         text: "Getting Started",
         items: [
           { text: "What is Janissary?", link: "/getting-started/application" },
+          { text: "Design principles", link: "/getting-started/design-principles" },
+          { text: "Why the name \"Janissary\"?", link: "/getting-started/why-the-name" },
+          { text: "Prerequisites", link: "/getting-started/prerequisites" },
           { text: "Starting the app", link: "/getting-started/startup" },
           { text: "Tabs", link: "/getting-started/tabs" },
           { text: "Tab groups", link: "/getting-started/groups" },
