@@ -1,9 +1,15 @@
 import { launchTabBrowser } from './browser.js';
 import { parseBrowserCommand } from './browser-command.js';
-import type { BrowserWindow, TabBrowser } from './types.js';
 import type { Managers } from './managers.js';
-
-type Entry = { browser: TabBrowser; current?: string; counter: number };
+import {
+  closeBrowserWindow,
+  formatList,
+  runContent,
+  runEval,
+  runGoto,
+  runShot,
+} from './browser-tab-helpers.js';
+import type { Entry } from './browser-tab-helpers.js';
 
 export class BrowserManager {
   private browsers = new Map<string, Entry>();
@@ -36,17 +42,6 @@ export class BrowserManager {
     const parsed = parseBrowserCommand(command);
     if ('error' in parsed) return parsed.error;
 
-    const ensureCurrent = async (): Promise<BrowserWindow> => {
-      let entry = this.browsers.get(label);
-      if (!entry) { entry = { browser: await launchTabBrowser(true), counter: 0 }; this.browsers.set(label, entry); }
-      if (!entry.current || !entry.browser.window(entry.current)) {
-        const id = `w${++entry.counter}`;
-        await entry.browser.openWindow(id);
-        entry.current = id;
-      }
-      return entry.browser.window(entry.current)!;
-    };
-
     try {
       switch (parsed.action) {
         case 'open': {
@@ -60,10 +55,7 @@ export class BrowserManager {
           return `Opened browser window ${id} (${entry.browser.mode}).${notice}`;
         }
         case 'list': {
-          const entry = this.browsers.get(label);
-          const ids = entry?.browser.windowIds() ?? [];
-          if (ids.length === 0) return 'No browser windows.';
-          return ids.map((id) => `${id === entry!.current ? '* ' : '  '}browser:${id}`).join('\n');
+          return formatList(this.browsers.get(label));
         }
         case 'use': {
           const entry = this.browsers.get(label);
@@ -74,28 +66,22 @@ export class BrowserManager {
         case 'close': {
           const entry = this.browsers.get(label);
           if (!entry?.current) return 'No browser window to close.';
-          return await this.closeWindow(label, entry.current);
+          return await closeBrowserWindow(this.browsers, label, entry.current);
         }
         case 'closeWindow': {
-          return await this.closeWindow(label, parsed.id);
+          return await closeBrowserWindow(this.browsers, label, parsed.id);
         }
         case 'goto': {
-          const page = await ensureCurrent();
-          return await page.goto(parsed.url);
+          return await runGoto(this.browsers, label, parsed.url);
         }
         case 'eval': {
-          const page = await ensureCurrent();
-          return await page.eval(parsed.js);
+          return await runEval(this.browsers, label, parsed.js);
         }
         case 'content': {
-          const page = await ensureCurrent();
-          return await page.content();
+          return await runContent(this.browsers, label);
         }
         case 'shot': {
-          const page = await ensureCurrent();
-          const path = await page.shot();
-          const opened = process.platform === 'darwin' ? ' (opening in Preview)' : '';
-          return `Screenshot saved: ${path}${opened}`;
+          return await runShot(this.browsers, label);
         }
       }
     } catch (error) {
@@ -113,14 +99,5 @@ export class BrowserManager {
         this.managers.tab.finishRunning(label, message);
         onDone?.(message);
       });
-  }
-
-  private async closeWindow(label: string, id: string): Promise<string> {
-    const entry = this.browsers.get(label);
-    if (!entry || !entry.browser.window(id)) return `No open connection browser:${id}.`;
-    await entry.browser.closeWindow(id);
-    if (entry.current === id) entry.current = entry.browser.windowIds()[0];
-    if (entry.browser.windowIds().length === 0) { await entry.browser.close(); this.browsers.delete(label); }
-    return `Closed connection browser:${id}.`;
   }
 }
