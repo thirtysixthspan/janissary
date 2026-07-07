@@ -46,6 +46,12 @@ describe('FileTreeManager', () => {
         append: (_label: string, entry: LogEntry) => { outputs.push(entry.output); },
         findIndex: (label: string) => tabs.findIndex((t) => t.label === label),
         setActiveTab: (index: number) => { activeTab = index; },
+        setDock: (index: number, dock: 'left' | 'right' | null) => {
+          const tab = tabs[index];
+          if (!tab) return;
+          tab.dock = dock ?? undefined;
+          if (dock === null) activeTab = index;
+        },
         cur: () => tabs[activeTab],
         setCwd: () => {},
         openFilesTab: (view: { root: string; rows: unknown[] }) => {
@@ -220,6 +226,52 @@ describe('FileTreeManager', () => {
   it('reroot on an unknown tab is a no-op', () => {
     const manager = run();
     expect(() => manager.reroot('ghost')).not.toThrow();
+  });
+
+  it('files left docks a newly created tab into the left sidebar', () => {
+    const manager = run();
+    manager.open('files left', 'janus');
+    const tab = tabs.find((t) => t.label.startsWith('files'));
+    expect(tab!.dock).toBe('left');
+    expect(tab!.files!.root).toBe(root);
+  });
+
+  it('files right <path> resolves the path and docks right', () => {
+    mkdirSync(path.join(root, 'sub'));
+    const manager = run();
+    manager.open('files right sub', 'janus');
+    const tab = tabs.find((t) => t.label.startsWith('files'));
+    expect(tab!.dock).toBe('right');
+    expect(tab!.files!.root).toBe(path.join(root, 'sub'));
+  });
+
+  it('a directory literally named left/right is reachable via a path form', () => {
+    mkdirSync(path.join(root, 'left'));
+    const manager = run();
+    manager.open('files ./left', 'janus');
+    const tab = tabs.find((t) => t.label.startsWith('files'));
+    expect(tab!.files!.root).toBe(path.join(root, 'left'));
+    expect(tab!.dock).toBeUndefined();
+  });
+
+  it('re-docking an existing root moves it instead of duplicating', () => {
+    const manager = run();
+    manager.open('files', 'janus');
+    const countAfterFirst = tabs.length;
+    manager.open('files left', 'janus');
+    expect(tabs.length).toBe(countAfterFirst);
+    const tab = tabs.find((t) => t.label.startsWith('files'));
+    expect(tab!.dock).toBe('left');
+  });
+
+  it('bare files on an existing docked root undocks it (no duplicate, dock cleared)', () => {
+    const manager = run();
+    manager.open('files left', 'janus');
+    const countAfterDock = tabs.length;
+    manager.open('files', 'janus');
+    expect(tabs.length).toBe(countAfterDock);
+    const tab = tabs.find((t) => t.label.startsWith('files'));
+    expect(tab!.dock).toBeUndefined();
   });
 
   it('closeTab closes every watcher for that tab', () => {

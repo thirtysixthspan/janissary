@@ -4,6 +4,8 @@ Every tab is an independent workspace: its own transcript, its own command histo
 
 A session starts with a single `janus` tab. New tabs are created on demand — agent tabs with the `agent` command (below), and view tabs by opening files, pages, or harnesses (see [Tab Types](/tab-types/opening-files)).
 
+A left and right sidebar flank the tab area, hidden until something is docked into them. Today the [file navigator](/tab-types/file-navigator) is the only tab that can dock — `files left`/`files right` opens (or moves) a tree straight into a sidebar, where it's resizable by dragging its inner edge.
+
 ![The tab strip with several agent tabs: each has a colored dot, one dot is blinking to show a busy agent, and an inactive tab carries a sparkle badge for unread output.](/screenshots/tabs-overview.png)
 
 ## Creating agent tabs

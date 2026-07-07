@@ -25,6 +25,22 @@ If a file tree tab is already open on the same root, `files` **focuses that tab*
 opening a duplicate — there is one tree per root, the same way there is one Explorer per
 workspace in a conventional editor.
 
+### `files left`/`files right [path]`
+
+A leading `left` or `right` keyword docks the tree into that sidebar instead of the central tab
+strip — see `sidebars.md` for sidebar mechanics. The keyword is only recognized as the tree's
+first word, so a directory literally named `left` or `right` is still reachable through a path
+form (`files ./left`).
+
+- **Bare `files [path]`** behaves exactly as above. If a tree on that root already exists and is
+  currently docked, focusing it means **undocking it back to the center strip and making it
+  active** — focusing a tree must make it visible somewhere the user is looking.
+- **`files left [path]` / `files right [path]`**: if a tree on that root already exists (docked
+  anywhere, or sitting in the strip), it **moves** to the requested sidebar. Otherwise a new tree
+  is created exactly as `files [path]` would, then immediately docked. Either way, if the target
+  sidebar already holds a different tree, that tree is **displaced back to the center strip**
+  (non-destructive — nothing is closed as a side effect of docking).
+
 ### Tree contents
 
 The tree shows, for the root and every directory the user has expanded:
@@ -101,6 +117,18 @@ highlight, and ordering — with three differences:
 - **Close button.** A close control is shown right-aligned within the tab, identical to other
   view tabs (markdown, image, editor).
 
+While a file tree tab is **docked** into a sidebar (see `sidebars.md`), it leaves the tab strip
+entirely — there is no duplicate representation of a docked tree in the strip.
+
+### Header buttons
+
+Every file tree tab's own header carries a **location button** that cycles the tree through
+left sidebar → center tab strip → right sidebar → left sidebar, one step per click, with a
+tooltip naming the destination. While docked, the header also shows a **close button** (×) — a
+docked tree has no strip × of its own and, being never the active tab, cannot be closed by typing
+`close` either, so this is its only direct close affordance (`close files` by label still works
+as a fallback).
+
 ### Closing
 
 Closing a file tree tab (via its close button, the `close` command, or app shutdown) stops every
@@ -112,3 +140,5 @@ the app, exactly as the `close` command does elsewhere (see `tabs.md`).
 
 A file tree tab is an ordinary member of the tab strip: it belongs to a group, stays contiguous
 within it (see Tabs → Tab grouping), and can be reordered within its group like any other tab.
+This applies while it sits in the strip; a docked tree keeps its group membership latent and
+returns to its position on undock.

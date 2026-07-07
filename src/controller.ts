@@ -167,6 +167,10 @@ export class Controller {
     if (label) this.managers.fileTree.reroot(label);
   }
 
+  fileTreeSetDock(index: number, dock: 'left' | 'right' | null): void {
+    this.managers.tab.setDock(index, dock);
+  }
+
   // Tab-completion for the command line (reuses the shared `completeCommandLine`): filesystem
   // paths against the active tab's cwd, `msg`/`broadcast` agent names, `connection close` targets,
   // and `browser` subcommands / window ids.

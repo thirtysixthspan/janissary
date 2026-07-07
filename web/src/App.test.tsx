@@ -102,3 +102,49 @@ describe('App syntax theme picker', () => {
     expect(screen.getByText('janus')).toBeTruthy();
   }, 15_000);
 });
+
+describe('App sidebar docking', () => {
+  beforeEach(() => {
+    sendMock.mockClear();
+    stateListener = null;
+  });
+
+  it('a docked file tree tab is absent from the tab strip but rendered in its sidebar', async () => {
+    const { App } = await import('./App');
+    const { container } = render(<App />);
+    act(() => {
+      stateListener!(
+        [
+          makeTab(),
+          makeTab({
+            label: 'files', view: 'files', dock: 'left',
+            files: { root: '/tmp/project', rows: [] },
+          }),
+        ],
+        0, null, 16, [], 'github-dark',
+      );
+    });
+    const stripLabels = [...container.querySelectorAll(':scope .tabstrip .tab')].map((el) => el.textContent);
+    expect(stripLabels.some((t) => t?.includes('files'))).toBe(false);
+    expect(container.querySelector('.sidebar-left')).not.toBeNull();
+  }, 15_000);
+
+  it('closing a docked tab via its sidebar header × sends closeTab with its server index', async () => {
+    const { App } = await import('./App');
+    const { container } = render(<App />);
+    act(() => {
+      stateListener!(
+        [
+          makeTab(),
+          makeTab({
+            label: 'files', view: 'files', dock: 'left',
+            files: { root: '/tmp/project', rows: [] },
+          }),
+        ],
+        0, null, 16, [], 'github-dark',
+      );
+    });
+    fireEvent.click(container.querySelector(':scope .sidebar-left .files-close')!);
+    expect(sendMock).toHaveBeenCalledWith({ method: 'closeTab', params: { index: 1 } });
+  }, 15_000);
+});

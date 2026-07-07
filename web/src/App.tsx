@@ -5,6 +5,7 @@ import { TabStrip } from './TabStrip';
 import { Transcript } from './Transcript';
 import { ViewTabBody } from './ViewTabBody';
 import { ReportingSection, isReportingTab } from './ReportingSection';
+import { AppShell } from './AppShell';
 import type { HarnessTabHandle } from './HarnessTab';
 import type { EditorTabHandle } from './EditorTab';
 import type { ShellTabHandle } from './ShellTab';
@@ -52,8 +53,10 @@ export function App() {
   const { handleScrollKey, handleScrollKeyUp } = useTranscriptScroll(transcriptReference);
 
   // Action tabs (above the command bar, take commands) vs. reporting tabs (below it,
-  // report-only). Each entry keeps its index in the server's full tab list for RPCs.
-  const actionEntries = useMemo(() => tabs.map((tab, index) => ({ tab, index })).filter((e) => !isReportingTab(e.tab)), [tabs]);
+  // report-only). Each entry keeps its index in the server's full tab list for RPCs. A tab
+  // docked into a sidebar leaves the strip entirely (rendered by Sidebar instead) while staying
+  // in the server's tab array, so RPCs still address it by index.
+  const actionEntries = useMemo(() => tabs.map((tab, index) => ({ tab, index })).filter((e) => !isReportingTab(e.tab) && !e.tab.dock), [tabs]);
   const reportingEntries = useMemo(() => tabs.map((tab, index) => ({ tab, index })).filter((e) => isReportingTab(e.tab)), [tabs]);
 
   const current = tabs[activeTab] ?? actionEntries[0]?.tab;
@@ -150,7 +153,7 @@ export function App() {
   if (!current) return <div className="app" style={{ padding: 16, color: 'var(--muted)' }}>Connecting…</div>;
 
   return (
-    <div className="app">
+    <AppShell tabs={tabs} client={client}>
       <TabStrip
         tabs={actionEntries.map((e) => e.tab)}
         activeTab={actionEntries.findIndex((e) => e.index === activeTab)}
@@ -226,6 +229,6 @@ export function App() {
       />
       {quitConfirmOpen && <QuitDialog onConfirm={confirmQuit} onCancel={cancelQuit} />}
       <CloseSaveGuard tabs={tabs} editorHandles={editorHandles} client={client} guardRef={guardRef} />
-    </div>
+    </AppShell>
   );
 }

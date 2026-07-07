@@ -151,4 +151,50 @@ describe('FileTreeTab', () => {
     const files2 = makeFiles({ rows: files1.rows.slice(1) });
     rerender(<FileTreeTab files={files2} client={client} index={0} />);
   });
+
+  it('dock-cycle button from center sends fileTreeSetDock to right, with the right tooltip', () => {
+    const send = vi.fn();
+    const client = { send } as unknown as JanusClient;
+    render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+    const button = screen.getByTitle('Move to right sidebar');
+    fireEvent.click(button);
+    expect(send).toHaveBeenCalledWith({ method: 'fileTreeSetDock', params: { index: 0, dock: 'right' } });
+  });
+
+  it('dock-cycle button from left sends fileTreeSetDock to center (null)', () => {
+    const send = vi.fn();
+    const client = { send } as unknown as JanusClient;
+    render(<FileTreeTab files={makeFiles()} client={client} index={0} dock="left" />);
+    fireEvent.click(screen.getByTitle('Move to center'));
+    expect(send).toHaveBeenCalledWith({ method: 'fileTreeSetDock', params: { index: 0, dock: null } });
+  });
+
+  it('dock-cycle button from right sends fileTreeSetDock to left', () => {
+    const send = vi.fn();
+    const client = { send } as unknown as JanusClient;
+    render(<FileTreeTab files={makeFiles()} client={client} index={0} dock="right" />);
+    fireEvent.click(screen.getByTitle('Move to left sidebar'));
+    expect(send).toHaveBeenCalledWith({ method: 'fileTreeSetDock', params: { index: 0, dock: 'left' } });
+  });
+
+  it('header close button is shown only while docked, and sends closeTab', () => {
+    const send = vi.fn();
+    const client = { send } as unknown as JanusClient;
+    const { rerender } = render(<FileTreeTab files={makeFiles()} client={client} index={3} />);
+    expect(screen.queryByTitle('Close')).toBeNull();
+    rerender(<FileTreeTab files={makeFiles()} client={client} index={3} dock="left" />);
+    fireEvent.click(screen.getByTitle('Close'));
+    expect(send).toHaveBeenCalledWith({ method: 'closeTab', params: { index: 3 } });
+  });
+
+  it('autoFocus defaults to true (center mount) and can be suppressed for sidebar mounts', () => {
+    const client = { send: vi.fn() } as unknown as JanusClient;
+    const focusSpy = vi.spyOn(HTMLElement.prototype, 'focus');
+    focusSpy.mockClear();
+    render(<FileTreeTab files={makeFiles()} client={client} index={0} autoFocus={false} />);
+    expect(focusSpy).not.toHaveBeenCalled();
+    render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+    expect(focusSpy).toHaveBeenCalled();
+    focusSpy.mockRestore();
+  });
 });

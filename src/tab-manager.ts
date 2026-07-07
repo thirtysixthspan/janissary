@@ -110,6 +110,7 @@ export class TabManager {
 
   setActiveTab(index: number): void {
     if (index < 0 || index >= this.tabs.length) return;
+    if (this.tabs[index]?.dock) return; // a docked tab is never the active tab
     this.activeTab = index;
     const tab = this.tabs[index];
     if (tab) tab.hasUnread = false;
@@ -117,7 +118,41 @@ export class TabManager {
   }
 
   moveTab(dir: -1 | 1): void {
-    this.setActiveTab((this.activeTab + dir + this.tabs.length) % this.tabs.length);
+    const total = this.tabs.length;
+    for (let step = 1; step <= total; step++) {
+      const index = (this.activeTab + dir * step + total) % total;
+      if (!this.tabs[index]?.dock) { this.setActiveTab(index); return; }
+    }
+  }
+
+  // Dock a tab into a sidebar (`'left'` | `'right'`), or undock it back to the center strip
+  // (`null`, which also makes it the active tab). Docking into an occupied side displaces the
+  // previous occupant back to center (non-destructive — nothing closes). Docking the active tab
+  // first moves `activeTab` to the nearest non-docked tab, preserving the invariant that a
+  // docked tab is never active.
+  setDock(index: number, dock: 'left' | 'right' | null): void {
+    const tab = this.tabs[index];
+    if (!tab) return;
+    if (dock === null) {
+      tab.dock = undefined;
+      this.activeTab = index;
+      tab.hasUnread = false;
+      messageBus.emit('state', { type: 'dirty' });
+      return;
+    }
+    const occupant = this.tabs.find((t, i) => i !== index && t.dock === dock);
+    if (occupant) occupant.dock = undefined;
+    tab.dock = dock;
+    if (this.activeTab === index) this.activateNearestNonDocked();
+    messageBus.emit('state', { type: 'dirty' });
+  }
+
+  private activateNearestNonDocked(): void {
+    const total = this.tabs.length;
+    for (let step = 0; step < total; step++) {
+      const index = (this.activeTab + step) % total;
+      if (!this.tabs[index]?.dock) { this.activeTab = index; return; }
+    }
   }
 
   reorderTab(dir: -1 | 1): void {
@@ -284,6 +319,7 @@ export class TabManager {
       monitor: t.monitor,
       files: t.files,
       activePty: t.activePty,
+      dock: t.dock,
     }));
   }
 
