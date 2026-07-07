@@ -130,4 +130,11 @@ describe('updateConfig', () => {
     expect(after.customField).toBe('kept');
     expect(after.syntaxTheme).toBe('nord');
   });
+
+  it('returns false when the config dir has been removed', () => {
+    loadConfig(tmpDir);
+    rmSync(path.join(tmpDir, '.janissary'), { recursive: true, force: true });
+    const ok = updateConfig({ syntaxTheme: 'nord' });
+    expect(ok).toBe(false);
+  });
 });
