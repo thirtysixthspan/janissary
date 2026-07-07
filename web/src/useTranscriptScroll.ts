@@ -1,5 +1,14 @@
 import { useCallback, useRef } from 'react';
 
+function getAccelStep(
+  dir: -1 | 1,
+  accel: React.MutableRefObject<{ start: number; dir: -1 | 1 } | null>,
+): number {
+  if (!accel.current || accel.current.dir !== dir) accel.current = { start: Date.now(), dir };
+  const elapsed = Date.now() - accel.current.start;
+  return Math.min(220, Math.max(22, Math.round(22 * Math.pow(2, elapsed / 1000))));
+}
+
 // Transcript scrolling: PageUp/Down half-screen, Shift/Ctrl+Up/Down one line (with acceleration
 // that doubles every second while held), Ctrl+P/N one line, Escape jumps back to the bottom.
 // `handleScrollKey` reports whether it consumed the key so the caller can bail out early;
@@ -14,18 +23,12 @@ export function useTranscriptScroll(scrollRef: React.RefObject<HTMLDivElement | 
     if (e.key === 'PageDown') { e.preventDefault(); element.scrollTop += element.clientHeight / 2; return true; }
     if ((e.shiftKey || e.ctrlKey) && e.key === 'ArrowUp') {
       e.preventDefault();
-      if (!scrollAccel.current || scrollAccel.current.dir !== -1) scrollAccel.current = { start: Date.now(), dir: -1 };
-      const elapsed = Date.now() - scrollAccel.current.start;
-      const step = Math.min(220, Math.max(22, Math.round(22 * Math.pow(2, elapsed / 1000))));
-      element.scrollTop -= step;
+      element.scrollTop -= getAccelStep(-1, scrollAccel);
       return true;
     }
     if ((e.shiftKey || e.ctrlKey) && e.key === 'ArrowDown') {
       e.preventDefault();
-      if (!scrollAccel.current || scrollAccel.current.dir !== 1) scrollAccel.current = { start: Date.now(), dir: 1 };
-      const elapsed = Date.now() - scrollAccel.current.start;
-      const step = Math.min(220, Math.max(22, Math.round(22 * Math.pow(2, elapsed / 1000))));
-      element.scrollTop += step;
+      element.scrollTop += getAccelStep(1, scrollAccel);
       return true;
     }
     if (e.ctrlKey && e.key.toLowerCase() === 'p') { e.preventDefault(); element.scrollTop -= 22; return true; }
