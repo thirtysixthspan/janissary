@@ -84,4 +84,21 @@ describe('App syntax theme picker', () => {
     fireEvent.keyDown(globalThis as unknown as Window, { key: 'Enter' });
     expect(sendMock).toHaveBeenCalledWith({ method: 'command', params: { text: 'syntax theme github-dark' } });
   }, 15_000);
+
+  it('sends "close" as a command when there are multiple tabs', async () => {
+    const { App } = await import('./App');
+    render(<App />);
+    act(() => { stateListener!([makeTab(), makeTab({ label: 'other' })], 0, null, 16, [], 'github-dark'); });
+    const input = screen.getByRole('textbox');
+    fireEvent.change(input, { target: { value: 'close' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(sendMock).toHaveBeenCalledWith({ method: 'command', params: { text: 'close' } });
+  }, 15_000);
+
+  it('renders a reporting section when a monitor tab is present', async () => {
+    const { App } = await import('./App');
+    render(<App />);
+    act(() => { stateListener!([makeTab({ view: 'monitor', monitor: { suggestions: [] }, groupColor: '#0f0' })], 0, null, 16, [], 'github-dark'); });
+    expect(screen.getByText('janus')).toBeTruthy();
+  }, 15_000);
 });
