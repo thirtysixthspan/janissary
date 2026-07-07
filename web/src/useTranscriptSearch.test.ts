@@ -3,14 +3,15 @@ import React from 'react';
 import { describe, expect, it } from 'vitest';
 import { useTranscriptSearch } from './useTranscriptSearch';
 
+let searchResult: ReturnType<typeof useTranscriptSearch>;
+
 function TestHook({ lines, label }: { lines: { type: string; text: string }[]; label: string }) {
-  const result = useTranscriptSearch(lines as never, label);
-  (globalThis as Record<string, unknown>).__searchResult = result;
+  searchResult = useTranscriptSearch(lines as never, label);
   return null;
 }
 
 function getResult() {
-  return (globalThis as Record<string, unknown>).__searchResult as ReturnType<typeof useTranscriptSearch>;
+  return searchResult;
 }
 
 describe('useTranscriptSearch', () => {

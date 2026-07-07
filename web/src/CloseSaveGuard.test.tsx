@@ -1,38 +1,53 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, fireEvent, act } from '@testing-library/react';
 import React from 'react';
+import type { EditorTabHandle } from './EditorTab';
 import { CloseSaveGuard } from './CloseSaveGuard';
 
 const makeTab = (label: string) =>
   ({ label, dotColor: '#ff0', groupColor: '#fff' }) as never;
 
+function makeHandles() {
+  const ref = React.createRef<Map<string, EditorTabHandle>>();
+  (ref as { current: Map<string, EditorTabHandle> | null }).current = new Map();
+  return ref as React.RefObject<Map<string, EditorTabHandle>>;
+}
+
+function makeHandlesWith(label: string, handle: EditorTabHandle) {
+  const ref = React.createRef<Map<string, EditorTabHandle>>();
+  (ref as { current: Map<string, EditorTabHandle> | null }).current = new Map([[label, handle]]);
+  return ref as React.RefObject<Map<string, EditorTabHandle>>;
+}
+
+function makeGuardRef() {
+  return React.createRef<((index: number) => boolean) | null>() as React.RefObject<((index: number) => boolean) | null>;
+}
+
 describe('CloseSaveGuard', () => {
   it('renders nothing when no save dialog is needed', () => {
-    const guardRef = React.createRef<((index: number) => boolean) | null>();
-    const editorHandles = React.createRef<Map<string, { isDirty(): boolean; save(): Promise<void> }>>();
-    editorHandles.current = new Map();
+    const guardRef = makeGuardRef();
+    const editorHandles = makeHandles();
     const { container } = render(
       React.createElement(CloseSaveGuard, {
         tabs: [makeTab('tab1')],
         editorHandles,
         client: { send: vi.fn() } as never,
-        guardRef: guardRef as never,
+        guardRef,
       }),
     );
     expect(container.querySelector('.modal-backdrop')).toBeNull();
   });
 
   it('guard function returns false for a clean editor', () => {
-    const guardRef = React.createRef<((index: number) => boolean) | null>();
-    const editorHandles = React.createRef<Map<string, { isDirty(): boolean; save(): Promise<void> }>>();
-    const handle = { isDirty: () => false, save: vi.fn() };
-    editorHandles.current = new Map([['tab1', handle]]);
+    const guardRef = makeGuardRef();
+    const handle = { isDirty: () => false, save: vi.fn() } as unknown as EditorTabHandle;
+    const editorHandles = makeHandlesWith('tab1', handle);
     render(
       React.createElement(CloseSaveGuard, {
         tabs: [makeTab('tab1')],
         editorHandles,
         client: { send: vi.fn() } as never,
-        guardRef: guardRef as never,
+        guardRef,
       }),
     );
     let result: boolean | undefined;
@@ -43,16 +58,15 @@ describe('CloseSaveGuard', () => {
   });
 
   it('guard function returns true and opens dialog for a dirty editor', () => {
-    const guardRef = React.createRef<((index: number) => boolean) | null>();
-    const editorHandles = React.createRef<Map<string, { isDirty(): boolean; save(): Promise<void> }>>();
-    const handle = { isDirty: () => true, save: vi.fn() };
-    editorHandles.current = new Map([['tab1', handle]]);
+    const guardRef = makeGuardRef();
+    const handle = { isDirty: () => true, save: vi.fn() } as unknown as EditorTabHandle;
+    const editorHandles = makeHandlesWith('tab1', handle);
     const { getByText } = render(
       React.createElement(CloseSaveGuard, {
         tabs: [makeTab('tab1')],
         editorHandles,
         client: { send: vi.fn() } as never,
-        guardRef: guardRef as never,
+        guardRef,
       }),
     );
     act(() => {
@@ -62,15 +76,14 @@ describe('CloseSaveGuard', () => {
   });
 
   it('guard function handles a missing tab gracefully', () => {
-    const guardRef = React.createRef<((index: number) => boolean) | null>();
-    const editorHandles = React.createRef<Map<string, { isDirty(): boolean; save(): Promise<void> }>>();
-    editorHandles.current = new Map();
+    const guardRef = makeGuardRef();
+    const editorHandles = makeHandles();
     render(
       React.createElement(CloseSaveGuard, {
         tabs: [makeTab('tab1')],
         editorHandles,
         client: { send: vi.fn() } as never,
-        guardRef: guardRef as never,
+        guardRef,
       }),
     );
     let result: boolean | undefined;
@@ -81,18 +94,17 @@ describe('CloseSaveGuard', () => {
   });
 
   it('onSave button saves, closes dialog, and sends closeTab', async () => {
-    const guardRef = React.createRef<((index: number) => boolean) | null>();
-    const editorHandles = React.createRef<Map<string, { isDirty(): boolean; save(): Promise<void> }>>();
+    const guardRef = makeGuardRef();
     const save = vi.fn().mockResolvedValue(undefined);
-    const handle = { isDirty: () => true, save };
-    editorHandles.current = new Map([['tab1', handle]]);
+    const handle = { isDirty: () => true, save } as unknown as EditorTabHandle;
+    const editorHandles = makeHandlesWith('tab1', handle);
     const client = { send: vi.fn() };
     const { getByText, queryByText } = render(
       React.createElement(CloseSaveGuard, {
         tabs: [makeTab('tab1')],
         editorHandles,
         client: client as never,
-        guardRef: guardRef as never,
+        guardRef,
       }),
     );
     act(() => {
@@ -107,18 +119,17 @@ describe('CloseSaveGuard', () => {
   });
 
   it('onDiscard button closes dialog and sends closeTab without saving', () => {
-    const guardRef = React.createRef<((index: number) => boolean) | null>();
-    const editorHandles = React.createRef<Map<string, { isDirty(): boolean; save(): Promise<void> }>>();
+    const guardRef = makeGuardRef();
     const save = vi.fn();
-    const handle = { isDirty: () => true, save };
-    editorHandles.current = new Map([['tab1', handle]]);
+    const handle = { isDirty: () => true, save } as unknown as EditorTabHandle;
+    const editorHandles = makeHandlesWith('tab1', handle);
     const client = { send: vi.fn() };
     const { getByText, queryByText } = render(
       React.createElement(CloseSaveGuard, {
         tabs: [makeTab('tab1')],
         editorHandles,
         client: client as never,
-        guardRef: guardRef as never,
+        guardRef,
       }),
     );
     act(() => {
@@ -131,17 +142,16 @@ describe('CloseSaveGuard', () => {
   });
 
   it('onCancel button closes dialog without sending closeTab', () => {
-    const guardRef = React.createRef<((index: number) => boolean) | null>();
-    const editorHandles = React.createRef<Map<string, { isDirty(): boolean; save(): Promise<void> }>>();
-    const handle = { isDirty: () => true, save: vi.fn() };
-    editorHandles.current = new Map([['tab1', handle]]);
+    const guardRef = makeGuardRef();
+    const handle = { isDirty: () => true, save: vi.fn() } as unknown as EditorTabHandle;
+    const editorHandles = makeHandlesWith('tab1', handle);
     const client = { send: vi.fn() };
     const { getByText, queryByText } = render(
       React.createElement(CloseSaveGuard, {
         tabs: [makeTab('tab1')],
         editorHandles,
         client: client as never,
-        guardRef: guardRef as never,
+        guardRef,
       }),
     );
     act(() => {

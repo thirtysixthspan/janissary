@@ -1,23 +1,36 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render } from '@testing-library/react';
 import React from 'react';
+import type { TabView } from '@shared/protocol';
+import type { HarnessTabHandle } from './HarnessTab';
+import type { EditorTabHandle } from './EditorTab';
 import { MountedViewLayers } from './MountedViewLayers';
 
-function makeEditorTab(label: string, url: string) {
+function makeEditorTab(label: string, url: string): TabView {
   return {
     label, view: 'editor' as const, dotColor: '#0f0', groupColor: '#ccc',
     editor: { url, name: 'test.ts' },
     connections: [], schedule: [], bufferLines: [], cmdHistory: [],
-  };
+  } as unknown as TabView;
+}
+
+function makeHarnessHandles() {
+  const ref = React.createRef<Map<string, HarnessTabHandle>>();
+  (ref as { current: Map<string, HarnessTabHandle> | null }).current = new Map();
+  return ref as React.RefObject<Map<string, HarnessTabHandle>>;
+}
+
+function makeEditorHandles() {
+  const ref = React.createRef<Map<string, EditorTabHandle>>();
+  (ref as { current: Map<string, EditorTabHandle> | null }).current = new Map();
+  return ref as React.RefObject<Map<string, EditorTabHandle>>;
 }
 
 describe('MountedViewLayers', () => {
   it('renders editor tabs', () => {
-    const tabs = [makeEditorTab('etab', '/test.ts')] as never[];
-    const harnessHandles = React.createRef<Map<string, unknown>>();
-    harnessHandles.current = new Map();
-    const editorHandles = React.createRef<Map<string, unknown>>();
-    editorHandles.current = new Map();
+    const tabs = [makeEditorTab('etab', '/test.ts')];
+    const harnessHandles = makeHarnessHandles();
+    const editorHandles = makeEditorHandles();
     const { container } = render(
       React.createElement(MountedViewLayers, {
         tabs, current: tabs[0], client: { send: vi.fn() } as never,
@@ -28,15 +41,13 @@ describe('MountedViewLayers', () => {
   });
 
   it('hides editor tab when not current', () => {
-    const tabs = [makeEditorTab('etab', '/test.ts')] as never[];
-    const other = { ...tabs[0], label: 'other' };
-    const harnessHandles = React.createRef<Map<string, unknown>>();
-    harnessHandles.current = new Map();
-    const editorHandles = React.createRef<Map<string, unknown>>();
-    editorHandles.current = new Map();
+    const tabs = [makeEditorTab('etab', '/test.ts')];
+    const other = makeEditorTab('other', '/other.ts');
+    const harnessHandles = makeHarnessHandles();
+    const editorHandles = makeEditorHandles();
     const { container } = render(
       React.createElement(MountedViewLayers, {
-        tabs, current: other as never, client: { send: vi.fn() } as never,
+        tabs, current: other, client: { send: vi.fn() } as never,
         harnessHandles, editorHandles,
       }),
     );
@@ -45,11 +56,9 @@ describe('MountedViewLayers', () => {
   });
 
   it('renders editor tab as flex when current', () => {
-    const tabs = [makeEditorTab('etab', '/test.ts')] as never[];
-    const harnessHandles = React.createRef<Map<string, unknown>>();
-    harnessHandles.current = new Map();
-    const editorHandles = React.createRef<Map<string, unknown>>();
-    editorHandles.current = new Map();
+    const tabs = [makeEditorTab('etab', '/test.ts')];
+    const harnessHandles = makeHarnessHandles();
+    const editorHandles = makeEditorHandles();
     const { container } = render(
       React.createElement(MountedViewLayers, {
         tabs, current: tabs[0], client: { send: vi.fn() } as never,
@@ -61,14 +70,12 @@ describe('MountedViewLayers', () => {
   });
 
   it('filters out tabs without editor payload', () => {
-    const harnessHandles = React.createRef<Map<string, unknown>>();
-    harnessHandles.current = new Map();
-    const editorHandles = React.createRef<Map<string, unknown>>();
-    editorHandles.current = new Map();
+    const harnessHandles = makeHarnessHandles();
+    const editorHandles = makeEditorHandles();
     const { container } = render(
       React.createElement(MountedViewLayers, {
-        tabs: [{ label: 'a', view: 'editor', dotColor: '#0f0', groupColor: '#ccc' }] as never[],
-        current: { label: 'a' } as never,
+        tabs: [{ label: 'a', view: 'editor', dotColor: '#0f0', groupColor: '#ccc' }] as TabView[],
+        current: { label: 'a' } as TabView,
         client: { send: vi.fn() } as never,
         harnessHandles, editorHandles,
       }),

@@ -7,7 +7,7 @@ function fakeEvent(key: string): KeyboardEvent {
 }
 
 function makeRoute(): RouteChooserView {
-  return { choices: ['cmd1', 'cmd2', 'cmd3'] };
+  return { cmd: 'route', choices: ['cmd1', 'cmd2', 'cmd3'] };
 }
 
 describe('handleRouteChooserKey', () => {

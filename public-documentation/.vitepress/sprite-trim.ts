@@ -47,10 +47,26 @@ function unfilter(data: Buffer, width: number, height: number): Buffer {
       const up = y > 0 ? out[(y - 1) * stride + x] : 0;
       const upLeft = y > 0 && x >= BYTES_PER_PIXEL ? out[(y - 1) * stride + x - BYTES_PER_PIXEL] : 0;
       let value = row[x];
-      if (filter === 1) value += left;
-      else if (filter === 2) value += up;
-      else if (filter === 3) value += Math.floor((left + up) / 2);
-      else if (filter === 4) value += paeth(left, up, upLeft);
+      switch (filter) {
+      case 1: {
+      value += left;
+      break;
+      }
+      case 2: {
+      value += up;
+      break;
+      }
+      case 3: {
+      value += Math.floor((left + up) / 2);
+      break;
+      }
+      case 4: { {
+      value += paeth(left, up, upLeft);
+      // No default
+      }
+      break;
+      }
+      }
       out[y * stride + x] = value & 0xff;
     }
   }
@@ -70,7 +86,9 @@ function decode(png: Buffer): { width: number; height: number; pixels: Buffer } 
     if (type === "IHDR") {
       width = data.readUInt32BE(0);
       height = data.readUInt32BE(4);
-      const [bitDepth, colorType, , , interlace] = [data[8], data[9], data[10], data[11], data[12]];
+      const bitDepth = data[8];
+      const colorType = data[9];
+      const interlace = data[12];
       if (bitDepth !== 8 || colorType !== 6 || interlace !== 0) return null;
     } else if (type === "IDAT") {
       idat.push(data);
