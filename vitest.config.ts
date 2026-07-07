@@ -109,10 +109,10 @@ export default defineConfig({
           lines: 91.45,
         },
         'web/src/**': {
-          statements: 81.74,
-          branches: 75,
+          statements: 81.95,
+          branches: 75.39,
           functions: 79.1,
-          lines: 85.76,
+          lines: 86.03,
         },
       },
     },
