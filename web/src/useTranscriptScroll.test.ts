@@ -5,9 +5,11 @@ import { useTranscriptScroll } from './useTranscriptScroll';
 
 function makeScrollElement(scrollTop: number, scrollHeight: number, clientHeight: number) {
   const el = document.createElement('div');
-  Object.defineProperty(el, 'scrollTop', { value: scrollTop, writable: true });
-  Object.defineProperty(el, 'scrollHeight', { value: scrollHeight, writable: true });
-  Object.defineProperty(el, 'clientHeight', { value: clientHeight, writable: true });
+  Object.defineProperties(el, {
+    scrollTop: { value: scrollTop, writable: true },
+    scrollHeight: { value: scrollHeight, writable: true },
+    clientHeight: { value: clientHeight, writable: true },
+  });
   return el;
 }
 
