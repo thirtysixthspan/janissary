@@ -9,7 +9,9 @@ describe('actionForKey', () => {
     expect(actionForKey(key('ArrowLeft'))).toEqual({ kind: 'move', dir: 'left', extend: false });
     expect(actionForKey(key('ArrowDown', { shiftKey: true }))).toEqual({ kind: 'move', dir: 'down', extend: true });
     expect(actionForKey(key('PageDown'))).toEqual({ kind: 'page', dir: 1, extend: false });
+    expect(actionForKey(key('PageUp'))).toEqual({ kind: 'page', dir: -1, extend: false });
     expect(actionForKey(key('Home'))).toEqual({ kind: 'lineEdge', edge: 'home', extend: false });
+    expect(actionForKey(key('End'))).toEqual({ kind: 'lineEdge', edge: 'end', extend: false });
     expect(actionForKey(key('Enter'))).toEqual({ kind: 'insert', text: '\n' });
     expect(actionForKey(key('Tab'))).toEqual({ kind: 'insert', text: '\t' });
     expect(actionForKey(key('Backspace'))).toEqual({ kind: 'deleteBackward' });
@@ -28,6 +30,9 @@ describe('actionForKey', () => {
     expect(actionForKey(key('k', { ctrlKey: true }))).toEqual({ kind: 'kill' });
     expect(actionForKey(key('y', { ctrlKey: true }))).toEqual({ kind: 'yank' });
     expect(actionForKey(key('Home', { ctrlKey: true }))).toEqual({ kind: 'docEdge', edge: 'start', extend: false });
+    expect(actionForKey(key('End', { ctrlKey: true }))).toEqual({ kind: 'docEdge', edge: 'end', extend: false });
+    expect(actionForKey(key('z', { ctrlKey: true }))).toEqual({ kind: 'undo' });
+    expect(actionForKey(key('z', { ctrlKey: true, shiftKey: true }))).toEqual({ kind: 'redo' });
   });
 
   it('maps the Cmd app chords', () => {
