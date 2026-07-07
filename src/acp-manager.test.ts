@@ -143,4 +143,24 @@ describe('AcpManager.run', () => {
     handlers.ranCommand('db query', 'row1\nrow2');
     expect(append).toHaveBeenCalledWith('tab1', { input: 'db query', output: 'row1\nrow2', acp: true });
   });
+
+  it('onConnect callback fires messageBus.emit on session connection', () => {
+    const { acp } = setup();
+    mocks.connectAcp.mockImplementation((opts: Record<string, unknown>) => {
+      if (typeof opts.onConnect === 'function') opts.onConnect();
+      return makeSession();
+    });
+    acp.run('tab1', 'acp hello');
+    expect(mocks.messageBusEmit).toHaveBeenCalledWith('state', { type: 'dirty' });
+  });
+
+  it('onError callback appends error to tab on session connection failure', () => {
+    const { acp, append } = setup();
+    mocks.connectAcp.mockImplementation((opts: Record<string, unknown>) => {
+      if (typeof opts.onError === 'function') opts.onError('connection refused');
+      return makeSession();
+    });
+    acp.run('tab1', 'acp hello');
+    expect(append).toHaveBeenCalledWith('tab1', { input: '', output: 'ACP: connection refused' });
+  });
 });
