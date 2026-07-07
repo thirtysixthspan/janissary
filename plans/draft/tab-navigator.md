@@ -1,5 +1,7 @@
 # Fuzzy Tab/Workspace Navigator
 
+**Complexity: 3/10** — one new picker component plus keyboard-handler wiring, entirely client-side, but must follow the existing centralized-keydown-listener architecture instead of adding a second, competing `keydown` listener.
+
 ## Summary
 
 Add a command-mode picker for tabs, analogous to `hist`'s command-history picker. A keybinding (`Ctrl+G` or a `nav` command) opens a fuzzy-searchable modal list of every open tab — agent, harness, SSH, viewer, reporting — filterable by typing part of its label, with arrow/Enter to jump straight to it. The picker reuses the `hist` UI pattern, just pointed at tabs instead of command history.
@@ -12,39 +14,52 @@ Add a command-mode picker for tabs, analogous to `hist`'s command-history picker
 4. **Controller model: server-owned, client-rendered.** Tab list comes from the server via the existing `StateEvent` snapshot — no new RPC needed. Selection dispatches `setActiveTab` with the chosen index. Server involvement is zero beyond serving state and honoring `setActiveTab`.
 5. **Keybindings within the picker:** `Ctrl+G` (toggle), `Up`/`Down` (navigate), `Enter` (select and dismiss), `Escape` (dismiss), `Ctrl+N`/`Ctrl+P` (navigate), type-to-filter (input intercepts all printable keys).
 
-## Verified codebase facts that shape the design
+## The central fact this plan must be built around
 
-- **`hist` already provides the picker pattern.** `HistoryPicker.tsx` (22 lines) renders a floating `HistPicker` component with a filtered list, arrow selection, Enter to submit, Escape to dismiss. The tab navigator copies this pattern with a different data source, matching the keyboard-first design principle.
-- **Tab list is already mirrored in the client.** `App.tsx` receives `tabs[]` via `useState<TabView[]>` updated on every `StateEvent`. No new RPC needed — the picker simply reads the same `tabs` array that `App.tsx` already holds.
-- **`setActiveTab` is the only action needed.** The server's `TabManager.setActiveTab()` handles focus rules (harness tabs get PTY focus, editor tabs get editor focus). The picker just dispatches the index.
-- **Modal overlays are well-established.** `RouteChooser.tsx` (18 lines) demonstrates the floating-modal-above-command-bar pattern. `HistoryPicker.tsx` adds fuzzy filtering. The navigator is a composition of both.
-- **Keyboard handler pattern exist.** `keyboard-handlers.ts` processes key events in `App.tsx`, translating chords to actions. `Ctrl+G` would be added here, probably with a guard to prevent firing inside a focused PTY or editor.
+**All keyboard handling for pickers/modals in this app goes through one centralized `keydown` listener, not per-component listeners.** `useWindowKeys` (`web/src/useWindowKeys.ts:52-86`) attaches a *single* `globalThis.addEventListener('keydown', onKey)`. Its handler checks modal/picker state in priority order (`snap.route` → `snap.themePickerOpen` → `snap.pickerOpen` → global shortcuts like `Ctrl+R`/`Cmd+F` → tab shortcuts) and dispatches to a pure function from `keyboard-handlers.ts` (`handleRouteChooserKey`, `handlePickerKey`), then `return`s so nothing else in the chain fires. Neither `HistoryPicker.tsx` nor `RouteChooser.tsx` — both pure renderers taking `selected`/`items`/`onPick` as props — attaches its own listener; `App.tsx` owns all the open/index/query state and passes it down.
+
+The plan's original section 1 (a component-local `useEffect` with its own `keydown` listener inside `TabNavPicker.tsx`) would create a **second, independent global listener** alongside `useWindowKeys`'s. Since `addEventListener` doesn't replace prior listeners, both would fire on every keydown: `useWindowKeys`'s chain has no way to know the tab navigator is open and would keep processing `Ctrl+R`/`Cmd+F`/tab-reorder shortcuts underneath it, and Escape/Enter could double-fire. The fix is to extend the existing single listener, not add a new one — see the redesigned Proposed changes below. This is the most important correction in this pass.
+
+One genuine difference from `hist`/`RouteChooser`: those never handle live typed text (`hist`'s list is a fixed `getRecentHistory(...)` snapshot filtered by nothing; arrows just move a selection). Fuzzy type-to-filter has no precedent anywhere in the picker system. Extending `handlePickerKey`'s style to also capture printable characters (building a `query` string via `e.key`, with `Backspace` trimming it) is the natural extension **within the existing architecture** — see Proposed changes.
+
+## What already exists (reuse, don't rebuild)
+
+| Need | Existing mechanism | Location |
+| --- | --- | --- |
+| Floating-modal-above-command-bar rendering | `RouteChooser.tsx` / `HistoryPicker.tsx` — pure renderers, `.picker`/`.picker-row` CSS classes | `web/src/RouteChooser.tsx`, `web/src/HistoryPicker.tsx` |
+| Centralized keydown dispatch for picker/modal state | `useWindowKeys` (`web/src/useWindowKeys.ts:52-86`) + pure handler functions in `keyboard-handlers.ts` (`handleRouteChooserKey`, `handlePickerKey`) | `web/src/useWindowKeys.ts`, `web/src/keyboard-handlers.ts` |
+| A global chord that opens a picker regardless of focus | `Ctrl+R` → `cb.openPicker()` (`web/src/useWindowKeys.ts:75`) — `Ctrl+G` should be added the same way, in the same `onKey` chain | `web/src/useWindowKeys.ts:75` |
+| Tab list mirrored client-side | `App.tsx` holds `tabs: TabView[]` from the `state` snapshot; no new RPC needed | `web/src/App.tsx` |
+| Jumping to a tab | `setActiveTab` RPC (`{ method: 'setActiveTab'; params: { index: number } }`, `src/protocol.ts:87`), routed via `src/message-handler.ts:18` to `Controller.setActiveTab` | `src/protocol.ts:87`, `src/message-handler.ts:18` |
+| Signaling "some modal/picker is open" to `CommandInput` | The existing combined boolean already ORs several flags together: `pickerOpen={pickerOpen || route !== null || quitConfirmOpen || themePickerOpen}` (`web/src/App.tsx:217`) — add `|| navOpen` the same way | `web/src/App.tsx:217` |
 
 ## Proposed changes
 
 ### 1. Web UI — `TabNavPicker` component
 
-- New module `web/src/TabNavPicker.tsx`:
-  - Props: `tabs: TabView[]`, `onSelect: (index: number) => void`, `onDismiss: () => void`.
-  - State: `query: string`, `selectedIdx: number` (index into filtered list).
-  - Filtering: `tabs.filter(t => t.label.toLowerCase().includes(query.toLowerCase()))` — fuzzy substring match. Could be upgraded to a more sophisticated fuzzy scorer later, but substring-with-highlight is sufficient for v1.
-  - Sorting: exact number matches sort first, then by label alphabetical. Direct dot-color injection is a stretch goal; v1 uses the tab's label text.
-  - Each row: `tab.number` + dot color swatch (inline CSS background-color from `tab.dotColor`) + label text with highlighted match substring.
-  - Keyboard handling: `useEffect` with `keydown` listener — `ArrowUp`/`ArrowDown` navigate `selectedIdx`, `Enter` calls `onSelect`, `Escape` calls `onDismiss`, `Ctrl+P`/`Ctrl+N` navigate, all others typed into `query` (via `e.key` when printable).
-  - Styling: `tab-nav-picker` CSS class in `theme.css`, following `hist-picker` styling (~`position: absolute`, bottom-anchored above command bar, `max-height: 50vh`, `overflow-y: auto`, dark background with border).
-- `TabView`: no changes needed. The picker reads `tabs[i].label`, `tabs[i].dotColor`, `tabs[i].number`.
+- New module `web/src/TabNavPicker.tsx`, a **pure renderer** like `HistoryPicker`/`RouteChooser` — no internal `keydown` listener, no internal state:
+  - Props: `tabs: TabView[]`, `query: string`, `selected: number` (index into the filtered list), `onPick: (index: number) => void` (called with the tab's real index in `tabs[]`, matching `HistoryPicker`'s `onPick` shape).
+  - Filtering/sorting is computed by the caller (`App.tsx`, via a small pure helper — see below), not inside the component, matching how `HistoryPicker` receives an already-computed `items` list rather than filtering internally.
+  - Each row: `tab.number` + dot color swatch (inline CSS `background-color: tab.dotColor`) + label text with the matched substring highlighted.
+  - Styling: `tab-nav-picker` class in `theme.css`, following the existing `.picker`/`.picker-row` rules `RouteChooser`/`HistoryPicker` already use (`position: absolute`, bottom-anchored above the command bar) rather than inventing new positioning.
+- New pure helper (in `web/src/TabNavPicker.tsx` or a small sibling module): `filterTabs(tabs: TabView[], query: string): { tab: TabView; index: number }[]` — substring match on `label` (case-insensitive) plus exact/prefix match on `String(tab.number)`, sorted with number matches first then alphabetical by label. This is the one piece of genuinely new logic in this plan.
+- `TabView`: no changes needed. The picker reads `tabs[i].label`, `tabs[i].dotColor`, `tabs[i].number`, all already present (`src/protocol.ts:30-32`).
 
-### 2. Keyboard handler
+### 2. Keyboard handling — extend the existing centralized listener, don't add a new one
 
-- In `web/src/keyboard-handlers.ts`, add a `'g'` handler under `Ctrl` modifier (no Shift): dispatches a `toggle-tab-nav` event or sets a `navOpen` state. Guard: not inside a focused PTY input or editor.
-- Alternative: add a `nav` command handler in `CommandInput.tsx` that toggles the picker, for command-line and agent-initiated access.
+- `App.tsx` gains `navOpen: boolean`, `navQuery: string`, `navIdx: number` state (mirroring `pickerOpen`/`pickerIdx`) and a `navTabs = useMemo(() => filterTabs(tabs, navQuery), [tabs, navQuery])`.
+- `useWindowKeys`'s `StateSnapshot`/`Callbacks` types (`web/src/useWindowKeys.ts:7-33`) gain `navOpen`, `navQuery`, `navIdx`, `navTabs` and `setNavQuery`, `setNavIndex`, `selectNavTab`, `setNavOpen`/`openTabNav` respectively — same shape as the existing `pickerOpen`/`pickerIdx`/`recent` trio and their callbacks.
+- In `useWindowKeys.ts`'s `onKey` chain (`web/src/useWindowKeys.ts:52-79`), add a `if (snap.navOpen) { handleTabNavKey(e, snap.navTabs, snap.navIdx, cb.setNavIndex, cb.selectNavTab, cb.setNavOpen, snap.navQuery, cb.setNavQuery); return; }` branch, in the same priority position as the existing `snap.pickerOpen` branch (before it, so the two modals can't both claim a keystroke).
+- Add `if (e.ctrlKey && e.key.toLowerCase() === 'g') { e.preventDefault(); cb.openTabNav(); return; }` alongside the existing `Ctrl+R` case (`web/src/useWindowKeys.ts:75`) — same pattern, no PTY/editor guard needed since `Ctrl+R` has none either and both live in the same unconditional global listener.
+- New `handleTabNavKey` in `web/src/keyboard-handlers.ts`, extending `handlePickerKey`'s shape (`web/src/keyboard-handlers.ts:19-34`) with query editing: `ArrowUp`/`ArrowDown`/`Ctrl+P`/`Ctrl+N` move `navIdx` clamped to `navTabs.length`; `Enter` calls `selectNavTab(navTabs[navIdx]?.index)` and closes; `Escape` closes; `Backspace` trims the last character off `navQuery`; any other single printable character (`e.key.length === 1 && !e.ctrlKey && !e.metaKey`) appends to `navQuery` and resets `navIdx` to `0`. This mirrors how the rest of the app's pickers handle keys through `e.key` rather than a real `<input>` element — consistent with `handlePickerKey`/`handleRouteChooserKey`, though it means paste and IME composition aren't supported (acceptable for a short fuzzy label filter; note this explicitly in Out of scope rather than leaving it implicit).
+- The `nav` command (`nav <query>` from the command line, per decision 1) still routes through `App.tsx`'s existing `onSubmit` special-casing (`web/src/App.tsx:205-214`, next to the `syntax theme`/`quit` cases) rather than `CommandInput.tsx` itself — it calls `openTabNav()` and seeds `navQuery` with whatever followed `nav `, instead of sending the text to the server.
 
 ### 3. App integration
 
-- `App.tsx`: add `const [navOpen, setNavOpen] = useState(false)` and a `handleNavSelect(index)` that calls `setActiveTab` RPC and sets `navOpen = false`.
-- Render `TabNavPicker` above the command area when `navOpen` is true. The picker is position-absolute, so no layout restructure needed.
-- `CommandInput.tsx`: when `nav` (or fuzzy `nav <query>`) is typed, toggle the picker instead of sending to the server. Pass the query string through to pre-populate the filter.
-- The `hist` button in the command bar already serves as a chooser opener; the tab navigator could co-locate a second button or use `Ctrl+G` exclusively.
+- `App.tsx`: add the `navOpen`/`navQuery`/`navIdx` state and `navTabs` memo above; a `selectNavTab(index)` callback that sends `setActiveTab` (`{ method: 'setActiveTab', params: { index } }`) and closes the picker.
+- Render `<TabNavPicker tabs={tabs} query={navQuery} selected={navIdx} onPick={selectNavTab} />` above the command area when `navOpen` is true, positioned like `HistoryPicker`/`RouteChooser` (`web/src/App.tsx:193-197`).
+- Extend the combined picker-open boolean passed to `CommandInput` (`web/src/App.tsx:217`) with `|| navOpen`, matching how `themePickerOpen`/`quitConfirmOpen` are already ORed in.
+- The `hist` button in the command bar already serves as a chooser opener; the tab navigator could co-locate a second button or rely on `Ctrl+G` exclusively — decide during implementation based on how crowded the command bar already is (not load-bearing either way).
 
 ### 4. Specs
 
@@ -54,16 +69,28 @@ Add a command-mode picker for tabs, analogous to `hist`'s command-history picker
 ### 5. Tests (colocated, run via `./scripts/run.mjs check-diff`)
 
 - `web/src/TabNavPicker.test.tsx`: renders tab list, filters by query substring, navigates with arrows, Enter selects and calls onSelect with the correct index, Escape dismisses, Ctrl+P/N work, number matching.
-- `web/src/keyboard-handlers.test.ts`: `Ctrl+G` dispatches toggle when not in PTY/editor mode.
-- `web/src/App.test.tsx`: picker opens on `Ctrl+G` from `keyboard-handlers`, selecting a tab dispatches `setActiveTab` RPC.
+- `web/src/keyboard-handlers.test.ts` (existing file — has coverage of `handlePickerKey`/`handleRouteChooserKey` already, add alongside): `handleTabNavKey` — arrows/Ctrl+P/N move `navIdx` clamped to the filtered list length, Enter selects and closes, Escape closes, Backspace trims `navQuery`, a printable character appends to `navQuery` and resets `navIdx`.
+- `web/src/useWindowKeys.test.ts` (existing file, has `Ctrl+R` coverage per line 105 pattern — add alongside): `Ctrl+G` calls `cb.openTabNav()`; when `snap.navOpen` is true, keys dispatch to `handleTabNavKey` instead of falling through to tab shortcuts.
+- `web/src/TabNavPicker.test.tsx`: renders the given `tabs`/`query`/`selected` props, highlights the matched substring, clicking a row calls `onPick` with that tab's index; `filterTabs` unit-tested separately for substring match, number match, and sort order.
+- `web/src/App.test.tsx`: `nav <query>` typed into the command bar opens the picker seeded with that query instead of sending it to the server (mirroring the existing `hist`/`syntax theme` special-case tests already in this file).
+
+## Out of scope
+
+- A more sophisticated fuzzy scorer (e.g. character-subsequence matching) beyond substring/number matching — explicitly deferred per decision 3.
+- Paste or IME composition support while typing the filter query, since query editing goes through `e.key` in the centralized listener rather than a real `<input>` element, matching every other picker in the app (see "central fact" above).
+- A dedicated command-bar button for the navigator (deferred to implementation-time judgment, not a design decision this plan needs to make).
+
+## Verification
+
+- `./scripts/run.mjs check-diff` after each implementation step.
+- Manual end-to-end check: open several tabs with distinct labels, press `Ctrl+G`, confirm the picker opens above the command bar; type a substring of one tab's label and confirm the list filters and highlights the match; use arrows/Ctrl+P/N to move selection, Enter to jump to it, and confirm the app's active tab changes and the picker closes; reopen with `Ctrl+G` and press Escape, confirming it closes without changing the active tab; run `nav depl` from the command line and confirm it opens the picker pre-filtered to "depl" instead of sending the text as a command.
 
 ## Implementation order
 
-1. `TabNavPicker` component with fuzzy filtering and keyboard navigation, tests.
-2. Keyboard handler: `Ctrl+G` integration, tests.
-3. App integration: render the picker, wire `setActiveTab` dispatch, `hist` button companion if desired, tests.
-4. `nav` command handler in `CommandInput`, tests.
-5. Specs: new `tab-navigator.md` + `keyboard-navigation.md` amendment.
-6. Public documentation.
+1. `filterTabs` helper + `TabNavPicker` pure-renderer component, tests. No dependency on later steps.
+2. Keyboard handling: `navOpen`/`navQuery`/`navIdx` state and `openTabNav`/`selectNavTab` callbacks in `App.tsx`; `handleTabNavKey` in `keyboard-handlers.ts`; `Ctrl+G` and `snap.navOpen` branches in `useWindowKeys.ts`, tests. Depends on step 1 for the component/helper shapes.
+3. App integration: render `TabNavPicker`, wire the combined `pickerOpen` boolean, `nav <query>` special-casing in `onSubmit`, tests. Depends on step 2.
+4. Specs: new `tab-navigator.md` + `keyboard-navigation.md` amendment.
+5. Public documentation.
 
 Run `./scripts/run.mjs check-diff` after each step.

@@ -1,5 +1,7 @@
 # Sidebars for the file navigator
 
+**Complexity: 6/10** — a real state machine (docked/active invariant, one-occupant-per-side displacement) plus a new RPC and a new resizable UI module, but every mechanism reuses a verified existing precedent (`ReportingSection`'s resize, `MountedViewLayers`'s extraction, `App.tsx`'s index-preserving strip filtering) rather than inventing new patterns.
+
 ## Summary
 
 Add a left and right sidebar to the web UI, both hidden by default. The file navigator (currently only ever a central tab) becomes placeable in three locations: left sidebar, central tab window, or right sidebar. A new button in the file navigator's header cycles through the three locations. Sidebars are resizable by dragging their inner border with the mouse. The `files` command gains a positional keyword to open directly into a sidebar.
@@ -88,6 +90,18 @@ Add a left and right sidebar to the web UI, both hidden by default. The file nav
 - `public-documentation/tab-types/file-navigator.md`: document the three locations and the `files left|right` forms, add the location button and docked-× to the Mouse table, and qualify the "placed at the start of its group" and "Files opened from the tree land in the same group" notes for the docked case (opened files still land in the tree's group — group membership is retained while docked).
 - `public-documentation/getting-started/tabs.md`: brief mention that the file navigator can dock to a sidebar, linking to the file-navigator page.
 - Screenshot of a sidebar-docked navigator: add a `data-doc-shot` target and a `scripts/docs-screenshots/manifest.mjs` entry; regenerate rather than hand-capture.
+
+## Out of scope
+
+- Docking any tab kind other than the file navigator (the `dock` field lives on `Tab`/`TabView` rather than `FileTreeView` specifically so this can extend later, but no other view kind gains dock support in this plan).
+- Persisting dock placement or sidebar width across relaunch (decision 5 — both reset).
+- More than one tab per sidebar, or sidebars stacking/tabbing multiple docked panels.
+- Keyboard shortcuts for docking/undocking (only the header cycle button and the `files left|right` command).
+
+## Verification
+
+- `./scripts/run.mjs check-diff` after each implementation step.
+- Manual end-to-end check: `files left` to dock a tree into the left sidebar, confirm it disappears from the tab strip and the sidebar renders with a resize divider; drag the divider and confirm width clamps at the min/max; `files right ~/some/other/dir` to dock a second, different tree on the right, confirm both sidebars show independently; run `files left` again with a third path and confirm the left sidebar's previous occupant returns to the center tab strip (not closed); click the docked tree's header location-cycle button through left → center → right → left and confirm the tab strip updates each time; confirm the docked tree is never selectable as the active tab (e.g. via `next`/tab-cycling) and that closing it via its header × works.
 
 ## Implementation order
 
