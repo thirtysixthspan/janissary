@@ -27,14 +27,10 @@ Do **not** attempt any of the following. If your plan for the chosen file requir
 1. Editing, deleting, or rewriting an **existing test**.
 2. Changing **any file that is not a `*.test.ts(x)` file** (for example, editing real source code "to make it testable").
 3. Replacing a **whole module** with a mock (e.g. `vi.mock('./something.js')` for a module that many files import).
-4. Testing **security, password/crypto, shell command, PTY/terminal, or network** code.
+4. Testing **security, password/crypto, shell command, PTY/terminal, or network** code (applies to `src/` files only — `web/src/` files have no restrictions).
 5. Writing **more than 3** new test files in one run.
 
-**Important for `web/src/` files:** The vitest `client` project runs in a JSDOM environment that provides `document`, `window`, `DOMParser`, `requestAnimationFrame`, keyboard events, and related browser APIs. A `web/src/` file is **not** blocked just because it uses DOM APIs — the test environment already supplies them. It is only blocked when it genuinely requires a real browser (imports of `playwright`, `puppeteer`), a real terminal (`xterm`, `node-pty`), a real network connection (`ws` / WebSocket), or spawns a child process (`child_process`).
-
 If every remaining candidate is blocked, report what you found (file, why it was blocked) and stop without writing any tests.
-
-> Note: when coverage goes up, the test tool automatically rewrites the threshold numbers inside `vitest.config.ts`. That is normal and expected. It does **not** count as a source-code change, and you must **not** edit those numbers yourself.
 
 ---
 
@@ -93,7 +89,7 @@ Choose the target with this exact procedure:
 If **every `src/` row is crossed out** (all at ≥90% or blocked), repeat the procedure on rows whose file path starts with **`web/src/`**:
 1. **Cross out** any row already at **90% or higher** in the `% Lines` column.
 2. Pick the **one with the lowest `% Lines`** (same tie-breakers as above).
-3. **Open that source file.** Skip it only if it requires a real browser (Playwright/puppeteer import), a real terminal (xterm/node-pty import), a real network connection (ws/WebSocket import), or spawns a child process.
+3. **Open that source file.** No restrictions apply to `web/src/` files — proceed with testing any file you find.
 
 State your pick in one short paragraph: the file path, its current `% Lines`, and the uncovered line numbers you will target.
 

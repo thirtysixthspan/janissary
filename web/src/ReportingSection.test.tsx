@@ -1,9 +1,9 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, fireEvent } from '@testing-library/react';
 import React from 'react';
-import { ReportingSection, isReportingTab } from './ReportingSection';
+import { ReportingSection, isReportingTab, type ReportingEntry } from './ReportingSection';
 
-function makeEntry(label: string, index: number, suggestions: { id: string; text: string; command?: string }[] = []) {
+function makeEntry(label: string, index: number, suggestions: { id: string; text: string; command?: string }[] = []): ReportingEntry {
   return {
     tab: {
       label,
@@ -12,7 +12,7 @@ function makeEntry(label: string, index: number, suggestions: { id: string; text
       groupColor: '#ccc',
       title: undefined as string | undefined,
       monitor: { suggestions: suggestions.map((s) => ({ ...s, timestamp: 0, persona: '', about: '' })) },
-    },
+    } as never,
     index,
   };
 }

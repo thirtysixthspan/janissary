@@ -98,21 +98,19 @@ export default defineConfig({
         '**/*.spec.{ts,tsx}',
         'web/src/main.tsx',
       ],
-      // Baseline measured 2026-06-26: combined ~58% stmts, ~51% branches, ~59% funcs, ~63% lines.
-      // web/src is all 0% (no tests yet). Per-glob thresholds set just below the src/ floor.
       thresholds: {
-        autoUpdate: true,
+        autoUpdate: false,
         'src/**': {
-          statements: 88.77,
-          branches: 80.54,
-          functions: 91.1,
-          lines: 91.84,
+          statements: 90,
+          branches: 90,
+          functions: 90,
+          lines: 90,
         },
         'web/src/**': {
-          statements: 83.77,
-          branches: 76.97,
-          functions: 81.09,
-          lines: 87.73,
+          statements: 90,
+          branches: 90,
+          functions: 90,
+          lines: 90,
         },
       },
     },

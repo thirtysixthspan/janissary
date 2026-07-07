@@ -16,8 +16,8 @@ const SPRITE_SCALE = 2;
 function copyAgentImages() {
   const docsRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
   const source = path.resolve(docsRoot, "..", "agent-images");
-  const target = path.join(docsRoot, "public", "agents");
   if (!existsSync(source)) return;
+  const target = path.join(docsRoot, "public", "agents");
   mkdirSync(target, { recursive: true });
   for (const character of readdirSync(source)) {
     if (character === "idris") continue;
