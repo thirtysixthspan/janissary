@@ -24,6 +24,7 @@ export class TabManager {
   private openFiles = new Map<string, string>();
   private openFileCounter = 0;
   private readonly rootDir = process.cwd();
+  get launchDir(): string { return this.rootDir; }
   static readonly OPEN_MAX_FILES = 10;
 
   constructor(private managers: Managers) {

@@ -5,6 +5,7 @@ import { openerForExtension, type OpenContext } from './openers/index.js';
 import { didOsOpen } from './openers/os-open.js';
 import { openInEditor } from './openers/editor.js';
 import { parseOpen, isGlobPattern } from './commands/open.js';
+import { expandUserPath } from './paths.js';
 import { webOpener } from './openers/page.js';
 import { SHELL_NAME } from './shell-manager.js';
 import type { Managers } from './managers.js';
@@ -18,15 +19,16 @@ export class OpenFileManager {
     if ('error' in parsed) { this.managers.tab.append(label, { input: command, output: parsed.error }); return; }
     const cwd = this.managers.tab.cwdOf(label) ?? process.cwd();
     const context = this.buildContext(command, label);
+    const target = expandUserPath(parsed.target, { root: this.managers.tab.launchDir });
 
     if (parsed.web) {
-      void (parsed.external ? webOpener.external(parsed.target, context) : webOpener.inline(parsed.target, context));
+      void (parsed.external ? webOpener.external(target, context) : webOpener.inline(target, context));
       return;
     }
 
-    if (isGlobPattern(parsed.target)) {
-      const matches = this.expandGlob(parsed.target, cwd);
-      if (matches.length === 0) { this.managers.tab.append(label, { input: command, output: `open: ${parsed.target}: no matching files` }); return; }
+    if (isGlobPattern(target)) {
+      const matches = this.expandGlob(target, cwd);
+      if (matches.length === 0) { this.managers.tab.append(label, { input: command, output: `open: ${target}: no matching files` }); return; }
       const files = matches.slice(0, TabManager.OPEN_MAX_FILES);
       if (matches.length > files.length) {
         this.managers.tab.append(label, { input: command, output: `Opening the first ${files.length} of ${matches.length} matching files.` });
@@ -35,7 +37,7 @@ export class OpenFileManager {
       return;
     }
 
-    const file = path.isAbsolute(parsed.target) ? parsed.target : path.resolve(cwd, parsed.target);
+    const file = path.isAbsolute(target) ? target : path.resolve(cwd, target);
     this.openOne(command, label, file, parsed.external, context);
   }
 
@@ -44,7 +46,8 @@ export class OpenFileManager {
   // files (Makefile, .gitignore) get edited.
   edit(command: string, target: string, label: string, line?: number): void {
     const cwd = this.managers.tab.cwdOf(label) ?? process.cwd();
-    const file = path.isAbsolute(target) ? target : path.resolve(cwd, target);
+    const expanded = expandUserPath(target, { root: this.managers.tab.launchDir });
+    const file = path.isAbsolute(expanded) ? expanded : path.resolve(cwd, expanded);
     openInEditor(file, this.buildContext(command, label), line);
   }
 

@@ -1,7 +1,5 @@
 # small issues
 
-* files should recognize ~ an $root as valid segments in paths passed as parameters
-
 * the file navigator metadat shows dirname then full path. remove the dirname and only show the full path. paths that include $root should use the $root shortcut.
 
 * the tab label for files should always be 'navigator'

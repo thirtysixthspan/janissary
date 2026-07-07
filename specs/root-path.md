@@ -33,6 +33,10 @@ The shortcut is applied wherever the application itself renders a path into a ta
 
 The transcript already abbreviates a path under the user's home directory to `~`. `$root` is the more specific of the two: a path inside the root uses `$root`, and only a path outside the root but still under home falls back to `~`. The most specific (longest) matching prefix is the one shown.
 
+### Input expansion
+
+`$root` is also recognized as a path prefix when typed by the user in commands that accept file paths (`open`, `edit`, `files`). The prefix is expanded to the project root directory before the path is resolved. This works alongside `~` (home directory), which is expanded the same way. Only the start of the path is expanded — `$root` or `~` appearing mid-path are left as literal text.
+
 ### Display only
 
 `$root` is a presentation shortcut. The underlying paths are unchanged — working directories, stored state, and the paths passed to commands all remain the real absolute paths; only what the transcript shows is shortened. The shortcut is not applied to the raw output of a shell command (that text is the user's own data and is shown verbatim); it abbreviates the paths the application renders around and about that output.
