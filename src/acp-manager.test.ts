@@ -116,4 +116,31 @@ describe('AcpManager.run', () => {
     handlers.finished('capped', 5);
     expect(append).toHaveBeenCalledWith('tab1', { input: '', output: '(stopped after 5 tool steps)' });
   });
+
+  it('startTurn calls addBusy and appends the prompt on first turn', () => {
+    const { acp, addBusy, append } = setup();
+    acp.run('tab1', 'acp hello');
+    const handlers = mocks.runAcpToolLoop.mock.calls[0][3] as AcpLoopHandlers;
+    handlers.startTurn(true);
+    expect(addBusy).toHaveBeenCalledOnce();
+    expect(append).toHaveBeenCalledWith('tab1', { input: 'hello', output: '', running: true, markdown: true });
+  });
+
+  it('chunk handler calls updateRunning with the buffer', () => {
+    const { acp } = setup();
+    const updateFn = vi.fn();
+    mocks.makeUpdateRunning.mockReturnValue(updateFn);
+    acp.run('tab1', 'acp hello');
+    const handlers = mocks.runAcpToolLoop.mock.calls[0][3] as AcpLoopHandlers;
+    handlers.chunk('response so far');
+    expect(updateFn).toHaveBeenCalledWith('response so far', true);
+  });
+
+  it('ranCommand handler appends the command result to the tab', () => {
+    const { acp, append } = setup();
+    acp.run('tab1', 'acp hello');
+    const handlers = mocks.runAcpToolLoop.mock.calls[0][3] as AcpLoopHandlers;
+    handlers.ranCommand('db query', 'row1\nrow2');
+    expect(append).toHaveBeenCalledWith('tab1', { input: 'db query', output: 'row1\nrow2', acp: true });
+  });
 });
