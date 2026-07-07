@@ -1,10 +1,4 @@
 
-## sidebars
- create a right and left sidebar that are not normally show on launch. update the files command with an option to launch the file navigator in the left or right sidebar.
- add a button in the files-header that shifts the file navigator between one of three locations, right sidebar, central tab window, and left sidebar. 
- the width of the right and left side bars should be adjustable by moving the borders using the mouse.
-
-
 ## scheduling of multistep procedures
 the goal is to create a way to execute multiple steps in a tab, including in harnesses.
 multistep procedures should be stored in a ./procedures directory
@@ -22,9 +16,6 @@ harness tabs should have a tab transcript that records the harness output.
 For example, if claude or opencode are running in the harness, it is expected that the output of their work is captured in the transcript.
   
 # deferred
-
-## separate slow automated tests into a slow test suite 
-  only run at the end of feature development as a verification
 
 ## fix monitoring error 
  saw this error: Already monitoring with persona "assistant".
