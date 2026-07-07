@@ -299,6 +299,15 @@ describe('Controller', () => {
     expect(isExited).toBe(true);
   });
 
+  it('closing the last non-docked tab quits the app even with a docked file navigator', () => {
+    const root = mkdtempSync(path.join(tmpdir(), 'janus-last-tab-'));
+    let isExited = false;
+    const c = new Controller({ emitState() {}, sendPty() {}, sendPtyExit() {}, exit() { isExited = true; } });
+    c.dispatch(`files left ${root}`);
+    c.dispatch('close'); // close the active (janus) tab — only non-docked tab
+    expect(isExited).toBe(true);
+  });
+
   it('records transcript content in the append-only log', () => {
     const tl = new TranscriptLogger(mkdtempSync(path.join(tmpdir(), 'janus-log-')));
     try {

@@ -211,7 +211,7 @@ export function App() {
               const trimmed = text.trim().toLowerCase();
               if (trimmed === 'hist') openPicker();
               else if (trimmed === 'syntax theme') openThemePicker();
-              else if (trimmed === 'quit' || ((trimmed === 'close' || trimmed === 'exit') && tabs.length === 1)) openQuitConfirm();
+              else if (trimmed === 'quit' || ((trimmed === 'close' || trimmed === 'exit') && tabs.filter((t) => !t.dock).length === 1)) openQuitConfirm();
               else if ((trimmed === 'close' || trimmed === 'exit') && guardRef.current?.(activeTab)) return;
               else runCommand(text);
             }}
