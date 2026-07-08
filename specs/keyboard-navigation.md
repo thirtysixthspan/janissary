@@ -18,6 +18,7 @@
 | Ctrl+P | Scroll transcript up (fixed — one line per press) |
 | Ctrl+N | Scroll transcript down (fixed — one line per press) |
 | Ctrl+R | Open command history picker |
+| Ctrl+G | Open the fuzzy tab navigator (also closes it if already open) |
 | Ctrl+T | Expand / collapse the current tab's agent tool-step runs |
 | PageUp | Scroll transcript up by half terminal height |
 | PageDown | Scroll transcript down by half terminal height |

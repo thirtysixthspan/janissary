@@ -232,6 +232,11 @@ html, body, #root {
 .picker-row.selected { background: var(--accent); color: var(--bg); }
 .picker-row:hover { background: var(--border); }
 
+/* Tab navigator overlay (Ctrl+G / nav) */
+.tab-nav-picker .picker-row .dot { font-size: 10px; margin-right: 4px; }
+.tab-nav-picker .picker-row mark { background: var(--accent); color: var(--bg); border-radius: 2px; }
+.tab-nav-picker .picker-row.selected mark { background: var(--bg); color: var(--accent); }
+
 /* Quit confirmation dialog (modal: backdrop blocks all input outside the dialog) */
 .modal-backdrop {
   position: fixed; inset: 0; z-index: 60;

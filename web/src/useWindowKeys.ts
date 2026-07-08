@@ -2,7 +2,8 @@ import { useEffect } from 'react';
 import type { JanusClient } from './ws';
 import type { RouteChooserView } from '@shared/protocol';
 import { SYNTAX_THEMES } from '@shared/syntax-themes';
-import { handleRouteChooserKey, handlePickerKey } from './keyboard-handlers';
+import { handleRouteChooserKey, handlePickerKey, handleTabNavKey } from './keyboard-handlers';
+import type { TabNavEntry } from './TabNavPicker';
 
 type StateSnapshot = {
   pickerOpen: boolean;
@@ -17,6 +18,10 @@ type StateSnapshot = {
   searchOpen: boolean;
   themePickerOpen: boolean;
   themePickerIdx: number;
+  navOpen: boolean;
+  navQuery: string;
+  navIdx: number;
+  navTabs: TabNavEntry[];
 };
 
 type Callbacks = {
@@ -30,7 +35,34 @@ type Callbacks = {
   setThemePickerIndex: (setter: (prev: number) => number) => void;
   setThemePickerOpen: (open: boolean) => void;
   pickTheme: (name: string) => void;
+  setNavIndex: (setter: (prev: number) => number) => void;
+  setNavQuery: (query: string) => void;
+  selectNavTab: (index: number) => void;
+  setNavOpen: (open: boolean) => void;
+  openTabNav: () => void;
 };
+
+// Priority chain of pickers/choosers that claim every keystroke while open. Returns true once one
+// of them has handled the key, so the caller stops there.
+function dispatchModalKey(e: KeyboardEvent, snap: StateSnapshot, cb: Callbacks): boolean {
+  if (snap.route) {
+    handleRouteChooserKey(e, snap.route, snap.routeIdx, cb.setRouteIndex, cb.chooseRoute);
+    return true;
+  }
+  if (snap.themePickerOpen) {
+    handlePickerKey(e, SYNTAX_THEMES, snap.themePickerIdx, cb.setThemePickerIndex, cb.pickTheme, cb.setThemePickerOpen);
+    return true;
+  }
+  if (snap.navOpen) {
+    handleTabNavKey(e, snap.navTabs, snap.navIdx, cb.setNavIndex, cb.selectNavTab, cb.setNavOpen, snap.navQuery, cb.setNavQuery);
+    return true;
+  }
+  if (snap.pickerOpen) {
+    handlePickerKey(e, snap.recent, snap.pickerIdx, cb.setPickerIndex, cb.runCommand, cb.setPickerOpen);
+    return true;
+  }
+  return false;
+}
 
 // Ctrl/Shift+Arrow tab reorder/move shortcuts and Ctrl+T tool-step collapse — the tail of the key
 // handler once no picker/chooser/search state intercepts the key.
@@ -54,18 +86,7 @@ export function useWindowKeys(
       const snap = stateRef.current;
       const cb = callbacksRef.current;
       if (!snap || !cb) return;
-      if (snap.route) {
-        handleRouteChooserKey(e, snap.route, snap.routeIdx, cb.setRouteIndex, cb.chooseRoute);
-        return;
-      }
-      if (snap.themePickerOpen) {
-        handlePickerKey(e, SYNTAX_THEMES, snap.themePickerIdx, cb.setThemePickerIndex, cb.pickTheme, cb.setThemePickerOpen);
-        return;
-      }
-      if (snap.pickerOpen) {
-        handlePickerKey(e, snap.recent, snap.pickerIdx, cb.setPickerIndex, cb.runCommand, cb.setPickerOpen);
-        return;
-      }
+      if (dispatchModalKey(e, snap, cb)) return;
       if (e.metaKey && e.key.toLowerCase() === 'f') {
         if (!snap.canSearch) return;
         e.preventDefault();
@@ -73,6 +94,7 @@ export function useWindowKeys(
         return;
       }
       if (e.ctrlKey && e.key.toLowerCase() === 'r') { e.preventDefault(); cb.openPicker(); return; }
+      if (e.ctrlKey && e.key.toLowerCase() === 'g') { e.preventDefault(); cb.openTabNav(); return; }
 
       if (!snap.searchOpen && handleScrollKey(e)) return;
       handleTabShortcuts(e, client);

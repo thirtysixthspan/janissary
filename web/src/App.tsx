@@ -15,10 +15,8 @@ import { CommandArea } from './CommandArea';
 import { useTranscriptSearch } from './useTranscriptSearch';
 import { resolveSearchInterception } from './command-interceptions';
 import { StatusPanels } from './StatusPanels';
-import { HistoryPicker } from './HistoryPicker';
-import { ThemePicker } from './ThemePicker';
-import { RouteChooser } from './RouteChooser';
-import { SYNTAX_THEMES } from '@shared/syntax-themes';
+import { PickerOverlays } from './PickerOverlays';
+import { useTabNav } from './useTabNav';
 import { QuitDialog } from './QuitDialog/QuitDialog';
 import { CloseSaveGuard } from './CloseSaveGuard';
 import { getRecentHistory } from './history';
@@ -26,6 +24,7 @@ import { useCmdW } from './useCmdW';
 import { useTranscriptScroll } from './useTranscriptScroll';
 import { useQuitConfirm } from './QuitDialog/useQuitConfirm';
 import { useWindowKeys } from './useWindowKeys';
+import { useLiveRef } from './useLiveRef';
 import { useThemePicker } from './useThemePicker';
 import { applySyntaxTheme } from './editor/highlight/themes';
 
@@ -79,16 +78,15 @@ export function App() {
   const runCommand = useCallback((text: string) => client.send({ method: 'command', params: { text } }), [client]);
   const { themePickerOpen, themePickerIndex, setThemePickerIndex, setThemePickerOpen, openThemePicker, pickTheme } =
     useThemePicker(syntaxTheme, runCommand);
+  const {
+    navOpen, navQuery, navIndex, navTabs, setNavIndex, setNavQuery, setNavOpen, openTabNav, openTabNavWithQuery, selectNavTab,
+  } = useTabNav(client, tabs);
 
   // Live snapshot read by the window key handler, so it never has to re-register.
-  const stateReference = useRef({
+  const stateReference = useLiveRef({
     pickerOpen, pickerIdx: pickerIndex, recent, route, routeIdx: routeIndex, canSearch, searchOpen: search.searchOpen,
-    themePickerOpen, themePickerIdx: themePickerIndex,
+    themePickerOpen, themePickerIdx: themePickerIndex, navOpen, navQuery, navIdx: navIndex, navTabs,
   });
-  stateReference.current = {
-    pickerOpen, pickerIdx: pickerIndex, recent, route, routeIdx: routeIndex, canSearch, searchOpen: search.searchOpen,
-    themePickerOpen, themePickerIdx: themePickerIndex,
-  };
 
   const openPicker = () => {
     // Always open on hist / Ctrl+R; highlight the most recent (bottom) entry.
@@ -139,14 +137,11 @@ export function App() {
   useCmdW(closeTab, activeTabRef, quitConfirmOpenRef, pickerOpenRef, routeRef, activeViewRef);
 
   const openSearch = () => search.open('');
-  const keyCallbacksRef = useRef({
+  const keyCallbacksRef = useLiveRef({
     setRouteIndex, chooseRoute, runCommand, setPickerIndex, setPickerOpen, openPicker, openSearch,
     setThemePickerIndex, setThemePickerOpen, pickTheme,
+    setNavIndex, setNavQuery, selectNavTab, setNavOpen, openTabNav,
   });
-  keyCallbacksRef.current = {
-    setRouteIndex, chooseRoute, runCommand, setPickerIndex, setPickerOpen, openPicker, openSearch,
-    setThemePickerIndex, setThemePickerOpen, pickTheme,
-  };
 
   useWindowKeys(client, stateReference, keyCallbacksRef, handleScrollKey, handleScrollKeyUp);
 
@@ -193,11 +188,12 @@ export function App() {
               highlight={highlight}
             />
             <StatusPanels tab={current} />
-            {route && <RouteChooser cmd={route.cmd} choices={route.choices} selected={routeIndex} onPick={chooseRoute} />}
-            {!route && themePickerOpen && (
-              <ThemePicker themes={SYNTAX_THEMES} active={syntaxTheme} selected={themePickerIndex} onPick={pickTheme} />
-            )}
-            {!route && !themePickerOpen && pickerOpen && <HistoryPicker items={recent} selected={pickerIndex} onPick={pick} />}
+            <PickerOverlays
+              route={route} routeIndex={routeIndex} onPickRoute={chooseRoute}
+              syntaxTheme={syntaxTheme} themePickerOpen={themePickerOpen} themePickerIndex={themePickerIndex} onPickTheme={pickTheme}
+              pickerOpen={pickerOpen} recent={recent} pickerIndex={pickerIndex} onPickHistory={pick}
+              navOpen={navOpen} navQuery={navQuery} navIndex={navIndex} tabs={tabs} onPickTab={selectNavTab}
+            />
           </div>
           <CommandArea
             search={search}
@@ -211,13 +207,17 @@ export function App() {
               const trimmed = text.trim().toLowerCase();
               if (trimmed === 'hist') openPicker();
               else if (trimmed === 'syntax theme') openThemePicker();
+              else if (trimmed === 'nav' || trimmed.startsWith('nav ')) {
+                if (navOpen) setNavOpen(false);
+                else openTabNavWithQuery(text.trim().slice(3).trim());
+              }
               else if (trimmed === 'quit' || ((trimmed === 'close' || trimmed === 'exit') && tabs.filter((t) => !t.dock).length === 1)) openQuitConfirm();
               else if ((trimmed === 'close' || trimmed === 'exit') && guardRef.current?.(activeTab)) return;
               else runCommand(text);
             }}
             inputRef={inputReference}
             complete={(text, cursor) => client.request({ method: 'complete', params: { text, cursor } })}
-            pickerOpen={pickerOpen || route !== null || quitConfirmOpen || themePickerOpen}
+            pickerOpen={pickerOpen || route !== null || quitConfirmOpen || themePickerOpen || navOpen}
           />
         </div>
       )}

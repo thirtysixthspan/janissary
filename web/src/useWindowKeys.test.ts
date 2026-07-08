@@ -10,11 +10,12 @@ function dispatchKey(key: string, opts: { metaKey?: boolean; ctrlKey?: boolean; 
 }
 
 function TestComponent({
-  route, themePickerOpen, pickerOpen, canSearch, searchOpen, handleScrollKey, callbacks,
+  route, themePickerOpen, pickerOpen, navOpen, canSearch, searchOpen, handleScrollKey, callbacks,
 }: {
   route?: { cmd: string; choices: string[] } | null;
   themePickerOpen?: boolean;
   pickerOpen?: boolean;
+  navOpen?: boolean;
   canSearch?: boolean;
   searchOpen?: boolean;
   handleScrollKey?: (e: KeyboardEvent) => boolean;
@@ -29,6 +30,11 @@ function TestComponent({
     setThemePickerIndex: (s: (p: number) => number) => void;
     setThemePickerOpen: (o: boolean) => void;
     pickTheme: (n: string) => void;
+    setNavIndex: (s: (p: number) => number) => void;
+    setNavQuery: (q: string) => void;
+    selectNavTab: (i: number) => void;
+    setNavOpen: (o: boolean) => void;
+    openTabNav: () => void;
   }>;
 }) {
   const stateRef = useRef({
@@ -41,6 +47,10 @@ function TestComponent({
     searchOpen: searchOpen ?? false,
     themePickerOpen: themePickerOpen ?? false,
     themePickerIdx: 0,
+    navOpen: navOpen ?? false,
+    navQuery: '',
+    navIdx: 0,
+    navTabs: [],
   });
   const cb = {
     setRouteIndex: vi.fn(),
@@ -53,6 +63,11 @@ function TestComponent({
     setThemePickerIndex: vi.fn(),
     setThemePickerOpen: vi.fn(),
     pickTheme: vi.fn(),
+    setNavIndex: vi.fn(),
+    setNavQuery: vi.fn(),
+    selectNavTab: vi.fn(),
+    setNavOpen: vi.fn(),
+    openTabNav: vi.fn(),
     ...callbacks,
   };
   const cbRef = useRef(cb);
@@ -104,6 +119,38 @@ describe('useWindowKeys', () => {
     render(React.createElement(TestComponent, { callbacks: { openPicker } }));
     dispatchKey('r', { ctrlKey: true });
     expect(openPicker).toHaveBeenCalled();
+  });
+
+  it('Ctrl+G opens the tab navigator', () => {
+    const openTabNav = vi.fn();
+    render(React.createElement(TestComponent, { callbacks: { openTabNav } }));
+    dispatchKey('g', { ctrlKey: true });
+    expect(openTabNav).toHaveBeenCalled();
+  });
+
+  it('routes keys to the tab navigator when open, instead of falling through to tab shortcuts', () => {
+    const setNavIndex = vi.fn();
+    const sendMock = vi.fn();
+    const client = { send: sendMock } as never;
+    function C() {
+      const stateRef = useRef({
+        pickerOpen: false, pickerIdx: 0, recent: [], route: null, routeIdx: 0, canSearch: true, searchOpen: false,
+        themePickerOpen: false, themePickerIdx: 0, navOpen: true, navQuery: '', navIdx: 0, navTabs: [],
+      });
+      const cb = {
+        setRouteIndex: vi.fn(), chooseRoute: vi.fn(), runCommand: vi.fn(), setPickerIndex: vi.fn(), setPickerOpen: vi.fn(),
+        openPicker: vi.fn(), openSearch: vi.fn(), setThemePickerIndex: vi.fn(), setThemePickerOpen: vi.fn(), pickTheme: vi.fn(),
+        setNavIndex, setNavQuery: vi.fn(), selectNavTab: vi.fn(), setNavOpen: vi.fn(), openTabNav: vi.fn(),
+      };
+      const cbRef = useRef(cb);
+      cbRef.current = cb;
+      useWindowKeys(client, stateRef as never, cbRef as never, vi.fn(() => false), vi.fn());
+      return null;
+    }
+    render(React.createElement(C));
+    dispatchKey('ArrowDown');
+    expect(setNavIndex).toHaveBeenCalled();
+    expect(sendMock).not.toHaveBeenCalled();
   });
 
   it('delegates to scroll handler when search is closed', () => {
