@@ -111,8 +111,9 @@ highlight, and ordering — with three differences:
 - **Placement.** A file tree tab is placed at the beginning of its tab group (other tab types land
   at the end), so the tree sits left of the content it navigates.
 
-- **Name.** The tab's name is always `files` (the tree's root directory name and full path are
-  shown in the tab's own header using the standard metadata display, not in the strip). Per
+- **Name.** The tab's name is always `files` (the tree's root path is shown in the tab's own
+  header using the standard metadata display, not in the strip). The path is abbreviated using the
+  `$root` and `~` shortcuts. Per
   [[tab-label-no-markers]], no type or status marker is appended.
 - **Close button.** A close control is shown right-aligned within the tab, identical to other
   view tabs (markdown, image, editor).

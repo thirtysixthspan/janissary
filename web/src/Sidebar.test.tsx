@@ -30,7 +30,7 @@ describe('Sidebar', () => {
     const tabs = [makeTab({ view: 'files', dock: 'left', files: { root: '/tmp/project', rows: [] } })];
     const { container, getByText } = render(<Sidebar side="left" tabs={tabs} client={client} />);
     expect(container.querySelector('.sidebar-left')).not.toBeNull();
-    expect(getByText('project')).toBeTruthy();
+    expect(getByText('/tmp/project')).toBeTruthy();
   });
 
   it('ignores a tab docked to the other side', () => {
