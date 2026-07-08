@@ -55,7 +55,7 @@ describe('FileTreeManager', () => {
         cur: () => tabs[activeTab],
         setCwd: () => {},
         openFilesTab: (view: { root: string; rows: unknown[] }) => {
-          const label = `files${tabs.length > 1 ? `-${tabs.length}` : ''}`;
+          const label = `navigator${tabs.length > 1 ? `-${tabs.length}` : ''}`;
           tabs = [...tabs, { ...janus, label, files: view as never }];
           activeTab = tabs.length - 1;
         },
@@ -72,7 +72,7 @@ describe('FileTreeManager', () => {
   it('opens a files tab rooted at the issuing tab cwd and watches the root', () => {
     const manager = run();
     manager.open('files', 'janus');
-    const tab = tabs.find((t) => t.label.startsWith('files'));
+    const tab = tabs.find((t) => t.label.startsWith('navigator'));
     expect(tab).toBeDefined();
     expect(tab!.files!.root).toBe(root);
     expect(watchMock).toHaveBeenCalledTimes(1);
@@ -82,7 +82,7 @@ describe('FileTreeManager', () => {
     mkdirSync(path.join(root, 'sub'));
     const manager = run();
     manager.open('files sub', 'janus');
-    const tab = tabs.find((t) => t.label.startsWith('files'));
+    const tab = tabs.find((t) => t.label.startsWith('navigator'));
     expect(tab!.files!.root).toBe(path.join(root, 'sub'));
   });
 
@@ -91,7 +91,7 @@ describe('FileTreeManager', () => {
     const manager = run();
     manager.open('files file.txt', 'janus');
     expect(outputs.at(-1)).toContain('not a directory');
-    expect(tabs.some((t) => t.label.startsWith('files'))).toBe(false);
+    expect(tabs.some((t) => t.label.startsWith('navigator'))).toBe(false);
   });
 
   it('focuses the existing tab instead of duplicating for the same root', () => {
@@ -107,7 +107,7 @@ describe('FileTreeManager', () => {
     writeFileSync(path.join(root, 'src', 'index.ts'), '');
     const manager = run();
     manager.open('files', 'janus');
-    const label = tabs.find((t) => t.label.startsWith('files'))!.label;
+    const label = tabs.find((t) => t.label.startsWith('navigator'))!.label;
     manager.toggle(label, 'src');
     const tabAfterExpand = tabs.find((t) => t.label === label)!;
     expect(tabAfterExpand.files!.rows.some((r) => r.path === 'src/index.ts')).toBe(true);
@@ -124,7 +124,7 @@ describe('FileTreeManager', () => {
     mkdirSync(path.join(root, 'b'));
     const manager = run();
     manager.open('files', 'janus');
-    const label = tabs.find((t) => t.label.startsWith('files'))!.label;
+    const label = tabs.find((t) => t.label.startsWith('navigator'))!.label;
     manager.toggle(label, 'a');
     manager.toggle(label, 'b');
     expect(watchMock).toHaveBeenCalledTimes(3);
@@ -141,7 +141,7 @@ describe('FileTreeManager', () => {
     try {
       const manager = run();
       manager.open('files', 'janus');
-      const label = tabs.find((t) => t.label.startsWith('files'))!.label;
+      const label = tabs.find((t) => t.label.startsWith('navigator'))!.label;
       const onEvent = watchMock.mock.calls[0][1] as () => void;
       writeFileSync(path.join(root, 'new.txt'), '');
       onEvent();
@@ -161,7 +161,7 @@ describe('FileTreeManager', () => {
       mkdirSync(path.join(root, 'gone'));
       const manager = run();
       manager.open('files', 'janus');
-      const label = tabs.find((t) => t.label.startsWith('files'))!.label;
+      const label = tabs.find((t) => t.label.startsWith('navigator'))!.label;
       manager.toggle(label, 'gone');
       rmSync(path.join(root, 'gone'), { recursive: true, force: true });
       const onEvent = watchMock.mock.calls[0][1] as () => void;
@@ -181,7 +181,7 @@ describe('FileTreeManager', () => {
     mkdirSync(path.join(root, 'sub'));
     const manager = run();
     manager.open('files sub', 'janus');
-    const label = tabs.find((t) => t.label.startsWith('files'))!.label;
+    const label = tabs.find((t) => t.label.startsWith('navigator'))!.label;
     expect(watchMock).toHaveBeenCalledTimes(1);
 
     manager.reroot(label);
@@ -199,7 +199,7 @@ describe('FileTreeManager', () => {
     mkdirSync(path.join(root, 'sub', 'inner'));
     const manager = run();
     manager.open('files sub', 'janus');
-    const label = tabs.find((t) => t.label.startsWith('files'))!.label;
+    const label = tabs.find((t) => t.label.startsWith('navigator'))!.label;
     manager.toggle(label, 'inner');
     expect(watchMock).toHaveBeenCalledTimes(2);
 
@@ -213,7 +213,7 @@ describe('FileTreeManager', () => {
   it('reroot is a no-op once already at the filesystem root', () => {
     const manager = run();
     manager.open('files /', 'janus');
-    const label = tabs.find((t) => t.label.startsWith('files'))!.label;
+    const label = tabs.find((t) => t.label.startsWith('navigator'))!.label;
     watchMock.mockClear();
 
     manager.reroot(label);
@@ -231,7 +231,7 @@ describe('FileTreeManager', () => {
   it('files left docks a newly created tab into the left sidebar', () => {
     const manager = run();
     manager.open('files left', 'janus');
-    const tab = tabs.find((t) => t.label.startsWith('files'));
+    const tab = tabs.find((t) => t.label.startsWith('navigator'));
     expect(tab!.dock).toBe('left');
     expect(tab!.files!.root).toBe(root);
   });
@@ -240,7 +240,7 @@ describe('FileTreeManager', () => {
     mkdirSync(path.join(root, 'sub'));
     const manager = run();
     manager.open('files right sub', 'janus');
-    const tab = tabs.find((t) => t.label.startsWith('files'));
+    const tab = tabs.find((t) => t.label.startsWith('navigator'));
     expect(tab!.dock).toBe('right');
     expect(tab!.files!.root).toBe(path.join(root, 'sub'));
   });
@@ -249,7 +249,7 @@ describe('FileTreeManager', () => {
     mkdirSync(path.join(root, 'left'));
     const manager = run();
     manager.open('files ./left', 'janus');
-    const tab = tabs.find((t) => t.label.startsWith('files'));
+    const tab = tabs.find((t) => t.label.startsWith('navigator'));
     expect(tab!.files!.root).toBe(path.join(root, 'left'));
     expect(tab!.dock).toBeUndefined();
   });
@@ -260,7 +260,7 @@ describe('FileTreeManager', () => {
     const countAfterFirst = tabs.length;
     manager.open('files left', 'janus');
     expect(tabs.length).toBe(countAfterFirst);
-    const tab = tabs.find((t) => t.label.startsWith('files'));
+    const tab = tabs.find((t) => t.label.startsWith('navigator'));
     expect(tab!.dock).toBe('left');
   });
 
@@ -270,7 +270,7 @@ describe('FileTreeManager', () => {
     const countAfterDock = tabs.length;
     manager.open('files', 'janus');
     expect(tabs.length).toBe(countAfterDock);
-    const tab = tabs.find((t) => t.label.startsWith('files'));
+    const tab = tabs.find((t) => t.label.startsWith('navigator'));
     expect(tab!.dock).toBeUndefined();
   });
 
@@ -278,7 +278,7 @@ describe('FileTreeManager', () => {
     mkdirSync(path.join(root, 'src'));
     const manager = run();
     manager.open('files', 'janus');
-    const label = tabs.find((t) => t.label.startsWith('files'))!.label;
+    const label = tabs.find((t) => t.label.startsWith('navigator'))!.label;
     manager.toggle(label, 'src');
     manager.closeTab(label);
     expect(closeFns[0]).toHaveBeenCalled();
