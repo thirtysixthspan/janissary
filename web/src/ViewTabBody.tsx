@@ -9,14 +9,14 @@ import { FileTreeTab } from './FileTreeTab';
 // Renders the body for image, page, markdown, and file-tree view tabs. Harness tabs are rendered
 // separately in App because they must all stay mounted simultaneously for xterm state
 // preservation; monitor tabs are reporting tabs, rendered in the ReportingSection below the
-// command bar. `client`/`index` are only used by the files branch, to send its RPCs.
+// command bar. `client`/`index` are used by the page and files branches, to send their RPCs.
 export function ViewTabBody({ tab, client, index }: { tab: TabView; client: JanusClient; index: number }) {
   const border = { borderLeft: `4px solid ${tab.dotColor}` };
   if (tab.view === 'image' && tab.image) {
     return <div className="tab-body" style={border}><ImageTab key={tab.image.url} image={tab.image} /></div>;
   }
   if (tab.view === 'page' && tab.page) {
-    return <div className="tab-body" style={border}><PageTab page={tab.page} /></div>;
+    return <div className="tab-body" style={border}><PageTab page={tab.page} client={client} index={index} /></div>;
   }
   if (tab.view === 'markdown' && tab.markdown) {
     return <div className="tab-body" style={border}><MarkdownTab key={tab.markdown.url} markdown={tab.markdown} /></div>;

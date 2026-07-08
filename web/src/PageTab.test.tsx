@@ -1,7 +1,8 @@
 import React from 'react';
-import { render } from '@testing-library/react';
-import { describe, it, expect } from 'vitest';
+import { fireEvent, render } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
 import type { PageView } from '@shared/protocol';
+import type { JanusClient } from './ws';
 import { PageTab } from './PageTab';
 
 function makePage(overrides: Partial<PageView> = {}): PageView {
@@ -16,7 +17,8 @@ function makePage(overrides: Partial<PageView> = {}): PageView {
 describe('PageTab', () => {
   it('renders an iframe with the page URL as src', () => {
     const page = makePage({ url: 'https://slashdot.org/' });
-    const { container } = render(<PageTab page={page} />);
+    const client = { send: vi.fn() } as unknown as JanusClient;
+    const { container } = render(<PageTab page={page} client={client} index={0} />);
     const iframe = container.querySelector('iframe');
     expect(iframe).toBeInTheDocument();
     expect(iframe?.src).toBe('https://slashdot.org/');
@@ -24,7 +26,28 @@ describe('PageTab', () => {
 
   it('sets the iframe title to number) domain', () => {
     const page = makePage({ number: 2, domain: 'example.com', url: 'https://example.com/' });
-    const { container } = render(<PageTab page={page} />);
+    const client = { send: vi.fn() } as unknown as JanusClient;
+    const { container } = render(<PageTab page={page} client={client} index={0} />);
     expect(container.querySelector('iframe')?.title).toBe('2) example.com');
+  });
+
+  it('shows the page number, domain, and full URL in the metadata header', () => {
+    const page = makePage({ number: 3, domain: 'example.com', url: 'https://example.com/path' });
+    const client = { send: vi.fn() } as unknown as JanusClient;
+    const { container } = render(<PageTab page={page} client={client} index={0} />);
+    expect(container.querySelector('.page-number')?.textContent).toBe('3)');
+    expect(container.querySelector('.page-domain')?.textContent).toBe('example.com');
+    expect(container.querySelector('.page-url')?.textContent).toBe('https://example.com/path');
+  });
+
+  it('clicking the close button sends closeTab with the tab index', () => {
+    const send = vi.fn();
+    const client = { send } as unknown as JanusClient;
+    const page = makePage();
+    const { container } = render(<PageTab page={page} client={client} index={4} />);
+    const closeButton = container.querySelector('.page-close');
+    expect(closeButton).not.toBeNull();
+    fireEvent.click(closeButton as Element);
+    expect(send).toHaveBeenCalledWith({ method: 'closeTab', params: { index: 4 } });
   });
 });
