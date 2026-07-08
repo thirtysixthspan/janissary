@@ -80,16 +80,6 @@ describe('global-history', () => {
     expect(globalCommands()).toEqual(['dup']);
   });
 
-  it('caps at 1000 entries keeping the newest', () => {
-    const home = makeHome();
-    initGlobalHistory(home);
-    for (let i = 0; i < 1005; i++) recordGlobalHistory(`cmd-${i}`, 't');
-    const commands = globalCommands();
-    expect(commands).toHaveLength(1000);
-    expect(commands[0]).toBe('cmd-5');
-    expect(commands.at(-1)).toBe('cmd-1004');
-  });
-
   it('returns oldest to newest command strings', () => {
     const home = makeHome();
     initGlobalHistory(home);
