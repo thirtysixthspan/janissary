@@ -1,7 +1,5 @@
 # small issues
 
-* the dot on the command line should be vertically centered with text. It should blink in the same way the circle in the tab label does.
-
 * web page tabs should have a metadata line that includes the full url and a right aligned close button.
 
 * launch a command in the transcript should require a double click, not a single click.
