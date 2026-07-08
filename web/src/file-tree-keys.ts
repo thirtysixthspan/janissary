@@ -23,13 +23,12 @@ function parentOf(rows: FileTreeRow[], index: number): string | null {
   return null;
 }
 
-// `→`: collapsed dir expands (selection stays); expanded dir moves to its first child; file/".." is a no-op.
+// `→`: collapsed dir expands; expanded dir reroots to it; file/".." is a no-op.
 function onArrowRight(rows: FileTreeRow[], index: number): FileTreeKeyOutcome {
   const row = rows[index];
   if (!row.dir || row.path === '..') return { selection: row.path };
   if (!row.expanded) return { selection: row.path, action: { type: 'toggle', path: row.path } };
-  const child = rows[index + 1];
-  return child && child.depth === row.depth + 1 ? { selection: child.path } : { selection: row.path };
+  return { selection: row.path, action: { type: 'reroot', path: row.path } };
 }
 
 // `←`: expanded dir collapses; otherwise selection moves to the parent directory. ".." is a no-op.

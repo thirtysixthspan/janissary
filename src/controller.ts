@@ -162,9 +162,9 @@ export class Controller {
     if (label) this.managers.fileTree.collapseAll(label);
   }
 
-  fileTreeReroot(index: number): void {
+  fileTreeReroot(index: number, relPath?: string): void {
     const label = this.managers.tab.tabs[index]?.label;
-    if (label) this.managers.fileTree.reroot(label);
+    if (label) this.managers.fileTree.reroot(label, relPath);
   }
 
   fileTreeSetDock(index: number, dock: 'left' | 'right' | null): void {

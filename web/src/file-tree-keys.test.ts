@@ -70,10 +70,10 @@ describe('handleFileTreeKey — expand/collapse/parent', () => {
     expect(result.action).toEqual({ type: 'toggle', path: 'src/nested' });
   });
 
-  it('ArrowRight on an expanded dir moves to its first child', () => {
+  it('ArrowRight on an expanded dir reroots to that directory', () => {
     const result = handleFileTreeKey(rows, 'src', 'ArrowRight', false, 10);
-    expect(result.selection).toBe('src/nested');
-    expect(result.action).toBeUndefined();
+    expect(result.selection).toBe('src');
+    expect(result.action).toEqual({ type: 'reroot', path: 'src' });
   });
 
   it('ArrowRight on a file is a no-op', () => {

@@ -51,7 +51,7 @@ export function handle(controller: Controller, message: ClientMessage, reply: (e
     }
     case 'fileTreeCollapseAll': { controller.fileTreeCollapseAll(message.params.index); break;
     }
-    case 'fileTreeReroot': { controller.fileTreeReroot(message.params.index); break;
+    case 'fileTreeReroot': { controller.fileTreeReroot(message.params.index, message.params.path); break;
     }
     case 'fileTreeSetDock': { controller.fileTreeSetDock(message.params.index, message.params.dock); break;
     }
