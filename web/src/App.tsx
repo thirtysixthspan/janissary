@@ -19,7 +19,10 @@ import { useTabNav } from './useTabNav';
 import { useQueuePicker } from './useQueuePicker';
 import { useCommandBarSubmit } from './useCommandBarSubmit';
 import { QuitDialog } from './QuitDialog/QuitDialog';
+import { UnsavedQuitDialog } from './UnsavedQuitDialog';
 import { CloseSaveGuard } from './CloseSaveGuard';
+import { useUnsavedQuitGuard } from './useUnsavedQuitGuard';
+import { useFocusOnTabSwitch } from './useFocusOnTabSwitch';
 import { getRecentHistory } from './history';
 import { useCmdW } from './useCmdW';
 import { useTranscriptScroll } from './useTranscriptScroll';
@@ -102,9 +105,11 @@ export function App() {
   const pick = (command: string) => { runCommand(command); setPickerOpen(false); };
   const { quitConfirmOpen, openQuitConfirm, confirmQuit, cancelQuit } = useQuitConfirm(runCommand, inputReference);
   const editorHandles = useRef<Map<string, EditorTabHandle>>(new Map());
+  const { unsavedQuitOpen, guardedOpenQuitConfirm, confirmUnsavedQuit, cancelUnsavedQuit } =
+    useUnsavedQuitGuard(tabs, editorHandles, openQuitConfirm, runCommand);
   const guardRef = useRef<((index: number) => boolean) | null>(null);
   const activeTabRef = useRef(activeTab); activeTabRef.current = activeTab;
-  const quitConfirmOpenRef = useRef(quitConfirmOpen); quitConfirmOpenRef.current = quitConfirmOpen;
+  const quitConfirmOpenRef = useRef(quitConfirmOpen); quitConfirmOpenRef.current = quitConfirmOpen || unsavedQuitOpen;
   const pickerOpenRef = useRef(pickerOpen); pickerOpenRef.current = pickerOpen || queueOpen;
   const routeRef = useRef(route); routeRef.current = route;
   const activeViewRef = useRef(current?.view); activeViewRef.current = current?.view;
@@ -130,14 +135,7 @@ export function App() {
 
   useEffect(() => { applySyntaxTheme(syntaxTheme); }, [syntaxTheme]);
 
-  // Switching tabs: harness/shell PTY tabs focus the terminal; all others focus the command line.
-  useEffect(() => {
-    const cur = currentRef.current;
-    const harnessPtyId = cur?.view === 'harness' ? cur.harness?.ptyId : undefined;
-    if (harnessPtyId) harnessHandles.current.get(harnessPtyId)?.focus();
-    else if (cur?.activePty) shellHandles.current.get(cur.activePty)?.focus();
-    else inputReference.current?.focus();
-  }, [activeTab]);
+  useFocusOnTabSwitch(activeTab, currentRef, harnessHandles, shellHandles, inputReference);
 
   useCmdW(closeTab, activeTabRef, quitConfirmOpenRef, pickerOpenRef, routeRef, activeViewRef);
 
@@ -153,7 +151,7 @@ export function App() {
 
   const onCommandBarSubmit = useCommandBarSubmit({
     canSearch, lines, search, openPicker, openThemePicker, openQueue, navOpen, setNavOpen,
-    openTabNavWithQuery, tabs, openQuitConfirm, guardRef, activeTab, runCommand,
+    openTabNavWithQuery, tabs, openQuitConfirm: guardedOpenQuitConfirm, guardRef, activeTab, runCommand,
   });
 
   if (!current) return <div className="app" style={{ padding: 16, color: 'var(--muted)' }}>Connecting…</div>;
@@ -214,7 +212,7 @@ export function App() {
             onSubmit={onCommandBarSubmit}
             inputRef={inputReference}
             complete={(text, cursor) => client.request({ method: 'complete', params: { text, cursor } })}
-            pickerOpen={pickerOpen || route !== null || quitConfirmOpen || themePickerOpen || navOpen}
+            pickerOpen={pickerOpen || route !== null || quitConfirmOpen || unsavedQuitOpen || themePickerOpen || navOpen}
             busy={current.busy}
             queueOpen={queueOpen}
             recallRef={recallRef}
@@ -230,6 +228,7 @@ export function App() {
         onRate={(id, up) => client.send({ method: 'rateSuggestion', params: { id, up } })}
       />
       {quitConfirmOpen && <QuitDialog onConfirm={confirmQuit} onCancel={cancelQuit} />}
+      {unsavedQuitOpen && <UnsavedQuitDialog onConfirm={confirmUnsavedQuit} onCancel={cancelUnsavedQuit} />}
       <CloseSaveGuard tabs={tabs} editorHandles={editorHandles} client={client} guardRef={guardRef} />
     </AppShell>
   );

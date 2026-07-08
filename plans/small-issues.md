@@ -1,7 +1,5 @@
 # small issues
 
-* when the editor window is being closed, if there are unsaved changes, the user should be presented with a dialog that says there are unsaved changes, close anyway or cancel.
-
 * when running a command, the command should be printed in the transcript before the command is executed while the response is printed in the transcript after the command is executed.
 
 * the command enqueue should be switched to queue
