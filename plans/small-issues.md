@@ -12,5 +12,6 @@
 
 * when the editor window is being closed, if there are unsaved changes, the user should be presented with a dialog that says there are unsaved changes, close anyway or cancel.
 
+* remove feature/user documentation from the README.md limiting it to install, startup and developer specific documentation. Provide a link to the public documentation site (github site for the repository) at the top of the README.md
 
 
