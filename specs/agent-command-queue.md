@@ -21,6 +21,10 @@ in-flight work), the drain continues on to the next queued entry rather than sta
 pauses whenever a dequeued command opens the unprefixed-command route chooser, resuming once the
 chooser is resolved (a choice made, or cancelled).
 
+Draining runs the shell commands back to back on the same persistent shell; each command's output
+is exactly what that command produced, with no internal working-directory-tracking artifacts
+leaked in from adjacent commands in the drain.
+
 ### Command-line indicators
 
 While the exposed tab is busy, its command-line prompt reads `queue ❯` instead of the bare `❯`,

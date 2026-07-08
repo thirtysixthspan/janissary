@@ -24,6 +24,13 @@ type RunHandlers = {
 // runs commands with streaming output, and tears them down.
 export class ShellManager {
   private shells = new Map<string, ChildProcess>();
+  // Serializes each tab's shell interactions (a command's execution, then its trailing pwd query)
+  // so at most one stdin write / stdout listener pair is ever live on a given shell at a time.
+  // Without this, a rapid-fire queued command (dispatched the instant the previous one goes idle)
+  // could attach its own listener while the previous command's still-in-flight pwd query is
+  // waiting on the same stdout stream — Node delivers that chunk to both listeners, leaking the
+  // pwd query's cwd line and its `__PWD_...__` marker into the next command's output.
+  private shellQueues = new Map<string, Promise<void>>();
 
   constructor(private managers: Managers) {}
 
@@ -46,6 +53,7 @@ export class ShellManager {
         githubToken: tab?.workspaceDir ? getGithubToken() : undefined,
       });
       this.shells.set(label, shell);
+      this.shellQueues.delete(label);
       if (cwd) shell.stdin!.write(`cd "${cwd}"\n`);
     }
     return shell;
@@ -98,13 +106,25 @@ export class ShellManager {
 
   // Low-level: run a command in the tab's persistent shell, spawning it if needed. `index` tags the
   // streamed output so concurrent tabs don't cross sentinels. After the command completes the shell's
-  // pwd is queried and reported via `onPwd`.
+  // pwd is queried and reported via `onPwd`. Chained onto `shellQueues` so this command's stdin
+  // write/listener pair never overlaps a still-in-flight pwd query from the previous command on
+  // the same shell (see `shellQueues`' comment).
   private execute(label: string, command: string, index: number, cwd: string | undefined, handlers: RunHandlers): void {
     const shell = this.getShell(label, cwd);
-    executeShellCommand(shell, command, index, handlers.onChunk, (result) => {
-      handlers.onDone(result);
-      queryShellPwd(shell, index, (pwd) => { if (pwd) handlers.onPwd(pwd); });
-    });
+    const previous = this.shellQueues.get(label) ?? Promise.resolve();
+    const next = (async () => {
+      await previous;
+      await new Promise<void>((resolve) => {
+        executeShellCommand(shell, command, index, handlers.onChunk, (result) => {
+          handlers.onDone(result);
+          queryShellPwd(shell, index, (pwd) => {
+            if (pwd) handlers.onPwd(pwd);
+            resolve();
+          });
+        });
+      });
+    })();
+    this.shellQueues.set(label, next);
   }
 
   // Kill and forget a tab's shell. Returns whether a shell was actually open (drives the
@@ -114,6 +134,7 @@ export class ShellManager {
     if (!shell) return false;
     shell.kill();
     this.shells.delete(label);
+    this.shellQueues.delete(label);
     return true;
   }
 
@@ -121,5 +142,6 @@ export class ShellManager {
   closeAll(): void {
     for (const [, shell] of this.shells) shell.kill();
     this.shells.clear();
+    this.shellQueues.clear();
   }
 }

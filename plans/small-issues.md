@@ -6,8 +6,6 @@
 
 * when running a command, the command should be printed in the transcript before the command is executed while the response is printed in the transcript after the command is executed.
 
-* after a command is executed when it has been queued, the output is proceeded by two spourios lines. the first line contains the current working directory and the second line looks similar to __PWD_1_19829380192__. These seem related to tracking the current working directory, but should not be shown in the transciript.
-
 * the command enqueue should be switched to queue
 
 * agent status should be synced to and accurately reflect harness status. This may require a different solution for each supported harness.
