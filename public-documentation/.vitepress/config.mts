@@ -68,6 +68,7 @@ export default defineConfig({
           { text: "Tab completion", link: "/command-bar/tab-completion" },
           { text: "Shell commands", link: "/command-bar/shell" },
           { text: "Command history", link: "/command-bar/history" },
+          { text: "Tab navigator", link: "/command-bar/tab-navigator" },
         ],
       },
       {

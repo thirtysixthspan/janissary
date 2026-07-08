@@ -103,6 +103,24 @@ describe('App syntax theme picker', () => {
   }, 15_000);
 });
 
+describe('App tab navigator', () => {
+  beforeEach(() => {
+    sendMock.mockClear();
+    stateListener = null;
+  });
+
+  it('opens the tab navigator seeded with the query on "nav <query>" instead of sending it to the server', async () => {
+    const { App } = await import('./App');
+    render(<App />);
+    act(() => { stateListener!([makeTab({ label: 'deploy' }), makeTab({ label: 'shell', number: 2 })], 0, null, 16, [], 'github-dark'); });
+    const input = screen.getByRole('textbox');
+    fireEvent.change(input, { target: { value: 'nav depl' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(screen.getByText('nav: depl')).toBeInTheDocument();
+    expect(sendMock).not.toHaveBeenCalledWith({ method: 'command', params: { text: 'nav depl' } });
+  }, 15_000);
+});
+
 describe('App agent tab body click focuses command input', () => {
   beforeEach(() => {
     sendMock.mockClear();

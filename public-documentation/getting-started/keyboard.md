@@ -20,6 +20,7 @@ All bindings work from the command bar in any agent tab.
 | `Ctrl+P` | Scroll the transcript up one line per press |
 | `Ctrl+N` | Scroll the transcript down one line per press |
 | `Ctrl+R` | Open the [command history picker](/command-bar/history) |
+| `Ctrl+G` | Open the [tab navigator](/command-bar/tab-navigator) — closes it if already open |
 | `Ctrl+T` | Expand or collapse the current tab's agent tool steps |
 | `PageUp` | Scroll the transcript up half a screen |
 | `PageDown` | Scroll the transcript down half a screen |

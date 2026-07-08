@@ -46,6 +46,12 @@ export default [
     target: 'history-overlay',
   },
   { name: 'ghost-text', setup: ['shell git status'], actions: [{ type: 'shell git' }], target: 'command-bar' },
+  {
+    name: 'tab-navigator',
+    setup: ['shell ls -la', 'shell git status'],
+    actions: [{ press: 'Control+g' }, { type: 'shell' }],
+    target: 'tab-nav-overlay',
+  },
 
   // View tabs.
   { name: 'image-tab', setup: ['open ./sample.png'], actions: [{ press: 'PageUp' }], target: 'image-view' },
