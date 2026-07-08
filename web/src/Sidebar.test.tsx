@@ -51,6 +51,30 @@ describe('Sidebar', () => {
     expect(sidebar.style.flex).toBe('0 0 180px');
   });
 
+  it('stops resizing on mouseup', () => {
+    const client = { send: vi.fn() } as unknown as JanusClient;
+    const tabs = [makeTab({ view: 'files', dock: 'left', files: { root: '/tmp/project', rows: [] } })];
+    const { container } = render(<Sidebar side="left" tabs={tabs} client={client} />);
+    const sidebar = container.querySelector('.sidebar-left') as HTMLElement;
+    const divider = container.querySelector('.sidebar-resize')!;
+    fireEvent.mouseDown(divider, { clientX: 280 });
+    fireEvent.mouseUp(document);
+    // mouseup removes listeners — subsequent moves are no-ops
+    fireEvent.mouseMove(document, { clientX: 200 });
+    fireEvent.mouseMove(document, { clientX: 100 });
+    expect(sidebar.style.flex).toBe('0 0 280px');
+  });
+
+  it('sends closeTab when the close button is clicked', () => {
+    const send = vi.fn();
+    const client = { send } as unknown as JanusClient;
+    const tabs = [makeTab({ view: 'files', dock: 'left', files: { root: '/tmp/project', rows: [] } })];
+    const { container } = render(<Sidebar side="left" tabs={tabs} client={client} />);
+    const btn = container.querySelector('.sidebar-tab-close')!;
+    fireEvent.click(btn);
+    expect(send).toHaveBeenCalledWith({ method: 'closeTab', params: { index: 0 } });
+  });
+
   it('drag clamps width to 50% of the viewport when dragged far past it', () => {
     const client = { send: vi.fn() } as unknown as JanusClient;
     const tabs = [makeTab({ view: 'files', dock: 'right', files: { root: '/tmp/project', rows: [] } })];
