@@ -60,7 +60,7 @@ export const makeHarnessTab = (label: string, dotColor: string, number: number, 
 export const makeFilesTab = (label: string, dotColor: string, number: number, group: number, groupColor: string, files: FileTreeView): Tab => ({
   ...makeTab(label, dotColor, number, [], [], undefined, group, groupColor),
   view: 'files',
-  title: 'files',
+  title: 'navigator',
   files,
 });
 

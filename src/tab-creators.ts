@@ -1,4 +1,3 @@
-import path from 'node:path';
 import type { Tab, ImageView, MarkdownView, EditorView, PageView, FileTreeView } from './types.js';
 import {
   makeImageTab, makeMarkdownTab, makeEditorTab, makePageTab, makeFilesTab, distinctColor, insertTabInGroup,
@@ -25,7 +24,7 @@ export function uniqueEditorLabel(tabs: Tab[]): string {
 }
 
 export function uniqueFilesLabel(tabs: Tab[]): string {
-  return uniqueLabel(new Set(tabs.map((t) => t.label)), 'files');
+  return uniqueLabel(new Set(tabs.map((t) => t.label)), 'navigator');
 }
 
 export function uniquePageNumber(tabs: Tab[]): number {
@@ -82,7 +81,6 @@ export function addFilesTab(tabs: Tab[], activeTab: number, view: FileTreeView):
   const group = creator?.group ?? 1;
   const groupColor = creator?.groupColor ?? dotColor;
   const tab = makeFilesTab(label, dotColor, tabs.length + 1, group, groupColor, view);
-  tab.title = path.basename(view.root).slice(0, getConfig().tabNameMaxLength);
   const newTabs = insertTabInGroup(tabs, tab, 'start');
   return { tabs: newTabs, activeTab: newTabs.findIndex((t) => t.label === label) };
 }
