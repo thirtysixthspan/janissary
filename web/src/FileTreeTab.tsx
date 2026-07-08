@@ -122,6 +122,14 @@ export function FileTreeTab({ files, client, index, dock, autoFocus = true }: Pr
               ⇄
             </button>
           )}
+          <button
+            type="button"
+            className="files-collapse-all"
+            title="Collapse all"
+            onClick={() => client.send({ method: 'fileTreeCollapseAll', params: { index } })}
+          >
+            ⊟
+          </button>
           {dock && (
             <button
               type="button"
@@ -133,14 +141,6 @@ export function FileTreeTab({ files, client, index, dock, autoFocus = true }: Pr
               ×
             </button>
           )}
-          <button
-            type="button"
-            className="files-collapse-all"
-            title="Collapse all"
-            onClick={() => client.send({ method: 'fileTreeCollapseAll', params: { index } })}
-          >
-            ⊟
-          </button>
         </div>
       </div>
       <div className="files-rows">
