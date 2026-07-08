@@ -70,6 +70,8 @@ Closing an editor tab that has unsaved changes triggers a confirmation dialog: "
 
 Like the quit dialog, the save dialog is modal — all keyboard and click input is trapped until a choice is made. A click outside the dialog does nothing.
 
+Typing `quit`, or closing the last remaining tab, does not go through this per-tab dialog — see `quit-confirmation.md` for the whole-app unsaved-changes prompt shown in that case. Closing the actual browser tab or window (not through the app itself) shows the browser's own native "leave site?" confirmation instead, if any editor tab has unsaved changes.
+
 ### Live reload of external changes
 
 While an editor tab is open, its underlying file is watched for changes made by other processes
