@@ -14,6 +14,9 @@ vi.mock('./model', () => ({
   selectedText: vi.fn(() => 'selected'),
 }));
 
+import { killToLineEnd as _killToLineEnd } from './model';
+const mockKill = _killToLineEnd as ReturnType<typeof vi.fn>;
+
 vi.mock('./motion', () => ({
   moveCursor: vi.fn((s) => s),
   movePage: vi.fn((s) => s),
@@ -127,5 +130,20 @@ describe('useEditor', () => {
     act(() => { result.current.apply({ kind: 'copy' }, 20); });
     expect(writeText).toHaveBeenCalled();
     vi.unstubAllGlobals();
+  });
+
+  it('apply with kill records edit when killed text is returned', () => {
+    mockKill.mockReturnValueOnce({ state: { text: 'ab' }, killed: 'c' });
+    const { result } = renderHook(() => useEditor(() => {}));
+    act(() => { result.current.load('abc'); });
+    act(() => { result.current.apply({ kind: 'kill' }, 20); });
+  });
+
+  it('apply with yank inserts kill buffer text', () => {
+    mockKill.mockReturnValueOnce({ state: { text: 'ab' }, killed: 'c' });
+    const { result } = renderHook(() => useEditor(() => {}));
+    act(() => { result.current.load('abc'); });
+    act(() => { result.current.apply({ kind: 'kill' }, 20); });
+    act(() => { result.current.apply({ kind: 'yank' }, 20); });
   });
 });
