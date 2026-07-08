@@ -1,7 +1,5 @@
 # small issues
 
-* the file navigator toggle button should only toggle the file navigator position between left and right sidebars
-
 * the file navigator when in a tab will not have a position toggle button.
 
 * clicking and holding a file in the file navigator for three seconds or typing right arrow on an already expanded directory should cause the file navigator to open that directory as the prinary directory of the navigator.

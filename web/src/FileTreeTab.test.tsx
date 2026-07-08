@@ -152,21 +152,21 @@ describe('FileTreeTab', () => {
     rerender(<FileTreeTab files={files2} client={client} index={0} />);
   });
 
-  it('dock-cycle button from center sends fileTreeSetDock to right, with the right tooltip', () => {
+  it('dock-cycle button from center sends fileTreeSetDock to left, with the left tooltip', () => {
     const send = vi.fn();
     const client = { send } as unknown as JanusClient;
     render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
-    const button = screen.getByTitle('Move to right sidebar');
+    const button = screen.getByTitle('Move to left sidebar');
     fireEvent.click(button);
-    expect(send).toHaveBeenCalledWith({ method: 'fileTreeSetDock', params: { index: 0, dock: 'right' } });
+    expect(send).toHaveBeenCalledWith({ method: 'fileTreeSetDock', params: { index: 0, dock: 'left' } });
   });
 
-  it('dock-cycle button from left sends fileTreeSetDock to center (null)', () => {
+  it('dock-cycle button from left sends fileTreeSetDock to right', () => {
     const send = vi.fn();
     const client = { send } as unknown as JanusClient;
     render(<FileTreeTab files={makeFiles()} client={client} index={0} dock="left" />);
-    fireEvent.click(screen.getByTitle('Move to center'));
-    expect(send).toHaveBeenCalledWith({ method: 'fileTreeSetDock', params: { index: 0, dock: null } });
+    fireEvent.click(screen.getByTitle('Move to right sidebar'));
+    expect(send).toHaveBeenCalledWith({ method: 'fileTreeSetDock', params: { index: 0, dock: 'right' } });
   });
 
   it('dock-cycle button from right sends fileTreeSetDock to left', () => {

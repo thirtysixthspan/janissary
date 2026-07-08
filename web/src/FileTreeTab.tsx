@@ -21,16 +21,14 @@ const ROW_HEIGHT_PX = 22;
 // Printable, unmodified single characters — used for type-ahead. Excludes space (the action key).
 const PRINTABLE = /^[ -~]$/;
 
-// Cycle order: left -> center -> right -> left.
-function nextDock(current?: 'left' | 'right'): 'left' | 'right' | null {
-  if (current === 'left') return null;
-  if (current === 'right') return 'left';
-  return 'right';
+function nextDock(current?: 'left' | 'right'): 'left' | 'right' {
+  if (current === 'left') return 'right';
+  return 'left';
 }
 
 function dockTooltip(next: 'left' | 'right' | null): string {
-  if (next === null) return 'Move to center';
-  return next === 'left' ? 'Move to left sidebar' : 'Move to right sidebar';
+  if (next === 'left') return 'Move to left sidebar';
+  return 'Move to right sidebar';
 }
 
 export function FileTreeTab({ files, client, index, dock, autoFocus = true }: Properties) {
