@@ -66,7 +66,9 @@ The `next` command programmatically switches to the next tab.
 
 ### Keyboard focus on tab press
 
-Pressing a tab's label, or pressing anywhere in the body of an agent tab, immediately moves keyboard input focus to that tab's command bar. This happens on mouse-down (before the click is released), so it fires reliably even when the app window itself was unfocused and is being brought forward by the same press. If the pressed tab is a harness or shell PTY tab, focus subsequently moves to that tab's terminal instead, once the tab becomes active.
+Pressing a tab's label immediately moves keyboard input focus to that tab's command bar, on mouse-down (before the click is released), so it fires reliably even when the app window itself was unfocused and is being brought forward by the same press. If the pressed tab is a harness or shell PTY tab, focus subsequently moves to that tab's terminal instead, once the tab becomes active.
+
+Releasing the mouse (mouse-up) anywhere in the body of an agent tab also moves focus to that tab's command bar — unless the mouse gesture produced a text selection in the transcript (a click-and-drag), in which case focus is left alone so the selection survives; the selected text is instead copied to the clipboard (see History → Click to execute).
 
 ### Per-tab state isolation
 

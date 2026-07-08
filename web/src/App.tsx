@@ -181,10 +181,10 @@ export function App() {
         <div
           className="tab-body"
           style={{ borderLeft: `4px solid ${current.dotColor}` }}
-          onMouseDown={() => setTimeout(() => inputReference.current?.focus(), 0)}
           onMouseUp={() => {
             const selection = globalThis.getSelection()?.toString();
-            if (selection) navigator.clipboard.writeText(selection);
+            if (selection) { navigator.clipboard.writeText(selection); return; }
+            inputReference.current?.focus();
           }}
         >
           <div className="main">
