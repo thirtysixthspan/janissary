@@ -51,6 +51,15 @@ describe('renderLine — prompt click', () => {
     expect(onPromptClick).not.toHaveBeenCalled();
     spy.mockRestore();
   });
+
+  it('does not call onPromptClick when the cwd text is double-clicked, only the command text', async () => {
+    const onPromptClick = vi.fn();
+    const line = makePromptLine({ text: 'git status', cwd: '/home/user' });
+    const { container } = render(<>{renderLine(line, 0, clientStub, noop, onPromptClick)}</>);
+    await userEvent.dblClick(screen.getByText('/home/user'));
+    expect(onPromptClick).not.toHaveBeenCalled();
+    expect(container.querySelector('.cwd')).not.toHaveClass('prompt-text');
+  });
 });
 
 describe('renderLine — markdown link click', () => {

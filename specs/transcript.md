@@ -52,7 +52,10 @@ Clicking a file:line link opens the file in an **editor tab** (same as typing `e
 
 ### Re-running a prompt line
 
-Double-clicking a previous command's prompt line re-runs that command. A single click does
+Double-clicking a previous command's prompt line re-runs that command. The double-clickable
+region is limited to the `❯ <command>` text itself — a prompt line prefixed with the command's
+working directory does not re-run the command when that leading directory text is double-clicked,
+only the command text after it does. A single click does
 nothing (letting a click-and-drag text selection happen without triggering a re-run); if the
 double click lands on text that is still selected from an earlier selection, it is likewise
 suppressed. A collapsed agent tool-steps summary line is a separate case: a single click (or

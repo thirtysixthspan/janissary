@@ -4,8 +4,6 @@
 
 * when the editor window is being closed, if there are unsaved changes, the user should be presented with a dialog that says there are unsaved changes, close anyway or cancel.
 
-* when previous commands in the transcript are clicked, they should be executed. however, the clickable window extends the entire like, when instead the clickable window should be limited to the text of the command itself.
-
 * change the queue trigger to cntl+e
 
 * when the queue window is open, hitting escape should close the queue window and remove any text on the command line.
