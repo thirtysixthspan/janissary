@@ -39,7 +39,19 @@ export function Sidebar({ side, tabs, client }: { side: 'left' | 'right'; tabs: 
   return (
     <div className={`sidebar sidebar-${side}`} style={{ flex: `0 0 ${width}px` }} data-doc-shot={`sidebar-${side}`}>
       {side === 'right' && divider}
-      <div className="sidebar-body" style={{ borderLeft: `4px solid ${entry.tab.dotColor}` }}>
+      <div className="sidebar-body">
+        <div className="sidebar-strip">
+          <span className="sidebar-tab-label">{entry.tab.title ?? entry.tab.label}</span>
+          <button
+            type="button"
+            className="sidebar-tab-close"
+            title="Close"
+            aria-label="Close tab"
+            onClick={() => client.send({ method: 'closeTab', params: { index: entry.index } })}
+          >
+            ×
+          </button>
+        </div>
         {entry.tab.view === 'files' && entry.tab.files && (
           <FileTreeTab files={entry.tab.files} client={client} index={entry.index} dock={entry.tab.dock} autoFocus={false} />
         )}
