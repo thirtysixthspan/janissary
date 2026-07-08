@@ -39,6 +39,7 @@ describe('CommandManager queue gate', () => {
     managers.command.dispatch('clear');
     expect(managers.tab.queueFor('janus')).toEqual(['clear']);
     expect(managers.tab.cur().log).not.toEqual([]); // not run
+    expect(managers.tab.cur().log.at(-1)).toEqual({ input: '', output: 'Queued: clear' });
 
     managers.command.dispatch(' '.repeat(3));
     expect(managers.tab.queueFor('janus')).toEqual(['clear']); // empty input never queues
@@ -52,6 +53,10 @@ describe('CommandManager queue gate', () => {
     managers.command.dispatch('shell echo hi');
     expect(managers.tab.queueFor('janus')).toEqual(['clear', 'shell echo hi']);
     expect(recorder).toEqual([]);
+    expect(managers.tab.cur().log).toEqual([
+      { input: '', output: 'Queued: clear' },
+      { input: '', output: 'Queued: shell echo hi' },
+    ]);
 
     managers.tab.deleteBusy('janus');
     await Promise.resolve();
@@ -83,6 +88,16 @@ describe('CommandManager queue gate', () => {
     expect(managers.tab.queueFor('janus')).toEqual([]);
     expect(recorder).toEqual(['shell:echo hi']);
     expect(managers.tab.isBusy('janus')).toBe(true);
+  });
+
+  it('appends a Queued: line for a submission that queues behind an idle tab\'s existing queue', () => {
+    const { managers } = makeManagers();
+    managers.tab.enqueue('janus', 'state');
+    expect(managers.tab.isBusy('janus')).toBe(false);
+
+    managers.command.dispatch('shell echo hi');
+
+    expect(managers.tab.cur().log).toContainEqual({ input: '', output: 'Queued: shell echo hi' });
   });
 
   it('skips the gate for a non-agent tab, running immediately even while busy', () => {

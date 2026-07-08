@@ -4,8 +4,6 @@
 
 * when the editor window is being closed, if there are unsaved changes, the user should be presented with a dialog that says there are unsaved changes, close anyway or cancel.
 
-* when a command is queued, the message `Queued: command` should appear where command is the command that was queued. 
-
 * regression: text in the transcript window should be selectable.
 
 * when previous commands in the transcript are clicked, they should be executed. however, the clickable window extends the entire like, when instead the clickable window should be limited to the text of the command itself.
