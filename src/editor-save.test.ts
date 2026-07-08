@@ -9,6 +9,7 @@ import type { Managers } from './managers.js';
 function setup(content = 'original') {
   const managers = {} as Managers;
   managers.tab = new TabManager(managers);
+  managers.editorWatch = { watch: () => {}, markSaved: () => {} } as unknown as Managers['editorWatch'];
   const dir = mkdtempSync(path.join(tmpdir(), 'janus-save-'));
   const file = path.join(dir, 'notes.txt');
   writeFileSync(file, content);

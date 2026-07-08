@@ -226,4 +226,67 @@ describe('EditorTab', () => {
     const { container } = await renderLoaded(client);
     expect(container.querySelector('[class*="hljs-"]')).toBeNull();
   });
+
+  it('reloads clean content from disk when mtimeMs changes on an untouched buffer', async () => {
+    const { client } = makeClient();
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, text: () => Promise.resolve('line one\nline two') })
+      .mockResolvedValueOnce({ ok: true, text: () => Promise.resolve('changed elsewhere') });
+    vi.stubGlobal('fetch', fetchMock);
+    const view = makeView({ mtimeMs: 1 });
+    const { rerender } = await renderLoaded(client, view);
+
+    rerender(<EditorTab editor={{ ...view, mtimeMs: 2 }} client={client} active />);
+
+    await waitFor(() => expect(screen.getByText('changed elsewhere')).toBeInTheDocument());
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not reload a dirty buffer when mtimeMs changes, and prompts to overwrite on save', async () => {
+    const { client, saveFile } = makeClient();
+    const view = makeView({ mtimeMs: 1 });
+    const { container, rerender } = await renderLoaded(client, view);
+    type('x');
+    await waitFor(() => expect(nameText(container)).toContain('●'));
+
+    rerender(<EditorTab editor={{ ...view, mtimeMs: 2 }} client={client} active />);
+    expect(screen.getByText('line one')).toBeInTheDocument();
+
+    fireEvent.keyDown(textarea(), { key: 's', metaKey: true });
+    await waitFor(() => expect(screen.getByText('This file changed on disk. Overwrite it with your changes?')).toBeInTheDocument());
+    expect(saveFile).not.toHaveBeenCalled();
+  });
+
+  it('overwriting from the conflict dialog saves the buffer and closes the dialog', async () => {
+    const { client, saveFile } = makeClient();
+    const view = makeView({ mtimeMs: 1 });
+    const { container, rerender } = await renderLoaded(client, view);
+    type('x');
+    await waitFor(() => expect(nameText(container)).toContain('●'));
+    rerender(<EditorTab editor={{ ...view, mtimeMs: 2 }} client={client} active />);
+    fireEvent.keyDown(textarea(), { key: 's', metaKey: true });
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Overwrite (y)' })).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Overwrite (y)' }));
+
+    expect(saveFile).toHaveBeenCalledWith('/open/1', 'xline one\nline two');
+    await waitFor(() => expect(screen.queryByText('This file changed on disk. Overwrite it with your changes?')).not.toBeInTheDocument());
+  });
+
+  it('cancelling the conflict dialog leaves the buffer untouched and unsaved', async () => {
+    const { client, saveFile } = makeClient();
+    const view = makeView({ mtimeMs: 1 });
+    const { container, rerender } = await renderLoaded(client, view);
+    type('x');
+    await waitFor(() => expect(nameText(container)).toContain('●'));
+    rerender(<EditorTab editor={{ ...view, mtimeMs: 2 }} client={client} active />);
+    fireEvent.keyDown(textarea(), { key: 's', metaKey: true });
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Cancel (Esc)' })).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel (Esc)' }));
+
+    expect(saveFile).not.toHaveBeenCalled();
+    expect(nameText(container)).toContain('●');
+    expect(screen.queryByText('This file changed on disk. Overwrite it with your changes?')).not.toBeInTheDocument();
+  });
 });

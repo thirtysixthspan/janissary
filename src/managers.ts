@@ -16,6 +16,7 @@ import type { CommandManager } from './command-manager.js';
 import type { WorkspaceManager } from './workspace-manager.js';
 import type { MonitorManager } from './monitor-manager.js';
 import type { FileTreeManager } from './file-tree-manager.js';
+import type { EditorWatchManager } from './editor-watch-manager.js';
 
 export interface Managers {
   tab: TabManager;
@@ -36,4 +37,5 @@ export interface Managers {
   workspace: WorkspaceManager;
   monitor: MonitorManager;
   fileTree: FileTreeManager;
+  editorWatch: EditorWatchManager;
 }

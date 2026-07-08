@@ -93,6 +93,10 @@ export type EditorView = {
   // 1-based target line to jump to on open (from a `file:line` transcript link); undefined
   // when opened without a specific line.
   line?: number;
+  // On-disk mtime, bumped only when the file changes on disk outside the app (own saves move
+  // the watcher's baseline forward first, so they never show up here). The client diffs this
+  // against its previous value to detect an external change.
+  mtimeMs?: number;
 };
 
 // A single visible row in a file tree tab (opened via `files [path]`). `path` is relative to the
