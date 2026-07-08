@@ -391,7 +391,7 @@ html, body, #root {
   padding: 0 4px; line-height: 1;
 }
 .files-collapse-all:hover, .files-dock-cycle:hover, .files-close:hover { color: var(--fg); }
-.files-rows { flex: 1; min-height: 0; overflow-y: auto; padding: 4px 0; }
+.files-rows { flex: 1; min-height: 0; overflow-y: auto; padding: 4px 0 22px; }
 .files-row {
   display: flex; align-items: center; gap: 4px; padding: 2px 12px; cursor: pointer;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
