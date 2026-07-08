@@ -4,8 +4,6 @@
 
 * when the editor window is being closed, if there are unsaved changes, the user should be presented with a dialog that says there are unsaved changes, close anyway or cancel.
 
-* change the queue trigger to cntl+e
-
 * when the queue window is open, hitting escape should close the queue window and remove any text on the command line.
 
 * when running a command, the command should be printed in the transcript before the command is executed while the response is printed in the transcript after the command is executed.

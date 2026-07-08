@@ -138,10 +138,10 @@ describe('useWindowKeys', () => {
     expect(openTabNav).toHaveBeenCalled();
   });
 
-  it('Cmd+E opens the queue popup', () => {
+  it('Ctrl+E opens the queue popup', () => {
     const openQueue = vi.fn();
     render(React.createElement(TestComponent, { callbacks: { openQueue } }));
-    dispatchKey('e', { metaKey: true });
+    dispatchKey('e', { ctrlKey: true });
     expect(openQueue).toHaveBeenCalled();
   });
 
