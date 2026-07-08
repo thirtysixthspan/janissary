@@ -57,6 +57,7 @@ export function FileTreeTab({ files, client, index, dock, autoFocus = true }: Pr
   const openFile = (path: string) => client.send({ method: 'command', params: { text: `open ${path}` } });
   const editFile = (path: string) => client.send({ method: 'command', params: { text: `edit ${path}` } });
   const reroot = () => client.send({ method: 'fileTreeReroot', params: { index } });
+  const rerootTo = (path: string) => client.send({ method: 'fileTreeReroot', params: { index, path } });
 
   const onRowClick = (row: FileTreeRow) => {
     setSelected(row.path);
@@ -73,7 +74,7 @@ export function FileTreeTab({ files, client, index, dock, autoFocus = true }: Pr
   const runAction = (action: { type: 'toggle' | 'open' | 'edit' | 'reroot'; path: string } | undefined) => {
     if (!action) return;
     switch (action.type) {
-      case 'reroot': { reroot(); break; }
+      case 'reroot': { if (action.path === '..') reroot(); else rerootTo(action.path); break; }
       case 'toggle': { toggle(action.path); break; }
       case 'open': { openFile(action.path); break; }
       case 'edit': { editFile(action.path); break; }

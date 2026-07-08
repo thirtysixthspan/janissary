@@ -228,6 +228,22 @@ describe('FileTreeManager', () => {
     expect(() => manager.reroot('ghost')).not.toThrow();
   });
 
+  it('reroot with a relPath sets the target directory as the new root', () => {
+    mkdirSync(path.join(root, 'sub'));
+    mkdirSync(path.join(root, 'sub', 'inner'));
+    const manager = run();
+    manager.open('files sub', 'janus');
+    const label = tabs.find((t) => t.label.startsWith('navigator'))!.label;
+    expect(watchMock).toHaveBeenCalledTimes(1);
+
+    manager.reroot(label, 'inner');
+
+    const tab = tabs.find((t) => t.label === label)!;
+    expect(tab.files!.root).toBe(path.join(root, 'sub', 'inner'));
+    expect(watchMock).toHaveBeenCalledTimes(2);
+    expect(closeFns[0]).toHaveBeenCalled();
+  });
+
   it('files left docks a newly created tab into the left sidebar', () => {
     const manager = run();
     manager.open('files left', 'janus');

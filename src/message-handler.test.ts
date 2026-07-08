@@ -139,7 +139,7 @@ describe('handle', () => {
   it('routes fileTreeReroot', () => {
     const controller = makeController();
     dispatchCall(controller, 17, { method: 'fileTreeReroot', params: { index: 0 } });
-    expect(controller.fileTreeReroot).toHaveBeenCalledWith(0);
+    expect(controller.fileTreeReroot).toHaveBeenCalledWith(0, undefined);
   });
 
   it('routes fileTreeSetDock', () => {
