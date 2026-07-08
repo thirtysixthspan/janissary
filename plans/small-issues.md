@@ -1,7 +1,5 @@
 # small issues
 
-* web page tabs should have a metadata line that includes the full url and a right aligned close button.
-
 * launch a command in the transcript should require a double click, not a single click.
 
 * cmd+t should open a new agent tab in the root of the project - not workspaced

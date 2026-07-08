@@ -85,7 +85,10 @@ the active tab as before.
 
 The page view shows, stacked top to bottom:
 
-1. **Metadata** — the page's number, domain, and full address, in a compact header.
+1. **Metadata** — the page's number, domain, and full address, in a compact header, with a close
+   button right-aligned on that same line. Clicking it closes the tab directly — a second,
+   independent close affordance alongside the tab strip's own close button (see "Tab strip: name
+   and close button" below).
 2. **The embedded page** itself, filling the space beneath the metadata and resizing with the tab.
 
 ### What renders
@@ -115,9 +118,10 @@ highlight, and ordering — with two differences:
 
 ### Closing a page tab
 
-A page tab can be closed four ways, all equivalent in their teardown:
+A page tab can be closed five ways, all equivalent in their teardown:
 
 - the tab's **close button** (the manual affordance),
+- the **metadata header's close button**, shown right-aligned above the embedded page,
 - the **`close`** command when the page tab is active,
 - **`close page <n>`** — close the page tab with page number `n` from any tab, and
 - **Cmd+W / Ctrl+W (Keyboard Navigation)** — close the page tab from anywhere, including while interacting with the embedded page.
