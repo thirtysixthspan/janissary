@@ -1,7 +1,5 @@
 # small issues
 
-* hide the scrollbars for the file navigator when it is in a sidebar
-
 * the file navigator toggle button should only toggle the file navigator position between left and right sidebars
 
 * the file navigator when in a tab will not have a position toggle button.
