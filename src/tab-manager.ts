@@ -394,6 +394,7 @@ export class TabManager {
     const { tabs, activeTab } = addEditorTab(this.tabs, this.activeTab, view);
     this.tabs = tabs;
     this.activeTab = activeTab;
+    this.managers.editorWatch.watch(tabs[activeTab].label, view.path);
     messageBus.emit('state', { type: 'dirty' });
   }
 

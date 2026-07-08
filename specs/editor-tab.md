@@ -70,6 +70,25 @@ Closing an editor tab that has unsaved changes triggers a confirmation dialog: "
 
 Like the quit dialog, the save dialog is modal — all keyboard and click input is trapped until a choice is made. A click outside the dialog does nothing.
 
+### Live reload of external changes
+
+While an editor tab is open, its underlying file is watched for changes made by other processes
+(outside the app). If the buffer has no unsaved changes, an external change is loaded automatically
+— the buffer refreshes to the new on-disk content and the cursor stays on the same line. The
+editor's own saves never trigger this reload; only changes made elsewhere do.
+
+If the buffer has unsaved changes when an external change is detected, the buffer is left alone —
+the user's in-progress edits are never overwritten silently. Instead, the next time the user tries
+to save (Ctrl+S / Cmd+S, or via the close-tab save prompt), a dialog appears: "This file changed on
+disk. Overwrite it with your changes?" with two options — Overwrite and Cancel.
+
+- **Overwrite (y):** writes the buffer to disk, replacing the external change.
+- **Cancel (Esc):** dismisses the dialog and leaves the buffer as-is, still unsaved. The next save
+  attempt shows the same prompt again.
+
+Like the other editor dialogs, this prompt is modal — all keyboard and click input is trapped until
+a choice is made, and a click outside the dialog does nothing.
+
 ### Caret
 
 A blinking vertical bar marks the cursor position — where text will be inserted when typing. The caret is an accent-colored vertical line, 2 pixels wide, that blinks hard on/off on a 1-second cycle. It sits at the exact character column in the text flow without shifting the surrounding text. The caret is only visible when the editor tab is active; switching to another tab or opening a picker hides it.

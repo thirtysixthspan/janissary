@@ -1,7 +1,5 @@
 # small issues
 
-* in the editor, when viewing a file and it is not yet modified, the file should be watched for changes made by other processes, so that the file can be updated in real time with the changes being made. If the file has been modified by the user, it should not update. If the file has been modified by the user, and by another process, when the user goes to save changes, they should be prompted whether they want to overwrite the change by saving or cancel the action.
-
 * when the editor window is being closed, if there are unsaved changes, the user should be presented with a dialog that says there are unsaved changes, close anyway or cancel.
 
 * when running a command, the command should be printed in the transcript before the command is executed while the response is printed in the transcript after the command is executed.

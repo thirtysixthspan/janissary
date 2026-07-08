@@ -7,6 +7,7 @@ import { actionForKey } from './editor/keys';
 import { useEditor } from './editor/useEditor';
 import { useEditorMouse } from './editor/useEditorMouse';
 import { useSyntaxHighlight } from './editor/useSyntaxHighlight';
+import { OverwriteConflictDialog } from './OverwriteConflictDialog';
 
 export type EditorTabHandle = { isDirty(): boolean; save(): Promise<void> };
 
@@ -17,26 +18,41 @@ export const EditorTab = forwardRef<EditorTabHandle, { editor: EditorView; clien
   const [saveError, setSaveError] = useState<string | null>(null);
   const [lastSaved, setLastSaved] = useState<string | null>(null);
   const [savedFlash, setSavedFlash] = useState(false);
+  const [conflictOpen, setConflictOpen] = useState(false);
   const bodyRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const caretRef = useRef<HTMLSpanElement>(null);
   const composingRef = useRef(false);
+  // Set once a watched external change lands while the buffer is dirty; cleared on a successful
+  // save. Drives the overwrite-conflict prompt instead of a normal save.
+  const conflictPendingRef = useRef(false);
 
   const api = useEditor(() => { void save(); });
   const { state } = api;
   const mouse = useEditorMouse(api, bodyRef, () => textareaRef.current?.focus());
   const tokens = useSyntaxHighlight(state, editor.name);
 
-  const save = async () => {
-    const s = api.stateRef.current;
-    if (!s) return;
-    const text = toText(s);
+  const writeToDisk = async (text: string) => {
     setSaveError(null);
     const error = await client.saveFile(editor.url, text);
     if (error) { setSaveError(error); return; }
     setLastSaved(text);
+    conflictPendingRef.current = false;
     setSavedFlash(true);
     setTimeout(() => setSavedFlash(false), 1500);
+  };
+
+  const save = async () => {
+    const s = api.stateRef.current;
+    if (!s) return;
+    if (conflictPendingRef.current) { setConflictOpen(true); return; }
+    await writeToDisk(toText(s));
+  };
+
+  const fetchContent = async (token: string) => {
+    const r = await fetch(`${editor.url}?token=${encodeURIComponent(token)}`);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    return r.text();
   };
 
   useEffect(() => {
@@ -44,9 +60,7 @@ export const EditorTab = forwardRef<EditorTabHandle, { editor: EditorView; clien
     const token = new URLSearchParams(location.search).get('token') ?? '';
     const load = async () => {
       try {
-        const r = await fetch(`${editor.url}?token=${encodeURIComponent(token)}`);
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        const text = await r.text();
+        const text = await fetchContent(token);
         if (!cancelled) { api.load(text, editor.line === undefined ? undefined : editor.line - 1); setLastSaved(text); }
       } catch {
         if (!cancelled) setLoadError(`Failed to load ${editor.name}`);
@@ -56,6 +70,33 @@ export const EditorTab = forwardRef<EditorTabHandle, { editor: EditorView; clien
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editor.url, editor.name]);
+
+  const dirty = useMemo(() => state !== null && lastSaved !== null && toText(state) !== lastSaved, [state, lastSaved]);
+
+  // Live-reload from disk when another process changes the file, as long as the user hasn't
+  // touched the buffer yet; otherwise remember the conflict for the next save attempt.
+  const dirtyForWatchRef = useRef(dirty);
+  dirtyForWatchRef.current = dirty;
+  const seenMtimeRef = useRef<number | undefined>(undefined);
+  useEffect(() => {
+    if (editor.mtimeMs === undefined || editor.mtimeMs === seenMtimeRef.current) return;
+    const isFirstSighting = seenMtimeRef.current === undefined;
+    seenMtimeRef.current = editor.mtimeMs;
+    if (isFirstSighting) return;
+    if (dirtyForWatchRef.current) { conflictPendingRef.current = true; return; }
+    const token = new URLSearchParams(location.search).get('token') ?? '';
+    void (async () => {
+      try {
+        const text = await fetchContent(token);
+        const line = api.stateRef.current?.cursor.line;
+        api.load(text, line);
+        setLastSaved(text);
+      } catch {
+        // The reload is best-effort — the buffer just keeps showing the last content we had.
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editor.mtimeMs]);
 
   const loaded = state !== null;
   useEffect(() => { if (active && loaded) textareaRef.current?.focus(); }, [active, loaded]);
@@ -71,7 +112,6 @@ export const EditorTab = forwardRef<EditorTabHandle, { editor: EditorView; clien
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active, state?.cursor.line, state?.cursor.col]);
 
-  const dirty = useMemo(() => state !== null && lastSaved !== null && toText(state) !== lastSaved, [state, lastSaved]);
   const dirtyRef = useRef(dirty);
   dirtyRef.current = dirty;
   const saveRef = useRef(save);
@@ -147,6 +187,16 @@ export const EditorTab = forwardRef<EditorTabHandle, { editor: EditorView; clien
           );
         })}
       </div>
+      {conflictOpen && (
+        <OverwriteConflictDialog
+          onSave={() => {
+            setConflictOpen(false);
+            const s = api.stateRef.current;
+            if (s) void writeToDisk(toText(s));
+          }}
+          onCancel={() => setConflictOpen(false)}
+        />
+      )}
     </div>
   );
 });

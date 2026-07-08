@@ -13,6 +13,7 @@ import { ProfileManager } from './profile-manager.js';
 import { ConnectionManager } from './connection-manager.js';
 import { OpenFileManager } from './open-file-manager.js';
 import { FileTreeManager } from './file-tree-manager.js';
+import { EditorWatchManager } from './editor-watch-manager.js';
 import { saveFile } from './editor-save.js';
 import { CaptureManager } from './capture-manager.js';
 import { AgentCommunicationManager } from './agent-communication-manager.js';
@@ -37,6 +38,7 @@ export class Controller {
     this.managers.acp = new AcpManager(this.managers);
     this.managers.openFile = new OpenFileManager(this.managers);
     this.managers.fileTree = new FileTreeManager(this.managers);
+    this.managers.editorWatch = new EditorWatchManager(this.managers);
     this.managers.pty = new PseudoterminalManager(this.managers);
     this.managers.schedule = new ScheduleManager(this.managers);
     this.managers.shell = new ShellManager(this.managers);
@@ -203,6 +205,7 @@ export class Controller {
 
   shutdown(): void {
     this.managers.fileTree.dispose();
+    this.managers.editorWatch.dispose();
     this.managers.monitor.closeAll();
     messageBus.clear();
     this.managers.schedule.stop();
