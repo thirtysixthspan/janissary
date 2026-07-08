@@ -55,6 +55,7 @@ export class CommandManager {
     const alreadyQueued = this.managers.tab.queueFor(label).length > 0;
     if (isAgentTab && (!wasIdle || alreadyQueued)) {
       this.managers.tab.enqueue(label, trimmed);
+      this.managers.tab.append(label, { input: '', output: `Queued: ${trimmed}` });
       if (wasIdle) this.drainQueue(label);
       return;
     }

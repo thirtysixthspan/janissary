@@ -10,7 +10,9 @@ files, monitor) have no queue; input to them behaves exactly as before.
 
 The queue is per-tab, FIFO, and unbounded. A submission queues whenever the tab is busy, or
 whenever the tab is idle but already has queued entries waiting — in the latter case the new
-submission goes to the back, preserving order, and the queue immediately starts draining.
+submission goes to the back, preserving order, and the queue immediately starts draining. Queueing
+appends a `Queued: <command>` line to the issuing tab's transcript, confirming the submission was
+accepted rather than silently dropped.
 
 When the tab's busy → idle transition fires (see [[tabs]] "Busy indicator" for what busy means),
 the queue drains front to back, one command at a time. If a dequeued command finishes
