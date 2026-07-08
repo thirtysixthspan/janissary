@@ -60,7 +60,8 @@
   "files": [
     "bin",
     "dist",
-    "agent-names.json"
+    "agent-names.json",
+    "help.md"
   ],
   "type": "module",
   "dependencies": {

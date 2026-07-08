@@ -27,14 +27,9 @@ let helpOutput: string | null = null;
 
 function buildHelp(): string {
   const __dirname = path.dirname(fileURLToPath(import.meta.url));
-  const readmePath = path.join(__dirname, '..', 'README.md');
+  const helpPath = path.join(__dirname, '..', 'help.md');
   try {
-    const md = readFileSync(readmePath, 'utf8');
-    const commandMatch = md.match(/### Commands[\s\S]*?(?=^## |^### |$(?![\s\S]))/m);
-    const keyMatch = md.match(/### Key Bindings[\s\S]*?(?=^## |^### |$(?![\s\S]))/m);
-    const commandSection = commandMatch ? commandMatch[0].trim() : '';
-    const keySection = keyMatch ? keyMatch[0].trim() : '';
-    return commandSection + '\n\n' + keySection;
+    return readFileSync(helpPath, 'utf8').trim();
   } catch {
     return 'Built-in: ' + availableCommands.join(', ') + '. Prefix a command with "shell " to run it in the shell, or / to run a built-in command. Press Ctrl+R or type hist to browse command history.';
   }
