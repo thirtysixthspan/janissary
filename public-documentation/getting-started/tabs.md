@@ -29,7 +29,7 @@ The active tab is also highlighted: full-strength text on the content background
 
 ## Switching and reordering
 
-`Shift+←` / `Shift+→` cycle through tabs; the `next` command switches to the next tab. `Ctrl+←` / `Ctrl+→` move the current tab one position left or right — within its own group only (see [Tab groups](/getting-started/groups)).
+`Shift+←` / `Shift+→` cycle through tabs; the `next` command switches to the next tab. `Ctrl+←` / `Ctrl+→` move the current tab one position left or right — within its own group only (see [Tab groups](/getting-started/groups)). With several tabs open, the [tab navigator](/command-bar/tab-navigator) (`Ctrl+G`) jumps straight to any of them by typing part of its label or number.
 
 ## Renaming a tab
 
