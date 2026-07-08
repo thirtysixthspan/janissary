@@ -24,11 +24,11 @@ const clientStub = {} as JanusClient;
 const noop = () => {};
 
 describe('renderLine — prompt click', () => {
-  it('calls onPromptClick with the line text when a plain prompt is clicked', async () => {
+  it('calls onPromptClick with the line text when a plain prompt is double-clicked', async () => {
     const onPromptClick = vi.fn();
     const line = makePromptLine({ text: 'git status', cwd: '/home/user' });
     render(<>{renderLine(line, 0, clientStub, noop, onPromptClick)}</>);
-    await userEvent.click(screen.getByText(/git status/));
+    await userEvent.dblClick(screen.getByText(/git status/));
     expect(onPromptClick).toHaveBeenCalledWith('git status');
   });
 
@@ -47,7 +47,7 @@ describe('renderLine — prompt click', () => {
     const line = makePromptLine({ text: 'git status' });
     const spy = vi.spyOn(globalThis, 'getSelection').mockReturnValue({ toString: () => 'git' } as Selection);
     render(<>{renderLine(line, 0, clientStub, noop, onPromptClick)}</>);
-    await userEvent.click(screen.getByText(/git status/));
+    await userEvent.dblClick(screen.getByText(/git status/));
     expect(onPromptClick).not.toHaveBeenCalled();
     spy.mockRestore();
   });

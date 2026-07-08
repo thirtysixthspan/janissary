@@ -116,11 +116,18 @@ function renderPromptLine(
     );
   }
   return (
-    <div key={index} className="line prompt" title="Click to execute this command" onClick={() => {
-      const selection = globalThis.getSelection()?.toString();
-      if (selection) return;
-      onPromptClick(line.text);
-    }} {...hitProps}>
+    <div
+      key={index}
+      className="line prompt"
+      title="Double-click to execute this command"
+      onMouseDown={(e) => { if (e.detail > 1) e.preventDefault(); }}
+      onDoubleClick={() => {
+        const selection = globalThis.getSelection()?.toString();
+        if (selection) return;
+        onPromptClick(line.text);
+      }}
+      {...hitProps}
+    >
       {line.cwd && <span className="cwd">{line.cwd}</span>}
       <span>{'❯'} {highlightText(line.text, highlight, index)}</span>
     </div>
