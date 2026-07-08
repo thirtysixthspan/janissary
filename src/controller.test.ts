@@ -8,6 +8,7 @@ import { initGlobalHistory, globalCommands } from './global-history.js';
 import { initProfileDir } from './profiles.js';
 import { messageBus } from './bus.js';
 import { TranscriptLogger } from './transcript/logger.js';
+import { abbreviatePath } from './paths.js';
 import { initDbDir, isConnectionOpen, closeAllConnections } from './connections.js';
 import { loadConfig } from './config.js';
 import { agentNames } from './commands.js';
@@ -1278,7 +1279,7 @@ describe('Controller files tab', () => {
     c.dispatch(`files ${root}`);
     const tab = c.view().find((t) => t.view === 'files');
     expect(tab).toBeDefined();
-    expect(tab!.files?.root).toBe(root);
+    expect(tab!.files?.root).toBe(abbreviatePath(root, { root: process.cwd() }));
     expect(tab!.files?.rows.map((r) => r.path)).toEqual(['..', 'src', 'README.md']);
   });
 
@@ -1320,7 +1321,7 @@ describe('Controller files tab', () => {
     const index = c.view().findIndex((t) => t.view === 'files');
     c.fileTreeReroot(index);
     const tab = c.view()[index];
-    expect(tab.files?.root).toBe(root);
+    expect(tab.files?.root).toBe(abbreviatePath(root, { root: process.cwd() }));
     expect(tab.files?.rows.some((r) => r.path === 'sub')).toBe(true);
   });
 
@@ -1367,8 +1368,10 @@ describe('Controller sidebar docking', () => {
     const { c } = makeController();
     c.dispatch(`files left ${root}`);
     c.dispatch(`files left ${rootB}`);
-    expect(c.view().find((t) => t.files?.root === root)?.dock).toBeUndefined();
-    expect(c.view().find((t) => t.files?.root === rootB)?.dock).toBe('left');
+    const shortened = abbreviatePath(root, { root: process.cwd() });
+    const shortenedB = abbreviatePath(rootB, { root: process.cwd() });
+    expect(c.view().find((t) => t.files?.root === shortened)?.dock).toBeUndefined();
+    expect(c.view().find((t) => t.files?.root === shortenedB)?.dock).toBe('left');
   });
 
   it('bare files on a docked root undocks it to center and activates it', () => {

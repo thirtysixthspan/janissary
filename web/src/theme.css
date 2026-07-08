@@ -384,7 +384,6 @@ html, body, #root {
   display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px;
   flex: 1; min-width: 0;
 }
-.files-root { font-weight: 600; color: var(--fg); }
 .files-loc { font-size: 12px; word-break: break-all; color: var(--muted); }
 .files-actions { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
 .files-collapse-all, .files-dock-cycle, .files-close {

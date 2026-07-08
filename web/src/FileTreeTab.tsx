@@ -21,10 +21,6 @@ const ROW_HEIGHT_PX = 22;
 // Printable, unmodified single characters — used for type-ahead. Excludes space (the action key).
 const PRINTABLE = /^[ -~]$/;
 
-function basename(root: string): string {
-  return root.replace(/[/\\]+$/, '').split(/[/\\]/).pop() || root;
-}
-
 // Cycle order: left -> center -> right -> left.
 function nextDock(current?: 'left' | 'right'): 'left' | 'right' | null {
   if (current === 'left') return null;
@@ -114,7 +110,6 @@ export function FileTreeTab({ files, client, index, dock, autoFocus = true }: Pr
     <div className="files-tab" data-doc-shot="file-tree-view" ref={containerRef} tabIndex={0} role="tree" onKeyDown={onKeyDown}>
       <div className="files-header">
         <div className="files-meta">
-          <span className="files-root">{basename(files.root)}</span>
           <span className="files-loc">{files.root}</span>
         </div>
         <div className="files-actions">

@@ -319,7 +319,7 @@ export class TabManager {
       markdown: t.markdown,
       editor: t.editor,
       monitor: t.monitor,
-      files: t.files,
+      files: t.files ? { ...t.files, root: this.shorten(t.files.root) } : undefined,
       activePty: t.activePty,
       dock: t.dock,
     }));
