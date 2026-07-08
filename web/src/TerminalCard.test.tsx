@@ -5,8 +5,11 @@ import { TerminalCard } from './TerminalCard';
 import type { JanusClient } from './ws';
 
 vi.mock('./useXterm', () => ({
-  useXterm: () => () => {},
+  useXterm: vi.fn(() => () => {}),
 }));
+
+import { useXterm } from './useXterm';
+const mockedUseXterm = useXterm as ReturnType<typeof vi.fn>;
 
 function fakeClient(overrides: Partial<JanusClient> = {}): JanusClient {
   return { send: vi.fn(), ...overrides } as unknown as JanusClient;
@@ -63,5 +66,17 @@ describe('TerminalCard', () => {
     expect(container.querySelector('.terminal-card.maximized')).not.toBeInTheDocument();
     fireEvent.click(screen.getByText('maximize'));
     expect(container.querySelector('.terminal-card.maximized')).toBeInTheDocument();
+  });
+
+  it('passes a keyFilter that blocks shift+ctrl and allows plain keys', () => {
+    mockedUseXterm.mockClear();
+    render(<TerminalCard entry={{ ptyId: 'p1', program: 'test', status: 'running', exitCode: undefined }} client={fakeClient()} />);
+    const opts = mockedUseXterm.mock.calls[0][0];
+    const filter = opts.keyFilter as (e: KeyboardEvent) => boolean;
+
+    expect(filter(new KeyboardEvent('keyup', { key: 'a' }))).toBe(true);
+    expect(filter(new KeyboardEvent('keydown', { key: 'a' }))).toBe(true);
+    expect(filter(new KeyboardEvent('keydown', { key: 'a', shiftKey: true }))).toBe(false);
+    expect(filter(new KeyboardEvent('keydown', { key: 'a', ctrlKey: true }))).toBe(false);
   });
 });

@@ -92,13 +92,13 @@ describe('useEditor', () => {
   it('apply with page calls movePage', () => {
     const { result } = renderHook(() => useEditor(() => {}));
     act(() => { result.current.load('test'); });
-    act(() => { result.current.apply({ kind: 'page', dir: 'down', extend: false }, 20); });
+    act(() => { result.current.apply({ kind: 'page', dir: 1, extend: false }, 20); });
   });
 
   it('apply with lineEdge calls moveLineEdge', () => {
     const { result } = renderHook(() => useEditor(() => {}));
     act(() => { result.current.load('test'); });
-    act(() => { result.current.apply({ kind: 'lineEdge', edge: 'start', extend: false }, 20); });
+    act(() => { result.current.apply({ kind: 'lineEdge', edge: 'home', extend: false }, 20); });
   });
 
   it('apply with docEdge calls moveDocumentEdge', () => {
