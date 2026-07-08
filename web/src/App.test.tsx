@@ -167,7 +167,7 @@ describe('App agent tab body click focuses command input', () => {
     stateListener = null;
   });
 
-  it('mousedown on the agent tab body focuses the command input textarea', async () => {
+  it('mouseup on the agent tab body focuses the command input textarea when nothing is selected', async () => {
     const { App } = await import('./App');
     const { container } = render(<App />);
     act(() => {
@@ -175,9 +175,40 @@ describe('App agent tab body click focuses command input', () => {
     });
     const tabBody = container.querySelector('.tab-body') as HTMLElement;
     expect(tabBody).not.toBeNull();
-    fireEvent.mouseDown(tabBody);
-    await new Promise<void>((resolve) => setTimeout(resolve, 10));
+    fireEvent.mouseUp(tabBody);
     expect(document.activeElement).toBe(screen.getByRole('textbox'));
+  }, 15_000);
+
+  it('does not steal focus on mouseup when the transcript has a text selection', async () => {
+    const { App } = await import('./App');
+    const { container } = render(<App />);
+    act(() => {
+      stateListener!([makeTab()], 0, null, 16, [], 'github-dark');
+    });
+    const writeText = vi.fn();
+    vi.stubGlobal('navigator', { clipboard: { writeText } });
+    const spy = vi.spyOn(globalThis, 'getSelection').mockReturnValue({ toString: () => 'some selected text' } as Selection);
+    const input = screen.getByRole('textbox');
+    (input as HTMLElement).blur();
+    const tabBody = container.querySelector('.tab-body') as HTMLElement;
+    fireEvent.mouseUp(tabBody);
+    expect(document.activeElement).not.toBe(input);
+    spy.mockRestore();
+  }, 15_000);
+
+  it('copies selected text to the clipboard on mouseup instead of focusing the input', async () => {
+    const { App } = await import('./App');
+    const { container } = render(<App />);
+    act(() => {
+      stateListener!([makeTab()], 0, null, 16, [], 'github-dark');
+    });
+    const writeText = vi.fn();
+    vi.stubGlobal('navigator', { clipboard: { writeText } });
+    const spy = vi.spyOn(globalThis, 'getSelection').mockReturnValue({ toString: () => 'some selected text' } as Selection);
+    const tabBody = container.querySelector('.tab-body') as HTMLElement;
+    fireEvent.mouseUp(tabBody);
+    expect(writeText).toHaveBeenCalledWith('some selected text');
+    spy.mockRestore();
   }, 15_000);
 });
 
