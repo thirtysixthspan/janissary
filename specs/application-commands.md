@@ -2,7 +2,7 @@
 
 ### `help`
 
-Returns the **Commands** and **Key Bindings** sections extracted from `README.md` (parsed and cached on first use). If the README cannot be read, it falls back to a generated summary listing the built-in commands and the `shell` / `/` prefixes and `Ctrl+R` history shortcut.
+Returns the contents of `help.md` at the repo root (read and cached on first use). If that file cannot be read, it falls back to a generated summary listing the built-in commands and the `shell` / `/` prefixes and `Ctrl+R` history shortcut.
 
 ### `state`
 

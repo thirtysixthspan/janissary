@@ -4,8 +4,6 @@
 
 * when the editor window is being closed, if there are unsaved changes, the user should be presented with a dialog that says there are unsaved changes, close anyway or cancel.
 
-* remove feature/user documentation from the README.md limiting it to install, startup and developer specific documentation. Provide a link to the public documentation site (github site for the repository) at the top of the README.md. extract the help text into help.md and update the code that renders this file to use the new file name.
-
 * when a command is queued, the message `Queued: command` should appear where command is the command that was queued. 
 
 * regression: text in the transcript window should be selectable.
