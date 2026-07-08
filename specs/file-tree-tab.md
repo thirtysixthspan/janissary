@@ -89,7 +89,7 @@ A focused file tree tab captures its own keys, following the ARIA treeview patte
 | Key | Behavior |
 |---|---|
 | `↑` / `↓` | Move selection to the previous / next visible row |
-| `→` | Collapsed directory: expand (selection stays). Expanded directory: reroot the navigator to that directory. File: no-op |
+| `→` | Collapsed directory: expand. Expanded directory: reroot. File: open. `..`: no-op |
 | `←` | Expanded directory: collapse. Otherwise: move selection to the parent directory |
 | `Enter` / `Space` | File: open. Directory: toggle expand/collapse. `..`: navigate to parent directory |
 | `Shift+Enter` | File: open in the plain-text editor (mirrors Shift+double-click) |

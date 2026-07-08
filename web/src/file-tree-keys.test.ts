@@ -76,10 +76,10 @@ describe('handleFileTreeKey — expand/collapse/parent', () => {
     expect(result.action).toEqual({ type: 'reroot', path: 'src' });
   });
 
-  it('ArrowRight on a file is a no-op', () => {
+  it('ArrowRight on a file opens it', () => {
     const result = handleFileTreeKey(rows, 'README.md', 'ArrowRight', false, 10);
     expect(result.selection).toBe('README.md');
-    expect(result.action).toBeUndefined();
+    expect(result.action).toEqual({ type: 'open', path: 'README.md' });
   });
 
   it('ArrowLeft on an expanded dir collapses it', () => {
