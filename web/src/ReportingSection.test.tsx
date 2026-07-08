@@ -94,8 +94,8 @@ describe('ReportingSection', () => {
     expect(onClose).toHaveBeenCalledWith(1);
   });
 
-  it('divider drag calls addEventListener on mousedown', () => {
-    const addSpy = vi.spyOn(globalThis, 'addEventListener');
+  it('divider mouseup removes listeners', () => {
+    const removeSpy = vi.spyOn(globalThis, 'removeEventListener');
     const { container } = render(
       React.createElement(ReportingSection, {
         entries: [makeEntry('alerts', 0)],
@@ -104,8 +104,9 @@ describe('ReportingSection', () => {
     );
     const divider = container.querySelector('.reporting-resize')!;
     fireEvent.mouseDown(divider);
-    expect(addSpy).toHaveBeenCalledWith('mousemove', expect.any(Function));
-    expect(addSpy).toHaveBeenCalledWith('mouseup', expect.any(Function));
-    addSpy.mockRestore();
+    fireEvent.mouseUp(divider);
+    expect(removeSpy).toHaveBeenCalledWith('mousemove', expect.any(Function));
+    expect(removeSpy).toHaveBeenCalledWith('mouseup', expect.any(Function));
+    removeSpy.mockRestore();
   });
 });
