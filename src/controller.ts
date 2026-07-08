@@ -146,6 +146,14 @@ export class Controller {
     this.managers.tab.renameTab(index, title);
   }
 
+  editQueuedCommand(index: number, text: string): void {
+    this.managers.tab.editQueued(this.managers.tab.cur().label, index, text);
+  }
+
+  deleteQueuedCommand(index: number): void {
+    this.managers.tab.deleteQueued(this.managers.tab.cur().label, index);
+  }
+
   toggleCollapse(): void {
     this.managers.tab.toggleCollapse();
   }

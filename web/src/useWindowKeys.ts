@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import type { JanusClient } from './ws';
 import type { RouteChooserView } from '@shared/protocol';
 import { SYNTAX_THEMES } from '@shared/syntax-themes';
-import { handleRouteChooserKey, handlePickerKey, handleTabNavKey } from './keyboard-handlers';
+import { handleRouteChooserKey, handlePickerKey, handleTabNavKey, handleQueueKey } from './keyboard-handlers';
 import type { TabNavEntry } from './TabNavPicker';
 
 type StateSnapshot = {
@@ -22,6 +22,9 @@ type StateSnapshot = {
   navQuery: string;
   navIdx: number;
   navTabs: TabNavEntry[];
+  queueOpen: boolean;
+  queueIdx: number;
+  queueItems: string[];
 };
 
 type Callbacks = {
@@ -40,6 +43,9 @@ type Callbacks = {
   selectNavTab: (index: number) => void;
   setNavOpen: (open: boolean) => void;
   openTabNav: () => void;
+  setQueueIndex: (setter: (prev: number) => number) => void;
+  setQueueOpen: (open: boolean) => void;
+  openQueue: () => void;
 };
 
 // Priority chain of pickers/choosers that claim every keystroke while open. Returns true once one
@@ -61,6 +67,10 @@ function dispatchModalKey(e: KeyboardEvent, snap: StateSnapshot, cb: Callbacks):
     handlePickerKey(e, snap.recent, snap.pickerIdx, cb.setPickerIndex, cb.runCommand, cb.setPickerOpen);
     return true;
   }
+  if (snap.queueOpen) {
+    handleQueueKey(e, snap.queueItems, snap.queueIdx, cb.setQueueIndex, cb.setQueueOpen);
+    return true;
+  }
   return false;
 }
 
@@ -72,6 +82,21 @@ function handleTabShortcuts(e: KeyboardEvent, client: JanusClient): void {
   else if (e.shiftKey && !e.ctrlKey && e.key === 'ArrowLeft') { e.preventDefault(); client.send({ method: 'moveTab', params: { dir: -1 } }); }
   else if (e.shiftKey && !e.ctrlKey && e.key === 'ArrowRight') { e.preventDefault(); client.send({ method: 'moveTab', params: { dir: 1 } }); }
   else if (e.ctrlKey && e.key.toLowerCase() === 't') { e.preventDefault(); client.send({ method: 'toggleCollapse', params: {} }); }
+}
+
+// The chord openers (Cmd+F search, Ctrl+R history, Ctrl+G nav, Cmd+E queue) — split out of
+// `onKey` to keep its own cognitive complexity under the file's lint threshold.
+function handleChordKeys(e: KeyboardEvent, snap: StateSnapshot, cb: Callbacks): boolean {
+  if (e.metaKey && e.key.toLowerCase() === 'f') {
+    if (!snap.canSearch) return true;
+    e.preventDefault();
+    if (!snap.searchOpen) cb.openSearch();
+    return true;
+  }
+  if (e.ctrlKey && e.key.toLowerCase() === 'r') { e.preventDefault(); cb.openPicker(); return true; }
+  if (e.ctrlKey && e.key.toLowerCase() === 'g') { e.preventDefault(); cb.openTabNav(); return true; }
+  if (e.metaKey && e.key.toLowerCase() === 'e') { e.preventDefault(); cb.openQueue(); return true; }
+  return false;
 }
 
 export function useWindowKeys(
@@ -87,15 +112,7 @@ export function useWindowKeys(
       const cb = callbacksRef.current;
       if (!snap || !cb) return;
       if (dispatchModalKey(e, snap, cb)) return;
-      if (e.metaKey && e.key.toLowerCase() === 'f') {
-        if (!snap.canSearch) return;
-        e.preventDefault();
-        if (!snap.searchOpen) cb.openSearch();
-        return;
-      }
-      if (e.ctrlKey && e.key.toLowerCase() === 'r') { e.preventDefault(); cb.openPicker(); return; }
-      if (e.ctrlKey && e.key.toLowerCase() === 'g') { e.preventDefault(); cb.openTabNav(); return; }
-
+      if (handleChordKeys(e, snap, cb)) return;
       if (!snap.searchOpen && handleScrollKey(e)) return;
       handleTabShortcuts(e, client);
     };

@@ -11,9 +11,21 @@ type Properties = {
   inputRef: React.RefObject<HTMLTextAreaElement | null>;
   complete: (text: string, cursor: number) => Promise<CompletionResult>;
   pickerOpen: boolean;
+  busy: boolean;
+  // The queue popup (Cmd+E / `queue`) is modal for Enter/ArrowUp/ArrowDown (the window handler
+  // owns those) but not for typing — the command line is the popup's sole edit surface.
+  queueOpen?: boolean;
+  // Assigned this component's `recall` so the queue popup can push a selected row's text into
+  // the command line (the `guardRef` pattern — see `App.tsx`'s `guardRef`).
+  recallRef?: React.RefObject<((text: string) => void) | null>;
+  onEditQueued?: (text: string) => void;
+  onDeleteQueued?: () => void;
 };
 
-export function CommandInput({ dotColor, history, ghostHistory, onSubmit, inputRef, complete, pickerOpen }: Properties) {
+export function CommandInput({
+  dotColor, history, ghostHistory, onSubmit, inputRef, complete, pickerOpen, busy,
+  queueOpen, recallRef, onEditQueued, onDeleteQueued,
+}: Properties) {
   const [value, setValue] = useState('');
   const [completions, setCompletions] = useState<string[]>([]);
   const histIndex = useRef(-1);
@@ -33,13 +45,17 @@ export function CommandInput({ dotColor, history, ghostHistory, onSubmit, inputR
     setValue(text);
     requestAnimationFrame(() => { const element = inputRef.current; if (element) element.selectionStart = element.selectionEnd = text.length; });
   };
+  if (recallRef) recallRef.current = recall;
 
   const submit = () => {
     const text = value.trim();
-    if (text) onSubmit(text);
+    // Clear before calling onSubmit: a client-intercepted command (e.g. `queue`) may
+    // synchronously populate the command line again (selecting the front queued entry), and
+    // that write must win over this clear rather than being stomped by it.
     setValue('');
     setCompletions([]);
     histIndex.current = -1;
+    if (text) onSubmit(text);
   };
 
   const recallOlder = () => {
@@ -71,6 +87,19 @@ export function CommandInput({ dotColor, history, ghostHistory, onSubmit, inputR
     element.dispatchEvent(new Event('input', { bubbles: true }));
   };
 
+  // While the queue popup is open: Enter/ArrowUp/ArrowDown are owned by the window handler
+  // (no-op / move the selector); Backspace/Delete on an empty line deletes the selected row.
+  // Returns true once handled, so the caller stops there. All other keys behave normally.
+  const handleQueueOpenKey = (e: React.KeyboardEvent<HTMLTextAreaElement>): boolean => {
+    if (['Enter', 'ArrowUp', 'ArrowDown'].includes(e.key)) return true;
+    if ((e.key === 'Backspace' || e.key === 'Delete') && value === '') {
+      e.preventDefault();
+      onDeleteQueued?.();
+      return true;
+    }
+    return false;
+  };
+
   const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (pickerOpen) return; // history picker is modal; the window handler owns the keys
     // Shift+Enter inserts a newline and Ctrl+Enter submits — both ahead of the shift/ctrl guard
@@ -79,6 +108,7 @@ export function CommandInput({ dotColor, history, ghostHistory, onSubmit, inputR
     if (e.key === 'Enter' && e.ctrlKey) { e.preventDefault(); e.stopPropagation(); submit(); return; }
     // Defer tab chords (Shift+Arrow switch, Ctrl+Arrow reorder) and Shift+Up/Down (scroll) to the window handler.
     if (e.shiftKey || e.ctrlKey) return;
+    if (queueOpen && handleQueueOpenKey(e)) return;
     if (e.key === 'Tab') {
       e.preventDefault();
       handleTabCompletion(value, inputRef.current?.selectionStart ?? value.length, complete, setValue, setCompletions, inputRef);
@@ -131,8 +161,8 @@ export function CommandInput({ dotColor, history, ghostHistory, onSubmit, inputR
     <div className="command-area" data-doc-shot="command-bar">
       {completions.length > 0 && <div className="completions">{completions.join('  ')}</div>}
       <div className="command" onClick={() => inputRef.current?.focus()}>
-        <span className="dot" style={{ color: dotColor }}>●</span>
-        <span>❯</span>
+        <span className={`dot${busy ? ' busy' : ''}`} style={{ color: dotColor }}>●</span>
+        <span>{busy ? 'queue ❯' : '❯'}</span>
         <div className="input-wrap">
           {ghost && (
             <span className="ghost" aria-hidden="true">
@@ -145,7 +175,11 @@ export function CommandInput({ dotColor, history, ghostHistory, onSubmit, inputR
             value={value}
             autoFocus
             spellCheck={false}
-            onChange={(e) => { setValue(e.target.value); setCompletions([]); }}
+            onChange={(e) => {
+              setValue(e.target.value);
+              setCompletions([]);
+              if (queueOpen) onEditQueued?.(e.target.value);
+            }}
             onKeyDown={onKeyDown}
           />
         </div>

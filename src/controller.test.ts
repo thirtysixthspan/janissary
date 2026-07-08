@@ -1439,6 +1439,28 @@ describe('Controller direct RPC delegators', () => {
     expect(c.view()[0].title).toBe('reviewer');
   });
 
+  it('editQueuedCommand RPC patches the active tab\'s queued entry at the given index', () => {
+    const { c } = makeController();
+    c.managers.tab.enqueue('janus', 'first');
+    c.editQueuedCommand(0, 'edited');
+    expect(c.view()[0].commandQueue).toEqual(['edited']);
+  });
+
+  it('editQueuedCommand RPC no-ops for an out-of-range index', () => {
+    const { c } = makeController();
+    c.managers.tab.enqueue('janus', 'first');
+    c.editQueuedCommand(5, 'ignored');
+    expect(c.view()[0].commandQueue).toEqual(['first']);
+  });
+
+  it('deleteQueuedCommand RPC removes the active tab\'s queued entry at the given index', () => {
+    const { c } = makeController();
+    c.managers.tab.enqueue('janus', 'first');
+    c.managers.tab.enqueue('janus', 'second');
+    c.deleteQueuedCommand(0);
+    expect(c.view()[0].commandQueue).toEqual(['second']);
+  });
+
   it('runSuggestion RPC on an unknown id is a no-op', () => {
     const { c } = makeController();
     expect(() => c.runSuggestion('ghost')).not.toThrow();

@@ -18,7 +18,7 @@ function makeTab(overrides: Partial<TabView> = {}): TabView {
     connections: [],
     schedule: [],
     bufferLines: [],
-    cmdHistory: [],
+    cmdHistory: [], commandQueue: [],
     toolStepsExpanded: false,
     ...overrides,
   };

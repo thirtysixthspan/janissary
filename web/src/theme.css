@@ -262,6 +262,7 @@ html, body, #root {
 .completions { padding: 2px 12px; color: var(--muted); white-space: pre-wrap; overflow-wrap: break-word; border-top: 1px solid var(--border); }
 .command { display: flex; align-items: flex-start; gap: 8px; padding: 8px 12px; border-top: 1px solid var(--border); }
 .command .dot { font-size: 10px; line-height: 1.6; }
+.command .dot.busy { animation: dot-blink 1.2s step-end infinite; }
 .command .dot + span { line-height: 1.6; }
 .command textarea {
   flex: 1; background: transparent; border: none; outline: none;

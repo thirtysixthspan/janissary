@@ -13,10 +13,11 @@ import { ShellTabLayer } from './ShellTabLayer';
 import { MountedViewLayers } from './MountedViewLayers';
 import { CommandArea } from './CommandArea';
 import { useTranscriptSearch } from './useTranscriptSearch';
-import { resolveSearchInterception } from './command-interceptions';
 import { StatusPanels } from './StatusPanels';
 import { PickerOverlays } from './PickerOverlays';
 import { useTabNav } from './useTabNav';
+import { useQueuePicker } from './useQueuePicker';
+import { useCommandBarSubmit } from './useCommandBarSubmit';
 import { QuitDialog } from './QuitDialog/QuitDialog';
 import { CloseSaveGuard } from './CloseSaveGuard';
 import { getRecentHistory } from './history';
@@ -82,10 +83,15 @@ export function App() {
     navOpen, navQuery, navIndex, navTabs, setNavIndex, setNavQuery, setNavOpen, openTabNav, openTabNavWithQuery, selectNavTab,
   } = useTabNav(client, tabs);
 
+  const {
+    queueOpen, queueIndex, setQueueIndex, setQueueOpen, openQueue, selectQueueIndex, onEditQueued, onDeleteQueued, recallRef,
+  } = useQueuePicker(client, current, inputReference);
+
   // Live snapshot read by the window key handler, so it never has to re-register.
   const stateReference = useLiveRef({
     pickerOpen, pickerIdx: pickerIndex, recent, route, routeIdx: routeIndex, canSearch, searchOpen: search.searchOpen,
     themePickerOpen, themePickerIdx: themePickerIndex, navOpen, navQuery, navIdx: navIndex, navTabs,
+    queueOpen, queueIdx: queueIndex, queueItems: current?.commandQueue ?? [],
   });
 
   const openPicker = () => {
@@ -99,13 +105,12 @@ export function App() {
   const guardRef = useRef<((index: number) => boolean) | null>(null);
   const activeTabRef = useRef(activeTab); activeTabRef.current = activeTab;
   const quitConfirmOpenRef = useRef(quitConfirmOpen); quitConfirmOpenRef.current = quitConfirmOpen;
-  const pickerOpenRef = useRef(pickerOpen); pickerOpenRef.current = pickerOpen;
+  const pickerOpenRef = useRef(pickerOpen); pickerOpenRef.current = pickerOpen || queueOpen;
   const routeRef = useRef(route); routeRef.current = route;
   const activeViewRef = useRef(current?.view); activeViewRef.current = current?.view;
 
   const closeTab = useCallback((index: number) => {
-    if (guardRef.current?.(index)) return;
-    client.send({ method: 'closeTab', params: { index } });
+    if (guardRef.current?.(index)) return; client.send({ method: 'closeTab', params: { index } });
   }, [client]);
 
   const chooseRoute = useCallback((index: number) => client.send({ method: 'chooseRoute', params: { index } }), [client]);
@@ -141,9 +146,15 @@ export function App() {
     setRouteIndex, chooseRoute, runCommand, setPickerIndex, setPickerOpen, openPicker, openSearch,
     setThemePickerIndex, setThemePickerOpen, pickTheme,
     setNavIndex, setNavQuery, selectNavTab, setNavOpen, openTabNav,
+    setQueueIndex, setQueueOpen, openQueue,
   });
 
   useWindowKeys(client, stateReference, keyCallbacksRef, handleScrollKey, handleScrollKeyUp);
+
+  const onCommandBarSubmit = useCommandBarSubmit({
+    canSearch, lines, search, openPicker, openThemePicker, openQueue, navOpen, setNavOpen,
+    openTabNavWithQuery, tabs, openQuitConfirm, guardRef, activeTab, runCommand,
+  });
 
   if (!current) return <div className="app" style={{ padding: 16, color: 'var(--muted)' }}>Connecting…</div>;
 
@@ -173,9 +184,7 @@ export function App() {
           onMouseDown={() => setTimeout(() => inputReference.current?.focus(), 0)}
           onMouseUp={() => {
             const selection = globalThis.getSelection()?.toString();
-            if (selection) {
-              navigator.clipboard.writeText(selection);
-            }
+            if (selection) navigator.clipboard.writeText(selection);
           }}
         >
           <div className="main">
@@ -193,6 +202,7 @@ export function App() {
               syntaxTheme={syntaxTheme} themePickerOpen={themePickerOpen} themePickerIndex={themePickerIndex} onPickTheme={pickTheme}
               pickerOpen={pickerOpen} recent={recent} pickerIndex={pickerIndex} onPickHistory={pick}
               navOpen={navOpen} navQuery={navQuery} navIndex={navIndex} tabs={tabs} onPickTab={selectNavTab}
+              queueOpen={queueOpen} queueItems={current.commandQueue} queueIndex={queueIndex} onSelectQueue={selectQueueIndex}
             />
           </div>
           <CommandArea
@@ -201,23 +211,15 @@ export function App() {
             dotColor={current.dotColor}
             history={current.cmdHistory}
             ghostHistory={globalHistory}
-            onSubmit={(text) => {
-              const searchPattern = resolveSearchInterception(text, canSearch, lines);
-              if (searchPattern !== null) { search.open(searchPattern); return; }
-              const trimmed = text.trim().toLowerCase();
-              if (trimmed === 'hist') openPicker();
-              else if (trimmed === 'syntax theme') openThemePicker();
-              else if (trimmed === 'nav' || trimmed.startsWith('nav ')) {
-                if (navOpen) setNavOpen(false);
-                else openTabNavWithQuery(text.trim().slice(3).trim());
-              }
-              else if (trimmed === 'quit' || ((trimmed === 'close' || trimmed === 'exit') && tabs.filter((t) => !t.dock).length === 1)) openQuitConfirm();
-              else if ((trimmed === 'close' || trimmed === 'exit') && guardRef.current?.(activeTab)) return;
-              else runCommand(text);
-            }}
+            onSubmit={onCommandBarSubmit}
             inputRef={inputReference}
             complete={(text, cursor) => client.request({ method: 'complete', params: { text, cursor } })}
             pickerOpen={pickerOpen || route !== null || quitConfirmOpen || themePickerOpen || navOpen}
+            busy={current.busy}
+            queueOpen={queueOpen}
+            recallRef={recallRef}
+            onEditQueued={onEditQueued}
+            onDeleteQueued={onDeleteQueued}
           />
         </div>
       )}

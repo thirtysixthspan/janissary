@@ -7,7 +7,7 @@ import type { TabView } from '@shared/protocol';
 function baseTab(overrides: Partial<TabView> = {}): TabView {
   return {
     label: 'test', number: 1, dotColor: '#fff', group: 1, groupColor: '#fff',
-    busy: false, hasUnread: false, cwd: '/', connections: [], schedule: [], bufferLines: [], cmdHistory: [],
+    busy: false, hasUnread: false, cwd: '/', connections: [], schedule: [], bufferLines: [], cmdHistory: [], commandQueue: [],
     toolStepsExpanded: false,
     ...overrides,
   };

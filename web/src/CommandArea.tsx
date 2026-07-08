@@ -14,11 +14,19 @@ type Properties = {
   inputRef: React.RefObject<HTMLTextAreaElement | null>;
   complete: (text: string, cursor: number) => Promise<CompletionResult>;
   pickerOpen: boolean;
+  busy: boolean;
+  queueOpen: boolean;
+  recallRef: React.RefObject<((text: string) => void) | null>;
+  onEditQueued: (text: string) => void;
+  onDeleteQueued: () => void;
 };
 
 // Replaces the command bar with the search bar while search mode is open — visually, the
 // command bar "becomes" the search bar rather than something appearing alongside it.
-export function CommandArea({ search, lines, dotColor, history, ghostHistory, onSubmit, inputRef, complete, pickerOpen }: Properties) {
+export function CommandArea({
+  search, lines, dotColor, history, ghostHistory, onSubmit, inputRef, complete, pickerOpen, busy,
+  queueOpen, recallRef, onEditQueued, onDeleteQueued,
+}: Properties) {
   if (search.searchOpen) {
     return (
       <SearchBar
@@ -43,6 +51,11 @@ export function CommandArea({ search, lines, dotColor, history, ghostHistory, on
       inputRef={inputRef}
       complete={complete}
       pickerOpen={pickerOpen}
+      busy={busy}
+      queueOpen={queueOpen}
+      recallRef={recallRef}
+      onEditQueued={onEditQueued}
+      onDeleteQueued={onDeleteQueued}
     />
   );
 }

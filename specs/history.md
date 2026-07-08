@@ -36,7 +36,7 @@ Pressing Return saves the trimmed input to history before executing.
 
 ### Persistence
 
-Command history is persisted per-agent to `.janissary/state/<name>.json`. Each agent state file stores `name`, `dotColor`, `active`, `number` (the tab's position), `cmdHistory[]`, `log[]` (the full transcript), `cwd` (the shell's working directory), and `context[]` (informational messages received from other agents).
+Command history is persisted per-agent to `.janissary/state/<name>.json`. Each agent state file stores `name`, `dotColor`, `active`, `number` (the tab's position), `cmdHistory[]`, `log[]` (the full transcript), `cwd` (the shell's working directory), `context[]` (informational messages received from other agents), and `commandQueue[]` (see [[agent-command-queue]]).
 
 ### Global history
 

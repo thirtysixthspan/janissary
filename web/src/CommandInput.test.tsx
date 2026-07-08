@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { CommandInput } from './CommandInput';
 
-function renderCommandInput(overrides: { history?: string[]; ghostHistory?: string[] } = {}) {
+function renderCommandInput(overrides: { history?: string[]; ghostHistory?: string[]; busy?: boolean } = {}) {
   const inputRef = createRef<HTMLTextAreaElement>();
   const onSubmit = vi.fn();
   const complete = vi.fn().mockResolvedValue({ completions: [], cursor: 0 });
@@ -17,6 +17,7 @@ function renderCommandInput(overrides: { history?: string[]; ghostHistory?: stri
       inputRef={inputRef}
       complete={complete}
       pickerOpen={false}
+      busy={overrides.busy ?? false}
     />,
   );
   return { inputRef, onSubmit };
@@ -108,6 +109,74 @@ describe('CommandInput — ghost text', () => {
   });
 });
 
+describe('CommandInput — busy', () => {
+  it('shows the bare prompt and no blinking dot when idle', () => {
+    renderCommandInput({ busy: false });
+    expect(screen.getByText('❯')).toBeInTheDocument();
+    expect(document.querySelector('.dot.busy')).toBeNull();
+  });
+
+  it('shows the "queue ❯" prompt and a blinking dot when busy', () => {
+    renderCommandInput({ busy: true });
+    expect(screen.getByText('queue ❯')).toBeInTheDocument();
+    expect(document.querySelector('.dot.busy')).not.toBeNull();
+  });
+});
+
+describe('CommandInput — queueOpen', () => {
+  function renderQueueOpen(overrides: { onDeleteQueued?: () => void; onEditQueued?: (text: string) => void; value?: string } = {}) {
+    const inputRef = createRef<HTMLTextAreaElement>();
+    const onSubmit = vi.fn();
+    const onDeleteQueued = overrides.onDeleteQueued ?? vi.fn();
+    const onEditQueued = overrides.onEditQueued ?? vi.fn();
+    render(
+      <CommandInput
+        dotColor="#fff"
+        history={[]}
+        ghostHistory={[]}
+        onSubmit={onSubmit}
+        inputRef={inputRef}
+        complete={vi.fn().mockResolvedValue({ completions: [], cursor: 0 })}
+        pickerOpen={false}
+        busy={false}
+        queueOpen
+        onDeleteQueued={onDeleteQueued}
+        onEditQueued={onEditQueued}
+      />,
+    );
+    return { onSubmit, onDeleteQueued, onEditQueued };
+  }
+
+  it('Enter does not submit', () => {
+    const { onSubmit } = renderQueueOpen();
+    const input = screen.getByRole('textbox');
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it('Backspace on an empty line deletes the selected row instead of editing', () => {
+    const { onDeleteQueued } = renderQueueOpen();
+    const input = screen.getByRole('textbox');
+    fireEvent.keyDown(input, { key: 'Backspace' });
+    expect(onDeleteQueued).toHaveBeenCalled();
+  });
+
+  it('Backspace with text present edits normally, not deleting the row', async () => {
+    const { onDeleteQueued } = renderQueueOpen();
+    const input = screen.getByRole('textbox');
+    await userEvent.type(input, 'abc');
+    fireEvent.keyDown(input, { key: 'Backspace' });
+    expect(onDeleteQueued).not.toHaveBeenCalled();
+  });
+
+  it('typing patches the selected row via onEditQueued', async () => {
+    const { onEditQueued } = renderQueueOpen();
+    const input = screen.getByRole('textbox');
+    await userEvent.type(input, 'a');
+    expect(onEditQueued).toHaveBeenCalledWith('a');
+  });
+});
+
 describe('CommandInput — multi-line', () => {
   it('Shift+Enter inserts a newline instead of submitting', async () => {
     const { onSubmit } = renderCommandInput();
@@ -179,6 +248,7 @@ describe('CommandInput — multi-line', () => {
         inputRef={inputRef}
         complete={complete}
         pickerOpen={false}
+        busy={false}
       />,
     );
     const input = screen.getByRole('textbox') as HTMLTextAreaElement;

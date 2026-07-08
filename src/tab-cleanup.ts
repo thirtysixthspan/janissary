@@ -7,6 +7,7 @@ export function closeTabResources(
   managers: Managers,
   openFiles: Map<string, string>,
   context: Map<string, string[]>,
+  queue: Map<string, string[]>,
   tabsLength: number,
 ): void {
   if (tab.workspaceDir) managers.workspace.remove(tab.workspaceDir);
@@ -28,4 +29,5 @@ export function closeTabResources(
     openFiles.delete(id);
   }
   context.delete(tab.label);
+  queue.delete(tab.label);
 }

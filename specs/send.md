@@ -25,7 +25,7 @@ the same file.
 | Target tab kind | Delivery |
 | --- | --- |
 | Harness (`view === 'harness'`, `harness.status === 'running'`) | `ptyInput(harness.ptyId, text + '\r')` — raw keystrokes into the PTY, followed by a carriage return so the harness executes the line (matches xterm's own Enter key). |
-| Agent (`view` undefined or `'agent'`) | `dispatchTo(label, text)` — runs `text` as a command in that tab's own command pipeline. |
+| Agent (`view` undefined or `'agent'`) | `dispatchTo(label, text)` — runs `text` as a command in that tab's own command pipeline; queues behind whatever else is queued if the target is currently busy (see [[agent-command-queue]]). |
 | Harness that has exited | error: `Tab "<label>" is not a running harness.` |
 | Image / page / markdown view | error: `Tab "<label>" does not accept input.` |
 | No such tab | error: `No tab named "<label>".` |
