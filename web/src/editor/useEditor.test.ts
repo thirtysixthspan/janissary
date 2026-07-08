@@ -112,4 +112,20 @@ describe('useEditor', () => {
     act(() => { result.current.load('test'); });
     act(() => { result.current.apply({ kind: 'unknown' as never }, 20); });
   });
+
+  it('apply with redo calls undo.redo', () => {
+    const { result } = renderHook(() => useEditor(() => {}));
+    act(() => { result.current.load('test'); });
+    act(() => { result.current.apply({ kind: 'redo' }, 20); });
+  });
+
+  it('apply with copy calls navigator.clipboard.writeText', () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal('navigator', { clipboard: { writeText } });
+    const { result } = renderHook(() => useEditor(() => {}));
+    act(() => { result.current.load('test'); });
+    act(() => { result.current.apply({ kind: 'copy' }, 20); });
+    expect(writeText).toHaveBeenCalled();
+    vi.unstubAllGlobals();
+  });
 });
