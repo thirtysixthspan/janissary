@@ -37,8 +37,10 @@ export function handlePickerKey(
 // Navigation half of the queue popup's key handling (see `CommandInput`'s queueOpen branch for
 // the text-adjacent half: typing and Backspace-on-empty). Up/Down move the selector, each move
 // copying the newly selected row into the command line (via `setQueueIndex`). Enter is an
-// explicit no-op — it must not submit, run, or close. Escape closes only. Printable keys and
-// Backspace are deliberately NOT handled here so they fall through to the command-line textarea.
+// explicit no-op — it must not submit, run, or close. Escape closes the popup (the passed-in
+// `setQueueOpen` also clears the command line when called with `false` — see `useQueuePicker`'s
+// `closeQueue`). Printable keys and Backspace are deliberately NOT handled here so they fall
+// through to the command-line textarea.
 export function handleQueueKey(
   e: KeyboardEvent,
   items: string[],

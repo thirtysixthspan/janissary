@@ -44,7 +44,7 @@ overwriting whatever was there. The command line is the popup's only edit surfac
 | Backspace / Delete with text present | Ordinary text editing (also patches the row) |
 | Backspace / Delete on an empty line | Removes the selected row, clamps the selection, and keeps the popup open with an empty command line — repeated presses delete row after row |
 | Enter / Return | No-op — does not submit, run, or close the popup |
-| Escape | Closes the popup without any other effect |
+| Escape | Closes the popup and clears the command line |
 
 An entry backspaced to an empty string (but not yet deleted) is a legal queued row; when it
 reaches the front of the queue and drains, it runs as a no-op.
