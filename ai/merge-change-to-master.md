@@ -51,12 +51,12 @@ Any uncommitted changes carry over onto the new branch. (If the changes were alr
 
 ---
 
-## Step 3 — Commit the changes (descriptive message, **no co-authors**)
+## Step 3 — Commit the changes (conventional commits message, **no co-authors**)
 
-Write **one** commit with a descriptive subject and a body explaining *what* changed and *why*. `pr:commit` stages everything (`git add -A`) and commits with a **single author**:
+Write **one** commit. The subject line must follow the [Conventional Commits 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/) specification (see [`ai/guidelines/conventional-commits.md`](../../ai/guidelines/conventional-commits.md)): `<type>[optional scope]: <description>`. Valid types: `refactor`, `feat`, `fix`, `build`, `chore`, `ci`, `docs`, `style`, `perf`, `test`, `revert`. Include a body explaining *what* changed and *why*. `pr:commit` stages everything (`git add -A`) and commits with a **single author**:
 
 ```bash
-./scripts/run.mjs pr-commit "Extract parseSpec() helper to cut loadConfig cognitive complexity" \
+./scripts/run.mjs pr-commit "refactor: extract parseSpec() helper to cut loadConfig cognitive complexity" \
   "loadConfig exceeded the complexity limit; the spec-parsing block is now a small pure helper. No behavior change."
 ```
 
@@ -86,7 +86,7 @@ This prints a single space-separated line: `OWNER_REPO BRANCH GH_URL`. Read thos
 
 ## Step 5 — Open the PR against `master`
 
-Use the commit subject as `<title>`. Write the PR body to a file first — this avoids shell quoting issues with multi-line content. The body should have a **What** (one or two sentences on the change), a **Why** (the warning/goal it addresses), and a **Notes** line that the check gate passes.
+Use the commit subject (which follows Conventional Commits format) as `<title>`. The PR title must match the commit subject and therefore also follows the Conventional Commits specification. Write the PR body to a file first — this avoids shell quoting issues with multi-line content. The body should have a **What** (one or two sentences on the change), a **Why** (the warning/goal it addresses), and a **Notes** line that the check gate passes.
 
 Write the body to `./temp/pr-body.md`, then open the PR:
 

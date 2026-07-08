@@ -124,6 +124,20 @@ Follow the conventions in [`ai/guidelines/code-guidelines.md`](ai/guidelines/cod
 file-size limit and how to respond to it (extract code into a new module — never compact
 code, strip comments, or delete spacing to get under the limit).
 
+## Commits and pull requests
+
+All commit messages and PR titles must follow the [Conventional Commits 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/) specification, detailed in [`ai/guidelines/conventional-commits.md`](ai/guidelines/conventional-commits.md). The format is:
+
+```
+<type>[optional scope]: <description>
+
+[optional body]
+
+[optional footer(s)]
+```
+
+Valid types include `feat`, `fix`, `build`, `chore`, `ci`, `docs`, `style`, `refactor`, `perf`, `test`, and `revert`. Breaking changes are indicated with a `!` after the type/scope or a `BREAKING CHANGE:` footer.
+
 ## Running scripts
 
 Use `./scripts/run.mjs <name>` to run any script in `scripts/`. This is the only way to invoke scripts — it is pre-approved in `.claude/settings.json` so no permission prompt is needed.

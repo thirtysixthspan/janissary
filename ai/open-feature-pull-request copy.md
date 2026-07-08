@@ -83,12 +83,12 @@ Any uncommitted changes carry over onto the new branch.
 
 ---
 
-## Step 3 — Commit the changes (conventional commits message, **no co-authors**)
+## Step 3 — Commit the changes (descriptive message, **no co-authors**)
 
-Write **one** commit. The subject line must follow the [Conventional Commits 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/) specification (see [`ai/guidelines/conventional-commits.md`](../../ai/guidelines/conventional-commits.md)): `<type>[optional scope]: <description>`. Valid types: `feat`, `fix`, `build`, `chore`, `ci`, `docs`, `style`, `refactor`, `perf`, `test`, `revert`. Include a body explaining *what* changed and *why*. `pr-commit` stages everything (`git add -A`) and commits with a **single author**:
+Write **one** commit with a descriptive subject and a body explaining *what* changed and *why*. `pr-commit` stages everything (`git add -A`) and commits with a **single author**:
 
 ```bash
-./scripts/run.mjs pr-commit "feat(ui): add unread badge on inactive tabs" \
+./scripts/run.mjs pr-commit "Add unread badge on inactive tabs" \
   "When a background tab receives new transcript content (messages, command output, shell completion), a sparkle badge appears on the tab strip. Focusing the tab clears it. Covers all content-delivery paths (append, finishRunning, shell onDone) and all activation paths (click, next, reorderTab, closeTab)."
 ```
 
@@ -131,7 +131,7 @@ Use natural line breaks — never wrap lines at a fixed column.
 
 ## Step 6 — Open the PR against `master`
 
-Use the commit subject (which follows Conventional Commits format) as `<title>`. The PR title must match the commit subject and therefore also follows the Conventional Commits specification. Substitute the actual `OWNER_REPO` and `BRANCH` values you read in Step 4, and pass the body file:
+Use the commit subject as `<title>`. Substitute the actual `OWNER_REPO` and `BRANCH` values you read in Step 4, and pass the body file:
 
 ```bash
 ./scripts/run.mjs pr-create-pr owner/repo my-branch-name "<title>" ./temp/pr-body.md
