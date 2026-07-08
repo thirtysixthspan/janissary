@@ -12,6 +12,8 @@ const makeController = () =>
     setActiveTab: vi.fn(),
     closeTab: vi.fn(),
     renameTab: vi.fn(),
+    editQueuedCommand: vi.fn(),
+    deleteQueuedCommand: vi.fn(),
     moveTab: vi.fn(),
     reorderTab: vi.fn(),
     toggleCollapse: vi.fn(),
@@ -56,6 +58,18 @@ describe('handle', () => {
     const controller = makeController();
     dispatchCall(controller, 3, { method: 'renameTab', params: { index: 1, title: 'bob' } });
     expect(controller.renameTab).toHaveBeenCalledWith(1, 'bob');
+  });
+
+  it('routes editQueuedCommand', () => {
+    const controller = makeController();
+    dispatchCall(controller, 19, { method: 'editQueuedCommand', params: { index: 0, text: 'echo hi' } });
+    expect(controller.editQueuedCommand).toHaveBeenCalledWith(0, 'echo hi');
+  });
+
+  it('routes deleteQueuedCommand', () => {
+    const controller = makeController();
+    dispatchCall(controller, 20, { method: 'deleteQueuedCommand', params: { index: 0 } });
+    expect(controller.deleteQueuedCommand).toHaveBeenCalledWith(0);
   });
 
   it('routes moveTab', () => {

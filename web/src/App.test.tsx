@@ -34,7 +34,7 @@ function makeTab(overrides: Partial<TabView> = {}): TabView {
   return {
     label: 'janus', number: 1, dotColor: '#fff', group: 0, groupColor: '#000',
     busy: false, hasUnread: false, cwd: '/tmp', connections: [], schedule: [],
-    bufferLines: [], cmdHistory: [], toolStepsExpanded: false,
+    bufferLines: [], cmdHistory: [], commandQueue: [], toolStepsExpanded: false,
     ...overrides,
   };
 }
@@ -118,6 +118,46 @@ describe('App tab navigator', () => {
     fireEvent.keyDown(input, { key: 'Enter' });
     expect(screen.getByText('nav: depl')).toBeInTheDocument();
     expect(sendMock).not.toHaveBeenCalledWith({ method: 'command', params: { text: 'nav depl' } });
+  }, 15_000);
+});
+
+describe('App queue popup', () => {
+  beforeEach(() => {
+    sendMock.mockClear();
+    stateListener = null;
+  });
+
+  it('opens the queue popup on "queue" instead of sending a command RPC', async () => {
+    const { App } = await import('./App');
+    render(<App />);
+    act(() => { stateListener!([makeTab({ commandQueue: ['echo hi'] })], 0, null, 16, [], 'github-dark'); });
+    const input = screen.getByRole('textbox');
+    fireEvent.change(input, { target: { value: 'queue' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(screen.getByText('queue', { selector: '.picker-title' })).toBeInTheDocument();
+    expect(sendMock).not.toHaveBeenCalledWith({ method: 'command', params: { text: 'queue' } });
+  }, 15_000);
+
+  it('selecting the front entry copies it into the command line', async () => {
+    const { App } = await import('./App');
+    render(<App />);
+    act(() => { stateListener!([makeTab({ commandQueue: ['echo hi', 'echo bye'] })], 0, null, 16, [], 'github-dark'); });
+    const input = screen.getByRole('textbox') as HTMLTextAreaElement;
+    fireEvent.change(input, { target: { value: 'queue' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(input.value).toBe('echo hi');
+  }, 15_000);
+
+  it('Cmd+W does nothing while the queue popup is open', async () => {
+    const { App } = await import('./App');
+    render(<App />);
+    act(() => { stateListener!([makeTab({ commandQueue: ['echo hi'] })], 0, null, 16, [], 'github-dark'); });
+    const input = screen.getByRole('textbox');
+    fireEvent.change(input, { target: { value: 'queue' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    sendMock.mockClear();
+    fireEvent.keyDown(globalThis as unknown as Window, { key: 'w', metaKey: true });
+    expect(sendMock).not.toHaveBeenCalledWith(expect.objectContaining({ method: 'closeTab' }));
   }, 15_000);
 });
 

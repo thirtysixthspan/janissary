@@ -11,7 +11,9 @@ import type { Managers } from './managers.js';
 export class CommandManager {
   private pendingRoute: { label: string; cmd: string; choices: RouteChoice[] } | null = null;
 
-  constructor(private managers: Managers) {}
+  constructor(private managers: Managers) {
+    this.managers.tab.setOnIdle((label) => this.drainQueue(label));
+  }
 
   routeView(): { cmd: string; choices: string[] } | null {
     if (!this.pendingRoute) return null;
@@ -25,13 +27,14 @@ export class CommandManager {
       const index_ = this.managers.tab.findIndex(pending.label);
       if (index_ !== -1) this.run(toPrefixedCommand(pending.cmd, pending.choices[index]), pending.label, index_);
     }
+    if (pending) this.drainQueue(pending.label);
     messageBus.emit('state', { type: 'dirty' });
   }
 
   dispatch(text: string): void {
     const trimmed = this.managers.tab.recordHistory(this.managers.tab.activeTab, text);
     if (trimmed) recordGlobalHistory(trimmed, this.managers.tab.cur().label);
-    this.run(trimmed, this.managers.tab.cur().label, this.managers.tab.activeTab);
+    this.dispatchOrRun(trimmed, this.managers.tab.cur().label, this.managers.tab.activeTab);
   }
 
   dispatchTo(label: string, text: string): void {
@@ -39,7 +42,35 @@ export class CommandManager {
     if (index === -1) return;
     const trimmed = this.managers.tab.recordHistory(index, text);
     if (trimmed) recordGlobalHistory(trimmed, label);
+    this.dispatchOrRun(trimmed, label, index);
+  }
+
+  // Gate seam: agent tabs queue while busy (or while idle with entries already waiting, to
+  // preserve FIFO) instead of running immediately. Non-agent tabs and empty input bypass the gate.
+  private dispatchOrRun(trimmed: string, label: string, index: number): void {
+    if (!trimmed) { this.run(trimmed, label, index); return; }
+    const tab = this.managers.tab.tabs[index];
+    const isAgentTab = tab !== undefined && (tab.view === undefined || tab.view === 'agent');
+    const wasIdle = !this.managers.tab.isBusy(label);
+    const alreadyQueued = this.managers.tab.queueFor(label).length > 0;
+    if (isAgentTab && (!wasIdle || alreadyQueued)) {
+      this.managers.tab.enqueue(label, trimmed);
+      if (wasIdle) this.drainQueue(label);
+      return;
+    }
     this.run(trimmed, label, index);
+  }
+
+  // Runs queued commands FIFO until the tab goes busy, its queue empties, or a route chooser
+  // becomes pending (resumed by `chooseRoute`). Registered as `TabManager`'s onIdle hook.
+  drainQueue(label: string): void {
+    for (;;) {
+      const index = this.managers.tab.findIndex(label);
+      if (index === -1 || this.managers.tab.isBusy(label) || this.pendingRoute) return;
+      const command = this.managers.tab.dequeue(label);
+      if (command === undefined) return;
+      this.run(command, label, index);
+    }
   }
 
   private run(input: string, label: string, index: number): void {

@@ -21,6 +21,8 @@ export class TabManager {
   private cwd = new Map<string, string>();
   private busy = new Set<string>();
   private context = new Map<string, string[]>();
+  private queue = new Map<string, string[]>();
+  private onIdle: ((label: string) => void) | null = null;
   private openFiles = new Map<string, string>();
   private openFileCounter = 0;
   private readonly rootDir = process.cwd();
@@ -58,6 +60,53 @@ export class TabManager {
 
   deleteBusy(label: string): void {
     this.busy.delete(label);
+    if (this.queueFor(label).length > 0) {
+      queueMicrotask(() => this.onIdle?.(label));
+    }
+  }
+
+  setOnIdle(hook: (label: string) => void): void {
+    this.onIdle = hook;
+  }
+
+  queueFor(label: string): string[] {
+    return this.queue.get(label) ?? [];
+  }
+
+  enqueue(label: string, text: string): void {
+    this.queue.set(label, [...this.queueFor(label), text]);
+    this.persistQueue(label);
+  }
+
+  dequeue(label: string): string | undefined {
+    const q = this.queueFor(label);
+    if (q.length === 0) return undefined;
+    const [front, ...rest] = q;
+    this.queue.set(label, rest);
+    this.persistQueue(label);
+    return front;
+  }
+
+  editQueued(label: string, index: number, text: string): void {
+    const q = this.queueFor(label);
+    if (index < 0 || index >= q.length) return;
+    const next = [...q];
+    next[index] = text;
+    this.queue.set(label, next);
+    this.persistQueue(label);
+  }
+
+  deleteQueued(label: string, index: number): void {
+    const q = this.queueFor(label);
+    if (index < 0 || index >= q.length) return;
+    this.queue.set(label, q.filter((_, i) => i !== index));
+    this.persistQueue(label);
+  }
+
+  private persistQueue(label: string): void {
+    const tab = this.tabs.find((t) => t.label === label);
+    if (tab) this.persist(this.buildAgentState(tab));
+    messageBus.emit('state', { type: 'dirty' });
   }
 
   contextFor(label: string): string[] {
@@ -93,6 +142,7 @@ export class TabManager {
       cmdHistory: tab.cmdHistory,
       cwd: this.cwd.get(tab.label),
       context: this.context.get(tab.label),
+      commandQueue: this.queue.get(tab.label),
       title: tab.title,
       offline: tab.offline,
       ...extra,
@@ -174,7 +224,7 @@ export class TabManager {
     const tab = this.tabs[index];
     if (!tab) return;
     const nonDockedCount = this.tabs.filter((t) => !t.dock).length;
-    closeTabResources(tab, this.managers, this.openFiles, this.context, nonDockedCount);
+    closeTabResources(tab, this.managers, this.openFiles, this.context, this.queue, nonDockedCount);
     // Closing the last remaining non-docked tab quits the app (same as the `quit` command).
     if (!tab.dock && nonDockedCount <= 1) {
       messageBus.emit('app', { type: 'exit' });
@@ -225,7 +275,7 @@ export class TabManager {
       const index = log.findLastIndex((e) => e.running);
       if (index !== -1) log[index] = { ...log[index], output, running: false };
       t.log = log;
-      this.busy.delete(label);
+      this.deleteBusy(label);
       this.persist(this.buildAgentState(t));
     }
     if (output && t) {
@@ -310,6 +360,7 @@ export class TabManager {
       bufferLines: flattenBuffer(t.log, !t.toolStepsExpanded)
         .map((l) => (l.cwd ? { ...l, cwd: this.shorten(l.cwd) } : l)),
       cmdHistory: t.cmdHistory,
+      commandQueue: this.queue.get(t.label) ?? [],
       toolStepsExpanded: !!t.toolStepsExpanded,
       view: t.view,
       title: t.title,
@@ -380,6 +431,7 @@ export class TabManager {
     for (const s of states) {
       if (s.cwd) this.cwd.set(s.name, s.cwd);
       if (s.context) this.context.set(s.name, s.context);
+      if (s.commandQueue) this.queue.set(s.name, s.commandQueue);
       onState(s);
     }
     this.activeTab = 0;

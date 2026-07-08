@@ -16,7 +16,7 @@ New transcript entries from target tabs (including the initial historical entrie
 
 ### Suggestions
 
-Monitor suggestions are parsed from the ACP reply and delivered either inline (prefixed with the persona name and a sparkle indicator in the owner's transcript) or to the persona's reporting tab feed. Clicking a suggested command in the reporting tab runs it in the tab the suggestion is about. Suggestions from monitors are excluded from other monitors' feeds.
+Monitor suggestions are parsed from the ACP reply and delivered either inline (prefixed with the persona name and a sparkle indicator in the owner's transcript) or to the persona's reporting tab feed. Clicking a suggested command in the reporting tab runs it in the tab the suggestion is about, queuing behind that tab's other queued commands if it is currently busy (see [[agent-command-queue]]). Suggestions from monitors are excluded from other monitors' feeds.
 
 ### Asking a monitor
 

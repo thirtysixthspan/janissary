@@ -22,7 +22,7 @@ describe('closeTabResources', () => {
     const tab = makeTab('main', 'red');
     const managers = makeManagers();
 
-    closeTabResources(tab, managers, new Map(), new Map(), 2);
+    closeTabResources(tab, managers, new Map(), new Map(), new Map(), 2);
 
     expect(managers.shell.close).toHaveBeenCalledWith('main');
     expect(managers.acp.close).toHaveBeenCalledWith('main');
@@ -35,20 +35,20 @@ describe('closeTabResources', () => {
 
   it('removes the workspace clone only when the tab has one', () => {
     const managers = makeManagers();
-    closeTabResources(makeTab('main', 'red'), managers, new Map(), new Map(), 2);
+    closeTabResources(makeTab('main', 'red'), managers, new Map(), new Map(), new Map(), 2);
     expect(managers.workspace.remove).not.toHaveBeenCalled();
 
     const workspaced = { ...makeTab('ws', 'red'), workspaceDir: '/tmp/ws-main' };
-    closeTabResources(workspaced, managers, new Map(), new Map(), 2);
+    closeTabResources(workspaced, managers, new Map(), new Map(), new Map(), 2);
     expect(managers.workspace.remove).toHaveBeenCalledWith('/tmp/ws-main');
   });
 
   it('closes every database connection only when this was the last tab', () => {
     const managers = makeManagers();
-    closeTabResources(makeTab('main', 'red'), managers, new Map(), new Map(), 2);
+    closeTabResources(makeTab('main', 'red'), managers, new Map(), new Map(), new Map(), 2);
     expect(managers.database.closeAll).not.toHaveBeenCalled();
 
-    closeTabResources(makeTab('main', 'red'), managers, new Map(), new Map(), 1);
+    closeTabResources(makeTab('main', 'red'), managers, new Map(), new Map(), new Map(), 1);
     expect(managers.database.closeAll).toHaveBeenCalledTimes(1);
   });
 
@@ -56,7 +56,7 @@ describe('closeTabResources', () => {
     const managers = makeManagers();
     const emitSpy = vi.spyOn(messageBus, 'emit');
 
-    closeTabResources(makeTab('main', 'red'), managers, new Map(), new Map(), 2);
+    closeTabResources(makeTab('main', 'red'), managers, new Map(), new Map(), new Map(), 2);
 
     expect(emitSpy).toHaveBeenCalledWith('transcript', { type: 'tab:removed', tabLabel: 'main' });
     emitSpy.mockRestore();
@@ -67,7 +67,7 @@ describe('closeTabResources', () => {
     const tab = { ...makeTab('image', 'red'), image: { name: 'pic.png', path: '/tmp/pic.png', size: '1 KB', url: '/open/abc' } };
     const openFiles = new Map([['abc', '/tmp/pic.png']]);
 
-    closeTabResources(tab, managers, openFiles, new Map(), 2);
+    closeTabResources(tab, managers, openFiles, new Map(), new Map(), 2);
 
     expect(openFiles.has('abc')).toBe(false);
   });
@@ -77,7 +77,7 @@ describe('closeTabResources', () => {
     const tab = { ...makeTab('markdown', 'red'), markdown: { name: 'readme.md', path: '/tmp/readme.md', size: '1 KB', url: '/open/xyz' } };
     const openFiles = new Map([['xyz', '/tmp/readme.md']]);
 
-    closeTabResources(tab, managers, openFiles, new Map(), 2);
+    closeTabResources(tab, managers, openFiles, new Map(), new Map(), 2);
 
     expect(openFiles.has('xyz')).toBe(false);
   });
@@ -86,7 +86,7 @@ describe('closeTabResources', () => {
     const managers = makeManagers();
     const openFiles = new Map([['keep', '/tmp/keep.png']]);
 
-    closeTabResources(makeTab('main', 'red'), managers, openFiles, new Map(), 2);
+    closeTabResources(makeTab('main', 'red'), managers, openFiles, new Map(), new Map(), 2);
 
     expect(openFiles.has('keep')).toBe(true);
   });
@@ -95,8 +95,17 @@ describe('closeTabResources', () => {
     const managers = makeManagers();
     const context = new Map([['main', ['some context']]]);
 
-    closeTabResources(makeTab('main', 'red'), managers, new Map(), context, 2);
+    closeTabResources(makeTab('main', 'red'), managers, new Map(), context, new Map(), 2);
 
     expect(context.has('main')).toBe(false);
+  });
+
+  it('removes the tab\'s queue entry', () => {
+    const managers = makeManagers();
+    const queue = new Map([['main', ['echo hi']]]);
+
+    closeTabResources(makeTab('main', 'red'), managers, new Map(), new Map(), queue, 2);
+
+    expect(queue.has('main')).toBe(false);
   });
 });

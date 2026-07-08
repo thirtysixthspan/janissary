@@ -21,6 +21,10 @@ export function handle(controller: Controller, message: ClientMessage, reply: (e
     }
     case 'renameTab': { controller.renameTab(message.params.index, message.params.title); break;
     }
+    case 'editQueuedCommand': { controller.editQueuedCommand(message.params.index, message.params.text); break;
+    }
+    case 'deleteQueuedCommand': { controller.deleteQueuedCommand(message.params.index); break;
+    }
     case 'moveTab': { controller.moveTab(message.params.dir); break;
     }
     case 'reorderTab': { controller.reorderTab(message.params.dir); break;

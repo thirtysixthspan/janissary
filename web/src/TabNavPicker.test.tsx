@@ -8,7 +8,7 @@ function makeTab(overrides: Partial<TabView> = {}): TabView {
   return {
     label: 'janus', number: 1, dotColor: '#fff', group: 0, groupColor: '#000',
     busy: false, hasUnread: false, cwd: '/tmp', connections: [], schedule: [],
-    bufferLines: [], cmdHistory: [], toolStepsExpanded: false,
+    bufferLines: [], cmdHistory: [], commandQueue: [], toolStepsExpanded: false,
     ...overrides,
   };
 }

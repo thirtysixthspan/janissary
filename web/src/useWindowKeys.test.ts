@@ -10,12 +10,13 @@ function dispatchKey(key: string, opts: { metaKey?: boolean; ctrlKey?: boolean; 
 }
 
 function TestComponent({
-  route, themePickerOpen, pickerOpen, navOpen, canSearch, searchOpen, handleScrollKey, callbacks,
+  route, themePickerOpen, pickerOpen, navOpen, queueOpen, canSearch, searchOpen, handleScrollKey, callbacks,
 }: {
   route?: { cmd: string; choices: string[] } | null;
   themePickerOpen?: boolean;
   pickerOpen?: boolean;
   navOpen?: boolean;
+  queueOpen?: boolean;
   canSearch?: boolean;
   searchOpen?: boolean;
   handleScrollKey?: (e: KeyboardEvent) => boolean;
@@ -35,6 +36,9 @@ function TestComponent({
     selectNavTab: (i: number) => void;
     setNavOpen: (o: boolean) => void;
     openTabNav: () => void;
+    setQueueIndex: (s: (p: number) => number) => void;
+    setQueueOpen: (o: boolean) => void;
+    openQueue: () => void;
   }>;
 }) {
   const stateRef = useRef({
@@ -51,6 +55,9 @@ function TestComponent({
     navQuery: '',
     navIdx: 0,
     navTabs: [],
+    queueOpen: queueOpen ?? false,
+    queueIdx: 0,
+    queueItems: ['q1', 'q2'],
   });
   const cb = {
     setRouteIndex: vi.fn(),
@@ -68,6 +75,9 @@ function TestComponent({
     selectNavTab: vi.fn(),
     setNavOpen: vi.fn(),
     openTabNav: vi.fn(),
+    setQueueIndex: vi.fn(),
+    setQueueOpen: vi.fn(),
+    openQueue: vi.fn(),
     ...callbacks,
   };
   const cbRef = useRef(cb);
@@ -126,6 +136,20 @@ describe('useWindowKeys', () => {
     render(React.createElement(TestComponent, { callbacks: { openTabNav } }));
     dispatchKey('g', { ctrlKey: true });
     expect(openTabNav).toHaveBeenCalled();
+  });
+
+  it('Cmd+E opens the queue popup', () => {
+    const openQueue = vi.fn();
+    render(React.createElement(TestComponent, { callbacks: { openQueue } }));
+    dispatchKey('e', { metaKey: true });
+    expect(openQueue).toHaveBeenCalled();
+  });
+
+  it('routes keys to the queue popup when open', () => {
+    const setQueueIndex = vi.fn();
+    render(React.createElement(TestComponent, { queueOpen: true, callbacks: { setQueueIndex } }));
+    dispatchKey('ArrowDown');
+    expect(setQueueIndex).toHaveBeenCalled();
   });
 
   it('routes keys to the tab navigator when open, instead of falling through to tab shortcuts', () => {

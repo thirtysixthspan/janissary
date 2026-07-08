@@ -42,6 +42,7 @@ export type TabView = {
   schedule: ScheduleView[];
   bufferLines: BufferLine[];
   cmdHistory: string[];
+  commandQueue: string[];
   toolStepsExpanded: boolean;
   // Body kind: undefined/`'agent'` for a normal tab, `'image'` for an image view, `'page'` for an embedded web page, `'harness'` for a full-tab AI harness terminal, `'markdown'` for a rendered Markdown file, `'monitor'` for the AI-monitor suggestion feed, `'files'` for a file tree.
   view?: 'agent' | 'image' | 'page' | 'harness' | 'markdown' | 'editor' | 'monitor' | 'files';
@@ -90,6 +91,10 @@ export type RpcCall =
   | { method: 'setActiveTab'; params: { index: number } }
   | { method: 'closeTab'; params: { index: number } }
   | { method: 'renameTab'; params: { index: number; title: string } }
+  // Patch or remove one entry in the active tab's command queue (see `queue.md`). Index-based
+  // against that tab's queue; no-ops server-side when the index is out of range.
+  | { method: 'editQueuedCommand'; params: { index: number; text: string } }
+  | { method: 'deleteQueuedCommand'; params: { index: number } }
   | { method: 'moveTab'; params: { dir: -1 | 1 } }
   | { method: 'reorderTab'; params: { dir: -1 | 1 } }
   | { method: 'toggleCollapse'; params?: Record<string, never> }
