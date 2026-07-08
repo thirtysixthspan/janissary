@@ -84,7 +84,7 @@ function handleTabShortcuts(e: KeyboardEvent, client: JanusClient): void {
   else if (e.ctrlKey && e.key.toLowerCase() === 't') { e.preventDefault(); client.send({ method: 'toggleCollapse', params: {} }); }
 }
 
-// The chord openers (Cmd+F search, Ctrl+R history, Ctrl+G nav, Cmd+E queue) — split out of
+// The chord openers (Cmd+F search, Ctrl+R history, Ctrl+G nav, Cmd+E queue, Cmd+T new agent tab) — split out of
 // `onKey` to keep its own cognitive complexity under the file's lint threshold.
 function handleChordKeys(e: KeyboardEvent, snap: StateSnapshot, cb: Callbacks): boolean {
   if (e.metaKey && e.key.toLowerCase() === 'f') {
@@ -96,6 +96,7 @@ function handleChordKeys(e: KeyboardEvent, snap: StateSnapshot, cb: Callbacks): 
   if (e.ctrlKey && e.key.toLowerCase() === 'r') { e.preventDefault(); cb.openPicker(); return true; }
   if (e.ctrlKey && e.key.toLowerCase() === 'g') { e.preventDefault(); cb.openTabNav(); return true; }
   if (e.metaKey && e.key.toLowerCase() === 'e') { e.preventDefault(); cb.openQueue(); return true; }
+  if (e.metaKey && e.key.toLowerCase() === 't') { e.preventDefault(); cb.runCommand('agent'); return true; }
   return false;
 }
 
