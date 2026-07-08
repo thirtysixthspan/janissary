@@ -23,7 +23,8 @@ chooser is resolved (a choice made, or cancelled).
 
 While the exposed tab is busy, its command-line prompt reads `queue ❯` instead of the bare `❯`,
 and the small dot beside it blinks — the same blink treatment as the tab-strip dot (see
-[[tabs]]). Submitting text at this point queues it rather than running it.
+[[tabs]]). The dot is vertically centered with the prompt text next to it, whether idle or
+blinking. Submitting text at this point queues it rather than running it.
 
 ### Queue popup
 
