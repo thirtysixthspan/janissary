@@ -50,6 +50,15 @@ Patterns like `src/foo.ts:42` or `tests/test.py:10:5` in output and markdown lin
 
 Clicking a file:line link opens the file in an **editor tab** (same as typing `edit <filepath>:<line>`), with the cursor placed on the target line and scrolled to the middle of the tab (see Editor Tab → Scrolling).
 
+### Re-running a prompt line
+
+Double-clicking a previous command's prompt line re-runs that command. A single click does
+nothing (letting a click-and-drag text selection happen without triggering a re-run); if the
+double click lands on text that is still selected from an earlier selection, it is likewise
+suppressed. A collapsed agent tool-steps summary line is a separate case: a single click (or
+`Ctrl+T`) expands it instead (see "Collapsed agent tool steps" above) and does not re-run
+anything.
+
 ### ANSI-colored output
 
 Shell command output — whether run directly or by an agent — is interpreted for ANSI color and
