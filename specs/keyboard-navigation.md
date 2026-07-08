@@ -19,7 +19,7 @@
 | Ctrl+N | Scroll transcript down (fixed — one line per press) |
 | Ctrl+R | Open command history picker |
 | Ctrl+G | Open the fuzzy tab navigator (also closes it if already open) |
-| Cmd+E | Open the agent command queue popup (no-op if the exposed tab is not an agent tab) |
+| Ctrl+E | Open the agent command queue popup (no-op if the exposed tab is not an agent tab) |
 | Cmd+T | Open a new agent tab rooted at the project directory (same as typing `agent`) — never workspaced |
 | Ctrl+T | Expand / collapse the current tab's agent tool-step runs |
 | PageUp | Scroll transcript up by half terminal height |

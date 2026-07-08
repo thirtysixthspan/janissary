@@ -1,6 +1,6 @@
 import React from 'react';
 
-// The Cmd+E / `queue` overlay listing the active tab's queued commands, front (next to run) at
+// The Ctrl+E / `queue` overlay listing the active tab's queued commands, front (next to run) at
 // top. Up/Down move the selector and copy the selected row into the command line; the command
 // line is the sole edit surface (see `handleQueueKey` / `CommandInput`'s queueOpen behavior).
 // Escape closes — handled by App's key handler; a row can also be clicked to select it.

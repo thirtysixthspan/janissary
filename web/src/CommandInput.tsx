@@ -12,7 +12,7 @@ type Properties = {
   complete: (text: string, cursor: number) => Promise<CompletionResult>;
   pickerOpen: boolean;
   busy: boolean;
-  // The queue popup (Cmd+E / `queue`) is modal for Enter/ArrowUp/ArrowDown (the window handler
+  // The queue popup (Ctrl+E / `queue`) is modal for Enter/ArrowUp/ArrowDown (the window handler
   // owns those) but not for typing — the command line is the popup's sole edit surface.
   queueOpen?: boolean;
   // Assigned this component's `recall` so the queue popup can push a selected row's text into

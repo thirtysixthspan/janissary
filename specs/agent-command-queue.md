@@ -30,7 +30,7 @@ blinking. Submitting text at this point queues it rather than running it.
 
 ### Queue popup
 
-`Cmd+E` (or the `queue` command) opens a `queue` popup over the command line, listing the
+`Ctrl+E` (or the `queue` command) opens a `queue` popup over the command line, listing the
 exposed tab's queued commands in order, front (the next one to run) at the top. It no-ops if the
 exposed tab is not an agent tab. When the queue is empty it shows `(no commands queued)`.
 
