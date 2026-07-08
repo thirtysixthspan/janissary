@@ -111,14 +111,16 @@ export function FileTreeTab({ files, client, index, dock, autoFocus = true }: Pr
           <span className="files-loc">{files.root}</span>
         </div>
         <div className="files-actions">
-          <button
-            type="button"
-            className="files-dock-cycle"
-            title={dockTooltip(nextDock(dock))}
-            onClick={() => client.send({ method: 'fileTreeSetDock', params: { index, dock: nextDock(dock) } })}
-          >
-            ⇄
-          </button>
+          {dock && (
+            <button
+              type="button"
+              className="files-dock-cycle"
+              title={dockTooltip(nextDock(dock))}
+              onClick={() => client.send({ method: 'fileTreeSetDock', params: { index, dock: nextDock(dock) } })}
+            >
+              ⇄
+            </button>
+          )}
           {dock && (
             <button
               type="button"

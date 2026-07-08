@@ -152,13 +152,12 @@ describe('FileTreeTab', () => {
     rerender(<FileTreeTab files={files2} client={client} index={0} />);
   });
 
-  it('dock-cycle button from center sends fileTreeSetDock to left, with the left tooltip', () => {
+  it('dock-cycle button is hidden when the navigator is in a center tab', () => {
     const send = vi.fn();
     const client = { send } as unknown as JanusClient;
     render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
-    const button = screen.getByTitle('Move to left sidebar');
-    fireEvent.click(button);
-    expect(send).toHaveBeenCalledWith({ method: 'fileTreeSetDock', params: { index: 0, dock: 'left' } });
+    expect(screen.queryByTitle('Move to left sidebar')).toBeNull();
+    expect(screen.queryByTitle('Move to right sidebar')).toBeNull();
   });
 
   it('dock-cycle button from left sends fileTreeSetDock to right', () => {
