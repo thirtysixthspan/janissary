@@ -4,8 +4,6 @@
 
 * when the editor window is being closed, if there are unsaved changes, the user should be presented with a dialog that says there are unsaved changes, close anyway or cancel.
 
-* when the queue window is open, hitting escape should close the queue window and remove any text on the command line.
-
 * when running a command, the command should be printed in the transcript before the command is executed while the response is printed in the transcript after the command is executed.
 
 * after a command is executed when it has been queued, the output is proceeded by two spourios lines. the first line contains the current working directory and the second line looks similar to __PWD_1_19829380192__. These seem related to tracking the current working directory, but should not be shown in the transciript.

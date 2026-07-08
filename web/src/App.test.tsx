@@ -159,6 +159,19 @@ describe('App queue popup', () => {
     fireEvent.keyDown(globalThis as unknown as Window, { key: 'w', metaKey: true });
     expect(sendMock).not.toHaveBeenCalledWith(expect.objectContaining({ method: 'closeTab' }));
   }, 15_000);
+
+  it('Escape closes the queue popup and clears the command line', async () => {
+    const { App } = await import('./App');
+    render(<App />);
+    act(() => { stateListener!([makeTab({ commandQueue: ['echo hi', 'echo bye'] })], 0, null, 16, [], 'github-dark'); });
+    const input = screen.getByRole('textbox') as HTMLTextAreaElement;
+    fireEvent.change(input, { target: { value: 'queue' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(input.value).toBe('echo hi');
+    fireEvent.keyDown(input, { key: 'Escape' });
+    expect(screen.queryByText('queue', { selector: '.picker-title' })).not.toBeInTheDocument();
+    expect(input.value).toBe('');
+  }, 15_000);
 });
 
 describe('App agent tab body click focuses command input', () => {

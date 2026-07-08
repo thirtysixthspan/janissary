@@ -39,6 +39,13 @@ export function useQueuePicker(
     selectQueueIndex(0);
   }, [isAgentTab, selectQueueIndex]);
 
+  // Closing the popup (Escape) also clears the command line: the selected row's text was copied
+  // there for editing, and leaving it behind after dismissing the popup would be confusing.
+  const closeQueue = useCallback((open: boolean) => {
+    setQueueOpen(open);
+    if (!open) recallRef.current?.('');
+  }, []);
+
   const setQueueIndex = useCallback((setter: (prev: number) => number) => {
     selectQueueIndex(Math.max(0, Math.min(items.length - 1, setter(queueIndex))));
   }, [items.length, queueIndex, selectQueueIndex]);
@@ -52,6 +59,6 @@ export function useQueuePicker(
   }, [client, queueIndex]);
 
   return {
-    queueOpen, queueIndex, setQueueIndex, setQueueOpen, openQueue, selectQueueIndex, onEditQueued, onDeleteQueued, recallRef,
+    queueOpen, queueIndex, setQueueIndex, setQueueOpen: closeQueue, openQueue, selectQueueIndex, onEditQueued, onDeleteQueued, recallRef,
   };
 }
