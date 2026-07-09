@@ -13,3 +13,5 @@ execute ./ai/remove-duplication.md and if changes are successful execute ./ai/me
 execute ./ai/reduce-complexity.md and if changes are successful execute ./ai/merge-change-to-master.md
 
 schedule complexity in opencode every 15m execute ./ai/reduce-complexity.md and if changes are successful execute ./ai/merge-change-to-master.md
+
+schedule issues in claude every 15m execute ./ai/fix-a-small-issue.md
