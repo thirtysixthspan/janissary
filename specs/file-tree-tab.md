@@ -78,6 +78,7 @@ stops refreshing automatically and can be refreshed manually by collapsing and r
 | Double-click the `..` row | Navigate the tree up one directory |
 | Shift+double-click a file row | Select it and open it in the plain-text editor (with `edit`), even for files whose normal opener is a viewer (Markdown, images) |
 | Chevron (▸/▾) | Visual affordance only — the whole row is the click target |
+| Double-clicking any row | Does not select the row's text |
 | Header collapse-all button | Collapse every expanded directory back to just the root |
 | Scroll wheel / trackpad | Scrolls the row list |
 
