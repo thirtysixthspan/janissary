@@ -11,7 +11,9 @@ The picker lists only the `.md` files directly inside `ai/`, sorted alphabetical
 non-recursive: subdirectories such as `ai/guidelines/` (binding project docs) and `ai/personas/`
 (monitor persona bodies) are excluded, along with any other nested directory. The list is read
 fresh from disk, so adding, renaming, or removing a task file is reflected the next time the
-picker opens.
+picker opens. Each row displays the filename with its `.md` extension hidden (`fix-a-small-issue`,
+not `fix-a-small-issue.md`); the extension is still present in the command inserted when the row is
+picked.
 
 ### Openers
 

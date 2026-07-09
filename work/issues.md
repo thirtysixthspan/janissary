@@ -1,7 +1,5 @@
 # issues
 
-* do not include the file extenstion of tasks in the task picker
-
 * support navigation of tasks into directories by using right and left arrows to expand the directories making tasks in sub directories visible and selectable.
 
 * scrolling the action picker down using arrow keys should scroll the scrollbar to keep the currently selected command in view.
