@@ -23,9 +23,9 @@ describe('completeSendTarget', () => {
     expect(completeSendTarget('send', 2, 'hi', ['janus'], 'send janus hi', 'send janus hi', 11)).toBeNull();
   });
 
-  it('completes a tab label for the enqueue command at argument 1', () => {
-    const r = completeSendTarget('enqueue', 1, 'jan', ['janus', 'claude'], 'enqueue jan', '', 8);
-    expect(r?.newInput).toBe('enqueue janus ');
+  it('completes a tab label for the queue command at argument 1', () => {
+    const r = completeSendTarget('queue', 1, 'jan', ['janus', 'claude'], 'queue jan', '', 6);
+    expect(r?.newInput).toBe('queue janus ');
   });
 });
 

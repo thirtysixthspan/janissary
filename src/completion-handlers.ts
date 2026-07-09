@@ -30,7 +30,7 @@ export function completeSendTarget(
   after: string,
   tokenStart: number,
 ): CompletionResult | null {
-  if (argumentIndex !== 1 || (command !== 'send' && command !== 'enqueue')) return null;
+  if (argumentIndex !== 1 || (command !== 'send' && command !== 'queue')) return null;
   return completeWord(token, '', labels, ' ', before, after, tokenStart);
 }
 
