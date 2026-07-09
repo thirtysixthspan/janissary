@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { JanusClient } from './ws';
-import type { TabView, RouteChooserView } from '@shared/protocol';
+import type { TabView, RouteChooserView, TaskRow } from '@shared/protocol';
 import { TabStrip } from './TabStrip';
 import { Transcript } from './Transcript';
 import { ViewTabBody } from './ViewTabBody';
@@ -45,7 +45,7 @@ export function App() {
   const [tabNameMaxLength, setTabNameMaxLength] = useState(16);
   const [globalHistory, setGlobalHistory] = useState<string[]>([]);
   const [syntaxTheme, setSyntaxTheme] = useState('github-dark');
-  const [tasks, setTasks] = useState<string[]>([]);
+  const [tasks, setTasks] = useState<TaskRow[]>([]);
   // Server-driven route chooser (null when closed); `routeIdx` is the highlighted option.
   const [route, setRoute] = useState<RouteChooserView | null>(null);
   const [routeIndex, setRouteIndex] = useState(0);
@@ -97,6 +97,7 @@ export function App() {
   } = useQueuePicker(client, current, inputReference, recallReference);
   const {
     taskPickerOpen, taskPickerIndex, setTaskPickerIndex, setTaskPickerOpen, openTaskPicker, pickTask,
+    visibleTasks, toggleTaskDir,
   } = useTaskPicker(tasks, recallReference, inputReference);
 
   // Live snapshot read by the window key handler, so it never has to re-register.
@@ -104,7 +105,7 @@ export function App() {
     pickerOpen, pickerIdx: pickerIndex, recent, route, routeIdx: routeIndex, canSearch, searchOpen: search.searchOpen,
     themePickerOpen, themePickerIdx: themePickerIndex, navOpen, navQuery, navIdx: navIndex, navTabs,
     queueOpen, queueIdx: queueIndex, queueItems: current?.commandQueue ?? [],
-    taskPickerOpen, taskPickerIdx: taskPickerIndex, tasks,
+    taskPickerOpen, taskPickerIdx: taskPickerIndex, visibleTasks,
   });
 
   const { quitConfirmOpen, openQuitConfirm, confirmQuit, cancelQuit } = useQuitConfirm(runCommand, inputReference);
@@ -141,7 +142,7 @@ export function App() {
     setThemePickerIndex, setThemePickerOpen, pickTheme,
     setNavIndex, setNavQuery, selectNavTab, setNavOpen, openTabNav,
     setQueueIndex, setQueueOpen, openQueue,
-    setTaskPickerIndex, setTaskPickerOpen, openTaskPicker, pickTask,
+    setTaskPickerIndex, setTaskPickerOpen, openTaskPicker, pickTask, toggleTaskDir,
   });
 
   useWindowKeys(client, stateReference, keyCallbacksRef, handleScrollKey, handleScrollKeyUp);
@@ -198,7 +199,7 @@ export function App() {
               pickerOpen={pickerOpen} recent={recent} pickerIndex={pickerIndex} onPickHistory={pick}
               navOpen={navOpen} navQuery={navQuery} navIndex={navIndex} tabs={tabs} onPickTab={selectNavTab}
               queueOpen={queueOpen} queueItems={current.commandQueue} queueIndex={queueIndex} onSelectQueue={selectQueueIndex}
-              taskPickerOpen={taskPickerOpen} tasks={tasks} taskPickerIndex={taskPickerIndex} onPickTask={pickTask}
+              taskPickerOpen={taskPickerOpen} taskRows={visibleTasks} taskPickerIndex={taskPickerIndex} onPickTask={pickTask} onToggleTaskDir={toggleTaskDir}
             />
           </div>
           <CommandArea

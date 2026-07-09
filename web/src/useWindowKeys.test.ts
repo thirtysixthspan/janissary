@@ -44,6 +44,7 @@ function TestComponent({
     setTaskPickerOpen: (o: boolean) => void;
     openTaskPicker: () => void;
     pickTask: (n: string) => void;
+    toggleTaskDir: (p: string) => void;
   }>;
 }) {
   const stateRef = useRef({
@@ -65,7 +66,10 @@ function TestComponent({
     queueItems: ['q1', 'q2'],
     taskPickerOpen: taskPickerOpen ?? false,
     taskPickerIdx: 0,
-    tasks: ['build-a-feature.md', 'fix-a-small-issue.md'],
+    visibleTasks: [
+      { path: 'build-a-feature.md', name: 'build-a-feature.md', depth: 0, dir: false },
+      { path: 'fix-a-small-issue.md', name: 'fix-a-small-issue.md', depth: 0, dir: false },
+    ],
   });
   const cb = {
     setRouteIndex: vi.fn(),
@@ -90,6 +94,7 @@ function TestComponent({
     setTaskPickerOpen: vi.fn(),
     openTaskPicker: vi.fn(),
     pickTask: vi.fn(),
+    toggleTaskDir: vi.fn(),
     ...callbacks,
   };
   const cbRef = useRef(cb);

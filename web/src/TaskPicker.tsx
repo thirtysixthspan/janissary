@@ -1,24 +1,29 @@
 import React from 'react';
+import type { VisibleTaskRow } from './task-picker-keys';
 
-// The Ctrl+A / `tasks` overlay listing the executable `ai/*.md` task files. Up/Down move the
-// selection, Return copies `execute ./ai/<filename>` into the command line without submitting,
-// Escape closes — handled by App's key handler; a row can also be clicked to populate it.
-type Properties = { items: string[]; selected: number; onPick: (task: string) => void };
+// The Ctrl+A / `tasks` overlay listing the executable `ai/*.md` task files, recursively including
+// any subdirectory's tasks (collapsed by default). Up/Down move the selection, Left/Right
+// collapse/expand a directory or move to its parent, Enter toggles a directory or copies
+// `execute ./ai/<path>` into the command line without submitting, Escape closes — handled by
+// App's key handler; a row can also be clicked (toggling a directory, picking a file).
+type Properties = { rows: VisibleTaskRow[]; selected: number; onPick: (path: string) => void; onToggleDir: (path: string) => void };
 
-export function TaskPicker({ items, selected, onPick }: Properties) {
+export function TaskPicker({ rows, selected, onPick, onToggleDir }: Properties) {
   return (
     <div className="picker" data-doc-shot="task-overlay">
       <div className="picker-title">tasks</div>
-      {items.length === 0 ? (
+      {rows.length === 0 ? (
         <div className="picker-row picker-empty">(no tasks)</div>
       ) : (
-        items.map((name, index) => (
+        rows.map((row, index) => (
           <div
-            key={index}
+            key={row.path}
             className={`picker-row${index === selected ? ' selected' : ''}`}
-            onClick={() => onPick(name)}
+            style={{ paddingLeft: 12 + row.depth * 16 }}
+            onClick={() => (row.dir ? onToggleDir(row.path) : onPick(row.path))}
           >
-            {name.replace(/\.md$/, '')}
+            {row.dir && <span className="picker-chevron">{row.expanded ? '▾' : '▸'}</span>}
+            {row.dir ? row.name : row.name.replace(/\.md$/, '')}
           </div>
         ))
       )}

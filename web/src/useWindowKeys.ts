@@ -3,6 +3,7 @@ import type { JanusClient } from './ws';
 import type { RouteChooserView } from '@shared/protocol';
 import { SYNTAX_THEMES } from '@shared/syntax-themes';
 import { handleRouteChooserKey, handlePickerKey, handleTabNavKey, handleQueueKey } from './keyboard-handlers';
+import { dispatchTaskPickerKey, type VisibleTaskRow } from './task-picker-keys';
 import type { TabNavEntry } from './TabNavPicker';
 
 type StateSnapshot = {
@@ -27,7 +28,7 @@ type StateSnapshot = {
   queueItems: string[];
   taskPickerOpen: boolean;
   taskPickerIdx: number;
-  tasks: string[];
+  visibleTasks: VisibleTaskRow[];
 };
 
 type Callbacks = {
@@ -52,7 +53,8 @@ type Callbacks = {
   setTaskPickerIndex: (setter: (prev: number) => number) => void;
   setTaskPickerOpen: (open: boolean) => void;
   openTaskPicker: () => void;
-  pickTask: (name: string) => void;
+  pickTask: (path: string) => void;
+  toggleTaskDir: (path: string) => void;
 };
 
 // Priority chain of pickers/choosers that claim every keystroke while open. Returns true once one
@@ -79,7 +81,7 @@ function dispatchModalKey(e: KeyboardEvent, snap: StateSnapshot, cb: Callbacks):
     return true;
   }
   if (snap.taskPickerOpen) {
-    handlePickerKey(e, snap.tasks, snap.taskPickerIdx, cb.setTaskPickerIndex, cb.pickTask, cb.setTaskPickerOpen);
+    dispatchTaskPickerKey(e, snap.visibleTasks, snap.taskPickerIdx, cb.setTaskPickerIndex, cb.toggleTaskDir, cb.pickTask, cb.setTaskPickerOpen);
     return true;
   }
   return false;

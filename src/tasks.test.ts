@@ -7,6 +7,7 @@ import { listTasks } from './tasks.js';
 let root: string;
 
 function writeTask(name: string, content = 'x'): void {
+  mkdirSync(path.join(root, 'ai', path.dirname(name)), { recursive: true });
   writeFileSync(path.join(root, 'ai', name), content);
 }
 
@@ -21,21 +22,47 @@ describe('listTasks', () => {
   it('lists top-level .md files sorted, keeping the extension', () => {
     writeTask('fix-a-small-issue.md');
     writeTask('build-a-feature.md');
-    expect(listTasks(root)).toEqual(['build-a-feature.md', 'fix-a-small-issue.md']);
+    expect(listTasks(root)).toEqual([
+      { path: 'build-a-feature.md', name: 'build-a-feature.md', depth: 0, dir: false },
+      { path: 'fix-a-small-issue.md', name: 'fix-a-small-issue.md', depth: 0, dir: false },
+    ]);
   });
 
   it('ignores non-.md files', () => {
     writeTask('build-a-feature.md');
     writeTask('notes.txt');
-    expect(listTasks(root)).toEqual(['build-a-feature.md']);
+    expect(listTasks(root)).toEqual([
+      { path: 'build-a-feature.md', name: 'build-a-feature.md', depth: 0, dir: false },
+    ]);
   });
 
-  it('excludes subdirectories such as guidelines and personas', () => {
+  it('excludes the guidelines and personas subdirectories', () => {
     writeTask('build-a-feature.md');
     mkdirSync(path.join(root, 'ai', 'guidelines'), { recursive: true });
     writeFileSync(path.join(root, 'ai', 'guidelines', 'code-guidelines.md'), 'x');
     mkdirSync(path.join(root, 'ai', 'personas'), { recursive: true });
-    expect(listTasks(root)).toEqual(['build-a-feature.md']);
+    expect(listTasks(root)).toEqual([
+      { path: 'build-a-feature.md', name: 'build-a-feature.md', depth: 0, dir: false },
+    ]);
+  });
+
+  it('recurses into a non-special subdirectory, listing it as a dir row followed by its children', () => {
+    writeTask('top.md');
+    writeTask('extra/nested.md');
+    expect(listTasks(root)).toEqual([
+      { path: 'extra', name: 'extra', depth: 0, dir: true },
+      { path: 'extra/nested.md', name: 'nested.md', depth: 1, dir: false },
+      { path: 'top.md', name: 'top.md', depth: 0, dir: false },
+    ]);
+  });
+
+  it('recurses more than one level deep, tracking depth and path', () => {
+    writeTask('extra/inner/deep.md');
+    expect(listTasks(root)).toEqual([
+      { path: 'extra', name: 'extra', depth: 0, dir: true },
+      { path: 'extra/inner', name: 'inner', depth: 1, dir: true },
+      { path: 'extra/inner/deep.md', name: 'deep.md', depth: 2, dir: false },
+    ]);
   });
 
   it('returns an empty list when the ai directory is missing', () => {

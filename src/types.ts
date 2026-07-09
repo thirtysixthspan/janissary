@@ -114,6 +114,11 @@ export type FileTreeRow = {
 // pre-flattened, already-sorted, currently-visible row list; the client never walks directories.
 export type FileTreeView = { root: string; rows: FileTreeRow[] };
 
+// A single row in the task picker's listing (executable `ai/*.md` prompts). Unlike `FileTreeRow`,
+// this always contains the *full* recursive tree — the task list needs no live filesystem
+// watching, so expand/collapse is purely a client-side concern and carries no `expanded` field.
+export type TaskRow = { path: string; name: string; depth: number; dir: boolean };
+
 // A monitor target: a single tab by label, or a whole tab group by number (group targets
 // track membership dynamically — tabs added to the group later are covered).
 export type MonitorTarget =
