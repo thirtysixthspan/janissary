@@ -56,7 +56,12 @@ When neither `--help` nor `--version` is given, `janus` boots the full applicati
 
 ### Shutdown sequence
 
-When `janus` receives SIGINT or SIGTERM, it broadcasts a `bye` event to all connected browser windows (telling them to close), waits 100 ms for them to shut down, then closes the HTTP server and WebSocket connections, and exits. The `quit` command (sent from a connected client) triggers the same sequence. On exit, the Chrome app window is killed and the instance lock is released.
+Shutdown is triggered by any of:
+- SIGINT or SIGTERM
+- The `quit` command from a connected client
+- Closing the last browser window or tab (all WebSocket clients disconnect)
+
+The server broadcasts a `bye` event to all connected browser windows (telling them to close), waits 100 ms for them to shut down, then closes the HTTP server and WebSocket connections, and exits. On exit, the Chrome app window is killed and the instance lock is released.
 
 ### Project directory scope
 

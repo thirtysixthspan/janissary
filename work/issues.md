@@ -1,7 +1,5 @@
 # issues
 
-* Closing the main janissary UI window should halt the server. 
-
 * double clicking in the file navigator tab should not autoselect text.
 
 * when attempting to launch an editor tab on a file, if the already exists another editor tab open for that file, do not open a new editor tab, instead focus the existing editor tab.
