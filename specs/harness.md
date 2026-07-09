@@ -112,7 +112,9 @@ cards).
 The tab's name in the strip is the tab's unique label — the harness name by default (`claude`,
 `claude-2`, `claude-3`, …) or the custom `as <label>` if one was given — with no type marker
 appended (per [[tab-label-no-markers]]). A **× close button** is shown in the strip (identical to
-image/page view tabs).
+image/page view tabs). The tab's dot shows as **busy** for as long as the harness process is
+alive — it does not distinguish the harness actively working from the harness idling at its own
+prompt, only "a harness process is running here" from "no harness process is running."
 
 ## Lifecycle
 

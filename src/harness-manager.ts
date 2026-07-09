@@ -66,6 +66,7 @@ export class HarnessManager {
     const tab = makeHarnessTab(label, dotColor, this.managers.tab.tabs.length + 1, group, groupColor, harness, workspaceDir);
     tab.offline = offline;
     this.managers.tab.insertTabInGroup(tab);
+    this.managers.tab.addBusy(label);
     this.managers.tab.activeTab = this.managers.tab.findIndex(tab.label);
     const id = this.managers.pty.spawn(label, program, buildHarnessCommand(name, model), cwd, workspaceDir, offline);
     const liveTab = this.managers.tab.tabs.find((t) => t.label === label);

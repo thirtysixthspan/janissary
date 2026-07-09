@@ -769,6 +769,21 @@ describe('Controller harness view', () => {
     expect(c.view().map((t) => t.label)).not.toContain('claude');
   });
 
+  it('harness claude opens with the tab marked busy', () => {
+    const { c } = makeController();
+    c.dispatch('harness claude');
+    const tab = c.view().find((t) => t.label === 'claude');
+    expect(tab!.busy).toBe(true);
+  });
+
+  it('closing a harness tab clears its busy flag', () => {
+    const { c } = makeController();
+    c.dispatch('harness claude');
+    const index = c.view().findIndex((t) => t.label === 'claude');
+    c.closeTab(index);
+    expect(c.managers.tab.isBusy('claude')).toBe(false);
+  });
+
   it('unknown harness name produces an error in the transcript (not a tab)', () => {
     const { c } = makeController();
     c.dispatch('harness gemini');
