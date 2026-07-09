@@ -1,8 +1,12 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeAll } from 'vitest';
 import { render, fireEvent } from '@testing-library/react';
 import React from 'react';
 import { TaskPicker } from './TaskPicker';
 import type { VisibleTaskRow } from './task-picker-keys';
+
+beforeAll(() => {
+  Element.prototype.scrollIntoView = vi.fn();
+});
 
 function fileRow(path: string, depth = 0): VisibleTaskRow {
   return { path, name: path.split('/').pop()!, depth, dir: false };

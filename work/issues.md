@@ -1,7 +1,5 @@
 # issues
 
-* scrolling the action picker down using arrow keys should scroll the scrollbar to keep the currently selected command in view.
-
 * After trying to close an editor tab when there are unsaved changes, a dialog come ups. Hitting escape or clicking cancel should return focus to the current cursor location in the unopenned file.
 
 * remove --here flag and instead accept the project root as a second parameter to janus. by default the project root is the cwd when not specified.
