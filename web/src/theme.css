@@ -423,7 +423,7 @@ html, body, #root {
 .files-row {
   display: flex; align-items: center; gap: 4px; padding: 2px 12px; cursor: pointer;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  border-left: 2px solid transparent;
+  border-left: 2px solid transparent; user-select: none;
 }
 .files-row:hover { background: var(--bg-soft); }
 .files-row.selected { background: var(--bg-soft); border-left-color: var(--accent); }
