@@ -54,6 +54,10 @@ When neither `--help` nor `--version` is given, `janus` boots the full applicati
 8. Unless `--no-open`: open the app in a Chrome app window (or the default browser if no system Chrome is found).
 9. Register signal handlers for graceful shutdown (SIGINT, SIGTERM), app window cleanup, and instance lock release on exit.
 
+### Shutdown sequence
+
+When `janus` receives SIGINT or SIGTERM, it broadcasts a `bye` event to all connected browser windows (telling them to close), waits 100 ms for them to shut down, then closes the HTTP server and WebSocket connections, and exits. The `quit` command (sent from a connected client) triggers the same sequence. On exit, the Chrome app window is killed and the instance lock is released.
+
 ### Project directory scope
 
 The resolved target directory (from `<project-dir>`, or the current directory) serves as the default root for all shell commands, harness tabs, file-navigator roots, and workspace-clone detection throughout the session. The `$root` path token and path-abbreviation display are anchored to this directory.

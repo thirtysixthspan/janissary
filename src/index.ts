@@ -37,7 +37,7 @@ const MIME: Record<string, string> = {
 };
 
 export type ServerOptions = { webDir: string; host?: string; port?: number; token?: string; relaunch?: boolean; projectDir?: string };
-export type RunningServer = { url: string; port: number; token: string; close: () => Promise<void> };
+export type RunningServer = { url: string; port: number; token: string; close: () => Promise<void>; shutdown: () => void };
 
 export async function startServer(options: ServerOptions): Promise<RunningServer> {
   const token = options.token ?? makeToken();
@@ -136,6 +136,6 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
     setTimeout(() => { void close().then(() => process.exit(0)); }, 100);
   };
 
-  return { url: `http://${host}:${port}/?token=${token}`, port, token, close };
+  return { url: `http://${host}:${port}/?token=${token}`, port, token, close, shutdown: () => requestExit() };
 }
 

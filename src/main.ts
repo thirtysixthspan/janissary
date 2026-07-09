@@ -148,7 +148,7 @@ export async function boot(argv = process.argv.slice(2)): Promise<void> {
   process.stderr.write(`\nJanissary is running at:\n  ${server.url}\n\nPress Ctrl+C to stop.\n`);
   if (!args.noOpen) openApp(server.url, cwd);
 
-  const stop = () => { void server.close().then(() => process.exit(0)); };
+  const stop = () => { server.shutdown(); };
   process.on('SIGINT', stop);
   process.on('SIGTERM', stop);
   // Close the app window whenever the process exits (quit/exit, Ctrl+C, or normal shutdown).
