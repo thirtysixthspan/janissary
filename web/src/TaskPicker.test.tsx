@@ -14,10 +14,12 @@ describe('TaskPicker', () => {
     expect(getByText('(no tasks)')).toBeTruthy();
   });
 
-  it('renders all task items', () => {
-    const { getByText } = render(React.createElement(TaskPicker, { items: ['a.md', 'b.md'], selected: 0, onPick: vi.fn() }));
-    expect(getByText('a.md')).toBeTruthy();
-    expect(getByText('b.md')).toBeTruthy();
+  it('renders task items without the .md extension', () => {
+    const { getByText, queryByText } = render(React.createElement(TaskPicker, { items: ['a.md', 'b.md'], selected: 0, onPick: vi.fn() }));
+    expect(getByText('a')).toBeTruthy();
+    expect(getByText('b')).toBeTruthy();
+    expect(queryByText('a.md')).toBeNull();
+    expect(queryByText('b.md')).toBeNull();
   });
 
   it('marks the selected item with the selected class', () => {

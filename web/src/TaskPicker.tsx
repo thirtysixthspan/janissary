@@ -18,7 +18,7 @@ export function TaskPicker({ items, selected, onPick }: Properties) {
             className={`picker-row${index === selected ? ' selected' : ''}`}
             onClick={() => onPick(name)}
           >
-            {name}
+            {name.replace(/\.md$/, '')}
           </div>
         ))
       )}
