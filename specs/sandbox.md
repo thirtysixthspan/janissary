@@ -32,7 +32,11 @@ carve-in allows → secret denies last (so a secret path stays denied even insid
   readable) except `$HOME`'s *contents*, which are denied and then carved back in
   (`HOME_READ_CARVEINS` — the write carve-outs above, plus `~/.gitconfig`, `~/.gitexcludes`,
   `~/.claude/settings.json`, `~/.config/gh/config.yml` (`gh`'s general settings, as opposed to
-  `hosts.yml`, which stays denied), and `~/Library/Keychains`). `$HOME`'s directory **metadata** (stat/lstat) stays allowed
+  `hosts.yml`, which stays denied), `~/Library/Keychains`, `~/.nvm` (nvm's loader scripts and every
+  installed Node version under `versions/`), `~/.rvm` (same, for Ruby — execute needs no separate
+  carve-in for either since `process-exec` is already allowed everywhere except
+  `/tmp`/`/private/tmp`), and `~/.bash_profile`/`~/.bashrc` (sourced by a login/interactive `bash`
+  shell on startup)). `$HOME`'s directory **metadata** (stat/lstat) stays allowed
   everywhere, not just the carve-ins — resolving a path (`realpath`, a pre-exec `chdir`, git's
   ancestor-ownership walk) requires traversing every ancestor directory between `$HOME` and the
   workspace, and Seatbelt checks each ancestor individually rather than just the final target.

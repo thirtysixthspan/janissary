@@ -47,15 +47,23 @@ export const HOME_WRITE_CARVEOUTS = [
 // plaintext OAuth token and stays denied via `SECRET_DENY_PATHS`; a workspaced `gh` authenticates
 // via the injected `GH_TOKEN` env var instead, see `github-token.ts`), `Library/Keychains` (see
 // the comment on `SECRET_DENY_PATHS` — read access is needed for any Keychain lookup to work at all
-// on this OS, including harness login), and `.nvm/versions` (every installed Node version's
-// binaries and libs — broader than SERVER_NODE_DIR_L/R in sandbox.ts, which only carves in the one
-// version the janissary server itself runs on; a sandboxed process that shells out to a bare
-// `node`/`npm`/`npx`, or to a harness installed under a different nvm-managed version, needs to
-// read that version's directory too).
+// on this OS, including harness login), `.nvm` (nvm's own `nvm.sh`/`bash_completion` loader
+// scripts plus every installed Node version's binaries and libs under `versions/` — broader than
+// SERVER_NODE_DIR_L/R in sandbox.ts, which only carves in the one version the janissary server
+// itself runs on; a sandboxed process that sources `nvm.sh` or shells out to a bare `node`/`npm`/
+// `npx`, or to a harness installed under a different nvm-managed version, needs to read the whole
+// tree. Execute access for these binaries doesn't need a separate carve-in — `process-exec` is
+// allowed everywhere except `/tmp`/`/private/tmp`, so this read carve-in is the only gap), `.rvm`
+// (same reasoning as `.nvm`, for Ruby: `rvm`'s own loader script plus every installed Ruby
+// version's binaries and gems under `rubies/`/`gems/`), and `.bash_profile`/`.bashrc` (a
+// login/interactive bash shell sources these on startup; without the carve-in, spawning
+// `bash -lc` inside the sandbox fails that read silently and the shell starts with none of the
+// user's aliases/functions/PATH additions).
 export const HOME_READ_CARVEINS = [
   ...HOME_WRITE_CARVEOUTS,
   '.claude/settings.json', '.claude/plugins', '.claude/skills', '.claude/agents', '.claude/commands', '.claude/keybindings.json',
-  '.gitconfig', '.gitexcludes', '.config/gh/config.yml', 'Library/Keychains', '.nvm/versions',
+  '.gitconfig', '.gitexcludes', '.config/gh/config.yml', 'Library/Keychains', '.nvm', '.rvm',
+  '.bash_profile', '.bashrc',
 ];
 
 // Directories where `opendir`/`readdir` must work even though most of their *contents* aren't
