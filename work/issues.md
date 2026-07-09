@@ -1,7 +1,5 @@
 # issues
 
-* Halting the server should close the UI window first.
-
 * Closing the main janissary UI window should halt the server. 
 
 * double clicking in the file navigator tab should not autoselect text.
