@@ -1,5 +1,13 @@
 # issues
 
+* task picker should be activated via ctrl+a in harness tabs.
+
+* do not include the file extenstion of tasks in the task picker
+
+* support navigation of tasks into directories by using right and left arrows to expand the directories making tasks in sub directories visible and selectable.
+
+* scrolling the action picker down using arrow keys should scroll the scrollbar to keep the currently selected command in view.
+
 * After trying to close an editor tab when there are unsaved changes, a dialog come ups. Hitting escape or clicking cancel should return focus to the current cursor location in the unopenned file.
 
 * remove --here flag and instead accept the project root as a second parameter to janus. by default the project root is the cwd when not specified.
