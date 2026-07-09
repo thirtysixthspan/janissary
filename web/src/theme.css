@@ -338,10 +338,9 @@ html, body, #root {
    edge, clamped to a min width and 50% of the viewport (mirrors .reporting-resize). */
 .sidebar { min-width: 0; display: flex; flex-direction: row; }
 .sidebar-body { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.sidebar-resize { width: 5px; flex-shrink: 0; cursor: col-resize; }
+.sidebar-resize { width: 4px; flex-shrink: 0; cursor: col-resize; }
 .sidebar-left .sidebar-resize { border-right: 1px solid var(--border); }
 .sidebar-right .sidebar-resize { border-left: 1px solid var(--border); }
-.sidebar-resize:hover { background: var(--accent); }
 .sidebar-strip {
   display: flex; align-items: center;
   background: var(--bg-soft); border-bottom: 1px solid var(--border);

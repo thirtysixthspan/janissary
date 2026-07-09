@@ -1,6 +1,6 @@
 # Fix a Small Issue
 
-Your job: pick the simplest issue from `plans/small-issues.md`, develop a plan to resolve it, implement the fix, update functional specs, record the plan in `plans/complete/`, remove the issue from the small-issues file, and merge the change to master. You change source code, tests, spec files, the small-issues file, and the plan file's location — nothing else.
+Your job: pick the simplest issue from `work/issues.md`, develop a plan to resolve it, implement the fix, update functional specs, record the plan in `plans/complete/`, remove the issue from the issues file, and merge the change to master. You change source code, tests, spec files, the issues file, and the plan file's location — nothing else.
 
 **Shell hygiene:** run every command on its own line — no `&&` chaining, no `; echo "Exit code: $?"` suffixes, no subshell captures, no `for`/`while` loops, no variable expansion (`$var`, `$(...)`), no redirects (`2>/dev/null`, `>file`, `>>file`), no pipes (`|`). Commands with control-flow, expansion, redirects, or pipes require manual approval and will stall an unattended run. To run a project script, always use `./scripts/run.mjs <name>` — never call `node scripts/<name>.mjs` directly.
 
@@ -14,7 +14,7 @@ This overrides CLAUDE.md's "Capturing command output" guidance (write the output
 
 ### Allowed — do it automatically, never ask
 
-Read any file in the repo. Edit source, tests, CSS, and spec files as the fix requires. Write a plan file to `plans/complete/`. Remove the fixed issue from `plans/small-issues.md`. Run `./scripts/run.mjs check-diff` after each change. Execute the full merge workflow via `ai/merge-change-to-master.md` when implementation is done.
+Read any file in the repo. Edit source, tests, CSS, and spec files as the fix requires. Write a plan file to `plans/complete/`. Remove the fixed issue from `work/issues.md`. Run `./scripts/run.mjs check-diff` after each change. Execute the full merge workflow via `ai/merge-change-to-master.md` when implementation is done.
 
 ### Forbidden — no exceptions
 
@@ -22,7 +22,7 @@ Read any file in the repo. Edit source, tests, CSS, and spec files as the fix re
 2. **Running `npm run check`.** That is the human's end-of-work gate. Use `./scripts/run.mjs check-diff` during development.
 3. **Skipping tests.** Every fix needs tests that cover the changed behavior. Verify with `./scripts/run.mjs check-diff`.
 4. **Choosing an issue that requires significant new architecture.** If an issue would require high complexity error or prone work, pick a simpler issue instead and report why.
-5. **Editing `plans/small-issues.md` beyond removing the fixed entry.** Only remove the line for the issue you fixed — do not reorder, rephrase, or otherwise modify the remaining entries.
+5. **Editing `work/issues.md` beyond removing the fixed entry.** Only remove the line for the issue you fixed — do not reorder, rephrase, or otherwise modify the remaining entries.
 6. **Merging before all checks pass.** The `ai/merge-change-to-master.md` workflow handles merge; do not bypass it.
 
 ---
@@ -35,9 +35,9 @@ Execute `ai/prepare-workspace.md` in full before doing anything else.
 
 ## Step 1 — List small fixes and pick the first available
 
-1. Read `plans/small-issues.md` and list every issue.
+1. Read `work/issues.md` and list every issue.
 2. For each issue, assess the complexity by reviewing the codebase to understand what areas it touches. Do not use a shell loop for this.
-3. If no issues exist, report "No issues in `plans/small-issues.md`" and stop.
+3. If no issues exist, report "No issues in `work/issues.md`" and stop.
 4. If every issue requires significant new architecture (rating 7+), report the list with assessments and stop — do not pick one.
 5. Otherwise, pick the **first** issue listed in the file (top of the list). State your pick and why.
 
@@ -97,7 +97,7 @@ Spec files are markdown and do not affect `check-diff`, so no verification run i
    ```bash
    git mv plans/ready/<fix-name>.md plans/complete/<fix-name>.md
    ```
-2. Remove the fixed issue's line from `plans/small-issues.md`. Only remove that single line — do not modify any other content in the file.
+2. Remove the fixed issue's line from `work/issues.md`. Only remove that single line — do not modify any other content in the file.
 
 ---
 
@@ -119,7 +119,7 @@ Execute `ai/merge-change-to-master.md` in full. That document owns the merge wor
 Give the user a short report in this exact shape:
 
 ```
-Issue:          <the issue text from small-issues.md>
+Issue:          <the issue text from work/issues.md>
 Plan:           plans/ready/<file> → plans/complete/<file>
 Complexity:     N/10
 Implementation: <one-line summary of the fix>
