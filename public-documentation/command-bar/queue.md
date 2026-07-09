@@ -2,7 +2,7 @@
 
 <img class="agent-float" src="/agents/hakim-south.png" alt="" />
 
-When an agent tab is busy, anything you submit to it doesn't get lost — it's queued and runs automatically once the agent is free. You can also queue a command for a *different* agent with `enqueue`.
+When an agent tab is busy, anything you submit to it doesn't get lost — it's queued and runs automatically once the agent is free. You can also queue a command for a *different* agent with `queue <agent> <command>`.
 
 ## Queue while busy
 
@@ -12,10 +12,10 @@ You'll always know a tab is busy and queuing: its command-line prompt reads `que
 
 ## Queue for another agent
 
-`enqueue <agent> <command>` appends a command to another agent's queue, whether or not you're on that agent's tab:
+`queue <agent> <command>` appends a command to another agent's queue, whether or not you're on that agent's tab:
 
 ```
-enqueue worker db vacuum
+queue worker db vacuum
 ```
 
 If `worker` is idle with nothing else queued, the command runs right away. If it's busy, or already has commands waiting, this one joins the back of the line.
