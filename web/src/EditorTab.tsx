@@ -9,7 +9,7 @@ import { useEditorMouse } from './editor/useEditorMouse';
 import { useSyntaxHighlight } from './editor/useSyntaxHighlight';
 import { OverwriteConflictDialog } from './OverwriteConflictDialog';
 
-export type EditorTabHandle = { isDirty(): boolean; save(): Promise<void> };
+export type EditorTabHandle = { isDirty(): boolean; save(): Promise<void>; focus(): void };
 
 // The plain-text editor tab. Mounted persistently by App (like harness tabs) so the buffer, undo
 // stacks, cursor, and scroll position survive tab switches; `active` gates focus and the caret.
@@ -120,6 +120,7 @@ export const EditorTab = forwardRef<EditorTabHandle, { editor: EditorView; clien
   useImperativeHandle(ref, () => ({
     isDirty: () => dirtyRef.current,
     save: async () => { await saveRef.current(); },
+    focus: () => textareaRef.current?.focus(),
   }));
 
   // A viewport's worth of logical lines for PageUp/PageDown, from the measured row line-height.

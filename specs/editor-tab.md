@@ -66,7 +66,7 @@ Closing an editor tab that has unsaved changes triggers a confirmation dialog: "
 
 - **Save (y):** saves the file to disk, then closes the tab.
 - **Don't Save (n):** closes the tab without saving.
-- **Cancel (Esc):** dismisses the dialog and leaves the tab open with changes intact.
+- **Cancel (Esc):** dismisses the dialog and leaves the tab open with changes intact. Focus returns to the editor at the current cursor position.
 
 Like the quit dialog, the save dialog is modal — all keyboard and click input is trapped until a choice is made. A click outside the dialog does nothing.
 

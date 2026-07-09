@@ -13,7 +13,7 @@ function makeTab(label: string): TabView {
 }
 
 function editorHandles(dirty: boolean): React.RefObject<Map<string, EditorTabHandle>> {
-  return { current: new Map([['a', { isDirty: () => dirty, save: async () => {} }]]) };
+  return { current: new Map([['a', { isDirty: () => dirty, save: async () => {}, focus: () => {} }]]) };
 }
 
 describe('useUnsavedQuitGuard', () => {
