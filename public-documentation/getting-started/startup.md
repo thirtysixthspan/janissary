@@ -17,12 +17,17 @@ janus
 
 By default each launch starts fresh: a single `janus` tab, with any state from the previous session cleared. To pick up where you left off instead, use `--relaunch` (below).
 
+## Arguments
+
+| Argument | What it does |
+|---|---|
+| `<project-dir>` | Target directory to work against (default: current directory). |
+
 ## Flags
 
 | Flag | What it does |
 |---|---|
 | `--port=<n>` | Listen on port `n` (1–65535). Without it, a free port is picked automatically. |
-| `--here=<dir>` | Run against `<dir>` instead of the current directory. |
 | `--no-open` | Start the server without opening the app window. |
 | `--relaunch` | Restore the previous session instead of starting fresh. |
 | `--help` | Print usage and exit. |
@@ -46,7 +51,7 @@ If startup fails, the error names the app and version, says what went wrong, and
 
 - **The port is already in use** — something else is listening on the port you asked for. Pick another with `--port=<n>`, or drop `--port` entirely and let the app choose a free one.
 - **The web UI bundle is missing** — this only happens in a development checkout where the web assets haven't been built yet. Run `npm run build:web` (or `npm start`) and launch again.
-- **Another instance is already running here** — a second `janus` launched against the same directory as a still-running instance is rejected with the live process's ID. Run it against a different directory with `--here=<dir>` instead.
+- **Another instance is already running here** — a second `janus` launched against the same directory as a still-running instance is rejected with the live process's ID. Run `janus <dir>` to start a second instance against a different directory.
 
 ## Configuration
 

@@ -1,13 +1,18 @@
 # Command-line interface
 
-`janus [options]` — a terminal UI shell with built-in commands and shell execution.
+`janus [options] [<project-dir>]` — a terminal UI shell with built-in commands and shell execution.
+
+### Arguments
+
+| Argument | Type | Default | Description |
+| -------- | ---- | ------- | ----------- |
+| `<project-dir>` | string (path) | current directory | Target project directory to work against. |
 
 ### Flags
 
 | Flag | Type | Default | Description |
 | ---- | ---- | ------- | ----------- |
 | `--port=<n>` | string (numeric) | auto | Port for the HTTP server to listen on. |
-| `--here=<dir>` | string (path) | current directory | Run against a different directory instead of the current one. |
 | `--no-open` | boolean | `false` | Start the server without opening the app window. |
 | `--relaunch` | boolean | `false` | Preserve existing state instead of clearing it. See `specs/relaunch.md`. |
 | `--help` | boolean | `false` | Print usage text to stdout and exit 0. |
@@ -23,7 +28,7 @@ Prints `<name> <version>` (read from `package.json` at runtime) to stdout and ex
 
 ### Usage errors
 
-Unknown flags, malformed flags (e.g. bare `--port` with no value), positional arguments, invalid `--port` values (non-integer, out of range 1–65535), and a `--here` path that does not exist or is not a directory are rejected before the server starts. The error message is printed to stderr followed by a pointer to `--help`, and the process exits with code 2.
+Unknown flags, malformed flags (e.g. bare `--port` with no value), invalid `--port` values (non-integer, out of range 1–65535), more than one positional argument, and a `<project-dir>` path that does not exist or is not a directory are rejected before the server starts. The error message is printed to stderr followed by a pointer to `--help`, and the process exits with code 2.
 
 ### Startup failures
 
@@ -31,13 +36,13 @@ When `janus` fails to start, stderr shows `<name> <version> — failed to start:
 
 - The requested port is already in use: the message names the port and suggests picking another with `--port=<n>` or omitting `--port` to choose one automatically.
 - The web UI bundle is missing (a dev checkout where the web assets have not been built): the message points at `npm run build:web` or `npm start`.
-- Another `janus` instance is already running against the same target directory: the message names the directory and the live process ID, and suggests `--here=<other-directory>` to run a second instance elsewhere.
+- Another `janus` instance is already running against the same target directory: the message names the directory and the live process ID, and suggests `janus <other-directory>` to run a second instance elsewhere.
 
 Any other failure falls back to the underlying error's message with the same banner. Setting the `JANUS_DEBUG=1` environment variable additionally prints the full stack trace after the message.
 
 ### Startup sequence
 
-When neither `--help` nor `--version` is given, `janus` boots the full application against its target directory (the current directory, or the resolved `--here` path):
+When neither `--help` nor `--version` is given, `janus` boots the full application against its target directory (the current directory, or the resolved `<project-dir>` argument):
 
 1. Acquire an instance lock on the target directory, failing fast if another live `janus` process already holds it.
 2. Initialize `.janissary/` subdirectories (agent state, database, profiles, workspace).

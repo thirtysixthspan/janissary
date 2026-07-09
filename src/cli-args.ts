@@ -10,13 +10,14 @@ export interface CliArgs {
   relaunch: boolean;
   noOpen: boolean;
   port: number | undefined;
-  here: string | undefined;
+  projectDir: string | undefined;
 }
 
 export function parseCliArgs(argv: string[]): CliArgs {
-  let values;
+  let values: Record<string, string | boolean | string[] | undefined>;
+  let positionals: string[];
   try {
-    ({ values } = parseArgs({
+    ({ values, positionals } = parseArgs({
       args: argv,
       options: {
         help: { type: 'boolean' },
@@ -24,10 +25,9 @@ export function parseCliArgs(argv: string[]): CliArgs {
         relaunch: { type: 'boolean' },
         'no-open': { type: 'boolean' },
         port: { type: 'string' },
-        here: { type: 'string' },
       },
       strict: true,
-      allowPositionals: false,
+      allowPositionals: true,
     }));
   } catch (error) {
     const code = (error as NodeJS.ErrnoException).code;
@@ -44,13 +44,17 @@ export function parseCliArgs(argv: string[]): CliArgs {
     throw new CliUsageError(`invalid --port value: ${values.port}`);
   }
 
-  let here: string | undefined;
-  if (typeof values.here === 'string') {
-    const resolved = path.resolve(values.here);
+  let projectDir: string | undefined;
+  if (positionals.length > 0) {
+    const raw = positionals[0];
+    const resolved = path.resolve(raw);
     if (!existsSync(resolved) || !statSync(resolved).isDirectory()) {
-      throw new CliUsageError(`invalid --here value: ${values.here} is not a directory`);
+      throw new CliUsageError(`invalid project directory: ${raw} is not a directory`);
     }
-    here = resolved;
+    projectDir = resolved;
+  }
+  if (positionals.length > 1) {
+    throw new CliUsageError(`unexpected argument: ${positionals[1]}`);
   }
 
   return {
@@ -59,22 +63,24 @@ export function parseCliArgs(argv: string[]): CliArgs {
     relaunch: Boolean(values.relaunch),
     noOpen: Boolean(values['no-open']),
     port,
-    here,
+    projectDir,
   };
 }
 
 export function usageText(): string {
-  return `Usage: janus [options]
+  return `Usage: janus [options] [<project-dir>]
 
 A terminal UI shell with built-in commands and shell execution.
 
+Arguments:
+  <project-dir>  Target directory (default: current directory)
+
 Options:
-  --port=<n>    Port to listen on (default: auto)
-  --here=<dir>  Run against a different directory instead of the current one
-  --no-open     Start the server without opening the app window
-  --relaunch    Reattach to existing state instead of clearing it
-  --help        Show this help
-  --version     Show version
+  --port=<n>     Port to listen on (default: auto)
+  --no-open      Start the server without opening the app window
+  --relaunch     Reattach to existing state instead of clearing it
+  --help         Show this help
+  --version      Show version
 
 Environment:
   JANUS_DEBUG=1  print stack traces on failure
