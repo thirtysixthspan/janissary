@@ -1,5 +1,5 @@
 import { parseArgs } from 'node:util';
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync, statSync } from 'node:fs';
 import path from 'node:path';
 
 export class CliUsageError extends Error {}
@@ -10,6 +10,7 @@ export interface CliArgs {
   relaunch: boolean;
   noOpen: boolean;
   port: number | undefined;
+  here: string | undefined;
 }
 
 export function parseCliArgs(argv: string[]): CliArgs {
@@ -23,6 +24,7 @@ export function parseCliArgs(argv: string[]): CliArgs {
         relaunch: { type: 'boolean' },
         'no-open': { type: 'boolean' },
         port: { type: 'string' },
+        here: { type: 'string' },
       },
       strict: true,
       allowPositionals: false,
@@ -42,12 +44,22 @@ export function parseCliArgs(argv: string[]): CliArgs {
     throw new CliUsageError(`invalid --port value: ${values.port}`);
   }
 
+  let here: string | undefined;
+  if (typeof values.here === 'string') {
+    const resolved = path.resolve(values.here);
+    if (!existsSync(resolved) || !statSync(resolved).isDirectory()) {
+      throw new CliUsageError(`invalid --here value: ${values.here} is not a directory`);
+    }
+    here = resolved;
+  }
+
   return {
     help: Boolean(values.help),
     version: Boolean(values.version),
     relaunch: Boolean(values.relaunch),
     noOpen: Boolean(values['no-open']),
     port,
+    here,
   };
 }
 
@@ -58,6 +70,7 @@ A terminal UI shell with built-in commands and shell execution.
 
 Options:
   --port=<n>    Port to listen on (default: auto)
+  --here=<dir>  Run against a different directory instead of the current one
   --no-open     Start the server without opening the app window
   --relaunch    Reattach to existing state instead of clearing it
   --help        Show this help
