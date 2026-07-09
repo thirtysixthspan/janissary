@@ -16,7 +16,8 @@ function makeTab(overrides: Partial<TabView> = {}): TabView {
 function TestComponent({ tab, onHook }: { tab: TabView | undefined; onHook: (hook: ReturnType<typeof useQueuePicker>) => void }) {
   const client = { send: vi.fn() } as never;
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const hook = useQueuePicker(client, tab, inputRef);
+  const recallRef = useRef<((text: string) => void) | null>(null);
+  const hook = useQueuePicker(client, tab, inputRef, recallRef);
   onHook(hook);
   return null;
 }
@@ -46,7 +47,8 @@ describe('useQueuePicker', () => {
     let hook: ReturnType<typeof useQueuePicker> | undefined;
     function C() {
       const inputRef = useRef<HTMLTextAreaElement>(null);
-      hook = useQueuePicker(client, makeTab(), inputRef);
+      const recallRef = useRef<((text: string) => void) | null>(null);
+      hook = useQueuePicker(client, makeTab(), inputRef, recallRef);
       return null;
     }
     render(<C />);
@@ -60,7 +62,8 @@ describe('useQueuePicker', () => {
     let hook: ReturnType<typeof useQueuePicker> | undefined;
     function C() {
       const inputRef = useRef<HTMLTextAreaElement>(null);
-      hook = useQueuePicker(client, makeTab(), inputRef);
+      const recallRef = useRef<((text: string) => void) | null>(null);
+      hook = useQueuePicker(client, makeTab(), inputRef, recallRef);
       return null;
     }
     render(<C />);

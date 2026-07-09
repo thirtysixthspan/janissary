@@ -2,6 +2,7 @@ import type { Controller } from './controller.js';
 import type { ClientMessage, ServerEvent } from './protocol.js';
 import { getConfig } from './config.js';
 import { globalCommands } from './global-history.js';
+import { listTasks } from './tasks.js';
 
 export function handle(controller: Controller, message: ClientMessage, reply: (event: ServerEvent) => void): void {
   switch (message.method) {
@@ -9,7 +10,7 @@ export function handle(controller: Controller, message: ClientMessage, reply: (e
       reply({
         t: 'state', tabs: controller.view(), activeTab: controller.managers.tab.activeTab,
         route: controller.routeView(), tabNameMaxLength: getConfig().tabNameMaxLength,
-        globalHistory: globalCommands(), syntaxTheme: getConfig().syntaxTheme,
+        globalHistory: globalCommands(), syntaxTheme: getConfig().syntaxTheme, tasks: listTasks(),
       });
       break;
     }

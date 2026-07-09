@@ -75,6 +75,7 @@ export type StateEvent = {
   tabNameMaxLength: number;
   globalHistory: string[];
   syntaxTheme: string;
+  tasks: string[];
 };
 export type PtyDataEvent = { t: 'pty'; id: string; data: string };
 export type PtyExitEvent = { t: 'pty-exit'; id: string; exitCode: number };

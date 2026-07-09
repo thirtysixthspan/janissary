@@ -69,6 +69,7 @@ export default defineConfig({
           { text: "Shell commands", link: "/command-bar/shell" },
           { text: "Command history", link: "/command-bar/history" },
           { text: "Command queue", link: "/command-bar/queue" },
+          { text: "Task picker", link: "/command-bar/tasks" },
           { text: "Tab navigator", link: "/command-bar/tab-navigator" },
         ],
       },

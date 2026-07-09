@@ -10,6 +10,7 @@
 | `agent`      | Create a new agent tab (add `--workspace` to clone the repo, isolated by default — see Workspace; add `--offline` to also deny network access) |
 | `next`       | Switch to the next tab             |
 | `hist`       | Open command history picker        |
+| `tasks`      | Open the task picker listing executable `ai/*.md` task files (Ctrl+A) |
 | `msg`        | Send a message to another agent    |
 | `broadcast`  | Send a message to several or all agents |
 | `acp`        | Send a prompt to the OpenCode ACP agent |
@@ -43,6 +44,7 @@
 | `Ctrl+P` / `Ctrl+N` | Scroll the transcript up / down one line (fixed) |
 | `Ctrl+R`            | Open command history picker        |
 | `Ctrl+E`            | Open the queue picker to send a command to another agent tab |
+| `Ctrl+A`            | Open the task picker (executable `ai/*.md` files); Return populates the command line without running |
 | `Ctrl+T`            | Expand / collapse agent tool steps in the transcript |
 | `Tab`               | Complete a file path, an agent name for `msg` / `broadcast`, a connection string for `connection close`, a `browser` subcommand / window id, or a `monitor` persona / target |
 | `Enter`             | Execute the current command        |

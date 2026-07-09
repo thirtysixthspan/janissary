@@ -32,4 +32,4 @@ With nothing queued, the popup shows `(no commands queued)`.
 
 A tab's queue is part of its saved state, so it survives `janus --relaunch`. A relaunched tab always comes back idle — a restored queue waits and starts running as soon as you submit anything to that tab.
 
-A few commands are always handled instantly and never queue, no matter how busy the tab is: `hist`, `nav`, `syntax theme`, `quit`, `close`, `exit`, and `queue` itself.
+A few commands are always handled instantly and never queue, no matter how busy the tab is: `hist`, `nav`, `syntax theme`, `quit`, `close`, `exit`, `tasks`, and `queue` itself.

@@ -6,7 +6,7 @@ import type { TabView, RouteChooserView } from '@shared/protocol';
 const sendMock = vi.fn();
 type StateListener = (
   tabs: TabView[], activeTab: number, route: RouteChooserView | null, tabNameMaxLength: number, globalHistory: string[],
-  syntaxTheme: string,
+  syntaxTheme: string, tasks: string[],
 ) => void;
 let stateListener: StateListener | null = null;
 
@@ -48,7 +48,7 @@ describe('App transcript-search interception', () => {
   it('does not send a command RPC when the pattern matches, opening search instead', async () => {
     const { App } = await import('./App');
     render(<App />);
-    act(() => { stateListener!([makeTab({ bufferLines: [{ type: 'output', text: 'an error occurred' }] })], 0, null, 16, [], 'github-dark'); });
+    act(() => { stateListener!([makeTab({ bufferLines: [{ type: 'output', text: 'an error occurred' }] })], 0, null, 16, [], 'github-dark', []); });
     const input = screen.getByRole('textbox');
     fireEvent.change(input, { target: { value: 'search transcript error' } });
     fireEvent.keyDown(input, { key: 'Enter' });
@@ -59,7 +59,7 @@ describe('App transcript-search interception', () => {
   it('sends a command RPC when the pattern has no matches', async () => {
     const { App } = await import('./App');
     render(<App />);
-    act(() => { stateListener!([makeTab({ bufferLines: [{ type: 'output', text: 'all good' }] })], 0, null, 16, [], 'github-dark'); });
+    act(() => { stateListener!([makeTab({ bufferLines: [{ type: 'output', text: 'all good' }] })], 0, null, 16, [], 'github-dark', []); });
     const input = screen.getByRole('textbox');
     fireEvent.change(input, { target: { value: 'search transcript zzznotfound' } });
     fireEvent.keyDown(input, { key: 'Enter' });
@@ -76,7 +76,7 @@ describe('App syntax theme picker', () => {
   it('opens the theme picker on "syntax theme" and sends "syntax theme <name>" on Enter', async () => {
     const { App } = await import('./App');
     render(<App />);
-    act(() => { stateListener!([makeTab()], 0, null, 16, [], 'github-dark'); });
+    act(() => { stateListener!([makeTab()], 0, null, 16, [], 'github-dark', []); });
     const input = screen.getByRole('textbox');
     fireEvent.change(input, { target: { value: 'syntax theme' } });
     fireEvent.keyDown(input, { key: 'Enter' });
@@ -88,7 +88,7 @@ describe('App syntax theme picker', () => {
   it('sends "close" as a command when there are multiple tabs', async () => {
     const { App } = await import('./App');
     render(<App />);
-    act(() => { stateListener!([makeTab(), makeTab({ label: 'other' })], 0, null, 16, [], 'github-dark'); });
+    act(() => { stateListener!([makeTab(), makeTab({ label: 'other' })], 0, null, 16, [], 'github-dark', []); });
     const input = screen.getByRole('textbox');
     fireEvent.change(input, { target: { value: 'close' } });
     fireEvent.keyDown(input, { key: 'Enter' });
@@ -98,7 +98,7 @@ describe('App syntax theme picker', () => {
   it('renders a reporting section when a monitor tab is present', async () => {
     const { App } = await import('./App');
     render(<App />);
-    act(() => { stateListener!([makeTab({ view: 'monitor', monitor: { suggestions: [] }, groupColor: '#0f0' })], 0, null, 16, [], 'github-dark'); });
+    act(() => { stateListener!([makeTab({ view: 'monitor', monitor: { suggestions: [] }, groupColor: '#0f0' })], 0, null, 16, [], 'github-dark', []); });
     expect(screen.getByText('janus')).toBeTruthy();
   }, 15_000);
 });
@@ -112,7 +112,7 @@ describe('App tab navigator', () => {
   it('opens the tab navigator seeded with the query on "nav <query>" instead of sending it to the server', async () => {
     const { App } = await import('./App');
     render(<App />);
-    act(() => { stateListener!([makeTab({ label: 'deploy' }), makeTab({ label: 'shell', number: 2 })], 0, null, 16, [], 'github-dark'); });
+    act(() => { stateListener!([makeTab({ label: 'deploy' }), makeTab({ label: 'shell', number: 2 })], 0, null, 16, [], 'github-dark', []); });
     const input = screen.getByRole('textbox');
     fireEvent.change(input, { target: { value: 'nav depl' } });
     fireEvent.keyDown(input, { key: 'Enter' });
@@ -130,7 +130,7 @@ describe('App queue popup', () => {
   it('opens the queue popup on "queue" instead of sending a command RPC', async () => {
     const { App } = await import('./App');
     render(<App />);
-    act(() => { stateListener!([makeTab({ commandQueue: ['echo hi'] })], 0, null, 16, [], 'github-dark'); });
+    act(() => { stateListener!([makeTab({ commandQueue: ['echo hi'] })], 0, null, 16, [], 'github-dark', []); });
     const input = screen.getByRole('textbox');
     fireEvent.change(input, { target: { value: 'queue' } });
     fireEvent.keyDown(input, { key: 'Enter' });
@@ -141,7 +141,7 @@ describe('App queue popup', () => {
   it('selecting the front entry copies it into the command line', async () => {
     const { App } = await import('./App');
     render(<App />);
-    act(() => { stateListener!([makeTab({ commandQueue: ['echo hi', 'echo bye'] })], 0, null, 16, [], 'github-dark'); });
+    act(() => { stateListener!([makeTab({ commandQueue: ['echo hi', 'echo bye'] })], 0, null, 16, [], 'github-dark', []); });
     const input = screen.getByRole('textbox') as HTMLTextAreaElement;
     fireEvent.change(input, { target: { value: 'queue' } });
     fireEvent.keyDown(input, { key: 'Enter' });
@@ -151,7 +151,7 @@ describe('App queue popup', () => {
   it('Cmd+W does nothing while the queue popup is open', async () => {
     const { App } = await import('./App');
     render(<App />);
-    act(() => { stateListener!([makeTab({ commandQueue: ['echo hi'] })], 0, null, 16, [], 'github-dark'); });
+    act(() => { stateListener!([makeTab({ commandQueue: ['echo hi'] })], 0, null, 16, [], 'github-dark', []); });
     const input = screen.getByRole('textbox');
     fireEvent.change(input, { target: { value: 'queue' } });
     fireEvent.keyDown(input, { key: 'Enter' });
@@ -163,7 +163,7 @@ describe('App queue popup', () => {
   it('Escape closes the queue popup and clears the command line', async () => {
     const { App } = await import('./App');
     render(<App />);
-    act(() => { stateListener!([makeTab({ commandQueue: ['echo hi', 'echo bye'] })], 0, null, 16, [], 'github-dark'); });
+    act(() => { stateListener!([makeTab({ commandQueue: ['echo hi', 'echo bye'] })], 0, null, 16, [], 'github-dark', []); });
     const input = screen.getByRole('textbox') as HTMLTextAreaElement;
     fireEvent.change(input, { target: { value: 'queue' } });
     fireEvent.keyDown(input, { key: 'Enter' });
@@ -184,7 +184,7 @@ describe('App agent tab body click focuses command input', () => {
     const { App } = await import('./App');
     const { container } = render(<App />);
     act(() => {
-      stateListener!([makeTab()], 0, null, 16, [], 'github-dark');
+      stateListener!([makeTab()], 0, null, 16, [], 'github-dark', []);
     });
     const tabBody = container.querySelector('.tab-body') as HTMLElement;
     expect(tabBody).not.toBeNull();
@@ -196,7 +196,7 @@ describe('App agent tab body click focuses command input', () => {
     const { App } = await import('./App');
     const { container } = render(<App />);
     act(() => {
-      stateListener!([makeTab()], 0, null, 16, [], 'github-dark');
+      stateListener!([makeTab()], 0, null, 16, [], 'github-dark', []);
     });
     const writeText = vi.fn();
     vi.stubGlobal('navigator', { clipboard: { writeText } });
@@ -213,7 +213,7 @@ describe('App agent tab body click focuses command input', () => {
     const { App } = await import('./App');
     const { container } = render(<App />);
     act(() => {
-      stateListener!([makeTab()], 0, null, 16, [], 'github-dark');
+      stateListener!([makeTab()], 0, null, 16, [], 'github-dark', []);
     });
     const writeText = vi.fn();
     vi.stubGlobal('navigator', { clipboard: { writeText } });
@@ -243,7 +243,7 @@ describe('App sidebar docking', () => {
             files: { root: '/tmp/project', rows: [] },
           }),
         ],
-        0, null, 16, [], 'github-dark',
+        0, null, 16, [], 'github-dark', [],
       );
     });
     const stripLabels = [...container.querySelectorAll(':scope .tabstrip .tab')].map((el) => el.textContent);
@@ -263,7 +263,7 @@ describe('App sidebar docking', () => {
             files: { root: '/tmp/project', rows: [] },
           }),
         ],
-        0, null, 16, [], 'github-dark',
+        0, null, 16, [], 'github-dark', [],
       );
     });
     fireEvent.click(container.querySelector(':scope .sidebar-left .files-close')!);

@@ -10,13 +10,14 @@ function dispatchKey(key: string, opts: { metaKey?: boolean; ctrlKey?: boolean; 
 }
 
 function TestComponent({
-  route, themePickerOpen, pickerOpen, navOpen, queueOpen, canSearch, searchOpen, handleScrollKey, callbacks,
+  route, themePickerOpen, pickerOpen, navOpen, queueOpen, taskPickerOpen, canSearch, searchOpen, handleScrollKey, callbacks,
 }: {
   route?: { cmd: string; choices: string[] } | null;
   themePickerOpen?: boolean;
   pickerOpen?: boolean;
   navOpen?: boolean;
   queueOpen?: boolean;
+  taskPickerOpen?: boolean;
   canSearch?: boolean;
   searchOpen?: boolean;
   handleScrollKey?: (e: KeyboardEvent) => boolean;
@@ -39,6 +40,10 @@ function TestComponent({
     setQueueIndex: (s: (p: number) => number) => void;
     setQueueOpen: (o: boolean) => void;
     openQueue: () => void;
+    setTaskPickerIndex: (s: (p: number) => number) => void;
+    setTaskPickerOpen: (o: boolean) => void;
+    openTaskPicker: () => void;
+    pickTask: (n: string) => void;
   }>;
 }) {
   const stateRef = useRef({
@@ -58,6 +63,9 @@ function TestComponent({
     queueOpen: queueOpen ?? false,
     queueIdx: 0,
     queueItems: ['q1', 'q2'],
+    taskPickerOpen: taskPickerOpen ?? false,
+    taskPickerIdx: 0,
+    tasks: ['build-a-feature.md', 'fix-a-small-issue.md'],
   });
   const cb = {
     setRouteIndex: vi.fn(),
@@ -78,6 +86,10 @@ function TestComponent({
     setQueueIndex: vi.fn(),
     setQueueOpen: vi.fn(),
     openQueue: vi.fn(),
+    setTaskPickerIndex: vi.fn(),
+    setTaskPickerOpen: vi.fn(),
+    openTaskPicker: vi.fn(),
+    pickTask: vi.fn(),
     ...callbacks,
   };
   const cbRef = useRef(cb);
@@ -143,6 +155,27 @@ describe('useWindowKeys', () => {
     render(React.createElement(TestComponent, { callbacks: { openQueue } }));
     dispatchKey('e', { ctrlKey: true });
     expect(openQueue).toHaveBeenCalled();
+  });
+
+  it('Ctrl+A opens the task picker', () => {
+    const openTaskPicker = vi.fn();
+    render(React.createElement(TestComponent, { callbacks: { openTaskPicker } }));
+    dispatchKey('a', { ctrlKey: true });
+    expect(openTaskPicker).toHaveBeenCalled();
+  });
+
+  it('routes Arrow keys to the task picker when open', () => {
+    const setTaskPickerIndex = vi.fn();
+    render(React.createElement(TestComponent, { taskPickerOpen: true, callbacks: { setTaskPickerIndex } }));
+    dispatchKey('ArrowDown');
+    expect(setTaskPickerIndex).toHaveBeenCalled();
+  });
+
+  it('routes Enter to pickTask (populate) when the task picker is open', () => {
+    const pickTask = vi.fn();
+    render(React.createElement(TestComponent, { taskPickerOpen: true, callbacks: { pickTask } }));
+    dispatchKey('Enter');
+    expect(pickTask).toHaveBeenCalledWith('build-a-feature.md');
   });
 
   it('Cmd+T runs the agent command to open a new root-project tab', () => {

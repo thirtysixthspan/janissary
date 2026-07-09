@@ -17,6 +17,7 @@ import { StatusPanels } from './StatusPanels';
 import { PickerOverlays } from './PickerOverlays';
 import { useTabNav } from './useTabNav';
 import { useQueuePicker } from './useQueuePicker';
+import { useTaskPicker } from './useTaskPicker';
 import { useCommandBarSubmit } from './useCommandBarSubmit';
 import { QuitDialog } from './QuitDialog/QuitDialog';
 import { UnsavedQuitDialog } from './UnsavedQuitDialog';
@@ -30,6 +31,8 @@ import { useQuitConfirm } from './QuitDialog/useQuitConfirm';
 import { useWindowKeys } from './useWindowKeys';
 import { useLiveRef } from './useLiveRef';
 import { useThemePicker } from './useThemePicker';
+import { useHistPicker } from './useHistPicker';
+import { useServerState } from './useServerState';
 import { applySyntaxTheme } from './editor/highlight/themes';
 
 export function App() {
@@ -42,13 +45,15 @@ export function App() {
   const [tabNameMaxLength, setTabNameMaxLength] = useState(16);
   const [globalHistory, setGlobalHistory] = useState<string[]>([]);
   const [syntaxTheme, setSyntaxTheme] = useState('github-dark');
-  const [pickerOpen, setPickerOpen] = useState(false);
-  const [pickerIndex, setPickerIndex] = useState(0);
+  const [tasks, setTasks] = useState<string[]>([]);
   // Server-driven route chooser (null when closed); `routeIdx` is the highlighted option.
   const [route, setRoute] = useState<RouteChooserView | null>(null);
   const [routeIndex, setRouteIndex] = useState(0);
   const routeReference = useRef<RouteChooserView | null>(null);
   const inputReference = useRef<HTMLTextAreaElement>(null);
+  // Assigned `CommandInput`'s `recall` (the `guardRef` pattern); shared by the queue and task
+  // pickers so a selected row's text lands in the command line without submitting.
+  const recallReference = useRef<((text: string) => void) | null>(null);
   const transcriptReference = useRef<HTMLDivElement>(null);
   const harnessHandles = useRef<Map<string, HarnessTabHandle>>(new Map());
   const shellHandles = useRef<Map<string, ShellTabHandle>>(new Map());
@@ -82,27 +87,26 @@ export function App() {
   const runCommand = useCallback((text: string) => client.send({ method: 'command', params: { text } }), [client]);
   const { themePickerOpen, themePickerIndex, setThemePickerIndex, setThemePickerOpen, openThemePicker, pickTheme } =
     useThemePicker(syntaxTheme, runCommand);
+  const { pickerOpen, pickerIndex, setPickerIndex, setPickerOpen, openPicker, pick } = useHistPicker(recent, runCommand);
   const {
     navOpen, navQuery, navIndex, navTabs, setNavIndex, setNavQuery, setNavOpen, openTabNav, openTabNavWithQuery, selectNavTab,
   } = useTabNav(client, tabs);
 
   const {
-    queueOpen, queueIndex, setQueueIndex, setQueueOpen, openQueue, selectQueueIndex, onEditQueued, onDeleteQueued, recallRef,
-  } = useQueuePicker(client, current, inputReference);
+    queueOpen, queueIndex, setQueueIndex, setQueueOpen, openQueue, selectQueueIndex, onEditQueued, onDeleteQueued,
+  } = useQueuePicker(client, current, inputReference, recallReference);
+  const {
+    taskPickerOpen, taskPickerIndex, setTaskPickerIndex, setTaskPickerOpen, openTaskPicker, pickTask,
+  } = useTaskPicker(tasks, recallReference, inputReference);
 
   // Live snapshot read by the window key handler, so it never has to re-register.
   const stateReference = useLiveRef({
     pickerOpen, pickerIdx: pickerIndex, recent, route, routeIdx: routeIndex, canSearch, searchOpen: search.searchOpen,
     themePickerOpen, themePickerIdx: themePickerIndex, navOpen, navQuery, navIdx: navIndex, navTabs,
     queueOpen, queueIdx: queueIndex, queueItems: current?.commandQueue ?? [],
+    taskPickerOpen, taskPickerIdx: taskPickerIndex, tasks,
   });
 
-  const openPicker = () => {
-    // Always open on hist / Ctrl+R; highlight the most recent (bottom) entry.
-    setPickerIndex(Math.max(0, stateReference.current.recent.length - 1));
-    setPickerOpen(true);
-  };
-  const pick = (command: string) => { runCommand(command); setPickerOpen(false); };
   const { quitConfirmOpen, openQuitConfirm, confirmQuit, cancelQuit } = useQuitConfirm(runCommand, inputReference);
   const editorHandles = useRef<Map<string, EditorTabHandle>>(new Map());
   const { unsavedQuitOpen, guardedOpenQuitConfirm, confirmUnsavedQuit, cancelUnsavedQuit } =
@@ -110,7 +114,7 @@ export function App() {
   const guardRef = useRef<((index: number) => boolean) | null>(null);
   const activeTabRef = useRef(activeTab); activeTabRef.current = activeTab;
   const quitConfirmOpenRef = useRef(quitConfirmOpen); quitConfirmOpenRef.current = quitConfirmOpen || unsavedQuitOpen;
-  const pickerOpenRef = useRef(pickerOpen); pickerOpenRef.current = pickerOpen || queueOpen;
+  const pickerOpenRef = useRef(pickerOpen); pickerOpenRef.current = pickerOpen || queueOpen || taskPickerOpen;
   const routeRef = useRef(route); routeRef.current = route;
   const activeViewRef = useRef(current?.view); activeViewRef.current = current?.view;
 
@@ -120,18 +124,10 @@ export function App() {
 
   const chooseRoute = useCallback((index: number) => client.send({ method: 'chooseRoute', params: { index } }), [client]);
 
-  useEffect(() => client.onState((nextTabs, active, nextRoute, nextTabNameMaxLength, nextGlobalHistory, nextSyntaxTheme) => {
-    setTabs(nextTabs);
-    setActiveTab(active);
-    setRoute(nextRoute);
-    setTabNameMaxLength(nextTabNameMaxLength);
-    setGlobalHistory(nextGlobalHistory);
-    setSyntaxTheme(nextSyntaxTheme);
-    // Highlight the first option when a chooser newly opens (or its command changes).
-    const previous = routeReference.current;
-    routeReference.current = nextRoute;
-    if (nextRoute && (!previous || previous.cmd !== nextRoute.cmd)) setRouteIndex(0);
-  }), [client]);
+  useServerState(client, {
+    setTabs, setActiveTab, setRoute, setTabNameMaxLength, setGlobalHistory, setSyntaxTheme, setTasks, setRouteIndex,
+    routeRef: routeReference,
+  });
 
   useEffect(() => { applySyntaxTheme(syntaxTheme); }, [syntaxTheme]);
 
@@ -145,12 +141,13 @@ export function App() {
     setThemePickerIndex, setThemePickerOpen, pickTheme,
     setNavIndex, setNavQuery, selectNavTab, setNavOpen, openTabNav,
     setQueueIndex, setQueueOpen, openQueue,
+    setTaskPickerIndex, setTaskPickerOpen, openTaskPicker, pickTask,
   });
 
   useWindowKeys(client, stateReference, keyCallbacksRef, handleScrollKey, handleScrollKeyUp);
 
   const onCommandBarSubmit = useCommandBarSubmit({
-    canSearch, lines, search, openPicker, openThemePicker, openQueue, navOpen, setNavOpen,
+    canSearch, lines, search, openPicker, openThemePicker, openQueue, openTaskPicker, navOpen, setNavOpen,
     openTabNavWithQuery, tabs, openQuitConfirm: guardedOpenQuitConfirm, guardRef, activeTab, runCommand,
   });
 
@@ -201,6 +198,7 @@ export function App() {
               pickerOpen={pickerOpen} recent={recent} pickerIndex={pickerIndex} onPickHistory={pick}
               navOpen={navOpen} navQuery={navQuery} navIndex={navIndex} tabs={tabs} onPickTab={selectNavTab}
               queueOpen={queueOpen} queueItems={current.commandQueue} queueIndex={queueIndex} onSelectQueue={selectQueueIndex}
+              taskPickerOpen={taskPickerOpen} tasks={tasks} taskPickerIndex={taskPickerIndex} onPickTask={pickTask}
             />
           </div>
           <CommandArea
@@ -212,10 +210,10 @@ export function App() {
             onSubmit={onCommandBarSubmit}
             inputRef={inputReference}
             complete={(text, cursor) => client.request({ method: 'complete', params: { text, cursor } })}
-            pickerOpen={pickerOpen || route !== null || quitConfirmOpen || unsavedQuitOpen || themePickerOpen || navOpen}
+            pickerOpen={pickerOpen || route !== null || quitConfirmOpen || unsavedQuitOpen || themePickerOpen || navOpen || taskPickerOpen}
             busy={current.busy}
             queueOpen={queueOpen}
-            recallRef={recallRef}
+            recallRef={recallReference}
             onEditQueued={onEditQueued}
             onDeleteQueued={onDeleteQueued}
           />
