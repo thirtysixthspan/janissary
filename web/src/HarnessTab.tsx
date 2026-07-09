@@ -6,15 +6,17 @@ import { useXterm } from './useXterm';
 type Properties = { harness: HarnessView; client: JanusClient };
 export type HarnessTabHandle = { focus(): void };
 
-// Returns true to send to PTY, false to bubble (switch tabs).
+// Returns true to send to PTY, false to bubble (switch tabs, open task picker).
 function harnessKeyFilter(e: KeyboardEvent): boolean {
   if (e.type !== 'keydown') return true;
   const isTabSwitch = e.shiftKey && !e.ctrlKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight');
-  return !isTabSwitch;
+  const isTaskPicker = e.ctrlKey && !e.shiftKey && !e.altKey && !e.metaKey && e.key.toLowerCase() === 'a';
+  return !(isTabSwitch || isTaskPicker);
 }
 
 // Full-tab harness terminal: no card chrome, no command bar — the body is the PTY. All keys reach
-// the harness except the tab-switch chord (Shift+←/→), which bubbles to the window handler.
+// the harness except the tab-switch chord (Shift+←/→) and the task-picker chord (Ctrl+A), which
+// bubble to the window handler.
 export const HarnessTab = forwardRef<HarnessTabHandle, Properties>(function HarnessTab({ harness, client }, ref) {
   const hostReference = useRef<HTMLDivElement>(null);
   const focusTerm = useXterm({
