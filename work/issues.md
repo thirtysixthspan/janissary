@@ -1,7 +1,5 @@
 # issues
 
-* remove --here flag and instead accept the project root as a second parameter to janus. by default the project root is the cwd when not specified.
-
 * the project root when specified should be used through the application, including for opening new shells and harnesses and the default for when opening the file navigator.
 
 * Halting the server should close the UI window first.

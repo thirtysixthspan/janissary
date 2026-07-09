@@ -20,7 +20,7 @@ export function acquireLock(projectDir: string): void {
     const pid = Number(readFileSync(file, 'utf8').trim());
     if (isPidAlive(pid)) {
       throw new Error(
-        `another janus instance is already running in this directory (pid ${pid}). Use --here=<other-directory> to run a second instance elsewhere.`,
+        `another janus instance is already running in this directory (pid ${pid}). Run janus <other-directory> to start a second instance elsewhere.`,
       );
     }
   }

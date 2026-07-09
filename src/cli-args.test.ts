@@ -21,7 +21,7 @@ describe('parseCliArgs', () => {
     expect(args.relaunch).toBe(false);
     expect(args.noOpen).toBe(false);
     expect(args.port).toBeUndefined();
-    expect(args.here).toBeUndefined();
+    expect(args.projectDir).toBeUndefined();
   });
 
   it('parses --help', () => {
@@ -81,16 +81,16 @@ describe('parseCliArgs', () => {
     expect(() => parseCliArgs(['foo'])).toThrow(CliUsageError);
   });
 
-  it('parses --here=<existing-dir> to the resolved absolute path', () => {
-    expect(parseCliArgs([`--here=${tmpDir}`]).here).toBe(tmpDir);
+  it('parses a positional project directory to the resolved absolute path', () => {
+    expect(parseCliArgs([tmpDir]).projectDir).toBe(tmpDir);
   });
 
-  it('throws CliUsageError for a nonexistent --here path', () => {
-    expect(() => parseCliArgs([`--here=${path.join(tmpDir, 'nope')}`])).toThrow(CliUsageError);
+  it('throws CliUsageError for a nonexistent positional project directory', () => {
+    expect(() => parseCliArgs([path.join(tmpDir, 'nope')])).toThrow(CliUsageError);
   });
 
-  it('throws CliUsageError for a --here path that is a file, not a directory', () => {
-    expect(() => parseCliArgs([`--here=${tmpFile}`])).toThrow(CliUsageError);
+  it('throws CliUsageError for a positional path that is a file, not a directory', () => {
+    expect(() => parseCliArgs([tmpFile])).toThrow(CliUsageError);
   });
 });
 
@@ -98,7 +98,7 @@ describe('usageText', () => {
   it('includes all documented flags', () => {
     const text = usageText();
     expect(text).toContain('--port=<n>');
-    expect(text).toContain('--here=<dir>');
+    expect(text).toContain('<project-dir>');
     expect(text).toContain('--no-open');
     expect(text).toContain('--relaunch');
     expect(text).toContain('--help');

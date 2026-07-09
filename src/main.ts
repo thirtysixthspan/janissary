@@ -123,7 +123,7 @@ export async function boot(argv = process.argv.slice(2)): Promise<void> {
     return;
   }
 
-  const cwd = args.here ?? process.cwd();
+  const cwd = args.projectDir ?? process.cwd();
   acquireLock(cwd);
   lockedDir = cwd;
   initAgentStateDirectory(cwd);
