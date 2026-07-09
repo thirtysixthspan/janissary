@@ -1,10 +1,10 @@
 // Wire types shared between the Node server and the React web client.
 // The web client imports these directly via the @shared path alias — no mirror needed.
-import type { BufferLine, ImageView, PageView, HarnessView, MarkdownView, EditorView, TerminalEntry, CompletionResult, FileTreeView, FileTreeRow } from './types.js';
+import type { BufferLine, ImageView, PageView, HarnessView, MarkdownView, EditorView, TerminalEntry, CompletionResult, FileTreeView, FileTreeRow, TaskRow } from './types.js';
 
 // Used locally in TabView below, so separate import + export is required.
 // eslint-disable-next-line unicorn/prefer-export-from
-export type { BufferLine, ImageView, PageView, HarnessView, MarkdownView, EditorView, TerminalEntry, CompletionResult, FileTreeView, FileTreeRow };
+export type { BufferLine, ImageView, PageView, HarnessView, MarkdownView, EditorView, TerminalEntry, CompletionResult, FileTreeView, FileTreeRow, TaskRow };
 
 // One row in the floating "connections" panel (shell / acp / terminal card / sqlite).
 export type ConnectionView = { text: string; kind: 'shell' | 'acp' | 'browser' | 'terminal' | 'sqlite' | 'ssh' };
@@ -75,7 +75,7 @@ export type StateEvent = {
   tabNameMaxLength: number;
   globalHistory: string[];
   syntaxTheme: string;
-  tasks: string[];
+  tasks: TaskRow[];
 };
 export type PtyDataEvent = { t: 'pty'; id: string; data: string };
 export type PtyExitEvent = { t: 'pty-exit'; id: string; exitCode: number };

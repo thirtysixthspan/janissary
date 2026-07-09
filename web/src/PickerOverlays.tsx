@@ -6,6 +6,7 @@ import { RouteChooser } from './RouteChooser';
 import { TabNavPicker } from './TabNavPicker';
 import { QueuePicker } from './QueuePicker';
 import { TaskPicker } from './TaskPicker';
+import type { VisibleTaskRow } from './task-picker-keys';
 import { SYNTAX_THEMES } from '@shared/syntax-themes';
 
 // The mutually-exclusive stack of modal overlays that can float above the command bar: route
@@ -33,16 +34,17 @@ type Properties = {
   queueIndex: number;
   onSelectQueue: (index: number) => void;
   taskPickerOpen: boolean;
-  tasks: string[];
+  taskRows: VisibleTaskRow[];
   taskPickerIndex: number;
-  onPickTask: (task: string) => void;
+  onPickTask: (path: string) => void;
+  onToggleTaskDir: (path: string) => void;
 };
 
 export function PickerOverlays({
   route, routeIndex, onPickRoute, syntaxTheme, themePickerOpen, themePickerIndex, onPickTheme,
   pickerOpen, recent, pickerIndex, onPickHistory, navOpen, navQuery, navIndex, tabs, onPickTab,
   queueOpen, queueItems, queueIndex, onSelectQueue,
-  taskPickerOpen, tasks, taskPickerIndex, onPickTask,
+  taskPickerOpen, taskRows, taskPickerIndex, onPickTask, onToggleTaskDir,
 }: Properties) {
   if (route) return <RouteChooser cmd={route.cmd} choices={route.choices} selected={routeIndex} onPick={onPickRoute} />;
   if (themePickerOpen) {
@@ -51,6 +53,6 @@ export function PickerOverlays({
   if (navOpen) return <TabNavPicker tabs={tabs} query={navQuery} selected={navIndex} onPick={onPickTab} />;
   if (pickerOpen) return <HistoryPicker items={recent} selected={pickerIndex} onPick={onPickHistory} />;
   if (queueOpen) return <QueuePicker items={queueItems} selected={queueIndex} onSelect={onSelectQueue} />;
-  if (taskPickerOpen) return <TaskPicker items={tasks} selected={taskPickerIndex} onPick={onPickTask} />;
+  if (taskPickerOpen) return <TaskPicker rows={taskRows} selected={taskPickerIndex} onPick={onPickTask} onToggleDir={onToggleTaskDir} />;
   return null;
 }

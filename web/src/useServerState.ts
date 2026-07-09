@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import type React from 'react';
 import type { JanusClient } from './ws';
-import type { TabView, RouteChooserView } from '@shared/protocol';
+import type { TabView, RouteChooserView, TaskRow } from '@shared/protocol';
 
 type Setters = {
   setTabs: (tabs: TabView[]) => void;
@@ -10,7 +10,7 @@ type Setters = {
   setTabNameMaxLength: (length: number) => void;
   setGlobalHistory: (history: string[]) => void;
   setSyntaxTheme: (theme: string) => void;
-  setTasks: (tasks: string[]) => void;
+  setTasks: (tasks: TaskRow[]) => void;
   setRouteIndex: (index: number) => void;
   routeRef: React.RefObject<RouteChooserView | null>;
 };

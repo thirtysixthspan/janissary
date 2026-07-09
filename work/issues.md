@@ -1,7 +1,5 @@
 # issues
 
-* support navigation of tasks into directories by using right and left arrows to expand the directories making tasks in sub directories visible and selectable.
-
 * scrolling the action picker down using arrow keys should scroll the scrollbar to keep the currently selected command in view.
 
 * After trying to close an editor tab when there are unsaved changes, a dialog come ups. Hitting escape or clicking cancel should return focus to the current cursor location in the unopenned file.

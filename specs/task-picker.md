@@ -7,13 +7,16 @@ them so one can be dropped onto the command line without typing its path by hand
 
 ### Listing
 
-The picker lists only the `.md` files directly inside `ai/`, sorted alphabetically. It is
-non-recursive: subdirectories such as `ai/guidelines/` (binding project docs) and `ai/personas/`
-(monitor persona bodies) are excluded, along with any other nested directory. The list is read
-fresh from disk, so adding, renaming, or removing a task file is reflected the next time the
-picker opens. Each row displays the filename with its `.md` extension hidden (`fix-a-small-issue`,
-not `fix-a-small-issue.md`); the extension is still present in the command inserted when the row is
-picked.
+The picker lists the `.md` files inside `ai/`, sorted alphabetically, recursing into subdirectories.
+`ai/guidelines/` (binding project docs) and `ai/personas/` (monitor persona bodies) are always
+excluded — their contents are not executable task prompts. Any other subdirectory appears as a
+row of its own, collapsed by default; its task files become visible once it is expanded (see
+"Picker behavior" below). The list is read fresh from disk each time the picker opens, so adding,
+renaming, or removing a task file (or subdirectory) is reflected immediately. Each file row displays
+its name with the `.md` extension hidden (`fix-a-small-issue`, not `fix-a-small-issue.md`); the
+extension is still present in the command inserted when the row is picked. Directory rows show a
+chevron indicating their expand state (▸ collapsed, ▾ expanded) and are indented one level deeper
+than their parent.
 
 ### Openers
 
@@ -27,7 +30,10 @@ run interactive programs that depend on receiving that keystroke; no popup appea
 | Input | Effect |
 |---|---|
 | Up / Down | Move the selection |
-| Return, or clicking a row | Copies `execute ./ai/<filename>` into the command line and closes the popup **without submitting** |
+| Right | On a collapsed directory, expands it (selection stays put, its children appear beneath it); on an already-expanded directory, moves the selection to its first child; no effect on a file |
+| Left | On an expanded directory, collapses it; otherwise moves the selection to the parent directory (no effect at the top level) |
+| Return, or clicking a file row | Copies `execute ./ai/<path>` into the command line and closes the popup **without submitting** |
+| Return, or clicking a directory row | Toggles that directory's expand state, same as Right/Left |
 | Escape | Closes the popup, leaving the command line unchanged |
 
 Selecting a task populates the command line and leaves the cursor at the end, so the command can
@@ -36,8 +42,9 @@ sent until Return is pressed on the command line itself. This deliberately diffe
 picker, where Return runs the selected command immediately; it matches the command-queue picker's
 behavior of making the command line the edit surface.
 
-The filename is inserted verbatim, with no quoting or escaping — a task file whose name contains a
-space populates the command line with that space intact, because the populated text is freeform
-input for the agent, exactly as if it had been typed by hand.
+The path is inserted verbatim, with no quoting or escaping — a task file whose name (or an
+ancestor directory's name) contains a space populates the command line with that space intact,
+because the populated text is freeform input for the agent, exactly as if it had been typed by
+hand.
 
 When the `ai/` directory has no task files, the picker shows `(no tasks)`.

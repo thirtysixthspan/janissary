@@ -1,6 +1,6 @@
-import type { ServerEvent, RpcCall, RouteChooserView, TabView } from '@shared/protocol';
+import type { ServerEvent, RpcCall, RouteChooserView, TabView, TaskRow } from '@shared/protocol';
 
-type StateListener = (tabs: TabView[], activeTab: number, route: RouteChooserView | null, tabNameMaxLength: number, globalHistory: string[], syntaxTheme: string, tasks: string[]) => void;
+type StateListener = (tabs: TabView[], activeTab: number, route: RouteChooserView | null, tabNameMaxLength: number, globalHistory: string[], syntaxTheme: string, tasks: TaskRow[]) => void;
 type ExitListener = (id: string, exitCode: number) => void;
 
 // Thin WebSocket client. State snapshots fan out to subscribers; PTY output is routed per-id to
