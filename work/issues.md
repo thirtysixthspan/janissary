@@ -6,8 +6,6 @@
 
 * the project root when specified should be used through the application, including for opening new shells and harnesses and the default for when opening the file navigator.
 
-* when typing the command `files`, the `files <path>` should be pushed into the transcript of the tab the issued the command.
-
 * Halting the server should close the UI window first.
 
 * Closing the main janissary UI window should halt the server. 
