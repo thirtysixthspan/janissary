@@ -1,7 +1,17 @@
-import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { describe, it, expect, beforeAll } from 'vitest';
+import { readFileSync, mkdtempSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
+import { tmpdir } from 'node:os';
 import { parseCliArgs, usageText, appVersion, CliUsageError } from './cli-args.js';
+
+let tmpDir: string;
+let tmpFile: string;
+
+beforeAll(() => {
+  tmpDir = mkdtempSync(path.join(tmpdir(), 'cli-args-test-'));
+  tmpFile = path.join(tmpDir, 'not-a-dir.txt');
+  writeFileSync(tmpFile, 'x');
+});
 
 describe('parseCliArgs', () => {
   it('returns all defaults for an empty argv', () => {
@@ -11,6 +21,7 @@ describe('parseCliArgs', () => {
     expect(args.relaunch).toBe(false);
     expect(args.noOpen).toBe(false);
     expect(args.port).toBeUndefined();
+    expect(args.here).toBeUndefined();
   });
 
   it('parses --help', () => {
@@ -69,12 +80,25 @@ describe('parseCliArgs', () => {
   it('throws CliUsageError on positional argument', () => {
     expect(() => parseCliArgs(['foo'])).toThrow(CliUsageError);
   });
+
+  it('parses --here=<existing-dir> to the resolved absolute path', () => {
+    expect(parseCliArgs([`--here=${tmpDir}`]).here).toBe(tmpDir);
+  });
+
+  it('throws CliUsageError for a nonexistent --here path', () => {
+    expect(() => parseCliArgs([`--here=${path.join(tmpDir, 'nope')}`])).toThrow(CliUsageError);
+  });
+
+  it('throws CliUsageError for a --here path that is a file, not a directory', () => {
+    expect(() => parseCliArgs([`--here=${tmpFile}`])).toThrow(CliUsageError);
+  });
 });
 
 describe('usageText', () => {
   it('includes all documented flags', () => {
     const text = usageText();
     expect(text).toContain('--port=<n>');
+    expect(text).toContain('--here=<dir>');
     expect(text).toContain('--no-open');
     expect(text).toContain('--relaunch');
     expect(text).toContain('--help');

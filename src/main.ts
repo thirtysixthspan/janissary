@@ -4,6 +4,7 @@ import path from 'node:path';
 import { startServer } from './index.js';
 import { makeToken } from './security.js';
 import { initAgentStateDirectory, clearStateDirectory } from './agent-state.js';
+import { acquireLock, releaseLock } from './instance-lock.js';
 import { initGlobalHistory } from './global-history.js';
 import { TranscriptLogger } from './transcript/logger.js';
 import { TranscriptStore } from './transcript/store.js';
@@ -19,17 +20,22 @@ import type { ChildProcess } from 'node:child_process';
 // The Chrome "app" window we launched, so we can close it on shutdown (quit/exit/Ctrl+C).
 let appChild: ChildProcess | undefined;
 
+// Set once the target directory is resolved in boot(), so the exit handler can release its lock.
+let lockedDir: string | undefined;
+
 // Set once args are parsed in boot(), so the top-level catch can include the attempted port
 // in startup-error messages even though the catch itself sits outside boot()'s scope.
 let parsedPort: number | undefined;
 
 function killApp(): void {
-  if (!appChild?.pid) return;
-  // Chrome is spawned detached (its own process group), so kill the group to take down its
-  // renderers too. Fall back to a direct kill (e.g. on Windows where group kill isn't available).
-  try { process.kill(-appChild.pid, 'SIGTERM'); }
-  catch { try { appChild.kill(); } catch { /* already gone */ } }
-  appChild = undefined;
+  if (appChild?.pid) {
+    // Chrome is spawned detached (its own process group), so kill the group to take down its
+    // renderers too. Fall back to a direct kill (e.g. on Windows where group kill isn't available).
+    try { process.kill(-appChild.pid, 'SIGTERM'); }
+    catch { try { appChild.kill(); } catch { /* already gone */ } }
+    appChild = undefined;
+  }
+  if (lockedDir) { releaseLock(lockedDir); lockedDir = undefined; }
 }
 
 // Fallback: open a URL in the default browser.
@@ -117,7 +123,9 @@ export async function boot(argv = process.argv.slice(2)): Promise<void> {
     return;
   }
 
-  const cwd = process.cwd();
+  const cwd = args.here ?? process.cwd();
+  acquireLock(cwd);
+  lockedDir = cwd;
   initAgentStateDirectory(cwd);
   initGlobalHistory();
   initDbDir(cwd);
