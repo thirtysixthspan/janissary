@@ -44,7 +44,13 @@ export function CloseSaveGuard({ tabs, editorHandles, client, guardRef }: Proper
         closeSaveConfirm();
         client.send({ method: 'closeTab', params: { index: idx } });
       }}
-      onCancel={closeSaveConfirm}
+      onCancel={() => {
+        const idx = indexRef.current;
+        const tab = tabsRef.current[idx];
+        const handle = tab ? editorHandles.current.get(tab.label) : undefined;
+        closeSaveConfirm();
+        handle?.focus();
+      }}
     />
   );
 }

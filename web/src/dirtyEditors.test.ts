@@ -15,7 +15,7 @@ function makeTab(label: string, hasEditor: boolean): TabView {
 function makeHandles(dirty: Record<string, boolean>): React.RefObject<Map<string, EditorTabHandle>> {
   const map = new Map<string, EditorTabHandle>();
   for (const [label, isDirty] of Object.entries(dirty)) {
-    map.set(label, { isDirty: () => isDirty, save: async () => {} });
+    map.set(label, { isDirty: () => isDirty, save: async () => {}, focus: () => {} });
   }
   return { current: map };
 }

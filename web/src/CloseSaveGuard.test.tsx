@@ -40,7 +40,7 @@ describe('CloseSaveGuard', () => {
 
   it('guard function returns false for a clean editor', () => {
     const guardRef = makeGuardRef();
-    const handle = { isDirty: () => false, save: vi.fn() } as unknown as EditorTabHandle;
+    const handle = { isDirty: () => false, save: vi.fn(), focus: vi.fn() } as unknown as EditorTabHandle;
     const editorHandles = makeHandlesWith('tab1', handle);
     render(
       React.createElement(CloseSaveGuard, {
@@ -59,7 +59,7 @@ describe('CloseSaveGuard', () => {
 
   it('guard function returns true and opens dialog for a dirty editor', () => {
     const guardRef = makeGuardRef();
-    const handle = { isDirty: () => true, save: vi.fn() } as unknown as EditorTabHandle;
+    const handle = { isDirty: () => true, save: vi.fn(), focus: vi.fn() } as unknown as EditorTabHandle;
     const editorHandles = makeHandlesWith('tab1', handle);
     const { getByText } = render(
       React.createElement(CloseSaveGuard, {
@@ -143,7 +143,7 @@ describe('CloseSaveGuard', () => {
 
   it('onCancel button closes dialog without sending closeTab', () => {
     const guardRef = makeGuardRef();
-    const handle = { isDirty: () => true, save: vi.fn() } as unknown as EditorTabHandle;
+    const handle = { isDirty: () => true, save: vi.fn(), focus: vi.fn() } as unknown as EditorTabHandle;
     const editorHandles = makeHandlesWith('tab1', handle);
     const client = { send: vi.fn() };
     const { getByText, queryByText } = render(
@@ -160,5 +160,6 @@ describe('CloseSaveGuard', () => {
     fireEvent.click(getByText('Cancel (Esc)'));
     expect(client.send).not.toHaveBeenCalled();
     expect(queryByText('Do you want to save changes to this file?')).toBeNull();
+    expect(handle.focus).toHaveBeenCalled();
   });
 });
