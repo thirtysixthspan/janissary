@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { JanusClient } from './ws';
 import type { TabView } from '@shared/protocol';
 
@@ -10,13 +10,11 @@ export function useQueuePicker(
   client: JanusClient,
   current: TabView | undefined,
   inputRef: React.RefObject<HTMLTextAreaElement | null>,
+  recallRef: React.RefObject<((text: string) => void) | null>,
 ) {
   const items = useMemo(() => current?.commandQueue ?? [], [current]);
   // `Ctrl+E` / `queue` no-ops when the exposed tab isn't an agent tab (mirroring `canSearch`).
   const isAgentTab = current?.view === undefined || current?.view === 'agent';
-  // Assigned `CommandInput`'s `recall` (the `guardRef` pattern) so selection can push a row's
-  // text into the command line.
-  const recallRef = useRef<((text: string) => void) | null>(null);
   const [queueOpen, setQueueOpen] = useState(false);
   const [queueIndex, setQueueIndexState] = useState(0);
 
@@ -31,7 +29,7 @@ export function useQueuePicker(
     const text = items[index];
     if (text !== undefined) recallRef.current?.(text);
     inputRef.current?.focus();
-  }, [items, inputRef]);
+  }, [items, inputRef, recallRef]);
 
   const openQueue = useCallback(() => {
     if (!isAgentTab) return;
@@ -44,7 +42,7 @@ export function useQueuePicker(
   const closeQueue = useCallback((open: boolean) => {
     setQueueOpen(open);
     if (!open) recallRef.current?.('');
-  }, []);
+  }, [recallRef]);
 
   const setQueueIndex = useCallback((setter: (prev: number) => number) => {
     selectQueueIndex(Math.max(0, Math.min(items.length - 1, setter(queueIndex))));
@@ -59,6 +57,6 @@ export function useQueuePicker(
   }, [client, queueIndex]);
 
   return {
-    queueOpen, queueIndex, setQueueIndex, setQueueOpen: closeQueue, openQueue, selectQueueIndex, onEditQueued, onDeleteQueued, recallRef,
+    queueOpen, queueIndex, setQueueIndex, setQueueOpen: closeQueue, openQueue, selectQueueIndex, onEditQueued, onDeleteQueued,
   };
 }

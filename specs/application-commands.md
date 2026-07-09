@@ -20,6 +20,12 @@ Sets the current tab's display alias — see `tabs.md` for how the alias behaves
 
 `syntax theme <name>` sets the active syntax-highlighting theme for editor tabs; the theme applies globally, across every open editor tab, and persists to the application config so it survives a restart. Theme names are matched case-insensitively and canonicalized to their listed casing. An unrecognized name shows an error listing the available themes. Bare `syntax theme` opens a theme-picker overlay instead of running on the server; if it does reach the server directly (e.g. from another agent), it replies with the theme list, the active one marked. Any other `syntax` subcommand shows usage.
 
+### `tasks`
+
+Bare `tasks` opens the task-picker overlay instead of running on the server — a client-side
+listing of the executable `ai/*.md` task files (see `task-picker.md`). If it does reach the server
+directly (e.g. from a scheduled dispatch or another agent), it is a no-op.
+
 ### `quit`
 
 Exits the application: closes the app window (the web page) and stops the server, after killing every tab's shell, ACP session, browser, and terminals and closing all connections. Requires confirmation first — see `quit-confirmation.md`. (To close a single tab, use `close`; `exit` is an alias of `close`, not `quit`.)

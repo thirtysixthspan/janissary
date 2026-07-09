@@ -10,6 +10,7 @@ type Params = {
   openPicker: () => void;
   openThemePicker: () => void;
   openQueue: () => void;
+  openTaskPicker: () => void;
   navOpen: boolean;
   setNavOpen: (open: boolean) => void;
   openTabNavWithQuery: (query: string) => void;
@@ -25,7 +26,7 @@ type Params = {
 // the server — split out of App.tsx to keep it under the file-size limit.
 export function useCommandBarSubmit(params: Params): (text: string) => void {
   const {
-    canSearch, lines, search, openPicker, openThemePicker, openQueue,
+    canSearch, lines, search, openPicker, openThemePicker, openQueue, openTaskPicker,
     navOpen, setNavOpen, openTabNavWithQuery, tabs, openQuitConfirm, guardRef, activeTab, runCommand,
   } = params;
 
@@ -36,6 +37,7 @@ export function useCommandBarSubmit(params: Params): (text: string) => void {
     if (trimmed === 'hist') { openPicker(); return; }
     if (trimmed === 'syntax theme') { openThemePicker(); return; }
     if (trimmed === 'queue') { openQueue(); return; }
+    if (trimmed === 'tasks') { openTaskPicker(); return; }
     if (trimmed === 'nav' || trimmed.startsWith('nav ')) {
       if (navOpen) setNavOpen(false);
       else openTabNavWithQuery(text.trim().slice(3).trim());
@@ -48,7 +50,7 @@ export function useCommandBarSubmit(params: Params): (text: string) => void {
     if ((trimmed === 'close' || trimmed === 'exit') && guardRef.current?.(activeTab)) return;
     runCommand(text);
   }, [
-    canSearch, lines, search, openPicker, openThemePicker, openQueue,
+    canSearch, lines, search, openPicker, openThemePicker, openQueue, openTaskPicker,
     navOpen, setNavOpen, openTabNavWithQuery, tabs, openQuitConfirm, guardRef, activeTab, runCommand,
   ]);
 }

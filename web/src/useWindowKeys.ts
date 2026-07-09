@@ -25,6 +25,9 @@ type StateSnapshot = {
   queueOpen: boolean;
   queueIdx: number;
   queueItems: string[];
+  taskPickerOpen: boolean;
+  taskPickerIdx: number;
+  tasks: string[];
 };
 
 type Callbacks = {
@@ -46,6 +49,10 @@ type Callbacks = {
   setQueueIndex: (setter: (prev: number) => number) => void;
   setQueueOpen: (open: boolean) => void;
   openQueue: () => void;
+  setTaskPickerIndex: (setter: (prev: number) => number) => void;
+  setTaskPickerOpen: (open: boolean) => void;
+  openTaskPicker: () => void;
+  pickTask: (name: string) => void;
 };
 
 // Priority chain of pickers/choosers that claim every keystroke while open. Returns true once one
@@ -71,6 +78,10 @@ function dispatchModalKey(e: KeyboardEvent, snap: StateSnapshot, cb: Callbacks):
     handleQueueKey(e, snap.queueItems, snap.queueIdx, cb.setQueueIndex, cb.setQueueOpen);
     return true;
   }
+  if (snap.taskPickerOpen) {
+    handlePickerKey(e, snap.tasks, snap.taskPickerIdx, cb.setTaskPickerIndex, cb.pickTask, cb.setTaskPickerOpen);
+    return true;
+  }
   return false;
 }
 
@@ -84,7 +95,18 @@ function handleTabShortcuts(e: KeyboardEvent, client: JanusClient): void {
   else if (e.ctrlKey && e.key.toLowerCase() === 't') { e.preventDefault(); client.send({ method: 'toggleCollapse', params: {} }); }
 }
 
-// The chord openers (Cmd+F search, Ctrl+R history, Ctrl+G nav, Ctrl+E queue, Cmd+T new agent tab) — split out of
+// The Ctrl-key picker openers (Ctrl+R history, Ctrl+G nav, Ctrl+E queue, Ctrl+A tasks), keyed by
+// letter so the chord list stays flat and under the file's cognitive-complexity threshold.
+function ctrlChordOpener(key: string, cb: Callbacks): (() => void) | undefined {
+  switch (key) {
+  case 'r': { return cb.openPicker; }
+  case 'g': { return cb.openTabNav; }
+  case 'e': { return cb.openQueue; }
+  case 'a': { return cb.openTaskPicker; }
+  }
+}
+
+// The chord openers (Cmd+F search, the Ctrl picker chords, Cmd+T new agent tab) — split out of
 // `onKey` to keep its own cognitive complexity under the file's lint threshold.
 function handleChordKeys(e: KeyboardEvent, snap: StateSnapshot, cb: Callbacks): boolean {
   if (e.metaKey && e.key.toLowerCase() === 'f') {
@@ -93,9 +115,10 @@ function handleChordKeys(e: KeyboardEvent, snap: StateSnapshot, cb: Callbacks): 
     if (!snap.searchOpen) cb.openSearch();
     return true;
   }
-  if (e.ctrlKey && e.key.toLowerCase() === 'r') { e.preventDefault(); cb.openPicker(); return true; }
-  if (e.ctrlKey && e.key.toLowerCase() === 'g') { e.preventDefault(); cb.openTabNav(); return true; }
-  if (e.ctrlKey && e.key.toLowerCase() === 'e') { e.preventDefault(); cb.openQueue(); return true; }
+  if (e.ctrlKey) {
+    const opener = ctrlChordOpener(e.key.toLowerCase(), cb);
+    if (opener) { e.preventDefault(); opener(); return true; }
+  }
   if (e.metaKey && e.key.toLowerCase() === 't') { e.preventDefault(); cb.runCommand('agent'); return true; }
   return false;
 }

@@ -45,6 +45,17 @@ export default [
     actions: [{ press: 'Control+r' }],
     target: 'history-overlay',
   },
+  {
+    // The scratch fixture has no `ai/` directory, so seed one with a few realistically named task
+    // files before opening the picker — otherwise Ctrl+A would capture the empty `(no tasks)` state.
+    name: 'task-picker',
+    setup: [
+      'shell mkdir ai',
+      'shell touch ai/build-a-feature.md ai/fix-a-small-issue.md ai/merge-change-to-master.md',
+    ],
+    actions: [{ press: 'Control+a' }],
+    target: 'task-overlay',
+  },
   { name: 'ghost-text', setup: ['shell git status'], actions: [{ type: 'shell git' }], target: 'command-bar' },
   {
     name: 'tab-navigator',

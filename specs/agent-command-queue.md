@@ -71,8 +71,8 @@ the interactive picker for the *issuing* tab's own queue rather than appending t
 ### What never queues
 
 Commands intercepted client-side before they reach the server — `hist`, `nav`, `syntax theme`,
-`quit`, `close`/`exit`, and bare `queue` — always run immediately (client-side) regardless of
-the target tab's busy state, and never appear in the queue. `queue <agent> <command>` is not
+`quit`, `close`/`exit`, bare `queue`, and bare `tasks` — always run immediately (client-side)
+regardless of the target tab's busy state, and never appear in the queue. `queue <agent> <command>` is not
 intercepted client-side (only the argument-less form is) and reaches the server normally. Cross-agent
 messaging (`msg` / `broadcast`) keeps its own separate per-recipient delivery order (see
 [[messaging]]) and is unaffected by this queue.
