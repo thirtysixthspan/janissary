@@ -114,7 +114,13 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
         ws.send(JSON.stringify({ t: 'rpc-reply', id: message.id, error: error instanceof Error ? error.message : String(error) }));
       }
     });
-    ws.on('close', () => clients.delete(ws));
+    ws.on('close', () => {
+      clients.delete(ws);
+      if (clients.size === 0) {
+        broadcast({ t: 'bye' });
+        setTimeout(() => { void close().then(() => process.exit(0)); }, 100);
+      }
+    });
   });
 
   const port = await new Promise<number>((resolve, reject) => {
