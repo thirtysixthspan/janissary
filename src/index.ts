@@ -36,7 +36,7 @@ const MIME: Record<string, string> = {
   ].map((extension) => [extension, 'text/plain; charset=utf-8'])),
 };
 
-export type ServerOptions = { webDir: string; host?: string; port?: number; token?: string; relaunch?: boolean };
+export type ServerOptions = { webDir: string; host?: string; port?: number; token?: string; relaunch?: boolean; projectDir?: string };
 export type RunningServer = { url: string; port: number; token: string; close: () => Promise<void> };
 
 export async function startServer(options: ServerOptions): Promise<RunningServer> {
@@ -60,7 +60,7 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
     sendPty: (id, data) => broadcast({ t: 'pty', id, data }),
     sendPtyExit: (id, exitCode) => broadcast({ t: 'pty-exit', id, exitCode }),
     exit: () => requestExit(),
-  });
+  }, options.projectDir);
   if (options.relaunch) controller.rehydrate();
 
   const serveStatic = async (request: IncomingMessage, res: ServerResponse) => {

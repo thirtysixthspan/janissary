@@ -53,3 +53,7 @@ When neither `--help` nor `--version` is given, `janus` boots the full applicati
 7. Print the server URL to stdout (`__JANUS_URL__ <url>`) and stderr (human-readable).
 8. Unless `--no-open`: open the app in a Chrome app window (or the default browser if no system Chrome is found).
 9. Register signal handlers for graceful shutdown (SIGINT, SIGTERM), app window cleanup, and instance lock release on exit.
+
+### Project directory scope
+
+The resolved target directory (from `<project-dir>`, or the current directory) serves as the default root for all shell commands, harness tabs, file-navigator roots, and workspace-clone detection throughout the session. The `$root` path token and path-abbreviation display are anchored to this directory.

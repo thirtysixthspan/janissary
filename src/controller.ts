@@ -30,10 +30,10 @@ import type { Managers } from './managers.js';
 export class Controller {
   managers: Managers = {} as Managers;
 
-  constructor(private sinks: Sinks) {
+  constructor(private sinks: Sinks, private projectDir?: string) {
     this.managers.database = new DatabaseManager();
-    this.managers.tab = new TabManager(this.managers);
-    this.managers.workspace = new WorkspaceManager();
+    this.managers.tab = new TabManager(this.managers, projectDir);
+    this.managers.workspace = new WorkspaceManager(projectDir);
     this.managers.browser = new BrowserManager(this.managers);
     this.managers.acp = new AcpManager(this.managers);
     this.managers.openFile = new OpenFileManager(this.managers);

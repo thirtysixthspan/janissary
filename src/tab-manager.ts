@@ -25,13 +25,14 @@ export class TabManager {
   private onIdle: ((label: string) => void) | null = null;
   private openFiles = new Map<string, string>();
   private openFileCounter = 0;
-  private readonly rootDir = process.cwd();
+  private readonly rootDir: string;
   get launchDir(): string { return this.rootDir; }
   static readonly OPEN_MAX_FILES = 10;
 
-  constructor(private managers: Managers) {
+  constructor(private managers: Managers, projectDir?: string) {
+    this.rootDir = projectDir ?? process.cwd();
     this.tabs = [this.makeRootTab()];
-    this.cwd.set('janus', process.cwd());
+    this.cwd.set('janus', this.rootDir);
   }
 
   cur(): Tab {

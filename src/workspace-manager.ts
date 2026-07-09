@@ -8,12 +8,17 @@ const NO_REPO = 'No git repository found. Cannot create workspace.';
 // closes or at shutdown.
 export class WorkspaceManager {
   private dirs = new Set<string>();
+  private projectDir: string;
+
+  constructor(projectDir?: string) {
+    this.projectDir = projectDir ?? process.cwd();
+  }
 
   // Create a workspace clone named `name` from the repo detected at the launch cwd, tracking it for
   // cleanup. Returns the new directory, or an `{ error }` to surface when there's no repo / the clone
   // fails. Shared by the agent and harness `--workspace` paths so both behave identically.
   create(name: string): { dir: string } | { error: string } {
-    const root = findRepoRoot(process.cwd());
+    const root = findRepoRoot(this.projectDir);
     if (!root) return { error: NO_REPO };
     try {
       const dir = createWorkspace(name, root);
