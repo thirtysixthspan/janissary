@@ -24,6 +24,7 @@
 | `search`     | `search transcript <pattern>` searches the current tab's transcript with a regex (Cmd+F opens it empty) |
 | `files`      | `files [path]` opens a file tree tab rooted at the issuing tab's cwd, or at `path` |
 | `send`       | Deliver a line of input to any tab — types into a harness, or runs a command in an agent tab |
+| `queue`      | Queue a command for another agent tab (`queue <agent> <command>`); bare `queue` opens the interactive queue picker (Ctrl+E) |
 | `monitor`    | Start a persona-driven AI monitor — inline on the current tab, or watching other tabs/groups into a reporting tab |
 | `unmonitor`  | Stop a monitor (`unmonitor <persona>`) or all monitors started from this tab (`--all`) |
 | `monitors`   | List active monitors with their targets and suggestion counts |
@@ -41,6 +42,7 @@
 | `Ctrl+↑` / `Ctrl+↓` | Scroll the transcript up / down (accelerated) |
 | `Ctrl+P` / `Ctrl+N` | Scroll the transcript up / down one line (fixed) |
 | `Ctrl+R`            | Open command history picker        |
+| `Ctrl+E`            | Open the queue picker to send a command to another agent tab |
 | `Ctrl+T`            | Expand / collapse agent tool steps in the transcript |
 | `Tab`               | Complete a file path, an agent name for `msg` / `broadcast`, a connection string for `connection close`, a `browser` subcommand / window id, or a `monitor` persona / target |
 | `Enter`             | Execute the current command        |
