@@ -6,6 +6,10 @@ and command bar, controlled by direct interaction (clicking, arrow keys) rather 
 line. It behaves like a markdown tab (see Markdown Tab) — same lifecycle and tab-strip
 treatment — differing only in what fills the body and how that body is navigated.
 
+When the `files` command runs, a transcript entry for the command appears in the originating tab
+before the file tree tab opens and takes focus. The command text is recorded as the entry's input;
+the output is empty since the file tree tab is the side-effect.
+
 A file tree tab is created like an agent tab (see Tabs) — placed contiguously within the active
 tab's group, inheriting that group's number and bar color and taking a distinct dot color. Focus
 moves to the new file tree tab.
