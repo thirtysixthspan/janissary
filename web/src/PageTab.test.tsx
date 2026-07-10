@@ -24,19 +24,19 @@ describe('PageTab', () => {
     expect(iframe?.src).toBe('https://slashdot.org/');
   });
 
-  it('sets the iframe title to number) domain', () => {
+  it('sets the iframe title to the domain', () => {
     const page = makePage({ number: 2, domain: 'example.com', url: 'https://example.com/' });
     const client = { send: vi.fn() } as unknown as JanusClient;
     const { container } = render(<PageTab page={page} client={client} index={0} />);
-    expect(container.querySelector('iframe')?.title).toBe('2) example.com');
+    expect(container.querySelector('iframe')?.title).toBe('example.com');
   });
 
-  it('shows the page number, domain, and full URL in the metadata header', () => {
+  it('shows only the full URL in the metadata header', () => {
     const page = makePage({ number: 3, domain: 'example.com', url: 'https://example.com/path' });
     const client = { send: vi.fn() } as unknown as JanusClient;
     const { container } = render(<PageTab page={page} client={client} index={0} />);
-    expect(container.querySelector('.page-number')?.textContent).toBe('3)');
-    expect(container.querySelector('.page-domain')?.textContent).toBe('example.com');
+    expect(container.querySelector('.page-number')).toBeNull();
+    expect(container.querySelector('.page-domain')).toBeNull();
     expect(container.querySelector('.page-url')?.textContent).toBe('https://example.com/path');
   });
 

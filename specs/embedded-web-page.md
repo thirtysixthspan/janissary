@@ -44,15 +44,14 @@ address is invalid.
 Every page tab is assigned a **page number** — the smallest positive integer not currently used
 by an open page tab. Numbers are independent of a tab's position in the strip. When a page tab is
 closed its number becomes free again and is reused by the next page, so open page tabs are always
-numbered from `1` without gaps. The page number identifies the tab for `close page` and appears in
-its label.
+numbered from `1` without gaps. The page number identifies the tab for `close page`.
 
 ### Root domain
 
 The tab's label uses the address's **root domain** — its registrable domain with any leading
 `www.` removed. For example `www.website.com`, `website.com`, and `docs.example.com` label as
 `website.com`, `website.com`, and `example.com` respectively. The full address is shown in the
-page's metadata header, not in the label.
+page's metadata header.
 
 ---
 
@@ -73,7 +72,7 @@ A page tab is distinguished from an ordinary tab by a **view kind** marking it a
 Alongside it the tab carries the data the view needs:
 
 - **number** — the page number.
-- **domain** — the root domain (for the label and header).
+- **domain** — the root domain (for the label).
 - **address** — the normalized `http`/`https` URL loaded into the view.
 
 ### Page tab layout
@@ -85,10 +84,9 @@ the active tab as before.
 
 The page view shows, stacked top to bottom:
 
-1. **Metadata** — the page's number, domain, and full address, in a compact header, with a close
-   button right-aligned on that same line. Clicking it closes the tab directly — a second,
-   independent close affordance alongside the tab strip's own close button (see "Tab strip: name
-   and close button" below).
+1. **Metadata** — the page's full address in a compact header, with a close button right-aligned
+   on that same line. Clicking it closes the tab directly — a second, independent close affordance
+   alongside the tab strip's own close button (see "Tab strip: name and close button" below).
 2. **The embedded page** itself, filling the space beneath the metadata and resizing with the tab.
 
 ### What renders
@@ -108,9 +106,8 @@ to the system default browser, a site that refuses framing may instead show a bl
 In the tab strip a page tab reads exactly like an ordinary tab — same dot, group bar, active
 highlight, and ordering — with two differences:
 
-- **Name.** The tab's name is `<n>) <domain>` — its page number and root domain (for example,
-  `1) website.com`). Per [[tab-label-no-markers]], no type or status marker is appended — the
-  number and domain only.
+- **Name.** The tab's name is the page's root domain (for example, `website.com`). Per
+  [[tab-label-no-markers]], no type or status marker is appended — the domain only.
 - **Close button.** A close control is shown **right-aligned within the tab, immediately after the
   name**, exactly as for an image tab. Clicking it removes that tab without first selecting it; the
   click does not also trigger tab selection. The close button is specific to view tabs (agent tabs
