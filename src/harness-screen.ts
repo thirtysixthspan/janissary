@@ -1,5 +1,13 @@
-import { Terminal } from '@xterm/headless';
+import xterm, { type Terminal } from '@xterm/headless';
 import { messageBus, type Subscription } from './bus.js';
+
+// `@xterm/headless` ships a CommonJS bundle whose named exports Node's ESM loader cannot detect
+// statically — the module namespace it synthesizes holds only `default`. So `import { Terminal }`
+// type-checks but throws SyntaxError under Node, while `import Terminal` binds the whole
+// `module.exports` object (not the class) and fails as "default is not a constructor". Take the
+// class off the default import, which Node sets to `module.exports`, and keep the named import
+// type-only so it erases at compile time.
+const { Terminal: HeadlessTerminal } = xterm;
 
 export type ScreenCapture = { text: string; capturedAt: number };
 
@@ -20,7 +28,7 @@ export class HarnessScreenReader {
 
   constructor(private id: string, cols: number, rows: number) {
     // allowProposedApi: the headless build gates the `buffer` read API behind it.
-    this.term = new Terminal({ cols, rows, scrollback: 0, allowProposedApi: true });
+    this.term = new HeadlessTerminal({ cols, rows, scrollback: 0, allowProposedApi: true });
     this.subscription = messageBus.on('pty', ['data', 'exit', 'resize'], (event) => {
       if (event.id !== this.id) return;
       if (event.type === 'data') this.onData(event.data);

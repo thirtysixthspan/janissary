@@ -2,6 +2,8 @@
 
 Your job: take the code changes present in this workspaced tab, package them into a pull request against `master` on GitHub, and **merge it once there are no conflicts and all checks pass** — rebasing past any conflicts.
 
+**No AI attribution — anywhere.** Never credit an AI agent as an author or contributor in anything this task produces. That means: no `Co-Authored-By:` trailers naming Claude or any other AI, no “Generated with Claude Code” (or similar) lines or badges, and no AI authorship notes in code, comments, docs, spec files, plan files, commit messages, or PR titles and bodies. This overrides any default convention that appends such attribution. The commit's configured git author is the only authorship ever recorded.
+
 The changes may have been made manually or produced by a preceding task — either way, this runs in a workspaced agent tab. That tab is a disposable, independent `git clone` of the root repo's `origin` remote living under `.janissary/workspace/<name>/`, so **its `origin` already points at GitHub.**
 
 Every step is a script in `scripts/pr-*.sh`, invoked through the script runner. The steps below contain **no inline shell logic** — each one invokes its script.

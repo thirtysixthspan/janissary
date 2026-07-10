@@ -57,6 +57,9 @@
   "keywords": [],
   "author": "",
   "license": "UNLICENSED",
+  "overrides": {
+    "@vitejs/plugin-vue": "^6.0.7"
+  },
   "files": [
     "bin",
     "dist",
@@ -82,7 +85,7 @@
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.0",
     "@types/ws": "^8.5.13",
-    "@vitejs/plugin-react": "^4.3.4",
+    "@vitejs/plugin-react": "^6.0.3",
     "@vitest/coverage-v8": "^4.1.9",
     "@xterm/addon-fit": "^0.10.0",
     "@xterm/xterm": "^5.5.0",
@@ -108,7 +111,7 @@
     "tsx": "^4.22.4",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.61.1",
-    "vite": "^6.0.7",
+    "vite": "^8.1.4",
     "vitepress": "^1.6.4",
     "vitest": "^4.1.9"
   }

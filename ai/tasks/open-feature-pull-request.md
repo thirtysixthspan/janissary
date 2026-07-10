@@ -2,6 +2,8 @@
 
 Your job: take the uncommitted work in this repository, package it into a well-described pull request against `master` on GitHub, and open it. **Do not merge the PR** — just open it with a thorough description so reviewers understand exactly what changed and why.
 
+**No AI attribution — anywhere.** Never credit an AI agent as an author or contributor in anything this task produces. That means: no `Co-Authored-By:` trailers naming Claude or any other AI, no “Generated with Claude Code” (or similar) lines or badges, and no AI authorship notes in code, comments, docs, spec files, plan files, commit messages, or PR titles and bodies. This overrides any default convention that appends such attribution. The commit's configured git author is the only authorship ever recorded.
+
 **Do not ask the user for input at any point.** Make all decisions autonomously — branch name, commit message, PR title and body. The only valid reason to stop is "No changes to open a PR for" (Step 0) or an unresolvable error.
 
 ## The PR description

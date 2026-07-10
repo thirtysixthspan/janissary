@@ -48,12 +48,15 @@ export default [
   {
     // The scratch fixture has no `ai/` directory, so seed one with a few realistically named task
     // files before opening the picker — otherwise Ctrl+A would capture the empty `(no tasks)` state.
+    // They go under `ai/tasks/` to match the real layout, which means the picker opens on a single
+    // collapsed `tasks` row: expand it (Right) and step onto a file (Down) so the shot shows the
+    // task files with one selected, as the doc page describes.
     name: 'task-picker',
     setup: [
-      'shell mkdir ai',
-      'shell touch ai/build-a-feature.md ai/fix-a-small-issue.md ai/merge-change-to-master.md',
+      'shell mkdir -p ai/tasks',
+      'shell touch ai/tasks/build-a-feature.md ai/tasks/fix-a-small-issue.md ai/tasks/improve-test-coverage.md ai/tasks/merge-change-to-master.md ai/tasks/open-feature-pull-request.md ai/tasks/reduce-complexity.md',
     ],
-    actions: [{ press: 'Control+a' }],
+    actions: [{ press: 'Control+a' }, { press: 'ArrowRight' }, { press: 'ArrowDown' }],
     target: 'task-overlay',
   },
   { name: 'ghost-text', setup: ['shell git status'], actions: [{ type: 'shell git' }], target: 'command-bar' },

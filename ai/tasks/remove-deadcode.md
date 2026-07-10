@@ -2,6 +2,8 @@
 
 Your job: run Knip, delete the dead code it reports, then prove the project is still green. Dead-code removal is mechanical — you only ever **delete code that nothing uses**, never add or rewrite logic. Clear all the safe findings in one pass.
 
+**No AI attribution — anywhere.** Never credit an AI agent as an author or contributor in anything this task produces. That means: no `Co-Authored-By:` trailers naming Claude or any other AI, no “Generated with Claude Code” (or similar) lines or badges, and no AI authorship notes in code, comments, docs, spec files, plan files, commit messages, or PR titles and bodies. This overrides any default convention that appends such attribution. The commit's configured git author is the only authorship ever recorded.
+
 The rule is simple: **the compiler, the linter, and the tests must be green before you start and green again after you finish.** If the project is not green before you start, stop and tell the user. If you cannot keep it green, put the code back.
 
 **Shell hygiene:** run every command on its own line — no `&&` chaining, no `; echo "Exit code: $?"` suffixes, no subshell captures. The exit code and output are visible in the tool result. To run a project script, always use `./scripts/run.mjs <name>` — never call `node scripts/<name>.mjs` directly.

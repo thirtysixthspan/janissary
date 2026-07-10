@@ -2,6 +2,8 @@
 
 Your job: take **one** plan from `plans/draft/`, check every claim it makes against the real codebase, and edit the plan so an implementer is less likely to go wrong — then assess its complexity and record it at the top of the plan. You improve the **plan document only**; you change no source code.
 
+**No AI attribution — anywhere.** Never credit an AI agent as an author or contributor in anything this task produces. That means: no `Co-Authored-By:` trailers naming Claude or any other AI, no “Generated with Claude Code” (or similar) lines or badges, and no AI authorship notes in code, comments, docs, spec files, plan files, commit messages, or PR titles and bodies. This overrides any default convention that appends such attribution. The commit's configured git author is the only authorship ever recorded.
+
 This is a **planning** task, not pre-implementation. A good plan decides *what* to build, *where* it goes, and *which existing code to reuse* — it does not write the code. The implementer writes the code.
 
 Do the steps below **in order**. Do not skip steps. Do not invent your own process.
