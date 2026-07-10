@@ -41,11 +41,17 @@
 | `Ctrl+←` / `Ctrl+→` | Move the current tab left / right  |
 | `Shift+↑` / `Shift+↓` | Scroll the transcript up / down (accelerated — distance doubles each second) |
 | `Ctrl+↑` / `Ctrl+↓` | Scroll the transcript up / down (accelerated) |
+| `Page Up` / `Page Down` | Scroll the transcript up / down by half terminal height |
+| `Escape`            | Reset scroll to bottom           |
 | `Ctrl+P` / `Ctrl+N` | Scroll the transcript up / down one line (fixed) |
 | `Ctrl+R`            | Open command history picker        |
+| `Ctrl+G`            | Open the fuzzy tab navigator (also closes it if already open) |
 | `Ctrl+E`            | Open the queue picker to send a command to another agent tab |
 | `Ctrl+A`            | Open the task picker (executable `ai/*.md` files); Return populates the command line without running |
 | `Ctrl+T`            | Expand / collapse agent tool steps in the transcript |
+| `Cmd+T`             | Open a new agent tab (same as typing `agent`) |
+| `Cmd+F`             | Open the search bar in the transcript |
+| `Cmd+W` / `Ctrl+W`  | Close the current tab             |
 | `Tab`               | Complete a file path, an agent name for `msg` / `broadcast`, a connection string for `connection close`, a `browser` subcommand / window id, or a `monitor` persona / target |
 | `Enter`             | Execute the current command        |
 | `Ctrl+C`            | Exit                              |
