@@ -606,7 +606,7 @@ describe('Controller page tabs', () => {
     c.dispatch('open https://slashdot.org');
     const pages = c.view().filter((t) => t.view === 'page');
     expect(pages).toHaveLength(1);
-    expect(pages[0].title).toBe('1) slashdot.org');
+    expect(pages[0].title).toBe('slashdot.org');
     expect(pages[0].page?.url).toContain('slashdot.org');
   });
 
@@ -615,7 +615,7 @@ describe('Controller page tabs', () => {
     c.dispatch('open page slashdot.org');
     const pages = c.view().filter((t) => t.view === 'page');
     expect(pages).toHaveLength(1);
-    expect(pages[0].title).toBe('1) slashdot.org');
+    expect(pages[0].title).toBe('slashdot.org');
   });
 
   it('second page tab gets number 2', () => {
@@ -625,7 +625,7 @@ describe('Controller page tabs', () => {
     const pages = c.view().filter((t) => t.view === 'page');
     expect(pages).toHaveLength(2);
     const titles = pages.map((t) => t.title).toSorted((a, b) => String(a).localeCompare(String(b)));
-    expect(titles).toEqual(['1) slashdot.org', '2) example.com']);
+    expect(titles).toEqual(['example.com', 'slashdot.org']);
   });
 
   it('open external https URL confirms in transcript without creating a tab', () => {
@@ -684,7 +684,7 @@ describe('Controller page tabs', () => {
     c.dispatch('open https://example.com');
     const pages = c.view().filter((t) => t.view === 'page');
     expect(pages).toHaveLength(1);
-    expect(pages[0].title).toBe('1) example.com');
+    expect(pages[0].title).toBe('example.com');
   });
 
   it('open page with an invalid scheme reports an error', () => {

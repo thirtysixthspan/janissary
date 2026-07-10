@@ -26,11 +26,11 @@ export const makeImageTab = (label: string, dotColor: string, number: number, gr
 });
 
 // A page view tab (opened via `open https://…` or `open page …`). Renders an iframe; carries no
-// transcript/history/shell. The title shows the page number and domain (e.g. "1) slashdot.org").
+// transcript/history/shell. The title shows the domain (e.g. "slashdot.org").
 export const makePageTab = (label: string, dotColor: string, number: number, group: number, groupColor: string, page: PageView): Tab => ({
   ...makeTab(label, dotColor, number, [], [], undefined, group, groupColor),
   view: 'page',
-  title: `${page.number}) ${page.domain}`,
+  title: page.domain,
   page,
 });
 
