@@ -101,7 +101,7 @@ export function App() {
   const {
     taskPickerOpen, taskPickerIndex, setTaskPickerIndex, setTaskPickerOpen, openTaskPicker, pickTask,
     visibleTasks, toggleTaskDir,
-  } = useTaskPicker(tasks, recallReference, inputReference);
+  } = useTaskPicker(tasks, recallReference, inputReference, client, current?.view === 'harness' ? current.harness?.ptyId : undefined);
 
   const { quitConfirmOpen, openQuitConfirm, confirmQuit, cancelQuit } = useQuitConfirm(runCommand, inputReference);
   const editorHandles = useRef<Map<string, EditorTabHandle>>(new Map());

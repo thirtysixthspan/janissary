@@ -112,6 +112,19 @@ describe('HarnessTab', () => {
     expect(capturedKeyHandler!(makeKeyEvent({ key: 'Enter' }))).toBe(true);
   });
 
+  it.each(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter', 'Escape'])(
+    'key handler returns false (bubble) for %s when taskPickerOpen is true',
+    (key) => {
+      render(<HarnessTab harness={makeHarness()} client={mockClient} taskPickerOpen />);
+      expect(capturedKeyHandler!(makeKeyEvent({ key }))).toBe(false);
+    },
+  );
+
+  it('key handler returns true (send to PTY) for a regular key when taskPickerOpen is false', () => {
+    render(<HarnessTab harness={makeHarness()} client={mockClient} taskPickerOpen={false} />);
+    expect(capturedKeyHandler!(makeKeyEvent({ key: 'ArrowUp' }))).toBe(true);
+  });
+
   it('shows an exited banner when status is exited', () => {
     const { getByText } = render(
       <HarnessTab harness={makeHarness({ status: 'exited', exitCode: 1 })} client={mockClient} />,
