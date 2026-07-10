@@ -2,8 +2,10 @@ import React from 'react';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { TabView, RouteChooserView } from '@shared/protocol';
+import userEvent from '@testing-library/user-event';
 
 const sendMock = vi.fn();
+const renameTabMock = vi.fn();
 type StateListener = (
   tabs: TabView[], activeTab: number, route: RouteChooserView | null, tabNameMaxLength: number, globalHistory: string[],
   syntaxTheme: string, tasks: string[],
@@ -17,7 +19,7 @@ vi.mock('./ws', () => {
     onState(l: StateListener) { stateListener = l; return () => {}; }
     onPtyExit() { return () => {}; }
     attachPty() { return () => {}; }
-    renameTab() {}
+    renameTab = renameTabMock;
     saveFile() { return Promise.resolve(undefined); }
   }
   return { JanusClient };
@@ -302,5 +304,58 @@ describe('App sidebar docking', () => {
     });
     fireEvent.click(container.querySelector(':scope .sidebar-left .files-close')!);
     expect(sendMock).toHaveBeenCalledWith({ method: 'closeTab', params: { index: 1 } });
+  }, 15_000);
+});
+
+describe('App tab rename', () => {
+  beforeEach(() => {
+    sendMock.mockClear();
+    renameTabMock.mockClear();
+    stateListener = null;
+  });
+
+  it('renames a tab via double-click', async () => {
+    const { App } = await import('./App');
+    render(<App />);
+    act(() => { stateListener!([makeTab()], 0, null, 16, [], 'github-dark', []); });
+    await userEvent.dblClick(screen.getByText('janus'));
+    const input = screen.getByDisplayValue('janus');
+    await act(async () => { fireEvent.change(input, { target: { value: 'my project' } }); });
+    await act(async () => { fireEvent.keyDown(input, { key: 'Enter' }); });
+    expect(renameTabMock).toHaveBeenCalledWith(0, 'my project');
+  }, 15_000);
+});
+
+describe('App ACP prompt toggles collapse', () => {
+  beforeEach(() => {
+    sendMock.mockClear();
+    stateListener = null;
+  });
+
+  it('clicking an ACP prompt line sends toggleCollapse', async () => {
+    const { App } = await import('./App');
+    render(<App />);
+    act(() => {
+      stateListener!([makeTab({ bufferLines: [{ type: 'prompt', acp: true, text: 'some command' }] })], 0, null, 16, [], 'github-dark', []);
+    });
+    fireEvent.click(screen.getByText('+ some command'));
+    expect(sendMock).toHaveBeenCalledWith({ method: 'toggleCollapse', params: {} });
+  }, 15_000);
+});
+
+describe('App non-ACP prompt double-click runs command', () => {
+  beforeEach(() => {
+    sendMock.mockClear();
+    stateListener = null;
+  });
+
+  it('double-clicking a non-ACP prompt line sends the command', async () => {
+    const { App } = await import('./App');
+    render(<App />);
+    act(() => {
+      stateListener!([makeTab({ bufferLines: [{ type: 'prompt', text: 'git status' }] })], 0, null, 16, [], 'github-dark', []);
+    });
+    fireEvent.dblClick(screen.getByText('❯ git status'));
+    expect(sendMock).toHaveBeenCalledWith({ method: 'command', params: { text: 'git status' } });
   }, 15_000);
 });
