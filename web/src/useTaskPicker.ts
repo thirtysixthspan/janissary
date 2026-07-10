@@ -4,8 +4,8 @@ import { flattenVisibleTaskRows } from './task-picker-keys';
 
 // State and handlers for the Ctrl+A / `tasks` picker. Mirrors the queue picker's
 // populate-not-submit shape (not `hist`'s run-immediately shape): selecting a task writes
-// `execute ./ai/<path>` into the command line via the shared recall ref and closes the popup, so
-// the user can supplement or edit the command before running it themselves.
+// `execute ./ai/tasks/<path>` into the command line via the shared recall ref and closes the
+// popup, so the user can supplement or edit the command before running it themselves.
 export function useTaskPicker(
   tasks: TaskRow[],
   recallRef: React.RefObject<((text: string) => void) | null>,
@@ -21,7 +21,7 @@ export function useTaskPicker(
   }, []);
 
   const pickTask = useCallback((path: string) => {
-    recallRef.current?.(`execute ./ai/${path}`);
+    recallRef.current?.(`execute ./ai/tasks/${path}`);
     setTaskPickerOpen(false);
     inputRef.current?.focus();
   }, [recallRef, inputRef]);

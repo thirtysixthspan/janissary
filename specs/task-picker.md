@@ -7,13 +7,9 @@ be dropped onto the command line without typing its path by hand.
 
 ### Listing
 
-The picker lists the `.md` files inside `ai/`, sorted alphabetically, recursing into subdirectories.
-`ai/guidelines/` (binding project docs) and `ai/personas/` (monitor persona bodies) are always
-excluded — their contents are not executable task prompts. Any other subdirectory appears as a
-row of its own, collapsed by default; its task files become visible once it is expanded (see
-"Picker behavior" below). Since every task file lives under `ai/tasks/`, opening the picker shows
-a single collapsed `tasks` row at the top level — it must be expanded once to reveal the
-individual task files beneath it. The list is read fresh from disk each time the picker opens, so
+The picker lists the `.md` files inside `ai/tasks/`, sorted alphabetically, recursing into
+subdirectories. Any subdirectory appears as a row of its own, collapsed by default; its task files
+become visible once it is expanded (see "Picker behavior" below). The list is read fresh from disk each time the picker opens, so
 adding, renaming, or removing a task file (or subdirectory) is reflected immediately. Each file row
 displays its name with the `.md` extension hidden (`fix-a-small-issue`, not
 `fix-a-small-issue.md`); the extension is still present in the command inserted when the row is
@@ -37,7 +33,7 @@ never a different, unrelated tab.
 | Up / Down | Move the selection |
 | Right | On a collapsed directory, expands it (selection stays put, its children appear beneath it); on an already-expanded directory, moves the selection to its first child; no effect on a file |
 | Left | On an expanded directory, collapses it; otherwise moves the selection to the parent directory (no effect at the top level) |
-| Return, or clicking a file row | Copies `execute ./ai/<path>` into the command line and closes the popup **without submitting** |
+| Return, or clicking a file row | Copies `execute ./ai/tasks/<path>` into the command line and closes the popup **without submitting** |
 | Return, or clicking a directory row | Toggles that directory's expand state, same as Right/Left |
 | Escape | Closes the popup, leaving the command line unchanged |
 
