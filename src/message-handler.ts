@@ -10,7 +10,7 @@ export function handle(controller: Controller, message: ClientMessage, reply: (e
       reply({
         t: 'state', tabs: controller.view(), activeTab: controller.managers.tab.activeTab,
         route: controller.routeView(), tabNameMaxLength: getConfig().tabNameMaxLength,
-        globalHistory: globalCommands(), syntaxTheme: getConfig().syntaxTheme, tasks: listTasks(),
+        globalHistory: globalCommands(), syntaxTheme: getConfig().syntaxTheme, theme: getConfig().theme, tasks: listTasks(),
         projectDir: controller.rootDir,
       });
       break;

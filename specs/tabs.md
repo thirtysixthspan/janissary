@@ -40,7 +40,7 @@ Every tab belongs to a **group**, identified by a `group` number and a fixed `gr
 
 ### Active tab highlight
 
-The active tab shows full-intensity foreground text on the content background color; inactive tabs show muted text on the bar background.
+The active tab shows full-intensity foreground text on the content background color; inactive tabs show muted text on the bar background. These foreground/background colors — like all other state indicator colors in the strip and transcript — come from the active application theme (see `application-themes.md`); tab dot colors and group bar colors do not, staying per-tab in every theme.
 
 ### Busy indicator
 

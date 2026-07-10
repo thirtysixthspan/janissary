@@ -1,5 +1,10 @@
-/* Tokens mirror src/theme.ts (darkTheme). */
-:root {
+/* Application color themes (see specs/application-themes.md). Every themable surface reads these
+   custom properties; each `[data-theme="<name>"]` block below is one complete palette. `:root`
+   carries the dark palette so the app renders dark before any `data-theme` attribute is set;
+   scoping each block to `[data-theme]` too lets the theme picker render per-theme swatches by
+   putting the attribute on a small wrapper element. */
+:root,
+[data-theme="dark"] {
   --bg: #17181b;
   --bg-soft: #26292f;
   --fg: #e4e5e7;
@@ -7,8 +12,136 @@
   --faint: #5b5e66;
   --border: #292b30;
   --accent: #5b9cff;
+  --running: #ffd93d;
+  --success: #58c07a;
+  --error: #e06c75;
+  --search-hit-bg: #6b5b00;
+  --search-hit-fg: #ffe27a;
+  --terminal-bg: #17181b;
+  --editor-current-line: rgb(255 255 255 / 4%);
+  --editor-selection: rgb(91 156 255 / 30%);
   --mono: ui-monospace, "SFMono-Regular", "SF Mono", "Menlo", "Consolas", "Liberation Mono", monospace;
 }
+
+[data-theme="light"] {
+  --bg: #fff;
+  --bg-soft: #f0f1f3;
+  --fg: #1f2328;
+  --muted: #6e747d;
+  --faint: #a3a8b0;
+  --border: #d9dce1;
+  --accent: #0969da;
+  --running: #9a6700;
+  --success: #1a7f37;
+  --error: #cf222e;
+  --search-hit-bg: #fff8c5;
+  --search-hit-fg: #4d3800;
+  --terminal-bg: #fff;
+  --editor-current-line: rgb(0 0 0 / 4%);
+  --editor-selection: rgb(9 105 218 / 25%);
+}
+
+[data-theme="solarized-dark"] {
+  --bg: #002b36;
+  --bg-soft: #073642;
+  --fg: #93a1a1;
+  --muted: #657b83;
+  --faint: #586e75;
+  --border: #0a4050;
+  --accent: #268bd2;
+  --running: #b58900;
+  --success: #859900;
+  --error: #dc322f;
+  --search-hit-bg: #b58900;
+  --search-hit-fg: #002b36;
+  --terminal-bg: #002b36;
+  --editor-current-line: rgb(255 255 255 / 4%);
+  --editor-selection: rgb(38 139 210 / 30%);
+}
+
+[data-theme="solarized-light"] {
+  --bg: #fdf6e3;
+  --bg-soft: #eee8d5;
+  --fg: #586e75;
+  --muted: #839496;
+  --faint: #93a1a1;
+  --border: #ddd6c1;
+  --accent: #268bd2;
+  --running: #b58900;
+  --success: #859900;
+  --error: #dc322f;
+  --search-hit-bg: #b58900;
+  --search-hit-fg: #fdf6e3;
+  --terminal-bg: #fdf6e3;
+  --editor-current-line: rgb(0 0 0 / 4%);
+  --editor-selection: rgb(38 139 210 / 25%);
+}
+
+[data-theme="nord"] {
+  --bg: #2e3440;
+  --bg-soft: #3b4252;
+  --fg: #d8dee9;
+  --muted: #949cad;
+  --faint: #616e88;
+  --border: #434c5e;
+  --accent: #88c0d0;
+  --running: #ebcb8b;
+  --success: #a3be8c;
+  --error: #bf616a;
+  --search-hit-bg: #ebcb8b;
+  --search-hit-fg: #2e3440;
+  --terminal-bg: #2e3440;
+  --editor-current-line: rgb(255 255 255 / 4%);
+  --editor-selection: rgb(136 192 208 / 30%);
+}
+
+[data-theme="dracula"] {
+  --bg: #282a36;
+  --bg-soft: #343746;
+  --fg: #f8f8f2;
+  --muted: #8f93a8;
+  --faint: #6272a4;
+  --border: #44475a;
+  --accent: #bd93f9;
+  --running: #f1fa8c;
+  --success: #50fa7b;
+  --error: #f55;
+  --search-hit-bg: #ffb86c;
+  --search-hit-fg: #282a36;
+  --terminal-bg: #282a36;
+  --editor-current-line: rgb(255 255 255 / 4%);
+  --editor-selection: rgb(189 147 249 / 30%);
+}
+
+[data-theme="gruvbox-dark"] {
+  --bg: #282828;
+  --bg-soft: #3c3836;
+  --fg: #ebdbb2;
+  --muted: #a89984;
+  --faint: #7c6f64;
+  --border: #504945;
+  --accent: #83a598;
+  --running: #fabd2f;
+  --success: #b8bb26;
+  --error: #fb4934;
+  --search-hit-bg: #fabd2f;
+  --search-hit-fg: #282828;
+  --terminal-bg: #282828;
+  --editor-current-line: rgb(255 255 255 / 4%);
+  --editor-selection: rgb(131 165 152 / 30%);
+}
+
+/* Theme picker swatch: three chips (background, soft background, accent) resolved from the row's
+   own `data-theme` wrapper, so palettes never leave this file. */
+.theme-swatch {
+  display: inline-flex; gap: 2px; margin-right: 8px;
+  padding: 2px; border: 1px solid var(--border); border-radius: 3px;
+  background: var(--bg); vertical-align: middle;
+}
+.theme-swatch .chip { width: 10px; height: 10px; border-radius: 2px; }
+.theme-swatch .chip-bg { background: var(--bg-soft); }
+.theme-swatch .chip-fg { background: var(--fg); }
+.theme-swatch .chip-accent { background: var(--accent); }
 
 * { box-sizing: border-box; }
 
@@ -148,7 +281,7 @@ html, body, #root {
 .line.output { color: var(--fg); }
 .line.output .file-link { color: var(--accent); cursor: pointer; text-decoration: underline; }
 .line.output .file-link:hover { color: var(--fg); }
-.line.output.running { color: #ffd93d; }
+.line.output.running { color: var(--running); }
 /* ANSI SGR colors from shell command output (16-color palette, matching common terminal defaults).
    ansi-fg-0/8 use the theme's own muted tones instead of literal black/gray for readability
    against this app's fixed dark background. */
@@ -293,11 +426,11 @@ html, body, #root {
   color: var(--fg); font-family: var(--mono); font-size: 13.1625px;
 }
 .search-result { padding: 2px 12px; color: var(--muted); white-space: pre-wrap; overflow-wrap: break-word; border-top: 1px solid var(--border); }
-.search-hit { background: #6b5b00; color: #ffe27a; border-radius: 2px; }
+.search-hit { background: var(--search-hit-bg); color: var(--search-hit-fg); border-radius: 2px; }
 
 /* Harness tab: full-body PTY terminal with no transcript or command bar. */
 .harness-tab { flex: 1; min-height: 0; display: flex; flex-direction: column; }
-.harness-body { flex: 1; min-height: 0; background: #17181b; }
+.harness-body { flex: 1; min-height: 0; background: var(--terminal-bg); }
 .harness-exited {
   padding: 4px 10px; background: var(--bg-soft); font-size: 12px; color: var(--faint);
   border-bottom: 1px solid var(--border);
@@ -378,7 +511,7 @@ html, body, #root {
 /* Editor tab: metadata header (image-tab classes) above a scrollable numbered-gutter text body. */
 .editor-body { flex: 1; min-height: 0; overflow-y: auto; position: relative; cursor: text; font-family: var(--mono); line-height: 1.45; }
 .editor-row { display: flex; min-height: 1.45em; }
-.editor-row-current { background: rgb(255 255 255 / 4%); }
+.editor-row-current { background: var(--editor-current-line); }
 .editor-gutter {
   flex: none; text-align: right; padding-right: 14px; color: var(--faint);
   user-select: none; cursor: default;
@@ -386,7 +519,7 @@ html, body, #root {
 .editor-row-current .editor-gutter { color: var(--muted); }
 /* Soft-wrap long lines within the cell; the gutter number stays on the first visual row. */
 .editor-content { flex: 1; min-width: 0; white-space: pre-wrap; word-break: break-all; }
-.editor-sel { background: rgb(91 156 255 / 30%); }
+.editor-sel { background: var(--editor-selection); }
 /* Zero-width inline caret: the ::after paints the blinking bar without shifting text. */
 .editor-caret { width: 0; position: relative; }
 .editor-caret::after {
@@ -399,8 +532,8 @@ html, body, #root {
   position: absolute; left: 0; top: 0; width: 1px; height: 1px;
   opacity: 0; border: none; padding: 0; margin: 0; resize: none; outline: none;
 }
-.editor-saved { color: #58c07a; }
-.editor-error { color: #e06c75; }
+.editor-saved { color: var(--success); }
+.editor-error { color: var(--error); }
 
 /* File tree tab: metadata header (image-tab classes) above a scrollable, keyboard-navigable tree. */
 .files-tab { flex: 1; min-height: 0; display: flex; flex-direction: column; outline: none; }

@@ -75,6 +75,7 @@ export type StateEvent = {
   tabNameMaxLength: number;
   globalHistory: string[];
   syntaxTheme: string;
+  theme: string;
   tasks: TaskRow[];
   // Absolute path of the project directory the server was started against. Drives the titlebar.
   projectDir: string;

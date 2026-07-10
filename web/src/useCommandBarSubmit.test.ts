@@ -23,7 +23,7 @@ function makeTab(overrides: Partial<TabView> = {}): TabView {
 }
 
 function TestComponent({
-  canSearch, lines, search, openPicker, openThemePicker, openQueue, openTaskPicker,
+  canSearch, lines, search, openPicker, openThemePicker, openAppThemePicker, openQueue, openTaskPicker,
   navOpen, setNavOpen, openTabNavWithQuery, tabs, openQuitConfirm, guardRef, activeTab, runCommand,
   onResult,
 }: {
@@ -32,6 +32,7 @@ function TestComponent({
   search: ReturnType<typeof useTranscriptSearch>;
   openPicker: () => void;
   openThemePicker: () => void;
+  openAppThemePicker: () => void;
   openQueue: () => void;
   openTaskPicker: () => void;
   navOpen: boolean;
@@ -45,7 +46,7 @@ function TestComponent({
   onResult: (submit: (text: string) => void) => void;
 }) {
   const submit = useCommandBarSubmit({
-    canSearch, lines, search, openPicker, openThemePicker, openQueue, openTaskPicker,
+    canSearch, lines, search, openPicker, openThemePicker, openAppThemePicker, openQueue, openTaskPicker,
     navOpen, setNavOpen, openTabNavWithQuery, tabs, openQuitConfirm, guardRef, activeTab, runCommand,
   });
   onResult(submit);
@@ -59,7 +60,7 @@ describe('useCommandBarSubmit', () => {
     let submit: ((text: string) => void) | undefined;
     render(React.createElement(TestComponent, {
       canSearch: false, lines: [], search: makeSearch(),
-      openPicker: () => {}, openThemePicker: () => {}, openQueue: () => {}, openTaskPicker: () => {},
+      openPicker: () => {}, openThemePicker: () => {}, openAppThemePicker: () => {}, openQueue: () => {}, openTaskPicker: () => {},
       navOpen: false, setNavOpen: () => {}, openTabNavWithQuery: () => {},
       tabs: [makeTab()], openQuitConfirm, guardRef: { current: null }, activeTab: 0, runCommand,
       onResult: (s) => { submit = s; },
@@ -75,7 +76,7 @@ describe('useCommandBarSubmit', () => {
     let submit: ((text: string) => void) | undefined;
     render(React.createElement(TestComponent, {
       canSearch: false, lines: [], search: makeSearch(),
-      openPicker: () => {}, openThemePicker: () => {}, openQueue: () => {}, openTaskPicker: () => {},
+      openPicker: () => {}, openThemePicker: () => {}, openAppThemePicker: () => {}, openQueue: () => {}, openTaskPicker: () => {},
       navOpen: false, setNavOpen: () => {}, openTabNavWithQuery: () => {},
       tabs: [makeTab()], openQuitConfirm, guardRef: { current: null }, activeTab: 0, runCommand,
       onResult: (s) => { submit = s; },
@@ -91,7 +92,7 @@ describe('useCommandBarSubmit', () => {
     let submit: ((text: string) => void) | undefined;
     render(React.createElement(TestComponent, {
       canSearch: false, lines: [], search: makeSearch(),
-      openPicker: () => {}, openThemePicker: () => {}, openQueue: () => {}, openTaskPicker: () => {},
+      openPicker: () => {}, openThemePicker: () => {}, openAppThemePicker: () => {}, openQueue: () => {}, openTaskPicker: () => {},
       navOpen: false, setNavOpen: () => {}, openTabNavWithQuery: () => {},
       tabs: [makeTab()], openQuitConfirm, guardRef: { current: null }, activeTab: 0, runCommand,
       onResult: (s) => { submit = s; },
@@ -107,7 +108,7 @@ describe('useCommandBarSubmit', () => {
     let submit: ((text: string) => void) | undefined;
     render(React.createElement(TestComponent, {
       canSearch: false, lines: [], search: makeSearch(),
-      openPicker: () => {}, openThemePicker: () => {}, openQueue: () => {}, openTaskPicker: () => {},
+      openPicker: () => {}, openThemePicker: () => {}, openAppThemePicker: () => {}, openQueue: () => {}, openTaskPicker: () => {},
       navOpen: false, setNavOpen: () => {}, openTabNavWithQuery: () => {},
       tabs: [makeTab(), makeTab({ label: 'other' })],
       openQuitConfirm, guardRef: { current: null }, activeTab: 0, runCommand,
@@ -124,7 +125,7 @@ describe('useCommandBarSubmit', () => {
     let submit: ((text: string) => void) | undefined;
     render(React.createElement(TestComponent, {
       canSearch: false, lines: [], search: makeSearch(),
-      openPicker: () => {}, openThemePicker: () => {}, openQueue: () => {}, openTaskPicker: () => {},
+      openPicker: () => {}, openThemePicker: () => {}, openAppThemePicker: () => {}, openQueue: () => {}, openTaskPicker: () => {},
       navOpen: false, setNavOpen: () => {}, openTabNavWithQuery: () => {},
       tabs: [makeTab(), makeTab({ label: 'other' })],
       openQuitConfirm, guardRef: { current: null }, activeTab: 0, runCommand,
