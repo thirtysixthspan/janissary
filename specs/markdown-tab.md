@@ -74,14 +74,14 @@ resolved — only the Markdown text itself is rendered.
 
 ### Appearance
 
-The rendered Markdown is presented as a document "page" rather than in the app's dark transcript
-theme:
+The rendered Markdown follows the active application theme (see Application Themes), matching the
+rest of the app's chrome:
 
-- **Background** — white (a paper page).
-- **Text** — near-black, for legible reading on the white page; headings, code, tables,
-  blockquotes, lists, rules, and links are styled for the light background.
-- **Selection** — selecting text highlights it in a color clearly distinct from the white page (a
-  light blue), so the selection is visible against the paper background.
+- **Background and text** — the theme's own background and foreground colors; headings, code,
+  tables, blockquotes, lists, rules, and links are styled to match, using the same colors the
+  Markdown rendered inline in the transcript uses.
+- **Selection** — selecting text highlights it in a color clearly distinct from the background, so
+  the selection stays visible regardless of the active theme.
 
 ### Scrolling
 

@@ -1,7 +1,5 @@
 # issues
 
-* markdown preview should respect the application theme.
-
 * the task picker should open in the ./ai/tasks directory not the ./ai/ directory
 
 * when the task picker is launched on a harnessed tab, it should response to arrow keypresses to control the navigation within the selector. the task picker doesnt get the focus. the enter/return should select the task and inject it into the harness, but it does not. However using the mouse to select a task does. Hitting escape should close the task picker but it does not.
