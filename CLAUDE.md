@@ -157,7 +157,7 @@ All scripts in `scripts/` are considered trusted. Do not invoke them directly wi
 - `bin/janus.mjs` — CLI entry point (`janus`)
 - `specs/` — functional specs, one file per feature; when a change alters behavior, update the matching spec
 - `plans/` — implementation plans by status (see [Plan storage](#plan-storage))
-- `ai/` — agent workflow playbooks (`ai/*.md`), binding guidelines (`ai/guidelines/`), and personas (`ai/personas/`)
+- `ai/` — agent workflow playbooks (`ai/tasks/*.md`), binding guidelines (`ai/guidelines/`), and personas (`ai/personas/`)
 - `public-documentation/` — user-facing docs site (VitePress; `npm run docs:dev` / `docs:build`)
 - `scripts/` — project scripts; invoke only via `./scripts/run.mjs` (see [Running scripts](#running-scripts))
 - `profiles/` — harness profiles (see `specs/profiles.md`)

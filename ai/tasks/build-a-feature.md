@@ -12,7 +12,7 @@ Your job: pick the simplest available plan from `plans/ready/`, implement it end
 
 ### Allowed — do it automatically, never ask
 
-Read any file in the repo. Edit source, tests, CSS, and spec files as the plan directs. Move the chosen plan file from `plans/ready/` to `plans/complete/`. Run `./scripts/run.mjs check-diff` after each change. Run the full PR workflow via `ai/open-feature-pull-request.md` when implementation is done.
+Read any file in the repo. Edit source, tests, CSS, and spec files as the plan directs. Move the chosen plan file from `plans/ready/` to `plans/complete/`. Run `./scripts/run.mjs check-diff` after each change. Run the full PR workflow via `ai/tasks/open-feature-pull-request.md` when implementation is done.
 
 ### Forbidden — no exceptions
 
@@ -20,13 +20,13 @@ Read any file in the repo. Edit source, tests, CSS, and spec files as the plan d
 2. **Running `npm run check`.** That is the human's end-of-work gate. Use `./scripts/run.mjs check-diff` during development.
 3. **Skipping tests.** If the plan specifies tests, write them. If it does not, still verify with `./scripts/run.mjs check-diff`.
 4. **Choosing a plan at complexity 7 or above.** If every plan in `plans/ready/` is rated 7+, stop and report — do not pick one anyway.
-5. **Merging the PR.** `ai/open-feature-pull-request.md` opens it; merging is the human's decision.
+5. **Merging the PR.** `ai/tasks/open-feature-pull-request.md` opens it; merging is the human's decision.
 
 ---
 
 ## Step 0 — Prepare the workspace
 
-Execute `ai/prepare-workspace.md` in full before doing anything else.
+Execute `ai/tasks/prepare-workspace.md` in full before doing anything else.
 
 ---
 
@@ -45,7 +45,7 @@ State your pick and its complexity in one sentence.
 ## Step 2 — Read the plan and the project constraints
 
 1. Read the entire chosen plan.
-2. Read the project constraints that shape implementation: the ESLint rules and file-size limit in [`CLAUDE.md`](../CLAUDE.md) (200-line `max-lines`, `.js` import extensions in `src/`, type-aware rules), and the test conventions (`src/**/*.test.ts`, `web/src/**/*.test.tsx`).
+2. Read the project constraints that shape implementation: the ESLint rules and file-size limit in [`CLAUDE.md`](../../CLAUDE.md) (200-line `max-lines`, `.js` import extensions in `src/`, type-aware rules), and the test conventions (`src/**/*.test.ts`, `web/src/**/*.test.tsx`).
 3. Read every file the plan references to confirm the line anchors and code fragments still match. If a reference is stale, locate the correct position by the quoted code fragment — line numbers drift.
 
 ---
@@ -106,7 +106,7 @@ git mv plans/ready/<plan-file> plans/complete/<plan-file>
 
 ## Step 8 — Open the pull request
 
-Execute `ai/open-feature-pull-request.md` in full. That document owns the PR workflow — follow its steps without deviation.
+Execute `ai/tasks/open-feature-pull-request.md` in full. That document owns the PR workflow — follow its steps without deviation.
 
 ---
 

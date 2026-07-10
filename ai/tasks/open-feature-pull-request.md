@@ -85,7 +85,7 @@ Any uncommitted changes carry over onto the new branch.
 
 ## Step 3 — Commit the changes (conventional commits message, **no co-authors**)
 
-Write **one** commit. The subject line must follow the [Conventional Commits 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/) specification (see [`ai/guidelines/conventional-commits.md`](../../ai/guidelines/conventional-commits.md)): `<type>[optional scope]: <description>`. Valid types: `feat`, `fix`, `build`, `chore`, `ci`, `docs`, `style`, `refactor`, `perf`, `test`, `revert`. Include a body explaining *what* changed and *why*. `pr-commit` stages everything (`git add -A`) and commits with a **single author**:
+Write **one** commit. The subject line must follow the [Conventional Commits 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/) specification (see [`ai/guidelines/conventional-commits.md`](../guidelines/conventional-commits.md)): `<type>[optional scope]: <description>`. Valid types: `feat`, `fix`, `build`, `chore`, `ci`, `docs`, `style`, `refactor`, `perf`, `test`, `revert`. Include a body explaining *what* changed and *why*. `pr-commit` stages everything (`git add -A`) and commits with a **single author**:
 
 ```bash
 ./scripts/run.mjs pr-commit "feat(ui): add unread badge on inactive tabs" \

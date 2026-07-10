@@ -10,7 +10,7 @@ Do the steps below **in order**. Do not skip steps. Do not invent your own proce
 
 ## Step 0 — Prepare the workspace
 
-Execute `ai/prepare-workspace.md` in full before doing anything else.
+Execute `ai/tasks/prepare-workspace.md` in full before doing anything else.
 
 ---
 

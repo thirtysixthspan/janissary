@@ -1,6 +1,6 @@
 # PR Automation
 
-Scripts in `scripts/pr-*.sh` automate the `ai/merge-change-to-master.md` workflow: package the current changes into a PR against `master` and **merge it once there are no conflicts and all checks pass**. They are executable and called directly (no `npm run` wrappers). They work both in a normal checkout and in a workspaced clone (an independent `git clone` of the root repo's `origin` remote, so `origin` already points at GitHub).
+Scripts in `scripts/pr-*.sh` automate the `ai/tasks/merge-change-to-master.md` workflow: package the current changes into a PR against `master` and **merge it once there are no conflicts and all checks pass**. They are executable and called directly (no `npm run` wrappers). They work both in a normal checkout and in a workspaced clone (an independent `git clone` of the root repo's `origin` remote, so `origin` already points at GitHub).
 
 ## Quick Start
 
@@ -23,7 +23,7 @@ This single command runs Steps 0–9 of the workflow:
 9. ✅ Merges and deletes the branch (`pr-merge.sh`)
 10. ✅ Prints a final report
 
-It stops and leaves the PR open if the check gate is red, if the PR conflicts with `master` (resolve those with `pr-rebase.sh` — see Step 7 of `ai/merge-change-to-master.md`), or if a check fails.
+It stops and leaves the PR open if the check gate is red, if the PR conflicts with `master` (resolve those with `pr-rebase.sh` — see Step 7 of `ai/tasks/merge-change-to-master.md`), or if a check fails.
 
 ```bash
 # explicit branch, and --no-check to skip the gate for a pre-existing red tree:

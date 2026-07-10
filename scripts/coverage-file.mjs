@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Print per-file coverage detail from coverage/coverage-final.json for one file, without
-// building a one-off `node -e` snippet each time. Used by ai/improve-test-coverage.md's Step 6
+// building a one-off `node -e` snippet each time. Used by ai/tasks/improve-test-coverage.md's Step 6
 // to precisely confirm a target file's coverage moved, since the printed summary table rounds
 // percentages and truncates long paths.
 //
