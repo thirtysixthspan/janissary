@@ -392,6 +392,13 @@ export class TabManager {
   }
 
   openEditorTab(view: EditorView): void {
+    const existing = this.tabs.find((t) => t.editor?.path === view.path);
+    if (existing) {
+      if (view.line !== undefined) existing.editor!.line = view.line;
+      this.setActiveTab(this.tabs.indexOf(existing));
+      messageBus.emit('state', { type: 'dirty' });
+      return;
+    }
     const { tabs, activeTab } = addEditorTab(this.tabs, this.activeTab, view);
     this.tabs = tabs;
     this.activeTab = activeTab;

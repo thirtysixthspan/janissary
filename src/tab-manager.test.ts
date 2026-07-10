@@ -105,6 +105,35 @@ describe('TabManager queue', () => {
     listSpy.mockRestore();
   });
 
+  it('openEditorTab deduplicates by path and focuses the existing tab', () => {
+    const tm = makeTabManager();
+    const path = '/test/file.ts';
+    tm.openEditorTab({ name: 'file.ts', path, size: '1 KB', url: '/open/1' });
+    const countAfterFirst = tm.tabs.length;
+    const firstActive = tm.activeTab;
+
+    tm.openEditorTab({ name: 'file.ts', path, size: '1 KB', url: '/open/2' });
+    expect(tm.tabs.length).toBe(countAfterFirst);
+    expect(tm.activeTab).toBe(firstActive);
+  });
+
+  it('openEditorTab updates the existing tab\'s line when a new line is requested', () => {
+    const tm = makeTabManager();
+    const path = '/test/file.ts';
+    tm.openEditorTab({ name: 'file.ts', path, size: '1 KB', url: '/open/1' });
+    const count = tm.tabs.length;
+    tm.openEditorTab({ name: 'file.ts', path, size: '1 KB', url: '/open/2', line: 42 });
+    expect(tm.tabs.length).toBe(count);
+    expect(tm.cur().editor!.line).toBe(42);
+  });
+
+  it('openEditorTab creates a new tab when the path differs', () => {
+    const tm = makeTabManager();
+    tm.openEditorTab({ name: 'a.ts', path: '/test/a.ts', size: '1 KB', url: '/open/1' });
+    tm.openEditorTab({ name: 'b.ts', path: '/test/b.ts', size: '1 KB', url: '/open/2' });
+    expect(tm.tabs.length).toBe(3); // janus + a.ts + b.ts
+  });
+
   it('closeTab clears the label\'s queue entry', () => {
     const tm = makeTabManager();
     tm.tabs.push({ ...tm.cur(), label: 'second', number: 2 });
