@@ -56,6 +56,7 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
       t: 'state', tabs: controller.view(), activeTab: controller.managers.tab.activeTab,
       route: controller.routeView(), tabNameMaxLength: getConfig().tabNameMaxLength,
       globalHistory: globalCommands(), syntaxTheme: getConfig().syntaxTheme, tasks: listTasks(),
+      projectDir: controller.rootDir,
     }),
     sendPty: (id, data) => broadcast({ t: 'pty', id, data }),
     sendPtyExit: (id, exitCode) => broadcast({ t: 'pty-exit', id, exitCode }),

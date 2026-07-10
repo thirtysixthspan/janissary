@@ -40,3 +40,7 @@ The transcript already abbreviates a path under the user's home directory to `~`
 ### Display only
 
 `$root` is a presentation shortcut. The underlying paths are unchanged — working directories, stored state, and the paths passed to commands all remain the real absolute paths; only what the transcript shows is shortened. The shortcut is not applied to the raw output of a shell command (that text is the user's own data and is shown verbatim); it abbreviates the paths the application renders around and about that output.
+
+### The titlebar shows the full path
+
+The application's window titlebar reads `Janissary: <full path>`, where `<full path>` is the root directory's real absolute path — the one exception where the `$root` shortcut is not applied. The titlebar identifies which project window this is among several open at once, so it names the root directory outright rather than abbreviating it.

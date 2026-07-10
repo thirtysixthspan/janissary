@@ -1,7 +1,5 @@
 # issues
 
-* put the full project path in the titlebar `Janissary: <full path>`.
-
 * regression: closing the last open tab needs to trigger the quit dialog.
 
 * move all tasks currently in /ai to /ai/tasks and update the tasks that reference each other.
