@@ -32,7 +32,7 @@ describe('useTaskPicker', () => {
     expect(hook!.taskPickerIndex).toBe(0);
   });
 
-  it('pickTask populates the command line with execute ./ai/<path> and closes without submitting', () => {
+  it('pickTask populates the command line with execute ./ai/tasks/<path> and closes without submitting', () => {
     const recall = vi.fn();
     let hook: ReturnType<typeof useTaskPicker> | undefined;
     function C() {
@@ -46,7 +46,7 @@ describe('useTaskPicker', () => {
     rerender(React.createElement(C));
     hook!.pickTask('fix-a-small-issue.md');
     rerender(React.createElement(C));
-    expect(recall).toHaveBeenCalledWith('execute ./ai/fix-a-small-issue.md');
+    expect(recall).toHaveBeenCalledWith('execute ./ai/tasks/fix-a-small-issue.md');
     expect(hook!.taskPickerOpen).toBe(false);
   });
 

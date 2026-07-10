@@ -7,13 +7,13 @@ import { listTasks } from './tasks.js';
 let root: string;
 
 function writeTask(name: string, content = 'x'): void {
-  mkdirSync(path.join(root, 'ai', path.dirname(name)), { recursive: true });
-  writeFileSync(path.join(root, 'ai', name), content);
+  mkdirSync(path.join(root, 'ai', 'tasks', path.dirname(name)), { recursive: true });
+  writeFileSync(path.join(root, 'ai', 'tasks', name), content);
 }
 
 beforeEach(() => {
   root = mkdtempSync(path.join(tmpdir(), 'tasks-'));
-  mkdirSync(path.join(root, 'ai'), { recursive: true });
+  mkdirSync(path.join(root, 'ai', 'tasks'), { recursive: true });
 });
 
 afterEach(() => rmSync(root, { recursive: true, force: true }));
@@ -31,16 +31,6 @@ describe('listTasks', () => {
   it('ignores non-.md files', () => {
     writeTask('build-a-feature.md');
     writeTask('notes.txt');
-    expect(listTasks(root)).toEqual([
-      { path: 'build-a-feature.md', name: 'build-a-feature.md', depth: 0, dir: false },
-    ]);
-  });
-
-  it('excludes the guidelines and personas subdirectories', () => {
-    writeTask('build-a-feature.md');
-    mkdirSync(path.join(root, 'ai', 'guidelines'), { recursive: true });
-    writeFileSync(path.join(root, 'ai', 'guidelines', 'code-guidelines.md'), 'x');
-    mkdirSync(path.join(root, 'ai', 'personas'), { recursive: true });
     expect(listTasks(root)).toEqual([
       { path: 'build-a-feature.md', name: 'build-a-feature.md', depth: 0, dir: false },
     ]);
