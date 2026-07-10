@@ -89,7 +89,7 @@ export default [
     name: 'file-tree-sidebar',
     setup: ['files left .'],
     settle: 1000,
-    target: 'sidebar-left',
+    target: 'page',
   },
 
   // Advanced agents and automation.
