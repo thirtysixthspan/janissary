@@ -1,7 +1,5 @@
 # issues
 
-* remove the gruvbox-dark theme.
-
 * markdown preview should respect the application theme.
 
 * the task picker should open in the ./ai/tasks directory not the ./ai/ directory

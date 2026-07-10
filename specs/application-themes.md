@@ -4,7 +4,7 @@ The entire application chrome — tab strip, transcript colors, connections/sche
 
 ### Built-in themes
 
-`dark` (the default, matching the application's original appearance), `light`, `solarized-dark`, `solarized-light`, `nord`, `dracula`, and `gruvbox-dark`. There are no custom or user-defined themes.
+`dark` (the default, matching the application's original appearance), `light`, `solarized-dark`, `solarized-light`, `nord`, and `dracula`. There are no custom or user-defined themes.
 
 ### The `theme` command
 

@@ -10,7 +10,6 @@ describe('app-themes', () => {
       'solarized-light',
       'nord',
       'dracula',
-      'gruvbox-dark',
     ]);
   });
 
