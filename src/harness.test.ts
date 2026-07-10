@@ -27,6 +27,30 @@ describe('parseHarnessCommand', () => {
     expect((result as { error: string }).error).toMatch('gemini');
   });
 
+  it('recognizes the capture subcommand with a target label', () => {
+    const result = parseHarnessCommand('harness capture claude');
+    expect('capture' in result && result.capture).toBe(true);
+    expect('label' in result && result.label).toBe('claude');
+  });
+
+  it('is case-insensitive for the capture keyword but preserves the label case', () => {
+    const result = parseHarnessCommand('harness CAPTURE MyTab');
+    expect('capture' in result && result.capture).toBe(true);
+    expect('label' in result && result.label).toBe('MyTab');
+  });
+
+  it('returns a usage error for capture with no label', () => {
+    const result = parseHarnessCommand('harness capture');
+    expect('error' in result).toBe(true);
+    expect((result as { error: string }).error).toBe('Usage: harness capture <name>.');
+  });
+
+  it('never treats capture as an unknown harness name', () => {
+    const result = parseHarnessCommand('harness capture x');
+    expect('error' in result).toBe(false);
+    expect('name' in result).toBe(false);
+  });
+
   it('ignores unrecognized extra arguments after the name', () => {
     const result = parseHarnessCommand('harness claude --some-flag');
     expect('name' in result && result.name).toBe('claude');

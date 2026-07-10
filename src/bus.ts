@@ -83,6 +83,9 @@ export type BusEvent =
 
 type StateEvent = { type: 'dirty' };
 type AppEvent = { type: 'exit' };
-type PtyEvent = { type: 'data'; id: string; data: string } | { type: 'exit'; id: string; exitCode: number };
+type PtyEvent =
+  | { type: 'data'; id: string; data: string }
+  | { type: 'exit'; id: string; exitCode: number }
+  | { type: 'resize'; id: string; cols: number; rows: number };
 export type BusChannels = { transcript: BusEvent; state: StateEvent; app: AppEvent; pty: PtyEvent };
 export const messageBus = new MessageBus<BusChannels>();

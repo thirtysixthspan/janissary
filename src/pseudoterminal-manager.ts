@@ -29,14 +29,23 @@ export class PseudoterminalManager {
   // Forward client keystrokes to a PTY.
   input(id: string, data: string): void { this.ptys.get(id)?.session.write(data); }
 
-  // Resize a single PTY (a client viewport change).
-  resizeOne(id: string, cols: number, rows: number): void { this.ptys.get(id)?.session.resize(cols, rows); }
+  // Resize a single PTY (a client viewport change) and mirror the new size onto the bus so
+  // server-side observers (the harness screen reader) track the real PTY's dimensions.
+  resizeOne(id: string, cols: number, rows: number): void {
+    const entry = this.ptys.get(id);
+    if (!entry) return;
+    entry.session.resize(cols, rows);
+    messageBus.emit('pty', { type: 'resize', id, cols, rows });
+  }
 
   // Kill a single PTY; its exit then flows through `handleExit`.
   kill(id: string): void { this.ptys.get(id)?.session.kill(); }
 
   // Set the dimensions new PTYs spawn at (the client's terminal size).
   resize(cols: number, rows: number): void { this.cols = cols; this.rows = rows; }
+
+  // The dimensions new PTYs spawn at, for observers that mirror a PTY's screen.
+  spawnDimensions(): { cols: number; rows: number } { return { cols: this.cols, rows: this.rows }; }
 
   // The program names of a tab's live PTYs, for the connections panel and completion (`terminal:<program>`).
   terminalsFor(label: string): string[] {
