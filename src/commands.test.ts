@@ -12,4 +12,9 @@ describe('getOutput("help")', () => {
     const help = getOutput('help');
     expect(help).toContain('Ctrl+E');
   });
+
+  it('documents the Ctrl+G tab-navigator key binding', () => {
+    const help = getOutput('help');
+    expect(help).toContain('Ctrl+G');
+  });
 });
