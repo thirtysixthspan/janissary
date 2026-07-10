@@ -76,6 +76,8 @@ export type StateEvent = {
   globalHistory: string[];
   syntaxTheme: string;
   tasks: TaskRow[];
+  // Absolute path of the project directory the server was started against. Drives the titlebar.
+  projectDir: string;
 };
 export type PtyDataEvent = { t: 'pty'; id: string; data: string };
 export type PtyExitEvent = { t: 'pty-exit'; id: string; exitCode: number };

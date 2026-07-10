@@ -30,6 +30,8 @@ import type { Managers } from './managers.js';
 export class Controller {
   managers: Managers = {} as Managers;
 
+  get rootDir(): string { return this.projectDir ?? process.cwd(); }
+
   constructor(private sinks: Sinks, private projectDir?: string) {
     this.managers.database = new DatabaseManager();
     this.managers.tab = new TabManager(this.managers, projectDir);

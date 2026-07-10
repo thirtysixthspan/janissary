@@ -30,6 +30,18 @@ const makeController = () => {
 
 const allText = (c: Controller) => c.view().flatMap((t) => t.bufferLines).map((l) => l.text).join('\n');
 
+describe('Controller rootDir', () => {
+  it('returns the constructor-supplied projectDir', () => {
+    const c = new Controller({ emitState: () => {}, sendPty: () => {}, sendPtyExit: () => {} }, '/some/project');
+    expect(c.rootDir).toBe('/some/project');
+  });
+
+  it('falls back to process.cwd() when projectDir is omitted', () => {
+    const c = new Controller({ emitState: () => {}, sendPty: () => {}, sendPtyExit: () => {} });
+    expect(c.rootDir).toBe(process.cwd());
+  });
+});
+
 describe('Controller', () => {
   it('starts with a single janus tab', () => {
     const { c } = makeController();

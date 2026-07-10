@@ -1,7 +1,8 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import type React from 'react';
 import type { JanusClient } from './ws';
 import type { TabView, RouteChooserView, TaskRow } from '@shared/protocol';
+import { useProjectTitle } from './useProjectTitle';
 
 type Setters = {
   setTabs: (tabs: TabView[]) => void;
@@ -16,12 +17,15 @@ type Setters = {
 };
 
 // Subscribes App to server state snapshots, fanning each field out to its setter. Split out of
-// App.tsx to keep it under the file-size limit.
+// App.tsx to keep it under the file-size limit. Also mirrors `projectDir` into the titlebar, since
+// that field has no other consumer in `App.tsx`.
 export function useServerState(client: JanusClient, setters: Setters): void {
   const {
     setTabs, setActiveTab, setRoute, setTabNameMaxLength, setGlobalHistory, setSyntaxTheme, setTasks, setRouteIndex, routeRef,
   } = setters;
-  useEffect(() => client.onState((nextTabs, active, nextRoute, nextTabNameMaxLength, nextGlobalHistory, nextSyntaxTheme, nextTasks) => {
+  const [projectDir, setProjectDir] = useState('');
+  useProjectTitle(projectDir);
+  useEffect(() => client.onState((nextTabs, active, nextRoute, nextTabNameMaxLength, nextGlobalHistory, nextSyntaxTheme, nextTasks, nextProjectDir) => {
     setTabs(nextTabs);
     setActiveTab(active);
     setRoute(nextRoute);
@@ -29,6 +33,7 @@ export function useServerState(client: JanusClient, setters: Setters): void {
     setGlobalHistory(nextGlobalHistory);
     setSyntaxTheme(nextSyntaxTheme);
     setTasks(nextTasks);
+    setProjectDir(nextProjectDir);
     // Highlight the first option when a chooser newly opens (or its command changes).
     const previous = routeRef.current;
     routeRef.current = nextRoute;
