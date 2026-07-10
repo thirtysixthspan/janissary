@@ -1,9 +1,9 @@
 # Task Picker
 
-Task files are the executable prompts kept directly under the repository's top-level `ai/`
-directory — `build-a-feature.md`, `fix-a-small-issue.md`, `merge-change-to-master.md`, and the
-like. Each is a self-contained instruction set an agent can be told to run. The task picker lists
-them so one can be dropped onto the command line without typing its path by hand.
+Task files are the executable prompts kept under the repository's `ai/tasks/` directory —
+`build-a-feature.md`, `fix-a-small-issue.md`, `merge-change-to-master.md`, and the like. Each is a
+self-contained instruction set an agent can be told to run. The task picker lists them so one can
+be dropped onto the command line without typing its path by hand.
 
 ### Listing
 
@@ -11,12 +11,14 @@ The picker lists the `.md` files inside `ai/`, sorted alphabetically, recursing 
 `ai/guidelines/` (binding project docs) and `ai/personas/` (monitor persona bodies) are always
 excluded — their contents are not executable task prompts. Any other subdirectory appears as a
 row of its own, collapsed by default; its task files become visible once it is expanded (see
-"Picker behavior" below). The list is read fresh from disk each time the picker opens, so adding,
-renaming, or removing a task file (or subdirectory) is reflected immediately. Each file row displays
-its name with the `.md` extension hidden (`fix-a-small-issue`, not `fix-a-small-issue.md`); the
-extension is still present in the command inserted when the row is picked. Directory rows show a
-chevron indicating their expand state (▸ collapsed, ▾ expanded) and are indented one level deeper
-than their parent.
+"Picker behavior" below). Since every task file lives under `ai/tasks/`, opening the picker shows
+a single collapsed `tasks` row at the top level — it must be expanded once to reveal the
+individual task files beneath it. The list is read fresh from disk each time the picker opens, so
+adding, renaming, or removing a task file (or subdirectory) is reflected immediately. Each file row
+displays its name with the `.md` extension hidden (`fix-a-small-issue`, not
+`fix-a-small-issue.md`); the extension is still present in the command inserted when the row is
+picked. Directory rows show a chevron indicating their expand state (▸ collapsed, ▾ expanded) and
+are indented one level deeper than their parent.
 
 ### Openers
 
@@ -50,4 +52,4 @@ ancestor directory's name) contains a space populates the command line with that
 because the populated text is freeform input for the agent, exactly as if it had been typed by
 hand.
 
-When the `ai/` directory has no task files, the picker shows `(no tasks)`.
+When `ai/tasks/` has no task files, the picker shows `(no tasks)`.

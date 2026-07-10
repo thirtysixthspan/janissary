@@ -32,7 +32,7 @@ Each of those is a judgment call, and a wrong call hides a real problem that the
 
 ## Step 0 — Prepare the workspace
 
-Execute `ai/prepare-workspace.md` in full before doing anything else.
+Execute `ai/tasks/prepare-workspace.md` in full before doing anything else.
 
 ---
 

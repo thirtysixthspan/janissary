@@ -43,7 +43,7 @@ If every remaining clone is blocked, list each one and why it was blocked in you
 
 ## Step 0 — Prepare the workspace
 
-Execute `ai/prepare-workspace.md` in full before doing anything else.
+Execute `ai/tasks/prepare-workspace.md` in full before doing anything else.
 
 ---
 

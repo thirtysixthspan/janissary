@@ -14,7 +14,7 @@ This overrides CLAUDE.md's "Capturing command output" guidance (write the output
 
 ### Allowed — do it automatically, never ask
 
-Read any file in the repo. Edit source, tests, CSS, and spec files as the fix requires. Write a plan file to `plans/complete/`. Remove the fixed issue from `work/issues.md`. Run `./scripts/run.mjs check-diff` after each change. Execute the full merge workflow via `ai/merge-change-to-master.md` when implementation is done.
+Read any file in the repo. Edit source, tests, CSS, and spec files as the fix requires. Write a plan file to `plans/complete/`. Remove the fixed issue from `work/issues.md`. Run `./scripts/run.mjs check-diff` after each change. Execute the full merge workflow via `ai/tasks/merge-change-to-master.md` when implementation is done.
 
 ### Forbidden — no exceptions
 
@@ -23,13 +23,13 @@ Read any file in the repo. Edit source, tests, CSS, and spec files as the fix re
 3. **Skipping tests.** Every fix needs tests that cover the changed behavior. Verify with `./scripts/run.mjs check-diff`.
 4. **Choosing an issue that requires significant new architecture.** If an issue would require high complexity error or prone work, pick a simpler issue instead and report why.
 5. **Editing `work/issues.md` beyond removing the fixed entry.** Only remove the line for the issue you fixed — do not reorder, rephrase, or otherwise modify the remaining entries.
-6. **Merging before all checks pass.** The `ai/merge-change-to-master.md` workflow handles merge; do not bypass it.
+6. **Merging before all checks pass.** The `ai/tasks/merge-change-to-master.md` workflow handles merge; do not bypass it.
 
 ---
 
 ## Step 0 — Prepare the workspace
 
-Execute `ai/prepare-workspace.md` in full before doing anything else.
+Execute `ai/tasks/prepare-workspace.md` in full before doing anything else.
 
 ---
 
@@ -45,7 +45,7 @@ Execute `ai/prepare-workspace.md` in full before doing anything else.
 
 ## Step 2 — Develop a plan
 
-1. Read the project constraints in [`CLAUDE.md`](../CLAUDE.md): ESLint rules (200-line `max-lines`, `.js` import extensions in `src/`, type-aware rules), test conventions (`src/**/*.test.ts`, `web/src/**/*.test.tsx`).
+1. Read the project constraints in [`CLAUDE.md`](../../CLAUDE.md): ESLint rules (200-line `max-lines`, `.js` import extensions in `src/`, type-aware rules), test conventions (`src/**/*.test.ts`, `web/src/**/*.test.tsx`).
 2. Read every file relevant to the fix to understand the code involved.
 3. Write a plan file following the format of existing plans in `plans/complete/` — include a complexity rating, goal, approach, implementation steps, tests, and out-of-scope items. Write it to `plans/draft/<fix-name>.md`.
 4. After the plan is written, move it from `plans/draft/` to `plans/ready/`:
@@ -110,7 +110,7 @@ Spec files are markdown and do not affect `check-diff`, so no verification run i
 
 ## Step 8 — Merge the change to master
 
-Execute `ai/merge-change-to-master.md` in full. That document owns the merge workflow — follow its steps without deviation.
+Execute `ai/tasks/merge-change-to-master.md` in full. That document owns the merge workflow — follow its steps without deviation.
 
 ---
 

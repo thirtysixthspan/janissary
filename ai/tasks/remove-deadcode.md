@@ -43,7 +43,7 @@ Do **not** remove a finding if it is any of these. Just leave it in place and li
 
 ## Step 0 — Prepare the workspace
 
-Execute `ai/prepare-workspace.md` in full before doing anything else.
+Execute `ai/tasks/prepare-workspace.md` in full before doing anything else.
 
 ---
 

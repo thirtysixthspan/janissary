@@ -36,7 +36,7 @@ If every remaining candidate is blocked, report what you found (file, why it was
 
 ## Step 0 — Prepare the workspace
 
-Execute `ai/prepare-workspace.md` in full before doing anything else.
+Execute `ai/tasks/prepare-workspace.md` in full before doing anything else.
 
 ---
 
