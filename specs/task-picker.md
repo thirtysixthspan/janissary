@@ -43,6 +43,10 @@ sent until Return is pressed on the command line itself. This deliberately diffe
 picker, where Return runs the selected command immediately; it matches the command-queue picker's
 behavior of making the command line the edit surface.
 
+On a harness tab there is no command line to populate, so selecting a task instead sends
+`execute ./ai/tasks/<path>` directly into that harness's terminal input, exactly as if it had been
+typed there; the picker's Up/Down/Left/Right/Enter/Escape keys work the same as on any other tab.
+
 The path is inserted verbatim, with no quoting or escaping — a task file whose name (or an
 ancestor directory's name) contains a space populates the command line with that space intact,
 because the populated text is freeform input for the agent, exactly as if it had been typed by

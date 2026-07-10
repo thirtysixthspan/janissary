@@ -3,27 +3,30 @@ import type { JanusClient } from './ws';
 import type { HarnessView } from '@shared/protocol';
 import { useXterm } from './useXterm';
 
-type Properties = { harness: HarnessView; client: JanusClient };
+type Properties = { harness: HarnessView; client: JanusClient; taskPickerOpen?: boolean };
 export type HarnessTabHandle = { focus(): void };
 
-// Returns true to send to PTY, false to bubble (switch tabs, open task picker).
-function harnessKeyFilter(e: KeyboardEvent): boolean {
+// Returns true to send to PTY, false to bubble (switch tabs, open task picker, drive the task
+// picker overlay while it's open over this tab).
+function harnessKeyFilter(e: KeyboardEvent, taskPickerOpen: boolean): boolean {
   if (e.type !== 'keydown') return true;
+  if (taskPickerOpen) return false;
   const isTabSwitch = e.shiftKey && !e.ctrlKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight');
   const isTaskPicker = e.ctrlKey && !e.shiftKey && !e.altKey && !e.metaKey && e.key.toLowerCase() === 'a';
   return !(isTabSwitch || isTaskPicker);
 }
 
 // Full-tab harness terminal: no card chrome, no command bar — the body is the PTY. All keys reach
-// the harness except the tab-switch chord (Shift+←/→) and the task-picker chord (Ctrl+A), which
-// bubble to the window handler.
-export const HarnessTab = forwardRef<HarnessTabHandle, Properties>(function HarnessTab({ harness, client }, ref) {
+// the harness except the tab-switch chord (Shift+←/→), the task-picker chord (Ctrl+A), and every
+// key while the task picker overlay is open over this tab (Up/Down/Left/Right/Enter/Escape must
+// reach the picker instead of the PTY), which all bubble to the window handler.
+export const HarnessTab = forwardRef<HarnessTabHandle, Properties>(function HarnessTab({ harness, client, taskPickerOpen }, ref) {
   const hostReference = useRef<HTMLDivElement>(null);
   const focusTerm = useXterm({
     ptyId: harness.ptyId,
     client,
     containerRef: hostReference,
-    keyFilter: harnessKeyFilter,
+    keyFilter: (e) => harnessKeyFilter(e, !!taskPickerOpen),
     onMount: (term) => { term.focus(); },
   });
 
