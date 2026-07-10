@@ -113,24 +113,6 @@
   --editor-selection: rgb(189 147 249 / 30%);
 }
 
-[data-theme="gruvbox-dark"] {
-  --bg: #282828;
-  --bg-soft: #3c3836;
-  --fg: #ebdbb2;
-  --muted: #a89984;
-  --faint: #7c6f64;
-  --border: #504945;
-  --accent: #83a598;
-  --running: #fabd2f;
-  --success: #b8bb26;
-  --error: #fb4934;
-  --search-hit-bg: #fabd2f;
-  --search-hit-fg: #282828;
-  --terminal-bg: #282828;
-  --editor-current-line: rgb(255 255 255 / 4%);
-  --editor-selection: rgb(131 165 152 / 30%);
-}
-
 /* Theme picker swatch: three chips (background, soft background, accent) resolved from the row's
    own `data-theme` wrapper, so palettes never leave this file. */
 .theme-swatch {

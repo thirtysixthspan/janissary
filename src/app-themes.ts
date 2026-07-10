@@ -9,7 +9,6 @@ export const APP_THEMES: string[] = [
   'solarized-light',
   'nord',
   'dracula',
-  'gruvbox-dark',
 ];
 
 export const DEFAULT_APP_THEME = 'dark';
