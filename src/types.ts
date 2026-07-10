@@ -440,6 +440,9 @@ export type Config = {
   // The active syntax-highlighting theme name for editor tabs (see `syntax-themes.ts`), applied
   // globally across every open editor tab.
   syntaxTheme: string;
+  // The active application color theme name (see `app-themes.ts`), applied to the whole window
+  // chrome. Independent of `syntaxTheme`.
+  theme: string;
 };
 
 // --- completion.ts --------------------------------------------------------

@@ -28,9 +28,9 @@ import { getRecentHistory } from './history';
 import { useCmdW } from './useCmdW';
 import { useTranscriptScroll } from './useTranscriptScroll';
 import { useQuitConfirm } from './QuitDialog/useQuitConfirm';
-import { useWindowKeys } from './useWindowKeys';
-import { useLiveRef } from './useLiveRef';
+import { useAppWindowKeys } from './useAppWindowKeys';
 import { useThemePicker } from './useThemePicker';
+import { useAppThemePicker } from './useAppThemePicker';
 import { useHistPicker } from './useHistPicker';
 import { useServerState } from './useServerState';
 import { applySyntaxTheme } from './editor/highlight/themes';
@@ -87,6 +87,9 @@ export function App() {
   const runCommand = useCallback((text: string) => client.send({ method: 'command', params: { text } }), [client]);
   const { themePickerOpen, themePickerIndex, setThemePickerIndex, setThemePickerOpen, openThemePicker, pickTheme } =
     useThemePicker(syntaxTheme, runCommand);
+  const {
+    theme, setTheme, appThemePickerOpen, appThemePickerIndex, setAppThemePickerIndex, setAppThemePickerOpen, openAppThemePicker, pickAppTheme,
+  } = useAppThemePicker(runCommand);
   const { pickerOpen, pickerIndex, setPickerIndex, setPickerOpen, openPicker, pick } = useHistPicker(recent, runCommand);
   const {
     navOpen, navQuery, navIndex, navTabs, setNavIndex, setNavQuery, setNavOpen, openTabNav, openTabNavWithQuery, selectNavTab,
@@ -99,14 +102,6 @@ export function App() {
     taskPickerOpen, taskPickerIndex, setTaskPickerIndex, setTaskPickerOpen, openTaskPicker, pickTask,
     visibleTasks, toggleTaskDir,
   } = useTaskPicker(tasks, recallReference, inputReference);
-
-  // Live snapshot read by the window key handler, so it never has to re-register.
-  const stateReference = useLiveRef({
-    pickerOpen, pickerIdx: pickerIndex, recent, route, routeIdx: routeIndex, canSearch, searchOpen: search.searchOpen,
-    themePickerOpen, themePickerIdx: themePickerIndex, navOpen, navQuery, navIdx: navIndex, navTabs,
-    queueOpen, queueIdx: queueIndex, queueItems: current?.commandQueue ?? [],
-    taskPickerOpen, taskPickerIdx: taskPickerIndex, visibleTasks,
-  });
 
   const { quitConfirmOpen, openQuitConfirm, confirmQuit, cancelQuit } = useQuitConfirm(runCommand, inputReference);
   const editorHandles = useRef<Map<string, EditorTabHandle>>(new Map());
@@ -127,7 +122,7 @@ export function App() {
   const chooseRoute = useCallback((index: number) => client.send({ method: 'chooseRoute', params: { index } }), [client]);
 
   useServerState(client, {
-    setTabs, setActiveTab, setRoute, setTabNameMaxLength, setGlobalHistory, setSyntaxTheme, setTasks, setRouteIndex,
+    setTabs, setActiveTab, setRoute, setTabNameMaxLength, setGlobalHistory, setSyntaxTheme, setTheme, setTasks, setRouteIndex,
     routeRef: routeReference,
   });
 
@@ -137,19 +132,21 @@ export function App() {
 
   useCmdW(closeTab, activeTabRef, quitConfirmOpenRef, pickerOpenRef, routeRef, activeViewRef);
 
-  const openSearch = () => search.open('');
-  const keyCallbacksRef = useLiveRef({
-    setRouteIndex, chooseRoute, runCommand, setPickerIndex, setPickerOpen, openPicker, openSearch,
-    setThemePickerIndex, setThemePickerOpen, pickTheme,
+  // Live snapshot + callbacks read by the window key handler, so it never has to re-register.
+  useAppWindowKeys(client, handleScrollKey, handleScrollKeyUp, {
+    pickerOpen, pickerIdx: pickerIndex, recent, route, routeIdx: routeIndex, canSearch, searchOpen: search.searchOpen,
+    themePickerOpen, themePickerIdx: themePickerIndex, appThemePickerOpen, appThemePickerIdx: appThemePickerIndex,
+    navOpen, navQuery, navIdx: navIndex, navTabs, queueOpen, queueIdx: queueIndex, queueItems: current?.commandQueue ?? [],
+    taskPickerOpen, taskPickerIdx: taskPickerIndex, visibleTasks,
+    setRouteIndex, chooseRoute, runCommand, setPickerIndex, setPickerOpen, openPicker, openSearch: () => search.open(''),
+    setThemePickerIndex, setThemePickerOpen, pickTheme, setAppThemePickerIndex, setAppThemePickerOpen, pickAppTheme,
     setNavIndex, setNavQuery, selectNavTab, setNavOpen, openTabNav,
     setQueueIndex, setQueueOpen, openQueue,
     setTaskPickerIndex, setTaskPickerOpen, openTaskPicker, pickTask, toggleTaskDir,
   });
 
-  useWindowKeys(client, stateReference, keyCallbacksRef, handleScrollKey, handleScrollKeyUp);
-
   const onCommandBarSubmit = useCommandBarSubmit({
-    canSearch, lines, search, openPicker, openThemePicker, openQueue, openTaskPicker, navOpen, setNavOpen,
+    canSearch, lines, search, openPicker, openThemePicker, openAppThemePicker, openQueue, openTaskPicker, navOpen, setNavOpen,
     openTabNavWithQuery, tabs, openQuitConfirm: guardedOpenQuitConfirm, guardRef, activeTab, runCommand,
   });
 
@@ -198,6 +195,7 @@ export function App() {
             <PickerOverlays
               route={route} routeIndex={routeIndex} onPickRoute={chooseRoute}
               syntaxTheme={syntaxTheme} themePickerOpen={themePickerOpen} themePickerIndex={themePickerIndex} onPickTheme={pickTheme}
+              theme={theme} appThemePickerOpen={appThemePickerOpen} appThemePickerIndex={appThemePickerIndex} onPickAppTheme={pickAppTheme}
               pickerOpen={pickerOpen} recent={recent} pickerIndex={pickerIndex} onPickHistory={pick}
               navOpen={navOpen} navQuery={navQuery} navIndex={navIndex} tabs={tabs} onPickTab={selectNavTab}
               queueOpen={queueOpen} queueItems={current.commandQueue} queueIndex={queueIndex} onSelectQueue={selectQueueIndex}
@@ -213,7 +211,7 @@ export function App() {
             onSubmit={onCommandBarSubmit}
             inputRef={inputReference}
             complete={(text, cursor) => client.request({ method: 'complete', params: { text, cursor } })}
-            pickerOpen={pickerOpen || route !== null || quitConfirmOpen || unsavedQuitOpen || themePickerOpen || navOpen || taskPickerOpen}
+            pickerOpen={pickerOpen || route !== null || quitConfirmOpen || unsavedQuitOpen || themePickerOpen || appThemePickerOpen || navOpen || taskPickerOpen}
             busy={current.busy}
             queueOpen={queueOpen}
             recallRef={recallReference}

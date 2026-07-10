@@ -17,7 +17,7 @@ function TestComponent({
 
 function makeTabs(overrides: Partial<TabView> = {}): TabView[] {
   return [
-    { label: 'tab1', number: 1, dotColor: '', group: 0, groupColor: '', busy: false, hasUnread: false, cwd: '', connections: [], schedule: [], bufferLines: [], ...overrides },
+    { label: 'tab1', number: 1, dotColor: '', group: 0, groupColor: '', busy: false, hasUnread: false, cwd: '', connections: [], schedule: [], bufferLines: [], cmdHistory: [], commandQueue: [], toolStepsExpanded: false, ...overrides },
   ];
 }
 
@@ -87,8 +87,8 @@ describe('useTabNav', () => {
     let hook: ReturnType<typeof useTabNav> | undefined;
     const client = { send: vi.fn() } as unknown as JanusClient;
     const tabs = [
-      { label: 'alpha', number: 1, dotColor: '', group: 0, groupColor: '', busy: false, hasUnread: false, cwd: '', connections: [], schedule: [], bufferLines: [] },
-      { label: 'beta', number: 2, dotColor: '', group: 0, groupColor: '', busy: false, hasUnread: false, cwd: '', connections: [], schedule: [], bufferLines: [] },
+      makeTabs({ label: 'alpha', number: 1 })[0],
+      makeTabs({ label: 'beta', number: 2 })[0],
     ];
     const { rerender } = render(React.createElement(TestComponent, { client, tabs, onHook: (h) => { hook = h; } }));
     expect(hook!.navTabs).toHaveLength(2);

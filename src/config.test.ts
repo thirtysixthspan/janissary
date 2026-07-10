@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { mkdtempSync } from 'node:fs';
 import { loadConfig, getConfig, updateConfig, DEFAULT_TRANSCRIPT_MAX_LINES, DEFAULT_TAB_NAME_MAX_LENGTH } from './config.js';
 import { DEFAULT_SYNTAX_THEME } from './syntax-themes.js';
+import { DEFAULT_APP_THEME } from './app-themes.js';
 
 describe('loadConfig', () => {
   let tmpDir: string;
@@ -22,6 +23,7 @@ describe('loadConfig', () => {
     expect(config.transcriptMaxLines).toBe(DEFAULT_TRANSCRIPT_MAX_LINES);
     expect(config.tabNameMaxLength).toBe(DEFAULT_TAB_NAME_MAX_LENGTH);
     expect(config.syntaxTheme).toBe(DEFAULT_SYNTAX_THEME);
+    expect(config.theme).toBe(DEFAULT_APP_THEME);
 
     const configPath = path.join(tmpDir, '.janissary', 'config.json');
     expect(existsSync(configPath)).toBe(true);
@@ -29,6 +31,7 @@ describe('loadConfig', () => {
     expect(parsed.transcriptMaxLines).toBe(DEFAULT_TRANSCRIPT_MAX_LINES);
     expect(parsed.tabNameMaxLength).toBe(DEFAULT_TAB_NAME_MAX_LENGTH);
     expect(parsed.syntaxTheme).toBe(DEFAULT_SYNTAX_THEME);
+    expect(parsed.theme).toBe(DEFAULT_APP_THEME);
   });
 
   it('reads a custom tabNameMaxLength from an existing config.json', () => {
@@ -116,6 +119,24 @@ describe('updateConfig', () => {
     updateConfig({ syntaxTheme: 'nord' });
     const reloaded = loadConfig(tmpDir);
     expect(reloaded.syntaxTheme).toBe('nord');
+  });
+
+  it('writes the app theme and updates the in-memory config', () => {
+    loadConfig(tmpDir);
+    const ok = updateConfig({ theme: 'dracula' });
+    expect(ok).toBe(true);
+    expect(getConfig().theme).toBe('dracula');
+
+    const configPath = path.join(tmpDir, '.janissary', 'config.json');
+    const parsed = JSON.parse(readFileSync(configPath, 'utf8'));
+    expect(parsed.theme).toBe('dracula');
+  });
+
+  it('the app theme survives a reload', () => {
+    loadConfig(tmpDir);
+    updateConfig({ theme: 'dracula' });
+    const reloaded = loadConfig(tmpDir);
+    expect(reloaded.theme).toBe('dracula');
   });
 
   it('preserves an unknown key planted in the JSON', () => {

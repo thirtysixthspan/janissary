@@ -2,11 +2,12 @@ import { useEffect } from 'react';
 import type { JanusClient } from './ws';
 import type { RouteChooserView } from '@shared/protocol';
 import { SYNTAX_THEMES } from '@shared/syntax-themes';
+import { APP_THEMES } from '@shared/app-themes';
 import { handleRouteChooserKey, handlePickerKey, handleTabNavKey, handleQueueKey } from './keyboard-handlers';
 import { dispatchTaskPickerKey, type VisibleTaskRow } from './task-picker-keys';
 import type { TabNavEntry } from './TabNavPicker';
 
-type StateSnapshot = {
+export type StateSnapshot = {
   pickerOpen: boolean;
   pickerIdx: number;
   recent: string[];
@@ -19,6 +20,8 @@ type StateSnapshot = {
   searchOpen: boolean;
   themePickerOpen: boolean;
   themePickerIdx: number;
+  appThemePickerOpen: boolean;
+  appThemePickerIdx: number;
   navOpen: boolean;
   navQuery: string;
   navIdx: number;
@@ -31,7 +34,7 @@ type StateSnapshot = {
   visibleTasks: VisibleTaskRow[];
 };
 
-type Callbacks = {
+export type Callbacks = {
   setRouteIndex: (setter: (prev: number) => number) => void;
   chooseRoute: (index: number) => void;
   runCommand: (text: string) => void;
@@ -42,6 +45,9 @@ type Callbacks = {
   setThemePickerIndex: (setter: (prev: number) => number) => void;
   setThemePickerOpen: (open: boolean) => void;
   pickTheme: (name: string) => void;
+  setAppThemePickerIndex: (setter: (prev: number) => number) => void;
+  setAppThemePickerOpen: (open: boolean) => void;
+  pickAppTheme: (name: string) => void;
   setNavIndex: (setter: (prev: number) => number) => void;
   setNavQuery: (query: string) => void;
   selectNavTab: (index: number) => void;
@@ -66,6 +72,10 @@ function dispatchModalKey(e: KeyboardEvent, snap: StateSnapshot, cb: Callbacks):
   }
   if (snap.themePickerOpen) {
     handlePickerKey(e, SYNTAX_THEMES, snap.themePickerIdx, cb.setThemePickerIndex, cb.pickTheme, cb.setThemePickerOpen);
+    return true;
+  }
+  if (snap.appThemePickerOpen) {
+    handlePickerKey(e, APP_THEMES, snap.appThemePickerIdx, cb.setAppThemePickerIndex, cb.pickAppTheme, cb.setAppThemePickerOpen);
     return true;
   }
   if (snap.navOpen) {

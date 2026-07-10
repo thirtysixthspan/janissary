@@ -11,6 +11,7 @@ type Setters = {
   setTabNameMaxLength: (length: number) => void;
   setGlobalHistory: (history: string[]) => void;
   setSyntaxTheme: (theme: string) => void;
+  setTheme: (theme: string) => void;
   setTasks: (tasks: TaskRow[]) => void;
   setRouteIndex: (index: number) => void;
   routeRef: React.RefObject<RouteChooserView | null>;
@@ -21,17 +22,18 @@ type Setters = {
 // that field has no other consumer in `App.tsx`.
 export function useServerState(client: JanusClient, setters: Setters): void {
   const {
-    setTabs, setActiveTab, setRoute, setTabNameMaxLength, setGlobalHistory, setSyntaxTheme, setTasks, setRouteIndex, routeRef,
+    setTabs, setActiveTab, setRoute, setTabNameMaxLength, setGlobalHistory, setSyntaxTheme, setTheme, setTasks, setRouteIndex, routeRef,
   } = setters;
   const [projectDir, setProjectDir] = useState('');
   useProjectTitle(projectDir);
-  useEffect(() => client.onState((nextTabs, active, nextRoute, nextTabNameMaxLength, nextGlobalHistory, nextSyntaxTheme, nextTasks, nextProjectDir) => {
+  useEffect(() => client.onState((nextTabs, active, nextRoute, nextTabNameMaxLength, nextGlobalHistory, nextSyntaxTheme, nextTheme, nextTasks, nextProjectDir) => {
     setTabs(nextTabs);
     setActiveTab(active);
     setRoute(nextRoute);
     setTabNameMaxLength(nextTabNameMaxLength);
     setGlobalHistory(nextGlobalHistory);
     setSyntaxTheme(nextSyntaxTheme);
+    setTheme(nextTheme);
     setTasks(nextTasks);
     setProjectDir(nextProjectDir);
     // Highlight the first option when a chooser newly opens (or its command changes).
@@ -39,6 +41,6 @@ export function useServerState(client: JanusClient, setters: Setters): void {
     routeRef.current = nextRoute;
     if (nextRoute && (!previous || previous.cmd !== nextRoute.cmd)) setRouteIndex(0);
   }), [
-    client, setTabs, setActiveTab, setRoute, setTabNameMaxLength, setGlobalHistory, setSyntaxTheme, setTasks, setRouteIndex, routeRef,
+    client, setTabs, setActiveTab, setRoute, setTabNameMaxLength, setGlobalHistory, setSyntaxTheme, setTheme, setTasks, setRouteIndex, routeRef,
   ]);
 }

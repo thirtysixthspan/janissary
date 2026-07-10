@@ -2,6 +2,7 @@ import { mkdirSync, writeFileSync, existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import type { Config } from './types.js';
 import { DEFAULT_SYNTAX_THEME } from './syntax-themes.js';
+import { DEFAULT_APP_THEME } from './app-themes.js';
 
 export const DEFAULT_TRANSCRIPT_MAX_LINES = 25_000;
 export const DEFAULT_TAB_NAME_MAX_LENGTH = 16;
@@ -11,6 +12,7 @@ const DEFAULT_CONFIG: Config = {
   tabNameMaxLength: DEFAULT_TAB_NAME_MAX_LENGTH,
   sandboxWorkspaces: true,
   syntaxTheme: DEFAULT_SYNTAX_THEME,
+  theme: DEFAULT_APP_THEME,
 };
 
 let config: Config = { ...DEFAULT_CONFIG };

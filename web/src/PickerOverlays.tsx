@@ -8,6 +8,8 @@ import { QueuePicker } from './QueuePicker';
 import { TaskPicker } from './TaskPicker';
 import type { VisibleTaskRow } from './task-picker-keys';
 import { SYNTAX_THEMES } from '@shared/syntax-themes';
+import { APP_THEMES } from '@shared/app-themes';
+import { AppThemePicker } from './AppThemePicker';
 
 // The mutually-exclusive stack of modal overlays that can float above the command bar: route
 // chooser takes priority, then the syntax-theme picker, then whichever of `hist`/`nav` is open.
@@ -20,6 +22,10 @@ type Properties = {
   themePickerOpen: boolean;
   themePickerIndex: number;
   onPickTheme: (name: string) => void;
+  theme: string;
+  appThemePickerOpen: boolean;
+  appThemePickerIndex: number;
+  onPickAppTheme: (name: string) => void;
   pickerOpen: boolean;
   recent: string[];
   pickerIndex: number;
@@ -42,6 +48,7 @@ type Properties = {
 
 export function PickerOverlays({
   route, routeIndex, onPickRoute, syntaxTheme, themePickerOpen, themePickerIndex, onPickTheme,
+  theme, appThemePickerOpen, appThemePickerIndex, onPickAppTheme,
   pickerOpen, recent, pickerIndex, onPickHistory, navOpen, navQuery, navIndex, tabs, onPickTab,
   queueOpen, queueItems, queueIndex, onSelectQueue,
   taskPickerOpen, taskRows, taskPickerIndex, onPickTask, onToggleTaskDir,
@@ -49,6 +56,9 @@ export function PickerOverlays({
   if (route) return <RouteChooser cmd={route.cmd} choices={route.choices} selected={routeIndex} onPick={onPickRoute} />;
   if (themePickerOpen) {
     return <ThemePicker themes={SYNTAX_THEMES} active={syntaxTheme} selected={themePickerIndex} onPick={onPickTheme} />;
+  }
+  if (appThemePickerOpen) {
+    return <AppThemePicker themes={APP_THEMES} active={theme} selected={appThemePickerIndex} onPick={onPickAppTheme} />;
   }
   if (navOpen) return <TabNavPicker tabs={tabs} query={navQuery} selected={navIndex} onPick={onPickTab} />;
   if (pickerOpen) return <HistoryPicker items={recent} selected={pickerIndex} onPick={onPickHistory} />;
