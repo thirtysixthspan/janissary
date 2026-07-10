@@ -128,6 +128,36 @@ prompt, only "a harness process is running here" from "no harness process is run
   process exiting on its own — quits the app (see `tabs.md`). There is no frozen "exited" state
   to inspect — the harness's own scrollback is gone once its tab closes.
 
+## Screen capture
+
+```
+harness capture <name>
+```
+
+Writes a point-in-time text capture of a harness tab's screen to a file and opens it in a normal
+editor tab. `<name>` targets an **existing harness tab by its label** (matched exactly and
+case-sensitively) — not a harness type — so `harness capture claude` captures the tab labeled
+`claude` rather than launching anything.
+
+- `harness capture` with no name — error: `Usage: harness capture <name>.`
+- No tab has the label — error: `No tab labeled "<name>".`
+- The tab exists but is not a harness tab — error: `"<name>" is not a harness tab.`
+- The tab is a harness tab with nothing captured yet (no output has settled, or it is an ssh
+  tab, which is never captured) — error: `No capture available for "<name>" yet.`
+
+Captures are taken automatically while a harness produces output: about one second after output
+resumes, the current screen contents (the visible rows only, at the terminal's real dimensions,
+with trailing blank rows dropped) are recorded in memory, replacing the previous capture. A
+harness that goes quiet is simply not re-captured — an idle, unchanged screen never produces new
+captures — so the latest capture reflects the screen as of roughly one second after its last
+burst of output.
+
+Running the command writes that latest capture to `.janissary/captures/<label>-<timestamp>.txt`
+in the project directory and opens it as a regular editor tab — each invocation writes a file and
+opens a new tab; the capture is a snapshot, not a live view. Capture files accumulate only within
+a run: the directory is cleared at the next normal launch (a `--relaunch` handoff preserves it,
+matching agent state).
+
 ## Placement and grouping
 
 A harness tab is created adjacent to the active tab's group (same group number and bar color), like

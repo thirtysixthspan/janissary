@@ -1,5 +1,7 @@
 import { makeHarnessTab, distinctColor, uniqueLabel } from './tab.js';
 import { parseHarnessCommand, HARNESS_COMMANDS, buildHarnessCommand } from './harness.js';
+import { HarnessScreenReader } from './harness-screen.js';
+import { writeCaptureFile } from './harness-capture-file.js';
 import type { HarnessView, ProfileHarnessEntry } from './types.js';
 import { messageBus } from './bus.js';
 import { sandboxNotice } from './sandbox.js';
@@ -10,14 +12,37 @@ import type { Managers } from './managers.js';
 // The controller owns the shared tab and PTY state; this module owns the harness-specific decisions
 // and wiring.
 export class HarnessManager {
-  constructor(private managers: Managers) {}
+  private screenReaders = new Map<string, HarnessScreenReader>();
+
+  constructor(private managers: Managers) {
+    messageBus.on('pty', 'exit', (event) => {
+      if (event.type !== 'exit') return;
+      this.screenReaders.get(event.id)?.dispose();
+      this.screenReaders.delete(event.id);
+    });
+  }
 
   // Handle a `harness <name> [as <label>] [-w] [--offline]` command. Returns an error message to
   // surface in the creator's transcript, or undefined once the harness tab has been opened.
   run(input: string): string | undefined {
     const parsed = parseHarnessCommand(input);
     if ('error' in parsed) return parsed.error;
+    if ('capture' in parsed) return this.capture(input, parsed.label);
     return this.open(parsed.name, parsed.workspace, parsed.offline, parsed.label);
+  }
+
+  // Handle `harness capture <name>`: write the target tab's latest in-memory screen capture to a
+  // file under .janissary/captures/ and open it in a normal editor tab. Returns an error message
+  // to surface in the invoking tab's transcript, or undefined on success.
+  capture(input: string, label: string): string | undefined {
+    const tab = this.managers.tab.tabs.find((t) => t.label === label);
+    if (!tab) return `No tab labeled "${label}".`;
+    if (!tab.harness) return `"${label}" is not a harness tab.`;
+    const latest = this.screenReaders.get(tab.harness.ptyId)?.latestCapture();
+    if (!latest) return `No capture available for "${label}" yet.`;
+    const file = writeCaptureFile(label, latest.capturedAt, latest.text);
+    this.managers.openFile.edit(input, file, this.managers.tab.cur().label);
+    return undefined;
   }
 
   // Open (and focus) a harness tab running `name`, labeled `label` if given (otherwise `name`).
@@ -69,6 +94,8 @@ export class HarnessManager {
     this.managers.tab.addBusy(label);
     this.managers.tab.activeTab = this.managers.tab.findIndex(tab.label);
     const id = this.managers.pty.spawn(label, program, buildHarnessCommand(name, model), cwd, workspaceDir, offline);
+    const dims = this.managers.pty.spawnDimensions();
+    this.screenReaders.set(id, new HarnessScreenReader(id, dims.cols, dims.rows));
     const liveTab = this.managers.tab.tabs.find((t) => t.label === label);
     if (liveTab?.harness) liveTab.harness.ptyId = id;
     const notice = workspaceDir ? sandboxNotice() : undefined;

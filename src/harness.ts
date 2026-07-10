@@ -8,18 +8,28 @@ export const HARNESS_COMMANDS: Record<string, string> = {
 
 export const HARNESS_NAMES = Object.keys(HARNESS_COMMANDS);
 
-export type HarnessParsed = { name: string; workspace: boolean; offline: boolean; label?: string } | { error: string };
+export type HarnessParsed =
+  | { name: string; workspace: boolean; offline: boolean; label?: string }
+  | { capture: true; label: string }
+  | { error: string };
 
 /**
  * Parse a `harness <name> [as <label>] [-w|--workspace] [--offline]` command, validating the
  * harness name against the known set. `as <label>` gives the new tab a custom label instead of
  * the harness name (still de-duplicated against existing tab labels). `--offline` adds a
  * network-deny rule to the tab's sandbox profile (only meaningful alongside `-w`/`--workspace`).
+ * `harness capture <name>` is the other form: `<name>` targets an existing harness tab by label
+ * (`capture` can never collide with a harness name — it is not a HARNESS_COMMANDS key).
  */
 export function parseHarnessCommand(input: string): HarnessParsed {
   const rest = input.replace(/^harness\b\s*/i, '').trim();
   if (!rest) return { error: `Usage: harness <${HARNESS_NAMES.join('|')}> [as <label>] [-w].` };
   const tokens = rest.split(/\s+/);
+  if (tokens[0].toLowerCase() === 'capture') {
+    const label = tokens[1];
+    if (!label) return { error: 'Usage: harness capture <name>.' };
+    return { capture: true, label };
+  }
   const name = tokens[0].toLowerCase();
   if (HARNESS_COMMANDS[name] === undefined) {
     return { error: `Unknown harness "${name}". Choose from: ${HARNESS_NAMES.join(', ')}.` };
