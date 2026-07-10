@@ -85,7 +85,7 @@ Hands the file to the operating system's default viewer, launched detached so it
 
 ### `open <file>.md` — markdown tab
 
-Opens the file in a **markdown tab**: a non-agent view tab that renders the file's text as formatted Markdown (headings, lists, tables, fenced code, blockquotes, links) on a white paper background with dark text, with no command bar. The new tab is created and focused like an agent tab (placed within the active tab's group, distinct dot color); it is a live, in-memory view and is not persisted or restored on `--relaunch`. The markdown tab — its layout, scrolling controls, the tab-strip name and close button, how it is closed, and how its text is served — is described in [[markdown-tab]].
+Opens the file in a **markdown tab**: a non-agent view tab that renders the file's text as formatted Markdown (headings, lists, tables, fenced code, blockquotes, links) colored by the active application theme, with no command bar. The new tab is created and focused like an agent tab (placed within the active tab's group, distinct dot color); it is a live, in-memory view and is not persisted or restored on `--relaunch`. The markdown tab — its layout, scrolling controls, the tab-strip name and close button, how it is closed, and how its text is served — is described in [[markdown-tab]].
 
 ---
 
