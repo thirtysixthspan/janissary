@@ -120,8 +120,9 @@ export function App() {
   const activeViewRef = useRef(current?.view); activeViewRef.current = current?.view;
 
   const closeTab = useCallback((index: number) => {
+    if (tabs.filter((t) => !t.dock).length === 1) { guardedOpenQuitConfirm(); return; }
     if (guardRef.current?.(index)) return; client.send({ method: 'closeTab', params: { index } });
-  }, [client]);
+  }, [client, tabs, guardedOpenQuitConfirm]);
 
   const chooseRoute = useCallback((index: number) => client.send({ method: 'chooseRoute', params: { index } }), [client]);
 
@@ -166,7 +167,7 @@ export function App() {
         onFocusCommandBar={() => inputReference.current?.focus()}
       />
 
-      <ViewTabBody tab={current} client={client} index={currentIndex} />
+      <ViewTabBody tab={current} client={client} index={currentIndex} closeTab={closeTab} />
 
       <ShellTabLayer tabs={tabs} activeLabel={current.label} client={client}
         onHandle={(id, h) => { if (h) shellHandles.current.set(id, h); else shellHandles.current.delete(id); }} />

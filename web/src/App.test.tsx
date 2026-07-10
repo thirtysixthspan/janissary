@@ -174,6 +174,40 @@ describe('App queue popup', () => {
   }, 15_000);
 });
 
+describe('App closing the last tab', () => {
+  beforeEach(() => {
+    sendMock.mockClear();
+    stateListener = null;
+  });
+
+  it('clicking the tab strip × on the only remaining tab opens the quit dialog instead of sending closeTab', async () => {
+    const { App } = await import('./App');
+    const { container } = render(<App />);
+    act(() => { stateListener!([makeTab()], 0, null, 16, [], 'github-dark', []); });
+    fireEvent.click(container.querySelector('.tab-close')!);
+    expect(screen.getByText('Are you sure you want to quit?')).toBeInTheDocument();
+    expect(sendMock).not.toHaveBeenCalledWith(expect.objectContaining({ method: 'closeTab' }));
+  }, 15_000);
+
+  it('Cmd+W on the only remaining tab opens the quit dialog instead of sending closeTab', async () => {
+    const { App } = await import('./App');
+    render(<App />);
+    act(() => { stateListener!([makeTab()], 0, null, 16, [], 'github-dark', []); });
+    fireEvent.keyDown(globalThis as unknown as Window, { key: 'w', metaKey: true });
+    expect(screen.getByText('Are you sure you want to quit?')).toBeInTheDocument();
+    expect(sendMock).not.toHaveBeenCalledWith(expect.objectContaining({ method: 'closeTab' }));
+  }, 15_000);
+
+  it('clicking the tab strip × still sends closeTab directly when another tab remains', async () => {
+    const { App } = await import('./App');
+    const { container } = render(<App />);
+    act(() => { stateListener!([makeTab({ label: 'one' }), makeTab({ label: 'two' })], 0, null, 16, [], 'github-dark', []); });
+    fireEvent.click(container.querySelector('.tab-close')!);
+    expect(sendMock).toHaveBeenCalledWith({ method: 'closeTab', params: { index: 0 } });
+    expect(screen.queryByText('Are you sure you want to quit?')).not.toBeInTheDocument();
+  }, 15_000);
+});
+
 describe('App agent tab body click focuses command input', () => {
   beforeEach(() => {
     sendMock.mockClear();

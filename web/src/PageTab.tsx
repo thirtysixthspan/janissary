@@ -1,8 +1,7 @@
 import React from 'react';
 import type { PageView } from '@shared/protocol';
-import type { JanusClient } from './ws';
 
-export function PageTab({ page, client, index }: { page: PageView; client: JanusClient; index: number }) {
+export function PageTab({ page, closeTab, index }: { page: PageView; closeTab: (index: number) => void; index: number }) {
   return (
     <div className="page-tab" data-doc-shot="page-view">
       <div className="page-header">
@@ -15,7 +14,7 @@ export function PageTab({ page, client, index }: { page: PageView; client: Janus
             className="page-close"
             title="Close"
             aria-label="Close tab"
-            onClick={() => client.send({ method: 'closeTab', params: { index } })}
+            onClick={() => closeTab(index)}
           >
             ×
           </button>
