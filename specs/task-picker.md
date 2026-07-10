@@ -25,6 +25,9 @@ equivalent. On an agent or transcript tab, or a harness tab, `Ctrl+A` opens the 
 tab `Ctrl+A` reaches the terminal itself (shell line-start, tmux prefix) instead, since shell tabs
 run interactive programs that depend on receiving that keystroke; no popup appears there.
 
+The picker always overlays whichever tab was focused when it opened, including a harness tab —
+never a different, unrelated tab.
+
 ### Picker behavior
 
 | Input | Effect |
