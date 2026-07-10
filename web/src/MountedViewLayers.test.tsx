@@ -157,4 +157,46 @@ describe('MountedViewLayers', () => {
     );
     expect(container.querySelector('.tab-body')).toBeNull();
   });
+
+  it('renders the task picker inside the current harness tab when taskPickerOpen is true', () => {
+    const tabs = [makeHarnessTab('htab', 'pty1')];
+    const harnessHandles = makeHarnessHandles();
+    const editorHandles = makeEditorHandles();
+    const { container } = render(
+      React.createElement(MountedViewLayers, {
+        tabs, current: tabs[0], client: { send: vi.fn() } as never,
+        harnessHandles, editorHandles,
+        taskPickerOpen: true, taskRows: [], taskPickerIndex: 0, onPickTask: vi.fn(), onToggleTaskDir: vi.fn(),
+      }),
+    );
+    expect(container.querySelector(':scope .tab-body .picker')).toBeTruthy();
+  });
+
+  it('does not render the task picker in a harness tab that is not current', () => {
+    const tabs = [makeHarnessTab('htab', 'pty1')];
+    const other = makeHarnessTab('other', 'pty2');
+    const harnessHandles = makeHarnessHandles();
+    const editorHandles = makeEditorHandles();
+    const { container } = render(
+      React.createElement(MountedViewLayers, {
+        tabs, current: other, client: { send: vi.fn() } as never,
+        harnessHandles, editorHandles,
+        taskPickerOpen: true, taskRows: [], taskPickerIndex: 0, onPickTask: vi.fn(), onToggleTaskDir: vi.fn(),
+      }),
+    );
+    expect(container.querySelector('.picker')).toBeNull();
+  });
+
+  it('does not render the task picker when taskPickerOpen is false', () => {
+    const tabs = [makeHarnessTab('htab', 'pty1')];
+    const harnessHandles = makeHarnessHandles();
+    const editorHandles = makeEditorHandles();
+    const { container } = render(
+      React.createElement(MountedViewLayers, {
+        tabs, current: tabs[0], client: { send: vi.fn() } as never,
+        harnessHandles, editorHandles,
+      }),
+    );
+    expect(container.querySelector('.picker')).toBeNull();
+  });
 });
