@@ -35,6 +35,12 @@ export function shouldNotify(
   }
 }
 
+// A zero-padded HH:MM:SS clock time, prefixed to every notification line.
+export function formatTimestamp(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+}
+
 // The transcript text for an event. `detail` carries the event-specific extra: the command for
 // `schedule-fire`, the sender label for `incoming-message`, and the user's message for `manual`.
 function notificationText(event: NotificationEventType, tabLabel: string, detail?: string): string {
@@ -56,7 +62,6 @@ export function notify(managers: Managers, event: NotificationEventType, tabLabe
   const activeLabel = managers.tab.cur().label;
   if (!shouldNotify(getConfig().notifications, event, tabLabel, activeLabel)) return;
   const fromColor = managers.tab.tabs.find((t) => t.label === tabLabel)?.dotColor;
-  appendNotification(managers, {
-    input: '', output: notificationText(event, tabLabel, message), from: tabLabel, fromColor,
-  });
+  const output = `${formatTimestamp(new Date())} ${notificationText(event, tabLabel, message)}`;
+  appendNotification(managers, { input: '', output, from: tabLabel, fromColor });
 }

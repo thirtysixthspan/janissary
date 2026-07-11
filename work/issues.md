@@ -18,6 +18,4 @@
 
 * notifications and file navigator tabs should be able to share a sidebar using a tabbed interface.
 
-* notifications should be shown with latest at the top, and a timestamp provided for each
-
 

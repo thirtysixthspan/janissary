@@ -35,7 +35,15 @@ export function NotificationsTab({ lines, client, index, dock }: Properties) {
           </div>
         </div>
       )}
-      <Transcript lines={lines} client={client} onToggleCollapse={noop} onPromptClick={noop} scrollRef={scrollRef} showEmptyHint={false} />
+      <Transcript
+        lines={lines.toReversed()}
+        client={client}
+        onToggleCollapse={noop}
+        onPromptClick={noop}
+        scrollRef={scrollRef}
+        showEmptyHint={false}
+        pinToBottom={false}
+      />
     </div>
   );
 }

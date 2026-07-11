@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { NotificationConfig } from './types.js';
-import { shouldNotify } from './notifications.js';
+import { shouldNotify, formatTimestamp } from './notifications.js';
 import { NOTIFICATIONS_LABEL } from './notifications-tab.js';
 
 const allOn: NotificationConfig = {
@@ -43,5 +43,15 @@ describe('shouldNotify — manual event', () => {
 
   it('still never targets the notifications tab itself', () => {
     expect(shouldNotify(allOff, 'manual', NOTIFICATIONS_LABEL, 'janus')).toBe(false);
+  });
+});
+
+describe('formatTimestamp', () => {
+  it('zero-pads hours, minutes, and seconds', () => {
+    expect(formatTimestamp(new Date(2026, 0, 1, 9, 5, 3))).toBe('09:05:03');
+  });
+
+  it('renders double-digit values without truncation', () => {
+    expect(formatTimestamp(new Date(2026, 0, 1, 23, 59, 59))).toBe('23:59:59');
   });
 });

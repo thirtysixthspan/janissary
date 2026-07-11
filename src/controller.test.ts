@@ -1481,6 +1481,20 @@ describe('Controller notifications feed', () => {
     }
   });
 
+  it('prefixes each recorded notification with a HH:MM:SS timestamp', () => {
+    withConfig({ incomingMessage: true, stateChange: false, scheduleFire: false, agentStart: false });
+    try {
+      const { c } = makeController();
+      c.dispatch('agent bob');
+      openNotificationsTab(c.managers);
+      c.setActiveTab(c.view().findIndex((t) => t.label === 'janus'));
+      c.dispatch('msg bob info hello there');
+      expect(feedText(c)).toMatch(/^\d{2}:\d{2}:\d{2} Message from janus in bob$/);
+    } finally {
+      reset();
+    }
+  });
+
   it('drops the event (recording nothing, creating no tab) when the notifications tab is closed', () => {
     withConfig({ incomingMessage: true, stateChange: false, scheduleFire: false, agentStart: false });
     try {

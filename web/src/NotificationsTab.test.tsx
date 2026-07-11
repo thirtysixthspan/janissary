@@ -29,6 +29,17 @@ describe('NotificationsTab', () => {
     expect(container.querySelector('textarea')).toBeNull();
   });
 
+  it('renders lines newest-first, reversing the input order', () => {
+    const client = { send: vi.fn() } as unknown as JanusClient;
+    const twoLines: BufferLine[] = [
+      { type: 'output', text: 'first event' },
+      { type: 'output', text: 'second event' },
+    ];
+    const { container } = render(<NotificationsTab lines={twoLines} client={client} index={0} />);
+    const rendered = [...container.querySelectorAll('.line')].map((el) => el.textContent);
+    expect(rendered).toEqual(['second event', 'first event']);
+  });
+
   it('shows no dock-cycle button when undocked', () => {
     const client = { send: vi.fn() } as unknown as JanusClient;
     render(<NotificationsTab lines={lines} client={client} index={0} />);
