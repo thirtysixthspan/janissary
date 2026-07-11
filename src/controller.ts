@@ -18,6 +18,7 @@ import { saveFile } from './editor-save.js';
 import { CaptureManager } from './capture-manager.js';
 import { AgentCommunicationManager } from './agent-communication-manager.js';
 import { messageBus } from './bus.js';
+import { notify } from './notifications.js';
 import { BrowserManager } from './browser-tab.js';
 import { CommandManager } from './command-manager.js';
 import { runSuggestion } from './monitor-window.js';
@@ -57,6 +58,9 @@ export class Controller {
     messageBus.on('transcript', 'entry:appended', (event) => {
       if (event.type !== 'entry:appended') return;
       this.managers.tab.persist(this.managers.tab.buildAgentState(event.tab, { schedule: this.managers.schedule.get(event.tab.label) }));
+      // A cross-agent `msg`/`broadcast` delivery sets `entry.from`; feed the notifications tab
+      // (focus suppression and the per-event toggle are enforced inside `notify`).
+      if (event.entry.from) notify(this.managers, 'incoming-message', event.tabLabel, event.entry.from);
     });
     messageBus.on('app', 'exit', () => this.sinks.exit?.());
     messageBus.on('pty', ['data', 'exit'], (event) => {
@@ -180,7 +184,9 @@ export class Controller {
     if (label) this.managers.fileTree.reroot(label, relPath);
   }
 
-  fileTreeSetDock(index: number, dock: 'left' | 'right' | null): void {
+  // Dock/undock any dockable tab (file tree or notifications). The mechanism is view-agnostic —
+  // `TabManager.setDock` operates on any tab index — so both kinds share this one handler.
+  setDock(index: number, dock: 'left' | 'right' | null): void {
     this.managers.tab.setDock(index, dock);
   }
 

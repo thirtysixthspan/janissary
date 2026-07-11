@@ -20,6 +20,8 @@ export const availableCommands = [
   'ssh',
   'search',
   'files',
+  'notifications',
+  'notify',
   'syntax',
 ];
 

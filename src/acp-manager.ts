@@ -3,6 +3,7 @@ import { connectAcp } from './acp.js';
 import { runAcpToolLoop } from './acp-loop.js';
 import { extractBrowserCommand, BROWSER_PRIMER } from './browser-command.js';
 import { messageBus } from './bus.js';
+import { notify } from './notifications.js';
 import { makeUpdateRunning } from './acp-runner.js';
 import type { Managers } from './managers.js';
 
@@ -106,17 +107,18 @@ export class AcpManager {
       runCommand: (c) => (/^browser\b/i.test(c) ? this.managers.browser.run(label, c) : this.managers.database.runInTab(label, c)),
       extractCommand: (t) => extractBrowserCommand(t) ?? this.managers.database.extract(t) ?? null,
     }, {
-      startTurn: (isFirst) => { this.managers.tab.addBusy(label); this.managers.tab.append(label, { input: isFirst ? prompt : '', output: '', running: true, markdown: true }); },
+      startTurn: (isFirst) => { this.managers.tab.addBusy(label); if (isFirst) notify(this.managers, 'agent-start', label); this.managers.tab.append(label, { input: isFirst ? prompt : '', output: '', running: true, markdown: true }); },
       chunk: (buffer) => updateRunning(buffer, true),
       endTurn: (final) => { updateRunning(final, false); lastAnswer = final; },
       ranCommand: (c, result) => this.managers.tab.append(label, { input: c, output: result, acp: true }),
       finished: (reason, maxSteps) => {
         this.managers.tab.deleteBusy(label);
+        notify(this.managers, 'state-change', label);
         if (reason === 'capped') this.managers.tab.append(label, { input: '', output: `(stopped after ${maxSteps} tool steps)` });
         messageBus.emit('state', { type: 'dirty' });
         onDone?.(lastAnswer);
       },
-      error: (m) => { updateRunning(`ACP error: ${m}`, false); this.managers.tab.deleteBusy(label); onDone?.(`ACP error: ${m}`); },
+      error: (m) => { updateRunning(`ACP error: ${m}`, false); this.managers.tab.deleteBusy(label); notify(this.managers, 'state-change', label); onDone?.(`ACP error: ${m}`); },
     });
   }
 }

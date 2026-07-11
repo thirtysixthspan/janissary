@@ -4,6 +4,13 @@ import React from 'react';
 import { ViewTabBody } from './ViewTabBody';
 import type { TabView } from '@shared/protocol';
 
+// jsdom doesn't include ResizeObserver — the notifications view's Transcript observes its content.
+vi.stubGlobal('ResizeObserver', class {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+});
+
 function baseTab(overrides: Partial<TabView> = {}): TabView {
   return {
     label: 'test', number: 1, dotColor: '#fff', group: 1, groupColor: '#fff',
@@ -74,5 +81,14 @@ describe('ViewTabBody', () => {
     const tab = baseTab({ view: 'files', files: { root: '/', rows: [] } });
     const { container } = render(React.createElement(ViewTabBody, { tab, client: {} as never, index: 0, closeTab: vi.fn() }));
     expect(container.querySelector('.tab-body')).toBeTruthy();
+  });
+
+  it('renders a notifications tab as a transcript with no command bar', () => {
+    const tab = baseTab({ view: 'notifications', bufferLines: [{ type: 'output', text: 'a notification' }] });
+    const { container, getByText } = render(React.createElement(ViewTabBody, { tab, client: {} as never, index: 0, closeTab: vi.fn() }));
+    expect(container.querySelector('.tab-body')).toBeTruthy();
+    expect(container.querySelector('.transcript')).toBeTruthy();
+    expect(getByText('a notification')).toBeTruthy();
+    expect(container.querySelector('textarea')).toBeNull();
   });
 });

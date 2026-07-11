@@ -12,7 +12,7 @@ import { messageBus } from './bus.js';
 import { closeTabResources } from './tab-cleanup.js';
 import type { Managers } from './managers.js';
 import {
-  addImageTab, addMarkdownTab, addEditorTab, addPageTab, addFilesTab,
+  addImageTab, addMarkdownTab, addEditorTab, addPageTab, addFilesTab, addNotificationsTab,
 } from './tab-creators.js';
 
 export class TabManager {
@@ -415,6 +415,13 @@ export class TabManager {
 
   openFilesTab(view: FileTreeView): void {
     const { tabs, activeTab } = addFilesTab(this.tabs, this.activeTab, view);
+    this.tabs = tabs;
+    this.activeTab = activeTab;
+    messageBus.emit('state', { type: 'dirty' });
+  }
+
+  openNotificationsTab(): void {
+    const { tabs, activeTab } = addNotificationsTab(this.tabs, this.activeTab);
     this.tabs = tabs;
     this.activeTab = activeTab;
     messageBus.emit('state', { type: 'dirty' });

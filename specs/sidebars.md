@@ -7,8 +7,11 @@ default and appear only once something is docked into them.
 
 A tab can be **docked** into a sidebar instead of living in the central tab strip. Docking is a
 placement, not a separate kind of tab — a docked tab keeps everything else about it (its group,
-its transcript or view, its RPC identity) exactly as it was. Today only the file navigator (see
-`file-tree-tab.md`) can dock; other tab kinds may gain the ability later.
+its transcript or view, its RPC identity) exactly as it was. Two tab kinds can dock: the file
+navigator (see `file-tree-tab.md`) and the notifications tab (see `notifications.md`). They share
+one docking mechanism, so each can occupy a different sidebar at the same time, and docking one
+into a side already holding the other displaces that other back to center — the same
+one-tab-per-sidebar rule applies across both kinds.
 
 Each sidebar holds **at most one docked tab at a time**. Docking a tab into an already-occupied
 sidebar **displaces** the previous occupant, which returns to the center tab strip — nothing is

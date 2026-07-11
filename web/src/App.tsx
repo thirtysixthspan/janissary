@@ -77,7 +77,7 @@ export function App() {
   // The picker lists the tab's recent history, most recent at the bottom (suppressed when empty).
   const recent = useMemo(() => getRecentHistory(current?.cmdHistory ?? [], 10), [current]);
 
-  const isViewTab = (['image', 'page', 'harness', 'markdown', 'editor', 'files'] as const).includes(current?.view as 'image' | 'page' | 'harness' | 'markdown' | 'editor' | 'files');
+  const isViewTab = (['image', 'page', 'harness', 'markdown', 'editor', 'files', 'notifications'] as const).includes(current?.view as 'image' | 'page' | 'harness' | 'markdown' | 'editor' | 'files' | 'notifications');
   const canSearch = !isViewTab && !current?.activePty;
   const search = useTranscriptSearch(lines, current?.label ?? '');
   const highlight = search.searchOpen && search.currentLineIndex !== null

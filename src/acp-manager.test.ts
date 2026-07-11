@@ -6,8 +6,12 @@ const mocks = vi.hoisted(() => ({
   runAcpToolLoop: vi.fn(),
   makeUpdateRunning: vi.fn(),
   messageBusEmit: vi.fn(),
+  notify: vi.fn(),
 }));
 
+vi.mock('./notifications.js', () => ({
+  notify: mocks.notify,
+}));
 vi.mock('./acp.js', () => ({
   connectAcp: mocks.connectAcp,
 }));
@@ -124,6 +128,33 @@ describe('AcpManager.run', () => {
     handlers.startTurn(true);
     expect(addBusy).toHaveBeenCalledOnce();
     expect(append).toHaveBeenCalledWith('tab1', { input: 'hello', output: '', running: true, markdown: true });
+  });
+
+  it('startTurn fires an agent-start notification on the first turn only', () => {
+    const { acp, managers } = setup();
+    acp.run('tab1', 'acp hello');
+    const handlers = mocks.runAcpToolLoop.mock.calls[0][3] as AcpLoopHandlers;
+    handlers.startTurn(true);
+    expect(mocks.notify).toHaveBeenCalledWith(managers, 'agent-start', 'tab1');
+    mocks.notify.mockClear();
+    handlers.startTurn(false);
+    expect(mocks.notify).not.toHaveBeenCalledWith(managers, 'agent-start', 'tab1');
+  });
+
+  it('finished fires a state-change notification', () => {
+    const { acp, managers } = setup();
+    acp.run('tab1', 'acp hello');
+    const handlers = mocks.runAcpToolLoop.mock.calls[0][3] as AcpLoopHandlers;
+    handlers.finished('answered', 8);
+    expect(mocks.notify).toHaveBeenCalledWith(managers, 'state-change', 'tab1');
+  });
+
+  it('error fires a state-change notification', () => {
+    const { acp, managers } = setup();
+    acp.run('tab1', 'acp hello');
+    const handlers = mocks.runAcpToolLoop.mock.calls[0][3] as AcpLoopHandlers;
+    handlers.error('boom');
+    expect(mocks.notify).toHaveBeenCalledWith(managers, 'state-change', 'tab1');
   });
 
   it('chunk handler calls updateRunning with the buffer', () => {

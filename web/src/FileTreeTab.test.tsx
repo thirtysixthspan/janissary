@@ -160,20 +160,20 @@ describe('FileTreeTab', () => {
     expect(screen.queryByTitle('Move to right sidebar')).toBeNull();
   });
 
-  it('dock-cycle button from left sends fileTreeSetDock to right', () => {
+  it('dock-cycle button from left sends setDock to right', () => {
     const send = vi.fn();
     const client = { send } as unknown as JanusClient;
     render(<FileTreeTab files={makeFiles()} client={client} index={0} dock="left" />);
     fireEvent.click(screen.getByTitle('Move to right sidebar'));
-    expect(send).toHaveBeenCalledWith({ method: 'fileTreeSetDock', params: { index: 0, dock: 'right' } });
+    expect(send).toHaveBeenCalledWith({ method: 'setDock', params: { index: 0, dock: 'right' } });
   });
 
-  it('dock-cycle button from right sends fileTreeSetDock to left', () => {
+  it('dock-cycle button from right sends setDock to left', () => {
     const send = vi.fn();
     const client = { send } as unknown as JanusClient;
     render(<FileTreeTab files={makeFiles()} client={client} index={0} dock="right" />);
     fireEvent.click(screen.getByTitle('Move to left sidebar'));
-    expect(send).toHaveBeenCalledWith({ method: 'fileTreeSetDock', params: { index: 0, dock: 'left' } });
+    expect(send).toHaveBeenCalledWith({ method: 'setDock', params: { index: 0, dock: 'left' } });
   });
 
   it('header close button is shown only while docked, and sends closeTab', () => {

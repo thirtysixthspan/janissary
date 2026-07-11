@@ -135,6 +135,10 @@ docked tree has no strip × of its own and, being never the active tab, cannot b
 `close` either, so this is its only direct close affordance (`close files` by label still works
 as a fallback).
 
+This same dock/location-cycle mechanism is shared with the notifications tab (see
+`notifications.md`), which is the other dockable tab kind; both obey the one-tab-per-sidebar rule
+described in `sidebars.md`.
+
 ### Closing
 
 Closing a file tree tab (via its close button, the `close` command, or app shutdown) stops every

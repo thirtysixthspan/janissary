@@ -11,6 +11,7 @@ import { TranscriptLogger } from './transcript/logger.js';
 import { abbreviatePath } from './paths.js';
 import { initDbDir, isConnectionOpen, closeAllConnections } from './connections.js';
 import { loadConfig } from './config.js';
+import { openNotificationsTab } from './notifications-tab.js';
 import { agentNames } from './commands.js';
 import { spawnPty } from './pty.js';
 import type { PtyHandlers } from './pty.js';
@@ -1382,11 +1383,11 @@ describe('Controller sidebar docking', () => {
     expect(c.managers.tab.activeTab).not.toBe(index);
   });
 
-  it('fileTreeSetDock RPC docks an existing files tab into the right sidebar', () => {
+  it('setDock RPC docks an existing files tab into the right sidebar', () => {
     const { c } = makeController();
     c.dispatch(`files ${root}`);
     const index = c.view().findIndex((t) => t.view === 'files');
-    c.fileTreeSetDock(index, 'right');
+    c.setDock(index, 'right');
     expect(c.view()[index].dock).toBe('right');
   });
 
@@ -1434,6 +1435,79 @@ describe('Controller sidebar docking', () => {
     const index = c.view().findIndex((t) => t.view === 'files');
     expect(() => c.closeTab(index)).not.toThrow();
     expect(c.view().some((t) => t.view === 'files')).toBe(false);
+  });
+});
+
+describe('Controller notifications feed', () => {
+  const withConfig = (events: Record<string, boolean>) => {
+    const root = mkdtempSync(path.join(tmpdir(), 'janus-notif-'));
+    mkdirSync(path.join(root, '.janissary'), { recursive: true });
+    writeFileSync(path.join(root, '.janissary', 'config.json'), JSON.stringify({ notifications: { events } }));
+    loadConfig(root);
+  };
+  const reset = () => loadConfig(mkdtempSync(path.join(tmpdir(), 'janus-notif-reset-')));
+
+  const feedText = (c: Controller) =>
+    c.view().find((t) => t.view === 'notifications')!.bufferLines.map((l) => l.text).join('\n');
+
+  it('records an incoming message to a background tab when the notifications tab is open', () => {
+    withConfig({ incomingMessage: true, stateChange: false, scheduleFire: false, agentStart: false });
+    try {
+      const { c } = makeController();
+      c.dispatch('agent bob');
+      openNotificationsTab(c.managers);
+      c.setActiveTab(c.view().findIndex((t) => t.label === 'janus')); // janus active; bob is a background tab
+      c.dispatch('msg bob info hello there');
+      expect(feedText(c)).toContain('Message from janus in bob');
+    } finally {
+      reset();
+    }
+  });
+
+  it('drops the event (recording nothing, creating no tab) when the notifications tab is closed', () => {
+    withConfig({ incomingMessage: true, stateChange: false, scheduleFire: false, agentStart: false });
+    try {
+      const { c } = makeController();
+      c.dispatch('agent bob');
+      c.setActiveTab(0);
+      c.dispatch('msg bob info hello there');
+      expect(c.view().some((t) => t.view === 'notifications')).toBe(false);
+    } finally {
+      reset();
+    }
+  });
+});
+
+describe('Controller notifications command', () => {
+  it('opens a singleton notifications tab and reuses it on a second invocation', () => {
+    const { c } = makeController();
+    c.dispatch('notifications');
+    c.dispatch('notifications');
+    expect(c.view().filter((t) => t.view === 'notifications')).toHaveLength(1);
+  });
+
+  it('notifications right docks the tab into the right sidebar', () => {
+    const { c } = makeController();
+    c.dispatch('notifications right');
+    expect(c.view().find((t) => t.view === 'notifications')!.dock).toBe('right');
+  });
+
+  it('docking the notifications tab displaces a file navigator already in that sidebar', () => {
+    const root = mkdtempSync(path.join(tmpdir(), 'janus-notif-dock-'));
+    const { c } = makeController();
+    c.dispatch(`files right ${root}`);
+    c.dispatch('notifications right');
+    expect(c.view().find((t) => t.view === 'files')!.dock).toBeUndefined();
+    expect(c.view().find((t) => t.view === 'notifications')!.dock).toBe('right');
+  });
+
+  it('bare notifications on a docked tab undocks it to center and makes it active', () => {
+    const { c } = makeController();
+    c.dispatch('notifications left');
+    c.dispatch('notifications');
+    const index = c.view().findIndex((t) => t.view === 'notifications');
+    expect(c.view()[index].dock).toBeUndefined();
+    expect(c.managers.tab.activeTab).toBe(index);
   });
 });
 

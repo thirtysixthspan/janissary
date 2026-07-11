@@ -1,4 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
+const mocks = vi.hoisted(() => ({ notify: vi.fn() }));
+vi.mock('./notifications.js', () => ({ notify: mocks.notify }));
+
 import { ScheduleManager } from './schedule-manager.js';
 import type { Managers } from './managers.js';
 import type { Tab, ScheduleEntry } from './types.js';
@@ -90,6 +94,24 @@ describe('ScheduleManager tick', () => {
     expect(emitSpy).not.toHaveBeenCalledWith('state', { type: 'dirty' });
 
     emitSpy.mockRestore();
+    mgr.stop();
+  });
+
+  it('fires a schedule-fire notification when a due command is dispatched', () => {
+    const { managers } = makeManagers();
+    const mgr = new ScheduleManager(managers);
+    mocks.notify.mockClear();
+
+    const due: ScheduleEntry = {
+      id: 'test', command: 'clear', spec: 'every 1m',
+      nextRun: Date.now() - 1000, recurring: true, intervalMs: 60_000,
+    };
+    mgr.set('janus', [due]);
+    mgr.start();
+
+    vi.advanceTimersByTime(1000);
+
+    expect(mocks.notify).toHaveBeenCalledWith(managers, 'schedule-fire', 'janus', 'clear');
     mgr.stop();
   });
 
