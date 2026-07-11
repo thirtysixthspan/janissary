@@ -1464,6 +1464,23 @@ describe('Controller notifications feed', () => {
     }
   });
 
+  it('colors the notification dot with the sending tab\'s own dotColor', () => {
+    withConfig({ incomingMessage: true, stateChange: false, scheduleFire: false, agentStart: false });
+    try {
+      const { c } = makeController();
+      c.dispatch('agent bob');
+      const bobColor = c.view().find((t) => t.label === 'bob')!.dotColor;
+      openNotificationsTab(c.managers);
+      c.setActiveTab(c.view().findIndex((t) => t.label === 'janus')); // janus active; bob is a background tab
+      c.dispatch('msg bob info hello there');
+      const line = c.view().find((t) => t.view === 'notifications')!.bufferLines.find((l) => l.type === 'message');
+      expect(line?.from).toBe('bob');
+      expect(line?.fromColor).toBe(bobColor);
+    } finally {
+      reset();
+    }
+  });
+
   it('drops the event (recording nothing, creating no tab) when the notifications tab is closed', () => {
     withConfig({ incomingMessage: true, stateChange: false, scheduleFire: false, agentStart: false });
     try {

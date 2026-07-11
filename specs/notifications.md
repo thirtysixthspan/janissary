@@ -86,3 +86,8 @@ Notifications are ordinary transcript entries appended to the notifications tab 
 `append` path every tab write uses, and reach the client on the existing per-tab transcript
 broadcast (`bufferLines`). There is no toast banner, no sound, and no dedicated server→client push
 channel — a docked notifications tab renders its feed even though it is never the active tab.
+
+Every notification line carries a colored dot, matching the sending tab's own tab-strip dot
+color — the same colored-dot treatment already used for cross-agent `msg`/`broadcast` deliveries.
+The sending tab is the background tab whose activity produced the event (or, for `notify`, the
+issuing tab).

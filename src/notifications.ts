@@ -55,5 +55,8 @@ export function notify(managers: Managers, event: NotificationEventType, tabLabe
   if (!notificationsTab(managers)) return;
   const activeLabel = managers.tab.cur().label;
   if (!shouldNotify(getConfig().notifications, event, tabLabel, activeLabel)) return;
-  appendNotification(managers, { input: '', output: notificationText(event, tabLabel, message) });
+  const fromColor = managers.tab.tabs.find((t) => t.label === tabLabel)?.dotColor;
+  appendNotification(managers, {
+    input: '', output: notificationText(event, tabLabel, message), from: tabLabel, fromColor,
+  });
 }
