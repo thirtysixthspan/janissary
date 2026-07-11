@@ -4,7 +4,9 @@ The **notifications tab** is a singleton, view-only feed that collects notificat
 background events as lines in its own scrollable transcript. It is a non-agent **view tab**
 (`view: 'notifications'`): it renders the standard transcript body fed by its own log, but has no
 command bar and takes no typed input. Like the file tree tab (see `file-tree-tab.md`) it is a
-**live, in-memory view** — never persisted, never restored on `--relaunch`.
+**live, in-memory view** — never persisted, never restored on `--relaunch`. When the feed is empty
+it shows no content at all — unlike an agent tab's empty transcript, it does not show the "Type
+`help` for available commands" hint, since there is no command bar to type into.
 
 There is only ever **one** notifications tab, and it is **never created automatically**. It
 appears only when the user runs the `notifications` command; opening it again reuses the existing

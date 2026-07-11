@@ -12,9 +12,12 @@ type Properties = {
   // The current search match, if any — disables stick-to-bottom pinning and scrolls the
   // matched line into view instead (see the effect below).
   highlight?: LineHighlight;
+  // Whether to show the "Type help..." hint when there are no lines yet. Defaults to true
+  // for interactive agent tabs; read-only feeds (e.g. notifications) pass false.
+  showEmptyHint?: boolean;
 };
 
-export function Transcript({ lines, client, onToggleCollapse, onPromptClick, scrollRef, highlight }: Properties) {
+export function Transcript({ lines, client, onToggleCollapse, onPromptClick, scrollRef, highlight, showEmptyHint = true }: Properties) {
   const stick = useRef(true);
   const contentReference = useRef<HTMLDivElement>(null);
 
@@ -52,7 +55,7 @@ export function Transcript({ lines, client, onToggleCollapse, onPromptClick, scr
   return (
     <div className="transcript" data-doc-shot="transcript" ref={scrollRef} onScroll={onScroll}>
       <div ref={contentReference}>
-      {lines.length === 0 && (
+      {showEmptyHint && lines.length === 0 && (
         <div className="line empty-state">Type "help" for available commands.</div>
       )}
       {lines.map((line, index) => renderLine(line, index, client, onToggleCollapse, onPromptClick, highlight))}
