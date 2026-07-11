@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import type { TaskRow } from '@shared/protocol';
 import type { JanusClient } from './ws';
 import { flattenVisibleTaskRows } from './task-picker-keys';
+import { populateCommandLine } from './populate-command-line';
 
 // State and handlers for the Ctrl+A / `tasks` picker. Mirrors the queue picker's
 // populate-not-submit shape (not `hist`'s run-immediately shape): selecting a task writes
@@ -26,13 +27,7 @@ export function useTaskPicker(
   }, []);
 
   const pickTask = useCallback((path: string) => {
-    const text = `execute ./ai/tasks/${path}`;
-    if (harnessPtyId) {
-      client.send({ method: 'ptyInput', params: { id: harnessPtyId, data: text } });
-    } else {
-      recallRef.current?.(text);
-      inputRef.current?.focus();
-    }
+    populateCommandLine(`execute ./ai/tasks/${path}`, client, harnessPtyId, recallRef, inputRef);
     setTaskPickerOpen(false);
   }, [recallRef, inputRef, client, harnessPtyId]);
 
