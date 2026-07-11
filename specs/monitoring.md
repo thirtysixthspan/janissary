@@ -45,4 +45,4 @@ Thumbs-up or thumbs-down on a reporting-tab suggestion feeds back to the monitor
 
 ### Lifecycle
 
-A monitor's session is killed when its `monitor stop` command runs, when its owner tab closes, or when all of its targets have been removed. A reporting tab stays open as long as at least one monitor feeds it (potentially from a different owner tab).
+A monitor's session is killed when its `monitor stop` command runs, when its owner tab closes, when all of its tab targets have been removed, or when its own reporting tab is closed directly. A reporting tab stays open as long as at least one monitor feeds it (potentially from a different owner tab); once the last one stops, the reporting tab closes too, and the same owner/persona combination can be started again.
