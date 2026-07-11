@@ -23,23 +23,25 @@ export function NotificationsTab({ lines, client, index, dock }: Properties) {
     <div className="notifications-tab">
       {dock && (
         <div className="notifications-header">
-          <button
-            type="button"
-            className="notifications-dock-cycle"
-            title={dockTooltip(nextDock(dock))}
-            onClick={() => client.send({ method: 'setDock', params: { index, dock: nextDock(dock) } })}
-          >
-            ⇄
-          </button>
-          <button
-            type="button"
-            className="notifications-close"
-            title="Close"
-            aria-label="Close tab"
-            onClick={() => client.send({ method: 'closeTab', params: { index } })}
-          >
-            ×
-          </button>
+          <div className="notifications-actions">
+            <button
+              type="button"
+              className="notifications-dock-cycle"
+              title={dockTooltip(nextDock(dock))}
+              onClick={() => client.send({ method: 'setDock', params: { index, dock: nextDock(dock) } })}
+            >
+              ⇄
+            </button>
+            <button
+              type="button"
+              className="notifications-close"
+              title="Close"
+              aria-label="Close tab"
+              onClick={() => client.send({ method: 'closeTab', params: { index } })}
+            >
+              ×
+            </button>
+          </div>
         </div>
       )}
       <Transcript lines={lines} client={client} onToggleCollapse={noop} onPromptClick={noop} scrollRef={scrollRef} showEmptyHint={false} />

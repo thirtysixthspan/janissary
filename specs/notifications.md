@@ -35,7 +35,8 @@ navigator can each occupy a different sidebar at the same time, and docking one 
 holding the other displaces that other back to center.
 
 The tab's own header carries a dock-cycle button (toggling left↔right) and a close button (×) —
-both shown **only while docked**, matching the file tree tab. Center placement is reached via the
+both shown **only while docked**, matching the file tree tab, and styled the same way as the file
+tree tab's metadata header. Center placement is reached via the
 bare `notifications` command, not the dock-cycle button.
 
 ### Events that notify
