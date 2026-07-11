@@ -90,6 +90,29 @@ describe('loadConfig', () => {
     loadConfig(tmpDir);
     expect(getConfig().transcriptMaxLines).toBe(DEFAULT_TRANSCRIPT_MAX_LINES);
   });
+
+  it('writes a default notifications block with every event off', () => {
+    const config = loadConfig(tmpDir);
+    expect(config.notifications).toEqual({
+      events: { stateChange: false, incomingMessage: false, scheduleFire: false, agentStart: false },
+    });
+
+    const configPath = path.join(tmpDir, '.janissary', 'config.json');
+    const parsed = JSON.parse(readFileSync(configPath, 'utf8'));
+    expect(parsed.notifications.events.incomingMessage).toBe(false);
+  });
+
+  it('reads custom notification event toggles from an existing config.json', () => {
+    const configDir = path.join(tmpDir, '.janissary');
+    mkdirSync(configDir, { recursive: true });
+    writeFileSync(
+      path.join(configDir, 'config.json'),
+      JSON.stringify({ notifications: { events: { incomingMessage: true, stateChange: false, scheduleFire: false, agentStart: false } } }) + '\n',
+    );
+
+    const config = loadConfig(tmpDir);
+    expect(config.notifications?.events.incomingMessage).toBe(true);
+  });
 });
 
 describe('updateConfig', () => {

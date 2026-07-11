@@ -82,6 +82,7 @@ export default defineConfig({
           { text: "Embedded web pages", link: "/tab-types/web-pages" },
           { text: "Editor", link: "/tab-types/editor" },
           { text: "File navigator", link: "/tab-types/file-navigator" },
+          { text: "Notifications", link: "/tab-types/notifications" },
         ],
       },
       {

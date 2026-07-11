@@ -2,13 +2,14 @@ import React, { useCallback, useState } from 'react';
 import type { TabView } from '@shared/protocol';
 import type { JanusClient } from './ws';
 import { FileTreeTab } from './FileTreeTab';
+import { NotificationsTab } from './NotificationsTab';
 
 const MIN_WIDTH_PX = 180;
 const MAX_WIDTH_PCT = 50;
 const DEFAULT_WIDTH_PX = 280;
 
-// A sidebar (left or right) docks at most one tab at a time — today only the file navigator can
-// dock. Visibility is derived: the sidebar renders exactly when some tab is docked to its side.
+// A sidebar (left or right) docks at most one tab at a time — either the file navigator or the
+// notifications tab. Visibility is derived: the sidebar renders exactly when some tab is docked to its side.
 // Width is pure client-side view chrome (local `useState`, unpersisted), resized by dragging the
 // divider on the sidebar's inner edge, mirroring ReportingSection's height-drag precedent.
 export function Sidebar({ side, tabs, client }: { side: 'left' | 'right'; tabs: TabView[]; client: JanusClient }) {
@@ -54,6 +55,9 @@ export function Sidebar({ side, tabs, client }: { side: 'left' | 'right'; tabs: 
         </div>
         {entry.tab.view === 'files' && entry.tab.files && (
           <FileTreeTab files={entry.tab.files} client={client} index={entry.index} dock={entry.tab.dock} autoFocus={false} />
+        )}
+        {entry.tab.view === 'notifications' && (
+          <NotificationsTab lines={entry.tab.bufferLines} client={client} index={entry.index} dock={entry.tab.dock} />
         )}
       </div>
       {side === 'left' && divider}

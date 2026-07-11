@@ -1,0 +1,84 @@
+# Notifications
+
+The **notifications tab** is a singleton, view-only feed that collects notification-worthy
+background events as lines in its own scrollable transcript. It is a non-agent **view tab**
+(`view: 'notifications'`): it renders the standard transcript body fed by its own log, but has no
+command bar and takes no typed input. Like the file tree tab (see `file-tree-tab.md`) it is a
+**live, in-memory view** — never persisted, never restored on `--relaunch`.
+
+There is only ever **one** notifications tab, and it is **never created automatically**. It
+appears only when the user runs the `notifications` command; opening it again reuses the existing
+one. Its label is always `notifications`; per [[tab-label-no-markers]] no type or status marker is
+appended.
+
+### `notifications [left|right]`
+
+`notifications` opens the notifications tab — or, if it is already open, focuses it (undocking it
+back to the center strip and making it active when it was docked, since focusing must make the feed
+visible). A leading `left` or `right` keyword docks it into that sidebar instead of the center
+strip, mirroring `files [left|right]` (see `file-tree-tab.md` and `sidebars.md`). When the target
+sidebar already holds another dockable tab (the file navigator or an existing notifications tab),
+that tab is displaced back to the center strip — nothing is closed as a side effect.
+
+Running the command records a transcript entry for it in the issuing tab (the command text as
+input, empty output) before the tab opens, the same as `files`.
+
+### Docking
+
+The notifications tab is dockable on the same terms as the file navigator: at most one docked tab
+per sidebar, docking into an occupied sidebar non-destructively displaces the current occupant back
+to center, a docked tab is never the active tab, and neither dock placement nor sidebar width is
+persisted (see `sidebars.md`). Because docking is view-agnostic, the notifications tab and the file
+navigator can each occupy a different sidebar at the same time, and docking one into a side already
+holding the other displaces that other back to center.
+
+The tab's own header carries a dock-cycle button (toggling left↔right) and a close button (×) —
+both shown **only while docked**, matching the file tree tab. Center placement is reached via the
+bare `notifications` command, not the dock-cycle button.
+
+### Events that notify
+
+Five event types can produce a notification line:
+
+- **`state-change`** — an agent tab's busy flag clears (busy → idle), e.g. an ACP turn finishes or
+  errors.
+- **`incoming-message`** — a `msg` or `broadcast` is delivered to a tab (detected by the delivered
+  entry carrying a sender).
+- **`schedule-fire`** — a scheduled command fires in a tab (see `scheduling.md`).
+- **`agent-start`** — an ACP session begins its first turn (busy false → true).
+- **`manual`** — an explicit `notify <message>` (see below).
+
+The four ambient events (`state-change`, `incoming-message`, `schedule-fire`, `agent-start`) are
+each **independently togglable and default off** — opt in by editing `.janissary/config.json` (see
+`application-config.md`). The `manual` event has no toggle: an explicit `notify` always fires.
+
+### Focus suppression
+
+An ambient event on the **currently active** tab never produces a notification — only background
+tabs feed the notifications tab. The notifications tab itself is a view tab that produces no such
+events, so it never notifies about itself. The `manual` event **bypasses focus suppression**: a
+`notify` from the focused tab still records a line, because the caller opted in by invoking the
+command.
+
+### Drop-if-closed
+
+An event is recorded only if the notifications tab is open **at the moment the event fires**. There
+is no backlog: events fired while the tab is closed are dropped, not buffered, and never cause the
+tab to open or be created. Closing the tab and reopening it starts a fresh, empty feed. This holds
+for `notify` too — if the feed is closed, the message is dropped.
+
+### `notify <message>`
+
+`notify <message>` pushes a custom line into the feed, attributed to the issuing tab (e.g.
+`build-agent: deploy finished`). It is the deliberate counterpart to the four ambient events: an
+explicit signal that bypasses focus suppression and the per-event toggles, subject only to the
+drop-if-closed rule. It is available from any tab, including agent tabs (an agent dispatches it like
+any other command). It records a confirmation entry in the issuing tab. `notify` with no message is
+a usage error (`Usage: notify <message>.`) and records nothing in the feed.
+
+### Delivery model
+
+Notifications are ordinary transcript entries appended to the notifications tab through the same
+`append` path every tab write uses, and reach the client on the existing per-tab transcript
+broadcast (`bufferLines`). There is no toast banner, no sound, and no dedicated server→client push
+channel — a docked notifications tab renders its feed even though it is never the active tab.

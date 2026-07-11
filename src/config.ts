@@ -13,6 +13,14 @@ const DEFAULT_CONFIG: Config = {
   sandboxWorkspaces: true,
   syntaxTheme: DEFAULT_SYNTAX_THEME,
   theme: DEFAULT_APP_THEME,
+  notifications: {
+    events: {
+      stateChange: false,
+      incomingMessage: false,
+      scheduleFire: false,
+      agentStart: false,
+    },
+  },
 };
 
 let config: Config = { ...DEFAULT_CONFIG };

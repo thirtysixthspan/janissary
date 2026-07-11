@@ -5,8 +5,9 @@ import { ImageTab } from './ImageTab';
 import { MarkdownTab } from './MarkdownTab';
 import { PageTab } from './PageTab';
 import { FileTreeTab } from './FileTreeTab';
+import { NotificationsTab } from './NotificationsTab';
 
-// Renders the body for image, page, markdown, and file-tree view tabs. Harness tabs are rendered
+// Renders the body for image, page, markdown, file-tree, and notifications view tabs. Harness tabs are rendered
 // separately in App because they must all stay mounted simultaneously for xterm state
 // preservation; monitor tabs are reporting tabs, rendered in the ReportingSection below the
 // command bar. `client`/`index` are used by the page and files branches, to send their RPCs;
@@ -25,6 +26,9 @@ export function ViewTabBody({ tab, client, index, closeTab }: { tab: TabView; cl
   }
   if (tab.view === 'files' && tab.files) {
     return <div className="tab-body" style={border}><FileTreeTab files={tab.files} client={client} index={index} /></div>;
+  }
+  if (tab.view === 'notifications') {
+    return <div className="tab-body" style={border}><NotificationsTab lines={tab.bufferLines} client={client} index={index} /></div>;
   }
   return null;
 }

@@ -3,6 +3,7 @@ import type { ScheduleView } from './protocol.js';
 import { computeNextRun, fmtNextRun } from './schedule.js';
 import type { Managers } from './managers.js';
 import { messageBus } from './bus.js';
+import { notify } from './notifications.js';
 
 // Owns the per-tab scheduled commands (keyed by tab label) and the 1-second firing loop: at each tick
 // it fires any entry whose next-run time has passed, reschedules recurring ones, and drops one-shots.
@@ -91,9 +92,11 @@ export class ScheduleManager {
       const ptyId = tab.harness.ptyId;
       this.managers.pty.input(ptyId, e.command);
       setTimeout(() => this.managers.pty.input(ptyId, '\r'), 50);
+      notify(this.managers, 'schedule-fire', tab.label, e.command);
       return true;
     }
     this.managers.command.dispatchTo(tab.label, `${e.command} ## scheduled ##`);
+    notify(this.managers, 'schedule-fire', tab.label, e.command);
     return true;
   }
 }

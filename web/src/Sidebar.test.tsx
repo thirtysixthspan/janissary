@@ -5,6 +5,13 @@ import type { TabView } from '@shared/protocol';
 import type { JanusClient } from './ws';
 import { Sidebar } from './Sidebar';
 
+// jsdom doesn't include ResizeObserver — the docked notifications view's Transcript observes its content.
+vi.stubGlobal('ResizeObserver', class {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+});
+
 beforeAll(() => {
   Element.prototype.scrollIntoView = vi.fn();
 });
@@ -72,6 +79,19 @@ describe('Sidebar', () => {
     const { container } = render(<Sidebar side="left" tabs={tabs} client={client} />);
     const btn = container.querySelector('.sidebar-tab-close')!;
     fireEvent.click(btn);
+    expect(send).toHaveBeenCalledWith({ method: 'closeTab', params: { index: 0 } });
+  });
+
+  it('renders a docked notifications feed with its transcript body and a close button', () => {
+    const send = vi.fn();
+    const client = { send } as unknown as JanusClient;
+    const tabs = [makeTab({
+      label: 'notifications', title: 'notifications', view: 'notifications', dock: 'right',
+      bufferLines: [{ type: 'output', text: 'a notification' }],
+    })];
+    const { container, getByText } = render(<Sidebar side="right" tabs={tabs} client={client} />);
+    expect(getByText('a notification')).toBeTruthy();
+    fireEvent.click(container.querySelector('.sidebar-tab-close')!);
     expect(send).toHaveBeenCalledWith({ method: 'closeTab', params: { index: 0 } });
   });
 

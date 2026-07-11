@@ -143,7 +143,7 @@ export type Tab = {
   number: number;
   // The tab's body kind. Undefined/`'agent'` renders the normal transcript + command line; `'image'`
   // renders the image view (no command bar). View tabs are live and in-memory — not persisted.
-  view?: 'agent' | 'image' | 'page' | 'harness' | 'markdown' | 'editor' | 'monitor' | 'files';
+  view?: 'agent' | 'image' | 'page' | 'harness' | 'markdown' | 'editor' | 'monitor' | 'files' | 'notifications';
   // Display name shown in the tab strip when it differs from the (unique) internal `label` — e.g.
   // every image tab is titled `image` while keeping a distinct label (`image`, `image-2`, …).
   title?: string;
@@ -431,6 +431,18 @@ export type Resolution =
 
 // --- config.ts ------------------------------------------------------------
 
+// Per-event opt-in toggles for the notifications tab (see `notifications.ts`). Each defaults to
+// false; the user enables an event by editing `.janissary/config.json` directly. There is
+// deliberately no toggle for the `manual` event (an agent-triggered `notify`), which always fires.
+export type NotificationConfig = {
+  events: {
+    stateChange: boolean;
+    incomingMessage: boolean;
+    scheduleFire: boolean;
+    agentStart: boolean;
+  };
+};
+
 export type Config = {
   transcriptMaxLines: number;
   tabNameMaxLength: number;
@@ -443,6 +455,8 @@ export type Config = {
   // The active application color theme name (see `app-themes.ts`), applied to the whole window
   // chrome. Independent of `syntaxTheme`.
   theme: string;
+  // Which background events feed the notifications tab (all opt-in; see `notifications.ts`).
+  notifications?: NotificationConfig;
 };
 
 // --- completion.ts --------------------------------------------------------

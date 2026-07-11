@@ -30,6 +30,14 @@ Bare `tasks` opens the task-picker overlay instead of running on the server — 
 listing of the executable `ai/*.md` task files (see `task-picker.md`). If it does reach the server
 directly (e.g. from a scheduled dispatch or another agent), it is a no-op.
 
+### `notifications`
+
+`notifications` opens the singleton notifications tab, or focuses it when already open (undocking it back to center and making it active if it was docked). `notifications left` / `notifications right` dock it into that sidebar instead. See `notifications.md` for the tab, its events, and the config model.
+
+### `notify`
+
+`notify <message>` pushes a custom line into the notifications feed, attributed to the issuing tab. It bypasses focus suppression and the per-event toggles but obeys the drop-if-closed rule: if the notifications tab is not open, the message is dropped and nothing is recorded in the feed. Bare `notify` (no message) is a usage error (`Usage: notify <message>.`). Available from any tab, agents included. See `notifications.md`.
+
 ### `quit`
 
 Exits the application: closes the app window (the web page) and stops the server, after killing every tab's shell, ACP session, browser, and terminals and closing all connections. Requires confirmation first — see `quit-confirmation.md`. (To close a single tab, use `close`; `exit` is an alias of `close`, not `quit`.)

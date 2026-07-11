@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import type { FileTreeView, FileTreeRow } from '@shared/protocol';
 import type { JanusClient } from './ws';
 import { handleFileTreeKey, typeAheadMatch } from './file-tree-keys';
+import { nextDock, dockTooltip } from './dock-cycle';
 
 type Properties = {
   files: FileTreeView;
@@ -20,16 +21,6 @@ const TYPEAHEAD_RESET_MS = 700;
 const ROW_HEIGHT_PX = 22;
 // Printable, unmodified single characters — used for type-ahead. Excludes space (the action key).
 const PRINTABLE = /^[ -~]$/;
-
-function nextDock(current?: 'left' | 'right'): 'left' | 'right' {
-  if (current === 'left') return 'right';
-  return 'left';
-}
-
-function dockTooltip(next: 'left' | 'right' | null): string {
-  if (next === 'left') return 'Move to left sidebar';
-  return 'Move to right sidebar';
-}
 
 export function FileTreeTab({ files, client, index, dock, autoFocus = true }: Properties) {
   const [selected, setSelected] = useState<string | null>(null);
@@ -117,7 +108,7 @@ export function FileTreeTab({ files, client, index, dock, autoFocus = true }: Pr
               type="button"
               className="files-dock-cycle"
               title={dockTooltip(nextDock(dock))}
-              onClick={() => client.send({ method: 'fileTreeSetDock', params: { index, dock: nextDock(dock) } })}
+              onClick={() => client.send({ method: 'setDock', params: { index, dock: nextDock(dock) } })}
             >
               ⇄
             </button>

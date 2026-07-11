@@ -1,7 +1,8 @@
 import type { Tab, ImageView, MarkdownView, EditorView, PageView, FileTreeView } from './types.js';
 import {
-  makeImageTab, makeMarkdownTab, makeEditorTab, makePageTab, makeFilesTab, distinctColor, insertTabInGroup,
+  makeImageTab, makeMarkdownTab, makeEditorTab, makePageTab, makeFilesTab, makeNotificationsTab, distinctColor, insertTabInGroup,
 } from './tab.js';
+import { NOTIFICATIONS_LABEL } from './notifications-tab.js';
 import { getConfig } from './config.js';
 
 function uniqueLabel(used: Set<string>, prefix: string): string {
@@ -83,6 +84,16 @@ export function addFilesTab(tabs: Tab[], activeTab: number, view: FileTreeView):
   const tab = makeFilesTab(label, dotColor, tabs.length + 1, group, groupColor, view);
   const newTabs = insertTabInGroup(tabs, tab, 'start');
   return { tabs: newTabs, activeTab: newTabs.findIndex((t) => t.label === label) };
+}
+
+export function addNotificationsTab(tabs: Tab[], activeTab: number): TabAndActive {
+  const creator = tabs[activeTab];
+  const dotColor = distinctColor(tabs.map((t) => t.dotColor));
+  const group = creator?.group ?? 1;
+  const groupColor = creator?.groupColor ?? dotColor;
+  const tab = makeNotificationsTab(NOTIFICATIONS_LABEL, dotColor, tabs.length + 1, group, groupColor);
+  const newTabs = insertTabInGroup(tabs, tab, 'start');
+  return { tabs: newTabs, activeTab: newTabs.findIndex((t) => t.label === NOTIFICATIONS_LABEL) };
 }
 
 export function addPageTab(

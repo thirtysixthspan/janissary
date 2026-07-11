@@ -44,8 +44,8 @@ export type TabView = {
   cmdHistory: string[];
   commandQueue: string[];
   toolStepsExpanded: boolean;
-  // Body kind: undefined/`'agent'` for a normal tab, `'image'` for an image view, `'page'` for an embedded web page, `'harness'` for a full-tab AI harness terminal, `'markdown'` for a rendered Markdown file, `'monitor'` for the AI-monitor suggestion feed, `'files'` for a file tree.
-  view?: 'agent' | 'image' | 'page' | 'harness' | 'markdown' | 'editor' | 'monitor' | 'files';
+  // Body kind: undefined/`'agent'` for a normal tab, `'image'` for an image view, `'page'` for an embedded web page, `'harness'` for a full-tab AI harness terminal, `'markdown'` for a rendered Markdown file, `'monitor'` for the AI-monitor suggestion feed, `'files'` for a file tree, `'notifications'` for the notification feed.
+  view?: 'agent' | 'image' | 'page' | 'harness' | 'markdown' | 'editor' | 'monitor' | 'files' | 'notifications';
   // Display name when it differs from `label` (image tabs are all titled `image`).
   title?: string;
   // Image-view payload, present only when `view === 'image'`.
@@ -124,9 +124,10 @@ export type RpcCall =
   | { method: 'fileTreeCollapseAll'; params: { index: number } }
   // Re-root a file tree tab to the parent directory.
   | { method: 'fileTreeReroot'; params: { index: number; path?: string } }
-  // Dock a file tree tab into a sidebar (`'left'` | `'right'`), or undock it back to the
-  // center tab strip (`null`). Explicit set, not "cycle" — the cycle order lives client-side.
-  | { method: 'fileTreeSetDock'; params: { index: number; dock: 'left' | 'right' | null } };
+  // Dock a dockable tab (file tree or notifications) into a sidebar (`'left'` | `'right'`), or
+  // undock it back to the center tab strip (`null`). Explicit set, not "cycle" — the cycle order
+  // lives client-side. The handler is generic, so both dockable tab kinds share this one RPC.
+  | { method: 'setDock'; params: { index: number; dock: 'left' | 'right' | null } };
 
 export type ClientMessage = { t: 'rpc'; id: number } & RpcCall;
 
