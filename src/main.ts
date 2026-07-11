@@ -5,6 +5,7 @@ import { startServer } from './index.js';
 import { makeToken } from './security.js';
 import { initAgentStateDirectory, clearStateDirectory } from './agent-state.js';
 import { initHarnessCaptureDirectory, clearCaptureDirectory } from './harness-capture-file.js';
+import { initHarnessRecordingDirectory, clearHarnessRecordingDirectory } from './harness-recording-file.js';
 import { acquireLock, releaseLock } from './instance-lock.js';
 import { initGlobalHistory } from './global-history.js';
 import { TranscriptLogger } from './transcript/logger.js';
@@ -129,6 +130,7 @@ export async function boot(argv = process.argv.slice(2)): Promise<void> {
   lockedDir = cwd;
   initAgentStateDirectory(cwd);
   initHarnessCaptureDirectory(cwd);
+  initHarnessRecordingDirectory(cwd);
   initGlobalHistory();
   initDbDir(cwd);
   initProfileDir(cwd);
@@ -137,7 +139,7 @@ export async function boot(argv = process.argv.slice(2)): Promise<void> {
   new TranscriptStore(cwd);
   loadConfig(cwd);
   loadGithubToken(cwd);
-  if (!args.relaunch) { clearStateDirectory(); TranscriptStore.clear(); clearWorkspaceDir(); clearCaptureDirectory(); }
+  if (!args.relaunch) { clearStateDirectory(); TranscriptStore.clear(); clearWorkspaceDir(); clearCaptureDirectory(); clearHarnessRecordingDirectory(); }
 
   const webDir = path.join(import.meta.dirname, '..', 'web', 'dist');
   if (!existsSync(path.join(webDir, 'index.html'))) {

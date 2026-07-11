@@ -10,6 +10,8 @@ Persona-driven, tool-less AI sessions that watch tab activity and surface sugges
 
 When a monitor starts, it receives the full existing transcript of every target tab — not just entries that arrive after the monitor starts. Inline monitors receive the owner tab's own transcript. External monitors receive the transcripts of all specified tabs and all members of specified groups. Entries appear in the order they were logged, giving the monitor full historical context from the moment it starts.
 
+A **harness-view target** (see [[harness]]) has no `LogEntry` transcript, so it instead contributes its latest **rendered screen** — the same de-ANSI'd screen text `harness capture` writes. That screen is seeded at monitor start and refreshed on each 30-second flush, but only when it has changed since the last one fed (deduped by capture time), so an idle harness contributes nothing and never re-prompts the monitor. The monitor therefore sees periodic screen snapshots of a harness, not its full linear scrollback. SSH harness tabs have no screen reader and remain unwatchable.
+
 ### Flush cycle
 
 New transcript entries from target tabs (including the initial historical entries) are buffered and flushed to the monitor's ACP session every 30 seconds as a single batch prompt. No prompt is sent when the buffer is empty or when a previous prompt is still streaming.
