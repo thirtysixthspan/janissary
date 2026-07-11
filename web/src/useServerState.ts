@@ -13,6 +13,7 @@ type Setters = {
   setSyntaxTheme: (theme: string) => void;
   setTheme: (theme: string) => void;
   setTasks: (tasks: TaskRow[]) => void;
+  setProfiles: (profiles: string[]) => void;
   setRouteIndex: (index: number) => void;
   routeRef: React.RefObject<RouteChooserView | null>;
 };
@@ -22,11 +23,11 @@ type Setters = {
 // that field has no other consumer in `App.tsx`.
 export function useServerState(client: JanusClient, setters: Setters): void {
   const {
-    setTabs, setActiveTab, setRoute, setTabNameMaxLength, setGlobalHistory, setSyntaxTheme, setTheme, setTasks, setRouteIndex, routeRef,
+    setTabs, setActiveTab, setRoute, setTabNameMaxLength, setGlobalHistory, setSyntaxTheme, setTheme, setTasks, setProfiles, setRouteIndex, routeRef,
   } = setters;
   const [projectDir, setProjectDir] = useState('');
   useProjectTitle(projectDir);
-  useEffect(() => client.onState((nextTabs, active, nextRoute, nextTabNameMaxLength, nextGlobalHistory, nextSyntaxTheme, nextTheme, nextTasks, nextProjectDir) => {
+  useEffect(() => client.onState((nextTabs, active, nextRoute, nextTabNameMaxLength, nextGlobalHistory, nextSyntaxTheme, nextTheme, nextTasks, nextProfiles, nextProjectDir) => {
     setTabs(nextTabs);
     setActiveTab(active);
     setRoute(nextRoute);
@@ -35,12 +36,13 @@ export function useServerState(client: JanusClient, setters: Setters): void {
     setSyntaxTheme(nextSyntaxTheme);
     setTheme(nextTheme);
     setTasks(nextTasks);
+    setProfiles(nextProfiles);
     setProjectDir(nextProjectDir);
     // Highlight the first option when a chooser newly opens (or its command changes).
     const previous = routeRef.current;
     routeRef.current = nextRoute;
     if (nextRoute && (!previous || previous.cmd !== nextRoute.cmd)) setRouteIndex(0);
   }), [
-    client, setTabs, setActiveTab, setRoute, setTabNameMaxLength, setGlobalHistory, setSyntaxTheme, setTheme, setTasks, setRouteIndex, routeRef,
+    client, setTabs, setActiveTab, setRoute, setTabNameMaxLength, setGlobalHistory, setSyntaxTheme, setTheme, setTasks, setProfiles, setRouteIndex, routeRef,
   ]);
 }

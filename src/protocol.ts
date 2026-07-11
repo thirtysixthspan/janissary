@@ -77,6 +77,7 @@ export type StateEvent = {
   syntaxTheme: string;
   theme: string;
   tasks: TaskRow[];
+  profiles: string[];
   // Absolute path of the project directory the server was started against. Drives the titlebar.
   projectDir: string;
 };
