@@ -27,12 +27,12 @@ input, empty output) before the tab opens, the same as `files`.
 
 ### Docking
 
-The notifications tab is dockable on the same terms as the file navigator: at most one docked tab
-per sidebar, docking into an occupied sidebar non-destructively displaces the current occupant back
-to center, a docked tab is never the active tab, and neither dock placement nor sidebar width is
-persisted (see `sidebars.md`). Because docking is view-agnostic, the notifications tab and the file
-navigator can each occupy a different sidebar at the same time, and docking one into a side already
-holding the other displaces that other back to center.
+The notifications tab is dockable on the same terms as the file navigator: at most one docked
+notifications tab per sidebar (docking a second one displaces the first), a docked tab is never
+the active tab, and neither dock placement nor sidebar width is persisted (see `sidebars.md`).
+The notifications tab and the file navigator can share one sidebar side at the same time — docking
+one into a side already holding the other does not displace it, and the sidebar shows a
+tab-switcher to flip between them (see `sidebars.md`'s "Sharing a sidebar").
 
 When docked, a feed longer than the sidebar can render scrolls within the notifications tab's own
 content area — the sidebar and the rest of the app never grow to accommodate it — matching how the

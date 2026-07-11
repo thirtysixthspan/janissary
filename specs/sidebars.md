@@ -9,13 +9,22 @@ A tab can be **docked** into a sidebar instead of living in the central tab stri
 placement, not a separate kind of tab — a docked tab keeps everything else about it (its group,
 its transcript or view, its RPC identity) exactly as it was. Two tab kinds can dock: the file
 navigator (see `file-tree-tab.md`) and the notifications tab (see `notifications.md`). They share
-one docking mechanism, so each can occupy a different sidebar at the same time, and docking one
-into a side already holding the other displaces that other back to center — the same
-one-tab-per-sidebar rule applies across both kinds.
+one docking mechanism and, being different kinds, can occupy the **same** sidebar at the same
+time — see "Sharing a sidebar" below — as well as different sidebars.
 
-Each sidebar holds **at most one docked tab at a time**. Docking a tab into an already-occupied
-sidebar **displaces** the previous occupant, which returns to the center tab strip — nothing is
-closed as a side effect of docking.
+Each sidebar holds **at most one docked tab of each kind at a time**. Docking a tab into a side
+that already holds a tab of the *same* kind **displaces** that occupant, which returns to the
+center tab strip — nothing is closed as a side effect of docking. Docking into a side that holds
+the *other* kind does not displace it; both stay docked, sharing the sidebar.
+
+### Sharing a sidebar
+
+When both the file navigator and the notifications tab are docked to the same side, the sidebar
+shows a small tab-switcher above its usual strip, letting the user flip between the two. Docking
+a second kind into an already-occupied side brings it into view automatically. Which of the two
+is currently visible is ephemeral, client-side display state, like sidebar width (see "What's
+server-owned vs. client-owned" below) — it is never sent to the server and resets on relaunch.
+The strip's close button always closes whichever docked tab is currently visible.
 
 ### Visibility is derived
 
@@ -40,10 +49,11 @@ eligible to become active.
 
 ### The sidebar strip
 
-Each sidebar shows its own strip above the docked tab's content, carrying the tab's name and a
-close button (×). This is the sole close affordance for a docked tab — a docked tab is never the
-active tab (see above) and so cannot be closed by typing `close`, and its own metadata header
-carries no close button of its own (`close <label>` by label still works as a fallback).
+Each sidebar shows its own strip above the currently-visible docked tab's content, carrying that
+tab's name and a close button (×). This is the sole close affordance for a docked tab — a docked
+tab is never the active tab (see above) and so cannot be closed by typing `close`, and its own
+metadata header carries no close button of its own (`close <label>` by label still works as a
+fallback).
 
 ### Resizing
 
@@ -57,9 +67,10 @@ look matches the divider used to resize the reporting section below the tab stri
 ### What's server-owned vs. client-owned
 
 Which tab is docked where is **server-owned** state, broadcast to the client like any other tab
-property — the server enforces the one-tab-per-sidebar rule and the active-tab invariant.
-Sidebar **width**, by contrast, is purely client-side display chrome, the same way scroll
-position is: it is never sent to the server and never persisted.
+property — the server enforces the one-tab-per-kind-per-sidebar rule and the active-tab invariant.
+Sidebar **width** and which docked tab is currently visible (when a side holds both kinds) are, by
+contrast, purely client-side display chrome, the same way scroll position is: neither is ever sent
+to the server or persisted.
 
 ### Persistence
 

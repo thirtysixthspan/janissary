@@ -135,8 +135,9 @@ sidebar's own strip (see `sidebars.md`) shows the tab's name and the close affor
 tree is closed from there (`close files` by label still works as a fallback).
 
 This same dock/location-cycle mechanism is shared with the notifications tab (see
-`notifications.md`), which is the other dockable tab kind; both obey the one-tab-per-sidebar rule
-described in `sidebars.md`.
+`notifications.md`), which is the other dockable tab kind. The two can share one sidebar side at
+the same time, switching between them via the sidebar's own tab-switcher (see `sidebars.md`'s
+"Sharing a sidebar"); a second file tree tab docking into the same side still displaces the first.
 
 ### Closing
 

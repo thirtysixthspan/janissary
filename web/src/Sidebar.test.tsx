@@ -95,6 +95,59 @@ describe('Sidebar', () => {
     expect(send).toHaveBeenCalledWith({ method: 'closeTab', params: { index: 0 } });
   });
 
+  it('renders a tab-switcher when both a file tree and notifications tab are docked to the same side', () => {
+    const client = { send: vi.fn() } as unknown as JanusClient;
+    const tabs = [
+      makeTab({ label: 'files', view: 'files', dock: 'left', files: { root: '/tmp/project', rows: [] } }),
+      makeTab({ label: 'notifications', title: 'notifications', view: 'notifications', dock: 'left' }),
+    ];
+    const { container } = render(<Sidebar side="left" tabs={tabs} client={client} />);
+    expect(container.querySelectorAll('.sidebar-tab-switch')).toHaveLength(2);
+  });
+
+  it('clicking the inactive switcher tab changes which content renders', () => {
+    const client = { send: vi.fn() } as unknown as JanusClient;
+    const tabs = [
+      makeTab({ label: 'files', view: 'files', dock: 'left', files: { root: '/tmp/project', rows: [] } }),
+      makeTab({
+        label: 'notifications', title: 'notifications', view: 'notifications', dock: 'left',
+        bufferLines: [{ type: 'output', text: 'a notification' }],
+      }),
+    ];
+    const { getByText } = render(<Sidebar side="left" tabs={tabs} client={client} />);
+    expect(getByText('/tmp/project')).toBeTruthy();
+    fireEvent.click(getByText('notifications'));
+    expect(getByText('a notification')).toBeTruthy();
+  });
+
+  it('the close button closes whichever docked tab is currently visible', () => {
+    const send = vi.fn();
+    const client = { send } as unknown as JanusClient;
+    const tabs = [
+      makeTab({ label: 'files', view: 'files', dock: 'left', files: { root: '/tmp/project', rows: [] } }),
+      makeTab({ label: 'notifications', title: 'notifications', view: 'notifications', dock: 'left' }),
+    ];
+    const { container, getByText } = render(<Sidebar side="left" tabs={tabs} client={client} />);
+    fireEvent.click(getByText('notifications'));
+    fireEvent.click(container.querySelector('.sidebar-tab-close')!);
+    expect(send).toHaveBeenCalledWith({ method: 'closeTab', params: { index: 1 } });
+  });
+
+  it('docking a second tab auto-switches the visible content to it', () => {
+    const client = { send: vi.fn() } as unknown as JanusClient;
+    const filesTab = makeTab({ label: 'files', view: 'files', dock: 'left', files: { root: '/tmp/project', rows: [] } });
+    const { rerender, getByText, queryByText } = render(<Sidebar side="left" tabs={[filesTab]} client={client} />);
+    expect(getByText('/tmp/project')).toBeTruthy();
+
+    const notificationsTab = makeTab({
+      label: 'notifications', title: 'notifications', view: 'notifications', dock: 'left',
+      bufferLines: [{ type: 'output', text: 'a notification' }],
+    });
+    rerender(<Sidebar side="left" tabs={[filesTab, notificationsTab]} client={client} />);
+    expect(getByText('a notification')).toBeTruthy();
+    expect(queryByText('/tmp/project')).toBeNull();
+  });
+
   it('drag clamps width to 50% of the viewport when dragged far past it', () => {
     const client = { send: vi.fn() } as unknown as JanusClient;
     const tabs = [makeTab({ view: 'files', dock: 'right', files: { root: '/tmp/project', rows: [] } })];

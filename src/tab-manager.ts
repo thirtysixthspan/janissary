@@ -178,8 +178,10 @@ export class TabManager {
   }
 
   // Dock a tab into a sidebar (`'left'` | `'right'`), or undock it back to the center strip
-  // (`null`, which also makes it the active tab). Docking into an occupied side displaces the
-  // previous occupant back to center (non-destructive — nothing closes). Docking the active tab
+  // (`null`, which also makes it the active tab). Docking into a side that already holds a
+  // tab of the *same view kind* displaces that occupant back to center (non-destructive —
+  // nothing closes); a different-kind occupant (the file navigator and notifications tab
+  // share a sidebar via the client's own tab-switcher) is left docked. Docking the active tab
   // first moves `activeTab` to the nearest non-docked tab, preserving the invariant that a
   // docked tab is never active.
   setDock(index: number, dock: 'left' | 'right' | null): void {
@@ -192,7 +194,7 @@ export class TabManager {
       messageBus.emit('state', { type: 'dirty' });
       return;
     }
-    const occupant = this.tabs.find((t, i) => i !== index && t.dock === dock);
+    const occupant = this.tabs.find((t, i) => i !== index && t.dock === dock && t.view === tab.view);
     if (occupant) occupant.dock = undefined;
     tab.dock = dock;
     if (this.activeTab === index) this.activateNearestNonDocked();
