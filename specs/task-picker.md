@@ -53,3 +53,6 @@ because the populated text is freeform input for the agent, exactly as if it had
 hand.
 
 When `ai/tasks/` has no task files, the picker shows `(no tasks)`.
+
+Hovering the mouse over the row the keyboard cursor is already on keeps that row's selected
+appearance — the keyboard and mouse highlighting never conflict or combine into a mismatched look.

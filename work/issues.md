@@ -1,7 +1,5 @@
 # issues
 
-* when the task picker an similar windows are open, two rows are highlighted - the row given by the keyboard cursor and the row given by the mouse position. When these two are the same row, there is an unpleasant inversion of text colors. Instead we want the row to be no different from the row determined just by the keyboard when the mouse is hovering on that row.
-
 * The tab key should be responsible for shifting the keyboard focus between the application sections, currently the tab section and sidebar sections.
 
 * a metadata line should be added to the monitor tab, similar to other tabs, but provides the agent persona and the tabs/groups monitored as well as the acp context size in bytes (b/kb/mb). 
