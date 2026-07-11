@@ -22,6 +22,4 @@
 
 * the sidebar with the notifications tab should not be taller than the application tabs. when the notification transcript grows greater in length than can be rendered a scrollbar should appear in the notification tab and only apply to content in that tab, similar to how scrolling works for the file navigator.
 
-* notification should be rendered with a colored dot, the color of which is derived from the sending tab.
-
 
