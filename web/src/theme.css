@@ -445,10 +445,9 @@ html, body, #root {
    the drag clamps so neither area shrinks below 15% of the viewport. */
 .reporting-section { min-height: 0; display: flex; flex-direction: column; }
 .reporting-resize {
-  height: 5px; flex-shrink: 0; cursor: row-resize;
+  height: 4px; flex-shrink: 0; cursor: row-resize;
   border-top: 1px solid var(--border);
 }
-.reporting-resize:hover { background: var(--accent); }
 
 /* Sidebars: at most one docked tab each, hidden entirely while nothing is docked. Width is set
    inline (default ~280px) and adjusted by dragging the resize divider on the sidebar's inner
