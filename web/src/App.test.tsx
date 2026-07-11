@@ -302,7 +302,7 @@ describe('App sidebar docking', () => {
         0, null, 16, [], 'github-dark', 'dark', [],
       );
     });
-    fireEvent.click(container.querySelector(':scope .sidebar-left .files-close')!);
+    fireEvent.click(container.querySelector(':scope .sidebar-left .sidebar-tab-close')!);
     expect(sendMock).toHaveBeenCalledWith({ method: 'closeTab', params: { index: 1 } });
   }, 15_000);
 });

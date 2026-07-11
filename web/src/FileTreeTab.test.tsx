@@ -176,16 +176,6 @@ describe('FileTreeTab', () => {
     expect(send).toHaveBeenCalledWith({ method: 'setDock', params: { index: 0, dock: 'left' } });
   });
 
-  it('header close button is shown only while docked, and sends closeTab', () => {
-    const send = vi.fn();
-    const client = { send } as unknown as JanusClient;
-    const { rerender } = render(<FileTreeTab files={makeFiles()} client={client} index={3} />);
-    expect(screen.queryByTitle('Close')).toBeNull();
-    rerender(<FileTreeTab files={makeFiles()} client={client} index={3} dock="left" />);
-    fireEvent.click(screen.getByTitle('Close'));
-    expect(send).toHaveBeenCalledWith({ method: 'closeTab', params: { index: 3 } });
-  });
-
   it('autoFocus defaults to true (center mount) and can be suppressed for sidebar mounts', () => {
     const client = { send: vi.fn() } as unknown as JanusClient;
     const focusSpy = vi.spyOn(HTMLElement.prototype, 'focus');

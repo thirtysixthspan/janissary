@@ -130,10 +130,9 @@ entirely — there is no duplicate representation of a docked tree in the strip.
 
 Every file tree tab's own header carries a **location button** that cycles the tree through
 left sidebar → center tab strip → right sidebar → left sidebar, one step per click, with a
-tooltip naming the destination. While docked, the header also shows a **close button** (×) — a
-docked tree has no strip × of its own and, being never the active tab, cannot be closed by typing
-`close` either, so this is its only direct close affordance (`close files` by label still works
-as a fallback).
+tooltip naming the destination. The header itself carries no close button — while docked, the
+sidebar's own strip (see `sidebars.md`) shows the tab's name and the close affordance, so a docked
+tree is closed from there (`close files` by label still works as a fallback).
 
 This same dock/location-cycle mechanism is shared with the notifications tab (see
 `notifications.md`), which is the other dockable tab kind; both obey the one-tab-per-sidebar rule
