@@ -8,7 +8,7 @@ type Properties = {
   lines: BufferLine[];
   client: JanusClient;
   index: number;
-  // Current dock location (undefined means center). The dock-cycle and close buttons render only
+  // Current dock location (undefined means center). The dock-cycle button renders only
   // while docked, matching FileTreeTab.
   dock?: 'left' | 'right';
 };
@@ -31,15 +31,6 @@ export function NotificationsTab({ lines, client, index, dock }: Properties) {
               onClick={() => client.send({ method: 'setDock', params: { index, dock: nextDock(dock) } })}
             >
               ⇄
-            </button>
-            <button
-              type="button"
-              className="notifications-close"
-              title="Close"
-              aria-label="Close tab"
-              onClick={() => client.send({ method: 'closeTab', params: { index } })}
-            >
-              ×
             </button>
           </div>
         </div>

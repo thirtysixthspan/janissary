@@ -9,7 +9,7 @@ type Properties = {
   client: JanusClient;
   index: number;
   // The tab's current dock location (undefined means center). Drives the location-cycle
-  // button's destination and whether the header close button is shown.
+  // button's destination.
   dock?: 'left' | 'right';
   // Whether the tree grabs keyboard focus on mount. True for a center tab (the default); false
   // for a sidebar mount, where stealing focus would yank it away from the command bar every time
@@ -121,17 +121,6 @@ export function FileTreeTab({ files, client, index, dock, autoFocus = true }: Pr
           >
             ⊟
           </button>
-          {dock && (
-            <button
-              type="button"
-              className="files-close"
-              title="Close"
-              aria-label="Close tab"
-              onClick={() => client.send({ method: 'closeTab', params: { index } })}
-            >
-              ×
-            </button>
-          )}
         </div>
       </div>
       <div className="files-rows">

@@ -38,6 +38,13 @@ focusing a docked tab always means bringing it fully into view, which requires u
 Tab-cycling commands (e.g. switching to the next tab) skip over docked tabs, since they are not
 eligible to become active.
 
+### The sidebar strip
+
+Each sidebar shows its own strip above the docked tab's content, carrying the tab's name and a
+close button (×). This is the sole close affordance for a docked tab — a docked tab is never the
+active tab (see above) and so cannot be closed by typing `close`, and its own metadata header
+carries no close button of its own (`close <label>` by label still works as a fallback).
+
 ### Resizing
 
 Each sidebar's width is adjusted by dragging the divider on its inner edge (the edge facing the

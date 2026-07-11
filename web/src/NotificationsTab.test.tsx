@@ -29,27 +29,18 @@ describe('NotificationsTab', () => {
     expect(container.querySelector('textarea')).toBeNull();
   });
 
-  it('shows neither the dock-cycle nor close button when undocked', () => {
+  it('shows no dock-cycle button when undocked', () => {
     const client = { send: vi.fn() } as unknown as JanusClient;
     render(<NotificationsTab lines={lines} client={client} index={0} />);
     expect(screen.queryByTitle('Move to left sidebar')).toBeNull();
     expect(screen.queryByTitle('Move to right sidebar')).toBeNull();
-    expect(screen.queryByTitle('Close')).toBeNull();
   });
 
-  it('when docked left, shows the dock-cycle and close buttons; dock-cycle sends setDock to right', () => {
+  it('when docked left, shows the dock-cycle button, which sends setDock to right', () => {
     const send = vi.fn();
     const client = { send } as unknown as JanusClient;
     render(<NotificationsTab lines={lines} client={client} index={2} dock="left" />);
     fireEvent.click(screen.getByTitle('Move to right sidebar'));
     expect(send).toHaveBeenCalledWith({ method: 'setDock', params: { index: 2, dock: 'right' } });
-  });
-
-  it('when docked, the close button sends closeTab', () => {
-    const send = vi.fn();
-    const client = { send } as unknown as JanusClient;
-    render(<NotificationsTab lines={lines} client={client} index={2} dock="right" />);
-    fireEvent.click(screen.getByTitle('Close'));
-    expect(send).toHaveBeenCalledWith({ method: 'closeTab', params: { index: 2 } });
   });
 });

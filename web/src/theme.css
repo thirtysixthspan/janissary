@@ -529,11 +529,11 @@ html, body, #root {
 }
 .files-loc { font-size: 12px; word-break: break-all; color: var(--muted); }
 .files-actions { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
-.files-collapse-all, .files-dock-cycle, .files-close {
+.files-collapse-all, .files-dock-cycle {
   background: transparent; border: none; color: var(--muted); cursor: pointer; font-size: 13px;
   padding: 0 4px; line-height: 1;
 }
-.files-collapse-all:hover, .files-dock-cycle:hover, .files-close:hover { color: var(--fg); }
+.files-collapse-all:hover, .files-dock-cycle:hover { color: var(--fg); }
 .files-rows { flex: 1; min-height: 0; overflow-y: auto; padding: 4px 0 22px; }
 .files-row {
   display: flex; align-items: center; gap: 4px; padding: 2px 12px; cursor: pointer;
@@ -554,8 +554,8 @@ html, body, #root {
   padding: 6px 12px; color: var(--muted); font-size: 12px; border-bottom: 1px solid var(--border);
 }
 .notifications-actions { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
-.notifications-dock-cycle, .notifications-close {
+.notifications-dock-cycle {
   background: transparent; border: none; color: var(--muted); cursor: pointer; font-size: 13px;
   padding: 0 4px; line-height: 1;
 }
-.notifications-dock-cycle:hover, .notifications-close:hover { color: var(--fg); }
+.notifications-dock-cycle:hover { color: var(--fg); }

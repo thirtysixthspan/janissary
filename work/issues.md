@@ -24,6 +24,4 @@
 
 * notification should be rendered with a colored dot, the color of which is derived from the sending tab.
 
-* the metadata div for the file navigator and notification tab should not have a close button.
-
 
