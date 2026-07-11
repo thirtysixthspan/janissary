@@ -1,6 +1,6 @@
 import { getOutput } from './commands.js';
-import { analyzeCommand, toPrefixedCommand } from './recognizers/index.js';
-import type { RouteChoice } from './recognizers/types.js';
+import { toPrefixedCommand } from './recognizers/index.js';
+import { resolveRouteChoice } from './route-choice.js';
 import type { Managers } from './managers.js';
 
 export function routeUnknownCommand(
@@ -19,11 +19,8 @@ export function routeUnknownCommand(
   }
 
   const openDbs = managers.database.openDbs(label);
-  const decision = analyzeCommand(trimmed, { openDbs });
-  if (decision.kind === 'route' && (decision.route !== 'db' || openDbs.length === 1)) {
-    const choice: RouteChoice = decision.route === 'db'
-      ? { label: '', route: 'db', dbName: openDbs[0] }
-      : { label: '', route: decision.route };
+  const choice = resolveRouteChoice(trimmed, openDbs);
+  if (choice) {
     run(label, toPrefixedCommand(trimmed, choice), callback);
     return;
   }
