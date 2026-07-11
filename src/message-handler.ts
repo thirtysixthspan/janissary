@@ -52,6 +52,8 @@ export function handle(controller: Controller, message: ClientMessage, reply: (e
     }
     case 'rateSuggestion': { controller.rateSuggestion(message.params.id, message.params.up); break;
     }
+    case 'resetMonitorContext': { controller.resetMonitorContext(message.params.name); break;
+    }
     case 'saveFile': { controller.saveFile(message.params.url, message.params.content); break;
     }
     case 'fileTreeToggle': { controller.fileTreeToggle(message.params.index, message.params.path); break;

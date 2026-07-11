@@ -117,6 +117,9 @@ export type RpcCall =
   // Rate a suggestion 👍/👎; feedback reaches the monitoring AI on its next batch and
   // the suggestion is removed from the feed (either direction).
   | { method: 'rateSuggestion'; params: { id: string; up: boolean } }
+  // Reset a monitor's reporting tab to just its persona context (discards accumulated
+  // conversation on its dedicated ACP session).
+  | { method: 'resetMonitorContext'; params: { name: string } }
   // Write an editor tab's buffer back to disk. `url` is the tab's `/open/<id>` ref — the server
   // resolves it through the open-file allow-list, so only explicitly opened files are writable.
   | { method: 'saveFile'; params: { url: string; content: string } }

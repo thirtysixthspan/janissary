@@ -10,6 +10,8 @@ Persona-driven AI sessions that watch tab activity and surface suggestions inlin
 
 An external-mode monitor's reporting tab carries a metadata line above its suggestion feed, styled like the file navigator's and notifications tab's headers: the persona name, the tab(s)/group(s) it monitors (e.g. `agent2, group:3`), and the total size of everything sent to and received from its dedicated ACP session so far, shown in bytes/kilobytes/megabytes. The size grows with every flush and every direct question (`monitor ask`), and resets when the session is respawned after an error, since a fresh session starts a fresh context. Dropping one of several tab targets updates the target list shown; inline monitors have no reporting tab and so show no metadata line.
 
+The metadata line's right-floated reset button discards the accumulated conversation on the monitor's dedicated ACP session and reloads just its persona context — the same recovery the monitor already performs automatically after a prompt error, now available on demand. When two owners share one reporting tab (two different agent tabs monitored by the same persona), resetting it resets every monitor feeding that tab, not just one.
+
 ### Transcript access
 
 When a monitor starts, it receives the full existing transcript of every target tab — not just entries that arrive after the monitor starts. Inline monitors receive the owner tab's own transcript. External monitors receive the transcripts of all specified tabs and all members of specified groups. Entries appear in the order they were logged, giving the monitor full historical context from the moment it starts.

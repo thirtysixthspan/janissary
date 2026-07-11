@@ -18,7 +18,7 @@ function makeSuggestion(overrides: Partial<SuggestionView> = {}): SuggestionView
 
 function renderTab(
   suggestions: SuggestionView[],
-  handlers: { onRun?: (id: string) => void; onRate?: (id: string, up: boolean) => void } = {},
+  handlers: { onRun?: (id: string) => void; onRate?: (id: string, up: boolean) => void; onReset?: () => void } = {},
   meta: { persona?: string; targets?: string; contextBytes?: number } = {},
 ) {
   return render(
@@ -29,6 +29,7 @@ function renderTab(
       suggestions={suggestions}
       onRun={handlers.onRun ?? vi.fn()}
       onRate={handlers.onRate ?? vi.fn()}
+      onReset={handlers.onReset ?? vi.fn()}
     />,
   );
 }
@@ -55,6 +56,18 @@ describe('MonitorTab', () => {
   ])('formats %i context bytes as %s', (bytes, expected) => {
     renderTab([], {}, { contextBytes: bytes });
     expect(screen.getByText(expected)).toBeInTheDocument();
+  });
+
+  it('renders a reset-context button in the header', () => {
+    renderTab([]);
+    expect(screen.getByTitle('Reset context')).toBeInTheDocument();
+  });
+
+  it('clicking the reset button calls onReset', async () => {
+    const onReset = vi.fn();
+    renderTab([], { onReset });
+    await userEvent.click(screen.getByTitle('Reset context'));
+    expect(onReset).toHaveBeenCalledTimes(1);
   });
 
   it('renders the suggestion text without per-row meta', () => {

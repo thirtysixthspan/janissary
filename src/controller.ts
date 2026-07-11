@@ -126,6 +126,10 @@ export class Controller {
     this.managers.monitor.rate(id, up);
   }
 
+  resetMonitorContext(name: string): void {
+    this.managers.monitor.resetContext(name);
+  }
+
   // --- inline terminal cards (PTY) -----------------------------------------
 
   ptyInput(id: string, data: string): void { this.managers.pty.input(id, data); }

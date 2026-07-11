@@ -16,13 +16,14 @@ function formatBytes(n: number): string {
 // server-side in the tab the suggestion is about; the suggestion stays in the feed). Each
 // suggestion carries 👍/👎 rating buttons — both feed the rating back to the monitoring AI and
 // remove the suggestion from the feed (rating it means the user is done with it).
-export function MonitorTab({ persona, targets, contextBytes, suggestions, onRun, onRate }: {
+export function MonitorTab({ persona, targets, contextBytes, suggestions, onRun, onRate, onReset }: {
   persona: string;
   targets: string;
   contextBytes: number;
   suggestions: SuggestionView[];
   onRun: (id: string) => void;
   onRate: (id: string, up: boolean) => void;
+  onReset: () => void;
 }) {
   const header = (
     <div className="monitor-header">
@@ -30,6 +31,9 @@ export function MonitorTab({ persona, targets, contextBytes, suggestions, onRun,
         <span className="monitor-persona">{persona}</span>
         <span className="monitor-targets">{targets}</span>
         <span className="monitor-context">{formatBytes(contextBytes)}</span>
+      </div>
+      <div className="monitor-actions">
+        <button type="button" className="monitor-reset" title="Reset context" onClick={onReset}>↺</button>
       </div>
     </div>
   );
