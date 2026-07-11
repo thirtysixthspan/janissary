@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { JanusClient } from './ws';
+import { populateCommandLine } from './populate-command-line';
 
 // State and handlers for the `profile launch` picker (mirrors the `hist` picker's shape) — unlike
 // `hist`, selecting a profile populates the command line without submitting it, the same way the
@@ -20,13 +21,7 @@ export function useProfilePicker(
   };
 
   const pickProfile = (name: string) => {
-    const text = `profile launch ${name}`;
-    if (harnessPtyId) {
-      client.send({ method: 'ptyInput', params: { id: harnessPtyId, data: text } });
-    } else {
-      recallRef.current?.(text);
-      inputRef.current?.focus();
-    }
+    populateCommandLine(`profile launch ${name}`, client, harnessPtyId, recallRef, inputRef);
     setProfilePickerOpen(false);
   };
 
