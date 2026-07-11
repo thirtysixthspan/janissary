@@ -289,6 +289,9 @@ export type AcpOptions = {
   // via a Seatbelt sandbox (see sandbox.ts). Monitor sessions never set this.
   workspaceDir?: string;
   offline?: boolean;
+  // Tool ids the connection's permission handler may approve (see acp-tools.ts). Undefined/empty
+  // (every non-monitor caller and every tool-less persona) means deny every tool request.
+  allowedTools?: string[];
 };
 
 // --- acp-loop.ts ----------------------------------------------------------

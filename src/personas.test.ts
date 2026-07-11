@@ -49,6 +49,40 @@ describe('loadPersona', () => {
     writePersona('weird', '[//]: # gemini:Pro:high\nBody.');
     expect(() => loadPersona('weird', root)).toThrow(/Unknown harness "gemini"/);
   });
+
+  it('defaults to no tools when the tools line is absent', () => {
+    writePersona('plain', '[//]: # claude:Sonnet:high\n\nBody.');
+    expect(loadPersona('plain', root).tools).toEqual([]);
+  });
+
+  it('parses a tools line and keeps the body after it', () => {
+    writePersona('scout', '[//]: # claude:Sonnet:high\n[//]: # tools: web_search, web_fetch\n\nWatch and look things up.\n');
+    const persona = loadPersona('scout', root);
+    expect(persona.tools).toEqual(['web_search', 'web_fetch']);
+    expect(persona.body).toBe('Watch and look things up.');
+  });
+
+  it('tolerates case and whitespace and de-duplicates tool entries', () => {
+    writePersona('scout', '[//]: # claude:Sonnet:high\n[//]: # tools:   WEB_SEARCH , web_fetch ,  web_search \nBody.');
+    expect(loadPersona('scout', root).tools).toEqual(['web_search', 'web_fetch']);
+  });
+
+  it('treats an empty tools line as no tools', () => {
+    writePersona('scout', '[//]: # claude:Sonnet:high\n[//]: # tools:\nBody.');
+    expect(loadPersona('scout', root).tools).toEqual([]);
+  });
+
+  it('throws on an unknown tool name', () => {
+    writePersona('scout', '[//]: # claude:Sonnet:high\n[//]: # tools: web_search, telepathy\nBody.');
+    expect(() => loadPersona('scout', root)).toThrow(/requests unknown tool "telepathy" \(supported: web_search, web_fetch\)/);
+  });
+
+  it('treats a non-tools comment on the second line as body, not an error', () => {
+    writePersona('noted', '[//]: # claude:Sonnet:high\n[//]: # just a note\nBody.');
+    const persona = loadPersona('noted', root);
+    expect(persona.tools).toEqual([]);
+    expect(persona.body).toBe('[//]: # just a note\nBody.');
+  });
 });
 
 describe('listPersonas', () => {

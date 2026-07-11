@@ -7,7 +7,7 @@ import type { AcpSession, PromptHandlers } from './types.js';
 import type { Persona } from './personas.js';
 
 function makePersona(): Persona {
-  return { name: 'reviewer', harness: { harness: 'claude', model: 'sonnet', variant: 'default' }, body: 'Watch for bugs.' };
+  return { name: 'reviewer', harness: { harness: 'claude', model: 'sonnet', variant: 'default' }, body: 'Watch for bugs.', tools: [] };
 }
 
 function makeSession(): { session: AcpSession; prompt: ReturnType<typeof vi.fn>; kill: ReturnType<typeof vi.fn> } {

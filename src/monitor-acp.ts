@@ -4,8 +4,9 @@ import { connectAcp } from './acp.js';
 
 // Maps a persona's harness directive to the ACP subprocess that runs its monitoring
 // session. Every monitor gets its own fresh connection — never a tab's interactive
-// session. `connectAcp` auto-denies all tool permission requests, so monitoring
-// sessions are inherently tool-less: they can only read prompts and reply.
+// session. By default `connectAcp` denies all tool permission requests; a persona that
+// opts into web tools via its `tools:` line has those forwarded as `allowedTools`, and
+// only those are approved (see acp-tools.ts). A persona with no tools stays tool-less.
 
 type SpawnHooks = {
   onError: (message: string) => void;
@@ -22,6 +23,7 @@ export function spawnMonitorSession(persona: Persona, cwd: string, hooks: SpawnH
       onError: hooks.onError,
       onConnect: hooks.onConnect,
       env: { OPENCODE_CONFIG_CONTENT: JSON.stringify({ model }) },
+      allowedTools: persona.tools,
     });
   }
   // claude: the Claude Code ACP adapter. Model and thinking effort are passed via its
@@ -31,5 +33,6 @@ export function spawnMonitorSession(persona: Persona, cwd: string, hooks: SpawnH
     onError: hooks.onError,
     onConnect: hooks.onConnect,
     env: { ANTHROPIC_MODEL: model, CLAUDE_THINKING_EFFORT: variant },
+    allowedTools: persona.tools,
   });
 }
