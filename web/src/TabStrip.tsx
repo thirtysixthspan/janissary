@@ -1,15 +1,10 @@
 import React from 'react';
 import type { TabView } from '@shared/protocol';
-import { TabItem } from './TabItem';
+import { TabItem, type TabItemActions } from './TabItem';
 
-type Properties = {
+type Properties = TabItemActions & {
   tabs: TabView[];
   activeTab: number;
-  onSelect: (index: number) => void;
-  onClose: (index: number) => void;
-  onRename: (index: number, title: string) => void;
-  tabNameMaxLength: number;
-  onFocusCommandBar?: () => void;
 };
 
 export function TabStrip({ tabs, activeTab, onSelect, onClose, onRename, tabNameMaxLength, onFocusCommandBar }: Properties) {

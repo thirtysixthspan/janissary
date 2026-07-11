@@ -1,15 +1,19 @@
 import React, { useRef, useState } from 'react';
 import type { TabView } from '@shared/protocol';
 
-type Properties = {
-  tab: TabView;
-  index: number;
-  active: boolean;
+// Shared with TabStrip, which passes these straight through to each TabItem it renders.
+export type TabItemActions = {
   onSelect: (index: number) => void;
   onClose: (index: number) => void;
   onRename: (index: number, title: string) => void;
   tabNameMaxLength: number;
   onFocusCommandBar?: () => void;
+};
+
+type Properties = TabItemActions & {
+  tab: TabView;
+  index: number;
+  active: boolean;
 };
 
 export function TabItem({ tab, index, active, onSelect, onClose, onRename, tabNameMaxLength, onFocusCommandBar }: Properties) {
