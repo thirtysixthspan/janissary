@@ -547,3 +547,15 @@ html, body, #root {
 
 .sidebar .files-rows { scrollbar-width: none; }
 .sidebar .files-rows::-webkit-scrollbar { display: none; }
+
+/* Notifications tab: metadata header matching the file tab's header treatment. */
+.notifications-header {
+  display: flex; align-items: center; justify-content: flex-end;
+  padding: 6px 12px; color: var(--muted); font-size: 12px; border-bottom: 1px solid var(--border);
+}
+.notifications-actions { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
+.notifications-dock-cycle, .notifications-close {
+  background: transparent; border: none; color: var(--muted); cursor: pointer; font-size: 13px;
+  padding: 0 4px; line-height: 1;
+}
+.notifications-dock-cycle:hover, .notifications-close:hover { color: var(--fg); }

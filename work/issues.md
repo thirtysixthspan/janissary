@@ -18,8 +18,6 @@
 
 * notifications and file navigator tabs should be able to share a sidebar using a tabbed interface.
 
-* notification switch position and close buttons should be present in a metadata line that is styled the same as the metadat line in the files tab.
-
 * notifications should be shown with latest at the top, and a timestamp provided for each
 
 * the sidebar with the notifications tab should not be taller than the application tabs. when the notification transcript grows greater in length than can be rendered a scrollbar should appear in the notification tab and only apply to content in that tab, similar to how scrolling works for the file navigator.
