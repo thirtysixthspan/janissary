@@ -203,6 +203,50 @@ describe('MonitorManager', () => {
     expect(managers.tab.tabs.some((t) => t.view === 'monitor')).toBe(false);
   });
 
+  it('closing the reporting tab kills its session and stops feeding', () => {
+    const { managers } = makeFakeManagers([janus, agent2]);
+    const { spawn, sessions } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+    manager.start('janus', 'assistant', [{ kind: 'tab', label: 'agent2' }]);
+    const monitorIndex = managers.tab.tabs.findIndex((t) => t.view === 'monitor');
+
+    managers.tab.closeTab(monitorIndex);
+    messageBus.emit('transcript', { type: 'tab:removed', tabLabel: 'assistant' });
+
+    expect(sessions[0].kill).toHaveBeenCalled();
+    expect(manager.list()).toEqual([]);
+  });
+
+  it('reopening the same owner/persona after its reporting tab closes succeeds', () => {
+    const { managers } = makeFakeManagers([janus, agent2]);
+    const { spawn } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+    manager.start('janus', 'assistant', [{ kind: 'tab', label: 'agent2' }]);
+    const monitorIndex = managers.tab.tabs.findIndex((t) => t.view === 'monitor');
+
+    managers.tab.closeTab(monitorIndex);
+    messageBus.emit('transcript', { type: 'tab:removed', tabLabel: 'assistant' });
+
+    expect(manager.start('janus', 'assistant', [{ kind: 'tab', label: 'agent2' }])).toBeNull();
+  });
+
+  it('closing every tab target closes the now-empty reporting tab', () => {
+    const agent3 = makeTab('agent3', '#ccc');
+    const { managers } = makeFakeManagers([janus, agent2, agent3]);
+    const { spawn, sessions } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+    manager.start('janus', 'assistant', [{ kind: 'tab', label: 'agent2' }, { kind: 'tab', label: 'agent3' }]);
+    expect(managers.tab.tabs.some((t) => t.view === 'monitor')).toBe(true);
+
+    messageBus.emit('transcript', { type: 'tab:removed', tabLabel: 'agent2' });
+    expect(managers.tab.tabs.some((t) => t.view === 'monitor')).toBe(true); // one target remains
+    expect(sessions[0].kill).not.toHaveBeenCalled();
+
+    messageBus.emit('transcript', { type: 'tab:removed', tabLabel: 'agent3' });
+    expect(sessions[0].kill).toHaveBeenCalled();
+    expect(managers.tab.tabs.some((t) => t.view === 'monitor')).toBe(false);
+  });
+
   it('keeps a reporting tab fed by another owner when one owner closes', () => {
     const { managers } = makeFakeManagers([janus, agent2]);
     const { spawn } = fakeSpawnFactory();

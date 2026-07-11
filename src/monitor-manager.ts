@@ -106,6 +106,10 @@ export class MonitorManager {
       messageBus.on('transcript', 'tab:removed', (event) => {
         if (event.type !== 'tab:removed') return;
         if (event.tabLabel === reg.owner) { this.handleOwnerClosed(reg.owner); return; }
+        // The reporting tab itself was closed directly: tear the monitor down fully,
+        // regardless of remaining targets, so its session doesn't linger and the same
+        // owner/persona can be started again.
+        if (!reg.inline && event.tabLabel === reg.persona.name) { this.stop(reg.owner, reg.persona.name); return; }
         // Only tab targets drop out; group targets persist (the group may gain new tabs).
         if (reg.targets.some((t) => t.kind === 'tab' && t.label === event.tabLabel)) {
           this.stop(reg.owner, reg.persona.name, { kind: 'tab', label: event.tabLabel });
@@ -213,7 +217,15 @@ export class MonitorManager {
     clearInterval(reg.timer);
     reg.session.kill();
     this.monitors.delete(key);
+    if (!reg.inline) this.closeIfUnfed(personaName);
     return true;
+  }
+
+  // Close a persona's reporting tab if no live monitor still feeds it (another owner
+  // may run the same persona and keep it open).
+  private closeIfUnfed(personaName: string): void {
+    const stillFed = [...this.monitors.values()].some((r) => !r.inline && r.persona.name === personaName);
+    if (!stillFed) closeMonitorTab(this.managers, personaName);
   }
 
   // The owning agent tab closed: stop its monitors, and close any reporting tab that no
@@ -223,10 +235,7 @@ export class MonitorManager {
       .filter((reg) => reg.owner === owner && !reg.inline)
       .map((reg) => reg.persona.name);
     this.stopAll(owner);
-    for (const name of personas) {
-      const stillFed = [...this.monitors.values()].some((reg) => !reg.inline && reg.persona.name === name);
-      if (!stillFed) closeMonitorTab(this.managers, name);
-    }
+    for (const name of personas) this.closeIfUnfed(name);
   }
 
   stopAll(owner: string): number {
