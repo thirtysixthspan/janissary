@@ -357,6 +357,7 @@ html, body, #root {
 .picker-row.picker-empty { color: var(--muted); cursor: default; }
 .picker-row.selected { background: var(--accent); color: var(--bg); }
 .picker-row:hover { background: var(--border); }
+.picker-row.selected:hover { background: var(--accent); color: var(--bg); }
 .picker-chevron { flex: none; width: 1em; color: var(--muted); font-size: 10px; }
 
 /* Tab navigator overlay (Ctrl+G / nav) */
