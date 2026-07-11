@@ -1,5 +1,5 @@
 import React from 'react';
-import { useConfirmDialogKeys } from '../useConfirmDialogKeys';
+import { ConfirmDialogShell } from '../ConfirmDialogShell';
 
 // Confirmation dialog shown when the `quit` command runs. Modal: nothing but y/n/Enter/Escape/
 // Left/Right, or a click on the dialog itself, does anything while it's open. Both input
@@ -12,21 +12,13 @@ import { useConfirmDialogKeys } from '../useConfirmDialogKeys';
 type Properties = { onConfirm: () => void; onCancel: () => void };
 
 export function QuitDialog({ onConfirm, onCancel }: Properties) {
-  const { dialogRef, selected } = useConfirmDialogKeys(onConfirm, onCancel);
-
   return (
-    <div className="modal-backdrop">
-      <div ref={dialogRef} className="modal" role="alertdialog" aria-modal="true" tabIndex={-1}>
-        <div className="modal-title">Are you sure you want to quit?</div>
-        <div className="modal-actions">
-          <button className={`modal-button${selected === 'confirm' ? ' selected' : ''}`} onClick={onConfirm}>
-            Quit (y)
-          </button>
-          <button className={`modal-button${selected === 'cancel' ? ' selected' : ''}`} onClick={onCancel}>
-            Cancel (n)
-          </button>
-        </div>
-      </div>
-    </div>
+    <ConfirmDialogShell
+      title="Are you sure you want to quit?"
+      confirmLabel="Quit (y)"
+      cancelLabel="Cancel (n)"
+      onConfirm={onConfirm}
+      onCancel={onCancel}
+    />
   );
 }
