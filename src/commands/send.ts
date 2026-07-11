@@ -1,6 +1,7 @@
 import type { Command } from './types.js';
 import type { Tab } from '../types.js';
 import type { CommandManagers } from './types.js';
+import { resolveTarget } from './resolve-target.js';
 
 /** Parse a `send <label> <text...>` command (the leading `send` is optional). */
 export function parseSendCommand(input: string): { label: string; text: string } | { error: string } {
@@ -37,10 +38,8 @@ export const command: Command = {
     const append = (text: string) => managers.tab.append(tab.label, { input: command_, output: text });
     const parsed = parseSendCommand(command_);
     if ('error' in parsed) { append(parsed.error); return; }
-    // The target may be addressed by its label or by its display alias (see `rename`).
-    const key = parsed.label.toLowerCase();
-    const target = managers.tab.tabs.find((t) => t.label.toLowerCase() === key || t.title?.toLowerCase() === key);
-    if (!target) { append(`No tab named "${parsed.label}".`); return; }
+    const target = resolveTarget(parsed.label, managers, append);
+    if (!target) return;
     const error = deliverTo(target, parsed.text, managers);
     if (error) { append(error); return; }
     append(`→ ${parsed.label}: ${parsed.text}`);

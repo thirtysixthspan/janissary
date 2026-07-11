@@ -1,4 +1,5 @@
 import type { Command } from './types.js';
+import { resolveTarget } from './resolve-target.js';
 
 /** Parse a `queue <agent> <command...>` command (the leading `queue` is optional). */
 export function parseQueueCommand(input: string): { label: string; text: string } | { error: string } {
@@ -21,10 +22,8 @@ export const command: Command = {
     const append = (text: string) => managers.tab.append(tab.label, { input: command_, output: text });
     const parsed = parseQueueCommand(command_);
     if ('error' in parsed) { append(parsed.error); return; }
-    // The target may be addressed by its label or by its display alias (see `rename`).
-    const key = parsed.label.toLowerCase();
-    const target = managers.tab.tabs.find((t) => t.label.toLowerCase() === key || t.title?.toLowerCase() === key);
-    if (!target) { append(`No tab named "${parsed.label}".`); return; }
+    const target = resolveTarget(parsed.label, managers, append);
+    if (!target) return;
     if (target.view !== undefined && target.view !== 'agent') {
       append(`Tab "${parsed.label}" has no command queue.`);
       return;
