@@ -12,11 +12,12 @@ vi.mock('./acp.js', () => ({
 import { spawnMonitorSession } from './monitor-acp.js';
 import type { Persona } from './personas.js';
 
-function makePersona(harness: 'opencode' | 'claude'): Persona {
+function makePersona(harness: 'opencode' | 'claude', tools: string[] = []): Persona {
   return {
     name: 'test',
     harness: { harness, model: 'test-model', variant: 'default' },
     body: 'test body',
+    tools,
   };
 }
 
@@ -103,5 +104,23 @@ describe('spawnMonitorSession', () => {
         env: { ANTHROPIC_MODEL: 'claude-sonnet-4-20250514', CLAUDE_THINKING_EFFORT: 'high' },
       }),
     );
+  });
+
+  it('forwards persona.tools as allowedTools for the opencode branch', () => {
+    mocks.connectAcp.mockReturnValue(makeSession());
+    spawnMonitorSession(makePersona('opencode', ['web_search']), '/tmp', { onError: vi.fn() });
+    expect(mocks.connectAcp).toHaveBeenCalledWith(expect.objectContaining({ allowedTools: ['web_search'] }));
+  });
+
+  it('forwards persona.tools as allowedTools for the claude branch', () => {
+    mocks.connectAcp.mockReturnValue(makeSession());
+    spawnMonitorSession(makePersona('claude', ['web_search', 'web_fetch']), '/tmp', { onError: vi.fn() });
+    expect(mocks.connectAcp).toHaveBeenCalledWith(expect.objectContaining({ allowedTools: ['web_search', 'web_fetch'] }));
+  });
+
+  it('forwards an empty allowedTools for a tool-less persona', () => {
+    mocks.connectAcp.mockReturnValue(makeSession());
+    spawnMonitorSession(makePersona('claude'), '/tmp', { onError: vi.fn() });
+    expect(mocks.connectAcp).toHaveBeenCalledWith(expect.objectContaining({ allowedTools: [] }));
   });
 });

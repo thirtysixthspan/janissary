@@ -8,6 +8,7 @@ const persona = (name: string): Persona => ({
   name,
   harness: { harness: 'claude', model: 'sonnet', variant: 'default' },
   body: '',
+  tools: [],
 });
 const session: AcpSession = { prompt: () => {}, kill: () => {} };
 

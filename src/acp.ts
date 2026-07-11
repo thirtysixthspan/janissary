@@ -9,15 +9,17 @@ import {
 import type { PromptHandlers, AcpSession, AcpOptions } from './types.js';
 import { sandboxSpawn } from './sandbox.js';
 import { getGithubToken } from './github-token.js';
+import { decidePermission } from './acp-tools.js';
 
 /**
  * Connect to an arbitrary ACP agent launched as a subprocess and drive it as an ACP
  * client over stdio. This is agent-agnostic — the caller supplies the command to run
  * (e.g. `npx @agentclientprotocol/claude-agent-acp` or `opencode acp`).
  *
- * MVP scope: streams `agent_message_chunk` text into the prompt handler, auto-denies tool
- * permission requests, and advertises no fs/terminal capabilities (so the agent never
- * calls those back).
+ * Scope: streams `agent_message_chunk` text into the prompt handler and advertises no fs/terminal
+ * capabilities (so the agent never calls those back). Tool permission requests are denied unless
+ * `options.allowedTools` opts a classified web tool in (see acp-tools.ts) — undefined/empty (every
+ * non-monitor caller and every tool-less persona) denies every request, as before.
  *
  * `workspaceDir`/`offline` confine the subprocess to that workspace via a Seatbelt sandbox (see
  * sandbox.ts); omitted (monitor sessions never set them), the command runs exactly as before.
@@ -49,9 +51,9 @@ export function connectAcp(options: AcpOptions): AcpSession {
         current?.onChunk(update.content.text);
       }
     },
-    // MVP: auto-deny tool permission (read-only). A real permission UI replaces this.
-    async requestPermission() {
-      return { outcome: { outcome: 'cancelled' } };
+    // Deny every tool request unless the persona's allowlist opts a classified web tool in.
+    async requestPermission(params) {
+      return { outcome: decidePermission(options.allowedTools, params.toolCall, params.options) };
     },
   };
 

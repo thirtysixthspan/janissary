@@ -5,7 +5,7 @@ import path from 'node:path';
 // is the persona name used on the `monitor` command line. The first line is a required
 // harness directive; the rest of the file is the monitoring session's startup prompt.
 
-import { parseDirective } from './persona-parsing.js';
+import { parseDirective, isPersonaToolsLine, parsePersonaTools } from './persona-parsing.js';
 import type { PersonaHarness } from './persona-parsing.js';
 export type { PersonaHarness } from './persona-parsing.js';
 export { parseDirective } from './persona-parsing.js';
@@ -14,6 +14,9 @@ export type Persona = {
   name: string;
   harness: PersonaHarness;
   body: string;
+  // Tools the persona opted into via the `[//]: # tools:` line (see persona-parsing). Always
+  // present — `[]` for a tool-less persona — so callers never branch on undefined.
+  tools: string[];
 };
 
 const PERSONAS_DIR = path.join('ai', 'personas');
@@ -32,10 +35,15 @@ export function loadPersona(name: string, root: string = process.cwd()): Persona
   } catch {
     throw new Error(`No persona "${name}" (looked in ${path.join(PERSONAS_DIR, `${name}.md`)}).`);
   }
-  const newline = raw.indexOf('\n');
-  const firstLine = newline === -1 ? raw : raw.slice(0, newline);
-  const body = newline === -1 ? '' : raw.slice(newline + 1).trim();
-  return { name, harness: parseDirective(name, firstLine.trim()), body };
+  const lines = raw.split('\n');
+  const harness = parseDirective(name, (lines[0] ?? '').trim());
+  // An optional second `[//]: #` comment line lists the persona's tools; anything else (a blank
+  // line, an ordinary comment, or prose) starts the body, so existing personas are unaffected.
+  const secondLine = (lines[1] ?? '').trim();
+  const hasTools = isPersonaToolsLine(secondLine);
+  const tools = hasTools ? parsePersonaTools(name, secondLine) : [];
+  const body = lines.slice(hasTools ? 2 : 1).join('\n').trim();
+  return { name, harness, body, tools };
 }
 
 // Persona names available for the `monitor` command (used by completion and errors).
