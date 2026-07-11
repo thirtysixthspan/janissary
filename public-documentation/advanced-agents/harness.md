@@ -41,9 +41,25 @@ harness opencode as quality        → tab "quality-2"
 
 ## Lifecycle
 
-The tab lives exactly as long as the harness process. When the harness exits — quitting normally, crashing, or the binary not being found — the tab closes with it, scrollback included. The × button and `close` end it the same way. Harness tabs aren't restored by `janus --relaunch`; each launch starts fresh. If a harness tab is the last tab standing, its exit quits the app.
+The tab lives exactly as long as the harness process. When the harness exits — quitting normally, crashing, or the binary not being found — the tab closes with it, and its on-screen scrollback goes with it. The full session is preserved in a recording file, though (see below). The × button and `close` end it the same way. Harness tabs aren't restored by `janus --relaunch`; each launch starts fresh. If a harness tab is the last tab standing, its exit quits the app.
 
 Other tabs can drive a harness: `send <tab> <text>` types a line into it, and [scheduled commands](/automation/scheduling) targeted at a harness tab are typed into it the same way. A harness launched by a [profile](/automation/profiles) can also be given a model and startup commands.
+
+## Recordings
+
+Every harness session is recorded automatically — there's no command to start it. The full session, with its timing and colors, is written to a `.cast` file under `.janissary/recordings/` in your project, named `<label>-<timestamp>.cast`. Because the whole stream is saved, you can review a session even after its tab has closed and its scrollback is gone.
+
+Replay a recording with [asciinema](https://asciinema.org):
+
+```
+asciinema play .janissary/recordings/claude-2026-07-10T18-30-05-123Z.cast
+```
+
+The files are standard [asciicast v2](https://docs.asciinema.org/manual/asciicast/v2/), so they also drop into any asciicast web player. Recordings from the current run are cleared the next time you start `janus` normally; a `janus --relaunch` keeps them. SSH sessions are not recorded.
+
+## Watching a harness with a monitor
+
+You can point a monitor at a harness tab — `monitor <persona> <harness-label>` — to have a persona watch the harness's on-screen output and surface suggestions. The monitor reads the harness's current screen (refreshed as the screen changes), so it reacts to what the harness is actually showing. SSH tabs can't be watched this way.
 
 ## SSH sessions
 

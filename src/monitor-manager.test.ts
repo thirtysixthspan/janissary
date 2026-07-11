@@ -18,6 +18,7 @@ type FakeSession = {
 function makeFakeManagers(tabs: Tab[]) {
   const appended: { label: string; entry: LogEntry }[] = [];
   const finished: { label: string; output: string }[] = [];
+  const screens: Record<string, { text: string; capturedAt: number } | undefined> = {};
   const fakeTab = {
     tabs,
     cwdOf: () => '/tmp',
@@ -27,8 +28,15 @@ function makeFakeManagers(tabs: Tab[]) {
     // openMonitorTab reassigns `tabs`, so splice the live array, not the closure's original.
     closeTab: (index: number) => { fakeTab.tabs.splice(index, 1); },
   };
-  const managers = { tab: fakeTab } as unknown as Managers;
-  return { managers, appended, finished };
+  const managers = {
+    tab: fakeTab,
+    harness: { latestScreenText: (label: string) => screens[label] },
+  } as unknown as Managers;
+  return { managers, appended, finished, screens };
+}
+
+function harnessTab(label: string): Tab {
+  return { ...makeTab(label, '#aaa'), view: 'harness' } as Tab;
 }
 
 function fakeSpawnFactory() {
@@ -336,6 +344,49 @@ describe('MonitorManager', () => {
     const existingIndex = prompt.indexOf('existing');
     const newIndex = prompt.indexOf('new');
     expect(existingIndex).toBeLessThan(newIndex);
+  });
+
+  it('seeds a harness target with its current rendered screen', () => {
+    const claude = harnessTab('claude');
+    const { managers, screens } = makeFakeManagers([janus, claude]);
+    screens.claude = { text: 'on-screen output', capturedAt: 100 };
+    const { spawn, sessions } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+
+    manager.start('janus', 'assistant', [{ kind: 'tab', label: 'claude' }]);
+    vi.advanceTimersByTime(FLUSH_MS);
+    expect(sessions[0].prompts[1]).toContain('[claude]');
+    expect(sessions[0].prompts[1]).toContain('on-screen output');
+  });
+
+  it('feeds a harness target\'s new screen on flush, tagged with the tab label', () => {
+    const claude = harnessTab('claude');
+    const { managers, screens } = makeFakeManagers([janus, claude]);
+    screens.claude = { text: 'first screen', capturedAt: 100 };
+    const { spawn, sessions } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+
+    manager.start('janus', 'assistant', [{ kind: 'tab', label: 'claude' }]);
+    vi.advanceTimersByTime(FLUSH_MS); // flushes the seeded first screen
+    sessions[0].reply('no suggestion'); // complete the prompt so inFlight clears
+    screens.claude = { text: 'second screen', capturedAt: 200 };
+    vi.advanceTimersByTime(FLUSH_MS);
+    expect(sessions[0].prompts.at(-1)).toContain('second screen');
+    expect(sessions[0].prompts.at(-1)).toContain('[claude]');
+  });
+
+  it('does not prompt when a harness target is idle (no new capture)', () => {
+    const claude = harnessTab('claude');
+    const { managers, screens } = makeFakeManagers([janus, claude]);
+    screens.claude = { text: 'steady screen', capturedAt: 100 };
+    const { spawn, sessions } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+
+    manager.start('janus', 'assistant', [{ kind: 'tab', label: 'claude' }]);
+    vi.advanceTimersByTime(FLUSH_MS); // flushes the seeded screen (priming + 1)
+    sessions[0].reply('no suggestion'); // complete the prompt so inFlight clears
+    vi.advanceTimersByTime(FLUSH_MS); // idle: same capturedAt → buffer empty → no new prompt
+    expect(sessions[0].prompts).toHaveLength(2);
   });
 
   it('lists monitors with mode and delivery counts', () => {

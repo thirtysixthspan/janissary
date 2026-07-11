@@ -9,6 +9,17 @@ vi.mock('./harness-capture-file.js', () => ({
   writeCaptureFile: vi.fn(() => '/project/.janissary/captures/claude-now.txt'),
 }));
 
+// Mock the recorder so the manager's lifecycle wiring can be asserted without touching the
+// filesystem; each construction records a disposable stub.
+const recorderMock = vi.hoisted(() => ({ instances: [] as { dispose: ReturnType<typeof vi.fn> }[] }));
+vi.mock('./harness-recorder.js', () => ({
+  HarnessRecorder: vi.fn(function () {
+    const instance = { dispose: vi.fn() };
+    recorderMock.instances.push(instance);
+    return instance;
+  }),
+}));
+
 function makeManagers(): { managers: Managers; tabs: Tab[]; edit: ReturnType<typeof vi.fn> } {
   const tabs: Tab[] = [];
   const creator = { label: 'janus', log: [] } as unknown as Tab;
@@ -37,6 +48,7 @@ function makeManagers(): { managers: Managers; tabs: Tab[]; edit: ReturnType<typ
 describe('HarnessManager.capture', () => {
   beforeEach(() => {
     vi.useFakeTimers();
+    recorderMock.instances.length = 0;
   });
 
   afterEach(() => {
@@ -81,5 +93,73 @@ describe('HarnessManager.capture', () => {
     expect(manager.capture('harness capture claude', 'claude')).toBeUndefined();
     expect(writeCaptureFile).toHaveBeenCalledWith('claude', expect.any(Number), 'screen contents');
     expect(edit).toHaveBeenCalledWith('harness capture claude', '/project/.janissary/captures/claude-now.txt', 'janus');
+  });
+});
+
+describe('HarnessManager recorder lifecycle', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    recorderMock.instances.length = 0;
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.clearAllMocks();
+  });
+
+  it('creates a recorder when a harness tab spawns', () => {
+    const { managers } = makeManagers();
+    const manager = new HarnessManager(managers);
+    expect(manager.run('harness claude')).toBeUndefined();
+    expect(recorderMock.instances).toHaveLength(1);
+  });
+
+  it('disposes the recorder when its PTY exits', () => {
+    const { managers } = makeManagers();
+    const manager = new HarnessManager(managers);
+    manager.run('harness claude');
+    messageBus.emit('pty', { type: 'exit', id: 'pty-1', exitCode: 0 });
+    expect(recorderMock.instances[0].dispose).toHaveBeenCalled();
+  });
+});
+
+describe('HarnessManager.latestScreenText', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    recorderMock.instances.length = 0;
+  });
+
+  afterEach(() => {
+    messageBus.emit('pty', { type: 'exit', id: 'pty-1', exitCode: 0 });
+    vi.useRealTimers();
+    vi.clearAllMocks();
+  });
+
+  it('returns undefined for a missing tab', () => {
+    const { managers } = makeManagers();
+    const manager = new HarnessManager(managers);
+    expect(manager.latestScreenText('nope')).toBeUndefined();
+  });
+
+  it('returns undefined for a non-harness tab', () => {
+    const { managers } = makeManagers();
+    const manager = new HarnessManager(managers);
+    expect(manager.latestScreenText('janus')).toBeUndefined();
+  });
+
+  it('returns undefined for a harness tab with no capture yet', () => {
+    const { managers } = makeManagers();
+    const manager = new HarnessManager(managers);
+    manager.run('harness claude');
+    expect(manager.latestScreenText('claude')).toBeUndefined();
+  });
+
+  it('returns the reader\'s latest capture once the harness has produced settled output', async () => {
+    const { managers } = makeManagers();
+    const manager = new HarnessManager(managers);
+    manager.run('harness claude');
+    messageBus.emit('pty', { type: 'data', id: 'pty-1', data: 'on screen' });
+    await vi.advanceTimersByTimeAsync(1001);
+    expect(manager.latestScreenText('claude')?.text).toBe('on screen');
   });
 });

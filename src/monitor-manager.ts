@@ -6,7 +6,8 @@ import { parseSuggestion } from './monitor-parsing.js';
 import { openMonitorTab, closeMonitorTab, pushSuggestion, findSuggestion, removeSuggestion } from './monitor-window.js';
 import { openMonitorSession, respawnMonitorSession } from './monitor-session.js';
 import { spawnMonitorSession } from './monitor-acp.js';
-import { validateTargets, matchesTargets, targetColor } from './monitor-targets.js';
+import { validateTargets, matchesTargets, targetColor, seedEntries } from './monitor-targets.js';
+import { harnessFeedEntries } from './monitor-harness-feed.js';
 import { listMonitors, monitorConnections } from './monitor-info.js';
 import type { ConnectionView } from './protocol.js';
 import type { Managers } from './managers.js';
@@ -22,6 +23,8 @@ export type MonitorSub = {
   persona: Persona;
   targets: MonitorTarget[];
   buffer: { tabLabel: string; entry: LogEntry }[];
+  // Per-harness-target last-fed capture time, so an unchanged screen is not re-fed (see monitor-harness-feed).
+  harnessSeen: Map<string, number>;
   session: AcpSession;
   info?: AcpInfo;
   inFlight: boolean;
@@ -63,19 +66,15 @@ export class MonitorManager {
     }
 
     const reg: MonitorSub = {
-      owner, inline, persona, targets: resolved, buffer: [], inFlight: true, delivered: 0,
+      owner, inline, persona, targets: resolved, buffer: [], harnessSeen: new Map(), inFlight: true, delivered: 0,
       session: undefined as unknown as AcpSession, timer: undefined as unknown as ReturnType<typeof setInterval>, subs: [],
     };
     this.openSession(reg);
     this.subscribe(key, reg);
-    for (const target of resolved) {
-      const tabs = target.kind === 'tab'
-        ? this.managers.tab.tabs.filter((t) => t.label === target.label)
-        : this.managers.tab.tabs.filter((t) => t.group === target.group);
-      for (const t of tabs) {
-        for (const entry of t.log) reg.buffer.push({ tabLabel: t.label, entry });
-      }
-    }
+    reg.buffer.push(
+      ...seedEntries(this.managers.tab.tabs, resolved),
+      ...harnessFeedEntries(this.managers, resolved, reg.harnessSeen),
+    );
     reg.timer = setInterval(() => this.flush(key), this.flushMs);
     this.monitors.set(key, reg);
     // External mode: open the reporting tab right away (empty feed) so starting the
@@ -119,7 +118,12 @@ export class MonitorManager {
   // previous prompt (including the persona priming) is still streaming.
   private flush(key: string): void {
     const reg = this.monitors.get(key);
-    if (!reg || reg.inFlight || reg.buffer.length === 0) return;
+    if (!reg || reg.inFlight) return;
+    // Harness tabs never emit `entry:appended`, so top up from their rendered screen here — the
+    // live channel for harness targets. An idle harness yields nothing, keeping the "no new
+    // content → no ACP prompt" guarantee below intact.
+    reg.buffer.push(...harnessFeedEntries(this.managers, reg.targets, reg.harnessSeen));
+    if (reg.buffer.length === 0) return;
     const batch = reg.buffer;
     reg.buffer = [];
     const body = batch

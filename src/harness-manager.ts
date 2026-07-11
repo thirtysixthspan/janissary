@@ -1,6 +1,7 @@
 import { makeHarnessTab, distinctColor, uniqueLabel } from './tab.js';
 import { parseHarnessCommand, HARNESS_COMMANDS, buildHarnessCommand } from './harness.js';
-import { HarnessScreenReader } from './harness-screen.js';
+import { HarnessScreenReader, type ScreenCapture } from './harness-screen.js';
+import { HarnessRecorder } from './harness-recorder.js';
 import { writeCaptureFile } from './harness-capture-file.js';
 import type { HarnessView, ProfileHarnessEntry } from './types.js';
 import { messageBus } from './bus.js';
@@ -13,13 +14,25 @@ import type { Managers } from './managers.js';
 // and wiring.
 export class HarnessManager {
   private screenReaders = new Map<string, HarnessScreenReader>();
+  private recorders = new Map<string, HarnessRecorder>();
 
   constructor(private managers: Managers) {
     messageBus.on('pty', 'exit', (event) => {
       if (event.type !== 'exit') return;
       this.screenReaders.get(event.id)?.dispose();
       this.screenReaders.delete(event.id);
+      this.recorders.get(event.id)?.dispose();
+      this.recorders.delete(event.id);
     });
+  }
+
+  // The named harness tab's most recent rendered-screen capture, or undefined when the tab is
+  // missing, is not a harness tab, or has no capture yet. Exposes the screen reader's rendered
+  // text (the coherent, de-ANSI'd form) to monitors without exposing the reader map.
+  latestScreenText(label: string): ScreenCapture | undefined {
+    const tab = this.managers.tab.tabs.find((t) => t.label === label);
+    if (!tab?.harness) return undefined;
+    return this.screenReaders.get(tab.harness.ptyId)?.latestCapture();
   }
 
   // Handle a `harness <name> [as <label>] [-w] [--offline]` command. Returns an error message to
@@ -96,6 +109,7 @@ export class HarnessManager {
     const id = this.managers.pty.spawn(label, program, buildHarnessCommand(name, model), cwd, workspaceDir, offline);
     const dims = this.managers.pty.spawnDimensions();
     this.screenReaders.set(id, new HarnessScreenReader(id, dims.cols, dims.rows));
+    this.recorders.set(id, new HarnessRecorder(id, label, program, dims.cols, dims.rows));
     const liveTab = this.managers.tab.tabs.find((t) => t.label === label);
     if (liveTab?.harness) liveTab.harness.ptyId = id;
     const notice = workspaceDir ? sandboxNotice() : undefined;

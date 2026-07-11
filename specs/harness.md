@@ -126,7 +126,8 @@ prompt, only "a harness process is running here" from "no harness process is run
   `close` command closes it the same way while the process is still running (killing the PTY
   first). If the harness tab is the last remaining tab, closing it — including the harness
   process exiting on its own — quits the app (see `tabs.md`). There is no frozen "exited" state
-  to inspect — the harness's own scrollback is gone once its tab closes.
+  to inspect — the harness's own scrollback is gone once its tab closes, but the full timed session
+  is preserved in its recording file (see [[harness-recording]]).
 
 ## Screen capture
 
@@ -157,6 +158,20 @@ in the project directory and opens it as a regular editor tab — each invocatio
 opens a new tab; the capture is a snapshot, not a live view. Capture files accumulate only within
 a run: the directory is cleared at the next normal launch (a `--relaunch` handoff preserves it,
 matching agent state).
+
+## Session recording
+
+Separately from on-demand screen capture, every named-harness session is **automatically** recorded
+to a replayable asciicast file under `.janissary/recordings/` for its whole lifetime — a *recording*
+is the full timed output stream, where a *capture* is a single point-in-time screen snapshot. See
+[[harness-recording]] for the file format, scope (ssh and inline PTYs excluded), lazy creation, and
+replay.
+
+## Monitoring
+
+A harness tab can be a monitor target (`monitor <persona> <harness-label>`): since a harness has no
+`LogEntry` transcript, the monitor is instead fed the tab's latest **rendered screen** on each flush.
+SSH harness tabs have no screen reader, so they remain unwatchable. See [[monitoring]].
 
 ## Placement and grouping
 
