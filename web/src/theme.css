@@ -235,7 +235,7 @@ html, body, #root {
 .main { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; }
 
 /* Transcript */
-.transcript { flex: 1; overflow-y: auto; padding: 8px 12px; }
+.transcript { flex: 1; min-height: 0; overflow-y: auto; padding: 8px 12px; }
 
 /* Floating connection / schedule panels, top-right over the transcript */
 .status-panels {
@@ -547,6 +547,12 @@ html, body, #root {
 
 .sidebar .files-rows { scrollbar-width: none; }
 .sidebar .files-rows::-webkit-scrollbar { display: none; }
+.sidebar .transcript { scrollbar-width: none; }
+.sidebar .transcript::-webkit-scrollbar { display: none; }
+
+/* Notifications tab: a flex column so its transcript can scroll internally without growing
+   the sidebar (see .files-tab for the equivalent file-navigator containment). */
+.notifications-tab { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 
 /* Notifications tab: metadata header matching the file tab's header treatment. */
 .notifications-header {
