@@ -8,6 +8,7 @@ import {
   findSuggestion,
   removeSuggestion,
   runSuggestion,
+  updateMonitorMeta,
 } from './monitor-window.js';
 import { makeTab } from './tab.js';
 import { messageBus } from './bus.js';
@@ -66,7 +67,7 @@ describe('openMonitorTab', () => {
     expect(tab.view).toBe('monitor');
     expect(tab.label).toBe('reviewer');
     expect(tab.title).toBe('reviewer');
-    expect(tab.monitor).toEqual({ suggestions: [] });
+    expect(tab.monitor).toEqual({ suggestions: [], persona: 'reviewer', targets: '', contextBytes: 0 });
     expect(tab.number).toBe(2);
     expect(managers.tab.tabs).toHaveLength(2);
     expect(emitSpy).toHaveBeenCalledWith('state', { type: 'dirty' });
@@ -100,6 +101,44 @@ describe('pushSuggestion', () => {
     pushSuggestion(managers, 'reviewer', 'blue', makeSuggestion('s2'));
 
     expect(monitorTabs(managers)[0].monitor?.suggestions.map((s) => s.id)).toEqual(['s1', 's2']);
+  });
+});
+
+describe('updateMonitorMeta', () => {
+  it('updates targets and contextBytes on an existing monitor tab', () => {
+    const { managers } = makeManagers([makeTab('main', 'red')]);
+    openMonitorTab(managers, 'reviewer', 'blue');
+
+    updateMonitorMeta(managers, 'reviewer', 'agent2, group:3', 512);
+
+    const tab = monitorTabs(managers)[0];
+    expect(tab.monitor).toMatchObject({ targets: 'agent2, group:3', contextBytes: 512 });
+  });
+
+  it('mutates the monitor object in place rather than replacing it', () => {
+    const { managers } = makeManagers([makeTab('main', 'red')]);
+    openMonitorTab(managers, 'reviewer', 'blue');
+    const monitor = monitorTabs(managers)[0].monitor;
+
+    updateMonitorMeta(managers, 'reviewer', 'agent2', 100);
+
+    expect(monitorTabs(managers)[0].monitor).toBe(monitor);
+  });
+
+  it('emits a dirty state event', () => {
+    const { managers } = makeManagers([makeTab('main', 'red')]);
+    openMonitorTab(managers, 'reviewer', 'blue');
+    const emitSpy = vi.spyOn(messageBus, 'emit');
+
+    updateMonitorMeta(managers, 'reviewer', 'agent2', 100);
+
+    expect(emitSpy).toHaveBeenCalledWith('state', { type: 'dirty' });
+    emitSpy.mockRestore();
+  });
+
+  it('is a no-op when no monitor tab matches the name', () => {
+    const { managers } = makeManagers([makeTab('main', 'red')]);
+    expect(() => updateMonitorMeta(managers, 'ghost', 'agent2', 100)).not.toThrow();
   });
 });
 

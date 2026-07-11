@@ -14,7 +14,9 @@ export function openMonitorSession(
     onError: (message) => managers.tab.append(reg.owner, { input: '', output: `monitor ${reg.persona.name}: ${message}` }),
     onConnect: (info) => { reg.info = info; messageBus.emit('state', { type: 'dirty' }); },
   });
-  reg.session.prompt(`${reg.persona.body}\n\n${SUGGESTION_FORMAT}`, {
+  const primingText = `${reg.persona.body}\n\n${SUGGESTION_FORMAT}`;
+  reg.contextBytes += Buffer.byteLength(primingText, 'utf8');
+  reg.session.prompt(primingText, {
     onChunk: () => {},
     onEnd: () => { reg.inFlight = false; },
     onError: () => { reg.inFlight = false; },
@@ -27,5 +29,7 @@ export function respawnMonitorSession(
   spawn: typeof spawnMonitorSession = spawnMonitorSession,
 ): void {
   reg.session.kill();
+  // A fresh session starts a fresh context.
+  reg.contextBytes = 0;
   openMonitorSession(reg, managers, spawn);
 }

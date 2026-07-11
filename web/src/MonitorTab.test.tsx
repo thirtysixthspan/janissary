@@ -16,9 +16,20 @@ function makeSuggestion(overrides: Partial<SuggestionView> = {}): SuggestionView
   };
 }
 
-function renderTab(suggestions: SuggestionView[], handlers: { onRun?: (id: string) => void; onRate?: (id: string, up: boolean) => void } = {}) {
+function renderTab(
+  suggestions: SuggestionView[],
+  handlers: { onRun?: (id: string) => void; onRate?: (id: string, up: boolean) => void } = {},
+  meta: { persona?: string; targets?: string; contextBytes?: number } = {},
+) {
   return render(
-    <MonitorTab suggestions={suggestions} onRun={handlers.onRun ?? vi.fn()} onRate={handlers.onRate ?? vi.fn()} />,
+    <MonitorTab
+      persona={meta.persona ?? 'assistant'}
+      targets={meta.targets ?? 'agent2'}
+      contextBytes={meta.contextBytes ?? 0}
+      suggestions={suggestions}
+      onRun={handlers.onRun ?? vi.fn()}
+      onRate={handlers.onRate ?? vi.fn()}
+    />,
   );
 }
 
@@ -28,11 +39,30 @@ describe('MonitorTab', () => {
     expect(screen.getByText(/No suggestions yet/)).toBeInTheDocument();
   });
 
+  it('renders the persona and targets in the metadata line', () => {
+    renderTab([], {}, { persona: 'security', targets: 'agent2, group:3' });
+    expect(screen.getByText('security')).toBeInTheDocument();
+    expect(screen.getByText('agent2, group:3')).toBeInTheDocument();
+  });
+
+  it.each([
+    [0, '0b'],
+    [999, '999b'],
+    [1000, '1.0kb'],
+    [45_000, '45.0kb'],
+    [1_000_000, '1.0mb'],
+    [2_500_000, '2.5mb'],
+  ])('formats %i context bytes as %s', (bytes, expected) => {
+    renderTab([], {}, { contextBytes: bytes });
+    expect(screen.getByText(expected)).toBeInTheDocument();
+  });
+
   it('renders the suggestion text without per-row meta', () => {
     renderTab([makeSuggestion()]);
+    const row = document.querySelector('.monitor-suggestion')!;
     expect(screen.getByText('You might want to check the build output')).toBeInTheDocument();
-    expect(screen.queryByText(/assistant/)).not.toBeInTheDocument();
-    expect(screen.queryByText(/agent2/)).not.toBeInTheDocument();
+    expect(row.textContent).not.toContain('assistant');
+    expect(row.textContent).not.toContain('agent2');
   });
 
   it('renders the newest suggestion first', () => {

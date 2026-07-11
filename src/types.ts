@@ -160,8 +160,10 @@ export type Tab = {
   markdown?: MarkdownView;
   // The editor-view payload, present only when `view === 'editor'`.
   editor?: EditorView;
-  // The monitor-window payload, present only when `view === 'monitor'`: the suggestion feed.
-  monitor?: { suggestions: MonitorSuggestion[] };
+  // The monitor-window payload, present only when `view === 'monitor'`: the suggestion feed,
+  // the persona name, the monitored tabs/groups (pre-formatted), and the running total of bytes
+  // sent/received on the monitor's dedicated ACP session.
+  monitor?: { suggestions: MonitorSuggestion[]; persona: string; targets: string; contextBytes: number };
   // The file-tree payload, present only when `view === 'files'`.
   files?: FileTreeView;
   // Group number, shared by an agent and every agent it (transitively) creates. The root agent

@@ -15,7 +15,10 @@ const makeMonitorTab = (name: string, dotColor: string, number: number): Tab => 
   ...makeTab(name, dotColor, number, [], [], undefined, 0, dotColor),
   view: 'monitor',
   title: name,
-  monitor: { suggestions: [] },
+  // The reporting tab's label is always its persona name (see `MonitorManager.start`), so
+  // `persona` never changes after creation; `targets`/`contextBytes` are filled in afterward
+  // via `updateMonitorMeta` once the owning monitor registration exists.
+  monitor: { suggestions: [], persona: name, targets: '', contextBytes: 0 },
 });
 
 // A unique label for a new monitor's reporting tab: the persona name, suffixed
@@ -51,6 +54,16 @@ export function openMonitorTab(managers: Managers, name: string, dotColor: strin
 export function pushSuggestion(managers: Managers, name: string, dotColor: string, suggestion: MonitorSuggestion): void {
   const tab = openMonitorTab(managers, name, dotColor);
   tab.monitor!.suggestions.push(suggestion);
+  messageBus.emit('state', { type: 'dirty' });
+}
+
+// Update a persona's reporting tab with its monitor's current targets and running
+// context-byte total. A no-op if the tab or its monitor payload is gone.
+export function updateMonitorMeta(managers: Managers, name: string, targets: string, contextBytes: number): void {
+  const tab = monitorTabs(managers).find((t) => t.label === name);
+  if (!tab?.monitor) return;
+  tab.monitor.targets = targets;
+  tab.monitor.contextBytes = contextBytes;
   messageBus.emit('state', { type: 'dirty' });
 }
 

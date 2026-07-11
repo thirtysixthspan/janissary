@@ -77,7 +77,14 @@ export function ReportingSection({ entries, onClose, onRun, onRate }: {
       </div>
       {current.tab.view === 'monitor' && current.tab.monitor && (
         <div className="reporting-body" style={{ borderLeft: `4px solid ${current.tab.dotColor}` }}>
-          <MonitorTab suggestions={current.tab.monitor.suggestions} onRun={onRun} onRate={onRate} />
+          <MonitorTab
+            persona={current.tab.monitor.persona}
+            targets={current.tab.monitor.targets}
+            contextBytes={current.tab.monitor.contextBytes}
+            suggestions={current.tab.monitor.suggestions}
+            onRun={onRun}
+            onRate={onRate}
+          />
         </div>
       )}
     </div>
