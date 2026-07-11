@@ -38,6 +38,11 @@ export function validateTargets(tabs: Tab[], personaName: string, inline: boolea
   return null;
 }
 
+// A human-readable rendering of a monitor's targets, e.g. `agent2, group:3`.
+export function formatTargets(targets: MonitorTarget[]): string {
+  return targets.map((t) => (t.kind === 'tab' ? t.label : `group:${t.group}`)).join(', ');
+}
+
 export function matchesTargets(tabs: Tab[], targets: MonitorTarget[], tabLabel: string): boolean {
   const tab = tabs.find((t) => t.label === tabLabel);
   if (!tab || tab.view === 'monitor') return false;

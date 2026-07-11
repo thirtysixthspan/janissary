@@ -1,12 +1,13 @@
 import type { ConnectionView } from './protocol.js';
 import type { MonitorSub } from './monitor-manager.js';
+import { formatTargets } from './monitor-targets.js';
 
 // Read-only projections of the live monitor registry: the `monitors` command listing
 // and the connections-panel rows.
 
 export function listMonitors(monitors: Iterable<MonitorSub>): string[] {
   return [...monitors].map((reg) => {
-    const targets = reg.targets.map((t) => (t.kind === 'tab' ? t.label : `group:${t.group}`)).join(', ');
+    const targets = formatTargets(reg.targets);
     const mode = reg.inline ? 'inline' : 'external';
     return `${reg.persona.name}: ${targets} ← ${reg.owner} (${mode}, ${reg.delivered} suggestion${reg.delivered === 1 ? '' : 's'})`;
   });

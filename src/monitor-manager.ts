@@ -3,12 +3,13 @@ import type { Subscription } from './bus.js';
 import { messageBus } from './bus.js';
 import { loadPersona, type Persona } from './personas.js';
 import { parseSuggestion } from './monitor-parsing.js';
-import { openMonitorTab, closeMonitorTab, pushSuggestion, findSuggestion, removeSuggestion } from './monitor-window.js';
+import { openMonitorTab, closeMonitorTab, pushSuggestion, findSuggestion, removeSuggestion, updateMonitorMeta } from './monitor-window.js';
 import { openMonitorSession, respawnMonitorSession } from './monitor-session.js';
 import { spawnMonitorSession } from './monitor-acp.js';
-import { validateTargets, matchesTargets, targetColor, seedEntries } from './monitor-targets.js';
+import { validateTargets, matchesTargets, targetColor, seedEntries, formatTargets } from './monitor-targets.js';
 import { harnessFeedEntries } from './monitor-harness-feed.js';
 import { listMonitors, monitorConnections } from './monitor-info.js';
+import { askMonitor } from './monitor-ask.js';
 import type { ConnectionView } from './protocol.js';
 import type { Managers } from './managers.js';
 
@@ -29,6 +30,9 @@ export type MonitorSub = {
   info?: AcpInfo;
   inFlight: boolean;
   delivered: number;
+  // Running total of bytes sent/received on this monitor's dedicated ACP session (priming,
+  // flush batches, ask questions/replies) — reset to 0 on respawn.
+  contextBytes: number;
   timer: ReturnType<typeof setInterval>;
   subs: Subscription[];
 };
@@ -67,6 +71,7 @@ export class MonitorManager {
 
     const reg: MonitorSub = {
       owner, inline, persona, targets: resolved, buffer: [], harnessSeen: new Map(), inFlight: true, delivered: 0,
+      contextBytes: 0,
       session: undefined as unknown as AcpSession, timer: undefined as unknown as ReturnType<typeof setInterval>, subs: [],
     };
     this.openSession(reg);
@@ -79,7 +84,10 @@ export class MonitorManager {
     this.monitors.set(key, reg);
     // External mode: open the reporting tab right away (empty feed) so starting the
     // monitor is visible immediately, not only when the first suggestion lands.
-    if (!inline) openMonitorTab(this.managers, personaName, targetColor(this.managers.tab.tabs, resolved));
+    if (!inline) {
+      openMonitorTab(this.managers, personaName, targetColor(this.managers.tab.tabs, resolved));
+      updateMonitorMeta(this.managers, personaName, formatTargets(resolved), reg.contextBytes);
+    }
     return null;
   }
 
@@ -93,6 +101,7 @@ export class MonitorManager {
   // fresh, re-primed one so the monitor recovers instead of staying dead.
   private respawn(reg: MonitorSub): void {
     respawnMonitorSession(reg, this.managers, this.spawn);
+    if (!reg.inline) updateMonitorMeta(this.managers, reg.persona.name, formatTargets(reg.targets), reg.contextBytes);
   }
 
   private subscribe(key: string, reg: MonitorSub): void {
@@ -133,12 +142,16 @@ export class MonitorManager {
     const body = batch
       .map(({ tabLabel, entry }) => `[${tabLabel}]\n${entry.input}\n${entry.output}`.trim())
       .join('\n\n');
+    const prompt = `[Monitor update]\n${body}`;
+    reg.contextBytes += Buffer.byteLength(prompt, 'utf8');
     reg.inFlight = true;
     let reply = '';
-    reg.session.prompt(`[Monitor update]\n${body}`, {
+    reg.session.prompt(prompt, {
       onChunk: (text) => { reply += text; },
       onEnd: () => {
         reg.inFlight = false;
+        reg.contextBytes += Buffer.byteLength(reply, 'utf8');
+        if (!reg.inline) updateMonitorMeta(this.managers, reg.persona.name, formatTargets(reg.targets), reg.contextBytes);
         const suggestion = parseSuggestion(reply);
         if (suggestion) this.deliver(reg, batch.at(-1)!.tabLabel, suggestion);
       },
@@ -170,21 +183,7 @@ export class MonitorManager {
     const reg = this.monitors.get(`${owner}:${personaName}`);
     if (!reg) return `No "${personaName}" monitor running from this tab.`;
     if (reg.inFlight) return `The ${personaName} monitor is busy; try again in a moment.`;
-    reg.inFlight = true;
-    let reply = '';
-    this.managers.tab.startRunning(owner, `monitor ask ${personaName} ${question}`);
-    reg.session.prompt(`[Question from the user]\n${question}\n\nAnswer directly; the suggestion format does not apply to this reply.`, {
-      onChunk: (text) => { reply += text; },
-      onEnd: () => {
-        reg.inFlight = false;
-        // The 💡 prefix keeps the reply out of monitor buffers (like inline suggestions).
-        this.managers.tab.finishRunning(owner, `${SUGGESTION_PREFIX} ${personaName}: ${reply.trim() || '(no reply)'}`);
-      },
-      onError: (message) => {
-        this.managers.tab.finishRunning(owner, `monitor ${personaName}: ${message} — restarting monitor session`);
-        this.respawn(reg);
-      },
-    });
+    askMonitor(reg, owner, personaName, question, this.managers, () => this.respawn(reg));
     return null;
   }
 
@@ -211,7 +210,10 @@ export class MonitorManager {
     if (!reg) return false;
     if (target && !reg.inline) {
       reg.targets = reg.targets.filter((t) => JSON.stringify(t) !== JSON.stringify(target));
-      if (reg.targets.length > 0) return true;
+      if (reg.targets.length > 0) {
+        updateMonitorMeta(this.managers, personaName, formatTargets(reg.targets), reg.contextBytes);
+        return true;
+      }
     }
     for (const sub of reg.subs) sub.unsubscribe();
     clearInterval(reg.timer);

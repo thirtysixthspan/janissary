@@ -151,6 +151,48 @@ describe('MonitorManager', () => {
     expect(monitorTab?.monitor?.suggestions[0]).toMatchObject({ text: 'Fix the failing test', about: 'agent2' });
   });
 
+  it('sets the reporting tab\'s persona, targets, and an initial contextBytes from priming', () => {
+    const { managers } = makeFakeManagers([janus, agent2]);
+    const { spawn } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+
+    manager.start('janus', 'assistant', [{ kind: 'tab', label: 'agent2' }]);
+
+    const monitorTab = managers.tab.tabs.find((t) => t.view === 'monitor');
+    expect(monitorTab?.monitor?.persona).toBe('assistant');
+    expect(monitorTab?.monitor?.targets).toBe('agent2');
+    expect(monitorTab?.monitor?.contextBytes).toBeGreaterThan(0);
+  });
+
+  it('increases contextBytes further after a flush', () => {
+    const { managers } = makeFakeManagers([janus, agent2]);
+    const { spawn, sessions } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+    manager.start('janus', 'assistant', [{ kind: 'tab', label: 'agent2' }]);
+    const before = managers.tab.tabs.find((t) => t.view === 'monitor')!.monitor!.contextBytes;
+
+    emitEntry(agent2, 'npm test', '1 failing');
+    vi.advanceTimersByTime(FLUSH_MS);
+    sessions[0].reply('[SUGGESTION]: Fix the failing test');
+
+    const after = managers.tab.tabs.find((t) => t.view === 'monitor')!.monitor!.contextBytes;
+    expect(after).toBeGreaterThan(before);
+  });
+
+  it('dropping one of two tab targets updates targets to the remaining one without closing the tab', () => {
+    const agent3 = makeTab('agent3', '#ccc');
+    const { managers } = makeFakeManagers([janus, agent2, agent3]);
+    const { spawn } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+    manager.start('janus', 'assistant', [{ kind: 'tab', label: 'agent2' }, { kind: 'tab', label: 'agent3' }]);
+
+    messageBus.emit('transcript', { type: 'tab:removed', tabLabel: 'agent2' });
+
+    const monitorTab = managers.tab.tabs.find((t) => t.view === 'monitor');
+    expect(monitorTab).toBeDefined();
+    expect(monitorTab?.monitor?.targets).toBe('agent3');
+  });
+
   it('group targets match tabs by group number', () => {
     const { managers } = makeFakeManagers([janus, agent2]);
     const { spawn, sessions } = fakeSpawnFactory();

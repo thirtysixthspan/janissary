@@ -58,8 +58,10 @@ export type TabView = {
   markdown?: MarkdownView;
   // Editor-view payload, present only when `view === 'editor'`.
   editor?: EditorView;
-  // Monitor-window payload, present only when `view === 'monitor'`: the suggestion feed.
-  monitor?: { suggestions: SuggestionView[] };
+  // Monitor-window payload, present only when `view === 'monitor'`: the suggestion feed, the
+  // persona name, the monitored tabs/groups (pre-formatted), and the running total of bytes
+  // sent/received on the monitor's dedicated ACP session.
+  monitor?: { suggestions: SuggestionView[]; persona: string; targets: string; contextBytes: number };
   // File-tree payload, present only when `view === 'files'`.
   files?: FileTreeView;
   // Set while a full-tab interactive PTY (htop, vim, etc.) is running on this agent tab.

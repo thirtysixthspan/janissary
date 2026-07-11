@@ -6,6 +6,10 @@ Persona-driven AI sessions that watch tab activity and surface suggestions inlin
 
 `monitor <persona> [target...]` starts a dedicated monitoring session. Without targets (inline mode), the monitor watches the owner tab and reports suggestions into its transcript. With explicit targets (tab labels or `group:<n>`) the suggestions appear in a persona-named reporting tab colored after the monitored tab.
 
+### Reporting tab metadata
+
+An external-mode monitor's reporting tab carries a metadata line above its suggestion feed, styled like the file navigator's and notifications tab's headers: the persona name, the tab(s)/group(s) it monitors (e.g. `agent2, group:3`), and the total size of everything sent to and received from its dedicated ACP session so far, shown in bytes/kilobytes/megabytes. The size grows with every flush and every direct question (`monitor ask`), and resets when the session is respawned after an error, since a fresh session starts a fresh context. Dropping one of several tab targets updates the target list shown; inline monitors have no reporting tab and so show no metadata line.
+
 ### Transcript access
 
 When a monitor starts, it receives the full existing transcript of every target tab — not just entries that arrive after the monitor starts. Inline monitors receive the owner tab's own transcript. External monitors receive the transcripts of all specified tabs and all members of specified groups. Entries appear in the order they were logged, giving the monitor full historical context from the moment it starts.
