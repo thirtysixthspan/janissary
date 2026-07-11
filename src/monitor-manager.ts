@@ -10,6 +10,7 @@ import { validateTargets, matchesTargets, targetColor, seedEntries, formatTarget
 import { harnessFeedEntries } from './monitor-harness-feed.js';
 import { listMonitors, monitorConnections } from './monitor-info.js';
 import { askMonitor } from './monitor-ask.js';
+import { recordReply } from './monitor-reply.js';
 import type { ConnectionView } from './protocol.js';
 import type { Managers } from './managers.js';
 
@@ -149,8 +150,7 @@ export class MonitorManager {
       onChunk: (text) => { reply += text; },
       onEnd: () => {
         reg.inFlight = false;
-        reg.contextBytes += Buffer.byteLength(reply, 'utf8');
-        if (!reg.inline) updateMonitorMeta(this.managers, reg.persona.name, formatTargets(reg.targets), reg.contextBytes);
+        recordReply(reg, this.managers, reply);
         const suggestion = parseSuggestion(reply);
         if (suggestion) this.deliver(reg, batch.at(-1)!.tabLabel, suggestion);
       },
