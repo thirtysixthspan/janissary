@@ -3,6 +3,7 @@ import type { TabView } from '@shared/protocol';
 import type { JanusClient } from './ws';
 import { FileTreeTab } from './FileTreeTab';
 import { NotificationsTab } from './NotificationsTab';
+import { startDrag } from './drag-resize';
 
 const MIN_WIDTH_PX = 180;
 const MAX_WIDTH_PCT = 50;
@@ -23,17 +24,11 @@ export function Sidebar({ side, tabs, client }: { side: 'left' | 'right'; tabs: 
     down.preventDefault();
     const startX = down.clientX;
     const startWidth = width;
-    const onMove = (move: MouseEvent) => {
+    startDrag((move) => {
       const delta = side === 'left' ? move.clientX - startX : startX - move.clientX;
       const maxWidth = globalThis.innerWidth * (MAX_WIDTH_PCT / 100);
       setWidth(Math.min(maxWidth, Math.max(MIN_WIDTH_PX, startWidth + delta)));
-    };
-    const onUp = () => {
-      globalThis.removeEventListener('mousemove', onMove);
-      globalThis.removeEventListener('mouseup', onUp);
-    };
-    globalThis.addEventListener('mousemove', onMove);
-    globalThis.addEventListener('mouseup', onUp);
+    });
   }, [side, width]);
 
   const entries = tabs.map((tab, index) => ({ tab, index })).filter((e) => e.tab.dock === side);

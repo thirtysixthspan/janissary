@@ -1,6 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import type { TabView } from '@shared/protocol';
 import { MonitorTab } from './MonitorTab';
+import { startDrag } from './drag-resize';
 
 // Reporting tabs are a separate class from action tabs: they report, they never take
 // commands. A tab is a reporting tab when its view kind is in this set (currently just
@@ -36,16 +37,10 @@ export function ReportingSection({ entries, onClose, onRun, onRate, onReset }: {
 
   const onDividerDown = useCallback((down: React.MouseEvent) => {
     down.preventDefault();
-    const onMove = (move: MouseEvent) => {
+    startDrag((move) => {
       const pct = ((globalThis.innerHeight - move.clientY) / globalThis.innerHeight) * 100;
       setHeightPct(Math.min(MAX_PCT, Math.max(MIN_PCT, pct)));
-    };
-    const onUp = () => {
-      globalThis.removeEventListener('mousemove', onMove);
-      globalThis.removeEventListener('mouseup', onUp);
-    };
-    globalThis.addEventListener('mousemove', onMove);
-    globalThis.addEventListener('mouseup', onUp);
+    });
   }, []);
 
   if (entries.length === 0) return null;
