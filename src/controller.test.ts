@@ -1523,12 +1523,26 @@ describe('Controller notifications command', () => {
     expect(c.view().find((t) => t.view === 'notifications')!.dock).toBe('right');
   });
 
-  it('docking the notifications tab displaces a file navigator already in that sidebar', () => {
+  it('docking the notifications tab into a sidebar already holding a file navigator lets both share it', () => {
     const root = mkdtempSync(path.join(tmpdir(), 'janus-notif-dock-'));
     const { c } = makeController();
     c.dispatch(`files right ${root}`);
     c.dispatch('notifications right');
-    expect(c.view().find((t) => t.view === 'files')!.dock).toBeUndefined();
+    expect(c.view().find((t) => t.view === 'files')!.dock).toBe('right');
+    expect(c.view().find((t) => t.view === 'notifications')!.dock).toBe('right');
+  });
+
+  it('docking a second file navigator into that side displaces only the prior file navigator, not the notifications tab', () => {
+    const rootA = mkdtempSync(path.join(tmpdir(), 'janus-notif-dock-a-'));
+    const rootB = mkdtempSync(path.join(tmpdir(), 'janus-notif-dock-b-'));
+    const { c } = makeController();
+    c.dispatch('notifications right');
+    c.dispatch(`files right ${rootA}`);
+    const shortenedA = abbreviatePath(rootA, { root: process.cwd() });
+    const shortenedB = abbreviatePath(rootB, { root: process.cwd() });
+    c.dispatch(`files right ${rootB}`);
+    expect(c.view().find((t) => t.files?.root === shortenedA)?.dock).toBeUndefined();
+    expect(c.view().find((t) => t.files?.root === shortenedB)?.dock).toBe('right');
     expect(c.view().find((t) => t.view === 'notifications')!.dock).toBe('right');
   });
 

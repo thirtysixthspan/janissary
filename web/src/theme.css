@@ -457,6 +457,12 @@ html, body, #root {
 .sidebar-resize { width: 4px; flex-shrink: 0; cursor: col-resize; }
 .sidebar-left .sidebar-resize { border-right: 1px solid var(--border); }
 .sidebar-right .sidebar-resize { border-left: 1px solid var(--border); }
+.sidebar-tabs { display: flex; background: var(--bg-soft); border-bottom: 1px solid var(--border); }
+.sidebar-tab-switch {
+  flex: 1; background: transparent; border: none; cursor: pointer; color: var(--muted);
+  padding: 4px 8px; font-size: 12px; border-bottom: 2px solid transparent;
+}
+.sidebar-tab-switch.active { color: var(--fg); border-bottom-color: var(--accent); }
 .sidebar-strip {
   display: flex; align-items: center;
   background: var(--bg-soft); border-bottom: 1px solid var(--border);
