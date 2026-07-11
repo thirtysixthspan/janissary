@@ -6,8 +6,6 @@
 
 * the monitor metadata line should have a right floated button to reset the agent context, reloading only the persona context.
 
-* match the monitor section resize div to the style used by the sidebar resize div.
-
 * closing a monitoring tab should cause the associated acp connection to close.
 
 * closing all tabs monitored by a monitor, the monitor itself should be closed.

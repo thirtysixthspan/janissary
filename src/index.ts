@@ -43,6 +43,8 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
   const token = options.token ?? makeToken();
   const host = options.host ?? '127.0.0.1';
   const clients = new Set<WebSocket>();
+  let closed = false;
+  let exitTimer: ReturnType<typeof setTimeout> | undefined;
 
   const broadcast = (event: ServerEvent) => {
     const s = JSON.stringify(event);
@@ -117,9 +119,9 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
     });
     ws.on('close', () => {
       clients.delete(ws);
-      if (clients.size === 0) {
+      if (clients.size === 0 && !closed) {
         broadcast({ t: 'bye' });
-        setTimeout(() => { void close().then(() => process.exit(0)); }, 100);
+        exitTimer = setTimeout(() => { void close().then(() => process.exit(0)); }, 100);
       }
     });
   });
@@ -133,6 +135,8 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
   });
 
   const close = (): Promise<void> => new Promise((resolve) => {
+    closed = true;
+    if (exitTimer) clearTimeout(exitTimer);
     controller.shutdown();
     for (const c of clients) c.close();
     wss.close(() => http.close(() => resolve()));

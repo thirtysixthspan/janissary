@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
 import { tmpdir } from 'node:os';
 import { mkdtempSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
@@ -63,6 +63,21 @@ describe('startServer (WS + RPC + security)', () => {
     expect(headers['content-security-policy']).toContain("object-src 'none'");
     expect(headers['content-security-policy']).toContain("frame-src https: http:");
     expect(headers['content-security-policy']).toContain("frame-ancestors 'none'");
+  });
+
+  it('does not call process.exit if the server is closed right after the last client disconnects', async () => {
+    server = await startServer({ webDir: tmpdir() });
+    const ws = new WebSocket(`ws://127.0.0.1:${server.port}/?token=${server.token}`);
+    await new Promise((res, rej) => { ws.on('open', res); ws.on('error', rej); });
+
+    const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+    ws.close();
+    await new Promise((res) => ws.on('close', res));
+    await server.close();
+    server = null;
+    await new Promise((res) => setTimeout(res, 150));
+    expect(exitSpy).not.toHaveBeenCalled();
+    exitSpy.mockRestore();
   });
 
   it('rejects a connection with a bad token', async () => {
