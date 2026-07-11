@@ -15,16 +15,21 @@ type Properties = {
   // Whether to show the "Type help..." hint when there are no lines yet. Defaults to true
   // for interactive agent tabs; read-only feeds (e.g. notifications) pass false.
   showEmptyHint?: boolean;
+  // Whether new content auto-scrolls the view to the bottom. Defaults to true for
+  // interactive agent tabs, where output is appended at the end; a newest-first feed
+  // (e.g. notifications) passes false so it never fights the caller's own ordering.
+  pinToBottom?: boolean;
 };
 
-export function Transcript({ lines, client, onToggleCollapse, onPromptClick, scrollRef, highlight, showEmptyHint = true }: Properties) {
+export function Transcript({ lines, client, onToggleCollapse, onPromptClick, scrollRef, highlight, showEmptyHint = true, pinToBottom = true }: Properties) {
   const stick = useRef(true);
   const contentReference = useRef<HTMLDivElement>(null);
 
   const pin = useCallback(() => {
+    if (!pinToBottom) return;
     const element = scrollRef.current;
     if (element && stick.current && !highlight) element.scrollTop = element.scrollHeight;
-  }, [scrollRef, highlight]);
+  }, [scrollRef, highlight, pinToBottom]);
 
   useEffect(() => { pin(); }, [lines, pin]);
 

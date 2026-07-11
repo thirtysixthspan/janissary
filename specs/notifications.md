@@ -95,3 +95,9 @@ Every notification line carries a colored dot, matching the sending tab's own ta
 color — the same colored-dot treatment already used for cross-agent `msg`/`broadcast` deliveries.
 The sending tab is the background tab whose activity produced the event (or, for `notify`, the
 issuing tab).
+
+### Ordering and timestamps
+
+The feed displays **newest first**: the most recently recorded notification appears at the top,
+with earlier ones below it. Each line is prefixed with the clock time (`HH:MM:SS`) it was
+recorded at.
