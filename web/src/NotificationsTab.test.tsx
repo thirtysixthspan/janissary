@@ -15,6 +15,12 @@ vi.stubGlobal('ResizeObserver', class {
 const lines: BufferLine[] = [{ type: 'output', text: "Agent 'deploy' finished" }];
 
 describe('NotificationsTab', () => {
+  it('does not show the "help" hint when there are no notifications yet', () => {
+    const client = { send: vi.fn() } as unknown as JanusClient;
+    render(<NotificationsTab lines={[]} client={client} index={0} />);
+    expect(screen.queryByText('Type "help" for available commands.')).toBeNull();
+  });
+
   it('renders bufferLines as a transcript with no command bar', () => {
     const client = { send: vi.fn() } as unknown as JanusClient;
     const { container } = render(<NotificationsTab lines={lines} client={client} index={0} />);

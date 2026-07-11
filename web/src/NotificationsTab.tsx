@@ -42,7 +42,7 @@ export function NotificationsTab({ lines, client, index, dock }: Properties) {
           </button>
         </div>
       )}
-      <Transcript lines={lines} client={client} onToggleCollapse={noop} onPromptClick={noop} scrollRef={scrollRef} />
+      <Transcript lines={lines} client={client} onToggleCollapse={noop} onPromptClick={noop} scrollRef={scrollRef} showEmptyHint={false} />
     </div>
   );
 }

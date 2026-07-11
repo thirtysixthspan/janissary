@@ -16,8 +16,6 @@
 
 * `profile launch` should launch a profile picker just like the task picker.
 
-* remove 'Type "help" for available commands' from notifcations tab.
-
 * notifications and file navigator tabs should be able to share a sidebar using a tabbed interface.
 
 * notification switch position and close buttons should be present in a metadata line that is styled the same as the metadat line in the files tab.
