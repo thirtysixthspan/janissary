@@ -1,11 +1,8 @@
 
 ## in development
 
-
 ### monitor configuration
-* monitors may use one of many configured acp channels (even though only opencode is available at this point, others will come in the future).
-* a persona has a specific acp and model configured but that configuration should be able to be overridden at runtime.
-* the monitor should begin by reporting the acp connection, and the selected model in the tab and concisely summarize its 'persona' in one sentence.
+
 * there should be an up to date spec, help documentation, and public documentation.
 
 ### browser tabs should be exposed to monitors
