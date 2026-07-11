@@ -1,8 +1,7 @@
 import type { MonitorSub } from './monitor-manager.js';
 import { SUGGESTION_PREFIX } from './monitor-manager.js';
 import type { Managers } from './managers.js';
-import { formatTargets } from './monitor-targets.js';
-import { updateMonitorMeta } from './monitor-window.js';
+import { recordReply } from './monitor-reply.js';
 
 // Query a running monitor's ACP session directly; the reply lands in the owner tab's
 // transcript. Shares the `inFlight` slot with flushes, so a question never interleaves
@@ -25,8 +24,7 @@ export function askMonitor(
     onChunk: (text) => { reply += text; },
     onEnd: () => {
       reg.inFlight = false;
-      reg.contextBytes += Buffer.byteLength(reply, 'utf8');
-      if (!reg.inline) updateMonitorMeta(managers, reg.persona.name, formatTargets(reg.targets), reg.contextBytes);
+      recordReply(reg, managers, reply);
       // The 💡 prefix keeps the reply out of monitor buffers (like inline suggestions).
       managers.tab.finishRunning(owner, `${SUGGESTION_PREFIX} ${personaName}: ${reply.trim() || '(no reply)'}`);
     },
