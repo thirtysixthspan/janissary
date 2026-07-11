@@ -24,11 +24,12 @@ const DEFAULT_PCT = 20;
 // the color of the tab it monitors — in its strip dot, strip border, and the body's
 // left border. The top edge is a draggable divider: pulling it up grows the reporting
 // body while the action area shrinks (and vice versa), within the 15% floors.
-export function ReportingSection({ entries, onClose, onRun, onRate }: {
+export function ReportingSection({ entries, onClose, onRun, onRate, onReset }: {
   entries: ReportingEntry[];
   onClose: (index: number) => void;
   onRun: (id: string) => void;
   onRate: (id: string, up: boolean) => void;
+  onReset: (name: string) => void;
 }) {
   const [selected, setSelected] = useState(0);
   const [heightPct, setHeightPct] = useState(DEFAULT_PCT);
@@ -84,6 +85,7 @@ export function ReportingSection({ entries, onClose, onRun, onRate }: {
             suggestions={current.tab.monitor.suggestions}
             onRun={onRun}
             onRate={onRate}
+            onReset={() => onReset(current.tab.label)}
           />
         </div>
       )}

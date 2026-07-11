@@ -363,6 +363,60 @@ describe('MonitorManager', () => {
     expect(sessions[1].prompts).toHaveLength(2); // fresh session keeps flushing
   });
 
+  it('resetContext respawns the session and re-primes it', () => {
+    const { managers } = makeFakeManagers([janus, agent2]);
+    const { spawn, sessions } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+    manager.start('janus', 'assistant', [{ kind: 'tab', label: 'agent2' }]);
+
+    manager.resetContext('assistant');
+
+    expect(sessions[0].kill).toHaveBeenCalledTimes(1);
+    expect(sessions).toHaveLength(2);
+    expect(sessions[1].prompts[0]).toContain('[SUGGESTION]'); // re-primed
+  });
+
+  it('resetContext resets contextBytes back down after priming', () => {
+    const { managers } = makeFakeManagers([janus, agent2]);
+    const { spawn, sessions } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+    manager.start('janus', 'assistant', [{ kind: 'tab', label: 'agent2' }]);
+    emitEntry(agent2, 'npm test', '1 failing');
+    vi.advanceTimersByTime(FLUSH_MS);
+    sessions[0].reply('[SUGGESTION]: Fix the failing test');
+    const before = managers.tab.tabs.find((t) => t.view === 'monitor')!.monitor!.contextBytes;
+
+    manager.resetContext('assistant');
+
+    const after = managers.tab.tabs.find((t) => t.view === 'monitor')!.monitor!.contextBytes;
+    expect(after).toBeLessThan(before);
+    expect(after).toBeGreaterThan(0); // re-primed, not zeroed on the tab
+  });
+
+  it('resetContext is a no-op for a name with no matching monitor', () => {
+    const { managers } = makeFakeManagers([janus, agent2]);
+    const { spawn, sessions } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+    manager.start('janus', 'assistant', [{ kind: 'tab', label: 'agent2' }]);
+
+    expect(() => manager.resetContext('ghost')).not.toThrow();
+    expect(sessions).toHaveLength(1);
+  });
+
+  it('resetContext respawns every owner sharing one reporting tab', () => {
+    const { managers } = makeFakeManagers([janus, agent2]);
+    const { spawn, sessions } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+    manager.start('janus', 'assistant', [{ kind: 'tab', label: 'agent2' }]);
+    manager.start('agent2', 'assistant', [{ kind: 'group', group: 1 }]);
+
+    manager.resetContext('assistant');
+
+    expect(sessions[0].kill).toHaveBeenCalledTimes(1);
+    expect(sessions[1].kill).toHaveBeenCalledTimes(1);
+    expect(sessions).toHaveLength(4); // both original sessions respawned
+  });
+
   it('ask on an unknown monitor reports an error', () => {
     const { managers } = makeFakeManagers([janus]);
     const { spawn } = fakeSpawnFactory();

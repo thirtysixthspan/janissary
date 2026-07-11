@@ -30,8 +30,7 @@ export type MonitorSub = {
   info?: AcpInfo;
   inFlight: boolean;
   delivered: number;
-  // Running total of bytes sent/received on this monitor's dedicated ACP session (priming,
-  // flush batches, ask questions/replies) — reset to 0 on respawn.
+  // Running total of bytes sent/received on this session (priming, flushes, asks) — reset on respawn.
   contextBytes: number;
   timer: ReturnType<typeof setInterval>;
   subs: Subscription[];
@@ -201,6 +200,9 @@ export class MonitorManager {
     });
     removeSuggestion(this.managers, id);
   }
+
+  // Reset every monitor feeding `name`'s reporting tab to just its persona context.
+  resetContext(name: string): void { for (const reg of this.monitors.values()) if (!reg.inline && reg.persona.name === name) this.respawn(reg); }
 
   // Stop one persona's monitor (or drop a single target from it). Returns false when no
   // such monitor exists.
