@@ -1,19 +1,11 @@
 import type { Controller } from './controller.js';
 import type { ClientMessage, ServerEvent } from './protocol.js';
-import { getConfig } from './config.js';
-import { globalCommands } from './global-history.js';
-import { listTasks } from './tasks.js';
-import { listProfiles } from './profiles.js';
+import { buildStateEvent } from './state-event.js';
 
 export function handle(controller: Controller, message: ClientMessage, reply: (event: ServerEvent) => void): void {
   switch (message.method) {
     case 'init': {
-      reply({
-        t: 'state', tabs: controller.view(), activeTab: controller.managers.tab.activeTab,
-        route: controller.routeView(), tabNameMaxLength: getConfig().tabNameMaxLength,
-        globalHistory: globalCommands(), syntaxTheme: getConfig().syntaxTheme, theme: getConfig().theme, tasks: listTasks(),
-        profiles: listProfiles(), projectDir: controller.rootDir,
-      });
+      reply(buildStateEvent(controller));
       break;
     }
     case 'command': { controller.dispatch(message.params.text); break;

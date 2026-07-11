@@ -5,11 +5,8 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { Controller } from './controller.js';
 import { makeToken, originAllowed, tokenFromReq as tokenFromRequest, tokenMatches } from './security.js';
 import type { ClientMessage, ServerEvent } from './protocol.js';
-import { getConfig } from './config.js';
-import { globalCommands } from './global-history.js';
-import { listTasks } from './tasks.js';
-import { listProfiles } from './profiles.js';
 import { handle } from './message-handler.js';
+import { buildStateEvent } from './state-event.js';
 
 // Applied to every HTTP response: defence-in-depth for the XSS path and token leak.
 const SECURITY_HEADERS = {
@@ -55,12 +52,7 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
   // Reassigned below once `close` exists, so the `quit` command can shut the server down cleanly.
   let requestExit: () => void = () => process.exit(0);
   const controller = new Controller({
-    emitState: () => broadcast({
-      t: 'state', tabs: controller.view(), activeTab: controller.managers.tab.activeTab,
-      route: controller.routeView(), tabNameMaxLength: getConfig().tabNameMaxLength,
-      globalHistory: globalCommands(), syntaxTheme: getConfig().syntaxTheme, theme: getConfig().theme, tasks: listTasks(),
-      profiles: listProfiles(), projectDir: controller.rootDir,
-    }),
+    emitState: () => broadcast(buildStateEvent(controller)),
     sendPty: (id, data) => broadcast({ t: 'pty', id, data }),
     sendPtyExit: (id, exitCode) => broadcast({ t: 'pty-exit', id, exitCode }),
     exit: () => requestExit(),
