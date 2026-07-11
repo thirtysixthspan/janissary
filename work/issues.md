@@ -4,9 +4,15 @@
 
 * The tab key should be responsible for shifting the keyboard focus between the application sections, currently the tab section and sidebar sections.
 
+* a metadata line should be added to the monitor tab, similar to other tabs, but provides the agent persona and the tabs/groups monitored as well as the acp context size in bytes (b/kb/mb). 
+
+* the monitor metadata line should have a right floated button to reset the agent context, reloading only the persona context.
+
 * match the monitor section resize div to the style used by the sidebar resize div.
 
 * closing a monitoring tab should cause the associated acp connection to close.
+
+* closing all tabs monitored by a monitor, the monitor itself should be closed.
 
 * after opening and closing a monitor attempting to reopen a monitor causes an unexpected error. ❯ monitor assistant janus - Already monitoring with persona "assistant".
 
