@@ -34,6 +34,10 @@ persisted (see `sidebars.md`). Because docking is view-agnostic, the notificatio
 navigator can each occupy a different sidebar at the same time, and docking one into a side already
 holding the other displaces that other back to center.
 
+When docked, a feed longer than the sidebar can render scrolls within the notifications tab's own
+content area — the sidebar and the rest of the app never grow to accommodate it — matching how the
+file navigator's own row list scrolls in place.
+
 The tab's own header carries a dock-cycle button (toggling left↔right) — shown **only while
 docked**, matching the file tree tab, and styled the same way as the file tree tab's metadata
 header. Center placement is reached via the bare `notifications` command, not the dock-cycle
