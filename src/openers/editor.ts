@@ -2,6 +2,7 @@ import { statSync } from 'node:fs';
 import path from 'node:path';
 import type { Opener, OpenContext } from './types.js';
 import { humanSize } from './size.js';
+import { openInDefaultViewer } from './external-viewer.js';
 
 // Refuse to open files above this size: the editor holds the whole buffer in memory and a
 // multi-megabyte file is almost certainly not something to hand-edit in-app.
@@ -35,10 +36,6 @@ export function openInEditor(file: string, context: OpenContext, line?: number):
 export const opener: Opener = {
   name: 'editor',
   extensions: EXTENSIONS,
-  external: (file, context) => {
-    const name = path.basename(file);
-    if (context.openExternally(file)) context.note(`Opening ${name} in your default viewer…`);
-    else context.note(`No viewer available. The file is at ${file}`);
-  },
+  external: openInDefaultViewer,
   inline: (file, context) => { openInEditor(file, context); },
 };
