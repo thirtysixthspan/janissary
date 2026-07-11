@@ -7,6 +7,7 @@ import { TabNavPicker } from './TabNavPicker';
 import { QueuePicker } from './QueuePicker';
 import { TaskPicker } from './TaskPicker';
 import type { VisibleTaskRow } from './task-picker-keys';
+import { ProfilePicker } from './ProfilePicker';
 import { SYNTAX_THEMES } from '@shared/syntax-themes';
 import { APP_THEMES } from '@shared/app-themes';
 import { AppThemePicker } from './AppThemePicker';
@@ -44,6 +45,10 @@ type Properties = {
   taskPickerIndex: number;
   onPickTask: (path: string) => void;
   onToggleTaskDir: (path: string) => void;
+  profilePickerOpen: boolean;
+  profiles: string[];
+  profilePickerIndex: number;
+  onPickProfile: (name: string) => void;
 };
 
 export function PickerOverlays({
@@ -52,6 +57,7 @@ export function PickerOverlays({
   pickerOpen, recent, pickerIndex, onPickHistory, navOpen, navQuery, navIndex, tabs, onPickTab,
   queueOpen, queueItems, queueIndex, onSelectQueue,
   taskPickerOpen, taskRows, taskPickerIndex, onPickTask, onToggleTaskDir,
+  profilePickerOpen, profiles, profilePickerIndex, onPickProfile,
 }: Properties) {
   if (route) return <RouteChooser cmd={route.cmd} choices={route.choices} selected={routeIndex} onPick={onPickRoute} />;
   if (themePickerOpen) {
@@ -64,5 +70,6 @@ export function PickerOverlays({
   if (pickerOpen) return <HistoryPicker items={recent} selected={pickerIndex} onPick={onPickHistory} />;
   if (queueOpen) return <QueuePicker items={queueItems} selected={queueIndex} onSelect={onSelectQueue} />;
   if (taskPickerOpen) return <TaskPicker rows={taskRows} selected={taskPickerIndex} onPick={onPickTask} onToggleDir={onToggleTaskDir} />;
+  if (profilePickerOpen) return <ProfilePicker profiles={profiles} selected={profilePickerIndex} onPick={onPickProfile} />;
   return null;
 }

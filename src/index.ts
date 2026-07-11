@@ -8,6 +8,7 @@ import type { ClientMessage, ServerEvent } from './protocol.js';
 import { getConfig } from './config.js';
 import { globalCommands } from './global-history.js';
 import { listTasks } from './tasks.js';
+import { listProfiles } from './profiles.js';
 import { handle } from './message-handler.js';
 
 // Applied to every HTTP response: defence-in-depth for the XSS path and token leak.
@@ -58,7 +59,7 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
       t: 'state', tabs: controller.view(), activeTab: controller.managers.tab.activeTab,
       route: controller.routeView(), tabNameMaxLength: getConfig().tabNameMaxLength,
       globalHistory: globalCommands(), syntaxTheme: getConfig().syntaxTheme, theme: getConfig().theme, tasks: listTasks(),
-      projectDir: controller.rootDir,
+      profiles: listProfiles(), projectDir: controller.rootDir,
     }),
     sendPty: (id, data) => broadcast({ t: 'pty', id, data }),
     sendPtyExit: (id, exitCode) => broadcast({ t: 'pty-exit', id, exitCode }),

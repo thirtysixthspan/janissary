@@ -20,6 +20,11 @@ A harness entry's schedule and one-shot `run` commands are **memory-only**: harn
 
 ### `profile launch <name>`
 
+Typing bare `profile launch` (no name) opens a picker listing the available profiles,
+mirroring the `tasks` picker's interaction: arrow keys move the selection, Enter or a
+click populates the command line with `profile launch <name>` without submitting it (so
+it can be reviewed or edited first), and Escape closes it.
+
 Opens a tab for each entry in the named profile, in `number` order. For an agent entry, its state is written into the live state dir and the agent is initialized (`initAgentState`) and restored into a new tab — recovering its command history, transcript, working directory, schedule, and dot color (the profile's `dotColor` is used when it is distinct enough from the colors already on screen, otherwise the most distinct palette color is chosen). For a harness entry, a harness tab is opened directly (see Harness Tab) with the entry's model, starting directory, and workspace flag; it is never persisted to agent state. Once every entry is opened, focus moves to the first newly opened tab. A missing profile returns `No profile named "<name>".` and an empty one returns `Profile "<name>" has no agents.`.
 
 **Relaunching.** A profile may be launched more than once. Before opening any entry, every currently open tab whose label matches an entry in the profile is closed first (killing its PTYs/shells, dropping its schedule, and removing its workspace clone), and then every entry opens fresh — so a relaunch always gets a new process, a schedule re-based to "now", and a new workspace clone where applicable. The one exception is the tab `profile launch` was issued from: it is never closed, and if the profile names an entry matching its label, that entry is reported and skipped instead, so the launch report always has a tab to land in.

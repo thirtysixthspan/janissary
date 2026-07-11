@@ -17,7 +17,7 @@ import { StatusPanels } from './StatusPanels';
 import { PickerOverlays } from './PickerOverlays';
 import { useTabNav } from './useTabNav';
 import { useQueuePicker } from './useQueuePicker';
-import { useTaskPicker } from './useTaskPicker';
+import { usePopulatePickers } from './usePopulatePickers';
 import { useCommandBarSubmit } from './useCommandBarSubmit';
 import { QuitDialog } from './QuitDialog/QuitDialog';
 import { UnsavedQuitDialog } from './UnsavedQuitDialog';
@@ -46,6 +46,7 @@ export function App() {
   const [globalHistory, setGlobalHistory] = useState<string[]>([]);
   const [syntaxTheme, setSyntaxTheme] = useState('github-dark');
   const [tasks, setTasks] = useState<TaskRow[]>([]);
+  const [profiles, setProfiles] = useState<string[]>([]);
   // Server-driven route chooser (null when closed); `routeIdx` is the highlighted option.
   const [route, setRoute] = useState<RouteChooserView | null>(null);
   const [routeIndex, setRouteIndex] = useState(0);
@@ -99,9 +100,8 @@ export function App() {
     queueOpen, queueIndex, setQueueIndex, setQueueOpen, openQueue, selectQueueIndex, onEditQueued, onDeleteQueued,
   } = useQueuePicker(client, current, inputReference, recallReference);
   const {
-    taskPickerOpen, taskPickerIndex, setTaskPickerIndex, setTaskPickerOpen, openTaskPicker, pickTask,
-    visibleTasks, toggleTaskDir,
-  } = useTaskPicker(tasks, recallReference, inputReference, client, current?.view === 'harness' ? current.harness?.ptyId : undefined);
+    taskPickerOpen, taskPickerIndex, setTaskPickerIndex, setTaskPickerOpen, openTaskPicker, pickTask, visibleTasks, toggleTaskDir, profilePickerOpen, profilePickerIndex, setProfilePickerIndex, setProfilePickerOpen, openProfilePicker, pickProfile,
+  } = usePopulatePickers(tasks, recallReference, inputReference, client, current?.view === 'harness' ? current.harness?.ptyId : undefined);
 
   const { quitConfirmOpen, openQuitConfirm, confirmQuit, cancelQuit } = useQuitConfirm(runCommand, inputReference);
   const editorHandles = useRef<Map<string, EditorTabHandle>>(new Map());
@@ -110,7 +110,7 @@ export function App() {
   const guardRef = useRef<((index: number) => boolean) | null>(null);
   const activeTabRef = useRef(activeTab); activeTabRef.current = activeTab;
   const quitConfirmOpenRef = useRef(quitConfirmOpen); quitConfirmOpenRef.current = quitConfirmOpen || unsavedQuitOpen;
-  const pickerOpenRef = useRef(pickerOpen); pickerOpenRef.current = pickerOpen || queueOpen || taskPickerOpen;
+  const pickerOpenRef = useRef(pickerOpen); pickerOpenRef.current = pickerOpen || queueOpen || taskPickerOpen || profilePickerOpen;
   const routeRef = useRef(route); routeRef.current = route;
   const activeViewRef = useRef(current?.view); activeViewRef.current = current?.view;
 
@@ -122,7 +122,7 @@ export function App() {
   const chooseRoute = useCallback((index: number) => client.send({ method: 'chooseRoute', params: { index } }), [client]);
 
   useServerState(client, {
-    setTabs, setActiveTab, setRoute, setTabNameMaxLength, setGlobalHistory, setSyntaxTheme, setTheme, setTasks, setRouteIndex,
+    setTabs, setActiveTab, setRoute, setTabNameMaxLength, setGlobalHistory, setSyntaxTheme, setTheme, setTasks, setProfiles, setRouteIndex,
     routeRef: routeReference,
   });
 
@@ -137,16 +137,16 @@ export function App() {
     pickerOpen, pickerIdx: pickerIndex, recent, route, routeIdx: routeIndex, canSearch, searchOpen: search.searchOpen,
     themePickerOpen, themePickerIdx: themePickerIndex, appThemePickerOpen, appThemePickerIdx: appThemePickerIndex,
     navOpen, navQuery, navIdx: navIndex, navTabs, queueOpen, queueIdx: queueIndex, queueItems: current?.commandQueue ?? [],
-    taskPickerOpen, taskPickerIdx: taskPickerIndex, visibleTasks,
+    taskPickerOpen, taskPickerIdx: taskPickerIndex, visibleTasks, profilePickerOpen, profilePickerIdx: profilePickerIndex, profiles,
     setRouteIndex, chooseRoute, runCommand, setPickerIndex, setPickerOpen, openPicker, openSearch: () => search.open(''),
     setThemePickerIndex, setThemePickerOpen, pickTheme, setAppThemePickerIndex, setAppThemePickerOpen, pickAppTheme,
     setNavIndex, setNavQuery, selectNavTab, setNavOpen, openTabNav,
     setQueueIndex, setQueueOpen, openQueue,
-    setTaskPickerIndex, setTaskPickerOpen, openTaskPicker, pickTask, toggleTaskDir,
+    setTaskPickerIndex, setTaskPickerOpen, openTaskPicker, pickTask, toggleTaskDir, setProfilePickerIndex, setProfilePickerOpen, openProfilePicker, pickProfile,
   });
 
   const onCommandBarSubmit = useCommandBarSubmit({
-    canSearch, lines, search, openPicker, openThemePicker, openAppThemePicker, openQueue, openTaskPicker, navOpen, setNavOpen,
+    canSearch, lines, search, openPicker, openThemePicker, openAppThemePicker, openQueue, openTaskPicker, openProfilePicker, navOpen, setNavOpen,
     openTabNavWithQuery, tabs, openQuitConfirm: guardedOpenQuitConfirm, guardRef, activeTab, runCommand,
   });
 
@@ -200,7 +200,7 @@ export function App() {
               navOpen={navOpen} navQuery={navQuery} navIndex={navIndex} tabs={tabs} onPickTab={selectNavTab}
               queueOpen={queueOpen} queueItems={current.commandQueue} queueIndex={queueIndex} onSelectQueue={selectQueueIndex}
               taskPickerOpen={taskPickerOpen} taskRows={visibleTasks} taskPickerIndex={taskPickerIndex} onPickTask={pickTask} onToggleTaskDir={toggleTaskDir}
-            />
+              profilePickerOpen={profilePickerOpen} profiles={profiles} profilePickerIndex={profilePickerIndex} onPickProfile={pickProfile} />
           </div>
           <CommandArea
             search={search}
@@ -211,7 +211,7 @@ export function App() {
             onSubmit={onCommandBarSubmit}
             inputRef={inputReference}
             complete={(text, cursor) => client.request({ method: 'complete', params: { text, cursor } })}
-            pickerOpen={pickerOpen || route !== null || quitConfirmOpen || unsavedQuitOpen || themePickerOpen || appThemePickerOpen || navOpen || taskPickerOpen}
+            pickerOpen={pickerOpen || route !== null || quitConfirmOpen || unsavedQuitOpen || themePickerOpen || appThemePickerOpen || navOpen || taskPickerOpen || profilePickerOpen}
             busy={current.busy}
             queueOpen={queueOpen}
             recallRef={recallReference}

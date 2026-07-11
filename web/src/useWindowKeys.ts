@@ -32,6 +32,9 @@ export type StateSnapshot = {
   taskPickerOpen: boolean;
   taskPickerIdx: number;
   visibleTasks: VisibleTaskRow[];
+  profilePickerOpen: boolean;
+  profilePickerIdx: number;
+  profiles: string[];
 };
 
 export type Callbacks = {
@@ -61,6 +64,10 @@ export type Callbacks = {
   openTaskPicker: () => void;
   pickTask: (path: string) => void;
   toggleTaskDir: (path: string) => void;
+  setProfilePickerIndex: (setter: (prev: number) => number) => void;
+  setProfilePickerOpen: (open: boolean) => void;
+  openProfilePicker: () => void;
+  pickProfile: (name: string) => void;
 };
 
 // Priority chain of pickers/choosers that claim every keystroke while open. Returns true once one
@@ -92,6 +99,10 @@ function dispatchModalKey(e: KeyboardEvent, snap: StateSnapshot, cb: Callbacks):
   }
   if (snap.taskPickerOpen) {
     dispatchTaskPickerKey(e, snap.visibleTasks, snap.taskPickerIdx, cb.setTaskPickerIndex, cb.toggleTaskDir, cb.pickTask, cb.setTaskPickerOpen);
+    return true;
+  }
+  if (snap.profilePickerOpen) {
+    handlePickerKey(e, snap.profiles, snap.profilePickerIdx, cb.setProfilePickerIndex, cb.pickProfile, cb.setProfilePickerOpen);
     return true;
   }
   return false;

@@ -3,6 +3,7 @@ import type { ClientMessage, ServerEvent } from './protocol.js';
 import { getConfig } from './config.js';
 import { globalCommands } from './global-history.js';
 import { listTasks } from './tasks.js';
+import { listProfiles } from './profiles.js';
 
 export function handle(controller: Controller, message: ClientMessage, reply: (event: ServerEvent) => void): void {
   switch (message.method) {
@@ -11,7 +12,7 @@ export function handle(controller: Controller, message: ClientMessage, reply: (e
         t: 'state', tabs: controller.view(), activeTab: controller.managers.tab.activeTab,
         route: controller.routeView(), tabNameMaxLength: getConfig().tabNameMaxLength,
         globalHistory: globalCommands(), syntaxTheme: getConfig().syntaxTheme, theme: getConfig().theme, tasks: listTasks(),
-        projectDir: controller.rootDir,
+        profiles: listProfiles(), projectDir: controller.rootDir,
       });
       break;
     }
