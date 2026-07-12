@@ -11,9 +11,7 @@ import { getConfig } from './config.js';
 import { messageBus } from './bus.js';
 import { closeTabResources } from './tab-cleanup.js';
 import type { Managers } from './managers.js';
-import {
-  addImageTab, addMarkdownTab, addEditorTab, addPageTab, addFilesTab, addNotificationsTab,
-} from './tab-creators.js';
+import * as tabOpeners from './tab-openers.js';
 import { getQueue, pushQueue, shiftQueue, updateQueueEntry, removeQueueEntry } from './tab-queue.js';
 import { buildTabView } from './tab-view.js';
 import { rehydrateTabs } from './tab-rehydrate.js';
@@ -342,53 +340,27 @@ export class TabManager {
   }
 
   openImageTab(image: ImageView): void {
-    const { tabs, activeTab } = addImageTab(this.tabs, this.activeTab, image);
-    this.tabs = tabs;
-    this.activeTab = activeTab;
-    messageBus.emit('state', { type: 'dirty' });
+    tabOpeners.openImageTab(this, image);
   }
 
   openMarkdownTab(view: MarkdownView): void {
-    const { tabs, activeTab } = addMarkdownTab(this.tabs, this.activeTab, view);
-    this.tabs = tabs;
-    this.activeTab = activeTab;
-    messageBus.emit('state', { type: 'dirty' });
+    tabOpeners.openMarkdownTab(this, view);
   }
 
   openEditorTab(view: EditorView): void {
-    const existing = this.tabs.find((t) => t.editor?.path === view.path);
-    if (existing) {
-      if (view.line !== undefined) existing.editor!.line = view.line;
-      this.setActiveTab(this.tabs.indexOf(existing));
-      messageBus.emit('state', { type: 'dirty' });
-      return;
-    }
-    const { tabs, activeTab } = addEditorTab(this.tabs, this.activeTab, view);
-    this.tabs = tabs;
-    this.activeTab = activeTab;
-    this.managers.editorWatch.watch(tabs[activeTab].label, view.path);
-    messageBus.emit('state', { type: 'dirty' });
+    tabOpeners.openEditorTab(this, view, (label, path) => this.managers.editorWatch.watch(label, path));
   }
 
-  openPageTab({ url, domain }: Pick<PageView, 'url' | 'domain'>): void {
-    const { tabs, activeTab } = addPageTab(this.tabs, this.activeTab, url, domain);
-    this.tabs = tabs;
-    this.activeTab = activeTab;
-    messageBus.emit('state', { type: 'dirty' });
+  openPageTab(view: Pick<PageView, 'url' | 'domain'>): void {
+    tabOpeners.openPageTab(this, view);
   }
 
   openFilesTab(view: FileTreeView): void {
-    const { tabs, activeTab } = addFilesTab(this.tabs, this.activeTab, view);
-    this.tabs = tabs;
-    this.activeTab = activeTab;
-    messageBus.emit('state', { type: 'dirty' });
+    tabOpeners.openFilesTab(this, view);
   }
 
   openNotificationsTab(): void {
-    const { tabs, activeTab } = addNotificationsTab(this.tabs, this.activeTab);
-    this.tabs = tabs;
-    this.activeTab = activeTab;
-    messageBus.emit('state', { type: 'dirty' });
+    tabOpeners.openNotificationsTab(this);
   }
 
   rehydrate(
