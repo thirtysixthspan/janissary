@@ -46,7 +46,7 @@ the sidebar's own strip (see `sidebars.md`).
 
 ### Events that notify
 
-Five event types can produce a notification line:
+Six event types can produce a notification line:
 
 - **`state-change`** — an agent tab's busy flag clears (busy → idle), e.g. an ACP turn finishes or
   errors.
@@ -55,18 +55,20 @@ Five event types can produce a notification line:
 - **`schedule-fire`** — a scheduled command fires in a tab (see `scheduling.md`).
 - **`agent-start`** — an ACP session begins its first turn (busy false → true).
 - **`manual`** — an explicit `notify <message>` (see below).
+- **`auto-approve`** — a workspaced harness launched with `-y` auto-approves one of its own
+  permission prompts (see `harness.md`).
 
 The four ambient events (`state-change`, `incoming-message`, `schedule-fire`, `agent-start`) are
 each **independently togglable and default off** — opt in by editing `.janissary/config.json` (see
-`application-config.md`). The `manual` event has no toggle: an explicit `notify` always fires.
+`application-config.md`). The `manual` and `auto-approve` events have no toggle: they always fire.
 
 ### Focus suppression
 
 An ambient event on the **currently active** tab never produces a notification — only background
 tabs feed the notifications tab. The notifications tab itself is a view tab that produces no such
-events, so it never notifies about itself. The `manual` event **bypasses focus suppression**: a
-`notify` from the focused tab still records a line, because the caller opted in by invoking the
-command.
+events, so it never notifies about itself. The `manual` and `auto-approve` events **bypass focus
+suppression**: they still record a line even when their tab is active, because they represent an
+explicit, user-armed action rather than ambient background activity.
 
 ### Drop-if-closed
 

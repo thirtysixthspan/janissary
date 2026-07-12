@@ -26,7 +26,7 @@ export class HarnessScreenReader {
   private capture: ScreenCapture | undefined;
   private disposed = false;
 
-  constructor(private id: string, cols: number, rows: number) {
+  constructor(private id: string, cols: number, rows: number, private onCapture?: (capture: ScreenCapture) => void) {
     // allowProposedApi: the headless build gates the `buffer` read API behind it.
     this.term = new HeadlessTerminal({ cols, rows, scrollback: 0, allowProposedApi: true });
     this.subscription = messageBus.on('pty', ['data', 'exit', 'resize'], (event) => {
@@ -67,5 +67,6 @@ export class HarnessScreenReader {
     }
     while (lines.length > 0 && lines.at(-1) === '') lines.pop();
     this.capture = { text: lines.join('\n'), capturedAt: Date.now() };
+    this.onCapture?.(this.capture);
   }
 }

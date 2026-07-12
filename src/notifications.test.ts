@@ -47,6 +47,28 @@ describe('shouldNotify — manual event', () => {
   });
 });
 
+describe('shouldNotify — auto-approve event', () => {
+  it('fires even when the issuing tab is active', () => {
+    expect(shouldNotify(allOn, 'auto-approve', 'claude', 'claude')).toBe(true);
+  });
+
+  it('fires regardless of the per-event toggles', () => {
+    expect(shouldNotify(allOff, 'auto-approve', 'claude', 'janus')).toBe(true);
+  });
+
+  it('fires even when the config is undefined', () => {
+    expect(shouldNotify(undefined, 'auto-approve', 'claude', 'janus')).toBe(true);
+  });
+
+  it('still never targets the notifications tab itself', () => {
+    expect(shouldNotify(allOff, 'auto-approve', NOTIFICATIONS_LABEL, 'janus')).toBe(false);
+  });
+
+  it('returns the bare message (the label lives in the header)', () => {
+    expect(notificationText('auto-approve', 'claude', 'Auto-approved a permission prompt')).toBe('Auto-approved a permission prompt');
+  });
+});
+
 describe('formatTimestamp', () => {
   it('renders afternoon times in 12-hour form with pm', () => {
     expect(formatTimestamp(new Date(2026, 0, 1, 20, 32, 0))).toBe('8:32pm');

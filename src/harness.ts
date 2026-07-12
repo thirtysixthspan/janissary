@@ -9,21 +9,23 @@ export const HARNESS_COMMANDS: Record<string, string> = {
 export const HARNESS_NAMES = Object.keys(HARNESS_COMMANDS);
 
 export type HarnessParsed =
-  | { name: string; workspace: boolean; offline: boolean; label?: string }
+  | { name: string; workspace: boolean; offline: boolean; autoApprove: boolean; label?: string }
   | { capture: true; label: string }
   | { error: string };
 
 /**
- * Parse a `harness <name> [as <label>] [-w|--workspace] [--offline]` command, validating the
- * harness name against the known set. `as <label>` gives the new tab a custom label instead of
+ * Parse a `harness <name> [as <label>] [-w|--workspace] [--offline] [-y|--yes]` command, validating
+ * the harness name against the known set. `as <label>` gives the new tab a custom label instead of
  * the harness name (still de-duplicated against existing tab labels). `--offline` adds a
  * network-deny rule to the tab's sandbox profile (only meaningful alongside `-w`/`--workspace`).
- * `harness capture <name>` is the other form: `<name>` targets an existing harness tab by label
- * (`capture` can never collide with a harness name — it is not a HARNESS_COMMANDS key).
+ * `-y`/`--yes` auto-approves the harness's own permission prompts; it is claude-only and requires
+ * `-w`/`--workspace` (both are hard errors otherwise). `harness capture <name>` is the other form:
+ * `<name>` targets an existing harness tab by label (`capture` can never collide with a harness
+ * name — it is not a HARNESS_COMMANDS key).
  */
 export function parseHarnessCommand(input: string): HarnessParsed {
   const rest = input.replace(/^harness\b\s*/i, '').trim();
-  if (!rest) return { error: `Usage: harness <${HARNESS_NAMES.join('|')}> [as <label>] [-w].` };
+  if (!rest) return { error: `Usage: harness <${HARNESS_NAMES.join('|')}> [as <label>] [-w] [-y].` };
   const tokens = rest.split(/\s+/);
   if (tokens[0].toLowerCase() === 'capture') {
     const label = tokens[1];
@@ -37,11 +39,16 @@ export function parseHarnessCommand(input: string): HarnessParsed {
   const rest_ = tokens.slice(1);
   const workspace = rest_.some((t) => t === '-w' || t === '--workspace');
   const offline = rest_.some((t) => t.toLowerCase() === '--offline');
+  const autoApprove = rest_.some((t) => t === '-y' || t === '--yes');
+  // Claude-only comes first: adding -w would not make `harness opencode -y` valid, so pointing at
+  // -w would misdirect — the harness choice is the real blocker.
+  if (autoApprove && name !== 'claude') return { error: '-y/--yes is only supported for the claude harness.' };
+  if (autoApprove && !workspace) return { error: '-y/--yes requires -w/--workspace: auto-approval is only allowed in a sandboxed workspace.' };
   const asIndex = rest_.findIndex((t) => t.toLowerCase() === 'as');
-  if (asIndex === -1) return { name, workspace, offline };
+  if (asIndex === -1) return { name, workspace, offline, autoApprove };
   const label = rest_[asIndex + 1];
   if (!label) return { error: `Usage: harness <${HARNESS_NAMES.join('|')}> as <label>.` };
-  return { name, workspace, offline, label };
+  return { name, workspace, offline, autoApprove, label };
 }
 
 // Single-quote a value for embedding in a `shell -lc '<command>'` string, escaping any embedded

@@ -2,9 +2,11 @@ import { makeHarnessTab, distinctColor, uniqueLabel } from './tab.js';
 import { parseHarnessCommand, HARNESS_COMMANDS, buildHarnessCommand } from './harness.js';
 import { HarnessScreenReader, type ScreenCapture } from './harness-screen.js';
 import { HarnessRecorder } from './harness-recorder.js';
+import { HarnessAutoApprover } from './harness-auto-approve.js';
 import { writeCaptureFile } from './harness-capture-file.js';
 import type { HarnessView, ProfileHarnessEntry } from './types.js';
 import { messageBus } from './bus.js';
+import { notify } from './notifications.js';
 import { sandboxNotice } from './sandbox.js';
 import type { Managers } from './managers.js';
 
@@ -15,6 +17,7 @@ import type { Managers } from './managers.js';
 export class HarnessManager {
   private screenReaders = new Map<string, HarnessScreenReader>();
   private recorders = new Map<string, HarnessRecorder>();
+  private autoApprovers = new Map<string, HarnessAutoApprover>();
 
   constructor(private managers: Managers) {
     messageBus.on('pty', 'exit', (event) => {
@@ -23,6 +26,7 @@ export class HarnessManager {
       this.screenReaders.delete(event.id);
       this.recorders.get(event.id)?.dispose();
       this.recorders.delete(event.id);
+      this.autoApprovers.delete(event.id);
     });
   }
 
@@ -41,7 +45,7 @@ export class HarnessManager {
     const parsed = parseHarnessCommand(input);
     if ('error' in parsed) return parsed.error;
     if ('capture' in parsed) return this.capture(input, parsed.label);
-    return this.open(parsed.name, parsed.workspace, parsed.offline, parsed.label);
+    return this.open(parsed.name, parsed.workspace, parsed.offline, parsed.autoApprove, parsed.label);
   }
 
   // Handle `harness capture <name>`: write the target tab's latest in-memory screen capture to a
@@ -61,7 +65,7 @@ export class HarnessManager {
   // Open (and focus) a harness tab running `name`, labeled `label` if given (otherwise `name`).
   // With `workspace`, the harness starts in a fresh clone of the `origin` remote of the repo
   // detected from cwd; otherwise it inherits the creator's cwd.
-  private open(name: string, workspace: boolean, offline: boolean, label_?: string): string | undefined {
+  private open(name: string, workspace: boolean, offline: boolean, autoApprove: boolean, label_?: string): string | undefined {
     const creator = this.managers.tab.cur();
     const label = uniqueLabel(this.managers.tab.tabs, label_ ?? name);
 
@@ -73,7 +77,7 @@ export class HarnessManager {
     const dotColor = distinctColor(this.managers.tab.tabs.map((t) => t.dotColor));
     const group = creator?.group ?? 1;
     const groupColor = creator?.groupColor ?? dotColor;
-    this.spawnTab(name, label, cwd, workspaceDir, offline, group, groupColor, dotColor);
+    this.spawnTab(name, label, cwd, workspaceDir, offline, group, groupColor, dotColor, autoApprove);
     return undefined;
   }
 
@@ -89,7 +93,7 @@ export class HarnessManager {
     const cwd = typeof resolved === 'string' ? resolved : resolved.dir;
     const workspaceDir = typeof resolved === 'string' ? undefined : resolved.dir;
     const dotColor = distinctColor(this.managers.tab.tabs.map((t) => t.dotColor), entry.dotColor);
-    this.spawnTab(entry.harness, unique, cwd, workspaceDir, false, group, groupColor, dotColor, entry.model);
+    this.spawnTab(entry.harness, unique, cwd, workspaceDir, false, group, groupColor, dotColor, false, entry.model);
     return undefined;
   }
 
@@ -97,7 +101,7 @@ export class HarnessManager {
   // passed to the harness binary via `buildHarnessCommand`.
   private spawnTab(
     name: string, label: string, cwd: string, workspaceDir: string | undefined, offline: boolean,
-    group: number, groupColor: string, dotColor: string, model?: string,
+    group: number, groupColor: string, dotColor: string, autoApprove: boolean, model?: string,
   ): void {
     const program = HARNESS_COMMANDS[name];
     const harness: HarnessView = { name, program, ptyId: '', status: 'running' };
@@ -108,13 +112,29 @@ export class HarnessManager {
     this.managers.tab.activeTab = this.managers.tab.findIndex(tab.label);
     const id = this.managers.pty.spawn(label, program, buildHarnessCommand(name, model), cwd, workspaceDir, offline);
     const dims = this.managers.pty.spawnDimensions();
-    this.screenReaders.set(id, new HarnessScreenReader(id, dims.cols, dims.rows));
+    this.screenReaders.set(id, new HarnessScreenReader(id, dims.cols, dims.rows, this.autoApproveHandler(name, label, id, autoApprove)));
     this.recorders.set(id, new HarnessRecorder(id, label, program, dims.cols, dims.rows));
     const liveTab = this.managers.tab.tabs.find((t) => t.label === label);
     if (liveTab?.harness) liveTab.harness.ptyId = id;
     const notice = workspaceDir ? sandboxNotice() : undefined;
     if (notice) this.managers.tab.append(label, { input: '', output: notice });
     messageBus.emit('state', { type: 'dirty' });
+  }
+
+  // When `autoApprove` is on, build the tab's auto-approver, register it under the PTY id, and
+  // return the screen-reader callback that feeds it each fresh capture; otherwise return undefined
+  // so the reader runs exactly as it does today. The approver injects the approval keystroke back
+  // into this PTY and reports each approval to the notifications feed (label-free — `notify`
+  // prefixes the tab label).
+  private autoApproveHandler(name: string, label: string, id: string, autoApprove: boolean): ((capture: ScreenCapture) => void) | undefined {
+    if (!autoApprove) return undefined;
+    const approver = new HarnessAutoApprover({
+      harnessName: name,
+      approve: (keystroke) => this.managers.pty.input(id, keystroke),
+      notify: (message) => notify(this.managers, 'auto-approve', label, message),
+    });
+    this.autoApprovers.set(id, approver);
+    return (capture) => approver.onCapture(capture);
   }
 
   // The harness's starting directory: a new workspace clone (with `workspace`) or `fallbackCwd`.

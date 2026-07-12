@@ -105,6 +105,50 @@ describe('parseHarnessCommand', () => {
     expect('error' in result).toBe(true);
     expect((result as { error: string }).error).toMatch(/Usage/i);
   });
+
+  it('sets autoApprove true with -y alongside -w', () => {
+    const result = parseHarnessCommand('harness claude -w -y');
+    expect('autoApprove' in result && (result as { autoApprove: boolean }).autoApprove).toBe(true);
+  });
+
+  it('sets autoApprove true with --yes in either flag order', () => {
+    const result = parseHarnessCommand('harness claude --yes --workspace');
+    expect('autoApprove' in result && (result as { autoApprove: boolean }).autoApprove).toBe(true);
+  });
+
+  it('sets autoApprove false for a plain workspaced launch', () => {
+    const result = parseHarnessCommand('harness claude -w');
+    expect('autoApprove' in result && (result as { autoApprove: boolean }).autoApprove).toBe(false);
+  });
+
+  it('errors when -y is given without -w', () => {
+    const result = parseHarnessCommand('harness claude -y');
+    expect('error' in result).toBe(true);
+    expect((result as { error: string }).error).toBe('-y/--yes requires -w/--workspace: auto-approval is only allowed in a sandboxed workspace.');
+  });
+
+  it('errors when -y is given for a non-claude harness', () => {
+    const result = parseHarnessCommand('harness opencode -w -y');
+    expect('error' in result).toBe(true);
+    expect((result as { error: string }).error).toBe('-y/--yes is only supported for the claude harness.');
+  });
+
+  it('reports the claude-only error before the -w error for a non-claude harness', () => {
+    const result = parseHarnessCommand('harness opencode -y');
+    expect((result as { error: string }).error).toBe('-y/--yes is only supported for the claude harness.');
+  });
+
+  it('combines -y with `as <label>` and -w', () => {
+    const result = parseHarnessCommand('harness claude as review -w -y');
+    expect('label' in result && result.label).toBe('review');
+    expect('autoApprove' in result && (result as { autoApprove: boolean }).autoApprove).toBe(true);
+  });
+
+  it('does not disturb --offline parsing', () => {
+    const result = parseHarnessCommand('harness claude -w -y --offline');
+    expect('offline' in result && (result as { offline: boolean }).offline).toBe(true);
+    expect('autoApprove' in result && (result as { autoApprove: boolean }).autoApprove).toBe(true);
+  });
 });
 
 describe('buildHarnessCommand', () => {

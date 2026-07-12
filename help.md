@@ -20,7 +20,7 @@
 | `connection` | List or close open connections (sqlite/shell/acp/browser) |
 | `schedule`   | Run a command later — once or on a recurring schedule |
 | `profile`    | Launch a saved set of agents for a use case |
-| `harness`    | Open an AI coding harness (claude/opencode/codex) in a full-tab terminal (add `-w` to clone the repo); `harness capture <name>` snapshots a harness tab's screen into an editor tab |
+| `harness`    | Open an AI coding harness (claude/opencode/codex) in a full-tab terminal (add `-w` to clone the repo, `-y` to auto-approve claude's permission prompts — claude only, requires `-w`); `harness capture <name>` snapshots a harness tab's screen into an editor tab |
 | `ssh`        | Open an SSH session to a remote host in a full-tab terminal |
 | `search`     | `search transcript <pattern>` searches the current tab's transcript with a regex (Cmd+F opens it empty) |
 | `files`      | `files [path]` opens a file tree tab rooted at the issuing tab's cwd, or at `path` |

@@ -4,13 +4,15 @@ import { getConfig } from './config.js';
 import { NOTIFICATIONS_LABEL, notificationsTab, appendNotification } from './notifications-tab.js';
 
 // The events that can feed the notifications tab. Four are ambient (a background tab's own
-// activity); `manual` is an explicit `notify <message>` and is always eligible.
+// activity); `manual` is an explicit `notify <message>` and `auto-approve` is a workspaced
+// harness's auto-approved permission gate — both are always eligible and bypass focus suppression.
 export type NotificationEventType =
   | 'state-change'
   | 'incoming-message'
   | 'schedule-fire'
   | 'agent-start'
-  | 'manual';
+  | 'manual'
+  | 'auto-approve';
 
 // Whether an event should be recorded, given the config and the active tab. Defensive against the
 // tab feeding itself. For the four ambient events, both the per-event opt-in toggle and focus
@@ -24,7 +26,7 @@ export function shouldNotify(
   activeLabel: string,
 ): boolean {
   if (tabLabel === NOTIFICATIONS_LABEL) return false;
-  if (event === 'manual') return true;
+  if (event === 'manual' || event === 'auto-approve') return true;
   if (tabLabel === activeLabel) return false;
   if (!config) return false;
   switch (event) {
@@ -46,15 +48,17 @@ export function formatTimestamp(date: Date): string {
 
 // The message body for an event, rendered after the `<time> <tabLabel>:` header. `detail` carries
 // the event-specific extra: the command for `schedule-fire`, the sender label for
-// `incoming-message`, and the user's message for `manual`. The `manual` body is the message alone —
-// the tab label already leads the line via the header, so repeating it here would double it.
+// `incoming-message`, the user's message for `manual`, and the approver's message for
+// `auto-approve`. The `manual` and `auto-approve` bodies are the message alone — the tab label
+// already leads the line via the header, so repeating it here would double it.
 export function notificationText(event: NotificationEventType, tabLabel: string, detail?: string): string {
   switch (event) {
     case 'state-change': { return `Agent '${tabLabel}' finished`; }
     case 'agent-start': { return `Agent '${tabLabel}' started`; }
     case 'schedule-fire': { return `Scheduled: ${detail} in ${tabLabel}`; }
     case 'incoming-message': { return `Message from ${detail} in ${tabLabel}`; }
-    case 'manual': { return detail ?? ''; }
+    case 'manual':
+    case 'auto-approve': { return detail ?? ''; }
   }
 }
 
