@@ -54,4 +54,56 @@ describe('NotificationsTab', () => {
     fireEvent.click(screen.getByTitle('Move to right sidebar'));
     expect(send).toHaveBeenCalledWith({ method: 'setDock', params: { index: 2, dock: 'right' } });
   });
+
+  const renderFeed = () => {
+    const client = { send: vi.fn() } as unknown as JanusClient;
+    const { container } = render(<NotificationsTab lines={lines} client={client} index={0} />);
+    return {
+      wrapper: container.querySelector('.notifications-tab')! as HTMLElement,
+      transcript: container.querySelector('.transcript')! as HTMLElement,
+    };
+  };
+
+  it('ArrowDown scrolls the feed down', () => {
+    const { wrapper, transcript } = renderFeed();
+    transcript.scrollTop = 0;
+    fireEvent.keyDown(wrapper, { key: 'ArrowDown' });
+    expect(transcript.scrollTop).toBeGreaterThan(0);
+  });
+
+  it('ArrowUp scrolls the feed up', () => {
+    const { wrapper, transcript } = renderFeed();
+    transcript.scrollTop = 100;
+    fireEvent.keyDown(wrapper, { key: 'ArrowUp' });
+    expect(transcript.scrollTop).toBeLessThan(100);
+  });
+
+  it('PageDown scrolls by the container height', () => {
+    const { wrapper, transcript } = renderFeed();
+    Object.defineProperty(transcript, 'clientHeight', { value: 500, configurable: true });
+    transcript.scrollTop = 0;
+    fireEvent.keyDown(wrapper, { key: 'PageDown' });
+    expect(transcript.scrollTop).toBe(500);
+  });
+
+  it('PageUp scrolls up by the container height', () => {
+    const { wrapper, transcript } = renderFeed();
+    Object.defineProperty(transcript, 'clientHeight', { value: 500, configurable: true });
+    transcript.scrollTop = 800;
+    fireEvent.keyDown(wrapper, { key: 'PageUp' });
+    expect(transcript.scrollTop).toBe(300);
+  });
+
+  it('scroll keys are cancelled (preventDefault) so they do not also scroll the page', () => {
+    const { wrapper } = renderFeed();
+    expect(fireEvent.keyDown(wrapper, { key: 'ArrowDown' })).toBe(false);
+    expect(fireEvent.keyDown(wrapper, { key: 'PageUp' })).toBe(false);
+  });
+
+  it('leaves scroll position and the event alone for an unrelated key', () => {
+    const { wrapper, transcript } = renderFeed();
+    transcript.scrollTop = 50;
+    expect(fireEvent.keyDown(wrapper, { key: 'a' })).toBe(true);
+    expect(transcript.scrollTop).toBe(50);
+  });
 });

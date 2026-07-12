@@ -96,6 +96,15 @@ color — the same colored-dot treatment already used for cross-agent `msg`/`bro
 The sending tab is the background tab whose activity produced the event (or, for `notify`, the
 issuing tab).
 
+### Keyboard scrolling
+
+The feed can be scrolled from the keyboard once it has focus. Focus it by clicking it (mouse) or by
+tabbing to it (keyboard); while it holds focus, **Arrow Up/Down** scroll it a line at a time and
+**Page Up/Page Down** scroll it a page at a time. The mouse wheel scrolls it as before. These keys
+only act while the feed itself is focused — a notifications feed docked in a sidebar never scrolls in
+response to arrows while a different tab is focused. The keys scroll the transcript; they do not move
+a per-row selection.
+
 ### Ordering and timestamps
 
 The feed displays **newest first**: the most recently recorded notification appears at the top,
