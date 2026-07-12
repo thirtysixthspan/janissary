@@ -18,7 +18,7 @@ function makeSuggestion(overrides: Partial<SuggestionView> = {}): SuggestionView
 
 function renderTab(
   suggestions: SuggestionView[],
-  handlers: { onRun?: (id: string) => void; onRate?: (id: string, up: boolean) => void; onReset?: () => void } = {},
+  handlers: { onRun?: (id: string) => void; onRate?: (id: string, up: boolean) => void; onReset?: () => void; onSnapshot?: () => void } = {},
   meta: { persona?: string; targets?: string; contextBytes?: number } = {},
 ) {
   return render(
@@ -30,6 +30,7 @@ function renderTab(
       onRun={handlers.onRun ?? vi.fn()}
       onRate={handlers.onRate ?? vi.fn()}
       onReset={handlers.onReset ?? vi.fn()}
+      onSnapshot={handlers.onSnapshot ?? vi.fn()}
     />,
   );
 }
@@ -68,6 +69,18 @@ describe('MonitorTab', () => {
     renderTab([], { onReset });
     await userEvent.click(screen.getByTitle('Reset context'));
     expect(onReset).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders a context-snapshot button in the header', () => {
+    renderTab([]);
+    expect(screen.getByTitle('Open context snapshot')).toBeInTheDocument();
+  });
+
+  it('clicking the snapshot button calls onSnapshot', async () => {
+    const onSnapshot = vi.fn();
+    renderTab([], { onSnapshot });
+    await userEvent.click(screen.getByTitle('Open context snapshot'));
+    expect(onSnapshot).toHaveBeenCalledTimes(1);
   });
 
   it('renders the suggestion text without per-row meta', () => {

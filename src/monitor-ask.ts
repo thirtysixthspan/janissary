@@ -2,6 +2,7 @@ import type { MonitorSub } from './monitor-manager.js';
 import { SUGGESTION_PREFIX } from './monitor-manager.js';
 import type { Managers } from './managers.js';
 import { recordReply } from './monitor-reply.js';
+import { recordContext } from './monitor-context.js';
 
 // Query a running monitor's ACP session directly; the reply lands in the owner tab's
 // transcript. Shares the `inFlight` slot with flushes, so a question never interleaves
@@ -19,7 +20,7 @@ export function askMonitor(
   let reply = '';
   managers.tab.startRunning(owner, `monitor ask ${personaName} ${question}`);
   const prompt = `[Question from the user]\n${question}\n\nAnswer directly; the suggestion format does not apply to this reply.`;
-  reg.contextBytes += Buffer.byteLength(prompt, 'utf8');
+  recordContext(reg, prompt);
   reg.session.prompt(prompt, {
     onChunk: (text) => { reply += text; },
     onEnd: () => {

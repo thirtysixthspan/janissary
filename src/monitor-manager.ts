@@ -3,11 +3,12 @@ import type { Subscription } from './bus.js';
 import { messageBus } from './bus.js';
 import { loadPersona, type Persona } from './personas.js';
 import { parseSuggestion } from './monitor-parsing.js';
-import { openMonitorTab, closeMonitorTab, pushSuggestion, findSuggestion, removeSuggestion, updateMonitorMeta } from './monitor-window.js';
+import { openMonitorTab, closeMonitorTab, pushSuggestion, rateSuggestion, updateMonitorMeta } from './monitor-window.js';
 import { openMonitorSession, respawnMonitorSession } from './monitor-session.js';
 import { spawnMonitorSession } from './monitor-acp.js';
 import { validateTargets, matchesTargets, targetColor, seedEntries, formatTargets } from './monitor-targets.js';
 import { harnessFeedEntries } from './monitor-harness-feed.js';
+import { recordContext, snapshotMonitorContext } from './monitor-context.js';
 import { listMonitors, monitorConnections } from './monitor-info.js';
 import { askMonitor } from './monitor-ask.js';
 import { recordReply } from './monitor-reply.js';
@@ -33,6 +34,9 @@ export type MonitorSub = {
   delivered: number;
   // Running total of bytes sent/received on this session (priming, flushes, asks) — reset on respawn.
   contextBytes: number;
+  // The accumulated context text itself (priming, update prompts, asks, replies), kept in order so
+  // it can be snapshotted into a view tab. Grows and resets in lockstep with `contextBytes`.
+  contextText: string[];
   timer: ReturnType<typeof setInterval>;
   subs: Subscription[];
 };
@@ -71,7 +75,7 @@ export class MonitorManager {
 
     const reg: MonitorSub = {
       owner, inline, persona, targets: resolved, buffer: [], harnessSeen: new Map(), inFlight: true, delivered: 0,
-      contextBytes: 0,
+      contextBytes: 0, contextText: [],
       session: undefined as unknown as AcpSession, timer: undefined as unknown as ReturnType<typeof setInterval>, subs: [],
     };
     this.openSession(reg);
@@ -143,7 +147,7 @@ export class MonitorManager {
       .map(({ tabLabel, entry }) => `[${tabLabel}]\n${entry.input}\n${entry.output}`.trim())
       .join('\n\n');
     const prompt = `[Monitor update]\n${body}`;
-    reg.contextBytes += Buffer.byteLength(prompt, 'utf8');
+    recordContext(reg, prompt);
     reg.inFlight = true;
     let reply = '';
     reg.session.prompt(prompt, {
@@ -186,23 +190,18 @@ export class MonitorManager {
     return null;
   }
 
-  // Thumbs up/down on a reporting-tab suggestion. The rating is fed back to the monitor
-  // through its normal batched prompt channel (no extra ACP round-trip), so the AI learns
-  // what the user found useful. Rating a suggestion means the user is done with it, so
-  // either direction removes it from the feed.
+  // Thumbs up/down on a reporting-tab suggestion (see monitor-window `rateSuggestion`).
   rate(id: string, up: boolean): void {
-    const suggestion = findSuggestion(this.managers, id);
-    if (!suggestion) return;
-    const reg = [...this.monitors.values()].find((r) => !r.inline && r.persona.name === suggestion.persona);
-    reg?.buffer.push({
-      tabLabel: suggestion.about,
-      entry: { input: '', output: `[user feedback] The user rated your suggestion "${suggestion.text}" as ${up ? 'helpful (thumbs up)' : 'not helpful (thumbs down)'}.` },
-    });
-    removeSuggestion(this.managers, id);
+    rateSuggestion(this.monitors.values(), this.managers, id, up);
   }
 
   // Reset every monitor feeding `name`'s reporting tab to just its persona context.
   resetContext(name: string): void { for (const reg of this.monitors.values()) if (!reg.inline && reg.persona.name === name) this.respawn(reg); }
+
+  // Open a point-in-time snapshot of `name`'s monitor context in an editor tab (see monitor-context).
+  snapshotContext(name: string): void {
+    snapshotMonitorContext(this.monitors.values(), this.managers, name);
+  }
 
   // Stop one persona's monitor (or drop a single target from it). Returns false when no
   // such monitor exists.

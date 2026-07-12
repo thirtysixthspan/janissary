@@ -4,7 +4,15 @@ import type { Managers } from './managers.js';
 import { makeTab } from './tab.js';
 import { messageBus } from './bus.js';
 import { MonitorManager } from './monitor-manager.js';
+import { writeCaptureFile } from './harness-capture-file.js';
 import type * as monitorAcp from './monitor-acp.js';
+
+vi.mock('./harness-capture-file.js', () => ({
+  writeCaptureFile: vi.fn(() => '/project/.janissary/captures/assistant-now.txt'),
+  initHarnessCaptureDirectory: vi.fn(),
+  ensureCaptureDirectory: vi.fn(),
+  clearCaptureDirectory: vi.fn(),
+}));
 
 // Fake ACP sessions: capture prompts, let the test stream the reply. The priming prompt
 // (persona body) completes immediately so flushes are not held off.
@@ -22,17 +30,20 @@ function makeFakeManagers(tabs: Tab[]) {
   const fakeTab = {
     tabs,
     cwdOf: () => '/tmp',
+    cur: () => tabs[0],
     append: (label: string, entry: LogEntry) => { appended.push({ label, entry }); },
     startRunning: () => {},
     finishRunning: (label: string, output: string) => { finished.push({ label, output }); },
     // openMonitorTab reassigns `tabs`, so splice the live array, not the closure's original.
     closeTab: (index: number) => { fakeTab.tabs.splice(index, 1); },
   };
+  const edit = vi.fn();
   const managers = {
     tab: fakeTab,
     harness: { latestScreenText: (label: string) => screens[label] },
+    openFile: { edit },
   } as unknown as Managers;
-  return { managers, appended, finished, screens };
+  return { managers, appended, finished, screens, edit };
 }
 
 function harnessTab(label: string): Tab {
@@ -177,6 +188,40 @@ describe('MonitorManager', () => {
 
     const after = managers.tab.tabs.find((t) => t.view === 'monitor')!.monitor!.contextBytes;
     expect(after).toBeGreaterThan(before);
+  });
+
+  it('snapshotContext writes the accumulated context to a file and opens it in an editor tab', () => {
+    const { managers, edit } = makeFakeManagers([janus, agent2]);
+    const { spawn, sessions } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+    manager.start('janus', 'assistant', [{ kind: 'tab', label: 'agent2' }]);
+    emitEntry(agent2, 'npm test', '1 failing');
+    vi.advanceTimersByTime(FLUSH_MS);
+    sessions[0].reply('[SUGGESTION]: Fix the failing test');
+    vi.mocked(writeCaptureFile).mockClear();
+
+    manager.snapshotContext('assistant');
+
+    expect(writeCaptureFile).toHaveBeenCalledTimes(1);
+    const [label, , text] = vi.mocked(writeCaptureFile).mock.calls[0];
+    expect(label).toBe('assistant');
+    expect(text).toContain('[SUGGESTION]'); // persona priming
+    expect(text).toContain('npm test'); // flushed update prompt
+    expect(text).toContain('Fix the failing test'); // reply
+    expect(edit).toHaveBeenCalledWith('monitor context assistant', '/project/.janissary/captures/assistant-now.txt', 'janus');
+  });
+
+  it('snapshotContext is a no-op for an unknown reporting tab', () => {
+    const { managers, edit } = makeFakeManagers([janus, agent2]);
+    const { spawn } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+    manager.start('janus', 'assistant', [{ kind: 'tab', label: 'agent2' }]);
+    vi.mocked(writeCaptureFile).mockClear();
+
+    manager.snapshotContext('nonexistent');
+
+    expect(writeCaptureFile).not.toHaveBeenCalled();
+    expect(edit).not.toHaveBeenCalled();
   });
 
   it('dropping one of two tab targets updates targets to the remaining one without closing the tab', () => {

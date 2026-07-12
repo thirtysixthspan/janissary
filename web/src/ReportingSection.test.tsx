@@ -30,7 +30,7 @@ describe('isReportingTab', () => {
 describe('ReportingSection', () => {
   it('returns null when entries is empty', () => {
     const { container } = render(
-      React.createElement(ReportingSection, { entries: [], onClose: vi.fn(), onRun: vi.fn(), onRate: vi.fn(), onReset: vi.fn() }),
+      React.createElement(ReportingSection, { entries: [], onClose: vi.fn(), onRun: vi.fn(), onRate: vi.fn(), onReset: vi.fn(), onSnapshot: vi.fn() }),
     );
     expect(container.querySelector('.reporting-section')).toBeNull();
   });
@@ -39,7 +39,7 @@ describe('ReportingSection', () => {
     const { getByText } = render(
       React.createElement(ReportingSection, {
         entries: [makeEntry('alerts', 0), makeEntry('log', 1)],
-        onClose: vi.fn(), onRun: vi.fn(), onRate: vi.fn(), onReset: vi.fn(),
+        onClose: vi.fn(), onRun: vi.fn(), onRate: vi.fn(), onReset: vi.fn(), onSnapshot: vi.fn(),
       }),
     );
     expect(getByText('alerts')).toBeTruthy();
@@ -50,7 +50,7 @@ describe('ReportingSection', () => {
     const { getByText } = render(
       React.createElement(ReportingSection, {
         entries: [makeEntry('alerts', 0, [{ id: 's1', text: 'watch the builds' }])],
-        onClose: vi.fn(), onRun: vi.fn(), onRate: vi.fn(), onReset: vi.fn(),
+        onClose: vi.fn(), onRun: vi.fn(), onRate: vi.fn(), onReset: vi.fn(), onSnapshot: vi.fn(),
       }),
     );
     expect(getByText('watch the builds')).toBeTruthy();
@@ -61,18 +61,30 @@ describe('ReportingSection', () => {
     const { container } = render(
       React.createElement(ReportingSection, {
         entries: [makeEntry('alerts', 0)],
-        onClose: vi.fn(), onRun: vi.fn(), onRate: vi.fn(), onReset,
+        onClose: vi.fn(), onRun: vi.fn(), onRate: vi.fn(), onReset, onSnapshot: vi.fn(),
       }),
     );
     fireEvent.click(container.querySelector('.monitor-reset')!);
     expect(onReset).toHaveBeenCalledWith('alerts');
   });
 
+  it('snapshot button calls onSnapshot with the current tab\'s label', () => {
+    const onSnapshot = vi.fn();
+    const { container } = render(
+      React.createElement(ReportingSection, {
+        entries: [makeEntry('alerts', 0)],
+        onClose: vi.fn(), onRun: vi.fn(), onRate: vi.fn(), onReset: vi.fn(), onSnapshot,
+      }),
+    );
+    fireEvent.click(container.querySelector('.monitor-snapshot')!);
+    expect(onSnapshot).toHaveBeenCalledWith('alerts');
+  });
+
   it('clicking a different tab selects it', () => {
     const { container } = render(
       React.createElement(ReportingSection, {
         entries: [makeEntry('alerts', 0), makeEntry('log', 1)],
-        onClose: vi.fn(), onRun: vi.fn(), onRate: vi.fn(), onReset: vi.fn(),
+        onClose: vi.fn(), onRun: vi.fn(), onRate: vi.fn(), onReset: vi.fn(), onSnapshot: vi.fn(),
       }),
     );
     const tabs = container.querySelectorAll(':scope .reporting-strip .tab');
@@ -85,7 +97,7 @@ describe('ReportingSection', () => {
     const { container } = render(
       React.createElement(ReportingSection, {
         entries: [makeEntry('alerts', 5)],
-        onClose, onRun: vi.fn(), onRate: vi.fn(), onReset: vi.fn(),
+        onClose, onRun: vi.fn(), onRate: vi.fn(), onReset: vi.fn(), onSnapshot: vi.fn(),
       }),
     );
     fireEvent.click(container.querySelector('.tab-close')!);
@@ -97,7 +109,7 @@ describe('ReportingSection', () => {
     const { container } = render(
       React.createElement(ReportingSection, {
         entries: [makeEntry('alerts', 0), makeEntry('log', 1)],
-        onClose, onRun: vi.fn(), onRate: vi.fn(), onReset: vi.fn(),
+        onClose, onRun: vi.fn(), onRate: vi.fn(), onReset: vi.fn(), onSnapshot: vi.fn(),
       }),
     );
     const tabs = container.querySelectorAll(':scope .reporting-strip .tab');
@@ -111,7 +123,7 @@ describe('ReportingSection', () => {
     const { container } = render(
       React.createElement(ReportingSection, {
         entries: [makeEntry('alerts', 0)],
-        onClose: vi.fn(), onRun: vi.fn(), onRate: vi.fn(), onReset: vi.fn(),
+        onClose: vi.fn(), onRun: vi.fn(), onRate: vi.fn(), onReset: vi.fn(), onSnapshot: vi.fn(),
       }),
     );
     const divider = container.querySelector('.reporting-resize')!;

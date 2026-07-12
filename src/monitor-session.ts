@@ -4,6 +4,7 @@ import type { MonitorSub } from './monitor-manager.js';
 import { spawnMonitorSession } from './monitor-acp.js';
 import { SUGGESTION_FORMAT } from './monitor-parsing.js';
 import { formatConnection, personaSummary } from './monitor-info.js';
+import { recordContext } from './monitor-context.js';
 
 export function openMonitorSession(
   reg: MonitorSub,
@@ -25,7 +26,7 @@ export function openMonitorSession(
     },
   });
   const primingText = `${reg.persona.body}\n\n${SUGGESTION_FORMAT}`;
-  reg.contextBytes += Buffer.byteLength(primingText, 'utf8');
+  recordContext(reg, primingText);
   reg.session.prompt(primingText, {
     onChunk: () => {},
     onEnd: () => { reg.inFlight = false; },
@@ -41,5 +42,6 @@ export function respawnMonitorSession(
   reg.session.kill();
   // A fresh session starts a fresh context.
   reg.contextBytes = 0;
+  reg.contextText = [];
   openMonitorSession(reg, managers, spawn);
 }
