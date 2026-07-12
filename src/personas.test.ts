@@ -85,6 +85,17 @@ describe('loadPersona', () => {
   });
 });
 
+describe('the assistant persona', () => {
+  it('loads from the project and instructs harness-awareness (summarize, not suggest)', () => {
+    // Loads the real ai/personas/assistant.md (default root = project cwd), not a synthetic one.
+    const persona = loadPersona('assistant');
+    expect(persona.harness.harness).toBeTruthy();
+    expect(persona.body.length).toBeGreaterThan(0);
+    expect(persona.body.toLowerCase()).toContain('harness');
+    expect(persona.body.toLowerCase()).toContain('summarize');
+  });
+});
+
 describe('listPersonas', () => {
   it('lists persona names sorted, without extensions', () => {
     writePersona('security', 'x');
