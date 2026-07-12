@@ -1,6 +1,6 @@
 import { watch, statSync, type FSWatcher } from 'node:fs';
-import { messageBus } from './bus.js';
-import type { Managers } from './managers.js';
+import { messageBus } from '../bus.js';
+import type { Managers } from '../managers.js';
 
 const DEBOUNCE_MS = 100;
 

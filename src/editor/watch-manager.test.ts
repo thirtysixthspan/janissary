@@ -3,7 +3,7 @@ import { mkdtempSync, writeFileSync, rmSync, statSync } from 'node:fs';
 import type * as NodeFs from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import type { EditorView, Tab } from './types.js';
+import type { EditorView, Tab } from '../types.js';
 
 const watchMock = vi.fn();
 
@@ -12,7 +12,7 @@ vi.mock('node:fs', async (importOriginal) => {
   return { ...actual, watch: (...args: unknown[]) => watchMock(...args) };
 });
 
-const { EditorWatchManager } = await import('./editor-watch-manager.js');
+const { EditorWatchManager } = await import('./watch-manager.js');
 type EditorWatchManagerInstance = InstanceType<typeof EditorWatchManager>;
 
 function makeTab(label: string, editor: EditorView): Tab {

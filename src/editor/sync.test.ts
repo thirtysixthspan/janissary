@@ -2,9 +2,9 @@ import { describe, it, expect } from 'vitest';
 import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { syncEditorBuffer } from './editor-sync.js';
-import { TabManager } from './tab-manager.js';
-import type { Managers } from './managers.js';
+import { syncEditorBuffer } from './sync.js';
+import { TabManager } from '../tab-manager.js';
+import type { Managers } from '../managers.js';
 
 function setup(content = 'original') {
   const managers = {} as Managers;
