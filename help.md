@@ -55,6 +55,7 @@
 | `Cmd+F`             | Open the search bar in the transcript |
 | `Cmd+W` / `Ctrl+W`  | Close the current tab             |
 | `Tab`               | Complete a file path, an agent name for `msg` / `broadcast`, a connection string for `connection close`, a `browser` subcommand / window id, or a `monitor` persona / target |
+| `Shift+Tab`         | Move keyboard focus to the next application section (left → center → right sidebar/panel → reporting), looping; the visible tab in that section gets focus |
 | `Enter`             | Execute the current command        |
 | `Ctrl+C`            | Exit                              |
 

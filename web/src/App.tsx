@@ -4,7 +4,7 @@ import type { TabView, RouteChooserView, TaskRow } from '@shared/protocol';
 import { TabStrip } from './TabStrip';
 import { Transcript } from './Transcript';
 import { ViewTabBody } from './ViewTabBody';
-import { ReportingSection, isReportingTab } from './ReportingSection';
+import { ReportingSection } from './ReportingSection';
 import { AppShell } from './AppShell';
 import type { HarnessTabHandle } from './HarnessTab';
 import type { EditorTabHandle } from './EditorTab';
@@ -12,7 +12,6 @@ import type { ShellTabHandle } from './ShellTab';
 import { ShellTabLayer } from './ShellTabLayer';
 import { MountedViewLayers } from './MountedViewLayers';
 import { CommandArea } from './CommandArea';
-import { useTranscriptSearch } from './useTranscriptSearch';
 import { StatusPanels } from './StatusPanels';
 import { PickerOverlays } from './PickerOverlays';
 import { useTabNav } from './useTabNav';
@@ -23,7 +22,10 @@ import { QuitDialog } from './QuitDialog/QuitDialog';
 import { UnsavedQuitDialog } from './UnsavedQuitDialog';
 import { CloseSaveGuard } from './CloseSaveGuard';
 import { useUnsavedQuitGuard } from './useUnsavedQuitGuard';
-import { useFocusOnTabSwitch } from './useFocusOnTabSwitch';
+import { useFocusOnTabSwitch, focusCenterVisibleTab } from './useFocusOnTabSwitch';
+import { useSectionNav } from './useSectionNav';
+import { useTabEntries } from './useTabEntries';
+import { useViewSearchState } from './useViewSearchState';
 import { getRecentHistory } from './history';
 import { useCmdW } from './useCmdW';
 import { useTranscriptScroll } from './useTranscriptScroll';
@@ -61,12 +63,7 @@ export function App() {
   const currentRef = useRef<TabView | undefined>(undefined);
   const { handleScrollKey, handleScrollKeyUp } = useTranscriptScroll(transcriptReference);
 
-  // Action tabs (above the command bar, take commands) vs. reporting tabs (below it,
-  // report-only). Each entry keeps its index in the server's full tab list for RPCs. A tab
-  // docked into a sidebar leaves the strip entirely (rendered by Sidebar instead) while staying
-  // in the server's tab array, so RPCs still address it by index.
-  const actionEntries = useMemo(() => tabs.map((tab, index) => ({ tab, index })).filter((e) => !isReportingTab(e.tab) && !e.tab.dock), [tabs]);
-  const reportingEntries = useMemo(() => tabs.map((tab, index) => ({ tab, index })).filter((e) => isReportingTab(e.tab)), [tabs]);
+  const { actionEntries, reportingEntries } = useTabEntries(tabs);
 
   const current = tabs[activeTab] ?? actionEntries[0]?.tab;
   // `current`'s real index in the server's tab list — usually `activeTab`, but that can point
@@ -78,12 +75,7 @@ export function App() {
   // The picker lists the tab's recent history, most recent at the bottom (suppressed when empty).
   const recent = useMemo(() => getRecentHistory(current?.cmdHistory ?? [], 10), [current]);
 
-  const isViewTab = (['image', 'page', 'harness', 'markdown', 'editor', 'files', 'notifications'] as const).includes(current?.view as 'image' | 'page' | 'harness' | 'markdown' | 'editor' | 'files' | 'notifications');
-  const canSearch = !isViewTab && !current?.activePty;
-  const search = useTranscriptSearch(lines, current?.label ?? '');
-  const highlight = search.searchOpen && search.currentLineIndex !== null
-    ? { lineIndex: search.currentLineIndex, pattern: search.pattern }
-    : null;
+  const { isViewTab, canSearch, search, highlight } = useViewSearchState(current, lines);
 
   const runCommand = useCallback((text: string) => client.send({ method: 'command', params: { text } }), [client]);
   const { themePickerOpen, themePickerIndex, setThemePickerIndex, setThemePickerOpen, openThemePicker, pickTheme } =
@@ -129,6 +121,8 @@ export function App() {
   useEffect(() => { applySyntaxTheme(syntaxTheme); }, [syntaxTheme]);
 
   useFocusOnTabSwitch(activeTab, currentRef, harnessHandles, shellHandles, inputReference);
+
+  useSectionNav(tabs, () => focusCenterVisibleTab(currentRef.current, harnessHandles, shellHandles, inputReference));
 
   useCmdW(closeTab, activeTabRef, quitConfirmOpenRef, pickerOpenRef, routeRef, activeViewRef);
 
