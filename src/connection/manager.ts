@@ -1,8 +1,8 @@
-import type { ConnectionView } from './protocol.js';
-import { parseConnectionCommand } from './connections.js';
-import { SHELL_NAME } from './shell-manager.js';
-import { closeConnection } from './connection-close.js';
-import type { Managers } from './managers.js';
+import type { ConnectionView } from '../protocol.js';
+import { parseConnectionCommand } from '../connections.js';
+import { SHELL_NAME } from '../shell-manager.js';
+import { closeConnection } from './close.js';
+import type { Managers } from '../managers.js';
 
 // The global `connection list` lines: shell/acp are per-issuing-tab, the rest (terminals, ssh
 // tabs, sqlite) span every tab, since they have no command bar of their own to list from.

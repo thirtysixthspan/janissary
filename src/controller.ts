@@ -10,7 +10,7 @@ import { PseudoterminalManager } from './pseudoterminal-manager.js';
 import { TranscriptStore } from './transcript/store.js';
 import { ScheduleManager } from './schedule-manager.js';
 import { ProfileManager } from './profile-manager.js';
-import { ConnectionManager } from './connection-manager.js';
+import { ConnectionManager } from './connection/manager.js';
 import { OpenFileManager } from './open-file-manager.js';
 import { FileTreeManager } from './file-tree-manager.js';
 import { EditorWatchManager } from './editor/watch-manager.js';

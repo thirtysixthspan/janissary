@@ -1,7 +1,7 @@
 import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync, rmSync, existsSync, readdirSync } from 'node:fs';
 import path from 'node:path';
-export { parseConnectionCommand } from './connection-parsing.js';
+export { parseConnectionCommand } from './connection/parsing.js';
 
 // SQLite databases live under .janissary/db/sqlite/<name>.sqlite and, unlike
 // agent state and workspaces, persist across launches — that is the whole point.
