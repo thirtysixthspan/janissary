@@ -120,6 +120,8 @@ export type RpcCall =
   // Reset a monitor's reporting tab to just its persona context (discards accumulated
   // conversation on its dedicated ACP session).
   | { method: 'resetMonitorContext'; params: { name: string } }
+  // Open a point-in-time snapshot of a monitor's accumulated ACP context in an editor tab.
+  | { method: 'monitorContextSnapshot'; params: { name: string } }
   // Write an editor tab's buffer back to disk. `url` is the tab's `/open/<id>` ref — the server
   // resolves it through the open-file allow-list, so only explicitly opened files are writable.
   | { method: 'saveFile'; params: { url: string; content: string } }

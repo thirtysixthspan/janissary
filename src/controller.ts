@@ -130,6 +130,10 @@ export class Controller {
     this.managers.monitor.resetContext(name);
   }
 
+  monitorContextSnapshot(name: string): void {
+    this.managers.monitor.snapshotContext(name);
+  }
+
   // --- inline terminal cards (PTY) -----------------------------------------
 
   ptyInput(id: string, data: string): void { this.managers.pty.input(id, data); }

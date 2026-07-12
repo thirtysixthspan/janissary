@@ -14,6 +14,8 @@ An external-mode monitor's reporting tab carries a metadata line above its sugge
 
 The metadata line's right-floated reset button discards the accumulated conversation on the monitor's dedicated ACP session and reloads just its persona context — the same recovery the monitor already performs automatically after a prompt error, now available on demand. When two owners share one reporting tab (two different agent tabs monitored by the same persona), resetting it resets every monitor feeding that tab, not just one.
 
+The metadata line also carries a right-floated context button that opens a point-in-time snapshot of the monitor's current context — the actual accumulated content whose size the byte counter reports — in a text tab. The snapshot is the ordered context the monitor has built up: its persona priming followed by every batched update, direct question, and reply. It opens as a normal editor tab, so it scrolls with the arrow keys, Page Up/Down, and the mouse wheel. It is a snapshot, not a live view: it reflects the context as of the moment the button was clicked, and clicking again opens a fresh snapshot. When two owners share one reporting tab, the snapshot is of the monitor feeding that tab.
+
 ### Transcript access
 
 When a monitor starts, it receives the full existing transcript of every target tab — not just entries that arrive after the monitor starts. Inline monitors receive the owner tab's own transcript. External monitors receive the transcripts of all specified tabs and all members of specified groups. Entries appear in the order they were logged, giving the monitor full historical context from the moment it starts.

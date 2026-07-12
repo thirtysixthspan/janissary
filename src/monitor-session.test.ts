@@ -26,6 +26,8 @@ function makeReg(overrides: Partial<MonitorSub> = {}): MonitorSub {
     session: makeSession().session,
     inFlight: false,
     delivered: 0,
+    contextBytes: 0,
+    contextText: [],
     timer: setInterval(() => {}, 1_000_000),
     subs: [],
     ...overrides,

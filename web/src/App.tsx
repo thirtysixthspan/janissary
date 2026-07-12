@@ -219,6 +219,7 @@ export function App() {
         onRun={(id) => client.send({ method: 'runSuggestion', params: { id } })}
         onRate={(id, up) => client.send({ method: 'rateSuggestion', params: { id, up } })}
         onReset={(name) => client.send({ method: 'resetMonitorContext', params: { name } })}
+        onSnapshot={(name) => client.send({ method: 'monitorContextSnapshot', params: { name } })}
       />
       {quitConfirmOpen && <QuitDialog onConfirm={confirmQuit} onCancel={cancelQuit} />}
       {unsavedQuitOpen && <UnsavedQuitDialog onConfirm={confirmUnsavedQuit} onCancel={cancelUnsavedQuit} />}

@@ -1,4 +1,5 @@
 import type { MonitorSuggestion, Tab } from './types.js';
+import type { MonitorSub } from './monitor-manager.js';
 import { makeTab } from './tab.js';
 import { messageBus } from './bus.js';
 import type { Managers } from './managers.js';
@@ -97,4 +98,19 @@ export function runSuggestion(managers: Managers, id: string): void {
   const suggestion = findSuggestion(managers, id);
   if (!suggestion?.command) return;
   managers.command.dispatchTo(suggestion.about, suggestion.command);
+}
+
+// Thumbs up/down on a reporting-tab suggestion. The rating is fed back to the monitor through its
+// normal batched prompt channel (queued on the owning monitor's buffer, no extra ACP round-trip),
+// so the AI learns what the user found useful. Rating a suggestion means the user is done with it,
+// so either direction removes it from the feed.
+export function rateSuggestion(monitors: Iterable<MonitorSub>, managers: Managers, id: string, up: boolean): void {
+  const suggestion = findSuggestion(managers, id);
+  if (!suggestion) return;
+  const reg = [...monitors].find((r) => !r.inline && r.persona.name === suggestion.persona);
+  reg?.buffer.push({
+    tabLabel: suggestion.about,
+    entry: { input: '', output: `[user feedback] The user rated your suggestion "${suggestion.text}" as ${up ? 'helpful (thumbs up)' : 'not helpful (thumbs down)'}.` },
+  });
+  removeSuggestion(managers, id);
 }
