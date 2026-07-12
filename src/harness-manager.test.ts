@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { HarnessManager } from './harness-manager.js';
 import { writeCaptureFile } from './harness-capture-file.js';
+import { notify } from './notifications.js';
 import { messageBus } from './bus.js';
 import type { Managers } from './managers.js';
 import type { Tab } from './types.js';
@@ -8,6 +9,8 @@ import type { Tab } from './types.js';
 vi.mock('./harness-capture-file.js', () => ({
   writeCaptureFile: vi.fn(() => '/project/.janissary/captures/claude-now.txt'),
 }));
+
+vi.mock('./notifications.js', () => ({ notify: vi.fn() }));
 
 // Mock the recorder so the manager's lifecycle wiring can be asserted without touching the
 // filesystem; each construction records a disposable stub.
@@ -39,7 +42,9 @@ function makeManagers(): { managers: Managers; tabs: Tab[]; edit: ReturnType<typ
     pty: {
       spawn: () => 'pty-1',
       spawnDimensions: () => ({ cols: 80, rows: 24 }),
+      input: vi.fn(),
     },
+    workspace: { create: () => ({ dir: '/workspace/claude' }) },
     openFile: { edit },
   } as unknown as Managers;
   return { managers, tabs, edit };
@@ -161,5 +166,40 @@ describe('HarnessManager.latestScreenText', () => {
     messageBus.emit('pty', { type: 'data', id: 'pty-1', data: 'on screen' });
     await vi.advanceTimersByTimeAsync(1001);
     expect(manager.latestScreenText('claude')?.text).toBe('on screen');
+  });
+});
+
+describe('HarnessManager auto-approve', () => {
+  const GATE = ' Do you want to proceed?\r\n ❯ 1. Yes\r\n   2. No\r\n\r\n Esc to cancel';
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    recorderMock.instances.length = 0;
+  });
+
+  afterEach(() => {
+    messageBus.emit('pty', { type: 'exit', id: 'pty-1', exitCode: 0 });
+    vi.useRealTimers();
+    vi.clearAllMocks();
+  });
+
+  it('injects the approval keystroke and notifies when a gate is detected with -y', async () => {
+    const { managers } = makeManagers();
+    const manager = new HarnessManager(managers);
+    expect(manager.run('harness claude -w -y')).toBeUndefined();
+    messageBus.emit('pty', { type: 'data', id: 'pty-1', data: GATE });
+    await vi.advanceTimersByTimeAsync(1001);
+    expect(managers.pty.input).toHaveBeenCalledWith('pty-1', '\r');
+    expect(notify).toHaveBeenCalledWith(managers, 'auto-approve', 'claude', 'Auto-approved a permission prompt');
+  });
+
+  it('never injects into a gate when -y is not given', async () => {
+    const { managers } = makeManagers();
+    const manager = new HarnessManager(managers);
+    expect(manager.run('harness claude -w')).toBeUndefined();
+    messageBus.emit('pty', { type: 'data', id: 'pty-1', data: GATE });
+    await vi.advanceTimersByTimeAsync(1001);
+    expect(managers.pty.input).not.toHaveBeenCalled();
+    expect(notify).not.toHaveBeenCalledWith(managers, 'auto-approve', expect.anything(), expect.anything());
   });
 });

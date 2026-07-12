@@ -9,13 +9,13 @@ row, and the one place its behavior differs (the connections panel is shown, not
 ## Command
 
 ```
-harness <name> [as <label>] [-w]
+harness <name> [as <label>] [-w] [-y]
 ```
 
 Valid names: `claude`, `opencode`, `codex`. The binary must be on `PATH`; if it is not found, the
 PTY exits immediately and the tab closes (see [Lifecycle](#lifecycle)).
 
-- `harness` with no name — error: `Usage: harness <claude|opencode|codex> [as <label>] [-w].`
+- `harness` with no name — error: `Usage: harness <claude|opencode|codex> [as <label>] [-w] [-y].`
 - `harness foo` — error: `Unknown harness "foo". Choose from: claude, opencode, codex.`
 
 Before the harness tab opens, the `harness <name> [as <label>] [-w]` command itself is recorded
@@ -59,6 +59,35 @@ a large workspace never freezes the UI. If no git repository is found from the c
 error is shown and no tab is created.
 On macOS, the harness process is additionally confined to the workspace by a Seatbelt sandbox — see
 [[sandbox]] and [[workspaced-agent]].
+
+### Auto-approve permissions (`-y` / `--yes`)
+
+Adding `-y` (or `--yes`) lets a workspaced harness run unattended: when its own CLI raises a
+blocking permission prompt, the app recognizes the prompt and answers it automatically instead of
+waiting for the user. Because the harness is confined to a disposable workspace clone (and, on
+macOS, a sandbox), auto-approving its prompts stays low-risk — see [[workspaced-agent]].
+
+The flag is **claude-only** and **requires** `-w`/`--workspace`:
+
+- `harness opencode -y` (or any non-claude harness) — error: `-y/--yes is only supported for the claude harness.` The harness choice is checked first, so this error wins even when `-w` is also missing.
+- `harness claude -y` without `-w` — error: `-y/--yes requires -w/--workspace: auto-approval is only allowed in a sandboxed workspace.`
+
+`-y` combines with `as <label>` and `-w` in any order. Support for opencode and codex is future
+work.
+
+How it works: the app watches the harness's rendered-screen text (not an image), captured about a
+second after output settles. When that text shows claude's permission menu — the highlighted
+`❯ 1. Yes` default followed by a final `2. No`/`3. No` option — the app injects the Enter keystroke
+to accept the highlighted "Yes" (it is a numbered menu, so a literal `y` would not work) and records
+an `auto-approve` notification, rendered as `<label>: Auto-approved a permission prompt` (see
+[[notifications]]). Detection keys on the menu structure at the bottom of the screen, so gate-shaped
+text that has merely scrolled up the screen does not trigger an approval.
+
+If an approved prompt does not clear (the same gate screen redraws unchanged), the app does not
+re-send the keystroke; it records `<label>: Auto-approve could not clear the permission prompt;
+standing down` once and leaves that gate alone until the screen changes. Auto-approval is in-memory
+per launch — like the harness tab itself, it is never persisted or restored on `--relaunch`. As with
+every notification, the `auto-approve` line is only recorded while the notifications tab is open.
 
 ## Harness tab data
 

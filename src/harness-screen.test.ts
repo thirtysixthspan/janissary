@@ -80,4 +80,14 @@ describe('HarnessScreenReader', () => {
     await vi.advanceTimersByTimeAsync(5000);
     expect(reader.latestCapture()).toBeUndefined();
   });
+
+  it('invokes the onCapture callback with each fresh capture', async () => {
+    const onCapture = vi.fn();
+    const observed = new HarnessScreenReader('pty-cb', 80, 24, onCapture);
+    messageBus.emit('pty', { type: 'data', id: 'pty-cb', data: 'watched' });
+    await advancePastCapture();
+    expect(onCapture).toHaveBeenCalledTimes(1);
+    expect(onCapture.mock.calls[0][0].text).toBe('watched');
+    observed.dispose();
+  });
 });
