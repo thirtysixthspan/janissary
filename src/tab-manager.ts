@@ -16,6 +16,7 @@ import {
 } from './tab-creators.js';
 import { getQueue, pushQueue, shiftQueue, updateQueueEntry, removeQueueEntry } from './tab-queue.js';
 import { buildTabView } from './tab-view.js';
+import { rehydrateTabs } from './tab-rehydrate.js';
 
 export class TabManager {
   tabs: Tab[] = [];
@@ -407,17 +408,7 @@ export class TabManager {
   ): void {
     const states = listAgentStates().toSorted((a, b) => (a.number ?? Infinity) - (b.number ?? Infinity));
     if (states.length === 0) return;
-    this.tabs = states.map((s, index) => {
-      const log = this.capLog(loadTranscript(s.name) ?? s.log ?? []);
-      const tab = makeTab(
-        s.name, s.dotColor || distinctColor([]), s.number ?? index + 1, s.cmdHistory ?? [],
-        log, s.workspaceDir, s.group ?? 1, s.groupColor || s.dotColor || '#5b9cff',
-      );
-      tab.toolStepsExpanded = false;
-      if (s.title) tab.title = s.title;
-      if (s.offline) tab.offline = s.offline;
-      return tab;
-    });
+    this.tabs = rehydrateTabs(states, loadTranscript, (log) => this.capLog(log));
     for (const s of states) {
       if (s.cwd) this.cwd.set(s.name, s.cwd);
       if (s.context) this.context.set(s.name, s.context);
