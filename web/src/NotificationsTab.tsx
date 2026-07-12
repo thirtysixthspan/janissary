@@ -3,6 +3,10 @@ import type { BufferLine } from '@shared/protocol';
 import type { JanusClient } from './ws';
 import { Transcript } from './Transcript';
 import { nextDock, dockTooltip } from './dock-cycle';
+import { onNotificationsKey } from './notifications-handlers';
+
+// The keys the feed scrolls on; they are kept from reaching the window-level bindings.
+const SCROLL_KEYS = new Set(['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown']);
 
 type Properties = {
   lines: BufferLine[];
@@ -19,8 +23,15 @@ const noop = () => {};
 
 export function NotificationsTab({ lines, client, index, dock }: Properties) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  // Scroll the feed from the keyboard while it holds focus (click or tab to focus it). Handled
+  // per-element rather than globally so a docked feed never steals arrows from another active tab.
+  const onKeyDown = (e: React.KeyboardEvent) => {
+    if (!SCROLL_KEYS.has(e.key)) return;
+    e.stopPropagation();
+    onNotificationsKey(e.nativeEvent, scrollRef.current);
+  };
   return (
-    <div className="notifications-tab" tabIndex={0}>
+    <div className="notifications-tab" tabIndex={0} onKeyDown={onKeyDown}>
       {dock && (
         <div className="notifications-header">
           <div className="notifications-actions">
