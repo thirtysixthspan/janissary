@@ -11,7 +11,10 @@ function makeView(overrides: Partial<EditorView> = {}): EditorView {
 
 function makeClient(saveError?: string) {
   const saveFile = vi.fn().mockResolvedValue(saveError);
-  return { client: { saveFile } as unknown as JanusClient, saveFile };
+  // The editor debounces a draft sync ~500ms after an edit; under load that timer can fire before
+  // the test unmounts, so the mock must implement editorSync or the fire-and-forget call throws.
+  const editorSync = vi.fn();
+  return { client: { saveFile, editorSync } as unknown as JanusClient, saveFile };
 }
 
 async function renderLoaded(client: JanusClient, view = makeView()) {

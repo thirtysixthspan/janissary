@@ -1,4 +1,5 @@
 import React from 'react';
+import { ThemeListPicker } from './ThemeListPicker';
 
 // The `syntax theme` overlay listing every available syntax-highlighting theme, with the active
 // one marked. Up/Down move the selection, Return picks the selected theme, Escape closes —
@@ -7,17 +8,6 @@ type Properties = { themes: string[]; active: string; selected: number; onPick: 
 
 export function ThemePicker({ themes, active, selected, onPick }: Properties) {
   return (
-    <div className="picker">
-      <div className="picker-title">syntax theme</div>
-      {themes.map((name, index) => (
-        <div
-          key={name}
-          className={`picker-row${index === selected ? ' selected' : ''}`}
-          onClick={() => onPick(name)}
-        >
-          {name === active ? '✓ ' : '  '}{name}
-        </div>
-      ))}
-    </div>
+    <ThemeListPicker title="syntax theme" themes={themes} active={active} selected={selected} onPick={onPick} />
   );
 }

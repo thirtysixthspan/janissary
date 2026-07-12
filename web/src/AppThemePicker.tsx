@@ -1,4 +1,5 @@
 import React from 'react';
+import { ThemeListPicker } from './ThemeListPicker';
 
 // The `theme` overlay listing every application color theme, with the active one marked. Each row
 // carries a swatch whose wrapper sets `data-theme={name}`, so the CSS cascade resolves the chips
@@ -8,22 +9,19 @@ type Properties = { themes: string[]; active: string; selected: number; onPick: 
 
 export function AppThemePicker({ themes, active, selected, onPick }: Properties) {
   return (
-    <div className="picker">
-      <div className="picker-title">theme</div>
-      {themes.map((name, index) => (
-        <div
-          key={name}
-          className={`picker-row${index === selected ? ' selected' : ''}`}
-          onClick={() => onPick(name)}
-        >
-          <span className="theme-swatch" data-theme={name}>
-            <span className="chip chip-bg" />
-            <span className="chip chip-fg" />
-            <span className="chip chip-accent" />
-          </span>
-          {name === active ? '✓ ' : '  '}{name}
-        </div>
-      ))}
-    </div>
+    <ThemeListPicker
+      title="theme"
+      themes={themes}
+      active={active}
+      selected={selected}
+      onPick={onPick}
+      swatch={(name) => (
+        <span className="theme-swatch" data-theme={name}>
+          <span className="chip chip-bg" />
+          <span className="chip chip-fg" />
+          <span className="chip chip-accent" />
+        </span>
+      )}
+    />
   );
 }
