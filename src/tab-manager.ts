@@ -17,6 +17,7 @@ import {
 import { getQueue, pushQueue, shiftQueue, updateQueueEntry, removeQueueEntry } from './tab-queue.js';
 import { buildTabView } from './tab-view.js';
 import { rehydrateTabs } from './tab-rehydrate.js';
+import { buildAgentStateFromTab } from './tab-agent-state.js';
 
 export class TabManager {
   tabs: Tab[] = [];
@@ -125,21 +126,9 @@ export class TabManager {
   }
 
   buildAgentState(tab: Tab, extra?: Partial<AgentState>): AgentState {
-    return {
-      name: tab.label,
-      dotColor: tab.dotColor,
-      active: this.busy.has(tab.label),
-      number: tab.number,
-      group: tab.group,
-      groupColor: tab.groupColor,
-      cmdHistory: tab.cmdHistory,
-      cwd: this.cwd.get(tab.label),
-      context: this.context.get(tab.label),
-      commandQueue: this.queue.get(tab.label),
-      title: tab.title,
-      offline: tab.offline,
-      ...extra,
-    };
+    return buildAgentStateFromTab(
+      tab, this.busy.has(tab.label), this.cwd.get(tab.label), this.context.get(tab.label), this.queue.get(tab.label), extra,
+    );
   }
 
   private activeLabel(): string | undefined {
