@@ -160,6 +160,10 @@ export type Tab = {
   markdown?: MarkdownView;
   // The editor-view payload, present only when `view === 'editor'`.
   editor?: EditorView;
+  // Transient, unsaved buffer content synced from the client shortly after typing pauses
+  // (see editor-live-buffer-sync plan). In-memory only; never sent to any client (not part
+  // of TabView) and never read when building persisted AgentState. Cleared on save.
+  editorDraft?: { content: string; updatedAt: number };
   // The monitor-window payload, present only when `view === 'monitor'`: the suggestion feed,
   // the persona name, the monitored tabs/groups (pre-formatted), and the running total of bytes
   // sent/received on the monitor's dedicated ACP session.

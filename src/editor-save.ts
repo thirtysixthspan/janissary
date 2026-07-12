@@ -16,6 +16,8 @@ export function saveFile(managers: Managers, url: string, content: string): void
   const stat = statSync(filePath);
   const tab = managers.tab.tabs.find((t) => t.editor?.url === url);
   if (tab?.editor) tab.editor = { ...tab.editor, size: humanSize(stat.size) };
+  // The content is now canonical on disk, so any transient draft is superseded — drop it.
+  if (tab) tab.editorDraft = undefined;
   // Move the watcher's baseline forward first, so its own `fs.watch` event for this write isn't
   // mistaken for an external change.
   if (tab) managers.editorWatch.markSaved(tab.label, stat.mtimeMs);
