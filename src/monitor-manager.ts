@@ -8,6 +8,7 @@ import { openMonitorSession, respawnMonitorSession } from './monitor-session.js'
 import { spawnMonitorSession } from './monitor-acp.js';
 import { validateTargets, matchesTargets, targetColor, seedEntries, formatTargets } from './monitor-targets.js';
 import { harnessFeedEntries } from './monitor-harness-feed.js';
+import { editorFeedEntries } from './monitor-editor-feed.js';
 import { recordContext, snapshotMonitorContext } from './monitor-context.js';
 import { listMonitors, monitorConnections } from './monitor-info.js';
 import { askMonitor } from './monitor-ask.js';
@@ -28,6 +29,9 @@ export type MonitorSub = {
   buffer: { tabLabel: string; entry: LogEntry }[];
   // Per-harness-target last-fed capture time, so an unchanged screen is not re-fed (see monitor-harness-feed).
   harnessSeen: Map<string, number>;
+  // Per-editor-target last-fed file content, so an unchanged file is not re-fed and a changed one is
+  // diffed against what this monitor last saw (see monitor-editor-feed).
+  editorSeen: Map<string, string>;
   session: AcpSession;
   info?: AcpInfo;
   inFlight: boolean;
@@ -74,7 +78,7 @@ export class MonitorManager {
     }
 
     const reg: MonitorSub = {
-      owner, inline, persona, targets: resolved, buffer: [], harnessSeen: new Map(), inFlight: true, delivered: 0,
+      owner, inline, persona, targets: resolved, buffer: [], harnessSeen: new Map(), editorSeen: new Map(), inFlight: true, delivered: 0,
       contextBytes: 0, contextText: [],
       session: undefined as unknown as AcpSession, timer: undefined as unknown as ReturnType<typeof setInterval>, subs: [],
     };
@@ -83,6 +87,7 @@ export class MonitorManager {
     reg.buffer.push(
       ...seedEntries(this.managers.tab.tabs, resolved),
       ...harnessFeedEntries(this.managers, resolved, reg.harnessSeen),
+      ...editorFeedEntries(this.managers, resolved, reg.editorSeen),
     );
     reg.timer = setInterval(() => this.flush(key), this.flushMs);
     this.monitors.set(key, reg);
@@ -139,7 +144,7 @@ export class MonitorManager {
     // Harness tabs never emit `entry:appended`, so top up from their rendered screen here — the
     // live channel for harness targets. An idle harness yields nothing, keeping the "no new
     // content → no ACP prompt" guarantee below intact.
-    reg.buffer.push(...harnessFeedEntries(this.managers, reg.targets, reg.harnessSeen));
+    reg.buffer.push(...harnessFeedEntries(this.managers, reg.targets, reg.harnessSeen), ...editorFeedEntries(this.managers, reg.targets, reg.editorSeen));
     if (reg.buffer.length === 0) return;
     const batch = reg.buffer;
     reg.buffer = [];
