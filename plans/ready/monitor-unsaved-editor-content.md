@@ -1,0 +1,87 @@
+# Feed a monitor the editor tab's unsaved draft, not just its saved-to-disk content
+
+**Complexity: 2/10** — the two hard parts already shipped. [[editor-live-buffer-sync]] gave the server a transient `tab.editorDraft` as the user types, and [[monitor-editor-tab-change-feed]] built the whole poll-at-flush diff feed. This plan is the follow-up integration both of them deferred: change the *one* line in `editorFeedEntries` that decides what "current content" is, so a live draft wins over the disk read. One source-of-truth swap in `src/monitor-editor-feed.ts`, a handful of new unit-test cases, and a two-sentence spec correction. No new field, no new RPC, no new state on `MonitorSub`, no protocol change.
+
+**This is the step named in [[editor-live-buffer-sync]]'s Implementation order (step 8) and [[monitor-editor-tab-change-feed]]'s Out-of-scope / Decision 6.** Both plans landed the machinery and left the wiring for a separately reviewable change; this is that change.
+
+## Summary
+
+A monitor watching an editor tab currently sees only what is **on disk**: `editorFeedEntries` (`src/monitor-editor-feed.ts:27`) reads the target tab's file with `readFileSync` at seed and at each 30-second flush, diffs it against what was last fed to that monitor, and emits the change. Unsaved keystrokes are invisible until the user saves — the accepted limitation in [[monitor-editor-tab-change-feed]]'s Decision 6, written when the server had no access to the live buffer at all.
+
+That access now exists. [[editor-live-buffer-sync]] shipped a debounced client→server sync that populates `tab.editorDraft = { content, updatedAt }` shortly after typing pauses (`src/editor/sync.ts:10`) and clears it on a successful save (`src/editor/save.ts:20`). This plan makes `editorFeedEntries` **prefer `tab.editorDraft.content` over the disk read whenever a draft is present**, so a monitor sees the unsaved buffer within one flush of the user pausing — no save required. Everything downstream of "what is the current content" — the first-seen full-content seed, the per-monitor `editorSeen` dedup, the unified-diff generation, and the `MAX_DIFF_BYTES` cap — is untouched; only the *source* of `current` changes.
+
+## Design decisions
+
+1. **A present draft always wins; no `updatedAt` comparison is needed.** [[editor-live-buffer-sync]]'s step 8 hedged "prefer the draft *when it exists and is newer than the last content fed*." Tracing the shipped code, the "newer" guard is redundant: a draft is **cleared on every successful save** (`src/editor/save.ts:20`, verified), so a *present* `editorDraft` can only mean the buffer has been edited since the last save (or since open). Its content is therefore always fresher-than-or-equal-to disk. There is no reachable state where a live draft is staler than the file on disk, so the rule collapses to the simplest possible form: **draft present → use `draft.content`; draft absent → read disk** (unchanged from today). We do not thread `updatedAt` into `editorSeen` or compare it against a file mtime — that would be state and branching bought for a case that cannot occur. `updatedAt` stays on the field for [[editor-live-buffer-sync]]'s own bookkeeping; this feed simply doesn't need to read it.
+2. **When a draft is present, skip the disk read entirely.** The `readFileSync` (and the `openFilePath` resolution that feeds it) only exists to obtain the current content. If `tab.editorDraft` already *is* the current content, reading disk is wasted work whose result is immediately discarded — and it is precisely while the user is *actively typing* (draft present, flushes firing) that we would otherwise `readFileSync` on every 30s poll for nothing. So the disk branch runs only in the no-draft case. The concrete payoff is a **never-saved new file**: `edit <newfile>` opens a tab whose `/open/<id>` *does* resolve (the id is registered) but whose file is absent, so the disk read returns `''` (`monitor-editor-feed.ts:49-55`, `readContent`'s `catch → ''`) and the current disk-only feed shows the monitor nothing until the first save (this is the existing "emits nothing for a never-saved missing file" test, `monitor-editor-feed.test.ts:69-73`). Preferring the draft surfaces the typed-but-unsaved content immediately instead. Skipping the read for an unresolvable id is a secondary robustness point, not the motivation — an unresolvable id for a live editor tab is not expected to occur ([[monitor-editor-tab-change-feed]] Decision 7).
+3. **The save boundary produces no spurious diff — coherence is automatic.** The one transition to reason about is draft → no-draft on save. At the moment of a successful save, the buffer content, the freshly written disk content, and the just-cleared draft content are all identical (save writes the buffer to disk, *then* clears the draft — `src/editor/save.ts`). So the flush *before* the save fed content `X` from the draft and set `editorSeen[label] = X`; the flush *after* the save reads `X` from disk, finds `previous === current`, and emits nothing. The source switches from draft to disk with no diff, because both sides agree on `X`. No special-casing of the save event is required — the existing content-equality check in `editorFeedEntries` (`monitor-editor-feed.ts:34`) handles it for free.
+4. **The first-seen seed prefers the draft too.** If a monitor *starts* while an editor tab already has an unsaved draft, `previous` is `undefined` and the seed entry is the full draft content (still `cap()`-truncated like any entry). That is the correct freshest snapshot to prime the monitor with — the same principle by which agent-tab monitors seed on full transcript history. No separate handling; it falls out of using the draft as `current` before the existing `previous === undefined` branch.
+5. **An external on-disk change while a draft is live is intentionally *not* shown; the draft is.** When the watched file changes on disk while the buffer is **dirty**, the editor deliberately leaves the buffer alone rather than clobbering unsaved work (`specs/editor-tab.md`, "If the buffer has unsaved changes when an external change is detected, the buffer is left alone"). In that state the draft (what the user is actually looking at and editing) diverges from disk. Preferring the draft means the monitor tracks the editor's *visible* buffer, which is the right mental model for "watch this editor tab" — the monitor watches the tab, not the file underneath it. (When the buffer is **clean**, an external change auto-reloads into the buffer, which itself triggers a sync — `specs/editor-tab.md` "covers … an automatic reload of an external change" — so the draft and disk stay coherent and the point is moot.)
+6. **No change to `MonitorSub`, `monitor-manager.ts`, the diff library, the cap, or the protocol.** The entire change is contained in `editorFeedEntries`'s choice of `current`. `editorSeen: Map<string, string>` still stores the last content fed (be it draft- or disk-sourced — they're just strings), so dedup and diffing work identically regardless of source. The 30s flush cadence is unchanged: draft freshness is bounded by the flush interval on the read side and the 500ms sync debounce on the write side, exactly as [[monitor-editor-tab-change-feed]] already documents for disk reads.
+
+## Verified codebase facts that shape the design
+
+- **The draft field is live and cleared on save.** `src/editor/sync.ts:10` sets `tab.editorDraft = { content, updatedAt: Date.now() }` on the `editorSync` RPC; `src/editor/save.ts:20` sets `tab.editorDraft = undefined` after a successful write. So "draft present ⟺ unsaved edits exist" holds, which is what makes Decision 1 (drop the timestamp guard) sound.
+- **`editorFeedEntries` is disk-only today.** `src/monitor-editor-feed.ts:23-36`: it resolves the path via `resolveOpenFilePath` → `managers.tab.openFilePath` and reads with `readFileSync`; it never references `tab.editorDraft`. The `previous`/`editorSeen`/`createPatch`/`cap` logic downstream of `const current = …` is source-agnostic.
+- **The change surface is one variable, and one function covers both call sites.** Only the computation of `current` (`monitor-editor-feed.ts:25-27`) needs to branch on `tab.editorDraft`; lines 28-35 are unchanged. `editorFeedEntries` is the sole reader of editor content and is invoked from exactly two places — the seed at `monitor-manager.ts:90` and the flush at `:147` — so editing it once updates both the initial and steady-state feeds with no `monitor-manager.ts` change.
+- **`Tab.editorDraft` is typed `{ content: string; updatedAt: number } | undefined`** (`src/types.ts:166`), already imported wherever `Tab` is, so no new import is needed in the feed module.
+- **The spec currently states the opposite of the new behavior.** `specs/monitoring.md:25` says "an unsaved edit sitting in the editor buffer is not visible to a monitor until the file is actually saved." That sentence is what this plan makes false and must rewrite.
+- **The editor-tab spec's "Live draft sync" section (`specs/editor-tab.md:65-77`) describes the draft as "entirely transient and server-side … never shown back in the editor."** It does not yet mention that a monitor consumes it — a good place for a one-line cross-reference so the two specs agree on who reads the draft.
+
+## Proposed changes
+
+### 1. `src/monitor-editor-feed.ts` — prefer the draft as the content source
+
+The loop body today computes `current` unconditionally from disk (`monitor-editor-feed.ts:25-27`: resolve the `/open/` path via `resolveOpenFilePath`, `continue` if it doesn't resolve, then `readContent`). Change only the derivation of `current` to be draft-first:
+
+- **When `tab.editorDraft` is set, `current` is `tab.editorDraft.content`** — used verbatim, no disk access, no timestamp check (Decisions 1–2).
+- **When `tab.editorDraft` is absent, `current` comes from disk exactly as today** — resolve the path and `readContent` it, and skip the tab (the existing `continue`) if the id doesn't resolve, preserving Decision 7 of [[monitor-editor-tab-change-feed]].
+
+Because the disk branch's "unresolvable id → skip this tab" behavior must survive only on the no-draft side, extract the current three lines (path resolve + `!filePath` skip + `readContent`) into a small private helper in this same module that returns the on-disk content, or a sentinel meaning "unresolvable — skip this tab", keeping the missing/unreadable-file-reads-as-`''` behavior untouched. Name it in the module's existing style alongside `resolveOpenFilePath`/`readContent`. The loop then reads the draft when present, otherwise calls the helper and skips the tab on the sentinel. Everything downstream of `current` — `previous = editorSeen.get(tab.label)`, `editorSeen.set`, the `previous === undefined` full-content seed, the `previous === current` no-op, and the `createPatch`/`cap` diff (`monitor-editor-feed.ts:28-35`) — is unchanged, since it operates on the `current` string regardless of where it came from.
+
+This is one function's internals only. `resolveTargetTabs`, `resolveOpenFilePath`, `readContent`, `cap`, and `MAX_DIFF_BYTES` are unchanged, and no new import is needed (`Tab.editorDraft` is already reachable through the `tab` the loop iterates). The single `editorFeedEntries` change automatically covers **both** call sites — the seed at `monitor-manager.ts:90` and the flush at `:147` — since both invoke this one function; no edit to `monitor-manager.ts` is required. The module stays well under the 200-line cap.
+
+### 2. `src/monitor-editor-feed.test.ts` — cover the draft path
+
+Extend the existing suite (the `editorTab` helper already builds a `Tab`; set `.editorDraft` on it for these cases):
+
+- **Draft present at first sight → full draft content, not disk.** Temp file on disk holds `"saved\n"`, tab has `editorDraft.content = "saved\nunsaved\n"`; the single seed entry's `output` is the draft content.
+- **Draft preferred over a changed disk file.** Seed with a draft, then change *disk* only (leave the draft as-is) → no entry, because the draft (the source) didn't change.
+- **Draft change emits a diff.** Seed with `editorDraft.content = "a\n"`, then set `editorDraft.content = "a\nb\n"` → diff entry containing `+b`.
+- **Save boundary: clearing the draft to matching disk yields no entry.** Seed with `editorDraft.content = "final\n"` and disk `"final\n"`; then remove the draft (`tab.editorDraft = undefined`) leaving disk `"final\n"` → no entry (Decision 3).
+- **Never-saved new file with a draft feeds the typed content.** Contrast with the existing "emits nothing for a never-saved missing file" case (`monitor-editor-feed.test.ts:69-73`): keep that tab's on-disk file absent (`readContent → ''`) but give it `editorDraft.content = "typed but unsaved\n"` → the seed entry is the draft content, not nothing (Decision 2). This is the headline behavior of the plan.
+- **Draft feeds even when the `/open/` id doesn't resolve.** A tab whose `openFilePath` returns `undefined` but which has a draft → full draft content is fed. Secondary robustness guard against a regression where an unresolvable path skips a draft-backed tab (Decision 2).
+- Keep every existing disk-only case (they now exercise the `tab.editorDraft === undefined` fallback and must still pass unchanged).
+
+### 3. `specs/monitoring.md` — correct the editor-target paragraph
+
+Rewrite the final sentences of the editor-view paragraph (`specs/monitoring.md:25`). Replace "Because the content is read from disk, an unsaved edit sitting in the editor buffer is not visible to a monitor until the file is actually saved; a save (or an external change on disk) is what the next flush picks up …" with wording to the effect of:
+
+> The content a monitor sees is the editor tab's **live buffer**: whenever the tab has unsaved edits, the monitor is fed the in-progress draft the editor syncs to the server shortly after typing pauses (see [[editor-tab]]), so unsaved changes are visible without a save. When the buffer has no unsaved edits, the content is read from the saved file on disk. A save, an external on-disk change, and ongoing typing are therefore all picked up by the next flush; a file deleted from disk (with no unsaved buffer) feeds a diff that removes every line.
+
+Keep the rest of the paragraph (full-content-first, size-capped unified diffs thereafter, per-monitor dedup) intact.
+
+### 4. `specs/editor-tab.md` — one-line cross-reference (optional but recommended)
+
+In the "Live draft sync" section (`specs/editor-tab.md:74-77`), append a clause noting the one server-side consumer of the draft: a monitor watching the editor tab is fed the draft so it can see unsaved changes without a save (cross-reference [[monitoring]]). This keeps the two specs from disagreeing about whether the draft is "never shown" to anything — it *is* surfaced to monitors, just never rendered back into the editor.
+
+## Implementation order
+
+1. Make the `editorFeedEntries` draft-first source-selection change and extract the disk-read helper (§1); `./scripts/run.mjs lint-files` + `npm run typecheck:diff`.
+2. Add the draft-path test cases to `monitor-editor-feed.test.ts` (§2); `npm run test:diff:server`. Confirm the pre-existing disk-only cases still pass unchanged.
+3. Update `specs/monitoring.md` (§3) and the `specs/editor-tab.md` cross-reference (§4).
+4. `./scripts/run.mjs check-diff` after each step; leave `npm run check` for the human at the end.
+
+## Out of scope
+
+- **Reacting to a draft faster than the flush cycle.** The feed still polls at the 30s `MONITOR_FLUSH_MS` cadence; a draft is picked up on the next flush after the ~500ms client sync debounce, not pushed instantly. Event-driven push from the sync handler into monitor buffers was rejected for the disk feed in [[monitor-editor-tab-change-feed]] (Decision 1) for the same reasons and is not reopened here.
+- **Threading `updatedAt` into `editorSeen` or comparing it against file mtime.** Decision 1 establishes this is unnecessary; not built.
+- **Showing an external on-disk change while the buffer is dirty.** By design the monitor tracks the visible buffer (the draft), not the shadowed disk file, in that state (Decision 5).
+- **Any change to the live-buffer-sync mechanism itself** (`src/editor/sync.ts`, the client hook, the RPC). This plan only *consumes* `tab.editorDraft`; it does not touch how the draft is produced, debounced, or cleared.
+- **Persisting or restoring the draft.** Unchanged — it remains as transient as the rest of an editor tab's state.
+
+## Verification
+
+- `./scripts/run.mjs check-diff` after each step.
+- Unit tests: `npm run test:diff:server` covering the extended `monitor-editor-feed.test.ts` (draft-preferred-over-disk, draft-diff, save-boundary-no-diff, never-saved-new-file-with-draft, draft-without-resolvable-id) plus the unchanged disk-only cases.
+- Manual end-to-end: open an editor tab on a file, `monitor <persona> <that-tab-label>`, wait for the seed flush, then **type without saving**. Within one flush after pausing (~500ms sync + up to 30s flush) the reporting tab's context byte counter (`contextBytes`, `specs/monitoring.md`) should grow by roughly the size of the unsaved edit — confirming the monitor saw the buffer with no save. Then save and confirm the *next* flush adds nothing (draft cleared, disk matches last fed content — Decision 3). Finally, confirm an external edit (another process) to a **clean** buffer is still picked up as before.
