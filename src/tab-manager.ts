@@ -3,7 +3,7 @@ import type { Tab, LogEntry, AgentState, ImageView, MarkdownView, EditorView, Pa
 import type { ConnectionView, ScheduleView, TabView } from './protocol.js';
 import {
   makeTab, distinctColor, insertTabInGroup,
-  flattenBuffer, swapTabsLeft, swapTabsRight, stripComments,
+  swapTabsLeft, swapTabsRight, stripComments,
 } from './tab.js';
 import { saveAgentState, listAgentStates } from './agent-state.js';
 import { abbreviatePath } from './paths.js';
@@ -15,6 +15,7 @@ import {
   addImageTab, addMarkdownTab, addEditorTab, addPageTab, addFilesTab, addNotificationsTab,
 } from './tab-creators.js';
 import { getQueue, pushQueue, shiftQueue, updateQueueEntry, removeQueueEntry } from './tab-queue.js';
+import { buildTabView } from './tab-view.js';
 
 export class TabManager {
   tabs: Tab[] = [];
@@ -338,35 +339,16 @@ export class TabManager {
     acpLabel: (label: string) => string | undefined,
     scheduleView: (label: string) => ScheduleView[],
   ): TabView[] {
-    return this.tabs.map((t) => ({
-      label: t.label,
-      number: t.number,
-      dotColor: t.dotColor,
-      group: t.group,
-      groupColor: t.groupColor,
-      busy: this.busy.has(t.label),
-      hasUnread: !!t.hasUnread,
-      cwd: this.cwd.get(t.label) ?? process.cwd(),
-      acp: acpLabel(t.label),
-      connections: connectionsFor(t.label),
-      schedule: scheduleView(t.label),
-      bufferLines: flattenBuffer(t.log, !t.toolStepsExpanded)
-        .map((l) => (l.cwd ? { ...l, cwd: this.shorten(l.cwd) } : l)),
-      cmdHistory: t.cmdHistory,
-      commandQueue: this.queue.get(t.label) ?? [],
-      toolStepsExpanded: !!t.toolStepsExpanded,
-      view: t.view,
-      title: t.title,
-      image: t.image,
-      page: t.page,
-      harness: t.harness,
-      markdown: t.markdown,
-      editor: t.editor,
-      monitor: t.monitor,
-      files: t.files ? { ...t.files, root: this.shorten(t.files.root) } : undefined,
-      activePty: t.activePty,
-      dock: t.dock,
-    }));
+    return this.tabs.map((t) => buildTabView(
+      t,
+      this.busy.has(t.label),
+      this.cwd.get(t.label) ?? process.cwd(),
+      acpLabel(t.label),
+      connectionsFor(t.label),
+      scheduleView(t.label),
+      this.queue.get(t.label) ?? [],
+      (p: string) => this.shorten(p),
+    ));
   }
 
   openImageTab(image: ImageView): void {
