@@ -2,9 +2,9 @@ import { describe, it, expect, beforeAll, afterAll, afterEach } from 'vitest';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { DatabaseManager } from './database-manager.js';
-import { initDbDir, closeAllConnections, listOpenConnections } from './connections.js';
-import { DB_PRIMER } from './database.js';
+import { DatabaseManager } from './manager.js';
+import { initDbDir, closeAllConnections, listOpenConnections } from '../connections.js';
+import { DB_PRIMER } from './index.js';
 
 describe('DatabaseManager', () => {
   let dir = '';

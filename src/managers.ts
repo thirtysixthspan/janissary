@@ -1,7 +1,7 @@
 import type { TabManager } from './tab-manager.js';
 import type { ShellManager } from './shell-manager.js';
 import type { AcpManager } from './acp-manager.js';
-import type { DatabaseManager } from './database-manager.js';
+import type { DatabaseManager } from './database/manager.js';
 import type { AgentCommunicationManager } from './agent-communication-manager.js';
 import type { HarnessManager } from './harness-manager.js';
 import type { SshManager } from './ssh-manager.js';

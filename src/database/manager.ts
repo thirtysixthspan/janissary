@@ -1,5 +1,5 @@
-import { runDatabaseCommand, parseDatabaseCommand, extractDatabaseCommand, DB_PRIMER } from './database.js';
-import { isConnectionOpen, closeConnection, closeAllConnections, listOpenConnections } from './connections.js';
+import { runDatabaseCommand, parseDatabaseCommand, extractDatabaseCommand, DB_PRIMER } from './index.js';
+import { isConnectionOpen, closeConnection, closeAllConnections, listOpenConnections } from '../connections.js';
 
 // Owns each tab's view of the SQLite databases it has opened, and acts as the controller's facade
 // over the global connection registry (connections.ts) and the `db` command surface (database.ts).

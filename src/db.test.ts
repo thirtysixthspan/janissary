@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { mkdtempSync, mkdirSync, rmSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { parseDatabaseCommand, runDatabaseCommand, extractDatabaseCommand } from './database.js';
+import { parseDatabaseCommand, runDatabaseCommand, extractDatabaseCommand } from './database/index.js';
 import { initDbDir, closeConnection, closeAllConnections, listOpenConnections } from './connections.js';
 
 describe('parseDbCommand', () => {
