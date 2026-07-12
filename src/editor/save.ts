@@ -1,7 +1,7 @@
 import { statSync, writeFileSync } from 'node:fs';
-import { humanSize } from './openers/size.js';
-import { messageBus } from './bus.js';
-import type { Managers } from './managers.js';
+import { humanSize } from '../openers/size.js';
+import { messageBus } from '../bus.js';
+import type { Managers } from '../managers.js';
 
 // Write an editor tab's buffer back to disk. `url` is the tab's `/open/<id>` ref, resolved
 // through the open-file allow-list — the client can only ever write to files the user explicitly

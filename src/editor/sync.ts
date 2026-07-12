@@ -1,4 +1,4 @@
-import type { Managers } from './managers.js';
+import type { Managers } from '../managers.js';
 
 // Cache an editor tab's in-progress (unsaved) buffer as transient draft state on the tab. `url`
 // is the tab's `/open/<id>` ref, matched the same way saveFile's handler resolves its tab — but
