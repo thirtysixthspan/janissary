@@ -10,7 +10,14 @@ export function closeTabResources(
   queue: Map<string, string[]>,
   tabsLength: number,
 ): void {
-  if (tab.workspaceDir) managers.workspace.remove(tab.workspaceDir);
+  // Remove the workspace clone in the background: it is a recursive rmSync of a full git clone,
+  // slow enough to freeze the UI if run inline (the tab can't visibly close until it finishes).
+  // Deferring it lets the tab close and the state broadcast reach the client first. The clone stays
+  // tracked until `remove` runs, so a shutdown before this fires still cleans it up via removeAll().
+  if (tab.workspaceDir) {
+    const workspaceDir = tab.workspaceDir;
+    setTimeout(() => managers.workspace.remove(workspaceDir), 0);
+  }
   managers.shell.close(tab.label);
   managers.acp.close(tab.label);
   managers.browser.closeTab(tab.label);

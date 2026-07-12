@@ -37,13 +37,17 @@ describe('closeTabResources', () => {
     expect(managers.database.forgetTab).toHaveBeenCalledWith('main');
   });
 
-  it('removes the workspace clone only when the tab has one', () => {
+  it('removes the workspace clone in the background only when the tab has one', async () => {
     const managers = makeManagers();
     closeTabResources(makeTab('main', 'red'), managers, new Map(), new Map(), new Map(), 2);
-    expect(managers.workspace.remove).not.toHaveBeenCalled();
 
     const workspaced = { ...makeTab('ws', 'red'), workspaceDir: '/tmp/ws-main' };
     closeTabResources(workspaced, managers, new Map(), new Map(), new Map(), 2);
+    // Deferred off the synchronous close path so the rmSync of the clone can't freeze the UI.
+    expect(managers.workspace.remove).not.toHaveBeenCalled();
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(managers.workspace.remove).toHaveBeenCalledTimes(1);
     expect(managers.workspace.remove).toHaveBeenCalledWith('/tmp/ws-main');
   });
 

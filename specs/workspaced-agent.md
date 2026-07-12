@@ -36,6 +36,6 @@ The initial clone (done outside the sandbox, by the janissary process itself) us
 
 Workspace directories are ephemeral:
 - **Normal launch**: `.janissary/workspace/` is cleared before rendering.
-- **Tab close**: The workspace directory is removed when the tab is closed.
+- **Tab close**: The workspace directory is removed when the tab is closed. The tab closes immediately and the clone is deleted in the background, so removing a large workspace never freezes the UI. If the app exits before a background deletion finishes, that clone is still cleaned up as part of shutdown.
 - **`--relaunch`**: Workspace directories are not recreated; restore falls back to the tab's last known working directory.
 
