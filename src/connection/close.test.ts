@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
-import { closeConnection } from './connection-close.js';
-import { makeTab } from './tab.js';
-import type { Managers } from './managers.js';
+import { closeConnection } from './close.js';
+import { makeTab } from '../tab.js';
+import type { Managers } from '../managers.js';
 
 function makeManagers(overrides: Partial<Managers> = {}): Managers {
   return {

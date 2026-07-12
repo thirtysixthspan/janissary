@@ -1,6 +1,6 @@
-import { messageBus } from './bus.js';
-import { SHELL_NAME } from './shell-manager.js';
-import type { Managers } from './managers.js';
+import { messageBus } from '../bus.js';
+import { SHELL_NAME } from '../shell-manager.js';
+import type { Managers } from '../managers.js';
 
 export function closeConnection(
   kind: string,

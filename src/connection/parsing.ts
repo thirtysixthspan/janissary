@@ -1,4 +1,4 @@
-import type { ConnectionKind, ConnectionParsed } from './types.js';
+import type { ConnectionKind, ConnectionParsed } from '../types.js';
 
 const KINDS: ConnectionKind[] = ['sqlite', 'shell', 'acp', 'browser', 'ssh'];
 const USAGE = 'Usage: connection <list|close> [kind:id]  (e.g. connection close sqlite:mydb)';
