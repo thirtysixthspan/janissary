@@ -1,4 +1,7 @@
 import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest';
+import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import type { LogEntry, Tab } from './types.js';
 import type { Managers } from './managers.js';
 import { makeTab } from './tab.js';
@@ -27,6 +30,7 @@ function makeFakeManagers(tabs: Tab[]) {
   const appended: { label: string; entry: LogEntry }[] = [];
   const finished: { label: string; output: string }[] = [];
   const screens: Record<string, { text: string; capturedAt: number } | undefined> = {};
+  const openFiles = new Map<string, string>();
   const fakeTab = {
     tabs,
     cwdOf: () => '/tmp',
@@ -34,6 +38,7 @@ function makeFakeManagers(tabs: Tab[]) {
     append: (label: string, entry: LogEntry) => { appended.push({ label, entry }); },
     startRunning: () => {},
     finishRunning: (label: string, output: string) => { finished.push({ label, output }); },
+    openFilePath: (id: string) => openFiles.get(id),
     // openMonitorTab reassigns `tabs`, so splice the live array, not the closure's original.
     closeTab: (index: number) => { fakeTab.tabs.splice(index, 1); },
   };
@@ -43,11 +48,15 @@ function makeFakeManagers(tabs: Tab[]) {
     harness: { latestScreenText: (label: string) => screens[label] },
     openFile: { edit },
   } as unknown as Managers;
-  return { managers, appended, finished, screens, edit };
+  return { managers, appended, finished, screens, edit, openFiles };
 }
 
 function harnessTab(label: string): Tab {
   return { ...makeTab(label, '#aaa'), view: 'harness' } as Tab;
+}
+
+function editorTab(label: string, id: string, name = 'notes.txt'): Tab {
+  return { ...makeTab(label, '#ddd'), view: 'editor', editor: { name, url: `/open/${id}`, path: '', size: '' } } as unknown as Tab;
 }
 
 function fakeSpawnFactory() {
@@ -572,6 +581,33 @@ describe('MonitorManager', () => {
     sessions[0].reply('no suggestion'); // complete the prompt so inFlight clears
     vi.advanceTimersByTime(FLUSH_MS); // idle: same capturedAt → buffer empty → no new prompt
     expect(sessions[0].prompts).toHaveLength(2);
+  });
+
+  it('feeds an editor target its file content on seed and a diff on change', () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'janus-monitor-editor-'));
+    const file = path.join(dir, 'notes.txt');
+    writeFileSync(file, 'first content\n');
+    const { managers, openFiles } = makeFakeManagers([janus, editorTab('notes', 'e1')]);
+    openFiles.set('e1', file);
+    const { spawn, sessions } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+
+    manager.start('janus', 'assistant', [{ kind: 'tab', label: 'notes' }]);
+    vi.advanceTimersByTime(FLUSH_MS); // flushes the seeded full content
+    expect(sessions[0].prompts[1]).toContain('[notes]');
+    expect(sessions[0].prompts[1]).toContain('first content');
+    sessions[0].reply('no suggestion'); // clear inFlight
+
+    writeFileSync(file, 'second content\n');
+    vi.advanceTimersByTime(FLUSH_MS);
+    expect(sessions[0].prompts.at(-1)).toContain('-first content');
+    expect(sessions[0].prompts.at(-1)).toContain('+second content');
+    sessions[0].reply('no suggestion');
+
+    vi.advanceTimersByTime(FLUSH_MS); // unchanged file → no new prompt
+    expect(sessions[0].prompts).toHaveLength(3);
+
+    rmSync(dir, { recursive: true, force: true });
   });
 
   it('lists monitors with mode and delivery counts', () => {
