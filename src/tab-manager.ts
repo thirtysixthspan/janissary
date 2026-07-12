@@ -14,6 +14,7 @@ import type { Managers } from './managers.js';
 import {
   addImageTab, addMarkdownTab, addEditorTab, addPageTab, addFilesTab, addNotificationsTab,
 } from './tab-creators.js';
+import { getQueue, pushQueue, shiftQueue, updateQueueEntry, removeQueueEntry } from './tab-queue.js';
 
 export class TabManager {
   tabs: Tab[] = [];
@@ -71,37 +72,26 @@ export class TabManager {
   }
 
   queueFor(label: string): string[] {
-    return this.queue.get(label) ?? [];
+    return getQueue(this.queue, label);
   }
 
   enqueue(label: string, text: string): void {
-    this.queue.set(label, [...this.queueFor(label), text]);
+    pushQueue(this.queue, label, text);
     this.persistQueue(label);
   }
 
   dequeue(label: string): string | undefined {
-    const q = this.queueFor(label);
-    if (q.length === 0) return undefined;
-    const [front, ...rest] = q;
-    this.queue.set(label, rest);
-    this.persistQueue(label);
+    const front = shiftQueue(this.queue, label);
+    if (front !== undefined) this.persistQueue(label);
     return front;
   }
 
   editQueued(label: string, index: number, text: string): void {
-    const q = this.queueFor(label);
-    if (index < 0 || index >= q.length) return;
-    const next = [...q];
-    next[index] = text;
-    this.queue.set(label, next);
-    this.persistQueue(label);
+    if (updateQueueEntry(this.queue, label, index, text)) this.persistQueue(label);
   }
 
   deleteQueued(label: string, index: number): void {
-    const q = this.queueFor(label);
-    if (index < 0 || index >= q.length) return;
-    this.queue.set(label, q.filter((_, i) => i !== index));
-    this.persistQueue(label);
+    if (removeQueueEntry(this.queue, label, index)) this.persistQueue(label);
   }
 
   private persistQueue(label: string): void {
