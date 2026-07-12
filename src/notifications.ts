@@ -35,21 +35,26 @@ export function shouldNotify(
   }
 }
 
-// A zero-padded HH:MM:SS clock time, prefixed to every notification line.
+// A compact 12-hour clock time (e.g. `8:32pm`) — hour without a leading zero, two-digit minutes,
+// lowercase am/pm, no seconds. Leads each notification line's provenance header.
 export function formatTimestamp(date: Date): string {
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  const period = date.getHours() < 12 ? 'am' : 'pm';
+  const hour12 = date.getHours() % 12 === 0 ? 12 : date.getHours() % 12;
+  return `${hour12}:${minutes}${period}`;
 }
 
-// The transcript text for an event. `detail` carries the event-specific extra: the command for
-// `schedule-fire`, the sender label for `incoming-message`, and the user's message for `manual`.
-function notificationText(event: NotificationEventType, tabLabel: string, detail?: string): string {
+// The message body for an event, rendered after the `<time> <tabLabel>:` header. `detail` carries
+// the event-specific extra: the command for `schedule-fire`, the sender label for
+// `incoming-message`, and the user's message for `manual`. The `manual` body is the message alone —
+// the tab label already leads the line via the header, so repeating it here would double it.
+export function notificationText(event: NotificationEventType, tabLabel: string, detail?: string): string {
   switch (event) {
     case 'state-change': { return `Agent '${tabLabel}' finished`; }
     case 'agent-start': { return `Agent '${tabLabel}' started`; }
     case 'schedule-fire': { return `Scheduled: ${detail} in ${tabLabel}`; }
     case 'incoming-message': { return `Message from ${detail} in ${tabLabel}`; }
-    case 'manual': { return `${tabLabel}: ${detail ?? ''}`; }
+    case 'manual': { return detail ?? ''; }
   }
 }
 
@@ -62,6 +67,9 @@ export function notify(managers: Managers, event: NotificationEventType, tabLabe
   const activeLabel = managers.tab.cur().label;
   if (!shouldNotify(getConfig().notifications, event, tabLabel, activeLabel)) return;
   const fromColor = managers.tab.tabs.find((t) => t.label === tabLabel)?.dotColor;
-  const output = `${formatTimestamp(new Date())} ${notificationText(event, tabLabel, message)}`;
-  appendNotification(managers, { input: '', output, from: tabLabel, fromColor });
+  // The dot label is the notification's provenance header — when, then who — so the line reads
+  // `● 8:32pm janus: <message>`. `fromColor` (looked up from tabLabel) still colors the dot.
+  const from = `${formatTimestamp(new Date())} ${tabLabel}`;
+  const output = notificationText(event, tabLabel, message);
+  appendNotification(managers, { input: '', output, from, fromColor });
 }

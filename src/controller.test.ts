@@ -1474,14 +1474,14 @@ describe('Controller notifications feed', () => {
       c.setActiveTab(c.view().findIndex((t) => t.label === 'janus')); // janus active; bob is a background tab
       c.dispatch('msg bob info hello there');
       const line = c.view().find((t) => t.view === 'notifications')!.bufferLines.find((l) => l.type === 'message');
-      expect(line?.from).toBe('bob');
+      expect(line?.from).toMatch(/ bob$/); // header is "<time> bob"
       expect(line?.fromColor).toBe(bobColor);
     } finally {
       reset();
     }
   });
 
-  it('prefixes each recorded notification with a HH:MM:SS timestamp', () => {
+  it('leads each recorded notification header with a 12-hour timestamp', () => {
     withConfig({ incomingMessage: true, stateChange: false, scheduleFire: false, agentStart: false });
     try {
       const { c } = makeController();
@@ -1489,7 +1489,9 @@ describe('Controller notifications feed', () => {
       openNotificationsTab(c.managers);
       c.setActiveTab(c.view().findIndex((t) => t.label === 'janus'));
       c.dispatch('msg bob info hello there');
-      expect(feedText(c)).toMatch(/^\d{2}:\d{2}:\d{2} Message from janus in bob$/);
+      const line = c.view().find((t) => t.view === 'notifications')!.bufferLines.find((l) => l.type === 'message');
+      expect(line?.from).toMatch(/^\d{1,2}:\d{2}(am|pm) bob$/);
+      expect(line?.text).toBe('Message from janus in bob');
     } finally {
       reset();
     }
