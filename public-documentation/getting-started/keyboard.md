@@ -27,7 +27,8 @@ All bindings work from the command bar in any agent tab.
 | `Escape` | Reset the transcript scroll to the bottom |
 | `Backspace` / `Delete` | Delete the character before the cursor |
 | `Tab` | Complete the token at the cursor — see [Tab completion](/command-bar/tab-completion) |
+| `Shift+Tab` | Move keyboard focus to the next application section — left sidebar, center, right sidebar, reporting panel — looping, skipping any that aren't currently present |
 
-Two tab types take keyboard input for themselves. A focused [file navigator](/tab-types/file-navigator) captures arrow keys, `Home`/`End`, `PageUp`/`PageDown`, `Enter`, `Space`, and typed characters for tree navigation. A [harness tab](/advanced-agents/harness) sends everything to the harness except `Shift+←`/`Shift+→`, which still switch tabs.
+Two tab types take keyboard input for themselves. A focused [file navigator](/tab-types/file-navigator) captures arrow keys, `Home`/`End`, `PageUp`/`PageDown`, `Enter`, `Space`, and typed characters for tree navigation. A [harness tab](/advanced-agents/harness) sends everything to the harness except `Shift+←`/`Shift+→`/`Shift+Tab`, which still switch tabs or move focus between sections.
 
 <img class="agent-float" src="/agents/tahir-south.png" alt="" />

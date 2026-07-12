@@ -77,3 +77,9 @@ to the server or persisted.
 Dock placement and sidebar width both reset on relaunch — neither is saved. This matches file
 tree tabs generally: they are live, in-memory views, never persisted or restored (see
 `file-tree-tab.md`).
+
+### Keyboard focus
+
+A sidebar can receive keyboard focus via section navigation (see `keyboard-navigation.md`), which
+focuses its currently-visible docked tab without changing the server's active tab — reaffirming
+that a docked tab is never the active tab.

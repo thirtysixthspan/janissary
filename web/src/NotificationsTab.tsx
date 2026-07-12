@@ -20,7 +20,7 @@ const noop = () => {};
 export function NotificationsTab({ lines, client, index, dock }: Properties) {
   const scrollRef = useRef<HTMLDivElement>(null);
   return (
-    <div className="notifications-tab">
+    <div className="notifications-tab" tabIndex={0}>
       {dock && (
         <div className="notifications-header">
           <div className="notifications-actions">

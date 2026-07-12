@@ -29,6 +29,15 @@
 | Backspace / Delete | Delete character before cursor |
 | (printable) | Insert character at cursor |
 | Tab | Complete the token at the cursor: a file path, a `msg`/`broadcast` agent name, a `connection close` connection string, or a `browser` subcommand / window id |
+| Shift+Tab | Move keyboard focus to the next application section (left sidebar → center → right sidebar → reporting, wrapping back to left, skipping any section that is not currently present). The section's currently-visible tab receives focus. |
+
+The UI is composed of up to four **application sections**: the left sidebar, the center action
+area, the right sidebar, and the reporting section below it. A section exists only when it holds
+at least one tab (the center is always present). Moving keyboard focus into a section always
+focuses that section's currently-visible tab — the docked tab shown in a sidebar, or the selected
+monitor in the reporting section.
 
 A focused file tree tab captures arrow keys, Home/End, PageUp/PageDown, Enter, Space, and printable
 characters (type-ahead) for its own tree navigation instead of the bindings above — see File Tree Tab.
+Shift+Tab is intercepted ahead of that file-tree capture and ahead of a focused harness terminal, so
+section navigation still escapes them.
