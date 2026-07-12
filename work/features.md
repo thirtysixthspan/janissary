@@ -5,10 +5,6 @@
 - raw website content
 - dom point in time captures?
 
-### editor tabs should be exposed to monitors
-- current state of the file being edited
-
-
 ## deferred
 
 ### fix monitoring error 
