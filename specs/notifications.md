@@ -99,5 +99,7 @@ issuing tab).
 ### Ordering and timestamps
 
 The feed displays **newest first**: the most recently recorded notification appears at the top,
-with earlier ones below it. Each line is prefixed with the clock time (`HH:MM:SS`) it was
-recorded at.
+with earlier ones below it. Each line reads `● <time> <tab>: <message>` — the colored dot, then a
+compact 12-hour clock time (for example `8:32pm`), the originating tab's label, and the message.
+The tab label appears **once**, in this header: a `notify <message>` shows the message on its own
+without repeating the label ahead of it.

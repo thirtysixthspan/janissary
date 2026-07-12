@@ -21,7 +21,8 @@ describe('notify command', () => {
   it('appends an attributed line to the feed when the notifications tab is open', () => {
     openNotificationsTab(managers);
     command.run('notify deploy finished', { label: 'janus', index: 0 }, managers);
-    expect(feed(managers).some((line) => line.endsWith('janus: deploy finished'))).toBe(true);
+    const entries = notificationsTab(managers)!.log;
+    expect(entries.some((e) => e.output === 'deploy finished' && !!e.from?.endsWith('janus'))).toBe(true);
   });
 
   it('is a no-op (drops the message, creates nothing) when the notifications tab is closed', () => {
@@ -35,7 +36,8 @@ describe('notify command', () => {
     openNotificationsTab(managers);
     managers.tab.setActiveTab(managers.tab.findIndex('janus'));
     command.run('notify heads up', { label: 'janus', index: 0 }, managers);
-    expect(feed(managers).some((line) => line.endsWith('janus: heads up'))).toBe(true);
+    const entries = notificationsTab(managers)!.log;
+    expect(entries.some((e) => e.output === 'heads up' && !!e.from?.endsWith('janus'))).toBe(true);
   });
 
   it('appends a usage error to the issuing tab for an empty message and records nothing in the feed', () => {

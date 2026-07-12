@@ -1,6 +1,7 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { NotificationConfig } from './types.js';
-import { shouldNotify, formatTimestamp } from './notifications.js';
+import type { Managers } from './managers.js';
+import { shouldNotify, formatTimestamp, notificationText, notify } from './notifications.js';
 import { NOTIFICATIONS_LABEL } from './notifications-tab.js';
 
 const allOn: NotificationConfig = {
@@ -47,11 +48,63 @@ describe('shouldNotify — manual event', () => {
 });
 
 describe('formatTimestamp', () => {
-  it('zero-pads hours, minutes, and seconds', () => {
-    expect(formatTimestamp(new Date(2026, 0, 1, 9, 5, 3))).toBe('09:05:03');
+  it('renders afternoon times in 12-hour form with pm', () => {
+    expect(formatTimestamp(new Date(2026, 0, 1, 20, 32, 0))).toBe('8:32pm');
   });
 
-  it('renders double-digit values without truncation', () => {
-    expect(formatTimestamp(new Date(2026, 0, 1, 23, 59, 59))).toBe('23:59:59');
+  it('renders morning times with am and no leading zero on the hour', () => {
+    expect(formatTimestamp(new Date(2026, 0, 1, 9, 5, 0))).toBe('9:05am');
+  });
+
+  it('renders the midnight hour as 12am', () => {
+    expect(formatTimestamp(new Date(2026, 0, 1, 0, 15, 0))).toBe('12:15am');
+  });
+
+  it('renders noon as 12pm', () => {
+    expect(formatTimestamp(new Date(2026, 0, 1, 12, 0, 0))).toBe('12:00pm');
+  });
+
+  it('renders one minute before midnight as 11:59pm', () => {
+    expect(formatTimestamp(new Date(2026, 0, 1, 23, 59, 0))).toBe('11:59pm');
+  });
+});
+
+describe('notificationText', () => {
+  it('returns the bare message for a manual event (the label lives in the header)', () => {
+    expect(notificationText('manual', 'janus', 'this is a notification')).toBe('this is a notification');
+  });
+
+  it('is unchanged for ambient events', () => {
+    expect(notificationText('state-change', 'janus')).toBe("Agent 'janus' finished");
+  });
+});
+
+describe('notify — line composition', () => {
+  function makeManagers(append: ReturnType<typeof vi.fn>): Managers {
+    const notif = { label: NOTIFICATIONS_LABEL, view: 'notifications', log: [] };
+    const janus = { label: 'janus', dotColor: '#abc', log: [] };
+    return {
+      tab: { tabs: [notif, janus], cur: () => notif, append },
+    } as unknown as Managers;
+  }
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 0, 1, 20, 32, 0));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('renders a manual notification as `<time> <label>: <message>` without duplicating the label', () => {
+    const append = vi.fn();
+    notify(makeManagers(append), 'manual', 'janus', 'this is a notification');
+    expect(append).toHaveBeenCalledTimes(1);
+    const [label, entry] = append.mock.calls[0];
+    expect(label).toBe(NOTIFICATIONS_LABEL);
+    expect(entry.from).toBe('8:32pm janus');
+    expect(entry.output).toBe('this is a notification');
+    expect(entry.fromColor).toBe('#abc');
   });
 });
