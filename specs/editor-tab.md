@@ -62,6 +62,20 @@ editor's key bindings.
 
 The editor saves with Ctrl+S or Cmd+S. The save writes the current buffer content to disk at the file's path. On success a "Saved" flash appears in the metadata header; on failure the server error message is shown and the dirty indicator remains. A dirty dot (●) appears next to the file name in the header whenever there are unsaved changes.
 
+### Live draft sync
+
+As the buffer changes, the editor keeps the server updated with the current in-progress content
+shortly after typing pauses, so the server holds a transient copy of the unsaved buffer without the
+user having to save. The sync is debounced — it happens a moment after editing stops rather than on
+every keystroke — and covers every way the buffer changes, including typing, paste, undo/redo, and
+an automatic reload of an external change. Pure cursor movements and selections do not trigger a
+sync, since the text itself is unchanged.
+
+This draft copy is entirely transient and server-side: it is never shown back in the editor, never
+written to disk, and never persisted or restored on `--relaunch`. A successful save clears it, since
+the saved file is then the current content; further editing builds a fresh draft again. If the
+connection drops, a lost sync simply leaves the server's copy stale until the next buffer change.
+
 ### Closing with unsaved changes
 
 Closing an editor tab that has unsaved changes triggers a confirmation dialog: "Do you want to save changes to this file?" with three buttons — Save, Don't Save, and Cancel. Save is selected by default. The dialog appears whether the close comes from the tab strip's × button, the Cmd+W / Ctrl+W keyboard shortcut, or typing `close` / `exit` at the command line.

@@ -48,6 +48,8 @@ export function handle(controller: Controller, message: ClientMessage, reply: (e
     }
     case 'saveFile': { controller.saveFile(message.params.url, message.params.content); break;
     }
+    case 'editorSync': { controller.syncEditorBuffer(message.params.url, message.params.content); break;
+    }
     case 'fileTreeToggle': { controller.fileTreeToggle(message.params.index, message.params.path); break;
     }
     case 'fileTreeCollapseAll': { controller.fileTreeCollapseAll(message.params.index); break;

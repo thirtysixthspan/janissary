@@ -7,6 +7,7 @@ import { actionForKey } from './editor/keys';
 import { useEditor } from './editor/useEditor';
 import { useEditorMouse } from './editor/useEditorMouse';
 import { useSyntaxHighlight } from './editor/useSyntaxHighlight';
+import { useEditorSync } from './editor/useEditorSync';
 import { OverwriteConflictDialog } from './OverwriteConflictDialog';
 
 export type EditorTabHandle = { isDirty(): boolean; save(): Promise<void>; focus(): void };
@@ -31,6 +32,7 @@ export const EditorTab = forwardRef<EditorTabHandle, { editor: EditorView; clien
   const { state } = api;
   const mouse = useEditorMouse(api, bodyRef, () => textareaRef.current?.focus());
   const tokens = useSyntaxHighlight(state, editor.name);
+  useEditorSync(state, editor.url, client);
 
   const writeToDisk = async (text: string) => {
     setSaveError(null);

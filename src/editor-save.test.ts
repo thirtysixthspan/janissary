@@ -33,6 +33,26 @@ describe('saveFile', () => {
     expect(tab?.editor?.size).toContain('2');
   });
 
+  it('clears a pre-existing draft on a successful save', () => {
+    const { managers, url } = setup();
+    const tab = managers.tab.tabs.find((t) => t.editor);
+    tab!.editorDraft = { content: 'draft', updatedAt: Date.now() };
+    saveFile(managers, url, 'updated content');
+    expect(tab?.editorDraft).toBeUndefined();
+  });
+
+  it('leaves a draft intact when the save fails', () => {
+    const managers = {} as Managers;
+    managers.tab = new TabManager(managers);
+    managers.editorWatch = { watch: () => {}, markSaved: () => {} } as unknown as Managers['editorWatch'];
+    const url = managers.tab.registerFile('/no/such/dir/notes.txt');
+    managers.tab.openEditorTab({ name: 'notes.txt', path: '/no/such/dir/notes.txt', size: '0 B', url });
+    const tab = managers.tab.tabs.find((t) => t.editor);
+    tab!.editorDraft = { content: 'draft', updatedAt: Date.now() };
+    expect(() => saveFile(managers, url, 'x')).toThrow();
+    expect(tab?.editorDraft?.content).toBe('draft');
+  });
+
   it('rejects an unknown file ref', () => {
     const { managers } = setup();
     expect(() => saveFile(managers, '/open/999', 'x')).toThrow(/unknown file ref/);

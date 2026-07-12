@@ -123,6 +123,10 @@ export type RpcCall =
   // Write an editor tab's buffer back to disk. `url` is the tab's `/open/<id>` ref — the server
   // resolves it through the open-file allow-list, so only explicitly opened files are writable.
   | { method: 'saveFile'; params: { url: string; content: string } }
+  // Sync an editor tab's in-progress (unsaved) buffer to the server as transient draft
+  // state, debounced client-side after typing pauses. Never written to disk — see saveFile
+  // for that. `url` identifies the tab the same way saveFile's does.
+  | { method: 'editorSync'; params: { url: string; content: string } }
   // Expand/collapse one directory row in a file tree tab. `index` is the tab's position in the
   // server's full tab list (resolved to a label server-side); `path` is the row's tree-relative path.
   | { method: 'fileTreeToggle'; params: { index: number; path: string } }

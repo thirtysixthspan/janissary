@@ -74,6 +74,10 @@ export class JanusClient {
 
   renameTab(index: number, title: string): void { this.send({ method: 'renameTab', params: { index, title } }); }
 
+  // Sync an editor tab's in-progress buffer to the server as transient draft state. Fire-and-forget:
+  // no reply is awaited, and a sync lost to a closed socket is simply dropped (see send()).
+  editorSync(url: string, content: string): void { this.send({ method: 'editorSync', params: { url, content } }); }
+
   // Write an editor buffer back to disk. Resolves with the server's error message, or undefined
   // on success (including when the socket is down, which surfaces as a generic failure).
   saveFile(url: string, content: string): Promise<string | undefined> {

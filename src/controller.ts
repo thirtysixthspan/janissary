@@ -15,6 +15,7 @@ import { OpenFileManager } from './open-file-manager.js';
 import { FileTreeManager } from './file-tree-manager.js';
 import { EditorWatchManager } from './editor-watch-manager.js';
 import { saveFile } from './editor-save.js';
+import { syncEditorBuffer } from './editor-sync.js';
 import { CaptureManager } from './capture-manager.js';
 import { AgentCommunicationManager } from './agent-communication-manager.js';
 import { messageBus } from './bus.js';
@@ -114,6 +115,12 @@ export class Controller {
   // layer relays the message to the client.
   saveFile(url: string, content: string): void {
     saveFile(this.managers, url, content);
+  }
+
+  // Cache an editor tab's in-progress buffer as transient draft state (the `editorSync` RPC).
+  // In-memory only; never written to disk.
+  syncEditorBuffer(url: string, content: string): void {
+    syncEditorBuffer(this.managers, url, content);
   }
 
   // --- monitor reporting tabs ------------------------------------------------
