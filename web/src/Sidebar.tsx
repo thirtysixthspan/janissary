@@ -50,31 +50,25 @@ export function Sidebar({ side, tabs, client }: { side: 'left' | 'right'; tabs: 
     <div className={`sidebar sidebar-${side}`} style={{ flex: `0 0 ${width}px` }} data-doc-shot={`sidebar-${side}`}>
       {side === 'right' && divider}
       <div className="sidebar-body">
-        {entries.length > 1 && (
-          <div className="sidebar-tabs">
-            {entries.map((e) => (
+        <div className="sidebar-tabstrip">
+          {entries.map((e) => (
+            <div
+              key={e.tab.view}
+              className={`sidebar-tab${e === current ? ' active' : ''}`}
+              onClick={() => setSelectedView(e.tab.view as 'files' | 'notifications')}
+            >
+              <span className="sidebar-tab-label">{e.tab.title ?? e.tab.label}</span>
               <button
-                key={e.tab.view}
                 type="button"
-                className={`sidebar-tab-switch${e === current ? ' active' : ''}`}
-                onClick={() => setSelectedView(e.tab.view as 'files' | 'notifications')}
+                className="sidebar-tab-close"
+                title="Close"
+                aria-label="Close tab"
+                onClick={(ev) => { ev.stopPropagation(); client.send({ method: 'closeTab', params: { index: e.index } }); }}
               >
-                {e.tab.title ?? e.tab.label}
+                ×
               </button>
-            ))}
-          </div>
-        )}
-        <div className="sidebar-strip">
-          <span className="sidebar-tab-label">{current.tab.title ?? current.tab.label}</span>
-          <button
-            type="button"
-            className="sidebar-tab-close"
-            title="Close"
-            aria-label="Close tab"
-            onClick={() => client.send({ method: 'closeTab', params: { index: current.index } })}
-          >
-            ×
-          </button>
+            </div>
+          ))}
         </div>
         {current.tab.view === 'files' && current.tab.files && (
           <FileTreeTab files={current.tab.files} client={client} index={current.index} dock={current.tab.dock} autoFocus={false} />

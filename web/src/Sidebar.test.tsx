@@ -95,14 +95,14 @@ describe('Sidebar', () => {
     expect(send).toHaveBeenCalledWith({ method: 'closeTab', params: { index: 0 } });
   });
 
-  it('renders a tab-switcher when both a file tree and notifications tab are docked to the same side', () => {
+  it('renders one tab-strip entry per docked tab when both are docked to the same side', () => {
     const client = { send: vi.fn() } as unknown as JanusClient;
     const tabs = [
       makeTab({ label: 'files', view: 'files', dock: 'left', files: { root: '/tmp/project', rows: [] } }),
       makeTab({ label: 'notifications', title: 'notifications', view: 'notifications', dock: 'left' }),
     ];
     const { container } = render(<Sidebar side="left" tabs={tabs} client={client} />);
-    expect(container.querySelectorAll('.sidebar-tab-switch')).toHaveLength(2);
+    expect(container.querySelectorAll('.sidebar-tab')).toHaveLength(2);
   });
 
   it('clicking the inactive switcher tab changes which content renders', () => {
@@ -120,17 +120,19 @@ describe('Sidebar', () => {
     expect(getByText('a notification')).toBeTruthy();
   });
 
-  it('the close button closes whichever docked tab is currently visible', () => {
+  it("each entry's close button closes that entry's own tab", () => {
     const send = vi.fn();
     const client = { send } as unknown as JanusClient;
     const tabs = [
       makeTab({ label: 'files', view: 'files', dock: 'left', files: { root: '/tmp/project', rows: [] } }),
       makeTab({ label: 'notifications', title: 'notifications', view: 'notifications', dock: 'left' }),
     ];
-    const { container, getByText } = render(<Sidebar side="left" tabs={tabs} client={client} />);
-    fireEvent.click(getByText('notifications'));
-    fireEvent.click(container.querySelector('.sidebar-tab-close')!);
+    const { container } = render(<Sidebar side="left" tabs={tabs} client={client} />);
+    const closes = container.querySelectorAll('.sidebar-tab-close');
+    fireEvent.click(closes[1]);
     expect(send).toHaveBeenCalledWith({ method: 'closeTab', params: { index: 1 } });
+    fireEvent.click(closes[0]);
+    expect(send).toHaveBeenCalledWith({ method: 'closeTab', params: { index: 0 } });
   });
 
   it('docking a second tab auto-switches the visible content to it', () => {

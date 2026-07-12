@@ -19,12 +19,13 @@ the *other* kind does not displace it; both stay docked, sharing the sidebar.
 
 ### Sharing a sidebar
 
-When both the file navigator and the notifications tab are docked to the same side, the sidebar
-shows a small tab-switcher above its usual strip, letting the user flip between the two. Docking
-a second kind into an already-occupied side brings it into view automatically. Which of the two
-is currently visible is ephemeral, client-side display state, like sidebar width (see "What's
-server-owned vs. client-owned" below) — it is never sent to the server and resets on relaunch.
-The strip's close button always closes whichever docked tab is currently visible.
+When both the file navigator and the notifications tab are docked to the same side, the sidebar's
+tab strip shows one entry per docked tab, side by side — like the central tab strip — with the
+visible one highlighted; clicking an entry flips to it. There is no separate switcher above the
+strip. Docking a second kind into an already-occupied side brings it into view automatically. Which
+of the two is currently visible is ephemeral, client-side display state, like sidebar width (see
+"What's server-owned vs. client-owned" below) — it is never sent to the server and resets on
+relaunch.
 
 ### Visibility is derived
 
@@ -49,11 +50,11 @@ eligible to become active.
 
 ### The sidebar strip
 
-Each sidebar shows its own strip above the currently-visible docked tab's content, carrying that
-tab's name and a close button (×). This is the sole close affordance for a docked tab — a docked
-tab is never the active tab (see above) and so cannot be closed by typing `close`, and its own
-metadata header carries no close button of its own (`close <label>` by label still works as a
-fallback).
+Each sidebar shows its own tab strip above the visible docked tab's content: one entry per docked
+tab, each carrying that tab's name and its own close button (×). Each entry's × closes that entry's
+tab. This is the sole close affordance for a docked tab — a docked tab is never the active tab (see
+above) and so cannot be closed by typing `close`, and its own metadata header carries no close
+button of its own (`close <label>` by label still works as a fallback).
 
 ### Resizing
 
