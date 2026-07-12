@@ -88,12 +88,31 @@ export const HOME_READ_LISTING_DIRS = ['.claude'];
 // whole `.claude` directory for writes (still deliberately avoided, per the comment on
 // HOME_WRITE_CARVEOUTS above) — this only ever matches paths starting with the exact
 // `settings.json` string.
-export const HOME_WRITE_PREFIX_CARVEOUTS = ['.claude/settings.json'];
+//
+// `Library/Keychains/login.keychain-db` is here for the same atomic-write reason, and is the fix
+// for a specific failure mode: OAuth-based harness auth (e.g. Claude Code) reads its credential
+// from the login Keychain fine — reads are carved in via HOME_READ_CARVEINS — but when the access
+// token expires mid-session, persisting the *refreshed* token back is a Keychain write, which hit
+// the top-level deny-default and silently failed, so the stale expired token kept being sent and
+// the provider returned 401 invalid-credentials. The write lands as an atomic-rename temp sibling
+// `login.keychain-db.sb-<random>` (confirmed in the Sandbox deny log: `file-write-create
+// .../login.keychain-db.sb-151e5e06-tFbiQ8`), so a `subpath`/`literal` carve-in of the base name
+// can't cover it — `prefix` does, and also naturally covers the DB's SQLite sidecars
+// (`login.keychain-db-wal`/`-shm`/`-journal`), all of which share the base as a character-prefix.
+// Deliberately the login keychain DB only, not the whole `~/Library/Keychains` subtree: the DB
+// stays encrypted and per-item ACL-enforced by securityd regardless of raw file writability (same
+// argument the read carve-in rests on — see SECRET_DENY_PATHS), and the narrow prefix keeps a
+// sandboxed process from tampering with unrelated keychain files. If a data-protection keychain
+// (`<UUID>/keychain-2.db`) is ever in play, its own write deny will surface separately in the log.
+export const HOME_WRITE_PREFIX_CARVEOUTS = ['.claude/settings.json', 'Library/Keychains/login.keychain-db'];
 
 // Secret paths denied last, even inside a carve-in.
 //
-// `Library/Keychains` is deliberately NOT here (writes stay denied by the top-level deny-default —
-// only reads matter). Even "modern" Keychain Services calls (SecItemCopyMatching) fall through to
+// `Library/Keychains` is deliberately NOT here: reads are carved in (HOME_READ_CARVEINS) and one
+// narrow write is carved in (HOME_WRITE_PREFIX_CARVEOUTS covers `login.keychain-db` and its
+// atomic-write/SQLite siblings, so a harness can persist a refreshed OAuth token — see that
+// comment); every other write under the subtree stays denied by the top-level deny-default. Even
+// "modern" Keychain Services calls (SecItemCopyMatching) fall through to
 // a legacy CDSA/MDS implementation on this OS that reads the keychain DB file directly rather than
 // only talking to securityd over IPC; denying that read blocks every keychain lookup a sandboxed
 // harness makes, including its own OAuth credential, and it shows up as "not logged in" rather

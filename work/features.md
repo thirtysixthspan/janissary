@@ -1,10 +1,6 @@
 
 ## in development
 
-### monitor configuration
-
-* there should be an up to date spec, help documentation, and public documentation.
-
 ### browser tabs should be exposed to monitors
 - raw website content
 - dom point in time captures?
