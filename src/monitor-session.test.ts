@@ -127,9 +127,9 @@ describe('openMonitorSession', () => {
     expect(append).toHaveBeenCalledWith('main', { input: '', output: 'monitor reviewer: connection lost' });
   });
 
-  it('records connection info and emits a dirty state event on connect', () => {
+  it('records connection info, reports it in the owner tab, and emits a dirty state event on connect', () => {
     const reg = makeReg();
-    const { managers } = makeManagers('/repo');
+    const { managers, append } = makeManagers('/repo');
     const emitSpy = vi.spyOn(messageBus, 'emit');
     let capturedOnConnect: ((info: { provider?: string; model?: string }) => void) | undefined;
     const spawn = vi.fn((_persona, _cwd, hooks: { onConnect: (info: { provider?: string; model?: string }) => void }) => {
@@ -141,8 +141,24 @@ describe('openMonitorSession', () => {
     capturedOnConnect?.({ provider: 'anthropic', model: 'sonnet' });
 
     expect(reg.info).toEqual({ provider: 'anthropic', model: 'sonnet' });
+    expect(append).toHaveBeenCalledWith('main', { input: '', output: 'monitor reviewer: connected (anthropic/sonnet) — Watch for bugs.' });
     expect(emitSpy).toHaveBeenCalledWith('state', { type: 'dirty' });
     emitSpy.mockRestore();
+  });
+
+  it('reports the connection without parens when no provider or model is known', () => {
+    const reg = makeReg();
+    const { managers, append } = makeManagers('/repo');
+    let capturedOnConnect: ((info: { provider?: string; model?: string }) => void) | undefined;
+    const spawn = vi.fn((_persona, _cwd, hooks: { onConnect: (info: { provider?: string; model?: string }) => void }) => {
+      capturedOnConnect = hooks.onConnect;
+      return makeSession().session;
+    });
+
+    openMonitorSession(reg, managers, spawn);
+    capturedOnConnect?.({});
+
+    expect(append).toHaveBeenCalledWith('main', { input: '', output: 'monitor reviewer: connected — Watch for bugs.' });
   });
 });
 

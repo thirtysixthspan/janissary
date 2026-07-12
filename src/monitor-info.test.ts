@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { listMonitors, monitorConnections } from './monitor-info.js';
+import { listMonitors, monitorConnections, formatConnection, personaSummary } from './monitor-info.js';
 import type { MonitorSub } from './monitor-manager.js';
 import type { Persona } from './personas.js';
 import type { AcpSession } from './types.js';
@@ -75,5 +75,33 @@ describe('monitorConnections', () => {
     expect(monitorConnections([sub], 'janus')).toEqual([
       { text: 'monitor:bilal (sonnet)', kind: 'acp' },
     ]);
+  });
+});
+
+describe('formatConnection', () => {
+  it('joins provider and model with a slash', () => {
+    expect(formatConnection({ provider: 'anthropic', model: 'sonnet' })).toBe('anthropic/sonnet');
+  });
+
+  it('omits the slash when only the model is present', () => {
+    expect(formatConnection({ model: 'sonnet' })).toBe('sonnet');
+  });
+
+  it('returns an empty string when both are absent', () => {
+    expect(formatConnection({})).toBe('');
+  });
+});
+
+describe('personaSummary', () => {
+  it('returns the first sentence including its period', () => {
+    const p = persona('bilal');
+    p.body = 'You are a security monitor. You watch for problems.';
+    expect(personaSummary(p)).toBe('You are a security monitor.');
+  });
+
+  it('falls back to the trimmed full body when there is no period', () => {
+    const p = persona('bilal');
+    p.body = 'Watch closely';
+    expect(personaSummary(p)).toBe('Watch closely');
   });
 });
