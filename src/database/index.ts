@@ -4,10 +4,10 @@ import {
   removeDatabaseFile,
   getConnection,
   closeConnection,
-} from './connections.js';
-import { parseDatabaseCommand } from './database-parsing.js';
-export { parseDatabaseCommand } from './database-parsing.js';
-import { queryDatabase } from './database-query.js';
+} from '../connections.js';
+import { parseDatabaseCommand } from './parsing.js';
+export { parseDatabaseCommand } from './parsing.js';
+import { queryDatabase } from './query.js';
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);

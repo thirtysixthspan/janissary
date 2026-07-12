@@ -1,4 +1,4 @@
-import type { DbParsed as DatabaseParsed } from './types.js';
+import type { DbParsed as DatabaseParsed } from '../types.js';
 
 const VALID_NAME = /^[A-Za-z0-9_-]+$/;
 const USAGE = 'Usage: db sqlite <create|delete|query|list> [name] [query]';

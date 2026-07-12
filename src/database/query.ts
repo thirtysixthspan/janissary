@@ -1,7 +1,7 @@
 import { type DatabaseSync } from 'node:sqlite';
 import {
   databaseFileExists, getConnection, isConnectionOpen,
-} from './connections.js';
+} from '../connections.js';
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
