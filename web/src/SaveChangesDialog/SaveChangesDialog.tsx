@@ -1,4 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
+import { useDialogKeyboard } from '../useDialogKeyboard';
 
 type Action = 'save' | 'discard' | 'cancel';
 
@@ -16,54 +17,40 @@ export function SaveChangesDialog({ onSave, onDiscard, onCancel }: Properties) {
   onCancelRef.current = onCancel;
   selectedRef.current = selected;
 
-  useEffect(() => {
-    dialogRef.current?.focus();
+  const onKeyDown = (e: KeyboardEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    switch (e.key.toLowerCase()) {
+    case 'y': { onSaveRef.current();
+    break;
+    }
+    case 'n': { onDiscardRef.current();
+    break;
+    }
+    case 'enter': {
+      if (selectedRef.current === 'save') onSaveRef.current();
+      else if (selectedRef.current === 'discard') onDiscardRef.current();
+      else onCancelRef.current();
 
-    const onKeyDown = (e: KeyboardEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-      switch (e.key.toLowerCase()) {
-      case 'y': { onSaveRef.current();
-      break;
-      }
-      case 'n': { onDiscardRef.current();
-      break;
-      }
-      case 'enter': {
-        if (selectedRef.current === 'save') onSaveRef.current();
-        else if (selectedRef.current === 'discard') onDiscardRef.current();
-        else onCancelRef.current();
+    break;
+    }
+    case 'escape': { onCancelRef.current();
+    break;
+    }
+    case 'arrowleft': {
+      setSelected((s) => (s === 'save' ? 'cancel' : s === 'discard' ? 'save' : 'discard'));
 
-      break;
-      }
-      case 'escape': { onCancelRef.current();
-      break;
-      }
-      case 'arrowleft': {
-        setSelected((s) => (s === 'save' ? 'cancel' : s === 'discard' ? 'save' : 'discard'));
+    break;
+    }
+    case 'arrowright': {
+      setSelected((s) => (s === 'save' ? 'discard' : s === 'discard' ? 'cancel' : 'save'));
 
-      break;
-      }
-      case 'arrowright': {
-        setSelected((s) => (s === 'save' ? 'discard' : s === 'discard' ? 'cancel' : 'save'));
-
-      break;
-      }
-      // No default
-      }
-    };
-    const onClickOutside = (e: MouseEvent) => {
-      if (dialogRef.current?.contains(e.target as Node)) return;
-      e.preventDefault();
-      e.stopPropagation();
-    };
-    globalThis.addEventListener('keydown', onKeyDown, { capture: true });
-    globalThis.addEventListener('click', onClickOutside, { capture: true });
-    return () => {
-      globalThis.removeEventListener('keydown', onKeyDown, { capture: true });
-      globalThis.removeEventListener('click', onClickOutside, { capture: true });
-    };
-  }, []);
+    break;
+    }
+    // No default
+    }
+  };
+  useDialogKeyboard(dialogRef, onKeyDown);
 
   return (
     <div className="modal-backdrop">
