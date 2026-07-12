@@ -1,10 +1,6 @@
 
 ## in development
 
-### browser tabs should be exposed to monitors
-- raw website content
-- dom point in time captures?
-
 ## deferred
 
 ### fix monitoring error 
