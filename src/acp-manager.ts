@@ -1,7 +1,7 @@
 import type { AcpSession, AcpInfo } from './types.js';
 import { connectAcp } from './acp.js';
 import { runAcpToolLoop } from './acp-loop.js';
-import { extractBrowserCommand, BROWSER_PRIMER } from './browser-command.js';
+import { extractBrowserCommand, BROWSER_PRIMER } from './browser/command.js';
 import { messageBus } from './bus.js';
 import { notify } from './notifications.js';
 import { makeUpdateRunning } from './acp-runner.js';

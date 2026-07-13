@@ -1,5 +1,5 @@
-import { launchTabBrowser } from './browser.js';
-import type { BrowserWindow, TabBrowser } from './types.js';
+import { launchTabBrowser } from './index.js';
+import type { BrowserWindow, TabBrowser } from '../types.js';
 
 export type Entry = { browser: TabBrowser; current?: string; counter: number };
 

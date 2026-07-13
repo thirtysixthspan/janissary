@@ -1,6 +1,6 @@
 import type { CompletionResult } from './types.js';
 import { completeWord } from './completion-helpers.js';
-import { BROWSER_SUBCOMMANDS } from './browser-command.js';
+import { BROWSER_SUBCOMMANDS } from './browser/command.js';
 
 export function completeBrowserCommand(
   command: string,

@@ -4,8 +4,8 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { chromium } from 'playwright';
 import type { Browser, BrowserContext, Page } from 'playwright';
-import { randomBrowserProfile, acceptLanguage, DEFAULT_CHROME_MAJOR } from './user-agent.js';
-import type { BrowserWindow, TabBrowser } from './types.js';
+import { randomBrowserProfile, acceptLanguage, DEFAULT_CHROME_MAJOR } from '../user-agent.js';
+import type { BrowserWindow, TabBrowser } from '../types.js';
 
 // Pull the major version out of a Playwright version string like "149.0.7827.55" so the
 // generated UA claims the same Chrome version the engine actually reports via client hints.

@@ -1,6 +1,6 @@
-import { launchTabBrowser } from './browser.js';
-import { parseBrowserCommand } from './browser-command.js';
-import type { Managers } from './managers.js';
+import { launchTabBrowser } from './index.js';
+import { parseBrowserCommand } from './command.js';
+import type { Managers } from '../managers.js';
 import {
   closeBrowserWindow,
   formatList,
@@ -8,8 +8,8 @@ import {
   runEval,
   runGoto,
   runShot,
-} from './browser-tab-helpers.js';
-import type { Entry } from './browser-tab-helpers.js';
+} from './tab-helpers.js';
+import type { Entry } from './tab-helpers.js';
 
 export class BrowserManager {
   private browsers = new Map<string, Entry>();

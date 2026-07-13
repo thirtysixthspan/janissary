@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { BrowserManager } from './browser-tab.js';
-import type { Managers } from './managers.js';
-import type { BrowserWindow, TabBrowser } from './types.js';
+import { BrowserManager } from './tab.js';
+import type { Managers } from '../managers.js';
+import type { BrowserWindow, TabBrowser } from '../types.js';
 
 const { launchTabBrowser } = vi.hoisted(() => ({ launchTabBrowser: vi.fn() }));
-vi.mock('./browser.js', () => ({ launchTabBrowser }));
+vi.mock('./index.js', () => ({ launchTabBrowser }));
 
 function makeWindow(id: string): BrowserWindow {
   return {
