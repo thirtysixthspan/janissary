@@ -7,6 +7,7 @@ import {
   parseProfileCommand,
   listProfiles,
   loadProfileEntries,
+  loadProfileMonitors,
   profileExists,
   PROFILE_USAGE,
 } from './profiles.js';
@@ -41,6 +42,12 @@ describe('profile directory', () => {
     const dir = path.join(root, 'profiles', profile);
     mkdirSync(dir, { recursive: true });
     writeFileSync(path.join(dir, `${filename}.json`), JSON.stringify({ harness: 'opencode', ...entry }));
+  };
+
+  const writeFile = (profile: string, filename: string, contents: string) => {
+    const dir = path.join(root, 'profiles', profile);
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(path.join(dir, filename), contents);
   };
 
   beforeEach(() => {
@@ -106,5 +113,43 @@ describe('profile directory', () => {
     writeFileSync(path.join(dir, 'bad.json'), '{ not json');
     writeAgent('broken', 'ok', {});
     expect(loadProfileEntries('broken').map((e) => ('harness' in e ? e.label : e.name))).toEqual(['ok']);
+  });
+
+  it('parses a harness file with autoApprove and offline flags', () => {
+    writeHarness('assist', 'claude', { harness: 'claude', workspace: true, autoApprove: true, offline: true });
+    const [entry] = loadProfileEntries('assist') as ProfileHarnessEntry[];
+    expect(entry.autoApprove).toBe(true);
+    expect(entry.offline).toBe(true);
+    expect(entry.workspace).toBe(true);
+  });
+
+  it('never loads underscore-prefixed files as entries', () => {
+    writeAgent('assist', 'bob', {});
+    writeFile('assist', '_monitors.json', JSON.stringify([{ persona: 'assistant', targets: ['group:1'] }]));
+    expect(loadProfileEntries('assist').map((e) => ('harness' in e ? e.label : e.name))).toEqual(['bob']);
+  });
+
+  it('loads profile monitors from _monitors.json', () => {
+    writeFile('assist', '_monitors.json', JSON.stringify([{ persona: 'assistant', targets: ['group:1'] }]));
+    expect(loadProfileMonitors('assist')).toEqual([{ persona: 'assistant', targets: ['group:1'] }]);
+  });
+
+  it('returns no monitors when the file is absent, unparseable, or not an array', () => {
+    writeAgent('none', 'bob', {});
+    expect(loadProfileMonitors('none')).toEqual([]);
+    writeFile('bad', '_monitors.json', '{ not json');
+    expect(loadProfileMonitors('bad')).toEqual([]);
+    writeFile('obj', '_monitors.json', JSON.stringify({ persona: 'assistant', targets: [] }));
+    expect(loadProfileMonitors('obj')).toEqual([]);
+  });
+
+  it('drops malformed monitor elements', () => {
+    writeFile('mix', '_monitors.json', JSON.stringify([
+      { persona: 'assistant', targets: ['group:1'] },
+      { persona: 42, targets: ['group:1'] },
+      { persona: 'security', targets: 'group:1' },
+      { targets: ['group:1'] },
+    ]));
+    expect(loadProfileMonitors('mix')).toEqual([{ persona: 'assistant', targets: ['group:1'] }]);
   });
 });

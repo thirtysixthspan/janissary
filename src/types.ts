@@ -234,12 +234,25 @@ export type ProfileHarnessEntry = {
   number?: number;
   dotColor?: string;
   workspace?: boolean;
+  // `-y`/`--yes`: auto-approve the harness's own permission prompts. Claude-only and requires
+  // `workspace` (mirrors `parseHarnessCommand`); an entry that sets it without a claude
+  // workspace is reported and skipped at launch rather than opened unsafely.
+  autoApprove?: boolean;
+  // `--offline`: adds a network-deny rule to the tab's sandbox profile (only meaningful with
+  // `workspace`).
+  offline?: boolean;
   cwd?: string;
   run?: string[];
   schedule?: string[];
 };
 
 export type ProfileEntry = AgentState | ProfileHarnessEntry;
+
+// A profile-level monitor, authored in a profile's reserved `_monitors.json` file (decoupled
+// from any single entry). Once every profile entry is open, each is started from the launch's
+// issuing tab as `monitor <persona> <targets…>`. `targets` are authored target words in the
+// `monitor` grammar (`group:<n>` or a tab label); an empty list is inline mode.
+export type ProfileMonitor = { persona: string; targets: string[] };
 
 // --- schedule.ts ----------------------------------------------------------
 

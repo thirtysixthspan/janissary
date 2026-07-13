@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
-import type { ProfileEntry, ProfileParsed } from './types.js';
+import type { ProfileEntry, ProfileMonitor, ProfileParsed } from './types.js';
 
 // A profile is a named, reusable set of agents for a particular use case (writing code,
 // surfing the web, authoring a book, …). Each profile is a directory under the profiles
@@ -44,7 +44,8 @@ export function loadProfileEntries(name: string): ProfileEntry[] {
   if (!existsSync(directory)) return [];
   try {
     return readdirSync(directory)
-      .filter((f) => f.endsWith('.json'))
+      // `_`-prefixed files are reserved profile-level config (e.g. `_monitors.json`), never entries.
+      .filter((f) => f.endsWith('.json') && !f.startsWith('_'))
       .map((f) => {
         try {
           const parsed = JSON.parse(readFileSync(path.join(directory, f), 'utf8')) as ProfileEntry;
@@ -56,6 +57,29 @@ export function loadProfileEntries(name: string): ProfileEntry[] {
       })
       .filter((s): s is ProfileEntry => s !== undefined)
       .toSorted((a, b) => (a.number ?? Infinity) - (b.number ?? Infinity));
+  } catch {
+    return [];
+  }
+}
+
+function isProfileMonitor(value: unknown): value is ProfileMonitor {
+  if (typeof value !== 'object' || value === null) return false;
+  const monitor = value as Record<string, unknown>;
+  return typeof monitor.persona === 'string'
+    && Array.isArray(monitor.targets)
+    && monitor.targets.every((target) => typeof target === 'string');
+}
+
+// Profile-level monitors live in a reserved `_monitors.json` file — a JSON array of
+// `{ persona, targets }` — kept out of the entry set by the leading underscore (it is not an
+// agent or harness tab). Returns [] when the file is absent, unparseable, or not an array;
+// malformed elements are dropped.
+export function loadProfileMonitors(name: string): ProfileMonitor[] {
+  const file = path.join(profilePath(name), '_monitors.json');
+  if (!existsSync(file)) return [];
+  try {
+    const parsed: unknown = JSON.parse(readFileSync(file, 'utf8'));
+    return Array.isArray(parsed) ? parsed.filter(isProfileMonitor) : [];
   } catch {
     return [];
   }

@@ -202,4 +202,24 @@ describe('HarnessManager auto-approve', () => {
     expect(managers.pty.input).not.toHaveBeenCalled();
     expect(notify).not.toHaveBeenCalledWith(managers, 'auto-approve', expect.anything(), expect.anything());
   });
+
+  it('threads a profile entry\'s autoApprove into the auto-approver', async () => {
+    const { managers } = makeManagers();
+    const manager = new HarnessManager(managers);
+    expect(manager.openFromProfile(
+      { label: 'claude', harness: 'claude', workspace: true, autoApprove: true }, 'claude', 2, '#fff',
+    )).toBeUndefined();
+    messageBus.emit('pty', { type: 'data', id: 'pty-1', data: GATE });
+    await vi.advanceTimersByTimeAsync(1001);
+    expect(managers.pty.input).toHaveBeenCalledWith('pty-1', '\r');
+  });
+
+  it('threads a profile entry\'s offline flag onto the tab', () => {
+    const { managers, tabs } = makeManagers();
+    const manager = new HarnessManager(managers);
+    manager.openFromProfile(
+      { label: 'claude', harness: 'claude', workspace: true, offline: true }, 'claude', 2, '#fff',
+    );
+    expect(tabs.at(-1)?.offline).toBe(true);
+  });
 });

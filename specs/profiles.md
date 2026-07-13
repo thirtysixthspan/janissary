@@ -6,17 +6,29 @@ A profile is a reusable, named set of agents and/or AI harnesses for a particula
 
 Profiles live in a top-level `profiles/` directory (`initProfileDir` in `src/cli.tsx`), kept separate from `.janissary/` so they are committable and are **not** cleared on launch. Each profile is its own directory named in dasherized text (e.g. `writing-code/`), containing one `<name>.json` file per entry — an agent or a harness. The filename (minus `.json`) is the authoritative tab label and overrides any `name` field inside the file.
 
+A file whose name begins with an underscore is **not** an entry — it is reserved profile-level configuration (see Profile-level monitors below) and is skipped when loading entries.
+
 An agent entry uses the agent-state schema — the same format as `.janissary/state/<name>.json`. A harness entry is distinguished by a `harness` key naming the harness to launch (`claude`, `opencode`, or `codex`) and supports:
 
 - **model** — passed to the harness binary's `--model` flag, verbatim. Validated at launch against the known model catalog for that harness; an unknown model is reported (`Unknown model "<model>" for harness "<harness>" — add it to harness-models.json.`) and the entry is skipped, same as an unknown harness name.
 - **number** — tab-order, same as agent entries.
 - **dotColor** — same handling as agent entries.
 - **workspace** — launch in a fresh workspace clone (default false), like `harness <name> --workspace`.
+- **autoApprove** — auto-approve the harness's own permission prompts, like `harness <name> -y/--yes`. Claude-only and requires `workspace` (auto-approval is only allowed in a sandboxed clone); an entry that sets it without a claude workspace is reported and skipped, same as an unknown harness or model.
+- **offline** — add a network-deny rule to the tab's sandbox profile, like `harness <name> --offline` (only meaningful alongside `workspace`).
 - **cwd** — starting directory (default: the issuing tab's cwd).
 - **run** — a list of commands typed into the harness once, shortly after launch (each becomes a one-shot schedule entry that fires on the first scheduler tick and then disappears from the schedule panel).
 - **schedule** — a list of authored schedule lines in the `schedule` command grammar, minus the `in <tab>` clause (the tab is implicitly this entry's own tab). A line that fails to parse, or that includes an `in <tab>` clause, is reported in the launch output and skipped; a duplicate schedule name within one entry keeps the first and reports the rest.
 
 A harness entry's schedule and one-shot `run` commands are **memory-only**: harness tabs have no persisted agent state, so closing the tab, quitting the app, or the harness process exiting ends the loop, and `--relaunch` does not restore it (see Harness Tab § Lifecycle). Re-running `profile launch <name>` recreates the whole setup from the profile file, which remains the single source of truth.
+
+A harness entry's `run`/`schedule` commands are typed into the harness's own terminal, so they must be things that harness understands — not janissary commands. To start a janissary-level construct like a monitor as part of a profile, use the profile-level monitors file below.
+
+### Profile-level monitors
+
+A profile may declare monitors in a reserved `_monitors.json` file at the profile root (the leading underscore keeps it out of the entry set — it is not an agent or harness tab). The file is a JSON array of `{ persona, targets }` objects, where `targets` is a list of authored target words in the `monitor` command grammar (`group:<n>` or a tab label; an empty list is inline mode). Once every profile entry is open, each monitor is started from the tab `profile launch` was issued from as `monitor <persona> <targets…>`, so its targets resolve against the complete tab list (including the just-opened entries). Being owned by the issuing tab rather than by a profile entry, a monitor keeps running when the profile's own tabs are closed; it stops when the issuing tab closes or via `unmonitor` from that tab.
+
+Starting is **idempotent across relaunch**: before starting each monitor, any existing monitor with the same owner and persona is stopped, so re-running `profile launch <name>` refreshes the monitors rather than reporting `Already monitoring with persona "<persona>"`. Each monitor's outcome — started (with its resolved targets) or the parse/validation error that skipped it — is included in the launch report. Malformed elements in `_monitors.json`, and the file being absent, unparseable, or not an array, are treated as no monitors.
 
 ### `profile launch <name>`
 

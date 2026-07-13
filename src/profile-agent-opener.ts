@@ -2,6 +2,7 @@ import { distinctColor, makeTab } from './tab.js';
 import { HARNESS_COMMANDS } from './harness/index.js';
 import { isKnownModel } from './harness/models.js';
 import { parseScheduleCommand } from './schedule/index.js';
+import { startProfileMonitors } from './profile-monitors.js';
 import type { Managers } from './managers.js';
 import type { AgentState, ProfileEntry, ProfileHarnessEntry, ScheduleEntry } from './types.js';
 
@@ -59,6 +60,10 @@ function openHarnessEntry(
   if (entry.model && !isKnownModel(entry.harness, entry.model)) {
     return `Unknown model "${entry.model}" for harness "${entry.harness}" — add it to harness-models.json.`;
   }
+  // Mirror `parseHarnessCommand`: -y is claude-only and requires a workspace (auto-approval is
+  // only allowed in a sandboxed clone). Report and skip rather than open unsafely.
+  if (entry.autoApprove && entry.harness !== 'claude') return 'autoApprove (-y) is only supported for the claude harness';
+  if (entry.autoApprove && !entry.workspace) return 'autoApprove (-y) requires workspace (-w)';
   const withCwd: ProfileHarnessEntry = { ...entry, cwd: entry.cwd ?? issuingCwd };
   const error = managers.harness.openFromProfile(withCwd, entry.label, group, groupColor);
   if (error) return error;
@@ -127,6 +132,9 @@ export function openProfileEntries(
   }
 
   if (opened.length > 0) managers.tab.setActiveTab(firstNew);
+  // Profile-level monitors start after every entry is open, owned by the issuing tab, so their
+  // targets (e.g. `group:1`) can resolve against the now-complete tab list.
+  startProfileMonitors(name, managers, issuingLabel, notes);
   const parts: string[] = [];
   if (opened.length > 0) parts.push(`Launched profile "${name}": ${opened.join(', ')}.`);
   if (notes.length > 0) parts.push(notes.join(' '));

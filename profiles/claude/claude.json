@@ -1,0 +1,6 @@
+{
+  "harness": "claude",
+  "workspace": true,
+  "autoApprove": true,
+  "number": 1
+}
