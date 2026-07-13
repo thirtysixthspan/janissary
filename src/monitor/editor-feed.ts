@@ -9,11 +9,12 @@ import { resolveTargetTabs } from './targets.js';
 const MAX_DIFF_BYTES = 20_000;
 
 // Turn editor-view targets into monitor buffer entries. Editor tabs have no `LogEntry` transcript, so
-// a monitor watching one instead receives that tab's file content read from disk. The first feed to a
-// given monitor for a given tab is the full current content; every one after that is a unified diff
-// against what was last fed to *that* monitor, emitted only when the content actually changed. Every
-// entry is byte-capped (Decision 4). Non-editor targets are ignored here; they flow through the tab
-// log and the `entry:appended` channel, or (for harness tabs) the harness feed.
+// a monitor watching one instead receives that tab's current content: the live unsaved draft when one
+// is present, or the file read from disk otherwise. The first feed to a given monitor for a given tab
+// is the full current content; every one after that is a unified diff against what was last fed to
+// *that* monitor, emitted only when the content actually changed. Every entry is byte-capped
+// (Decision 4). Non-editor targets are ignored here; they flow through the tab log and the
+// `entry:appended` channel, or (for harness tabs) the harness feed.
 export function editorFeedEntries(
   managers: Managers,
   targets: MonitorTarget[],
@@ -22,9 +23,8 @@ export function editorFeedEntries(
   const entries: { tabLabel: string; entry: LogEntry }[] = [];
   for (const tab of resolveTargetTabs(managers.tab.tabs, targets)) {
     if (tab.view !== 'editor' || !tab.editor) continue;
-    const filePath = resolveOpenFilePath(managers, tab.editor.url);
-    if (!filePath) continue;
-    const current = readContent(filePath);
+    const current = currentContent(managers, tab.editorDraft, tab.editor.url);
+    if (current === undefined) continue;
     const previous = editorSeen.get(tab.label);
     editorSeen.set(tab.label, current);
     if (previous === undefined) {
@@ -35,6 +35,15 @@ export function editorFeedEntries(
     entries.push({ tabLabel: tab.label, entry: { input: '', output: cap(createPatch(tab.editor.name, previous, current)) } });
   }
   return entries;
+}
+
+// Resolve an editor tab's current content: the live unsaved draft when present, otherwise the file
+// read from disk. Returns undefined only when there is no draft and the `/open/<id>` ref no longer
+// resolves, meaning the tab should be skipped entirely.
+function currentContent(managers: Managers, draft: { content: string } | undefined, url: string): string | undefined {
+  if (draft) return draft.content;
+  const filePath = resolveOpenFilePath(managers, url);
+  return filePath ? readContent(filePath) : undefined;
 }
 
 // Resolve an editor tab's `/open/<id>` ref to its on-disk path through the same allow-list
