@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import { detectPermissionGate, HarnessAutoApprover } from './harness-auto-approve.js';
-import type { ScreenCapture } from './harness-screen.js';
+import { detectPermissionGate, HarnessAutoApprover } from './auto-approve.js';
+import type { ScreenCapture } from './screen.js';
 
 // The five claude gate variants captured live (see the plan's Ground truth section).
 const BASH_IN_PROJECT = [

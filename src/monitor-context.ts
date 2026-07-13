@@ -1,6 +1,6 @@
 import type { MonitorSub } from './monitor-manager.js';
 import type { Managers } from './managers.js';
-import { writeCaptureFile } from './harness-capture-file.js';
+import { writeCaptureFile } from './harness/capture-file.js';
 
 // Record a piece of a monitor's ACP context (a priming block, an update prompt, an ask, or a
 // reply): grow the running byte count and keep the text itself, so the full context can be

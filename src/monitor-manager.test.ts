@@ -7,10 +7,10 @@ import type { Managers } from './managers.js';
 import { makeTab } from './tab.js';
 import { messageBus } from './bus.js';
 import { MonitorManager } from './monitor-manager.js';
-import { writeCaptureFile } from './harness-capture-file.js';
+import { writeCaptureFile } from './harness/capture-file.js';
 import type * as monitorAcp from './monitor-acp.js';
 
-vi.mock('./harness-capture-file.js', () => ({
+vi.mock('./harness/capture-file.js', () => ({
   writeCaptureFile: vi.fn(() => '/project/.janissary/captures/assistant-now.txt'),
   initHarnessCaptureDirectory: vi.fn(),
   ensureCaptureDirectory: vi.fn(),

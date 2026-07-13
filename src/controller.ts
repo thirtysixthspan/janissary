@@ -1,4 +1,4 @@
-import { HarnessManager } from './harness-manager.js';
+import { HarnessManager } from './harness/manager.js';
 import { SshManager } from './ssh-manager.js';
 import { DatabaseManager } from './database/manager.js';
 import { AcpManager } from './acp/manager.js';

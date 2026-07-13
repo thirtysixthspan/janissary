@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { modelsFor, isKnownModel } from './harness-models.js';
+import { modelsFor, isKnownModel } from './models.js';
 
 describe('harness-models', () => {
   it('returns the catalog for a known harness', () => {

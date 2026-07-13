@@ -1,5 +1,5 @@
 import xterm, { type Terminal } from '@xterm/headless';
-import { messageBus, type Subscription } from './bus.js';
+import { messageBus, type Subscription } from '../bus.js';
 
 // `@xterm/headless` ships a CommonJS bundle whose named exports Node's ESM loader cannot detect
 // statically — the module namespace it synthesizes holds only `default`. So `import { Terminal }`

@@ -1,6 +1,6 @@
 import { distinctColor, makeTab } from './tab.js';
-import { HARNESS_COMMANDS } from './harness.js';
-import { isKnownModel } from './harness-models.js';
+import { HARNESS_COMMANDS } from './harness/index.js';
+import { isKnownModel } from './harness/models.js';
 import { parseScheduleCommand } from './schedule/index.js';
 import type { Managers } from './managers.js';
 import type { AgentState, ProfileEntry, ProfileHarnessEntry, ScheduleEntry } from './types.js';

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type { Tab } from './types.js';
 import type { Managers } from './managers.js';
-import type { ScreenCapture } from './harness-screen.js';
+import type { ScreenCapture } from './harness/screen.js';
 import { harnessFeedEntries } from './monitor-harness-feed.js';
 
 function harnessTab(label: string, group = 1): Tab {

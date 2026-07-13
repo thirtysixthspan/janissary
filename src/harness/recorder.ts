@@ -1,6 +1,6 @@
 import { createWriteStream, type WriteStream } from 'node:fs';
-import { messageBus, type Subscription } from './bus.js';
-import { ensureRecordingDirectory, harnessRecordingPath } from './harness-recording-file.js';
+import { messageBus, type Subscription } from '../bus.js';
+import { ensureRecordingDirectory, harnessRecordingPath } from './recording-file.js';
 
 // The terminal name the PTY is actually spawned with (`src/pty.ts`); asciicast players read it for
 // correct rendering.
