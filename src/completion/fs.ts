@@ -1,7 +1,7 @@
 import path from 'node:path';
 import { readdirSync } from 'node:fs';
-import type { CompletionResult } from './types.js';
-import { isDir, longestCommonPrefix, splitToken, replaceToken } from './completion-helpers.js';
+import type { CompletionResult } from '../types.js';
+import { isDir, longestCommonPrefix, splitToken, replaceToken } from './helpers.js';
 
 export function completeFilePath(
   token: string,

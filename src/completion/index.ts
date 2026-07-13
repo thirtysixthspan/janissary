@@ -1,7 +1,7 @@
-import type { CompletionResult } from './types.js';
-import { completeAgentName, completeSendTarget, completeScheduleTarget, completeConnectionClose, completeBrowserCommand, completeMonitorCommand, completeSearchCommand, completeSyntaxTheme } from './completion-handlers.js';
-import { completeFilePath } from './completion-fs.js';
-import { SYNTAX_THEMES } from './syntax-themes.js';
+import type { CompletionResult } from '../types.js';
+import { completeAgentName, completeSendTarget, completeScheduleTarget, completeConnectionClose, completeBrowserCommand, completeMonitorCommand, completeSearchCommand, completeSyntaxTheme } from './handlers.js';
+import { completeFilePath } from './fs.js';
+import { SYNTAX_THEMES } from '../syntax-themes.js';
 
 /**
  * Tab-complete the token ending at the cursor.

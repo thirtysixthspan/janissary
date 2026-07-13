@@ -7,7 +7,7 @@ import {
   completeSearchCommand,
   completeSyntaxTheme,
   completeConnectionClose,
-} from './completion-handlers.js';
+} from './handlers.js';
 
 describe('completeSendTarget', () => {
   it('completes a tab label for the send command at argument 1', () => {
