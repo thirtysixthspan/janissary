@@ -5,7 +5,7 @@ hero:
   text: An Agentic Working Environment
   tagline: An interface to enhance your creative workflow by supplementing and automating the tedius parts of your work.
   image:
-    src: /agents/archer-firing.gif
+    src: /agents/archer-south.png
     alt: Animated pixel-art Janissary archer firing a bow
   actions:
     - theme: brand
