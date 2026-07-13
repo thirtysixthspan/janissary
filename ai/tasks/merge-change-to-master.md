@@ -84,6 +84,8 @@ This prints a single space-separated line: `OWNER_REPO BRANCH GH_URL`. Read thos
 ./scripts/run.mjs pr-push-branch origin my-branch-name
 ```
 
+If the push fails with an HTTP 400 RPC error ("unexpected disconnect while reading sideband packet"), `pr-push-branch` handles it for you: it raises `http.postBuffer` and forces HTTP/1.1, then retries automatically. No manual intervention is needed — just let the script run.
+
 ---
 
 ## Step 5 — Open the PR against `master`
