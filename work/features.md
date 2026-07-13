@@ -1,4 +1,8 @@
 
+## ready
+
+* support launching the file navigator in a workspace `files in <tab label> on <dock side>` for example `files in claude on left`
+
 ## in development
 
 4. Supervisor/manager agent (LangGraph supervisor, n8n AI Agent Tool) — a built-in supervisor persona that receives a goal, fans work out with broadcast request, and aggregates the responses.
