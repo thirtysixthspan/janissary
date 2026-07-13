@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseBrowserCommand, extractBrowserCommand } from './browser-command.js';
+import { parseBrowserCommand, extractBrowserCommand } from './command.js';
 
 describe('parseBrowserCommand', () => {
   it('parses open with an optional name and headless default', () => {

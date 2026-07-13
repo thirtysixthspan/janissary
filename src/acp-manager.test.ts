@@ -24,7 +24,7 @@ vi.mock('./acp-runner.js', () => ({
 vi.mock('./bus.js', () => ({
   messageBus: { emit: mocks.messageBusEmit },
 }));
-vi.mock('./browser-command.js', () => ({
+vi.mock('./browser/command.js', () => ({
   extractBrowserCommand: vi.fn(),
   BROWSER_PRIMER: 'browser primer text',
 }));
