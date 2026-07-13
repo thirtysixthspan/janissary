@@ -1,25 +1,13 @@
 import React from 'react';
-import type { BufferLine, CompletionResult } from '@shared/protocol';
-import { CommandInput } from './CommandInput';
+import type { BufferLine } from '@shared/protocol';
+import { CommandInput, type CommandInputProperties } from './CommandInput';
 import { SearchBar } from './SearchBar';
 import type { useTranscriptSearch } from './useTranscriptSearch';
 
 type Properties = {
   search: ReturnType<typeof useTranscriptSearch>;
   lines: BufferLine[];
-  dotColor: string;
-  history: string[];
-  ghostHistory: string[];
-  onSubmit: (text: string) => void;
-  inputRef: React.RefObject<HTMLTextAreaElement | null>;
-  complete: (text: string, cursor: number) => Promise<CompletionResult>;
-  pickerOpen: boolean;
-  busy: boolean;
-  queueOpen: boolean;
-  recallRef: React.RefObject<((text: string) => void) | null>;
-  onEditQueued: (text: string) => void;
-  onDeleteQueued: () => void;
-};
+} & CommandInputProperties;
 
 // Replaces the command bar with the search bar while search mode is open — visually, the
 // command bar "becomes" the search bar rather than something appearing alongside it.

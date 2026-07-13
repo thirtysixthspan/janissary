@@ -3,7 +3,7 @@ import type { CompletionResult } from '@shared/protocol';
 import { handleTabCompletion } from './command-completion';
 import { findGhostSuggestion } from './ghost-suggestion';
 
-type Properties = {
+export type CommandInputProperties = {
   dotColor: string;
   history: string[];
   ghostHistory: string[];
@@ -25,7 +25,7 @@ type Properties = {
 export function CommandInput({
   dotColor, history, ghostHistory, onSubmit, inputRef, complete, pickerOpen, busy,
   queueOpen, recallRef, onEditQueued, onDeleteQueued,
-}: Properties) {
+}: CommandInputProperties) {
   const [value, setValue] = useState('');
   const [completions, setCompletions] = useState<string[]>([]);
   const histIndex = useRef(-1);
