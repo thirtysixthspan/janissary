@@ -76,6 +76,10 @@ written to disk, and never persisted or restored on `--relaunch`. A successful s
 the saved file is then the current content; further editing builds a fresh draft again. If the
 connection drops, a lost sync simply leaves the server's copy stale until the next buffer change.
 
+The one consumer of this draft is a monitor watching the tab (see [[monitoring]]): it is fed the
+draft so it can see unsaved changes without a save, even though the draft is never shown back in the
+editor itself.
+
 ### Closing with unsaved changes
 
 Closing an editor tab that has unsaved changes triggers a confirmation dialog: "Do you want to save changes to this file?" with three buttons — Save, Don't Save, and Cancel. Save is selected by default. The dialog appears whether the close comes from the tab strip's × button, the Cmd+W / Ctrl+W keyboard shortcut, or typing `close` / `exit` at the command line.

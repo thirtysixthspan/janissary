@@ -87,4 +87,70 @@ describe('editorFeedEntries', () => {
     const managers = makeManagers([{ label: 'claude', view: 'harness', group: 1 } as unknown as Tab], {});
     expect(editorFeedEntries(managers, [{ kind: 'tab', label: 'claude' }], new Map())).toEqual([]);
   });
+
+  it('feeds the full draft content on first sight, not disk', () => {
+    const { id, file } = tempFile('saved\n');
+    const tab = editorTab('notes', id);
+    tab.editorDraft = { content: 'saved\nunsaved\n', updatedAt: Date.now() };
+    const managers = makeManagers([tab], { [id]: file });
+    const entries = editorFeedEntries(managers, [{ kind: 'tab', label: 'notes' }], new Map());
+    expect(entries).toHaveLength(1);
+    expect(entries[0].entry.output).toBe('saved\nunsaved\n');
+  });
+
+  it('prefers the draft over a changed disk file', () => {
+    const { id, file } = tempFile('saved\n');
+    const tab = editorTab('notes', id);
+    tab.editorDraft = { content: 'draft\n', updatedAt: Date.now() };
+    const managers = makeManagers([tab], { [id]: file });
+    const seen = new Map<string, string>();
+    editorFeedEntries(managers, [{ kind: 'tab', label: 'notes' }], seen);
+    writeFileSync(file, 'changed on disk\n');
+    const entries = editorFeedEntries(managers, [{ kind: 'tab', label: 'notes' }], seen);
+    expect(entries).toHaveLength(0);
+  });
+
+  it('emits a diff when the draft changes', () => {
+    const { id, file } = tempFile('irrelevant\n');
+    const tab = editorTab('notes', id);
+    tab.editorDraft = { content: 'a\n', updatedAt: Date.now() };
+    const managers = makeManagers([tab], { [id]: file });
+    const seen = new Map<string, string>();
+    editorFeedEntries(managers, [{ kind: 'tab', label: 'notes' }], seen);
+    tab.editorDraft = { content: 'a\nb\n', updatedAt: Date.now() };
+    const entries = editorFeedEntries(managers, [{ kind: 'tab', label: 'notes' }], seen);
+    expect(entries).toHaveLength(1);
+    expect(entries[0].entry.output).toContain('+b');
+  });
+
+  it('emits no entry at the save boundary when disk matches the cleared draft', () => {
+    const { id, file } = tempFile('final\n');
+    const tab = editorTab('notes', id);
+    tab.editorDraft = { content: 'final\n', updatedAt: Date.now() };
+    const managers = makeManagers([tab], { [id]: file });
+    const seen = new Map<string, string>();
+    editorFeedEntries(managers, [{ kind: 'tab', label: 'notes' }], seen);
+    tab.editorDraft = undefined;
+    const entries = editorFeedEntries(managers, [{ kind: 'tab', label: 'notes' }], seen);
+    expect(entries).toHaveLength(0);
+  });
+
+  it('feeds a draft for a never-saved missing file', () => {
+    const id = 'missing-draft';
+    const tab = editorTab('new', id);
+    tab.editorDraft = { content: 'typed but unsaved\n', updatedAt: Date.now() };
+    const managers = makeManagers([tab], { [id]: path.join(dir, 'does-not-exist.txt') });
+    const entries = editorFeedEntries(managers, [{ kind: 'tab', label: 'new' }], new Map());
+    expect(entries).toHaveLength(1);
+    expect(entries[0].entry.output).toBe('typed but unsaved\n');
+  });
+
+  it('feeds a draft even when the /open/ id does not resolve', () => {
+    const tab = editorTab('notes', 'unresolvable');
+    tab.editorDraft = { content: 'draft content\n', updatedAt: Date.now() };
+    const managers = makeManagers([tab], {});
+    const entries = editorFeedEntries(managers, [{ kind: 'tab', label: 'notes' }], new Map());
+    expect(entries).toHaveLength(1);
+    expect(entries[0].entry.output).toBe('draft content\n');
+  });
 });
