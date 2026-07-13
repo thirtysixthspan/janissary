@@ -1,14 +1,14 @@
-import { makeHarnessTab, distinctColor, uniqueLabel } from './tab.js';
-import { parseHarnessCommand, HARNESS_COMMANDS, buildHarnessCommand } from './harness.js';
-import { HarnessScreenReader, type ScreenCapture } from './harness-screen.js';
-import { HarnessRecorder } from './harness-recorder.js';
-import { HarnessAutoApprover } from './harness-auto-approve.js';
-import { writeCaptureFile } from './harness-capture-file.js';
-import type { HarnessView, ProfileHarnessEntry } from './types.js';
-import { messageBus } from './bus.js';
-import { notify } from './notifications.js';
-import { sandboxNotice } from './sandbox.js';
-import type { Managers } from './managers.js';
+import { makeHarnessTab, distinctColor, uniqueLabel } from '../tab.js';
+import { parseHarnessCommand, HARNESS_COMMANDS, buildHarnessCommand } from './index.js';
+import { HarnessScreenReader, type ScreenCapture } from './screen.js';
+import { HarnessRecorder } from './recorder.js';
+import { HarnessAutoApprover } from './auto-approve.js';
+import { writeCaptureFile } from './capture-file.js';
+import type { HarnessView, ProfileHarnessEntry } from '../types.js';
+import { messageBus } from '../bus.js';
+import { notify } from '../notifications.js';
+import { sandboxNotice } from '../sandbox.js';
+import type { Managers } from '../managers.js';
 
 // Owns harness command handling: launching a harness `<name>` as a PTY-backed tab (optionally in a
 // fresh `--workspace` git clone, and optionally under a custom `as <label>`) and naming it uniquely.

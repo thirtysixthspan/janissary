@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { HarnessScreenReader } from './harness-screen.js';
-import { messageBus } from './bus.js';
+import { HarnessScreenReader } from './screen.js';
+import { messageBus } from '../bus.js';
 
 function emitData(id: string, data: string): void {
   messageBus.emit('pty', { type: 'data', id, data });

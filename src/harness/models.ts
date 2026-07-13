@@ -1,4 +1,4 @@
-import catalog from '../harness-models.json' with { type: 'json' };
+import catalog from '../../harness-models.json' with { type: 'json' };
 
 const models: Record<string, string[]> = catalog;
 

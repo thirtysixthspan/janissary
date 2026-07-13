@@ -1,21 +1,21 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { HarnessManager } from './harness-manager.js';
-import { writeCaptureFile } from './harness-capture-file.js';
-import { notify } from './notifications.js';
-import { messageBus } from './bus.js';
-import type { Managers } from './managers.js';
-import type { Tab } from './types.js';
+import { HarnessManager } from './manager.js';
+import { writeCaptureFile } from './capture-file.js';
+import { notify } from '../notifications.js';
+import { messageBus } from '../bus.js';
+import type { Managers } from '../managers.js';
+import type { Tab } from '../types.js';
 
-vi.mock('./harness-capture-file.js', () => ({
+vi.mock('./capture-file.js', () => ({
   writeCaptureFile: vi.fn(() => '/project/.janissary/captures/claude-now.txt'),
 }));
 
-vi.mock('./notifications.js', () => ({ notify: vi.fn() }));
+vi.mock('../notifications.js', () => ({ notify: vi.fn() }));
 
 // Mock the recorder so the manager's lifecycle wiring can be asserted without touching the
 // filesystem; each construction records a disposable stub.
 const recorderMock = vi.hoisted(() => ({ instances: [] as { dispose: ReturnType<typeof vi.fn> }[] }));
-vi.mock('./harness-recorder.js', () => ({
+vi.mock('./recorder.js', () => ({
   HarnessRecorder: vi.fn(function () {
     const instance = { dispose: vi.fn() };
     recorderMock.instances.push(instance);

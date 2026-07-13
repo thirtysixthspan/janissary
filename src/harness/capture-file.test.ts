@@ -5,7 +5,7 @@ import {
   ensureCaptureDirectory,
   writeCaptureFile,
   clearCaptureDirectory,
-} from './harness-capture-file.js';
+} from './capture-file.js';
 
 vi.mock('node:fs');
 

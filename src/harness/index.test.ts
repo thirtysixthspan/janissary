@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseHarnessCommand, HARNESS_NAMES, buildHarnessCommand } from './harness.js';
+import { parseHarnessCommand, HARNESS_NAMES, buildHarnessCommand } from './index.js';
 
 describe('parseHarnessCommand', () => {
   it('accepts valid harness names', () => {

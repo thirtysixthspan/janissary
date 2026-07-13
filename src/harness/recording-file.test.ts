@@ -5,7 +5,7 @@ import {
   ensureRecordingDirectory,
   harnessRecordingPath,
   clearHarnessRecordingDirectory,
-} from './harness-recording-file.js';
+} from './recording-file.js';
 
 vi.mock('node:fs');
 

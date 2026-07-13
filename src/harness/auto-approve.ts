@@ -1,4 +1,4 @@
-import type { ScreenCapture } from './harness-screen.js';
+import type { ScreenCapture } from './screen.js';
 
 // How far up from the bottom of the capture the gate menu is allowed to sit. The real permission
 // menu always occupies the final few lines; requiring both anchors inside this window rejects the

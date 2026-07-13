@@ -2,9 +2,9 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtempSync, rmSync, existsSync, readdirSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { messageBus } from './bus.js';
-import { HarnessRecorder } from './harness-recorder.js';
-import { initHarnessRecordingDirectory } from './harness-recording-file.js';
+import { messageBus } from '../bus.js';
+import { HarnessRecorder } from './recorder.js';
+import { initHarnessRecordingDirectory } from './recording-file.js';
 
 // The recorder writes real files with an append stream that flushes asynchronously, so a test
 // ends the stream (dispose / exit) and then polls the `.cast` file until it has the expected lines.
