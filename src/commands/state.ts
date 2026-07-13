@@ -1,5 +1,5 @@
 import type { Command } from './types.js';
-import { loadAgentState } from '../agent-state.js';
+import { loadAgentState } from '../agent/state.js';
 import { formatState } from '../state-format.js';
 
 export const command: Command = {

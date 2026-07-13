@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-export { resolveAgentName, parseAgentCommand } from './agent-commands.js';
+export { resolveAgentName, parseAgentCommand } from './agent/commands.js';
 
 export const availableCommands = [
   'help',

@@ -1,6 +1,6 @@
 import { mkdirSync, writeFileSync, existsSync, readFileSync, readdirSync, rmSync } from 'node:fs';
 import path from 'node:path';
-import type { AgentState } from './types.js';
+import type { AgentState } from '../types.js';
 
 let stateDirectory = '';
 

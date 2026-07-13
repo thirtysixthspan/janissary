@@ -3,7 +3,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, readdirSync } from
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { Controller } from './controller.js';
-import { initAgentStateDirectory, saveAgentState, loadAgentState } from './agent-state.js';
+import { initAgentStateDirectory, saveAgentState, loadAgentState } from './agent/state.js';
 import { initGlobalHistory, globalCommands } from './global-history.js';
 import { initProfileDir } from './profiles.js';
 import { messageBus } from './bus.js';

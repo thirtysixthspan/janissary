@@ -1,6 +1,6 @@
-import type { AgentCommand } from './types.js';
-import agentNames from '../agent-names.json' with { type: 'json' };
-import { getConfig } from './config.js';
+import type { AgentCommand } from '../types.js';
+import agentNames from '../../agent-names.json' with { type: 'json' };
+import { getConfig } from '../config.js';
 
 export function resolveAgentName(
   input: string,

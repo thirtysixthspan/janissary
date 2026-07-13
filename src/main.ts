@@ -3,7 +3,7 @@ import { existsSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { startServer } from './index.js';
 import { makeToken } from './security.js';
-import { initAgentStateDirectory, clearStateDirectory } from './agent-state.js';
+import { initAgentStateDirectory, clearStateDirectory } from './agent/state.js';
 import { initHarnessCaptureDirectory, clearCaptureDirectory } from './harness-capture-file.js';
 import { initHarnessRecordingDirectory, clearHarnessRecordingDirectory } from './harness-recording-file.js';
 import { acquireLock, releaseLock } from './instance-lock.js';
