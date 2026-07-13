@@ -69,11 +69,9 @@ export class HarnessManager {
     const creator = this.managers.tab.cur();
     const label = uniqueLabel(this.managers.tab.tabs, label_ ?? name);
 
-    const resolved = this.resolveCwd(workspace, label, this.managers.tab.cwdOf(creator.label) ?? process.cwd());
-    if (typeof resolved !== 'string' && 'error' in resolved) return resolved.error;
-    const cwd = typeof resolved === 'string' ? resolved : resolved.dir;
-    const workspaceDir = typeof resolved === 'string' ? undefined : resolved.dir;
-
+    const dir = this.parseDir(this.resolveCwd(workspace, label, this.managers.tab.cwdOf(creator.label) ?? process.cwd()));
+    if (typeof dir === 'string') return dir;
+    const { cwd, workspaceDir } = dir;
     const dotColor = distinctColor(this.managers.tab.tabs.map((t) => t.dotColor));
     const group = creator?.group ?? 1;
     const groupColor = creator?.groupColor ?? dotColor;
@@ -88,10 +86,9 @@ export class HarnessManager {
   // tabs have no agent state.
   openFromProfile(entry: ProfileHarnessEntry, label: string, group: number, groupColor: string): string | undefined {
     const unique = uniqueLabel(this.managers.tab.tabs, label);
-    const resolved = this.resolveCwd(!!entry.workspace, unique, entry.cwd ?? process.cwd());
-    if (typeof resolved !== 'string' && 'error' in resolved) return resolved.error;
-    const cwd = typeof resolved === 'string' ? resolved : resolved.dir;
-    const workspaceDir = typeof resolved === 'string' ? undefined : resolved.dir;
+    const dir = this.parseDir(this.resolveCwd(!!entry.workspace, unique, entry.cwd ?? process.cwd()));
+    if (typeof dir === 'string') return dir;
+    const { cwd, workspaceDir } = dir;
     const dotColor = distinctColor(this.managers.tab.tabs.map((t) => t.dotColor), entry.dotColor);
     this.spawnTab(entry.harness, unique, cwd, workspaceDir, entry.offline ?? false, group, groupColor, dotColor, entry.autoApprove ?? false, entry.model);
     return undefined;
@@ -135,6 +132,15 @@ export class HarnessManager {
     });
     this.autoApprovers.set(id, approver);
     return (capture) => approver.onCapture(capture);
+  }
+
+  // Parse `resolveCwd`'s result into a clean `{ cwd, workspaceDir }` or return the error string.
+  private parseDir(resolved: string | { dir: string } | { error: string }): string | { cwd: string; workspaceDir: string | undefined } {
+    if (typeof resolved !== 'string' && 'error' in resolved) return resolved.error;
+    return {
+      cwd: typeof resolved === 'string' ? resolved : resolved.dir,
+      workspaceDir: typeof resolved === 'string' ? undefined : resolved.dir,
+    };
   }
 
   // The harness's starting directory: a new workspace clone (with `workspace`) or `fallbackCwd`.
