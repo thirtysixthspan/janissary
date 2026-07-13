@@ -1,10 +1,10 @@
 # Agent Characters in Documentation
 
-Decorative pixel-art Janissary characters appear throughout the public documentation (`public-documentation/`) as floated sprites that body text wraps around. They add visual rhythm and personality but must follow strict rules so they stay decorative rather than distracting.
+Decorative pixel-art Janissary characters appear throughout the user documentation (`documentation/user-documentation/`) as floated sprites that body text wraps around. They add visual rhythm and personality but must follow strict rules so they stay decorative rather than distracting.
 
 ## Source images
 
-Agent character images live in `agent-images/` at the repo root. Each character has a subdirectory (`malik/`, `idris/`, `yusuf/`, `fariz/`, `hakim/`, `tahir/`) containing one or more character states, each with eight directional rotations. The VitePress build config (`public-documentation/.vitepress/config.mts`) copies the used facings into `public-documentation/public/agents/` at build time, trimmed and scaled — that directory is gitignored and must not be committed.
+Agent character images live in `agent-images/` at the repo root. Each character has a subdirectory (`malik/`, `idris/`, `yusuf/`, `fariz/`, `hakim/`, `tahir/`) containing one or more character states, each with eight directional rotations. The VitePress build config (`documentation/.vitepress/config.mts`) copies the used facings into `documentation/public/agents/` at build time, trimmed and scaled — that directory is gitignored and must not be committed.
 
 ## Allowed facings
 

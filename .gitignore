@@ -6,7 +6,7 @@ temp/
 .janissary/
 /coverage
 .claude/settings.local.json
-public-documentation/.vitepress/dist
-public-documentation/.vitepress/cache
-public-documentation/public/agents/
+documentation/.vitepress/dist
+documentation/.vitepress/cache
+documentation/public/agents/
 .DS_Store
