@@ -1,9 +1,9 @@
-import type { ScheduleEntry, Tab } from './types.js';
-import type { ScheduleView } from './protocol.js';
-import { computeNextRun, fmtNextRun } from './schedule.js';
-import type { Managers } from './managers.js';
-import { messageBus } from './bus.js';
-import { notify } from './notifications.js';
+import type { ScheduleEntry, Tab } from '../types.js';
+import type { ScheduleView } from '../protocol.js';
+import { computeNextRun, fmtNextRun } from './index.js';
+import type { Managers } from '../managers.js';
+import { messageBus } from '../bus.js';
+import { notify } from '../notifications.js';
 
 // Owns the per-tab scheduled commands (keyed by tab label) and the 1-second firing loop: at each tick
 // it fires any entry whose next-run time has passed, reschedules recurring ones, and drops one-shots.

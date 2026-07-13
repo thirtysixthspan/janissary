@@ -8,7 +8,7 @@ import { completeCommandLine } from './completion/index.js';
 import type { CompletionResult, Sinks } from './types.js';
 import { PseudoterminalManager } from './pseudoterminal-manager.js';
 import { TranscriptStore } from './transcript/store.js';
-import { ScheduleManager } from './schedule-manager.js';
+import { ScheduleManager } from './schedule/manager.js';
 import { ProfileManager } from './profile-manager.js';
 import { ConnectionManager } from './connection/manager.js';
 import { OpenFileManager } from './open-file-manager.js';

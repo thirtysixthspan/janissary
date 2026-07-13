@@ -1,4 +1,4 @@
-import type { ScheduleEntry } from './types.js';
+import type { ScheduleEntry } from '../types.js';
 
 export function nextOccurrenceOfTime(hour: number, minute: number, now: Date): number {
   const d = new Date(now);

@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 const mocks = vi.hoisted(() => ({ notify: vi.fn() }));
-vi.mock('./notifications.js', () => ({ notify: mocks.notify }));
+vi.mock('../notifications.js', () => ({ notify: mocks.notify }));
 
-import { ScheduleManager } from './schedule-manager.js';
-import type { Managers } from './managers.js';
-import type { Tab, ScheduleEntry } from './types.js';
-import { messageBus } from './bus.js';
+import { ScheduleManager } from './manager.js';
+import type { Managers } from '../managers.js';
+import type { Tab, ScheduleEntry } from '../types.js';
+import { messageBus } from '../bus.js';
 
 function makeManagers(overrides: Partial<Tab> = {}): { managers: Managers; tab: Tab } {
   const tab: Tab = {
