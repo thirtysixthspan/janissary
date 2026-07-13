@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { useDialogKeyboard } from '../useDialogKeyboard';
+import { ModalDialog } from '../ModalDialog';
 
 type Action = 'save' | 'discard' | 'cancel';
 
@@ -53,21 +54,18 @@ export function SaveChangesDialog({ onSave, onDiscard, onCancel }: Properties) {
   useDialogKeyboard(dialogRef, onKeyDown);
 
   return (
-    <div className="modal-backdrop">
-      <div ref={dialogRef} className="modal" role="alertdialog" aria-modal="true" tabIndex={-1}>
-        <div className="modal-title">Do you want to save changes to this file?</div>
-        <div className="modal-actions">
-          <button className={`modal-button${selected === 'save' ? ' selected' : ''}`} onClick={onSave}>
-            Save (y)
-          </button>
-          <button className={`modal-button${selected === 'discard' ? ' selected' : ''}`} onClick={onDiscard}>
-            Don&#39;t Save (n)
-          </button>
-          <button className={`modal-button${selected === 'cancel' ? ' selected' : ''}`} onClick={onCancel}>
-            Cancel (Esc)
-          </button>
-        </div>
+    <ModalDialog dialogRef={dialogRef} title="Do you want to save changes to this file?">
+      <div className="modal-actions">
+        <button className={`modal-button${selected === 'save' ? ' selected' : ''}`} onClick={onSave}>
+          Save (y)
+        </button>
+        <button className={`modal-button${selected === 'discard' ? ' selected' : ''}`} onClick={onDiscard}>
+          Don&#39;t Save (n)
+        </button>
+        <button className={`modal-button${selected === 'cancel' ? ' selected' : ''}`} onClick={onCancel}>
+          Cancel (Esc)
+        </button>
       </div>
-    </div>
+    </ModalDialog>
   );
 }

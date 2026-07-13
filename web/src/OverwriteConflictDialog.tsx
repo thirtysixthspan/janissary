@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { useDialogKeyboard } from './useDialogKeyboard';
+import { ModalDialog } from './ModalDialog';
 
 type Action = 'save' | 'cancel';
 
@@ -45,18 +46,15 @@ export function OverwriteConflictDialog({ onSave, onCancel }: Properties) {
   useDialogKeyboard(dialogRef, onKeyDown);
 
   return (
-    <div className="modal-backdrop">
-      <div ref={dialogRef} className="modal" role="alertdialog" aria-modal="true" tabIndex={-1}>
-        <div className="modal-title">This file changed on disk. Overwrite it with your changes?</div>
-        <div className="modal-actions">
-          <button className={`modal-button${selected === 'save' ? ' selected' : ''}`} onClick={onSave}>
-            Overwrite (y)
-          </button>
-          <button className={`modal-button${selected === 'cancel' ? ' selected' : ''}`} onClick={onCancel}>
-            Cancel (Esc)
-          </button>
-        </div>
+    <ModalDialog dialogRef={dialogRef} title="This file changed on disk. Overwrite it with your changes?">
+      <div className="modal-actions">
+        <button className={`modal-button${selected === 'save' ? ' selected' : ''}`} onClick={onSave}>
+          Overwrite (y)
+        </button>
+        <button className={`modal-button${selected === 'cancel' ? ' selected' : ''}`} onClick={onCancel}>
+          Cancel (Esc)
+        </button>
       </div>
-    </div>
+    </ModalDialog>
   );
 }
