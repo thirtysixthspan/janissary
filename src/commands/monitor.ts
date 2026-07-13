@@ -1,5 +1,5 @@
 import type { Command } from './types.js';
-import { parseMonitorCommand, parseUnmonitorCommand } from '../monitor-parsing.js';
+import { parseMonitorCommand, parseUnmonitorCommand } from '../monitor/parsing.js';
 
 // `monitor <persona> [target...]` — start a persona-driven AI monitor. No targets:
 // inline mode, watching the current tab and reporting into its transcript. With targets

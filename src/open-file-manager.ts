@@ -9,7 +9,7 @@ import { expandUserPath } from './paths.js';
 import { webOpener } from './openers/page.js';
 import { SHELL_NAME } from './shell-manager.js';
 import type { Managers } from './managers.js';
-import { TabManager } from './tab-manager.js';
+import { TabManager } from './tab/manager.js';
 
 export class OpenFileManager {
   constructor(private managers: Managers) {}

@@ -1,4 +1,4 @@
-import { makeHarnessTab, distinctColor, uniqueLabel } from '../tab.js';
+import { makeHarnessTab, distinctColor, uniqueLabel } from '../tab/index.js';
 import { parseHarnessCommand, HARNESS_COMMANDS, buildHarnessCommand } from './index.js';
 import { HarnessScreenReader, type ScreenCapture } from './screen.js';
 import { HarnessRecorder } from './recorder.js';

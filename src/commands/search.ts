@@ -1,5 +1,5 @@
 import type { Command } from './types.js';
-import { flattenBuffer } from '../tab-formatting.js';
+import { flattenBuffer } from '../tab/formatting.js';
 import { compilePattern, findMatches } from '../search-matches.js';
 
 export const SEARCH_USAGE = 'Usage: search transcript <pattern>';

@@ -9,7 +9,7 @@ import type { CompletionResult, Sinks } from './types.js';
 import { PseudoterminalManager } from './pseudoterminal-manager.js';
 import { TranscriptStore } from './transcript/store.js';
 import { ScheduleManager } from './schedule/manager.js';
-import { ProfileManager } from './profile-manager.js';
+import { ProfileManager } from './profile/manager.js';
 import { ConnectionManager } from './connection/manager.js';
 import { OpenFileManager } from './open-file-manager.js';
 import { FileTreeManager } from './file-tree-manager.js';
@@ -22,11 +22,11 @@ import { messageBus } from './bus.js';
 import { notify } from './notifications.js';
 import { BrowserManager } from './browser/tab.js';
 import { CommandManager } from './command-manager.js';
-import { runSuggestion } from './monitor-window.js';
-import { MonitorManager } from './monitor-manager.js';
+import { runSuggestion } from './monitor/window.js';
+import { MonitorManager } from './monitor/manager.js';
 import { listPersonas } from './personas.js';
 import type { TabView } from './protocol.js';
-import { TabManager } from './tab-manager.js';
+import { TabManager } from './tab/manager.js';
 import type { Managers } from './managers.js';
 
 export class Controller {

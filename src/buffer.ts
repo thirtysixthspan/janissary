@@ -1,5 +1,5 @@
 import type { LogEntry, BufferLine } from './types.js';
-import { expandTabs } from './tab.js';
+import { expandTabs } from './tab/index.js';
 
 function isEmptyEntry(entry: LogEntry): boolean {
   return !entry.from && !entry.input && !entry.output;

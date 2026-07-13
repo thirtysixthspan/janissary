@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { TabManager } from './tab-manager.js';
+import { TabManager } from './tab/manager.js';
 import type { Managers } from './managers.js';
 import { openNotificationsTab, appendNotification, notificationsTab } from './notifications-tab.js';
 
