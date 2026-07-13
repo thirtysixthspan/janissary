@@ -1,7 +1,7 @@
-import { getOutput } from './commands.js';
-import { toPrefixedCommand } from './recognizers/index.js';
-import { resolveRouteChoice } from './route-choice.js';
-import type { Managers } from './managers.js';
+import { getOutput } from '../commands.js';
+import { toPrefixedCommand } from '../recognizers/index.js';
+import { resolveRouteChoice } from '../route-choice.js';
+import type { Managers } from '../managers.js';
 
 export function routeUnknownCommand(
   text: string,

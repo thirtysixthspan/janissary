@@ -7,7 +7,7 @@ import {
   type Client,
 } from '@agentclientprotocol/sdk';
 import type { PromptHandlers, AcpSession, AcpOptions } from '../types.js';
-import { sandboxSpawn } from '../sandbox.js';
+import { sandboxSpawn } from '../sandbox/index.js';
 import { getGithubToken } from '../github-token.js';
 import { decidePermission } from './tools.js';
 

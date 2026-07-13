@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import { routeUnknownCommand } from './capture-router.js';
-import type { Managers } from './managers.js';
+import { routeUnknownCommand } from './router.js';
+import type { Managers } from '../managers.js';
 
 function makeManagers(openDbs: string[]): { managers: Managers; appended: unknown[] } {
   const appended: unknown[] = [];

@@ -16,7 +16,7 @@ import { FileTreeManager } from './file-tree-manager.js';
 import { EditorWatchManager } from './editor/watch-manager.js';
 import { saveFile } from './editor/save.js';
 import { syncEditorBuffer } from './editor/sync.js';
-import { CaptureManager } from './capture-manager.js';
+import { CaptureManager } from './capture/manager.js';
 import { AgentCommunicationManager } from './agent/communication-manager.js';
 import { messageBus } from './bus.js';
 import { notify } from './notifications.js';

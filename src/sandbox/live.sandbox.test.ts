@@ -3,8 +3,8 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync, existsSync } from 'node:
 import { execFileSync } from 'node:child_process';
 import { tmpdir, homedir } from 'node:os';
 import path from 'node:path';
-import { loadConfig } from './config.js';
-import { sandboxAvailable, sandboxSpawn } from './sandbox.js';
+import { loadConfig } from '../config.js';
+import { sandboxAvailable, sandboxSpawn } from './index.js';
 
 describe.skipIf(!sandboxAvailable())('sandboxSpawn — live sandbox-exec integration (darwin only)', () => {
   let workspaceDir: string;

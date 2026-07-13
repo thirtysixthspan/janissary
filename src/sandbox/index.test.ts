@@ -2,9 +2,9 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { loadConfig } from './config.js';
-import { sandboxAvailable, sandboxSpawn } from './sandbox.js';
-import { SANDBOX_PROFILE, SANDBOX_PROFILE_OFFLINE } from './sandbox-profile.js';
+import { loadConfig } from '../config.js';
+import { sandboxAvailable, sandboxSpawn } from './index.js';
+import { SANDBOX_PROFILE, SANDBOX_PROFILE_OFFLINE } from './profile.js';
 
 function parenDepth(text: string): number {
   let depth = 0;
