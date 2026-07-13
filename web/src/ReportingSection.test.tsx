@@ -133,4 +133,46 @@ describe('ReportingSection', () => {
     expect(removeSpy).toHaveBeenCalledWith('mouseup', expect.any(Function));
     removeSpy.mockRestore();
   });
+
+  it('divider drag mousemove updates the height percentage', () => {
+    const { container } = render(
+      React.createElement(ReportingSection, {
+        entries: [makeEntry('alerts', 0)],
+        onClose: vi.fn(), onRun: vi.fn(), onRate: vi.fn(), onReset: vi.fn(), onSnapshot: vi.fn(),
+      }),
+    );
+    const divider = container.querySelector('.reporting-resize')!;
+    const section = container.querySelector('.reporting-section')!;
+    fireEvent.mouseDown(divider);
+    fireEvent.mouseMove(divider, { clientY: globalThis.innerHeight * 0.5 });
+    expect((section as HTMLElement).style.flex).toBe('0 0 50%');
+  });
+
+  it('divider drag clamps height to min 15%', () => {
+    const { container } = render(
+      React.createElement(ReportingSection, {
+        entries: [makeEntry('alerts', 0)],
+        onClose: vi.fn(), onRun: vi.fn(), onRate: vi.fn(), onReset: vi.fn(), onSnapshot: vi.fn(),
+      }),
+    );
+    const divider = container.querySelector('.reporting-resize')!;
+    const section = container.querySelector('.reporting-section')!;
+    fireEvent.mouseDown(divider);
+    fireEvent.mouseMove(divider, { clientY: globalThis.innerHeight * 0.9 });
+    expect((section as HTMLElement).style.flex).toBe('0 0 15%');
+  });
+
+  it('divider drag clamps height to max 85%', () => {
+    const { container } = render(
+      React.createElement(ReportingSection, {
+        entries: [makeEntry('alerts', 0)],
+        onClose: vi.fn(), onRun: vi.fn(), onRate: vi.fn(), onReset: vi.fn(), onSnapshot: vi.fn(),
+      }),
+    );
+    const divider = container.querySelector('.reporting-resize')!;
+    const section = container.querySelector('.reporting-section')!;
+    fireEvent.mouseDown(divider);
+    fireEvent.mouseMove(divider, { clientY: 0 });
+    expect((section as HTMLElement).style.flex).toBe('0 0 85%');
+  });
 });
