@@ -1,6 +1,6 @@
 # Writing User Documentation
 
-Guidance for writing user-facing docs (`public-documentation/`) from the internal specs
+Guidance for writing user-facing docs (`documentation/user-documentation/`) from the internal specs
 (`specs/`). Specs describe implementation and behavior for contributors; user documentation
 describes tasks and concepts for someone running the app who has never read the spec and never
 will. Don't just reformat a spec into a doc page — rewrite it for the reader's goal, and drop
@@ -83,7 +83,7 @@ Strip everything that only makes sense to a contributor:
 
 - No file paths, function names, module names, or internal class names (`src/tab.ts`,
   `flattenBuffer`, `TabManager.markUnread` — these belong in `specs/`, never in
-  `public-documentation/`).
+  `documentation/user-documentation/`).
 - No "why we implemented it this way" engineering trade-off discussion — that's explanation for
   contributors, not users. A user-facing Explanation page answers "why does the app behave this
   way from where I'm sitting," not "why did we choose this data structure."
@@ -159,7 +159,7 @@ just the internal name for the feature.
 
 ## Treat docs as code
 
-User docs live in version control (`public-documentation/`) next to the code they describe, same
+User docs live in version control (`documentation/user-documentation/`) next to the code they describe, same
 as everything else in this repo:
 
 - A behavior change that lands in a PR should update the doc page in the same PR when the change
@@ -174,4 +174,4 @@ as everything else in this repo:
 Not every spec needs a public page, and not all at once. Tier by audience reach: onboarding-critical
 content first, everyday features next, advanced/specialized features after that, and pure
 implementation detail (the kind aimed at contributors, not users) left out of
-`public-documentation/` entirely — that belongs in `specs/`, per [[developer-documentation]].
+`documentation/user-documentation/` entirely — that belongs in `specs/`, per [[developer-documentation]].

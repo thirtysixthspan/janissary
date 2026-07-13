@@ -1,6 +1,6 @@
 // The shot manifest for `./scripts/run.mjs docs-screenshots`. One entry per screenshot used by
-// the pages in public-documentation/; the entry name is the output filename, so a doc page's
-// image path (/screenshots/<name>.png) stays stable across reruns.
+// the pages in documentation/user-documentation/; the entry name is the output filename, so a
+// doc page's image path (/screenshots/<name>.png) stays stable across reruns.
 //
 // Each entry may carry:
 //   setup          commands typed into the command bar, one at a time (Enter after each).

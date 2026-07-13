@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Captures the screenshots referenced by public-documentation/ pages, by launching the real app
+// Captures the screenshots referenced by documentation/user-documentation/ pages, by launching the real app
 // against fixture data and driving it with Playwright. Run via `./scripts/run.mjs docs-screenshots`
 // (optionally passing shot names to capture a subset). Host-only: sandboxed workspaces install
 // with --ignore-scripts and cannot reach Playwright's browser cache, so regenerate on the host.
@@ -18,7 +18,7 @@ import { createScratch, destroyScratch, startPageServer } from './docs-screensho
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const fixturesDirectory = path.join(repoRoot, 'scripts', 'docs-screenshots', 'fixtures');
-const outputDirectory = path.join(repoRoot, 'public-documentation', 'public', 'screenshots');
+const outputDirectory = path.join(repoRoot, 'documentation', 'public', 'screenshots');
 
 function fail(message) {
   console.error(message);
