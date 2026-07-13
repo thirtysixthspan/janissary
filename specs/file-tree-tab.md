@@ -45,6 +45,19 @@ form (`files ./left`).
   sidebar already holds a different tree, that tree is **displaced back to the center strip**
   (non-destructive — nothing is closed as a side effect of docking).
 
+### `files in <label>`/`files on <side>`
+
+`files in <label>` opens (or focuses/redocks) a tree rooted at the cwd of the tab named `<label>`
+instead of the issuing tab's own cwd. If no tab has that label, an error (`No tab named
+"<label>".`) is appended to the issuing tab's transcript and no tree is opened or moved.
+
+`files on left`/`files on right` is an explicit spelling of the same docking `files left`/`files
+right` provides. The two clauses are independent and may be combined in either order — `files in
+<label> on <side>` or `files on <side> in <label>` — to root the tree at another tab's cwd and dock
+it in one command, e.g. `files in claude on left`. Like `left`/`right`, `in` and `on` are only
+recognized as clause keywords, so a directory literally named `in` or `on` is still reachable
+through a path form (`files ./in`).
+
 ### Tree contents
 
 The tree shows, for the root and every directory the user has expanded:
