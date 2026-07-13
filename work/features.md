@@ -1,7 +1,7 @@
 
 ## ready
 
-* support launching the file navigator in a workspace `files in <tab label> on <dock side>` for example `files in claude on left`
+
 
 ## in development
 
