@@ -1,5 +1,9 @@
-import { describe, it, expect } from 'vitest';
-import { textOffsetIn, hitFromEvent } from './mouse';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { textOffsetIn, pointToCol, hitFromEvent } from './mouse';
+
+type DocWithCaretPos = {
+  caretPositionFromPoint?: (x: number, y: number) => { offsetNode: Node; offset: number } | null;
+};
 
 describe('textOffsetIn', () => {
   it('sums text lengths of preceding text nodes in a cell', () => {
@@ -23,6 +27,47 @@ describe('textOffsetIn', () => {
     cell.append(document.createTextNode('cd'));
     expect(textOffsetIn(cell, cell, 1)).toBe(2);
     expect(textOffsetIn(cell, cell, 2)).toBe(4);
+  });
+
+  it('returns total text length when walker does not find node', () => {
+    const cell = document.createElement('div');
+    cell.append(document.createTextNode('hello'));
+    cell.append(document.createTextNode(' world'));
+    const span = document.createElement('span');
+    span.textContent = '!';
+    cell.append(span);
+    expect(textOffsetIn(cell, span, 0)).toBe(12);
+  });
+});
+
+describe('pointToCol', () => {
+  afterEach(() => {
+    delete (document as unknown as DocWithCaretPos).caretPositionFromPoint;
+  });
+
+  it('returns column from caretPositionFromPoint', () => {
+    const cell = document.createElement('div');
+    cell.append(document.createTextNode('hello world'));
+    const textNode = cell.firstChild!;
+    (document as unknown as DocWithCaretPos).caretPositionFromPoint = vi.fn().mockReturnValue({ offsetNode: textNode, offset: 6 });
+    expect(pointToCol(cell, 0, 0)).toBe(6);
+  });
+
+  it('returns 0 when caretPositionFromPoint returns null', () => {
+    const cell = document.createElement('div');
+    cell.append(document.createTextNode('hello'));
+    (document as unknown as DocWithCaretPos).caretPositionFromPoint = vi.fn().mockReturnValue(null);
+    expect(pointToCol(cell, 0, 0)).toBe(0);
+  });
+
+  it('returns 0 when caret node is outside the cell', () => {
+    const cell = document.createElement('div');
+    cell.append(document.createTextNode('hello'));
+    const outside = document.createTextNode('outside');
+    document.body.append(outside);
+    (document as unknown as DocWithCaretPos).caretPositionFromPoint = vi.fn().mockReturnValue({ offsetNode: outside, offset: 3 });
+    expect(pointToCol(cell, 0, 0)).toBe(0);
+    outside.remove();
   });
 });
 
