@@ -1,7 +1,7 @@
-import { isInteractive } from './interactive.js';
-import { commands } from './commands/index.js';
-import { routeUnknownCommand } from './capture-router.js';
-import type { Managers } from './managers.js';
+import { isInteractive } from '../interactive.js';
+import { commands } from '../commands/index.js';
+import { routeUnknownCommand } from './router.js';
+import type { Managers } from '../managers.js';
 
 export class CaptureManager {
   constructor(private managers: Managers) {}

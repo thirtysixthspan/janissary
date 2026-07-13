@@ -11,7 +11,7 @@ import type { BrowserManager } from './browser/tab.js';
 import type { ProfileManager } from './profile/manager.js';
 import type { ConnectionManager } from './connection/manager.js';
 import type { OpenFileManager } from './open-file-manager.js';
-import type { CaptureManager } from './capture-manager.js';
+import type { CaptureManager } from './capture/manager.js';
 import type { CommandManager } from './command-manager.js';
 import type { WorkspaceManager } from './workspace-manager.js';
 import type { MonitorManager } from './monitor/manager.js';

@@ -7,7 +7,7 @@ import { writeCaptureFile } from './capture-file.js';
 import type { HarnessView, ProfileHarnessEntry } from '../types.js';
 import { messageBus } from '../bus.js';
 import { notify } from '../notifications.js';
-import { sandboxNotice } from '../sandbox.js';
+import { sandboxNotice } from '../sandbox/index.js';
 import type { Managers } from '../managers.js';
 
 // Owns harness command handling: launching a harness `<name>` as a PTY-backed tab (optionally in a

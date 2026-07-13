@@ -11,7 +11,7 @@
 import {
   WRITE_CARVEOUT_PARAMS, READ_CARVEIN_PARAMS, SECRET_DENY_PARAMS, LISTING_DIR_PARAMS, WRITE_PREFIX_PARAMS,
   clausesFor, literalClausesFor, prefixClausesFor,
-} from './sandbox-paths.js';
+} from './paths.js';
 
 const writeCarveClauses = clausesFor(WRITE_CARVEOUT_PARAMS);
 const readCarveClauses = clausesFor(READ_CARVEIN_PARAMS);

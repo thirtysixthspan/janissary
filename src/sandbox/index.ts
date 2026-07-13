@@ -2,13 +2,13 @@ import { existsSync, readFileSync, realpathSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { homedir } from 'node:os';
 import path from 'node:path';
-import { SANDBOX_PROFILE, SANDBOX_PROFILE_OFFLINE } from './sandbox-profile.js';
+import { SANDBOX_PROFILE, SANDBOX_PROFILE_OFFLINE } from './profile.js';
 import {
   HOME_WRITE_CARVEOUTS, HOME_READ_CARVEINS, SECRET_DENY_PATHS, HOME_READ_LISTING_DIRS, HOME_WRITE_PREFIX_CARVEOUTS,
   WRITE_CARVEOUT_PARAMS, READ_CARVEIN_PARAMS, SECRET_DENY_PARAMS, LISTING_DIR_PARAMS, WRITE_PREFIX_PARAMS,
   ENV_SCRUB_PATTERNS,
-} from './sandbox-paths.js';
-import { getConfig } from './config.js';
+} from './paths.js';
+import { getConfig } from '../config.js';
 
 export type SandboxOptions = {
   // Undefined for a non-workspaced tab — callers pass it through unconditionally and

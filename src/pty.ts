@@ -1,5 +1,5 @@
 import * as pty from 'node-pty';
-import { sandboxSpawn, type SandboxOptions } from './sandbox.js';
+import { sandboxSpawn, type SandboxOptions } from './sandbox/index.js';
 
 // A live pseudo-terminal backing an inline xterm.js card (an interactive program like vim/less
 // or an AI harness like claude/codex). Bytes flow out through the manager's `onData`; keystrokes

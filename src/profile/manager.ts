@@ -2,7 +2,7 @@ import { makeTab, distinctColor } from '../tab/index.js';
 import { parseProfileCommand, loadProfileEntries, listProfiles, profileExists } from '../profiles.js';
 import { parseAgentCommand, resolveAgentName } from '../commands.js';
 import { openProfileEntries } from './agent-opener.js';
-import { sandboxNotice } from '../sandbox.js';
+import { sandboxNotice } from '../sandbox/index.js';
 import type { Managers } from '../managers.js';
 
 export class ProfileManager {

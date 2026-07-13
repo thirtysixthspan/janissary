@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
-import { CaptureManager } from './capture-manager.js';
-import { makeTab } from './tab/index.js';
-import type { Managers } from './managers.js';
+import { CaptureManager } from './manager.js';
+import { makeTab } from '../tab/index.js';
+import type { Managers } from '../managers.js';
 
 function makeManagers(overrides: Partial<Managers> = {}): Managers {
   const tab = makeTab('main', 'red');
