@@ -31,6 +31,22 @@ describe('shouldNotify — ambient events', () => {
   it('is suppressed when the config is undefined', () => {
     expect(shouldNotify(undefined, 'agent-start', 'build', 'janus')).toBe(false);
   });
+
+  it('fires for schedule-fire when its toggle is on', () => {
+    expect(shouldNotify(allOn, 'schedule-fire', 'build', 'janus')).toBe(true);
+  });
+
+  it('is suppressed for schedule-fire when its toggle is off', () => {
+    expect(shouldNotify(allOff, 'schedule-fire', 'build', 'janus')).toBe(false);
+  });
+
+  it('fires for agent-start when its toggle is on', () => {
+    expect(shouldNotify(allOn, 'agent-start', 'build', 'janus')).toBe(true);
+  });
+
+  it('is suppressed for agent-start when its toggle is off', () => {
+    expect(shouldNotify(allOff, 'agent-start', 'build', 'janus')).toBe(false);
+  });
 });
 
 describe('shouldNotify — manual event', () => {
@@ -98,6 +114,14 @@ describe('notificationText', () => {
 
   it('is unchanged for ambient events', () => {
     expect(notificationText('state-change', 'janus')).toBe("Agent 'janus' finished");
+  });
+
+  it('renders agent-start event text', () => {
+    expect(notificationText('agent-start', 'build')).toBe("Agent 'build' started");
+  });
+
+  it('renders schedule-fire event text with the detail and tab', () => {
+    expect(notificationText('schedule-fire', 'build', 'deploy')).toBe('Scheduled: deploy in build');
   });
 });
 
