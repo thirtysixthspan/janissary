@@ -8,6 +8,7 @@ import {
   listProfiles,
   loadProfileEntries,
   loadProfileMonitors,
+  loadProfileFiles,
   profileExists,
   PROFILE_USAGE,
 } from './profiles.js';
@@ -151,5 +152,29 @@ describe('profile directory', () => {
       { targets: ['group:1'] },
     ]));
     expect(loadProfileMonitors('mix')).toEqual([{ persona: 'assistant', targets: ['group:1'] }]);
+  });
+
+  it('loads profile files from _files.json', () => {
+    writeFile('assist', '_files.json', JSON.stringify([{ dock: 'left' }]));
+    expect(loadProfileFiles('assist')).toEqual([{ dock: 'left' }]);
+  });
+
+  it('returns no files entries when the file is absent, unparseable, or not an array', () => {
+    writeAgent('none', 'bob', {});
+    expect(loadProfileFiles('none')).toEqual([]);
+    writeFile('bad', '_files.json', '{ not json');
+    expect(loadProfileFiles('bad')).toEqual([]);
+    writeFile('obj', '_files.json', JSON.stringify({ dock: 'left' }));
+    expect(loadProfileFiles('obj')).toEqual([]);
+  });
+
+  it('drops malformed files elements', () => {
+    writeFile('mix', '_files.json', JSON.stringify([
+      { dock: 'left' },
+      { dock: 'up' },
+      { in: 42 },
+      { dock: 'right', in: 'claude' },
+    ]));
+    expect(loadProfileFiles('mix')).toEqual([{ dock: 'left' }, { dock: 'right', in: 'claude' }]);
   });
 });

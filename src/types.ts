@@ -232,6 +232,7 @@ export type ProfileHarnessEntry = {
   harness: string;
   model?: string;
   number?: number;
+  group?: number;
   dotColor?: string;
   workspace?: boolean;
   // `-y`/`--yes`: auto-approve the harness's own permission prompts. Claude-only and requires
@@ -253,6 +254,11 @@ export type ProfileEntry = AgentState | ProfileHarnessEntry;
 // issuing tab as `monitor <persona> <targets…>`. `targets` are authored target words in the
 // `monitor` grammar (`group:<n>` or a tab label); an empty list is inline mode.
 export type ProfileMonitor = { persona: string; targets: string[] };
+
+// A profile-level file-tree tab, authored in a profile's reserved `_files.json` file (mirrors
+// `_monitors.json`). `dock` docks it into that sidebar; `in` roots it at the cwd of the named tab
+// instead of the profile's first newly opened tab.
+export type ProfileFilesEntry = { dock?: 'left' | 'right'; in?: string };
 
 // --- schedule.ts ----------------------------------------------------------
 

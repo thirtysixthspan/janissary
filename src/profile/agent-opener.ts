@@ -3,6 +3,7 @@ import { HARNESS_COMMANDS } from '../harness/index.js';
 import { isKnownModel } from '../harness/models.js';
 import { parseScheduleCommand } from '../schedule/index.js';
 import { startProfileMonitors } from './monitors.js';
+import { openProfileFiles } from './files.js';
 import type { Managers } from '../managers.js';
 import type { AgentState, ProfileEntry, ProfileHarnessEntry, ScheduleEntry } from '../types.js';
 
@@ -103,7 +104,7 @@ export function openProfileEntries(
   out: (text: string) => void,
 ): void {
   const authoredGroup = entries
-    .map((e) => (isHarnessEntry(e) ? undefined : e.group))
+    .map((e) => e.group)
     .find((g): g is number => typeof g === 'number');
   const group = authoredGroup ?? Math.max(0, ...managers.tab.tabs.map((t) => t.group)) + 1;
 
@@ -132,6 +133,10 @@ export function openProfileEntries(
   }
 
   if (opened.length > 0) managers.tab.setActiveTab(firstNew);
+  // Profile-level file navigator(s) open next, rooted at the first newly opened tab by default, so
+  // their tabs are part of the list by the time monitor targets are resolved below.
+  const firstNewLabel = opened.length > 0 ? managers.tab.tabs[firstNew]?.label : undefined;
+  openProfileFiles(name, managers, firstNewLabel, notes);
   // Profile-level monitors start after every entry is open, owned by the issuing tab, so their
   // targets (e.g. `group:1`) can resolve against the now-complete tab list.
   startProfileMonitors(name, managers, issuingLabel, notes);
