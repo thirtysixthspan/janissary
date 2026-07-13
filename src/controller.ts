@@ -4,7 +4,7 @@ import { DatabaseManager } from './database/manager.js';
 import { AcpManager } from './acp-manager.js';
 import { ShellManager } from './shell-manager.js';
 import { WorkspaceManager } from './workspace-manager.js';
-import { completeCommandLine } from './completion.js';
+import { completeCommandLine } from './completion/index.js';
 import type { CompletionResult, Sinks } from './types.js';
 import { PseudoterminalManager } from './pseudoterminal-manager.js';
 import { TranscriptStore } from './transcript/store.js';

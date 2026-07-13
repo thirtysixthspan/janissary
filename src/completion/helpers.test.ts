@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir, homedir } from 'node:os';
 import path from 'node:path';
-import { isDir, longestCommonPrefix, splitToken, replaceToken, completeWord } from './completion-helpers.js';
+import { isDir, longestCommonPrefix, splitToken, replaceToken, completeWord } from './helpers.js';
 
 describe('isDir', () => {
   it('returns true for a real directory', () => {

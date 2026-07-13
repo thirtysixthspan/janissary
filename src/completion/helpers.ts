@@ -1,7 +1,7 @@
 import { statSync } from 'node:fs';
 import path from 'node:path';
 import { homedir } from 'node:os';
-import type { CompletionResult } from './types.js';
+import type { CompletionResult } from '../types.js';
 
 export const isDir = (p: string): boolean => {
   try {

@@ -1,6 +1,6 @@
-import type { CompletionResult } from './types.js';
-import { completeWord } from './completion-helpers.js';
-export { completeBrowserCommand } from './completion-browser.js';
+import type { CompletionResult } from '../types.js';
+import { completeWord } from './helpers.js';
+export { completeBrowserCommand } from './browser.js';
 
 export function completeAgentName(
   command: string,
