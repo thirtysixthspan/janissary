@@ -17,6 +17,7 @@ type FileTreeManagerInstance = InstanceType<typeof FileTreeManager>;
 
 describe('FileTreeManager', () => {
   let root: string;
+  let otherRoot: string;
   let outputs: string[];
   let tabs: Tab[];
   let activeTab: number;
@@ -25,6 +26,7 @@ describe('FileTreeManager', () => {
 
   beforeEach(() => {
     root = mkdtempSync(path.join(tmpdir(), 'file-tree-mgr-'));
+    otherRoot = mkdtempSync(path.join(tmpdir(), 'file-tree-mgr-other-'));
     outputs = [];
     activeTab = 0;
     closeFns = [];
@@ -38,11 +40,15 @@ describe('FileTreeManager', () => {
       label: 'janus', dotColor: '#fff', number: 1, group: 1, groupColor: '#fff',
       log: [], cmdHistory: [], cmdHistoryIdx: -1, scrollOffset: 0,
     };
-    tabs = [janus];
+    const other: Tab = {
+      label: 'other', dotColor: '#fff', number: 1, group: 1, groupColor: '#fff',
+      log: [], cmdHistory: [], cmdHistoryIdx: -1, scrollOffset: 0,
+    };
+    tabs = [janus, other];
     managers = {
       tab: {
         get tabs() { return tabs; },
-        cwdOf: () => root,
+        cwdOf: (label: string) => (label === 'other' ? otherRoot : root),
         append: (_label: string, entry: LogEntry) => { outputs.push(entry.output); },
         findIndex: (label: string) => tabs.findIndex((t) => t.label === label),
         setActiveTab: (index: number) => { activeTab = index; },
@@ -55,7 +61,7 @@ describe('FileTreeManager', () => {
         cur: () => tabs[activeTab],
         setCwd: () => {},
         openFilesTab: (view: { root: string; rows: unknown[] }) => {
-          const label = `navigator${tabs.length > 1 ? `-${tabs.length}` : ''}`;
+          const label = `navigator${tabs.length > 2 ? `-${tabs.length}` : ''}`;
           tabs = [...tabs, { ...janus, label, files: view as never }];
           activeTab = tabs.length - 1;
         },
@@ -267,6 +273,54 @@ describe('FileTreeManager', () => {
     manager.open('files ./left', 'janus');
     const tab = tabs.find((t) => t.label.startsWith('navigator'));
     expect(tab!.files!.root).toBe(path.join(root, 'left'));
+    expect(tab!.dock).toBeUndefined();
+  });
+
+  it('files in <label> roots the tree at the referenced tab\'s cwd', () => {
+    const manager = run();
+    manager.open('files in other', 'janus');
+    const tab = tabs.find((t) => t.label.startsWith('navigator'));
+    expect(tab!.files!.root).toBe(otherRoot);
+    expect(tab!.dock).toBeUndefined();
+  });
+
+  it('files in <label> on <side> roots at the referenced tab\'s cwd and docks', () => {
+    const manager = run();
+    manager.open('files in other on left', 'janus');
+    const tab = tabs.find((t) => t.label.startsWith('navigator'));
+    expect(tab!.files!.root).toBe(otherRoot);
+    expect(tab!.dock).toBe('left');
+  });
+
+  it('files on <side> in <label> supports the reversed clause order', () => {
+    const manager = run();
+    manager.open('files on right in other', 'janus');
+    const tab = tabs.find((t) => t.label.startsWith('navigator'));
+    expect(tab!.files!.root).toBe(otherRoot);
+    expect(tab!.dock).toBe('right');
+  });
+
+  it('files on <side> docks without changing the root', () => {
+    const manager = run();
+    manager.open('files on left', 'janus');
+    const tab = tabs.find((t) => t.label.startsWith('navigator'));
+    expect(tab!.dock).toBe('left');
+    expect(tab!.files!.root).toBe(root);
+  });
+
+  it('files in <unknown label> errors into the creator transcript and creates no tab', () => {
+    const manager = run();
+    manager.open('files in ghost', 'janus');
+    expect(outputs.at(-1)).toContain('No tab named "ghost".');
+    expect(tabs.some((t) => t.label.startsWith('navigator'))).toBe(false);
+  });
+
+  it('a directory literally named in/on is reachable via a path form', () => {
+    mkdirSync(path.join(root, 'in'));
+    const manager = run();
+    manager.open('files ./in', 'janus');
+    const tab = tabs.find((t) => t.label.startsWith('navigator'));
+    expect(tab!.files!.root).toBe(path.join(root, 'in'));
     expect(tab!.dock).toBeUndefined();
   });
 

@@ -3,6 +3,7 @@ import path from 'node:path';
 import { messageBus } from './bus.js';
 import { buildRows } from './file-tree.js';
 import { expandUserPath } from './paths.js';
+import { resolveTarget } from './commands/resolve-target.js';
 import type { Managers } from './managers.js';
 
 const DEBOUNCE_MS = 100;
@@ -28,16 +29,27 @@ export class FileTreeManager {
   // issuing tab's cwd), or focus/redock the existing tab if one is already open on that root.
   // A leading `left`/`right` keyword docks the tab into that sidebar; a directory literally named
   // `left`/`right` is still reachable via a path form (`files ./left`), since the keyword is only
-  // recognized as the first word.
+  // recognized as the first word. `in <label>` roots the tree at another tab's cwd instead of the
+  // issuing tab's, and `on <left|right>` is an explicit spelling of the same docking the bare
+  // keyword provides; both are optional, independent, and may appear in either order (`files in
+  // claude on left`). Like `left`/`right`, they are only recognized as clause keywords — a
+  // directory literally named `in`/`on` stays reachable via a path form (`files ./in`).
   open(command: string, label: string): void {
     const rest = command.replace(/^files\b\s*/i, '');
-    const keyword = /^(left|right)\b\s*/i.exec(rest);
-    const dock = keyword ? (keyword[1].toLowerCase() as 'left' | 'right') : null;
-    const target = (keyword ? rest.slice(keyword[0].length) : rest).trim();
-    const cwd = this.managers.tab.cwdOf(label) ?? process.cwd();
+    const { inLabel, dock, target } = this.parseArgs(rest);
+    const out = (text: string) => this.managers.tab.append(label, { input: command, output: text });
+
+    let cwd: string;
+    if (inLabel === undefined) {
+      cwd = this.managers.tab.cwdOf(label) ?? process.cwd();
+    } else {
+      const sourceTab = resolveTarget(inLabel, this.managers, out);
+      if (!sourceTab) return;
+      cwd = this.managers.tab.cwdOf(sourceTab.label) ?? process.cwd();
+    }
+
     const expandedPath = target ? expandUserPath(target, { root: this.managers.tab.launchDir }) : '';
     const root = target ? (path.isAbsolute(expandedPath) ? expandedPath : path.resolve(cwd, expandedPath)) : cwd;
-    const out = (text: string) => this.managers.tab.append(label, { input: command, output: text });
 
     let stat;
     try { stat = statSync(root); } catch { stat = undefined; }
@@ -53,6 +65,32 @@ export class FileTreeManager {
     this.tabs.set(newLabel, { root, expanded, watchers: new Map() });
     this.watchDir(newLabel, root, '');
     if (dock) this.managers.tab.setDock(this.managers.tab.findIndex(newLabel), dock);
+  }
+
+  // Consume leading `in <label>` / `on <left|right>` clauses (either order, each at most once),
+  // then fall back to the bare `left`/`right` keyword if neither clause was used. Whatever's left
+  // over is the path target.
+  private parseArgs(rest: string): { inLabel?: string; dock: 'left' | 'right' | null; target: string } {
+    let cursor = rest;
+    let inLabel: string | undefined;
+    let dock: 'left' | 'right' | null = null;
+
+    for (;;) {
+      if (inLabel === undefined) {
+        const inMatch = /^in\s+(\S+)\b\s*/i.exec(cursor);
+        if (inMatch) { inLabel = inMatch[1]; cursor = cursor.slice(inMatch[0].length); continue; }
+      }
+      if (dock === null) {
+        const onMatch = /^on\s+(left|right)\b\s*/i.exec(cursor);
+        if (onMatch) { dock = onMatch[1].toLowerCase() as 'left' | 'right'; cursor = cursor.slice(onMatch[0].length); continue; }
+      }
+      break;
+    }
+    if (inLabel === undefined && dock === null) {
+      const keyword = /^(left|right)\b\s*/i.exec(cursor);
+      if (keyword) { dock = keyword[1].toLowerCase() as 'left' | 'right'; cursor = cursor.slice(keyword[0].length); }
+    }
+    return { inLabel, dock, target: cursor.trim() };
   }
 
   // Expand/collapse one directory row.
