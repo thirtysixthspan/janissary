@@ -1,7 +1,7 @@
 import { HarnessManager } from './harness-manager.js';
 import { SshManager } from './ssh-manager.js';
 import { DatabaseManager } from './database/manager.js';
-import { AcpManager } from './acp-manager.js';
+import { AcpManager } from './acp/manager.js';
 import { ShellManager } from './shell-manager.js';
 import { WorkspaceManager } from './workspace-manager.js';
 import { completeCommandLine } from './completion/index.js';

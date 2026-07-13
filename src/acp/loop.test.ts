@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
-import { runAcpToolLoop } from './acp-loop.js';
-import type { AcpLoopSession, AcpLoopHandlers } from './types.js';
-import { extractDatabaseCommand } from './database/index.js';
-import { extractBrowserCommand } from './browser/command.js';
+import { runAcpToolLoop } from './loop.js';
+import type { AcpLoopSession, AcpLoopHandlers } from '../types.js';
+import { extractDatabaseCommand } from '../database/index.js';
+import { extractBrowserCommand } from '../browser/command.js';
 
 // A fake ACP session that replies synchronously from a scripted list (the last
 // reply repeats once exhausted) and records every prompt it was sent.

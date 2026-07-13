@@ -1,11 +1,11 @@
-import type { AcpSession, AcpInfo } from './types.js';
-import { connectAcp } from './acp.js';
-import { runAcpToolLoop } from './acp-loop.js';
-import { extractBrowserCommand, BROWSER_PRIMER } from './browser/command.js';
-import { messageBus } from './bus.js';
-import { notify } from './notifications.js';
-import { makeUpdateRunning } from './acp-runner.js';
-import type { Managers } from './managers.js';
+import type { AcpSession, AcpInfo } from '../types.js';
+import { connectAcp } from './index.js';
+import { runAcpToolLoop } from './loop.js';
+import { extractBrowserCommand, BROWSER_PRIMER } from '../browser/command.js';
+import { messageBus } from '../bus.js';
+import { notify } from '../notifications.js';
+import { makeUpdateRunning } from './runner.js';
+import type { Managers } from '../managers.js';
 
 // The ACP agent the manager connects to and the model it runs. Hardcoded for now (the only provider
 // wired up); the model string drives the `provider/model` label shown in the connections panel.

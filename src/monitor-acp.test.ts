@@ -5,7 +5,7 @@ const mocks = vi.hoisted(() => ({
   connectAcp: vi.fn(),
 }));
 
-vi.mock('./acp.js', () => ({
+vi.mock('./acp/index.js', () => ({
   connectAcp: mocks.connectAcp,
 }));
 

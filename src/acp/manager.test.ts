@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { AcpSession, AcpLoopHandlers } from './types.js';
+import type { AcpSession, AcpLoopHandlers } from '../types.js';
 
 const mocks = vi.hoisted(() => ({
   connectAcp: vi.fn(),
@@ -9,27 +9,27 @@ const mocks = vi.hoisted(() => ({
   notify: vi.fn(),
 }));
 
-vi.mock('./notifications.js', () => ({
+vi.mock('../notifications.js', () => ({
   notify: mocks.notify,
 }));
-vi.mock('./acp.js', () => ({
+vi.mock('./index.js', () => ({
   connectAcp: mocks.connectAcp,
 }));
-vi.mock('./acp-loop.js', () => ({
+vi.mock('./loop.js', () => ({
   runAcpToolLoop: mocks.runAcpToolLoop,
 }));
-vi.mock('./acp-runner.js', () => ({
+vi.mock('./runner.js', () => ({
   makeUpdateRunning: mocks.makeUpdateRunning,
 }));
-vi.mock('./bus.js', () => ({
+vi.mock('../bus.js', () => ({
   messageBus: { emit: mocks.messageBusEmit },
 }));
-vi.mock('./browser/command.js', () => ({
+vi.mock('../browser/command.js', () => ({
   extractBrowserCommand: vi.fn(),
   BROWSER_PRIMER: 'browser primer text',
 }));
 
-import { AcpManager } from './acp-manager.js';
+import { AcpManager } from './manager.js';
 
 const makeSession = (): AcpSession => ({ prompt: vi.fn(), kill: vi.fn() });
 

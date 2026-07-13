@@ -1,6 +1,6 @@
-import { messageBus } from './bus.js';
-import type { Tab } from './types.js';
-import type { Managers } from './managers.js';
+import { messageBus } from '../bus.js';
+import type { Tab } from '../types.js';
+import type { Managers } from '../managers.js';
 
 export function makeUpdateRunning(
   label: string,
