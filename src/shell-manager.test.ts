@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { TabManager } from './tab-manager.js';
+import { TabManager } from './tab/manager.js';
 import { ShellManager } from './shell-manager.js';
 import type { Managers } from './managers.js';
 

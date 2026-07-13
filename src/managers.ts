@@ -1,4 +1,4 @@
-import type { TabManager } from './tab-manager.js';
+import type { TabManager } from './tab/manager.js';
 import type { ShellManager } from './shell-manager.js';
 import type { AcpManager } from './acp/manager.js';
 import type { DatabaseManager } from './database/manager.js';
@@ -8,13 +8,13 @@ import type { SshManager } from './ssh-manager.js';
 import type { ScheduleManager } from './schedule/manager.js';
 import type { PseudoterminalManager } from './pseudoterminal-manager.js';
 import type { BrowserManager } from './browser/tab.js';
-import type { ProfileManager } from './profile-manager.js';
+import type { ProfileManager } from './profile/manager.js';
 import type { ConnectionManager } from './connection/manager.js';
 import type { OpenFileManager } from './open-file-manager.js';
 import type { CaptureManager } from './capture-manager.js';
 import type { CommandManager } from './command-manager.js';
 import type { WorkspaceManager } from './workspace-manager.js';
-import type { MonitorManager } from './monitor-manager.js';
+import type { MonitorManager } from './monitor/manager.js';
 import type { FileTreeManager } from './file-tree-manager.js';
 import type { EditorWatchManager } from './editor/watch-manager.js';
 

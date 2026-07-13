@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { CommandManager } from './command-manager.js';
-import { TabManager } from './tab-manager.js';
+import { TabManager } from './tab/manager.js';
 import type { Managers } from './managers.js';
 
 function makeManagers(): { managers: Managers; recorder: string[] } {
@@ -129,7 +129,7 @@ describe('CommandManager drain and route chooser', () => {
       },
     }));
     const { CommandManager: MockedCommandManager } = await import('./command-manager.js');
-    const { TabManager: MockedTabManager } = await import('./tab-manager.js');
+    const { TabManager: MockedTabManager } = await import('./tab/manager.js');
     const recorder: string[] = [];
     const managers = {} as Managers;
     managers.tab = new MockedTabManager(managers);
