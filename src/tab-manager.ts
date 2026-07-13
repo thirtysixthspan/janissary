@@ -5,7 +5,7 @@ import {
   makeTab, distinctColor, insertTabInGroup,
   swapTabsLeft, swapTabsRight, stripComments,
 } from './tab.js';
-import { saveAgentState, listAgentStates } from './agent-state.js';
+import { saveAgentState, listAgentStates } from './agent/state.js';
 import { abbreviatePath } from './paths.js';
 import { getConfig } from './config.js';
 import { messageBus } from './bus.js';

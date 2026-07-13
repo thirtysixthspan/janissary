@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import { AgentCommunicationManager } from './agent-communication-manager.js';
-import type { Tab } from './types.js';
+import { AgentCommunicationManager } from './communication-manager.js';
+import type { Tab } from '../types.js';
 
 const makeTab = (label: string, dotColor: string, title?: string): Tab => ({
   label, dotColor, log: [], activePty: undefined, toolStepsExpanded: false,

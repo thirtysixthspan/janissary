@@ -1,5 +1,5 @@
-import type { MessageKind } from './types.js';
-import type { Managers } from './managers.js';
+import type { MessageKind } from '../types.js';
+import type { Managers } from '../managers.js';
 
 // Server-side port of useMessaging (the React hook): per-recipient FIFO queues drained one
 // message at a time. info/response are shown in the recipient's transcript; command runs the

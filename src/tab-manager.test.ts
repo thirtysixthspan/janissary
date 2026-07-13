@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { TabManager } from './tab-manager.js';
 import type { Managers } from './managers.js';
 import type { AgentState } from './types.js';
-import * as agentState from './agent-state.js';
+import * as agentState from './agent/state.js';
 
 function makeManagers(): Managers {
   return {

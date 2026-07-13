@@ -8,7 +8,7 @@ import {
   saveAgentState,
   clearStateDirectory,
   listAgentStates,
-} from './agent-state.js';
+} from './state.js';
 
 vi.mock('node:fs');
 
