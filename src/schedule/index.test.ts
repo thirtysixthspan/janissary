@@ -8,8 +8,8 @@ import {
   computeNextRun,
   parseScheduleCommand,
   formatSchedule,
-} from './schedule.js';
-import type { ScheduleEntry } from './types.js';
+} from './index.js';
+import type { ScheduleEntry } from '../types.js';
 
 // Tuesday, June 23 2026, 2:00pm local.
 const NOW = new Date(2026, 5, 23, 14, 0, 0, 0);

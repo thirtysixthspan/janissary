@@ -5,7 +5,7 @@ import type { DatabaseManager } from './database/manager.js';
 import type { AgentCommunicationManager } from './agent-communication-manager.js';
 import type { HarnessManager } from './harness-manager.js';
 import type { SshManager } from './ssh-manager.js';
-import type { ScheduleManager } from './schedule-manager.js';
+import type { ScheduleManager } from './schedule/manager.js';
 import type { PseudoterminalManager } from './pseudoterminal-manager.js';
 import type { BrowserManager } from './browser/tab.js';
 import type { ProfileManager } from './profile-manager.js';

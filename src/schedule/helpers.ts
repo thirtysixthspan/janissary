@@ -1,4 +1,4 @@
-import type { ScheduleEntry, TimeOfDay } from './types.js';
+import type { ScheduleEntry, TimeOfDay } from '../types.js';
 
 export type ScheduleBodyResult = { action: 'add'; entry: Omit<ScheduleEntry, 'id'> } | { error: string };
 

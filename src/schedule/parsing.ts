@@ -1,4 +1,4 @@
-import type { TimeOfDay } from './types.js';
+import type { TimeOfDay } from '../types.js';
 
 const MONTHS = [
   'january', 'february', 'march', 'april', 'may', 'june',

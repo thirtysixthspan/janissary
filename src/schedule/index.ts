@@ -1,14 +1,14 @@
 // Parsing and next-run math for the `schedule` command. Pure (no I/O) so it is fully
 // unit-testable; callers (the command + the scheduler tick) own the side effects.
 
-import type { ScheduleEntry, ScheduleParseResult } from './types.js';
-import { parseAtSchedule, parseOnSchedule, parseEverySchedule } from './schedule-helpers.js';
-import { parseTimeOfDay, parseInterval, parseMonthDay } from './schedule-parsing.js';
-export { parseTimeOfDay, parseInterval, parseMonthDay } from './schedule-parsing.js';
-import { nextOccurrenceOfTime, nextWeekday, nextDateTime } from './schedule-time.js';
-export { nextOccurrenceOfTime, nextWeekday, computeNextRun } from './schedule-time.js';
-import { fmtTime } from './schedule-display.js';
-export { fmtNextRun, formatSchedule } from './schedule-display.js';
+import type { ScheduleEntry, ScheduleParseResult } from '../types.js';
+import { parseAtSchedule, parseOnSchedule, parseEverySchedule } from './helpers.js';
+import { parseTimeOfDay, parseInterval, parseMonthDay } from './parsing.js';
+export { parseTimeOfDay, parseInterval, parseMonthDay } from './parsing.js';
+import { nextOccurrenceOfTime, nextWeekday, nextDateTime } from './time.js';
+export { nextOccurrenceOfTime, nextWeekday, computeNextRun } from './time.js';
+import { fmtTime } from './display.js';
+export { fmtNextRun, formatSchedule } from './display.js';
 
 // The body parser produces an add result without a name; the wrapper attaches the leading
 // positional name afterwards.

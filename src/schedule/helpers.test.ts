@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { parseAtSchedule, parseOnSchedule, parseEverySchedule } from './schedule-helpers.js';
-import type { TimeOfDay } from './types.js';
+import { parseAtSchedule, parseOnSchedule, parseEverySchedule } from './helpers.js';
+import type { TimeOfDay } from '../types.js';
 
 const now = new Date('2026-07-06T12:00:00Z');
 

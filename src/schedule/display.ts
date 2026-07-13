@@ -1,5 +1,5 @@
-import type { ScheduleEntry, TimeOfDay } from './types.js';
-import { MONTHS } from './schedule-parsing.js';
+import type { ScheduleEntry, TimeOfDay } from '../types.js';
+import { MONTHS } from './parsing.js';
 
 export function fmtTime({ hour, minute }: TimeOfDay): string {
   const ap = hour < 12 ? 'am' : 'pm';
