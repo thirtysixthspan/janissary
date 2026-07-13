@@ -6,10 +6,10 @@ import {
   PROTOCOL_VERSION,
   type Client,
 } from '@agentclientprotocol/sdk';
-import type { PromptHandlers, AcpSession, AcpOptions } from './types.js';
-import { sandboxSpawn } from './sandbox.js';
-import { getGithubToken } from './github-token.js';
-import { decidePermission } from './acp-tools.js';
+import type { PromptHandlers, AcpSession, AcpOptions } from '../types.js';
+import { sandboxSpawn } from '../sandbox.js';
+import { getGithubToken } from '../github-token.js';
+import { decidePermission } from './tools.js';
 
 /**
  * Connect to an arbitrary ACP agent launched as a subprocess and drive it as an ACP

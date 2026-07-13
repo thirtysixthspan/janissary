@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { ToolCallUpdate, PermissionOption } from '@agentclientprotocol/sdk';
-import { classifyTool, decidePermission } from './acp-tools.js';
+import { classifyTool, decidePermission } from './tools.js';
 
 function toolCall(overrides: Partial<ToolCallUpdate>): ToolCallUpdate {
   return { toolCallId: 't1', ...overrides };

@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { Tab } from './types.js';
-import type { Managers } from './managers.js';
-import { makeTab } from './tab.js';
-import { messageBus } from './bus.js';
-import { makeUpdateRunning } from './acp-runner.js';
+import type { Tab } from '../types.js';
+import type { Managers } from '../managers.js';
+import { makeTab } from '../tab.js';
+import { messageBus } from '../bus.js';
+import { makeUpdateRunning } from './runner.js';
 
 function makeFakeManagers(tabs: Tab[]) {
   const persisted: Tab[] = [];

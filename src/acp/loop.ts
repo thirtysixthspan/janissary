@@ -4,7 +4,7 @@
 // side effects (rendering the transcript, executing the command) are injected,
 // which keeps it testable independently of the live agent.
 
-import type { AcpLoopSession, AcpLoopDeps as AcpLoopDependencies, AcpLoopHandlers } from './types.js';
+import type { AcpLoopSession, AcpLoopDeps as AcpLoopDependencies, AcpLoopHandlers } from '../types.js';
 
 /**
  * Drive the loop. Each turn streams the agent reply, then looks for a command:

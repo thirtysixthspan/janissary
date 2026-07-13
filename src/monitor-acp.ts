@@ -1,6 +1,6 @@
 import type { AcpSession, AcpInfo } from './types.js';
 import type { Persona } from './personas.js';
-import { connectAcp } from './acp.js';
+import { connectAcp } from './acp/index.js';
 
 // Maps a persona's harness directive to the ACP subprocess that runs its monitoring
 // session. Every monitor gets its own fresh connection — never a tab's interactive
