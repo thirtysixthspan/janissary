@@ -1,10 +1,7 @@
 
 ## ready
 
-### developer documentation
-rename public-documentation to user-documentation.
-create a developer-documentation similar to user documentation but containing the developer specific documentation from the readme.
-link the developer documentation in the navbar of the user-documentation and in the readme.
+* editor tab must have edit undo and redo functionality with standard keybinding. 
 
 ## in development
 

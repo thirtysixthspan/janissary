@@ -1,5 +1,7 @@
 # issues
 
+* double click on a markdown file in the file navigator should open it in an editor tab, while shift double click should open it in the markdown preview tab.
+
 * recover the chrome extension implementation from the git history and enable its use to allow iframing of external sites in the browser tab.
 
 * monitor buttons in the meta data should match in styles to those used in the meta data line of the file navigator tab.
