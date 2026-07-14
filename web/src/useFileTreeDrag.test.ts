@@ -51,6 +51,24 @@ describe('useFileTreeDrag', () => {
 
     expect(result.current.draggedPath).toBe('notes.txt');
     expect(result.current.dropTarget).toEqual({ path: 'other', conflict: false });
+    expect(result.current.dragPosition).toEqual({ x: 20, y: 0 });
+  });
+
+  it('updates dragPosition on further movement and clears it on drop', () => {
+    const client = { send: vi.fn() } as unknown as JanusClient;
+    const { result } = renderHook(() => useFileTreeDrag(makeRows(), client, 0));
+    const otherRow = makeRowElement('other');
+    document.elementFromPoint = vi.fn().mockReturnValue(otherRow);
+
+    act(() => { result.current.onRowMouseDown({ path: 'notes.txt' } as FileTreeRow, downEvent(0, 0)); });
+    act(() => { globalThis.dispatchEvent(new MouseEvent('mousemove', { clientX: 20, clientY: 0 })); });
+    act(() => { globalThis.dispatchEvent(new MouseEvent('mousemove', { clientX: 35, clientY: 10 })); });
+
+    expect(result.current.dragPosition).toEqual({ x: 35, y: 10 });
+
+    act(() => { result.current.drop(); });
+
+    expect(result.current.dragPosition).toBeNull();
   });
 
   it('drop() sends moveFileTreeItem directly for a valid non-conflicting target', () => {

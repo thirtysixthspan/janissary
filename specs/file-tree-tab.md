@@ -103,11 +103,12 @@ the root) resolves correctly. The opened file's tab lands in the same group as t
 ### Moving files by drag-and-drop
 
 Pressing down on a row and dragging it onto a directory row, then releasing, moves that file or
-directory into the target directory. Only directory rows accept a drop — while dragging, the
-directory row currently under the pointer is highlighted to show it as the target; a file row or
-empty space shows no highlight, and releasing there does nothing. Dropping onto the dragged item
-itself, or onto one of its own descendants (if it's a directory), is also blocked outright: no
-highlight is shown, and releasing there does nothing.
+directory into the target directory. While a drag is in progress, a small label showing the
+dragged item's name follows the mouse cursor, indicating which row is being moved. Only directory
+rows accept a drop — while dragging, the directory row currently under the pointer is highlighted
+to show it as the target; a file row or empty space shows no highlight, and releasing there does
+nothing. Dropping onto the dragged item itself, or onto one of its own descendants (if it's a
+directory), is also blocked outright: no highlight is shown, and releasing there does nothing.
 
 If the target directory already contains an entry with the same name as the dragged item, the
 move does not happen immediately. Instead a confirmation dialog appears, offering **Overwrite** or

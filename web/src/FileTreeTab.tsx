@@ -146,6 +146,14 @@ export function FileTreeTab({ files, client, index, dock, autoFocus = true }: Pr
           </div>
         ))}
       </div>
+      {drag.draggedPath && drag.dragPosition && (
+        <div
+          className="files-drag-ghost"
+          style={{ left: drag.dragPosition.x, top: drag.dragPosition.y }}
+        >
+          {drag.draggedPath.slice(drag.draggedPath.lastIndexOf('/') + 1)}
+        </div>
+      )}
       {drag.pendingConflict && (
         <MoveConflictDialog
           name={drag.pendingConflict.fromRelPath.slice(drag.pendingConflict.fromRelPath.lastIndexOf('/') + 1)}
