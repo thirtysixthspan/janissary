@@ -10,3 +10,4 @@ documentation/.vitepress/dist
 documentation/.vitepress/cache
 documentation/public/agents/
 .DS_Store
+chrome-extension/_metadata/

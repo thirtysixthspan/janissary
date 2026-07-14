@@ -19,6 +19,7 @@ import { parseCliArgs, usageText, appVersion, CliUsageError } from './cli-args.j
 import { explainStartupError, formatFatal, maybeStack } from './startup-errors.js';
 import { loadFrameEnablerExtension } from './chrome-extension-loader.js';
 import type { ChildProcess } from 'node:child_process';
+import type { Readable, Writable } from 'node:stream';
 
 // The Chrome "app" window we launched, so we can close it on shutdown (quit/exit/Ctrl+C).
 let appChild: ChildProcess | undefined;
@@ -98,20 +99,33 @@ function openApp(url: string, projectDir: string): void {
   const profile = path.join(projectDir, '.janissary', 'chrome');
   mkdirSync(profile, { recursive: true });
   const extDir = path.join(import.meta.dirname, '..', 'chrome-extension');
+  // `Extensions.loadUnpacked` is only reachable over the CDP pipe transport (fd 3/4), not
+  // `--remote-debugging-port` — hence the extra 'pipe' stdio slots and `--remote-debugging-pipe`.
+  // `--load-extension`/`--disable-extensions-except` are deliberately NOT passed: the former is a
+  // silent no-op on branded Chrome 137+, but the latter is still enforced and disables everything
+  // *except* whatever `--load-extension` actually registered — i.e. nothing — which killed the
+  // extension we then loaded dynamically via CDP.
   const child = spawn(exe, [
     `--app=${url}`,
     `--user-data-dir=${profile}`,
     '--no-first-run',
     '--no-default-browser-check',
     '--window-size=1280,800',
-    '--remote-debugging-port=0',
-    `--load-extension=${extDir}`,
-    `--disable-extensions-except=${extDir}`,
-  ], { stdio: 'ignore', detached: true });
+    '--remote-debugging-pipe',
+    '--enable-unsafe-extension-debugging',
+  ], { stdio: ['ignore', 'ignore', 'ignore', 'pipe', 'pipe'], detached: true });
   child.on('error', () => openUrl(url));
   child.unref();
   appChild = child;
-  void loadFrameEnablerExtension(profile, extDir);
+  const writePipe = child.stdio[3] as Writable | null;
+  const readPipe = child.stdio[4] as Readable | null;
+  if (writePipe && readPipe) {
+    void loadFrameEnablerExtension(writePipe, readPipe, extDir);
+  } else {
+    process.stderr.write(
+      'warning: Chrome frame-enabler extension failed to load (fd 3/4 pipes unavailable) — sites that block iframing may not render in page tabs\n',
+    );
+  }
 }
 
 export async function boot(argv = process.argv.slice(2)): Promise<void> {

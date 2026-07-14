@@ -1,49 +1,75 @@
-import { existsSync, readFileSync } from 'node:fs';
-import path from 'node:path';
-import { chromium } from 'playwright';
+import type { Readable, Writable } from 'node:stream';
 
-const PORT_FILE_POLL_INTERVAL_MS = 100;
-const PORT_FILE_POLL_CEILING_MS = 5000;
+const RESPONSE_TIMEOUT_MS = 20000;
 
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => { setTimeout(resolve, ms); });
-}
+// Sends a single Chrome DevTools Protocol command over Chrome's `--remote-debugging-pipe`
+// file descriptors (fd 3 write, fd 4 read) and waits for the matching response. Messages on
+// the pipe are newline-free JSON terminated by a NUL byte, per Chromium's pipe transport.
+function sendCdpCommand(
+  writePipe: Writable,
+  readPipe: Readable,
+  method: string,
+  params: unknown,
+): Promise<unknown> {
+  return new Promise((resolve, reject) => {
+    const id = 1;
+    let buffer = '';
 
-// Chrome writes `DevToolsActivePort` into the profile dir shortly (not immediately) after
-// startup when launched with `--remote-debugging-port=0`. First line is the port number.
-async function readDevToolsPort(profileDir: string): Promise<number> {
-  const portFile = path.join(profileDir, 'DevToolsActivePort');
-  const deadline = Date.now() + PORT_FILE_POLL_CEILING_MS;
-  while (Date.now() < deadline) {
-    if (existsSync(portFile)) {
-      const firstLine = readFileSync(portFile, 'utf8').split('\n', 1)[0] ?? '';
-      const port = Number(firstLine);
-      if (Number.isFinite(port) && port > 0) return port;
+    const cleanup = (): void => {
+      clearTimeout(timeout);
+      readPipe.off('data', onData);
+    };
+
+    const timeout = setTimeout(() => {
+      cleanup();
+      reject(new Error(`CDP command ${method} timed out after ${RESPONSE_TIMEOUT_MS}ms`));
+    }, RESPONSE_TIMEOUT_MS);
+
+    function onData(chunk: Buffer): void {
+      buffer += chunk.toString('utf8');
+      let sep = buffer.indexOf('\0');
+      while (sep !== -1) {
+        const raw = buffer.slice(0, sep);
+        buffer = buffer.slice(sep + 1);
+        sep = buffer.indexOf('\0');
+
+        let message: { id?: number; error?: { message: string }; result?: unknown };
+        try {
+          message = JSON.parse(raw) as typeof message;
+        } catch {
+          continue;
+        }
+        if (message.id === id) {
+          cleanup();
+          if (message.error) {
+            reject(new Error(message.error.message));
+          } else {
+            resolve(message.result);
+          }
+          return;
+        }
+      }
     }
-    await sleep(PORT_FILE_POLL_INTERVAL_MS);
-  }
-  throw new Error(`DevToolsActivePort did not appear within ${PORT_FILE_POLL_CEILING_MS}ms`);
+
+    readPipe.on('data', onData);
+    writePipe.write(`${JSON.stringify({ id, method, params })}\0`);
+  });
 }
 
-// Loads the bundled Frame Enabler extension into an already-launched, branded Chrome via CDP
-// (`Extensions.loadUnpacked`) — the sanctioned replacement for the `--load-extension` launch flag
-// Google removed from branded Chrome 137+. Never throws: any failure is reported as a single
-// stderr warning, since page-tab framing is a nice-to-have, not core functionality.
-export async function loadFrameEnablerExtension(profileDir: string, extDir: string): Promise<void> {
+// Loads the bundled Frame Enabler extension into an already-launched, branded Chrome over the
+// CDP `--remote-debugging-pipe` file descriptors (`Extensions.loadUnpacked`) — the sanctioned
+// replacement for the `--load-extension` launch flag Google removed from branded Chrome 137+.
+// `Extensions.loadUnpacked` is only reachable over the pipe transport, not `--remote-debugging-port`
+// / a WebSocket connection, so `writePipe`/`readPipe` must be Chrome's inherited fd 3/4 streams.
+// Never throws: any failure is reported as a single stderr warning, since page-tab framing is a
+// nice-to-have, not core functionality.
+export async function loadFrameEnablerExtension(
+  writePipe: Writable,
+  readPipe: Readable,
+  extDir: string,
+): Promise<void> {
   try {
-    const port = await readDevToolsPort(profileDir);
-    const browser = await chromium.connectOverCDP(`http://127.0.0.1:${port}`);
-    try {
-      const session = await browser.newBrowserCDPSession();
-      // The `Extensions` CDP domain postdates Playwright's bundled protocol types, so
-      // `session.send` (typed over the known domains) needs an explicit cast here.
-      await (session.send as (method: string, params?: unknown) => Promise<unknown>)(
-        'Extensions.loadUnpacked',
-        { path: extDir },
-      );
-    } finally {
-      await browser.close();
-    }
+    await sendCdpCommand(writePipe, readPipe, 'Extensions.loadUnpacked', { path: extDir });
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
     process.stderr.write(
