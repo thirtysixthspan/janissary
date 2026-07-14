@@ -68,7 +68,7 @@ export type TabView = {
   // Cleared on exit; the client hides the transcript while this is set.
   activePty?: string;
   // Set when this tab is docked into a sidebar instead of living in the central tab strip.
-  // Absent means center. A docked tab is never the active tab. See specs/sidebars.md.
+  // Absent means center. A docked tab is never the active tab. See product/specs/sidebars.md.
   dock?: 'left' | 'right';
 };
 

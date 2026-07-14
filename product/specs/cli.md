@@ -14,7 +14,7 @@
 | ---- | ---- | ------- | ----------- |
 | `--port=<n>` | string (numeric) | auto | Port for the HTTP server to listen on. |
 | `--no-open` | boolean | `false` | Start the server without opening the app window. |
-| `--relaunch` | boolean | `false` | Preserve existing state instead of clearing it. See `specs/relaunch.md`. |
+| `--relaunch` | boolean | `false` | Preserve existing state instead of clearing it. See `product/specs/relaunch.md`. |
 | `--help` | boolean | `false` | Print usage text to stdout and exit 0. |
 | `--version` | boolean | `false` | Print the application name and version to stdout and exit 0. |
 

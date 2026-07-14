@@ -1,6 +1,6 @@
 # Writing Developer Documentation
 
-Guidance for docs aimed at contributors, not end users: `specs/`, `plans/`, `ai/guidelines/`
+Guidance for docs aimed at contributors, not end users: `product/specs/`, `product/plans/`, `ai/guidelines/`
 itself, and the developer-facing parts of `README.md`. The audience already knows how to run the
 app and wants to know how it's built and why — the opposite orientation from
 [[user-documentation]], which assumes no codebase knowledge at all. For sentence-level tone, see
@@ -8,7 +8,7 @@ app and wants to know how it's built and why — the opposite orientation from
 
 ## Specs describe behavior precisely, not just architecture
 
-Every file in `specs/` is a **behavior spec**, not a design essay: it should let a contributor
+Every file in `product/specs/` is a **behavior spec**, not a design essay: it should let a contributor
 predict exactly what the app does for a given input, including edge cases and error messages,
 without reading the implementation. The existing specs in this repo already establish the house
 style — match it rather than inventing a new one:
@@ -42,7 +42,7 @@ possible — not to hold the whole architecture.
 - Lead with the smallest working example — the actual install/run commands, verbatim — before
   architecture or design discussion. A contributor's first goal is a working local setup, the same
   "time-to-first-call" instinct API docs optimize for.
-- Push deep detail (architecture rationale, full command reference) out to `specs/` and link to it,
+- Push deep detail (architecture rationale, full command reference) out to `product/specs/` and link to it,
   rather than growing the README past what a newcomer needs on day one. A README bloated with
   reference material makes the one thing it must do — get someone running — harder to find.
 - Keep it current the same way as any other doc here: a setup-affecting change updates the README
@@ -54,8 +54,8 @@ A new contributor's first real question is where things live and how to find the
 every subsystem does. The onboarding-relevant docs in this repo (`README.md`, `CLAUDE.md`,
 `ai/guidelines/`) should collectively make that answerable within the first sitting:
 
-- State explicitly where behavior is documented (`specs/`), where forward-looking design lives
-  (`plans/`), and where conventions live (`ai/guidelines/`) — a newcomer shouldn't have to guess
+- State explicitly where behavior is documented (`product/specs/`), where forward-looking design lives
+  (`product/plans/`), and where conventions live (`ai/guidelines/`) — a newcomer shouldn't have to guess
   which directory is authoritative for which kind of question.
 - Prefer a single, current source of truth over scattered partial explanations; treat contradicting
   or duplicated guidance across files as a bug to fix, not a style choice.
@@ -65,8 +65,8 @@ every subsystem does. The onboarding-relevant docs in this repo (`README.md`, `C
 
 ## Technical specs and plans
 
-`plans/` holds forward-looking design docs for work not yet done (or being done), organized by
-status (`draft/`, `ready/`, `complete/`, `deferred/` — see the root `CLAUDE.md`). Unlike `specs/`,
+`product/plans/` holds forward-looking design docs for work not yet done (or being done), organized by
+status (`draft/`, `ready/`, `complete/`, `deferred/` — see the root `CLAUDE.md`). Unlike `product/specs/`,
 which documents current behavior, a plan documents an intended change:
 
 - Keep a plan only as detailed as needed to make the implementation decision — API/interface
@@ -109,7 +109,7 @@ A code comment and a spec entry serve different jobs, and neither substitutes fo
 
 ## Keep developer docs versioned and reviewed like code
 
-- `specs/`, `plans/`, and `ai/guidelines/` all live in the same repo and are reviewed the same way
+- `product/specs/`, `product/plans/`, and `ai/guidelines/` all live in the same repo and are reviewed the same way
   code is — a spec change should be part of the PR that changes the behavior it describes, not a
   follow-up.
 - Prefer several small, focused files over one large one — the same file-size and
@@ -118,7 +118,7 @@ A code comment and a spec entry serve different jobs, and neither substitutes fo
   behavior that no longer exists. Treat "the spec still matches the code" as part of the definition
   of done for any behavior-changing PR — a reviewer should check this the same way they check that
   tests were updated, not treat it as optional polish.
-- Docs staying next to the code they describe (`specs/` alongside `src/`, not in a separate wiki or
+- Docs staying next to the code they describe (`product/specs/` alongside `src/`, not in a separate wiki or
   external tool) is what makes this checkable at review time at all — a reviewer can't be expected
   to cross-reference a system outside the PR diff. If a doc genuinely can't live in-repo, at least
   link to it from the PR description so review can catch drift.

@@ -91,7 +91,7 @@ Instead:
 - Just run the command and read its output from the tool result.
 - If a later step needs the value, re-derive it (re-run the read-only command again) rather than stashing it in a file — shell variables don't persist across separate Bash calls anyway.
 - Only write output to a file when a downstream command genuinely requires a file path as input (e.g. a script argument that must be a file, not stdin), or when you need to filter one slow command's output multiple ways (see [Capturing command output](#capturing-command-output)) — and prefer the Write tool for that, not a shell redirect.
-- This applies to project workflow docs (`ai/**/*.md`, `specs/*.md`, `plans/**/*.md`) too: if an example command shows `> file` followed by `cat file`, treat that as a mistake to fix, not a pattern to replicate.
+- This applies to project workflow docs (`ai/**/*.md`, `product/specs/*.md`, `product/plans/**/*.md`) too: if an example command shows `> file` followed by `cat file`, treat that as a mistake to fix, not a pattern to replicate.
 
 ```bash
 # ❌ Antipattern — redirect triggers a permission prompt even though `npm run coverage` alone is pre-approved
@@ -109,14 +109,14 @@ When writing implementation plans or creating tasks, use natural line breaks onl
 
 ## Plan storage
 
-Implementation plans live in `plans/`, organized into folders by status. Each plan is a single markdown file; move the file between folders as its status changes:
+Implementation plans live in `product/plans/`, organized into folders by status. Each plan is a single markdown file; move the file between folders as its status changes:
 
-- `plans/draft/` — the plan itself is still being drafted and refined
-- `plans/ready/` — the plan is finalized and ready to implement
-- `plans/complete/` — the plan has been implemented
-- `plans/deferred/` — intentionally put on hold; not planned for near-term work
+- `product/plans/draft/` — the plan itself is still being drafted and refined
+- `product/plans/ready/` — the plan is finalized and ready to implement
+- `product/plans/complete/` — the plan has been implemented
+- `product/plans/deferred/` — intentionally put on hold; not planned for near-term work
 
-Backlogs of smaller items live alongside the status folders: `plans/small-issues.md` and `plans/todo-features.md`.
+Backlogs of smaller items live in `product/development/`: `bugs.md`, `chores.md`, `features.md`, and `issues.md`.
 
 ## Code guidelines
 
@@ -155,12 +155,14 @@ All scripts in `scripts/` are considered trusted. Do not invoke them directly wi
 - `src/` — Server (Node.js, CLI, terminal UI); tests colocated as `src/**/*.test.ts` (vitest project `server`)
 - `web/src/` — Web UI (React, Vite); tests colocated as `web/src/**/*.test.ts(x)` (vitest project `client`)
 - `bin/janus.mjs` — CLI entry point (`janus`)
-- `specs/` — functional specs, one file per feature; when a change alters behavior, update the matching spec
-- `plans/` — implementation plans by status (see [Plan storage](#plan-storage))
+- `product/` — plans, specs, and backlogs for product work (see below)
+- `product/specs/` — functional specs, one file per feature; when a change alters behavior, update the matching spec
+- `product/plans/` — implementation plans by status (see [Plan storage](#plan-storage))
+- `product/development/` — backlogs of smaller items (`bugs.md`, `chores.md`, `features.md`, `issues.md`)
 - `ai/` — agent workflow playbooks (`ai/tasks/*.md`), binding guidelines (`ai/guidelines/`), and personas (`ai/personas/`)
 - `documentation/` — docs site (VitePress; `npm run docs:dev` / `docs:build`), with `documentation/user-documentation/` (user-facing) and `documentation/developer-documentation/` (contributor-facing) sections
 - `scripts/` — project scripts; invoke only via `./scripts/run.mjs` (see [Running scripts](#running-scripts))
-- `profiles/` — harness profiles (see `specs/profiles.md`)
+- `profiles/` — harness profiles (see `product/specs/profiles.md`)
 - `skills/` — project-provided agent skills
 - `fta/` — FTA code-quality baselines (regenerate with `npm run quality:snapshot`)
 - `temp/` — scratch space for captured command output; gitignored

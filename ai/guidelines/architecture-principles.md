@@ -62,9 +62,9 @@ The strongest boundary in the system: the server binds to `127.0.0.1`, requires 
 
 ## 10. Specs and docs are source of truth — and they evolve with the code
 
-`specs/` is declared authoritative ("when behavior is ambiguous, the spec is the source of truth"), yet architecture docs here have gone stale before: earlier docs (`AI.md`, a migration map) described components like `cli.tsx` and `src/server/*` paths long after they were removed or flattened into `src/`. Documentation that lies about the code is worse than none — it actively misleads both humans and AI agents.
+`product/specs/` is declared authoritative ("when behavior is ambiguous, the spec is the source of truth"), yet architecture docs here have gone stale before: earlier docs (`AI.md`, a migration map) described components like `cli.tsx` and `src/server/*` paths long after they were removed or flattened into `src/`. Documentation that lies about the code is worse than none — it actively misleads both humans and AI agents.
 
-**Rule.** A behavior change updates its `specs/` file in the same change; a structural change updates the architecture docs (`CLAUDE.md`'s project-structure section, the affected `ai/guidelines/` files) in the same change. Behavior ships with a test (vitest, colocated `*.test.ts(x)`) — the suite is the executable half of the spec. Stale architecture docs are bugs; fix them on sight.
+**Rule.** A behavior change updates its `product/specs/` file in the same change; a structural change updates the architecture docs (`CLAUDE.md`'s project-structure section, the affected `ai/guidelines/` files) in the same change. Behavior ships with a test (vitest, colocated `*.test.ts(x)`) — the suite is the executable half of the spec. Stale architecture docs are bugs; fix them on sight.
 
 ---
 

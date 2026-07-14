@@ -1,7 +1,7 @@
 # Writing User Documentation
 
 Guidance for writing user-facing docs (`documentation/user-documentation/`) from the internal specs
-(`specs/`). Specs describe implementation and behavior for contributors; user documentation
+(`product/specs/`). Specs describe implementation and behavior for contributors; user documentation
 describes tasks and concepts for someone running the app who has never read the spec and never
 will. Don't just reformat a spec into a doc page — rewrite it for the reader's goal, and drop
 every internal detail that doesn't serve that goal (see "No implementation leakage" below). For
@@ -82,7 +82,7 @@ User documentation is written for a reader who has never seen the codebase and n
 Strip everything that only makes sense to a contributor:
 
 - No file paths, function names, module names, or internal class names (`src/tab.ts`,
-  `flattenBuffer`, `TabManager.markUnread` — these belong in `specs/`, never in
+  `flattenBuffer`, `TabManager.markUnread` — these belong in `product/specs/`, never in
   `documentation/user-documentation/`).
 - No "why we implemented it this way" engineering trade-off discussion — that's explanation for
   contributors, not users. A user-facing Explanation page answers "why does the app behave this
@@ -174,4 +174,4 @@ as everything else in this repo:
 Not every spec needs a public page, and not all at once. Tier by audience reach: onboarding-critical
 content first, everyday features next, advanced/specialized features after that, and pure
 implementation detail (the kind aimed at contributors, not users) left out of
-`documentation/user-documentation/` entirely — that belongs in `specs/`, per [[developer-documentation]].
+`documentation/user-documentation/` entirely — that belongs in `product/specs/`, per [[developer-documentation]].

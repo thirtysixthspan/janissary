@@ -200,7 +200,7 @@ export type Tab = {
   // Set when this tab is docked into a sidebar instead of living in the central tab strip.
   // Absent means center (today's only behavior) — the zero value, no migration needed. A docked
   // tab stays in `tabs[]` (every index-keyed RPC still addresses it) but is never the active tab
-  // and is not rendered in the strip; see specs/sidebars.md. In-memory only — not persisted.
+  // and is not rendered in the strip; see product/specs/sidebars.md. In-memory only — not persisted.
   dock?: 'left' | 'right';
 };
 
