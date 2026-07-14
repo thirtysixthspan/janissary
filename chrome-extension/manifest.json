@@ -1,0 +1,17 @@
+{
+  "manifest_version": 3,
+  "name": "Janissary Frame Enabler",
+  "version": "1.0",
+  "description": "Removes X-Frame-Options and CSP frame-ancestors from embedded page responses so all sites render in page tabs.",
+  "permissions": ["declarativeNetRequest"],
+  "host_permissions": ["<all_urls>"],
+  "declarative_net_request": {
+    "rule_resources": [
+      {
+        "id": "framing",
+        "enabled": true,
+        "path": "rules.json"
+      }
+    ]
+  }
+}
