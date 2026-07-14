@@ -27,6 +27,10 @@ export class TabManager {
   private onIdle: ((label: string) => void) | null = null;
   private openFiles = new Map<string, string>();
   private openFileCounter = 0;
+  // Labels of tabs that were previously active, most-recent-last. Closing the active tab pops
+  // this to restore focus to whatever was focused right before it, rather than just clamping to
+  // the nearest surviving index.
+  private focusHistory: string[] = [];
   private readonly rootDir: string;
   get launchDir(): string { return this.rootDir; }
   static readonly OPEN_MAX_FILES = 10;
@@ -139,9 +143,40 @@ export class TabManager {
     if (tab) tab.hasUnread = true;
   }
 
+  // Records that `this.activeTab` is about to stop being active in favor of `newIndex`, so
+  // closing `newIndex` later can restore focus to it. No-ops if `newIndex` is already active.
+  private recordLeavingActiveTab(newIndex: number): void {
+    if (newIndex === this.activeTab) return;
+    const leaving = this.tabs[this.activeTab]?.label;
+    if (!leaving) return;
+    this.focusHistory = this.focusHistory.filter((l) => l !== leaving);
+    this.focusHistory.push(leaving);
+  }
+
+  // Pops the most recent still-valid (existing, non-docked) label off the focus-history stack,
+  // discarding any stale entries (closed or since-docked tabs) along the way.
+  private popFocusHistory(): number | undefined {
+    while (this.focusHistory.length > 0) {
+      const label = this.focusHistory.pop();
+      const index = this.tabs.findIndex((t) => t.label === label);
+      if (index !== -1 && !this.tabs[index].dock) return index;
+    }
+    return undefined;
+  }
+
+  // Applies the result of adding a new tab (or focusing an existing one) from the `openers.ts`
+  // helpers, which otherwise assign `tabs`/`activeTab` directly and would bypass focus-history
+  // tracking — a freshly opened, auto-focused tab still needs its predecessor recorded.
+  applyOpenResult(result: { tabs: Tab[]; activeTab: number }): void {
+    this.recordLeavingActiveTab(result.activeTab);
+    this.tabs = result.tabs;
+    this.activeTab = result.activeTab;
+  }
+
   setActiveTab(index: number): void {
     if (index < 0 || index >= this.tabs.length) return;
     if (this.tabs[index]?.dock) return; // a docked tab is never the active tab
+    this.recordLeavingActiveTab(index);
     this.activeTab = index;
     const tab = this.tabs[index];
     if (tab) tab.hasUnread = false;
@@ -168,6 +203,7 @@ export class TabManager {
     if (!tab) return;
     if (dock === null) {
       tab.dock = undefined;
+      this.recordLeavingActiveTab(index);
       this.activeTab = index;
       tab.hasUnread = false;
       messageBus.emit('state', { type: 'dirty' });
@@ -184,7 +220,7 @@ export class TabManager {
     const total = this.tabs.length;
     for (let step = 0; step < total; step++) {
       const index = (this.activeTab + step) % total;
-      if (!this.tabs[index]?.dock) { this.activeTab = index; return; }
+      if (!this.tabs[index]?.dock) { this.recordLeavingActiveTab(index); this.activeTab = index; return; }
     }
   }
 
@@ -212,8 +248,11 @@ export class TabManager {
       messageBus.emit('app', { type: 'exit' });
       return;
     }
+    const wasActive = index === this.activeTab;
+    this.focusHistory = this.focusHistory.filter((l) => l !== tab.label);
     this.tabs = this.tabs.filter((_, index_) => index_ !== index).map((t, index_) => ({ ...t, number: index_ + 1 }));
-    this.activeTab = Math.min(this.activeTab, this.tabs.length - 1);
+    const restored = wasActive ? this.popFocusHistory() : undefined;
+    this.activeTab = restored ?? Math.min(this.activeTab, this.tabs.length - 1);
     const active = this.tabs[this.activeTab];
     if (active) active.hasUnread = false;
     messageBus.emit('state', { type: 'dirty' });

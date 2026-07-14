@@ -10,11 +10,11 @@ interface OpenTarget {
   tabs: Tab[];
   activeTab: number;
   setActiveTab(index: number): void;
+  applyOpenResult(result: { tabs: Tab[]; activeTab: number }): void;
 }
 
 function activate(target: OpenTarget, result: { tabs: Tab[]; activeTab: number }): void {
-  target.tabs = result.tabs;
-  target.activeTab = result.activeTab;
+  target.applyOpenResult(result);
   messageBus.emit('state', { type: 'dirty' });
 }
 
@@ -36,10 +36,9 @@ export function openEditorTab(
     messageBus.emit('state', { type: 'dirty' });
     return;
   }
-  const { tabs, activeTab } = addEditorTab(target.tabs, target.activeTab, view);
-  target.tabs = tabs;
-  target.activeTab = activeTab;
-  watch(tabs[activeTab].label, view.path);
+  const result = addEditorTab(target.tabs, target.activeTab, view);
+  target.applyOpenResult(result);
+  watch(result.tabs[result.activeTab].label, view.path);
   messageBus.emit('state', { type: 'dirty' });
 }
 
