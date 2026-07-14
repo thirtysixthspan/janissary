@@ -53,6 +53,19 @@ describe('EditorTab', () => {
     expect(screen.getByText('line two')).toBeInTheDocument();
   });
 
+  it('auto-focuses the textarea once the file has loaded', async () => {
+    const { client } = makeClient();
+    await renderLoaded(client);
+    expect(document.activeElement).toBe(textarea());
+  });
+
+  it('starts the cursor on the first line when opened without a target line', async () => {
+    const { client } = makeClient();
+    const { container } = await renderLoaded(client);
+    const current = container.querySelector(':scope .editor-row-current .editor-content');
+    expect(current?.textContent).toBe('line one');
+  });
+
   it('shows a dirty dot after an edit and clears it on a successful save', async () => {
     const { client, saveFile } = makeClient();
     const { container } = await renderLoaded(client);

@@ -12,9 +12,10 @@ output is empty since the editor tab is the side-effect.
 
 An editor tab is created like an agent tab (see Tabs) — placed contiguously within the active tab's
 group, inheriting that group's number and bar color and taking a distinct dot color. Focus moves to
-the new editor tab. If a file is already open in an editor tab, opening it again focuses the
-existing tab instead of creating a duplicate. If the new open request includes a line number, the
-existing tab's cursor moves to that line.
+the new editor tab, and keyboard focus lands in the buffer once its content has loaded, with the
+cursor on the first line (or the requested line, if one was given). If a file is already open in an
+editor tab, opening it again focuses the existing tab instead of creating a duplicate. If the new
+open request includes a line number, the existing tab's cursor moves to that line.
 
 Unlike an agent tab, an editor tab has no shell, agent session, browser, transcript, or command
 history, and no persisted agent state. It is a live, in-memory view — like markdown tabs and image
