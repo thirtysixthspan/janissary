@@ -158,6 +158,8 @@ export default ts.config(
   },
   {
     // docs-screenshots fixtures are capture *content* (files the app opens on screen), not code.
-    ignores: ['dist/', 'web/dist/', 'node_modules/', '.janissary/', 'coverage/', 'scripts/docs-screenshots/fixtures/', 'documentation/.vitepress/'],
+    // chrome-extension/ is a plain browser-executed extension bundle (Chrome's runtime, not
+    // Node/bundler tooling), so the project's Node/TS-oriented lint rules don't apply to it.
+    ignores: ['dist/', 'web/dist/', 'node_modules/', '.janissary/', 'coverage/', 'scripts/docs-screenshots/fixtures/', 'documentation/.vitepress/', 'chrome-extension/'],
   },
 );

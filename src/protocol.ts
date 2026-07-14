@@ -129,6 +129,10 @@ export type RpcCall =
   // state, debounced client-side after typing pauses. Never written to disk — see saveFile
   // for that. `url` identifies the tab the same way saveFile's does.
   | { method: 'editorSync'; params: { url: string; content: string } }
+  // Sync a page tab's currently visible text, relayed by the bundled extension's content script
+  // through the app's message-listener. Never persisted or sent to any client — see `pageSnapshot`.
+  // `url` identifies the page tab the same way its `page.url` field does.
+  | { method: 'pageSync'; params: { url: string; text: string } }
   // Expand/collapse one directory row in a file tree tab. `index` is the tab's position in the
   // server's full tab list (resolved to a label server-side); `path` is the row's tree-relative path.
   | { method: 'fileTreeToggle'; params: { index: number; path: string } }

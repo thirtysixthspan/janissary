@@ -19,7 +19,7 @@ export function ViewTabBody({ tab, client, index, closeTab }: { tab: TabView; cl
     return <div className="tab-body" style={border}><ImageTab key={tab.image.url} image={tab.image} /></div>;
   }
   if (tab.view === 'page' && tab.page) {
-    return <div className="tab-body" style={border}><PageTab page={tab.page} closeTab={closeTab} index={index} /></div>;
+    return <div className="tab-body" style={border}><PageTab page={tab.page} closeTab={closeTab} index={index} client={client} /></div>;
   }
   if (tab.view === 'markdown' && tab.markdown) {
     return <div className="tab-body" style={border}><MarkdownTab key={tab.markdown.url} markdown={tab.markdown} /></div>;

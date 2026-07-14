@@ -40,6 +40,8 @@ export function buildTabView(
     editor: tab.editor,
     // Deliberately NOT spreading `tab.editorDraft` here: the transient unsaved buffer is
     // server-only and must never be broadcast back to clients (see editor-live-buffer-sync plan).
+    // Same for `tab.pageSnapshot`: the visible-text cache is server-only, read by monitor page
+    // feeds, and must never be broadcast back to clients (see monitor-page-tab-content-feed plan).
 
     monitor: tab.monitor,
     files: tab.files ? { ...tab.files, root: shorten(tab.files.root) } : undefined,

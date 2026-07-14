@@ -6,8 +6,11 @@ manually. It is a non-agent **view tab**, modelled on the image tab (see [[image
 showing a web page instead of an image file.
 
 Page viewing is intentionally minimal. The app does not communicate with, control, script, or
-read the contents of the embedded page; it only displays it. Whatever the embedded site allows the
-user to do directly — click, scroll, type, follow links — happens inside the page itself.
+read the contents of the embedded page, **except when the user has explicitly attached a monitor
+to that page tab** (see [[monitoring]]) — in that case, and only then, the app reads the text
+currently visible in the page's viewport so the monitor can see it. Whatever the embedded site
+allows the user to do directly — click, scroll, type, follow links — happens inside the page
+itself.
 
 ### Opening a page
 
@@ -96,7 +99,8 @@ sending framing controls in their responses — `X-Frame-Options`, or the CSP `f
 directive. When running in its own managed browser, the app removes those framing headers from
 embedded page responses, so such sites render anyway. The page still loads directly from its real
 origin, so the site's own login and session behavior is unchanged; the app only displays the page
-and does not read or script its contents.
+and does not read or script its contents, except for the explicit-monitor-target case described
+above (see [[monitoring]]).
 
 This relaxation is scoped to embedded pages and to the app's managed browser. If the app falls back
 to the system default browser, a site that refuses framing may instead show a blank or blocked area.

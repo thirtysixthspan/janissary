@@ -26,6 +26,7 @@ const makeController = () =>
     runSuggestion: vi.fn(),
     rateSuggestion: vi.fn(),
     saveFile: vi.fn(),
+    syncPageSnapshot: vi.fn(),
     fileTreeToggle: vi.fn(),
     fileTreeCollapseAll: vi.fn(),
     fileTreeReroot: vi.fn(),
@@ -138,6 +139,12 @@ describe('handle', () => {
     const controller = makeController();
     dispatchCall(controller, 14, { method: 'saveFile', params: { url: 'file:///a.ts', content: 'x' } });
     expect(controller.saveFile).toHaveBeenCalledWith('file:///a.ts', 'x');
+  });
+
+  it('routes pageSync', () => {
+    const controller = makeController();
+    dispatchCall(controller, 21, { method: 'pageSync', params: { url: 'https://example.org', text: 'visible text' } });
+    expect(controller.syncPageSnapshot).toHaveBeenCalledWith('https://example.org', 'visible text');
   });
 
   it('routes fileTreeToggle', () => {

@@ -78,6 +78,10 @@ export class JanusClient {
   // no reply is awaited, and a sync lost to a closed socket is simply dropped (see send()).
   editorSync(url: string, content: string): void { this.send({ method: 'editorSync', params: { url, content } }); }
 
+  // Sync a page tab's currently visible text (from the extension content script) to the server as
+  // transient snapshot state. Fire-and-forget, same as editorSync.
+  pageSync(url: string, text: string): void { this.send({ method: 'pageSync', params: { url, text } }); }
+
   // Write an editor buffer back to disk. Resolves with the server's error message, or undefined
   // on success (including when the socket is down, which surfaces as a generic failure).
   saveFile(url: string, content: string): Promise<string | undefined> {

@@ -3,6 +3,7 @@ import type { Managers } from '../managers.js';
 import type { MonitorSub } from './manager.js';
 import { spawnMonitorSession } from './acp.js';
 import { SUGGESTION_FORMAT } from './parsing.js';
+import { TRUST_FRAMING_INSTRUCTIONS } from './framing.js';
 import { formatConnection, personaSummary } from './info.js';
 import { recordContext } from './context.js';
 
@@ -25,7 +26,7 @@ export function openMonitorSession(
       messageBus.emit('state', { type: 'dirty' });
     },
   });
-  const primingText = `${reg.persona.body}\n\n${SUGGESTION_FORMAT}`;
+  const primingText = `${reg.persona.body}\n\n${SUGGESTION_FORMAT}\n\n${TRUST_FRAMING_INSTRUCTIONS(reg.delimiter)}`;
   recordContext(reg, primingText);
   reg.session.prompt(primingText, {
     onChunk: () => {},

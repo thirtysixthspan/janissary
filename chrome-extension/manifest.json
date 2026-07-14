@@ -13,5 +13,13 @@
         "path": "rules.json"
       }
     ]
-  }
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "all_frames": true,
+      "js": ["content-script.js"],
+      "run_at": "document_idle"
+    }
+  ]
 }

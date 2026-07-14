@@ -164,6 +164,11 @@ export type Tab = {
   // (see editor-live-buffer-sync plan). In-memory only; never sent to any client (not part
   // of TabView) and never read when building persisted AgentState. Cleared on save.
   editorDraft?: { content: string; updatedAt: number };
+  // Transient cache of a page tab's visible-viewport text, kept fresh out of band by the bundled
+  // extension's content script via the `pageSync` RPC (see monitor-page-tab-content-feed plan).
+  // In-memory only; never sent to any client (not part of TabView) and never read when building
+  // persisted AgentState.
+  pageSnapshot?: { text: string; capturedAt: number };
   // The monitor-window payload, present only when `view === 'monitor'`: the suggestion feed,
   // the persona name, the monitored tabs/groups (pre-formatted), and the running total of bytes
   // sent/received on the monitor's dedicated ACP session.
