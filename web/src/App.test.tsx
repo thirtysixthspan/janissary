@@ -6,6 +6,7 @@ import userEvent from '@testing-library/user-event';
 
 const sendMock = vi.fn();
 const renameTabMock = vi.fn();
+const requestMock = vi.fn().mockResolvedValue({ newInput: '', newCursor: 0, matches: [] });
 type StateListener = (
   tabs: TabView[], activeTab: number, route: RouteChooserView | null, tabNameMaxLength: number, globalHistory: string[],
   syntaxTheme: string, theme: string, tasks: string[],
@@ -15,7 +16,7 @@ let stateListener: StateListener | null = null;
 vi.mock('./ws', () => {
   class JanusClient {
     send = sendMock;
-    request = vi.fn().mockResolvedValue({ newInput: '', newCursor: 0, matches: [] });
+    request = requestMock;
     onState(l: StateListener) { stateListener = l; return () => {}; }
     onPtyExit() { return () => {}; }
     attachPty() { return () => {}; }
@@ -24,6 +25,10 @@ vi.mock('./ws', () => {
   }
   return { JanusClient };
 });
+
+vi.mock('./useXterm', () => ({
+  useXterm: () => vi.fn(),
+}));
 
 // jsdom doesn't include ResizeObserver — Transcript observes its content element.
 vi.stubGlobal('ResizeObserver', class {
@@ -357,5 +362,143 @@ describe('App non-ACP prompt double-click runs command', () => {
     });
     fireEvent.dblClick(screen.getByText('❯ git status'));
     expect(sendMock).toHaveBeenCalledWith({ method: 'command', params: { text: 'git status' } });
+  }, 15_000);
+});
+
+describe('App search on Cmd+F', () => {
+  beforeEach(() => {
+    sendMock.mockClear();
+    stateListener = null;
+  });
+
+  it('opens the search bar on Cmd+F when the tab is searchable', async () => {
+    const { App } = await import('./App');
+    const { container } = render(<App />);
+    act(() => { stateListener!([makeTab({ bufferLines: [{ type: 'output', text: 'hello' }] })], 0, null, 16, [], 'github-dark', 'dark', []); });
+    expect(container.querySelector('.search-bar')).toBeNull();
+    fireEvent.keyDown(globalThis as unknown as Window, { key: 'f', metaKey: true });
+    expect(container.querySelector('.search-bar')).not.toBeNull();
+  }, 15_000);
+
+  it('does not open search on Cmd+F when the tab has an active PTY', async () => {
+    const { App } = await import('./App');
+    const { container } = render(<App />);
+    act(() => { stateListener!([makeTab({ activePty: 'pty-1' })], 0, null, 16, [], 'github-dark', 'dark', []); });
+    fireEvent.keyDown(globalThis as unknown as Window, { key: 'f', metaKey: true });
+    expect(container.querySelector('.search-bar')).toBeNull();
+  }, 15_000);
+
+  it('does not open search on Cmd+F when the tab is a view tab', async () => {
+    const { App } = await import('./App');
+    const { container } = render(<App />);
+    act(() => { stateListener!([makeTab({ view: 'markdown' })], 0, null, 16, [], 'github-dark', 'dark', []); });
+    fireEvent.keyDown(globalThis as unknown as Window, { key: 'f', metaKey: true });
+    expect(container.querySelector('.search-bar')).toBeNull();
+  }, 15_000);
+});
+
+describe('App shell tab', () => {
+  beforeEach(() => {
+    sendMock.mockClear();
+    stateListener = null;
+  });
+
+  it('renders a ShellTab body when a tab has an active PTY', async () => {
+    const { App } = await import('./App');
+    const { container } = render(<App />);
+    act(() => { stateListener!([makeTab({ activePty: 'pty-1' })], 0, null, 16, [], 'github-dark', 'dark', []); });
+    expect(container.querySelector('.harness-body')).not.toBeNull();
+  }, 15_000);
+
+  it('removes the ShellTab body when the active PTY is gone', async () => {
+    const { App } = await import('./App');
+    const { container } = render(<App />);
+    act(() => { stateListener!([makeTab({ activePty: 'pty-1' })], 0, null, 16, [], 'github-dark', 'dark', []); });
+    expect(container.querySelector('.harness-body')).not.toBeNull();
+    act(() => { stateListener!([makeTab()], 0, null, 16, [], 'github-dark', 'dark', []); });
+    expect(container.querySelector('.harness-body')).toBeNull();
+  }, 15_000);
+});
+
+describe('App autocomplete', () => {
+  beforeEach(() => {
+    sendMock.mockClear();
+    requestMock.mockClear();
+    stateListener = null;
+  });
+
+  it('triggers completion on Tab', async () => {
+    const { App } = await import('./App');
+    render(<App />);
+    act(() => { stateListener!([makeTab()], 0, null, 16, [], 'github-dark', 'dark', []); });
+    const input = screen.getByRole('textbox') as HTMLTextAreaElement;
+    fireEvent.change(input, { target: { value: 'some text' } });
+    fireEvent.keyDown(input, { key: 'Tab' });
+    expect(requestMock).toHaveBeenCalledWith({ method: 'complete', params: { text: 'some text', cursor: 9 } });
+  }, 15_000);
+});
+
+describe('App reporting section callbacks', () => {
+  beforeEach(() => {
+    sendMock.mockClear();
+    stateListener = null;
+  });
+
+  const monitorTab = makeTab({
+    view: 'monitor',
+    monitor: {
+      suggestions: [{
+        id: 's1',
+        text: 'Check build output',
+        command: 'npm run build',
+        timestamp: Date.now(),
+        persona: 'assistant',
+        about: 'agent2',
+      }],
+      persona: 'assistant',
+      targets: 'agent2',
+      contextBytes: 0,
+    },
+    groupColor: '#0f0',
+  });
+
+  it('calls runSuggestion when clicking a suggestion command', async () => {
+    const { App } = await import('./App');
+    render(<App />);
+    act(() => { stateListener!([monitorTab], 0, null, 16, [], 'github-dark', 'dark', []); });
+    await userEvent.click(screen.getByRole('button', { name: 'npm run build' }));
+    expect(sendMock).toHaveBeenCalledWith({ method: 'runSuggestion', params: { id: 's1' } });
+  }, 15_000);
+
+  it('calls rateSuggestion when clicking thumbs up', async () => {
+    const { App } = await import('./App');
+    render(<App />);
+    act(() => { stateListener!([monitorTab], 0, null, 16, [], 'github-dark', 'dark', []); });
+    await userEvent.click(screen.getByRole('button', { name: 'Helpful' }));
+    expect(sendMock).toHaveBeenCalledWith({ method: 'rateSuggestion', params: { id: 's1', up: true } });
+  }, 15_000);
+
+  it('calls rateSuggestion when clicking thumbs down', async () => {
+    const { App } = await import('./App');
+    render(<App />);
+    act(() => { stateListener!([monitorTab], 0, null, 16, [], 'github-dark', 'dark', []); });
+    await userEvent.click(screen.getByRole('button', { name: 'Not helpful' }));
+    expect(sendMock).toHaveBeenCalledWith({ method: 'rateSuggestion', params: { id: 's1', up: false } });
+  }, 15_000);
+
+  it('calls resetMonitorContext when clicking the reset button', async () => {
+    const { App } = await import('./App');
+    render(<App />);
+    act(() => { stateListener!([monitorTab], 0, null, 16, [], 'github-dark', 'dark', []); });
+    await userEvent.click(screen.getByTitle('Reset context'));
+    expect(sendMock).toHaveBeenCalledWith({ method: 'resetMonitorContext', params: { name: 'janus' } });
+  }, 15_000);
+
+  it('calls monitorContextSnapshot when clicking the snapshot button', async () => {
+    const { App } = await import('./App');
+    render(<App />);
+    act(() => { stateListener!([monitorTab], 0, null, 16, [], 'github-dark', 'dark', []); });
+    await userEvent.click(screen.getByTitle('Open context snapshot'));
+    expect(sendMock).toHaveBeenCalledWith({ method: 'monitorContextSnapshot', params: { name: 'janus' } });
   }, 15_000);
 });
