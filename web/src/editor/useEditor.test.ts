@@ -80,6 +80,12 @@ describe('useEditor', () => {
     act(() => { result.current.apply({ kind: 'deleteBackward' }, 20); });
   });
 
+  it('apply with deleteForward calls edit', () => {
+    const { result } = renderHook(() => useEditor(() => {}));
+    act(() => { result.current.load('test'); });
+    act(() => { result.current.apply({ kind: 'deleteForward' }, 20); });
+  });
+
   it('apply with escape collapses selection', () => {
     const { result } = renderHook(() => useEditor(() => {}));
     act(() => { result.current.load('test'); });
@@ -130,6 +136,22 @@ describe('useEditor', () => {
     act(() => { result.current.apply({ kind: 'copy' }, 20); });
     expect(writeText).toHaveBeenCalled();
     vi.unstubAllGlobals();
+  });
+
+  it('apply with cut calls navigator.clipboard.writeText and edits', () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal('navigator', { clipboard: { writeText } });
+    const { result } = renderHook(() => useEditor(() => {}));
+    act(() => { result.current.load('test'); });
+    act(() => { result.current.apply({ kind: 'cut' }, 20); });
+    expect(writeText).toHaveBeenCalledWith('selected');
+    vi.unstubAllGlobals();
+  });
+
+  it('apply with insert kind calls insert', () => {
+    const { result } = renderHook(() => useEditor(() => {}));
+    act(() => { result.current.load('test'); });
+    act(() => { result.current.apply({ kind: 'insert', text: 'x' }, 20); });
   });
 
   it('apply with kill records edit when killed text is returned', () => {

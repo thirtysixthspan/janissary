@@ -127,4 +127,28 @@ describe('JanusClient', () => {
     const client = new JanusClient();
     await expect(client.saveFile('/file.txt', 'content')).resolves.toBe('not connected');
   });
+
+  it('bye event closes the window', () => {
+    const closeSpy = vi.spyOn(globalThis, 'close').mockImplementation(() => {});
+    new JanusClient();
+    messageHandler!({ data: JSON.stringify({ t: 'bye' }) });
+    expect(closeSpy).toHaveBeenCalled();
+    closeSpy.mockRestore();
+  });
+
+  it('renameTab sends a renameTab RPC', () => {
+    const client = new JanusClient();
+    client.renameTab(0, 'new name');
+    expect(inst.send).toHaveBeenCalledWith(
+      expect.stringContaining('"method":"renameTab"'),
+    );
+  });
+
+  it('editorSync sends an editorSync RPC', () => {
+    const client = new JanusClient();
+    client.editorSync('/file.txt', 'content');
+    expect(inst.send).toHaveBeenCalledWith(
+      expect.stringContaining('"method":"editorSync"'),
+    );
+  });
 });
