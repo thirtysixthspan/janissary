@@ -38,6 +38,10 @@ Every tab belongs to a **group**, identified by a `group` number and a fixed `gr
 - **Contiguity.** A new tab is inserted directly after the last tab of its group (`insertTabInGroup` in `src/tab.ts`) so each group stays a single connected run in the strip. Reordering (`Ctrl+←` / `Ctrl+→`) may only swap a tab with a neighbor **in the same group** (`canMoveTab`), so groups always stay contiguous and a tab can never be dragged out of its group. A tab can be temporarily absent from the strip while docked into a sidebar; see `sidebars.md`.
 - **Persistence.** `group` and `groupColor` are saved in each agent's state file and restored on `--relaunch`, so groupings reappear exactly as they were left.
 
+### Window focus dimming
+
+While the janus window itself lacks OS-level focus — the user has switched to another application, or (in a browser) another browser tab — every tab's colored group-color border dims slightly, uniformly across the whole strip. It returns to full strength as soon as the window regains focus. This is independent of, and does not affect, which in-app tab is active or the group-color border's full-strength/never-faded rule described under Tab grouping.
+
 ### Active tab highlight
 
 The active tab shows full-intensity foreground text on the content background color; inactive tabs show muted text on the bar background. These foreground/background colors — like all other state indicator colors in the strip and transcript — come from the active application theme (see `application-themes.md`); tab dot colors and group bar colors do not, staying per-tab in every theme.
