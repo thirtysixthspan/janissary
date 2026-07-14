@@ -133,6 +133,27 @@ disappears and nothing is moved, the same as releasing over empty space.
 Pressing Escape at any point during a drag also cancels it outright, with the same result: the
 drag label disappears and nothing is moved.
 
+### Undoing and redoing a move
+
+A focused file tree tab captures `Cmd+Z` (`Ctrl+Z` on other platforms) to undo the most recent
+move made in that tab, reversing it back to where the moved item came from; `Cmd+Shift+Z`
+(`Ctrl+Shift+Z`) redoes, re-applying whatever undo just reversed. Each tab keeps its own stack of
+past moves and a separate stack of undone moves, in memory only — both start empty when the tab
+opens and are discarded when it closes; reopening a tree on the same root does not restore them.
+
+Undo steps back through the stack one move at a time, oldest last; redo steps forward through
+whatever was just undone, for as long as the tab has stayed open. Making a new move — whether by
+drag-and-drop or by redoing — clears the redo stack: once the timeline diverges from an undone
+move, that move is no longer reachable by redo. If there is nothing to undo, or nothing to redo,
+the corresponding chord does nothing — no message, no dialog, no sound.
+
+If an undo or redo would land on a path that already has an entry with the same name, the same
+overwrite confirmation used for a drag-and-drop move appears, offering **Overwrite** or **Cancel**.
+Confirming replaces the existing entry with the moved item and completes the undo or redo;
+cancelling leaves both where they are, and the same undo or redo can be retried later.
+
+Deletions are not covered by undo/redo — a deleted file or directory cannot be restored this way.
+
 ### Deleting a file or directory
 
 Pressing Backspace or Delete while a row is selected (any row other than `..`) opens a
@@ -159,9 +180,13 @@ A focused file tree tab captures its own keys, following the ARIA treeview patte
 | `Page Up` / `Page Down` | Move selection by one viewport of rows |
 | `Backspace` / `Delete` | Selected file or directory (not `..`): open a delete confirmation dialog |
 | Printable characters | Type-ahead: jump to the next visible row whose name starts with what's typed; the typed buffer resets after a pause |
+| `Cmd+Z` / `Ctrl+Z` | Undo the most recent move made in this tab |
+| `Cmd+Shift+Z` / `Ctrl+Shift+Z` | Redo the most recently undone move |
 
 Chords carrying Ctrl or Cmd (tab switching, tab reordering, closing the tab, etc.) are not
-captured by the tree and reach the normal window-level bindings instead.
+captured by the tree and reach the normal window-level bindings instead, except for the
+undo/redo chords above, which the tree captures for itself — the same way an editor tab captures
+its own `Cmd+Z`/`Cmd+Shift+Z` for text undo/redo.
 
 If the selected row disappears (the directory watcher removed it), selection moves to the nearest
 surviving row rather than pointing at nothing.

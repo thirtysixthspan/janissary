@@ -13,6 +13,7 @@ import { ProfileManager } from './profile/manager.js';
 import { ConnectionManager } from './connection/manager.js';
 import { OpenFileManager } from './open-file-manager.js';
 import { FileTreeManager } from './file-tree-manager.js';
+import * as fileTreeRpc from './controller-file-tree.js';
 import { EditorWatchManager } from './editor/watch-manager.js';
 import { saveFile } from './editor/save.js';
 import { syncEditorBuffer } from './editor/sync.js';
@@ -182,31 +183,34 @@ export class Controller {
     this.managers.tab.toggleCollapse();
   }
 
-  // --- file tree tabs -------------------------------------------------------
+  // --- file tree tabs (see controller-file-tree.ts) ------------------------
 
   fileTreeToggle(index: number, path: string): void {
-    const label = this.managers.tab.tabs[index]?.label;
-    if (label) this.managers.fileTree.toggle(label, path);
+    fileTreeRpc.fileTreeToggle(this.managers, index, path);
   }
 
   fileTreeCollapseAll(index: number): void {
-    const label = this.managers.tab.tabs[index]?.label;
-    if (label) this.managers.fileTree.collapseAll(label);
+    fileTreeRpc.fileTreeCollapseAll(this.managers, index);
   }
 
   fileTreeReroot(index: number, relPath?: string): void {
-    const label = this.managers.tab.tabs[index]?.label;
-    if (label) this.managers.fileTree.reroot(label, relPath);
+    fileTreeRpc.fileTreeReroot(this.managers, index, relPath);
   }
 
   moveFileTreeItem(index: number, fromRelPath: string, toRelPath: string): void {
-    const label = this.managers.tab.tabs[index]?.label;
-    if (label) this.managers.fileTree.move(label, fromRelPath, toRelPath);
+    fileTreeRpc.moveFileTreeItem(this.managers, index, fromRelPath, toRelPath);
   }
 
   deleteFileTreeItem(index: number, relPath: string): void {
-    const label = this.managers.tab.tabs[index]?.label;
-    if (label) this.managers.fileTree.delete(label, relPath);
+    fileTreeRpc.deleteFileTreeItem(this.managers, index, relPath);
+  }
+
+  undoFileTreeItem(index: number, overwrite?: boolean): { conflict?: { fromRelPath: string; toRelPath: string } } {
+    return fileTreeRpc.undoFileTreeItem(this.managers, index, overwrite);
+  }
+
+  redoFileTreeItem(index: number, overwrite?: boolean): { conflict?: { fromRelPath: string; toRelPath: string } } {
+    return fileTreeRpc.redoFileTreeItem(this.managers, index, overwrite);
   }
 
   // Dock/undock any dockable tab (file tree or notifications). The mechanism is view-agnostic —

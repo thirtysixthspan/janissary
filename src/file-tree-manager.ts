@@ -1,7 +1,7 @@
 import { watch, statSync, renameSync, rmSync, type FSWatcher } from 'node:fs';
 import path from 'node:path';
 import { messageBus } from './bus.js';
-import { buildRows, isSameOrDescendantPath } from './file-tree.js';
+import { buildRows, isSameOrDescendantPath, hasNameConflict } from './file-tree.js';
 import { parseFileTreeArgs } from './file-tree-args.js';
 import { expandUserPath } from './paths.js';
 import { resolveTarget } from './commands/resolve-target.js';
@@ -9,14 +9,33 @@ import type { Managers } from './managers.js';
 
 const DEBOUNCE_MS = 100;
 
+// One past move: the item's tree-relative path before (`from`) and after (`to`) the move. Enough
+// to reverse it (move `to` back to `from`'s directory) or re-apply it (move `from` to `to`'s
+// directory) without recomputing anything from disk.
+type MoveEntry = { from: string; to: string };
+
+// Reported by `undo`/`redo` when the destination is already occupied: neither stack is mutated, so
+// a caller-driven overwrite (passing `overwrite: true`) can retry the same pending entry.
+type UndoRedoResult = { conflict?: { fromRelPath: string; toRelPath: string } };
+
 // Per files-tab state, keyed by the tab's label. `watchers` is keyed by each visible directory's
-// tree-relative path ('' for the root itself).
+// tree-relative path ('' for the root itself). `undoStack`/`redoStack` are purely in-memory and
+// reset with the rest of the tab's state on close.
 type FilesTabState = {
   root: string;
   expanded: Set<string>;
   watchers: Map<string, FSWatcher>;
   debounce?: ReturnType<typeof setTimeout>;
+  undoStack: MoveEntry[];
+  redoStack: MoveEntry[];
 };
+
+// The containing directory of a tree-relative path — the empty string for a root-level entry,
+// matching the root-as-empty-string convention `buildRows` already uses.
+function parentPath(relPath: string): string {
+  const idx = relPath.lastIndexOf('/');
+  return idx === -1 ? '' : relPath.slice(0, idx);
+}
 
 // Owns file tree tabs: opening/focusing them, their `expanded` directory sets, and one
 // non-recursive `fs.watch` per visible directory. Any watch event schedules a single per-tab
@@ -63,7 +82,7 @@ export class FileTreeManager {
     this.managers.tab.openFilesTab({ root, rows: buildRows(root, expanded) });
     const newLabel = this.managers.tab.cur().label;
     this.managers.tab.setCwd(newLabel, root);
-    this.tabs.set(newLabel, { root, expanded, watchers: new Map() });
+    this.tabs.set(newLabel, { root, expanded, watchers: new Map(), undoStack: [], redoStack: [] });
     this.watchDir(newLabel, root, '');
     if (dock) this.managers.tab.setDock(this.managers.tab.findIndex(newLabel), dock);
   }
@@ -109,16 +128,69 @@ export class FileTreeManager {
   // Move a file or directory into a different directory (drag-and-release in the tree). Rejects
   // moving an item onto itself or into one of its own descendants; a same-named entry already at
   // the destination is overwritten (the client has already confirmed that via its own dialog
-  // before sending this). Rebuilds so the tree reflects the change immediately, without waiting
-  // on the directory watcher's own debounce.
+  // before sending this). Pushes the move onto the tab's undo stack and clears its redo stack —
+  // mirroring the editor's own "any new edit invalidates the redo stack" rule. Rebuilds so the
+  // tree reflects the change immediately, without waiting on the directory watcher's own debounce.
   move(label: string, fromRelPath: string, toRelPath: string): void {
     const state = this.tabs.get(label);
     if (!state) return;
     if (isSameOrDescendantPath(toRelPath, fromRelPath)) return;
     const fromAbs = path.join(state.root, fromRelPath);
-    const toAbs = path.join(state.root, toRelPath, path.basename(fromAbs));
+    const name = path.basename(fromAbs);
+    const toAbs = path.join(state.root, toRelPath, name);
     try { renameSync(fromAbs, toAbs); } catch { return; }
+    state.undoStack.push({ from: fromRelPath, to: toRelPath ? `${toRelPath}/${name}` : name });
+    state.redoStack = [];
     this.rebuild(label);
+  }
+
+  // Undo the most recent move: moves the item back from `to` to `from`'s original directory. A
+  // conflict at the destination is reported back without mutating either stack, so a caller-driven
+  // overwrite (passing `overwrite: true`) can retry the same pending entry. An empty undo stack is
+  // a silent no-op.
+  undo(label: string, overwrite = false): UndoRedoResult {
+    const state = this.tabs.get(label);
+    if (!state) return {};
+    const entry = state.undoStack.at(-1);
+    if (!entry) return {};
+    return this.applyStackMove(label, state, entry.to, parentPath(entry.from), entry, state.undoStack, state.redoStack, overwrite);
+  }
+
+  // Redo the most recently undone move: re-applies it from `from` to `to`'s original directory.
+  // Same conflict-reporting and no-op behavior as `undo`.
+  redo(label: string, overwrite = false): UndoRedoResult {
+    const state = this.tabs.get(label);
+    if (!state) return {};
+    const entry = state.redoStack.at(-1);
+    if (!entry) return {};
+    return this.applyStackMove(label, state, entry.from, parentPath(entry.to), entry, state.redoStack, state.undoStack, overwrite);
+  }
+
+  // Shared reverse/re-apply logic for `undo`/`redo`: moves `sourceRel` into `destDir`, unless the
+  // destination already has a same-named entry and the caller hasn't confirmed an overwrite, in
+  // which case it reports the conflict and leaves both stacks untouched.
+  private applyStackMove(
+    label: string,
+    state: FilesTabState,
+    sourceRel: string,
+    destDir: string,
+    entry: MoveEntry,
+    fromStack: MoveEntry[],
+    toStack: MoveEntry[],
+    overwrite: boolean,
+  ): UndoRedoResult {
+    const sourceAbs = path.join(state.root, sourceRel);
+    const name = path.basename(sourceAbs);
+    const destAbsDir = path.join(state.root, destDir);
+    const destAbs = path.join(destAbsDir, name);
+    if (!overwrite && sourceAbs !== destAbs && hasNameConflict(destAbsDir, name)) {
+      return { conflict: { fromRelPath: sourceRel, toRelPath: destDir } };
+    }
+    try { renameSync(sourceAbs, destAbs); } catch { return {}; }
+    fromStack.pop();
+    toStack.push(entry);
+    this.rebuild(label);
+    return {};
   }
 
   // Delete a file or directory (recursively) from disk — the client has already confirmed with

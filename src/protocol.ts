@@ -143,6 +143,11 @@ export type RpcCall =
   // Delete a file or directory (recursively) from a file tree tab, after the client has already
   // confirmed with the user. `relPath` is the tree-relative path of the row being removed.
   | { method: 'deleteFileTreeItem'; params: { index: number; relPath: string } }
+  // Undo/redo the most recent move in a file tree tab's per-tab undo/redo stack. `overwrite`
+  // retries a pending entry after the client has confirmed an overwrite of a conflicting
+  // destination; the reply's `result` carries `{ conflict }` when one is found instead.
+  | { method: 'undoFileTreeItem'; params: { index: number; overwrite?: boolean } }
+  | { method: 'redoFileTreeItem'; params: { index: number; overwrite?: boolean } }
   // Dock a dockable tab (file tree or notifications) into a sidebar (`'left'` | `'right'`), or
   // undock it back to the center tab strip (`null`). Explicit set, not "cycle" — the cycle order
   // lives client-side. The handler is generic, so both dockable tab kinds share this one RPC.

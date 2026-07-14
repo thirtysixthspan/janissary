@@ -86,6 +86,12 @@ export function FileTreeTab({ files, client, index, dock, autoFocus = true }: Pr
   const cancelDelete = () => setPendingDelete(null);
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+      e.preventDefault();
+      e.stopPropagation();
+      if (e.shiftKey) void drag.sendRedo(); else void drag.sendUndo();
+      return;
+    }
     if (e.ctrlKey || e.metaKey) return; // tab-management chords go to the window handler
     if ((e.key === 'Backspace' || e.key === 'Delete') && selected && selected !== '..') {
       e.preventDefault();

@@ -7,7 +7,10 @@ import { resolveDropTarget, type DropTarget } from './file-tree-drag';
 // press-release is just a click, not a drag.
 const DRAG_THRESHOLD_PX = 4;
 
-type PendingConflict = { fromRelPath: string; toRelPath: string };
+// `source` tracks which RPC produced the conflict, so `confirmOverwrite` retries the right one:
+// a drag-drop move sends its own fromRelPath/toRelPath, while an undo/redo retry just resends
+// itself with `overwrite: true` — the server already knows which stack entry is pending.
+type PendingConflict = { fromRelPath: string; toRelPath: string; source: 'move' | 'undo' | 'redo' };
 
 // Click-drag-release to move a file tree row into a directory row. Manages its own window-level
 // mousemove/mouseup listeners for the duration of one gesture (mirroring the editor's own mouse
@@ -47,7 +50,7 @@ export function useFileTreeDrag(rows: FileTreeRow[], client: JanusClient, index:
     const gesture = gestureRef.current;
     const target = dropTargetRef.current;
     if (gesture?.started && target) {
-      if (target.conflict) setPendingConflict({ fromRelPath: gesture.path, toRelPath: target.path });
+      if (target.conflict) setPendingConflict({ fromRelPath: gesture.path, toRelPath: target.path, source: 'move' });
       else send(gesture.path, target.path);
     }
     resetGestureState();
@@ -103,11 +106,25 @@ export function useFileTreeDrag(rows: FileTreeRow[], client: JanusClient, index:
   };
 
   const confirmOverwrite = () => {
-    if (pendingConflict) send(pendingConflict.fromRelPath, pendingConflict.toRelPath);
+    if (!pendingConflict) return;
+    if (pendingConflict.source === 'move') send(pendingConflict.fromRelPath, pendingConflict.toRelPath);
+    else client.send({ method: pendingConflict.source === 'undo' ? 'undoFileTreeItem' : 'redoFileTreeItem', params: { index, overwrite: true } });
     setPendingConflict(null);
   };
 
   const cancelConflict = () => setPendingConflict(null);
 
-  return { draggedPath, dragPosition, dropTarget, pendingConflict, onRowMouseDown, drop, confirmOverwrite, cancelConflict };
+  type UndoRedoResult = { conflict?: { fromRelPath: string; toRelPath: string } };
+
+  const sendUndo = async () => {
+    const result = await client.request<UndoRedoResult>({ method: 'undoFileTreeItem', params: { index } });
+    if (result.conflict) setPendingConflict({ ...result.conflict, source: 'undo' });
+  };
+
+  const sendRedo = async () => {
+    const result = await client.request<UndoRedoResult>({ method: 'redoFileTreeItem', params: { index } });
+    if (result.conflict) setPendingConflict({ ...result.conflict, source: 'redo' });
+  };
+
+  return { draggedPath, dragPosition, dropTarget, pendingConflict, onRowMouseDown, drop, confirmOverwrite, cancelConflict, sendUndo, sendRedo };
 }
