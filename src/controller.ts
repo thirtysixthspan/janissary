@@ -14,13 +14,14 @@ import { ConnectionManager } from './connection/manager.js';
 import { OpenFileManager } from './open-file-manager.js';
 import { FileTreeManager } from './file-tree-manager.js';
 import * as fileTreeRpc from './controller-file-tree.js';
+import { wireControllerEvents } from './controller-events.js';
 import { EditorWatchManager } from './editor/watch-manager.js';
 import { saveFile } from './editor/save.js';
 import { syncEditorBuffer } from './editor/sync.js';
+import { syncPageSnapshot } from './page/sync.js';
 import { CaptureManager } from './capture/manager.js';
 import { AgentCommunicationManager } from './agent/communication-manager.js';
 import { messageBus } from './bus.js';
-import { notify } from './notifications.js';
 import { BrowserManager } from './browser/tab.js';
 import { CommandManager } from './command-manager.js';
 import { runSuggestion } from './monitor/window.js';
@@ -55,27 +56,8 @@ export class Controller {
     this.managers.command = new CommandManager(this.managers);
     this.managers.capture = new CaptureManager(this.managers);
     this.managers.monitor = new MonitorManager(this.managers);
-    
-    messageBus.on('state', 'dirty', () => this.sinks.emitState());
-    messageBus.on('transcript', 'entry:appended', (event) => {
-      if (event.type !== 'entry:appended') return;
-      this.managers.tab.persist(this.managers.tab.buildAgentState(event.tab, { schedule: this.managers.schedule.get(event.tab.label) }));
-      // A cross-agent `msg`/`broadcast` delivery sets `entry.from`; feed the notifications tab
-      // (focus suppression and the per-event toggle are enforced inside `notify`).
-      if (event.entry.from) notify(this.managers, 'incoming-message', event.tabLabel, event.entry.from);
-    });
-    messageBus.on('app', 'exit', () => this.sinks.exit?.());
-    messageBus.on('pty', ['data', 'exit'], (event) => {
-      if (event.type === 'data') { this.sinks.sendPty(event.id, event.data); return; }
-      if (event.type !== 'exit') return;
-      const harnessIndex = this.managers.tab.tabs.findIndex((tab) => tab.harness?.ptyId === event.id);
-      if (harnessIndex !== -1) {
-        this.sinks.sendPtyExit(event.id, event.exitCode);
-        this.managers.tab.closeTab(harnessIndex);
-        return;
-      }
-      this.sinks.sendPtyExit(event.id, event.exitCode);
-    });
+
+    wireControllerEvents(this.managers, this.sinks);
     this.managers.schedule.start();
   }
 
@@ -122,6 +104,12 @@ export class Controller {
   // In-memory only; never written to disk.
   syncEditorBuffer(url: string, content: string): void {
     syncEditorBuffer(this.managers, url, content);
+  }
+
+  // Cache a page tab's currently visible text as transient snapshot state (the `pageSync` RPC).
+  // In-memory only; never written to disk or sent to any client.
+  syncPageSnapshot(url: string, text: string): void {
+    syncPageSnapshot(this.managers, url, text);
   }
 
   // --- monitor reporting tabs ------------------------------------------------

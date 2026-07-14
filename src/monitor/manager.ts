@@ -6,9 +6,9 @@ import { parseSuggestion } from './parsing.js';
 import { openMonitorTab, closeMonitorTab, pushSuggestion, rateSuggestion, updateMonitorMeta } from './window.js';
 import { openMonitorSession, respawnMonitorSession } from './session.js';
 import { spawnMonitorSession } from './acp.js';
-import { validateTargets, matchesTargets, targetColor, seedEntries, formatTargets } from './targets.js';
-import { harnessFeedEntries } from './harness-feed.js';
-import { editorFeedEntries } from './editor-feed.js';
+import { validateTargets, matchesTargets, targetColor, formatTargets } from './targets.js';
+import { seedFeedEntries, flushFeedEntries } from './feeds.js';
+import { generateSessionDelimiter, frameEntry } from './framing.js';
 import { recordContext, snapshotMonitorContext } from './context.js';
 import { listMonitors, monitorConnections } from './info.js';
 import { askMonitor } from './ask.js';
@@ -32,6 +32,12 @@ export type MonitorSub = {
   // Per-editor-target last-fed file content, so an unchanged file is not re-fed and a changed one is
   // diffed against what this monitor last saw (see monitor-editor-feed).
   editorSeen: Map<string, string>;
+  // Per-page-target last-fed visible-text content, so an unchanged page is not re-fed and a
+  // changed one is diffed against what this monitor last saw (see monitor-page-tab-content-feed).
+  pageSeen: Map<string, string>;
+  // Random, per-session token every buffered entry is wrapped in (see monitor/framing.ts), so the
+  // persona can tell monitored content apart from its own instructions.
+  delimiter: string;
   session: AcpSession;
   info?: AcpInfo;
   inFlight: boolean;
@@ -78,17 +84,13 @@ export class MonitorManager {
     }
 
     const reg: MonitorSub = {
-      owner, inline, persona, targets: resolved, buffer: [], harnessSeen: new Map(), editorSeen: new Map(), inFlight: true, delivered: 0,
+      owner, inline, persona, targets: resolved, buffer: [], harnessSeen: new Map(), editorSeen: new Map(), pageSeen: new Map(), delimiter: generateSessionDelimiter(), inFlight: true, delivered: 0,
       contextBytes: 0, contextText: [],
       session: undefined as unknown as AcpSession, timer: undefined as unknown as ReturnType<typeof setInterval>, subs: [],
     };
     this.openSession(reg);
     this.subscribe(key, reg);
-    reg.buffer.push(
-      ...seedEntries(this.managers.tab.tabs, resolved),
-      ...harnessFeedEntries(this.managers, resolved, reg.harnessSeen),
-      ...editorFeedEntries(this.managers, resolved, reg.editorSeen),
-    );
+    reg.buffer.push(...seedFeedEntries(this.managers, this.managers.tab.tabs, resolved, reg));
     reg.timer = setInterval(() => this.flush(key), this.flushMs);
     this.monitors.set(key, reg);
     // External mode: open the reporting tab right away (empty feed) so starting the
@@ -144,12 +146,12 @@ export class MonitorManager {
     // Harness tabs never emit `entry:appended`, so top up from their rendered screen here — the
     // live channel for harness targets. An idle harness yields nothing, keeping the "no new
     // content → no ACP prompt" guarantee below intact.
-    reg.buffer.push(...harnessFeedEntries(this.managers, reg.targets, reg.harnessSeen), ...editorFeedEntries(this.managers, reg.targets, reg.editorSeen));
+    reg.buffer.push(...flushFeedEntries(this.managers, reg.targets, reg));
     if (reg.buffer.length === 0) return;
     const batch = reg.buffer;
     reg.buffer = [];
     const body = batch
-      .map(({ tabLabel, entry }) => `[${tabLabel}]\n${entry.input}\n${entry.output}`.trim())
+      .map(({ tabLabel, entry }) => frameEntry(tabLabel, entry, reg.delimiter))
       .join('\n\n');
     const prompt = `[Monitor update]\n${body}`;
     recordContext(reg, prompt);

@@ -11,6 +11,7 @@ type Manifest = {
   manifest_version: number;
   permissions: string[];
   declarative_net_request: { rule_resources: { path: string }[] };
+  content_scripts: { matches: string[]; all_frames: boolean; js: string[] }[];
 };
 
 type Rule = {
@@ -39,5 +40,18 @@ describe('chrome-extension', () => {
   it('package.json ships the extension directory', () => {
     const pkg = JSON.parse(readFileSync(path.join(extensionDir, '..', 'package.json'), 'utf8')) as { files: string[] };
     expect(pkg.files).toContain('chrome-extension');
+  });
+
+  it('manifest.json declares a content script matching every URL, in every frame', () => {
+    const manifest = JSON.parse(readFileSync(path.join(extensionDir, 'manifest.json'), 'utf8')) as Manifest;
+    const [contentScript] = manifest.content_scripts;
+    expect(contentScript.matches).toContain('<all_urls>');
+    expect(contentScript.all_frames).toBe(true);
+    expect(contentScript.js).toContain('content-script.js');
+  });
+
+  it('content-script.js exists and only acts inside a nested frame', () => {
+    const script = readFileSync(path.join(extensionDir, 'content-script.js'), 'utf8');
+    expect(script).toContain('window.top === window.self');
   });
 });

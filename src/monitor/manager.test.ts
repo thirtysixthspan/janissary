@@ -59,6 +59,10 @@ function editorTab(label: string, id: string, name = 'notes.txt'): Tab {
   return { ...makeTab(label, '#ddd'), view: 'editor', editor: { name, url: `/open/${id}`, path: '', size: '' } } as unknown as Tab;
 }
 
+function pageTab(label: string, domain = 'example.org'): Tab {
+  return { ...makeTab(label, '#eee'), view: 'page', page: { url: `https://${domain}`, domain, number: 1 } } as unknown as Tab;
+}
+
 function fakeSpawnFactory() {
   const sessions: FakeSession[] = [];
   const spawn = (() => {
@@ -622,6 +626,29 @@ describe('MonitorManager', () => {
     expect(sessions[0].prompts).toHaveLength(3);
 
     rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('feeds a page target its visible-text snapshot on seed and a diff on change', () => {
+    const site = pageTab('site');
+    const { managers } = makeFakeManagers([janus, site]);
+    const { spawn, sessions } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+
+    manager.start('janus', 'assistant', [{ kind: 'tab', label: 'site' }]);
+    site.pageSnapshot = { text: 'first visible text', capturedAt: Date.now() };
+    vi.advanceTimersByTime(FLUSH_MS);
+    expect(sessions[0].prompts[1]).toContain('[site]');
+    expect(sessions[0].prompts[1]).toContain('first visible text');
+    sessions[0].reply('no suggestion'); // clear inFlight
+
+    site.pageSnapshot = { text: 'second visible text', capturedAt: Date.now() };
+    vi.advanceTimersByTime(FLUSH_MS);
+    expect(sessions[0].prompts.at(-1)).toContain('-first visible text');
+    expect(sessions[0].prompts.at(-1)).toContain('+second visible text');
+    sessions[0].reply('no suggestion');
+
+    vi.advanceTimersByTime(FLUSH_MS); // unchanged snapshot → no new prompt
+    expect(sessions[0].prompts).toHaveLength(3);
   });
 
   it('lists monitors with mode and delivery counts', () => {

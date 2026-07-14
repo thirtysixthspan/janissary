@@ -52,6 +52,8 @@ export function handle(controller: Controller, message: ClientMessage, reply: (e
     }
     case 'editorSync': { controller.syncEditorBuffer(message.params.url, message.params.content); break;
     }
+    case 'pageSync': { controller.syncPageSnapshot(message.params.url, message.params.text); break;
+    }
     case 'fileTreeToggle': { controller.fileTreeToggle(message.params.index, message.params.path); break;
     }
     case 'fileTreeCollapseAll': { controller.fileTreeCollapseAll(message.params.index); break;
