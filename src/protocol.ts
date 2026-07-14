@@ -140,6 +140,9 @@ export type RpcCall =
   // `fromRelPath` is the dragged item's tree-relative path; `toRelPath` is the destination
   // directory's tree-relative path.
   | { method: 'moveFileTreeItem'; params: { index: number; fromRelPath: string; toRelPath: string } }
+  // Delete a file or directory (recursively) from a file tree tab, after the client has already
+  // confirmed with the user. `relPath` is the tree-relative path of the row being removed.
+  | { method: 'deleteFileTreeItem'; params: { index: number; relPath: string } }
   // Dock a dockable tab (file tree or notifications) into a sidebar (`'left'` | `'right'`), or
   // undock it back to the center tab strip (`null`). Explicit set, not "cycle" — the cycle order
   // lives client-side. The handler is generic, so both dockable tab kinds share this one RPC.

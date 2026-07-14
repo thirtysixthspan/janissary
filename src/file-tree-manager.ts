@@ -1,4 +1,4 @@
-import { watch, statSync, renameSync, type FSWatcher } from 'node:fs';
+import { watch, statSync, renameSync, rmSync, type FSWatcher } from 'node:fs';
 import path from 'node:path';
 import { messageBus } from './bus.js';
 import { buildRows, isSameOrDescendantPath } from './file-tree.js';
@@ -118,6 +118,17 @@ export class FileTreeManager {
     const fromAbs = path.join(state.root, fromRelPath);
     const toAbs = path.join(state.root, toRelPath, path.basename(fromAbs));
     try { renameSync(fromAbs, toAbs); } catch { return; }
+    this.rebuild(label);
+  }
+
+  // Delete a file or directory (recursively) from disk — the client has already confirmed with
+  // the user before sending this. Rebuilds so the tree reflects the removal immediately, without
+  // waiting on the directory watcher's own debounce.
+  delete(label: string, relPath: string): void {
+    const state = this.tabs.get(label);
+    if (!state) return;
+    const abs = path.join(state.root, relPath);
+    try { rmSync(abs, { recursive: true }); } catch { return; }
     this.rebuild(label);
   }
 

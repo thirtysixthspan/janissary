@@ -133,6 +133,16 @@ disappears and nothing is moved, the same as releasing over empty space.
 Pressing Escape at any point during a drag also cancels it outright, with the same result: the
 drag label disappears and nothing is moved.
 
+### Deleting a file or directory
+
+Pressing Backspace or Delete while a row is selected (any row other than `..`) opens a
+confirmation dialog: `Delete "<name>"?`, offering **Delete** and **Cancel**. Confirming removes the
+file or directory — recursively, if it's a directory — from disk; cancelling leaves it untouched.
+The tree already watches every visible directory, so the removed row disappears automatically once
+the watcher picks up the change, the same as any other on-disk change made outside the app. If the
+selected row was the one removed, selection moves to the nearest surviving row rather than pointing
+at nothing.
+
 ### Keyboard interactions
 
 A focused file tree tab captures its own keys, following the ARIA treeview pattern (see
@@ -147,6 +157,7 @@ A focused file tree tab captures its own keys, following the ARIA treeview patte
 | `Shift+Enter` | File: open in the plain-text editor (mirrors Shift+double-click) |
 | `Home` / `End` | Select the first / last visible row |
 | `Page Up` / `Page Down` | Move selection by one viewport of rows |
+| `Backspace` / `Delete` | Selected file or directory (not `..`): open a delete confirmation dialog |
 | Printable characters | Type-ahead: jump to the next visible row whose name starts with what's typed; the typed buffer resets after a pause |
 
 Chords carrying Ctrl or Cmd (tab switching, tab reordering, closing the tab, etc.) are not

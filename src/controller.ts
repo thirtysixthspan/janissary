@@ -204,6 +204,11 @@ export class Controller {
     if (label) this.managers.fileTree.move(label, fromRelPath, toRelPath);
   }
 
+  deleteFileTreeItem(index: number, relPath: string): void {
+    const label = this.managers.tab.tabs[index]?.label;
+    if (label) this.managers.fileTree.delete(label, relPath);
+  }
+
   // Dock/undock any dockable tab (file tree or notifications). The mechanism is view-agnostic —
   // `TabManager.setDock` operates on any tab index — so both kinds share this one handler.
   setDock(index: number, dock: 'left' | 'right' | null): void {
