@@ -557,6 +557,7 @@ html, body, #root {
 }
 .files-row:hover { background: var(--bg-soft); }
 .files-row.selected { background: var(--bg-soft); border-left-color: var(--accent); }
+.files-row.drop-target { background: var(--bg-soft); border-left-color: var(--accent); outline: 1px dashed var(--accent); outline-offset: -1px; }
 .files-chevron { flex: none; width: 1em; color: var(--muted); font-size: 10px; }
 .files-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 

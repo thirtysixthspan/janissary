@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync } from 'node:fs';
 import type * as NodeFs from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -342,6 +342,38 @@ describe('FileTreeManager', () => {
     expect(tabs.length).toBe(countAfterDock);
     const tab = tabs.find((t) => t.label.startsWith('navigator'));
     expect(tab!.dock).toBeUndefined();
+  });
+
+  it('move renames the file on disk and rebuilds the tree', () => {
+    mkdirSync(path.join(root, 'dest'));
+    writeFileSync(path.join(root, 'notes.txt'), 'hi');
+    const manager = run();
+    manager.open('files', 'janus');
+    const label = tabs.find((t) => t.label.startsWith('navigator'))!.label;
+    manager.move(label, 'notes.txt', 'dest');
+    const tab = tabs.find((t) => t.label === label)!;
+    expect(tab.files!.rows.some((r) => r.path === 'notes.txt')).toBe(false);
+    expect(readFileSync(path.join(root, 'dest', 'notes.txt'), 'utf8')).toBe('hi');
+  });
+
+  it('rejects moving an item onto itself', () => {
+    writeFileSync(path.join(root, 'notes.txt'), 'hi');
+    const manager = run();
+    manager.open('files', 'janus');
+    const label = tabs.find((t) => t.label.startsWith('navigator'))!.label;
+    manager.move(label, 'notes.txt', 'notes.txt');
+    expect(readFileSync(path.join(root, 'notes.txt'), 'utf8')).toBe('hi');
+  });
+
+  it('rejects moving a directory into its own descendant', () => {
+    mkdirSync(path.join(root, 'src'));
+    mkdirSync(path.join(root, 'src', 'nested'));
+    const manager = run();
+    manager.open('files', 'janus');
+    const label = tabs.find((t) => t.label.startsWith('navigator'))!.label;
+    manager.move(label, 'src', 'src/nested');
+    const tab = tabs.find((t) => t.label === label)!;
+    expect(tab.files!.rows.some((r) => r.path === 'src')).toBe(true);
   });
 
   it('closeTab closes every watcher for that tab', () => {

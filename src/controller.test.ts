@@ -1353,6 +1353,23 @@ describe('Controller files tab', () => {
     expect(tab.files?.rows.some((r) => r.path === 'sub')).toBe(true);
   });
 
+  it('moveFileTreeItem RPC moves a file into a directory and rebuilds the tree', () => {
+    mkdirSync(path.join(root, 'dest'));
+    writeFileSync(path.join(root, 'notes.txt'), '');
+    const { c } = makeController();
+    c.dispatch(`files ${root}`);
+    const index = c.view().findIndex((t) => t.view === 'files');
+    c.moveFileTreeItem(index, 'notes.txt', 'dest');
+    const tab = c.view()[index];
+    expect(tab.files?.rows.some((r) => r.path === 'notes.txt')).toBe(false);
+  });
+
+  it('moveFileTreeItem RPC on an out-of-range index does nothing', () => {
+    const { c } = makeController();
+    c.dispatch(`files ${root}`);
+    expect(() => c.moveFileTreeItem(99, 'a', 'b')).not.toThrow();
+  });
+
   it('fileTreeReroot RPC on an out-of-range index does nothing', () => {
     const { c } = makeController();
     c.dispatch(`files ${root}`);

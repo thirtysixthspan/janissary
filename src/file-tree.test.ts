@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtempSync, mkdirSync, writeFileSync, symlinkSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { readDirSorted, buildRows } from './file-tree.js';
+import { readDirSorted, buildRows, isSameOrDescendantPath, hasNameConflict } from './file-tree.js';
 
 describe('readDirSorted', () => {
   let root: string;
@@ -77,5 +77,39 @@ describe('buildRows', () => {
     writeFileSync(path.join(root, 'file.txt'), '');
     const rows = buildRows(root, new Set(['gone']));
     expect(rows.map((r) => r.path)).toEqual(['..', 'file.txt']);
+  });
+});
+
+describe('isSameOrDescendantPath', () => {
+  it('is true for the same path', () => {
+    expect(isSameOrDescendantPath('src', 'src')).toBe(true);
+  });
+
+  it('is true for a nested descendant', () => {
+    expect(isSameOrDescendantPath('src/nested', 'src')).toBe(true);
+  });
+
+  it('is false for an unrelated sibling', () => {
+    expect(isSameOrDescendantPath('other', 'src')).toBe(false);
+  });
+
+  it('is false for a path that merely shares a name prefix', () => {
+    expect(isSameOrDescendantPath('src-backup', 'src')).toBe(false);
+  });
+});
+
+describe('hasNameConflict', () => {
+  let root: string;
+
+  beforeEach(() => { root = mkdtempSync(path.join(tmpdir(), 'file-tree-conflict-')); });
+  afterEach(() => { rmSync(root, { recursive: true, force: true }); });
+
+  it('is true when the destination already has an entry with that name', () => {
+    writeFileSync(path.join(root, 'notes.txt'), '');
+    expect(hasNameConflict(root, 'notes.txt')).toBe(true);
+  });
+
+  it('is false when the destination has no entry with that name', () => {
+    expect(hasNameConflict(root, 'notes.txt')).toBe(false);
   });
 });

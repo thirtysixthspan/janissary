@@ -94,10 +94,29 @@ stops refreshing automatically and can be refreshed manually by collapsing and r
 | Double-clicking any row | Does not select the row's text |
 | Header collapse-all button | Collapse every expanded directory back to just the root |
 | Scroll wheel / trackpad | Scrolls the row list |
+| Click-drag a row and release it over a directory row | Moves the dragged file or directory into that directory on disk |
 
 Opening or editing a file from the tree uses the same `open`/`edit` commands available at any
 command line, dispatched with the tree tab's cwd set to its root — so a row's path (relative to
 the root) resolves correctly. The opened file's tab lands in the same group as the tree tab.
+
+### Moving files by drag-and-drop
+
+Pressing down on a row and dragging it onto a directory row, then releasing, moves that file or
+directory into the target directory. Only directory rows accept a drop — while dragging, the
+directory row currently under the pointer is highlighted to show it as the target; a file row or
+empty space shows no highlight, and releasing there does nothing. Dropping onto the dragged item
+itself, or onto one of its own descendants (if it's a directory), is also blocked outright: no
+highlight is shown, and releasing there does nothing.
+
+If the target directory already contains an entry with the same name as the dragged item, the
+move does not happen immediately. Instead a confirmation dialog appears, offering **Overwrite** or
+**Cancel**. Confirming replaces the existing entry with the dragged one; cancelling leaves both
+where they were, unmoved.
+
+Only a single row can be dragged at a time — the tree has no multi-select. The tree already
+watches every visible directory, so a completed move is reflected automatically once its watcher
+picks up the change, the same as any other on-disk change made outside the app.
 
 ### Keyboard interactions
 
