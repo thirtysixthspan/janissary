@@ -188,6 +188,30 @@ describe('TabStrip', () => {
     expect(onFocusCommandBar).toHaveBeenCalledTimes(1);
   });
 
+  it('dims the tab border when the window is unfocused', () => {
+    const { container } = render(
+      <TabStrip tabs={[makeTab()]} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()} onRename={vi.fn()} tabNameMaxLength={100} windowFocused={false} />,
+    );
+    const tabEl = container.querySelector('.tab') as HTMLElement;
+    expect(tabEl.style.borderTopColor).toContain('color-mix');
+  });
+
+  it('shows the full-strength tab border when the window is focused', () => {
+    const { container } = render(
+      <TabStrip tabs={[makeTab({ groupColor: '#123456' })]} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()} onRename={vi.fn()} tabNameMaxLength={100} windowFocused />,
+    );
+    const tabEl = container.querySelector('.tab') as HTMLElement;
+    expect(tabEl.style.borderTopColor).not.toContain('color-mix');
+  });
+
+  it('shows the full-strength tab border when windowFocused is omitted', () => {
+    const { container } = render(
+      <TabStrip tabs={[makeTab()]} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()} onRename={vi.fn()} tabNameMaxLength={100} />,
+    );
+    const tabEl = container.querySelector('.tab') as HTMLElement;
+    expect(tabEl.style.borderTopColor).not.toContain('color-mix');
+  });
+
   it('does not crash on mousedown of a tab label when onFocusCommandBar is omitted', () => {
     const onSelect = vi.fn();
     const tabs = [makeTab({ label: 'a' }), makeTab({ label: 'b' })];

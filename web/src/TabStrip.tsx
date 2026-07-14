@@ -5,9 +5,10 @@ import { TabItem, type TabItemActions } from './TabItem';
 type Properties = TabItemActions & {
   tabs: TabView[];
   activeTab: number;
+  windowFocused?: boolean;
 };
 
-export function TabStrip({ tabs, activeTab, onSelect, onClose, onRename, tabNameMaxLength, onFocusCommandBar }: Properties) {
+export function TabStrip({ tabs, activeTab, onSelect, onClose, onRename, tabNameMaxLength, onFocusCommandBar, windowFocused }: Properties) {
   return (
     <div className="tabstrip" data-doc-shot="tab-strip">
       {tabs.map((tab, index) => (
@@ -21,6 +22,7 @@ export function TabStrip({ tabs, activeTab, onSelect, onClose, onRename, tabName
           onRename={onRename}
           tabNameMaxLength={tabNameMaxLength}
           onFocusCommandBar={onFocusCommandBar}
+          windowFocused={windowFocused}
         />
       ))}
     </div>

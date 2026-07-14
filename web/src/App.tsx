@@ -36,6 +36,8 @@ import { useAppThemePicker } from './useAppThemePicker';
 import { useHistPicker } from './useHistPicker';
 import { useServerState } from './useServerState';
 import { applySyntaxTheme } from './editor/highlight/themes';
+import { useWindowFocus } from './useWindowFocus';
+import { useCmdWRefs } from './useCmdWRefs';
 
 export function App() {
   const clientReference = useRef<JanusClient | null>(null);
@@ -62,6 +64,7 @@ export function App() {
   const shellHandles = useRef<Map<string, ShellTabHandle>>(new Map());
   const currentRef = useRef<TabView | undefined>(undefined);
   const { handleScrollKey, handleScrollKeyUp } = useTranscriptScroll(transcriptReference);
+  const windowFocused = useWindowFocus();
 
   const { actionEntries, reportingEntries } = useTabEntries(tabs);
 
@@ -100,11 +103,9 @@ export function App() {
   const { unsavedQuitOpen, guardedOpenQuitConfirm, confirmUnsavedQuit, cancelUnsavedQuit } =
     useUnsavedQuitGuard(tabs, editorHandles, openQuitConfirm, runCommand);
   const guardRef = useRef<((index: number) => boolean) | null>(null);
-  const activeTabRef = useRef(activeTab); activeTabRef.current = activeTab;
-  const quitConfirmOpenRef = useRef(quitConfirmOpen); quitConfirmOpenRef.current = quitConfirmOpen || unsavedQuitOpen;
-  const pickerOpenRef = useRef(pickerOpen); pickerOpenRef.current = pickerOpen || queueOpen || taskPickerOpen || profilePickerOpen;
-  const routeRef = useRef(route); routeRef.current = route;
-  const activeViewRef = useRef(current?.view); activeViewRef.current = current?.view;
+  const { activeTabRef, quitConfirmOpenRef, pickerOpenRef, routeRef, activeViewRef } = useCmdWRefs(
+    activeTab, quitConfirmOpen, unsavedQuitOpen, pickerOpen, queueOpen, taskPickerOpen, profilePickerOpen, route, current?.view,
+  );
 
   const closeTab = useCallback((index: number) => {
     if (tabs.filter((t) => !t.dock).length === 1) { guardedOpenQuitConfirm(); return; }
@@ -156,6 +157,7 @@ export function App() {
         onRename={(index, title) => client.renameTab(actionEntries[index].index, title)}
         tabNameMaxLength={tabNameMaxLength}
         onFocusCommandBar={() => inputReference.current?.focus()}
+        windowFocused={windowFocused}
       />
 
       <ViewTabBody tab={current} client={client} index={currentIndex} closeTab={closeTab} />
