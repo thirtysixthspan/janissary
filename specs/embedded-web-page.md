@@ -124,8 +124,10 @@ A page tab can be closed five ways, all equivalent in their teardown:
 - **Cmd+W / Ctrl+W (Keyboard Navigation)** — close the page tab from anywhere, including while interacting with the embedded page.
 
 Closing performs the same teardown the `close` command does for a non-last tab: the tab is removed
-from the strip, its in-memory state is dropped, and an adjacent tab is selected. Because a page tab
-owns no shell, agent session, browser, workspace, or served file, those teardown steps simply do
+from the strip, its in-memory state is dropped, and, if it was the active tab, focus is restored to
+whichever tab was focused immediately before it became active (falling back to an adjacent tab if
+that one no longer exists). Because a page tab owns no shell, agent session, browser, workspace, or
+served file, those teardown steps simply do
 nothing for it. Closing the last remaining tab quits the app, exactly as the `close` command does
 (see `tabs.md`).
 

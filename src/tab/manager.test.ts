@@ -146,3 +146,41 @@ describe('TabManager queue', () => {
     expect(tm.queueFor('second')).toEqual([]);
   });
 });
+
+describe('TabManager focus history', () => {
+  it('closing the active tab restores the tab active immediately before it, not just the adjacent slot', () => {
+    const tm = makeTabManager();
+    tm.tabs.push({ ...tm.cur(), label: 'bob', number: 2 }, { ...tm.cur(), label: 'carol', number: 3 });
+    tm.setActiveTab(1); // -> bob (from janus)
+    tm.setActiveTab(2); // -> carol (from bob)
+    tm.setActiveTab(0); // -> janus (from carol)
+    tm.setActiveTab(1); // -> bob (from janus)
+    expect(tm.activeTab).toBe(1);
+
+    tm.closeTab(1); // close bob, the active tab
+
+    // The tab that slides into bob's old slot is carol, but janus was actually focused right
+    // before bob — that's what should be restored.
+    expect(tm.tabs[tm.activeTab].label).toBe('janus');
+  });
+
+  it('opening a new editor tab and closing it immediately returns focus to the previously active tab', () => {
+    const tm = makeTabManager();
+    tm.openEditorTab({ name: 'file.ts', path: '/test/file.ts', size: '1 KB', url: '/open/1' });
+    const editorIndex = tm.activeTab;
+    expect(tm.tabs[editorIndex].editor?.path).toBe('/test/file.ts');
+
+    tm.closeTab(editorIndex);
+
+    expect(tm.tabs[tm.activeTab].label).toBe('janus');
+  });
+
+  it('closing the active tab with no recorded focus history falls back to clamping to a valid index', () => {
+    const tm = makeTabManager();
+    tm.tabs.push({ ...tm.cur(), label: 'second', number: 2 });
+    tm.activeTab = 1; // bypasses setActiveTab, so nothing is recorded
+
+    expect(() => tm.closeTab(1)).not.toThrow();
+    expect(tm.tabs[tm.activeTab].label).toBe('janus');
+  });
+});
