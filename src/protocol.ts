@@ -136,6 +136,10 @@ export type RpcCall =
   | { method: 'fileTreeCollapseAll'; params: { index: number } }
   // Re-root a file tree tab to the parent directory.
   | { method: 'fileTreeReroot'; params: { index: number; path?: string } }
+  // Move a file or directory in a file tree tab into a different directory (drag-and-release).
+  // `fromRelPath` is the dragged item's tree-relative path; `toRelPath` is the destination
+  // directory's tree-relative path.
+  | { method: 'moveFileTreeItem'; params: { index: number; fromRelPath: string; toRelPath: string } }
   // Dock a dockable tab (file tree or notifications) into a sidebar (`'left'` | `'right'`), or
   // undock it back to the center tab strip (`null`). Explicit set, not "cycle" — the cycle order
   // lives client-side. The handler is generic, so both dockable tab kinds share this one RPC.

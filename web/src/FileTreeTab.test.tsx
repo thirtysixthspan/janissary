@@ -1,6 +1,6 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi, beforeAll } from 'vitest';
+import { render, screen, fireEvent, act } from '@testing-library/react';
+import { describe, it, expect, vi, beforeAll, afterEach } from 'vitest';
 import type { FileTreeView } from '@shared/protocol';
 import type { JanusClient } from './ws';
 import { FileTreeTab } from './FileTreeTab';
@@ -201,5 +201,75 @@ describe('FileTreeTab', () => {
     render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
     expect(focusSpy).toHaveBeenCalled();
     focusSpy.mockRestore();
+  });
+
+  describe('drag to move', () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it('dragging a file over a directory row highlights it as the drop target', () => {
+      const client = { send: vi.fn() } as unknown as JanusClient;
+      render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+      const srcRow = screen.getByText('src').closest('[role="treeitem"]') as HTMLElement;
+      document.elementFromPoint = vi.fn().mockReturnValue(srcRow);
+
+      fireEvent.mouseDown(screen.getByText('README.md'), { clientX: 0, clientY: 0 });
+      act(() => { globalThis.dispatchEvent(new MouseEvent('mousemove', { clientX: 20, clientY: 20 })); });
+
+      expect(srcRow.className).toContain('drop-target');
+      act(() => { globalThis.dispatchEvent(new MouseEvent('mouseup')); });
+    });
+
+    it('dragging a file over another file row shows no highlight', () => {
+      const client = { send: vi.fn() } as unknown as JanusClient;
+      render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+      const indexRow = screen.getByText('index.ts').closest('[role="treeitem"]') as HTMLElement;
+      document.elementFromPoint = vi.fn().mockReturnValue(indexRow);
+
+      fireEvent.mouseDown(screen.getByText('README.md'), { clientX: 0, clientY: 0 });
+      act(() => { globalThis.dispatchEvent(new MouseEvent('mousemove', { clientX: 20, clientY: 20 })); });
+
+      expect(indexRow.className).not.toContain('drop-target');
+      act(() => { globalThis.dispatchEvent(new MouseEvent('mouseup')); });
+    });
+
+    it('drop on a valid directory sends moveFileTreeItem with the right paths', () => {
+      const send = vi.fn();
+      const client = { send } as unknown as JanusClient;
+      render(<FileTreeTab files={makeFiles()} client={client} index={2} />);
+      const srcRow = screen.getByText('src').closest('[role="treeitem"]') as HTMLElement;
+      document.elementFromPoint = vi.fn().mockReturnValue(srcRow);
+
+      fireEvent.mouseDown(screen.getByText('README.md'), { clientX: 0, clientY: 0 });
+      act(() => { globalThis.dispatchEvent(new MouseEvent('mousemove', { clientX: 20, clientY: 20 })); });
+      act(() => { globalThis.dispatchEvent(new MouseEvent('mouseup')); });
+
+      expect(send).toHaveBeenCalledWith({ method: 'moveFileTreeItem', params: { index: 2, fromRelPath: 'README.md', toRelPath: 'src' } });
+    });
+
+    it('drop on a conflicting name renders MoveConflictDialog instead of sending immediately', () => {
+      const send = vi.fn();
+      const client = { send } as unknown as JanusClient;
+      const files = makeFiles({
+        rows: [
+          { path: 'src', name: 'src', depth: 0, dir: true, expanded: true },
+          { path: 'src/index.ts', name: 'index.ts', depth: 1, dir: false },
+          { path: 'dest', name: 'dest', depth: 0, dir: true, expanded: true },
+          { path: 'dest/index.ts', name: 'index.ts', depth: 1, dir: false },
+        ],
+      });
+      const { container } = render(<FileTreeTab files={files} client={client} index={0} />);
+      const destRow = screen.getByText('dest').closest('[role="treeitem"]') as HTMLElement;
+      const draggedRow = container.querySelector('[data-path="src/index.ts"]') as HTMLElement;
+      document.elementFromPoint = vi.fn().mockReturnValue(destRow);
+
+      fireEvent.mouseDown(draggedRow, { clientX: 0, clientY: 0 });
+      act(() => { globalThis.dispatchEvent(new MouseEvent('mousemove', { clientX: 20, clientY: 20 })); });
+      act(() => { globalThis.dispatchEvent(new MouseEvent('mouseup')); });
+
+      expect(send).not.toHaveBeenCalled();
+      expect(screen.getByRole('alertdialog')).toBeInTheDocument();
+    });
   });
 });

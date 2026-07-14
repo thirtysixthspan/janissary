@@ -58,6 +58,8 @@ export function handle(controller: Controller, message: ClientMessage, reply: (e
     }
     case 'fileTreeReroot': { controller.fileTreeReroot(message.params.index, message.params.path); break;
     }
+    case 'moveFileTreeItem': { controller.moveFileTreeItem(message.params.index, message.params.fromRelPath, message.params.toRelPath); break;
+    }
     case 'setDock': { controller.setDock(message.params.index, message.params.dock); break;
     }
   }

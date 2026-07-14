@@ -3,6 +3,8 @@ import type { FileTreeView, FileTreeRow } from '@shared/protocol';
 import type { JanusClient } from './ws';
 import { handleFileTreeKey, typeAheadMatch } from './file-tree-keys';
 import { nextDock, dockTooltip } from './dock-cycle';
+import { useFileTreeDrag } from './useFileTreeDrag';
+import { MoveConflictDialog } from './MoveConflictDialog/MoveConflictDialog';
 
 type Properties = {
   files: FileTreeView;
@@ -27,6 +29,7 @@ export function FileTreeTab({ files, client, index, dock, autoFocus = true }: Pr
   const [selected, setSelected] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const typeahead = useRef<{ buffer: string; timer?: ReturnType<typeof setTimeout> }>({ buffer: '' });
+  const drag = useFileTreeDrag(files.rows, client, index);
 
   useEffect(() => { if (autoFocus) containerRef.current?.focus(); }, [autoFocus]);
 
@@ -131,17 +134,25 @@ export function FileTreeTab({ files, client, index, dock, autoFocus = true }: Pr
             role="treeitem"
             aria-selected={row.path === selected}
             aria-expanded={row.dir ? !!row.expanded : undefined}
-            className={`files-row${row.path === selected ? ' selected' : ''}`}
+            className={`files-row${row.path === selected ? ' selected' : ''}${drag.dropTarget?.path === row.path ? ' drop-target' : ''}`}
             data-path={row.path}
             style={{ paddingLeft: 12 + row.depth * 16 }}
             onClick={() => onRowClick(row)}
             onDoubleClick={(e) => onRowDoubleClick(row, e.shiftKey)}
+            onMouseDown={(e) => drag.onRowMouseDown(row, e)}
           >
             {row.dir && row.expanded !== undefined && <span className="files-chevron">{row.expanded ? '▾' : '▸'}</span>}
             <span className="files-name">{row.name}</span>
           </div>
         ))}
       </div>
+      {drag.pendingConflict && (
+        <MoveConflictDialog
+          name={drag.pendingConflict.fromRelPath.slice(drag.pendingConflict.fromRelPath.lastIndexOf('/') + 1)}
+          onOverwrite={drag.confirmOverwrite}
+          onCancel={drag.cancelConflict}
+        />
+      )}
     </div>
   );
 }

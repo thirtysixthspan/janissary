@@ -1,7 +1,8 @@
-import { watch, statSync, type FSWatcher } from 'node:fs';
+import { watch, statSync, renameSync, type FSWatcher } from 'node:fs';
 import path from 'node:path';
 import { messageBus } from './bus.js';
-import { buildRows } from './file-tree.js';
+import { buildRows, isSameOrDescendantPath } from './file-tree.js';
+import { parseFileTreeArgs } from './file-tree-args.js';
 import { expandUserPath } from './paths.js';
 import { resolveTarget } from './commands/resolve-target.js';
 import type { Managers } from './managers.js';
@@ -36,7 +37,7 @@ export class FileTreeManager {
   // directory literally named `in`/`on` stays reachable via a path form (`files ./in`).
   open(command: string, label: string): void {
     const rest = command.replace(/^files\b\s*/i, '');
-    const { inLabel, dock, target } = this.parseArgs(rest);
+    const { inLabel, dock, target } = parseFileTreeArgs(rest);
     const out = (text: string) => this.managers.tab.append(label, { input: command, output: text });
 
     let cwd: string;
@@ -65,32 +66,6 @@ export class FileTreeManager {
     this.tabs.set(newLabel, { root, expanded, watchers: new Map() });
     this.watchDir(newLabel, root, '');
     if (dock) this.managers.tab.setDock(this.managers.tab.findIndex(newLabel), dock);
-  }
-
-  // Consume leading `in <label>` / `on <left|right>` clauses (either order, each at most once),
-  // then fall back to the bare `left`/`right` keyword if neither clause was used. Whatever's left
-  // over is the path target.
-  private parseArgs(rest: string): { inLabel?: string; dock: 'left' | 'right' | null; target: string } {
-    let cursor = rest;
-    let inLabel: string | undefined;
-    let dock: 'left' | 'right' | null = null;
-
-    for (;;) {
-      if (inLabel === undefined) {
-        const inMatch = /^in\s+(\S+)\b\s*/i.exec(cursor);
-        if (inMatch) { inLabel = inMatch[1]; cursor = cursor.slice(inMatch[0].length); continue; }
-      }
-      if (dock === null) {
-        const onMatch = /^on\s+(left|right)\b\s*/i.exec(cursor);
-        if (onMatch) { dock = onMatch[1].toLowerCase() as 'left' | 'right'; cursor = cursor.slice(onMatch[0].length); continue; }
-      }
-      break;
-    }
-    if (inLabel === undefined && dock === null) {
-      const keyword = /^(left|right)\b\s*/i.exec(cursor);
-      if (keyword) { dock = keyword[1].toLowerCase() as 'left' | 'right'; cursor = cursor.slice(keyword[0].length); }
-    }
-    return { inLabel, dock, target: cursor.trim() };
   }
 
   // Expand/collapse one directory row.
@@ -128,6 +103,21 @@ export class FileTreeManager {
     state.root = target;
     this.watchDir(label, target, '');
     if (this.managers.tab.tabs.some((t) => t.label === label)) this.managers.tab.setCwd(label, target);
+    this.rebuild(label);
+  }
+
+  // Move a file or directory into a different directory (drag-and-release in the tree). Rejects
+  // moving an item onto itself or into one of its own descendants; a same-named entry already at
+  // the destination is overwritten (the client has already confirmed that via its own dialog
+  // before sending this). Rebuilds so the tree reflects the change immediately, without waiting
+  // on the directory watcher's own debounce.
+  move(label: string, fromRelPath: string, toRelPath: string): void {
+    const state = this.tabs.get(label);
+    if (!state) return;
+    if (isSameOrDescendantPath(toRelPath, fromRelPath)) return;
+    const fromAbs = path.join(state.root, fromRelPath);
+    const toAbs = path.join(state.root, toRelPath, path.basename(fromAbs));
+    try { renameSync(fromAbs, toAbs); } catch { return; }
     this.rebuild(label);
   }
 

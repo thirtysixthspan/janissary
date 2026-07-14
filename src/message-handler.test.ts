@@ -29,6 +29,7 @@ const makeController = () =>
     fileTreeToggle: vi.fn(),
     fileTreeCollapseAll: vi.fn(),
     fileTreeReroot: vi.fn(),
+    moveFileTreeItem: vi.fn(),
     setDock: vi.fn(),
   }) as unknown as Controller;
 
@@ -154,6 +155,12 @@ describe('handle', () => {
     const controller = makeController();
     dispatchCall(controller, 17, { method: 'fileTreeReroot', params: { index: 0 } });
     expect(controller.fileTreeReroot).toHaveBeenCalledWith(0, undefined);
+  });
+
+  it('routes moveFileTreeItem', () => {
+    const controller = makeController();
+    dispatchCall(controller, 19, { method: 'moveFileTreeItem', params: { index: 0, fromRelPath: 'a', toRelPath: 'b' } });
+    expect(controller.moveFileTreeItem).toHaveBeenCalledWith(0, 'a', 'b');
   });
 
   it('routes setDock', () => {
