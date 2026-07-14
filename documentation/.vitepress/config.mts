@@ -64,6 +64,7 @@ export default defineConfig({
             { text: "Tab groups", link: "/user-documentation/getting-started/groups" },
             { text: "Agents", link: "/user-documentation/getting-started/agents" },
             { text: "Keyboard shortcuts", link: "/user-documentation/getting-started/keyboard" },
+            { text: "License", link: "/user-documentation/getting-started/license" },
           ],
         },
         {
