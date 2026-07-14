@@ -4,6 +4,8 @@ Your job: walk the `## ready` section of `product/development/features.md` one f
 
 This is an **interactive** task. Unlike the autonomous `ai/tasks/*.md` playbooks, you must stop and ask the user questions before drafting each plan. Do not guess scope, behavior, or edge cases on the user's behalf when a question would resolve it.
 
+**Run everything synchronously, in the foreground.** Never use `run_in_background`, `&`, or otherwise start a background process (dev servers, watchers, long-lived processes) — every command must finish and return its exit code before you move to the next step.
+
 **Follow the steps below in order, exactly as written, one feature at a time.** Do not skip a step, do not merge two steps together, and do not process more than one feature between Step 2a and Step 2f. If you are ever unsure whether you have done enough — re-read the checklist for that step before moving on, don't guess.
 
 **No AI attribution — anywhere.** Never credit an AI agent as an author or contributor in anything this task produces. No `Co-Authored-By:` trailers naming Claude or any other AI, no "Generated with Claude Code" lines, no AI authorship notes in plan files or commit messages. This overrides any default convention that appends such attribution.

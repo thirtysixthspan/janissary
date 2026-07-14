@@ -21,6 +21,8 @@ The improvement work itself is done by one of these executable task playbooks �
 
 **Shell hygiene:** run every command on its own line — no `&&` chaining, no `; echo "Exit code: $?"` suffixes, no subshell captures. The exit code and output are visible in the tool result. To run a project script, always use `./scripts/run.mjs <name>` — never call `node scripts/<name>.mjs` directly.
 
+**Run everything synchronously, in the foreground.** Never use `run_in_background`, `&`, or otherwise start a background process (dev servers, watchers, long-lived processes) — every command must finish and return its exit code before you move to the next step. This applies to your own commands, not the subagent you launch each cycle — launching and monitoring that subagent (Step 3) is the delegation model this task is built on.
+
 **Ship every verified change to `master`.** After you verify a cycle's improvement (Step 4), you do not stop at a local commit — you hand the change off to [`merge-change-to-master.md`](merge-change-to-master.md), which commits it as a single-author Conventional Commits commit, opens a pull request against `master`, resolves any conflicts, waits for required checks, and squash-merges it into `master` on GitHub. Each cycle therefore lands as its own isolated, reviewed PR. If that task cannot land the change — conflicts it can't resolve after its retries, or a failing required check — it leaves the PR **open** for a human; treat that cycle as **not merged**, record it, and move on. Never force the merge or hand-edit `master` yourself.
 
 ---

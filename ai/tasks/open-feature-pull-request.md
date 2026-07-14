@@ -6,6 +6,8 @@ Your job: take the uncommitted work in this repository, package it into a well-d
 
 **Do not ask the user for input at any point.** Make all decisions autonomously — branch name, commit message, PR title and body. The only valid reason to stop is "No changes to open a PR for" (Step 0) or an unresolvable error.
 
+**Run everything synchronously, in the foreground.** Never use `run_in_background`, `&`, or otherwise start a background process (dev servers, watchers, long-lived processes) — every command must finish and return its exit code before you move to the next step.
+
 ## The PR description
 
 The PR body is the deliverable. It must be **thorough and self-contained** — a reviewer should understand the feature without reading the code. Write it to `./temp/pr-body.md`, then pass that file to the create-PR script.

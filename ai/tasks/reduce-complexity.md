@@ -6,6 +6,8 @@ Your job: make **one** small, safe change that lowers the cognitive complexity o
 
 This task is about complexity, not file size: **all code you touch must stay in the target file.** Never move code into a new module file — that is the job of [`ai/tasks/improve-modularity.md`](improve-modularity.md), not this one. Never compact code, strip comments, or delete blank lines to shrink a function — that hurts readability without improving the design (see [`code-guidelines.md`](../guidelines/code-guidelines.md)).
 
+**Run everything synchronously, in the foreground.** Never use `run_in_background`, `&`, or otherwise start a background process (dev servers, watchers, long-lived processes) — every command must finish and return its exit code before you move to the next step.
+
 Refactoring edits real code, so the rule is simple: **the tests must pass before you start and still pass after. If you cannot keep them passing, put the code back the way it was.**
 
 Do the steps below **in order**. Do not skip steps. Do not invent your own process.
