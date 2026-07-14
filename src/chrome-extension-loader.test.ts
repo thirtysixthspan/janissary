@@ -48,7 +48,7 @@ describe('loadFrameEnablerExtension', () => {
     const writeSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
 
     const promise = loadFrameEnablerExtension(writePipe, readPipe, '/path/to/chrome-extension');
-    await vi.advanceTimersByTimeAsync(10_000);
+    await vi.advanceTimersByTimeAsync(20_000);
     await promise;
 
     expect(writeSpy).toHaveBeenCalledWith(
