@@ -221,17 +221,33 @@ describe('FileTreeTab', () => {
       act(() => { globalThis.dispatchEvent(new MouseEvent('mouseup')); });
     });
 
-    it('dragging a file over another file row shows no highlight', () => {
+    it('dragging a file over another file row highlights that file\'s parent directory instead', () => {
       const client = { send: vi.fn() } as unknown as JanusClient;
       render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
       const indexRow = screen.getByText('index.ts').closest('[role="treeitem"]') as HTMLElement;
+      const srcRow = screen.getByText('src').closest('[role="treeitem"]') as HTMLElement;
       document.elementFromPoint = vi.fn().mockReturnValue(indexRow);
 
       fireEvent.mouseDown(screen.getByText('README.md'), { clientX: 0, clientY: 0 });
       act(() => { globalThis.dispatchEvent(new MouseEvent('mousemove', { clientX: 20, clientY: 20 })); });
 
       expect(indexRow.className).not.toContain('drop-target');
+      expect(srcRow.className).toContain('drop-target');
       act(() => { globalThis.dispatchEvent(new MouseEvent('mouseup')); });
+    });
+
+    it('drop released over a file row moves the dragged item into that file\'s parent directory', () => {
+      const send = vi.fn();
+      const client = { send } as unknown as JanusClient;
+      render(<FileTreeTab files={makeFiles()} client={client} index={2} />);
+      const indexRow = screen.getByText('index.ts').closest('[role="treeitem"]') as HTMLElement;
+      document.elementFromPoint = vi.fn().mockReturnValue(indexRow);
+
+      fireEvent.mouseDown(screen.getByText('README.md'), { clientX: 0, clientY: 0 });
+      act(() => { globalThis.dispatchEvent(new MouseEvent('mousemove', { clientX: 20, clientY: 20 })); });
+      act(() => { globalThis.dispatchEvent(new MouseEvent('mouseup')); });
+
+      expect(send).toHaveBeenCalledWith({ method: 'moveFileTreeItem', params: { index: 2, fromRelPath: 'README.md', toRelPath: 'src' } });
     });
 
     it('dragging a file renders a ghost label with its name that follows the cursor', () => {

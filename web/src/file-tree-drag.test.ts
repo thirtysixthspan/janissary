@@ -25,12 +25,24 @@ describe('resolveDropTarget', () => {
     expect(target).toEqual({ path: 'dest', conflict: true });
   });
 
-  it('is null when hovering a file row', () => {
-    expect(resolveDropTarget(makeRows(), 'src/index.ts', 'README.md')).toBeNull();
+  it('resolves a file row to its parent directory', () => {
+    const target = resolveDropTarget(makeRows(), 'README.md', 'src/index.ts');
+    expect(target).toEqual({ path: 'src', conflict: false });
   });
 
-  it('is null when hovering the dragged item itself', () => {
+  it('flags a conflict when hovering a file whose parent already has a matching child', () => {
+    const target = resolveDropTarget(makeRows(), 'src/index.ts', 'dest/index.ts');
+    expect(target).toEqual({ path: 'dest', conflict: true });
+  });
+
+  it('resolves a root-level file row to the root itself', () => {
+    const target = resolveDropTarget(makeRows(), 'src/index.ts', 'README.md');
+    expect(target).toEqual({ path: '', conflict: false });
+  });
+
+  it('is null when hovering the dragged item itself, whether a directory or a file', () => {
     expect(resolveDropTarget(makeRows(), 'src', 'src')).toBeNull();
+    expect(resolveDropTarget(makeRows(), 'src/index.ts', 'src/index.ts')).toBeNull();
   });
 
   it('is null when hovering a descendant of the dragged directory', () => {
