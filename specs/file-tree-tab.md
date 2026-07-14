@@ -126,6 +126,10 @@ Only a single row can be dragged at a time — the tree has no multi-select. The
 watches every visible directory, so a completed move is reflected automatically once its watcher
 picks up the change, the same as any other on-disk change made outside the app.
 
+If the window loses focus while a drag is in progress — switching to another application or
+virtual desktop with the mouse button still held — the drag is cancelled outright: the drag label
+disappears and nothing is moved, the same as releasing over empty space.
+
 ### Keyboard interactions
 
 A focused file tree tab captures its own keys, following the ARIA treeview pattern (see

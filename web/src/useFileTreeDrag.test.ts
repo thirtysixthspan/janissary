@@ -129,6 +129,42 @@ describe('useFileTreeDrag', () => {
     expect(result.current.pendingConflict).toBeNull();
   });
 
+  it('a window blur during an active drag cancels it without sending anything', () => {
+    const client = { send: vi.fn() } as unknown as JanusClient;
+    const { result } = renderHook(() => useFileTreeDrag(makeRows(), client, 0));
+    const otherRow = makeRowElement('other');
+    document.elementFromPoint = vi.fn().mockReturnValue(otherRow);
+
+    act(() => { result.current.onRowMouseDown({ path: 'notes.txt' } as FileTreeRow, downEvent(0, 0)); });
+    act(() => { globalThis.dispatchEvent(new MouseEvent('mousemove', { clientX: 20, clientY: 0 })); });
+    act(() => { globalThis.dispatchEvent(new Event('blur')); });
+
+    expect(client.send).not.toHaveBeenCalled();
+    expect(result.current.draggedPath).toBeNull();
+    expect(result.current.dropTarget).toBeNull();
+    expect(result.current.dragPosition).toBeNull();
+  });
+
+  it('a window blur after a drag has already ended does not affect subsequent gestures', () => {
+    const client = { send: vi.fn() } as unknown as JanusClient;
+    const { result } = renderHook(() => useFileTreeDrag(makeRows(), client, 0));
+    const otherRow = makeRowElement('other');
+    document.elementFromPoint = vi.fn().mockReturnValue(otherRow);
+
+    act(() => { result.current.onRowMouseDown({ path: 'notes.txt' } as FileTreeRow, downEvent(0, 0)); });
+    act(() => { globalThis.dispatchEvent(new MouseEvent('mousemove', { clientX: 20, clientY: 0 })); });
+    act(() => { result.current.drop(); });
+    act(() => { globalThis.dispatchEvent(new Event('blur')); });
+
+    expect(client.send).toHaveBeenCalledTimes(1);
+
+    act(() => { result.current.onRowMouseDown({ path: 'notes.txt' } as FileTreeRow, downEvent(0, 0)); });
+    act(() => { globalThis.dispatchEvent(new MouseEvent('mousemove', { clientX: 20, clientY: 0 })); });
+
+    expect(result.current.draggedPath).toBe('notes.txt');
+    expect(result.current.dropTarget).toEqual({ path: 'other', conflict: false });
+  });
+
   it('a release with no valid target resets drag state without sending anything', () => {
     const client = { send: vi.fn() } as unknown as JanusClient;
     const { result } = renderHook(() => useFileTreeDrag(makeRows(), client, 0));
