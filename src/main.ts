@@ -17,6 +17,7 @@ import { loadConfig } from './config.js';
 import { loadGithubToken } from './github-token.js';
 import { parseCliArgs, usageText, appVersion, CliUsageError } from './cli-args.js';
 import { explainStartupError, formatFatal, maybeStack } from './startup-errors.js';
+import { loadFrameEnablerExtension } from './chrome-extension-loader.js';
 import type { ChildProcess } from 'node:child_process';
 
 // The Chrome "app" window we launched, so we can close it on shutdown (quit/exit/Ctrl+C).
@@ -103,12 +104,14 @@ function openApp(url: string, projectDir: string): void {
     '--no-first-run',
     '--no-default-browser-check',
     '--window-size=1280,800',
+    '--remote-debugging-port=0',
     `--load-extension=${extDir}`,
     `--disable-extensions-except=${extDir}`,
   ], { stdio: 'ignore', detached: true });
   child.on('error', () => openUrl(url));
   child.unref();
   appChild = child;
+  void loadFrameEnablerExtension(profile, extDir);
 }
 
 export async function boot(argv = process.argv.slice(2)): Promise<void> {
