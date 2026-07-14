@@ -39,6 +39,10 @@ A workspaced tab (`agent -w` / `harness -w`) confines its processes to the works
 
 See the [Developer Docs](https://thirtysixthspan.github.io/janissary/developer-documentation/security-checks) for the automated lint/secrets/dependency checks that run in this repo's own CI, and their threat model.
 
+## License
+
+Janissary is free to use under the [PolyForm Noncommercial License](LICENSE) for any noncommercial purpose. Any commercial use — including using Janissary in a commercial setting for your own software development — requires a commercial license. Commercial licenses are available on request; see [LICENSE-COMMERCIAL.md](LICENSE-COMMERCIAL.md) for how to request one.
+
 ## Development
 
 ```bash
