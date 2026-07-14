@@ -203,6 +203,68 @@ describe('FileTreeTab', () => {
     focusSpy.mockRestore();
   });
 
+  describe('delete', () => {
+    it('Backspace with a row selected opens the delete dialog with that row\'s name', () => {
+      const client = { send: vi.fn() } as unknown as JanusClient;
+      const { container } = render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+      const tree = container.querySelector('[role="tree"]')!;
+      fireEvent.keyDown(tree, { key: 'r' });
+      fireEvent.keyDown(tree, { key: 'Backspace' });
+      expect(screen.getByText('Delete "README.md"?')).toBeInTheDocument();
+    });
+
+    it('Delete key opens the delete dialog the same way', () => {
+      const client = { send: vi.fn() } as unknown as JanusClient;
+      const { container } = render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+      const tree = container.querySelector('[role="tree"]')!;
+      fireEvent.keyDown(tree, { key: 'r' });
+      fireEvent.keyDown(tree, { key: 'Delete' });
+      expect(screen.getByText('Delete "README.md"?')).toBeInTheDocument();
+    });
+
+    it('Backspace/Delete with the ".." row selected does nothing', () => {
+      const client = { send: vi.fn() } as unknown as JanusClient;
+      const files = makeFiles({ rows: [{ path: '..', name: '..', depth: 0, dir: true }] });
+      const { container } = render(<FileTreeTab files={files} client={client} index={0} />);
+      const tree = container.querySelector('[role="tree"]')!;
+      fireEvent.keyDown(tree, { key: 'ArrowDown' });
+      fireEvent.keyDown(tree, { key: 'Backspace' });
+      expect(screen.queryByRole('alertdialog')).toBeNull();
+    });
+
+    it('Backspace/Delete with no row selected does nothing', () => {
+      const client = { send: vi.fn() } as unknown as JanusClient;
+      const { container } = render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+      const tree = container.querySelector('[role="tree"]')!;
+      fireEvent.keyDown(tree, { key: 'Backspace' });
+      expect(screen.queryByRole('alertdialog')).toBeNull();
+    });
+
+    it('confirming the dialog sends deleteFileTreeItem with the selected path and closes the dialog', () => {
+      const send = vi.fn();
+      const client = { send } as unknown as JanusClient;
+      const { container } = render(<FileTreeTab files={makeFiles()} client={client} index={3} />);
+      const tree = container.querySelector('[role="tree"]')!;
+      fireEvent.keyDown(tree, { key: 'r' });
+      fireEvent.keyDown(tree, { key: 'Backspace' });
+      fireEvent.click(screen.getByRole('button', { name: /delete/i }));
+      expect(send).toHaveBeenCalledWith({ method: 'deleteFileTreeItem', params: { index: 3, relPath: 'README.md' } });
+      expect(screen.queryByRole('alertdialog')).toBeNull();
+    });
+
+    it('cancelling the dialog sends nothing and closes the dialog', () => {
+      const send = vi.fn();
+      const client = { send } as unknown as JanusClient;
+      const { container } = render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+      const tree = container.querySelector('[role="tree"]')!;
+      fireEvent.keyDown(tree, { key: 'r' });
+      fireEvent.keyDown(tree, { key: 'Backspace' });
+      fireEvent.click(screen.getByRole('button', { name: /cancel/i }));
+      expect(send).not.toHaveBeenCalled();
+      expect(screen.queryByRole('alertdialog')).toBeNull();
+    });
+  });
+
   describe('drag to move', () => {
     afterEach(() => {
       vi.restoreAllMocks();

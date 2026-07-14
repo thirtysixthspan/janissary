@@ -5,6 +5,7 @@ import { handleFileTreeKey, typeAheadMatch } from './file-tree-keys';
 import { nextDock, dockTooltip } from './dock-cycle';
 import { useFileTreeDrag } from './useFileTreeDrag';
 import { MoveConflictDialog } from './MoveConflictDialog/MoveConflictDialog';
+import { DeleteFileDialog } from './DeleteFileDialog';
 
 type Properties = {
   files: FileTreeView;
@@ -27,6 +28,7 @@ const MARKDOWN_EXTENSION = /\.(md|markdown)$/i;
 
 export function FileTreeTab({ files, client, index, dock, autoFocus = true }: Properties) {
   const [selected, setSelected] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const typeahead = useRef<{ buffer: string; timer?: ReturnType<typeof setTimeout> }>({ buffer: '' });
   const drag = useFileTreeDrag(files.rows, client, index);
@@ -76,8 +78,21 @@ export function FileTreeTab({ files, client, index, dock, autoFocus = true }: Pr
     }
   };
 
+  const confirmDelete = () => {
+    if (pendingDelete) client.send({ method: 'deleteFileTreeItem', params: { index, relPath: pendingDelete } });
+    setPendingDelete(null);
+  };
+
+  const cancelDelete = () => setPendingDelete(null);
+
   const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     if (e.ctrlKey || e.metaKey) return; // tab-management chords go to the window handler
+    if ((e.key === 'Backspace' || e.key === 'Delete') && selected && selected !== '..') {
+      e.preventDefault();
+      e.stopPropagation();
+      setPendingDelete(selected);
+      return;
+    }
     const navKeys = new Set(['ArrowDown', 'ArrowUp', 'ArrowLeft', 'ArrowRight', 'Home', 'End', 'PageUp', 'PageDown', 'Enter', ' ']);
     if (navKeys.has(e.key)) {
       e.preventDefault();
@@ -159,6 +174,13 @@ export function FileTreeTab({ files, client, index, dock, autoFocus = true }: Pr
           name={drag.pendingConflict.fromRelPath.slice(drag.pendingConflict.fromRelPath.lastIndexOf('/') + 1)}
           onOverwrite={drag.confirmOverwrite}
           onCancel={drag.cancelConflict}
+        />
+      )}
+      {pendingDelete && (
+        <DeleteFileDialog
+          name={pendingDelete.slice(pendingDelete.lastIndexOf('/') + 1)}
+          onConfirm={confirmDelete}
+          onCancel={cancelDelete}
         />
       )}
     </div>

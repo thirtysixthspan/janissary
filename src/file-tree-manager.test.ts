@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, existsSync } from 'node:fs';
 import type * as NodeFs from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -374,6 +374,45 @@ describe('FileTreeManager', () => {
     manager.move(label, 'src', 'src/nested');
     const tab = tabs.find((t) => t.label === label)!;
     expect(tab.files!.rows.some((r) => r.path === 'src')).toBe(true);
+  });
+
+  it('delete removes a file from disk and rebuilds the tree', () => {
+    writeFileSync(path.join(root, 'notes.txt'), 'hi');
+    const manager = run();
+    manager.open('files', 'janus');
+    const label = tabs.find((t) => t.label.startsWith('navigator'))!.label;
+    manager.delete(label, 'notes.txt');
+    const tab = tabs.find((t) => t.label === label)!;
+    expect(tab.files!.rows.some((r) => r.path === 'notes.txt')).toBe(false);
+    expect(existsSync(path.join(root, 'notes.txt'))).toBe(false);
+  });
+
+  it('delete removes a directory recursively', () => {
+    mkdirSync(path.join(root, 'src'));
+    writeFileSync(path.join(root, 'src', 'index.ts'), '');
+    const manager = run();
+    manager.open('files', 'janus');
+    const label = tabs.find((t) => t.label.startsWith('navigator'))!.label;
+    manager.delete(label, 'src');
+    const tab = tabs.find((t) => t.label === label)!;
+    expect(tab.files!.rows.some((r) => r.path === 'src')).toBe(false);
+    expect(existsSync(path.join(root, 'src'))).toBe(false);
+  });
+
+  it('delete on an unknown tab is a no-op', () => {
+    writeFileSync(path.join(root, 'notes.txt'), 'hi');
+    const manager = run();
+    manager.delete('nonexistent', 'notes.txt');
+    expect(existsSync(path.join(root, 'notes.txt'))).toBe(true);
+  });
+
+  it('a failed delete leaves the tree unchanged', () => {
+    const manager = run();
+    manager.open('files', 'janus');
+    const label = tabs.find((t) => t.label.startsWith('navigator'))!.label;
+    expect(() => manager.delete(label, 'does-not-exist.txt')).not.toThrow();
+    const tab = tabs.find((t) => t.label === label)!;
+    expect(tab.files!.rows.some((r) => r.path === 'does-not-exist.txt')).toBe(false);
   });
 
   it('closeTab closes every watcher for that tab', () => {

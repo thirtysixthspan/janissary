@@ -60,6 +60,8 @@ export function handle(controller: Controller, message: ClientMessage, reply: (e
     }
     case 'moveFileTreeItem': { controller.moveFileTreeItem(message.params.index, message.params.fromRelPath, message.params.toRelPath); break;
     }
+    case 'deleteFileTreeItem': { controller.deleteFileTreeItem(message.params.index, message.params.relPath); break;
+    }
     case 'setDock': { controller.setDock(message.params.index, message.params.dock); break;
     }
   }
