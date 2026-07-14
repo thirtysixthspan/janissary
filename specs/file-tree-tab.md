@@ -86,10 +86,10 @@ stops refreshing automatically and can be refreshed manually by collapsing and r
 |---|---|---|
 | Click a directory row (anywhere on the row) | Select it and give the tree keyboard focus |
 | Click a file row | Select it and give the tree keyboard focus |
-| Double-click a file row | Select it and open it (with `open`) |
+| Double-click a file row | Select it and open it (with `open`) — for Markdown files, this opens the plain-text editor instead (with `edit`) |
 | Double-click a directory row | Select it and toggle expand/collapse |
 | Double-click the `..` row | Navigate the tree up one directory |
-| Shift+double-click a file row | Select it and open it in the plain-text editor (with `edit`), even for files whose normal opener is a viewer (Markdown, images) |
+| Shift+double-click a file row | Select it and open it in the plain-text editor (with `edit`), even for files whose normal opener is a viewer (images) — for Markdown files, this instead opens the rendered preview (with `open`) |
 | Chevron (▸/▾) | Visual affordance only — the whole row is the click target |
 | Double-clicking any row | Does not select the row's text |
 | Header collapse-all button | Collapse every expanded directory back to just the root |

@@ -21,6 +21,7 @@ const TYPEAHEAD_RESET_MS = 700;
 const ROW_HEIGHT_PX = 22;
 // Printable, unmodified single characters — used for type-ahead. Excludes space (the action key).
 const PRINTABLE = /^[ -~]$/;
+const MARKDOWN_EXTENSION = /\.(md|markdown)$/i;
 
 export function FileTreeTab({ files, client, index, dock, autoFocus = true }: Properties) {
   const [selected, setSelected] = useState<string | null>(null);
@@ -58,8 +59,8 @@ export function FileTreeTab({ files, client, index, dock, autoFocus = true }: Pr
   const onRowDoubleClick = (row: FileTreeRow, shiftKey: boolean) => {
     if (row.path === '..') reroot();
     else if (row.dir) toggle(row.path);
-    else if (shiftKey) editFile(row.path);
-    else openFile(row.path);
+    else if (MARKDOWN_EXTENSION.test(row.path) === shiftKey) openFile(row.path);
+    else editFile(row.path);
   };
 
   const runAction = (action: { type: 'toggle' | 'open' | 'edit' | 'reroot'; path: string } | undefined) => {

@@ -62,16 +62,32 @@ describe('FileTreeTab', () => {
     const send = vi.fn();
     const client = { send } as unknown as JanusClient;
     render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
-    fireEvent.dblClick(screen.getByText('README.md'));
-    expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'open README.md' } });
+    fireEvent.dblClick(screen.getByText('index.ts'));
+    expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'open src/index.ts' } });
   });
 
   it('Shift+double-click on a file row sends an edit command', () => {
     const send = vi.fn();
     const client = { send } as unknown as JanusClient;
     render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
-    fireEvent.dblClick(screen.getByText('README.md'), { shiftKey: true });
+    fireEvent.dblClick(screen.getByText('index.ts'), { shiftKey: true });
+    expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'edit src/index.ts' } });
+  });
+
+  it('double-click on a markdown file row sends an edit command', () => {
+    const send = vi.fn();
+    const client = { send } as unknown as JanusClient;
+    render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+    fireEvent.dblClick(screen.getByText('README.md'));
     expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'edit README.md' } });
+  });
+
+  it('Shift+double-click on a markdown file row sends an open command', () => {
+    const send = vi.fn();
+    const client = { send } as unknown as JanusClient;
+    render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+    fireEvent.dblClick(screen.getByText('README.md'), { shiftKey: true });
+    expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'open README.md' } });
   });
 
   it('collapse-all button sends fileTreeCollapseAll', () => {
