@@ -68,6 +68,12 @@ A focused tree captures these keys for itself (tab-switching and other `Ctrl`/`C
 | `Home` / `End` | First / last visible row |
 | `PageUp` / `PageDown` | Move by a screenful |
 | Type letters | Jump to the next row starting with what you typed |
+| `Cmd+Z` / `Ctrl+Z` | Undo the most recent move made in this tab |
+| `Cmd+Shift+Z` / `Ctrl+Shift+Z` | Redo the most recently undone move |
+
+Undo and redo only apply to moves — deleting a file or directory is permanent and can't be undone
+this way. Each tree keeps its own undo/redo history in memory for as long as it stays open; closing
+it clears that history.
 
 Like other view tabs, a file navigator is a live view — closed with its × button or `close`, and not restored by `janus --relaunch`.
 

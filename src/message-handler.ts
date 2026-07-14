@@ -62,6 +62,14 @@ export function handle(controller: Controller, message: ClientMessage, reply: (e
     }
     case 'deleteFileTreeItem': { controller.deleteFileTreeItem(message.params.index, message.params.relPath); break;
     }
+    case 'undoFileTreeItem': {
+      reply({ t: 'rpc-reply', id: message.id, result: controller.undoFileTreeItem(message.params.index, message.params.overwrite) });
+      return;
+    }
+    case 'redoFileTreeItem': {
+      reply({ t: 'rpc-reply', id: message.id, result: controller.redoFileTreeItem(message.params.index, message.params.overwrite) });
+      return;
+    }
     case 'setDock': { controller.setDock(message.params.index, message.params.dock); break;
     }
   }

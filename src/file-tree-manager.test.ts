@@ -415,6 +415,138 @@ describe('FileTreeManager', () => {
     expect(tab.files!.rows.some((r) => r.path === 'does-not-exist.txt')).toBe(false);
   });
 
+  it('undo reverses the most recent move', () => {
+    mkdirSync(path.join(root, 'dest'));
+    writeFileSync(path.join(root, 'notes.txt'), 'hi');
+    const manager = run();
+    manager.open('files', 'janus');
+    const label = tabs.find((t) => t.label.startsWith('navigator'))!.label;
+    manager.move(label, 'notes.txt', 'dest');
+
+    const result = manager.undo(label);
+
+    expect(result).toEqual({});
+    expect(existsSync(path.join(root, 'notes.txt'))).toBe(true);
+    expect(existsSync(path.join(root, 'dest', 'notes.txt'))).toBe(false);
+  });
+
+  it('undo reverses multiple moves in stack order', () => {
+    mkdirSync(path.join(root, 'a'));
+    mkdirSync(path.join(root, 'b'));
+    writeFileSync(path.join(root, 'x.txt'), 'x');
+    writeFileSync(path.join(root, 'y.txt'), 'y');
+    const manager = run();
+    manager.open('files', 'janus');
+    const label = tabs.find((t) => t.label.startsWith('navigator'))!.label;
+    manager.move(label, 'x.txt', 'a');
+    manager.move(label, 'y.txt', 'b');
+
+    manager.undo(label);
+    expect(existsSync(path.join(root, 'b', 'y.txt'))).toBe(false);
+    expect(existsSync(path.join(root, 'y.txt'))).toBe(true);
+    expect(existsSync(path.join(root, 'a', 'x.txt'))).toBe(true);
+
+    manager.undo(label);
+    expect(existsSync(path.join(root, 'a', 'x.txt'))).toBe(false);
+    expect(existsSync(path.join(root, 'x.txt'))).toBe(true);
+  });
+
+  it('redo re-applies an undone move', () => {
+    mkdirSync(path.join(root, 'dest'));
+    writeFileSync(path.join(root, 'notes.txt'), 'hi');
+    const manager = run();
+    manager.open('files', 'janus');
+    const label = tabs.find((t) => t.label.startsWith('navigator'))!.label;
+    manager.move(label, 'notes.txt', 'dest');
+    manager.undo(label);
+
+    const result = manager.redo(label);
+
+    expect(result).toEqual({});
+    expect(existsSync(path.join(root, 'dest', 'notes.txt'))).toBe(true);
+    expect(existsSync(path.join(root, 'notes.txt'))).toBe(false);
+  });
+
+  it('a fresh move after an undo clears the redo stack', () => {
+    mkdirSync(path.join(root, 'dest'));
+    writeFileSync(path.join(root, 'notes.txt'), 'hi');
+    writeFileSync(path.join(root, 'other.txt'), 'hi');
+    const manager = run();
+    manager.open('files', 'janus');
+    const label = tabs.find((t) => t.label.startsWith('navigator'))!.label;
+    manager.move(label, 'notes.txt', 'dest');
+    manager.undo(label);
+    manager.move(label, 'other.txt', 'dest');
+
+    const result = manager.redo(label);
+
+    expect(result).toEqual({});
+    expect(existsSync(path.join(root, 'dest', 'notes.txt'))).toBe(false);
+  });
+
+  it('undo on an empty stack is a silent no-op', () => {
+    const manager = run();
+    manager.open('files', 'janus');
+    const label = tabs.find((t) => t.label.startsWith('navigator'))!.label;
+    expect(manager.undo(label)).toEqual({});
+  });
+
+  it('redo on an empty stack is a silent no-op', () => {
+    const manager = run();
+    manager.open('files', 'janus');
+    const label = tabs.find((t) => t.label.startsWith('navigator'))!.label;
+    expect(manager.redo(label)).toEqual({});
+  });
+
+  it('undo reports a conflict without mutating either stack when the destination is occupied', () => {
+    mkdirSync(path.join(root, 'dest'));
+    writeFileSync(path.join(root, 'notes.txt'), 'moved');
+    const manager = run();
+    manager.open('files', 'janus');
+    const label = tabs.find((t) => t.label.startsWith('navigator'))!.label;
+    manager.move(label, 'notes.txt', 'dest');
+    writeFileSync(path.join(root, 'notes.txt'), 'new file at original location');
+
+    const result = manager.undo(label);
+
+    expect(result).toEqual({ conflict: { fromRelPath: 'dest/notes.txt', toRelPath: '' } });
+    expect(existsSync(path.join(root, 'dest', 'notes.txt'))).toBe(true);
+    expect(readFileSync(path.join(root, 'notes.txt'), 'utf8')).toBe('new file at original location');
+  });
+
+  it('a follow-up overwrite call consumes the pending undo entry', () => {
+    mkdirSync(path.join(root, 'dest'));
+    writeFileSync(path.join(root, 'notes.txt'), 'moved');
+    const manager = run();
+    manager.open('files', 'janus');
+    const label = tabs.find((t) => t.label.startsWith('navigator'))!.label;
+    manager.move(label, 'notes.txt', 'dest');
+    writeFileSync(path.join(root, 'notes.txt'), 'stale');
+    manager.undo(label);
+
+    const result = manager.undo(label, true);
+
+    expect(result).toEqual({});
+    expect(readFileSync(path.join(root, 'notes.txt'), 'utf8')).toBe('moved');
+  });
+
+  it('redo reports a conflict without mutating either stack when the destination is occupied', () => {
+    mkdirSync(path.join(root, 'dest'));
+    writeFileSync(path.join(root, 'notes.txt'), 'hi');
+    const manager = run();
+    manager.open('files', 'janus');
+    const label = tabs.find((t) => t.label.startsWith('navigator'))!.label;
+    manager.move(label, 'notes.txt', 'dest');
+    manager.undo(label);
+    writeFileSync(path.join(root, 'dest', 'notes.txt'), 'blocked');
+
+    const result = manager.redo(label);
+
+    expect(result).toEqual({ conflict: { fromRelPath: 'notes.txt', toRelPath: 'dest' } });
+    expect(readFileSync(path.join(root, 'dest', 'notes.txt'), 'utf8')).toBe('blocked');
+    expect(existsSync(path.join(root, 'notes.txt'))).toBe(true);
+  });
+
   it('closeTab closes every watcher for that tab', () => {
     mkdirSync(path.join(root, 'src'));
     const manager = run();

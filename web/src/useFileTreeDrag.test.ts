@@ -96,7 +96,7 @@ describe('useFileTreeDrag', () => {
     act(() => { result.current.drop(); });
 
     expect(client.send).not.toHaveBeenCalled();
-    expect(result.current.pendingConflict).toEqual({ fromRelPath: 'notes.txt', toRelPath: 'dest' });
+    expect(result.current.pendingConflict).toEqual({ fromRelPath: 'notes.txt', toRelPath: 'dest', source: 'move' });
   });
 
   it('confirmOverwrite sends the move and clears the pending conflict', () => {

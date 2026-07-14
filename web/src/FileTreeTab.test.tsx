@@ -366,4 +366,115 @@ describe('FileTreeTab', () => {
       expect(screen.getByRole('alertdialog')).toBeInTheDocument();
     });
   });
+
+  describe('undo/redo', () => {
+    it('Cmd+Z sends undoFileTreeItem', async () => {
+      const request = vi.fn().mockResolvedValue({});
+      const client = { send: vi.fn(), request } as unknown as JanusClient;
+      const { container } = render(<FileTreeTab files={makeFiles()} client={client} index={2} />);
+      const tree = container.querySelector('[role="tree"]')!;
+      await act(async () => { fireEvent.keyDown(tree, { key: 'z', metaKey: true }); });
+      expect(request).toHaveBeenCalledWith({ method: 'undoFileTreeItem', params: { index: 2 } });
+    });
+
+    it('Ctrl+Z sends undoFileTreeItem', async () => {
+      const request = vi.fn().mockResolvedValue({});
+      const client = { send: vi.fn(), request } as unknown as JanusClient;
+      const { container } = render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+      const tree = container.querySelector('[role="tree"]')!;
+      await act(async () => { fireEvent.keyDown(tree, { key: 'z', ctrlKey: true }); });
+      expect(request).toHaveBeenCalledWith({ method: 'undoFileTreeItem', params: { index: 0 } });
+    });
+
+    it('Cmd+Shift+Z sends redoFileTreeItem', async () => {
+      const request = vi.fn().mockResolvedValue({});
+      const client = { send: vi.fn(), request } as unknown as JanusClient;
+      const { container } = render(<FileTreeTab files={makeFiles()} client={client} index={1} />);
+      const tree = container.querySelector('[role="tree"]')!;
+      await act(async () => { fireEvent.keyDown(tree, { key: 'z', metaKey: true, shiftKey: true }); });
+      expect(request).toHaveBeenCalledWith({ method: 'redoFileTreeItem', params: { index: 1 } });
+    });
+
+    it('Ctrl+Shift+Z sends redoFileTreeItem', async () => {
+      const request = vi.fn().mockResolvedValue({});
+      const client = { send: vi.fn(), request } as unknown as JanusClient;
+      const { container } = render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+      const tree = container.querySelector('[role="tree"]')!;
+      await act(async () => { fireEvent.keyDown(tree, { key: 'z', ctrlKey: true, shiftKey: true }); });
+      expect(request).toHaveBeenCalledWith({ method: 'redoFileTreeItem', params: { index: 0 } });
+    });
+
+    it('a conflict response from undo opens MoveConflictDialog', async () => {
+      const request = vi.fn().mockResolvedValue({ conflict: { fromRelPath: 'dest/README.md', toRelPath: '' } });
+      const client = { send: vi.fn(), request } as unknown as JanusClient;
+      const { container } = render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+      const tree = container.querySelector('[role="tree"]')!;
+      await act(async () => { fireEvent.keyDown(tree, { key: 'z', metaKey: true }); });
+      expect(screen.getByRole('alertdialog')).toBeInTheDocument();
+    });
+
+    it('confirming an undo conflict retries undoFileTreeItem with overwrite', async () => {
+      const request = vi.fn().mockResolvedValue({ conflict: { fromRelPath: 'dest/README.md', toRelPath: '' } });
+      const send = vi.fn();
+      const client = { send, request } as unknown as JanusClient;
+      const { container } = render(<FileTreeTab files={makeFiles()} client={client} index={4} />);
+      const tree = container.querySelector('[role="tree"]')!;
+      await act(async () => { fireEvent.keyDown(tree, { key: 'z', metaKey: true }); });
+
+      fireEvent.click(screen.getByRole('button', { name: /overwrite/i }));
+
+      expect(send).toHaveBeenCalledWith({ method: 'undoFileTreeItem', params: { index: 4, overwrite: true } });
+      expect(screen.queryByRole('alertdialog')).toBeNull();
+    });
+
+    it('confirming a redo conflict retries redoFileTreeItem with overwrite', async () => {
+      const request = vi.fn().mockResolvedValue({ conflict: { fromRelPath: 'README.md', toRelPath: 'dest' } });
+      const send = vi.fn();
+      const client = { send, request } as unknown as JanusClient;
+      const { container } = render(<FileTreeTab files={makeFiles()} client={client} index={5} />);
+      const tree = container.querySelector('[role="tree"]')!;
+      await act(async () => { fireEvent.keyDown(tree, { key: 'z', metaKey: true, shiftKey: true }); });
+
+      fireEvent.click(screen.getByRole('button', { name: /overwrite/i }));
+
+      expect(send).toHaveBeenCalledWith({ method: 'redoFileTreeItem', params: { index: 5, overwrite: true } });
+      expect(screen.queryByRole('alertdialog')).toBeNull();
+    });
+
+    it('cancelling a conflict leaves it unmoved and closes the dialog without sending anything', async () => {
+      const request = vi.fn().mockResolvedValue({ conflict: { fromRelPath: 'dest/README.md', toRelPath: '' } });
+      const send = vi.fn();
+      const client = { send, request } as unknown as JanusClient;
+      const { container } = render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+      const tree = container.querySelector('[role="tree"]')!;
+      await act(async () => { fireEvent.keyDown(tree, { key: 'z', metaKey: true }); });
+
+      fireEvent.click(screen.getByRole('button', { name: /cancel/i }));
+
+      expect(send).not.toHaveBeenCalled();
+      expect(screen.queryByRole('alertdialog')).toBeNull();
+    });
+
+    it('all four undo/redo chords are intercepted while other Cmd/Ctrl chords still fall through', () => {
+      const send = vi.fn();
+      const request = vi.fn().mockResolvedValue({});
+      const client = { send, request } as unknown as JanusClient;
+      const { container } = render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+      const tree = container.querySelector('[role="tree"]')!;
+
+      for (const event of [
+        { key: 'z', metaKey: true },
+        { key: 'z', ctrlKey: true },
+        { key: 'z', metaKey: true, shiftKey: true },
+        { key: 'z', ctrlKey: true, shiftKey: true },
+      ]) {
+        const nativeEvent = fireEvent.keyDown(tree, event);
+        expect(nativeEvent).toBe(false); // preventDefault() was called
+      }
+
+      // A different Cmd chord (tab-management) is not intercepted: no undo/redo RPC fires for it.
+      fireEvent.keyDown(tree, { key: 'w', metaKey: true });
+      expect(request).toHaveBeenCalledTimes(4);
+    });
+  });
 });
