@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { textOffsetIn, pointToCol, hitFromEvent } from './mouse';
+import { textOffsetIn, pointToCol, hitFromEvent, visualVerticalHit } from './mouse';
 
 type DocWithCaretPos = {
   caretPositionFromPoint?: (x: number, y: number) => { offsetNode: Node; offset: number } | null;
@@ -121,6 +121,74 @@ describe('hitFromEvent', () => {
     const result = hitFromEvent({ target: row, clientX: 0, clientY: 0 });
     expect(result).toBeNull();
     row.remove();
+  });
+});
+
+describe('visualVerticalHit', () => {
+  afterEach(() => {
+    delete (document as unknown as DocWithCaretPos).caretPositionFromPoint;
+    delete (document as unknown as { elementFromPoint?: unknown }).elementFromPoint;
+    vi.restoreAllMocks();
+  });
+
+  function makeRect(overrides: Partial<DOMRect>): DOMRect {
+    return { top: 0, bottom: 0, left: 0, right: 0, width: 0, height: 0, x: 0, y: 0, toJSON: () => ({}), ...overrides };
+  }
+
+  it('returns null when the caret has no real layout (zero-height rect, e.g. jsdom)', () => {
+    const body = document.createElement('div');
+    const caret = document.createElement('span');
+    body.append(caret);
+    expect(visualVerticalHit(body, caret, 'down')).toBeNull();
+    expect(visualVerticalHit(body, caret, 'up')).toBeNull();
+  });
+
+  it('resolves a point one line-height below the caret for dir "down"', () => {
+    const container = document.createElement('div');
+    document.body.append(container);
+    const row = document.createElement('div');
+    row.dataset.editorLine = '3';
+    const content = document.createElement('span');
+    content.className = 'editor-content';
+    const text = document.createTextNode('line three');
+    content.append(text);
+    row.append(content);
+    container.append(row);
+    const caret = document.createElement('span');
+    container.append(caret);
+
+    vi.spyOn(caret, 'getBoundingClientRect').mockReturnValue(makeRect({ top: 0, bottom: 14, left: 5, height: 14 }));
+    (document as unknown as { elementFromPoint: (x: number, y: number) => Element | null }).elementFromPoint = vi.fn().mockReturnValue(content);
+    (document as unknown as DocWithCaretPos).caretPositionFromPoint = vi.fn().mockReturnValue({ offsetNode: text, offset: 2 });
+
+    const hit = visualVerticalHit(container, caret, 'down');
+    expect(hit).toEqual({ line: 3, col: 2, inGutter: false });
+
+    container.remove();
+  });
+
+  it('resolves a point one line-height above the caret for dir "up"', () => {
+    const container = document.createElement('div');
+    document.body.append(container);
+    const row = document.createElement('div');
+    row.dataset.editorLine = '1';
+    const content = document.createElement('span');
+    content.className = 'editor-content';
+    const text = document.createTextNode('line one');
+    content.append(text);
+    row.append(content);
+    container.append(row);
+    const caret = document.createElement('span');
+    container.append(caret);
+
+    vi.spyOn(caret, 'getBoundingClientRect').mockReturnValue(makeRect({ top: 14, bottom: 28, left: 5, height: 14 }));
+    (document as unknown as { elementFromPoint: (x: number, y: number) => Element | null }).elementFromPoint = vi.fn().mockReturnValue(content);
+    (document as unknown as DocWithCaretPos).caretPositionFromPoint = vi.fn().mockReturnValue({ offsetNode: text, offset: 4 });
+
+    const hit = visualVerticalHit(container, caret, 'up');
+    expect(hit).toEqual({ line: 1, col: 4, inGutter: false });
+
+    container.remove();
   });
 });
 

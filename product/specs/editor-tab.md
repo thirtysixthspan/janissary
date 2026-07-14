@@ -53,6 +53,12 @@ repeat event. Shift+←/→ is the one exception: like everywhere else in the ap
 (see Tabs) rather than extending the selection horizontally. Shift+↑/↓ is unaffected and still
 extends the selection vertically, since there is no competing tab-switch binding on those keys.
 
+A line too long to fit the editor's width soft-wraps across several visual rows. Pressing ↑/↓ (or
+Ctrl+P/Ctrl+N) moves the cursor one visual row at a time, so a wrapped line takes as many presses
+to cross as it has visual rows, matching how the line actually appears on screen. Once the cursor
+reaches the wrapped line's first or last visual row, the next ↑/↓ press continues into the
+neighboring line, same as for unwrapped lines.
+
 Clicking anywhere in the editor body — including empty space below the last line — keeps the textarea focused so keyboard input continues to work. Clicks on text lines move the cursor; clicks on empty space do not change cursor position but do not disarm the editor.
 
 During IME composition, key events are deferred to the compositing text input and are not processed

@@ -30,6 +30,13 @@ function moveToVertical(s: EditorState, target: number, goal: number, extend: bo
   return moveTo(s, { line: target, col: goal }, extend, goal);
 }
 
+// Move to a position already resolved by the caller (e.g. wrapped-line-aware vertical navigation
+// via visualVerticalHit) instead of computing it from the logical line array. Delegates to the
+// same moveTo used by every other transition, so anchor/selection semantics are identical.
+export function moveToVisualTarget(s: EditorState, pos: Pos, extend: boolean): EditorState {
+  return moveTo(s, pos, extend);
+}
+
 export function moveCursor(s: EditorState, dir: Direction, extend: boolean): EditorState {
   const sel = selectionRange(s);
   if (dir === 'left' || dir === 'right') {
