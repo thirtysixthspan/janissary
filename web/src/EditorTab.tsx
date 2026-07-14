@@ -103,14 +103,22 @@ export const EditorTab = forwardRef<EditorTabHandle, { editor: EditorView; clien
   const loaded = state !== null;
   useEffect(() => { if (active && loaded) textareaRef.current?.focus(); }, [active, loaded]);
   const initialScrollDone = useRef(false);
+  const lastCursorRef = useRef<{ line: number; col: number } | null>(null);
   useEffect(() => {
     if (!active || !state) return;
     if (!initialScrollDone.current) {
       initialScrollDone.current = true;
+      lastCursorRef.current = { line: state.cursor.line, col: state.cursor.col };
       caretRef.current?.scrollIntoView({ block: editor.line === undefined ? 'nearest' : 'center' });
       return;
     }
-    caretRef.current?.scrollIntoView({ block: 'nearest' });
+    // Reactivating the tab re-runs this effect even when the cursor hasn't moved since it was
+    // last visible; only scroll when the cursor position actually changed, so returning to a tab
+    // never overrides a scroll position the user set deliberately while it was inactive.
+    const last = lastCursorRef.current;
+    const moved = !last || last.line !== state.cursor.line || last.col !== state.cursor.col;
+    lastCursorRef.current = { line: state.cursor.line, col: state.cursor.col };
+    if (moved) caretRef.current?.scrollIntoView({ block: 'nearest' });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active, state?.cursor.line, state?.cursor.col]);
 

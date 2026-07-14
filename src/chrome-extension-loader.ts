@@ -1,6 +1,6 @@
 import type { Readable, Writable } from 'node:stream';
 
-const RESPONSE_TIMEOUT_MS = 20000;
+const RESPONSE_TIMEOUT_MS = 20_000;
 
 // Sends a single Chrome DevTools Protocol command over Chrome's `--remote-debugging-pipe`
 // file descriptors (fd 3 write, fd 4 read) and waits for the matching response. Messages on
