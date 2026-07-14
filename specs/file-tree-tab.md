@@ -130,6 +130,9 @@ If the window loses focus while a drag is in progress — switching to another a
 virtual desktop with the mouse button still held — the drag is cancelled outright: the drag label
 disappears and nothing is moved, the same as releasing over empty space.
 
+Pressing Escape at any point during a drag also cancels it outright, with the same result: the
+drag label disappears and nothing is moved.
+
 ### Keyboard interactions
 
 A focused file tree tab captures its own keys, following the ARIA treeview pattern (see
