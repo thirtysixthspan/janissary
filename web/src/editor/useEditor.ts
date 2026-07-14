@@ -3,14 +3,18 @@
 // the ref mirror is always current) and never mutate inside a React updater.
 
 import { useRef, useState } from 'react';
-import type { EditorState } from './model';
+import type { EditorState, Pos } from './model';
 import {
   fromText, insertText, deleteBackward, deleteForward, killToLineEnd,
   collapseSelection, selectAll, selectedText,
 } from './model';
-import { moveCursor, movePage, moveLineEdge, moveDocumentEdge } from './motion';
+import { moveCursor, movePage, moveLineEdge, moveDocumentEdge, moveToVisualTarget } from './motion';
 import type { KeyAction } from './keys';
 import { UndoBuffer, type EditKind } from './undo';
+
+// Resolves one visual row up/down from the caret's current screen position (wrapped-line-aware
+// navigation); returns null to fall back to logical-line movement.
+export type ResolveVertical = (dir: 'up' | 'down') => Pos | null;
 
 export type EditorApi = {
   state: EditorState | null;
@@ -18,7 +22,7 @@ export type EditorApi = {
   load: (text: string, line?: number) => void;
   setState: (s: EditorState) => void;
   insert: (text: string) => void;
-  apply: (action: KeyAction, pageLines: number) => void;
+  apply: (action: KeyAction, pageLines: number, resolveVertical?: ResolveVertical) => void;
   sealUndo: () => void;
 };
 
@@ -63,11 +67,18 @@ export function useEditor(onSave: () => void): EditorApi {
     }
   };
 
-  const apply = (action: KeyAction, pageLines: number): void => {
+  const apply = (action: KeyAction, pageLines: number, resolveVertical?: ResolveVertical): void => {
     const s = stateRef.current;
     if (!s) return;
     switch (action.kind) {
-      case 'move': { move(moveCursor(s, action.dir, action.extend)); break; }
+      case 'move': {
+        if (action.dir === 'up' || action.dir === 'down') {
+          const target = resolveVertical?.(action.dir);
+          if (target) { move(moveToVisualTarget(s, target, action.extend)); break; }
+        }
+        move(moveCursor(s, action.dir, action.extend));
+        break;
+      }
       case 'page': { move(movePage(s, action.dir, pageLines, action.extend)); break; }
       case 'lineEdge': { move(moveLineEdge(s, action.edge, action.extend)); break; }
       case 'docEdge': { move(moveDocumentEdge(s, action.edge, action.extend)); break; }

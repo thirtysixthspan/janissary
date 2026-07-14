@@ -22,7 +22,12 @@ vi.mock('./motion', () => ({
   movePage: vi.fn((s) => s),
   moveLineEdge: vi.fn((s) => s),
   moveDocumentEdge: vi.fn((s) => s),
+  moveToVisualTarget: vi.fn((s) => s),
 }));
+
+import { moveCursor as _moveCursor, moveToVisualTarget as _moveToVisualTarget } from './motion';
+const mockMoveCursor = _moveCursor as ReturnType<typeof vi.fn>;
+const mockMoveToVisualTarget = _moveToVisualTarget as ReturnType<typeof vi.fn>;
 
 vi.mock('./undo', () => {
   class UndoBuffer {
@@ -64,6 +69,44 @@ describe('useEditor', () => {
     act(() => {
       result.current.apply({ kind: 'move', dir: 'up', extend: false }, 20);
     });
+  });
+
+  it('apply with vertical move and a resolving resolveVertical calls moveToVisualTarget, not moveCursor', () => {
+    mockMoveCursor.mockClear();
+    mockMoveToVisualTarget.mockClear();
+    const { result } = renderHook(() => useEditor(() => {}));
+    act(() => { result.current.load('test'); });
+    const resolveVertical = vi.fn().mockReturnValue({ line: 1, col: 2 });
+    act(() => {
+      result.current.apply({ kind: 'move', dir: 'down', extend: false }, 20, resolveVertical);
+    });
+    expect(resolveVertical).toHaveBeenCalledWith('down');
+    expect(mockMoveToVisualTarget).toHaveBeenCalledWith(expect.anything(), { line: 1, col: 2 }, false);
+    expect(mockMoveCursor).not.toHaveBeenCalled();
+  });
+
+  it('apply with vertical move falls back to moveCursor when resolveVertical returns null', () => {
+    mockMoveCursor.mockClear();
+    mockMoveToVisualTarget.mockClear();
+    const { result } = renderHook(() => useEditor(() => {}));
+    act(() => { result.current.load('test'); });
+    const resolveVertical = vi.fn().mockReturnValue(null);
+    act(() => {
+      result.current.apply({ kind: 'move', dir: 'up', extend: false }, 20, resolveVertical);
+    });
+    expect(resolveVertical).toHaveBeenCalledWith('up');
+    expect(mockMoveCursor).toHaveBeenCalled();
+    expect(mockMoveToVisualTarget).not.toHaveBeenCalled();
+  });
+
+  it('apply with horizontal move never calls resolveVertical', () => {
+    const { result } = renderHook(() => useEditor(() => {}));
+    act(() => { result.current.load('test'); });
+    const resolveVertical = vi.fn();
+    act(() => {
+      result.current.apply({ kind: 'move', dir: 'left', extend: false }, 20, resolveVertical);
+    });
+    expect(resolveVertical).not.toHaveBeenCalled();
   });
 
   it('apply with save calls onSave', () => {

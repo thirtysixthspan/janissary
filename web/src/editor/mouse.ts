@@ -77,3 +77,15 @@ export function hitFromPoint(body: HTMLElement, x: number, y: number): MouseHit 
   const lastLine = Number(lastRow.dataset.editorLine);
   return { line: lastLine, col: Number.MAX_SAFE_INTEGER, inGutter: false };
 }
+
+// One visual row up/down from the caret's current screen position, for wrapped-line-aware
+// ArrowUp/ArrowDown. Probes a point half a line-height above/below the caret's box and resolves
+// it the same way a mouse click would. Returns null when the caret has no real layout (a
+// zero-height rect — unmounted, or a non-layout test environment like jsdom) so callers can fall
+// back to logical-line movement.
+export function visualVerticalHit(body: HTMLElement, caret: HTMLElement, dir: 'up' | 'down'): MouseHit | null {
+  const rect = caret.getBoundingClientRect();
+  if (rect.height === 0) return null;
+  const y = dir === 'up' ? rect.top - rect.height / 2 : rect.bottom + rect.height / 2;
+  return hitFromPoint(body, rect.left, y);
+}

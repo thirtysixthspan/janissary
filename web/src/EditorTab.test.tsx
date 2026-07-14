@@ -209,6 +209,34 @@ describe('EditorTab', () => {
     expect(textareaEl).toHaveFocus();
   });
 
+  it('ArrowDown resolves to a visual row via DOM geometry when layout is available', async () => {
+    const { client } = makeClient();
+    const { container } = await renderLoaded(client);
+    const rows = container.querySelectorAll('.editor-row');
+    const secondContent = rows[1].querySelector('.editor-content')!;
+    const secondText = secondContent.firstChild!.firstChild!;
+    const caret = container.querySelector('.editor-caret')!;
+
+    vi.spyOn(caret, 'getBoundingClientRect').mockReturnValue(
+      { top: 0, bottom: 14, left: 3, right: 3, width: 0, height: 14, x: 3, y: 0, toJSON: () => ({}) },
+    );
+    (document as unknown as { elementFromPoint: (x: number, y: number) => Element | null }).elementFromPoint =
+      vi.fn().mockReturnValue(secondContent as Element);
+    (document as unknown as { caretPositionFromPoint: (x: number, y: number) => { offsetNode: Node; offset: number } }).caretPositionFromPoint =
+      vi.fn().mockReturnValue({ offsetNode: secondText, offset: 3 });
+
+    fireEvent.keyDown(textarea(), { key: 'ArrowDown' });
+
+    await waitFor(() => {
+      const current = container.querySelector(':scope .editor-row-current .editor-content');
+      expect(current?.textContent).toBe('line two');
+    });
+
+    vi.restoreAllMocks();
+    delete (document as unknown as { elementFromPoint?: unknown }).elementFromPoint;
+    delete (document as unknown as { caretPositionFromPoint?: unknown }).caretPositionFromPoint;
+  });
+
   it('does not consume Shift+ArrowLeft/Right, so it can reach the window-level tab-switch shortcut', async () => {
     const { client } = makeClient();
     await renderLoaded(client);

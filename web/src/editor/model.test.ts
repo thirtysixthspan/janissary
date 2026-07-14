@@ -4,7 +4,7 @@ import {
   deleteBackward, deleteForward, killToLineEnd, setSelection, collapseSelection, selectAll,
   wordRangeAt, type EditorState,
 } from './model';
-import { moveCursor, movePage, moveLineEdge, moveDocumentEdge } from './motion';
+import { moveCursor, movePage, moveLineEdge, moveDocumentEdge, moveToVisualTarget } from './motion';
 
 const state = (text: string, cursor?: { line: number; col: number }, anchor: { line: number; col: number } | null = null): EditorState =>
   ({ lines: text.split('\n'), cursor: cursor ?? { line: 0, col: 0 }, anchor });
@@ -166,6 +166,24 @@ describe('moveCursor', () => {
     const collapsed = moveCursor(extended, 'left', false);
     expect(selectionRange(collapsed)).toBeNull();
     expect(collapsed.cursor).toEqual({ line: 0, col: 1 });
+  });
+});
+
+describe('moveToVisualTarget', () => {
+  it('moves the cursor to the given position without a selection', () => {
+    const moved = moveToVisualTarget(state('abcdef\nghijkl'), { line: 1, col: 3 }, false);
+    expect(moved.cursor).toEqual({ line: 1, col: 3 });
+    expect(selectionRange(moved)).toBeNull();
+  });
+
+  it('clamps an out-of-range column to the target line length', () => {
+    const moved = moveToVisualTarget(state('ab\ncdef'), { line: 0, col: 99 }, false);
+    expect(moved.cursor).toEqual({ line: 0, col: 2 });
+  });
+
+  it('extends the selection from the pre-move cursor when extend is true', () => {
+    const extended = moveToVisualTarget(state('abc\ndef', { line: 0, col: 1 }), { line: 1, col: 2 }, true);
+    expect(selectionRange(extended)).toEqual({ start: { line: 0, col: 1 }, end: { line: 1, col: 2 } });
   });
 });
 

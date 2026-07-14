@@ -4,6 +4,7 @@ import type { JanusClient } from './ws';
 import { toText } from './editor/model';
 import { EditorLine, lineSelection } from './editor/render';
 import { actionForKey } from './editor/keys';
+import { visualVerticalHit } from './editor/mouse';
 import { useEditor } from './editor/useEditor';
 import { useEditorMouse } from './editor/useEditorMouse';
 import { useSyntaxHighlight } from './editor/useSyntaxHighlight';
@@ -141,6 +142,16 @@ export const EditorTab = forwardRef<EditorTabHandle, { editor: EditorView; clien
     return Math.max(1, Math.floor(body.clientHeight / lineHeight) - 1);
   };
 
+  // Wrapped-line-aware ArrowUp/ArrowDown: resolve one visual row from the caret's screen
+  // position, falling back to logical-line movement when there's no real layout (e.g. jsdom).
+  const resolveVertical = (dir: 'up' | 'down') => {
+    const body = bodyRef.current;
+    const caret = caretRef.current;
+    if (!body || !caret) return null;
+    const hit = visualVerticalHit(body, caret, dir);
+    return hit ? { line: hit.line, col: hit.col } : null;
+  };
+
   const onKeyDown = (e: React.KeyboardEvent) => {
     if (e.nativeEvent.isComposing) return;
     // Shift+Left/Right switches tabs everywhere else in the app (see useWindowKeys); let it
@@ -151,7 +162,7 @@ export const EditorTab = forwardRef<EditorTabHandle, { editor: EditorView; clien
     const action = actionForKey(e);
     if (!action) return;
     e.preventDefault();
-    api.apply(action, pageLines());
+    api.apply(action, pageLines(), resolveVertical);
   };
 
   // Typed text and paste both arrive through the hidden textarea (keeps IME composition working).
