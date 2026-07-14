@@ -8,6 +8,8 @@ Your job: run the security tools, list **every** finding, automatically apply th
 
 **Run everything synchronously, in the foreground.** Never use `run_in_background`, `&`, or otherwise start a background process (dev servers, watchers, long-lived processes) — every command must finish and return its exit code before you move to the next step.
 
+**No subagents, no background agents.** Do every step yourself — never launch a subagent (Task/Agent tool, `fork`, or otherwise) to research, explore, or implement any part of this task on your behalf.
+
 **Why security is different from other cleanups:** a wrong security "fix" still passes the tests. If you silence a warning, weaken a check, or delete a guard, `tsc`, the linter, and the tests all stay green — so they **cannot** tell you that you made the code less safe. Because nothing will catch a bad call, you must not make security judgment calls. Detect and report; let a human decide.
 
 Do the steps below **in order**. Do not skip steps. Do not invent your own process.
