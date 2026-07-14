@@ -196,6 +196,24 @@ describe('EditorTab', () => {
     expect(textareaEl).toHaveFocus();
   });
 
+  it('does not consume Shift+ArrowLeft/Right, so it can reach the window-level tab-switch shortcut', async () => {
+    const { client } = makeClient();
+    await renderLoaded(client);
+    const spy = vi.fn();
+    globalThis.addEventListener('keydown', spy);
+    fireEvent.keyDown(textarea(), { key: 'ArrowRight', shiftKey: true });
+    fireEvent.keyDown(textarea(), { key: 'ArrowLeft', shiftKey: true });
+    globalThis.removeEventListener('keydown', spy);
+    expect(spy).toHaveBeenCalledTimes(2);
+  });
+
+  it('Shift+ArrowRight no longer extends the in-editor selection', async () => {
+    const { client } = makeClient();
+    const { container } = await renderLoaded(client);
+    fireEvent.keyDown(textarea(), { key: 'ArrowRight', shiftKey: true });
+    expect(container.querySelector('.editor-sel')).toBeNull();
+  });
+
   it('undoes an edit with Cmd+Z', async () => {
     const { client } = makeClient();
     await renderLoaded(client);

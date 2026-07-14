@@ -49,7 +49,9 @@ on-disk size. Subsequent saves overwrite the file as usual.
 Printable characters (letters, digits, symbols, and space) and special keys (arrows, page up/down,
 home, end, enter, tab, backspace, delete, escape) are handled by the editor. Pressing and holding
 a printable key repeats the character — the key press is applied directly to the buffer on each
-repeat event.
+repeat event. Shift+←/→ is the one exception: like everywhere else in the app, it switches tabs
+(see Tabs) rather than extending the selection horizontally. Shift+↑/↓ is unaffected and still
+extends the selection vertically, since there is no competing tab-switch binding on those keys.
 
 Clicking anywhere in the editor body — including empty space below the last line — keeps the textarea focused so keyboard input continues to work. Clicks on text lines move the cursor; clicks on empty space do not change cursor position but do not disarm the editor.
 
