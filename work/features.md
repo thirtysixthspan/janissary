@@ -1,8 +1,6 @@
 
 ## ready
 
-* editor tab must have edit undo and redo functionality with standard keybinding. 
-
 * file navigator needs click-drag-release interaction to move files between directories. 
 
 ## in development
