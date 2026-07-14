@@ -3,6 +3,8 @@
 
 * editor tab must have edit undo and redo functionality with standard keybinding. 
 
+* file navigator needs click-drag-release interaction to move files between directories. 
+
 ## in development
 
 4. Supervisor/manager agent (LangGraph supervisor, n8n AI Agent Tool) — a built-in supervisor persona that receives a goal, fans work out with broadcast request, and aggregates the responses.
