@@ -110,6 +110,19 @@ describe('EditorTab', () => {
     await waitFor(() => expect(scrollMock).toHaveBeenCalledWith({ block: 'nearest' }));
   });
 
+  it('does not re-scroll the caret into view on reactivation when the cursor has not moved', async () => {
+    const { client } = makeClient();
+    const view = makeView();
+    const { rerender } = await renderLoaded(client, view);
+    const scrollMock = Element.prototype.scrollIntoView as ReturnType<typeof vi.fn>;
+
+    rerender(<EditorTab editor={view} client={client} active={false} />);
+    scrollMock.mockClear();
+    rerender(<EditorTab editor={view} client={client} active />);
+
+    expect(scrollMock).not.toHaveBeenCalled();
+  });
+
   it('centers the caret on initial load when opened with a target line', async () => {
     const { client } = makeClient();
     const scrollMock = Element.prototype.scrollIntoView as ReturnType<typeof vi.fn>;
