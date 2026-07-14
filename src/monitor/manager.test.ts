@@ -260,6 +260,20 @@ describe('MonitorManager', () => {
     expect(sessions[0].prompts[1]).not.toContain('[janus]');
   });
 
+  it('a tab created after start and joining the monitored group is picked up', () => {
+    const { managers } = makeFakeManagers([janus, agent2]);
+    const { spawn, sessions } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+    manager.start('janus', 'assistant', [{ kind: 'group', group: 2 }]);
+
+    const agent3 = { ...makeTab('agent3', '#eee'), group: 2, groupColor: '#bbb' };
+    managers.tab.tabs = [...managers.tab.tabs, agent3];
+
+    emitEntry(agent3, 'echo', 'z');
+    vi.advanceTimersByTime(FLUSH_MS);
+    expect(sessions[0].prompts[1]).toContain('agent3');
+  });
+
   it('rejects unknown targets, duplicate personas, and label collisions', () => {
     const { managers } = makeFakeManagers([janus, { ...makeTab('assistant', '#ccc') }]);
     const { spawn } = fakeSpawnFactory();
