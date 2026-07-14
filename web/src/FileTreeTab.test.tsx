@@ -234,6 +234,22 @@ describe('FileTreeTab', () => {
       act(() => { globalThis.dispatchEvent(new MouseEvent('mouseup')); });
     });
 
+    it('dragging a file renders a ghost label with its name that follows the cursor', () => {
+      const client = { send: vi.fn() } as unknown as JanusClient;
+      render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+      const srcRow = screen.getByText('src').closest('[role="treeitem"]') as HTMLElement;
+      document.elementFromPoint = vi.fn().mockReturnValue(srcRow);
+
+      fireEvent.mouseDown(screen.getByText('README.md'), { clientX: 0, clientY: 0 });
+      act(() => { globalThis.dispatchEvent(new MouseEvent('mousemove', { clientX: 20, clientY: 20 })); });
+
+      expect(screen.getByText('README.md', { selector: '.files-drag-ghost' })).toBeInTheDocument();
+
+      act(() => { globalThis.dispatchEvent(new MouseEvent('mouseup')); });
+
+      expect(screen.queryByText('README.md', { selector: '.files-drag-ghost' })).toBeNull();
+    });
+
     it('drop on a valid directory sends moveFileTreeItem with the right paths', () => {
       const send = vi.fn();
       const client = { send } as unknown as JanusClient;

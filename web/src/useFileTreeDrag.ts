@@ -16,6 +16,7 @@ type PendingConflict = { fromRelPath: string; toRelPath: string };
 // mousedown actually becomes a drag; a plain click never sets `draggedPath`.
 export function useFileTreeDrag(rows: FileTreeRow[], client: JanusClient, index: number) {
   const [draggedPath, setDraggedPath] = useState<string | null>(null);
+  const [dragPosition, setDragPosition] = useState<{ x: number; y: number } | null>(null);
   const [dropTarget, setDropTarget] = useState<DropTarget>(null);
   const [pendingConflict, setPendingConflict] = useState<PendingConflict | null>(null);
 
@@ -44,6 +45,7 @@ export function useFileTreeDrag(rows: FileTreeRow[], client: JanusClient, index:
     }
     gestureRef.current = null;
     setDraggedPath(null);
+    setDragPosition(null);
     setDropTarget(null);
   };
 
@@ -55,6 +57,7 @@ export function useFileTreeDrag(rows: FileTreeRow[], client: JanusClient, index:
       gesture.started = true;
       setDraggedPath(gesture.path);
     }
+    setDragPosition({ x: e.clientX, y: e.clientY });
     setDropTarget(resolveDropTarget(rowsRef.current, gesture.path, hoveredRowPath(e.clientX, e.clientY)));
   };
 
@@ -79,5 +82,5 @@ export function useFileTreeDrag(rows: FileTreeRow[], client: JanusClient, index:
 
   const cancelConflict = () => setPendingConflict(null);
 
-  return { draggedPath, dropTarget, pendingConflict, onRowMouseDown, drop, confirmOverwrite, cancelConflict };
+  return { draggedPath, dragPosition, dropTarget, pendingConflict, onRowMouseDown, drop, confirmOverwrite, cancelConflict };
 }
