@@ -14,6 +14,7 @@ The improvement work itself follows one of these existing single-purpose task pl
 | Coverage is below threshold on a testable file | [`improve-test-coverage.md`](improve-test-coverage.md) |
 | `npm audit` / security tooling reports a patchable advisory | [`improve-security.md`](improve-security.md) |
 | stylelint reports a CSS issue | [`improve-style.md`](improve-style.md) |
+| `npm outdated` lists a safe-looking package update | [`update-package.md`](update-package.md) |
 
 **No AI attribution — anywhere.** Never credit an AI agent as an author or contributor in anything this task produces. That means: no `Co-Authored-By:` trailers naming Claude or any other AI, no “Generated with Claude Code” (or similar) lines or badges, and no AI authorship notes in code, comments, docs, spec files, plan files, commit messages, or PR titles and bodies. This overrides any default convention that appends such attribution. The commit's configured git author is the only authorship ever recorded.
 
@@ -60,10 +61,11 @@ npm run quality 2>&1
 npm run duplication 2>&1
 npm run knip 2>&1
 npm run lint:css 2>&1
+npm outdated 2>&1
 ```
 
 - **TypeScript / tests must be green to begin a cycle.** If `npm run typecheck` errors, STOP the loop and report — the tree is broken and no improvement should be layered on top. (Tests are validated per-task as you follow the chosen playbook, and re-checked in Step 4.)
-- Read the signals into the selection table at the top of this file: FTA scores and `max-lines` from `quality`/`lint`, `cognitive-complexity` warnings from `lint`, clones from `duplication`, unused code from `knip`, coverage gaps (run `npm run coverage 2>&1` when test-coverage is a candidate), CSS issues from `lint:css`, and prefix clusters from the file layout under `src/`.
+- Read the signals into the selection table at the top of this file: FTA scores and `max-lines` from `quality`/`lint`, `cognitive-complexity` warnings from `lint`, clones from `duplication`, unused code from `knip`, coverage gaps (run `npm run coverage 2>&1` when test-coverage is a candidate), CSS issues from `lint:css`, prefix clusters from the file layout under `src/`, and outdated packages from `npm outdated` (`npm outdated` exits non-zero when it lists anything — that's expected, not a broken tree).
 
 Record the specific number for whatever you're about to target (the FTA score, the complexity value, the clone count, etc.) — this is the **before** value you will compare against in Step 4.
 
@@ -124,7 +126,7 @@ git clean -fd
 
 ### Step 5 — Ship this cycle to master
 
-The change is verified and sitting uncommitted in the working tree. **Ship it by executing [`merge-change-to-master.md`](merge-change-to-master.md) in full, yourself** — follow every step of that playbook in order, same as you did for the improvement playbook in Step 3; do not delegate this either. It commits the change as a single-author Conventional Commits commit — pick the type that fits the task (`refactor` for modularity/complexity/namespacing/duplication, `test` for coverage, `chore`/`fix` for deadcode, `fix`/`build` for security, `style` for CSS) — opens a PR against `master`, resolves any conflicts, waits for required checks, and squash-merges it. Do **not** hand-commit first: the merge task's own Step 0 picks up the working-tree change itself.
+The change is verified and sitting uncommitted in the working tree. **Ship it by executing [`merge-change-to-master.md`](merge-change-to-master.md) in full, yourself** — follow every step of that playbook in order, same as you did for the improvement playbook in Step 3; do not delegate this either. It commits the change as a single-author Conventional Commits commit — pick the type that fits the task (`refactor` for modularity/complexity/namespacing/duplication, `test` for coverage, `chore`/`fix` for deadcode, `fix`/`build` for security, `style` for CSS, `build` for a package update) — opens a PR against `master`, resolves any conflicts, waits for required checks, and squash-merges it. Do **not** hand-commit first: the merge task's own Step 0 picks up the working-tree change itself.
 
 Keep honoring the **No AI attribution** rule as you go — the commit, PR title, and PR body must carry no AI authorship — and the **Run autonomously** rule (never pause to ask a question).
 
