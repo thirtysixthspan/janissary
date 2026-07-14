@@ -1,7 +1,5 @@
 # issues
 
-* in the file navigator, when dropping a file into the same directory from where it came, the drag and drop is automatically cancelled. No cancel dialog is required.
-
 * in the file navigator, when dragging outside the file navigator, the drag and drop is cancelled.
 
 * in the file navigator, when dragging outside the file navigator, the drag and drop is cancelled.
