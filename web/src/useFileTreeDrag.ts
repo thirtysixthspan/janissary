@@ -36,6 +36,13 @@ export function useFileTreeDrag(rows: FileTreeRow[], client: JanusClient, index:
     client.send({ method: 'moveFileTreeItem', params: { index, fromRelPath, toRelPath } });
   };
 
+  const resetGestureState = () => {
+    gestureRef.current = null;
+    setDraggedPath(null);
+    setDragPosition(null);
+    setDropTarget(null);
+  };
+
   const drop = () => {
     const gesture = gestureRef.current;
     const target = dropTargetRef.current;
@@ -43,10 +50,13 @@ export function useFileTreeDrag(rows: FileTreeRow[], client: JanusClient, index:
       if (target.conflict) setPendingConflict({ fromRelPath: gesture.path, toRelPath: target.path });
       else send(gesture.path, target.path);
     }
-    gestureRef.current = null;
-    setDraggedPath(null);
-    setDragPosition(null);
-    setDropTarget(null);
+    resetGestureState();
+  };
+
+  const removeGestureListeners = () => {
+    globalThis.removeEventListener('mousemove', onWindowMove);
+    globalThis.removeEventListener('mouseup', onWindowUp);
+    globalThis.removeEventListener('blur', onWindowBlur);
   };
 
   const onWindowMove = (e: MouseEvent) => {
@@ -63,8 +73,15 @@ export function useFileTreeDrag(rows: FileTreeRow[], client: JanusClient, index:
 
   const onWindowUp = () => {
     drop();
-    globalThis.removeEventListener('mousemove', onWindowMove);
-    globalThis.removeEventListener('mouseup', onWindowUp);
+    removeGestureListeners();
+  };
+
+  // A blur never commits a move, regardless of what's under the pointer — the window losing focus
+  // (switching apps, virtual desktops) is the only signal we get for a release that lands entirely
+  // outside the browser window, where no mouseup event reaches the page at all.
+  const onWindowBlur = () => {
+    resetGestureState();
+    removeGestureListeners();
   };
 
   const onRowMouseDown = (row: FileTreeRow, e: React.MouseEvent) => {
@@ -73,6 +90,7 @@ export function useFileTreeDrag(rows: FileTreeRow[], client: JanusClient, index:
     gestureRef.current = { path: row.path, x: e.clientX, y: e.clientY, started: false };
     globalThis.addEventListener('mousemove', onWindowMove);
     globalThis.addEventListener('mouseup', onWindowUp);
+    globalThis.addEventListener('blur', onWindowBlur);
   };
 
   const confirmOverwrite = () => {
