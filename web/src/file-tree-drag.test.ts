@@ -8,9 +8,11 @@ function makeRows(): FileTreeRow[] {
     { path: 'src', name: 'src', depth: 0, dir: true, expanded: true },
     { path: 'src/nested', name: 'nested', depth: 1, dir: true, expanded: false },
     { path: 'src/index.ts', name: 'index.ts', depth: 1, dir: false },
+    { path: 'src/other.ts', name: 'other.ts', depth: 1, dir: false },
     { path: 'dest', name: 'dest', depth: 0, dir: true, expanded: true },
     { path: 'dest/index.ts', name: 'index.ts', depth: 1, dir: false },
     { path: 'README.md', name: 'README.md', depth: 0, dir: false },
+    { path: 'LICENSE', name: 'LICENSE', depth: 0, dir: false },
   ];
 }
 
@@ -47,6 +49,18 @@ describe('resolveDropTarget', () => {
 
   it('is null when hovering a descendant of the dragged directory', () => {
     expect(resolveDropTarget(makeRows(), 'src', 'src/nested')).toBeNull();
+  });
+
+  it("is null when hovering another row already inside the dragged item's own directory", () => {
+    expect(resolveDropTarget(makeRows(), 'dest/index.ts', 'dest')).toBeNull();
+  });
+
+  it("is null when hovering a sibling file inside the dragged item's own directory", () => {
+    expect(resolveDropTarget(makeRows(), 'src/index.ts', 'src/other.ts')).toBeNull();
+  });
+
+  it('is null when hovering another root-level row and the dragged item is also root-level', () => {
+    expect(resolveDropTarget(makeRows(), 'README.md', 'LICENSE')).toBeNull();
   });
 
   it('is null when hovering the ".." row', () => {

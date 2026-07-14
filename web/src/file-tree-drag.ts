@@ -21,7 +21,9 @@ function parentPath(path: string): string {
 // target: hovering a directory row targets that directory directly; hovering a file row targets
 // that file's containing directory instead, so releasing over any row inside a directory — not
 // just the directory's own row — moves the dragged item into it. A target must not be the dragged
-// item itself and must not be one of its own descendants. A valid target additionally reports
+// item itself, must not be one of its own descendants, and must not be the item's own current
+// parent (dropping a row back onto the directory it already lives in is a no-op, not a move). A
+// valid target additionally reports
 // whether it already has a child with the same name as the dragged item — checked by name only,
 // and only among that child's rows that are already loaded (a collapsed directory's children
 // aren't in `rows` at all, so a conflict inside one can't be detected client-side; the server
@@ -32,6 +34,7 @@ export function resolveDropTarget(rows: FileTreeRow[], draggedPath: string, hove
   if (!hovered) return null;
   const targetPath = hovered.dir ? hovered.path : parentPath(hovered.path);
   if (isSameOrDescendantPath(targetPath, draggedPath)) return null;
+  if (targetPath === parentPath(draggedPath)) return null;
   const name = draggedPath.slice(draggedPath.lastIndexOf('/') + 1);
   const childPath = targetPath ? `${targetPath}/${name}` : name;
   const conflict = rows.some((r) => r.path === childPath);

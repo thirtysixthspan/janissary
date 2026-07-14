@@ -113,6 +113,10 @@ shown, and releasing there does nothing. Releasing over a file at the root of th
 dragged item into the root itself — since the root has no row of its own, nothing highlights for
 this target, but the move still happens.
 
+Dropping the item back onto the directory it's already in — its own row, or any other row already
+inside that same directory — is also a no-op: no confirmation dialog appears, and the file stays
+exactly where it was.
+
 If the target directory already contains an entry with the same name as the dragged item, the
 move does not happen immediately. Instead a confirmation dialog appears, offering **Overwrite** or
 **Cancel**. Confirming replaces the existing entry with the dragged one; cancelling leaves both
