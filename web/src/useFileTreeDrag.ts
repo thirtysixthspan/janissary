@@ -57,6 +57,7 @@ export function useFileTreeDrag(rows: FileTreeRow[], client: JanusClient, index:
     globalThis.removeEventListener('mousemove', onWindowMove);
     globalThis.removeEventListener('mouseup', onWindowUp);
     globalThis.removeEventListener('blur', onWindowBlur);
+    globalThis.removeEventListener('keydown', onWindowKeyDown);
   };
 
   const onWindowMove = (e: MouseEvent) => {
@@ -84,6 +85,13 @@ export function useFileTreeDrag(rows: FileTreeRow[], client: JanusClient, index:
     removeGestureListeners();
   };
 
+  // Same cancel-without-committing path as blur, triggered by Escape instead of a focus change.
+  const onWindowKeyDown = (e: KeyboardEvent) => {
+    if (e.key !== 'Escape' || !gestureRef.current) return;
+    resetGestureState();
+    removeGestureListeners();
+  };
+
   const onRowMouseDown = (row: FileTreeRow, e: React.MouseEvent) => {
     if (row.path === '..') return;
     e.preventDefault();
@@ -91,6 +99,7 @@ export function useFileTreeDrag(rows: FileTreeRow[], client: JanusClient, index:
     globalThis.addEventListener('mousemove', onWindowMove);
     globalThis.addEventListener('mouseup', onWindowUp);
     globalThis.addEventListener('blur', onWindowBlur);
+    globalThis.addEventListener('keydown', onWindowKeyDown);
   };
 
   const confirmOverwrite = () => {

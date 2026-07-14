@@ -165,6 +165,45 @@ describe('useFileTreeDrag', () => {
     expect(result.current.dropTarget).toEqual({ path: 'other', conflict: false });
   });
 
+  it('pressing Escape during an active drag cancels it without sending anything', () => {
+    const client = { send: vi.fn() } as unknown as JanusClient;
+    const { result } = renderHook(() => useFileTreeDrag(makeRows(), client, 0));
+    const otherRow = makeRowElement('other');
+    document.elementFromPoint = vi.fn().mockReturnValue(otherRow);
+
+    act(() => { result.current.onRowMouseDown({ path: 'notes.txt' } as FileTreeRow, downEvent(0, 0)); });
+    act(() => { globalThis.dispatchEvent(new MouseEvent('mousemove', { clientX: 20, clientY: 0 })); });
+    act(() => { globalThis.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); });
+
+    expect(client.send).not.toHaveBeenCalled();
+    expect(result.current.draggedPath).toBeNull();
+    expect(result.current.dropTarget).toBeNull();
+    expect(result.current.dragPosition).toBeNull();
+  });
+
+  it("a keydown that isn't Escape does not cancel an active drag", () => {
+    const client = { send: vi.fn() } as unknown as JanusClient;
+    const { result } = renderHook(() => useFileTreeDrag(makeRows(), client, 0));
+    const otherRow = makeRowElement('other');
+    document.elementFromPoint = vi.fn().mockReturnValue(otherRow);
+
+    act(() => { result.current.onRowMouseDown({ path: 'notes.txt' } as FileTreeRow, downEvent(0, 0)); });
+    act(() => { globalThis.dispatchEvent(new MouseEvent('mousemove', { clientX: 20, clientY: 0 })); });
+    act(() => { globalThis.dispatchEvent(new KeyboardEvent('keydown', { key: 'a' })); });
+
+    expect(result.current.draggedPath).toBe('notes.txt');
+  });
+
+  it('pressing Escape with no active drag does nothing', () => {
+    const client = { send: vi.fn() } as unknown as JanusClient;
+    const { result } = renderHook(() => useFileTreeDrag(makeRows(), client, 0));
+
+    act(() => { globalThis.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); });
+
+    expect(client.send).not.toHaveBeenCalled();
+    expect(result.current.draggedPath).toBeNull();
+  });
+
   it('a release with no valid target resets drag state without sending anything', () => {
     const client = { send: vi.fn() } as unknown as JanusClient;
     const { result } = renderHook(() => useFileTreeDrag(makeRows(), client, 0));
