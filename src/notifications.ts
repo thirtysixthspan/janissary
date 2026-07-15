@@ -3,7 +3,7 @@ import type { Managers } from './managers.js';
 import { getConfig } from './config.js';
 import { NOTIFICATIONS_LABEL, notificationsTab, appendNotification } from './notifications-tab.js';
 
-// The events that can feed the notifications tab. Four are ambient (a background tab's own
+// The events that can feed the notifications tab. Five are ambient (a background tab's own
 // activity); `manual` is an explicit `notify <message>` and `auto-approve` is a workspaced
 // harness's auto-approved permission gate — both are always eligible and bypass focus suppression.
 export type NotificationEventType =
@@ -11,11 +11,12 @@ export type NotificationEventType =
   | 'incoming-message'
   | 'schedule-fire'
   | 'agent-start'
+  | 'rate-limited'
   | 'manual'
   | 'auto-approve';
 
 // Whether an event should be recorded, given the config and the active tab. Defensive against the
-// tab feeding itself. For the four ambient events, both the per-event opt-in toggle and focus
+// tab feeding itself. For the five ambient events, both the per-event opt-in toggle and focus
 // suppression (the active tab never notifies about its own activity) apply; the `manual` event
 // bypasses both — an explicit trigger always fires (subject only to the tab being open, enforced
 // in `notify`).
@@ -34,6 +35,7 @@ export function shouldNotify(
     case 'incoming-message': { return config.events.incomingMessage; }
     case 'schedule-fire': { return config.events.scheduleFire; }
     case 'agent-start': { return config.events.agentStart; }
+    case 'rate-limited': { return config.events.rateLimited; }
   }
 }
 
@@ -55,6 +57,7 @@ export function notificationText(event: NotificationEventType, tabLabel: string,
   switch (event) {
     case 'state-change': { return `Agent '${tabLabel}' finished`; }
     case 'agent-start': { return `Agent '${tabLabel}' started`; }
+    case 'rate-limited': { return `Agent '${tabLabel}' is being rate limited`; }
     case 'schedule-fire': { return `Scheduled: ${detail} in ${tabLabel}`; }
     case 'incoming-message': { return `Message from ${detail} in ${tabLabel}`; }
     case 'manual':

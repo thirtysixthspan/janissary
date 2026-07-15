@@ -4,6 +4,7 @@ import { runAcpToolLoop } from './loop.js';
 import { extractBrowserCommand, BROWSER_PRIMER } from '../browser/command.js';
 import { messageBus } from '../bus.js';
 import { notify } from '../notifications.js';
+import { isRateLimitError } from './rate-limit.js';
 import { makeUpdateRunning } from './runner.js';
 import type { Managers } from '../managers.js';
 
@@ -118,7 +119,7 @@ export class AcpManager {
         messageBus.emit('state', { type: 'dirty' });
         onDone?.(lastAnswer);
       },
-      error: (m) => { updateRunning(`ACP error: ${m}`, false); this.managers.tab.deleteBusy(label); notify(this.managers, 'state-change', label); onDone?.(`ACP error: ${m}`); },
+      error: (m) => { updateRunning(`ACP error: ${m}`, false); this.managers.tab.deleteBusy(label); notify(this.managers, 'state-change', label); if (isRateLimitError(m)) notify(this.managers, 'rate-limited', label); onDone?.(`ACP error: ${m}`); },
     });
   }
 }

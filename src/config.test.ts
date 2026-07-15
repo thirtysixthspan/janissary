@@ -94,7 +94,7 @@ describe('loadConfig', () => {
   it('writes a default notifications block with every event off', () => {
     const config = loadConfig(tmpDir);
     expect(config.notifications).toEqual({
-      events: { stateChange: false, incomingMessage: false, scheduleFire: false, agentStart: false },
+      events: { stateChange: false, incomingMessage: false, scheduleFire: false, agentStart: false, rateLimited: false },
     });
 
     const configPath = path.join(tmpDir, '.janissary', 'config.json');

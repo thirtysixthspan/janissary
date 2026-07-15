@@ -157,6 +157,23 @@ describe('AcpManager.run', () => {
     expect(mocks.notify).toHaveBeenCalledWith(managers, 'state-change', 'tab1');
   });
 
+  it('error with a rate-limit-shaped message also fires a rate-limited notification', () => {
+    const { acp, managers } = setup();
+    acp.run('tab1', 'acp hello');
+    const handlers = mocks.runAcpToolLoop.mock.calls[0][3] as AcpLoopHandlers;
+    handlers.error('request failed with status 429');
+    expect(mocks.notify).toHaveBeenCalledWith(managers, 'state-change', 'tab1');
+    expect(mocks.notify).toHaveBeenCalledWith(managers, 'rate-limited', 'tab1');
+  });
+
+  it('error with an unrelated message does not fire a rate-limited notification', () => {
+    const { acp, managers } = setup();
+    acp.run('tab1', 'acp hello');
+    const handlers = mocks.runAcpToolLoop.mock.calls[0][3] as AcpLoopHandlers;
+    handlers.error('boom');
+    expect(mocks.notify).not.toHaveBeenCalledWith(managers, 'rate-limited', 'tab1');
+  });
+
   it('chunk handler calls updateRunning with the buffer', () => {
     const { acp } = setup();
     const updateFn = vi.fn();

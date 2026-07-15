@@ -482,6 +482,7 @@ export type NotificationConfig = {
     incomingMessage: boolean;
     scheduleFire: boolean;
     agentStart: boolean;
+    rateLimited: boolean;
   };
 };
 

@@ -10,6 +10,14 @@ import { MonitorManager } from './manager.js';
 import { writeCaptureFile } from '../harness/capture-file.js';
 import type * as monitorAcp from './acp.js';
 
+const mocks = vi.hoisted(() => ({
+  notify: vi.fn(),
+}));
+
+vi.mock('../notifications.js', () => ({
+  notify: mocks.notify,
+}));
+
 vi.mock('../harness/capture-file.js', () => ({
   writeCaptureFile: vi.fn(() => '/project/.janissary/captures/assistant-now.txt'),
   initHarnessCaptureDirectory: vi.fn(),
@@ -468,6 +476,34 @@ describe('MonitorManager', () => {
     emitEntry(janus, 'pwd', '/tmp');
     vi.advanceTimersByTime(FLUSH_MS);
     expect(sessions[1].prompts).toHaveLength(2); // fresh session keeps flushing
+  });
+
+  it('a flush error with a rate-limit-shaped message fires a rate-limited notification', () => {
+    const { managers } = makeFakeManagers([janus]);
+    const { spawn, sessions } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+    manager.start('janus', 'security', []);
+    mocks.notify.mockClear();
+
+    emitEntry(janus, 'ls', 'x');
+    vi.advanceTimersByTime(FLUSH_MS);
+    sessions[0].fail('too many requests');
+
+    expect(mocks.notify).toHaveBeenCalledWith(managers, 'rate-limited', 'janus');
+  });
+
+  it('a flush error with an unrelated message does not fire a rate-limited notification', () => {
+    const { managers } = makeFakeManagers([janus]);
+    const { spawn, sessions } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+    manager.start('janus', 'security', []);
+    mocks.notify.mockClear();
+
+    emitEntry(janus, 'ls', 'x');
+    vi.advanceTimersByTime(FLUSH_MS);
+    sessions[0].fail('ACP connection closed');
+
+    expect(mocks.notify).not.toHaveBeenCalledWith(managers, 'rate-limited', 'janus');
   });
 
   it('resetContext respawns the session and re-primes it', () => {

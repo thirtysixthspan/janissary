@@ -3,6 +3,8 @@ import { SUGGESTION_PREFIX } from './manager.js';
 import type { Managers } from '../managers.js';
 import { recordReply } from './reply.js';
 import { recordContext } from './context.js';
+import { notify } from '../notifications.js';
+import { isRateLimitError } from '../acp/rate-limit.js';
 
 // Query a running monitor's ACP session directly; the reply lands in the owner tab's
 // transcript. Shares the `inFlight` slot with flushes, so a question never interleaves
@@ -31,6 +33,7 @@ export function askMonitor(
     },
     onError: (message) => {
       managers.tab.finishRunning(owner, `monitor ${personaName}: ${message} — restarting monitor session`);
+      if (isRateLimitError(message)) notify(managers, 'rate-limited', owner);
       onRespawn();
     },
   });
