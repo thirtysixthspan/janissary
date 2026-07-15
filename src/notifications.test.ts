@@ -5,10 +5,10 @@ import { shouldNotify, formatTimestamp, notificationText, notify } from './notif
 import { NOTIFICATIONS_LABEL } from './notifications-tab.js';
 
 const allOn: NotificationConfig = {
-  events: { stateChange: true, incomingMessage: true, scheduleFire: true, agentStart: true },
+  events: { stateChange: true, incomingMessage: true, scheduleFire: true, agentStart: true, rateLimited: true },
 };
 const allOff: NotificationConfig = {
-  events: { stateChange: false, incomingMessage: false, scheduleFire: false, agentStart: false },
+  events: { stateChange: false, incomingMessage: false, scheduleFire: false, agentStart: false, rateLimited: false },
 };
 
 describe('shouldNotify — ambient events', () => {
@@ -46,6 +46,14 @@ describe('shouldNotify — ambient events', () => {
 
   it('is suppressed for agent-start when its toggle is off', () => {
     expect(shouldNotify(allOff, 'agent-start', 'build', 'janus')).toBe(false);
+  });
+
+  it('fires for rate-limited when its toggle is on', () => {
+    expect(shouldNotify(allOn, 'rate-limited', 'build', 'janus')).toBe(true);
+  });
+
+  it('is suppressed for rate-limited when its toggle is off', () => {
+    expect(shouldNotify(allOff, 'rate-limited', 'build', 'janus')).toBe(false);
   });
 });
 
@@ -122,6 +130,10 @@ describe('notificationText', () => {
 
   it('renders schedule-fire event text with the detail and tab', () => {
     expect(notificationText('schedule-fire', 'build', 'deploy')).toBe('Scheduled: deploy in build');
+  });
+
+  it('renders rate-limited event text', () => {
+    expect(notificationText('rate-limited', 'build')).toBe("Agent 'build' is being rate limited");
   });
 });
 

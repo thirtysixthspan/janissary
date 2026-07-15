@@ -46,7 +46,7 @@ the sidebar's own strip (see `sidebars.md`).
 
 ### Events that notify
 
-Six event types can produce a notification line:
+Seven event types can produce a notification line:
 
 - **`state-change`** — an agent tab's busy flag clears (busy → idle), e.g. an ACP turn finishes or
   errors.
@@ -54,13 +54,20 @@ Six event types can produce a notification line:
   entry carrying a sender).
 - **`schedule-fire`** — a scheduled command fires in a tab (see `scheduling.md`).
 - **`agent-start`** — an ACP session begins its first turn (busy false → true).
+- **`rate-limited`** — an ACP query fails because the underlying provider is rate limiting
+  requests, detected by a best-effort match against the failure's error-message text. This covers
+  every ACP query path with a visible in-tab error line: an agent tab's interactive `acp <prompt>`
+  command, a monitor persona's periodic background query, and a direct `monitor ask <persona>
+  <question>`. The notification is additive — it appears alongside the existing in-tab error line,
+  which is unchanged. A non-rate-limit ACP error produces no `rate-limited` notification.
 - **`manual`** — an explicit `notify <message>` (see below).
 - **`auto-approve`** — a workspaced harness launched with `-y` auto-approves one of its own
   permission prompts (see `harness.md`).
 
-The four ambient events (`state-change`, `incoming-message`, `schedule-fire`, `agent-start`) are
-each **independently togglable and default off** — opt in by editing `.janissary/config.json` (see
-`application-config.md`). The `manual` and `auto-approve` events have no toggle: they always fire.
+The five ambient events (`state-change`, `incoming-message`, `schedule-fire`, `agent-start`,
+`rate-limited`) are each **independently togglable and default off** — opt in by editing
+`.janissary/config.json` (see `application-config.md`). The `manual` and `auto-approve` events have
+no toggle: they always fire.
 
 ### Focus suppression
 

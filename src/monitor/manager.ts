@@ -16,6 +16,8 @@ import { askMonitor } from './ask.js';
 import { recordReply } from './reply.js';
 import type { ConnectionView } from '../protocol.js';
 import type { Managers } from '../managers.js';
+import { notify } from '../notifications.js';
+import { isRateLimitError } from '../acp/rate-limit.js';
 
 export const MONITOR_FLUSH_MS = 30_000;
 
@@ -170,6 +172,7 @@ export class MonitorManager {
       },
       onError: (message) => {
         this.managers.tab.append(reg.owner, { input: '', output: `monitor ${reg.persona.name}: ${message} — restarting monitor session` });
+        if (isRateLimitError(message)) notify(this.managers, 'rate-limited', reg.owner);
         this.respawn(reg);
       },
     });

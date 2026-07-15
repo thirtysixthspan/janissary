@@ -19,6 +19,7 @@ const DEFAULT_CONFIG: Config = {
       incomingMessage: false,
       scheduleFire: false,
       agentStart: false,
+      rateLimited: false,
     },
   },
 };
