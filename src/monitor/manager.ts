@@ -3,10 +3,11 @@ import type { Subscription } from '../bus.js';
 import { messageBus } from '../bus.js';
 import { loadPersona, type Persona } from '../personas.js';
 import { parseSuggestion } from './parsing.js';
-import { openMonitorTab, closeMonitorTab, pushSuggestion, rateSuggestion, updateMonitorMeta } from './window.js';
+import { openMonitorTab, pushSuggestion, rateSuggestion, updateMonitorMeta } from './window.js';
 import { openMonitorSession, respawnMonitorSession } from './session.js';
 import { spawnMonitorSession } from './acp.js';
-import { validateTargets, matchesTargets, targetColor, formatTargets } from './targets.js';
+import { validateTargets, matchesTargets, targetColor, formatTargets, resolveTargetAliases } from './targets.js';
+import { stopMonitor, closeIfUnfed } from './stop.js';
 import { seedFeedEntries, flushFeedEntries } from './feeds.js';
 import { generateSessionDelimiter, frameEntry } from './framing.js';
 import { recordContext, snapshotMonitorContext } from './context.js';
@@ -72,7 +73,9 @@ export class MonitorManager {
     const key = `${owner}:${personaName}`;
     if (this.monitors.has(key)) return `Already monitoring with persona "${personaName}".`;
     const inline = targets.length === 0;
-    const resolved: MonitorTarget[] = inline ? [{ kind: 'tab', label: owner }] : targets;
+    const resolved: MonitorTarget[] = inline
+      ? [{ kind: 'tab', label: owner }]
+      : resolveTargetAliases(this.managers.tab.tabs, targets);
     const targetError = validateTargets(this.managers.tab.tabs, personaName, inline, resolved);
     if (targetError) return targetError;
 
@@ -213,29 +216,7 @@ export class MonitorManager {
   // Stop one persona's monitor (or drop a single target from it). Returns false when no
   // such monitor exists.
   stop(owner: string, personaName: string, target?: MonitorTarget): boolean {
-    const key = `${owner}:${personaName}`;
-    const reg = this.monitors.get(key);
-    if (!reg) return false;
-    if (target && !reg.inline) {
-      reg.targets = reg.targets.filter((t) => JSON.stringify(t) !== JSON.stringify(target));
-      if (reg.targets.length > 0) {
-        updateMonitorMeta(this.managers, personaName, formatTargets(reg.targets), reg.contextBytes);
-        return true;
-      }
-    }
-    for (const sub of reg.subs) sub.unsubscribe();
-    clearInterval(reg.timer);
-    reg.session.kill();
-    this.monitors.delete(key);
-    if (!reg.inline) this.closeIfUnfed(personaName);
-    return true;
-  }
-
-  // Close a persona's reporting tab if no live monitor still feeds it (another owner
-  // may run the same persona and keep it open).
-  private closeIfUnfed(personaName: string): void {
-    const stillFed = [...this.monitors.values()].some((r) => !r.inline && r.persona.name === personaName);
-    if (!stillFed) closeMonitorTab(this.managers, personaName);
+    return stopMonitor(this.monitors, this.managers, owner, personaName, target);
   }
 
   // The owning agent tab closed: stop its monitors, and close any reporting tab that no
@@ -245,7 +226,7 @@ export class MonitorManager {
       .filter((reg) => reg.owner === owner && !reg.inline)
       .map((reg) => reg.persona.name);
     this.stopAll(owner);
-    for (const name of personas) this.closeIfUnfed(name);
+    for (const name of personas) closeIfUnfed(this.monitors, this.managers, name);
   }
 
   stopAll(owner: string): number {

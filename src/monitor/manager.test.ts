@@ -251,6 +251,33 @@ describe('MonitorManager', () => {
     expect(monitorTab?.monitor?.targets).toBe('agent3');
   });
 
+  it('starting with a target given as a renamed tab\'s alias resolves and monitors it', () => {
+    const renamed = { ...agent2, title: 'reviewer' };
+    const { managers } = makeFakeManagers([janus, renamed]);
+    const { spawn } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+
+    expect(manager.start('janus', 'assistant', [{ kind: 'tab', label: 'reviewer' }])).toBeNull();
+
+    const monitorTab = managers.tab.tabs.find((t) => t.view === 'monitor');
+    expect(monitorTab?.monitor?.targets).toBe('agent2');
+  });
+
+  it('stopping a target given as a renamed tab\'s alias drops the matching tab target', () => {
+    const agent3 = makeTab('agent3', '#ccc');
+    const renamed = { ...agent2, title: 'reviewer' };
+    const { managers } = makeFakeManagers([janus, renamed, agent3]);
+    const { spawn } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+    manager.start('janus', 'assistant', [{ kind: 'tab', label: 'agent2' }, { kind: 'tab', label: 'agent3' }]);
+
+    const stopped = manager.stop('janus', 'assistant', { kind: 'tab', label: 'reviewer' });
+
+    expect(stopped).toBe(true);
+    const monitorTab = managers.tab.tabs.find((t) => t.view === 'monitor');
+    expect(monitorTab?.monitor?.targets).toBe('agent3');
+  });
+
   it('group targets match tabs by group number', () => {
     const { managers } = makeFakeManagers([janus, agent2]);
     const { spawn, sessions } = fakeSpawnFactory();
