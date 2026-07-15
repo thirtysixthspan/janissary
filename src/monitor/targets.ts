@@ -21,6 +21,19 @@ export function seedEntries(tabs: Tab[], targets: MonitorTarget[]): { tabLabel: 
   return entries;
 }
 
+// Resolve a tab-kind target's typed label against a tab's canonical label or display alias
+// (see `rename`), case-insensitively — mirrors `resolveTarget` in commands/resolve-target.ts.
+// A target that matches no tab passes through unchanged, so `validateTargets` still reports
+// it as missing. Group targets pass through unchanged.
+export function resolveTargetAliases(tabs: Tab[], targets: MonitorTarget[]): MonitorTarget[] {
+  return targets.map((target) => {
+    if (target.kind !== 'tab') return target;
+    const key = target.label.toLowerCase();
+    const match = tabs.find((t) => t.label.toLowerCase() === key || t.title?.toLowerCase() === key);
+    return match ? { kind: 'tab', label: match.label } : target;
+  });
+}
+
 export function validateTargets(tabs: Tab[], personaName: string, inline: boolean, targets: MonitorTarget[]): string | null {
   for (const target of targets) {
     if (target.kind === 'tab' && tabs.every((t) => t.label !== target.label || t.view === 'monitor')) {
