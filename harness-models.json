@@ -5,6 +5,12 @@
     "claude-sonnet-5",
     "claude-haiku-4-5-20251001"
   ],
+  "codex": [
+    "gpt-5.6-terra",
+    "gpt-5.6-luna",
+    "gpt-5.5",
+    "gpt-5.4-mini"
+  ],
   "opencode": [
     "opencode/big-pickle",
     "opencode/deepseek-v4-flash-free",
