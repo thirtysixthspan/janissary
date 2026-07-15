@@ -7,7 +7,7 @@ describe('harness-models', () => {
   });
 
   it('returns an empty list for an unknown harness', () => {
-    expect(modelsFor('claude')).toEqual([]);
+    expect(modelsFor('codex')).toEqual([]);
   });
 
   it('accepts a known model id', () => {
@@ -19,6 +19,18 @@ describe('harness-models', () => {
   });
 
   it('rejects an unknown harness', () => {
-    expect(isKnownModel('claude', 'opencode-go/deepseek-v4-pro')).toBe(false);
+    expect(isKnownModel('codex', 'opencode-go/deepseek-v4-pro')).toBe(false);
+  });
+
+  it('returns the catalog for the claude harness', () => {
+    expect(modelsFor('claude')).toContain('claude-sonnet-5');
+  });
+
+  it('accepts a known claude model id', () => {
+    expect(isKnownModel('claude', 'claude-sonnet-5')).toBe(true);
+  });
+
+  it('rejects an unknown claude model id', () => {
+    expect(isKnownModel('claude', 'not-a-real-model')).toBe(false);
   });
 });

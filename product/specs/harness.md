@@ -227,5 +227,5 @@ While running, the harness PTY appears in the connections panel as `terminal:<na
 ## Launching with a model (`profile launch`)
 
 `profile launch <name>` can open a harness tab with a model selected, passed to the harness binary's
-`--model` flag verbatim (currently only opencode's model catalog is populated). This is not available
-from the interactive `harness <name>` command — see Profiles for the harness-entry schema.
+`--model` flag verbatim (currently only opencode's and claude's model catalogs are populated). This is
+not available from the interactive `harness <name>` command — see Profiles for the harness-entry schema.
