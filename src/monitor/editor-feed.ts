@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { createPatch } from 'diff';
+import { createPatch } from './patch.js';
 import type { LogEntry, MonitorTarget } from '../types.js';
 import type { Managers } from '../managers.js';
 import { resolveTargetTabs } from './targets.js';
