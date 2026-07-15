@@ -270,6 +270,10 @@ export type ProfileMonitor = { persona: string; targets: string[] };
 // instead of the profile's first newly opened tab.
 export type ProfileFilesEntry = { dock?: 'left' | 'right'; in?: string };
 
+// A profile-level notifications tab, authored in a profile's reserved `_notifications.json` file
+// (mirrors `_files.json`). `dock` docks the singleton notifications feed into that sidebar.
+export type ProfileNotificationsEntry = { dock?: 'left' | 'right' };
+
 // --- schedule.ts ----------------------------------------------------------
 
 export type TimeOfDay = { hour: number; minute: number };

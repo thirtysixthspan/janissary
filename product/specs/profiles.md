@@ -35,6 +35,10 @@ Starting is **idempotent across relaunch**: before starting each monitor, any ex
 
 A profile may declare one or more file-tree tabs to open in a reserved `_files.json` file at the profile root (kept out of the entry set the same way `_monitors.json` is). The file is a JSON array of `{ dock?, in? }` objects: `dock` docks the tree into that sidebar (`left`/`right`); `in` roots it at the cwd of the named tab instead of the default. Once every profile entry is open, each is opened as `files [in <in>] [on <dock>]`, with `in` defaulting to the profile's first newly opened tab when omitted — so an entry with no `in` shows that tab's own workspace. Because a docked tree is never the active tab, opening and docking one of these can move focus away from the first newly opened tab to the nearest non-docked tab — the same invariant `files left`/`files right` already has outside of profiles.
 
+### Profile-level notifications tab
+
+A profile may declare that the notifications tab should open on launch in a reserved `_notifications.json` file at the profile root (kept out of the entry set the same way `_monitors.json` and `_files.json` are). The file is a JSON array of `{ dock? }` objects, where `dock` docks the feed into that sidebar (`left`/`right`). Once every profile entry is open, each entry opens or docks the singleton notifications tab, mirroring the `notifications [left|right]` command. Because the notifications tab is a singleton, more than one entry simply re-docks the same feed. Malformed elements in `_notifications.json`, and the file being absent, unparseable, or not an array, are treated as no notifications tab. The `claude` profile uses this to open notifications docked into the right sidebar.
+
 ### `profile launch <name>`
 
 Typing bare `profile launch` (no name) opens a picker listing the available profiles,

@@ -9,6 +9,7 @@ import {
   loadProfileEntries,
   loadProfileMonitors,
   loadProfileFiles,
+  loadProfileNotifications,
   profileExists,
   PROFILE_USAGE,
 } from './profiles.js';
@@ -176,5 +177,34 @@ describe('profile directory', () => {
       { dock: 'right', in: 'claude' },
     ]));
     expect(loadProfileFiles('mix')).toEqual([{ dock: 'left' }, { dock: 'right', in: 'claude' }]);
+  });
+
+  it('loads profile notifications from _notifications.json', () => {
+    writeFile('assist', '_notifications.json', JSON.stringify([{ dock: 'right' }]));
+    expect(loadProfileNotifications('assist')).toEqual([{ dock: 'right' }]);
+  });
+
+  it('returns no notifications entries when the file is absent, unparseable, or not an array', () => {
+    writeAgent('none', 'bob', {});
+    expect(loadProfileNotifications('none')).toEqual([]);
+    writeFile('bad', '_notifications.json', '{ not json');
+    expect(loadProfileNotifications('bad')).toEqual([]);
+    writeFile('obj', '_notifications.json', JSON.stringify({ dock: 'right' }));
+    expect(loadProfileNotifications('obj')).toEqual([]);
+  });
+
+  it('drops malformed notifications elements', () => {
+    writeFile('mix', '_notifications.json', JSON.stringify([
+      { dock: 'right' },
+      { dock: 'up' },
+      {},
+    ]));
+    expect(loadProfileNotifications('mix')).toEqual([{ dock: 'right' }, {}]);
+  });
+
+  it('never loads _notifications.json as a profile entry', () => {
+    writeAgent('assist', 'bob', {});
+    writeFile('assist', '_notifications.json', JSON.stringify([{ dock: 'right' }]));
+    expect(loadProfileEntries('assist').map((e) => ('harness' in e ? e.label : e.name))).toEqual(['bob']);
   });
 });
