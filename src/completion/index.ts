@@ -8,8 +8,8 @@ import { SYNTAX_THEMES } from '../syntax-themes.js';
  *
  * - For the recipient argument of `msg`/`broadcast`, completes against active agent names
  *   (`broadcast` also offers `all` and supports a comma-separated list).
- * - For the target argument of `send` and the `in <tab>` clause of `schedule`, completes
- *   against all open tab labels.
+ * - For the target argument of `send`, `queue`, `close`/`exit`, and the `in <tab>` clause of
+ *   `schedule`, completes against all open tab labels.
  * - For the target of `connection close`, completes against open connection strings
  *   (e.g. `sqlite:movies`, `shell:bash`, `acp:opencode`, `browser:w1`).
  * - For the `browser` command, completes subcommands and, where a window id is expected
