@@ -74,6 +74,8 @@ export function handle(controller: Controller, message: ClientMessage, reply: (e
     }
     case 'setDock': { controller.setDock(message.params.index, message.params.dock); break;
     }
+    case 'openFileNavigatorFor': { controller.openFileNavigatorFor(message.params.label); break;
+    }
   }
   reply({ t: 'rpc-reply', id: message.id, result: 'ok' });
 }

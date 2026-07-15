@@ -58,6 +58,20 @@ it in one command, e.g. `files in claude on left`. Like `left`/`right`, `in` and
 recognized as clause keywords, so a directory literally named `in` or `on` is still reachable
 through a path form (`files ./in`).
 
+### Opening from a tab's metadata row
+
+Agent tabs and harness tabs carry a 📁 file-navigator button in their metadata row (see "Metadata
+row" in `tabs.md`). Clicking it opens a file navigator rooted at that tab's own working directory.
+Unlike the bare `files` command — which opens into the center tab strip — a navigator opened this
+way, when none is open yet, opens **docked in the left sidebar** by default.
+
+If a file navigator is already open somewhere, clicking the button does not open a second one:
+instead it **retargets the existing navigator** — the most recently focused one if more than one is
+open — to the clicked tab's working directory, replacing its root in place. The retargeted tab keeps
+its identity, its position, and its dock placement (a docked navigator stays docked where it was);
+its expanded directories, and its move undo/redo history, are cleared, since they no longer apply to
+the new root. Either way — fresh open or retarget — focus moves to the resulting navigator.
+
 ### Tree contents
 
 The tree shows, for the root and every directory the user has expanded:

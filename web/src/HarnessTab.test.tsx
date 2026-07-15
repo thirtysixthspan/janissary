@@ -70,11 +70,11 @@ describe('HarnessTab', () => {
   });
 
   it('renders without crashing', () => {
-    render(<HarnessTab harness={makeHarness()} client={mockClient} />);
+    render(<HarnessTab harness={makeHarness()} client={mockClient} label="claude" />);
   });
 
   it('attaches to the PTY stream on mount', () => {
-    render(<HarnessTab harness={makeHarness({ ptyId: 'pty-42' })} client={mockClient} />);
+    render(<HarnessTab harness={makeHarness({ ptyId: 'pty-42' })} client={mockClient} label="claude" />);
     expect(vi.mocked(mockClient.attachPty as ReturnType<typeof vi.fn>)).toHaveBeenCalledWith(
       'pty-42',
       expect.any(Function),
@@ -82,73 +82,73 @@ describe('HarnessTab', () => {
   });
 
   it('key handler returns false (bubble) for Shift+ArrowLeft', () => {
-    render(<HarnessTab harness={makeHarness()} client={mockClient} />);
+    render(<HarnessTab harness={makeHarness()} client={mockClient} label="claude" />);
     expect(capturedKeyHandler).not.toBeNull();
     expect(capturedKeyHandler!(makeKeyEvent({ shiftKey: true, key: 'ArrowLeft' }))).toBe(false);
   });
 
   it('key handler returns false (bubble) for Shift+ArrowRight', () => {
-    render(<HarnessTab harness={makeHarness()} client={mockClient} />);
+    render(<HarnessTab harness={makeHarness()} client={mockClient} label="claude" />);
     expect(capturedKeyHandler!(makeKeyEvent({ shiftKey: true, key: 'ArrowRight' }))).toBe(false);
   });
 
   it('key handler returns true (send to PTY) for Ctrl+C', () => {
-    render(<HarnessTab harness={makeHarness()} client={mockClient} />);
+    render(<HarnessTab harness={makeHarness()} client={mockClient} label="claude" />);
     expect(capturedKeyHandler!(makeKeyEvent({ ctrlKey: true, key: 'c' }))).toBe(true);
   });
 
   it('key handler returns false (bubble) for Ctrl+A', () => {
-    render(<HarnessTab harness={makeHarness()} client={mockClient} />);
+    render(<HarnessTab harness={makeHarness()} client={mockClient} label="claude" />);
     expect(capturedKeyHandler!(makeKeyEvent({ ctrlKey: true, key: 'a' }))).toBe(false);
   });
 
   it('key handler returns true (send to PTY) for Ctrl+Shift+A', () => {
-    render(<HarnessTab harness={makeHarness()} client={mockClient} />);
+    render(<HarnessTab harness={makeHarness()} client={mockClient} label="claude" />);
     expect(capturedKeyHandler!(makeKeyEvent({ ctrlKey: true, shiftKey: true, key: 'a' }))).toBe(true);
   });
 
   it('key handler returns true for regular keys', () => {
-    render(<HarnessTab harness={makeHarness()} client={mockClient} />);
+    render(<HarnessTab harness={makeHarness()} client={mockClient} label="claude" />);
     expect(capturedKeyHandler!(makeKeyEvent({ key: 'Enter' }))).toBe(true);
   });
 
   it.each(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter', 'Escape'])(
     'key handler returns false (bubble) for %s when taskPickerOpen is true',
     (key) => {
-      render(<HarnessTab harness={makeHarness()} client={mockClient} taskPickerOpen />);
+      render(<HarnessTab harness={makeHarness()} client={mockClient} label="claude" taskPickerOpen />);
       expect(capturedKeyHandler!(makeKeyEvent({ key }))).toBe(false);
     },
   );
 
   it('key handler returns true (send to PTY) for a regular key when taskPickerOpen is false', () => {
-    render(<HarnessTab harness={makeHarness()} client={mockClient} taskPickerOpen={false} />);
+    render(<HarnessTab harness={makeHarness()} client={mockClient} label="claude" taskPickerOpen={false} />);
     expect(capturedKeyHandler!(makeKeyEvent({ key: 'ArrowUp' }))).toBe(true);
   });
 
   it('shows an exited banner when status is exited', () => {
     const { getByText } = render(
-      <HarnessTab harness={makeHarness({ status: 'exited', exitCode: 1 })} client={mockClient} />,
+      <HarnessTab harness={makeHarness({ status: 'exited', exitCode: 1 })} client={mockClient} label="claude" />,
     );
     expect(getByText(/exited \(1\)/)).toBeInTheDocument();
   });
 
   it('does not show an exited banner while running', () => {
     const { queryByText } = render(
-      <HarnessTab harness={makeHarness({ status: 'running' })} client={mockClient} />,
+      <HarnessTab harness={makeHarness({ status: 'running' })} client={mockClient} label="claude" />,
     );
     expect(queryByText(/exited/)).not.toBeInTheDocument();
   });
 
   it('shows the given cwd in the metadata row', () => {
     const { getByText } = render(
-      <HarnessTab harness={makeHarness()} client={mockClient} cwd="~/project" />,
+      <HarnessTab harness={makeHarness()} client={mockClient} label="claude" cwd="~/project" />,
     );
     expect(getByText('~/project')).toBeInTheDocument();
   });
 
   it('renders the workspaced emoji with a tooltip when flags includes workspaced', () => {
     const { getByRole } = render(
-      <HarnessTab harness={makeHarness()} client={mockClient} flags={['workspaced']} />,
+      <HarnessTab harness={makeHarness()} client={mockClient} label="claude" flags={['workspaced']} />,
     );
     const badge = getByRole('img', { name: 'Workspaced' });
     expect(badge).toBeInTheDocument();
@@ -158,16 +158,28 @@ describe('HarnessTab', () => {
 
   it('renders no flag emoji when flags is empty', () => {
     const { container } = render(
-      <HarnessTab harness={makeHarness()} client={mockClient} flags={[]} />,
+      <HarnessTab harness={makeHarness()} client={mockClient} label="claude" flags={[]} />,
     );
     expect(container.querySelectorAll('.tab-flag').length).toBe(0);
   });
 
   it('renders both flag emoji when both are present', () => {
     const { getByRole } = render(
-      <HarnessTab harness={makeHarness()} client={mockClient} flags={['workspaced', 'autoApprove']} />,
+      <HarnessTab harness={makeHarness()} client={mockClient} label="claude" flags={['workspaced', 'autoApprove']} />,
     );
     expect(getByRole('img', { name: 'Workspaced' })).toBeInTheDocument();
     expect(getByRole('img', { name: 'Auto-permitting' })).toBeInTheDocument();
+  });
+
+  it('dispatches openFileNavigatorFor with the tab label when the metadata button is clicked', () => {
+    const { getByTitle } = render(
+      <HarnessTab harness={makeHarness()} client={mockClient} label="claude" />,
+    );
+    vi.mocked(mockClient.send as ReturnType<typeof vi.fn>).mockClear();
+    getByTitle('Open file navigator here').click();
+    expect(vi.mocked(mockClient.send as ReturnType<typeof vi.fn>)).toHaveBeenCalledWith({
+      method: 'openFileNavigatorFor',
+      params: { label: 'claude' },
+    });
   });
 });

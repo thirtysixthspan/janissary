@@ -27,6 +27,10 @@ The strip tells you what every tab is doing without switching to it. Three signa
 
 The active tab is also highlighted: full-strength text on the content background, while inactive tabs are muted.
 
+## The tab metadata row
+
+Agent and harness tabs show a small metadata row above their body: the tab's working directory, followed by an emoji for each active flag (📦 workspaced, ⚡ auto-permitting). At the right of that row, agent and harness tabs also carry a 📁 file-navigator button (tooltip "Open file navigator here") — clicking it opens a [file navigator](/user-documentation/tab-types/file-navigator) rooted at that tab's working directory, docked in the left sidebar by default, or retargets an already-open navigator to that directory. Shell tabs don't show the 📁 button.
+
 ## Switching and reordering
 
 `Shift+←` / `Shift+→` cycle through tabs; the `next` command switches to the next tab. `Ctrl+←` / `Ctrl+→` move the current tab one position left or right — within its own group only (see [Tab groups](/user-documentation/getting-started/groups)). With several tabs open, the [tab navigator](/user-documentation/command-bar/tab-navigator) (`Ctrl+G`) jumps straight to any of them by typing part of its label or number.

@@ -83,7 +83,11 @@ export function AgentTabBody({
         inputReference.current?.focus();
       }}
     >
-      <AgentTabMeta cwd={current.cwd} flags={current.flags} />
+      <AgentTabMeta
+        cwd={current.cwd}
+        flags={current.flags}
+        onOpenFileNavigator={() => client.send({ method: 'openFileNavigatorFor', params: { label: current.label } })}
+      />
       <div className="main">
         <Transcript
           lines={lines}

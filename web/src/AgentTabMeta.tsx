@@ -1,9 +1,9 @@
 import React from 'react';
 import { tabFlagDisplay } from './tab-flag-display';
 
-type Properties = { cwd?: string; flags?: string[] };
+type Properties = { cwd?: string; flags?: string[]; onOpenFileNavigator?: () => void };
 
-export function AgentTabMeta({ cwd, flags }: Properties) {
+export function AgentTabMeta({ cwd, flags, onOpenFileNavigator }: Properties) {
   return (
     <div className="tab-meta">
       <span className="tab-cwd">{cwd}</span>
@@ -18,6 +18,16 @@ export function AgentTabMeta({ cwd, flags }: Properties) {
           );
         })}
       </span>
+      {onOpenFileNavigator && (
+        <button
+          type="button"
+          className="tab-open-files"
+          title="Open file navigator here"
+          onClick={onOpenFileNavigator}
+        >
+          📁
+        </button>
+      )}
     </div>
   );
 }

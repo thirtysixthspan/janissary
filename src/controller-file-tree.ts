@@ -37,3 +37,7 @@ export function redoFileTreeItem(managers: Managers, index: number, overwrite?: 
   const label = managers.tab.tabs[index]?.label;
   return label ? managers.fileTree.redo(label, overwrite) : {};
 }
+
+export function openFileNavigatorFor(managers: Managers, label: string): void {
+  managers.fileTree.openOrRetarget(label);
+}

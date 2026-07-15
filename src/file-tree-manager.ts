@@ -5,6 +5,7 @@ import { buildRows, isSameOrDescendantPath, hasNameConflict } from './file-tree.
 import { parseFileTreeArgs } from './file-tree-args.js';
 import { expandUserPath } from './paths.js';
 import { resolveTarget } from './commands/resolve-target.js';
+import { openOrRetarget, type OpenPort } from './file-tree-open.js';
 import type { Managers } from './managers.js';
 
 const DEBOUNCE_MS = 100;
@@ -21,7 +22,7 @@ type UndoRedoResult = { conflict?: { fromRelPath: string; toRelPath: string } };
 // Per files-tab state, keyed by the tab's label. `watchers` is keyed by each visible directory's
 // tree-relative path ('' for the root itself). `undoStack`/`redoStack` are purely in-memory and
 // reset with the rest of the tab's state on close.
-type FilesTabState = {
+export type FilesTabState = {
   root: string;
   expanded: Set<string>;
   watchers: Map<string, FSWatcher>;
@@ -123,6 +124,26 @@ export class FileTreeManager {
     this.watchDir(label, target, '');
     if (this.managers.tab.tabs.some((t) => t.label === label)) this.managers.tab.setCwd(label, target);
     this.rebuild(label);
+  }
+
+  // Open a file navigator at `label`'s cwd (the metadata-row 📁 button). If a file-tree tab is
+  // already open, retarget the most-recently-focused one to that cwd in place — preserving its
+  // identity, dock placement, and strip position; otherwise open a fresh tree docked in the left
+  // sidebar. Either way, focus the resulting file-tree tab. See `file-tree-open.ts`.
+  openOrRetarget(label: string): void {
+    openOrRetarget(this.openPort(), label);
+  }
+
+  // The narrow set of manager internals `file-tree-open.ts` operates through, passed as bound
+  // closures so the tab-state map and watcher methods stay private to this class.
+  private openPort(): OpenPort {
+    return {
+      managers: this.managers,
+      states: this.tabs,
+      watchDir: (label, absDir, relPath) => this.watchDir(label, absDir, relPath),
+      unwatchDir: (state, relPath) => this.unwatchDir(state, relPath),
+      rebuild: (label) => this.rebuild(label),
+    };
   }
 
   // Move a file or directory into a different directory (drag-and-release in the tree). Rejects

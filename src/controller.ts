@@ -207,6 +207,12 @@ export class Controller {
     this.managers.tab.setDock(index, dock);
   }
 
+  // Open (or retarget an existing) file navigator at the named tab's cwd — the 📁 metadata-row
+  // button (see controller-file-tree.ts).
+  openFileNavigatorFor(label: string): void {
+    fileTreeRpc.openFileNavigatorFor(this.managers, label);
+  }
+
   // Tab-completion for the command line (reuses the shared `completeCommandLine`): filesystem
   // paths against the active tab's cwd, `msg`/`broadcast` agent names, `connection close` targets,
   // and `browser` subcommands / window ids.
