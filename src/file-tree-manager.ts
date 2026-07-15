@@ -1,23 +1,16 @@
 import { watch, statSync, renameSync, rmSync, type FSWatcher } from 'node:fs';
 import path from 'node:path';
 import { messageBus } from './bus.js';
-import { buildRows, isSameOrDescendantPath, hasNameConflict } from './file-tree.js';
+import { buildRows, markChanged, isSameOrDescendantPath, parentPath } from './file-tree.js';
+import { refreshGit } from './file-tree-git-refresh.js';
 import { parseFileTreeArgs } from './file-tree-args.js';
 import { expandUserPath } from './paths.js';
 import { resolveTarget } from './commands/resolve-target.js';
 import { openOrRetarget, type OpenPort } from './file-tree-open.js';
+import { applyStackMove, type MoveEntry, type UndoRedoResult } from './file-tree-moves.js';
 import type { Managers } from './managers.js';
 
 const DEBOUNCE_MS = 100;
-
-// One past move: the item's tree-relative path before (`from`) and after (`to`) the move. Enough
-// to reverse it (move `to` back to `from`'s directory) or re-apply it (move `from` to `to`'s
-// directory) without recomputing anything from disk.
-type MoveEntry = { from: string; to: string };
-
-// Reported by `undo`/`redo` when the destination is already occupied: neither stack is mutated, so
-// a caller-driven overwrite (passing `overwrite: true`) can retry the same pending entry.
-type UndoRedoResult = { conflict?: { fromRelPath: string; toRelPath: string } };
 
 // Per files-tab state, keyed by the tab's label. `watchers` is keyed by each visible directory's
 // tree-relative path ('' for the root itself). `undoStack`/`redoStack` are purely in-memory and
@@ -29,14 +22,14 @@ export type FilesTabState = {
   debounce?: ReturnType<typeof setTimeout>;
   undoStack: MoveEntry[];
   redoStack: MoveEntry[];
+  // Last-computed set of git-changed, root-relative paths (see `git-status.ts`). Applied
+  // synchronously to every rebuild so interactive redraws are instant; recomputed asynchronously by
+  // `refreshGit`. `gitRefreshing`/`gitRefreshStale` coalesce overlapping refresh requests into at
+  // most one in-flight git call plus one queued follow-up.
+  changed?: Set<string>;
+  gitRefreshing?: boolean;
+  gitRefreshStale?: boolean;
 };
-
-// The containing directory of a tree-relative path — the empty string for a root-level entry,
-// matching the root-as-empty-string convention `buildRows` already uses.
-function parentPath(relPath: string): string {
-  const idx = relPath.lastIndexOf('/');
-  return idx === -1 ? '' : relPath.slice(0, idx);
-}
 
 // Owns file tree tabs: opening/focusing them, their `expanded` directory sets, and one
 // non-recursive `fs.watch` per visible directory. Any watch event schedules a single per-tab
@@ -83,9 +76,10 @@ export class FileTreeManager {
     this.managers.tab.openFilesTab({ root, absoluteRoot: root, rows: buildRows(root, expanded) });
     const newLabel = this.managers.tab.cur().label;
     this.managers.tab.setCwd(newLabel, root);
-    this.tabs.set(newLabel, { root, expanded, watchers: new Map(), undoStack: [], redoStack: [] });
+    this.tabs.set(newLabel, { root, expanded, watchers: new Map(), undoStack: [], redoStack: [], changed: new Set() });
     this.watchDir(newLabel, root, '');
     if (dock) this.managers.tab.setDock(this.managers.tab.findIndex(newLabel), dock);
+    this.refreshGit(newLabel);
   }
 
   // Expand/collapse one directory row.
@@ -121,9 +115,11 @@ export class FileTreeManager {
     state.expanded.clear();
     this.unwatchDir(state, '');
     state.root = target;
+    state.changed = new Set();
     this.watchDir(label, target, '');
     if (this.managers.tab.tabs.some((t) => t.label === label)) this.managers.tab.setCwd(label, target);
     this.rebuild(label);
+    this.refreshGit(label);
   }
 
   // Open a file navigator at `label`'s cwd (the metadata-row 📁 button). If a file-tree tab is
@@ -174,7 +170,7 @@ export class FileTreeManager {
     if (!state) return {};
     const entry = state.undoStack.at(-1);
     if (!entry) return {};
-    return this.applyStackMove(label, state, entry.to, parentPath(entry.from), entry, state.undoStack, state.redoStack, overwrite);
+    return applyStackMove(state.root, entry.to, parentPath(entry.from), entry, state.undoStack, state.redoStack, overwrite, () => this.rebuild(label));
   }
 
   // Redo the most recently undone move: re-applies it from `from` to `to`'s original directory.
@@ -184,34 +180,7 @@ export class FileTreeManager {
     if (!state) return {};
     const entry = state.redoStack.at(-1);
     if (!entry) return {};
-    return this.applyStackMove(label, state, entry.from, parentPath(entry.to), entry, state.redoStack, state.undoStack, overwrite);
-  }
-
-  // Shared reverse/re-apply logic for `undo`/`redo`: moves `sourceRel` into `destDir`, unless the
-  // destination already has a same-named entry and the caller hasn't confirmed an overwrite, in
-  // which case it reports the conflict and leaves both stacks untouched.
-  private applyStackMove(
-    label: string,
-    state: FilesTabState,
-    sourceRel: string,
-    destDir: string,
-    entry: MoveEntry,
-    fromStack: MoveEntry[],
-    toStack: MoveEntry[],
-    overwrite: boolean,
-  ): UndoRedoResult {
-    const sourceAbs = path.join(state.root, sourceRel);
-    const name = path.basename(sourceAbs);
-    const destAbsDir = path.join(state.root, destDir);
-    const destAbs = path.join(destAbsDir, name);
-    if (!overwrite && sourceAbs !== destAbs && hasNameConflict(destAbsDir, name)) {
-      return { conflict: { fromRelPath: sourceRel, toRelPath: destDir } };
-    }
-    try { renameSync(sourceAbs, destAbs); } catch { return {}; }
-    fromStack.pop();
-    toStack.push(entry);
-    this.rebuild(label);
-    return {};
+    return applyStackMove(state.root, entry.from, parentPath(entry.to), entry, state.redoStack, state.undoStack, overwrite, () => this.rebuild(label));
   }
 
   // Delete a file or directory (recursively) from disk — the client has already confirmed with
@@ -260,7 +229,11 @@ export class FileTreeManager {
     const state = this.tabs.get(label);
     if (!state) return;
     if (state.debounce) clearTimeout(state.debounce);
-    state.debounce = setTimeout(() => this.rebuild(label), DEBOUNCE_MS);
+    state.debounce = setTimeout(() => { this.rebuild(label); this.refreshGit(label); }, DEBOUNCE_MS);
+  }
+
+  private refreshGit(label: string): void {
+    refreshGit(this.tabs, label, (l) => this.rebuild(l));
   }
 
   // Prune expanded directories that no longer exist (closing their watchers), rebuild the visible
@@ -275,7 +248,7 @@ export class FileTreeManager {
     }
     const tab = this.managers.tab.tabs.find((t) => t.label === label);
     if (!tab?.files) return;
-    tab.files = { root: state.root, absoluteRoot: state.root, rows: buildRows(state.root, state.expanded) };
+    tab.files = { root: state.root, absoluteRoot: state.root, rows: markChanged(buildRows(state.root, state.expanded), state.changed ?? new Set()) };
     messageBus.emit('state', { type: 'dirty' });
   }
 }

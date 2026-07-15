@@ -12,6 +12,12 @@ vi.mock('node:fs', async (importOriginal) => {
   return { ...actual, watch: (...args: unknown[]) => watchMock(...args) };
 });
 
+const changedPathsMock = vi.fn((_root: string): Promise<Set<string>> => Promise.resolve(new Set<string>()));
+
+vi.mock('./git-status.js', () => ({
+  changedPaths: (...args: [string]) => changedPathsMock(...args),
+}));
+
 const { FileTreeManager } = await import('./file-tree-manager.js');
 type FileTreeManagerInstance = InstanceType<typeof FileTreeManager>;
 
@@ -31,6 +37,8 @@ describe('FileTreeManager', () => {
     activeTab = 0;
     closeFns = [];
     watchMock.mockReset();
+    changedPathsMock.mockReset();
+    changedPathsMock.mockResolvedValue(new Set());
     watchMock.mockImplementation(() => {
       const close = vi.fn();
       closeFns.push(close);
@@ -613,5 +621,108 @@ describe('FileTreeManager', () => {
     expect(after.redoStack).toHaveLength(0);
     expect(closeFns[0]).toHaveBeenCalled();
     expect(closeFns[1]).toHaveBeenCalled();
+  });
+
+  describe('git-modified coloring', () => {
+    const navLabel = () => tabs.find((t) => t.label.startsWith('navigator'))!.label;
+
+    it('applies the changed flag once the async git refresh resolves, without a watcher event', async () => {
+      writeFileSync(path.join(root, 'a.txt'), '');
+      changedPathsMock.mockResolvedValue(new Set(['a.txt']));
+      const manager = run();
+      manager.open('files', 'janus');
+      const label = navLabel();
+      expect(tabs.find((t) => t.label === label)!.files!.rows.find((r) => r.path === 'a.txt')?.changed).toBeUndefined();
+      await vi.waitFor(() => {
+        const row = tabs.find((t) => t.label === label)!.files!.rows.find((r) => r.path === 'a.txt');
+        expect(row?.changed).toBe(true);
+      });
+    });
+
+    it('an interactive toggle reuses the cached git set and spawns no new git call', async () => {
+      mkdirSync(path.join(root, 'src'));
+      writeFileSync(path.join(root, 'src', 'a.txt'), '');
+      changedPathsMock.mockResolvedValue(new Set(['src/a.txt']));
+      const manager = run();
+      manager.open('files', 'janus');
+      const label = navLabel();
+      await vi.waitFor(() => expect(changedPathsMock).toHaveBeenCalledTimes(1));
+      manager.toggle(label, 'src');
+      expect(changedPathsMock).toHaveBeenCalledTimes(1);
+      const rows = tabs.find((t) => t.label === label)!.files!.rows;
+      expect(rows.find((r) => r.path === 'src/a.txt')?.changed).toBe(true);
+      expect(rows.find((r) => r.path === 'src')?.changed).toBe(true);
+    });
+
+    it('reroot resets the cache (no stale coloring) and triggers a fresh refresh', async () => {
+      mkdirSync(path.join(root, 'sub'));
+      writeFileSync(path.join(root, 'sub', 'a.txt'), '');
+      changedPathsMock.mockResolvedValue(new Set(['a.txt']));
+      const manager = run();
+      manager.open('files sub', 'janus');
+      const label = navLabel();
+      await vi.waitFor(() => expect(changedPathsMock).toHaveBeenCalledTimes(1));
+      changedPathsMock.mockResolvedValue(new Set());
+      manager.reroot(label);
+      expect(tabs.find((t) => t.label === label)!.files!.rows.find((r) => r.path === 'sub')?.changed).toBeUndefined();
+      await vi.waitFor(() => expect(changedPathsMock).toHaveBeenCalledTimes(2));
+    });
+
+    it('coalesces overlapping refresh requests into exactly one extra git call', async () => {
+      vi.useFakeTimers();
+      try {
+        const deferred = Promise.withResolvers<Set<string>>();
+        changedPathsMock
+          .mockImplementationOnce(() => deferred.promise)
+          .mockResolvedValue(new Set());
+        const manager = run();
+        manager.open('files', 'janus');
+        expect(changedPathsMock).toHaveBeenCalledTimes(1);
+        const onEvent = watchMock.mock.calls[0][1] as () => void;
+        onEvent();
+        vi.advanceTimersByTime(150);
+        onEvent();
+        vi.advanceTimersByTime(150);
+        expect(changedPathsMock).toHaveBeenCalledTimes(1);
+        deferred.resolve(new Set());
+        await Promise.resolve();
+        await Promise.resolve();
+        expect(changedPathsMock).toHaveBeenCalledTimes(2);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('discards a git refresh that resolves after its tab was closed', async () => {
+      writeFileSync(path.join(root, 'a.txt'), '');
+      const deferred = Promise.withResolvers<Set<string>>();
+      changedPathsMock.mockImplementation(() => deferred.promise);
+      const manager = run();
+      manager.open('files', 'janus');
+      const label = navLabel();
+      manager.closeTab(label);
+      deferred.resolve(new Set(['a.txt']));
+      await Promise.resolve();
+      await Promise.resolve();
+      const row = tabs.find((t) => t.label === label)!.files!.rows.find((r) => r.path === 'a.txt');
+      expect(row?.changed).toBeUndefined();
+    });
+
+    it('discards a git refresh whose root changed (reroot) before it resolved', async () => {
+      mkdirSync(path.join(root, 'sub'));
+      writeFileSync(path.join(root, 'sub', 'a.txt'), '');
+      const deferred = Promise.withResolvers<Set<string>>();
+      changedPathsMock
+        .mockImplementationOnce(() => deferred.promise)
+        .mockResolvedValue(new Set());
+      const manager = run();
+      manager.open('files sub', 'janus');
+      const label = navLabel();
+      manager.reroot(label);
+      deferred.resolve(new Set(['a.txt']));
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(tabs.find((t) => t.label === label)!.files!.rows.find((r) => r.path === 'sub')?.changed).toBeUndefined();
+    });
   });
 });

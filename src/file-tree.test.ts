@@ -2,7 +2,8 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtempSync, mkdirSync, writeFileSync, symlinkSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { readDirSorted, buildRows, isSameOrDescendantPath, hasNameConflict } from './file-tree.js';
+import type { FileTreeRow } from './types.js';
+import { readDirSorted, buildRows, markChanged, isSameOrDescendantPath, hasNameConflict } from './file-tree.js';
 
 describe('readDirSorted', () => {
   let root: string;
@@ -77,6 +78,40 @@ describe('buildRows', () => {
     writeFileSync(path.join(root, 'file.txt'), '');
     const rows = buildRows(root, new Set(['gone']));
     expect(rows.map((r) => r.path)).toEqual(['..', 'file.txt']);
+  });
+});
+
+describe('markChanged', () => {
+  it('marks a changed file and every ancestor directory — including collapsed ones — and leaves others unmarked', () => {
+    const rows: FileTreeRow[] = [
+      { path: '..', name: '..', depth: 0, dir: true },
+      { path: 'src', name: 'src', depth: 0, dir: true, expanded: true },
+      { path: 'src/deep', name: 'deep', depth: 1, dir: true, expanded: false },
+      { path: 'src/other.ts', name: 'other.ts', depth: 1, dir: false },
+      { path: 'docs', name: 'docs', depth: 0, dir: true, expanded: false },
+    ];
+    const marked = markChanged(rows, new Set(['src/deep/nested/changed.ts']));
+    const changed = Object.fromEntries(marked.map((r) => [r.path, r.changed]));
+    expect(changed['src']).toBe(true);
+    expect(changed['src/deep']).toBe(true);
+    expect(changed['src/other.ts']).toBeUndefined();
+    expect(changed['docs']).toBeUndefined();
+    expect(changed['..']).toBeUndefined();
+  });
+
+  it('marks a file row whose own path is in the changed set', () => {
+    const rows: FileTreeRow[] = [{ path: 'a.txt', name: 'a.txt', depth: 0, dir: false }];
+    expect(markChanged(rows, new Set(['a.txt']))[0].changed).toBe(true);
+  });
+
+  it('does not color a directory that merely shares a name prefix with a changed path', () => {
+    const rows: FileTreeRow[] = [{ path: 'src', name: 'src', depth: 0, dir: true, expanded: false }];
+    expect(markChanged(rows, new Set(['src-backup/x.ts']))[0].changed).toBeUndefined();
+  });
+
+  it('returns the rows unchanged when the changed set is empty', () => {
+    const rows: FileTreeRow[] = [{ path: 'a.txt', name: 'a.txt', depth: 0, dir: false }];
+    expect(markChanged(rows, new Set())).toBe(rows);
   });
 });
 

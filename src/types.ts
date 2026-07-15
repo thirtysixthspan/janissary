@@ -108,6 +108,9 @@ export type FileTreeRow = {
   depth: number;
   dir: boolean;
   expanded?: boolean;
+  // Set when git considers this row changed. For a file row: its own path is modified, staged, or
+  // untracked. For a directory row: some file beneath it (at any depth) is. Drives yellow coloring.
+  changed?: boolean;
 };
 
 // A file tree view (opened via `files [path]`). The server owns the tree — `rows` is the

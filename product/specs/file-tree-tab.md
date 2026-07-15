@@ -84,6 +84,16 @@ The tree shows, for the root and every directory the user has expanded:
 A directory's children are read from disk only once it is **expanded** — an unopened directory
 (e.g. `node_modules`) costs nothing until the user opens it.
 
+**Git-modified coloring.** When the tree is rooted inside a git repository, any file row that git
+considers changed — a working-tree modification, a staged change, or an untracked (new) file —
+renders its name in yellow; the three states are not distinguished from one another. A directory
+row also renders yellow whenever any file beneath it, at any depth, is changed — even inside a
+collapsed subtree that has not been expanded — so changes are visible without walking the whole
+tree. The coloring refreshes together with the tree itself (on open and on every automatic or
+interactive refresh), never on a timer of its own, and is computed without blocking the interface.
+A tree rooted in a directory that is not part of a git repository, or where git status cannot be
+determined, shows no coloring and no error.
+
 ### Watching
 
 Every currently visible directory (the root, plus every expanded directory) is watched for
