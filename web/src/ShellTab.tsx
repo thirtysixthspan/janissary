@@ -1,7 +1,7 @@
 import React, { forwardRef, useImperativeHandle, useRef } from 'react';
 import type { JanusClient } from './ws';
 import { useXterm } from './useXterm';
-import { tabFlagDisplay } from './tab-flag-display';
+import { AgentTabMeta } from './AgentTabMeta';
 
 type Properties = { ptyId: string; client: JanusClient; cwd?: string; flags?: string[] };
 export type ShellTabHandle = { focus(): void };
@@ -28,20 +28,7 @@ export const ShellTab = forwardRef<ShellTabHandle, Properties>(function ShellTab
   useImperativeHandle(ref, () => ({ focus: focusTerm }), [focusTerm]);
   return (
     <div className="harness-tab">
-      <div className="tab-meta">
-        <span className="tab-cwd">{cwd}</span>
-        <span className="tab-flags">
-          {(flags ?? []).map((flag) => {
-            const display = tabFlagDisplay[flag];
-            if (!display) return null;
-            return (
-              <span key={flag} className="tab-flag" role="img" aria-label={display.label} title={display.label}>
-                {display.emoji}
-              </span>
-            );
-          })}
-        </span>
-      </div>
+      <AgentTabMeta cwd={cwd} flags={flags} />
       <div className="harness-body" ref={hostReference} />
     </div>
   );
