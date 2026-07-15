@@ -116,7 +116,7 @@ Implementation plans live in `product/plans/`, organized into folders by status.
 - `product/plans/complete/` — the plan has been implemented
 - `product/plans/deferred/` — intentionally put on hold; not planned for near-term work
 
-Backlogs of smaller items live in `product/development/`: `bugs.md`, `chores.md`, `features.md`, and `issues.md`.
+Backlogs of smaller items live in `product/backlog/`: `bugs.md`, `chores.md`, `features.md`, and `issues.md`.
 
 ## Code guidelines
 
@@ -158,7 +158,7 @@ All scripts in `scripts/` are considered trusted. Do not invoke them directly wi
 - `product/` — plans, specs, and backlogs for product work (see below)
 - `product/specs/` — functional specs, one file per feature; when a change alters behavior, update the matching spec
 - `product/plans/` — implementation plans by status (see [Plan storage](#plan-storage))
-- `product/development/` — backlogs of smaller items (`bugs.md`, `chores.md`, `features.md`, `issues.md`)
+- `product/backlog/` — backlogs of smaller items (`bugs.md`, `chores.md`, `features.md`, `issues.md`)
 - `ai/` — agent workflow playbooks (`ai/tasks/*.md`), binding guidelines (`ai/guidelines/`), and personas (`ai/personas/`)
 - `documentation/` — docs site (VitePress; `npm run docs:dev` / `docs:build`), with `documentation/user-documentation/` (user-facing) and `documentation/developer-documentation/` (contributor-facing) sections
 - `scripts/` — project scripts; invoke only via `./scripts/run.mjs` (see [Running scripts](#running-scripts))

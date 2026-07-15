@@ -106,12 +106,19 @@ export default defineConfig({
             { text: "Profiles", link: "/user-documentation/automation/profiles" },
           ],
         },
+        {
+          text: "Workflows",
+          items: [
+            { text: "Product development workflow", link: "/user-documentation/workflows/product-development" },
+          ],
+        },
       ],
       "/developer-documentation/": [
         {
           text: "Developer Docs",
           items: [
             { text: "Overview", link: "/developer-documentation/" },
+            { text: "Contributing", link: "/developer-documentation/contributing" },
             { text: "Documentation", link: "/developer-documentation/documentation" },
             { text: "Release process", link: "/developer-documentation/release-process" },
             { text: "Testing", link: "/developer-documentation/testing" },

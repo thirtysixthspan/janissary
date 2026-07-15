@@ -50,7 +50,7 @@ Only call `scrollIntoView` when the cursor's `(line, col)` has actually changed 
 - Restoring scroll position for non-persistently-mounted tab types (page, markdown, files, notifications).
 - Any change to how `.editor-body`'s native scroll offset is preserved (already correct).
 - The keyboard-focus-restoration effect (already correct).
-- Other issues in `product/development/issues.md`.
+- Other issues in `product/backlog/issues.md`.
 
 ## Verification
 

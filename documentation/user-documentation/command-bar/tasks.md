@@ -17,3 +17,7 @@ Unlike the [history picker](/user-documentation/command-bar/history), `Return` h
 ## What gets listed
 
 Only `.md` files under `ai/` are shown, recursing into subdirectories — `ai/guidelines/` and `ai/personas/` are left out since they hold binding docs and monitor personas, not runnable tasks. The list is read fresh each time the picker opens, so a task file you add, rename, or remove shows up right away.
+
+## Building a multi-stage workflow
+
+Task files can chain together into a larger loop — one that plans work, hardens the plan, then executes it — by having each stage read and write the same set of project files. See [Product development workflow](/user-documentation/workflows/product-development) for a worked example.

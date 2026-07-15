@@ -1,6 +1,6 @@
 # Plan Ready Features
 
-Your job: walk the `## ready` section of `product/development/features.md` one feature at a time, interview the user with product-focused questions to pin down scope and behavior, and write a draft plan for each into `product/plans/draft/`. You produce plan documents only — you never write source code.
+Your job: walk the `## ready` section of `product/backlog/features.md` one feature at a time, interview the user with product-focused questions to pin down scope and behavior, and write a draft plan for each into `product/plans/draft/`. You produce plan documents only — you never write source code.
 
 This is an **interactive** task. Unlike the autonomous `ai/tasks/*.md` playbooks, you must stop and ask the user questions before drafting each plan. Do not guess scope, behavior, or edge cases on the user's behalf when a question would resolve it.
 
@@ -20,15 +20,15 @@ This is an **interactive** task. Unlike the autonomous `ai/tasks/*.md` playbooks
 
 ### Allowed — do it automatically, never ask
 
-Read any file in the repo to ground a plan in real code. Create new plan files under `product/plans/draft/`. Edit `product/development/features.md` to remove a `### ` entry from the `## ready` section once its plan has been drafted and confirmed. Ask the user clarifying questions — this is expected, not an interruption to avoid.
+Read any file in the repo to ground a plan in real code. Create new plan files under `product/plans/draft/`. Edit `product/backlog/features.md` to remove a `### ` entry from the `## ready` section once its plan has been drafted and confirmed. Ask the user clarifying questions — this is expected, not an interruption to avoid.
 
 ### Forbidden — no exceptions
 
 1. **Writing implementation code into a plan.** No function bodies, no JSX/CSS blocks, no "here's the code." Name the module/type/contract in prose, per `ai/tasks/improve-plan.md`'s rule — the same rule applies here since you are authoring, not implementing.
-2. **Editing any source, test, or config file.** This task only touches `product/development/features.md` and files under `product/plans/draft/`.
+2. **Editing any source, test, or config file.** This task only touches `product/backlog/features.md` and files under `product/plans/draft/`.
 3. **Skipping the question round.** Never invent a plan's scope, edge-case behavior, or UI wording without asking, when the answer is a product decision rather than something the codebase already settles.
 4. **Moving a plan to `product/plans/ready/`.** That promotion is a separate human/`ai/tasks/improve-plan.md` step. Everything this task produces lands in `product/plans/draft/`.
-5. **Removing a feature's entry from `product/development/features.md` before its plan is drafted and the user has confirmed it.** Don't clear the backlog ahead of the plan actually existing.
+5. **Removing a feature's entry from `product/backlog/features.md` before its plan is drafted and the user has confirmed it.** Don't clear the backlog ahead of the plan actually existing.
 
 ---
 
@@ -40,9 +40,9 @@ Execute `ai/tasks/prepare-workspace.md` in full before doing anything else.
 
 ## Step 1 — Read the ready backlog
 
-1. Read `product/development/features.md` in full.
+1. Read `product/backlog/features.md` in full.
 2. Extract every entry under the `## ready` heading, up to the next `## ` heading. Each entry is a `### <title>` followed by its description body. Copy titles verbatim — do not paraphrase or shorten them.
-3. If the `## ready` section is empty, report "No ready features in `product/development/features.md`" and stop.
+3. If the `## ready` section is empty, report "No ready features in `product/backlog/features.md`" and stop.
 4. Write down the exact ordered list of feature titles as a numbered list in your own working notes, e.g.:
    ```
    1. profile launcher
@@ -71,7 +71,7 @@ Stop after these three checks — this is reconnaissance, not a design phase. Do
 
 ### 2b. Decide whether this feature needs implementation questions
 
-Answer these four yes/no checks about the feature, using only what the feature's `product/development/features.md` text says plus what you found in 2a:
+Answer these four yes/no checks about the feature, using only what the feature's `product/backlog/features.md` text says plus what you found in 2a:
 
 1. Does it require a **new subsystem** (not an extension of one that already exists)?
 2. Does it require a **new client/server protocol message or RPC**?
@@ -91,7 +91,7 @@ Ask the user questions using `AskUserQuestion`, one call per round, **maximum 4 
 - **Scope boundary** — what is explicitly *not* included in this version.
 - **Naming/wording** — any user-visible text (labels, commands, messages) the plan needs to fix precisely.
 
-Skip a category only if the feature's existing description in `product/development/features.md` already answers it unambiguously — quote that text back to the user as your understanding rather than silently assuming it.
+Skip a category only if the feature's existing description in `product/backlog/features.md` already answers it unambiguously — quote that text back to the user as your understanding rather than silently assuming it.
 
 Every question must offer concrete options grounded in what you found in Step 2a, rather than an open-ended "what should happen?". If a question has no natural small set of options, still propose your best-guess default as one of the options so the user can simply confirm it.
 
@@ -130,11 +130,11 @@ Before moving on, check the plan file against this list:
 
 ### 2e. Confirm with the user
 
-Show the user a brief summary of the drafted plan (goal, key decisions, out-of-scope boundary) and confirm it matches what they described. If they want changes, edit the plan and show the summary again — repeat until confirmed. If they want to abandon the feature entirely, delete `product/plans/draft/<slug>.md` if you already wrote it, leave the entry in `product/development/features.md` untouched, note it as skipped, and move to the next feature in the queue.
+Show the user a brief summary of the drafted plan (goal, key decisions, out-of-scope boundary) and confirm it matches what they described. If they want changes, edit the plan and show the summary again — repeat until confirmed. If they want to abandon the feature entirely, delete `product/plans/draft/<slug>.md` if you already wrote it, leave the entry in `product/backlog/features.md` untouched, note it as skipped, and move to the next feature in the queue.
 
 ### 2f. Remove the entry from the backlog
 
-Once confirmed, edit `product/development/features.md` to remove that feature's `### ` entry (title and body) from the `## ready` section. Leave every other section, heading, and entry byte-for-byte untouched — do not reformat or reflow surrounding text.
+Once confirmed, edit `product/backlog/features.md` to remove that feature's `### ` entry (title and body) from the `## ready` section. Leave every other section, heading, and entry byte-for-byte untouched — do not reformat or reflow surrounding text.
 
 Only after this step is complete, return to the top of Step 2 for the next feature in the queue.
 
@@ -148,7 +148,7 @@ After all ready features are processed (planned or explicitly skipped per 2e), g
 Processed:  N ready features
 Planned:    product/plans/draft/<file> — <one-line goal>   (repeat per feature)
 Skipped:    <feature title> — <why, if any were abandoned>
-Backlog:    product/development/features.md updated, N entries removed from ## ready
+Backlog:    product/backlog/features.md updated, N entries removed from ## ready
 ```
 
 Keep it brief. Done.

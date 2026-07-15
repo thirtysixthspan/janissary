@@ -4,6 +4,7 @@ This section is for contributors working on the Janissary codebase itself — no
 
 Start with `npm start` to run the app and `npm test` to run the test suite. From there:
 
+- [Contributing](/developer-documentation/contributing) — how contributions work: draft plans by pull request, bugs and feature ideas by GitHub issue
 - [Documentation](/developer-documentation/documentation) — building and previewing this docs site, and regenerating screenshots
 - [Testing](/developer-documentation/testing) — running the test suite
 - [Checking changes](/developer-documentation/checking-changes) — the fast diff-scoped loop vs. the full end-of-work gate
