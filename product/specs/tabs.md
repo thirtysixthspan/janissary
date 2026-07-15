@@ -74,6 +74,19 @@ Pressing a tab's label immediately moves keyboard input focus to that tab's comm
 
 Releasing the mouse (mouse-up) anywhere in the body of an agent tab also moves focus to that tab's command bar — unless the mouse gesture produced a text selection in the transcript (a click-and-drag), in which case focus is left alone so the selection survives; the selected text is instead copied to the clipboard (see History → Click to execute).
 
+### Metadata row
+
+Agent tabs, harness tabs, and shell (PTY-takeover) tabs each show a small metadata row above their
+body: the tab's current working directory (abbreviated the same way as other tab header locations),
+followed by an emoji for each of the tab's currently-active flags. A flag with no active state
+contributes no emoji — there is no "disabled" indicator — and the row always renders, showing at
+least the working directory, even when a tab has zero active flags.
+
+Today there are two possible flags: **workspaced** (📦), shown when the tab has its own isolated
+git clone, and **auto-permitting** (⚡), shown when harness auto-approval is enabled (harness tabs
+only — see Auto-approve permissions in `harness.md`). Hovering a flag's emoji shows a tooltip naming
+it ("Workspaced", "Auto-permitting"). More flags of the same kind are expected in the future.
+
 ### Per-tab state isolation
 
 Each tab carries its own transcript log, command history (including navigation index), and scroll offset. Switching tabs preserves each tab's state.

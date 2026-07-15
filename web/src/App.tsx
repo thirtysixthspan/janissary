@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { JanusClient } from './ws';
 import type { TabView, RouteChooserView, TaskRow } from '@shared/protocol';
 import { TabStrip } from './TabStrip';
-import { Transcript } from './Transcript';
 import { ViewTabBody } from './ViewTabBody';
 import { ReportingSection } from './ReportingSection';
 import { AppShell } from './AppShell';
@@ -11,9 +10,6 @@ import type { EditorTabHandle } from './EditorTab';
 import type { ShellTabHandle } from './ShellTab';
 import { ShellTabLayer } from './ShellTabLayer';
 import { MountedViewLayers } from './MountedViewLayers';
-import { CommandArea } from './CommandArea';
-import { StatusPanels } from './StatusPanels';
-import { PickerOverlays } from './PickerOverlays';
 import { useTabNav } from './useTabNav';
 import { useQueuePicker } from './useQueuePicker';
 import { usePopulatePickers } from './usePopulatePickers';
@@ -28,6 +24,7 @@ import { useTabEntries } from './useTabEntries';
 import { useViewSearchState } from './useViewSearchState';
 import { getRecentHistory } from './history';
 import { useCmdW } from './useCmdW';
+import { AgentTabBody } from './AgentTabBody';
 import { useTranscriptScroll } from './useTranscriptScroll';
 import { useQuitConfirm } from './QuitDialog/useQuitConfirm';
 import { useAppWindowKeys } from './useAppWindowKeys';
@@ -169,52 +166,21 @@ export function App() {
         taskPickerOpen={taskPickerOpen} taskRows={visibleTasks} taskPickerIndex={taskPickerIndex} onPickTask={pickTask} onToggleTaskDir={toggleTaskDir} />
 
       {!isViewTab && !current.activePty && (
-        <div
-          className="tab-body"
-          style={{ borderLeft: `4px solid ${current.dotColor}` }}
-          onMouseUp={() => {
-            const selection = globalThis.getSelection()?.toString();
-            if (selection) { navigator.clipboard.writeText(selection); return; }
-            inputReference.current?.focus();
-          }}
-        >
-          <div className="main">
-            <Transcript
-              lines={lines}
-              client={client}
-              onToggleCollapse={() => client.send({ method: 'toggleCollapse', params: {} })}
-              onPromptClick={(text) => runCommand(text)}
-              scrollRef={transcriptReference}
-              highlight={highlight}
-            />
-            <StatusPanels tab={current} />
-            <PickerOverlays
-              route={route} routeIndex={routeIndex} onPickRoute={chooseRoute}
-              syntaxTheme={syntaxTheme} themePickerOpen={themePickerOpen} themePickerIndex={themePickerIndex} onPickTheme={pickTheme}
-              theme={theme} appThemePickerOpen={appThemePickerOpen} appThemePickerIndex={appThemePickerIndex} onPickAppTheme={pickAppTheme}
-              pickerOpen={pickerOpen} recent={recent} pickerIndex={pickerIndex} onPickHistory={pick}
-              navOpen={navOpen} navQuery={navQuery} navIndex={navIndex} tabs={tabs} onPickTab={selectNavTab}
-              queueOpen={queueOpen} queueItems={current.commandQueue} queueIndex={queueIndex} onSelectQueue={selectQueueIndex}
-              taskPickerOpen={taskPickerOpen} taskRows={visibleTasks} taskPickerIndex={taskPickerIndex} onPickTask={pickTask} onToggleTaskDir={toggleTaskDir}
-              profilePickerOpen={profilePickerOpen} profiles={profiles} profilePickerIndex={profilePickerIndex} onPickProfile={pickProfile} />
-          </div>
-          <CommandArea
-            search={search}
-            lines={lines}
-            dotColor={current.dotColor}
-            history={current.cmdHistory}
-            ghostHistory={globalHistory}
-            onSubmit={onCommandBarSubmit}
-            inputRef={inputReference}
-            complete={(text, cursor) => client.request({ method: 'complete', params: { text, cursor } })}
-            pickerOpen={pickerOpen || route !== null || quitConfirmOpen || unsavedQuitOpen || themePickerOpen || appThemePickerOpen || navOpen || taskPickerOpen || profilePickerOpen}
-            busy={current.busy}
-            queueOpen={queueOpen}
-            recallRef={recallReference}
-            onEditQueued={onEditQueued}
-            onDeleteQueued={onDeleteQueued}
-          />
-        </div>
+        <AgentTabBody
+          current={current} client={client} lines={lines} runCommand={runCommand}
+          transcriptReference={transcriptReference} highlight={highlight} inputReference={inputReference}
+          route={route} routeIndex={routeIndex} chooseRoute={chooseRoute}
+          syntaxTheme={syntaxTheme} themePickerOpen={themePickerOpen} themePickerIndex={themePickerIndex} pickTheme={pickTheme}
+          theme={theme} appThemePickerOpen={appThemePickerOpen} appThemePickerIndex={appThemePickerIndex} pickAppTheme={pickAppTheme}
+          pickerOpen={pickerOpen} recent={recent} pickerIndex={pickerIndex} pick={pick}
+          navOpen={navOpen} navQuery={navQuery} navIndex={navIndex} tabs={tabs} selectNavTab={selectNavTab}
+          queueOpen={queueOpen} queueIndex={queueIndex} selectQueueIndex={selectQueueIndex}
+          taskPickerOpen={taskPickerOpen} visibleTasks={visibleTasks} taskPickerIndex={taskPickerIndex} pickTask={pickTask} toggleTaskDir={toggleTaskDir}
+          profilePickerOpen={profilePickerOpen} profiles={profiles} profilePickerIndex={profilePickerIndex} pickProfile={pickProfile}
+          search={search} globalHistory={globalHistory} onCommandBarSubmit={onCommandBarSubmit}
+          quitConfirmOpen={quitConfirmOpen} unsavedQuitOpen={unsavedQuitOpen}
+          recallReference={recallReference} onEditQueued={onEditQueued} onDeleteQueued={onDeleteQueued}
+        />
       )}
       <ReportingSection
         entries={reportingEntries} onClose={closeTab}

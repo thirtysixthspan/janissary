@@ -22,7 +22,11 @@ export function buildTabView(
     groupColor: tab.groupColor,
     busy,
     hasUnread: !!tab.hasUnread,
-    cwd,
+    cwd: shorten(cwd),
+    flags: [
+      ...(tab.workspaceDir ? ['workspaced'] : []),
+      ...(tab.autoApprove ? ['autoApprove'] : []),
+    ],
     acp,
     connections,
     schedule,

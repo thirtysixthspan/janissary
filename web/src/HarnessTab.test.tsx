@@ -138,4 +138,36 @@ describe('HarnessTab', () => {
     );
     expect(queryByText(/exited/)).not.toBeInTheDocument();
   });
+
+  it('shows the given cwd in the metadata row', () => {
+    const { getByText } = render(
+      <HarnessTab harness={makeHarness()} client={mockClient} cwd="~/project" />,
+    );
+    expect(getByText('~/project')).toBeInTheDocument();
+  });
+
+  it('renders the workspaced emoji with a tooltip when flags includes workspaced', () => {
+    const { getByRole } = render(
+      <HarnessTab harness={makeHarness()} client={mockClient} flags={['workspaced']} />,
+    );
+    const badge = getByRole('img', { name: 'Workspaced' });
+    expect(badge).toBeInTheDocument();
+    expect(badge).toHaveTextContent('📦');
+    expect(badge).toHaveAttribute('title', 'Workspaced');
+  });
+
+  it('renders no flag emoji when flags is empty', () => {
+    const { container } = render(
+      <HarnessTab harness={makeHarness()} client={mockClient} flags={[]} />,
+    );
+    expect(container.querySelectorAll('.tab-flag').length).toBe(0);
+  });
+
+  it('renders both flag emoji when both are present', () => {
+    const { getByRole } = render(
+      <HarnessTab harness={makeHarness()} client={mockClient} flags={['workspaced', 'autoApprove']} />,
+    );
+    expect(getByRole('img', { name: 'Workspaced' })).toBeInTheDocument();
+    expect(getByRole('img', { name: 'Auto-permitting' })).toBeInTheDocument();
+  });
 });

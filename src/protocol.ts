@@ -36,6 +36,9 @@ export type TabView = {
   // True when the tab has unseen output (see Tab.hasUnread). Drives the tab-strip badge.
   hasUnread: boolean;
   cwd: string;
+  // Identifiers of this tab's currently-active flags (e.g. 'workspaced', 'autoApprove'), for the
+  // metadata row's flag-emoji display. Empty when none are active.
+  flags?: string[];
   // provider/model of a connected ACP agent on this tab, if any.
   acp?: string;
   connections: ConnectionView[];

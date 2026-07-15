@@ -224,6 +224,15 @@ describe('HarnessManager auto-approve', () => {
     expect(tabs.at(-1)?.offline).toBe(true);
   });
 
+  it('sets tab.autoApprove to match the autoApprove argument it was opened with', () => {
+    const { managers, tabs } = makeManagers();
+    const manager = new HarnessManager(managers);
+    manager.openFromProfile(
+      { label: 'claude', harness: 'claude', workspace: true, autoApprove: true }, 'claude', 2, '#fff',
+    );
+    expect(tabs.at(-1)?.autoApprove).toBe(true);
+  });
+
   it('registers the workspace clone dir as the tab\'s cwd, so `files` defaults to it', () => {
     const { managers } = makeManagers();
     const setCwd = vi.fn();

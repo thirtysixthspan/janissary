@@ -89,6 +89,9 @@ standing down` once and leaves that gate alone until the screen changes. Auto-ap
 per launch — like the harness tab itself, it is never persisted or restored on `--relaunch`. As with
 every notification, the `auto-approve` line is only recorded while the notifications tab is open.
 
+A harness tab opened with `-y` shows the auto-permitting flag emoji in its metadata row — see
+Metadata row in `tabs.md`.
+
 ## Harness tab data
 
 A harness tab is distinguished by `view: 'harness'` and carries a **harness payload**:

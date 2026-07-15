@@ -74,6 +74,21 @@ describe('App transcript-search interception', () => {
   }, 15_000);
 });
 
+describe('App agent tab metadata row', () => {
+  beforeEach(() => {
+    sendMock.mockClear();
+    stateListener = null;
+  });
+
+  it('renders the active tab\'s cwd and flags in the metadata row', async () => {
+    const { App } = await import('./App');
+    render(<App />);
+    act(() => { stateListener!([makeTab({ cwd: '~/project', flags: ['workspaced'] })], 0, null, 16, [], 'github-dark', 'dark', []); });
+    expect(screen.getByText('~/project')).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Workspaced' })).toBeInTheDocument();
+  });
+});
+
 describe('App syntax theme picker', () => {
   beforeEach(() => {
     sendMock.mockClear();
