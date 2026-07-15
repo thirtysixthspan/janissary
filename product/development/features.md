@@ -2,11 +2,6 @@
 
 ## ready
 
-* setup github actions and checks
-  - typescript
-  - lint
-  - tests
-  
 ## development
 
 4. Supervisor/manager agent (LangGraph supervisor, n8n AI Agent Tool) — a built-in supervisor persona that receives a goal, fans work out with broadcast request, and aggregates the responses.
