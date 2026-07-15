@@ -2,16 +2,14 @@
 # Run the check gate for the merge step.
 #
 # Hard checks fail the gate: type errors, lint errors, failing tests, CSS
-# errors. Advisory quality checks (complexity, duplication, dead code) are run
-# for visibility but only WARN — they never fail the gate, matching the
-# warn-level lint rules. So the gate does not fail on warnings.
+# errors. That's the whole gate — no advisory quality checks (complexity,
+# duplication, dead code) run here; those are for the human end-of-work gate
+# (`npm run check:full`), not this automated merge step.
 
 set -o pipefail
 
 # Hard gates — any failure fails the gate.
 HARD=(typecheck lint test lint:css)
-# Advisory gates — reported but never fail the gate.
-ADVISORY=(quality duplication knip)
 
 status=0
 
@@ -23,16 +21,9 @@ for step in "${HARD[@]}"; do
   fi
 done
 
-for step in "${ADVISORY[@]}"; do
-  echo "==> npm run $step (advisory — warnings do not fail the gate)"
-  if ! npm run "$step"; then
-    echo "WARNING: npm run $step reported issues (not failing the gate)"
-  fi
-done
-
 if [[ $status -ne 0 ]]; then
   echo "Check gate: FAILED (hard errors above)" >&2
 else
-  echo "Check gate: passed (advisory warnings, if any, do not fail the gate)"
+  echo "Check gate: passed"
 fi
 exit $status

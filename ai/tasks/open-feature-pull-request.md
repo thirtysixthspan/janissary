@@ -68,7 +68,7 @@ This is the end-of-work gate. Run the full check:
 ./scripts/run.mjs pr-check-gate
 ```
 
-The gate runs **hard** checks (typecheck, lint errors, tests, CSS) and **advisory** quality checks (complexity, duplication, dead code). **Warnings do not fail the gate** — only hard errors do.
+The gate runs **hard** checks only: typecheck, lint errors, tests, CSS. It does not run the advisory quality checks (complexity, duplication, dead code) — those belong to the human end-of-work gate (`npm run check:full`), not this automated step.
 
 The hard checks **must pass**. If they fail **because of the changes**, fix the offending code and re-run until green. If you cannot get them green, **STOP** — do not open a PR on a red gate — and report exactly what failed. Never weaken a test or lint rule to make a hard check pass.
 

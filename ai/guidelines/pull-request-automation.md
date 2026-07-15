@@ -38,7 +38,7 @@ Each step is also a standalone script for finer control or manual conflict resol
 Print uncommitted changes and commits ahead of `master`. Exits non-zero when there is nothing to ship.
 
 ### `./scripts/pr-check-gate.sh`
-Run the check gate. Hard checks (typecheck, lint errors, tests, CSS) fail it; advisory quality checks (complexity, duplication, dead code) are surfaced but **never fail the gate** — it does not fail on warnings. Exits non-zero only on a hard-check failure.
+Run the check gate. Only the hard checks run: typecheck, lint errors, tests, CSS. Advisory quality checks (complexity, duplication, dead code) are not part of this gate — they belong to the human end-of-work gate (`npm run check:full`). Exits non-zero only on a hard-check failure.
 
 ### `./scripts/pr-create-branch.sh <branch>`
 Create and switch to a feature branch (`git checkout -b`). No-op if already on it.
