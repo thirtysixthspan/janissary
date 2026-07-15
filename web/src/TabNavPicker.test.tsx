@@ -43,6 +43,16 @@ describe('filterTabs', () => {
     const tabs = [makeTab({ label: 'deploy' }), makeTab({ label: 'shell', number: 2 })];
     expect(filterTabs(tabs, 'zzz')).toEqual([]);
   });
+
+  it('matches by substring on the alias (title) when the tab has been renamed', () => {
+    const tabs = [makeTab({ label: 'agent-3', title: 'reviewer' }), makeTab({ label: 'shell', number: 2 })];
+    expect(filterTabs(tabs, 'revie').map((e) => e.tab.label)).toEqual(['agent-3']);
+  });
+
+  it('still matches by label when the tab has no alias', () => {
+    const tabs = [makeTab({ label: 'deploy' }), makeTab({ label: 'shell', number: 2 })];
+    expect(filterTabs(tabs, 'depl').map((e) => e.tab.label)).toEqual(['deploy']);
+  });
 });
 
 describe('TabNavPicker', () => {
@@ -64,6 +74,20 @@ describe('TabNavPicker', () => {
     const { container } = render(React.createElement(TabNavPicker, { tabs, query: 'depl', selected: 0, onPick: vi.fn() }));
     const mark = container.querySelector('mark');
     expect(mark?.textContent).toBe('depl');
+  });
+
+  it('renders the alias, not the raw label, for a renamed tab', () => {
+    const tabs = [makeTab({ label: 'agent-3', title: 'reviewer' })];
+    const { getByText, queryByText } = render(React.createElement(TabNavPicker, { tabs, query: '', selected: 0, onPick: vi.fn() }));
+    expect(getByText(/reviewer/)).toBeTruthy();
+    expect(queryByText(/agent-3/)).toBeNull();
+  });
+
+  it('highlights the matched substring within the alias when filtering by alias text', () => {
+    const tabs = [makeTab({ label: 'agent-3', title: 'reviewer' })];
+    const { container } = render(React.createElement(TabNavPicker, { tabs, query: 'revie', selected: 0, onPick: vi.fn() }));
+    const mark = container.querySelector('mark');
+    expect(mark?.textContent).toBe('revie');
   });
 
   it('marks the selected row', () => {
