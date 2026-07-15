@@ -157,4 +157,15 @@ describe('HarnessAutoApprover', () => {
     approver.onCapture(capture(BASH_IN_PROJECT));
     expect(approve).toHaveBeenCalledTimes(2);
   });
+
+  it('reports isStuck only once the stuck-notification path fires, and false again after clearing', () => {
+    const { approver } = make();
+    expect(approver.isStuck).toBe(false);
+    approver.onCapture(capture(BASH_IN_PROJECT));
+    expect(approver.isStuck).toBe(false);
+    approver.onCapture(capture(BASH_IN_PROJECT));
+    expect(approver.isStuck).toBe(true);
+    approver.onCapture(capture('back to normal output'));
+    expect(approver.isStuck).toBe(false);
+  });
 });

@@ -9,7 +9,7 @@ import { messageBus, type Subscription } from '../bus.js';
 // type-only so it erases at compile time.
 const { Terminal: HeadlessTerminal } = xterm;
 
-export type ScreenCapture = { text: string; capturedAt: number };
+export type ScreenCapture = { text: string; capturedAt: number; title?: string };
 
 // Delay between a PTY byte arriving and the screen being read: long enough for a burst of output
 // to settle into a coherent frame, short enough that the capture reflects "now".
@@ -24,11 +24,15 @@ export class HarnessScreenReader {
   private subscription: Subscription;
   private pending: ReturnType<typeof setTimeout> | undefined;
   private capture: ScreenCapture | undefined;
+  private title: string | undefined;
   private disposed = false;
 
   constructor(private id: string, cols: number, rows: number, private onCapture?: (capture: ScreenCapture) => void) {
     // allowProposedApi: the headless build gates the `buffer` read API behind it.
     this.term = new HeadlessTerminal({ cols, rows, scrollback: 0, allowProposedApi: true });
+    // The terminal parses OSC 0/2 title sequences itself; retain the latest so each capture can
+    // carry the title alongside the rendered text (harness busy/ready detection reads it).
+    this.term.onTitleChange((title) => { this.title = title; });
     this.subscription = messageBus.on('pty', ['data', 'exit', 'resize'], (event) => {
       if (event.id !== this.id) return;
       if (event.type === 'data') this.onData(event.data);
@@ -66,7 +70,7 @@ export class HarnessScreenReader {
       lines.push(buffer.getLine(i)?.translateToString(true) ?? '');
     }
     while (lines.length > 0 && lines.at(-1) === '') lines.pop();
-    this.capture = { text: lines.join('\n'), capturedAt: Date.now() };
+    this.capture = { text: lines.join('\n'), capturedAt: Date.now(), title: this.title };
     this.onCapture?.(this.capture);
   }
 }
