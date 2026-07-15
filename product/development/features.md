@@ -1,16 +1,6 @@
 
 ## ready
 
-* in the file navigator, indicate modified files as indicated by git, by coloring the text yellow.
-
-* support choosing a model and effort level when launching a harness via command line parameters
-
-* send a notification to the notifications tab when ACP queries are failing due to rate limiting.
-
-* recognize claude code busy/ready status from captures and update tab status/blinking accordingly.
-
-* Add a right floated button to the metadata tab of harness/agent tabs that will open a file navigator to the working directory of the harness/agent tab. If the file navigator is already open, change its directory accordingly instead of opening another tab. If a file navigator tab does not exist, defaul to openning it in the left sidebar.
-
 ## in development
 
 4. Supervisor/manager agent (LangGraph supervisor, n8n AI Agent Tool) — a built-in supervisor persona that receives a goal, fans work out with broadcast request, and aggregates the responses.
