@@ -123,6 +123,24 @@ export function CommandInput({
     element.dispatchEvent(new Event('input', { bubbles: true }));
   };
 
+  // ArrowUp/ArrowDown recall history only when the caret sits on the input's first/last visual
+  // line respectively — otherwise the native caret movement across a multi-line value wins.
+  const handleArrowUpKey = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    const element = inputRef.current;
+    const onFirstLine = !value.includes('\n') || element?.selectionStart == null
+      || value.lastIndexOf('\n', element.selectionStart - 1) === -1;
+    if (onFirstLine) { e.preventDefault(); recallOlder(); }
+    // else: native ArrowUp moves the caret up one line.
+  };
+
+  const handleArrowDownKey = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    const element = inputRef.current;
+    const onLastLine = !value.includes('\n') || element?.selectionStart == null
+      || !value.includes('\n', element.selectionStart);
+    if (onLastLine) { e.preventDefault(); recallNewer(); }
+    // else: native ArrowDown moves the caret down one line.
+  };
+
   // While the queue popup is open: Enter/ArrowUp/ArrowDown are owned by the window handler
   // (no-op / move the selector); Backspace/Delete on an empty line deletes the selected row.
   // Returns true once handled, so the caller stops there. All other keys behave normally.
@@ -162,20 +180,12 @@ export function CommandInput({
     break;
     }
     case 'ArrowUp': {
-      const element = inputRef.current;
-      const onFirstLine = !value.includes('\n') || element?.selectionStart == null
-        || value.lastIndexOf('\n', element.selectionStart - 1) === -1;
-      if (onFirstLine) { e.preventDefault(); recallOlder(); }
-      // else: native ArrowUp moves the caret up one line.
+      handleArrowUpKey(e);
 
     break;
     }
     case 'ArrowDown': {
-      const element = inputRef.current;
-      const onLastLine = !value.includes('\n') || element?.selectionStart == null
-        || !value.includes('\n', element.selectionStart);
-      if (onLastLine) { e.preventDefault(); recallNewer(); }
-      // else: native ArrowDown moves the caret down one line.
+      handleArrowDownKey(e);
 
     break;
     }
