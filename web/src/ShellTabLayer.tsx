@@ -21,7 +21,7 @@ export function ShellTabLayer({ tabs, activeLabel, client, onHandle }: Propertie
           className="tab-body"
           style={{ borderLeft: `4px solid ${t.dotColor}`, display: t.label === activeLabel ? 'flex' : 'none' }}
         >
-          <ShellTab ptyId={t.activePty!} client={client}
+          <ShellTab ptyId={t.activePty!} client={client} cwd={t.cwd} flags={t.flags}
             ref={(h) => onHandle(t.activePty!, h)} />
         </div>
       ))}

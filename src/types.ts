@@ -189,6 +189,9 @@ export type Tab = {
   // `--offline` on the tab's creating `agent`/`harness` command: adds a network-deny rule to the
   // tab's sandbox profile (only meaningful alongside `workspaceDir`). Kept so a relaunch restores it.
   offline?: boolean;
+  // Whether harness auto-permitting (auto-approving the harness's own permission prompts) is
+  // enabled on this tab. Harness-only; set once at spawn time.
+  autoApprove?: boolean;
   // When false/undefined, contiguous runs of auto-run agent tool steps (acp entries) are
   // collapsed into a single summary line in the transcript. Toggled with Ctrl+T. In-memory
   // only (like scrollOffset) — not persisted to agent state.

@@ -34,6 +34,9 @@ Full-screen and interactive programs — `htop`, `vim`, `less`, `top`, `man`, `p
 
 When the program exits, the tab returns to the normal transcript view exactly as it was before the PTY launched. No log entry is appended — the transcript is simply restored.
 
+While in PTY takeover mode, the tab shows the same metadata row (working directory and active-flag
+emoji) as the underlying agent tab — see Metadata row in `tabs.md`.
+
 ### Multi-tab persistence
 
 All agent tabs with a running interactive PTY stay mounted simultaneously (only the active tab is visible, the rest use `display: none`). This preserves xterm state — alternate-screen TUIs like `htop` keep their cursor position and screen buffer intact across tab switches.

@@ -68,4 +68,32 @@ describe('ShellTab', () => {
     ref.current?.focus();
     expect(focusXterm).toHaveBeenCalled();
   });
+
+  it('shows the given cwd in the metadata row', () => {
+    const client = fakeClient();
+    const { getByText } = render(<ShellTab ptyId="pty1" client={client} cwd="~/project" />);
+    expect(getByText('~/project')).toBeInTheDocument();
+  });
+
+  it('renders the workspaced emoji with a tooltip when flags includes workspaced', () => {
+    const client = fakeClient();
+    const { getByRole } = render(<ShellTab ptyId="pty1" client={client} flags={['workspaced']} />);
+    const badge = getByRole('img', { name: 'Workspaced' });
+    expect(badge).toBeInTheDocument();
+    expect(badge).toHaveTextContent('📦');
+    expect(badge).toHaveAttribute('title', 'Workspaced');
+  });
+
+  it('renders no flag emoji when flags is empty', () => {
+    const client = fakeClient();
+    const { container } = render(<ShellTab ptyId="pty1" client={client} flags={[]} />);
+    expect(container.querySelectorAll('.tab-flag').length).toBe(0);
+  });
+
+  it('renders both flag emoji when both are present', () => {
+    const client = fakeClient();
+    const { getByRole } = render(<ShellTab ptyId="pty1" client={client} flags={['workspaced', 'autoApprove']} />);
+    expect(getByRole('img', { name: 'Workspaced' })).toBeInTheDocument();
+    expect(getByRole('img', { name: 'Auto-permitting' })).toBeInTheDocument();
+  });
 });

@@ -104,6 +104,7 @@ export class HarnessManager {
     const harness: HarnessView = { name, program, ptyId: '', status: 'running' };
     const tab = makeHarnessTab(label, dotColor, this.managers.tab.tabs.length + 1, group, groupColor, harness, workspaceDir);
     tab.offline = offline;
+    tab.autoApprove = autoApprove;
     this.managers.tab.insertTabInGroup(tab);
     this.managers.tab.setCwd(label, cwd);
     this.managers.tab.addBusy(label);

@@ -40,7 +40,7 @@ export function MountedViewLayers({
           className="tab-body"
           style={{ borderLeft: `4px solid ${t.dotColor}`, position: 'relative', display: t.label === current.label ? 'flex' : 'none' }}
         >
-          <HarnessTab harness={t.harness!} client={client} taskPickerOpen={!!taskPickerOpen && t.label === current.label}
+          <HarnessTab harness={t.harness!} client={client} cwd={t.cwd} flags={t.flags} taskPickerOpen={!!taskPickerOpen && t.label === current.label}
             ref={(h) => { if (h) harnessHandles.current.set(t.harness!.ptyId, h); else harnessHandles.current.delete(t.harness!.ptyId); }} />
           <StatusPanels tab={t} scheduleOnly={t.harness!.name !== 'ssh'} />
           {taskPickerOpen && t.label === current.label && onPickTask && onToggleTaskDir && (
