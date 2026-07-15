@@ -1,6 +1,12 @@
 
 ## ready
 
+* in the file navigator, indicate modified files as indicated by git, by coloring the text yellow.
+
+* support choosing a model and effort level when launching a harness via command line parameters
+
+* send a notification to the notifications tab when ACP queries are failing due to rate limiting.
+
 ## in development
 
 4. Supervisor/manager agent (LangGraph supervisor, n8n AI Agent Tool) — a built-in supervisor persona that receives a goal, fans work out with broadcast request, and aggregates the responses.
