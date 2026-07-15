@@ -1,6 +1,8 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
-import type { ProfileEntry, ProfileFilesEntry, ProfileMonitor, ProfileParsed } from './types.js';
+import type {
+  ProfileEntry, ProfileFilesEntry, ProfileMonitor, ProfileNotificationsEntry, ProfileParsed,
+} from './types.js';
 
 // A profile is a named, reusable set of agents for a particular use case (writing code,
 // surfing the web, authoring a book, …). Each profile is a directory under the profiles
@@ -101,6 +103,26 @@ export function loadProfileFiles(name: string): ProfileFilesEntry[] {
   try {
     const parsed: unknown = JSON.parse(readFileSync(file, 'utf8'));
     return Array.isArray(parsed) ? parsed.filter(isProfileFilesEntry) : [];
+  } catch {
+    return [];
+  }
+}
+
+function isProfileNotificationsEntry(value: unknown): value is ProfileNotificationsEntry {
+  if (typeof value !== 'object' || value === null) return false;
+  const entry = value as Record<string, unknown>;
+  return entry.dock === undefined || (typeof entry.dock === 'string' && ['left', 'right'].includes(entry.dock));
+}
+
+// Profile-level notifications tabs live in a reserved `_notifications.json` file — a JSON array of
+// `{ dock? }` — kept out of the entry set by the leading underscore. Returns [] when the file is
+// absent, unparseable, or not an array; malformed elements are dropped.
+export function loadProfileNotifications(name: string): ProfileNotificationsEntry[] {
+  const file = path.join(profilePath(name), '_notifications.json');
+  if (!existsSync(file)) return [];
+  try {
+    const parsed: unknown = JSON.parse(readFileSync(file, 'utf8'));
+    return Array.isArray(parsed) ? parsed.filter(isProfileNotificationsEntry) : [];
   } catch {
     return [];
   }
