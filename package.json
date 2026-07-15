@@ -72,6 +72,7 @@
   "dependencies": {
     "@agentclientprotocol/sdk": "^0.28.1",
     "@xterm/headless": "^5.5.0",
+    "diff": "^9.0.0",
     "dompurify": "^3.4.11",
     "marked": "^18.0.5",
     "node-pty": "^1.1.0",
