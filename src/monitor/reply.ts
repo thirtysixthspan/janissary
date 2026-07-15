@@ -8,6 +8,6 @@ import { recordContext } from './context.js';
 // flush's and ask's `onEnd` handlers, both of which do this identically once an ACP reply finishes
 // streaming.
 export function recordReply(reg: MonitorSub, managers: Managers, reply: string): void {
-  recordContext(reg, reply);
+  recordContext(reg, reply, 'response');
   if (!reg.inline) updateMonitorMeta(managers, reg.persona.name, formatTargets(reg.targets), reg.contextBytes);
 }

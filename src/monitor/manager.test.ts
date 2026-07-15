@@ -222,6 +222,14 @@ describe('MonitorManager', () => {
     expect(text).toContain('npm test'); // flushed update prompt
     expect(text).toContain('Fix the failing test'); // reply
     expect(edit).toHaveBeenCalledWith('monitor context assistant', '/project/.janissary/captures/assistant-now.txt', 'janus');
+
+    // Each block is delineated by a header marking whether it was sent to or received from the model.
+    expect(text).toContain('SENT TO MODEL');
+    expect(text).toContain('MODEL RESPONSE');
+    // Priming and the flushed update sit under "sent"; the reply sits under "received".
+    expect(text).toMatch(/SENT TO MODEL[\s\S]*\[SUGGESTION]/);
+    expect(text).toMatch(/SENT TO MODEL[\s\S]*npm test/);
+    expect(text).toMatch(/MODEL RESPONSE[^\n]*\n\[SUGGESTION]: Fix the failing test/);
   });
 
   it('snapshotContext is a no-op for an unknown reporting tab', () => {

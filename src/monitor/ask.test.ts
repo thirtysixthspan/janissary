@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import type { MonitorSub } from './manager.js';
 import type { Managers } from '../managers.js';
+import type { MonitorContextEntry } from './context.js';
 import { askMonitor } from './ask.js';
 
 describe('askMonitor', () => {
@@ -10,7 +11,7 @@ describe('askMonitor', () => {
     const reg = {
       inFlight: false,
       contextBytes: 0,
-      contextText: [] as string[],
+      contextText: [] as MonitorContextEntry[],
       session: {
         prompt: (_text: string, handlers: { onError: (msg: string) => void }) => {
           handlers.onError('test error');

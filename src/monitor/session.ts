@@ -27,7 +27,7 @@ export function openMonitorSession(
     },
   });
   const primingText = `${reg.persona.body}\n\n${SUGGESTION_FORMAT}\n\n${TRUST_FRAMING_INSTRUCTIONS(reg.delimiter)}`;
-  recordContext(reg, primingText);
+  recordContext(reg, primingText, 'input');
   reg.session.prompt(primingText, {
     onChunk: () => {},
     onEnd: () => { reg.inFlight = false; },

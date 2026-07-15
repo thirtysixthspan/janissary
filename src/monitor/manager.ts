@@ -10,7 +10,7 @@ import { validateTargets, matchesTargets, targetColor, formatTargets, resolveTar
 import { stopMonitor, closeIfUnfed } from './stop.js';
 import { seedFeedEntries, flushFeedEntries } from './feeds.js';
 import { generateSessionDelimiter, frameEntry } from './framing.js';
-import { recordContext, snapshotMonitorContext } from './context.js';
+import { recordContext, snapshotMonitorContext, type MonitorContextEntry } from './context.js';
 import { listMonitors, monitorConnections } from './info.js';
 import { askMonitor } from './ask.js';
 import { recordReply } from './reply.js';
@@ -47,7 +47,7 @@ export type MonitorSub = {
   contextBytes: number;
   // The accumulated context text itself (priming, update prompts, asks, replies), kept in order so
   // it can be snapshotted into a view tab. Grows and resets in lockstep with `contextBytes`.
-  contextText: string[];
+  contextText: MonitorContextEntry[];
   timer: ReturnType<typeof setInterval>;
   subs: Subscription[];
 };
@@ -157,7 +157,7 @@ export class MonitorManager {
       .map(({ tabLabel, entry }) => frameEntry(tabLabel, entry, reg.delimiter))
       .join('\n\n');
     const prompt = `[Monitor update]\n${body}`;
-    recordContext(reg, prompt);
+    recordContext(reg, prompt, 'input');
     reg.inFlight = true;
     let reply = '';
     reg.session.prompt(prompt, {
