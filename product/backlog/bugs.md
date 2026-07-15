@@ -6,6 +6,8 @@
 
 * acp doesnt detect rate limited queries and fails silently
 
+* using --effort when launching a harness fails for opencode and codex likely because they use the terms variant and reasining level. 
+
 ## development
 
 ## deferred

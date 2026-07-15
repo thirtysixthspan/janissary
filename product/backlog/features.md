@@ -2,6 +2,10 @@
 
 ## ready
 
+* `harness launch` dialog that allows selection of harness and all flags.
+
+* add the harness model and effort level in the metadata: `<path> <model> <effort> <flags>`
+
 ## development
 
 4. Supervisor/manager agent (LangGraph supervisor, n8n AI Agent Tool) — a built-in supervisor persona that receives a goal, fans work out with broadcast request, and aggregates the responses.
