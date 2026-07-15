@@ -27,6 +27,16 @@ describe('completeSendTarget', () => {
     const r = completeSendTarget('queue', 1, 'jan', ['janus', 'claude'], 'queue jan', '', 6);
     expect(r?.newInput).toBe('queue janus ');
   });
+
+  it('completes a tab label for the close command at argument 1', () => {
+    const r = completeSendTarget('close', 1, 'jan', ['janus', 'claude'], 'close jan', '', 6);
+    expect(r?.newInput).toBe('close janus ');
+  });
+
+  it('completes a tab label for the exit command at argument 1', () => {
+    const r = completeSendTarget('exit', 1, 'jan', ['janus', 'claude'], 'exit jan', '', 5);
+    expect(r?.newInput).toBe('exit janus ');
+  });
 });
 
 describe('completeAgentName', () => {

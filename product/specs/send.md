@@ -64,7 +64,8 @@ than the sender's (see [[scheduling]]).
 ## Tab-completion
 
 Typing `send <partial>` completes the first argument against every open tab's label (all
-tabs, not just agents), via `completeSendTarget` in `src/completion-handlers.ts`.
+tabs, not just agents), via `completeSendTarget` in `src/completion-handlers.ts`. The same
+handler backs `queue` and `close`/`exit`'s name argument (see [[tabs]]).
 
 ## Non-goals
 

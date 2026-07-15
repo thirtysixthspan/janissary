@@ -1,7 +1,5 @@
 # issues
 
-* tab labels should autocomplete
-
 * tab alias should be shown in the tab picker
 
 * monitor command should recognize tab aliases
