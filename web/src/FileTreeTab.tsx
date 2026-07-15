@@ -4,6 +4,7 @@ import type { JanusClient } from './ws';
 import { handleFileTreeKey, typeAheadMatch } from './file-tree-keys';
 import { nextDock, dockTooltip } from './dock-cycle';
 import { useFileTreeDrag } from './useFileTreeDrag';
+import { fileTreeRowClass } from './file-tree-row-class';
 import { MoveConflictDialog } from './MoveConflictDialog/MoveConflictDialog';
 import { DeleteFileDialog } from './DeleteFileDialog';
 import type { CommandInputDropHandle } from './CommandInput';
@@ -155,23 +156,26 @@ export function FileTreeTab({ files, client, index, dock, autoFocus = true, drop
         </div>
       </div>
       <div className="files-rows">
-        {files.rows.map((row) => (
-          <div
-            key={row.path}
-            role="treeitem"
-            aria-selected={row.path === selected}
-            aria-expanded={row.dir ? !!row.expanded : undefined}
-            className={`files-row${row.path === selected ? ' selected' : ''}${drag.dropTarget?.path === row.path ? ' drop-target' : ''}`}
-            data-path={row.path}
-            style={{ paddingLeft: 12 + row.depth * 16 }}
-            onClick={() => onRowClick(row)}
-            onDoubleClick={(e) => onRowDoubleClick(row, e.shiftKey)}
-            onMouseDown={(e) => drag.onRowMouseDown(row, e)}
-          >
-            {row.dir && row.expanded !== undefined && <span className="files-chevron">{row.expanded ? '▾' : '▸'}</span>}
-            <span className="files-name">{row.name}</span>
-          </div>
-        ))}
+        {files.rows.map((row) => {
+          const cls = fileTreeRowClass(row, selected, drag.dropTarget?.path);
+          return (
+            <div
+              key={row.path}
+              role="treeitem"
+              aria-selected={row.path === selected}
+              aria-expanded={row.dir ? !!row.expanded : undefined}
+              className={cls.row}
+              data-path={row.path}
+              style={{ paddingLeft: 12 + row.depth * 16 }}
+              onClick={() => onRowClick(row)}
+              onDoubleClick={(e) => onRowDoubleClick(row, e.shiftKey)}
+              onMouseDown={(e) => drag.onRowMouseDown(row, e)}
+            >
+              {row.dir && row.expanded !== undefined && <span className="files-chevron">{row.expanded ? '▾' : '▸'}</span>}
+              <span className={cls.name}>{row.name}</span>
+            </div>
+          );
+        })}
       </div>
       {drag.draggedPath && drag.dragPosition && (
         <div

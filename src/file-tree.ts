@@ -52,6 +52,28 @@ export function buildRows(root: string, expanded: Set<string>): FileTreeRow[] {
   return rows;
 }
 
+// Return `rows` with a `changed` flag set on every row git considers changed: a file row when its
+// own `path` is in `changed`; a directory row when any changed path is nested beneath it (a prefix
+// check, `changedPath` starts with `${row.path}/`). Propagation is purely this flat-set prefix
+// scan — no directory is re-read, so a collapsed directory still colors when something deep inside
+// it changed. Rows with no match are returned as-is; an empty `changed` set marks nothing.
+export function markChanged(rows: FileTreeRow[], changed: Set<string>): FileTreeRow[] {
+  if (changed.size === 0) return rows;
+  return rows.map((row) => {
+    const isChanged = row.dir
+      ? [...changed].some((p) => p.startsWith(`${row.path}/`))
+      : changed.has(row.path);
+    return isChanged ? { ...row, changed: true } : row;
+  });
+}
+
+// The containing directory of a tree-relative path — the empty string for a root-level entry,
+// matching the root-as-empty-string convention `buildRows` already uses.
+export function parentPath(relPath: string): string {
+  const idx = relPath.lastIndexOf('/');
+  return idx === -1 ? '' : relPath.slice(0, idx);
+}
+
 // True if `candidate` is `base` itself, or is nested inside it — the check that blocks dropping a
 // dragged item onto itself or one of its own descendants (moving a directory into its own child).
 export function isSameOrDescendantPath(candidate: string, base: string): boolean {

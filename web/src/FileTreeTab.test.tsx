@@ -37,6 +37,21 @@ describe('FileTreeTab', () => {
     expect(screen.getByText('README.md').closest('[role="treeitem"]')!.getAttribute('aria-expanded')).toBeNull();
   });
 
+  it('renders a git-changed row with the files-name--changed class and leaves clean rows without it', () => {
+    const client = { send: vi.fn() } as unknown as JanusClient;
+    const files = makeFiles({
+      rows: [
+        { path: 'src', name: 'src', depth: 0, dir: true, expanded: true, changed: true },
+        { path: 'src/index.ts', name: 'index.ts', depth: 1, dir: false, changed: true },
+        { path: 'README.md', name: 'README.md', depth: 0, dir: false },
+      ],
+    });
+    render(<FileTreeTab files={files} client={client} index={0} />);
+    expect(screen.getByText('index.ts').className).toContain('files-name--changed');
+    expect(screen.getByText('src').className).toContain('files-name--changed');
+    expect(screen.getByText('README.md').className).not.toContain('files-name--changed');
+  });
+
   it('click on a directory row selects but does not toggle', () => {
     const send = vi.fn();
     const client = { send } as unknown as JanusClient;

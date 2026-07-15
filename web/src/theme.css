@@ -578,6 +578,7 @@ html, body, #root {
 }
 .files-chevron { flex: none; width: 1em; color: var(--muted); font-size: 10px; }
 .files-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.files-name--changed { color: var(--running); }
 
 .sidebar .files-rows { scrollbar-width: none; }
 .sidebar .files-rows::-webkit-scrollbar { display: none; }
