@@ -231,19 +231,19 @@ describe('useFileTreeDrag', () => {
   });
 
   describe('drop onto the command bar', () => {
-    it('a drag released over the command-bar marker inserts the relative path instead of sending moveFileTreeItem', () => {
+    it('a drag released over the command-bar marker inserts the path relative to the file tree root instead of sending moveFileTreeItem', () => {
       const client = { send: vi.fn() } as unknown as JanusClient;
       const dropHandle = makeDropHandle();
       const dropRef = { current: dropHandle };
-      const { result } = renderHook(() => useFileTreeDrag(makeRows(), client, 0, '/home/user/project', '/home/user/other', dropRef));
+      const { result } = renderHook(() => useFileTreeDrag(makeRows(), client, 0, dropRef));
       const bar = makeCommandBarElement();
       document.elementFromPoint = vi.fn().mockReturnValue(bar);
 
-      act(() => { result.current.onRowMouseDown({ path: 'notes.txt' } as FileTreeRow, downEvent(0, 0)); });
+      act(() => { result.current.onRowMouseDown({ path: 'src/notes.txt' } as FileTreeRow, downEvent(0, 0)); });
       act(() => { globalThis.dispatchEvent(new MouseEvent('mousemove', { clientX: 20, clientY: 0 })); });
       act(() => { result.current.drop(); });
 
-      expect(dropHandle.insertAtCaret).toHaveBeenCalledWith('../project/notes.txt');
+      expect(dropHandle.insertAtCaret).toHaveBeenCalledWith('src/notes.txt');
       expect(client.send).not.toHaveBeenCalled();
     });
 
@@ -251,7 +251,7 @@ describe('useFileTreeDrag', () => {
       const client = { send: vi.fn() } as unknown as JanusClient;
       const dropHandle = makeDropHandle();
       const dropRef = { current: dropHandle };
-      const { result } = renderHook(() => useFileTreeDrag(makeRows(), client, 0, '/home/user/project', '/home/user/project', dropRef));
+      const { result } = renderHook(() => useFileTreeDrag(makeRows(), client, 0, dropRef));
       const bar = makeCommandBarElement();
       const otherRow = makeRowElement('other');
       document.elementFromPoint = vi.fn().mockReturnValue(bar);
@@ -271,7 +271,7 @@ describe('useFileTreeDrag', () => {
     it('a drag released over a tree row still moves the file as before, unaffected by the command-bar wiring', () => {
       const client = { send: vi.fn() } as unknown as JanusClient;
       const dropRef = { current: makeDropHandle() };
-      const { result } = renderHook(() => useFileTreeDrag(makeRows(), client, 3, '/home/user/project', '/home/user/project', dropRef));
+      const { result } = renderHook(() => useFileTreeDrag(makeRows(), client, 3, dropRef));
       const otherRow = makeRowElement('other');
       document.elementFromPoint = vi.fn().mockReturnValue(otherRow);
 
@@ -286,7 +286,7 @@ describe('useFileTreeDrag', () => {
     it('a release over neither a row nor the command bar is a no-op', () => {
       const client = { send: vi.fn() } as unknown as JanusClient;
       const dropRef = { current: makeDropHandle() };
-      const { result } = renderHook(() => useFileTreeDrag(makeRows(), client, 0, '/home/user/project', '/home/user/project', dropRef));
+      const { result } = renderHook(() => useFileTreeDrag(makeRows(), client, 0, dropRef));
       document.elementFromPoint = vi.fn().mockReturnValue(null);
 
       act(() => { result.current.onRowMouseDown({ path: 'notes.txt' } as FileTreeRow, downEvent(0, 0)); });
@@ -300,7 +300,7 @@ describe('useFileTreeDrag', () => {
     it('a drag over where the command bar would be finds no marker when no CommandInput is mounted (e.g. a harness tab)', () => {
       const client = { send: vi.fn() } as unknown as JanusClient;
       const dropRef = { current: makeDropHandle() };
-      const { result } = renderHook(() => useFileTreeDrag(makeRows(), client, 0, '/home/user/project', '/home/user/project', dropRef));
+      const { result } = renderHook(() => useFileTreeDrag(makeRows(), client, 0, dropRef));
       // No [data-command-bar] element exists anywhere — elementFromPoint returns a plain, unrelated element.
       const plain = document.createElement('div');
       document.body.append(plain);

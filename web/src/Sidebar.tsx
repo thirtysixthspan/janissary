@@ -17,15 +17,14 @@ const DEFAULT_WIDTH_PX = 280;
 // resized by dragging the divider on the sidebar's inner edge, mirroring ReportingSection's
 // height-drag precedent.
 export function Sidebar({
-  side, tabs, client, dropRef, activeCwd,
+  side, tabs, client, dropRef,
 }: {
   side: 'left' | 'right';
   tabs: TabView[];
   client: JanusClient;
-  // The active tab's command-bar drop handle and cwd, threaded down to a docked `FileTreeTab` so
-  // a drag can find and insert into that tab's command bar. See `App.tsx`'s `dropRef`.
+  // The active tab's command-bar drop handle, threaded down to a docked `FileTreeTab` so a drag
+  // can find and insert into that tab's command bar. See `App.tsx`'s `dropRef`.
   dropRef?: React.RefObject<CommandInputDropHandle | null>;
-  activeCwd?: string;
 }) {
   const [width, setWidth] = useState(DEFAULT_WIDTH_PX);
   const [selectedView, setSelectedView] = useState<'files' | 'notifications'>('files');
@@ -84,7 +83,7 @@ export function Sidebar({
         {current.tab.view === 'files' && current.tab.files && (
           <FileTreeTab
             files={current.tab.files} client={client} index={current.index} dock={current.tab.dock} autoFocus={false}
-            dropRef={dropRef} cwd={activeCwd}
+            dropRef={dropRef}
           />
         )}
         {current.tab.view === 'notifications' && (

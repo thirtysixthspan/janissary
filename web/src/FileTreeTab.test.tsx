@@ -379,7 +379,7 @@ describe('FileTreeTab', () => {
         bufferLines: [], cmdHistory: [], commandQueue: [], toolStepsExpanded: false,
         view: 'files', dock: 'left', files: makeFiles(),
       };
-      const { container } = render(<Sidebar side="left" tabs={[tab]} client={client} dropRef={dropRef} activeCwd="/home/user/other" />);
+      const { container } = render(<Sidebar side="left" tabs={[tab]} client={client} dropRef={dropRef} />);
       const bar = document.createElement('div');
       bar.dataset.commandBar = '';
       document.body.append(bar);

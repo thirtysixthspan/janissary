@@ -7,19 +7,18 @@ import type { CommandInputDropHandle } from './CommandInput';
 // The root layout: left sidebar / center column (everything App renders today) / right sidebar.
 // Split out of App.tsx to keep it under the file-size limit.
 export function AppShell({
-  tabs, client, children, dropRef, activeCwd,
+  tabs, client, children, dropRef,
 }: {
   tabs: TabView[];
   client: JanusClient;
   children: React.ReactNode;
   dropRef?: React.RefObject<CommandInputDropHandle | null>;
-  activeCwd?: string;
 }) {
   return (
     <div className="app">
-      <Sidebar side="left" tabs={tabs} client={client} dropRef={dropRef} activeCwd={activeCwd} />
+      <Sidebar side="left" tabs={tabs} client={client} dropRef={dropRef} />
       <div className="app-center">{children}</div>
-      <Sidebar side="right" tabs={tabs} client={client} dropRef={dropRef} activeCwd={activeCwd} />
+      <Sidebar side="right" tabs={tabs} client={client} dropRef={dropRef} />
     </div>
   );
 }

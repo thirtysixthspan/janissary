@@ -2,7 +2,6 @@ import { useRef, useState, type RefObject } from 'react';
 import type { FileTreeRow } from '@shared/protocol';
 import type { JanusClient } from './ws';
 import { resolveDropTarget, type DropTarget } from './file-tree-drag';
-import { relativePath } from './file-tree-relative-path';
 import type { CommandInputDropHandle } from './CommandInput';
 
 // Ignore incidental pointer jitter between mousedown and the first real move — below this, a
@@ -23,8 +22,6 @@ export function useFileTreeDrag(
   rows: FileTreeRow[],
   client: JanusClient,
   index: number,
-  absoluteRoot?: string,
-  cwd?: string,
   dropRef?: RefObject<CommandInputDropHandle | null>,
 ) {
   const [draggedPath, setDraggedPath] = useState<string | null>(null);
@@ -74,8 +71,7 @@ export function useFileTreeDrag(
   const drop = () => {
     const gesture = gestureRef.current;
     if (gesture?.started && overCommandBarRef.current) {
-      const absolute = `${absoluteRoot ?? ''}/${gesture.path}`;
-      dropRef?.current?.insertAtCaret(relativePath(cwd ?? '', absolute));
+      dropRef?.current?.insertAtCaret(gesture.path);
       resetGestureState();
       return;
     }
