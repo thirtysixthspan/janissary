@@ -4,6 +4,7 @@ import { isKnownModel } from './models.js';
 import { HarnessScreenReader, type ScreenCapture } from './screen.js';
 import { HarnessRecorder } from './recorder.js';
 import { HarnessAutoApprover } from './auto-approve.js';
+import { busyStatusHandler } from './busy-status.js';
 import { writeCaptureFile } from './capture-file.js';
 import type { HarnessView, ProfileHarnessEntry } from '../types.js';
 import { messageBus } from '../bus.js';
@@ -119,7 +120,7 @@ export class HarnessManager {
     this.managers.tab.activeTab = this.managers.tab.findIndex(tab.label);
     const id = this.managers.pty.spawn(label, program, buildHarnessCommand(name, model, effort), cwd, workspaceDir, offline);
     const dims = this.managers.pty.spawnDimensions();
-    this.screenReaders.set(id, new HarnessScreenReader(id, dims.cols, dims.rows, this.autoApproveHandler(name, label, id, autoApprove)));
+    this.screenReaders.set(id, new HarnessScreenReader(id, dims.cols, dims.rows, this.captureHandler(name, label, id, autoApprove)));
     this.recorders.set(id, new HarnessRecorder(id, label, program, dims.cols, dims.rows));
     const liveTab = this.managers.tab.tabs.find((t) => t.label === label);
     if (liveTab?.harness) liveTab.harness.ptyId = id;
@@ -128,12 +129,26 @@ export class HarnessManager {
     messageBus.emit('state', { type: 'dirty' });
   }
 
-  // When `autoApprove` is on, build the tab's auto-approver, register it under the PTY id, and
-  // return the screen-reader callback that feeds it each fresh capture; otherwise return undefined
-  // so the reader runs exactly as it does today. The approver injects the approval keystroke back
-  // into this PTY and reports each approval to the notifications feed (label-free — `notify`
-  // prefixes the tab label).
-  private autoApproveHandler(name: string, label: string, id: string, autoApprove: boolean): ((capture: ScreenCapture) => void) | undefined {
+  // Build the screen-reader callback that feeds each fresh capture to whichever consumers apply:
+  // the auto-approver (when `autoApprove` is on) and the busy/ready status handler (when the
+  // harness has a detector). The approver runs first so the busy handler reads its stuck state as
+  // of the same capture. Returns undefined when neither applies, so the reader runs exactly as it
+  // would with no consumers.
+  private captureHandler(name: string, label: string, id: string, autoApprove: boolean): ((capture: ScreenCapture) => void) | undefined {
+    const approver = this.buildAutoApprover(name, label, id, autoApprove);
+    const busyHandler = busyStatusHandler(name, label, this.managers, approver);
+    if (!approver && !busyHandler) return undefined;
+    return (capture) => {
+      approver?.onCapture(capture);
+      busyHandler?.(capture);
+    };
+  }
+
+  // When `autoApprove` is on, build the tab's auto-approver and register it under the PTY id;
+  // otherwise return undefined. The approver injects the approval keystroke back into this PTY
+  // and reports each approval to the notifications feed (label-free — `notify` prefixes the tab
+  // label).
+  private buildAutoApprover(name: string, label: string, id: string, autoApprove: boolean): HarnessAutoApprover | undefined {
     if (!autoApprove) return undefined;
     const approver = new HarnessAutoApprover({
       harnessName: name,
@@ -141,7 +156,7 @@ export class HarnessManager {
       notify: (message) => notify(this.managers, 'auto-approve', label, message),
     });
     this.autoApprovers.set(id, approver);
-    return (capture) => approver.onCapture(capture);
+    return approver;
   }
 
   // Parse `resolveCwd`'s result into a clean `{ cwd, workspaceDir }` or return the error string.

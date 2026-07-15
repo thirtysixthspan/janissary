@@ -65,6 +65,10 @@ export class HarnessAutoApprover {
     this.keystroke = GATE_TABLE[opts.harnessName]?.keystroke ?? '\r';
   }
 
+  // Whether the approver has stood down on a gate it could not clear — the signal busy/ready
+  // tracking uses to badge a gate that still needs the user despite auto-approve being on.
+  get isStuck(): boolean { return this.stuckNotified; }
+
   onCapture(capture: ScreenCapture): void {
     if (!detectPermissionGate(capture.text, this.opts.harnessName)) {
       this.lastApprovedText = undefined;

@@ -81,6 +81,19 @@ describe('HarnessScreenReader', () => {
     expect(reader.latestCapture()).toBeUndefined();
   });
 
+  it('carries the OSC title on captures once one has been set', async () => {
+    emitData('pty-1', '\u{1B}]0;⠂ Write a haiku\u{7}some output');
+    await advancePastCapture();
+    expect(reader.latestCapture()?.title).toBe('⠂ Write a haiku');
+    expect(reader.latestCapture()?.text).toBe('some output');
+  });
+
+  it('leaves the title undefined when no title sequence has arrived', async () => {
+    emitData('pty-1', 'no title here');
+    await advancePastCapture();
+    expect(reader.latestCapture()?.title).toBeUndefined();
+  });
+
   it('invokes the onCapture callback with each fresh capture', async () => {
     const onCapture = vi.fn();
     const observed = new HarnessScreenReader('pty-cb', 80, 24, onCapture);

@@ -35,7 +35,9 @@ function makeManagers(): { managers: Managers; tabs: Tab[]; edit: ReturnType<typ
       cwdOf: () => '/project',
       setCwd: () => {},
       insertTabInGroup: (tab: Tab) => { tabs.push(tab); },
-      addBusy: () => {},
+      addBusy: vi.fn(),
+      deleteBusy: vi.fn(),
+      markUnread: vi.fn(),
       findIndex: () => tabs.length - 1,
       append: () => {},
       activeTab: 0,
@@ -294,5 +296,103 @@ describe('HarnessManager model/effort', () => {
     expect(managers.pty.spawn).toHaveBeenCalledWith(
       'claude', 'claude', "claude --effort 'high'", expect.any(String), undefined, false,
     );
+  });
+});
+
+describe('HarnessManager busy/ready status', () => {
+  const CLAUDE_BUSY = '\u{1B}]0;⠂ Write a haiku\u{7}';
+  const CLAUDE_READY = '\u{1B}]0;✳ Claude Code\u{7}';
+  const CLEAR = '\u{1B}[2J\u{1B}[H';
+  const GATE = ' Do you want to proceed?\r\n ❯ 1. Yes\r\n   2. No\r\n\r\n Esc to cancel';
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    recorderMock.instances.length = 0;
+  });
+
+  afterEach(() => {
+    messageBus.emit('pty', { type: 'exit', id: 'pty-1', exitCode: 0 });
+    vi.useRealTimers();
+    vi.clearAllMocks();
+  });
+
+  // Emit PTY data and advance past the reader's 1s capture delay so the capture fires.
+  async function settle(data: string): Promise<void> {
+    messageBus.emit('pty', { type: 'data', id: 'pty-1', data });
+    await vi.advanceTimersByTimeAsync(1001);
+  }
+
+  it('tracks claude busy/ready from the title with no -y, debouncing the ready transition', async () => {
+    const { managers } = makeManagers();
+    const manager = new HarnessManager(managers);
+    expect(manager.run('harness claude')).toBeUndefined();
+    vi.clearAllMocks();
+    await settle(`${CLAUDE_BUSY}thinking`);
+    expect(managers.tab.addBusy).toHaveBeenCalledWith('claude');
+    await settle(CLAUDE_READY);
+    expect(managers.tab.deleteBusy).not.toHaveBeenCalled();
+    await settle(CLAUDE_READY);
+    expect(managers.tab.deleteBusy).toHaveBeenCalledWith('claude');
+    await settle(`${CLAUDE_BUSY}more work`);
+    expect(managers.tab.addBusy).toHaveBeenCalledTimes(2);
+  });
+
+  it('clears busy and marks unread when a gate shows without auto-approve', async () => {
+    const { managers } = makeManagers();
+    const manager = new HarnessManager(managers);
+    expect(manager.run('harness claude')).toBeUndefined();
+    vi.clearAllMocks();
+    await settle(GATE);
+    expect(managers.tab.deleteBusy).toHaveBeenCalledWith('claude');
+    expect(managers.tab.markUnread).toHaveBeenCalledWith('claude');
+  });
+
+  it('with -y, badges the tab only once auto-approve stands down on a stuck gate', async () => {
+    const { managers } = makeManagers();
+    const manager = new HarnessManager(managers);
+    expect(manager.run('harness claude -w -y')).toBeUndefined();
+    vi.clearAllMocks();
+    await settle(CLEAR + GATE);
+    expect(managers.pty.input).toHaveBeenCalledWith('pty-1', '\r');
+    expect(managers.tab.deleteBusy).toHaveBeenCalledWith('claude');
+    expect(managers.tab.markUnread).not.toHaveBeenCalled();
+    await settle(CLEAR + GATE);
+    expect(managers.tab.markUnread).toHaveBeenCalledWith('claude');
+  });
+
+  it('drives opencode busy/ready from screen text, with no badge on its permission prompt', async () => {
+    const { managers } = makeManagers();
+    const manager = new HarnessManager(managers);
+    expect(manager.run('harness opencode')).toBeUndefined();
+    vi.clearAllMocks();
+    await settle('⬝⬝⬝⬝■■■■');
+    expect(managers.tab.addBusy).toHaveBeenCalledWith('opencode');
+    await settle(`${CLEAR} △ Permission required`);
+    await settle(`${CLEAR} △ Permission required`);
+    expect(managers.tab.deleteBusy).toHaveBeenCalledWith('opencode');
+    expect(managers.tab.markUnread).not.toHaveBeenCalled();
+  });
+
+  it('drives codex busy/ready from its spinner-led title with no -y', async () => {
+    const { managers } = makeManagers();
+    const manager = new HarnessManager(managers);
+    expect(manager.run('harness codex')).toBeUndefined();
+    vi.clearAllMocks();
+    await settle('\u{1B}]0;⠹ scratchpad\u{7}working');
+    expect(managers.tab.addBusy).toHaveBeenCalledWith('codex');
+    await settle('\u{1B}]0;scratchpad\u{7}');
+    await settle('\u{1B}]0;scratchpad\u{7}');
+    expect(managers.tab.deleteBusy).toHaveBeenCalledWith('codex');
+  });
+
+  it('builds no busy/ready callback for a harness with no detector, leaving busy set', async () => {
+    const { managers } = makeManagers();
+    const manager = new HarnessManager(managers);
+    expect(manager.openFromProfile({ label: 'mystery', harness: 'mystery' }, 'mystery', 2, '#fff')).toBeUndefined();
+    vi.clearAllMocks();
+    await settle('idle-looking output');
+    await settle('still idle');
+    expect(managers.tab.addBusy).not.toHaveBeenCalled();
+    expect(managers.tab.deleteBusy).not.toHaveBeenCalled();
   });
 });

@@ -148,9 +148,39 @@ cards).
 The tab's name in the strip is the tab's unique label — the harness name by default (`claude`,
 `claude-2`, `claude-3`, …) or the custom `as <label>` if one was given — with no type marker
 appended (per [[tab-label-no-markers]]). A **× close button** is shown in the strip (identical to
-image/page view tabs). The tab's dot shows as **busy** for as long as the harness process is
-alive — it does not distinguish the harness actively working from the harness idling at its own
-prompt, only "a harness process is running here" from "no harness process is running."
+image/page view tabs). The tab's dot shows as **busy** while the harness is actively working and
+stops blinking while it sits idle at its own prompt — see
+[Busy/ready status](#busyready-status).
+
+## Busy/ready status
+
+The tab's blinking dot tracks what the harness is actually doing, not merely whether its process
+is alive: it blinks while the harness is generating a response or running tools, and stops once
+the harness returns to its own idle prompt. Recognition reads the same rendered-screen captures
+taken for [screen capture](#screen-capture), plus the terminal title the harness sets, and each
+harness has its own signal:
+
+- **claude and codex** set an animated spinner glyph at the start of the terminal title while
+  working; any other title means idle. When claude has set no title yet, its rendered screen is
+  read instead: an `esc to interrupt` footer means working, a live input prompt means idle.
+- **opencode** never signals through its title, so only its rendered screen is read: a progress
+  bar or an interrupt hint (`esc interrupt`) means working; the absence of both means idle.
+
+A newly launched harness tab starts busy, exactly as before, until its first capture is
+classified. A working→idle transition is committed only after the idle reading holds across two
+consecutive captures, so a brief mid-generation pause never flickers the dot off; a return to
+working takes effect immediately.
+
+When claude shows its permission prompt, the dot stops blinking — claude is waiting on the user,
+not working. If nothing is going to answer the prompt (the tab was launched without `-y`, or
+auto-approve has stood down on a prompt it could not clear), the tab is also marked with the
+unread badge to call attention to it. A permission prompt in codex or opencode simply reads as
+idle, with no badge — their prompt recognition is future work, alongside their auto-approve
+support.
+
+A harness without its own recognition signals keeps the previous coarse behavior — the dot blinks
+for as long as the process is alive. All three launchable harnesses have signals today, so this
+applies only to harnesses added later.
 
 ## Lifecycle
 
