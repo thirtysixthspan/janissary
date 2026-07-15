@@ -4,6 +4,7 @@ import type { JanusClient } from './ws';
 import { FileTreeTab } from './FileTreeTab';
 import { NotificationsTab } from './NotificationsTab';
 import { startDrag } from './drag-resize';
+import type { CommandInputDropHandle } from './CommandInput';
 
 const MIN_WIDTH_PX = 180;
 const MAX_WIDTH_PCT = 50;
@@ -15,7 +16,17 @@ const DEFAULT_WIDTH_PX = 280;
 // is docked to its side. Width is pure client-side view chrome (local `useState`, unpersisted),
 // resized by dragging the divider on the sidebar's inner edge, mirroring ReportingSection's
 // height-drag precedent.
-export function Sidebar({ side, tabs, client }: { side: 'left' | 'right'; tabs: TabView[]; client: JanusClient }) {
+export function Sidebar({
+  side, tabs, client, dropRef, activeCwd,
+}: {
+  side: 'left' | 'right';
+  tabs: TabView[];
+  client: JanusClient;
+  // The active tab's command-bar drop handle and cwd, threaded down to a docked `FileTreeTab` so
+  // a drag can find and insert into that tab's command bar. See `App.tsx`'s `dropRef`.
+  dropRef?: React.RefObject<CommandInputDropHandle | null>;
+  activeCwd?: string;
+}) {
   const [width, setWidth] = useState(DEFAULT_WIDTH_PX);
   const [selectedView, setSelectedView] = useState<'files' | 'notifications'>('files');
   const previousLabelsRef = useRef<Set<string>>(new Set());
@@ -71,7 +82,10 @@ export function Sidebar({ side, tabs, client }: { side: 'left' | 'right'; tabs: 
           ))}
         </div>
         {current.tab.view === 'files' && current.tab.files && (
-          <FileTreeTab files={current.tab.files} client={client} index={current.index} dock={current.tab.dock} autoFocus={false} />
+          <FileTreeTab
+            files={current.tab.files} client={client} index={current.index} dock={current.tab.dock} autoFocus={false}
+            dropRef={dropRef} cwd={activeCwd}
+          />
         )}
         {current.tab.view === 'notifications' && (
           <NotificationsTab lines={current.tab.bufferLines} client={client} index={current.index} dock={current.tab.dock} />

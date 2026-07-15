@@ -1,9 +1,11 @@
 import React from 'react';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeAll, afterEach } from 'vitest';
-import type { FileTreeView } from '@shared/protocol';
+import type { FileTreeView, TabView } from '@shared/protocol';
 import type { JanusClient } from './ws';
 import { FileTreeTab } from './FileTreeTab';
+import { Sidebar } from './Sidebar';
+import type { CommandInputDropHandle } from './CommandInput';
 
 beforeAll(() => {
   Element.prototype.scrollIntoView = vi.fn();
@@ -12,6 +14,7 @@ beforeAll(() => {
 function makeFiles(overrides: Partial<FileTreeView> = {}): FileTreeView {
   return {
     root: '/home/user/project',
+    absoluteRoot: '/home/user/project',
     rows: [
       { path: 'src', name: 'src', depth: 0, dir: true, expanded: true },
       { path: 'src/index.ts', name: 'index.ts', depth: 1, dir: false },
@@ -364,6 +367,33 @@ describe('FileTreeTab', () => {
 
       expect(send).not.toHaveBeenCalled();
       expect(screen.getByRole('alertdialog')).toBeInTheDocument();
+    });
+
+    it('dragging over a sibling command bar (docked sidebar mount) highlights it via dropRef instead of a tree row', () => {
+      const client = { send: vi.fn() } as unknown as JanusClient;
+      const dropHandle: CommandInputDropHandle = { insertAtCaret: vi.fn(), setDropHighlighted: vi.fn() };
+      const dropRef = { current: dropHandle };
+      const tab: TabView = {
+        label: 'files', number: 1, dotColor: '#5b9cff', group: 1, groupColor: '#5b9cff',
+        busy: false, hasUnread: false, cwd: '/tmp', connections: [], schedule: [],
+        bufferLines: [], cmdHistory: [], commandQueue: [], toolStepsExpanded: false,
+        view: 'files', dock: 'left', files: makeFiles(),
+      };
+      const { container } = render(<Sidebar side="left" tabs={[tab]} client={client} dropRef={dropRef} activeCwd="/home/user/other" />);
+      const bar = document.createElement('div');
+      bar.dataset.commandBar = '';
+      document.body.append(bar);
+      document.elementFromPoint = vi.fn().mockReturnValue(bar);
+
+      const readmeRow = [...container.querySelectorAll('[role="treeitem"]')].find((el) => el.textContent === 'README.md')!;
+      fireEvent.mouseDown(readmeRow, { clientX: 0, clientY: 0 });
+      act(() => { globalThis.dispatchEvent(new MouseEvent('mousemove', { clientX: 20, clientY: 20 })); });
+
+      expect(dropHandle.setDropHighlighted).toHaveBeenCalledWith(true);
+      expect(container.querySelectorAll('.drop-target')).toHaveLength(0);
+
+      act(() => { globalThis.dispatchEvent(new MouseEvent('mouseup')); });
+      bar.remove();
     });
   });
 

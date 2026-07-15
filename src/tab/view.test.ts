@@ -45,4 +45,12 @@ describe('buildTabView', () => {
     const view = buildTabView(tab, false, '/Users/derrick/project', undefined, [], [], [], () => '~/project');
     expect(view.cwd).toBe('~/project');
   });
+
+  it('carries the unshortened root as absoluteRoot while root itself is shortened', () => {
+    const tab = makeTab('agent-1', '#fff');
+    tab.files = { root: '/Users/derrick/project', absoluteRoot: '/Users/derrick/project', rows: [] };
+    const view = buildTabView(tab, false, '/tmp', undefined, [], [], [], () => '~/project');
+    expect(view.files?.root).toBe('~/project');
+    expect(view.files?.absoluteRoot).toBe('/Users/derrick/project');
+  });
 });

@@ -79,7 +79,7 @@ export class FileTreeManager {
     if (existing) { this.managers.tab.setDock(this.managers.tab.findIndex(existing.label), dock); return; }
 
     const expanded = new Set<string>();
-    this.managers.tab.openFilesTab({ root, rows: buildRows(root, expanded) });
+    this.managers.tab.openFilesTab({ root, absoluteRoot: root, rows: buildRows(root, expanded) });
     const newLabel = this.managers.tab.cur().label;
     this.managers.tab.setCwd(newLabel, root);
     this.tabs.set(newLabel, { root, expanded, watchers: new Map(), undoStack: [], redoStack: [] });
@@ -254,7 +254,7 @@ export class FileTreeManager {
     }
     const tab = this.managers.tab.tabs.find((t) => t.label === label);
     if (!tab?.files) return;
-    tab.files = { root: state.root, rows: buildRows(state.root, state.expanded) };
+    tab.files = { root: state.root, absoluteRoot: state.root, rows: buildRows(state.root, state.expanded) };
     messageBus.emit('state', { type: 'dirty' });
   }
 }

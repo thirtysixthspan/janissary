@@ -133,6 +133,28 @@ disappears and nothing is moved, the same as releasing over empty space.
 Pressing Escape at any point during a drag also cancels it outright, with the same result: the
 drag label disappears and nothing is moved.
 
+### Dragging a row into the command bar
+
+The same click-drag-release gesture used to move a file also has a second possible destination:
+the command bar of whichever tab is active. Releasing a dragged file or directory row over that
+command bar inserts its path at the current caret position — replacing any active selection, the
+same as a normal paste — without moving the file on disk. The inserted path is relative to the
+active tab's own working directory, not the tree's root, so it lines up with how that tab's own
+commands (`open`, `edit`) already resolve relative arguments. While the drag is over the command
+bar, it is highlighted the same way a valid directory drop target is; releasing over it never
+triggers the file-move flow, and no move confirmation or conflict dialog can appear for it.
+
+Both file and directory rows can be dropped this way. The path is inserted exactly as computed,
+never wrapped in quotes, even when it contains spaces.
+
+The command bar is only a valid drop target while it is actually visible for the active tab — it
+is not present for a view tab (an image, a markdown preview, an editor, notifications, or the file
+tree itself when that tree is the active, non-docked tab), for a harness tab, or while transcript
+search has replaced it. Dragging over where the command bar would otherwise be in any of these
+cases has no effect: no highlight, no insertion. In practice, dropping a row onto a command bar
+therefore only happens when the file tree is docked into a sidebar while a different, plain tab is
+active in the center — a docked tree's own active-tab command bar is never a target for itself.
+
 ### Undoing and redoing a move
 
 A focused file tree tab captures `Cmd+Z` (`Ctrl+Z` on other platforms) to undo the most recent

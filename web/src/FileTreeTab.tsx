@@ -6,6 +6,7 @@ import { nextDock, dockTooltip } from './dock-cycle';
 import { useFileTreeDrag } from './useFileTreeDrag';
 import { MoveConflictDialog } from './MoveConflictDialog/MoveConflictDialog';
 import { DeleteFileDialog } from './DeleteFileDialog';
+import type { CommandInputDropHandle } from './CommandInput';
 
 type Properties = {
   files: FileTreeView;
@@ -18,6 +19,12 @@ type Properties = {
   // for a sidebar mount, where stealing focus would yank it away from the command bar every time
   // a dock move remounts the tree.
   autoFocus?: boolean;
+  // The active tab's command bar imperative handle and cwd — only ever passed when this tree is
+  // docked into a sidebar, where another tab's command bar can be a valid drop target alongside
+  // it. Omitted for a center-mounted tree, which per Decision 4 never has a reachable command-bar
+  // target regardless.
+  dropRef?: React.RefObject<CommandInputDropHandle | null>;
+  cwd?: string;
 };
 
 const TYPEAHEAD_RESET_MS = 700;
@@ -26,12 +33,12 @@ const ROW_HEIGHT_PX = 22;
 const PRINTABLE = /^[ -~]$/;
 const MARKDOWN_EXTENSION = /\.(md|markdown)$/i;
 
-export function FileTreeTab({ files, client, index, dock, autoFocus = true }: Properties) {
+export function FileTreeTab({ files, client, index, dock, autoFocus = true, dropRef, cwd }: Properties) {
   const [selected, setSelected] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const typeahead = useRef<{ buffer: string; timer?: ReturnType<typeof setTimeout> }>({ buffer: '' });
-  const drag = useFileTreeDrag(files.rows, client, index);
+  const drag = useFileTreeDrag(files.rows, client, index, files.absoluteRoot, cwd, dropRef);
 
   useEffect(() => { if (autoFocus) containerRef.current?.focus(); }, [autoFocus]);
 

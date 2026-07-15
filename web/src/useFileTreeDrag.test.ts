@@ -3,6 +3,7 @@ import { renderHook, act } from '@testing-library/react';
 import type { FileTreeRow } from '@shared/protocol';
 import type { JanusClient } from './ws';
 import { useFileTreeDrag } from './useFileTreeDrag';
+import type { CommandInputDropHandle } from './CommandInput';
 
 function makeRows(): FileTreeRow[] {
   return [
@@ -22,6 +23,17 @@ function makeRowElement(path: string): HTMLElement {
 
 function downEvent(x: number, y: number) {
   return { preventDefault: vi.fn(), clientX: x, clientY: y } as unknown as React.MouseEvent;
+}
+
+function makeCommandBarElement(): HTMLElement {
+  const bar = document.createElement('div');
+  bar.dataset.commandBar = '';
+  document.body.append(bar);
+  return bar;
+}
+
+function makeDropHandle(): CommandInputDropHandle {
+  return { insertAtCaret: vi.fn(), setDropHighlighted: vi.fn() };
 }
 
 describe('useFileTreeDrag', () => {
@@ -216,5 +228,94 @@ describe('useFileTreeDrag', () => {
     expect(client.send).not.toHaveBeenCalled();
     expect(result.current.draggedPath).toBeNull();
     expect(result.current.dropTarget).toBeNull();
+  });
+
+  describe('drop onto the command bar', () => {
+    it('a drag released over the command-bar marker inserts the relative path instead of sending moveFileTreeItem', () => {
+      const client = { send: vi.fn() } as unknown as JanusClient;
+      const dropHandle = makeDropHandle();
+      const dropRef = { current: dropHandle };
+      const { result } = renderHook(() => useFileTreeDrag(makeRows(), client, 0, '/home/user/project', '/home/user/other', dropRef));
+      const bar = makeCommandBarElement();
+      document.elementFromPoint = vi.fn().mockReturnValue(bar);
+
+      act(() => { result.current.onRowMouseDown({ path: 'notes.txt' } as FileTreeRow, downEvent(0, 0)); });
+      act(() => { globalThis.dispatchEvent(new MouseEvent('mousemove', { clientX: 20, clientY: 0 })); });
+      act(() => { result.current.drop(); });
+
+      expect(dropHandle.insertAtCaret).toHaveBeenCalledWith('../project/notes.txt');
+      expect(client.send).not.toHaveBeenCalled();
+    });
+
+    it('hovering the command-bar marker highlights it and unhighlighting on move-away clears it', () => {
+      const client = { send: vi.fn() } as unknown as JanusClient;
+      const dropHandle = makeDropHandle();
+      const dropRef = { current: dropHandle };
+      const { result } = renderHook(() => useFileTreeDrag(makeRows(), client, 0, '/home/user/project', '/home/user/project', dropRef));
+      const bar = makeCommandBarElement();
+      const otherRow = makeRowElement('other');
+      document.elementFromPoint = vi.fn().mockReturnValue(bar);
+
+      act(() => { result.current.onRowMouseDown({ path: 'notes.txt' } as FileTreeRow, downEvent(0, 0)); });
+      act(() => { globalThis.dispatchEvent(new MouseEvent('mousemove', { clientX: 20, clientY: 0 })); });
+
+      expect(dropHandle.setDropHighlighted).toHaveBeenLastCalledWith(true);
+
+      document.elementFromPoint = vi.fn().mockReturnValue(otherRow);
+      act(() => { globalThis.dispatchEvent(new MouseEvent('mousemove', { clientX: 40, clientY: 0 })); });
+
+      expect(dropHandle.setDropHighlighted).toHaveBeenLastCalledWith(false);
+      act(() => { result.current.drop(); });
+    });
+
+    it('a drag released over a tree row still moves the file as before, unaffected by the command-bar wiring', () => {
+      const client = { send: vi.fn() } as unknown as JanusClient;
+      const dropRef = { current: makeDropHandle() };
+      const { result } = renderHook(() => useFileTreeDrag(makeRows(), client, 3, '/home/user/project', '/home/user/project', dropRef));
+      const otherRow = makeRowElement('other');
+      document.elementFromPoint = vi.fn().mockReturnValue(otherRow);
+
+      act(() => { result.current.onRowMouseDown({ path: 'notes.txt' } as FileTreeRow, downEvent(0, 0)); });
+      act(() => { globalThis.dispatchEvent(new MouseEvent('mousemove', { clientX: 20, clientY: 0 })); });
+      act(() => { result.current.drop(); });
+
+      expect(client.send).toHaveBeenCalledWith({ method: 'moveFileTreeItem', params: { index: 3, fromRelPath: 'notes.txt', toRelPath: 'other' } });
+      expect(dropRef.current.insertAtCaret).not.toHaveBeenCalled();
+    });
+
+    it('a release over neither a row nor the command bar is a no-op', () => {
+      const client = { send: vi.fn() } as unknown as JanusClient;
+      const dropRef = { current: makeDropHandle() };
+      const { result } = renderHook(() => useFileTreeDrag(makeRows(), client, 0, '/home/user/project', '/home/user/project', dropRef));
+      document.elementFromPoint = vi.fn().mockReturnValue(null);
+
+      act(() => { result.current.onRowMouseDown({ path: 'notes.txt' } as FileTreeRow, downEvent(0, 0)); });
+      act(() => { globalThis.dispatchEvent(new MouseEvent('mousemove', { clientX: 20, clientY: 0 })); });
+      act(() => { result.current.drop(); });
+
+      expect(client.send).not.toHaveBeenCalled();
+      expect(dropRef.current.insertAtCaret).not.toHaveBeenCalled();
+    });
+
+    it('a drag over where the command bar would be finds no marker when no CommandInput is mounted (e.g. a harness tab)', () => {
+      const client = { send: vi.fn() } as unknown as JanusClient;
+      const dropRef = { current: makeDropHandle() };
+      const { result } = renderHook(() => useFileTreeDrag(makeRows(), client, 0, '/home/user/project', '/home/user/project', dropRef));
+      // No [data-command-bar] element exists anywhere — elementFromPoint returns a plain, unrelated element.
+      const plain = document.createElement('div');
+      document.body.append(plain);
+      document.elementFromPoint = vi.fn().mockReturnValue(plain);
+
+      act(() => { result.current.onRowMouseDown({ path: 'notes.txt' } as FileTreeRow, downEvent(0, 0)); });
+      act(() => { globalThis.dispatchEvent(new MouseEvent('mousemove', { clientX: 20, clientY: 0 })); });
+
+      expect(dropRef.current.setDropHighlighted).not.toHaveBeenCalledWith(true);
+      expect(result.current.dropTarget).toBeNull();
+
+      act(() => { result.current.drop(); });
+
+      expect(client.send).not.toHaveBeenCalled();
+      expect(dropRef.current.insertAtCaret).not.toHaveBeenCalled();
+    });
   });
 });

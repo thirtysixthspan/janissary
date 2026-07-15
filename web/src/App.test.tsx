@@ -296,7 +296,7 @@ describe('App sidebar docking', () => {
           makeTab(),
           makeTab({
             label: 'files', view: 'files', dock: 'left',
-            files: { root: '/tmp/project', rows: [] },
+            files: { root: '/tmp/project', absoluteRoot: '/tmp/project', rows: [] },
           }),
         ],
         0, null, 16, [], 'github-dark', 'dark', [],
@@ -316,7 +316,7 @@ describe('App sidebar docking', () => {
           makeTab(),
           makeTab({
             label: 'files', view: 'files', dock: 'left',
-            files: { root: '/tmp/project', rows: [] },
+            files: { root: '/tmp/project', absoluteRoot: '/tmp/project', rows: [] },
           }),
         ],
         0, null, 16, [], 'github-dark', 'dark', [],
