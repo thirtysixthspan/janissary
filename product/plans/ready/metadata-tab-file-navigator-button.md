@@ -34,6 +34,9 @@ A new button, right-floated in the metadata row of harness tabs and agent tabs (
 4. **`src/tab/manager.ts`**: add a new public method (e.g. `mostRecentFileTreeLabel(): string | undefined`, per decision 2) that non-destructively scans `focusHistory` from the end for the first still-open tab with `view === 'files'` (docked or not), falling back to the first `view === 'files'` tab in `tabs` order if the scan finds none. `popFocusHistory` and its existing callers are untouched.
 5. **`src/file-tree-manager.ts`**: new method (e.g. `openOrRetarget(label: string)`) that resolves the named tab's cwd, then: calls the new `mostRecentFileTreeLabel()` (item 4); if it returns a label, retargets that tab to the new root using a generalized version of the existing `reroot()` clearing logic (accepting an arbitrary absolute path rather than only a relative move, and additionally clearing `undoStack`/`redoStack` per decision 3); if it returns `undefined`, opens a fresh tree exactly as `open()` does for a bare `files` command, but docked left by default instead of centered. Either branch ends by focusing the resulting file-tree tab.
 6. **Spec updates**: `product/specs/tabs.md`'s metadata row section gains a line describing the new button; `product/specs/file-tree-tab.md` gains a short note on the retarget operation and its left-sidebar-by-default behavior when triggered from this button (distinguishing it from the bare `files` command's center-strip default).
+7. **User documentation updates**:
+   - `documentation/user-documentation/tab-types/file-navigator.md`: document that a file navigator can be opened directly from a harness/agent tab's metadata row via the 📁 button — noting that it opens docked in the left sidebar by default (unlike the center-strip default of the bare `files` command), and that clicking it again from another tab retargets the existing navigator to that tab's cwd rather than opening a second one.
+   - `documentation/user-documentation/getting-started/tabs.md`: add a line to the metadata row description covering the new 📁 file-navigator button (shown on harness and agent tabs, not shell tabs) and what it does.
 
 ## Tests
 
@@ -55,4 +58,5 @@ None.
 ## Verification
 
 - Run `./scripts/run.mjs check-diff`.
+- Confirm the user documentation updates (`tab-types/file-navigator.md`, `getting-started/tabs.md`) describe the 📁 metadata-row button, its left-sidebar-by-default open, and the retarget-existing-navigator behavior; build the docs site (`npm run docs:build`) if the wording changed structurally.
 - Manual check: with no file-tree tab open, click the new button on a harness tab and confirm a navigator opens docked in the left sidebar, rooted at that tab's cwd, and focus moves to it. Click the button again from a different harness/agent tab with a different cwd and confirm the same navigator's root changes (rather than a second tab opening) and its dock placement is unchanged. Open a second file-tree tab manually via the `files` command on a third root, focus it, then click the metadata button from a tab again and confirm the most-recently-focused tree (the manually opened one) is the one retargeted.

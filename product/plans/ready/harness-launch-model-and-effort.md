@@ -33,6 +33,9 @@ Today, only `profile launch` can open a harness tab with a `model` selected (pas
 3. **`src/types.ts`**: add `effort?: string` to `ProfileHarnessEntry`, documented the same way `model` is.
 4. **`src/profile/agent-opener.ts`**: `openHarnessEntry` reads `entry.effort` and passes it through to `openFromProfile`/`spawnTab` alongside `entry.model`, with no validation call for it (per decision 3).
 5. **Spec updates**: `product/specs/harness.md`'s "Launching with a model" section is renamed/expanded to describe `--model`/`--effort` on the interactive command as well as profile launch, dropping the "This is not available from the interactive `harness <name>` command" caveat. `product/specs/profiles.md`'s entry-schema bullet list gains an `effort` bullet mirroring the existing `model` bullet, noting it has no validation.
+6. **User documentation updates**:
+   - `documentation/user-documentation/advanced-agents/harness.md`: document the new `--model <name>` and `--effort <level>` flags on the interactive `harness <name>` command (a new section, or an addition alongside the "Workspaces" `-w` coverage), including the updated usage string; note the model is validated against the harness's catalog (unknown-model error) while effort is passed through verbatim; and update the line that today reads "A harness launched by a profile can also be given a model and startup commands" (`:46`) so it no longer implies model/effort are profile-only.
+   - `documentation/user-documentation/automation/profiles.md`: add the new `effort` field to the harness entry schema description, mirroring the existing `model` field and noting it has no validation.
 
 ## Tests
 
@@ -55,4 +58,5 @@ None.
 ## Verification
 
 - Run `./scripts/run.mjs check-diff`.
+- Confirm the user documentation updates (`advanced-agents/harness.md`, `automation/profiles.md`) describe the `--model`/`--effort` flags, the updated usage string, and the new `effort` profile field; build the docs site (`npm run docs:build`) if the wording changed structurally.
 - Manual check: run `harness opencode --model opencode-go/glm-5.2 --effort high` and confirm the spawned PTY's command line includes both flags with the given values; run `harness claude --effort high` alone (no model) and confirm only `--effort high` is appended; run `harness opencode --model not-a-real-model` and confirm it errors with the same "Unknown model" text profile launch already produces, with no tab opened; author a profile with a harness entry carrying `model` and `effort` fields, run `profile launch <name>`, and confirm the opened harness tab's spawned command includes both.
