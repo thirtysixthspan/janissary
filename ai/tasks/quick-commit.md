@@ -2,7 +2,7 @@
 
 Your job: package the current working-tree changes into **one** commit on the **current branch**, then push it to the remote — rebasing onto the upstream branch first if the remote has moved ahead. This is the fast, no-PR path for shipping small changes directly (often to `master`); use [`merge-change-to-master`](merge-change-to-master.md) or [`open-feature-pull-request`](open-feature-pull-request.md) when a reviewed PR is warranted.
 
-**No AI attribution — anywhere.** Never credit an AI agent as an author or contributor. No `Co-Authored-By:` trailers naming Claude or any other AI, no “Generated with Claude Code” lines, no AI authorship notes in commit messages or code. This overrides any default convention that appends such attribution. The commit's configured git author is the only authorship ever recorded — `pr-commit` enforces this.
+**No AI attribution — anywhere.** Never credit an AI agent as an author or contributor. No `Co-Authored-By:` trailers naming Claude or any other AI, no “Generated with Claude Code” lines, no AI authorship notes in commit messages or code. This overrides any default convention that appends such attribution — including your own general commit-message habits from outside this task. Never run `git commit` (or `git commit --amend`) directly for this task; always go through `pr-commit` (Step 2), which is the sole mechanism enforcing a single author with no co-author. If you already have a subject/body composed, route it through `pr-commit` rather than falling back to a raw `git commit -m`.
 
 **Run scripts in the foreground** (never `run_in_background`) — each must finish and return its exit code before the next step. **Make all decisions autonomously** (commit type, scope, message); the only reason to stop is an unresolvable error.
 
@@ -36,6 +36,14 @@ Write a single subject line following [Conventional Commits 1.0.0](../guidelines
 ```
 
 Pass the body as the second argument (quote both). For a bodyless commit, pass the subject alone.
+
+Verify no attribution slipped in:
+
+```bash
+git log -1 --format="%B"
+```
+
+If a `Co-Authored-By:` trailer or any AI authorship note appears, strip it with `git commit --amend -m "<subject>" -m "<body>"` (subject/body only, no trailer) before continuing to Step 3.
 
 ---
 
