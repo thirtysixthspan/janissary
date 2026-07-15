@@ -9,11 +9,13 @@ row, and the one place its behavior differs (the connections panel is shown, not
 ## Command
 
 ```
-harness <name> [as <label>] [-w] [-y]
+harness <name> [as <label>] [-w] [-y] [--model <name>] [--effort <level>]
 ```
 
 Valid names: `claude`, `opencode`, `codex`. The binary must be on `PATH`; if it is not found, the
-PTY exits immediately and the tab closes (see [Lifecycle](#lifecycle)).
+PTY exits immediately and the tab closes (see [Lifecycle](#lifecycle)). See
+[Launching with a model and effort level](#launching-with-a-model-and-effort-level) for `--model`
+and `--effort`.
 
 - `harness` with no name — error: `Usage: harness <claude|opencode|codex> [as <label>] [-w] [-y].`
 - `harness foo` — error: `Unknown harness "foo". Choose from: claude, opencode, codex.`
@@ -224,8 +226,19 @@ ends when the harness's PTY exits and its tab closes (see Lifecycle above and Sc
 
 While running, the harness PTY appears in the connections panel as `terminal:<name>`.
 
-## Launching with a model (`profile launch`)
+## Launching with a model and effort level
 
-`profile launch <name>` can open a harness tab with a model selected, passed to the harness binary's
-`--model` flag verbatim (currently only opencode's and claude's model catalogs are populated). This is
-not available from the interactive `harness <name>` command — see Profiles for the harness-entry schema.
+A harness tab can be opened with a model and/or an effort level selected, either from the
+interactive command (`harness <name> --model <name> --effort <level>`) or via `profile launch`
+(see Profiles for the harness-entry schema) — both paths behave the same way.
+
+`--model <name>` is passed to the harness binary's `--model` flag verbatim, but is validated first
+against that harness's known model catalog (currently only opencode's and claude's catalogs are
+populated); an unknown model is rejected with `Unknown model "<model>" for harness "<name>" — add
+it to harness-models.json.` and no tab is opened.
+
+`--effort <level>` is passed to the harness binary's `--effort` flag verbatim, with no validation
+against any fixed set of levels — an unrecognized level is simply forwarded, and a harness binary
+that doesn't understand the flag ignores it. `--model` and `--effort` may be given independently or
+together, in any order relative to each other and to `as <label>`, `-w`/`--workspace`, `--offline`,
+and `-y`/`--yes`.

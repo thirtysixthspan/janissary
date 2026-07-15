@@ -39,6 +39,7 @@ An agent entry uses the same format as saved agent state — an empty `{}` is a 
 ```
 
 - **`model`** — passed to the harness verbatim; an unknown model for that harness is reported and the entry skipped.
+- **`effort`** — an effort/thinking level, passed to the harness verbatim, like `--effort` on the interactive `harness` command. Not validated against any fixed set of levels.
 - **`workspace`** — launch in a fresh [workspace clone](/user-documentation/advanced-agents/workspaced-agent), like `-w`.
 - **`cwd`** — starting directory.
 - **`run`** — commands typed into the harness once, shortly after launch.

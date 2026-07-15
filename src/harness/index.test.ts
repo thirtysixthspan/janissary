@@ -149,6 +149,48 @@ describe('parseHarnessCommand', () => {
     expect('offline' in result && (result as { offline: boolean }).offline).toBe(true);
     expect('autoApprove' in result && (result as { autoApprove: boolean }).autoApprove).toBe(true);
   });
+
+  it('parses --model <value>', () => {
+    const result = parseHarnessCommand('harness opencode --model opencode-go/deepseek-v4-pro');
+    expect('model' in result && (result as { model?: string }).model).toBe('opencode-go/deepseek-v4-pro');
+  });
+
+  it('parses --effort <value>', () => {
+    const result = parseHarnessCommand('harness claude --effort high');
+    expect('effort' in result && (result as { effort?: string }).effort).toBe('high');
+  });
+
+  it('parses --model and --effort together', () => {
+    const result = parseHarnessCommand('harness opencode --model opencode-go/deepseek-v4-pro --effort high');
+    expect('model' in result && (result as { model?: string }).model).toBe('opencode-go/deepseek-v4-pro');
+    expect('effort' in result && (result as { effort?: string }).effort).toBe('high');
+  });
+
+  it('parses --model and --effort in any order relative to other flags', () => {
+    const result = parseHarnessCommand('harness opencode -w --effort high as quality --model opencode-go/deepseek-v4-pro');
+    expect('model' in result && (result as { model?: string }).model).toBe('opencode-go/deepseek-v4-pro');
+    expect('effort' in result && (result as { effort?: string }).effort).toBe('high');
+    expect('label' in result && result.label).toBe('quality');
+    expect('workspace' in result && (result as { workspace: boolean }).workspace).toBe(true);
+  });
+
+  it('returns a usage error for --model with no value', () => {
+    const result = parseHarnessCommand('harness claude --model');
+    expect('error' in result).toBe(true);
+    expect((result as { error: string }).error).toMatch(/Usage/i);
+  });
+
+  it('returns a usage error for --effort with no value', () => {
+    const result = parseHarnessCommand('harness claude --effort');
+    expect('error' in result).toBe(true);
+    expect((result as { error: string }).error).toMatch(/Usage/i);
+  });
+
+  it('leaves model and effort undefined when not given', () => {
+    const result = parseHarnessCommand('harness claude');
+    expect('model' in result && result.model).toBeUndefined();
+    expect('effort' in result && result.effort).toBeUndefined();
+  });
 });
 
 describe('buildHarnessCommand', () => {
@@ -162,5 +204,15 @@ describe('buildHarnessCommand', () => {
 
   it('safely quotes a model value containing a single quote', () => {
     expect(buildHarnessCommand('opencode', "a'b")).toBe(String.raw`opencode --model 'a'\''b'`);
+  });
+
+  it('appends a quoted --effort flag when given, with no model', () => {
+    expect(buildHarnessCommand('claude', undefined, 'high')).toBe("claude --effort 'high'");
+  });
+
+  it('appends both --model and --effort flags when both are given', () => {
+    expect(buildHarnessCommand('opencode', 'opencode-go/deepseek-v4-pro', 'high')).toBe(
+      "opencode --model 'opencode-go/deepseek-v4-pro' --effort 'high'",
+    );
   });
 });

@@ -35,6 +35,23 @@ harness opencode as quality        → tab "quality-2"
 - An unknown name: `Unknown harness "foo". Choose from: claude, opencode, codex.`
 - `as` with no label: `Usage: harness <claude|opencode|codex> as <label>.`
 
+## Choosing a model and effort level
+
+```
+harness <name> [as <label>] [-w] [-y] [--model <name>] [--effort <level>]
+```
+
+`--model <name>` picks a model, passed to the harness binary's `--model` flag verbatim. It's checked against that harness's known model catalog first — an unknown model errors with `Unknown model "<model>" for harness "<name>" — add it to harness-models.json.` and no tab opens (today only opencode's and claude's catalogs are populated).
+
+`--effort <level>` picks an effort/thinking level, passed to the harness binary's `--effort` flag verbatim — there's no catalog to check it against, so any value you give is forwarded as-is (a harness binary that doesn't understand the flag just ignores it):
+
+```
+harness opencode --model opencode-go/glm-5.2 --effort high
+harness claude --effort high
+```
+
+`--model` and `--effort` can be combined with each other and with `as <label>`, `-w`, and `-y` in any order.
+
 ## Workspaces
 
 `-w` / `--workspace` starts the harness inside a disposable clone of your repository instead of the project itself — the same isolation agents get. See [Workspaced agents](/user-documentation/advanced-agents/workspaced-agent) for how the clone, sandboxing, and GitHub authentication work.
@@ -43,7 +60,7 @@ harness opencode as quality        → tab "quality-2"
 
 The tab lives exactly as long as the harness process. When the harness exits — quitting normally, crashing, or the binary not being found — the tab closes with it, and its on-screen scrollback goes with it. The full session is preserved in a recording file, though (see below). The × button and `close` end it the same way. Harness tabs aren't restored by `janus --relaunch`; each launch starts fresh. If a harness tab is the last tab standing, its exit quits the app.
 
-Other tabs can drive a harness: `send <tab> <text>` types a line into it, and [scheduled commands](/user-documentation/automation/scheduling) targeted at a harness tab are typed into it the same way. A harness launched by a [profile](/user-documentation/automation/profiles) can also be given a model and startup commands.
+Other tabs can drive a harness: `send <tab> <text>` types a line into it, and [scheduled commands](/user-documentation/automation/scheduling) targeted at a harness tab are typed into it the same way. A harness launched by a [profile](/user-documentation/automation/profiles) can also be given a model, an effort level, and startup commands, the same as typing the command directly.
 
 ## Recordings
 

@@ -103,3 +103,17 @@ describe('openProfileEntries — profile-level file navigator', () => {
     expect(fileTreeOpen).not.toHaveBeenCalled();
   });
 });
+
+describe('openProfileEntries — effort field', () => {
+  it('opens an entry with an effort set successfully, regardless of the value', () => {
+    const janus = makeTab('janus', 'red', 1, [], [], undefined, 1, 'red');
+    const { managers, harnessOpen } = makeManagers([janus]);
+    const entry: ProfileHarnessEntry = { label: 'claude', harness: 'claude', effort: 'not-a-real-effort-level' };
+    const messages: string[] = [];
+
+    openProfileEntries([entry], managers, 'claude', 'janus', (text) => { messages.push(text); });
+
+    expect(harnessOpen).toHaveBeenCalledWith(expect.objectContaining({ effort: 'not-a-real-effort-level' }), 'claude', expect.any(Number), expect.any(String));
+    expect(messages.join(' ')).not.toMatch(/Skipped/);
+  });
+});
