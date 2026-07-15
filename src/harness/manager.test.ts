@@ -41,7 +41,7 @@ function makeManagers(): { managers: Managers; tabs: Tab[]; edit: ReturnType<typ
       activeTab: 0,
     },
     pty: {
-      spawn: () => 'pty-1',
+      spawn: vi.fn(() => 'pty-1'),
       spawnDimensions: () => ({ cols: 80, rows: 24 }),
       input: vi.fn(),
     },
@@ -242,5 +242,57 @@ describe('HarnessManager auto-approve', () => {
       { label: 'claude', harness: 'claude', workspace: true }, 'claude', 2, '#fff',
     );
     expect(setCwd).toHaveBeenCalledWith('claude', '/workspace/claude');
+  });
+});
+
+describe('HarnessManager model/effort', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    recorderMock.instances.length = 0;
+  });
+
+  afterEach(() => {
+    messageBus.emit('pty', { type: 'exit', id: 'pty-1', exitCode: 0 });
+    vi.useRealTimers();
+    vi.clearAllMocks();
+  });
+
+  it('rejects an unknown --model for a harness with a populated catalog before spawning', () => {
+    const { managers } = makeManagers();
+    const manager = new HarnessManager(managers);
+    expect(manager.run('harness opencode --model not-a-real-model')).toBe(
+      'Unknown model "not-a-real-model" for harness "opencode" — add it to harness-models.json.',
+    );
+    expect(managers.pty.spawn).not.toHaveBeenCalled();
+  });
+
+  it('passes a valid --model and --effort through to the spawned command', () => {
+    const { managers } = makeManagers();
+    const manager = new HarnessManager(managers);
+    expect(manager.run('harness opencode --model opencode-go/glm-5.2 --effort high')).toBeUndefined();
+    expect(managers.pty.spawn).toHaveBeenCalledWith(
+      'opencode', 'opencode', "opencode --model 'opencode-go/glm-5.2' --effort 'high'",
+      '/project', undefined, false,
+    );
+  });
+
+  it('passes --effort through without --model when only --effort is given', () => {
+    const { managers } = makeManagers();
+    const manager = new HarnessManager(managers);
+    expect(manager.run('harness claude --effort high')).toBeUndefined();
+    expect(managers.pty.spawn).toHaveBeenCalledWith(
+      'claude', 'claude', "claude --effort 'high'", '/project', undefined, false,
+    );
+  });
+
+  it('threads a profile entry\'s effort through to the spawned command', () => {
+    const { managers } = makeManagers();
+    const manager = new HarnessManager(managers);
+    expect(manager.openFromProfile(
+      { label: 'claude', harness: 'claude', effort: 'high' }, 'claude', 2, '#fff',
+    )).toBeUndefined();
+    expect(managers.pty.spawn).toHaveBeenCalledWith(
+      'claude', 'claude', "claude --effort 'high'", expect.any(String), undefined, false,
+    );
   });
 });

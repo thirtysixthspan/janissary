@@ -1,5 +1,6 @@
 import { makeHarnessTab, distinctColor, uniqueLabel } from '../tab/index.js';
 import { parseHarnessCommand, HARNESS_COMMANDS, buildHarnessCommand } from './index.js';
+import { isKnownModel } from './models.js';
 import { HarnessScreenReader, type ScreenCapture } from './screen.js';
 import { HarnessRecorder } from './recorder.js';
 import { HarnessAutoApprover } from './auto-approve.js';
@@ -39,13 +40,17 @@ export class HarnessManager {
     return this.screenReaders.get(tab.harness.ptyId)?.latestCapture();
   }
 
-  // Handle a `harness <name> [as <label>] [-w] [--offline]` command. Returns an error message to
-  // surface in the creator's transcript, or undefined once the harness tab has been opened.
+  // Handle a `harness <name> [as <label>] [-w] [--offline] [--model <name>] [--effort <level>]`
+  // command. Returns an error message to surface in the creator's transcript, or undefined once
+  // the harness tab has been opened.
   run(input: string): string | undefined {
     const parsed = parseHarnessCommand(input);
     if ('error' in parsed) return parsed.error;
     if ('capture' in parsed) return this.capture(input, parsed.label);
-    return this.open(parsed.name, parsed.workspace, parsed.offline, parsed.autoApprove, parsed.label);
+    if (parsed.model && !isKnownModel(parsed.name, parsed.model)) {
+      return `Unknown model "${parsed.model}" for harness "${parsed.name}" — add it to harness-models.json.`;
+    }
+    return this.open(parsed.name, parsed.workspace, parsed.offline, parsed.autoApprove, parsed.label, parsed.model, parsed.effort);
   }
 
   // Handle `harness capture <name>`: write the target tab's latest in-memory screen capture to a
@@ -65,7 +70,10 @@ export class HarnessManager {
   // Open (and focus) a harness tab running `name`, labeled `label` if given (otherwise `name`).
   // With `workspace`, the harness starts in a fresh clone of the `origin` remote of the repo
   // detected from cwd; otherwise it inherits the creator's cwd.
-  private open(name: string, workspace: boolean, offline: boolean, autoApprove: boolean, label_?: string): string | undefined {
+  private open(
+    name: string, workspace: boolean, offline: boolean, autoApprove: boolean, label_?: string,
+    model?: string, effort?: string,
+  ): string | undefined {
     const creator = this.managers.tab.cur();
     const label = uniqueLabel(this.managers.tab.tabs, label_ ?? name);
 
@@ -75,7 +83,7 @@ export class HarnessManager {
     const dotColor = distinctColor(this.managers.tab.tabs.map((t) => t.dotColor));
     const group = creator?.group ?? 1;
     const groupColor = creator?.groupColor ?? dotColor;
-    this.spawnTab(name, label, cwd, workspaceDir, offline, group, groupColor, dotColor, autoApprove);
+    this.spawnTab(name, label, cwd, workspaceDir, offline, group, groupColor, dotColor, autoApprove, model, effort);
     return undefined;
   }
 
@@ -90,15 +98,15 @@ export class HarnessManager {
     if (typeof dir === 'string') return dir;
     const { cwd, workspaceDir } = dir;
     const dotColor = distinctColor(this.managers.tab.tabs.map((t) => t.dotColor), entry.dotColor);
-    this.spawnTab(entry.harness, unique, cwd, workspaceDir, entry.offline ?? false, group, groupColor, dotColor, entry.autoApprove ?? false, entry.model);
+    this.spawnTab(entry.harness, unique, cwd, workspaceDir, entry.offline ?? false, group, groupColor, dotColor, entry.autoApprove ?? false, entry.model, entry.effort);
     return undefined;
   }
 
-  // Shared core: create the harness tab, focus it, and spawn its PTY. `model`, when given, is
-  // passed to the harness binary via `buildHarnessCommand`.
+  // Shared core: create the harness tab, focus it, and spawn its PTY. `model`/`effort`, when
+  // given, are passed to the harness binary via `buildHarnessCommand`.
   private spawnTab(
     name: string, label: string, cwd: string, workspaceDir: string | undefined, offline: boolean,
-    group: number, groupColor: string, dotColor: string, autoApprove: boolean, model?: string,
+    group: number, groupColor: string, dotColor: string, autoApprove: boolean, model?: string, effort?: string,
   ): void {
     const program = HARNESS_COMMANDS[name];
     const harness: HarnessView = { name, program, ptyId: '', status: 'running' };
@@ -109,7 +117,7 @@ export class HarnessManager {
     this.managers.tab.setCwd(label, cwd);
     this.managers.tab.addBusy(label);
     this.managers.tab.activeTab = this.managers.tab.findIndex(tab.label);
-    const id = this.managers.pty.spawn(label, program, buildHarnessCommand(name, model), cwd, workspaceDir, offline);
+    const id = this.managers.pty.spawn(label, program, buildHarnessCommand(name, model, effort), cwd, workspaceDir, offline);
     const dims = this.managers.pty.spawnDimensions();
     this.screenReaders.set(id, new HarnessScreenReader(id, dims.cols, dims.rows, this.autoApproveHandler(name, label, id, autoApprove)));
     this.recorders.set(id, new HarnessRecorder(id, label, program, dims.cols, dims.rows));

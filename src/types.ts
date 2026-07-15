@@ -241,6 +241,9 @@ export type ProfileHarnessEntry = {
   label: string;
   harness: string;
   model?: string;
+  // A startup effort level (e.g. "high"), passed through to the harness binary verbatim with no
+  // validation against a fixed set (unlike `model`, which is checked against harness-models.json).
+  effort?: string;
   number?: number;
   group?: number;
   dotColor?: string;
