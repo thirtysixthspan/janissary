@@ -113,6 +113,7 @@ export default defineConfig({
           items: [
             { text: "Overview", link: "/developer-documentation/" },
             { text: "Documentation", link: "/developer-documentation/documentation" },
+            { text: "Release process", link: "/developer-documentation/release-process" },
             { text: "Testing", link: "/developer-documentation/testing" },
             { text: "Checking changes", link: "/developer-documentation/checking-changes" },
             { text: "Code coverage", link: "/developer-documentation/code-coverage" },

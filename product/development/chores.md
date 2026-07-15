@@ -1,9 +1,12 @@
+# chores
+
+## ready
+
 * setup github actions and checks
+  - typescript
   - lint
-  - docs deploy task 
+  - tests
 
-* develop release process, versioning, tagging, publishing
+## development
 
-* setup npm publish workflow
-
-* update package metadata — repository, bugs, homepage, author, keywords are all empty in package.json.
+## deferred
