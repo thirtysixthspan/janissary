@@ -33,6 +33,7 @@ function makeManagers(): { managers: Managers; tabs: Tab[]; edit: ReturnType<typ
       tabs,
       cur: () => creator,
       cwdOf: () => '/project',
+      setCwd: () => {},
       insertTabInGroup: (tab: Tab) => { tabs.push(tab); },
       addBusy: () => {},
       findIndex: () => tabs.length - 1,
@@ -221,5 +222,16 @@ describe('HarnessManager auto-approve', () => {
       { label: 'claude', harness: 'claude', workspace: true, offline: true }, 'claude', 2, '#fff',
     );
     expect(tabs.at(-1)?.offline).toBe(true);
+  });
+
+  it('registers the workspace clone dir as the tab\'s cwd, so `files` defaults to it', () => {
+    const { managers } = makeManagers();
+    const setCwd = vi.fn();
+    (managers.tab as unknown as { setCwd: typeof setCwd }).setCwd = setCwd;
+    const manager = new HarnessManager(managers);
+    manager.openFromProfile(
+      { label: 'claude', harness: 'claude', workspace: true }, 'claude', 2, '#fff',
+    );
+    expect(setCwd).toHaveBeenCalledWith('claude', '/workspace/claude');
   });
 });
