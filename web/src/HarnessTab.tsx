@@ -2,7 +2,7 @@ import React, { forwardRef, useImperativeHandle, useRef } from 'react';
 import type { JanusClient } from './ws';
 import type { HarnessView } from '@shared/protocol';
 import { useXterm } from './useXterm';
-import { tabFlagDisplay } from './tab-flag-display';
+import { AgentTabMeta } from './AgentTabMeta';
 
 type Properties = {
   harness: HarnessView; client: JanusClient; taskPickerOpen?: boolean; cwd?: string; flags?: string[];
@@ -38,20 +38,7 @@ export const HarnessTab = forwardRef<HarnessTabHandle, Properties>(function Harn
   const isExited = harness.status === 'exited';
   return (
     <div className="harness-tab" data-doc-shot="harness-view">
-      <div className="tab-meta">
-        <span className="tab-cwd">{cwd}</span>
-        <span className="tab-flags">
-          {(flags ?? []).map((flag) => {
-            const display = tabFlagDisplay[flag];
-            if (!display) return null;
-            return (
-              <span key={flag} className="tab-flag" role="img" aria-label={display.label} title={display.label}>
-                {display.emoji}
-              </span>
-            );
-          })}
-        </span>
-      </div>
+      <AgentTabMeta cwd={cwd} flags={flags} />
       {isExited && (
         <div className="harness-exited">
           exited{harness.exitCode === undefined ? '' : ` (${harness.exitCode})`}
