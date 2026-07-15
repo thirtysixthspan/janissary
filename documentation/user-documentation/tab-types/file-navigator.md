@@ -15,6 +15,12 @@ If a tree is already open on the same root, `files` focuses it rather than openi
 
 ![A file navigator tab: a directory tree with one directory expanded and a row selected.](/screenshots/file-tree.png)
 
+## Opening from a tab's metadata row
+
+Every agent tab and harness tab has a 📁 button on the right of its metadata row (tooltip "Open file navigator here"). Clicking it opens a file navigator rooted at that tab's own working directory — a one-click alternative to typing `files in <label>`. Shell tabs don't have this button.
+
+Unlike the bare `files` command, which opens into the center tab strip, a navigator opened from the button — when none is open yet — opens **docked in the left sidebar** by default. If a navigator is already open, clicking the button doesn't open a second one: it **retargets the existing navigator** (the most recently focused one, if you have more than one) to the clicked tab's working directory, leaving it exactly where it sits — docked or not. Either way, focus moves to the navigator.
+
 ## Docking to a sidebar
 
 A file navigator can live in three places: the central tab strip (the default), the left

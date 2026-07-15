@@ -184,3 +184,51 @@ describe('TabManager focus history', () => {
     expect(tm.tabs[tm.activeTab].label).toBe('janus');
   });
 });
+
+describe('TabManager mostRecentFileTreeLabel', () => {
+  it('returns the most-recently-left file-tree tab from the focus history', () => {
+    const tm = makeTabManager();
+    tm.tabs.push({ ...tm.cur(), label: 'files1', number: 2, view: 'files' });
+    tm.setActiveTab(1); // -> files1 (records leaving janus)
+    tm.setActiveTab(0); // -> janus (records leaving files1)
+
+    expect(tm.mostRecentFileTreeLabel()).toBe('files1');
+  });
+
+  it('returns a docked file-tree tab rather than skipping it (unlike popFocusHistory)', () => {
+    const tm = makeTabManager();
+    tm.tabs.push({ ...tm.cur(), label: 'files1', number: 2, view: 'files' });
+    tm.setActiveTab(1); // -> files1
+    tm.setActiveTab(0); // -> janus (files1 now in focus history)
+    tm.setDock(1, 'left'); // files1 becomes docked
+
+    expect(tm.mostRecentFileTreeLabel()).toBe('files1');
+  });
+
+  it('does not mutate the focus history (repeated calls return the same label)', () => {
+    const tm = makeTabManager();
+    tm.tabs.push({ ...tm.cur(), label: 'files1', number: 2, view: 'files' });
+    tm.setActiveTab(1);
+    tm.setActiveTab(0);
+
+    expect(tm.mostRecentFileTreeLabel()).toBe('files1');
+    expect(tm.mostRecentFileTreeLabel()).toBe('files1');
+  });
+
+  it('falls back to the first file-tree tab in tab order when none is in the focus history', () => {
+    const tm = makeTabManager();
+    tm.tabs.push(
+      { ...tm.cur(), label: 'files1', number: 2, view: 'files' },
+      { ...tm.cur(), label: 'files2', number: 3, view: 'files' },
+    );
+    // Never focused either files tab, so neither is in the focus history.
+    expect(tm.mostRecentFileTreeLabel()).toBe('files1');
+  });
+
+  it('returns undefined when no file-tree tab exists', () => {
+    const tm = makeTabManager();
+    tm.tabs.push({ ...tm.cur(), label: 'bob', number: 2 });
+
+    expect(tm.mostRecentFileTreeLabel()).toBeUndefined();
+  });
+});

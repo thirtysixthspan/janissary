@@ -59,6 +59,7 @@ describe('FileTreeManager', () => {
           if (dock === null) activeTab = index;
         },
         cur: () => tabs[activeTab],
+        mostRecentFileTreeLabel: () => tabs.find((t) => t.files)?.label,
         setCwd: () => {},
         openFilesTab: (view: { root: string; rows: unknown[] }) => {
           const label = `navigator${tabs.length > 2 ? `-${tabs.length}` : ''}`;
@@ -554,6 +555,62 @@ describe('FileTreeManager', () => {
     const label = tabs.find((t) => t.label.startsWith('navigator'))!.label;
     manager.toggle(label, 'src');
     manager.closeTab(label);
+    expect(closeFns[0]).toHaveBeenCalled();
+    expect(closeFns[1]).toHaveBeenCalled();
+  });
+
+  it('openOrRetarget opens a fresh, left-docked tree at the tab cwd and focuses it when none exists', () => {
+    const manager = run();
+    manager.openOrRetarget('janus');
+    const nav = tabs.find((t) => t.files);
+    expect(nav).toBeDefined();
+    expect(nav!.files!.root).toBe(root);
+    expect(nav!.dock).toBe('left');
+    expect(activeTab).toBe(tabs.indexOf(nav!));
+  });
+
+  it('openOrRetarget retargets the existing navigator in place, preserving dock and tab position', () => {
+    const manager = run();
+    manager.openOrRetarget('janus');
+    const nav = tabs.find((t) => t.files)!;
+    const label = nav.label;
+    const indexBefore = tabs.indexOf(nav);
+    const lengthBefore = tabs.length;
+
+    manager.openOrRetarget('other');
+
+    const after = tabs.find((t) => t.label === label)!;
+    expect(after.files!.root).toBe(otherRoot);
+    expect(tabs.length).toBe(lengthBefore);
+    expect(tabs.indexOf(after)).toBe(indexBefore);
+    expect(after.dock).toBe('left');
+  });
+
+  it('openOrRetarget clears the retargeted tab\'s expanded set, watchers, and undo/redo stacks', () => {
+    mkdirSync(path.join(root, 'sub'));
+    mkdirSync(path.join(root, 'dest'));
+    writeFileSync(path.join(root, 'notes.txt'), 'hi');
+    writeFileSync(path.join(root, 'other.txt'), 'hi');
+    const manager = run();
+    manager.openOrRetarget('janus');
+    const label = tabs.find((t) => t.files)!.label;
+    manager.toggle(label, 'sub');
+    manager.move(label, 'notes.txt', 'dest');
+    manager.move(label, 'other.txt', 'dest');
+    manager.undo(label);
+
+    type Introspect = { tabs: Map<string, { expanded: Set<string>; undoStack: unknown[]; redoStack: unknown[] }> };
+    const before = (manager as unknown as Introspect).tabs.get(label)!;
+    expect(before.expanded.size).toBe(1);
+    expect(before.undoStack).toHaveLength(1);
+    expect(before.redoStack).toHaveLength(1);
+
+    manager.openOrRetarget('other');
+
+    const after = (manager as unknown as Introspect).tabs.get(label)!;
+    expect(after.expanded.size).toBe(0);
+    expect(after.undoStack).toHaveLength(0);
+    expect(after.redoStack).toHaveLength(0);
     expect(closeFns[0]).toHaveBeenCalled();
     expect(closeFns[1]).toHaveBeenCalled();
   });

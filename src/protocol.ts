@@ -158,7 +158,12 @@ export type RpcCall =
   // Dock a dockable tab (file tree or notifications) into a sidebar (`'left'` | `'right'`), or
   // undock it back to the center tab strip (`null`). Explicit set, not "cycle" — the cycle order
   // lives client-side. The handler is generic, so both dockable tab kinds share this one RPC.
-  | { method: 'setDock'; params: { index: number; dock: 'left' | 'right' | null } };
+  | { method: 'setDock'; params: { index: number; dock: 'left' | 'right' | null } }
+  // Open a file navigator rooted at the named tab's cwd, triggered by the 📁 button in a
+  // harness/agent tab's metadata row. If a file-tree tab is already open, its root is retargeted
+  // to that cwd in place; otherwise a fresh one opens docked in the left sidebar. Either way the
+  // resulting file-tree tab is focused. `label` is the requesting tab's own label.
+  | { method: 'openFileNavigatorFor'; params: { label: string } };
 
 export type ClientMessage = { t: 'rpc'; id: number } & RpcCall;
 

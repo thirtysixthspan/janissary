@@ -164,6 +164,20 @@ export class TabManager {
     return undefined;
   }
 
+  // The label of the file-tree tab to retarget when the metadata-row 📁 button is clicked: the
+  // most-recently-left still-open `view === 'files'` tab. Scans `focusHistory` from most-recent to
+  // least-recent without mutating it and — unlike `popFocusHistory` — includes docked tabs, since a
+  // docked file navigator is a valid retarget target. Falls back to the first `view === 'files'`
+  // tab in `tabs` order (e.g. a tree that never lost focus since opening); returns `undefined` when
+  // no file-tree tab exists.
+  mostRecentFileTreeLabel(): string | undefined {
+    for (let i = this.focusHistory.length - 1; i >= 0; i--) {
+      const tab = this.tabs.find((t) => t.label === this.focusHistory[i]);
+      if (tab?.view === 'files') return tab.label;
+    }
+    return this.tabs.find((t) => t.view === 'files')?.label;
+  }
+
   // Applies the result of adding a new tab (or focusing an existing one) from the `openers.ts`
   // helpers, which otherwise assign `tabs`/`activeTab` directly and would bypass focus-history
   // tracking — a freshly opened, auto-focused tab still needs its predecessor recorded.

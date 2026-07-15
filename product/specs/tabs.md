@@ -87,6 +87,11 @@ git clone, and **auto-permitting** (⚡), shown when harness auto-approval is en
 only — see Auto-approve permissions in `harness.md`). Hovering a flag's emoji shows a tooltip naming
 it ("Workspaced", "Auto-permitting"). More flags of the same kind are expected in the future.
 
+Agent tabs and harness tabs also show a right-aligned file-navigator button (📁, tooltip "Open file
+navigator here") at the end of the metadata row. Clicking it opens a file navigator rooted at that
+tab's own working directory; shell (PTY-takeover) tabs do not show this button. See "Opening from a
+tab's metadata row" in `file-tree-tab.md` for how it opens or retargets the navigator.
+
 ### Per-tab state isolation
 
 Each tab carries its own transcript log, command history (including navigation index), and scroll offset. Switching tabs preserves each tab's state.

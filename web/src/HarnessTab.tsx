@@ -5,7 +5,7 @@ import { useXterm } from './useXterm';
 import { AgentTabMeta } from './AgentTabMeta';
 
 type Properties = {
-  harness: HarnessView; client: JanusClient; taskPickerOpen?: boolean; cwd?: string; flags?: string[];
+  harness: HarnessView; client: JanusClient; taskPickerOpen?: boolean; cwd?: string; flags?: string[]; label: string;
 };
 export type HarnessTabHandle = { focus(): void };
 
@@ -23,7 +23,7 @@ function harnessKeyFilter(e: KeyboardEvent, taskPickerOpen: boolean): boolean {
 // the harness except the tab-switch chord (Shift+←/→), the task-picker chord (Ctrl+A), and every
 // key while the task picker overlay is open over this tab (Up/Down/Left/Right/Enter/Escape must
 // reach the picker instead of the PTY), which all bubble to the window handler.
-export const HarnessTab = forwardRef<HarnessTabHandle, Properties>(function HarnessTab({ harness, client, taskPickerOpen, cwd, flags }, ref) {
+export const HarnessTab = forwardRef<HarnessTabHandle, Properties>(function HarnessTab({ harness, client, taskPickerOpen, cwd, flags, label }, ref) {
   const hostReference = useRef<HTMLDivElement>(null);
   const focusTerm = useXterm({
     ptyId: harness.ptyId,
@@ -38,7 +38,11 @@ export const HarnessTab = forwardRef<HarnessTabHandle, Properties>(function Harn
   const isExited = harness.status === 'exited';
   return (
     <div className="harness-tab" data-doc-shot="harness-view">
-      <AgentTabMeta cwd={cwd} flags={flags} />
+      <AgentTabMeta
+        cwd={cwd}
+        flags={flags}
+        onOpenFileNavigator={() => client.send({ method: 'openFileNavigatorFor', params: { label } })}
+      />
       {isExited && (
         <div className="harness-exited">
           exited{harness.exitCode === undefined ? '' : ` (${harness.exitCode})`}
