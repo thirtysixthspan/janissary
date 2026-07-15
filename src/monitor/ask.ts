@@ -20,7 +20,7 @@ export function askMonitor(
   let reply = '';
   managers.tab.startRunning(owner, `monitor ask ${personaName} ${question}`);
   const prompt = `[Question from the user]\n${question}\n\nAnswer directly; the suggestion format does not apply to this reply.`;
-  recordContext(reg, prompt);
+  recordContext(reg, prompt, 'input');
   reg.session.prompt(prompt, {
     onChunk: (text) => { reply += text; },
     onEnd: () => {
