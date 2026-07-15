@@ -1,10 +1,6 @@
 
 ## ready
 
-* in the file navigator, dragging a file onto the command bar will copy the relative path to the file into the command bar, and will not move the file.
-
-* add a metadata row to harness, agent and shell tabs. The metadata row should show the current working directory and a tab status. add emojis in the tab status of metadata row to indicate when workspaced and or auto-permitting is enabled. other features will be flagged there as well in the future. a flag is either enabled or disabled and the presence of the emoji indicates enabled. 
-
 ## in development
 
 4. Supervisor/manager agent (LangGraph supervisor, n8n AI Agent Tool) — a built-in supervisor persona that receives a goal, fans work out with broadcast request, and aggregates the responses.
