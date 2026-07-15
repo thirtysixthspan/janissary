@@ -5,6 +5,7 @@ import { Transcript } from './Transcript';
 import { StatusPanels } from './StatusPanels';
 import { PickerOverlays } from './PickerOverlays';
 import { CommandArea } from './CommandArea';
+import type { CommandInputDropHandle } from './CommandInput';
 import { AgentTabMeta } from './AgentTabMeta';
 import type { useViewSearchState } from './useViewSearchState';
 import type { VisibleTaskRow } from './task-picker-keys';
@@ -57,6 +58,7 @@ type Properties = {
   recallReference: React.RefObject<((text: string) => void) | null>;
   onEditQueued: React.ComponentProps<typeof CommandArea>['onEditQueued'];
   onDeleteQueued: React.ComponentProps<typeof CommandArea>['onDeleteQueued'];
+  dropRef: React.RefObject<CommandInputDropHandle | null>;
 };
 
 // The normal agent-tab body: transcript, status panels, picker overlays, and the command bar.
@@ -69,7 +71,7 @@ export function AgentTabBody({
   taskPickerOpen, visibleTasks, taskPickerIndex, pickTask, toggleTaskDir,
   profilePickerOpen, profiles, profilePickerIndex, pickProfile,
   search, globalHistory, onCommandBarSubmit, quitConfirmOpen, unsavedQuitOpen,
-  recallReference, onEditQueued, onDeleteQueued,
+  recallReference, onEditQueued, onDeleteQueued, dropRef,
 }: Properties) {
   return (
     <div
@@ -117,6 +119,7 @@ export function AgentTabBody({
         recallRef={recallReference}
         onEditQueued={onEditQueued}
         onDeleteQueued={onDeleteQueued}
+        dropRef={dropRef}
       />
     </div>
   );

@@ -1,7 +1,9 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, type RefObject } from 'react';
 import type { FileTreeRow } from '@shared/protocol';
 import type { JanusClient } from './ws';
 import { resolveDropTarget, type DropTarget } from './file-tree-drag';
+import { relativePath } from './file-tree-relative-path';
+import type { CommandInputDropHandle } from './CommandInput';
 
 // Ignore incidental pointer jitter between mousedown and the first real move — below this, a
 // press-release is just a click, not a drag.
@@ -17,7 +19,14 @@ type PendingConflict = { fromRelPath: string; toRelPath: string; source: 'move' 
 // handling in `editor/useEditorMouse.ts`) rather than reusing `drag-resize.ts`'s `startDrag`, which
 // has no way to signal the drop moment back to the caller. A movement threshold gates when a
 // mousedown actually becomes a drag; a plain click never sets `draggedPath`.
-export function useFileTreeDrag(rows: FileTreeRow[], client: JanusClient, index: number) {
+export function useFileTreeDrag(
+  rows: FileTreeRow[],
+  client: JanusClient,
+  index: number,
+  absoluteRoot?: string,
+  cwd?: string,
+  dropRef?: RefObject<CommandInputDropHandle | null>,
+) {
   const [draggedPath, setDraggedPath] = useState<string | null>(null);
   const [dragPosition, setDragPosition] = useState<{ x: number; y: number } | null>(null);
   const [dropTarget, setDropTarget] = useState<DropTarget>(null);
@@ -28,6 +37,7 @@ export function useFileTreeDrag(rows: FileTreeRow[], client: JanusClient, index:
   const dropTargetRef = useRef<DropTarget>(null);
   dropTargetRef.current = dropTarget;
   const gestureRef = useRef<{ path: string; x: number; y: number; started: boolean } | null>(null);
+  const overCommandBarRef = useRef(false);
 
   const hoveredRowPath = (x: number, y: number): string | null => {
     const element = document.elementFromPoint(x, y);
@@ -35,8 +45,22 @@ export function useFileTreeDrag(rows: FileTreeRow[], client: JanusClient, index:
     return row instanceof HTMLElement ? (row.dataset.path ?? null) : null;
   };
 
+  // True when the pointer is over the command bar's hit-test marker — present only while
+  // `CommandInput` is mounted for the currently active tab (see Decision 4 in the drag-to-command-
+  // bar plan). Not present for a harness tab, a docked file tree tab, or while transcript search
+  // has replaced the command bar.
+  const hoveredCommandBar = (x: number, y: number): boolean => {
+    const element = document.elementFromPoint(x, y);
+    return element instanceof Element && element.closest('[data-command-bar]') !== null;
+  };
+
   const send = (fromRelPath: string, toRelPath: string) => {
     client.send({ method: 'moveFileTreeItem', params: { index, fromRelPath, toRelPath } });
+  };
+
+  const setCommandBarHighlighted = (active: boolean) => {
+    overCommandBarRef.current = active;
+    dropRef?.current?.setDropHighlighted(active);
   };
 
   const resetGestureState = () => {
@@ -44,10 +68,17 @@ export function useFileTreeDrag(rows: FileTreeRow[], client: JanusClient, index:
     setDraggedPath(null);
     setDragPosition(null);
     setDropTarget(null);
+    setCommandBarHighlighted(false);
   };
 
   const drop = () => {
     const gesture = gestureRef.current;
+    if (gesture?.started && overCommandBarRef.current) {
+      const absolute = `${absoluteRoot ?? ''}/${gesture.path}`;
+      dropRef?.current?.insertAtCaret(relativePath(cwd ?? '', absolute));
+      resetGestureState();
+      return;
+    }
     const target = dropTargetRef.current;
     if (gesture?.started && target) {
       if (target.conflict) setPendingConflict({ fromRelPath: gesture.path, toRelPath: target.path, source: 'move' });
@@ -72,7 +103,9 @@ export function useFileTreeDrag(rows: FileTreeRow[], client: JanusClient, index:
       setDraggedPath(gesture.path);
     }
     setDragPosition({ x: e.clientX, y: e.clientY });
-    setDropTarget(resolveDropTarget(rowsRef.current, gesture.path, hoveredRowPath(e.clientX, e.clientY)));
+    const overBar = hoveredCommandBar(e.clientX, e.clientY);
+    if (overBar !== overCommandBarRef.current) setCommandBarHighlighted(overBar);
+    setDropTarget(overBar ? null : resolveDropTarget(rowsRef.current, gesture.path, hoveredRowPath(e.clientX, e.clientY)));
   };
 
   const onWindowUp = () => {

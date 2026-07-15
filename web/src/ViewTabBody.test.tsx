@@ -64,7 +64,7 @@ describe('ViewTabBody', () => {
   });
 
   it('renders FileTreeTab when view is files with payload', () => {
-    const tab = baseTab({ view: 'files', files: { root: '/', rows: [] } });
+    const tab = baseTab({ view: 'files', files: { root: '/', absoluteRoot: '/', rows: [] } });
     const { container } = render(React.createElement(ViewTabBody, { tab, client: {} as never, index: 0 }));
     expect(container.querySelector('.tab-body')).toBeTruthy();
   });

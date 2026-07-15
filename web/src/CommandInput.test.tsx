@@ -1,8 +1,8 @@
 import React, { createRef } from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
-import { CommandInput } from './CommandInput';
+import { CommandInput, type CommandInputDropHandle } from './CommandInput';
 
 function renderCommandInput(overrides: { history?: string[]; ghostHistory?: string[]; busy?: boolean } = {}) {
   const inputRef = createRef<HTMLTextAreaElement>();
@@ -256,5 +256,66 @@ describe('CommandInput — multi-line', () => {
     input.setSelectionRange(6, 6); // right after the newline, nothing typed yet on line 2
     fireEvent.keyDown(input, { key: 'Tab' });
     expect(complete).not.toHaveBeenCalled();
+  });
+});
+
+describe('CommandInput — drop handle', () => {
+  function renderWithDropRef() {
+    const inputRef = createRef<HTMLTextAreaElement>();
+    const dropRef = createRef<CommandInputDropHandle | null>() as React.RefObject<CommandInputDropHandle | null>;
+    const { container } = render(
+      <CommandInput
+        dotColor="#fff"
+        history={['recalled']}
+        ghostHistory={[]}
+        onSubmit={vi.fn()}
+        inputRef={inputRef}
+        complete={vi.fn().mockResolvedValue({ completions: [], cursor: 0 })}
+        pickerOpen={false}
+        busy={false}
+        dropRef={dropRef}
+      />,
+    );
+    return { inputRef, dropRef, container };
+  }
+
+  it('inserts text into an empty box', () => {
+    const { inputRef, dropRef } = renderWithDropRef();
+    act(() => { dropRef.current?.insertAtCaret('src/index.ts'); });
+    expect(inputRef.current).toHaveValue('src/index.ts');
+  });
+
+  it('inserts at a mid-string caret position', async () => {
+    const { dropRef } = renderWithDropRef();
+    const input = screen.getByRole('textbox') as HTMLTextAreaElement;
+    await userEvent.type(input, 'open ');
+    input.setSelectionRange(5, 5);
+    act(() => { dropRef.current?.insertAtCaret('src/index.ts'); });
+    expect(input).toHaveValue('open src/index.ts');
+  });
+
+  it('replaces an active selection', async () => {
+    const { dropRef } = renderWithDropRef();
+    const input = screen.getByRole('textbox') as HTMLTextAreaElement;
+    await userEvent.type(input, 'open oldpath');
+    input.setSelectionRange(5, 12);
+    act(() => { dropRef.current?.insertAtCaret('newpath'); });
+    expect(input).toHaveValue('open newpath');
+  });
+
+  it('leaves recall (replace-all) behavior unchanged when a dropRef is also provided', async () => {
+    renderWithDropRef();
+    const input = screen.getByRole('textbox');
+    await userEvent.type(input, '{ArrowUp}');
+    expect(input).toHaveValue('recalled');
+  });
+
+  it('setDropHighlighted toggles the drop-target class on the root element', () => {
+    const { dropRef, container } = renderWithDropRef();
+    const root = container.querySelector('.command-area')!;
+    act(() => { dropRef.current?.setDropHighlighted(true); });
+    expect(root.className).toContain('drop-target');
+    act(() => { dropRef.current?.setDropHighlighted(false); });
+    expect(root.className).not.toContain('drop-target');
   });
 });

@@ -3,6 +3,13 @@ import type { CompletionResult } from '@shared/protocol';
 import { handleTabCompletion } from './command-completion';
 import { findGhostSuggestion } from './ghost-suggestion';
 
+// Exposed via `dropRef` so a file-tree drag can insert a dropped path and highlight the command
+// bar as a valid drop target, mirroring `recallRef`'s imperative-escape-hatch pattern.
+export type CommandInputDropHandle = {
+  insertAtCaret: (text: string) => void;
+  setDropHighlighted: (active: boolean) => void;
+};
+
 export type CommandInputProperties = {
   dotColor: string;
   history: string[];
@@ -20,15 +27,17 @@ export type CommandInputProperties = {
   recallRef?: React.RefObject<((text: string) => void) | null>;
   onEditQueued?: (text: string) => void;
   onDeleteQueued?: () => void;
+  dropRef?: React.RefObject<CommandInputDropHandle | null>;
 };
 
 export function CommandInput({
   dotColor, history, ghostHistory, onSubmit, inputRef, complete, pickerOpen, busy,
-  queueOpen, recallRef, onEditQueued, onDeleteQueued,
+  queueOpen, recallRef, onEditQueued, onDeleteQueued, dropRef,
 }: CommandInputProperties) {
   const [value, setValue] = useState('');
   const [completions, setCompletions] = useState<string[]>([]);
   const histIndex = useRef(-1);
+  const rootRef = useRef<HTMLDivElement>(null);
   const ghost = findGhostSuggestion(ghostHistory, value);
 
   // Auto-resize: shrink to one row first so `scrollHeight` reflects the actual content, then
@@ -46,6 +55,33 @@ export function CommandInput({
     requestAnimationFrame(() => { const element = inputRef.current; if (element) element.selectionStart = element.selectionEnd = text.length; });
   };
   if (recallRef) recallRef.current = recall;
+
+  // Splice `text` into the textarea at the current caret (or over the current selection),
+  // mirroring `insertNewline` below but generalized to arbitrary inserted text. Focuses the
+  // textarea first: unlike a keyboard-driven insert, the caller is a file-tree drag release, so
+  // the textarea is never already the focused/selected element.
+  const insertAtCaret = (text: string) => {
+    const element = inputRef.current;
+    if (!element) return;
+    element.focus();
+    const start = element.selectionStart ?? value.length;
+    const end = element.selectionEnd ?? value.length;
+    if (typeof document.execCommand === 'function') {
+      element.setSelectionRange(start, end);
+      document.execCommand('insertText', false, text);
+      return;
+    }
+    element.value = `${value.slice(0, start)}${text}${value.slice(end)}`;
+    element.selectionStart = element.selectionEnd = start + text.length;
+    element.dispatchEvent(new Event('input', { bubbles: true }));
+  };
+
+  if (dropRef) {
+    dropRef.current = {
+      insertAtCaret,
+      setDropHighlighted: (active: boolean) => rootRef.current?.classList.toggle('drop-target', active),
+    };
+  }
 
   const submit = () => {
     const text = value.trim();
@@ -158,7 +194,7 @@ export function CommandInput({
   };
 
   return (
-    <div className="command-area" data-doc-shot="command-bar">
+    <div className="command-area" data-doc-shot="command-bar" data-command-bar ref={rootRef}>
       {completions.length > 0 && <div className="completions">{completions.join('  ')}</div>}
       <div className="command" onClick={() => inputRef.current?.focus()}>
         <span className={`dot${busy ? ' busy' : ''}`} style={{ color: dotColor }}>●</span>

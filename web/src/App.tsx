@@ -5,6 +5,7 @@ import { TabStrip } from './TabStrip';
 import { ViewTabBody } from './ViewTabBody';
 import { ReportingSection } from './ReportingSection';
 import { AppShell } from './AppShell';
+import type { CommandInputDropHandle } from './CommandInput';
 import type { HarnessTabHandle } from './HarnessTab';
 import type { EditorTabHandle } from './EditorTab';
 import type { ShellTabHandle } from './ShellTab';
@@ -56,6 +57,10 @@ export function App() {
   // Assigned `CommandInput`'s `recall` (the `guardRef` pattern); shared by the queue and task
   // pickers so a selected row's text lands in the command line without submitting.
   const recallReference = useRef<((text: string) => void) | null>(null);
+  // Assigned `CommandInput`'s insert-at-caret/highlight pair (the `guardRef` pattern) so a
+  // file-tree drag, threaded down the sidebar's own branch of the tree, can insert a dropped path
+  // into whichever tab's command bar is currently rendered here.
+  const dropReference = useRef<CommandInputDropHandle | null>(null);
   const transcriptReference = useRef<HTMLDivElement>(null);
   const harnessHandles = useRef<Map<string, HarnessTabHandle>>(new Map());
   const shellHandles = useRef<Map<string, ShellTabHandle>>(new Map());
@@ -145,7 +150,7 @@ export function App() {
   if (!current) return <div className="app" style={{ padding: 16, color: 'var(--muted)' }}>Connecting…</div>;
 
   return (
-    <AppShell tabs={tabs} client={client}>
+    <AppShell tabs={tabs} client={client} dropRef={dropReference} activeCwd={current.cwd}>
       <TabStrip
         tabs={actionEntries.map((e) => e.tab)}
         activeTab={actionEntries.findIndex((e) => e.index === activeTab)}
@@ -180,6 +185,7 @@ export function App() {
           search={search} globalHistory={globalHistory} onCommandBarSubmit={onCommandBarSubmit}
           quitConfirmOpen={quitConfirmOpen} unsavedQuitOpen={unsavedQuitOpen}
           recallReference={recallReference} onEditQueued={onEditQueued} onDeleteQueued={onDeleteQueued}
+          dropRef={dropReference}
         />
       )}
       <ReportingSection

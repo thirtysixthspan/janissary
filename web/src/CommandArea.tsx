@@ -13,7 +13,7 @@ type Properties = {
 // command bar "becomes" the search bar rather than something appearing alongside it.
 export function CommandArea({
   search, lines, dotColor, history, ghostHistory, onSubmit, inputRef, complete, pickerOpen, busy,
-  queueOpen, recallRef, onEditQueued, onDeleteQueued,
+  queueOpen, recallRef, onEditQueued, onDeleteQueued, dropRef,
 }: Properties) {
   if (search.searchOpen) {
     return (
@@ -44,6 +44,7 @@ export function CommandArea({
       recallRef={recallRef}
       onEditQueued={onEditQueued}
       onDeleteQueued={onDeleteQueued}
+      dropRef={dropRef}
     />
   );
 }

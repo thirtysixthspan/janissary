@@ -48,7 +48,7 @@ export function buildTabView(
     // feeds, and must never be broadcast back to clients (see monitor-page-tab-content-feed plan).
 
     monitor: tab.monitor,
-    files: tab.files ? { ...tab.files, root: shorten(tab.files.root) } : undefined,
+    files: tab.files ? { ...tab.files, root: shorten(tab.files.root), absoluteRoot: tab.files.root } : undefined,
     activePty: tab.activePty,
     dock: tab.dock,
   };

@@ -112,7 +112,9 @@ export type FileTreeRow = {
 
 // A file tree view (opened via `files [path]`). The server owns the tree — `rows` is the
 // pre-flattened, already-sorted, currently-visible row list; the client never walks directories.
-export type FileTreeView = { root: string; rows: FileTreeRow[] };
+// `root` is display-abbreviated for the header; `absoluteRoot` is the same root unshortened, used
+// client-side to resolve a dragged row's path relative to another tab's cwd.
+export type FileTreeView = { root: string; absoluteRoot: string; rows: FileTreeRow[] };
 
 // A single row in the task picker's listing (executable `ai/*.md` prompts). Unlike `FileTreeRow`,
 // this always contains the *full* recursive tree — the task list needs no live filesystem
