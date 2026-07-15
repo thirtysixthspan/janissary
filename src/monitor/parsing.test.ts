@@ -70,6 +70,16 @@ describe('parseSuggestion', () => {
     expect(parseSuggestion('[SUGGESTION]: Take a closer look at that diff')).toEqual({ text: 'Take a closer look at that diff' });
   });
 
+  it('extracts a summary as text with no command', () => {
+    expect(parseSuggestion('[SUMMARY]: The agent is running the test suite and fixing a failing case.'))
+      .toEqual({ text: 'The agent is running the test suite and fixing a failing case.' });
+  });
+
+  it('prefers an actionable suggestion over a summary when both are present', () => {
+    const reply = '[SUMMARY]: The build is failing.\n[SUGGESTION]: Rerun the build\n[COMMAND]: npm run build';
+    expect(parseSuggestion(reply)).toEqual({ text: 'Rerun the build', command: 'npm run build' });
+  });
+
   it('returns null when no marker is present', () => {
     expect(parseSuggestion('OK')).toBeNull();
     expect(parseSuggestion('I have nothing to add here.')).toBeNull();

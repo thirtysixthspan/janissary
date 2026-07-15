@@ -48,22 +48,30 @@ export function parseUnmonitorCommand(input: string): ParsedUnmonitor | { error:
   return { persona, target };
 }
 
-// Extract a suggestion from the monitoring AI's reply. The reply may contain anything;
-// only the marker lines count:
-//   [SUGGESTION]: <text>
-//   [COMMAND]: <optional command>
-// No marker → no suggestion (the persona is told silence is fine).
+// Extract a deliverable report from the monitoring AI's reply. The reply may contain
+// anything; only the marker lines count:
+//   [SUMMARY]: <text>                — a recap of activity (harness/page), no command
+//   [SUGGESTION]: <text>             — an actionable suggestion
+//   [COMMAND]: <optional command>    — a command that accompanies a suggestion
+// An actionable suggestion wins when both markers are present; a summary carries no
+// command. No marker → nothing to deliver (the persona is told silence is fine).
 export function parseSuggestion(reply: string): { text: string; command?: string } | null {
-  const text = /^\[SUGGESTION]:\s*(.+)$/m.exec(reply)?.[1]?.trim();
-  if (!text) return null;
-  const command = /^\[COMMAND]:\s*(.+)$/m.exec(reply)?.[1]?.trim();
-  return command ? { text, command } : { text };
+  const suggestion = /^\[SUGGESTION]:\s*(.+)$/m.exec(reply)?.[1]?.trim();
+  if (suggestion) {
+    const command = /^\[COMMAND]:\s*(.+)$/m.exec(reply)?.[1]?.trim();
+    return command ? { text: suggestion, command } : { text: suggestion };
+  }
+  const summary = /^\[SUMMARY]:\s*(.+)$/m.exec(reply)?.[1]?.trim();
+  return summary ? { text: summary } : null;
 }
 
 // The output-format instructions appended to every persona's startup prompt.
 export const SUGGESTION_FORMAT = [
-  'When you have a suggestion, reply with exactly this format:',
+  'Reply using exactly one of these formats:',
+  'To recap what a harness or web page is doing (a summary, not a suggestion):',
+  '[SUMMARY]: <one or two short sentences>',
+  'To offer an actionable suggestion:',
   '[SUGGESTION]: <one short sentence>',
   '[COMMAND]: <a single command the user could run, only if one clearly applies>',
-  'When you have nothing useful to say, reply with the single word: OK',
+  'Only when you have genuinely nothing to report, reply with the single word: OK',
 ].join('\n');

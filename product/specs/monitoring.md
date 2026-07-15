@@ -36,7 +36,9 @@ New transcript entries from target tabs (including the initial historical entrie
 
 ### Suggestions
 
-Monitor suggestions are parsed from the ACP reply and delivered either inline (prefixed with the persona name and a sparkle indicator in the owner's transcript) or to the persona's reporting tab feed. Clicking a suggested command in the reporting tab runs it in the tab the suggestion is about, queuing behind that tab's other queued commands if it is currently busy (see [[agent-command-queue]]). Suggestions from monitors are excluded from other monitors' feeds.
+A monitor's reply is parsed for one of two deliverable reports, using explicit marker lines: a `[SUMMARY]:` line recaps activity (what a harness or web page is doing) and carries no command, while a `[SUGGESTION]:` line offers an actionable suggestion and may be accompanied by a `[COMMAND]:` line. When both markers appear, the actionable suggestion wins. A reply with neither marker (e.g. the single word `OK`) delivers nothing. This lets a persona that watches an autonomously-working harness surface running summaries into its feed rather than being forced to phrase everything as a suggestion or fall silent.
+
+Both summaries and suggestions are delivered the same way — either inline (prefixed with the persona name and a sparkle indicator in the owner's transcript) or to the persona's reporting tab feed. Clicking a suggested command in the reporting tab runs it in the tab the suggestion is about, queuing behind that tab's other queued commands if it is currently busy (see [[agent-command-queue]]). Reports from monitors are excluded from other monitors' feeds.
 
 ### Persona web tools
 
