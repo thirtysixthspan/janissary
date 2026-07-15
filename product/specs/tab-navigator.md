@@ -8,7 +8,11 @@ A fuzzy-searchable jump list for switching directly to any open tab by typing pa
 
 ### Filtering
 
-Typing narrows the list to tabs whose label contains the typed text anywhere (case-insensitive), or whose tab number starts with it. The matched portion of a label is highlighted. Number matches are listed first, followed by label matches, each group sorted alphabetically by label. Running `nav <query>` opens the navigator pre-filtered to `<query>` instead of sending the text as a command. When nothing matches, the window shows a `(no matching tabs)` placeholder.
+Typing narrows the list to tabs whose displayed name (its alias if renamed, otherwise its label) contains the typed text anywhere (case-insensitive), or whose tab number starts with it. The matched portion of the displayed name is highlighted. Number matches are listed first, followed by name matches, each group sorted alphabetically by displayed name. Running `nav <query>` opens the navigator pre-filtered to `<query>` instead of sending the text as a command. When nothing matches, the window shows a `(no matching tabs)` placeholder.
+
+### Renamed tabs
+
+A tab renamed with `rename` (see the tab strip's alias) shows and matches by its alias in the navigator, the same way it does in the tab strip — its underlying routing label still exists but is not what's displayed or searched.
 
 ### Selecting a tab
 
