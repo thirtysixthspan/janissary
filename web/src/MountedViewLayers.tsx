@@ -3,6 +3,7 @@ import type { TabView } from '@shared/protocol';
 import type { JanusClient } from './ws';
 import { HarnessTab, type HarnessTabHandle } from './HarnessTab';
 import { EditorTab, type EditorTabHandle } from './EditorTab';
+import { PageTab } from './PageTab';
 import { StatusPanels } from './StatusPanels';
 import { TaskPicker } from './TaskPicker';
 import type { VisibleTaskRow } from './task-picker-keys';
@@ -11,6 +12,7 @@ type Properties = {
   tabs: TabView[];
   current: TabView;
   client: JanusClient;
+  closeTab: (index: number) => void;
   harnessHandles: React.RefObject<Map<string, HarnessTabHandle>>;
   editorHandles: React.RefObject<Map<string, EditorTabHandle>>;
   // Ctrl+A opens the task picker from a focused harness tab (see `HarnessTab.harnessKeyFilter`);
@@ -23,11 +25,11 @@ type Properties = {
   onToggleTaskDir?: (path: string) => void;
 };
 
-// Harness and editor tabs stay mounted (hidden when inactive) so terminal/xterm state and editor
-// buffers, undo stacks, cursor, and scroll position survive tab switches. Split out of App.tsx to
-// keep it under the file-size limit.
+// Harness, editor, and page tabs stay mounted (hidden when inactive) so terminal/xterm state,
+// editor buffers, undo stacks, cursor/scroll position, and embedded-page navigation survive tab
+// switches. Split out of App.tsx to keep it under the file-size limit.
 export function MountedViewLayers({
-  tabs, current, client, harnessHandles, editorHandles,
+  tabs, current, client, closeTab, harnessHandles, editorHandles,
   taskPickerOpen, taskRows, taskPickerIndex, onPickTask, onToggleTaskDir,
 }: Properties) {
   return (
@@ -57,6 +59,19 @@ export function MountedViewLayers({
             ref={(h) => { if (h) editorHandles.current.set(t.label, h); else editorHandles.current.delete(t.label); }} />
         </div>
       ))}
+
+      {tabs
+        .map((t, index) => ({ t, index }))
+        .filter(({ t }) => t.view === 'page' && t.page)
+        .map(({ t, index }) => (
+          <div
+            key={t.page!.url}
+            className="tab-body"
+            style={{ borderLeft: `4px solid ${t.dotColor}`, display: t.label === current.label ? 'flex' : 'none' }}
+          >
+            <PageTab page={t.page!} closeTab={closeTab} index={index} client={client} />
+          </div>
+        ))}
     </>
   );
 }

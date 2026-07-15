@@ -160,12 +160,12 @@ export function App() {
         windowFocused={windowFocused}
       />
 
-      <ViewTabBody tab={current} client={client} index={currentIndex} closeTab={closeTab} />
+      <ViewTabBody tab={current} client={client} index={currentIndex} />
 
       <ShellTabLayer tabs={tabs} activeLabel={current.label} client={client}
         onHandle={(id, h) => { if (h) shellHandles.current.set(id, h); else shellHandles.current.delete(id); }} />
 
-      <MountedViewLayers tabs={tabs} current={current} client={client} harnessHandles={harnessHandles} editorHandles={editorHandles}
+      <MountedViewLayers tabs={tabs} current={current} client={client} closeTab={closeTab} harnessHandles={harnessHandles} editorHandles={editorHandles}
         taskPickerOpen={taskPickerOpen} taskRows={visibleTasks} taskPickerIndex={taskPickerIndex} onPickTask={pickTask} onToggleTaskDir={toggleTaskDir} />
 
       {!isViewTab && !current.activePty && (

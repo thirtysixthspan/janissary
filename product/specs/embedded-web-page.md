@@ -92,6 +92,10 @@ The page view shows, stacked top to bottom:
    alongside the tab strip's own close button (see "Tab strip: name and close button" below).
 2. **The embedded page** itself, filling the space beneath the metadata and resizing with the tab.
 
+Switching to another tab and back preserves the page view exactly as it was: whatever navigation,
+scroll position, or in-page state the embedded page had before the switch is still there when the
+tab becomes active again. The embedded page never reloads as a result of switching tabs.
+
 ### What renders
 
 The app embeds external `http`/`https` sites in a page view. Sites commonly refuse to be framed by
