@@ -1,17 +1,13 @@
 # Starting the app
 
-See [Prerequisites](/user-documentation/getting-started/prerequisites) if you haven't set up Janissary yet. Run `janus` from the directory you want to work in:
+See [Installing](/user-documentation/getting-started/install) if you haven't installed Janissary yet. 
 
-```
-npx janus
-```
 
-Or install it globally first:
-
+Run 
 ```
-npm install -g janissary
-janus
+> janus
 ```
+from the project directory.
 
 <img class="agent-float" src="/agents/tahir-south-west.png" alt="" />
 
@@ -50,7 +46,6 @@ janus --relaunch
 If startup fails, the error names the app and version, says what went wrong, and suggests what to do next. The two you're most likely to see:
 
 - **The port is already in use** — something else is listening on the port you asked for. Pick another with `--port=<n>`, or drop `--port` entirely and let the app choose a free one.
-- **The web UI bundle is missing** — this only happens in a development checkout where the web assets haven't been built yet. Run `npm run build:web` (or `npm start`) and launch again.
 - **Another instance is already running here** — a second `janus` launched against the same directory as a still-running instance is rejected with the live process's ID. Run `janus <dir>` to start a second instance against a different directory.
 
 ## Configuration

@@ -8,21 +8,3 @@ See the [User Docs](https://thirtysixthspan.github.io/janissary/user-documentati
 
 See the [Developer Docs](https://thirtysixthspan.github.io/janissary/developer-documentation/) for advanced usage, coding, linting and testing practices.  
 
-## Prerequisites
-
-- macOS
-- Node.js 24+
-- Google Chrome 
-
-## Usage
-
-```
-npx janus
-```
-
-Or install globally:
-
-```
-npm install -g janissary
-janus
-```

@@ -80,6 +80,7 @@
   },
   "files": [
     "ai",
+    "profiles",
     "bin",
     "dist",
     "web/dist",

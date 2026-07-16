@@ -1,10 +1,20 @@
-# Prerequisites
+# Installing
+
+## Prerequisites
 
 Before installing Janissary, make sure you have:
 
-- **macOS.** Janissary currently runs on macOS only.
-- **Node.js 24 or newer.**
-- **A Chromium-based browser** — Google Chrome, Chromium, Microsoft Edge, or Brave. Janissary opens its UI in a dedicated app window hosted by whichever of these browsers it finds on your system. If none are installed, it falls back to opening in your default browser instead.
+- **macOS.** - currently runs on macOS only.
+- **Node.js 24 or newer.** - preferably managed by NVM.
+- **Google Chrome.** - the UI is a dedicated browser window.
+
+## Installing the app
+
+```
+npm install -g --allow-scripts=janissary,node-pty,fsevents janissary
+```
+
+npm 12+ blocks install scripts from dependencies by default. `janissary` and its native dependencies (`node-pty`, `fsevents`) need their `postinstall` scripts to run — they fix native binary permissions after install — so `--allow-scripts` allows them explicitly.
 
 ## Installing the browser automation engine
 

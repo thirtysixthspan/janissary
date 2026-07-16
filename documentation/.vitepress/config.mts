@@ -58,7 +58,7 @@ export default defineConfig({
             { text: "What is Janissary?", link: "/user-documentation/getting-started/application" },
             { text: "Design principles", link: "/user-documentation/getting-started/design-principles" },
             { text: "Why the name \"Janissary\"?", link: "/user-documentation/getting-started/why-the-name" },
-            { text: "Prerequisites", link: "/user-documentation/getting-started/prerequisites" },
+            { text: "Installing", link: "/user-documentation/getting-started/install" },
             { text: "Starting the app", link: "/user-documentation/getting-started/startup" },
             { text: "Tabs", link: "/user-documentation/getting-started/tabs" },
             { text: "Tab groups", link: "/user-documentation/getting-started/groups" },
