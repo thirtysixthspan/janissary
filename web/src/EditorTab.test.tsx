@@ -237,7 +237,7 @@ describe('EditorTab', () => {
     delete (document as unknown as { caretPositionFromPoint?: unknown }).caretPositionFromPoint;
   });
 
-  it('does not consume Shift+ArrowLeft/Right, so it can reach the window-level tab-switch shortcut', async () => {
+  it('consumes Shift+ArrowLeft/Right locally instead of letting them reach the window-level tab-switch shortcut', async () => {
     const { client } = makeClient();
     await renderLoaded(client);
     const spy = vi.fn();
@@ -245,14 +245,22 @@ describe('EditorTab', () => {
     fireEvent.keyDown(textarea(), { key: 'ArrowRight', shiftKey: true });
     fireEvent.keyDown(textarea(), { key: 'ArrowLeft', shiftKey: true });
     globalThis.removeEventListener('keydown', spy);
-    expect(spy).toHaveBeenCalledTimes(2);
+    expect(spy).not.toHaveBeenCalled();
   });
 
-  it('Shift+ArrowRight no longer extends the in-editor selection', async () => {
+  it('Shift+ArrowRight extends the in-editor selection, like Shift+ArrowUp/Down', async () => {
     const { client } = makeClient();
     const { container } = await renderLoaded(client);
     fireEvent.keyDown(textarea(), { key: 'ArrowRight', shiftKey: true });
-    expect(container.querySelector('.editor-sel')).toBeNull();
+    expect(container.querySelector('.editor-sel')).not.toBeNull();
+  });
+
+  it('Shift+ArrowLeft extends the in-editor selection', async () => {
+    const { client } = makeClient();
+    const { container } = await renderLoaded(client);
+    fireEvent.keyDown(textarea(), { key: 'ArrowRight' });
+    fireEvent.keyDown(textarea(), { key: 'ArrowLeft', shiftKey: true });
+    expect(container.querySelector('.editor-sel')).not.toBeNull();
   });
 
   it('undoes an edit with Cmd+Z', async () => {
