@@ -2,6 +2,8 @@
 
 ## ready
 
+* add the git branch to the files navigator tab metadata `<path> <branch>`
+
 * available harness models should be tab completable 
 
 * ssh tabs should be monitorable similar to harness tabs.
