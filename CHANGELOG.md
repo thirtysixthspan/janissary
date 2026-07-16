@@ -2,6 +2,17 @@
 
 All notable changes to this project are documented here.
 
+## [0.5.2] - 2026-07-16
+
+### Bug Fixes
+
+- package ai and scripts
+- push tags
+
+### Documentation
+
+- draft plans for three ready features
+
 ## [0.5.1] - 2026-07-16
 
 ### Bug Fixes
