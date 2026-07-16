@@ -41,6 +41,7 @@ function copyAgentImages() {
 copyAgentImages();
 
 export default defineConfig({
+  base: "/janissary/",
   title: "Janissary",
   description:
     "Documentation for Janissary, a tab-based terminal shell for working with AI agents — user guide and developer/contributor docs",
