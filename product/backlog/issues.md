@@ -2,11 +2,6 @@
 
 ## ready
 
-* delimit ACP model response with begin and end lines
-━━━━━━━━━━ BEGIN MODEL RESPONSE ━━━━━━━━━━
-....
-━━━━━━━━━━ END MODEL RESPONSE ━━━━━━━━━━
-
 * allow response withn multiple lines from ACP, for example:
 [SUMMARY]: Two parallel feature implementations underway:
 - **claude** (Opus): implementing git modified coloring for file navigator (mid-thought, has context ready)
