@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import { readFileSync, mkdtempSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { tmpdir } from 'node:os';
-import { parseCliArgs, usageText, appVersion, CliUsageError } from './cli-args.js';
+import { parseCliArgs, usageText, appVersion, appVersionNumber, CliUsageError } from './cli-args.js';
 
 let tmpDir: string;
 let tmpFile: string;
@@ -111,5 +111,13 @@ describe('appVersion', () => {
     const packagePath = path.join(import.meta.dirname, '..', 'package.json');
     const pkg = JSON.parse(readFileSync(packagePath, 'utf8')) as { name: string; version: string };
     expect(appVersion()).toBe(`${pkg.name} ${pkg.version}`);
+  });
+});
+
+describe('appVersionNumber', () => {
+  it('matches the bare version in package.json', () => {
+    const packagePath = path.join(import.meta.dirname, '..', 'package.json');
+    const pkg = JSON.parse(readFileSync(packagePath, 'utf8')) as { name: string; version: string };
+    expect(appVersionNumber()).toBe(pkg.version);
   });
 });

@@ -85,6 +85,8 @@ export type StateEvent = {
   profiles: string[];
   // Absolute path of the project directory the server was started against. Drives the titlebar.
   projectDir: string;
+  // App version (semver only, e.g. "0.5.4"). Drives the titlebar.
+  version: string;
 };
 export type PtyDataEvent = { t: 'pty'; id: string; data: string };
 export type PtyExitEvent = { t: 'pty-exit'; id: string; exitCode: number };

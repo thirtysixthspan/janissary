@@ -3,24 +3,24 @@ import { describe, it, expect } from 'vitest';
 import { useProjectTitle } from './useProjectTitle';
 
 describe('useProjectTitle', () => {
-  it('sets document.title to Janissary: <dir> for a non-empty path', () => {
-    renderHook(() => useProjectTitle('/some/project'));
-    expect(document.title).toBe('Janissary: /some/project');
+  it('sets document.title to Janissary (<version>): <dir> for a non-empty path', () => {
+    renderHook(() => useProjectTitle('/some/project', '1.2.3'));
+    expect(document.title).toBe('Janissary (1.2.3): /some/project');
   });
 
   it('leaves the title untouched when given an empty string', () => {
     document.title = 'unchanged';
-    renderHook(() => useProjectTitle(''));
+    renderHook(() => useProjectTitle('', '1.2.3'));
     expect(document.title).toBe('unchanged');
   });
 
   it('updates the title again when projectDir changes across renders', () => {
-    const { rerender } = renderHook(({ projectDir }) => useProjectTitle(projectDir), {
-      initialProps: { projectDir: '/first/project' },
+    const { rerender } = renderHook(({ projectDir, version }) => useProjectTitle(projectDir, version), {
+      initialProps: { projectDir: '/first/project', version: '1.2.3' },
     });
-    expect(document.title).toBe('Janissary: /first/project');
+    expect(document.title).toBe('Janissary (1.2.3): /first/project');
 
-    rerender({ projectDir: '/second/project' });
-    expect(document.title).toBe('Janissary: /second/project');
+    rerender({ projectDir: '/second/project', version: '1.2.3' });
+    expect(document.title).toBe('Janissary (1.2.3): /second/project');
   });
 });
