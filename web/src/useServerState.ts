@@ -26,8 +26,9 @@ export function useServerState(client: JanusClient, setters: Setters): void {
     setTabs, setActiveTab, setRoute, setTabNameMaxLength, setGlobalHistory, setSyntaxTheme, setTheme, setTasks, setProfiles, setRouteIndex, routeRef,
   } = setters;
   const [projectDir, setProjectDir] = useState('');
-  useProjectTitle(projectDir);
-  useEffect(() => client.onState((nextTabs, active, nextRoute, nextTabNameMaxLength, nextGlobalHistory, nextSyntaxTheme, nextTheme, nextTasks, nextProfiles, nextProjectDir) => {
+  const [version, setVersion] = useState('');
+  useProjectTitle(projectDir, version);
+  useEffect(() => client.onState((nextTabs, active, nextRoute, nextTabNameMaxLength, nextGlobalHistory, nextSyntaxTheme, nextTheme, nextTasks, nextProfiles, nextProjectDir, nextVersion) => {
     setTabs(nextTabs);
     setActiveTab(active);
     setRoute(nextRoute);
@@ -38,6 +39,7 @@ export function useServerState(client: JanusClient, setters: Setters): void {
     setTasks(nextTasks);
     setProfiles(nextProfiles);
     setProjectDir(nextProjectDir);
+    setVersion(nextVersion);
     // Highlight the first option when a chooser newly opens (or its command changes).
     const previous = routeRef.current;
     routeRef.current = nextRoute;

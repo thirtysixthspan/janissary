@@ -72,11 +72,11 @@ describe('JanusClient', () => {
       data: JSON.stringify({
         t: 'state', tabs: [], activeTab: 0, route: null, tabNameMaxLength: 20,
         globalHistory: [], syntaxTheme: 'monokai', theme: 'dark', tasks: [],
-        profiles: [], projectDir: '/tmp',
+        profiles: [], projectDir: '/tmp', version: '1.2.3',
       }),
     });
     expect(listener).toHaveBeenCalledTimes(1);
-    expect(listener).toHaveBeenCalledWith([], 0, null, 20, [], 'monokai', 'dark', [], [], '/tmp');
+    expect(listener).toHaveBeenCalledWith([], 0, null, 20, [], 'monokai', 'dark', [], [], '/tmp', '1.2.3');
   });
 
   it('onState unsubscribe stops the listener from being called', () => {
@@ -88,7 +88,7 @@ describe('JanusClient', () => {
       data: JSON.stringify({
         t: 'state', tabs: [], activeTab: 0, route: null, tabNameMaxLength: 20,
         globalHistory: [], syntaxTheme: 'monokai', theme: 'dark', tasks: [],
-        profiles: [], projectDir: '/tmp',
+        profiles: [], projectDir: '/tmp', version: '1.2.3',
       }),
     });
     expect(listener).not.toHaveBeenCalled();

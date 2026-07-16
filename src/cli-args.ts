@@ -87,8 +87,16 @@ Environment:
 `;
 }
 
-export function appVersion(): string {
+function readPackageInfo(): { name: string; version: string } {
   const packagePath = path.join(import.meta.dirname, '..', 'package.json');
-  const pkg = JSON.parse(readFileSync(packagePath, 'utf8')) as { name: string; version: string };
+  return JSON.parse(readFileSync(packagePath, 'utf8')) as { name: string; version: string };
+}
+
+export function appVersion(): string {
+  const pkg = readPackageInfo();
   return `${pkg.name} ${pkg.version}`;
+}
+
+export function appVersionNumber(): string {
+  return readPackageInfo().version;
 }

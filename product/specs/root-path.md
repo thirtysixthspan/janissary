@@ -43,4 +43,4 @@ The transcript already abbreviates a path under the user's home directory to `~`
 
 ### The titlebar shows the full path
 
-The application's window titlebar reads `Janissary: <full path>`, where `<full path>` is the root directory's real absolute path — the one exception where the `$root` shortcut is not applied. The titlebar identifies which project window this is among several open at once, so it names the root directory outright rather than abbreviating it.
+The application's window titlebar reads `Janissary (<version>): <full path>`, where `<version>` is the running app's version and `<full path>` is the root directory's real absolute path — the one exception where the `$root` shortcut is not applied. The titlebar identifies which project window this is among several open at once, and which version it is running, so it names the root directory outright rather than abbreviating it.
