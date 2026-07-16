@@ -67,6 +67,7 @@ function changelogSection(version, date) {
 
   const categories = { feat: [], fix: [], docs: [], refactor: [], chore: [], other: [] };
   for (const line of lines) {
+    if (isReleaseCommit(line)) continue;
     const match = line.match(/^(\w+)(?:\(.+?\))?!?:\s(.+)$/);
     if (match) {
       const type = match[1];
@@ -104,6 +105,10 @@ function changelogSection(version, date) {
   }
 
   return md.trimEnd() + '\n';
+}
+
+function isReleaseCommit(line) {
+  return /^\w+(\(.+?\))?!?:\s*bump version to \d+\.\d+\.\d+/i.test(line);
 }
 
 function lastTag() {
