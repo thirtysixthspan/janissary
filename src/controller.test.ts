@@ -903,6 +903,16 @@ describe('Controller ssh tab', () => {
     expect(capturedKill).toHaveBeenCalled();
   });
 
+  it('registers a screen reader for the ssh PTY so the tab is monitorable', async () => {
+    vi.useFakeTimers();
+    const { c } = makeController();
+    c.dispatch('ssh devbox');
+    messageBus.emit('pty', { type: 'data', id: 'mock-pty-1', data: 'ssh screen' });
+    await vi.advanceTimersByTimeAsync(1001);
+    expect(c.managers.harness.latestScreenText('devbox')?.text).toBe('ssh screen');
+    vi.useRealTimers();
+  });
+
   it('ssh with no destination produces a usage error in the transcript (not a tab)', () => {
     const { c } = makeController();
     c.dispatch('ssh');
