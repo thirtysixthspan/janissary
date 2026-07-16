@@ -1,4 +1,4 @@
-import type { AcpInfo, AcpSession, LogEntry, MonitorSuggestion, MonitorTarget } from '../types.js';
+import type { AcpInfo, AcpSession, LogEntry, MonitorTarget } from '../types.js';
 import type { Subscription } from '../bus.js';
 import { messageBus } from '../bus.js';
 import { loadPersona, type Persona } from '../personas.js';
@@ -18,11 +18,11 @@ import type { ConnectionView } from '../protocol.js';
 import type { Managers } from '../managers.js';
 import { notify } from '../notifications.js';
 import { isRateLimitError } from '../acp/rate-limit.js';
+import { SUGGESTION_PREFIX, buildSuggestion, formatInlineSuggestion } from './suggestion.js';
+
+export { SUGGESTION_PREFIX } from './suggestion.js';
 
 export const MONITOR_FLUSH_MS = 30_000;
-
-// Marks inline suggestion entries so monitors never feed on their own output.
-export const SUGGESTION_PREFIX = '💡';
 
 export type MonitorSub = {
   owner: string;
@@ -180,12 +180,9 @@ export class MonitorManager {
 
   private deliver(reg: MonitorSub, about: string, parsed: { text: string; command?: string }): void {
     reg.delivered += 1;
-    const suggestion: MonitorSuggestion = {
-      ...parsed, id: `s-${++this.counter}`, timestamp: Date.now(), persona: reg.persona.name, about,
-    };
+    const suggestion = buildSuggestion(parsed, reg.persona.name, about, `s-${++this.counter}`);
     if (reg.inline) {
-      const command = suggestion.command ? `\n${suggestion.command}` : '';
-      this.managers.tab.append(reg.owner, { input: '', output: `${SUGGESTION_PREFIX} ${reg.persona.name}: ${suggestion.text}${command}` });
+      this.managers.tab.append(reg.owner, { input: '', output: formatInlineSuggestion(reg.persona.name, suggestion) });
       return;
     }
     pushSuggestion(this.managers, reg.persona.name, targetColor(this.managers.tab.tabs, reg.targets), suggestion);
