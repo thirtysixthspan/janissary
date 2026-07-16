@@ -2,12 +2,6 @@
 
 ## ready
 
-* `harness launch` dialog that allows selection of harness and all flags.
-
-* add the harness model and effort level in the metadata: `<path> <model> <effort> <flags>`
-
-* once a permission prompt is detected, capture the screen and save it as a file in .janissary/perimission_prompts and then add a link to the notification that will open the file in an editor tab.
-
 * tasks for the task picker should be draft from two places - taken from the /ai/tasks directory in the Janissary codebase and taken from the /ai/tasks directory in the working directory of the project.
 
 * Update the AI tasks so that they reference the product directory in the working directory of the project, not the product directory of the Janissary codebase. 
