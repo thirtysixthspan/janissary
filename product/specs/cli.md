@@ -36,7 +36,7 @@ When `janus` fails to start, stderr shows `<name> <version> — failed to start:
 
 - The requested port is already in use: the message names the port and suggests picking another with `--port=<n>` or omitting `--port` to choose one automatically.
 - The web UI bundle is missing (a dev checkout where the web assets have not been built): the message points at `npm run build:web` or `npm start`.
-- Another `janus` instance is already running against the same target directory: the message names the directory and the live process ID, and suggests `janus <other-directory>` to run a second instance elsewhere.
+- Another `janus` instance is already running against the same target directory: the message names the directory and the live process ID, suggests `janus <other-directory>` to run a second instance elsewhere, and names the lock file's path with instructions to delete it if the user is sure no other instance is actually running.
 
 Any other failure falls back to the underlying error's message with the same banner. Setting the `JANUS_DEBUG=1` environment variable additionally prints the full stack trace after the message.
 

@@ -23,6 +23,12 @@ describe('acquireLock', () => {
     expect(() => acquireLock(projectDir)).toThrow(/already running/);
   });
 
+  it('throws with guidance on how to remove the lock file', () => {
+    acquireLock(projectDir);
+    const file = path.join(projectDir, '.janissary', 'lock');
+    expect(() => acquireLock(projectDir)).toThrow(`delete ${file} to clear the lock`);
+  });
+
   it('succeeds when the lock file contains a pid that is not alive', () => {
     const dir = path.join(projectDir, '.janissary');
     mkdirSync(dir, { recursive: true });
