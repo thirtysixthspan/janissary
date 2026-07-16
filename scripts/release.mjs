@@ -108,7 +108,8 @@ function changelogSection(version, date) {
 
 function lastTag() {
   try {
-    return capture('git', ['describe', '--tags', '--abbrev=0']);
+    const tags = capture('git', ['tag', '--sort=-v:refname']);
+    return tags ? tags.split('\n')[0] : null;
   } catch {
     return null;
   }
