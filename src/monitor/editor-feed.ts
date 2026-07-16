@@ -1,8 +1,8 @@
 import { readFileSync } from 'node:fs';
-import { createPatch } from 'diff';
 import type { LogEntry, MonitorTarget } from '../types.js';
 import type { Managers } from '../managers.js';
 import { resolveTargetTabs } from './targets.js';
+import { diffFeedEntry } from './feed-diff.js';
 
 // Cap on a single editor entry's size (first-seen full content or a subsequent diff), so one edit to
 // a large file never floods a monitor with more than roughly a screenful of change.
@@ -25,14 +25,8 @@ export function editorFeedEntries(
     if (tab.view !== 'editor' || !tab.editor) continue;
     const current = currentContent(managers, tab.editorDraft, tab.editor.url);
     if (current === undefined) continue;
-    const previous = editorSeen.get(tab.label);
-    editorSeen.set(tab.label, current);
-    if (previous === undefined) {
-      if (current !== '') entries.push({ tabLabel: tab.label, entry: { input: '', output: cap(current) } });
-      continue;
-    }
-    if (previous === current) continue;
-    entries.push({ tabLabel: tab.label, entry: { input: '', output: cap(createPatch(tab.editor.name, previous, current)) } });
+    const entry = diffFeedEntry(editorSeen, tab.label, current, tab.editor.name, cap);
+    if (entry) entries.push(entry);
   }
   return entries;
 }

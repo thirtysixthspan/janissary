@@ -1,7 +1,7 @@
-import { createPatch } from 'diff';
 import type { LogEntry, MonitorTarget } from '../types.js';
 import type { Managers } from '../managers.js';
 import { resolveTargetTabs } from './targets.js';
+import { diffFeedEntry } from './feed-diff.js';
 
 // Cap on a single page entry's size (first-seen full content or a subsequent diff), matching the
 // editor feed's cap so one page's visible text never floods a monitor with more than roughly a
@@ -24,14 +24,8 @@ export function pageFeedEntries(
   for (const tab of resolveTargetTabs(managers.tab.tabs, targets)) {
     if (tab.view !== 'page' || !tab.pageSnapshot) continue;
     const current = tab.pageSnapshot.text;
-    const previous = pageSeen.get(tab.label);
-    pageSeen.set(tab.label, current);
-    if (previous === undefined) {
-      if (current !== '') entries.push({ tabLabel: tab.label, entry: { input: '', output: cap(current) } });
-      continue;
-    }
-    if (previous === current) continue;
-    entries.push({ tabLabel: tab.label, entry: { input: '', output: cap(createPatch(tab.page?.domain ?? tab.label, previous, current)) } });
+    const entry = diffFeedEntry(pageSeen, tab.label, current, tab.page?.domain ?? tab.label, cap);
+    if (entry) entries.push(entry);
   }
   return entries;
 }
