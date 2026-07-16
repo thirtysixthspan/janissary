@@ -28,7 +28,7 @@
     "check:full": "npm run typecheck && npm run lint && npm run test && npm run lint:css && npm run quality && npm run duplication && npm run knip",
     "lint:files": "node scripts/lint-files.mjs",
     "format": "prettier --write .",
-    "postinstall": "chmod +x node_modules/node-pty/prebuilds/*/spawn-helper",
+    "postinstall": "node scripts/postinstall.mjs",
     "playwright:install-chromium": "npx playwright install chromium",
     "test:server": "vitest run --project server",
     "test:watch": "vitest --project server --project client",
