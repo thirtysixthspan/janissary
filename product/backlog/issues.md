@@ -8,8 +8,6 @@
 
 * .janissary/agent-names.json and .janissary/harness-models.json in the project should override those provided by the package. document this in user documentation.
 
-* update the lock error message to explain how to remove the lock file.
-
 * file navigator and notifications tab labels when in the same sidebar should be fixed width, like normal tabs, and also be renameable like normal tabs. if possible reuse the same underlying code for the tab implementation.
 
 
