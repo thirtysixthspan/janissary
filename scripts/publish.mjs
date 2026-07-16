@@ -55,6 +55,7 @@ if (dryRun) {
 
 run('npm', ['publish']);
 run('git', ['push', '--follow-tags']);
+run('git', ['push', '--tags']);
 run('gh', ['release', 'create', tag, '--generate-notes', '--title', tag]);
 
 console.log(`\nPublished ${tag}`);
