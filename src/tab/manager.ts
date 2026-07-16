@@ -18,6 +18,7 @@ import { rehydrateTabs } from './rehydrate.js';
 import { buildAgentStateFromTab } from './agent-state.js';
 import { recordLeavingActiveTab, popFocusHistory, mostRecentFileTreeLabel } from './focus-history.js';
 import { applyDock } from './dock.js';
+import { capLog, finishRunningEntry } from './transcript.js';
 
 export class TabManager {
   tabs: Tab[] = [];
@@ -260,10 +261,7 @@ export class TabManager {
   finishRunning(label: string, output: string): void {
     const t = this.tabs.find((x) => x.label === label);
     if (t) {
-      const log = [...t.log];
-      const index = log.findLastIndex((e) => e.running);
-      if (index !== -1) log[index] = { ...log[index], output, running: false };
-      t.log = log;
+      t.log = finishRunningEntry(t.log, output);
       this.deleteBusy(label);
       this.persist(this.buildAgentState(t));
     }
@@ -277,8 +275,7 @@ export class TabManager {
   }
 
   private capLog(log: LogEntry[]): LogEntry[] {
-    const max = getConfig().transcriptMaxLines;
-    return log.length > max ? log.slice(log.length - max) : log;
+    return capLog(log, getConfig().transcriptMaxLines);
   }
 
   append(label: string, entry: LogEntry): void {
