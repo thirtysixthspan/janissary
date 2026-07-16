@@ -1,6 +1,6 @@
 # Merge a Workspaced Change to master
 
-Your job: take the code changes present in this workspaced tab, package them into a pull request against `master` on GitHub, and **merge it once there are no conflicts and all checks pass** — rebasing past any conflicts.
+Your job: take the code changes present in this workspaced tab, package them into a pull request against `master` on GitHub, and **merge it once there are no conflicts** — rebasing past any conflicts. Do not wait on PR checks before merging.
 
 **No AI attribution — anywhere.** Never credit an AI agent as an author or contributor in anything this task produces. That means: no `Co-Authored-By:` trailers naming Claude or any other AI, no “Generated with Claude Code” (or similar) lines or badges, and no AI authorship notes in code, comments, docs, spec files, plan files, commit messages, or PR titles and bodies. This overrides any default convention that appends such attribution. The commit's configured git author is the only authorship ever recorded.
 
@@ -98,7 +98,7 @@ GitHub computes conflict status asynchronously; `pr:check-mergeable` polls until
 ./scripts/run.mjs pr-check-mergeable "$BRANCH" "$OWNER_REPO"
 ```
 
-- `MERGEABLE` → **no conflicts with master.** Go to **Step 7 (wait for checks)**.
+- `MERGEABLE` → **no conflicts with master.** Go to **Step 7 (merge)**.
 - `CONFLICTING` → **conflicts with master.** Go to **Step 6 (resolve conflicts)**.
 
 ---
@@ -111,31 +111,16 @@ GitHub computes conflict status asynchronously; `pr:check-mergeable` polls until
 ./scripts/run.mjs pr-rebase origin my-branch-name
 ```
 
-- **Exit 0** → rebased cleanly and pushed. Re-check conflict status (Step 5); when `MERGEABLE`, go to Step 7 (wait for checks).
+- **Exit 0** → rebased cleanly and pushed. Re-check conflict status (Step 5); when `MERGEABLE`, go to Step 7 (merge).
 - **Exit 2** → it stopped on conflicts and listed the files. Open each, resolve the markers correctly (preserve the intent of *both* sides; never blindly drop master's changes), then **re-run the same command** — it continues the in-progress rebase.
 
 Run this loop **at most 5 times**. If the PR is **still conflicting after 5 attempts**, **STOP**: report that conflicts could not be resolved automatically and leave the PR open for a human.
 
 ---
 
-## Step 7 — Wait for all checks to pass
+## Step 7 — Merge the PR
 
-The PR is `MERGEABLE` (no conflicts). Before merging, **every required check must pass**:
-
-```bash
-./scripts/run.mjs pr-wait-checks "$BRANCH" "$OWNER_REPO"
-```
-
-It blocks until every check finishes and **exits non-zero** if any check failed (a PR with no checks counts as passed).
-
-- All checks **passed** → go to **Step 8 (merge)**.
-- Any check **failed** → **STOP.** Report which checks failed and leave the PR open for a human. Never merge on a failing check.
-
----
-
-## Step 8 — Merge the PR
-
-The PR is `MERGEABLE` and all checks have passed. Squash-merge it and delete the remote branch:
+The PR is `MERGEABLE` (no conflicts). Squash-merge it and delete the remote branch — **do not wait on PR checks**; merge as soon as the PR is mergeable:
 
 ```bash
 ./scripts/run.mjs pr-merge "$BRANCH" "$OWNER_REPO"
@@ -145,7 +130,7 @@ If the merge fails, report the error and leave the PR open for a human.
 
 ---
 
-## Step 9 — Report
+## Step 8 — Report
 
 Give the user a short report in this exact shape:
 
@@ -153,8 +138,7 @@ Give the user a short report in this exact shape:
 Branch:         <branch>
 PR:             <url> (#<number>)
 Conflicts:      none | resolved in <n> rebase attempt(s) | unresolved after 5 attempts
-PR checks:      passed | failed (see error above)
-Status:         merged | open (checks failed — see error above) | open (merge failed — see error above) | open (conflicts unresolved after 5 attempts)
+Status:         merged | open (merge failed — see error above) | open (conflicts unresolved after 5 attempts)
 ```
 
 Keep it brief. Done.
