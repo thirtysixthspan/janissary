@@ -302,7 +302,7 @@ describe('App sidebar docking', () => {
         0, null, 16, [], 'github-dark', 'dark', [],
       );
     });
-    const stripLabels = [...container.querySelectorAll(':scope .tabstrip .tab')].map((el) => el.textContent);
+    const stripLabels = [...container.querySelectorAll(':scope .app-center .tabstrip .tab')].map((el) => el.textContent);
     expect(stripLabels.some((t) => t?.includes('files'))).toBe(false);
     expect(container.querySelector('.sidebar-left')).not.toBeNull();
   }, 15_000);
@@ -322,7 +322,7 @@ describe('App sidebar docking', () => {
         0, null, 16, [], 'github-dark', 'dark', [],
       );
     });
-    fireEvent.click(container.querySelector(':scope .sidebar-left .sidebar-tab-close')!);
+    fireEvent.click(container.querySelector(':scope .sidebar-left .tab-close')!);
     expect(sendMock).toHaveBeenCalledWith({ method: 'closeTab', params: { index: 1 } });
   }, 15_000);
 });

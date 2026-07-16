@@ -150,7 +150,7 @@ export function App() {
   if (!current) return <div className="app" style={{ padding: 16, color: 'var(--muted)' }}>Connecting…</div>;
 
   return (
-    <AppShell tabs={tabs} client={client} dropRef={dropReference}>
+    <AppShell tabs={tabs} client={client} dropRef={dropReference} tabNameMaxLength={tabNameMaxLength}>
       <TabStrip
         tabs={actionEntries.map((e) => e.tab)}
         activeTab={actionEntries.findIndex((e) => e.index === activeTab)}
