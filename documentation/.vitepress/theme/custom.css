@@ -20,19 +20,66 @@
   width: 256px;
 }
 
-/* The animated archer in the landing-page hero: blown up from its 128px source to match the
-   hero text block beside it, with the chunky pixelation kept sharp on purpose. */
+/* The landing-page hero: always use the stacked mobile layout (image above the text), never the
+   side-by-side row VitePress switches to past 960px, and show the screenshot at double the
+   default mobile size. !important overrides VitePress's own scoped breakpoint rules, which
+   otherwise win by source order at matching viewport widths. */
+
+.VPContent {
+  padding-top: 0 !important;
+}
+.VPHome .VPHero .container {
+  flex-direction: column !important;
+  text-align: center !important;
+}
+.VPHome .VPHero .text {
+  text-align: center !important;
+  margin: auto;
+}
+@media (min-width: 960px) {
+  .VPHero.has-image .name, .VPHero.has-image .text {
+    margin: auto !important;
+  }
+}
+
+.VPHome .VPHero .main {
+  order: 2 !important;
+  margin: auto;
+}
+
+.VPHome .VPHero .image {
+  order: 1 !important;
+  flex-grow: 0 !important;
+  margin: 0 auto 24px !important;
+}
+
+.VPHome .VPHero .image-container {
+  height: 200px;
+  margin: 0 auto !important;
+  transform: none !important;
+  max-width: none !important;
+  max-height: none !important;
+}
+
 .VPHome .VPHero .image-src {
-  width: min(460px, 100%);
-  max-width: 460px;
-  max-height: 460px;
-  height: auto;
-  image-rendering: pixelated;
+  width: auto;
+  height: 100%;
+  max-width: none !important;
+  max-height: none !important;
 }
 
 @media (min-width: 960px) {
-  .VPHome .VPHero .image-container {
-    width: 460px;
-    height: 460px;
+  .VPHome .VPHero .image-container, .VPHome .VPHero .image-src {
+    height: 460px !important;
   }
+}
+@media (min-width: 640px) {
+  .VPHome .VPHero .image-container, .VPHome .VPHero .image-src {
+    height: 300px;
+  }
+}
+
+
+.VPHero.has-image .actions {
+  justify-content: center !important;
 }

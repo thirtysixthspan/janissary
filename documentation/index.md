@@ -5,8 +5,8 @@ hero:
   text: An Agentic Working Environment
   tagline: An interface to enhance your creative workflow by supplementing and automating the tedius parts of your work.
   image:
-    src: /agents/archer-south.png
-    alt: Animated pixel-art Janissary archer firing a bow
+    src: /screenshots/demo.png
+    alt: A screenshot of the Janissary application
   actions:
     - theme: brand
       text: Why Janissary?
