@@ -36,7 +36,13 @@ The shell uses the following rules, in order of precedence:
     - Completes browser subcommands.
     - For commands requiring a window ID (e.g., `browser use`, `browser window close`), completes against the current tab's open browser window IDs.
 
-### 4. Filesystem Path Completion
+### 4. Harness Model (`harness ... --model`)
+
+- **Context:** The value following a `--model` flag on a `harness` command.
+- **Candidates:** The known model names for the harness named earlier on the same command line.
+- **Behavior:** The `--model` flag may appear anywhere after the harness name, alongside the command's other flags and options.
+
+### 5. Filesystem Path Completion
 
 - **Context:** Default fallback for all other positions.
 - **Behavior:**

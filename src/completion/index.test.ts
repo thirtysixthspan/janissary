@@ -191,3 +191,12 @@ describe('completeCommandLine — syntax theme', () => {
     expect(r.matches).toContain('nord');
   });
 });
+
+describe('completeCommandLine — harness model', () => {
+  const noFiles = '/no/such/dir/xyz';
+
+  it('completes a model name after --model for the named harness', () => {
+    const r = completeCommandLine('harness claude --model claude-s', 32, noFiles);
+    expect(r.newInput).toBe('harness claude --model claude-sonnet-5 ');
+  });
+});
