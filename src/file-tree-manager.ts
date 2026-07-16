@@ -1,4 +1,4 @@
-import { watch, statSync, renameSync, rmSync, type FSWatcher } from 'node:fs';
+import { statSync, renameSync, rmSync, type FSWatcher } from 'node:fs';
 import path from 'node:path';
 import { messageBus } from './bus.js';
 import { buildRows, markChanged, isSameOrDescendantPath, parentPath } from './file-tree.js';
@@ -8,6 +8,7 @@ import { expandUserPath } from './paths.js';
 import { resolveTarget } from './commands/resolve-target.js';
 import { openOrRetarget, type OpenPort } from './file-tree-open.js';
 import { applyStackMove, type MoveEntry, type UndoRedoResult } from './file-tree-moves.js';
+import { watchDir, unwatchDir } from './file-tree-watch.js';
 import type { Managers } from './managers.js';
 
 const DEBOUNCE_MS = 100;
@@ -209,20 +210,11 @@ export class FileTreeManager {
   }
 
   private watchDir(label: string, absDir: string, relPath: string): void {
-    const state = this.tabs.get(label);
-    if (!state || state.watchers.has(relPath)) return;
-    try {
-      state.watchers.set(relPath, watch(absDir, () => this.scheduleRebuild(label)));
-    } catch {
-      // Exotic filesystems, fd limits, races — the tree still works, just refreshes on toggle.
-    }
+    watchDir(this.tabs, label, absDir, relPath, () => this.scheduleRebuild(label));
   }
 
   private unwatchDir(state: FilesTabState, relPath: string): void {
-    const watcher = state.watchers.get(relPath);
-    if (!watcher) return;
-    try { watcher.close(); } catch { /* already gone */ }
-    state.watchers.delete(relPath);
+    unwatchDir(state, relPath);
   }
 
   private scheduleRebuild(label: string): void {
