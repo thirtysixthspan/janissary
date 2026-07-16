@@ -70,7 +70,8 @@ instead it **retargets the existing navigator** — the most recently focused on
 open — to the clicked tab's working directory, replacing its root in place. The retargeted tab keeps
 its identity, its position, and its dock placement (a docked navigator stays docked where it was);
 its expanded directories, and its move undo/redo history, are cleared, since they no longer apply to
-the new root. Either way — fresh open or retarget — focus moves to the resulting navigator.
+the new root. Either way — fresh open or retarget — focus stays on the tab whose button was clicked;
+opening or retargeting the navigator does not steal focus.
 
 ### Tree contents
 

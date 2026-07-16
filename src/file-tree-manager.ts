@@ -130,7 +130,7 @@ export class FileTreeManager {
   // Open a file navigator at `label`'s cwd (the metadata-row 📁 button). If a file-tree tab is
   // already open, retarget the most-recently-focused one to that cwd in place — preserving its
   // identity, dock placement, and strip position; otherwise open a fresh tree docked in the left
-  // sidebar. Either way, focus the resulting file-tree tab. See `file-tree-open.ts`.
+  // sidebar. Either way, focus stays on the tab whose button was clicked. See `file-tree-open.ts`.
   openOrRetarget(label: string): void {
     openOrRetarget(this.openPort(), label);
   }
