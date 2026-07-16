@@ -13,9 +13,11 @@ vi.mock('node:fs', async (importOriginal) => {
 });
 
 const changedPathsMock = vi.fn((_root: string): Promise<Set<string>> => Promise.resolve(new Set<string>()));
+const currentBranchMock = vi.fn((_root: string): Promise<string | undefined> => Promise.resolve(undefined));
 
 vi.mock('./git-status.js', () => ({
   changedPaths: (...args: [string]) => changedPathsMock(...args),
+  currentBranch: (...args: [string]) => currentBranchMock(...args),
 }));
 
 const { FileTreeManager } = await import('./file-tree-manager.js');
@@ -39,6 +41,8 @@ describe('FileTreeManager', () => {
     watchMock.mockReset();
     changedPathsMock.mockReset();
     changedPathsMock.mockResolvedValue(new Set());
+    currentBranchMock.mockReset();
+    currentBranchMock.mockResolvedValue(undefined);
     watchMock.mockImplementation(() => {
       const close = vi.fn();
       closeFns.push(close);
@@ -646,7 +650,11 @@ describe('FileTreeManager', () => {
       const manager = run();
       manager.open('files', 'janus');
       const label = navLabel();
-      await vi.waitFor(() => expect(changedPathsMock).toHaveBeenCalledTimes(1));
+      await vi.waitFor(() => {
+        const rows = tabs.find((t) => t.label === label)!.files!.rows;
+        expect(rows.find((r) => r.path === 'src')?.changed).toBe(true);
+      });
+      expect(changedPathsMock).toHaveBeenCalledTimes(1);
       manager.toggle(label, 'src');
       expect(changedPathsMock).toHaveBeenCalledTimes(1);
       const rows = tabs.find((t) => t.label === label)!.files!.rows;
@@ -723,6 +731,65 @@ describe('FileTreeManager', () => {
       await Promise.resolve();
       await Promise.resolve();
       expect(tabs.find((t) => t.label === label)!.files!.rows.find((r) => r.path === 'sub')?.changed).toBeUndefined();
+    });
+  });
+
+  describe('branch metadata', () => {
+    const navLabel = () => tabs.find((t) => t.label.startsWith('navigator'))!.label;
+
+    it('applies the branch once the async git refresh resolves', async () => {
+      currentBranchMock.mockResolvedValue('main');
+      const manager = run();
+      manager.open('files', 'janus');
+      const label = navLabel();
+      expect(tabs.find((t) => t.label === label)!.files!.branch).toBeUndefined();
+      await vi.waitFor(() => {
+        expect(tabs.find((t) => t.label === label)!.files!.branch).toBe('main');
+      });
+    });
+
+    it('reroot clears the previous branch and triggers a fresh refresh', async () => {
+      mkdirSync(path.join(root, 'sub'));
+      currentBranchMock.mockResolvedValue('main');
+      const manager = run();
+      manager.open('files', 'janus');
+      const label = navLabel();
+      await vi.waitFor(() => expect(currentBranchMock).toHaveBeenCalledTimes(1));
+      currentBranchMock.mockResolvedValue('feature');
+      manager.reroot(label, 'sub');
+      expect(tabs.find((t) => t.label === label)!.files!.branch).toBeUndefined();
+      await vi.waitFor(() => {
+        expect(tabs.find((t) => t.label === label)!.files!.branch).toBe('feature');
+      });
+    });
+
+    it('discards a branch refresh that resolves after its tab was closed', async () => {
+      const deferred = Promise.withResolvers<string | undefined>();
+      currentBranchMock.mockImplementation(() => deferred.promise);
+      const manager = run();
+      manager.open('files', 'janus');
+      const label = navLabel();
+      manager.closeTab(label);
+      deferred.resolve('main');
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(tabs.find((t) => t.label === label)!.files!.branch).toBeUndefined();
+    });
+
+    it('discards a branch refresh whose root changed (reroot) before it resolved', async () => {
+      mkdirSync(path.join(root, 'sub'));
+      const deferred = Promise.withResolvers<string | undefined>();
+      currentBranchMock
+        .mockImplementationOnce(() => deferred.promise)
+        .mockResolvedValue(undefined);
+      const manager = run();
+      manager.open('files sub', 'janus');
+      const label = navLabel();
+      manager.reroot(label);
+      deferred.resolve('stale-branch');
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(tabs.find((t) => t.label === label)!.files!.branch).toBeUndefined();
     });
   });
 });

@@ -133,6 +133,7 @@ export function FileTreeTab({ files, client, index, dock, autoFocus = true, drop
       <div className="files-header">
         <div className="files-meta">
           <span className="files-loc">{files.root}</span>
+          {files.branch && <span className="files-branch">{files.branch}</span>}
         </div>
         <div className="files-actions">
           {dock && (

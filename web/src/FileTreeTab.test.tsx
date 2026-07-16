@@ -52,6 +52,20 @@ describe('FileTreeTab', () => {
     expect(screen.getByText('README.md').className).not.toContain('files-name--changed');
   });
 
+  it('renders the branch name in .files-branch when present', () => {
+    const client = { send: vi.fn() } as unknown as JanusClient;
+    const { container } = render(<FileTreeTab files={makeFiles({ branch: 'main' })} client={client} index={0} />);
+    const branchEl = container.querySelector('.files-branch');
+    expect(branchEl).not.toBeNull();
+    expect(branchEl!.textContent).toBe('main');
+  });
+
+  it('renders no .files-branch element when branch is undefined', () => {
+    const client = { send: vi.fn() } as unknown as JanusClient;
+    const { container } = render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+    expect(container.querySelector('.files-branch')).toBeNull();
+  });
+
   it('click on a directory row selects but does not toggle', () => {
     const send = vi.fn();
     const client = { send } as unknown as JanusClient;
