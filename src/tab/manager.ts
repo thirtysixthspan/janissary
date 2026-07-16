@@ -2,7 +2,7 @@
 import type { Tab, LogEntry, AgentState, ImageView, MarkdownView, EditorView, PageView, FileTreeView } from '../types.js';
 import type { ConnectionView, ScheduleView, TabView } from '../protocol.js';
 import {
-  makeTab, distinctColor, insertTabInGroup, stripComments,
+  makeTab, distinctColor, insertTabInGroup,
 } from './index.js';
 import { saveAgentState, listAgentStates } from '../agent/state.js';
 import { abbreviatePath } from '../paths.js';
@@ -19,6 +19,7 @@ import { recordLeavingActiveTab, popFocusHistory, mostRecentFileTreeLabel } from
 import { applyDock } from './dock.js';
 import { capLog, finishRunningEntry } from './transcript.js';
 import { computeReorder, removeTabAt } from './reorder.js';
+import { recordHistory } from './history.js';
 
 export class TabManager {
   tabs: Tab[] = [];
@@ -300,15 +301,7 @@ export class TabManager {
   }
 
   recordHistory(index: number, text: string): string {
-    const trimmed = stripComments(text);
-    const tab = this.tabs[index];
-    if (tab) {
-      if (trimmed && tab.cmdHistory.at(-1) !== trimmed) {
-        tab.cmdHistory = [...tab.cmdHistory, trimmed].slice(-100);
-      }
-      tab.cmdHistoryIdx = -1;
-    }
-    return trimmed;
+    return recordHistory(this.tabs[index], text);
   }
 
   shorten(p: string): string {
