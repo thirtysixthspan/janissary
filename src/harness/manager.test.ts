@@ -172,6 +172,29 @@ describe('HarnessManager.latestScreenText', () => {
   });
 });
 
+describe('HarnessManager.registerScreenReader', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    recorderMock.instances.length = 0;
+  });
+
+  afterEach(() => {
+    messageBus.emit('pty', { type: 'exit', id: 'pty-1', exitCode: 0 });
+    vi.useRealTimers();
+    vi.clearAllMocks();
+  });
+
+  it('lets latestScreenText read a PTY not spawned via run/spawnTab (the ssh case)', async () => {
+    const { managers, tabs } = makeManagers();
+    const manager = new HarnessManager(managers);
+    tabs.push({ label: 'ssh', harness: { name: 'ssh', program: 'ssh', ptyId: 'pty-1', status: 'running' } } as unknown as Tab);
+    manager.registerScreenReader('pty-1');
+    messageBus.emit('pty', { type: 'data', id: 'pty-1', data: 'ssh screen' });
+    await vi.advanceTimersByTimeAsync(1001);
+    expect(manager.latestScreenText('ssh')?.text).toBe('ssh screen');
+  });
+});
+
 describe('HarnessManager auto-approve', () => {
   const GATE = ' Do you want to proceed?\r\n ❯ 1. Yes\r\n   2. No\r\n\r\n Esc to cancel';
 

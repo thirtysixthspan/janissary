@@ -41,6 +41,14 @@ export class HarnessManager {
     return this.screenReaders.get(tab.harness.ptyId)?.latestCapture();
   }
 
+  // Register a screen reader for a PTY this manager did not spawn itself (currently: ssh tabs,
+  // which reuse the harness-view tab shape but spawn their PTY directly via SshManager). No
+  // capture handler — auto-approve and busy detection are harness-specific and don't apply.
+  registerScreenReader(id: string): void {
+    const dims = this.managers.pty.spawnDimensions();
+    this.screenReaders.set(id, new HarnessScreenReader(id, dims.cols, dims.rows));
+  }
+
   // Handle a `harness <name> [as <label>] [-w] [--offline] [--model <name>] [--effort <level>]`
   // command. Returns an error message to surface in the creator's transcript, or undefined once
   // the harness tab has been opened.
