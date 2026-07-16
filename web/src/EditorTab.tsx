@@ -154,9 +154,6 @@ export const EditorTab = forwardRef<EditorTabHandle, { editor: EditorView; clien
 
   const onKeyDown = (e: React.KeyboardEvent) => {
     if (e.nativeEvent.isComposing) return;
-    // Shift+Left/Right switches tabs everywhere else in the app (see useWindowKeys); let it
-    // bubble there instead of extending the selection, so the editor doesn't shadow that binding.
-    if (e.shiftKey && !e.ctrlKey && !e.metaKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) return;
     // Nothing typed in the editor may reach App's global bindings (Ctrl+T, Ctrl+R, Ctrl+arrows).
     e.stopPropagation();
     const action = actionForKey(e);

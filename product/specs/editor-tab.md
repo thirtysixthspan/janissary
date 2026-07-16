@@ -49,9 +49,9 @@ on-disk size. Subsequent saves overwrite the file as usual.
 Printable characters (letters, digits, symbols, and space) and special keys (arrows, page up/down,
 home, end, enter, tab, backspace, delete, escape) are handled by the editor. Pressing and holding
 a printable key repeats the character — the key press is applied directly to the buffer on each
-repeat event. Shift+←/→ is the one exception: like everywhere else in the app, it switches tabs
-(see Tabs) rather than extending the selection horizontally. Shift+↑/↓ is unaffected and still
-extends the selection vertically, since there is no competing tab-switch binding on those keys.
+repeat event. Shift+←/→ extends the selection horizontally, exactly like Shift+↑/↓ extends it
+vertically; switching tabs while the editor has focus uses Cmd+Shift+[ / Cmd+Shift+] instead (see
+Tabs), so the horizontal and vertical arrow pairs behave consistently.
 
 A line too long to fit the editor's width soft-wraps across several visual rows. Pressing ↑/↓ (or
 Ctrl+P/Ctrl+N) moves the cursor one visual row at a time, so a wrapped line takes as many presses
