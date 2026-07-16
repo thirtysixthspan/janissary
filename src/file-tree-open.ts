@@ -16,7 +16,8 @@ export interface OpenPort {
 // Open a file navigator at `label`'s cwd (the metadata-row 📁 button). If a file-tree tab is already
 // open, retarget the most-recently-focused one to that cwd in place — preserving its identity, dock
 // placement, and strip position; otherwise open a fresh tree docked in the left sidebar. Either way,
-// focus the resulting file-tree tab.
+// focus stays on the tab whose button was clicked — opening or retargeting the navigator must not
+// steal focus.
 export function openOrRetarget(port: OpenPort, label: string): void {
   const cwd = port.managers.tab.cwdOf(label) ?? process.cwd();
   let stat;
@@ -26,8 +27,7 @@ export function openOrRetarget(port: OpenPort, label: string): void {
   const existing = port.managers.tab.mostRecentFileTreeLabel();
   if (existing) retarget(port, existing, cwd);
   else openFresh(port, cwd);
-  const focusLabel = existing ?? port.managers.tab.cur().label;
-  port.managers.tab.setActiveTab(port.managers.tab.findIndex(focusLabel));
+  port.managers.tab.setActiveTab(port.managers.tab.findIndex(label));
 }
 
 // Open a fresh tree rooted at `root`, docked left by default (unlike the bare `files` command's

@@ -571,14 +571,15 @@ describe('FileTreeManager', () => {
     expect(closeFns[1]).toHaveBeenCalled();
   });
 
-  it('openOrRetarget opens a fresh, left-docked tree at the tab cwd and focuses it when none exists', () => {
+  it('openOrRetarget opens a fresh, left-docked tree at the tab cwd but leaves the originating tab focused', () => {
     const manager = run();
-    manager.openOrRetarget('janus');
+    activeTab = 1; // simulate clicking the button from "other", not the first tab
+    manager.openOrRetarget('other');
     const nav = tabs.find((t) => t.files);
     expect(nav).toBeDefined();
-    expect(nav!.files!.root).toBe(root);
+    expect(nav!.files!.root).toBe(otherRoot);
     expect(nav!.dock).toBe('left');
-    expect(activeTab).toBe(tabs.indexOf(nav!));
+    expect(tabs[activeTab].label).toBe('other');
   });
 
   it('openOrRetarget retargets the existing navigator in place, preserving dock and tab position', () => {
@@ -596,6 +597,14 @@ describe('FileTreeManager', () => {
     expect(tabs.length).toBe(lengthBefore);
     expect(tabs.indexOf(after)).toBe(indexBefore);
     expect(after.dock).toBe('left');
+  });
+
+  it('openOrRetarget leaves the originating tab focused when retargeting an existing navigator', () => {
+    const manager = run();
+    manager.openOrRetarget('janus');
+    activeTab = 1; // simulate the button now being clicked from "other"
+    manager.openOrRetarget('other');
+    expect(tabs[activeTab].label).toBe('other');
   });
 
   it('openOrRetarget clears the retargeted tab\'s expanded set, watchers, and undo/redo stacks', () => {
