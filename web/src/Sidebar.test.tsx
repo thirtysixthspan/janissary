@@ -77,7 +77,7 @@ describe('Sidebar', () => {
     const client = { send } as unknown as JanusClient;
     const tabs = [makeTab({ view: 'files', dock: 'left', files: { root: '/tmp/project', absoluteRoot: '/tmp/project', rows: [] } })];
     const { container } = render(<Sidebar side="left" tabs={tabs} client={client} />);
-    const btn = container.querySelector('.sidebar-tab-close')!;
+    const btn = container.querySelector('.tab-close')!;
     fireEvent.click(btn);
     expect(send).toHaveBeenCalledWith({ method: 'closeTab', params: { index: 0 } });
   });
@@ -91,7 +91,7 @@ describe('Sidebar', () => {
     })];
     const { container, getByText } = render(<Sidebar side="right" tabs={tabs} client={client} />);
     expect(getByText('a notification')).toBeTruthy();
-    fireEvent.click(container.querySelector('.sidebar-tab-close')!);
+    fireEvent.click(container.querySelector('.tab-close')!);
     expect(send).toHaveBeenCalledWith({ method: 'closeTab', params: { index: 0 } });
   });
 
@@ -102,7 +102,7 @@ describe('Sidebar', () => {
       makeTab({ label: 'notifications', title: 'notifications', view: 'notifications', dock: 'left' }),
     ];
     const { container } = render(<Sidebar side="left" tabs={tabs} client={client} />);
-    expect(container.querySelectorAll('.sidebar-tab')).toHaveLength(2);
+    expect(container.querySelectorAll(':scope .tabstrip .tab')).toHaveLength(2);
   });
 
   it('clicking the inactive switcher tab changes which content renders', () => {
@@ -116,7 +116,7 @@ describe('Sidebar', () => {
     ];
     const { getByText } = render(<Sidebar side="left" tabs={tabs} client={client} />);
     expect(getByText('/tmp/project')).toBeTruthy();
-    fireEvent.click(getByText('notifications'));
+    fireEvent.mouseDown(getByText('notifications'));
     expect(getByText('a notification')).toBeTruthy();
   });
 
@@ -128,11 +128,36 @@ describe('Sidebar', () => {
       makeTab({ label: 'notifications', title: 'notifications', view: 'notifications', dock: 'left' }),
     ];
     const { container } = render(<Sidebar side="left" tabs={tabs} client={client} />);
-    const closes = container.querySelectorAll('.sidebar-tab-close');
+    const closes = container.querySelectorAll('.tab-close');
     fireEvent.click(closes[1]);
     expect(send).toHaveBeenCalledWith({ method: 'closeTab', params: { index: 1 } });
     fireEvent.click(closes[0]);
     expect(send).toHaveBeenCalledWith({ method: 'closeTab', params: { index: 0 } });
+  });
+
+  it('double-clicking the active sidebar tab opens a rename input and commits via renameTab', () => {
+    const client = { send: vi.fn(), renameTab: vi.fn() } as unknown as JanusClient;
+    const tabs = [
+      makeTab({ label: 'files', view: 'files', dock: 'left', files: { root: '/tmp/project', absoluteRoot: '/tmp/project', rows: [] } }),
+      makeTab({ label: 'notifications', title: 'notifications', view: 'notifications', dock: 'left' }),
+    ];
+    const { getByText, container } = render(<Sidebar side="left" tabs={tabs} client={client} />);
+    fireEvent.doubleClick(getByText('files'));
+    const input = container.querySelector('.tab-rename-input') as HTMLInputElement;
+    expect(input).toBeTruthy();
+    fireEvent.change(input, { target: { value: 'notes' } });
+    fireEvent.blur(input);
+    expect(client.renameTab).toHaveBeenCalledWith(0, 'notes');
+  });
+
+  it('sidebar tab labels no longer stretch to fill the strip (legacy flex label wrapper is gone)', () => {
+    const client = { send: vi.fn() } as unknown as JanusClient;
+    const tabs = [
+      makeTab({ label: 'files', view: 'files', dock: 'left', files: { root: '/tmp/project', absoluteRoot: '/tmp/project', rows: [] } }),
+      makeTab({ label: 'notifications', title: 'notifications', view: 'notifications', dock: 'left' }),
+    ];
+    const { container } = render(<Sidebar side="left" tabs={tabs} client={client} />);
+    expect(container.querySelector('.sidebar-tab-label')).toBeNull();
   });
 
   it('docking a second tab auto-switches the visible content to it', () => {

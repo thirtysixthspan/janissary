@@ -3,6 +3,7 @@ import type { TabView } from '@shared/protocol';
 import type { JanusClient } from './ws';
 import { FileTreeTab } from './FileTreeTab';
 import { NotificationsTab } from './NotificationsTab';
+import { TabStrip } from './TabStrip';
 import { startDrag } from './drag-resize';
 import type { CommandInputDropHandle } from './CommandInput';
 
@@ -17,7 +18,7 @@ const DEFAULT_WIDTH_PX = 280;
 // resized by dragging the divider on the sidebar's inner edge, mirroring ReportingSection's
 // height-drag precedent.
 export function Sidebar({
-  side, tabs, client, dropRef,
+  side, tabs, client, dropRef, tabNameMaxLength = 16,
 }: {
   side: 'left' | 'right';
   tabs: TabView[];
@@ -25,6 +26,7 @@ export function Sidebar({
   // The active tab's command-bar drop handle, threaded down to a docked `FileTreeTab` so a drag
   // can find and insert into that tab's command bar. See `App.tsx`'s `dropRef`.
   dropRef?: React.RefObject<CommandInputDropHandle | null>;
+  tabNameMaxLength?: number;
 }) {
   const [width, setWidth] = useState(DEFAULT_WIDTH_PX);
   const [selectedView, setSelectedView] = useState<'files' | 'notifications'>('files');
@@ -53,6 +55,7 @@ export function Sidebar({
 
   if (entries.length === 0) return null;
   const current = entries.find((e) => e.tab.view === selectedView) ?? entries[0];
+  const activeIndex = entries.indexOf(current);
 
   const divider = <div className="sidebar-resize" onMouseDown={onDividerDown} />;
 
@@ -60,26 +63,14 @@ export function Sidebar({
     <div className={`sidebar sidebar-${side}`} style={{ flex: `0 0 ${width}px` }} data-doc-shot={`sidebar-${side}`}>
       {side === 'right' && divider}
       <div className="sidebar-body">
-        <div className="sidebar-tabstrip">
-          {entries.map((e) => (
-            <div
-              key={e.tab.view}
-              className={`sidebar-tab${e === current ? ' active' : ''}`}
-              onClick={() => setSelectedView(e.tab.view as 'files' | 'notifications')}
-            >
-              <span className="sidebar-tab-label">{e.tab.title ?? e.tab.label}</span>
-              <button
-                type="button"
-                className="sidebar-tab-close"
-                title="Close"
-                aria-label="Close tab"
-                onClick={(ev) => { ev.stopPropagation(); client.send({ method: 'closeTab', params: { index: e.index } }); }}
-              >
-                ×
-              </button>
-            </div>
-          ))}
-        </div>
+        <TabStrip
+          tabs={entries.map((e) => e.tab)}
+          activeTab={activeIndex}
+          onSelect={(i) => setSelectedView(entries[i].tab.view as 'files' | 'notifications')}
+          onClose={(i) => client.send({ method: 'closeTab', params: { index: entries[i].index } })}
+          onRename={(i, title) => client.renameTab(entries[i].index, title)}
+          tabNameMaxLength={tabNameMaxLength}
+        />
         {current.tab.view === 'files' && current.tab.files && (
           <FileTreeTab
             files={current.tab.files} client={client} index={current.index} dock={current.tab.dock} autoFocus={false}
