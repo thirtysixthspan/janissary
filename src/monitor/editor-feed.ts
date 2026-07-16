@@ -4,10 +4,6 @@ import type { Managers } from '../managers.js';
 import { resolveTargetTabs } from './targets.js';
 import { diffFeedEntry } from './feed-diff.js';
 
-// Cap on a single editor entry's size (first-seen full content or a subsequent diff), so one edit to
-// a large file never floods a monitor with more than roughly a screenful of change.
-const MAX_DIFF_BYTES = 20_000;
-
 // Turn editor-view targets into monitor buffer entries. Editor tabs have no `LogEntry` transcript, so
 // a monitor watching one instead receives that tab's current content: the live unsaved draft when one
 // is present, or the file read from disk otherwise. The first feed to a given monitor for a given tab
@@ -25,7 +21,7 @@ export function editorFeedEntries(
     if (tab.view !== 'editor' || !tab.editor) continue;
     const current = currentContent(managers, tab.editorDraft, tab.editor.url);
     if (current === undefined) continue;
-    const entry = diffFeedEntry(editorSeen, tab.label, current, tab.editor.name, cap);
+    const entry = diffFeedEntry(editorSeen, tab.label, current, tab.editor.name);
     if (entry) entries.push(entry);
   }
   return entries;
@@ -57,10 +53,4 @@ function readContent(filePath: string): string {
   }
 }
 
-// Truncate to MAX_DIFF_BYTES plus a trailing note; content within the cap is returned unchanged.
-function cap(text: string): string {
-  const totalBytes = Buffer.byteLength(text, 'utf8');
-  if (totalBytes <= MAX_DIFF_BYTES) return text;
-  const head = Buffer.from(text, 'utf8').subarray(0, MAX_DIFF_BYTES).toString('utf8');
-  return `${head}\n… diff truncated (${totalBytes} bytes total)`;
-}
+
