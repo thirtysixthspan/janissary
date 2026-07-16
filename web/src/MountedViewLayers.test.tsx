@@ -210,6 +210,48 @@ describe('MountedViewLayers', () => {
     expect(container.querySelector('.picker')).toBeNull();
   });
 
+  it('renders the tab navigator inside the current harness tab when navOpen is true', () => {
+    const tabs = [makeHarnessTab('htab', 'pty1')];
+    const harnessHandles = makeHarnessHandles();
+    const editorHandles = makeEditorHandles();
+    const { container } = render(
+      React.createElement(MountedViewLayers, {
+        tabs, current: tabs[0], client: { send: vi.fn() } as never, closeTab: vi.fn(),
+        harnessHandles, editorHandles,
+        navOpen: true, navQuery: '', navIndex: 0, onPickTab: vi.fn(),
+      }),
+    );
+    expect(container.querySelector(':scope .tab-body .tab-nav-picker')).toBeTruthy();
+  });
+
+  it('does not render the tab navigator in a harness tab that is not current', () => {
+    const tabs = [makeHarnessTab('htab', 'pty1')];
+    const other = makeHarnessTab('other', 'pty2');
+    const harnessHandles = makeHarnessHandles();
+    const editorHandles = makeEditorHandles();
+    const { container } = render(
+      React.createElement(MountedViewLayers, {
+        tabs, current: other, client: { send: vi.fn() } as never, closeTab: vi.fn(),
+        harnessHandles, editorHandles,
+        navOpen: true, navQuery: '', navIndex: 0, onPickTab: vi.fn(),
+      }),
+    );
+    expect(container.querySelector('.tab-nav-picker')).toBeNull();
+  });
+
+  it('does not render the tab navigator when navOpen is false', () => {
+    const tabs = [makeHarnessTab('htab', 'pty1')];
+    const harnessHandles = makeHarnessHandles();
+    const editorHandles = makeEditorHandles();
+    const { container } = render(
+      React.createElement(MountedViewLayers, {
+        tabs, current: tabs[0], client: { send: vi.fn() } as never, closeTab: vi.fn(),
+        harnessHandles, editorHandles,
+      }),
+    );
+    expect(container.querySelector('.tab-nav-picker')).toBeNull();
+  });
+
   it('renders page tabs', () => {
     const tabs = [makePageTab('ptab', 'https://example.com')];
     const harnessHandles = makeHarnessHandles();
