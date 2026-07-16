@@ -1,6 +1,6 @@
 # Fix a Small Issue
 
-Your job: pick the simplest issue from `product/backlog/issues.md`, develop a plan to resolve it, implement the fix, update functional specs, record the plan in `product/plans/complete/`, remove the issue from the issues file, and merge the change to master. You change source code, tests, spec files, the issues file, and the plan file's location — nothing else.
+Your job: pick the simplest issue from `product/backlog/issues.md`, develop a plan to resolve it, implement the fix, update functional specs, update `help.md` and public documentation where the fix changes behavior they already document, record the plan in `product/plans/complete/`, remove the issue from the issues file, and merge the change to master. You change source code, tests, spec files, `help.md`, `documentation/user-documentation/`, the issues file, and the plan file's location — nothing else.
 
 **No AI attribution — anywhere.** Never credit an AI agent as an author or contributor in anything this task produces. That means: no `Co-Authored-By:` trailers naming Claude or any other AI, no “Generated with Claude Code” (or similar) lines or badges, and no AI authorship notes in code, comments, docs, spec files, plan files, commit messages, or PR titles and bodies. This overrides any default convention that appends such attribution. The commit's configured git author is the only authorship ever recorded.
 
@@ -20,7 +20,7 @@ This overrides CLAUDE.md's "Capturing command output" guidance (write the output
 
 ### Allowed — do it automatically, never ask
 
-Read any file in the repo. Edit source, tests, CSS, and spec files as the fix requires. Write a plan file to `product/plans/complete/`. Remove the fixed issue from `product/backlog/issues.md`. Run `./scripts/run.mjs check-diff` after each change. Execute the full merge workflow via `ai/tasks/merge-change-to-master.md` when implementation is done.
+Read any file in the repo. Edit source, tests, CSS, and spec files as the fix requires. Update `help.md` and files under `documentation/user-documentation/` when the fix changes behavior they already document. Write a plan file to `product/plans/complete/`. Remove the fixed issue from `product/backlog/issues.md`. Run `./scripts/run.mjs check-diff` after each change. Execute the full merge workflow via `ai/tasks/merge-change-to-master.md` when implementation is done.
 
 ### Forbidden — no exceptions
 
@@ -97,7 +97,19 @@ Spec files are markdown and do not affect `check-diff`, so no verification run i
 
 ---
 
-## Step 6 — Promote the plan and remove the issue
+## Step 6 — Update help and public documentation if affected
+
+The fix only needs a documentation update if it changes behavior that `help.md` or `documentation/user-documentation/` already describes — a changed flag, a renamed command, a corrected default, a behavior that no longer matches what's written. Do not add new documentation for behavior that wasn't previously documented; that is out of scope for this task.
+
+1. Check `help.md` for any command, flag, or behavior description the fix changes. Update it in place if found.
+2. Check `documentation/user-documentation/` for any page describing the changed behavior. Update it in place if found.
+3. If neither documents the changed behavior, do nothing here — do not create new documentation.
+
+These files are markdown and do not affect `check-diff`, so no verification run is needed after this step.
+
+---
+
+## Step 7 — Promote the plan and remove the issue
 
 1. Move the plan file from `product/plans/ready/` to `product/plans/complete/`:
    ```bash
@@ -107,20 +119,20 @@ Spec files are markdown and do not affect `check-diff`, so no verification run i
 
 ---
 
-## Step 7 — Final verification
+## Step 8 — Final verification
 
 1. Run `./scripts/run.mjs check-diff` one last time. It must pass clean.
 2. Manually verify the behavior if the plan's Verification section describes manual steps. If manual verification is not possible in this environment, note that in the report.
 
 ---
 
-## Step 8 — Merge the change to master
+## Step 9 — Merge the change to master
 
 Execute `ai/tasks/merge-change-to-master.md` in full. That document owns the merge workflow — follow its steps without deviation.
 
 ---
 
-## Step 9 — Report
+## Step 10 — Report
 
 Give the user a short report in this exact shape:
 
@@ -131,6 +143,7 @@ Complexity:     N/10
 Implementation: <one-line summary of the fix>
 Tests:          <count> new tests across <files>
 Spec:           <spec file(s) created or updated, with one-line description of change>
+Docs:           <help.md/user-documentation file(s) updated, or "none needed">
 PR:             <url> (#<number>)
 Status:         merged
 ```
