@@ -117,6 +117,26 @@ describe('HarnessTab', () => {
     expect(capturedKeyHandler!(makeKeyEvent({ ctrlKey: true, shiftKey: true, key: 'a' }))).toBe(true);
   });
 
+  it('key handler returns false (bubble) for Ctrl+G', () => {
+    render(<HarnessTab harness={makeHarness()} client={mockClient} label="claude" />);
+    expect(capturedKeyHandler!(makeKeyEvent({ ctrlKey: true, key: 'g' }))).toBe(false);
+  });
+
+  it('key handler returns true (send to PTY) for Ctrl+Shift+G', () => {
+    render(<HarnessTab harness={makeHarness()} client={mockClient} label="claude" />);
+    expect(capturedKeyHandler!(makeKeyEvent({ ctrlKey: true, shiftKey: true, key: 'g' }))).toBe(true);
+  });
+
+  it('key handler returns false (bubble) for a regular key when navOpen is true', () => {
+    render(<HarnessTab harness={makeHarness()} client={mockClient} label="claude" navOpen />);
+    expect(capturedKeyHandler!(makeKeyEvent({ key: 'a' }))).toBe(false);
+  });
+
+  it('key handler returns true (send to PTY) for a regular key when navOpen is false', () => {
+    render(<HarnessTab harness={makeHarness()} client={mockClient} label="claude" navOpen={false} />);
+    expect(capturedKeyHandler!(makeKeyEvent({ key: 'a' }))).toBe(true);
+  });
+
   it('key handler returns true for regular keys', () => {
     render(<HarnessTab harness={makeHarness()} client={mockClient} label="claude" />);
     expect(capturedKeyHandler!(makeKeyEvent({ key: 'Enter' }))).toBe(true);

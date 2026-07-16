@@ -6,6 +6,7 @@ import { EditorTab, type EditorTabHandle } from './EditorTab';
 import { PageTab } from './PageTab';
 import { StatusPanels } from './StatusPanels';
 import { TaskPicker } from './TaskPicker';
+import { TabNavPicker } from './TabNavPicker';
 import type { VisibleTaskRow } from './task-picker-keys';
 
 type Properties = {
@@ -15,14 +16,19 @@ type Properties = {
   closeTab: (index: number) => void;
   harnessHandles: React.RefObject<Map<string, HarnessTabHandle>>;
   editorHandles: React.RefObject<Map<string, EditorTabHandle>>;
-  // Ctrl+A opens the task picker from a focused harness tab (see `HarnessTab.harnessKeyFilter`);
-  // it's the only picker/chooser that chord ever lets bubble there, so this renders just that one
-  // overlay rather than the full `PickerOverlays` stack the agent-tab body uses.
+  // Ctrl+A and Ctrl+G open the task picker and tab navigator from a focused harness tab (see
+  // `HarnessTab.harnessKeyFilter`); they're the only pickers/choosers those chords ever let bubble
+  // there, so this renders just those two overlays rather than the full `PickerOverlays` stack the
+  // agent-tab body uses.
   taskPickerOpen?: boolean;
   taskRows?: VisibleTaskRow[];
   taskPickerIndex?: number;
   onPickTask?: (path: string) => void;
   onToggleTaskDir?: (path: string) => void;
+  navOpen?: boolean;
+  navQuery?: string;
+  navIndex?: number;
+  onPickTab?: (index: number) => void;
 };
 
 // Harness, editor, and page tabs stay mounted (hidden when inactive) so terminal/xterm state,
@@ -31,6 +37,7 @@ type Properties = {
 export function MountedViewLayers({
   tabs, current, client, closeTab, harnessHandles, editorHandles,
   taskPickerOpen, taskRows, taskPickerIndex, onPickTask, onToggleTaskDir,
+  navOpen, navQuery, navIndex, onPickTab,
 }: Properties) {
   return (
     <>
@@ -40,11 +47,16 @@ export function MountedViewLayers({
           className="tab-body"
           style={{ borderLeft: `4px solid ${t.dotColor}`, position: 'relative', display: t.label === current.label ? 'flex' : 'none' }}
         >
-          <HarnessTab harness={t.harness!} client={client} cwd={t.cwd} flags={t.flags} label={t.label} taskPickerOpen={!!taskPickerOpen && t.label === current.label}
+          <HarnessTab harness={t.harness!} client={client} cwd={t.cwd} flags={t.flags} label={t.label}
+            taskPickerOpen={!!taskPickerOpen && t.label === current.label}
+            navOpen={!!navOpen && t.label === current.label}
             ref={(h) => { if (h) harnessHandles.current.set(t.harness!.ptyId, h); else harnessHandles.current.delete(t.harness!.ptyId); }} />
           <StatusPanels tab={t} scheduleOnly={t.harness!.name !== 'ssh'} />
           {taskPickerOpen && t.label === current.label && onPickTask && onToggleTaskDir && (
             <TaskPicker rows={taskRows ?? []} selected={taskPickerIndex ?? 0} onPick={onPickTask} onToggleDir={onToggleTaskDir} />
+          )}
+          {navOpen && t.label === current.label && onPickTab && (
+            <TabNavPicker tabs={tabs} query={navQuery ?? ''} selected={navIndex ?? 0} onPick={onPickTab} />
           )}
         </div>
       ))}

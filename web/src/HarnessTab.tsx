@@ -5,33 +5,34 @@ import { useXterm } from './useXterm';
 import { AgentTabMeta } from './AgentTabMeta';
 
 type Properties = {
-  harness: HarnessView; client: JanusClient; taskPickerOpen?: boolean; cwd?: string; flags?: string[]; label: string;
+  harness: HarnessView; client: JanusClient; taskPickerOpen?: boolean; navOpen?: boolean; cwd?: string; flags?: string[]; label: string;
 };
 export type HarnessTabHandle = { focus(): void };
 
-// Returns true to send to PTY, false to bubble (switch tabs, open task picker, drive the task
-// picker overlay while it's open over this tab).
-function harnessKeyFilter(e: KeyboardEvent, taskPickerOpen: boolean): boolean {
+// Returns true to send to PTY, false to bubble (switch tabs, open task/nav picker, drive whichever
+// picker overlay is open over this tab).
+function harnessKeyFilter(e: KeyboardEvent, taskPickerOpen: boolean, navOpen: boolean): boolean {
   if (e.type !== 'keydown') return true;
-  if (taskPickerOpen) return false;
+  if (taskPickerOpen || navOpen) return false;
   const isTabSwitch = (e.shiftKey && !e.ctrlKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight'))
     || (e.metaKey && e.shiftKey && ['[', '{', ']', '}'].includes(e.key));
   const isTaskPicker = e.ctrlKey && !e.shiftKey && !e.altKey && !e.metaKey && e.key.toLowerCase() === 'a';
-  return !(isTabSwitch || isTaskPicker);
+  const isTabNav = e.ctrlKey && !e.shiftKey && !e.altKey && !e.metaKey && e.key.toLowerCase() === 'g';
+  return !(isTabSwitch || isTaskPicker || isTabNav);
 }
 
 // Full-tab harness terminal: no card chrome, no command bar — the body is the PTY. All keys reach
 // the harness except the tab-switch chords (Shift+←/→, Cmd+Shift+[/]), the task-picker chord
-// (Ctrl+A), and every key while the task picker overlay is open over this tab
-// (Up/Down/Left/Right/Enter/Escape must reach the picker instead of the PTY), which all bubble to
-// the window handler.
-export const HarnessTab = forwardRef<HarnessTabHandle, Properties>(function HarnessTab({ harness, client, taskPickerOpen, cwd, flags, label }, ref) {
+// (Ctrl+A), the tab-navigator chord (Ctrl+G), and every key while either picker overlay is open
+// over this tab (Up/Down/Left/Right/Enter/Escape must reach the picker instead of the PTY), which
+// all bubble to the window handler.
+export const HarnessTab = forwardRef<HarnessTabHandle, Properties>(function HarnessTab({ harness, client, taskPickerOpen, navOpen, cwd, flags, label }, ref) {
   const hostReference = useRef<HTMLDivElement>(null);
   const focusTerm = useXterm({
     ptyId: harness.ptyId,
     client,
     containerRef: hostReference,
-    keyFilter: (e) => harnessKeyFilter(e, !!taskPickerOpen),
+    keyFilter: (e) => harnessKeyFilter(e, !!taskPickerOpen, !!navOpen),
     onMount: (term) => { term.focus(); },
   });
 

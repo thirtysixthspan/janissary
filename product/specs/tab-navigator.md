@@ -4,7 +4,7 @@ A fuzzy-searchable jump list for switching directly to any open tab by typing pa
 
 ### Opening the navigator
 
-`Ctrl+G` (or the `nav` command, optionally followed by a query, e.g. `nav depl`) opens a modal window listing every open tab — agent, harness, SSH, viewer, and reporting tabs alike — floating above the command bar. If the navigator is already open, `Ctrl+G` or `nav` closes it again instead of reopening it.
+`Ctrl+G` (or the `nav` command, optionally followed by a query, e.g. `nav depl`) opens a modal window listing every open tab — agent, harness, SSH, viewer, and reporting tabs alike — floating above the command bar. If the navigator is already open, `Ctrl+G` or `nav` closes it again instead of reopening it. On an agent or transcript tab, or a harness tab, `Ctrl+G` opens the navigator; it overlays whichever tab was focused when it opened, including a harness tab, never a different, unrelated tab.
 
 ### Filtering
 
