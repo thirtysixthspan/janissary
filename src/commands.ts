@@ -59,4 +59,4 @@ export const getOutput = (command: string): string | null => {
   return `Unknown command: "${trimmed}". Type "help" for available commands.`;
 };
 
-export {default as agentNames} from '../agent-names.json' with { type: 'json' };
+export { agentNames } from './agent-names.js';

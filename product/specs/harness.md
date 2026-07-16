@@ -267,6 +267,11 @@ against that harness's known model catalog (currently only opencode's and claude
 populated); an unknown model is rejected with `Unknown model "<model>" for harness "<name>" — add
 it to harness-models.json.` and no tab is opened.
 
+A project can supply its own `.janissary/harness-models.json` (a JSON object mapping harness name to
+a list of model ids) to replace the bundled catalog entirely for that project. If the file is
+missing, the bundled catalog is used; if it exists but isn't valid JSON, a warning is printed and
+the bundled catalog is used.
+
 `--effort <level>` is passed to the harness binary's `--effort` flag verbatim, with no validation
 against any fixed set of levels — an unrecognized level is simply forwarded, and a harness binary
 that doesn't understand the flag ignores it. `--model` and `--effort` may be given independently or

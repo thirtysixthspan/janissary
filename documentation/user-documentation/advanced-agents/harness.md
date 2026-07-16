@@ -43,6 +43,8 @@ harness <name> [as <label>] [-w] [-y] [--model <name>] [--effort <level>]
 
 `--model <name>` picks a model, passed to the harness binary's `--model` flag verbatim. It's checked against that harness's known model catalog first — an unknown model errors with `Unknown model "<model>" for harness "<name>" — add it to harness-models.json.` and no tab opens (today only opencode's and claude's catalogs are populated).
 
+A project can drop its own `.janissary/harness-models.json` (a JSON object mapping harness name to a list of model ids) into its `.janissary/` directory to replace the bundled catalog entirely for that project — useful for pinning a project-specific set of models or covering a harness the bundled catalog doesn't populate. Likewise, a project can drop `.janissary/agent-names.json` (a JSON array of names) to replace the bundled agent name pool. If either file is missing, the bundled default is used; if it exists but isn't valid JSON, a warning is printed and the bundled default is used instead.
+
 `--effort <level>` picks an effort/thinking level, passed to the harness binary's `--effort` flag verbatim — there's no catalog to check it against, so any value you give is forwarded as-is (a harness binary that doesn't understand the flag just ignores it):
 
 ```
