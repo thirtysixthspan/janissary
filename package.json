@@ -79,11 +79,13 @@
     "@vitejs/plugin-vue": "^6.0.7"
   },
   "files": [
+    "ai",
     "bin",
     "dist",
     "chrome-extension",
     "agent-names.json",
-    "help.md"
+    "help.md",
+    "scripts"
   ],
   "type": "module",
   "dependencies": {
