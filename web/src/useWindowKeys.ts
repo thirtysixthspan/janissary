@@ -115,6 +115,11 @@ function handleTabShortcuts(e: KeyboardEvent, client: JanusClient): void {
   else if (e.ctrlKey && !e.shiftKey && e.key === 'ArrowRight') { e.preventDefault(); client.send({ method: 'reorderTab', params: { dir: 1 } }); }
   else if (e.shiftKey && !e.ctrlKey && e.key === 'ArrowLeft') { e.preventDefault(); client.send({ method: 'moveTab', params: { dir: -1 } }); }
   else if (e.shiftKey && !e.ctrlKey && e.key === 'ArrowRight') { e.preventDefault(); client.send({ method: 'moveTab', params: { dir: 1 } }); }
+  // Cmd+Shift+[ / Cmd+Shift+] — the macOS tab-switch convention (Safari, Xcode, iTerm2, VS Code),
+  // as an alias for the same moveTab action as Shift+←/→. Shift changes the produced `key` on a
+  // US layout ('{'/'}' rather than '['/']'), so both forms are accepted.
+  else if (e.metaKey && e.shiftKey && (e.key === '[' || e.key === '{')) { e.preventDefault(); client.send({ method: 'moveTab', params: { dir: -1 } }); }
+  else if (e.metaKey && e.shiftKey && (e.key === ']' || e.key === '}')) { e.preventDefault(); client.send({ method: 'moveTab', params: { dir: 1 } }); }
   else if (e.ctrlKey && e.key.toLowerCase() === 't') { e.preventDefault(); client.send({ method: 'toggleCollapse', params: {} }); }
 }
 

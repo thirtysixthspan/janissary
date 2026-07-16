@@ -92,6 +92,16 @@ describe('HarnessTab', () => {
     expect(capturedKeyHandler!(makeKeyEvent({ shiftKey: true, key: 'ArrowRight' }))).toBe(false);
   });
 
+  it.each(['[', '{', ']', '}'])('key handler returns false (bubble) for Cmd+Shift+%s', (key) => {
+    render(<HarnessTab harness={makeHarness()} client={mockClient} label="claude" />);
+    expect(capturedKeyHandler!(makeKeyEvent({ metaKey: true, shiftKey: true, key }))).toBe(false);
+  });
+
+  it.each(['[', ']'])('key handler returns true (send to PTY) for plain Cmd+%s', (key) => {
+    render(<HarnessTab harness={makeHarness()} client={mockClient} label="claude" />);
+    expect(capturedKeyHandler!(makeKeyEvent({ metaKey: true, key }))).toBe(true);
+  });
+
   it('key handler returns true (send to PTY) for Ctrl+C', () => {
     render(<HarnessTab harness={makeHarness()} client={mockClient} label="claude" />);
     expect(capturedKeyHandler!(makeKeyEvent({ ctrlKey: true, key: 'c' }))).toBe(true);

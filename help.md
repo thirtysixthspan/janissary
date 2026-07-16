@@ -43,7 +43,7 @@
 | --- | ------ |
 | `←` / `→` | Move cursor in the input field |
 | `↑` / `↓` | Previous / next command in history |
-| `Shift+←` / `Shift+→` | Switch to the previous / next tab |
+| `Shift+←` / `Shift+→` / `Cmd+Shift+[` / `Cmd+Shift+]` | Switch to the previous / next tab |
 | `Ctrl+←` / `Ctrl+→` | Move the current tab left / right |
 | `Shift+↑` / `Shift+↓` | Scroll the transcript up / down (accelerated — distance doubles each second) |
 | `Ctrl+↑` / `Ctrl+↓` | Scroll the transcript up / down (accelerated) |

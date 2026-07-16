@@ -48,6 +48,21 @@ describe('ShellTab', () => {
     expect(filter(new KeyboardEvent('keydown', { key: 'Enter', ctrlKey: true }))).toBe(true);
   });
 
+  it('passes a keyFilter that blocks Cmd+Shift+[/] and allows plain Cmd+[/]', () => {
+    const client = fakeClient();
+    mockedUseXterm.mockClear();
+    render(<ShellTab ptyId="pty1" client={client} />);
+    const opts = mockedUseXterm.mock.calls[0][0];
+    const filter = opts.keyFilter as (e: KeyboardEvent) => boolean;
+
+    expect(filter(new KeyboardEvent('keydown', { key: '[', metaKey: true, shiftKey: true }))).toBe(false);
+    expect(filter(new KeyboardEvent('keydown', { key: ']', metaKey: true, shiftKey: true }))).toBe(false);
+    expect(filter(new KeyboardEvent('keydown', { key: '{', metaKey: true, shiftKey: true }))).toBe(false);
+    expect(filter(new KeyboardEvent('keydown', { key: '}', metaKey: true, shiftKey: true }))).toBe(false);
+    expect(filter(new KeyboardEvent('keydown', { key: '[', metaKey: true }))).toBe(true);
+    expect(filter(new KeyboardEvent('keydown', { key: ']', metaKey: true }))).toBe(true);
+  });
+
   it('calls term.focus() on mount', () => {
     const focus = vi.fn();
     mockedUseXterm.mockImplementationOnce(({ onMount }: { onMount?: (term: { focus: () => void }) => void }) => {
