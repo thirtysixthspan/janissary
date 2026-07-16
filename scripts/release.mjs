@@ -114,7 +114,7 @@ function isReleaseCommit(line) {
 function lastTag() {
   try {
     const tags = capture('git', ['tag', '--sort=-v:refname']);
-    return tags ? tags.split('\n')[0] : null;
+    return tags ? tags.split('\n', 1)[0] : null;
   } catch {
     return null;
   }
