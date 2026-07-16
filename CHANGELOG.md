@@ -2,6 +2,18 @@
 
 All notable changes to this project are documented here.
 
+## [0.5.1] - 2026-07-16
+
+### Bug Fixes
+
+- filter release commits
+- resolve release script diff
+- let Shift+Left/Right extend the selection like Shift+Up/Down (#380)
+
+### Other
+
+- resolve post install
+
 ## [0.5.0] - 2026-07-16
 
 ### Features
