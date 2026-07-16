@@ -1,5 +1,6 @@
 import type { CompletionResult } from '../types.js';
 import { completeWord } from './helpers.js';
+import { modelsFor } from '../harness/models.js';
 export { completeBrowserCommand } from './browser.js';
 
 export function completeAgentName(
@@ -110,6 +111,23 @@ export function completeSyntaxTheme(
     return completeWord(token, '', themes, ' ', before, after, tokenStart);
   }
   return null;
+}
+
+// Complete `harness <name> ... --model <partial>` against the harness's known model catalog.
+// The flag can appear anywhere after the harness name, so match on the token immediately
+// preceding the cursor rather than a fixed argument index (mirrors completeScheduleTarget).
+export function completeHarnessModel(
+  command: string,
+  preceding: string[],
+  token: string,
+  before: string,
+  after: string,
+  tokenStart: number,
+): CompletionResult | null {
+  if (command !== 'harness' || preceding.at(-1)?.toLowerCase() !== '--model') return null;
+  const harnessName = preceding[1]?.toLowerCase();
+  if (!harnessName) return null;
+  return completeWord(token, '', modelsFor(harnessName), ' ', before, after, tokenStart);
 }
 
 export function completeConnectionClose(

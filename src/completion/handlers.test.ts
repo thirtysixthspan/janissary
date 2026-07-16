@@ -7,6 +7,7 @@ import {
   completeSearchCommand,
   completeSyntaxTheme,
   completeConnectionClose,
+  completeHarnessModel,
 } from './handlers.js';
 
 describe('completeSendTarget', () => {
@@ -129,6 +130,39 @@ describe('completeSyntaxTheme', () => {
 
   it('returns null at argument 2 when the preceding word is not "theme"', () => {
     expect(completeSyntaxTheme('syntax', 2, ['syntax', 'bogus'], 'no', ['nord'], '', '', 0)).toBeNull();
+  });
+});
+
+describe('completeHarnessModel', () => {
+  it('completes a single match for the harness model flag', () => {
+    const r = completeHarnessModel(
+      'harness', ['harness', 'claude', '--model'], 'claude-op', 'harness claude --model claude-op', '', 23,
+    );
+    expect(r?.newInput).toBe('harness claude --model claude-opus-4-8 ');
+  });
+
+  it('completes multiple matches to their longest common prefix', () => {
+    const r = completeHarnessModel(
+      'harness', ['harness', 'claude', '--model'], 'claude-', 'harness claude --model claude-', '', 23,
+    );
+    expect(r?.matches).toEqual(['claude-fable-5', 'claude-haiku-4-5-20251001', 'claude-opus-4-8', 'claude-sonnet-5']);
+  });
+
+  it('returns null for a non-harness command', () => {
+    expect(
+      completeHarnessModel('msg', ['msg', 'claude', '--model'], 'claude-op', 'msg claude --model claude-op', '', 20),
+    ).toBeNull();
+  });
+
+  it('returns null when the preceding token is not --model', () => {
+    expect(
+      completeHarnessModel('harness', ['harness', 'claude'], 'clau', 'harness clau', 'harness clau', 8),
+    ).toBeNull();
+  });
+
+  it('finds no matches for an unknown harness name', () => {
+    const r = completeHarnessModel('harness', ['harness', 'bogus', '--model'], '', 'harness bogus --model ', '', 22);
+    expect(r?.matches).toEqual([]);
   });
 });
 

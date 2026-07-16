@@ -1,5 +1,5 @@
 import type { CompletionResult } from '../types.js';
-import { completeAgentName, completeSendTarget, completeScheduleTarget, completeConnectionClose, completeBrowserCommand, completeMonitorCommand, completeSearchCommand, completeSyntaxTheme } from './handlers.js';
+import { completeAgentName, completeSendTarget, completeScheduleTarget, completeConnectionClose, completeBrowserCommand, completeMonitorCommand, completeSearchCommand, completeSyntaxTheme, completeHarnessModel } from './handlers.js';
 import { completeFilePath } from './fs.js';
 import { SYNTAX_THEMES } from '../syntax-themes.js';
 
@@ -45,7 +45,8 @@ export function completeCommandLine(
     completeBrowserCommand(command, argumentIndex, preceding, token, connections, before, after, tokenStart) ??
     completeMonitorCommand(command, argumentIndex, preceding, token, monitor, before, after, tokenStart) ??
     completeSearchCommand(command, argumentIndex, token, before, after, tokenStart) ??
-    completeSyntaxTheme(command, argumentIndex, preceding, token, SYNTAX_THEMES, before, after, tokenStart);
+    completeSyntaxTheme(command, argumentIndex, preceding, token, SYNTAX_THEMES, before, after, tokenStart) ??
+    completeHarnessModel(command, preceding, token, before, after, tokenStart);
   if (result !== null) {
     return result;
   }
