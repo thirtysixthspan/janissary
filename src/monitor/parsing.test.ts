@@ -84,4 +84,25 @@ describe('parseSuggestion', () => {
     expect(parseSuggestion('OK')).toBeNull();
     expect(parseSuggestion('I have nothing to add here.')).toBeNull();
   });
+
+  it('captures a summary that spans multiple lines', () => {
+    const reply = [
+      '[SUMMARY]: Two parallel feature implementations underway:',
+      '- **claude** (Opus): implementing git modified coloring for file navigator (mid-thought, has context ready)',
+      '- **claude-2** (Sonnet): just started executing `build-a-feature.md` for **acp-rate-limit-notification** — reading the task file now',
+    ].join('\n');
+    expect(parseSuggestion(reply)).toEqual({ text: reply.replace('[SUMMARY]: ', '') });
+  });
+
+  it('captures a multi-line suggestion without swallowing its own command line', () => {
+    const reply = [
+      '[SUGGESTION]: Rerun the build, it failed on:',
+      '- a flaky network timeout',
+      '[COMMAND]: npm run build',
+    ].join('\n');
+    expect(parseSuggestion(reply)).toEqual({
+      text: 'Rerun the build, it failed on:\n- a flaky network timeout',
+      command: 'npm run build',
+    });
+  });
 });
