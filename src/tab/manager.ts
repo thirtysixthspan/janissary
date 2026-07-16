@@ -2,8 +2,7 @@
 import type { Tab, LogEntry, AgentState, ImageView, MarkdownView, EditorView, PageView, FileTreeView } from '../types.js';
 import type { ConnectionView, ScheduleView, TabView } from '../protocol.js';
 import {
-  makeTab, distinctColor, insertTabInGroup,
-  swapTabsLeft, swapTabsRight, stripComments,
+  makeTab, distinctColor, insertTabInGroup, stripComments,
 } from './index.js';
 import { saveAgentState, listAgentStates } from '../agent/state.js';
 import { abbreviatePath } from '../paths.js';
@@ -19,6 +18,7 @@ import { buildAgentStateFromTab } from './agent-state.js';
 import { recordLeavingActiveTab, popFocusHistory, mostRecentFileTreeLabel } from './focus-history.js';
 import { applyDock } from './dock.js';
 import { capLog, finishRunningEntry } from './transcript.js';
+import { computeReorder, removeTabAt } from './reorder.js';
 
 export class TabManager {
   tabs: Tab[] = [];
@@ -195,15 +195,14 @@ export class TabManager {
 
   reorderTab(dir: -1 | 1): void {
     const from = this.activeTab;
-    const next = dir < 0 ? swapTabsLeft(this.tabs, from) : swapTabsRight(this.tabs, from);
-    if (next === this.tabs) return;
-    this.tabs = next;
-    const to = dir < 0 ? Math.max(0, from - 1) : Math.min(from + 1, this.tabs.length - 1);
-    this.activeTab = to;
-    const active = this.tabs[to];
+    const result = computeReorder(this.tabs, from, dir);
+    if (!result) return;
+    this.tabs = result.tabs;
+    this.activeTab = result.activeTab;
+    const active = this.tabs[this.activeTab];
     if (active) active.hasUnread = false;
     this.persist(this.buildAgentState(this.tabs[from]));
-    this.persist(this.buildAgentState(this.tabs[to]));
+    this.persist(this.buildAgentState(this.tabs[this.activeTab]));
     messageBus.emit('state', { type: 'dirty' });
   }
 
@@ -219,7 +218,7 @@ export class TabManager {
     }
     const wasActive = index === this.activeTab;
     this.focusHistory = this.focusHistory.filter((l) => l !== tab.label);
-    this.tabs = this.tabs.filter((_, index_) => index_ !== index).map((t, index_) => ({ ...t, number: index_ + 1 }));
+    this.tabs = removeTabAt(this.tabs, index);
     const restored = wasActive ? this.popFocusHistory() : undefined;
     this.activeTab = restored ?? Math.min(this.activeTab, this.tabs.length - 1);
     const active = this.tabs[this.activeTab];
