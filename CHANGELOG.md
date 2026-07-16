@@ -2,6 +2,21 @@
 
 All notable changes to this project are documented here.
 
+## [0.5.5] - 2026-07-16
+
+### Features
+
+- deploy action
+
+### Bug Fixes
+
+- explain how to remove a stale lock file in the instance-lock error (#381)
+- install and suggested usage
+
+### Other
+
+- planning
+
 ## [0.5.4] - 2026-07-16
 
 ## [0.5.3] - 2026-07-16
