@@ -29,6 +29,8 @@ export type FilesTabState = {
   // `refreshGit`. `gitRefreshing`/`gitRefreshStale` coalesce overlapping refresh requests into at
   // most one in-flight git call plus one queued follow-up.
   changed?: Set<string>;
+  // Last-computed current git branch name (see `git-status.ts`), refreshed alongside `changed`.
+  branch?: string;
   gitRefreshing?: boolean;
   gitRefreshStale?: boolean;
 };
@@ -118,6 +120,7 @@ export class FileTreeManager {
     this.unwatchDir(state, '');
     state.root = target;
     state.changed = new Set();
+    state.branch = undefined;
     this.watchDir(label, target, '');
     if (this.managers.tab.tabs.some((t) => t.label === label)) this.managers.tab.setCwd(label, target);
     this.rebuild(label);
@@ -236,7 +239,7 @@ export class FileTreeManager {
     if (!state) return;
     const tab = this.managers.tab.tabs.find((t) => t.label === label);
     if (!tab?.files) return;
-    tab.files = { root: state.root, absoluteRoot: state.root, rows: pruneAndBuildRows(state) };
+    tab.files = { root: state.root, absoluteRoot: state.root, rows: pruneAndBuildRows(state), branch: state.branch };
     messageBus.emit('state', { type: 'dirty' });
   }
 }

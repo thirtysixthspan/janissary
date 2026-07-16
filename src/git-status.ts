@@ -49,3 +49,17 @@ export async function changedPaths(root: string): Promise<Set<string>> {
     return new Set();
   }
 }
+
+// Given an absolute directory root, resolve to the name of the currently checked-out branch — the
+// literal string `HEAD` for a detached checkout, matching git's own convention. Resolves to
+// `undefined` — never rejects — when `root` is not inside a git repository or the command fails
+// for any reason, so a non-git directory renders with no branch text and no error.
+export async function currentBranch(root: string): Promise<string | undefined> {
+  try {
+    const { stdout } = await execFileAsync('git', ['rev-parse', '--abbrev-ref', 'HEAD'], { cwd: root });
+    const branch = stdout.trim();
+    return branch || undefined;
+  } catch {
+    return undefined;
+  }
+}

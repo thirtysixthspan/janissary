@@ -1,11 +1,12 @@
-import { changedPaths } from './git-status.js';
+import { changedPaths, currentBranch } from './git-status.js';
 import type { FilesTabState } from './file-tree-manager.js';
 
-// Recompute one tab's git-changed set off the event loop, then re-render with it via `rebuild`
-// (decision 6's second `dirty` emit). Coalesced: if a refresh is already in flight for this tab,
-// the request only sets a stale bit and exactly one follow-up runs when the current one resolves —
-// no overlapping git processes. The captured `root` guards against a mid-flight `reroot` or tab
-// close: a result whose tab is gone or whose root has changed is discarded, never written.
+// Recompute one tab's git-changed set and current branch off the event loop, then re-render with
+// them via `rebuild` (decision 6's second `dirty` emit). Coalesced: if a refresh is already in
+// flight for this tab, the request only sets a stale bit and exactly one follow-up runs when the
+// current one resolves — no overlapping git processes. The captured `root` guards against a
+// mid-flight `reroot` or tab close: a result whose tab is gone or whose root has changed is
+// discarded, never written.
 export function refreshGit(
   states: Map<string, FilesTabState>,
   label: string,
@@ -16,10 +17,10 @@ export function refreshGit(
   if (state.gitRefreshing) { state.gitRefreshStale = true; return; }
   state.gitRefreshing = true;
   const root = state.root;
-  void changedPaths(root).then((changed) => {
+  void Promise.all([changedPaths(root), currentBranch(root)]).then(([changed, branch]) => {
     const current = states.get(label);
     if (!current) return;
-    if (current.root === root) { current.changed = changed; rebuild(label); }
+    if (current.root === root) { current.changed = changed; current.branch = branch; rebuild(label); }
     current.gitRefreshing = false;
     if (current.gitRefreshStale) { current.gitRefreshStale = false; refreshGit(states, label, rebuild); }
   });

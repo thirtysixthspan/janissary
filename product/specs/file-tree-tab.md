@@ -84,6 +84,12 @@ The tree shows, for the root and every directory the user has expanded:
 A directory's children are read from disk only once it is **expanded** — an unopened directory
 (e.g. `node_modules`) costs nothing until the user opens it.
 
+**Branch metadata.** When the tree is rooted inside a git repository, the tab's header shows the
+currently checked-out branch name next to the root path. A detached-HEAD checkout shows `HEAD`. A
+tree rooted outside any git repository, or where the branch cannot be determined, shows only the
+path with no branch text. The branch refreshes together with the tree itself (on open, on reroot,
+and on every automatic or interactive refresh), never on a timer of its own.
+
 **Git-modified coloring.** When the tree is rooted inside a git repository, any file row that git
 considers changed — a working-tree modification, a staged change, or an untracked (new) file —
 renders its name in yellow; the three states are not distinguished from one another. A directory
