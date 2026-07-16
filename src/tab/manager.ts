@@ -16,6 +16,7 @@ import { getQueue, pushQueue, shiftQueue, updateQueueEntry, removeQueueEntry } f
 import { buildTabView } from './view.js';
 import { rehydrateTabs } from './rehydrate.js';
 import { buildAgentStateFromTab } from './agent-state.js';
+import { recordLeavingActiveTab, popFocusHistory, mostRecentFileTreeLabel } from './focus-history.js';
 
 export class TabManager {
   tabs: Tab[] = [];
@@ -143,39 +144,18 @@ export class TabManager {
     if (tab) tab.hasUnread = true;
   }
 
-  // Records that `this.activeTab` is about to stop being active in favor of `newIndex`, so
-  // closing `newIndex` later can restore focus to it. No-ops if `newIndex` is already active.
   private recordLeavingActiveTab(newIndex: number): void {
-    if (newIndex === this.activeTab) return;
-    const leaving = this.tabs[this.activeTab]?.label;
-    if (!leaving) return;
-    this.focusHistory = this.focusHistory.filter((l) => l !== leaving);
-    this.focusHistory.push(leaving);
+    this.focusHistory = recordLeavingActiveTab(this.tabs, this.activeTab, this.focusHistory, newIndex);
   }
 
-  // Pops the most recent still-valid (existing, non-docked) label off the focus-history stack,
-  // discarding any stale entries (closed or since-docked tabs) along the way.
   private popFocusHistory(): number | undefined {
-    while (this.focusHistory.length > 0) {
-      const label = this.focusHistory.pop();
-      const index = this.tabs.findIndex((t) => t.label === label);
-      if (index !== -1 && !this.tabs[index].dock) return index;
-    }
-    return undefined;
+    const { index, history } = popFocusHistory(this.tabs, this.focusHistory);
+    this.focusHistory = history;
+    return index;
   }
 
-  // The label of the file-tree tab to retarget when the metadata-row 📁 button is clicked: the
-  // most-recently-left still-open `view === 'files'` tab. Scans `focusHistory` from most-recent to
-  // least-recent without mutating it and — unlike `popFocusHistory` — includes docked tabs, since a
-  // docked file navigator is a valid retarget target. Falls back to the first `view === 'files'`
-  // tab in `tabs` order (e.g. a tree that never lost focus since opening); returns `undefined` when
-  // no file-tree tab exists.
   mostRecentFileTreeLabel(): string | undefined {
-    for (let i = this.focusHistory.length - 1; i >= 0; i--) {
-      const tab = this.tabs.find((t) => t.label === this.focusHistory[i]);
-      if (tab?.view === 'files') return tab.label;
-    }
-    return this.tabs.find((t) => t.view === 'files')?.label;
+    return mostRecentFileTreeLabel(this.tabs, this.focusHistory);
   }
 
   // Applies the result of adding a new tab (or focusing an existing one) from the `openers.ts`
