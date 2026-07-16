@@ -82,8 +82,10 @@
     "ai",
     "bin",
     "dist",
+    "web/dist",
     "chrome-extension",
     "agent-names.json",
+    "harness-models.json",
     "help.md",
     "scripts"
   ],
