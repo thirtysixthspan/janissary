@@ -6,8 +6,8 @@
 | Ctrl+C | Quit application |
 | ← / Ctrl+B | Move input cursor left |
 | → / Ctrl+F | Move input cursor right |
-| Shift+← | Switch to previous tab (no-op if one tab) |
-| Shift+→ | Switch to next tab (no-op if one tab) |
+| Shift+← / Cmd+Shift+[ | Switch to previous tab (no-op if one tab) |
+| Shift+→ / Cmd+Shift+] | Switch to next tab (no-op if one tab) |
 | Ctrl+← | Move the current tab one position left |
 | Ctrl+→ | Move the current tab one position right |
 | ↑ | Walk backward through command history |

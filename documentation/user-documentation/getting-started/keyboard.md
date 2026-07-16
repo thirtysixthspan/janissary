@@ -8,8 +8,8 @@ All bindings work from the command bar in any agent tab.
 | `Ctrl+C` | Quit the application |
 | `←` / `Ctrl+B` | Move the input cursor left |
 | `→` / `Ctrl+F` | Move the input cursor right |
-| `Shift+←` | Switch to the previous tab |
-| `Shift+→` | Switch to the next tab |
+| `Shift+←` / `Cmd+Shift+[` | Switch to the previous tab |
+| `Shift+→` / `Cmd+Shift+]` | Switch to the next tab |
 | `Ctrl+←` | Move the current tab one position left |
 | `Ctrl+→` | Move the current tab one position right |
 | `↑` | Walk backward through command history |
@@ -29,6 +29,6 @@ All bindings work from the command bar in any agent tab.
 | `Tab` | Complete the token at the cursor — see [Tab completion](/user-documentation/command-bar/tab-completion) |
 | `Shift+Tab` | Move keyboard focus to the next application section — left sidebar, center, right sidebar, reporting panel — looping, skipping any that aren't currently present |
 
-Two tab types take keyboard input for themselves. A focused [file navigator](/user-documentation/tab-types/file-navigator) captures arrow keys, `Home`/`End`, `PageUp`/`PageDown`, `Enter`, `Space`, and typed characters for tree navigation. A [harness tab](/user-documentation/advanced-agents/harness) sends everything to the harness except `Shift+←`/`Shift+→`/`Shift+Tab`, which still switch tabs or move focus between sections.
+Two tab types take keyboard input for themselves. A focused [file navigator](/user-documentation/tab-types/file-navigator) captures arrow keys, `Home`/`End`, `PageUp`/`PageDown`, `Enter`, `Space`, and typed characters for tree navigation. A [harness tab](/user-documentation/advanced-agents/harness) sends everything to the harness except `Shift+←`/`Shift+→`/`Cmd+Shift+[`/`Cmd+Shift+]`/`Shift+Tab`, which still switch tabs or move focus between sections.
 
 <img class="agent-float" src="/agents/tahir-south.png" alt="" />

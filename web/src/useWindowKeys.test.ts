@@ -10,7 +10,7 @@ function dispatchKey(key: string, opts: { metaKey?: boolean; ctrlKey?: boolean; 
 }
 
 function TestComponent({
-  route, themePickerOpen, pickerOpen, navOpen, queueOpen, taskPickerOpen, canSearch, searchOpen, handleScrollKey, callbacks,
+  route, themePickerOpen, pickerOpen, navOpen, queueOpen, taskPickerOpen, canSearch, searchOpen, handleScrollKey, callbacks, client,
 }: {
   route?: { cmd: string; choices: string[] } | null;
   themePickerOpen?: boolean;
@@ -21,6 +21,7 @@ function TestComponent({
   canSearch?: boolean;
   searchOpen?: boolean;
   handleScrollKey?: (e: KeyboardEvent) => boolean;
+  client?: { send: ReturnType<typeof vi.fn> };
   callbacks?: Partial<{
     setRouteIndex: (s: (p: number) => number) => void;
     chooseRoute: (i: number) => void;
@@ -99,8 +100,8 @@ function TestComponent({
   };
   const cbRef = useRef(cb);
   cbRef.current = cb;
-  const client = { send: vi.fn() } as never;
-  useWindowKeys(client, stateRef as never, cbRef as never, handleScrollKey ?? vi.fn(() => false), vi.fn());
+  const sendClient = client ?? { send: vi.fn() };
+  useWindowKeys(sendClient as never, stateRef as never, cbRef as never, handleScrollKey ?? vi.fn(() => false), vi.fn());
   return null;
 }
 
@@ -263,6 +264,15 @@ describe('useWindowKeys', () => {
     expect(scrollFn).not.toHaveBeenCalled();
   });
 
+  it.each([
+    ['[', -1], ['{', -1], [']', 1], ['}', 1],
+  ] as const)('sends moveTab dir %s for Cmd+Shift+%s', (key, dir) => {
+    const client = { send: vi.fn() };
+    render(React.createElement(TestComponent, { client }));
+    dispatchKey(key, { metaKey: true, shiftKey: true });
+    expect(client.send).toHaveBeenCalledWith({ method: 'moveTab', params: { dir } });
+  });
+
   it('does nothing when state is null', () => {
     const client = { send: vi.fn() };
     const stateRef = { current: null } as never;
@@ -275,6 +285,7 @@ describe('useWindowKeys', () => {
     dispatchKey('ArrowLeft', { ctrlKey: true });
     expect(client.send).not.toHaveBeenCalled();
   });
+
 
   it('registers and cleans up event listeners', () => {
     const addSpy = vi.spyOn(globalThis, 'addEventListener');

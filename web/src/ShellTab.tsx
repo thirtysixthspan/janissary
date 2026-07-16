@@ -6,11 +6,12 @@ import { AgentTabMeta } from './AgentTabMeta';
 type Properties = { ptyId: string; client: JanusClient; cwd?: string; flags?: string[] };
 export type ShellTabHandle = { focus(): void };
 
-// Only Shift+←/→ (tab switch) bubbles to the window; everything else — including Ctrl+C,
-// Ctrl+D, Ctrl+Z — goes to the PTY so interactive programs receive it.
+// Only the tab-switch chords (Shift+←/→ and Cmd+Shift+[/]) bubble to the window; everything
+// else — including Ctrl+C, Ctrl+D, Ctrl+Z — goes to the PTY so interactive programs receive it.
 function shellKeyFilter(e: KeyboardEvent): boolean {
   if (e.type !== 'keydown') return true;
-  const isTabSwitch = e.shiftKey && !e.ctrlKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight');
+  const isTabSwitch = (e.shiftKey && !e.ctrlKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight'))
+    || (e.metaKey && e.shiftKey && ['[', '{', ']', '}'].includes(e.key));
   return !isTabSwitch;
 }
 
