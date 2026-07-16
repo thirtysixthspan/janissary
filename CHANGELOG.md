@@ -2,6 +2,652 @@
 
 All notable changes to this project are documented here.
 
+## [0.5.0] - 2026-07-16
+
+### Features
+
+- add Cmd+Shift+[ / Cmd+Shift+] as a tab-switch alias (#379)
+- delimit model responses with begin/end marker lines (#376)
+- make ssh tabs monitorable via a registered screen reader (#374)
+- tab-complete harness --model against the harness's model catalog (#373)
+- show git branch in file navigator header (#372)
+- recognize busy/ready status from screen captures (#359)
+- add --model and --effort flags to interactive harness launch (#358)
+- color git-modified files in the file navigator (#357)
+- notify on ACP query rate limiting (#356)
+- add file navigator button to harness/agent tab metadata row (#355)
+- delineate model input from response in context snapshot (#353)
+- launch the notifications tab from a profile (#352)
+- populate claude's model catalog (#351)
+- drag a file-tree row into the command bar to insert its path (#344)
+- show a metadata row on agent, harness, and shell tabs (#343)
+- feed page-tab visible content to monitors (#331)
+- add per-tab undo/redo for drag-and-drop moves (#330)
+- dual-license Janissary under PolyForm Noncommercial with a commercial alternative (#329)
+- delete a file or directory with Backspace/Delete (#328)
+- allow dropping on any file inside a directory to move into it (#324)
+- show a cursor-following label while dragging a row (#323)
+- click-drag-release to move files between directories (#321)
+- feed editor tab monitors the live unsaved draft (#310)
+- let harness entries author a group and profiles open a file navigator (#303)
+- support in <label>/on <side> clauses in files command (#302)
+- feed editor-tab file changes to monitors as diffs (#283)
+- auto-approve claude permission prompts in workspaced tabs (#276)
+- sync unsaved editor buffer to server as transient draft (#275)
+- make the assistant monitor summarize, not suggest, when a harness is working (#282)
+- open a snapshot of a monitor's context from its metadata line (#281)
+- scroll the feed with arrow and page keys (#279)
+- report connection and persona summary on startup (#274)
+- add Shift+Tab section focus navigation (#269)
+- let the file navigator and notifications tab share a sidebar (#260)
+- add a reset-context button to the monitor metadata line (#259)
+- add a metadata line to the monitor tab (#258)
+- open a profile picker on bare 'profile launch' (#257)
+- show notifications newest-first with a timestamp (#255)
+- color notification lines with the sending tab's dot color (#253)
+- record harness PTY sessions and feed them to monitors (#246)
+- let monitoring personas opt into web search/fetch tools (#247)
+- add a notifications tab for background tab events (#245)
+- add full application color themes with a theme command and picker (#239)
+- capture a harness tab's screen to an editor tab (#238)
+- navigate task-picker subdirectories with Left/Right arrows (#217)
+- add Ctrl+A task picker for ai/ task files (#214)
+- add --here flag and same-directory instance lock (#211)
+- warn on unsaved changes when quitting or closing the last tab (#208)
+- live-reload open files changed by another process (#207)
+- clear the command line when Escape closes the queue popup (#205)
+- change the queue popup trigger from Cmd+E to Ctrl+E (#204)
+- show Queued: <command> in the transcript when a command queues (#201)
+- bind Cmd+T to open a new root-project agent tab (#199)
+- add metadata header with close button to page tabs (#197)
+- follow conventional commits
+
+### Bug Fixes
+
+- allow SUMMARY/SUGGESTION/COMMAND replies to span multiple lines (#377)
+- keep tab focus in place when opening the file navigator from the metadata row (#375)
+- make file-tree-to-command-bar drag insert a root-relative path
+- root harness tabs' cwd so file navigator finds their workspace
+- keep page tabs mounted across tab switches (#341)
+- monitor command recognizes tab aliases (#340)
+- show tab alias in the nav picker (#339)
+- complete tab labels for close/exit target argument (#338)
+- dim tab group-color border when the window loses focus (#335)
+- navigate wrapped lines by visual row with arrow keys (#334)
+- preserve scroll position when returning to an editor tab (#333)
+- load Chrome frame-enabler extension via CDP instead of --load-extension (#332)
+- cancel a drag when Escape is pressed (#327)
+- cancel a drag when the window loses focus mid-drag (#326)
+- no-op when dropping a file back into its own directory (#325)
+- restore the accidentally-deleted Chrome frame-enabler extension (#318)
+- let Shift+Left/Right switch tabs from the editor tab (#316)
+- closing the active tab restores focus to the previously focused tab (#314)
+- invert markdown double-click behavior in file navigator (#312)
+- close workspaced tabs without freezing the UI (#278)
+- clean up notification line format (#277)
+- tear down a monitor when its reporting tab or all targets close (#256)
+- contain notifications sidebar scroll to its own tab (#254)
+- hide help hint in notifications tab empty state (#250)
+- prevent selected-row color inversion on picker hover (#248)
+- task picker keyboard nav and injection on harness tabs (#243)
+- open the task picker at ai/tasks instead of ai/ (#242)
+- overlay the task picker on the harness tab that opened it (#230)
+- show quit dialog when closing the last tab from any UI path (#229)
+- show full project path in the titlebar (#228)
+- browser tab labels show domain only; metadata shows URL and close button (#226)
+- deduplicate editor tabs by file path (#225)
+- prevent text selection on file tree row double-click (#224)
+- closing UI window halts the server (#223)
+- halt server closes UI window first (#222)
+- thread projectDir through server, controller, tab-manager, and workspace-manager (#221)
+- restore focus to editor textarea when save dialog is cancelled (#219)
+- scroll selected row into view on arrow key navigation (#218)
+- hide the .md extension in the task picker (#216)
+- let Ctrl+A open the task picker from harness tabs (#215)
+- append files command to issuing tab's transcript (#213)
+- mark harness tabs busy while their process is alive (#212)
+- updates for claude
+- serialize shell command execution to stop pwd-marker leaks into queued output (#206)
+- limit transcript prompt-line double-click target to the command text (#203)
+- restore transcript text selection by moving focus-steal to mouseup (#202)
+- require a double click to re-run a transcript prompt line (#198)
+
+### Documentation
+
+- document the GitHub token's required permission scopes (#378)
+- promote finalized plans from draft to ready
+- add contributor guide and draft-plan PR template; rename product/development to product/backlog
+- draft CI setup plan and clear ready backlog entry
+- verify and improve five draft plans (#350)
+- draft plans for ready backlog features (#349)
+- trim commercial-license note and simplify contact link
+- restore PR-checks gate, drop local check-gate step from merge task
+- move file-navigator-drag-to-command-bar and tab-metadata-row to ready
+- move vendor-unified-diff to ready
+- draft plans for two ready features
+- forbid raw git commit in quick-commit
+- restructure assistant persona by input type
+- add update-package playbook
+- forbid subagent delegation in every playbook
+- remove subagent delegation from improve-codebase loop
+- require synchronous, foreground-only execution across playbooks
+- refine file navigator drag-move plan with concrete anchors
+- draft plan for file navigator drag-and-drop move
+- add developer documentation site alongside user docs (#311)
+- add quick-commit task playbook
+- capture the file-tree-sidebar screenshot as a full-page shot (#244)
+- move ai/ task playbooks into ai/tasks/ (#231)
+- add missing key bindings to help.md and sync spec (#227)
+- document the queue command and Ctrl+E binding (#210)
+- trim README to install/dev docs, extract in-app help into help.md (#200)
+
+### Refactoring
+
+- extract row-rebuilding logic from FileTreeManager (#371)
+- extract suggestion-building helpers from MonitorManager (#370)
+- extract command-history bookkeeping from TabManager (#369)
+- extract watch/unwatch helpers from FileTreeManager (#368)
+- extract reorder/remove helpers from TabManager (#367)
+- extract log-capping and finish-running helpers from TabManager (#365)
+- extract shared feed-diff logic into feed-utils (#364)
+- extract dock-resolution logic from TabManager (#363)
+- extract shared diff-entry helper for editor/page feeds (#361)
+- extract focus-history helpers from TabManager (#360)
+- reuse AgentTabMeta in HarnessTab and ShellTab (#346)
+- extract ArrowUp/ArrowDown handlers out of CommandInput's onKeyDown (#345)
+- extract ModalDialog component to deduplicate modal layout (#309)
+- export CommandInputProperties to deduplicate prop types with CommandArea (#308)
+- extract parseDir helper to deduplicate resolveCwd error handling (#306)
+- namespace sandbox and capture modules into directories (#301)
+- group flat tab, monitor, and profile modules into namespace directories (#299)
+- namespace harness files under src/harness/ (#295)
+- namespace agent files under src/agent/ (#294)
+- namespace acp files under src/acp/ (#293)
+- namespace schedule files under src/schedule/ (#292)
+- namespace completion files under src/completion/ (#291)
+- namespace browser files under src/browser/ (#290)
+- namespace database files under src/database/ (#289)
+- namespace connection files under src/connection/ (#288)
+- namespace editor files under src/editor/ (#287)
+- extract tab view openers into tab-openers module (#286)
+- extract shared ThemeListPicker component (#285)
+- extract shared dialog keyboard wiring into useDialogKeyboard (#284)
+- use one tab strip instead of a switcher plus strip (#280)
+- extract agent-state assembly from tab manager (#273)
+- extract tab rehydration from persisted state (#272)
+- extract tab-to-TabView conversion (#271)
+- extract per-tab command-queue helpers (#270)
+- extract shared state-event builder (#268)
+- extract shared command-target resolution (#267)
+- extract shared confirm-dialog shell (#266)
+- extract shared monitor reply accounting (#265)
+- extract shared populate-command-line helper (#264)
+- extract shared route-choice resolution (#263)
+- extract shared drag-resize listener wiring (#262)
+- extract shared logic to remove code duplication (#261)
+- remove redundant close button from docked tab headers (#252)
+- remove --here flag, accept project dir as positional argument (#220)
+- rename the enqueue command to queue (#209)
+
+### Chores
+
+- vendor a unified-diff generator to replace the diff dependency (#342)
+- move plans, specs, and work into product/
+- replace developer-documentation feature with editor undo/redo, add file navigator open issue
+- work update
+
+### Other
+
+- planning
+- planning
+- planning
+- update persona
+- dont wait on checks cause gh cant get check status using PATs
+- planning
+- features
+- build: update vite to 8.1.5 (#366)
+- planning
+- update models
+- planning
+- planning
+- planning
+- ci: add GitHub Actions workflow for PR checks (#354)
+- planning
+- planning
+- chores
+- test: cover controller-file-tree.ts label-lookup branches (#348)
+- features
+- features
+- build: update eslint to 10.7.0 (#347)
+- planning
+- features
+- planning
+- bug
+- change assistant model
+- Revert "chore: vendor a unified-diff generator to replace the diff dependency (#342)"
+- build: drop advisory checks from the PR check gate
+- build: split npm run check into fast and full variants
+- build: update dompurify to 3.4.12 (#337)
+- build: update @types/node to 26.1.1 (#336)
+- update test
+- updates for chrome loader
+- planning
+- planning
+- issues
+- planning
+- issues
+- issues
+- test(web): add useEditor, App, and ws tests (#322)
+- test: add 15 tests for spawnPty to bring pty.ts coverage to 100% (#320)
+- test: add unit tests for shell.ts functions (#319)
+- features
+- add features
+- test: lock in that new tabs joining a monitored group get monitored (#317)
+- test: lock in editor tab auto-focus and first-line cursor on open (#315)
+- planning
+- style: match monitor header button styles to file navigator (#313)
+- issues
+- test: add edge-case coverage for textOffsetIn and pointToCol in editor/mouse.ts (#305)
+- test: add unit tests for JanusClient WebSocket client (#304)
+- issues
+- planning
+- ci: make pr-push-branch self-heal HTTP 400 RPC push failures (#300)
+- update assistant persona
+- claude profile
+- features
+- test: add drag-mousemove tests for ReportingSection height calculation (#298)
+- permissions for codec
+- test: add schedule-fire and agent-start branch tests to notifications (#297)
+- test: add error-path test for askMonitor to raise coverage to 100% (#296)
+- add plans
+- issues
+- planning
+- relative path
+- issues
+- planning
+- planning
+- issues
+- issues
+- add plans
+- style: match notifications tab header to file tab metadata line (#251)
+- style: match monitor resize divider to sidebar divider style (#249)
+- more issues
+- more issues
+- planning
+- add screenshot
+- style: theme the markdown preview to match the active application theme (#241)
+- style: remove the gruvbox-dark application theme (#240)
+- issues
+- cleanup from feature merge
+- test: add unit tests for monitor-acp (#237)
+- test: add unit tests for useCommandBarSubmit (#236)
+- test: add App interaction tests for tab rename, ACP collapse toggle, and prompt click (#235)
+- test(web): add unit tests for useTabNav hook (#234)
+- test(server): add unit tests for security.ts (#233)
+- test(web): add unit tests for useHistPicker and useQuitConfirm hooks (#232)
+- harness capture
+- more issues
+- more issues
+- task picker plan
+- update feature workflow
+- Vertically center the command-line dot with prompt text (#196)
+- update readme
+- add feature related issues
+- Add agent command queue (#195)
+- promote plan
+- planning mostly
+- Add fuzzy tab navigator (Ctrl+G / nav) (#194)
+- promote plans
+- Remove stale sidebar entry from small-issues.md (#193)
+- test: Sidebar mouseup cleanup and closeTab button (#192)
+- Style sidebar header like a tab strip (#191)
+- Add kill and yank tests for useEditor (#190)
+- Add bottom padding to prevent file tree rows from being cut off (#189)
+- Add redo and copy tests for useEditor (#188)
+- Move close button to rightmost position in file navigator header (#187)
+- Add keyFilter test for TerminalCard (#186)
+- Add useEditor tests and remove flaky global-history test (#185)
+- Right Arrow on a file opens it (#184)
+- Right Arrow on expanded directory reroots the file navigator (#183)
+- Add divider drag test for ReportingSection (#182)
+- Hide dock-cycle button when file navigator is in a center tab (#181)
+- Add harness tab tests for MountedViewLayers (#180)
+- Restrict file navigator dock toggle to left/right only (#179)
+- Hide scrollbars for file navigator when in a sidebar (#178)
+- Add ShellTab component tests (#177)
+- Change files tab label and title to 'navigator' (#176)
+- Show only abbreviated full path in file navigator header (#175)
+- Add ShellTabLayer component tests (#174)
+- Expand ~ and $root in command path parameters (#173)
+- Add TerminalCard component tests (#172)
+- Exclude docked sidebar tabs from last-tab-quit checks (#171)
+- Defer command input focus on agent tab body click (#170)
+- Add test for agent tab body click focusing command input (#169)
+- navigator issues
+- Add left/right sidebars for docking the file navigator (#168)
+- Improve 9 draft plans per ai/improve-plan.md (#167)
+- Add implementation plans for 8 todo features (#166)
+- update docs
+- Extract getAccelStep helper to reduce useTranscriptScroll cognitive complexity (#165)
+- Focus command bar on tab label mousedown (#164)
+- rephrase issue
+- update docs
+- Forward mousedown clicks to UI when app window is unfocused (#163)
+- research
+- Extract browser tab helpers to reduce cognitive complexity (#162)
+- Add draft implementation plan for file-navigator sidebars (#161)
+- feature updates
+- Add test verifying double-click on inactive tab does not start rename (#160)
+- update sandboxing for claude
+- Improve test coverage and fix TypeScript errors (#159)
+- Update coverage thresholds (#158)
+- Add AcpManager label and close tests (#157)
+- Add acp-manager onConnect and onError tests (#156)
+- Add more acp-manager tests (#155)
+- Fix editor mouse test target type (#154)
+- Add unit tests for editor mouse.ts (#153)
+- Add test for updateConfig catch path (#152)
+- Add unit tests for useSyntaxHighlight (#151)
+- add documentation
+- Add test for renderMarkdown catch path (#150)
+- Add unit tests for useTranscriptSearch (#149)
+- Fill remaining branches in editor keys test (#148)
+- Add App tests for close command and reporting section (#147)
+- Add keyboard nav and type-ahead tests for FileTreeTab (#146)
+- Add unit tests for MountedViewLayers covering editor tab render/hide and filter (#145)
+- Add unit tests for useWindowKeys covering route/picker/search/tab-keys and lifecycle (#144)
+- Add unit tests for ReportingSection and isReportingTab covering all render paths (#143)
+- Add unit tests for useTranscriptScroll covering all scroll key handlers (#142)
+- Add unit tests for CloseSaveGuard covering guard function, save, discard, and cancel flows (#141)
+- Add unit tests for AcpManager.run() covering empty prompt, session wiring, error, and finish paths (#140)
+- tests: add HistoryPicker coverage for history overlay (#139)
+- tests: add RouteChooser coverage for route overlay rendering (#138)
+- tests: add keyboard-handlers coverage for route chooser and picker keys (#137)
+- tests: add ViewTabBody coverage for all view types (#136)
+- tests: add command-interceptions coverage, permit web/src/ in coverage workflow (#135)
+- tests: add command-completion coverage for handleTabCompletion (#134)
+- tests: add schedule-helpers full coverage for parseAt, parseOn, parseEvery (#133)
+- tests: add buffer.ts full coverage, remove orphaned main.test.ts (#132)
+- cleanup structure
+- Extract renderMarkdownLine and hitForLine helpers from renderLine (#131)
+- unrestrict browser code
+- Add dispatch coverage tests for message-handler.ts (#130)
+- permit ./temp removals
+- update ai guidance
+- Extract dispatchMatchedCommand() helper to cut CaptureManager.run cognitive complexity (#129)
+- output security report inline
+- Extract renderTextContent() helper to reduce renderLine cognitive complexity (#128)
+- remove stealth plugin do to aging dependencies
+- Extract renderPromptLine() helper to reduce renderLine cognitive complexity (#127)
+- Extract parseKindAndText() helper to deduplicate messaging validation (#126)
+- update package lock
+- new ai task to reduce complexity
+- Extract finalizeTab() helper to deduplicate tab creation in tab-creators.ts (#125)
+- Extract moveToVertical() helper to deduplicate vertical cursor motion (#124)
+- sandbox fix for knip
+- Extract handle() from index.ts into message-handler.ts (#123)
+- update ai guidance
+- Interpret ANSI escape codes in shell command output (#122)
+- permission node tool calls
+- Remove stale small-issues entry: edit transcript ordering already fixed (#121)
+- Scroll the target line into view when jumping from a file:line transcript link (#120)
+- Add createDatabase/deleteDatabase error-path tests to raise database.ts coverage (#119)
+- Add tests for completion-helpers to raise coverage (#118)
+- Add tests for closeTabResources to raise tab-cleanup.ts coverage (#117)
+- Add RPC-delegator and rehydrate tests to raise controller.ts coverage (#116)
+- Add reroot() tests to raise file-tree-manager.ts coverage (#115)
+- Add markdown-tab tests to raise tab-creators.ts coverage (#114)
+- Add tests for ProfileManager to raise profile-manager.ts coverage (#113)
+- Add tests for PseudoterminalManager to raise pseudoterminal-manager.ts coverage (#112)
+- Add run() tests for the msg command to raise msg.ts coverage (#111)
+- Add tests for monitor reporting-tab helpers to raise monitor-window.ts coverage (#110)
+- Add tests for DatabaseManager to raise database-manager.ts coverage (#109)
+- Add run() tests for the next command to raise next.ts coverage (#108)
+- Add tests for openMonitorSession/respawnMonitorSession to raise monitor-session.ts coverage (#107)
+- Add tests for BrowserManager to raise browser-tab.ts coverage (#106)
+- update sending commands for reliability
+- Add unit tests for completion-handlers' command-argument completers (#105)
+- Add unit tests for WorkspaceManager's create/remove dispatch (#104)
+- Add unit tests for monitor-info's listMonitors and monitorConnections (#103)
+- Add unit tests for the monitor/unmonitor/monitors commands (#102)
+- provide coverage parsing script
+- Add unit tests for closeConnection dispatch logic (#101)
+- Add unit tests for CaptureManager.run dispatch logic (#100)
+- restore pretooluse hook
+- Add unit tests for acp-runner's makeUpdateRunning (#99)
+- update to run workspaced command like fluid
+- Add unit tests for capture-router's routeUnknownCommand (#98)
+- sandbox fix
+- move to not found instead of not permissed in sandbox
+- unblock workspace from test coverage
+- update coverage command
+- allow killing child processes in sandbox
+- dont post install chromium
+- carve out nvm
+- extract tests that fail in a sandbox
+- working towards coverage in sandbox
+- workspace perms
+- update test suite for workspace run
+- update workspace
+- update ai tasks for workspace work
+- Add syntax highlighting to the editor tab (#91)
+- AI workflow scripts pull latest from master before running (#97)
+- Single-click in file tree selects and focuses container (#96)
+- Place file tree tabs at the beginning of the tab group (#95)
+- Remove hover tooltip from file tree rows (#94)
+- Fix command bar ghost text vertical alignment (#93)
+- Add .. parent-directory navigation to file tree (#92)
+- Show full directory path in file tree header using metadata display (#90)
+- Scroll file tree to keep selected row visible on arrow navigation (#89)
+- update perms
+- Require double-click to expand a directory in the file tree tab (#88)
+- add issue
+- Change edit modifier from Alt to Shift in file tree tab (#87)
+- add issue
+- Require double-click to open a file in the file tree tab (#86)
+- update sandbox
+- Add 12px base left padding to file tree tab rows
+- workspace cloning
+- gh interactions in workspaces
+- switch to cloning
+- safer npm install
+- update sandbox
+- update sandbox
+- sandbox updates
+- update sandboxing
+- Confine workspaced agents to their workspace via a Seatbelt sandbox (#84)
+- Add file tree tab (files command) (#83)
+- Add multi-line input mode to the command bar (#82)
+- Add ssh tab command (#80)
+- Add transcript search (search transcript / Cmd+F) (#81)
+- Add scheduled harness launch via profile (#79)
+- Prevent metadata header clicks from stealing editor focus (#78)
+- Cmd+W closes the app tab even when focus is in an embedded web page (#77)
+- editor review
+- Switch focus to new agent tab on creation (#76)
+- Use filenames as tab labels for image and markdown preview tabs (#75)
+- Require double-click to rename tab label (#74)
+- Make URLs clickable in transcript output (#73)
+- Protect editor tab focus when clicking outside text lines (#72)
+- update plans
+- Keep editor textarea focused on clicks outside text lines (#71)
+- more planning
+- Fix caret blink animation: steps(1) to steps(2) (#70)
+- Append edit command to transcript before opening editor tab (#69)
+- Use edit instead of open for clickable file:line links (#68)
+- testing outcomes
+- Add global command history buffer with cross-tab ghost text (#67)
+- Add acp reset command to kill the current tab's ACP subprocess (#66)
+- Detect file:line patterns in transcript output and make them clickable (#65)
+- add transcript plan
+- Support closing tabs by name with "close <tabname>" (#64)
+- Show save confirmation dialog when closing an editor tab with unsaved changes (#63)
+- Add caret DOM tests and document blinking cursor behavior (#62)
+- Prime monitor buffer with existing transcript entries on start (#61)
+- Add Cmd+W/Ctrl+W keyboard shortcut to close the current tab (#60)
+- some issues
+- Open web links in transcript as page tabs instead of navigating away (#59)
+- Emit state after schedule fires so next-run time updates in the web UI (#58)
+- Fix editor caret alignment so it sits on the text line (#57)
+- Handle printable characters in the editor key action system for key repeat (#56)
+- Allow edit command to open new text files (#55)
+- Fix editor scroll resetting to top after typing (#54)
+- Show filename on editor tabs instead of generic label (#53)
+- remove screenshots
+- Limit tab name length and route messages by alias (#51)
+- update claude perms
+- Add tab display alias via rename command and inline edit (#50)
+- Add ghost-text command suggestions to the command bar (#49)
+- build a feature perms
+- build a feature perms
+- update build a feature
+- Give startup failures actionable, self-identifying error messages (#48)
+- Click prompt lines in transcript to immediately execute command (#48)
+- Click prompt lines in transcript to pre-fill the command bar (#47)
+- Reject unknown flags and invalid port values with exit code 2 (#46)
+- Add --help and --version CLI flags (#45)
+- update build task
+- more plans
+- Add unread badge on inactive tabs (#44)
+- planning
+- shift+enter multiline input in terminals; closing the last tab quits the app
+- Extract persona directive parser into dedicated module (#43)
+- Extract unknown command routing into dedicated module (#42)
+- Extract markdown keyboard handler into dedicated module (#41)
+- Extract tab manipulation utilities into dedicated module (#40)
+- Extract connection command parser into dedicated module (#39)
+- Extract ACP running-state updater into dedicated module (#38)
+- Extract image keyboard handler into dedicated module (#37)
+- Extract monitor session management into dedicated module (#36)
+- Extract tab cleanup resources into dedicated module (#35)
+- Extract schedule display helpers into dedicated module (#34)
+- Extract browser command completion into dedicated module (#33)
+- Extract Tab completion from CommandInput into dedicated module (#32)
+- Extract line rendering from Transcript into dedicated module (#31)
+- Extract modal keyboard handlers into dedicated module (#30)
+- Extract unknown command routing into dedicated module (#29)
+- Extract connection close logic into dedicated module (#28)
+- Extract filesystem path completion into dedicated module (#27)
+- Extract profile agent opening logic into dedicated module (#26)
+- Extract schedule time-math into dedicated module (#25)
+- monitoring system: AI agent sessions that watch tabs and suggest actions
+- monitoring ui
+- update scheduling of harnesses
+- harness as alias
+- update spec
+- close harness on exit
+- fix harness transcript
+- send commands to tabs and harnesses
+- quit dialog
+- fix harness leaving workspace dir dangling
+- Extract agent command parsing into agent-commands module (#24)
+- Extract database query execution into database-query module (#23)
+- Extract tab color utilities into tab-colors module (#22)
+- Extract schedule parsing helpers into schedule-parsing module (#21)
+- Extract specialized tab creation into tab-creators module (#20)
+- extract database parsing
+- refactor controller
+- extract managers
+- extract acp manager
+- extract shell manager
+- dead code
+- refactoring
+- introduce event bus
+- new feature plans
+- update specs
+- dynamic shell commands
+- harness ui updates
+- remove close button gating
+- Add close button to agent tabs (#19)
+- update settings
+- shell hygiene
+- improve merge semantics
+- Extract wordWrap helper to reduce tab-formatting cognitive complexity (#18)
+- improve quality
+- Extract connection handlers to reduce cognitive complexity (#17)
+- Extract flattenBuffer handlers to reduce cognitive complexity (#16)
+- Update test.md (#15)
+- update merge task
+- Update test.md (#14)
+- update merge task
+- Update test.md (#13)
+- update merge task
+- update merge task
+- dont background
+- Update test.md (#10)
+- Update test.md with test3 content (#8)
+- add script runner
+- Add test.md (#6)
+- update merge task
+- update pr automation
+- Extract completion helpers to reduce complexity (#5)
+- automerge is not free so the agent handles the merge
+- Extract tab formatting functions into new module (#4)
+- try to force method extractions into new files
+- improved automerge workflow
+- Extract parseQueryAction() helper to reduce database command parser complexity (#3)
+- Extract filterCommandFromDisplay() helper to reduce ACP loop complexity (#2)
+- Extract parse helpers from schedule.ts to cut cognitive complexity (#1)
+- update plans style
+- add markdown tab
+- improve quality
+- update harness
+- image tab behavior
+- page tabs
+- improve coverage
+- add security monitors
+- improve coverage
+- address type safety
+- add style linting
+- deadcode tooling
+- remove code duplication
+- add code quality tool
+- add test coverage tools
+- resolve all lint warning and force errors
+- resolve refactoring regression
+- ink cleanup
+- refactorings
+- resolve linting issues
+- resolve unicorn lint errors
+- improved linting
+- root paths
+- open launcher
+- navigation changes
+- messaging fixes
+- markdown rendering in console
+- complete migration
+- specs
+- migrate to webapp
+- migration to web app
+- adjust scroll bar behavior
+- auto command dispatch
+- tab groups
+- add profile feature
+- scheduling
+- centralize types
+- command test refactor
+- command refactor
+- extract shellmanager hook
+- refactor cli
+- input refactor
+- refactor to commandwindow
+- refactor to connectionwindow
+- browser integration
+- command comments
+- logger
+- config
+- dbs and acp loop
+- hardcode opencode acp
+- agent connections; optional agent workspaces
+- acp integration
+- agent messaging
+- preliminary agent messaging
+- navigation updates
+- UI tabs
+- cleanup
+- janus
+- initial commit
+
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
