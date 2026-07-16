@@ -1,7 +1,7 @@
 import { statSync, renameSync, rmSync, type FSWatcher } from 'node:fs';
 import path from 'node:path';
 import { messageBus } from './bus.js';
-import { buildRows, markChanged, isSameOrDescendantPath, parentPath } from './file-tree.js';
+import { buildRows, isSameOrDescendantPath, parentPath } from './file-tree.js';
 import { refreshGit } from './file-tree-git-refresh.js';
 import { parseFileTreeArgs } from './file-tree-args.js';
 import { expandUserPath } from './paths.js';
@@ -9,6 +9,7 @@ import { resolveTarget } from './commands/resolve-target.js';
 import { openOrRetarget, type OpenPort } from './file-tree-open.js';
 import { applyStackMove, type MoveEntry, type UndoRedoResult } from './file-tree-moves.js';
 import { watchDir, unwatchDir } from './file-tree-watch.js';
+import { pruneAndBuildRows } from './file-tree-rebuild.js';
 import type { Managers } from './managers.js';
 
 const DEBOUNCE_MS = 100;
@@ -228,19 +229,14 @@ export class FileTreeManager {
     refreshGit(this.tabs, label, (l) => this.rebuild(l));
   }
 
-  // Prune expanded directories that no longer exist (closing their watchers), rebuild the visible
-  // row list, and write it onto the tab's payload.
+  // Rebuild the visible row list (pruning expanded directories that no longer exist) and write it
+  // onto the tab's payload.
   private rebuild(label: string): void {
     const state = this.tabs.get(label);
     if (!state) return;
-    for (const relPath of state.expanded) {
-      let stillDir: boolean;
-      try { stillDir = statSync(path.join(state.root, relPath)).isDirectory(); } catch { stillDir = false; }
-      if (!stillDir) { state.expanded.delete(relPath); this.unwatchDir(state, relPath); }
-    }
     const tab = this.managers.tab.tabs.find((t) => t.label === label);
     if (!tab?.files) return;
-    tab.files = { root: state.root, absoluteRoot: state.root, rows: markChanged(buildRows(state.root, state.expanded), state.changed ?? new Set()) };
+    tab.files = { root: state.root, absoluteRoot: state.root, rows: pruneAndBuildRows(state) };
     messageBus.emit('state', { type: 'dirty' });
   }
 }
