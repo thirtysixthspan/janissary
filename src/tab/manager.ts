@@ -17,6 +17,7 @@ import { buildTabView } from './view.js';
 import { rehydrateTabs } from './rehydrate.js';
 import { buildAgentStateFromTab } from './agent-state.js';
 import { recordLeavingActiveTab, popFocusHistory, mostRecentFileTreeLabel } from './focus-history.js';
+import { applyDock } from './dock.js';
 
 export class TabManager {
   tabs: Tab[] = [];
@@ -185,37 +186,10 @@ export class TabManager {
     }
   }
 
-  // Dock a tab into a sidebar (`'left'` | `'right'`), or undock it back to the center strip
-  // (`null`, which also makes it the active tab). Docking into a side that already holds a
-  // tab of the *same view kind* displaces that occupant back to center (non-destructive —
-  // nothing closes); a different-kind occupant (the file navigator and notifications tab
-  // share a sidebar via the client's own tab-switcher) is left docked. Docking the active tab
-  // first moves `activeTab` to the nearest non-docked tab, preserving the invariant that a
-  // docked tab is never active.
   setDock(index: number, dock: 'left' | 'right' | null): void {
-    const tab = this.tabs[index];
-    if (!tab) return;
-    if (dock === null) {
-      tab.dock = undefined;
-      this.recordLeavingActiveTab(index);
-      this.activeTab = index;
-      tab.hasUnread = false;
-      messageBus.emit('state', { type: 'dirty' });
-      return;
-    }
-    const occupant = this.tabs.find((t, i) => i !== index && t.dock === dock && t.view === tab.view);
-    if (occupant) occupant.dock = undefined;
-    tab.dock = dock;
-    if (this.activeTab === index) this.activateNearestNonDocked();
+    if (this.tabs[index] === undefined) return;
+    this.activeTab = applyDock(this.tabs, this.activeTab, index, dock, (i) => this.recordLeavingActiveTab(i));
     messageBus.emit('state', { type: 'dirty' });
-  }
-
-  private activateNearestNonDocked(): void {
-    const total = this.tabs.length;
-    for (let step = 0; step < total; step++) {
-      const index = (this.activeTab + step) % total;
-      if (!this.tabs[index]?.dock) { this.recordLeavingActiveTab(index); this.activeTab = index; return; }
-    }
   }
 
   reorderTab(dir: -1 | 1): void {
