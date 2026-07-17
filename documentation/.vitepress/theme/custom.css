@@ -20,6 +20,12 @@
   width: 256px;
 }
 
+@media (min-width: 960px) {
+  .VPDoc .content {
+    padding: 24px 32px 128px;
+  }
+}
+
 /* The landing-page hero: always use the stacked mobile layout (image above the text), never the
    side-by-side row VitePress switches to past 960px, and show the screenshot at double the
    default mobile size. !important overrides VitePress's own scoped breakpoint rules, which
