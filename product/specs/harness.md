@@ -17,8 +17,31 @@ PTY exits immediately and the tab closes (see [Lifecycle](#lifecycle)). See
 [Launching with a model and effort level](#launching-with-a-model-and-effort-level) for `--model`
 and `--effort`.
 
-- `harness` with no name — error: `Usage: harness <claude|opencode|codex> [as <label>] [-w] [-y].`
+- `harness` with no name — opens the **New harness** launch dialog (see [New harness launch dialog](#new-harness-launch-dialog) below), not an error.
 - `harness foo` — error: `Unknown harness "foo". Choose from: claude, opencode, codex.`
+
+### New harness launch dialog
+
+Typing `harness` with no arguments — from a tab that has a command line — opens a modal **New harness**
+dialog over the command bar instead of returning a usage error. The dialog is a small form for
+choosing the harness and its launch flags with controls rather than typing the command by hand. It
+offers: a harness selector (claude, opencode, codex), a **Label** field (the `as <label>` name), a
+**Workspace** toggle (`-w`), an **Offline** toggle (`--offline`), an **Auto-approve** toggle (`-y`),
+a **Model** dropdown, and an **Effort** field.
+
+The form enforces the flag constraints so it can only ever build a valid command: **Auto-approve** is
+disabled unless the selected harness is claude *and* Workspace is on, and the **Model** dropdown lists
+the selected harness's known models and is disabled when that harness has no model catalog. Opening
+the dialog records no line in the transcript.
+
+Pressing **Create** launches the harness tab immediately — it synthesizes the equivalent
+`harness <name> …` command and submits it through the normal command path, so all the usual parsing,
+validation, workspace/sandbox setup, and creator-transcript recording happen exactly as if the
+command had been typed. **Cancel** or **Escape** closes the dialog with nothing launched. The
+dialog's selections are remembered in memory for the rest of the app run (reopening restores them);
+they are never persisted to disk or restored across `--relaunch`. Only the bare `harness` command
+opens the dialog — every other form (`harness claude`, `harness claude -w`, `harness capture <name>`,
+…) still acts directly, and harness tabs, which have no command line, have no way to open it.
 
 Before the harness tab opens, the `harness <name> [as <label>] [-w]` command itself is recorded
 in the **creator's** transcript — the tab `harness` was run from, not the new harness tab (which

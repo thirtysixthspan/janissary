@@ -274,6 +274,34 @@ describe('HarnessManager auto-approve', () => {
   });
 });
 
+describe('HarnessManager launch dialog view', () => {
+  it('returns null while the dialog is closed', () => {
+    const { managers } = makeManagers();
+    const manager = new HarnessManager(managers);
+    expect(manager.harnessLaunchView()).toBeNull();
+  });
+
+  it('returns the harness names and per-harness model catalog while open', () => {
+    const { managers } = makeManagers();
+    const manager = new HarnessManager(managers);
+    manager.openLaunchDialog();
+    const view = manager.harnessLaunchView();
+    expect(view).not.toBeNull();
+    expect(view!.names).toEqual(['claude', 'opencode', 'codex']);
+    // Every name has a (possibly empty) model list, built from the catalog.
+    expect(Object.keys(view!.models)).toEqual(['claude', 'opencode', 'codex']);
+    for (const name of view!.names) expect(Array.isArray(view!.models[name])).toBe(true);
+  });
+
+  it('returns null again after the dialog is closed', () => {
+    const { managers } = makeManagers();
+    const manager = new HarnessManager(managers);
+    manager.openLaunchDialog();
+    manager.closeLaunchDialog();
+    expect(manager.harnessLaunchView()).toBeNull();
+  });
+});
+
 describe('HarnessManager model/effort', () => {
   beforeEach(() => {
     vi.useFakeTimers();

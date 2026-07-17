@@ -396,6 +396,15 @@ html, body, #root {
 }
 .modal-button:hover { background: var(--border); }
 .modal-button.selected { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+.harness-launch .harness-launch-form { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+.harness-launch-form label { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--muted); }
+.harness-launch-form label.harness-launch-check { flex-direction: row; align-items: center; gap: 6px; color: var(--fg); }
+.harness-launch-form label.harness-launch-check.disabled { color: var(--muted); }
+.harness-launch-form input[type="text"], .harness-launch-form select {
+  background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 4px;
+  padding: 3px 6px; font-family: var(--mono); font-size: 13px;
+}
+.harness-launch-form select:disabled, .harness-launch-form input:disabled { opacity: 0.5; cursor: not-allowed; }
 
 /* Command input */
 .command-area { display: flex; flex-direction: column; }

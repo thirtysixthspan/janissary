@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { JanusClient } from './ws';
-import type { TabView, RouteChooserView, TaskRow } from '@shared/protocol';
+import type { TabView, RouteChooserView, HarnessLaunchView, TaskRow } from '@shared/protocol';
+import { HarnessLaunchDialog } from './HarnessLaunchDialog';
 import { TabStrip } from './TabStrip';
 import { ViewTabBody } from './ViewTabBody';
 import { ReportingSection } from './ReportingSection';
@@ -51,6 +52,8 @@ export function App() {
   const [profiles, setProfiles] = useState<string[]>([]);
   // Server-driven route chooser (null when closed); `routeIdx` is the highlighted option.
   const [route, setRoute] = useState<RouteChooserView | null>(null);
+  // Server-driven "New harness" launch dialog (null when closed).
+  const [harnessLaunch, setHarnessLaunch] = useState<HarnessLaunchView | null>(null);
   const [routeIndex, setRouteIndex] = useState(0);
   const routeReference = useRef<RouteChooserView | null>(null);
   const inputReference = useRef<HTMLTextAreaElement>(null);
@@ -117,7 +120,7 @@ export function App() {
   const chooseRoute = useCallback((index: number) => client.send({ method: 'chooseRoute', params: { index } }), [client]);
 
   useServerState(client, {
-    setTabs, setActiveTab, setRoute, setTabNameMaxLength, setGlobalHistory, setSyntaxTheme, setTheme, setTasks, setProfiles, setRouteIndex,
+    setTabs, setActiveTab, setRoute, setHarnessLaunch, setTabNameMaxLength, setGlobalHistory, setSyntaxTheme, setTheme, setTasks, setProfiles, setRouteIndex,
     routeRef: routeReference,
   });
 
@@ -196,6 +199,7 @@ export function App() {
         onReset={(name) => client.send({ method: 'resetMonitorContext', params: { name } })}
         onSnapshot={(name) => client.send({ method: 'monitorContextSnapshot', params: { name } })}
       />
+      {harnessLaunch && <HarnessLaunchDialog view={harnessLaunch} client={client} />}
       {quitConfirmOpen && <QuitDialog onConfirm={confirmQuit} onCancel={cancelQuit} />}
       {unsavedQuitOpen && <UnsavedQuitDialog onConfirm={confirmUnsavedQuit} onCancel={cancelUnsavedQuit} />}
       <CloseSaveGuard tabs={tabs} editorHandles={editorHandles} client={client} guardRef={guardRef} />

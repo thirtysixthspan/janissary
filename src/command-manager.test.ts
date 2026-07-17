@@ -13,7 +13,7 @@ function makeManagers(): { managers: Managers; recorder: string[] } {
       managers.tab.addBusy(label);
     }),
   } as unknown as Managers['shell'];
-  managers.harness = { run: vi.fn(() => null) } as unknown as Managers['harness'];
+  managers.harness = { run: vi.fn(() => null), openLaunchDialog: vi.fn() } as unknown as Managers['harness'];
   managers.ssh = { run: vi.fn(() => null) } as unknown as Managers['ssh'];
   managers.pty = { openInlinePty: vi.fn() } as unknown as Managers['pty'];
   managers.database = { openDbs: vi.fn(() => []) } as unknown as Managers['database'];
@@ -110,6 +110,31 @@ describe('CommandManager queue gate', () => {
 
     expect(managers.tab.queueFor('janus')).toEqual([]);
     expect(managers.tab.cur().log).toEqual([]);
+  });
+});
+
+describe('CommandManager bare-harness launch dialog', () => {
+  it('opens the launch dialog for bare `harness` and records no transcript line', () => {
+    const { managers } = makeManagers();
+    managers.command.dispatch('harness');
+    expect(managers.harness.openLaunchDialog).toHaveBeenCalledTimes(1);
+    expect(managers.harness.run).not.toHaveBeenCalled();
+    expect(managers.tab.cur().log).toEqual([]);
+  });
+
+  it('treats `harness` with trailing whitespace as bare and opens the dialog', () => {
+    const { managers } = makeManagers();
+    managers.command.dispatch('harness \t');
+    expect(managers.harness.openLaunchDialog).toHaveBeenCalledTimes(1);
+    expect(managers.harness.run).not.toHaveBeenCalled();
+  });
+
+  it('still appends the input and runs for a non-empty `harness <name>` command', () => {
+    const { managers } = makeManagers();
+    managers.command.dispatch('harness claude');
+    expect(managers.harness.openLaunchDialog).not.toHaveBeenCalled();
+    expect(managers.harness.run).toHaveBeenCalledWith('harness claude');
+    expect(managers.tab.cur().log).toContainEqual({ input: 'harness claude', output: '' });
   });
 });
 

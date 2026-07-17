@@ -11,7 +11,8 @@ import { appVersionNumber } from './cli-args.js';
 export function buildStateEvent(controller: Controller): ServerEvent {
   return {
     t: 'state', tabs: controller.view(), activeTab: controller.managers.tab.activeTab,
-    route: controller.routeView(), tabNameMaxLength: getConfig().tabNameMaxLength,
+    route: controller.routeView(), harnessLaunch: controller.harnessLaunchView(),
+    tabNameMaxLength: getConfig().tabNameMaxLength,
     globalHistory: globalCommands(), syntaxTheme: getConfig().syntaxTheme, theme: getConfig().theme, tasks: listTasks(),
     profiles: listProfiles(), projectDir: controller.rootDir, version: appVersionNumber(),
   };

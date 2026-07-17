@@ -12,6 +12,9 @@ export type ConnectionView = { text: string; kind: 'shell' | 'acp' | 'browser' |
 export type ScheduleView = { id: string; spec: string; next: string; recurring: boolean };
 // A pending route chooser: the unprefixed command plus the option labels to pick from.
 export type RouteChooserView = { cmd: string; choices: string[] };
+// The open "New harness" launch dialog's data: the ordered harness names and each harness's known
+// model catalog (empty for a harness with no catalog). Null in the snapshot when the dialog is closed.
+export type HarnessLaunchView = { names: string[]; models: Record<string, string[]> };
 
 // One AI-monitor suggestion in the monitor window's feed: which persona produced it, which
 // tab's activity it is about, and the optional one-click command.
@@ -77,6 +80,8 @@ export type TabView = {
 
 export type StateEvent = {
   t: 'state'; tabs: TabView[]; activeTab: number; route: RouteChooserView | null;
+  // The open "New harness" launch dialog, or null when it is closed.
+  harnessLaunch: HarnessLaunchView | null;
   tabNameMaxLength: number;
   globalHistory: string[];
   syntaxTheme: string;
@@ -111,6 +116,8 @@ export type RpcCall =
   | { method: 'reorderTab'; params: { dir: -1 | 1 } }
   | { method: 'toggleCollapse'; params?: Record<string, never> }
   | { method: 'chooseRoute'; params: { index: number } }
+  // Close the "New harness" launch dialog without launching (Cancel/Escape).
+  | { method: 'closeHarnessLaunch'; params?: Record<string, never> }
   | { method: 'complete'; params: { text: string; cursor: number } }
   | { method: 'resize'; params: { cols: number; rows: number } }
   | { method: 'ptyInput'; params: { id: string; data: string } }
