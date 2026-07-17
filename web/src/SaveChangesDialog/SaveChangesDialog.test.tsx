@@ -90,6 +90,30 @@ describe('SaveChangesDialog', () => {
     expect(onCancel).not.toHaveBeenCalled();
   });
 
+  it('Enter runs Discard when that is the currently selected option', () => {
+    const onSave = vi.fn();
+    const onDiscard = vi.fn();
+    const onCancel = vi.fn();
+    render(<SaveChangesDialog onSave={onSave} onDiscard={onDiscard} onCancel={onCancel} />);
+    fireEvent.keyDown(document, { key: 'ArrowRight' });
+    fireEvent.keyDown(document, { key: 'Enter' });
+    expect(onDiscard).toHaveBeenCalledTimes(1);
+    expect(onSave).not.toHaveBeenCalled();
+    expect(onCancel).not.toHaveBeenCalled();
+  });
+
+  it('Enter runs Cancel when that is the currently selected option', () => {
+    const onSave = vi.fn();
+    const onDiscard = vi.fn();
+    const onCancel = vi.fn();
+    render(<SaveChangesDialog onSave={onSave} onDiscard={onDiscard} onCancel={onCancel} />);
+    fireEvent.keyDown(document, { key: 'ArrowLeft' });
+    fireEvent.keyDown(document, { key: 'Enter' });
+    expect(onCancel).toHaveBeenCalledTimes(1);
+    expect(onSave).not.toHaveBeenCalled();
+    expect(onDiscard).not.toHaveBeenCalled();
+  });
+
   it.each([
     { key: 'ArrowRight', expected: 'discard' },
     { key: 'ArrowRight', steps: 2, expected: 'cancel' },
