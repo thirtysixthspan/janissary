@@ -1,7 +1,8 @@
 import { makeHarnessTab, distinctColor, uniqueLabel } from '../tab/index.js';
-import { parseHarnessCommand, HARNESS_COMMANDS, buildHarnessCommand } from './index.js';
+import { parseHarnessCommand, HARNESS_COMMANDS, HARNESS_NAMES, buildHarnessCommand } from './index.js';
 import { claudeTmpDir } from './scratch-dir.js';
-import { isKnownModel } from './models.js';
+import { isKnownModel, modelsFor } from './models.js';
+import type { HarnessLaunchView } from '../protocol.js';
 import { HarnessScreenReader, type ScreenCapture } from './screen.js';
 import { HarnessRecorder } from './recorder.js';
 import { HarnessAutoApprover } from './auto-approve.js';
@@ -22,6 +23,7 @@ export class HarnessManager {
   private screenReaders = new Map<string, HarnessScreenReader>();
   private recorders = new Map<string, HarnessRecorder>();
   private autoApprovers = new Map<string, HarnessAutoApprover>();
+  private launchDialogOpen = false;
 
   constructor(private managers: Managers) {
     messageBus.on('pty', 'exit', (event) => {
@@ -62,6 +64,28 @@ export class HarnessManager {
       return `Unknown model "${parsed.model}" for harness "${parsed.name}" — add it to harness-models.json.`;
     }
     return this.open(parsed.name, parsed.workspace, parsed.offline, parsed.autoApprove, parsed.label, parsed.model, parsed.effort);
+  }
+
+  // Open the "New harness" launch dialog (bare `harness`). Held as a flag, mirroring
+  // `CommandManager`'s `pendingRoute`; surfaced to the client via `harnessLaunchView()`.
+  openLaunchDialog(): void {
+    this.launchDialogOpen = true;
+    messageBus.emit('state', { type: 'dirty' });
+  }
+
+  // Close the launch dialog (Cancel/Escape, or once a launch has been submitted).
+  closeLaunchDialog(): void {
+    this.launchDialogOpen = false;
+    messageBus.emit('state', { type: 'dirty' });
+  }
+
+  // The launch dialog's catalog while open, or null when closed: the harness names and each
+  // harness's known models, built fresh from `HARNESS_NAMES`/`modelsFor` so a project override of
+  // `harness-models.json` is reflected.
+  harnessLaunchView(): HarnessLaunchView | null {
+    if (!this.launchDialogOpen) return null;
+    const models = Object.fromEntries(HARNESS_NAMES.map((name) => [name, modelsFor(name)]));
+    return { names: HARNESS_NAMES, models };
   }
 
   // Handle `harness capture <name>`: write the target tab's latest in-memory screen capture to a

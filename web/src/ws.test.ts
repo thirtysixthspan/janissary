@@ -74,10 +74,11 @@ describe('JanusClient', () => {
         globalHistory: [], syntaxTheme: 'monokai', theme: 'dark', tasks: [],
         janissaryTasksDir: '/opt/janissary/ai/tasks',
         profiles: [], projectDir: '/tmp', version: '1.2.3',
+        harnessLaunch: { names: ['claude'], models: { claude: ['opus'] } },
       }),
     });
     expect(listener).toHaveBeenCalledTimes(1);
-    expect(listener).toHaveBeenCalledWith([], 0, null, 20, [], 'monokai', 'dark', [], '/opt/janissary/ai/tasks', [], '/tmp', '1.2.3');
+    expect(listener).toHaveBeenCalledWith([], 0, null, 20, [], 'monokai', 'dark', [], '/opt/janissary/ai/tasks', [], '/tmp', '1.2.3', { names: ['claude'], models: { claude: ['opus'] } });
   });
 
   it('onState unsubscribe stops the listener from being called', () => {

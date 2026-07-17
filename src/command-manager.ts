@@ -76,6 +76,9 @@ export class CommandManager {
 
   private run(input: string, label: string, index: number): void {
     if (/^harness\b/i.test(input)) {
+      // Bare `harness` (no args) opens the launch dialog instead of erroring; no transcript line is
+      // recorded, so nothing is appended ahead of the dialog. Every other `harness …` form runs.
+      if (input.trim().toLowerCase() === 'harness') { this.managers.harness.openLaunchDialog(); return; }
       this.managers.tab.append(label, { input, output: '' });
       const error = this.managers.harness.run(input);
       if (error) this.managers.tab.append(label, { input: '', output: error });

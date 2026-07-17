@@ -28,6 +28,8 @@ export function handle(controller: Controller, message: ClientMessage, reply: (e
     }
     case 'chooseRoute': { controller.chooseRoute(message.params.index); break;
     }
+    case 'closeHarnessLaunch': { controller.closeHarnessLaunch(); break;
+    }
     case 'complete': {
       reply({ t: 'rpc-reply', id: message.id, result: controller.complete(message.params.text, message.params.cursor) });
       return;

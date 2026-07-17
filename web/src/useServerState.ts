@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
 import type React from 'react';
 import type { JanusClient } from './ws';
-import type { TabView, RouteChooserView, TaskRow } from '@shared/protocol';
+import type { TabView, RouteChooserView, HarnessLaunchView, TaskRow } from '@shared/protocol';
 import { useProjectTitle } from './useProjectTitle';
 
 type Setters = {
   setTabs: (tabs: TabView[]) => void;
   setActiveTab: (index: number) => void;
   setRoute: (route: RouteChooserView | null) => void;
+  setHarnessLaunch: (view: HarnessLaunchView | null) => void;
   setTabNameMaxLength: (length: number) => void;
   setGlobalHistory: (history: string[]) => void;
   setSyntaxTheme: (theme: string) => void;
@@ -24,15 +25,16 @@ type Setters = {
 // that field has no other consumer in `App.tsx`.
 export function useServerState(client: JanusClient, setters: Setters): void {
   const {
-    setTabs, setActiveTab, setRoute, setTabNameMaxLength, setGlobalHistory, setSyntaxTheme, setTheme, setTasks, setJanissaryTasksDir, setProfiles, setRouteIndex, routeRef,
+    setTabs, setActiveTab, setRoute, setHarnessLaunch, setTabNameMaxLength, setGlobalHistory, setSyntaxTheme, setTheme, setTasks, setJanissaryTasksDir, setProfiles, setRouteIndex, routeRef,
   } = setters;
   const [projectDir, setProjectDir] = useState('');
   const [version, setVersion] = useState('');
   useProjectTitle(projectDir, version);
-  useEffect(() => client.onState((nextTabs, active, nextRoute, nextTabNameMaxLength, nextGlobalHistory, nextSyntaxTheme, nextTheme, nextTasks, nextJanissaryTasksDir, nextProfiles, nextProjectDir, nextVersion) => {
+  useEffect(() => client.onState((nextTabs, active, nextRoute, nextTabNameMaxLength, nextGlobalHistory, nextSyntaxTheme, nextTheme, nextTasks, nextJanissaryTasksDir, nextProfiles, nextProjectDir, nextVersion, nextHarnessLaunch) => {
     setTabs(nextTabs);
     setActiveTab(active);
     setRoute(nextRoute);
+    setHarnessLaunch(nextHarnessLaunch);
     setTabNameMaxLength(nextTabNameMaxLength);
     setGlobalHistory(nextGlobalHistory);
     setSyntaxTheme(nextSyntaxTheme);
@@ -47,6 +49,6 @@ export function useServerState(client: JanusClient, setters: Setters): void {
     routeRef.current = nextRoute;
     if (nextRoute && (!previous || previous.cmd !== nextRoute.cmd)) setRouteIndex(0);
   }), [
-    client, setTabs, setActiveTab, setRoute, setTabNameMaxLength, setGlobalHistory, setSyntaxTheme, setTheme, setTasks, setJanissaryTasksDir, setProfiles, setRouteIndex, routeRef,
+    client, setTabs, setActiveTab, setRoute, setHarnessLaunch, setTabNameMaxLength, setGlobalHistory, setSyntaxTheme, setTheme, setTasks, setJanissaryTasksDir, setProfiles, setRouteIndex, routeRef,
   ]);
 }
