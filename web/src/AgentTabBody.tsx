@@ -87,6 +87,7 @@ export function AgentTabBody({
         cwd={current.cwd}
         flags={current.flags}
         onOpenFileNavigator={() => client.send({ method: 'openFileNavigatorFor', params: { label: current.label } })}
+        onLaunchAgentHere={current.cwd === undefined ? undefined : () => client.send({ method: 'launchAgentFor', params: { label: current.label } })}
       />
       <div className="main">
         <Transcript

@@ -92,6 +92,16 @@ navigator here") at the end of the metadata row. Clicking it opens a file naviga
 tab's own working directory; shell (PTY-takeover) tabs do not show this button. See "Opening from a
 tab's metadata row" in `file-tree-tab.md` for how it opens or retargets the navigator.
 
+Beside the file-navigator button, agent tabs and harness tabs also show a launch-agent button (➕,
+tooltip "New agent here"). Clicking it immediately creates a new, auto-named agent tab whose working
+directory is that tab's own working directory — the one-click equivalent of the `agent` command,
+except the new agent starts where this tab is rather than in the server's own directory. The new tab
+joins the source tab's group and is focused right away; there is no dialog or name prompt. The button
+appears only when the tab has a known working directory, and shell (PTY-takeover) tabs do not show it.
+If a new agent cannot be created because all pool names are already in use, the "All agent names are
+in use." message is posted to the notifications feed (when that feed is open) rather than to the
+source tab, so the click still gives visible feedback even from a harness tab that has no transcript.
+
 ### Per-tab state isolation
 
 Each tab carries its own transcript log, command history (including navigation index), and scroll offset. Switching tabs preserves each tab's state.

@@ -21,6 +21,23 @@ describe('AgentTabMeta', () => {
     expect(onOpen).toHaveBeenCalledTimes(1);
   });
 
+  it('renders the launch-agent button only when onLaunchAgentHere is provided', () => {
+    const { getByTitle } = render(<AgentTabMeta cwd="~/project" onLaunchAgentHere={() => {}} />);
+    expect(getByTitle('New agent here')).toBeInTheDocument();
+  });
+
+  it('does not render the launch-agent button when onLaunchAgentHere is omitted', () => {
+    const { queryByTitle } = render(<AgentTabMeta cwd="~/project" />);
+    expect(queryByTitle('New agent here')).not.toBeInTheDocument();
+  });
+
+  it('invokes the callback when the launch-agent button is clicked', () => {
+    const onLaunch = vi.fn();
+    const { getByTitle } = render(<AgentTabMeta cwd="~/project" onLaunchAgentHere={onLaunch} />);
+    getByTitle('New agent here').click();
+    expect(onLaunch).toHaveBeenCalledTimes(1);
+  });
+
   it('renders no model/effort chips when those props are omitted', () => {
     const { container } = render(<AgentTabMeta cwd="~/project" flags={['workspaced']} />);
     expect(container.querySelectorAll('.tab-meta-chip').length).toBe(0);

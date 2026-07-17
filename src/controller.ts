@@ -221,6 +221,11 @@ export class Controller {
     fileTreeRpc.openFileNavigatorFor(this.managers, label);
   }
 
+  // Launch a new agent tab rooted at the named tab's cwd — the ➕ metadata-row button.
+  launchAgentFor(label: string): void {
+    this.managers.profile.newAgentAt(label);
+  }
+
   // Tab-completion for the command line (reuses the shared `completeCommandLine`): filesystem
   // paths against the active tab's cwd, `msg`/`broadcast` agent names, `connection close` targets,
   // and `browser` subcommands / window ids.

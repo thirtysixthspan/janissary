@@ -175,7 +175,11 @@ export type RpcCall =
   // harness/agent tab's metadata row. If a file-tree tab is already open, its root is retargeted
   // to that cwd in place; otherwise a fresh one opens docked in the left sidebar. Either way the
   // resulting file-tree tab is focused. `label` is the requesting tab's own label.
-  | { method: 'openFileNavigatorFor'; params: { label: string } };
+  | { method: 'openFileNavigatorFor'; params: { label: string } }
+  // Launch a new agent tab whose working directory is the named tab's cwd, triggered by the ➕
+  // button in a harness/agent tab's metadata row. The new agent is auto-named from the pool, joins
+  // the source tab's group, and is focused. `label` is the requesting tab's own label.
+  | { method: 'launchAgentFor'; params: { label: string } };
 
 export type ClientMessage = { t: 'rpc'; id: number } & RpcCall;
 

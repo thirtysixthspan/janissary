@@ -198,6 +198,11 @@ html, body, #root {
   font-size: 13px; padding: 0 4px; line-height: 1;
 }
 .tab-open-files:hover { color: var(--fg); }
+.tab-launch-agent {
+  background: transparent; border: none; color: var(--muted); cursor: pointer;
+  font-size: 13px; padding: 0 4px; line-height: 1;
+}
+.tab-launch-agent:hover { color: var(--fg); }
 .page-domain { color: var(--fg); font-weight: 600; } /* deprecated — kept for back-compat */
 .page-url { font-size: 12px; word-break: break-all; }
 .page-actions { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }

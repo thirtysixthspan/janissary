@@ -3,6 +3,8 @@ import { parseProfileCommand, loadProfileEntries, listProfiles, profileExists } 
 import { parseAgentCommand, resolveAgentName } from '../commands.js';
 import { openProfileEntries } from './agent-opener.js';
 import { sandboxNotice } from '../sandbox/index.js';
+import { notify } from '../notifications.js';
+import type { Tab } from '../types.js';
 import type { Managers } from '../managers.js';
 
 export class ProfileManager {
@@ -46,18 +48,36 @@ export class ProfileManager {
       workspaceDir = result.dir;
     }
 
+    this.placeAgent(resolved, creator, workspaceDir ?? process.cwd(), workspaceDir, parsed.offline);
+    const notice = workspaceDir ? sandboxNotice() : undefined;
+    out(`Agent "${resolved}" ready.${workspaceDir ? ` (workspace: ${this.managers.tab.shorten(workspaceDir)})` : ''}`);
+    if (notice) out(notice);
+  }
+
+  // Launch a bare, auto-named agent tab rooted at the named source tab's cwd, joining its group —
+  // the ➕ metadata-row button. A no-op for an unknown label; on pool exhaustion the error reaches
+  // the notifications feed (the source tab may be a harness with no transcript to print into).
+  newAgentAt(label: string): void {
+    const creator = this.managers.tab.tabs.find((t) => t.label === label);
+    if (!creator) return;
+    const resolved = resolveAgentName('agent', this.managers.tab.allLabels());
+    if (resolved === null) { notify(this.managers, 'manual', label, 'All agent names are in use.'); return; }
+    this.placeAgent(resolved, creator, this.managers.tab.cwdOf(label) ?? process.cwd(), undefined, false);
+  }
+
+  // Build the agent tab, insert it into its creator's group, set its cwd, focus it, and persist —
+  // the creation body shared by `newAgent` (active tab as creator) and `newAgentAt` (a label-resolved
+  // source tab that may be docked and not active).
+  private placeAgent(resolved: string, creator: Tab | undefined, cwd: string, workspaceDir: string | undefined, offline: boolean): void {
     const dotColor = distinctColor(this.managers.tab.tabs.map((t) => t.dotColor));
     const group = creator?.group ?? 1;
     const groupColor = creator?.groupColor ?? dotColor;
     const tab = makeTab(resolved, dotColor, this.managers.tab.tabs.length + 1, [], [], workspaceDir, group, groupColor);
     tab.toolStepsExpanded = false;
-    tab.offline = parsed.offline;
+    tab.offline = offline;
     this.managers.tab.insertTabInGroup(tab);
-    this.managers.tab.setCwd(resolved, workspaceDir ?? process.cwd());
+    this.managers.tab.setCwd(resolved, cwd);
     this.managers.tab.setActiveTab(this.managers.tab.findIndex(resolved));
     this.managers.tab.persist(this.managers.tab.buildAgentState(tab));
-    const notice = workspaceDir ? sandboxNotice() : undefined;
-    out(`Agent "${resolved}" ready.${workspaceDir ? ` (workspace: ${this.managers.tab.shorten(workspaceDir)})` : ''}`);
-    if (notice) out(notice);
   }
 }

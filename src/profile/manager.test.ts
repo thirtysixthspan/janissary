@@ -2,9 +2,14 @@ import { describe, it, expect, beforeEach, afterAll, vi } from 'vitest';
 import { mkdtempSync, mkdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+
+const mocks = vi.hoisted(() => ({ notify: vi.fn() }));
+vi.mock('../notifications.js', () => ({ notify: mocks.notify }));
+
 import { ProfileManager } from './manager.js';
 import { initProfileDir } from '../profiles.js';
 import { makeTab } from '../tab/index.js';
+import { agentNames } from '../agent-names.js';
 import type { Managers } from '../managers.js';
 import type { Tab } from '../types.js';
 
@@ -90,5 +95,57 @@ describe('ProfileManager.newAgent', () => {
       expect.objectContaining({ label: 'bob', workspaceDir: '/tmp/janus-workspaces/bob' }),
     );
     expect(managers.tab.setCwd).toHaveBeenCalledWith('bob', '/tmp/janus-workspaces/bob');
+  });
+});
+
+describe('ProfileManager.newAgentAt', () => {
+  function makeAtManagers(tabs: Tab[], cwdByLabel: Record<string, string>): Managers {
+    return {
+      tab: {
+        tabs,
+        allLabels: () => tabs.map((t) => t.label),
+        cwdOf: (label: string) => cwdByLabel[label],
+        insertTabInGroup: vi.fn(),
+        setCwd: vi.fn(),
+        setActiveTab: vi.fn(),
+        findIndex: vi.fn(() => 0),
+        persist: vi.fn(),
+        buildAgentState: vi.fn(() => ({})),
+      },
+    } as unknown as Managers;
+  }
+
+  beforeEach(() => { mocks.notify.mockClear(); });
+
+  it('creates a new agent tab rooted at the source tab cwd and in its group', () => {
+    const source = makeTab('claude', 'red', 1, [], [], undefined, 3, 'blue');
+    const managers = makeAtManagers([source], { claude: '/work/here' });
+
+    new ProfileManager(managers).newAgentAt('claude');
+
+    expect(managers.tab.insertTabInGroup).toHaveBeenCalledWith(
+      expect.objectContaining({ group: 3, groupColor: 'blue' }),
+    );
+    expect(managers.tab.setCwd).toHaveBeenCalledWith(expect.any(String), '/work/here');
+  });
+
+  it('does nothing for an unknown label', () => {
+    const managers = makeAtManagers([makeTab('claude', 'red')], { claude: '/work' });
+
+    new ProfileManager(managers).newAgentAt('nope');
+
+    expect(managers.tab.insertTabInGroup).not.toHaveBeenCalled();
+    expect(mocks.notify).not.toHaveBeenCalled();
+  });
+
+  it('notifies and creates nothing when every pool name is in use', () => {
+    const tabs = agentNames.map((n) => makeTab(n, 'red'));
+    const source = tabs[0];
+    const managers = makeAtManagers(tabs, { [source.label]: '/work' });
+
+    new ProfileManager(managers).newAgentAt(source.label);
+
+    expect(managers.tab.insertTabInGroup).not.toHaveBeenCalled();
+    expect(mocks.notify).toHaveBeenCalledWith(managers, 'manual', source.label, 'All agent names are in use.');
   });
 });
