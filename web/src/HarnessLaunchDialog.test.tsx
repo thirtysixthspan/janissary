@@ -88,4 +88,18 @@ describe('HarnessLaunchDialog', () => {
     expect((second.container.querySelector('select') as HTMLSelectElement).value).toBe('opencode');
     expect((second.getByLabelText(/Workspace/) as HTMLInputElement).checked).toBe(true);
   });
+
+  it('does not focus the Create button on a fresh dialog with no remembered settings', () => {
+    const { getByText } = renderDialog();
+    expect(document.activeElement).not.toBe(getByText('Create'));
+  });
+
+  it('focuses the Create button when reopened with remembered settings', () => {
+    const first = renderDialog();
+    fireEvent.click(first.getByLabelText(/Workspace/));
+    first.unmount();
+
+    const second = renderDialog();
+    expect(document.activeElement).toBe(second.getByText('Create'));
+  });
 });

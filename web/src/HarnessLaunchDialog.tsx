@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import type { HarnessLaunchView } from '@shared/protocol';
 import type { JanusClient } from './ws';
 import { useDialogKeyboard } from './useDialogKeyboard';
@@ -23,7 +23,9 @@ export function resetHarnessLaunchDialogMemory(): void {
 // command, so Create can only ever submit a valid `harness …` string via the normal command path.
 export function HarnessLaunchDialog({ view, client }: Properties) {
   const dialogRef = useRef<HTMLDivElement>(null);
+  const submitButtonRef = useRef<HTMLButtonElement>(null);
   const [fields, setFields] = useState<HarnessLaunchFields>(() => remembered ?? initialFields(view.names));
+  const [hadRemembered] = useState(() => remembered !== null);
 
   const models = view.models[fields.name] ?? [];
   const autoApproveEnabled = fields.name === 'claude' && fields.workspace;
@@ -48,6 +50,10 @@ export function HarnessLaunchDialog({ view, client }: Properties) {
     if (e.key === 'Escape') { e.preventDefault(); cancel(); }
     else if (e.key === 'Enter') { e.preventDefault(); create(); }
   });
+
+  useEffect(() => {
+    if (hadRemembered) submitButtonRef.current?.focus();
+  }, [hadRemembered]);
 
   return (
     <div className="modal-backdrop">
@@ -90,7 +96,7 @@ export function HarnessLaunchDialog({ view, client }: Properties) {
           </label>
         </div>
         <div className="modal-actions">
-          <button className="modal-button" onClick={create}>Create</button>
+          <button ref={submitButtonRef} className="modal-button" onClick={create}>Create</button>
           <button className="modal-button" onClick={cancel}>Cancel</button>
         </div>
       </div>
