@@ -1,6 +1,6 @@
 {
   "name": "janissary",
-  "version": "0.5.5",
+  "version": "0.6.0",
   "description": "A terminal UI shell with built-in commands and shell execution",
   "bin": {
     "janus": "./bin/janus.mjs"

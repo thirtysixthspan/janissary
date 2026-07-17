@@ -2,6 +2,112 @@
 
 All notable changes to this project are documented here.
 
+## [0.6.0] - 2026-07-17
+
+### Features
+
+- replace chrome glyphs with Font Awesome icons (#428)
+- inject a launch prompt via a with clause (#419)
+- add aggregated schedules tab (#415)
+- add launch-agent button to the tab metadata row (#417)
+- make the launch dialog's Effort field a dropdown (#411)
+- open a New harness launch dialog for bare `harness`
+- list task-picker tasks from the project and Janissary install
+- link an auto-approved prompt's screen capture from its notification
+- show harness model and effort in the metadata row
+- let a project override agent-names.json and harness-models.json (#384)
+- show the app version in the titlebar (#382)
+
+### Bug Fixes
+
+- fall back to logical line movement when the caret leaves the visible editor body (#427)
+- suppress unread badge on docked tabs (#424)
+- render auto-approve capture link as an icon (#420)
+- give the schedules tab list-tab behavior (#418)
+- regenerate package-lock.json with resolved/integrity metadata
+- color only the dot/time/tab prefix on message lines (#412)
+- open sidebars at a default width of 300px (#410)
+- focus Create button when launch dialog reopens with remembered settings (#409)
+- direct claude temp dir
+- adjust style
+- landing page
+- make sidebar tab labels fixed-width and renameable (#385)
+- let Ctrl+G open the tab navigator from harness tabs (#383)
+- update help and docs when making even small changes
+- fix linting error
+
+### Documentation
+
+- list soft dependencies in Prerequisites (#426)
+- document soft dependencies (Claude Code, Codex, OpenCode) (#425)
+- draft scheduling dialog, tab, and harness-with-task plans
+- draft launch-agent metadata button plan
+- resolve ai/tasks product/ references to the project working directory
+- make fix-a-bug select first or named bug without evaluation
+- add fix-a-bug AI task
+- draft plans for two ready features and clear backlog
+- show package version in documentation site nav title (#387)
+- add a GitHub icon to the documentation nav bar (#386)
+
+### Refactoring
+
+- namespace file-tree-* files into src/file-tree/ (#414)
+- extract file-id registry from TabManager (#413)
+- extract rehydrate state-map fan-out into rehydrate-state.ts (#403)
+- extract tab log mutations into transcript-ops.ts (#402)
+- dedupe dialog keydown handling into dialog-key-handler.ts (#393)
+- extract tab queue commands into queue-commands.ts (#392)
+- extract DB_PRIMER and extractDatabaseCommand into database/primer.ts (#391)
+- extract profile reserved-file loaders into profile-reserved-files.ts (#390)
+- extract buildHarnessSchedule into profile/harness-schedule.ts (#389)
+- extract tab unique-label helpers into unique-labels.ts (#388)
+
+### Chores
+
+- planning
+- add prereqs
+- planning
+- add draft plans for server backgrounding and font awesome icons
+- planning
+- planning
+- remove duplicate harness with-prompt backlog entry (#422)
+- planning
+- remove duplicate schedules-tab backlog entry (#421)
+- remove no-subagent restriction from task playbooks
+- planning
+- planning
+- planning
+- planning
+- planning
+- update package-lock
+- planning
+- planning
+- planning
+- planning
+- promote four plans from draft to ready
+- remove resolved bug entries
+- planning
+- planning
+
+### Other
+
+- Revert "docs: list soft dependencies in Prerequisites (#426)"
+- Revert "docs: document soft dependencies (Claude Code, Codex, OpenCode) (#425)"
+- cleanup: remove unnecessary integrations documentation and spec
+- style: restyle notification lines with a colored tab pill and accent bar (#423)
+- test(connection): cover ConnectionManager shell row and browser close (#416)
+- chore:planning
+- test(web): set IS_REACT_ACT_ENVIRONMENT in client setup
+- chore:planning
+- test: cover CommandInput's next-newer recall and execCommand insert branches (#401)
+- test: cover ImageTab's orientation-on-load branches (#400)
+- test: cover OverwriteConflictDialog's Enter-on-Cancel branch (#399)
+- test: cover the app theme picker's open/pick flow (#398)
+- test: cover useServerState's route-index reset logic (#397)
+- test: cover AgentTabBody's open-file-navigator button (#396)
+- test: cover SaveChangesDialog's Enter-on-Discard/Cancel branches (#395)
+- test: cover remaining message-handler.ts rpc routes (#394)
+
 ## [0.5.5] - 2026-07-16
 
 ### Features
