@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, act } from '@testing-library/react';
+import { render, screen, act, fireEvent } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 import type { ImageView } from '@shared/protocol';
 import { ImageTab } from './ImageTab';
@@ -199,6 +199,30 @@ describe('ImageTab', () => {
 
     act(() => { stage.dispatchEvent(new MouseEvent('mousedown', { button: 2, clientX: 0, clientY: 0, bubbles: true })); });
     expect(stage.style.cursor).not.toBe('grabbing');
+  });
+
+  // --- Orientation on load ---
+
+  it('applies image-landscape when the loaded image is wider than tall', () => {
+    const { container } = render(<ImageTab image={makeImage()} />);
+    const img = container.querySelector('img')!;
+    Object.defineProperties(img, {
+      naturalWidth: { value: 200, configurable: true },
+      naturalHeight: { value: 100, configurable: true },
+    });
+    fireEvent.load(img);
+    expect(img).toHaveClass('image-landscape');
+  });
+
+  it('applies image-portrait when the loaded image is taller than wide', () => {
+    const { container } = render(<ImageTab image={makeImage()} />);
+    const img = container.querySelector('img')!;
+    Object.defineProperties(img, {
+      naturalWidth: { value: 100, configurable: true },
+      naturalHeight: { value: 200, configurable: true },
+    });
+    fireEvent.load(img);
+    expect(img).toHaveClass('image-portrait');
   });
 
   // --- Zoom resets on image change ---
