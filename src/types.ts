@@ -57,7 +57,7 @@ export type BufferLine = {
 // `name === 'ssh'`: `destination` carries the connection identity for the connections panel.
 export type HarnessView = {
   name: string; program: string; ptyId: string; status: 'running' | 'exited'; exitCode?: number;
-  destination?: string;
+  destination?: string; model?: string; effort?: string;
 };
 
 export type ImageView = {

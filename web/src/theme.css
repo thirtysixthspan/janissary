@@ -188,6 +188,11 @@ html, body, #root {
 .tab-cwd { word-break: break-all; }
 .tab-flags { display: flex; align-items: center; gap: 4px; }
 .tab-flag { font-size: 13px; cursor: default; }
+.tab-meta-chip {
+  display: inline-block; max-width: 16ch; overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap; vertical-align: bottom; cursor: default;
+  padding: 0 6px; border: 1px solid var(--border); border-radius: 4px; color: var(--fg);
+}
 .tab-open-files {
   margin-left: auto; background: transparent; border: none; color: var(--muted); cursor: pointer;
   font-size: 13px; padding: 0 4px; line-height: 1;

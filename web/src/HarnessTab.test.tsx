@@ -201,6 +201,51 @@ describe('HarnessTab', () => {
     expect(getByRole('img', { name: 'Auto-permitting' })).toBeInTheDocument();
   });
 
+  it('renders model and effort chips in order between the cwd and the flags', () => {
+    const { container } = render(
+      <HarnessTab
+        harness={makeHarness({ model: 'opus', effort: 'high' })}
+        client={mockClient}
+        label="claude"
+        cwd="~/project"
+        flags={['workspaced']}
+      />,
+    );
+    const meta = container.querySelector('.tab-meta')!;
+    const order = [...meta.children].map((el) => el.className);
+    expect(order).toEqual(['tab-cwd', 'tab-meta-chip', 'tab-meta-chip', 'tab-flags', 'tab-open-files']);
+    const chips = meta.querySelectorAll('.tab-meta-chip');
+    expect(chips[0]).toHaveTextContent('opus');
+    expect(chips[0]).toHaveAttribute('title', 'Model: opus');
+    expect(chips[1]).toHaveTextContent('high');
+    expect(chips[1]).toHaveAttribute('title', 'Effort: high');
+  });
+
+  it('renders only the model chip when effort is unset', () => {
+    const { container } = render(
+      <HarnessTab harness={makeHarness({ model: 'opus' })} client={mockClient} label="claude" />,
+    );
+    const chips = container.querySelectorAll('.tab-meta-chip');
+    expect(chips.length).toBe(1);
+    expect(chips[0]).toHaveAttribute('title', 'Model: opus');
+  });
+
+  it('renders only the effort chip when model is unset', () => {
+    const { container } = render(
+      <HarnessTab harness={makeHarness({ effort: 'high' })} client={mockClient} label="claude" />,
+    );
+    const chips = container.querySelectorAll('.tab-meta-chip');
+    expect(chips.length).toBe(1);
+    expect(chips[0]).toHaveAttribute('title', 'Effort: high');
+  });
+
+  it('renders no chips when neither model nor effort is set', () => {
+    const { container } = render(
+      <HarnessTab harness={makeHarness()} client={mockClient} label="claude" />,
+    );
+    expect(container.querySelectorAll('.tab-meta-chip').length).toBe(0);
+  });
+
   it('dispatches openFileNavigatorFor with the tab label when the metadata button is clicked', () => {
     const { getByTitle } = render(
       <HarnessTab harness={makeHarness()} client={mockClient} label="claude" />,

@@ -120,6 +120,8 @@ export class HarnessManager {
   ): void {
     const program = HARNESS_COMMANDS[name];
     const harness: HarnessView = { name, program, ptyId: '', status: 'running' };
+    if (model !== undefined) harness.model = model;
+    if (effort !== undefined) harness.effort = effort;
     const tab = makeHarnessTab(label, dotColor, this.managers.tab.tabs.length + 1, group, groupColor, harness, workspaceDir);
     tab.offline = offline;
     tab.autoApprove = autoApprove;

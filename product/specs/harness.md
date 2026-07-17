@@ -277,3 +277,11 @@ against any fixed set of levels — an unrecognized level is simply forwarded, a
 that doesn't understand the flag ignores it. `--model` and `--effort` may be given independently or
 together, in any order relative to each other and to `as <label>`, `-w`/`--workspace`, `--offline`,
 and `-y`/`--yes`.
+
+Whichever of the model and effort were set at launch appear as small chips in the harness tab's
+metadata row, positioned between the working directory and the flag emojis (so the row reads
+working directory, then model, then effort, then flags). Each chip is shown only when its value
+was set — a harness launched with neither flag shows no chips and its row is unchanged. The chip
+displays the value verbatim; long values are visually truncated, and hovering a chip shows a
+tooltip carrying its label and full value (`Model: <value>` or `Effort: <value>`). These chips
+appear on harness tabs only — agent and shell tabs' metadata rows are unaffected.

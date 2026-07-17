@@ -20,4 +20,9 @@ describe('AgentTabMeta', () => {
     getByTitle('Open file navigator here').click();
     expect(onOpen).toHaveBeenCalledTimes(1);
   });
+
+  it('renders no model/effort chips when those props are omitted', () => {
+    const { container } = render(<AgentTabMeta cwd="~/project" flags={['workspaced']} />);
+    expect(container.querySelectorAll('.tab-meta-chip').length).toBe(0);
+  });
 });
