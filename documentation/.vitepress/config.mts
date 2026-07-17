@@ -13,6 +13,10 @@ import { trimAndScaleSprite } from "./sprite-trim";
 const FACINGS = ["south", "south-east", "south-west"];
 const SPRITE_SCALE = 2;
 
+const pkg = JSON.parse(
+  readFileSync(path.resolve(fileURLToPath(import.meta.url), "..", "..", "..", "package.json"), "utf-8"),
+) as { version: string };
+
 function copyAgentImages() {
   const docsRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
   const source = path.resolve(docsRoot, "..", "agent-images");
@@ -47,6 +51,7 @@ export default defineConfig({
     "Documentation for Janissary, a tab-based terminal shell for working with AI agents — user guide and developer/contributor docs",
   srcDir: ".",
   themeConfig: {
+    siteTitle: `Janissary (${pkg.version})`,
     nav: [
       { text: "User Docs", link: "/user-documentation/getting-started/application" },
       { text: "Developer Docs", link: "/developer-documentation/" },
