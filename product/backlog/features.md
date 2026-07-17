@@ -2,10 +2,6 @@
 
 ## ready
 
-* tasks for the task picker should be draft from two places - taken from the /ai/tasks directory in the Janissary codebase and taken from the /ai/tasks directory in the working directory of the project.
-
-* Update the AI tasks so that they reference the product directory in the working directory of the project, not the product directory of the Janissary codebase. 
-
 ## development
 
 4. Supervisor/manager agent (LangGraph supervisor, n8n AI Agent Tool) — a built-in supervisor persona that receives a goal, fans work out with broadcast request, and aggregates the responses.
