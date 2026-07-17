@@ -4,6 +4,8 @@
 
 * launching the application should background the server and all server output should be sent the a .janissary log instead of displayed to the user with the exception of failed to start error messages which should go both to the log and to the user.
 
+* integrate the latest version of font awesome and relace the icons and emoji in the application with font awesome icons 
+
 ## development
 
 4. Supervisor/manager agent (LangGraph supervisor, n8n AI Agent Tool) — a built-in supervisor persona that receives a goal, fans work out with broadcast request, and aggregates the responses.
