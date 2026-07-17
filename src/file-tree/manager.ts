@@ -1,16 +1,16 @@
 import { statSync, renameSync, rmSync, type FSWatcher } from 'node:fs';
 import path from 'node:path';
-import { messageBus } from './bus.js';
-import { buildRows, isSameOrDescendantPath, parentPath } from './file-tree.js';
-import { refreshGit } from './file-tree-git-refresh.js';
-import { parseFileTreeArgs } from './file-tree-args.js';
-import { expandUserPath } from './paths.js';
-import { resolveTarget } from './commands/resolve-target.js';
-import { openOrRetarget, type OpenPort } from './file-tree-open.js';
-import { applyStackMove, type MoveEntry, type UndoRedoResult } from './file-tree-moves.js';
-import { watchDir, unwatchDir } from './file-tree-watch.js';
-import { pruneAndBuildRows } from './file-tree-rebuild.js';
-import type { Managers } from './managers.js';
+import { messageBus } from '../bus.js';
+import { buildRows, isSameOrDescendantPath, parentPath } from './index.js';
+import { refreshGit } from './git-refresh.js';
+import { parseFileTreeArgs } from './args.js';
+import { expandUserPath } from '../paths.js';
+import { resolveTarget } from '../commands/resolve-target.js';
+import { openOrRetarget, type OpenPort } from './open.js';
+import { applyStackMove, type MoveEntry, type UndoRedoResult } from './moves.js';
+import { watchDir, unwatchDir } from './watch.js';
+import { pruneAndBuildRows } from './rebuild.js';
+import type { Managers } from '../managers.js';
 
 const DEBOUNCE_MS = 100;
 

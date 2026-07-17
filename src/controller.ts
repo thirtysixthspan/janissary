@@ -12,7 +12,7 @@ import { ScheduleManager } from './schedule/manager.js';
 import { ProfileManager } from './profile/manager.js';
 import { ConnectionManager } from './connection/manager.js';
 import { OpenFileManager } from './open-file-manager.js';
-import { FileTreeManager } from './file-tree-manager.js';
+import { FileTreeManager } from './file-tree/manager.js';
 import * as fileTreeRpc from './controller-file-tree.js';
 import { wireControllerEvents } from './controller-events.js';
 import { EditorWatchManager } from './editor/watch-manager.js';

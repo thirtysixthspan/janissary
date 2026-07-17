@@ -1,8 +1,8 @@
 import { statSync, type FSWatcher } from 'node:fs';
 import path from 'node:path';
-import { buildRows, markChanged } from './file-tree.js';
-import { unwatchDir } from './file-tree-watch.js';
-import type { FileTreeRow } from './types.js';
+import { buildRows, markChanged } from './index.js';
+import { unwatchDir } from './watch.js';
+import type { FileTreeRow } from '../types.js';
 
 type RebuildableState = {
   root: string;

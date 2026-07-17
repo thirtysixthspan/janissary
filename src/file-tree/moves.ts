@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { renameSync } from 'node:fs';
-import { hasNameConflict } from './file-tree.js';
+import { hasNameConflict } from './index.js';
 
 // One past move: the item's tree-relative path before (`from`) and after (`to`) the move. Enough
 // to reverse it (move `to` back to `from`'s directory) or re-apply it (move `from` to `to`'s

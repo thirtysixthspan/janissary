@@ -1,5 +1,5 @@
-import { changedPaths, currentBranch } from './git-status.js';
-import type { FilesTabState } from './file-tree-manager.js';
+import { changedPaths, currentBranch } from '../git-status.js';
+import type { FilesTabState } from './manager.js';
 
 // Recompute one tab's git-changed set and current branch off the event loop, then re-render with
 // them via `rebuild` (decision 6's second `dirty` emit). Coalesced: if a refresh is already in
