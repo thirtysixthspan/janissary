@@ -88,9 +88,12 @@ describe('TabStrip', () => {
   });
 
   it('shows the unread badge when hasUnread is set', () => {
-    const { container } = render(
+    const { container, getByRole } = render(
       <TabStrip tabs={[makeTab({ hasUnread: true })]} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()} onRename={vi.fn()} tabNameMaxLength={100} />,
     );
+    const badge = getByRole('img', { name: 'unread' });
+    expect(badge).toHaveClass('tab-badge');
+    expect(badge.querySelector('svg[data-icon="star"]')).not.toBeNull();
     expect(container.querySelector('.tab-badge')).toBeInTheDocument();
   });
 

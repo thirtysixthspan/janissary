@@ -1,5 +1,7 @@
 import React from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { TabView } from '@shared/protocol';
+import { statusDotIcon } from './icons';
 
 export type TabNavEntry = { tab: TabView; index: number };
 
@@ -66,7 +68,7 @@ export function TabNavPicker({ tabs, query, selected, onPick }: Properties) {
             className={`picker-row${row === selected ? ' selected' : ''}`}
             onClick={() => onPick(index)}
           >
-            <span className="dot" style={{ color: tab.dotColor }}>●</span> {tab.number} {highlightLabel(displayLabel(tab), query)}
+            <span className="dot" style={{ color: tab.dotColor }}><FontAwesomeIcon icon={statusDotIcon} /></span> {tab.number} {highlightLabel(displayLabel(tab), query)}
           </div>
         ))
       )}

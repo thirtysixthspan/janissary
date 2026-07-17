@@ -52,7 +52,7 @@ While a tab's agent is busy — running a shell command, an ACP turn, or any oth
 
 ### Unread badge
 
-When an **inactive** tab receives new transcript content — a message from another agent (`msg`/`broadcast`), ACP/agent output, a shell command finishing, or a browser/connection command completing — a **sparkle badge (✨)** appears on that tab in the tab strip, rendered as a sibling of the tab name so it does not inherit the busy-dot blink. The badge stays until the tab is focused, then clears. The active tab never shows the sparkle.
+When an **inactive** tab receives new transcript content — a message from another agent (`msg`/`broadcast`), ACP/agent output, a shell command finishing, or a browser/connection command completing — an **unread badge** (a star icon) appears on that tab in the tab strip, rendered as a sibling of the tab name so it does not inherit the busy-dot blink. The badge stays until the tab is focused, then clears. The active tab never shows the badge.
 
 **Marking.** Content delivery marks a tab unread via a single `TabManager.markUnread(label)` helper, which sets `hasUnread` only when the target tab is not the active tab and not docked into a sidebar. The helper is called from `append` (messages, command output, ACP output), `finishRunning` (browser/connection completion), and the shell manager's `onDone` callback (shell command completion). In-progress shell output (`onChunk`) does not mark — the busy dot already conveys that state; the badge signals completed new output.
 
@@ -80,21 +80,21 @@ Releasing the mouse (mouse-up) anywhere in the body of an agent tab also moves f
 
 Agent tabs, harness tabs, and shell (PTY-takeover) tabs each show a small metadata row above their
 body: the tab's current working directory (abbreviated the same way as other tab header locations),
-followed by an emoji for each of the tab's currently-active flags. A flag with no active state
-contributes no emoji — there is no "disabled" indicator — and the row always renders, showing at
+followed by an icon for each of the tab's currently-active flags. A flag with no active state
+contributes no icon — there is no "disabled" indicator — and the row always renders, showing at
 least the working directory, even when a tab has zero active flags.
 
-Today there are two possible flags: **workspaced** (📦), shown when the tab has its own isolated
-git clone, and **auto-permitting** (⚡), shown when harness auto-approval is enabled (harness tabs
-only — see Auto-approve permissions in `harness.md`). Hovering a flag's emoji shows a tooltip naming
+Today there are two possible flags: **workspaced** (a box icon), shown when the tab has its own isolated
+git clone, and **auto-permitting** (a bolt icon), shown when harness auto-approval is enabled (harness tabs
+only — see Auto-approve permissions in `harness.md`). Hovering a flag's icon shows a tooltip naming
 it ("Workspaced", "Auto-permitting"). More flags of the same kind are expected in the future.
 
-Agent tabs and harness tabs also show a right-aligned file-navigator button (📁, tooltip "Open file
+Agent tabs and harness tabs also show a right-aligned file-navigator button (a folder icon, tooltip "Open file
 navigator here") at the end of the metadata row. Clicking it opens a file navigator rooted at that
 tab's own working directory; shell (PTY-takeover) tabs do not show this button. See "Opening from a
 tab's metadata row" in `file-tree-tab.md` for how it opens or retargets the navigator.
 
-Beside the file-navigator button, agent tabs and harness tabs also show a launch-agent button (➕,
+Beside the file-navigator button, agent tabs and harness tabs also show a launch-agent button (a plus icon,
 tooltip "New agent here"). Clicking it immediately creates a new, auto-named agent tab whose working
 directory is that tab's own working directory — the one-click equivalent of the `agent` command,
 except the new agent starts where this tab is rather than in the server's own directory. The new tab

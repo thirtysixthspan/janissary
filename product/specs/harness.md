@@ -149,7 +149,7 @@ standing down` once and leaves that gate alone until the screen changes. Auto-ap
 per launch — like the harness tab itself, it is never persisted or restored on `--relaunch`. As with
 every notification, the `auto-approve` line is only recorded while the notifications tab is open.
 
-A harness tab opened with `-y` shows the auto-permitting flag emoji in its metadata row — see
+A harness tab opened with `-y` shows the auto-permitting flag icon in its metadata row — see
 Metadata row in `tabs.md`.
 
 ## Harness tab data
@@ -337,7 +337,7 @@ together, in any order relative to each other and to `as <label>`, `-w`/`--works
 and `-y`/`--yes`.
 
 Whichever of the model and effort were set at launch appear as small chips in the harness tab's
-metadata row, positioned between the working directory and the flag emojis (so the row reads
+metadata row, positioned between the working directory and the flag icons (so the row reads
 working directory, then model, then effort, then flags). Each chip is shown only when its value
 was set — a harness launched with neither flag shows no chips and its row is unchanged. The chip
 displays the value verbatim; long values are visually truncated, and hovering a chip shows a

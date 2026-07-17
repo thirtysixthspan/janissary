@@ -60,7 +60,7 @@ through a path form (`files ./in`).
 
 ### Opening from a tab's metadata row
 
-Agent tabs and harness tabs carry a 📁 file-navigator button in their metadata row (see "Metadata
+Agent tabs and harness tabs carry a folder-icon file-navigator button in their metadata row (see "Metadata
 row" in `tabs.md`). Clicking it opens a file navigator rooted at that tab's own working directory.
 Unlike the bare `files` command — which opens into the center tab strip — a navigator opened this
 way, when none is open yet, opens **docked in the left sidebar** by default.
@@ -121,7 +121,7 @@ stops refreshing automatically and can be refreshed manually by collapsing and r
 | Double-click a directory row | Select it and toggle expand/collapse |
 | Double-click the `..` row | Navigate the tree up one directory |
 | Shift+double-click a file row | Select it and open it in the plain-text editor (with `edit`), even for files whose normal opener is a viewer (images) — for Markdown files, this instead opens the rendered preview (with `open`) |
-| Chevron (▸/▾) | Visual affordance only — the whole row is the click target |
+| Chevron (a caret icon, pointing right when collapsed and down when expanded) | Visual affordance only — the whole row is the click target |
 | Double-clicking any row | Does not select the row's text |
 | Header collapse-all button | Collapse every expanded directory back to just the root |
 | Scroll wheel / trackpad | Scrolls the row list |

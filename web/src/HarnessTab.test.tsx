@@ -182,7 +182,7 @@ describe('HarnessTab', () => {
     );
     const badge = getByRole('img', { name: 'Workspaced' });
     expect(badge).toBeInTheDocument();
-    expect(badge).toHaveTextContent('📦');
+    expect(badge.querySelector('svg[data-icon="box"]')).not.toBeNull();
     expect(badge).toHaveAttribute('title', 'Workspaced');
   });
 

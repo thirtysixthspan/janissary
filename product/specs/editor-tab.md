@@ -69,7 +69,7 @@ editor's key bindings.
 
 ### Saving
 
-The editor saves with Ctrl+S or Cmd+S. The save writes the current buffer content to disk at the file's path. On success a "Saved" flash appears in the metadata header; on failure the server error message is shown and the dirty indicator remains. A dirty dot (●) appears next to the file name in the header whenever there are unsaved changes.
+The editor saves with Ctrl+S or Cmd+S. The save writes the current buffer content to disk at the file's path. On success a "Saved" flash appears in the metadata header; on failure the server error message is shown and the dirty indicator remains. A dirty dot (a filled-circle icon) appears next to the file name in the header whenever there are unsaved changes.
 
 ### Live draft sync
 

@@ -35,7 +35,7 @@ Full-screen and interactive programs — `htop`, `vim`, `less`, `top`, `man`, `p
 When the program exits, the tab returns to the normal transcript view exactly as it was before the PTY launched. No log entry is appended — the transcript is simply restored.
 
 While in PTY takeover mode, the tab shows the same metadata row (working directory and active-flag
-emoji) as the underlying agent tab — see Metadata row in `tabs.md`.
+icons) as the underlying agent tab — see Metadata row in `tabs.md`.
 
 ### Multi-tab persistence
 

@@ -1,5 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { CompletionResult } from '@shared/protocol';
+import { statusDotIcon, promptIcon } from './icons';
 import { handleTabCompletion } from './command-completion';
 import { findGhostSuggestion } from './ghost-suggestion';
 
@@ -207,8 +209,8 @@ export function CommandInput({
     <div className="command-area" data-doc-shot="command-bar" data-command-bar ref={rootRef}>
       {completions.length > 0 && <div className="completions">{completions.join('  ')}</div>}
       <div className="command" onClick={() => inputRef.current?.focus()}>
-        <span className={`dot${busy ? ' busy' : ''}`} style={{ color: dotColor }}>●</span>
-        <span>{busy ? 'queue ❯' : '❯'}</span>
+        <span className={`dot${busy ? ' busy' : ''}`} style={{ color: dotColor }}><FontAwesomeIcon icon={statusDotIcon} /></span>
+        <span>{busy ? <>queue <FontAwesomeIcon icon={promptIcon} /></> : <FontAwesomeIcon icon={promptIcon} />}</span>
         <div className="input-wrap">
           {ghost && (
             <span className="ghost" aria-hidden="true">

@@ -1,7 +1,9 @@
 import React, { useRef, useState } from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { JanusClient } from './ws';
 import type { TerminalEntry } from '@shared/protocol';
 import { useXterm } from './useXterm';
+import { collapsedIcon } from './icons';
 
 type Properties = { entry: TerminalEntry; client: JanusClient };
 
@@ -31,7 +33,7 @@ export function TerminalCard({ entry, client }: Properties) {
   return (
     <div className={`terminal-card${maximized ? ' maximized' : ''}`}>
       <div className="head">
-        <span className="name">▸{entry.program}</span>
+        <span className="name"><FontAwesomeIcon icon={collapsedIcon} />{entry.program}</span>
         <span className={`status${isExited ? ' exited' : ''}`}>
           {isExited ? `exited${entry.exitCode === undefined ? '' : ` (${entry.exitCode})`}` : 'running'}
         </span>

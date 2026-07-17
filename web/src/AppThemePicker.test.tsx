@@ -7,9 +7,11 @@ import { APP_THEMES } from '@shared/app-themes';
 describe('AppThemePicker', () => {
   it('renders every theme with the active one marked', () => {
     const { container } = render(<AppThemePicker themes={APP_THEMES} active="nord" selected={0} onPick={() => {}} />);
-    expect(screen.getByText(/✓ nord/)).toBeInTheDocument();
+    const nordRow = screen.getByText('nord', { exact: false }).closest('.picker-row');
+    expect(nordRow?.querySelector('svg[data-icon="check"]')).not.toBeNull();
     const rows = [...container.querySelectorAll(':scope .picker-row')].map((row) => row.textContent?.trim());
-    expect(rows).toEqual(APP_THEMES.map((name) => (name === 'nord' ? `✓ ${name}` : name)));
+    expect(rows).toEqual(APP_THEMES.map((name) => name));
+    expect(container.querySelectorAll(':scope svg[data-icon="check"]')).toHaveLength(1);
   });
 
   it('renders one data-theme scoped swatch per theme', () => {

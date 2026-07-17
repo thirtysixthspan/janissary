@@ -18,8 +18,8 @@ files become visible once it is expanded (see "Picker behavior" below). The list
 disk each time the picker opens, so adding, renaming, or removing a task file (or subdirectory) is
 reflected immediately. Each file row displays its name with the `.md` extension hidden
 (`fix-a-small-issue`, not `fix-a-small-issue.md`); the extension is still present in the command
-inserted when the row is picked. Directory rows show a chevron indicating their expand state (▸
-collapsed, ▾ expanded) and are indented one level deeper than their parent.
+inserted when the row is picked. Directory rows show a caret-icon chevron indicating their expand state (pointing
+right when collapsed, down when expanded) and are indented one level deeper than their parent.
 
 When the same task path exists in both sources, the **project copy wins** and the built-in copy is
 hidden — a project can override a shipped task by giving a file the same name. A section whose

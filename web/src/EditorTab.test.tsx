@@ -27,6 +27,8 @@ const textarea = () => screen.getByLabelText('Edit notes.txt');
 
 const nameText = (container: HTMLElement) => container.querySelector('.image-name')?.textContent ?? '';
 
+const hasDirtyDot = (container: HTMLElement) => container.querySelector(':scope .image-name svg[data-icon="circle"]') !== null;
+
 function type(text: string) {
   const element = textarea() as HTMLTextAreaElement;
   element.value = text;
@@ -69,11 +71,11 @@ describe('EditorTab', () => {
   it('shows a dirty dot after an edit and clears it on a successful save', async () => {
     const { client, saveFile } = makeClient();
     const { container } = await renderLoaded(client);
-    expect(nameText(container)).not.toContain('●');
+    expect(hasDirtyDot(container)).toBe(false);
     type('x');
-    await waitFor(() => expect(nameText(container)).toContain('●'));
+    await waitFor(() => expect(hasDirtyDot(container)).toBe(true));
     fireEvent.keyDown(textarea(), { key: 's', metaKey: true });
-    await waitFor(() => expect(nameText(container)).not.toContain('●'));
+    await waitFor(() => expect(hasDirtyDot(container)).toBe(false));
     expect(saveFile).toHaveBeenCalledWith('/open/1', 'xline one\nline two');
     expect(screen.getByText('Saved')).toBeInTheDocument();
   });
@@ -84,7 +86,7 @@ describe('EditorTab', () => {
     type('x');
     fireEvent.keyDown(textarea(), { key: 's', metaKey: true });
     await waitFor(() => expect(screen.getByText('EACCES: permission denied')).toBeInTheDocument());
-    expect(nameText(container)).toContain('●');
+    expect(hasDirtyDot(container)).toBe(true);
   });
 
   it('shows a load error when the fetch fails', async () => {
@@ -330,7 +332,7 @@ describe('EditorTab', () => {
     const view = makeView({ mtimeMs: 1 });
     const { container, rerender } = await renderLoaded(client, view);
     type('x');
-    await waitFor(() => expect(nameText(container)).toContain('●'));
+    await waitFor(() => expect(hasDirtyDot(container)).toBe(true));
 
     rerender(<EditorTab editor={{ ...view, mtimeMs: 2 }} client={client} active />);
     expect(screen.getByText('line one')).toBeInTheDocument();
@@ -345,7 +347,7 @@ describe('EditorTab', () => {
     const view = makeView({ mtimeMs: 1 });
     const { container, rerender } = await renderLoaded(client, view);
     type('x');
-    await waitFor(() => expect(nameText(container)).toContain('●'));
+    await waitFor(() => expect(hasDirtyDot(container)).toBe(true));
     rerender(<EditorTab editor={{ ...view, mtimeMs: 2 }} client={client} active />);
     fireEvent.keyDown(textarea(), { key: 's', metaKey: true });
     await waitFor(() => expect(screen.getByRole('button', { name: 'Overwrite (y)' })).toBeInTheDocument());
@@ -361,7 +363,7 @@ describe('EditorTab', () => {
     const view = makeView({ mtimeMs: 1 });
     const { container, rerender } = await renderLoaded(client, view);
     type('x');
-    await waitFor(() => expect(nameText(container)).toContain('●'));
+    await waitFor(() => expect(hasDirtyDot(container)).toBe(true));
     rerender(<EditorTab editor={{ ...view, mtimeMs: 2 }} client={client} active />);
     fireEvent.keyDown(textarea(), { key: 's', metaKey: true });
     await waitFor(() => expect(screen.getByRole('button', { name: 'Cancel (Esc)' })).toBeInTheDocument());
@@ -369,7 +371,7 @@ describe('EditorTab', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Cancel (Esc)' }));
 
     expect(saveFile).not.toHaveBeenCalled();
-    expect(nameText(container)).toContain('●');
+    expect(hasDirtyDot(container)).toBe(true);
     expect(screen.queryByText('This file changed on disk. Overwrite it with your changes?')).not.toBeInTheDocument();
   });
 });

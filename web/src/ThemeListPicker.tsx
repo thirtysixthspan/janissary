@@ -1,4 +1,6 @@
 import React from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { selectedIcon } from './icons';
 
 // Shared picker overlay listing selectable theme names with the active one checkmarked. Up/Down
 // move the selection and Return picks — both handled by App's key handler; rows are also clickable.
@@ -23,7 +25,7 @@ export function ThemeListPicker({ title, themes, active, selected, onPick, swatc
           onClick={() => onPick(name)}
         >
           {swatch?.(name)}
-          {name === active ? '✓ ' : '  '}{name}
+          {name === active ? <><FontAwesomeIcon icon={selectedIcon} /> </> : '  '}{name}
         </div>
       ))}
     </div>

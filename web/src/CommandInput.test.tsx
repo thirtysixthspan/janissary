@@ -112,13 +112,14 @@ describe('CommandInput — ghost text', () => {
 describe('CommandInput — busy', () => {
   it('shows the bare prompt and no blinking dot when idle', () => {
     renderCommandInput({ busy: false });
-    expect(screen.getByText('❯')).toBeInTheDocument();
+    expect(document.querySelector('svg[data-icon="chevron-right"]')).not.toBeNull();
     expect(document.querySelector('.dot.busy')).toBeNull();
   });
 
   it('shows the "queue ❯" prompt and a blinking dot when busy', () => {
     renderCommandInput({ busy: true });
-    expect(screen.getByText('queue ❯')).toBeInTheDocument();
+    expect(screen.getByText('queue', { exact: false })).toBeInTheDocument();
+    expect(document.querySelector('svg[data-icon="chevron-right"]')).not.toBeNull();
     expect(document.querySelector('.dot.busy')).not.toBeNull();
   });
 });
