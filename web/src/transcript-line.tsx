@@ -178,7 +178,7 @@ export function renderLine(
     return renderPromptLine(line, index, highlight, onToggleCollapse, onPromptClick, hit, hitProps);
   }
   if (line.type === 'message') {
-    const [time, ...tabParts] = line.from.split(' ');
+    const [time, ...tabParts] = (line.from ?? '').split(' ');
     const tab = tabParts.join(' ');
     return (
       <div

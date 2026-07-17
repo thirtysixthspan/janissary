@@ -147,6 +147,27 @@ describe('TabManager queue', () => {
   });
 });
 
+describe('TabManager markUnread', () => {
+  it('append does not mark a docked, non-active tab unread', () => {
+    const tm = makeTabManager();
+    tm.tabs.push({ ...tm.cur(), label: 'notifications', number: 2, view: 'notifications' });
+    tm.setDock(1, 'left');
+
+    tm.append('notifications', { output: 'new line' });
+
+    expect(tm.tabs.find((t) => t.label === 'notifications')?.hasUnread).toBeFalsy();
+  });
+
+  it('append still marks a non-docked, non-active tab unread', () => {
+    const tm = makeTabManager();
+    tm.tabs.push({ ...tm.cur(), label: 'second', number: 2 });
+
+    tm.append('second', { output: 'new line' });
+
+    expect(tm.tabs.find((t) => t.label === 'second')?.hasUnread).toBe(true);
+  });
+});
+
 describe('TabManager focus history', () => {
   it('closing the active tab restores the tab active immediately before it, not just the adjacent slot', () => {
     const tm = makeTabManager();
