@@ -10,6 +10,8 @@ function initialFields(names: string[]): HarnessLaunchFields {
   return { name: names[0] ?? 'claude', label: '', workspace: false, offline: false, autoApprove: false, model: '', effort: '' };
 }
 
+const EFFORT_LEVELS = ['low', 'medium', 'high', 'xhigh', 'max'];
+
 // Remembered across reopen within a single app run (module-level, never persisted to disk).
 let remembered: HarnessLaunchFields | null = null;
 
@@ -92,7 +94,10 @@ export function HarnessLaunchDialog({ view, client }: Properties) {
             </select>
           </label>
           <label>Effort
-            <input type="text" value={fields.effort} placeholder="(optional)" onChange={(e) => update({ effort: e.target.value })} />
+            <select value={fields.effort} onChange={(e) => update({ effort: e.target.value })}>
+              <option value="">(default)</option>
+              {EFFORT_LEVELS.map((level) => <option key={level} value={level}>{level}</option>)}
+            </select>
           </label>
         </div>
         <div className="modal-actions">
