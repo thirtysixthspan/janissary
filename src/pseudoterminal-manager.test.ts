@@ -48,7 +48,7 @@ describe('PseudoterminalManager', () => {
     expect(id).toBe('pty1');
     expect(manager.terminalsFor('main')).toEqual(['vim']);
     expect(vi.mocked(spawnPty)).toHaveBeenCalledWith(
-      'vim', 'vim file.txt', '/repo', expect.anything(), 80, 24, expect.anything(),
+      'vim', 'vim file.txt', '/repo', expect.anything(), 80, 24, expect.anything(), undefined,
     );
   });
 
@@ -60,7 +60,7 @@ describe('PseudoterminalManager', () => {
     manager.spawn('main', 'vim', 'vim file.txt', '/repo');
 
     expect(vi.mocked(spawnPty)).toHaveBeenCalledWith(
-      'vim', 'vim file.txt', '/repo', expect.anything(), 120, 40, expect.anything(),
+      'vim', 'vim file.txt', '/repo', expect.anything(), 120, 40, expect.anything(), undefined,
     );
   });
 
@@ -118,7 +118,7 @@ describe('PseudoterminalManager', () => {
     manager.openInlinePty('main', 'less file.txt', 'less');
 
     expect(vi.mocked(spawnPty)).toHaveBeenCalledWith(
-      'less', 'less file.txt', process.cwd(), expect.anything(), 80, 24, expect.anything(),
+      'less', 'less file.txt', process.cwd(), expect.anything(), 80, 24, expect.anything(), undefined,
     );
     expect(tab.activePty).toBe('pty1');
   });

@@ -10,6 +10,10 @@ vi.mock('./capture-file.js', () => ({
   writeCaptureFile: vi.fn(() => '/project/.janissary/captures/claude-now.txt'),
 }));
 
+vi.mock('./scratch-dir.js', () => ({
+  claudeTmpDir: vi.fn((cwd: string) => `${cwd}/.janissary/temp`),
+}));
+
 vi.mock('../notifications.js', () => ({ notify: vi.fn() }));
 
 // Mock the recorder so the manager's lifecycle wiring can be asserted without touching the
@@ -297,7 +301,7 @@ describe('HarnessManager model/effort', () => {
     expect(manager.run('harness opencode --model opencode-go/glm-5.2 --effort high')).toBeUndefined();
     expect(managers.pty.spawn).toHaveBeenCalledWith(
       'opencode', 'opencode', "opencode --model 'opencode-go/glm-5.2' --effort 'high'",
-      '/project', undefined, false,
+      '/project', undefined, false, undefined,
     );
   });
 
@@ -307,6 +311,7 @@ describe('HarnessManager model/effort', () => {
     expect(manager.run('harness claude --effort high')).toBeUndefined();
     expect(managers.pty.spawn).toHaveBeenCalledWith(
       'claude', 'claude', "claude --effort 'high'", '/project', undefined, false,
+      { CLAUDE_CODE_TMPDIR: '/project/.janissary/temp' },
     );
   });
 
@@ -318,6 +323,7 @@ describe('HarnessManager model/effort', () => {
     )).toBeUndefined();
     expect(managers.pty.spawn).toHaveBeenCalledWith(
       'claude', 'claude', "claude --effort 'high'", expect.any(String), undefined, false,
+      { CLAUDE_CODE_TMPDIR: expect.any(String) },
     );
   });
 });

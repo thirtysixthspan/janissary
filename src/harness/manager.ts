@@ -1,5 +1,6 @@
 import { makeHarnessTab, distinctColor, uniqueLabel } from '../tab/index.js';
 import { parseHarnessCommand, HARNESS_COMMANDS, buildHarnessCommand } from './index.js';
+import { claudeTmpDir } from './scratch-dir.js';
 import { isKnownModel } from './models.js';
 import { HarnessScreenReader, type ScreenCapture } from './screen.js';
 import { HarnessRecorder } from './recorder.js';
@@ -126,7 +127,10 @@ export class HarnessManager {
     this.managers.tab.setCwd(label, cwd);
     this.managers.tab.addBusy(label);
     this.managers.tab.activeTab = this.managers.tab.findIndex(tab.label);
-    const id = this.managers.pty.spawn(label, program, buildHarnessCommand(name, model, effort), cwd, workspaceDir, offline);
+    const extraEnv: NodeJS.ProcessEnv | undefined = name === 'claude'
+      ? { CLAUDE_CODE_TMPDIR: claudeTmpDir(cwd) }
+      : undefined;
+    const id = this.managers.pty.spawn(label, program, buildHarnessCommand(name, model, effort), cwd, workspaceDir, offline, extraEnv);
     const dims = this.managers.pty.spawnDimensions();
     this.screenReaders.set(id, new HarnessScreenReader(id, dims.cols, dims.rows, this.captureHandler(name, label, id, autoApprove)));
     this.recorders.set(id, new HarnessRecorder(id, label, program, dims.cols, dims.rows));

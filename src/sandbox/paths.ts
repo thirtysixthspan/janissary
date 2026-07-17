@@ -34,6 +34,7 @@ export const HOME_WRITE_CARVEOUTS = [
   '.npm/_cacache',
   '.npm/_logs',
   '.npm/_npx',
+  '.npmrc',  
   '.cache/pip',
   '.cache/yarn',
 ];

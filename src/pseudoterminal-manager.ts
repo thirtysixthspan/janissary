@@ -17,11 +17,16 @@ export class PseudoterminalManager {
   // Spawn a PTY running `command` (with `program` as its display label) in `cwd`, register it under
   // the owning tab's `label`, and return its id. Output and exit route back through the host.
   // `workspaceDir`/`offline`, when the owning tab is workspaced, confine the process via Seatbelt.
-  spawn(label: string, program: string, command: string, cwd: string, workspaceDir?: string, offline?: boolean): string {
+  // `extraEnv`, when given, is merged over the spawned process's environment (e.g. a harness-specific
+  // override that isn't part of Seatbelt confinement).
+  spawn(
+    label: string, program: string, command: string, cwd: string,
+    workspaceDir?: string, offline?: boolean, extraEnv?: NodeJS.ProcessEnv,
+  ): string {
     const session = spawnPty(program, command, cwd, {
       onData: (id, data) => messageBus.emit('pty', { type: 'data', id, data }),
       onExit: (id, exitCode) => this.handleExit(id, exitCode),
-    }, this.cols, this.rows, { workspaceDir, offline, githubToken: workspaceDir ? getGithubToken() : undefined });
+    }, this.cols, this.rows, { workspaceDir, offline, githubToken: workspaceDir ? getGithubToken() : undefined }, extraEnv);
     this.ptys.set(session.id, { session, tabLabel: label });
     return session.id;
   }

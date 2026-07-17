@@ -34,6 +34,7 @@ export function spawnPty(
   cols = 80,
   rows = 24,
   sandbox?: SandboxOptions,
+  extraEnv?: NodeJS.ProcessEnv,
 ): PtySession {
   const id = `pty${++counter}`;
   const shell = process.env.SHELL || 'bash';
@@ -43,7 +44,7 @@ export function spawnPty(
     cols: Math.max(1, cols),
     rows: Math.max(1, rows),
     cwd: cwd || process.cwd(),
-    env,
+    env: extraEnv ? { ...env, ...extraEnv } : env,
   });
 
   proc.onData((d) => handlers.onData(id, d));
