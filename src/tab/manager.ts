@@ -24,6 +24,7 @@ import { capLog } from './transcript.js';
 import { appendEntry, finishEntry, clearLog } from './transcript-ops.js';
 import { computeReorder, removeTabAt } from './reorder.js';
 import { recordHistory } from './history.js';
+import { FileRegistry } from './file-registry.js';
 
 export class TabManager {
   tabs: Tab[] = [];
@@ -33,8 +34,7 @@ export class TabManager {
   private context = new Map<string, string[]>();
   private queue = new Map<string, string[]>();
   private onIdle: ((label: string) => void) | null = null;
-  private openFiles = new Map<string, string>();
-  private openFileCounter = 0;
+  private fileRegistry = new FileRegistry();
   // Labels of tabs that were previously active, most-recent-last. Closing the active tab pops
   // this to restore focus to whatever was focused right before it, rather than just clamping to
   // the nearest surviving index.
@@ -212,7 +212,7 @@ export class TabManager {
     const tab = this.tabs[index];
     if (!tab) return;
     const nonDockedCount = this.tabs.filter((t) => !t.dock).length;
-    closeTabResources(tab, this.managers, this.openFiles, this.context, this.queue, nonDockedCount);
+    closeTabResources(tab, this.managers, this.fileRegistry.map, this.context, this.queue, nonDockedCount);
     // Closing the last remaining non-docked tab quits the app (same as the `quit` command).
     if (!tab.dock && nonDockedCount <= 1) {
       messageBus.emit('app', { type: 'exit' });
@@ -307,13 +307,11 @@ export class TabManager {
   }
 
   registerFile(absPath: string): string {
-    const id = String(++this.openFileCounter);
-    this.openFiles.set(id, absPath);
-    return `/open/${id}`;
+    return this.fileRegistry.register(absPath);
   }
 
   openFilePath(id: string): string | undefined {
-    return this.openFiles.get(id);
+    return this.fileRegistry.get(id);
   }
 
   view(
