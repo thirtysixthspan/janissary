@@ -178,8 +178,9 @@ export function renderLine(
   }
   if (line.type === 'message') {
     return (
-      <div key={index} className="line message" style={{ color: line.fromColor }} {...hitProps}>
-        ● {line.from}{line.text ? `: ${highlightText(line.text, highlight, index)}` : ''}
+      <div key={index} className="line message" {...hitProps}>
+        <span className="message-from" style={{ color: line.fromColor }}>● {line.from}</span>
+        {line.text ? `: ${highlightText(line.text, highlight, index)}` : ''}
         {line.openFile && <OpenFileLink path={line.openFile} client={client} />}
       </div>
     );
