@@ -73,5 +73,14 @@ export const makeNotificationsTab = (label: string, dotColor: string, number: nu
   title: 'notifications',
 });
 
+// A schedules view tab (opened via `schedules`). A singleton, view-only tab whose body reflects the
+// aggregated schedule list computed per state emit. Live and in-memory like the notifications tab —
+// never persisted, never restored on `--relaunch`.
+export const makeSchedulesTab = (label: string, dotColor: string, number: number, group: number, groupColor: string): Tab => ({
+  ...makeTab(label, dotColor, number, [], [], undefined, group, groupColor),
+  view: 'schedules',
+  title: 'schedules',
+});
+
 
 

@@ -3,6 +3,7 @@ import type { TabView } from '@shared/protocol';
 import type { JanusClient } from './ws';
 import { FileTreeTab } from './FileTreeTab';
 import { NotificationsTab } from './NotificationsTab';
+import { SchedulesTab } from './SchedulesTab';
 import { TabStrip } from './TabStrip';
 import { startDrag } from './drag-resize';
 import type { CommandInputDropHandle } from './CommandInput';
@@ -29,7 +30,7 @@ export function Sidebar({
   tabNameMaxLength?: number;
 }) {
   const [width, setWidth] = useState(DEFAULT_WIDTH_PX);
-  const [selectedView, setSelectedView] = useState<'files' | 'notifications'>('files');
+  const [selectedView, setSelectedView] = useState<'files' | 'notifications' | 'schedules'>('files');
   const previousLabelsRef = useRef<Set<string>>(new Set());
 
   const onDividerDown = useCallback((down: React.MouseEvent) => {
@@ -49,7 +50,7 @@ export function Sidebar({
   // always makes the docked tab fully visible.
   useEffect(() => {
     const newlyDocked = entries.find((e) => !previousLabelsRef.current.has(e.tab.label));
-    if (newlyDocked) setSelectedView(newlyDocked.tab.view as 'files' | 'notifications');
+    if (newlyDocked) setSelectedView(newlyDocked.tab.view as 'files' | 'notifications' | 'schedules');
     previousLabelsRef.current = new Set(entries.map((e) => e.tab.label));
   }, [entries]);
 
@@ -66,7 +67,7 @@ export function Sidebar({
         <TabStrip
           tabs={entries.map((e) => e.tab)}
           activeTab={activeIndex}
-          onSelect={(i) => setSelectedView(entries[i].tab.view as 'files' | 'notifications')}
+          onSelect={(i) => setSelectedView(entries[i].tab.view as 'files' | 'notifications' | 'schedules')}
           onClose={(i) => client.send({ method: 'closeTab', params: { index: entries[i].index } })}
           onRename={(i, title) => client.renameTab(entries[i].index, title)}
           tabNameMaxLength={tabNameMaxLength}
@@ -79,6 +80,9 @@ export function Sidebar({
         )}
         {current.tab.view === 'notifications' && (
           <NotificationsTab lines={current.tab.bufferLines} client={client} index={current.index} dock={current.tab.dock} />
+        )}
+        {current.tab.view === 'schedules' && (
+          <SchedulesTab entries={current.tab.aggregatedSchedules ?? []} tabs={tabs} client={client} compact />
         )}
       </div>
       {side === 'left' && divider}

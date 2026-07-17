@@ -1,7 +1,7 @@
 import type { Tab, ImageView, MarkdownView, EditorView, PageView, FileTreeView } from '../types.js';
 import { messageBus } from '../bus.js';
 import {
-  addImageTab, addMarkdownTab, addEditorTab, addPageTab, addFilesTab, addNotificationsTab,
+  addImageTab, addMarkdownTab, addEditorTab, addPageTab, addFilesTab, addNotificationsTab, addSchedulesTab,
 } from './creators.js';
 
 // Minimal surface these openers need from the TabManager. Kept structural (rather than importing
@@ -52,4 +52,8 @@ export function openFilesTab(target: OpenTarget, view: FileTreeView): void {
 
 export function openNotificationsTab(target: OpenTarget): void {
   activate(target, addNotificationsTab(target.tabs, target.activeTab));
+}
+
+export function openSchedulesTab(target: OpenTarget): void {
+  activate(target, addSchedulesTab(target.tabs, target.activeTab));
 }

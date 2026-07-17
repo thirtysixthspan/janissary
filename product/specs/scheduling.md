@@ -32,6 +32,16 @@ While the active agent has at least one scheduled entry, a small titled `schedul
 
 In the web app the same panels are `StatusPanels` (`web/src/StatusPanels.tsx`). On a harness tab the schedule panel floats over the top-right of the harness terminal (rendered `scheduleOnly` — no connections panel, since the whole tab is the terminal connection), with pointer events disabled so it never intercepts terminal input.
 
+### Scheduling tab
+
+The `schedules` command (plural, distinct from the singular `schedule` command that manages a tab's own timers) opens a singleton, view-only tab labeled "schedules" that aggregates every scheduled command across all open tabs into one list. Where the schedule window shows only the active tab's timers, this tab collects the entries from every tab that can hold a schedule — agent tabs and harness tabs alike — into a single flat list ordered soonest-to-run first, regardless of which tab owns each entry. A second `schedules` reuses the existing tab rather than opening another.
+
+`schedules left` and `schedules right` dock the tab into that sidebar; bare `schedules` on a docked tab undocks it back to the center. Docking follows the same behavior as the notifications tab.
+
+The tab has two renderings of the same data. In the main application area it shows one row per entry with the owning tab, the timer name, the next-run time, the schedule spec, and the command to run; recurring entries are distinguished from one-shots by an accent color, matching the schedule window. When docked into a sidebar it shows a compressed one line per entry — next-run time, timer name, and the owning tab — omitting the command and spec. Both renderings stay ordered next-to-run first.
+
+The list is live: it is recomputed as the scheduler ticks, so new schedules appear, fired one-shots drop off, and next-run times advance without any manual refresh. When no tab has a scheduled entry the tab shows "No scheduled commands." and stays open. The content is read-only apart from clicking a row, which switches to the tab that owns that entry; creating, cancelling, editing, or clearing a schedule stays on the `schedule` command in the owning tab. See the Schedule window section for the per-tab floating panel this tab complements.
+
 ### Authored schedules in a profile
 
 A profile's harness entry can author its tab's schedule directly, without the tab existing yet: its `schedule` field is a list of strings in this same command grammar, minus the leading `schedule` keyword and the `in <tab>` clause (the tab is implicitly the entry's own, once opened). Its `run` field is a list of commands typed into the harness once, shortly after launch — each becomes a one-shot entry that fires on the first tick and then disappears from the schedule panel. A schedule string that fails to parse, or that includes an `in <tab>` clause, is reported in the launch output and skipped; a duplicate name within one entry keeps the first and reports the rest. See Profiles.

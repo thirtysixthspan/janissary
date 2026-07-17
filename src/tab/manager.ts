@@ -1,6 +1,6 @@
 /* eslint-disable max-lines */
 import type { Tab, LogEntry, AgentState, ImageView, MarkdownView, EditorView, PageView, FileTreeView } from '../types.js';
-import type { ConnectionView, ScheduleView, TabView } from '../protocol.js';
+import type { AggregatedScheduleView, ConnectionView, ScheduleView, TabView } from '../protocol.js';
 import {
   makeTab, distinctColor, insertTabInGroup,
 } from './index.js';
@@ -320,6 +320,7 @@ export class TabManager {
     connectionsFor: (label: string) => ConnectionView[],
     acpLabel: (label: string) => string | undefined,
     scheduleView: (label: string) => ScheduleView[],
+    aggregatedSchedules: AggregatedScheduleView[],
   ): TabView[] {
     return this.tabs.map((t) => buildTabView(
       t,
@@ -330,6 +331,7 @@ export class TabManager {
       scheduleView(t.label),
       this.queue.get(t.label) ?? [],
       (p: string) => this.shorten(p),
+      aggregatedSchedules,
     ));
   }
 
@@ -355,6 +357,10 @@ export class TabManager {
 
   openNotificationsTab(): void {
     tabOpeners.openNotificationsTab(this);
+  }
+
+  openSchedulesTab(): void {
+    tabOpeners.openSchedulesTab(this);
   }
 
   rehydrate(

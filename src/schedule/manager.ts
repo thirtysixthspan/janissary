@@ -1,5 +1,5 @@
 import type { ScheduleEntry, Tab } from '../types.js';
-import type { ScheduleView } from '../protocol.js';
+import type { AggregatedScheduleView, ScheduleView } from '../protocol.js';
 import { computeNextRun, fmtNextRun } from './index.js';
 import type { Managers } from '../managers.js';
 import { messageBus } from '../bus.js';
@@ -46,6 +46,22 @@ export class ScheduleManager {
     return (this.schedules.get(label) ?? []).map((e) => ({
       id: e.id, spec: e.spec, next: fmtNextRun(e.nextRun), recurring: e.recurring,
     }));
+  }
+
+  // Every scheduled entry across all still-open tabs, flattened and sorted soonest-first by the raw
+  // next-run timestamp, then shaped like `view(label)` rows plus the owning tab label and command.
+  // Labels with no matching open tab are skipped, mirroring the open-tab guard in `tick()`.
+  aggregatedView(): AggregatedScheduleView[] {
+    const rows: { entry: ScheduleEntry; label: string }[] = [];
+    for (const [label, entries] of this.schedules) {
+      if (this.managers.tab.tabs.every((t) => t.label !== label)) continue;
+      for (const entry of entries) rows.push({ entry, label });
+    }
+    return rows
+      .toSorted((a, b) => a.entry.nextRun - b.entry.nextRun)
+      .map(({ entry: e, label }) => ({
+        tab: label, id: e.id, spec: e.spec, next: fmtNextRun(e.nextRun), recurring: e.recurring, command: e.command,
+      }));
   }
 
   // Fire any commands whose next-run time has passed, in every still-open tab. A recurring entry is

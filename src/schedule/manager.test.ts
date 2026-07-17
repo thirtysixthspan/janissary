@@ -142,3 +142,34 @@ describe('ScheduleManager tick', () => {
     mgr.stop();
   });
 });
+
+describe('ScheduleManager aggregatedView', () => {
+  function makeMgr(labels: string[]): ScheduleManager {
+    const managers = {
+      tab: { tabs: labels.map((label) => ({ label })) },
+    } as unknown as Managers;
+    return new ScheduleManager(managers);
+  }
+
+  it('merges entries from multiple tabs sorted soonest-first, tagged with owner and command', () => {
+    const mgr = makeMgr(['agent-1', 'harness-1']);
+    mgr.set('agent-1', [{ id: 's1', command: 'clear', spec: 'every 5m', nextRun: 2000, recurring: true }]);
+    mgr.set('harness-1', [{ id: 's1', command: 'echo hi', spec: 'at 3pm', nextRun: 1000, recurring: false }]);
+
+    const rows = mgr.aggregatedView();
+
+    expect(rows.map((r) => r.tab)).toEqual(['harness-1', 'agent-1']);
+    expect(rows[0]).toMatchObject({ tab: 'harness-1', id: 's1', command: 'echo hi', recurring: false });
+    expect(rows[1]).toMatchObject({ tab: 'agent-1', command: 'clear', recurring: true });
+  });
+
+  it('returns an empty array when no tab has a schedule', () => {
+    expect(makeMgr(['agent-1']).aggregatedView()).toEqual([]);
+  });
+
+  it('excludes entries for a label whose tab is no longer open', () => {
+    const mgr = makeMgr(['agent-1']);
+    mgr.set('closed', [{ id: 's1', command: 'clear', spec: 'every 5m', nextRun: 1000, recurring: true }]);
+    expect(mgr.aggregatedView()).toEqual([]);
+  });
+});

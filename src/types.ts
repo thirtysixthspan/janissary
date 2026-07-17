@@ -154,7 +154,7 @@ export type Tab = {
   number: number;
   // The tab's body kind. Undefined/`'agent'` renders the normal transcript + command line; `'image'`
   // renders the image view (no command bar). View tabs are live and in-memory — not persisted.
-  view?: 'agent' | 'image' | 'page' | 'harness' | 'markdown' | 'editor' | 'monitor' | 'files' | 'notifications';
+  view?: 'agent' | 'image' | 'page' | 'harness' | 'markdown' | 'editor' | 'monitor' | 'files' | 'notifications' | 'schedules';
   // Display name shown in the tab strip when it differs from the (unique) internal `label` — e.g.
   // every image tab is titled `image` while keeping a distinct label (`image`, `image-2`, …).
   title?: string;

@@ -1,8 +1,9 @@
 import type { Tab, ImageView, MarkdownView, EditorView, PageView, FileTreeView } from '../types.js';
 import {
-  makeImageTab, makeMarkdownTab, makeEditorTab, makePageTab, makeFilesTab, makeNotificationsTab, distinctColor, insertTabInGroup,
+  makeImageTab, makeMarkdownTab, makeEditorTab, makePageTab, makeFilesTab, makeNotificationsTab, makeSchedulesTab, distinctColor, insertTabInGroup,
 } from './index.js';
 import { NOTIFICATIONS_LABEL } from '../notifications-tab.js';
+import { SCHEDULES_LABEL } from '../schedules-tab.js';
 import { getConfig } from '../config.js';
 import {
   uniqueImageLabel, uniqueMarkdownLabel, uniqueEditorLabel, uniqueFilesLabel, uniquePageNumber,
@@ -71,6 +72,16 @@ export function addNotificationsTab(tabs: Tab[], activeTab: number): TabAndActiv
   const tab = makeNotificationsTab(NOTIFICATIONS_LABEL, dotColor, tabs.length + 1, group, groupColor);
   const newTabs = insertTabInGroup(tabs, tab, 'start');
   return { tabs: newTabs, activeTab: newTabs.findIndex((t) => t.label === NOTIFICATIONS_LABEL) };
+}
+
+export function addSchedulesTab(tabs: Tab[], activeTab: number): TabAndActive {
+  const creator = tabs[activeTab];
+  const dotColor = distinctColor(tabs.map((t) => t.dotColor));
+  const group = creator?.group ?? 1;
+  const groupColor = creator?.groupColor ?? dotColor;
+  const tab = makeSchedulesTab(SCHEDULES_LABEL, dotColor, tabs.length + 1, group, groupColor);
+  const newTabs = insertTabInGroup(tabs, tab, 'start');
+  return { tabs: newTabs, activeTab: newTabs.findIndex((t) => t.label === SCHEDULES_LABEL) };
 }
 
 export function addPageTab(
