@@ -3,7 +3,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, existsSync
 import type * as NodeFs from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import type { LogEntry, Tab } from './types.js';
+import type { LogEntry, Tab } from '../types.js';
 
 const watchMock = vi.fn();
 
@@ -15,12 +15,12 @@ vi.mock('node:fs', async (importOriginal) => {
 const changedPathsMock = vi.fn((_root: string): Promise<Set<string>> => Promise.resolve(new Set<string>()));
 const currentBranchMock = vi.fn((_root: string): Promise<string | undefined> => Promise.resolve(undefined));
 
-vi.mock('./git-status.js', () => ({
+vi.mock('../git-status.js', () => ({
   changedPaths: (...args: [string]) => changedPathsMock(...args),
   currentBranch: (...args: [string]) => currentBranchMock(...args),
 }));
 
-const { FileTreeManager } = await import('./file-tree-manager.js');
+const { FileTreeManager } = await import('./manager.js');
 type FileTreeManagerInstance = InstanceType<typeof FileTreeManager>;
 
 describe('FileTreeManager', () => {

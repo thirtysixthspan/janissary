@@ -2,8 +2,8 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtempSync, mkdirSync, writeFileSync, symlinkSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import type { FileTreeRow } from './types.js';
-import { readDirSorted, buildRows, markChanged, isSameOrDescendantPath, hasNameConflict } from './file-tree.js';
+import type { FileTreeRow } from '../types.js';
+import { readDirSorted, buildRows, markChanged, isSameOrDescendantPath, hasNameConflict } from './index.js';
 
 describe('readDirSorted', () => {
   let root: string;

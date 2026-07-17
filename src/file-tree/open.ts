@@ -1,7 +1,7 @@
 import { statSync } from 'node:fs';
-import { buildRows } from './file-tree.js';
-import type { Managers } from './managers.js';
-import type { FilesTabState } from './file-tree-manager.js';
+import { buildRows } from './index.js';
+import type { Managers } from '../managers.js';
+import type { FilesTabState } from './manager.js';
 
 // The narrow slice of `FileTreeManager` internals this module needs, handed over as bound closures
 // so the tab-state map and watcher plumbing stay private to the manager (see `openPort()` there).

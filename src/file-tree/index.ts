@@ -1,6 +1,6 @@
 import { readdirSync } from 'node:fs';
 import path from 'node:path';
-import type { FileTreeRow } from './types.js';
+import type { FileTreeRow } from '../types.js';
 
 // VS Code's `files.exclude` defaults. Other dotfiles are shown.
 const EXCLUDES = new Set(['.git', '.svn', '.hg', '.DS_Store', 'Thumbs.db']);
