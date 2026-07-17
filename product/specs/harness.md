@@ -39,7 +39,9 @@ Pressing **Create** launches the harness tab immediately — it synthesizes the 
 validation, workspace/sandbox setup, and creator-transcript recording happen exactly as if the
 command had been typed. **Cancel** or **Escape** closes the dialog with nothing launched. The
 dialog's selections are remembered in memory for the rest of the app run (reopening restores them);
-they are never persisted to disk or restored across `--relaunch`. Only the bare `harness` command
+they are never persisted to disk or restored across `--relaunch`. When the dialog reopens with
+remembered settings, keyboard focus lands on **Create** so hitting Return relaunches immediately;
+a fresh dialog (no prior settings yet this run) keeps focus on the dialog itself. Only the bare `harness` command
 opens the dialog — every other form (`harness claude`, `harness claude -w`, `harness capture <name>`,
 …) still acts directly, and harness tabs, which have no command line, have no way to open it.
 
