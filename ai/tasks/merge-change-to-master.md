@@ -10,8 +10,6 @@ Every step is a script in `scripts/pr-*.sh`, invoked through the script runner. 
 
 **Always run scripts in the foreground.** Never use `run_in_background` — each script must complete and return its exit code before the next step begins.
 
-**No subagents, no background agents.** Do every step yourself — never launch a subagent (Task/Agent tool, `fork`, or otherwise) to do any part of this task on your behalf.
-
 **Do not ask the user for input at any point.** Make all decisions autonomously — branch names, commit messages, PR titles and bodies. The only valid reason to stop is an unresolvable error.
 
 ---

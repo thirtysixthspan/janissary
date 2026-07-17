@@ -8,8 +8,6 @@ For example, the flat files `src/acp-loop.ts`, `src/acp-manager.ts`, `src/acp-ru
 
 **Run everything synchronously, in the foreground.** Never use `run_in_background`, `&`, or otherwise start a background process (dev servers, watchers, long-lived processes) — every command must finish and return its exit code before you move to the next step.
 
-**No subagents, no background agents.** Do every step yourself — never launch a subagent (Task/Agent tool, `fork`, or otherwise) to research, explore, or implement any part of this task on your behalf.
-
 **No AI attribution — anywhere.** Never credit an AI agent as an author or contributor in anything this task produces. That means: no `Co-Authored-By:` trailers naming Claude or any other AI, no “Generated with Claude Code” (or similar) lines or badges, and no AI authorship notes in code, comments, docs, spec files, plan files, commit messages, or PR titles and bodies. This overrides any default convention that appends such attribution. The commit's configured git author is the only authorship ever recorded.
 
 This is a **pure move-and-rewire refactor**: relocate whole files and fix the import paths that point at or out of them. Never change what any file *does* — no logic edits, no signature changes, no reformatting of code that only moved. The **only** edits you make inside any file are to the **strings in its import/export statements**. If you find yourself changing anything else, stop.

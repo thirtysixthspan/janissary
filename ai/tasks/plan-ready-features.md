@@ -8,8 +8,6 @@ This is an **interactive** task. Unlike the autonomous `ai/tasks/*.md` playbooks
 
 **Run everything synchronously, in the foreground.** Never use `run_in_background`, `&`, or otherwise start a background process (dev servers, watchers, long-lived processes) — every command must finish and return its exit code before you move to the next step.
 
-**No subagents, no background agents.** Do every step yourself — never launch a subagent (Task/Agent tool, `fork`, or otherwise) to research, explore, or implement any part of this task on your behalf.
-
 **Follow the steps below in order, exactly as written, one feature at a time.** Do not skip a step, do not merge two steps together, and do not process more than one feature between Step 2a and Step 2f. If you are ever unsure whether you have done enough — re-read the checklist for that step before moving on, don't guess.
 
 **No AI attribution — anywhere.** Never credit an AI agent as an author or contributor in anything this task produces. No `Co-Authored-By:` trailers naming Claude or any other AI, no "Generated with Claude Code" lines, no AI authorship notes in plan files or commit messages. This overrides any default convention that appends such attribution.

@@ -1,6 +1,6 @@
 # Improve code base
 
-Your job: act as a **supervisor** that continuously improves this codebase by running a loop, entirely by yourself — no subagents, no background agents. Each cycle you **inspect** the code, **select** the single most valuable improvement, **execute** the matching task playbook yourself, **verify** the result, **ship it to `master` through a full pull request**, and then **start the next cycle**. You own the judgment around it: what to work on, whether the result is genuinely good, and when to stop.
+Your job: act as a **supervisor** that continuously improves this codebase by running a loop. Each cycle you **inspect** the code, **select** the single most valuable improvement, **execute** the matching task playbook, **verify** the result, **ship it to `master` through a full pull request**, and then **start the next cycle**. You own the judgment around it: what to work on, whether the result is genuinely good, and when to stop.
 
 The improvement work itself follows one of these existing single-purpose task playbooks — you pick the right one each cycle and execute it yourself, inline, in this same session:
 
@@ -19,8 +19,6 @@ The improvement work itself follows one of these existing single-purpose task pl
 **No AI attribution — anywhere.** Never credit an AI agent as an author or contributor in anything this task produces. That means: no `Co-Authored-By:` trailers naming Claude or any other AI, no “Generated with Claude Code” (or similar) lines or badges, and no AI authorship notes in code, comments, docs, spec files, plan files, commit messages, or PR titles and bodies. This overrides any default convention that appends such attribution. The commit's configured git author is the only authorship ever recorded.
 
 **Run autonomously.** This task runs unattended — do not ask the user questions or wait for feedback at any step. Make the best judgment call yourself, using the rules in this document, and keep going. The only reasons to stop are the ones listed in "When to stop the loop" below.
-
-**No subagents, no background agents.** Do every step yourself, in this session — never launch a subagent (Task/Agent tool) to execute a playbook or any part of one, and never hand work off to a background agent. The playbooks referenced below are instructions for *you* to follow directly, not prompts to delegate.
 
 **Shell hygiene:** run every command on its own line — no `&&` chaining, no `; echo "Exit code: $?"` suffixes, no subshell captures. The exit code and output are visible in the tool result. To run a project script, always use `./scripts/run.mjs <name>` — never call `node scripts/<name>.mjs` directly.
 
@@ -82,7 +80,7 @@ State your pick in one sentence: the task playbook, the target file/function, an
 
 ### Step 3 — Execute the chosen playbook yourself
 
-Follow [`ai/tasks/<task>.md`](.) for the task you picked in Step 2, in full, in this same session — you are the one carrying out every step of it, not a subagent. A few adjustments to how you run it here:
+Follow [`ai/tasks/<task>.md`](.) for the task you picked in Step 2, in full. A few adjustments to how you run it here:
 
 1. **Skip that playbook's "Step 0 — Prepare the workspace"** — the workspace is already prepared and synced to `master`, and you must not run `git checkout`/`git pull` here (that would discard the working-tree change you're about to make this cycle). Start at the playbook's Step 1.
 2. **Stop after that playbook's own verification step — do not commit, push, or open a PR from within it.** Leave the single change sitting in the working tree. Committing and shipping is Step 5 below, handled once for the whole cycle.
@@ -126,7 +124,7 @@ git clean -fd
 
 ### Step 5 — Ship this cycle to master
 
-The change is verified and sitting uncommitted in the working tree. **Ship it by executing [`merge-change-to-master.md`](merge-change-to-master.md) in full, yourself** — follow every step of that playbook in order, same as you did for the improvement playbook in Step 3; do not delegate this either. It commits the change as a single-author Conventional Commits commit — pick the type that fits the task (`refactor` for modularity/complexity/namespacing/duplication, `test` for coverage, `chore`/`fix` for deadcode, `fix`/`build` for security, `style` for CSS, `build` for a package update) — opens a PR against `master`, resolves any conflicts, waits for required checks, and squash-merges it. Do **not** hand-commit first: the merge task's own Step 0 picks up the working-tree change itself.
+The change is verified and sitting uncommitted in the working tree. **Ship it by executing [`merge-change-to-master.md`](merge-change-to-master.md) in full** — follow every step of that playbook in order, same as you did for the improvement playbook in Step 3. It commits the change as a single-author Conventional Commits commit — pick the type that fits the task (`refactor` for modularity/complexity/namespacing/duplication, `test` for coverage, `chore`/`fix` for deadcode, `fix`/`build` for security, `style` for CSS, `build` for a package update) — opens a PR against `master`, resolves any conflicts, waits for required checks, and squash-merges it. Do **not** hand-commit first: the merge task's own Step 0 picks up the working-tree change itself.
 
 Keep honoring the **No AI attribution** rule as you go — the commit, PR title, and PR body must carry no AI authorship — and the **Run autonomously** rule (never pause to ask a question).
 

@@ -6,8 +6,6 @@ Your job: package the current working-tree changes into **one** commit on the **
 
 **Run scripts in the foreground** (never `run_in_background`) — each must finish and return its exit code before the next step. **Make all decisions autonomously** (commit type, scope, message); the only reason to stop is an unresolvable error.
 
-**No subagents, no background agents.** Do every step yourself — never launch a subagent (Task/Agent tool, `fork`, or otherwise) to do any part of this task on your behalf.
-
 ---
 
 ## Step 1 — Compose a Conventional Commits message
