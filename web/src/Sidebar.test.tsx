@@ -69,7 +69,7 @@ describe('Sidebar', () => {
     // mouseup removes listeners — subsequent moves are no-ops
     fireEvent.mouseMove(document, { clientX: 200 });
     fireEvent.mouseMove(document, { clientX: 100 });
-    expect(sidebar.style.flex).toBe('0 0 280px');
+    expect(sidebar.style.flex).toBe('0 0 300px');
   });
 
   it('sends closeTab when the close button is clicked', () => {

@@ -480,7 +480,7 @@ html, body, #root {
 }
 
 /* Sidebars: at most one docked tab each, hidden entirely while nothing is docked. Width is set
-   inline (default ~280px) and adjusted by dragging the resize divider on the sidebar's inner
+   inline (default ~300px) and adjusted by dragging the resize divider on the sidebar's inner
    edge, clamped to a min width and 50% of the viewport (mirrors .reporting-resize). */
 .sidebar { min-width: 0; display: flex; flex-direction: row; }
 .sidebar-body { flex: 1; min-width: 0; display: flex; flex-direction: column; }
