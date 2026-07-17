@@ -27,11 +27,12 @@ vi.mock('./recorder.js', () => ({
   }),
 }));
 
-function makeManagers(): { managers: Managers; tabs: Tab[]; edit: ReturnType<typeof vi.fn> } {
+function makeManagers(): { managers: Managers; tabs: Tab[]; edit: ReturnType<typeof vi.fn>; scheduleSet: ReturnType<typeof vi.fn> } {
   const tabs: Tab[] = [];
   const creator = { label: 'janus', log: [] } as unknown as Tab;
   tabs.push(creator);
   const edit = vi.fn();
+  const scheduleSet = vi.fn();
   const managers = {
     tab: {
       tabs,
@@ -53,8 +54,9 @@ function makeManagers(): { managers: Managers; tabs: Tab[]; edit: ReturnType<typ
     },
     workspace: { create: () => ({ dir: '/workspace/claude' }) },
     openFile: { edit },
+    schedule: { set: scheduleSet },
   } as unknown as Managers;
-  return { managers, tabs, edit };
+  return { managers, tabs, edit, scheduleSet };
 }
 
 describe('HarnessManager.capture', () => {
@@ -490,5 +492,45 @@ describe('HarnessManager busy/ready status', () => {
     await settle('still idle');
     expect(managers.tab.addBusy).not.toHaveBeenCalled();
     expect(managers.tab.deleteBusy).not.toHaveBeenCalled();
+  });
+});
+
+describe('HarnessManager launch with prompt', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    recorderMock.instances.length = 0;
+  });
+
+  afterEach(() => {
+    messageBus.emit('pty', { type: 'exit', id: 'pty-1', exitCode: 0 });
+    vi.useRealTimers();
+    vi.clearAllMocks();
+  });
+
+  it('sets one one-shot schedule entry carrying the prompt on the new tab', () => {
+    const { managers, scheduleSet } = makeManagers();
+    const manager = new HarnessManager(managers);
+    expect(manager.run('harness claude with fix the failing tests')).toBeUndefined();
+    expect(scheduleSet).toHaveBeenCalledTimes(1);
+    expect(scheduleSet).toHaveBeenCalledWith('claude', [
+      { id: 'run-1', command: 'fix the failing tests', spec: 'once', nextRun: expect.any(Number), recurring: false },
+    ]);
+  });
+
+  it('sets no schedule entry when the launch has no prompt', () => {
+    const { managers, scheduleSet } = makeManagers();
+    const manager = new HarnessManager(managers);
+    expect(manager.run('harness claude')).toBeUndefined();
+    expect(scheduleSet).not.toHaveBeenCalled();
+  });
+
+  it('attaches the one-shot to the de-duplicated label', () => {
+    const { managers, tabs, scheduleSet } = makeManagers();
+    tabs.push({ label: 'claude' } as unknown as Tab);
+    const manager = new HarnessManager(managers);
+    expect(manager.run('harness claude with say hi')).toBeUndefined();
+    expect(scheduleSet).toHaveBeenCalledWith('claude-2', [
+      expect.objectContaining({ id: 'run-1', command: 'say hi' }),
+    ]);
   });
 });

@@ -9,7 +9,7 @@ export const HARNESS_COMMANDS: Record<string, string> = {
 export const HARNESS_NAMES = Object.keys(HARNESS_COMMANDS);
 
 export type HarnessParsed =
-  | { name: string; workspace: boolean; offline: boolean; autoApprove: boolean; label?: string; model?: string; effort?: string }
+  | { name: string; workspace: boolean; offline: boolean; autoApprove: boolean; label?: string; model?: string; effort?: string; prompt?: string }
   | { capture: true; label: string }
   | { error: string };
 
@@ -32,13 +32,31 @@ function findFlagValue(tokens: string[], flag: string): string | undefined | { e
  * prompts; it is claude-only and requires `-w`/`--workspace` (both are hard errors otherwise).
  * `--model <name>` selects a model, validated by the caller against the harness's catalog.
  * `--effort <level>` selects an effort level, passed through verbatim with no validation.
+ * A trailing `with <prompt>` clause (after all options) carries free-text to inject into the new
+ * harness once it is running; everything after the standalone `with` token to end of line is the
+ * prompt, with internal spaces preserved verbatim. A `with` with no following text is a usage error.
  * `harness capture <name>` is the other form: `<name>` targets an existing harness tab by label
  * (`capture` can never collide with a harness name — it is not a HARNESS_COMMANDS key).
  */
+// Split a trailing `with <prompt>` clause off the harness command's argument string, before any
+// option parsing so flag-like words inside the prompt are never scanned as options. Returns the
+// options portion (`left`) plus the verbatim prompt when a standalone `with` token is present, an
+// `error` when `with` has no following text, or just `left` when there is no clause.
+function splitWithClause(rest: string): { left: string; prompt?: string } | { error: string } {
+  const withMatch = /\bwith\b/i.exec(rest);
+  if (!withMatch) return { left: rest };
+  const prompt = rest.slice(withMatch.index + withMatch[0].length).trim();
+  if (!prompt) return { error: `Usage: harness <${HARNESS_NAMES.join('|')}> [options] with <prompt>.` };
+  return { left: rest.slice(0, withMatch.index).trim(), prompt };
+}
+
 export function parseHarnessCommand(input: string): HarnessParsed {
   const rest = input.replace(/^harness\b\s*/i, '').trim();
   if (!rest) return { error: `Usage: harness <${HARNESS_NAMES.join('|')}> [as <label>] [-w] [-y].` };
-  const tokens = rest.split(/\s+/);
+  const clause = splitWithClause(rest);
+  if ('error' in clause) return clause;
+  const { left, prompt } = clause;
+  const tokens = left.split(/\s+/);
   if (tokens[0].toLowerCase() === 'capture') {
     const label = tokens[1];
     if (!label) return { error: 'Usage: harness capture <name>.' };
@@ -61,10 +79,10 @@ export function parseHarnessCommand(input: string): HarnessParsed {
   const effort = findFlagValue(rest_, '--effort');
   if (effort !== undefined && typeof effort !== 'string') return effort;
   const asIndex = rest_.findIndex((t) => t.toLowerCase() === 'as');
-  if (asIndex === -1) return { name, workspace, offline, autoApprove, model, effort };
+  if (asIndex === -1) return { name, workspace, offline, autoApprove, model, effort, prompt };
   const label = rest_[asIndex + 1];
   if (!label) return { error: `Usage: harness <${HARNESS_NAMES.join('|')}> as <label>.` };
-  return { name, workspace, offline, autoApprove, model, effort, label };
+  return { name, workspace, offline, autoApprove, model, effort, label, prompt };
 }
 
 // Single-quote a value for embedding in a `shell -lc '<command>'` string, escaping any embedded

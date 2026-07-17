@@ -9,7 +9,7 @@ row, and the one place its behavior differs (the connections panel is shown, not
 ## Command
 
 ```
-harness <name> [as <label>] [-w] [-y] [--model <name>] [--effort <level>]
+harness <name> [as <label>] [-w] [-y] [--model <name>] [--effort <level>] [with <prompt>]
 ```
 
 Valid names: `claude`, `opencode`, `codex`. The binary must be on `PATH`; if it is not found, the
@@ -102,6 +102,30 @@ The flag is **claude-only** and **requires** `-w`/`--workspace`:
 
 `-y` combines with `as <label>` and `-w` in any order. Support for opencode and codex is future
 work.
+
+### Launch prompt (`with <prompt>`)
+
+A trailing `with <prompt>` clause gives the new harness an initial prompt that is typed and
+submitted into it once it is ready, so a launch and its first instruction happen in one command:
+
+```
+harness claude with fix the failing tests
+```
+
+The clause comes **after** every option — everything from the standalone `with` keyword to the end
+of the line is the prompt, taken verbatim with its internal spacing preserved. Because the clause is
+split off before options are read, words inside the prompt that look like flags or keywords
+(`-w`, `as`, `--model`, …) are treated as prompt text, not parsed as options.
+
+- `harness claude with` (no text after `with`) — error: `Usage: harness <claude|opencode|codex> [options] with <prompt>.` No tab is created.
+- `harness claude` with no `with` clause launches an empty harness exactly as before.
+
+The prompt is delivered by the same mechanism a profile's `run` entry uses: a single one-shot
+schedule entry is attached to the new harness tab and fires as soon as the harness is running,
+typing the prompt and submitting it. If the harness is not yet ready the delivery retries on later
+ticks; if the tab never opens or exits first, the prompt is simply never delivered. Because
+launching is an ordinary command, wrapping it in a `schedule` command runs the whole launch — fresh
+harness plus injected prompt — at a future time (see [[scheduling]]).
 
 How it works: the app watches the harness's rendered-screen text (not an image), captured about a
 second after output settles. When that text shows claude's permission menu — the highlighted

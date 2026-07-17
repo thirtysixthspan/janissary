@@ -13,6 +13,7 @@ import { messageBus } from '../bus.js';
 import { notify } from '../notifications.js';
 import { notificationsTab } from '../notifications-tab.js';
 import { sandboxNotice } from '../sandbox/index.js';
+import { oneShotRunEntry } from '../profile/harness-schedule.js';
 import type { Managers } from '../managers.js';
 
 // Owns harness command handling: launching a harness `<name>` as a PTY-backed tab (optionally in a
@@ -63,7 +64,7 @@ export class HarnessManager {
     if (parsed.model && !isKnownModel(parsed.name, parsed.model)) {
       return `Unknown model "${parsed.model}" for harness "${parsed.name}" — add it to harness-models.json.`;
     }
-    return this.open(parsed.name, parsed.workspace, parsed.offline, parsed.autoApprove, parsed.label, parsed.model, parsed.effort);
+    return this.open(parsed.name, parsed.workspace, parsed.offline, parsed.autoApprove, parsed.label, parsed.model, parsed.effort, parsed.prompt);
   }
 
   // Open the "New harness" launch dialog (bare `harness`). Held as a flag, mirroring
@@ -107,7 +108,7 @@ export class HarnessManager {
   // detected from cwd; otherwise it inherits the creator's cwd.
   private open(
     name: string, workspace: boolean, offline: boolean, autoApprove: boolean, label_?: string,
-    model?: string, effort?: string,
+    model?: string, effort?: string, prompt?: string,
   ): string | undefined {
     const creator = this.managers.tab.cur();
     const label = uniqueLabel(this.managers.tab.tabs, label_ ?? name);
@@ -119,6 +120,7 @@ export class HarnessManager {
     const group = creator?.group ?? 1;
     const groupColor = creator?.groupColor ?? dotColor;
     this.spawnTab(name, label, cwd, workspaceDir, offline, group, groupColor, dotColor, autoApprove, model, effort);
+    if (prompt) this.managers.schedule.set(label, [oneShotRunEntry('run-1', prompt)]);
     return undefined;
   }
 
