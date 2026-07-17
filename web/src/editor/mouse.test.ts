@@ -157,6 +157,7 @@ describe('visualVerticalHit', () => {
     const caret = document.createElement('span');
     container.append(caret);
 
+    vi.spyOn(container, 'getBoundingClientRect').mockReturnValue(makeRect({ top: 0, bottom: 100, height: 100 }));
     vi.spyOn(caret, 'getBoundingClientRect').mockReturnValue(makeRect({ top: 0, bottom: 14, left: 5, height: 14 }));
     (document as unknown as { elementFromPoint: (x: number, y: number) => Element | null }).elementFromPoint = vi.fn().mockReturnValue(content);
     (document as unknown as DocWithCaretPos).caretPositionFromPoint = vi.fn().mockReturnValue({ offsetNode: text, offset: 2 });
@@ -164,6 +165,63 @@ describe('visualVerticalHit', () => {
     const hit = visualVerticalHit(container, caret, 'down');
     expect(hit).toEqual({ line: 3, col: 2, inGutter: false });
 
+    container.remove();
+  });
+
+  function makeContainerWithRows(lines: number[]): { container: HTMLElement; caret: HTMLElement } {
+    const container = document.createElement('div');
+    document.body.append(container);
+    for (const line of lines) {
+      const row = document.createElement('div');
+      row.dataset.editorLine = String(line);
+      const content = document.createElement('span');
+      content.className = 'editor-content';
+      content.append(document.createTextNode(`line ${line}`));
+      row.append(content);
+      container.append(row);
+    }
+    const caret = document.createElement('span');
+    container.append(caret);
+    return { container, caret };
+  }
+
+  it('returns null instead of clamping when the caret is scrolled out of view above the body', () => {
+    const { container, caret } = makeContainerWithRows([0, 1, 2]);
+    vi.spyOn(container, 'getBoundingClientRect').mockReturnValue(makeRect({ top: 20, bottom: 120, height: 100 }));
+    vi.spyOn(container.querySelector('[data-editor-line]')!, 'getBoundingClientRect').mockReturnValue(makeRect({ top: -50, bottom: -36, height: 14 }));
+    vi.spyOn(caret, 'getBoundingClientRect').mockReturnValue(makeRect({ top: -36, bottom: -22, left: 5, height: 14 }));
+    (document as unknown as { elementFromPoint: (x: number, y: number) => Element | null }).elementFromPoint = vi.fn().mockReturnValue(null);
+
+    expect(visualVerticalHit(container, caret, 'down')).toBeNull();
+    expect(visualVerticalHit(container, caret, 'up')).toBeNull();
+
+    container.remove();
+  });
+
+  it('returns null instead of clamping when the probe point falls below the visible body', () => {
+    const { container, caret } = makeContainerWithRows([0, 1, 2]);
+    vi.spyOn(container, 'getBoundingClientRect').mockReturnValue(makeRect({ top: 20, bottom: 120, height: 100 }));
+    vi.spyOn(container.querySelector('[data-editor-line]')!, 'getBoundingClientRect').mockReturnValue(makeRect({ top: -50, bottom: -36, height: 14 }));
+    vi.spyOn(caret, 'getBoundingClientRect').mockReturnValue(makeRect({ top: 106, bottom: 120, left: 5, height: 14 }));
+    (document as unknown as { elementFromPoint: (x: number, y: number) => Element | null }).elementFromPoint = vi.fn().mockReturnValue(null);
+
+    expect(visualVerticalHit(container, caret, 'down')).toBeNull();
+
+    container.remove();
+  });
+
+  it('returns null instead of clamping when the probe point falls above the visible body', () => {
+    const { container, caret } = makeContainerWithRows([0, 1, 2]);
+    const header = document.createElement('div');
+    document.body.append(header);
+    vi.spyOn(container, 'getBoundingClientRect').mockReturnValue(makeRect({ top: 20, bottom: 120, height: 100 }));
+    vi.spyOn(container.querySelector('[data-editor-line]')!, 'getBoundingClientRect').mockReturnValue(makeRect({ top: -50, bottom: -36, height: 14 }));
+    vi.spyOn(caret, 'getBoundingClientRect').mockReturnValue(makeRect({ top: 20, bottom: 34, left: 5, height: 14 }));
+    (document as unknown as { elementFromPoint: (x: number, y: number) => Element | null }).elementFromPoint = vi.fn().mockReturnValue(header);
+
+    expect(visualVerticalHit(container, caret, 'up')).toBeNull();
+
+    header.remove();
     container.remove();
   });
 
@@ -181,6 +239,7 @@ describe('visualVerticalHit', () => {
     const caret = document.createElement('span');
     container.append(caret);
 
+    vi.spyOn(container, 'getBoundingClientRect').mockReturnValue(makeRect({ top: 0, bottom: 100, height: 100 }));
     vi.spyOn(caret, 'getBoundingClientRect').mockReturnValue(makeRect({ top: 14, bottom: 28, left: 5, height: 14 }));
     (document as unknown as { elementFromPoint: (x: number, y: number) => Element | null }).elementFromPoint = vi.fn().mockReturnValue(content);
     (document as unknown as DocWithCaretPos).caretPositionFromPoint = vi.fn().mockReturnValue({ offsetNode: text, offset: 4 });
