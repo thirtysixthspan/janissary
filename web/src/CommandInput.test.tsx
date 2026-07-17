@@ -228,6 +228,16 @@ describe('CommandInput — multi-line', () => {
     expect(input).toHaveValue(''); // advanced past the end of history and cleared
   });
 
+  it('ArrowDown after recalling an older entry recalls the next-newer one', () => {
+    renderCommandInput({ history: ['first', 'second'] });
+    const input = screen.getByRole('textbox') as HTMLTextAreaElement;
+    fireEvent.keyDown(input, { key: 'ArrowUp' }); // histIndex now points at 'second'
+    fireEvent.keyDown(input, { key: 'ArrowUp' }); // histIndex now points at 'first'
+    expect(input).toHaveValue('first');
+    fireEvent.keyDown(input, { key: 'ArrowDown' });
+    expect(input).toHaveValue('second');
+  });
+
   it('auto-resizes to fit multi-line content', async () => {
     renderCommandInput();
     const input = screen.getByRole('textbox') as HTMLTextAreaElement;
@@ -301,6 +311,22 @@ describe('CommandInput — drop handle', () => {
     input.setSelectionRange(5, 12);
     act(() => { dropRef.current?.insertAtCaret('newpath'); });
     expect(input).toHaveValue('open newpath');
+  });
+
+  it('inserts via document.execCommand when the browser supports it', async () => {
+    const execCommand = vi.fn();
+    document.execCommand = execCommand;
+    try {
+      const { dropRef } = renderWithDropRef();
+      const input = screen.getByRole('textbox') as HTMLTextAreaElement;
+      await userEvent.type(input, 'open ');
+      input.setSelectionRange(5, 5);
+      act(() => { dropRef.current?.insertAtCaret('src/index.ts'); });
+      expect(execCommand).toHaveBeenCalledWith('insertText', false, 'src/index.ts');
+    } finally {
+      // @ts-expect-error jsdom does not implement execCommand by default; restore that.
+      delete document.execCommand;
+    }
   });
 
   it('leaves recall (replace-all) behavior unchanged when a dropRef is also provided', async () => {
