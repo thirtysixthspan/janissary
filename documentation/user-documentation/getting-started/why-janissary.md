@@ -132,4 +132,3 @@ Spawn an agent in an isolated git clone of your repo. If it breaks things, your 
 - [Agents](/user-documentation/getting-started/agents) — Spawn and manage AI agents
 - [Scheduling](/user-documentation/automation/scheduling) — Automate tasks with built-in timing
 - [Profiles](/user-documentation/automation/profiles) — Save and recreate multi-tab setups
-- [Soft dependencies](/user-documentation/integrations/soft-dependencies) — How Claude Code, Codex, and OpenCode complement Janissary
