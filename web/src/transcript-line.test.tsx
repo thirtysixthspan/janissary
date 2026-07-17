@@ -192,12 +192,18 @@ describe('renderLine — message openFile link', () => {
     expect(container.querySelector('[role="link"]')).toBeNull();
   });
 
-  it('colors only the dot/time/tab prefix by the notifying tab, not the whole line', () => {
+  it('exposes the notifying tab color as a CSS variable, not by coloring the whole line', () => {
     const line: BufferLine = { type: 'message', text: 'Auto-approved a permission prompt', from: '8:32pm claude', fromColor: '#ff0000' };
     const { container } = render(<>{renderLine(line, 0, clientStub, noop, vi.fn())}</>);
-    const from = container.querySelector('.message-from') as HTMLElement;
-    expect(from.style.color).toBe('rgb(255, 0, 0)');
     const lineEl = container.querySelector('.line.message') as HTMLElement;
+    expect(lineEl.style.getPropertyValue('--from-color')).toBe('#ff0000');
     expect(lineEl.style.color).toBe('');
+  });
+
+  it('splits the from string into a time and a tab pill', () => {
+    const line: BufferLine = { type: 'message', text: 'Auto-approved a permission prompt', from: '8:32pm claude' };
+    const { container } = render(<>{renderLine(line, 0, clientStub, noop, vi.fn())}</>);
+    expect(container.querySelector('.message-time')?.textContent).toBe('8:32pm');
+    expect(container.querySelector('.message-tab')?.textContent).toBe('claude');
   });
 });

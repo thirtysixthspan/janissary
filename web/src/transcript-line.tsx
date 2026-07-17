@@ -178,10 +178,18 @@ export function renderLine(
     return renderPromptLine(line, index, highlight, onToggleCollapse, onPromptClick, hit, hitProps);
   }
   if (line.type === 'message') {
+    const [time, ...tabParts] = line.from.split(' ');
+    const tab = tabParts.join(' ');
     return (
-      <div key={index} className="line message" {...hitProps}>
-        <span className="message-from" style={{ color: line.fromColor }}>● {line.from}</span>
-        {line.text ? `: ${highlightText(line.text, highlight, index)}` : ''}
+      <div
+        key={index}
+        className="line message"
+        style={line.fromColor ? { '--from-color': line.fromColor } as React.CSSProperties : undefined}
+        {...hitProps}
+      >
+        <span className="message-time">{time}</span>
+        {tab && <span className="message-tab">{tab}</span>}
+        {line.text && <span className="message-text">{highlightText(line.text, highlight, index)}</span>}
         {line.openFile && <OpenFileLink path={line.openFile} client={client} />}
       </div>
     );

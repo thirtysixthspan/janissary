@@ -331,7 +331,16 @@ html, body, #root {
 /* Expanded agent tool steps: dimmed + indented, click anywhere to re-collapse. */
 .line.prompt.acp { color: var(--muted); cursor: pointer; }
 .line.output.acp { color: var(--faint); cursor: pointer; padding-left: 1.5em; }
-.line.message { font-weight: 600; }
+.line.message {
+  display: flex; align-items: baseline; flex-wrap: wrap; gap: 0 8px;
+  border-left: 3px solid var(--from-color, var(--border)); padding-left: 8px;
+}
+.line.message .message-time { color: var(--muted); font-size: 0.9em; }
+.line.message .message-tab {
+  background: var(--from-color, var(--muted)); color: var(--bg);
+  border-radius: 10px; padding: 0 8px; font-size: 0.85em; line-height: 1.6;
+}
+.line.message .message-text { color: var(--fg); }
 .line.message .file-link {
   color: var(--accent); cursor: pointer; text-decoration: none;
   border: 1px solid var(--accent); border-radius: 4px; padding: 0 6px;
