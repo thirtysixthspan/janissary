@@ -11,7 +11,9 @@ import { messageBus } from '../bus.js';
 import { closeTabResources } from './cleanup.js';
 import type { Managers } from '../managers.js';
 import * as tabOpeners from './openers.js';
-import { getQueue, pushQueue, shiftQueue, updateQueueEntry, removeQueueEntry } from './queue.js';
+import {
+  queueFor as queueForOp, enqueue as enqueueOp, dequeue as dequeueOp, editQueued as editQueuedOp, deleteQueued as deleteQueuedOp,
+} from './queue-commands.js';
 import { buildTabView } from './view.js';
 import { rehydrateTabs } from './rehydrate.js';
 import { buildAgentStateFromTab } from './agent-state.js';
@@ -81,26 +83,23 @@ export class TabManager {
   }
 
   queueFor(label: string): string[] {
-    return getQueue(this.queue, label);
+    return queueForOp(this.queue, label);
   }
 
   enqueue(label: string, text: string): void {
-    pushQueue(this.queue, label, text);
-    this.persistQueue(label);
+    enqueueOp(this.queue, label, text, (l) => this.persistQueue(l));
   }
 
   dequeue(label: string): string | undefined {
-    const front = shiftQueue(this.queue, label);
-    if (front !== undefined) this.persistQueue(label);
-    return front;
+    return dequeueOp(this.queue, label, (l) => this.persistQueue(l));
   }
 
   editQueued(label: string, index: number, text: string): void {
-    if (updateQueueEntry(this.queue, label, index, text)) this.persistQueue(label);
+    editQueuedOp(this.queue, label, index, text, (l) => this.persistQueue(l));
   }
 
   deleteQueued(label: string, index: number): void {
-    if (removeQueueEntry(this.queue, label, index)) this.persistQueue(label);
+    deleteQueuedOp(this.queue, label, index, (l) => this.persistQueue(l));
   }
 
   private persistQueue(label: string): void {
