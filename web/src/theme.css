@@ -327,6 +327,11 @@ html, body, #root {
 .line.prompt.acp { color: var(--muted); cursor: pointer; }
 .line.output.acp { color: var(--faint); cursor: pointer; padding-left: 1.5em; }
 .line.message { font-weight: 600; }
+.line.message .file-link {
+  color: var(--accent); cursor: pointer; text-decoration: none;
+  border: 1px solid var(--accent); border-radius: 4px; padding: 0 6px;
+}
+.line.message .file-link:hover { background: var(--accent); color: var(--bg); }
 
 /* Rendered Markdown from an ACP agent reply. Override the per-line pre-wrap so block elements flow
    normally; keep vertical rhythm tight to match the transcript. */
