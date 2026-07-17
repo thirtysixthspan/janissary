@@ -166,7 +166,7 @@ export function App() {
         windowFocused={windowFocused}
       />
 
-      <ViewTabBody tab={current} client={client} index={currentIndex} />
+      <ViewTabBody tab={current} client={client} index={currentIndex} tabs={tabs} />
 
       <ShellTabLayer tabs={tabs} activeLabel={current.label} client={client}
         onHandle={(id, h) => { if (h) shellHandles.current.set(id, h); else shellHandles.current.delete(id); }} />

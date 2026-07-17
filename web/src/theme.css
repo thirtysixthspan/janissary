@@ -618,3 +618,21 @@ html, body, #root {
   padding: 0 4px; line-height: 1;
 }
 .notifications-dock-cycle:hover { color: var(--fg); }
+
+/* Schedules tab: the aggregated, next-to-run-ordered schedule list. A scrollable flex column of
+   clickable rows; the compact variant tightens each row to a single sidebar-width line. */
+.schedules-tab { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; padding: 4px 0; }
+.schedules-empty { padding: 8px 12px; color: var(--muted); }
+.schedules-row {
+  display: flex; gap: 12px; align-items: baseline; width: 100%; text-align: left;
+  background: transparent; border: none; color: var(--fg); cursor: pointer;
+  padding: 4px 12px; font: inherit; white-space: nowrap;
+}
+.schedules-row:hover { background: var(--border); }
+.schedules-row.recurring { color: var(--accent); }
+.schedules-owner { color: var(--muted); flex-shrink: 0; }
+.schedules-id { flex-shrink: 0; }
+.schedules-next { flex-shrink: 0; }
+.schedules-spec { color: var(--muted); flex-shrink: 0; }
+.schedules-command { overflow: hidden; text-overflow: ellipsis; }
+.schedules-compact .schedules-row { gap: 8px; font-size: 12px; }

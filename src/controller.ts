@@ -74,6 +74,7 @@ export class Controller {
       (l) => this.managers.connection.connectionsFor(l),
       (l) => this.managers.acp.label(l),
       (l) => this.managers.schedule.view(l),
+      this.managers.schedule.aggregatedView(),
     );
   }
 

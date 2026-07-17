@@ -23,6 +23,7 @@ import { command as rename } from './rename.js';
 import { command as search } from './search.js';
 import { command as files } from './files.js';
 import { command as notifications } from './notifications.js';
+import { command as schedules } from './schedules.js';
 import { command as notify } from './notify.js';
 import { command as syntax } from './syntax.js';
 import { command as theme } from './theme.js';
@@ -54,6 +55,7 @@ export const commands: Command[] = [
   search,
   files,
   notifications,
+  schedules,
   notify,
   syntax,
   theme,

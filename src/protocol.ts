@@ -10,6 +10,9 @@ export type { BufferLine, ImageView, PageView, HarnessView, MarkdownView, Editor
 export type ConnectionView = { text: string; kind: 'shell' | 'acp' | 'browser' | 'terminal' | 'sqlite' | 'ssh' };
 // One row in the floating "schedule" panel.
 export type ScheduleView = { id: string; spec: string; next: string; recurring: boolean };
+// One row in the aggregated "schedules" tab: a ScheduleView plus its owning tab label and the
+// command to run (the per-tab ScheduleView omits the command; the aggregate needs it).
+export type AggregatedScheduleView = ScheduleView & { tab: string; command: string };
 // A pending route chooser: the unprefixed command plus the option labels to pick from.
 export type RouteChooserView = { cmd: string; choices: string[] };
 // The open "New harness" launch dialog's data: the ordered harness names and each harness's known
@@ -50,8 +53,8 @@ export type TabView = {
   cmdHistory: string[];
   commandQueue: string[];
   toolStepsExpanded: boolean;
-  // Body kind: undefined/`'agent'` for a normal tab, `'image'` for an image view, `'page'` for an embedded web page, `'harness'` for a full-tab AI harness terminal, `'markdown'` for a rendered Markdown file, `'monitor'` for the AI-monitor suggestion feed, `'files'` for a file tree, `'notifications'` for the notification feed.
-  view?: 'agent' | 'image' | 'page' | 'harness' | 'markdown' | 'editor' | 'monitor' | 'files' | 'notifications';
+  // Body kind: undefined/`'agent'` for a normal tab, `'image'` for an image view, `'page'` for an embedded web page, `'harness'` for a full-tab AI harness terminal, `'markdown'` for a rendered Markdown file, `'monitor'` for the AI-monitor suggestion feed, `'files'` for a file tree, `'notifications'` for the notification feed, `'schedules'` for the aggregated schedule list.
+  view?: 'agent' | 'image' | 'page' | 'harness' | 'markdown' | 'editor' | 'monitor' | 'files' | 'notifications' | 'schedules';
   // Display name when it differs from `label` (image tabs are all titled `image`).
   title?: string;
   // Image-view payload, present only when `view === 'image'`.
@@ -70,6 +73,9 @@ export type TabView = {
   monitor?: { suggestions: SuggestionView[]; persona: string; targets: string; contextBytes: number };
   // File-tree payload, present only when `view === 'files'`.
   files?: FileTreeView;
+  // Aggregated schedule rows across all tabs, sorted next-to-run first. Present only when
+  // `view === 'schedules'`.
+  aggregatedSchedules?: AggregatedScheduleView[];
   // Set while a full-tab interactive PTY (htop, vim, etc.) is running on this agent tab.
   // Cleared on exit; the client hides the transcript while this is set.
   activePty?: string;

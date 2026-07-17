@@ -95,6 +95,17 @@ describe('Sidebar', () => {
     expect(send).toHaveBeenCalledWith({ method: 'closeTab', params: { index: 0 } });
   });
 
+  it('renders a docked schedules tab with its compressed body', () => {
+    const client = { send: vi.fn() } as unknown as JanusClient;
+    const tabs = [makeTab({
+      label: 'schedules', title: 'schedules', view: 'schedules', dock: 'right',
+      aggregatedSchedules: [{ tab: 'agent-1', id: 's1', spec: 'every 5m', next: 'Jan 1 3:00pm', recurring: true, command: 'clear' }],
+    })];
+    const { container, getByText } = render(<Sidebar side="right" tabs={tabs} client={client} />);
+    expect(container.querySelector('.schedules-compact')).not.toBeNull();
+    expect(getByText('agent-1')).toBeTruthy();
+  });
+
   it('renders one tab-strip entry per docked tab when both are docked to the same side', () => {
     const client = { send: vi.fn() } as unknown as JanusClient;
     const tabs = [
