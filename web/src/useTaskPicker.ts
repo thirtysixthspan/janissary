@@ -1,17 +1,19 @@
 import { useCallback, useMemo, useState } from 'react';
 import type { TaskRow } from '@shared/protocol';
 import type { JanusClient } from './ws';
-import { flattenVisibleTaskRows } from './task-picker-keys';
+import { flattenVisibleTaskRows, firstSelectableIndex } from './task-picker-keys';
 import { populateCommandLine } from './populate-command-line';
 
 // State and handlers for the Ctrl+A / `tasks` picker. Mirrors the queue picker's
-// populate-not-submit shape (not `hist`'s run-immediately shape): selecting a task writes
-// `execute ./ai/tasks/<path>` into the command line via the shared recall ref and closes the
-// popup, so the user can supplement or edit the command before running it themselves. On a
-// harness tab there is no command line, so instead the text is sent straight into that harness's
-// PTY as terminal input (see `harnessPtyId`).
+// populate-not-submit shape (not `hist`'s run-immediately shape): selecting a task writes an
+// `execute …` command into the command line via the shared recall ref and closes the popup, so the
+// user can supplement or edit the command before running it themselves. A project task inserts the
+// relative `execute ./ai/tasks/<path>`; a built-in (Janissary) task inserts the absolute
+// `execute <janissaryTasksDir>/<path>` so it resolves from any working directory. On a harness tab
+// there is no command line, so the same text is sent straight into that harness's PTY input.
 export function useTaskPicker(
   tasks: TaskRow[],
+  janissaryTasksDir: string,
   recallRef: React.RefObject<((text: string) => void) | null>,
   inputRef: React.RefObject<HTMLTextAreaElement | null>,
   client: JanusClient,
@@ -21,15 +23,21 @@ export function useTaskPicker(
   const [taskPickerIndex, setTaskPickerIndex] = useState(0);
   const [expandedTaskDirs, setExpandedTaskDirs] = useState<Set<string>>(new Set());
 
+  const visibleTasks = useMemo(() => flattenVisibleTaskRows(tasks, expandedTaskDirs), [tasks, expandedTaskDirs]);
+
   const openTaskPicker = useCallback(() => {
-    setTaskPickerIndex(0);
+    setTaskPickerIndex(firstSelectableIndex(visibleTasks));
     setTaskPickerOpen(true);
-  }, []);
+  }, [visibleTasks]);
 
   const pickTask = useCallback((path: string) => {
-    populateCommandLine(`execute ./ai/tasks/${path}`, client, harnessPtyId, recallRef, inputRef);
+    const source = tasks.find((task) => task.path === path)?.source ?? 'project';
+    const command = source === 'janissary'
+      ? `execute ${janissaryTasksDir}/${path}`
+      : `execute ./ai/tasks/${path}`;
+    populateCommandLine(command, client, harnessPtyId, recallRef, inputRef);
     setTaskPickerOpen(false);
-  }, [recallRef, inputRef, client, harnessPtyId]);
+  }, [tasks, janissaryTasksDir, recallRef, inputRef, client, harnessPtyId]);
 
   const toggleTaskDir = useCallback((path: string) => {
     setExpandedTaskDirs((prev) => {
@@ -38,8 +46,6 @@ export function useTaskPicker(
       return next;
     });
   }, []);
-
-  const visibleTasks = useMemo(() => flattenVisibleTaskRows(tasks, expandedTaskDirs), [tasks, expandedTaskDirs]);
 
   return {
     taskPickerOpen, taskPickerIndex, setTaskPickerIndex, setTaskPickerOpen, openTaskPicker, pickTask,

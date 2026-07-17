@@ -2,7 +2,7 @@ import type { Controller } from './controller.js';
 import type { ServerEvent } from './protocol.js';
 import { getConfig } from './config.js';
 import { globalCommands } from './global-history.js';
-import { listTasks } from './tasks.js';
+import { listTasks, janissaryTasksDir } from './tasks.js';
 import { listProfiles } from './profiles.js';
 import { appVersionNumber } from './cli-args.js';
 
@@ -12,7 +12,8 @@ export function buildStateEvent(controller: Controller): ServerEvent {
   return {
     t: 'state', tabs: controller.view(), activeTab: controller.managers.tab.activeTab,
     route: controller.routeView(), tabNameMaxLength: getConfig().tabNameMaxLength,
-    globalHistory: globalCommands(), syntaxTheme: getConfig().syntaxTheme, theme: getConfig().theme, tasks: listTasks(),
+    globalHistory: globalCommands(), syntaxTheme: getConfig().syntaxTheme, theme: getConfig().theme,
+    tasks: listTasks(controller.rootDir), janissaryTasksDir: janissaryTasksDir(),
     profiles: listProfiles(), projectDir: controller.rootDir, version: appVersionNumber(),
   };
 }

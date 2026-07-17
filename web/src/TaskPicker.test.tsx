@@ -8,12 +8,16 @@ beforeAll(() => {
   Element.prototype.scrollIntoView = vi.fn();
 });
 
-function fileRow(path: string, depth = 0): VisibleTaskRow {
-  return { path, name: path.split('/').pop()!, depth, dir: false };
+function fileRow(path: string, depth = 0, source: VisibleTaskRow['source'] = 'project'): VisibleTaskRow {
+  return { path, name: path.split('/').pop()!, depth, dir: false, source };
 }
 
 function dirRow(path: string, expanded: boolean, depth = 0): VisibleTaskRow {
-  return { path, name: path.split('/').pop()!, depth, dir: true, expanded };
+  return { path, name: path.split('/').pop()!, depth, dir: true, expanded, source: 'project' };
+}
+
+function headerRow(source: VisibleTaskRow['source'], name: string): VisibleTaskRow {
+  return { header: true, source, path: ` header-${source}`, name, depth: 0, dir: false };
 }
 
 describe('TaskPicker', () => {
@@ -73,5 +77,27 @@ describe('TaskPicker', () => {
     fireEvent.click(container.querySelector('.picker-row')!);
     expect(onToggleDir).toHaveBeenCalledWith('sub');
     expect(onPick).not.toHaveBeenCalled();
+  });
+
+  it('renders section header rows as non-selectable dividers, not picker rows', () => {
+    const rows = [
+      headerRow('project', 'Project'), fileRow('a.md'),
+      headerRow('janissary', 'Janissary'), fileRow('b.md', 0, 'janissary'),
+    ];
+    const { container, getByText } = render(React.createElement(TaskPicker, { rows, selected: 1, onPick: vi.fn(), onToggleDir: vi.fn() }));
+    expect(getByText('Project')).toBeTruthy();
+    expect(getByText('Janissary')).toBeTruthy();
+    expect(container.querySelectorAll('.picker-section').length).toBe(2);
+    expect(container.querySelectorAll('.picker-row').length).toBe(2);
+  });
+
+  it('does not call onPick when a section header is clicked', () => {
+    const onPick = vi.fn();
+    const onToggleDir = vi.fn();
+    const rows = [headerRow('project', 'Project'), fileRow('a.md')];
+    const { container } = render(React.createElement(TaskPicker, { rows, selected: 1, onPick, onToggleDir }));
+    fireEvent.click(container.querySelector('.picker-section')!);
+    expect(onPick).not.toHaveBeenCalled();
+    expect(onToggleDir).not.toHaveBeenCalled();
   });
 });

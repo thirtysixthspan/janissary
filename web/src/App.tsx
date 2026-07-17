@@ -48,6 +48,7 @@ export function App() {
   const [globalHistory, setGlobalHistory] = useState<string[]>([]);
   const [syntaxTheme, setSyntaxTheme] = useState('github-dark');
   const [tasks, setTasks] = useState<TaskRow[]>([]);
+  const [janissaryTasksDir, setJanissaryTasksDir] = useState('');
   const [profiles, setProfiles] = useState<string[]>([]);
   // Server-driven route chooser (null when closed); `routeIdx` is the highlighted option.
   const [route, setRoute] = useState<RouteChooserView | null>(null);
@@ -98,7 +99,7 @@ export function App() {
   } = useQueuePicker(client, current, inputReference, recallReference);
   const {
     taskPickerOpen, taskPickerIndex, setTaskPickerIndex, setTaskPickerOpen, openTaskPicker, pickTask, visibleTasks, toggleTaskDir, profilePickerOpen, profilePickerIndex, setProfilePickerIndex, setProfilePickerOpen, openProfilePicker, pickProfile,
-  } = usePopulatePickers(tasks, recallReference, inputReference, client, current?.view === 'harness' ? current.harness?.ptyId : undefined);
+  } = usePopulatePickers(tasks, janissaryTasksDir, recallReference, inputReference, client, current?.view === 'harness' ? current.harness?.ptyId : undefined);
 
   const { quitConfirmOpen, openQuitConfirm, confirmQuit, cancelQuit } = useQuitConfirm(runCommand, inputReference);
   const editorHandles = useRef<Map<string, EditorTabHandle>>(new Map());
@@ -117,7 +118,7 @@ export function App() {
   const chooseRoute = useCallback((index: number) => client.send({ method: 'chooseRoute', params: { index } }), [client]);
 
   useServerState(client, {
-    setTabs, setActiveTab, setRoute, setTabNameMaxLength, setGlobalHistory, setSyntaxTheme, setTheme, setTasks, setProfiles, setRouteIndex,
+    setTabs, setActiveTab, setRoute, setTabNameMaxLength, setGlobalHistory, setSyntaxTheme, setTheme, setTasks, setJanissaryTasksDir, setProfiles, setRouteIndex,
     routeRef: routeReference,
   });
 

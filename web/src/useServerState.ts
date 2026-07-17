@@ -13,6 +13,7 @@ type Setters = {
   setSyntaxTheme: (theme: string) => void;
   setTheme: (theme: string) => void;
   setTasks: (tasks: TaskRow[]) => void;
+  setJanissaryTasksDir: (dir: string) => void;
   setProfiles: (profiles: string[]) => void;
   setRouteIndex: (index: number) => void;
   routeRef: React.RefObject<RouteChooserView | null>;
@@ -23,12 +24,12 @@ type Setters = {
 // that field has no other consumer in `App.tsx`.
 export function useServerState(client: JanusClient, setters: Setters): void {
   const {
-    setTabs, setActiveTab, setRoute, setTabNameMaxLength, setGlobalHistory, setSyntaxTheme, setTheme, setTasks, setProfiles, setRouteIndex, routeRef,
+    setTabs, setActiveTab, setRoute, setTabNameMaxLength, setGlobalHistory, setSyntaxTheme, setTheme, setTasks, setJanissaryTasksDir, setProfiles, setRouteIndex, routeRef,
   } = setters;
   const [projectDir, setProjectDir] = useState('');
   const [version, setVersion] = useState('');
   useProjectTitle(projectDir, version);
-  useEffect(() => client.onState((nextTabs, active, nextRoute, nextTabNameMaxLength, nextGlobalHistory, nextSyntaxTheme, nextTheme, nextTasks, nextProfiles, nextProjectDir, nextVersion) => {
+  useEffect(() => client.onState((nextTabs, active, nextRoute, nextTabNameMaxLength, nextGlobalHistory, nextSyntaxTheme, nextTheme, nextTasks, nextJanissaryTasksDir, nextProfiles, nextProjectDir, nextVersion) => {
     setTabs(nextTabs);
     setActiveTab(active);
     setRoute(nextRoute);
@@ -37,6 +38,7 @@ export function useServerState(client: JanusClient, setters: Setters): void {
     setSyntaxTheme(nextSyntaxTheme);
     setTheme(nextTheme);
     setTasks(nextTasks);
+    setJanissaryTasksDir(nextJanissaryTasksDir);
     setProfiles(nextProfiles);
     setProjectDir(nextProjectDir);
     setVersion(nextVersion);
@@ -45,6 +47,6 @@ export function useServerState(client: JanusClient, setters: Setters): void {
     routeRef.current = nextRoute;
     if (nextRoute && (!previous || previous.cmd !== nextRoute.cmd)) setRouteIndex(0);
   }), [
-    client, setTabs, setActiveTab, setRoute, setTabNameMaxLength, setGlobalHistory, setSyntaxTheme, setTheme, setTasks, setProfiles, setRouteIndex, routeRef,
+    client, setTabs, setActiveTab, setRoute, setTabNameMaxLength, setGlobalHistory, setSyntaxTheme, setTheme, setTasks, setJanissaryTasksDir, setProfiles, setRouteIndex, routeRef,
   ]);
 }

@@ -370,6 +370,10 @@ html, body, #root {
   box-shadow: 0 -6px 24px rgb(0 0 0 / 40%);
 }
 .picker-title { padding: 4px 10px; color: var(--muted); border-bottom: 1px solid var(--border); }
+.picker-section {
+  padding: 3px 10px; color: var(--muted); cursor: default;
+  font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em;
+}
 .picker-row { display: flex; align-items: center; padding: 3px 10px; cursor: pointer; white-space: nowrap; }
 .picker-row.picker-empty { color: var(--muted); cursor: default; }
 .picker-row.selected { background: var(--accent); color: var(--bg); }
