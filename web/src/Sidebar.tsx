@@ -82,7 +82,10 @@ export function Sidebar({
           <NotificationsTab lines={current.tab.bufferLines} client={client} index={current.index} dock={current.tab.dock} />
         )}
         {current.tab.view === 'schedules' && (
-          <SchedulesTab entries={current.tab.aggregatedSchedules ?? []} tabs={tabs} client={client} compact />
+          <SchedulesTab
+            entries={current.tab.aggregatedSchedules ?? []} tabs={tabs} client={client} compact
+            dock={current.tab.dock} index={current.index}
+          />
         )}
       </div>
       {side === 'left' && divider}

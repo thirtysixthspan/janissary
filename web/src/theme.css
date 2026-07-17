@@ -620,19 +620,38 @@ html, body, #root {
 .notifications-dock-cycle:hover { color: var(--fg); }
 
 /* Schedules tab: the aggregated, next-to-run-ordered schedule list. A scrollable flex column of
-   clickable rows; the compact variant tightens each row to a single sidebar-width line. */
-.schedules-tab { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; padding: 4px 0; }
+   numbered, tabular rows with column headings; the compact variant tightens each row to a single
+   sidebar-width line with fewer columns. */
+.schedules-tab { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; padding: 4px 0; outline: none; }
 .schedules-empty { padding: 8px 12px; color: var(--muted); }
+.schedules-header {
+  display: flex; align-items: center; justify-content: flex-end;
+  padding: 6px 12px; color: var(--muted); font-size: 12px; border-bottom: 1px solid var(--border);
+}
+.schedules-actions { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
+.schedules-dock-cycle {
+  background: transparent; border: none; color: var(--muted); cursor: pointer; font-size: 13px;
+  padding: 0 4px; line-height: 1;
+}
+.schedules-dock-cycle:hover { color: var(--fg); }
+.schedules-headings, .schedules-row {
+  display: grid; grid-template-columns: 2em 1fr 1fr 1fr 1fr 2fr;
+  gap: 12px; align-items: baseline; width: 100%; text-align: left;
+  padding: 4px 12px; white-space: nowrap;
+}
+.schedules-headings { color: var(--muted); font-size: 12px; border-bottom: 1px solid var(--border); }
 .schedules-row {
-  display: flex; gap: 12px; align-items: baseline; width: 100%; text-align: left;
-  background: transparent; border: none; color: var(--fg); cursor: pointer;
-  padding: 4px 12px; font: inherit; white-space: nowrap;
+  background: transparent; color: var(--fg); cursor: pointer; font: inherit;
 }
 .schedules-row:hover { background: var(--border); }
+.schedules-row.selected { background: var(--bg-soft); }
 .schedules-row.recurring { color: var(--accent); }
+.schedules-num { color: var(--muted); flex-shrink: 0; }
 .schedules-owner { color: var(--muted); flex-shrink: 0; }
 .schedules-id { flex-shrink: 0; }
 .schedules-next { flex-shrink: 0; }
 .schedules-spec { color: var(--muted); flex-shrink: 0; }
 .schedules-command { overflow: hidden; text-overflow: ellipsis; }
-.schedules-compact .schedules-row { gap: 8px; font-size: 12px; }
+.schedules-compact .schedules-headings, .schedules-compact .schedules-row {
+  grid-template-columns: 1.5em 1fr 1fr 1fr; gap: 8px; font-size: 12px;
+}

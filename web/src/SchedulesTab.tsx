@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import type { AggregatedScheduleView, TabView } from '@shared/protocol';
 import type { JanusClient } from './ws';
+import { nextDock, dockTooltip } from './dock-cycle';
+import { nextSelection } from './schedules-keys';
 
 type Properties = {
   entries: AggregatedScheduleView[];
@@ -8,13 +10,32 @@ type Properties = {
   client: JanusClient;
   // Compressed one-line-per-entry layout, used when the tab is docked into a sidebar.
   compact?: boolean;
+  // The tab's current dock location (undefined means center). Drives the dock-cycle button,
+  // which is shown only while docked, matching FileTreeTab and NotificationsTab.
+  dock?: 'left' | 'right';
+  index: number;
 };
 
-// The aggregated schedules tab: every scheduled command across all tabs, ordered next-to-run first.
-// Read-only apart from clicking a row, which focuses the tab that owns that entry via setActiveTab.
-// Rendered full-width in the main area, or as a compressed one-line-per-entry list when docked
-// (`compact`); both layouts share the row-click-to-focus behavior.
-export function SchedulesTab({ entries, tabs, client, compact = false }: Properties) {
+const NAV_KEYS = new Set(['ArrowDown', 'ArrowUp', 'Home', 'End']);
+
+// The aggregated schedules tab: every scheduled command across all tabs, ordered next-to-run
+// first. Read-only apart from selection: a single click selects a row, a double click (or Enter
+// on the selected row) focuses the tab that owns it via setActiveTab. Arrow Up/Down/Home/End move
+// the selection. Rendered full-width in the main area, or as a compressed one-line-per-entry list
+// when docked (`compact`); both layouts share the same selection and focus behavior.
+export function SchedulesTab({ entries, tabs, client, compact = false, dock, index }: Properties) {
+  const [selected, setSelected] = useState<number | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (selected === null) return;
+    containerRef.current?.querySelector(`[data-index="${CSS.escape(String(selected))}"]`)?.scrollIntoView({ block: 'nearest' });
+  }, [selected]);
+
+  useEffect(() => {
+    if (selected !== null && selected >= entries.length) setSelected(entries.length === 0 ? null : entries.length - 1);
+  }, [entries.length, selected]);
+
   if (entries.length === 0) {
     return (
       <div className="schedules-tab">
@@ -23,22 +44,93 @@ export function SchedulesTab({ entries, tabs, client, compact = false }: Propert
     );
   }
   const focusOwner = (label: string) => {
-    const index = tabs.findIndex((t) => t.label === label);
-    if (index !== -1) client.send({ method: 'setActiveTab', params: { index } });
+    const owningIndex = tabs.findIndex((t) => t.label === label);
+    if (owningIndex !== -1) client.send({ method: 'setActiveTab', params: { index: owningIndex } });
   };
+
+  const onRowClick = (i: number) => {
+    setSelected(i);
+    containerRef.current?.focus();
+  };
+
+  const onKeyDown = (e: React.KeyboardEvent) => {
+    if (NAV_KEYS.has(e.key)) {
+      e.preventDefault();
+      e.stopPropagation();
+      setSelected(nextSelection(entries.length, selected, e.key));
+      return;
+    }
+    if (e.key === 'Enter' && selected !== null) {
+      e.preventDefault();
+      e.stopPropagation();
+      focusOwner(entries[selected].tab);
+    }
+  };
+
   return (
-    <div className={`schedules-tab${compact ? ' schedules-compact' : ''}`}>
-      {entries.map((entry) => (
-        <button
+    <div
+      className={`schedules-tab${compact ? ' schedules-compact' : ''}`}
+      ref={containerRef}
+      tabIndex={0}
+      onKeyDown={onKeyDown}
+    >
+      {dock && (
+        <div className="schedules-header">
+          <div className="schedules-actions">
+            <button
+              type="button"
+              className="schedules-dock-cycle"
+              title={dockTooltip(nextDock(dock))}
+              onClick={() => client.send({ method: 'setDock', params: { index, dock: nextDock(dock) } })}
+            >
+              ⇄
+            </button>
+          </div>
+        </div>
+      )}
+      <div className="schedules-headings">
+        {compact ? <CompactHeadings /> : <FullHeadings />}
+      </div>
+      {entries.map((entry, i) => (
+        <div
           key={`${entry.tab}:${entry.id}`}
-          type="button"
-          className={`schedules-row${entry.recurring ? ' recurring' : ''}`}
-          onClick={() => focusOwner(entry.tab)}
+          role="button"
+          tabIndex={-1}
+          aria-selected={i === selected}
+          className={`schedules-row${entry.recurring ? ' recurring' : ''}${i === selected ? ' selected' : ''}`}
+          data-index={i}
+          onClick={() => onRowClick(i)}
+          onDoubleClick={() => focusOwner(entry.tab)}
         >
+          <span className="schedules-num">{i + 1})</span>
           {compact ? <CompactRow entry={entry} /> : <FullRow entry={entry} />}
-        </button>
+        </div>
       ))}
     </div>
+  );
+}
+
+function FullHeadings() {
+  return (
+    <>
+      <span className="schedules-num" />
+      <span>Owner</span>
+      <span>Id</span>
+      <span>Next</span>
+      <span>Spec</span>
+      <span>Command</span>
+    </>
+  );
+}
+
+function CompactHeadings() {
+  return (
+    <>
+      <span className="schedules-num" />
+      <span>Next</span>
+      <span>Id</span>
+      <span>Owner</span>
+    </>
   );
 }
 
@@ -57,7 +149,7 @@ function FullRow({ entry }: { entry: AggregatedScheduleView }) {
 function CompactRow({ entry }: { entry: AggregatedScheduleView }) {
   return (
     <>
-      <span className="schedules-next">{entry.next}</span>
+      <span className="schedules-next">{entry.next.split(' ').pop()}</span>
       <span className="schedules-id">{entry.id}</span>
       <span className="schedules-owner">{entry.tab}</span>
     </>
