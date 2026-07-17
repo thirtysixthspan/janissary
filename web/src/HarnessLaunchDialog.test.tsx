@@ -102,4 +102,17 @@ describe('HarnessLaunchDialog', () => {
     const second = renderDialog();
     expect(document.activeElement).toBe(second.getByText('Create'));
   });
+
+  it('Effort dropdown lists the five supported levels plus a default option', () => {
+    const { getByLabelText } = renderDialog();
+    const options = getByLabelText(/Effort/).querySelectorAll('option');
+    expect([...options].map((o) => o.value)).toEqual(['', 'low', 'medium', 'high', 'xhigh', 'max']);
+  });
+
+  it('selecting an effort level includes --effort in the built command', () => {
+    const { getByText, getByLabelText, send } = renderDialog();
+    fireEvent.change(getByLabelText(/Effort/), { target: { value: 'high' } });
+    fireEvent.click(getByText('Create'));
+    expect(send).toHaveBeenNthCalledWith(1, { method: 'command', params: { text: 'harness claude --effort high' } });
+  });
 });

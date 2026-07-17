@@ -27,12 +27,13 @@ dialog over the command bar instead of returning a usage error. The dialog is a 
 choosing the harness and its launch flags with controls rather than typing the command by hand. It
 offers: a harness selector (claude, opencode, codex), a **Label** field (the `as <label>` name), a
 **Workspace** toggle (`-w`), an **Offline** toggle (`--offline`), an **Auto-approve** toggle (`-y`),
-a **Model** dropdown, and an **Effort** field.
+a **Model** dropdown, and an **Effort** dropdown.
 
 The form enforces the flag constraints so it can only ever build a valid command: **Auto-approve** is
 disabled unless the selected harness is claude *and* Workspace is on, and the **Model** dropdown lists
-the selected harness's known models and is disabled when that harness has no model catalog. Opening
-the dialog records no line in the transcript.
+the selected harness's known models and is disabled when that harness has no model catalog. The
+**Effort** dropdown offers a default (no `--effort` flag) plus the fixed levels `low`, `medium`,
+`high`, `xhigh`, and `max`. Opening the dialog records no line in the transcript.
 
 Pressing **Create** launches the harness tab immediately — it synthesizes the equivalent
 `harness <name> …` command and submits it through the normal command path, so all the usual parsing,
