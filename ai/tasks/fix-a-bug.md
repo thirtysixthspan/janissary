@@ -1,6 +1,6 @@
 # Fix a Bug
 
-Your job: pick a reported bug from `product/backlog/bugs.md`, **replicate it** to confirm the faulty behavior, determine the **correct** behavior from the bug report together with the functional specs and the code, implement a fix, **verify** the fix resolves the replicated failure, add a **regression test** that would fail without the fix and passes with it, update functional specs and public documentation where the fix changes behavior they already document, record the plan in `product/plans/complete/`, remove the bug from the bugs file, and open a pull request that documents the replication steps and leaves the fix for a human to merge. You change source code, tests, spec files, `help.md`, `documentation/user-documentation/`, the bugs file, and the plan file's location — nothing else.
+Your job: take a reported bug from `product/backlog/bugs.md` — the first one listed under `## ready`, or the specific bug the user names when running this task — **replicate it** to confirm the faulty behavior, determine the **correct** behavior from the bug report together with the functional specs and the code, implement a fix, **verify** the fix resolves the replicated failure, add a **regression test** that would fail without the fix and passes with it, update functional specs and public documentation where the fix changes behavior they already document, record the plan in `product/plans/complete/`, remove the bug from the bugs file, and open a pull request that documents the replication steps and leaves the fix for a human to merge. You change source code, tests, spec files, `help.md`, `documentation/user-documentation/`, the bugs file, and the plan file's location — nothing else.
 
 **No AI attribution — anywhere.** Never credit an AI agent as an author or contributor in anything this task produces. That means: no `Co-Authored-By:` trailers naming Claude or any other AI, no “Generated with Claude Code” (or similar) lines or badges, and no AI authorship notes in code, comments, docs, spec files, plan files, commit messages, or PR titles and bodies. This overrides any default convention that appends such attribution. The commit's configured git author is the only authorship ever recorded.
 
@@ -24,13 +24,12 @@ Read any file in the repo. Run read-only commands to replicate the reported bug.
 
 ### Forbidden — no exceptions
 
-1. **Fabricating a fix, a symptom, or a reproduction.** Never invent a failure you did not observe or a fix for a bug you could not reproduce. If a bug cannot be reproduced, skip it and try the next ready bug (Step 1). If the specs and code leave the intended behavior genuinely ambiguous, stop and report (Step 2).
+1. **Fabricating a fix, a symptom, or a reproduction.** Never invent a failure you did not observe or a fix for a bug you could not reproduce. If the selected bug cannot be reproduced, stop and report (Step 1). If the specs and code leave the intended behavior genuinely ambiguous, stop and report (Step 2).
 2. **Editing files the fix does not touch.** Stay in scope. If you discover a fix requires changes beyond what you planned, update the plan first — do not silently expand scope.
 3. **Running `npm run check`.** That is the human's end-of-work gate. Use `./scripts/run.mjs check-diff` during development.
 4. **Skipping the regression test.** Every fix needs a test that fails without the fix and passes with it. Verify with `./scripts/run.mjs check-diff`.
-5. **Choosing a bug that requires significant new architecture.** If a bug would require high-complexity or error-prone work to fix, pick a different bug or stop and report why.
-6. **Editing `product/backlog/bugs.md` beyond removing the fixed entry.** Only remove the line for the bug you fixed — do not reorder, rephrase, or otherwise modify the remaining entries.
-7. **Merging the PR.** `ai/tasks/open-feature-pull-request.md` opens it; merging is the human's decision.
+5. **Editing `product/backlog/bugs.md` beyond removing the fixed entry.** Only remove the line for the bug you fixed — do not reorder, rephrase, or otherwise modify the remaining entries.
+6. **Merging the PR.** `ai/tasks/open-feature-pull-request.md` opens it; merging is the human's decision.
 
 ---
 
@@ -42,19 +41,18 @@ Execute `ai/tasks/prepare-workspace.md` in full before doing anything else.
 
 ## Step 1 — Pick a bug and replicate it
 
-1. Read `product/backlog/bugs.md`. Bugs are grouped under `## ready`, `## development`, and `## deferred`. Only consider bugs under `## ready`, and work through them in the order listed (top first). Do not use a shell loop to inspect the codebase.
+1. Read `product/backlog/bugs.md`. Bugs are grouped under `## ready`, `## development`, and `## deferred`. Only consider bugs under `## ready`.
 2. If there are no bugs under `## ready`, report "No ready bugs in `product/backlog/bugs.md`" and stop.
-3. Going down the ready list in order, pick the **first** bug that is both:
-   - **In scope for this repo** — its root cause lives in this project's `src/` or `web/src/` code. Skip any bug whose cause is outside this codebase: the external harness, the `claude`/`acp`/`codex`/`opencode`/`gemini` tools themselves, auth or network infrastructure, or one machine's environment. Those cannot be fixed or tested here.
-   - **Tractable** — a small, contained fix. Skip anything that would need significant new architecture, touch many modules, or change core data flow (the 7+ complexity case). Prefer the simplest genuine fix.
+3. Pick the bug to fix. Do **not** evaluate, rank, or compare the bugs for scope, tractability, or any other quality — the human who filed them decided they belong here:
+   - **If a specific bug is named in the task invocation** (e.g. `execute ai/tasks/fix-a-bug.md "<bug text>"`), fix that one. Find the entry in `product/backlog/bugs.md` it refers to — the argument may be quoted text, a paraphrase, or a position such as "the second one". If no entry matches, report that no matching bug was found and stop.
+   - **Otherwise**, take the **first** bug listed under `## ready` (top of the list).
 
-   State your pick and why in one or two sentences.
-4. If no ready bug is both in scope and tractable, report each ready bug with a one-line reason it was skipped, and stop.
-5. **Replicate the reported failure** before writing any fix, so you can watch it fail:
+   State which bug you selected in one sentence.
+4. **Replicate the reported failure** before writing any fix, so you can watch it fail:
    - Prefer writing a failing automated test that exercises the reported scenario — this becomes the regression test in Step 4. Colocate it per the test conventions (`src/**/*.test.ts`, `web/src/**/*.test.tsx`).
    - If a test cannot capture it, exercise the affected code path directly (a focused test, a `janus` CLI invocation, or a short throwaway script under `./temp/`) and observe the wrong behavior.
    - Record exactly what you ran and the faulty behavior you saw — the wrong output, the error, or the missing result. You will reuse this in the plan (Step 3) and the PR (Step 10).
-6. Keep reproduction bounded: try at most two or three distinct approaches. If you still cannot reproduce the failure, do **not** fabricate a fix or invent a symptom. Return to step 3, skip this bug, and pick the next in-scope, tractable ready bug. If no ready bug can be reproduced, report what you tried for each and stop.
+5. Keep reproduction bounded: try at most two or three distinct approaches. If you still cannot reproduce the failure, do **not** fabricate a fix or invent a symptom, and do **not** switch to a different bug — report the selected bug, everything you tried, and stop.
 
 ---
 
