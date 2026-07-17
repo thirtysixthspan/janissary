@@ -213,7 +213,7 @@ describe('HarnessTab', () => {
     );
     const meta = container.querySelector('.tab-meta')!;
     const order = [...meta.children].map((el) => el.className);
-    expect(order).toEqual(['tab-cwd', 'tab-meta-chip', 'tab-meta-chip', 'tab-flags', 'tab-open-files']);
+    expect(order).toEqual(['tab-cwd', 'tab-meta-chip', 'tab-meta-chip', 'tab-flags', 'tab-open-files', 'tab-launch-agent']);
     const chips = meta.querySelectorAll('.tab-meta-chip');
     expect(chips[0]).toHaveTextContent('opus');
     expect(chips[0]).toHaveAttribute('title', 'Model: opus');
@@ -256,5 +256,24 @@ describe('HarnessTab', () => {
       method: 'openFileNavigatorFor',
       params: { label: 'claude' },
     });
+  });
+
+  it('dispatches launchAgentFor with the tab label when the launch-agent button is clicked', () => {
+    const { getByTitle } = render(
+      <HarnessTab harness={makeHarness()} client={mockClient} label="claude" cwd="~/project" />,
+    );
+    vi.mocked(mockClient.send as ReturnType<typeof vi.fn>).mockClear();
+    getByTitle('New agent here').click();
+    expect(vi.mocked(mockClient.send as ReturnType<typeof vi.fn>)).toHaveBeenCalledWith({
+      method: 'launchAgentFor',
+      params: { label: 'claude' },
+    });
+  });
+
+  it('renders no launch-agent button when the tab has no known cwd', () => {
+    const { queryByTitle } = render(
+      <HarnessTab harness={makeHarness()} client={mockClient} label="claude" />,
+    );
+    expect(queryByTitle('New agent here')).not.toBeInTheDocument();
   });
 });

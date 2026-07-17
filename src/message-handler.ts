@@ -78,6 +78,8 @@ export function handle(controller: Controller, message: ClientMessage, reply: (e
     }
     case 'openFileNavigatorFor': { controller.openFileNavigatorFor(message.params.label); break;
     }
+    case 'launchAgentFor': { controller.launchAgentFor(message.params.label); break;
+    }
   }
   reply({ t: 'rpc-reply', id: message.id, result: 'ok' });
 }

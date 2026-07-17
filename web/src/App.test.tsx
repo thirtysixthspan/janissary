@@ -95,6 +95,14 @@ describe('App agent tab metadata row', () => {
     await userEvent.click(screen.getByTitle('Open file navigator here'));
     expect(sendMock).toHaveBeenCalledWith({ method: 'openFileNavigatorFor', params: { label: 'janus' } });
   });
+
+  it('sends launchAgentFor with the active tab\'s label when the launch-agent button is clicked', async () => {
+    const { App } = await import('./App');
+    render(<App />);
+    act(() => { stateListener!([makeTab({ label: 'janus' })], 0, null, 16, [], 'github-dark', 'dark', []); });
+    await userEvent.click(screen.getByTitle('New agent here'));
+    expect(sendMock).toHaveBeenCalledWith({ method: 'launchAgentFor', params: { label: 'janus' } });
+  });
 });
 
 describe('App app theme picker', () => {

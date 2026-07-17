@@ -1,7 +1,7 @@
 import React from 'react';
 import { tabFlagDisplay } from './tab-flag-display';
 
-type Properties = { cwd?: string; flags?: string[]; model?: string; effort?: string; onOpenFileNavigator?: () => void };
+type Properties = { cwd?: string; flags?: string[]; model?: string; effort?: string; onOpenFileNavigator?: () => void; onLaunchAgentHere?: () => void };
 
 function MetaChip({ label, value }: { label: string; value: string }) {
   return (
@@ -11,7 +11,7 @@ function MetaChip({ label, value }: { label: string; value: string }) {
   );
 }
 
-export function AgentTabMeta({ cwd, flags, model, effort, onOpenFileNavigator }: Properties) {
+export function AgentTabMeta({ cwd, flags, model, effort, onOpenFileNavigator, onLaunchAgentHere }: Properties) {
   return (
     <div className="tab-meta">
       <span className="tab-cwd">{cwd}</span>
@@ -36,6 +36,16 @@ export function AgentTabMeta({ cwd, flags, model, effort, onOpenFileNavigator }:
           onClick={onOpenFileNavigator}
         >
           📁
+        </button>
+      )}
+      {onLaunchAgentHere && (
+        <button
+          type="button"
+          className="tab-launch-agent"
+          title="New agent here"
+          onClick={onLaunchAgentHere}
+        >
+          ➕
         </button>
       )}
     </div>

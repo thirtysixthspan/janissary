@@ -47,6 +47,7 @@ export const HarnessTab = forwardRef<HarnessTabHandle, Properties>(function Harn
         model={harness.model}
         effort={harness.effort}
         onOpenFileNavigator={() => client.send({ method: 'openFileNavigatorFor', params: { label } })}
+        onLaunchAgentHere={cwd === undefined ? undefined : () => client.send({ method: 'launchAgentFor', params: { label } })}
       />
       {isExited && (
         <div className="harness-exited">
