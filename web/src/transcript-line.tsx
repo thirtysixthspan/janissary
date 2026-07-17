@@ -87,6 +87,21 @@ function hitForLine(highlight: LineHighlight | undefined, index: number): { hit:
   return { hit, props: hit ? { 'data-search-hit': true } : {} };
 }
 
+// A clickable "view capture" affordance on a notification line: opens the captured file in an
+// editor tab by sending the existing `edit <path>` command, mirroring the file-link click path.
+function OpenFileLink({ path, client }: { path: string; client: JanusClient }) {
+  return (
+    <span
+      className="file-link"
+      role="link"
+      title="Open the captured screen in an editor tab"
+      onClick={() => client.send({ method: 'command', params: { text: `edit ${path}` } })}
+    >
+      {' '}view capture
+    </span>
+  );
+}
+
 function renderMarkdownLine(
   line: { text: string },
   index: number,
@@ -165,6 +180,7 @@ export function renderLine(
     return (
       <div key={index} className="line message" style={{ color: line.fromColor }} {...hitProps}>
         ● {line.from}{line.text ? `: ${highlightText(line.text, highlight, index)}` : ''}
+        {line.openFile && <OpenFileLink path={line.openFile} client={client} />}
       </div>
     );
   }

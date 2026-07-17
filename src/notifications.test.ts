@@ -165,4 +165,18 @@ describe('notify — line composition', () => {
     expect(entry.output).toBe('this is a notification');
     expect(entry.fromColor).toBe('#abc');
   });
+
+  it('threads an openFile path onto the appended entry when given', () => {
+    const append = vi.fn();
+    notify(makeManagers(append), 'auto-approve', 'janus', 'Auto-approved a permission prompt', '/captures/janus-now.txt');
+    const [, entry] = append.mock.calls[0];
+    expect(entry.openFile).toBe('/captures/janus-now.txt');
+  });
+
+  it('omits openFile from the appended entry when not given', () => {
+    const append = vi.fn();
+    notify(makeManagers(append), 'auto-approve', 'janus', 'Auto-approved a permission prompt');
+    const [, entry] = append.mock.calls[0];
+    expect(entry.openFile).toBeUndefined();
+  });
 });

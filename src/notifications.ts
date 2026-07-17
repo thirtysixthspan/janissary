@@ -69,7 +69,7 @@ export function notificationText(event: NotificationEventType, tabLabel: string,
 // never creating the tab) while the notifications tab is closed, so the event path is free when the
 // feed is not open. Otherwise it consults the config + focus rules via `shouldNotify` and, on pass,
 // appends the derived line. `message` is the event-specific detail (see `notificationText`).
-export function notify(managers: Managers, event: NotificationEventType, tabLabel: string, message?: string): void {
+export function notify(managers: Managers, event: NotificationEventType, tabLabel: string, message?: string, openFile?: string): void {
   if (!notificationsTab(managers)) return;
   const activeLabel = managers.tab.cur().label;
   if (!shouldNotify(getConfig().notifications, event, tabLabel, activeLabel)) return;
@@ -78,5 +78,5 @@ export function notify(managers: Managers, event: NotificationEventType, tabLabe
   // `● 8:32pm janus: <message>`. `fromColor` (looked up from tabLabel) still colors the dot.
   const from = `${formatTimestamp(new Date())} ${tabLabel}`;
   const output = notificationText(event, tabLabel, message);
-  appendNotification(managers, { input: '', output, from, fromColor });
+  appendNotification(managers, { input: '', output, from, fromColor, ...(openFile && { openFile }) });
 }

@@ -10,6 +10,7 @@ import { writeCaptureFile } from './capture-file.js';
 import type { HarnessView, ProfileHarnessEntry } from '../types.js';
 import { messageBus } from '../bus.js';
 import { notify } from '../notifications.js';
+import { notificationsTab } from '../notifications-tab.js';
 import { sandboxNotice } from '../sandbox/index.js';
 import type { Managers } from '../managers.js';
 
@@ -165,7 +166,12 @@ export class HarnessManager {
     const approver = new HarnessAutoApprover({
       harnessName: name,
       approve: (keystroke) => this.managers.pty.input(id, keystroke),
-      notify: (message) => notify(this.managers, 'auto-approve', label, message),
+      notify: (message, capture) => {
+        const openFile = capture && notificationsTab(this.managers)
+          ? writeCaptureFile(label, capture.capturedAt, capture.text)
+          : undefined;
+        notify(this.managers, 'auto-approve', label, message, openFile);
+      },
     });
     this.autoApprovers.set(id, approver);
     return approver;

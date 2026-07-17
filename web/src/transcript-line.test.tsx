@@ -165,3 +165,22 @@ describe('renderLine — search highlight', () => {
     expect(container.querySelector('[data-search-hit]')).toBeInTheDocument();
   });
 });
+
+describe('renderLine — message openFile link', () => {
+  it('renders a clickable link that sends an edit command when the message carries openFile', async () => {
+    const send = vi.fn();
+    const client = { send } as unknown as JanusClient;
+    const line: BufferLine = { type: 'message', text: 'Auto-approved a permission prompt', from: '8:32pm claude', openFile: '/captures/claude-now.txt' };
+    const { container } = render(<>{renderLine(line, 0, client, noop, vi.fn())}</>);
+    const link = container.querySelector('.file-link[role="link"]')!;
+    expect(link).toBeInTheDocument();
+    await userEvent.click(link);
+    expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'edit /captures/claude-now.txt' } });
+  });
+
+  it('renders no link when the message has no openFile', () => {
+    const line: BufferLine = { type: 'message', text: 'a plain notification', from: '8:32pm janus' };
+    const { container } = render(<>{renderLine(line, 0, clientStub, noop, vi.fn())}</>);
+    expect(container.querySelector('[role="link"]')).toBeNull();
+  });
+});
