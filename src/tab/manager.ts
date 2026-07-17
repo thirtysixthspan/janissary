@@ -143,9 +143,9 @@ export class TabManager {
   }
 
   markUnread(label: string): void {
-    if (label === this.activeLabel()) return;
     const tab = this.tabs.find((t) => t.label === label);
-    if (tab) tab.hasUnread = true;
+    if (!tab || tab.dock || label === this.activeLabel()) return;
+    tab.hasUnread = true;
   }
 
   private recordLeavingActiveTab(newIndex: number): void {
