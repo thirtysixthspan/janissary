@@ -1,5 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { useDialogKeyboard } from '../useDialogKeyboard';
+import { useLatestRef } from '../useLatestRef';
+import { dialogKeyHandler } from '../dialog-key-handler';
 import { ModalDialog } from '../ModalDialog';
 
 type Action = 'save' | 'discard' | 'cancel';
@@ -9,48 +11,23 @@ type Properties = { onSave: () => void; onDiscard: () => void; onCancel: () => v
 export function SaveChangesDialog({ onSave, onDiscard, onCancel }: Properties) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const [selected, setSelected] = useState<Action>('save');
-  const onSaveRef = useRef(onSave);
-  const onDiscardRef = useRef(onDiscard);
-  const onCancelRef = useRef(onCancel);
-  const selectedRef = useRef(selected);
-  onSaveRef.current = onSave;
-  onDiscardRef.current = onDiscard;
-  onCancelRef.current = onCancel;
-  selectedRef.current = selected;
+  const onSaveRef = useLatestRef(onSave);
+  const onDiscardRef = useLatestRef(onDiscard);
+  const onCancelRef = useLatestRef(onCancel);
+  const selectedRef = useLatestRef(selected);
 
-  const onKeyDown = (e: KeyboardEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    switch (e.key.toLowerCase()) {
-    case 'y': { onSaveRef.current();
-    break;
-    }
-    case 'n': { onDiscardRef.current();
-    break;
-    }
-    case 'enter': {
+  const onKeyDown = dialogKeyHandler({
+    y: () => onSaveRef.current(),
+    n: () => onDiscardRef.current(),
+    enter: () => {
       if (selectedRef.current === 'save') onSaveRef.current();
       else if (selectedRef.current === 'discard') onDiscardRef.current();
       else onCancelRef.current();
-
-    break;
-    }
-    case 'escape': { onCancelRef.current();
-    break;
-    }
-    case 'arrowleft': {
-      setSelected((s) => (s === 'save' ? 'cancel' : s === 'discard' ? 'save' : 'discard'));
-
-    break;
-    }
-    case 'arrowright': {
-      setSelected((s) => (s === 'save' ? 'discard' : s === 'discard' ? 'cancel' : 'save'));
-
-    break;
-    }
-    // No default
-    }
-  };
+    },
+    escape: () => onCancelRef.current(),
+    arrowleft: () => setSelected((s) => (s === 'save' ? 'cancel' : s === 'discard' ? 'save' : 'discard')),
+    arrowright: () => setSelected((s) => (s === 'save' ? 'discard' : s === 'discard' ? 'cancel' : 'save')),
+  });
   useDialogKeyboard(dialogRef, onKeyDown);
 
   return (

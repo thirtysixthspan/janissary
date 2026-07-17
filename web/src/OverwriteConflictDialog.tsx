@@ -1,5 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { useDialogKeyboard } from './useDialogKeyboard';
+import { useLatestRef } from './useLatestRef';
+import { dialogKeyHandler } from './dialog-key-handler';
 import { ModalDialog } from './ModalDialog';
 
 type Action = 'save' | 'cancel';
@@ -11,38 +13,17 @@ type Properties = { onSave: () => void; onCancel: () => void };
 export function OverwriteConflictDialog({ onSave, onCancel }: Properties) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const [selected, setSelected] = useState<Action>('save');
-  const onSaveRef = useRef(onSave);
-  const onCancelRef = useRef(onCancel);
-  const selectedRef = useRef(selected);
-  onSaveRef.current = onSave;
-  onCancelRef.current = onCancel;
-  selectedRef.current = selected;
+  const onSaveRef = useLatestRef(onSave);
+  const onCancelRef = useLatestRef(onCancel);
+  const selectedRef = useLatestRef(selected);
 
-  const onKeyDown = (e: KeyboardEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    switch (e.key.toLowerCase()) {
-    case 'y': { onSaveRef.current();
-    break;
-    }
-    case 'enter': {
-      if (selectedRef.current === 'save') onSaveRef.current();
-      else onCancelRef.current();
-
-    break;
-    }
-    case 'escape': { onCancelRef.current();
-    break;
-    }
-    case 'arrowleft':
-    case 'arrowright': {
-      setSelected((s) => (s === 'save' ? 'cancel' : 'save'));
-
-    break;
-    }
-    // No default
-    }
-  };
+  const onKeyDown = dialogKeyHandler({
+    y: () => onSaveRef.current(),
+    enter: () => (selectedRef.current === 'save' ? onSaveRef.current() : onCancelRef.current()),
+    escape: () => onCancelRef.current(),
+    arrowleft: () => setSelected((s) => (s === 'save' ? 'cancel' : 'save')),
+    arrowright: () => setSelected((s) => (s === 'save' ? 'cancel' : 'save')),
+  });
   useDialogKeyboard(dialogRef, onKeyDown);
 
   return (
