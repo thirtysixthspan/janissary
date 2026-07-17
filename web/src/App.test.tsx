@@ -87,6 +87,14 @@ describe('App agent tab metadata row', () => {
     expect(screen.getByText('~/project')).toBeInTheDocument();
     expect(screen.getByRole('img', { name: 'Workspaced' })).toBeInTheDocument();
   });
+
+  it('sends openFileNavigatorFor with the active tab\'s label when the open-files button is clicked', async () => {
+    const { App } = await import('./App');
+    render(<App />);
+    act(() => { stateListener!([makeTab({ label: 'janus' })], 0, null, 16, [], 'github-dark', 'dark', []); });
+    await userEvent.click(screen.getByTitle('Open file navigator here'));
+    expect(sendMock).toHaveBeenCalledWith({ method: 'openFileNavigatorFor', params: { label: 'janus' } });
+  });
 });
 
 describe('App syntax theme picker', () => {
