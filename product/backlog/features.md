@@ -2,6 +2,12 @@
 
 ## ready
 
+* scheduling dialog to more easily schedule tasks, similar to harness dialog
+
+* scheduling tab that aggregates a list of schedules across all tabs and summarizes each. the tab will have two views, one for the application main area and a compressed view for when viewed in the sidebar. schedules listed in order of next to run. 
+
+* being able to schedule the creation of a new harness that gets injected with a given task
+
 ## development
 
 4. Supervisor/manager agent (LangGraph supervisor, n8n AI Agent Tool) — a built-in supervisor persona that receives a goal, fans work out with broadcast request, and aggregates the responses.
