@@ -1,8 +1,10 @@
 import React, { useRef } from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { BufferLine } from '@shared/protocol';
 import type { JanusClient } from './ws';
 import { Transcript } from './Transcript';
 import { nextDock, dockTooltip } from './dock-cycle';
+import { dockSwapIcon } from './icons';
 import { onNotificationsKey } from './notifications-handlers';
 
 // The keys the feed scrolls on; they are kept from reaching the window-level bindings.
@@ -41,7 +43,7 @@ export function NotificationsTab({ lines, client, index, dock }: Properties) {
               title={dockTooltip(nextDock(dock))}
               onClick={() => client.send({ method: 'setDock', params: { index, dock: nextDock(dock) } })}
             >
-              ⇄
+              <FontAwesomeIcon icon={dockSwapIcon} />
             </button>
           </div>
         </div>

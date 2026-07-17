@@ -12,7 +12,7 @@ The Up arrow walks backward through the history (most recent first). The Down ar
 
 ### Click to execute
 
-Double-clicking any prompt line (`❯ <command>`) in the transcript executes that command again, as if it were typed into the command bar and Enter was pressed (see Transcript → Re-running a prompt line). Drag-selecting text anywhere in the transcript, including a prompt line, copies the selection to the clipboard and does not trigger execution or steal keyboard focus from the selection (see Tabs → Keyboard focus on tab press). ACP prompt lines (agent tool steps) keep their collapse-toggle single-click behavior.
+Double-clicking any prompt line (a chevron icon followed by the command) in the transcript executes that command again, as if it were typed into the command bar and Enter was pressed (see Transcript → Re-running a prompt line). Drag-selecting text anywhere in the transcript, including a prompt line, copies the selection to the clipboard and does not trigger execution or steal keyboard focus from the selection (see Tabs → Keyboard focus on tab press). ACP prompt lines (agent tool steps) keep their collapse-toggle single-click behavior.
 
 ### Ghost text suggestion
 

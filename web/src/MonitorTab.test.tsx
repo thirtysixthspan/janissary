@@ -129,4 +129,12 @@ describe('MonitorTab', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Not helpful' }));
     expect(onRate).toHaveBeenCalledWith('sug-7', false);
   });
+
+  it('renders the header and rating buttons as icons while keeping their accessible names', () => {
+    renderTab([makeSuggestion()]);
+    expect(screen.getByTitle('Open context snapshot').querySelector('svg[data-icon="bars"]')).not.toBeNull();
+    expect(screen.getByTitle('Reset context').querySelector('svg[data-icon="rotate-left"]')).not.toBeNull();
+    expect(screen.getByRole('button', { name: 'Helpful' }).querySelector('svg[data-icon="thumbs-up"]')).not.toBeNull();
+    expect(screen.getByRole('button', { name: 'Not helpful' }).querySelector('svg[data-icon="thumbs-down"]')).not.toBeNull();
+  });
 });

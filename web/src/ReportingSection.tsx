@@ -1,6 +1,8 @@
 import React, { useCallback, useState } from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { TabView } from '@shared/protocol';
 import { MonitorTab } from './MonitorTab';
+import { statusDotIcon } from './icons';
 import { startDrag } from './drag-resize';
 
 // Reporting tabs are a separate class from action tabs: they report, they never take
@@ -58,7 +60,7 @@ export function ReportingSection({ entries, onClose, onRun, onRate, onReset, onS
             style={{ borderTopColor: entry.tab.groupColor }}
             onClick={() => setSelected(index)}
           >
-            <span className="dot" style={{ color: entry.tab.dotColor }}>●</span>
+            <span className="dot" style={{ color: entry.tab.dotColor }}><FontAwesomeIcon icon={statusDotIcon} /></span>
             <span>{entry.tab.title ?? entry.tab.label}</span>
             <button
               type="button"

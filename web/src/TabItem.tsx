@@ -1,5 +1,7 @@
 import React, { useRef, useState } from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { TabView } from '@shared/protocol';
+import { statusDotIcon, unreadIcon } from './icons';
 
 // Shared with TabStrip, which passes these straight through to each TabItem it renders.
 export type TabItemActions = {
@@ -43,7 +45,7 @@ export function TabItem({ tab, index, active, onSelect, onClose, onRename, tabNa
       style={{ borderTopColor: borderColor }}
       onMouseDown={() => { onFocusCommandBar?.(); onSelect(index); }}
     >
-      <span className={`dot${tab.busy ? ' busy' : ''}`} style={{ color: tab.dotColor }}>●</span>
+      <span className={`dot${tab.busy ? ' busy' : ''}`} style={{ color: tab.dotColor }}><FontAwesomeIcon icon={statusDotIcon} /></span>
       {editing ? (
         <input
           className="tab-rename-input"
@@ -67,7 +69,7 @@ export function TabItem({ tab, index, active, onSelect, onClose, onRename, tabNa
         }}
         >{tab.title ?? tab.label}</span>
       )}
-      {tab.hasUnread && <span className="tab-badge" role="img" aria-label="unread">✨</span>}
+      {tab.hasUnread && <span className="tab-badge" role="img" aria-label="unread"><FontAwesomeIcon icon={unreadIcon} /></span>}
       <button
         type="button"
         className="tab-close"

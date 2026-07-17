@@ -1,5 +1,7 @@
 import React, { useEffect, useRef } from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { VisibleTaskRow } from './task-picker-keys';
+import { expandedIcon, collapsedIcon } from './icons';
 
 // The Ctrl+A / `tasks` overlay listing the executable `ai/tasks/*.md` task files, recursively
 // including any subdirectory's tasks (collapsed by default). Up/Down move the selection, Left/Right
@@ -32,7 +34,7 @@ export function TaskPicker({ rows, selected, onPick, onToggleDir }: Properties) 
             style={{ paddingLeft: 12 + row.depth * 16 }}
             onClick={() => (row.dir ? onToggleDir(row.path) : onPick(row.path))}
           >
-            {row.dir && <span className="picker-chevron">{row.expanded ? '▾' : '▸'}</span>}
+            {row.dir && <span className="picker-chevron"><FontAwesomeIcon icon={row.expanded ? expandedIcon : collapsedIcon} /></span>}
             {row.dir ? row.name : row.name.replace(/\.md$/, '')}
           </div>
         )))

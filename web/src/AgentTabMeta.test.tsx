@@ -42,4 +42,18 @@ describe('AgentTabMeta', () => {
     const { container } = render(<AgentTabMeta cwd="~/project" flags={['workspaced']} />);
     expect(container.querySelectorAll('.tab-meta-chip').length).toBe(0);
   });
+
+  it('renders the workspaced flag as a box icon with its accessible label', () => {
+    const { getByRole } = render(<AgentTabMeta cwd="~/project" flags={['workspaced']} />);
+    const flag = getByRole('img', { name: 'Workspaced' });
+    expect(flag).toHaveAttribute('title', 'Workspaced');
+    expect(flag.querySelector('svg[data-icon="box"]')).not.toBeNull();
+  });
+
+  it('renders the auto-permit flag as a bolt icon with its accessible label', () => {
+    const { getByRole } = render(<AgentTabMeta cwd="~/project" flags={['autoApprove']} />);
+    const flag = getByRole('img', { name: 'Auto-permitting' });
+    expect(flag).toHaveAttribute('title', 'Auto-permitting');
+    expect(flag.querySelector('svg[data-icon="bolt"]')).not.toBeNull();
+  });
 });

@@ -95,7 +95,7 @@ describe('ShellTab', () => {
     const { getByRole } = render(<ShellTab ptyId="pty1" client={client} flags={['workspaced']} />);
     const badge = getByRole('img', { name: 'Workspaced' });
     expect(badge).toBeInTheDocument();
-    expect(badge).toHaveTextContent('📦');
+    expect(badge.querySelector('svg[data-icon="box"]')).not.toBeNull();
     expect(badge).toHaveAttribute('title', 'Workspaced');
   });
 

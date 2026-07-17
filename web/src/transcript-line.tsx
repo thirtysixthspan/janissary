@@ -1,5 +1,7 @@
 import React, { useCallback, useMemo } from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { JanusClient } from './ws';
+import { screenshotIcon, promptIcon, collapsedIcon } from './icons';
 import type { BufferLine } from '@shared/protocol';
 import { matchRange } from '@shared/search-matches';
 import { TerminalCard } from './TerminalCard';
@@ -98,7 +100,7 @@ function OpenFileLink({ path, client }: { path: string; client: JanusClient }) {
       title="Open the captured screen in an editor tab"
       onClick={() => client.send({ method: 'command', params: { text: `edit ${path}` } })}
     >
-      {' '}📷
+      {' '}<FontAwesomeIcon icon={screenshotIcon} />
     </span>
   );
 }
@@ -144,7 +146,7 @@ function renderPromptLine(
           onPromptClick(line.text);
         }}
       >
-        {'❯'} {highlightText(line.text, highlight, index)}
+        <FontAwesomeIcon icon={promptIcon} /> {highlightText(line.text, highlight, index)}
       </span>
     </div>
   );
@@ -170,7 +172,7 @@ export function renderLine(
   if (line.type === 'collapsed') {
     return (
       <div key={index} className="line collapsed" onClick={onToggleCollapse} title="Click or Ctrl+T to expand" {...hitProps}>
-        ▸ {highlightText(line.text, highlight, index)} (click to expand)
+        <FontAwesomeIcon icon={collapsedIcon} /> {highlightText(line.text, highlight, index)} (click to expand)
       </div>
     );
   }

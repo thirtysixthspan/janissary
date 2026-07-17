@@ -9,7 +9,7 @@ The entire application chrome — tab strip, transcript colors, connections/sche
 ### The `theme` command
 
 - `theme <name>` applies a theme immediately, with no restart, and persists it to the application config (`theme` key in `.janissary/config.json`) so it survives a restart. Names are matched case-insensitively. An unrecognized name shows an error listing the available themes with the active one marked.
-- Bare `theme` opens a picker overlay listing every theme, each row showing a small swatch of that theme's own background, foreground, and accent colors alongside its name, with the active theme marked with a `✓`. Up/Down move the selection, Return applies the selected theme, Escape closes, and a row can be clicked. The interaction mirrors the `syntax theme` picker; there is no keyboard shortcut to open it.
+- Bare `theme` opens a picker overlay listing every theme, each row showing a small swatch of that theme's own background, foreground, and accent colors alongside its name, with the active theme marked with a check icon. Up/Down move the selection, Return applies the selected theme, Escape closes, and a row can be clicked. The interaction mirrors the `syntax theme` picker; there is no keyboard shortcut to open it.
 - `theme sync` sets the syntax-highlighting theme to the app theme's name when a syntax theme with exactly that name exists, and otherwise reports that no matching syntax theme exists, leaving the syntax theme unchanged. The two name sets barely overlap (only `nord` exists in both today), so sync typically reports no match.
 
 ### Relationship to syntax themes

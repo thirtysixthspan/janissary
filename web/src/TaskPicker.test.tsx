@@ -42,15 +42,15 @@ describe('TaskPicker', () => {
 
   it('renders a directory row with its name and a chevron', () => {
     const rows = [dirRow('sub', false)];
-    const { getByText } = render(React.createElement(TaskPicker, { rows, selected: 0, onPick: vi.fn(), onToggleDir: vi.fn() }));
+    const { container, getByText } = render(React.createElement(TaskPicker, { rows, selected: 0, onPick: vi.fn(), onToggleDir: vi.fn() }));
     expect(getByText('sub')).toBeTruthy();
-    expect(getByText('▸')).toBeTruthy();
+    expect(container.querySelector(':scope .picker-chevron svg[data-icon="caret-right"]')).toBeTruthy();
   });
 
   it('shows the expanded chevron for an expanded directory', () => {
     const rows = [dirRow('sub', true)];
-    const { getByText } = render(React.createElement(TaskPicker, { rows, selected: 0, onPick: vi.fn(), onToggleDir: vi.fn() }));
-    expect(getByText('▾')).toBeTruthy();
+    const { container } = render(React.createElement(TaskPicker, { rows, selected: 0, onPick: vi.fn(), onToggleDir: vi.fn() }));
+    expect(container.querySelector(':scope .picker-chevron svg[data-icon="caret-down"]')).toBeTruthy();
   });
 
   it('marks the selected item with the selected class', () => {

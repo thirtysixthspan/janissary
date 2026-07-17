@@ -1,8 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { AggregatedScheduleView, TabView } from '@shared/protocol';
 import type { JanusClient } from './ws';
 import { nextDock, dockTooltip } from './dock-cycle';
 import { nextSelection } from './schedules-keys';
+import { dockSwapIcon } from './icons';
 
 type Properties = {
   entries: AggregatedScheduleView[];
@@ -83,7 +85,7 @@ export function SchedulesTab({ entries, tabs, client, compact = false, dock, ind
               title={dockTooltip(nextDock(dock))}
               onClick={() => client.send({ method: 'setDock', params: { index, dock: nextDock(dock) } })}
             >
-              ⇄
+              <FontAwesomeIcon icon={dockSwapIcon} />
             </button>
           </div>
         </div>

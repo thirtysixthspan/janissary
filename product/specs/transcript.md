@@ -8,7 +8,7 @@ Log entries are flattened into a `BufferLine[]` array. Each entry produces one p
 
 ### Collapsed agent tool steps
 
-Auto-run agent tool steps (entries flagged `acp`, produced by the ACP tool loop) are **collapsed by default**: `flattenBuffer(log, collapseToolSteps)` replaces each contiguous run of `acp` entries with a single `▸ N tool steps  (ctrl+t to expand)` summary line (a `collapsed` `BufferLine`). Empty continuation turns interspersed in a run are absorbed without breaking it or inflating the count; a visible (non-`acp`) prose turn or message breaks one run into two. The surrounding user prompt and the agent's final answer stay visible.
+Auto-run agent tool steps (entries flagged `acp`, produced by the ACP tool loop) are **collapsed by default**: `flattenBuffer(log, collapseToolSteps)` replaces each contiguous run of `acp` entries with a single summary line — a right-pointing caret icon followed by `N tool steps  (ctrl+t to expand)` — (a `collapsed` `BufferLine`). Empty continuation turns interspersed in a run are absorbed without breaking it or inflating the count; a visible (non-`acp`) prose turn or message breaks one run into two. The surrounding user prompt and the agent's final answer stay visible.
 
 `Ctrl+T` toggles the per-tab `Tab.toolStepsExpanded` flag (in-memory, like `scrollOffset`, not persisted), resetting scroll to the bottom. When expanded, each step renders as its `+ <command>` line followed by the command's response on the indented output lines beneath it (the `ranCommand` handler stores the command in the entry's `input` and the result in its `output`). Both the render path and the scroll-length calculation pass the same `!toolStepsExpanded` flag to `flattenBuffer`, so scrolling math matches what is drawn.
 
@@ -53,7 +53,7 @@ Clicking a file:line link opens the file in an **editor tab** (same as typing `e
 ### Re-running a prompt line
 
 Double-clicking a previous command's prompt line re-runs that command. The double-clickable
-region is limited to the `❯ <command>` text itself — a prompt line prefixed with the command's
+region is limited to the chevron-icon-prefixed command text itself — a prompt line prefixed with the command's
 working directory does not re-run the command when that leading directory text is double-clicked,
 only the command text after it does. A single click does
 nothing (letting a click-and-drag text selection happen without triggering a re-run); if the

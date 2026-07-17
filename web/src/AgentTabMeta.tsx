@@ -1,5 +1,7 @@
 import React from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { tabFlagDisplay } from './tab-flag-display';
+import { openFilesIcon, newTabIcon } from './icons';
 
 type Properties = { cwd?: string; flags?: string[]; model?: string; effort?: string; onOpenFileNavigator?: () => void; onLaunchAgentHere?: () => void };
 
@@ -23,7 +25,7 @@ export function AgentTabMeta({ cwd, flags, model, effort, onOpenFileNavigator, o
           if (!display) return null;
           return (
             <span key={flag} className="tab-flag" role="img" aria-label={display.label} title={display.label}>
-              {display.emoji}
+              <FontAwesomeIcon icon={display.icon} />
             </span>
           );
         })}
@@ -35,7 +37,7 @@ export function AgentTabMeta({ cwd, flags, model, effort, onOpenFileNavigator, o
           title="Open file navigator here"
           onClick={onOpenFileNavigator}
         >
-          📁
+          <FontAwesomeIcon icon={openFilesIcon} />
         </button>
       )}
       {onLaunchAgentHere && (
@@ -45,7 +47,7 @@ export function AgentTabMeta({ cwd, flags, model, effort, onOpenFileNavigator, o
           title="New agent here"
           onClick={onLaunchAgentHere}
         >
-          ➕
+          <FontAwesomeIcon icon={newTabIcon} />
         </button>
       )}
     </div>

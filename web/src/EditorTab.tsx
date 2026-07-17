@@ -1,5 +1,7 @@
 import React, { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { EditorView } from '@shared/protocol';
+import { dirtyMarkerIcon } from './icons';
 import type { JanusClient } from './ws';
 import { toText } from './editor/model';
 import { EditorLine, lineSelection } from './editor/render';
@@ -174,7 +176,7 @@ export const EditorTab = forwardRef<EditorTabHandle, { editor: EditorView; clien
   return (
     <div className="image-tab editor-tab" data-doc-shot="editor-view">
       <div className="image-meta" onMouseDown={(e) => { e.preventDefault(); textareaRef.current?.focus(); }}>
-        <span className="image-name">{editor.name}{dirty ? ' ●' : ''}</span>
+        <span className="image-name">{editor.name}{dirty ? <> <FontAwesomeIcon icon={dirtyMarkerIcon} /></> : ''}</span>
         <span className="image-size">{editor.size}</span>
         <span className="image-loc">{editor.path}</span>
         {savedFlash && <span className="editor-saved">Saved</span>}

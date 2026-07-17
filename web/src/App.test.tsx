@@ -410,7 +410,7 @@ describe('App non-ACP prompt double-click runs command', () => {
     act(() => {
       stateListener!([makeTab({ bufferLines: [{ type: 'prompt', text: 'git status' }] })], 0, null, 16, [], 'github-dark', 'dark', []);
     });
-    fireEvent.dblClick(screen.getByText('❯ git status'));
+    fireEvent.dblClick(screen.getByText('git status'));
     expect(sendMock).toHaveBeenCalledWith({ method: 'command', params: { text: 'git status' } });
   }, 15_000);
 });

@@ -1,5 +1,7 @@
 import React from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { SuggestionView } from '@shared/protocol';
+import { approveIcon, rejectIcon, snapshotIcon, resetIcon } from './icons';
 
 // A byte count formatted as b/kb/mb, one decimal place above 1000.
 function formatBytes(n: number): string {
@@ -34,8 +36,8 @@ export function MonitorTab({ persona, targets, contextBytes, suggestions, onRun,
         <span className="monitor-context">{formatBytes(contextBytes)}</span>
       </div>
       <div className="monitor-actions">
-        <button type="button" className="monitor-snapshot" title="Open context snapshot" onClick={onSnapshot}>☰</button>
-        <button type="button" className="monitor-reset" title="Reset context" onClick={onReset}>↺</button>
+        <button type="button" className="monitor-snapshot" title="Open context snapshot" onClick={onSnapshot}><FontAwesomeIcon icon={snapshotIcon} /></button>
+        <button type="button" className="monitor-reset" title="Reset context" onClick={onReset}><FontAwesomeIcon icon={resetIcon} /></button>
       </div>
     </div>
   );
@@ -62,8 +64,8 @@ export function MonitorTab({ persona, targets, contextBytes, suggestions, onRun,
             )}
           </span>
           <span className="rate">
-            <button type="button" aria-label="Helpful" title="Helpful" onClick={() => onRate(s.id, true)}>👍</button>
-            <button type="button" aria-label="Not helpful" title="Not helpful" onClick={() => onRate(s.id, false)}>👎</button>
+            <button type="button" aria-label="Helpful" title="Helpful" onClick={() => onRate(s.id, true)}><FontAwesomeIcon icon={approveIcon} /></button>
+            <button type="button" aria-label="Not helpful" title="Not helpful" onClick={() => onRate(s.id, false)}><FontAwesomeIcon icon={rejectIcon} /></button>
           </span>
         </div>
       ))}

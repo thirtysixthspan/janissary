@@ -1,10 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { FileTreeView, FileTreeRow } from '@shared/protocol';
 import type { JanusClient } from './ws';
 import { handleFileTreeKey, typeAheadMatch } from './file-tree-keys';
 import { nextDock, dockTooltip } from './dock-cycle';
 import { useFileTreeDrag } from './useFileTreeDrag';
 import { fileTreeRowClass } from './file-tree-row-class';
+import { dockSwapIcon, expandedIcon, collapsedIcon } from './icons';
 import { MoveConflictDialog } from './MoveConflictDialog/MoveConflictDialog';
 import { DeleteFileDialog } from './DeleteFileDialog';
 import type { CommandInputDropHandle } from './CommandInput';
@@ -143,7 +145,7 @@ export function FileTreeTab({ files, client, index, dock, autoFocus = true, drop
               title={dockTooltip(nextDock(dock))}
               onClick={() => client.send({ method: 'setDock', params: { index, dock: nextDock(dock) } })}
             >
-              ⇄
+              <FontAwesomeIcon icon={dockSwapIcon} />
             </button>
           )}
           <button
@@ -172,7 +174,7 @@ export function FileTreeTab({ files, client, index, dock, autoFocus = true, drop
               onDoubleClick={(e) => onRowDoubleClick(row, e.shiftKey)}
               onMouseDown={(e) => drag.onRowMouseDown(row, e)}
             >
-              {row.dir && row.expanded !== undefined && <span className="files-chevron">{row.expanded ? '▾' : '▸'}</span>}
+              {row.dir && row.expanded !== undefined && <span className="files-chevron"><FontAwesomeIcon icon={row.expanded ? expandedIcon : collapsedIcon} /></span>}
               <span className={cls.name}>{row.name}</span>
             </div>
           );

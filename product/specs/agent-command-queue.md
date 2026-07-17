@@ -27,7 +27,7 @@ leaked in from adjacent commands in the drain.
 
 ### Command-line indicators
 
-While the exposed tab is busy, its command-line prompt reads `queue ❯` instead of the bare `❯`,
+While the exposed tab is busy, its command-line prompt shows the word `queue` before the chevron icon instead of the bare chevron,
 and the small dot beside it blinks — the same blink treatment as the tab-strip dot (see
 [[tabs]]). The dot is vertically centered with the prompt text next to it, whether idle or
 blinking. Submitting text at this point queues it rather than running it.

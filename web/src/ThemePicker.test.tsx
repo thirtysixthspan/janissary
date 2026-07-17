@@ -6,7 +6,8 @@ import { ThemePicker } from './ThemePicker';
 describe('ThemePicker', () => {
   it('renders the shared theme list with the active one marked', () => {
     render(<ThemePicker themes={['github-dark', 'nord', 'monokai']} active="nord" selected={1} onPick={() => {}} />);
-    expect(screen.getByText(/✓ nord/)).toBeInTheDocument();
+    const nordRow = screen.getByText('nord', { exact: false }).closest('.picker-row');
+    expect(nordRow?.querySelector('svg[data-icon="check"]')).not.toBeNull();
     expect(screen.getByText('github-dark', { exact: false })).toBeInTheDocument();
     expect(screen.getByText('monokai', { exact: false })).toBeInTheDocument();
   });
