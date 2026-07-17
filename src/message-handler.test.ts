@@ -33,6 +33,12 @@ const makeController = () =>
     moveFileTreeItem: vi.fn(),
     deleteFileTreeItem: vi.fn(),
     setDock: vi.fn(),
+    resetMonitorContext: vi.fn(),
+    monitorContextSnapshot: vi.fn(),
+    syncEditorBuffer: vi.fn(),
+    undoFileTreeItem: vi.fn(() => ({})),
+    redoFileTreeItem: vi.fn(() => ({})),
+    openFileNavigatorFor: vi.fn(),
   }) as unknown as Controller;
 
 const dispatchCall = (controller: Controller, id: number, call: RpcCall) => {
@@ -181,5 +187,45 @@ describe('handle', () => {
     const controller = makeController();
     dispatchCall(controller, 18, { method: 'setDock', params: { index: 0, dock: 'left' } });
     expect(controller.setDock).toHaveBeenCalledWith(0, 'left');
+  });
+
+  it('routes resetMonitorContext', () => {
+    const controller = makeController();
+    dispatchCall(controller, 22, { method: 'resetMonitorContext', params: { name: 'agent-1' } });
+    expect(controller.resetMonitorContext).toHaveBeenCalledWith('agent-1');
+  });
+
+  it('routes monitorContextSnapshot', () => {
+    const controller = makeController();
+    dispatchCall(controller, 23, { method: 'monitorContextSnapshot', params: { name: 'agent-1' } });
+    expect(controller.monitorContextSnapshot).toHaveBeenCalledWith('agent-1');
+  });
+
+  it('routes editorSync', () => {
+    const controller = makeController();
+    dispatchCall(controller, 24, { method: 'editorSync', params: { url: 'file:///a.ts', content: 'x' } });
+    expect(controller.syncEditorBuffer).toHaveBeenCalledWith('file:///a.ts', 'x');
+  });
+
+  it('routes undoFileTreeItem and replies with its result', () => {
+    const controller = makeController();
+    (controller.undoFileTreeItem as ReturnType<typeof vi.fn>).mockReturnValue({ conflict: { fromRelPath: 'a', toRelPath: 'b' } });
+    const replies = dispatchCall(controller, 25, { method: 'undoFileTreeItem', params: { index: 0, overwrite: true } });
+    expect(controller.undoFileTreeItem).toHaveBeenCalledWith(0, true);
+    expect(replies).toEqual([{ t: 'rpc-reply', id: 25, result: { conflict: { fromRelPath: 'a', toRelPath: 'b' } } }]);
+  });
+
+  it('routes redoFileTreeItem and replies with its result', () => {
+    const controller = makeController();
+    (controller.redoFileTreeItem as ReturnType<typeof vi.fn>).mockReturnValue({});
+    const replies = dispatchCall(controller, 26, { method: 'redoFileTreeItem', params: { index: 0 } });
+    expect(controller.redoFileTreeItem).toHaveBeenCalledWith(0, undefined);
+    expect(replies).toEqual([{ t: 'rpc-reply', id: 26, result: {} }]);
+  });
+
+  it('routes openFileNavigatorFor', () => {
+    const controller = makeController();
+    dispatchCall(controller, 27, { method: 'openFileNavigatorFor', params: { label: 'janus' } });
+    expect(controller.openFileNavigatorFor).toHaveBeenCalledWith('janus');
   });
 });
