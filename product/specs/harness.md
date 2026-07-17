@@ -112,10 +112,10 @@ an `auto-approve` notification, rendered as `<label>: Auto-approved a permission
 text that has merely scrolled up the screen does not trigger an approval.
 
 At the moment of a successful auto-approval, the app also saves the harness's on-screen text to a
-file and attaches a clickable link to that same notification line; clicking the link opens the
-captured text in an ordinary editor tab, so the user can review exactly what was auto-approved after
-the fact. The capture file is written only when the notification is actually recorded (the
-notifications tab is open), so no orphan files are left behind when the feed is closed. This link is
+file and attaches a clickable camera-icon link to that same notification line; clicking the link
+opens the captured text in an ordinary editor tab, so the user can review exactly what was
+auto-approved after the fact. The capture file is written only when the notification is actually
+recorded (the notifications tab is open), so no orphan files are left behind when the feed is closed. This link is
 added only for successful auto-approvals — a prompt still awaiting the user, and the stand-down
 "could not clear the permission prompt" case, get no capture and no link.
 

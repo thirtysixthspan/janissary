@@ -178,6 +178,14 @@ describe('renderLine — message openFile link', () => {
     expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'edit /captures/claude-now.txt' } });
   });
 
+  it('renders the capture link as an icon, not text', () => {
+    const line: BufferLine = { type: 'message', text: 'Auto-approved a permission prompt', from: '8:32pm claude', openFile: '/captures/claude-now.txt' };
+    const { container } = render(<>{renderLine(line, 0, clientStub, noop, vi.fn())}</>);
+    const link = container.querySelector('.file-link[role="link"]')!;
+    expect(link).toHaveAttribute('aria-label', 'View capture');
+    expect(link.textContent?.trim()).not.toMatch(/view capture/i);
+  });
+
   it('renders no link when the message has no openFile', () => {
     const line: BufferLine = { type: 'message', text: 'a plain notification', from: '8:32pm janus' };
     const { container } = render(<>{renderLine(line, 0, clientStub, noop, vi.fn())}</>);
