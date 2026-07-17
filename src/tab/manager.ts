@@ -16,6 +16,7 @@ import {
 } from './queue-commands.js';
 import { buildTabView } from './view.js';
 import { rehydrateTabs } from './rehydrate.js';
+import { applyRehydratedState } from './rehydrate-state.js';
 import { buildAgentStateFromTab } from './agent-state.js';
 import { recordLeavingActiveTab, popFocusHistory, mostRecentFileTreeLabel } from './focus-history.js';
 import { applyDock } from './dock.js';
@@ -363,12 +364,7 @@ export class TabManager {
     const states = listAgentStates().toSorted((a, b) => (a.number ?? Infinity) - (b.number ?? Infinity));
     if (states.length === 0) return;
     this.tabs = rehydrateTabs(states, loadTranscript, (log) => this.capLog(log));
-    for (const s of states) {
-      if (s.cwd) this.cwd.set(s.name, s.cwd);
-      if (s.context) this.context.set(s.name, s.context);
-      if (s.commandQueue) this.queue.set(s.name, s.commandQueue);
-      onState(s);
-    }
+    applyRehydratedState(states, this.cwd, this.context, this.queue, onState);
     this.activeTab = 0;
   }
 }
