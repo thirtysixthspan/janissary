@@ -44,6 +44,8 @@ export const HarnessTab = forwardRef<HarnessTabHandle, Properties>(function Harn
       <AgentTabMeta
         cwd={cwd}
         flags={flags}
+        model={harness.model}
+        effort={harness.effort}
         onOpenFileNavigator={() => client.send({ method: 'openFileNavigatorFor', params: { label } })}
       />
       {isExited && (

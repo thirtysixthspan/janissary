@@ -1,12 +1,22 @@
 import React from 'react';
 import { tabFlagDisplay } from './tab-flag-display';
 
-type Properties = { cwd?: string; flags?: string[]; onOpenFileNavigator?: () => void };
+type Properties = { cwd?: string; flags?: string[]; model?: string; effort?: string; onOpenFileNavigator?: () => void };
 
-export function AgentTabMeta({ cwd, flags, onOpenFileNavigator }: Properties) {
+function MetaChip({ label, value }: { label: string; value: string }) {
+  return (
+    <span className="tab-meta-chip" aria-label={label} title={`${label}: ${value}`}>
+      {value}
+    </span>
+  );
+}
+
+export function AgentTabMeta({ cwd, flags, model, effort, onOpenFileNavigator }: Properties) {
   return (
     <div className="tab-meta">
       <span className="tab-cwd">{cwd}</span>
+      {model !== undefined && <MetaChip label="Model" value={model} />}
+      {effort !== undefined && <MetaChip label="Effort" value={effort} />}
       <span className="tab-flags">
         {(flags ?? []).map((flag) => {
           const display = tabFlagDisplay[flag];

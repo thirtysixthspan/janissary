@@ -326,6 +326,22 @@ describe('HarnessManager model/effort', () => {
       { CLAUDE_CODE_TMPDIR: expect.any(String) },
     );
   });
+
+  it('carries the launch model and effort onto the harness payload', () => {
+    const { managers, tabs } = makeManagers();
+    const manager = new HarnessManager(managers);
+    expect(manager.run('harness opencode --model opencode-go/glm-5.2 --effort high')).toBeUndefined();
+    expect(tabs.at(-1)!.harness).toMatchObject({ model: 'opencode-go/glm-5.2', effort: 'high' });
+  });
+
+  it('leaves model and effort undefined on the payload when neither is given', () => {
+    const { managers, tabs } = makeManagers();
+    const manager = new HarnessManager(managers);
+    expect(manager.run('harness claude')).toBeUndefined();
+    const { harness } = tabs.at(-1)!;
+    expect(harness!.model).toBeUndefined();
+    expect(harness!.effort).toBeUndefined();
+  });
 });
 
 describe('HarnessManager busy/ready status', () => {
