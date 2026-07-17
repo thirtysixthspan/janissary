@@ -220,7 +220,30 @@ describe('HarnessManager auto-approve', () => {
     messageBus.emit('pty', { type: 'data', id: 'pty-1', data: GATE });
     await vi.advanceTimersByTimeAsync(1001);
     expect(managers.pty.input).toHaveBeenCalledWith('pty-1', '\r');
-    expect(notify).toHaveBeenCalledWith(managers, 'auto-approve', 'claude', 'Auto-approved a permission prompt');
+    expect(notify).toHaveBeenCalledWith(managers, 'auto-approve', 'claude', 'Auto-approved a permission prompt', undefined);
+  });
+
+  it('writes a capture file and links it on the notification when the notifications tab is open', async () => {
+    const { managers, tabs } = makeManagers();
+    tabs.push({ label: 'notifications', view: 'notifications' } as unknown as Tab);
+    const manager = new HarnessManager(managers);
+    expect(manager.run('harness claude -w -y')).toBeUndefined();
+    messageBus.emit('pty', { type: 'data', id: 'pty-1', data: GATE });
+    await vi.advanceTimersByTimeAsync(1001);
+    expect(writeCaptureFile).toHaveBeenCalledWith('claude', expect.any(Number), expect.any(String));
+    expect(notify).toHaveBeenCalledWith(
+      managers, 'auto-approve', 'claude', 'Auto-approved a permission prompt',
+      '/project/.janissary/captures/claude-now.txt',
+    );
+  });
+
+  it('writes no capture file when the notifications tab is closed', async () => {
+    const { managers } = makeManagers();
+    const manager = new HarnessManager(managers);
+    expect(manager.run('harness claude -w -y')).toBeUndefined();
+    messageBus.emit('pty', { type: 'data', id: 'pty-1', data: GATE });
+    await vi.advanceTimersByTimeAsync(1001);
+    expect(writeCaptureFile).not.toHaveBeenCalled();
   });
 
   it('never injects into a gate when -y is not given', async () => {

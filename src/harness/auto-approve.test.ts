@@ -117,13 +117,14 @@ describe('HarnessAutoApprover', () => {
     return { approver, approve, notify };
   }
 
-  it('approves with a carriage return and notifies once on a gate', () => {
+  it('approves with a carriage return and notifies once on a gate, passing the capture', () => {
     const { approver, approve, notify } = make();
-    approver.onCapture(capture(BASH_IN_PROJECT));
+    const cap = capture(BASH_IN_PROJECT);
+    approver.onCapture(cap);
     expect(approve).toHaveBeenCalledTimes(1);
     expect(approve).toHaveBeenCalledWith('\r');
     expect(notify).toHaveBeenCalledTimes(1);
-    expect(notify).toHaveBeenCalledWith('Auto-approved a permission prompt');
+    expect(notify).toHaveBeenCalledWith('Auto-approved a permission prompt', cap);
   });
 
   it('does not inject on a non-gate capture', () => {

@@ -85,6 +85,14 @@ an `auto-approve` notification, rendered as `<label>: Auto-approved a permission
 [[notifications]]). Detection keys on the menu structure at the bottom of the screen, so gate-shaped
 text that has merely scrolled up the screen does not trigger an approval.
 
+At the moment of a successful auto-approval, the app also saves the harness's on-screen text to a
+file and attaches a clickable link to that same notification line; clicking the link opens the
+captured text in an ordinary editor tab, so the user can review exactly what was auto-approved after
+the fact. The capture file is written only when the notification is actually recorded (the
+notifications tab is open), so no orphan files are left behind when the feed is closed. This link is
+added only for successful auto-approvals — a prompt still awaiting the user, and the stand-down
+"could not clear the permission prompt" case, get no capture and no link.
+
 If an approved prompt does not clear (the same gate screen redraws unchanged), the app does not
 re-send the keystroke; it records `<label>: Auto-approve could not clear the permission prompt;
 standing down` once and leaves that gate alone until the screen changes. Auto-approval is in-memory

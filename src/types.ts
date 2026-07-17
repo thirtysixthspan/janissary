@@ -24,6 +24,9 @@ export type LogEntry = {
   // Set when this entry hosts an inline terminal card (an interactive program or AI harness
   // running in a PTY). Used by the web renderer to mount an xterm.js pane. `ptyId` keys the live PTY stream.
   terminal?: TerminalEntry;
+  // Absolute path of a file to open in an editor tab when the rendered line is clicked (e.g. an
+  // auto-approved permission prompt's screen capture).
+  openFile?: string;
 };
 
 export type TerminalEntry = {
@@ -47,6 +50,8 @@ export type BufferLine = {
   running?: boolean;
   // Populated for `type: 'terminal'` lines.
   terminal?: TerminalEntry;
+  // Absolute path of a file to open in an editor tab when this line is clicked (see `LogEntry.openFile`).
+  openFile?: string;
 };
 
 // An in-app file view mounted in a tab instead of the agent transcript/command-line body. Image

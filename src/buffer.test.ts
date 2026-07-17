@@ -81,4 +81,17 @@ describe('formatMessageContent', () => {
     const lines = formatMessageContent(entry, []);
     expect(lines).toEqual([{ type: 'message', text: '', from: 'bob', fromColor: '#fff', msgKind: 'info' }]);
   });
+
+  it('copies openFile onto the message line, but not onto trailing output lines', () => {
+    const entry: LogEntry = { input: '', output: '', from: 'bob', fromColor: '#fff', msgKind: 'info', openFile: '/captures/bob-now.txt' };
+    const lines = formatMessageContent(entry, ['heads up', 'more']);
+    expect(lines[0]).toEqual({ type: 'message', text: 'heads up', from: 'bob', fromColor: '#fff', msgKind: 'info', openFile: '/captures/bob-now.txt' });
+    expect(lines[1].openFile).toBeUndefined();
+  });
+
+  it('copies openFile onto a response message header line', () => {
+    const entry: LogEntry = { input: '', output: '', from: 'bob', fromColor: '#fff', msgKind: 'response', openFile: '/captures/bob-now.txt' };
+    const [header] = formatMessageContent(entry, ['reply']);
+    expect(header.openFile).toBe('/captures/bob-now.txt');
+  });
 });

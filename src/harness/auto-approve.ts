@@ -60,7 +60,7 @@ export class HarnessAutoApprover {
   constructor(private opts: {
     harnessName: string;
     approve: (keystroke: string) => void;
-    notify: (message: string) => void;
+    notify: (message: string, capture?: ScreenCapture) => void;
   }) {
     this.keystroke = GATE_TABLE[opts.harnessName]?.keystroke ?? '\r';
   }
@@ -85,6 +85,6 @@ export class HarnessAutoApprover {
     this.opts.approve(this.keystroke);
     this.lastApprovedText = capture.text;
     this.stuckNotified = false;
-    this.opts.notify('Auto-approved a permission prompt');
+    this.opts.notify('Auto-approved a permission prompt', capture);
   }
 }
