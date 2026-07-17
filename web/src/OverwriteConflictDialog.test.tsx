@@ -64,6 +64,16 @@ describe('OverwriteConflictDialog', () => {
     expect(onCancel).not.toHaveBeenCalled();
   });
 
+  it('Enter runs Cancel when that is the currently selected option', () => {
+    const onSave = vi.fn();
+    const onCancel = vi.fn();
+    render(<OverwriteConflictDialog onSave={onSave} onCancel={onCancel} />);
+    fireEvent.keyDown(document, { key: 'ArrowRight' });
+    fireEvent.keyDown(document, { key: 'Enter' });
+    expect(onCancel).toHaveBeenCalledTimes(1);
+    expect(onSave).not.toHaveBeenCalled();
+  });
+
   it('Arrow keys toggle the selection between Overwrite and Cancel', () => {
     render(<OverwriteConflictDialog onSave={vi.fn()} onCancel={vi.fn()} />);
     fireEvent.keyDown(document, { key: 'ArrowRight' });
