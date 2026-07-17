@@ -8,6 +8,14 @@ Before installing Janissary, make sure you have:
 - **Node.js 24 or newer.** - preferably managed by NVM.
 - **Google Chrome.** - the UI is a dedicated browser window.
 
+### Soft dependencies (optional)
+
+These tools complement Janissary but are not required:
+
+- **Claude Code** — autonomous AI coding harness for single-task work
+- **Codex** — AI-assisted code editing for interactive pair programming
+- **OpenCode** — framework for building AI-assisted coding tools
+
 ## Installing the app
 
 ```
