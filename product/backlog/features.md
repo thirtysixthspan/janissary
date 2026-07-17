@@ -2,9 +2,6 @@
 
 ## ready
 
-* add a button in the agent metadata next to the file navigator button that launches an agent tab in the working directory of the harness. 
-
-
 ## development
 
 4. Supervisor/manager agent (LangGraph supervisor, n8n AI Agent Tool) — a built-in supervisor persona that receives a goal, fans work out with broadcast request, and aggregates the responses.
