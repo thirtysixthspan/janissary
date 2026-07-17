@@ -7,6 +7,9 @@ Before installing Janissary, make sure you have:
 - **macOS.** - currently runs on macOS only.
 - **Node.js 24 or newer.** - preferably managed by NVM.
 - **Google Chrome.** - the UI is a dedicated browser window.
+- **OpenCode** - AI Harness and ACP interface.
+- **Claude Code** - AI Harness.
+- **OpenAI Codex** - AI Harness.
 
 ## Installing the app
 
