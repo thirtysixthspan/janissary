@@ -9,7 +9,7 @@ import type { CommandInputDropHandle } from './CommandInput';
 
 const MIN_WIDTH_PX = 180;
 const MAX_WIDTH_PCT = 50;
-const DEFAULT_WIDTH_PX = 280;
+const DEFAULT_WIDTH_PX = 300;
 
 // A sidebar (left or right) can dock the file navigator and the notifications tab at the same
 // time — the only two dockable kinds — sharing the space via a small internal tab-switcher (only
