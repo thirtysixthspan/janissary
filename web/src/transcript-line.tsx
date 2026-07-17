@@ -94,10 +94,11 @@ function OpenFileLink({ path, client }: { path: string; client: JanusClient }) {
     <span
       className="file-link"
       role="link"
+      aria-label="View capture"
       title="Open the captured screen in an editor tab"
       onClick={() => client.send({ method: 'command', params: { text: `edit ${path}` } })}
     >
-      {' '}view capture
+      {' '}📷
     </span>
   );
 }
