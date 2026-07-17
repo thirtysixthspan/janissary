@@ -10,7 +10,7 @@ const makeClient = () => {
   return {
     onState: vi.fn((l: StateListener) => { listener = l; return () => {}; }),
     emit: (route: RouteChooserView | null) => {
-      listener?.([], 0, route, 16, [], 'github-dark', 'dark', [], [], '', '');
+      listener?.([], 0, route, 16, [], 'github-dark', 'dark', [], '', [], '', '');
     },
   };
 };
@@ -24,6 +24,7 @@ const makeSetters = () => ({
   setSyntaxTheme: vi.fn(),
   setTheme: vi.fn(),
   setTasks: vi.fn(),
+  setJanissaryTasksDir: vi.fn(),
   setProfiles: vi.fn(),
   setRouteIndex: vi.fn(),
   routeRef: { current: null as RouteChooserView | null },

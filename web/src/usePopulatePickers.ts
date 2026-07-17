@@ -8,12 +8,13 @@ import { useProfilePicker } from './useProfilePicker';
 // shape (`useHistPicker`). Split out of App.tsx to keep it under the file-size limit.
 export function usePopulatePickers(
   tasks: TaskRow[],
+  janissaryTasksDir: string,
   recallRef: React.RefObject<((text: string) => void) | null>,
   inputRef: React.RefObject<HTMLTextAreaElement | null>,
   client: JanusClient,
   harnessPtyId: string | undefined,
 ) {
-  const task = useTaskPicker(tasks, recallRef, inputRef, client, harnessPtyId);
+  const task = useTaskPicker(tasks, janissaryTasksDir, recallRef, inputRef, client, harnessPtyId);
   const profile = useProfilePicker(recallRef, inputRef, client, harnessPtyId);
   return { ...task, ...profile };
 }

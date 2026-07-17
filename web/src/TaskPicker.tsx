@@ -23,7 +23,9 @@ export function TaskPicker({ rows, selected, onPick, onToggleDir }: Properties) 
       {rows.length === 0 ? (
         <div className="picker-row picker-empty">(no tasks)</div>
       ) : (
-        rows.map((row, index) => (
+        rows.map((row, index) => (row.header ? (
+          <div key={row.path} className="picker-section">{row.name}</div>
+        ) : (
           <div
             key={row.path}
             className={`picker-row${index === selected ? ' selected' : ''}`}
@@ -33,7 +35,7 @@ export function TaskPicker({ rows, selected, onPick, onToggleDir }: Properties) 
             {row.dir && <span className="picker-chevron">{row.expanded ? '▾' : '▸'}</span>}
             {row.dir ? row.name : row.name.replace(/\.md$/, '')}
           </div>
-        ))
+        )))
       )}
     </div>
   );
