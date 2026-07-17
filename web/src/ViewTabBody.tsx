@@ -28,7 +28,7 @@ export function ViewTabBody({ tab, client, index, tabs = [] }: { tab: TabView; c
     return <div className="tab-body" style={border}><NotificationsTab lines={tab.bufferLines} client={client} index={index} /></div>;
   }
   if (tab.view === 'schedules') {
-    return <div className="tab-body" style={border}><SchedulesTab entries={tab.aggregatedSchedules ?? []} tabs={tabs} client={client} /></div>;
+    return <div className="tab-body" style={border}><SchedulesTab entries={tab.aggregatedSchedules ?? []} tabs={tabs} client={client} index={index} /></div>;
   }
   return null;
 }
