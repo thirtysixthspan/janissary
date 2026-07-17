@@ -143,6 +143,75 @@ describe('ScheduleManager tick', () => {
   });
 });
 
+describe('ScheduleManager one-shot prompt injection into a harness', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  function runningHarness(overrides: Partial<Tab> = {}): { managers: Managers; tab: Tab; input: ReturnType<typeof vi.fn> } {
+    const { managers, tab } = makeManagers({
+      view: 'harness',
+      harness: { name: 'claude', program: 'claude', ptyId: 'p1', status: 'running' },
+      ...overrides,
+    });
+    const input = vi.fn();
+    (managers.pty as unknown as { input: typeof input }).input = input;
+    return { managers, tab, input };
+  }
+
+  function promptEntry(command: string): ScheduleEntry {
+    return { id: 'run-1', command, spec: 'once', nextRun: Date.now() - 1000, recurring: false };
+  }
+
+  it('delivers a one-shot prompt to the running harness PTY, then drops it', () => {
+    const { managers, input } = runningHarness();
+    const mgr = new ScheduleManager(managers);
+    mgr.set('janus', [promptEntry('say hello and stop')]);
+    mgr.start();
+
+    vi.advanceTimersByTime(1000);
+    expect(input).toHaveBeenCalledWith('p1', 'say hello and stop');
+    vi.advanceTimersByTime(50);
+    expect(input).toHaveBeenCalledWith('p1', '\r');
+    expect(mgr.get('janus')).toEqual([]);
+    mgr.stop();
+  });
+
+  it('holds the prompt while the harness is not yet ready, delivering on a later tick', () => {
+    const { managers, tab, input } = runningHarness({
+      harness: { name: 'claude', program: 'claude', ptyId: '', status: 'running' },
+    });
+    const mgr = new ScheduleManager(managers);
+    mgr.set('janus', [promptEntry('list files')]);
+    mgr.start();
+
+    vi.advanceTimersByTime(1000);
+    expect(input).not.toHaveBeenCalled();
+    expect(mgr.get('janus')).toHaveLength(1);
+
+    tab.harness!.ptyId = 'p1';
+    vi.advanceTimersByTime(1000);
+    expect(input).toHaveBeenCalledWith('p1', 'list files');
+    mgr.stop();
+  });
+
+  it('delivers the prompt verbatim with no scheduled marker appended', () => {
+    const { managers, input } = runningHarness();
+    const mgr = new ScheduleManager(managers);
+    mgr.set('janus', [promptEntry('fix the tests')]);
+    mgr.start();
+
+    vi.advanceTimersByTime(1000);
+    expect(input).toHaveBeenCalledWith('p1', 'fix the tests');
+    expect(input).not.toHaveBeenCalledWith('p1', expect.stringContaining('## scheduled ##'));
+    mgr.stop();
+  });
+});
+
 describe('ScheduleManager aggregatedView', () => {
   function makeMgr(labels: string[]): ScheduleManager {
     const managers = {

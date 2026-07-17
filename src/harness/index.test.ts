@@ -191,6 +191,49 @@ describe('parseHarnessCommand', () => {
     expect('model' in result && result.model).toBeUndefined();
     expect('effort' in result && result.effort).toBeUndefined();
   });
+
+  it('extracts the prompt after `with`', () => {
+    const result = parseHarnessCommand('harness claude with fix the failing tests');
+    expect('name' in result && result.name).toBe('claude');
+    expect('prompt' in result && result.prompt).toBe('fix the failing tests');
+  });
+
+  it('preserves internal spacing in the prompt verbatim', () => {
+    const result = parseHarnessCommand('harness claude with add   two  spaces');
+    expect('prompt' in result && result.prompt).toBe('add   two  spaces');
+  });
+
+  it('combines `with` with `as <label>`, --model, and -w before the clause', () => {
+    const result = parseHarnessCommand('harness claude as review -w --model sonnet with ship it now');
+    expect('label' in result && result.label).toBe('review');
+    expect('workspace' in result && (result as { workspace: boolean }).workspace).toBe(true);
+    expect('model' in result && (result as { model?: string }).model).toBe('sonnet');
+    expect('prompt' in result && result.prompt).toBe('ship it now');
+  });
+
+  it('does not scan options that appear inside the prompt', () => {
+    const result = parseHarnessCommand('harness claude with add a -w flag as needed');
+    expect('workspace' in result && (result as { workspace: boolean }).workspace).toBe(false);
+    expect('name' in result && result.label).toBeUndefined();
+    expect('prompt' in result && result.prompt).toBe('add a -w flag as needed');
+  });
+
+  it('returns a usage error for `with` with no following text', () => {
+    const result = parseHarnessCommand('harness claude with');
+    expect('error' in result).toBe(true);
+    expect((result as { error: string }).error).toMatch(/Usage/i);
+  });
+
+  it('leaves prompt undefined when no `with` clause is given', () => {
+    const result = parseHarnessCommand('harness claude');
+    expect('name' in result && result.prompt).toBeUndefined();
+  });
+
+  it('does not match `with` as a substring of another word', () => {
+    const result = parseHarnessCommand('harness claude as within');
+    expect('label' in result && result.label).toBe('within');
+    expect('name' in result && result.prompt).toBeUndefined();
+  });
 });
 
 describe('buildHarnessCommand', () => {

@@ -1,6 +1,13 @@
 import { parseScheduleCommand } from '../schedule/index.js';
 import type { ProfileHarnessEntry, ScheduleEntry } from '../types.js';
 
+// A one-shot schedule entry that fires `command` once, immediately (as soon as the tab's harness is
+// running). This is the shape a profile `run` line produces, reused to inject a `harness … with …`
+// launch prompt into a freshly opened harness tab.
+export function oneShotRunEntry(id: string, command: string): ScheduleEntry {
+  return { id, command, spec: 'once', nextRun: Date.now(), recurring: false };
+}
+
 // Authored `schedule` strings (schedule-command grammar minus `in <tab>`) plus `run` one-shots,
 // parsed into the ScheduleEntry[] the harness tab's schedule is set to. A string that errors or
 // carries an `in <tab>` clause is reported and skipped; a duplicate name keeps the first.
@@ -20,7 +27,7 @@ export function buildHarnessSchedule(entry: ProfileHarnessEntry, report: (messag
   }
   const runLines = entry.run ?? [];
   for (const [i, command] of runLines.entries()) {
-    entries.push({ id: `run-${i + 1}`, command, spec: 'once', nextRun: Date.now(), recurring: false });
+    entries.push(oneShotRunEntry(`run-${i + 1}`, command));
   }
   return entries;
 }
