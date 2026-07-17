@@ -97,6 +97,25 @@ describe('App agent tab metadata row', () => {
   });
 });
 
+describe('App app theme picker', () => {
+  beforeEach(() => {
+    sendMock.mockClear();
+    stateListener = null;
+  });
+
+  it('opens the app theme picker on "theme" and sends "theme <name>" on Enter', async () => {
+    const { App } = await import('./App');
+    render(<App />);
+    act(() => { stateListener!([makeTab()], 0, null, 16, [], 'github-dark', 'dark', []); });
+    const input = screen.getByRole('textbox');
+    fireEvent.change(input, { target: { value: 'theme' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(screen.getByText('theme', { selector: '.picker-title' })).toBeInTheDocument();
+    fireEvent.keyDown(globalThis as unknown as Window, { key: 'Enter' });
+    expect(sendMock).toHaveBeenCalledWith({ method: 'command', params: { text: 'theme dark' } });
+  }, 15_000);
+});
+
 describe('App syntax theme picker', () => {
   beforeEach(() => {
     sendMock.mockClear();
