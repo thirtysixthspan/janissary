@@ -19,7 +19,8 @@ import { rehydrateTabs } from './rehydrate.js';
 import { buildAgentStateFromTab } from './agent-state.js';
 import { recordLeavingActiveTab, popFocusHistory, mostRecentFileTreeLabel } from './focus-history.js';
 import { applyDock } from './dock.js';
-import { capLog, finishRunningEntry } from './transcript.js';
+import { capLog } from './transcript.js';
+import { appendEntry, finishEntry, clearLog } from './transcript-ops.js';
 import { computeReorder, removeTabAt } from './reorder.js';
 import { recordHistory } from './history.js';
 
@@ -260,7 +261,7 @@ export class TabManager {
   finishRunning(label: string, output: string): void {
     const t = this.tabs.find((x) => x.label === label);
     if (t) {
-      t.log = finishRunningEntry(t.log, output);
+      finishEntry(t, output);
       this.deleteBusy(label);
       this.persist(this.buildAgentState(t));
     }
@@ -280,10 +281,7 @@ export class TabManager {
   append(label: string, entry: LogEntry): void {
     const tab = this.tabs.find((t) => t.label === label);
     if (!tab) return;
-    const before = tab.log.length;
-    tab.log = this.capLog([...tab.log, entry]);
-    tab.scrollOffset = 0;
-    const trimmed = before + 1 - tab.log.length;
+    const trimmed = appendEntry(tab, entry, (log) => this.capLog(log));
     if (trimmed > 0) messageBus.emit('transcript', { type: 'entries:trimmed', tabLabel: label, count: trimmed });
     messageBus.emit('transcript', { type: 'entry:appended', tabLabel: label, entry, tab });
     this.markUnread(label);
@@ -293,7 +291,7 @@ export class TabManager {
   clearTranscript(label: string): void {
     const tab = this.tabs.find((t) => t.label === label);
     if (!tab) return;
-    tab.log = [];
+    clearLog(tab);
     this.persist(this.buildAgentState(tab));
     messageBus.emit('transcript', { type: 'tab:cleared', tabLabel: label });
     messageBus.emit('state', { type: 'dirty' });
