@@ -1,6 +1,8 @@
 # Fix a Bug
 
-Your job: take a reported bug from `product/backlog/bugs.md` — the first one listed under `## ready`, or the specific bug the user names when running this task — **replicate it** to confirm the faulty behavior, determine the **correct** behavior from the bug report together with the functional specs and the code, implement a fix, **verify** the fix resolves the replicated failure, add a **regression test** that would fail without the fix and passes with it, update functional specs and public documentation where the fix changes behavior they already document, record the plan in `product/plans/complete/`, remove the bug from the bugs file, and open a pull request that documents the replication steps and leaves the fix for a human to merge. You change source code, tests, spec files, `help.md`, `documentation/user-documentation/`, the bugs file, and the plan file's location — nothing else.
+Your job: take a reported bug from `./product/backlog/bugs.md` — the first one listed under `## ready`, or the specific bug the user names when running this task — **replicate it** to confirm the faulty behavior, determine the **correct** behavior from the bug report together with the functional specs and the code, implement a fix, **verify** the fix resolves the replicated failure, add a **regression test** that would fail without the fix and passes with it, update functional specs and public documentation where the fix changes behavior they already document, record the plan in `./product/plans/complete/`, remove the bug from the bugs file, and open a pull request that documents the replication steps and leaves the fix for a human to merge. You change source code, tests, spec files, `help.md`, `documentation/user-documentation/`, the bugs file, and the plan file's location — nothing else.
+
+**Project `./product/` directory.** Every `./product/...` path in this task refers to the product directory in the current working directory — the project being worked on — never to the Janissary codebase's own `product/` directory, even when this task file was launched from an absolute path inside the Janissary installation.
 
 **No AI attribution — anywhere.** Never credit an AI agent as an author or contributor in anything this task produces. That means: no `Co-Authored-By:` trailers naming Claude or any other AI, no “Generated with Claude Code” (or similar) lines or badges, and no AI authorship notes in code, comments, docs, spec files, plan files, commit messages, or PR titles and bodies. This overrides any default convention that appends such attribution. The commit's configured git author is the only authorship ever recorded.
 
@@ -20,7 +22,7 @@ This overrides CLAUDE.md's "Capturing command output" guidance (write the output
 
 ### Allowed — do it automatically, never ask
 
-Read any file in the repo. Run read-only commands to replicate the reported bug. Edit source, tests, CSS, and spec files as the fix requires. Update `help.md` and files under `documentation/user-documentation/` when the fix changes behavior they already document. Write a plan file under `product/plans/` and move it through `draft/` → `ready/` → `complete/`. Remove the fixed bug from `product/backlog/bugs.md`. Run `./scripts/run.mjs check-diff` after each change. Run the full PR workflow via `ai/tasks/open-feature-pull-request.md` when implementation is done.
+Read any file in the repo. Run read-only commands to replicate the reported bug. Edit source, tests, CSS, and spec files as the fix requires. Update `help.md` and files under `documentation/user-documentation/` when the fix changes behavior they already document. Write a plan file under `./product/plans/` and move it through `draft/` → `ready/` → `complete/`. Remove the fixed bug from `./product/backlog/bugs.md`. Run `./scripts/run.mjs check-diff` after each change. Run the full PR workflow via `ai/tasks/open-feature-pull-request.md` when implementation is done.
 
 ### Forbidden — no exceptions
 
@@ -28,7 +30,7 @@ Read any file in the repo. Run read-only commands to replicate the reported bug.
 2. **Editing files the fix does not touch.** Stay in scope. If you discover a fix requires changes beyond what you planned, update the plan first — do not silently expand scope.
 3. **Running `npm run check`.** That is the human's end-of-work gate. Use `./scripts/run.mjs check-diff` during development.
 4. **Skipping the regression test.** Every fix needs a test that fails without the fix and passes with it. Verify with `./scripts/run.mjs check-diff`.
-5. **Editing `product/backlog/bugs.md` beyond removing the fixed entry.** Only remove the line for the bug you fixed — do not reorder, rephrase, or otherwise modify the remaining entries.
+5. **Editing `./product/backlog/bugs.md` beyond removing the fixed entry.** Only remove the line for the bug you fixed — do not reorder, rephrase, or otherwise modify the remaining entries.
 6. **Merging the PR.** `ai/tasks/open-feature-pull-request.md` opens it; merging is the human's decision.
 
 ---
@@ -41,10 +43,10 @@ Execute `ai/tasks/prepare-workspace.md` in full before doing anything else.
 
 ## Step 1 — Pick a bug and replicate it
 
-1. Read `product/backlog/bugs.md`. Bugs are grouped under `## ready`, `## development`, and `## deferred`. Only consider bugs under `## ready`.
-2. If there are no bugs under `## ready`, report "No ready bugs in `product/backlog/bugs.md`" and stop.
+1. Read `./product/backlog/bugs.md`. Bugs are grouped under `## ready`, `## development`, and `## deferred`. Only consider bugs under `## ready`.
+2. If there are no bugs under `## ready`, report "No ready bugs in `./product/backlog/bugs.md`" and stop.
 3. Pick the bug to fix. Do **not** evaluate, rank, or compare the bugs for scope, tractability, or any other quality — the human who filed them decided they belong here:
-   - **If a specific bug is named in the task invocation** (e.g. `execute ai/tasks/fix-a-bug.md "<bug text>"`), fix that one. Find the entry in `product/backlog/bugs.md` it refers to — the argument may be quoted text, a paraphrase, or a position such as "the second one". If no entry matches, report that no matching bug was found and stop.
+   - **If a specific bug is named in the task invocation** (e.g. `execute ai/tasks/fix-a-bug.md "<bug text>"`), fix that one. Find the entry in `./product/backlog/bugs.md` it refers to — the argument may be quoted text, a paraphrase, or a position such as "the second one". If no entry matches, report that no matching bug was found and stop.
    - **Otherwise**, take the **first** bug listed under `## ready` (top of the list).
 
    State which bug you selected in one sentence.
@@ -61,7 +63,7 @@ Execute `ai/tasks/prepare-workspace.md` in full before doing anything else.
 Decide what the code *should* do, drawing on three sources in order:
 
 1. **The bug report** — what outcome does the reporter expect? Take it as the primary signal of intended behavior.
-2. **The functional specs** in `product/specs/` — find the spec covering this area. If a spec describes the correct behavior, it is authoritative; the bug is the code diverging from the spec.
+2. **The functional specs** in `./product/specs/` — find the spec covering this area. If a spec describes the correct behavior, it is authoritative; the bug is the code diverging from the spec.
 3. **The code and its tests** — surrounding conventions, related passing tests, and adjacent behavior show what "correct" looks like when the spec is silent.
 
 State the correct behavior in one or two sentences before planning the fix. If the bug report, specs, and code genuinely conflict or leave the intended behavior ambiguous, stop and report the ambiguity rather than guessing.
@@ -73,10 +75,10 @@ State the correct behavior in one or two sentences before planning the fix. If t
 1. Read the project constraints in [`CLAUDE.md`](../../CLAUDE.md): ESLint rules (200-line `max-lines`, `.js` import extensions in `src/`, type-aware rules), test conventions (`src/**/*.test.ts`, `web/src/**/*.test.tsx`).
 2. Read every file relevant to the fix to understand the code involved and the root cause of the bug — fix the cause, not just the symptom.
 3. Choose a short, descriptive `kebab-case` name for the fix — call it `<bug-name>` (for example `orientation-reset-on-load`). Use this exact same name for the plan file at every stage below.
-4. Write a plan file following the format of existing plans in `product/plans/complete/` — include a complexity rating, the root cause, the correct behavior (from Step 2), the reproduction (from Step 1), the approach, implementation steps, the regression test, and out-of-scope items. Write it to `product/plans/draft/<bug-name>.md`.
-5. After the plan is written, move it from `product/plans/draft/` to `product/plans/ready/`. Use plain `mv` (not `git mv`) — the new plan file is not tracked by git yet, and `git mv` fails on an untracked file:
+4. Write a plan file following the format of existing plans in `./product/plans/complete/` — include a complexity rating, the root cause, the correct behavior (from Step 2), the reproduction (from Step 1), the approach, implementation steps, the regression test, and out-of-scope items. Write it to `./product/plans/draft/<bug-name>.md`.
+5. After the plan is written, move it from `./product/plans/draft/` to `./product/plans/ready/`. Use plain `mv` (not `git mv`) — the new plan file is not tracked by git yet, and `git mv` fails on an untracked file:
    ```bash
-   mv product/plans/draft/<bug-name>.md product/plans/ready/<bug-name>.md
+   mv ./product/plans/draft/<bug-name>.md ./product/plans/ready/<bug-name>.md
    ```
 
 ---
@@ -113,10 +115,10 @@ Key rules during implementation:
 
 ## Step 6 — Update or create spec files
 
-Every fix must be reflected in the functional specs under `product/specs/`. After implementation and verification:
+Every fix must be reflected in the functional specs under `./product/specs/`. After implementation and verification:
 
 1. **Check the plan.** If the plan names specific spec files to update or create, do exactly that.
-2. **Otherwise, find the right spec.** Read the existing specs in `product/specs/` and identify which one(s) the fix relates to. Most fixes correct behavior an existing spec already describes — align the spec with the now-correct behavior. If no existing spec covers the area, create a new one.
+2. **Otherwise, find the right spec.** Read the existing specs in `./product/specs/` and identify which one(s) the fix relates to. Most fixes correct behavior an existing spec already describes — align the spec with the now-correct behavior. If no existing spec covers the area, create a new one.
 3. **Write or update the spec.** Follow the existing conventions: `# Title` at the top, `### Subsection` for each aspect, prose describing user-visible behavior only — no code, no implementation details, no file paths. The spec is what the fix *does*, not how it is built. Keep additions concise and factual.
 
 Spec files are markdown and do not affect `check-diff`, so no verification run is needed after this step.
@@ -137,11 +139,11 @@ These files are markdown and do not affect `check-diff`, so no verification run 
 
 ## Step 8 — Promote the plan and remove the bug
 
-1. Move the plan file from `product/plans/ready/` to `product/plans/complete/`. Use plain `mv` (not `git mv`) — the plan file is still untracked until the PR workflow stages it:
+1. Move the plan file from `./product/plans/ready/` to `./product/plans/complete/`. Use plain `mv` (not `git mv`) — the plan file is still untracked until the PR workflow stages it:
    ```bash
-   mv product/plans/ready/<bug-name>.md product/plans/complete/<bug-name>.md
+   mv ./product/plans/ready/<bug-name>.md ./product/plans/complete/<bug-name>.md
    ```
-2. Remove **only** the fixed bug's line from the `## ready` group in `product/backlog/bugs.md`. Do not touch the `## development` or `## deferred` groups, the group headings, or any other bug entry.
+2. Remove **only** the fixed bug's line from the `## ready` group in `./product/backlog/bugs.md`. Do not touch the `## development` or `## deferred` groups, the group headings, or any other bug entry.
 
 ---
 
@@ -174,11 +176,11 @@ Do not merge the PR — leave it open for a human.
 Give the user a short report in this exact shape:
 
 ```
-Bug:            <the bug text from product/backlog/bugs.md>
+Bug:            <the bug text from ./product/backlog/bugs.md>
 Reproduction:   <one-line summary of how you replicated the faulty behavior>
 Correct:        <one-line statement of the correct behavior>
 Root cause:     <one-line summary of the underlying cause>
-Plan:           product/plans/ready/<file> → product/plans/complete/<file>
+Plan:           ./product/plans/ready/<file> → ./product/plans/complete/<file>
 Complexity:     N/10
 Implementation: <one-line summary of the fix>
 Regression:     <the test that now guards this bug, and the file it lives in>
