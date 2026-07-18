@@ -202,7 +202,12 @@ export type RpcCall =
   // Write the named agent tab's full transcript to a plain-text file and open it in an editor
   // tab, triggered by the clipboard button in an agent tab's metadata row. No-ops when the tab
   // is missing or its log is empty. `label` is the requesting tab's own label.
-  | { method: 'openTranscriptFor'; params: { label: string } };
+  | { method: 'openTranscriptFor'; params: { label: string } }
+  // List every gitignore-aware file under the project/launch directory, for the Cmd+P quick-open
+  // overlay. Replies (deferred) with `{ root, paths }` — `root` is the absolute launch directory,
+  // `paths` are its root-relative paths — so the client can join them into an absolute path for
+  // the `edit` command regardless of the active tab's own cwd.
+  | { method: 'projectFiles'; params?: Record<string, never> };
 
 export type ClientMessage = { t: 'rpc'; id: number } & RpcCall;
 

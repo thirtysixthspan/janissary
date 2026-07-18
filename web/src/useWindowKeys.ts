@@ -35,6 +35,7 @@ export type StateSnapshot = {
   profilePickerOpen: boolean;
   profilePickerIdx: number;
   profiles: string[];
+  quickOpenOpen: boolean;
 };
 
 export type Callbacks = {
@@ -68,6 +69,7 @@ export type Callbacks = {
   setProfilePickerOpen: (open: boolean) => void;
   openProfilePicker: () => void;
   pickProfile: (name: string) => void;
+  openQuickOpen: () => void;
 };
 
 // Priority chain of pickers/choosers that claim every keystroke while open. Returns true once one
@@ -134,15 +136,27 @@ function ctrlChordOpener(key: string, cb: Callbacks): (() => void) | undefined {
   }
 }
 
-// The chord openers (Cmd+F search, the Ctrl picker chords, Cmd+T new agent tab) — split out of
-// `onKey` to keep its own cognitive complexity under the file's lint threshold.
-function handleChordKeys(e: KeyboardEvent, snap: StateSnapshot, cb: Callbacks): boolean {
-  if (e.metaKey && e.key.toLowerCase() === 'f') {
+// The Cmd-key chord openers (Cmd+F search, Cmd+P quick open) — split out of `handleChordKeys` to
+// keep its own cognitive complexity under the file's lint threshold.
+function metaChordOpener(e: KeyboardEvent, snap: StateSnapshot, cb: Callbacks): boolean {
+  if (e.key.toLowerCase() === 'f') {
     if (!snap.canSearch) return true;
     e.preventDefault();
     if (!snap.searchOpen) cb.openSearch();
     return true;
   }
+  if (e.key.toLowerCase() === 'p') {
+    e.preventDefault();
+    if (snap.canSearch && !snap.quickOpenOpen) cb.openQuickOpen();
+    return true;
+  }
+  return false;
+}
+
+// The chord openers (Cmd+F search, Cmd+P quick open, the Ctrl picker chords, Cmd+T new agent tab)
+// — split out of `onKey` to keep its own cognitive complexity under the file's lint threshold.
+function handleChordKeys(e: KeyboardEvent, snap: StateSnapshot, cb: Callbacks): boolean {
+  if (e.metaKey && metaChordOpener(e, snap, cb)) return true;
   if (e.ctrlKey) {
     const opener = ctrlChordOpener(e.key.toLowerCase(), cb);
     if (opener) { e.preventDefault(); opener(); return true; }
@@ -165,7 +179,7 @@ export function useWindowKeys(
       if (!snap || !cb) return;
       if (dispatchModalKey(e, snap, cb)) return;
       if (handleChordKeys(e, snap, cb)) return;
-      if (!snap.searchOpen && handleScrollKey(e)) return;
+      if (!snap.searchOpen && !snap.quickOpenOpen && handleScrollKey(e)) return;
       handleTabShortcuts(e, client);
     };
     globalThis.addEventListener('keydown', onKey);

@@ -2,6 +2,7 @@ import type { Controller } from './controller.js';
 import type { ClientMessage, ServerEvent } from './protocol.js';
 import { buildStateEvent } from './state-event.js';
 import { openTranscriptFor } from './controller-transcript.js';
+import { projectFilesFor } from './project-files.js';
 
 export function handle(controller: Controller, message: ClientMessage, reply: (event: ServerEvent) => void): void {
   switch (message.method) {
@@ -90,6 +91,18 @@ export function handle(controller: Controller, message: ClientMessage, reply: (e
     // Bridges straight to controller-transcript.js (bypassing a Controller passthrough method)
     // to keep controller.ts under its line-size limit — see that module's own comment.
     case 'openTranscriptFor': { openTranscriptFor(controller.managers, message.params.label); break;
+    }
+    // Deferred reply: the listing is async (never blocks the event loop), so the reply fires from
+    // the `.then()`/`.catch()` below, not inline — see project-files.ts and protocol.ts.
+    case 'projectFiles': {
+      void (async () => {
+        try {
+          reply({ t: 'rpc-reply', id: message.id, result: await projectFilesFor(controller.managers) });
+        } catch {
+          reply({ t: 'rpc-reply', id: message.id, result: { root: controller.managers.tab.launchDir, paths: [] } });
+        }
+      })();
+      return;
     }
   }
   reply({ t: 'rpc-reply', id: message.id, result: 'ok' });
