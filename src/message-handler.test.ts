@@ -12,6 +12,7 @@ const makeController = () =>
     setActiveTab: vi.fn(),
     closeTab: vi.fn(),
     renameTab: vi.fn(),
+    navigatePage: vi.fn(),
     editQueuedCommand: vi.fn(),
     deleteQueuedCommand: vi.fn(),
     moveTab: vi.fn(),
@@ -67,6 +68,12 @@ describe('handle', () => {
     const controller = makeController();
     dispatchCall(controller, 3, { method: 'renameTab', params: { index: 1, title: 'bob' } });
     expect(controller.renameTab).toHaveBeenCalledWith(1, 'bob');
+  });
+
+  it('routes navigatePage', () => {
+    const controller = makeController();
+    dispatchCall(controller, 3, { method: 'navigatePage', params: { index: 1, url: 'https://example.com/' } });
+    expect(controller.navigatePage).toHaveBeenCalledWith(1, 'https://example.com/');
   });
 
   it('routes editQueuedCommand', () => {

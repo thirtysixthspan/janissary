@@ -11,7 +11,9 @@ embedded page, **except when the user has explicitly attached a monitor to that 
 page's viewport so the monitor can see it. Whatever the embedded site allows the user to do
 directly — click, scroll, type, follow links — happens inside the page itself. The one exception
 is navigation control: the metadata header's back, forward, and reload buttons (below) move the
-embedded page through its own history or reload it, without reading or scripting its contents.
+embedded page through its own history or reload it, and its address itself can be edited directly
+(below), all without reading or scripting the page's contents. A manually-typed address is
+validated the same way `open`/`open page` validates one (below).
 
 ### Opening a page
 
@@ -92,7 +94,12 @@ The page view shows, stacked top to bottom:
    forward, and reload icon buttons that move the embedded page through its own navigation history
    or reload it, and followed by a close button right-aligned on that same line. Clicking the close
    button closes the tab directly — a second, independent close affordance alongside the tab
-   strip's own close button (see "Tab strip: name and close button" below).
+   strip's own close button (see "Tab strip: name and close button" below). Double-clicking the
+   address opens it for editing in place; pressing Enter (or clicking away) loads the typed address
+   into the same page tab, validated the same way `open`/`open page` validates one — an invalid
+   scheme or malformed address is silently discarded, leaving the tab on its current address.
+   Escape cancels the edit without navigating. Navigating this way keeps the tab's page number,
+   position, and group unchanged; only its address, root-domain label, and displayed title update.
 2. **The embedded page** itself, filling the space beneath the metadata and resizing with the tab.
 
 Switching to another tab and back preserves the page view exactly as it was: whatever navigation,

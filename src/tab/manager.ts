@@ -23,6 +23,7 @@ import { applyDock } from './dock.js';
 import { capLog } from './transcript.js';
 import { appendEntry, finishEntry, clearLog } from './transcript-ops.js';
 import { computeReorder, removeTabAt } from './reorder.js';
+import { navigatePageTab } from './navigate.js';
 import { recordHistory } from './history.js';
 import { FileRegistry } from './file-registry.js';
 
@@ -235,6 +236,12 @@ export class TabManager {
     if (trimmed && trimmed !== tab.label) tab.title = trimmed;
     else delete tab.title;
     this.persist(this.buildAgentState(tab));
+    messageBus.emit('state', { type: 'dirty' });
+  }
+
+  navigatePage(index: number, url: string): void {
+    const tab = this.tabs[index];
+    if (!tab || !navigatePageTab(tab, url)) return;
     messageBus.emit('state', { type: 'dirty' });
   }
 

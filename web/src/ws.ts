@@ -74,6 +74,8 @@ export class JanusClient {
 
   renameTab(index: number, title: string): void { this.send({ method: 'renameTab', params: { index, title } }); }
 
+  navigatePage(index: number, url: string): void { this.send({ method: 'navigatePage', params: { index, url } }); }
+
   // Sync an editor tab's in-progress buffer to the server as transient draft state. Fire-and-forget:
   // no reply is awaited, and a sync lost to a closed socket is simply dropped (see send()).
   editorSync(url: string, content: string): void { this.send({ method: 'editorSync', params: { url, content } }); }

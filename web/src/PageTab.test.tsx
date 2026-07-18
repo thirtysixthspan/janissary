@@ -15,7 +15,7 @@ function makePage(overrides: Partial<PageView> = {}): PageView {
 }
 
 function makeClient(): JanusClient {
-  return { pageSync: vi.fn() } as unknown as JanusClient;
+  return { pageSync: vi.fn(), navigatePage: vi.fn() } as unknown as JanusClient;
 }
 
 describe('PageTab', () => {
@@ -82,5 +82,34 @@ describe('PageTab', () => {
     const { container } = render(<PageTab page={makePage({ url: 'https://slashdot.org/' })} closeTab={vi.fn()} index={0} client={makeClient()} />);
     fireEvent.click(container.querySelector('.page-reload') as Element);
     expect(container.querySelector('iframe')?.src).toBe('https://slashdot.org/');
+  });
+
+  it('double-clicking the URL enters edit mode with the current address prefilled', () => {
+    const { container } = render(<PageTab page={makePage({ url: 'https://slashdot.org/' })} closeTab={vi.fn()} index={2} client={makeClient()} />);
+    fireEvent.doubleClick(container.querySelector('.page-url') as Element);
+    const input = container.querySelector('.page-url-input') as HTMLInputElement;
+    expect(input).not.toBeNull();
+    expect(input.value).toBe('https://slashdot.org/');
+  });
+
+  it('pressing Enter commits the new address via navigatePage', () => {
+    const client = makeClient();
+    const { container } = render(<PageTab page={makePage({ url: 'https://slashdot.org/' })} closeTab={vi.fn()} index={2} client={client} />);
+    fireEvent.doubleClick(container.querySelector('.page-url') as Element);
+    const input = container.querySelector('.page-url-input') as HTMLInputElement;
+    fireEvent.change(input, { target: { value: 'example.com' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(client.navigatePage).toHaveBeenCalledWith(2, 'example.com');
+  });
+
+  it('pressing Escape cancels without navigating', () => {
+    const client = makeClient();
+    const { container } = render(<PageTab page={makePage({ url: 'https://slashdot.org/' })} closeTab={vi.fn()} index={2} client={client} />);
+    fireEvent.doubleClick(container.querySelector('.page-url') as Element);
+    const input = container.querySelector('.page-url-input') as HTMLInputElement;
+    fireEvent.change(input, { target: { value: 'example.com' } });
+    fireEvent.keyDown(input, { key: 'Escape' });
+    expect(container.querySelector('.page-url-input')).toBeNull();
+    expect(client.navigatePage).not.toHaveBeenCalled();
   });
 });

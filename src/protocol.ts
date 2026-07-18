@@ -122,6 +122,9 @@ export type RpcCall =
   | { method: 'setActiveTab'; params: { index: number } }
   | { method: 'closeTab'; params: { index: number } }
   | { method: 'renameTab'; params: { index: number; title: string } }
+  // Navigate an existing page tab to a new address in place, keeping its page number and
+  // identity. No-ops server-side when the index isn't a page tab or the URL is invalid.
+  | { method: 'navigatePage'; params: { index: number; url: string } }
   // Patch or remove one entry in the active tab's command queue (see `queue.md`). Index-based
   // against that tab's queue; no-ops server-side when the index is out of range.
   | { method: 'editQueuedCommand'; params: { index: number; text: string } }
