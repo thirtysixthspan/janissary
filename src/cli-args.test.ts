@@ -85,6 +85,27 @@ describe('parseCliArgs', () => {
     expect(parseCliArgs([tmpDir]).projectDir).toBe(tmpDir);
   });
 
+  it('recognizes `stop` as a subcommand with no project directory', () => {
+    const args = parseCliArgs(['stop']);
+    expect(args.stop).toBe(true);
+    expect(args.projectDir).toBeUndefined();
+  });
+
+  it('recognizes `stop <project-dir>` without raising the unexpected-argument error', () => {
+    const args = parseCliArgs(['stop', tmpDir]);
+    expect(args.stop).toBe(true);
+    expect(args.projectDir).toBe(tmpDir);
+  });
+
+  it('leaves stop false for a normal invocation', () => {
+    expect(parseCliArgs([]).stop).toBe(false);
+    expect(parseCliArgs([tmpDir]).stop).toBe(false);
+  });
+
+  it('throws CliUsageError for `stop` with more than one extra argument', () => {
+    expect(() => parseCliArgs(['stop', tmpDir, 'extra'])).toThrow(CliUsageError);
+  });
+
   it('throws CliUsageError for a nonexistent positional project directory', () => {
     expect(() => parseCliArgs([path.join(tmpDir, 'nope')])).toThrow(CliUsageError);
   });
@@ -103,6 +124,10 @@ describe('usageText', () => {
     expect(text).toContain('--relaunch');
     expect(text).toContain('--help');
     expect(text).toContain('--version');
+  });
+
+  it('mentions the stop subcommand', () => {
+    expect(usageText()).toContain('stop');
   });
 });
 

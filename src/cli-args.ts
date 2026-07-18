@@ -9,6 +9,7 @@ export interface CliArgs {
   version: boolean;
   relaunch: boolean;
   noOpen: boolean;
+  stop: boolean;
   port: number | undefined;
   projectDir: string | undefined;
 }
@@ -44,36 +45,48 @@ export function parseCliArgs(argv: string[]): CliArgs {
     throw new CliUsageError(`invalid --port value: ${values.port}`);
   }
 
-  let projectDir: string | undefined;
-  if (positionals.length > 0) {
-    const raw = positionals[0];
-    const resolved = path.resolve(raw);
-    if (!existsSync(resolved) || !statSync(resolved).isDirectory()) {
-      throw new CliUsageError(`invalid project directory: ${raw} is not a directory`);
-    }
-    projectDir = resolved;
-  }
-  if (positionals.length > 1) {
-    throw new CliUsageError(`unexpected argument: ${positionals[1]}`);
-  }
+  // `stop` is a positional subcommand, not a project directory: `janus stop [<project-dir>]`
+  // takes its own optional directory argument after the keyword.
+  const stop = positionals[0] === 'stop';
+  const projectDir = parseProjectDir(stop ? positionals.slice(1) : positionals);
 
   return {
     help: Boolean(values.help),
     version: Boolean(values.version),
     relaunch: Boolean(values.relaunch),
     noOpen: Boolean(values['no-open']),
+    stop,
     port,
     projectDir,
   };
 }
 
+// Resolve the optional `<project-dir>` positional (whatever remains after any leading `stop`
+// keyword has been stripped) to an absolute path, validating it exists and is a directory.
+function parseProjectDir(dirPositionals: string[]): string | undefined {
+  if (dirPositionals.length === 0) return undefined;
+  const raw = dirPositionals[0];
+  const resolved = path.resolve(raw);
+  if (!existsSync(resolved) || !statSync(resolved).isDirectory()) {
+    throw new CliUsageError(`invalid project directory: ${raw} is not a directory`);
+  }
+  if (dirPositionals.length > 1) {
+    throw new CliUsageError(`unexpected argument: ${dirPositionals[1]}`);
+  }
+  return resolved;
+}
+
 export function usageText(): string {
   return `Usage: janus [options] [<project-dir>]
+       janus stop [<project-dir>]
 
 A terminal UI shell with built-in commands and shell execution.
 
 Arguments:
   <project-dir>  Target directory (default: current directory)
+
+Commands:
+  stop           Stop the running instance for a directory
 
 Options:
   --port=<n>     Port to listen on (default: auto)

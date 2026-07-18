@@ -7,6 +7,7 @@ import { initAgentStateDirectory, clearStateDirectory } from './agent/state.js';
 import { initHarnessCaptureDirectory, clearCaptureDirectory } from './harness/capture-file.js';
 import { initHarnessRecordingDirectory, clearHarnessRecordingDirectory } from './harness/recording-file.js';
 import { acquireLock, releaseLock } from './instance-lock.js';
+import { stopInstance } from './stop-instance.js';
 import { initGlobalHistory } from './global-history.js';
 import { TranscriptLogger } from './transcript/logger.js';
 import { TranscriptStore } from './transcript/store.js';
@@ -145,6 +146,8 @@ export async function boot(argv = process.argv.slice(2)): Promise<void> {
   }
 
   const cwd = args.projectDir ?? process.cwd();
+  if (args.stop) { stopInstance(cwd); return; }
+
   acquireLock(cwd);
   lockedDir = cwd;
   initAgentStateDirectory(cwd);

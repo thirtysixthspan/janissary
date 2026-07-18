@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { mkdtempSync, writeFileSync, mkdirSync, existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { tmpdir } from 'node:os';
-import { acquireLock, releaseLock } from './instance-lock.js';
+import { acquireLock, releaseLock, readLockPid } from './instance-lock.js';
 
 let projectDir: string;
 
@@ -36,6 +36,24 @@ describe('acquireLock', () => {
     acquireLock(projectDir);
     const file = path.join(dir, 'lock');
     expect(readFileSync(file, 'utf8').trim()).toBe(String(process.pid));
+  });
+});
+
+describe('readLockPid', () => {
+  it('returns undefined when no lock file exists', () => {
+    expect(readLockPid(projectDir)).toBeUndefined();
+  });
+
+  it('returns the pid recorded in an existing lock file', () => {
+    acquireLock(projectDir);
+    expect(readLockPid(projectDir)).toBe(process.pid);
+  });
+
+  it('returns a stale (dead) pid unchanged — liveness is the caller\'s concern', () => {
+    const dir = path.join(projectDir, '.janissary');
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(path.join(dir, 'lock'), '999999');
+    expect(readLockPid(projectDir)).toBe(999_999);
   });
 });
 
