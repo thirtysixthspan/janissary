@@ -41,8 +41,8 @@ describe('FileTreeTab', () => {
     const client = { send: vi.fn() } as unknown as JanusClient;
     const files = makeFiles({
       rows: [
-        { path: 'src', name: 'src', depth: 0, dir: true, expanded: true, changed: true },
-        { path: 'src/index.ts', name: 'index.ts', depth: 1, dir: false, changed: true },
+        { path: 'src', name: 'src', depth: 0, dir: true, expanded: true, gitStatus: 'changed' },
+        { path: 'src/index.ts', name: 'index.ts', depth: 1, dir: false, gitStatus: 'changed' },
         { path: 'README.md', name: 'README.md', depth: 0, dir: false },
       ],
     });
@@ -50,6 +50,19 @@ describe('FileTreeTab', () => {
     expect(screen.getByText('index.ts').className).toContain('files-name--changed');
     expect(screen.getByText('src').className).toContain('files-name--changed');
     expect(screen.getByText('README.md').className).not.toContain('files-name--changed');
+  });
+
+  it('renders staged rows green and conflicted rows red', () => {
+    const client = { send: vi.fn() } as unknown as JanusClient;
+    const files = makeFiles({
+      rows: [
+        { path: 'staged.txt', name: 'staged.txt', depth: 0, dir: false, gitStatus: 'staged' },
+        { path: 'conflict.txt', name: 'conflict.txt', depth: 0, dir: false, gitStatus: 'conflict' },
+      ],
+    });
+    render(<FileTreeTab files={files} client={client} index={0} />);
+    expect(screen.getByText('staged.txt').className).toContain('files-name--staged');
+    expect(screen.getByText('conflict.txt').className).toContain('files-name--conflict');
   });
 
   it('renders the branch name in .files-branch when present', () => {

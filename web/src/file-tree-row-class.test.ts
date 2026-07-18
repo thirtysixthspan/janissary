@@ -8,11 +8,22 @@ const row = (overrides: Partial<FileTreeRow> = {}): FileTreeRow => ({
 
 describe('fileTreeRowClass', () => {
   it('adds files-name--changed to the name class when the row is changed', () => {
-    expect(fileTreeRowClass(row({ changed: true }), null, undefined).name).toContain('files-name--changed');
+    expect(fileTreeRowClass(row({ gitStatus: 'changed' }), null, undefined).name).toContain('files-name--changed');
   });
 
-  it('omits files-name--changed when the row is not changed', () => {
-    expect(fileTreeRowClass(row(), null, undefined).name).not.toContain('files-name--changed');
+  it('adds files-name--staged to the name class when the row is staged', () => {
+    expect(fileTreeRowClass(row({ gitStatus: 'staged' }), null, undefined).name).toContain('files-name--staged');
+  });
+
+  it('adds files-name--conflict to the name class when the row is conflicted', () => {
+    expect(fileTreeRowClass(row({ gitStatus: 'conflict' }), null, undefined).name).toContain('files-name--conflict');
+  });
+
+  it('omits every status modifier when the row has no gitStatus', () => {
+    const name = fileTreeRowClass(row(), null, undefined).name;
+    expect(name).not.toContain('files-name--changed');
+    expect(name).not.toContain('files-name--staged');
+    expect(name).not.toContain('files-name--conflict');
   });
 
   it('preserves the selected modifier on the row class', () => {

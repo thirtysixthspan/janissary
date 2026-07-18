@@ -44,7 +44,7 @@ other already sits displaces that one back to center.
 
 Every visible directory is watched: files that appear, disappear, or get renamed show up in the tree within about a second, even during a burst of changes like a `git checkout`. If watching stops working for a directory (permissions, exotic filesystems), the tree keeps working — collapse and re-expand to refresh by hand.
 
-Inside a git repository, files that git considers changed — modified, staged, or untracked — show up in **yellow**, the same way an editor's Explorer highlights dirty files. A directory turns yellow when anything beneath it is changed, even deep inside a collapsed folder, so you can spot changes without expanding everything. This coloring refreshes along with the tree. A directory that isn't in a git repository simply shows no coloring — nothing turns yellow and no error appears.
+Inside a git repository, a file's name is colored by its git status: **green** for a staged change, **red** for an unresolved merge conflict, and **yellow** for anything else changed — an unstaged modification or an untracked file — the same way an editor's Explorer highlights dirty files. A directory takes the color of the most urgent status found beneath it (a conflict beats a staged change, which beats a plain change), even deep inside a collapsed folder, so you can spot changes without expanding everything. Coloring always reflects the git repository the navigator's own root sits in, so it stays accurate when you have more than one navigator open on different folders or repositories. This coloring refreshes along with the tree. A directory that isn't in a git repository simply shows no coloring — nothing is colored and no error appears.
 
 ## Mouse
 

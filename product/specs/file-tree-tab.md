@@ -91,15 +91,20 @@ tree rooted outside any git repository, or where the branch cannot be determined
 path with no branch text. The branch refreshes together with the tree itself (on open, on reroot,
 and on every automatic or interactive refresh), never on a timer of its own.
 
-**Git-modified coloring.** When the tree is rooted inside a git repository, any file row that git
-considers changed — a working-tree modification, a staged change, or an untracked (new) file —
-renders its name in yellow; the three states are not distinguished from one another. A directory
-row also renders yellow whenever any file beneath it, at any depth, is changed — even inside a
-collapsed subtree that has not been expanded — so changes are visible without walking the whole
-tree. The coloring refreshes together with the tree itself (on open and on every automatic or
-interactive refresh), never on a timer of its own, and is computed without blocking the interface.
-A tree rooted in a directory that is not part of a git repository, or where git status cannot be
-determined, shows no coloring and no error.
+**Git-status coloring.** When the tree is rooted inside a git repository, a file row's name renders
+in a color reflecting its git status: **green** when the file has staged changes (added to the
+index, including a file that is staged and then further edited), **red** when the file has an
+unresolved merge conflict, and **yellow** for anything else git considers changed — an unstaged
+working-tree modification or an untracked (new) file. A directory row renders in the color of the
+highest-priority state found among the files beneath it, at any depth — a conflict outranks a
+staged change, which outranks a plain change — even inside a collapsed subtree that has not been
+expanded, so changes are visible without walking the whole tree. Coloring reflects the git
+repository containing the tree's own root, regardless of where that root sits relative to any other
+open file navigator or the app's own working directory — each navigator's colors always match `git
+status` run at its own root. The coloring refreshes together with the tree itself (on open and on
+every automatic or interactive refresh), never on a timer of its own, and is computed without
+blocking the interface. A tree rooted in a directory that is not part of a git repository, or where
+git status cannot be determined, shows no coloring and no error.
 
 ### Watching
 

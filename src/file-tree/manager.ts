@@ -11,6 +11,7 @@ import { applyStackMove, type MoveEntry, type UndoRedoResult } from './moves.js'
 import { watchDir, unwatchDir } from './watch.js';
 import { pruneAndBuildRows } from './rebuild.js';
 import type { Managers } from '../managers.js';
+import type { GitFileStatus } from '../git-status.js';
 
 const DEBOUNCE_MS = 100;
 
@@ -24,11 +25,11 @@ export type FilesTabState = {
   debounce?: ReturnType<typeof setTimeout>;
   undoStack: MoveEntry[];
   redoStack: MoveEntry[];
-  // Last-computed set of git-changed, root-relative paths (see `git-status.ts`). Applied
-  // synchronously to every rebuild so interactive redraws are instant; recomputed asynchronously by
-  // `refreshGit`. `gitRefreshing`/`gitRefreshStale` coalesce overlapping refresh requests into at
-  // most one in-flight git call plus one queued follow-up.
-  changed?: Set<string>;
+  // Last-computed map of git-changed, root-relative paths to their status (see `git-status.ts`).
+  // Applied synchronously to every rebuild so interactive redraws are instant; recomputed
+  // asynchronously by `refreshGit`. `gitRefreshing`/`gitRefreshStale` coalesce overlapping refresh
+  // requests into at most one in-flight git call plus one queued follow-up.
+  gitStatuses?: Map<string, GitFileStatus>;
   // Last-computed current git branch name (see `git-status.ts`), refreshed alongside `changed`.
   branch?: string;
   gitRefreshing?: boolean;
@@ -80,7 +81,7 @@ export class FileTreeManager {
     this.managers.tab.openFilesTab({ root, absoluteRoot: root, rows: buildRows(root, expanded) });
     const newLabel = this.managers.tab.cur().label;
     this.managers.tab.setCwd(newLabel, root);
-    this.tabs.set(newLabel, { root, expanded, watchers: new Map(), undoStack: [], redoStack: [], changed: new Set() });
+    this.tabs.set(newLabel, { root, expanded, watchers: new Map(), undoStack: [], redoStack: [], gitStatuses: new Map() });
     this.watchDir(newLabel, root, '');
     if (dock) this.managers.tab.setDock(this.managers.tab.findIndex(newLabel), dock);
     this.refreshGit(newLabel);
@@ -119,7 +120,7 @@ export class FileTreeManager {
     state.expanded.clear();
     this.unwatchDir(state, '');
     state.root = target;
-    state.changed = new Set();
+    state.gitStatuses = new Map();
     state.branch = undefined;
     this.watchDir(label, target, '');
     if (this.managers.tab.tabs.some((t) => t.label === label)) this.managers.tab.setCwd(label, target);

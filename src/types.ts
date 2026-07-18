@@ -113,9 +113,11 @@ export type FileTreeRow = {
   depth: number;
   dir: boolean;
   expanded?: boolean;
-  // Set when git considers this row changed. For a file row: its own path is modified, staged, or
-  // untracked. For a directory row: some file beneath it (at any depth) is. Drives yellow coloring.
-  changed?: boolean;
+  // Set when git considers this row changed. For a file row: its own git status — 'changed' for a
+  // modified-but-unstaged or untracked file, 'staged', or 'conflict' for an unmerged path. For a
+  // directory row: the highest-priority status (conflict > staged > changed) found among the
+  // files beneath it, at any depth. Drives yellow/green/red coloring respectively.
+  gitStatus?: 'changed' | 'staged' | 'conflict';
 };
 
 // A file tree view (opened via `files [path]`). The server owns the tree — `rows` is the
