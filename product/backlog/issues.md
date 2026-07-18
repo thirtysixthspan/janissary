@@ -8,8 +8,6 @@
 
 * double clicking the url in the metadata row of the browser tab allows the user to edit the address, and the address is then loaded once enter/return is pressed
 
-* move the clipboard icon before the auto-approve notification message and use the fa-regular version of the icon.
-
 * delimiters in the acp transcript should be both before and after the content they delimit, for example:
 ━━━━━━━━━━ MODEL PROMPT BEGIN ━━━━━━━━━━
 text
