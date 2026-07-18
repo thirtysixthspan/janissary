@@ -3,7 +3,6 @@
 export {
   faFolder as openFilesIcon,
   faPlus as newTabIcon,
-  faStar as unreadIcon,
   faBox as workspacedIcon,
   faBolt as autoPermitIcon,
   faClipboard as viewCaptureIcon,
@@ -19,3 +18,4 @@ export {
   faCaretDown as expandedIcon,
   faCaretRight as collapsedIcon,
 } from '@fortawesome/free-solid-svg-icons';
+export { faFlag as unreadIcon } from '@fortawesome/free-regular-svg-icons';

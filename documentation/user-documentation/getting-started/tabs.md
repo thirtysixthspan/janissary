@@ -6,7 +6,7 @@ A session starts with a single `janus` tab. New tabs are created on demand — a
 
 A left and right sidebar flank the tab area, hidden until something is docked into them. Today the [file navigator](/user-documentation/tab-types/file-navigator) is the only tab that can dock — `files left`/`files right` opens (or moves) a tree straight into a sidebar, where it's resizable by dragging its inner edge.
 
-![The tab strip with several agent tabs: each has a colored dot, one dot is blinking to show a busy agent, and an inactive tab carries a sparkle badge for unread output.](/screenshots/tabs-overview.png)
+![The tab strip with several agent tabs: each has a colored dot, one dot is blinking to show a busy agent, and an inactive tab carries a flag badge for unread output.](/screenshots/tabs-overview.png)
 
 ## Creating agent tabs
 
@@ -23,7 +23,7 @@ The strip tells you what every tab is doing without switching to it. Three signa
 
 - **The colored dot.** Every tab gets a dot color picked to stand apart from the colors already on screen, so adjacent tabs are easy to tell apart. The colored band along the top of a tab is its [group](/user-documentation/getting-started/groups).
 - **A blinking dot means busy.** While a tab's agent is working — a shell command, an agent turn, anything in flight — its dot blinks on and off. It settles back to a steady fill when the work finishes.
-- **A sparkle (✨) means unread output.** When an inactive tab receives new content — a message from another agent, a shell command finishing, agent output — a sparkle badge appears on it. Focusing the tab clears it. The active tab never shows one.
+- **A flag icon means unread output.** When an inactive tab receives new content — a message from another agent, a shell command finishing, agent output — a flag badge appears on it. Focusing the tab clears it. The active tab never shows one.
 
 The active tab is also highlighted: full-strength text on the content background, while inactive tabs are muted.
 

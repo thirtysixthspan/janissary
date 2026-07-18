@@ -4,8 +4,6 @@
 
 * the UI should not be blocked awaiting the openning or closure of harnesses. The tab can be openned or closed while the backend operations complete. 
 
-* use "fa-regular fa-flag" instead of fa-star for the unread mark in tab labels.
-
 * add a back, forward and reload icon buttons left floated in the metadata tab of a browser tab.
 
 * double clicking the url in the metadata row of the browser tab allows the user to edit the address, and the address is then loaded once enter/return is pressed
