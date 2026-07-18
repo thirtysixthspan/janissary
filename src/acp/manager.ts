@@ -14,21 +14,6 @@ const ACP_COMMAND = 'opencode';
 const ACP_ARGS = ['acp'];
 const ACP_MODEL = 'google/gemini-3.1-flash-lite';
 
-const RESPONSE_BEGIN = '━━━━━━━━━━ BEGIN MODEL RESPONSE ━━━━━━━━━━';
-const RESPONSE_END = '━━━━━━━━━━ END MODEL RESPONSE ━━━━━━━━━━';
-
-// Prefix a still-streaming buffer with the begin marker only — the end marker appears once the
-// turn is actually finished, not on every intermediate chunk.
-function delimitStreaming(text: string): string {
-  return text ? `${RESPONSE_BEGIN}\n${text}` : text;
-}
-
-// Wrap a finished turn's text with both markers, so the model's own reply reads as a clearly
-// bounded block distinct from tool-call output and other transcript content around it.
-function delimitFinal(text: string): string {
-  return text ? `${RESPONSE_BEGIN}\n${text}\n${RESPONSE_END}` : text;
-}
-
 // Split a `provider/model` config string into its parts; a bare `model` with no slash has no
 // provider. Drives the connections-panel label.
 function parseModel(model: string): AcpInfo {
@@ -124,8 +109,8 @@ export class AcpManager {
       extractCommand: (t) => extractBrowserCommand(t) ?? this.managers.database.extract(t) ?? null,
     }, {
       startTurn: (isFirst) => { this.managers.tab.addBusy(label); if (isFirst) notify(this.managers, 'agent-start', label); this.managers.tab.append(label, { input: isFirst ? prompt : '', output: '', running: true, markdown: true }); },
-      chunk: (buffer) => updateRunning(delimitStreaming(buffer), true),
-      endTurn: (final) => { updateRunning(delimitFinal(final), false); lastAnswer = final; },
+      chunk: (buffer) => updateRunning(buffer, true),
+      endTurn: (final) => { updateRunning(final, false); lastAnswer = final; },
       ranCommand: (c, result) => this.managers.tab.append(label, { input: c, output: result, acp: true }),
       finished: (reason, maxSteps) => {
         this.managers.tab.deleteBusy(label);

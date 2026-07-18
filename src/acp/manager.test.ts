@@ -192,14 +192,14 @@ describe('AcpManager.run', () => {
     expect(mocks.notify).not.toHaveBeenCalledWith(managers, 'rate-limited', 'tab1');
   });
 
-  it('chunk handler calls updateRunning with the buffer prefixed by the begin marker', () => {
+  it('chunk handler calls updateRunning with the buffer verbatim', () => {
     const { acp } = setup();
     const updateFn = vi.fn();
     mocks.makeUpdateRunning.mockReturnValue(updateFn);
     acp.run('tab1', 'acp hello');
     const handlers = mocks.runAcpToolLoop.mock.calls[0][3] as AcpLoopHandlers;
     handlers.chunk('response so far');
-    expect(updateFn).toHaveBeenCalledWith('━━━━━━━━━━ BEGIN MODEL RESPONSE ━━━━━━━━━━\nresponse so far', true);
+    expect(updateFn).toHaveBeenCalledWith('response so far', true);
   });
 
   it('chunk handler leaves an empty buffer unwrapped', () => {
@@ -212,17 +212,14 @@ describe('AcpManager.run', () => {
     expect(updateFn).toHaveBeenCalledWith('', true);
   });
 
-  it('endTurn handler calls updateRunning with both markers wrapped around the final text', () => {
+  it('endTurn handler calls updateRunning with the final text verbatim', () => {
     const { acp } = setup();
     const updateFn = vi.fn();
     mocks.makeUpdateRunning.mockReturnValue(updateFn);
     acp.run('tab1', 'acp hello');
     const handlers = mocks.runAcpToolLoop.mock.calls[0][3] as AcpLoopHandlers;
     handlers.endTurn('the final answer');
-    expect(updateFn).toHaveBeenCalledWith(
-      '━━━━━━━━━━ BEGIN MODEL RESPONSE ━━━━━━━━━━\nthe final answer\n━━━━━━━━━━ END MODEL RESPONSE ━━━━━━━━━━',
-      false,
-    );
+    expect(updateFn).toHaveBeenCalledWith('the final answer', false);
   });
 
   it('endTurn handler leaves an empty final string unwrapped', () => {
