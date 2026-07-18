@@ -2,6 +2,9 @@ import { describe, it, expect, vi } from 'vitest';
 import { handle } from './message-handler.js';
 import type { Controller } from './controller.js';
 import type { ClientMessage, ServerEvent, RpcCall } from './protocol.js';
+import { openTranscriptFor } from './controller-transcript.js';
+
+vi.mock('./controller-transcript.js', () => ({ openTranscriptFor: vi.fn() }));
 
 const makeController = () =>
   ({
@@ -234,5 +237,11 @@ describe('handle', () => {
     const controller = makeController();
     dispatchCall(controller, 27, { method: 'openFileNavigatorFor', params: { label: 'janus' } });
     expect(controller.openFileNavigatorFor).toHaveBeenCalledWith('janus');
+  });
+
+  it('routes openTranscriptFor to controller-transcript.js with the controller\'s managers', () => {
+    const controller = makeController();
+    dispatchCall(controller, 28, { method: 'openTranscriptFor', params: { label: 'janus' } });
+    expect(openTranscriptFor).toHaveBeenCalledWith(controller.managers, 'janus');
   });
 });

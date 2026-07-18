@@ -38,6 +38,23 @@ describe('AgentTabMeta', () => {
     expect(onLaunch).toHaveBeenCalledTimes(1);
   });
 
+  it('renders the transcript button only when onOpenTranscript is provided', () => {
+    const { getByTitle } = render(<AgentTabMeta cwd="~/project" onOpenTranscript={() => {}} />);
+    expect(getByTitle('Open transcript')).toBeInTheDocument();
+  });
+
+  it('does not render the transcript button when onOpenTranscript is omitted', () => {
+    const { queryByTitle } = render(<AgentTabMeta cwd="~/project" />);
+    expect(queryByTitle('Open transcript')).not.toBeInTheDocument();
+  });
+
+  it('invokes the callback when the transcript button is clicked', () => {
+    const onOpen = vi.fn();
+    const { getByTitle } = render(<AgentTabMeta cwd="~/project" onOpenTranscript={onOpen} />);
+    getByTitle('Open transcript').click();
+    expect(onOpen).toHaveBeenCalledTimes(1);
+  });
+
   it('renders no model/effort chips when those props are omitted', () => {
     const { container } = render(<AgentTabMeta cwd="~/project" flags={['workspaced']} />);
     expect(container.querySelectorAll('.tab-meta-chip').length).toBe(0);

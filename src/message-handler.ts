@@ -1,6 +1,7 @@
 import type { Controller } from './controller.js';
 import type { ClientMessage, ServerEvent } from './protocol.js';
 import { buildStateEvent } from './state-event.js';
+import { openTranscriptFor } from './controller-transcript.js';
 
 export function handle(controller: Controller, message: ClientMessage, reply: (event: ServerEvent) => void): void {
   switch (message.method) {
@@ -85,6 +86,10 @@ export function handle(controller: Controller, message: ClientMessage, reply: (e
     case 'openFileNavigatorFor': { controller.openFileNavigatorFor(message.params.label); break;
     }
     case 'launchAgentFor': { controller.launchAgentFor(message.params.label); break;
+    }
+    // Bridges straight to controller-transcript.js (bypassing a Controller passthrough method)
+    // to keep controller.ts under its line-size limit — see that module's own comment.
+    case 'openTranscriptFor': { openTranscriptFor(controller.managers, message.params.label); break;
     }
   }
   reply({ t: 'rpc-reply', id: message.id, result: 'ok' });
