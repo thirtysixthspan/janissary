@@ -10,6 +10,7 @@ import { openOrRetarget, type OpenPort } from './open.js';
 import { applyStackMove, type MoveEntry, type UndoRedoResult } from './moves.js';
 import { watchDir, unwatchDir } from './watch.js';
 import { pruneAndBuildRows } from './rebuild.js';
+import { listProjectFiles } from './search.js';
 import type { Managers } from '../managers.js';
 import type { GitFileStatus } from '../git-status.js';
 
@@ -197,6 +198,32 @@ export class FileTreeManager {
     if (!state) return;
     const abs = path.join(state.root, relPath);
     try { rmSync(abs, { recursive: true }); } catch { return; }
+    this.rebuild(label);
+  }
+
+  // The gitignore-aware candidate list for the tab's own Search-files pop-up (async, off the event
+  // loop — see `search.ts`), for the deferred `fileTreeSearch` RPC.
+  async search(label: string): Promise<string[]> {
+    const state = this.tabs.get(label);
+    if (!state) return [];
+    return listProjectFiles(state.root);
+  }
+
+  // Expand every ancestor directory of `relPath` not already expanded (adding to `expanded`,
+  // watching each newly-expanded one), then rebuild — the search pop-up's Enter action, so the
+  // target row exists in the client's next `rows` update for it to select and scroll to.
+  reveal(label: string, relPath: string): void {
+    const state = this.tabs.get(label);
+    if (!state) return;
+    const dir = parentPath(relPath);
+    const segments = dir ? dir.split('/') : [];
+    let cur = '';
+    for (const segment of segments) {
+      cur = cur ? `${cur}/${segment}` : segment;
+      if (state.expanded.has(cur)) continue;
+      state.expanded.add(cur);
+      this.watchDir(label, path.join(state.root, cur), cur);
+    }
     this.rebuild(label);
   }
 

@@ -41,3 +41,13 @@ export function redoFileTreeItem(managers: Managers, index: number, overwrite?: 
 export function openFileNavigatorFor(managers: Managers, label: string): void {
   managers.fileTree.openOrRetarget(label);
 }
+
+export async function fileTreeSearch(managers: Managers, index: number): Promise<string[]> {
+  const label = managers.tab.tabs[index]?.label;
+  return label ? managers.fileTree.search(label) : [];
+}
+
+export function revealFileTreeItem(managers: Managers, index: number, relPath: string): void {
+  const label = managers.tab.tabs[index]?.label;
+  if (label) managers.fileTree.reveal(label, relPath);
+}

@@ -17,6 +17,7 @@ export {
   faCaretDown as expandedIcon,
   faCaretRight as collapsedIcon,
   faFileCirclePlus as newFileIcon,
+  faMagnifyingGlass as searchFilesIcon,
   faArrowLeft as pageBackIcon,
   faArrowRight as pageForwardIcon,
   faRotateRight as pageReloadIcon,

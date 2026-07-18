@@ -3,6 +3,7 @@ import type { ClientMessage, ServerEvent } from './protocol.js';
 import { buildStateEvent } from './state-event.js';
 import { openTranscriptFor } from './controller-transcript.js';
 import { projectFilesFor } from './project-files.js';
+import { fileTreeSearch, revealFileTreeItem } from './controller-file-tree.js';
 
 export function handle(controller: Controller, message: ClientMessage, reply: (event: ServerEvent) => void): void {
   switch (message.method) {
@@ -71,6 +72,22 @@ export function handle(controller: Controller, message: ClientMessage, reply: (e
     case 'moveFileTreeItem': { controller.moveFileTreeItem(message.params.index, message.params.fromRelPath, message.params.toRelPath); break;
     }
     case 'deleteFileTreeItem': { controller.deleteFileTreeItem(message.params.index, message.params.relPath); break;
+    }
+    // Deferred reply: the listing is async (never blocks the event loop) — see fileTreeSearch
+    // in controller-file-tree.ts and the `projectFiles` case above for the same pattern. Bridges
+    // straight to controller-file-tree.js (bypassing a Controller passthrough method), as
+    // openTranscriptFor does, to keep controller.ts under its line-size limit.
+    case 'fileTreeSearch': {
+      void (async () => {
+        try {
+          reply({ t: 'rpc-reply', id: message.id, result: { paths: await fileTreeSearch(controller.managers, message.params.index) } });
+        } catch {
+          reply({ t: 'rpc-reply', id: message.id, result: { paths: [] } });
+        }
+      })();
+      return;
+    }
+    case 'revealFileTreeItem': { revealFileTreeItem(controller.managers, message.params.index, message.params.relPath); break;
     }
     case 'cancelSchedule': { controller.cancelSchedule(message.params.tab, message.params.id); break;
     }

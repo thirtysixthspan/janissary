@@ -155,6 +155,50 @@ describe('FileTreeManager', () => {
     expect(tab.files!.rows.map((r) => r.path)).toEqual(['..', 'a', 'b']);
   });
 
+  it('search resolves the tab-root-relative file list for the Search-files pop-up', async () => {
+    mkdirSync(path.join(root, 'src'));
+    writeFileSync(path.join(root, 'src', 'index.ts'), '');
+    writeFileSync(path.join(root, 'README.md'), '');
+    const manager = run();
+    manager.open('files', 'janus');
+    const label = tabs.find((t) => t.label.startsWith('navigator'))!.label;
+    const paths = await manager.search(label);
+    expect(paths.toSorted((a, b) => a.localeCompare(b))).toEqual(['README.md', 'src/index.ts']);
+  });
+
+  it('search resolves to an empty list for an unknown tab label', async () => {
+    const manager = run();
+    expect(await manager.search('missing')).toEqual([]);
+  });
+
+  it('reveal adds every ancestor of a nested path to expanded and rebuilds so the target row is visible', () => {
+    mkdirSync(path.join(root, 'a', 'b'), { recursive: true });
+    writeFileSync(path.join(root, 'a', 'b', 'c.txt'), '');
+    const manager = run();
+    manager.open('files', 'janus');
+    const label = tabs.find((t) => t.label.startsWith('navigator'))!.label;
+    manager.reveal(label, 'a/b/c.txt');
+    const tab = tabs.find((t) => t.label === label)!;
+    expect(tab.files!.rows.map((r) => r.path)).toEqual(expect.arrayContaining(['a', 'a/b', 'a/b/c.txt']));
+    expect(watchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it('reveal on a root-level path adds nothing to expanded and still rebuilds harmlessly', () => {
+    writeFileSync(path.join(root, 'top.txt'), '');
+    const manager = run();
+    manager.open('files', 'janus');
+    const label = tabs.find((t) => t.label.startsWith('navigator'))!.label;
+    manager.reveal(label, 'top.txt');
+    const tab = tabs.find((t) => t.label === label)!;
+    expect(tab.files!.rows.map((r) => r.path)).toContain('top.txt');
+    expect(watchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('reveal is a no-op for an unknown tab label', () => {
+    const manager = run();
+    expect(() => manager.reveal('missing', 'a/b.txt')).not.toThrow();
+  });
+
   it('a watch event triggers exactly one rebuild after the debounce window', () => {
     vi.useFakeTimers();
     try {
