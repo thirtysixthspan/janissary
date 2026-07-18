@@ -2,10 +2,6 @@
 
 ## ready
 
-* file search should be a magnifying glass in the file navigator that triggers a pop-up allowing the user to enter a string to find a file in the project directory. the input will offer shadow auto-completions and show the full path of the file below the search input. when the enter key is pressed the file navigator opens the necessary directories in the tree and scrolls to that file.
-
-* cmd+p should open a file search window that allows the user to find a file and once found open that file in the editor tab. research online descriptions of this functionality such as MS visual studio code quick open and replicate it. 
-
 * the UI should not be blocked awaiting the openning or closure of harnesses. The tab can be openned or closed while the backend operations complete. 
 
 ## development
