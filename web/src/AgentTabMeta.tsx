@@ -1,9 +1,9 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { tabFlagDisplay } from './tab-flag-display';
-import { openFilesIcon, newTabIcon } from './icons';
+import { openFilesIcon, newTabIcon, viewCaptureIcon } from './icons';
 
-type Properties = { cwd?: string; flags?: string[]; model?: string; effort?: string; onOpenFileNavigator?: () => void; onLaunchAgentHere?: () => void };
+type Properties = { cwd?: string; flags?: string[]; model?: string; effort?: string; onOpenFileNavigator?: () => void; onLaunchAgentHere?: () => void; onOpenTranscript?: () => void };
 
 function MetaChip({ label, value }: { label: string; value: string }) {
   return (
@@ -13,7 +13,7 @@ function MetaChip({ label, value }: { label: string; value: string }) {
   );
 }
 
-export function AgentTabMeta({ cwd, flags, model, effort, onOpenFileNavigator, onLaunchAgentHere }: Properties) {
+export function AgentTabMeta({ cwd, flags, model, effort, onOpenFileNavigator, onLaunchAgentHere, onOpenTranscript }: Properties) {
   return (
     <div className="tab-meta">
       <span className="tab-cwd">{cwd}</span>
@@ -48,6 +48,17 @@ export function AgentTabMeta({ cwd, flags, model, effort, onOpenFileNavigator, o
           onClick={onLaunchAgentHere}
         >
           <FontAwesomeIcon icon={newTabIcon} />
+        </button>
+      )}
+      {onOpenTranscript && (
+        <button
+          type="button"
+          className="tab-open-transcript"
+          title="Open transcript"
+          aria-label="Open transcript"
+          onClick={onOpenTranscript}
+        >
+          <FontAwesomeIcon icon={viewCaptureIcon} />
         </button>
       )}
     </div>
