@@ -14,7 +14,7 @@ Janissary acts as the ACP client: on the first `acp` prompt in a tab it spawns t
 
 The agent is instructed (via the prompt primer) to write its replies in **GitHub-flavored Markdown**, and the tab renders them as formatted Markdown. The reply streams into a running log entry keyed by the prompt text; that entry is flagged `markdown` so the raw Markdown is kept verbatim (not split into plain-text lines) and `flattenBuffer` (`src/tab.ts`) emits it as a single `markdown` buffer line. The web client renders that line by converting the Markdown to HTML (`marked`, GFM enabled) and sanitizing it (`DOMPurify`) before insertion — so headings, lists, tables, fenced code blocks, blockquotes, and links all render, with partial Markdown rendering progressively as it streams. While awaiting the agent, the tab's busy indicator flashes (the dot blinks). On completion the entry is finalized.
 
-The reply text is bracketed with `━━━━━━━━━━ BEGIN MODEL RESPONSE ━━━━━━━━━━` and `━━━━━━━━━━ END MODEL RESPONSE ━━━━━━━━━━` delimiter lines, so the model's own words read as a clearly bounded block distinct from tool-call output and other transcript content around it. The begin line appears as soon as the reply starts streaming; the end line appears only once that turn's reply is complete. An empty reply carries no delimiters.
+The reply text is shown as the model's own words alone, with no surrounding banner or delimiter lines — the streamed and finished reply carries exactly what the model wrote, keeping it visually distinct from tool-call output only by its markdown formatting and position in the transcript.
 
 ### Database and browser assistance (autonomous tool loop)
 
