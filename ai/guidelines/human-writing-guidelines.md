@@ -40,3 +40,7 @@ WHAT TO AVOID
 - Overly polished or resolved endings — real writing sometimes ends mid-thought
 - Formulaic structure: introduction → three points → conclusion
 - avoid banned expressions: tailwind, through line
+- avoid use of em dashes in prose
+- avoid the use of subphrases; prefer short simple sentences
+
+

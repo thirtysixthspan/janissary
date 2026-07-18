@@ -25,3 +25,4 @@ Use this as a style guide when generating or editing summary content. The reader
 - Connect ideas through logic and word choice, not structural signposting
 - Let paragraph endings do transition work naturally
 - Do not Restate the same point in slightly different words across paragraphs
+- Aviod excessive subphrasing; prefer simple sentences

@@ -144,13 +144,6 @@ a screenshot of an ordinary button).
 
 ## Validate it against real readers
 
-Before treating a page as done, run the two cheap checks that catch most usability problems:
-
-- **Task-based check**: hand the page to someone who fits the target audience and watch whether
-  they can complete the task using only the page, without narrating or helping them.
-- **Paraphrase check**: ask them to explain a section back in their own words — a garbled paraphrase
-  means the writing, not the reader, needs work.
-
 Findability matters as much as the writing itself: a correct page nobody can locate might as well
 not exist. Give every page a heading and title that matches the phrase a reader would actually
 search for (task-first, not implementation-first — "close a page tab," not "page tab teardown"),
