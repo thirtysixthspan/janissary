@@ -120,6 +120,18 @@ describe('TabStrip', () => {
     expect(screen.getByDisplayValue('Display Name')).toBeInTheDocument();
   });
 
+  it('double-clicking an editor tab label shows an input pre-filled with the full, untruncated file name', async () => {
+    const tab = makeTab({
+      label: 'internal',
+      view: 'editor',
+      title: 'a-very-long-fi',
+      editor: { name: 'a-very-long-file-name.md', path: '/tmp/a-very-long-file-name.md', size: '1 KB', url: '/open/1' },
+    });
+    render(<TabStrip tabs={[tab]} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()} onRename={vi.fn()} tabNameMaxLength={14} />);
+    await userEvent.dblClick(screen.getByText('a-very-long-fi'));
+    expect(screen.getByDisplayValue('a-very-long-file-name.md')).toBeInTheDocument();
+  });
+
   it('clicking an inactive tab label still selects it instead of editing', async () => {
     const onSelect = vi.fn();
     const tabs = [makeTab({ label: 'a' }), makeTab({ label: 'b' })];
