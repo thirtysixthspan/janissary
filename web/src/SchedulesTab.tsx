@@ -5,6 +5,7 @@ import type { JanusClient } from './ws';
 import { nextDock, dockTooltip } from './dock-cycle';
 import { nextSelection } from './schedules-keys';
 import { dockSwapIcon } from './icons';
+import { DeleteScheduleDialog } from './DeleteScheduleDialog';
 
 type Properties = {
   entries: AggregatedScheduleView[];
@@ -27,6 +28,7 @@ const NAV_KEYS = new Set(['ArrowDown', 'ArrowUp', 'Home', 'End']);
 // when docked (`compact`); both layouts share the same selection and focus behavior.
 export function SchedulesTab({ entries, tabs, client, compact = false, dock, index }: Properties) {
   const [selected, setSelected] = useState<number | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<AggregatedScheduleView | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -48,11 +50,22 @@ export function SchedulesTab({ entries, tabs, client, compact = false, dock, ind
     containerRef.current?.focus();
   };
 
+  const confirmDelete = () => {
+    if (pendingDelete) client.send({ method: 'cancelSchedule', params: { tab: pendingDelete.tab, id: pendingDelete.id } });
+    setPendingDelete(null);
+  };
+
   const onKeyDown = (e: React.KeyboardEvent) => {
     if (NAV_KEYS.has(e.key)) {
       e.preventDefault();
       e.stopPropagation();
       setSelected(nextSelection(entries.length, selected, e.key));
+      return;
+    }
+    if ((e.key === 'Backspace' || e.key === 'Delete') && selected !== null) {
+      e.preventDefault();
+      e.stopPropagation();
+      setPendingDelete(entries[selected]);
       return;
     }
     if (e.key === 'Enter' && selected !== null) {
@@ -106,6 +119,13 @@ export function SchedulesTab({ entries, tabs, client, compact = false, dock, ind
             </div>
           ))}
         </>
+      )}
+      {pendingDelete && (
+        <DeleteScheduleDialog
+          id={pendingDelete.id}
+          onConfirm={confirmDelete}
+          onCancel={() => setPendingDelete(null)}
+        />
       )}
     </div>
   );

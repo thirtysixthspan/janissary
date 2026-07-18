@@ -90,6 +90,7 @@ export class Controller {
   closeHarnessLaunch(): void { this.managers.harness.closeLaunchDialog(); }
   scheduleLaunchView() { return this.managers.schedule.scheduleLaunchView(); }
   closeScheduleLaunch(): void { this.managers.schedule.closeScheduleLaunch(); }
+  cancelSchedule(tab: string, id: string): void { this.managers.schedule.cancel(tab, id); }
 
   dispatch(text: string): void {
     this.managers.command.dispatch(text);
