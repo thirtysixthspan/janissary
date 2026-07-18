@@ -4,6 +4,7 @@ import { isKnownModel } from '../harness/models.js';
 import { startProfileMonitors } from './monitors.js';
 import { openProfileFiles } from './files.js';
 import { openProfileNotifications } from './notifications.js';
+import { openProfileSchedules } from './schedules.js';
 import { buildHarnessSchedule } from './harness-schedule.js';
 import type { Managers } from '../managers.js';
 import type { AgentState, ProfileEntry, ProfileHarnessEntry } from '../types.js';
@@ -116,6 +117,8 @@ export function openProfileEntries(
   openProfileFiles(name, managers, firstNewLabel, notes);
   // Profile-level notifications tab opens next, docked per the profile's `_notifications.json`.
   openProfileNotifications(name, managers, notes);
+  // Profile-level schedules tab opens next, docked per the profile's `_schedules.json`.
+  openProfileSchedules(name, managers, notes);
   // Profile-level monitors start after every entry is open, owned by the issuing tab, so their
   // targets (e.g. `group:1`) can resolve against the now-complete tab list.
   startProfileMonitors(name, managers, issuingLabel, notes);

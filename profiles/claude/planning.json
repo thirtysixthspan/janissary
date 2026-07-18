@@ -1,0 +1,9 @@
+{
+  "harness": "claude",
+  "workspace": true,
+  "autoApprove": true,
+  "model": "claude-opus-4-8",
+  "effort": "medium",
+  "number": 4,
+  "group": 1
+}

@@ -1,12 +1,14 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import type {
-  ProfileEntry, ProfileFilesEntry, ProfileMonitor, ProfileNotificationsEntry, ProfileParsed,
+  ProfileEntry, ProfileFilesEntry, ProfileMonitor, ProfileNotificationsEntry,
+  ProfileParsed, ProfileSchedulesEntry,
 } from './types.js';
 import {
   loadProfileMonitors as loadReservedMonitors,
   loadProfileFiles as loadReservedFiles,
   loadProfileNotifications as loadReservedNotifications,
+  loadProfileSchedules as loadReservedSchedules,
 } from './profile-reserved-files.js';
 
 // A profile is a named, reusable set of agents for a particular use case (writing code,
@@ -79,6 +81,10 @@ export function loadProfileFiles(name: string): ProfileFilesEntry[] {
 
 export function loadProfileNotifications(name: string): ProfileNotificationsEntry[] {
   return loadReservedNotifications(profilePath(name));
+}
+
+export function loadProfileSchedules(name: string): ProfileSchedulesEntry[] {
+  return loadReservedSchedules(profilePath(name));
 }
 
 export const PROFILE_USAGE = 'Usage: profile launch <name> | profile list';

@@ -1,0 +1,9 @@
+{
+  "harness": "claude",
+  "workspace": true,
+  "autoApprove": true,
+  "model": "claude-sonnet-5",
+  "effort": "medium",
+  "number": 3,
+  "group": 1
+}

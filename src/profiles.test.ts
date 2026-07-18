@@ -10,6 +10,7 @@ import {
   loadProfileMonitors,
   loadProfileFiles,
   loadProfileNotifications,
+  loadProfileSchedules,
   profileExists,
   PROFILE_USAGE,
 } from './profiles.js';
@@ -177,6 +178,37 @@ describe('profile directory', () => {
       { dock: 'right', in: 'claude' },
     ]));
     expect(loadProfileFiles('mix')).toEqual([{ dock: 'left' }, { dock: 'right', in: 'claude' }]);
+  });
+
+  it('keeps a valid path and drops an entry whose path is not a string', () => {
+    writeFile('mix', '_files.json', JSON.stringify([
+      { dock: 'left', path: '$root' },
+      { path: 42 },
+    ]));
+    expect(loadProfileFiles('mix')).toEqual([{ dock: 'left', path: '$root' }]);
+  });
+
+  it('loads profile schedules from _schedules.json', () => {
+    writeFile('assist', '_schedules.json', JSON.stringify([{ dock: 'right' }]));
+    expect(loadProfileSchedules('assist')).toEqual([{ dock: 'right' }]);
+  });
+
+  it('returns no schedules entries when the file is absent, unparseable, or not an array', () => {
+    writeAgent('none', 'bob', {});
+    expect(loadProfileSchedules('none')).toEqual([]);
+    writeFile('bad', '_schedules.json', '{ not json');
+    expect(loadProfileSchedules('bad')).toEqual([]);
+    writeFile('obj', '_schedules.json', JSON.stringify({ dock: 'right' }));
+    expect(loadProfileSchedules('obj')).toEqual([]);
+  });
+
+  it('drops malformed schedules elements', () => {
+    writeFile('mix', '_schedules.json', JSON.stringify([
+      { dock: 'right' },
+      { dock: 'up' },
+      {},
+    ]));
+    expect(loadProfileSchedules('mix')).toEqual([{ dock: 'right' }, {}]);
   });
 
   it('loads profile notifications from _notifications.json', () => {
