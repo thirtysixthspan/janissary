@@ -38,13 +38,6 @@ export function SchedulesTab({ entries, tabs, client, compact = false, dock, ind
     if (selected !== null && selected >= entries.length) setSelected(entries.length === 0 ? null : entries.length - 1);
   }, [entries.length, selected]);
 
-  if (entries.length === 0) {
-    return (
-      <div className="schedules-tab">
-        <div className="schedules-empty">No scheduled commands.</div>
-      </div>
-    );
-  }
   const focusOwner = (label: string) => {
     const owningIndex = tabs.findIndex((t) => t.label === label);
     if (owningIndex !== -1) client.send({ method: 'setActiveTab', params: { index: owningIndex } });
@@ -90,24 +83,30 @@ export function SchedulesTab({ entries, tabs, client, compact = false, dock, ind
           </div>
         </div>
       )}
-      <div className="schedules-headings">
-        {compact ? <CompactHeadings /> : <FullHeadings />}
-      </div>
-      {entries.map((entry, i) => (
-        <div
-          key={`${entry.tab}:${entry.id}`}
-          role="button"
-          tabIndex={-1}
-          aria-selected={i === selected}
-          className={`schedules-row${entry.recurring ? ' recurring' : ''}${i === selected ? ' selected' : ''}`}
-          data-index={i}
-          onClick={() => onRowClick(i)}
-          onDoubleClick={() => focusOwner(entry.tab)}
-        >
-          <span className="schedules-num">{i + 1})</span>
-          {compact ? <CompactRow entry={entry} /> : <FullRow entry={entry} />}
-        </div>
-      ))}
+      {entries.length === 0 ? (
+        <div className="schedules-empty">No scheduled commands.</div>
+      ) : (
+        <>
+          <div className="schedules-headings">
+            {compact ? <CompactHeadings /> : <FullHeadings />}
+          </div>
+          {entries.map((entry, i) => (
+            <div
+              key={`${entry.tab}:${entry.id}`}
+              role="button"
+              tabIndex={-1}
+              aria-selected={i === selected}
+              className={`schedules-row${entry.recurring ? ' recurring' : ''}${i === selected ? ' selected' : ''}`}
+              data-index={i}
+              onClick={() => onRowClick(i)}
+              onDoubleClick={() => focusOwner(entry.tab)}
+            >
+              <span className="schedules-num">{i + 1})</span>
+              {compact ? <CompactRow entry={entry} /> : <FullRow entry={entry} />}
+            </div>
+          ))}
+        </>
+      )}
     </div>
   );
 }

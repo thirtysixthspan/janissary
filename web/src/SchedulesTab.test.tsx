@@ -122,4 +122,20 @@ describe('SchedulesTab', () => {
     fireEvent.click(button);
     expect(send).toHaveBeenCalledWith({ method: 'setDock', params: { index: 3, dock: 'right' } });
   });
+
+  it('still shows the dock-cycle button when the list is empty and the tab is docked', () => {
+    const client = { send: vi.fn() } as unknown as JanusClient;
+    const { container } = render(<SchedulesTab entries={[]} tabs={[]} client={client} dock="left" index={0} />);
+    expect(screen.getByText('No scheduled commands.')).toBeTruthy();
+    expect(container.querySelector('.schedules-dock-cycle')).not.toBeNull();
+  });
+
+  it('clicking the dock-cycle button while empty still sends setDock with the other side', () => {
+    const send = vi.fn();
+    const client = { send } as unknown as JanusClient;
+    const { container } = render(<SchedulesTab entries={[]} tabs={[]} client={client} dock="right" index={2} />);
+    const button = container.querySelector('.schedules-dock-cycle')!;
+    fireEvent.click(button);
+    expect(send).toHaveBeenCalledWith({ method: 'setDock', params: { index: 2, dock: 'left' } });
+  });
 });
