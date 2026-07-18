@@ -9,6 +9,7 @@ import type { CommandInputDropHandle } from './CommandInput';
 import { AgentTabMeta } from './AgentTabMeta';
 import type { useViewSearchState } from './useViewSearchState';
 import type { VisibleTaskRow } from './task-picker-keys';
+import { useStatusWindows } from './useStatusWindows';
 import type { FuzzyMatchResult } from './fuzzy-match';
 
 type Properties = {
@@ -85,6 +86,7 @@ export function AgentTabBody({
   search, globalHistory, onCommandBarSubmit, quitConfirmOpen, unsavedQuitOpen,
   recallReference, onEditQueued, onDeleteQueued, dropRef,
 }: Properties) {
+  const statusWindows = useStatusWindows(current.label, current.connections.length > 0, current.schedule.length > 0);
   return (
     <div
       className="tab-body"
@@ -101,6 +103,18 @@ export function AgentTabBody({
         onOpenFileNavigator={() => client.send({ method: 'openFileNavigatorFor', params: { label: current.label } })}
         onLaunchAgentHere={current.cwd === undefined ? undefined : () => client.send({ method: 'launchAgentFor', params: { label: current.label } })}
         onOpenTranscript={() => client.send({ method: 'openTranscriptFor', params: { label: current.label } })}
+        connectionsButton={{
+          hasContent: current.connections.length > 0,
+          onEnter: statusWindows.connections.onButtonEnter,
+          onLeave: statusWindows.connections.onButtonLeave,
+          onClick: statusWindows.connections.onButtonClick,
+        }}
+        scheduleButton={{
+          hasContent: current.schedule.length > 0,
+          onEnter: statusWindows.schedule.onButtonEnter,
+          onLeave: statusWindows.schedule.onButtonLeave,
+          onClick: statusWindows.schedule.onButtonClick,
+        }}
       />
       <div className="main">
         <Transcript
@@ -111,7 +125,7 @@ export function AgentTabBody({
           scrollRef={transcriptReference}
           highlight={highlight}
         />
-        <StatusPanels tab={current} />
+        <StatusPanels tab={current} connections={statusWindows.connections} schedule={statusWindows.schedule} interactive />
         <PickerOverlays
           route={route} routeIndex={routeIndex} onPickRoute={chooseRoute}
           syntaxTheme={syntaxTheme} themePickerOpen={themePickerOpen} themePickerIndex={themePickerIndex} onPickTheme={pickTheme}

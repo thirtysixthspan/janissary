@@ -2,10 +2,11 @@ import React, { forwardRef, useImperativeHandle, useRef } from 'react';
 import type { JanusClient } from './ws';
 import type { HarnessView } from '@shared/protocol';
 import { useXterm } from './useXterm';
-import { AgentTabMeta } from './AgentTabMeta';
+import { AgentTabMeta, type StatusWindowButtonProps } from './AgentTabMeta';
 
 type Properties = {
   harness: HarnessView; client: JanusClient; taskPickerOpen?: boolean; navOpen?: boolean; cwd?: string; flags?: string[]; label: string;
+  connectionsButton?: StatusWindowButtonProps; scheduleButton?: StatusWindowButtonProps;
 };
 export type HarnessTabHandle = { focus(): void };
 
@@ -26,7 +27,7 @@ function harnessKeyFilter(e: KeyboardEvent, taskPickerOpen: boolean, navOpen: bo
 // (Ctrl+A), the tab-navigator chord (Ctrl+G), and every key while either picker overlay is open
 // over this tab (Up/Down/Left/Right/Enter/Escape must reach the picker instead of the PTY), which
 // all bubble to the window handler.
-export const HarnessTab = forwardRef<HarnessTabHandle, Properties>(function HarnessTab({ harness, client, taskPickerOpen, navOpen, cwd, flags, label }, ref) {
+export const HarnessTab = forwardRef<HarnessTabHandle, Properties>(function HarnessTab({ harness, client, taskPickerOpen, navOpen, cwd, flags, label, connectionsButton, scheduleButton }, ref) {
   const hostReference = useRef<HTMLDivElement>(null);
   const focusTerm = useXterm({
     ptyId: harness.ptyId,
@@ -48,6 +49,8 @@ export const HarnessTab = forwardRef<HarnessTabHandle, Properties>(function Harn
         effort={harness.effort}
         onOpenFileNavigator={() => client.send({ method: 'openFileNavigatorFor', params: { label } })}
         onLaunchAgentHere={cwd === undefined ? undefined : () => client.send({ method: 'launchAgentFor', params: { label } })}
+        connectionsButton={connectionsButton}
+        scheduleButton={scheduleButton}
       />
       {isExited && (
         <div className="harness-exited">

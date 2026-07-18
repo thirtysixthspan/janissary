@@ -1,12 +1,10 @@
 import React from 'react';
 import type { TabView } from '@shared/protocol';
 import type { JanusClient } from './ws';
-import { HarnessTab, type HarnessTabHandle } from './HarnessTab';
+import type { HarnessTabHandle } from './HarnessTab';
 import { EditorTab, type EditorTabHandle } from './EditorTab';
 import { PageTab } from './PageTab';
-import { StatusPanels } from './StatusPanels';
-import { TaskPicker } from './TaskPicker';
-import { TabNavPicker } from './TabNavPicker';
+import { HarnessTabLayer } from './HarnessTabLayer';
 import type { VisibleTaskRow } from './task-picker-keys';
 
 type Properties = {
@@ -42,23 +40,13 @@ export function MountedViewLayers({
   return (
     <>
       {tabs.filter((t) => t.view === 'harness' && t.harness).map((t) => (
-        <div
+        <HarnessTabLayer
           key={t.harness!.ptyId}
-          className="tab-body"
-          style={{ borderLeft: `4px solid ${t.dotColor}`, position: 'relative', display: t.label === current.label ? 'flex' : 'none' }}
-        >
-          <HarnessTab harness={t.harness!} client={client} cwd={t.cwd} flags={t.flags} label={t.label}
-            taskPickerOpen={!!taskPickerOpen && t.label === current.label}
-            navOpen={!!navOpen && t.label === current.label}
-            ref={(h) => { if (h) harnessHandles.current.set(t.harness!.ptyId, h); else harnessHandles.current.delete(t.harness!.ptyId); }} />
-          <StatusPanels tab={t} scheduleOnly={t.harness!.name !== 'ssh'} />
-          {taskPickerOpen && t.label === current.label && onPickTask && onToggleTaskDir && (
-            <TaskPicker rows={taskRows ?? []} selected={taskPickerIndex ?? 0} onPick={onPickTask} onToggleDir={onToggleTaskDir} />
-          )}
-          {navOpen && t.label === current.label && onPickTab && (
-            <TabNavPicker tabs={tabs} query={navQuery ?? ''} selected={navIndex ?? 0} onPick={onPickTab} />
-          )}
-        </div>
+          t={t} current={current} tabs={tabs} client={client} harnessHandles={harnessHandles}
+          taskPickerOpen={taskPickerOpen} taskRows={taskRows} taskPickerIndex={taskPickerIndex}
+          onPickTask={onPickTask} onToggleTaskDir={onToggleTaskDir}
+          navOpen={navOpen} navQuery={navQuery} navIndex={navIndex} onPickTab={onPickTab}
+        />
       ))}
 
       {tabs.filter((t) => t.view === 'editor' && t.editor).map((t) => (

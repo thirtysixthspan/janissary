@@ -42,6 +42,8 @@ A small titled `connections` panel (`ConnectionWindow`) floats at the top-right 
 
 Over an ssh tab, this panel shows only that tab's own `ssh:<destination>` row (no `terminal:` row — the ssh session is the tab's only PTY) and is shown even though the whole tab is a terminal, unlike other harness tabs where the panel is suppressed since the terminal already *is* the connection. See SSH Tab.
 
+In the web app, the tab's metadata bar carries a connections button (a plug icon) alongside its other buttons. When the tab has at least one live connection, the button is active: hovering it shows the connections window, moving away hides it again, and clicking pins the window open until the button is clicked a second time. When the tab has no live connections, the button is dark and unclickable, with a tooltip explaining there are none. Each time a tab becomes the active tab, its connections window (if non-empty) auto-shows immediately and then fades away after five seconds; moving the pointer onto the button or the window during that auto-show cancels the fade and hands control back to plain hover behavior, while clicking at any point pins or unpins the window regardless of where it is in that sequence. A non-ssh harness tab has no connections button, since the terminal is already the connection; an ssh harness tab keeps both the connections and schedule buttons.
+
 ### `connection` command
 
 `connection <list|close> [kind:id]` lists or closes open connections. See the Connections section. `connection list` shows every open connection; `connection close <kind>:<id>` closes one, where `<kind>` is `sqlite`, `shell`, `acp`, `browser`, or `ssh`. Malformed invocations return a `Usage:` message.
