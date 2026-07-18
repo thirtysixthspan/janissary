@@ -1,7 +1,7 @@
 import { mkdirSync, writeFileSync, readFileSync, existsSync, rmSync } from 'node:fs';
 import path from 'node:path';
 
-function isPidAlive(pid: number): boolean {
+export function isPidAlive(pid: number): boolean {
   try {
     process.kill(pid, 0);
     return true;
@@ -12,6 +12,15 @@ function isPidAlive(pid: number): boolean {
 
 function lockPath(projectDir: string): string {
   return path.join(projectDir, '.janissary', 'lock');
+}
+
+// The PID recorded in a directory's lock file, or undefined when no lock file exists (or its
+// contents don't parse as a number). Used by `janus stop` to find the instance to signal.
+export function readLockPid(projectDir: string): number | undefined {
+  const file = lockPath(projectDir);
+  if (!existsSync(file)) return undefined;
+  const pid = Number(readFileSync(file, 'utf8').trim());
+  return Number.isNaN(pid) ? undefined : pid;
 }
 
 export function acquireLock(projectDir: string): void {
