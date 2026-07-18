@@ -1,23 +1,23 @@
 import { useCallback, useMemo, useState } from 'react';
 import type { TaskRow } from '@shared/protocol';
 import type { JanusClient } from './ws';
+import type { CommandInputDropHandle } from './CommandInput';
 import { flattenVisibleTaskRows, firstSelectableIndex } from './task-picker-keys';
-import { populateCommandLine } from './populate-command-line';
+import { insertIntoCommandLine } from './populate-command-line';
 
-// State and handlers for the Ctrl+A / `tasks` picker. Mirrors the queue picker's
-// populate-not-submit shape (not `hist`'s run-immediately shape): selecting a task writes an
-// `execute …` command into the command line via the shared recall ref and closes the popup, so the
-// user can supplement or edit the command before running it themselves. A project task inserts the
-// relative `execute ./ai/tasks/<path>`; a built-in (Janissary) task inserts the absolute
-// `execute <janissaryTasksDir>/<path>` so it resolves from any working directory. On a harness tab
-// there is no command line, so the same text is sent straight into that harness's PTY input.
+// State and handlers for the Ctrl+A / `tasks` picker. Selecting a task inserts an `execute …`
+// command at the command line's current cursor (via the shared drop handle's `insertAtCaret`),
+// leaving the rest of the line intact, and closes the popup — so the user can supplement or edit the
+// command before running it themselves. A project task inserts the relative `execute ./ai/tasks/<path>`;
+// a built-in (Janissary) task inserts the absolute `execute <janissaryTasksDir>/<path>` so it resolves
+// from any working directory. On a harness tab there is no command line, so the same text is sent
+// straight into that harness's PTY input.
 export function useTaskPicker(
   tasks: TaskRow[],
   janissaryTasksDir: string,
-  recallRef: React.RefObject<((text: string) => void) | null>,
-  inputRef: React.RefObject<HTMLTextAreaElement | null>,
   client: JanusClient,
   harnessPtyId: string | undefined,
+  dropRef: React.RefObject<CommandInputDropHandle | null>,
 ) {
   const [taskPickerOpen, setTaskPickerOpen] = useState(false);
   const [taskPickerIndex, setTaskPickerIndex] = useState(0);
@@ -35,9 +35,9 @@ export function useTaskPicker(
     const command = source === 'janissary'
       ? `execute ${janissaryTasksDir}/${path}`
       : `execute ./ai/tasks/${path}`;
-    populateCommandLine(command, client, harnessPtyId, recallRef, inputRef);
+    insertIntoCommandLine(command, client, harnessPtyId, dropRef);
     setTaskPickerOpen(false);
-  }, [tasks, janissaryTasksDir, recallRef, inputRef, client, harnessPtyId]);
+  }, [tasks, janissaryTasksDir, client, harnessPtyId, dropRef]);
 
   const toggleTaskDir = useCallback((path: string) => {
     setExpandedTaskDirs((prev) => {

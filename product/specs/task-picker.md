@@ -44,15 +44,16 @@ never a different, unrelated tab.
 | Up / Down | Move the selection, skipping the non-selectable section headers |
 | Right | On a collapsed directory, expands it (selection stays put, its children appear beneath it); on an already-expanded directory, moves the selection to its first child; no effect on a file |
 | Left | On an expanded directory, collapses it; otherwise moves the selection to the parent directory (no effect at the top level) |
-| Return, or clicking a file row | Copies the task's `execute …` command into the command line and closes the popup **without submitting** — a Project task inserts the relative `execute ./ai/tasks/<path>`, a Janissary task inserts the absolute `execute <janissary-tasks-dir>/<path>` |
+| Return, or clicking a file row | Inserts the task's `execute …` command into the command line at the current cursor position and closes the popup **without submitting** — a Project task inserts the relative `execute ./ai/tasks/<path>`, a Janissary task inserts the absolute `execute <janissary-tasks-dir>/<path>` |
 | Return, or clicking a directory row | Toggles that directory's expand state, same as Right/Left |
 | Escape | Closes the popup, leaving the command line unchanged |
 
-Selecting a task populates the command line and leaves the cursor at the end, so the command can
-be supplemented (for example appending extra instructions) or edited before it is run. Nothing is
-sent until Return is pressed on the command line itself. This deliberately differs from the history
-picker, where Return runs the selected command immediately; it matches the command-queue picker's
-behavior of making the command line the edit surface.
+Selecting a task inserts the command at the command line's current cursor position rather than
+overwriting the line — any text already typed is preserved, and the cursor is left immediately after
+the inserted command, so it can be supplemented (for example appending extra instructions) or edited
+before it is run. Nothing is sent until Return is pressed on the command line itself. This
+deliberately differs from the history picker, where Return runs the selected command immediately; it
+matches the command-queue picker's behavior of making the command line the edit surface.
 
 On a harness tab there is no command line to populate, so selecting a task instead sends the same
 `execute …` command (relative for a Project task, absolute for a Janissary task) directly into that
