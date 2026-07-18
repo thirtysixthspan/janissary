@@ -238,6 +238,10 @@ describe('MonitorManager', () => {
     expect(text).toMatch(/SENT TO MODEL[\s\S]*\[SUGGESTION]/);
     expect(text).toMatch(/SENT TO MODEL[\s\S]*npm test/);
     expect(text).toMatch(/MODEL RESPONSE[^\n]*\n\[SUGGESTION]: Fix the failing test/);
+    // Each block is also closed by a matching end marker after its content.
+    expect(text).toContain('SENT TO MODEL END');
+    expect(text).toContain('MODEL RESPONSE END');
+    expect(text).toMatch(/Fix the failing test\n━━━━━━━━━━ MODEL RESPONSE END ━━━━━━━━━━/);
   });
 
   it('snapshotContext is a no-op for an unknown reporting tab', () => {
