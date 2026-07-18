@@ -193,6 +193,17 @@ describe('renderLine — message openFile link', () => {
     expect(link.querySelector('svg[data-icon]')).toHaveAttribute('data-icon', 'clipboard');
   });
 
+  it('renders the capture link before the message text', () => {
+    const line: BufferLine = { type: 'message', text: 'Auto-approved a permission prompt', from: '8:32pm claude', openFile: '/captures/claude-now.txt' };
+    const { container } = render(<>{renderLine(line, 0, clientStub, noop, vi.fn())}</>);
+    const lineEl = container.querySelector('.line.message')!;
+    const link = lineEl.querySelector('.file-link');
+    const messageText = lineEl.querySelector('.message-text');
+    expect(link).toBeInTheDocument();
+    expect(messageText).toBeInTheDocument();
+    expect(link!.compareDocumentPosition(messageText!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it('renders no link when the message has no openFile', () => {
     const line: BufferLine = { type: 'message', text: 'a plain notification', from: '8:32pm janus' };
     const { container } = render(<>{renderLine(line, 0, clientStub, noop, vi.fn())}</>);

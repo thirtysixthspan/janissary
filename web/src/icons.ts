@@ -5,7 +5,6 @@ export {
   faPlus as newTabIcon,
   faBox as workspacedIcon,
   faBolt as autoPermitIcon,
-  faClipboard as viewCaptureIcon,
   faThumbsUp as approveIcon,
   faThumbsDown as rejectIcon,
   faBars as snapshotIcon,
@@ -18,4 +17,4 @@ export {
   faCaretDown as expandedIcon,
   faCaretRight as collapsedIcon,
 } from '@fortawesome/free-solid-svg-icons';
-export { faFlag as unreadIcon } from '@fortawesome/free-regular-svg-icons';
+export { faFlag as unreadIcon, faClipboard as viewCaptureIcon } from '@fortawesome/free-regular-svg-icons';

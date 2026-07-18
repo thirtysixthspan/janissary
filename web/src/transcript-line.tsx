@@ -100,7 +100,7 @@ function OpenFileLink({ path, client }: { path: string; client: JanusClient }) {
       title="Open the captured screen in an editor tab"
       onClick={() => client.send({ method: 'command', params: { text: `edit ${path}` } })}
     >
-      {' '}<FontAwesomeIcon icon={viewCaptureIcon} />
+      <FontAwesomeIcon icon={viewCaptureIcon} />{' '}
     </span>
   );
 }
@@ -191,8 +191,8 @@ export function renderLine(
       >
         <span className="message-time">{time}</span>
         {tab && <span className="message-tab">{tab}</span>}
-        {line.text && <span className="message-text">{highlightText(line.text, highlight, index)}</span>}
         {line.openFile && <OpenFileLink path={line.openFile} client={client} />}
+        {line.text && <span className="message-text">{highlightText(line.text, highlight, index)}</span>}
       </div>
     );
   }
