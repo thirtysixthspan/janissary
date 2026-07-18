@@ -5,12 +5,13 @@ Open). A page tab is a passive viewer: the user browses the site within the tab 
 manually. It is a non-agent **view tab**, modelled on the image tab (see [[image-tab]]) but
 showing a web page instead of an image file.
 
-Page viewing is intentionally minimal. The app does not communicate with, control, script, or
-read the contents of the embedded page, **except when the user has explicitly attached a monitor
-to that page tab** (see [[monitoring]]) — in that case, and only then, the app reads the text
-currently visible in the page's viewport so the monitor can see it. Whatever the embedded site
-allows the user to do directly — click, scroll, type, follow links — happens inside the page
-itself.
+Page viewing is intentionally minimal. The app does not script or read the contents of the
+embedded page, **except when the user has explicitly attached a monitor to that page tab** (see
+[[monitoring]]) — in that case, and only then, the app reads the text currently visible in the
+page's viewport so the monitor can see it. Whatever the embedded site allows the user to do
+directly — click, scroll, type, follow links — happens inside the page itself. The one exception
+is navigation control: the metadata header's back, forward, and reload buttons (below) move the
+embedded page through its own history or reload it, without reading or scripting its contents.
 
 ### Opening a page
 
@@ -87,9 +88,11 @@ the active tab as before.
 
 The page view shows, stacked top to bottom:
 
-1. **Metadata** — the page's full address in a compact header, with a close button right-aligned
-   on that same line. Clicking it closes the tab directly — a second, independent close affordance
-   alongside the tab strip's own close button (see "Tab strip: name and close button" below).
+1. **Metadata** — the page's full address in a compact header, preceded by left-floated back,
+   forward, and reload icon buttons that move the embedded page through its own navigation history
+   or reload it, and followed by a close button right-aligned on that same line. Clicking the close
+   button closes the tab directly — a second, independent close affordance alongside the tab
+   strip's own close button (see "Tab strip: name and close button" below).
 2. **The embedded page** itself, filling the space beneath the metadata and resizing with the tab.
 
 Switching to another tab and back preserves the page view exactly as it was: whatever navigation,

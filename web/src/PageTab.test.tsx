@@ -50,4 +50,37 @@ describe('PageTab', () => {
     fireEvent.click(closeButton as Element);
     expect(closeTab).toHaveBeenCalledWith(4);
   });
+
+  it('renders back, forward, and reload buttons before the URL', () => {
+    const { container } = render(<PageTab page={makePage()} closeTab={vi.fn()} index={0} client={makeClient()} />);
+    const meta = container.querySelector('.page-meta')!;
+    const nav = meta.querySelector('.page-nav')!;
+    expect(nav.querySelector('.page-back')).not.toBeNull();
+    expect(nav.querySelector('.page-forward')).not.toBeNull();
+    expect(nav.querySelector('.page-reload')).not.toBeNull();
+    const url = meta.querySelector('.page-url')!;
+    expect(nav.compareDocumentPosition(url) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('clicking back calls history.back on the embedded frame', () => {
+    const { container } = render(<PageTab page={makePage()} closeTab={vi.fn()} index={0} client={makeClient()} />);
+    const iframe = container.querySelector('iframe') as HTMLIFrameElement;
+    const back = vi.spyOn(iframe.contentWindow!.history, 'back').mockImplementation(() => {});
+    fireEvent.click(container.querySelector('.page-back') as Element);
+    expect(back).toHaveBeenCalled();
+  });
+
+  it('clicking forward calls history.forward on the embedded frame', () => {
+    const { container } = render(<PageTab page={makePage()} closeTab={vi.fn()} index={0} client={makeClient()} />);
+    const iframe = container.querySelector('iframe') as HTMLIFrameElement;
+    const forward = vi.spyOn(iframe.contentWindow!.history, 'forward').mockImplementation(() => {});
+    fireEvent.click(container.querySelector('.page-forward') as Element);
+    expect(forward).toHaveBeenCalled();
+  });
+
+  it('clicking reload keeps the iframe pointed at the same URL', () => {
+    const { container } = render(<PageTab page={makePage({ url: 'https://slashdot.org/' })} closeTab={vi.fn()} index={0} client={makeClient()} />);
+    fireEvent.click(container.querySelector('.page-reload') as Element);
+    expect(container.querySelector('iframe')?.src).toBe('https://slashdot.org/');
+  });
 });

@@ -4,8 +4,6 @@
 
 * the UI should not be blocked awaiting the openning or closure of harnesses. The tab can be openned or closed while the backend operations complete. 
 
-* add a back, forward and reload icon buttons left floated in the metadata tab of a browser tab.
-
 * double clicking the url in the metadata row of the browser tab allows the user to edit the address, and the address is then loaded once enter/return is pressed
 
 * add fa-regular fa-clipboard clipboard icon to the agent tab metadata row that when clicked will open the transcript for that agent in an editor tab.
