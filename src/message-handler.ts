@@ -68,6 +68,8 @@ export function handle(controller: Controller, message: ClientMessage, reply: (e
     }
     case 'deleteFileTreeItem': { controller.deleteFileTreeItem(message.params.index, message.params.relPath); break;
     }
+    case 'cancelSchedule': { controller.cancelSchedule(message.params.tab, message.params.id); break;
+    }
     case 'undoFileTreeItem': {
       reply({ t: 'rpc-reply', id: message.id, result: controller.undoFileTreeItem(message.params.index, message.params.overwrite) });
       return;

@@ -67,6 +67,20 @@ export class ScheduleManager {
     this.schedules.delete(label);
   }
 
+  // Remove one entry from a tab's schedule by id, after the client has confirmed the deletion.
+  // Persists the reduced list for non-harness tabs and re-emits state so every schedule surface
+  // refreshes. Returns false (no persist, no emit) when the tab has no matching entry.
+  cancel(label: string, id: string): boolean {
+    const current = this.schedules.get(label) ?? [];
+    const next = current.filter((e) => e.id !== id);
+    if (next.length === current.length) return false;
+    this.schedules.set(label, next);
+    const tab = this.managers.tab.tabs.find((t) => t.label === label);
+    if (tab && tab.view !== 'harness') this.managers.tab.persist(this.managers.tab.buildAgentState(tab, { schedule: next }));
+    messageBus.emit('state', { type: 'dirty' });
+    return true;
+  }
+
   // The schedule rows for a tab's view: id, spec, humanized next-run time, and the recurring flag.
   view(label: string): ScheduleView[] {
     return (this.schedules.get(label) ?? []).map((e) => ({

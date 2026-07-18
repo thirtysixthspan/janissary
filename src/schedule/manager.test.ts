@@ -244,6 +244,63 @@ describe('ScheduleManager schedule launch dialog', () => {
   });
 });
 
+describe('ScheduleManager cancel', () => {
+  function entry(id: string): ScheduleEntry {
+    return { id, command: 'clear', spec: 'every 5m', nextRun: Date.now() + 60_000, recurring: true, intervalMs: 60_000 };
+  }
+
+  it('removes an agent tab entry, persists the reduced list, emits state.dirty, and returns true', () => {
+    const { managers } = makeManagers();
+    const persist = vi.fn();
+    (managers.tab as unknown as { persist: typeof persist }).persist = persist;
+    const mgr = new ScheduleManager(managers);
+    mgr.set('janus', [entry('a'), entry('b')]);
+    const emitSpy = vi.spyOn(messageBus, 'emit');
+
+    expect(mgr.cancel('janus', 'a')).toBe(true);
+    expect(mgr.get('janus')!.map((e) => e.id)).toEqual(['b']);
+    expect(persist).toHaveBeenCalledTimes(1);
+    expect(emitSpy).toHaveBeenCalledWith('state', { type: 'dirty' });
+    emitSpy.mockRestore();
+  });
+
+  it('removes a harness tab entry and emits without persisting', () => {
+    const { managers } = makeManagers({
+      view: 'harness',
+      harness: { name: 'claude', program: 'claude', ptyId: 'p1', status: 'running' },
+    });
+    const persist = vi.fn();
+    (managers.tab as unknown as { persist: typeof persist }).persist = persist;
+    const mgr = new ScheduleManager(managers);
+    mgr.set('janus', [entry('a')]);
+    const emitSpy = vi.spyOn(messageBus, 'emit');
+
+    expect(mgr.cancel('janus', 'a')).toBe(true);
+    expect(mgr.get('janus')).toEqual([]);
+    expect(persist).not.toHaveBeenCalled();
+    expect(emitSpy).toHaveBeenCalledWith('state', { type: 'dirty' });
+    emitSpy.mockRestore();
+  });
+
+  it('leaves the schedule unchanged, does not emit, and returns false for an unknown id', () => {
+    const { managers } = makeManagers();
+    const mgr = new ScheduleManager(managers);
+    mgr.set('janus', [entry('a')]);
+    const emitSpy = vi.spyOn(messageBus, 'emit');
+
+    expect(mgr.cancel('janus', 'missing')).toBe(false);
+    expect(mgr.get('janus')!.map((e) => e.id)).toEqual(['a']);
+    expect(emitSpy).not.toHaveBeenCalledWith('state', { type: 'dirty' });
+    emitSpy.mockRestore();
+  });
+
+  it('returns false for a tab with no schedule', () => {
+    const { managers } = makeManagers();
+    const mgr = new ScheduleManager(managers);
+    expect(mgr.cancel('janus', 'a')).toBe(false);
+  });
+});
+
 describe('ScheduleManager aggregatedView', () => {
   function makeMgr(labels: string[]): ScheduleManager {
     const managers = {

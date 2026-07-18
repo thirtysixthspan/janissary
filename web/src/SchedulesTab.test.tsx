@@ -99,6 +99,46 @@ describe('SchedulesTab', () => {
     expect(send).toHaveBeenCalledWith({ method: 'setActiveTab', params: { index: 0 } });
   });
 
+  it.each(['Delete', 'Backspace'])('pressing %s on a selected row opens the delete confirmation dialog', (key) => {
+    const send = vi.fn();
+    const client = { send } as unknown as JanusClient;
+    const { container } = render(<SchedulesTab entries={entries} tabs={[]} client={client} index={0} />);
+    fireEvent.click(container.querySelector('.schedules-row')!);
+    fireEvent.keyDown(container.querySelector('.schedules-tab')!, { key });
+    expect(screen.getByText('Delete schedule "s1"?')).toBeTruthy();
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  it('confirming the delete dialog sends cancelSchedule with the selected row\'s tab and id', () => {
+    const send = vi.fn();
+    const client = { send } as unknown as JanusClient;
+    const { container } = render(<SchedulesTab entries={entries} tabs={[]} client={client} index={0} />);
+    fireEvent.keyDown(container.querySelector('.schedules-tab')!, { key: 'ArrowDown' });
+    fireEvent.keyDown(container.querySelector('.schedules-tab')!, { key: 'Delete' });
+    fireEvent.click(screen.getByRole('button', { name: /delete/i }));
+    expect(send).toHaveBeenCalledWith({ method: 'cancelSchedule', params: { tab: 'agent-1', id: 's2' } });
+  });
+
+  it('cancelling the delete dialog sends nothing and closes it', () => {
+    const send = vi.fn();
+    const client = { send } as unknown as JanusClient;
+    const { container } = render(<SchedulesTab entries={entries} tabs={[]} client={client} index={0} />);
+    fireEvent.click(container.querySelector('.schedules-row')!);
+    fireEvent.keyDown(container.querySelector('.schedules-tab')!, { key: 'Delete' });
+    fireEvent.click(screen.getByRole('button', { name: /cancel/i }));
+    expect(send).not.toHaveBeenCalled();
+    expect(screen.queryByText('Delete schedule "s1"?')).toBeNull();
+  });
+
+  it('pressing Delete with no selection does nothing', () => {
+    const send = vi.fn();
+    const client = { send } as unknown as JanusClient;
+    const { container } = render(<SchedulesTab entries={entries} tabs={[]} client={client} index={0} />);
+    fireEvent.keyDown(container.querySelector('.schedules-tab')!, { key: 'Delete' });
+    expect(screen.queryByText(/Delete schedule/)).toBeNull();
+    expect(send).not.toHaveBeenCalled();
+  });
+
   it('renders the compressed one-line form in compact mode, showing only the time', () => {
     const client = { send: vi.fn() } as unknown as JanusClient;
     const { container } = render(<SchedulesTab entries={entries} tabs={[]} client={client} compact index={0} />);
