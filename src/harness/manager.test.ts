@@ -33,6 +33,7 @@ function makeManagers(): { managers: Managers; tabs: Tab[]; edit: ReturnType<typ
   tabs.push(creator);
   const edit = vi.fn();
   const scheduleSet = vi.fn();
+  const busy = new Set<string>();
   const managers = {
     tab: {
       tabs,
@@ -40,8 +41,9 @@ function makeManagers(): { managers: Managers; tabs: Tab[]; edit: ReturnType<typ
       cwdOf: () => '/project',
       setCwd: () => {},
       insertTabInGroup: (tab: Tab) => { tabs.push(tab); },
-      addBusy: vi.fn(),
-      deleteBusy: vi.fn(),
+      isBusy: (label: string) => busy.has(label),
+      addBusy: vi.fn((label: string) => { busy.add(label); }),
+      deleteBusy: vi.fn((label: string) => { busy.delete(label); }),
       markUnread: vi.fn(),
       findIndex: () => tabs.length - 1,
       append: () => {},

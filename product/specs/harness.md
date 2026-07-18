@@ -229,6 +229,10 @@ classified. A working→idle transition is committed only after the idle reading
 consecutive captures, so a brief mid-generation pause never flickers the dot off; a return to
 working takes effect immediately.
 
+Status changes show in the tab strip the moment they are recognized, whether or not the harness
+tab is the active one — a backgrounded harness's dot starts and stops blinking live, without
+switching to the tab first.
+
 When claude shows its permission prompt, the dot stops blinking — claude is waiting on the user,
 not working. If nothing is going to answer the prompt (the tab was launched without `-y`, or
 auto-approve has stood down on a prompt it could not clear), the tab is also marked with the

@@ -1,7 +1,8 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { classifyBusy, busyStatusHandler } from './busy-status.js';
 import type { ScreenCapture } from './screen.js';
 import type { Managers } from '../managers.js';
+import { messageBus, type Subscription } from '../bus.js';
 
 // Title fixtures from the live spot-checks (claude 2.1.210, codex-cli 0.144.4).
 const CLAUDE_BUSY_TITLE = '⠂ Write a haiku about the sea';
@@ -110,7 +111,14 @@ describe('classifyBusy — unknown harness', () => {
 
 describe('busyStatusHandler debounce', () => {
   function make(name: string) {
-    const tab = { addBusy: vi.fn(), deleteBusy: vi.fn(), markUnread: vi.fn() };
+    const busy = new Set<string>();
+    const tab = {
+      tabs: [{ label: name, hasUnread: false }],
+      isBusy: (label: string) => busy.has(label),
+      addBusy: vi.fn((label: string) => { busy.add(label); }),
+      deleteBusy: vi.fn((label: string) => { busy.delete(label); }),
+      markUnread: vi.fn(),
+    };
     const handler = busyStatusHandler(name, name, { tab } as unknown as Managers, undefined);
     if (!handler) throw new Error(`no busy entry for ${name}`);
     return { tab, handler };
@@ -144,5 +152,63 @@ describe('busyStatusHandler debounce', () => {
   it('returns undefined for a harness with no table entry', () => {
     const tab = { addBusy: vi.fn(), deleteBusy: vi.fn(), markUnread: vi.fn() };
     expect(busyStatusHandler('mystery', 'mystery', { tab } as unknown as Managers, undefined)).toBeUndefined();
+  });
+});
+
+describe('busyStatusHandler state push', () => {
+  function makeStateful(name: string) {
+    const busy = new Set<string>();
+    const tabs = [{ label: name, hasUnread: false }];
+    const tab = {
+      tabs,
+      isBusy: (label: string) => busy.has(label),
+      addBusy: (label: string) => { busy.add(label); },
+      deleteBusy: (label: string) => { busy.delete(label); },
+      markUnread: () => { tabs[0].hasUnread = true; },
+    };
+    const handler = busyStatusHandler(name, name, { tab } as unknown as Managers, undefined);
+    if (!handler) throw new Error(`no busy entry for ${name}`);
+    return { tabs, handler };
+  }
+
+  let dirtyCount = 0;
+  let subscription: Subscription;
+
+  beforeEach(() => {
+    dirtyCount = 0;
+    subscription = messageBus.on('state', 'dirty', () => { dirtyCount += 1; });
+  });
+
+  afterEach(() => { subscription.unsubscribe(); });
+
+  it('pushes state when the harness turns busy', () => {
+    const { handler } = makeStateful('claude');
+    handler(capture('anything', CLAUDE_BUSY_TITLE));
+    expect(dirtyCount).toBe(1);
+  });
+
+  it('pushes state when the debounced ready transition commits', () => {
+    const { handler } = makeStateful('claude');
+    handler(capture('anything', CLAUDE_BUSY_TITLE));
+    handler(capture('anything', CLAUDE_IDLE_TITLE));
+    expect(dirtyCount).toBe(1);
+    handler(capture('anything', CLAUDE_IDLE_TITLE));
+    expect(dirtyCount).toBe(2);
+  });
+
+  it('does not push again while captures keep the same state', () => {
+    const { handler } = makeStateful('claude');
+    handler(capture('anything', CLAUDE_BUSY_TITLE));
+    handler(capture('anything', CLAUDE_BUSY_TITLE));
+    handler(capture('anything', CLAUDE_BUSY_TITLE));
+    expect(dirtyCount).toBe(1);
+  });
+
+  it('pushes state when a permission gate badges the tab unread', () => {
+    const { tabs, handler } = makeStateful('claude');
+    const gate = ' Do you want to proceed?\n ❯ 1. Yes\n   2. No';
+    handler(capture(gate));
+    expect(tabs[0].hasUnread).toBe(true);
+    expect(dirtyCount).toBe(1);
   });
 });
