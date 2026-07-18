@@ -166,6 +166,10 @@ export class Controller {
     this.managers.tab.renameTab(index, title);
   }
 
+  navigatePage(index: number, url: string): void {
+    this.managers.tab.navigatePage(index, url);
+  }
+
   editQueuedCommand(index: number, text: string): void {
     this.managers.tab.editQueued(this.managers.tab.cur().label, index, text);
   }

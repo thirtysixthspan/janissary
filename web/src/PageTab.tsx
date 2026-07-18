@@ -8,11 +8,23 @@ import { pageBackIcon, pageForwardIcon, pageReloadIcon } from './icons';
 export function PageTab({ page, closeTab, index, client }: { page: PageView; closeTab: (index: number) => void; index: number; client: JanusClient }) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [reloadNonce, setReloadNonce] = useState(0);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState('');
+  const cancelledRef = useRef(false);
   usePageContentSync(iframeRef, page.url, client);
 
   const goBack = () => iframeRef.current?.contentWindow?.history.back();
   const goForward = () => iframeRef.current?.contentWindow?.history.forward();
   const reload = () => setReloadNonce((n) => n + 1);
+
+  const startEdit = () => { cancelledRef.current = false; setDraft(page.url); setEditing(true); };
+  const commit = () => {
+    if (cancelledRef.current) return;
+    setEditing(false);
+    const target = draft.trim();
+    if (target && target !== page.url) client.navigatePage(index, target);
+  };
+  const cancel = () => { cancelledRef.current = true; setEditing(false); };
 
   return (
     <div className="page-tab" data-doc-shot="page-view">
@@ -29,7 +41,22 @@ export function PageTab({ page, closeTab, index, client }: { page: PageView; clo
               <FontAwesomeIcon icon={pageReloadIcon} />
             </button>
           </div>
-          <span className="page-url">{page.url}</span>
+          {editing ? (
+            <input
+              className="page-url-input"
+              value={draft}
+              autoFocus
+              onFocus={(e) => e.currentTarget.select()}
+              onChange={(e) => setDraft(e.currentTarget.value)}
+              onBlur={commit}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') { e.currentTarget.blur(); }
+                else if (e.key === 'Escape') { cancel(); }
+              }}
+            />
+          ) : (
+            <span className="page-url" onDoubleClick={startEdit}>{page.url}</span>
+          )}
         </div>
         <div className="page-actions">
           <button
