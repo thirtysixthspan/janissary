@@ -66,3 +66,51 @@ describe('saveFile', () => {
     expect(() => saveFile(managers, url, 'x')).toThrow();
   });
 });
+
+describe('saveFile new-file auto-suffix', () => {
+  function setupNewFile(dir: string, name = 'untitled.md') {
+    const managers = {} as Managers;
+    managers.tab = new TabManager(managers);
+    managers.editorWatch = { watch: () => {}, markSaved: () => {} } as unknown as Managers['editorWatch'];
+    const file = path.join(dir, name);
+    const url = managers.tab.registerFile(file);
+    managers.tab.openEditorTab({ name, path: file, size: 'unknown', url, newFile: true });
+    return { managers, file, url };
+  }
+
+  it('writes untitled.md when there is no clash', () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'janus-save-newfile-'));
+    const { managers, file, url } = setupNewFile(dir);
+    saveFile(managers, url, 'hello');
+    expect(readFileSync(file, 'utf8')).toBe('hello');
+    const tab = managers.tab.tabs.find((t) => t.editor);
+    expect(tab?.editor?.path).toBe(file);
+    expect(tab?.editor?.newFile).toBe(false);
+  });
+
+  it('auto-suffixes to untitled-2.md when untitled.md already exists', () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'janus-save-newfile-'));
+    writeFileSync(path.join(dir, 'untitled.md'), 'existing');
+    const { managers, url } = setupNewFile(dir);
+    saveFile(managers, url, 'hello');
+    const tab = managers.tab.tabs.find((t) => t.editor);
+    expect(tab?.editor?.path).toBe(path.join(dir, 'untitled-2.md'));
+    expect(tab?.editor?.name).toBe('untitled-2.md');
+    expect(readFileSync(path.join(dir, 'untitled-2.md'), 'utf8')).toBe('hello');
+    expect(readFileSync(path.join(dir, 'untitled.md'), 'utf8')).toBe('existing');
+    expect(tab?.editor?.newFile).toBe(false);
+  });
+
+  it('a non-new-file editor still overwrites as before, even if the target already exists', () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'janus-save-newfile-'));
+    const file = path.join(dir, 'existing.txt');
+    writeFileSync(file, 'original');
+    const managers = {} as Managers;
+    managers.tab = new TabManager(managers);
+    managers.editorWatch = { watch: () => {}, markSaved: () => {} } as unknown as Managers['editorWatch'];
+    const url = managers.tab.registerFile(file);
+    managers.tab.openEditorTab({ name: 'existing.txt', path: file, size: '8 B', url });
+    saveFile(managers, url, 'updated');
+    expect(readFileSync(file, 'utf8')).toBe('updated');
+  });
+});

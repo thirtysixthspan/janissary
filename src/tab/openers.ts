@@ -29,7 +29,7 @@ export function openMarkdownTab(target: OpenTarget, view: MarkdownView): void {
 export function openEditorTab(
   target: OpenTarget, view: EditorView, watch: (label: string, path: string) => void,
 ): void {
-  const existing = target.tabs.find((t) => t.editor?.path === view.path);
+  const existing = view.newFile ? undefined : target.tabs.find((t) => t.editor?.path === view.path);
   if (existing) {
     if (view.line !== undefined) existing.editor!.line = view.line;
     target.setActiveTab(target.tabs.indexOf(existing));
@@ -37,6 +37,7 @@ export function openEditorTab(
     return;
   }
   const result = addEditorTab(target.tabs, target.activeTab, view);
+  if (view.newFile) result.tabs[result.activeTab].newFileEditor = true;
   target.applyOpenResult(result);
   watch(result.tabs[result.activeTab].label, view.path);
   messageBus.emit('state', { type: 'dirty' });

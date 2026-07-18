@@ -1,4 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
+import { mkdtempSync, writeFileSync, existsSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import { TabManager } from './manager.js';
 import type { Managers } from '../managers.js';
 import type { AgentState } from '../types.js';
@@ -134,6 +137,14 @@ describe('TabManager queue', () => {
     expect(tm.tabs.length).toBe(3); // janus + a.ts + b.ts
   });
 
+  it('openEditorTab bypasses de-dupe for a new-file view, allowing multiple untitled tabs', () => {
+    const tm = makeTabManager();
+    const path = '/test/untitled.md';
+    tm.openEditorTab({ name: 'untitled.md', path, size: 'unknown', url: '/open/1', newFile: true });
+    tm.openEditorTab({ name: 'untitled.md', path, size: 'unknown', url: '/open/2', newFile: true });
+    expect(tm.tabs.length).toBe(3); // janus + two untitled.md tabs
+  });
+
   it('closeTab clears the label\'s queue entry', () => {
     const tm = makeTabManager();
     tm.tabs.push({ ...tm.cur(), label: 'second', number: 2 });
@@ -251,5 +262,59 @@ describe('TabManager mostRecentFileTreeLabel', () => {
     tm.tabs.push({ ...tm.cur(), label: 'bob', number: 2 });
 
     expect(tm.mostRecentFileTreeLabel()).toBeUndefined();
+  });
+});
+
+describe('TabManager renameTab for new-file editors', () => {
+  it('renaming a not-yet-saved new-file editor updates its pending basename literally (no extension appended)', () => {
+    const tm = makeTabManager();
+    tm.openEditorTab({ name: 'untitled.md', path: '/test/untitled.md', size: 'unknown', url: '/open/1', newFile: true });
+    const index = tm.activeTab;
+
+    tm.renameTab(index, 'notes');
+
+    const tab = tm.tabs[index];
+    expect(tab.editor?.name).toBe('notes');
+    expect(tab.editor?.path).toBe('/test/notes');
+    expect(tab.title).toBe('notes');
+  });
+
+  it('renaming a saved new-file editor renames the file on disk and retargets the editor', () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'janus-rename-'));
+    const filePath = path.join(dir, 'untitled.md');
+    writeFileSync(filePath, 'content');
+    const tm = makeTabManager();
+    tm.openEditorTab({ name: 'untitled.md', path: filePath, size: '7 B', url: '/open/1', newFile: true });
+    const index = tm.activeTab;
+    tm.tabs[index].editor!.newFile = false; // simulate a completed save
+
+    tm.renameTab(index, 'final');
+
+    const newPath = path.join(dir, 'final');
+    const tab = tm.tabs[index];
+    expect(existsSync(newPath)).toBe(true);
+    expect(existsSync(filePath)).toBe(false);
+    expect(tab.editor?.path).toBe(newPath);
+    expect(tab.editor?.name).toBe('final');
+    expect(tab.title).toBe('final');
+  });
+
+  it('renaming a normal editor tab still sets a display alias only, without touching any file', () => {
+    const tm = makeTabManager();
+    tm.openEditorTab({ name: 'existing.ts', path: '/test/existing.ts', size: '1 KB', url: '/open/1' });
+    const index = tm.activeTab;
+
+    tm.renameTab(index, 'aliased');
+
+    const tab = tm.tabs[index];
+    expect(tab.title).toBe('aliased');
+    expect(tab.editor?.path).toBe('/test/existing.ts');
+    expect(tab.editor?.name).toBe('existing.ts');
+  });
+
+  it('renaming an agent tab still sets an alias only', () => {
+    const tm = makeTabManager();
+    tm.renameTab(0, 'newlabel');
+    expect(tm.tabs[0].title).toBe('newlabel');
   });
 });

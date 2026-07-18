@@ -240,11 +240,12 @@ A focused file tree tab captures its own keys, following the ARIA treeview patte
 | Printable characters | Type-ahead: jump to the next visible row whose name starts with what's typed; the typed buffer resets after a pause |
 | `Cmd+Z` / `Ctrl+Z` | Undo the most recent move made in this tab |
 | `Cmd+Shift+Z` / `Ctrl+Shift+Z` | Redo the most recently undone move |
+| `Cmd+N` / `Ctrl+N` | Create a new file (see "Creating a new file") |
 
 Chords carrying Ctrl or Cmd (tab switching, tab reordering, closing the tab, etc.) are not
 captured by the tree and reach the normal window-level bindings instead, except for the
-undo/redo chords above, which the tree captures for itself — the same way an editor tab captures
-its own `Cmd+Z`/`Cmd+Shift+Z` for text undo/redo.
+undo/redo chords and `Cmd+N`/`Ctrl+N` above, which the tree captures for itself — the same way an
+editor tab captures its own `Cmd+Z`/`Cmd+Shift+Z` for text undo/redo.
 
 If the selected row disappears (the directory watcher removed it), selection moves to the nearest
 surviving row rather than pointing at nothing.
@@ -269,11 +270,27 @@ entirely — there is no duplicate representation of a docked tree in the strip.
 
 ### Header buttons
 
-Every file tree tab's own header carries a **location button** that cycles the tree through
-left sidebar → center tab strip → right sidebar → left sidebar, one step per click, with a
-tooltip naming the destination. The header itself carries no close button — while docked, the
-sidebar's own strip (see `sidebars.md`) shows the tab's name and the close affordance, so a docked
-tree is closed from there (`close files` by label still works as a fallback).
+Every file tree tab's own header carries a **New file** button and a **location button**. New
+file opens a fresh, unsaved editor tab named `untitled.md` — see "Creating a new file" below. The
+location button cycles the tree through left sidebar → center tab strip → right sidebar → left
+sidebar, one step per click, with a tooltip naming the destination. The header itself carries no
+close button — while docked, the sidebar's own strip (see `sidebars.md`) shows the tab's name and
+the close affordance, so a docked tree is closed from there (`close files` by label still works as
+a fallback).
+
+### Creating a new file
+
+Clicking the header's **New file** button, or pressing `Cmd+N` (`Ctrl+N`) while the navigator has
+keyboard focus, opens a fresh, unsaved editor tab named `untitled.md`. The target directory comes
+from the tree's current keyboard-cursor selection: a selected directory row creates the file
+inside that directory; a selected file row creates it in that file's containing directory; no
+selection (or the `..` row) creates it at the tree root.
+
+The user names the file by editing the new editor tab's label — the typed text becomes the
+filename literally, with no extension appended (see Editor Tab → "New files"). On save, if the
+directory already contains a file named `untitled.md` because the tab was never renamed, the save
+silently writes to the next free name (`untitled-2.md`, `untitled-3.md`, …) instead of overwriting
+anything, so several new-file tabs can be created and saved side by side without colliding.
 
 This same dock/location-cycle mechanism is shared with the notifications tab (see
 `notifications.md`), which is the other dockable tab kind. The two can share one sidebar side at
