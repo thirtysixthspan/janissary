@@ -2,6 +2,8 @@
 
 ## ready
 
+* a button in the file navigator metadata row should create a new text file. An unsaved file will open in an editor tab with the name untitled.md. When saved, the file should be created in the directory marked by the keyboard cursor in the originating file navigator, or the root directory of the file navigator if no keyboard cursor is yet placed. If the user updates the name in the tab label, the file should be named accordingly. the keyboard binding cmd+n while focused in the file navigator should trigger the new text file.
+
 ## development
 
 4. Supervisor/manager agent (LangGraph supervisor, n8n AI Agent Tool) — a built-in supervisor persona that receives a goal, fans work out with broadcast request, and aggregates the responses.
