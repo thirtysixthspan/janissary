@@ -6,7 +6,8 @@ import { handleFileTreeKey, typeAheadMatch } from './file-tree-keys';
 import { nextDock, dockTooltip } from './dock-cycle';
 import { useFileTreeDrag } from './useFileTreeDrag';
 import { fileTreeRowClass } from './file-tree-row-class';
-import { dockSwapIcon, expandedIcon, collapsedIcon } from './icons';
+import { newFileTargetDir, newFileCommand } from './file-tree-new-file';
+import { dockSwapIcon, expandedIcon, collapsedIcon, newFileIcon } from './icons';
 import { MoveConflictDialog } from './MoveConflictDialog/MoveConflictDialog';
 import { DeleteFileDialog } from './DeleteFileDialog';
 import type { CommandInputDropHandle } from './CommandInput';
@@ -64,6 +65,10 @@ export function FileTreeTab({ files, client, index, dock, autoFocus = true, drop
   const editFile = (path: string) => client.send({ method: 'command', params: { text: `edit ${path}` } });
   const reroot = () => client.send({ method: 'fileTreeReroot', params: { index } });
   const rerootTo = (path: string) => client.send({ method: 'fileTreeReroot', params: { index, path } });
+  const createNewFile = () => {
+    const text = newFileCommand(newFileTargetDir(files.rows, selected));
+    client.send({ method: 'command', params: { text } });
+  };
 
   const onRowClick = (row: FileTreeRow) => {
     setSelected(row.path);
@@ -99,6 +104,12 @@ export function FileTreeTab({ files, client, index, dock, autoFocus = true, drop
       e.preventDefault();
       e.stopPropagation();
       if (e.shiftKey) void drag.sendRedo(); else void drag.sendUndo();
+      return;
+    }
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'n') {
+      e.preventDefault();
+      e.stopPropagation();
+      createNewFile();
       return;
     }
     if (e.ctrlKey || e.metaKey) return; // tab-management chords go to the window handler
@@ -138,6 +149,14 @@ export function FileTreeTab({ files, client, index, dock, autoFocus = true, drop
           {files.branch && <span className="files-branch">{files.branch}</span>}
         </div>
         <div className="files-actions">
+          <button
+            type="button"
+            className="files-new-file"
+            title="New file"
+            onClick={createNewFile}
+          >
+            <FontAwesomeIcon icon={newFileIcon} />
+          </button>
           {dock && (
             <button
               type="button"

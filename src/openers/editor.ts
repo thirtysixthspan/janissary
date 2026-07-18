@@ -30,7 +30,7 @@ export function openInEditor(file: string, context: OpenContext, line?: number):
     return;
   }
   const size = bytes === undefined ? 'unknown' : humanSize(bytes);
-  context.openEditorTab({ name, path: file, size, url: context.registerFile(file), line });
+  context.openEditorTab({ name, path: file, size, url: context.registerFile(file), line, newFile: bytes === undefined });
 }
 
 export const opener: Opener = {

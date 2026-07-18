@@ -44,6 +44,27 @@ header. The file is not written to disk until the user explicitly saves (Ctrl+S 
 first save, the file is created at the given path and the size display updates to reflect the new
 on-disk size. Subsequent saves overwrite the file as usual.
 
+Opening the same not-yet-existing path more than once (for example, creating several new files in
+the same directory from the file navigator without renaming any of them) does not focus an
+existing tab the way opening an already-existing file would — each open creates its own new,
+independent unsaved tab, since none of them has a real file to converge on yet.
+
+For a new-file editor tab only, editing the tab's label (see Tabs → "Tab display alias") does more
+than set a display alias: it sets the file's name itself, literally — typing `notes` targets a
+file named exactly `notes` (no extension is appended), and typing `notes.txt` targets `notes.txt`.
+Before the first save this just updates the pending target path; once the file exists on disk,
+renaming the tab actually renames the file in place and the editor stays pointed at the new path.
+This coupling lasts for the life of the tab. An editor tab opened on a file that already existed
+keeps the ordinary behavior — renaming its tab only sets a display alias and never touches the
+file.
+
+If the user never renames a new-file tab and saves while a file named the same as the pending
+target already exists in that directory (created by another new-file tab saved first), the save
+does not overwrite it — it silently picks the next free name in the same directory (`untitled.md` →
+`untitled-2.md` → `untitled-3.md`, …) and updates the tab's displayed name and path to match. This
+only applies to a new-file editor's still-unsaved target; once any file has been saved, further
+saves on that tab overwrite it normally, exactly like any other editor tab.
+
 ### Keyboard input
 
 Printable characters (letters, digits, symbols, and space) and special keys (arrows, page up/down,

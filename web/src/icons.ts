@@ -16,6 +16,7 @@ export {
   faCircle as dirtyMarkerIcon,
   faCaretDown as expandedIcon,
   faCaretRight as collapsedIcon,
+  faFileCirclePlus as newFileIcon,
   faArrowLeft as pageBackIcon,
   faArrowRight as pageForwardIcon,
   faRotateRight as pageReloadIcon,
