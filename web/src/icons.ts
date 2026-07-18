@@ -6,7 +6,7 @@ export {
   faStar as unreadIcon,
   faBox as workspacedIcon,
   faBolt as autoPermitIcon,
-  faCamera as screenshotIcon,
+  faClipboard as viewCaptureIcon,
   faThumbsUp as approveIcon,
   faThumbsDown as rejectIcon,
   faBars as snapshotIcon,
