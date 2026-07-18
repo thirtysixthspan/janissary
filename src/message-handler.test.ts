@@ -4,9 +4,11 @@ import type { Controller } from './controller.js';
 import type { ClientMessage, ServerEvent, RpcCall } from './protocol.js';
 import { openTranscriptFor } from './controller-transcript.js';
 import { projectFilesFor } from './project-files.js';
+import { fileTreeSearch, revealFileTreeItem } from './controller-file-tree.js';
 
 vi.mock('./controller-transcript.js', () => ({ openTranscriptFor: vi.fn() }));
 vi.mock('./project-files.js', () => ({ projectFilesFor: vi.fn() }));
+vi.mock('./controller-file-tree.js', () => ({ fileTreeSearch: vi.fn(), revealFileTreeItem: vi.fn() }));
 
 const makeController = () =>
   ({
@@ -264,5 +266,31 @@ describe('handle', () => {
     handle(controller, { t: 'rpc', id: 30, method: 'projectFiles', params: {} } as ClientMessage, (event) => { replies.push(event); });
     await vi.waitFor(() => expect(replies).toHaveLength(1));
     expect(replies).toEqual([{ t: 'rpc-reply', id: 30, result: { root: '/proj', paths: [] } }]);
+  });
+
+  it('routes fileTreeSearch to a deferred reply carrying the resolved paths', async () => {
+    const controller = makeController();
+    (fileTreeSearch as ReturnType<typeof vi.fn>).mockResolvedValue(['a.ts', 'b.ts']);
+    const replies: ServerEvent[] = [];
+    handle(controller, { t: 'rpc', id: 31, method: 'fileTreeSearch', params: { index: 0 } } as ClientMessage, (event) => { replies.push(event); });
+    expect(replies).toEqual([]);
+    await vi.waitFor(() => expect(replies).toHaveLength(1));
+    expect(fileTreeSearch).toHaveBeenCalledWith(controller.managers, 0);
+    expect(replies).toEqual([{ t: 'rpc-reply', id: 31, result: { paths: ['a.ts', 'b.ts'] } }]);
+  });
+
+  it('replies with an empty paths list for fileTreeSearch — never leaving the request pending — when the listing rejects', async () => {
+    const controller = makeController();
+    (fileTreeSearch as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('boom'));
+    const replies: ServerEvent[] = [];
+    handle(controller, { t: 'rpc', id: 32, method: 'fileTreeSearch', params: { index: 0 } } as ClientMessage, (event) => { replies.push(event); });
+    await vi.waitFor(() => expect(replies).toHaveLength(1));
+    expect(replies).toEqual([{ t: 'rpc-reply', id: 32, result: { paths: [] } }]);
+  });
+
+  it('routes revealFileTreeItem to controller-file-tree.js with the controller\'s managers', () => {
+    const controller = makeController();
+    dispatchCall(controller, 33, { method: 'revealFileTreeItem', params: { index: 0, relPath: 'src/a.ts' } });
+    expect(revealFileTreeItem).toHaveBeenCalledWith(controller.managers, 0, 'src/a.ts');
   });
 });

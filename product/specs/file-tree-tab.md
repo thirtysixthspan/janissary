@@ -270,13 +270,35 @@ entirely — there is no duplicate representation of a docked tree in the strip.
 
 ### Header buttons
 
-Every file tree tab's own header carries a **New file** button and a **location button**. New
-file opens a fresh, unsaved editor tab named `untitled.md` — see "Creating a new file" below. The
-location button cycles the tree through left sidebar → center tab strip → right sidebar → left
+Every file tree tab's own header carries a **Search files** button, a **New file** button, and a
+**location button**. Search files opens the search pop-up — see "Finding a file by name" below.
+New file opens a fresh, unsaved editor tab named `untitled.md` — see "Creating a new file" below.
+The location button cycles the tree through left sidebar → center tab strip → right sidebar → left
 sidebar, one step per click, with a tooltip naming the destination. The header itself carries no
 close button — while docked, the sidebar's own strip (see `sidebars.md`) shows the tab's name and
 the close affordance, so a docked tree is closed from there (`close files` by label still works as
 a fallback).
+
+### Finding a file by name
+
+Clicking the header's **magnifying-glass** button opens a small search pop-up with a single text
+input. As the user types part of a filename, the input shows an inline ghost completion of the
+single best-matching file when its name starts with what's typed, and a line below the input shows
+that match's full path relative to the tree root. Matching is a case-insensitive substring on the
+filename only (not the full path), with a filename-prefix match ranked ahead of any other substring
+match; ties are broken by the shortest path. The searchable set is every file under the tree's root
+that is not excluded by `.gitignore` (or, outside a git repository, the same default excludes the
+tree itself applies) — matching how a conventional editor's "Go to File" behaves. There is no
+results list; only the single top match drives the ghost text and the path line.
+
+An empty query shows neither ghost text nor a path line. A query with no matches shows
+`(no matching files)` in place of the path line, with no ghost text, and `Enter` does nothing.
+While the candidate list is still loading, the path line reads `Searching…`.
+
+Pressing `Tab` accepts the ghost completion into the input without closing the pop-up. Pressing
+`Enter` acts on the current top match: it closes the pop-up, expands every ancestor directory of
+the match in the tree, selects that file's row, and scrolls it into view. Pressing `Escape`, or
+clicking outside the pop-up, closes it with no change to the tree and returns focus to the tree.
 
 ### Creating a new file
 

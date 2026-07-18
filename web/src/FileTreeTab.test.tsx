@@ -610,4 +610,90 @@ describe('FileTreeTab', () => {
       expect(request).toHaveBeenCalledTimes(4);
     });
   });
+
+  describe('search', () => {
+    it('the Search files button renders with its tooltip', () => {
+      const client = { send: vi.fn(), request: vi.fn(() => new Promise(() => { /* never resolves */ })) } as unknown as JanusClient;
+      render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+      expect(screen.getByTitle('Search files')).toBeInTheDocument();
+    });
+
+    it('clicking Search files opens the pop-up showing Searching… before the list resolves, then matches after', async () => {
+      const { promise, resolve } = withResolvers<{ paths: string[] }>();
+      const client = { send: vi.fn(), request: vi.fn(() => promise) } as unknown as JanusClient;
+      render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+      fireEvent.click(screen.getByTitle('Search files'));
+      expect(screen.getByText('Searching…')).toBeInTheDocument();
+      await act(async () => { resolve({ paths: ['src/index.ts', 'README.md'] }); await promise; });
+      fireEvent.change(screen.getByPlaceholderText('Find file…'), { target: { value: 'index' } });
+      expect(screen.getByText('src/index.ts')).toBeInTheDocument();
+    });
+
+    it('shows (no matching files) for a non-matching query and Enter is a no-op', async () => {
+      const client = { send: vi.fn(), request: vi.fn(() => Promise.resolve({ paths: ['README.md'] })) } as unknown as JanusClient;
+      render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+      fireEvent.click(screen.getByTitle('Search files'));
+      await act(async () => { await Promise.resolve(); });
+      const input = screen.getByPlaceholderText('Find file…');
+      fireEvent.change(input, { target: { value: 'zzz' } });
+      expect(screen.getByText('(no matching files)')).toBeInTheDocument();
+      fireEvent.keyDown(input, { key: 'Enter' });
+      expect(screen.getByPlaceholderText('Find file…')).toBeInTheDocument();
+    });
+
+    it('Escape closes the pop-up and returns focus to the tree', async () => {
+      const client = { send: vi.fn(), request: vi.fn(() => Promise.resolve({ paths: ['README.md'] })) } as unknown as JanusClient;
+      const { container } = render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+      fireEvent.click(screen.getByTitle('Search files'));
+      await act(async () => { await Promise.resolve(); });
+      fireEvent.keyDown(screen.getByPlaceholderText('Find file…'), { key: 'Escape' });
+      expect(screen.queryByPlaceholderText('Find file…')).not.toBeInTheDocument();
+      expect(container.querySelector('[role="tree"]')).toHaveFocus();
+    });
+
+    it('Tab accepts the ghost completion into the input without closing the pop-up', async () => {
+      const client = { send: vi.fn(), request: vi.fn(() => Promise.resolve({ paths: ['src/index.ts'] })) } as unknown as JanusClient;
+      render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+      fireEvent.click(screen.getByTitle('Search files'));
+      await act(async () => { await Promise.resolve(); });
+      const input = screen.getByPlaceholderText('Find file…');
+      fireEvent.change(input, { target: { value: 'index' } });
+      fireEvent.keyDown(input, { key: 'Tab' });
+      expect(screen.getByPlaceholderText('Find file…')).toHaveValue('index.ts');
+      expect(screen.getByPlaceholderText('Find file…')).toBeInTheDocument();
+    });
+
+    it('selecting a match sends revealFileTreeItem and selects the row once it appears', async () => {
+      const send = vi.fn();
+      const client = { send, request: vi.fn(() => Promise.resolve({ paths: ['src/index.ts'] })) } as unknown as JanusClient;
+      const { rerender } = render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+      fireEvent.click(screen.getByTitle('Search files'));
+      await act(async () => { await Promise.resolve(); });
+      fireEvent.change(screen.getByPlaceholderText('Find file…'), { target: { value: 'index' } });
+      fireEvent.keyDown(screen.getByPlaceholderText('Find file…'), { key: 'Enter' });
+      expect(send).toHaveBeenCalledWith({ method: 'revealFileTreeItem', params: { index: 0, relPath: 'src/index.ts' } });
+      expect(screen.queryByPlaceholderText('Find file…')).not.toBeInTheDocument();
+      rerender(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+      expect(screen.getByText('index.ts').closest('[role="treeitem"]')).toHaveAttribute('aria-selected', 'true');
+    });
+
+    it('a reply that arrives after the pop-up is closed does not reopen or repopulate it', async () => {
+      const { promise, resolve } = withResolvers<{ paths: string[] }>();
+      const client = { send: vi.fn(), request: vi.fn(() => promise) } as unknown as JanusClient;
+      render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+      fireEvent.click(screen.getByTitle('Search files'));
+      fireEvent.keyDown(screen.getByPlaceholderText('Find file…'), { key: 'Escape' });
+      expect(screen.queryByPlaceholderText('Find file…')).not.toBeInTheDocument();
+      await act(async () => { resolve({ paths: ['README.md'] }); await promise; });
+      expect(screen.queryByPlaceholderText('Find file…')).not.toBeInTheDocument();
+    });
+  });
 });
+
+// `Promise.withResolvers` (ES2024) predates this project's `lib` target; a small typed shim keeps
+// the tests off the disallowed "extract resolver from `new Promise()`" pattern regardless.
+function withResolvers<T>(): { promise: Promise<T>; resolve: (value: T) => void } {
+  const state = { resolve: undefined as unknown as (value: T) => void };
+  const promise = new Promise<T>((resolve) => { state.resolve = resolve; });
+  return { promise, resolve: state.resolve };
+}

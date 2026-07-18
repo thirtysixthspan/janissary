@@ -3,13 +3,15 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { FileTreeView, FileTreeRow } from '@shared/protocol';
 import type { JanusClient } from './ws';
 import { handleFileTreeKey, typeAheadMatch } from './file-tree-keys';
-import { nextDock, dockTooltip } from './dock-cycle';
 import { useFileTreeDrag } from './useFileTreeDrag';
 import { fileTreeRowClass } from './file-tree-row-class';
 import { newFileTargetDir, newFileCommand } from './file-tree-new-file';
-import { dockSwapIcon, expandedIcon, collapsedIcon, newFileIcon } from './icons';
+import { expandedIcon, collapsedIcon } from './icons';
 import { MoveConflictDialog } from './MoveConflictDialog/MoveConflictDialog';
 import { DeleteFileDialog } from './DeleteFileDialog';
+import { FileSearchPopup } from './FileSearchPopup';
+import { useFileTreeSearch } from './useFileTreeSearch';
+import { FileTreeHeader } from './FileTreeHeader';
 import type { CommandInputDropHandle } from './CommandInput';
 
 type Properties = {
@@ -42,6 +44,7 @@ export function FileTreeTab({ files, client, index, dock, autoFocus = true, drop
   const containerRef = useRef<HTMLDivElement>(null);
   const typeahead = useRef<{ buffer: string; timer?: ReturnType<typeof setTimeout> }>({ buffer: '' });
   const drag = useFileTreeDrag(files.rows, client, index, dropRef);
+  const search = useFileTreeSearch(client, index, files.rows, setSelected, () => containerRef.current?.focus());
 
   useEffect(() => { if (autoFocus) containerRef.current?.focus(); }, [autoFocus]);
 
@@ -143,40 +146,10 @@ export function FileTreeTab({ files, client, index, dock, autoFocus = true, drop
 
   return (
     <div className="files-tab" data-doc-shot="file-tree-view" ref={containerRef} tabIndex={0} role="tree" onKeyDown={onKeyDown}>
-      <div className="files-header">
-        <div className="files-meta">
-          <span className="files-loc">{files.root}</span>
-          {files.branch && <span className="files-branch">{files.branch}</span>}
-        </div>
-        <div className="files-actions">
-          <button
-            type="button"
-            className="files-new-file"
-            title="New file"
-            onClick={createNewFile}
-          >
-            <FontAwesomeIcon icon={newFileIcon} />
-          </button>
-          {dock && (
-            <button
-              type="button"
-              className="files-dock-cycle"
-              title={dockTooltip(nextDock(dock))}
-              onClick={() => client.send({ method: 'setDock', params: { index, dock: nextDock(dock) } })}
-            >
-              <FontAwesomeIcon icon={dockSwapIcon} />
-            </button>
-          )}
-          <button
-            type="button"
-            className="files-collapse-all"
-            title="Collapse all"
-            onClick={() => client.send({ method: 'fileTreeCollapseAll', params: { index } })}
-          >
-            ⊟
-          </button>
-        </div>
-      </div>
+      <FileTreeHeader
+        root={files.root} branch={files.branch} client={client} index={index} dock={dock}
+        onSearch={search.openSearch} onNewFile={createNewFile}
+      />
       <div className="files-rows">
         {files.rows.map((row) => {
           const cls = fileTreeRowClass(row, selected, drag.dropTarget?.path);
@@ -219,6 +192,16 @@ export function FileTreeTab({ files, client, index, dock, autoFocus = true, drop
           name={pendingDelete.slice(pendingDelete.lastIndexOf('/') + 1)}
           onConfirm={confirmDelete}
           onCancel={cancelDelete}
+        />
+      )}
+      {search.searchOpen && (
+        <FileSearchPopup
+          query={search.searchQuery}
+          onChangeQuery={search.setSearchQuery}
+          paths={search.searchPaths}
+          loading={search.searchLoading}
+          onReveal={search.revealFromSearch}
+          onClose={search.closeSearch}
         />
       )}
     </div>
