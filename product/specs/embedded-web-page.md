@@ -100,6 +100,12 @@ The page view shows, stacked top to bottom:
    scheme or malformed address is silently discarded, leaving the tab on its current address.
    Escape cancels the edit without navigating. Navigating this way keeps the tab's page number,
    position, and group unchanged; only its address, root-domain label, and displayed title update.
+   The address and label also follow the page automatically as the user navigates **inside** the
+   embedded page (clicking links, etc.) — when the app's bundled browser extension is active, the
+   same content-relay path the monitor's page-text feature already depends on reports the live
+   address, and it is applied the same way a manually-typed one is. Without the extension (for
+   example when the app fell back to the system browser at startup), the address and label simply
+   stay as they were when the tab was opened.
 2. **The embedded page** itself, filling the space beneath the metadata and resizing with the tab.
 
 Switching to another tab and back preserves the page view exactly as it was: whatever navigation,

@@ -54,4 +54,32 @@ describe('usePageContentSync', () => {
     expect(pageSync).not.toHaveBeenCalled();
     iframe.remove();
   });
+
+  it('calls onNavigate when the posted url differs from the current one', () => {
+    const iframe = document.createElement('iframe');
+    document.body.append(iframe);
+    const ref = React.createRef<HTMLIFrameElement>();
+    (ref as { current: HTMLIFrameElement }).current = iframe;
+    const { client } = makeClient();
+    const onNavigate = vi.fn();
+    renderHook(() => usePageContentSync(ref, 'https://example.org', client, onNavigate));
+
+    postMessage(iframe.contentWindow, { source: 'janissary-page-content', url: 'https://example.org/other', text: 'visible text' });
+    expect(onNavigate).toHaveBeenCalledWith('https://example.org/other');
+    iframe.remove();
+  });
+
+  it('does not call onNavigate when the posted url matches the current one', () => {
+    const iframe = document.createElement('iframe');
+    document.body.append(iframe);
+    const ref = React.createRef<HTMLIFrameElement>();
+    (ref as { current: HTMLIFrameElement }).current = iframe;
+    const { client } = makeClient();
+    const onNavigate = vi.fn();
+    renderHook(() => usePageContentSync(ref, 'https://example.org', client, onNavigate));
+
+    postMessage(iframe.contentWindow, { source: 'janissary-page-content', url: 'https://example.org', text: 'visible text' });
+    expect(onNavigate).not.toHaveBeenCalled();
+    iframe.remove();
+  });
 });
