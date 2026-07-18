@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { TabView } from '@shared/protocol';
+import { TAB_RENAME_MAX_LENGTH } from '@shared/config';
 import { statusDotIcon, unreadIcon } from './icons';
 
 // Shared with TabStrip, which passes these straight through to each TabItem it renders.
@@ -19,7 +20,7 @@ type Properties = TabItemActions & {
   windowFocused?: boolean;
 };
 
-export function TabItem({ tab, index, active, onSelect, onClose, onRename, tabNameMaxLength, onFocusCommandBar, windowFocused = true }: Properties) {
+export function TabItem({ tab, index, active, onSelect, onClose, onRename, onFocusCommandBar, windowFocused = true }: Properties) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState('');
   // Escape cancels and blurs the input; the resulting blur event must not also commit.
@@ -51,11 +52,12 @@ export function TabItem({ tab, index, active, onSelect, onClose, onRename, tabNa
         <input
           className="tab-rename-input"
           value={draft}
-          maxLength={tabNameMaxLength}
+          maxLength={TAB_RENAME_MAX_LENGTH}
+          size={Math.max(draft.length, 1)}
           autoFocus
           onFocus={(e) => e.currentTarget.select()}
           onClick={(e) => e.stopPropagation()}
-          onChange={(e) => setDraft(e.currentTarget.value.slice(0, tabNameMaxLength))}
+          onChange={(e) => setDraft(e.currentTarget.value.slice(0, TAB_RENAME_MAX_LENGTH))}
           onBlur={commit}
           onKeyDown={(e) => {
             if (e.key === 'Enter') { e.currentTarget.blur(); }

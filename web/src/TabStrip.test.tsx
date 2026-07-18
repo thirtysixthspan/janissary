@@ -162,15 +162,25 @@ describe('TabStrip', () => {
     expect(onRename).toHaveBeenCalledWith(0, '  reviewer  ');
   });
 
-  it('truncates typed input to tabNameMaxLength', async () => {
+  it('truncates typed input to the 50-character rename cap regardless of tabNameMaxLength', async () => {
     const onRename = vi.fn();
     const tab = makeTab({ label: 'internal', title: 'Display Name' });
     render(<TabStrip tabs={[tab]} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()} onRename={onRename} tabNameMaxLength={4} />);
     await userEvent.dblClick(screen.getByText('Display Name'));
     const input = screen.getByRole('textbox');
     await userEvent.clear(input);
-    await userEvent.type(input, 'abcdefgh{Enter}');
-    expect(onRename).toHaveBeenCalledWith(0, 'abcd');
+    await userEvent.type(input, 'a'.repeat(60) + '{Enter}');
+    expect(onRename).toHaveBeenCalledWith(0, 'a'.repeat(50));
+  });
+
+  it('grows the rename input as the draft grows instead of reserving fixed space', async () => {
+    const tab = makeTab({ label: 'internal', title: 'ab' });
+    render(<TabStrip tabs={[tab]} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()} onRename={vi.fn()} tabNameMaxLength={100} />);
+    await userEvent.dblClick(screen.getByText('ab'));
+    const input = screen.getByRole('textbox') as HTMLInputElement;
+    expect(input.size).toBe(2);
+    await userEvent.type(input, 'cdef');
+    expect(input.size).toBe(6);
   });
 
   it('cancels without committing on Escape', async () => {

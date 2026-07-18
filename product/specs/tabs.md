@@ -124,6 +124,8 @@ An alias can be set two ways:
 
 Setting the alias to an empty value, or to the same text as the label, clears it rather than storing a redundant alias. Aliases are display-only — they need not be unique, and two tabs may show the same alias while remaining distinct by label.
 
+While editing via double-click, the field accepts up to 50 characters — independent of the strip's display truncation length — so a full file name can always be typed in, including for an editor tab whose rename renames the file on disk. The field starts sized to its pre-filled content and widens only as further characters are typed, rather than reserving space for the maximum length up front.
+
 An alias persists across `--relaunch`, restored alongside the rest of the tab's saved state.
 
 ### `close` command

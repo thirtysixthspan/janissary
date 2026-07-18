@@ -6,6 +6,10 @@ import { DEFAULT_APP_THEME } from './app-themes.js';
 
 export const DEFAULT_TRANSCRIPT_MAX_LINES = 25_000;
 export const DEFAULT_TAB_NAME_MAX_LENGTH = 16;
+// Cap for the tab-rename input itself, independent of tabNameMaxLength (which only truncates
+// the tab strip's *display* label). Editor-tab renames go straight to a file-system rename, so
+// this needs to accommodate real file names rather than the short display length.
+export const TAB_RENAME_MAX_LENGTH = 50;
 
 const DEFAULT_CONFIG: Config = {
   transcriptMaxLines: DEFAULT_TRANSCRIPT_MAX_LINES,

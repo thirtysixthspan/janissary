@@ -253,10 +253,10 @@ describe('Controller', () => {
     expect(c.view()[0].title).toBeUndefined();
   });
 
-  it('truncates a rename to the configured tab name max length', () => {
+  it('truncates a rename to the 50-character rename cap', () => {
     const { c } = makeController();
-    c.dispatch('rename abcdefghijklmnopqrstuvwxyz');
-    expect(c.view()[0].title).toBe('abcdefghijklmnop'); // 16 chars, the default tabNameMaxLength
+    c.dispatch(`rename ${'a'.repeat(60)}`);
+    expect(c.view()[0].title).toBe('a'.repeat(50));
   });
 
   it('persists and restores the alias across rehydrate', () => {

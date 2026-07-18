@@ -6,7 +6,7 @@ import {
 } from './index.js';
 import { saveAgentState, listAgentStates } from '../agent/state.js';
 import { abbreviatePath } from '../paths.js';
-import { getConfig } from '../config.js';
+import { getConfig, TAB_RENAME_MAX_LENGTH } from '../config.js';
 import { messageBus } from '../bus.js';
 import { closeTabResources } from './cleanup.js';
 import type { Managers } from '../managers.js';
@@ -235,14 +235,14 @@ export class TabManager {
     if (!tab) return;
     if (tab.editor) {
       renameEditorTab(
-        tab, title, getConfig().tabNameMaxLength,
+        tab, title, TAB_RENAME_MAX_LENGTH,
         (p) => this.registerFile(p), (l, p) => this.managers.editorWatch.watch(l, p),
       );
       this.persist(this.buildAgentState(tab));
       messageBus.emit('state', { type: 'dirty' });
       return;
     }
-    const trimmed = title.trim().slice(0, getConfig().tabNameMaxLength);
+    const trimmed = title.trim().slice(0, TAB_RENAME_MAX_LENGTH);
     if (trimmed && trimmed !== tab.label) tab.title = trimmed;
     else delete tab.title;
     this.persist(this.buildAgentState(tab));

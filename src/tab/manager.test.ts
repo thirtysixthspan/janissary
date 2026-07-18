@@ -323,4 +323,24 @@ describe('TabManager renameTab for editor tabs', () => {
     tm.renameTab(0, 'newlabel');
     expect(tm.tabs[0].title).toBe('newlabel');
   });
+
+  it('renaming an agent tab allows up to 50 characters, independent of tabNameMaxLength', () => {
+    const tm = makeTabManager();
+    tm.renameTab(0, 'a'.repeat(60));
+    expect(tm.tabs[0].title).toBe('a'.repeat(50));
+  });
+
+  it('renaming an editor tab allows a file name up to 50 characters, independent of tabNameMaxLength', () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'janus-rename-'));
+    const filePath = path.join(dir, 'existing.ts');
+    writeFileSync(filePath, 'content');
+    const tm = makeTabManager();
+    tm.openEditorTab({ name: 'existing.ts', path: filePath, size: '7 B', url: '/open/1' });
+    const index = tm.activeTab;
+
+    tm.renameTab(index, 'a'.repeat(60));
+
+    const tab = tm.tabs[index];
+    expect(tab.editor?.name).toBe('a'.repeat(50));
+  });
 });

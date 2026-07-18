@@ -55,7 +55,7 @@ Settings live in `.janissary/config.json` inside the directory you launch from; 
 | Setting | Default | What it does |
 |---|---|---|
 | `transcriptMaxLines` | `25000` | How many transcript entries each tab keeps. Past the cap, the oldest entries are dropped. |
-| `tabNameMaxLength` | `16` | The longest allowed tab name, applied when tabs are created or renamed. |
+| `tabNameMaxLength` | `16` | The longest tab name shown in the strip when a tab is created; the strip truncates to fit. Renaming via `rename` or double-click accepts up to 50 characters regardless of this setting. |
 | `syntaxTheme` | `"github-dark"` | The syntax-highlighting theme for [editor tabs](/user-documentation/tab-types/editor). Change it at runtime with `syntax theme <name>`. |
 
 If the file isn't valid JSON, the app warns on startup and falls back to defaults for that session — your file is left untouched so you can fix it.
