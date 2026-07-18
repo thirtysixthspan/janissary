@@ -12,7 +12,7 @@ vi.mock('node:fs', async (importOriginal) => {
   return { ...actual, watch: (...args: unknown[]) => watchMock(...args) };
 });
 
-const changedPathsMock = vi.fn((_root: string): Promise<Set<string>> => Promise.resolve(new Set<string>()));
+const changedPathsMock = vi.fn((_root: string): Promise<Map<string, string>> => Promise.resolve(new Map<string, string>()));
 const currentBranchMock = vi.fn((_root: string): Promise<string | undefined> => Promise.resolve(undefined));
 
 vi.mock('../git-status.js', () => ({
@@ -40,7 +40,7 @@ describe('FileTreeManager', () => {
     closeFns = [];
     watchMock.mockReset();
     changedPathsMock.mockReset();
-    changedPathsMock.mockResolvedValue(new Set());
+    changedPathsMock.mockResolvedValue(new Map());
     currentBranchMock.mockReset();
     currentBranchMock.mockResolvedValue(undefined);
     watchMock.mockImplementation(() => {
@@ -639,59 +639,76 @@ describe('FileTreeManager', () => {
   describe('git-modified coloring', () => {
     const navLabel = () => tabs.find((t) => t.label.startsWith('navigator'))!.label;
 
-    it('applies the changed flag once the async git refresh resolves, without a watcher event', async () => {
+    it('applies the changed status once the async git refresh resolves, without a watcher event', async () => {
       writeFileSync(path.join(root, 'a.txt'), '');
-      changedPathsMock.mockResolvedValue(new Set(['a.txt']));
+      changedPathsMock.mockResolvedValue(new Map([['a.txt', 'changed']]));
       const manager = run();
       manager.open('files', 'janus');
       const label = navLabel();
-      expect(tabs.find((t) => t.label === label)!.files!.rows.find((r) => r.path === 'a.txt')?.changed).toBeUndefined();
+      expect(tabs.find((t) => t.label === label)!.files!.rows.find((r) => r.path === 'a.txt')?.gitStatus).toBeUndefined();
       await vi.waitFor(() => {
         const row = tabs.find((t) => t.label === label)!.files!.rows.find((r) => r.path === 'a.txt');
-        expect(row?.changed).toBe(true);
+        expect(row?.gitStatus).toBe('changed');
       });
     });
 
-    it('an interactive toggle reuses the cached git set and spawns no new git call', async () => {
-      mkdirSync(path.join(root, 'src'));
-      writeFileSync(path.join(root, 'src', 'a.txt'), '');
-      changedPathsMock.mockResolvedValue(new Set(['src/a.txt']));
+    it('applies staged and conflict statuses distinctly', async () => {
+      writeFileSync(path.join(root, 'staged.txt'), '');
+      writeFileSync(path.join(root, 'conflict.txt'), '');
+      changedPathsMock.mockResolvedValue(new Map([
+        ['staged.txt', 'staged'],
+        ['conflict.txt', 'conflict'],
+      ]));
       const manager = run();
       manager.open('files', 'janus');
       const label = navLabel();
       await vi.waitFor(() => {
         const rows = tabs.find((t) => t.label === label)!.files!.rows;
-        expect(rows.find((r) => r.path === 'src')?.changed).toBe(true);
+        expect(rows.find((r) => r.path === 'staged.txt')?.gitStatus).toBe('staged');
+        expect(rows.find((r) => r.path === 'conflict.txt')?.gitStatus).toBe('conflict');
+      });
+    });
+
+    it('an interactive toggle reuses the cached git map and spawns no new git call', async () => {
+      mkdirSync(path.join(root, 'src'));
+      writeFileSync(path.join(root, 'src', 'a.txt'), '');
+      changedPathsMock.mockResolvedValue(new Map([['src/a.txt', 'changed']]));
+      const manager = run();
+      manager.open('files', 'janus');
+      const label = navLabel();
+      await vi.waitFor(() => {
+        const rows = tabs.find((t) => t.label === label)!.files!.rows;
+        expect(rows.find((r) => r.path === 'src')?.gitStatus).toBe('changed');
       });
       expect(changedPathsMock).toHaveBeenCalledTimes(1);
       manager.toggle(label, 'src');
       expect(changedPathsMock).toHaveBeenCalledTimes(1);
       const rows = tabs.find((t) => t.label === label)!.files!.rows;
-      expect(rows.find((r) => r.path === 'src/a.txt')?.changed).toBe(true);
-      expect(rows.find((r) => r.path === 'src')?.changed).toBe(true);
+      expect(rows.find((r) => r.path === 'src/a.txt')?.gitStatus).toBe('changed');
+      expect(rows.find((r) => r.path === 'src')?.gitStatus).toBe('changed');
     });
 
     it('reroot resets the cache (no stale coloring) and triggers a fresh refresh', async () => {
       mkdirSync(path.join(root, 'sub'));
       writeFileSync(path.join(root, 'sub', 'a.txt'), '');
-      changedPathsMock.mockResolvedValue(new Set(['a.txt']));
+      changedPathsMock.mockResolvedValue(new Map([['a.txt', 'changed']]));
       const manager = run();
       manager.open('files sub', 'janus');
       const label = navLabel();
       await vi.waitFor(() => expect(changedPathsMock).toHaveBeenCalledTimes(1));
-      changedPathsMock.mockResolvedValue(new Set());
+      changedPathsMock.mockResolvedValue(new Map());
       manager.reroot(label);
-      expect(tabs.find((t) => t.label === label)!.files!.rows.find((r) => r.path === 'sub')?.changed).toBeUndefined();
+      expect(tabs.find((t) => t.label === label)!.files!.rows.find((r) => r.path === 'sub')?.gitStatus).toBeUndefined();
       await vi.waitFor(() => expect(changedPathsMock).toHaveBeenCalledTimes(2));
     });
 
     it('coalesces overlapping refresh requests into exactly one extra git call', async () => {
       vi.useFakeTimers();
       try {
-        const deferred = Promise.withResolvers<Set<string>>();
+        const deferred = Promise.withResolvers<Map<string, string>>();
         changedPathsMock
           .mockImplementationOnce(() => deferred.promise)
-          .mockResolvedValue(new Set());
+          .mockResolvedValue(new Map());
         const manager = run();
         manager.open('files', 'janus');
         expect(changedPathsMock).toHaveBeenCalledTimes(1);
@@ -701,7 +718,7 @@ describe('FileTreeManager', () => {
         onEvent();
         vi.advanceTimersByTime(150);
         expect(changedPathsMock).toHaveBeenCalledTimes(1);
-        deferred.resolve(new Set());
+        deferred.resolve(new Map());
         await Promise.resolve();
         await Promise.resolve();
         expect(changedPathsMock).toHaveBeenCalledTimes(2);
@@ -712,34 +729,34 @@ describe('FileTreeManager', () => {
 
     it('discards a git refresh that resolves after its tab was closed', async () => {
       writeFileSync(path.join(root, 'a.txt'), '');
-      const deferred = Promise.withResolvers<Set<string>>();
+      const deferred = Promise.withResolvers<Map<string, string>>();
       changedPathsMock.mockImplementation(() => deferred.promise);
       const manager = run();
       manager.open('files', 'janus');
       const label = navLabel();
       manager.closeTab(label);
-      deferred.resolve(new Set(['a.txt']));
+      deferred.resolve(new Map([['a.txt', 'changed']]));
       await Promise.resolve();
       await Promise.resolve();
       const row = tabs.find((t) => t.label === label)!.files!.rows.find((r) => r.path === 'a.txt');
-      expect(row?.changed).toBeUndefined();
+      expect(row?.gitStatus).toBeUndefined();
     });
 
     it('discards a git refresh whose root changed (reroot) before it resolved', async () => {
       mkdirSync(path.join(root, 'sub'));
       writeFileSync(path.join(root, 'sub', 'a.txt'), '');
-      const deferred = Promise.withResolvers<Set<string>>();
+      const deferred = Promise.withResolvers<Map<string, string>>();
       changedPathsMock
         .mockImplementationOnce(() => deferred.promise)
-        .mockResolvedValue(new Set());
+        .mockResolvedValue(new Map());
       const manager = run();
       manager.open('files sub', 'janus');
       const label = navLabel();
       manager.reroot(label);
-      deferred.resolve(new Set(['a.txt']));
+      deferred.resolve(new Map([['a.txt', 'changed']]));
       await Promise.resolve();
       await Promise.resolve();
-      expect(tabs.find((t) => t.label === label)!.files!.rows.find((r) => r.path === 'sub')?.changed).toBeUndefined();
+      expect(tabs.find((t) => t.label === label)!.files!.rows.find((r) => r.path === 'sub')?.gitStatus).toBeUndefined();
     });
   });
 

@@ -3,7 +3,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, symlinkSync, rmSync } from 'node
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import type { FileTreeRow } from '../types.js';
-import { readDirSorted, buildRows, markChanged, isSameOrDescendantPath, hasNameConflict } from './index.js';
+import { readDirSorted, buildRows, markGitStatus, isSameOrDescendantPath, hasNameConflict } from './index.js';
 
 describe('readDirSorted', () => {
   let root: string;
@@ -81,7 +81,7 @@ describe('buildRows', () => {
   });
 });
 
-describe('markChanged', () => {
+describe('markGitStatus', () => {
   it('marks a changed file and every ancestor directory — including collapsed ones — and leaves others unmarked', () => {
     const rows: FileTreeRow[] = [
       { path: '..', name: '..', depth: 0, dir: true },
@@ -90,28 +90,38 @@ describe('markChanged', () => {
       { path: 'src/other.ts', name: 'other.ts', depth: 1, dir: false },
       { path: 'docs', name: 'docs', depth: 0, dir: true, expanded: false },
     ];
-    const marked = markChanged(rows, new Set(['src/deep/nested/changed.ts']));
-    const changed = Object.fromEntries(marked.map((r) => [r.path, r.changed]));
-    expect(changed['src']).toBe(true);
-    expect(changed['src/deep']).toBe(true);
-    expect(changed['src/other.ts']).toBeUndefined();
-    expect(changed['docs']).toBeUndefined();
-    expect(changed['..']).toBeUndefined();
+    const marked = markGitStatus(rows, new Map([['src/deep/nested/changed.ts', 'changed']]));
+    const status = Object.fromEntries(marked.map((r) => [r.path, r.gitStatus]));
+    expect(status['src']).toBe('changed');
+    expect(status['src/deep']).toBe('changed');
+    expect(status['src/other.ts']).toBeUndefined();
+    expect(status['docs']).toBeUndefined();
+    expect(status['..']).toBeUndefined();
   });
 
-  it('marks a file row whose own path is in the changed set', () => {
+  it('marks a file row with its own path\'s status', () => {
     const rows: FileTreeRow[] = [{ path: 'a.txt', name: 'a.txt', depth: 0, dir: false }];
-    expect(markChanged(rows, new Set(['a.txt']))[0].changed).toBe(true);
+    expect(markGitStatus(rows, new Map([['a.txt', 'staged']]))[0].gitStatus).toBe('staged');
   });
 
   it('does not color a directory that merely shares a name prefix with a changed path', () => {
     const rows: FileTreeRow[] = [{ path: 'src', name: 'src', depth: 0, dir: true, expanded: false }];
-    expect(markChanged(rows, new Set(['src-backup/x.ts']))[0].changed).toBeUndefined();
+    expect(markGitStatus(rows, new Map([['src-backup/x.ts', 'changed']]))[0].gitStatus).toBeUndefined();
   });
 
-  it('returns the rows unchanged when the changed set is empty', () => {
+  it('returns the rows unchanged when the status map is empty', () => {
     const rows: FileTreeRow[] = [{ path: 'a.txt', name: 'a.txt', depth: 0, dir: false }];
-    expect(markChanged(rows, new Set())).toBe(rows);
+    expect(markGitStatus(rows, new Map())).toBe(rows);
+  });
+
+  it('marks a directory row with the highest-priority status among its descendants', () => {
+    const rows: FileTreeRow[] = [{ path: 'src', name: 'src', depth: 0, dir: true, expanded: true }];
+    const statuses = new Map<string, 'changed' | 'staged' | 'conflict'>([
+      ['src/a.txt', 'changed'],
+      ['src/b.txt', 'conflict'],
+      ['src/c.txt', 'staged'],
+    ]);
+    expect(markGitStatus(rows, statuses)[0].gitStatus).toBe('conflict');
   });
 });
 

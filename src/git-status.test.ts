@@ -22,29 +22,53 @@ describe('changedPaths', () => {
   beforeEach(() => { root = mkdtempSync(path.join(tmpdir(), 'git-status-')); });
   afterEach(() => { rmSync(root, { recursive: true, force: true }); });
 
-  it('includes a modified tracked file', async () => {
+  it('classifies a modified tracked file as changed', async () => {
     initRepo(root);
     writeFileSync(path.join(root, 'a.txt'), 'one');
     commitAll(root);
     writeFileSync(path.join(root, 'a.txt'), 'two');
-    expect(await changedPaths(root)).toEqual(new Set(['a.txt']));
+    expect(await changedPaths(root)).toEqual(new Map([['a.txt', 'changed']]));
   });
 
-  it('includes a staged file', async () => {
+  it('classifies a staged file as staged', async () => {
     initRepo(root);
     writeFileSync(path.join(root, 'a.txt'), 'one');
     commitAll(root);
     writeFileSync(path.join(root, 'b.txt'), 'new');
     execSync('git add b.txt', { cwd: root, stdio: 'pipe' });
-    expect(await changedPaths(root)).toEqual(new Set(['b.txt']));
+    expect(await changedPaths(root)).toEqual(new Map([['b.txt', 'staged']]));
   });
 
-  it('includes an untracked file', async () => {
+  it('classifies an untracked file as changed', async () => {
     initRepo(root);
     writeFileSync(path.join(root, 'a.txt'), 'one');
     commitAll(root);
     writeFileSync(path.join(root, 'untracked.txt'), 'new');
-    expect(await changedPaths(root)).toEqual(new Set(['untracked.txt']));
+    expect(await changedPaths(root)).toEqual(new Map([['untracked.txt', 'changed']]));
+  });
+
+  it('classifies a partially-staged file (staged, then further edited) as staged', async () => {
+    initRepo(root);
+    writeFileSync(path.join(root, 'a.txt'), 'one');
+    commitAll(root);
+    writeFileSync(path.join(root, 'a.txt'), 'two');
+    execSync('git add a.txt', { cwd: root, stdio: 'pipe' });
+    writeFileSync(path.join(root, 'a.txt'), 'three');
+    expect(await changedPaths(root)).toEqual(new Map([['a.txt', 'staged']]));
+  });
+
+  it('classifies an unmerged path from a merge conflict as conflict', async () => {
+    initRepo(root);
+    writeFileSync(path.join(root, 'a.txt'), 'base');
+    commitAll(root);
+    execSync('git checkout -b feature', { cwd: root, stdio: 'pipe' });
+    writeFileSync(path.join(root, 'a.txt'), 'feature');
+    commitAll(root);
+    execSync('git checkout master', { cwd: root, stdio: 'pipe' });
+    writeFileSync(path.join(root, 'a.txt'), 'master');
+    commitAll(root);
+    try { execSync('git merge feature', { cwd: root, stdio: 'pipe' }); } catch { /* conflict expected */ }
+    expect(await changedPaths(root)).toEqual(new Map([['a.txt', 'conflict']]));
   });
 
   it('lists a file inside a wholly-untracked directory individually, not the collapsed directory', async () => {
@@ -77,15 +101,15 @@ describe('changedPaths', () => {
     commitAll(root);
     writeFileSync(path.join(sub, 'a.txt'), 'two');
     writeFileSync(path.join(sub, 'untracked.txt'), 'new');
-    expect(await changedPaths(sub)).toEqual(new Set(['a.txt', 'untracked.txt']));
+    expect(await changedPaths(sub)).toEqual(new Map([['a.txt', 'changed'], ['untracked.txt', 'changed']]));
   });
 
-  it('resolves to an empty set for a directory that is not a git repository', async () => {
-    expect(await changedPaths(root)).toEqual(new Set());
+  it('resolves to an empty map for a directory that is not a git repository', async () => {
+    expect(await changedPaths(root)).toEqual(new Map());
   });
 
-  it('resolves to an empty set — never rejects — when the git invocation fails', async () => {
-    await expect(changedPaths(path.join(root, 'does-not-exist'))).resolves.toEqual(new Set());
+  it('resolves to an empty map — never rejects — when the git invocation fails', async () => {
+    await expect(changedPaths(path.join(root, 'does-not-exist'))).resolves.toEqual(new Map());
   });
 });
 
