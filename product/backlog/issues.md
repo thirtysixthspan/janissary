@@ -2,8 +2,6 @@
 
 ## ready
 
-* when changing the file name in the tab label of the editor tab, it should always update the file name. there are no tab aliases for editor tabs.
-
 * when changing the tab label in the editor tab to rename the file, the tab label should allow file names of 50 characters, but onl extend the size of the tab only as the input grows. 
 
 * in the file search dialog of the file navigator the text and ghost text are not aligned but should be. 

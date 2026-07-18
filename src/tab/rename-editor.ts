@@ -2,11 +2,12 @@ import { existsSync, renameSync } from 'node:fs';
 import path from 'node:path';
 import type { Tab } from '../types.js';
 
-// Rename branch for a new-file-coupled editor tab (`Tab.newFileEditor`): the tab label sets the
-// filename literally (no extension appended), rather than acting as a display-only alias. Before
-// the file exists on disk this just updates the pending target path; once it exists, the file is
-// renamed on disk and the editor retargeted to the new path.
-export function renameNewFileEditor(
+// Rename branch for any editor tab: the tab label sets the filename literally (no extension
+// appended), rather than acting as a display-only alias — editor tabs represent a file on disk,
+// so there is no separate alias concept. Before the file exists on disk this just updates the
+// pending target path; once it exists, the file is renamed on disk and the editor retargeted to
+// the new path.
+export function renameEditorTab(
   tab: Tab,
   title: string,
   maxLength: number,

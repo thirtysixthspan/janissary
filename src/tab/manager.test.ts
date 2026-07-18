@@ -265,7 +265,7 @@ describe('TabManager mostRecentFileTreeLabel', () => {
   });
 });
 
-describe('TabManager renameTab for new-file editors', () => {
+describe('TabManager renameTab for editor tabs', () => {
   it('renaming a not-yet-saved new-file editor updates its pending basename literally (no extension appended)', () => {
     const tm = makeTabManager();
     tm.openEditorTab({ name: 'untitled.md', path: '/test/untitled.md', size: 'unknown', url: '/open/1', newFile: true });
@@ -299,17 +299,23 @@ describe('TabManager renameTab for new-file editors', () => {
     expect(tab.title).toBe('final');
   });
 
-  it('renaming a normal editor tab still sets a display alias only, without touching any file', () => {
+  it('renaming a normal editor tab renames the file on disk and retargets the editor', () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'janus-rename-'));
+    const filePath = path.join(dir, 'existing.ts');
+    writeFileSync(filePath, 'content');
     const tm = makeTabManager();
-    tm.openEditorTab({ name: 'existing.ts', path: '/test/existing.ts', size: '1 KB', url: '/open/1' });
+    tm.openEditorTab({ name: 'existing.ts', path: filePath, size: '7 B', url: '/open/1' });
     const index = tm.activeTab;
 
     tm.renameTab(index, 'aliased');
 
+    const newPath = path.join(dir, 'aliased');
     const tab = tm.tabs[index];
+    expect(existsSync(newPath)).toBe(true);
+    expect(existsSync(filePath)).toBe(false);
+    expect(tab.editor?.path).toBe(newPath);
+    expect(tab.editor?.name).toBe('aliased');
     expect(tab.title).toBe('aliased');
-    expect(tab.editor?.path).toBe('/test/existing.ts');
-    expect(tab.editor?.name).toBe('existing.ts');
   });
 
   it('renaming an agent tab still sets an alias only', () => {

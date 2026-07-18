@@ -115,7 +115,7 @@ Each tab carries its own transcript log, command history (including navigation i
 
 ### Tab display alias
 
-Any tab can be given a **display alias**: a name shown in the tab strip in place of its internal label, without changing the label itself. The label remains the identifier used everywhere else — `msg`/`broadcast` routing, the monitor feed, and every other tab-targeting feature keep working against the original name; only the strip's appearance changes.
+Any tab can be given a **display alias**: a name shown in the tab strip in place of its internal label, without changing the label itself. The label remains the identifier used everywhere else — `msg`/`broadcast` routing, the monitor feed, and every other tab-targeting feature keep working against the original name; only the strip's appearance changes. The plain-text editor tab is the one exception: it has no alias concept, since it represents a file on disk — renaming its label always renames the underlying file (see `editor-tab.md`).
 
 An alias can be set two ways:
 
