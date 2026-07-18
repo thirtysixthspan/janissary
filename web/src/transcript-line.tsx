@@ -1,7 +1,7 @@
 import React, { useCallback, useMemo } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { JanusClient } from './ws';
-import { screenshotIcon, promptIcon, collapsedIcon } from './icons';
+import { viewCaptureIcon, promptIcon, collapsedIcon } from './icons';
 import type { BufferLine } from '@shared/protocol';
 import { matchRange } from '@shared/search-matches';
 import { TerminalCard } from './TerminalCard';
@@ -100,7 +100,7 @@ function OpenFileLink({ path, client }: { path: string; client: JanusClient }) {
       title="Open the captured screen in an editor tab"
       onClick={() => client.send({ method: 'command', params: { text: `edit ${path}` } })}
     >
-      {' '}<FontAwesomeIcon icon={screenshotIcon} />
+      {' '}<FontAwesomeIcon icon={viewCaptureIcon} />
     </span>
   );
 }

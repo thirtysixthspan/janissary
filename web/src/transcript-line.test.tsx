@@ -186,6 +186,13 @@ describe('renderLine — message openFile link', () => {
     expect(link.textContent?.trim()).not.toMatch(/view capture/i);
   });
 
+  it('renders the capture link as a clipboard icon', () => {
+    const line: BufferLine = { type: 'message', text: 'Auto-approved a permission prompt', from: '8:32pm claude', openFile: '/captures/claude-now.txt' };
+    const { container } = render(<>{renderLine(line, 0, clientStub, noop, vi.fn())}</>);
+    const link = container.querySelector('.file-link[role="link"]')!;
+    expect(link.querySelector('svg[data-icon]')).toHaveAttribute('data-icon', 'clipboard');
+  });
+
   it('renders no link when the message has no openFile', () => {
     const line: BufferLine = { type: 'message', text: 'a plain notification', from: '8:32pm janus' };
     const { container } = render(<>{renderLine(line, 0, clientStub, noop, vi.fn())}</>);

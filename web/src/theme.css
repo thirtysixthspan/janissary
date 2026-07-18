@@ -352,9 +352,8 @@ html, body, #root {
 .line.message .message-text { color: var(--fg); }
 .line.message .file-link {
   color: var(--accent); cursor: pointer; text-decoration: none;
-  border: 1px solid var(--accent); border-radius: 4px; padding: 0 6px;
 }
-.line.message .file-link:hover { background: var(--accent); color: var(--bg); }
+.line.message .file-link:hover { color: var(--fg); }
 
 /* Rendered Markdown from an ACP agent reply. Override the per-line pre-wrap so block elements flow
    normally; keep vertical rhythm tight to match the transcript. */
