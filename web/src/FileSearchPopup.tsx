@@ -26,6 +26,7 @@ export function FileSearchPopup({ query, onChangeQuery, paths, loading, onReveal
   const best = bestFileMatch(paths, query);
   const ghost = best ? ghostSuffix(best, query) : undefined;
   const line = pathLine(loading, query, best);
+  const display = best !== undefined && line === best ? `> ${line}` : line;
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     e.stopPropagation();
@@ -54,7 +55,7 @@ export function FileSearchPopup({ query, onChangeQuery, paths, loading, onReveal
           />
         </div>
       </div>
-      {line !== null && <div className="search-result">{line}</div>}
+      {display !== null && <div className="search-result">{display}</div>}
     </div>
   );
 }

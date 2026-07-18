@@ -626,7 +626,7 @@ describe('FileTreeTab', () => {
       expect(screen.getByText('Searching…')).toBeInTheDocument();
       await act(async () => { resolve({ paths: ['src/index.ts', 'README.md'] }); await promise; });
       fireEvent.change(screen.getByPlaceholderText('Find file…'), { target: { value: 'index' } });
-      expect(screen.getByText('src/index.ts')).toBeInTheDocument();
+      expect(screen.getByText('> src/index.ts')).toBeInTheDocument();
     });
 
     it('shows (no matching files) for a non-matching query and Enter is a no-op', async () => {
