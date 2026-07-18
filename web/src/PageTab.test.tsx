@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render } from '@testing-library/react';
+import { act, fireEvent, render } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import type { PageView } from '@shared/protocol';
 import type { JanusClient } from './ws';
@@ -111,5 +111,18 @@ describe('PageTab', () => {
     fireEvent.keyDown(input, { key: 'Escape' });
     expect(container.querySelector('.page-url-input')).toBeNull();
     expect(client.navigatePage).not.toHaveBeenCalled();
+  });
+
+  it('calls navigatePage when the embedded page reports a different URL', () => {
+    const client = makeClient();
+    const { container } = render(<PageTab page={makePage({ url: 'https://slashdot.org/' })} closeTab={vi.fn()} index={3} client={client} />);
+    const iframe = container.querySelector('iframe') as HTMLIFrameElement;
+    act(() => {
+      globalThis.dispatchEvent(new MessageEvent('message', {
+        data: { source: 'janissary-page-content', url: 'https://slashdot.org/story/1', text: 'story text' },
+        source: iframe.contentWindow,
+      }));
+    });
+    expect(client.navigatePage).toHaveBeenCalledWith(3, 'https://slashdot.org/story/1');
   });
 });

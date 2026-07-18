@@ -23,7 +23,7 @@ Many sites send headers refusing to be embedded. When the app runs in its own ma
 
 ## Page numbers and labels
 
-Each page tab is numbered `1`, `2`, `3`, … — always the smallest free number, so open pages count up from 1 without gaps, and a closed page's number is reused. The strip label combines number and root domain — `1) slashdot.org` — with any `www.` dropped (`docs.example.com` labels as `example.com`).
+Each page tab is numbered `1`, `2`, `3`, … — always the smallest free number, so open pages count up from 1 without gaps, and a closed page's number is reused. The strip label combines number and root domain — `1) slashdot.org` — with any `www.` dropped (`docs.example.com` labels as `example.com`). The label and the address shown in the metadata header follow you as you navigate inside the embedded page — click through to another page on the same site (or a different one) and both update to match, as long as the app is running in its own managed browser.
 
 ## Closing
 

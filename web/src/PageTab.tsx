@@ -11,7 +11,7 @@ export function PageTab({ page, closeTab, index, client }: { page: PageView; clo
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState('');
   const cancelledRef = useRef(false);
-  usePageContentSync(iframeRef, page.url, client);
+  usePageContentSync(iframeRef, page.url, client, (liveUrl) => client.navigatePage(index, liveUrl));
 
   const goBack = () => iframeRef.current?.contentWindow?.history.back();
   const goForward = () => iframeRef.current?.contentWindow?.history.forward();

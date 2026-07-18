@@ -10,17 +10,21 @@ const SOURCE = 'janissary-page-content';
 // messages whose `event.source` is this exact iframe's content window are accepted — an embedded
 // page is cross-origin and untrusted, so origin alone can't identify it, but the iframe's window
 // object can.
-export function usePageContentSync(iframeRef: React.RefObject<HTMLIFrameElement | null>, url: string, client: JanusClient): void {
+export function usePageContentSync(
+  iframeRef: React.RefObject<HTMLIFrameElement | null>, url: string, client: JanusClient,
+  onNavigate?: (url: string) => void,
+): void {
   useEffect(() => {
     function handleMessage(event: MessageEvent): void {
       if (event.source !== iframeRef.current?.contentWindow) return;
       const data: unknown = event.data;
       if (!data || typeof data !== 'object') return;
-      const { source, text } = data as { source?: unknown; text?: unknown };
+      const { source, text, url: liveUrl } = data as { source?: unknown; text?: unknown; url?: unknown };
       if (source !== SOURCE || typeof text !== 'string') return;
       client.pageSync(url, text);
+      if (onNavigate && typeof liveUrl === 'string' && liveUrl !== url) onNavigate(liveUrl);
     }
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
-  }, [iframeRef, url, client]);
+  }, [iframeRef, url, client, onNavigate]);
 }
