@@ -284,7 +284,8 @@ a fallback).
 Clicking the header's **magnifying-glass** button opens a small search pop-up with a single text
 input. As the user types part of a filename, the input shows an inline ghost completion of the
 single best-matching file when its name starts with what's typed, and a line below the input shows
-that match's full path relative to the tree root. Matching is a case-insensitive substring on the
+that match's full path relative to the tree root, prefixed with `> ` (for example, `> src/tasks.md`).
+Matching is a case-insensitive substring on the
 filename only (not the full path), with a filename-prefix match ranked ahead of any other substring
 match; ties are broken by the shortest path. The searchable set is every file under the tree's root
 that is not excluded by `.gitignore` (or, outside a git repository, the same default excludes the
