@@ -43,11 +43,11 @@ describe('QuickOpen', () => {
     expect(screen.getByText('type to search')).toBeInTheDocument();
   });
 
-  it('renders capped ranked rows with filename, dimmed path, and highlighted characters', () => {
+  it('renders capped ranked rows with filename and dimmed path, without highlighting matches', () => {
     renderQuickOpen({ query: 'app', results });
     expect(screen.getAllByText(/\.tsx?$/, { exact: false }).length).toBeGreaterThan(0);
     const marks = document.querySelectorAll('.quick-open-row mark');
-    expect(marks.length).toBeGreaterThan(0);
+    expect(marks.length).toBe(0);
     expect(document.querySelector('.quick-open-dir')).toHaveTextContent('web/src');
   });
 

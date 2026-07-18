@@ -13,32 +13,14 @@ type Properties = {
   commandInputRef: React.RefObject<HTMLTextAreaElement | null>;
 };
 
-// Highlights the ranges of `text` that fall within `[offset, offset + text.length)` of the full
-// path they were matched against — used to independently highlight the filename and dimmed
-// directory portions of a row from one shared match-range array (Decision 4).
-function highlightSlice(text: string, ranges: [number, number][], offset: number): React.ReactNode {
-  const nodes: React.ReactNode[] = [];
-  let cursor = 0;
-  for (const [start, end] of ranges) {
-    const relStart = Math.max(start - offset, 0);
-    const relEnd = Math.min(end - offset, text.length);
-    if (relEnd <= relStart) continue;
-    if (relStart > cursor) nodes.push(text.slice(cursor, relStart));
-    nodes.push(<mark key={relStart}>{text.slice(relStart, relEnd)}</mark>);
-    cursor = relEnd;
-  }
-  if (cursor < text.length) nodes.push(text.slice(cursor));
-  return nodes;
-}
-
 function QuickOpenRow({ result, selected, onPick }: { result: FuzzyMatchResult; selected: boolean; onPick: () => void }) {
   const basenameStart = result.path.lastIndexOf('/') + 1;
   const dir = result.path.slice(0, Math.max(basenameStart - 1, 0));
   const name = result.path.slice(basenameStart);
   return (
     <div className={`picker-row quick-open-row${selected ? ' selected' : ''}`} onClick={onPick}>
-      <span className="quick-open-name">{highlightSlice(name, result.ranges, basenameStart)}</span>
-      {dir && <span className="quick-open-dir">{highlightSlice(dir, result.ranges, 0)}</span>}
+      <span className="quick-open-name">{name}</span>
+      {dir && <span className="quick-open-dir">{dir}</span>}
     </div>
   );
 }
