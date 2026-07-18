@@ -8,14 +8,6 @@
 
 * double clicking the url in the metadata row of the browser tab allows the user to edit the address, and the address is then loaded once enter/return is pressed
 
-* delimiters in the acp transcript should be both before and after the content they delimit, for example:
-━━━━━━━━━━ MODEL PROMPT BEGIN ━━━━━━━━━━
-text
-━━━━━━━━━━ MODEL PROMPT END ━━━━━━━━━━
-━━━━━━━━━━ MODEL RESPONSE BEGIN━━━━━━━━━━
-ok
-━━━━━━━━━━ MODEL RESPONSE END ━━━━━━━━━━
-
 * add fa-regular fa-clipboard clipboard icon to the agent tab metadata row that when clicked will open the transcript for that agent in an editor tab.
 
 * the url in the metadata row and the domain on the label of the browser tab should follow the actual url in view as the user navigates. 

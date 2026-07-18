@@ -7,9 +7,9 @@ import { writeCaptureFile } from '../harness/capture-file.js';
 // tag lets a snapshot delineate what was sent from what was received.
 export type MonitorContextEntry = { role: 'input' | 'response'; text: string };
 
-const HEADERS: Record<MonitorContextEntry['role'], string> = {
-  input: '━━━━━━━━━━ SENT TO MODEL ━━━━━━━━━━',
-  response: '━━━━━━━━━━ MODEL RESPONSE ━━━━━━━━━━',
+const HEADERS: Record<MonitorContextEntry['role'], { begin: string; end: string }> = {
+  input: { begin: '━━━━━━━━━━ SENT TO MODEL BEGIN ━━━━━━━━━━', end: '━━━━━━━━━━ SENT TO MODEL END ━━━━━━━━━━' },
+  response: { begin: '━━━━━━━━━━ MODEL RESPONSE BEGIN ━━━━━━━━━━', end: '━━━━━━━━━━ MODEL RESPONSE END ━━━━━━━━━━' },
 };
 
 // Record a piece of a monitor's ACP context (a priming block, an update prompt, an ask, or a
@@ -30,7 +30,7 @@ export function recordContext(reg: MonitorSub, text: string, role: MonitorContex
 export function snapshotMonitorContext(monitors: Iterable<MonitorSub>, managers: Managers, name: string): void {
   const reg = [...monitors].find((r) => !r.inline && r.persona.name === name);
   if (!reg || reg.contextText.length === 0) return;
-  const body = reg.contextText.map(({ role, text }) => `${HEADERS[role]}\n${text}`).join('\n\n');
+  const body = reg.contextText.map(({ role, text }) => `${HEADERS[role].begin}\n${text}\n${HEADERS[role].end}`).join('\n\n');
   const file = writeCaptureFile(name, Date.now(), body);
   managers.openFile.edit(`monitor context ${name}`, file, managers.tab.cur().label);
 }
