@@ -53,7 +53,7 @@
 | `Ctrl+R` | Open command history picker |
 | `Ctrl+G` | Open the fuzzy tab navigator (also closes it if already open) |
 | `Ctrl+E` | Open the queue picker to send a command to another agent tab |
-| `Ctrl+A` | Open the task picker (executable `ai/*.md` files); Return populates the command line without running |
+| `Ctrl+A` | Open the task picker (executable `ai/*.md` files); Return inserts it into the command line at the cursor without running |
 | `Ctrl+T` | Expand / collapse agent tool steps in the transcript |
 | `Cmd+T` | Open a new agent tab (same as typing `agent`) |
 | `Cmd+F` | Open the search bar in the transcript |

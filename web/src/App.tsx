@@ -105,7 +105,7 @@ export function App() {
   } = useQueuePicker(client, current, inputReference, recallReference);
   const {
     taskPickerOpen, taskPickerIndex, setTaskPickerIndex, setTaskPickerOpen, openTaskPicker, pickTask, visibleTasks, toggleTaskDir, profilePickerOpen, profilePickerIndex, setProfilePickerIndex, setProfilePickerOpen, openProfilePicker, pickProfile,
-  } = usePopulatePickers(tasks, janissaryTasksDir, recallReference, inputReference, client, current?.view === 'harness' ? current.harness?.ptyId : undefined);
+  } = usePopulatePickers(tasks, janissaryTasksDir, recallReference, inputReference, client, current?.view === 'harness' ? current.harness?.ptyId : undefined, dropReference);
 
   const { quitConfirmOpen, openQuitConfirm, confirmQuit, cancelQuit } = useQuitConfirm(runCommand, inputReference);
   const editorHandles = useRef<Map<string, EditorTabHandle>>(new Map());
