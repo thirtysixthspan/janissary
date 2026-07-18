@@ -4,5 +4,5 @@
   "ignoreExportsUsedInFile": true,
   "ignoreBinaries": ["open", "which"],
   "ignore": ["web/src/env.d.ts"],
-  "ignoreDependencies": ["stylelint-config-standard"]
+  "ignoreDependencies": ["stylelint-config-standard", "@emnapi/core", "@emnapi/runtime"]
 }
