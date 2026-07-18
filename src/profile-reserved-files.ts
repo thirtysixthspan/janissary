@@ -49,42 +49,33 @@ export function loadProfileFiles(profileDir: string): ProfileFilesEntry[] {
   }
 }
 
-function isProfileNotificationsEntry(value: unknown): value is ProfileNotificationsEntry {
+function isDockEntry(value: unknown): value is { dock?: 'left' | 'right' } {
   if (typeof value !== 'object' || value === null) return false;
   const entry = value as Record<string, unknown>;
   return entry.dock === undefined || (typeof entry.dock === 'string' && ['left', 'right'].includes(entry.dock));
+}
+
+function loadDockEntries<T>(profileDir: string, fileName: string, isEntry: (value: unknown) => value is T): T[] {
+  const file = path.join(profileDir, fileName);
+  if (!existsSync(file)) return [];
+  try {
+    const parsed: unknown = JSON.parse(readFileSync(file, 'utf8'));
+    return Array.isArray(parsed) ? parsed.filter(isEntry) : [];
+  } catch {
+    return [];
+  }
 }
 
 // Profile-level notifications tabs live in a reserved `_notifications.json` file — a JSON array of
 // `{ dock? }` — kept out of the entry set by the leading underscore. Returns [] when the file is
 // absent, unparseable, or not an array; malformed elements are dropped.
 export function loadProfileNotifications(profileDir: string): ProfileNotificationsEntry[] {
-  const file = path.join(profileDir, '_notifications.json');
-  if (!existsSync(file)) return [];
-  try {
-    const parsed: unknown = JSON.parse(readFileSync(file, 'utf8'));
-    return Array.isArray(parsed) ? parsed.filter(isProfileNotificationsEntry) : [];
-  } catch {
-    return [];
-  }
-}
-
-function isProfileSchedulesEntry(value: unknown): value is ProfileSchedulesEntry {
-  if (typeof value !== 'object' || value === null) return false;
-  const entry = value as Record<string, unknown>;
-  return entry.dock === undefined || (typeof entry.dock === 'string' && ['left', 'right'].includes(entry.dock));
+  return loadDockEntries<ProfileNotificationsEntry>(profileDir, '_notifications.json', isDockEntry);
 }
 
 // Profile-level schedules tabs live in a reserved `_schedules.json` file — a JSON array of
 // `{ dock? }` — kept out of the entry set by the leading underscore. Returns [] when the file is
 // absent, unparseable, or not an array; malformed elements are dropped.
 export function loadProfileSchedules(profileDir: string): ProfileSchedulesEntry[] {
-  const file = path.join(profileDir, '_schedules.json');
-  if (!existsSync(file)) return [];
-  try {
-    const parsed: unknown = JSON.parse(readFileSync(file, 'utf8'));
-    return Array.isArray(parsed) ? parsed.filter(isProfileSchedulesEntry) : [];
-  } catch {
-    return [];
-  }
+  return loadDockEntries<ProfileSchedulesEntry>(profileDir, '_schedules.json', isDockEntry);
 }
