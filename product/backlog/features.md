@@ -6,6 +6,8 @@
 
 * cmd+p should open a file search window that allows the user to find a file and once found open that file in the editor tab. research online descriptions of this functionality such as MS visual studio code quick open and replicate it. 
 
+* the UI should not be blocked awaiting the openning or closure of harnesses. The tab can be openned or closed while the backend operations complete. 
+
 ## development
 
 4. Supervisor/manager agent (LangGraph supervisor, n8n AI Agent Tool) — a built-in supervisor persona that receives a goal, fans work out with broadcast request, and aggregates the responses.
