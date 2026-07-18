@@ -130,6 +130,7 @@ export class AcpManager {
       finished: (reason, maxSteps) => {
         this.managers.tab.deleteBusy(label);
         notify(this.managers, 'state-change', label);
+        if (isRateLimitError(lastAnswer)) notify(this.managers, 'rate-limited', label);
         if (reason === 'capped') this.managers.tab.append(label, { input: '', output: `(stopped after ${maxSteps} tool steps)` });
         messageBus.emit('state', { type: 'dirty' });
         onDone?.(lastAnswer);
