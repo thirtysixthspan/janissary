@@ -4,8 +4,6 @@
 
 * the UI should not be blocked awaiting the openning or closure of harnesses. The tab can be openned or closed while the backend operations complete. 
 
-* Owner column should be called Agent instead.
-
 * use "fa-regular fa-flag" instead of fa-star for the unread mark in tab labels.
 
 * add a back, forward and reload icon buttons left floated in the metadata tab of a browser tab.

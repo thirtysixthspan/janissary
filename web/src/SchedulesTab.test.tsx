@@ -39,7 +39,7 @@ describe('SchedulesTab', () => {
   it('renders column headings above the rows', () => {
     const client = { send: vi.fn() } as unknown as JanusClient;
     const { container } = render(<SchedulesTab entries={entries} tabs={[]} client={client} index={0} />);
-    expect(container.querySelector('.schedules-headings')?.textContent).toContain('Owner');
+    expect(container.querySelector('.schedules-headings')?.textContent).toContain('Agent');
     expect(container.querySelector('.schedules-headings')?.textContent).toContain('Command');
   });
 
