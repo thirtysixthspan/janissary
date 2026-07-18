@@ -1,5 +1,5 @@
 import React from 'react';
-import { render } from '@testing-library/react';
+import { render, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { AgentTabMeta } from './AgentTabMeta';
 
@@ -72,5 +72,56 @@ describe('AgentTabMeta', () => {
     const flag = getByRole('img', { name: 'Auto-permitting' });
     expect(flag).toHaveAttribute('title', 'Auto-permitting');
     expect(flag.querySelector('svg[data-icon="bolt"]')).not.toBeNull();
+  });
+
+  it('renders an active connections button with hover and click handlers wired', () => {
+    const onEnter = vi.fn();
+    const onLeave = vi.fn();
+    const onClick = vi.fn();
+    const { getByTitle } = render(
+      <AgentTabMeta cwd="~/project" connectionsButton={{ hasContent: true, onEnter, onLeave, onClick }} />,
+    );
+    const button = getByTitle('connections');
+    expect(button).not.toBeDisabled();
+    fireEvent.mouseEnter(button);
+    expect(onEnter).toHaveBeenCalledTimes(1);
+    fireEvent.mouseLeave(button);
+    expect(onLeave).toHaveBeenCalledTimes(1);
+    button.click();
+    expect(onClick).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders an empty connections button as dark and inert with its tooltip', () => {
+    const onEnter = vi.fn();
+    const onClick = vi.fn();
+    const { getByTitle } = render(
+      <AgentTabMeta cwd="~/project" connectionsButton={{ hasContent: false, onEnter, onLeave: () => {}, onClick }} />,
+    );
+    const button = getByTitle('no active connections');
+    expect(button).toBeDisabled();
+    fireEvent.mouseEnter(button);
+    expect(onEnter).not.toHaveBeenCalled();
+    button.click();
+    expect(onClick).not.toHaveBeenCalled();
+  });
+
+  it('does not render the connections button when its props are omitted', () => {
+    const { queryByTitle } = render(<AgentTabMeta cwd="~/project" />);
+    expect(queryByTitle('connections')).not.toBeInTheDocument();
+    expect(queryByTitle('no active connections')).not.toBeInTheDocument();
+  });
+
+  it('renders an active schedule button with its tooltip', () => {
+    const { getByTitle } = render(
+      <AgentTabMeta cwd="~/project" scheduleButton={{ hasContent: true, onEnter: () => {}, onLeave: () => {}, onClick: () => {} }} />,
+    );
+    expect(getByTitle('schedule')).not.toBeDisabled();
+  });
+
+  it('renders an empty schedule button as dark and inert with its tooltip', () => {
+    const { getByTitle } = render(
+      <AgentTabMeta cwd="~/project" scheduleButton={{ hasContent: false, onEnter: () => {}, onLeave: () => {}, onClick: () => {} }} />,
+    );
+    expect(getByTitle('no active schedules')).toBeDisabled();
   });
 });
