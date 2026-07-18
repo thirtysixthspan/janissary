@@ -135,7 +135,7 @@ function FullHeadings() {
   return (
     <>
       <span className="schedules-num" />
-      <span>Owner</span>
+      <span>Agent</span>
       <span>Id</span>
       <span>Next</span>
       <span>Spec</span>
@@ -150,7 +150,7 @@ function CompactHeadings() {
       <span className="schedules-num" />
       <span>Next</span>
       <span>Id</span>
-      <span>Owner</span>
+      <span>Agent</span>
     </>
   );
 }
