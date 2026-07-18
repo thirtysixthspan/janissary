@@ -11,6 +11,8 @@ import { ProfilePicker } from './ProfilePicker';
 import { SYNTAX_THEMES } from '@shared/syntax-themes';
 import { APP_THEMES } from '@shared/app-themes';
 import { AppThemePicker } from './AppThemePicker';
+import { QuickOpen } from './QuickOpen';
+import type { FuzzyMatchResult } from './fuzzy-match';
 
 // The mutually-exclusive stack of modal overlays that can float above the command bar: route
 // chooser takes priority, then the syntax-theme picker, then whichever of `hist`/`nav` is open.
@@ -49,6 +51,16 @@ type Properties = {
   profiles: string[];
   profilePickerIndex: number;
   onPickProfile: (name: string) => void;
+  quickOpenOpen: boolean;
+  quickOpenQuery: string;
+  onChangeQuickOpenQuery: (query: string) => void;
+  quickOpenResults: FuzzyMatchResult[];
+  quickOpenIndex: number;
+  onChangeQuickOpenIndex: (index: number) => void;
+  quickOpenLoading: boolean;
+  onPickQuickOpen: (relPath: string) => void;
+  onCloseQuickOpen: () => void;
+  commandInputRef: React.RefObject<HTMLTextAreaElement | null>;
 };
 
 export function PickerOverlays({
@@ -58,6 +70,8 @@ export function PickerOverlays({
   queueOpen, queueItems, queueIndex, onSelectQueue,
   taskPickerOpen, taskRows, taskPickerIndex, onPickTask, onToggleTaskDir,
   profilePickerOpen, profiles, profilePickerIndex, onPickProfile,
+  quickOpenOpen, quickOpenQuery, onChangeQuickOpenQuery, quickOpenResults, quickOpenIndex, onChangeQuickOpenIndex,
+  quickOpenLoading, onPickQuickOpen, onCloseQuickOpen, commandInputRef,
 }: Properties) {
   if (route) return <RouteChooser cmd={route.cmd} choices={route.choices} selected={routeIndex} onPick={onPickRoute} />;
   if (themePickerOpen) {
@@ -65,6 +79,15 @@ export function PickerOverlays({
   }
   if (appThemePickerOpen) {
     return <AppThemePicker themes={APP_THEMES} active={theme} selected={appThemePickerIndex} onPick={onPickAppTheme} />;
+  }
+  if (quickOpenOpen) {
+    return (
+      <QuickOpen
+        query={quickOpenQuery} onChangeQuery={onChangeQuickOpenQuery} results={quickOpenResults}
+        selected={quickOpenIndex} onChangeSelected={onChangeQuickOpenIndex} loading={quickOpenLoading}
+        onPick={onPickQuickOpen} onClose={onCloseQuickOpen} commandInputRef={commandInputRef}
+      />
+    );
   }
   if (navOpen) return <TabNavPicker tabs={tabs} query={navQuery} selected={navIndex} onPick={onPickTab} />;
   if (pickerOpen) return <HistoryPicker items={recent} selected={pickerIndex} onPick={onPickHistory} />;

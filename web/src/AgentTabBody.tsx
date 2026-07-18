@@ -9,6 +9,7 @@ import type { CommandInputDropHandle } from './CommandInput';
 import { AgentTabMeta } from './AgentTabMeta';
 import type { useViewSearchState } from './useViewSearchState';
 import type { VisibleTaskRow } from './task-picker-keys';
+import type { FuzzyMatchResult } from './fuzzy-match';
 
 type Properties = {
   current: TabView;
@@ -50,6 +51,15 @@ type Properties = {
   profiles: string[];
   profilePickerIndex: number;
   pickProfile: (name: string) => void;
+  quickOpenOpen: boolean;
+  quickOpenQuery: string;
+  setQuickOpenQuery: (query: string) => void;
+  quickOpenResults: FuzzyMatchResult[];
+  quickOpenIndex: number;
+  setQuickOpenIndex: (index: number) => void;
+  quickOpenLoading: boolean;
+  pickQuickOpenFile: (relPath: string) => void;
+  closeQuickOpen: () => void;
   search: ReturnType<typeof useViewSearchState>['search'];
   globalHistory: string[];
   onCommandBarSubmit: React.ComponentProps<typeof CommandArea>['onSubmit'];
@@ -70,6 +80,8 @@ export function AgentTabBody({
   navOpen, navQuery, navIndex, tabs, selectNavTab, queueOpen, queueIndex, selectQueueIndex,
   taskPickerOpen, visibleTasks, taskPickerIndex, pickTask, toggleTaskDir,
   profilePickerOpen, profiles, profilePickerIndex, pickProfile,
+  quickOpenOpen, quickOpenQuery, setQuickOpenQuery, quickOpenResults, quickOpenIndex, setQuickOpenIndex,
+  quickOpenLoading, pickQuickOpenFile, closeQuickOpen,
   search, globalHistory, onCommandBarSubmit, quitConfirmOpen, unsavedQuitOpen,
   recallReference, onEditQueued, onDeleteQueued, dropRef,
 }: Properties) {
@@ -108,7 +120,11 @@ export function AgentTabBody({
           navOpen={navOpen} navQuery={navQuery} navIndex={navIndex} tabs={tabs} onPickTab={selectNavTab}
           queueOpen={queueOpen} queueItems={current.commandQueue} queueIndex={queueIndex} onSelectQueue={selectQueueIndex}
           taskPickerOpen={taskPickerOpen} taskRows={visibleTasks} taskPickerIndex={taskPickerIndex} onPickTask={pickTask} onToggleTaskDir={toggleTaskDir}
-          profilePickerOpen={profilePickerOpen} profiles={profiles} profilePickerIndex={profilePickerIndex} onPickProfile={pickProfile} />
+          profilePickerOpen={profilePickerOpen} profiles={profiles} profilePickerIndex={profilePickerIndex} onPickProfile={pickProfile}
+          quickOpenOpen={quickOpenOpen} quickOpenQuery={quickOpenQuery} onChangeQuickOpenQuery={setQuickOpenQuery}
+          quickOpenResults={quickOpenResults} quickOpenIndex={quickOpenIndex} onChangeQuickOpenIndex={setQuickOpenIndex}
+          quickOpenLoading={quickOpenLoading} onPickQuickOpen={pickQuickOpenFile} onCloseQuickOpen={closeQuickOpen}
+          commandInputRef={inputReference} />
       </div>
       <CommandArea
         search={search}

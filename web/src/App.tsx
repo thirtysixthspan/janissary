@@ -14,6 +14,7 @@ import type { ShellTabHandle } from './ShellTab';
 import { ShellTabLayer } from './ShellTabLayer';
 import { MountedViewLayers } from './MountedViewLayers';
 import { useTabNav } from './useTabNav';
+import { useQuickOpen } from './useQuickOpen';
 import { useQueuePicker } from './useQueuePicker';
 import { usePopulatePickers } from './usePopulatePickers';
 import { useCommandBarSubmit } from './useCommandBarSubmit';
@@ -99,6 +100,10 @@ export function App() {
   const {
     navOpen, navQuery, navIndex, navTabs, setNavIndex, setNavQuery, setNavOpen, openTabNav, openTabNavWithQuery, selectNavTab,
   } = useTabNav(client, tabs);
+  const {
+    quickOpenOpen, quickOpenQuery, quickOpenIndex, quickOpenLoading, quickOpenResults,
+    setQuickOpenQuery, setQuickOpenIndex, openQuickOpen, closeQuickOpen, pickQuickOpenFile,
+  } = useQuickOpen(client);
 
   const {
     queueOpen, queueIndex, setQueueIndex, setQueueOpen, openQueue, selectQueueIndex, onEditQueued, onDeleteQueued,
@@ -142,11 +147,13 @@ export function App() {
     themePickerOpen, themePickerIdx: themePickerIndex, appThemePickerOpen, appThemePickerIdx: appThemePickerIndex,
     navOpen, navQuery, navIdx: navIndex, navTabs, queueOpen, queueIdx: queueIndex, queueItems: current?.commandQueue ?? [],
     taskPickerOpen, taskPickerIdx: taskPickerIndex, visibleTasks, profilePickerOpen, profilePickerIdx: profilePickerIndex, profiles,
+    quickOpenOpen,
     setRouteIndex, chooseRoute, runCommand, setPickerIndex, setPickerOpen, openPicker, openSearch: () => search.open(''),
     setThemePickerIndex, setThemePickerOpen, pickTheme, setAppThemePickerIndex, setAppThemePickerOpen, pickAppTheme,
     setNavIndex, setNavQuery, selectNavTab, setNavOpen, openTabNav,
     setQueueIndex, setQueueOpen, openQueue,
     setTaskPickerIndex, setTaskPickerOpen, openTaskPicker, pickTask, toggleTaskDir, setProfilePickerIndex, setProfilePickerOpen, openProfilePicker, pickProfile,
+    openQuickOpen,
   });
 
   const onCommandBarSubmit = useCommandBarSubmit({
@@ -190,6 +197,9 @@ export function App() {
           queueOpen={queueOpen} queueIndex={queueIndex} selectQueueIndex={selectQueueIndex}
           taskPickerOpen={taskPickerOpen} visibleTasks={visibleTasks} taskPickerIndex={taskPickerIndex} pickTask={pickTask} toggleTaskDir={toggleTaskDir}
           profilePickerOpen={profilePickerOpen} profiles={profiles} profilePickerIndex={profilePickerIndex} pickProfile={pickProfile}
+          quickOpenOpen={quickOpenOpen} quickOpenQuery={quickOpenQuery} setQuickOpenQuery={setQuickOpenQuery}
+          quickOpenResults={quickOpenResults} quickOpenIndex={quickOpenIndex} setQuickOpenIndex={setQuickOpenIndex}
+          quickOpenLoading={quickOpenLoading} pickQuickOpenFile={pickQuickOpenFile} closeQuickOpen={closeQuickOpen}
           search={search} globalHistory={globalHistory} onCommandBarSubmit={onCommandBarSubmit}
           quitConfirmOpen={quitConfirmOpen} unsavedQuitOpen={unsavedQuitOpen}
           recallReference={recallReference} onEditQueued={onEditQueued} onDeleteQueued={onDeleteQueued}

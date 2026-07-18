@@ -10,7 +10,7 @@ function dispatchKey(key: string, opts: { metaKey?: boolean; ctrlKey?: boolean; 
 }
 
 function TestComponent({
-  route, themePickerOpen, pickerOpen, navOpen, queueOpen, taskPickerOpen, canSearch, searchOpen, handleScrollKey, callbacks, client,
+  route, themePickerOpen, pickerOpen, navOpen, queueOpen, taskPickerOpen, canSearch, searchOpen, quickOpenOpen, handleScrollKey, callbacks, client,
 }: {
   route?: { cmd: string; choices: string[] } | null;
   themePickerOpen?: boolean;
@@ -20,6 +20,7 @@ function TestComponent({
   taskPickerOpen?: boolean;
   canSearch?: boolean;
   searchOpen?: boolean;
+  quickOpenOpen?: boolean;
   handleScrollKey?: (e: KeyboardEvent) => boolean;
   client?: { send: ReturnType<typeof vi.fn> };
   callbacks?: Partial<{
@@ -46,6 +47,7 @@ function TestComponent({
     openTaskPicker: () => void;
     pickTask: (n: string) => void;
     toggleTaskDir: (p: string) => void;
+    openQuickOpen: () => void;
   }>;
 }) {
   const stateRef = useRef({
@@ -71,6 +73,7 @@ function TestComponent({
       { path: 'build-a-feature.md', name: 'build-a-feature.md', depth: 0, dir: false },
       { path: 'fix-a-small-issue.md', name: 'fix-a-small-issue.md', depth: 0, dir: false },
     ],
+    quickOpenOpen: quickOpenOpen ?? false,
   });
   const cb = {
     setRouteIndex: vi.fn(),
@@ -96,6 +99,7 @@ function TestComponent({
     openTaskPicker: vi.fn(),
     pickTask: vi.fn(),
     toggleTaskDir: vi.fn(),
+    openQuickOpen: vi.fn(),
     ...callbacks,
   };
   const cbRef = useRef(cb);
@@ -140,6 +144,30 @@ describe('useWindowKeys', () => {
     render(React.createElement(TestComponent, { searchOpen: true, callbacks: { openSearch } }));
     dispatchKey('f', { metaKey: true });
     expect(openSearch).not.toHaveBeenCalled();
+  });
+
+  it('Cmd+P opens quick open and calls preventDefault', () => {
+    const openQuickOpen = vi.fn();
+    render(React.createElement(TestComponent, { callbacks: { openQuickOpen } }));
+    const event = new KeyboardEvent('keydown', { key: 'p', metaKey: true, bubbles: true, cancelable: true });
+    const preventDefaultSpy = vi.spyOn(event, 'preventDefault');
+    globalThis.dispatchEvent(event);
+    expect(openQuickOpen).toHaveBeenCalled();
+    expect(preventDefaultSpy).toHaveBeenCalled();
+  });
+
+  it('Ctrl+P does not open quick open', () => {
+    const openQuickOpen = vi.fn();
+    render(React.createElement(TestComponent, { callbacks: { openQuickOpen } }));
+    dispatchKey('p', { ctrlKey: true });
+    expect(openQuickOpen).not.toHaveBeenCalled();
+  });
+
+  it('does not reopen quick open if already open', () => {
+    const openQuickOpen = vi.fn();
+    render(React.createElement(TestComponent, { quickOpenOpen: true, callbacks: { openQuickOpen } }));
+    dispatchKey('p', { metaKey: true });
+    expect(openQuickOpen).not.toHaveBeenCalled();
   });
 
   it('Ctrl+R opens the history picker', () => {
