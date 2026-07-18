@@ -72,6 +72,37 @@ describe('openProfileFiles', () => {
     expect(open).toHaveBeenCalledWith('files in other on right', 'other');
   });
 
+  it('appends the path after the clauses when path is set', () => {
+    writeFiles('claude', JSON.stringify([{ dock: 'left', path: '$root' }]));
+    const { managers, open } = makeManagers();
+    const notes: string[] = [];
+
+    openProfileFiles('claude', managers, 'claude', notes);
+
+    expect(open).toHaveBeenCalledWith('files on left $root', 'claude');
+    expect(notes).toEqual(['Opened file navigator (docked left).']);
+  });
+
+  it('builds "files <path>" when only path is set', () => {
+    writeFiles('claude', JSON.stringify([{ path: '$root' }]));
+    const { managers, open } = makeManagers();
+    const notes: string[] = [];
+
+    openProfileFiles('claude', managers, 'claude', notes);
+
+    expect(open).toHaveBeenCalledWith('files $root', 'claude');
+  });
+
+  it('combines in, dock, and path into one command', () => {
+    writeFiles('mixed', JSON.stringify([{ in: 'other', dock: 'right', path: './sub' }]));
+    const { managers, open } = makeManagers();
+    const notes: string[] = [];
+
+    openProfileFiles('mixed', managers, 'claude', notes);
+
+    expect(open).toHaveBeenCalledWith('files in other on right ./sub', 'other');
+  });
+
   it('skips with a note when there is no default label and the entry has no in', () => {
     writeFiles('claude', JSON.stringify([{ dock: 'left' }]));
     const { managers, open } = makeManagers();

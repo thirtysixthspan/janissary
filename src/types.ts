@@ -279,12 +279,17 @@ export type ProfileMonitor = { persona: string; targets: string[] };
 
 // A profile-level file-tree tab, authored in a profile's reserved `_files.json` file (mirrors
 // `_monitors.json`). `dock` docks it into that sidebar; `in` roots it at the cwd of the named tab
-// instead of the profile's first newly opened tab.
-export type ProfileFilesEntry = { dock?: 'left' | 'right'; in?: string };
+// instead of the profile's first newly opened tab; `path` roots it at a literal path, expanded like
+// the `files` command's path argument (so `$root` roots it at the launch dir regardless of any tab).
+export type ProfileFilesEntry = { dock?: 'left' | 'right'; in?: string; path?: string };
 
 // A profile-level notifications tab, authored in a profile's reserved `_notifications.json` file
 // (mirrors `_files.json`). `dock` docks the singleton notifications feed into that sidebar.
 export type ProfileNotificationsEntry = { dock?: 'left' | 'right' };
+
+// A profile-level schedules tab, authored in a profile's reserved `_schedules.json` file (mirrors
+// `_notifications.json`). `dock` docks the singleton schedules list into that sidebar.
+export type ProfileSchedulesEntry = { dock?: 'left' | 'right' };
 
 // --- schedule.ts ----------------------------------------------------------
 

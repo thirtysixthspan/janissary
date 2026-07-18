@@ -1,6 +1,8 @@
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
-import type { ProfileFilesEntry, ProfileMonitor, ProfileNotificationsEntry } from './types.js';
+import type {
+  ProfileFilesEntry, ProfileMonitor, ProfileNotificationsEntry, ProfileSchedulesEntry,
+} from './types.js';
 
 function isProfileMonitor(value: unknown): value is ProfileMonitor {
   if (typeof value !== 'object' || value === null) return false;
@@ -29,7 +31,8 @@ function isProfileFilesEntry(value: unknown): value is ProfileFilesEntry {
   if (typeof value !== 'object' || value === null) return false;
   const entry = value as Record<string, unknown>;
   return (entry.dock === undefined || (typeof entry.dock === 'string' && ['left', 'right'].includes(entry.dock)))
-    && (entry.in === undefined || typeof entry.in === 'string');
+    && (entry.in === undefined || typeof entry.in === 'string')
+    && (entry.path === undefined || typeof entry.path === 'string');
 }
 
 // Profile-level file-tree tabs live in a reserved `_files.json` file — a JSON array of
@@ -61,6 +64,26 @@ export function loadProfileNotifications(profileDir: string): ProfileNotificatio
   try {
     const parsed: unknown = JSON.parse(readFileSync(file, 'utf8'));
     return Array.isArray(parsed) ? parsed.filter(isProfileNotificationsEntry) : [];
+  } catch {
+    return [];
+  }
+}
+
+function isProfileSchedulesEntry(value: unknown): value is ProfileSchedulesEntry {
+  if (typeof value !== 'object' || value === null) return false;
+  const entry = value as Record<string, unknown>;
+  return entry.dock === undefined || (typeof entry.dock === 'string' && ['left', 'right'].includes(entry.dock));
+}
+
+// Profile-level schedules tabs live in a reserved `_schedules.json` file — a JSON array of
+// `{ dock? }` — kept out of the entry set by the leading underscore. Returns [] when the file is
+// absent, unparseable, or not an array; malformed elements are dropped.
+export function loadProfileSchedules(profileDir: string): ProfileSchedulesEntry[] {
+  const file = path.join(profileDir, '_schedules.json');
+  if (!existsSync(file)) return [];
+  try {
+    const parsed: unknown = JSON.parse(readFileSync(file, 'utf8'));
+    return Array.isArray(parsed) ? parsed.filter(isProfileSchedulesEntry) : [];
   } catch {
     return [];
   }
