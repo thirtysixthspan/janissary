@@ -25,7 +25,8 @@ export function TabItem({ tab, index, active, onSelect, onClose, onRename, tabNa
   // Escape cancels and blurs the input; the resulting blur event must not also commit.
   const cancelledRef = useRef(false);
 
-  const startEdit = () => { cancelledRef.current = false; setDraft(tab.title ?? tab.label); setEditing(true); };
+  const fullName = tab.editor?.name ?? tab.markdown?.name ?? tab.image?.name ?? tab.title ?? tab.label;
+  const startEdit = () => { cancelledRef.current = false; setDraft(fullName); setEditing(true); };
 
   const commit = () => {
     if (cancelledRef.current) return;
