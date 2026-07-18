@@ -174,6 +174,24 @@ describe('AcpManager.run', () => {
     expect(mocks.notify).not.toHaveBeenCalledWith(managers, 'rate-limited', 'tab1');
   });
 
+  it('an answered reply whose text is rate-limit-shaped fires a rate-limited notification', () => {
+    const { acp, managers } = setup();
+    acp.run('tab1', 'acp hello');
+    const handlers = mocks.runAcpToolLoop.mock.calls[0][3] as AcpLoopHandlers;
+    handlers.endTurn('Error: 429 Too Many Requests. Please try again later.');
+    handlers.finished('answered', 8);
+    expect(mocks.notify).toHaveBeenCalledWith(managers, 'rate-limited', 'tab1');
+  });
+
+  it('an answered reply with ordinary text does not fire a rate-limited notification', () => {
+    const { acp, managers } = setup();
+    acp.run('tab1', 'acp hello');
+    const handlers = mocks.runAcpToolLoop.mock.calls[0][3] as AcpLoopHandlers;
+    handlers.endTurn('The actors are Keanu and Carrie.');
+    handlers.finished('answered', 8);
+    expect(mocks.notify).not.toHaveBeenCalledWith(managers, 'rate-limited', 'tab1');
+  });
+
   it('chunk handler calls updateRunning with the buffer prefixed by the begin marker', () => {
     const { acp } = setup();
     const updateFn = vi.fn();

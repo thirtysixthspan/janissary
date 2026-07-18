@@ -55,11 +55,13 @@ Seven event types can produce a notification line:
 - **`schedule-fire`** — a scheduled command fires in a tab (see `scheduling.md`).
 - **`agent-start`** — an ACP session begins its first turn (busy false → true).
 - **`rate-limited`** — an ACP query fails because the underlying provider is rate limiting
-  requests, detected by a best-effort match against the failure's error-message text. This covers
-  every ACP query path with a visible in-tab error line: an agent tab's interactive `acp <prompt>`
-  command, a monitor persona's periodic background query, and a direct `monitor ask <persona>
-  <question>`. The notification is additive — it appears alongside the existing in-tab error line,
-  which is unchanged. A non-rate-limit ACP error produces no `rate-limited` notification.
+  requests, detected by a best-effort match against the failure's text. This covers every ACP query
+  path: an agent tab's interactive `acp <prompt>` command, a monitor persona's periodic background
+  query, and a direct `monitor ask <persona> <question>`. Detection matches both a thrown ACP error
+  and — for the interactive `acp <prompt>` command — a rate limit the agent surfaces as its ordinary
+  reply text rather than an error, so a query that is rate limited but resolves normally is not
+  missed. The notification is additive — it appears alongside the existing in-tab output, which is
+  unchanged. A non-rate-limit ACP outcome produces no `rate-limited` notification.
 - **`manual`** — an explicit `notify <message>` (see below).
 - **`auto-approve`** — a workspaced harness launched with `-y` auto-approves one of its own
   permission prompts (see `harness.md`).
