@@ -547,7 +547,7 @@ html, body, #root {
 .monitor-suggestion .text { flex: 1; }
 .monitor-suggestion .rate { display: flex; flex-direction: column; align-items: center; gap: 2px; flex-shrink: 0; }
 .monitor-suggestion .rate button {
-  background: transparent; border: none; cursor: pointer;
+  background: transparent; border: none; cursor: pointer; color: var(--fg);
   font-size: 12px; padding: 0 2px; opacity: 0.35;
 }
 .monitor-suggestion .rate button:hover { opacity: 1; }
