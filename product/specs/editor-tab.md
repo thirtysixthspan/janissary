@@ -49,14 +49,13 @@ the same directory from the file navigator without renaming any of them) does no
 existing tab the way opening an already-existing file would — each open creates its own new,
 independent unsaved tab, since none of them has a real file to converge on yet.
 
-For a new-file editor tab only, editing the tab's label (see Tabs → "Tab display alias") does more
-than set a display alias: it sets the file's name itself, literally — typing `notes` targets a
-file named exactly `notes` (no extension is appended), and typing `notes.txt` targets `notes.txt`.
-Before the first save this just updates the pending target path; once the file exists on disk,
-renaming the tab actually renames the file in place and the editor stays pointed at the new path.
-This coupling lasts for the life of the tab. An editor tab opened on a file that already existed
-keeps the ordinary behavior — renaming its tab only sets a display alias and never touches the
-file.
+Editing an editor tab's label never sets a display-only alias (unlike other tab kinds, see Tabs →
+"Tab display alias") — it always sets the underlying file's name itself, literally: typing `notes`
+targets a file named exactly `notes` (no extension is appended), and typing `notes.txt` targets
+`notes.txt`. For a not-yet-saved new-file tab this just updates the pending target path; once the
+file exists on disk (whether it was a new file that has since been saved, or an editor opened on a
+file that already existed), renaming the tab renames the file in place and the editor stays pointed
+at the new path.
 
 If the user never renames a new-file tab and saves while a file named the same as the pending
 target already exists in that directory (created by another new-file tab saved first), the save

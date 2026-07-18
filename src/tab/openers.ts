@@ -37,7 +37,6 @@ export function openEditorTab(
     return;
   }
   const result = addEditorTab(target.tabs, target.activeTab, view);
-  if (view.newFile) result.tabs[result.activeTab].newFileEditor = true;
   target.applyOpenResult(result);
   watch(result.tabs[result.activeTab].label, view.path);
   messageBus.emit('state', { type: 'dirty' });

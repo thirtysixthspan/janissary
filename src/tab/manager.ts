@@ -26,7 +26,7 @@ import { computeReorder, removeTabAt } from './reorder.js';
 import { navigatePageTab } from './navigate.js';
 import { recordHistory } from './history.js';
 import { FileRegistry } from './file-registry.js';
-import { renameNewFileEditor } from './rename-new-file.js';
+import { renameEditorTab } from './rename-editor.js';
 
 export class TabManager {
   tabs: Tab[] = [];
@@ -233,8 +233,8 @@ export class TabManager {
   renameTab(index: number, title: string): void {
     const tab = this.tabs[index];
     if (!tab) return;
-    if (tab.newFileEditor && tab.editor) {
-      renameNewFileEditor(
+    if (tab.editor) {
+      renameEditorTab(
         tab, title, getConfig().tabNameMaxLength,
         (p) => this.registerFile(p), (l, p) => this.managers.editorWatch.watch(l, p),
       );

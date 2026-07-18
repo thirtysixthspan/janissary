@@ -177,12 +177,6 @@ export type Tab = {
   markdown?: MarkdownView;
   // The editor-view payload, present only when `view === 'editor'`.
   editor?: EditorView;
-  // Set (and never cleared) when this editor tab was opened as a new file (see EditorView.newFile).
-  // Unlike `EditorView.newFile` — which clears once the buffer is first saved — this persists for
-  // the tab's life, so `renameTab` keeps coupling the tab label to its on-disk filename even after
-  // later saves. Server-only: deliberately not part of TabView (see buildTabView), like
-  // `editorDraft`/`pageSnapshot`.
-  newFileEditor?: boolean;
   // Transient, unsaved buffer content synced from the client shortly after typing pauses
   // (see editor-live-buffer-sync plan). In-memory only; never sent to any client (not part
   // of TabView) and never read when building persisted AgentState. Cleared on save.
