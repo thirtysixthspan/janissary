@@ -18,8 +18,6 @@ ok
 
 * add fa-regular fa-clipboard clipboard icon to the agent tab metadata row that when clicked will open the transcript for that agent in an editor tab.
 
-* the thumbs up and down in the monitor tab should be white, not dark.
-
 * the url in the metadata row and the domain on the label of the browser tab should follow the actual url in view as the user navigates. 
 
 ## development
