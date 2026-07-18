@@ -64,24 +64,27 @@ export function addFilesTab(tabs: Tab[], activeTab: number, view: FileTreeView):
   return { tabs: newTabs, activeTab: newTabs.findIndex((t) => t.label === label) };
 }
 
-export function addNotificationsTab(tabs: Tab[], activeTab: number): TabAndActive {
+function addStartTab(
+  tabs: Tab[], activeTab: number, label: string,
+  makeTab: (dotColor: string, group: number, groupColor: string) => Tab,
+): TabAndActive {
   const creator = tabs[activeTab];
   const dotColor = distinctColor(tabs.map((t) => t.dotColor));
   const group = creator?.group ?? 1;
   const groupColor = creator?.groupColor ?? dotColor;
-  const tab = makeNotificationsTab(NOTIFICATIONS_LABEL, dotColor, tabs.length + 1, group, groupColor);
+  const tab = makeTab(dotColor, group, groupColor);
   const newTabs = insertTabInGroup(tabs, tab, 'start');
-  return { tabs: newTabs, activeTab: newTabs.findIndex((t) => t.label === NOTIFICATIONS_LABEL) };
+  return { tabs: newTabs, activeTab: newTabs.findIndex((t) => t.label === label) };
+}
+
+export function addNotificationsTab(tabs: Tab[], activeTab: number): TabAndActive {
+  return addStartTab(tabs, activeTab, NOTIFICATIONS_LABEL, (dotColor, group, groupColor) =>
+    makeNotificationsTab(NOTIFICATIONS_LABEL, dotColor, tabs.length + 1, group, groupColor));
 }
 
 export function addSchedulesTab(tabs: Tab[], activeTab: number): TabAndActive {
-  const creator = tabs[activeTab];
-  const dotColor = distinctColor(tabs.map((t) => t.dotColor));
-  const group = creator?.group ?? 1;
-  const groupColor = creator?.groupColor ?? dotColor;
-  const tab = makeSchedulesTab(SCHEDULES_LABEL, dotColor, tabs.length + 1, group, groupColor);
-  const newTabs = insertTabInGroup(tabs, tab, 'start');
-  return { tabs: newTabs, activeTab: newTabs.findIndex((t) => t.label === SCHEDULES_LABEL) };
+  return addStartTab(tabs, activeTab, SCHEDULES_LABEL, (dotColor, group, groupColor) =>
+    makeSchedulesTab(SCHEDULES_LABEL, dotColor, tabs.length + 1, group, groupColor));
 }
 
 export function addPageTab(
