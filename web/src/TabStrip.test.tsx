@@ -93,7 +93,7 @@ describe('TabStrip', () => {
     );
     const badge = getByRole('img', { name: 'unread' });
     expect(badge).toHaveClass('tab-badge');
-    expect(badge.querySelector('svg[data-icon="star"]')).not.toBeNull();
+    expect(badge.querySelector('svg[data-icon="flag"]')).not.toBeNull();
     expect(container.querySelector('.tab-badge')).toBeInTheDocument();
   });
 
