@@ -167,7 +167,7 @@ html, body, #root {
 /* Inline tab-rename input: matches the label's font so it reads as an in-place edit. */
 .tab-rename-input {
   font: inherit; color: inherit; background: transparent; border: none; outline: none;
-  padding: 0; margin: 0; width: 10em;
+  padding: 0; margin: 0;
 }
 
 /* Image view tab: a metadata header above the image, which fills the remaining space. */
