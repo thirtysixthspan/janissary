@@ -86,13 +86,10 @@ export class Controller {
     this.managers.command.chooseRoute(index);
   }
 
-  harnessLaunchView() {
-    return this.managers.harness.harnessLaunchView();
-  }
-
-  closeHarnessLaunch(): void {
-    this.managers.harness.closeLaunchDialog();
-  }
+  harnessLaunchView() { return this.managers.harness.harnessLaunchView(); }
+  closeHarnessLaunch(): void { this.managers.harness.closeLaunchDialog(); }
+  scheduleLaunchView() { return this.managers.schedule.scheduleLaunchView(); }
+  closeScheduleLaunch(): void { this.managers.schedule.closeScheduleLaunch(); }
 
   dispatch(text: string): void {
     this.managers.command.dispatch(text);

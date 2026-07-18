@@ -53,3 +53,11 @@ Because launching a harness is an ordinary command, a `schedule` entry can wrap 
 ### `schedule` command
 
 `schedule` queues a command for later execution in the issuing agent's tab, or in another tab via `in <tab>`. See the Scheduling section. Every scheduled command is named by the first token after `schedule`. Forms: `schedule <name> [in <tab>] at <time> <cmd>` (one-shot today/next day), `schedule <name> [in <tab>] on <date> [at <time>] <cmd>` (one-shot date), `schedule <name> [in <tab>] every <N><m|h|d|w> <cmd>` (recurring interval), `schedule <name> [in <tab>] every <day|weekday> at <time> <cmd>` (recurring clock time), plus `schedule list [in <tab>]`, `schedule cancel <name> [in <tab>]`, and `schedule clear [in <tab>]`. Malformed invocations return a `Usage:` message.
+
+### New schedule dialog
+
+In the web app, typing bare `schedule` (the word alone, with no arguments) opens a "New schedule" dialog instead of returning the `Usage:` message — mirroring how bare `harness` opens the "New harness" dialog. No transcript line is recorded for the bare keyword itself. The dialog is web-only; the terminal UI keeps returning the `Usage:` message for a bare `schedule`.
+
+The dialog covers creation only, not managing existing entries — those stay on `schedule list/cancel/clear` and the schedule window. Its fields are: a timer name, a target tab (a dropdown of eligible tabs — agent and harness tabs only — defaulting to the current active tab), a schedule-type selector covering all five forms (`at <time>`, `on <date> [at <time>]`, `every N(m|h|d|w)`, `every day at <time>`, `every <weekday> at <time>`), the time/date/interval/weekday inputs for the selected type, and the command to run. The Schedule button stays disabled until the name, command, and the selected type's required inputs are filled in.
+
+On submit, the dialog assembles the equivalent `schedule NAME [in TAB] <form> COMMAND` string (omitting the `in TAB` clause when the target is the active tab) and submits it through the normal `command` path, exactly as if it had been typed — so duplicate-name and parse errors surface as a transcript line in the target tab, the same as a typed command. Escape or the Cancel button closes the dialog without scheduling anything. Field values are remembered across reopens within the session (not persisted to disk).

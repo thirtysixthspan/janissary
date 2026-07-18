@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { JanusClient } from './ws';
-import type { TabView, RouteChooserView, HarnessLaunchView, TaskRow } from '@shared/protocol';
+import type { TabView, RouteChooserView, HarnessLaunchView, ScheduleLaunchView, TaskRow } from '@shared/protocol';
 import { HarnessLaunchDialog } from './HarnessLaunchDialog';
+import { ScheduleDialog } from './ScheduleDialog';
 import { TabStrip } from './TabStrip';
 import { ViewTabBody } from './ViewTabBody';
 import { ReportingSection } from './ReportingSection';
@@ -55,6 +56,8 @@ export function App() {
   const [route, setRoute] = useState<RouteChooserView | null>(null);
   // Server-driven "New harness" launch dialog (null when closed).
   const [harnessLaunch, setHarnessLaunch] = useState<HarnessLaunchView | null>(null);
+  // Server-driven "New schedule" dialog (null when closed).
+  const [scheduleLaunch, setScheduleLaunch] = useState<ScheduleLaunchView | null>(null);
   const [routeIndex, setRouteIndex] = useState(0);
   const routeReference = useRef<RouteChooserView | null>(null);
   const inputReference = useRef<HTMLTextAreaElement>(null);
@@ -121,7 +124,7 @@ export function App() {
   const chooseRoute = useCallback((index: number) => client.send({ method: 'chooseRoute', params: { index } }), [client]);
 
   useServerState(client, {
-    setTabs, setActiveTab, setRoute, setHarnessLaunch, setTabNameMaxLength, setGlobalHistory, setSyntaxTheme, setTheme, setTasks, setJanissaryTasksDir, setProfiles, setRouteIndex,
+    setTabs, setActiveTab, setRoute, setHarnessLaunch, setScheduleLaunch, setTabNameMaxLength, setGlobalHistory, setSyntaxTheme, setTheme, setTasks, setJanissaryTasksDir, setProfiles, setRouteIndex,
     routeRef: routeReference,
   });
 
@@ -201,6 +204,7 @@ export function App() {
         onSnapshot={(name) => client.send({ method: 'monitorContextSnapshot', params: { name } })}
       />
       {harnessLaunch && <HarnessLaunchDialog view={harnessLaunch} client={client} />}
+      {scheduleLaunch && <ScheduleDialog view={scheduleLaunch} client={client} />}
       {quitConfirmOpen && <QuitDialog onConfirm={confirmQuit} onCancel={cancelQuit} />}
       {unsavedQuitOpen && <UnsavedQuitDialog onConfirm={confirmUnsavedQuit} onCancel={cancelUnsavedQuit} />}
       <CloseSaveGuard tabs={tabs} editorHandles={editorHandles} client={client} guardRef={guardRef} />
