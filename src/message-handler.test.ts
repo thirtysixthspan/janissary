@@ -3,14 +3,16 @@ import { handle } from './message-handler.js';
 import type { Controller } from './controller.js';
 import type { ClientMessage, ServerEvent, RpcCall } from './protocol.js';
 import { openTranscriptFor } from './controller-transcript.js';
+import { projectFilesFor } from './project-files.js';
 
 vi.mock('./controller-transcript.js', () => ({ openTranscriptFor: vi.fn() }));
+vi.mock('./project-files.js', () => ({ projectFilesFor: vi.fn() }));
 
 const makeController = () =>
   ({
     view: vi.fn(() => []),
     routeView: vi.fn(() => null),
-    managers: { tab: { activeTab: 0 } },
+    managers: { tab: { activeTab: 0, launchDir: '/proj' } },
     dispatch: vi.fn(),
     setActiveTab: vi.fn(),
     closeTab: vi.fn(),
@@ -243,5 +245,24 @@ describe('handle', () => {
     const controller = makeController();
     dispatchCall(controller, 28, { method: 'openTranscriptFor', params: { label: 'janus' } });
     expect(openTranscriptFor).toHaveBeenCalledWith(controller.managers, 'janus');
+  });
+
+  it('routes projectFiles to a deferred reply carrying the resolved root and paths', async () => {
+    const controller = makeController();
+    (projectFilesFor as ReturnType<typeof vi.fn>).mockResolvedValue({ root: '/proj', paths: ['a.ts', 'b.ts'] });
+    const replies: ServerEvent[] = [];
+    handle(controller, { t: 'rpc', id: 29, method: 'projectFiles', params: {} } as ClientMessage, (event) => { replies.push(event); });
+    expect(replies).toEqual([]);
+    await vi.waitFor(() => expect(replies).toHaveLength(1));
+    expect(replies).toEqual([{ t: 'rpc-reply', id: 29, result: { root: '/proj', paths: ['a.ts', 'b.ts'] } }]);
+  });
+
+  it('replies with an empty paths list — never leaving the request pending — when the listing rejects', async () => {
+    const controller = makeController();
+    (projectFilesFor as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('boom'));
+    const replies: ServerEvent[] = [];
+    handle(controller, { t: 'rpc', id: 30, method: 'projectFiles', params: {} } as ClientMessage, (event) => { replies.push(event); });
+    await vi.waitFor(() => expect(replies).toHaveLength(1));
+    expect(replies).toEqual([{ t: 'rpc-reply', id: 30, result: { root: '/proj', paths: [] } }]);
   });
 });
