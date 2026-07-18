@@ -16,5 +16,8 @@ export {
   faCircle as dirtyMarkerIcon,
   faCaretDown as expandedIcon,
   faCaretRight as collapsedIcon,
+  faArrowLeft as pageBackIcon,
+  faArrowRight as pageForwardIcon,
+  faRotateRight as pageReloadIcon,
 } from '@fortawesome/free-solid-svg-icons';
 export { faFlag as unreadIcon, faClipboard as viewCaptureIcon } from '@fortawesome/free-regular-svg-icons';

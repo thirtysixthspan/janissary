@@ -17,7 +17,7 @@ Only `http` and `https` addresses can be embedded; anything else (`javascript:`,
 
 <img class="agent-float" src="/agents/tahir-south-west.png" alt="" />
 
-A page tab only displays the site. The app doesn't script, read, or control the embedded page — whatever you can do inside it, you do by hand. (Programmatic browsing is a different feature: the `browser` command.)
+A page tab only displays the site. The app doesn't script or read the embedded page's contents — whatever you can do inside it, you do by hand. (Programmatic browsing is a different feature: the `browser` command.) The metadata header's back, forward, and reload buttons are the one exception: they move the embedded page through its own history or reload it, without reading or scripting anything inside it.
 
 Many sites send headers refusing to be embedded. When the app runs in its own managed browser window, those framing restrictions are lifted and such sites render anyway; if the app fell back to your system browser at startup, a site that refuses framing may show a blocked or blank area instead.
 
