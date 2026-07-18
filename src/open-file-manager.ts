@@ -4,6 +4,7 @@ import path from 'node:path';
 import { openerForExtension, type OpenContext } from './openers/index.js';
 import { didOsOpen } from './openers/os-open.js';
 import { openInEditor } from './openers/editor.js';
+import { nextFreeName } from './editor/next-free-name.js';
 import { parseOpen, isGlobPattern } from './commands/open.js';
 import { expandUserPath } from './paths.js';
 import { webOpener } from './openers/page.js';
@@ -49,6 +50,18 @@ export class OpenFileManager {
     const expanded = expandUserPath(target, { root: this.managers.tab.launchDir });
     const file = path.isAbsolute(expanded) ? expanded : path.resolve(cwd, expanded);
     openInEditor(file, this.buildContext(command, label), line);
+  }
+
+  // The file navigator's "New file" button / Cmd+N: like `edit`, but resolves to the next free
+  // `<base>-N<ext>` name first, so creating a second new file in a directory that already has
+  // `untitled.md` opens `untitled-2.md` instead of reopening the existing one.
+  newFile(command: string, target: string, label: string): void {
+    const cwd = this.managers.tab.cwdOf(label) ?? process.cwd();
+    const expanded = expandUserPath(target, { root: this.managers.tab.launchDir });
+    const file = path.isAbsolute(expanded) ? expanded : path.resolve(cwd, expanded);
+    const dir = path.dirname(file);
+    const resolved = path.join(dir, nextFreeName(dir, path.basename(file)));
+    openInEditor(resolved, this.buildContext(command, label));
   }
 
   private buildContext(command: string, label: string): OpenContext {

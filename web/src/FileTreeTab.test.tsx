@@ -446,30 +446,30 @@ describe('FileTreeTab', () => {
       expect(screen.getByTitle('New file')).toBeInTheDocument();
     });
 
-    it('clicking New file with a directory row selected dispatches edit inside that directory', () => {
+    it('clicking New file with a directory row selected dispatches newfile inside that directory', () => {
       const send = vi.fn();
       const client = { send } as unknown as JanusClient;
       render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
       fireEvent.click(screen.getByText('src'));
       fireEvent.click(screen.getByTitle('New file'));
-      expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'edit src/untitled.md' } });
+      expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'newfile src/untitled.md' } });
     });
 
-    it('clicking New file with a file row selected dispatches edit in its containing directory', () => {
+    it('clicking New file with a file row selected dispatches newfile in its containing directory', () => {
       const send = vi.fn();
       const client = { send } as unknown as JanusClient;
       render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
       fireEvent.click(screen.getByText('index.ts'));
       fireEvent.click(screen.getByTitle('New file'));
-      expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'edit src/untitled.md' } });
+      expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'newfile src/untitled.md' } });
     });
 
-    it('clicking New file with no row selected dispatches edit at the tree root', () => {
+    it('clicking New file with no row selected dispatches newfile at the tree root', () => {
       const send = vi.fn();
       const client = { send } as unknown as JanusClient;
       render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
       fireEvent.click(screen.getByTitle('New file'));
-      expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'edit untitled.md' } });
+      expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'newfile untitled.md' } });
     });
 
     it('Cmd+N while focused dispatches the same new-file command', () => {
@@ -478,7 +478,7 @@ describe('FileTreeTab', () => {
       const { container } = render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
       const tree = container.querySelector('[role="tree"]')!;
       fireEvent.keyDown(tree, { key: 'n', metaKey: true });
-      expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'edit untitled.md' } });
+      expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'newfile untitled.md' } });
     });
 
     it('Ctrl+N while focused dispatches the same new-file command', () => {
@@ -487,7 +487,7 @@ describe('FileTreeTab', () => {
       const { container } = render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
       const tree = container.querySelector('[role="tree"]')!;
       fireEvent.keyDown(tree, { key: 'n', ctrlKey: true });
-      expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'edit untitled.md' } });
+      expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'newfile untitled.md' } });
     });
 
     it('Cmd+N does not fall through to the window handler', () => {

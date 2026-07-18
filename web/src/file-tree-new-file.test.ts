@@ -42,11 +42,11 @@ describe('newFileTargetDir', () => {
 });
 
 describe('newFileCommand', () => {
-  it('builds the edit command at the tree root when the target directory is null', () => {
-    expect(newFileCommand(null)).toBe('edit untitled.md');
+  it('builds the newfile command at the tree root when the target directory is null', () => {
+    expect(newFileCommand(null)).toBe('newfile untitled.md');
   });
 
-  it('builds the edit command inside the target directory', () => {
-    expect(newFileCommand('src')).toBe('edit src/untitled.md');
+  it('builds the newfile command inside the target directory', () => {
+    expect(newFileCommand('src')).toBe('newfile src/untitled.md');
   });
 });
