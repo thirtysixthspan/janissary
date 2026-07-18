@@ -12,6 +12,7 @@ export function buildStateEvent(controller: Controller): ServerEvent {
   return {
     t: 'state', tabs: controller.view(), activeTab: controller.managers.tab.activeTab,
     route: controller.routeView(), harnessLaunch: controller.harnessLaunchView(),
+    scheduleLaunch: controller.scheduleLaunchView(),
     tabNameMaxLength: getConfig().tabNameMaxLength,
     globalHistory: globalCommands(), syntaxTheme: getConfig().syntaxTheme, theme: getConfig().theme,
     tasks: listTasks(controller.rootDir), janissaryTasksDir: janissaryTasksDir(),

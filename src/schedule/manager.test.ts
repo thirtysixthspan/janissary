@@ -212,6 +212,38 @@ describe('ScheduleManager one-shot prompt injection into a harness', () => {
   });
 });
 
+describe('ScheduleManager schedule launch dialog', () => {
+  function makeMgr(tabs: Partial<Tab>[], activeLabel: string): ScheduleManager {
+    const managers = {
+      tab: { tabs, cur: () => tabs.find((t) => t.label === activeLabel) },
+    } as unknown as Managers;
+    return new ScheduleManager(managers);
+  }
+
+  it('returns null when the dialog is closed', () => {
+    const mgr = makeMgr([{ label: 'janus' }], 'janus');
+    expect(mgr.scheduleLaunchView()).toBeNull();
+  });
+
+  it('lists only tabs whose view is undefined, agent, or harness, with the active tab as default', () => {
+    const mgr = makeMgr([
+      { label: 'janus' },
+      { label: 'claude', view: 'harness' },
+      { label: 'notes', view: 'markdown' },
+      { label: 'shots', view: 'image' },
+    ], 'claude');
+    mgr.openScheduleLaunch();
+    expect(mgr.scheduleLaunchView()).toEqual({ targets: ['janus', 'claude'], active: 'claude' });
+  });
+
+  it('reflects closeScheduleLaunch back to null', () => {
+    const mgr = makeMgr([{ label: 'janus' }], 'janus');
+    mgr.openScheduleLaunch();
+    mgr.closeScheduleLaunch();
+    expect(mgr.scheduleLaunchView()).toBeNull();
+  });
+});
+
 describe('ScheduleManager aggregatedView', () => {
   function makeMgr(labels: string[]): ScheduleManager {
     const managers = {

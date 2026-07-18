@@ -17,6 +17,9 @@ function makeManagers(): { managers: Managers; recorder: string[] } {
   managers.ssh = { run: vi.fn(() => null) } as unknown as Managers['ssh'];
   managers.pty = { openInlinePty: vi.fn() } as unknown as Managers['pty'];
   managers.database = { openDbs: vi.fn(() => []) } as unknown as Managers['database'];
+  managers.schedule = {
+    openScheduleLaunch: vi.fn(), get: vi.fn(() => []), set: vi.fn(),
+  } as unknown as Managers['schedule'];
   managers.command = new CommandManager(managers);
   return { managers, recorder };
 }
@@ -135,6 +138,35 @@ describe('CommandManager bare-harness launch dialog', () => {
     expect(managers.harness.openLaunchDialog).not.toHaveBeenCalled();
     expect(managers.harness.run).toHaveBeenCalledWith('harness claude');
     expect(managers.tab.cur().log).toContainEqual({ input: 'harness claude', output: '' });
+  });
+});
+
+describe('CommandManager bare-schedule launch dialog', () => {
+  it('opens the schedule dialog for bare `schedule` and records no transcript line', () => {
+    const { managers } = makeManagers();
+    managers.command.dispatch('schedule');
+    expect(managers.schedule.openScheduleLaunch).toHaveBeenCalledTimes(1);
+    expect(managers.tab.cur().log).toEqual([]);
+  });
+
+  it('treats `schedule` with trailing whitespace as bare and opens the dialog', () => {
+    const { managers } = makeManagers();
+    managers.command.dispatch('schedule \t');
+    expect(managers.schedule.openScheduleLaunch).toHaveBeenCalledTimes(1);
+  });
+
+  it('still dispatches `schedule list` to the schedule command', () => {
+    const { managers } = makeManagers();
+    managers.command.dispatch('schedule list');
+    expect(managers.schedule.openScheduleLaunch).not.toHaveBeenCalled();
+    expect(managers.tab.cur().log).toContainEqual({ input: 'schedule list', output: 'No scheduled commands.' });
+  });
+
+  it('still dispatches a full schedule creation form to the schedule command', () => {
+    const { managers } = makeManagers();
+    managers.command.dispatch('schedule fetch every 5m echo hi');
+    expect(managers.schedule.openScheduleLaunch).not.toHaveBeenCalled();
+    expect(managers.schedule.set).toHaveBeenCalled();
   });
 });
 

@@ -1,6 +1,6 @@
-import type { ServerEvent, RpcCall, RouteChooserView, HarnessLaunchView, TabView, TaskRow } from '@shared/protocol';
+import type { ServerEvent, RpcCall, RouteChooserView, HarnessLaunchView, ScheduleLaunchView, TabView, TaskRow } from '@shared/protocol';
 
-type StateListener = (tabs: TabView[], activeTab: number, route: RouteChooserView | null, tabNameMaxLength: number, globalHistory: string[], syntaxTheme: string, theme: string, tasks: TaskRow[], janissaryTasksDir: string, profiles: string[], projectDir: string, version: string, harnessLaunch: HarnessLaunchView | null) => void;
+type StateListener = (tabs: TabView[], activeTab: number, route: RouteChooserView | null, tabNameMaxLength: number, globalHistory: string[], syntaxTheme: string, theme: string, tasks: TaskRow[], janissaryTasksDir: string, profiles: string[], projectDir: string, version: string, harnessLaunch: HarnessLaunchView | null, scheduleLaunch: ScheduleLaunchView | null) => void;
 type ExitListener = (id: string, exitCode: number) => void;
 
 // Thin WebSocket client. State snapshots fan out to subscribers; PTY output is routed per-id to
@@ -26,7 +26,7 @@ export class JanusClient {
     case 'state': {
       // Must be `null`, not `undefined`: App gates the command line with `route !== null`, so an
       // `undefined` route reads as "chooser open" and silently swallows every keystroke (incl. Enter).
-      for (const l of this.stateListeners) l(event.tabs, event.activeTab, event.route ?? null, event.tabNameMaxLength, event.globalHistory, event.syntaxTheme, event.theme, event.tasks, event.janissaryTasksDir, event.profiles, event.projectDir, event.version, event.harnessLaunch ?? null);
+      for (const l of this.stateListeners) l(event.tabs, event.activeTab, event.route ?? null, event.tabNameMaxLength, event.globalHistory, event.syntaxTheme, event.theme, event.tasks, event.janissaryTasksDir, event.profiles, event.projectDir, event.version, event.harnessLaunch ?? null, event.scheduleLaunch ?? null);
     
     break;
     }

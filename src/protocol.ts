@@ -18,6 +18,9 @@ export type RouteChooserView = { cmd: string; choices: string[] };
 // The open "New harness" launch dialog's data: the ordered harness names and each harness's known
 // model catalog (empty for a harness with no catalog). Null in the snapshot when the dialog is closed.
 export type HarnessLaunchView = { names: string[]; models: Record<string, string[]> };
+// The open "New schedule" dialog's data: the eligible target-tab labels (agent + harness tabs)
+// and the default (active tab) label. Null in the snapshot when the dialog is closed.
+export type ScheduleLaunchView = { targets: string[]; active: string };
 
 // One AI-monitor suggestion in the monitor window's feed: which persona produced it, which
 // tab's activity it is about, and the optional one-click command.
@@ -88,6 +91,8 @@ export type StateEvent = {
   t: 'state'; tabs: TabView[]; activeTab: number; route: RouteChooserView | null;
   // The open "New harness" launch dialog, or null when it is closed.
   harnessLaunch: HarnessLaunchView | null;
+  // The open "New schedule" dialog, or null when it is closed.
+  scheduleLaunch: ScheduleLaunchView | null;
   tabNameMaxLength: number;
   globalHistory: string[];
   syntaxTheme: string;
@@ -127,6 +132,8 @@ export type RpcCall =
   | { method: 'chooseRoute'; params: { index: number } }
   // Close the "New harness" launch dialog without launching (Cancel/Escape).
   | { method: 'closeHarnessLaunch'; params?: Record<string, never> }
+  // Close the "New schedule" dialog without scheduling (Cancel/Escape, or after a submit).
+  | { method: 'closeScheduleLaunch'; params?: Record<string, never> }
   | { method: 'complete'; params: { text: string; cursor: number } }
   | { method: 'resize'; params: { cols: number; rows: number } }
   | { method: 'ptyInput'; params: { id: string; data: string } }

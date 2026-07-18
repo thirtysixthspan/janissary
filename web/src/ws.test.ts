@@ -78,7 +78,7 @@ describe('JanusClient', () => {
       }),
     });
     expect(listener).toHaveBeenCalledTimes(1);
-    expect(listener).toHaveBeenCalledWith([], 0, null, 20, [], 'monokai', 'dark', [], '/opt/janissary/ai/tasks', [], '/tmp', '1.2.3', { names: ['claude'], models: { claude: ['opus'] } });
+    expect(listener).toHaveBeenCalledWith([], 0, null, 20, [], 'monokai', 'dark', [], '/opt/janissary/ai/tasks', [], '/tmp', '1.2.3', { names: ['claude'], models: { claude: ['opus'] } }, null);
   });
 
   it('onState unsubscribe stops the listener from being called', () => {

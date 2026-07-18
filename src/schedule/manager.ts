@@ -1,5 +1,5 @@
 import type { ScheduleEntry, Tab } from '../types.js';
-import type { AggregatedScheduleView, ScheduleView } from '../protocol.js';
+import type { AggregatedScheduleView, ScheduleLaunchView, ScheduleView } from '../protocol.js';
 import { computeNextRun, fmtNextRun } from './index.js';
 import type { Managers } from '../managers.js';
 import { messageBus } from '../bus.js';
@@ -11,7 +11,33 @@ import { notify } from '../notifications.js';
 export class ScheduleManager {
   private schedules = new Map<string, ScheduleEntry[]>();
   private timer: ReturnType<typeof setInterval> | undefined;
+  private launchDialogOpen = false;
   constructor(private managers: Managers) {}
+
+  // Open the "New schedule" dialog (bare `schedule`). Held as a flag, mirroring
+  // `HarnessManager.openLaunchDialog`; surfaced to the client via `scheduleLaunchView()`.
+  openScheduleLaunch(): void {
+    this.launchDialogOpen = true;
+    messageBus.emit('state', { type: 'dirty' });
+  }
+
+  // Close the launch dialog (Cancel/Escape, or once a schedule has been submitted).
+  closeScheduleLaunch(): void {
+    this.launchDialogOpen = false;
+    messageBus.emit('state', { type: 'dirty' });
+  }
+
+  // The launch dialog's target-tab catalog while open, or null when closed: the eligible tab
+  // labels (agent + harness tabs, the same predicate `resolveTargetTab` uses) plus the active
+  // tab's label as the default.
+  scheduleLaunchView(): ScheduleLaunchView | null {
+    if (!this.launchDialogOpen) return null;
+    const eligible = new Set<Tab['view'] | undefined>([undefined, 'agent', 'harness']);
+    const targets = this.managers.tab.tabs
+      .filter((t) => eligible.has(t.view))
+      .map((t) => t.label);
+    return { targets, active: this.managers.tab.cur().label };
+  }
 
   // Begin the firing loop. `unref` so a pending tick never keeps the process alive on its own.
   start(): void {
