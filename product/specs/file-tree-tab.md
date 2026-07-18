@@ -306,13 +306,17 @@ Clicking the header's **New file** button, or pressing `Cmd+N` (`Ctrl+N`) while 
 keyboard focus, opens a fresh, unsaved editor tab named `untitled.md`. The target directory comes
 from the tree's current keyboard-cursor selection: a selected directory row creates the file
 inside that directory; a selected file row creates it in that file's containing directory; no
-selection (or the `..` row) creates it at the tree root.
+selection (or the `..` row) creates it at the tree root. If the target directory already contains
+a file named `untitled.md` on disk, the next free name is opened instead (`untitled-2.md`,
+`untitled-3.md`, …), so New file always opens a fresh, uncreated file rather than reopening an
+existing one.
 
 The user names the file by editing the new editor tab's label — the typed text becomes the
 filename literally, with no extension appended (see Editor Tab → "New files"). On save, if the
-directory already contains a file named `untitled.md` because the tab was never renamed, the save
-silently writes to the next free name (`untitled-2.md`, `untitled-3.md`, …) instead of overwriting
-anything, so several new-file tabs can be created and saved side by side without colliding.
+directory already contains a file with that name because the tab was never renamed and another
+new-file tab already saved to it first, the save silently writes to the next free name
+(`untitled-2.md`, `untitled-3.md`, …) instead of overwriting anything, so several new-file tabs can
+be created and saved side by side without colliding.
 
 This same dock/location-cycle mechanism is shared with the notifications tab (see
 `notifications.md`), which is the other dockable tab kind. The two can share one sidebar side at

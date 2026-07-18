@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import path from 'node:path';
+import { mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { OpenFileManager } from './open-file-manager.js';
 import type { Managers } from './managers.js';
 
@@ -58,5 +60,49 @@ describe('OpenFileManager.edit', () => {
 
     expect(opened).toHaveLength(1);
     expect(opened[0].line).toBe(42);
+  });
+});
+
+describe('OpenFileManager.newFile', () => {
+  const makeManagers = (dir: string, opened: string[]): Managers => ({
+    tab: {
+      cwdOf: () => dir,
+      append: () => {},
+      openEditorTab: (view: { path: string }) => { opened.push(view.path); },
+      registerFile: (p: string) => `/open/test-${p.length}`,
+    },
+  } as unknown as Managers);
+
+  it('opens the literal target when it does not exist yet', () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'janus-newfile-'));
+    const opened: string[] = [];
+    const mgr = new OpenFileManager(makeManagers(dir, opened));
+
+    mgr.newFile('newfile untitled.md', 'untitled.md', 'janus');
+
+    expect(opened).toEqual([path.join(dir, 'untitled.md')]);
+  });
+
+  it('opens untitled-2.md when untitled.md already exists', () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'janus-newfile-'));
+    writeFileSync(path.join(dir, 'untitled.md'), 'existing', 'utf8');
+    const opened: string[] = [];
+    const mgr = new OpenFileManager(makeManagers(dir, opened));
+
+    mgr.newFile('newfile untitled.md', 'untitled.md', 'janus');
+
+    expect(opened).toEqual([path.join(dir, 'untitled-2.md')]);
+  });
+
+  it('opens untitled-3.md when both untitled.md and untitled-2.md already exist', () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'janus-newfile-'));
+    writeFileSync(path.join(dir, 'untitled.md'), 'existing', 'utf8');
+    writeFileSync(path.join(dir, 'untitled-2.md'), 'existing', 'utf8');
+    const opened: string[] = [];
+    const mgr = new OpenFileManager(makeManagers(dir, opened));
+
+    mgr.newFile('newfile untitled.md', 'untitled.md', 'janus');
+
+    expect(opened).toEqual([path.join(dir, 'untitled-3.md')]);
   });
 });

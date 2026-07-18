@@ -13,7 +13,7 @@ export function newFileTargetDir(rows: FileTreeRow[], selected: string | null): 
   return lastSlash === -1 ? null : row.path.slice(0, lastSlash);
 }
 
-// The `edit` command target for a new `untitled.md` file, given the resolved target directory.
+// The `newfile` command target for a new `untitled.md` file, given the resolved target directory.
 export function newFileCommand(targetDir: string | null): string {
-  return targetDir === null ? 'edit untitled.md' : `edit ${targetDir}/untitled.md`;
+  return targetDir === null ? 'newfile untitled.md' : `newfile ${targetDir}/untitled.md`;
 }

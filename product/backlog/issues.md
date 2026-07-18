@@ -2,8 +2,6 @@
 
 ## ready
 
-* using the file navigator new file button, if the new file already exists, the next postfix version of the file should be openned, for example if untitled.md already exists, untitled-2.md should be openned in the editor (unless untitled-2.md already exists). 
-
 * when changing the file name in the tab label of the editor tab, the full file name should be shown for editing even though the display if character limited in length.
 
 * when changing the file name in the tab label of the editor tab, it should always update the file name. there are no tab aliases for editor tabs.
