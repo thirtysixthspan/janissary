@@ -1,9 +1,10 @@
 import type { ScheduleEntry, Tab } from '../types.js';
 import type { AggregatedScheduleView, ScheduleLaunchView, ScheduleView } from '../protocol.js';
-import { computeNextRun, fmtNextRun } from './index.js';
+import { computeNextRun } from './index.js';
 import type { Managers } from '../managers.js';
 import { messageBus } from '../bus.js';
 import { notify } from '../notifications.js';
+import { scheduleView, aggregatedScheduleView } from './views.js';
 
 // Owns the per-tab scheduled commands (keyed by tab label) and the 1-second firing loop: at each tick
 // it fires any entry whose next-run time has passed, reschedules recurring ones, and drops one-shots.
@@ -83,25 +84,13 @@ export class ScheduleManager {
 
   // The schedule rows for a tab's view: id, spec, humanized next-run time, and the recurring flag.
   view(label: string): ScheduleView[] {
-    return (this.schedules.get(label) ?? []).map((e) => ({
-      id: e.id, spec: e.spec, next: fmtNextRun(e.nextRun), recurring: e.recurring,
-    }));
+    return scheduleView(this.schedules, label);
   }
 
   // Every scheduled entry across all still-open tabs, flattened and sorted soonest-first by the raw
   // next-run timestamp, then shaped like `view(label)` rows plus the owning tab label and command.
-  // Labels with no matching open tab are skipped, mirroring the open-tab guard in `tick()`.
   aggregatedView(): AggregatedScheduleView[] {
-    const rows: { entry: ScheduleEntry; label: string }[] = [];
-    for (const [label, entries] of this.schedules) {
-      if (this.managers.tab.tabs.every((t) => t.label !== label)) continue;
-      for (const entry of entries) rows.push({ entry, label });
-    }
-    return rows
-      .toSorted((a, b) => a.entry.nextRun - b.entry.nextRun)
-      .map(({ entry: e, label }) => ({
-        tab: label, id: e.id, spec: e.spec, next: fmtNextRun(e.nextRun), recurring: e.recurring, command: e.command,
-      }));
+    return aggregatedScheduleView(this.schedules, this.managers.tab.tabs);
   }
 
   // Fire any commands whose next-run time has passed, in every still-open tab. A recurring entry is
