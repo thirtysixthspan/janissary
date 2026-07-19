@@ -7,8 +7,8 @@ import {
   deleteFileTreeItem,
   undoFileTreeItem,
   redoFileTreeItem,
-} from './controller-file-tree.js';
-import type { Managers } from './managers.js';
+} from './file-tree.js';
+import type { Managers } from '../managers.js';
 
 function makeManagers(label: string | undefined, fileTree: Record<string, (...args: unknown[]) => unknown>) {
   return {

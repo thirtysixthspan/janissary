@@ -1,6 +1,6 @@
-import type { Managers } from './managers.js';
-import { writeCaptureFile } from './harness/capture-file.js';
-import { transcriptText } from './tab/transcript-text.js';
+import type { Managers } from '../managers.js';
+import { writeCaptureFile } from '../harness/capture-file.js';
+import { transcriptText } from '../tab/transcript-text.js';
 
 // Open the named tab's full transcript as a plain-text snapshot in an editor tab — the
 // clipboard metadata-row button (see AgentTabMeta.tsx).

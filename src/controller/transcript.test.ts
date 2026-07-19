@@ -1,9 +1,9 @@
 import { describe, it, expect, vi } from 'vitest';
-import { openTranscriptFor } from './controller-transcript.js';
-import { writeCaptureFile } from './harness/capture-file.js';
-import type { Managers } from './managers.js';
+import { openTranscriptFor } from './transcript.js';
+import { writeCaptureFile } from '../harness/capture-file.js';
+import type { Managers } from '../managers.js';
 
-vi.mock('./harness/capture-file.js', () => ({
+vi.mock('../harness/capture-file.js', () => ({
   writeCaptureFile: vi.fn(() => '/project/.janissary/captures/agent-now.txt'),
 }));
 

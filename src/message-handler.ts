@@ -1,9 +1,9 @@
 import type { Controller } from './controller.js';
 import type { ClientMessage, ServerEvent } from './protocol.js';
 import { buildStateEvent } from './state-event.js';
-import { openTranscriptFor } from './controller-transcript.js';
+import { openTranscriptFor } from './controller/transcript.js';
 import { projectFilesFor } from './project-files.js';
-import { fileTreeSearch, revealFileTreeItem } from './controller-file-tree.js';
+import { fileTreeSearch, revealFileTreeItem } from './controller/file-tree.js';
 
 export function handle(controller: Controller, message: ClientMessage, reply: (event: ServerEvent) => void): void {
   switch (message.method) {

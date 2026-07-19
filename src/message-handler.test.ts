@@ -2,13 +2,13 @@ import { describe, it, expect, vi } from 'vitest';
 import { handle } from './message-handler.js';
 import type { Controller } from './controller.js';
 import type { ClientMessage, ServerEvent, RpcCall } from './protocol.js';
-import { openTranscriptFor } from './controller-transcript.js';
+import { openTranscriptFor } from './controller/transcript.js';
 import { projectFilesFor } from './project-files.js';
-import { fileTreeSearch, revealFileTreeItem } from './controller-file-tree.js';
+import { fileTreeSearch, revealFileTreeItem } from './controller/file-tree.js';
 
-vi.mock('./controller-transcript.js', () => ({ openTranscriptFor: vi.fn() }));
+vi.mock('./controller/transcript.js', () => ({ openTranscriptFor: vi.fn() }));
 vi.mock('./project-files.js', () => ({ projectFilesFor: vi.fn() }));
-vi.mock('./controller-file-tree.js', () => ({ fileTreeSearch: vi.fn(), revealFileTreeItem: vi.fn() }));
+vi.mock('./controller/file-tree.js', () => ({ fileTreeSearch: vi.fn(), revealFileTreeItem: vi.fn() }));
 
 const makeController = () =>
   ({
