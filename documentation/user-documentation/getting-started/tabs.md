@@ -70,8 +70,22 @@ $root/workspace/emrah   = a workspaced agent's clone, inside the project
 
 Paths outside the project but under your home directory shorten to `~`. This is display-only — the real absolute paths are what actually get used, and the raw output of your own shell commands is never rewritten.
 
+## Reading the transcript
+
+<img class="agent-float" src="/agents/tahir-south-east.png" alt="" />
+
+A path and line number in output, like `src/foo.ts:42`, is a clickable link. Click it to open that file in an editor tab with the cursor on that line. This works in your own shell output and in an agent's output alike.
+
+Double-click a previous command's prompt line — the chevron and the command text — to run it again. Clicking the leading working-directory text on that line does nothing; only the command text after it re-runs. A single click does nothing either, so click-and-drag text selection still works.
+
+Shell output keeps its color, whether you ran the command yourself or an agent did: a test suite's colored pass/fail summary, for example, renders with the same colors it would in a real terminal.
+
+![Shell output in the transcript: a grep match highlighted in the shell's color, with the file path and line number rendered as an underlined, clickable link.](/screenshots/transcript-file-link.png)
+
+Besides the keys in [Keyboard shortcuts](/user-documentation/getting-started/keyboard), the mouse wheel scrolls the transcript one line per tick. Once you've scrolled up from the bottom, a scrollbar with a percentage appears in the command bar, showing how far back you are.
+
 ## Agent tool steps fold up
 
-<img class="agent-float" src="/agents/yusuf-south-west.png" alt="" />
+<img class="agent-float left" src="/agents/yusuf-south-west.png" alt="" />
 
-When an agent runs a series of tool steps, the transcript collapses each run into a single summary line — `▸ N tool steps  (ctrl+t to expand)` — so the conversation stays readable. Your prompt and the agent's final answer always stay visible. Press `Ctrl+T` to expand or collapse the steps for the current tab.
+When an agent runs a series of tool steps, the transcript collapses each run into a single summary line — `▸ N tool steps  (ctrl+t to expand)` — so the conversation stays readable. Your prompt and the agent's final answer always stay visible. Click the summary line, or press `Ctrl+T`, to expand or collapse the steps for the current tab.
