@@ -137,4 +137,12 @@ ssh devbox
 ssh -p 2222 admin@host
 ```
 
-Everything after `ssh` is passed to the real `ssh` binary verbatim — flags, `user@host`, jump hosts, a trailing remote command. The tab is labeled with the bare host name (`admin@10.0.0.5` → `10.0.0.5`), the session appears in the connections panel as `ssh:<destination>`, and `connection close ssh:<name>` ends it from any tab. Input, focus, lifecycle, and `send`/schedule delivery all behave exactly as for a harness tab. There's no `as` or `-w` here — anything after the destination belongs to ssh itself.
+Everything after `ssh` is passed to the real `ssh` binary verbatim — flags, `user@host`, jump hosts, a trailing remote command. The tab is labeled with the bare host name (`admin@10.0.0.5` → `10.0.0.5`), the session appears in the connections panel as `ssh:<destination>`, and [`connection close ssh:<name>`](/user-documentation/command-bar/connections) ends it from any tab. Input, focus, lifecycle, and `send`/schedule delivery all behave exactly as for a harness tab. There's no `as` or `-w` here — anything after the destination belongs to ssh itself.
+
+- `ssh` with no destination: `Usage: ssh <destination> [ssh options].`
+
+Before the tab opens, the `ssh <destination> […]` command itself is recorded in the transcript of the tab you ran it from. That happens first, so the launch stays visible even if the connection fails immediately — an unreachable host or a rejected login closes the new tab right away, and its error output goes with it rather than echoing back to the tab you launched from.
+
+The ssh tab closes as soon as the `ssh` process exits, whether that's a normal logout, a dropped connection, or an immediate failure. Closing the [last remaining tab](/user-documentation/getting-started/tabs#closing-tabs) quits the app, same as any other tab.
+
+Typing `ssh <host>` after `shell` (`shell ssh <host>`) doesn't open a dedicated tab — it opens an inline terminal card in the current tab's transcript instead, the same as any other interactive program run through `shell`. Only a bare `ssh …` command opens its own tab.
