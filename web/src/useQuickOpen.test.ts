@@ -67,6 +67,21 @@ describe('useQuickOpen', () => {
     expect(hook!.quickOpenLoading).toBe(true);
   });
 
+  it('caps results at the top 10 best-scoring matches', async () => {
+    let hook: ReturnType<typeof useQuickOpen> | undefined;
+    const paths = Array.from({ length: 15 }, (_, i) => `dir/file${i}.ts`);
+    const client = { send: vi.fn(), request: vi.fn(() => Promise.resolve({ root: '/proj', paths })) } as unknown as JanusClient;
+    const { rerender } = render(React.createElement(TestComponent, { client, onHook: (h) => { hook = h; } }));
+    hook!.openQuickOpen();
+    rerender(React.createElement(TestComponent, { client, onHook: (h) => { hook = h; } }));
+    await Promise.resolve();
+    await Promise.resolve();
+    rerender(React.createElement(TestComponent, { client, onHook: (h) => { hook = h; } }));
+    hook!.setQuickOpenQuery('file');
+    rerender(React.createElement(TestComponent, { client, onHook: (h) => { hook = h; } }));
+    expect(hook!.quickOpenResults).toHaveLength(10);
+  });
+
   it('pickQuickOpenFile sends an edit command with the absolute path and closes', async () => {
     let hook: ReturnType<typeof useQuickOpen> | undefined;
     const send = vi.fn();

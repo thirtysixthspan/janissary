@@ -2,7 +2,7 @@ import { useCallback, useDeferredValue, useMemo, useRef, useState } from 'react'
 import type { JanusClient } from './ws';
 import { fuzzyMatch, type FuzzyMatchResult } from './fuzzy-match';
 
-const RESULT_CAP = 100;
+const RESULT_CAP = 10;
 
 // State and handlers for the Cmd+P quick-open overlay: fetches the project's gitignore-aware file
 // list once per open (Decision 8), then fuzzy-filters it client-side on every keystroke, capped
