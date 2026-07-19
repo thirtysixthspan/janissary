@@ -14,7 +14,7 @@
 | `nav` | Open the fuzzy tab navigator (Ctrl+G); `nav <query>` pre-fills the search |
 | `msg` | Send a message to another agent |
 | `broadcast` | Send a message to several or all agents |
-| `acp` | Send a prompt to the OpenCode ACP agent |
+| `acp` | Send a prompt to the OpenCode ACP agent (`acp reset` starts a fresh session) |
 | `db` | Create, delete, query, or list SQLite databases |
 | `browser` | Drive a headless/headed web browser (open, goto, content, eval, shot) |
 | `open` | Open images/files in a tab, or web pages embedded (`open https://…` / `open page …`) — sites that refuse framing render too; `open external` uses the OS viewer/browser |
