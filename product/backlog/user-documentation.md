@@ -6,8 +6,6 @@ Functional areas where user documentation lags application behavior, scored 1–
 
 ## candidates
 
-* sandbox (3/10) — The workspace sandbox is well documented for users in `documentation/user-documentation/advanced-agents/workspacing.md` (what works inside, write/read/secret blocking, `--offline`, the `sandboxWorkspaces` toggle, macOS-only, the not-active notice), with 1 of 10 user-facing facts missing. Missing: credential-shaped environment variables (`AWS_*`, `GITHUB_TOKEN`, `NPM_TOKEN`, `SSH_AUTH_SOCK`, and similar) are scrubbed from sandboxed processes, so a tool that needs them fails inside the workspace even though reads of the corresponding files are also blocked — worth a sentence so users understand why such tools fail. The deeper Seatbelt mechanics in the spec are engineering detail that does not belong in user docs. The ground truth is `product/specs/sandbox.md` and `src/sandbox.ts`. Fix with a sentence in the isolation list in `documentation/user-documentation/advanced-agents/workspacing.md`.
-
 ## unverified
 
 * editor-tab — flagged by git log (live-reload of externally changed files, unsaved-changes warning, transient draft sync) against `documentation/user-documentation/tab-types/editor.md`; not yet evaluated (over this run's limit)
@@ -15,6 +13,8 @@ Functional areas where user documentation lags application behavior, scored 1–
 * tabs — flagged by git log (metadata row with launch-agent, file-navigator, connections, and schedule buttons) against `documentation/user-documentation/getting-started/tabs.md`; not yet evaluated (over this run's limit)
 
 ## resolved
+
+* sandbox — documented in `documentation/user-documentation/advanced-agents/workspacing.md` (added a bullet to the isolation list noting that credential-shaped environment variables like `AWS_*`, `GITHUB_TOKEN`, `NPM_TOKEN`, and `SSH_AUTH_SOCK` are also stripped from a sandboxed process) (removed 2026-07-19)
 
 * harness-recording — documented in `documentation/user-documentation/advanced-agents/harness.md` (Recordings section now notes that keystroke input is never recorded, only output, and that the file is created lazily on first output so a harness that exits immediately leaves none) (removed 2026-07-19)
 
