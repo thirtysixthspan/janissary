@@ -1,11 +1,12 @@
 import type { MessageKind } from '../types.js';
 import type { Managers } from '../managers.js';
+import { sendMessage, pumpQueue } from './message-queue.js';
 
 // Server-side port of useMessaging (the React hook): per-recipient FIFO queues drained one
 // message at a time. info/response are shown in the recipient's transcript; command runs the
 // command through full dispatch (as if typed by the user); request runs it and returns the
 // output to the sender as a response.
-type Message = { id: number; from: string; to: string; kind: MessageKind; text: string };
+export type Message = { id: number; from: string; to: string; kind: MessageKind; text: string };
 
 export class AgentCommunicationManager {
   private queues = new Map<string, Message[]>();
@@ -17,29 +18,11 @@ export class AgentCommunicationManager {
   // Recipients may be addressed by their label or by their display alias (see `rename`);
   // either way, routing and queuing key off the tab's canonical label.
   send(message: Omit<Message, 'id'>): boolean {
-    const to = message.to.toLowerCase();
-    const target = this.managers.tab.tabs.find(
-      (t) => t.label.toLowerCase() === to || t.title?.toLowerCase() === to,
-    );
-    if (!target) return false;
-    const full: Message = { ...message, to: target.label, id: ++this.nextId };
-    const q = this.queues.get(target.label) ?? [];
-    q.push(full);
-    this.queues.set(target.label, q);
-    this.pump(target.label);
-    return true;
+    return sendMessage(this.managers, this.queues, message, () => ++this.nextId, (label) => this.pump(label));
   }
 
   private pump(label: string): void {
-    if (this.processing.has(label)) return;
-    const queue = this.queues.get(label);
-    if (!queue || queue.length === 0) return;
-    this.processing.add(label);
-    const message = queue.shift()!;
-    this.handle(message, () => {
-      this.processing.delete(label);
-      if ((this.queues.get(label)?.length ?? 0) > 0) setTimeout(() => this.pump(label), 0);
-    });
+    pumpQueue(this.queues, this.processing, label, (m, done) => this.handle(m, done), (l) => this.pump(l));
   }
 
   private handle(message: Message, done: () => void): void {
