@@ -40,6 +40,13 @@ export default [
   { name: 'tab-completion', actions: [{ type: 'open sa' }, { press: 'Tab' }], target: 'command-bar' },
   { name: 'shell-output', setup: ['shell ls -la'], settle: 1200, target: 'transcript', clipHeight: 400 },
   {
+    name: 'transcript-file-link',
+    setup: ['shell grep -Hn --color=always harbor-gazette src/app.ts'],
+    settle: 1200,
+    target: 'transcript',
+    clipHeight: 100,
+  },
+  {
     name: 'browser-output',
     setup: ['browser goto {{PAGE_URL}}', 'browser content'],
     settle: 2000,
