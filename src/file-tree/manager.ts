@@ -8,6 +8,7 @@ import { expandUserPath } from '../paths.js';
 import { resolveTarget } from '../commands/resolve-target.js';
 import { openOrRetarget, type OpenPort } from './open.js';
 import { applyStackMove, type MoveEntry, type UndoRedoResult } from './moves.js';
+import { toggleDir, collapseAllDirs, rerootTree, revealPath, type NavPort } from './navigation.js';
 import { watchDir, unwatchDir } from './watch.js';
 import { pruneAndBuildRows } from './rebuild.js';
 import { listProjectFiles } from './search.js';
@@ -90,43 +91,31 @@ export class FileTreeManager {
 
   // Expand/collapse one directory row.
   toggle(label: string, relPath: string): void {
-    const state = this.tabs.get(label);
-    if (!state) return;
-    if (state.expanded.has(relPath)) {
-      state.expanded.delete(relPath);
-      this.unwatchDir(state, relPath);
-    } else {
-      state.expanded.add(relPath);
-      this.watchDir(label, path.join(state.root, relPath), relPath);
-    }
-    this.rebuild(label);
+    toggleDir(this.navPort(), label, relPath);
   }
 
   // Collapse every expanded directory back to just the root.
   collapseAll(label: string): void {
-    const state = this.tabs.get(label);
-    if (!state) return;
-    for (const relPath of state.expanded) this.unwatchDir(state, relPath);
-    state.expanded.clear();
-    this.rebuild(label);
+    collapseAllDirs(this.navPort(), label);
   }
 
   // Re-root the tree to the parent directory. Clears expanded state and watchers, then rebuilds.
   reroot(label: string, relPath?: string): void {
-    const state = this.tabs.get(label);
-    if (!state) return;
-    const target = relPath ? path.resolve(state.root, relPath) : path.resolve(state.root, '..');
-    if (target === state.root) return;
-    for (const relPath of state.expanded) this.unwatchDir(state, relPath);
-    state.expanded.clear();
-    this.unwatchDir(state, '');
-    state.root = target;
-    state.gitStatuses = new Map();
-    state.branch = undefined;
-    this.watchDir(label, target, '');
-    if (this.managers.tab.tabs.some((t) => t.label === label)) this.managers.tab.setCwd(label, target);
-    this.rebuild(label);
-    this.refreshGit(label);
+    rerootTree(this.navPort(), label, relPath);
+  }
+
+  // The narrow set of manager internals `navigation.ts` operates through, passed as bound
+  // closures so the tab-state map and watcher methods stay private to this class.
+  private navPort(): NavPort {
+    return {
+      states: this.tabs,
+      watchDir: (label, absDir, relPath) => this.watchDir(label, absDir, relPath),
+      unwatchDir: (state, relPath) => this.unwatchDir(state, relPath),
+      rebuild: (label) => this.rebuild(label),
+      refreshGit: (label) => this.refreshGit(label),
+      setCwd: (label, dir) => this.managers.tab.setCwd(label, dir),
+      hasTab: (label) => this.managers.tab.tabs.some((t) => t.label === label),
+    };
   }
 
   // Open a file navigator at `label`'s cwd (the metadata-row 📁 button). If a file-tree tab is
@@ -213,18 +202,7 @@ export class FileTreeManager {
   // watching each newly-expanded one), then rebuild — the search pop-up's Enter action, so the
   // target row exists in the client's next `rows` update for it to select and scroll to.
   reveal(label: string, relPath: string): void {
-    const state = this.tabs.get(label);
-    if (!state) return;
-    const dir = parentPath(relPath);
-    const segments = dir ? dir.split('/') : [];
-    let cur = '';
-    for (const segment of segments) {
-      cur = cur ? `${cur}/${segment}` : segment;
-      if (state.expanded.has(cur)) continue;
-      state.expanded.add(cur);
-      this.watchDir(label, path.join(state.root, cur), cur);
-    }
-    this.rebuild(label);
+    revealPath(this.navPort(), label, relPath);
   }
 
   // Tear down one tab's watchers and debounce timer (on tab close).
