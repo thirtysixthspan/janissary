@@ -117,6 +117,13 @@ export default [
     settle: 1000,
     target: 'page',
   },
+  {
+    name: 'sidebar-shared',
+    setup: ['files left .', 'notifications left'],
+    settle: 1200,
+    target: 'sidebar-left',
+    clipHeight: 200,
+  },
 
   // Advanced agents and automation.
   {
