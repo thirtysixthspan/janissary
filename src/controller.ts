@@ -23,7 +23,7 @@ import { CaptureManager } from './capture/manager.js';
 import { AgentCommunicationManager } from './agent/communication-manager.js';
 import { messageBus } from './bus.js';
 import { BrowserManager } from './browser/tab.js';
-import { CommandManager } from './command-manager.js';
+import { CommandManager } from './command/manager.js';
 import { runSuggestion } from './monitor/window.js';
 import { MonitorManager } from './monitor/manager.js';
 import { listPersonas } from './personas.js';

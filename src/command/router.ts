@@ -1,8 +1,8 @@
-import { messageBus } from './bus.js';
-import { toPrefixedCommand, routeChoices } from './recognizers/index.js';
-import type { RouteChoice } from './recognizers/types.js';
-import { resolveRouteChoice } from './route-choice.js';
-import type { Managers } from './managers.js';
+import { messageBus } from '../bus.js';
+import { toPrefixedCommand, routeChoices } from '../recognizers/index.js';
+import type { RouteChoice } from '../recognizers/types.js';
+import { resolveRouteChoice } from '../route-choice.js';
+import type { Managers } from '../managers.js';
 
 export function resolveUnknownCommand(
   cmd: string,

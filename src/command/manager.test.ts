@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { CommandManager } from './command-manager.js';
-import { TabManager } from './tab/manager.js';
-import type { Managers } from './managers.js';
+import { CommandManager } from './manager.js';
+import { TabManager } from '../tab/manager.js';
+import type { Managers } from '../managers.js';
 
 function makeManagers(): { managers: Managers; recorder: string[] } {
   const recorder: string[] = [];
@@ -176,7 +176,7 @@ describe('CommandManager drain and route chooser', () => {
   });
 
   it('stops the drain while a route is pending and resumes via chooseRoute', async () => {
-    vi.doMock('./command-router.js', () => ({
+    vi.doMock('./router.js', () => ({
       resolveUnknownCommand: (
         cmd: string, label: string, _managers: Managers,
         _run: (input: string, l: string, i: number) => void,
@@ -185,8 +185,8 @@ describe('CommandManager drain and route chooser', () => {
         setPending({ label, cmd, choices: [{ label: 'run in shell', route: 'shell' }] });
       },
     }));
-    const { CommandManager: MockedCommandManager } = await import('./command-manager.js');
-    const { TabManager: MockedTabManager } = await import('./tab/manager.js');
+    const { CommandManager: MockedCommandManager } = await import('./manager.js');
+    const { TabManager: MockedTabManager } = await import('../tab/manager.js');
     const recorder: string[] = [];
     const managers = {} as Managers;
     managers.tab = new MockedTabManager(managers);
@@ -221,6 +221,6 @@ describe('CommandManager drain and route chooser', () => {
     await Promise.resolve();
     expect(managers.tab.queueFor('janus')).toEqual([]);
 
-    vi.doUnmock('./command-router.js');
+    vi.doUnmock('./router.js');
   });
 });
