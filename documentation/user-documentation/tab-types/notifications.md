@@ -52,6 +52,6 @@ A notification only fires for a **background** tab — the tab you're currently 
 
 The notifications feed can sit in the central tab strip or dock into the left or right sidebar, exactly like the [file navigator](/user-documentation/tab-types/file-navigator). `notifications left` and `notifications right` open or move it into that sidebar; bare `notifications` brings a docked feed back to center and focuses it.
 
-The two share the sidebars: each sidebar holds one docked tab, so docking the feed into a side that already holds the file navigator sends the navigator back to center rather than closing it. While docked, the feed's header shows a **⇄** button to move it to the other side and a **×** button to close it. See [Tabs](/user-documentation/getting-started/tabs) for more on sidebars.
+The feed shares a sidebar with the [file navigator](/user-documentation/tab-types/file-navigator) and the [schedules](/user-documentation/automation/scheduling) tab: docking the feed into a side that already holds one of those leaves it docked too, both sharing the sidebar's own tab strip, rather than displacing it back to center. While docked, the feed's header shows a **⇄** button to move it to the other side and a **×** button to close it. See [Tabs](/user-documentation/getting-started/tabs) for more on sidebars.
 
 Like other view tabs, the notifications feed is a live view: it's closed with its `×` button or `close`, and it is not restored by `janus --relaunch`.

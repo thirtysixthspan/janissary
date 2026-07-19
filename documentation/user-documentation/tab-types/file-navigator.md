@@ -29,14 +29,17 @@ tree straight into that sidebar; a directory literally named `left` or `right` i
 with a path form, e.g. `files ./left`.
 
 While docked, the tree leaves the tab strip and appears in its sidebar instead, resizable by
-dragging the divider on its inner edge. Only one tab can be docked per sidebar — docking a
+dragging the divider on its inner edge. Only one tree can be docked per sidebar — docking a
 second one into an occupied side sends the first back to the center strip rather than
 closing it. A docked tree is never the active tab; `files <same path>` (no `left`/`right`) brings
 it back to center and focuses it. See [Tabs](/user-documentation/getting-started/tabs) for more on sidebars.
 
-The sidebars are shared with the [notifications](/user-documentation/tab-types/notifications) feed, which docks the
-same way — so a sidebar can hold a tree *or* the notifications feed, and docking one where the
-other already sits displaces that one back to center.
+The sidebars are shared with the [notifications](/user-documentation/tab-types/notifications) feed and the
+[schedules](/user-documentation/automation/scheduling) tab, which dock the same way — a sidebar can hold a
+tree together with a notifications feed and/or a schedules tab, all at once, side by side in that
+sidebar's own tab strip. Docking a second tree into an already-occupied side displaces the first
+tree back to center; it never displaces a different kind. See
+[Tabs](/user-documentation/getting-started/tabs) for how a shared sidebar's strip works.
 
 ![A file navigator docked in the left sidebar, with its resize divider on the right edge.](/screenshots/file-tree-sidebar.png)
 
