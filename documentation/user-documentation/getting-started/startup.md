@@ -58,5 +58,7 @@ Settings live in `.janissary/config.json` inside the directory you launch from; 
 | `tabNameMaxLength` | `16` | The longest tab name shown in the strip when a tab is created; the strip truncates to fit. Renaming via `rename` or double-click accepts up to 50 characters regardless of this setting. |
 | `theme` | `"dark"` | The application color theme. Change it at runtime with [`theme <name>`](/user-documentation/command-bar/commands#theme). |
 | `syntaxTheme` | `"github-dark"` | The syntax-highlighting theme for [editor tabs](/user-documentation/tab-types/editor). Change it at runtime with `syntax theme <name>`. |
+| `sandboxWorkspaces` | `true` | Whether workspaced tabs are confined to their workspace clone by the macOS sandbox. See [Workspacing](/user-documentation/advanced-agents/workspacing). |
+| `notifications` | all events off | Which background events feed the [notifications](/user-documentation/tab-types/notifications) tab. There's no runtime command for this; edit the file directly. |
 
 Changing `theme` or `syntaxTheme` at runtime rewrites this file, preserving every other key, and warns if the write fails. If the file isn't valid JSON, the app warns on startup and falls back to defaults for that session — your file is left untouched so you can fix it.
