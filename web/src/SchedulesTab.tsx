@@ -79,6 +79,7 @@ export function SchedulesTab({ entries, tabs, client, compact = false, dock, ind
       ref={containerRef}
       tabIndex={0}
       onKeyDown={onKeyDown}
+      data-doc-shot="schedules-tab"
     >
       {dock && <DockCycleHeader dock={dock} client={client} index={index} classPrefix="schedules" />}
       {entries.length === 0 ? (
