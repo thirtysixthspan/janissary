@@ -16,15 +16,15 @@ Do the steps below **in order**. Do not skip steps. Do not invent your own proce
 
 ## Step 0 — Prepare the workspace
 
-Execute [`prepare-workspace.md`](prepare-workspace.md) in full before doing anything else.
+This task only reads files and runs git — it never builds, tests, or runs the app — so it does not need the full [`prepare-workspace.md`](prepare-workspace.md) install. Do this instead:
 
-Then confirm a clean starting point:
+1. `git checkout master` and `git pull origin master`.
+2. Skip `npm install` entirely. If a later step's script fails for lack of dependencies, run `npm install --ignore-scripts`, then check `git status` — the install itself can rewrite `package-lock.json` (version-sync churn); if it did and you did not change dependencies, revert it with `git checkout -- package-lock.json`.
+3. Confirm a clean starting point with `git status`.
 
-```bash
-git status
-```
+The working tree **must be clean** — no modified *and no untracked* files. This matters more than usual here: the quick-commit step at the end stages everything with `git add -A`, so any stray file would be silently swept into this task's commit. If the tree is not clean, STOP and report what is there — do not start on top of changes you did not make.
 
-The working tree **must be clean** before you start. If it is not, STOP and report — do not start on top of uncommitted changes you did not make.
+**Command hygiene for the whole run:** run each command plainly and read its output from the result — no piping into `tail`/`head`, no `>` redirects, no `$(...)` capture. These trigger permission prompts or hook rejections in this repo (see CLAUDE.md) and cost a wasted call each time.
 
 ---
 
@@ -51,15 +51,21 @@ Build a candidate list of functional areas from three sources. Do all three — 
    find documentation/user-documentation -iname '*<keyword>*'
    ```
 
-   Try the obvious keyword and one synonym before concluding a page is missing (e.g. `db` and `database`; `msg` and `message`). Also grep `help.md` for the area's command name. A spec with no doc page **and** no `help.md` row is an automatic candidate.
-2. **Git logs.** Review history since the last run for user-facing behavior changes. Run both commands and compare:
+   Try the obvious keyword and one synonym (e.g. `db` and `database`; `msg` and `message`). **A missing filename is a hint, not proof**: coverage often lives inside a page with an unrelated name (command comments are documented in `commands.md`; the CLI in `startup.md`). When the filename check comes up empty, also grep the docs *content* for the area's command name and key chord before treating it as uncovered:
 
    ```bash
-   git log --oneline --since="<SINCE>" -- src/ web/src/ product/specs/
+   grep -riln '<command or key chord>' documentation/user-documentation/
+   ```
+
+   Grep one specific token per call (a command word, `Cmd+P`, a flag) — a single alternation of many loose terms matches half the site and tells you nothing. Also grep `help.md` for the area's command name. A spec with no doc page, no content mention, **and** no `help.md` row is an automatic candidate.
+2. **Git logs.** Review history since the last run for user-facing behavior changes. The raw app-side log can run to hundreds of commits, so filter by type up front:
+
+   ```bash
+   git log --oneline --since="<SINCE>" --extended-regexp --grep='^(feat|fix)' -- src/ web/src/ product/specs/
    git log --oneline --since="<SINCE>" -- documentation/user-documentation/ help.md
    ```
 
-   From the first list, flag subjects that sound user-facing: new commands, new flags, renames, removed behavior, changed defaults (`feat:` and `fix:` subjects usually; `refactor:`/`chore:`/`test:` usually not). For each flagged commit whose area does **not** appear in the second list in the same period, add that area as a candidate. If a subject is unclear, run `git show --stat <hash>` to see what it touched before deciding — do not guess from the subject line alone.
+   From the first list, flag subjects that sound user-facing: new commands, new flags, renames, removed behavior, changed defaults. For each flagged commit whose area does **not** appear in the second list in the same period, add that area as a candidate. If a subject is unclear, run `git show --stat <hash>` to see what it touched before deciding — do not guess from the subject line alone.
 3. **Code.** Look for user-facing surface with no spec: commands registered in the command bar, key bindings, CLI flags in `bin/janus.mjs`. Grep the relevant registries in `src/` and `web/src/` — read only, never edit. Anything a user can invoke that has no spec **and** no doc page is a candidate.
 
 Merge the three lists with the carried-over entries from Step 1 into one deduplicated list, keyed by area ID. Record next to each area *why* it is a candidate (no page / user-facing commits since `SINCE` / carried over) — you will need this in Step 4.
@@ -82,8 +88,12 @@ Deep-evaluate (Step 4) the carried-over entries **plus at most 10 new candidates
 
 Scores must be reproducible from evidence, not impressions. For each area, follow this exact procedure:
 
+Before reading spec bodies, check their sizes in one call (`wc -l product/specs/<a>.md product/specs/<b>.md …`) and read several specs per batch of tool calls — one round-trip per spec wastes most of the run.
+
 1. **Enumerate the documentable facts.** Read the spec in full (if one exists) and, where the spec is silent or ambiguous, read the relevant source. List the area's user-visible facts: each command, subcommand, flag, key binding, and each distinct behavior a user would need to know (defaults, limits, error conditions they'll hit). Count them — call this **N**. For a typical area N lands between 5 and 20; if you counted fewer than 3, you read too shallowly — go back.
-2. **Check each fact against the docs.** Read the matching doc page(s) and `help.md` rows side by side with your fact list. Mark every fact one of: **correct** (documented and accurate), **missing** (not documented anywhere), or **wrong** (documented but no longer matches the app — verify against source or the spec's verbatim text before marking wrong, since a wrong fact actively misleads and weighs heaviest).
+
+   Specs go stale: before a command, subcommand, or flag from the spec goes into your fact list or a gap description, confirm it exists — a `help.md` row or one `grep -rln '<token>' src/` is enough. Where they disagree, the app is the ground truth (e.g. a spec saying `monitor stop` when the shipped command is `unmonitor`); use the app's name and note the stale spec in the gap description.
+2. **Check each fact against the docs.** If Step 2's content greps already confirmed the area has **zero** doc coverage (no page, no content mention, at most a terse `help.md` row), skip the side-by-side comparison: every fact is missing by definition, the score comes from the top two rubric rows, and your fact list is only needed to write the gap description. Otherwise, read the matching doc page(s) and `help.md` rows side by side with your fact list. Mark every fact one of: **correct** (documented and accurate), **missing** (not documented anywhere), or **wrong** (documented but no longer matches the app — verify against source or the spec's verbatim text before marking wrong, since a wrong fact actively misleads and weighs heaviest).
 3. **Score from the table.** Compute the missing fraction (missing ÷ N) and count the wrong facts, then take the score from the first row that matches:
 
    | Condition | Score |
