@@ -21,12 +21,14 @@ import { buildAgentStateFromTab } from './agent-state.js';
 import { recordLeavingActiveTab, popFocusHistory, mostRecentFileTreeLabel } from './focus-history.js';
 import { applyDock } from './dock.js';
 import { capLog } from './transcript.js';
-import { appendEntry, finishEntry, clearLog } from './transcript-ops.js';
 import { computeReorder, removeTabAt } from './reorder.js';
 import { navigatePageTab } from './navigate.js';
 import { recordHistory } from './history.js';
 import { FileRegistry } from './file-registry.js';
 import { renameEditorTab } from './rename-editor.js';
+import {
+  markUnreadTab, startRunningTab, finishRunningTab, appendTab, clearTranscriptTab,
+} from './transcript-commands.js';
 
 export class TabManager {
   tabs: Tab[] = [];
@@ -145,9 +147,7 @@ export class TabManager {
   }
 
   markUnread(label: string): void {
-    const tab = this.tabs.find((t) => t.label === label);
-    if (!tab || tab.dock || label === this.activeLabel()) return;
-    tab.hasUnread = true;
+    markUnreadTab(this.tabs, label, this.activeLabel());
   }
 
   private recordLeavingActiveTab(newIndex: number): void {
@@ -272,24 +272,14 @@ export class TabManager {
   }
 
   startRunning(label: string, input: string): void {
-    this.busy.add(label);
-    this.append(label, { input, output: '', running: true });
+    startRunningTab(this.busy, label, input, (l, entry) => this.append(l, entry));
   }
 
   finishRunning(label: string, output: string): void {
-    const t = this.tabs.find((x) => x.label === label);
-    if (t) {
-      finishEntry(t, output);
-      this.deleteBusy(label);
-      this.persist(this.buildAgentState(t));
-    }
-    if (output && t) {
-      messageBus.emit('transcript', {
-        type: 'entry:appended', tabLabel: label, entry: { input: '', output }, tab: t,
-      });
-    }
-    this.markUnread(label);
-    messageBus.emit('state', { type: 'dirty' });
+    finishRunningTab(
+      this.tabs, label, output,
+      (l) => this.deleteBusy(l), (s) => this.persist(s), (t) => this.buildAgentState(t), (l) => this.markUnread(l),
+    );
   }
 
   private capLog(log: LogEntry[]): LogEntry[] {
@@ -297,22 +287,11 @@ export class TabManager {
   }
 
   append(label: string, entry: LogEntry): void {
-    const tab = this.tabs.find((t) => t.label === label);
-    if (!tab) return;
-    const trimmed = appendEntry(tab, entry, (log) => this.capLog(log));
-    if (trimmed > 0) messageBus.emit('transcript', { type: 'entries:trimmed', tabLabel: label, count: trimmed });
-    messageBus.emit('transcript', { type: 'entry:appended', tabLabel: label, entry, tab });
-    this.markUnread(label);
-    messageBus.emit('state', { type: 'dirty' });
+    appendTab(this.tabs, label, entry, (log) => this.capLog(log), (l) => this.markUnread(l));
   }
 
   clearTranscript(label: string): void {
-    const tab = this.tabs.find((t) => t.label === label);
-    if (!tab) return;
-    clearLog(tab);
-    this.persist(this.buildAgentState(tab));
-    messageBus.emit('transcript', { type: 'tab:cleared', tabLabel: label });
-    messageBus.emit('state', { type: 'dirty' });
+    clearTranscriptTab(this.tabs, label, (s) => this.persist(s), (t) => this.buildAgentState(t));
   }
 
   recordHistory(index: number, text: string): string {
