@@ -1,13 +1,13 @@
-import type { RouteChoice } from './recognizers/types.js';
-import { resolveCommand } from './resolve.js';
-import { isInteractive } from './interactive.js';
-import { commands } from './commands/index.js';
-import { toPrefixedCommand } from './recognizers/index.js';
-import { messageBus } from './bus.js';
-import { resolveUnknownCommand } from './command-router.js';
-import { recordGlobalHistory } from './global-history.js';
-import type { Managers } from './managers.js';
-import { dispatchOrRunOp, drainQueueOp } from './command-queue.js';
+import type { RouteChoice } from '../recognizers/types.js';
+import { resolveCommand } from '../resolve.js';
+import { isInteractive } from '../interactive.js';
+import { commands } from '../commands/index.js';
+import { toPrefixedCommand } from '../recognizers/index.js';
+import { messageBus } from '../bus.js';
+import { resolveUnknownCommand } from './router.js';
+import { recordGlobalHistory } from '../global-history.js';
+import type { Managers } from '../managers.js';
+import { dispatchOrRunOp, drainQueueOp } from './queue.js';
 
 export class CommandManager {
   private pendingRoute: { label: string; cmd: string; choices: RouteChoice[] } | null = null;

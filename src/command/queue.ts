@@ -1,4 +1,4 @@
-import type { Managers } from './managers.js';
+import type { Managers } from '../managers.js';
 
 // CommandManager's FIFO command-queue gate, extracted whole: agent tabs queue while busy (or
 // while idle with entries already waiting, to preserve FIFO) instead of running immediately.
