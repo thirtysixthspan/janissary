@@ -5,7 +5,7 @@ import type { HarnessTabHandle } from './HarnessTab';
 import { EditorTab, type EditorTabHandle } from './EditorTab';
 import { PageTab } from './PageTab';
 import { HarnessTabLayer } from './HarnessTabLayer';
-import type { VisibleTaskRow } from './task-picker-keys';
+import type { PickerOverlayProps } from './picker-overlay-props';
 
 type Properties = {
   tabs: TabView[];
@@ -18,16 +18,7 @@ type Properties = {
   // `HarnessTab.harnessKeyFilter`); they're the only pickers/choosers those chords ever let bubble
   // there, so this renders just those two overlays rather than the full `PickerOverlays` stack the
   // agent-tab body uses.
-  taskPickerOpen?: boolean;
-  taskRows?: VisibleTaskRow[];
-  taskPickerIndex?: number;
-  onPickTask?: (path: string) => void;
-  onToggleTaskDir?: (path: string) => void;
-  navOpen?: boolean;
-  navQuery?: string;
-  navIndex?: number;
-  onPickTab?: (index: number) => void;
-};
+} & PickerOverlayProps;
 
 // Harness, editor, and page tabs stay mounted (hidden when inactive) so terminal/xterm state,
 // editor buffers, undo stacks, cursor/scroll position, and embedded-page navigation survive tab
