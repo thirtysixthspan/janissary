@@ -43,6 +43,14 @@ tree back to center; it never displaces a different kind. See
 
 ![A file navigator docked in the left sidebar, with its resize divider on the right edge.](/screenshots/file-tree-sidebar.png)
 
+## Finding a file by name
+
+Click the header's magnifying-glass button to open a search pop-up. Type part of a filename and the input shows a ghost completion of the best-matching file, with its full path (relative to the tree root) below, prefixed with `> ` — for example, `> src/tasks.md`. Matching is a case-insensitive substring on the filename, with a name that starts with what you typed ranked first; only the single top match is shown, there's no results list.
+
+Press `Tab` to accept the ghost completion into the input without closing the pop-up. Press `Enter` to jump to the top match: it expands every ancestor directory, selects the file's row, and scrolls it into view. Press `Escape`, or click outside the pop-up, to close it without changing the tree. An empty query shows nothing below the input; a query with no matches shows `(no matching files)` instead of a path.
+
+<img class="agent-float" src="/agents/hakim-south-east.png" alt="" />
+
 ## The tree stays current
 
 Every visible directory is watched: files that appear, disappear, or get renamed show up in the tree within about a second, even during a burst of changes like a `git checkout`. If watching stops working for a directory (permissions, exotic filesystems), the tree keeps working — collapse and re-expand to refresh by hand.
@@ -61,9 +69,26 @@ Inside a git repository, a file's name is colored by its git status: **green** f
 | Header ⊟ button | Collapse everything back to the root |
 | Header ⇄ button | Cycle location: left sidebar → center tab strip → right sidebar → left sidebar |
 | Header × button | Shown while docked; closes the tree (a docked tree has no strip × of its own) |
+| Press a row, drag, and release over a directory (or any file inside it) | Moves the dragged file or directory into that directory on disk |
 
 Files opened from the tree land in the same [group](/user-documentation/getting-started/groups) as the tree tab —
 including while the tree is docked to a sidebar; opened files still land in that group.
+
+## Moving files by drag-and-drop
+
+Press down on a row, drag it onto a directory row (or any file row inside that directory), and release to move the dragged file or directory into that directory. A small label follows the cursor while you drag, and the targeted directory highlights. Dropping onto the item itself, one of its own descendants, or the directory it's already in does nothing. If the target already has an entry with the same name, a dialog offers **Overwrite** or **Cancel** instead of moving right away. Releasing over empty space, losing window focus mid-drag, or pressing `Escape` cancels the drag with nothing moved.
+
+Only one row can be dragged at a time — the tree has no multi-select.
+
+You can also drag a row onto the command bar of the active tab to insert its path at the cursor, without moving the file. This only works while the tree is docked to a sidebar and a different tab is active in the center, since a non-docked tree has no other tab's command bar to drop onto.
+
+## Creating a new file
+
+Click the header's **New file** button, or press `Cmd+N` (`Ctrl+N`) while the tree has keyboard focus, to open a fresh, unsaved editor tab named `untitled.md`. The target directory follows your current selection: a selected directory creates the file inside it, a selected file creates it in that file's directory, and no selection (or the `..` row) creates it at the tree root. If that directory already has an `untitled.md`, the next free name opens instead (`untitled-2.md`, and so on).
+
+Rename the new tab's label to name the file — the typed text becomes the filename, with no extension added. Saving writes to that name; if another new-file tab already saved to it first, your save silently falls back to the next free name instead of overwriting it.
+
+<img class="agent-float left" src="/agents/fariz-south.png" alt="" />
 
 ## Keyboard
 
@@ -72,15 +97,19 @@ A focused tree captures these keys for itself (tab-switching and other `Ctrl`/`C
 | Key | Behavior |
 |---|---|
 | `↑` / `↓` | Move the selection |
-| `→` | Expand a collapsed directory; from an expanded one, move to its first child |
+| `→` | Expand a collapsed directory; from an expanded one, re-root the tree there; open a file |
 | `←` | Collapse an expanded directory; otherwise jump to the parent |
 | `Enter` / `Space` | Open a file, toggle a directory, or (on `..`) go up |
 | `Shift+Enter` | Open the selected file in the editor |
 | `Home` / `End` | First / last visible row |
 | `PageUp` / `PageDown` | Move by a screenful |
 | Type letters | Jump to the next row starting with what you typed |
+| `Backspace` / `Delete` | Open a confirmation dialog to delete the selected file or directory |
 | `Cmd+Z` / `Ctrl+Z` | Undo the most recent move made in this tab |
 | `Cmd+Shift+Z` / `Ctrl+Shift+Z` | Redo the most recently undone move |
+| `Cmd+N` / `Ctrl+N` | Create a new file (see "Creating a new file" above) |
+
+Deleting asks first: `Delete "<name>"?`, offering **Delete** and **Cancel**. Confirming removes the file or directory (recursively, for a directory) from disk; cancelling leaves it untouched.
 
 Undo and redo only apply to moves — deleting a file or directory is permanent and can't be undone
 this way. Each tree keeps its own undo/redo history in memory for as long as it stays open; closing
