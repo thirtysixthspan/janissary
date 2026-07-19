@@ -4,6 +4,7 @@ import type { PageView } from '@shared/protocol';
 import type { JanusClient } from './ws';
 import { usePageContentSync } from './page/usePageContentSync';
 import { pageBackIcon, pageForwardIcon, pageReloadIcon } from './icons';
+import { InlineEditInput } from './InlineEditInput';
 
 export function PageTab({ page, closeTab, index, client }: { page: PageView; closeTab: (index: number) => void; index: number; client: JanusClient }) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -42,18 +43,7 @@ export function PageTab({ page, closeTab, index, client }: { page: PageView; clo
             </button>
           </div>
           {editing ? (
-            <input
-              className="page-url-input"
-              value={draft}
-              autoFocus
-              onFocus={(e) => e.currentTarget.select()}
-              onChange={(e) => setDraft(e.currentTarget.value)}
-              onBlur={commit}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') { e.currentTarget.blur(); }
-                else if (e.key === 'Escape') { cancel(); }
-              }}
-            />
+            <InlineEditInput className="page-url-input" value={draft} onChange={setDraft} onCommit={commit} onCancel={cancel} />
           ) : (
             <span className="page-url" onDoubleClick={startEdit}>{page.url}</span>
           )}
