@@ -145,4 +145,9 @@ export default [
     clipHeight: 540,
     requiresBinary: 'claude',
   },
+  {
+    name: 'harness-launch-dialog',
+    setup: ['harness'],
+    target: 'harness-launch-dialog',
+  },
 ];

@@ -46,7 +46,7 @@ export function HarnessLaunchDialog({ view, client }: Properties) {
 
   return (
     <div className="modal-backdrop">
-      <div ref={dialogRef} className="modal harness-launch" role="dialog" aria-modal="true" tabIndex={-1}>
+      <div ref={dialogRef} className="modal harness-launch" role="dialog" aria-modal="true" tabIndex={-1} data-doc-shot="harness-launch-dialog">
         <div className="modal-title">New harness</div>
         <div className="harness-launch-form">
           <label>Harness
