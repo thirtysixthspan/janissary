@@ -1,13 +1,11 @@
-import { distinctColor, makeTab } from '../tab/index.js';
-import { HARNESS_COMMANDS } from '../harness/index.js';
-import { isKnownModel } from '../harness/models.js';
+import { distinctColor } from '../tab/index.js';
 import { startProfileMonitors } from './monitors.js';
 import { openProfileFiles } from './files.js';
 import { openProfileNotifications } from './notifications.js';
 import { openProfileSchedules } from './schedules.js';
-import { buildHarnessSchedule } from './harness-schedule.js';
+import { openAgentEntry, openHarnessEntry } from './entry-openers.js';
 import type { Managers } from '../managers.js';
-import type { AgentState, ProfileEntry, ProfileHarnessEntry } from '../types.js';
+import type { ProfileEntry, ProfileHarnessEntry } from '../types.js';
 
 function isHarnessEntry(e: ProfileEntry): e is ProfileHarnessEntry {
   return 'harness' in e;
@@ -15,40 +13,6 @@ function isHarnessEntry(e: ProfileEntry): e is ProfileHarnessEntry {
 
 function labelOf(e: ProfileEntry): string {
   return isHarnessEntry(e) ? e.label : e.name;
-}
-
-function openAgentEntry(state: AgentState, managers: Managers, group: number, groupColor: string, dotColor: string): void {
-  const log = state.log ?? [];
-  const tab = makeTab(state.name, dotColor, managers.tab.tabs.length + 1, state.cmdHistory ?? [],
-    log, state.workspaceDir, group, groupColor);
-  tab.toolStepsExpanded = false;
-  managers.tab.tabs = [...managers.tab.tabs, tab];
-  if (state.cwd) managers.tab.setCwd(state.name, state.cwd);
-  if (state.context) managers.tab.setContext(state.name, state.context);
-  if (state.schedule) managers.schedule.set(state.name, state.schedule);
-  managers.tab.persist(managers.tab.buildAgentState(tab, { schedule: state.schedule }));
-}
-
-// Validate and open a harness entry. Returns an error to report and skip on, or undefined once
-// the tab (and its schedule) is set up.
-function openHarnessEntry(
-  entry: ProfileHarnessEntry, managers: Managers, group: number, groupColor: string,
-  issuingCwd: string, notes: string[],
-): string | undefined {
-  if (HARNESS_COMMANDS[entry.harness] === undefined) return `unknown harness "${entry.harness}"`;
-  if (entry.model && !isKnownModel(entry.harness, entry.model)) {
-    return `Unknown model "${entry.model}" for harness "${entry.harness}" — add it to harness-models.json.`;
-  }
-  // Mirror `parseHarnessCommand`: -y is claude-only and requires a workspace (auto-approval is
-  // only allowed in a sandboxed clone). Report and skip rather than open unsafely.
-  if (entry.autoApprove && entry.harness !== 'claude') return 'autoApprove (-y) is only supported for the claude harness';
-  if (entry.autoApprove && !entry.workspace) return 'autoApprove (-y) requires workspace (-w)';
-  const withCwd: ProfileHarnessEntry = { ...entry, cwd: entry.cwd ?? issuingCwd };
-  const error = managers.harness.openFromProfile(withCwd, entry.label, group, groupColor);
-  if (error) return error;
-  const schedule = buildHarnessSchedule(entry, (message) => { notes.push(message); });
-  if (schedule.length > 0) managers.schedule.set(entry.label, schedule);
-  return undefined;
 }
 
 // Relaunch semantics: close every open tab matching an entry's label first, then the caller opens
