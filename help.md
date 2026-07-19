@@ -57,6 +57,7 @@
 | `Ctrl+T` | Expand / collapse agent tool steps in the transcript |
 | `Cmd+T` | Open a new agent tab (same as typing `agent`) |
 | `Cmd+F` | Open the search bar in the transcript |
+| `Cmd+P` | Open the Quick Open file finder (fuzzy-match a project file; Return opens it in an editor tab) |
 | `Cmd+W` / `Ctrl+W` | Close the current tab |
 | `Tab` | Complete a file path, an agent name for `msg` / `broadcast`, a connection string for `connection close`, a `browser` subcommand / window id, or a `monitor` persona / target |
 | `Shift+Tab` | Move keyboard focus to the next application section (left → center → right sidebar/panel → reporting), looping; the visible tab in that section gets focus |
