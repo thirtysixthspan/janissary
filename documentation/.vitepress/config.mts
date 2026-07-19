@@ -84,6 +84,7 @@ export default defineConfig({
             { text: "Connections", link: "/user-documentation/command-bar/connections" },
             { text: "Command history", link: "/user-documentation/command-bar/history" },
             { text: "Command queue", link: "/user-documentation/command-bar/queue" },
+            { text: "Messaging", link: "/user-documentation/command-bar/messaging" },
             { text: "Task picker", link: "/user-documentation/command-bar/tasks" },
             { text: "Tab navigator", link: "/user-documentation/command-bar/tab-navigator" },
             { text: "Quick open", link: "/user-documentation/command-bar/quick-open" },

@@ -54,6 +54,13 @@ export default [
     clipHeight: 400,
   },
   {
+    name: 'messaging-output',
+    setup: ['agent bilal', 'msg bilal info the deploy is done', 'msg bilal request state'],
+    settle: 1500,
+    target: 'transcript',
+    clipHeight: 400,
+  },
+  {
     name: 'connection-window',
     setup: ['shell ls -la'],
     target: 'status-panels',
