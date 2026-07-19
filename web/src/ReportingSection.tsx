@@ -75,7 +75,7 @@ export function ReportingSection({ entries, onClose, onRun, onRate, onReset, onS
         ))}
       </div>
       {current.tab.view === 'monitor' && current.tab.monitor && (
-        <div className="reporting-body" tabIndex={0} style={{ borderLeft: `4px solid ${current.tab.dotColor}` }}>
+        <div className="reporting-body" data-doc-shot="reporting-tab" tabIndex={0} style={{ borderLeft: `4px solid ${current.tab.dotColor}` }}>
           <MonitorTab
             persona={current.tab.monitor.persona}
             targets={current.tab.monitor.targets}

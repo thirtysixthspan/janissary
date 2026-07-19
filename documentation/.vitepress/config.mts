@@ -115,6 +115,7 @@ export default defineConfig({
           text: "Automation",
           items: [
             { text: "Scheduling", link: "/user-documentation/automation/scheduling" },
+            { text: "Monitoring with personas", link: "/user-documentation/automation/monitoring" },
             { text: "Profiles", link: "/user-documentation/automation/profiles" },
           ],
         },

@@ -78,7 +78,7 @@ The files are standard [asciicast v2](https://docs.asciinema.org/manual/asciicas
 
 ## Watching a harness with a monitor
 
-You can point a monitor at a harness tab — `monitor <persona> <harness-label>` — to have a persona watch the harness's on-screen output and surface suggestions. The monitor reads the harness's current screen (refreshed as the screen changes), so it reacts to what the harness is actually showing. SSH tabs can't be watched this way.
+You can point a monitor at a harness tab — `monitor <persona> <harness-label>` — to have a persona watch the harness's on-screen output and surface suggestions. The monitor reads the harness's current screen (refreshed as the screen changes), so it reacts to what the harness is actually showing. SSH tabs can be watched the same way. See [Monitoring with personas](/user-documentation/automation/monitoring) for the full picture.
 
 ## SSH sessions
 
