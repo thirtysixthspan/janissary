@@ -1,12 +1,15 @@
-# Improve User Documentation (one functional area per run)
+# Improve User Documentation (one backlog item per run)
 
-Your job: pick **one** functional area of the application from the checklist in Step 2, compare
-what it actually does (per its spec and source) to what `documentation/user-documentation/` and
-`help.md` currently say, and fix the gap — then prove the docs still build. Do exactly one area,
-then verify.
+Your job: take the **top** candidate from `product/backlog/user-documentation.md` — the gap
+backlog maintained by [`find-user-documentation-gaps.md`](find-user-documentation-gaps.md) —
+verify its gap description against the spec and source, fix the gap in
+`documentation/user-documentation/` and `help.md`, prove the docs still build, and then remove
+the worked item from the backlog's candidates. Do exactly one item, then verify.
 
-This task edits **markdown files only**. You will never touch application source code, tests, or
-config. There is no test suite to run for this task.
+This task edits **documentation files only**. You will never touch application source code,
+specs, or tests. The one non-markdown file you may edit is the docs sidebar in
+`documentation/.vitepress/config.mts`, and only when you add a new page (see Step 4). There is
+no test suite to run for this task.
 
 **No AI attribution — anywhere.** Never credit an AI agent as an author or contributor. No
 `Co-Authored-By:` trailers naming Claude or any other AI, no "Generated with Claude Code" lines or
@@ -16,8 +19,8 @@ is the only authorship ever recorded.
 Do the steps below **in order**. Do not skip steps. Do not invent your own process.
 
 **Run autonomously.** Do not ask the user questions or wait for feedback at any step. Only stop
-early if the docs site isn't green before you start (Step 1), or if every candidate area on the
-checklist is blocked (see "Blocked work" below).
+early if the docs site isn't green before you start (Step 1), if the backlog has no candidates
+(Step 2), or if every candidate in the backlog is blocked (see "Blocked work" below).
 
 ---
 
@@ -29,27 +32,44 @@ Only these, ever:
   that matches its topic)
 - `help.md` (the in-app quick-reference: a `Commands` table and a `Key Bindings` table — keep
   entries there terse, one line each)
+- `documentation/.vitepress/config.mts` (**only** the `sidebar` entries, and **only** to register
+  a new page you created — the build won't fail on an unregistered page, it just becomes
+  unreachable in the site nav, so this registration is part of adding a page, not optional)
+- `product/backlog/user-documentation.md` (only to remove the item you completed — see Step 6)
 
-Never edit `product/specs/`, `src/`, `web/src/`, `ai/`, or any config file.
+Never edit `product/specs/`, `src/`, `web/src/`, `ai/`, or any other config file.
 
-## Blocked work — skip and pick the next checklist item
+## Blocked work — skip and take the next backlog candidate
 
-Skip an area and move to the next one on the Step 2 checklist, without asking, if:
+Skip an item and move to the next candidate in the backlog, without asking, if:
 
 1. Fixing it would require changing application **source code** — the docs and the app disagree,
    and the app is right, or fixing it isn't a doc change. Document the app's actual behavior, note
    the mismatch in your Step 7 report, and do **not** edit source.
-2. You read the spec and the existing doc/help text side by side and they already agree — no real
-   gap. Don't make a cosmetic edit just to have something to show.
+2. You re-verify the gap and it has already been closed — the spec and the existing doc/help text
+   now agree. Don't make a cosmetic edit just to have something to show. Remove the entry from
+   the backlog's `candidates` per Step 6 (note it as already resolved) and take the next one.
 
-If every checklist item is blocked, report which ones you checked and why, and stop without
-changing any files.
+A skipped-as-blocked item (case 1) keeps its backlog entry — only worked or already-resolved
+items are removed. If every candidate is blocked, report which ones you checked and why, and
+stop without changing any doc files.
 
 ---
 
 ## Step 0 — Prepare the workspace
 
-Execute `ai/tasks/prepare-workspace.md` in full before doing anything else.
+Execute `ai/tasks/prepare-workspace.md` in full before doing anything else. Then confirm a clean
+starting point with `git status` — no modified *and no untracked* files (an install can rewrite
+`package-lock.json`; if it did and you did not change dependencies, revert it with
+`git checkout -- package-lock.json`). If the tree still is not clean, STOP and report what is
+there — a dirty tree makes the Step 5 ownership check meaningless, because you can no longer
+tell your changes from pre-existing ones.
+
+**Command hygiene for the whole run:** run each command plainly and read its output from the
+result — no piping into `tail`/`head`, no `>` redirects, no `$(...)` capture. These trigger
+permission prompts or hook rejections in this repo (see CLAUDE.md) and cost a wasted call each
+time. If you need to filter a slow command's output (the docs build, a long git log) more than
+once, save the output with the **Write tool** to `./temp/` and grep that file.
 
 ---
 
@@ -62,76 +82,99 @@ npm run docs:build 2>&1
 This must finish with **no errors**. If it already fails before you touch anything, STOP and tell
 the user — do not start doc work on a broken site.
 
----
-
-## Step 2 — Pick exactly one functional area
-
-Go down this list **in order**. For each one, run its check command. Stop at the **first** area
-where the check shows a real gap (missing page, or content that looks stale/incomplete compared to
-the spec). If an area's check shows good, up-to-date coverage, move to the next item.
-
-| # | Area | Spec file(s) | Check command |
-|---|------|--------------|----------------|
-| 1 | Browser driving (`browser` command) | `product/specs/browser.md` | `find documentation/user-documentation -iname '*browser*'` |
-| 2 | SSH tabs (`ssh` command) | `product/specs/ssh-tab.md` | `find documentation/user-documentation -iname '*ssh*'` |
-| 3 | Monitors (`monitor`/`unmonitor`/`monitors`) | `product/specs/monitoring.md` | `find documentation/user-documentation -iname '*monitor*'` |
-| 4 | Messaging (`msg`/`broadcast`) | `product/specs/messaging.md` | `find documentation/user-documentation -iname '*msg*' -o -iname '*message*' -o -iname '*broadcast*'` |
-| 5 | Quick open (`Ctrl+A` / quick-open) | `product/specs/quick-open.md` | `find documentation/user-documentation -iname '*quick-open*'` |
-| 6 | Connections (`connection` command) | `product/specs/connection.md` | `find documentation/user-documentation -iname '*connection*'` |
-| 7 | Themes (`theme`/`syntax theme`) | `product/specs/application-themes.md` | `find documentation/user-documentation -iname '*theme*'` |
-| 8 | Comments | `product/specs/comments.md` | `find documentation/user-documentation -iname '*comment*'` |
-| 9 | Databases (`db` command) | `product/specs/database.md` | `find documentation/user-documentation -iname '*database*' -o -iname '*db*'` |
-| 10 | Anything else with a spec but no matching page | pick from `ls product/specs` | `find documentation/user-documentation -iname '*<keyword>*'` |
-
-If the check command finds **no matching file**, that's very likely a real gap (an undocumented
-feature) — you can stop searching and go with it. If it finds a file, open both that file and the
-spec and read them side by side before deciding whether there's a gap.
-
-If you get through the whole table with nothing blocked and nothing gapped, fall back to checking
-whether any *existing* page in `documentation/user-documentation/` describes a command whose
-`help.md` entry doesn't match — read `help.md` top to bottom against `product/specs/` and pick the
-first mismatch you find.
-
-State your pick in one sentence: the area, the spec file, and the doc page/`help.md` section
-(or "no page exists yet").
+The build is slow — run it exactly twice in a normal run: once here, once in Step 5. Read the
+result from the tool output; do not re-run it to filter differently. Note that the build fails
+on dead links (that's your Step 5 safety net for link typos), but it does **not** fail on a page
+missing from the sidebar — that check is manual (Step 5).
 
 ---
 
-## Step 3 — Research
+## Step 2 — Take the top backlog item
 
-1. Read the spec file(s) for your chosen area in full. Note the exact command syntax, flags, and
-   any verbatim error/usage messages — you'll reuse these exactly, not paraphrase them.
-2. If the spec is ambiguous about something, grep the relevant `src/` or `web/src/` file to check
-   — read only, never edit.
-3. Read the existing doc page(s) and `help.md` entry for this area (if any) and write down, in
-   plain terms, what's wrong: missing / stale / wrong syntax / wrong example / doesn't exist yet.
-4. **Check git history for functionality added after the docs were written.** A spec being
-   accurate doesn't mean the doc page kept up. Run one command:
+Read `product/backlog/user-documentation.md` in full. The `candidates` section is sorted by
+score, highest first — your item is the **first** bullet in `candidates`. Do not shop around the
+list for an item you'd rather do; go top-down, moving to the next candidate only when the
+"Blocked work" rules above say to skip.
+
+Also note the `Last run:` date at the top of the file — that is when the gap descriptions were
+last verified, and Step 3 uses it to scope its git-history check. If it is missing or
+unparseable, treat it as 3 months ago.
+
+Each candidate bullet already names the area ID, the score, the fact counts, the most important
+missing or wrong facts, the ground-truth files (spec and source), and where the fix belongs.
+That is your work order — Step 3's research focuses on verifying and completing it, not
+re-deriving it.
+
+If the backlog file does not exist, or its `candidates` section is empty, STOP and tell the user
+to run [`find-user-documentation-gaps.md`](find-user-documentation-gaps.md) first — do not fall
+back to inventing your own candidate.
+
+State your pick in one sentence: the area ID, its score, the spec file, and the doc
+page/`help.md` section (or "no page exists yet").
+
+---
+
+## Step 3 — Research the item
+
+Keep the research **scoped to your backlog item**: the gap description tells you which facts are
+missing or wrong and which files hold the ground truth. Your job here is to verify that
+description is still accurate (it was written on an earlier date and the app may have moved) and
+to gather the exact wording you'll need — not to survey other areas.
+
+Batch your reads: the spec, the existing doc page(s), and the `help.md` rows for the area are
+all named in the backlog entry — read them together in one round of tool calls rather than one
+file per call.
+
+1. Read the spec file(s) named in the backlog entry in full. Note the exact command syntax,
+   flags, and any verbatim error/usage messages — you'll reuse these exactly, not paraphrase
+   them. Confirm each fact the backlog entry lists as missing or wrong; if the spec and the app
+   disagree, the app is the ground truth (grep the source files named in the entry — read only,
+   never edit).
+2. **Verify before you publish.** Specs and backlog entries both go stale. Before any command,
+   subcommand, flag, key chord, or verbatim message goes into a doc page, confirm it exists in
+   the shipped app: a `help.md` row or one `grep -rln '<token>' src/ web/src/` is enough. Grep
+   one specific token per call. A fact you cannot confirm in the app does **not** go into the
+   docs — drop it and note it in your Step 7 report instead of guessing. Wrong docs are worse
+   than missing docs.
+3. Read the existing doc page(s) and `help.md` entry named in the backlog entry (if any) and
+   confirm, in plain terms, what's wrong: missing / stale / wrong syntax / wrong example /
+   doesn't exist yet. If the entry's fact list turns out to be partly stale, work from what you
+   verified, not from the entry as written. Also grep the rest of the docs for the area's main
+   command or key chord (`grep -riln '<token>' documentation/user-documentation/`) — coverage
+   sometimes lives in a page with an unrelated name, and duplicating it creates two pages that
+   drift apart; link to it instead.
+4. **Check git history for functionality added after the backlog entry was written.** Run one
+   command, using the `Last run:` date you noted in Step 2:
 
    ```bash
-   git log --oneline -20 -- <spec file path>
+   git log --oneline --since="<Last run date>" -- <spec file path> <src file path(s) from the entry>
    ```
 
-   (If you already know the source file from step 2 above, tack it onto the same command:
-   `git log --oneline -20 -- <spec file path> <src file path>`. If not, the spec path alone is
-   fine — skip guessing at source paths.)
-
-   The newest commits are at the top. Skim the subject lines for anything that sounds like a new
-   flag, a new subcommand, a rename, or removed behavior. For any subject that's unclear or looks
-   doc-relevant, run `git show <hash>` to read that one commit before writing anything, and fold
-   what you find into your notes from step 3 above — that's the functionality most likely missing
-   from the current docs.
+   An empty result means the area hasn't moved since the gap was recorded — the entry's fact
+   list is current, and you can move on. Otherwise, skim the subject lines for anything that
+   sounds like a new flag, a new subcommand, a rename, or removed behavior. For any subject
+   that's unclear or looks doc-relevant, run `git show <hash>` to read that one commit before
+   writing anything, and fold what you find into your notes — behavior that changed after the
+   backlog entry was written is exactly what the entry cannot warn you about.
 
 ---
 
 ## Step 4 — Write the update
 
-Pick where the content belongs before you write:
+Pick where the content belongs before you write — the backlog entry says where the fix belongs;
+follow it unless your Step 3 verification showed it's wrong:
 
 - **New page or existing page?** If a page already covers this area, edit it. If not, add a new
   `.md` file in the `documentation/user-documentation/` subfolder that best matches the topic
   (look at the existing subfolders: `getting-started/`, `command-bar/`, `automation/`,
   `advanced-agents/`, `tab-types/`, `workflows/` — put it where a reader would expect to find it).
+  Before creating one, open a neighboring page in that subfolder and match its structure and
+  frontmatter (if any) rather than inventing your own.
+- **New page? Register it.** Add a sidebar entry for it in `documentation/.vitepress/config.mts`,
+  in the section matching its subfolder, at the position where it reads naturally among its
+  neighbors. Copy the exact `{ text: ..., link: ... }` shape of the surrounding entries; the
+  `link` has no `.md` extension. Touch nothing else in that file. Skip this bullet entirely when
+  you only edited existing pages.
 - **`help.md` too?** If the command/key binding is new or its description changed, update its row
   in `help.md`'s `Commands` or `Key Bindings` table. Keep it to the existing one-line style — don't
   turn `help.md` into a second copy of the full doc page; link isn't needed there since it's
@@ -144,7 +187,8 @@ and [`human-writing-guidelines.md`](../guidelines/human-writing-guidelines.md) i
 - [ ] A runnable example/command appears before any explanation of flags or edge cases.
 - [ ] No file paths, function/module/class names, or "why we built it this way" engineering
       rationale — that belongs in `product/specs/`, never here.
-- [ ] Command names, flags, and error messages are copied **verbatim** from the spec.
+- [ ] Command names, flags, and error messages are copied **verbatim** from the spec — and only
+      after Step 3 point 2 confirmed them against the app.
 - [ ] Commands, flags, file paths, and key chords are in `monospace` (`Ctrl+R`, not "control R").
 - [ ] Headings are sentence case and describe the task (`Close a page tab`, not `Closing`).
 - [ ] Second person, active voice, present tense.
@@ -154,7 +198,8 @@ and [`human-writing-guidelines.md`](../guidelines/human-writing-guidelines.md) i
       comprehensive, nuanced, pivotal), no formulaic three-point structure.
 - [ ] If a concept is fully explained on another page, link to it instead of repeating it.
 
-Do not touch anything outside `documentation/user-documentation/` and `help.md`.
+Do not touch anything outside `documentation/user-documentation/`, `help.md`, and (for a new
+page only) the sidebar in `documentation/.vitepress/config.mts`.
 
 ---
 
@@ -166,23 +211,52 @@ npm run docs:build 2>&1
 
 1. Must still finish with **no errors**. If it fails and the fix is obviously in the file you just
    edited (typo, bad link, bad frontmatter), fix it and rerun. If you can't get it clean quickly,
-   revert your changes with `git checkout -- <files you touched>` and report what blocked you.
-2. Run `git status` and confirm every changed file is under `documentation/user-documentation/`
-   or is `help.md` — nothing else should appear.
-3. Re-read the page(s) you changed once, straight through, as if you'd never seen them. Confirm
-   the first sentence states the goal and there's no leftover implementation detail.
+   revert your changes (`git checkout -- <files you touched>`, and `rm` any new page you created)
+   and report what blocked you.
+2. Run `git status` and confirm every changed file is under `documentation/user-documentation/`,
+   is `help.md`, or (new page only) is `documentation/.vitepress/config.mts` — nothing else
+   should appear yet (the backlog edit comes in Step 6). If anything else changed, revert it
+   before moving on.
+3. If you created a new page, confirm its sidebar entry: the `link` value must match the new
+   file's path under `documentation/` without the `.md` extension, or the page builds fine but
+   never appears in the nav. A dead sidebar link fails the build (caught in point 1); a missing
+   sidebar entry fails silently — this manual check is the only thing that catches it.
+4. Re-read the page(s) you changed once, straight through, as if you'd never seen them. Confirm
+   the first sentence states the goal, there's no leftover implementation detail, and every
+   command, flag, and key chord on the page is one you verified in Step 3 — if you spot one you
+   never confirmed, go back and confirm it now rather than shipping it.
 
 ---
 
-## Step 6 — Report
+## Step 6 — Remove the item from the backlog
+
+Now that the gap is closed and verified, update `product/backlog/user-documentation.md`:
+
+1. Delete the item's bullet from the `candidates` section.
+2. Add a one-line bullet for it under the `resolved` section, matching the file's existing
+   style: `* <area-id> — documented in <doc page path(s) you touched> (removed <YYYY-MM-DD>)`.
+   Get the date from `date -u "+%Y-%m-%d"` — do not write one from memory.
+3. Touch nothing else in the file: no rescoring other candidates, no reordering, no editing the
+   `Last run` line or the `unverified` section — those belong to
+   [`find-user-documentation-gaps.md`](find-user-documentation-gaps.md).
+
+If you skipped the top item because its gap was already closed (Blocked work, case 2), do the
+same removal for it, wording the `resolved` bullet as already-resolved instead — then continue
+working the candidate you actually took.
+
+---
+
+## Step 7 — Report
 
 Give the user a short report in this exact shape:
 
 ```
-Functional area:  <name, e.g. "browser driving">
+Backlog item:     <area-id> (<score>/10)
 Source material:  <spec file(s) you read>
-Docs touched:     <path(s) of the doc pages / help.md rows you changed or created>
+Docs touched:     <path(s) of the doc pages / help.md rows / sidebar entries you changed or created>
 Gap closed:       <one or two sentences — what was missing or wrong, and what you did about it>
+Dropped facts:    none / <facts from the backlog entry you could not confirm in the app and left out>
+Backlog:          <area-id> removed from candidates<, plus any already-resolved removals>
 Docs build:       clean / <errors, if any>
 ```
 
