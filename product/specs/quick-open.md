@@ -17,8 +17,8 @@ project-relative path: the typed characters must appear in order somewhere in th
 necessarily consecutively (typing `wsprof` can surface `web/src/ProfilePicker.tsx`). A match on the
 filename itself outranks a match found only in the directory portion of the path, and matches whose
 characters are consecutive or fall right after a `/`, `-`, `_`, `.`, or camelCase boundary rank
-higher than scattered ones; a shorter path breaks a tie. The list is capped to the best-scoring
-matches and sorted best first. Each row shows the matched filename plainly, with its containing
+higher than scattered ones; a shorter path breaks a tie. The list is capped to the top 10
+best-scoring matches and sorted best first. Each row shows the matched filename plainly, with its containing
 directory dimmed beside it. An empty query shows a "type to search"
 hint with no rows. A query that matches nothing shows **No matching files**, and `Return` does
 nothing in that state.
