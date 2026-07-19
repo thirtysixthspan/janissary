@@ -2,6 +2,74 @@
 
 All notable changes to this project are documented here.
 
+## [0.7.0] - 2026-07-19
+
+### Features
+
+- prefix file search match path with > (#464)
+- open next free name when New file target exists (#459)
+- add file navigator search pop-up (#458)
+- show connections and schedule windows on hover (#457)
+- add Cmd+P quick-open file finder (#456)
+- add New file button and Cmd+N to create files (#455)
+- distinguish staged and conflicted files with green and red coloring (#453)
+- follow the page tab's address and label as the user navigates (#452)
+- open an agent tab's transcript from its metadata row (#450)
+- make the page tab's address editable in place (#449)
+- add back, forward, and reload buttons to the page tab (#448)
+- delete a schedule entry from the schedules tab with a confirmation dialog (#439)
+- background the server and log its output; add janus stop (#434)
+- add New schedule dialog opened by bare schedule (#432)
+- build out the claude profile launch layout (#430)
+
+### Bug Fixes
+
+- test warnings
+- make harness and agent --workspace launches non-blocking (#467)
+- limit quick open to the top 10 candidates (#466)
+- stop highlighting matched characters in quick open (#465)
+- align ghost text with typed text in file search pop-up (#463)
+- allow tab renames up to 50 characters (#462)
+- editor tab rename always renames the underlying file (#461)
+- seed tab rename input with the full file name (#460)
+- close context snapshot blocks with an end delimiter (#447)
+- color the monitor tab's rating icons with the theme foreground (#446)
+- move the capture icon before the auto-approve message and use the regular clipboard glyph (#445)
+- use a regular flag icon for the unread tab badge (#444)
+- rename Schedules tab Owner column to Agent (#443)
+- task picker inserts at the cursor instead of overwriting the command line (#442)
+- remove the BEGIN/END MODEL RESPONSE delimiter lines from replies (#441)
+- keep schedules dock-cycle button visible when the list is empty (#438)
+- push status changes to clients while the tab is backgrounded (#437)
+- detect a rate limit surfaced as an acp reply, not just an error (#435)
+
+### Documentation
+
+- add ready plans for file-navigator search and cmd+p quick open (#454)
+- add ready plans for new-file button and hover-driven status windows (#451)
+
+### Refactoring
+
+- dedupe profile notifications/schedules loaders (#433)
+- extract addStartTab() helper in tab creators (#431)
+
+### Chores
+
+- draft plan for non-blocking harness/workspace open-close
+- planning
+- planning
+- planning
+- planning
+- planning
+- planning
+- tell knip to ignore emnapi dependencies (#436)
+- remove unused emnapi devDependencies (#429)
+
+### Other
+
+- style(web): make the capture link a bare clipboard icon (#440)
+- XXRevert "chore: remove unused emnapi devDependencies (#429)"
+
 ## [0.6.0] - 2026-07-17
 
 ### Features
