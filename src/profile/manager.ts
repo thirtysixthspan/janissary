@@ -1,13 +1,11 @@
 import { makeTab, distinctColor } from '../tab/index.js';
 import { parseProfileCommand, loadProfileEntries, listProfiles, profileExists } from '../profiles.js';
-import { parseAgentCommand, resolveAgentName } from '../commands.js';
+import { resolveAgentName } from '../commands.js';
 import { openProfileEntries } from './agent-opener.js';
-import { sandboxNotice } from '../sandbox/index.js';
 import { notify } from '../notifications.js';
-import { wireProvisioning, PROVISION_FAILURE_CLOSE_DELAY_MS } from '../workspace-provision-wire.js';
-import { messageBus } from '../bus.js';
 import type { Tab } from '../types.js';
 import type { Managers } from '../managers.js';
+import { newAgentOp } from './new-agent.js';
 
 export class ProfileManager {
   constructor(private managers: Managers) {}
@@ -35,44 +33,9 @@ export class ProfileManager {
   }
 
   newAgent(command: string): void {
-    const parsed = parseAgentCommand(command);
-    const existing = this.managers.tab.allLabels();
-    const creator = this.managers.tab.cur();
-    const resolved = parsed.name || resolveAgentName(`agent ${parsed.name}`, existing);
-    const out = (text: string) => this.managers.tab.append(creator.label, { input: command, output: text });
-    if (resolved === null) { out('All agent names are in use.'); return; }
-    if (existing.some((l) => l.toLowerCase() === resolved.toLowerCase())) { out(`Agent "${resolved}" is already active.`); return; }
-
-    if (!parsed.workspace) {
-      this.placeAgent(resolved, creator, process.cwd(), undefined, parsed.offline);
-      out(`Agent "${resolved}" ready.`);
-      return;
-    }
-
-    const result = this.managers.workspace.create(resolved);
-    if ('error' in result) { out(result.error); return; }
-    // The tab is created immediately, busy, with the clone's target directory already known — the
-    // "ready" message and sandbox notice fire once the clone actually resolves, not before, so the
-    // tab isn't announced ready while it's still empty.
-    this.placeAgent(resolved, creator, result.dir, result.dir, parsed.offline, true);
-    wireProvisioning(
-      resolved,
-      result.ready,
-      (label) => this.managers.tab.tabs.some((t) => t.label === label),
-      () => {
-        this.managers.tab.deleteBusy(resolved);
-        messageBus.emit('state', { type: 'dirty' });
-        const notice = sandboxNotice();
-        out(`Agent "${resolved}" ready. (workspace: ${this.managers.tab.shorten(result.dir)})`);
-        if (notice) out(notice);
-      },
-      (message) => {
-        out(`Failed to create workspace for "${resolved}": ${message}`);
-        setTimeout(() => {
-          const index = this.managers.tab.findIndex(resolved);
-          if (index !== -1) this.managers.tab.closeTab(index);
-        }, PROVISION_FAILURE_CLOSE_DELAY_MS);
-      },
+    newAgentOp(
+      this.managers, command,
+      (resolved, creator, cwd, workspaceDir, offline, busy) => this.placeAgent(resolved, creator, cwd, workspaceDir, offline, busy),
     );
   }
 
