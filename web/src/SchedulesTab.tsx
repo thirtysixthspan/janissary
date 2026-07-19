@@ -1,10 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { AggregatedScheduleView, TabView } from '@shared/protocol';
 import type { JanusClient } from './ws';
-import { nextDock, dockTooltip } from './dock-cycle';
 import { nextSelection } from './schedules-keys';
-import { dockSwapIcon } from './icons';
+import { DockCycleHeader } from './DockCycleHeader';
 import { DeleteScheduleDialog } from './DeleteScheduleDialog';
 
 type Properties = {
@@ -82,20 +80,7 @@ export function SchedulesTab({ entries, tabs, client, compact = false, dock, ind
       tabIndex={0}
       onKeyDown={onKeyDown}
     >
-      {dock && (
-        <div className="schedules-header">
-          <div className="schedules-actions">
-            <button
-              type="button"
-              className="schedules-dock-cycle"
-              title={dockTooltip(nextDock(dock))}
-              onClick={() => client.send({ method: 'setDock', params: { index, dock: nextDock(dock) } })}
-            >
-              <FontAwesomeIcon icon={dockSwapIcon} />
-            </button>
-          </div>
-        </div>
-      )}
+      {dock && <DockCycleHeader dock={dock} client={client} index={index} classPrefix="schedules" />}
       {entries.length === 0 ? (
         <div className="schedules-empty">No scheduled commands.</div>
       ) : (
