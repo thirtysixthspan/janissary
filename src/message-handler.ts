@@ -3,7 +3,7 @@ import type { ClientMessage, ServerEvent } from './protocol.js';
 import { buildStateEvent } from './state-event.js';
 import { openTranscriptFor } from './controller/transcript.js';
 import { projectFilesFor } from './project-files.js';
-import { fileTreeSearch, revealFileTreeItem } from './controller/file-tree.js';
+import { handleFileTreeMessage } from './message-handler-file-tree.js';
 
 export function handle(controller: Controller, message: ClientMessage, reply: (event: ServerEvent) => void): void {
   switch (message.method) {
@@ -63,41 +63,19 @@ export function handle(controller: Controller, message: ClientMessage, reply: (e
     }
     case 'pageSync': { controller.syncPageSnapshot(message.params.url, message.params.text); break;
     }
-    case 'fileTreeToggle': { controller.fileTreeToggle(message.params.index, message.params.path); break;
-    }
-    case 'fileTreeCollapseAll': { controller.fileTreeCollapseAll(message.params.index); break;
-    }
-    case 'fileTreeReroot': { controller.fileTreeReroot(message.params.index, message.params.path); break;
-    }
-    case 'moveFileTreeItem': { controller.moveFileTreeItem(message.params.index, message.params.fromRelPath, message.params.toRelPath); break;
-    }
-    case 'deleteFileTreeItem': { controller.deleteFileTreeItem(message.params.index, message.params.relPath); break;
-    }
-    // Deferred reply: the listing is async (never blocks the event loop) — see fileTreeSearch
-    // in controller-file-tree.ts and the `projectFiles` case above for the same pattern. Bridges
-    // straight to controller-file-tree.js (bypassing a Controller passthrough method), as
-    // openTranscriptFor does, to keep controller.ts under its line-size limit.
-    case 'fileTreeSearch': {
-      void (async () => {
-        try {
-          reply({ t: 'rpc-reply', id: message.id, result: { paths: await fileTreeSearch(controller.managers, message.params.index) } });
-        } catch {
-          reply({ t: 'rpc-reply', id: message.id, result: { paths: [] } });
-        }
-      })();
+    case 'fileTreeToggle':
+    case 'fileTreeCollapseAll':
+    case 'fileTreeReroot':
+    case 'moveFileTreeItem':
+    case 'deleteFileTreeItem':
+    case 'fileTreeSearch':
+    case 'revealFileTreeItem':
+    case 'undoFileTreeItem':
+    case 'redoFileTreeItem': {
+      handleFileTreeMessage(controller, message, reply);
       return;
-    }
-    case 'revealFileTreeItem': { revealFileTreeItem(controller.managers, message.params.index, message.params.relPath); break;
     }
     case 'cancelSchedule': { controller.cancelSchedule(message.params.tab, message.params.id); break;
-    }
-    case 'undoFileTreeItem': {
-      reply({ t: 'rpc-reply', id: message.id, result: controller.undoFileTreeItem(message.params.index, message.params.overwrite) });
-      return;
-    }
-    case 'redoFileTreeItem': {
-      reply({ t: 'rpc-reply', id: message.id, result: controller.redoFileTreeItem(message.params.index, message.params.overwrite) });
-      return;
     }
     case 'setDock': { controller.setDock(message.params.index, message.params.dock); break;
     }
@@ -105,7 +83,7 @@ export function handle(controller: Controller, message: ClientMessage, reply: (e
     }
     case 'launchAgentFor': { controller.launchAgentFor(message.params.label); break;
     }
-    // Bridges straight to controller-transcript.js (bypassing a Controller passthrough method)
+    // Bridges straight to controller/transcript.js (bypassing a Controller passthrough method)
     // to keep controller.ts under its line-size limit — see that module's own comment.
     case 'openTranscriptFor': { openTranscriptFor(controller.managers, message.params.label); break;
     }
