@@ -3,6 +3,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { TabView } from '@shared/protocol';
 import { TAB_RENAME_MAX_LENGTH } from '@shared/config';
 import { statusDotIcon, unreadIcon } from './icons';
+import { InlineEditInput } from './InlineEditInput';
 
 // Shared with TabStrip, which passes these straight through to each TabItem it renders.
 export type TabItemActions = {
@@ -49,20 +50,15 @@ export function TabItem({ tab, index, active, onSelect, onClose, onRename, onFoc
     >
       <span className={`dot${tab.busy ? ' busy' : ''}`} style={{ color: tab.dotColor }}><FontAwesomeIcon icon={statusDotIcon} /></span>
       {editing ? (
-        <input
+        <InlineEditInput
           className="tab-rename-input"
           value={draft}
           maxLength={TAB_RENAME_MAX_LENGTH}
           size={Math.max(draft.length, 1)}
-          autoFocus
-          onFocus={(e) => e.currentTarget.select()}
           onClick={(e) => e.stopPropagation()}
-          onChange={(e) => setDraft(e.currentTarget.value.slice(0, TAB_RENAME_MAX_LENGTH))}
-          onBlur={commit}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') { e.currentTarget.blur(); }
-            else if (e.key === 'Escape') { cancel(); }
-          }}
+          onChange={(v) => setDraft(v.slice(0, TAB_RENAME_MAX_LENGTH))}
+          onCommit={commit}
+          onCancel={cancel}
         />
       ) : (
         <span onDoubleClick={(e) => {
