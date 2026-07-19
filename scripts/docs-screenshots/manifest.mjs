@@ -138,6 +138,13 @@ export default [
     target: 'status-panels',
   },
   {
+    name: 'schedules-tab',
+    setup: ['schedule standup every day at 9:00 state', 'schedule tests every 2h shell ls', 'schedules'],
+    settle: 1200,
+    target: 'schedules-tab',
+    clipHeight: 150,
+  },
+  {
     name: 'profile-group',
     setup: ['profile launch demo'],
     settle: 1500,
