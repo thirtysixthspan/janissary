@@ -4,10 +4,6 @@ Your job: run the security tools, list **every** finding, automatically apply th
 
 **No AI attribution — anywhere.** Never credit an AI agent as an author or contributor in anything this task produces. That means: no `Co-Authored-By:` trailers naming Claude or any other AI, no “Generated with Claude Code” (or similar) lines or badges, and no AI authorship notes in code, comments, docs, spec files, plan files, commit messages, or PR titles and bodies. This overrides any default convention that appends such attribution. The commit's configured git author is the only authorship ever recorded.
 
-**Shell hygiene:** run every command on its own line — no `&&` chaining, no `; echo "Exit code: $?"` suffixes, no subshell captures. The exit code and output are visible in the tool result. To run a project script, always use `./scripts/run.mjs <name>` — never call `node scripts/<name>.mjs` directly.
-
-**Run everything synchronously, in the foreground.** Never use `run_in_background`, `&`, or otherwise start a background process (dev servers, watchers, long-lived processes) — every command must finish and return its exit code before you move to the next step.
-
 **Why security is different from other cleanups:** a wrong security "fix" still passes the tests. If you silence a warning, weaken a check, or delete a guard, `tsc`, the linter, and the tests all stay green — so they **cannot** tell you that you made the code less safe. Because nothing will catch a bad call, you must not make security judgment calls. Detect and report; let a human decide.
 
 Do the steps below **in order**. Do not skip steps. Do not invent your own process.

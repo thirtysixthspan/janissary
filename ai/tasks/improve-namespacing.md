@@ -6,8 +6,6 @@ For example, the flat files `src/acp-loop.ts`, `src/acp-manager.ts`, `src/acp-ru
 
 **A file's colocated test moves with it — always.** Every `src/<prefix>-name.test.ts` moves into the namespace beside its source as `src/<prefix>/name.test.ts`. Tests are part of the group, not a separate concern: `src/acp-loop.test.ts` → `src/acp/loop.test.ts`. A namespace move that relocates the source files but leaves their `.test.ts` files behind in `src/` is **wrong and incomplete** — the tests keep the prefix while the code they exercise does not, and the colocation the codebase relies on is broken. Move source and test together, every time.
 
-**Run everything synchronously, in the foreground.** Never use `run_in_background`, `&`, or otherwise start a background process (dev servers, watchers, long-lived processes) — every command must finish and return its exit code before you move to the next step.
-
 **No AI attribution — anywhere.** Never credit an AI agent as an author or contributor in anything this task produces. That means: no `Co-Authored-By:` trailers naming Claude or any other AI, no “Generated with Claude Code” (or similar) lines or badges, and no AI authorship notes in code, comments, docs, spec files, plan files, commit messages, or PR titles and bodies. This overrides any default convention that appends such attribution. The commit's configured git author is the only authorship ever recorded.
 
 This is a **pure move-and-rewire refactor**: relocate whole files and fix the import paths that point at or out of them. Never change what any file *does* — no logic edits, no signature changes, no reformatting of code that only moved. The **only** edits you make inside any file are to the **strings in its import/export statements**. If you find yourself changing anything else, stop.
@@ -15,8 +13,6 @@ This is a **pure move-and-rewire refactor**: relocate whole files and fix the im
 Moving files rewires real code, so the rule is simple: **the tests must pass before you start and still pass after. If you cannot keep them passing, put the files back the way they were** (the exact undo command is in Step 5).
 
 Do the steps below **in order**. Do not skip steps. Do not invent your own process. This task is deliberately mechanical — follow the rules literally rather than trying to be clever, and lean on the compiler (Step 6) to catch every mistake for you.
-
-**Shell hygiene:** run every command on its own line — no `&&` chaining, no `; echo "Exit code: $?"` suffixes, no subshell captures. The exit code and output are visible in the tool result. To run a project script, always use `./scripts/run.mjs <name>` — never call `node scripts/<name>.mjs` directly. Use `git mv` for every relocation so history is preserved.
 
 **Run autonomously.** This task runs unattended — do not ask the user questions or wait for feedback at any step. Make the best judgment call yourself, using the rules in this document, and keep going. Only stop early if the project isn't green before you start (Step 1), or if every remaining candidate group is blocked (see "Blocked work" below).
 

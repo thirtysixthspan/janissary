@@ -6,10 +6,6 @@ Your job: pick the simplest available plan from `./product/plans/ready/`, implem
 
 **No AI attribution — anywhere.** Never credit an AI agent as an author or contributor in anything this task produces. That means: no `Co-Authored-By:` trailers naming Claude or any other AI, no “Generated with Claude Code” (or similar) lines or badges, and no AI authorship notes in code, comments, docs, spec files, plan files, commit messages, or PR titles and bodies. This overrides any default convention that appends such attribution. The commit's configured git author is the only authorship ever recorded.
 
-**Shell hygiene:** run every command on its own line — no `&&` chaining, no `; echo "Exit code: $?"` suffixes, no subshell captures, no `for`/`while` loops, no variable expansion (`$var`, `$(...)`), no redirects (`2>/dev/null`, `>file`, `>>file`), no pipes (`|`). Commands with control-flow, expansion, redirects, or pipes require manual approval and will stall an unattended run. To run a project script, always use `./scripts/run.mjs <name>` — never call `node scripts/<name>.mjs` directly.
-
-**Run everything synchronously, in the foreground.** Never use `run_in_background`, `&`, or otherwise start a background process (dev servers, watchers, long-lived processes) — every command must finish and return its exit code before you move to the next step.
-
 **Run autonomously.** This task runs unattended — do not ask the user questions or wait for feedback at any step. Make the best judgment call yourself, using the rules in this document, and keep going. Only stop early for the conditions explicitly listed under "Forbidden" below (e.g. no plans available, only 7+ complexity plans, discovering out-of-scope file edits).
 
 **Stay within the project directory.** The current working directory is the project directory for this session. Do not read or write any file outside it — no absolute paths escaping the project root, no `..` traversal above it, no touching files elsewhere on the machine (home directory config, other repos, system paths).
@@ -93,14 +89,7 @@ Spec files are markdown and do not affect `check-diff`, so no verification run i
 
 ---
 
-## Step 6 — Final verification
-
-1. Run `./scripts/run.mjs check-diff` one last time. It must pass clean.
-2. Manually verify the behavior if the plan's Verification section describes manual steps. If manual verification is not possible in this environment, note that in the report.
-
----
-
-## Step 7 — Promote the plan
+## Step 6 — Promote the plan
 
 Move the plan file from `./product/plans/ready/` to `./product/plans/complete/`:
 
@@ -110,13 +99,13 @@ git mv ./product/plans/ready/<plan-file> ./product/plans/complete/<plan-file>
 
 ---
 
-## Step 8 — Open the pull request
+## Step 7 — Open the pull request
 
 Execute `ai/tasks/open-feature-pull-request.md` in full. That document owns the PR workflow — follow its steps without deviation.
 
 ---
 
-## Step 9 — Report
+## Step 8 — Report
 
 Give the user a short report in this exact shape:
 

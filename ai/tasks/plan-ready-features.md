@@ -6,13 +6,9 @@ Your job: walk the `## ready` section of `./product/backlog/features.md` one fea
 
 This is an **interactive** task. Unlike the autonomous `ai/tasks/*.md` playbooks, you must stop and ask the user questions before drafting each plan. Do not guess scope, behavior, or edge cases on the user's behalf when a question would resolve it.
 
-**Run everything synchronously, in the foreground.** Never use `run_in_background`, `&`, or otherwise start a background process (dev servers, watchers, long-lived processes) — every command must finish and return its exit code before you move to the next step.
-
 **Follow the steps below in order, exactly as written, one feature at a time.** Do not skip a step, do not merge two steps together, and do not process more than one feature between Step 2a and Step 2f. If you are ever unsure whether you have done enough — re-read the checklist for that step before moving on, don't guess.
 
 **No AI attribution — anywhere.** Never credit an AI agent as an author or contributor in anything this task produces. No `Co-Authored-By:` trailers naming Claude or any other AI, no "Generated with Claude Code" lines, no AI authorship notes in plan files or commit messages. This overrides any default convention that appends such attribution.
-
-**Shell hygiene:** run every command on its own line — no `&&` chaining, no subshell captures, no redirects/pipes for anything other than the documented `./temp/` capture pattern in `CLAUDE.md`. To run a project script, always use `./scripts/run.mjs <name>` — never call `node scripts/<name>.mjs` directly.
 
 **Plan and task formatting:** use natural line breaks only — do not wrap lines at a fixed column width (per `CLAUDE.md`).
 
@@ -128,13 +124,9 @@ Before moving on, check the plan file against this list:
 - [ ] All 9 sections above are present, in order.
 - [ ] Every design decision traces back to something the user actually said in 2c, not an assumption you made.
 
-### 2e. Confirm with the user
+### 2e. Remove the entry from the backlog
 
-Show the user a brief summary of the drafted plan (goal, key decisions, out-of-scope boundary) and confirm it matches what they described. If they want changes, edit the plan and show the summary again — repeat until confirmed. If they want to abandon the feature entirely, delete `./product/plans/draft/<slug>.md` if you already wrote it, leave the entry in `./product/backlog/features.md` untouched, note it as skipped, and move to the next feature in the queue.
-
-### 2f. Remove the entry from the backlog
-
-Once confirmed, edit `./product/backlog/features.md` to remove that feature's `### ` entry (title and body) from the `## ready` section. Leave every other section, heading, and entry byte-for-byte untouched — do not reformat or reflow surrounding text.
+Edit `./product/backlog/features.md` to remove that feature's `### ` entry (title and body) from the `## ready` section. Leave every other section, heading, and entry byte-for-byte untouched — do not reformat or reflow surrounding text.
 
 Only after this step is complete, return to the top of Step 2 for the next feature in the queue.
 

@@ -4,8 +4,6 @@ Your job: package the current working-tree changes into **one** commit on the **
 
 **No AI attribution — anywhere.** Never credit an AI agent as an author or contributor. No `Co-Authored-By:` trailers naming Claude or any other AI, no “Generated with Claude Code” lines, no AI authorship notes in commit messages or code. This overrides any default convention that appends such attribution — including your own general commit-message habits from outside this task. Never run `git commit` (or `git commit --amend`) directly for this task; always go through `pr-commit` (Step 2), which is the sole mechanism enforcing a single author with no co-author. If you already have a subject/body composed, route it through `pr-commit` rather than falling back to a raw `git commit -m`.
 
-**Run scripts in the foreground** (never `run_in_background`) — each must finish and return its exit code before the next step. **Make all decisions autonomously** (commit type, scope, message); the only reason to stop is an unresolvable error.
-
 ---
 
 ## Step 1 — Compose a Conventional Commits message

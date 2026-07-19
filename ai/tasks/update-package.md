@@ -4,10 +4,6 @@ Your job: update **one** npm package to the latest version its existing `package
 
 **No AI attribution — anywhere.** Never credit an AI agent as an author or contributor in anything this task produces. That means: no `Co-Authored-By:` trailers naming Claude or any other AI, no “Generated with Claude Code” (or similar) lines or badges, and no AI authorship notes in code, comments, docs, spec files, plan files, commit messages, or PR titles and bodies. This overrides any default convention that appends such attribution. The commit's configured git author is the only authorship ever recorded.
 
-**Shell hygiene:** run every command on its own line — no `&&` chaining, no `; echo "Exit code: $?"` suffixes, no subshell captures. The exit code and output are visible in the tool result. To run a project script, always use `./scripts/run.mjs <name>` — never call `node scripts/<name>.mjs` directly.
-
-**Run everything synchronously, in the foreground.** Never use `run_in_background`, `&`, or otherwise start a background process (dev servers, watchers, long-lived processes) — every command must finish and return its exit code before you move to the next step.
-
 **Run autonomously.** This task runs unattended — do not ask the user questions or wait for feedback at any step. Only stop early for the conditions explicitly listed below.
 
 The rule is simple: **the compiler, the linter, and the tests must be green before you start and green again after you finish.** If not green before you start, stop and tell the user. If you can't get it green again after two fix attempts, put the package back and stop.

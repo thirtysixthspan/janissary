@@ -6,10 +6,6 @@ Your job: take a reported bug from `./product/backlog/bugs.md` — the first one
 
 **No AI attribution — anywhere.** Never credit an AI agent as an author or contributor in anything this task produces. That means: no `Co-Authored-By:` trailers naming Claude or any other AI, no “Generated with Claude Code” (or similar) lines or badges, and no AI authorship notes in code, comments, docs, spec files, plan files, commit messages, or PR titles and bodies. This overrides any default convention that appends such attribution. The commit's configured git author is the only authorship ever recorded.
 
-**Shell hygiene:** run every command on its own line — no `&&` chaining, no `; echo "Exit code: $?"` suffixes, no subshell captures, no `for`/`while` loops, no variable expansion (`$var`, `$(...)`), no redirects (`2>/dev/null`, `>file`, `>>file`), no pipes (`|`). Commands with control-flow, expansion, redirects, or pipes require manual approval and will stall an unattended run. To run a project script, always use `./scripts/run.mjs <name>` — never call `node scripts/<name>.mjs` directly.
-
-**Run everything synchronously, in the foreground.** Never use `run_in_background`, `&`, or otherwise start a background process (dev servers, watchers, long-lived processes) — every command must finish and return its exit code before you move to the next step.
-
 This overrides CLAUDE.md's "Capturing command output" guidance (write the output to a file under `./temp/`, then `grep` it repeatedly) for this task: the follow-up `grep`/`tail` filter commands stall an unattended run. Instead, run the command plain and read the full tool output directly — filter it yourself while reading, don't shell out to `grep`.
 
 **Run autonomously.** This task runs unattended — do not ask the user questions or wait for feedback at any step. Make the best judgment call yourself, using the rules in this document, and keep going. Only stop early for the conditions explicitly listed under "Forbidden" below.
@@ -119,8 +115,6 @@ Every fix must be reflected in the functional specs under `./product/specs/`. Af
 2. **Otherwise, find the right spec.** Read the existing specs in `./product/specs/` and identify which one(s) the fix relates to. Most fixes correct behavior an existing spec already describes — align the spec with the now-correct behavior. If no existing spec covers the area, create a new one.
 3. **Write or update the spec.** Follow the existing conventions: `# Title` at the top, `### Subsection` for each aspect, prose describing user-visible behavior only — no code, no implementation details, no file paths. The spec is what the fix *does*, not how it is built. Keep additions concise and factual.
 
-Spec files are markdown and do not affect `check-diff`, so no verification run is needed after this step.
-
 ---
 
 ## Step 7 — Update help and public documentation if affected
@@ -130,8 +124,6 @@ The fix only needs a documentation update if it changes behavior that `help.md` 
 1. Check `help.md` for any command, flag, or behavior description the fix changes. Update it in place if found.
 2. Check `documentation/user-documentation/` for any page describing the changed behavior. Update it in place if found.
 3. If neither documents the changed behavior, do nothing here — do not create new documentation.
-
-These files are markdown and do not affect `check-diff`, so no verification run is needed after this step.
 
 ---
 
@@ -145,14 +137,7 @@ These files are markdown and do not affect `check-diff`, so no verification run 
 
 ---
 
-## Step 9 — Final verification
-
-1. Run `./scripts/run.mjs check-diff` one last time. It must pass clean, including the regression test.
-2. Manually verify the behavior if the plan's Verification section describes manual steps. If manual verification is not possible in this environment, note that in the report.
-
----
-
-## Step 10 — Open the pull request
+## Step 9 — Open the pull request
 
 Execute `ai/tasks/open-feature-pull-request.md` in full — it owns the branch, commit, push, and PR-open workflow. Follow its steps as written, and additionally satisfy the two bug-specific requirements below.
 
@@ -169,7 +154,7 @@ Do not merge the PR — leave it open for a human.
 
 ---
 
-## Step 11 — Report
+## Step 10 — Report
 
 Give the user a short report in this exact shape:
 
