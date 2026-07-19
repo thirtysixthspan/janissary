@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { render } from '@testing-library/react';
+import { act, render } from '@testing-library/react';
 import React from 'react';
 import type { TabView } from '@shared/protocol';
 import type { JanusClient } from './ws';
@@ -26,12 +26,9 @@ describe('useTabNav', () => {
     let hook: ReturnType<typeof useTabNav> | undefined;
     const client = { send: vi.fn() } as unknown as JanusClient;
     const tabs = makeTabs();
-    const { rerender } = render(React.createElement(TestComponent, { client, tabs, onHook: (h) => { hook = h; } }));
-    hook!.setNavQuery('test');
-    hook!.setNavIndex(2);
-    rerender(React.createElement(TestComponent, { client, tabs, onHook: (h) => { hook = h; } }));
-    hook!.openTabNav();
-    rerender(React.createElement(TestComponent, { client, tabs, onHook: (h) => { hook = h; } }));
+    render(React.createElement(TestComponent, { client, tabs, onHook: (h) => { hook = h; } }));
+    act(() => { hook!.setNavQuery('test'); hook!.setNavIndex(2); });
+    act(() => hook!.openTabNav());
     expect(hook!.navOpen).toBe(true);
     expect(hook!.navQuery).toBe('');
     expect(hook!.navIndex).toBe(0);
@@ -41,9 +38,8 @@ describe('useTabNav', () => {
     let hook: ReturnType<typeof useTabNav> | undefined;
     const client = { send: vi.fn() } as unknown as JanusClient;
     const tabs = makeTabs();
-    const { rerender } = render(React.createElement(TestComponent, { client, tabs, onHook: (h) => { hook = h; } }));
-    hook!.openTabNavWithQuery('test');
-    rerender(React.createElement(TestComponent, { client, tabs, onHook: (h) => { hook = h; } }));
+    render(React.createElement(TestComponent, { client, tabs, onHook: (h) => { hook = h; } }));
+    act(() => hook!.openTabNavWithQuery('test'));
     expect(hook!.navOpen).toBe(true);
     expect(hook!.navQuery).toBe('test');
     expect(hook!.navIndex).toBe(0);
@@ -54,11 +50,9 @@ describe('useTabNav', () => {
     const send = vi.fn();
     const client = { send } as unknown as JanusClient;
     const tabs = makeTabs();
-    const { rerender } = render(React.createElement(TestComponent, { client, tabs, onHook: (h) => { hook = h; } }));
-    hook!.openTabNav();
-    rerender(React.createElement(TestComponent, { client, tabs, onHook: (h) => { hook = h; } }));
-    hook!.selectNavTab(0);
-    rerender(React.createElement(TestComponent, { client, tabs, onHook: (h) => { hook = h; } }));
+    render(React.createElement(TestComponent, { client, tabs, onHook: (h) => { hook = h; } }));
+    act(() => hook!.openTabNav());
+    act(() => hook!.selectNavTab(0));
     expect(send).toHaveBeenCalledWith({ method: 'setActiveTab', params: { index: 0 } });
     expect(hook!.navOpen).toBe(false);
   });
@@ -67,9 +61,8 @@ describe('useTabNav', () => {
     let hook: ReturnType<typeof useTabNav> | undefined;
     const client = { send: vi.fn() } as unknown as JanusClient;
     const tabs = makeTabs();
-    const { rerender } = render(React.createElement(TestComponent, { client, tabs, onHook: (h) => { hook = h; } }));
-    hook!.setNavIndex(3);
-    rerender(React.createElement(TestComponent, { client, tabs, onHook: (h) => { hook = h; } }));
+    render(React.createElement(TestComponent, { client, tabs, onHook: (h) => { hook = h; } }));
+    act(() => hook!.setNavIndex(3));
     expect(hook!.navIndex).toBe(3);
   });
 
@@ -77,9 +70,8 @@ describe('useTabNav', () => {
     let hook: ReturnType<typeof useTabNav> | undefined;
     const client = { send: vi.fn() } as unknown as JanusClient;
     const tabs = makeTabs();
-    const { rerender } = render(React.createElement(TestComponent, { client, tabs, onHook: (h) => { hook = h; } }));
-    hook!.setNavQuery('search');
-    rerender(React.createElement(TestComponent, { client, tabs, onHook: (h) => { hook = h; } }));
+    render(React.createElement(TestComponent, { client, tabs, onHook: (h) => { hook = h; } }));
+    act(() => hook!.setNavQuery('search'));
     expect(hook!.navQuery).toBe('search');
   });
 
@@ -90,10 +82,9 @@ describe('useTabNav', () => {
       makeTabs({ label: 'alpha', number: 1 })[0],
       makeTabs({ label: 'beta', number: 2 })[0],
     ];
-    const { rerender } = render(React.createElement(TestComponent, { client, tabs, onHook: (h) => { hook = h; } }));
+    render(React.createElement(TestComponent, { client, tabs, onHook: (h) => { hook = h; } }));
     expect(hook!.navTabs).toHaveLength(2);
-    hook!.setNavQuery('alpha');
-    rerender(React.createElement(TestComponent, { client, tabs, onHook: (h) => { hook = h; } }));
+    act(() => hook!.setNavQuery('alpha'));
     expect(hook!.navTabs).toHaveLength(1);
     expect(hook!.navTabs[0].tab.label).toBe('alpha');
   });

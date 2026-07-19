@@ -16,6 +16,18 @@ vi.mock('./HarnessTab', () => {
   };
 });
 
+// EditorTab fetches file content asynchronously on mount; mocking it avoids act(...) warnings
+// from state updates landing after these layout-focused tests have already asserted.
+vi.mock('./EditorTab', () => {
+  const { forwardRef, useImperativeHandle, createElement } = React;
+  return {
+    EditorTab: forwardRef((_props, ref) => {
+      useImperativeHandle(ref, () => ({ isDirty: () => false, save: async () => {}, focus: () => {} }), []);
+      return createElement('div', { 'data-testid': 'editor' });
+    }),
+  };
+});
+
 function makeEditorTab(label: string, url: string): TabView {
   return {
     label, view: 'editor' as const, dotColor: '#0f0', groupColor: '#ccc',

@@ -1,5 +1,5 @@
 import React, { createRef } from 'react';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { EditorView } from '@shared/protocol';
 import { EditorTab, type EditorTabHandle } from './EditorTab';
@@ -195,7 +195,7 @@ describe('EditorTab', () => {
     await waitFor(() => expect(screen.getByText('line one')).toBeInTheDocument());
     type('x');
     await waitFor(() => expect(ref.current?.isDirty()).toBe(true));
-    await ref.current?.save();
+    await act(async () => { await ref.current?.save(); });
     expect(saveFile).toHaveBeenCalled();
     await waitFor(() => expect(ref.current?.isDirty()).toBe(false));
   });

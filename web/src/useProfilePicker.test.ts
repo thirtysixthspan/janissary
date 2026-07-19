@@ -1,4 +1,4 @@
-import { render } from '@testing-library/react';
+import { act, render } from '@testing-library/react';
 import React, { useRef } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { useProfilePicker } from './useProfilePicker';
@@ -17,10 +17,8 @@ function TestComponent({ onHook }: { onHook: (hook: ReturnType<typeof useProfile
 describe('useProfilePicker', () => {
   it('openProfilePicker resets the index to 0 and opens the popup', () => {
     let hook: ReturnType<typeof useProfilePicker> | undefined;
-    const { rerender } = render(React.createElement(TestComponent, { onHook: (h) => { hook = h; } }));
-    hook!.setProfilePickerIndex(3);
-    hook!.openProfilePicker();
-    rerender(React.createElement(TestComponent, { onHook: (h) => { hook = h; } }));
+    render(React.createElement(TestComponent, { onHook: (h) => { hook = h; } }));
+    act(() => { hook!.setProfilePickerIndex(3); hook!.openProfilePicker(); });
     expect(hook!.profilePickerOpen).toBe(true);
     expect(hook!.profilePickerIndex).toBe(0);
   });
@@ -34,11 +32,9 @@ describe('useProfilePicker', () => {
       hook = useProfilePicker(recallRef, inputRef, mockClient, undefined);
       return null;
     }
-    const { rerender } = render(React.createElement(C));
-    hook!.openProfilePicker();
-    rerender(React.createElement(C));
-    hook!.pickProfile('writing');
-    rerender(React.createElement(C));
+    render(React.createElement(C));
+    act(() => hook!.openProfilePicker());
+    act(() => hook!.pickProfile('writing'));
     expect(recall).toHaveBeenCalledWith('profile launch writing');
     expect(hook!.profilePickerOpen).toBe(false);
   });
@@ -54,11 +50,9 @@ describe('useProfilePicker', () => {
       hook = useProfilePicker(recallRef, inputRef, client, 'pty-1');
       return null;
     }
-    const { rerender } = render(React.createElement(C));
-    hook!.openProfilePicker();
-    rerender(React.createElement(C));
-    hook!.pickProfile('writing');
-    rerender(React.createElement(C));
+    render(React.createElement(C));
+    act(() => hook!.openProfilePicker());
+    act(() => hook!.pickProfile('writing'));
     expect(send).toHaveBeenCalledWith({ method: 'ptyInput', params: { id: 'pty-1', data: 'profile launch writing' } });
     expect(recall).not.toHaveBeenCalled();
     expect(hook!.profilePickerOpen).toBe(false);

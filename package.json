@@ -21,7 +21,7 @@
     "test:browser": "vitest run --project browser",
     "test:sandbox": "vitest run --project sandbox",
     "test:unsandboxed": "vitest run --project unsandboxed",
-    "lint": "eslint .",
+    "lint": "eslint . --cache --concurrency=auto",
     "lint:fix": "eslint . --fix",
     "lint:all": "npm run lint && npm run lint:css && npm run typecheck",
     "check": "npm run typecheck && npm run lint && npm run test",

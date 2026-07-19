@@ -41,7 +41,7 @@ console.error(`lint-files: linting ${targets.length} file(s)`);
 // so it works regardless of the caller's working directory.
 const eslintBin = new URL('../node_modules/.bin/eslint', import.meta.url).pathname;
 try {
-  execFileSync(eslintBin, [...flags, ...targets], { stdio: 'inherit' });
+  execFileSync(eslintBin, [...flags, '--cache', '--concurrency=auto', ...targets], { stdio: 'inherit' });
 } catch (error) {
   process.exit(typeof error.status === 'number' ? error.status : 1);
 }

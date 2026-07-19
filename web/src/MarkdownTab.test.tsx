@@ -30,11 +30,12 @@ beforeEach(() => {
 });
 
 describe('MarkdownTab', () => {
-  it('renders the file metadata header', () => {
+  it('renders the file metadata header', async () => {
     render(<MarkdownTab markdown={makeMarkdown()} />);
     expect(screen.getByText('README.md')).toBeInTheDocument();
     expect(screen.getByText('2.1 KB')).toBeInTheDocument();
     expect(screen.getByText('/home/user/README.md')).toBeInTheDocument();
+    await waitFor(() => screen.getByRole('heading', { level: 1 }));
   });
 
   it('renders markdown content as HTML after fetch', async () => {

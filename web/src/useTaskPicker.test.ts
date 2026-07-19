@@ -1,4 +1,4 @@
-import { render } from '@testing-library/react';
+import { act, render } from '@testing-library/react';
 import React, { useRef } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { useTaskPicker } from './useTaskPicker';
@@ -31,10 +31,8 @@ describe('useTaskPicker', () => {
   it('openTaskPicker seats the index on the first selectable row (past the section header) and opens the popup', () => {
     let hook: ReturnType<typeof useTaskPicker> | undefined;
     const tasks = [fileRow('build-a-feature.md')];
-    const { rerender } = render(React.createElement(TestComponent, { tasks, onHook: (h) => { hook = h; } }));
-    hook!.setTaskPickerIndex(3);
-    hook!.openTaskPicker();
-    rerender(React.createElement(TestComponent, { tasks, onHook: (h) => { hook = h; } }));
+    render(React.createElement(TestComponent, { tasks, onHook: (h) => { hook = h; } }));
+    act(() => { hook!.setTaskPickerIndex(3); hook!.openTaskPicker(); });
     expect(hook!.taskPickerOpen).toBe(true);
     expect(hook!.taskPickerIndex).toBe(1);
   });
@@ -47,11 +45,9 @@ describe('useTaskPicker', () => {
       hook = useTaskPicker([fileRow('fix-a-small-issue.md')], '/janissary/ai/tasks', mockClient, undefined, dropRef);
       return null;
     }
-    const { rerender } = render(React.createElement(C));
-    hook!.openTaskPicker();
-    rerender(React.createElement(C));
-    hook!.pickTask('fix-a-small-issue.md');
-    rerender(React.createElement(C));
+    render(React.createElement(C));
+    act(() => hook!.openTaskPicker());
+    act(() => hook!.pickTask('fix-a-small-issue.md'));
     expect(insertAtCaret).toHaveBeenCalledWith('execute ./ai/tasks/fix-a-small-issue.md');
     expect(hook!.taskPickerOpen).toBe(false);
   });
@@ -64,11 +60,9 @@ describe('useTaskPicker', () => {
       hook = useTaskPicker([fileRow('build-a-feature.md', 0, 'janissary')], '/opt/janissary/ai/tasks', mockClient, undefined, dropRef);
       return null;
     }
-    const { rerender } = render(React.createElement(C));
-    hook!.openTaskPicker();
-    rerender(React.createElement(C));
-    hook!.pickTask('build-a-feature.md');
-    rerender(React.createElement(C));
+    render(React.createElement(C));
+    act(() => hook!.openTaskPicker());
+    act(() => hook!.pickTask('build-a-feature.md'));
     expect(insertAtCaret).toHaveBeenCalledWith('execute /opt/janissary/ai/tasks/build-a-feature.md');
     expect(hook!.taskPickerOpen).toBe(false);
   });
@@ -83,11 +77,9 @@ describe('useTaskPicker', () => {
       hook = useTaskPicker([fileRow('fix-a-small-issue.md')], '/janissary/ai/tasks', client, 'pty-1', dropRef);
       return null;
     }
-    const { rerender } = render(React.createElement(C));
-    hook!.openTaskPicker();
-    rerender(React.createElement(C));
-    hook!.pickTask('fix-a-small-issue.md');
-    rerender(React.createElement(C));
+    render(React.createElement(C));
+    act(() => hook!.openTaskPicker());
+    act(() => hook!.pickTask('fix-a-small-issue.md'));
     expect(send).toHaveBeenCalledWith({ method: 'ptyInput', params: { id: 'pty-1', data: 'execute ./ai/tasks/fix-a-small-issue.md' } });
     expect(insertAtCaret).not.toHaveBeenCalled();
     expect(hook!.taskPickerOpen).toBe(false);
@@ -97,15 +89,13 @@ describe('useTaskPicker', () => {
     let hook: ReturnType<typeof useTaskPicker> | undefined;
     const tasks = [dirRow('sub'), fileRow('sub/nested.md', 1), fileRow('top.md')];
     const paths = () => hook!.visibleTasks.filter((r) => !r.header).map((r) => r.path);
-    const { rerender } = render(React.createElement(TestComponent, { tasks, onHook: (h) => { hook = h; } }));
+    render(React.createElement(TestComponent, { tasks, onHook: (h) => { hook = h; } }));
     expect(paths()).toEqual(['sub', 'top.md']);
 
-    hook!.toggleTaskDir('sub');
-    rerender(React.createElement(TestComponent, { tasks, onHook: (h) => { hook = h; } }));
+    act(() => hook!.toggleTaskDir('sub'));
     expect(paths()).toEqual(['sub', 'sub/nested.md', 'top.md']);
 
-    hook!.toggleTaskDir('sub');
-    rerender(React.createElement(TestComponent, { tasks, onHook: (h) => { hook = h; } }));
+    act(() => hook!.toggleTaskDir('sub'));
     expect(paths()).toEqual(['sub', 'top.md']);
   });
 });

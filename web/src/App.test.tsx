@@ -483,7 +483,7 @@ describe('App autocomplete', () => {
     act(() => { stateListener!([makeTab()], 0, null, 16, [], 'github-dark', 'dark', []); });
     const input = screen.getByRole('textbox') as HTMLTextAreaElement;
     fireEvent.change(input, { target: { value: 'some text' } });
-    fireEvent.keyDown(input, { key: 'Tab' });
+    await act(async () => { fireEvent.keyDown(input, { key: 'Tab' }); await Promise.resolve(); });
     expect(requestMock).toHaveBeenCalledWith({ method: 'complete', params: { text: 'some text', cursor: 9 } });
   }, 15_000);
 });

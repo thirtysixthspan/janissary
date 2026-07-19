@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render } from '@testing-library/react';
+import { render, waitFor, screen } from '@testing-library/react';
 import React from 'react';
 import { ViewTabBody } from './ViewTabBody';
 import type { TabView } from '@shared/protocol';
@@ -10,6 +10,12 @@ vi.stubGlobal('ResizeObserver', class {
   unobserve() {}
   disconnect() {}
 });
+
+// MarkdownTab fetches its content on mount; stub fetch so that state update settles
+// synchronously with the assertions instead of firing after the test has finished.
+vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+  text: () => Promise.resolve('# Hello'),
+} as unknown as Response));
 
 function baseTab(overrides: Partial<TabView> = {}): TabView {
   return {
@@ -57,10 +63,11 @@ describe('ViewTabBody', () => {
     expect(container.querySelector('.tab-body')).toBeTruthy();
   });
 
-  it('renders MarkdownTab when view is markdown with payload', () => {
+  it('renders MarkdownTab when view is markdown with payload', async () => {
     const tab = baseTab({ view: 'markdown', markdown: { name: 'readme.md', path: '/a/readme.md', size: '2 KB', url: '/open/2' } });
     const { container } = render(React.createElement(ViewTabBody, { tab, client: {} as never, index: 0 }));
     expect(container.querySelector('.tab-body')).toBeTruthy();
+    await waitFor(() => screen.getByRole('heading', { level: 1 }));
   });
 
   it('renders FileTreeTab when view is files with payload', () => {

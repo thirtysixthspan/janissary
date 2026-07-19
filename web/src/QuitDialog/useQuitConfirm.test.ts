@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { render } from '@testing-library/react';
+import { act, render } from '@testing-library/react';
 import React, { createRef } from 'react';
 import { useQuitConfirm } from './useQuitConfirm';
 
@@ -21,18 +21,13 @@ describe('useQuitConfirm', () => {
   it('openQuitConfirm sets quitConfirmOpen to true', () => {
     let hook: ReturnType<typeof useQuitConfirm> | undefined;
     const inputRef = createRef<HTMLTextAreaElement>();
-    const { rerender } = render(React.createElement(TestComponent, {
+    render(React.createElement(TestComponent, {
       runCommand: () => {},
       inputRef,
       onHook: (h) => { hook = h; },
     }));
     expect(hook!.quitConfirmOpen).toBe(false);
-    hook!.openQuitConfirm();
-    rerender(React.createElement(TestComponent, {
-      runCommand: () => {},
-      inputRef,
-      onHook: (h) => { hook = h; },
-    }));
+    act(() => hook!.openQuitConfirm());
     expect(hook!.quitConfirmOpen).toBe(true);
   });
 
@@ -40,24 +35,14 @@ describe('useQuitConfirm', () => {
     let hook: ReturnType<typeof useQuitConfirm> | undefined;
     const runCommand = vi.fn();
     const inputRef = createRef<HTMLTextAreaElement>();
-    const { rerender } = render(React.createElement(TestComponent, {
+    render(React.createElement(TestComponent, {
       runCommand,
       inputRef,
       onHook: (h) => { hook = h; },
     }));
-    hook!.openQuitConfirm();
-    rerender(React.createElement(TestComponent, {
-      runCommand,
-      inputRef,
-      onHook: (h) => { hook = h; },
-    }));
+    act(() => hook!.openQuitConfirm());
     expect(hook!.quitConfirmOpen).toBe(true);
-    hook!.confirmQuit();
-    rerender(React.createElement(TestComponent, {
-      runCommand,
-      inputRef,
-      onHook: (h) => { hook = h; },
-    }));
+    act(() => hook!.confirmQuit());
     expect(runCommand).toHaveBeenCalledWith('quit');
     expect(hook!.quitConfirmOpen).toBe(false);
   });
@@ -73,7 +58,7 @@ describe('useQuitConfirm', () => {
       inputRef,
       onHook: (h) => { hook = h; },
     }));
-    hook!.cancelQuit();
+    act(() => hook!.cancelQuit());
     expect(hook!.quitConfirmOpen).toBe(false);
     expect(focusFn).toHaveBeenCalled();
     raf.mockRestore();

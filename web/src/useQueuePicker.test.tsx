@@ -1,4 +1,4 @@
-import { render } from '@testing-library/react';
+import { act, render } from '@testing-library/react';
 import React, { useRef } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import type { TabView } from '@shared/protocol';
@@ -25,9 +25,8 @@ function TestComponent({ tab, onHook }: { tab: TabView | undefined; onHook: (hoo
 describe('useQueuePicker', () => {
   it('openQueue opens the popup and selects the front entry for an agent tab', () => {
     let hook: ReturnType<typeof useQueuePicker> | undefined;
-    const { rerender } = render(<TestComponent tab={makeTab()} onHook={(h) => { hook = h; }} />);
-    hook!.openQueue();
-    rerender(<TestComponent tab={makeTab()} onHook={(h) => { hook = h; }} />);
+    render(<TestComponent tab={makeTab()} onHook={(h) => { hook = h; }} />);
+    act(() => hook!.openQueue());
     expect(hook!.queueOpen).toBe(true);
     expect(hook!.queueIndex).toBe(0);
   });
@@ -35,9 +34,8 @@ describe('useQueuePicker', () => {
   it('openQueue no-ops for a non-agent tab', () => {
     let hook: ReturnType<typeof useQueuePicker> | undefined;
     const tab = makeTab({ view: 'harness' });
-    const { rerender } = render(<TestComponent tab={tab} onHook={(h) => { hook = h; }} />);
-    hook!.openQueue();
-    rerender(<TestComponent tab={tab} onHook={(h) => { hook = h; }} />);
+    render(<TestComponent tab={tab} onHook={(h) => { hook = h; }} />);
+    act(() => hook!.openQueue());
     expect(hook!.queueOpen).toBe(false);
   });
 
