@@ -31,9 +31,17 @@ harness opencode as quality        → tab "quality"
 harness opencode as quality        → tab "quality-2"
 ```
 
-- `harness` with no name: `Usage: harness <claude|opencode|codex> [as <label>] [-w].`
+- `harness` with no name opens the **New harness** dialog in the app (see below). Only the classic terminal UI prints `Usage: harness <claude|opencode|codex> [as <label>] [-w].` instead.
 - An unknown name: `Unknown harness "foo". Choose from: claude, opencode, codex.`
 - `as` with no label: `Usage: harness <claude|opencode|codex> as <label>.`
+
+## New harness dialog
+
+Typing `harness` with no arguments opens a **New harness** dialog instead of erroring: a form with a harness selector, a **Label** field, **Workspace** and **Offline** toggles, an **Auto-approve** toggle, and **Model** and **Effort** dropdowns.
+
+![The New harness dialog, with fields for harness, label, workspace, offline, auto-approve, model, and effort.](/screenshots/harness-launch-dialog.png)
+
+**Auto-approve** stays disabled unless you've picked claude and turned on **Workspace** — the dialog only ever builds a command that's actually valid. **Create** launches the harness right away, the same as typing the equivalent command by hand. **Cancel** or `Escape` closes the dialog with nothing launched. Your choices are remembered for the rest of the session, so reopening the dialog restores your last picks and puts focus on **Create** so Return relaunches immediately.
 
 ## Choosing a model and effort level
 
@@ -54,9 +62,34 @@ harness claude --effort high
 
 `--model` and `--effort` can be combined with each other and with `as <label>`, `-w`, and `-y` in any order.
 
+Whichever of `--model` and `--effort` you set show up as small chips in the harness tab's metadata row, next to the working directory — see [the tab metadata row](/user-documentation/getting-started/tabs#the-tab-metadata-row). A launch with neither flag shows no chips.
+
 ## Workspaces
 
 `-w` / `--workspace` starts the harness inside a disposable clone of your repository instead of the project itself — the same isolation agents get. See [Workspaced agents](/user-documentation/advanced-agents/workspaced-agent) for how the clone, sandboxing, and GitHub authentication work.
+
+## Auto-approving permission prompts
+
+`-y` / `--yes` lets a claude harness run unattended: when claude raises its own permission prompt, the app answers it automatically instead of waiting for you, and records an `Auto-approved a permission prompt` notification with a link to what was approved. It's claude-only and requires `-w`:
+
+- `harness opencode -y` (or any non-claude harness): `-y/--yes is only supported for the claude harness.`
+- `harness claude -y` without `-w`: `-y/--yes requires -w/--workspace: auto-approval is only allowed in a sandboxed workspace.`
+
+A harness launched with `-y` shows the auto-permitting flag icon in its metadata row.
+
+## Starting with a prompt
+
+A trailing `with <prompt>` clause gives the new harness something to do as soon as it's ready, so the launch and its first instruction happen in one command:
+
+```
+harness claude with fix the failing tests
+```
+
+Everything after the standalone `with` keyword is the prompt, taken verbatim — so words that look like flags or `as` inside it are treated as prompt text, not parsed as options. `with` must come after every other option.
+
+- `harness claude with` (nothing after `with`): `Usage: harness <claude|opencode|codex> [options] with <prompt>.`
+
+Wrapping the whole launch in a [`schedule`](/user-documentation/automation/scheduling) command runs it — fresh harness plus prompt — at a future time: `schedule deploy at 5pm harness claude with fix the failing tests`.
 
 ## Lifecycle
 
@@ -75,6 +108,19 @@ asciinema play .janissary/recordings/claude-2026-07-10T18-30-05-123Z.cast
 ```
 
 The files are standard [asciicast v2](https://docs.asciinema.org/manual/asciicast/v2/), so they also drop into any asciicast web player. Recordings from the current run are cleared the next time you start `janus` normally; a `janus --relaunch` keeps them. SSH sessions are not recorded.
+
+## Capturing a harness's screen
+
+```
+harness capture <name>
+```
+
+Writes the harness tab labeled `<name>`'s current screen to a file and opens it in an editor tab — a one-off snapshot, unlike the continuous session recording above. `<name>` is the tab's label, not a harness type, matched exactly and case-sensitively.
+
+- `harness capture` with no name: `Usage: harness capture <name>.`
+- No tab has that label: `No tab labeled "<name>".`
+- The tab isn't a harness tab: `"<name>" is not a harness tab.`
+- The tab is a harness tab but nothing has been captured yet: `No capture available for "<name>" yet.`
 
 ## Watching a harness with a monitor
 
