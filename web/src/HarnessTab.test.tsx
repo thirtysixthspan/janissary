@@ -169,6 +169,29 @@ describe('HarnessTab', () => {
     expect(queryByText(/exited/)).not.toBeInTheDocument();
   });
 
+  it('renders no terminal content or banner while provisioning', () => {
+    const { queryByText } = render(
+      <HarnessTab harness={makeHarness({ status: 'provisioning', ptyId: '' })} client={mockClient} label="claude" />,
+    );
+    expect(queryByText(/exited/)).not.toBeInTheDocument();
+  });
+
+  it('attaches to no real PTY while provisioning (empty ptyId)', () => {
+    render(<HarnessTab harness={makeHarness({ status: 'provisioning', ptyId: '' })} client={mockClient} label="claude" />);
+    expect(vi.mocked(mockClient.attachPty as ReturnType<typeof vi.fn>)).toHaveBeenCalledWith('', expect.any(Function));
+  });
+
+  it('shows the provision-error banner in place of the exited banner', () => {
+    const { getByText } = render(
+      <HarnessTab
+        harness={makeHarness({ status: 'provisioning', ptyId: '', provisionError: 'Failed to create workspace: no origin remote' })}
+        client={mockClient}
+        label="claude"
+      />,
+    );
+    expect(getByText('Failed to create workspace: no origin remote')).toBeInTheDocument();
+  });
+
   it('shows the given cwd in the metadata row', () => {
     const { getByText } = render(
       <HarnessTab harness={makeHarness()} client={mockClient} label="claude" cwd="~/project" />,

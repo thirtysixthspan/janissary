@@ -48,6 +48,7 @@ function makeManagers(): { managers: Managers; tabs: Tab[]; edit: ReturnType<typ
       findIndex: () => tabs.length - 1,
       append: () => {},
       activeTab: 0,
+      closeTab: vi.fn((index: number) => { tabs.splice(index, 1); }),
     },
     pty: {
       spawn: vi.fn(() => 'pty-1'),
@@ -534,5 +535,101 @@ describe('HarnessManager launch with prompt', () => {
     expect(scheduleSet).toHaveBeenCalledWith('claude-2', [
       expect.objectContaining({ id: 'run-1', command: 'say hi' }),
     ]);
+  });
+});
+
+// A `-w` launch whose workspace clone is still pending — asserted against directly via the
+// returned `resolve`/`reject`, rather than letting `makeManagers()`'s default synchronous stub
+// resolve it immediately (as every other describe block in this file relies on).
+function pendingWorkspaceLaunch(): { managers: Managers; tabs: Tab[]; resolve: () => void; reject: (message: string) => void } {
+  const { managers, tabs } = makeManagers();
+  const { promise, resolve, reject } = Promise.withResolvers<void>();
+  (managers.workspace as unknown as { create: () => { dir: string; ready: Promise<void> } }).create =
+    () => ({ dir: '/workspace/claude', ready: promise });
+  return { managers, tabs, resolve, reject: (message) => reject(new Error(message)) };
+}
+
+describe('HarnessManager workspace provisioning', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    recorderMock.instances.length = 0;
+  });
+
+  afterEach(() => {
+    messageBus.emit('pty', { type: 'exit', id: 'pty-1', exitCode: 0 });
+    vi.useRealTimers();
+    vi.clearAllMocks();
+  });
+
+  it('creates the tab immediately as a provisioning placeholder with no PTY while the clone is pending', () => {
+    const { managers, tabs } = pendingWorkspaceLaunch();
+    const manager = new HarnessManager(managers);
+    expect(manager.run('harness claude -w')).toBeUndefined();
+    expect(tabs.at(-1)!.harness).toMatchObject({ ptyId: '', status: 'provisioning' });
+    expect(managers.pty.spawn).not.toHaveBeenCalled();
+  });
+
+  it('spawns the PTY and marks the tab running once the clone resolves', async () => {
+    const { managers, tabs, resolve } = pendingWorkspaceLaunch();
+    const manager = new HarnessManager(managers);
+    expect(manager.run('harness claude -w')).toBeUndefined();
+    resolve();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(managers.pty.spawn).toHaveBeenCalledTimes(1);
+    expect(tabs.at(-1)!.harness).toMatchObject({ ptyId: 'pty-1', status: 'running' });
+  });
+
+  it('does not spawn a PTY once the tab has been removed before the clone resolves', async () => {
+    const { managers, tabs, resolve } = pendingWorkspaceLaunch();
+    const manager = new HarnessManager(managers);
+    expect(manager.run('harness claude -w')).toBeUndefined();
+    tabs.splice(tabs.findIndex((t) => t.label === 'claude'), 1);
+    resolve();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(managers.pty.spawn).not.toHaveBeenCalled();
+  });
+
+  it('sets provisionError and does not spawn a PTY when the clone rejects', async () => {
+    const { managers, tabs, reject } = pendingWorkspaceLaunch();
+    const manager = new HarnessManager(managers);
+    expect(manager.run('harness claude -w')).toBeUndefined();
+    reject('no origin remote');
+    await vi.advanceTimersByTimeAsync(0);
+    expect(tabs.at(-1)!.harness?.provisionError).toBe('no origin remote');
+    expect(managers.pty.spawn).not.toHaveBeenCalled();
+  });
+
+  it('closes the tab after the fixed delay once the clone rejects', async () => {
+    const { managers, tabs, reject } = pendingWorkspaceLaunch();
+    const manager = new HarnessManager(managers);
+    expect(manager.run('harness claude -w')).toBeUndefined();
+    reject('boom');
+    await vi.advanceTimersByTimeAsync(0);
+    expect(managers.tab.closeTab).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(3000);
+    expect(managers.tab.closeTab).toHaveBeenCalledTimes(1);
+    expect(tabs.some((t) => t.label === 'claude')).toBe(false);
+  });
+
+  it('creates a profile-launched (`openFromProfile`) harness tab as a placeholder too', () => {
+    const { managers, tabs } = pendingWorkspaceLaunch();
+    const manager = new HarnessManager(managers);
+    expect(manager.openFromProfile(
+      { label: 'claude', harness: 'claude', workspace: true }, 'claude', 2, '#fff',
+    )).toBeUndefined();
+    expect(tabs.at(-1)!.harness).toMatchObject({ ptyId: '', status: 'provisioning' });
+    expect(managers.pty.spawn).not.toHaveBeenCalled();
+  });
+
+  it('spawns the PTY for a profile-launched harness tab once its clone resolves', async () => {
+    const { managers, tabs, resolve } = pendingWorkspaceLaunch();
+    const manager = new HarnessManager(managers);
+    expect(manager.openFromProfile(
+      { label: 'claude', harness: 'claude', workspace: true }, 'claude', 2, '#fff',
+    )).toBeUndefined();
+    resolve();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(managers.pty.spawn).toHaveBeenCalledTimes(1);
+    expect(tabs.at(-1)!.harness).toMatchObject({ ptyId: 'pty-1', status: 'running' });
   });
 });

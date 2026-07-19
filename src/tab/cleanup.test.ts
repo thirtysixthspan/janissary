@@ -6,7 +6,7 @@ import type { Managers } from '../managers.js';
 
 function makeManagers(): Managers {
   return {
-    workspace: { remove: vi.fn() },
+    workspace: { remove: vi.fn(), cancel: vi.fn() },
     shell: { close: vi.fn() },
     acp: { close: vi.fn() },
     browser: { closeTab: vi.fn() },
@@ -49,6 +49,23 @@ describe('closeTabResources', () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(managers.workspace.remove).toHaveBeenCalledTimes(1);
     expect(managers.workspace.remove).toHaveBeenCalledWith('/tmp/ws-main');
+  });
+
+  it('cancels an in-flight clone immediately when closing a still-provisioning tab', () => {
+    const managers = makeManagers();
+    const workspaced = { ...makeTab('ws', 'red'), label: 'ws', workspaceDir: '/tmp/ws-provisioning' };
+
+    closeTabResources(workspaced, managers, new Map(), new Map(), new Map(), 2);
+
+    expect(managers.workspace.cancel).toHaveBeenCalledWith('ws');
+  });
+
+  it('does not cancel anything for a tab with no workspace', () => {
+    const managers = makeManagers();
+
+    closeTabResources(makeTab('main', 'red'), managers, new Map(), new Map(), new Map(), 2);
+
+    expect(managers.workspace.cancel).not.toHaveBeenCalled();
   });
 
   it('closes every database connection only when this was the last tab', () => {

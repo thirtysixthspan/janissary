@@ -1,7 +1,10 @@
 import { existsSync, mkdirSync, rmSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { homedir } from 'node:os';
-import { execSync } from 'node:child_process';
+import { execSync, execFile, spawn, type ChildProcess } from 'node:child_process';
+import { promisify } from 'node:util';
+
+const execFileAsync = promisify(execFile);
 
 let workspaceBaseDir = '';
 
@@ -64,25 +67,61 @@ export function toHttpsUrl(url: string): string {
   return url;
 }
 
-export function createWorkspace(name: string, repoPath: string): string {
+export type ProvisionHandle = {
+  // The workspace's target directory — known up front, before the clone starts.
+  dir: string;
+  // Resolves once the clone and its follow-up setup have finished.
+  ready: Promise<void>;
+  // Kills the clone if it's still running. A no-op once the clone has already settled.
+  cancel: () => void;
+};
+
+// Kick off a workspace clone asynchronously so it never blocks the event loop, unlike the old
+// single synchronous `createWorkspace`. `remoteUrl` must already be resolved (via `getRemoteUrl`,
+// which stays synchronous — see `WorkspaceManager.create`) since it's needed to even start the
+// clone; only the slow parts (the clone itself, plus the setup that has to run after it) are
+// asynchronous here. Exposes `cancel()` so a caller can kill an in-flight clone (e.g. the tab
+// it belongs to was closed before it finished) instead of only being able to wait for it.
+export function provisionWorkspace(name: string, remoteUrl: string): ProvisionHandle {
   ensureWorkspaceDir();
   const target = workspacePath(name);
-  const remoteUrl = getRemoteUrl(repoPath);
-  // Clone over whatever transport already works on the host (this runs unsandboxed, so SSH is
-  // fine here) — intentional: user-driven workspace creation; only local-user commands reach this
-  // sink.
-  execSync(`git clone "${remoteUrl}" "${target}"`, { stdio: 'pipe' });
+  let cancelled = false;
+  let child: ChildProcess | undefined;
+
+  async function run(): Promise<void> {
+    // Clone over whatever transport already works on the host (this runs unsandboxed, so SSH is
+    // fine here) — intentional: user-driven workspace creation; only local-user commands reach
+    // this sink. Run via `spawn` (no shell) rather than `execSync` so it doesn't block the event
+    // loop and so the child process can be killed on cancel.
+    child = spawn('git', ['clone', remoteUrl, target], { stdio: 'ignore' });
+    const activeChild = child;
+    const code = await new Promise<number | null>((resolve, reject) => {
+      activeChild.on('error', reject);
+      activeChild.on('exit', resolve);
+    });
+    if (cancelled) throw new Error('Workspace provisioning cancelled.');
+    if (code !== 0) throw new Error(`git clone exited with code ${String(code)}`);
+    await finishProvisioning(name, target, remoteUrl);
+  }
+
+  return {
+    dir: target,
+    ready: run(),
+    cancel: () => { cancelled = true; child?.kill(); },
+  };
+}
+
+async function finishProvisioning(name: string, target: string, remoteUrl: string): Promise<void> {
   // Rewrite the clone's own origin to HTTPS: later git operations from *inside* the workspace run
   // in the Seatbelt sandbox, which denies `~/.ssh` and scrubs `SSH_AUTH_SOCK`, so SSH can't
   // authenticate there — only HTTPS + the injected `GH_TOKEN` can (see sandbox.ts).
-  execSync(`git remote set-url origin "${toHttpsUrl(remoteUrl)}"`, { cwd: target, stdio: 'pipe' });
+  await execFileAsync('git', ['remote', 'set-url', 'origin', toHttpsUrl(remoteUrl)], { cwd: target });
   // Local-only credential helper (never touches global git config) — `gh auth git-credential`
   // checks `GH_TOKEN` in its environment before falling back to its keychain-stored OAuth token,
   // so once the sandbox injects `GH_TOKEN` (see sandbox.ts), `git push` authenticates via it.
-  execSync('git config --local credential.helper "!gh auth git-credential"', { cwd: target, stdio: 'pipe' });
+  await execFileAsync('git', ['config', '--local', 'credential.helper', '!gh auth git-credential'], { cwd: target });
   trustWorkspace(target);
   mkdirSync(workspaceTempPath(name), { recursive: true });
-  return target;
 }
 
 export function untrustWorkspace(workspaceDir: string): void {

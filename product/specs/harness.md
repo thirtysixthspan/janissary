@@ -85,6 +85,16 @@ The harness PTY starts in the workspace directory. The workspace is removed when
 the tab closes immediately and the clone is deleted in the background, so closing a harness tab with
 a large workspace never freezes the UI. If no git repository is found from the current directory, an
 error is shown and no tab is created.
+
+**The tab appears immediately; the clone runs in the background.** Cloning a large repository can
+take a while, but the app never blocks on it: the harness tab opens right away with no terminal
+content (`status: 'provisioning'`), the rest of the app stays fully responsive — other tabs keep
+working, more commands can be run — and the terminal takes over once the clone finishes and the
+harness process starts. Closing the tab before the clone finishes cancels it and closes the tab
+immediately, the same as closing any other harness tab. If the clone fails (network error, no
+`origin` remote, etc.), the failure is shown in place of the empty terminal and the tab closes on
+its own shortly after — see [Harness tab data](#harness-tab-data).
+
 On macOS, the harness process is additionally confined to the workspace by a Seatbelt sandbox — see
 [[sandbox]] and [[workspaced-agent]].
 
@@ -158,11 +168,16 @@ A harness tab is distinguished by `view: 'harness'` and carries a **harness payl
 
 - **name** — the harness identifier (`claude`, `opencode`, or `codex`).
 - **program** — the binary that was launched.
-- **ptyId** — the live PTY stream id used by xterm.js to attach.
-- **status** — `running` while the process is alive. The tab is closed as soon as the process
-  exits, so `exited` is not observed in normal operation.
+- **ptyId** — the live PTY stream id used by xterm.js to attach; empty while `provisioning`.
+- **status** — `running` while the process is alive. A `-w`/`--workspace` launch starts at
+  `provisioning` instead, for as long as its workspace clone is still being created (see
+  [Workspace flag](#workspace-flag--w----workspace) below) — the tab appears immediately with no
+  terminal content, and moves to `running` once the clone finishes and the harness process starts.
+  The tab is closed as soon as the process exits, so `exited` is not observed in normal operation.
 - **exitCode** — would be set alongside an `exited` status; unused in practice since the tab
   closes before it could be read.
+- **provisionError** — set only when a `-w` launch's workspace clone fails; shown in place of the
+  empty terminal, and the tab closes automatically shortly after.
 
 ## Layout
 

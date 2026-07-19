@@ -4,6 +4,8 @@ import { parseAgentCommand, resolveAgentName } from '../commands.js';
 import { openProfileEntries } from './agent-opener.js';
 import { sandboxNotice } from '../sandbox/index.js';
 import { notify } from '../notifications.js';
+import { wireProvisioning, PROVISION_FAILURE_CLOSE_DELAY_MS } from '../workspace-provision-wire.js';
+import { messageBus } from '../bus.js';
 import type { Tab } from '../types.js';
 import type { Managers } from '../managers.js';
 
@@ -41,17 +43,37 @@ export class ProfileManager {
     if (resolved === null) { out('All agent names are in use.'); return; }
     if (existing.some((l) => l.toLowerCase() === resolved.toLowerCase())) { out(`Agent "${resolved}" is already active.`); return; }
 
-    let workspaceDir: string | undefined;
-    if (parsed.workspace) {
-      const result = this.managers.workspace.create(resolved);
-      if ('error' in result) { out(result.error); return; }
-      workspaceDir = result.dir;
+    if (!parsed.workspace) {
+      this.placeAgent(resolved, creator, process.cwd(), undefined, parsed.offline);
+      out(`Agent "${resolved}" ready.`);
+      return;
     }
 
-    this.placeAgent(resolved, creator, workspaceDir ?? process.cwd(), workspaceDir, parsed.offline);
-    const notice = workspaceDir ? sandboxNotice() : undefined;
-    out(`Agent "${resolved}" ready.${workspaceDir ? ` (workspace: ${this.managers.tab.shorten(workspaceDir)})` : ''}`);
-    if (notice) out(notice);
+    const result = this.managers.workspace.create(resolved);
+    if ('error' in result) { out(result.error); return; }
+    // The tab is created immediately, busy, with the clone's target directory already known — the
+    // "ready" message and sandbox notice fire once the clone actually resolves, not before, so the
+    // tab isn't announced ready while it's still empty.
+    this.placeAgent(resolved, creator, result.dir, result.dir, parsed.offline, true);
+    wireProvisioning(
+      resolved,
+      result.ready,
+      (label) => this.managers.tab.tabs.some((t) => t.label === label),
+      () => {
+        this.managers.tab.deleteBusy(resolved);
+        messageBus.emit('state', { type: 'dirty' });
+        const notice = sandboxNotice();
+        out(`Agent "${resolved}" ready. (workspace: ${this.managers.tab.shorten(result.dir)})`);
+        if (notice) out(notice);
+      },
+      (message) => {
+        out(`Failed to create workspace for "${resolved}": ${message}`);
+        setTimeout(() => {
+          const index = this.managers.tab.findIndex(resolved);
+          if (index !== -1) this.managers.tab.closeTab(index);
+        }, PROVISION_FAILURE_CLOSE_DELAY_MS);
+      },
+    );
   }
 
   // Launch a bare, auto-named agent tab rooted at the named source tab's cwd, joining its group —
@@ -67,8 +89,10 @@ export class ProfileManager {
 
   // Build the agent tab, insert it into its creator's group, set its cwd, focus it, and persist —
   // the creation body shared by `newAgent` (active tab as creator) and `newAgentAt` (a label-resolved
-  // source tab that may be docked and not active).
-  private placeAgent(resolved: string, creator: Tab | undefined, cwd: string, workspaceDir: string | undefined, offline: boolean): void {
+  // source tab that may be docked and not active). `busy`, when true, marks the tab busy on creation
+  // (a `--workspace` launch still waiting on its clone) — everything typed in the meantime queues
+  // through the ordinary busy-tab command queue.
+  private placeAgent(resolved: string, creator: Tab | undefined, cwd: string, workspaceDir: string | undefined, offline: boolean, busy = false): void {
     const dotColor = distinctColor(this.managers.tab.tabs.map((t) => t.dotColor));
     const group = creator?.group ?? 1;
     const groupColor = creator?.groupColor ?? dotColor;
@@ -77,6 +101,7 @@ export class ProfileManager {
     tab.offline = offline;
     this.managers.tab.insertTabInGroup(tab);
     this.managers.tab.setCwd(resolved, cwd);
+    if (busy) this.managers.tab.addBusy(resolved);
     this.managers.tab.setActiveTab(this.managers.tab.findIndex(resolved));
     this.managers.tab.persist(this.managers.tab.buildAgentState(tab));
   }

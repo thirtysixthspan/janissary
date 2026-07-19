@@ -9,7 +9,7 @@ import * as agentState from '../agent/state.js';
 
 function makeManagers(): Managers {
   return {
-    workspace: { remove: vi.fn() },
+    workspace: { remove: vi.fn(), cancel: vi.fn() },
     shell: { close: vi.fn() },
     acp: { close: vi.fn() },
     browser: { closeTab: vi.fn() },

@@ -12,6 +12,8 @@ A workspaced agent is an agent tab with its own cloned workspace. This workspace
 
 If no git repository is found from the current directory, or the repository has no `origin` remote, an error is shown and no tab is created.
 
+The tab appears immediately, marked busy, with its workspace directory already known — it does not wait for the clone to finish. Anything typed into it while the clone is still running is queued and runs once the tab goes idle, the same as typing into any other busy agent tab. The creator tab's "Agent ready" confirmation (and the sandbox notice, if any) is posted once the clone actually finishes, not before. If the clone fails after the tab was created, the creator tab reports the failure and the half-created tab closes on its own shortly after.
+
 ### Workspace harness tab
 
 `harness <name> -w` (or `--workspace`) creates a harness tab with a cloned workspace using the same
@@ -36,6 +38,9 @@ The initial clone (done outside the sandbox, by the janissary process itself) us
 
 Workspace directories are ephemeral:
 - **Normal launch**: `.janissary/workspace/` is cleared before rendering.
+- **Tab creation**: The tab (agent or harness) appears immediately; the clone runs in the
+  background and never blocks the rest of the app. Closing the tab before the clone finishes
+  cancels it right away, the same as any other close.
 - **Tab close**: The workspace directory is removed when the tab is closed. The tab closes immediately and the clone is deleted in the background, so removing a large workspace never freezes the UI. If the app exits before a background deletion finishes, that clone is still cleaned up as part of shutdown.
 - **`--relaunch`**: Workspace directories are not recreated; restore falls back to the tab's last known working directory.
 

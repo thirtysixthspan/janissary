@@ -21,10 +21,13 @@ function makeManagers(creator: Tab, tabs: Tab[] = [creator]): { managers: Manage
       append: (_label: string, entry: { input: string; output: string }) => { appended.push(entry); },
       allLabels: () => tabs.map((t) => t.label),
       cur: () => creator,
-      insertTabInGroup: vi.fn(),
+      insertTabInGroup: vi.fn((tab: Tab) => { tabs.push(tab); }),
       setCwd: vi.fn(),
+      addBusy: vi.fn(),
+      deleteBusy: vi.fn(),
       setActiveTab: vi.fn(),
-      findIndex: vi.fn(() => 0),
+      findIndex: vi.fn(() => tabs.length - 1),
+      closeTab: vi.fn((index: number) => { tabs.splice(index, 1); }),
       persist: vi.fn(),
       buildAgentState: vi.fn(() => ({ name: creator.label, dotColor: creator.dotColor, active: true })),
       shorten: (p: string) => p,
@@ -71,6 +74,18 @@ describe('ProfileManager.run', () => {
 });
 
 describe('ProfileManager.newAgent', () => {
+  it('creates a plain (non-workspace) agent tab and reports it ready immediately', () => {
+    const janus = makeTab('janus', 'red');
+    const { managers, appended } = makeManagers(janus);
+    const manager = new ProfileManager(managers);
+
+    manager.newAgent('agent bob');
+
+    expect(managers.workspace.create).not.toHaveBeenCalled();
+    expect(managers.tab.addBusy).not.toHaveBeenCalled();
+    expect(appended).toEqual([{ input: 'agent bob', output: 'Agent "bob" ready.' }]);
+  });
+
   it('reports a workspace-creation error and never creates the tab', () => {
     const janus = makeTab('janus', 'red');
     const { managers, appended } = makeManagers(janus);
@@ -83,10 +98,11 @@ describe('ProfileManager.newAgent', () => {
     expect(managers.tab.insertTabInGroup).not.toHaveBeenCalled();
   });
 
-  it('creates the tab in the returned workspace dir on success', () => {
+  it('creates the tab in the returned workspace dir immediately, marked busy, before the clone resolves', () => {
     const janus = makeTab('janus', 'red');
-    const { managers } = makeManagers(janus);
-    vi.mocked(managers.workspace.create).mockReturnValue({ dir: '/tmp/janus-workspaces/bob' });
+    const { managers, appended } = makeManagers(janus);
+    const { promise, resolve } = Promise.withResolvers<void>();
+    vi.mocked(managers.workspace.create).mockReturnValue({ dir: '/tmp/janus-workspaces/bob', ready: promise });
     const manager = new ProfileManager(managers);
 
     manager.newAgent('agent bob --workspace');
@@ -95,6 +111,65 @@ describe('ProfileManager.newAgent', () => {
       expect.objectContaining({ label: 'bob', workspaceDir: '/tmp/janus-workspaces/bob' }),
     );
     expect(managers.tab.setCwd).toHaveBeenCalledWith('bob', '/tmp/janus-workspaces/bob');
+    expect(managers.tab.addBusy).toHaveBeenCalledWith('bob');
+    // Not yet reported ready — the clone hasn't resolved.
+    expect(appended).toEqual([]);
+    resolve();
+  });
+
+  it('clears busy and reports ready with the workspace path only once the clone resolves', async () => {
+    const janus = makeTab('janus', 'red');
+    const { managers, appended } = makeManagers(janus);
+    const { promise, resolve } = Promise.withResolvers<void>();
+    vi.mocked(managers.workspace.create).mockReturnValue({ dir: '/tmp/janus-workspaces/bob', ready: promise });
+    const manager = new ProfileManager(managers);
+
+    manager.newAgent('agent bob --workspace');
+    resolve();
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(managers.tab.deleteBusy).toHaveBeenCalledWith('bob');
+    expect(appended).toEqual([
+      { input: 'agent bob --workspace', output: 'Agent "bob" ready. (workspace: /tmp/janus-workspaces/bob)' },
+    ]);
+  });
+
+  it('reports the error and closes the tab after a delay when the clone rejects', async () => {
+    vi.useFakeTimers();
+    const janus = makeTab('janus', 'red');
+    const { managers, appended } = makeManagers(janus);
+    const { promise, reject } = Promise.withResolvers<void>();
+    vi.mocked(managers.workspace.create).mockReturnValue({ dir: '/tmp/janus-workspaces/bob', ready: promise });
+    const manager = new ProfileManager(managers);
+
+    manager.newAgent('agent bob --workspace');
+    reject(new Error('network error'));
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(appended).toEqual([
+      { input: 'agent bob --workspace', output: 'Failed to create workspace for "bob": network error' },
+    ]);
+    expect(managers.tab.closeTab).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(3000);
+    expect(managers.tab.closeTab).toHaveBeenCalledTimes(1);
+    vi.useRealTimers();
+  });
+
+  it('does not clear busy or report ready once the tab has been removed before the clone resolves', async () => {
+    const janus = makeTab('janus', 'red');
+    const { managers, appended } = makeManagers(janus);
+    const { promise, resolve } = Promise.withResolvers<void>();
+    vi.mocked(managers.workspace.create).mockReturnValue({ dir: '/tmp/janus-workspaces/bob', ready: promise });
+    const manager = new ProfileManager(managers);
+
+    manager.newAgent('agent bob --workspace');
+    managers.tab.tabs.length = 1; // simulate the tab having been closed already
+    resolve();
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(managers.tab.deleteBusy).not.toHaveBeenCalled();
+    expect(appended).toEqual([]);
   });
 });
 
