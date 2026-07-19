@@ -7,6 +7,7 @@ import { messageBus } from './bus.js';
 import { resolveUnknownCommand } from './command-router.js';
 import { recordGlobalHistory } from './global-history.js';
 import type { Managers } from './managers.js';
+import { dispatchOrRunOp, drainQueueOp } from './command-queue.js';
 
 export class CommandManager {
   private pendingRoute: { label: string; cmd: string; choices: RouteChoice[] } | null = null;
@@ -48,30 +49,16 @@ export class CommandManager {
   // Gate seam: agent tabs queue while busy (or while idle with entries already waiting, to
   // preserve FIFO) instead of running immediately. Non-agent tabs and empty input bypass the gate.
   private dispatchOrRun(trimmed: string, label: string, index: number): void {
-    if (!trimmed) { this.run(trimmed, label, index); return; }
-    const tab = this.managers.tab.tabs[index];
-    const isAgentTab = tab !== undefined && (tab.view === undefined || tab.view === 'agent');
-    const wasIdle = !this.managers.tab.isBusy(label);
-    const alreadyQueued = this.managers.tab.queueFor(label).length > 0;
-    if (isAgentTab && (!wasIdle || alreadyQueued)) {
-      this.managers.tab.enqueue(label, trimmed);
-      this.managers.tab.append(label, { input: '', output: `Queued: ${trimmed}` });
-      if (wasIdle) this.drainQueue(label);
-      return;
-    }
-    this.run(trimmed, label, index);
+    dispatchOrRunOp(
+      this.managers, trimmed, label, index,
+      (i, l, idx) => this.run(i, l, idx), (l) => this.drainQueue(l),
+    );
   }
 
   // Runs queued commands FIFO until the tab goes busy, its queue empties, or a route chooser
   // becomes pending (resumed by `chooseRoute`). Registered as `TabManager`'s onIdle hook.
   drainQueue(label: string): void {
-    for (;;) {
-      const index = this.managers.tab.findIndex(label);
-      if (index === -1 || this.managers.tab.isBusy(label) || this.pendingRoute) return;
-      const command = this.managers.tab.dequeue(label);
-      if (command === undefined) return;
-      this.run(command, label, index);
-    }
+    drainQueueOp(this.managers, label, () => this.pendingRoute !== null, (i, l, idx) => this.run(i, l, idx));
   }
 
   private run(input: string, label: string, index: number): void {
