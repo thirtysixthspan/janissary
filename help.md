@@ -20,7 +20,7 @@
 | `open` | Open images/files in a tab, or web pages embedded (`open https://…` / `open page …`) — sites that refuse framing render too; `open external` uses the OS viewer/browser |
 | `edit` | Open a file in the plain-text editor (`edit <file>` or `edit <file>:<line>` to jump to a line) |
 | `rename` | Rename the current tab's display name (`rename <name>`); bare `rename` clears the alias |
-| `connection` | List or close open connections (sqlite/shell/acp/browser) |
+| `connection` | List or close open connections (sqlite/shell/acp/browser/ssh) |
 | `schedule` | Run a command later — once or on a recurring schedule |
 | `profile` | Launch a saved set of agents for a use case |
 | `harness` | Open an AI coding harness (claude/opencode/codex) in a full-tab terminal (add `-w` / `--workspace` to clone the repo, `-y` / `--yes` to auto-approve claude's permission prompts — claude only, requires `-w`); `harness capture <name>` snapshots a harness tab's screen into an editor tab |
@@ -95,4 +95,4 @@
 | `Page Up` / `Page Down` | Move selection by one viewport of rows |
 | Printable characters | Type-ahead: jump to the next visible row whose name starts with what's typed |
 
-`Tab` completes the word at the cursor: filesystem paths against the tab's working directory; at the recipient position of `msg` / `broadcast`, active agent names (`broadcast` also offers `all` and completes each entry of a comma-separated list); at the target of `connection close`, the tab's open connection strings (`sqlite:<name>`, `shell:<shell>`, `acp:opencode`, `browser:<id>`); and for the `browser` command, its subcommands (`open`, `goto`, `content`, …) plus the tab's open window ids where one is expected (`browser use`, `browser window close`). For `monitor` / `unmonitor`, the first argument completes against persona names (from `ai/personas/`) and later arguments against tab labels and `group:<n>` tokens (`unmonitor` also offers `--all`).
+`Tab` completes the word at the cursor: filesystem paths against the tab's working directory; at the recipient position of `msg` / `broadcast`, active agent names (`broadcast` also offers `all` and completes each entry of a comma-separated list); at the target of `connection close`, the tab's open connection strings (`sqlite:<name>`, `shell:<shell>`, `acp:opencode`, `browser:<id>`, `ssh:<label>`); and for the `browser` command, its subcommands (`open`, `goto`, `content`, …) plus the tab's open window ids where one is expected (`browser use`, `browser window close`). For `monitor` / `unmonitor`, the first argument completes against persona names (from `ai/personas/`) and later arguments against tab labels and `group:<n>` tokens (`unmonitor` also offers `--all`).
