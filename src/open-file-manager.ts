@@ -5,41 +5,19 @@ import { openerForExtension, type OpenContext } from './openers/index.js';
 import { didOsOpen } from './openers/os-open.js';
 import { openInEditor } from './openers/editor.js';
 import { nextFreeName } from './editor/next-free-name.js';
-import { parseOpen, isGlobPattern } from './commands/open.js';
 import { expandUserPath } from './paths.js';
-import { webOpener } from './openers/page.js';
 import { SHELL_NAME } from './shell-manager.js';
 import type { Managers } from './managers.js';
-import { TabManager } from './tab/manager.js';
+import { runOpenCommand } from './open-file-command.js';
 
 export class OpenFileManager {
   constructor(private managers: Managers) {}
 
   run(command: string, label: string): void {
-    const parsed = parseOpen(command);
-    if ('error' in parsed) { this.managers.tab.append(label, { input: command, output: parsed.error }); return; }
-    const cwd = this.managers.tab.cwdOf(label) ?? process.cwd();
-    const context = this.buildContext(command, label);
-    const target = expandUserPath(parsed.target, { root: this.managers.tab.launchDir });
-
-    if (parsed.web) {
-      void (parsed.external ? webOpener.external(target, context) : webOpener.inline(target, context));
-      return;
-    }
-
-    if (isGlobPattern(target)) {
-      const matches = this.expandGlob(target, cwd);
-      if (matches.length === 0) { this.managers.tab.append(label, { input: command, output: `open: ${target}: no matching files` }); return; }
-      const files = matches.slice(0, TabManager.OPEN_MAX_FILES);
-      if (matches.length > files.length) {
-        this.managers.tab.append(label, { input: command, output: `Opening the first ${files.length} of ${matches.length} matching files.` });
-      }
-      for (const file of files) this.openOne(command, label, file, parsed.external, context);
-      return;
-    }
-
-    const file = path.isAbsolute(target) ? target : path.resolve(cwd, target);
-    this.openOne(command, label, file, parsed.external, context);
+    runOpenCommand(
+      this.managers, command, label,
+      (c, l) => this.buildContext(c, l), (p, cwd) => this.expandGlob(p, cwd), (c, l, f, ext, ctx) => this.openOne(c, l, f, ext, ctx),
+    );
   }
 
   // The `edit <file>` command: resolve the target like `open` does, but bypass the opener
