@@ -3,9 +3,10 @@
 Your job: take the **top** candidate from `product/backlog/user-documentation.md` — the gap
 backlog maintained by [`find-user-documentation-gaps.md`](find-user-documentation-gaps.md) —
 verify its gap description against the spec and source, fix the gap in
-`documentation/user-documentation/` and `help.md`, add visuals where the guidelines call for
-them (see Step 4b), prove the docs still build, and then remove the worked item from the
-backlog's candidates. Do exactly one item, then verify.
+`documentation/user-documentation/` and `help.md`, add visuals — character sprites per the
+guidelines, and a screenshot captured with the docs-screenshots pipeline whenever the page
+documents visible UI (see Step 4b) — prove the docs still build, and then remove the worked
+item from the backlog's candidates. Do exactly one item, then verify.
 
 This task edits **documentation files only**. You will never touch application source code,
 specs, or tests. The only non-markdown files you may edit are the docs sidebar (and, if a new
@@ -239,20 +240,35 @@ sprites that already comply.
 
 ### Screenshots — "Visuals: use them with intent" in [`user-documentation.md`](../guidelines/user-documentation.md)
 
-A screenshot earns its place only when it shows something genuinely visual (a layout, a
-picker, a badge state) — never as decoration, and never in place of a copyable command. Most
-small doc fixes need none; add one only when the page explains UI a reader has to recognize.
+**Default to adding one.** Every page you create or substantially rework that documents visible
+UI — a tab type, a picker, a panel, a dialog, a badge, anything a reader has to recognize on
+screen — gets a screenshot. Skipping is the exception, reserved for pages about pure command
+semantics with nothing visual to show; if you skip, say why in your Step 7 report. A screenshot
+is still never decoration and never a substitute for a copyable command.
 
-If the page does need one:
+**How capture works.** `scripts/docs-screenshots.mjs` (run it via
+`./scripts/run.mjs docs-screenshots [<name> ...]`; never invoke the file directly) launches the
+real app against fixture data — a fresh scratch directory and app process per shot, so captures
+are deterministic — drives it with Playwright, and writes each shot to
+`documentation/public/screenshots/<name>.png`. The shots are declared in
+`scripts/docs-screenshots/manifest.mjs`, one entry per screenshot; the entry `name` is the
+output filename, so the doc page's image path stays stable across reruns.
 
-1. Add an entry to `scripts/docs-screenshots/manifest.mjs`. The entry `name` is the output
-   filename; model the `setup`/`actions`/`target` on the existing entries, which drive the real
-   app against fixture data.
-2. Capture it: `./scripts/run.mjs docs-screenshots <name>` (add the name of any existing shot
-   whose page you also edited and whose UI may have moved). If the run reports a missing web
-   bundle or missing Playwright Chromium, or the shot is skipped for a missing binary, **do not
-   try to install or build anything** — ship the page without the screenshot, drop the manifest
-   entry, and note it in your Step 7 report.
+1. Add a manifest entry, modeled on the existing ones. The fields: `setup` (commands typed into
+   the command bar, one at a time; `{{PAGE_URL}}` becomes the fixture web server's URL),
+   `actions` (staged input after setup: `{ type }`, `{ press }` in Playwright key syntax,
+   `{ wait }` ms), `target` (an existing `data-doc-shot` attribute to crop to, or `page` for
+   the whole viewport), plus optional `settle`, `cropToChildren`, `clipHeight`, `stabilize`,
+   and `requiresBinary` — the comment block at the top of `manifest.mjs` documents each.
+2. Capture it: `./scripts/run.mjs docs-screenshots <name>` — and pass, in the same run, the
+   name of any existing shot whose page you also edited and whose UI may have moved, so those
+   stay fresh too.
+   - If it reports the web bundle missing, build it once with `npm run build:web` and re-run
+     the capture.
+   - If it reports Playwright Chromium missing (normal in a sandboxed workspace, where the
+     browser download is blocked), or a shot is skipped for a missing `requiresBinary` binary,
+     **do not try to install anything** — ship the page without the screenshot, drop the
+     manifest entry, and note it in your Step 7 report.
 3. Reference it as `![<alt text>](/screenshots/<name>.png)`, placed immediately after the text
    it illustrates. The alt text must convey what the image shows a sighted reader (see the
    existing pages for the style), never a filename or "screenshot of the app".
@@ -260,8 +276,8 @@ If the page does need one:
    entry — the pair ships together or not at all.
 
 Never edit anything under `scripts/docs-screenshots/` other than `manifest.mjs`; if a shot
-needs capture-code changes (a new `target` attribute, a new fixture), that is blocked work —
-ship without the screenshot and note it in the report.
+needs capture-code changes (a `data-doc-shot` target that doesn't exist yet, a new fixture),
+that is blocked work — ship without the screenshot and note it in the report.
 
 ---
 
