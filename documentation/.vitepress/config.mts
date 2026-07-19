@@ -104,6 +104,7 @@ export default defineConfig({
             { text: "Harness tabs", link: "/user-documentation/advanced-agents/harness" },
             { text: "Workspacing", link: "/user-documentation/advanced-agents/workspacing" },
             { text: "Workspaced agents", link: "/user-documentation/advanced-agents/workspaced-agent" },
+            { text: "ACP agents", link: "/user-documentation/advanced-agents/acp-agent" },
           ],
         },
         {
