@@ -79,6 +79,7 @@ export default defineConfig({
             { text: "Application commands", link: "/user-documentation/command-bar/commands" },
             { text: "Tab completion", link: "/user-documentation/command-bar/tab-completion" },
             { text: "Shell commands", link: "/user-documentation/command-bar/shell" },
+            { text: "Browser automation", link: "/user-documentation/command-bar/browser" },
             { text: "Command history", link: "/user-documentation/command-bar/history" },
             { text: "Command queue", link: "/user-documentation/command-bar/queue" },
             { text: "Task picker", link: "/user-documentation/command-bar/tasks" },
