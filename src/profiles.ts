@@ -2,7 +2,7 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import type {
   ProfileEntry, ProfileFilesEntry, ProfileMonitor, ProfileNotificationsEntry,
-  ProfileParsed, ProfileSchedulesEntry,
+  ProfileSchedulesEntry,
 } from './types.js';
 import {
   loadProfileMonitors as loadReservedMonitors,
@@ -10,6 +10,7 @@ import {
   loadProfileNotifications as loadReservedNotifications,
   loadProfileSchedules as loadReservedSchedules,
 } from './profile-reserved-files.js';
+export { PROFILE_USAGE, parseProfileCommand } from './profile-command.js';
 
 // A profile is a named, reusable set of agents for a particular use case (writing code,
 // surfing the web, authoring a book, …). Each profile is a directory under the profiles
@@ -85,19 +86,4 @@ export function loadProfileNotifications(name: string): ProfileNotificationsEntr
 
 export function loadProfileSchedules(name: string): ProfileSchedulesEntry[] {
   return loadReservedSchedules(profilePath(name));
-}
-
-export const PROFILE_USAGE = 'Usage: profile launch <name> | profile list';
-
-export function parseProfileCommand(command: string): ProfileParsed {
-  const rest = command.replace(/^profile\b\s*/i, '').trim();
-  if (!rest) return { error: PROFILE_USAGE };
-  const tokens = rest.split(/\s+/);
-  const head = tokens[0].toLowerCase();
-  if (head === 'list') return { action: 'list' };
-  if (head === 'launch') {
-    if (!tokens[1]) return { error: 'Usage: profile launch <name>' };
-    return { action: 'launch', name: tokens[1] };
-  }
-  return { error: PROFILE_USAGE };
 }
