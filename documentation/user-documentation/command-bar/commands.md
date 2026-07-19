@@ -8,10 +8,21 @@ These commands manage the app itself — the current tab's transcript and name, 
 | `state` | Show the current agent's saved state fields (long values truncated) |
 | `clear` | Empty the current tab's transcript — other tabs are unaffected |
 | `rename [newname]` | Set (or, bare, clear) the tab's display alias — see [Tabs](/user-documentation/getting-started/tabs) |
+| `theme [name]` | Switch the application color theme; bare form opens a picker |
 | `syntax theme [name]` | Switch the editor syntax theme; bare form opens a picker |
 | `notifications [left\|right]` | Open the [notifications](/user-documentation/tab-types/notifications) feed, optionally docked in a sidebar |
 | `notify <message>` | Push a custom line into the [notifications](/user-documentation/tab-types/notifications) feed |
 | `quit` | Exit the application, after confirmation |
+
+## `theme`
+
+`theme <name>` sets the application's color theme — the tab strip, transcript colors, panels, borders, pickers, dialogs, and editor chrome — and applies it immediately, with no restart. It persists to the `theme` key in [`.janissary/config.json`](/user-documentation/getting-started/startup#configuration), so it survives a restart. Names match case-insensitively. An unrecognized name shows an error listing the six built-in themes: `dark` (the default), `light`, `solarized-dark`, `solarized-light`, `nord`, and `dracula`. There are no custom themes.
+
+Bare `theme` opens a picker overlay listing every theme, each row showing a swatch of that theme's own colors next to its name, with the active theme marked. `↑`/`↓` move the selection, `Return` applies it, `Escape` closes, and a row can be clicked.
+
+`theme sync` sets the syntax-highlighting theme to the app theme's name, when a syntax theme with exactly that name exists — otherwise it reports that no matching syntax theme exists and leaves the syntax theme unchanged. The application theme and the syntax theme are independent settings; nothing keeps them in sync automatically, so `theme sync` is the only bridge between them. Today only `nord` exists in both name sets, so sync usually reports no match.
+
+Embedded web pages and ANSI-colored shell output are deliberately outside the theme.
 
 ## `syntax theme`
 
