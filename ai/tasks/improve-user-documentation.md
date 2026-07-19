@@ -3,13 +3,15 @@
 Your job: take the **top** candidate from `product/backlog/user-documentation.md` — the gap
 backlog maintained by [`find-user-documentation-gaps.md`](find-user-documentation-gaps.md) —
 verify its gap description against the spec and source, fix the gap in
-`documentation/user-documentation/` and `help.md`, prove the docs still build, and then remove
-the worked item from the backlog's candidates. Do exactly one item, then verify.
+`documentation/user-documentation/` and `help.md`, add visuals where the guidelines call for
+them (see Step 4b), prove the docs still build, and then remove the worked item from the
+backlog's candidates. Do exactly one item, then verify.
 
 This task edits **documentation files only**. You will never touch application source code,
-specs, or tests. The one non-markdown file you may edit is the docs sidebar in
-`documentation/.vitepress/config.mts`, and only when you add a new page (see Step 4). There is
-no test suite to run for this task.
+specs, or tests. The only non-markdown files you may edit are the docs sidebar (and, if a new
+sprite facing is needed, the `FACINGS` array) in `documentation/.vitepress/config.mts`, and the
+screenshot manifest `scripts/docs-screenshots/manifest.mjs` when a page needs a new or updated
+screenshot (see Step 4b). There is no test suite to run for this task.
 
 **No AI attribution — anywhere.** Never credit an AI agent as an author or contributor. No
 `Co-Authored-By:` trailers naming Claude or any other AI, no "Generated with Claude Code" lines or
@@ -32,10 +34,18 @@ Only these, ever:
   that matches its topic)
 - `help.md` (the in-app quick-reference: a `Commands` table and a `Key Bindings` table — keep
   entries there terse, one line each)
-- `documentation/.vitepress/config.mts` (**only** the `sidebar` entries, and **only** to register
-  a new page you created — the build won't fail on an unregistered page, it just becomes
-  unreachable in the site nav, so this registration is part of adding a page, not optional)
+- `documentation/.vitepress/config.mts` (**only** the `sidebar` entries to register a new page
+  you created — the build won't fail on an unregistered page, it just becomes unreachable in the
+  site nav, so this registration is part of adding a page, not optional — and **only** the
+  `FACINGS` array when a sprite you're placing needs a facing not yet listed there)
+- `scripts/docs-screenshots/manifest.mjs` (**only** to add or update the entry for a screenshot
+  your page references — see Step 4b)
+- `documentation/public/screenshots/*.png` (generated output of `./scripts/run.mjs
+  docs-screenshots` — commit the PNGs the capture produces; never hand-edit them)
 - `product/backlog/user-documentation.md` (only to remove the item you completed — see Step 6)
+
+Never commit anything under `documentation/public/agents/` — it is gitignored build output; the
+sprite sources live in `agent-images/` and are copied at build time.
 
 Never edit `product/specs/`, `src/`, `web/src/`, `ai/`, or any other config file.
 
@@ -198,8 +208,60 @@ and [`human-writing-guidelines.md`](../guidelines/human-writing-guidelines.md) i
       comprehensive, nuanced, pivotal), no formulaic three-point structure.
 - [ ] If a concept is fully explained on another page, link to it instead of repeating it.
 
-Do not touch anything outside `documentation/user-documentation/`, `help.md`, and (for a new
-page only) the sidebar in `documentation/.vitepress/config.mts`.
+Do not touch anything outside the files listed in "Files you may touch".
+
+---
+
+## Step 4b — Add visuals
+
+Every page you created or substantially reworked gets a visuals pass. Two kinds of visuals
+exist, with different rules and different guidelines — read both before placing anything:
+
+### Agent character sprites — [`documentation.md`](../guidelines/documentation.md)
+
+Decorative pixel-art characters floated into the prose. Apply that guideline's rules exactly;
+the ones violated most often:
+
+- Count by page length: 1 character under ~30 lines, 2 for ~30–50, 3 over ~50 — never more
+  than 3.
+- Only the five named characters (malik, yusuf, fariz, hakim, tahir); never the archer or
+  idris. Only the `south`, `south-east`, and `south-west` facings.
+- Place a sprite only beside flowing prose or a heading — never adjacent to code blocks,
+  screenshots, tables, lists, or blockquotes. The tag sits on its own line with blank lines
+  around it: `<img class="agent-float" src="/agents/<name>-<facing>.png" alt="" />`.
+- Alternate sides on multi-sprite pages (`agent-float` floats right, `agent-float left` left),
+  and vary the character from the sidebar-adjacent pages.
+
+When you only made a small edit to an existing page, check the page still satisfies the count
+and placement rules after your change (your added text can shift a sprite against a table, or
+push the page into a higher length bracket); fix placement if it broke, but don't churn
+sprites that already comply.
+
+### Screenshots — "Visuals: use them with intent" in [`user-documentation.md`](../guidelines/user-documentation.md)
+
+A screenshot earns its place only when it shows something genuinely visual (a layout, a
+picker, a badge state) — never as decoration, and never in place of a copyable command. Most
+small doc fixes need none; add one only when the page explains UI a reader has to recognize.
+
+If the page does need one:
+
+1. Add an entry to `scripts/docs-screenshots/manifest.mjs`. The entry `name` is the output
+   filename; model the `setup`/`actions`/`target` on the existing entries, which drive the real
+   app against fixture data.
+2. Capture it: `./scripts/run.mjs docs-screenshots <name>` (add the name of any existing shot
+   whose page you also edited and whose UI may have moved). If the run reports a missing web
+   bundle or missing Playwright Chromium, or the shot is skipped for a missing binary, **do not
+   try to install or build anything** — ship the page without the screenshot, drop the manifest
+   entry, and note it in your Step 7 report.
+3. Reference it as `![<alt text>](/screenshots/<name>.png)`, placed immediately after the text
+   it illustrates. The alt text must convey what the image shows a sighted reader (see the
+   existing pages for the style), never a filename or "screenshot of the app".
+4. Commit the captured PNG from `documentation/public/screenshots/` along with the manifest
+   entry — the pair ships together or not at all.
+
+Never edit anything under `scripts/docs-screenshots/` other than `manifest.mjs`; if a shot
+needs capture-code changes (a new `target` attribute, a new fixture), that is blocked work —
+ship without the screenshot and note it in the report.
 
 ---
 
@@ -213,15 +275,19 @@ npm run docs:build 2>&1
    edited (typo, bad link, bad frontmatter), fix it and rerun. If you can't get it clean quickly,
    revert your changes (`git checkout -- <files you touched>`, and `rm` any new page you created)
    and report what blocked you.
-2. Run `git status` and confirm every changed file is under `documentation/user-documentation/`,
-   is `help.md`, or (new page only) is `documentation/.vitepress/config.mts` — nothing else
-   should appear yet (the backlog edit comes in Step 6). If anything else changed, revert it
-   before moving on.
+2. Run `git status` and confirm every changed file is one the "Files you may touch" list allows
+   — nothing else should appear yet (the backlog edit comes in Step 6). If anything else
+   changed, revert it before moving on. In particular, nothing under
+   `documentation/public/agents/` may be staged.
 3. If you created a new page, confirm its sidebar entry: the `link` value must match the new
    file's path under `documentation/` without the `.md` extension, or the page builds fine but
    never appears in the nav. A dead sidebar link fails the build (caught in point 1); a missing
    sidebar entry fails silently — this manual check is the only thing that catches it.
-4. Re-read the page(s) you changed once, straight through, as if you'd never seen them. Confirm
+4. Check every image on the page(s) you touched: each `/screenshots/<name>.png` reference has a
+   matching committed file in `documentation/public/screenshots/`, each sprite `src` uses one of
+   the five allowed characters and three allowed facings, and the Step 4b count/placement rules
+   hold. A missing image does **not** fail the docs build — this manual check is what catches it.
+5. Re-read the page(s) you changed once, straight through, as if you'd never seen them. Confirm
    the first sentence states the goal, there's no leftover implementation detail, and every
    command, flag, and key chord on the page is one you verified in Step 3 — if you spot one you
    never confirmed, go back and confirm it now rather than shipping it.
@@ -255,6 +321,7 @@ Backlog item:     <area-id> (<score>/10)
 Source material:  <spec file(s) you read>
 Docs touched:     <path(s) of the doc pages / help.md rows / sidebar entries you changed or created>
 Gap closed:       <one or two sentences — what was missing or wrong, and what you did about it>
+Visuals:          <sprites placed / screenshots added or recaptured / none needed / skipped because <reason>>
 Dropped facts:    none / <facts from the backlog entry you could not confirm in the app and left out>
 Backlog:          <area-id> removed from candidates<, plus any already-resolved removals>
 Docs build:       clean / <errors, if any>
