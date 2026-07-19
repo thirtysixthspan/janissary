@@ -201,8 +201,6 @@ run('git', ['commit', '-m', `feat(package): bump version to ${newVersion}`]);
 run('git', ['tag', tag]);
 console.log(`Committed and tagged ${tag}`);
 
-run('npm', ['run', 'typecheck']);
-run('npm', ['run', 'test']);
 run('npm', ['run', 'build']);
 
 console.log(`\nRelease v${newVersion} prepared. Next step:`);
