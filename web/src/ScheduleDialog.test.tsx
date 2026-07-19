@@ -120,4 +120,49 @@ describe('ScheduleDialog', () => {
     const second = renderDialog();
     expect(document.activeElement).toBe(second.getByText('Schedule'));
   });
+
+  it('Schedule is enabled for the `on` type once a date is entered', () => {
+    const { container, getByText, getByLabelText } = renderDialog();
+    const button = getByText('Schedule') as HTMLButtonElement;
+    fireEvent.change(getByLabelText('Name'), { target: { value: 'fetch' } });
+    fireEvent.change(getByLabelText('Command'), { target: { value: 'echo hi' } });
+    fireEvent.change(getByLabelText(/Schedule type/), { target: { value: 'on' } });
+    expect(button.disabled).toBe(true);
+    fireEvent.change(container.querySelector('input[placeholder="aug 12"]')!, { target: { value: 'aug 12' } });
+    expect(button.disabled).toBe(false);
+  });
+
+  it('Schedule is enabled for the `every` type once an interval is entered', () => {
+    const { container, getByText, getByLabelText } = renderDialog();
+    const button = getByText('Schedule') as HTMLButtonElement;
+    fireEvent.change(getByLabelText('Name'), { target: { value: 'fetch' } });
+    fireEvent.change(getByLabelText('Command'), { target: { value: 'echo hi' } });
+    fireEvent.change(getByLabelText(/Schedule type/), { target: { value: 'every' } });
+    expect(button.disabled).toBe(true);
+    fireEvent.change(container.querySelector('input[placeholder="5m"]')!, { target: { value: '5m' } });
+    expect(button.disabled).toBe(false);
+  });
+
+  it('Schedule is enabled for the `everyDay` type once a time is entered', () => {
+    const { getByText, getByLabelText } = renderDialog();
+    const button = getByText('Schedule') as HTMLButtonElement;
+    fireEvent.change(getByLabelText('Name'), { target: { value: 'fetch' } });
+    fireEvent.change(getByLabelText('Command'), { target: { value: 'echo hi' } });
+    fireEvent.change(getByLabelText(/Schedule type/), { target: { value: 'everyDay' } });
+    expect(button.disabled).toBe(true);
+    fireEvent.change(getByLabelText(/Time/), { target: { value: '9am' } });
+    expect(button.disabled).toBe(false);
+  });
+
+  it('Schedule is enabled for the `everyWeekday` type once a time is entered, and a weekday can be chosen', () => {
+    const { getByText, getByLabelText } = renderDialog();
+    const button = getByText('Schedule') as HTMLButtonElement;
+    fireEvent.change(getByLabelText('Name'), { target: { value: 'fetch' } });
+    fireEvent.change(getByLabelText('Command'), { target: { value: 'echo hi' } });
+    fireEvent.change(getByLabelText(/Schedule type/), { target: { value: 'everyWeekday' } });
+    fireEvent.change(getByLabelText(/Weekday/), { target: { value: 'friday' } });
+    expect(button.disabled).toBe(true);
+    fireEvent.change(getByLabelText(/Time/), { target: { value: '9am' } });
+    expect(button.disabled).toBe(false);
+  });
 });
