@@ -1,7 +1,8 @@
 import { bashRecognizer } from './bash.js';
 import { dbRecognizer as databaseRecognizer } from './db.js';
 import { acpRecognizer } from './acp.js';
-import type { CommandRecognizer, CommandRoute, RecognizerContext, RouteChoice } from './types.js';
+import type { CommandRecognizer, CommandRoute, RecognizerContext } from './types.js';
+export { routeChoices, toPrefixedCommand } from './route-choices.js';
 
 export const recognizers: CommandRecognizer[] = [bashRecognizer, databaseRecognizer, acpRecognizer];
 
@@ -36,29 +37,4 @@ export function analyzeCommand(command: string, context: RecognizerContext): Ana
 
   if (isConfident) return { kind: 'route', route: top.route, reliability: top.reliability };
   return { kind: 'ambiguous', candidates: matches };
-}
-
-// The routes a user may pick from in the chooser. Always offers shell and acp; offers a db
-// choice per open connection (the query needs a concrete database to target).
-export function routeChoices(openDbs: string[]): RouteChoice[] {
-  const choices: RouteChoice[] = [{ label: 'shell', route: 'shell' }];
-  for (const database of openDbs) choices.push({ label: `db query → ${database}`, route: 'db', dbName: database });
-  choices.push({ label: 'acp (agent prompt)', route: 'acp' });
-  return choices;
-}
-
-// Rewrite a bare command into the explicit, prefixed form for `choice`'s route, so it can be
-// dispatched through the normal command pipeline.
-export function toPrefixedCommand(command: string, choice: RouteChoice): string {
-  switch (choice.route) {
-    case 'shell': {
-      return `shell ${command}`;
-    }
-    case 'acp': {
-      return `acp ${command}`;
-    }
-    case 'db': {
-      return `db sqlite query ${choice.dbName} ${command}`;
-    }
-  }
 }
