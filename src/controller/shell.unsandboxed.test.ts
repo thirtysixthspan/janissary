@@ -2,8 +2,8 @@ import { describe, it, expect, vi } from 'vitest';
 import { mkdtempSync, realpathSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { Controller } from './controller.js';
-import { initAgentStateDirectory, saveAgentState } from './agent/state.js';
+import { Controller } from '../controller.js';
+import { initAgentStateDirectory, saveAgentState } from '../agent/state.js';
 
 // These tests spawn a real persistent shell (ShellManager.getShell → child_process.spawn) and
 // then tear it down via Controller.shutdown → ShellManager.closeAll, which calls the real

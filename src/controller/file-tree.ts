@@ -1,7 +1,7 @@
 // Controller-facing wrappers for file tree tab RPCs: resolve the tab index to its label, then
 // delegate to `FileTreeManager`. Extracted from `controller.ts` to keep it under the file-size
 // limit — see `ai/guidelines/code-guidelines.md`.
-import type { Managers } from './managers.js';
+import type { Managers } from '../managers.js';
 
 export function fileTreeToggle(managers: Managers, index: number, path: string): void {
   const label = managers.tab.tabs[index]?.label;
