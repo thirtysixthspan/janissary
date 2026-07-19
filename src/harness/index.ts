@@ -50,6 +50,31 @@ function splitWithClause(rest: string): { left: string; prompt?: string } | { er
   return { left: rest.slice(0, withMatch.index).trim(), prompt };
 }
 
+// Parse the option flags following the harness name: -w/--workspace, --offline, -y/--yes,
+// --model <name>, --effort <level>, and a trailing `as <label>`. Split out of
+// `parseHarnessCommand` so that function's own branching stays under the complexity limit.
+function parseHarnessFlags(
+  tokens: string[],
+  name: string,
+): { workspace: boolean; offline: boolean; autoApprove: boolean; model?: string; effort?: string; label?: string } | { error: string } {
+  const workspace = tokens.some((t) => t === '-w' || t === '--workspace');
+  const offline = tokens.some((t) => t.toLowerCase() === '--offline');
+  const autoApprove = tokens.some((t) => t === '-y' || t === '--yes');
+  // Claude-only comes first: adding -w would not make `harness opencode -y` valid, so pointing at
+  // -w would misdirect — the harness choice is the real blocker.
+  if (autoApprove && name !== 'claude') return { error: '-y/--yes is only supported for the claude harness.' };
+  if (autoApprove && !workspace) return { error: '-y/--yes requires -w/--workspace: auto-approval is only allowed in a sandboxed workspace.' };
+  const model = findFlagValue(tokens, '--model');
+  if (model !== undefined && typeof model !== 'string') return model;
+  const effort = findFlagValue(tokens, '--effort');
+  if (effort !== undefined && typeof effort !== 'string') return effort;
+  const asIndex = tokens.findIndex((t) => t.toLowerCase() === 'as');
+  if (asIndex === -1) return { workspace, offline, autoApprove, model, effort };
+  const label = tokens[asIndex + 1];
+  if (!label) return { error: `Usage: harness <${HARNESS_NAMES.join('|')}> as <label>.` };
+  return { workspace, offline, autoApprove, model, effort, label };
+}
+
 export function parseHarnessCommand(input: string): HarnessParsed {
   const rest = input.replace(/^harness\b\s*/i, '').trim();
   if (!rest) return { error: `Usage: harness <${HARNESS_NAMES.join('|')}> [as <label>] [-w] [-y].` };
@@ -66,23 +91,9 @@ export function parseHarnessCommand(input: string): HarnessParsed {
   if (HARNESS_COMMANDS[name] === undefined) {
     return { error: `Unknown harness "${name}". Choose from: ${HARNESS_NAMES.join(', ')}.` };
   }
-  const rest_ = tokens.slice(1);
-  const workspace = rest_.some((t) => t === '-w' || t === '--workspace');
-  const offline = rest_.some((t) => t.toLowerCase() === '--offline');
-  const autoApprove = rest_.some((t) => t === '-y' || t === '--yes');
-  // Claude-only comes first: adding -w would not make `harness opencode -y` valid, so pointing at
-  // -w would misdirect — the harness choice is the real blocker.
-  if (autoApprove && name !== 'claude') return { error: '-y/--yes is only supported for the claude harness.' };
-  if (autoApprove && !workspace) return { error: '-y/--yes requires -w/--workspace: auto-approval is only allowed in a sandboxed workspace.' };
-  const model = findFlagValue(rest_, '--model');
-  if (model !== undefined && typeof model !== 'string') return model;
-  const effort = findFlagValue(rest_, '--effort');
-  if (effort !== undefined && typeof effort !== 'string') return effort;
-  const asIndex = rest_.findIndex((t) => t.toLowerCase() === 'as');
-  if (asIndex === -1) return { name, workspace, offline, autoApprove, model, effort, prompt };
-  const label = rest_[asIndex + 1];
-  if (!label) return { error: `Usage: harness <${HARNESS_NAMES.join('|')}> as <label>.` };
-  return { name, workspace, offline, autoApprove, model, effort, label, prompt };
+  const flags = parseHarnessFlags(tokens.slice(1), name);
+  if ('error' in flags) return flags;
+  return { name, ...flags, prompt };
 }
 
 // Single-quote a value for embedding in a `shell -lc '<command>'` string, escaping any embedded
