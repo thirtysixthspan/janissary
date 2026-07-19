@@ -6,8 +6,6 @@ Functional areas where user documentation lags application behavior, scored 1–
 
 ## candidates
 
-* harness-recording (3/10) — Harness session recording is well documented in the Recordings section of `documentation/user-documentation/advanced-agents/harness.md` (automatic recording, `.cast` files under `.janissary/recordings/`, naming, asciinema replay, cleared on fresh launch and kept on `--relaunch`, SSH excluded), with 2 of 8 facts missing, both minor. Missing: keystroke input is never recorded (output and resizes only — a privacy-relevant reassurance worth one sentence); the file is created lazily on first output, so a harness that dies instantly leaves no file. The ground truth is `product/specs/harness-recording.md`. Fix with one or two sentences in the existing Recordings section of `documentation/user-documentation/advanced-agents/harness.md`.
-
 * sandbox (3/10) — The workspace sandbox is well documented for users in `documentation/user-documentation/advanced-agents/workspacing.md` (what works inside, write/read/secret blocking, `--offline`, the `sandboxWorkspaces` toggle, macOS-only, the not-active notice), with 1 of 10 user-facing facts missing. Missing: credential-shaped environment variables (`AWS_*`, `GITHUB_TOKEN`, `NPM_TOKEN`, `SSH_AUTH_SOCK`, and similar) are scrubbed from sandboxed processes, so a tool that needs them fails inside the workspace even though reads of the corresponding files are also blocked — worth a sentence so users understand why such tools fail. The deeper Seatbelt mechanics in the spec are engineering detail that does not belong in user docs. The ground truth is `product/specs/sandbox.md` and `src/sandbox.ts`. Fix with a sentence in the isolation list in `documentation/user-documentation/advanced-agents/workspacing.md`.
 
 ## unverified
@@ -17,6 +15,8 @@ Functional areas where user documentation lags application behavior, scored 1–
 * tabs — flagged by git log (metadata row with launch-agent, file-navigator, connections, and schedule buttons) against `documentation/user-documentation/getting-started/tabs.md`; not yet evaluated (over this run's limit)
 
 ## resolved
+
+* harness-recording — documented in `documentation/user-documentation/advanced-agents/harness.md` (Recordings section now notes that keystroke input is never recorded, only output, and that the file is created lazily on first output so a harness that exits immediately leaves none) (removed 2026-07-19)
 
 * transcript — documented in `documentation/user-documentation/getting-started/tabs.md` (new Reading the transcript section covering clickable `file:line` links, double-click re-run of a prompt line, ANSI-colored shell output with a screenshot, and the mouse wheel/scrollbar behavior; also noted that a single click, not just `Ctrl+T`, expands the collapsed tool-steps summary line) (removed 2026-07-19)
 

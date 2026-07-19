@@ -99,7 +99,9 @@ Other tabs can drive a harness: `send <tab> <text>` types a line into it, and [s
 
 ## Recordings
 
-Every harness session is recorded automatically — there's no command to start it. The full session, with its timing and colors, is written to a `.cast` file under `.janissary/recordings/` in your project, named `<label>-<timestamp>.cast`. Because the whole stream is saved, you can review a session even after its tab has closed and its scrollback is gone.
+Every harness session is recorded automatically — there's no command to start it. The full session, with its timing and colors, is written to a `.cast` file under `.janissary/recordings/` in your project, named `<label>-<timestamp>.cast`. Because the whole stream is saved, you can review a session even after its tab has closed and its scrollback is gone. Only the harness's output is recorded. Nothing you type is ever written to the file.
+
+The file is created only once the harness produces its first output, so a harness that exits immediately (for example, a binary that isn't found) leaves no recording behind.
 
 Replay a recording with [asciinema](https://asciinema.org):
 
