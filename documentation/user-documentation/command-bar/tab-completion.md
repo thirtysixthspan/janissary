@@ -12,7 +12,7 @@ What gets completed depends on where in the command you are:
 |---|---|
 | The recipient of `msg` | Active agent names |
 | The recipient of `broadcast` | Active agent names, plus `all`; completes each segment of a comma-separated list (`ahmed,bil` → `ahmed,bilal`) |
-| The target of `connection close` | Open connection strings (`sqlite:my-db`, `shell:bash`, `acp:opencode`, `browser:w1`) |
+| The target of [`connection close`](/user-documentation/command-bar/connections) | Open connection strings (`sqlite:my-db`, `shell:bash`, `acp:opencode`, `browser:w1`, `ssh:my-host`) |
 | After `browser` | Browser subcommands; for those that take a window id (`browser use`, `browser window close`), the current tab's open window ids |
 | Anywhere else | Filesystem paths, relative to the tab's working directory |
 

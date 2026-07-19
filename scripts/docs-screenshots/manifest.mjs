@@ -47,6 +47,11 @@ export default [
     clipHeight: 400,
   },
   {
+    name: 'connection-window',
+    setup: ['shell ls -la'],
+    target: 'status-panels',
+  },
+  {
     name: 'history-picker',
     setup: ['shell ls -la', 'shell git status', 'state'],
     actions: [{ press: 'Control+r' }],
