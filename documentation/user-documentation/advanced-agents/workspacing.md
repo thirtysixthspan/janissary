@@ -16,6 +16,7 @@ Ask for one with `--workspace` (or `-w`) when creating an [agent](/user-document
 - Writing outside the workspace doesn't: no global installs, no editing files elsewhere on disk.
 - Reading other projects, sibling workspaces, and your dotfiles is blocked (a handful of harmless ones, like `.gitconfig`, stay readable).
 - Credentials and secrets — `.ssh`, `.aws`, cloud CLI credentials, browser profiles, shell history — are invisible, not just unreadable.
+- Credential-shaped environment variables (`AWS_*`, `GITHUB_TOKEN`, `NPM_TOKEN`, `SSH_AUTH_SOCK`, and similar) are stripped from the process too, so a tool that needs one fails inside the workspace even though the file it would otherwise read is also blocked.
 - SSH doesn't work from inside, which is why pushing to GitHub needs a token — see [Workspaced agents](/user-documentation/advanced-agents/workspaced-agent).
 
 Add `--offline` to deny network access too.
