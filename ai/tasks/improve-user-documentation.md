@@ -9,10 +9,13 @@ documents visible UI (see Step 4b) — prove the docs still build, and then remo
 item from the backlog's candidates. Do exactly one item, then verify.
 
 This task edits **documentation files only**. You will never touch application source code,
-specs, or tests. The only non-markdown files you may edit are the docs sidebar (and, if a new
-sprite facing is needed, the `FACINGS` array) in `documentation/.vitepress/config.mts`, and the
+specs, or tests, with one narrow exception: adding a `data-doc-shot` attribute to an existing
+JSX element in `web/src/` so a screenshot has something to crop to (see Step 4b) — nothing else
+in source ever changes. The only non-markdown files you may edit are the docs sidebar (and, if a
+new sprite facing is needed, the `FACINGS` array) in `documentation/.vitepress/config.mts`, the
 screenshot manifest `scripts/docs-screenshots/manifest.mjs` when a page needs a new or updated
-screenshot (see Step 4b). There is no test suite to run for this task.
+screenshot (see Step 4b), and that one-attribute `data-doc-shot` addition in `web/src/`. There is
+no test suite to run for this task.
 
 **No AI attribution — anywhere.** Never credit an AI agent as an author or contributor. No
 `Co-Authored-By:` trailers naming Claude or any other AI, no "Generated with Claude Code" lines or
@@ -43,12 +46,17 @@ Only these, ever:
   your page references — see Step 4b)
 - `documentation/public/screenshots/*.png` (generated output of `./scripts/run.mjs
   docs-screenshots` — commit the PNGs the capture produces; never hand-edit them)
+- `web/src/**/*.tsx` (**only** to add a single `data-doc-shot="<name>"` attribute to an existing
+  JSX element, so a new screenshot has something to crop to — see Step 4b. Never add, remove, or
+  restructure markup, never touch component logic, styles, or any other attribute)
 - `product/backlog/user-documentation.md` (only to remove the item you completed — see Step 6)
 
 Never commit anything under `documentation/public/agents/` — it is gitignored build output; the
 sprite sources live in `agent-images/` and are copied at build time.
 
-Never edit `product/specs/`, `src/`, `web/src/`, `ai/`, or any other config file.
+Never edit `product/specs/`, `src/`, `ai/`, or any other config file. In `web/src/`, the single
+`data-doc-shot` attribute addition above is the only change ever allowed — everything else in
+that tree is off limits.
 
 ## Blocked work — skip and take the next backlog candidate
 
@@ -56,7 +64,10 @@ Skip an item and move to the next candidate in the backlog, without asking, if:
 
 1. Fixing it would require changing application **source code** — the docs and the app disagree,
    and the app is right, or fixing it isn't a doc change. Document the app's actual behavior, note
-   the mismatch in your Step 7 report, and do **not** edit source.
+   the mismatch in your Step 7 report, and do **not** edit source. (This does not cover adding a
+   `data-doc-shot` attribute for a screenshot per Step 4b — that one narrow exception is allowed;
+   it is still blocked work if the element you'd need to tag doesn't exist yet and would require
+   adding markup, not just tagging something already there.)
 2. You re-verify the gap and it has already been closed — the spec and the existing doc/help text
    now agree. Don't make a cosmetic edit just to have something to show. Remove the entry from
    the backlog's `candidates` per Step 6 (note it as already resolved) and take the next one.
@@ -254,30 +265,45 @@ are deterministic — drives it with Playwright, and writes each shot to
 `scripts/docs-screenshots/manifest.mjs`, one entry per screenshot; the entry `name` is the
 output filename, so the doc page's image path stays stable across reruns.
 
-1. Add a manifest entry, modeled on the existing ones. The fields: `setup` (commands typed into
+1. Find the element to crop to: `grep -rn 'data-doc-shot' web/src/` and check whether one of the
+   existing tags already covers the UI you need. If it does, use that name as `target`.
+2. **No existing tag covers it?** Add one, instead of skipping the shot. Open the component file
+   for the element (the one already rendering the UI — you're tagging existing markup, never
+   building new markup to make a tag for), and add a single `data-doc-shot="<name>"` attribute to
+   its outermost JSX element, following the exact style of the attributes found in step 1 (see
+   e.g. `web/src/Sidebar.tsx:64` or `web/src/CommandInput.tsx:209`). Pick `<name>` to describe the
+   UI region (`kebab-case`, matching the existing naming). This is the **only** change you make in
+   that file — no other edit, no matter how small, in the same pass. After adding it, run
+   `./scripts/run.mjs check-diff` to confirm lint and typecheck stay clean.
+   - If the UI you need to shoot has no element to tag at all — it would require adding new
+     markup, not just tagging something already rendered — that is blocked work: ship without the
+     screenshot and note it in your Step 7 report.
+3. Add a manifest entry, modeled on the existing ones. The fields: `setup` (commands typed into
    the command bar, one at a time; `{{PAGE_URL}}` becomes the fixture web server's URL),
    `actions` (staged input after setup: `{ type }`, `{ press }` in Playwright key syntax,
-   `{ wait }` ms), `target` (an existing `data-doc-shot` attribute to crop to, or `page` for
-   the whole viewport), plus optional `settle`, `cropToChildren`, `clipHeight`, `stabilize`,
-   and `requiresBinary` — the comment block at the top of `manifest.mjs` documents each.
-2. Capture it: `./scripts/run.mjs docs-screenshots <name>` — and pass, in the same run, the
+   `{ wait }` ms), `target` (the `data-doc-shot` attribute to crop to — the one you found or just
+   added — or `page` for the whole viewport), plus optional `settle`, `cropToChildren`,
+   `clipHeight`, `stabilize`, and `requiresBinary` — the comment block at the top of
+   `manifest.mjs` documents each.
+4. Capture it: `./scripts/run.mjs docs-screenshots <name>` — and pass, in the same run, the
    name of any existing shot whose page you also edited and whose UI may have moved, so those
    stay fresh too.
    - If it reports the web bundle missing, build it once with `npm run build:web` and re-run
-     the capture.
+     the capture (a new `data-doc-shot` attribute needs this rebuild to take effect).
    - If it reports Playwright Chromium missing (normal in a sandboxed workspace, where the
      browser download is blocked), or a shot is skipped for a missing `requiresBinary` binary,
-     **do not try to install anything** — ship the page without the screenshot, drop the
-     manifest entry, and note it in your Step 7 report.
-3. Reference it as `![<alt text>](/screenshots/<name>.png)`, placed immediately after the text
+     **do not try to install anything** — ship the page without the screenshot. If you added a
+     `data-doc-shot` attribute for this shot, keep the attribute (it's harmless, and the next run
+     can use it) but drop the manifest entry, and note it in your Step 7 report.
+5. Reference it as `![<alt text>](/screenshots/<name>.png)`, placed immediately after the text
    it illustrates. The alt text must convey what the image shows a sighted reader (see the
    existing pages for the style), never a filename or "screenshot of the app".
-4. Commit the captured PNG from `documentation/public/screenshots/` along with the manifest
+6. Commit the captured PNG from `documentation/public/screenshots/` along with the manifest
    entry — the pair ships together or not at all.
 
 Never edit anything under `scripts/docs-screenshots/` other than `manifest.mjs`; if a shot
-needs capture-code changes (a `data-doc-shot` target that doesn't exist yet, a new fixture),
-that is blocked work — ship without the screenshot and note it in the report.
+needs capture-code changes beyond a `data-doc-shot` attribute (new fixture data, new Playwright
+logic), that is blocked work — ship without the screenshot and note it in the report.
 
 ---
 
@@ -294,7 +320,9 @@ npm run docs:build 2>&1
 2. Run `git status` and confirm every changed file is one the "Files you may touch" list allows
    — nothing else should appear yet (the backlog edit comes in Step 6). If anything else
    changed, revert it before moving on. In particular, nothing under
-   `documentation/public/agents/` may be staged.
+   `documentation/public/agents/` may be staged. If a `web/src/` file changed, `git diff` it and
+   confirm the only change is the single `data-doc-shot` attribute you added — revert and drop
+   the screenshot if anything else crept in.
 3. If you created a new page, confirm its sidebar entry: the `link` value must match the new
    file's path under `documentation/` without the `.md` extension, or the page builds fine but
    never appears in the nav. A dead sidebar link fails the build (caught in point 1); a missing
@@ -338,6 +366,7 @@ Source material:  <spec file(s) you read>
 Docs touched:     <path(s) of the doc pages / help.md rows / sidebar entries you changed or created>
 Gap closed:       <one or two sentences — what was missing or wrong, and what you did about it>
 Visuals:          <sprites placed / screenshots added or recaptured / none needed / skipped because <reason>>
+DOM tagging:      none / added data-doc-shot="<name>" to <web/src file> for <screenshot name>
 Dropped facts:    none / <facts from the backlog entry you could not confirm in the app and left out>
 Backlog:          <area-id> removed from candidates<, plus any already-resolved removals>
 Docs build:       clean / <errors, if any>
