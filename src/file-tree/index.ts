@@ -1,10 +1,7 @@
 import { readdirSync } from 'node:fs';
 import path from 'node:path';
 import type { FileTreeRow } from '../types.js';
-import type { GitFileStatus } from '../git-status.js';
-
-// Aggregation priority when a directory row picks up the state of the highest-priority descendant.
-const PRIORITY: Record<GitFileStatus, number> = { conflict: 2, staged: 1, changed: 0 };
+export { markGitStatus } from './git-mark.js';
 
 // VS Code's `files.exclude` defaults. Other dotfiles are shown.
 const EXCLUDES = new Set(['.git', '.svn', '.hg', '.DS_Store', 'Thumbs.db']);
@@ -54,27 +51,6 @@ export function buildRows(root: string, expanded: Set<string>): FileTreeRow[] {
     rows.unshift({ path: '..', name: '..', depth: 0, dir: true });
   }
   return rows;
-}
-
-// Return `rows` with `gitStatus` set on every row git considers changed: a file row takes its own
-// `path`'s status from `statuses`; a directory row takes the highest-priority status (conflict >
-// staged > changed) found among the changed paths nested beneath it (a prefix check, `path` starts
-// with `${row.path}/`). Propagation is purely this flat-map prefix scan — no directory is re-read,
-// so a collapsed directory still colors when something deep inside it changed. Rows with no match
-// are returned as-is; an empty `statuses` map marks nothing.
-export function markGitStatus(rows: FileTreeRow[], statuses: Map<string, GitFileStatus>): FileTreeRow[] {
-  if (statuses.size === 0) return rows;
-  return rows.map((row) => {
-    if (!row.dir) {
-      const status = statuses.get(row.path);
-      return status ? { ...row, gitStatus: status } : row;
-    }
-    let best: GitFileStatus | undefined;
-    for (const [p, status] of statuses) {
-      if (p.startsWith(`${row.path}/`) && (!best || PRIORITY[status] > PRIORITY[best])) best = status;
-    }
-    return best ? { ...row, gitStatus: best } : row;
-  });
 }
 
 // The containing directory of a tree-relative path — the empty string for a root-level entry,
