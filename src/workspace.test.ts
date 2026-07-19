@@ -4,10 +4,18 @@ import path from 'node:path';
 import { execSync } from 'node:child_process';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { findRepoRoot, initWorkspaceDir, createWorkspace, removeWorkspace, clearWorkspaceDir, workspaceTempPath, getRemoteUrl, toHttpsUrl } from './workspace.js';
+import { findRepoRoot, initWorkspaceDir, provisionWorkspace, removeWorkspace, clearWorkspaceDir, workspaceTempPath, getRemoteUrl, toHttpsUrl } from './workspace.js';
 
 let tmpDir: string;
 let repoDir: string;
+
+// Test-only helper mirroring the old synchronous `createWorkspace(name, repoPath)`: resolves the
+// remote synchronously (as `WorkspaceManager.create` does) then awaits the async clone.
+async function createWorkspace(name: string, repoPath: string): Promise<string> {
+  const handle = provisionWorkspace(name, getRemoteUrl(repoPath));
+  await handle.ready;
+  return handle.dir;
+}
 
 beforeAll(() => {
   tmpDir = mkdtempSync(path.join(tmpdir(), 'workspace-test-'));
@@ -48,34 +56,41 @@ describe('findRepoRoot', () => {
 });
 
 describe('createWorkspace', () => {
-  it('creates an independent clone of the repo\'s origin remote', () => {
-    const ws = createWorkspace('test-agent', repoDir);
+  it('creates an independent clone of the repo\'s origin remote', async () => {
+    const ws = await createWorkspace('test-agent', repoDir);
     expect(existsSync(ws)).toBe(true);
     expect(existsSync(path.join(ws, '.git'))).toBe(true);
     expect(existsSync(path.join(ws, 'README.md'))).toBe(true);
     removeWorkspace(ws);
   });
 
-  it('also creates a sibling .tmp scratch dir', () => {
-    const ws = createWorkspace('test-agent-tmp', repoDir);
+  it('also creates a sibling .tmp scratch dir', async () => {
+    const ws = await createWorkspace('test-agent-tmp', repoDir);
     expect(existsSync(workspaceTempPath('test-agent-tmp'))).toBe(true);
     removeWorkspace(ws);
   });
 
-  it('sets a local credential helper on the clone', () => {
-    const ws = createWorkspace('test-agent-credhelper', repoDir);
+  it('sets a local credential helper on the clone', async () => {
+    const ws = await createWorkspace('test-agent-credhelper', repoDir);
     const helper = execSync('git config --local credential.helper', { cwd: ws, stdio: 'pipe' }).toString().trim();
     expect(helper).toBe('!gh auth git-credential');
     removeWorkspace(ws);
   });
 
-  it('clones from the origin\'s original url, then rewrites the workspace\'s own origin to https', () => {
+  it('clones from the origin\'s original url, then rewrites the workspace\'s own origin to https', async () => {
     // The clone itself must use whatever transport already works on the host (unsandboxed) — only
     // the resulting workspace's origin is switched to https, for later in-sandbox git operations.
-    const ws = createWorkspace('test-agent-origin-rewrite', repoDir);
+    const ws = await createWorkspace('test-agent-origin-rewrite', repoDir);
     const wsOrigin = execSync('git remote get-url origin', { cwd: ws, stdio: 'pipe' }).toString().trim();
     expect(wsOrigin).toBe(toHttpsUrl(getRemoteUrl(repoDir)));
     removeWorkspace(ws);
+  });
+
+  it('can be cancelled mid-clone, leaving no partial target directory', async () => {
+    const handle = provisionWorkspace('test-agent-cancel', getRemoteUrl(repoDir));
+    handle.cancel();
+    await expect(handle.ready).rejects.toThrow();
+    expect(existsSync(handle.dir)).toBe(false);
   });
 });
 
@@ -107,8 +122,8 @@ describe('getRemoteUrl', () => {
 });
 
 describe('removeWorkspace', () => {
-  it('removes the sibling .tmp scratch dir along with the clone', () => {
-    const ws = createWorkspace('test-agent-cleanup', repoDir);
+  it('removes the sibling .tmp scratch dir along with the clone', async () => {
+    const ws = await createWorkspace('test-agent-cleanup', repoDir);
     const tmp = workspaceTempPath('test-agent-cleanup');
     expect(existsSync(tmp)).toBe(true);
     removeWorkspace(ws);
@@ -118,9 +133,9 @@ describe('removeWorkspace', () => {
 });
 
 describe('clearWorkspaceDir', () => {
-  it('removes all workspaces', () => {
-    createWorkspace('agent-a', repoDir);
-    createWorkspace('agent-b', repoDir);
+  it('removes all workspaces', async () => {
+    await createWorkspace('agent-a', repoDir);
+    await createWorkspace('agent-b', repoDir);
     clearWorkspaceDir();
     expect(existsSync(path.join(tmpDir, '.janissary', 'workspace', 'agent-a'))).toBe(false);
     expect(existsSync(path.join(tmpDir, '.janissary', 'workspace', 'agent-b'))).toBe(false);

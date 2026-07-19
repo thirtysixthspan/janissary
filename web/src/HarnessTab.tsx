@@ -57,6 +57,9 @@ export const HarnessTab = forwardRef<HarnessTabHandle, Properties>(function Harn
           exited{harness.exitCode === undefined ? '' : ` (${harness.exitCode})`}
         </div>
       )}
+      {harness.provisionError !== undefined && (
+        <div className="harness-exited">{harness.provisionError}</div>
+      )}
       <div className="harness-body" ref={hostReference} onClick={() => { /* focus handled by xterm */ }} />
     </div>
   );

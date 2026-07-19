@@ -61,8 +61,10 @@ export type BufferLine = {
 // An ssh tab (opened via `ssh <destination>`) reuses this same shape, recognized by
 // `name === 'ssh'`: `destination` carries the connection identity for the connections panel.
 export type HarnessView = {
-  name: string; program: string; ptyId: string; status: 'running' | 'exited'; exitCode?: number;
+  name: string; program: string; ptyId: string; status: 'running' | 'exited' | 'provisioning'; exitCode?: number;
   destination?: string; model?: string; effort?: string;
+  // Set only when a `-w` launch's workspace clone fails; the tab closes shortly after.
+  provisionError?: string;
 };
 
 export type ImageView = {

@@ -14,6 +14,8 @@ import { notify } from '../notifications.js';
 import { notificationsTab } from '../notifications-tab.js';
 import { sandboxNotice } from '../sandbox/index.js';
 import { oneShotRunEntry } from '../profile/harness-schedule.js';
+import { wireProvisioning, PROVISION_FAILURE_CLOSE_DELAY_MS } from '../workspace-provision-wire.js';
+import type { ProvisioningWorkspace } from '../workspace-manager.js';
 import type { Managers } from '../managers.js';
 
 // Owns harness command handling: launching a harness `<name>` as a PTY-backed tab (optionally in a
@@ -115,11 +117,11 @@ export class HarnessManager {
 
     const dir = this.parseDir(this.resolveCwd(workspace, label, this.managers.tab.cwdOf(creator.label) ?? process.cwd()));
     if (typeof dir === 'string') return dir;
-    const { cwd, workspaceDir } = dir;
+    const { cwd, workspaceDir, ready } = dir;
     const dotColor = distinctColor(this.managers.tab.tabs.map((t) => t.dotColor));
     const group = creator?.group ?? 1;
     const groupColor = creator?.groupColor ?? dotColor;
-    this.spawnTab(name, label, cwd, workspaceDir, offline, group, groupColor, dotColor, autoApprove, model, effort);
+    this.spawnTab(name, label, cwd, workspaceDir, offline, group, groupColor, dotColor, autoApprove, model, effort, ready);
     if (prompt) this.managers.schedule.set(label, [oneShotRunEntry('run-1', prompt)]);
     return undefined;
   }
@@ -133,20 +135,25 @@ export class HarnessManager {
     const unique = uniqueLabel(this.managers.tab.tabs, label);
     const dir = this.parseDir(this.resolveCwd(!!entry.workspace, unique, entry.cwd ?? process.cwd()));
     if (typeof dir === 'string') return dir;
-    const { cwd, workspaceDir } = dir;
+    const { cwd, workspaceDir, ready } = dir;
     const dotColor = distinctColor(this.managers.tab.tabs.map((t) => t.dotColor), entry.dotColor);
-    this.spawnTab(entry.harness, unique, cwd, workspaceDir, entry.offline ?? false, group, groupColor, dotColor, entry.autoApprove ?? false, entry.model, entry.effort);
+    this.spawnTab(entry.harness, unique, cwd, workspaceDir, entry.offline ?? false, group, groupColor, dotColor, entry.autoApprove ?? false, entry.model, entry.effort, ready);
     return undefined;
   }
 
-  // Shared core: create the harness tab, focus it, and spawn its PTY. `model`/`effort`, when
-  // given, are passed to the harness binary via `buildHarnessCommand`.
+  // Shared core: create the harness tab and focus it. With no `ready` (no workspace, or a
+  // workspace already provisioned by the caller), the PTY spawns immediately, exactly as before —
+  // `spawnPty` runs synchronously. With `ready` (a `-w` launch's clone still in flight), the tab
+  // is inserted immediately as an empty, `provisioning` placeholder with no PTY, and the PTY spawn
+  // is deferred until `ready` resolves (see `finishSpawn`/`failSpawn`), so the tab never blocks on
+  // the clone. `model`/`effort`, when given, are passed to the harness binary via
+  // `buildHarnessCommand`.
   private spawnTab(
     name: string, label: string, cwd: string, workspaceDir: string | undefined, offline: boolean,
     group: number, groupColor: string, dotColor: string, autoApprove: boolean, model?: string, effort?: string,
+    ready?: Promise<void>,
   ): void {
-    const program = HARNESS_COMMANDS[name];
-    const harness: HarnessView = { name, program, ptyId: '', status: 'running' };
+    const harness: HarnessView = { name, program: HARNESS_COMMANDS[name], ptyId: '', status: ready ? 'provisioning' : 'running' };
     if (model !== undefined) harness.model = model;
     if (effort !== undefined) harness.effort = effort;
     const tab = makeHarnessTab(label, dotColor, this.managers.tab.tabs.length + 1, group, groupColor, harness, workspaceDir);
@@ -156,6 +163,30 @@ export class HarnessManager {
     this.managers.tab.setCwd(label, cwd);
     this.managers.tab.addBusy(label);
     this.managers.tab.activeTab = this.managers.tab.findIndex(tab.label);
+
+    if (!ready) {
+      this.finishSpawn(name, label, cwd, workspaceDir, offline, autoApprove, model, effort);
+      return;
+    }
+    // Broadcast the placeholder now — its PTY isn't ready yet, but the tab itself is, and the
+    // whole point is that this must not wait on the clone.
+    messageBus.emit('state', { type: 'dirty' });
+    wireProvisioning(
+      label,
+      ready,
+      (l) => this.managers.tab.tabs.some((t) => t.label === l),
+      () => this.finishSpawn(name, label, cwd, workspaceDir, offline, autoApprove, model, effort),
+      (message) => this.failSpawn(label, message),
+    );
+  }
+
+  // Spawn the PTY and wire up its screen reader/recorder — the part of tab creation that actually
+  // depends on `cwd` existing on disk, so it can't run until a `-w` launch's clone has finished.
+  private finishSpawn(
+    name: string, label: string, cwd: string, workspaceDir: string | undefined, offline: boolean,
+    autoApprove: boolean, model?: string, effort?: string,
+  ): void {
+    const program = HARNESS_COMMANDS[name];
     const extraEnv: NodeJS.ProcessEnv | undefined = name === 'claude'
       ? { CLAUDE_CODE_TMPDIR: claudeTmpDir(cwd) }
       : undefined;
@@ -164,10 +195,26 @@ export class HarnessManager {
     this.screenReaders.set(id, new HarnessScreenReader(id, dims.cols, dims.rows, this.captureHandler(name, label, id, autoApprove)));
     this.recorders.set(id, new HarnessRecorder(id, label, program, dims.cols, dims.rows));
     const liveTab = this.managers.tab.tabs.find((t) => t.label === label);
-    if (liveTab?.harness) liveTab.harness.ptyId = id;
+    if (liveTab?.harness) {
+      liveTab.harness.ptyId = id;
+      liveTab.harness.status = 'running';
+    }
     const notice = workspaceDir ? sandboxNotice() : undefined;
     if (notice) this.managers.tab.append(label, { input: '', output: notice });
     messageBus.emit('state', { type: 'dirty' });
+  }
+
+  // A `-w` launch's workspace clone failed after the placeholder tab was already created: surface
+  // the error in place of the empty placeholder, then close the tab shortly after so nothing is
+  // left open in a broken state.
+  private failSpawn(label: string, message: string): void {
+    const tab = this.managers.tab.tabs.find((t) => t.label === label);
+    if (tab?.harness) tab.harness.provisionError = message;
+    messageBus.emit('state', { type: 'dirty' });
+    setTimeout(() => {
+      const index = this.managers.tab.findIndex(label);
+      if (index !== -1) this.managers.tab.closeTab(index);
+    }, PROVISION_FAILURE_CLOSE_DELAY_MS);
   }
 
   // Build the screen-reader callback that feeds each fresh capture to whichever consumers apply:
@@ -205,20 +252,28 @@ export class HarnessManager {
     return approver;
   }
 
-  // Parse `resolveCwd`'s result into a clean `{ cwd, workspaceDir }` or return the error string.
-  private parseDir(resolved: string | { dir: string } | { error: string }): string | { cwd: string; workspaceDir: string | undefined } {
+  // Parse `resolveCwd`'s result into a clean `{ cwd, workspaceDir, ready }` or return the error
+  // string. `ready` is only set for a workspace clone still in flight — its `cwd` is already the
+  // clone's target directory (known synchronously, see `WorkspaceManager.create`), so the tab and
+  // its cwd can be set up immediately without waiting for `ready` to resolve.
+  private parseDir(
+    resolved: string | ProvisioningWorkspace | { error: string },
+  ): string | { cwd: string; workspaceDir: string | undefined; ready: Promise<void> | undefined } {
     if (typeof resolved !== 'string' && 'error' in resolved) return resolved.error;
     return {
       cwd: typeof resolved === 'string' ? resolved : resolved.dir,
       workspaceDir: typeof resolved === 'string' ? undefined : resolved.dir,
+      ready: typeof resolved === 'string' ? undefined : resolved.ready,
     };
   }
 
   // The harness's starting directory: a new workspace clone (with `workspace`) or `fallbackCwd`.
-  // Returns the directory, or an `{ error }` to surface when there's no repo or the clone fails.
-  // A workspace clone is returned as `{ dir }` (not a bare string) so the caller can tell it apart
-  // from the fallback cwd and record it on the tab for cleanup on close.
-  private resolveCwd(workspace: boolean, label: string, fallbackCwd: string): string | { dir: string } | { error: string } {
+  // Returns the directory, or an `{ error }` to surface when there's no repo or the remote can't
+  // be read (both fail synchronously, before anything is cloned — see `WorkspaceManager.create`).
+  // A workspace clone is returned as `{ dir, ready }` (not a bare string) so the caller can tell it
+  // apart from the fallback cwd, record it on the tab for cleanup on close, and defer the PTY spawn
+  // until `ready` resolves.
+  private resolveCwd(workspace: boolean, label: string, fallbackCwd: string): string | ProvisioningWorkspace | { error: string } {
     if (!workspace) return fallbackCwd;
     return this.managers.workspace.create(label);
   }

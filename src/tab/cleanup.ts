@@ -16,6 +16,10 @@ export function closeTabResources(
   // tracked until `remove` runs, so a shutdown before this fires still cleans it up via removeAll().
   if (tab.workspaceDir) {
     const workspaceDir = tab.workspaceDir;
+    // If the clone is still being provisioned (the tab was closed before it finished), cancel it
+    // immediately — a no-op once nothing is pending for this label — so the tab closes right away
+    // instead of leaving an orphaned `git clone` running for a tab that no longer exists.
+    managers.workspace.cancel(tab.label);
     setTimeout(() => managers.workspace.remove(workspaceDir), 0);
   }
   managers.shell.close(tab.label);

@@ -199,6 +199,25 @@ describe('ScheduleManager one-shot prompt injection into a harness', () => {
     mgr.stop();
   });
 
+  it('holds the prompt while a `-w` launch is still provisioning, delivering once running', () => {
+    const { managers, tab, input } = runningHarness({
+      harness: { name: 'claude', program: 'claude', ptyId: '', status: 'provisioning' },
+    });
+    const mgr = new ScheduleManager(managers);
+    mgr.set('janus', [promptEntry('list files')]);
+    mgr.start();
+
+    vi.advanceTimersByTime(1000);
+    expect(input).not.toHaveBeenCalled();
+    expect(mgr.get('janus')).toHaveLength(1);
+
+    tab.harness!.ptyId = 'p1';
+    tab.harness!.status = 'running';
+    vi.advanceTimersByTime(1000);
+    expect(input).toHaveBeenCalledWith('p1', 'list files');
+    mgr.stop();
+  });
+
   it('delivers the prompt verbatim with no scheduled marker appended', () => {
     const { managers, input } = runningHarness();
     const mgr = new ScheduleManager(managers);
