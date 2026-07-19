@@ -7,6 +7,9 @@ import {
   deleteFileTreeItem,
   undoFileTreeItem,
   redoFileTreeItem,
+  openFileNavigatorFor,
+  fileTreeSearch,
+  revealFileTreeItem,
 } from './file-tree.js';
 import type { Managers } from '../managers.js';
 
@@ -84,5 +87,38 @@ describe('controller-file-tree', () => {
     const managers = makeManagers(undefined, { redo: () => ({ conflict: { fromRelPath: 'a', toRelPath: 'b' } }) });
     const result = redoFileTreeItem(managers, 0);
     expect(result).toEqual({});
+  });
+
+  it('openFileNavigatorFor delegates to FileTreeManager.openOrRetarget with the label', () => {
+    const calls: unknown[] = [];
+    const managers = makeManagers('agent', { openOrRetarget: (...args: unknown[]) => { calls.push(args); } });
+    openFileNavigatorFor(managers, 'agent');
+    expect(calls).toEqual([['agent']]);
+  });
+
+  it('fileTreeSearch resolves the manager result when the tab exists', async () => {
+    const managers = makeManagers('agent', { search: async () => ['a.ts', 'b.ts'] });
+    const result = await fileTreeSearch(managers, 0);
+    expect(result).toEqual(['a.ts', 'b.ts']);
+  });
+
+  it('fileTreeSearch resolves an empty array when the tab index has no label', async () => {
+    const managers = makeManagers(undefined, { search: async () => ['a.ts'] });
+    const result = await fileTreeSearch(managers, 0);
+    expect(result).toEqual([]);
+  });
+
+  it('revealFileTreeItem delegates to FileTreeManager.reveal when the tab exists', () => {
+    const calls: unknown[] = [];
+    const managers = makeManagers('agent', { reveal: (...args: unknown[]) => { calls.push(args); } });
+    revealFileTreeItem(managers, 0, 'src/foo.ts');
+    expect(calls).toEqual([['agent', 'src/foo.ts']]);
+  });
+
+  it('revealFileTreeItem is a no-op when the tab index has no label', () => {
+    const calls: unknown[] = [];
+    const managers = makeManagers(undefined, { reveal: (...args: unknown[]) => { calls.push(args); } });
+    revealFileTreeItem(managers, 0, 'src/foo.ts');
+    expect(calls).toHaveLength(0);
   });
 });

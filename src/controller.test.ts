@@ -1678,4 +1678,66 @@ describe('Controller direct RPC delegators', () => {
     const res = c.complete('monitor foo ', 'monitor foo '.length);
     expect(res.matches).toContain('group:7');
   });
+
+  it('closeHarnessLaunch RPC closes the open harness launch dialog', () => {
+    const { c } = makeController();
+    c.dispatch('harness');
+    expect(c.harnessLaunchView()).not.toBeNull();
+    c.closeHarnessLaunch();
+    expect(c.harnessLaunchView()).toBeNull();
+  });
+
+  it('closeScheduleLaunch RPC closes the open schedule launch dialog', () => {
+    const { c } = makeController();
+    c.dispatch('schedule');
+    expect(c.scheduleLaunchView()).not.toBeNull();
+    c.closeScheduleLaunch();
+    expect(c.scheduleLaunchView()).toBeNull();
+  });
+
+  it('cancelSchedule RPC removes a named entry from the target tab', () => {
+    const { c } = makeController();
+    c.dispatch('schedule fetch every 5m echo hi');
+    expect(c.view().find((t) => t.label === 'janus')?.schedule?.map((s) => s.id)).toContain('fetch');
+    c.cancelSchedule('janus', 'fetch');
+    expect(c.view().find((t) => t.label === 'janus')?.schedule?.map((s) => s.id)).not.toContain('fetch');
+  });
+
+  it('syncEditorBuffer/syncPageSnapshot RPCs no-op for an unresolvable url', () => {
+    const { c } = makeController();
+    expect(() => c.syncEditorBuffer('/open/ghost', 'draft')).not.toThrow();
+    expect(() => c.syncPageSnapshot('/open/ghost', 'text')).not.toThrow();
+  });
+
+  it('resetMonitorContext/monitorContextSnapshot RPCs no-op for an unknown persona name', () => {
+    const { c } = makeController();
+    expect(() => c.resetMonitorContext('ghost')).not.toThrow();
+    expect(() => c.monitorContextSnapshot('ghost')).not.toThrow();
+  });
+
+  it('navigatePage RPC no-ops against a tab that is not a page tab', () => {
+    const { c } = makeController();
+    expect(() => c.navigatePage(0, 'https://example.com')).not.toThrow();
+  });
+
+  it('undoFileTreeItem RPC on an empty undo stack returns no conflict', () => {
+    const root = mkdtempSync(path.join(tmpdir(), 'janus-undo-'));
+    const { c } = makeController();
+    c.dispatch(`files ${root}`);
+    const index = c.view().findIndex((t) => t.view === 'files');
+    expect(c.undoFileTreeItem(index)).toEqual({});
+  });
+
+  it('openFileNavigatorFor RPC opens a file navigator rooted at the target tab\'s cwd', () => {
+    const { c } = makeController();
+    c.openFileNavigatorFor('janus');
+    expect(c.view().some((t) => t.view === 'files')).toBe(true);
+  });
+
+  it('launchAgentFor RPC launches a new agent rooted at the target tab\'s cwd', () => {
+    const { c } = makeController();
+    const before = c.view().length;
+    c.launchAgentFor('janus');
+    expect(c.view()).toHaveLength(before + 1);
+  });
 });
