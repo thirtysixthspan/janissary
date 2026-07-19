@@ -47,6 +47,13 @@ export default [
     clipHeight: 400,
   },
   {
+    name: 'db-output',
+    setup: ['db sqlite create demo', 'db sqlite query demo CREATE TABLE items (id INTEGER PRIMARY KEY, text TEXT)', 'db sqlite query demo SELECT * FROM items'],
+    settle: 1200,
+    target: 'transcript',
+    clipHeight: 400,
+  },
+  {
     name: 'connection-window',
     setup: ['shell ls -la'],
     target: 'status-panels',
