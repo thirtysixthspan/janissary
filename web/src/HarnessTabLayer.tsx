@@ -6,7 +6,7 @@ import { StatusPanels } from './StatusPanels';
 import { TaskPicker } from './TaskPicker';
 import { TabNavPicker } from './TabNavPicker';
 import { useStatusWindows } from './useStatusWindows';
-import type { VisibleTaskRow } from './task-picker-keys';
+import type { PickerOverlayProps } from './picker-overlay-props';
 
 type Properties = {
   t: TabView;
@@ -14,16 +14,7 @@ type Properties = {
   tabs: TabView[];
   client: JanusClient;
   harnessHandles: React.RefObject<Map<string, HarnessTabHandle>>;
-  taskPickerOpen?: boolean;
-  taskRows?: VisibleTaskRow[];
-  taskPickerIndex?: number;
-  onPickTask?: (path: string) => void;
-  onToggleTaskDir?: (path: string) => void;
-  navOpen?: boolean;
-  navQuery?: string;
-  navIndex?: number;
-  onPickTab?: (index: number) => void;
-};
+} & PickerOverlayProps;
 
 // One harness tab's body (terminal + meta bar) plus its status panels and picker overlays.
 // Split out of `MountedViewLayers` so `useStatusWindows` can be instantiated once per harness
