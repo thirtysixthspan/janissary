@@ -3,8 +3,9 @@ import { mkdtempSync, mkdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
-const mocks = vi.hoisted(() => ({ notify: vi.fn() }));
+const mocks = vi.hoisted(() => ({ notify: vi.fn(), sandboxNotice: vi.fn(() => undefined as string | undefined) }));
 vi.mock('../notifications.js', () => ({ notify: mocks.notify }));
+vi.mock('../sandbox/index.js', () => ({ sandboxNotice: mocks.sandboxNotice }));
 
 import { ProfileManager } from './manager.js';
 import { initProfileDir } from '../profiles.js';
@@ -131,6 +132,24 @@ describe('ProfileManager.newAgent', () => {
     expect(managers.tab.deleteBusy).toHaveBeenCalledWith('bob');
     expect(appended).toEqual([
       { input: 'agent bob --workspace', output: 'Agent "bob" ready. (workspace: /tmp/janus-workspaces/bob)' },
+    ]);
+  });
+
+  it('appends the sandbox notice after the ready message when sandboxing is unavailable', async () => {
+    mocks.sandboxNotice.mockReturnValueOnce('workspace isolation off: sandbox-exec unavailable');
+    const janus = makeTab('janus', 'red');
+    const { managers, appended } = makeManagers(janus);
+    const { promise, resolve } = Promise.withResolvers<void>();
+    vi.mocked(managers.workspace.create).mockReturnValue({ dir: '/tmp/janus-workspaces/bob', ready: promise });
+    const manager = new ProfileManager(managers);
+
+    manager.newAgent('agent bob --workspace');
+    resolve();
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(appended).toEqual([
+      { input: 'agent bob --workspace', output: 'Agent "bob" ready. (workspace: /tmp/janus-workspaces/bob)' },
+      { input: 'agent bob --workspace', output: 'workspace isolation off: sandbox-exec unavailable' },
     ]);
   });
 
