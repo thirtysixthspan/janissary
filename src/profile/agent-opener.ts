@@ -5,38 +5,8 @@ import { openProfileNotifications } from './notifications.js';
 import { openProfileSchedules } from './schedules.js';
 import { openAgentEntry, openHarnessEntry } from './entry-openers.js';
 import type { Managers } from '../managers.js';
-import type { ProfileEntry, ProfileHarnessEntry } from '../types.js';
-
-function isHarnessEntry(e: ProfileEntry): e is ProfileHarnessEntry {
-  return 'harness' in e;
-}
-
-function labelOf(e: ProfileEntry): string {
-  return isHarnessEntry(e) ? e.label : e.name;
-}
-
-// Relaunch semantics: close every open tab matching an entry's label first, then the caller opens
-// all entries fresh, so label collisions between a closing tab and an opening one cannot arise.
-// The issuing tab is never closed; if it's named by an entry, that entry is skipped instead.
-function closeMatchingTabs(
-  entries: ProfileEntry[], managers: Managers, issuingLabel: string, skipped: string[], notes: string[],
-): ProfileEntry[] {
-  const toOpen: ProfileEntry[] = [];
-  for (const entry of entries) {
-    const label = labelOf(entry);
-    if (label.toLowerCase() === issuingLabel.toLowerCase()) {
-      skipped.push(`${label} (cannot relaunch the issuing tab)`);
-      continue;
-    }
-    const index = managers.tab.findIndex(label);
-    if (index !== -1) {
-      managers.tab.closeTab(index);
-      notes.push(`Relaunched "${label}".`);
-    }
-    toOpen.push(entry);
-  }
-  return toOpen;
-}
+import type { ProfileEntry } from '../types.js';
+import { isHarnessEntry, labelOf, closeMatchingTabs } from './entry-resolve.js';
 
 export function openProfileEntries(
   entries: ProfileEntry[],
