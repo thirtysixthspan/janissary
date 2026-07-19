@@ -22,6 +22,7 @@ All bindings work from the command bar in any agent tab.
 | `Ctrl+R` | Open the [command history picker](/user-documentation/command-bar/history) |
 | `Ctrl+G` | Open the [tab navigator](/user-documentation/command-bar/tab-navigator) — closes it if already open |
 | `Ctrl+T` | Expand or collapse the current tab's agent tool steps |
+| `Cmd+P` | Open the [quick open](/user-documentation/command-bar/quick-open) file finder |
 | `PageUp` | Scroll the transcript up half a screen |
 | `PageDown` | Scroll the transcript down half a screen |
 | `Escape` | Reset the transcript scroll to the bottom |

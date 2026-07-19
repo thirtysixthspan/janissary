@@ -83,6 +83,7 @@ export default defineConfig({
             { text: "Command queue", link: "/user-documentation/command-bar/queue" },
             { text: "Task picker", link: "/user-documentation/command-bar/tasks" },
             { text: "Tab navigator", link: "/user-documentation/command-bar/tab-navigator" },
+            { text: "Quick open", link: "/user-documentation/command-bar/quick-open" },
           ],
         },
         {
