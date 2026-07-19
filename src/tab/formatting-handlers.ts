@@ -1,22 +1,7 @@
 import type { LogEntry, BufferLine } from '../types.js';
 import { formatMessageContent, tryCollapseToolSteps } from '../buffer.js';
-
-export function expandTabs(text: string, tabWidth = 8): string {
-  if (!text.includes('\t')) return text;
-  let col = 0;
-  let out = '';
-  for (const ch of text) {
-    if (ch === '\t') {
-      const spaces = tabWidth - (col % tabWidth);
-      out += ' '.repeat(spaces);
-      col += spaces;
-    } else {
-      out += ch;
-      col += ch === '\n' ? 0 : 1;
-    }
-  }
-  return out;
-}
+export { expandTabs } from './expand-tabs.js';
+import { expandTabs } from './expand-tabs.js';
 
 export function handleCollapsedToolSteps(
   log: LogEntry[],
