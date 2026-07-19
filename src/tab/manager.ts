@@ -21,7 +21,7 @@ import { buildAgentStateFromTab } from './agent-state.js';
 import { recordLeavingActiveTab, popFocusHistory, mostRecentFileTreeLabel } from './focus-history.js';
 import { applyDock } from './dock.js';
 import { capLog } from './transcript.js';
-import { computeReorder, removeTabAt } from './reorder.js';
+import { removeTabAt } from './reorder.js';
 import { navigatePageTab } from './navigate.js';
 import { recordHistory } from './history.js';
 import { FileRegistry } from './file-registry.js';
@@ -29,6 +29,7 @@ import { renameEditorTab } from './rename-editor.js';
 import {
   markUnreadTab, startRunningTab, finishRunningTab, appendTab, clearTranscriptTab,
 } from './transcript-commands.js';
+import { setActiveTabOp, moveTabOp, reorderTabOp } from './navigation-commands.js';
 
 export class TabManager {
   tabs: Tab[] = [];
@@ -174,21 +175,11 @@ export class TabManager {
   }
 
   setActiveTab(index: number): void {
-    if (index < 0 || index >= this.tabs.length) return;
-    if (this.tabs[index]?.dock) return; // a docked tab is never the active tab
-    this.recordLeavingActiveTab(index);
-    this.activeTab = index;
-    const tab = this.tabs[index];
-    if (tab) tab.hasUnread = false;
-    messageBus.emit('state', { type: 'dirty' });
+    setActiveTabOp(this.tabs, index, (i) => this.recordLeavingActiveTab(i), (i) => { this.activeTab = i; });
   }
 
   moveTab(dir: -1 | 1): void {
-    const total = this.tabs.length;
-    for (let step = 1; step <= total; step++) {
-      const index = (this.activeTab + dir * step + total) % total;
-      if (!this.tabs[index]?.dock) { this.setActiveTab(index); return; }
-    }
+    moveTabOp(this.tabs, this.activeTab, dir, (index) => this.setActiveTab(index));
   }
 
   setDock(index: number, dock: 'left' | 'right' | null): void {
@@ -198,16 +189,11 @@ export class TabManager {
   }
 
   reorderTab(dir: -1 | 1): void {
-    const from = this.activeTab;
-    const result = computeReorder(this.tabs, from, dir);
-    if (!result) return;
-    this.tabs = result.tabs;
-    this.activeTab = result.activeTab;
-    const active = this.tabs[this.activeTab];
-    if (active) active.hasUnread = false;
-    this.persist(this.buildAgentState(this.tabs[from]));
-    this.persist(this.buildAgentState(this.tabs[this.activeTab]));
-    messageBus.emit('state', { type: 'dirty' });
+    reorderTabOp(
+      this.tabs, this.activeTab, dir,
+      (tabs, activeTab) => { this.tabs = tabs; this.activeTab = activeTab; },
+      (s) => this.persist(s), (t) => this.buildAgentState(t),
+    );
   }
 
   closeTab(index: number): void {
