@@ -1,12 +1,10 @@
-import { statSync, renameSync, rmSync, type FSWatcher } from 'node:fs';
+import { renameSync, rmSync, type FSWatcher } from 'node:fs';
 import path from 'node:path';
 import { messageBus } from '../bus.js';
-import { buildRows, isSameOrDescendantPath, parentPath } from './index.js';
+import { isSameOrDescendantPath, parentPath } from './index.js';
 import { refreshGit } from './git-refresh.js';
-import { parseFileTreeArgs } from './args.js';
-import { expandUserPath } from '../paths.js';
-import { resolveTarget } from '../commands/resolve-target.js';
 import { openOrRetarget, type OpenPort } from './open.js';
+import { openFilesCommand } from './open-command.js';
 import { applyStackMove, type MoveEntry, type UndoRedoResult } from './moves.js';
 import { toggleDir, collapseAllDirs, rerootTree, revealPath, type NavPort } from './navigation.js';
 import { watchDir, unwatchDir } from './watch.js';
@@ -56,37 +54,10 @@ export class FileTreeManager {
   // claude on left`). Like `left`/`right`, they are only recognized as clause keywords — a
   // directory literally named `in`/`on` stays reachable via a path form (`files ./in`).
   open(command: string, label: string): void {
-    const rest = command.replace(/^files\b\s*/i, '');
-    const { inLabel, dock, target } = parseFileTreeArgs(rest);
-    const out = (text: string) => this.managers.tab.append(label, { input: command, output: text });
-
-    let cwd: string;
-    if (inLabel === undefined) {
-      cwd = this.managers.tab.cwdOf(label) ?? process.cwd();
-    } else {
-      const sourceTab = resolveTarget(inLabel, this.managers, out);
-      if (!sourceTab) return;
-      cwd = this.managers.tab.cwdOf(sourceTab.label) ?? process.cwd();
-    }
-
-    const expandedPath = target ? expandUserPath(target, { root: this.managers.tab.launchDir }) : '';
-    const root = target ? (path.isAbsolute(expandedPath) ? expandedPath : path.resolve(cwd, expandedPath)) : cwd;
-
-    let stat;
-    try { stat = statSync(root); } catch { stat = undefined; }
-    if (!stat?.isDirectory()) { out(`files: ${root}: not a directory`); return; }
-
-    const existing = this.managers.tab.tabs.find((t) => t.files?.root === root);
-    if (existing) { this.managers.tab.setDock(this.managers.tab.findIndex(existing.label), dock); return; }
-
-    const expanded = new Set<string>();
-    this.managers.tab.openFilesTab({ root, absoluteRoot: root, rows: buildRows(root, expanded) });
-    const newLabel = this.managers.tab.cur().label;
-    this.managers.tab.setCwd(newLabel, root);
-    this.tabs.set(newLabel, { root, expanded, watchers: new Map(), undoStack: [], redoStack: [], gitStatuses: new Map() });
-    this.watchDir(newLabel, root, '');
-    if (dock) this.managers.tab.setDock(this.managers.tab.findIndex(newLabel), dock);
-    this.refreshGit(newLabel);
+    openFilesCommand(
+      this.managers, this.tabs, command, label,
+      (l, a, r) => this.watchDir(l, a, r), (l) => this.refreshGit(l),
+    );
   }
 
   // Expand/collapse one directory row.
