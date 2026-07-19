@@ -1,7 +1,7 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import type { ScheduleLaunchView } from '@shared/protocol';
 import type { JanusClient } from './ws';
-import { useDialogKeyboard } from './useDialogKeyboard';
+import { useLaunchDialog } from './use-launch-dialog';
 import { buildScheduleCommand, type ScheduleFields, type ScheduleType } from './schedule-command';
 
 type Properties = { view: ScheduleLaunchView; client: JanusClient };
@@ -51,8 +51,6 @@ function isValid(fields: ScheduleFields): boolean {
 // schedule forms: it assembles the equivalent `schedule …` string and submits it through the
 // normal command path, so the server's existing parsing/validation/firing runs unchanged.
 export function ScheduleDialog({ view, client }: Properties) {
-  const dialogRef = useRef<HTMLDivElement>(null);
-  const submitButtonRef = useRef<HTMLButtonElement>(null);
   const [fields, setFields] = useState<ScheduleFields>(() => remembered ?? initialFields(view.active));
   const [hadRemembered] = useState(() => remembered !== null);
 
@@ -64,20 +62,9 @@ export function ScheduleDialog({ view, client }: Properties) {
     });
   }, []);
 
-  const cancel = useCallback(() => client.send({ method: 'closeScheduleLaunch', params: {} }), [client]);
-  const create = useCallback(() => {
-    client.send({ method: 'command', params: { text: buildScheduleCommand(fields) } });
-    client.send({ method: 'closeScheduleLaunch', params: {} });
-  }, [client, fields]);
-
-  useDialogKeyboard(dialogRef, (e) => {
-    if (e.key === 'Escape') { e.preventDefault(); cancel(); }
-    else if (e.key === 'Enter') { e.preventDefault(); if (isValid(fields)) create(); }
-  });
-
-  useEffect(() => {
-    if (hadRemembered) submitButtonRef.current?.focus();
-  }, [hadRemembered]);
+  const { dialogRef, submitButtonRef, cancel, create } = useLaunchDialog(
+    client, 'closeScheduleLaunch', fields, buildScheduleCommand, hadRemembered, isValid,
+  );
 
   return (
     <div className="modal-backdrop">
