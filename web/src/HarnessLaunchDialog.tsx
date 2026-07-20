@@ -28,13 +28,13 @@ export function HarnessLaunchDialog({ view, client }: Properties) {
   const [hadRemembered] = useState(() => remembered !== null);
 
   const models = view.models[fields.name] ?? [];
-  const autoApproveEnabled = fields.name === 'claude' && fields.workspace;
+  const autoApproveEnabled = fields.name === 'claude';
 
   const update = useCallback((patch: Partial<HarnessLaunchFields>) => {
     setFields((prev) => {
       const next = { ...prev, ...patch };
       if (!(view.models[next.name] ?? []).includes(next.model)) next.model = '';
-      if (!(next.name === 'claude' && next.workspace)) next.autoApprove = false;
+      if (next.name !== 'claude') next.autoApprove = false;
       remembered = next;
       return next;
     });
@@ -72,7 +72,7 @@ export function HarnessLaunchDialog({ view, client }: Properties) {
               disabled={!autoApproveEnabled}
               onChange={(e) => update({ autoApprove: e.target.checked })}
             />
-            Auto-approve (-y) — claude + workspace only
+            Auto-approve (-y) — claude only
           </label>
           <label>Model
             <select value={fields.model} disabled={models.length === 0} onChange={(e) => update({ model: e.target.value })}>

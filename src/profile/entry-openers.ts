@@ -27,10 +27,8 @@ export function openHarnessEntry(
   if (entry.model && !isKnownModel(entry.harness, entry.model)) {
     return `Unknown model "${entry.model}" for harness "${entry.harness}" — add it to harness-models.json.`;
   }
-  // Mirror `parseHarnessCommand`: -y is claude-only and requires a workspace (auto-approval is
-  // only allowed in a sandboxed clone). Report and skip rather than open unsafely.
+  // Mirror `parseHarnessCommand`: -y is claude-only. Report and skip rather than open unsafely.
   if (entry.autoApprove && entry.harness !== 'claude') return 'autoApprove (-y) is only supported for the claude harness';
-  if (entry.autoApprove && !entry.workspace) return 'autoApprove (-y) requires workspace (-w)';
   const withCwd: ProfileHarnessEntry = { ...entry, cwd: entry.cwd ?? issuingCwd };
   const error = managers.harness.openFromProfile(withCwd, entry.label, group, groupColor);
   if (error) return error;

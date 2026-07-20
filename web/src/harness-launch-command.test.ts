@@ -45,9 +45,7 @@ describe('buildHarnessLaunchCommand', () => {
     expect(command).toBe('harness claude as quality -w --offline -y --effort high');
   });
 
-  it('never emits -y without -w (the form gates it, but the builder also only emits what it is given)', () => {
-    // The form only sets autoApprove when workspace is on; a fields object with autoApprove but no
-    // workspace would still just reflect its inputs — the invalid pairing is prevented upstream.
+  it('combines -w and -y in the fixed flag order', () => {
     expect(buildHarnessLaunchCommand(fields({ workspace: true, autoApprove: true }))).toBe('harness claude -w -y');
   });
 });
