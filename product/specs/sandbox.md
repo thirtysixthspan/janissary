@@ -145,6 +145,18 @@ dedicated handling:
   readability, so this doesn't hand out plaintext secrets — but it is a materially larger read
   surface than the other carve-ins, kept as a deliberate trade-off documented inline in
   `sandbox-profile.ts` rather than silently folded in with the others.
+- **Keychain database *writes* for token refresh.** When a harness's OAuth access token expires
+  mid-session it refreshes the token and persists the new one back into the Keychain — a *write* to
+  a keychain database file, which the top-level write deny would otherwise block silently, leaving
+  the stale expired token in place so the provider returns `401` ("Please run /login") after an
+  extended run. Two narrow write carve-outs cover the databases a refreshed credential can land in:
+  the file-based login keychain (`~/Library/Keychains/login.keychain-db`) and the data-protection
+  keychain (`~/Library/Keychains/<UUID>/keychain-2.db`), where modern Keychain Services persists a
+  generic-password item on current macOS. Both also cover each database's atomic-write temp sibling
+  and SQLite sidecars (`-wal`/`-shm`/`-journal`). The carve-outs are deliberately limited to the
+  keychain database files themselves, never the whole `~/Library/Keychains` subtree — the databases
+  stay encrypted and `securityd`-ACL-enforced regardless of raw file writability, the same trade-off
+  the read carve-in above rests on.
 - **The harness CLI's own scratchpad directory.** Claude Code (and presumably other harness CLIs)
   creates a per-project/session scratch directory under a fixed, UID-keyed path,
   `/private/tmp/claude-<uid>/`, before running any tool call — including a plain shell command.
