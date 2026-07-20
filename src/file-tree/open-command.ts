@@ -13,6 +13,7 @@ export function openFilesCommand(
   managers: Managers, tabs: Map<string, FilesTabState>, command: string, label: string,
   watchDir: (label: string, absDir: string, relPath: string) => void,
   refreshGit: (label: string) => void,
+  pollForCreation: (label: string, absDir: string) => void,
 ): void {
   const rest = command.replace(/^files\b\s*/i, '');
   const { inLabel, dock, target } = parseFileTreeArgs(rest);
@@ -31,13 +32,25 @@ export function openFilesCommand(
   const root = target ? (path.isAbsolute(expandedPath) ? expandedPath : path.resolve(cwd, expandedPath)) : cwd;
 
   let stat;
-  try { stat = statSync(root); } catch { stat = undefined; }
-  if (!stat?.isDirectory()) { out(`files: ${root}: not a directory`); return; }
+  let exists = true;
+  try { stat = statSync(root); } catch { stat = undefined; exists = false; }
+  if (exists && !stat?.isDirectory()) { out(`files: ${root}: not a directory`); return; }
 
   const existing = managers.tab.tabs.find((t) => t.files?.root === root);
   if (existing) { managers.tab.setDock(managers.tab.findIndex(existing.label), dock); return; }
 
   const expanded = new Set<string>();
+
+  if (!exists) {
+    managers.tab.openFilesTab({ root, absoluteRoot: root, rows: [], waitingFor: root });
+    const waitingLabel = managers.tab.cur().label;
+    managers.tab.setCwd(waitingLabel, root);
+    tabs.set(waitingLabel, { root, expanded, watchers: new Map(), undoStack: [], redoStack: [], gitStatuses: new Map() });
+    pollForCreation(waitingLabel, root);
+    if (dock) managers.tab.setDock(managers.tab.findIndex(waitingLabel), dock);
+    return;
+  }
+
   managers.tab.openFilesTab({ root, absoluteRoot: root, rows: buildRows(root, expanded) });
   const newLabel = managers.tab.cur().label;
   managers.tab.setCwd(newLabel, root);

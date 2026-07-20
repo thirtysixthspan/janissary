@@ -8,7 +8,9 @@ import { openFilesCommand } from './open-command.js';
 import { applyStackMove, type MoveEntry, type UndoRedoResult } from './moves.js';
 import { toggleDir, collapseAllDirs, rerootTree, revealPath, type NavPort } from './navigation.js';
 import { watchDir, unwatchDir } from './watch.js';
+import { pollForDir, stopPolling } from './poll.js';
 import { pruneAndBuildRows } from './rebuild.js';
+import { buildRows } from './index.js';
 import { listProjectFiles } from './search.js';
 import type { Managers } from '../managers.js';
 import type { GitFileStatus } from '../git-status.js';
@@ -23,6 +25,9 @@ export type FilesTabState = {
   expanded: Set<string>;
   watchers: Map<string, FSWatcher>;
   debounce?: ReturnType<typeof setTimeout>;
+  // Set while the tab is waiting for its root to be created (see `pollForCreation`); cleared once
+  // the directory appears.
+  pollTimer?: ReturnType<typeof setInterval>;
   undoStack: MoveEntry[];
   redoStack: MoveEntry[];
   // Last-computed map of git-changed, root-relative paths to their status (see `git-status.ts`).
@@ -56,7 +61,7 @@ export class FileTreeManager {
   open(command: string, label: string): void {
     openFilesCommand(
       this.managers, this.tabs, command, label,
-      (l, a, r) => this.watchDir(l, a, r), (l) => this.refreshGit(l),
+      (l, a, r) => this.watchDir(l, a, r), (l) => this.refreshGit(l), (l, a) => this.pollForCreation(l, a),
     );
   }
 
@@ -181,6 +186,7 @@ export class FileTreeManager {
     const state = this.tabs.get(label);
     if (!state) return;
     if (state.debounce) clearTimeout(state.debounce);
+    stopPolling(state);
     for (const watcher of state.watchers.values()) { try { watcher.close(); } catch { /* already gone */ } }
     this.tabs.delete(label);
   }
@@ -192,6 +198,23 @@ export class FileTreeManager {
 
   private watchDir(label: string, absDir: string, relPath: string): void {
     watchDir(this.tabs, label, absDir, relPath, () => this.scheduleRebuild(label));
+  }
+
+  // Poll a not-yet-existing root until it's created, then build the tree for real and start
+  // watching it — the tail end of what `openFilesCommand` does for a root that already exists.
+  private pollForCreation(label: string, absDir: string): void {
+    pollForDir(this.tabs, label, absDir, () => this.onDirCreated(label, absDir));
+  }
+
+  private onDirCreated(label: string, absDir: string): void {
+    const state = this.tabs.get(label);
+    if (!state) return;
+    const tab = this.managers.tab.tabs.find((t) => t.label === label);
+    if (!tab?.files) return;
+    tab.files = { root: absDir, absoluteRoot: absDir, rows: buildRows(absDir, state.expanded) };
+    this.watchDir(label, absDir, '');
+    this.refreshGit(label);
+    messageBus.emit('state', { type: 'dirty' });
   }
 
   private unwatchDir(state: FilesTabState, relPath: string): void {
