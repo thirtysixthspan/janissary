@@ -82,6 +82,34 @@ describe('saveProfile', () => {
     expect(loadProfileEntries('demo')).toEqual([]);
   });
 
+  it('does not capture the root janus tab, and does not count or report it', async () => {
+    const janus = makeTab('janus', '#000');
+    const bob = makeTab('bob', '#aaa');
+    const managers = makeManagers([janus, bob]);
+
+    const summary = await saveProfile('demo', managers);
+
+    expect(loadProfileEntries('demo')).toEqual([
+      { name: 'bob', dotColor: '#aaa', active: false, number: 1, group: 1, groupColor: '#aaa' },
+    ]);
+    expect(summary.agents).toBe(1);
+    expect(summary.skipped).not.toContain('janus');
+  });
+
+  it('captures a tab labeled janus if it is not the first tab', async () => {
+    const bob = makeTab('bob', '#aaa');
+    const janus = makeTab('janus', '#000');
+    const managers = makeManagers([bob, janus]);
+
+    const summary = await saveProfile('demo', managers);
+
+    expect(loadProfileEntries('demo')).toEqual([
+      { name: 'bob', dotColor: '#aaa', active: false, number: 1, group: 1, groupColor: '#aaa' },
+      { name: 'janus', dotColor: '#000', active: false, number: 1, group: 1, groupColor: '#000' },
+    ]);
+    expect(summary.agents).toBe(2);
+  });
+
   it('captures a docked file-tree tab into _files.json (dock + literal path, no `in`) and a docked notifications/schedules tab', async () => {
     const dockedFiles = { ...makeFilesTab('nav', '#444', 1, 1, '#444', { root: '~', absoluteRoot: '/home/bob', rows: [] }), dock: 'left' as const };
     const notifications = { ...makeNotificationsTab('notifications', '#555', 1, 1, '#555'), dock: 'right' as const };

@@ -26,6 +26,7 @@ export function captureTab(dir: string, tab: Tab, managers: Managers, state: Cap
   switch (tab.view) {
     case undefined:
     case 'agent': {
+      if (tab === managers.tab.tabs[0] && tab.label === 'janus') return;
       writeAgentEntry(dir, tab, managers);
       state.agents += 1;
       return;

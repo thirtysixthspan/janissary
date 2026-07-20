@@ -71,7 +71,7 @@ Lists the available profile directory names (sorted), or `No profiles.` when non
 
 ### `profile save <name>`
 
-Captures the running session into `profiles/<name>/` — the inverse of `profile launch`. `<name>` is used verbatim as the directory name, with no dasherization. Every open tab is captured, including the tab the command was typed in (unlike `profile launch`, which never touches its own issuing tab).
+Captures the running session into `profiles/<name>/` — the inverse of `profile launch`. `<name>` is used verbatim as the directory name, with no dasherization. Every open tab is captured, including the tab the command was typed in (unlike `profile launch`, which never touches its own issuing tab) — except the root `janus` tab that every session opens automatically on startup, which is left out of the capture entirely since relaunching a profile always has its own fresh session, and so its own fresh root tab, to land in.
 
 Each agent tab is written as a clean, reusable template: its name, dot color, tab order, group, and starting directory. Command history, transcript, and any queued commands are deliberately left out, so a saved profile is a fresh starting point rather than a frozen session — reopening it later starts each agent from scratch. Each harness tab is captured the same way: harness kind, model, effort level, workspace/offline/auto-approve flags, dot color, group, and starting directory. A harness tab's scheduled or one-shot commands are never captured, since they exist only in memory and are not recoverable.
 
