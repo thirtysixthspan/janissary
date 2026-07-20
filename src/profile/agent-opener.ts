@@ -3,6 +3,7 @@ import { startProfileMonitors } from './monitors.js';
 import { openProfileFiles } from './files.js';
 import { openProfileNotifications } from './notifications.js';
 import { openProfileSchedules } from './schedules.js';
+import { applyProfileLayout } from './layout.js';
 import { openAgentEntry, openHarnessEntry } from './entry-openers.js';
 import type { Managers } from '../managers.js';
 import type { ProfileEntry } from '../types.js';
@@ -53,6 +54,8 @@ export function openProfileEntries(
   openProfileNotifications(name, managers, notes);
   // Profile-level schedules tab opens next, docked per the profile's `_schedules.json`.
   openProfileSchedules(name, managers, notes);
+  // Profile-level layout (window/sidebar/tab-area sizing) applies per the profile's `_layout.json`.
+  applyProfileLayout(name, managers, notes);
   // Profile-level monitors start after every entry is open, owned by the issuing tab, so their
   // targets (e.g. `group:1`) can resolve against the now-complete tab list.
   startProfileMonitors(name, managers, issuingLabel, notes);

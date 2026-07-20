@@ -56,6 +56,7 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
     sendPty: (id, data) => broadcast({ t: 'pty', id, data }),
     sendPtyExit: (id, exitCode) => broadcast({ t: 'pty-exit', id, exitCode }),
     exit: () => requestExit(),
+    sendLayout: (event) => broadcast({ t: 'layout', ...event }),
   }, options.projectDir);
   if (options.relaunch) controller.rehydrate();
 

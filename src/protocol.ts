@@ -112,7 +112,10 @@ export type PtyExitEvent = { t: 'pty-exit'; id: string; exitCode: number };
 export type RpcReply = { t: 'rpc-reply'; id: number; result?: unknown; error?: string };
 // Tells the client to close its window; the server then stops (the `quit`/`exit` command).
 export type ByeEvent = { t: 'bye' };
-export type ServerEvent = StateEvent | PtyDataEvent | PtyExitEvent | RpcReply | ByeEvent;
+// A profile's `_layout.json` sidebar/tab-area sizes, applied on `profile launch`. Window sizing is
+// applied directly over CDP and never reaches the client — see product/specs/profiles.md.
+export type LayoutEvent = { t: 'layout'; sidebarLeft?: number; sidebarRight?: number; tabAreaPct?: number };
+export type ServerEvent = StateEvent | PtyDataEvent | PtyExitEvent | RpcReply | ByeEvent | LayoutEvent;
 
 // Client -> server requests. Tab creation/closing flow through `command` (`agent`, `close`);
 // `setActiveTab`/`moveTab`/`toggleCollapse` are pure-UI shortcuts.

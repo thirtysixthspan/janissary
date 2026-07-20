@@ -1,9 +1,16 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { render, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeAll } from 'vitest';
 import type { TabView } from '@shared/protocol';
 import type { JanusClient } from './ws';
-import { Sidebar } from './Sidebar';
+import { Sidebar, DEFAULT_WIDTH_PX } from './Sidebar';
+
+// A drag needs the width prop to actually move the rendered flex value, so the drag-clamp tests
+// wrap Sidebar in a small controlled harness — mirroring how `App` owns the width in production.
+function ControlledSidebar(props: Omit<React.ComponentProps<typeof Sidebar>, 'width' | 'onWidthChange'>) {
+  const [width, setWidth] = useState(DEFAULT_WIDTH_PX);
+  return <Sidebar {...props} width={width} onWidthChange={setWidth} />;
+}
 
 // jsdom doesn't include ResizeObserver — the docked notifications view's Transcript observes its content.
 vi.stubGlobal('ResizeObserver', class {
@@ -50,7 +57,7 @@ describe('Sidebar', () => {
   it('drag clamps width to the minimum (180px) when dragged far past it', () => {
     const client = { send: vi.fn() } as unknown as JanusClient;
     const tabs = [makeTab({ view: 'files', dock: 'left', files: { root: '/tmp/project', absoluteRoot: '/tmp/project', rows: [] } })];
-    const { container } = render(<Sidebar side="left" tabs={tabs} client={client} />);
+    const { container } = render(<ControlledSidebar side="left" tabs={tabs} client={client} />);
     const sidebar = container.querySelector('.sidebar-left') as HTMLElement;
     const divider = container.querySelector('.sidebar-resize')!;
     fireEvent.mouseDown(divider, { clientX: 280 });
@@ -189,7 +196,7 @@ describe('Sidebar', () => {
   it('drag clamps width to 50% of the viewport when dragged far past it', () => {
     const client = { send: vi.fn() } as unknown as JanusClient;
     const tabs = [makeTab({ view: 'files', dock: 'right', files: { root: '/tmp/project', absoluteRoot: '/tmp/project', rows: [] } })];
-    const { container } = render(<Sidebar side="right" tabs={tabs} client={client} />);
+    const { container } = render(<ControlledSidebar side="right" tabs={tabs} client={client} />);
     const sidebar = container.querySelector('.sidebar-right') as HTMLElement;
     const divider = container.querySelector('.sidebar-resize')!;
     fireEvent.mouseDown(divider, { clientX: 280 });

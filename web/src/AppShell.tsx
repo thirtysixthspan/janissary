@@ -8,18 +8,29 @@ import type { CommandInputDropHandle } from './CommandInput';
 // Split out of App.tsx to keep it under the file-size limit.
 export function AppShell({
   tabs, client, children, dropRef, tabNameMaxLength = 16,
+  sidebarLeftWidth, onSidebarLeftWidthChange, sidebarRightWidth, onSidebarRightWidthChange,
 }: {
   tabs: TabView[];
   client: JanusClient;
   children: React.ReactNode;
   dropRef?: React.RefObject<CommandInputDropHandle | null>;
   tabNameMaxLength?: number;
+  sidebarLeftWidth?: number;
+  onSidebarLeftWidthChange?: (width: number) => void;
+  sidebarRightWidth?: number;
+  onSidebarRightWidthChange?: (width: number) => void;
 }) {
   return (
     <div className="app">
-      <Sidebar side="left" tabs={tabs} client={client} dropRef={dropRef} tabNameMaxLength={tabNameMaxLength} />
+      <Sidebar
+        side="left" tabs={tabs} client={client} dropRef={dropRef} tabNameMaxLength={tabNameMaxLength}
+        width={sidebarLeftWidth} onWidthChange={onSidebarLeftWidthChange}
+      />
       <div className="app-center">{children}</div>
-      <Sidebar side="right" tabs={tabs} client={client} dropRef={dropRef} tabNameMaxLength={tabNameMaxLength} />
+      <Sidebar
+        side="right" tabs={tabs} client={client} dropRef={dropRef} tabNameMaxLength={tabNameMaxLength}
+        width={sidebarRightWidth} onWidthChange={onSidebarRightWidthChange}
+      />
     </div>
   );
 }

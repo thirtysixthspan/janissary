@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import type {
-  ProfileFilesEntry, ProfileMonitor, ProfileNotificationsEntry, ProfileSchedulesEntry,
+  ProfileFilesEntry, ProfileLayout, ProfileMonitor, ProfileNotificationsEntry, ProfileSchedulesEntry,
 } from './types.js';
 
 function isProfileMonitor(value: unknown): value is ProfileMonitor {
@@ -78,4 +78,35 @@ export function loadProfileNotifications(profileDir: string): ProfileNotificatio
 // absent, unparseable, or not an array; malformed elements are dropped.
 export function loadProfileSchedules(profileDir: string): ProfileSchedulesEntry[] {
   return loadDockEntries<ProfileSchedulesEntry>(profileDir, '_schedules.json', isDockEntry);
+}
+
+function isProfileWindow(value: unknown): value is { width: number; height: number } {
+  if (typeof value !== 'object' || value === null) return false;
+  const window = value as Record<string, unknown>;
+  return typeof window.width === 'number' && typeof window.height === 'number';
+}
+
+// Profile-level layout sizing lives in a reserved `_layout.json` file — a single JSON object
+// nested under a `layout` key (unlike the other reserved files, which are arrays) — kept out of
+// the entry set by the leading underscore. Returns null when the file is absent, unparseable, not
+// an object, or missing/malformed `layout`; individually malformed sub-fields are dropped while
+// valid sibling fields are kept.
+export function loadProfileLayout(profileDir: string): ProfileLayout | null {
+  const file = path.join(profileDir, '_layout.json');
+  if (!existsSync(file)) return null;
+  try {
+    const parsed: unknown = JSON.parse(readFileSync(file, 'utf8'));
+    if (typeof parsed !== 'object' || parsed === null) return null;
+    const layout = (parsed as Record<string, unknown>).layout;
+    if (typeof layout !== 'object' || layout === null) return null;
+    const fields = layout as Record<string, unknown>;
+    const result: ProfileLayout = {};
+    if (isProfileWindow(fields.window)) result.window = fields.window;
+    if (typeof fields.sidebarLeft === 'number') result.sidebarLeft = fields.sidebarLeft;
+    if (typeof fields.sidebarRight === 'number') result.sidebarRight = fields.sidebarRight;
+    if (typeof fields.tabAreaPct === 'number') result.tabAreaPct = fields.tabAreaPct;
+    return result;
+  } catch {
+    return null;
+  }
 }

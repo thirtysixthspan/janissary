@@ -11,6 +11,7 @@ import {
   loadProfileFiles,
   loadProfileNotifications,
   loadProfileSchedules,
+  loadProfileLayout,
   profileExists,
   PROFILE_USAGE,
 } from './profiles.js';
@@ -237,6 +238,39 @@ describe('profile directory', () => {
   it('never loads _notifications.json as a profile entry', () => {
     writeAgent('assist', 'bob', {});
     writeFile('assist', '_notifications.json', JSON.stringify([{ dock: 'right' }]));
+    expect(loadProfileEntries('assist').map((e) => ('harness' in e ? e.label : e.name))).toEqual(['bob']);
+  });
+
+  it('loads a full profile layout from _layout.json', () => {
+    writeFile('assist', '_layout.json', JSON.stringify({
+      layout: { window: { width: 1440, height: 900 }, sidebarLeft: 320, sidebarRight: 280, tabAreaPct: 75 },
+    }));
+    expect(loadProfileLayout('assist')).toEqual({
+      window: { width: 1440, height: 900 }, sidebarLeft: 320, sidebarRight: 280, tabAreaPct: 75,
+    });
+  });
+
+  it('returns null when _layout.json is absent, unparseable, not an object, or missing layout', () => {
+    writeAgent('none', 'bob', {});
+    expect(loadProfileLayout('none')).toBeNull();
+    writeFile('bad', '_layout.json', '{ not json');
+    expect(loadProfileLayout('bad')).toBeNull();
+    writeFile('arr', '_layout.json', JSON.stringify([{ sidebarLeft: 320 }]));
+    expect(loadProfileLayout('arr')).toBeNull();
+    writeFile('nolayout', '_layout.json', JSON.stringify({ sidebarLeft: 320 }));
+    expect(loadProfileLayout('nolayout')).toBeNull();
+  });
+
+  it('drops an individually malformed layout field while keeping valid siblings', () => {
+    writeFile('mix', '_layout.json', JSON.stringify({
+      layout: { sidebarLeft: 'wide', sidebarRight: 280, window: { width: '1440', height: 900 } },
+    }));
+    expect(loadProfileLayout('mix')).toEqual({ sidebarRight: 280 });
+  });
+
+  it('never loads _layout.json as a profile entry', () => {
+    writeAgent('assist', 'bob', {});
+    writeFile('assist', '_layout.json', JSON.stringify({ layout: { sidebarLeft: 320 } }));
     expect(loadProfileEntries('assist').map((e) => ('harness' in e ? e.label : e.name))).toEqual(['bob']);
   });
 });
