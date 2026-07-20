@@ -19,6 +19,24 @@ const secretDenyClauses = clausesFor(SECRET_DENY_PARAMS);
 const listingClauses = literalClausesFor(LISTING_DIR_PARAMS);
 const writePrefixClauses = prefixClausesFor(WRITE_PREFIX_PARAMS);
 
+// Companion to the `login.keychain-db` prefix carve-out in WRITE_PREFIX_PARAMS: the *data-protection*
+// keychain, where modern Keychain Services (SecItemAdd/SecItemUpdate without a legacy keychain ref)
+// actually persists a generic-password item on current macOS. Its database lives at
+// `~/Library/Keychains/<UUID>/keychain-2.db`, and the `<UUID>` directory is per-machine and unknown
+// ahead of time, so no fixed `prefix`/`subpath` param can name it — a HOME-anchored `regex` on the
+// invariant tail is the narrowest match that works (same `require-all (subpath HOME) (regex …)` shape
+// the package.json/tsconfig read carve-in below uses). Without this, an OAuth harness that stores its
+// credential in the data-protection keychain reads it fine (reads are carved in via ~/Library/Keychains)
+// but the *refreshed* token write hits the top-level deny-default and silently fails, so the stale
+// expired token keeps being sent and the provider returns 401 — the login.keychain-db carve-out alone
+// doesn't cover it. The unanchored tail deliberately also matches the atomic-write temp sibling
+// (`keychain-2.db.sb-<random>`) and SQLite sidecars (`-wal`/`-shm`/`-journal`), same as the
+// login.keychain-db prefix. Still narrow: only paths shaped like a keychain DB under a single
+// Keychains subdirectory, never the whole subtree — the DB stays encrypted and securityd-ACL-enforced
+// regardless of raw file writability, exactly as the login.keychain-db carve-out already accepts.
+const keychainWriteClause =
+  String.raw`  (require-all (subpath (param "HOME")) (regex #"/Library/Keychains/[^/]+/keychain-2\.db"))`;
+
 function buildProfile(networkClause: string): string {
   return String.raw`(version 1)
 (deny default)
@@ -49,7 +67,8 @@ function buildProfile(networkClause: string): string {
   (subpath (param "DARWIN_USER_CACHE_DIR"))
   (subpath (param "CLAUDE_SCRATCH_DIR"))
 ${writeCarveClauses}
-${writePrefixClauses})
+${writePrefixClauses}
+${keychainWriteClause})
 (allow file-read-data file-write-data
   (literal "/dev/null")
   (regex #"^/dev/tty")
