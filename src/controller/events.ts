@@ -17,6 +17,9 @@ export function wireControllerEvents(managers: Managers, sinks: Sinks): void {
     if (event.entry.from) notify(managers, 'incoming-message', event.tabLabel, event.entry.from);
   });
   messageBus.on('app', 'exit', () => sinks.exit?.());
+  messageBus.on('layout', 'update', (event) => sinks.sendLayout?.({
+    sidebarLeft: event.sidebarLeft, sidebarRight: event.sidebarRight, tabAreaPct: event.tabAreaPct,
+  }));
   messageBus.on('pty', ['data', 'exit'], (event) => {
     if (event.type === 'data') { sinks.sendPty(event.id, event.data); return; }
     if (event.type !== 'exit') return;

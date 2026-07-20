@@ -1,0 +1,71 @@
+import type { Readable, Writable } from 'node:stream';
+
+const RESPONSE_TIMEOUT_MS = 20_000;
+
+// Sends a single Chrome DevTools Protocol command over Chrome's `--remote-debugging-pipe` file
+// descriptors (fd 3 write, fd 4 read) and waits for the matching response. Mirrors
+// chrome-extension-loader.ts's pipe-command plumbing (messages are newline-free JSON terminated
+// by a NUL byte, per Chromium's pipe transport).
+function sendCdpCommand(
+  writePipe: Writable,
+  readPipe: Readable,
+  method: string,
+  params: unknown,
+): Promise<unknown> {
+  return new Promise((resolve, reject) => {
+    const id = 1;
+    let buffer = '';
+
+    const cleanup = (): void => {
+      clearTimeout(timeout);
+      readPipe.off('data', onData);
+    };
+
+    const timeout = setTimeout(() => {
+      cleanup();
+      reject(new Error(`CDP command ${method} timed out after ${RESPONSE_TIMEOUT_MS}ms`));
+    }, RESPONSE_TIMEOUT_MS);
+
+    function onData(chunk: Buffer): void {
+      buffer += chunk.toString('utf8');
+      let sep = buffer.indexOf('\0');
+      while (sep !== -1) {
+        const raw = buffer.slice(0, sep);
+        buffer = buffer.slice(sep + 1);
+        sep = buffer.indexOf('\0');
+
+        let message: { id?: number; error?: { message: string }; result?: unknown };
+        try {
+          message = JSON.parse(raw) as typeof message;
+        } catch {
+          continue;
+        }
+        if (message.id === id) {
+          cleanup();
+          if (message.error) {
+            reject(new Error(message.error.message));
+          } else {
+            resolve(message.result);
+          }
+          return;
+        }
+      }
+    }
+
+    readPipe.on('data', onData);
+    writePipe.write(`${JSON.stringify({ id, method, params })}\0`);
+  });
+}
+
+// Resizes the app's own Chrome window over the CDP pipe transport already opened in `openApp`:
+// looks up the window id for any target in this Chrome instance, then sets its bounds. Only
+// reachable over the pipe transport, same as `Extensions.loadUnpacked` in chrome-extension-loader.ts.
+export async function resizeAppWindow(
+  writePipe: Writable,
+  readPipe: Readable,
+  width: number,
+  height: number,
+): Promise<void> {
+  const { windowId } = await sendCdpCommand(writePipe, readPipe, 'Browser.getWindowForTarget', {}) as { windowId: number };
+  await sendCdpCommand(writePipe, readPipe, 'Browser.setWindowBounds', { windowId, bounds: { width, height } });
+}

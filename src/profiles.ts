@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import type {
-  ProfileEntry, ProfileFilesEntry, ProfileMonitor, ProfileNotificationsEntry,
+  ProfileEntry, ProfileFilesEntry, ProfileLayout, ProfileMonitor, ProfileNotificationsEntry,
   ProfileSchedulesEntry,
 } from './types.js';
 import {
@@ -9,6 +9,7 @@ import {
   loadProfileFiles as loadReservedFiles,
   loadProfileNotifications as loadReservedNotifications,
   loadProfileSchedules as loadReservedSchedules,
+  loadProfileLayout as loadReservedLayout,
 } from './profile-reserved-files.js';
 export { PROFILE_USAGE, parseProfileCommand } from './profile-command.js';
 
@@ -86,4 +87,8 @@ export function loadProfileNotifications(name: string): ProfileNotificationsEntr
 
 export function loadProfileSchedules(name: string): ProfileSchedulesEntry[] {
   return loadReservedSchedules(profilePath(name));
+}
+
+export function loadProfileLayout(name: string): ProfileLayout | null {
+  return loadReservedLayout(profilePath(name));
 }

@@ -44,6 +44,14 @@ A profile may declare that the notifications tab should open on launch in a rese
 
 A profile may declare that the schedules tab should open on launch in a reserved `_schedules.json` file at the profile root (kept out of the entry set the same way `_monitors.json`, `_files.json`, and `_notifications.json` are). The file is a JSON array of `{ dock? }` objects, where `dock` docks the list into that sidebar (`left`/`right`). Once every profile entry is open, each entry opens or docks the singleton schedules tab, mirroring the `schedules [left|right]` command. Because the schedules tab is a singleton, more than one entry simply re-docks the same list. Malformed elements in `_schedules.json`, and the file being absent, unparseable, or not an array, are treated as no schedules tab. The `claude` profile uses this to open schedules docked into the right sidebar.
 
+### Profile-level layout
+
+A profile may declare the size of the application window, the left/right sidebars, and the split between the upper action-tab area and the lower reporting-tab area in a reserved `_layout.json` file at the profile root (kept out of the entry set the same way `_monitors.json`, `_files.json`, `_notifications.json`, and `_schedules.json` are). Unlike those files, `_layout.json` is a single JSON object nested under a `layout` key, not an array: `{ "layout": { "window": { "width": 1440, "height": 900 }, "sidebarLeft": 320, "sidebarRight": 280, "tabAreaPct": 75 } }`. `window.width`/`window.height` are pixels; `sidebarLeft`/`sidebarRight` are pixels; `tabAreaPct` is 0-100 and is the upper action area's share of the vertical split.
+
+The layout is applied once every entry is open, on **every** `profile launch`, including a relaunch — it always overrides whatever the user had manually resized things to. Any dimension `_layout.json` doesn't mention resets to the app's built-in default (1280x800 window, 300px sidebars, the reporting section's current default height percentage) rather than being left at whatever it currently is. Sizes are applied exactly as specified, even if they exceed the manual-drag limits on sidebars or the reporting split, or the screen's own bounds — a profile's numbers are trusted as authoritative. Malformed individual fields in `_layout.json` are dropped while valid sibling fields are kept; the file being absent, unparseable, or not an object (or missing a `layout` key) is treated as no layout.
+
+When the server was started with `--no-open` (no application window opened), the window-size portion of `_layout.json` is ignored entirely — no resize attempt and no report note — while the sidebar/tab-area sizes still apply to any connected browser client.
+
 ### `profile launch <name>`
 
 Typing bare `profile launch` (no name) opens a picker listing the available profiles,

@@ -1,7 +1,15 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, fireEvent } from '@testing-library/react';
-import React from 'react';
-import { ReportingSection, isReportingTab, type ReportingEntry } from './ReportingSection';
+import React, { useState } from 'react';
+import { ReportingSection, isReportingTab, DEFAULT_PCT, type ReportingEntry } from './ReportingSection';
+
+// A drag needs the heightPct prop to actually move the rendered flex value, so the drag-clamp
+// tests wrap ReportingSection in a small controlled harness — mirroring how `App` owns it in
+// production.
+function ControlledReportingSection(props: Omit<React.ComponentProps<typeof ReportingSection>, 'heightPct' | 'onHeightPctChange'>) {
+  const [heightPct, setHeightPct] = useState(DEFAULT_PCT);
+  return React.createElement(ReportingSection, { ...props, heightPct, onHeightPctChange: setHeightPct });
+}
 
 function makeEntry(label: string, index: number, suggestions: { id: string; text: string; command?: string }[] = []): ReportingEntry {
   return {
@@ -136,7 +144,7 @@ describe('ReportingSection', () => {
 
   it('divider drag mousemove updates the height percentage', () => {
     const { container } = render(
-      React.createElement(ReportingSection, {
+      React.createElement(ControlledReportingSection, {
         entries: [makeEntry('alerts', 0)],
         onClose: vi.fn(), onRun: vi.fn(), onRate: vi.fn(), onReset: vi.fn(), onSnapshot: vi.fn(),
       }),
@@ -150,7 +158,7 @@ describe('ReportingSection', () => {
 
   it('divider drag clamps height to min 15%', () => {
     const { container } = render(
-      React.createElement(ReportingSection, {
+      React.createElement(ControlledReportingSection, {
         entries: [makeEntry('alerts', 0)],
         onClose: vi.fn(), onRun: vi.fn(), onRate: vi.fn(), onReset: vi.fn(), onSnapshot: vi.fn(),
       }),
@@ -164,7 +172,7 @@ describe('ReportingSection', () => {
 
   it('divider drag clamps height to max 85%', () => {
     const { container } = render(
-      React.createElement(ReportingSection, {
+      React.createElement(ControlledReportingSection, {
         entries: [makeEntry('alerts', 0)],
         onClose: vi.fn(), onRun: vi.fn(), onRate: vi.fn(), onReset: vi.fn(), onSnapshot: vi.fn(),
       }),

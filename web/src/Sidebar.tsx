@@ -10,16 +10,16 @@ import type { CommandInputDropHandle } from './CommandInput';
 
 const MIN_WIDTH_PX = 180;
 const MAX_WIDTH_PCT = 50;
-const DEFAULT_WIDTH_PX = 300;
+export const DEFAULT_WIDTH_PX = 300;
 
 // A sidebar (left or right) can dock the file navigator and the notifications tab at the same
 // time — the only two dockable kinds — sharing the space via a small internal tab-switcher (only
 // shown once both are present). Visibility is derived: the sidebar renders exactly when some tab
-// is docked to its side. Width is pure client-side view chrome (local `useState`, unpersisted),
-// resized by dragging the divider on the sidebar's inner edge, mirroring ReportingSection's
-// height-drag precedent.
+// is docked to its side. Width is a controlled prop, owned by `App` (so a profile's `_layout.json`
+// can drive it too — see `useLayoutState`), resized by dragging the divider on the sidebar's inner
+// edge, mirroring ReportingSection's height-drag precedent.
 export function Sidebar({
-  side, tabs, client, dropRef, tabNameMaxLength = 16,
+  side, tabs, client, dropRef, tabNameMaxLength = 16, width = DEFAULT_WIDTH_PX, onWidthChange,
 }: {
   side: 'left' | 'right';
   tabs: TabView[];
@@ -28,8 +28,9 @@ export function Sidebar({
   // can find and insert into that tab's command bar. See `App.tsx`'s `dropRef`.
   dropRef?: React.RefObject<CommandInputDropHandle | null>;
   tabNameMaxLength?: number;
+  width?: number;
+  onWidthChange?: (width: number) => void;
 }) {
-  const [width, setWidth] = useState(DEFAULT_WIDTH_PX);
   const [selectedView, setSelectedView] = useState<'files' | 'notifications' | 'schedules'>('files');
   const previousLabelsRef = useRef<Set<string>>(new Set());
 
@@ -40,9 +41,9 @@ export function Sidebar({
     startDrag((move) => {
       const delta = side === 'left' ? move.clientX - startX : startX - move.clientX;
       const maxWidth = globalThis.innerWidth * (MAX_WIDTH_PCT / 100);
-      setWidth(Math.min(maxWidth, Math.max(MIN_WIDTH_PX, startWidth + delta)));
+      onWidthChange?.(Math.min(maxWidth, Math.max(MIN_WIDTH_PX, startWidth + delta)));
     });
-  }, [side, width]);
+  }, [side, width, onWidthChange]);
 
   const entries = tabs.map((tab, index) => ({ tab, index })).filter((e) => e.tab.dock === side);
 

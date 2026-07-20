@@ -2,6 +2,7 @@ import type { ServerEvent, RpcCall, RouteChooserView, HarnessLaunchView, Schedul
 
 type StateListener = (tabs: TabView[], activeTab: number, route: RouteChooserView | null, tabNameMaxLength: number, globalHistory: string[], syntaxTheme: string, theme: string, tasks: TaskRow[], janissaryTasksDir: string, profiles: string[], projectDir: string, version: string, harnessLaunch: HarnessLaunchView | null, scheduleLaunch: ScheduleLaunchView | null) => void;
 type ExitListener = (id: string, exitCode: number) => void;
+type LayoutListener = (sidebarLeft?: number, sidebarRight?: number, tabAreaPct?: number) => void;
 
 // Thin WebSocket client. State snapshots fan out to subscribers; PTY output is routed per-id to
 // the terminal card that attached (with early bytes buffered so nothing is lost before mount).
@@ -10,6 +11,7 @@ export class JanusClient {
   private nextId = 1;
   private stateListeners = new Set<StateListener>();
   private exitListeners = new Set<ExitListener>();
+  private layoutListeners = new Set<LayoutListener>();
   private ptyHandlers = new Map<string, (data: string) => void>();
   private ptyBuffers = new Map<string, string[]>();
   private pending = new Map<number, (result: unknown, error?: string) => void>();
@@ -40,6 +42,11 @@ export class JanusClient {
     case 'pty-exit': {
       for (const l of this.exitListeners) l(event.id, event.exitCode);
     
+    break;
+    }
+    case 'layout': {
+      for (const l of this.layoutListeners) l(event.sidebarLeft, event.sidebarRight, event.tabAreaPct);
+
     break;
     }
     case 'bye': {
@@ -97,6 +104,7 @@ export class JanusClient {
 
   onState(l: StateListener): () => void { this.stateListeners.add(l); return () => this.stateListeners.delete(l); }
   onPtyExit(l: ExitListener): () => void { this.exitListeners.add(l); return () => this.exitListeners.delete(l); }
+  onLayout(l: LayoutListener): () => void { this.layoutListeners.add(l); return () => this.layoutListeners.delete(l); }
 
   // Register a terminal card's writer for a pty id, flushing any buffered early output first.
   attachPty(id: string, onData: (data: string) => void): () => void {

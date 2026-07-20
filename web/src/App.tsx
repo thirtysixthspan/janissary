@@ -36,6 +36,7 @@ import { useThemePicker } from './useThemePicker';
 import { useAppThemePicker } from './useAppThemePicker';
 import { useHistPicker } from './useHistPicker';
 import { useServerState } from './useServerState';
+import { useLayoutState } from './useLayoutState';
 import { applySyntaxTheme } from './editor/highlight/themes';
 import { useWindowFocus } from './useWindowFocus';
 import { useCmdWRefs } from './useCmdWRefs';
@@ -77,6 +78,9 @@ export function App() {
   const windowFocused = useWindowFocus();
 
   const { actionEntries, reportingEntries } = useTabEntries(tabs);
+  const {
+    sidebarLeftWidth, setSidebarLeftWidth, sidebarRightWidth, setSidebarRightWidth, reportingHeightPct, setReportingHeightPct,
+  } = useLayoutState(client);
 
   const current = tabs[activeTab] ?? actionEntries[0]?.tab;
   // `current`'s real index in the server's tab list — usually `activeTab`, but that can point
@@ -164,7 +168,11 @@ export function App() {
   if (!current) return <div className="app" style={{ padding: 16, color: 'var(--muted)' }}>Connecting…</div>;
 
   return (
-    <AppShell tabs={tabs} client={client} dropRef={dropReference} tabNameMaxLength={tabNameMaxLength}>
+    <AppShell
+      tabs={tabs} client={client} dropRef={dropReference} tabNameMaxLength={tabNameMaxLength}
+      sidebarLeftWidth={sidebarLeftWidth} onSidebarLeftWidthChange={setSidebarLeftWidth}
+      sidebarRightWidth={sidebarRightWidth} onSidebarRightWidthChange={setSidebarRightWidth}
+    >
       <TabStrip
         tabs={actionEntries.map((e) => e.tab)}
         activeTab={actionEntries.findIndex((e) => e.index === activeTab)}
@@ -212,6 +220,7 @@ export function App() {
         onRate={(id, up) => client.send({ method: 'rateSuggestion', params: { id, up } })}
         onReset={(name) => client.send({ method: 'resetMonitorContext', params: { name } })}
         onSnapshot={(name) => client.send({ method: 'monitorContextSnapshot', params: { name } })}
+        heightPct={reportingHeightPct} onHeightPctChange={setReportingHeightPct}
       />
       {harnessLaunch && <HarnessLaunchDialog view={harnessLaunch} client={client} />}
       {scheduleLaunch && <ScheduleDialog view={scheduleLaunch} client={client} />}

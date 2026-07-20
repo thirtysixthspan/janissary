@@ -299,6 +299,17 @@ export type ProfileNotificationsEntry = { dock?: 'left' | 'right' };
 // `_notifications.json`). `dock` docks the singleton schedules list into that sidebar.
 export type ProfileSchedulesEntry = { dock?: 'left' | 'right' };
 
+// Profile-level layout sizing, authored in a profile's reserved `_layout.json` file (mirrors the
+// other reserved files, but is a single object nested under a `layout` key, not an array). Applied
+// on every `profile launch`, including relaunch; any field it omits resets to the app's built-in
+// default rather than being left at whatever it currently is.
+export type ProfileLayout = {
+  window?: { width: number; height: number };
+  sidebarLeft?: number;
+  sidebarRight?: number;
+  tabAreaPct?: number;
+};
+
 // --- schedule.ts ----------------------------------------------------------
 
 export type TimeOfDay = { hour: number; minute: number };
@@ -562,4 +573,5 @@ export type Sinks = {
   sendPty: (id: string, data: string) => void;
   sendPtyExit: (id: string, exitCode: number) => void;
   exit?: () => void;
+  sendLayout?: (event: { sidebarLeft?: number; sidebarRight?: number; tabAreaPct?: number }) => void;
 };

@@ -12,6 +12,8 @@ type StateListener = (
   syntaxTheme: string, theme: string, tasks: string[],
 ) => void;
 let stateListener: StateListener | null = null;
+type LayoutListener = (sidebarLeft?: number, sidebarRight?: number, tabAreaPct?: number) => void;
+let layoutListener: LayoutListener | null = null;
 
 vi.mock('./ws', () => {
   class JanusClient {
@@ -19,6 +21,7 @@ vi.mock('./ws', () => {
     request = requestMock;
     onState(l: StateListener) { stateListener = l; return () => {}; }
     onPtyExit() { return () => {}; }
+    onLayout(l: LayoutListener) { layoutListener = l; return () => {}; }
     attachPty() { return () => {}; }
     renameTab = renameTabMock;
     saveFile() { return Promise.resolve(undefined); }
@@ -359,6 +362,48 @@ describe('App sidebar docking', () => {
     });
     fireEvent.click(container.querySelector(':scope .sidebar-left .tab-close')!);
     expect(sendMock).toHaveBeenCalledWith({ method: 'closeTab', params: { index: 1 } });
+  }, 15_000);
+});
+
+describe('App layout WS event', () => {
+  beforeEach(() => {
+    sendMock.mockClear();
+    stateListener = null;
+    layoutListener = null;
+  });
+
+  it('updates the rendered sidebar width on a layout event', async () => {
+    const { App } = await import('./App');
+    const { container } = render(<App />);
+    act(() => {
+      stateListener!(
+        [makeTab(), makeTab({ label: 'files', view: 'files', dock: 'left', files: { root: '/tmp/project', absoluteRoot: '/tmp/project', rows: [] } })],
+        0, null, 16, [], 'github-dark', 'dark', [],
+      );
+    });
+    act(() => { layoutListener!(320, undefined, undefined); });
+    const sidebar = container.querySelector('.sidebar-left') as HTMLElement;
+    expect(sidebar.style.flex).toBe('0 0 320px');
+  }, 15_000);
+
+  it('a partial layout event leaves the other sidebar width unchanged', async () => {
+    const { App } = await import('./App');
+    const { container } = render(<App />);
+    act(() => {
+      stateListener!(
+        [
+          makeTab(),
+          makeTab({ label: 'files', view: 'files', dock: 'left', files: { root: '/tmp/project', absoluteRoot: '/tmp/project', rows: [] } }),
+          makeTab({ label: 'notifications', title: 'notifications', view: 'notifications', dock: 'right' }),
+        ],
+        0, null, 16, [], 'github-dark', 'dark', [],
+      );
+    });
+    act(() => { layoutListener!(undefined, undefined, 75); });
+    const leftSidebar = container.querySelector('.sidebar-left') as HTMLElement;
+    const rightSidebar = container.querySelector('.sidebar-right') as HTMLElement;
+    expect(leftSidebar.style.flex).toBe('0 0 300px');
+    expect(rightSidebar.style.flex).toBe('0 0 300px');
   }, 15_000);
 });
 
