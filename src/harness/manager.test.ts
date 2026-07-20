@@ -461,7 +461,7 @@ describe('HarnessManager busy/ready status', () => {
     expect(managers.tab.markUnread).toHaveBeenCalledWith('claude');
   });
 
-  it('drives opencode busy/ready from screen text, with no badge on its permission prompt', async () => {
+  it('drives opencode busy/ready from screen text, badging unread once idle (no distinct gate detection)', async () => {
     const { managers } = makeManagers();
     const manager = new HarnessManager(managers);
     expect(manager.run('harness opencode')).toBeUndefined();
@@ -469,9 +469,10 @@ describe('HarnessManager busy/ready status', () => {
     await settle('⬝⬝⬝⬝■■■■');
     expect(managers.tab.addBusy).toHaveBeenCalledWith('opencode');
     await settle(`${CLEAR} △ Permission required`);
+    expect(managers.tab.markUnread).not.toHaveBeenCalled();
     await settle(`${CLEAR} △ Permission required`);
     expect(managers.tab.deleteBusy).toHaveBeenCalledWith('opencode');
-    expect(managers.tab.markUnread).not.toHaveBeenCalled();
+    expect(managers.tab.markUnread).toHaveBeenCalledWith('opencode');
   });
 
   it('drives codex busy/ready from its spinner-led title with no -y', async () => {
