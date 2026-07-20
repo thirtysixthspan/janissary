@@ -17,13 +17,25 @@ function shellQuote(value: string): string {
   return `'${value.replaceAll("'", String.raw`'\''`)}'`;
 }
 
-// Build the shell command string that launches a harness binary, optionally with a model and/or
-// effort flag. `buildHarnessCommand('opencode', 'opencode-go/deepseek-v4-pro', 'high')` →
-// `opencode --model 'opencode-go/deepseek-v4-pro' --effort 'high'`.
+// Each harness expresses a per-session effort/reasoning level through a different flag, so the same
+// requested level maps to different arguments: claude takes `--effort <level>`; codex sets it via a
+// config override (`-c model_reasoning_effort=<level>`); opencode has no effort flag at all and gets
+// nothing. Passing claude's `--effort` to codex or opencode makes the binary reject the unknown
+// argument and exit immediately, closing the freshly opened harness tab.
+function effortArg(name: string, effort: string): string | undefined {
+  if (name === 'claude') return `--effort ${shellQuote(effort)}`;
+  if (name === 'codex') return `-c ${shellQuote(`model_reasoning_effort=${effort}`)}`;
+  return undefined;
+}
+
+// Build the shell command string that launches a harness binary, optionally with a model and/or an
+// effort level translated to that harness's own flag (see effortArg).
+// `buildHarnessCommand('codex', 'gpt-5', 'high')` → `codex --model 'gpt-5' -c 'model_reasoning_effort=high'`.
 export function buildHarnessCommand(name: string, model?: string, effort?: string): string {
   const program = HARNESS_COMMANDS[name];
   const parts = [program];
   if (model) parts.push(`--model ${shellQuote(model)}`);
-  if (effort) parts.push(`--effort ${shellQuote(effort)}`);
+  const effortFlag = effort ? effortArg(name, effort) : undefined;
+  if (effortFlag) parts.push(effortFlag);
   return parts.join(' ');
 }

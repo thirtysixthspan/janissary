@@ -53,10 +53,10 @@ harness <name> [as <label>] [-w] [-y] [--model <name>] [--effort <level>]
 
 A project can drop its own `.janissary/harness-models.json` (a JSON object mapping harness name to a list of model ids) into its `.janissary/` directory to replace the bundled catalog entirely for that project — useful for pinning a project-specific set of models or covering a harness the bundled catalog doesn't populate. Likewise, a project can drop `.janissary/agent-names.json` (a JSON array of names) to replace the bundled agent name pool. If either file is missing, the bundled default is used; if it exists but isn't valid JSON, a warning is printed and the bundled default is used instead.
 
-`--effort <level>` picks an effort/thinking level, passed to the harness binary's `--effort` flag verbatim — there's no catalog to check it against, so any value you give is forwarded as-is (a harness binary that doesn't understand the flag just ignores it):
+`--effort <level>` picks an effort/thinking level. There's no catalog to check it against, so any value you give is forwarded as-is — but it's translated to whichever flag the harness actually understands so the launch never breaks: claude gets `--effort <level>`, codex gets the reasoning-effort config override `-c model_reasoning_effort=<level>`, and opencode (which has no effort flag) simply ignores it:
 
 ```
-harness opencode --model opencode-go/glm-5.2 --effort high
+harness codex --model gpt-5 --effort high
 harness claude --effort high
 ```
 

@@ -249,13 +249,23 @@ describe('buildHarnessCommand', () => {
     expect(buildHarnessCommand('opencode', "a'b")).toBe(String.raw`opencode --model 'a'\''b'`);
   });
 
-  it('appends a quoted --effort flag when given, with no model', () => {
+  it('appends claude\'s --effort flag when given, with no model', () => {
     expect(buildHarnessCommand('claude', undefined, 'high')).toBe("claude --effort 'high'");
   });
 
-  it('appends both --model and --effort flags when both are given', () => {
+  it('translates effort to codex\'s reasoning-effort config override', () => {
+    expect(buildHarnessCommand('codex', undefined, 'high')).toBe("codex -c 'model_reasoning_effort=high'");
+  });
+
+  it('appends both --model and codex\'s effort override when both are given', () => {
+    expect(buildHarnessCommand('codex', 'gpt-5', 'high')).toBe(
+      "codex --model 'gpt-5' -c 'model_reasoning_effort=high'",
+    );
+  });
+
+  it('drops effort for opencode, which has no effort flag, keeping the model', () => {
     expect(buildHarnessCommand('opencode', 'opencode-go/deepseek-v4-pro', 'high')).toBe(
-      "opencode --model 'opencode-go/deepseek-v4-pro' --effort 'high'",
+      "opencode --model 'opencode-go/deepseek-v4-pro'",
     );
   });
 });
