@@ -351,6 +351,27 @@ describe('MonitorManager', () => {
     expect(manager.list()).toEqual([]);
   });
 
+  it('snapshot returns one record per live monitor with persona, authored targets, and inline', () => {
+    const { managers } = makeFakeManagers([janus, agent2]);
+    const { spawn } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+    manager.start('janus', 'security', []);
+    manager.start('janus', 'assistant', [{ kind: 'tab', label: 'agent2' }]);
+
+    expect(manager.snapshot()).toEqual(expect.arrayContaining([
+      { persona: 'security', targets: [{ kind: 'tab', label: 'janus' }], inline: true },
+      { persona: 'assistant', targets: [{ kind: 'tab', label: 'agent2' }], inline: false },
+    ]));
+  });
+
+  it('snapshot returns an empty array when no monitors are running', () => {
+    const { managers } = makeFakeManagers([janus]);
+    const { spawn } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+
+    expect(manager.snapshot()).toEqual([]);
+  });
+
   it('closing the owner tab tears down its monitors and their reporting tabs', () => {
     const { managers } = makeFakeManagers([janus, agent2]);
     const { spawn, sessions } = fakeSpawnFactory();

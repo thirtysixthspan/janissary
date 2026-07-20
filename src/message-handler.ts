@@ -4,6 +4,7 @@ import { buildStateEvent } from './state-event.js';
 import { openTranscriptFor } from './controller/transcript.js';
 import { projectFilesFor } from './project-files.js';
 import { handleFileTreeMessage } from './message-handler-file-tree.js';
+import { setClientLayout } from './client-layout.js';
 
 export function handle(controller: Controller, message: ClientMessage, reply: (event: ServerEvent) => void): void {
   switch (message.method) {
@@ -60,6 +61,10 @@ export function handle(controller: Controller, message: ClientMessage, reply: (e
     case 'saveFile': { controller.saveFile(message.params.url, message.params.content); break;
     }
     case 'editorSync': { controller.syncEditorBuffer(message.params.url, message.params.content); break;
+    }
+    // Bridges straight to client-layout.js (bypassing a Controller passthrough method) to keep
+    // controller.ts under its line-size limit — see openTranscriptFor's comment above.
+    case 'reportLayout': { setClientLayout(message.params); break;
     }
     case 'pageSync': { controller.syncPageSnapshot(message.params.url, message.params.text); break;
     }

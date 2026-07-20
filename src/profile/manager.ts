@@ -2,6 +2,7 @@ import { makeTab, distinctColor } from '../tab/index.js';
 import { parseProfileCommand, loadProfileEntries, listProfiles, profileExists } from '../profiles.js';
 import { resolveAgentName } from '../commands.js';
 import { openProfileEntries } from './agent-opener.js';
+import { saveProfile, formatSaveSummary } from './save.js';
 import { notify } from '../notifications.js';
 import type { Tab } from '../types.js';
 import type { Managers } from '../managers.js';
@@ -17,6 +18,10 @@ export class ProfileManager {
     if (parsed.action === 'list') {
       const names = listProfiles();
       out(names.length > 0 ? names.join('\n') : 'No profiles.');
+      return;
+    }
+    if (parsed.action === 'save') {
+      void saveProfile(parsed.name, this.managers).then((summary) => out(formatSaveSummary(parsed.name, summary)));
       return;
     }
     if (!profileExists(parsed.name)) {

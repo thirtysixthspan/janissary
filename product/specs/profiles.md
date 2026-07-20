@@ -69,7 +69,23 @@ All of a launched profile's entries are placed into a single **new group** (the 
 
 Lists the available profile directory names (sorted), or `No profiles.` when none exist.
 
+### `profile save <name>`
+
+Captures the running session into `profiles/<name>/` — the inverse of `profile launch`. `<name>` is used verbatim as the directory name, with no dasherization. Every open tab is captured, including the tab the command was typed in (unlike `profile launch`, which never touches its own issuing tab).
+
+Each agent tab is written as a clean, reusable template: its name, dot color, tab order, group, and starting directory. Command history, transcript, and any queued commands are deliberately left out, so a saved profile is a fresh starting point rather than a frozen session — reopening it later starts each agent from scratch. Each harness tab is captured the same way: harness kind, model, effort level, workspace/offline/auto-approve flags, dot color, group, and starting directory. A harness tab's scheduled or one-shot commands are never captured, since they exist only in memory and are not recoverable.
+
+Live group and dot-color assignments are captured exactly as they appear on screen. Note that `profile launch` always places a profile's entries into one new group regardless of what each entry's own `group` says (see Relaunching below), so a session with agents split across several groups does not round-trip that split — launching the saved profile merges them back into a single group.
+
+The window size, sidebar widths, and the split between the tab area and the reporting area are captured into the profile's layout, matching whatever the window and sidebars currently look like. When the server was started with `--no-open` (no application window), the window-size portion is skipped — the sidebar/tab-area sizes are still captured — and the command's output notes that the window size wasn't captured.
+
+Any running monitors are captured too, keyed by persona and their monitored tabs/groups; an inline monitor (one with no separate reporting tab) is captured the same way. A docked file navigator, notifications tab, or schedules tab is captured by which sidebar it's docked to; a file navigator's tree root is captured as a literal path. Which docked tab is currently visible in a sidebar's internal tab-switcher is not captured, and neither is a file navigator's association with the tab it was opened from — reopening the saved profile roots each captured file navigator directly at the path it was saved with.
+
+Tabs with no equivalent in a profile — an opened image, a web page, a markdown viewer, a text editor, an ssh connection, a monitor's own reporting tab, or a file navigator that isn't docked into a sidebar — are left out of the saved profile and listed by name in the command's output, so it's clear what wasn't captured.
+
+Saving over an existing profile name replaces it outright: the profile directory is cleared and rewritten from the current session, with no confirmation prompt. On success, the command reports what was captured — counts of agents, harnesses, the layout, monitors, and docked tabs — followed by the list of any tabs that were skipped.
+
 ### `profile` command
 
-`profile` launches a saved set of agents and harnesses. See the Profiles section. `profile launch <name>` opens a tab for each entry in the named profile (restoring agent state, or launching a harness), closing and reopening any tab that collides with a relaunch; `profile list` lists the available profiles. Malformed invocations return a `Usage:` message.
+`profile` launches a saved set of agents and harnesses. See the Profiles section. `profile launch <name>` opens a tab for each entry in the named profile (restoring agent state, or launching a harness), closing and reopening any tab that collides with a relaunch; `profile list` lists the available profiles; `profile save <name>` captures the running session into a new or overwritten profile. Malformed invocations return a `Usage:` message.
 

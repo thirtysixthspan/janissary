@@ -5,10 +5,12 @@ import type { ClientMessage, ServerEvent, RpcCall } from './protocol.js';
 import { openTranscriptFor } from './controller/transcript.js';
 import { projectFilesFor } from './project-files.js';
 import { fileTreeSearch, revealFileTreeItem } from './controller/file-tree.js';
+import { setClientLayout } from './client-layout.js';
 
 vi.mock('./controller/transcript.js', () => ({ openTranscriptFor: vi.fn() }));
 vi.mock('./project-files.js', () => ({ projectFilesFor: vi.fn() }));
 vi.mock('./controller/file-tree.js', () => ({ fileTreeSearch: vi.fn(), revealFileTreeItem: vi.fn() }));
+vi.mock('./client-layout.js', () => ({ setClientLayout: vi.fn() }));
 
 const makeController = () =>
   ({
@@ -247,6 +249,12 @@ describe('handle', () => {
     const controller = makeController();
     dispatchCall(controller, 28, { method: 'openTranscriptFor', params: { label: 'janus' } });
     expect(openTranscriptFor).toHaveBeenCalledWith(controller.managers, 'janus');
+  });
+
+  it('routes reportLayout straight to client-layout.js', () => {
+    const controller = makeController();
+    dispatchCall(controller, 30, { method: 'reportLayout', params: { sidebarLeft: 320, sidebarRight: 280, tabAreaPct: 70 } });
+    expect(setClientLayout).toHaveBeenCalledWith({ sidebarLeft: 320, sidebarRight: 280, tabAreaPct: 70 });
   });
 
   it('routes projectFiles to a deferred reply carrying the resolved root and paths', async () => {

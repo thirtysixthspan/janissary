@@ -39,8 +39,26 @@ export function useLayoutState(client: JanusClient): LayoutState {
     if (event.focusRight !== undefined) setFocusRight(event.focusRight);
   }), [client]);
 
+  // Report a manual resize back to the server (the reverse of the `layout` event above), so
+  // `profile save` can read the live sizes. Not fired for server-driven updates (the setters
+  // above, called from onLayout, bypass these wrappers).
+  const reportSidebarLeftWidth = (width: number) => {
+    setSidebarLeftWidth(width);
+    client.reportLayout(width, sidebarRightWidth, 100 - reportingHeightPct);
+  };
+  const reportSidebarRightWidth = (width: number) => {
+    setSidebarRightWidth(width);
+    client.reportLayout(sidebarLeftWidth, width, 100 - reportingHeightPct);
+  };
+  const reportReportingHeightPct = (heightPct: number) => {
+    setReportingHeightPct(heightPct);
+    client.reportLayout(sidebarLeftWidth, sidebarRightWidth, 100 - heightPct);
+  };
+
   return {
-    sidebarLeftWidth, setSidebarLeftWidth, sidebarRightWidth, setSidebarRightWidth, reportingHeightPct, setReportingHeightPct,
+    sidebarLeftWidth, setSidebarLeftWidth: reportSidebarLeftWidth,
+    sidebarRightWidth, setSidebarRightWidth: reportSidebarRightWidth,
+    reportingHeightPct, setReportingHeightPct: reportReportingHeightPct,
     focusLeft, focusRight,
   };
 }

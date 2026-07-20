@@ -21,8 +21,8 @@ import { loadGithubToken } from './github-token.js';
 import { parseCliArgs, usageText, appVersion, CliUsageError } from './cli-args.js';
 import { explainStartupError, formatFatal, maybeStack } from './startup-errors.js';
 import { loadFrameEnablerExtension } from './chrome-extension-loader.js';
-import { resizeAppWindow } from './cdp-window-resize.js';
-import { setWindowResizer } from './window-resizer.js';
+import { resizeAppWindow, getAppWindowBounds } from './cdp-window-resize.js';
+import { setWindowResizer, setWindowBoundsReader } from './window-resizer.js';
 import type { ChildProcess } from 'node:child_process';
 import type { Readable, Writable } from 'node:stream';
 
@@ -127,6 +127,7 @@ function openApp(url: string, projectDir: string): void {
   if (writePipe && readPipe) {
     void loadFrameEnablerExtension(writePipe, readPipe, extDir);
     setWindowResizer((width, height) => resizeAppWindow(writePipe, readPipe, width, height));
+    setWindowBoundsReader(() => getAppWindowBounds(writePipe, readPipe));
   } else {
     process.stderr.write(
       'warning: Chrome frame-enabler extension failed to load (fd 3/4 pipes unavailable) — sites that block iframing may not render in page tabs\n',
