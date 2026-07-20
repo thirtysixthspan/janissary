@@ -46,10 +46,13 @@ export function useServerState(client: JanusClient, setters: Setters): void {
     setProfiles(nextProfiles);
     setProjectDir(nextProjectDir);
     setVersion(nextVersion);
-    // Highlight the first option when a chooser newly opens (or its command changes).
+    // Highlight the acp option (routeChoices always places it last) when a chooser newly opens
+    // (or its command changes), falling back to 0 if there are no choices to highlight.
     const previous = routeRef.current;
     routeRef.current = nextRoute;
-    if (nextRoute && (!previous || previous.cmd !== nextRoute.cmd)) setRouteIndex(0);
+    if (nextRoute && (!previous || previous.cmd !== nextRoute.cmd)) {
+      setRouteIndex(Math.max(0, nextRoute.choices.length - 1));
+    }
   }), [
     client, setTabs, setActiveTab, setRoute, setHarnessLaunch, setScheduleLaunch, setTabNameMaxLength, setGlobalHistory, setSyntaxTheme, setTheme, setTasks, setJanissaryTasksDir, setProfiles, setRouteIndex, routeRef,
   ]);
