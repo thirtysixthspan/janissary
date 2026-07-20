@@ -80,6 +80,7 @@ export function App() {
   const { actionEntries, reportingEntries } = useTabEntries(tabs);
   const {
     sidebarLeftWidth, setSidebarLeftWidth, sidebarRightWidth, setSidebarRightWidth, reportingHeightPct, setReportingHeightPct,
+    focusLeft, focusRight,
   } = useLayoutState(client);
 
   const current = tabs[activeTab] ?? actionEntries[0]?.tab;
@@ -172,6 +173,7 @@ export function App() {
       tabs={tabs} client={client} dropRef={dropReference} tabNameMaxLength={tabNameMaxLength}
       sidebarLeftWidth={sidebarLeftWidth} onSidebarLeftWidthChange={setSidebarLeftWidth}
       sidebarRightWidth={sidebarRightWidth} onSidebarRightWidthChange={setSidebarRightWidth}
+      focusLeft={focusLeft} focusRight={focusRight}
     >
       <TabStrip
         tabs={actionEntries.map((e) => e.tab)}

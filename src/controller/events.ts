@@ -18,7 +18,11 @@ export function wireControllerEvents(managers: Managers, sinks: Sinks): void {
   });
   messageBus.on('app', 'exit', () => sinks.exit?.());
   messageBus.on('layout', 'update', (event) => sinks.sendLayout?.({
-    sidebarLeft: event.sidebarLeft, sidebarRight: event.sidebarRight, tabAreaPct: event.tabAreaPct,
+    sidebarLeft: event.sidebarLeft,
+    sidebarRight: event.sidebarRight,
+    tabAreaPct: event.tabAreaPct,
+    focusLeft: event.focusLeft,
+    focusRight: event.focusRight,
   }));
   messageBus.on('pty', ['data', 'exit'], (event) => {
     if (event.type === 'data') { sinks.sendPty(event.id, event.data); return; }

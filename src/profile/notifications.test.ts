@@ -6,6 +6,7 @@ import { openProfileNotifications } from './notifications.js';
 import { notificationsTab } from '../notifications-tab.js';
 import { initProfileDir } from '../profiles.js';
 import { TabManager } from '../tab/manager.js';
+import { messageBus } from '../bus.js';
 import type { Managers } from '../managers.js';
 
 function makeManagers(): Managers {
@@ -52,6 +53,38 @@ describe('openProfileNotifications', () => {
 
     expect(notificationsTab(managers)!.dock).toBeUndefined();
     expect(notes).toEqual(['Opened notifications.']);
+  });
+
+  it('emits a layout focus event when docked with focus: true', () => {
+    writeNotifications('claude', JSON.stringify([{ dock: 'right', focus: true }]));
+    const managers = makeManagers();
+    const notes: string[] = [];
+    const events: unknown[] = [];
+    const sub = messageBus.on('layout', 'update', (event) => { events.push(event); });
+
+    try {
+      openProfileNotifications('claude', managers, notes);
+    } finally {
+      sub.unsubscribe();
+    }
+
+    expect(events).toEqual([{ type: 'update', focusRight: 'notifications' }]);
+  });
+
+  it('does not emit a layout focus event when focus is omitted', () => {
+    writeNotifications('claude', JSON.stringify([{ dock: 'right' }]));
+    const managers = makeManagers();
+    const notes: string[] = [];
+    const events: unknown[] = [];
+    const sub = messageBus.on('layout', 'update', (event) => { events.push(event); });
+
+    try {
+      openProfileNotifications('claude', managers, notes);
+    } finally {
+      sub.unsubscribe();
+    }
+
+    expect(events).toEqual([]);
   });
 
   it('does nothing when the profile has no _notifications.json', () => {

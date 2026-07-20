@@ -19,7 +19,7 @@ export const DEFAULT_WIDTH_PX = 300;
 // can drive it too — see `useLayoutState`), resized by dragging the divider on the sidebar's inner
 // edge, mirroring ReportingSection's height-drag precedent.
 export function Sidebar({
-  side, tabs, client, dropRef, tabNameMaxLength = 16, width = DEFAULT_WIDTH_PX, onWidthChange,
+  side, tabs, client, dropRef, tabNameMaxLength = 16, width = DEFAULT_WIDTH_PX, onWidthChange, focusView,
 }: {
   side: 'left' | 'right';
   tabs: TabView[];
@@ -30,6 +30,10 @@ export function Sidebar({
   tabNameMaxLength?: number;
   width?: number;
   onWidthChange?: (width: number) => void;
+  // A profile's `_notifications.json` `focus` field (or any future dock entry's), delivered over
+  // the `layout` WS event. Overrides the "most recently docked tab wins" default below — see
+  // `useLayoutState.ts`.
+  focusView?: 'files' | 'notifications' | 'schedules';
 }) {
   const [selectedView, setSelectedView] = useState<'files' | 'notifications' | 'schedules'>('files');
   const previousLabelsRef = useRef<Set<string>>(new Set());
@@ -54,6 +58,12 @@ export function Sidebar({
     if (newlyDocked) setSelectedView(newlyDocked.tab.view as 'files' | 'notifications' | 'schedules');
     previousLabelsRef.current = new Set(entries.map((e) => e.tab.label));
   }, [entries]);
+
+  // A profile's declared focus wins over the "newly docked" default above, whenever the target
+  // view is actually docked here (it may arrive before or after the tab it names).
+  useEffect(() => {
+    if (focusView && entries.some((e) => e.tab.view === focusView)) setSelectedView(focusView);
+  }, [focusView, entries]);
 
   if (entries.length === 0) return null;
   const current = entries.find((e) => e.tab.view === selectedView) ?? entries[0];

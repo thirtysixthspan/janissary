@@ -9,6 +9,7 @@ import type { CommandInputDropHandle } from './CommandInput';
 export function AppShell({
   tabs, client, children, dropRef, tabNameMaxLength = 16,
   sidebarLeftWidth, onSidebarLeftWidthChange, sidebarRightWidth, onSidebarRightWidthChange,
+  focusLeft, focusRight,
 }: {
   tabs: TabView[];
   client: JanusClient;
@@ -19,17 +20,19 @@ export function AppShell({
   onSidebarLeftWidthChange?: (width: number) => void;
   sidebarRightWidth?: number;
   onSidebarRightWidthChange?: (width: number) => void;
+  focusLeft?: 'files' | 'notifications' | 'schedules';
+  focusRight?: 'files' | 'notifications' | 'schedules';
 }) {
   return (
     <div className="app">
       <Sidebar
         side="left" tabs={tabs} client={client} dropRef={dropRef} tabNameMaxLength={tabNameMaxLength}
-        width={sidebarLeftWidth} onWidthChange={onSidebarLeftWidthChange}
+        width={sidebarLeftWidth} onWidthChange={onSidebarLeftWidthChange} focusView={focusLeft}
       />
       <div className="app-center">{children}</div>
       <Sidebar
         side="right" tabs={tabs} client={client} dropRef={dropRef} tabNameMaxLength={tabNameMaxLength}
-        width={sidebarRightWidth} onWidthChange={onSidebarRightWidthChange}
+        width={sidebarRightWidth} onWidthChange={onSidebarRightWidthChange} focusView={focusRight}
       />
     </div>
   );

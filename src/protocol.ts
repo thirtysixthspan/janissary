@@ -114,7 +114,14 @@ export type RpcReply = { t: 'rpc-reply'; id: number; result?: unknown; error?: s
 export type ByeEvent = { t: 'bye' };
 // A profile's `_layout.json` sidebar/tab-area sizes, applied on `profile launch`. Window sizing is
 // applied directly over CDP and never reaches the client — see product/specs/profiles.md.
-export type LayoutEvent = { t: 'layout'; sidebarLeft?: number; sidebarRight?: number; tabAreaPct?: number };
+export type LayoutEvent = {
+  t: 'layout';
+  sidebarLeft?: number;
+  sidebarRight?: number;
+  tabAreaPct?: number;
+  focusLeft?: 'files' | 'notifications' | 'schedules';
+  focusRight?: 'files' | 'notifications' | 'schedules';
+};
 export type ServerEvent = StateEvent | PtyDataEvent | PtyExitEvent | RpcReply | ByeEvent | LayoutEvent;
 
 // Client -> server requests. Tab creation/closing flow through `command` (`agent`, `close`);

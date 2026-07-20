@@ -292,8 +292,10 @@ export type ProfileMonitor = { persona: string; targets: string[] };
 export type ProfileFilesEntry = { dock?: 'left' | 'right'; in?: string; path?: string };
 
 // A profile-level notifications tab, authored in a profile's reserved `_notifications.json` file
-// (mirrors `_files.json`). `dock` docks the singleton notifications feed into that sidebar.
-export type ProfileNotificationsEntry = { dock?: 'left' | 'right' };
+// (mirrors `_files.json`). `dock` docks the singleton notifications feed into that sidebar; `focus`
+// (only meaningful alongside `dock`) makes it the visible tab in that sidebar's internal
+// tab-switcher, overriding the default "most recently docked tab wins" behavior.
+export type ProfileNotificationsEntry = { dock?: 'left' | 'right'; focus?: boolean };
 
 // A profile-level schedules tab, authored in a profile's reserved `_schedules.json` file (mirrors
 // `_notifications.json`). `dock` docks the singleton schedules list into that sidebar.
@@ -573,5 +575,11 @@ export type Sinks = {
   sendPty: (id: string, data: string) => void;
   sendPtyExit: (id: string, exitCode: number) => void;
   exit?: () => void;
-  sendLayout?: (event: { sidebarLeft?: number; sidebarRight?: number; tabAreaPct?: number }) => void;
+  sendLayout?: (event: {
+    sidebarLeft?: number;
+    sidebarRight?: number;
+    tabAreaPct?: number;
+    focusLeft?: 'files' | 'notifications' | 'schedules';
+    focusRight?: 'files' | 'notifications' | 'schedules';
+  }) => void;
 };

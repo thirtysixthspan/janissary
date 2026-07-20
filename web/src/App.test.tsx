@@ -12,7 +12,13 @@ type StateListener = (
   syntaxTheme: string, theme: string, tasks: string[],
 ) => void;
 let stateListener: StateListener | null = null;
-type LayoutListener = (sidebarLeft?: number, sidebarRight?: number, tabAreaPct?: number) => void;
+type LayoutListener = (event: {
+  sidebarLeft?: number;
+  sidebarRight?: number;
+  tabAreaPct?: number;
+  focusLeft?: 'files' | 'notifications' | 'schedules';
+  focusRight?: 'files' | 'notifications' | 'schedules';
+}) => void;
 let layoutListener: LayoutListener | null = null;
 
 vi.mock('./ws', () => {
@@ -381,7 +387,7 @@ describe('App layout WS event', () => {
         0, null, 16, [], 'github-dark', 'dark', [],
       );
     });
-    act(() => { layoutListener!(320, undefined, undefined); });
+    act(() => { layoutListener!({ sidebarLeft: 320 }); });
     const sidebar = container.querySelector('.sidebar-left') as HTMLElement;
     expect(sidebar.style.flex).toBe('0 0 320px');
   }, 15_000);
@@ -399,7 +405,7 @@ describe('App layout WS event', () => {
         0, null, 16, [], 'github-dark', 'dark', [],
       );
     });
-    act(() => { layoutListener!(undefined, undefined, 75); });
+    act(() => { layoutListener!({ tabAreaPct: 75 }); });
     const leftSidebar = container.querySelector('.sidebar-left') as HTMLElement;
     const rightSidebar = container.querySelector('.sidebar-right') as HTMLElement;
     expect(leftSidebar.style.flex).toBe('0 0 300px');

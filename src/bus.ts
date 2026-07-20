@@ -87,6 +87,13 @@ type PtyEvent =
   | { type: 'data'; id: string; data: string }
   | { type: 'exit'; id: string; exitCode: number }
   | { type: 'resize'; id: string; cols: number; rows: number };
-type LayoutEvent = { type: 'update'; sidebarLeft?: number; sidebarRight?: number; tabAreaPct?: number };
+type LayoutEvent = {
+  type: 'update';
+  sidebarLeft?: number;
+  sidebarRight?: number;
+  tabAreaPct?: number;
+  focusLeft?: 'files' | 'notifications' | 'schedules';
+  focusRight?: 'files' | 'notifications' | 'schedules';
+};
 export type BusChannels = { transcript: BusEvent; state: StateEvent; app: AppEvent; pty: PtyEvent; layout: LayoutEvent };
 export const messageBus = new MessageBus<BusChannels>();

@@ -193,6 +193,16 @@ describe('Sidebar', () => {
     expect(queryByText('/tmp/project')).toBeNull();
   });
 
+  it('focusView overrides which docked tab is visible, even though it docked first', () => {
+    const client = { send: vi.fn() } as unknown as JanusClient;
+    const tabs = [
+      makeTab({ label: 'notifications', title: 'notifications', view: 'notifications', dock: 'right', bufferLines: [{ type: 'output', text: 'a notification' }] }),
+      makeTab({ label: 'schedules', title: 'schedules', view: 'schedules', dock: 'right', aggregatedSchedules: [] }),
+    ];
+    const { getByText } = render(<Sidebar side="right" tabs={tabs} client={client} focusView="notifications" />);
+    expect(getByText('a notification')).toBeTruthy();
+  });
+
   it('drag clamps width to 50% of the viewport when dragged far past it', () => {
     const client = { send: vi.fn() } as unknown as JanusClient;
     const tabs = [makeTab({ view: 'files', dock: 'right', files: { root: '/tmp/project', absoluteRoot: '/tmp/project', rows: [] } })];

@@ -2,7 +2,13 @@ import type { ServerEvent, RpcCall, RouteChooserView, HarnessLaunchView, Schedul
 
 type StateListener = (tabs: TabView[], activeTab: number, route: RouteChooserView | null, tabNameMaxLength: number, globalHistory: string[], syntaxTheme: string, theme: string, tasks: TaskRow[], janissaryTasksDir: string, profiles: string[], projectDir: string, version: string, harnessLaunch: HarnessLaunchView | null, scheduleLaunch: ScheduleLaunchView | null) => void;
 type ExitListener = (id: string, exitCode: number) => void;
-type LayoutListener = (sidebarLeft?: number, sidebarRight?: number, tabAreaPct?: number) => void;
+type LayoutListener = (event: {
+  sidebarLeft?: number;
+  sidebarRight?: number;
+  tabAreaPct?: number;
+  focusLeft?: 'files' | 'notifications' | 'schedules';
+  focusRight?: 'files' | 'notifications' | 'schedules';
+}) => void;
 
 // Thin WebSocket client. State snapshots fan out to subscribers; PTY output is routed per-id to
 // the terminal card that attached (with early bytes buffered so nothing is lost before mount).
@@ -45,7 +51,12 @@ export class JanusClient {
     break;
     }
     case 'layout': {
-      for (const l of this.layoutListeners) l(event.sidebarLeft, event.sidebarRight, event.tabAreaPct);
+      for (const l of this.layoutListeners) {
+        l({
+          sidebarLeft: event.sidebarLeft, sidebarRight: event.sidebarRight, tabAreaPct: event.tabAreaPct,
+          focusLeft: event.focusLeft, focusRight: event.focusRight,
+        });
+      }
 
     break;
     }

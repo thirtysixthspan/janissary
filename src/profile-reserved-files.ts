@@ -66,11 +66,17 @@ function loadDockEntries<T>(profileDir: string, fileName: string, isEntry: (valu
   }
 }
 
+function isProfileNotificationsEntry(value: unknown): value is ProfileNotificationsEntry {
+  if (!isDockEntry(value)) return false;
+  const entry = value as Record<string, unknown>;
+  return entry.focus === undefined || typeof entry.focus === 'boolean';
+}
+
 // Profile-level notifications tabs live in a reserved `_notifications.json` file — a JSON array of
-// `{ dock? }` — kept out of the entry set by the leading underscore. Returns [] when the file is
-// absent, unparseable, or not an array; malformed elements are dropped.
+// `{ dock?, focus? }` — kept out of the entry set by the leading underscore. Returns [] when the
+// file is absent, unparseable, or not an array; malformed elements are dropped.
 export function loadProfileNotifications(profileDir: string): ProfileNotificationsEntry[] {
-  return loadDockEntries<ProfileNotificationsEntry>(profileDir, '_notifications.json', isDockEntry);
+  return loadDockEntries<ProfileNotificationsEntry>(profileDir, '_notifications.json', isProfileNotificationsEntry);
 }
 
 // Profile-level schedules tabs live in a reserved `_schedules.json` file — a JSON array of
