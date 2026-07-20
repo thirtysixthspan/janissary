@@ -10,15 +10,28 @@ describe('resizeAppWindow', () => {
     writePipe.on('data', (chunk: Buffer) => { written.push(chunk.toString('utf8')); });
 
     const promise = resizeAppWindow(writePipe, readPipe, 1440, 900);
+    readPipe.write(`${JSON.stringify({ id: 1, result: { targetInfos: [{ targetId: 'abc', type: 'page' }] } })}\0`);
+    await new Promise((resolve) => { setImmediate(resolve); });
     readPipe.write(`${JSON.stringify({ id: 1, result: { windowId: 7 } })}\0`);
     await new Promise((resolve) => { setImmediate(resolve); });
     readPipe.write(`${JSON.stringify({ id: 1, result: {} })}\0`);
     await promise;
 
-    const [first, second] = written.join('').split('\0').filter(Boolean)
+    const [first, second, third] = written.join('').split('\0').filter(Boolean)
       .map((raw) => JSON.parse(raw) as { id: number; method: string; params: unknown });
-    expect(first).toEqual({ id: 1, method: 'Browser.getWindowForTarget', params: {} });
-    expect(second).toEqual({ id: 1, method: 'Browser.setWindowBounds', params: { windowId: 7, bounds: { width: 1440, height: 900 } } });
+    expect(first).toEqual({ id: 1, method: 'Target.getTargets', params: {} });
+    expect(second).toEqual({ id: 1, method: 'Browser.getWindowForTarget', params: { targetId: 'abc' } });
+    expect(third).toEqual({ id: 1, method: 'Browser.setWindowBounds', params: { windowId: 7, bounds: { width: 1440, height: 900 } } });
+  });
+
+  it('throws when no page target is found', async () => {
+    const writePipe = new PassThrough();
+    const readPipe = new PassThrough();
+
+    const promise = resizeAppWindow(writePipe, readPipe, 1440, 900);
+    readPipe.write(`${JSON.stringify({ id: 1, result: { targetInfos: [] } })}\0`);
+
+    await expect(promise).rejects.toThrow('no page target found');
   });
 
   it('rejects when the pipe returns a CDP error', async () => {
