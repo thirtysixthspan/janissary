@@ -240,6 +240,12 @@ export class MonitorManager {
     return listMonitors(this.monitors.values());
   }
 
+  // One record per live monitor, for `profile save` to write into `_monitors.json`. Distinct from
+  // the display-only `list()` strings and never reads the private `monitors` map directly.
+  snapshot(): { persona: string; targets: MonitorTarget[]; inline: boolean }[] {
+    return [...this.monitors.values()].map((reg) => ({ persona: reg.persona.name, targets: reg.targets, inline: reg.inline }));
+  }
+
   // Connections-panel rows for a tab's monitors (e.g. `monitor:security (opencode/…)`).
   connectionsFor(owner: string): ConnectionView[] {
     return monitorConnections(this.monitors.values(), owner);

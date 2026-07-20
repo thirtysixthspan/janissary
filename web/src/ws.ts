@@ -98,6 +98,12 @@ export class JanusClient {
   // no reply is awaited, and a sync lost to a closed socket is simply dropped (see send()).
   editorSync(url: string, content: string): void { this.send({ method: 'editorSync', params: { url, content } }); }
 
+  // Report the current sidebar/tab-area sizes after a manual resize completes. Fire-and-forget,
+  // same as editorSync.
+  reportLayout(sidebarLeft: number, sidebarRight: number, tabAreaPct: number): void {
+    this.send({ method: 'reportLayout', params: { sidebarLeft, sidebarRight, tabAreaPct } });
+  }
+
   // Sync a page tab's currently visible text (from the extension content script) to the server as
   // transient snapshot state. Fire-and-forget, same as editorSync.
   pageSync(url: string, text: string): void { this.send({ method: 'pageSync', params: { url, text } }); }

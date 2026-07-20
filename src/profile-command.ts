@@ -3,7 +3,7 @@ import type { ProfileParsed } from './types.js';
 // The `profile` command's parsing, split out of profiles.ts: a distinct concern from the
 // file-loading helpers that remain there.
 
-export const PROFILE_USAGE = 'Usage: profile launch <name> | profile list';
+export const PROFILE_USAGE = 'Usage: profile launch <name> | profile list | profile save <name>';
 
 export function parseProfileCommand(command: string): ProfileParsed {
   const rest = command.replace(/^profile\b\s*/i, '').trim();
@@ -14,6 +14,10 @@ export function parseProfileCommand(command: string): ProfileParsed {
   if (head === 'launch') {
     if (!tokens[1]) return { error: 'Usage: profile launch <name>' };
     return { action: 'launch', name: tokens[1] };
+  }
+  if (head === 'save') {
+    if (!tokens[1]) return { error: 'Usage: profile save <name>' };
+    return { action: 'save', name: tokens[1] };
   }
   return { error: PROFILE_USAGE };
 }

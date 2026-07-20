@@ -484,7 +484,8 @@ export type AgentCommand = {
 export type ProfileParsed =
   | { error: string }
   | { action: 'list' }
-  | { action: 'launch'; name: string };
+  | { action: 'launch'; name: string }
+  | { action: 'save'; name: string };
 
 // --- db.ts ----------------------------------------------------------------
 

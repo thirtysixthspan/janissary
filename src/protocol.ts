@@ -170,6 +170,10 @@ export type RpcCall =
   // state, debounced client-side after typing pauses. Never written to disk — see saveFile
   // for that. `url` identifies the tab the same way saveFile's does.
   | { method: 'editorSync'; params: { url: string; content: string } }
+  // Report the client's current sidebar/tab-area sizes after a manual resize completes, so the
+  // server always holds the latest values for `profile save` to read synchronously into
+  // `_layout.json`. Client-only, no reply — the reverse of the server->client `layout` event.
+  | { method: 'reportLayout'; params: { sidebarLeft: number; sidebarRight: number; tabAreaPct: number } }
   // Sync a page tab's currently visible text, relayed by the bundled extension's content script
   // through the app's message-listener. Never persisted or sent to any client — see `pageSnapshot`.
   // `url` identifies the page tab the same way its `page.url` field does.

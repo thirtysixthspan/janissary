@@ -85,3 +85,27 @@ export async function resizeAppWindow(
   ) as { windowId: number };
   await sendCdpCommand(writePipe, readPipe, 'Browser.setWindowBounds', { windowId, bounds: { width, height } });
 }
+
+// Reads the app's own Chrome window size over the same CDP pipe transport as `resizeAppWindow`
+// (its get-bounds companion), for `profile save` to capture into `_layout.json`.
+export async function getAppWindowBounds(
+  writePipe: Writable,
+  readPipe: Readable,
+): Promise<{ width: number; height: number }> {
+  const { targetInfos } = await sendCdpCommand(writePipe, readPipe, 'Target.getTargets', {}) as {
+    targetInfos: { targetId: string; type: string }[];
+  };
+  const pageTarget = targetInfos.find((t) => t.type === 'page');
+  if (!pageTarget) throw new Error('getAppWindowBounds: no page target found');
+
+  const { windowId } = await sendCdpCommand(
+    writePipe,
+    readPipe,
+    'Browser.getWindowForTarget',
+    { targetId: pageTarget.targetId },
+  ) as { windowId: number };
+  const { bounds } = await sendCdpCommand(writePipe, readPipe, 'Browser.getWindowBounds', { windowId }) as {
+    bounds: { width: number; height: number };
+  };
+  return { width: bounds.width, height: bounds.height };
+}
