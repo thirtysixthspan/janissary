@@ -6,7 +6,7 @@ import { openProfileEntries } from './agent-opener.js';
 import { initProfileDir } from '../profiles.js';
 import { makeTab } from '../tab/index.js';
 import type { Managers } from '../managers.js';
-import type { ProfileHarnessEntry, Tab } from '../types.js';
+import type { AgentState, ProfileHarnessEntry, Tab } from '../types.js';
 
 function makeManagers(tabs: Tab[]): { managers: Managers; harnessOpen: ReturnType<typeof vi.fn>; fileTreeOpen: ReturnType<typeof vi.fn> } {
   const harnessOpen = vi.fn((_entry: ProfileHarnessEntry, label: string, group: number, groupColor: string): string | undefined => {
@@ -25,6 +25,7 @@ function makeManagers(tabs: Tab[]): { managers: Managers; harnessOpen: ReturnTyp
       buildAgentState: vi.fn(() => ({ name: 'x', dotColor: 'red', active: true })),
       cwdOf: () => '/cwd',
       setActiveTab: vi.fn(),
+      launchDir: '/proj',
     },
     harness: { openFromProfile: harnessOpen },
     schedule: { set: vi.fn() },
@@ -101,6 +102,38 @@ describe('openProfileEntries — profile-level file navigator', () => {
     openProfileEntries([entry], managers, 'claude', 'janus', () => {});
 
     expect(fileTreeOpen).not.toHaveBeenCalled();
+  });
+});
+
+describe('openProfileEntries — cwd expansion', () => {
+  it('expands a $root-relative harness entry cwd to an absolute path before opening', () => {
+    const janus = makeTab('janus', 'red', 1, [], [], undefined, 1, 'red');
+    const { managers, harnessOpen } = makeManagers([janus]);
+    const entry: ProfileHarnessEntry = { label: 'claude', harness: 'claude', cwd: '$root/src' };
+
+    openProfileEntries([entry], managers, 'claude', 'janus', () => {});
+
+    expect(harnessOpen).toHaveBeenCalledWith(expect.objectContaining({ cwd: '/proj/src' }), 'claude', expect.any(Number), expect.any(String));
+  });
+
+  it('leaves a legacy absolute harness entry cwd unchanged', () => {
+    const janus = makeTab('janus', 'red', 1, [], [], undefined, 1, 'red');
+    const { managers, harnessOpen } = makeManagers([janus]);
+    const entry: ProfileHarnessEntry = { label: 'claude', harness: 'claude', cwd: '/elsewhere/src' };
+
+    openProfileEntries([entry], managers, 'claude', 'janus', () => {});
+
+    expect(harnessOpen).toHaveBeenCalledWith(expect.objectContaining({ cwd: '/elsewhere/src' }), 'claude', expect.any(Number), expect.any(String));
+  });
+
+  it('expands a $root-relative agent entry cwd to an absolute path before setting it', () => {
+    const janus = makeTab('janus', 'red', 1, [], [], undefined, 1, 'red');
+    const { managers } = makeManagers([janus]);
+    const entry: AgentState = { name: 'bob', dotColor: 'blue', active: false, cwd: '$root/src' };
+
+    openProfileEntries([entry], managers, 'demo', 'janus', () => {});
+
+    expect(managers.tab.setCwd).toHaveBeenCalledWith('bob', '/proj/src');
   });
 });
 

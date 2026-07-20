@@ -1,5 +1,6 @@
 import { writeFileSync } from 'node:fs';
 import path from 'node:path';
+import { abbreviatePath } from '../paths.js';
 import type { AgentState, ProfileHarnessEntry, Tab } from '../types.js';
 import type { Managers } from '../managers.js';
 
@@ -10,6 +11,7 @@ import type { Managers } from '../managers.js';
 // unset optional (e.g. `cwd`, `model`) is simply omitted rather than written as `null`.
 
 export function writeAgentEntry(dir: string, tab: Tab, managers: Managers): void {
+  const cwd = managers.tab.cwdOf(tab.label);
   const entry: AgentState = {
     name: tab.label,
     dotColor: tab.dotColor,
@@ -17,7 +19,7 @@ export function writeAgentEntry(dir: string, tab: Tab, managers: Managers): void
     number: tab.number,
     group: tab.group,
     groupColor: tab.groupColor,
-    cwd: managers.tab.cwdOf(tab.label),
+    cwd: cwd ? abbreviatePath(cwd, { root: managers.tab.launchDir }) : cwd,
   };
   writeFileSync(path.join(dir, `${tab.label}.json`), JSON.stringify(entry, null, 2));
 }
@@ -25,6 +27,7 @@ export function writeAgentEntry(dir: string, tab: Tab, managers: Managers): void
 export function writeHarnessEntry(dir: string, tab: Tab, managers: Managers): void {
   const harness = tab.harness;
   if (!harness) return;
+  const cwd = managers.tab.cwdOf(tab.label);
   const entry: Omit<ProfileHarnessEntry, 'label'> = {
     harness: harness.name,
     model: harness.model,
@@ -33,7 +36,7 @@ export function writeHarnessEntry(dir: string, tab: Tab, managers: Managers): vo
     offline: tab.offline,
     autoApprove: tab.autoApprove,
     dotColor: tab.dotColor,
-    cwd: managers.tab.cwdOf(tab.label),
+    cwd: cwd ? abbreviatePath(cwd, { root: managers.tab.launchDir }) : cwd,
     number: tab.number,
     group: tab.group,
   };

@@ -18,7 +18,7 @@ An agent entry uses the agent-state schema — the same format as `.janissary/st
 - **autoApprove** — auto-approve the harness's own permission prompts, like `harness <name> -y/--yes`. Claude-only; an entry that sets it for a non-claude harness is reported and skipped, same as an unknown harness or model. Works with or without `workspace`, but without it, the launched tab's terminal shows a security warning since prompts are then approved unattended with no sandbox.
 - **offline** — add a network-deny rule to the tab's sandbox profile, like `harness <name> --offline` (only meaningful alongside `workspace`).
 - **group** — an explicit group number for the whole profile (see Tab grouping below), same as an agent entry's `group`.
-- **cwd** — starting directory (default: the issuing tab's cwd).
+- **cwd** — starting directory (default: the issuing tab's cwd), expanded the same way the `files` command's path argument is — `$root` resolves to the launch directory and `~` to home, so a hand-authored or saved `cwd` can be written portably instead of as a literal absolute path.
 - **run** — a list of commands typed into the harness once, shortly after launch (each becomes a one-shot schedule entry that fires on the first scheduler tick and then disappears from the schedule panel).
 - **schedule** — a list of authored schedule lines in the `schedule` command grammar, minus the `in <tab>` clause (the tab is implicitly this entry's own tab). A line that fails to parse, or that includes an `in <tab>` clause, is reported in the launch output and skipped; a duplicate schedule name within one entry keeps the first and reports the rest.
 
@@ -74,6 +74,8 @@ Lists the available profile directory names (sorted), or `No profiles.` when non
 Captures the running session into `profiles/<name>/` — the inverse of `profile launch`. `<name>` is used verbatim as the directory name, with no dasherization. Every open tab is captured, including the tab the command was typed in (unlike `profile launch`, which never touches its own issuing tab) — except the root `janus` tab that every session opens automatically on startup, which is left out of the capture entirely since relaunching a profile always has its own fresh session, and so its own fresh root tab, to land in.
 
 Each agent tab is written as a clean, reusable template: its name, dot color, tab order, group, and starting directory. Command history, transcript, and any queued commands are deliberately left out, so a saved profile is a fresh starting point rather than a frozen session — reopening it later starts each agent from scratch. Each harness tab is captured the same way: harness kind, model, effort level, workspace/offline/auto-approve flags, dot color, group, and starting directory. A harness tab's scheduled or one-shot commands are never captured, since they exist only in memory and are not recoverable.
+
+A starting directory under the project root is captured relative to it (`$root/...`) rather than as an absolute path, so a saved profile stays portable across machines and checkouts; one elsewhere is captured as-is.
 
 Live group and dot-color assignments are captured exactly as they appear on screen. Note that `profile launch` always places a profile's entries into one new group regardless of what each entry's own `group` says (see Relaunching below), so a session with agents split across several groups does not round-trip that split — launching the saved profile merges them back into a single group.
 
