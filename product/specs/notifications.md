@@ -63,7 +63,7 @@ Seven event types can produce a notification line:
   missed. The notification is additive — it appears alongside the existing in-tab output, which is
   unchanged. A non-rate-limit ACP outcome produces no `rate-limited` notification.
 - **`manual`** — an explicit `notify <message>` (see below).
-- **`auto-approve`** — a workspaced harness launched with `-y` auto-approves one of its own
+- **`auto-approve`** — a harness launched with `-y` auto-approves one of its own
   permission prompts (see `harness.md`).
 
 The five ambient events (`state-change`, `incoming-message`, `schedule-fire`, `agent-start`,

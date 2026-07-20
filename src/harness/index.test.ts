@@ -121,10 +121,10 @@ describe('parseHarnessCommand', () => {
     expect('autoApprove' in result && (result as { autoApprove: boolean }).autoApprove).toBe(false);
   });
 
-  it('errors when -y is given without -w', () => {
+  it('sets autoApprove true with -y and no -w', () => {
     const result = parseHarnessCommand('harness claude -y');
-    expect('error' in result).toBe(true);
-    expect((result as { error: string }).error).toBe('-y/--yes requires -w/--workspace: auto-approval is only allowed in a sandboxed workspace.');
+    expect('autoApprove' in result && (result as { autoApprove: boolean }).autoApprove).toBe(true);
+    expect('workspace' in result && (result as { workspace: boolean }).workspace).toBe(false);
   });
 
   it('errors when -y is given for a non-claude harness', () => {
@@ -133,7 +133,7 @@ describe('parseHarnessCommand', () => {
     expect((result as { error: string }).error).toBe('-y/--yes is only supported for the claude harness.');
   });
 
-  it('reports the claude-only error before the -w error for a non-claude harness', () => {
+  it('errors when -y is given for a non-claude harness with no other flags', () => {
     const result = parseHarnessCommand('harness opencode -y');
     expect((result as { error: string }).error).toBe('-y/--yes is only supported for the claude harness.');
   });

@@ -61,6 +61,17 @@ export function detectPermissionGate(text: string, harnessName: string): boolean
   return entry ? entry.detect(text) : false;
 }
 
+// A one-line security warning to append to a harness tab's transcript when it launches
+// auto-approving (`-y`) but without a workspace: with no disposable clone (and, on macOS, no
+// sandbox) confining it, an auto-approved prompt acts on the user's real working directory
+// unattended. Undefined when auto-approve is off, so callers only surface it when there's
+// something to warn about.
+export function autoApproveWithoutWorkspaceWarning(autoApprove: boolean): string | undefined {
+  return autoApprove
+    ? 'auto-approve is on without a workspace: prompts are approved unattended against your real files, with no sandbox confining the harness'
+    : undefined;
+}
+
 // Watches a harness's screen captures and injects the approval keystroke when a permission gate is
 // detected, then reports it. A loop guard prevents re-injecting into an identical, uncleared gate.
 export class HarnessAutoApprover {

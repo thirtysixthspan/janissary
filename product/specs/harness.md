@@ -30,7 +30,7 @@ offers: a harness selector (claude, opencode, codex), a **Label** field (the `as
 a **Model** dropdown, and an **Effort** dropdown.
 
 The form enforces the flag constraints so it can only ever build a valid command: **Auto-approve** is
-disabled unless the selected harness is claude *and* Workspace is on, and the **Model** dropdown lists
+disabled unless the selected harness is claude, and the **Model** dropdown lists
 the selected harness's known models and is disabled when that harness has no model catalog. The
 **Effort** dropdown offers a default (no `--effort` flag) plus the fixed levels `low`, `medium`,
 `high`, `xhigh`, and `max`. Opening the dialog records no line in the transcript.
@@ -105,10 +105,15 @@ blocking permission prompt, the app recognizes the prompt and answers it automat
 waiting for the user. Because the harness is confined to a disposable workspace clone (and, on
 macOS, a sandbox), auto-approving its prompts stays low-risk — see [[workspaced-agent]].
 
-The flag is **claude-only** and **requires** `-w`/`--workspace`:
+The flag is **claude-only**:
 
-- `harness opencode -y` (or any non-claude harness) — error: `-y/--yes is only supported for the claude harness.` The harness choice is checked first, so this error wins even when `-w` is also missing.
-- `harness claude -y` without `-w` — error: `-y/--yes requires -w/--workspace: auto-approval is only allowed in a sandboxed workspace.`
+- `harness opencode -y` (or any non-claude harness) — error: `-y/--yes is only supported for the claude harness.`
+
+`-y` does **not** require `-w`/`--workspace`. Launching `harness claude -y` without a workspace
+succeeds, but since there is then no disposable clone (and, on macOS, no sandbox) confining the
+harness, a security warning line appears in the new tab's terminal: `auto-approve is on without a
+workspace: prompts are approved unattended against your real files, with no sandbox confining the
+harness`.
 
 `-y` combines with `as <label>` and `-w` in any order. Support for opencode and codex is future
 work.

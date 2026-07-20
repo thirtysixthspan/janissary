@@ -30,10 +30,10 @@ describe('HarnessLaunchDialog', () => {
     expect([...options].map((o) => o.value)).toEqual(['claude', 'opencode', 'codex']);
   });
 
-  it('disables Auto-approve unless the harness is claude AND workspace is on', () => {
+  it('enables Auto-approve for claude regardless of the Workspace toggle', () => {
     const { getByLabelText } = renderDialog();
     const auto = getByLabelText(/Auto-approve/) as HTMLInputElement;
-    expect(auto.disabled).toBe(true); // claude, but workspace off
+    expect(auto.disabled).toBe(false); // claude, workspace off
     fireEvent.click(getByLabelText(/Workspace/));
     expect((getByLabelText(/Auto-approve/) as HTMLInputElement).disabled).toBe(false);
   });

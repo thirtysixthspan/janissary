@@ -15,7 +15,7 @@ An agent entry uses the agent-state schema — the same format as `.janissary/st
 - **number** — tab-order, same as agent entries.
 - **dotColor** — same handling as agent entries.
 - **workspace** — launch in a fresh workspace clone (default false), like `harness <name> --workspace`.
-- **autoApprove** — auto-approve the harness's own permission prompts, like `harness <name> -y/--yes`. Claude-only and requires `workspace` (auto-approval is only allowed in a sandboxed clone); an entry that sets it without a claude workspace is reported and skipped, same as an unknown harness or model.
+- **autoApprove** — auto-approve the harness's own permission prompts, like `harness <name> -y/--yes`. Claude-only; an entry that sets it for a non-claude harness is reported and skipped, same as an unknown harness or model. Works with or without `workspace`, but without it, the launched tab's terminal shows a security warning since prompts are then approved unattended with no sandbox.
 - **offline** — add a network-deny rule to the tab's sandbox profile, like `harness <name> --offline` (only meaningful alongside `workspace`).
 - **group** — an explicit group number for the whole profile (see Tab grouping below), same as an agent entry's `group`.
 - **cwd** — starting directory (default: the issuing tab's cwd).

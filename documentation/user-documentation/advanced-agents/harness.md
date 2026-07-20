@@ -41,7 +41,7 @@ Typing `harness` with no arguments opens a **New harness** dialog instead of err
 
 ![The New harness dialog, with fields for harness, label, workspace, offline, auto-approve, model, and effort.](/screenshots/harness-launch-dialog.png)
 
-**Auto-approve** stays disabled unless you've picked claude and turned on **Workspace** — the dialog only ever builds a command that's actually valid. **Create** launches the harness right away, the same as typing the equivalent command by hand. **Cancel** or `Escape` closes the dialog with nothing launched. Your choices are remembered for the rest of the session, so reopening the dialog restores your last picks and puts focus on **Create** so Return relaunches immediately.
+**Auto-approve** stays disabled unless you've picked claude — the dialog only ever builds a command that's actually valid. **Create** launches the harness right away, the same as typing the equivalent command by hand. **Cancel** or `Escape` closes the dialog with nothing launched. Your choices are remembered for the rest of the session, so reopening the dialog restores your last picks and puts focus on **Create** so Return relaunches immediately.
 
 ## Choosing a model and effort level
 
@@ -70,10 +70,11 @@ Whichever of `--model` and `--effort` you set show up as small chips in the harn
 
 ## Auto-approving permission prompts
 
-`-y` / `--yes` lets a claude harness run unattended: when claude raises its own permission prompt, the app answers it automatically instead of waiting for you, and records an `Auto-approved a permission prompt` notification with a link to what was approved. It's claude-only and requires `-w`:
+`-y` / `--yes` lets a claude harness run unattended: when claude raises its own permission prompt, the app answers it automatically instead of waiting for you, and records an `Auto-approved a permission prompt` notification with a link to what was approved. It's claude-only:
 
 - `harness opencode -y` (or any non-claude harness): `-y/--yes is only supported for the claude harness.`
-- `harness claude -y` without `-w`: `-y/--yes requires -w/--workspace: auto-approval is only allowed in a sandboxed workspace.`
+
+`-y` doesn't require `-w`/`--workspace`. Launching without a workspace still works, but since there's no disposable clone (or sandbox) confining the harness, the new tab's terminal shows a security warning that prompts will be approved unattended against your real files.
 
 A harness launched with `-y` shows the auto-permitting flag icon in its metadata row.
 

@@ -5,7 +5,7 @@ import { isKnownModel, modelsFor } from './models.js';
 import type { HarnessLaunchView } from '../protocol.js';
 import { HarnessScreenReader, type ScreenCapture } from './screen.js';
 import { HarnessRecorder } from './recorder.js';
-import { HarnessAutoApprover } from './auto-approve.js';
+import { HarnessAutoApprover, autoApproveWithoutWorkspaceWarning } from './auto-approve.js';
 import { busyStatusHandler } from './busy-status.js';
 import { writeCaptureFile } from './capture-file.js';
 import type { HarnessView, ProfileHarnessEntry } from '../types.js';
@@ -199,7 +199,7 @@ export class HarnessManager {
       liveTab.harness.ptyId = id;
       liveTab.harness.status = 'running';
     }
-    const notice = workspaceDir ? sandboxNotice() : undefined;
+    const notice = workspaceDir ? sandboxNotice() : autoApproveWithoutWorkspaceWarning(autoApprove);
     if (notice) this.managers.tab.append(label, { input: '', output: notice });
     messageBus.emit('state', { type: 'dirty' });
   }

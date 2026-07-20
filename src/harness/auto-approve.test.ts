@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { detectPermissionGate, HarnessAutoApprover } from './auto-approve.js';
+import { detectPermissionGate, HarnessAutoApprover, autoApproveWithoutWorkspaceWarning } from './auto-approve.js';
 import type { ScreenCapture } from './screen.js';
 
 // The five claude gate variants captured live (see the plan's Ground truth section).
@@ -215,5 +215,15 @@ describe('HarnessAutoApprover', () => {
     expect(approver.isStuck).toBe(true);
     approver.onCapture(capture('back to normal output'));
     expect(approver.isStuck).toBe(false);
+  });
+});
+
+describe('autoApproveWithoutWorkspaceWarning', () => {
+  it('returns a warning string when auto-approve is on', () => {
+    expect(typeof autoApproveWithoutWorkspaceWarning(true)).toBe('string');
+  });
+
+  it('returns undefined when auto-approve is off', () => {
+    expect(autoApproveWithoutWorkspaceWarning(false)).toBeUndefined();
   });
 });
