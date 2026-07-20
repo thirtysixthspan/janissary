@@ -351,12 +351,12 @@ describe('HarnessManager model/effort', () => {
     expect(managers.pty.spawn).not.toHaveBeenCalled();
   });
 
-  it('passes a valid --model and --effort through to the spawned command', () => {
+  it('passes a valid --model through and drops effort for opencode in the spawned command', () => {
     const { managers } = makeManagers();
     const manager = new HarnessManager(managers);
     expect(manager.run('harness opencode --model opencode-go/glm-5.2 --effort high')).toBeUndefined();
     expect(managers.pty.spawn).toHaveBeenCalledWith(
-      'opencode', 'opencode', "opencode --model 'opencode-go/glm-5.2' --effort 'high'",
+      'opencode', 'opencode', "opencode --model 'opencode-go/glm-5.2'",
       '/project', undefined, false, undefined,
     );
   });

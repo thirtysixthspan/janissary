@@ -349,11 +349,18 @@ a list of model ids) to replace the bundled catalog entirely for that project. I
 missing, the bundled catalog is used; if it exists but isn't valid JSON, a warning is printed and
 the bundled catalog is used.
 
-`--effort <level>` is passed to the harness binary's `--effort` flag verbatim, with no validation
-against any fixed set of levels — an unrecognized level is simply forwarded, and a harness binary
-that doesn't understand the flag ignores it. `--model` and `--effort` may be given independently or
-together, in any order relative to each other and to `as <label>`, `-w`/`--workspace`, `--offline`,
-and `-y`/`--yes`.
+`--effort <level>` selects an effort level with no validation against any fixed set of levels — the
+level is forwarded verbatim, translated to whichever flag the target harness actually understands so
+the launch never breaks on a flag the binary would reject:
+
+- **claude** — `--effort <level>`.
+- **codex** — the reasoning-effort config override `-c model_reasoning_effort=<level>` (codex has no
+  `--effort` flag and would exit on one).
+- **opencode** — has no effort flag of its own, so the level is silently dropped rather than passed
+  as an argument opencode would reject.
+
+`--model` and `--effort` may be given independently or together, in any order relative to each other
+and to `as <label>`, `-w`/`--workspace`, `--offline`, and `-y`/`--yes`.
 
 Whichever of the model and effort were set at launch appear as small chips in the harness tab's
 metadata row, positioned between the working directory and the flag icons (so the row reads

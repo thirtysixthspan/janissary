@@ -11,7 +11,7 @@ A file whose name begins with an underscore is **not** an entry — it is reserv
 An agent entry uses the agent-state schema — the same format as `.janissary/state/<name>.json`. A harness entry is distinguished by a `harness` key naming the harness to launch (`claude`, `opencode`, or `codex`) and supports:
 
 - **model** — passed to the harness binary's `--model` flag, verbatim. Validated at launch against the known model catalog for that harness; an unknown model is reported (`Unknown model "<model>" for harness "<harness>" — add it to harness-models.json.`) and the entry is skipped, same as an unknown harness name.
-- **effort** — passed to the harness binary's `--effort` flag, verbatim, like `harness <name> --effort <level>`. Not validated against any fixed set of levels.
+- **effort** — the effort level, verbatim, like `harness <name> --effort <level>`. Not validated against any fixed set of levels, and translated to whichever flag the target harness understands (claude `--effort`, codex `-c model_reasoning_effort=<level>`, opencode has none and drops it).
 - **number** — tab-order, same as agent entries.
 - **dotColor** — same handling as agent entries.
 - **workspace** — launch in a fresh workspace clone (default false), like `harness <name> --workspace`.
