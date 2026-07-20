@@ -21,9 +21,14 @@ tabs, it is not saved and is not restored on `--relaunch`.
 ### `files [path]`
 
 `files` opens a tree rooted at the issuing tab's cwd; `files <path>` opens it rooted at `path`
-instead (resolved against the issuing tab's cwd if relative). If the resolved target does not
-exist or is not a directory, an error (`files: <path>: not a directory`) is appended to the
-issuing tab's transcript and no tab is created.
+instead (resolved against the issuing tab's cwd if relative). If the resolved target exists but is
+not a directory, an error (`files: <path>: not a directory`) is appended to the issuing tab's
+transcript and no tab is created.
+
+If the resolved target does not exist yet, a file tree tab still opens immediately, showing
+"Looking for `<path>`…" in place of the (empty) tree while it waits. The tab polls until the
+directory is created, then populates with its contents and starts watching it like any other file
+tree tab — no error, and no need to re-run `files`. Closing the waiting tab stops the poll.
 
 If a file tree tab is already open on the same root, `files` **focuses that tab** instead of
 opening a duplicate — there is one tree per root, the same way there is one Explorer per

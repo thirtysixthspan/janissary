@@ -516,7 +516,7 @@ html, body, #root {
 /* Harness tab: full-body PTY terminal with no transcript or command bar. */
 .harness-tab { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .harness-body { flex: 1; min-height: 0; background: var(--terminal-bg); }
-.harness-exited {
+.harness-exited, .files-waiting {
   padding: 4px 10px; background: var(--bg-soft); font-size: 12px; color: var(--faint);
   border-bottom: 1px solid var(--border);
 }

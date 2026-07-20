@@ -113,6 +113,51 @@ describe('FileTreeManager', () => {
     expect(tabs.some((t) => t.label.startsWith('navigator'))).toBe(false);
   });
 
+  it('opens a waiting tab for a not-yet-existing path instead of erroring', () => {
+    const manager = run();
+    const missing = path.join(root, 'not-yet-there');
+    manager.open('files not-yet-there', 'janus');
+    const tab = tabs.find((t) => t.label.startsWith('navigator'));
+    expect(tab).toBeDefined();
+    expect(tab!.files!.waitingFor).toBe(missing);
+    expect(tab!.files!.rows).toEqual([]);
+    expect(outputs).toEqual([]);
+  });
+
+  it('populates the tree and clears waitingFor once the directory is created', () => {
+    vi.useFakeTimers();
+    try {
+      const manager = run();
+      const missing = path.join(root, 'not-yet-there');
+      manager.open('files not-yet-there', 'janus');
+      mkdirSync(missing);
+      writeFileSync(path.join(missing, 'new.txt'), '');
+      vi.advanceTimersByTime(500);
+      const tab = tabs.find((t) => t.label.startsWith('navigator'));
+      expect(tab!.files!.waitingFor).toBeUndefined();
+      expect(tab!.files!.rows.some((r) => r.path === 'new.txt')).toBe(true);
+      expect(watchMock).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('stops polling when the waiting tab is closed', () => {
+    vi.useFakeTimers();
+    try {
+      const manager = run();
+      const missing = path.join(root, 'not-yet-there');
+      manager.open('files not-yet-there', 'janus');
+      const label = tabs.find((t) => t.label.startsWith('navigator'))!.label;
+      manager.closeTab(label);
+      mkdirSync(missing);
+      expect(() => vi.advanceTimersByTime(2000)).not.toThrow();
+      expect(watchMock).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('focuses the existing tab instead of duplicating for the same root', () => {
     const manager = run();
     manager.open('files', 'janus');

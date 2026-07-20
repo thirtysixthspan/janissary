@@ -79,6 +79,23 @@ describe('FileTreeTab', () => {
     expect(container.querySelector('.files-branch')).toBeNull();
   });
 
+  it('renders a "Looking for" banner and no rows while waitingFor is set', () => {
+    const client = { send: vi.fn() } as unknown as JanusClient;
+    const { container } = render(
+      <FileTreeTab files={makeFiles({ rows: [], waitingFor: '/home/user/project/not-yet-there' })} client={client} index={0} />,
+    );
+    const banner = container.querySelector('.files-waiting');
+    expect(banner).not.toBeNull();
+    expect(banner!.textContent).toContain('/home/user/project/not-yet-there');
+    expect(container.querySelectorAll('[role="treeitem"]')).toHaveLength(0);
+  });
+
+  it('renders no .files-waiting banner when waitingFor is undefined', () => {
+    const client = { send: vi.fn() } as unknown as JanusClient;
+    const { container } = render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+    expect(container.querySelector('.files-waiting')).toBeNull();
+  });
+
   it('click on a directory row selects but does not toggle', () => {
     const send = vi.fn();
     const client = { send } as unknown as JanusClient;

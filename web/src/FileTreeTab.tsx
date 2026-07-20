@@ -150,6 +150,9 @@ export function FileTreeTab({ files, client, index, dock, autoFocus = true, drop
         root={files.root} branch={files.branch} client={client} index={index} dock={dock}
         onSearch={search.openSearch} onNewFile={createNewFile}
       />
+      {files.waitingFor !== undefined && (
+        <div className="files-waiting">Looking for {files.waitingFor}…</div>
+      )}
       <div className="files-rows">
         {files.rows.map((row) => {
           const cls = fileTreeRowClass(row, selected, drag.dropTarget?.path);

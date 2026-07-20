@@ -11,7 +11,7 @@ files right src  rooted at src, docked in the right sidebar
 
 Directories sort before files, both alphabetically. Version-control clutter (`.git` and friends, `.DS_Store`) is hidden; every other dotfile shows. A directory's contents are only read when you expand it, so a huge `node_modules` costs nothing until opened. The tab is labeled `files` in the strip and placed at the *start* of its group, so the tree sits left of the tabs it opens — except while docked to a sidebar, when it leaves the strip entirely (see below).
 
-If a tree is already open on the same root, `files` focuses it rather than opening a duplicate — or, with `left`/`right`, moves it into that sidebar. A target that isn't a directory prints `files: <path>: not a directory`.
+If a tree is already open on the same root, `files` focuses it rather than opening a duplicate — or, with `left`/`right`, moves it into that sidebar. A target that isn't a directory prints `files: <path>: not a directory`. A target that doesn't exist *yet* still opens a tab, showing "Looking for `<path>`…" until the directory shows up — handy for pointing a navigator at a directory a build or clone is about to create.
 
 ![A file navigator tab: a directory tree with one directory expanded and a row selected.](/screenshots/file-tree.png)
 

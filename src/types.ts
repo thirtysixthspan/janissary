@@ -131,7 +131,9 @@ export type FileTreeRow = {
 // `root` is display-abbreviated for the header; `absoluteRoot` is the same root unshortened, used
 // client-side to resolve a dragged row's path relative to another tab's cwd. `branch` is the
 // current git branch when the root sits inside a git repository, undefined otherwise.
-export type FileTreeView = { root: string; absoluteRoot: string; rows: FileTreeRow[]; branch?: string };
+// `waitingFor`, when set, is the absolute path the navigator is polling for (not yet created);
+// `rows` stays empty until it appears.
+export type FileTreeView = { root: string; absoluteRoot: string; rows: FileTreeRow[]; branch?: string; waitingFor?: string };
 
 // A single row in the task picker's listing (executable `ai/*.md` prompts). Unlike `FileTreeRow`,
 // this always contains the *full* recursive tree — the task list needs no live filesystem
