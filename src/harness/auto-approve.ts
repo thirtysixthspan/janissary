@@ -1,10 +1,5 @@
 import type { ScreenCapture } from './screen.js';
 
-// How far up from the bottom of the capture the gate menu is allowed to sit. The real permission
-// menu always occupies the final few lines; requiring both anchors inside this window rejects the
-// classic false positive of a session merely *printing* gate-shaped text that has scrolled upward.
-const GATE_WINDOW_LINES = 10;
-
 // The highlighted default option-1 line, e.g. `❯ 1. Yes` (possibly with trailing text). The `❯`
 // glyph is the highlight marker and is required — a gate always defaults to "Yes".
 function isYesDefaultLine(line: string): boolean {
@@ -23,14 +18,30 @@ function isNoOptionLine(line: string): boolean {
   return trimmed.slice('2.'.length).trimStart().startsWith('No');
 }
 
+// claude's live input caret — the `❯` prompt of its own input box, as distinct from the gate's
+// highlighted `❯ 1. Yes` option (which starts with `1.`). An active gate replaces the input box, so
+// the caret is absent; its reappearance below the options means the gate is gone — dismissed, or
+// gate-shaped text that has scrolled up while claude sits back at its prompt. Mirrors the
+// prompt-box signal in busy-classify.
+function isInputCaretLine(line: string): boolean {
+  const trimmed = line.trim();
+  if (!trimmed.startsWith('❯')) return false;
+  return !trimmed.slice('❯'.length).trimStart().startsWith('1.');
+}
+
 // claude's permission gate, matched on menu *structure* rather than the (variable) question,
-// footer, or option wording: within the last few lines, a highlighted `❯ 1. Yes` line followed by
-// a later `2. No`/`3. No` line. Deterministic, so false positives stay near-zero.
+// footer, or option wording: a highlighted `❯ 1. Yes` line followed by a later `2. No`/`3. No`
+// line, with no live input caret beneath the options. Keying on what follows the options — rather
+// than their distance from the bottom — lets the gate be detected regardless of the passive chrome
+// claude pins below it (the footer hint, a task panel, status lines), while still rejecting
+// gate-shaped text that has scrolled up and been superseded by claude's own prompt.
 function detectClaudeGate(text: string): boolean {
-  const window = text.split('\n').slice(-GATE_WINDOW_LINES);
-  const yesIndex = window.findIndex((line) => isYesDefaultLine(line));
+  const lines = text.split('\n');
+  const yesIndex = lines.findIndex((line) => isYesDefaultLine(line));
   if (yesIndex === -1) return false;
-  return window.slice(yesIndex + 1).some((line) => isNoOptionLine(line));
+  const noIndex = lines.findIndex((line, i) => i > yesIndex && isNoOptionLine(line));
+  if (noIndex === -1) return false;
+  return lines.slice(noIndex + 1).every((line) => !isInputCaretLine(line));
 }
 
 type GateEntry = { detect: (text: string) => boolean; keystroke: string };

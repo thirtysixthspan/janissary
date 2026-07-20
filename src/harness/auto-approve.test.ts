@@ -67,7 +67,48 @@ const MCP_TOOL = [
   ' Esc to cancel · Tab to amend',
 ].join('\n');
 
-const ALL_GATES = { BASH_IN_PROJECT, BASH_OUT_OF_PROJECT, FETCH, SUBAGENT_TWO_OPTION, MCP_TOOL };
+// A gate with claude's task panel pinned below it — the options are pushed well above the bottom
+// of the capture, which used to defeat the last-10-lines window (the reported failure).
+const GATE_WITH_TASK_LIST = [
+  ' Bash command',
+  '',
+  String.raw`   for f in src/types.ts src/bus.ts; do n=$(grep -cve "^\s*$" "$f"); echo "$n $f"; done`,
+  '   Check line counts of touched files against 200-line limit',
+  '',
+  ' Contains simple_expansion',
+  '',
+  ' Do you want to proceed?',
+  ' ❯ 1. Yes',
+  '   2. No',
+  '',
+  ' Esc to cancel · Tab to amend · ctrl+e to explain',
+  '',
+  '  9 tasks (8 done, 1 in progress, 0 open)',
+  '  ◼ Run check-diff, fix issues, update spec, promote plan, open PR',
+  '  ✔ Server: types.ts, bus.ts, protocol.ts wiring',
+  '  ✔ Server: reserved-file loader + profiles.ts re-export',
+  '  ✔ Server: cdp-window-resize.ts + window-resizer.ts (new modules)',
+  '  ✔ Server: main.ts wiring + controller/events.ts + index.ts broadcast',
+  '   … +4 completed',
+].join('\n');
+
+// A plain three-option bash gate — no task panel, no extra chrome. Structurally the common case;
+// kept as a fixture because it was reported failing in the field (see the harness spec).
+const BASH_TEMP_CLEANUP = [
+  ' Bash command',
+  '',
+  '   rm -f ./temp/pr-body.md',
+  '   Clean up scratch PR body file',
+  '',
+  ' Do you want to proceed?',
+  ' ❯ 1. Yes',
+  '   2. Yes, and always allow access to temp/ from this project',
+  '   3. No',
+  '',
+  ' Esc to cancel · Tab to amend · ctrl+e to explain',
+].join('\n');
+
+const ALL_GATES = { BASH_IN_PROJECT, BASH_OUT_OF_PROJECT, FETCH, SUBAGENT_TWO_OPTION, MCP_TOOL, GATE_WITH_TASK_LIST, BASH_TEMP_CLEANUP };
 
 function capture(text: string): ScreenCapture {
   return { text, capturedAt: Date.now() };
@@ -93,9 +134,15 @@ describe('detectPermissionGate — claude', () => {
     expect(detectPermissionGate('The answer is yes. Type y to continue or n to abort.', 'claude')).toBe(false);
   });
 
-  it('does not match a gate-shaped block that has scrolled above the last-10-line window', () => {
-    const quoted = [BASH_IN_PROJECT, '', '', '', '', '', '', '', '', '', ' > now working on something else', ' $ '].join('\n');
+  it('does not match a gate-shaped block that has scrolled above claude’s live input caret', () => {
+    // The old gate is in scrollback; claude sits back at its own prompt (the `❯` input caret) below.
+    const quoted = [BASH_IN_PROJECT, '', '', ' ❯ now working on something else', '', ' ? for shortcuts'].join('\n');
     expect(detectPermissionGate(quoted, 'claude')).toBe(false);
+  });
+
+  it('still matches a gate followed by passive chrome (status lines, no input caret)', () => {
+    const withChrome = [BASH_TEMP_CLEANUP, '', ' ? for shortcuts', '   Context left until auto-compact: 23%'].join('\n');
+    expect(detectPermissionGate(withChrome, 'claude')).toBe(true);
   });
 });
 

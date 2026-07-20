@@ -142,8 +142,12 @@ second after output settles. When that text shows claude's permission menu — t
 `❯ 1. Yes` default followed by a final `2. No`/`3. No` option — the app injects the Enter keystroke
 to accept the highlighted "Yes" (it is a numbered menu, so a literal `y` would not work) and records
 an `auto-approve` notification, rendered as `<label>: Auto-approved a permission prompt` (see
-[[notifications]]). Detection keys on the menu structure at the bottom of the screen, so gate-shaped
-text that has merely scrolled up the screen does not trigger an approval.
+[[notifications]]). Detection keys on the menu structure and on the absence of claude's live input
+caret (its own `❯` prompt) below the options — an active gate replaces the input box, so the caret
+is gone. This lets a gate be detected regardless of the passive chrome claude pins beneath it (the
+footer hint, a task panel that pushes the options well above the bottom of the screen, status
+lines), while gate-shaped text that has scrolled up and been superseded by claude's prompt — where
+the input caret is back on screen — does not trigger an approval.
 
 At the moment of a successful auto-approval, the app also saves the harness's on-screen text to a
 file and attaches a clickable, outline-style clipboard-icon link before that same notification line's
