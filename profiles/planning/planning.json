@@ -1,0 +1,12 @@
+{
+  "harness": "claude",
+  "model": "claude-sonnet-5",
+  "effort": "high",
+  "workspace": true,
+  "offline": false,
+  "autoApprove": true,
+  "dotColor": "#f368e0",
+  "cwd": ".janissary/workspace/planning",
+  "number": 3,
+  "group": 1
+}

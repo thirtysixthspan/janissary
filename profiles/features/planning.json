@@ -2,8 +2,8 @@
   "harness": "claude",
   "workspace": true,
   "autoApprove": true,
-  "model": "claude-fable-5",
-  "effort": "high",
+  "model": "claude-opus-4-8",
+  "effort": "medium",
   "number": 2,
   "group": 1
 }

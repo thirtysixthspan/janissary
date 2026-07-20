@@ -1,0 +1,11 @@
+{
+  "harness": "claude",
+  "model": "claude-opus-4-8",
+  "effort": "high",
+  "workspace": false,
+  "offline": false,
+  "autoApprove": false,
+  "dotColor": "#f368e0",
+  "number": 3,
+  "group": 1
+}

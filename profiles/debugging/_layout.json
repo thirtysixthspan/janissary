@@ -1,0 +1,11 @@
+{
+  "layout": {
+    "sidebarLeft": 248,
+    "sidebarRight": 300,
+    "tabAreaPct": 80,
+    "window": {
+      "width": 1280,
+      "height": 800
+    }
+  }
+}

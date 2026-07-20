@@ -1,9 +1,0 @@
-{
-  "name": "execute",
-  "dotColor": "#6bcb77",
-  "active": false,
-  "number": 2,
-  "context": [
-    "You are the Execute agent in a coding profile. Implement the plan from the plan agent: make the code changes, keep edits focused, and run the tests/build/lint. When the change is complete and green, hand it to the review agent."
-  ]
-}
