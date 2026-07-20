@@ -2,6 +2,7 @@ import { makeTab } from '../tab/index.js';
 import { HARNESS_COMMANDS } from '../harness/index.js';
 import { isKnownModel } from '../harness/models.js';
 import { buildHarnessSchedule } from './harness-schedule.js';
+import { expandUserPath } from '../paths.js';
 import type { Managers } from '../managers.js';
 import type { AgentState, ProfileHarnessEntry } from '../types.js';
 
@@ -11,7 +12,7 @@ export function openAgentEntry(state: AgentState, managers: Managers, group: num
     log, state.workspaceDir, group, groupColor);
   tab.toolStepsExpanded = false;
   managers.tab.tabs = [...managers.tab.tabs, tab];
-  if (state.cwd) managers.tab.setCwd(state.name, state.cwd);
+  if (state.cwd) managers.tab.setCwd(state.name, expandUserPath(state.cwd, { root: managers.tab.launchDir }));
   if (state.context) managers.tab.setContext(state.name, state.context);
   if (state.schedule) managers.schedule.set(state.name, state.schedule);
   managers.tab.persist(managers.tab.buildAgentState(tab, { schedule: state.schedule }));
@@ -29,7 +30,8 @@ export function openHarnessEntry(
   }
   // Mirror `parseHarnessCommand`: -y is claude-only. Report and skip rather than open unsafely.
   if (entry.autoApprove && entry.harness !== 'claude') return 'autoApprove (-y) is only supported for the claude harness';
-  const withCwd: ProfileHarnessEntry = { ...entry, cwd: entry.cwd ?? issuingCwd };
+  const cwd = entry.cwd ? expandUserPath(entry.cwd, { root: managers.tab.launchDir }) : issuingCwd;
+  const withCwd: ProfileHarnessEntry = { ...entry, cwd };
   const error = managers.harness.openFromProfile(withCwd, entry.label, group, groupColor);
   if (error) return error;
   const schedule = buildHarnessSchedule(entry, (message) => { notes.push(message); });

@@ -17,9 +17,11 @@ import type { MonitorTarget, Tab } from '../types.js';
 
 type Snapshot = { persona: string; targets: MonitorTarget[]; inline: boolean }[];
 
-function makeManagers(tabs: Tab[], cwdByLabel: Record<string, string> = {}, monitors: Snapshot = []): Managers {
+function makeManagers(
+  tabs: Tab[], cwdByLabel: Record<string, string> = {}, monitors: Snapshot = [], launchDir = '/proj',
+): Managers {
   return {
-    tab: { tabs, cwdOf: (label: string) => cwdByLabel[label] },
+    tab: { tabs, cwdOf: (label: string) => cwdByLabel[label], launchDir },
     monitor: { snapshot: () => monitors },
   } as unknown as Managers;
 }
@@ -67,6 +69,28 @@ describe('saveProfile', () => {
       label: 'claude', harness: 'claude', model: 'sonnet', effort: 'high', workspace: false,
       offline: true, autoApprove: true, dotColor: '#ccc', cwd: '/work/claude', number: 1, group: 1,
     }]);
+  });
+
+  it('writes an agent entry cwd relative to the project root when it is under the root', async () => {
+    const bob = makeTab('bob', '#aaa');
+    const managers = makeManagers([bob], { bob: '/proj/src/deep' }, [], '/proj');
+
+    await saveProfile('demo', managers);
+
+    const entries = loadProfileEntries('demo');
+    expect(entries).toEqual([expect.objectContaining({ cwd: '$root/src/deep' })]);
+  });
+
+  it('writes a harness entry cwd relative to the project root when it is under the root', async () => {
+    const claude = makeHarnessTab('claude', '#ccc', 1, 1, '#ccc', {
+      name: 'claude', program: 'claude', ptyId: 'pty1', status: 'running',
+    });
+    const managers = makeManagers([claude], { claude: '/proj/src' }, [], '/proj');
+
+    await saveProfile('demo', managers);
+
+    const entries = loadProfileEntries('demo');
+    expect(entries).toEqual([expect.objectContaining({ cwd: '$root/src' })]);
   });
 
   it('skips image, editor, ssh, and non-docked file-tree tabs, and reports them', async () => {
