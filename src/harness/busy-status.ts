@@ -20,9 +20,12 @@ function dotSnapshot(managers: Managers, label: string): string {
 // harness is idle, blocked on the user, so busy clears immediately — and the tab is badged unread
 // when nothing is going to answer the gate (`approver` missing, or stood down on it). A busy→ready
 // transition is debounced to two consecutive ready captures so a brief mid-generation pause does
-// not flicker the dot off; ready→busy is applied immediately. Whenever a capture flips the busy
-// flag or the unread badge, `state: dirty` is emitted so clients see the change immediately —
-// without it, a backgrounded tab's dot would sit stale until the next unrelated state push.
+// not flicker the dot off; ready→busy is applied immediately. Once a busy→ready transition
+// commits, the tab is also badged unread — the harness finished its current run, same as hitting
+// an unanswered permission gate. `markUnread` itself only badges a hidden (backgrounded, undocked)
+// tab, so a visible tab going ready is unaffected. Whenever a capture flips the busy flag or the
+// unread badge, `state: dirty` is emitted so clients see the change immediately — without it, a
+// backgrounded tab's dot would sit stale until the next unrelated state push.
 export function busyStatusHandler(
   name: string, label: string, managers: Managers, approver: HarnessAutoApprover | undefined,
 ): ((capture: ScreenCapture) => void) | undefined {
@@ -42,7 +45,7 @@ export function busyStatusHandler(
       managers.tab.addBusy(label);
       return;
     }
-    if (pendingReady) managers.tab.deleteBusy(label);
+    if (pendingReady) { managers.tab.deleteBusy(label); managers.tab.markUnread(label); }
     else pendingReady = true;
   };
   return (capture) => {

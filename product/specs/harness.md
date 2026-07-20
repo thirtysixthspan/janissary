@@ -257,12 +257,19 @@ Status changes show in the tab strip the moment they are recognized, whether or 
 tab is the active one — a backgrounded harness's dot starts and stops blinking live, without
 switching to the tab first.
 
-When claude shows its permission prompt, the dot stops blinking — claude is waiting on the user,
-not working. If nothing is going to answer the prompt (the tab was launched without `-y`, or
-auto-approve has stood down on a prompt it could not clear), the tab is also marked with the
-unread badge to call attention to it. A permission prompt in codex or opencode simply reads as
-idle, with no badge — their prompt recognition is future work, alongside their auto-approve
-support.
+Once a hidden (backgrounded, undocked) harness tab's working→idle transition commits, the tab is
+marked with the unread badge to call attention to it — the harness has either finished its current
+run or is otherwise waiting, and the badge is what surfaces that without switching to the tab
+first. A visible tab going idle is unaffected; only a hidden one is badged.
+
+When claude shows its permission prompt, the dot stops blinking immediately — claude is waiting on
+the user, not working — and if nothing is going to answer the prompt (the tab was launched without
+`-y`, or auto-approve has stood down on a prompt it could not clear), the tab is marked unread
+right away rather than waiting on the usual working→idle debounce. A permission prompt in codex or
+opencode simply reads as idle, with no distinct gate detection of its own — their prompt
+recognition is future work, alongside their auto-approve support — but it still badges unread like
+any other working→idle transition, so a hidden codex/opencode tab stuck on an unanswered prompt is
+still surfaced, just without claude's immediate (non-debounced) timing.
 
 A harness without its own recognition signals keeps the previous coarse behavior — the dot blinks
 for as long as the process is alive. All three launchable harnesses have signals today, so this

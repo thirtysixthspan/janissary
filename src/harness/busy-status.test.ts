@@ -147,6 +147,15 @@ describe('busyStatusHandler debounce', () => {
       handler(ready);
       expect(tab.deleteBusy).toHaveBeenCalledTimes(1);
     });
+
+    it(`${name}: calls markUnread only once the ready transition commits, not on the first transient ready`, () => {
+      const { tab, handler } = make(name);
+      handler(busy);
+      handler(ready);
+      expect(tab.markUnread).not.toHaveBeenCalled();
+      handler(ready);
+      expect(tab.markUnread).toHaveBeenCalledTimes(1);
+    });
   }
 
   it('returns undefined for a harness with no table entry', () => {
@@ -210,5 +219,14 @@ describe('busyStatusHandler state push', () => {
     handler(capture(gate));
     expect(tabs[0].hasUnread).toBe(true);
     expect(dirtyCount).toBe(1);
+  });
+
+  it('badges the tab unread when the debounced ready transition commits', () => {
+    const { tabs, handler } = makeStateful('claude');
+    handler(capture('anything', CLAUDE_BUSY_TITLE));
+    handler(capture('anything', CLAUDE_IDLE_TITLE));
+    expect(tabs[0].hasUnread).toBe(false);
+    handler(capture('anything', CLAUDE_IDLE_TITLE));
+    expect(tabs[0].hasUnread).toBe(true);
   });
 });
