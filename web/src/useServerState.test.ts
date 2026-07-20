@@ -33,21 +33,29 @@ const makeSetters = () => ({
 });
 
 describe('useServerState', () => {
-  it('resets routeIndex to 0 when a chooser newly opens', () => {
+  it('defaults routeIndex to the last choice (acp) when a chooser newly opens', () => {
     const client = makeClient();
     const setters = makeSetters();
     renderHook(() => useServerState(client as never, setters));
-    client.emit({ cmd: 'nav', options: [] } as unknown as RouteChooserView);
-    expect(setters.setRouteIndex).toHaveBeenCalledWith(0);
+    client.emit({ cmd: 'nav', choices: ['shell', 'acp (agent prompt)'] } as unknown as RouteChooserView);
+    expect(setters.setRouteIndex).toHaveBeenCalledWith(1);
   });
 
-  it('resets routeIndex to 0 when the chooser command changes', () => {
+  it('defaults routeIndex to the last choice (acp) when the chooser command changes', () => {
     const client = makeClient();
     const setters = makeSetters();
     renderHook(() => useServerState(client as never, setters));
-    client.emit({ cmd: 'nav', options: [] } as unknown as RouteChooserView);
+    client.emit({ cmd: 'nav', choices: ['shell', 'acp (agent prompt)'] } as unknown as RouteChooserView);
     setters.setRouteIndex.mockClear();
-    client.emit({ cmd: 'queue', options: [] } as unknown as RouteChooserView);
+    client.emit({ cmd: 'queue', choices: ['shell', 'db query → test', 'acp (agent prompt)'] } as unknown as RouteChooserView);
+    expect(setters.setRouteIndex).toHaveBeenCalledWith(2);
+  });
+
+  it('defaults routeIndex to 0 when a newly opened chooser has no choices', () => {
+    const client = makeClient();
+    const setters = makeSetters();
+    renderHook(() => useServerState(client as never, setters));
+    client.emit({ cmd: 'nav', choices: [] } as unknown as RouteChooserView);
     expect(setters.setRouteIndex).toHaveBeenCalledWith(0);
   });
 
@@ -55,9 +63,9 @@ describe('useServerState', () => {
     const client = makeClient();
     const setters = makeSetters();
     renderHook(() => useServerState(client as never, setters));
-    client.emit({ cmd: 'nav', options: [] } as unknown as RouteChooserView);
+    client.emit({ cmd: 'nav', choices: ['shell', 'acp (agent prompt)'] } as unknown as RouteChooserView);
     setters.setRouteIndex.mockClear();
-    client.emit({ cmd: 'nav', options: [] } as unknown as RouteChooserView);
+    client.emit({ cmd: 'nav', choices: ['shell', 'acp (agent prompt)'] } as unknown as RouteChooserView);
     expect(setters.setRouteIndex).not.toHaveBeenCalled();
   });
 

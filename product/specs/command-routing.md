@@ -61,7 +61,9 @@ can be aimed at a specific connection).
 - **Client overlay.** `web/src/RouteChooser.tsx` floats above the command line listing the command and
   its options. It is **modal**: the command input is disabled while it is open. **Up/Down** move the
   selection, **Return** picks, **Escape** cancels (a row can also be clicked). The overlay closes
-  automatically when the next `state` event reports `route: null`.
+  automatically when the next `state` event reports `route: null`. The **acp (agent prompt)** option is
+  highlighted by default when a chooser newly opens (or its command changes) — the last entry in
+  `choices`, since `routeChoices` always places it last.
 - **Resolution.** The client replies with the `chooseRoute` RPC carrying the selected index (or `-1` to
   cancel). `Controller.chooseRoute` clears the pending chooser and, for a valid index, runs
   `toPrefixedCommand(cmd, choice)` in the originating tab; a cancel (or out-of-range index) runs
