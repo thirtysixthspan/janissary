@@ -1,44 +1,37 @@
-import { writeFileSync } from 'node:fs';
-import path from 'node:path';
 import { abbreviatePath } from '../paths.js';
-import type { AgentState, ProfileHarnessEntry, Tab } from '../types.js';
+import type { ProfileAgentFile, ProfileHarnessFile, Tab } from '../types.js';
 import type { Managers } from '../managers.js';
 
-// Entry writers for `profile save`: the inverse of the agent-state/harness-entry loaders. Each
-// writes a clean reusable template — no transcript/history fields — named `<tab.label>.json`
-// (the filename is the authoritative label on read, so `name`/`label` inside the file is
-// informational only). `JSON.stringify` drops `undefined`-valued fields on its own, so an
-// unset optional (e.g. `cwd`, `model`) is simply omitted rather than written as `null`.
+// Entry builders for `profile save`: the inverse of the agent-state/harness-entry loaders. Each
+// returns a clean reusable template — no transcript/history fields — carrying its own `name` (the
+// tab label) since an array element has no filename to derive it from, and folding the tab's
+// presentation into a nested `tab` object (`dotColor` → `color`) per Decision 14. `JSON.stringify`
+// drops `undefined`-valued fields on its own, so an unset optional (e.g. `cwd`, `model`) is simply
+// omitted rather than written as `null`.
 
-export function writeAgentEntry(dir: string, tab: Tab, managers: Managers): void {
+export function writeAgentEntry(tab: Tab, managers: Managers): ProfileAgentFile {
   const cwd = managers.tab.cwdOf(tab.label);
-  const entry: AgentState = {
+  return {
     name: tab.label,
-    dotColor: tab.dotColor,
     active: false,
-    number: tab.number,
-    group: tab.group,
-    groupColor: tab.groupColor,
     cwd: cwd ? abbreviatePath(cwd, { root: managers.tab.launchDir }) : cwd,
+    tab: { color: tab.dotColor, number: tab.number, group: tab.group, groupColor: tab.groupColor },
   };
-  writeFileSync(path.join(dir, `${tab.label}.json`), JSON.stringify(entry, null, 2));
 }
 
-export function writeHarnessEntry(dir: string, tab: Tab, managers: Managers): void {
+export function writeHarnessEntry(tab: Tab, managers: Managers): ProfileHarnessFile | undefined {
   const harness = tab.harness;
-  if (!harness) return;
+  if (!harness) return undefined;
   const cwd = managers.tab.cwdOf(tab.label);
-  const entry: Omit<ProfileHarnessEntry, 'label'> = {
-    harness: harness.name,
+  return {
+    name: tab.label,
+    type: harness.name,
     model: harness.model,
     effort: harness.effort,
     workspace: tab.workspaceDir !== undefined,
     offline: tab.offline,
     autoApprove: tab.autoApprove,
-    dotColor: tab.dotColor,
     cwd: cwd ? abbreviatePath(cwd, { root: managers.tab.launchDir }) : cwd,
-    number: tab.number,
-    group: tab.group,
+    tab: { color: tab.dotColor, number: tab.number, group: tab.group },
   };
-  writeFileSync(path.join(dir, `${tab.label}.json`), JSON.stringify(entry, null, 2));
 }

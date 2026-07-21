@@ -17,8 +17,8 @@ export type LayoutState = {
 };
 
 // Sidebar widths, the reporting-section height percentage, and which docked tab should be visible
-// per side, hoisted out of Sidebar/ReportingSection's own state so a profile's `_layout.json` (and,
-// for focus, `_notifications.json`'s `focus` field) can drive them too (see
+// per side, hoisted out of Sidebar/ReportingSection's own state so a profile's `layout` key (and,
+// for focus, its `notifications` `focus` field) can drive them too (see
 // product/specs/profiles.md's "Profile-level layout" section). A `layout` WS event patches
 // whichever fields it carries, leaving the rest untouched. Split out of App.tsx to keep it under
 // the file-size limit.

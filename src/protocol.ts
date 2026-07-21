@@ -112,7 +112,7 @@ export type PtyExitEvent = { t: 'pty-exit'; id: string; exitCode: number };
 export type RpcReply = { t: 'rpc-reply'; id: number; result?: unknown; error?: string };
 // Tells the client to close its window; the server then stops (the `quit`/`exit` command).
 export type ByeEvent = { t: 'bye' };
-// A profile's `_layout.json` sidebar/tab-area sizes, applied on `profile launch`. Window sizing is
+// A profile's `layout` sidebar/tab-area sizes, applied on `profile launch`. Window sizing is
 // applied directly over CDP and never reaches the client — see product/specs/profiles.md.
 export type LayoutEvent = {
   t: 'layout';
@@ -171,8 +171,8 @@ export type RpcCall =
   // for that. `url` identifies the tab the same way saveFile's does.
   | { method: 'editorSync'; params: { url: string; content: string } }
   // Report the client's current sidebar/tab-area sizes after a manual resize completes, so the
-  // server always holds the latest values for `profile save` to read synchronously into
-  // `_layout.json`. Client-only, no reply — the reverse of the server->client `layout` event.
+  // server always holds the latest values for `profile save` to read synchronously into a profile's
+  // `layout` key. Client-only, no reply — the reverse of the server->client `layout` event.
   | { method: 'reportLayout'; params: { sidebarLeft: number; sidebarRight: number; tabAreaPct: number } }
   // Sync a page tab's currently visible text, relayed by the bundled extension's content script
   // through the app's message-listener. Never persisted or sent to any client — see `pageSnapshot`.

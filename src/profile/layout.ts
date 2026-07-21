@@ -1,7 +1,7 @@
-import { loadProfileLayout } from '../profiles.js';
 import { getWindowResizer } from '../window-resizer.js';
 import { messageBus } from '../bus.js';
 import type { Managers } from '../managers.js';
+import type { ProfileLayout } from '../types.js';
 
 // Wraps a window resize so a CDP failure (e.g. the app window isn't ready yet) logs a warning
 // instead of becoming an unhandled promise rejection that crashes the process.
@@ -17,12 +17,11 @@ async function resizeWindow(
   }
 }
 
-// Applies a profile's `_layout.json` (window size, sidebar widths, tab-area split) once every
-// entry is open, mirroring the other reserved-file openers. Does nothing when the file is absent.
+// Applies a profile's `layout` (window size, sidebar widths, tab-area split) once every entry is
+// open, mirroring the other reserved-section openers. Does nothing when the profile has no layout.
 // The window resize is skipped silently when no CDP window connection is registered (`--no-open`,
 // or a failed handshake) — see `window-resizer.ts`.
-export function applyProfileLayout(profileName: string, _managers: Managers, notes: string[]): void {
-  const layout = loadProfileLayout(profileName);
+export function applyProfileLayout(layout: ProfileLayout | null, _managers: Managers, notes: string[]): void {
   if (!layout) return;
 
   if (layout.window) {

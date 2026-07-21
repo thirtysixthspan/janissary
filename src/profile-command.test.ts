@@ -22,6 +22,18 @@ describe('parseProfileCommand', () => {
     expect(parseProfileCommand('profile save')).toEqual({ error: 'Usage: profile save <name>' });
   });
 
+  it('parses validate with a name', () => {
+    expect(parseProfileCommand('profile validate writing')).toEqual({ action: 'validate', name: 'writing' });
+  });
+
+  it('parses bare validate as validate-all (no name)', () => {
+    expect(parseProfileCommand('profile validate')).toEqual({ action: 'validate', name: undefined });
+  });
+
+  it('lists validate in the usage string', () => {
+    expect(PROFILE_USAGE).toContain('validate');
+  });
+
   it('reports the top-level usage for a malformed command', () => {
     expect(parseProfileCommand('profile')).toEqual({ error: PROFILE_USAGE });
     expect(parseProfileCommand('profile bogus')).toEqual({ error: PROFILE_USAGE });

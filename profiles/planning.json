@@ -1,0 +1,24 @@
+{
+  "harnesses": [
+    {
+      "name": "planning",
+      "type": "claude",
+      "model": "claude-sonnet-5",
+      "effort": "high",
+      "workspace": true,
+      "offline": false,
+      "autoApprove": true,
+      "cwd": ".janissary/workspace/planning",
+      "tab": { "color": "#f368e0", "number": 3, "group": 1 }
+    }
+  ],
+  "files": [
+    { "dock": "left", "path": ".janissary/workspace/planning" }
+  ],
+  "notifications": [
+    { "dock": "right", "focus": true }
+  ],
+  "layout": {
+    "window": { "width": 1280, "height": 800 }
+  }
+}

@@ -18,10 +18,10 @@ export function buildHarnessSchedule(entry: ProfileHarnessEntry, report: (messag
   const scheduleLines = entry.schedule ?? [];
   for (const raw of scheduleLines) {
     const parsed = parseScheduleCommand(raw, now);
-    if ('error' in parsed) { report(`Schedule "${raw}" for "${entry.label}": ${parsed.error}`); continue; }
-    if (parsed.action !== 'add') { report(`Schedule "${raw}" for "${entry.label}" is not a new schedule.`); continue; }
-    if (parsed.target !== undefined) { report(`Schedule "${raw}" for "${entry.label}" cannot target another tab.`); continue; }
-    if (ids.has(parsed.name)) { report(`Duplicate schedule name "${parsed.name}" for "${entry.label}"; kept the first.`); continue; }
+    if ('error' in parsed) { report(`Schedule "${raw}" for "${entry.name}": ${parsed.error}`); continue; }
+    if (parsed.action !== 'add') { report(`Schedule "${raw}" for "${entry.name}" is not a new schedule.`); continue; }
+    if (parsed.target !== undefined) { report(`Schedule "${raw}" for "${entry.name}" cannot target another tab.`); continue; }
+    if (ids.has(parsed.name)) { report(`Duplicate schedule name "${parsed.name}" for "${entry.name}"; kept the first.`); continue; }
     ids.add(parsed.name);
     entries.push({ ...parsed.entry, id: parsed.name });
   }

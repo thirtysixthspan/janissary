@@ -1,15 +1,21 @@
 import { writeAgentEntry, writeHarnessEntry } from './save-entries.js';
 import type { Managers } from '../managers.js';
-import type { ProfileFilesEntry, ProfileNotificationsEntry, ProfileSchedulesEntry, Tab } from '../types.js';
+import type {
+  ProfileAgentFile, ProfileFilesEntry, ProfileHarnessFile, ProfileNotificationsEntry,
+  ProfileSchedulesEntry, Tab,
+} from '../types.js';
 
 // Per-tab routing for `profile save`, split out of save.ts to keep its cognitive complexity down.
-// Monitor reporting tabs are deliberately a no-op here (captured via the monitor manager's
-// snapshot instead), so they never land in `skipped`.
+// Each tab produces a value pushed onto the matching accumulator; `saveProfile` assembles them into
+// one root object. Monitor reporting tabs are deliberately a no-op here (captured via the monitor
+// manager's snapshot instead), so they never land in `skipped`.
 export type CaptureState = {
   agents: number;
   harnesses: number;
   dockedViews: number;
   skipped: string[];
+  agentEntries: ProfileAgentFile[];
+  harnessEntries: ProfileHarnessFile[];
   filesEntries: ProfileFilesEntry[];
   notificationsEntries: ProfileNotificationsEntry[];
   schedulesEntries: ProfileSchedulesEntry[];
@@ -18,16 +24,17 @@ export type CaptureState = {
 export function newCaptureState(): CaptureState {
   return {
     agents: 0, harnesses: 0, dockedViews: 0, skipped: [],
+    agentEntries: [], harnessEntries: [],
     filesEntries: [], notificationsEntries: [], schedulesEntries: [],
   };
 }
 
-export function captureTab(dir: string, tab: Tab, managers: Managers, state: CaptureState): void {
+export function captureTab(tab: Tab, managers: Managers, state: CaptureState): void {
   switch (tab.view) {
     case undefined:
     case 'agent': {
       if (tab === managers.tab.tabs[0] && tab.label === 'janus') return;
-      writeAgentEntry(dir, tab, managers);
+      state.agentEntries.push(writeAgentEntry(tab, managers));
       state.agents += 1;
       return;
     }
@@ -35,8 +42,8 @@ export function captureTab(dir: string, tab: Tab, managers: Managers, state: Cap
       // An ssh tab reuses the harness view (see types.ts's HarnessView comment) but has no
       // profile-entry form of its own.
       if (tab.harness?.name === 'ssh') { state.skipped.push(tab.label); return; }
-      writeHarnessEntry(dir, tab, managers);
-      state.harnesses += 1;
+      const entry = writeHarnessEntry(tab, managers);
+      if (entry) { state.harnessEntries.push(entry); state.harnesses += 1; }
       return;
     }
     case 'files': {

@@ -137,7 +137,7 @@ export class HarnessManager {
     if (typeof dir === 'string') return dir;
     const { cwd, workspaceDir, ready } = dir;
     const dotColor = distinctColor(this.managers.tab.tabs.map((t) => t.dotColor), entry.dotColor);
-    this.spawnTab(entry.harness, unique, cwd, workspaceDir, entry.offline ?? false, group, groupColor, dotColor, entry.autoApprove ?? false, entry.model, entry.effort, ready);
+    this.spawnTab(entry.type, unique, cwd, workspaceDir, entry.offline ?? false, group, groupColor, dotColor, entry.autoApprove ?? false, entry.model, entry.effort, ready);
     return undefined;
   }
 

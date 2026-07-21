@@ -28,7 +28,7 @@ export function recordContext(reg: MonitorSub, text: string, role: MonitorContex
 // under a header marking whether it was sent to or received from the model, then opened for
 // reading. No live monitor or empty context is a no-op.
 export function snapshotMonitorContext(monitors: Iterable<MonitorSub>, managers: Managers, name: string): void {
-  const reg = [...monitors].find((r) => !r.inline && r.persona.name === name);
+  const reg = [...monitors].find((r) => !r.inline && r.name === name);
   if (!reg || reg.contextText.length === 0) return;
   const body = reg.contextText.map(({ role, text }) => `${HEADERS[role].begin}\n${text}\n${HEADERS[role].end}`).join('\n\n');
   const file = writeCaptureFile(name, Date.now(), body);

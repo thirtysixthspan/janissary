@@ -9,5 +9,5 @@ import { recordContext } from './context.js';
 // streaming.
 export function recordReply(reg: MonitorSub, managers: Managers, reply: string): void {
   recordContext(reg, reply, 'response');
-  if (!reg.inline) updateMonitorMeta(managers, reg.persona.name, formatTargets(reg.targets), reg.contextBytes);
+  if (!reg.inline) updateMonitorMeta(managers, reg.name, formatTargets(reg.targets), reg.contextBytes);
 }

@@ -5,11 +5,11 @@ import type { ProfileEntry, ProfileHarnessEntry } from '../types.js';
 // concern from the tab-opening orchestration that remains there.
 
 export function isHarnessEntry(e: ProfileEntry): e is ProfileHarnessEntry {
-  return 'harness' in e;
+  return 'type' in e;
 }
 
 export function labelOf(e: ProfileEntry): string {
-  return isHarnessEntry(e) ? e.label : e.name;
+  return e.name;
 }
 
 // Relaunch semantics: close every open tab matching an entry's label first, then the caller opens

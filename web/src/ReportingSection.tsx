@@ -27,7 +27,7 @@ export const DEFAULT_PCT = 20;
 // the color of the tab it monitors — in its strip dot, strip border, and the body's
 // left border. The top edge is a draggable divider: pulling it up grows the reporting
 // body while the action area shrinks (and vice versa), within the 15% floors. Height is a
-// controlled prop, owned by `App` (so a profile's `_layout.json` can drive it too — see
+// controlled prop, owned by `App` (so a profile's `layout` key can drive it too — see
 // `useLayoutState`).
 export function ReportingSection({
   entries, onClose, onRun, onRate, onReset, onSnapshot, heightPct = DEFAULT_PCT, onHeightPctChange,
