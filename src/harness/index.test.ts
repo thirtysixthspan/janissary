@@ -127,15 +127,26 @@ describe('parseHarnessCommand', () => {
     expect('workspace' in result && (result as { workspace: boolean }).workspace).toBe(false);
   });
 
-  it('errors when -y is given for a non-claude harness', () => {
-    const result = parseHarnessCommand('harness opencode -w -y');
-    expect('error' in result).toBe(true);
-    expect((result as { error: string }).error).toBe('-y/--yes is only supported for the claude harness.');
+  it('sets autoApprove true with -y for codex', () => {
+    const result = parseHarnessCommand('harness codex -y');
+    expect('name' in result && result.name).toBe('codex');
+    expect('autoApprove' in result && (result as { autoApprove: boolean }).autoApprove).toBe(true);
   });
 
-  it('errors when -y is given for a non-claude harness with no other flags', () => {
+  it('sets autoApprove true with --yes for codex alongside -w', () => {
+    const result = parseHarnessCommand('harness codex -w --yes');
+    expect('autoApprove' in result && (result as { autoApprove: boolean }).autoApprove).toBe(true);
+  });
+
+  it('errors when -y is given for an unsupported harness', () => {
+    const result = parseHarnessCommand('harness opencode -w -y');
+    expect('error' in result).toBe(true);
+    expect((result as { error: string }).error).toBe('-y/--yes is only supported for the claude and codex harnesses.');
+  });
+
+  it('errors when -y is given for an unsupported harness with no other flags', () => {
     const result = parseHarnessCommand('harness opencode -y');
-    expect((result as { error: string }).error).toBe('-y/--yes is only supported for the claude harness.');
+    expect((result as { error: string }).error).toBe('-y/--yes is only supported for the claude and codex harnesses.');
   });
 
   it('combines -y with `as <label>` and -w', () => {

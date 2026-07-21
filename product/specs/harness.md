@@ -30,7 +30,8 @@ offers: a harness selector (claude, opencode, codex), a **Label** field (the `as
 a **Model** dropdown, and an **Effort** dropdown.
 
 The form enforces the flag constraints so it can only ever build a valid command: **Auto-approve** is
-disabled unless the selected harness is claude, and the **Model** dropdown lists
+disabled unless the selected harness is claude or codex — switching between those two keeps its
+checked state, while switching to opencode clears and disables it — and the **Model** dropdown lists
 the selected harness's known models and is disabled when that harness has no model catalog. The
 **Effort** dropdown offers a default (no `--effort` flag) plus the fixed levels `low`, `medium`,
 `high`, `xhigh`, and `max`. Opening the dialog records no line in the transcript.
@@ -105,9 +106,9 @@ blocking permission prompt, the app recognizes the prompt and answers it automat
 waiting for the user. Because the harness is confined to a disposable workspace clone (and, on
 macOS, a sandbox), auto-approving its prompts stays low-risk — see [[workspaced-agent]].
 
-The flag is **claude-only**:
+The flag is supported for **claude and codex**:
 
-- `harness opencode -y` (or any non-claude harness) — error: `-y/--yes is only supported for the claude harness.`
+- `harness opencode -y` (or any harness without a recognized permission prompt) — error: `-y/--yes is only supported for the claude and codex harnesses.`
 
 `-y` does **not** require `-w`/`--workspace`. Launching `harness claude -y` without a workspace
 succeeds, but since there is then no disposable clone (and, on macOS, no sandbox) confining the
@@ -115,8 +116,17 @@ harness, a security warning line appears in the new tab's terminal: `auto-approv
 workspace: prompts are approved unattended against your real files, with no sandbox confining the
 harness`.
 
-`-y` combines with `as <label>` and `-w` in any order. Support for opencode and codex is future
-work.
+`-y` combines with `as <label>` and `-w` in any order. Support for opencode is future work.
+
+For codex, the app recognizes codex's approval overlay by its structure rather than by broad
+approval words: a request-specific title (the command-execution, network-access, file-changes,
+permission-grant, or MCP-elicitation prompt), the highlighted first ordinary-approval option (its
+one-time "Yes, proceed" / "Yes, just this once" / per-turn grant / first MCP approve choice —
+never a persistent prefix, session, host, or file allowlist choice), and the confirm/cancel footer.
+When that overlay is live, the app injects a single Enter to accept the highlighted option — the same
+selected-row Enter contract as claude, not a literal `y` — and records the same `Auto-approved a
+permission prompt` notification with a capture link. A gate-shaped menu that has scrolled above
+codex's live input composer is treated as stale and not answered.
 
 ### Launch prompt (`with <prompt>`)
 
@@ -262,14 +272,14 @@ marked with the unread badge to call attention to it — the harness has either 
 run or is otherwise waiting, and the badge is what surfaces that without switching to the tab
 first. A visible tab going idle is unaffected; only a hidden one is badged.
 
-When claude shows its permission prompt, the dot stops blinking immediately — claude is waiting on
-the user, not working — and if nothing is going to answer the prompt (the tab was launched without
-`-y`, or auto-approve has stood down on a prompt it could not clear), the tab is marked unread
-right away rather than waiting on the usual working→idle debounce. A permission prompt in codex or
-opencode simply reads as idle, with no distinct gate detection of its own — their prompt
-recognition is future work, alongside their auto-approve support — but it still badges unread like
-any other working→idle transition, so a hidden codex/opencode tab stuck on an unanswered prompt is
-still surfaced, just without claude's immediate (non-debounced) timing.
+When claude or codex shows a recognized permission prompt, the dot stops blinking immediately — the
+harness is waiting on the user, not working — and if nothing is going to answer the prompt (the tab
+was launched without `-y`, or auto-approve has stood down on a prompt it could not clear), the tab is
+marked unread right away rather than waiting on the usual working→idle debounce. A permission prompt
+in opencode simply reads as idle, with no distinct gate detection of its own — its prompt recognition
+is future work, alongside its auto-approve support — but it still badges unread like any other
+working→idle transition, so a hidden opencode tab stuck on an unanswered prompt is still surfaced,
+just without the immediate (non-debounced) timing.
 
 A harness without its own recognition signals keeps the previous coarse behavior — the dot blinks
 for as long as the process is alive. All three launchable harnesses have signals today, so this

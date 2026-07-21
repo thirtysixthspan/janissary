@@ -269,9 +269,9 @@ export type ProfileHarnessEntry = {
   group?: number;
   dotColor?: string;
   workspace?: boolean;
-  // `-y`/`--yes`: auto-approve the harness's own permission prompts. Claude-only (mirrors
-  // `parseHarnessCommand`); an entry that sets it for a non-claude harness is reported and
-  // skipped at launch rather than opened unsafely. Works with or without `workspace`.
+  // `-y`/`--yes`: auto-approve the harness's own permission prompts. Supported for claude and codex
+  // (mirrors `parseHarnessCommand`); an entry that sets it for an unsupported harness (opencode) is
+  // reported and skipped at launch rather than opened unsafely. Works with or without `workspace`.
   autoApprove?: boolean;
   // `--offline`: adds a network-deny rule to the tab's sandbox profile (only meaningful with
   // `workspace`).

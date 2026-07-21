@@ -1,4 +1,5 @@
 import { HARNESS_COMMANDS, HARNESS_NAMES } from './index.js';
+import { supportsHarnessAutoApprove } from './auto-approve.js';
 
 // The `harness` command's parsing, split out of index.ts: a distinct concern from the
 // shell-command-string building (shellQuote/buildHarnessCommand) that remains there.
@@ -40,9 +41,11 @@ function parseHarnessFlags(
   const workspace = tokens.some((t) => t === '-w' || t === '--workspace');
   const offline = tokens.some((t) => t.toLowerCase() === '--offline');
   const autoApprove = tokens.some((t) => t === '-y' || t === '--yes');
-  // Claude-only comes first: adding -w would not make `harness opencode -y` valid, so pointing at
-  // -w would misdirect — the harness choice is the real blocker.
-  if (autoApprove && name !== 'claude') return { error: '-y/--yes is only supported for the claude harness.' };
+  // The supported-harness check comes first: adding -w would not make `harness opencode -y` valid,
+  // so pointing at -w would misdirect — the harness choice is the real blocker.
+  if (autoApprove && !supportsHarnessAutoApprove(name)) {
+    return { error: '-y/--yes is only supported for the claude and codex harnesses.' };
+  }
   const model = findFlagValue(tokens, '--model');
   if (model !== undefined && typeof model !== 'string') return model;
   const effort = findFlagValue(tokens, '--effort');
@@ -60,7 +63,7 @@ function parseHarnessFlags(
  * gives the new tab a custom label instead of the harness name (still de-duplicated against
  * existing tab labels). `--offline` adds a network-deny rule to the tab's sandbox profile (only
  * meaningful alongside `-w`/`--workspace`). `-y`/`--yes` auto-approves the harness's own permission
- * prompts; it is claude-only (a hard error otherwise) and works with or without `-w`/`--workspace` —
+ * prompts; it is supported for claude and codex (a hard error otherwise) and works with or without `-w`/`--workspace` —
  * without a workspace, the new tab's terminal shows a security warning since prompts are then
  * approved unattended against the real working directory, with no sandbox.
  * `--model <name>` selects a model, validated by the caller against the harness's catalog.

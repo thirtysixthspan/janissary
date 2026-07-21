@@ -1,5 +1,6 @@
 import { makeTab } from '../tab/index.js';
 import { HARNESS_COMMANDS } from '../harness/index.js';
+import { supportsHarnessAutoApprove } from '../harness/auto-approve.js';
 import { isKnownModel } from '../harness/models.js';
 import { buildHarnessSchedule } from './harness-schedule.js';
 import { expandUserPath } from '../paths.js';
@@ -28,8 +29,10 @@ export function openHarnessEntry(
   if (entry.model && !isKnownModel(entry.type, entry.model)) {
     return `Unknown model "${entry.model}" for harness "${entry.type}" — add it to harness-models.json.`;
   }
-  // Mirror `parseHarnessCommand`: -y is claude-only. Report and skip rather than open unsafely.
-  if (entry.autoApprove && entry.type !== 'claude') return 'autoApprove (-y) is only supported for the claude harness';
+  // Mirror `parseHarnessCommand`: -y is supported for claude and codex. Report and skip rather than open unsafely.
+  if (entry.autoApprove && !supportsHarnessAutoApprove(entry.type)) {
+    return 'autoApprove (-y) is only supported for the claude and codex harnesses';
+  }
   const cwd = entry.cwd ? expandUserPath(entry.cwd, { root: managers.tab.launchDir }) : issuingCwd;
   const withCwd: ProfileHarnessEntry = { ...entry, cwd };
   const error = managers.harness.openFromProfile(withCwd, entry.name, group, groupColor);

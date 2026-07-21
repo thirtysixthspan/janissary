@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { detectPermissionGate, HarnessAutoApprover, autoApproveWithoutWorkspaceWarning } from './auto-approve.js';
+import { detectPermissionGate, HarnessAutoApprover, autoApproveWithoutWorkspaceWarning, supportsHarnessAutoApprove } from './auto-approve.js';
 import type { ScreenCapture } from './screen.js';
 
 // The five claude gate variants captured live (see the plan's Ground truth section).
@@ -110,6 +110,18 @@ const BASH_TEMP_CLEANUP = [
 
 const ALL_GATES = { BASH_IN_PROJECT, BASH_OUT_OF_PROJECT, FETCH, SUBAGENT_TWO_OPTION, MCP_TOOL, GATE_WITH_TASK_LIST, BASH_TEMP_CLEANUP };
 
+// A codex command-execution overlay: distinct title and `›` selection glyph from claude's gates.
+const CODEX_GATE = [
+  ' Would you like to run the following command?',
+  '',
+  '   npm test',
+  '',
+  ' › 1. Yes, proceed',
+  '   2. No, provide feedback',
+  '',
+  ' Press Enter to confirm · Esc to cancel',
+].join('\n');
+
 function capture(text: string): ScreenCapture {
   return { text, capturedAt: Date.now() };
 }
@@ -146,13 +158,27 @@ describe('detectPermissionGate — claude', () => {
   });
 });
 
+describe('detectPermissionGate — codex', () => {
+  it('matches a codex overlay routed to the codex matcher', () => {
+    expect(detectPermissionGate(CODEX_GATE, 'codex')).toBe(true);
+  });
+
+  it('does not match a codex overlay against claude', () => {
+    expect(detectPermissionGate(CODEX_GATE, 'claude')).toBe(false);
+  });
+
+  it('does not match a claude-shaped gate against codex', () => {
+    expect(detectPermissionGate(BASH_IN_PROJECT, 'codex')).toBe(false);
+  });
+});
+
 describe('detectPermissionGate — unarmed harnesses', () => {
   it('returns false for opencode even on a claude-shaped gate', () => {
     expect(detectPermissionGate(BASH_IN_PROJECT, 'opencode')).toBe(false);
   });
 
-  it('returns false for codex even on a claude-shaped gate', () => {
-    expect(detectPermissionGate(BASH_IN_PROJECT, 'codex')).toBe(false);
+  it('returns false for opencode even on a codex-shaped gate', () => {
+    expect(detectPermissionGate(CODEX_GATE, 'opencode')).toBe(false);
   });
 });
 
@@ -172,6 +198,16 @@ describe('HarnessAutoApprover', () => {
     expect(approve).toHaveBeenCalledWith('\r');
     expect(notify).toHaveBeenCalledTimes(1);
     expect(notify).toHaveBeenCalledWith('Auto-approved a permission prompt', cap);
+  });
+
+  it('injects the codex table keystroke on a codex overlay', () => {
+    const approve = vi.fn();
+    const notify = vi.fn();
+    const approver = new HarnessAutoApprover({ harnessName: 'codex', approve, notify });
+    approver.onCapture(capture(CODEX_GATE));
+    expect(approve).toHaveBeenCalledTimes(1);
+    expect(approve).toHaveBeenCalledWith('\r');
+    expect(notify).toHaveBeenCalledWith('Auto-approved a permission prompt', expect.anything());
   });
 
   it('does not inject on a non-gate capture', () => {
@@ -215,6 +251,15 @@ describe('HarnessAutoApprover', () => {
     expect(approver.isStuck).toBe(true);
     approver.onCapture(capture('back to normal output'));
     expect(approver.isStuck).toBe(false);
+  });
+});
+
+describe('supportsHarnessAutoApprove', () => {
+  it('accepts claude and codex, rejects opencode and unknown harnesses', () => {
+    expect(supportsHarnessAutoApprove('claude')).toBe(true);
+    expect(supportsHarnessAutoApprove('codex')).toBe(true);
+    expect(supportsHarnessAutoApprove('opencode')).toBe(false);
+    expect(supportsHarnessAutoApprove('gemini')).toBe(false);
   });
 });
 

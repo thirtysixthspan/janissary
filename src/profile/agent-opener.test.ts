@@ -124,6 +124,31 @@ describe('openProfileEntries — semantic launch-time checks (Decision 7)', () =
     expect(messages.join(' ')).toMatch(/Skipped/);
     expect(messages.join(' ')).toMatch(/Unknown model/);
   });
+
+  it('launches a codex entry with autoApprove, reaching openFromProfile', () => {
+    const janus = makeTab('janus', 'red', 1, [], [], undefined, 1, 'red');
+    const { managers, harnessOpen } = makeManagers([janus]);
+    const entry: ProfileHarnessEntry = { name: 'codex', type: 'codex', autoApprove: true };
+    const messages: string[] = [];
+
+    openProfileEntries(loaded([entry]), managers, 'codex', 'janus', (text) => { messages.push(text); });
+
+    expect(harnessOpen).toHaveBeenCalledWith(expect.objectContaining({ type: 'codex', autoApprove: true }), 'codex', expect.any(Number), expect.any(String));
+    expect(messages.join(' ')).not.toMatch(/Skipped/);
+  });
+
+  it('skips an opencode entry with autoApprove, reporting the updated message', () => {
+    const janus = makeTab('janus', 'red', 1, [], [], undefined, 1, 'red');
+    const { managers, harnessOpen } = makeManagers([janus]);
+    const entry: ProfileHarnessEntry = { name: 'opencode', type: 'opencode', autoApprove: true };
+    const messages: string[] = [];
+
+    openProfileEntries(loaded([entry]), managers, 'opencode', 'janus', (text) => { messages.push(text); });
+
+    expect(harnessOpen).not.toHaveBeenCalled();
+    expect(messages.join(' ')).toMatch(/Skipped/);
+    expect(messages.join(' ')).toMatch('autoApprove (-y) is only supported for the claude and codex harnesses');
+  });
 });
 
 describe('openProfileEntries — effort field', () => {

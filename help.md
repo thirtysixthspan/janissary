@@ -24,7 +24,7 @@
 | `schedule` | Run a command later — once or on a recurring schedule |
 | `schedules` | Open the aggregated, view-only tab listing every scheduled command across all tabs (`schedules left`/`right` to dock it) |
 | `profile` | Launch a saved set of agents for a use case |
-| `harness` | Open an AI coding harness (claude/opencode/codex) in a full-tab terminal (add `-w` / `--workspace` to clone the repo, `-y` / `--yes` to auto-approve claude's permission prompts — claude only; without `-w` a security warning is shown in the terminal); `harness capture <name>` snapshots a harness tab's screen into an editor tab |
+| `harness` | Open an AI coding harness (claude/opencode/codex) in a full-tab terminal (add `-w` / `--workspace` to clone the repo, `-y` / `--yes` to auto-approve the harness's permission prompts — claude and codex only; without `-w` a security warning is shown in the terminal); `harness capture <name>` snapshots a harness tab's screen into an editor tab |
 | `ssh` | Open an SSH session to a remote host in a full-tab terminal |
 | `search` | `search transcript <pattern>` searches the current tab's transcript with a regex (Cmd+F opens it empty) |
 | `files` | `files [path]` opens a file tree tab rooted at the issuing tab's cwd, or at `path` |
