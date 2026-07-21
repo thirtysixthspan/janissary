@@ -15,6 +15,12 @@ prefix_rule(
 )
 
 prefix_rule(
+    pattern = ["rg"],
+    decision = "allow",
+    justification = "grep",
+)
+
+prefix_rule(
     pattern = ["npx"],
     decision = "allow",
     justification = "Run project-local Node tooling",

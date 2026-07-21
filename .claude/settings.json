@@ -24,6 +24,7 @@
       "Bash(screencapture *)",
       "Bash(chmod +x node_modules/node-pty/prebuilds/*)",
       "Bash(echo *)",
+      "Bash(rg *)",
       "Bash(grep *)",
       "Bash(head *)",
       "Bash(tail *)",
