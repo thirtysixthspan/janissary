@@ -1,54 +1,38 @@
-import { writeFileSync } from 'node:fs';
-import path from 'node:path';
-import type {
-  ProfileFilesEntry, ProfileLayout, ProfileMonitor, ProfileNotificationsEntry, ProfileSchedulesEntry,
-} from '../types.js';
+import type { ProfileLayoutFile, ProfileMonitorFile } from '../types.js';
 import { getClientLayout } from '../client-layout.js';
 import { getWindowBoundsReader } from '../window-resizer.js';
 import type { Managers } from '../managers.js';
 
-// Reserved-file writers for `profile save`: each emits the exact JSON its loader in
-// `profile-reserved-files.ts` parses, so a saved profile round-trips through `profile launch`.
-// Every array-shaped file is written only when it has at least one entry, mirroring the loaders'
-// "absent file = no entries" treatment.
+// Reserved-section builders for `profile save`: each returns the value `saveProfile` attaches under
+// the matching plain key, so a saved profile round-trips through `profile launch`. The array
+// sections are attached only when non-empty (mirroring the old "write only if non-empty"); `layout`
+// is always attached.
 
-function writeReserved(dir: string, fileName: string, entries: unknown[]): void {
-  if (entries.length === 0) return;
-  writeFileSync(path.join(dir, fileName), JSON.stringify(entries, null, 2));
-}
-
-export function writeMonitors(dir: string, managers: Managers): void {
-  const monitors: ProfileMonitor[] = managers.monitor.snapshot().map((m) => ({
+// One record per live monitor, from the manager snapshot (which carries each monitor's `name`,
+// defaulting to its persona per Decision 13). An inline monitor's targets collapse to an empty list.
+export function buildMonitors(managers: Managers): ProfileMonitorFile[] {
+  return managers.monitor.snapshot().map((m) => ({
+    name: m.name,
     persona: m.persona,
     targets: m.inline ? [] : m.targets.map((t) => (t.kind === 'tab' ? t.label : `group:${t.group}`)),
   }));
-  writeReserved(dir, '_monitors.json', monitors);
 }
 
-export function writeFiles(dir: string, entries: ProfileFilesEntry[]): void {
-  writeReserved(dir, '_files.json', entries);
-}
-
-export function writeNotifications(dir: string, entries: ProfileNotificationsEntry[]): void {
-  writeReserved(dir, '_notifications.json', entries);
-}
-
-export function writeSchedules(dir: string, entries: ProfileSchedulesEntry[]): void {
-  writeReserved(dir, '_schedules.json', entries);
-}
-
-// The layout writer always writes `_layout.json`: sidebar/tab-area sizes from the server-retained
-// client report (empty until a `reportLayout` RPC has landed), plus the window size read over CDP
-// when a bounds reader is registered. Under `--no-open` no reader exists, so `window` is omitted
-// and a skip note is added for the launch report.
-export async function writeLayout(dir: string, notes: string[]): Promise<void> {
+// The `layout` value: sidebar/tab-area sizes from the server-retained client report (empty until a
+// `reportLayout` RPC has landed), emitted with the nested `sidebar: { left, right }` shape, plus the
+// window size read over CDP when a bounds reader is registered. Under `--no-open` no reader exists,
+// so `window` is omitted and a skip note is added for the launch report.
+export async function buildLayout(notes: string[]): Promise<ProfileLayoutFile> {
   const clientLayout = getClientLayout();
-  const layout: ProfileLayout = clientLayout ? { ...clientLayout } : {};
-  const reader = getWindowBoundsReader();
-  if (reader) {
-    layout.window = await reader();
-  } else {
-    notes.push('Window size not captured (no window open).');
+  const layout: ProfileLayoutFile = {};
+  if (clientLayout) {
+    if (clientLayout.sidebarLeft !== undefined || clientLayout.sidebarRight !== undefined) {
+      layout.sidebar = { left: clientLayout.sidebarLeft, right: clientLayout.sidebarRight };
+    }
+    if (clientLayout.tabAreaPct !== undefined) layout.tabAreaPct = clientLayout.tabAreaPct;
   }
-  writeFileSync(path.join(dir, '_layout.json'), JSON.stringify({ layout }, null, 2));
+  const reader = getWindowBoundsReader();
+  if (reader) layout.window = await reader();
+  else notes.push('Window size not captured (no window open).');
+  return layout;
 }

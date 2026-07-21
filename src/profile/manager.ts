@@ -1,7 +1,8 @@
 import { makeTab, distinctColor } from '../tab/index.js';
-import { parseProfileCommand, loadProfileEntries, listProfiles, profileExists } from '../profiles.js';
+import { parseProfileCommand, loadProfile, listProfiles, profileExists } from '../profiles.js';
 import { resolveAgentName } from '../commands.js';
 import { openProfileEntries } from './agent-opener.js';
+import { reportValidation } from './validate.js';
 import { saveProfile, formatSaveSummary } from './save.js';
 import { notify } from '../notifications.js';
 import type { Tab } from '../types.js';
@@ -24,17 +25,25 @@ export class ProfileManager {
       void saveProfile(parsed.name, this.managers).then((summary) => out(formatSaveSummary(parsed.name, summary)));
       return;
     }
+    if (parsed.action === 'validate') {
+      out(reportValidation(parsed.name));
+      return;
+    }
     if (!profileExists(parsed.name)) {
       out(`No profile named "${parsed.name}".`);
       return;
     }
-    const entries = loadProfileEntries(parsed.name);
-    if (entries.length === 0) {
+    const loaded = loadProfile(parsed.name);
+    if ('error' in loaded) {
+      out(`Profile "${parsed.name}" is malformed. Run \`profile validate ${parsed.name}\` for details.`);
+      return;
+    }
+    if (loaded.entries.length === 0) {
       out(`Profile "${parsed.name}" has no agents.`);
       return;
     }
 
-    openProfileEntries(entries, this.managers, parsed.name, label, out);
+    openProfileEntries(loaded, this.managers, parsed.name, label, out);
   }
 
   newAgent(command: string): void {

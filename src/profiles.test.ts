@@ -3,19 +3,9 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import {
-  initProfileDir,
-  parseProfileCommand,
-  listProfiles,
-  loadProfileEntries,
-  loadProfileMonitors,
-  loadProfileFiles,
-  loadProfileNotifications,
-  loadProfileSchedules,
-  loadProfileLayout,
-  profileExists,
-  PROFILE_USAGE,
+  initProfileDir, parseProfileCommand, listProfiles, loadProfile, profileExists, profilePath, PROFILE_USAGE,
 } from './profiles.js';
-import type { AgentState, ProfileHarnessEntry } from './types.js';
+import type { LoadedProfile, ProfileFile } from './types.js';
 
 describe('parseProfileCommand', () => {
   it('parses launch with a name', () => {
@@ -33,244 +23,82 @@ describe('parseProfileCommand', () => {
   });
 });
 
-describe('profile directory', () => {
+describe('single-file profiles', () => {
   let root: string;
 
-  const writeAgent = (profile: string, name: string, state: Partial<AgentState>) => {
-    const dir = path.join(root, 'profiles', profile);
-    mkdirSync(dir, { recursive: true });
-    writeFileSync(path.join(dir, `${name}.json`), JSON.stringify({ name, dotColor: 'red', active: false, ...state }));
-  };
-
-  const writeHarness = (profile: string, filename: string, entry: Partial<ProfileHarnessEntry>) => {
-    const dir = path.join(root, 'profiles', profile);
-    mkdirSync(dir, { recursive: true });
-    writeFileSync(path.join(dir, `${filename}.json`), JSON.stringify({ harness: 'opencode', ...entry }));
-  };
-
-  const writeFile = (profile: string, filename: string, contents: string) => {
-    const dir = path.join(root, 'profiles', profile);
-    mkdirSync(dir, { recursive: true });
-    writeFileSync(path.join(dir, filename), contents);
+  const writeProfile = (name: string, file: ProfileFile) => {
+    writeFileSync(path.join(root, 'profiles', `${name}.json`), JSON.stringify(file));
   };
 
   beforeEach(() => {
     root = mkdtempSync(path.join(tmpdir(), 'janus-prof-'));
     initProfileDir(root);
+    mkdirSync(path.join(root, 'profiles'), { recursive: true });
   });
 
   afterAll(() => {
     if (root) rmSync(root, { recursive: true, force: true });
   });
 
-  it('lists profile directories sorted', () => {
-    writeAgent('surfing', 'alice', {});
-    writeAgent('coding', 'bob', {});
+  it('lists profile files (extension stripped) sorted', () => {
+    writeProfile('surfing', {});
+    writeProfile('coding', {});
     expect(listProfiles()).toEqual(['coding', 'surfing']);
   });
 
-  it('reports profile existence', () => {
-    writeAgent('coding', 'bob', {});
+  it('resolves profilePath/profileExists to the file', () => {
+    writeProfile('coding', {});
+    expect(profilePath('coding')).toBe(path.join(root, 'profiles', 'coding.json'));
     expect(profileExists('coding')).toBe(true);
     expect(profileExists('missing')).toBe(false);
   });
 
-  it('loads each agent file, using the filename as the agent name', () => {
-    writeAgent('coding', 'bob', { cmdHistory: ['ls'], name: 'WRONG' });
-    writeAgent('coding', 'carol', {});
-    const agents = loadProfileEntries('coding') as AgentState[];
-    expect(agents.map((a) => a.name).toSorted((a, b) => a.localeCompare(b))).toEqual(['bob', 'carol']);
-    expect(agents.find((a) => a.name === 'bob')?.cmdHistory).toEqual(['ls']);
+  it('loads agents and harnesses ordered by tab.number, each entry name as its label', () => {
+    writeProfile('coding', {
+      agents: [{ name: 'reviewer', active: false, tab: { number: 2, color: '#aaa', group: 3, groupColor: '#bbb' } }],
+      harnesses: [{ name: 'builder', type: 'opencode', model: 'opencode-go/deepseek-v4-pro', run: ['do it'], tab: { number: 1 } }],
+    });
+    const loaded = loadProfile('coding') as LoadedProfile;
+    expect(loaded.entries.map((e) => e.name)).toEqual(['builder', 'reviewer']);
+    const builder = loaded.entries[0];
+    expect('type' in builder && builder.type).toBe('opencode');
+    const reviewer = loaded.entries[1];
+    expect(reviewer.dotColor).toBe('#aaa');
+    expect(reviewer.group).toBe(3);
+    expect(reviewer.groupColor).toBe('#bbb');
   });
 
-  it('orders agents by their number field', () => {
-    writeAgent('coding', 'review', { number: 3 });
-    writeAgent('coding', 'plan', { number: 1 });
-    writeAgent('coding', 'execute', { number: 2 });
-    expect((loadProfileEntries('coding') as AgentState[]).map((a) => a.name)).toEqual(['plan', 'execute', 'review']);
+  it('parses the reserved config sections', () => {
+    writeProfile('assist', {
+      monitors: [{ persona: 'assistant', targets: ['group:1'] }],
+      files: [{ dock: 'left', path: '$root' }],
+      notifications: [{ dock: 'right', focus: true }],
+      schedules: [{ dock: 'right' }],
+    });
+    const loaded = loadProfile('assist') as LoadedProfile;
+    expect(loaded.monitors).toEqual([{ name: 'assistant', persona: 'assistant', targets: ['group:1'] }]);
+    expect(loaded.files).toEqual([{ dock: 'left', path: '$root' }]);
+    expect(loaded.notifications).toEqual([{ dock: 'right', focus: true }]);
+    expect(loaded.schedules).toEqual([{ dock: 'right' }]);
   });
 
-  it('returns no agents for a missing profile', () => {
-    expect(loadProfileEntries('nope')).toEqual([]);
-  });
-
-  it('parses a harness file into a ProfileHarnessEntry, using the filename as the label', () => {
-    writeHarness('coding', 'opencode', { model: 'opencode-go/deepseek-v4-pro', run: ['do it'] });
-    const entries = loadProfileEntries('coding') as ProfileHarnessEntry[];
-    expect(entries).toHaveLength(1);
-    expect(entries[0].harness).toBe('opencode');
-    expect(entries[0].label).toBe('opencode');
-    expect(entries[0].model).toBe('opencode-go/deepseek-v4-pro');
-    expect(entries[0].run).toEqual(['do it']);
-  });
-
-  it('orders mixed agent and harness entries by their number field', () => {
-    writeAgent('mixed', 'reviewer', { number: 2 });
-    writeHarness('mixed', 'opencode', { number: 1 });
-    const entries = loadProfileEntries('mixed');
-    expect(entries.map((e) => ('harness' in e ? e.label : e.name))).toEqual(['opencode', 'reviewer']);
-  });
-
-  it('skips invalid JSON files', () => {
-    const dir = path.join(root, 'profiles', 'broken');
-    mkdirSync(dir, { recursive: true });
-    writeFileSync(path.join(dir, 'bad.json'), '{ not json');
-    writeAgent('broken', 'ok', {});
-    expect(loadProfileEntries('broken').map((e) => ('harness' in e ? e.label : e.name))).toEqual(['ok']);
-  });
-
-  it('parses a harness file with autoApprove and offline flags', () => {
-    writeHarness('assist', 'claude', { harness: 'claude', workspace: true, autoApprove: true, offline: true });
-    const [entry] = loadProfileEntries('assist') as ProfileHarnessEntry[];
-    expect(entry.autoApprove).toBe(true);
-    expect(entry.offline).toBe(true);
-    expect(entry.workspace).toBe(true);
-  });
-
-  it('never loads underscore-prefixed files as entries', () => {
-    writeAgent('assist', 'bob', {});
-    writeFile('assist', '_monitors.json', JSON.stringify([{ persona: 'assistant', targets: ['group:1'] }]));
-    expect(loadProfileEntries('assist').map((e) => ('harness' in e ? e.label : e.name))).toEqual(['bob']);
-  });
-
-  it('loads profile monitors from _monitors.json', () => {
-    writeFile('assist', '_monitors.json', JSON.stringify([{ persona: 'assistant', targets: ['group:1'] }]));
-    expect(loadProfileMonitors('assist')).toEqual([{ persona: 'assistant', targets: ['group:1'] }]);
-  });
-
-  it('returns no monitors when the file is absent, unparseable, or not an array', () => {
-    writeAgent('none', 'bob', {});
-    expect(loadProfileMonitors('none')).toEqual([]);
-    writeFile('bad', '_monitors.json', '{ not json');
-    expect(loadProfileMonitors('bad')).toEqual([]);
-    writeFile('obj', '_monitors.json', JSON.stringify({ persona: 'assistant', targets: [] }));
-    expect(loadProfileMonitors('obj')).toEqual([]);
-  });
-
-  it('drops malformed monitor elements', () => {
-    writeFile('mix', '_monitors.json', JSON.stringify([
-      { persona: 'assistant', targets: ['group:1'] },
-      { persona: 42, targets: ['group:1'] },
-      { persona: 'security', targets: 'group:1' },
-      { targets: ['group:1'] },
-    ]));
-    expect(loadProfileMonitors('mix')).toEqual([{ persona: 'assistant', targets: ['group:1'] }]);
-  });
-
-  it('loads profile files from _files.json', () => {
-    writeFile('assist', '_files.json', JSON.stringify([{ dock: 'left' }]));
-    expect(loadProfileFiles('assist')).toEqual([{ dock: 'left' }]);
-  });
-
-  it('returns no files entries when the file is absent, unparseable, or not an array', () => {
-    writeAgent('none', 'bob', {});
-    expect(loadProfileFiles('none')).toEqual([]);
-    writeFile('bad', '_files.json', '{ not json');
-    expect(loadProfileFiles('bad')).toEqual([]);
-    writeFile('obj', '_files.json', JSON.stringify({ dock: 'left' }));
-    expect(loadProfileFiles('obj')).toEqual([]);
-  });
-
-  it('drops malformed files elements', () => {
-    writeFile('mix', '_files.json', JSON.stringify([
-      { dock: 'left' },
-      { dock: 'up' },
-      { in: 42 },
-      { dock: 'right', in: 'claude' },
-    ]));
-    expect(loadProfileFiles('mix')).toEqual([{ dock: 'left' }, { dock: 'right', in: 'claude' }]);
-  });
-
-  it('keeps a valid path and drops an entry whose path is not a string', () => {
-    writeFile('mix', '_files.json', JSON.stringify([
-      { dock: 'left', path: '$root' },
-      { path: 42 },
-    ]));
-    expect(loadProfileFiles('mix')).toEqual([{ dock: 'left', path: '$root' }]);
-  });
-
-  it('loads profile schedules from _schedules.json', () => {
-    writeFile('assist', '_schedules.json', JSON.stringify([{ dock: 'right' }]));
-    expect(loadProfileSchedules('assist')).toEqual([{ dock: 'right' }]);
-  });
-
-  it('returns no schedules entries when the file is absent, unparseable, or not an array', () => {
-    writeAgent('none', 'bob', {});
-    expect(loadProfileSchedules('none')).toEqual([]);
-    writeFile('bad', '_schedules.json', '{ not json');
-    expect(loadProfileSchedules('bad')).toEqual([]);
-    writeFile('obj', '_schedules.json', JSON.stringify({ dock: 'right' }));
-    expect(loadProfileSchedules('obj')).toEqual([]);
-  });
-
-  it('drops malformed schedules elements', () => {
-    writeFile('mix', '_schedules.json', JSON.stringify([
-      { dock: 'right' },
-      { dock: 'up' },
-      {},
-    ]));
-    expect(loadProfileSchedules('mix')).toEqual([{ dock: 'right' }, {}]);
-  });
-
-  it('loads profile notifications from _notifications.json', () => {
-    writeFile('assist', '_notifications.json', JSON.stringify([{ dock: 'right' }]));
-    expect(loadProfileNotifications('assist')).toEqual([{ dock: 'right' }]);
-  });
-
-  it('returns no notifications entries when the file is absent, unparseable, or not an array', () => {
-    writeAgent('none', 'bob', {});
-    expect(loadProfileNotifications('none')).toEqual([]);
-    writeFile('bad', '_notifications.json', '{ not json');
-    expect(loadProfileNotifications('bad')).toEqual([]);
-    writeFile('obj', '_notifications.json', JSON.stringify({ dock: 'right' }));
-    expect(loadProfileNotifications('obj')).toEqual([]);
-  });
-
-  it('drops malformed notifications elements', () => {
-    writeFile('mix', '_notifications.json', JSON.stringify([
-      { dock: 'right' },
-      { dock: 'up' },
-      {},
-    ]));
-    expect(loadProfileNotifications('mix')).toEqual([{ dock: 'right' }, {}]);
-  });
-
-  it('never loads _notifications.json as a profile entry', () => {
-    writeAgent('assist', 'bob', {});
-    writeFile('assist', '_notifications.json', JSON.stringify([{ dock: 'right' }]));
-    expect(loadProfileEntries('assist').map((e) => ('harness' in e ? e.label : e.name))).toEqual(['bob']);
-  });
-
-  it('loads a full profile layout from _layout.json', () => {
-    writeFile('assist', '_layout.json', JSON.stringify({
-      layout: { window: { width: 1440, height: 900 }, sidebarLeft: 320, sidebarRight: 280, tabAreaPct: 75 },
-    }));
-    expect(loadProfileLayout('assist')).toEqual({
+  it('reads layout.sidebar into the flat internal fields', () => {
+    writeProfile('assist', {
+      layout: { sidebar: { left: 320, right: 280 }, tabAreaPct: 75, window: { width: 1440, height: 900 } },
+    });
+    const loaded = loadProfile('assist') as LoadedProfile;
+    expect(loaded.layout).toEqual({
       window: { width: 1440, height: 900 }, sidebarLeft: 320, sidebarRight: 280, tabAreaPct: 75,
     });
   });
 
-  it('returns null when _layout.json is absent, unparseable, not an object, or missing layout', () => {
-    writeAgent('none', 'bob', {});
-    expect(loadProfileLayout('none')).toBeNull();
-    writeFile('bad', '_layout.json', '{ not json');
-    expect(loadProfileLayout('bad')).toBeNull();
-    writeFile('arr', '_layout.json', JSON.stringify([{ sidebarLeft: 320 }]));
-    expect(loadProfileLayout('arr')).toBeNull();
-    writeFile('nolayout', '_layout.json', JSON.stringify({ sidebarLeft: 320 }));
-    expect(loadProfileLayout('nolayout')).toBeNull();
+  it('a monitor name defaults to its persona when omitted', () => {
+    writeProfile('assist', { monitors: [{ persona: 'security', targets: [] }] });
+    const loaded = loadProfile('assist') as LoadedProfile;
+    expect(loaded.monitors).toEqual([{ name: 'security', persona: 'security', targets: [] }]);
   });
 
-  it('drops an individually malformed layout field while keeping valid siblings', () => {
-    writeFile('mix', '_layout.json', JSON.stringify({
-      layout: { sidebarLeft: 'wide', sidebarRight: 280, window: { width: '1440', height: 900 } },
-    }));
-    expect(loadProfileLayout('mix')).toEqual({ sidebarRight: 280 });
-  });
-
-  it('never loads _layout.json as a profile entry', () => {
-    writeAgent('assist', 'bob', {});
-    writeFile('assist', '_layout.json', JSON.stringify({ layout: { sidebarLeft: 320 } }));
-    expect(loadProfileEntries('assist').map((e) => ('harness' in e ? e.label : e.name))).toEqual(['bob']);
+  it('returns an error for a missing profile file', () => {
+    expect(loadProfile('nope')).toHaveProperty('error');
   });
 });

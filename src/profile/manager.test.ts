@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterAll, vi } from 'vitest';
-import { mkdtempSync, mkdirSync, rmSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
@@ -41,9 +41,14 @@ function makeManagers(creator: Tab, tabs: Tab[] = [creator]): { managers: Manage
 describe('ProfileManager.run', () => {
   let root: string;
 
+  const writeProfile = (name: string, contents: string) => {
+    writeFileSync(path.join(root, 'profiles', `${name}.json`), contents);
+  };
+
   beforeEach(() => {
     root = mkdtempSync(path.join(tmpdir(), 'janus-profmgr-'));
     initProfileDir(root);
+    mkdirSync(path.join(root, 'profiles'), { recursive: true });
   });
 
   afterAll(() => {
@@ -60,9 +65,8 @@ describe('ProfileManager.run', () => {
     expect(appended).toEqual([{ input: 'profile launch ghost', output: 'No profile named "ghost".' }]);
   });
 
-  it('reports an existing profile that has no agent files', () => {
-    // Create the profile directory itself so profileExists() is true but loadProfileEntries() is empty.
-    mkdirSync(path.join(root, 'profiles', 'empty'), { recursive: true });
+  it('reports an existing profile that has no entries', () => {
+    writeProfile('empty', JSON.stringify({}));
 
     const janus = makeTab('janus', 'red');
     const { managers, appended } = makeManagers(janus);
@@ -71,6 +75,34 @@ describe('ProfileManager.run', () => {
     manager.run('profile launch empty', 'janus');
 
     expect(appended).toEqual([{ input: 'profile launch empty', output: 'Profile "empty" has no agents.' }]);
+  });
+
+  it('reports a malformed profile and opens nothing', () => {
+    writeProfile('broken', JSON.stringify({ harnesses: [{ name: 'c' }] }));
+
+    const janus = makeTab('janus', 'red');
+    const { managers, appended } = makeManagers(janus);
+    const manager = new ProfileManager(managers);
+
+    manager.run('profile launch broken', 'janus');
+
+    expect(appended[0].output).toContain('Profile "broken" is malformed.');
+    expect(managers.tab.insertTabInGroup).not.toHaveBeenCalled();
+  });
+
+  it('routes the validate action to the validator', () => {
+    writeProfile('good', JSON.stringify({ agents: [{ name: 'bob', active: false }] }));
+    writeProfile('bad', JSON.stringify({ harnesses: [{ name: 'c' }] }));
+
+    const janus = makeTab('janus', 'red');
+    const { managers, appended } = makeManagers(janus);
+    const manager = new ProfileManager(managers);
+
+    manager.run('profile validate good', 'janus');
+    manager.run('profile validate bad', 'janus');
+
+    expect(appended[0].output).toBe('Profile "good" is valid.');
+    expect(appended[1].output).toContain('Profile "bad" is not valid:');
   });
 });
 

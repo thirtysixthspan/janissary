@@ -24,17 +24,17 @@ export function openHarnessEntry(
   entry: ProfileHarnessEntry, managers: Managers, group: number, groupColor: string,
   issuingCwd: string, notes: string[],
 ): string | undefined {
-  if (HARNESS_COMMANDS[entry.harness] === undefined) return `unknown harness "${entry.harness}"`;
-  if (entry.model && !isKnownModel(entry.harness, entry.model)) {
-    return `Unknown model "${entry.model}" for harness "${entry.harness}" — add it to harness-models.json.`;
+  if (HARNESS_COMMANDS[entry.type] === undefined) return `unknown harness "${entry.type}"`;
+  if (entry.model && !isKnownModel(entry.type, entry.model)) {
+    return `Unknown model "${entry.model}" for harness "${entry.type}" — add it to harness-models.json.`;
   }
   // Mirror `parseHarnessCommand`: -y is claude-only. Report and skip rather than open unsafely.
-  if (entry.autoApprove && entry.harness !== 'claude') return 'autoApprove (-y) is only supported for the claude harness';
+  if (entry.autoApprove && entry.type !== 'claude') return 'autoApprove (-y) is only supported for the claude harness';
   const cwd = entry.cwd ? expandUserPath(entry.cwd, { root: managers.tab.launchDir }) : issuingCwd;
   const withCwd: ProfileHarnessEntry = { ...entry, cwd };
-  const error = managers.harness.openFromProfile(withCwd, entry.label, group, groupColor);
+  const error = managers.harness.openFromProfile(withCwd, entry.name, group, groupColor);
   if (error) return error;
   const schedule = buildHarnessSchedule(entry, (message) => { notes.push(message); });
-  if (schedule.length > 0) managers.schedule.set(entry.label, schedule);
+  if (schedule.length > 0) managers.schedule.set(entry.name, schedule);
   return undefined;
 }

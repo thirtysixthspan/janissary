@@ -34,7 +34,7 @@ export function resolveTargetAliases(tabs: Tab[], targets: MonitorTarget[]): Mon
   });
 }
 
-export function validateTargets(tabs: Tab[], personaName: string, inline: boolean, targets: MonitorTarget[]): string | null {
+export function validateTargets(tabs: Tab[], reportLabel: string, inline: boolean, targets: MonitorTarget[]): string | null {
   for (const target of targets) {
     if (target.kind === 'tab' && tabs.every((t) => t.label !== target.label || t.view === 'monitor')) {
       return `No tab named "${target.label}".`;
@@ -43,10 +43,10 @@ export function validateTargets(tabs: Tab[], personaName: string, inline: boolea
       return `No group ${target.group}.`;
     }
   }
-  // The reporting tab reuses the persona name as its label; an action tab holding that
+  // The reporting tab takes the monitor's name as its label; an action tab holding that
   // label would collide with by-label lookups (e.g. runSuggestion's dispatch).
-  if (!inline && tabs.some((t) => t.label === personaName && t.view !== 'monitor')) {
-    return `A tab named "${personaName}" already exists; rename it or pick another persona.`;
+  if (!inline && tabs.some((t) => t.label === reportLabel && t.view !== 'monitor')) {
+    return `A tab named "${reportLabel}" already exists; rename it or pick another monitor name.`;
   }
   return null;
 }

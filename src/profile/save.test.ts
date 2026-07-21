@@ -1,21 +1,18 @@
 import { describe, it, expect, beforeEach, afterEach, afterAll } from 'vitest';
-import { mkdtempSync, mkdirSync, writeFileSync, existsSync, rmSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, existsSync, statSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { saveProfile } from './save.js';
-import {
-  initProfileDir, profilePath, loadProfileEntries, loadProfileMonitors, loadProfileFiles,
-  loadProfileNotifications, loadProfileSchedules, loadProfileLayout,
-} from '../profiles.js';
+import { initProfileDir, profilePath, loadProfile } from '../profiles.js';
 import { setClientLayout } from '../client-layout.js';
 import { setWindowBoundsReader } from '../window-resizer.js';
 import {
   makeTab, makeHarnessTab, makeImageTab, makeEditorTab, makeFilesTab, makeNotificationsTab, makeSchedulesTab,
 } from '../tab/index.js';
 import type { Managers } from '../managers.js';
-import type { MonitorTarget, Tab } from '../types.js';
+import type { LoadedProfile, MonitorTarget, Tab } from '../types.js';
 
-type Snapshot = { persona: string; targets: MonitorTarget[]; inline: boolean }[];
+type Snapshot = { name: string; persona: string; targets: MonitorTarget[]; inline: boolean }[];
 
 function makeManagers(
   tabs: Tab[], cwdByLabel: Record<string, string> = {}, monitors: Snapshot = [], launchDir = '/proj',
@@ -26,12 +23,19 @@ function makeManagers(
   } as unknown as Managers;
 }
 
+function load(name: string): LoadedProfile {
+  const loaded = loadProfile(name);
+  if ('error' in loaded) throw new Error(`expected a valid profile, got: ${loaded.error}`);
+  return loaded;
+}
+
 describe('saveProfile', () => {
   let root: string;
 
   beforeEach(() => {
     root = mkdtempSync(path.join(tmpdir(), 'janus-profsave-'));
     initProfileDir(root);
+    mkdirSync(path.join(root, 'profiles'), { recursive: true });
   });
 
   afterEach(() => {
@@ -42,19 +46,27 @@ describe('saveProfile', () => {
     if (root) rmSync(root, { recursive: true, force: true });
   });
 
-  it('writes one clean-template agent entry per agent tab', async () => {
+  it('writes exactly one profiles/<name>.json file', async () => {
+    const managers = makeManagers([makeTab('bob', '#aaa')]);
+
+    await saveProfile('demo', managers);
+
+    expect(statSync(profilePath('demo')).isFile()).toBe(true);
+    expect(existsSync(path.join(root, 'profiles', 'demo'))).toBe(false);
+  });
+
+  it('writes one clean-template agent entry per agent tab, with a nested tab object', async () => {
     const bob = { ...makeTab('bob', '#aaa', 2, ['history line'], [{ input: 'ls', output: 'x' }], undefined, 3, '#bbb') };
     const managers = makeManagers([bob], { bob: '/work/bob' });
 
     await saveProfile('demo', managers);
 
-    const entries = loadProfileEntries('demo');
-    expect(entries).toEqual([
-      { name: 'bob', dotColor: '#aaa', active: false, number: 2, group: 3, groupColor: '#bbb', cwd: '/work/bob' },
+    expect(load('demo').entries).toEqual([
+      { name: 'bob', active: false, cwd: '/work/bob', dotColor: '#aaa', number: 2, group: 3, groupColor: '#bbb' },
     ]);
   });
 
-  it('writes a harness entry with the fields the plan specifies and no run/schedule', async () => {
+  it('writes a harness entry with type and a nested tab object', async () => {
     const claude = makeHarnessTab('claude', '#ccc', 1, 1, '#ccc', {
       name: 'claude', program: 'claude', ptyId: 'pty1', status: 'running', model: 'sonnet', effort: 'high',
     });
@@ -64,21 +76,18 @@ describe('saveProfile', () => {
 
     await saveProfile('demo', managers);
 
-    const entries = loadProfileEntries('demo');
-    expect(entries).toEqual([{
-      label: 'claude', harness: 'claude', model: 'sonnet', effort: 'high', workspace: false,
+    expect(load('demo').entries).toEqual([{
+      name: 'claude', type: 'claude', model: 'sonnet', effort: 'high', workspace: false,
       offline: true, autoApprove: true, dotColor: '#ccc', cwd: '/work/claude', number: 1, group: 1,
     }]);
   });
 
   it('writes an agent entry cwd relative to the project root when it is under the root', async () => {
-    const bob = makeTab('bob', '#aaa');
-    const managers = makeManagers([bob], { bob: '/proj/src/deep' }, [], '/proj');
+    const managers = makeManagers([makeTab('bob', '#aaa')], { bob: '/proj/src/deep' }, [], '/proj');
 
     await saveProfile('demo', managers);
 
-    const entries = loadProfileEntries('demo');
-    expect(entries).toEqual([expect.objectContaining({ cwd: '$root/src/deep' })]);
+    expect(load('demo').entries).toEqual([expect.objectContaining({ cwd: '$root/src/deep' })]);
   });
 
   it('writes a harness entry cwd relative to the project root when it is under the root', async () => {
@@ -89,8 +98,7 @@ describe('saveProfile', () => {
 
     await saveProfile('demo', managers);
 
-    const entries = loadProfileEntries('demo');
-    expect(entries).toEqual([expect.objectContaining({ cwd: '$root/src' })]);
+    expect(load('demo').entries).toEqual([expect.objectContaining({ cwd: '$root/src' })]);
   });
 
   it('skips image, editor, ssh, and non-docked file-tree tabs, and reports them', async () => {
@@ -103,38 +111,31 @@ describe('saveProfile', () => {
     const summary = await saveProfile('demo', managers);
 
     expect(summary.skipped).toEqual(['pic', 'notes', 'server', 'nav']);
-    expect(loadProfileEntries('demo')).toEqual([]);
+    expect(load('demo').entries).toEqual([]);
   });
 
   it('does not capture the root janus tab, and does not count or report it', async () => {
-    const janus = makeTab('janus', '#000');
-    const bob = makeTab('bob', '#aaa');
-    const managers = makeManagers([janus, bob]);
+    const managers = makeManagers([makeTab('janus', '#000'), makeTab('bob', '#aaa')]);
 
     const summary = await saveProfile('demo', managers);
 
-    expect(loadProfileEntries('demo')).toEqual([
-      { name: 'bob', dotColor: '#aaa', active: false, number: 1, group: 1, groupColor: '#aaa' },
+    expect(load('demo').entries).toEqual([
+      { name: 'bob', active: false, dotColor: '#aaa', number: 1, group: 1, groupColor: '#aaa' },
     ]);
     expect(summary.agents).toBe(1);
     expect(summary.skipped).not.toContain('janus');
   });
 
   it('captures a tab labeled janus if it is not the first tab', async () => {
-    const bob = makeTab('bob', '#aaa');
-    const janus = makeTab('janus', '#000');
-    const managers = makeManagers([bob, janus]);
+    const managers = makeManagers([makeTab('bob', '#aaa'), makeTab('janus', '#000')]);
 
     const summary = await saveProfile('demo', managers);
 
-    expect(loadProfileEntries('demo')).toEqual([
-      { name: 'bob', dotColor: '#aaa', active: false, number: 1, group: 1, groupColor: '#aaa' },
-      { name: 'janus', dotColor: '#000', active: false, number: 1, group: 1, groupColor: '#000' },
-    ]);
+    expect(load('demo').entries.map((e) => e.name)).toEqual(['bob', 'janus']);
     expect(summary.agents).toBe(2);
   });
 
-  it('captures a docked file-tree tab into _files.json (dock + literal path, no `in`) and a docked notifications/schedules tab', async () => {
+  it('captures docked file-tree/notifications/schedules tabs into their config keys', async () => {
     const dockedFiles = { ...makeFilesTab('nav', '#444', 1, 1, '#444', { root: '~', absoluteRoot: '/home/bob', rows: [] }), dock: 'left' as const };
     const notifications = { ...makeNotificationsTab('notifications', '#555', 1, 1, '#555'), dock: 'right' as const };
     const schedules = { ...makeSchedulesTab('schedules', '#666', 1, 1, '#666'), dock: 'right' as const };
@@ -143,75 +144,73 @@ describe('saveProfile', () => {
     const summary = await saveProfile('demo', managers);
 
     expect(summary.dockedViews).toBe(3);
-    expect(loadProfileFiles('demo')).toEqual([{ dock: 'left', path: '/home/bob' }]);
-    expect(loadProfileNotifications('demo')).toEqual([{ dock: 'right' }]);
-    expect(loadProfileSchedules('demo')).toEqual([{ dock: 'right' }]);
+    const loaded = load('demo');
+    expect(loaded.files).toEqual([{ dock: 'left', path: '/home/bob' }]);
+    expect(loaded.notifications).toEqual([{ dock: 'right' }]);
+    expect(loaded.schedules).toEqual([{ dock: 'right' }]);
   });
 
-  it('does not write _monitors.json/_files.json/_notifications.json/_schedules.json when nothing qualifies', async () => {
-    const bob = makeTab('bob', '#aaa');
-    const managers = makeManagers([bob]);
+  it('omits empty config sections while always keeping layout', async () => {
+    const managers = makeManagers([makeTab('bob', '#aaa')]);
 
     await saveProfile('demo', managers);
 
-    const dir = profilePath('demo');
-    expect(existsSync(path.join(dir, '_monitors.json'))).toBe(false);
-    expect(existsSync(path.join(dir, '_files.json'))).toBe(false);
-    expect(existsSync(path.join(dir, '_notifications.json'))).toBe(false);
-    expect(existsSync(path.join(dir, '_schedules.json'))).toBe(false);
+    const loaded = load('demo');
+    expect(loaded.monitors).toEqual([]);
+    expect(loaded.files).toEqual([]);
+    expect(loaded.notifications).toEqual([]);
+    expect(loaded.schedules).toEqual([]);
+    expect(loaded.layout).not.toBeNull();
   });
 
-  it('captures live monitors via the monitor manager snapshot, authored as targets words', async () => {
-    const bob = makeTab('bob', '#aaa');
+  it('captures live monitors via the snapshot, each with a name, authored as target words', async () => {
     const monitors: Snapshot = [
-      { persona: 'security', targets: [{ kind: 'tab', label: 'bob' }], inline: false },
-      { persona: 'assistant', targets: [{ kind: 'tab', label: 'bob' }], inline: true },
+      { name: 'security', persona: 'security', targets: [{ kind: 'tab', label: 'bob' }], inline: false },
+      { name: 'assistant', persona: 'assistant', targets: [{ kind: 'tab', label: 'bob' }], inline: true },
     ];
-    const managers = makeManagers([bob], {}, monitors);
+    const managers = makeManagers([makeTab('bob', '#aaa')], {}, monitors);
 
     await saveProfile('demo', managers);
 
-    expect(loadProfileMonitors('demo')).toEqual([
-      { persona: 'security', targets: ['bob'] },
-      { persona: 'assistant', targets: [] },
+    expect(load('demo').monitors).toEqual([
+      { name: 'security', persona: 'security', targets: ['bob'] },
+      { name: 'assistant', persona: 'assistant', targets: [] },
     ]);
   });
 
-  it('overwrites an existing profile directory cleanly, leaving no stale files', async () => {
-    const dir = profilePath('demo');
-    mkdirSync(dir, { recursive: true });
-    writeFileSync(path.join(dir, 'stale.json'), '{}');
-    const bob = makeTab('bob', '#aaa');
-    const managers = makeManagers([bob]);
+  it('removes a stale old-format directory and overwrites cleanly', async () => {
+    const staleDir = path.join(root, 'profiles', 'demo');
+    mkdirSync(staleDir, { recursive: true });
+    writeFileSync(path.join(staleDir, 'stale.json'), '{}');
+    const managers = makeManagers([makeTab('bob', '#aaa')]);
 
     await saveProfile('demo', managers);
 
-    expect(existsSync(path.join(dir, 'stale.json'))).toBe(false);
-    expect(existsSync(path.join(dir, 'bob.json'))).toBe(true);
+    expect(existsSync(staleDir)).toBe(false);
+    expect(statSync(profilePath('demo')).isFile()).toBe(true);
+    expect(load('demo').entries.map((e) => e.name)).toEqual(['bob']);
   });
 
-  it('captures sidebar/tab-area sizes from getClientLayout and window bounds when a reader is registered', async () => {
-    const bob = makeTab('bob', '#aaa');
-    const managers = makeManagers([bob]);
+  it('captures sidebar/tab-area sizes and window bounds when a reader is registered', async () => {
+    const managers = makeManagers([makeTab('bob', '#aaa')]);
     setClientLayout({ sidebarLeft: 320, sidebarRight: 280, tabAreaPct: 70 });
     setWindowBoundsReader(async () => ({ width: 1440, height: 900 }));
 
     const summary = await saveProfile('demo', managers);
 
-    expect(loadProfileLayout('demo')).toEqual({
+    expect(load('demo').layout).toEqual({
       window: { width: 1440, height: 900 }, sidebarLeft: 320, sidebarRight: 280, tabAreaPct: 70,
     });
     expect(summary.notes).toEqual([]);
   });
 
-  it('omits window from _layout.json and notes the skip when no bounds reader is registered', async () => {
-    const bob = makeTab('bob', '#aaa');
-    const managers = makeManagers([bob]);
+  it('omits window and notes the skip when no bounds reader is registered', async () => {
+    const managers = makeManagers([makeTab('bob', '#aaa')]);
     setClientLayout({ sidebarLeft: 320, sidebarRight: 280, tabAreaPct: 70 });
 
     const summary = await saveProfile('demo', managers);
 
-    expect(loadProfileLayout('demo')).toEqual({ sidebarLeft: 320, sidebarRight: 280, tabAreaPct: 70 });
+    expect(load('demo').layout).toEqual({ sidebarLeft: 320, sidebarRight: 280, tabAreaPct: 70 });
     expect(summary.notes).toEqual(['Window size not captured (no window open).']);
   });
 });

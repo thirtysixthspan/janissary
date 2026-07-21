@@ -99,8 +99,8 @@ describe('Controller', () => {
   it('a launched profile forms its own group, distinct from the root', () => {
     const root = mkdtempSync(path.join(tmpdir(), 'janus-prof-'));
     initProfileDir(root); // profiles live under <root>/profiles/<name>
-    mkdirSync(path.join(root, 'profiles', 'writing'), { recursive: true });
-    writeFileSync(path.join(root, 'profiles', 'writing', 'writer.json'), JSON.stringify({ name: 'writer', dotColor: '#6bcb77', active: false }));
+    mkdirSync(path.join(root, 'profiles'), { recursive: true });
+    writeFileSync(path.join(root, 'profiles', 'writing.json'), JSON.stringify({ agents: [{ name: 'writer', active: false, tab: { color: '#6bcb77' } }] }));
     const { c } = makeController();
     c.dispatch('profile launch writing');
     const janus = c.view().find((t) => t.label === 'janus')!;
@@ -112,8 +112,8 @@ describe('Controller', () => {
   it('honors a group number authored on a profile agent file', () => {
     const root = mkdtempSync(path.join(tmpdir(), 'janus-prof-grp-'));
     initProfileDir(root);
-    mkdirSync(path.join(root, 'profiles', 'team'), { recursive: true });
-    writeFileSync(path.join(root, 'profiles', 'team', 'writer.json'), JSON.stringify({ name: 'writer', dotColor: '#6bcb77', active: false, group: 7 }));
+    mkdirSync(path.join(root, 'profiles'), { recursive: true });
+    writeFileSync(path.join(root, 'profiles', 'team.json'), JSON.stringify({ agents: [{ name: 'writer', active: false, tab: { color: '#6bcb77', group: 7 } }] }));
     const { c } = makeController();
     c.dispatch('profile launch team');
     expect(c.view().find((t) => t.label === 'writer')!.group).toBe(7);
@@ -399,8 +399,8 @@ describe('Controller', () => {
   it('will not reorder a tab across a group boundary', () => {
     const root = mkdtempSync(path.join(tmpdir(), 'janus-reorder-'));
     initProfileDir(root);
-    mkdirSync(path.join(root, 'profiles', 'writing'), { recursive: true });
-    writeFileSync(path.join(root, 'profiles', 'writing', 'writer.json'), JSON.stringify({ name: 'writer', dotColor: '#6bcb77', active: false }));
+    mkdirSync(path.join(root, 'profiles'), { recursive: true });
+    writeFileSync(path.join(root, 'profiles', 'writing.json'), JSON.stringify({ agents: [{ name: 'writer', active: false, tab: { color: '#6bcb77' } }] }));
     const { c } = makeController();
     c.dispatch('profile launch writing'); // [janus(g1), writer(g2)], active = writer (index 1)
     c.reorderTab(-1); // would cross from group 2 into group 1 — blocked
@@ -1163,9 +1163,10 @@ describe('Controller unread badge', () => {
 
 describe('Controller profile launch (harness entries)', () => {
   const writeHarnessEntry = (root: string, profile: string, filename: string, entry: Record<string, unknown>) => {
-    const dir = path.join(root, 'profiles', profile);
-    mkdirSync(dir, { recursive: true });
-    writeFileSync(path.join(dir, `${filename}.json`), JSON.stringify({ harness: 'opencode', ...entry }));
+    mkdirSync(path.join(root, 'profiles'), { recursive: true });
+    const { harness = 'opencode', ...rest } = entry;
+    const harnesses = [{ name: filename, type: harness, ...rest }];
+    writeFileSync(path.join(root, 'profiles', `${profile}.json`), JSON.stringify({ harnesses }));
   };
 
   beforeEach(() => {
@@ -1670,8 +1671,8 @@ describe('Controller direct RPC delegators', () => {
   it('complete() offers a group: target for each existing group once more than one exists', () => {
     const root = mkdtempSync(path.join(tmpdir(), 'janus-complete-groups-'));
     initProfileDir(root);
-    mkdirSync(path.join(root, 'profiles', 'team'), { recursive: true });
-    writeFileSync(path.join(root, 'profiles', 'team', 'writer.json'), JSON.stringify({ name: 'writer', dotColor: '#6bcb77', active: false, group: 7 }));
+    mkdirSync(path.join(root, 'profiles'), { recursive: true });
+    writeFileSync(path.join(root, 'profiles', 'team.json'), JSON.stringify({ agents: [{ name: 'writer', active: false, tab: { color: '#6bcb77', group: 7 } }] }));
     const { c } = makeController();
     c.dispatch('profile launch team');
     c.setActiveTab(0);

@@ -1,0 +1,32 @@
+{
+  "agents": [
+    {
+      "name": "terminal",
+      "active": false,
+      "tab": { "color": "#ffd93d", "number": 4, "group": 1, "groupColor": "#5b9cff" }
+    }
+  ],
+  "harnesses": [
+    {
+      "name": "debugging",
+      "type": "claude",
+      "model": "claude-opus-4-8",
+      "effort": "high",
+      "workspace": false,
+      "offline": false,
+      "autoApprove": false,
+      "tab": { "color": "#f368e0", "number": 3, "group": 1 }
+    }
+  ],
+  "files": [
+    { "dock": "left" }
+  ],
+  "notifications": [
+    { "dock": "right", "focus": true }
+  ],
+  "layout": {
+    "sidebar": { "left": 248, "right": 300 },
+    "tabAreaPct": 80,
+    "window": { "width": 1280, "height": 800 }
+  }
+}

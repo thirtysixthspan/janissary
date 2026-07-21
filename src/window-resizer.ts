@@ -14,7 +14,7 @@ export function getWindowResizer(): WindowResizer | undefined {
   return resizer;
 }
 
-// Companion registry for reading the app window's current size (`profile save`'s `_layout.json`
+// Companion registry for reading the app window's current size (`profile save`'s `layout.window`
 // capture). Registered alongside the resizer, so it too is absent under `--no-open`.
 export function setWindowBoundsReader(fn: WindowBoundsReader | undefined): void {
   boundsReader = fn;

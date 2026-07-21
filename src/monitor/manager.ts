@@ -26,6 +26,10 @@ export const MONITOR_FLUSH_MS = 30_000;
 
 export type MonitorSub = {
   owner: string;
+  // The monitor's runtime identity, distinct from its persona (Decision 13): the map key, the
+  // reporting-tab label, and what a relaunch-refresh matches on. Defaults to the persona name for a
+  // monitor started without one (the interactive `monitor` command), preserving one-per-persona.
+  name: string;
   inline: boolean;
   persona: Persona;
   targets: MonitorTarget[];
@@ -54,7 +58,7 @@ export type MonitorSub = {
   subs: Subscription[];
 };
 
-// Owns all live monitors, keyed by `${ownerLabel}:${persona}`. Each monitor is a
+// Owns all live monitors, keyed by `${ownerLabel}:${name}`. Each monitor is a
 // dedicated, tool-less ACP session primed with its persona; transcript entries from its
 // targets buffer up and flush as one prompt every 30s (never when the buffer is empty,
 // never while a previous prompt is still streaming). Suggestions route to the owner
@@ -71,14 +75,14 @@ export class MonitorManager {
 
   // Start a monitor; returns an error message, or null on success. No targets = inline
   // mode (watch the owner tab, report into its transcript).
-  start(owner: string, personaName: string, targets: MonitorTarget[]): string | null {
-    const key = `${owner}:${personaName}`;
+  start(owner: string, personaName: string, targets: MonitorTarget[], name: string = personaName): string | null {
+    const key = `${owner}:${name}`;
     if (this.monitors.has(key)) return `Already monitoring with persona "${personaName}".`;
     const inline = targets.length === 0;
     const resolved: MonitorTarget[] = inline
       ? [{ kind: 'tab', label: owner }]
       : resolveTargetAliases(this.managers.tab.tabs, targets);
-    const targetError = validateTargets(this.managers.tab.tabs, personaName, inline, resolved);
+    const targetError = validateTargets(this.managers.tab.tabs, name, inline, resolved);
     if (targetError) return targetError;
 
     let persona: Persona;
@@ -89,7 +93,7 @@ export class MonitorManager {
     }
 
     const reg: MonitorSub = {
-      owner, inline, persona, targets: resolved, buffer: [], harnessSeen: new Map(), editorSeen: new Map(), pageSeen: new Map(), delimiter: generateSessionDelimiter(), inFlight: true, delivered: 0,
+      owner, name, inline, persona, targets: resolved, buffer: [], harnessSeen: new Map(), editorSeen: new Map(), pageSeen: new Map(), delimiter: generateSessionDelimiter(), inFlight: true, delivered: 0,
       contextBytes: 0, contextText: [],
       session: undefined as unknown as AcpSession, timer: undefined as unknown as ReturnType<typeof setInterval>, subs: [],
     };
@@ -101,8 +105,8 @@ export class MonitorManager {
     // External mode: open the reporting tab right away (empty feed) so starting the
     // monitor is visible immediately, not only when the first suggestion lands.
     if (!inline) {
-      openMonitorTab(this.managers, personaName, targetColor(this.managers.tab.tabs, resolved));
-      updateMonitorMeta(this.managers, personaName, formatTargets(resolved), reg.contextBytes);
+      openMonitorTab(this.managers, name, targetColor(this.managers.tab.tabs, resolved));
+      updateMonitorMeta(this.managers, name, formatTargets(resolved), reg.contextBytes);
     }
     return null;
   }
@@ -117,7 +121,7 @@ export class MonitorManager {
   // fresh, re-primed one so the monitor recovers instead of staying dead.
   private respawn(reg: MonitorSub): void {
     respawnMonitorSession(reg, this.managers, this.spawn);
-    if (!reg.inline) updateMonitorMeta(this.managers, reg.persona.name, formatTargets(reg.targets), reg.contextBytes);
+    if (!reg.inline) updateMonitorMeta(this.managers, reg.name, formatTargets(reg.targets), reg.contextBytes);
   }
 
   private subscribe(key: string, reg: MonitorSub): void {
@@ -134,10 +138,10 @@ export class MonitorManager {
         // The reporting tab itself was closed directly: tear the monitor down fully,
         // regardless of remaining targets, so its session doesn't linger and the same
         // owner/persona can be started again.
-        if (!reg.inline && event.tabLabel === reg.persona.name) { this.stop(reg.owner, reg.persona.name); return; }
+        if (!reg.inline && event.tabLabel === reg.name) { this.stop(reg.owner, reg.name); return; }
         // Only tab targets drop out; group targets persist (the group may gain new tabs).
         if (reg.targets.some((t) => t.kind === 'tab' && t.label === event.tabLabel)) {
-          this.stop(reg.owner, reg.persona.name, { kind: 'tab', label: event.tabLabel });
+          this.stop(reg.owner, reg.name, { kind: 'tab', label: event.tabLabel });
         }
       }),
     );
@@ -185,7 +189,7 @@ export class MonitorManager {
       this.managers.tab.append(reg.owner, { input: '', output: formatInlineSuggestion(reg.persona.name, suggestion) });
       return;
     }
-    pushSuggestion(this.managers, reg.persona.name, targetColor(this.managers.tab.tabs, reg.targets), suggestion);
+    pushSuggestion(this.managers, reg.name, targetColor(this.managers.tab.tabs, reg.targets), suggestion);
   }
 
   // Query a running monitor's ACP session directly; the reply lands in the owner tab's
@@ -206,7 +210,7 @@ export class MonitorManager {
   }
 
   // Reset every monitor feeding `name`'s reporting tab to just its persona context.
-  resetContext(name: string): void { for (const reg of this.monitors.values()) if (!reg.inline && reg.persona.name === name) this.respawn(reg); }
+  resetContext(name: string): void { for (const reg of this.monitors.values()) if (!reg.inline && reg.name === name) this.respawn(reg); }
 
   // Open a point-in-time snapshot of `name`'s monitor context in an editor tab (see monitor-context).
   snapshotContext(name: string): void {
@@ -215,23 +219,23 @@ export class MonitorManager {
 
   // Stop one persona's monitor (or drop a single target from it). Returns false when no
   // such monitor exists.
-  stop(owner: string, personaName: string, target?: MonitorTarget): boolean {
-    return stopMonitor(this.monitors, this.managers, owner, personaName, target);
+  stop(owner: string, name: string, target?: MonitorTarget): boolean {
+    return stopMonitor(this.monitors, this.managers, owner, name, target);
   }
 
   // The owning agent tab closed: stop its monitors, and close any reporting tab that no
   // longer has a live monitor feeding it (another tab may still run the same persona).
   private handleOwnerClosed(owner: string): void {
-    const personas = [...this.monitors.values()]
+    const names = [...this.monitors.values()]
       .filter((reg) => reg.owner === owner && !reg.inline)
-      .map((reg) => reg.persona.name);
+      .map((reg) => reg.name);
     this.stopAll(owner);
-    for (const name of personas) closeIfUnfed(this.monitors, this.managers, name);
+    for (const name of names) closeIfUnfed(this.monitors, this.managers, name);
   }
 
   stopAll(owner: string): number {
     const mine = [...this.monitors.values()].filter((r) => r.owner === owner);
-    for (const reg of mine) this.stop(reg.owner, reg.persona.name);
+    for (const reg of mine) this.stop(reg.owner, reg.name);
     return mine.length;
   }
 
@@ -240,10 +244,10 @@ export class MonitorManager {
     return listMonitors(this.monitors.values());
   }
 
-  // One record per live monitor, for `profile save` to write into `_monitors.json`. Distinct from
+  // One record per live monitor, for `profile save` to write into the `monitors` key. Distinct from
   // the display-only `list()` strings and never reads the private `monitors` map directly.
-  snapshot(): { persona: string; targets: MonitorTarget[]; inline: boolean }[] {
-    return [...this.monitors.values()].map((reg) => ({ persona: reg.persona.name, targets: reg.targets, inline: reg.inline }));
+  snapshot(): { name: string; persona: string; targets: MonitorTarget[]; inline: boolean }[] {
+    return [...this.monitors.values()].map((reg) => ({ name: reg.name, persona: reg.persona.name, targets: reg.targets, inline: reg.inline }));
   }
 
   // Connections-panel rows for a tab's monitors (e.g. `monitor:security (opencode/…)`).
@@ -254,6 +258,6 @@ export class MonitorManager {
   closeAll(): void {
     // Snapshot first: `stop` mutates the map while we iterate.
     const all = [...this.monitors.values()];
-    for (const reg of all) this.stop(reg.owner, reg.persona.name);
+    for (const reg of all) this.stop(reg.owner, reg.name);
   }
 }

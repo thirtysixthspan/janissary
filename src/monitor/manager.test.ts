@@ -351,7 +351,7 @@ describe('MonitorManager', () => {
     expect(manager.list()).toEqual([]);
   });
 
-  it('snapshot returns one record per live monitor with persona, authored targets, and inline', () => {
+  it('snapshot returns one record per live monitor with name, persona, authored targets, and inline', () => {
     const { managers } = makeFakeManagers([janus, agent2]);
     const { spawn } = fakeSpawnFactory();
     const manager = new MonitorManager(managers, spawn, FLUSH_MS);
@@ -359,9 +359,46 @@ describe('MonitorManager', () => {
     manager.start('janus', 'assistant', [{ kind: 'tab', label: 'agent2' }]);
 
     expect(manager.snapshot()).toEqual(expect.arrayContaining([
-      { persona: 'security', targets: [{ kind: 'tab', label: 'janus' }], inline: true },
-      { persona: 'assistant', targets: [{ kind: 'tab', label: 'agent2' }], inline: false },
+      { name: 'security', persona: 'security', targets: [{ kind: 'tab', label: 'janus' }], inline: true },
+      { name: 'assistant', persona: 'assistant', targets: [{ kind: 'tab', label: 'agent2' }], inline: false },
     ]));
+  });
+
+  it('two same-persona monitors with different names both run from one owner', () => {
+    const { managers } = makeFakeManagers([janus, agent2]);
+    const { spawn } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+
+    expect(manager.start('janus', 'assistant', [{ kind: 'tab', label: 'agent2' }], 'watch-a')).toBeNull();
+    expect(manager.start('janus', 'assistant', [{ kind: 'group', group: 2 }], 'watch-b')).toBeNull();
+
+    expect(manager.list()).toHaveLength(2);
+    const labels = managers.tab.tabs.filter((t) => t.view === 'monitor').map((t) => t.label);
+    expect(labels).toEqual(expect.arrayContaining(['watch-a', 'watch-b']));
+    expect(manager.snapshot()).toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: 'watch-a', persona: 'assistant' }),
+      expect.objectContaining({ name: 'watch-b', persona: 'assistant' }),
+    ]));
+  });
+
+  it('rejects a second monitor with the same owner and name', () => {
+    const { managers } = makeFakeManagers([janus, agent2]);
+    const { spawn } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+
+    expect(manager.start('janus', 'assistant', [{ kind: 'tab', label: 'agent2' }], 'watch')).toBeNull();
+    expect(manager.start('janus', 'security', [{ kind: 'group', group: 2 }], 'watch')).toMatch(/Already monitoring/);
+  });
+
+  it('defaults a monitor started without a name to its persona', () => {
+    const { managers } = makeFakeManagers([janus, agent2]);
+    const { spawn } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+
+    manager.start('janus', 'assistant', [{ kind: 'tab', label: 'agent2' }]);
+
+    expect(manager.snapshot()).toEqual([expect.objectContaining({ name: 'assistant', persona: 'assistant' })]);
+    expect(manager.stop('janus', 'assistant')).toBe(true);
   });
 
   it('snapshot returns an empty array when no monitors are running', () => {
