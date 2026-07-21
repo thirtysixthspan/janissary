@@ -1,0 +1,129 @@
+# Project workflow commands permitted by the repository's Claude configuration.
+# These rules allow the matching command prefixes when Codex would otherwise need
+# to cross the sandbox boundary; the workspace-write sandbox remains in effect.
+
+prefix_rule(
+    pattern = ["./scripts/run.mjs"],
+    decision = "allow",
+    justification = "Repository maintenance scripts are part of the project workflow",
+)
+
+prefix_rule(
+    pattern = ["npm"],
+    decision = "allow",
+    justification = "Run the project's package scripts and dependency commands",
+)
+
+prefix_rule(
+    pattern = ["npx"],
+    decision = "allow",
+    justification = "Run project-local Node tooling",
+)
+
+prefix_rule(
+    pattern = ["node"],
+    decision = "allow",
+    justification = "Run project Node scripts",
+)
+
+prefix_rule(
+    pattern = ["git"],
+    decision = "allow",
+    justification = "Inspect and update the project repository",
+)
+
+prefix_rule(
+    pattern = ["gh"],
+    decision = "allow",
+    justification = "Use the GitHub CLI for this repository",
+)
+
+prefix_rule(
+    pattern = ["/usr/local/opt/gh/bin/gh"],
+    decision = "allow",
+    justification = "Use the configured GitHub CLI installation",
+)
+
+prefix_rule(
+    pattern = ["ls"],
+    decision = "allow",
+    justification = "Inspect project directories",
+)
+
+prefix_rule(
+    pattern = ["find"],
+    decision = "allow",
+    justification = "Inspect project files",
+)
+
+prefix_rule(
+    pattern = ["cat"],
+    decision = "allow",
+    justification = "Read project text files",
+)
+
+prefix_rule(
+    pattern = ["head"],
+    decision = "allow",
+    justification = "Inspect the beginning of project files",
+)
+
+prefix_rule(
+    pattern = ["tail"],
+    decision = "allow",
+    justification = "Inspect the end of project files and logs",
+)
+
+prefix_rule(
+    pattern = ["sed"],
+    decision = "allow",
+    justification = "Inspect project text files",
+)
+
+prefix_rule(
+    pattern = ["awk"],
+    decision = "allow",
+    justification = "Process project text output",
+)
+
+prefix_rule(
+    pattern = ["grep"],
+    decision = "allow",
+    justification = "Search project text output",
+)
+
+prefix_rule(
+    pattern = ["wc"],
+    decision = "allow",
+    justification = "Inspect project file statistics",
+)
+
+prefix_rule(
+    pattern = ["echo"],
+    decision = "allow",
+    justification = "Print workflow diagnostics",
+)
+
+prefix_rule(
+    pattern = ["mkdir"],
+    decision = "allow",
+    justification = "Create project-scoped directories",
+)
+
+prefix_rule(
+    pattern = ["cp"],
+    decision = "allow",
+    justification = "Copy project files when required by the workflow",
+)
+
+prefix_rule(
+    pattern = ["kill"],
+    decision = "allow",
+    justification = "Stop project processes when required",
+)
+
+prefix_rule(
+    pattern = ["screencapture"],
+    decision = "allow",
+    justification = "Capture application screenshots",
+)
