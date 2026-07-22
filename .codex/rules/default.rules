@@ -117,6 +117,12 @@ prefix_rule(
 )
 
 prefix_rule(
+    pattern = ["printf"],
+    decision = "allow",
+    justification = "Print workflow diagnostics",
+)
+
+prefix_rule(
     pattern = ["mkdir"],
     decision = "allow",
     justification = "Create project-scoped directories",
