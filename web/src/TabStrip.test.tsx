@@ -195,6 +195,47 @@ describe('TabStrip', () => {
     expect(screen.getByText('Display Name')).toBeInTheDocument();
   });
 
+  it('returns focus to the editor with the pre-rename label on commit', async () => {
+    const onFocusEditor = vi.fn();
+    const tab = makeTab({ label: 'internal', title: 'Display Name' });
+    render(
+      <TabStrip
+        tabs={[tab]} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()} onRename={vi.fn()}
+        tabNameMaxLength={100} onFocusEditor={onFocusEditor}
+      />,
+    );
+    await userEvent.dblClick(screen.getByText('Display Name'));
+    const input = screen.getByRole('textbox');
+    await userEvent.type(input, '{Enter}');
+    expect(onFocusEditor).toHaveBeenCalledTimes(1);
+    expect(onFocusEditor).toHaveBeenCalledWith('internal');
+  });
+
+  it('does not call onFocusEditor on cancel', async () => {
+    const onFocusEditor = vi.fn();
+    const tab = makeTab({ label: 'internal', title: 'Display Name' });
+    render(
+      <TabStrip
+        tabs={[tab]} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()} onRename={vi.fn()}
+        tabNameMaxLength={100} onFocusEditor={onFocusEditor}
+      />,
+    );
+    await userEvent.dblClick(screen.getByText('Display Name'));
+    const input = screen.getByRole('textbox');
+    await userEvent.type(input, 'x{Escape}');
+    expect(onFocusEditor).not.toHaveBeenCalled();
+  });
+
+  it('commits without an onFocusEditor prop without throwing', async () => {
+    const onRename = vi.fn();
+    const tab = makeTab({ label: 'internal', title: 'Display Name' });
+    render(<TabStrip tabs={[tab]} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()} onRename={onRename} tabNameMaxLength={100} />);
+    await userEvent.dblClick(screen.getByText('Display Name'));
+    const input = screen.getByRole('textbox');
+    await expect(userEvent.type(input, '{Enter}')).resolves.not.toThrow();
+    expect(onRename).toHaveBeenCalledTimes(1);
+  });
+
   it('calls onFocusCommandBar on mousedown of a tab label', () => {
     const onFocusCommandBar = vi.fn();
     const tabs = [makeTab({ label: 'a' }), makeTab({ label: 'b' })];

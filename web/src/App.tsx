@@ -184,7 +184,7 @@ export function App() {
         onRename={(index, title) => client.renameTab(actionEntries[index].index, title)}
         tabNameMaxLength={tabNameMaxLength}
         activeTabNameMaxLength={activeTabNameMaxLength}
-        onFocusCommandBar={() => inputReference.current?.focus()}
+        onFocusCommandBar={() => inputReference.current?.focus()} onFocusEditor={(label) => editorHandles.current.get(label)?.focus()}
         windowFocused={windowFocused}
       />
 
