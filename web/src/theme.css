@@ -677,6 +677,12 @@ html, body, #root {
 .files-name--changed { color: var(--running); }
 .files-name--staged { color: var(--success); }
 .files-name--conflict { color: var(--error); }
+/* Inline file-tree rename input: matches the row's font and fills the same space .files-name does,
+   so it extends to the row's right edge instead of falling back to the native default input width. */
+.files-rename-input {
+  font: inherit; color: inherit; background: transparent; border: none; outline: none;
+  padding: 0; margin: 0; flex: 1; min-width: 0; width: 100%;
+}
 
 .sidebar .files-rows { scrollbar-width: none; }
 .sidebar .files-rows::-webkit-scrollbar { display: none; }
