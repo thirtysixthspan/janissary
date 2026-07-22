@@ -12,7 +12,8 @@ produces:
 5. Green
 as a suggestion that can be accepted or declined by keypress and removes then removes then removes the written request.
 
-* a way to trigger renaming files and directories inline and inside the file navigator.
+* mechanism to create an questions/approval dialog in Janissary from a harness, acp, shell script. This could be an external API provided as skills to the agents. the dialog would show the agent asking the question.
+
 
 ## development
 
@@ -29,8 +30,6 @@ as a suggestion that can be accepted or declined by keypress and removes then re
 *  Sage agent — a persona that maintains a running record of the product domain. interacts with specific storage mechanism like a DB (probably not git).
 
 * Context-budget auto-summarization — when context[] grows large, a summarizer persona compacts it automatically.
-
-* mechanism to create an questions/approval dialog in Janissary from a harness, acp, shell script. This could be an external API provided as skills to the agents. the dialog would show the agent asking the question.
 
 * support monitor -> trigger -> action workflows. monitors are agent tasks that interact with web, files, databases to capture and summarize data. triggers are agent tasks that take monitor data and evaluate if the data meets some criteria. actions take data and affect some outcome. requires a way to encode and visualize entities and workflows, dataflows and outcomes. could be OODA loop instead Observers - Orienters - Deciders - Actors.
 
