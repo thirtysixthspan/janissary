@@ -5,6 +5,8 @@ import { openTranscriptFor } from './controller/transcript.js';
 import { projectFilesFor } from './project-files.js';
 import { handleFileTreeMessage } from './message-handler-file-tree.js';
 import { setClientLayout } from './client-layout.js';
+import { listPersonas } from './personas.js';
+import { editorSuggest } from './editor-suggest/handler.js';
 
 export function handle(controller: Controller, message: ClientMessage, reply: (event: ServerEvent) => void): void {
   switch (message.method) {
@@ -106,6 +108,20 @@ export function handle(controller: Controller, message: ClientMessage, reply: (e
           reply({ t: 'rpc-reply', id: message.id, result: { root: controller.managers.tab.launchDir, paths: [] } });
         }
       })();
+      return;
+    }
+    // Bridges straight to editor-suggest/handler.js (bypassing a Controller passthrough method)
+    // to keep controller.ts under its line-size limit — see openTranscriptFor's comment above.
+    case 'editorPersonas': {
+      reply({ t: 'rpc-reply', id: message.id, result: { names: listPersonas() } });
+      return;
+    }
+    // Deferred reply: the query spawns and awaits a one-shot ACP session, so the reply fires from
+    // editorSuggest's callback, not inline.
+    case 'editorSuggest': {
+      editorSuggest(controller.managers, message.params, (result) => {
+        reply({ t: 'rpc-reply', id: message.id, result });
+      });
       return;
     }
   }

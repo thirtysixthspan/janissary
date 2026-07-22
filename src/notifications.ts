@@ -4,8 +4,10 @@ import { getConfig } from './config.js';
 import { NOTIFICATIONS_LABEL, notificationsTab, appendNotification } from './notifications-tab.js';
 
 // The events that can feed the notifications tab. Five are ambient (a background tab's own
-// activity); `manual` is an explicit `notify <message>` and `auto-approve` is a workspaced
-// harness's auto-approved permission gate — both are always eligible and bypass focus suppression.
+// activity); `manual` is an explicit `notify <message>`, `auto-approve` is a workspaced harness's
+// auto-approved permission gate, and `editor-suggest` is an in-editor persona-suggestion query's
+// failure or empty reply (see product/specs/editor-tab.md) — all three are always eligible and
+// bypass focus suppression.
 export type NotificationEventType =
   | 'state-change'
   | 'incoming-message'
@@ -13,13 +15,14 @@ export type NotificationEventType =
   | 'agent-start'
   | 'rate-limited'
   | 'manual'
-  | 'auto-approve';
+  | 'auto-approve'
+  | 'editor-suggest';
 
 // Whether an event should be recorded, given the config and the active tab. Defensive against the
 // tab feeding itself. For the five ambient events, both the per-event opt-in toggle and focus
-// suppression (the active tab never notifies about its own activity) apply; the `manual` event
-// bypasses both — an explicit trigger always fires (subject only to the tab being open, enforced
-// in `notify`).
+// suppression (the active tab never notifies about its own activity) apply; `manual`,
+// `auto-approve`, and `editor-suggest` bypass both — an explicit trigger always fires (subject
+// only to the tab being open, enforced in `notify`).
 export function shouldNotify(
   config: NotificationConfig | undefined,
   event: NotificationEventType,
@@ -27,7 +30,12 @@ export function shouldNotify(
   activeLabel: string,
 ): boolean {
   if (tabLabel === NOTIFICATIONS_LABEL) return false;
-  if (event === 'manual' || event === 'auto-approve') return true;
+  switch (event) {
+    case 'manual':
+    case 'auto-approve':
+    case 'editor-suggest': { return true; }
+    default: { break; }
+  }
   if (tabLabel === activeLabel) return false;
   if (!config) return false;
   switch (event) {
@@ -36,6 +44,7 @@ export function shouldNotify(
     case 'schedule-fire': { return config.events.scheduleFire; }
     case 'agent-start': { return config.events.agentStart; }
     case 'rate-limited': { return config.events.rateLimited; }
+    default: { return false; }
   }
 }
 
@@ -50,9 +59,10 @@ export function formatTimestamp(date: Date): string {
 
 // The message body for an event, rendered after the `<time> <tabLabel>:` header. `detail` carries
 // the event-specific extra: the command for `schedule-fire`, the sender label for
-// `incoming-message`, the user's message for `manual`, and the approver's message for
-// `auto-approve`. The `manual` and `auto-approve` bodies are the message alone — the tab label
-// already leads the line via the header, so repeating it here would double it.
+// `incoming-message`, the user's message for `manual`, the approver's message for `auto-approve`,
+// and the persona name plus outcome for `editor-suggest`. The `manual`, `auto-approve`, and
+// `editor-suggest` bodies are the message alone — the tab label already leads the line via the
+// header, so repeating it here would double it.
 export function notificationText(event: NotificationEventType, tabLabel: string, detail?: string): string {
   switch (event) {
     case 'state-change': { return `Agent '${tabLabel}' finished`; }
@@ -61,7 +71,8 @@ export function notificationText(event: NotificationEventType, tabLabel: string,
     case 'schedule-fire': { return `Scheduled: ${detail} in ${tabLabel}`; }
     case 'incoming-message': { return `Message from ${detail} in ${tabLabel}`; }
     case 'manual':
-    case 'auto-approve': { return detail ?? ''; }
+    case 'auto-approve':
+    case 'editor-suggest': { return detail ?? ''; }
   }
 }
 

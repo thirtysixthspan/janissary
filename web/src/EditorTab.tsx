@@ -9,6 +9,9 @@ import { useEditor } from './editor/useEditor';
 import { useEditorMouse } from './editor/useEditorMouse';
 import { useSyntaxHighlight } from './editor/useSyntaxHighlight';
 import { useEditorSync } from './editor/useEditorSync';
+import { useEditorSuggest } from './editor/useEditorSuggest';
+import { handleSuggestKeyDown } from './editor/handleSuggestKeyDown';
+import { PendingSuggestPanel } from './editor/PendingSuggestPanel';
 import { OverwriteConflictDialog } from './OverwriteConflictDialog';
 import { EditorSaveButton } from './EditorSaveButton';
 
@@ -35,6 +38,7 @@ export const EditorTab = forwardRef<EditorTabHandle, { editor: EditorView; clien
   const mouse = useEditorMouse(api, bodyRef, () => textareaRef.current?.focus());
   const tokens = useSyntaxHighlight(state, editor.name);
   useEditorSync(state, editor.url, client);
+  const suggest = useEditorSuggest(client, editor.url, api.setState);
 
   const writeToDisk = async (text: string) => {
     setSaveError(null);
@@ -158,6 +162,7 @@ export const EditorTab = forwardRef<EditorTabHandle, { editor: EditorView; clien
     if (e.nativeEvent.isComposing) return;
     // Nothing typed in the editor may reach App's global bindings (Ctrl+T, Ctrl+R, Ctrl+arrows).
     e.stopPropagation();
+    if (handleSuggestKeyDown(e, api, suggest)) return;
     const action = actionForKey(e);
     if (!action) return;
     e.preventDefault();
@@ -185,6 +190,7 @@ export const EditorTab = forwardRef<EditorTabHandle, { editor: EditorView; clien
         {(saveError ?? loadError) && <span className="editor-error">{saveError ?? loadError}</span>}
         <EditorSaveButton dirty={dirty} onSave={() => { void save(); }} />
       </div>
+      <PendingSuggestPanel pending={suggest.pending} />
       <div className="editor-body" ref={bodyRef} onMouseDown={mouse.onMouseDown}>
         <textarea
           ref={textareaRef}
