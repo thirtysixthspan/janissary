@@ -82,6 +82,19 @@ export class ScheduleManager {
     return true;
   }
 
+  clearAll(): boolean {
+    let changed = false;
+    for (const [label, entries] of this.schedules) {
+      if (entries.length === 0) continue;
+      this.schedules.set(label, []);
+      const tab = this.managers.tab.tabs.find((t) => t.label === label);
+      if (tab && tab.view !== 'harness') this.managers.tab.persist(this.managers.tab.buildAgentState(tab, { schedule: [] }));
+      changed = true;
+    }
+    if (changed) messageBus.emit('state', { type: 'dirty' });
+    return changed;
+  }
+
   // The schedule rows for a tab's view: id, spec, humanized next-run time, and the recurring flag.
   view(label: string): ScheduleView[] {
     return scheduleView(this.schedules, label);

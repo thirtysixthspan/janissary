@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import type { AggregatedScheduleView, TabView } from '@shared/protocol';
 import type { JanusClient } from './ws';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { clearSchedulesIcon } from './icons';
 import { nextSelection } from './schedules-keys';
 import { DockCycleHeader } from './DockCycleHeader';
 import { DeleteScheduleDialog } from './DeleteScheduleDialog';
@@ -81,7 +83,17 @@ export function SchedulesTab({ entries, tabs, client, compact = false, dock, ind
       onKeyDown={onKeyDown}
       data-doc-shot="schedules-tab"
     >
-      {dock && <DockCycleHeader dock={dock} client={client} index={index} classPrefix="schedules" />}
+      <DockCycleHeader dock={dock} client={client} index={index} classPrefix="schedules">
+        <button
+          type="button"
+          className="schedules-clear"
+          aria-label="Clear all schedules"
+          disabled={entries.length === 0}
+          onClick={() => client.send({ method: 'clearSchedules', params: {} })}
+        >
+          <FontAwesomeIcon icon={clearSchedulesIcon} />
+        </button>
+      </DockCycleHeader>
       {entries.length === 0 ? (
         <div className="schedules-empty">No scheduled commands.</div>
       ) : (

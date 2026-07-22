@@ -210,6 +210,7 @@ export type RpcCall =
   // Remove one scheduled entry, identified by its owning tab label and timer id, after the client
   // has confirmed with the user (Backspace/Delete on a selected row in the aggregated schedules tab).
   | { method: 'cancelSchedule'; params: { tab: string; id: string } }
+  | { method: 'clearSchedules'; params?: Record<string, never> }
   // Undo/redo the most recent move in a file tree tab's per-tab undo/redo stack. `overwrite`
   // retries a pending entry after the client has confirmed an overwrite of a conflicting
   // destination; the reply's `result` carries `{ conflict }` when one is found instead.
