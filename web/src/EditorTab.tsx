@@ -1,7 +1,5 @@
 import React, { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { EditorView } from '@shared/protocol';
-import { dirtyMarkerIcon } from './icons';
 import type { JanusClient } from './ws';
 import { toText } from './editor/model';
 import { EditorLine, lineSelection } from './editor/render';
@@ -12,6 +10,7 @@ import { useEditorMouse } from './editor/useEditorMouse';
 import { useSyntaxHighlight } from './editor/useSyntaxHighlight';
 import { useEditorSync } from './editor/useEditorSync';
 import { OverwriteConflictDialog } from './OverwriteConflictDialog';
+import { EditorSaveButton } from './EditorSaveButton';
 
 export type EditorTabHandle = { isDirty(): boolean; save(): Promise<void>; focus(): void };
 
@@ -179,11 +178,12 @@ export const EditorTab = forwardRef<EditorTabHandle, { editor: EditorView; clien
       <div className="image-meta" onMouseUp={() => {
         if (!globalThis.getSelection()?.toString()) textareaRef.current?.focus();
       }}>
-        <span className="image-name">{editor.name}{dirty ? <> <FontAwesomeIcon icon={dirtyMarkerIcon} /></> : ''}</span>
+        <span className="image-name">{editor.name}</span>
         <span className="image-size">{editor.size}</span>
         <span className="image-loc">{editor.path}</span>
         {savedFlash && <span className="editor-saved">Saved</span>}
         {(saveError ?? loadError) && <span className="editor-error">{saveError ?? loadError}</span>}
+        <EditorSaveButton dirty={dirty} onSave={() => { void save(); }} />
       </div>
       <div className="editor-body" ref={bodyRef} onMouseDown={mouse.onMouseDown}>
         <textarea

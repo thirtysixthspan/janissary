@@ -34,6 +34,8 @@ up/down, etc.) are not.
 ### Layout
 
 - **Metadata header** — the file's name, size, and location.
+- The metadata header has a save button aligned to the right. It is enabled when the buffer has
+  unsaved changes and disabled and dimmed when the buffer is clean.
 - **Editor body** — fills the remaining space. Scrolls independently.
 
 ### Focus protection
@@ -105,7 +107,9 @@ editor's key bindings.
 
 ### Saving
 
-The editor saves with Ctrl+S or Cmd+S. The save writes the current buffer content to disk at the file's path. On success a "Saved" flash appears in the metadata header; on failure the server error message is shown and the dirty indicator remains. A dirty dot (a filled-circle icon) appears next to the file name in the header whenever there are unsaved changes.
+The editor saves with the metadata header's save button or Ctrl+S / Cmd+S. The save writes the
+current buffer content to disk at the file's path. On success a "Saved" flash appears in the
+metadata header; on failure the server error message is shown and the save button remains enabled.
 
 ### Live draft sync
 
