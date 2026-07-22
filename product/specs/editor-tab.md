@@ -74,7 +74,9 @@ vertically; switching tabs while the editor has focus uses Cmd+Shift+[ / Cmd+Shi
 Tabs), so the horizontal and vertical arrow pairs behave consistently.
 
 A line too long to fit the editor's width soft-wraps across several visual rows. Pressing ↑/↓ (or
-Ctrl+P/Ctrl+N) moves the cursor one visual row at a time, so a wrapped line takes as many presses
+Ctrl+P/Ctrl+N) moves the cursor one visual row at a time. Normal text wraps at whitespace so a word
+is never split merely because it reaches the edge; a single unbroken token wider than the available
+space may break to prevent horizontal overflow. A wrapped line takes as many presses
 to cross as it has visual rows, matching how the line actually appears on screen. Once the cursor
 reaches the wrapped line's first or last visual row, the next ↑/↓ press continues into the
 neighboring line, same as for unwrapped lines.
