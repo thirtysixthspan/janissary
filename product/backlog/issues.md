@@ -5,7 +5,6 @@
 
 
 
-* when inspecting the command line history, the current command already typed must be saved into the history before fetching an older one so that the one (that has not already been executed) can be come back to and not lost.
 
 * a new directory button next to and behaves similar to the new file button.
 

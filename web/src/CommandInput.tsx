@@ -39,6 +39,7 @@ export function CommandInput({
   const [value, setValue] = useState('');
   const [completions, setCompletions] = useState<string[]>([]);
   const histIndex = useRef(-1);
+  const draftBeforeHistory = useRef('');
   const rootRef = useRef<HTMLDivElement>(null);
   const ghost = findGhostSuggestion(ghostHistory, value);
 
@@ -93,11 +94,13 @@ export function CommandInput({
     setValue('');
     setCompletions([]);
     histIndex.current = -1;
+    draftBeforeHistory.current = '';
     if (text) onSubmit(text);
   };
 
   const recallOlder = () => {
     if (history.length === 0) return;
+    if (histIndex.current === -1) draftBeforeHistory.current = value;
     histIndex.current = histIndex.current === -1 ? history.length - 1 : Math.max(0, histIndex.current - 1);
     recall(history[histIndex.current]);
   };
@@ -105,7 +108,7 @@ export function CommandInput({
   const recallNewer = () => {
     if (histIndex.current === -1) return;
     histIndex.current += 1;
-    if (histIndex.current >= history.length) { histIndex.current = -1; setValue(''); }
+    if (histIndex.current >= history.length) { histIndex.current = -1; recall(draftBeforeHistory.current); }
     else recall(history[histIndex.current]);
   };
 

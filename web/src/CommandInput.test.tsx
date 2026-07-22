@@ -37,6 +37,21 @@ describe('CommandInput — recall', () => {
     await userEvent.type(input, '{ArrowUp}');
     expect(input).toHaveValue('second');
   });
+
+  it('restores typed text after returning past the newest history entry', async () => {
+    renderCommandInput({ history: ['first', 'second'] });
+    const input = screen.getByRole('textbox');
+    await userEvent.type(input, 'work in progress');
+    await userEvent.type(input, '{ArrowUp}{ArrowDown}');
+    expect(input).toHaveValue('work in progress');
+  });
+
+  it('returns to an empty input when history navigation started empty', async () => {
+    renderCommandInput({ history: ['first', 'second'] });
+    const input = screen.getByRole('textbox');
+    await userEvent.type(input, '{ArrowUp}{ArrowDown}');
+    expect(input).toHaveValue('');
+  });
 });
 
 describe('CommandInput — ghost text', () => {
