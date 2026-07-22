@@ -24,6 +24,10 @@ export type EditorSuggestApi = {
   pending: PendingSuggest | null;
   firingLine: string | null;
   noSuggestionLine: string | null;
+  // The line index whose status pill currently holds keyboard focus (via Tab), or null when none
+  // does. Enter fires the request on that line while it's set; any other key clears it.
+  focusedPillLine: number | null;
+  setFocusedPillLine: (line: number | null) => void;
   fireOnLine: (state: EditorState, lineIndex: number) => void;
   acceptFocused: (state: EditorState) => void;
   declineFocused: (state: EditorState) => void;
@@ -34,6 +38,7 @@ export function useEditorSuggest(client: JanusClient, url: string, setState: (s:
   const [pending, setPending] = useState<PendingSuggest | null>(null);
   const [firingLine, setFiringLine] = useState<string | null>(null);
   const [noSuggestionLine, setNoSuggestionLine] = useState<string | null>(null);
+  const [focusedPillLine, setFocusedPillLine] = useState<number | null>(null);
   const pendingRef = useRef<PendingSuggest | null>(null);
   const firingRef = useRef(false);
 
@@ -101,5 +106,8 @@ export function useEditorSuggest(client: JanusClient, url: string, setState: (s:
     setState(resolveOne(false, state));
   };
 
-  return { personas, pending, firingLine, noSuggestionLine, fireOnLine, acceptFocused, declineFocused };
+  return {
+    personas, pending, firingLine, noSuggestionLine, focusedPillLine, setFocusedPillLine,
+    fireOnLine, acceptFocused, declineFocused,
+  };
 }

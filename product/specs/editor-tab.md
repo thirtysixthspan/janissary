@@ -209,7 +209,10 @@ immediately followed by the name of an available persona and then the request te
 `> summarizer rewrite this paragraph in one sentence`. While the caret sits in the persona-name
 word right after `>`, pressing Tab completes it against the available persona names — this is the
 only place the editor completes anything; it does not add general word-completion elsewhere in the
-buffer.
+buffer. Once the line is a complete, runnable request, pressing Tab anywhere else on it instead
+moves keyboard focus to that line's status pill, highlighting it; pressing Enter while the pill
+holds focus sends the request, the same as clicking it. Any other key clears the pill's focus and
+returns to ordinary editing.
 
 Pressing Ctrl+Enter (Cmd+Enter on macOS) while the caret is on a valid `> <persona> <prompt>` line
 sends the request; a plain Enter always just inserts a newline, so an ordinary Markdown blockquote
@@ -242,13 +245,16 @@ If the named persona doesn't exist, the request fails, or the persona's reply pr
 all, a notification appears in the notifications tab naming the persona and the outcome, and the
 buffer and request line are left untouched.
 
-A status pill is rendered at the end of any `>`-led line, tracking that line's progress: `[agent?]`
-before a known persona has been named, `[query?]` once the persona is named but no request text
-has been typed yet, and `[run]` once both are present — clicking `[run]` sends the request, the
-same as pressing Ctrl+Enter (Cmd+Enter on macOS) on that line. While the request is in flight the
-pill reads `[running...]`; if the reply proposes no change at all, it reads `[no suggestion]` until
-the line is edited. While a proposed change from that line is pending accept/decline, the pill is
-hidden — the pending-change prompt above the buffer is the request's state at that point.
+A status pill, styled as a colored badge (matching the agent-color badge shown on a cross-tab
+notification) and right-aligned at the end of the line, is rendered at the end of any `>`-led line,
+tracking that line's progress: `[agent?]` before a known persona has been named, `[query?]` once
+the persona is named but no request text has been typed yet, and `[run]` once both are present —
+clicking `[run]` sends the request, the same as pressing Ctrl+Enter (Cmd+Enter on macOS) on that
+line, or pressing Enter while the pill holds keyboard focus (see above). While the request is in
+flight the pill reads `[running...]`; if the reply proposes no change at all, it reads `[no
+suggestion]` until the line is edited. While a proposed change from that line is pending
+accept/decline, the pill is hidden — the pending-change prompt above the buffer is the request's
+state at that point.
 
 Nothing about an in-editor suggestion is saved or restored — like the rest of an editor tab's state,
 it exists only in memory for as long as the tab is open.

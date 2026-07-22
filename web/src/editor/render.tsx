@@ -29,6 +29,9 @@ type LineProps = {
   tokens: TokenRange[];
   // The in-editor persona-suggestion status pill for this line, when it is a `>`-led request line.
   pill?: SuggestPill;
+  // Whether the pill holds keyboard focus (via Tab), so Enter fires the request instead of
+  // inserting a newline.
+  pillFocused?: boolean;
   // Whether this line is part of the focused pending hunk's diff-preview "remove" range.
   removed?: boolean;
 };
@@ -62,18 +65,16 @@ function contentSegments({ text, selFrom, selTo, caretCol, caretRef, tokens }: L
 // One logical line: gutter cell + soft-wrapped content cell. Wrapped lines occupy several visual
 // rows while the gutter number sits on the first — the flex row gives correct alignment for free.
 export const EditorLine = React.memo(function EditorLine(props: LineProps) {
-  const { line, gutterCh, isCurrent, pill, removed } = props;
+  const { line, gutterCh, isCurrent, pill, pillFocused, removed } = props;
   const rowClass = ['editor-row', isCurrent && 'editor-row-current', removed && 'editor-diff-remove']
+    .filter(Boolean).join(' ');
+  const pillClass = ['editor-suggest-pill', pill?.runnable && 'editor-suggest-pill-run', pillFocused && 'editor-suggest-pill-focused']
     .filter(Boolean).join(' ');
   return (
     <div className={rowClass} data-editor-line={line}>
       <span className="editor-gutter" style={{ width: `${gutterCh}ch` }}>{line + 1}</span>
       <span className="editor-content">{contentSegments(props)}</span>
-      {pill && (
-        <span className={pill.runnable ? 'editor-suggest-pill editor-suggest-pill-run' : 'editor-suggest-pill'}>
-          {pill.text}
-        </span>
-      )}
+      {pill && <span className={pillClass}>{pill.text}</span>}
     </div>
   );
 });
