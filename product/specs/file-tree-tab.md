@@ -353,6 +353,13 @@ tree root. If `untitled` already exists at the target, the new directory uses th
 (`untitled-2`, `untitled-3`, …). The tree refreshes to show the created directory. New directory
 has no keyboard shortcut.
 
+When the new directory (named exactly `untitled`, with no collision) appears in the tree, it is
+selected automatically and its rename field opens immediately, pre-filled with `untitled`, so the
+name can be typed over right away without a separate select-then-rename step (see "Renaming a file
+or directory"). If a collision meant the directory was created under a different name
+(`untitled-2`, …), it is not auto-selected or auto-renamed — the user selects and renames it like
+any other row.
+
 This same dock/location-cycle mechanism is shared with the notifications tab (see
 `notifications.md`), which is the other dockable tab kind. The two can share one sidebar side at
 the same time, switching between them via the sidebar's own tab-switcher (see `sidebars.md`'s

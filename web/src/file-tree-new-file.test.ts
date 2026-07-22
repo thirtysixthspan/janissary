@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { FileTreeRow } from '@shared/protocol';
-import { newFileTargetDir, newFileCommand, newDirectoryCommand } from './file-tree-new-file';
+import { newFileTargetDir, newFileCommand, newDirectoryCommand, newDirectoryTargetPath, findPendingNewDir } from './file-tree-new-file';
 
 const rows: FileTreeRow[] = [
   { path: 'src', name: 'src', depth: 0, dir: true, expanded: true },
@@ -58,5 +58,35 @@ describe('newDirectoryCommand', () => {
 
   it('builds the newdir command inside the target directory', () => {
     expect(newDirectoryCommand('src')).toBe('newdir src/untitled');
+  });
+});
+
+describe('newDirectoryTargetPath', () => {
+  it('guesses the root-level path when the target directory is null', () => {
+    expect(newDirectoryTargetPath(null)).toBe('untitled');
+  });
+
+  it('guesses the nested path inside the target directory', () => {
+    expect(newDirectoryTargetPath('src')).toBe('src/untitled');
+  });
+});
+
+describe('findPendingNewDir', () => {
+  it('returns undefined when there is no pending path', () => {
+    expect(findPendingNewDir(rows, null)).toBeUndefined();
+  });
+
+  it('returns the matching directory row', () => {
+    const withNewDir: FileTreeRow[] = [...rows, { path: 'untitled', name: 'untitled', depth: 0, dir: true }];
+    expect(findPendingNewDir(withNewDir, 'untitled')).toEqual({ path: 'untitled', name: 'untitled', depth: 0, dir: true });
+  });
+
+  it('returns undefined when no row matches the guessed path yet', () => {
+    expect(findPendingNewDir(rows, 'untitled')).toBeUndefined();
+  });
+
+  it('ignores a file row that happens to match the guessed path', () => {
+    const withFile: FileTreeRow[] = [...rows, { path: 'untitled', name: 'untitled', depth: 0, dir: false }];
+    expect(findPendingNewDir(withFile, 'untitled')).toBeUndefined();
   });
 });

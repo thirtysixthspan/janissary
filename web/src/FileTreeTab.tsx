@@ -7,7 +7,7 @@ import { useFileTreeDrag } from './useFileTreeDrag';
 import { useFileTreeRename } from './useFileTreeRename';
 import { FileTreeRowView } from './FileTreeRowView';
 import { fileTreeRowClass } from './file-tree-row-class';
-import { newFileTargetDir, newFileCommand, newDirectoryCommand } from './file-tree-new-file';
+import { newFileTargetDir, newFileCommand, newDirectoryCommand, newDirectoryTargetPath, findPendingNewDir } from './file-tree-new-file';
 import { MoveConflictDialog } from './MoveConflictDialog/MoveConflictDialog';
 import { DeleteFileDialog } from './DeleteFileDialog';
 import { FileSearchPopup } from './FileSearchPopup';
@@ -42,6 +42,7 @@ const MARKDOWN_EXTENSION = /\.(md|markdown)$/i;
 export function FileTreeTab({ files, client, index, dock, autoFocus = true, dropRef }: Properties) {
   const [selected, setSelected] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
+  const [pendingNewDir, setPendingNewDir] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const typeahead = useRef<{ buffer: string; timer?: ReturnType<typeof setTimeout> }>({ buffer: '' });
   const drag = useFileTreeDrag(files.rows, client, index, dropRef);
@@ -65,6 +66,19 @@ export function FileTreeTab({ files, client, index, dock, autoFocus = true, drop
     }
   }, [files.rows, selected]);
 
+  // New-directory auto-rename: once the directory created by `createNewDirectory` shows up at its
+  // guessed path (the OS-level watcher rebuild that already brings any newly created row into
+  // view), select it and open its rename field. A name collision server-side (the guessed path
+  // doesn't match the actual created name) just means this never fires for that creation — see the
+  // plan's accepted limitation.
+  useEffect(() => {
+    const row = findPendingNewDir(files.rows, pendingNewDir);
+    if (!row) return;
+    setSelected(row.path);
+    rename.begin(row.path, row.name);
+    setPendingNewDir(null);
+  }, [files.rows, pendingNewDir]); // eslint-disable-line react-hooks/exhaustive-deps -- `rename` is fresh each render
+
   const toggle = (path: string) => client.send({ method: 'fileTreeToggle', params: { index, path } });
   const openFile = (path: string) => client.send({ method: 'command', params: { text: `open ${path}` } });
   const editFile = (path: string) => client.send({ method: 'command', params: { text: `edit ${path}` } });
@@ -75,8 +89,9 @@ export function FileTreeTab({ files, client, index, dock, autoFocus = true, drop
     client.send({ method: 'command', params: { text } });
   };
   const createNewDirectory = () => {
-    const text = newDirectoryCommand(newFileTargetDir(files.rows, selected));
-    client.send({ method: 'command', params: { text } });
+    const targetDir = newFileTargetDir(files.rows, selected);
+    setPendingNewDir(newDirectoryTargetPath(targetDir));
+    client.send({ method: 'command', params: { text: newDirectoryCommand(targetDir) } });
   };
 
   const onRowClick = (row: FileTreeRow) => {
