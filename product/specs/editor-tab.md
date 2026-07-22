@@ -226,6 +226,11 @@ anything — every other keystroke is suppressed rather than reaching the buffer
 blocked until the whole set is resolved. Switching to another tab and back leaves a pending
 suggestion exactly as it was.
 
+The focused change previews inline, directly in the buffer at the position it would apply: the
+lines it would remove are struck through in the diff "remove" color, immediately followed by the
+lines it would insert, shown in the diff "add" color with a `+` in place of a line number. Only the
+one focused change is previewed at a time, matching the accept/decline order above.
+
 Only one request may be in flight (or awaiting resolution) per editor tab at a time; firing another
 request while a suggestion is still pending is ignored until the current one is fully resolved.
 

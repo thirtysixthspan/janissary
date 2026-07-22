@@ -10,6 +10,7 @@ import type { EditorState } from './model';
 import { fromText, toText } from './model';
 import type { JanusClient } from '../ws';
 import { parseSuggestRequest } from './suggest-request';
+import { spliceHunk } from './suggestDiff';
 
 export type PendingSuggest = {
   hunks: SuggestHunk[];
@@ -27,14 +28,6 @@ export type EditorSuggestApi = {
   acceptFocused: (state: EditorState) => void;
   declineFocused: (state: EditorState) => void;
 };
-
-// Splice `hunk` into `text` at its anchor's first occurrence (empty anchor = append at the end),
-// or return null when the anchor no longer matches (Decision 6: the hunk is simply dropped).
-function applyHunk(text: string, hunk: SuggestHunk): string | null {
-  const idx = hunk.anchor === '' ? text.length : text.indexOf(hunk.anchor);
-  if (idx === -1) return null;
-  return `${text.slice(0, idx)}${hunk.replacement}${text.slice(idx + hunk.anchor.length)}`;
-}
 
 export function useEditorSuggest(client: JanusClient, url: string, setState: (s: EditorState) => void): EditorSuggestApi {
   const [personas, setPersonas] = useState<string[]>([]);
@@ -99,7 +92,7 @@ export function useEditorSuggest(client: JanusClient, url: string, setState: (s:
     if (!p) return;
     const hunk = p.hunks[p.index];
     const text = toText(state);
-    const newText = applyHunk(text, hunk);
+    const newText = spliceHunk(text, hunk);
     const applied = newText === null ? state : fromText(newText, state.cursor.line);
     setState(resolveOne(newText !== null, applied));
   };

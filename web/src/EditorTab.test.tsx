@@ -462,6 +462,22 @@ describe('EditorTab', () => {
       await waitFor(() => expect(screen.getByText('(A)ccept or (D)ecline this change?')).toBeInTheDocument());
     });
 
+    it('previews the pending hunk inline: struck-through removed line and an added line below it', async () => {
+      const { client, request } = makeClient();
+      request.mockReset();
+      request.mockResolvedValueOnce({ names: ['summarizer'] });
+      request.mockResolvedValueOnce({ hunks: [{ anchor: 'line one', replacement: 'LINE ONE' }] });
+      stubRequestFileContent('line one\n> summarizer rewrite this');
+      const { container } = await renderLoaded(client, makeView({ line: 2 }));
+
+      fireEvent.keyDown(textarea(), { key: 'Enter', metaKey: true });
+
+      await waitFor(() => expect(container.querySelector('.editor-diff-remove')).not.toBeNull());
+      expect(container.querySelector(':scope .editor-diff-remove .editor-content')?.textContent).toBe('line one');
+      expect(container.querySelector(':scope .editor-diff-add .editor-content')?.textContent).toBe('LINE ONE');
+      expect(container.querySelector(':scope .editor-diff-add .editor-gutter')?.textContent).toBe('+');
+    });
+
     it('does not fire on a plain Enter', async () => {
       const { client, request } = makeClient();
       request.mockReset();
