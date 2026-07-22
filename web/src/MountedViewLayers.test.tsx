@@ -17,12 +17,16 @@ vi.mock('./HarnessTab', () => {
 });
 
 // EditorTab fetches file content asynchronously on mount; mocking it avoids act(...) warnings
-// from state updates landing after these layout-focused tests have already asserted.
+// from state updates landing after these layout-focused tests have already asserted. The mount
+// effect also increments a shared counter so tests can assert the component was (or wasn't)
+// torn down and recreated across a re-render.
+let editorMountCount = 0;
 vi.mock('./EditorTab', () => {
-  const { forwardRef, useImperativeHandle, createElement } = React;
+  const { forwardRef, useImperativeHandle, useEffect, createElement } = React;
   return {
     EditorTab: forwardRef((_props, ref) => {
       useImperativeHandle(ref, () => ({ isDirty: () => false, save: async () => {}, focus: () => {} }), []);
+      useEffect(() => { editorMountCount += 1; }, []);
       return createElement('div', { 'data-testid': 'editor' });
     }),
   };
@@ -106,6 +110,32 @@ describe('MountedViewLayers', () => {
     );
     const el = container.querySelector('.tab-body') as HTMLElement;
     expect(el.style.display).toBe('flex');
+  });
+
+  it('does not remount the editor tab when only its url/name/path change (rename)', () => {
+    editorMountCount = 0;
+    const tab = makeEditorTab('etab', '/open/1');
+    const harnessHandles = makeHarnessHandles();
+    const editorHandles = makeEditorHandles();
+    const { rerender } = render(
+      React.createElement(MountedViewLayers, {
+        tabs: [tab], current: tab, client: { send: vi.fn() } as never, closeTab: vi.fn(),
+        harnessHandles, editorHandles,
+      }),
+    );
+    expect(editorMountCount).toBe(1);
+
+    const renamed: TabView = {
+      ...tab,
+      editor: { ...tab.editor!, url: '/open/2', name: 'renamed.ts' },
+    };
+    rerender(
+      React.createElement(MountedViewLayers, {
+        tabs: [renamed], current: renamed, client: { send: vi.fn() } as never, closeTab: vi.fn(),
+        harnessHandles, editorHandles,
+      }),
+    );
+    expect(editorMountCount).toBe(1);
   });
 
   it('filters out tabs without editor payload', () => {
