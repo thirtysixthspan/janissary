@@ -12,6 +12,7 @@ import { pollForDir, stopPolling } from './poll.js';
 import { pruneAndBuildRows } from './rebuild.js';
 import { buildRows } from './index.js';
 import { listProjectFiles } from './search.js';
+import { makeNavigationPort, makeOpenPort } from './manager-ports.js';
 import type { Managers } from '../managers.js';
 import type { GitFileStatus } from '../git-status.js';
 import { openerForExtension } from '../openers/index.js';
@@ -85,15 +86,12 @@ export class FileTreeManager {
   // The narrow set of manager internals `navigation.ts` operates through, passed as bound
   // closures so the tab-state map and watcher methods stay private to this class.
   private navPort(): NavPort {
-    return {
-      states: this.tabs,
-      watchDir: (label, absDir, relPath) => this.watchDir(label, absDir, relPath),
-      unwatchDir: (state, relPath) => this.unwatchDir(state, relPath),
-      rebuild: (label) => this.rebuild(label),
-      refreshGit: (label) => this.refreshGit(label),
-      setCwd: (label, dir) => this.managers.tab.setCwd(label, dir),
-      hasTab: (label) => this.managers.tab.tabs.some((t) => t.label === label),
-    };
+    return makeNavigationPort(
+      this.managers, this.tabs,
+      (label, absDir, relPath) => this.watchDir(label, absDir, relPath),
+      (state, relPath) => this.unwatchDir(state, relPath),
+      (label) => this.rebuild(label), (label) => this.refreshGit(label),
+    );
   }
 
   // Open a file navigator at `label`'s cwd (the metadata-row 📁 button). If a file-tree tab is
@@ -107,13 +105,11 @@ export class FileTreeManager {
   // The narrow set of manager internals `file-tree-open.ts` operates through, passed as bound
   // closures so the tab-state map and watcher methods stay private to this class.
   private openPort(): OpenPort {
-    return {
-      managers: this.managers,
-      states: this.tabs,
-      watchDir: (label, absDir, relPath) => this.watchDir(label, absDir, relPath),
-      unwatchDir: (state, relPath) => this.unwatchDir(state, relPath),
-      rebuild: (label) => this.rebuild(label),
-    };
+    return makeOpenPort(
+      this.managers, this.tabs,
+      (label, absDir, relPath) => this.watchDir(label, absDir, relPath),
+      (state, relPath) => this.unwatchDir(state, relPath), (label) => this.rebuild(label),
+    );
   }
 
   // Move a file or directory into a different directory (drag-and-release in the tree). Rejects
