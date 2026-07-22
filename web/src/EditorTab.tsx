@@ -188,7 +188,6 @@ export const EditorTab = forwardRef<EditorTabHandle, { editor: EditorView; tab: 
         editor={editor} dirty={dirty} savedFlash={savedFlash} error={saveError ?? loadError}
         onSave={() => { void save(); }} onMouseUp={onMetaMouseUp} connectionsButton={connections.connectionsButton}
       />
-      <EditorConnectionsPanel tab={tab} api={connections} />
       <PendingSuggestPanel pending={suggest.pending} />
       <div
         className="editor-body"
@@ -196,6 +195,7 @@ export const EditorTab = forwardRef<EditorTabHandle, { editor: EditorView; tab: 
         onMouseDown={mouse.onMouseDown}
         onClick={(e) => { handleSuggestPillClick(e, state, suggest.fireOnLine); }}
       >
+        <EditorConnectionsPanel tab={tab} api={connections} />
         <textarea
           ref={textareaRef}
           className="editor-textarea"

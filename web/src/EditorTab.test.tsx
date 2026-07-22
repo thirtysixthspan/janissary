@@ -340,6 +340,17 @@ describe('EditorTab', () => {
     expect(meta.querySelector('.tab-connections')).not.toBeNull();
   });
 
+  it('anchors the floating connections window below the metadata row, inside the editor body', async () => {
+    const { client } = makeClient();
+    const tab = makeTab({ connections: [{ text: 'reviewer (acp)', kind: 'acp' }] });
+    const { container } = await renderLoaded(client, makeView(), tab);
+
+    const body = container.querySelector('.editor-body')!;
+    const meta = container.querySelector('.editor-meta')!;
+    expect(body.querySelector('.status-panels')).not.toBeNull();
+    expect(meta.querySelector('.status-panels')).toBeNull();
+  });
+
   it('a plain metadata click restores focus to the textarea on mouse-up', async () => {
     const { client } = makeClient();
     const { container } = await renderLoaded(client);
