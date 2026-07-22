@@ -183,4 +183,18 @@ describe('ReportingSection', () => {
     fireEvent.mouseMove(button, { clientY: 0 });
     expect((section as HTMLElement).style.flex).toBe('0 0 85%');
   });
+
+  it('border divider drag also updates the height percentage', () => {
+    const { container } = render(
+      React.createElement(ControlledReportingSection, {
+        entries: [makeEntry('alerts', 0)],
+        onClose: vi.fn(), onRun: vi.fn(), onRate: vi.fn(), onReset: vi.fn(), onSnapshot: vi.fn(),
+      }),
+    );
+    const divider = container.querySelector('.reporting-resize')!;
+    const section = container.querySelector('.reporting-section')!;
+    fireEvent.mouseDown(divider);
+    fireEvent.mouseMove(document, { clientY: globalThis.innerHeight * 0.5 });
+    expect((section as HTMLElement).style.flex).toBe('0 0 50%');
+  });
 });
