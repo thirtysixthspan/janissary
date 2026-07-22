@@ -23,3 +23,12 @@ describe('metadata theme', () => {
     expect(metadataRule).not.toContain('user-select: none');
   });
 });
+
+describe('tab strip theme', () => {
+  it('makes tab labels non-selectable', () => {
+    const tabRule = theme.match(/^\.tab \{[^}]+\}/m)?.[0];
+
+    expect(tabRule).toBeDefined();
+    expect(tabRule).toContain('user-select: none');
+  });
+});
