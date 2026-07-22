@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeAll, afterEach } from 'vitest';
 import type { FileTreeView, TabView } from '@shared/protocol';
@@ -151,6 +151,21 @@ describe('FileTreeTab', () => {
     render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
     fireEvent.dblClick(screen.getByText('README.md'), { shiftKey: true });
     expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'open README.md' } });
+  });
+
+  it('shows opener choices for an unsupported file and edits it when chosen', async () => {
+    const send = vi.fn();
+    const request = vi.fn().mockResolvedValue({ choices: [
+      { label: 'Edit as text', command: 'edit' },
+      { label: 'Open externally', command: 'open external' },
+    ] });
+    const client = { send, request } as unknown as JanusClient;
+    const files = makeFiles({ rows: [{ path: 'data.xyz', name: 'data.xyz', depth: 0, dir: false }] });
+    render(<FileTreeTab files={files} client={client} index={3} />);
+    fireEvent.dblClick(screen.getByText('data.xyz'));
+    await waitFor(() => expect(screen.getByRole('dialog', { name: 'Open data.xyz' })).toBeInTheDocument());
+    fireEvent.click(screen.getByText('Edit as text'));
+    expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'edit data.xyz' } });
   });
 
   it('collapse-all button sends fileTreeCollapseAll', () => {

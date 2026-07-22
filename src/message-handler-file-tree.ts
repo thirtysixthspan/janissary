@@ -1,10 +1,10 @@
 import type { Controller } from './controller.js';
 import type { ClientMessage, ServerEvent } from './protocol.js';
-import { fileTreeSearch, revealFileTreeItem, renameFileTreeItem } from './controller/file-tree.js';
+import { fileTreeSearch, revealFileTreeItem, renameFileTreeItem, fileTreeOpeners } from './controller/file-tree.js';
 
 type FileTreeMessage = Extract<ClientMessage, {
   method: 'fileTreeToggle' | 'fileTreeCollapseAll' | 'fileTreeReroot' | 'moveFileTreeItem'
-    | 'deleteFileTreeItem' | 'renameFileTreeItem' | 'fileTreeSearch' | 'revealFileTreeItem' | 'undoFileTreeItem' | 'redoFileTreeItem';
+    | 'deleteFileTreeItem' | 'renameFileTreeItem' | 'fileTreeSearch' | 'revealFileTreeItem' | 'fileTreeOpeners' | 'undoFileTreeItem' | 'redoFileTreeItem';
 }>;
 
 // The file-tree RPC cases, split out of `handle()` to keep message-handler.ts under the line-size
@@ -37,6 +37,10 @@ export function handleFileTreeMessage(controller: Controller, message: FileTreeM
       return;
     }
     case 'revealFileTreeItem': { revealFileTreeItem(controller.managers, message.params.index, message.params.relPath); break;
+    }
+    case 'fileTreeOpeners': {
+      reply({ t: 'rpc-reply', id: message.id, result: fileTreeOpeners(controller.managers, message.params.index, message.params.relPath, message.params.edit) });
+      return;
     }
     case 'undoFileTreeItem': {
       reply({ t: 'rpc-reply', id: message.id, result: controller.undoFileTreeItem(message.params.index, message.params.overwrite) });

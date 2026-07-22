@@ -14,6 +14,10 @@ import { FileSearchPopup } from './FileSearchPopup';
 import { useFileTreeSearch } from './useFileTreeSearch';
 import { FileTreeHeader } from './FileTreeHeader';
 import type { CommandInputDropHandle } from './CommandInput';
+import { FileTreeOpenerOverlay } from './FileTreeOpenerOverlay';
+import { useFileTreeOpener } from './useFileTreeOpener';
+import { useFileTreeDelete } from './useFileTreeDelete';
+import { runFileTreeAction } from './file-tree-actions';
 
 type Properties = {
   files: FileTreeView;
@@ -41,13 +45,14 @@ const MARKDOWN_EXTENSION = /\.(md|markdown)$/i;
 
 export function FileTreeTab({ files, client, index, dock, autoFocus = true, dropRef }: Properties) {
   const [selected, setSelected] = useState<string | null>(null);
-  const [pendingDelete, setPendingDelete] = useState<string | null>(null);
   const [pendingNewDir, setPendingNewDir] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const typeahead = useRef<{ buffer: string; timer?: ReturnType<typeof setTimeout> }>({ buffer: '' });
   const drag = useFileTreeDrag(files.rows, client, index, dropRef);
   const rename = useFileTreeRename(files.rows, client, index, setSelected, () => containerRef.current?.focus());
   const search = useFileTreeSearch(client, index, files.rows, setSelected, () => containerRef.current?.focus());
+  const opener = useFileTreeOpener(client, index);
+  const deletion = useFileTreeDelete(client, index);
 
   useEffect(() => { if (autoFocus) containerRef.current?.focus(); }, [autoFocus]);
 
@@ -80,7 +85,7 @@ export function FileTreeTab({ files, client, index, dock, autoFocus = true, drop
   }, [files.rows, pendingNewDir]); // eslint-disable-line react-hooks/exhaustive-deps -- `rename` is fresh each render
 
   const toggle = (path: string) => client.send({ method: 'fileTreeToggle', params: { index, path } });
-  const openFile = (path: string) => client.send({ method: 'command', params: { text: `open ${path}` } });
+  const openFile = (path: string, edit: boolean) => opener.open(path, edit);
   const editFile = (path: string) => client.send({ method: 'command', params: { text: `edit ${path}` } });
   const reroot = () => client.send({ method: 'fileTreeReroot', params: { index } });
   const rerootTo = (path: string) => client.send({ method: 'fileTreeReroot', params: { index, path } });
@@ -102,28 +107,11 @@ export function FileTreeTab({ files, client, index, dock, autoFocus = true, drop
   const onRowDoubleClick = (row: FileTreeRow, shiftKey: boolean) => {
     if (row.path === '..') reroot();
     else if (row.dir) toggle(row.path);
-    else if (MARKDOWN_EXTENSION.test(row.path) === shiftKey) openFile(row.path);
-    else editFile(row.path);
+    else openFile(row.path, MARKDOWN_EXTENSION.test(row.path) !== shiftKey);
   };
-
-  const runAction = (action: { type: 'toggle' | 'open' | 'edit' | 'reroot'; path: string } | undefined) => {
-    if (!action) return;
-    switch (action.type) {
-      case 'reroot': { if (action.path === '..') reroot(); else rerootTo(action.path); break; }
-      case 'toggle': { toggle(action.path); break; }
-      case 'open': { openFile(action.path); break; }
-      case 'edit': { editFile(action.path); break; }
-    }
-  };
-
-  const confirmDelete = () => {
-    if (pendingDelete) client.send({ method: 'deleteFileTreeItem', params: { index, relPath: pendingDelete } });
-    setPendingDelete(null);
-  };
-
-  const cancelDelete = () => setPendingDelete(null);
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (opener.onKeyDown(e)) return;
     // While the rename field is open, its own Enter/Escape/typing handling in `InlineEditInput`
     // owns every keystroke; without this, those keydowns bubble here too and get double-handled
     // (e.g. Enter also re-triggering the tree's own "open selected row" navigation action).
@@ -141,7 +129,7 @@ export function FileTreeTab({ files, client, index, dock, autoFocus = true, drop
     if ((e.key === 'Backspace' || e.key === 'Delete') && selected && selected !== '..') {
       e.preventDefault();
       e.stopPropagation();
-      setPendingDelete(selected);
+      deletion.request(selected);
       return;
     }
     const navKeys = new Set(['ArrowDown', 'ArrowUp', 'ArrowLeft', 'ArrowRight', 'Home', 'End', 'PageUp', 'PageDown', 'Enter', ' ']);
@@ -151,7 +139,7 @@ export function FileTreeTab({ files, client, index, dock, autoFocus = true, drop
       const pageSize = Math.max(1, Math.floor((containerRef.current?.clientHeight ?? ROW_HEIGHT_PX * 10) / ROW_HEIGHT_PX));
       const result = handleFileTreeKey(files.rows, selected, e.key, e.shiftKey, pageSize);
       setSelected(result.selection);
-      runAction(result.action);
+      runFileTreeAction(result.action, { reroot: (path) => { if (path === '..') reroot(); else rerootTo(path); }, toggle, open: (path) => openFile(path, false), edit: editFile });
       return;
     }
     if (PRINTABLE.test(e.key)) {
@@ -215,12 +203,14 @@ export function FileTreeTab({ files, client, index, dock, autoFocus = true, drop
           onCancel={rename.cancelConflict}
         />
       )}
-      {pendingDelete && (
+      {deletion.pendingDelete && (
         <DeleteFileDialog
-          name={pendingDelete.slice(pendingDelete.lastIndexOf('/') + 1)}
-          onConfirm={confirmDelete}
-          onCancel={cancelDelete}
+          name={deletion.pendingDelete.slice(deletion.pendingDelete.lastIndexOf('/') + 1)}
+          onConfirm={deletion.confirm} onCancel={deletion.cancel}
         />
+      )}
+      {opener.pending && (
+        <FileTreeOpenerOverlay pending={opener.pending} onPick={opener.choose} />
       )}
       {search.searchOpen && (
         <FileSearchPopup

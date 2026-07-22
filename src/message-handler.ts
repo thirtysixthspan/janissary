@@ -76,6 +76,7 @@ export function handle(controller: Controller, message: ClientMessage, reply: (e
     case 'renameFileTreeItem':
     case 'fileTreeSearch':
     case 'revealFileTreeItem':
+    case 'fileTreeOpeners':
     case 'undoFileTreeItem':
     case 'redoFileTreeItem': {
       handleFileTreeMessage(controller, message, reply);

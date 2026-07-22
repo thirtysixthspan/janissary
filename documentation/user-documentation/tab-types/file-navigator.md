@@ -74,6 +74,9 @@ Inside a git repository, a file's name is colored by its git status: **green** f
 Files opened from the tree land in the same [group](/user-documentation/getting-started/groups) as the tree tab —
 including while the tree is docked to a sidebar; opened files still land in that group.
 
+If a file type has no built-in opener, double-clicking the file shows a picker with **Edit as text**
+and **Open externally**. Choose the action you want, or press `Escape` to close the picker.
+
 ## Moving files by drag-and-drop
 
 Press down on a row, drag it onto a directory row (or any file row inside that directory), and release to move the dragged file or directory into that directory. A small label follows the cursor while you drag, and the targeted directory highlights. Dropping onto the item itself, one of its own descendants, or the directory it's already in does nothing. If the target already has an entry with the same name, a dialog offers **Overwrite** or **Cancel** instead of moving right away. Releasing over empty space, losing window focus mid-drag, or pressing `Escape` cancels the drag with nothing moved.
