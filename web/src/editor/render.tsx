@@ -2,6 +2,7 @@ import React from 'react';
 import type { EditorState } from './model';
 import { selectionRange } from './model';
 import type { TokenRange } from './highlight/tokenize';
+import type { SuggestPill } from './suggest-request';
 
 // Selection column bounds for one line as primitives ([-1, -1] when the line is outside the
 // selection) so EditorLine's React.memo can compare props cheaply on large files.
@@ -26,6 +27,8 @@ type LineProps = {
   caretRef: React.Ref<HTMLSpanElement> | null;
   // Syntax-highlighting token ranges for this line; empty when highlighting is off.
   tokens: TokenRange[];
+  // The in-editor persona-suggestion status pill for this line, when it is a `>`-led request line.
+  pill?: SuggestPill;
 };
 
 // The caret is a zero-width inline span (its ::after paints the bar) inserted into the text flow
@@ -57,11 +60,16 @@ function contentSegments({ text, selFrom, selTo, caretCol, caretRef, tokens }: L
 // One logical line: gutter cell + soft-wrapped content cell. Wrapped lines occupy several visual
 // rows while the gutter number sits on the first — the flex row gives correct alignment for free.
 export const EditorLine = React.memo(function EditorLine(props: LineProps) {
-  const { line, gutterCh, isCurrent } = props;
+  const { line, gutterCh, isCurrent, pill } = props;
   return (
     <div className={isCurrent ? 'editor-row editor-row-current' : 'editor-row'} data-editor-line={line}>
       <span className="editor-gutter" style={{ width: `${gutterCh}ch` }}>{line + 1}</span>
       <span className="editor-content">{contentSegments(props)}</span>
+      {pill && (
+        <span className={pill.runnable ? 'editor-suggest-pill editor-suggest-pill-run' : 'editor-suggest-pill'}>
+          {pill.text}
+        </span>
+      )}
     </div>
   );
 });

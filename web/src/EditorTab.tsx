@@ -2,7 +2,6 @@ import React, { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, use
 import type { EditorView } from '@shared/protocol';
 import type { JanusClient } from './ws';
 import { toText } from './editor/model';
-import { EditorLine, lineSelection } from './editor/render';
 import { actionForKey } from './editor/keys';
 import { visualVerticalHit } from './editor/mouse';
 import { useEditor } from './editor/useEditor';
@@ -11,6 +10,8 @@ import { useSyntaxHighlight } from './editor/useSyntaxHighlight';
 import { useEditorSync } from './editor/useEditorSync';
 import { useEditorSuggest } from './editor/useEditorSuggest';
 import { handleSuggestKeyDown } from './editor/handleSuggestKeyDown';
+import { handleSuggestPillClick } from './editor/handleSuggestPillClick';
+import { EditorLines } from './editor/EditorLines';
 import { PendingSuggestPanel } from './editor/PendingSuggestPanel';
 import { OverwriteConflictDialog } from './OverwriteConflictDialog';
 import { EditorSaveButton } from './EditorSaveButton';
@@ -191,7 +192,12 @@ export const EditorTab = forwardRef<EditorTabHandle, { editor: EditorView; clien
         <EditorSaveButton dirty={dirty} onSave={() => { void save(); }} />
       </div>
       <PendingSuggestPanel pending={suggest.pending} />
-      <div className="editor-body" ref={bodyRef} onMouseDown={mouse.onMouseDown}>
+      <div
+        className="editor-body"
+        ref={bodyRef}
+        onMouseDown={mouse.onMouseDown}
+        onClick={(e) => { handleSuggestPillClick(e, state, suggest.fireOnLine); }}
+      >
         <textarea
           ref={textareaRef}
           className="editor-textarea"
@@ -201,24 +207,16 @@ export const EditorTab = forwardRef<EditorTabHandle, { editor: EditorView; clien
           onCompositionStart={() => { composingRef.current = true; }}
           onCompositionEnd={() => { composingRef.current = false; flushTextarea(); }}
         />
-        {state?.lines.map((text, index) => {
-          const [selFrom, selTo] = lineSelection(state, index);
-          const onCursorLine = index === state.cursor.line;
-          return (
-            <EditorLine
-              key={index}
-              text={text}
-              line={index}
-              gutterCh={gutterCh}
-              isCurrent={onCursorLine}
-              selFrom={selFrom}
-              selTo={selTo}
-              caretCol={onCursorLine && active ? state.cursor.col : -1}
-              caretRef={onCursorLine ? caretRef : null}
-              tokens={tokens[index] ?? []}
-            />
-          );
-        })}
+        {state && (
+          <EditorLines
+            state={state}
+            tokens={tokens}
+            suggest={suggest}
+            active={active}
+            gutterCh={gutterCh}
+            caretRef={caretRef}
+          />
+        )}
       </div>
       {conflictOpen && (
         <OverwriteConflictDialog

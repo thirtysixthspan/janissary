@@ -6,7 +6,7 @@ export type SuggestRequest = { persona: string; prompt: string };
 // The persona-name token right after a leading `>` (and any whitespace before/after it): its
 // column range and, when present, its text. Undefined off a `>`-led line entirely — so an
 // ordinary Markdown blockquote with no persona word is never mistaken for a request.
-function personaToken(line: string): { start: number; end: number; word: string } | undefined {
+export function personaToken(line: string): { start: number; end: number; word: string } | undefined {
   const lead = /^\s*>\s*/.exec(line);
   if (!lead) return undefined;
   const start = lead[0].length;
@@ -43,4 +43,29 @@ export function completePersonaName(line: string, col: number, personas: string[
   if (!range) return undefined;
   const name = personas.find((p) => p.toLowerCase().startsWith(range.partial.toLowerCase()));
   return name ? { start: range.start, end: range.end, name } : undefined;
+}
+
+export type SuggestPill = { text: string; runnable: boolean };
+
+// The inline status pill for a `>`-led line: its text tracks the request's progress from an
+// unnamed persona through to a runnable query, an in-flight one, or a resolved outcome.
+// Undefined for a line that isn't `>`-led at all, or one whose pending hunk-review panel already
+// owns the line's state (Decision: no redundant pill while accept/decline is in progress).
+export function suggestPillLabel(
+  line: string,
+  personas: string[],
+  firingLine: string | null,
+  pendingLine: string | null,
+  noSuggestionLine: string | null,
+): SuggestPill | undefined {
+  const token = personaToken(line);
+  if (!token) return undefined;
+  const hasPersona = personas.some((p) => p.toLowerCase() === token.word.toLowerCase());
+  if (!hasPersona) return { text: '[agent?]', runnable: false };
+  const prompt = line.slice(token.end).trimStart();
+  if (!prompt) return { text: '[query?]', runnable: false };
+  if (line === firingLine) return { text: '[running...]', runnable: false };
+  if (line === pendingLine) return undefined;
+  if (line === noSuggestionLine) return { text: '[no suggestion]', runnable: false };
+  return { text: '[run]', runnable: true };
 }
