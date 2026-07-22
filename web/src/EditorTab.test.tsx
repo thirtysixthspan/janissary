@@ -475,13 +475,13 @@ describe('EditorTab', () => {
       vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, text: () => Promise.resolve(content) } as unknown as Response));
     }
 
-    it('fires an editorSuggest query on Ctrl/Cmd+Enter and shows the pending panel', async () => {
+    it('fires an editorSuggest query on Ctrl/Cmd+Enter and previews the single hunk without the multi-change banner', async () => {
       const { client, request } = makeClient();
       request.mockReset();
       request.mockResolvedValueOnce({ names: ['summarizer'] });
       request.mockResolvedValueOnce({ hunks: [{ anchor: 'line one', replacement: 'LINE ONE' }] });
       stubRequestFileContent('line one\n> summarizer rewrite this');
-      await renderLoaded(client, makeView({ line: 2 }));
+      const { container } = await renderLoaded(client, makeView({ line: 2 }));
 
       fireEvent.keyDown(textarea(), { key: 'Enter', metaKey: true });
 
@@ -489,8 +489,8 @@ describe('EditorTab', () => {
         method: 'editorSuggest',
         params: { url: '/open/1', persona: 'summarizer', content: 'line one\n> summarizer rewrite this', prompt: 'rewrite this' },
       });
-      await waitFor(() => expect(screen.getByText('Accept or decline each change below')).toBeInTheDocument());
-      expect(screen.getByText('1 of 1 remaining')).toBeInTheDocument();
+      await waitFor(() => expect(container.querySelector('.editor-diff-controls')).not.toBeNull());
+      expect(screen.queryByText('Accept or decline each change below')).not.toBeInTheDocument();
     });
 
     it('previews the pending hunk inline: struck-through removed line and an added line below it, with accept/decline icons', async () => {
@@ -530,11 +530,11 @@ describe('EditorTab', () => {
       stubRequestFileContent('line one\n> summarizer rewrite this');
       const { container } = await renderLoaded(client, makeView({ line: 2 }));
       fireEvent.keyDown(textarea(), { key: 'Enter', metaKey: true });
-      await waitFor(() => expect(screen.getByText('Accept or decline each change below')).toBeInTheDocument());
+      await waitFor(() => expect(container.querySelector('.editor-diff-controls')).not.toBeNull());
 
       fireEvent.click(screen.getByLabelText('Accept'));
 
-      await waitFor(() => expect(screen.queryByText('Accept or decline each change below')).not.toBeInTheDocument());
+      await waitFor(() => expect(container.querySelector('.editor-diff-controls')).toBeNull());
       expect(container.querySelector('.editor-content')?.textContent).toBe('LINE ONE');
     });
 
@@ -544,13 +544,13 @@ describe('EditorTab', () => {
       request.mockResolvedValueOnce({ names: ['summarizer'] });
       request.mockResolvedValueOnce({ hunks: [{ anchor: 'line one', replacement: 'LINE ONE' }] });
       stubRequestFileContent('line one\n> summarizer rewrite this');
-      await renderLoaded(client, makeView({ line: 2 }));
+      const { container } = await renderLoaded(client, makeView({ line: 2 }));
       fireEvent.keyDown(textarea(), { key: 'Enter', metaKey: true });
-      await waitFor(() => expect(screen.getByText('Accept or decline each change below')).toBeInTheDocument());
+      await waitFor(() => expect(container.querySelector('.editor-diff-controls')).not.toBeNull());
 
       fireEvent.click(screen.getByLabelText('Decline'));
 
-      await waitFor(() => expect(screen.queryByText('Accept or decline each change below')).not.toBeInTheDocument());
+      await waitFor(() => expect(container.querySelector('.editor-diff-controls')).toBeNull());
       expect(screen.getByText('> summarizer rewrite this')).toBeInTheDocument();
     });
 
@@ -560,14 +560,14 @@ describe('EditorTab', () => {
       request.mockResolvedValueOnce({ names: ['summarizer'] });
       request.mockResolvedValueOnce({ hunks: [{ anchor: 'line one', replacement: 'LINE ONE' }] });
       stubRequestFileContent('line one\n> summarizer rewrite this');
-      await renderLoaded(client, makeView({ line: 2 }));
+      const { container } = await renderLoaded(client, makeView({ line: 2 }));
       fireEvent.keyDown(textarea(), { key: 'Enter', metaKey: true });
-      await waitFor(() => expect(screen.getByText('Accept or decline each change below')).toBeInTheDocument());
+      await waitFor(() => expect(container.querySelector('.editor-diff-controls')).not.toBeNull());
 
       fireEvent.keyDown(textarea(), { key: 'ArrowRight' });
       fireEvent.keyDown(textarea(), { key: 'z' });
 
-      expect(screen.getByText('Accept or decline each change below')).toBeInTheDocument();
+      expect(container.querySelector('.editor-diff-controls')).not.toBeNull();
       expect(screen.getByText('> summarizer rewrite this')).toBeInTheDocument();
     });
 
