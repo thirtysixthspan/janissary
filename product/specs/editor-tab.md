@@ -236,8 +236,10 @@ The persona may propose one or more edits anywhere in the file, not only at the 
 location. Every proposed change previews inline at once, directly in the buffer at the position it
 would apply: the lines it would remove are struck through in the diff "remove" color, immediately
 followed by the lines it would insert, shown in the diff "add" color with a `+` in place of a line
-number. A banner above the buffer reads "Accept or decline each change below" along with a count of
-how many of the proposed changes remain unresolved.
+number. When two or more changes are proposed at once, a banner above the buffer reads "Accept or
+decline each change below" along with a count of how many of the proposed changes remain unresolved;
+when only a single change is proposed, the banner is not shown — its own inline accept/decline icons
+are the only affordance needed.
 
 Each proposed change's inserted lines carry their own thumbs-up/thumbs-down icon pair, right-aligned
 on the last inserted line — the same icons and click-to-resolve interaction as a monitor reporting
