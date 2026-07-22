@@ -28,6 +28,11 @@ export function deleteFileTreeItem(managers: Managers, index: number, relPath: s
   if (label) managers.fileTree.delete(label, relPath);
 }
 
+export function renameFileTreeItem(managers: Managers, index: number, relPath: string, newName: string): void {
+  const label = managers.tab.tabs[index]?.label;
+  if (label) managers.fileTree.rename(label, relPath, newName);
+}
+
 export function undoFileTreeItem(managers: Managers, index: number, overwrite?: boolean): { conflict?: { fromRelPath: string; toRelPath: string } } {
   const label = managers.tab.tabs[index]?.label;
   return label ? managers.fileTree.undo(label, overwrite) : {};

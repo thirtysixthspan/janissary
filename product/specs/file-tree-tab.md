@@ -217,6 +217,28 @@ cancelling leaves both where they are, and the same undo or redo can be retried 
 
 Deletions are not covered by undo/redo — a deleted file or directory cannot be restored this way.
 
+### Renaming a file or directory
+
+With a row selected (any row other than `..`), pressing `Cmd+R` (`Ctrl+R` on other platforms) turns
+that row's name into an editable text field in place, pre-filled with the current name — for a
+file, the extension is left out of the initial selection so retyping it isn't required; for a
+directory, the whole name is selected. The rest of the tree stays visible and in place while the
+field is open.
+
+Pressing Enter commits the edit, but only if the name has actually changed — Enter with an
+unchanged name is a silent no-op that just closes the field. An empty or whitespace-only name is
+treated as a cancel. Committing renames the file or directory on disk (staying in the same
+directory; the field cannot be used to move an item elsewhere) and the tree refreshes to show the
+new name, with selection following the renamed row. Pressing Escape, or the field losing focus,
+cancels the edit and restores the original name with no change on disk.
+
+If the committed name matches a sibling already in the same directory, the same Overwrite/Cancel
+confirmation dialog used for a drag-and-drop move appears. Overwrite replaces the existing entry
+and completes the rename; Cancel returns to the still-open edit field so a different name can be
+chosen.
+
+A rename is not added to the tab's move undo/redo stack and cannot be reversed with `Cmd+Z`.
+
 ### Deleting a file or directory
 
 Pressing Backspace or Delete while a row is selected (any row other than `..`) opens a
@@ -242,6 +264,7 @@ A focused file tree tab captures its own keys, following the ARIA treeview patte
 | `Home` / `End` | Select the first / last visible row |
 | `Page Up` / `Page Down` | Move selection by one viewport of rows |
 | `Backspace` / `Delete` | Selected file or directory (not `..`): open a delete confirmation dialog |
+| `Cmd+R` / `Ctrl+R` | Selected file or directory (not `..`): turn its name into an editable field (see "Renaming a file or directory") |
 | Printable characters | Type-ahead: jump to the next visible row whose name starts with what's typed; the typed buffer resets after a pause |
 | `Cmd+Z` / `Ctrl+Z` | Undo the most recent move made in this tab |
 | `Cmd+Shift+Z` / `Ctrl+Shift+Z` | Redo the most recently undone move |
@@ -249,8 +272,8 @@ A focused file tree tab captures its own keys, following the ARIA treeview patte
 
 Chords carrying Ctrl or Cmd (tab switching, tab reordering, closing the tab, etc.) are not
 captured by the tree and reach the normal window-level bindings instead, except for the
-undo/redo chords and `Cmd+N`/`Ctrl+N` above, which the tree captures for itself — the same way an
-editor tab captures its own `Cmd+Z`/`Cmd+Shift+Z` for text undo/redo.
+undo/redo chords, `Cmd+N`/`Ctrl+N`, and `Cmd+R`/`Ctrl+R` above, which the tree captures for itself
+— the same way an editor tab captures its own `Cmd+Z`/`Cmd+Shift+Z` for text undo/redo.
 
 If the selected row disappears (the directory watcher removed it), selection moves to the nearest
 surviving row rather than pointing at nothing.

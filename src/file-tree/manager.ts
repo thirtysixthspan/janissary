@@ -166,6 +166,20 @@ export class FileTreeManager {
     this.rebuild(label);
   }
 
+  // Rename a file or directory in place — the new name stays in the same directory. Rejects a
+  // `newName` containing a path separator as an invalid no-op, so a rename can never move the item
+  // elsewhere. Rebuilds so the tree reflects the change immediately, without waiting on the
+  // directory watcher's own debounce.
+  rename(label: string, relPath: string, newName: string): void {
+    const state = this.tabs.get(label);
+    if (!state) return;
+    if (newName.includes('/') || newName.includes(path.sep)) return;
+    const oldAbs = path.join(state.root, relPath);
+    const newAbs = path.join(path.dirname(oldAbs), newName);
+    try { renameSync(oldAbs, newAbs); } catch { return; }
+    this.rebuild(label);
+  }
+
   // The gitignore-aware candidate list for the tab's own Search-files pop-up (async, off the event
   // loop — see `search.ts`), for the deferred `fileTreeSearch` RPC.
   async search(label: string): Promise<string[]> {

@@ -4,7 +4,6 @@ import { DatabaseManager } from './database/manager.js';
 import { AcpManager } from './acp/manager.js';
 import { ShellManager } from './shell-manager.js';
 import { WorkspaceManager } from './workspace-manager.js';
-import { completeCommandLine } from './completion/index.js';
 import type { CompletionResult, Sinks } from './types.js';
 import { PseudoterminalManager } from './pseudoterminal-manager.js';
 import { TranscriptStore } from './transcript/store.js';
@@ -14,6 +13,7 @@ import { ConnectionManager } from './connection/manager.js';
 import { OpenFileManager } from './open-file-manager.js';
 import { FileTreeManager } from './file-tree/manager.js';
 import * as fileTreeRpc from './controller/file-tree.js';
+import { complete } from './controller/complete.js';
 import { wireControllerEvents } from './controller/events.js';
 import { EditorWatchManager } from './editor/watch-manager.js';
 import { saveFile } from './editor/save.js';
@@ -26,7 +26,6 @@ import { BrowserManager } from './browser/tab.js';
 import { CommandManager } from './command/manager.js';
 import { runSuggestion } from './monitor/window.js';
 import { MonitorManager } from './monitor/manager.js';
-import { listPersonas } from './personas.js';
 import type { TabView } from './protocol.js';
 import { TabManager } from './tab/manager.js';
 import type { Managers } from './managers.js';
@@ -204,6 +203,10 @@ export class Controller {
     fileTreeRpc.deleteFileTreeItem(this.managers, index, relPath);
   }
 
+  renameFileTreeItem(index: number, relPath: string, newName: string): void {
+    fileTreeRpc.renameFileTreeItem(this.managers, index, relPath, newName);
+  }
+
   undoFileTreeItem(index: number, overwrite?: boolean): { conflict?: { fromRelPath: string; toRelPath: string } } {
     return fileTreeRpc.undoFileTreeItem(this.managers, index, overwrite);
   }
@@ -229,26 +232,9 @@ export class Controller {
     this.managers.profile.newAgentAt(label);
   }
 
-  // Tab-completion for the command line (reuses the shared `completeCommandLine`): filesystem
-  // paths against the active tab's cwd, `msg`/`broadcast` agent names, `connection close` targets,
-  // and `browser` subcommands / window ids.
+  // Tab-completion for the command line — see `controller/complete.ts`.
   complete(text: string, cursor: number): CompletionResult {
-    const tab = this.managers.tab.cur();
-    const cwd = this.managers.tab.cwdOf(tab.label) ?? process.cwd();
-    const agents = this.managers.tab.allLabels();
-    // Monitor targets: every other action tab, plus `group:<n>` for each existing group.
-    const actionTabs = this.managers.tab.tabs.filter((t) => t.view !== 'monitor');
-    const groups = [...new Set(actionTabs.map((t) => t.group))].toSorted((a, b) => a - b).map((g) => `group:${g}`);
-    const targets = [...actionTabs.map((t) => t.label).filter((l) => l !== tab.label), ...groups];
-    return completeCommandLine(
-      text, cursor, cwd, agents, this.managers.connection.completionConnections(tab.label),
-      { personas: listPersonas(), targets },
-    );
-  }
-
-  // Canonical connection strings for `connection close` completion (shell/acp/browser/sqlite).
-  private completionConnections(label: string): string[] {
-    return this.managers.connection.completionConnections(label);
+    return complete(this.managers, text, cursor);
   }
 
   shutdown(): void {

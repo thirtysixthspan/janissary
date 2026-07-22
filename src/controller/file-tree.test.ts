@@ -5,6 +5,7 @@ import {
   fileTreeReroot,
   moveFileTreeItem,
   deleteFileTreeItem,
+  renameFileTreeItem,
   undoFileTreeItem,
   redoFileTreeItem,
   openFileNavigatorFor,
@@ -61,6 +62,20 @@ describe('controller-file-tree', () => {
     const managers = makeManagers('agent', { delete: (...args: unknown[]) => { calls.push(args); } });
     deleteFileTreeItem(managers, 0, 'a.ts');
     expect(calls).toEqual([['agent', 'a.ts']]);
+  });
+
+  it('renameFileTreeItem delegates to FileTreeManager.rename when the tab exists', () => {
+    const calls: unknown[] = [];
+    const managers = makeManagers('agent', { rename: (...args: unknown[]) => { calls.push(args); } });
+    renameFileTreeItem(managers, 0, 'a.ts', 'b.ts');
+    expect(calls).toEqual([['agent', 'a.ts', 'b.ts']]);
+  });
+
+  it('renameFileTreeItem is a no-op when the tab index has no label', () => {
+    const calls: unknown[] = [];
+    const managers = makeManagers(undefined, { rename: (...args: unknown[]) => { calls.push(args); } });
+    renameFileTreeItem(managers, 0, 'a.ts', 'b.ts');
+    expect(calls).toHaveLength(0);
   });
 
   it('undoFileTreeItem returns the manager result when the tab exists', () => {

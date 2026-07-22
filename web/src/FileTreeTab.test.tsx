@@ -327,6 +327,137 @@ describe('FileTreeTab', () => {
     });
   });
 
+  describe('rename', () => {
+    it('the rename chord on a selected file opens an editable field pre-filled with the name', () => {
+      const client = { send: vi.fn() } as unknown as JanusClient;
+      const { container } = render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+      fireEvent.click(screen.getByText('README.md'));
+      const tree = container.querySelector('[role="tree"]')!;
+      fireEvent.keyDown(tree, { key: 'r', metaKey: true });
+      const input = container.querySelector('.files-name-input') as HTMLInputElement;
+      expect(input).not.toBeNull();
+      expect(input.value).toBe('README.md');
+    });
+
+    it('Ctrl+R opens the editable field the same way', () => {
+      const client = { send: vi.fn() } as unknown as JanusClient;
+      const { container } = render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+      fireEvent.click(screen.getByText('README.md'));
+      const tree = container.querySelector('[role="tree"]')!;
+      fireEvent.keyDown(tree, { key: 'r', ctrlKey: true });
+      expect(container.querySelector('.files-name-input')).not.toBeNull();
+    });
+
+    it('Enter with a changed name sends renameFileTreeItem with the right params and closes the field', () => {
+      const send = vi.fn();
+      const client = { send } as unknown as JanusClient;
+      const { container } = render(<FileTreeTab files={makeFiles()} client={client} index={3} />);
+      fireEvent.click(screen.getByText('README.md'));
+      const tree = container.querySelector('[role="tree"]')!;
+      fireEvent.keyDown(tree, { key: 'r', metaKey: true });
+      const input = container.querySelector('.files-name-input') as HTMLInputElement;
+      fireEvent.change(input, { target: { value: 'renamed.md' } });
+      fireEvent.keyDown(input, { key: 'Enter' });
+      expect(send).toHaveBeenCalledWith({ method: 'renameFileTreeItem', params: { index: 3, relPath: 'README.md', newName: 'renamed.md' } });
+      expect(container.querySelector('.files-name-input')).toBeNull();
+    });
+
+    it('Enter with no change sends nothing', () => {
+      const send = vi.fn();
+      const client = { send } as unknown as JanusClient;
+      const { container } = render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+      fireEvent.click(screen.getByText('README.md'));
+      const tree = container.querySelector('[role="tree"]')!;
+      fireEvent.keyDown(tree, { key: 'r', metaKey: true });
+      const input = container.querySelector('.files-name-input') as HTMLInputElement;
+      fireEvent.keyDown(input, { key: 'Enter' });
+      expect(send).not.toHaveBeenCalled();
+      expect(container.querySelector('.files-name-input')).toBeNull();
+    });
+
+    it('Escape cancels without sending', () => {
+      const send = vi.fn();
+      const client = { send } as unknown as JanusClient;
+      const { container } = render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+      fireEvent.click(screen.getByText('README.md'));
+      const tree = container.querySelector('[role="tree"]')!;
+      fireEvent.keyDown(tree, { key: 'r', metaKey: true });
+      const input = container.querySelector('.files-name-input') as HTMLInputElement;
+      fireEvent.change(input, { target: { value: 'renamed.md' } });
+      fireEvent.keyDown(input, { key: 'Escape' });
+      expect(send).not.toHaveBeenCalled();
+      expect(container.querySelector('.files-name-input')).toBeNull();
+    });
+
+    it('blur cancels without sending', () => {
+      const send = vi.fn();
+      const client = { send } as unknown as JanusClient;
+      const { container } = render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+      fireEvent.click(screen.getByText('README.md'));
+      const tree = container.querySelector('[role="tree"]')!;
+      fireEvent.keyDown(tree, { key: 'r', metaKey: true });
+      const input = container.querySelector('.files-name-input') as HTMLInputElement;
+      fireEvent.change(input, { target: { value: 'renamed.md' } });
+      fireEvent.blur(input);
+      expect(send).not.toHaveBeenCalled();
+      expect(container.querySelector('.files-name-input')).toBeNull();
+    });
+
+    it('the chord on the ".." row does nothing', () => {
+      const client = { send: vi.fn() } as unknown as JanusClient;
+      const files = makeFiles({ rows: [{ path: '..', name: '..', depth: 0, dir: true }] });
+      const { container } = render(<FileTreeTab files={files} client={client} index={0} />);
+      const tree = container.querySelector('[role="tree"]')!;
+      fireEvent.keyDown(tree, { key: 'ArrowDown' });
+      fireEvent.keyDown(tree, { key: 'r', metaKey: true });
+      expect(container.querySelector('.files-name-input')).toBeNull();
+    });
+
+    it('committing a name that collides with a visible sibling opens MoveConflictDialog', () => {
+      const send = vi.fn();
+      const client = { send } as unknown as JanusClient;
+      const { container } = render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+      fireEvent.click(screen.getByText('README.md'));
+      const tree = container.querySelector('[role="tree"]')!;
+      fireEvent.keyDown(tree, { key: 'r', metaKey: true });
+      const input = container.querySelector('.files-name-input') as HTMLInputElement;
+      fireEvent.change(input, { target: { value: 'src' } });
+      fireEvent.keyDown(input, { key: 'Enter' });
+      expect(send).not.toHaveBeenCalled();
+      expect(screen.getByRole('alertdialog')).toBeInTheDocument();
+    });
+
+    it('Overwrite on the rename conflict dialog sends the RPC', () => {
+      const send = vi.fn();
+      const client = { send } as unknown as JanusClient;
+      const { container } = render(<FileTreeTab files={makeFiles()} client={client} index={5} />);
+      fireEvent.click(screen.getByText('README.md'));
+      const tree = container.querySelector('[role="tree"]')!;
+      fireEvent.keyDown(tree, { key: 'r', metaKey: true });
+      const input = container.querySelector('.files-name-input') as HTMLInputElement;
+      fireEvent.change(input, { target: { value: 'src' } });
+      fireEvent.keyDown(input, { key: 'Enter' });
+      fireEvent.click(screen.getByRole('button', { name: /overwrite/i }));
+      expect(send).toHaveBeenCalledWith({ method: 'renameFileTreeItem', params: { index: 5, relPath: 'README.md', newName: 'src' } });
+    });
+
+    it('Cancel on the rename conflict dialog keeps the field open', () => {
+      const send = vi.fn();
+      const client = { send } as unknown as JanusClient;
+      const { container } = render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+      fireEvent.click(screen.getByText('README.md'));
+      const tree = container.querySelector('[role="tree"]')!;
+      fireEvent.keyDown(tree, { key: 'r', metaKey: true });
+      const input = container.querySelector('.files-name-input') as HTMLInputElement;
+      fireEvent.change(input, { target: { value: 'src' } });
+      fireEvent.keyDown(input, { key: 'Enter' });
+      fireEvent.click(screen.getByRole('button', { name: /cancel/i }));
+      expect(send).not.toHaveBeenCalled();
+      expect(screen.queryByRole('alertdialog')).toBeNull();
+      expect(container.querySelector('.files-name-input')).not.toBeNull();
+    });
+  });
+
   describe('drag to move', () => {
     afterEach(() => {
       vi.restoreAllMocks();

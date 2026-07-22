@@ -107,11 +107,14 @@ A focused tree captures these keys for itself (tab-switching and other `Ctrl`/`C
 | `PageUp` / `PageDown` | Move by a screenful |
 | Type letters | Jump to the next row starting with what you typed |
 | `Backspace` / `Delete` | Open a confirmation dialog to delete the selected file or directory |
+| `Cmd+R` / `Ctrl+R` | Turn the selected file or directory's name into an editable field to rename it |
 | `Cmd+Z` / `Ctrl+Z` | Undo the most recent move made in this tab |
 | `Cmd+Shift+Z` / `Ctrl+Shift+Z` | Redo the most recently undone move |
 | `Cmd+N` / `Ctrl+N` | Create a new file (see "Creating a new file" above) |
 
 Deleting asks first: `Delete "<name>"?`, offering **Delete** and **Cancel**. Confirming removes the file or directory (recursively, for a directory) from disk; cancelling leaves it untouched.
+
+Renaming edits the name in place: press Enter to commit (only if you actually changed it), or Escape — or click elsewhere — to cancel. If the new name collides with something already in the same directory, you'll see the same Overwrite/Cancel dialog used for drag-and-drop moves. A rename can't move the item to a different directory, and it isn't tracked by undo/redo.
 
 Undo and redo only apply to moves — deleting a file or directory is permanent and can't be undone
 this way. Each tree keeps its own undo/redo history in memory for as long as it stays open; closing

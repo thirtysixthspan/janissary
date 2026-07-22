@@ -42,6 +42,7 @@ const makeController = () =>
     fileTreeReroot: vi.fn(),
     moveFileTreeItem: vi.fn(),
     deleteFileTreeItem: vi.fn(),
+    renameFileTreeItem: vi.fn(),
     setDock: vi.fn(),
     resetMonitorContext: vi.fn(),
     monitorContextSnapshot: vi.fn(),
@@ -197,6 +198,12 @@ describe('handle', () => {
     const controller = makeController();
     dispatchCall(controller, 20, { method: 'deleteFileTreeItem', params: { index: 0, relPath: 'a' } });
     expect(controller.deleteFileTreeItem).toHaveBeenCalledWith(0, 'a');
+  });
+
+  it('routes renameFileTreeItem', () => {
+    const controller = makeController();
+    dispatchCall(controller, 21, { method: 'renameFileTreeItem', params: { index: 0, relPath: 'a', newName: 'b' } });
+    expect(controller.renameFileTreeItem).toHaveBeenCalledWith(0, 'a', 'b');
   });
 
   it('routes setDock', () => {

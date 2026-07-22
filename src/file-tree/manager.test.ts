@@ -517,6 +517,54 @@ describe('FileTreeManager', () => {
     expect(tab.files!.rows.some((r) => r.path === 'does-not-exist.txt')).toBe(false);
   });
 
+  it('rename renames a file on disk and rebuilds', () => {
+    writeFileSync(path.join(root, 'notes.txt'), 'hi');
+    const manager = run();
+    manager.open('files', 'janus');
+    const label = tabs.find((t) => t.label.startsWith('navigator'))!.label;
+    manager.rename(label, 'notes.txt', 'renamed.txt');
+    const tab = tabs.find((t) => t.label === label)!;
+    expect(tab.files!.rows.some((r) => r.path === 'notes.txt')).toBe(false);
+    expect(readFileSync(path.join(root, 'renamed.txt'), 'utf8')).toBe('hi');
+  });
+
+  it('rename renames a directory', () => {
+    mkdirSync(path.join(root, 'src'));
+    writeFileSync(path.join(root, 'src', 'index.ts'), '');
+    const manager = run();
+    manager.open('files', 'janus');
+    const label = tabs.find((t) => t.label.startsWith('navigator'))!.label;
+    manager.rename(label, 'src', 'lib');
+    const tab = tabs.find((t) => t.label === label)!;
+    expect(tab.files!.rows.some((r) => r.path === 'src')).toBe(false);
+    expect(existsSync(path.join(root, 'lib', 'index.ts'))).toBe(true);
+  });
+
+  it('rename is a silent no-op when the source is missing', () => {
+    const manager = run();
+    manager.open('files', 'janus');
+    const label = tabs.find((t) => t.label.startsWith('navigator'))!.label;
+    expect(() => manager.rename(label, 'does-not-exist.txt', 'renamed.txt')).not.toThrow();
+    expect(existsSync(path.join(root, 'renamed.txt'))).toBe(false);
+  });
+
+  it('rename is a no-op when newName contains a path separator', () => {
+    writeFileSync(path.join(root, 'notes.txt'), 'hi');
+    const manager = run();
+    manager.open('files', 'janus');
+    const label = tabs.find((t) => t.label.startsWith('navigator'))!.label;
+    manager.rename(label, 'notes.txt', 'sub/renamed.txt');
+    expect(existsSync(path.join(root, 'notes.txt'))).toBe(true);
+    expect(existsSync(path.join(root, 'sub'))).toBe(false);
+  });
+
+  it('rename on an unknown tab is a no-op', () => {
+    writeFileSync(path.join(root, 'notes.txt'), 'hi');
+    const manager = run();
+    expect(() => manager.rename('nonexistent', 'notes.txt', 'renamed.txt')).not.toThrow();
+    expect(existsSync(path.join(root, 'notes.txt'))).toBe(true);
+  });
+
   it('undo reverses the most recent move', () => {
     mkdirSync(path.join(root, 'dest'));
     writeFileSync(path.join(root, 'notes.txt'), 'hi');
