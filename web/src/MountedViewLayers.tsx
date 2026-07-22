@@ -42,7 +42,7 @@ export function MountedViewLayers({
 
       {tabs.filter((t) => t.view === 'editor' && t.editor).map((t) => (
         <div
-          key={t.editor!.url}
+          key={t.label}
           className="tab-body"
           style={{ borderLeft: `4px solid ${t.dotColor}`, display: t.label === current.label ? 'flex' : 'none' }}
         >
