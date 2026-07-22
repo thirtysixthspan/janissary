@@ -275,10 +275,11 @@ entirely — there is no duplicate representation of a docked tree in the strip.
 
 ### Header buttons
 
-Every file tree tab's own header carries a **Search files** button, a **New file** button, and a
-**location button**. Search files opens the search pop-up — see "Finding a file by name" below.
-New file opens a fresh, unsaved editor tab named `untitled.md` — see "Creating a new file" below.
-The location button cycles the tree through left sidebar → center tab strip → right sidebar → left
+Every file tree tab's own header carries a **Search files** button, **New file** and **New
+directory** buttons, and a **location button**. Search files opens the search pop-up — see
+"Finding a file by name" below. New file opens a fresh, unsaved editor tab named `untitled.md`;
+New directory creates a folder beside or inside the selected row — see the creating sections
+below. The location button cycles the tree through left sidebar → center tab strip → right sidebar → left
 sidebar, one step per click, with a tooltip naming the destination. The header itself carries no
 close button — while docked, the sidebar's own strip (see `sidebars.md`) shows the tab's name and
 the close affordance, so a docked tree is closed from there (`close files` by label still works as
@@ -323,6 +324,15 @@ directory already contains a file with that name because the tab was never renam
 new-file tab already saved to it first, the save silently writes to the next free name
 (`untitled-2.md`, `untitled-3.md`, …) instead of overwriting anything, so several new-file tabs can
 be created and saved side by side without colliding.
+
+### Creating a new directory
+
+Clicking the header's **New directory** button creates a directory named `untitled`. It uses the
+same target rule as New file: a selected directory row creates inside that directory, a selected
+file row creates in its containing directory, and no selection (or the `..` row) creates at the
+tree root. If `untitled` already exists at the target, the new directory uses the next free name
+(`untitled-2`, `untitled-3`, …). The tree refreshes to show the created directory. New directory
+has no keyboard shortcut.
 
 This same dock/location-cycle mechanism is shared with the notifications tab (see
 `notifications.md`), which is the other dockable tab kind. The two can share one sidebar side at

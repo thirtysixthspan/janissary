@@ -5,7 +5,7 @@ import type { JanusClient } from './ws';
 import { handleFileTreeKey, typeAheadMatch } from './file-tree-keys';
 import { useFileTreeDrag } from './useFileTreeDrag';
 import { fileTreeRowClass } from './file-tree-row-class';
-import { newFileTargetDir, newFileCommand } from './file-tree-new-file';
+import { newFileTargetDir, newFileCommand, newDirectoryCommand } from './file-tree-new-file';
 import { expandedIcon, collapsedIcon } from './icons';
 import { MoveConflictDialog } from './MoveConflictDialog/MoveConflictDialog';
 import { DeleteFileDialog } from './DeleteFileDialog';
@@ -70,6 +70,10 @@ export function FileTreeTab({ files, client, index, dock, autoFocus = true, drop
   const rerootTo = (path: string) => client.send({ method: 'fileTreeReroot', params: { index, path } });
   const createNewFile = () => {
     const text = newFileCommand(newFileTargetDir(files.rows, selected));
+    client.send({ method: 'command', params: { text } });
+  };
+  const createNewDirectory = () => {
+    const text = newDirectoryCommand(newFileTargetDir(files.rows, selected));
     client.send({ method: 'command', params: { text } });
   };
 
@@ -148,7 +152,7 @@ export function FileTreeTab({ files, client, index, dock, autoFocus = true, drop
     <div className="files-tab" data-doc-shot="file-tree-view" ref={containerRef} tabIndex={0} role="tree" onKeyDown={onKeyDown}>
       <FileTreeHeader
         root={files.root} branch={files.branch} client={client} index={index} dock={dock}
-        onSearch={search.openSearch} onNewFile={createNewFile}
+        onSearch={search.openSearch} onNewFile={createNewFile} onNewDirectory={createNewDirectory}
       />
       {files.waitingFor !== undefined && (
         <div className="files-waiting">Looking for {files.waitingFor}…</div>

@@ -2,7 +2,7 @@ import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { JanusClient } from './ws';
 import { nextDock, dockTooltip } from './dock-cycle';
-import { dockSwapIcon, newFileIcon, searchFilesIcon } from './icons';
+import { dockSwapIcon, newDirectoryIcon, newFileIcon, searchFilesIcon } from './icons';
 
 type Properties = {
   root: string;
@@ -12,12 +12,13 @@ type Properties = {
   dock?: 'left' | 'right';
   onSearch: () => void;
   onNewFile: () => void;
+  onNewDirectory: () => void;
 };
 
-// The file navigator's metadata row: root/branch on the left, action buttons (search, new file,
+// The file navigator's metadata row: root/branch on the left, action buttons (search, new items,
 // dock cycle, collapse all) on the right. Split out of `FileTreeTab` to keep it under the
 // file-size limit.
-export function FileTreeHeader({ root, branch, client, index, dock, onSearch, onNewFile }: Properties) {
+export function FileTreeHeader({ root, branch, client, index, dock, onSearch, onNewFile, onNewDirectory }: Properties) {
   return (
     <div className="files-header">
       <div className="files-meta">
@@ -30,6 +31,9 @@ export function FileTreeHeader({ root, branch, client, index, dock, onSearch, on
         </button>
         <button type="button" className="files-new-file" title="New file" onClick={onNewFile}>
           <FontAwesomeIcon icon={newFileIcon} />
+        </button>
+        <button type="button" className="files-new-directory" title="New directory" onClick={onNewDirectory}>
+          <FontAwesomeIcon icon={newDirectoryIcon} />
         </button>
         {dock && (
           <button

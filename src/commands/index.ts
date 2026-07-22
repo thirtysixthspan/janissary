@@ -18,6 +18,7 @@ import { command as profile } from './profile.js';
 import { command as open } from './open.js';
 import { command as edit } from './edit.js';
 import { command as newFile } from './new-file.js';
+import { command as newDirectory } from './new-directory.js';
 import { command as send } from './send.js';
 import { command as queue } from './queue.js';
 import { command as rename } from './rename.js';
@@ -51,6 +52,7 @@ export const commands: Command[] = [
   open,
   edit,
   newFile,
+  newDirectory,
   send,
   queue,
   rename,

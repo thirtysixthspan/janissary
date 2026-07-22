@@ -517,6 +517,40 @@ describe('FileTreeTab', () => {
     });
   });
 
+  describe('new directory', () => {
+    it('New directory button renders with the tooltip', () => {
+      const client = { send: vi.fn() } as unknown as JanusClient;
+      render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+      expect(screen.getByTitle('New directory')).toBeInTheDocument();
+    });
+
+    it('creates inside a selected directory', () => {
+      const send = vi.fn();
+      const client = { send } as unknown as JanusClient;
+      render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+      fireEvent.click(screen.getByText('src'));
+      fireEvent.click(screen.getByTitle('New directory'));
+      expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'newdir src/untitled' } });
+    });
+
+    it("creates in a selected file's containing directory", () => {
+      const send = vi.fn();
+      const client = { send } as unknown as JanusClient;
+      render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+      fireEvent.click(screen.getByText('index.ts'));
+      fireEvent.click(screen.getByTitle('New directory'));
+      expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'newdir src/untitled' } });
+    });
+
+    it('creates at the tree root when nothing is selected', () => {
+      const send = vi.fn();
+      const client = { send } as unknown as JanusClient;
+      render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+      fireEvent.click(screen.getByTitle('New directory'));
+      expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'newdir untitled' } });
+    });
+  });
+
   describe('undo/redo', () => {
     it('Cmd+Z sends undoFileTreeItem', async () => {
       const request = vi.fn().mockResolvedValue({});

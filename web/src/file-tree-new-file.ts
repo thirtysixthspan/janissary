@@ -17,3 +17,8 @@ export function newFileTargetDir(rows: FileTreeRow[], selected: string | null): 
 export function newFileCommand(targetDir: string | null): string {
   return targetDir === null ? 'newfile untitled.md' : `newfile ${targetDir}/untitled.md`;
 }
+
+// The `newdir` command target for a new `untitled` directory.
+export function newDirectoryCommand(targetDir: string | null): string {
+  return targetDir === null ? 'newdir untitled' : `newdir ${targetDir}/untitled`;
+}
