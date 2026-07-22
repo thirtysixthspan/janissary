@@ -653,6 +653,12 @@ html, body, #root {
 .editor-diff-remove .editor-content { text-decoration: line-through; }
 .editor-diff-add { background: color-mix(in srgb, var(--success) 15%, transparent); }
 .editor-diff-add .editor-gutter { color: var(--success); }
+.editor-diff-controls { margin-left: auto; display: flex; gap: 2px; flex-shrink: 0; }
+.editor-diff-controls button {
+  background: transparent; border: none; cursor: pointer; color: var(--fg);
+  font-size: 12px; padding: 0 4px; opacity: 0.35;
+}
+.editor-diff-controls button:hover { opacity: 1; }
 
 /* File tree tab: metadata header (image-tab classes) above a scrollable, keyboard-navigable tree. */
 .files-tab { flex: 1; min-height: 0; display: flex; flex-direction: column; outline: none; position: relative; }

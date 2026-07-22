@@ -30,8 +30,8 @@ function makeSuggest(overrides: Partial<EditorSuggestApi> = {}): EditorSuggestAp
     focusedPillLine: null,
     setFocusedPillLine: vi.fn(),
     fireOnLine: vi.fn(),
-    acceptFocused: vi.fn(),
-    declineFocused: vi.fn(),
+    acceptHunk: vi.fn(),
+    declineHunk: vi.fn(),
     ...overrides,
   };
 }
@@ -39,6 +39,24 @@ function makeSuggest(overrides: Partial<EditorSuggestApi> = {}): EditorSuggestAp
 function makeEvent(key: string, mods: Partial<{ metaKey: boolean; ctrlKey: boolean }> = {}): React.KeyboardEvent {
   return { key, metaKey: false, ctrlKey: false, ...mods, preventDefault: vi.fn() } as unknown as React.KeyboardEvent;
 }
+
+describe('handleSuggestKeyDown pending hunks', () => {
+  it('blocks any key while a hunk is pending, without resolving anything itself', () => {
+    const state = makeState('old text\n> summarizer rewrite');
+    const api = makeApi(state);
+    const suggest = makeSuggest({
+      pending: { hunks: [{ anchor: 'old text', replacement: 'new text' }], resolved: [false], requestLineText: '> summarizer rewrite', acceptedAny: false },
+    });
+    const e = makeEvent('a');
+
+    const handled = handleSuggestKeyDown(e, api, suggest);
+
+    expect(handled).toBe(true);
+    expect(e.preventDefault).toHaveBeenCalled();
+    expect(suggest.acceptHunk).not.toHaveBeenCalled();
+    expect(suggest.declineHunk).not.toHaveBeenCalled();
+  });
+});
 
 describe('handleSuggestKeyDown pill focus', () => {
   it('focuses the pill on Tab when the request line is runnable', () => {

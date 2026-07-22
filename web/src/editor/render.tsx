@@ -79,13 +79,16 @@ export const EditorLine = React.memo(function EditorLine(props: LineProps) {
   );
 });
 
-// A synthetic row previewing one line the focused pending hunk would insert — shown directly
-// below the buffer lines it would remove. Not part of the buffer: no caret, selection, or tokens.
-export function DiffAddedLine({ text, gutterCh }: { text: string; gutterCh: number }) {
+// A synthetic row previewing one line a pending hunk would insert — shown directly below the
+// buffer lines it would remove. Not part of the buffer: no caret, selection, or tokens. `controls`
+// (accept/decline icons) is passed on a hunk's last added row only, right-floated via the same
+// `margin-left: auto` pattern the status pill uses.
+export function DiffAddedLine({ text, gutterCh, controls }: { text: string; gutterCh: number; controls?: React.ReactNode }) {
   return (
     <div className="editor-row editor-diff-add">
       <span className="editor-gutter" style={{ width: `${gutterCh}ch` }}>+</span>
       <span className="editor-content">{text}</span>
+      {controls}
     </div>
   );
 }

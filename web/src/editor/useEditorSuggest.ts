@@ -14,7 +14,9 @@ import { spliceHunk } from './suggestDiff';
 
 export type PendingSuggest = {
   hunks: SuggestHunk[];
-  index: number;
+  // Parallel to `hunks`: true once that hunk has been accepted or declined. Every unresolved hunk
+  // previews inline at once; the set finalizes once every slot is true.
+  resolved: boolean[];
   requestLineText: string;
   acceptedAny: boolean;
 };
@@ -29,8 +31,8 @@ export type EditorSuggestApi = {
   focusedPillLine: number | null;
   setFocusedPillLine: (line: number | null) => void;
   fireOnLine: (state: EditorState, lineIndex: number) => void;
-  acceptFocused: (state: EditorState) => void;
-  declineFocused: (state: EditorState) => void;
+  acceptHunk: (state: EditorState, index: number) => void;
+  declineHunk: (state: EditorState, index: number) => void;
 };
 
 export function useEditorSuggest(client: JanusClient, url: string, setState: (s: EditorState) => void): EditorSuggestApi {
@@ -69,19 +71,21 @@ export function useEditorSuggest(client: JanusClient, url: string, setState: (s:
       const hunks = res?.hunks ?? [];
       // Empty hunks/failure is already surfaced via a notification server-side (Decision 10); the
       // request line stays untouched and no pending panel opens.
-      if (hunks.length > 0) setPendingBoth({ hunks, index: 0, requestLineText: lineText, acceptedAny: false });
-      else setNoSuggestionLine(lineText);
+      if (hunks.length > 0) {
+        setPendingBoth({ hunks, resolved: hunks.map(() => false), requestLineText: lineText, acceptedAny: false });
+      } else setNoSuggestionLine(lineText);
     });
   };
 
-  // Advances focus to the next pending hunk, or resolves the set once none remain — removing the
-  // `>` request line only if at least one hunk was accepted (Decision 9).
-  const resolveOne = (accepted: boolean, state: EditorState): EditorState => {
+  // Marks one hunk resolved, or finalizes the whole set once no unresolved hunk remains — removing
+  // the `>` request line only if at least one hunk was accepted (Decision 9). A call against an
+  // already-resolved index is a no-op.
+  const resolveHunk = (index: number, accepted: boolean, state: EditorState): EditorState => {
     const p = pendingRef.current;
-    if (!p) return state;
+    if (!p || p.resolved[index]) return state;
     const acceptedAny = p.acceptedAny || accepted;
-    const nextIndex = p.index + 1;
-    if (nextIndex < p.hunks.length) { setPendingBoth({ ...p, index: nextIndex, acceptedAny }); return state; }
+    const resolved = p.resolved.map((r, i) => (i === index ? true : r));
+    if (resolved.some((r) => !r)) { setPendingBoth({ ...p, resolved, acceptedAny }); return state; }
     setPendingBoth(null);
     if (!acceptedAny) return state;
     const idx = state.lines.indexOf(p.requestLineText);
@@ -92,22 +96,22 @@ export function useEditorSuggest(client: JanusClient, url: string, setState: (s:
     return { lines, cursor: { line, col: 0 }, anchor: null };
   };
 
-  const acceptFocused = (state: EditorState) => {
+  const acceptHunk = (state: EditorState, index: number) => {
     const p = pendingRef.current;
-    if (!p) return;
-    const hunk = p.hunks[p.index];
+    if (!p || p.resolved[index]) return;
+    const hunk = p.hunks[index];
     const text = toText(state);
     const newText = spliceHunk(text, hunk);
     const applied = newText === null ? state : fromText(newText, state.cursor.line);
-    setState(resolveOne(newText !== null, applied));
+    setState(resolveHunk(index, newText !== null, applied));
   };
 
-  const declineFocused = (state: EditorState) => {
-    setState(resolveOne(false, state));
+  const declineHunk = (state: EditorState, index: number) => {
+    setState(resolveHunk(index, false, state));
   };
 
   return {
     personas, pending, firingLine, noSuggestionLine, focusedPillLine, setFocusedPillLine,
-    fireOnLine, acceptFocused, declineFocused,
+    fireOnLine, acceptHunk, declineHunk,
   };
 }

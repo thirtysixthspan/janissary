@@ -222,17 +222,20 @@ current buffer content exactly as it stands at that moment — including any uns
 request text.
 
 The persona may propose one or more edits anywhere in the file, not only at the request line's own
-location. Each proposed change appears as a pending suggestion titled "(A)ccept or (D)ecline this
-change?", one at a time: pressing `a` applies the focused change and `d` dismisses it, after which
-the next pending change (if any) takes focus. While any change is pending, only `a` and `d` do
-anything — every other keystroke is suppressed rather than reaching the buffer, so editing is
-blocked until the whole set is resolved. Switching to another tab and back leaves a pending
-suggestion exactly as it was.
+location. Every proposed change previews inline at once, directly in the buffer at the position it
+would apply: the lines it would remove are struck through in the diff "remove" color, immediately
+followed by the lines it would insert, shown in the diff "add" color with a `+` in place of a line
+number. A banner above the buffer reads "Accept or decline each change below" along with a count of
+how many of the proposed changes remain unresolved.
 
-The focused change previews inline, directly in the buffer at the position it would apply: the
-lines it would remove are struck through in the diff "remove" color, immediately followed by the
-lines it would insert, shown in the diff "add" color with a `+` in place of a line number. Only the
-one focused change is previewed at a time, matching the accept/decline order above.
+Each proposed change's inserted lines carry their own thumbs-up/thumbs-down icon pair, right-aligned
+on the last inserted line — the same icons and click-to-resolve interaction as a monitor reporting
+tab's suggestion (see [[monitoring]]). Clicking thumbs-up applies that one change; thumbs-down drops
+it; either resolves that change independently of any others still pending, which keep previewing
+until resolved in turn — there is no required order. While any change is pending, every keystroke
+other than the accept/decline clicks is suppressed rather than reaching the buffer, so editing is
+blocked until the whole set is resolved. Switching to another tab and back leaves the pending set
+exactly as it was.
 
 Only one request may be in flight (or awaiting resolution) per editor tab at a time; firing another
 request while a suggestion is still pending is ignored until the current one is fully resolved.
