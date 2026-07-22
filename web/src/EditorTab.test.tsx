@@ -80,6 +80,27 @@ describe('EditorTab', () => {
     expect(screen.getByText('Saved')).toBeInTheDocument();
   });
 
+  it('preserves unsaved content and saves it to the renamed file', async () => {
+    const { client, saveFile } = makeClient();
+    const view = makeView();
+    const { container, rerender } = await renderLoaded(client, view);
+    type('draft ');
+    await waitFor(() => expect(hasDirtyDot(container)).toBe(true));
+
+    const renamed = makeView({ name: 'renamed.txt', path: '/home/user/renamed.txt', url: '/open/2' });
+    rerender(<EditorTab editor={renamed} client={client} active />);
+
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(container.querySelector('.editor-content')?.textContent).toBe('draft line one');
+    expect(hasDirtyDot(container)).toBe(true);
+
+    fireEvent.keyDown(screen.getByLabelText('Edit renamed.txt'), { key: 's', metaKey: true });
+    await waitFor(() => {
+      expect(saveFile).toHaveBeenCalledWith('/open/2', 'draft line one\nline two');
+      expect(hasDirtyDot(container)).toBe(false);
+    });
+  });
+
   it('shows the server error when a save fails', async () => {
     const { client } = makeClient('EACCES: permission denied');
     const { container } = await renderLoaded(client);

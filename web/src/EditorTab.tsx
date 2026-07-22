@@ -61,6 +61,7 @@ export const EditorTab = forwardRef<EditorTabHandle, { editor: EditorView; clien
   };
 
   useEffect(() => {
+    if (api.stateRef.current !== null) return;
     let cancelled = false;
     const token = new URLSearchParams(location.search).get('token') ?? '';
     const load = async () => {
