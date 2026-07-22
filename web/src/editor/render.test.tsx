@@ -3,6 +3,7 @@ import { render } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 import { EditorLine, DiffAddedLine } from './render';
 import type { TokenRange } from './highlight/tokenize';
+import type { SuggestPill } from './suggest-request';
 
 describe('EditorLine token segments', () => {
   it('emits an hljs-* class for a token range', () => {
@@ -51,6 +52,24 @@ describe('EditorLine token segments', () => {
       <EditorLine text="old line" line={0} gutterCh={2} isCurrent={false} selFrom={-1} selTo={-1} caretCol={-1} caretRef={null} tokens={[]} removed />,
     );
     expect(container.querySelector('.editor-row')?.className).toContain('editor-diff-remove');
+  });
+});
+
+describe('EditorLine suggestion pill', () => {
+  const pill: SuggestPill = { text: '[run]', runnable: true };
+
+  it('adds editor-suggest-pill-focused when pillFocused is set', () => {
+    const { container } = render(
+      <EditorLine text="> summarizer go" line={0} gutterCh={2} isCurrent selFrom={-1} selTo={-1} caretCol={-1} caretRef={null} tokens={[]} pill={pill} pillFocused />,
+    );
+    expect(container.querySelector('.editor-suggest-pill')?.className).toContain('editor-suggest-pill-focused');
+  });
+
+  it('omits editor-suggest-pill-focused when pillFocused is not set', () => {
+    const { container } = render(
+      <EditorLine text="> summarizer go" line={0} gutterCh={2} isCurrent selFrom={-1} selTo={-1} caretCol={-1} caretRef={null} tokens={[]} pill={pill} />,
+    );
+    expect(container.querySelector('.editor-suggest-pill')?.className).not.toContain('editor-suggest-pill-focused');
   });
 });
 

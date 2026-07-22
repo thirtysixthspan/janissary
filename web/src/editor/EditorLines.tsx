@@ -34,6 +34,7 @@ export function EditorLines({ state, tokens, suggest, active, gutterCh, caretRef
       pending?.requestLineText ?? null,
       suggest.noSuggestionLine,
     );
+    const pillFocused = onCursorLine && suggest.focusedPillLine === index;
     return (
       <EditorLine
         key={index}
@@ -47,6 +48,7 @@ export function EditorLines({ state, tokens, suggest, active, gutterCh, caretRef
         caretRef={onCursorLine ? caretRef : null}
         tokens={tokens[index] ?? []}
         pill={pill}
+        pillFocused={pillFocused}
         removed={removed}
       />
     );
