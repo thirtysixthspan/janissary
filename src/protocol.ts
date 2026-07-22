@@ -8,6 +8,11 @@ export type { BufferLine, ImageView, PageView, HarnessView, MarkdownView, Editor
 
 // One row in the floating "connections" panel (shell / acp / terminal card / sqlite).
 export type ConnectionView = { text: string; kind: 'shell' | 'acp' | 'browser' | 'terminal' | 'sqlite' | 'ssh' };
+
+// One proposed edit from an in-editor persona-suggestion query (see editorSuggest below): the
+// exact existing text to replace (empty means append at the end of the file) and its replacement
+// (empty means delete the anchor text with nothing).
+export type SuggestHunk = { anchor: string; replacement: string };
 // One row in the floating "schedule" panel.
 export type ScheduleView = { id: string; spec: string; next: string; recurring: boolean };
 // One row in the aggregated "schedules" tab: a ScheduleView plus its owning tab label and the
@@ -237,6 +242,15 @@ export type RpcCall =
   // overlay. Replies (deferred) with `{ root, paths }` — `root` is the absolute launch directory,
   // `paths` are its root-relative paths — so the client can join them into an absolute path for
   // the `edit` command regardless of the active tab's own cwd.
-  | { method: 'projectFiles'; params?: Record<string, never> };
+  | { method: 'projectFiles'; params?: Record<string, never> }
+  // List the persona names available to an editor tab's `>`-led suggestion requests, for
+  // Tab-completion after `>` (see product/specs/editor-tab.md). Replies (deferred) with `{ names }`.
+  | { method: 'editorPersonas'; params?: Record<string, never> }
+  // Fire a single-shot in-editor persona-suggestion query: prime the named persona with the
+  // editor's live buffer content (including unsaved edits) and the request prompt, and reply
+  // (deferred) with `{ hunks }` — the parsed edit hunks the persona proposed (empty when the
+  // persona is unknown, the query fails, or it has nothing to suggest; a notification is posted
+  // in each of those cases). `url` identifies the owning editor tab the same way saveFile's does.
+  | { method: 'editorSuggest'; params: { url: string; persona: string; content: string; prompt: string } };
 
 export type ClientMessage = { t: 'rpc'; id: number } & RpcCall;

@@ -196,3 +196,46 @@ view back to the caret — only an actual cursor movement while the tab is activ
 Clicking a `path:line` link in the transcript (see Transcript) opens the editor with the cursor
 already on the target line, scrolled to the middle of the tab so the surrounding context is visible
 on first open. Subsequent cursor movement in that tab follows the normal into-view scrolling above.
+
+### In-editor persona suggestions
+
+An editor tab can ask an AI persona for a change to the text it is editing and apply the answer
+inline, without leaving the buffer and without opening a monitor reporting tab (see [[monitoring]]
+for that separate, batched flow — both read the same live buffer, but this one is a single-shot
+request fired directly from the editor).
+
+A request is written as an ordinary buffer line whose first non-whitespace character is `>`,
+immediately followed by the name of an available persona and then the request text, for example
+`> summarizer rewrite this paragraph in one sentence`. While the caret sits in the persona-name
+word right after `>`, pressing Tab completes it against the available persona names — this is the
+only place the editor completes anything; it does not add general word-completion elsewhere in the
+buffer.
+
+Pressing Ctrl+Enter (Cmd+Enter on macOS) while the caret is on a valid `> <persona> <prompt>` line
+sends the request; a plain Enter always just inserts a newline, so an ordinary Markdown blockquote
+line that happens to start with `>` is never mistaken for a request, and Ctrl/Cmd+Enter on a line
+that isn't a valid request does nothing. The named persona is asked once, primed with the editor's
+current buffer content exactly as it stands at that moment — including any unsaved edits — plus the
+request text.
+
+The persona may propose one or more edits anywhere in the file, not only at the request line's own
+location. Each proposed change appears as a pending suggestion titled "(A)ccept or (D)ecline this
+change?", one at a time: pressing `a` applies the focused change and `d` dismisses it, after which
+the next pending change (if any) takes focus. While any change is pending, only `a` and `d` do
+anything — every other keystroke is suppressed rather than reaching the buffer, so editing is
+blocked until the whole set is resolved. Switching to another tab and back leaves a pending
+suggestion exactly as it was.
+
+Only one request may be in flight (or awaiting resolution) per editor tab at a time; firing another
+request while a suggestion is still pending is ignored until the current one is fully resolved.
+
+Once every proposed change has been accepted or declined, the original `>` request line is removed
+from the buffer only if at least one change was accepted. If every change was declined, or the
+persona had nothing to propose, the request line is left in place so it can be edited and retried.
+
+If the named persona doesn't exist, the request fails, or the persona's reply proposes no change at
+all, a notification appears in the notifications tab naming the persona and the outcome, and the
+buffer and request line are left untouched.
+
+Nothing about an in-editor suggestion is saved or restored — like the rest of an editor tab's state,
+it exists only in memory for as long as the tab is open.

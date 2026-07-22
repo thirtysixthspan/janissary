@@ -14,7 +14,11 @@ function makeClient(saveError?: string) {
   // The editor debounces a draft sync ~500ms after an edit; under load that timer can fire before
   // the test unmounts, so the mock must implement editorSync or the fire-and-forget call throws.
   const editorSync = vi.fn();
-  return { client: { saveFile, editorSync } as unknown as JanusClient, saveFile };
+  // useEditorSuggest fetches the persona list on mount and fires editorSuggest queries via the
+  // same generic request(); default to no personas and no hunks so the suggestion surface is
+  // inert unless a test opts in.
+  const request = vi.fn().mockResolvedValue({ names: [], hunks: [] });
+  return { client: { saveFile, editorSync, request } as unknown as JanusClient, saveFile, request };
 }
 
 async function renderLoaded(client: JanusClient, view = makeView()) {
@@ -434,5 +438,89 @@ describe('EditorTab', () => {
     expect(saveFile).not.toHaveBeenCalled();
     expect(hasDirtyDot(container)).toBe(true);
     expect(screen.queryByText('This file changed on disk. Overwrite it with your changes?')).not.toBeInTheDocument();
+  });
+
+  describe('in-editor persona suggestions', () => {
+    function stubRequestFileContent(content: string) {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, text: () => Promise.resolve(content) } as unknown as Response));
+    }
+
+    it('fires an editorSuggest query on Ctrl/Cmd+Enter and shows the pending panel', async () => {
+      const { client, request } = makeClient();
+      request.mockReset();
+      request.mockResolvedValueOnce({ names: ['summarizer'] });
+      request.mockResolvedValueOnce({ hunks: [{ anchor: 'line one', replacement: 'LINE ONE' }] });
+      stubRequestFileContent('line one\n> summarizer rewrite this');
+      await renderLoaded(client, makeView({ line: 2 }));
+
+      fireEvent.keyDown(textarea(), { key: 'Enter', metaKey: true });
+
+      expect(request).toHaveBeenCalledWith({
+        method: 'editorSuggest',
+        params: { url: '/open/1', persona: 'summarizer', content: 'line one\n> summarizer rewrite this', prompt: 'rewrite this' },
+      });
+      await waitFor(() => expect(screen.getByText('(A)ccept or (D)ecline this change?')).toBeInTheDocument());
+    });
+
+    it('does not fire on a plain Enter', async () => {
+      const { client, request } = makeClient();
+      request.mockReset();
+      request.mockResolvedValueOnce({ names: ['summarizer'] });
+      stubRequestFileContent('line one\n> summarizer rewrite this');
+      await renderLoaded(client, makeView({ line: 2 }));
+
+      fireEvent.keyDown(textarea(), { key: 'Enter' });
+
+      expect(request).toHaveBeenCalledTimes(1); // only the persona-list fetch
+    });
+
+    it('accepts the focused hunk with "a", updates the buffer, and removes the request line', async () => {
+      const { client, request } = makeClient();
+      request.mockReset();
+      request.mockResolvedValueOnce({ names: ['summarizer'] });
+      request.mockResolvedValueOnce({ hunks: [{ anchor: 'line one', replacement: 'LINE ONE' }] });
+      stubRequestFileContent('line one\n> summarizer rewrite this');
+      const { container } = await renderLoaded(client, makeView({ line: 2 }));
+      fireEvent.keyDown(textarea(), { key: 'Enter', metaKey: true });
+      await waitFor(() => expect(screen.getByText('(A)ccept or (D)ecline this change?')).toBeInTheDocument());
+
+      fireEvent.keyDown(textarea(), { key: 'a' });
+
+      await waitFor(() => expect(screen.queryByText('(A)ccept or (D)ecline this change?')).not.toBeInTheDocument());
+      expect(container.querySelector('.editor-content')?.textContent).toBe('LINE ONE');
+    });
+
+    it('declines every hunk with "d", leaving the buffer and request line unchanged', async () => {
+      const { client, request } = makeClient();
+      request.mockReset();
+      request.mockResolvedValueOnce({ names: ['summarizer'] });
+      request.mockResolvedValueOnce({ hunks: [{ anchor: 'line one', replacement: 'LINE ONE' }] });
+      stubRequestFileContent('line one\n> summarizer rewrite this');
+      await renderLoaded(client, makeView({ line: 2 }));
+      fireEvent.keyDown(textarea(), { key: 'Enter', metaKey: true });
+      await waitFor(() => expect(screen.getByText('(A)ccept or (D)ecline this change?')).toBeInTheDocument());
+
+      fireEvent.keyDown(textarea(), { key: 'd' });
+
+      await waitFor(() => expect(screen.queryByText('(A)ccept or (D)ecline this change?')).not.toBeInTheDocument());
+      expect(screen.getByText('> summarizer rewrite this')).toBeInTheDocument();
+    });
+
+    it('does not resolve or advance the pending suggestion for keys other than a/d', async () => {
+      const { client, request } = makeClient();
+      request.mockReset();
+      request.mockResolvedValueOnce({ names: ['summarizer'] });
+      request.mockResolvedValueOnce({ hunks: [{ anchor: 'line one', replacement: 'LINE ONE' }] });
+      stubRequestFileContent('line one\n> summarizer rewrite this');
+      await renderLoaded(client, makeView({ line: 2 }));
+      fireEvent.keyDown(textarea(), { key: 'Enter', metaKey: true });
+      await waitFor(() => expect(screen.getByText('(A)ccept or (D)ecline this change?')).toBeInTheDocument());
+
+      fireEvent.keyDown(textarea(), { key: 'ArrowRight' });
+      fireEvent.keyDown(textarea(), { key: 'z' });
+
+      expect(screen.getByText('(A)ccept or (D)ecline this change?')).toBeInTheDocument();
+      expect(screen.getByText('> summarizer rewrite this')).toBeInTheDocument();
+    });
   });
 });
