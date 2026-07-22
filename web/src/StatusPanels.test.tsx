@@ -99,4 +99,22 @@ describe('StatusPanels', () => {
     fireEvent.mouseLeave(panel!);
     expect(onLeave).toHaveBeenCalledTimes(1);
   });
+
+  it('renders a close control on a row when onCloseRow is supplied and calls it with that row', () => {
+    const onCloseRow = vi.fn();
+    const tab = makeTab({ connections: [{ text: 'reviewer (acp)', kind: 'acp' }] });
+    const { container } = render(
+      <StatusPanels tab={tab} connections={windowState()} schedule={windowState()} onCloseRow={onCloseRow} />,
+    );
+    const close = container.querySelector('.panel-row-close');
+    expect(close).toBeInTheDocument();
+    fireEvent.click(close!);
+    expect(onCloseRow).toHaveBeenCalledWith({ text: 'reviewer (acp)', kind: 'acp' }, 0);
+  });
+
+  it('renders no close control when onCloseRow is omitted', () => {
+    const tab = makeTab({ connections: [{ text: 'ssh:devbox', kind: 'ssh' }] });
+    const { container } = render(<StatusPanels tab={tab} connections={windowState()} schedule={windowState()} />);
+    expect(container.querySelector('.panel-row-close')).not.toBeInTheDocument();
+  });
 });

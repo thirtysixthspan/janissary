@@ -251,6 +251,10 @@ export type RpcCall =
   // (deferred) with `{ hunks }` — the parsed edit hunks the persona proposed (empty when the
   // persona is unknown, the query fails, or it has nothing to suggest; a notification is posted
   // in each of those cases). `url` identifies the owning editor tab the same way saveFile's does.
-  | { method: 'editorSuggest'; params: { url: string; persona: string; content: string; prompt: string } };
+  | { method: 'editorSuggest'; params: { url: string; persona: string; content: string; prompt: string } }
+  // Close one of an editor tab's open persona ACP connections (the connections window's close
+  // control). Fire-and-forget: the row disappears via the next `state` broadcast, so no reply
+  // payload is needed. `url` identifies the owning editor tab the same way saveFile's does.
+  | { method: 'closeEditorConnection'; params: { url: string; persona: string } };
 
 export type ClientMessage = { t: 'rpc'; id: number } & RpcCall;

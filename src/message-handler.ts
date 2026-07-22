@@ -6,7 +6,8 @@ import { projectFilesFor } from './project-files.js';
 import { handleFileTreeMessage } from './message-handler-file-tree.js';
 import { setClientLayout } from './client-layout.js';
 import { listPersonas } from './personas.js';
-import { editorSuggest } from './editor-suggest/handler.js';
+import { editorSuggest, ownerLabel } from './editor-suggest/handler.js';
+import { closeConnection } from './connection/close.js';
 
 export function handle(controller: Controller, message: ClientMessage, reply: (event: ServerEvent) => void): void {
   switch (message.method) {
@@ -122,6 +123,14 @@ export function handle(controller: Controller, message: ClientMessage, reply: (e
       editorSuggest(controller.managers, message.params, (result) => {
         reply({ t: 'rpc-reply', id: message.id, result });
       });
+      return;
+    }
+    // Fire-and-forget: the connections window relies on the next `state` broadcast to drop the
+    // closed row, not on this reply, so `out` is a no-op (an editor tab has no transcript).
+    case 'closeEditorConnection': {
+      const label = ownerLabel(controller.managers, message.params.url);
+      closeConnection('acp', message.params.persona, controller.managers, label, () => { /* no-op */ });
+      reply({ t: 'rpc-reply', id: message.id, result: 'ok' });
       return;
     }
   }

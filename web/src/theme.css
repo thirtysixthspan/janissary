@@ -317,6 +317,12 @@ html, body, #root {
 .panel-row.conn-sqlite { color: var(--fg); }
 .panel-row.conn-ssh { color: var(--accent); }
 .panel-row.recurring { color: var(--accent); }
+/* Close control on a closable connection row (editor tabs' persona connections). */
+.panel-row-close {
+  margin-left: 6px; padding: 0 2px; border: none; background: none; cursor: pointer;
+  color: var(--muted); font-size: 12px; line-height: 1;
+}
+.panel-row-close:hover { color: var(--fg); }
 .line { white-space: pre-wrap; overflow-wrap: break-word; line-height: 1.4; }
 .line.prompt { color: var(--accent); }
 .line.prompt .cwd { color: var(--faint); margin-right: 6px; }

@@ -20,7 +20,8 @@ export function closeConnection(
     break;
   }
   case 'acp': {
-    if (managers.acp.close(label)) { messageBus.emit('state', { type: 'dirty' }); out('Closed connection acp:opencode.'); }
+    if (managers.editorAcp.close(label, id)) { messageBus.emit('state', { type: 'dirty' }); out(`Closed connection acp:${id}.`); }
+    else if (managers.acp.close(label)) { messageBus.emit('state', { type: 'dirty' }); out('Closed connection acp:opencode.'); }
     else out('No open connection acp:opencode.');
     break;
   }

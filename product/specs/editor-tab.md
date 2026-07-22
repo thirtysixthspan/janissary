@@ -217,9 +217,17 @@ returns to ordinary editing.
 Pressing Ctrl+Enter (Cmd+Enter on macOS) while the caret is on a valid `> <persona> <prompt>` line
 sends the request; a plain Enter always just inserts a newline, so an ordinary Markdown blockquote
 line that happens to start with `>` is never mistaken for a request, and Ctrl/Cmd+Enter on a line
-that isn't a valid request does nothing. The named persona is asked once, primed with the editor's
-current buffer content exactly as it stands at that moment — including any unsaved edits — plus the
-request text.
+that isn't a valid request does nothing. The named persona is primed with the editor's current
+buffer content exactly as it stands at that moment — including any unsaved edits — plus the request
+text.
+
+The first request to a given persona in an editor tab opens a connection to that persona, which
+stays open for the rest of that tab's life; every later request to the same persona in that same
+tab reuses the same connection rather than starting a fresh one, and the persona's replies can draw
+on what it said earlier in the tab, the same as a multi-turn conversation. A request to a different
+persona in the same tab opens its own separate connection alongside it. These connections appear in
+the tab's connections window (see [[connection]]) and are closed automatically when the editor tab
+itself is closed, or manually from the connections window at any point.
 
 The persona may propose one or more edits anywhere in the file, not only at the request line's own
 location. Every proposed change previews inline at once, directly in the buffer at the position it

@@ -2,7 +2,6 @@ import { randomUUID } from 'node:crypto';
 import type { Managers } from '../managers.js';
 import type { SuggestHunk } from '../protocol.js';
 import { loadPersona, listPersonas } from '../personas.js';
-import { spawnMonitorSession } from '../monitor/acp.js';
 import { notify } from '../notifications.js';
 import { HUNK_FORMAT, parseHunks } from './reply-format.js';
 
@@ -12,21 +11,22 @@ export type EditorSuggestResult = { hunks: SuggestHunk[] };
 // The owning editor tab's label, for cwd resolution and notification attribution — resolved from
 // `url` the same way saveFile/syncEditorBuffer match their tab, falling back to the active tab
 // when the editor tab has already closed mid-query.
-function ownerLabel(managers: Managers, url: string): string {
+export function ownerLabel(managers: Managers, url: string): string {
   return managers.tab.tabs.find((t) => t.editor?.url === url)?.label ?? managers.tab.cur().label;
 }
 
-// Fire a single-shot editor-suggestion query (the `editorSuggest` RPC): validate the persona,
-// spawn a fresh one-prompt ACP session via the same path monitors use, prime it with the persona
-// body, the hunk-reply format, and the live buffer content, await its one reply, tear the session
-// down, and hand the parsed hunks back through `callback`. An unknown persona, a spawn/prompt
-// error, or a reply proposing nothing each post a notification (Decision 10) and resolve with no
-// hunks. `spawn` is injectable for tests, mirroring monitor/session.ts's seam.
+// Fire an in-editor persona-suggestion query (the `editorSuggest` RPC): validate the persona, get
+// or open the tab's persistent, multi-turn ACP session for that persona (reused across every later
+// request to the same persona in the same tab — see
+// product/plans/ready/editor-tab-persona-connections.md), prime it with the persona body, the
+// hunk-reply format, and the live buffer content, await its reply, and hand the parsed hunks back
+// through `callback`. An unknown persona, a connect/prompt error, or a reply proposing nothing each
+// post a notification (Decision 10) and resolve with no hunks; the session itself is never killed
+// on error — only an explicit close (`connection close acp:<persona>`) or the tab closing does.
 export function editorSuggest(
   managers: Managers,
   params: EditorSuggestParams,
   callback: (result: EditorSuggestResult) => void,
-  spawn: typeof spawnMonitorSession = spawnMonitorSession,
 ): void {
   const label = ownerLabel(managers, params.url);
   const match = listPersonas().find((name) => name.toLowerCase() === params.persona.toLowerCase());
@@ -47,7 +47,7 @@ export function editorSuggest(
     callback({ hunks });
   };
 
-  const session = spawn(persona, cwd, { onError: (message) => finish([], message) });
+  const session = managers.editorAcp.session(label, persona, cwd, { onError: (message) => finish([], message) });
   const delimiter = `janus-editor-suggest-${randomUUID()}`;
   const primingText = [
     persona.body,
@@ -60,7 +60,7 @@ export function editorSuggest(
   let reply = '';
   session.prompt(`${primingText}\n\nRequest: ${params.prompt}`, {
     onChunk: (text) => { reply += text; },
-    onEnd: () => { session.kill(); finish(parseHunks(reply)); },
-    onError: (message) => { session.kill(); finish([], message); },
+    onEnd: () => { finish(parseHunks(reply)); },
+    onError: (message) => { finish([], message); },
   });
 }

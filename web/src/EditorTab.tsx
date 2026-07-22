@@ -1,5 +1,5 @@
 import React, { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
-import type { EditorView } from '@shared/protocol';
+import type { EditorView, TabView } from '@shared/protocol';
 import type { JanusClient } from './ws';
 import { toText } from './editor/model';
 import { actionForKey } from './editor/keys';
@@ -9,6 +9,8 @@ import { useEditorMouse } from './editor/useEditorMouse';
 import { useSyntaxHighlight } from './editor/useSyntaxHighlight';
 import { useEditorSync } from './editor/useEditorSync';
 import { useEditorSuggest } from './editor/useEditorSuggest';
+import { useEditorConnections } from './editor/useEditorConnections';
+import { EditorConnectionsPanel } from './editor/EditorConnectionsPanel';
 import { handleSuggestKeyDown } from './editor/handleSuggestKeyDown';
 import { handleSuggestPillClick } from './editor/handleSuggestPillClick';
 import { EditorLines } from './editor/EditorLines';
@@ -20,7 +22,7 @@ export type EditorTabHandle = { isDirty(): boolean; save(): Promise<void>; focus
 
 // The plain-text editor tab. Mounted persistently by App (like harness tabs) so the buffer, undo
 // stacks, cursor, and scroll position survive tab switches; `active` gates focus and the caret.
-export const EditorTab = forwardRef<EditorTabHandle, { editor: EditorView; client: JanusClient; active: boolean }>(function EditorTab({ editor, client, active }, ref) {
+export const EditorTab = forwardRef<EditorTabHandle, { editor: EditorView; tab: TabView; client: JanusClient; active: boolean }>(function EditorTab({ editor, tab, client, active }, ref) {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [lastSaved, setLastSaved] = useState<string | null>(null);
@@ -39,7 +41,7 @@ export const EditorTab = forwardRef<EditorTabHandle, { editor: EditorView; clien
   const mouse = useEditorMouse(api, bodyRef, () => textareaRef.current?.focus());
   const tokens = useSyntaxHighlight(state, editor.name);
   useEditorSync(state, editor.url, client);
-  const suggest = useEditorSuggest(client, editor.url, api.setState);
+  const suggest = useEditorSuggest(client, editor.url, api.setState), connections = useEditorConnections(client, tab);
 
   const writeToDisk = async (text: string) => {
     setSaveError(null);
@@ -191,6 +193,7 @@ export const EditorTab = forwardRef<EditorTabHandle, { editor: EditorView; clien
         {(saveError ?? loadError) && <span className="editor-error">{saveError ?? loadError}</span>}
         <EditorSaveButton dirty={dirty} onSave={() => { void save(); }} />
       </div>
+      <EditorConnectionsPanel tab={tab} api={connections} />
       <PendingSuggestPanel pending={suggest.pending} />
       <div
         className="editor-body"
