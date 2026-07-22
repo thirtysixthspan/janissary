@@ -24,6 +24,7 @@ export {
   faRotateRight as pageReloadIcon,
   faPlug as connectionsWindowIcon,
   faClock as scheduleWindowIcon,
+  faTrash as clearSchedulesIcon,
   faFloppyDisk as saveIcon,
 } from '@fortawesome/free-solid-svg-icons';
 export { faFlag as unreadIcon, faClipboard as viewCaptureIcon } from '@fortawesome/free-regular-svg-icons';

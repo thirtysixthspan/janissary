@@ -724,6 +724,11 @@ html, body, #root {
   padding: 0 4px; line-height: 1;
 }
 .schedules-dock-cycle:hover { color: var(--fg); }
+.schedules-clear, .schedules-clear:disabled {
+  background: transparent; border: none; color: var(--muted); cursor: pointer; font-size: 13px;
+  padding: 0 4px; line-height: 1;
+}
+.schedules-clear:disabled { color: var(--faint); cursor: default; }
 .schedules-headings, .schedules-row {
   display: grid; grid-template-columns: 2em 1fr 1fr 1fr 1fr 2fr;
   gap: 12px; align-items: baseline; width: 100%; text-align: left;

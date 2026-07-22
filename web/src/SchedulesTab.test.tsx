@@ -57,6 +57,16 @@ describe('SchedulesTab', () => {
     expect(screen.getByText('No scheduled commands.')).toBeTruthy();
   });
 
+  it('disables clear when empty and clears all schedules when clicked', () => {
+    const send = vi.fn();
+    const client = { send } as unknown as JanusClient;
+    const { rerender } = render(<SchedulesTab entries={[]} tabs={[]} client={client} index={0} />);
+    expect(screen.getByRole('button', { name: 'Clear all schedules' })).toBeDisabled();
+    rerender(<SchedulesTab entries={entries} tabs={[]} client={client} index={0} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Clear all schedules' }));
+    expect(send).toHaveBeenCalledWith({ method: 'clearSchedules', params: {} });
+  });
+
   it('a single click selects a row without sending setActiveTab', () => {
     const send = vi.fn();
     const client = { send } as unknown as JanusClient;
