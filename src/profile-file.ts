@@ -15,14 +15,14 @@ import type {
 // Map an on-disk agent element to the flat runtime `AgentState`: `tab.*` → the flat tab fields.
 function mapAgent(file: ProfileAgentFile): AgentState {
   const { tab, ...rest } = file;
-  return { ...rest, dotColor: tab?.color ?? '', number: tab?.number, group: tab?.group, groupColor: tab?.groupColor };
+  return { ...rest, dotColor: tab?.color ?? '', number: tab?.number, focus: tab?.focus, group: tab?.group, groupColor: tab?.groupColor };
 }
 
 // Map an on-disk harness element to the flat runtime `ProfileHarnessEntry` (which keeps `type`,
 // `name`, and the flat tab fields).
 function mapHarness(file: ProfileHarnessFile): ProfileHarnessEntry {
   const { tab, ...rest } = file;
-  return { ...rest, dotColor: tab?.color, number: tab?.number, group: tab?.group };
+  return { ...rest, dotColor: tab?.color, number: tab?.number, focus: tab?.focus, group: tab?.group };
 }
 
 // An on-disk monitor's `name` defaults to its persona when omitted (Decision 13).
@@ -66,6 +66,7 @@ export function loadProfile(name: string): LoadedProfile | { error: string } {
     entries: mapEntries(file),
     monitors: (file.monitors ?? []).map((monitor) => mapMonitor(monitor)),
     files: file.files ?? [],
+    editors: file.editors ?? [],
     notifications: file.notifications ?? [],
     schedules: file.schedules ?? [],
     layout: file.layout ? mapLayout(file.layout) : null,

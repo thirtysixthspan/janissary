@@ -15,7 +15,7 @@ export function writeAgentEntry(tab: Tab, managers: Managers): ProfileAgentFile 
     name: tab.label,
     active: false,
     cwd: cwd ? abbreviatePath(cwd, { root: managers.tab.launchDir }) : cwd,
-    tab: { color: tab.dotColor, number: tab.number, group: tab.group, groupColor: tab.groupColor },
+    tab: { color: tab.dotColor, number: tab.number, focus: tab === managers.tab.tabs[managers.tab.activeTab] || undefined, group: tab.group, groupColor: tab.groupColor },
   };
 }
 
@@ -32,6 +32,6 @@ export function writeHarnessEntry(tab: Tab, managers: Managers): ProfileHarnessF
     offline: tab.offline,
     autoApprove: tab.autoApprove,
     cwd: cwd ? abbreviatePath(cwd, { root: managers.tab.launchDir }) : cwd,
-    tab: { color: tab.dotColor, number: tab.number, group: tab.group },
+    tab: { color: tab.dotColor, number: tab.number, focus: tab === managers.tab.tabs[managers.tab.activeTab] || undefined, group: tab.group },
   };
 }

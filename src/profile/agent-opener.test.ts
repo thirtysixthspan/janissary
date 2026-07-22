@@ -4,11 +4,12 @@ import { makeTab } from '../tab/index.js';
 import type { Managers } from '../managers.js';
 import type { AgentState, LoadedProfile, ProfileEntry, ProfileHarnessEntry, Tab } from '../types.js';
 
-function makeManagers(tabs: Tab[]): { managers: Managers; harnessOpen: ReturnType<typeof vi.fn>; fileTreeOpen: ReturnType<typeof vi.fn> } {
+function makeManagers(tabs: Tab[]): { managers: Managers; harnessOpen: ReturnType<typeof vi.fn>; fileTreeOpen: ReturnType<typeof vi.fn>; edit: ReturnType<typeof vi.fn> } {
   const harnessOpen = vi.fn((_entry: ProfileHarnessEntry, label: string, group: number, groupColor: string): string | undefined => {
     tabs = [...tabs, makeTab(label, 'blue', tabs.length + 1, [], [], undefined, group, groupColor)];
   });
   const fileTreeOpen = vi.fn();
+  const edit = vi.fn();
   const managers = {
     tab: {
       get tabs() { return tabs; },
@@ -21,19 +22,46 @@ function makeManagers(tabs: Tab[]): { managers: Managers; harnessOpen: ReturnTyp
       buildAgentState: vi.fn(() => ({ name: 'x', dotColor: 'red', active: true })),
       cwdOf: () => '/cwd',
       setActiveTab: vi.fn(),
+      activeTab: 0,
       launchDir: '/proj',
     },
     harness: { openFromProfile: harnessOpen },
     schedule: { set: vi.fn() },
     monitor: { stop: vi.fn(() => true), start: vi.fn(() => null) },
     fileTree: { open: fileTreeOpen },
+    openFile: { edit },
   } as unknown as Managers;
-  return { managers, harnessOpen, fileTreeOpen };
+  return { managers, harnessOpen, fileTreeOpen, edit };
 }
 
 function loaded(entries: ProfileEntry[], extra: Partial<LoadedProfile> = {}): LoadedProfile {
-  return { entries, monitors: [], files: [], notifications: [], schedules: [], layout: null, ...extra };
+  return { entries, monitors: [], files: [], editors: [], notifications: [], schedules: [], layout: null, ...extra };
 }
+
+describe('openProfileEntries — editor tabs and focus', () => {
+  it('opens editors after entries and activates the lowest-numbered focused entry', () => {
+    const janus = makeTab('janus', 'red', 1, [], [], undefined, 1, 'red');
+    const { managers, harnessOpen, edit } = makeManagers([janus]);
+    const first: ProfileHarnessEntry = { name: 'first', type: 'claude', number: 2, focus: true };
+    const second: ProfileHarnessEntry = { name: 'second', type: 'claude', number: 1, focus: true };
+
+    openProfileEntries(loaded([first, second], { editors: [{ path: '$root/notes.md' }] }), managers, 'demo', 'janus', () => {});
+
+    expect(harnessOpen).toHaveBeenCalledBefore(edit);
+    expect(edit).toHaveBeenCalledWith('edit $root/notes.md', '$root/notes.md', 'first', undefined);
+    expect(managers.tab.setActiveTab).toHaveBeenLastCalledWith(2);
+  });
+
+  it('keeps the first newly opened tab active when nothing declares focus', () => {
+    const janus = makeTab('janus', 'red', 1, [], [], undefined, 1, 'red');
+    const { managers } = makeManagers([janus]);
+    const entry: ProfileHarnessEntry = { name: 'first', type: 'claude' };
+
+    openProfileEntries(loaded([entry]), managers, 'demo', 'janus', () => {});
+
+    expect(managers.tab.setActiveTab).toHaveBeenLastCalledWith(1);
+  });
+});
 
 describe('openProfileEntries — group authoring', () => {
   it('uses the next free group when no entry authors one', () => {

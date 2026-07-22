@@ -25,6 +25,9 @@
   "files": [
     { "dock": "left", "path": "$root" }
   ],
+  "editors": [
+    { "path": "$root/product/backlog/features.md" }
+  ],
   "notifications": [
     { "dock": "right", "focus": true }
   ],

@@ -82,6 +82,20 @@ describe('saveProfile', () => {
     }]);
   });
 
+  it('writes focus only on the active main-area tab', async () => {
+    const bob = makeTab('bob', '#aaa');
+    const claude = makeHarnessTab('claude', '#ccc', 1, 1, '#ccc', { name: 'claude', program: 'claude', ptyId: 'pty1', status: 'running' });
+    const managers = makeManagers([bob, claude]);
+    managers.tab.activeTab = 1;
+
+    await saveProfile('demo', managers);
+
+    expect(load('demo').entries).toEqual([
+      expect.objectContaining({ name: 'bob', focus: undefined }),
+      expect.objectContaining({ name: 'claude', focus: true }),
+    ]);
+  });
+
   it('writes an agent entry cwd relative to the project root when it is under the root', async () => {
     const managers = makeManagers([makeTab('bob', '#aaa')], { bob: '/proj/src/deep' }, [], '/proj');
 
