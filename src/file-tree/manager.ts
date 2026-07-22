@@ -238,10 +238,9 @@ export class FileTreeManager {
   }
 
   private onDirCreated(label: string, absDir: string): void {
-    const state = this.tabs.get(label);
-    if (!state) return;
-    const tab = this.managers.tab.tabs.find((t) => t.label === label);
-    if (!tab?.files) return;
+    const found = this.findOpenFilesTab(label);
+    if (!found) return;
+    const { state, tab } = found;
     tab.files = { root: absDir, absoluteRoot: absDir, rows: buildRows(absDir, state.expanded) };
     this.watchDir(label, absDir, '');
     this.refreshGit(label);
@@ -266,11 +265,20 @@ export class FileTreeManager {
   // Rebuild the visible row list (pruning expanded directories that no longer exist) and write it
   // onto the tab's payload.
   private rebuild(label: string): void {
+    const found = this.findOpenFilesTab(label);
+    if (!found) return;
+    const { state, tab } = found;
+    tab.files = { root: state.root, absoluteRoot: state.root, rows: pruneAndBuildRows(state), branch: state.branch };
+    messageBus.emit('state', { type: 'dirty' });
+  }
+
+  // Looks up a tab's file-tree state and its open `files` payload together — both `onDirCreated`
+  // and `rebuild` bail out the same way if either is missing.
+  private findOpenFilesTab(label: string) {
     const state = this.tabs.get(label);
     if (!state) return;
     const tab = this.managers.tab.tabs.find((t) => t.label === label);
     if (!tab?.files) return;
-    tab.files = { root: state.root, absoluteRoot: state.root, rows: pruneAndBuildRows(state), branch: state.branch };
-    messageBus.emit('state', { type: 'dirty' });
+    return { state, tab };
   }
 }
