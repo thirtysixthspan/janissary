@@ -46,7 +46,7 @@ export function FileTreeTab({ files, client, index, dock, autoFocus = true, drop
   const containerRef = useRef<HTMLDivElement>(null);
   const typeahead = useRef<{ buffer: string; timer?: ReturnType<typeof setTimeout> }>({ buffer: '' });
   const drag = useFileTreeDrag(files.rows, client, index, dropRef);
-  const rename = useFileTreeRename(files.rows, client, index, setSelected);
+  const rename = useFileTreeRename(files.rows, client, index, setSelected, () => containerRef.current?.focus());
   const search = useFileTreeSearch(client, index, files.rows, setSelected, () => containerRef.current?.focus());
 
   useEffect(() => { if (autoFocus) containerRef.current?.focus(); }, [autoFocus]);

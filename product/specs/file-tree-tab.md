@@ -245,6 +245,9 @@ If the renamed file is already open in an editor tab, that tab updates to the ne
 automatically — its unsaved content, dirty state, cursor, and undo history are preserved exactly as
 when the same file is renamed from the editor tab's own label (see `editor-tab.md`).
 
+After a successful rename, the renamed row remains selected and keyboard focus returns to the file
+tree.
+
 ### Keyboard interactions
 
 A focused file tree tab captures its own keys, following the ARIA treeview pattern (see
