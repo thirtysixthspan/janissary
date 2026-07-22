@@ -8,7 +8,9 @@ type Properties = TabItemActions & {
   windowFocused?: boolean;
 };
 
-export function TabStrip({ tabs, activeTab, onSelect, onClose, onRename, tabNameMaxLength, onFocusCommandBar, windowFocused }: Properties) {
+export function TabStrip({
+  tabs, activeTab, onSelect, onClose, onRename, tabNameMaxLength, activeTabNameMaxLength = 50, onFocusCommandBar, windowFocused,
+}: Properties) {
   return (
     <div className="tabstrip" data-doc-shot="tab-strip">
       {tabs.map((tab, index) => (
@@ -21,6 +23,7 @@ export function TabStrip({ tabs, activeTab, onSelect, onClose, onRename, tabName
           onClose={onClose}
           onRename={onRename}
           tabNameMaxLength={tabNameMaxLength}
+          activeTabNameMaxLength={activeTabNameMaxLength}
           onFocusCommandBar={onFocusCommandBar}
           windowFocused={windowFocused}
         />

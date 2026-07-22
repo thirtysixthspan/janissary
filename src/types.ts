@@ -588,6 +588,7 @@ export type NotificationConfig = {
 export type Config = {
   transcriptMaxLines: number;
   tabNameMaxLength: number;
+  activeTabNameMaxLength: number;
   // Isolate workspaced tabs (`agent --workspace`, `harness --workspace`) to their workspace clone
   // via a Seatbelt sandbox (macOS only). Default true; the escape hatch for when it causes trouble.
   sandboxWorkspaces: boolean;

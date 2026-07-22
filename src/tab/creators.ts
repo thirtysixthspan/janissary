@@ -4,7 +4,6 @@ import {
 } from './index.js';
 import { NOTIFICATIONS_LABEL } from '../notifications-tab.js';
 import { SCHEDULES_LABEL } from '../schedules-tab.js';
-import { getConfig } from '../config.js';
 import {
   uniqueImageLabel, uniqueMarkdownLabel, uniqueEditorLabel, uniqueFilesLabel, uniquePageNumber,
 } from './unique-labels.js';
@@ -22,13 +21,13 @@ export function addImageTab(tabs: Tab[], activeTab: number, image: ImageView): T
   const group = creator?.group ?? 1;
   const groupColor = creator?.groupColor ?? dotColor;
   const tab = makeImageTab(label, dotColor, tabs.length + 1, group, groupColor, image);
-  tab.title = image.name.slice(0, getConfig().tabNameMaxLength);
+  tab.title = image.name;
   const newTabs = insertTabInGroup(tabs, tab);
   return { tabs: newTabs, activeTab: newTabs.findIndex((t) => t.label === label) };
 }
 
 function finalizeTab(tabs: Tab[], tab: Tab, label: string, title: string): TabAndActive {
-  tab.title = title.slice(0, getConfig().tabNameMaxLength);
+  tab.title = title;
   const newTabs = insertTabInGroup(tabs, tab);
   return { tabs: newTabs, activeTab: newTabs.findIndex((t) => t.label === label) };
 }

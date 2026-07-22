@@ -11,6 +11,7 @@ type Setters = {
   setHarnessLaunch: (view: HarnessLaunchView | null) => void;
   setScheduleLaunch: (view: ScheduleLaunchView | null) => void;
   setTabNameMaxLength: (length: number) => void;
+  setActiveTabNameMaxLength: (length: number) => void;
   setGlobalHistory: (history: string[]) => void;
   setSyntaxTheme: (theme: string) => void;
   setTheme: (theme: string) => void;
@@ -21,23 +22,30 @@ type Setters = {
   routeRef: React.RefObject<RouteChooserView | null>;
 };
 
+export function useTabNameLimits() {
+  const [tabNameMaxLength, setTabNameMaxLength] = useState(16);
+  const [activeTabNameMaxLength, setActiveTabNameMaxLength] = useState(50);
+  return { tabNameMaxLength, setTabNameMaxLength, activeTabNameMaxLength, setActiveTabNameMaxLength };
+}
+
 // Subscribes App to server state snapshots, fanning each field out to its setter. Split out of
 // App.tsx to keep it under the file-size limit. Also mirrors `projectDir` into the titlebar, since
 // that field has no other consumer in `App.tsx`.
 export function useServerState(client: JanusClient, setters: Setters): void {
   const {
-    setTabs, setActiveTab, setRoute, setHarnessLaunch, setScheduleLaunch, setTabNameMaxLength, setGlobalHistory, setSyntaxTheme, setTheme, setTasks, setJanissaryTasksDir, setProfiles, setRouteIndex, routeRef,
+    setTabs, setActiveTab, setRoute, setHarnessLaunch, setScheduleLaunch, setTabNameMaxLength, setActiveTabNameMaxLength, setGlobalHistory, setSyntaxTheme, setTheme, setTasks, setJanissaryTasksDir, setProfiles, setRouteIndex, routeRef,
   } = setters;
   const [projectDir, setProjectDir] = useState('');
   const [version, setVersion] = useState('');
   useProjectTitle(projectDir, version);
-  useEffect(() => client.onState((nextTabs, active, nextRoute, nextTabNameMaxLength, nextGlobalHistory, nextSyntaxTheme, nextTheme, nextTasks, nextJanissaryTasksDir, nextProfiles, nextProjectDir, nextVersion, nextHarnessLaunch, nextScheduleLaunch) => {
+  useEffect(() => client.onState((nextTabs, active, nextRoute, nextTabNameMaxLength, nextGlobalHistory, nextSyntaxTheme, nextTheme, nextTasks, nextJanissaryTasksDir, nextProfiles, nextProjectDir, nextVersion, nextHarnessLaunch, nextScheduleLaunch, nextActiveTabNameMaxLength = 50) => {
     setTabs(nextTabs);
     setActiveTab(active);
     setRoute(nextRoute);
     setHarnessLaunch(nextHarnessLaunch);
     setScheduleLaunch(nextScheduleLaunch);
     setTabNameMaxLength(nextTabNameMaxLength);
+    setActiveTabNameMaxLength(nextActiveTabNameMaxLength);
     setGlobalHistory(nextGlobalHistory);
     setSyntaxTheme(nextSyntaxTheme);
     setTheme(nextTheme);
@@ -54,6 +62,6 @@ export function useServerState(client: JanusClient, setters: Setters): void {
       setRouteIndex(Math.max(0, nextRoute.choices.length - 1));
     }
   }), [
-    client, setTabs, setActiveTab, setRoute, setHarnessLaunch, setScheduleLaunch, setTabNameMaxLength, setGlobalHistory, setSyntaxTheme, setTheme, setTasks, setJanissaryTasksDir, setProfiles, setRouteIndex, routeRef,
+    client, setTabs, setActiveTab, setRoute, setHarnessLaunch, setScheduleLaunch, setTabNameMaxLength, setActiveTabNameMaxLength, setGlobalHistory, setSyntaxTheme, setTheme, setTasks, setJanissaryTasksDir, setProfiles, setRouteIndex, routeRef,
   ]);
 }

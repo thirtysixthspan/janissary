@@ -19,7 +19,8 @@ export const DEFAULT_WIDTH_PX = 300;
 // can drive it too — see `useLayoutState`), resized by dragging the divider on the sidebar's inner
 // edge, mirroring ReportingSection's height-drag precedent.
 export function Sidebar({
-  side, tabs, client, dropRef, tabNameMaxLength = 16, width = DEFAULT_WIDTH_PX, onWidthChange, focusView,
+  side, tabs, client, dropRef, tabNameMaxLength = 16, activeTabNameMaxLength = 50,
+  width = DEFAULT_WIDTH_PX, onWidthChange, focusView,
 }: {
   side: 'left' | 'right';
   tabs: TabView[];
@@ -28,6 +29,7 @@ export function Sidebar({
   // can find and insert into that tab's command bar. See `App.tsx`'s `dropRef`.
   dropRef?: React.RefObject<CommandInputDropHandle | null>;
   tabNameMaxLength?: number;
+  activeTabNameMaxLength?: number;
   width?: number;
   onWidthChange?: (width: number) => void;
   // A profile's `notifications` `focus` field (or any future dock entry's), delivered over
@@ -82,6 +84,7 @@ export function Sidebar({
           onClose={(i) => client.send({ method: 'closeTab', params: { index: entries[i].index } })}
           onRename={(i, title) => client.renameTab(entries[i].index, title)}
           tabNameMaxLength={tabNameMaxLength}
+          activeTabNameMaxLength={activeTabNameMaxLength}
         />
         {current.tab.view === 'files' && current.tab.files && (
           <FileTreeTab

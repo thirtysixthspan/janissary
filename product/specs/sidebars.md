@@ -57,7 +57,8 @@ above) and so cannot be closed by typing `close`, and its own metadata header ca
 button of its own (`close <label>` by label still works as a fallback).
 
 The sidebar strip behaves exactly like the central tab strip: each entry's label is fixed-width,
-hugging its own (length-capped) content rather than stretching to fill the strip, and double-clicking
+hugging its own content rather than stretching to fill the strip. The visible entry uses the focused
+tab-name limit while the other docked entries use the inactive limit. Double-clicking
 the visible entry's label opens the same inline rename control as any other tab, committing the new
 name the same way.
 

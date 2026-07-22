@@ -3,7 +3,10 @@ import { mkdirSync, writeFileSync, rmSync, existsSync, readFileSync } from 'node
 import path from 'node:path';
 import { tmpdir } from 'node:os';
 import { mkdtempSync } from 'node:fs';
-import { loadConfig, getConfig, updateConfig, DEFAULT_TRANSCRIPT_MAX_LINES, DEFAULT_TAB_NAME_MAX_LENGTH } from './config.js';
+import {
+  loadConfig, getConfig, updateConfig, DEFAULT_TRANSCRIPT_MAX_LINES,
+  DEFAULT_TAB_NAME_MAX_LENGTH, DEFAULT_ACTIVE_TAB_NAME_MAX_LENGTH,
+} from './config.js';
 import { DEFAULT_SYNTAX_THEME } from './syntax-themes.js';
 import { DEFAULT_APP_THEME } from './app-themes.js';
 
@@ -22,6 +25,7 @@ describe('loadConfig', () => {
     const config = loadConfig(tmpDir);
     expect(config.transcriptMaxLines).toBe(DEFAULT_TRANSCRIPT_MAX_LINES);
     expect(config.tabNameMaxLength).toBe(DEFAULT_TAB_NAME_MAX_LENGTH);
+    expect(config.activeTabNameMaxLength).toBe(DEFAULT_ACTIVE_TAB_NAME_MAX_LENGTH);
     expect(config.syntaxTheme).toBe(DEFAULT_SYNTAX_THEME);
     expect(config.theme).toBe(DEFAULT_APP_THEME);
 
@@ -30,17 +34,19 @@ describe('loadConfig', () => {
     const parsed = JSON.parse(readFileSync(configPath, 'utf8'));
     expect(parsed.transcriptMaxLines).toBe(DEFAULT_TRANSCRIPT_MAX_LINES);
     expect(parsed.tabNameMaxLength).toBe(DEFAULT_TAB_NAME_MAX_LENGTH);
+    expect(parsed.activeTabNameMaxLength).toBe(DEFAULT_ACTIVE_TAB_NAME_MAX_LENGTH);
     expect(parsed.syntaxTheme).toBe(DEFAULT_SYNTAX_THEME);
     expect(parsed.theme).toBe(DEFAULT_APP_THEME);
   });
 
-  it('reads a custom tabNameMaxLength from an existing config.json', () => {
+  it('reads custom tab name display limits from an existing config.json', () => {
     const configDir = path.join(tmpDir, '.janissary');
     mkdirSync(configDir, { recursive: true });
-    writeFileSync(path.join(configDir, 'config.json'), JSON.stringify({ tabNameMaxLength: 8 }) + '\n');
+    writeFileSync(path.join(configDir, 'config.json'), JSON.stringify({ tabNameMaxLength: 8, activeTabNameMaxLength: 40 }) + '\n');
 
     const config = loadConfig(tmpDir);
     expect(config.tabNameMaxLength).toBe(8);
+    expect(config.activeTabNameMaxLength).toBe(40);
   });
 
   it('reads an existing config.json', () => {

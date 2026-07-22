@@ -113,6 +113,12 @@ elsewhere in the app. The button is a no-op when the tab's transcript is empty.
 
 Each tab carries its own transcript log, command history (including navigation index), and scroll offset. Switching tabs preserves each tab's state.
 
+### Tab label length
+
+A tab name longer than its display limit is shortened with a trailing `…`. Inactive tabs use `tabNameMaxLength`, which defaults to 16 characters. The active tab uses `activeTabNameMaxLength`, which defaults to 50 characters, so focusing a tab reveals more of a long name. Each limit counts the ellipsis as one of its displayed characters.
+
+File-backed tabs keep the complete filename in their tab state and apply these limits only while rendering the strip. Focusing a file-backed tab can therefore expand a name that was shortened while inactive without losing any part of the underlying filename.
+
 ### Tab display alias
 
 Any tab can be given a **display alias**: a name shown in the tab strip in place of its internal label, without changing the label itself. The label remains the identifier used everywhere else — `msg`/`broadcast` routing, the monitor feed, and every other tab-targeting feature keep working against the original name; only the strip's appearance changes. The plain-text editor tab is the one exception: it has no alias concept, since it represents a file on disk — renaming its label always renames the underlying file (see `editor-tab.md`).

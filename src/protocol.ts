@@ -94,6 +94,7 @@ export type StateEvent = {
   // The open "New schedule" dialog, or null when it is closed.
   scheduleLaunch: ScheduleLaunchView | null;
   tabNameMaxLength: number;
+  activeTabNameMaxLength: number;
   globalHistory: string[];
   syntaxTheme: string;
   theme: string;
