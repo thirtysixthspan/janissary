@@ -55,7 +55,9 @@ targets a file named exactly `notes` (no extension is appended), and typing `not
 `notes.txt`. For a not-yet-saved new-file tab this just updates the pending target path; once the
 file exists on disk (whether it was a new file that has since been saved, or an editor opened on a
 file that already existed), renaming the tab renames the file in place and the editor stays pointed
-at the new path.
+at the new path. Renaming never reloads the document: any unsaved content, dirty state, cursor, and
+undo history remain in the live editor buffer, and the next save writes that content to the renamed
+path.
 
 If the user never renames a new-file tab and saves while a file named the same as the pending
 target already exists in that directory (created by another new-file tab saved first), the save
