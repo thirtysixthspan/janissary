@@ -14,6 +14,8 @@ import { buildRows } from './index.js';
 import { listProjectFiles } from './search.js';
 import type { Managers } from '../managers.js';
 import type { GitFileStatus } from '../git-status.js';
+import { openerForExtension } from '../openers/index.js';
+import type { FileOpenerChoice } from '../protocol.js';
 
 const DEBOUNCE_MS = 100;
 
@@ -195,6 +197,19 @@ export class FileTreeManager {
   // target row exists in the client's next `rows` update for it to select and scroll to.
   reveal(label: string, relPath: string): void {
     revealPath(this.navPort(), label, relPath);
+  }
+
+  openers(label: string, relPath: string, edit: boolean): { command?: 'open' | 'edit'; choices: FileOpenerChoice[] } {
+    const state = this.tabs.get(label);
+    if (!state) return { choices: [] };
+    const opener = openerForExtension(path.extname(path.resolve(state.root, relPath)));
+    if (opener) return { command: edit ? 'edit' : 'open', choices: [] };
+    return {
+      choices: [
+        { label: 'Edit as text', command: 'edit' },
+        { label: 'Open externally', command: 'open external' },
+      ],
+    };
   }
 
   // Tear down one tab's watchers and debounce timer (on tab close).

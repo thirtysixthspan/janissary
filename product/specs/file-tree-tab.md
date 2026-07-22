@@ -141,6 +141,9 @@ Opening or editing a file from the tree uses the same `open`/`edit` commands ava
 command line, dispatched with the tree tab's cwd set to its root — so a row's path (relative to
 the root) resolves correctly. The opened file's tab lands in the same group as the tree tab.
 
+If a file has no registered opener, double-clicking it presents a chooser with **Edit as text** and
+**Open externally**. Selecting an option runs that action for the file; Escape closes the chooser.
+
 ### Moving files by drag-and-drop
 
 Pressing down on a row and dragging it onto a directory row — or onto any file row inside that

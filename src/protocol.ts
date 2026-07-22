@@ -15,6 +15,7 @@ export type ScheduleView = { id: string; spec: string; next: string; recurring: 
 export type AggregatedScheduleView = ScheduleView & { tab: string; command: string };
 // A pending route chooser: the unprefixed command plus the option labels to pick from.
 export type RouteChooserView = { cmd: string; choices: string[] };
+export type FileOpenerChoice = { label: string; command: 'edit' | 'open external' };
 // The open "New harness" launch dialog's data: the ordered harness names and each harness's known
 // model catalog (empty for a harness with no catalog). Null in the snapshot when the dialog is closed.
 export type HarnessLaunchView = { names: string[]; models: Record<string, string[]> };
@@ -205,6 +206,7 @@ export type RpcCall =
   // watching, rebuilding); the client separately selects and scrolls to it once the resulting
   // rows arrive. The search pop-up's Enter action.
   | { method: 'revealFileTreeItem'; params: { index: number; relPath: string } }
+  | { method: 'fileTreeOpeners'; params: { index: number; relPath: string; edit: boolean } }
   // Remove one scheduled entry, identified by its owning tab label and timer id, after the client
   // has confirmed with the user (Backspace/Delete on a selected row in the aggregated schedules tab).
   | { method: 'cancelSchedule'; params: { tab: string; id: string } }
@@ -237,4 +239,3 @@ export type RpcCall =
   | { method: 'projectFiles'; params?: Record<string, never> };
 
 export type ClientMessage = { t: 'rpc'; id: number } & RpcCall;
-

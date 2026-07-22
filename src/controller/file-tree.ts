@@ -2,6 +2,7 @@
 // delegate to `FileTreeManager`. Extracted from `controller.ts` to keep it under the file-size
 // limit — see `ai/guidelines/code-guidelines.md`.
 import type { Managers } from '../managers.js';
+import type { FileOpenerChoice } from '../protocol.js';
 
 export function fileTreeToggle(managers: Managers, index: number, path: string): void {
   const label = managers.tab.tabs[index]?.label;
@@ -55,4 +56,9 @@ export async function fileTreeSearch(managers: Managers, index: number): Promise
 export function revealFileTreeItem(managers: Managers, index: number, relPath: string): void {
   const label = managers.tab.tabs[index]?.label;
   if (label) managers.fileTree.reveal(label, relPath);
+}
+
+export function fileTreeOpeners(managers: Managers, index: number, relPath: string, edit: boolean): { command?: 'open' | 'edit'; choices: FileOpenerChoice[] } {
+  const label = managers.tab.tabs[index]?.label;
+  return label ? managers.fileTree.openers(label, relPath, edit) : { choices: [] };
 }

@@ -31,7 +31,9 @@ The chosen presentation of the selected opener is then invoked.
 
 Error handling, surfaced in the active tab before any opener runs:
 
-- **No opener for the extension** — a message stating the file type is unsupported.
+- **No opener for the extension** — when opened from the file navigator, a chooser offers editing
+  the file as text or opening it externally; other `open` commands report that the file type is
+  unsupported.
 - **Missing target or malformed invocation** — a usage message: `open [external] [page] <target>`.
 - **Unviewable or malformed web address** — a message reporting the address is invalid (for example, a non-`http`/`https` scheme).
 - **File does not exist** — a not-found message. Existence is checked before dispatch, so every file opener may assume the file is present.
