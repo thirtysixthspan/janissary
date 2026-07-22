@@ -147,7 +147,7 @@ function metaChordOpener(e: KeyboardEvent, snap: StateSnapshot, cb: Callbacks): 
   }
   if (e.key.toLowerCase() === 'p') {
     e.preventDefault();
-    if (snap.canSearch && !snap.quickOpenOpen) cb.openQuickOpen();
+    if (!snap.quickOpenOpen) cb.openQuickOpen();
     return true;
   }
   return false;
