@@ -2,19 +2,6 @@
 
 ## ready
 
-* New persona that watches the active editor tab and make suggestions. Suggestions can be made in a monitor tab, or through a new suggested edit view in the editor. The persona can be asked to make guided suggestions to the text that can be accepted or declined. for example:
-> persona: provide a list of 5 different colors
-produces:
-1. Red
-2. White
-3. Blue
-4. Black
-5. Green
-as a suggestion that can be accepted or declined by keypress and removes then removes then removes the written request.
-
-* mechanism to create an questions/approval dialog in Janissary from a harness, acp, shell script. This could be an external API provided as skills to the agents. the dialog would show the agent asking the question.
-
-
 ## development
 
 * Generate a set of given profiles derived from profiles used in other tools. research and clone. curated personas: researcher, critic, planner, summarizer. research and clone. Ambient background research persona that, when you mention an unfamiliar term/library/error, quietly researches it and drops a ready reference into a side tab, unasked. (Web-tool personas.)
