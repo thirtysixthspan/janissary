@@ -155,6 +155,22 @@ export class FileTreeManager {
     return applyStackMove(state.root, entry.from, parentPath(entry.to), entry, state.redoStack, state.undoStack, overwrite, () => this.rebuild(label));
   }
 
+  // Rename a file or directory in place (same directory only — `newName` may not contain a path
+  // separator, which would otherwise move the item elsewhere; that stays drag-and-drop's job). The
+  // client has already confirmed an overwrite with the user if `newName` collides with a sibling.
+  // If an editor tab is already open on the renamed file, it is retargeted to the new path so it
+  // doesn't go stale. Rebuilds so the tree reflects the new name immediately.
+  rename(label: string, relPath: string, newName: string): void {
+    const state = this.tabs.get(label);
+    if (!state) return;
+    if (newName.includes('/') || newName.includes(path.sep)) return;
+    const oldAbs = path.join(state.root, relPath);
+    const newAbs = path.join(path.dirname(oldAbs), newName);
+    try { renameSync(oldAbs, newAbs); } catch { return; }
+    this.managers.tab.retargetEditorTab(oldAbs, newAbs);
+    this.rebuild(label);
+  }
+
   // Delete a file or directory (recursively) from disk — the client has already confirmed with
   // the user before sending this. Rebuilds so the tree reflects the removal immediately, without
   // waiting on the directory watcher's own debounce.

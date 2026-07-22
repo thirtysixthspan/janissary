@@ -73,6 +73,7 @@ export function handle(controller: Controller, message: ClientMessage, reply: (e
     case 'fileTreeReroot':
     case 'moveFileTreeItem':
     case 'deleteFileTreeItem':
+    case 'renameFileTreeItem':
     case 'fileTreeSearch':
     case 'revealFileTreeItem':
     case 'undoFileTreeItem':

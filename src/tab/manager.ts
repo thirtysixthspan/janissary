@@ -1,4 +1,5 @@
 /* eslint-disable max-lines */
+import path from 'node:path';
 import type { Tab, LogEntry, AgentState, ImageView, MarkdownView, EditorView, PageView, FileTreeView } from '../types.js';
 import type { AggregatedScheduleView, ConnectionView, ScheduleView, TabView } from '../protocol.js';
 import {
@@ -232,6 +233,21 @@ export class TabManager {
     if (trimmed && trimmed !== tab.label) tab.title = trimmed;
     else delete tab.title;
     this.persist(this.buildAgentState(tab));
+    messageBus.emit('state', { type: 'dirty' });
+  }
+
+  // Retarget an editor tab already open on `oldAbsPath` to `newAbsPath`, after something else (the
+  // file navigator's rename) has already renamed the file on disk. Mirrors `renameEditorTab`'s
+  // bookkeeping without repeating the disk rename it already performed. A no-op if no open editor
+  // tab has that exact path.
+  retargetEditorTab(oldAbsPath: string, newAbsPath: string): void {
+    const tab = this.tabs.find((t) => t.editor?.path === oldAbsPath);
+    if (!tab?.editor) return;
+    const name = path.basename(newAbsPath);
+    tab.editor = { ...tab.editor, path: newAbsPath, name, url: this.registerFile(newAbsPath) };
+    tab.title = name;
+    this.persist(this.buildAgentState(tab));
+    this.managers.editorWatch.watch(tab.label, newAbsPath);
     messageBus.emit('state', { type: 'dirty' });
   }
 

@@ -227,6 +227,24 @@ the watcher picks up the change, the same as any other on-disk change made outsi
 selected row was the one removed, selection moves to the nearest surviving row rather than pointing
 at nothing.
 
+### Renaming a file or directory
+
+Pressing Cmd+R (Ctrl+R on other platforms) while a row is selected (any row other than `..`) turns
+that row's name into an editable text field, pre-filled with the current name. Editing the name
+and pressing Enter renames the file or directory on disk in place — only if the name actually
+changed; an unchanged or empty/whitespace-only name is a silent no-op that just closes the field.
+The rename stays within the same directory; typing a name with a path separator is not a way to
+move the item elsewhere (drag-and-drop remains the only way to move an item into a different
+directory). Escape, or the field losing focus, cancels and restores the original name with no
+on-disk change. If the new name collides with a sibling already in the same directory, the same
+Overwrite/Cancel confirmation dialog used for a drag-and-drop move appears; Overwrite replaces the
+existing entry and completes the rename, Cancel returns to the still-open edit field. A rename is
+not added to the tab's move undo/redo stack and cannot be reversed with Cmd+Z.
+
+If the renamed file is already open in an editor tab, that tab updates to the new name and path
+automatically — its unsaved content, dirty state, cursor, and undo history are preserved exactly as
+when the same file is renamed from the editor tab's own label (see `editor-tab.md`).
+
 ### Keyboard interactions
 
 A focused file tree tab captures its own keys, following the ARIA treeview pattern (see
@@ -246,11 +264,12 @@ A focused file tree tab captures its own keys, following the ARIA treeview patte
 | `Cmd+Z` / `Ctrl+Z` | Undo the most recent move made in this tab |
 | `Cmd+Shift+Z` / `Ctrl+Shift+Z` | Redo the most recently undone move |
 | `Cmd+N` / `Ctrl+N` | Create a new file (see "Creating a new file") |
+| `Cmd+R` / `Ctrl+R` | Selected file or directory (not `..`): begin renaming it in place (see "Renaming a file or directory") |
 
 Chords carrying Ctrl or Cmd (tab switching, tab reordering, closing the tab, etc.) are not
 captured by the tree and reach the normal window-level bindings instead, except for the
-undo/redo chords and `Cmd+N`/`Ctrl+N` above, which the tree captures for itself — the same way an
-editor tab captures its own `Cmd+Z`/`Cmd+Shift+Z` for text undo/redo.
+undo/redo chords, `Cmd+N`/`Ctrl+N`, and `Cmd+R`/`Ctrl+R` above, which the tree captures for
+itself — the same way an editor tab captures its own `Cmd+Z`/`Cmd+Shift+Z` for text undo/redo.
 
 If the selected row disappears (the directory watcher removed it), selection moves to the nearest
 surviving row rather than pointing at nothing.

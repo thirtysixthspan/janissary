@@ -1,12 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { FileTreeView, FileTreeRow } from '@shared/protocol';
 import type { JanusClient } from './ws';
 import { handleFileTreeKey, typeAheadMatch } from './file-tree-keys';
+import { handleTreeChord } from './file-tree-chords';
 import { useFileTreeDrag } from './useFileTreeDrag';
+import { useFileTreeRename } from './useFileTreeRename';
+import { FileTreeRowView } from './FileTreeRowView';
 import { fileTreeRowClass } from './file-tree-row-class';
 import { newFileTargetDir, newFileCommand, newDirectoryCommand } from './file-tree-new-file';
-import { expandedIcon, collapsedIcon } from './icons';
 import { MoveConflictDialog } from './MoveConflictDialog/MoveConflictDialog';
 import { DeleteFileDialog } from './DeleteFileDialog';
 import { FileSearchPopup } from './FileSearchPopup';
@@ -44,6 +45,7 @@ export function FileTreeTab({ files, client, index, dock, autoFocus = true, drop
   const containerRef = useRef<HTMLDivElement>(null);
   const typeahead = useRef<{ buffer: string; timer?: ReturnType<typeof setTimeout> }>({ buffer: '' });
   const drag = useFileTreeDrag(files.rows, client, index, dropRef);
+  const rename = useFileTreeRename(files.rows, client, index, setSelected);
   const search = useFileTreeSearch(client, index, files.rows, setSelected, () => containerRef.current?.focus());
 
   useEffect(() => { if (autoFocus) containerRef.current?.focus(); }, [autoFocus]);
@@ -107,19 +109,20 @@ export function FileTreeTab({ files, client, index, dock, autoFocus = true, drop
   const cancelDelete = () => setPendingDelete(null);
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
-      e.preventDefault();
-      e.stopPropagation();
-      if (e.shiftKey) void drag.sendRedo(); else void drag.sendUndo();
-      return;
+    // While the rename field is open, its own Enter/Escape/typing handling in `InlineEditInput`
+    // owns every keystroke; without this, those keydowns bubble here too and get double-handled
+    // (e.g. Enter also re-triggering the tree's own "open selected row" navigation action).
+    if (rename.editing !== null) return;
+    if (e.ctrlKey || e.metaKey) {
+      const handled = handleTreeChord(e.key, e.shiftKey, files.rows, selected, {
+        sendUndo: () => void drag.sendUndo(),
+        sendRedo: () => void drag.sendRedo(),
+        createNewFile,
+        beginRename: (row) => rename.begin(row.path, row.name),
+      });
+      if (handled) { e.preventDefault(); e.stopPropagation(); }
+      return; // tab-management chords go to the window handler
     }
-    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'n') {
-      e.preventDefault();
-      e.stopPropagation();
-      createNewFile();
-      return;
-    }
-    if (e.ctrlKey || e.metaKey) return; // tab-management chords go to the window handler
     if ((e.key === 'Backspace' || e.key === 'Delete') && selected && selected !== '..') {
       e.preventDefault();
       e.stopPropagation();
@@ -158,26 +161,22 @@ export function FileTreeTab({ files, client, index, dock, autoFocus = true, drop
         <div className="files-waiting">Looking for {files.waitingFor}…</div>
       )}
       <div className="files-rows">
-        {files.rows.map((row) => {
-          const cls = fileTreeRowClass(row, selected, drag.dropTarget?.path);
-          return (
-            <div
-              key={row.path}
-              role="treeitem"
-              aria-selected={row.path === selected}
-              aria-expanded={row.dir ? !!row.expanded : undefined}
-              className={cls.row}
-              data-path={row.path}
-              style={{ paddingLeft: 12 + row.depth * 16 }}
-              onClick={() => onRowClick(row)}
-              onDoubleClick={(e) => onRowDoubleClick(row, e.shiftKey)}
-              onMouseDown={(e) => drag.onRowMouseDown(row, e)}
-            >
-              {row.dir && row.expanded !== undefined && <span className="files-chevron"><FontAwesomeIcon icon={row.expanded ? expandedIcon : collapsedIcon} /></span>}
-              <span className={cls.name}>{row.name}</span>
-            </div>
-          );
-        })}
+        {files.rows.map((row) => (
+          <FileTreeRowView
+            key={row.path}
+            row={row}
+            selected={selected}
+            rowClass={fileTreeRowClass(row, selected, drag.dropTarget?.path)}
+            editing={rename.editing === row.path}
+            draft={rename.draft}
+            onDraftChange={rename.setDraft}
+            onCommit={rename.commit}
+            onCancel={rename.cancel}
+            onClick={() => onRowClick(row)}
+            onDoubleClick={(shiftKey) => onRowDoubleClick(row, shiftKey)}
+            onMouseDown={(e) => drag.onRowMouseDown(row, e)}
+          />
+        ))}
       </div>
       {drag.draggedPath && drag.dragPosition && (
         <div
@@ -192,6 +191,13 @@ export function FileTreeTab({ files, client, index, dock, autoFocus = true, drop
           name={drag.pendingConflict.fromRelPath.slice(drag.pendingConflict.fromRelPath.lastIndexOf('/') + 1)}
           onOverwrite={drag.confirmOverwrite}
           onCancel={drag.cancelConflict}
+        />
+      )}
+      {rename.pendingConflict && (
+        <MoveConflictDialog
+          name={rename.pendingConflict.newName}
+          onOverwrite={rename.confirmOverwrite}
+          onCancel={rename.cancelConflict}
         />
       )}
       {pendingDelete && (

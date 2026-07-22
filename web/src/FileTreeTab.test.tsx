@@ -1,5 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent, act } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeAll, afterEach } from 'vitest';
 import type { FileTreeView, TabView } from '@shared/protocol';
 import type { JanusClient } from './ws';
@@ -324,6 +325,143 @@ describe('FileTreeTab', () => {
       fireEvent.click(screen.getByRole('button', { name: /cancel/i }));
       expect(send).not.toHaveBeenCalled();
       expect(screen.queryByRole('alertdialog')).toBeNull();
+    });
+  });
+
+  describe('rename', () => {
+    const selectReadme = (tree: Element) => {
+      fireEvent.keyDown(tree, { key: 'r' }); // type-ahead selects README.md
+    };
+
+    it('Cmd+R on a selected file opens an editable field pre-filled with its name', () => {
+      const client = { send: vi.fn() } as unknown as JanusClient;
+      const { container } = render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+      const tree = container.querySelector('[role="tree"]')!;
+      selectReadme(tree);
+      fireEvent.keyDown(tree, { key: 'r', metaKey: true });
+      const input = screen.getByRole('textbox') as HTMLInputElement;
+      expect(input.value).toBe('README.md');
+    });
+
+    it('Ctrl+R works the same as Cmd+R', () => {
+      const client = { send: vi.fn() } as unknown as JanusClient;
+      const { container } = render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+      const tree = container.querySelector('[role="tree"]')!;
+      selectReadme(tree);
+      fireEvent.keyDown(tree, { key: 'r', ctrlKey: true });
+      expect(screen.getByRole('textbox')).toBeInTheDocument();
+    });
+
+    it('Enter with a changed name sends renameFileTreeItem and closes the field', async () => {
+      const send = vi.fn();
+      const client = { send } as unknown as JanusClient;
+      const { container } = render(<FileTreeTab files={makeFiles()} client={client} index={2} />);
+      const tree = container.querySelector('[role="tree"]')!;
+      selectReadme(tree);
+      fireEvent.keyDown(tree, { key: 'r', metaKey: true });
+      const input = screen.getByRole('textbox');
+      await userEvent.clear(input);
+      await userEvent.type(input, 'renamed.md{Enter}');
+      expect(send).toHaveBeenCalledWith({ method: 'renameFileTreeItem', params: { index: 2, relPath: 'README.md', newName: 'renamed.md' } });
+      expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+    });
+
+    it('Enter with no change sends nothing', () => {
+      const send = vi.fn();
+      const client = { send } as unknown as JanusClient;
+      const { container } = render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+      const tree = container.querySelector('[role="tree"]')!;
+      selectReadme(tree);
+      fireEvent.keyDown(tree, { key: 'r', metaKey: true });
+      const input = screen.getByRole('textbox');
+      fireEvent.keyDown(input, { key: 'Enter' });
+      expect(send).not.toHaveBeenCalled();
+    });
+
+    it('Escape cancels without sending', () => {
+      const send = vi.fn();
+      const client = { send } as unknown as JanusClient;
+      const { container } = render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+      const tree = container.querySelector('[role="tree"]')!;
+      selectReadme(tree);
+      fireEvent.keyDown(tree, { key: 'r', metaKey: true });
+      const input = screen.getByRole('textbox');
+      fireEvent.keyDown(input, { key: 'Escape' });
+      expect(send).not.toHaveBeenCalled();
+      expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+    });
+
+    it('blur cancels without sending', () => {
+      const send = vi.fn();
+      const client = { send } as unknown as JanusClient;
+      const { container } = render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+      const tree = container.querySelector('[role="tree"]')!;
+      selectReadme(tree);
+      fireEvent.keyDown(tree, { key: 'r', metaKey: true });
+      const input = screen.getByRole('textbox');
+      fireEvent.blur(input);
+      expect(send).not.toHaveBeenCalled();
+      expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+    });
+
+    it('the chord on the ".." row does nothing', () => {
+      const client = { send: vi.fn() } as unknown as JanusClient;
+      const files = makeFiles({ rows: [{ path: '..', name: '..', depth: 0, dir: true }] });
+      const { container } = render(<FileTreeTab files={files} client={client} index={0} />);
+      const tree = container.querySelector('[role="tree"]')!;
+      fireEvent.keyDown(tree, { key: 'ArrowDown' });
+      fireEvent.keyDown(tree, { key: 'r', metaKey: true });
+      expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+    });
+
+    it('the chord with no row selected does nothing', () => {
+      const client = { send: vi.fn() } as unknown as JanusClient;
+      const { container } = render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+      const tree = container.querySelector('[role="tree"]')!;
+      fireEvent.keyDown(tree, { key: 'r', metaKey: true });
+      expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+    });
+
+    it('committing a name colliding with a visible sibling opens MoveConflictDialog', async () => {
+      const send = vi.fn();
+      const client = { send } as unknown as JanusClient;
+      const { container } = render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+      const tree = container.querySelector('[role="tree"]')!;
+      selectReadme(tree);
+      fireEvent.keyDown(tree, { key: 'r', metaKey: true });
+      const input = screen.getByRole('textbox');
+      await userEvent.clear(input);
+      await userEvent.type(input, 'src{Enter}');
+      expect(send).not.toHaveBeenCalled();
+      expect(screen.getByRole('alertdialog')).toBeInTheDocument();
+    });
+
+    it('Overwrite on the rename conflict dialog sends the RPC', async () => {
+      const send = vi.fn();
+      const client = { send } as unknown as JanusClient;
+      const { container } = render(<FileTreeTab files={makeFiles()} client={client} index={4} />);
+      const tree = container.querySelector('[role="tree"]')!;
+      selectReadme(tree);
+      fireEvent.keyDown(tree, { key: 'r', metaKey: true });
+      const input = screen.getByRole('textbox');
+      await userEvent.clear(input);
+      await userEvent.type(input, 'src{Enter}');
+      fireEvent.click(screen.getByRole('button', { name: /overwrite/i }));
+      expect(send).toHaveBeenCalledWith({ method: 'renameFileTreeItem', params: { index: 4, relPath: 'README.md', newName: 'src' } });
+    });
+
+    it('Cancel on the rename conflict dialog reopens the edit field', async () => {
+      const client = { send: vi.fn() } as unknown as JanusClient;
+      const { container } = render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+      const tree = container.querySelector('[role="tree"]')!;
+      selectReadme(tree);
+      fireEvent.keyDown(tree, { key: 'r', metaKey: true });
+      const input = screen.getByRole('textbox');
+      await userEvent.clear(input);
+      await userEvent.type(input, 'src{Enter}');
+      fireEvent.click(screen.getByRole('button', { name: /cancel/i }));
+      expect(screen.queryByRole('alertdialog')).toBeNull();
+      expect(screen.getByRole('textbox')).toBeInTheDocument();
     });
   });
 

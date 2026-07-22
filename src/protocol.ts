@@ -193,6 +193,11 @@ export type RpcCall =
   // Delete a file or directory (recursively) from a file tree tab, after the client has already
   // confirmed with the user. `relPath` is the tree-relative path of the row being removed.
   | { method: 'deleteFileTreeItem'; params: { index: number; relPath: string } }
+  // Rename a file or directory in place within a file tree tab (in-directory only — the client has
+  // already confirmed an overwrite with the user, if the new name collides with a sibling).
+  // `relPath` is the tree-relative path of the row being renamed; `newName` is the bare new name
+  // (no path separators).
+  | { method: 'renameFileTreeItem'; params: { index: number; relPath: string; newName: string } }
   // List every gitignore-aware file under a file tree tab's own root, for its Search-files
   // pop-up. Replies (deferred) with `{ paths }` — root-relative, matching the tree's own rows.
   | { method: 'fileTreeSearch'; params: { index: number } }
