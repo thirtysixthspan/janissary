@@ -2,7 +2,6 @@
 
 ## ready
 
-* in the editor tab, when sentences are long, the line is visually wrapped. When a word lands on a wrap point it should be bumped to the next line so the word is not spread across two lines.
 
 * when a file name is too long to fit on a tab label use the ... symbol to shorten it. when a tab is focused, expand the tab label to show up to 50 characters of the file name. This number should be application configuration and be stored in ./janissary/config.json. when it is not focused only show the default number of characters. this default number should be application configutation and stored in ./janissary/config.json. the default is currently hard coded.
 

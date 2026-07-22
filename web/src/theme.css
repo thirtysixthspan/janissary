@@ -606,7 +606,7 @@ html, body, #root {
 }
 .editor-row-current .editor-gutter { color: var(--muted); }
 /* Soft-wrap long lines within the cell; the gutter number stays on the first visual row. */
-.editor-content { flex: 1; min-width: 0; white-space: pre-wrap; word-break: break-all; }
+.editor-content { flex: 1; min-width: 0; white-space: pre-wrap; overflow-wrap: break-word; }
 .editor-sel { background: var(--editor-selection); }
 /* Zero-width inline caret: the ::after paints the blinking bar without shifting text. */
 .editor-caret { width: 0; position: relative; }
