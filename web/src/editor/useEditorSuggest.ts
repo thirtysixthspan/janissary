@@ -21,6 +21,8 @@ export type PendingSuggest = {
 export type EditorSuggestApi = {
   personas: string[];
   pending: PendingSuggest | null;
+  firingLine: string | null;
+  noSuggestionLine: string | null;
   fireOnLine: (state: EditorState, lineIndex: number) => void;
   acceptFocused: (state: EditorState) => void;
   declineFocused: (state: EditorState) => void;
@@ -37,6 +39,8 @@ function applyHunk(text: string, hunk: SuggestHunk): string | null {
 export function useEditorSuggest(client: JanusClient, url: string, setState: (s: EditorState) => void): EditorSuggestApi {
   const [personas, setPersonas] = useState<string[]>([]);
   const [pending, setPending] = useState<PendingSuggest | null>(null);
+  const [firingLine, setFiringLine] = useState<string | null>(null);
+  const [noSuggestionLine, setNoSuggestionLine] = useState<string | null>(null);
   const pendingRef = useRef<PendingSuggest | null>(null);
   const firingRef = useRef(false);
 
@@ -57,15 +61,18 @@ export function useEditorSuggest(client: JanusClient, url: string, setState: (s:
     const request = parseSuggestRequest(lineText, personas);
     if (!request) return;
     firingRef.current = true;
+    setFiringLine(lineText);
     void client.request<{ hunks: SuggestHunk[] }>({
       method: 'editorSuggest',
       params: { url, persona: request.persona, content: toText(state), prompt: request.prompt },
     }).then((res) => {
       firingRef.current = false;
+      setFiringLine(null);
       const hunks = res?.hunks ?? [];
       // Empty hunks/failure is already surfaced via a notification server-side (Decision 10); the
       // request line stays untouched and no pending panel opens.
       if (hunks.length > 0) setPendingBoth({ hunks, index: 0, requestLineText: lineText, acceptedAny: false });
+      else setNoSuggestionLine(lineText);
     });
   };
 
@@ -101,5 +108,5 @@ export function useEditorSuggest(client: JanusClient, url: string, setState: (s:
     setState(resolveOne(false, state));
   };
 
-  return { personas, pending, fireOnLine, acceptFocused, declineFocused };
+  return { personas, pending, firingLine, noSuggestionLine, fireOnLine, acceptFocused, declineFocused };
 }

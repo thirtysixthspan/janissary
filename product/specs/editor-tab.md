@@ -237,5 +237,13 @@ If the named persona doesn't exist, the request fails, or the persona's reply pr
 all, a notification appears in the notifications tab naming the persona and the outcome, and the
 buffer and request line are left untouched.
 
+A status pill is rendered at the end of any `>`-led line, tracking that line's progress: `[agent?]`
+before a known persona has been named, `[query?]` once the persona is named but no request text
+has been typed yet, and `[run]` once both are present — clicking `[run]` sends the request, the
+same as pressing Ctrl+Enter (Cmd+Enter on macOS) on that line. While the request is in flight the
+pill reads `[running...]`; if the reply proposes no change at all, it reads `[no suggestion]` until
+the line is edited. While a proposed change from that line is pending accept/decline, the pill is
+hidden — the pending-change prompt above the buffer is the request's state at that point.
+
 Nothing about an in-editor suggestion is saved or restored — like the rest of an editor tab's state,
 it exists only in memory for as long as the tab is open.

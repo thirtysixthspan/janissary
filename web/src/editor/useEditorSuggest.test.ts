@@ -29,7 +29,8 @@ describe('useEditorSuggest', () => {
     await waitFor(() => expect(result.current.personas).toEqual(['summarizer']));
 
     const state = makeState('> summarizer rewrite this');
-    await act(async () => { result.current.fireOnLine(state, 0); });
+    act(() => { result.current.fireOnLine(state, 0); });
+    expect(result.current.firingLine).toBe('> summarizer rewrite this');
 
     expect(request).toHaveBeenCalledWith({
       method: 'editorSuggest',
@@ -37,6 +38,20 @@ describe('useEditorSuggest', () => {
     });
     await waitFor(() => expect(result.current.pending).not.toBeNull());
     expect(result.current.pending?.hunks).toEqual([{ anchor: 'old', replacement: 'new' }]);
+    expect(result.current.firingLine).toBeNull();
+  });
+
+  it('records the line as having no suggestion when the reply has no hunks', async () => {
+    const { client } = makeClient(['summarizer'], [{ hunks: [] }]);
+    const { result } = renderHook(() => useEditorSuggest(client, '/open/1', vi.fn()));
+    await waitFor(() => expect(result.current.personas).toEqual(['summarizer']));
+
+    const state = makeState('> summarizer rewrite this');
+    await act(async () => { result.current.fireOnLine(state, 0); });
+
+    await waitFor(() => expect(result.current.noSuggestionLine).toBe('> summarizer rewrite this'));
+    expect(result.current.pending).toBeNull();
+    expect(result.current.firingLine).toBeNull();
   });
 
   it('does not fire for a line that is not a valid request', async () => {
