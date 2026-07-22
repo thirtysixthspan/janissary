@@ -29,6 +29,8 @@ type LineProps = {
   tokens: TokenRange[];
   // The in-editor persona-suggestion status pill for this line, when it is a `>`-led request line.
   pill?: SuggestPill;
+  // Whether this line is part of the focused pending hunk's diff-preview "remove" range.
+  removed?: boolean;
 };
 
 // The caret is a zero-width inline span (its ::after paints the bar) inserted into the text flow
@@ -60,9 +62,11 @@ function contentSegments({ text, selFrom, selTo, caretCol, caretRef, tokens }: L
 // One logical line: gutter cell + soft-wrapped content cell. Wrapped lines occupy several visual
 // rows while the gutter number sits on the first — the flex row gives correct alignment for free.
 export const EditorLine = React.memo(function EditorLine(props: LineProps) {
-  const { line, gutterCh, isCurrent, pill } = props;
+  const { line, gutterCh, isCurrent, pill, removed } = props;
+  const rowClass = ['editor-row', isCurrent && 'editor-row-current', removed && 'editor-diff-remove']
+    .filter(Boolean).join(' ');
   return (
-    <div className={isCurrent ? 'editor-row editor-row-current' : 'editor-row'} data-editor-line={line}>
+    <div className={rowClass} data-editor-line={line}>
       <span className="editor-gutter" style={{ width: `${gutterCh}ch` }}>{line + 1}</span>
       <span className="editor-content">{contentSegments(props)}</span>
       {pill && (
@@ -73,3 +77,14 @@ export const EditorLine = React.memo(function EditorLine(props: LineProps) {
     </div>
   );
 });
+
+// A synthetic row previewing one line the focused pending hunk would insert — shown directly
+// below the buffer lines it would remove. Not part of the buffer: no caret, selection, or tokens.
+export function DiffAddedLine({ text, gutterCh }: { text: string; gutterCh: number }) {
+  return (
+    <div className="editor-row editor-diff-add">
+      <span className="editor-gutter" style={{ width: `${gutterCh}ch` }}>+</span>
+      <span className="editor-content">{text}</span>
+    </div>
+  );
+}

@@ -1,7 +1,7 @@
 import React, { createRef } from 'react';
 import { render } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
-import { EditorLine } from './render';
+import { EditorLine, DiffAddedLine } from './render';
 import type { TokenRange } from './highlight/tokenize';
 
 describe('EditorLine token segments', () => {
@@ -44,5 +44,21 @@ describe('EditorLine token segments', () => {
     );
     const span = container.querySelector(':scope .editor-content span');
     expect(span?.className).toBe('');
+  });
+
+  it('adds editor-diff-remove to the row when removed is set', () => {
+    const { container } = render(
+      <EditorLine text="old line" line={0} gutterCh={2} isCurrent={false} selFrom={-1} selTo={-1} caretCol={-1} caretRef={null} tokens={[]} removed />,
+    );
+    expect(container.querySelector('.editor-row')?.className).toContain('editor-diff-remove');
+  });
+});
+
+describe('DiffAddedLine', () => {
+  it('renders the added text with a + gutter and no line number', () => {
+    const { container } = render(<DiffAddedLine text="new line" gutterCh={2} />);
+    expect(container.querySelector('.editor-gutter')?.textContent).toBe('+');
+    expect(container.querySelector('.editor-content')?.textContent).toBe('new line');
+    expect(container.querySelector('.editor-row')?.className).toContain('editor-diff-add');
   });
 });
