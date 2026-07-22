@@ -188,7 +188,7 @@ export class HarnessManager {
   ): void {
     const program = HARNESS_COMMANDS[name];
     const extraEnv: NodeJS.ProcessEnv | undefined = name === 'claude'
-      ? { CLAUDE_CODE_TMPDIR: claudeTmpDir(cwd) }
+      ? { CLAUDE_CODE_TMPDIR: claudeTmpDir(cwd), DISABLE_AUTOUPDATER: '1' }
       : undefined;
     const id = this.managers.pty.spawn(label, program, buildHarnessCommand(name, model, effort), cwd, workspaceDir, offline, extraEnv);
     const dims = this.managers.pty.spawnDimensions();

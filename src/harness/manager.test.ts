@@ -378,7 +378,17 @@ describe('HarnessManager model/effort', () => {
     expect(manager.run('harness claude --effort high')).toBeUndefined();
     expect(managers.pty.spawn).toHaveBeenCalledWith(
       'claude', 'claude', "claude --effort 'high'", '/project', undefined, false,
-      { CLAUDE_CODE_TMPDIR: '/project/.janissary/temp' },
+      { CLAUDE_CODE_TMPDIR: '/project/.janissary/temp', DISABLE_AUTOUPDATER: '1' },
+    );
+  });
+
+  it('disables Claude Code autoupdates for a plain Claude launch', () => {
+    const { managers } = makeManagers();
+    const manager = new HarnessManager(managers);
+    expect(manager.run('harness claude')).toBeUndefined();
+    expect(managers.pty.spawn).toHaveBeenCalledWith(
+      'claude', 'claude', 'claude', '/project', undefined, false,
+      { CLAUDE_CODE_TMPDIR: '/project/.janissary/temp', DISABLE_AUTOUPDATER: '1' },
     );
   });
 
@@ -390,7 +400,7 @@ describe('HarnessManager model/effort', () => {
     )).toBeUndefined();
     expect(managers.pty.spawn).toHaveBeenCalledWith(
       'claude', 'claude', "claude --effort 'high'", expect.any(String), undefined, false,
-      { CLAUDE_CODE_TMPDIR: expect.any(String) },
+      { CLAUDE_CODE_TMPDIR: expect.any(String), DISABLE_AUTOUPDATER: '1' },
     );
   });
 

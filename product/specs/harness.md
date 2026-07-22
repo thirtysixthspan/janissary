@@ -17,6 +17,10 @@ PTY exits immediately and the tab closes (see [Lifecycle](#lifecycle)). See
 [Launching with a model and effort level](#launching-with-a-model-and-effort-level) for `--model`
 and `--effort`.
 
+Claude harnesses launch with `DISABLE_AUTOUPDATER=1`, so Claude Code does not attempt to update
+itself during a Janissary session. This applies to direct launches and harnesses opened from a
+profile; other harness types are unchanged.
+
 - `harness` with no name — opens the **New harness** launch dialog (see [New harness launch dialog](#new-harness-launch-dialog) below), not an error.
 - `harness foo` — error: `Unknown harness "foo". Choose from: claude, opencode, codex.`
 
