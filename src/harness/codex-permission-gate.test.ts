@@ -38,6 +38,17 @@ const EDITS = [
   ' Press Enter to confirm · Esc to cancel',
 ].join('\n');
 
+const EDITS_WITH_SHORTCUTS = [
+  '  Would you like to make the following edits?',
+  ' ',
+  ' ',
+  '› 1. Yes, proceed (y)',
+  '  2. Yes, and don\'t ask again for these files (a)',
+  '  3. No, and tell Codex what to do differently (esc)',
+  ' ',
+  '  Press enter to confirm or esc to cancel    ',
+].join('\n');
+
 const PERMISSIONS = [
   ' Would you like to grant these permissions?',
   '',
@@ -61,7 +72,7 @@ const MCP_ELICITATION = [
   ' Press Enter to confirm · Esc to cancel',
 ].join('\n');
 
-const ALL_GATES = { COMMAND, NETWORK, EDITS, PERMISSIONS, MCP_ELICITATION };
+const ALL_GATES = { COMMAND, NETWORK, EDITS, EDITS_WITH_SHORTCUTS, PERMISSIONS, MCP_ELICITATION };
 
 describe('detectCodexPermissionGate', () => {
   for (const [name, text] of Object.entries(ALL_GATES)) {
