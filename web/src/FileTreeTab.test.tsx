@@ -687,6 +687,40 @@ describe('FileTreeTab', () => {
       fireEvent.click(screen.getByTitle('New directory'));
       expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'newdir untitled' } });
     });
+
+    it('selects and opens the rename field once the created directory appears in files.rows', () => {
+      const client = { send: vi.fn() } as unknown as JanusClient;
+      const { rerender } = render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+      fireEvent.click(screen.getByTitle('New directory'));
+      const withNewDir = makeFiles({
+        rows: [...makeFiles().rows, { path: 'untitled', name: 'untitled', depth: 0, dir: true }],
+      });
+      rerender(<FileTreeTab files={withNewDir} client={client} index={0} />);
+      const input = screen.getByRole('textbox') as HTMLInputElement;
+      expect(input.value).toBe('untitled');
+    });
+
+    it('does nothing when an unrelated row appears instead', () => {
+      const client = { send: vi.fn() } as unknown as JanusClient;
+      const { rerender } = render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+      fireEvent.click(screen.getByTitle('New directory'));
+      const withOtherFile = makeFiles({
+        rows: [...makeFiles().rows, { path: 'other.txt', name: 'other.txt', depth: 0, dir: false }],
+      });
+      rerender(<FileTreeTab files={withOtherFile} client={client} index={0} />);
+      expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+    });
+
+    it('does nothing when the actual created name differs from the guess (collision)', () => {
+      const client = { send: vi.fn() } as unknown as JanusClient;
+      const { rerender } = render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+      fireEvent.click(screen.getByTitle('New directory'));
+      const withRenamedDir = makeFiles({
+        rows: [...makeFiles().rows, { path: 'untitled-2', name: 'untitled-2', depth: 0, dir: true }],
+      });
+      rerender(<FileTreeTab files={withRenamedDir} client={client} index={0} />);
+      expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+    });
   });
 
   describe('undo/redo', () => {

@@ -88,7 +88,7 @@ Click the header's **New file** button, or press `Cmd+N` (`Ctrl+N`) while the tr
 
 Rename the new tab's label to name the file — the typed text becomes the filename, with no extension added. Saving writes to that name; if another new-file tab already saved to it first, your save silently falls back to the next free name instead of overwriting it.
 
-Click the adjacent **New directory** button to create a folder using the same selection rules. It is named `untitled`, or the next available name (`untitled-2`, and so on) if that name already exists.
+Click the adjacent **New directory** button to create a folder using the same selection rules. It is named `untitled`, or the next available name (`untitled-2`, and so on) if that name already exists. When the new `untitled` directory appears, it's selected automatically and its name is ready to edit right away; if a naming collision gave it a different name instead, select and rename it yourself.
 
 <img class="agent-float left" src="/agents/fariz-south.png" alt="" />
 
