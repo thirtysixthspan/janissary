@@ -625,6 +625,10 @@ html, body, #root {
 }
 .editor-saved { color: var(--success); }
 .editor-error { color: var(--error); }
+.editor-save-button {
+  margin-left: auto; padding: 0 4px; border: none; background: transparent; color: var(--fg); cursor: pointer;
+}
+.editor-save-button:disabled { color: var(--faint); cursor: default; }
 
 /* File tree tab: metadata header (image-tab classes) above a scrollable, keyboard-navigable tree. */
 .files-tab { flex: 1; min-height: 0; display: flex; flex-direction: column; outline: none; position: relative; }

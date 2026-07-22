@@ -27,7 +27,8 @@ const textarea = () => screen.getByLabelText('Edit notes.txt');
 
 const nameText = (container: HTMLElement) => container.querySelector('.image-name')?.textContent ?? '';
 
-const hasDirtyDot = (container: HTMLElement) => container.querySelector(':scope .image-name svg[data-icon="circle"]') !== null;
+const hasEnabledSaveButton = (container: HTMLElement) => !container.querySelector<HTMLButtonElement>('.editor-save-button')!.disabled;
+const hasDirtyDot = hasEnabledSaveButton;
 
 function type(text: string) {
   const element = textarea() as HTMLTextAreaElement;
@@ -68,16 +69,30 @@ describe('EditorTab', () => {
     expect(current?.textContent).toBe('line one');
   });
 
-  it('shows a dirty dot after an edit and clears it on a successful save', async () => {
+  it('enables the save button after an edit and disables it on a successful save', async () => {
     const { client, saveFile } = makeClient();
     const { container } = await renderLoaded(client);
-    expect(hasDirtyDot(container)).toBe(false);
+    expect(hasEnabledSaveButton(container)).toBe(false);
     type('x');
-    await waitFor(() => expect(hasDirtyDot(container)).toBe(true));
+    await waitFor(() => expect(hasEnabledSaveButton(container)).toBe(true));
     fireEvent.keyDown(textarea(), { key: 's', metaKey: true });
-    await waitFor(() => expect(hasDirtyDot(container)).toBe(false));
+    await waitFor(() => expect(hasEnabledSaveButton(container)).toBe(false));
     expect(saveFile).toHaveBeenCalledWith('/open/1', 'xline one\nline two');
     expect(screen.getByText('Saved')).toBeInTheDocument();
+  });
+
+  it('saves the buffer when the dirty metadata button is clicked', async () => {
+    const { client, saveFile } = makeClient();
+    const { container } = await renderLoaded(client);
+    type('x');
+    const button = await waitFor(() => {
+      const candidate = container.querySelector<HTMLButtonElement>('.editor-save-button');
+      expect(candidate).toBeEnabled();
+      return candidate!;
+    });
+    fireEvent.click(button);
+    await waitFor(() => expect(saveFile).toHaveBeenCalledWith('/open/1', 'xline one\nline two'));
+    await waitFor(() => expect(button).toBeDisabled());
   });
 
   it('preserves unsaved content and saves it to the renamed file', async () => {
