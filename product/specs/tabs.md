@@ -88,6 +88,9 @@ Text content in metadata rows and headers throughout the application is selectab
 including paths, names, sizes, branches, addresses, monitor details, and agent settings. Native
 selection is preserved so the selected text can be copied.
 
+The tab strip's own labels are not selectable with the mouse — clicking and dragging across a
+tab's name behaves like clicking any other UI control rather than highlighting text.
+
 Today there are two possible flags: **workspaced** (a box icon), shown when the tab has its own isolated
 git clone, and **auto-permitting** (a bolt icon), shown when harness auto-approval is enabled (harness tabs
 only — see Auto-approve permissions in `harness.md`). Hovering a flag's icon shows a tooltip naming

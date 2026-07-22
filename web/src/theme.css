@@ -154,7 +154,7 @@ html, body, #root {
 .tab {
   display: flex; align-items: center; gap: 6px;
   padding: 4px 14px 6px; cursor: pointer; color: var(--muted);
-  border-top: 3px solid var(--accent);
+  border-top: 3px solid var(--accent); user-select: none;
 }
 .tab.active { background: var(--bg); color: var(--fg); }
 .tab .dot { font-size: 10px; line-height: 1; }
