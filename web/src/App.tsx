@@ -35,7 +35,7 @@ import { useAppWindowKeys } from './useAppWindowKeys';
 import { useThemePicker } from './useThemePicker';
 import { useAppThemePicker } from './useAppThemePicker';
 import { useHistPicker } from './useHistPicker';
-import { useServerState } from './useServerState';
+import { useServerState, useTabNameLimits } from './useServerState';
 import { useLayoutState } from './useLayoutState';
 import { applySyntaxTheme } from './editor/highlight/themes';
 import { useWindowFocus } from './useWindowFocus';
@@ -48,7 +48,7 @@ export function App() {
 
   const [tabs, setTabs] = useState<TabView[]>([]);
   const [activeTab, setActiveTab] = useState(0);
-  const [tabNameMaxLength, setTabNameMaxLength] = useState(16);
+  const { tabNameMaxLength, setTabNameMaxLength, activeTabNameMaxLength, setActiveTabNameMaxLength } = useTabNameLimits();
   const [globalHistory, setGlobalHistory] = useState<string[]>([]);
   const [syntaxTheme, setSyntaxTheme] = useState('github-dark');
   const [tasks, setTasks] = useState<TaskRow[]>([]);
@@ -134,7 +134,7 @@ export function App() {
   const chooseRoute = useCallback((index: number) => client.send({ method: 'chooseRoute', params: { index } }), [client]);
 
   useServerState(client, {
-    setTabs, setActiveTab, setRoute, setHarnessLaunch, setScheduleLaunch, setTabNameMaxLength, setGlobalHistory, setSyntaxTheme, setTheme, setTasks, setJanissaryTasksDir, setProfiles, setRouteIndex,
+    setTabs, setActiveTab, setRoute, setHarnessLaunch, setScheduleLaunch, setTabNameMaxLength, setActiveTabNameMaxLength, setGlobalHistory, setSyntaxTheme, setTheme, setTasks, setJanissaryTasksDir, setProfiles, setRouteIndex,
     routeRef: routeReference,
   });
 
@@ -171,6 +171,7 @@ export function App() {
   return (
     <AppShell
       tabs={tabs} client={client} dropRef={dropReference} tabNameMaxLength={tabNameMaxLength}
+      activeTabNameMaxLength={activeTabNameMaxLength}
       sidebarLeftWidth={sidebarLeftWidth} onSidebarLeftWidthChange={setSidebarLeftWidth}
       sidebarRightWidth={sidebarRightWidth} onSidebarRightWidthChange={setSidebarRightWidth}
       focusLeft={focusLeft} focusRight={focusRight}
@@ -182,6 +183,7 @@ export function App() {
         onClose={(index) => closeTab(actionEntries[index].index)}
         onRename={(index, title) => client.renameTab(actionEntries[index].index, title)}
         tabNameMaxLength={tabNameMaxLength}
+        activeTabNameMaxLength={activeTabNameMaxLength}
         onFocusCommandBar={() => inputReference.current?.focus()}
         windowFocused={windowFocused}
       />

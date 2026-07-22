@@ -10,7 +10,7 @@ const makeClient = () => {
   return {
     onState: vi.fn((l: StateListener) => { listener = l; return () => {}; }),
     emit: (route: RouteChooserView | null) => {
-      listener?.([], 0, route, 16, [], 'github-dark', 'dark', [], '', [], '', '', null, null);
+      listener?.([], 0, route, 16, [], 'github-dark', 'dark', [], '', [], '', '', null, null, 50);
     },
   };
 };
@@ -22,6 +22,7 @@ const makeSetters = () => ({
   setHarnessLaunch: vi.fn(),
   setScheduleLaunch: vi.fn(),
   setTabNameMaxLength: vi.fn(),
+  setActiveTabNameMaxLength: vi.fn(),
   setGlobalHistory: vi.fn(),
   setSyntaxTheme: vi.fn(),
   setTheme: vi.fn(),

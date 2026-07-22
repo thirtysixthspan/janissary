@@ -128,7 +128,7 @@ describe('TabStrip', () => {
       editor: { name: 'a-very-long-file-name.md', path: '/tmp/a-very-long-file-name.md', size: '1 KB', url: '/open/1' },
     });
     render(<TabStrip tabs={[tab]} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()} onRename={vi.fn()} tabNameMaxLength={14} />);
-    await userEvent.dblClick(screen.getByText('a-very-long-fi'));
+    await userEvent.dblClick(screen.getByText('a-very-long-file-name.md'));
     expect(screen.getByDisplayValue('a-very-long-file-name.md')).toBeInTheDocument();
   });
 
@@ -260,5 +260,37 @@ describe('TabStrip', () => {
     await userEvent.click(screen.getByText('elsewhere'));
     expect(onRename).toHaveBeenCalledTimes(1);
     expect(onRename).toHaveBeenCalledWith(0, 'Display Namereviewer');
+  });
+  it('truncates an inactive tab to the configured short limit with an ellipsis', () => {
+    const tabs = [makeTab({ label: 'active' }), makeTab({ label: 'inactive', title: 'abcdefgh' })];
+    render(
+      <TabStrip
+        tabs={tabs} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()} onRename={vi.fn()}
+        tabNameMaxLength={5} activeTabNameMaxLength={20}
+      />,
+    );
+    expect(screen.getByText('abcd…')).toBeInTheDocument();
+  });
+
+  it('expands the active tab to the configured focused limit', () => {
+    const tab = makeTab({ label: 'internal', title: 'abcdefgh' });
+    render(
+      <TabStrip
+        tabs={[tab]} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()} onRename={vi.fn()}
+        tabNameMaxLength={5} activeTabNameMaxLength={10}
+      />,
+    );
+    expect(screen.getByText('abcdefgh')).toBeInTheDocument();
+  });
+
+  it('ellipsizes the active tab when its name exceeds the configured focused limit', () => {
+    const tab = makeTab({ label: 'internal', title: 'abcdefgh' });
+    render(
+      <TabStrip
+        tabs={[tab]} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()} onRename={vi.fn()}
+        tabNameMaxLength={3} activeTabNameMaxLength={5}
+      />,
+    );
+    expect(screen.getByText('abcd…')).toBeInTheDocument();
   });
 });

@@ -4,6 +4,7 @@ import type { TabView } from '@shared/protocol';
 import { TAB_RENAME_MAX_LENGTH } from '@shared/config';
 import { statusDotIcon, unreadIcon } from './icons';
 import { InlineEditInput } from './InlineEditInput';
+import { truncateTabLabel } from './tab-label';
 
 // Shared with TabStrip, which passes these straight through to each TabItem it renders.
 export type TabItemActions = {
@@ -11,6 +12,7 @@ export type TabItemActions = {
   onClose: (index: number) => void;
   onRename: (index: number, title: string) => void;
   tabNameMaxLength: number;
+  activeTabNameMaxLength?: number;
   onFocusCommandBar?: () => void;
 };
 
@@ -21,13 +23,17 @@ type Properties = TabItemActions & {
   windowFocused?: boolean;
 };
 
-export function TabItem({ tab, index, active, onSelect, onClose, onRename, onFocusCommandBar, windowFocused = true }: Properties) {
+export function TabItem({
+  tab, index, active, onSelect, onClose, onRename, tabNameMaxLength,
+  activeTabNameMaxLength = 50, onFocusCommandBar, windowFocused = true,
+}: Properties) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState('');
   // Escape cancels and blurs the input; the resulting blur event must not also commit.
   const cancelledRef = useRef(false);
 
   const fullName = tab.editor?.name ?? tab.markdown?.name ?? tab.image?.name ?? tab.title ?? tab.label;
+  const displayName = truncateTabLabel(fullName, active ? activeTabNameMaxLength : tabNameMaxLength);
   const startEdit = () => { cancelledRef.current = false; setDraft(fullName); setEditing(true); };
 
   const commit = () => {
@@ -66,7 +72,7 @@ export function TabItem({ tab, index, active, onSelect, onClose, onRename, onFoc
           e.stopPropagation();
           startEdit();
         }}
-        >{tab.title ?? tab.label}</span>
+        >{displayName}</span>
       )}
       {tab.hasUnread && <span className="tab-badge" role="img" aria-label="unread"><FontAwesomeIcon icon={unreadIcon} /></span>}
       <button

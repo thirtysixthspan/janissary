@@ -3,7 +3,6 @@
 ## ready
 
 
-* when a file name is too long to fit on a tab label use the ... symbol to shorten it. when a tab is focused, expand the tab label to show up to 50 characters of the file name. This number should be application configuration and be stored in ./janissary/config.json. when it is not focused only show the default number of characters. this default number should be application configutation and stored in ./janissary/config.json. the default is currently hard coded.
 
 * when you open a new file in an editor, add content to the tab, then use the tab label to change the name of the file, the unsaved content in the tab should also carry over to the new file.
 

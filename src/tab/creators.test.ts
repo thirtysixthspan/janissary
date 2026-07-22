@@ -1,10 +1,18 @@
 import { describe, it, expect } from 'vitest';
 import { makeTab, makeEditorTab, makeMarkdownTab } from './index.js';
-import { uniqueEditorLabel, addEditorTab, uniqueMarkdownLabel, addMarkdownTab } from './creators.js';
-import type { EditorView, MarkdownView } from '../types.js';
+import { uniqueEditorLabel, addEditorTab, uniqueMarkdownLabel, addMarkdownTab, addImageTab } from './creators.js';
+import type { EditorView, MarkdownView, ImageView } from '../types.js';
 
 const view: EditorView = { name: 'notes.txt', path: '/tmp/notes.txt', size: '5 B', url: '/open/1' };
 const markdownView: MarkdownView = { name: 'readme.md', path: '/tmp/readme.md', size: '5 B', url: '/open/1' };
+
+describe('addImageTab', () => {
+  it('retains a long image filename as the complete tab title', () => {
+    const image: ImageView = { name: 'very-long-reference-image-name.png', path: '/tmp/image.png', size: '1 kB', url: '/open/2' };
+    const result = addImageTab([makeTab('janus', '#fff')], 0, image);
+    expect(result.tabs[result.activeTab].title).toBe(image.name);
+  });
+});
 
 describe('makeEditorTab', () => {
   it('builds an editor view tab with the filename as title and the payload attached', () => {
@@ -33,13 +41,12 @@ describe('addEditorTab', () => {
     expect(added.title).toBe('notes.txt');
   });
 
-  it('truncates a long filename to the configured max tab name length', () => {
+  it('retains a long filename as the complete tab title', () => {
     const long: EditorView = { name: 'very-long-config-file-name-that-is-too-long.json', path: '/tmp/long.json', size: '1 kB', url: '/open/2' };
     const tabs = [makeTab('janus', '#fff')];
     const result = addEditorTab(tabs, 0, long);
     const added = result.tabs[result.activeTab];
-    expect(added.title.length).toBeLessThanOrEqual(16);
-    expect(added.title).toBe('very-long-config');
+    expect(added.title).toBe(long.name);
   });
 });
 
@@ -62,12 +69,11 @@ describe('addMarkdownTab', () => {
     expect(added.title).toBe('readme.md');
   });
 
-  it('truncates a long filename to the configured max tab name length', () => {
+  it('retains a long filename as the complete tab title', () => {
     const long: MarkdownView = { name: 'very-long-config-file-name-that-is-too-long.md', path: '/tmp/long.md', size: '1 kB', url: '/open/2' };
     const tabs = [makeTab('janus', '#fff')];
     const result = addMarkdownTab(tabs, 0, long);
     const added = result.tabs[result.activeTab];
-    expect(added.title.length).toBeLessThanOrEqual(16);
-    expect(added.title).toBe('very-long-config');
+    expect(added.title).toBe(long.name);
   });
 });
