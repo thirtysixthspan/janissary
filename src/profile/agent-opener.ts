@@ -1,6 +1,8 @@
 import { distinctColor } from '../tab/index.js';
 import { startProfileMonitors } from './monitors.js';
 import { openProfileFiles } from './files.js';
+import { openProfileEditors } from './editors.js';
+import { focusedMainAreaLabel, type MainAreaCandidate } from './focus.js';
 import { openProfileNotifications } from './notifications.js';
 import { openProfileSchedules } from './schedules.js';
 import { applyProfileLayout } from './layout.js';
@@ -28,6 +30,7 @@ export function openProfileEntries(
 
   const used = new Set(managers.tab.tabs.map((t) => t.dotColor));
   const opened: string[] = [];
+  const candidates: MainAreaCandidate[] = [];
   let groupColor: string | undefined;
   const firstNew = managers.tab.tabs.length;
   const issuingCwd = managers.tab.cwdOf(issuingLabel) ?? process.cwd();
@@ -44,13 +47,16 @@ export function openProfileEntries(
       openAgentEntry(entry, managers, group, groupColor, dotColor);
     }
     opened.push(label);
+    candidates.push({ label, number: entry.number, focus: entry.focus });
   }
 
-  if (opened.length > 0) managers.tab.setActiveTab(firstNew);
   // Profile-level file navigator(s) open next, rooted at the first newly opened tab by default, so
   // their tabs are part of the list by the time monitor targets are resolved below.
   const firstNewLabel = opened.length > 0 ? managers.tab.tabs[firstNew]?.label : undefined;
   openProfileFiles(loaded.files, managers, firstNewLabel, notes);
+  candidates.push(...openProfileEditors(loaded.editors, managers, firstNewLabel, notes));
+  const focusLabel = focusedMainAreaLabel(candidates, firstNewLabel);
+  if (focusLabel !== undefined) managers.tab.setActiveTab(managers.tab.findIndex(focusLabel));
   // Profile-level notifications tab opens next, docked per the profile's `notifications` key.
   openProfileNotifications(loaded.notifications, managers, notes);
   // Profile-level schedules tab opens next, docked per the profile's `schedules` key.

@@ -72,4 +72,18 @@ describe('loadProfile', () => {
     const loaded = loadProfile('s') as LoadedProfile;
     expect(loaded.layout).toEqual({ sidebarLeft: 200, sidebarRight: 210 });
   });
+
+  it('loads editors and maps tab focus for agents and harnesses', () => {
+    writeJson('editor', {
+      agents: [{ name: 'agent', active: false, tab: { number: 2, focus: true } }],
+      harnesses: [{ name: 'harness', type: 'claude', tab: { number: 1 } }],
+      editors: [{ path: '$root/notes.md', line: 4 }],
+    });
+    const loaded = loadProfile('editor') as LoadedProfile;
+    expect(loaded.editors).toEqual([{ path: '$root/notes.md', line: 4 }]);
+    expect(loaded.entries).toEqual([
+      expect.objectContaining({ name: 'harness', number: 1, focus: undefined }),
+      expect.objectContaining({ name: 'agent', number: 2, focus: true }),
+    ]);
+  });
 });

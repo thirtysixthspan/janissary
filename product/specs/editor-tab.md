@@ -10,6 +10,10 @@ When the `edit` command runs, a transcript entry for the command appears in the 
 before the editor tab opens and takes focus. The command text is recorded as the entry's input; the
 output is empty since the editor tab is the side-effect.
 
+Profiles may also open an editor tab through their `editors` configuration. Those tabs follow the
+same file, line-targeting, missing-file, and duplicate-file behavior, while profile launch chooses
+the final active main-area tab from its configured focus settings.
+
 An editor tab is created like an agent tab (see Tabs) — placed contiguously within the active tab's
 group, inheriting that group's number and bar color and taking a distinct dot color. Focus moves to
 the new editor tab, and keyboard focus lands in the buffer once its content has loaded, with the
