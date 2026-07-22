@@ -6,11 +6,12 @@ type Properties = TabItemActions & {
   tabs: TabView[];
   activeTab: number;
   windowFocused?: boolean;
+  endControl?: React.ReactNode;
 };
 
 export function TabStrip({
   tabs, activeTab, onSelect, onClose, onRename, tabNameMaxLength, activeTabNameMaxLength = 50,
-  onFocusCommandBar, onFocusEditor, windowFocused,
+  onFocusCommandBar, onFocusEditor, windowFocused, endControl,
 }: Properties) {
   return (
     <div className="tabstrip" data-doc-shot="tab-strip">
@@ -30,6 +31,7 @@ export function TabStrip({
           windowFocused={windowFocused}
         />
       ))}
+      {endControl}
     </div>
   );
 }

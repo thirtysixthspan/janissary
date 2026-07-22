@@ -5,7 +5,7 @@ import { FileTreeTab } from './FileTreeTab';
 import { NotificationsTab } from './NotificationsTab';
 import { SchedulesTab } from './SchedulesTab';
 import { TabStrip } from './TabStrip';
-import { startDrag } from './drag-resize';
+import { ResizeButton } from './ResizeButton';
 import type { CommandInputDropHandle } from './CommandInput';
 
 const MIN_WIDTH_PX = 180;
@@ -16,8 +16,7 @@ export const DEFAULT_WIDTH_PX = 300;
 // time — the only two dockable kinds — sharing the space via a small internal tab-switcher (only
 // shown once both are present). Visibility is derived: the sidebar renders exactly when some tab
 // is docked to its side. Width is a controlled prop, owned by `App` (so a profile's `layout` key
-// can drive it too — see `useLayoutState`), resized by dragging the divider on the sidebar's inner
-// edge, mirroring ReportingSection's height-drag precedent.
+// can drive it too — see `useLayoutState`), resized by dragging the gutter button.
 export function Sidebar({
   side, tabs, client, dropRef, tabNameMaxLength = 16, activeTabNameMaxLength = 50,
   width = DEFAULT_WIDTH_PX, onWidthChange, focusView,
@@ -40,16 +39,19 @@ export function Sidebar({
   const [selectedView, setSelectedView] = useState<'files' | 'notifications' | 'schedules'>('files');
   const previousLabelsRef = useRef<Set<string>>(new Set());
 
-  const onDividerDown = useCallback((down: React.MouseEvent) => {
-    down.preventDefault();
-    const startX = down.clientX;
-    const startWidth = width;
-    startDrag((move) => {
-      const delta = side === 'left' ? move.clientX - startX : startX - move.clientX;
-      const maxWidth = globalThis.innerWidth * (MAX_WIDTH_PCT / 100);
-      onWidthChange?.(Math.min(maxWidth, Math.max(MIN_WIDTH_PX, startWidth + delta)));
-    });
+  const onResize = useCallback((down: React.MouseEvent, move: MouseEvent) => {
+    const delta = side === 'left' ? move.clientX - down.clientX : down.clientX - move.clientX;
+    const maxWidth = globalThis.innerWidth * (MAX_WIDTH_PCT / 100);
+    onWidthChange?.(Math.min(maxWidth, Math.max(MIN_WIDTH_PX, width + delta)));
   }, [side, width, onWidthChange]);
+
+  const resizeButton = (
+    <ResizeButton
+      direction="horizontal"
+      label={`Resize ${side} sidebar`}
+      onResize={onResize}
+    />
+  );
 
   const entries = tabs.map((tab, index) => ({ tab, index })).filter((e) => e.tab.dock === side);
 
@@ -71,11 +73,8 @@ export function Sidebar({
   const current = entries.find((e) => e.tab.view === selectedView) ?? entries[0];
   const activeIndex = entries.indexOf(current);
 
-  const divider = <div className="sidebar-resize" onMouseDown={onDividerDown} />;
-
   return (
     <div className={`sidebar sidebar-${side}`} style={{ flex: `0 0 ${width}px` }} data-doc-shot={`sidebar-${side}`}>
-      {side === 'right' && divider}
       <div className="sidebar-body">
         <TabStrip
           tabs={entries.map((e) => e.tab)}
@@ -85,6 +84,7 @@ export function Sidebar({
           onRename={(i, title) => client.renameTab(entries[i].index, title)}
           tabNameMaxLength={tabNameMaxLength}
           activeTabNameMaxLength={activeTabNameMaxLength}
+          endControl={resizeButton}
         />
         {current.tab.view === 'files' && current.tab.files && (
           <FileTreeTab
@@ -102,7 +102,6 @@ export function Sidebar({
           />
         )}
       </div>
-      {side === 'left' && divider}
     </div>
   );
 }

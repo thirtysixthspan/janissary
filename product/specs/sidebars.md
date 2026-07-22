@@ -64,12 +64,11 @@ name the same way.
 
 ### Resizing
 
-Each sidebar's width is adjusted by dragging the divider on its inner edge (the edge facing the
-center content) with the mouse. Width is clamped to a minimum and to roughly half the viewport,
-so a sidebar can never crowd out the center content entirely or shrink to nothing. Width is
-ephemeral display state: it resets to a default on relaunch and is never persisted, independent
-per sidebar, and unrelated to which tab happens to be docked there. The divider's plain-border
-look matches the divider used to resize the reporting section below the tab strip.
+Each sidebar's tab gutter has a single right-aligned up/down-arrow resize button. Dragging the
+button horizontally adjusts the sidebar's width. Width is clamped to a minimum and to roughly
+half the viewport, so a sidebar can never crowd out the center content entirely or shrink to
+nothing. Width is ephemeral display state: it resets to a default on relaunch and is never
+persisted, independent per sidebar, and unrelated to which tab happens to be docked there.
 
 ### What's server-owned vs. client-owned
 

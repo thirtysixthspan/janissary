@@ -26,6 +26,9 @@ A target is a tab label or `group:<n>`. A tab may also be named by its display a
 
 A reporting-mode monitor's tab carries a metadata line above its suggestion feed: the persona name, the tab(s)/group(s) it watches, and the total size sent to and received from its session so far (shown in bytes/kilobytes/megabytes). Two buttons sit at the right of that line:
 
+The reporting tab gutter has an up/down-arrow button at the right. Drag it vertically to resize
+the reporting area: drag up for more reporting space, or down for more main-tab space.
+
 - A **reset** button discards the monitor's accumulated context and reloads just its persona priming, the same recovery the monitor performs automatically after a session error.
 - A **context snapshot** button opens the monitor's current accumulated context (persona priming, batched updates, questions, and replies) as a point-in-time snapshot in a text tab.
 
