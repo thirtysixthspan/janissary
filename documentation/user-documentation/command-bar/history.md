@@ -6,7 +6,7 @@ Every command you run is remembered, and there are three ways back to one: the `
 
 ## Arrow-key recall
 
-`↑` walks backward through the current tab's history, most recent first; `↓` walks forward again. Stepping past the newest entry clears the input line. Each recalled command lands on the input line with the cursor at the end, ready to edit or run.
+`↑` walks backward through the current tab's history, most recent first; `↓` walks forward again. If you've already typed a command before pressing `↑`, stepping forward past the newest history entry restores that unexecuted text instead of losing it. Each recalled command and restored draft lands on the input line with the cursor at the end, ready to edit or run.
 
 ## Ghost text
 

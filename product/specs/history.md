@@ -8,7 +8,7 @@ Each tab stores its own command history array and navigation index. Switching ta
 
 ### History navigation
 
-The Up arrow walks backward through the history (most recent first). The Down arrow walks forward. Past the newest entry, the input line clears. Each recalled entry is placed on the input line with the cursor at its end.
+The Up arrow walks backward through the history (most recent first). When navigation begins, the current unexecuted input is retained as a transient draft. The Down arrow walks forward, and moving past the newest executed entry restores that draft, including an empty draft. Each recalled entry and the restored draft are placed on the input line with the cursor at its end. The draft is not added to persisted per-tab or global history and does not appear in the history picker.
 
 ### Click to execute
 
