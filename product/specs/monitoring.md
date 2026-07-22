@@ -16,6 +16,13 @@ The metadata line's right-floated reset button discards the accumulated conversa
 
 The metadata line also carries a right-floated context button that opens a point-in-time snapshot of the monitor's current context — the actual accumulated content whose size the byte counter reports — in a text tab. The snapshot is the ordered context the monitor has built up: its persona priming followed by every batched update, direct question, and reply. Each block is wrapped between a pair of markers that delineate its direction — one immediately before and one immediately after its content — whether it was sent to the model (persona priming, batched updates, direct questions) or is a response received from the model (a reply) — so the two are visually distinct rather than an undifferentiated run of text. It opens as a normal editor tab, so it scrolls with the arrow keys, Page Up/Down, and the mouse wheel. It is a snapshot, not a live view: it reflects the context as of the moment the button was clicked, and clicking again opens a fresh snapshot. When two owners share one reporting tab, the snapshot is of the monitor feeding that tab.
 
+### Reporting area resizing
+
+The reporting tab gutter has a single right-aligned up/down-arrow resize button. Dragging the
+button vertically changes the reporting area's height; dragging up gives the reporting area more
+space and dragging down gives the main tab area more space. Neither area can shrink below 15% of
+the viewport height.
+
 ### Transcript access
 
 When a monitor starts, it receives the full existing transcript of every target tab — not just entries that arrive after the monitor starts. Inline monitors receive the owner tab's own transcript. External monitors receive the transcripts of all specified tabs and all members of specified groups. Entries appear in the order they were logged, giving the monitor full historical context from the moment it starts.

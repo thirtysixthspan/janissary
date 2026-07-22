@@ -126,7 +126,7 @@ describe('ReportingSection', () => {
     expect(onClose).toHaveBeenCalledWith(1);
   });
 
-  it('divider mouseup removes listeners', () => {
+  it('resize button mouseup removes listeners', () => {
     const removeSpy = vi.spyOn(globalThis, 'removeEventListener');
     const { container } = render(
       React.createElement(ReportingSection, {
@@ -134,53 +134,53 @@ describe('ReportingSection', () => {
         onClose: vi.fn(), onRun: vi.fn(), onRate: vi.fn(), onReset: vi.fn(), onSnapshot: vi.fn(),
       }),
     );
-    const divider = container.querySelector('.reporting-resize')!;
-    fireEvent.mouseDown(divider);
-    fireEvent.mouseUp(divider);
+    const button = container.querySelector('.resize-button')!;
+    fireEvent.mouseDown(button);
+    fireEvent.mouseUp(button);
     expect(removeSpy).toHaveBeenCalledWith('mousemove', expect.any(Function));
     expect(removeSpy).toHaveBeenCalledWith('mouseup', expect.any(Function));
     removeSpy.mockRestore();
   });
 
-  it('divider drag mousemove updates the height percentage', () => {
+  it('resize button drag mousemove updates the height percentage', () => {
     const { container } = render(
       React.createElement(ControlledReportingSection, {
         entries: [makeEntry('alerts', 0)],
         onClose: vi.fn(), onRun: vi.fn(), onRate: vi.fn(), onReset: vi.fn(), onSnapshot: vi.fn(),
       }),
     );
-    const divider = container.querySelector('.reporting-resize')!;
+    const button = container.querySelector('.resize-button')!;
     const section = container.querySelector('.reporting-section')!;
-    fireEvent.mouseDown(divider);
-    fireEvent.mouseMove(divider, { clientY: globalThis.innerHeight * 0.5 });
+    fireEvent.mouseDown(button);
+    fireEvent.mouseMove(button, { clientY: globalThis.innerHeight * 0.5 });
     expect((section as HTMLElement).style.flex).toBe('0 0 50%');
   });
 
-  it('divider drag clamps height to min 15%', () => {
+  it('resize button drag clamps height to min 15%', () => {
     const { container } = render(
       React.createElement(ControlledReportingSection, {
         entries: [makeEntry('alerts', 0)],
         onClose: vi.fn(), onRun: vi.fn(), onRate: vi.fn(), onReset: vi.fn(), onSnapshot: vi.fn(),
       }),
     );
-    const divider = container.querySelector('.reporting-resize')!;
+    const button = container.querySelector('.resize-button')!;
     const section = container.querySelector('.reporting-section')!;
-    fireEvent.mouseDown(divider);
-    fireEvent.mouseMove(divider, { clientY: globalThis.innerHeight * 0.9 });
+    fireEvent.mouseDown(button);
+    fireEvent.mouseMove(button, { clientY: globalThis.innerHeight * 0.9 });
     expect((section as HTMLElement).style.flex).toBe('0 0 15%');
   });
 
-  it('divider drag clamps height to max 85%', () => {
+  it('resize button drag clamps height to max 85%', () => {
     const { container } = render(
       React.createElement(ControlledReportingSection, {
         entries: [makeEntry('alerts', 0)],
         onClose: vi.fn(), onRun: vi.fn(), onRate: vi.fn(), onReset: vi.fn(), onSnapshot: vi.fn(),
       }),
     );
-    const divider = container.querySelector('.reporting-resize')!;
+    const button = container.querySelector('.resize-button')!;
     const section = container.querySelector('.reporting-section')!;
-    fireEvent.mouseDown(divider);
-    fireEvent.mouseMove(divider, { clientY: 0 });
+    fireEvent.mouseDown(button);
+    fireEvent.mouseMove(button, { clientY: 0 });
     expect((section as HTMLElement).style.flex).toBe('0 0 85%');
   });
 });

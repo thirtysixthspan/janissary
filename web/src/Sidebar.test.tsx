@@ -59,8 +59,8 @@ describe('Sidebar', () => {
     const tabs = [makeTab({ view: 'files', dock: 'left', files: { root: '/tmp/project', absoluteRoot: '/tmp/project', rows: [] } })];
     const { container } = render(<ControlledSidebar side="left" tabs={tabs} client={client} />);
     const sidebar = container.querySelector('.sidebar-left') as HTMLElement;
-    const divider = container.querySelector('.sidebar-resize')!;
-    fireEvent.mouseDown(divider, { clientX: 280 });
+    const button = container.querySelector('.resize-button')!;
+    fireEvent.mouseDown(button, { clientX: 280 });
     fireEvent.mouseMove(document, { clientX: -1000 });
     expect(sidebar.style.flex).toBe('0 0 180px');
   });
@@ -70,8 +70,8 @@ describe('Sidebar', () => {
     const tabs = [makeTab({ view: 'files', dock: 'left', files: { root: '/tmp/project', absoluteRoot: '/tmp/project', rows: [] } })];
     const { container } = render(<Sidebar side="left" tabs={tabs} client={client} />);
     const sidebar = container.querySelector('.sidebar-left') as HTMLElement;
-    const divider = container.querySelector('.sidebar-resize')!;
-    fireEvent.mouseDown(divider, { clientX: 280 });
+    const button = container.querySelector('.resize-button')!;
+    fireEvent.mouseDown(button, { clientX: 280 });
     fireEvent.mouseUp(document);
     // mouseup removes listeners — subsequent moves are no-ops
     fireEvent.mouseMove(document, { clientX: 200 });
@@ -208,8 +208,8 @@ describe('Sidebar', () => {
     const tabs = [makeTab({ view: 'files', dock: 'right', files: { root: '/tmp/project', absoluteRoot: '/tmp/project', rows: [] } })];
     const { container } = render(<ControlledSidebar side="right" tabs={tabs} client={client} />);
     const sidebar = container.querySelector('.sidebar-right') as HTMLElement;
-    const divider = container.querySelector('.sidebar-resize')!;
-    fireEvent.mouseDown(divider, { clientX: 280 });
+    const button = container.querySelector('.resize-button')!;
+    fireEvent.mouseDown(button, { clientX: 280 });
     fireEvent.mouseMove(document, { clientX: -100_000 }); // dragging left widens the right sidebar
     const maxWidth = globalThis.innerWidth * 0.5;
     expect(sidebar.style.flex).toBe(`0 0 ${maxWidth}px`);
