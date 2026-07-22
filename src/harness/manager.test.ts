@@ -206,6 +206,7 @@ describe('HarnessManager.registerScreenReader', () => {
 
 describe('HarnessManager auto-approve', () => {
   const GATE = ' Do you want to proceed?\r\n ❯ 1. Yes\r\n   2. No\r\n\r\n Esc to cancel';
+  const CODEX_GATE = ' Would you like to run the following command?\r\n\r\n   npm test\r\n\r\n › 1. Yes, proceed\r\n   2. No\r\n\r\n Press Enter to confirm · Esc to cancel';
 
   beforeEach(() => {
     vi.useFakeTimers();
@@ -226,6 +227,16 @@ describe('HarnessManager auto-approve', () => {
     await vi.advanceTimersByTimeAsync(1001);
     expect(managers.pty.input).toHaveBeenCalledWith('pty-1', '\r');
     expect(notify).toHaveBeenCalledWith(managers, 'auto-approve', 'claude', 'Auto-approved a permission prompt', undefined);
+  });
+
+  it('injects the approval keystroke and notifies when a codex overlay is detected with -y', async () => {
+    const { managers } = makeManagers();
+    const manager = new HarnessManager(managers);
+    expect(manager.run('harness codex -w -y')).toBeUndefined();
+    messageBus.emit('pty', { type: 'data', id: 'pty-1', data: CODEX_GATE });
+    await vi.advanceTimersByTimeAsync(1001);
+    expect(managers.pty.input).toHaveBeenCalledWith('pty-1', '\r');
+    expect(notify).toHaveBeenCalledWith(managers, 'auto-approve', 'codex', 'Auto-approved a permission prompt', undefined);
   });
 
   it('writes a capture file and links it on the notification when the notifications tab is open', async () => {

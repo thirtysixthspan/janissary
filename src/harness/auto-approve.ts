@@ -1,4 +1,5 @@
 import type { ScreenCapture } from './screen.js';
+import { detectCodexPermissionGate, CODEX_APPROVAL_KEYSTROKE } from './codex-permission-gate.js';
 
 // The highlighted default option-1 line, e.g. `❯ 1. Yes` (possibly with trailing text). The `❯`
 // glyph is the highlight marker and is required — a gate always defaults to "Yes".
@@ -46,13 +47,22 @@ function detectClaudeGate(text: string): boolean {
 
 type GateEntry = { detect: (text: string) => boolean; keystroke: string };
 
-// Per-harness gate detectors + approval keystrokes. Only claude is populated today; opencode/codex
-// are deliberate later work (each needs its own captured gate signatures). claude's keystroke is
-// Enter (`\r`), which accepts the highlighted default "Yes" across every captured variant — `y`
-// does not work because these are numbered menus, not y/n prompts.
+// Per-harness gate detectors + approval keystrokes. claude and codex are populated; opencode is
+// deliberate later work (it needs its own captured gate signatures). Both keystrokes are Enter
+// (`\r`), which accepts the highlighted default option — `y` does not work because these are
+// selected-row menus, not y/n prompts. Membership here is also the source of truth for which
+// harnesses accept `-y`/auto-approve (see supportsHarnessAutoApprove).
 const GATE_TABLE: Record<string, GateEntry> = {
   claude: { detect: detectClaudeGate, keystroke: '\r' },
+  codex: { detect: detectCodexPermissionGate, keystroke: CODEX_APPROVAL_KEYSTROKE },
 };
+
+// Whether `harnessName` has an installed permission-gate detector and therefore supports
+// auto-approve (`-y`). Command parsing and profile launching both derive their accepted set from
+// this predicate, so validation cannot drift from the detectors that actually exist.
+export function supportsHarnessAutoApprove(harnessName: string): boolean {
+  return GATE_TABLE[harnessName] !== undefined;
+}
 
 // Whether the rendered screen `text` is a recognized permission gate for `harnessName`. Pure and
 // deterministic; any harness without a table entry returns false.
