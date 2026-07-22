@@ -11,3 +11,15 @@ describe('editor theme', () => {
     expect(editorContentRule).not.toContain('word-break: break-all');
   });
 });
+
+describe('metadata theme', () => {
+  it('makes every metadata text container selectable', () => {
+    const metadataRule = theme.match(
+      /\.image-meta, \.page-meta, \.tab-meta, \.monitor-meta, \.files-meta \{[^}]+\}/,
+    )?.[0];
+
+    expect(metadataRule).toBeDefined();
+    expect(metadataRule).toContain('user-select: text');
+    expect(metadataRule).not.toContain('user-select: none');
+  });
+});

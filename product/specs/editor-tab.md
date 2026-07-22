@@ -34,7 +34,10 @@ up/down, etc.) are not.
 
 ### Focus protection
 
-Clicking the metadata header or in the editor body outside any text line (blank space below the last line) must not steal focus from the hidden textarea — the cursor position and keyboard input remain uninterrupted. The metadata header is non-selectable (text cannot be selected in it) to prevent accidental browser focus changes.
+Clicking in the editor body outside any text line (blank space below the last line) must not steal
+focus from the hidden textarea. A plain click in the metadata header restores textarea focus on
+mouse-up, so the cursor position and keyboard input remain uninterrupted. Drag-selecting metadata
+text leaves focus alone instead, preserving the native selection so it can be copied.
 
 ### New files
 

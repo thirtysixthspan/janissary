@@ -84,6 +84,10 @@ followed by an icon for each of the tab's currently-active flags. A flag with no
 contributes no icon — there is no "disabled" indicator — and the row always renders, showing at
 least the working directory, even when a tab has zero active flags.
 
+Text content in metadata rows and headers throughout the application is selectable with the mouse,
+including paths, names, sizes, branches, addresses, monitor details, and agent settings. Native
+selection is preserved so the selected text can be copied.
+
 Today there are two possible flags: **workspaced** (a box icon), shown when the tab has its own isolated
 git clone, and **auto-permitting** (a bolt icon), shown when harness auto-approval is enabled (harness tabs
 only — see Auto-approve permissions in `harness.md`). Hovering a flag's icon shows a tooltip naming
