@@ -235,6 +235,7 @@ export type AgentState = {
   dotColor: string;
   active: boolean;
   number?: number;
+  focus?: boolean;
   group?: number;
   groupColor?: string;
   cmdHistory?: string[];
@@ -266,6 +267,7 @@ export type ProfileHarnessEntry = {
   // validation against a fixed set (unlike `model`, which is checked against harness-models.json).
   effort?: string;
   number?: number;
+  focus?: boolean;
   group?: number;
   dotColor?: string;
   workspace?: boolean;
@@ -287,7 +289,7 @@ export type ProfileEntry = AgentState | ProfileHarnessEntry;
 // color, tab order, group, and group color, grouped under a `tab` object. The loader maps these down
 // to the flat `dotColor`/`number`/`group`/`groupColor` fields of the runtime `AgentState` /
 // `ProfileHarnessEntry`, and the saver maps them back up.
-export type ProfileTab = { color?: string; number?: number; group?: number; groupColor?: string };
+export type ProfileTab = { color?: string; number?: number; focus?: boolean; group?: number; groupColor?: string };
 
 // An `agents` array element as authored/saved on disk: the agent-state fields, minus the flat tab
 // fields (which live nested under `tab`).
@@ -318,6 +320,10 @@ export type ProfileMonitorFile = { name?: string; persona: string; targets: stri
 // tab; `path` roots it at a literal path, expanded like the `files` command's path argument (so
 // `$root` roots it at the launch dir regardless of any tab).
 export type ProfileFilesEntry = { dock?: 'left' | 'right'; in?: string; path?: string };
+
+// A profile-level editor tab. Its path resolves from `in`, or the profile's first newly opened
+// tab, using the same rules as the `edit` command.
+export type ProfileEditorsEntry = { path: string; in?: string; line?: number; tab?: ProfileTab };
 
 // A profile-level notifications tab, authored under a profile's `notifications` key. `dock` docks
 // the singleton notifications feed into that sidebar; `focus` (only meaningful alongside `dock`)
@@ -355,6 +361,7 @@ export type ProfileFile = {
   harnesses?: ProfileHarnessFile[];
   monitors?: ProfileMonitorFile[];
   files?: ProfileFilesEntry[];
+  editors?: ProfileEditorsEntry[];
   notifications?: ProfileNotificationsEntry[];
   schedules?: ProfileSchedulesEntry[];
   layout?: ProfileLayoutFile;
@@ -366,6 +373,7 @@ export type LoadedProfile = {
   entries: ProfileEntry[];
   monitors: ProfileMonitor[];
   files: ProfileFilesEntry[];
+  editors: ProfileEditorsEntry[];
   notifications: ProfileNotificationsEntry[];
   schedules: ProfileSchedulesEntry[];
   layout: ProfileLayout | null;

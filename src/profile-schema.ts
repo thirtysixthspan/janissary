@@ -39,6 +39,7 @@ function tabProblems(tab: unknown, loc: string): string[] {
   return [
     ...checkField(tab, 'color', 'string', `${loc}.tab`),
     ...checkField(tab, 'number', 'number', `${loc}.tab`),
+    ...checkField(tab, 'focus', 'boolean', `${loc}.tab`),
     ...checkField(tab, 'group', 'number', `${loc}.tab`),
     ...checkField(tab, 'groupColor', 'string', `${loc}.tab`),
   ];
@@ -78,6 +79,16 @@ function monitorProblems(value: unknown, loc: string): string[] {
 function filesProblems(value: unknown, loc: string): string[] {
   if (!isObject(value)) return [`${loc} must be an object`];
   return [...checkDock(value, loc), ...checkField(value, 'in', 'string', loc), ...checkField(value, 'path', 'string', loc)];
+}
+
+function editorsProblems(value: unknown, loc: string): string[] {
+  if (!isObject(value)) return [`${loc} must be an object`];
+  return [
+    ...checkField(value, 'path', 'string', loc, true),
+    ...checkField(value, 'in', 'string', loc),
+    ...checkField(value, 'line', 'number', loc),
+    ...tabProblems(value.tab, loc),
+  ];
 }
 
 function notificationsProblems(value: unknown, loc: string): string[] {
@@ -129,6 +140,7 @@ export function collectProfileProblems(root: unknown): string[] {
     ...sectionProblems(root, 'harnesses', harnessProblems),
     ...sectionProblems(root, 'monitors', monitorProblems),
     ...sectionProblems(root, 'files', filesProblems),
+    ...sectionProblems(root, 'editors', editorsProblems),
     ...sectionProblems(root, 'notifications', notificationsProblems),
     ...sectionProblems(root, 'schedules', schedulesProblems),
   ];

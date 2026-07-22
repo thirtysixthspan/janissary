@@ -48,9 +48,19 @@ An agent entry uses the same format as saved agent state — just a `name` is a 
 - **`run`** — commands typed into the harness once, shortly after launch.
 - **`schedule`** — timers in the [`schedule` grammar](/user-documentation/automation/scheduling), minus the leading `schedule` keyword and any `in <tab>` clause (each line belongs to this tab). A line that doesn't parse is reported at launch and skipped.
 
-Both kinds of entry group their tab presentation under a `tab` object: `color` (the dot color), `number` (tab order), `group`, and `groupColor`.
+Both kinds of entry group their tab presentation under a `tab` object: `color` (the dot color), `number` (tab order), `group`, `groupColor`, and `focus`. Any agent, harness, or editor entry with `focus: true` can claim the main area after launch; the lowest-numbered focused entry wins. Without one, the first newly opened profile tab stays active.
 
-Profile-level configuration lives under plain top-level keys alongside the arrays: `monitors`, `files`, `notifications`, `schedules`, and `layout`. The `layout` key groups the sidebar widths under a nested `sidebar` object, e.g. `"layout": { "sidebar": { "left": 300, "right": 280 }, "tabAreaPct": 75, "window": { "width": 1280, "height": 800 } }`.
+Profile-level configuration lives under plain top-level keys alongside the arrays: `monitors`, `files`, `editors`, `notifications`, `schedules`, and `layout`. The `layout` key groups the sidebar widths under a nested `sidebar` object, e.g. `"layout": { "sidebar": { "left": 300, "right": 280 }, "tabAreaPct": 75, "window": { "width": 1280, "height": 800 } }`.
+
+Use `editors` to open files directly in the in-app editor when the profile launches:
+
+```json
+"editors": [
+  { "path": "$root/product/backlog/features.md", "line": 1, "tab": { "number": 3 } }
+]
+```
+
+Each entry has a required `path`, optional resolving tab `in`, optional cursor `line`, and optional `tab` presentation. `$root` resolves from the launch directory and `~` from home; another relative path resolves from `in` or the first newly opened profile tab. A missing file opens an empty buffer and is created only on save. Relaunching reuses an already-open editor tab for the same file and moves its cursor to the requested line.
 
 A harness entry's `run` and `schedule` live in memory only — closing the tab or quitting ends them. That's the point of the profile: the file is the source of truth, and every launch rebuilds the setup from it.
 

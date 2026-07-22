@@ -40,6 +40,25 @@ describe('validateProfile', () => {
     expect(problems).toContain('layout.window: width must be a number');
   });
 
+  it('validates editor entries and locates malformed editor fields', () => {
+    writeJson('bad-editors', {
+      editors: [
+        {}, { path: 1 }, { path: 'x', line: '1' }, { path: 'x', in: 1 }, { path: 'x', tab: { focus: 'yes' } },
+      ],
+    });
+    const problems = validateProfile('bad-editors');
+    expect(problems).toContain('editors[0]: path is required');
+    expect(problems).toContain('editors[1]: path must be a string');
+    expect(problems).toContain('editors[2]: line must be a number');
+    expect(problems).toContain('editors[3]: in must be a string');
+    expect(problems).toContain('editors[4].tab: focus must be a boolean');
+  });
+
+  it('accepts a valid editor entry even when its file does not exist', () => {
+    writeJson('new-file', { editors: [{ path: '$root/not-yet-created.txt', tab: { focus: true } }] });
+    expect(validateProfile('new-file')).toEqual([]);
+  });
+
   it('returns a single "not valid JSON" item for unparseable JSON', () => {
     write('broken', '{ not json');
     expect(validateProfile('broken')).toEqual(['not valid JSON']);
