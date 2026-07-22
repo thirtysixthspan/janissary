@@ -166,6 +166,17 @@ export class FileTreeManager {
     this.rebuild(label);
   }
 
+  // Rename a file or directory within its current parent. Path separators are rejected so this
+  // operation cannot become a move.
+  rename(label: string, relPath: string, newName: string): void {
+    const state = this.tabs.get(label);
+    if (!state || newName.includes('/') || newName.includes(path.sep)) return;
+    const oldAbs = path.join(state.root, relPath);
+    const newAbs = path.join(path.dirname(oldAbs), newName);
+    try { renameSync(oldAbs, newAbs); } catch { return; }
+    this.rebuild(label);
+  }
+
   // The gitignore-aware candidate list for the tab's own Search-files pop-up (async, off the event
   // loop — see `search.ts`), for the deferred `fileTreeSearch` RPC.
   async search(label: string): Promise<string[]> {

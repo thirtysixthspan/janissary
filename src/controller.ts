@@ -188,20 +188,18 @@ export class Controller {
     fileTreeRpc.fileTreeToggle(this.managers, index, path);
   }
 
-  fileTreeCollapseAll(index: number): void {
-    fileTreeRpc.fileTreeCollapseAll(this.managers, index);
-  }
 
-  fileTreeReroot(index: number, relPath?: string): void {
-    fileTreeRpc.fileTreeReroot(this.managers, index, relPath);
-  }
+  fileTreeCollapseAll = (index: number): void => fileTreeRpc.fileTreeCollapseAll(this.managers, index);
+  fileTreeReroot = (index: number, relPath?: string): void => fileTreeRpc.fileTreeReroot(this.managers, index, relPath);
 
-  moveFileTreeItem(index: number, fromRelPath: string, toRelPath: string): void {
-    fileTreeRpc.moveFileTreeItem(this.managers, index, fromRelPath, toRelPath);
-  }
+  moveFileTreeItem = (index: number, fromRelPath: string, toRelPath: string): void => fileTreeRpc.moveFileTreeItem(this.managers, index, fromRelPath, toRelPath);
 
   deleteFileTreeItem(index: number, relPath: string): void {
     fileTreeRpc.deleteFileTreeItem(this.managers, index, relPath);
+  }
+
+  renameFileTreeItem(index: number, relPath: string, newName: string): void {
+    fileTreeRpc.renameFileTreeItem(this.managers, index, relPath, newName);
   }
 
   undoFileTreeItem(index: number, overwrite?: boolean): { conflict?: { fromRelPath: string; toRelPath: string } } {

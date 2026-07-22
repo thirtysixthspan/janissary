@@ -69,10 +69,11 @@ export function handle(controller: Controller, message: ClientMessage, reply: (e
     case 'pageSync': { controller.syncPageSnapshot(message.params.url, message.params.text); break;
     }
     case 'fileTreeToggle':
-    case 'fileTreeCollapseAll':
     case 'fileTreeReroot':
+    case 'fileTreeCollapseAll':
     case 'moveFileTreeItem':
     case 'deleteFileTreeItem':
+    case 'renameFileTreeItem':
     case 'fileTreeSearch':
     case 'revealFileTreeItem':
     case 'undoFileTreeItem':

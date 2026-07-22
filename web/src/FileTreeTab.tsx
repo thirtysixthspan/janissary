@@ -12,6 +12,8 @@ import { DeleteFileDialog } from './DeleteFileDialog';
 import { FileSearchPopup } from './FileSearchPopup';
 import { useFileTreeSearch } from './useFileTreeSearch';
 import { FileTreeHeader } from './FileTreeHeader';
+import { useFileTreeRename } from './useFileTreeRename';
+import { FileTreeRenameInput } from './FileTreeRenameInput';
 import type { CommandInputDropHandle } from './CommandInput';
 
 type Properties = {
@@ -44,6 +46,7 @@ export function FileTreeTab({ files, client, index, dock, autoFocus = true, drop
   const containerRef = useRef<HTMLDivElement>(null);
   const typeahead = useRef<{ buffer: string; timer?: ReturnType<typeof setTimeout> }>({ buffer: '' });
   const drag = useFileTreeDrag(files.rows, client, index, dropRef);
+  const rename = useFileTreeRename(files.rows, client, index, setSelected);
   const search = useFileTreeSearch(client, index, files.rows, setSelected, () => containerRef.current?.focus());
 
   useEffect(() => { if (autoFocus) containerRef.current?.focus(); }, [autoFocus]);
@@ -77,11 +80,6 @@ export function FileTreeTab({ files, client, index, dock, autoFocus = true, drop
     client.send({ method: 'command', params: { text } });
   };
 
-  const onRowClick = (row: FileTreeRow) => {
-    setSelected(row.path);
-    containerRef.current?.focus();
-  };
-
   const onRowDoubleClick = (row: FileTreeRow, shiftKey: boolean) => {
     if (row.path === '..') reroot();
     else if (row.dir) toggle(row.path);
@@ -99,13 +97,6 @@ export function FileTreeTab({ files, client, index, dock, autoFocus = true, drop
     }
   };
 
-  const confirmDelete = () => {
-    if (pendingDelete) client.send({ method: 'deleteFileTreeItem', params: { index, relPath: pendingDelete } });
-    setPendingDelete(null);
-  };
-
-  const cancelDelete = () => setPendingDelete(null);
-
   const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
       e.preventDefault();
@@ -117,6 +108,12 @@ export function FileTreeTab({ files, client, index, dock, autoFocus = true, drop
       e.preventDefault();
       e.stopPropagation();
       createNewFile();
+      return;
+    }
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'r') {
+      e.preventDefault();
+      e.stopPropagation();
+      if (selected && selected !== '..') rename.beginRename(selected);
       return;
     }
     if (e.ctrlKey || e.metaKey) return; // tab-management chords go to the window handler
@@ -169,12 +166,14 @@ export function FileTreeTab({ files, client, index, dock, autoFocus = true, drop
               className={cls.row}
               data-path={row.path}
               style={{ paddingLeft: 12 + row.depth * 16 }}
-              onClick={() => onRowClick(row)}
+              onClick={() => { setSelected(row.path); containerRef.current?.focus(); }}
               onDoubleClick={(e) => onRowDoubleClick(row, e.shiftKey)}
               onMouseDown={(e) => drag.onRowMouseDown(row, e)}
             >
               {row.dir && row.expanded !== undefined && <span className="files-chevron"><FontAwesomeIcon icon={row.expanded ? expandedIcon : collapsedIcon} /></span>}
-              <span className={cls.name}>{row.name}</span>
+              {rename.editing === row.path ? (
+                <FileTreeRenameInput name={row.name} dir={row.dir} onCommit={rename.commit} onCancel={rename.cancel} />
+              ) : <span className={cls.name}>{row.name}</span>}
             </div>
           );
         })}
@@ -194,11 +193,18 @@ export function FileTreeTab({ files, client, index, dock, autoFocus = true, drop
           onCancel={drag.cancelConflict}
         />
       )}
+      {rename.pendingConflict && (
+        <MoveConflictDialog
+          name={rename.pendingConflict.newName}
+          onOverwrite={rename.confirmOverwrite}
+          onCancel={rename.cancelConflict}
+        />
+      )}
       {pendingDelete && (
         <DeleteFileDialog
           name={pendingDelete.slice(pendingDelete.lastIndexOf('/') + 1)}
-          onConfirm={confirmDelete}
-          onCancel={cancelDelete}
+          onConfirm={() => { client.send({ method: "deleteFileTreeItem", params: { index, relPath: pendingDelete } }); setPendingDelete(null); }}
+          onCancel={() => setPendingDelete(null)}
         />
       )}
       {search.searchOpen && (

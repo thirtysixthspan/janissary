@@ -246,11 +246,16 @@ A focused file tree tab captures its own keys, following the ARIA treeview patte
 | `Cmd+Z` / `Ctrl+Z` | Undo the most recent move made in this tab |
 | `Cmd+Shift+Z` / `Ctrl+Shift+Z` | Redo the most recently undone move |
 | `Cmd+N` / `Ctrl+N` | Create a new file (see "Creating a new file") |
+| `Cmd+R` / `Ctrl+R` | Rename the selected file or directory |
 
 Chords carrying Ctrl or Cmd (tab switching, tab reordering, closing the tab, etc.) are not
 captured by the tree and reach the normal window-level bindings instead, except for the
 undo/redo chords and `Cmd+N`/`Ctrl+N` above, which the tree captures for itself — the same way an
 editor tab captures its own `Cmd+Z`/`Cmd+Shift+Z` for text undo/redo.
+
+### Renaming a file or directory
+
+With a file or directory selected, `Cmd+R` / `Ctrl+R` replaces its name with an inline field. Enter renames only when the trimmed name changed; Escape or moving focus away cancels. When a sibling already has the chosen name, an Overwrite/Cancel dialog appears. Cancel returns to the field.
 
 If the selected row disappears (the directory watcher removed it), selection moves to the nearest
 surviving row rather than pointing at nothing.

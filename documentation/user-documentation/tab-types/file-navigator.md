@@ -110,6 +110,11 @@ A focused tree captures these keys for itself (tab-switching and other `Ctrl`/`C
 | `Cmd+Z` / `Ctrl+Z` | Undo the most recent move made in this tab |
 | `Cmd+Shift+Z` / `Ctrl+Shift+Z` | Redo the most recently undone move |
 | `Cmd+N` / `Ctrl+N` | Create a new file (see "Creating a new file" above) |
+| `Cmd+R` / `Ctrl+R` | Rename the selected file or directory |
+
+## Rename a file or directory
+
+Select a file or directory and press `Cmd+R` (`Ctrl+R`). Its name becomes an editable field. Press `Enter` after changing it to rename it. Press `Escape` or click away to cancel. If the new name already exists beside it, choose **Overwrite** or **Cancel**; cancel returns to the field.
 
 Deleting asks first: `Delete "<name>"?`, offering **Delete** and **Cancel**. Confirming removes the file or directory (recursively, for a directory) from disk; cancelling leaves it untouched.
 
