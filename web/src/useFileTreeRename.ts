@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { FileTreeRow } from '@shared/protocol';
 import type { JanusClient } from './ws';
 import { computeRename, hasRenameCollision, siblingNames } from './file-tree-rename';
@@ -8,10 +8,20 @@ type PendingConflict = { relPath: string; newRelPath: string; newName: string };
 // In-place rename for a file tree row (Cmd+R / Ctrl+R): edit state, commit/cancel, same-directory
 // collision handling (via the shared `MoveConflictDialog`), and the RPC send — kept out of
 // `FileTreeTab.tsx` to stay under the file-size limit, mirroring `useFileTreeDrag`/`useFileTreeSearch`.
-export function useFileTreeRename(rows: FileTreeRow[], client: JanusClient, index: number, setSelected: (path: string) => void) {
+export function useFileTreeRename(
+  rows: FileTreeRow[], client: JanusClient, index: number, setSelected: (path: string) => void,
+  focusTree: () => void,
+) {
   const [editing, setEditing] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
   const [pendingConflict, setPendingConflict] = useState<PendingConflict | null>(null);
+  const [pendingSelection, setPendingSelection] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (pendingSelection === null || rows.every((row) => row.path !== pendingSelection)) return;
+    setSelected(pendingSelection);
+    setPendingSelection(null);
+  }, [pendingSelection, rows, setSelected]);
 
   const begin = (relPath: string, currentName: string) => {
     setEditing(relPath);
@@ -21,6 +31,8 @@ export function useFileTreeRename(rows: FileTreeRow[], client: JanusClient, inde
   const send = (relPath: string, newName: string, newRelPath: string) => {
     client.send({ method: 'renameFileTreeItem', params: { index, relPath, newName } });
     setSelected(newRelPath);
+    setPendingSelection(newRelPath);
+    focusTree();
   };
 
   const commit = () => {

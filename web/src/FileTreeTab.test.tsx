@@ -355,7 +355,7 @@ describe('FileTreeTab', () => {
     it('Enter with a changed name sends renameFileTreeItem and closes the field', async () => {
       const send = vi.fn();
       const client = { send } as unknown as JanusClient;
-      const { container } = render(<FileTreeTab files={makeFiles()} client={client} index={2} />);
+      const { container, rerender } = render(<FileTreeTab files={makeFiles()} client={client} index={2} />);
       const tree = container.querySelector('[role="tree"]')!;
       selectReadme(tree);
       fireEvent.keyDown(tree, { key: 'r', metaKey: true });
@@ -364,6 +364,10 @@ describe('FileTreeTab', () => {
       await userEvent.type(input, 'renamed.md{Enter}');
       expect(send).toHaveBeenCalledWith({ method: 'renameFileTreeItem', params: { index: 2, relPath: 'README.md', newName: 'renamed.md' } });
       expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+      const renamedFiles = makeFiles({ rows: makeFiles().rows.map((row) => row.path === 'README.md' ? { ...row, path: 'renamed.md', name: 'renamed.md' } : row) });
+      rerender(<FileTreeTab files={renamedFiles} client={client} index={2} />);
+      expect(screen.getByText('renamed.md').closest('[role="treeitem"]')).toHaveAttribute('aria-selected', 'true');
+      expect(document.activeElement).toBe(tree);
     });
 
     it('Enter with no change sends nothing', () => {
