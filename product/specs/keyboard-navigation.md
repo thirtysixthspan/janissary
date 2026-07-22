@@ -21,7 +21,7 @@
 | Ctrl+A | Open the task picker |
 | Ctrl+G | Open the fuzzy tab navigator (also closes it if already open) |
 | Ctrl+E | Open the agent command queue popup (no-op if the exposed tab is not an agent tab) |
-| Cmd+P | Open the Quick Open file finder (no-op, but still suppresses the browser Print dialog, on a tab that can't show it) |
+| Cmd+P | Open the Quick Open file finder from any focused tab |
 | Cmd+T | Open a new agent tab rooted at the project directory (same as typing `agent`) — never workspaced |
 | Ctrl+T | Expand / collapse the current tab's agent tool-step runs |
 | PageUp | Scroll transcript up by half terminal height |

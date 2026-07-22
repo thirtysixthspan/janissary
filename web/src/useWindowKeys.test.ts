@@ -156,6 +156,13 @@ describe('useWindowKeys', () => {
     expect(preventDefaultSpy).toHaveBeenCalled();
   });
 
+  it('Cmd+P opens quick open when the focused tab cannot show transcript search', () => {
+    const openQuickOpen = vi.fn();
+    render(React.createElement(TestComponent, { canSearch: false, callbacks: { openQuickOpen } }));
+    dispatchKey('p', { metaKey: true });
+    expect(openQuickOpen).toHaveBeenCalled();
+  });
+
   it('Ctrl+P does not open quick open', () => {
     const openQuickOpen = vi.fn();
     render(React.createElement(TestComponent, { callbacks: { openQuickOpen } }));
