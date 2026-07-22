@@ -3,22 +3,18 @@ import type { EditorApi } from './useEditor';
 import type { EditorSuggestApi } from './useEditorSuggest';
 import { completePersonaName, suggestPillLabel } from './suggest-request';
 
-// Intercepts editor keydowns for the in-editor persona-suggestion surface — pending hunk a/d
-// resolution, the Ctrl/Cmd+Enter query trigger, Tab-completion of a persona name after `>`, and
-// Tab/Enter keyboard focus on a runnable status pill — ahead of the normal key-action pipeline.
+// Intercepts editor keydowns for the in-editor persona-suggestion surface — blocking edits while
+// any hunk is pending (resolution itself is click-only, via each hunk's accept/decline icons; see
+// EditorLines.tsx), the Ctrl/Cmd+Enter query trigger, Tab-completion of a persona name after `>`,
+// and Tab/Enter keyboard focus on a runnable status pill — ahead of the normal key-action pipeline.
 // Returns true once it has handled (and prevented) the event, so EditorTab's onKeyDown stops
 // there. Split out to keep EditorTab.tsx under the 200-line cap (Decision 12).
 export function handleSuggestKeyDown(e: React.KeyboardEvent, api: EditorApi, suggest: EditorSuggestApi): boolean {
-  const s = api.stateRef.current;
   if (suggest.pending) {
     e.preventDefault();
-    if (s) {
-      const key = e.key.toLowerCase();
-      if (key === 'a') suggest.acceptFocused(s);
-      else if (key === 'd') suggest.declineFocused(s);
-    }
     return true;
   }
+  const s = api.stateRef.current;
   if (s && suggest.focusedPillLine === s.cursor.line) {
     if (e.key === 'Enter' && !e.metaKey && !e.ctrlKey) {
       e.preventDefault();

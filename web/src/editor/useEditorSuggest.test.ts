@@ -77,7 +77,7 @@ describe('useEditorSuggest', () => {
     expect(request).toHaveBeenCalledTimes(2); // persona list + the one query, never a second query
   });
 
-  it('accepts the focused hunk, applies it, and removes the request line once all hunks resolve', async () => {
+  it('accepts a hunk, applies it, and removes the request line once all hunks resolve', async () => {
     const { client } = makeClient(['summarizer'], [{ hunks: [{ anchor: 'old text', replacement: 'new text' }] }]);
     let latest: EditorState | undefined;
     const setState = vi.fn((s: EditorState) => { latest = s; });
@@ -88,7 +88,7 @@ describe('useEditorSuggest', () => {
     await act(async () => { result.current.fireOnLine(state, 1); });
     await waitFor(() => expect(result.current.pending).not.toBeNull());
 
-    act(() => { result.current.acceptFocused(state); });
+    act(() => { result.current.acceptHunk(state, 0); });
 
     expect(latest?.lines).toEqual(['new text']);
     expect(result.current.pending).toBeNull();
@@ -105,13 +105,13 @@ describe('useEditorSuggest', () => {
     await act(async () => { result.current.fireOnLine(state, 1); });
     await waitFor(() => expect(result.current.pending).not.toBeNull());
 
-    act(() => { result.current.declineFocused(state); });
+    act(() => { result.current.declineHunk(state, 0); });
 
     expect(latest?.lines).toEqual(['old text', '> summarizer rewrite']);
     expect(result.current.pending).toBeNull();
   });
 
-  it('advances focus to the next hunk without resolving when more remain', async () => {
+  it('marks a hunk resolved without finalizing the set when more remain', async () => {
     const { client } = makeClient(['summarizer'], [{
       hunks: [{ anchor: 'a', replacement: '1' }, { anchor: 'b', replacement: '2' }],
     }]);
@@ -122,8 +122,47 @@ describe('useEditorSuggest', () => {
     await act(async () => { result.current.fireOnLine(state, 2); });
     await waitFor(() => expect(result.current.pending?.hunks.length).toBe(2));
 
-    act(() => { result.current.declineFocused(state); });
+    act(() => { result.current.declineHunk(state, 1); });
 
-    expect(result.current.pending?.index).toBe(1);
+    expect(result.current.pending?.resolved).toEqual([false, true]);
+  });
+
+  it('resolves hunks out of order and only finalizes once every slot is resolved', async () => {
+    const { client } = makeClient(['summarizer'], [{
+      hunks: [{ anchor: 'a', replacement: '1' }, { anchor: 'b', replacement: '2' }],
+    }]);
+    let latest: EditorState | undefined;
+    const setState = vi.fn((s: EditorState) => { latest = s; });
+    const { result } = renderHook(() => useEditorSuggest(client, '/open/1', setState));
+    await waitFor(() => expect(result.current.personas).toEqual(['summarizer']));
+
+    const state = makeState('a\nb\n> summarizer rewrite');
+    await act(async () => { result.current.fireOnLine(state, 2); });
+    await waitFor(() => expect(result.current.pending?.hunks.length).toBe(2));
+
+    act(() => { result.current.acceptHunk(state, 1); });
+    expect(result.current.pending?.resolved).toEqual([false, true]);
+    expect(result.current.pending).not.toBeNull();
+
+    act(() => { result.current.acceptHunk(latest ?? state, 0); });
+    expect(result.current.pending).toBeNull();
+    expect(latest?.lines).toEqual(['1', '2']);
+  });
+
+  it('is a no-op resolving an already-resolved hunk', async () => {
+    const { client } = makeClient(['summarizer'], [{
+      hunks: [{ anchor: 'a', replacement: '1' }, { anchor: 'b', replacement: '2' }],
+    }]);
+    const { result } = renderHook(() => useEditorSuggest(client, '/open/1', vi.fn()));
+    await waitFor(() => expect(result.current.personas).toEqual(['summarizer']));
+
+    const state = makeState('a\nb\n> summarizer rewrite');
+    await act(async () => { result.current.fireOnLine(state, 2); });
+    await waitFor(() => expect(result.current.pending?.hunks.length).toBe(2));
+
+    act(() => { result.current.declineHunk(state, 0); });
+    act(() => { result.current.declineHunk(state, 0); });
+
+    expect(result.current.pending?.resolved).toEqual([true, false]);
   });
 });

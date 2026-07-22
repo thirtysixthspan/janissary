@@ -459,10 +459,11 @@ describe('EditorTab', () => {
         method: 'editorSuggest',
         params: { url: '/open/1', persona: 'summarizer', content: 'line one\n> summarizer rewrite this', prompt: 'rewrite this' },
       });
-      await waitFor(() => expect(screen.getByText('(A)ccept or (D)ecline this change?')).toBeInTheDocument());
+      await waitFor(() => expect(screen.getByText('Accept or decline each change below')).toBeInTheDocument());
+      expect(screen.getByText('1 of 1 remaining')).toBeInTheDocument();
     });
 
-    it('previews the pending hunk inline: struck-through removed line and an added line below it', async () => {
+    it('previews the pending hunk inline: struck-through removed line and an added line below it, with accept/decline icons', async () => {
       const { client, request } = makeClient();
       request.mockReset();
       request.mockResolvedValueOnce({ names: ['summarizer'] });
@@ -476,6 +477,7 @@ describe('EditorTab', () => {
       expect(container.querySelector(':scope .editor-diff-remove .editor-content')?.textContent).toBe('line one');
       expect(container.querySelector(':scope .editor-diff-add .editor-content')?.textContent).toBe('LINE ONE');
       expect(container.querySelector(':scope .editor-diff-add .editor-gutter')?.textContent).toBe('+');
+      expect(container.querySelector('.editor-diff-controls')).not.toBeNull();
     });
 
     it('does not fire on a plain Enter', async () => {
@@ -490,7 +492,7 @@ describe('EditorTab', () => {
       expect(request).toHaveBeenCalledTimes(1); // only the persona-list fetch
     });
 
-    it('accepts the focused hunk with "a", updates the buffer, and removes the request line', async () => {
+    it('accepts a hunk by clicking its accept icon, updates the buffer, and removes the request line', async () => {
       const { client, request } = makeClient();
       request.mockReset();
       request.mockResolvedValueOnce({ names: ['summarizer'] });
@@ -498,15 +500,15 @@ describe('EditorTab', () => {
       stubRequestFileContent('line one\n> summarizer rewrite this');
       const { container } = await renderLoaded(client, makeView({ line: 2 }));
       fireEvent.keyDown(textarea(), { key: 'Enter', metaKey: true });
-      await waitFor(() => expect(screen.getByText('(A)ccept or (D)ecline this change?')).toBeInTheDocument());
+      await waitFor(() => expect(screen.getByText('Accept or decline each change below')).toBeInTheDocument());
 
-      fireEvent.keyDown(textarea(), { key: 'a' });
+      fireEvent.click(screen.getByLabelText('Accept'));
 
-      await waitFor(() => expect(screen.queryByText('(A)ccept or (D)ecline this change?')).not.toBeInTheDocument());
+      await waitFor(() => expect(screen.queryByText('Accept or decline each change below')).not.toBeInTheDocument());
       expect(container.querySelector('.editor-content')?.textContent).toBe('LINE ONE');
     });
 
-    it('declines every hunk with "d", leaving the buffer and request line unchanged', async () => {
+    it('declines every hunk by clicking decline, leaving the buffer and request line unchanged', async () => {
       const { client, request } = makeClient();
       request.mockReset();
       request.mockResolvedValueOnce({ names: ['summarizer'] });
@@ -514,15 +516,15 @@ describe('EditorTab', () => {
       stubRequestFileContent('line one\n> summarizer rewrite this');
       await renderLoaded(client, makeView({ line: 2 }));
       fireEvent.keyDown(textarea(), { key: 'Enter', metaKey: true });
-      await waitFor(() => expect(screen.getByText('(A)ccept or (D)ecline this change?')).toBeInTheDocument());
+      await waitFor(() => expect(screen.getByText('Accept or decline each change below')).toBeInTheDocument());
 
-      fireEvent.keyDown(textarea(), { key: 'd' });
+      fireEvent.click(screen.getByLabelText('Decline'));
 
-      await waitFor(() => expect(screen.queryByText('(A)ccept or (D)ecline this change?')).not.toBeInTheDocument());
+      await waitFor(() => expect(screen.queryByText('Accept or decline each change below')).not.toBeInTheDocument());
       expect(screen.getByText('> summarizer rewrite this')).toBeInTheDocument();
     });
 
-    it('does not resolve or advance the pending suggestion for keys other than a/d', async () => {
+    it('blocks ordinary typing while a hunk is pending', async () => {
       const { client, request } = makeClient();
       request.mockReset();
       request.mockResolvedValueOnce({ names: ['summarizer'] });
@@ -530,13 +532,43 @@ describe('EditorTab', () => {
       stubRequestFileContent('line one\n> summarizer rewrite this');
       await renderLoaded(client, makeView({ line: 2 }));
       fireEvent.keyDown(textarea(), { key: 'Enter', metaKey: true });
-      await waitFor(() => expect(screen.getByText('(A)ccept or (D)ecline this change?')).toBeInTheDocument());
+      await waitFor(() => expect(screen.getByText('Accept or decline each change below')).toBeInTheDocument());
 
       fireEvent.keyDown(textarea(), { key: 'ArrowRight' });
       fireEvent.keyDown(textarea(), { key: 'z' });
 
-      expect(screen.getByText('(A)ccept or (D)ecline this change?')).toBeInTheDocument();
+      expect(screen.getByText('Accept or decline each change below')).toBeInTheDocument();
       expect(screen.getByText('> summarizer rewrite this')).toBeInTheDocument();
+    });
+
+    it('previews multiple hunks simultaneously and resolves them independently', async () => {
+      const { client, request } = makeClient();
+      request.mockReset();
+      request.mockResolvedValueOnce({ names: ['summarizer'] });
+      request.mockResolvedValueOnce({
+        hunks: [
+          { anchor: 'line one', replacement: 'LINE ONE' },
+          { anchor: 'line two', replacement: 'LINE TWO' },
+        ],
+      });
+      stubRequestFileContent('line one\nline two\n> summarizer rewrite this');
+      const { container } = await renderLoaded(client, makeView({ line: 3 }));
+      fireEvent.keyDown(textarea(), { key: 'Enter', metaKey: true });
+
+      await waitFor(() => expect(screen.getByText('2 of 2 remaining')).toBeInTheDocument());
+      const addedTexts = [...container.querySelectorAll(':scope .editor-diff-add .editor-content')].map((n) => n.textContent);
+      expect(addedTexts).toEqual(['LINE ONE', 'LINE TWO']);
+
+      fireEvent.click(screen.getAllByLabelText('Accept')[0]);
+
+      await waitFor(() => expect(screen.getByText('1 of 2 remaining')).toBeInTheDocument());
+      expect(container.querySelector(':scope .editor-diff-add .editor-content')?.textContent).toBe('LINE TWO');
+      expect(screen.getByText('> summarizer rewrite this')).toBeInTheDocument();
+
+      fireEvent.click(screen.getByLabelText('Accept'));
+
+      await waitFor(() => expect(screen.queryByText('Accept or decline each change below')).not.toBeInTheDocument());
+      expect(screen.queryByText('> summarizer rewrite this')).not.toBeInTheDocument();
     });
   });
 });
