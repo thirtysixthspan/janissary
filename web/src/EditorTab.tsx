@@ -176,7 +176,9 @@ export const EditorTab = forwardRef<EditorTabHandle, { editor: EditorView; clien
 
   return (
     <div className="image-tab editor-tab" data-doc-shot="editor-view">
-      <div className="image-meta" onMouseDown={(e) => { e.preventDefault(); textareaRef.current?.focus(); }}>
+      <div className="image-meta" onMouseUp={() => {
+        if (!globalThis.getSelection()?.toString()) textareaRef.current?.focus();
+      }}>
         <span className="image-name">{editor.name}{dirty ? <> <FontAwesomeIcon icon={dirtyMarkerIcon} /></> : ''}</span>
         <span className="image-size">{editor.size}</span>
         <span className="image-loc">{editor.path}</span>

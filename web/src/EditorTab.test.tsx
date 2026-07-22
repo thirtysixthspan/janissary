@@ -295,15 +295,40 @@ describe('EditorTab', () => {
     await waitFor(() => expect(screen.queryByText('abc')).not.toBeInTheDocument());
   });
 
-  it('clicking the metadata header does not steal focus from the textarea', async () => {
+  it('does not cancel mouse-down on metadata text', async () => {
+    const { client } = makeClient();
+    const { container } = await renderLoaded(client);
+    const meta = container.querySelector('.image-meta')!;
+
+    expect(fireEvent.mouseDown(meta)).toBe(true);
+  });
+
+  it('a plain metadata click restores focus to the textarea on mouse-up', async () => {
     const { client } = makeClient();
     const { container } = await renderLoaded(client);
     const ta = textarea();
-    ta.focus();
-    expect(document.activeElement).toBe(ta);
+    ta.blur();
     const meta = container.querySelector('.image-meta')!;
-    fireEvent.mouseDown(meta);
+
+    fireEvent.mouseUp(meta);
+
     expect(document.activeElement).toBe(ta);
+  });
+
+  it('does not restore editor focus when metadata text is selected', async () => {
+    const { client } = makeClient();
+    const { container } = await renderLoaded(client);
+    const outside = document.createElement('button');
+    document.body.append(outside);
+    outside.focus();
+    vi.spyOn(globalThis, 'getSelection').mockReturnValueOnce({
+      toString: () => '/home/user/notes.txt',
+    } as Selection);
+
+    fireEvent.mouseUp(container.querySelector('.image-meta')!);
+
+    expect(document.activeElement).toBe(outside);
+    outside.remove();
   });
 
   it('clicking the editor body outside any line does not steal focus from the textarea', async () => {
