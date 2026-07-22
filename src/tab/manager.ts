@@ -12,9 +12,6 @@ import { messageBus } from '../bus.js';
 import { closeTabResources } from './cleanup.js';
 import type { Managers } from '../managers.js';
 import * as tabOpeners from './openers.js';
-import {
-  queueFor as queueForOp, enqueue as enqueueOp, dequeue as dequeueOp, editQueued as editQueuedOp, deleteQueued as deleteQueuedOp,
-} from './queue-commands.js';
 import { buildTabView } from './view.js';
 import { rehydrateTabs } from './rehydrate.js';
 import { applyRehydratedState } from './rehydrate-state.js';
@@ -27,18 +24,18 @@ import { navigatePageTab } from './navigate.js';
 import { recordHistory } from './history.js';
 import { FileRegistry } from './file-registry.js';
 import { renameEditorTab } from './rename-editor.js';
+import { TabQueueState } from './queue-state.js';
 import {
   markUnreadTab, startRunningTab, finishRunningTab, appendTab, clearTranscriptTab,
 } from './transcript-commands.js';
 import { setActiveTabOp, moveTabOp, reorderTabOp } from './navigation-commands.js';
 
-export class TabManager {
+export class TabManager extends TabQueueState {
   tabs: Tab[] = [];
   activeTab = 0;
   private cwd = new Map<string, string>();
   private busy = new Set<string>();
   private context = new Map<string, string[]>();
-  private queue = new Map<string, string[]>();
   private onIdle: ((label: string) => void) | null = null;
   private fileRegistry = new FileRegistry();
   // Labels of tabs that were previously active, most-recent-last. Closing the active tab pops
@@ -50,6 +47,7 @@ export class TabManager {
   static readonly OPEN_MAX_FILES = 10;
 
   constructor(private managers: Managers, projectDir?: string) {
+    super();
     this.rootDir = projectDir ?? process.cwd();
     this.tabs = [this.makeRootTab()];
     this.cwd.set('janus', this.rootDir);
@@ -90,27 +88,7 @@ export class TabManager {
     this.onIdle = hook;
   }
 
-  queueFor(label: string): string[] {
-    return queueForOp(this.queue, label);
-  }
-
-  enqueue(label: string, text: string): void {
-    enqueueOp(this.queue, label, text, (l) => this.persistQueue(l));
-  }
-
-  dequeue(label: string): string | undefined {
-    return dequeueOp(this.queue, label, (l) => this.persistQueue(l));
-  }
-
-  editQueued(label: string, index: number, text: string): void {
-    editQueuedOp(this.queue, label, index, text, (l) => this.persistQueue(l));
-  }
-
-  deleteQueued(label: string, index: number): void {
-    deleteQueuedOp(this.queue, label, index, (l) => this.persistQueue(l));
-  }
-
-  private persistQueue(label: string): void {
+  protected persistQueue(label: string): void {
     const tab = this.tabs.find((t) => t.label === label);
     if (tab) this.persist(this.buildAgentState(tab));
     messageBus.emit('state', { type: 'dirty' });
