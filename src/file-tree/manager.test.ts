@@ -31,6 +31,7 @@ describe('FileTreeManager', () => {
   let activeTab: number;
   let managers: unknown;
   let closeFns: (() => void)[];
+  let retargetEditorTabMock: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     root = mkdtempSync(path.join(tmpdir(), 'file-tree-mgr-'));
@@ -57,6 +58,7 @@ describe('FileTreeManager', () => {
       log: [], cmdHistory: [], cmdHistoryIdx: -1, scrollOffset: 0,
     };
     tabs = [janus, other];
+    retargetEditorTabMock = vi.fn();
     managers = {
       tab: {
         get tabs() { return tabs; },
@@ -78,6 +80,7 @@ describe('FileTreeManager', () => {
           tabs = [...tabs, { ...janus, label, files: view as never }];
           activeTab = tabs.length - 1;
         },
+        retargetEditorTab: retargetEditorTabMock,
       },
     };
   });
@@ -499,6 +502,50 @@ describe('FileTreeManager', () => {
     const tab = tabs.find((t) => t.label === label)!;
     expect(tab.files!.rows.some((r) => r.path === 'src')).toBe(false);
     expect(existsSync(path.join(root, 'src'))).toBe(false);
+  });
+
+  it('rename renames a file on disk, rebuilds, and syncs an open editor tab', () => {
+    writeFileSync(path.join(root, 'notes.txt'), 'hi');
+    const manager = run();
+    manager.open('files', 'janus');
+    const label = tabs.find((t) => t.label.startsWith('navigator'))!.label;
+    manager.rename(label, 'notes.txt', 'renamed.txt');
+    const tab = tabs.find((t) => t.label === label)!;
+    expect(tab.files!.rows.some((r) => r.path === 'renamed.txt')).toBe(true);
+    expect(tab.files!.rows.some((r) => r.path === 'notes.txt')).toBe(false);
+    expect(readFileSync(path.join(root, 'renamed.txt'), 'utf8')).toBe('hi');
+    expect(retargetEditorTabMock).toHaveBeenCalledWith(path.join(root, 'notes.txt'), path.join(root, 'renamed.txt'));
+  });
+
+  it('rename renames a directory', () => {
+    mkdirSync(path.join(root, 'src'));
+    writeFileSync(path.join(root, 'src', 'index.ts'), '');
+    const manager = run();
+    manager.open('files', 'janus');
+    const label = tabs.find((t) => t.label.startsWith('navigator'))!.label;
+    manager.rename(label, 'src', 'lib');
+    const tab = tabs.find((t) => t.label === label)!;
+    expect(tab.files!.rows.some((r) => r.path === 'lib')).toBe(true);
+    expect(existsSync(path.join(root, 'src'))).toBe(false);
+  });
+
+  it('rename is a silent no-op when the source is missing', () => {
+    const manager = run();
+    manager.open('files', 'janus');
+    const label = tabs.find((t) => t.label.startsWith('navigator'))!.label;
+    manager.rename(label, 'missing.txt', 'renamed.txt');
+    expect(retargetEditorTabMock).not.toHaveBeenCalled();
+    expect(existsSync(path.join(root, 'renamed.txt'))).toBe(false);
+  });
+
+  it('rename is a no-op when newName contains a path separator', () => {
+    writeFileSync(path.join(root, 'notes.txt'), 'hi');
+    const manager = run();
+    manager.open('files', 'janus');
+    const label = tabs.find((t) => t.label.startsWith('navigator'))!.label;
+    manager.rename(label, 'notes.txt', 'dest/renamed.txt');
+    expect(readFileSync(path.join(root, 'notes.txt'), 'utf8')).toBe('hi');
+    expect(retargetEditorTabMock).not.toHaveBeenCalled();
   });
 
   it('delete on an unknown tab is a no-op', () => {

@@ -67,6 +67,10 @@ undo history remain in the live editor buffer, and the next save writes that con
 path. Once the rename commits, keyboard focus returns to the editor buffer so the user can keep
 typing immediately, without needing to click back into it.
 
+Renaming the same file from the file navigator instead (see `file-tree-tab.md`) has the same
+effect on an already-open editor tab: its name and path update to match, with its unsaved content,
+dirty state, cursor, and undo history preserved exactly as above — the buffer is never reloaded.
+
 If the user never renames a new-file tab and saves while a file named the same as the pending
 target already exists in that directory (created by another new-file tab saved first), the save
 does not overwrite it — it silently picks the next free name in the same directory (`untitled.md` →

@@ -1,10 +1,10 @@
 import type { Controller } from './controller.js';
 import type { ClientMessage, ServerEvent } from './protocol.js';
-import { fileTreeSearch, revealFileTreeItem } from './controller/file-tree.js';
+import { fileTreeSearch, revealFileTreeItem, renameFileTreeItem } from './controller/file-tree.js';
 
 type FileTreeMessage = Extract<ClientMessage, {
   method: 'fileTreeToggle' | 'fileTreeCollapseAll' | 'fileTreeReroot' | 'moveFileTreeItem'
-    | 'deleteFileTreeItem' | 'fileTreeSearch' | 'revealFileTreeItem' | 'undoFileTreeItem' | 'redoFileTreeItem';
+    | 'deleteFileTreeItem' | 'renameFileTreeItem' | 'fileTreeSearch' | 'revealFileTreeItem' | 'undoFileTreeItem' | 'redoFileTreeItem';
 }>;
 
 // The file-tree RPC cases, split out of `handle()` to keep message-handler.ts under the line-size
@@ -20,6 +20,8 @@ export function handleFileTreeMessage(controller: Controller, message: FileTreeM
     case 'moveFileTreeItem': { controller.moveFileTreeItem(message.params.index, message.params.fromRelPath, message.params.toRelPath); break;
     }
     case 'deleteFileTreeItem': { controller.deleteFileTreeItem(message.params.index, message.params.relPath); break;
+    }
+    case 'renameFileTreeItem': { renameFileTreeItem(controller.managers, message.params.index, message.params.relPath, message.params.newName); break;
     }
     // Deferred reply: the listing is async (never blocks the event loop) — see fileTreeSearch
     // in controller/file-tree.ts and the `projectFiles` case in message-handler.ts for the same

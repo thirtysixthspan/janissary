@@ -92,6 +92,12 @@ Click the adjacent **New directory** button to create a folder using the same se
 
 <img class="agent-float left" src="/agents/fariz-south.png" alt="" />
 
+## Renaming a file or directory
+
+Press `Cmd+R` (`Ctrl+R`) while a row other than `..` is selected to turn its name into an editable field, pre-filled with the current name. Edit it and press Enter to rename the file or directory on disk in place — an unchanged or empty name is a no-op that just closes the field. Escape, or clicking elsewhere, cancels without changing anything. If the new name collides with a sibling already in that directory, the same Overwrite/Cancel dialog used for drag-and-drop moves appears. A rename doesn't join the undo/redo history described below.
+
+If the renamed file is already open in an editor tab, that tab's name and path update automatically, with unsaved content and cursor position preserved.
+
 ## Keyboard
 
 A focused tree captures these keys for itself (tab-switching and other `Ctrl`/`Cmd` chords still work):
@@ -110,6 +116,7 @@ A focused tree captures these keys for itself (tab-switching and other `Ctrl`/`C
 | `Cmd+Z` / `Ctrl+Z` | Undo the most recent move made in this tab |
 | `Cmd+Shift+Z` / `Ctrl+Shift+Z` | Redo the most recently undone move |
 | `Cmd+N` / `Ctrl+N` | Create a new file (see "Creating a new file" above) |
+| `Cmd+R` / `Ctrl+R` | Rename the selected file or directory in place (see "Renaming a file or directory" above) |
 
 Deleting asks first: `Delete "<name>"?`, offering **Delete** and **Cancel**. Confirming removes the file or directory (recursively, for a directory) from disk; cancelling leaves it untouched.
 

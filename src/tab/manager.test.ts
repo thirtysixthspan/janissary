@@ -344,3 +344,41 @@ describe('TabManager renameTab for editor tabs', () => {
     expect(tab.editor?.name).toBe('a'.repeat(50));
   });
 });
+
+describe('TabManager retargetEditorTab', () => {
+  function makeTabManagerWithManagers(): { tm: TabManager; managers: Managers } {
+    const managers = {} as Managers;
+    managers.tab = new TabManager(managers);
+    Object.assign(managers, makeManagers());
+    return { tm: managers.tab, managers };
+  }
+
+  it('updates the matching editor tab\'s path, name, url, and title, and rewatches at the new path', () => {
+    const { tm, managers } = makeTabManagerWithManagers();
+    tm.openEditorTab({ name: 'notes.txt', path: '/tree/notes.txt', size: '2 B', url: '/open/1' });
+    const index = tm.activeTab;
+    const label = tm.tabs[index].label;
+
+    tm.retargetEditorTab('/tree/notes.txt', '/tree/renamed.txt');
+
+    const tab = tm.tabs[index];
+    expect(tab.editor?.path).toBe('/tree/renamed.txt');
+    expect(tab.editor?.name).toBe('renamed.txt');
+    expect(tm.openFilePath(tab.editor!.url.slice('/open/'.length))).toBe('/tree/renamed.txt');
+    expect(tab.title).toBe('renamed.txt');
+    expect(managers.editorWatch.watch).toHaveBeenCalledWith(label, '/tree/renamed.txt');
+  });
+
+  it('is a no-op when no open editor tab matches the old path', () => {
+    const { tm, managers } = makeTabManagerWithManagers();
+    tm.openEditorTab({ name: 'notes.txt', path: '/tree/notes.txt', size: '2 B', url: '/open/1' });
+    const index = tm.activeTab;
+    (managers.editorWatch.watch as ReturnType<typeof vi.fn>).mockClear();
+
+    tm.retargetEditorTab('/tree/other.txt', '/tree/renamed.txt');
+
+    const tab = tm.tabs[index];
+    expect(tab.editor?.path).toBe('/tree/notes.txt');
+    expect(managers.editorWatch.watch).not.toHaveBeenCalled();
+  });
+});
