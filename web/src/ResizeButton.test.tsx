@@ -15,4 +15,14 @@ describe('ResizeButton', () => {
 
     expect(onResize).toHaveBeenCalledWith(expect.objectContaining({ clientY: 400 }), expect.objectContaining({ clientY: 300 }));
   });
+
+  it('defaults to align-end, and takes align-start when requested', () => {
+    const { getByRole, rerender } = render(
+      <ResizeButton direction="vertical" label="Resize monitoring area" onResize={vi.fn()} />,
+    );
+    expect(getByRole('button').classList.contains('resize-align-end')).toBe(true);
+
+    rerender(<ResizeButton direction="vertical" label="Resize monitoring area" onResize={vi.fn()} align="start" />);
+    expect(getByRole('button').classList.contains('resize-align-start')).toBe(true);
+  });
 });

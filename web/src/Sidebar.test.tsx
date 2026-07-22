@@ -214,4 +214,35 @@ describe('Sidebar', () => {
     const maxWidth = globalThis.innerWidth * 0.5;
     expect(sidebar.style.flex).toBe(`0 0 ${maxWidth}px`);
   });
+
+  it('border divider drag also resizes the sidebar', () => {
+    const client = { send: vi.fn() } as unknown as JanusClient;
+    const tabs = [makeTab({ view: 'files', dock: 'left', files: { root: '/tmp/project', absoluteRoot: '/tmp/project', rows: [] } })];
+    const { container } = render(<ControlledSidebar side="left" tabs={tabs} client={client} />);
+    const sidebar = container.querySelector('.sidebar-left') as HTMLElement;
+    const divider = container.querySelector('.sidebar-resize')!;
+    fireEvent.mouseDown(divider, { clientX: 280 });
+    fireEvent.mouseMove(document, { clientX: -1000 });
+    expect(sidebar.style.flex).toBe('0 0 180px');
+  });
+
+  it("the right sidebar's resize button floats to the start of the strip, ahead of the tabs", () => {
+    const client = { send: vi.fn() } as unknown as JanusClient;
+    const tabs = [makeTab({ view: 'files', dock: 'right', files: { root: '/tmp/project', absoluteRoot: '/tmp/project', rows: [] } })];
+    const { container } = render(<Sidebar side="right" tabs={tabs} client={client} />);
+    const button = container.querySelector('.resize-button')!;
+    expect(button.classList.contains('resize-align-start')).toBe(true);
+    const strip = container.querySelector('.tabstrip')!;
+    expect(strip.firstElementChild).toBe(button);
+  });
+
+  it("the left sidebar's resize button floats to the end of the strip, after the tabs", () => {
+    const client = { send: vi.fn() } as unknown as JanusClient;
+    const tabs = [makeTab({ view: 'files', dock: 'left', files: { root: '/tmp/project', absoluteRoot: '/tmp/project', rows: [] } })];
+    const { container } = render(<Sidebar side="left" tabs={tabs} client={client} />);
+    const button = container.querySelector('.resize-button')!;
+    expect(button.classList.contains('resize-align-end')).toBe(true);
+    const strip = container.querySelector('.tabstrip')!;
+    expect(strip.lastElementChild).toBe(button);
+  });
 });

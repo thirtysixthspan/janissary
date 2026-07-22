@@ -6,15 +6,17 @@ type Properties = TabItemActions & {
   tabs: TabView[];
   activeTab: number;
   windowFocused?: boolean;
+  startControl?: React.ReactNode;
   endControl?: React.ReactNode;
 };
 
 export function TabStrip({
   tabs, activeTab, onSelect, onClose, onRename, tabNameMaxLength, activeTabNameMaxLength = 50,
-  onFocusCommandBar, onFocusEditor, windowFocused, endControl,
+  onFocusCommandBar, onFocusEditor, windowFocused, startControl, endControl,
 }: Properties) {
   return (
     <div className="tabstrip" data-doc-shot="tab-strip">
+      {startControl}
       {tabs.map((tab, index) => (
         <TabItem
           key={tab.label}

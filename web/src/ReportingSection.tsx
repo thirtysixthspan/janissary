@@ -4,6 +4,7 @@ import type { TabView } from '@shared/protocol';
 import { MonitorTab } from './MonitorTab';
 import { statusDotIcon } from './icons';
 import { ResizeButton } from './ResizeButton';
+import { beginResizeDrag } from './drag-resize';
 
 // Reporting tabs are a separate class from action tabs: they report, they never take
 // commands. A tab is a reporting tab when its view kind is in this set (currently just
@@ -25,7 +26,8 @@ export const DEFAULT_PCT = 20;
 // own strip and its own (client-side) selection, independent of the server's active
 // action tab. Hidden entirely while no reporting tabs exist. Each reporting tab carries
 // the color of the tab it monitors — in its strip dot, strip border, and the body's
-// left border. Its gutter button is draggable: pulling it up grows the reporting body while the
+// left border. Its top edge is a draggable divider, and its strip carries the same resize
+// affordance as a gutter button — either one dragged up grows the reporting body while the
 // action area shrinks (and vice versa), within the 15% floors. Height is a
 // controlled prop, owned by `App` (so a profile's `layout` key can drive it too — see
 // `useLayoutState`).
@@ -56,6 +58,7 @@ export function ReportingSection({
 
   return (
     <div className="reporting-section" style={{ flex: `0 0 ${heightPct}%` }}>
+      <div className="reporting-resize" onMouseDown={(down) => beginResizeDrag(down, onResize)} />
       <div className="tabstrip reporting-strip">
         {entries.map((entry, index) => (
           <div

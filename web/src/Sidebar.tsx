@@ -6,6 +6,7 @@ import { NotificationsTab } from './NotificationsTab';
 import { SchedulesTab } from './SchedulesTab';
 import { TabStrip } from './TabStrip';
 import { ResizeButton } from './ResizeButton';
+import { beginResizeDrag } from './drag-resize';
 import type { CommandInputDropHandle } from './CommandInput';
 
 const MIN_WIDTH_PX = 180;
@@ -16,7 +17,8 @@ export const DEFAULT_WIDTH_PX = 300;
 // time — the only two dockable kinds — sharing the space via a small internal tab-switcher (only
 // shown once both are present). Visibility is derived: the sidebar renders exactly when some tab
 // is docked to its side. Width is a controlled prop, owned by `App` (so a profile's `layout` key
-// can drive it too — see `useLayoutState`), resized by dragging the gutter button.
+// can drive it too — see `useLayoutState`), resized by dragging either the gutter button
+// or the border divider on the sidebar's inner edge.
 export function Sidebar({
   side, tabs, client, dropRef, tabNameMaxLength = 16, activeTabNameMaxLength = 50,
   width = DEFAULT_WIDTH_PX, onWidthChange, focusView,
@@ -50,6 +52,14 @@ export function Sidebar({
       direction="horizontal"
       label={`Resize ${side} sidebar`}
       onResize={onResize}
+      align={side === 'right' ? 'start' : 'end'}
+    />
+  );
+
+  const divider = (
+    <div
+      className="sidebar-resize"
+      onMouseDown={(down) => beginResizeDrag(down, onResize)}
     />
   );
 
@@ -75,6 +85,7 @@ export function Sidebar({
 
   return (
     <div className={`sidebar sidebar-${side}`} style={{ flex: `0 0 ${width}px` }} data-doc-shot={`sidebar-${side}`}>
+      {side === 'right' && divider}
       <div className="sidebar-body">
         <TabStrip
           tabs={entries.map((e) => e.tab)}
@@ -84,7 +95,8 @@ export function Sidebar({
           onRename={(i, title) => client.renameTab(entries[i].index, title)}
           tabNameMaxLength={tabNameMaxLength}
           activeTabNameMaxLength={activeTabNameMaxLength}
-          endControl={resizeButton}
+          startControl={side === 'right' ? resizeButton : undefined}
+          endControl={side === 'left' ? resizeButton : undefined}
         />
         {current.tab.view === 'files' && current.tab.files && (
           <FileTreeTab
@@ -102,6 +114,7 @@ export function Sidebar({
           />
         )}
       </div>
+      {side === 'left' && divider}
     </div>
   );
 }
