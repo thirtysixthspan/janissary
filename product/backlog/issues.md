@@ -2,18 +2,6 @@
 
 ## ready
 
-* the codex auto-approver should approve prompts that look like:
-------
-  Would you like to make the following edits?
- 
- 
-› 1. Yes, proceed (y)
-  2. Yes, and don't ask again for these files (a)
-  3. No, and tell Codex what to do differently (esc)
- 
-  Press enter to confirm or esc to cancel    
-------
-
 * if a file is renamed in the file navigator, and it is open in an editor tab, file names in both locations need to be updated.
 
 * when renaming a file in the file navigator, the input field should extend to the right edge of the file navigator. 
