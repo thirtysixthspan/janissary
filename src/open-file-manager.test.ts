@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import path from 'node:path';
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { OpenFileManager } from './open-file-manager.js';
 import type { Managers } from './managers.js';
@@ -104,5 +104,41 @@ describe('OpenFileManager.newFile', () => {
     mgr.newFile('newfile untitled.md', 'untitled.md', 'janus');
 
     expect(opened).toEqual([path.join(dir, 'untitled-3.md')]);
+  });
+});
+
+describe('OpenFileManager.newDirectory', () => {
+  const makeManager = (dir: string) => new OpenFileManager({
+    tab: { cwdOf: () => dir },
+  } as unknown as Managers);
+
+  it('creates the requested directory', () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'janus-newdir-'));
+    const manager = makeManager(dir);
+
+    manager.newDirectory('untitled', 'janus');
+
+    expect(existsSync(path.join(dir, 'untitled'))).toBe(true);
+  });
+
+  it('creates inside a nested target directory', () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'janus-newdir-'));
+    mkdirSync(path.join(dir, 'src'));
+    const manager = makeManager(dir);
+
+    manager.newDirectory('src/untitled', 'janus');
+
+    expect(existsSync(path.join(dir, 'src', 'untitled'))).toBe(true);
+  });
+
+  it('uses the next free suffix when directories already exist', () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'janus-newdir-'));
+    mkdirSync(path.join(dir, 'untitled'));
+    mkdirSync(path.join(dir, 'untitled-2'));
+    const manager = makeManager(dir);
+
+    manager.newDirectory('untitled', 'janus');
+
+    expect(existsSync(path.join(dir, 'untitled-3'))).toBe(true);
   });
 });

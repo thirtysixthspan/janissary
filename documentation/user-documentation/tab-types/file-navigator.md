@@ -82,11 +82,13 @@ Only one row can be dragged at a time — the tree has no multi-select.
 
 You can also drag a row onto the command bar of the active tab to insert its path at the cursor, without moving the file. This only works while the tree is docked to a sidebar and a different tab is active in the center, since a non-docked tree has no other tab's command bar to drop onto.
 
-## Creating a new file
+## Creating files and directories
 
 Click the header's **New file** button, or press `Cmd+N` (`Ctrl+N`) while the tree has keyboard focus, to open a fresh, unsaved editor tab named `untitled.md`. The target directory follows your current selection: a selected directory creates the file inside it, a selected file creates it in that file's directory, and no selection (or the `..` row) creates it at the tree root. If that directory already has an `untitled.md`, the next free name opens instead (`untitled-2.md`, and so on).
 
 Rename the new tab's label to name the file — the typed text becomes the filename, with no extension added. Saving writes to that name; if another new-file tab already saved to it first, your save silently falls back to the next free name instead of overwriting it.
+
+Click the adjacent **New directory** button to create a folder using the same selection rules. It is named `untitled`, or the next available name (`untitled-2`, and so on) if that name already exists.
 
 <img class="agent-float left" src="/agents/fariz-south.png" alt="" />
 

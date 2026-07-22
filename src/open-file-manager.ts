@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { existsSync, statSync } from 'node:fs';
+import { existsSync, mkdirSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { openerForExtension, type OpenContext } from './openers/index.js';
 import { didOsOpen } from './openers/os-open.js';
@@ -40,6 +40,15 @@ export class OpenFileManager {
     const dir = path.dirname(file);
     const resolved = path.join(dir, nextFreeName(dir, path.basename(file)));
     openInEditor(resolved, this.buildContext(command, label));
+  }
+
+  newDirectory(target: string, label: string): void {
+    const cwd = this.managers.tab.cwdOf(label) ?? process.cwd();
+    const expanded = expandUserPath(target, { root: this.managers.tab.launchDir });
+    const directory = path.isAbsolute(expanded) ? expanded : path.resolve(cwd, expanded);
+    const parent = path.dirname(directory);
+    const resolved = path.join(parent, nextFreeName(parent, path.basename(directory)));
+    mkdirSync(resolved);
   }
 
   private buildContext(command: string, label: string): OpenContext {

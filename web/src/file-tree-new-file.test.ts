@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { FileTreeRow } from '@shared/protocol';
-import { newFileTargetDir, newFileCommand } from './file-tree-new-file';
+import { newFileTargetDir, newFileCommand, newDirectoryCommand } from './file-tree-new-file';
 
 const rows: FileTreeRow[] = [
   { path: 'src', name: 'src', depth: 0, dir: true, expanded: true },
@@ -48,5 +48,15 @@ describe('newFileCommand', () => {
 
   it('builds the newfile command inside the target directory', () => {
     expect(newFileCommand('src')).toBe('newfile src/untitled.md');
+  });
+});
+
+describe('newDirectoryCommand', () => {
+  it('builds the newdir command at the tree root when the target directory is null', () => {
+    expect(newDirectoryCommand(null)).toBe('newdir untitled');
+  });
+
+  it('builds the newdir command inside the target directory', () => {
+    expect(newDirectoryCommand('src')).toBe('newdir src/untitled');
   });
 });
