@@ -2,8 +2,6 @@
 
 ## ready
 
-* after renaming a file in the editor using the tab label, the input focus should return to the content so that the user can immediately continue typing.
-
 * the codex auto-approver should approve prompts that look like:
 ------
   Would you like to make the following edits?

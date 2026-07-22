@@ -9,7 +9,8 @@ type Properties = TabItemActions & {
 };
 
 export function TabStrip({
-  tabs, activeTab, onSelect, onClose, onRename, tabNameMaxLength, activeTabNameMaxLength = 50, onFocusCommandBar, windowFocused,
+  tabs, activeTab, onSelect, onClose, onRename, tabNameMaxLength, activeTabNameMaxLength = 50,
+  onFocusCommandBar, onFocusEditor, windowFocused,
 }: Properties) {
   return (
     <div className="tabstrip" data-doc-shot="tab-strip">
@@ -25,6 +26,7 @@ export function TabStrip({
           tabNameMaxLength={tabNameMaxLength}
           activeTabNameMaxLength={activeTabNameMaxLength}
           onFocusCommandBar={onFocusCommandBar}
+          onFocusEditor={onFocusEditor}
           windowFocused={windowFocused}
         />
       ))}

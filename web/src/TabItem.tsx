@@ -14,6 +14,7 @@ export type TabItemActions = {
   tabNameMaxLength: number;
   activeTabNameMaxLength?: number;
   onFocusCommandBar?: () => void;
+  onFocusEditor?: (label: string) => void;
 };
 
 type Properties = TabItemActions & {
@@ -25,7 +26,7 @@ type Properties = TabItemActions & {
 
 export function TabItem({
   tab, index, active, onSelect, onClose, onRename, tabNameMaxLength,
-  activeTabNameMaxLength = 50, onFocusCommandBar, windowFocused = true,
+  activeTabNameMaxLength = 50, onFocusCommandBar, onFocusEditor, windowFocused = true,
 }: Properties) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState('');
@@ -40,6 +41,7 @@ export function TabItem({
     if (cancelledRef.current) return;
     setEditing(false);
     onRename(index, draft);
+    onFocusEditor?.(tab.label);
   };
 
   const cancel = () => { cancelledRef.current = true; setEditing(false); };
