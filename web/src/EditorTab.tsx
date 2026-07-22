@@ -16,7 +16,7 @@ import { handleSuggestPillClick } from './editor/handleSuggestPillClick';
 import { EditorLines } from './editor/EditorLines';
 import { PendingSuggestPanel } from './editor/PendingSuggestPanel';
 import { OverwriteConflictDialog } from './OverwriteConflictDialog';
-import { EditorSaveButton } from './EditorSaveButton';
+import { EditorMetaRow } from './editor/EditorMetaRow';
 
 export type EditorTabHandle = { isDirty(): boolean; save(): Promise<void>; focus(): void };
 
@@ -180,19 +180,14 @@ export const EditorTab = forwardRef<EditorTabHandle, { editor: EditorView; tab: 
   };
 
   const gutterCh = state ? String(state.lines.length).length + 1 : 2;
+  const onMetaMouseUp = () => { if (!globalThis.getSelection()?.toString()) textareaRef.current?.focus(); };
 
   return (
-    <div className="image-tab editor-tab" data-doc-shot="editor-view">
-      <div className="image-meta" onMouseUp={() => {
-        if (!globalThis.getSelection()?.toString()) textareaRef.current?.focus();
-      }}>
-        <span className="image-name">{editor.name}</span>
-        <span className="image-size">{editor.size}</span>
-        <span className="image-loc">{editor.path}</span>
-        {savedFlash && <span className="editor-saved">Saved</span>}
-        {(saveError ?? loadError) && <span className="editor-error">{saveError ?? loadError}</span>}
-        <EditorSaveButton dirty={dirty} onSave={() => { void save(); }} />
-      </div>
+    <div className="editor-tab" data-doc-shot="editor-view">
+      <EditorMetaRow
+        editor={editor} dirty={dirty} savedFlash={savedFlash} error={saveError ?? loadError}
+        onSave={() => { void save(); }} onMouseUp={onMetaMouseUp} connectionsButton={connections.connectionsButton}
+      />
       <EditorConnectionsPanel tab={tab} api={connections} />
       <PendingSuggestPanel pending={suggest.pending} />
       <div

@@ -38,7 +38,7 @@ async function renderLoaded(client: JanusClient, view = makeView(), tab = makeTa
 
 const textarea = () => screen.getByLabelText('Edit notes.txt');
 
-const nameText = (container: HTMLElement) => container.querySelector('.image-name')?.textContent ?? '';
+const nameText = (container: HTMLElement) => container.querySelector('.editor-name')?.textContent ?? '';
 
 const hasEnabledSaveButton = (container: HTMLElement) => !container.querySelector<HTMLButtonElement>('.editor-save-button')!.disabled;
 const hasDirtyDot = hasEnabledSaveButton;
@@ -326,9 +326,18 @@ describe('EditorTab', () => {
   it('does not cancel mouse-down on metadata text', async () => {
     const { client } = makeClient();
     const { container } = await renderLoaded(client);
-    const meta = container.querySelector('.image-meta')!;
+    const meta = container.querySelector('.editor-meta')!;
 
     expect(fireEvent.mouseDown(meta)).toBe(true);
+  });
+
+  it('renders the save and connections buttons in the same metadata row', async () => {
+    const { client } = makeClient();
+    const { container } = await renderLoaded(client);
+    const meta = container.querySelector('.editor-meta')!;
+
+    expect(meta.querySelector('.editor-save-button')).not.toBeNull();
+    expect(meta.querySelector('.tab-connections')).not.toBeNull();
   });
 
   it('a plain metadata click restores focus to the textarea on mouse-up', async () => {
@@ -336,7 +345,7 @@ describe('EditorTab', () => {
     const { container } = await renderLoaded(client);
     const ta = textarea();
     ta.blur();
-    const meta = container.querySelector('.image-meta')!;
+    const meta = container.querySelector('.editor-meta')!;
 
     fireEvent.mouseUp(meta);
 
@@ -353,7 +362,7 @@ describe('EditorTab', () => {
       toString: () => '/home/user/notes.txt',
     } as Selection);
 
-    fireEvent.mouseUp(container.querySelector('.image-meta')!);
+    fireEvent.mouseUp(container.querySelector('.editor-meta')!);
 
     expect(document.activeElement).toBe(outside);
     outside.remove();

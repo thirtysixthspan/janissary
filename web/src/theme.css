@@ -175,6 +175,11 @@ html, body, #root {
 .image-meta { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; color: var(--muted); }
 .image-meta .image-name { color: var(--fg); font-weight: 600; }
 .image-meta .image-loc { font-size: 12px; word-break: break-all; }
+/* Editor tab: same layout as the image tab, under its own class names (it isn't an image). */
+.editor-tab { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 8px 12px; gap: 8px; }
+.editor-meta { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; color: var(--muted); }
+.editor-meta .editor-name { color: var(--fg); font-weight: 600; }
+.editor-meta .editor-loc { font-size: 12px; word-break: break-all; }
 .image-stage { flex: 1; min-height: 0; position: relative; display: flex; align-items: safe center; justify-content: safe center; overflow: auto; cursor: grab; scrollbar-width: none; }
 .image-stage::-webkit-scrollbar { display: none; }
 /* Landscape: span the full width. Portrait: fill the full remaining height. Aspect ratio preserved.
@@ -194,7 +199,7 @@ html, body, #root {
   display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px;
   padding: 6px 12px; color: var(--muted); font-size: 12px; border-bottom: 1px solid var(--border);
 }
-.image-meta, .page-meta, .tab-meta, .monitor-meta, .files-meta {
+.image-meta, .page-meta, .tab-meta, .monitor-meta, .files-meta, .editor-meta {
   user-select: text;
 }
 .tab-cwd { word-break: break-all; }

@@ -33,9 +33,12 @@ up/down, etc.) are not.
 
 ### Layout
 
-- **Metadata header** — the file's name, size, and location.
-- The metadata header has a save button aligned to the right. It is enabled when the buffer has
-  unsaved changes and disabled and dimmed when the buffer is clean.
+- **Metadata header** — a single row showing the file's name, size, and location.
+- The metadata header has a save button and a connections-status button aligned to the right,
+  together in that same row. The save button is enabled when the buffer has unsaved changes and
+  disabled and dimmed when the buffer is clean. The connections-status button opens the tab's
+  connections window (see [[connection]]) and is dimmed and inert when no persona connection is
+  open.
 - **Editor body** — fills the remaining space. Scrolls independently.
 
 ### Focus protection
