@@ -1,12 +1,20 @@
 import React, { createRef } from 'react';
 import { render, screen, waitFor, fireEvent, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { EditorView } from '@shared/protocol';
+import type { EditorView, TabView } from '@shared/protocol';
 import { EditorTab, type EditorTabHandle } from './EditorTab';
 import type { JanusClient } from './ws';
 
 function makeView(overrides: Partial<EditorView> = {}): EditorView {
   return { name: 'notes.txt', path: '/home/user/notes.txt', size: '12 B', url: '/open/1', ...overrides };
+}
+
+function makeTab(overrides: Partial<TabView> = {}): TabView {
+  return {
+    label: 'notes', number: 1, dotColor: '#fff', group: 1, groupColor: '#fff', busy: false, hasUnread: false,
+    cwd: '/repo', connections: [], schedule: [], bufferLines: [], cmdHistory: [], commandQueue: [], toolStepsExpanded: false,
+    view: 'editor', editor: makeView(), ...overrides,
+  };
 }
 
 function makeClient(saveError?: string) {
@@ -18,11 +26,12 @@ function makeClient(saveError?: string) {
   // same generic request(); default to no personas and no hunks so the suggestion surface is
   // inert unless a test opts in.
   const request = vi.fn().mockResolvedValue({ names: [], hunks: [] });
-  return { client: { saveFile, editorSync, request } as unknown as JanusClient, saveFile, request };
+  const send = vi.fn();
+  return { client: { saveFile, editorSync, request, send } as unknown as JanusClient, saveFile, request, send };
 }
 
-async function renderLoaded(client: JanusClient, view = makeView()) {
-  const result = render(<EditorTab editor={view} client={client} active />);
+async function renderLoaded(client: JanusClient, view = makeView(), tab = makeTab({ editor: view })) {
+  const result = render(<EditorTab editor={view} tab={tab} client={client} active />);
   await waitFor(() => expect(screen.getByText('line one')).toBeInTheDocument());
   return result;
 }
@@ -107,7 +116,7 @@ describe('EditorTab', () => {
     await waitFor(() => expect(hasDirtyDot(container)).toBe(true));
 
     const renamed = makeView({ name: 'renamed.txt', path: '/home/user/renamed.txt', url: '/open/2' });
-    rerender(<EditorTab editor={renamed} client={client} active />);
+    rerender(<EditorTab editor={renamed} tab={makeTab({ editor: renamed })} client={client} active />);
 
     expect(fetch).toHaveBeenCalledTimes(1);
     expect(container.querySelector('.editor-content')?.textContent).toBe('draft line one');
@@ -132,7 +141,7 @@ describe('EditorTab', () => {
   it('shows a load error when the fetch fails', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('boom')));
     const { client } = makeClient();
-    render(<EditorTab editor={makeView()} client={client} active />);
+    render(<EditorTab editor={makeView()} tab={makeTab()} client={client} active />);
     await waitFor(() => expect(screen.getByText('Failed to load notes.txt')).toBeInTheDocument());
   });
 
@@ -158,9 +167,9 @@ describe('EditorTab', () => {
     const { rerender } = await renderLoaded(client, view);
     const scrollMock = Element.prototype.scrollIntoView as ReturnType<typeof vi.fn>;
 
-    rerender(<EditorTab editor={view} client={client} active={false} />);
+    rerender(<EditorTab editor={view} tab={makeTab({ editor: view })} client={client} active={false} />);
     scrollMock.mockClear();
-    rerender(<EditorTab editor={view} client={client} active />);
+    rerender(<EditorTab editor={view} tab={makeTab({ editor: view })} client={client} active />);
 
     expect(scrollMock).not.toHaveBeenCalled();
   });
@@ -191,7 +200,7 @@ describe('EditorTab', () => {
       ok: true,
       text: () => Promise.resolve(''),
     } as unknown as Response));
-    const { container } = render(<EditorTab editor={makeView()} client={client} active />);
+    const { container } = render(<EditorTab editor={makeView()} tab={makeTab()} client={client} active />);
     await waitFor(() => expect(container.querySelectorAll('.editor-gutter')).toHaveLength(1));
     expect(container.querySelector('.editor-caret')).toBeInTheDocument();
   });
@@ -203,7 +212,7 @@ describe('EditorTab', () => {
       ok: true,
       text: () => Promise.resolve('line one\nline two'),
     } as unknown as Response));
-    const { container } = render(<EditorTab editor={view} client={client} active={false} />);
+    const { container } = render(<EditorTab editor={view} tab={makeTab({ editor: view })} client={client} active={false} />);
     await waitFor(() => expect(container.querySelector('.editor-caret')).toBeNull());
   });
 
@@ -221,7 +230,7 @@ describe('EditorTab', () => {
   it('exposes isDirty() returning false after load and true after edit', async () => {
     const { client } = makeClient();
     const ref = createRef<EditorTabHandle>();
-    render(<EditorTab editor={makeView()} client={client} active ref={ref} />);
+    render(<EditorTab editor={makeView()} tab={makeTab()} client={client} active ref={ref} />);
     await waitFor(() => expect(screen.getByText('line one')).toBeInTheDocument());
     expect(ref.current?.isDirty()).toBe(false);
     type('x');
@@ -231,7 +240,7 @@ describe('EditorTab', () => {
   it('exposes save() that calls saveFile and marks clean', async () => {
     const { client, saveFile } = makeClient();
     const ref = createRef<EditorTabHandle>();
-    render(<EditorTab editor={makeView()} client={client} active ref={ref} />);
+    render(<EditorTab editor={makeView()} tab={makeTab()} client={client} active ref={ref} />);
     await waitFor(() => expect(screen.getByText('line one')).toBeInTheDocument());
     type('x');
     await waitFor(() => expect(ref.current?.isDirty()).toBe(true));
@@ -367,7 +376,8 @@ describe('EditorTab', () => {
       ok: true,
       text: () => Promise.resolve('const x = 1;'),
     } as unknown as Response));
-    const { container } = render(<EditorTab editor={makeView({ name: 'notes.ts' })} client={client} active />);
+    const view = makeView({ name: 'notes.ts' });
+    const { container } = render(<EditorTab editor={view} tab={makeTab({ editor: view })} client={client} active />);
     await waitFor(() => expect(container.querySelector('.hljs-keyword')).toBeInTheDocument());
   });
 
@@ -386,7 +396,7 @@ describe('EditorTab', () => {
     const view = makeView({ mtimeMs: 1 });
     const { rerender } = await renderLoaded(client, view);
 
-    rerender(<EditorTab editor={{ ...view, mtimeMs: 2 }} client={client} active />);
+    rerender(<EditorTab editor={{ ...view, mtimeMs: 2 }} tab={makeTab({ editor: view })} client={client} active />);
 
     await waitFor(() => expect(screen.getByText('changed elsewhere')).toBeInTheDocument());
     expect(fetchMock).toHaveBeenCalledTimes(2);
@@ -399,7 +409,7 @@ describe('EditorTab', () => {
     type('x');
     await waitFor(() => expect(hasDirtyDot(container)).toBe(true));
 
-    rerender(<EditorTab editor={{ ...view, mtimeMs: 2 }} client={client} active />);
+    rerender(<EditorTab editor={{ ...view, mtimeMs: 2 }} tab={makeTab({ editor: view })} client={client} active />);
     expect(screen.getByText('line one')).toBeInTheDocument();
 
     fireEvent.keyDown(textarea(), { key: 's', metaKey: true });
@@ -413,7 +423,7 @@ describe('EditorTab', () => {
     const { container, rerender } = await renderLoaded(client, view);
     type('x');
     await waitFor(() => expect(hasDirtyDot(container)).toBe(true));
-    rerender(<EditorTab editor={{ ...view, mtimeMs: 2 }} client={client} active />);
+    rerender(<EditorTab editor={{ ...view, mtimeMs: 2 }} tab={makeTab({ editor: view })} client={client} active />);
     fireEvent.keyDown(textarea(), { key: 's', metaKey: true });
     await waitFor(() => expect(screen.getByRole('button', { name: 'Overwrite (y)' })).toBeInTheDocument());
 
@@ -429,7 +439,7 @@ describe('EditorTab', () => {
     const { container, rerender } = await renderLoaded(client, view);
     type('x');
     await waitFor(() => expect(hasDirtyDot(container)).toBe(true));
-    rerender(<EditorTab editor={{ ...view, mtimeMs: 2 }} client={client} active />);
+    rerender(<EditorTab editor={{ ...view, mtimeMs: 2 }} tab={makeTab({ editor: view })} client={client} active />);
     fireEvent.keyDown(textarea(), { key: 's', metaKey: true });
     await waitFor(() => expect(screen.getByRole('button', { name: 'Cancel (Esc)' })).toBeInTheDocument());
 
@@ -569,6 +579,42 @@ describe('EditorTab', () => {
 
       await waitFor(() => expect(screen.queryByText('Accept or decline each change below')).not.toBeInTheDocument());
       expect(screen.queryByText('> summarizer rewrite this')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('persona connections window', () => {
+    it('shows the connections button dark/disabled with no open persona connections', async () => {
+      const { client } = makeClient();
+      const { container } = await renderLoaded(client);
+      expect(container.querySelector('.tab-connections')).toHaveClass('status-window-button-empty');
+    });
+
+    it('shows the connections window with a persona row once tab.connections is non-empty', async () => {
+      const { client } = makeClient();
+      const view = makeView();
+      const tab = makeTab({ editor: view, connections: [{ text: 'reviewer (acp)', kind: 'acp' }] });
+      const { container } = await renderLoaded(client, view, tab);
+      const button = container.querySelector('.tab-connections')!;
+      expect(button).not.toHaveClass('status-window-button-empty');
+
+      fireEvent.mouseEnter(button);
+      expect(container.querySelector('.panel-row.conn-acp')?.textContent).toContain('reviewer (acp)');
+    });
+
+    it('clicking a row\'s close control fires closeEditorConnection with the tab\'s url and persona', async () => {
+      const { client } = makeClient();
+      const view = makeView();
+      const tab = makeTab({ editor: view, connections: [{ text: 'reviewer (acp)', kind: 'acp' }] });
+      const { container } = await renderLoaded(client, view, tab);
+      const button = container.querySelector('.tab-connections')!;
+      fireEvent.mouseEnter(button);
+
+      fireEvent.click(container.querySelector('.panel-row-close')!);
+
+      expect(client.send).toHaveBeenCalledWith({
+        method: 'closeEditorConnection',
+        params: { url: '/open/1', persona: 'reviewer' },
+      });
     });
   });
 });

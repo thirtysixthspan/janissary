@@ -1,5 +1,5 @@
 import React from 'react';
-import type { TabView } from '@shared/protocol';
+import type { TabView, ConnectionView } from '@shared/protocol';
 import type { StatusWindowHandlers } from './useStatusWindows';
 
 type Properties = {
@@ -8,6 +8,9 @@ type Properties = {
   connections: StatusWindowHandlers;
   schedule: StatusWindowHandlers;
   interactive?: boolean;
+  // Renders a close control on each connection row when supplied (editor tabs' persona
+  // connections); omitted elsewhere, so agent-tab rows stay read-only, as today.
+  onCloseRow?: (row: ConnectionView, index: number) => void;
 };
 
 // Floating top-right panels mirroring the Ink ConnectionWindow / ScheduleWindow: the active
@@ -18,7 +21,7 @@ type Properties = {
 // the whole tab *is* the terminal connection and only the timers are worth overlaying.
 // `interactive` accepts pointer events on the panels themselves (agent tabs, Decision 8); on
 // harness tabs the panels stay non-interactive so they never intercept terminal input.
-export function StatusPanels({ tab, scheduleOnly = false, connections: connectionsWindow, schedule: scheduleWindow, interactive = false }: Properties) {
+export function StatusPanels({ tab, scheduleOnly = false, connections: connectionsWindow, schedule: scheduleWindow, interactive = false, onCloseRow }: Properties) {
   const scheduleRows = tab.schedule;
   const connectionRows = scheduleOnly ? [] : tab.connections;
   const showConnections = connectionRows.length > 0 && connectionsWindow.visible;
@@ -35,7 +38,20 @@ export function StatusPanels({ tab, scheduleOnly = false, connections: connectio
         >
           <div className="panel-title">connections</div>
           {connectionRows.map((c, index) => (
-            <div key={index} className={`panel-row conn-${c.kind}`}>{c.text}</div>
+            <div key={index} className={`panel-row conn-${c.kind}`}>
+              {c.text}
+              {onCloseRow && (
+                <button
+                  type="button"
+                  className="panel-row-close"
+                  title="Close connection"
+                  aria-label="Close connection"
+                  onClick={() => onCloseRow(c, index)}
+                >
+                  ×
+                </button>
+              )}
+            </div>
           ))}
         </div>
       )}

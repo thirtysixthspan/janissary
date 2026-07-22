@@ -1,34 +1,16 @@
-import { HarnessManager } from './harness/manager.js';
-import { SshManager } from './ssh-manager.js';
-import { DatabaseManager } from './database/manager.js';
-import { AcpManager } from './acp/manager.js';
-import { ShellManager } from './shell-manager.js';
-import { WorkspaceManager } from './workspace-manager.js';
 import { completeCommandLine } from './completion/index.js';
 import type { CompletionResult, Sinks } from './types.js';
-import { PseudoterminalManager } from './pseudoterminal-manager.js';
 import { TranscriptStore } from './transcript/store.js';
-import { ScheduleManager } from './schedule/manager.js';
-import { ProfileManager } from './profile/manager.js';
-import { ConnectionManager } from './connection/manager.js';
-import { OpenFileManager } from './open-file-manager.js';
-import { FileTreeManager } from './file-tree/manager.js';
 import * as fileTreeRpc from './controller/file-tree.js';
 import { wireControllerEvents } from './controller/events.js';
-import { EditorWatchManager } from './editor/watch-manager.js';
+import { createManagers } from './controller/create-managers.js';
 import { saveFile } from './editor/save.js';
 import { syncEditorBuffer } from './editor/sync.js';
 import { syncPageSnapshot } from './page/sync.js';
-import { CaptureManager } from './capture/manager.js';
-import { AgentCommunicationManager } from './agent/communication-manager.js';
 import { messageBus } from './bus.js';
-import { BrowserManager } from './browser/tab.js';
-import { CommandManager } from './command/manager.js';
 import { runSuggestion } from './monitor/window.js';
-import { MonitorManager } from './monitor/manager.js';
 import { listPersonas } from './personas.js';
 import type { TabView } from './protocol.js';
-import { TabManager } from './tab/manager.js';
 import type { Managers } from './managers.js';
 
 export class Controller {
@@ -37,26 +19,7 @@ export class Controller {
   get rootDir(): string { return this.projectDir ?? process.cwd(); }
 
   constructor(private sinks: Sinks, private projectDir?: string) {
-    this.managers.database = new DatabaseManager();
-    this.managers.tab = new TabManager(this.managers, projectDir);
-    this.managers.workspace = new WorkspaceManager(projectDir);
-    this.managers.browser = new BrowserManager(this.managers);
-    this.managers.acp = new AcpManager(this.managers);
-    this.managers.openFile = new OpenFileManager(this.managers);
-    this.managers.fileTree = new FileTreeManager(this.managers);
-    this.managers.editorWatch = new EditorWatchManager(this.managers);
-    this.managers.pty = new PseudoterminalManager(this.managers);
-    this.managers.schedule = new ScheduleManager(this.managers);
-    this.managers.shell = new ShellManager(this.managers);
-    this.managers.harness = new HarnessManager(this.managers);
-    this.managers.ssh = new SshManager(this.managers);
-    this.managers.profile = new ProfileManager(this.managers);
-    this.managers.connection = new ConnectionManager(this.managers);
-    this.managers.communication = new AgentCommunicationManager(this.managers);
-    this.managers.command = new CommandManager(this.managers);
-    this.managers.capture = new CaptureManager(this.managers);
-    this.managers.monitor = new MonitorManager(this.managers);
-
+    createManagers(this.managers, projectDir);
     wireControllerEvents(this.managers, this.sinks);
     this.managers.schedule.start();
   }

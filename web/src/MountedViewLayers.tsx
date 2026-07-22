@@ -46,7 +46,7 @@ export function MountedViewLayers({
           className="tab-body"
           style={{ borderLeft: `4px solid ${t.dotColor}`, display: t.label === current.label ? 'flex' : 'none' }}
         >
-          <EditorTab editor={t.editor!} client={client} active={t.label === current.label}
+          <EditorTab editor={t.editor!} tab={t} client={client} active={t.label === current.label}
             ref={(h) => { if (h) editorHandles.current.set(t.label, h); else editorHandles.current.delete(t.label); }} />
         </div>
       ))}

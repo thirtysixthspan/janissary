@@ -24,6 +24,7 @@ export function closeTabResources(
   }
   managers.shell.close(tab.label);
   managers.acp.close(tab.label);
+  managers.editorAcp.closeTab(tab.label);
   managers.browser.closeTab(tab.label);
   managers.pty.closeTab(tab.label);
   managers.tab.deleteBusy(tab.label);

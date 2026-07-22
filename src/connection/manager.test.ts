@@ -8,6 +8,7 @@ function makeManagers(overrides: Partial<Managers> = {}): Managers {
     shell: { has: vi.fn(() => false) },
     acp: { has: vi.fn(() => false), label: vi.fn(() => { /* no acp connection */ }) },
     monitor: { connectionsFor: vi.fn(() => []) },
+    editorAcp: { connectionsFor: vi.fn(() => []) },
     browser: { info: vi.fn(() => { /* no browser connection */ }), run: vi.fn(() => Promise.resolve('closed')) },
     pty: { terminalsFor: vi.fn(() => []) },
     database: { openDbs: vi.fn(() => []) },
@@ -34,6 +35,17 @@ describe('ConnectionManager', () => {
       const rows = manager.connectionsFor('main');
 
       expect(rows.some((r) => r.kind === 'shell')).toBe(false);
+    });
+
+    it('includes an editor tab\'s persona connection rows', () => {
+      const managers = makeManagers({
+        editorAcp: { connectionsFor: vi.fn(() => [{ text: 'reviewer (acp)', kind: 'acp' }]) },
+      } as unknown as Partial<Managers>);
+      const manager = new ConnectionManager(managers);
+
+      const rows = manager.connectionsFor('notes');
+
+      expect(rows).toContainEqual({ text: 'reviewer (acp)', kind: 'acp' });
     });
   });
 

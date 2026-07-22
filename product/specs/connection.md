@@ -8,11 +8,11 @@ The `connection` command inspects and closes the five kinds of long-lived connec
 |---|---|---|---|
 | `sqlite` | database name | Global (shared across tabs) | connection registry in `connections.ts` |
 | `shell` | shell program basename (`bash`, `zsh`, …) | Current tab | `shellsRef` (keyed by tab index) |
-| `acp` | `opencode` | Current tab | `acpRef` (keyed by tab index) |
+| `acp` | `opencode` (interactive tab), or a persona name (editor tab) | Current tab | `acpRef` (keyed by tab index); an editor tab's persona connections are kept separately, one per persona |
 | `browser` | window id (`w1`, `w2`, …) | Current tab | `browserRef` (keyed by tab index) |
 | `ssh` | tab label, or the destination as typed | Global (the ssh tab is its own scope — it has no command bar to run `connection` from) | the ssh tab's own `HarnessView.destination`/`ptyId` |
 
-The shell id is derived from `process.env.SHELL` (default `bash`); the acp id is always `opencode` (the hardcoded agent); browser window ids are a per-tab counter; see SSH Tab for id resolution.
+The shell id is derived from `process.env.SHELL` (default `bash`); the acp id is `opencode` (the hardcoded agent) for a normal tab's interactive connection, or the persona's name for one of an editor tab's persona connections (see [[editor-tab]] "In-editor persona suggestions"); browser window ids are a per-tab counter; see SSH Tab for id resolution.
 
 ### `connection list`
 
@@ -22,7 +22,7 @@ Lists all open connections, one per line: the current tab's shell (`shell:<name>
 
 - `sqlite:<name>` — closes the database connection via `closeConnection(name)`. Returns `Closed connection sqlite:<name>.` or `No open connection sqlite:<name>.` if none was open. The connection reopens on the next `db` command.
 - `shell:<name>` — if `<name>` matches this tab's shell, kills the tab's shell process and clears its busy indicator; the shell respawns (restoring its cwd) on the next shell command. A mismatched or absent shell reports a `No open connection …` message.
-- `acp:<name>` — if `<name>` is `opencode`, kills the tab's ACP session and clears its status-popup info; it reconnects on the next `acp` prompt. Otherwise reports `No open connection …`.
+- `acp:<name>` — on an editor tab, if `<name>` matches one of that tab's open persona connections, closes just that connection; a later request to that persona in the same tab opens a fresh one. Otherwise, if `<name>` is `opencode`, kills the tab's interactive ACP session and clears its status-popup info; it reconnects on the next `acp` prompt. If neither matches, reports `No open connection …`.
 - `browser:<id>` — closes that window in the current tab's browser (async; shown via a running entry). Returns `Closed connection browser:<id>.` or `No open connection browser:<id>.`. Closing the tab's last window ends that tab's browser process.
 - `ssh:<id>` — kills the matching ssh tab's PTY (`<id>` matched against an ssh tab's label first, then its destination), which then closes the tab through the normal PTY-exit path. Returns `Closed connection ssh:<id>.` or `No open connection ssh:<id>.` if no ssh tab matches. See SSH Tab.
 
@@ -30,7 +30,7 @@ Pressing `Tab` at the target of `connection close` completes against the active 
 
 ### Lifecycle integration
 
-Closing a tab kills that tab's shell, ACP, and browser connections (SQLite connections, being global, are untouched). Quitting the app, closing the last tab, and the component-unmount cleanup all additionally close every tab's browser and call `closeAllConnections()` to close every open SQLite connection.
+Closing a tab kills that tab's shell, ACP, and browser connections — and, for an editor tab, every one of its open persona connections — (SQLite connections, being global, are untouched). Quitting the app, closing the last tab, and the component-unmount cleanup all additionally close every tab's browser and call `closeAllConnections()` to close every open SQLite connection.
 
 ### Validation
 
@@ -43,6 +43,8 @@ A small titled `connections` panel (`ConnectionWindow`) floats at the top-right 
 Over an ssh tab, this panel shows only that tab's own `ssh:<destination>` row (no `terminal:` row — the ssh session is the tab's only PTY) and is shown even though the whole tab is a terminal, unlike other harness tabs where the panel is suppressed since the terminal already *is* the connection. See SSH Tab.
 
 In the web app, the tab's metadata bar carries a connections button (a plug icon) alongside its other buttons. When the tab has at least one live connection, the button is active: hovering it shows the connections window, moving away hides it again, and clicking pins the window open until the button is clicked a second time. When the tab has no live connections, the button is dark and unclickable, with a tooltip explaining there are none. Each time a tab becomes the active tab, its connections window (if non-empty) auto-shows immediately and then fades away after five seconds; moving the pointer onto the button or the window during that auto-show cancels the fade and hands control back to plain hover behavior, while clicking at any point pins or unpins the window regardless of where it is in that sequence. A non-ssh harness tab has no connections button, since the terminal is already the connection; an ssh harness tab keeps both the connections and schedule buttons.
+
+An editor tab carries the same connections button and window, listing its open persona connections (each shown as `<persona> (acp)`) alongside any other connections that tab has opened. Unlike every other kind of connection row, an editor tab's persona connection rows carry their own small close control; clicking it closes just that one persona's connection immediately, the same as running `connection close acp:<persona>`, without affecting any other open persona connection in that tab.
 
 ### `connection` command
 

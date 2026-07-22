@@ -8,6 +8,7 @@ function makeManagers(overrides: Partial<Managers> = {}): Managers {
     database: { close: vi.fn(() => false) },
     shell: { close: vi.fn(() => false) },
     acp: { close: vi.fn(() => false) },
+    editorAcp: { close: vi.fn(() => false) },
     pty: { kill: vi.fn() },
     tab: { tabs: [] },
     ...overrides,
@@ -70,6 +71,30 @@ describe('closeConnection', () => {
     closeConnection('acp', 'anything', managers, 'main', out);
 
     expect(out).toHaveBeenCalledWith('No open connection acp:opencode.');
+  });
+
+  it('closes an editor tab\'s persona connection without touching the interactive session', () => {
+    const editorAcpClose = vi.fn(() => true);
+    const acpClose = vi.fn(() => true);
+    const managers = makeManagers({ editorAcp: { close: editorAcpClose }, acp: { close: acpClose } } as unknown as Partial<Managers>);
+    const out = vi.fn();
+
+    closeConnection('acp', 'reviewer', managers, 'notes', out);
+
+    expect(editorAcpClose).toHaveBeenCalledWith('notes', 'reviewer');
+    expect(acpClose).not.toHaveBeenCalled();
+    expect(out).toHaveBeenCalledWith('Closed connection acp:reviewer.');
+  });
+
+  it('falls back to the interactive session close when no editor persona connection matches', () => {
+    const managers = makeManagers({ acp: { close: vi.fn(() => true) } } as unknown as Partial<Managers>);
+    const out = vi.fn();
+
+    closeConnection('acp', 'opencode', managers, 'main', out);
+
+    expect(managers.editorAcp.close).toHaveBeenCalledWith('main', 'opencode');
+    expect(managers.acp.close).toHaveBeenCalledWith('main');
+    expect(out).toHaveBeenCalledWith('Closed connection acp:opencode.');
   });
 
   it('closes an ssh connection found by tab label', () => {
