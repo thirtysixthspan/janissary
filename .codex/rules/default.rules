@@ -105,6 +105,12 @@ prefix_rule(
 )
 
 prefix_rule(
+    pattern = ["nl"],
+    decision = "allow",
+    justification = "Inspect project file statistics",
+)
+
+prefix_rule(
     pattern = ["echo"],
     decision = "allow",
     justification = "Print workflow diagnostics",

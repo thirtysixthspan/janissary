@@ -29,6 +29,7 @@
       "Bash(head *)",
       "Bash(tail *)",
       "Bash(wc *)",
+      "Bash(nl *)",
       "Bash(sed *)",
       "Bash(awk *)",
       "Bash(node *)"
