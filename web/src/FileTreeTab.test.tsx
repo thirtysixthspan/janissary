@@ -140,7 +140,7 @@ describe('FileTreeTab', () => {
     const client = { send } as unknown as JanusClient;
     render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
     fireEvent.dblClick(screen.getByText('index.ts'));
-    expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'open src/index.ts' } });
+    expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'open /home/user/project/src/index.ts' } });
   });
 
   it('Shift+double-click on a file row sends an edit command', () => {
@@ -148,7 +148,7 @@ describe('FileTreeTab', () => {
     const client = { send } as unknown as JanusClient;
     render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
     fireEvent.dblClick(screen.getByText('index.ts'), { shiftKey: true });
-    expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'edit src/index.ts' } });
+    expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'edit /home/user/project/src/index.ts' } });
   });
 
   it('double-click on a markdown file row sends an edit command', () => {
@@ -156,7 +156,7 @@ describe('FileTreeTab', () => {
     const client = { send } as unknown as JanusClient;
     render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
     fireEvent.dblClick(screen.getByText('README.md'));
-    expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'edit README.md' } });
+    expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'edit /home/user/project/README.md' } });
   });
 
   it('Shift+double-click on a markdown file row sends an open command', () => {
@@ -164,7 +164,16 @@ describe('FileTreeTab', () => {
     const client = { send } as unknown as JanusClient;
     render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
     fireEvent.dblClick(screen.getByText('README.md'), { shiftKey: true });
-    expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'open README.md' } });
+    expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'open /home/user/project/README.md' } });
+  });
+
+  it('double-click on a file row uses the unshortened absoluteRoot, not the display-abbreviated root', () => {
+    const send = vi.fn();
+    const client = { send } as unknown as JanusClient;
+    const files = makeFiles({ root: '~/project', absoluteRoot: '/Users/derrick/project' });
+    render(<FileTreeTab files={files} client={client} index={0} />);
+    fireEvent.dblClick(screen.getByText('index.ts'));
+    expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'open /Users/derrick/project/src/index.ts' } });
   });
 
   it('shows opener choices for an unsupported file and edits it when chosen', async () => {
@@ -179,7 +188,7 @@ describe('FileTreeTab', () => {
     fireEvent.dblClick(screen.getByText('data.xyz'));
     await waitFor(() => expect(screen.getByRole('dialog', { name: 'Open data.xyz' })).toBeInTheDocument());
     fireEvent.click(screen.getByText('Edit as text'));
-    expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'edit data.xyz' } });
+    expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'edit /home/user/project/data.xyz' } });
   });
 
   it('collapse-all button sends fileTreeCollapseAll', () => {
@@ -205,7 +214,7 @@ describe('FileTreeTab', () => {
     const tree = container.querySelector('[role="tree"]')!;
     fireEvent.keyDown(tree, { key: 'ArrowDown' }); // no selection yet -> defaults to src (index 0), moves to src/index.ts
     fireEvent.keyDown(tree, { key: 'Enter' });
-    expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'open src/index.ts' } });
+    expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'open /home/user/project/src/index.ts' } });
   });
 
   it('ArrowRight on a collapsed dir sends fileTreeToggle', () => {
@@ -238,7 +247,7 @@ describe('FileTreeTab', () => {
     fireEvent.keyDown(tree, { key: 'ArrowDown' });
     fireEvent.keyDown(tree, { key: 'ArrowDown' });
     fireEvent.keyDown(tree, { key: 'Enter', shiftKey: true });
-    expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'edit README.md' } });
+    expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'edit /home/user/project/README.md' } });
   });
 
   it('type-ahead jumps to a matching row', () => {
