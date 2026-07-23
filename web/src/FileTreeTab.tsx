@@ -157,7 +157,7 @@ export function FileTreeTab({ files, client, index, dock, autoFocus = true, drop
   return (
     <div className="files-tab" data-doc-shot="file-tree-view" ref={containerRef} tabIndex={0} role="tree" onKeyDown={onKeyDown}>
       <FileTreeHeader
-        root={files.root} branch={files.branch} client={client} index={index} dock={dock}
+        root={files.root} branch={files.branch} githubUrl={files.githubUrl} client={client} index={index} dock={dock}
         onSearch={search.openSearch} onNewFile={createNewFile} onNewDirectory={createNewDirectory}
       />
       {files.waitingFor !== undefined && (

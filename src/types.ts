@@ -140,7 +140,13 @@ export type FileTreeRow = {
 // current git branch when the root sits inside a git repository, undefined otherwise.
 // `waitingFor`, when set, is the absolute path the navigator is polling for (not yet created);
 // `rows` stays empty until it appears.
-export type FileTreeView = { root: string; absoluteRoot: string; rows: FileTreeRow[]; branch?: string; waitingFor?: string };
+export type FileTreeView = {
+  root: string; absoluteRoot: string; rows: FileTreeRow[]; branch?: string;
+  // GitHub commits-page URL for the current origin/branch (see `github-url.ts`); undefined when
+  // there's no github.com origin remote.
+  githubUrl?: string;
+  waitingFor?: string;
+};
 
 // A single row in the task picker's listing (executable `ai/*.md` prompts). Unlike `FileTreeRow`,
 // this always contains the *full* recursive tree — the task list needs no live filesystem

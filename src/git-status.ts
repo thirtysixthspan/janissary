@@ -87,3 +87,15 @@ export async function currentBranch(root: string): Promise<string | undefined> {
     return undefined;
   }
 }
+
+// Given an absolute directory root, resolve to the `origin` remote's URL. Resolves to `undefined`
+// — never rejects — when `root` is not inside a git repository, has no `origin` remote configured,
+// or the command fails for any reason.
+export async function remoteUrl(root: string): Promise<string | undefined> {
+  try {
+    const { stdout } = await execFileAsync('git', ['remote', 'get-url', 'origin'], { cwd: root });
+    return stdout.trim() || undefined;
+  } catch {
+    return undefined;
+  }
+}

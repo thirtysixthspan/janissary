@@ -3,7 +3,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { execSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { changedPaths, currentBranch } from './git-status.js';
+import { changedPaths, currentBranch, remoteUrl } from './git-status.js';
 
 function initRepo(root: string): void {
   execSync('git init', { cwd: root, stdio: 'pipe' });
@@ -141,5 +141,27 @@ describe('currentBranch', () => {
 
   it('resolves to undefined — never rejects — when the git invocation fails', async () => {
     await expect(currentBranch(path.join(root, 'does-not-exist'))).resolves.toBeUndefined();
+  });
+});
+
+describe('remoteUrl', () => {
+  let root: string;
+
+  beforeEach(() => { root = mkdtempSync(path.join(tmpdir(), 'git-status-')); });
+  afterEach(() => { rmSync(root, { recursive: true, force: true }); });
+
+  it('returns the origin remote url for a repo with one configured', async () => {
+    initRepo(root);
+    execSync('git remote add origin git@github.com:owner/repo.git', { cwd: root, stdio: 'pipe' });
+    expect(await remoteUrl(root)).toBe('git@github.com:owner/repo.git');
+  });
+
+  it('resolves to undefined for a repo with no origin remote', async () => {
+    initRepo(root);
+    expect(await remoteUrl(root)).toBeUndefined();
+  });
+
+  it('resolves to undefined for a directory that is not a git repository', async () => {
+    expect(await remoteUrl(root)).toBeUndefined();
   });
 });

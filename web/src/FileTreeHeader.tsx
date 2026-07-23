@@ -3,10 +3,12 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { JanusClient } from './ws';
 import { nextDock, dockTooltip } from './dock-cycle';
 import { dockSwapIcon, newDirectoryIcon, newFileIcon, searchFilesIcon } from './icons';
+import { FileTreeGithubButton } from './FileTreeGithubButton';
 
 type Properties = {
   root: string;
   branch?: string;
+  githubUrl?: string;
   client: JanusClient;
   index: number;
   dock?: 'left' | 'right';
@@ -15,10 +17,10 @@ type Properties = {
   onNewDirectory: () => void;
 };
 
-// The file navigator's metadata row: root/branch on the left, action buttons (search, new items,
-// dock cycle, collapse all) on the right. Split out of `FileTreeTab` to keep it under the
-// file-size limit.
-export function FileTreeHeader({ root, branch, client, index, dock, onSearch, onNewFile, onNewDirectory }: Properties) {
+// The file navigator's metadata row: root/branch on the left, action buttons (GitHub link, search,
+// new items, dock cycle, collapse all) on the right. Split out of `FileTreeTab` to keep it under
+// the file-size limit.
+export function FileTreeHeader({ root, branch, githubUrl, client, index, dock, onSearch, onNewFile, onNewDirectory }: Properties) {
   return (
     <div className="files-header">
       <div className="files-meta">
@@ -26,6 +28,7 @@ export function FileTreeHeader({ root, branch, client, index, dock, onSearch, on
         {branch && <span className="files-branch">{branch}</span>}
       </div>
       <div className="files-actions">
+        {githubUrl && <FileTreeGithubButton githubUrl={githubUrl} client={client} />}
         <button type="button" className="files-search" title="Search files" onClick={onSearch}>
           <FontAwesomeIcon icon={searchFilesIcon} />
         </button>

@@ -80,6 +80,20 @@ describe('FileTreeTab', () => {
     expect(container.querySelector('.files-branch')).toBeNull();
   });
 
+  it('renders a .files-github button when githubUrl is present', () => {
+    const client = { send: vi.fn() } as unknown as JanusClient;
+    const { container } = render(
+      <FileTreeTab files={makeFiles({ githubUrl: 'https://github.com/owner/repo/commits/main/' })} client={client} index={0} />,
+    );
+    expect(container.querySelector('.files-github')).not.toBeNull();
+  });
+
+  it('renders no .files-github element when githubUrl is undefined', () => {
+    const client = { send: vi.fn() } as unknown as JanusClient;
+    const { container } = render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+    expect(container.querySelector('.files-github')).toBeNull();
+  });
+
   it('renders a "Looking for" banner and no rows while waitingFor is set', () => {
     const client = { send: vi.fn() } as unknown as JanusClient;
     const { container } = render(
