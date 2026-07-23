@@ -2,9 +2,12 @@ import type React from 'react';
 import type { EditorApi } from './useEditor';
 import type { EditorSuggestApi } from './useEditorSuggest';
 import type { EditorState } from './model';
-import { insertText, deleteBackward, deleteForward, toText } from './model';
-import { moveCursor, moveLineEdge } from './motion';
+import { insertText, toText } from './model';
+import { moveCursor } from './motion';
+import { actionForKey } from './keys';
 import { completePersonaName, suggestPillLabel, type SuggestPill } from './suggest-request';
+
+const DEFAULT_PAGE_LINES = 20;
 
 // While the query line's status pill holds keyboard focus (via Tab), Enter fires the request and
 // any other key (but Tab) drops focus back to plain text-editing. Returns true once it has handled
@@ -37,14 +40,15 @@ function handleQueryTab(e: React.KeyboardEvent, suggest: EditorSuggestApi, qs: E
   return true;
 }
 
-// The query text's editing transitions, reusing model.ts/motion.ts (Decision 2): printable keys,
-// Backspace/Delete, and Left/Right/Home/End/Up/Down. Up/Down move within a multiline query
-// (Shift+Enter inserts a line break, see handleQueryLineKeyDown) and, once the cursor passes the
-// query's first or last line, hand focus to the buffer at the anchor's neighboring line instead
-// (a no-op there when the anchor sits at the document's first/last line). Every other key is
-// swallowed so it never reaches the buffer.
-function handleQueryEdit(e: React.KeyboardEvent, suggest: EditorSuggestApi, qs: EditorState, bufferState: EditorState | null): boolean {
-  if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+// The query text's editing transitions. Up/Down move within a multiline query (Shift+Enter inserts
+// a line break, see handleQueryLineKeyDown) and, once the cursor passes the query's first or last
+// line, hand focus to the buffer at the anchor's neighboring line instead (a no-op there when the
+// anchor sits at the document's first/last line) — this crossing behavior only applies to a plain
+// arrow press, not one combined with Cmd/Ctrl (those instead move within the query, same as the
+// buffer). Everything else shares the buffer's own keybinding table (see keys.ts) and dispatch
+// (applyKeyAction.ts), so the query line's keybindings match the buffer's.
+function handleQueryEdit(e: React.KeyboardEvent, suggest: EditorSuggestApi, qs: EditorState, bufferState: EditorState | null, pageLines: number): boolean {
+  if ((e.key === 'ArrowUp' || e.key === 'ArrowDown') && !e.metaKey && !e.ctrlKey) {
     e.preventDefault();
     const dir = e.key === 'ArrowUp' ? -1 : 1;
     const targetLine = qs.cursor.line + dir;
@@ -55,23 +59,10 @@ function handleQueryEdit(e: React.KeyboardEvent, suggest: EditorSuggestApi, qs: 
     }
     return true;
   }
-  if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
-    e.preventDefault();
-    suggest.setQueryLineState(moveCursor(qs, e.key === 'ArrowLeft' ? 'left' : 'right', e.shiftKey));
-    return true;
-  }
-  if (e.key === 'Home' || e.key === 'End') {
-    e.preventDefault();
-    suggest.setQueryLineState(moveLineEdge(qs, e.key === 'Home' ? 'home' : 'end', e.shiftKey));
-    return true;
-  }
-  if (e.key === 'Backspace') { e.preventDefault(); suggest.setQueryLineState(deleteBackward(qs)); return true; }
-  if (e.key === 'Delete') { e.preventDefault(); suggest.setQueryLineState(deleteForward(qs)); return true; }
-  if (e.key.length === 1 && !e.metaKey && !e.ctrlKey) {
-    e.preventDefault();
-    suggest.setQueryLineState(insertText(qs, e.key));
-    return true;
-  }
+  const action = actionForKey(e);
+  if (!action) return true;
+  e.preventDefault();
+  suggest.applyQueryAction(action, pageLines);
   return true;
 }
 
@@ -80,7 +71,7 @@ function handleQueryEdit(e: React.KeyboardEvent, suggest: EditorSuggestApi, qs: 
 // otherwise a no-op (Decision 7), Shift+Enter inserts a line break instead of firing; Escape
 // closes with nothing inserted (Decision 5); everything else is either the pill-focus affordance,
 // Tab-completion, or plain text editing.
-function handleQueryLineKeyDown(e: React.KeyboardEvent, suggest: EditorSuggestApi, bufferState: EditorState | null): boolean {
+function handleQueryLineKeyDown(e: React.KeyboardEvent, suggest: EditorSuggestApi, bufferState: EditorState | null, pageLines: number): boolean {
   const qs = suggest.queryLine!.state;
   const pill = suggestPillLabel(toText(qs), suggest.personas, suggest.firingLine, null, suggest.noSuggestionLine);
 
@@ -93,7 +84,7 @@ function handleQueryLineKeyDown(e: React.KeyboardEvent, suggest: EditorSuggestAp
     if (pill?.runnable && bufferState) suggest.fireOnLine(bufferState);
     return true;
   }
-  return handleQueryEdit(e, suggest, qs, bufferState);
+  return handleQueryEdit(e, suggest, qs, bufferState, pageLines);
 }
 
 // While the buffer holds focus and a query line is open, an ArrowUp/ArrowDown that would land the
@@ -117,12 +108,12 @@ function crossIntoQuery(e: React.KeyboardEvent, suggest: EditorSuggestApi, s: Ed
 // the first character of an otherwise-empty line (Decision 3). Returns true once it has handled
 // (and prevented) the event, so EditorTab's onKeyDown stops there. Split out to keep EditorTab.tsx
 // under the 200-line cap (Decision 12).
-export function handleSuggestKeyDown(e: React.KeyboardEvent, api: EditorApi, suggest: EditorSuggestApi): boolean {
+export function handleSuggestKeyDown(e: React.KeyboardEvent, api: EditorApi, suggest: EditorSuggestApi, pageLines: number = DEFAULT_PAGE_LINES): boolean {
   if (suggest.pending) {
     e.preventDefault();
     return true;
   }
-  if (suggest.queryLine && suggest.focusTarget === 'query') return handleQueryLineKeyDown(e, suggest, api.stateRef.current);
+  if (suggest.queryLine && suggest.focusTarget === 'query') return handleQueryLineKeyDown(e, suggest, api.stateRef.current, pageLines);
   const s = api.stateRef.current;
   if (s && crossIntoQuery(e, suggest, s)) return true;
   if (s && e.key === '>' && !e.metaKey && !e.ctrlKey && s.cursor.col === 0 && s.lines[s.cursor.line] === '' && !s.anchor) {

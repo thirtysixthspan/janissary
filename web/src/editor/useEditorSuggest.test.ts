@@ -269,6 +269,34 @@ describe('useEditorSuggest', () => {
     expect(result.current.queryLine?.state.cursor).toEqual({ line: 1, col: 3 });
   });
 
+  it('applyQueryAction saves via the onSave passed in, and edits the query line text', async () => {
+    const { client } = makeClient();
+    const onSave = vi.fn();
+    const { result } = renderHook(() => useEditorSuggest(client, '/open/1', vi.fn(), onSave));
+    await waitFor(() => expect(result.current.personas).toEqual(['summarizer']));
+
+    act(() => { result.current.openQueryLine(0); });
+    act(() => { result.current.applyQueryAction({ kind: 'save' }, 20); });
+    expect(onSave).toHaveBeenCalled();
+
+    act(() => { result.current.applyQueryAction({ kind: 'insert', text: 'x' }, 20); });
+    expect(result.current.queryLine?.state.lines).toEqual(['>x']);
+  });
+
+  it('does not carry undo history from a previous query session into a freshly opened one', async () => {
+    const { client } = makeClient();
+    const { result } = renderHook(() => useEditorSuggest(client, '/open/1', vi.fn()));
+    await waitFor(() => expect(result.current.personas).toEqual(['summarizer']));
+
+    act(() => { result.current.openQueryLine(0); });
+    act(() => { result.current.applyQueryAction({ kind: 'insert', text: 'x' }, 20); });
+    act(() => { result.current.closeQueryLine(); });
+
+    act(() => { result.current.openQueryLine(0); });
+    act(() => { result.current.applyQueryAction({ kind: 'undo' }, 20); });
+    expect(result.current.queryLine?.state.lines).toEqual(['>']);
+  });
+
   it('is a no-op resolving an already-resolved hunk', async () => {
     const { client } = makeClient(['summarizer'], [{
       hunks: [{ anchor: 'a', replacement: '1' }, { anchor: 'b', replacement: '2' }],

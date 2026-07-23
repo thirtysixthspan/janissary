@@ -24,6 +24,7 @@ function makeSuggest(queryLine: QueryLine | null, personas: string[] = []): Edit
     setQueryLineState: vi.fn(),
     exitQueryToBuffer: vi.fn(),
     enterQueryFromBuffer: vi.fn(),
+    applyQueryAction: vi.fn(),
     fireOnLine: vi.fn(),
     acceptHunk: vi.fn(),
     declineHunk: vi.fn(),
