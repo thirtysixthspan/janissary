@@ -352,6 +352,19 @@ describe('EditorTab', () => {
     expect(meta.querySelector('.tab-connections')).not.toBeNull();
   });
 
+  it('does not render a sync status icon for an ordinary, non-synced editor tab', async () => {
+    const { client } = makeClient();
+    const { container } = await renderLoaded(client);
+    expect(container.querySelector('.editor-sync-icon')).toBeNull();
+  });
+
+  it('renders the provisioning sync status icon for a synced tab not yet filled in', async () => {
+    const { client } = makeClient();
+    const view = makeView({ sync: 'provisioning' });
+    const { container } = await renderLoaded(client, view, makeTab({ editor: view }));
+    expect(container.querySelector('.editor-sync-icon--provisioning')).not.toBeNull();
+  });
+
   it('anchors the floating connections window below the metadata row, inside the editor body', async () => {
     const { client } = makeClient();
     const tab = makeTab({ connections: [{ text: 'reviewer (acp)', kind: 'acp' }] });

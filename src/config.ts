@@ -28,6 +28,7 @@ const DEFAULT_CONFIG: Config = {
       rateLimited: false,
     },
   },
+  syncPaths: [],
 };
 
 let config: Config = { ...DEFAULT_CONFIG };

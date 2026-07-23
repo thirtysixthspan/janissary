@@ -4,6 +4,7 @@ import { DatabaseManager } from '../database/manager.js';
 import { AcpManager } from '../acp/manager.js';
 import { ShellManager } from '../shell-manager.js';
 import { WorkspaceManager } from '../workspace-manager.js';
+import { GitSync } from '../git-sync.js';
 import { PseudoterminalManager } from '../pseudoterminal-manager.js';
 import { ScheduleManager } from '../schedule/manager.js';
 import { ProfileManager } from '../profile/manager.js';
@@ -38,6 +39,7 @@ export function createManagers(managers: Managers, projectDir?: string): void {
     }
   });
   managers.workspace = new WorkspaceManager(projectDir);
+  managers.gitSync = new GitSync(managers.workspace);
   managers.browser = new BrowserManager(managers);
   managers.acp = new AcpManager(managers);
   managers.openFile = new OpenFileManager(managers);

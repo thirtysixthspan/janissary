@@ -119,6 +119,20 @@ describe('loadConfig', () => {
     const config = loadConfig(tmpDir);
     expect(config.notifications?.events.incomingMessage).toBe(true);
   });
+
+  it('defaults syncPaths to an empty list', () => {
+    const config = loadConfig(tmpDir);
+    expect(config.syncPaths).toEqual([]);
+  });
+
+  it('reads a custom syncPaths list from an existing config.json', () => {
+    const configDir = path.join(tmpDir, '.janissary');
+    mkdirSync(configDir, { recursive: true });
+    writeFileSync(path.join(configDir, 'config.json'), JSON.stringify({ syncPaths: ['docs/notes.md'] }) + '\n');
+
+    const config = loadConfig(tmpDir);
+    expect(config.syncPaths).toEqual(['docs/notes.md']);
+  });
 });
 
 describe('updateConfig', () => {
@@ -186,5 +200,15 @@ describe('updateConfig', () => {
     rmSync(path.join(tmpDir, '.janissary'), { recursive: true, force: true });
     const ok = updateConfig({ syntaxTheme: 'nord' });
     expect(ok).toBe(false);
+  });
+
+  it('round-trips syncPaths like other settings', () => {
+    loadConfig(tmpDir);
+    const ok = updateConfig({ syncPaths: ['docs/notes.md', 'src/config.ts'] });
+    expect(ok).toBe(true);
+    expect(getConfig().syncPaths).toEqual(['docs/notes.md', 'src/config.ts']);
+
+    const reloaded = loadConfig(tmpDir);
+    expect(reloaded.syncPaths).toEqual(['docs/notes.md', 'src/config.ts']);
   });
 });

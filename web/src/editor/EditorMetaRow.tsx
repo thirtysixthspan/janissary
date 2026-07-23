@@ -4,6 +4,7 @@ import { EditorSaveButton } from '../EditorSaveButton';
 import { StatusWindowButton } from '../StatusWindowButton';
 import type { StatusWindowButtonProps } from '../AgentTabMeta';
 import { connectionsWindowIcon } from '../icons';
+import { EditorSyncIcon } from './EditorSyncIcon';
 
 type Properties = {
   editor: EditorView;
@@ -25,6 +26,7 @@ export function EditorMetaRow({ editor, dirty, savedFlash, error, onSave, onMous
       <span className="editor-loc">{editor.path}</span>
       {savedFlash && <span className="editor-saved">Saved</span>}
       {error && <span className="editor-error">{error}</span>}
+      <EditorSyncIcon sync={editor.sync} />
       <EditorSaveButton dirty={dirty} onSave={onSave} />
       <StatusWindowButton
         icon={connectionsWindowIcon}

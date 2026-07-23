@@ -44,5 +44,20 @@ export function saveFile(managers: Managers, url: string, content: string): void
     // mistaken for an external change.
     managers.editorWatch.markSaved(tab.label, stat.mtimeMs);
   }
+  // The write and "Saved" flash above are synchronous and complete either way; a synced file's
+  // git-sync cycle (commit/pull-rebase/push) only starts after, and is never awaited here, so a
+  // slow or failing network sync never delays the save confirmation the user already saw.
+  if (tab?.editor?.sync) {
+    tab.editor = { ...tab.editor, sync: 'syncing' };
+    void syncAfterSave(managers, tab.label);
+  }
+  messageBus.emit('state', { type: 'dirty' });
+}
+
+async function syncAfterSave(managers: Managers, label: string): Promise<void> {
+  const result = await managers.gitSync.saveSync();
+  const tab = managers.tab.tabs.find((t) => t.label === label);
+  if (!tab?.editor) return;
+  tab.editor = { ...tab.editor, sync: 'error' in result ? 'error' : 'synced' };
   messageBus.emit('state', { type: 'dirty' });
 }

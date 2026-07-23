@@ -9,6 +9,9 @@ import { expandUserPath } from './paths.js';
 import { SHELL_NAME } from './shell-manager.js';
 import type { Managers } from './managers.js';
 import { runOpenCommand } from './open-file-command.js';
+import { getConfig } from './config.js';
+import { humanSize } from './openers/size.js';
+import { messageBus } from './bus.js';
 
 export class OpenFileManager {
   constructor(private managers: Managers) {}
@@ -27,7 +30,9 @@ export class OpenFileManager {
     const cwd = this.managers.tab.cwdOf(label) ?? process.cwd();
     const expanded = expandUserPath(target, { root: this.managers.tab.launchDir });
     const file = path.isAbsolute(expanded) ? expanded : path.resolve(cwd, expanded);
-    openInEditor(file, this.buildContext(command, label), line);
+    const context = this.buildContext(command, label);
+    if (this.isSyncPath(file)) { this.openSynced(file, context, line); return; }
+    openInEditor(file, context, line);
   }
 
   // The file navigator's "New file" button / Cmd+N: like `edit`, but resolves to the next free
@@ -67,7 +72,46 @@ export class OpenFileManager {
     if (!existsSync(file)) { this.managers.tab.append(label, { input: command, output: `open: ${file}: no such file` }); return; }
     const opener = openerForExtension(path.extname(file));
     if (!opener) { this.managers.tab.append(label, { input: command, output: `No opener for "${path.extname(file) || '(none)'}" files.` }); return; }
+    if (!external && opener.name === 'editor' && this.isSyncPath(file)) { this.openSynced(file, context); return; }
     void (external ? opener.external(file, context) : opener.inline(file, context));
+  }
+
+  // Whether `file`'s project-relative path is config-listed for GitHub syncing — the sole gate for
+  // the entire feature (see `git-sync.ts`); there is no UI toggle.
+  private isSyncPath(file: string): boolean {
+    const launchDir = this.managers.tab.launchDir;
+    if (!launchDir) return false;
+    const relative = path.relative(launchDir, file).split(path.sep).join('/');
+    return getConfig().syncPaths.includes(relative);
+  }
+
+  // Mirrors `HarnessManager.spawnTab`/`finishSpawn`'s immediate-placeholder-then-async-fill-in
+  // pattern: the tab opens right away, targeting the file's eventual location inside the shared
+  // sync workspace, showing `sync: 'provisioning'` until that workspace (and an initial pull) is
+  // ready — at which point the real size/content become available and the tab is filled in.
+  private openSynced(file: string, context: OpenContext, line?: number): void {
+    const relative = path.relative(this.managers.tab.launchDir, file).split(path.sep).join('/');
+    const target = this.managers.gitSync.workspaceFilePath(relative);
+    context.openEditorTab({
+      name: path.basename(target), path: target, size: 'unknown', url: context.registerFile(target), line, sync: 'provisioning',
+    });
+    void this.finishOpenSynced(target, context);
+  }
+
+  private async finishOpenSynced(target: string, context: OpenContext): Promise<void> {
+    const result = await this.managers.gitSync.openSync();
+    const tab = this.managers.tab.tabs.find((t) => t.editor?.path === target);
+    if (!tab?.editor) return;
+    if ('error' in result) {
+      tab.editor = { ...tab.editor, sync: 'error' };
+      messageBus.emit('state', { type: 'dirty' });
+      return;
+    }
+    let size = 'unknown';
+    try { size = humanSize(statSync(target).size); } catch { /* not yet created on disk */ }
+    tab.editor = { ...tab.editor, size, url: context.registerFile(target), sync: 'synced' };
+    this.managers.editorWatch.watch(tab.label, target);
+    messageBus.emit('state', { type: 'dirty' });
   }
 
   private expandGlob(pattern: string, cwd: string): string[] {

@@ -200,6 +200,40 @@ Clicking a `path:line` link in the transcript (see Transcript) opens the editor 
 already on the target line, scrolled to the middle of the tab so the surrounding context is visible
 on first open. Subsequent cursor movement in that tab follows the normal into-view scrolling above.
 
+### GitHub syncing
+
+A file whose project-relative path is listed in the application config's sync-paths setting (see
+Application Config) is kept automatically synced with its `origin/master` branch. Syncing is
+entirely config-driven — there is no button or toggle anywhere in the editor to turn it on or off
+for a file; a file syncs if and only if its path appears in that list.
+
+Every config-listed file is edited from inside a single shared workspace dedicated to syncing,
+separate from the main project checkout and from any agent workspace. This shared workspace is
+created the first time any config-listed file is opened, and is reused for every other config-listed
+file opened afterward — opening a second synced file never creates a second copy of the shared
+workspace. It persists for the life of the application, not just for as long as any one synced tab
+stays open.
+
+If the shared workspace does not exist yet when a synced file is opened, its editor tab opens
+immediately showing a loading state instead of content, and only loads the file's real content once
+the workspace is ready. Opening a synced file — or another synced file finishing a save — also pulls
+the latest `origin/master` into the shared workspace; any other open, unmodified synced tab whose
+file changed as a result refreshes automatically, exactly like an ordinary external file change (see
+"Live reload of external changes"). A synced tab with unsaved changes is left alone, same as always.
+
+Saving a synced file writes and confirms the save exactly as an ordinary save does — the "Saved"
+flash is not delayed by anything that happens next. After that, the change is committed with a fixed
+commit message, the shared workspace is brought up to date with `origin/master`, and the commit is
+pushed. If updating with `origin/master` finds a conflicting change, the remote version always wins
+automatically; there is no merge-conflict prompt to resolve.
+
+The metadata header's connections-status button area also shows a read-only status icon for a synced
+file, reflecting whether that file's sync is currently being provisioned, syncing, synced, or has hit
+an error — it has no click behavior. A sync error (for example a network problem, an authentication
+failure, or a project whose default branch is not literally named `master`) never blocks editing or
+shows a dialog; it only changes the status icon and is otherwise reported through the notifications
+tab.
+
 ### In-editor persona suggestions
 
 An editor tab can ask an AI persona for a change to the text it is editing and apply the answer
