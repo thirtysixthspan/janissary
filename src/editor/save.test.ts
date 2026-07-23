@@ -68,7 +68,7 @@ describe('saveFile', () => {
 });
 
 describe('saveFile git sync', () => {
-  function setupSynced(saveSync: () => Promise<{ ok: true } | { error: string }>) {
+  function setupSynced(saveSync: (filename: string) => Promise<{ ok: true } | { error: string }>) {
     const managers = {} as Managers;
     managers.tab = new TabManager(managers);
     managers.editorWatch = { watch: () => {}, markSaved: () => {} } as unknown as Managers['editorWatch'];
@@ -103,6 +103,14 @@ describe('saveFile git sync', () => {
     expect(tab?.editor?.sync).toBe('syncing');
 
     await vi.waitFor(() => expect(tab?.editor?.sync).toBe('synced'));
+  });
+
+  it('passes the saved file\'s name to the sync cycle', async () => {
+    const saveSync = vi.fn().mockResolvedValue({ ok: true });
+    const { managers, url } = setupSynced(saveSync);
+    saveFile(managers, url, 'updated content');
+
+    await vi.waitFor(() => expect(saveSync).toHaveBeenCalledWith('synced.txt'));
   });
 
   it('transitions sync to error when the cycle rejects', async () => {

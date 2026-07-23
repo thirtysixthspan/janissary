@@ -11,9 +11,6 @@ const execFileAsync = promisify(execFile);
 // single tab and is shared by every config-listed synced file (see the plan's Design decisions).
 export const SYNC_WORKSPACE_NAME = 'git-sync';
 
-// Every sync commit uses this literal message; no per-save customization.
-export const SYNC_COMMIT_MESSAGE = 'chore: planning';
-
 type ProvisioningWorkspace = { dir: string; ready: Promise<void> };
 type SyncResult = { ok: true } | { error: string };
 
@@ -57,14 +54,14 @@ export class GitSync {
     }
   }
 
-  // Save-triggered cycle: commit with the fixed message (if there's anything to commit), then the
+  // Save-triggered cycle: commit `sync: <filename>` (if there's anything to commit), then the
   // same pull-rebase step, then push.
-  async saveSync(): Promise<SyncResult> {
+  async saveSync(filename: string): Promise<SyncResult> {
     const handle = this.ensureWorkspace();
     if ('error' in handle) return handle;
     try {
       await handle.ready;
-      await commitIfChanged(handle.dir);
+      await commitIfChanged(handle.dir, filename);
       await pullRebase(handle.dir);
       await push(handle.dir);
       return { ok: true };
@@ -81,13 +78,13 @@ function githubEnv(): NodeJS.ProcessEnv {
   return { ...process.env, GH_TOKEN: getGithubToken() };
 }
 
-async function commitIfChanged(dir: string): Promise<void> {
+async function commitIfChanged(dir: string, filename: string): Promise<void> {
   await execFileAsync('git', ['add', '-A'], { cwd: dir });
   try {
     // Exits 0 (no staged changes) when there's nothing to commit; non-zero otherwise.
     await execFileAsync('git', ['diff', '--cached', '--quiet'], { cwd: dir });
   } catch {
-    await execFileAsync('git', ['commit', '-m', SYNC_COMMIT_MESSAGE], { cwd: dir });
+    await execFileAsync('git', ['commit', '-m', `sync: ${filename}`], { cwd: dir });
   }
 }
 

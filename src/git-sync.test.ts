@@ -21,7 +21,7 @@ vi.mock('node:child_process', () => ({
 vi.mock('./github-token.js', () => ({ getGithubToken: () => 'test-token' }));
 vi.mock('./workspace.js', () => ({ workspacePath: (name: string) => `/repo/.janissary/workspace/${name}` }));
 
-const { GitSync, SYNC_WORKSPACE_NAME, SYNC_COMMIT_MESSAGE } = await import('./git-sync.js');
+const { GitSync, SYNC_WORKSPACE_NAME } = await import('./git-sync.js');
 
 function makeWorkspace(dir = '/repo/.janissary/workspace/git-sync', ready: Promise<void> = Promise.resolve()) {
   const create = vi.fn().mockReturnValue({ dir, ready });
@@ -75,22 +75,31 @@ describe('GitSync', () => {
     expect(commands).not.toContain('push');
   });
 
-  it('a save cycle commits with the fixed message, pulls/rebases, then pushes, in order', async () => {
+  it('a save cycle commits with sync: <filename>, pulls/rebases, then pushes, in order', async () => {
     failPatterns = [['diff', '--cached', '--quiet']];
     const sync = new GitSync(makeWorkspace());
-    expect(await sync.saveSync()).toEqual({ ok: true });
+    expect(await sync.saveSync('bugs.md')).toEqual({ ok: true });
     const commands = argLists().map((a) => a.join(' '));
     const commitIndex = commands.findIndex((c) => c.startsWith('commit'));
     const pullIndex = commands.findIndex((c) => c.startsWith('pull'));
     const pushIndex = commands.findIndex((c) => c.startsWith('push'));
-    expect(commands[commitIndex]).toContain(SYNC_COMMIT_MESSAGE);
+    expect(commands[commitIndex]).toContain('sync: bugs.md');
     expect(commitIndex).toBeLessThan(pullIndex);
     expect(pullIndex).toBeLessThan(pushIndex);
   });
 
+  it('uses the saved file\'s name in the commit message', async () => {
+    failPatterns = [['diff', '--cached', '--quiet']];
+    const sync = new GitSync(makeWorkspace());
+    await sync.saveSync('notes.md');
+    const commands = argLists().map((a) => a.join(' '));
+    const commitCommand = commands.find((c) => c.startsWith('commit'));
+    expect(commitCommand).toContain('sync: notes.md');
+  });
+
   it('skips the commit when there is nothing staged', async () => {
     const sync = new GitSync(makeWorkspace());
-    await sync.saveSync();
+    await sync.saveSync('bugs.md');
     const commands = argLists().map((a) => a[0]);
     expect(commands).not.toContain('commit');
     expect(commands).toContain('push');
@@ -109,14 +118,14 @@ describe('GitSync', () => {
   it('surfaces a push failure as an error result', async () => {
     failPatterns = [['diff', '--cached', '--quiet'], ['push', 'origin', 'HEAD:master']];
     const sync = new GitSync(makeWorkspace());
-    const result = await sync.saveSync();
+    const result = await sync.saveSync('bugs.md');
     expect(result).toEqual({ error: expect.stringContaining('push') });
   });
 
   it('passes GH_TOKEN in the environment of the pull and push execFile calls', async () => {
     failPatterns = [['diff', '--cached', '--quiet']];
     const sync = new GitSync(makeWorkspace());
-    await sync.saveSync();
+    await sync.saveSync('bugs.md');
     const pullCall = calls.find((c) => c.args[0] === 'pull');
     const pushCall = calls.find((c) => c.args[0] === 'push');
     expect(pullCall?.options.env?.GH_TOKEN).toBe('test-token');
