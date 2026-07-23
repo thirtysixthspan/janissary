@@ -40,6 +40,9 @@ export type FilesTabState = {
   gitStatuses?: Map<string, GitFileStatus>;
   // Last-computed current git branch name (see `git-status.ts`), refreshed alongside `changed`.
   branch?: string;
+  // Last-computed GitHub commits-page URL for the current origin/branch (see `github-url.ts`),
+  // refreshed alongside `branch`. Undefined when there's no github.com origin remote.
+  githubUrl?: string;
   gitRefreshing?: boolean;
   gitRefreshStale?: boolean;
 };
@@ -264,7 +267,10 @@ export class FileTreeManager {
     const found = this.findOpenFilesTab(label);
     if (!found) return;
     const { state, tab } = found;
-    tab.files = { root: state.root, absoluteRoot: state.root, rows: pruneAndBuildRows(state), branch: state.branch };
+    tab.files = {
+      root: state.root, absoluteRoot: state.root, rows: pruneAndBuildRows(state),
+      branch: state.branch, githubUrl: state.githubUrl,
+    };
     messageBus.emit('state', { type: 'dirty' });
   }
 

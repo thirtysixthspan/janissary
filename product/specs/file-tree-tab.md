@@ -310,6 +310,15 @@ close button — while docked, the sidebar's own strip (see `sidebars.md`) shows
 the close affordance, so a docked tree is closed from there (`close files` by label still works as
 a fallback).
 
+When the tree is rooted inside a git repository whose `origin` remote points at GitHub, the header
+also carries a **GitHub** button, shown before Search files. Clicking it opens that repository's
+commits page for the currently checked-out branch (for example
+`https://github.com/thirtysixthspan/janissary/commits/master/`) in an in-app page tab — the same
+kind of tab the `open` command opens a URL into — not a native browser tab. The button is absent
+when there is no `origin` remote, the remote isn't a `github.com` URL, or the current branch can't
+be determined — the same quiet degradation as the branch text. It refreshes together with the
+branch metadata above.
+
 ### Finding a file by name
 
 Clicking the header's **magnifying-glass** button opens a small search pop-up with a single text

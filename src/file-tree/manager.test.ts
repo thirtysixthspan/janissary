@@ -14,10 +14,12 @@ vi.mock('node:fs', async (importOriginal) => {
 
 const changedPathsMock = vi.fn((_root: string): Promise<Map<string, string>> => Promise.resolve(new Map<string, string>()));
 const currentBranchMock = vi.fn((_root: string): Promise<string | undefined> => Promise.resolve(undefined));
+const remoteUrlMock = vi.fn((_root: string): Promise<string | undefined> => Promise.resolve(undefined));
 
 vi.mock('../git-status.js', () => ({
   changedPaths: (...args: [string]) => changedPathsMock(...args),
   currentBranch: (...args: [string]) => currentBranchMock(...args),
+  remoteUrl: (...args: [string]) => remoteUrlMock(...args),
 }));
 
 const { FileTreeManager } = await import('./manager.js');
@@ -44,6 +46,8 @@ describe('FileTreeManager', () => {
     changedPathsMock.mockResolvedValue(new Map());
     currentBranchMock.mockReset();
     currentBranchMock.mockResolvedValue(undefined);
+    remoteUrlMock.mockReset();
+    remoteUrlMock.mockResolvedValue(undefined);
     watchMock.mockImplementation(() => {
       const close = vi.fn();
       closeFns.push(close);
@@ -952,6 +956,62 @@ describe('FileTreeManager', () => {
       await Promise.resolve();
       await Promise.resolve();
       expect(tabs.find((t) => t.label === label)!.files!.branch).toBeUndefined();
+    });
+  });
+
+  describe('github url metadata', () => {
+    const navLabel = () => tabs.find((t) => t.label.startsWith('navigator'))!.label;
+
+    it('applies the github url once the async git refresh resolves', async () => {
+      currentBranchMock.mockResolvedValue('main');
+      remoteUrlMock.mockResolvedValue('git@github.com:owner/repo.git');
+      const manager = run();
+      manager.open('files', 'janus');
+      const label = navLabel();
+      expect(tabs.find((t) => t.label === label)!.files!.githubUrl).toBeUndefined();
+      await vi.waitFor(() => {
+        expect(tabs.find((t) => t.label === label)!.files!.githubUrl).toBe('https://github.com/owner/repo/commits/main/');
+      });
+    });
+
+    it('leaves the github url undefined when the remote is not a github.com origin', async () => {
+      currentBranchMock.mockResolvedValue('main');
+      remoteUrlMock.mockResolvedValue('git@gitlab.com:owner/repo.git');
+      const manager = run();
+      manager.open('files', 'janus');
+      const label = navLabel();
+      await vi.waitFor(() => expect(currentBranchMock).toHaveBeenCalledTimes(1));
+      expect(tabs.find((t) => t.label === label)!.files!.githubUrl).toBeUndefined();
+    });
+
+    it('reroot clears the previous github url and triggers a fresh refresh', async () => {
+      mkdirSync(path.join(root, 'sub'));
+      currentBranchMock.mockResolvedValue('main');
+      remoteUrlMock.mockResolvedValue('git@github.com:owner/repo.git');
+      const manager = run();
+      manager.open('files', 'janus');
+      const label = navLabel();
+      await vi.waitFor(() => expect(remoteUrlMock).toHaveBeenCalledTimes(1));
+      currentBranchMock.mockResolvedValue('feature');
+      manager.reroot(label, 'sub');
+      expect(tabs.find((t) => t.label === label)!.files!.githubUrl).toBeUndefined();
+      await vi.waitFor(() => {
+        expect(tabs.find((t) => t.label === label)!.files!.githubUrl).toBe('https://github.com/owner/repo/commits/feature/');
+      });
+    });
+
+    it('discards a github url refresh that resolves after its tab was closed', async () => {
+      const deferred = Promise.withResolvers<string | undefined>();
+      currentBranchMock.mockResolvedValue('main');
+      remoteUrlMock.mockImplementation(() => deferred.promise);
+      const manager = run();
+      manager.open('files', 'janus');
+      const label = navLabel();
+      manager.closeTab(label);
+      deferred.resolve('git@github.com:owner/repo.git');
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(tabs.find((t) => t.label === label)!.files!.githubUrl).toBeUndefined();
     });
   });
 });

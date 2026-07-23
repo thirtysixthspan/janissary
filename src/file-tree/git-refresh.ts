@@ -1,4 +1,5 @@
-import { changedPaths, currentBranch } from '../git-status.js';
+import { changedPaths, currentBranch, remoteUrl } from '../git-status.js';
+import { githubCommitsUrl } from '../github-url.js';
 import type { FilesTabState } from './manager.js';
 
 // Recompute one tab's git statuses and current branch off the event loop, then re-render with
@@ -17,10 +18,15 @@ export function refreshGit(
   if (state.gitRefreshing) { state.gitRefreshStale = true; return; }
   state.gitRefreshing = true;
   const root = state.root;
-  void Promise.all([changedPaths(root), currentBranch(root)]).then(([gitStatuses, branch]) => {
+  void Promise.all([changedPaths(root), currentBranch(root), remoteUrl(root)]).then(([gitStatuses, branch, remote]) => {
     const current = states.get(label);
     if (!current) return;
-    if (current.root === root) { current.gitStatuses = gitStatuses; current.branch = branch; rebuild(label); }
+    if (current.root === root) {
+      current.gitStatuses = gitStatuses;
+      current.branch = branch;
+      current.githubUrl = remote && branch ? githubCommitsUrl(remote, branch) : undefined;
+      rebuild(label);
+    }
     current.gitRefreshing = false;
     if (current.gitRefreshStale) { current.gitRefreshStale = false; refreshGit(states, label, rebuild); }
   });
