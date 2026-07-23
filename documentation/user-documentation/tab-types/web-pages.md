@@ -7,7 +7,7 @@ open https://slashdot.org
 open page slashdot.org        bare address; https:// is assumed
 ```
 
-The page fills the tab body, and the tab is labeled with its page number and domain — `1) slashdot.org`. It's a real, live page — click, scroll, type, follow links, log in; the site behaves as it would in a browser, sessions included. Clicking an `http(s)` link in an agent's rendered output opens a page tab the same way.
+The page fills the tab body, and the tab is labeled with its root domain — `slashdot.org`. It's a real, live page — click, scroll, type, follow links, log in; the site behaves as it would in a browser, sessions included. Clicking an `http(s)` link in an agent's rendered output opens a page tab the same way.
 
 ![A page tab showing a live web page embedded in the app.](/screenshots/page-tab.png)
 
@@ -23,7 +23,7 @@ Many sites send headers refusing to be embedded. When the app runs in its own ma
 
 ## Page numbers and labels
 
-Each page tab is numbered `1`, `2`, `3`, … — always the smallest free number, so open pages count up from 1 without gaps, and a closed page's number is reused. The strip label combines number and root domain — `1) slashdot.org` — with any `www.` dropped (`docs.example.com` labels as `example.com`). The label and the address shown in the metadata header follow you as you navigate inside the embedded page — click through to another page on the same site (or a different one) and both update to match, as long as the app is running in its own managed browser.
+Each page tab is numbered `1`, `2`, `3`, … — always the smallest free number, so open pages count up from 1 without gaps, and a closed page's number is reused. That number isn't shown in the strip; it's only how `close page <n>` identifies a page tab. The strip label itself is just the root domain, with any `www.` dropped (`docs.example.com` labels as `example.com`). The label and the address shown in the metadata header follow you as you navigate inside the embedded page — click through to another page on the same site (or a different one) and both update to match, as long as the app is running in its own managed browser.
 
 ## Closing
 

@@ -43,6 +43,12 @@ tree back to center; it never displaces a different kind. See
 
 ![A file navigator docked in the left sidebar, with its resize divider on the right edge.](/screenshots/file-tree-sidebar.png)
 
+## Opening the repository on GitHub
+
+When the tree is rooted inside a git repository whose `origin` remote points at GitHub, its header shows a **GitHub** button (tooltip "Open on GitHub") before the search button. Clicking it opens the repository's commits page for the branch you currently have checked out, in a page tab inside the app rather than your OS browser.
+
+The button doesn't show up for a directory with no `origin` remote, a remote that isn't a `github.com` URL, or a branch the app can't determine. It refreshes along with the rest of the header whenever the tree does.
+
 ## Finding a file by name
 
 Click the header's magnifying-glass button to open a search pop-up. Type part of a filename and the input shows a ghost completion of the best-matching file, with its full path (relative to the tree root) below, prefixed with `> ` — for example, `> src/tasks.md`. Matching is a case-insensitive substring on the filename, with a name that starts with what you typed ranked first; only the single top match is shown, there's no results list.
