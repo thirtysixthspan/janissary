@@ -219,6 +219,11 @@ an empty line: a Markdown blockquote whose `>` is meant to be the very first cha
 line can't be typed by pressing `>` first — type the blockquote's body first, then insert the
 leading `>` once the line is no longer empty.
 
+Editing the buffer and editing the query line are interchangeable while the query line is open:
+clicking into the buffer moves keyboard focus there so ordinary typing edits the document, and
+clicking back into the query row moves focus back to it, all without closing the query line or
+losing either one's text. Only whichever one currently holds focus shows a caret.
+
 The query line shows a `>` prompt marker. The request itself follows the same shape as before: the
 name of an available persona immediately after the `>`, then the request text, for example
 `> assistant rewrite this paragraph in one sentence`. Typing `>>` at the start of the query is a

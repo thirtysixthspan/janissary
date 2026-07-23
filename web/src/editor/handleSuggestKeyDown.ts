@@ -83,16 +83,17 @@ function handleQueryLineKeyDown(e: React.KeyboardEvent, suggest: EditorSuggestAp
 
 // Intercepts editor keydowns for the in-editor persona-suggestion surface — blocking edits while
 // any hunk is pending (resolution itself is click-only, via each hunk's accept/decline icons; see
-// EditorLines.tsx), routing every key to the query line while it is open, and opening it when `>`
-// is typed as the first character of an otherwise-empty line (Decision 3). Returns true once it
-// has handled (and prevented) the event, so EditorTab's onKeyDown stops there. Split out to keep
-// EditorTab.tsx under the 200-line cap (Decision 12).
+// EditorLines.tsx), routing keys to the query line only while it holds focus (`focusTarget`) so
+// the buffer stays editable while the query line remains open, and opening it when `>` is typed
+// as the first character of an otherwise-empty line (Decision 3). Returns true once it has handled
+// (and prevented) the event, so EditorTab's onKeyDown stops there. Split out to keep EditorTab.tsx
+// under the 200-line cap (Decision 12).
 export function handleSuggestKeyDown(e: React.KeyboardEvent, api: EditorApi, suggest: EditorSuggestApi): boolean {
   if (suggest.pending) {
     e.preventDefault();
     return true;
   }
-  if (suggest.queryLine) return handleQueryLineKeyDown(e, suggest, api.stateRef.current);
+  if (suggest.queryLine && suggest.focusTarget === 'query') return handleQueryLineKeyDown(e, suggest, api.stateRef.current);
   const s = api.stateRef.current;
   if (s && e.key === '>' && !e.metaKey && !e.ctrlKey && s.cursor.col === 0 && s.lines[s.cursor.line] === '' && !s.anchor) {
     e.preventDefault();

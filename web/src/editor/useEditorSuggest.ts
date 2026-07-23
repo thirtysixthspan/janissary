@@ -36,6 +36,10 @@ export type EditorSuggestApi = {
   // request instead of moving within the query text.
   pillFocused: boolean;
   setPillFocused: (focused: boolean) => void;
+  // Which surface keyboard input (and its caret) currently targets — lets the query line stay
+  // open while the buffer is edited, and vice versa, instead of one exclusively owning all input.
+  focusTarget: 'buffer' | 'query';
+  setFocusTarget: (target: 'buffer' | 'query') => void;
   openQueryLine: (anchorLine: number) => void;
   closeQueryLine: () => void;
   setQueryLineState: (s: EditorState) => void;
@@ -51,6 +55,7 @@ export function useEditorSuggest(client: JanusClient, url: string, setState: (s:
   const [noSuggestionLine, setNoSuggestionLine] = useState<string | null>(null);
   const [queryLine, setQueryLine] = useState<QueryLine | null>(null);
   const [pillFocused, setPillFocused] = useState(false);
+  const [focusTarget, setFocusTarget] = useState<'buffer' | 'query'>('buffer');
   const pendingRef = useRef<PendingSuggest | null>(null);
   const queryLineRef = useRef<QueryLine | null>(null);
   const firingRef = useRef(false);
@@ -66,11 +71,16 @@ export function useEditorSuggest(client: JanusClient, url: string, setState: (s:
 
   const setPendingBoth = (p: PendingSuggest | null) => { pendingRef.current = p; setPending(p); };
 
-  const openQueryLine = (anchorLine: number) => { setQueryLine({ anchorLine, state: emptyQueryState() }); setPillFocused(false); };
+  const openQueryLine = (anchorLine: number) => {
+    setQueryLine({ anchorLine, state: emptyQueryState() });
+    setPillFocused(false);
+    setFocusTarget('query');
+  };
   const closeQueryLine = () => {
     if (firingRef.current) firingCancelledRef.current = true;
     setQueryLine(null);
     setPillFocused(false);
+    setFocusTarget('buffer');
   };
   const setQueryLineState = (s: EditorState) => { setQueryLine((q) => (q ? { ...q, state: s } : q)); };
 
@@ -132,6 +142,7 @@ export function useEditorSuggest(client: JanusClient, url: string, setState: (s:
 
   return {
     personas, pending, firingLine, noSuggestionLine, queryLine, pillFocused, setPillFocused,
+    focusTarget, setFocusTarget,
     openQueryLine, closeQueryLine, setQueryLineState, fireOnLine, acceptHunk, declineHunk,
   };
 }

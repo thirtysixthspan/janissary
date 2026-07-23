@@ -34,6 +34,8 @@ function makeSuggest(overrides: Partial<EditorSuggestApi> = {}): EditorSuggestAp
     queryLine: null,
     pillFocused: false,
     setPillFocused: vi.fn(),
+    focusTarget: 'query',
+    setFocusTarget: vi.fn(),
     openQueryLine: vi.fn(),
     closeQueryLine: vi.fn(),
     setQueryLineState: vi.fn(),
@@ -245,5 +247,29 @@ describe('handleSuggestKeyDown while the query line is active', () => {
 
     expect(suggest.setPillFocused).toHaveBeenCalledWith(false);
     expect(suggest.fireOnLine).not.toHaveBeenCalled();
+  });
+});
+
+describe('handleSuggestKeyDown while the query line is open but the buffer holds focus', () => {
+  it('does not route a printable key into the query text, leaving it for the buffer', () => {
+    const api = makeApi(makeState('abc', 0, 1));
+    const suggest = makeSuggest({ queryLine: makeQueryLine('> summarizer x'), focusTarget: 'buffer' });
+    const e = makeEvent('a');
+
+    const handled = handleSuggestKeyDown(e, api, suggest);
+
+    expect(handled).toBe(false);
+    expect(suggest.setQueryLineState).not.toHaveBeenCalled();
+  });
+
+  it('does not intercept Escape, leaving it for the buffer', () => {
+    const api = makeApi(makeState('abc', 0, 1));
+    const suggest = makeSuggest({ queryLine: makeQueryLine('> summarizer x'), focusTarget: 'buffer' });
+    const e = makeEvent('Escape');
+
+    const handled = handleSuggestKeyDown(e, api, suggest);
+
+    expect(handled).toBe(false);
+    expect(suggest.closeQueryLine).not.toHaveBeenCalled();
   });
 });
