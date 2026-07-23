@@ -237,10 +237,20 @@ against the available persona names — this is the only place the editor comple
 does not add general word-completion elsewhere in the buffer. Once the query is a complete, runnable
 request, pressing Tab anywhere else on it instead moves keyboard focus to its status pill,
 highlighting it; pressing Enter while the pill holds focus sends the request, the same as clicking
-it. Any other key clears the pill's focus and returns to ordinary editing of the query text. Up/Down
-arrows are no-ops within the query line, since it holds a single line; Left/Right/Home/End and
-Backspace/Delete edit the query text as usual, and a paste or IME commit while the query line is
-focused lands in the query text rather than the buffer.
+it. Any other key clears the pill's focus and returns to ordinary editing of the query text.
+Shift+Enter inserts a line break in the query instead of sending the request, so a query can span
+several lines; Left/Right/Home/End and Backspace/Delete edit the query text as usual, and a paste
+or IME commit while the query line is focused lands in the query text rather than the buffer.
+
+Up/Down arrows move the cursor within the query's lines when there is a neighboring query line to
+move to. Pressing Up on the query's first line, or Down on its last line, instead moves keyboard
+focus into the buffer, landing on the line just above (Up) or below (Down) the query's anchor line,
+at the same column — the same as if the query line weren't there. The reverse works the same way:
+pressing Up or Down in the buffer, when it would land the cursor exactly on the query's anchor
+line, instead moves focus into the query line, landing on its last line (moving up) or first line
+(moving down) at the same column. Either direction is a no-op where there's no line to cross onto —
+Up/Down at the query's edge when the anchor sits at the document's first or last line, same as
+before.
 
 Pressing Enter, Ctrl+Enter (Cmd+Enter on macOS), or clicking the `run` pill all send the request
 once it is a valid `> <persona> <prompt>`; any of them while the query isn't yet runnable is a

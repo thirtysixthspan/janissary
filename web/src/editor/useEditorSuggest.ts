@@ -7,7 +7,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { SuggestHunk } from '@shared/protocol';
 import type { EditorState } from './model';
-import { fromText, toText } from './model';
+import { fromText, toText, clampPos } from './model';
 import type { JanusClient } from '../ws';
 import { parseSuggestRequest } from './suggest-request';
 import { spliceHunk } from './suggestDiff';
@@ -43,6 +43,14 @@ export type EditorSuggestApi = {
   openQueryLine: (anchorLine: number) => void;
   closeQueryLine: () => void;
   setQueryLineState: (s: EditorState) => void;
+  // Moves focus (and the caret) from the query line into the buffer, landing on the buffer line
+  // just past the query's anchor in the direction the cursor left the query (`dir`), at `col`.
+  // A no-op when there is no buffer line in that direction (the anchor sits at the document edge).
+  exitQueryToBuffer: (dir: -1 | 1, col: number, bufferState: EditorState) => void;
+  // Moves focus (and the caret) from the buffer into the query line, landing on the query's first
+  // line when entering from above (`dir` 1, moving down) or its last line when entering from below
+  // (`dir` -1, moving up), at `col`.
+  enterQueryFromBuffer: (dir: -1 | 1, col: number) => void;
   fireOnLine: (bufferState: EditorState) => void;
   acceptHunk: (state: EditorState, index: number) => void;
   declineHunk: (state: EditorState, index: number) => void;
@@ -84,17 +92,35 @@ export function useEditorSuggest(client: JanusClient, url: string, setState: (s:
   };
   const setQueryLineState = (s: EditorState) => { setQueryLine((q) => (q ? { ...q, state: s } : q)); };
 
-  // Fires the `editorSuggest` query from the ephemeral query text, priming it with the live buffer
-  // (Decision 2: the buffer never contains the request). A second request while one is already
-  // pending, or with no open query line, is ignored (Decision 8).
+  const exitQueryToBuffer = (dir: -1 | 1, col: number, bufferState: EditorState) => {
+    const q = queryLineRef.current;
+    if (!q) return;
+    const target = q.anchorLine + dir;
+    if (target < 0 || target >= bufferState.lines.length) return;
+    setFocusTarget('buffer');
+    setState({ ...bufferState, cursor: clampPos(bufferState.lines, { line: target, col }), anchor: null, goalCol: undefined });
+  };
+
+  const enterQueryFromBuffer = (dir: -1 | 1, col: number) => {
+    const q = queryLineRef.current;
+    if (!q) return;
+    const line = dir === 1 ? 0 : q.state.lines.length - 1;
+    setFocusTarget('query');
+    setQueryLineState({ ...q.state, cursor: clampPos(q.state.lines, { line, col }), anchor: null, goalCol: undefined });
+  };
+
+  // Fires the `editorSuggest` query from the ephemeral query text (now possibly several lines,
+  // one per Shift+Enter), priming it with the live buffer (Decision 2: the buffer never contains
+  // the request). A second request while one is already pending, or with no open query line, is
+  // ignored (Decision 8).
   const fireOnLine = (bufferState: EditorState) => {
     const q = queryLineRef.current;
     if (pendingRef.current || firingRef.current || !q) return;
-    const lineText = q.state.lines[0];
-    const request = parseSuggestRequest(lineText, personas);
+    const queryText = toText(q.state);
+    const request = parseSuggestRequest(queryText, personas);
     if (!request) return;
     firingRef.current = true;
-    setFiringLine(lineText);
+    setFiringLine(queryText);
     void client.request<{ hunks: SuggestHunk[] }>({
       method: 'editorSuggest',
       params: { url, persona: request.persona, content: toText(bufferState), prompt: request.prompt },
@@ -107,7 +133,7 @@ export function useEditorSuggest(client: JanusClient, url: string, setState: (s:
       // query line stays open with its text intact and no pending panel opens.
       if (hunks.length > 0) {
         setPendingBoth({ hunks, resolved: hunks.map(() => false), acceptedAny: false });
-      } else setNoSuggestionLine(lineText);
+      } else setNoSuggestionLine(queryText);
     });
   };
 
@@ -143,6 +169,7 @@ export function useEditorSuggest(client: JanusClient, url: string, setState: (s:
   return {
     personas, pending, firingLine, noSuggestionLine, queryLine, pillFocused, setPillFocused,
     focusTarget, setFocusTarget,
-    openQueryLine, closeQueryLine, setQueryLineState, fireOnLine, acceptHunk, declineHunk,
+    openQueryLine, closeQueryLine, setQueryLineState, exitQueryToBuffer, enterQueryFromBuffer,
+    fireOnLine, acceptHunk, declineHunk,
   };
 }
