@@ -1,7 +1,7 @@
 # Task Picker
 
 Task files are the executable prompts kept under the repository's `ai/tasks/` directory —
-`build-a-feature.md`, `fix-a-small-issue.md`, `merge-change-to-master.md`, and the like. Each is a
+`build-a-feature.md`, `fix-an-issue.md`, `merge-change-to-master.md`, and the like. Each is a
 self-contained instruction set an agent can be told to run. The task picker lists them so one can
 be dropped onto the command line without typing its path by hand.
 
@@ -17,7 +17,7 @@ into subdirectories. Any subdirectory appears as a row of its own, collapsed by 
 files become visible once it is expanded (see "Picker behavior" below). The list is read fresh from
 disk each time the picker opens, so adding, renaming, or removing a task file (or subdirectory) is
 reflected immediately. Each file row displays its name with the `.md` extension hidden
-(`fix-a-small-issue`, not `fix-a-small-issue.md`); the extension is still present in the command
+(`fix-an-issue`, not `fix-an-issue.md`); the extension is still present in the command
 inserted when the row is picked. Directory rows show a caret-icon chevron indicating their expand state (pointing
 right when collapsed, down when expanded) and are indented one level deeper than their parent.
 
