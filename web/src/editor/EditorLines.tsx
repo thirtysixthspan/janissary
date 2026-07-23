@@ -59,7 +59,7 @@ export function EditorLines({ state, tokens, suggest, active, gutterCh, caretRef
         isCurrent={onCursorLine}
         selFrom={selFrom}
         selTo={selTo}
-        caretCol={onCursorLine && active ? state.cursor.col : -1}
+        caretCol={onCursorLine && active && suggest.focusTarget === 'buffer' ? state.cursor.col : -1}
         caretRef={onCursorLine ? caretRef : null}
         tokens={tokens[index] ?? []}
         removed={removed}
@@ -82,7 +82,7 @@ export function EditorLines({ state, tokens, suggest, active, gutterCh, caretRef
         isCurrent
         selFrom={-1}
         selTo={-1}
-        caretCol={active ? qs.cursor.col : -1}
+        caretCol={active && suggest.focusTarget === 'query' ? qs.cursor.col : -1}
         caretRef={caretRef}
         tokens={[]}
         pill={pill}

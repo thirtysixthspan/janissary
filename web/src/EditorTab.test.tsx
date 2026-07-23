@@ -562,6 +562,41 @@ describe('EditorTab', () => {
       expect(screen.queryByText('Accept or decline each change below')).not.toBeInTheDocument();
     });
 
+    it('lets the buffer be edited via a click while the query line stays open', async () => {
+      const { client } = makeClient();
+      stubRequestFileContent('line one\n');
+      const { container } = await renderLoaded(client, makeView({ line: 2 }));
+
+      fireEvent.keyDown(textarea(), { key: '>' });
+      expect(container.querySelector('.editor-row-query')).not.toBeNull();
+
+      const bufferContent = container.querySelector(':scope .editor-row:not(.editor-row-query) .editor-content') as HTMLElement;
+      fireEvent.mouseDown(bufferContent, { clientX: 0, clientY: 0, detail: 1 });
+      type('X');
+
+      expect(container.querySelector(':scope .editor-row:not(.editor-row-query) .editor-content')?.textContent).toBe('Xline one');
+      expect(container.querySelector('.editor-row-query')).not.toBeNull();
+    });
+
+    it('switches focus back to the query row on click without closing it, keeping both texts', async () => {
+      const { client } = makeClient();
+      stubRequestFileContent('line one\n');
+      const { container } = await renderLoaded(client, makeView({ line: 2 }));
+
+      openAndType(' summarizer hi');
+      const bufferContent = container.querySelector(':scope .editor-row:not(.editor-row-query) .editor-content') as HTMLElement;
+      fireEvent.mouseDown(bufferContent, { clientX: 0, clientY: 0, detail: 1 });
+      type('X');
+
+      const queryContent = container.querySelector(':scope .editor-row-query .editor-content') as HTMLElement;
+      fireEvent.mouseDown(queryContent, { clientX: 0, clientY: 0, detail: 1 });
+      fireEvent.keyDown(textarea(), { key: '!' });
+
+      expect(queryRowText(container)).toContain('!');
+      expect(container.querySelector(':scope .editor-row:not(.editor-row-query) .editor-content')?.textContent).toBe('Xline one');
+      expect(container.querySelector('.editor-row-query')).not.toBeNull();
+    });
+
     it('opening, typing, and closing the query line never dirties the buffer', async () => {
       const { client } = makeClient();
       stubRequestFileContent('line one\n');

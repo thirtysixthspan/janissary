@@ -176,4 +176,48 @@ describe('useEditorMouse', () => {
     expect(api.setState).toHaveBeenCalled();
     body.remove();
   });
+
+  it('routes a click on the query row into the query state and marks it focused, leaving the buffer untouched', () => {
+    const state = makeState(['hello', '']);
+    const api = makeApi(state);
+    const body = makeEditorBody(2);
+    const bodyRef = { current: body } as React.RefObject<HTMLDivElement | null>;
+    const focus = vi.fn();
+    const queryLine = { anchorLine: 1, state: { lines: ['> summ'], cursor: { line: 0, col: 6 }, anchor: null } };
+    const setQueryLineState = vi.fn();
+    const setFocusTarget = vi.fn();
+    const suggest = { queryLine, setQueryLineState, setFocusTarget };
+    const { result } = renderHook(() => useEditorMouse(api, bodyRef, focus, suggest));
+
+    const content = body.querySelectorAll('.editor-content')[1] as HTMLElement;
+    const event = { preventDefault: vi.fn(), target: content, clientX: 10, clientY: 30, detail: 1, shiftKey: false } as unknown as React.MouseEvent;
+    act(() => { result.current.onMouseDown(event); });
+
+    expect(setFocusTarget).toHaveBeenCalledWith('query');
+    expect(setQueryLineState).toHaveBeenCalled();
+    expect(api.setState).not.toHaveBeenCalled();
+    body.remove();
+  });
+
+  it('marks the buffer focused when clicking an ordinary row while a query line is open', () => {
+    const state = makeState(['hello', '']);
+    const api = makeApi(state);
+    const body = makeEditorBody(2);
+    const bodyRef = { current: body } as React.RefObject<HTMLDivElement | null>;
+    const focus = vi.fn();
+    const queryLine = { anchorLine: 1, state: { lines: ['> summ'], cursor: { line: 0, col: 6 }, anchor: null } };
+    const setQueryLineState = vi.fn();
+    const setFocusTarget = vi.fn();
+    const suggest = { queryLine, setQueryLineState, setFocusTarget };
+    const { result } = renderHook(() => useEditorMouse(api, bodyRef, focus, suggest));
+
+    const content = body.querySelector('.editor-content') as HTMLElement;
+    const event = { preventDefault: vi.fn(), target: content, clientX: 10, clientY: 10, detail: 1, shiftKey: false } as unknown as React.MouseEvent;
+    act(() => { result.current.onMouseDown(event); });
+
+    expect(setFocusTarget).toHaveBeenCalledWith('buffer');
+    expect(setQueryLineState).not.toHaveBeenCalled();
+    expect(api.setState).toHaveBeenCalled();
+    body.remove();
+  });
 });

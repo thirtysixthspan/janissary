@@ -38,10 +38,11 @@ export const EditorTab = forwardRef<EditorTabHandle, { editor: EditorView; tab: 
 
   const api = useEditor(() => { void save(); });
   const { state } = api;
-  const mouse = useEditorMouse(api, bodyRef, () => textareaRef.current?.focus());
+  const suggest = useEditorSuggest(client, editor.url, api.setState);
+  const mouse = useEditorMouse(api, bodyRef, () => textareaRef.current?.focus(), suggest);
   const tokens = useSyntaxHighlight(state, editor.name);
   useEditorSync(state, editor.url, client);
-  const suggest = useEditorSuggest(client, editor.url, api.setState), connections = useEditorConnections(client, tab);
+  const connections = useEditorConnections(client, tab);
 
   const writeToDisk = async (text: string) => {
     setSaveError(null);
@@ -173,13 +174,13 @@ export const EditorTab = forwardRef<EditorTabHandle, { editor: EditorView; tab: 
   };
 
   // Typed text and paste both arrive through the hidden textarea (keeps IME composition working).
-  // While the agent query line is open, route the value into its text instead of the buffer — the
-  // keydown path (handleSuggestKeyDown) covers ordinary typing, but paste and IME composition
+  // While the agent query line holds focus, route the value into its text instead of the buffer —
+  // the keydown path (handleSuggestKeyDown) covers ordinary typing, but paste and IME composition
   // bypass it entirely.
   const flushTextarea = () => {
     const textarea = textareaRef.current;
     if (!textarea || composingRef.current || !textarea.value) return;
-    if (suggest.queryLine) suggest.setQueryLineState(insertText(suggest.queryLine.state, textarea.value));
+    if (suggest.queryLine && suggest.focusTarget === 'query') suggest.setQueryLineState(insertText(suggest.queryLine.state, textarea.value));
     else api.insert(textarea.value);
     textarea.value = '';
   };

@@ -7,6 +7,9 @@ import type { EditorApi } from './useEditor';
 import type { Pos, EditorState } from './model';
 import { clampPos, setSelection, wordRangeAt } from './model';
 import { hitFromEvent, hitFromPoint, type MouseHit } from './mouse';
+import type { EditorSuggestApi } from './useEditorSuggest';
+
+type QueryMouseTarget = Pick<EditorSuggestApi, 'queryLine' | 'setQueryLineState' | 'setFocusTarget'>;
 
 type Drag = { anchor: Pos; lineMode: boolean; anchorLine: number };
 
@@ -22,7 +25,7 @@ function linesSelection(s: EditorState, anchorLine: number, hitLine: number): Ed
   return setSelection(s, anchor, { line: hitLine, col: 0 });
 }
 
-export function useEditorMouse(api: EditorApi, bodyRef: React.RefObject<HTMLDivElement | null>, focus: () => void) {
+export function useEditorMouse(api: EditorApi, bodyRef: React.RefObject<HTMLDivElement | null>, focus: () => void, suggest?: QueryMouseTarget) {
   const dragRef = useRef<Drag | null>(null);
 
   const extendTo = (hit: MouseHit) => {
@@ -54,9 +57,20 @@ export function useEditorMouse(api: EditorApi, bodyRef: React.RefObject<HTMLDivE
 
   const onMouseDown = (e: React.MouseEvent) => {
     focus();
-    const s = api.stateRef.current;
     const hit = hitFromEvent(e);
-    if (!s || !hit) { e.preventDefault(); return; }
+    if (!hit) { e.preventDefault(); return; }
+    const queryLine = suggest?.queryLine;
+    if (queryLine && !hit.inGutter && hit.line === queryLine.anchorLine) {
+      e.preventDefault();
+      suggest?.setFocusTarget('query');
+      const qs = queryLine.state;
+      const pos = clampPos(qs.lines, { line: 0, col: hit.col });
+      suggest?.setQueryLineState(setSelection(qs, pos, pos));
+      return;
+    }
+    suggest?.setFocusTarget('buffer');
+    const s = api.stateRef.current;
+    if (!s) { e.preventDefault(); return; }
     // Suppress native text selection when a text line was hit.
     e.preventDefault();
     api.sealUndo();

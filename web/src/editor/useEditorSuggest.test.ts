@@ -45,9 +45,11 @@ describe('useEditorSuggest', () => {
 
     act(() => { result.current.openQueryLine(2); });
     expect(result.current.queryLine).toEqual({ anchorLine: 2, state: { lines: ['>'], cursor: { line: 0, col: 1 }, anchor: null } });
+    expect(result.current.focusTarget).toBe('query');
 
     act(() => { result.current.closeQueryLine(); });
     expect(result.current.queryLine).toBeNull();
+    expect(result.current.focusTarget).toBe('buffer');
   });
 
   it('fires an editorSuggest request from the query text and opens the pending set', async () => {
