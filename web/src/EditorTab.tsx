@@ -1,7 +1,7 @@
 import React, { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import type { EditorView, TabView } from '@shared/protocol';
 import type { JanusClient } from './ws';
-import { toText } from './editor/model';
+import { insertText, toText } from './editor/model';
 import { actionForKey } from './editor/keys';
 import { visualVerticalHit } from './editor/mouse';
 import { useEditor } from './editor/useEditor';
@@ -173,10 +173,15 @@ export const EditorTab = forwardRef<EditorTabHandle, { editor: EditorView; tab: 
   };
 
   // Typed text and paste both arrive through the hidden textarea (keeps IME composition working).
+  // While the agent query line is open, route the value into its text instead of the buffer — the
+  // keydown path (handleSuggestKeyDown) covers ordinary typing, but paste and IME composition
+  // bypass it entirely.
   const flushTextarea = () => {
     const textarea = textareaRef.current;
-    if (!textarea || composingRef.current) return;
-    if (textarea.value) { api.insert(textarea.value); textarea.value = ''; }
+    if (!textarea || composingRef.current || !textarea.value) return;
+    if (suggest.queryLine) suggest.setQueryLineState(insertText(suggest.queryLine.state, textarea.value));
+    else api.insert(textarea.value);
+    textarea.value = '';
   };
 
   const gutterCh = state ? String(state.lines.length).length + 1 : 2;

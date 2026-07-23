@@ -207,25 +207,42 @@ inline, without leaving the buffer and without opening a monitor reporting tab (
 for that separate, batched flow — both read the same live buffer, but this one is a single-shot
 request fired directly from the editor).
 
-A request is written as an ordinary buffer line whose first non-whitespace character is `>`,
-immediately followed by the name of an available persona and then the request text, for example
-`> assistant rewrite this paragraph in one sentence`. Typing `>>` at the start of the line is a
+A request is entered in an ephemeral agent query line, not as buffer text. Pressing `>` while the
+caret sits at the very start of an otherwise-empty line opens the query line inline, right at that
+line's on-screen position, visually distinct from ordinary buffer rows; typing `>` anywhere else —
+mid-line, after other text, or when it would replace a selection — inserts a literal `>` exactly as
+before. Because the query line is not buffer text, it is never saved to disk, never counted toward
+whether the tab is dirty, and never sent to a monitor watching the buffer's live draft; opening,
+typing in, or closing it leaves the buffer exactly as it was. One consequence of triggering only on
+an empty line: a Markdown blockquote whose `>` is meant to be the very first character of an empty
+line can't be typed by pressing `>` first — type the blockquote's body first, then insert the
+leading `>` once the line is no longer empty.
+
+The query line shows a `>` prompt marker followed by placeholder text reading "persona request…"
+until something is typed. The request itself follows the same shape as before: the name of an
+available persona immediately after the `>`, then the request text, for example
+`> assistant rewrite this paragraph in one sentence`. Typing `>>` at the start of the query is a
 shorthand for `> assistant`, naming that persona without typing its name out. The personas offered
 here are the ones written for in-editor requests, a separate set from the personas `monitor`
 offers — a persona made for watching a transcript and one made for editing a buffer are different
 jobs. While the caret sits in the persona-name word right after `>`, pressing Tab completes it
 against the available persona names — this is the only place the editor completes anything; it
-does not add general word-completion elsewhere in the buffer. Once the line is a complete, runnable
-request, pressing Tab anywhere else on it instead moves keyboard focus to that line's status pill,
+does not add general word-completion elsewhere in the buffer. Once the query is a complete, runnable
+request, pressing Tab anywhere else on it instead moves keyboard focus to its status pill,
 highlighting it; pressing Enter while the pill holds focus sends the request, the same as clicking
-it. Any other key clears the pill's focus and returns to ordinary editing.
+it. Any other key clears the pill's focus and returns to ordinary editing of the query text. Up/Down
+arrows are no-ops within the query line, since it holds a single line; Left/Right/Home/End and
+Backspace/Delete edit the query text as usual, and a paste or IME commit while the query line is
+focused lands in the query text rather than the buffer.
 
-Pressing Ctrl+Enter (Cmd+Enter on macOS) while the caret is on a valid `> <persona> <prompt>` line
-sends the request; a plain Enter always just inserts a newline, so an ordinary Markdown blockquote
-line that happens to start with `>` is never mistaken for a request, and Ctrl/Cmd+Enter on a line
-that isn't a valid request does nothing. The named persona is primed with the editor's current
-buffer content exactly as it stands at that moment — including any unsaved edits — plus the request
-text.
+Pressing Enter, Ctrl+Enter (Cmd+Enter on macOS), or clicking the `[run]` pill all send the request
+once it is a valid `> <persona> <prompt>`; any of them while the query isn't yet runnable is a
+no-op — Enter in the query line never inserts a buffer newline, since keyboard focus is in the
+ephemeral query, not the buffer. Escape closes the query line at any point, discarding whatever was
+typed and returning keyboard focus to the buffer at the line the query was anchored to, with nothing
+inserted. The named persona is primed with the editor's current buffer content exactly as it
+stands at that moment — including any unsaved edits, and excluding the query text itself, since it
+was never part of the buffer — plus the request text.
 
 The first request to a given persona in an editor tab opens a connection to that persona, which
 stays open for the rest of that tab's life; every later request to the same persona in that same
@@ -256,24 +273,25 @@ exactly as it was.
 Only one request may be in flight (or awaiting resolution) per editor tab at a time; firing another
 request while a suggestion is still pending is ignored until the current one is fully resolved.
 
-Once every proposed change has been accepted or declined, the original `>` request line is removed
-from the buffer only if at least one change was accepted. If every change was declined, or the
-persona had nothing to propose, the request line is left in place so it can be edited and retried.
+Once every proposed change has been accepted or declined, the query line closes only if at least one
+change was accepted. If every change was declined, or the persona had nothing to propose, the query
+line stays open with its text intact so it can be edited and retried.
 
 If the named persona doesn't exist, the request fails, or the persona's reply proposes no change at
 all, a notification appears in the notifications tab naming the persona and the outcome, and the
-buffer and request line are left untouched.
+buffer and the query line's text are left untouched.
 
 A status pill, styled as a colored badge (matching the agent-color badge shown on a cross-tab
-notification) and right-aligned at the end of the line, is rendered at the end of any `>`-led line,
-tracking that line's progress: `[agent?]` before a known persona has been named, `[query?]` once
-the persona is named but no request text has been typed yet, and `[run]` once both are present —
-clicking `[run]` sends the request, the same as pressing Ctrl+Enter (Cmd+Enter on macOS) on that
-line, or pressing Enter while the pill holds keyboard focus (see above). While the request is in
-flight the pill reads `[running...]`; if the reply proposes no change at all, it reads `[no
-suggestion]` until the line is edited. While a proposed change from that line is pending
-accept/decline, the pill is hidden — the pending-change prompt above the buffer is the request's
-state at that point.
+notification) and right-aligned at the end of the row, is rendered on the query line, tracking its
+progress: `[agent?]` before a known persona has been named, `[query?]` once the persona is named but
+no request text has been typed yet, and `[run]` once both are present — clicking `[run]` sends the
+request, the same as pressing Ctrl+Enter (Cmd+Enter on macOS), or pressing Enter while the pill
+holds keyboard focus (see above). While the request is in flight the pill reads `[running...]`; if
+the reply proposes no change at all, it reads `[no suggestion]` until the query is edited. While a
+proposed change is pending accept/decline, the pill is hidden — the pending-change prompt above the
+buffer is the request's state at that point, and the buffer's own caret is suppressed while the
+query line holds keyboard focus.
 
 Nothing about an in-editor suggestion is saved or restored — like the rest of an editor tab's state,
-it exists only in memory for as long as the tab is open.
+it exists only in memory for as long as the tab is open. The query line follows the same rule: it is
+never persisted or restored across a relaunch.
