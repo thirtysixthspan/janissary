@@ -53,6 +53,13 @@ describe('EditorLine token segments', () => {
     );
     expect(container.querySelector('.editor-row')?.className).toContain('editor-diff-remove');
   });
+
+  it('shows the 1-based line number in the gutter for an ordinary (non-query) row', () => {
+    const { container } = render(
+      <EditorLine text="plain text" line={4} gutterCh={2} isCurrent={false} selFrom={-1} selTo={-1} caretCol={-1} caretRef={null} tokens={[]} />,
+    );
+    expect(container.querySelector('.editor-gutter')?.textContent).toBe('5');
+  });
 });
 
 describe('EditorLine suggestion pill', () => {
@@ -86,6 +93,7 @@ describe('EditorLine query row', () => {
     expect(container.querySelector('.editor-content')?.textContent?.replaceAll('\u{200B}', '')).toBe('>');
     expect(container.querySelector('.editor-placeholder')).toBeNull();
     expect(container.querySelector('.editor-caret')).toBeInTheDocument();
+    expect(container.querySelector('.editor-gutter')?.textContent).toBe('');
   });
 
   it('suppresses the caret when the row is not active', () => {
