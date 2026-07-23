@@ -2,8 +2,6 @@
 
 ## ready
 
-* update the gitsync commit to say `sync: <filename>`
-
 * if syncPaths is missing from the config file on launch, add the default values for "syncPaths": ["product/backlog/", "product/plans/"]
 
 * use the $root abbreviation in the path in the editor metadata bar.

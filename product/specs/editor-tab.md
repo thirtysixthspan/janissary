@@ -226,10 +226,10 @@ file changed as a result refreshes automatically, exactly like an ordinary exter
 "Live reload of external changes"). A synced tab with unsaved changes is left alone, same as always.
 
 Saving a synced file writes and confirms the save exactly as an ordinary save does — the "Saved"
-flash is not delayed by anything that happens next. After that, the change is committed with a fixed
-commit message, the shared workspace is brought up to date with `origin/master`, and the commit is
-pushed. If updating with `origin/master` finds a conflicting change, the remote version always wins
-automatically; there is no merge-conflict prompt to resolve.
+flash is not delayed by anything that happens next. After that, the change is committed with the
+message `sync: <filename>` (the saved file's name), the shared workspace is brought up to date with
+`origin/master`, and the commit is pushed. If updating with `origin/master` finds a conflicting
+change, the remote version always wins automatically; there is no merge-conflict prompt to resolve.
 
 The metadata header's connections-status button area also shows a read-only status icon for a synced
 file, reflecting whether that file's sync is currently being provisioned, syncing, synced, or has hit
