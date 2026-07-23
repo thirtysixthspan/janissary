@@ -30,6 +30,7 @@ import { command as notify } from './notify.js';
 import { command as syntax } from './syntax.js';
 import { command as theme } from './theme.js';
 import { command as tasks } from './tasks.js';
+import { command as question } from './question.js';
 import { monitor, unmonitor, monitors } from './monitor.js';
 
 export const commands: Command[] = [
@@ -64,6 +65,7 @@ export const commands: Command[] = [
   syntax,
   theme,
   tasks,
+  question,
   monitors,
   monitor,
   unmonitor,
