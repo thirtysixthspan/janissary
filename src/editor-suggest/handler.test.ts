@@ -6,12 +6,15 @@ const mocks = vi.hoisted(() => ({
   notify: vi.fn(),
   listPersonas: vi.fn(),
   loadPersona: vi.fn(),
+  spawnMonitorSession: vi.fn(),
 }));
 
 vi.mock('../notifications.js', () => ({ notify: mocks.notify }));
 vi.mock('../personas.js', () => ({ listPersonas: mocks.listPersonas, loadPersona: mocks.loadPersona }));
+vi.mock('../monitor/acp.js', () => ({ spawnMonitorSession: mocks.spawnMonitorSession }));
 
 import { editorSuggest } from './handler.js';
+import { EditorAcpManager } from '../editor/acp-manager.js';
 
 function makeSession(): { session: AcpSession; prompt: ReturnType<typeof vi.fn>; kill: ReturnType<typeof vi.fn> } {
   const prompt = vi.fn();
@@ -19,14 +22,14 @@ function makeSession(): { session: AcpSession; prompt: ReturnType<typeof vi.fn>;
   return { session: { prompt, kill }, prompt, kill };
 }
 
-function makeManagers(session: ReturnType<typeof vi.fn>): Managers {
+function makeManagers(session: ReturnType<typeof vi.fn>, record: ReturnType<typeof vi.fn> = vi.fn()): Managers {
   return {
     tab: {
       tabs: [{ label: 'notes', editor: { url: '/open/1' } }],
       cur: () => ({ label: 'notes' }),
       cwdOf: () => '/repo',
     },
-    editorAcp: { session },
+    editorAcp: { session, record },
   } as unknown as Managers;
 }
 
@@ -52,7 +55,8 @@ describe('editorSuggest', () => {
     mocks.loadPersona.mockReturnValue({ name: 'reviewer', harness: { harness: 'claude', model: 'sonnet', variant: 'default' }, body: 'Watch for bugs.', tools: [] });
     const { session, prompt } = makeSession();
     const sessionFn = vi.fn(() => session);
-    const managers = makeManagers(sessionFn);
+    const record = vi.fn();
+    const managers = makeManagers(sessionFn, record);
     const callback = vi.fn();
 
     editorSuggest(managers, baseParams, callback);
@@ -62,11 +66,36 @@ describe('editorSuggest', () => {
     const [promptText, handlers] = prompt.mock.calls[0] as [string, PromptHandlers];
     expect(promptText).toContain('Watch for bugs.');
     expect(promptText).toContain('hello world');
+    expect(record).toHaveBeenCalledWith('notes', 'reviewer', promptText, 'input');
     handlers.onChunk('[HUNK]\n[ANCHOR]: hello\n[REPLACEMENT]: goodbye\n[/HUNK]');
     handlers.onEnd('end_turn');
 
+    expect(record).toHaveBeenCalledWith('notes', 'reviewer', '[HUNK]\n[ANCHOR]: hello\n[REPLACEMENT]: goodbye\n[/HUNK]', 'response');
     expect(callback).toHaveBeenCalledWith({ hunks: [{ anchor: 'hello', replacement: 'goodbye' }] });
     expect(mocks.notify).not.toHaveBeenCalled();
+  });
+
+  it('records the exchange into the real EditorAcpManager so its transcript is non-empty afterward', () => {
+    mocks.listPersonas.mockReturnValue(['reviewer']);
+    mocks.loadPersona.mockReturnValue({ name: 'reviewer', harness: { harness: 'claude', model: 'sonnet', variant: 'default' }, body: 'Watch for bugs.', tools: [] });
+    const { session, prompt } = makeSession();
+    mocks.spawnMonitorSession.mockReturnValue(session);
+    const editorAcp = new EditorAcpManager({} as unknown as Managers);
+    const managers = {
+      tab: { tabs: [{ label: 'notes', editor: { url: '/open/1' } }], cur: () => ({ label: 'notes' }), cwdOf: () => '/repo' },
+      editorAcp,
+    } as unknown as Managers;
+
+    expect(editorAcp.transcript('notes', 'reviewer')).toBe('');
+
+    editorSuggest(managers, baseParams, vi.fn());
+    const handlers = prompt.mock.calls[0][1] as PromptHandlers;
+    handlers.onChunk('OK, nothing to change.');
+    handlers.onEnd('end_turn');
+
+    const transcript = editorAcp.transcript('notes', 'reviewer');
+    expect(transcript).not.toBe('');
+    expect(transcript).toContain('OK, nothing to change.');
   });
 
   it('a second request for the same persona reuses the same session (spawn called once)', () => {
