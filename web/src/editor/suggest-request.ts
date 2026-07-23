@@ -5,8 +5,15 @@ export type SuggestRequest = { persona: string; prompt: string };
 
 // The persona-name token right after a leading `>` (and any whitespace before/after it): its
 // column range and, when present, its text. Undefined off a `>`-led line entirely — so an
-// ordinary Markdown blockquote with no persona word is never mistaken for a request.
-export function personaToken(line: string): { start: number; end: number; word: string } | undefined {
+// ordinary Markdown blockquote with no persona word is never mistaken for a request. A leading
+// `>>` is the `assistant` shorthand: it returns a zero-length, `synthetic` token so callers treat
+// the persona as already named without offering any text to complete.
+export function personaToken(line: string): { start: number; end: number; word: string; synthetic?: boolean } | undefined {
+  const doubleLead = /^\s*>>\s*/.exec(line);
+  if (doubleLead) {
+    const start = doubleLead[0].length;
+    return { start, end: start, word: 'assistant', synthetic: true };
+  }
   const lead = /^\s*>\s*/.exec(line);
   if (!lead) return undefined;
   const start = lead[0].length;
@@ -32,7 +39,7 @@ export function parseSuggestRequest(line: string, personas: string[]): SuggestRe
 // has moved past the first word.
 export function personaTokenRange(line: string, col: number): { start: number; end: number; partial: string } | undefined {
   const token = personaToken(line);
-  if (!token || col < token.start || col > token.end) return undefined;
+  if (!token || token.synthetic || col < token.start || col > token.end) return undefined;
   return { start: token.start, end: token.end, partial: line.slice(token.start, col) };
 }
 
