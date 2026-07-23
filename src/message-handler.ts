@@ -114,7 +114,7 @@ export function handle(controller: Controller, message: ClientMessage, reply: (e
     // Bridges straight to editor-suggest/handler.js (bypassing a Controller passthrough method)
     // to keep controller.ts under its line-size limit — see openTranscriptFor's comment above.
     case 'editorPersonas': {
-      reply({ t: 'rpc-reply', id: message.id, result: { names: listPersonas() } });
+      reply({ t: 'rpc-reply', id: message.id, result: { names: listPersonas('editor') } });
       return;
     }
     // Deferred reply: the query spawns and awaits a one-shot ACP session, so the reply fires from
