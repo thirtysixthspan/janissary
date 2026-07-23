@@ -2,8 +2,6 @@
 
 ## ready
 
-* An editor tab can have github syncing enabled so that file is always up to date with the remote origin, and any saves are committed to origin, rebasing and conflicts are automatically managed. this could run against a file on any branch. the branch would be determined by the branch of the file navigator or agent that launched the editor. the metadata row would have a github icon right floated to enable or disable git syncing in the editor. github syncing would be disabled by default. git syncing could be enabled by default for a set of file paths listed in the janissary.config file.
-
 ## development
 
 * extract harness transcripts directly from harness dot directories. useful for monitoring subagents.
