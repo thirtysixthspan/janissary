@@ -1,6 +1,7 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { EditorState } from './model';
+import { toText } from './model';
 import { EditorLine, DiffAddedLine, lineSelection } from './render';
 import type { EditorSuggestApi } from './useEditorSuggest';
 import { suggestPillLabel } from './suggest-request';
@@ -71,29 +72,33 @@ export function EditorLines({ state, tokens, suggest, active, gutterCh, caretRef
     );
   };
 
-  // Renders the query line's own single-line state in place of its (always-empty) anchor buffer
-  // line — its own caret, and the status pill computed from its own text (Decision 9).
+  // Renders the query line's own (possibly multi-line) state in place of its (always-empty) anchor
+  // buffer line — one row per query line, each sharing the caret when it holds the cursor, and the
+  // status pill on the last row, computed from the query's full text.
   const renderQueryRow = (anchorLine: number) => {
     const qs = queryLine!.state;
-    const text = qs.lines[0];
+    const text = toText(qs);
     const pill = suggestPillLabel(text, suggest.personas, suggest.firingLine, pending ? text : null, suggest.noSuggestionLine);
-    return (
-      <EditorLine
-        key={`query-${anchorLine}`}
-        text={text}
-        line={anchorLine}
-        gutterCh={gutterCh}
-        isCurrent
-        selFrom={-1}
-        selTo={-1}
-        caretCol={active && suggest.focusTarget === 'query' ? qs.cursor.col : -1}
-        caretRef={caretRef}
-        tokens={[]}
-        pill={pill}
-        pillFocused={suggest.pillFocused}
-        query
-      />
-    );
+    return qs.lines.map((lineText, i) => {
+      const onCursorLine = qs.cursor.line === i;
+      return (
+        <EditorLine
+          key={`query-${anchorLine}-${i}`}
+          text={lineText}
+          line={anchorLine}
+          gutterCh={gutterCh}
+          isCurrent
+          selFrom={-1}
+          selTo={-1}
+          caretCol={onCursorLine && active && suggest.focusTarget === 'query' ? qs.cursor.col : -1}
+          caretRef={onCursorLine ? caretRef : null}
+          tokens={[]}
+          pill={i === qs.lines.length - 1 ? pill : undefined}
+          pillFocused={suggest.pillFocused}
+          query
+        />
+      );
+    });
   };
 
   const renderRow = (index: number, removed: boolean) => (queryLine && index === queryLine.anchorLine ? renderQueryRow(index) : renderLine(index, removed));

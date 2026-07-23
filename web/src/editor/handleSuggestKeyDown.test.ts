@@ -39,6 +39,8 @@ function makeSuggest(overrides: Partial<EditorSuggestApi> = {}): EditorSuggestAp
     openQueryLine: vi.fn(),
     closeQueryLine: vi.fn(),
     setQueryLineState: vi.fn(),
+    exitQueryToBuffer: vi.fn(),
+    enterQueryFromBuffer: vi.fn(),
     fireOnLine: vi.fn(),
     acceptHunk: vi.fn(),
     declineHunk: vi.fn(),
@@ -140,16 +142,45 @@ describe('handleSuggestKeyDown while the query line is active', () => {
     expect(suggest.setQueryLineState).toHaveBeenCalledWith({ lines: ['>ab'], cursor: { line: 0, col: 2 }, anchor: null });
   });
 
-  it('treats Up/Down as no-ops that are still consumed', () => {
-    const api = makeApi(makeState(''));
-    const suggest = makeSuggest({ queryLine: makeQueryLine('>ab', 1) });
+  it('exits a single-line query into the buffer on ArrowUp/ArrowDown, since both are at its edge', () => {
+    const bufferState = makeState('one\n\ntwo', 1, 0);
+    const api = makeApi(bufferState);
+    const suggest = makeSuggest({ queryLine: makeQueryLine('>ab', 1, 1) });
 
     const up = handleSuggestKeyDown(makeEvent('ArrowUp'), api, suggest);
-    const down = handleSuggestKeyDown(makeEvent('ArrowDown'), api, suggest);
-
     expect(up).toBe(true);
-    expect(down).toBe(true);
+    expect(suggest.exitQueryToBuffer).toHaveBeenCalledWith(-1, 1, bufferState);
     expect(suggest.setQueryLineState).not.toHaveBeenCalled();
+
+    const down = handleSuggestKeyDown(makeEvent('ArrowDown'), api, suggest);
+    expect(down).toBe(true);
+    expect(suggest.exitQueryToBuffer).toHaveBeenCalledWith(1, 1, bufferState);
+  });
+
+  it('moves within a multiline query instead of exiting when a neighboring query line exists', () => {
+    const api = makeApi(makeState(''));
+    const suggest = makeSuggest({
+      queryLine: { anchorLine: 0, state: { lines: ['> summarizer rewrite', 'more text'], cursor: { line: 1, col: 3 }, anchor: null } },
+    });
+
+    const handled = handleSuggestKeyDown(makeEvent('ArrowUp'), api, suggest);
+
+    expect(handled).toBe(true);
+    expect(suggest.setQueryLineState).toHaveBeenCalledWith({ lines: ['> summarizer rewrite', 'more text'], cursor: { line: 0, col: 3 }, anchor: null, goalCol: 3 });
+    expect(suggest.exitQueryToBuffer).not.toHaveBeenCalled();
+  });
+
+  it('inserts a line break into the query on Shift+Enter instead of firing', () => {
+    const bufferState = makeState('buffer content');
+    const api = makeApi(bufferState);
+    const suggest = makeSuggest({ queryLine: makeQueryLine('> summarizer rewrite this') });
+    const e = makeEvent('Enter', { shiftKey: true });
+
+    const handled = handleSuggestKeyDown(e, api, suggest);
+
+    expect(handled).toBe(true);
+    expect(suggest.setQueryLineState).toHaveBeenCalledWith({ lines: ['> summarizer rewrite this', ''], cursor: { line: 1, col: 0 }, anchor: null });
+    expect(suggest.fireOnLine).not.toHaveBeenCalled();
   });
 
   it('closes the query line on Escape without inserting anything', () => {
@@ -271,5 +302,40 @@ describe('handleSuggestKeyDown while the query line is open but the buffer holds
 
     expect(handled).toBe(false);
     expect(suggest.closeQueryLine).not.toHaveBeenCalled();
+  });
+
+  it('crosses into the query line when ArrowDown would land on its anchor line', () => {
+    const api = makeApi(makeState('one\n\ntwo', 0, 2));
+    const suggest = makeSuggest({ queryLine: makeQueryLine('>', 1, 1), focusTarget: 'buffer' });
+    const e = makeEvent('ArrowDown');
+
+    const handled = handleSuggestKeyDown(e, api, suggest);
+
+    expect(handled).toBe(true);
+    expect(e.preventDefault).toHaveBeenCalled();
+    expect(suggest.enterQueryFromBuffer).toHaveBeenCalledWith(1, 2);
+  });
+
+  it('crosses into the query line when ArrowUp would land on its anchor line', () => {
+    const api = makeApi(makeState('one\n\ntwo', 2, 2));
+    const suggest = makeSuggest({ queryLine: makeQueryLine('>', 1, 1), focusTarget: 'buffer' });
+    const e = makeEvent('ArrowUp');
+
+    const handled = handleSuggestKeyDown(e, api, suggest);
+
+    expect(handled).toBe(true);
+    expect(suggest.enterQueryFromBuffer).toHaveBeenCalledWith(-1, 2);
+  });
+
+  it('does not cross into the query for a non-adjacent ArrowDown, or with a modifier held', () => {
+    const api = makeApi(makeState('one\n\ntwo\nthree', 0, 1));
+    const suggest = makeSuggest({ queryLine: makeQueryLine('>', 1, 2), focusTarget: 'buffer' });
+
+    expect(handleSuggestKeyDown(makeEvent('ArrowDown'), api, suggest)).toBe(false);
+    expect(suggest.enterQueryFromBuffer).not.toHaveBeenCalled();
+
+    const apiAdjacent = makeApi(makeState('one\n\ntwo', 0, 1));
+    const shiftHeld = handleSuggestKeyDown(makeEvent('ArrowDown', { shiftKey: true }), apiAdjacent, makeSuggest({ queryLine: makeQueryLine('>', 1, 1), focusTarget: 'buffer' }));
+    expect(shiftHeld).toBe(false);
   });
 });

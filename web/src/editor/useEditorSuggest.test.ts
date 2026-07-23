@@ -221,6 +221,54 @@ describe('useEditorSuggest', () => {
     expect(latest?.lines).toEqual(['1', '2']);
   });
 
+  it('exits the query into the buffer at the anchor line ± direction, at the given column', async () => {
+    const { client } = makeClient();
+    const setState = vi.fn();
+    const { result } = renderHook(() => useEditorSuggest(client, '/open/1', setState));
+    await waitFor(() => expect(result.current.personas).toEqual(['summarizer']));
+
+    act(() => { result.current.openQueryLine(2); });
+    const bufferState: EditorState = { lines: ['one', '', 'two'], cursor: { line: 2, col: 0 }, anchor: null };
+
+    act(() => { result.current.exitQueryToBuffer(-1, 1, bufferState); });
+
+    expect(result.current.focusTarget).toBe('buffer');
+    expect(setState).toHaveBeenCalledWith({ ...bufferState, cursor: { line: 1, col: 0 }, anchor: null, goalCol: undefined });
+  });
+
+  it('does not exit the query when there is no buffer line in that direction', async () => {
+    const { client } = makeClient();
+    const setState = vi.fn();
+    const { result } = renderHook(() => useEditorSuggest(client, '/open/1', setState));
+    await waitFor(() => expect(result.current.personas).toEqual(['summarizer']));
+
+    act(() => { result.current.openQueryLine(0); });
+    const bufferState: EditorState = { lines: [''], cursor: { line: 0, col: 0 }, anchor: null };
+
+    act(() => { result.current.exitQueryToBuffer(-1, 0, bufferState); });
+
+    expect(setState).not.toHaveBeenCalled();
+    expect(result.current.focusTarget).toBe('query');
+  });
+
+  it('enters the query from the buffer at its first line when moving down, last line when moving up', async () => {
+    const { client } = makeClient();
+    const { result } = renderHook(() => useEditorSuggest(client, '/open/1', vi.fn()));
+    await waitFor(() => expect(result.current.personas).toEqual(['summarizer']));
+
+    act(() => { result.current.openQueryLine(1); });
+    act(() => {
+      result.current.setQueryLineState({ lines: ['> summarizer', 'more text'], cursor: { line: 0, col: 0 }, anchor: null });
+    });
+
+    act(() => { result.current.enterQueryFromBuffer(1, 3); });
+    expect(result.current.focusTarget).toBe('query');
+    expect(result.current.queryLine?.state.cursor).toEqual({ line: 0, col: 3 });
+
+    act(() => { result.current.enterQueryFromBuffer(-1, 3); });
+    expect(result.current.queryLine?.state.cursor).toEqual({ line: 1, col: 3 });
+  });
+
   it('is a no-op resolving an already-resolved hunk', async () => {
     const { client } = makeClient(['summarizer'], [{
       hunks: [{ anchor: 'a', replacement: '1' }, { anchor: 'b', replacement: '2' }],

@@ -23,15 +23,23 @@ export function personaToken(line: string): { start: number; end: number; word: 
   return { start, end, word: line.slice(start, end) };
 }
 
-// Whether `line` is a valid `> <persona> <prompt>` request, matched case-insensitively against
-// `personas`. Returns undefined for a non-`>` line, a `>` line whose first word isn't a known
-// persona (including a plain blockquote), or one with no persona word at all.
-export function parseSuggestRequest(line: string, personas: string[]): SuggestRequest | undefined {
-  const token = personaToken(line);
+// The prompt text for a `>`-led query: everything after the persona token on its first line, plus
+// every line after that (the query may now span several lines, one per Shift+Enter).
+function promptFrom(lines: string[], tokenEnd: number): string {
+  return [lines[0].slice(tokenEnd), ...lines.slice(1)].join('\n').trimStart();
+}
+
+// Whether `text` (the query's full, possibly multi-line content) is a valid `> <persona> <prompt>`
+// request, matched case-insensitively against `personas`. The persona word must lead the first
+// line. Returns undefined for a non-`>` line, a `>` line whose first word isn't a known persona
+// (including a plain blockquote), or one with no persona word at all.
+export function parseSuggestRequest(text: string, personas: string[]): SuggestRequest | undefined {
+  const lines = text.split('\n');
+  const token = personaToken(lines[0]);
   if (!token || !token.word) return undefined;
   const persona = personas.find((p) => p.toLowerCase() === token.word.toLowerCase());
   if (!persona) return undefined;
-  return { persona, prompt: line.slice(token.end).trimStart() };
+  return { persona, prompt: promptFrom(lines, token.end) };
 }
 
 // The persona-name token's column range on a `>`-led line, when the caret sits inside it — the
@@ -54,25 +62,27 @@ export function completePersonaName(line: string, col: number, personas: string[
 
 export type SuggestPill = { text: string; runnable: boolean };
 
-// The inline status pill for a `>`-led line: its text tracks the request's progress from an
-// unnamed persona through to a runnable query, an in-flight one, or a resolved outcome.
-// Undefined for a line that isn't `>`-led at all, or one whose pending hunk-review panel already
-// owns the line's state (Decision: no redundant pill while accept/decline is in progress).
+// The inline status pill for a `>`-led query: its text tracks the request's progress from an
+// unnamed persona through to a runnable query, an in-flight one, or a resolved outcome. `text` is
+// the query's full, possibly multi-line content. Undefined for text that isn't `>`-led at all, or
+// whose pending hunk-review panel already owns its state (Decision: no redundant pill while
+// accept/decline is in progress).
 export function suggestPillLabel(
-  line: string,
+  text: string,
   personas: string[],
-  firingLine: string | null,
-  pendingLine: string | null,
-  noSuggestionLine: string | null,
+  firingText: string | null,
+  pendingText: string | null,
+  noSuggestionText: string | null,
 ): SuggestPill | undefined {
-  const token = personaToken(line);
+  const lines = text.split('\n');
+  const token = personaToken(lines[0]);
   if (!token) return undefined;
   const hasPersona = personas.some((p) => p.toLowerCase() === token.word.toLowerCase());
   if (!hasPersona) return { text: 'agent?', runnable: false };
-  const prompt = line.slice(token.end).trimStart();
+  const prompt = promptFrom(lines, token.end);
   if (!prompt) return { text: 'query?', runnable: false };
-  if (line === firingLine) return { text: 'running...', runnable: false };
-  if (line === pendingLine) return undefined;
-  if (line === noSuggestionLine) return { text: 'no suggestion', runnable: false };
+  if (text === firingText) return { text: 'running...', runnable: false };
+  if (text === pendingText) return undefined;
+  if (text === noSuggestionText) return { text: 'no suggestion', runnable: false };
   return { text: 'run', runnable: true };
 }

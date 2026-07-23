@@ -40,6 +40,15 @@ describe('parseSuggestRequest', () => {
     expect(parseSuggestRequest('>>rewrite this', personas))
       .toEqual({ persona: 'assistant', prompt: 'rewrite this' });
   });
+
+  it('joins every line after the persona token into a multi-line prompt', () => {
+    expect(parseSuggestRequest('> summarizer rewrite this\nin one sentence\nplease', personas))
+      .toEqual({ persona: 'summarizer', prompt: 'rewrite this\nin one sentence\nplease' });
+  });
+
+  it('still requires the persona token on the first line only', () => {
+    expect(parseSuggestRequest('plain text\n> summarizer rewrite this', personas)).toBeUndefined();
+  });
 });
 
 describe('personaTokenRange', () => {
@@ -114,5 +123,16 @@ describe('suggestPillLabel', () => {
 
   it('shows query? for a >> assistant shorthand line with no prompt yet', () => {
     expect(suggestPillLabel('>>', personas, null, null, null)).toEqual({ text: 'query?', runnable: false });
+  });
+
+  it('shows run for a multi-line query once the first line names a persona and any line has a prompt', () => {
+    expect(suggestPillLabel('> summarizer\nrewrite this', personas, null, null, null))
+      .toEqual({ text: 'run', runnable: true });
+  });
+
+  it('matches running/no-suggestion state against the full multi-line text, not just the first line', () => {
+    const text = '> summarizer rewrite\nthis paragraph';
+    expect(suggestPillLabel(text, personas, text, null, null)).toEqual({ text: 'running...', runnable: false });
+    expect(suggestPillLabel(text, personas, null, null, text)).toEqual({ text: 'no suggestion', runnable: false });
   });
 });
