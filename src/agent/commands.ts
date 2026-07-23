@@ -1,5 +1,5 @@
 import type { AgentCommand } from '../types.js';
-import { agentNames } from '../agent-names.js';
+import { agentNames } from './names.js';
 import { getConfig } from '../config.js';
 
 export function resolveAgentName(

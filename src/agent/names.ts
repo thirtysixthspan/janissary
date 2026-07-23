@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
-import defaultNames from '../agent-names.json' with { type: 'json' };
+import defaultNames from '../../agent-names.json' with { type: 'json' };
 
 export let agentNames: string[] = defaultNames;
 

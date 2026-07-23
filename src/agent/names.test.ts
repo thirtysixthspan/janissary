@@ -2,8 +2,8 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { mkdirSync, writeFileSync, rmSync, mkdtempSync } from 'node:fs';
 import path from 'node:path';
 import { tmpdir } from 'node:os';
-import { loadAgentNames, agentNames } from './agent-names.js';
-import defaultNames from '../agent-names.json' with { type: 'json' };
+import { loadAgentNames, agentNames } from './names.js';
+import defaultNames from '../../agent-names.json' with { type: 'json' };
 
 describe('loadAgentNames', () => {
   let tmpDir: string;
