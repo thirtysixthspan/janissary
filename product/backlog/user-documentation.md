@@ -1,19 +1,13 @@
 # user documentation gaps
 
-Last run: 2026-07-23 21:10 UTC
+Last run: 2026-07-23 23:56 UTC
 
 Functional areas where user documentation lags application behavior, scored 1–10 for the size of the mismatch (10 = completely undocumented).
 
 ## candidates
 
+* append-only-log (10/10) — The append-only transcript log has no user-documentation page and no `help.md` coverage, so 13 of 13 documentable facts are missing. Users are not told that `.janissary/log/<YYYY-MM-DD>.json` contains one JSON object per line with `timestamp`, `agent`, and `text`, that command inputs and outputs are logged separately, that messages, ACP traffic, and shell output are included, or that daily files accumulate and are never compacted or cleared. The `product/specs/append-only-log.md` claim that rotation is UTC is stale: the application uses the local calendar date and local `HH:MM:SS.mmm` time from `src/datetime.ts`, with writes implemented in `src/transcript/logger.ts` and initialization in `src/main.ts`; `src/transcript/store.ts` is the separate persisted per-tab transcript store. Fix by adding a user-facing explanation under `documentation/user-documentation/getting-started/` (and, if desired, a concise `help.md` row) while correcting the stale UTC wording in the documentation derived from `product/specs/append-only-log.md`.
+
 ## unverified
 
 ## resolved
-
-* agent-questions — documented in documentation/user-documentation/advanced-agents/agent-questions.md, help.md (removed 2026-07-23)
-* editor-tab — documented in documentation/user-documentation/tab-types/editor.md (removed 2026-07-23)
-* profiles — documented in documentation/user-documentation/automation/profiles.md, help.md (removed 2026-07-23)
-* embedded-web-page — documented in documentation/user-documentation/tab-types/web-pages.md (removed 2026-07-23)
-* application-config — documented in documentation/user-documentation/getting-started/startup.md (removed 2026-07-23)
-* file-tree-tab — documented in documentation/user-documentation/tab-types/file-navigator.md (removed 2026-07-23)
-* tabs — documented in documentation/user-documentation/getting-started/tabs.md (removed 2026-07-23)
