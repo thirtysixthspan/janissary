@@ -32,6 +32,9 @@ export function TabItem({
   const [draft, setDraft] = useState('');
   // Escape cancels and blurs the input; the resulting blur event must not also commit.
   const cancelledRef = useRef(false);
+  // A click that focuses an inactive tab must not also count as half of a rename double-click,
+  // even though `active` flips true (via onSelect) before the browser's dblclick event fires.
+  const gestureStartedInactiveRef = useRef(false);
 
   const fullName = tab.editor?.name ?? tab.markdown?.name ?? tab.image?.name ?? tab.title ?? tab.label;
   const displayName = truncateTabLabel(fullName, active ? activeTabNameMaxLength : tabNameMaxLength);
@@ -54,7 +57,11 @@ export function TabItem({
     <div
       className={`tab${active ? ' active' : ''}`}
       style={{ borderTopColor: borderColor }}
-      onMouseDown={() => { onFocusCommandBar?.(); onSelect(index); }}
+      onMouseDown={(e) => {
+        if (e.detail <= 1) gestureStartedInactiveRef.current = !active;
+        onFocusCommandBar?.();
+        onSelect(index);
+      }}
     >
       <span className={`dot${tab.busy ? ' busy' : ''}`} style={{ color: tab.dotColor }}><FontAwesomeIcon icon={statusDotIcon} /></span>
       {editing ? (
@@ -70,7 +77,7 @@ export function TabItem({
         />
       ) : (
         <span onDoubleClick={(e) => {
-          if (!active) return;
+          if (!active || gestureStartedInactiveRef.current) return;
           e.stopPropagation();
           startEdit();
         }}

@@ -24,6 +24,20 @@ function makeTab(overrides: Partial<TabView> = {}): TabView {
   };
 }
 
+function StatefulTabStrip({ tabs, initialActiveTab = 0 }: { tabs: TabView[]; initialActiveTab?: number }) {
+  const [activeTab, setActiveTab] = React.useState(initialActiveTab);
+  return (
+    <TabStrip
+      tabs={tabs}
+      activeTab={activeTab}
+      onSelect={setActiveTab}
+      onClose={vi.fn()}
+      onRename={vi.fn()}
+      tabNameMaxLength={100}
+    />
+  );
+}
+
 describe('TabStrip', () => {
   it('renders a tab label', () => {
     const tab = makeTab({ label: 'mytab' });
@@ -148,6 +162,22 @@ describe('TabStrip', () => {
     await userEvent.dblClick(screen.getByText('b'));
     expect(onSelect).toHaveBeenCalled();
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+  });
+
+  it('double-clicking a tab that starts inactive selects it but does not start renaming, even when onSelect updates the active tab', async () => {
+    const tabs = [makeTab({ label: 'a' }), makeTab({ label: 'b' })];
+    const { container } = render(<StatefulTabStrip tabs={tabs} />);
+    await userEvent.dblClick(screen.getByText('b'));
+    const tabEls = container.querySelectorAll('.tab');
+    expect(tabEls[1]).toHaveClass('active');
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+  });
+
+  it('double-clicking a tab that is already active still starts renaming', async () => {
+    const tabs = [makeTab({ label: 'a' }), makeTab({ label: 'b' })];
+    render(<StatefulTabStrip tabs={tabs} initialActiveTab={1} />);
+    await userEvent.dblClick(screen.getByText('b'));
+    expect(screen.getByDisplayValue('b')).toBeInTheDocument();
   });
 
   it('commits the trimmed value once on Enter', async () => {
