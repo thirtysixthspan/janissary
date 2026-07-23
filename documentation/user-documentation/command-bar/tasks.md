@@ -2,7 +2,7 @@
 
 <img class="agent-float" src="/agents/hakim-south.png" alt="" />
 
-Your repository's `ai/tasks/` directory holds executable task files — self-contained instruction sets like `build-a-feature.md` or `fix-a-small-issue.md` that an agent can be told to run. The task picker lists them so you can drop one onto the command line without typing its path by hand.
+Your repository's `ai/tasks/` directory holds executable task files — self-contained instruction sets like `build-a-feature.md` or `fix-an-issue.md` that an agent can be told to run. The task picker lists them so you can drop one onto the command line without typing its path by hand.
 
 ## The `Ctrl+A` picker
 
