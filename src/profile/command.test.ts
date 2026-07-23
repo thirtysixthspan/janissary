@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseProfileCommand, PROFILE_USAGE } from './profile-command.js';
+import { parseProfileCommand, PROFILE_USAGE } from './command.js';
 
 describe('parseProfileCommand', () => {
   it('parses list', () => {
