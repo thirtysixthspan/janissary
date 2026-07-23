@@ -54,6 +54,7 @@ export function useEditorSuggest(client: JanusClient, url: string, setState: (s:
   const pendingRef = useRef<PendingSuggest | null>(null);
   const queryLineRef = useRef<QueryLine | null>(null);
   const firingRef = useRef(false);
+  const firingCancelledRef = useRef(false);
   queryLineRef.current = queryLine;
 
   useEffect(() => {
@@ -66,7 +67,11 @@ export function useEditorSuggest(client: JanusClient, url: string, setState: (s:
   const setPendingBoth = (p: PendingSuggest | null) => { pendingRef.current = p; setPending(p); };
 
   const openQueryLine = (anchorLine: number) => { setQueryLine({ anchorLine, state: emptyQueryState() }); setPillFocused(false); };
-  const closeQueryLine = () => { setQueryLine(null); setPillFocused(false); };
+  const closeQueryLine = () => {
+    if (firingRef.current) firingCancelledRef.current = true;
+    setQueryLine(null);
+    setPillFocused(false);
+  };
   const setQueryLineState = (s: EditorState) => { setQueryLine((q) => (q ? { ...q, state: s } : q)); };
 
   // Fires the `editorSuggest` query from the ephemeral query text, priming it with the live buffer
@@ -86,6 +91,7 @@ export function useEditorSuggest(client: JanusClient, url: string, setState: (s:
     }).then((res) => {
       firingRef.current = false;
       setFiringLine(null);
+      if (firingCancelledRef.current) { firingCancelledRef.current = false; return; }
       const hunks = res?.hunks ?? [];
       // Empty hunks/failure is already surfaced via a notification server-side (Decision 10); the
       // query line stays open with its text intact and no pending panel opens.
