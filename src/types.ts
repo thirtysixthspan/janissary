@@ -27,6 +27,7 @@ export type LogEntry = {
   // Absolute path of a file to open in an editor tab when the rendered line is clicked (e.g. an
   // auto-approved permission prompt's screen capture).
   openFile?: string;
+  openTab?: string;
 };
 
 export type TerminalEntry = {
@@ -52,6 +53,7 @@ export type BufferLine = {
   terminal?: TerminalEntry;
   // Absolute path of a file to open in an editor tab when this line is clicked (see `LogEntry.openFile`).
   openFile?: string;
+  openTab?: string;
 };
 
 // An in-app file view mounted in a tab instead of the agent transcript/command-line body. Image

@@ -18,6 +18,7 @@ import type { MonitorManager } from './monitor/manager.js';
 import type { FileTreeManager } from './file-tree/manager.js';
 import type { EditorWatchManager } from './editor/watch-manager.js';
 import type { EditorAcpManager } from './editor/acp-manager.js';
+import type { Questions } from './questions.js';
 
 export interface Managers {
   tab: TabManager;
@@ -40,4 +41,5 @@ export interface Managers {
   fileTree: FileTreeManager;
   editorWatch: EditorWatchManager;
   editorAcp: EditorAcpManager;
+  questions: Questions;
 }

@@ -306,6 +306,7 @@ export class TabManager extends TabQueueState {
       this.queue.get(t.label) ?? [],
       (p: string) => this.shorten(p),
       aggregatedSchedules,
+      this.managers.questions.pendingFor(t.label),
     ));
   }
 

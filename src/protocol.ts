@@ -35,6 +35,14 @@ export type HarnessLaunchView = { names: string[]; models: Record<string, string
 // The open "New schedule" dialog's data: the eligible target-tab labels (agent + harness tabs)
 // and the default (active tab) label. Null in the snapshot when the dialog is closed.
 export type ScheduleLaunchView = { targets: string[]; active: string };
+export type QuestionKind = 'ask' | 'approve';
+export type PendingQuestionView = {
+  id: string;
+  tab: string;
+  kind: QuestionKind;
+  question: string;
+  options?: string[];
+};
 
 // One AI-monitor suggestion in the monitor window's feed: which persona produced it, which
 // tab's activity it is about, and the optional one-click command.
@@ -70,6 +78,7 @@ export type TabView = {
   cmdHistory: string[];
   commandQueue: string[];
   toolStepsExpanded: boolean;
+  pendingQuestion?: PendingQuestionView;
   // Body kind: undefined/`'agent'` for a normal tab, `'image'` for an image view, `'page'` for an embedded web page, `'harness'` for a full-tab AI harness terminal, `'markdown'` for a rendered Markdown file, `'monitor'` for the AI-monitor suggestion feed, `'files'` for a file tree, `'notifications'` for the notification feed, `'schedules'` for the aggregated schedule list.
   view?: 'agent' | 'image' | 'page' | 'harness' | 'markdown' | 'editor' | 'monitor' | 'files' | 'notifications' | 'schedules';
   // Display name when it differs from `label` (image tabs are all titled `image`).
@@ -145,6 +154,7 @@ export type RpcCall =
   | { method: 'init'; params?: Record<string, never> }
   | { method: 'command'; params: { text: string } }
   | { method: 'setActiveTab'; params: { index: number } }
+  | { method: 'focusTab'; params: { label: string } }
   | { method: 'closeTab'; params: { index: number } }
   | { method: 'renameTab'; params: { index: number; title: string } }
   // Navigate an existing page tab to a new address in place, keeping its page number and
@@ -162,6 +172,7 @@ export type RpcCall =
   | { method: 'closeHarnessLaunch'; params?: Record<string, never> }
   // Close the "New schedule" dialog without scheduling (Cancel/Escape, or after a submit).
   | { method: 'closeScheduleLaunch'; params?: Record<string, never> }
+  | { method: 'answerQuestion'; params: { tab: string; id: string; answer: string | null } }
   | { method: 'complete'; params: { text: string; cursor: number } }
   | { method: 'resize'; params: { cols: number; rows: number } }
   | { method: 'ptyInput'; params: { id: string; data: string } }

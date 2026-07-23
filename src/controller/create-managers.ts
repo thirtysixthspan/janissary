@@ -19,6 +19,9 @@ import { CommandManager } from '../command/manager.js';
 import { MonitorManager } from '../monitor/manager.js';
 import { TabManager } from '../tab/manager.js';
 import type { Managers } from '../managers.js';
+import { Questions } from '../questions.js';
+import { messageBus } from '../bus.js';
+import { notify } from '../notifications.js';
 
 // Populates every manager onto an already-allocated (empty) `Managers` object, in construction
 // order (later managers may reference earlier ones via `this.managers` at call time, not
@@ -28,6 +31,12 @@ import type { Managers } from '../managers.js';
 export function createManagers(managers: Managers, projectDir?: string): void {
   managers.database = new DatabaseManager();
   managers.tab = new TabManager(managers, projectDir);
+  managers.questions = new Questions((label, pending) => {
+    messageBus.emit('state', { type: 'dirty' });
+    if (pending && managers.tab.cur().label !== label) {
+      notify(managers, 'question', label, undefined, undefined, label);
+    }
+  });
   managers.workspace = new WorkspaceManager(projectDir);
   managers.browser = new BrowserManager(managers);
   managers.acp = new AcpManager(managers);

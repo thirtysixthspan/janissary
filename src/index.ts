@@ -143,4 +143,3 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
 
   return { url: `http://${host}:${port}/?token=${token}`, port, token, close, shutdown: () => requestExit() };
 }
-

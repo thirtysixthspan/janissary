@@ -5,9 +5,9 @@ import { NOTIFICATIONS_LABEL, notificationsTab, appendNotification } from './not
 
 // The events that can feed the notifications tab. Five are ambient (a background tab's own
 // activity); `manual` is an explicit `notify <message>`, `auto-approve` is a workspaced harness's
-// auto-approved permission gate, and `editor-suggest` is an in-editor persona-suggestion query's
-// failure or empty reply (see product/specs/editor-tab.md) — all three are always eligible and
-// bypass focus suppression.
+// auto-approved permission gate, `editor-suggest` is an in-editor persona-suggestion query's
+// failure or empty reply, and `question` is an agent waiting for a human answer. Explicit events
+// are always eligible and bypass focus suppression.
 export type NotificationEventType =
   | 'state-change'
   | 'incoming-message'
@@ -16,12 +16,13 @@ export type NotificationEventType =
   | 'rate-limited'
   | 'manual'
   | 'auto-approve'
-  | 'editor-suggest';
+  | 'editor-suggest'
+  | 'question';
 
 // Whether an event should be recorded, given the config and the active tab. Defensive against the
 // tab feeding itself. For the five ambient events, both the per-event opt-in toggle and focus
 // suppression (the active tab never notifies about its own activity) apply; `manual`,
-// `auto-approve`, and `editor-suggest` bypass both — an explicit trigger always fires (subject
+// `auto-approve`, `editor-suggest`, and `question` bypass both — an explicit trigger always fires (subject
 // only to the tab being open, enforced in `notify`).
 export function shouldNotify(
   config: NotificationConfig | undefined,
@@ -33,7 +34,8 @@ export function shouldNotify(
   switch (event) {
     case 'manual':
     case 'auto-approve':
-    case 'editor-suggest': { return true; }
+    case 'editor-suggest':
+    case 'question': { return true; }
     default: { break; }
   }
   if (tabLabel === activeLabel) return false;
@@ -73,6 +75,7 @@ export function notificationText(event: NotificationEventType, tabLabel: string,
     case 'manual':
     case 'auto-approve':
     case 'editor-suggest': { return detail ?? ''; }
+    case 'question': { return `Question from ${tabLabel}`; }
   }
 }
 
@@ -80,7 +83,14 @@ export function notificationText(event: NotificationEventType, tabLabel: string,
 // never creating the tab) while the notifications tab is closed, so the event path is free when the
 // feed is not open. Otherwise it consults the config + focus rules via `shouldNotify` and, on pass,
 // appends the derived line. `message` is the event-specific detail (see `notificationText`).
-export function notify(managers: Managers, event: NotificationEventType, tabLabel: string, message?: string, openFile?: string): void {
+export function notify(
+  managers: Managers,
+  event: NotificationEventType,
+  tabLabel: string,
+  message?: string,
+  openFile?: string,
+  openTab?: string,
+): void {
   if (!notificationsTab(managers)) return;
   const activeLabel = managers.tab.cur().label;
   if (!shouldNotify(getConfig().notifications, event, tabLabel, activeLabel)) return;
@@ -89,5 +99,12 @@ export function notify(managers: Managers, event: NotificationEventType, tabLabe
   // `● 8:32pm janus: <message>`. `fromColor` (looked up from tabLabel) still colors the dot.
   const from = `${formatTimestamp(new Date())} ${tabLabel}`;
   const output = notificationText(event, tabLabel, message);
-  appendNotification(managers, { input: '', output, from, fromColor, ...(openFile && { openFile }) });
+  appendNotification(managers, {
+    input: '',
+    output,
+    from,
+    fromColor,
+    ...(openFile && { openFile }),
+    ...(openTab && { openTab }),
+  });
 }

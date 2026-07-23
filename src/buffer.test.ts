@@ -94,4 +94,16 @@ describe('formatMessageContent', () => {
     const [header] = formatMessageContent(entry, ['reply']);
     expect(header.openFile).toBe('/captures/bob-now.txt');
   });
+
+  it('copies an owning-tab link onto the message line', () => {
+    const entry: LogEntry = {
+      input: '',
+      output: '',
+      from: 'bob',
+      msgKind: 'info',
+      openTab: 'bob',
+    };
+    const [line] = formatMessageContent(entry, ['Question from bob']);
+    expect(line.openTab).toBe('bob');
+  });
 });

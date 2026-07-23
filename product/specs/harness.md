@@ -185,6 +185,11 @@ every notification, the `auto-approve` line is only recorded while the notificat
 A harness tab opened with `-y` shows the auto-permitting flag icon in its metadata row — see
 Metadata row in `tabs.md`.
 
+An ACP agent can separately ask the human a free-text or multiple-choice question by issuing a
+`question ask` or `question approve` command. This human-answer channel is independent of harness
+auto-approve and does not change how harness permission prompts are recognized or answered. See
+[[agent-questions]].
+
 ## Harness tab data
 
 A harness tab is distinguished by `view: 'harness'` and carries a **harness payload**:

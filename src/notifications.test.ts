@@ -93,6 +93,16 @@ describe('shouldNotify — auto-approve event', () => {
   });
 });
 
+describe('shouldNotify — question event', () => {
+  it('fires regardless of notification config', () => {
+    expect(shouldNotify(undefined, 'question', 'build', 'janus')).toBe(true);
+  });
+
+  it('formats the waiting-agent message', () => {
+    expect(notificationText('question', 'build')).toBe('Question from build');
+  });
+});
+
 describe('formatTimestamp', () => {
   it('renders afternoon times in 12-hour form with pm', () => {
     expect(formatTimestamp(new Date(2026, 0, 1, 20, 32, 0))).toBe('8:32pm');
@@ -178,5 +188,12 @@ describe('notify — line composition', () => {
     notify(makeManagers(append), 'auto-approve', 'janus', 'Auto-approved a permission prompt');
     const [, entry] = append.mock.calls[0];
     expect(entry.openFile).toBeUndefined();
+  });
+
+  it('threads an owning-tab link onto a question notification', () => {
+    const append = vi.fn();
+    notify(makeManagers(append), 'question', 'janus', undefined, undefined, 'janus');
+    const [, entry] = append.mock.calls[0];
+    expect(entry.openTab).toBe('janus');
   });
 });

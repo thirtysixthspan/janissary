@@ -46,7 +46,7 @@ the sidebar's own strip (see `sidebars.md`).
 
 ### Events that notify
 
-Seven event types can produce a notification line:
+Eight event types can produce a notification line:
 
 - **`state-change`** — an agent tab's busy flag clears (busy → idle), e.g. an ACP turn finishes or
   errors.
@@ -65,11 +65,13 @@ Seven event types can produce a notification line:
 - **`manual`** — an explicit `notify <message>` (see below).
 - **`auto-approve`** — a harness launched with `-y` auto-approves one of its own
   permission prompts (see `harness.md`).
+- **`question`** — an ACP agent issues a question command while its owning tab is not focused
+  (see [[agent-questions]]). The tab label on this line is a link that focuses the asking tab.
 
 The five ambient events (`state-change`, `incoming-message`, `schedule-fire`, `agent-start`,
 `rate-limited`) are each **independently togglable and default off** — opt in by editing
-`.janissary/config.json` (see `application-config.md`). The `manual` and `auto-approve` events have
-no toggle: they always fire.
+`.janissary/config.json` (see `application-config.md`). The `manual`, `auto-approve`, and `question`
+events have no toggle. A `question` event fires only for a background tab.
 
 ### Focus suppression
 
@@ -77,7 +79,9 @@ An ambient event on the **currently active** tab never produces a notification �
 tabs feed the notifications tab. The notifications tab itself is a view tab that produces no such
 events, so it never notifies about itself. The `manual` and `auto-approve` events **bypass focus
 suppression**: they still record a line even when their tab is active, because they represent an
-explicit, user-armed action rather than ambient background activity.
+explicit, user-armed action rather than ambient background activity. A `question` is also an
+explicit event with no configuration toggle, but it is emitted only when its owning tab is in the
+background.
 
 ### Drop-if-closed
 

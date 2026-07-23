@@ -225,3 +225,20 @@ describe('renderLine — message openFile link', () => {
     expect(container.querySelector('.message-tab')?.textContent).toBe('claude');
   });
 });
+
+describe('renderLine — message tab link', () => {
+  it('focuses the owning tab when its notification label is clicked', async () => {
+    const send = vi.fn();
+    const client = { send } as unknown as JanusClient;
+    const line: BufferLine = {
+      type: 'message',
+      text: 'Question from build',
+      from: '8:32pm build',
+      openTab: 'build',
+    };
+    render(<>{renderLine(line, 0, client, noop, vi.fn())}</>);
+
+    await userEvent.click(screen.getByRole('button', { name: 'build' }));
+    expect(send).toHaveBeenCalledWith({ method: 'focusTab', params: { label: 'build' } });
+  });
+});

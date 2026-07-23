@@ -16,7 +16,15 @@ const makeController = () =>
   ({
     view: vi.fn(() => []),
     routeView: vi.fn(() => null),
-    managers: { tab: { activeTab: 0, launchDir: '/proj' } },
+    managers: {
+      tab: {
+        activeTab: 0,
+        launchDir: '/proj',
+        findIndex: vi.fn(() => 2),
+        setActiveTab: vi.fn(),
+      },
+      questions: { answer: vi.fn(() => true) },
+    },
     dispatch: vi.fn(),
     setActiveTab: vi.fn(),
     closeTab: vi.fn(),
@@ -65,6 +73,13 @@ describe('handle', () => {
     const replies = dispatchCall(controller, 1, { method: 'setActiveTab', params: { index: 2 } });
     expect(controller.setActiveTab).toHaveBeenCalledWith(2);
     expect(replies).toEqual([{ t: 'rpc-reply', id: 1, result: 'ok' }]);
+  });
+
+  it('focuses a tab by label', () => {
+    const controller = makeController();
+    dispatchCall(controller, 32, { method: 'focusTab', params: { label: 'build' } });
+    expect(controller.managers.tab.findIndex).toHaveBeenCalledWith('build');
+    expect(controller.managers.tab.setActiveTab).toHaveBeenCalledWith(2);
   });
 
   it('routes closeTab', () => {
@@ -243,6 +258,15 @@ describe('handle', () => {
     const controller = makeController();
     dispatchCall(controller, 27, { method: 'openFileNavigatorFor', params: { label: 'janus' } });
     expect(controller.openFileNavigatorFor).toHaveBeenCalledWith('janus');
+  });
+
+  it('routes answerQuestion through the question registry', () => {
+    const controller = makeController();
+    dispatchCall(controller, 31, {
+      method: 'answerQuestion',
+      params: { tab: 'janus', id: 'question-1', answer: 'Yes' },
+    });
+    expect(controller.managers.questions.answer).toHaveBeenCalledWith('janus', 'question-1', 'Yes');
   });
 
   it('routes openTranscriptFor to controller-transcript.js with the controller\'s managers', () => {

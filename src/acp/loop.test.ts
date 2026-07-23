@@ -3,6 +3,7 @@ import { runAcpToolLoop } from './loop.js';
 import type { AcpLoopSession, AcpLoopHandlers } from '../types.js';
 import { extractDatabaseCommand } from '../database/index.js';
 import { extractBrowserCommand } from '../browser/command.js';
+import { extractQuestionCommand } from '../question-command.js';
 
 // A fake ACP session that replies synchronously from a scripted list (the last
 // reply repeats once exhausted) and records every prompt it was sent.
@@ -73,6 +74,27 @@ describe('runAcpToolLoop', () => {
       'db sqlite query movies SELECT name FROM actors',
       'name\n----\nKeanu\nCarrie\n\n(2 rows)',
     ]);
+  });
+
+  it('waits for a human answer before continuing an agent question command', async () => {
+    const { session, sent } = makeSession([
+      'question ask "What port should I use?"',
+      'Use port 4321.',
+    ]);
+    const { h, events } = makeHandlers();
+    const { promise: answer, resolve: answerQuestion } = Promise.withResolvers<string>();
+
+    runAcpToolLoop(session, 'configure the service', {
+      runCommand: () => answer,
+      extractCommand: extractQuestionCommand,
+    }, h);
+
+    expect(sent).toHaveLength(1);
+    answerQuestion('4321');
+    await vi.waitFor(() => { expect(sent).toHaveLength(2); });
+    expect(sent[1]).toContain('Output of `question ask "What port should I use?"`:\n4321');
+    expect(events).toContainEqual(['ranCommand', 'question ask "What port should I use?"', '4321']);
+    expect(events.at(-1)).toEqual(['finished', 'answered', 8]);
   });
 
   it('strips the extracted command line from the agent reply before endTurn', () => {

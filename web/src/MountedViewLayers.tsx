@@ -6,6 +6,7 @@ import { EditorTab, type EditorTabHandle } from './EditorTab';
 import { PageTab } from './PageTab';
 import { HarnessTabLayer } from './HarnessTabLayer';
 import type { PickerOverlayProps } from './picker-overlay-props';
+import { QuestionPanel } from './QuestionPanel';
 
 type Properties = {
   tabs: TabView[];
@@ -63,6 +64,7 @@ export function MountedViewLayers({
             <PageTab page={t.page!} closeTab={closeTab} index={index} client={client} />
           </div>
         ))}
+      {current.pendingQuestion && <QuestionPanel question={current.pendingQuestion} client={client} />}
     </>
   );
 }

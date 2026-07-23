@@ -190,7 +190,17 @@ export function renderLine(
         {...hitProps}
       >
         <span className="message-time">{time}</span>
-        {tab && <span className="message-tab">{tab}</span>}
+        {tab && (line.openTab
+          ? (
+            <button
+              className="message-tab message-tab-link"
+              type="button"
+              onClick={() => client.send({ method: 'focusTab', params: { label: line.openTab! } })}
+            >
+              {tab}
+            </button>
+          )
+          : <span className="message-tab">{tab}</span>)}
         {line.openFile && <OpenFileLink path={line.openFile} client={client} />}
         {line.text && <span className="message-text">{highlightText(line.text, highlight, index)}</span>}
       </div>
