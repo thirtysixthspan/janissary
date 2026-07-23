@@ -8,9 +8,8 @@ import { ViewTabBody } from './ViewTabBody';
 import { ReportingSection } from './ReportingSection';
 import { AppShell } from './AppShell';
 import type { CommandInputDropHandle } from './CommandInput';
-import type { HarnessTabHandle } from './HarnessTab';
 import type { EditorTabHandle } from './EditorTab';
-import type { ShellTabHandle } from './ShellTab';
+import { useTabHandles } from './useTabHandles';
 import { ShellTabLayer } from './ShellTabLayer';
 import { MountedViewLayers } from './MountedViewLayers';
 import { useTabNav } from './useTabNav';
@@ -71,8 +70,7 @@ export function App() {
   // into whichever tab's command bar is currently rendered here.
   const dropReference = useRef<CommandInputDropHandle | null>(null);
   const transcriptReference = useRef<HTMLDivElement>(null);
-  const harnessHandles = useRef<Map<string, HarnessTabHandle>>(new Map());
-  const shellHandles = useRef<Map<string, ShellTabHandle>>(new Map());
+  const { harnessHandles, shellHandles, questionPanelRef } = useTabHandles();
   const currentRef = useRef<TabView | undefined>(undefined);
   const { handleScrollKey, handleScrollKeyUp } = useTranscriptScroll(transcriptReference);
   const windowFocused = useWindowFocus();
@@ -140,7 +138,7 @@ export function App() {
 
   useEffect(() => { applySyntaxTheme(syntaxTheme); }, [syntaxTheme]);
 
-  useFocusOnTabSwitch(activeTab, currentRef, harnessHandles, shellHandles, inputReference);
+  useFocusOnTabSwitch(activeTab, currentRef, harnessHandles, shellHandles, inputReference, questionPanelRef);
 
   useSectionNav(tabs, () => focusCenterVisibleTab(currentRef.current, harnessHandles, shellHandles, inputReference));
 
@@ -193,7 +191,7 @@ export function App() {
       <ShellTabLayer tabs={tabs} activeLabel={current.label} client={client}
         onHandle={(id, h) => { if (h) shellHandles.current.set(id, h); else shellHandles.current.delete(id); }} />
 
-      <MountedViewLayers tabs={tabs} current={current} client={client} closeTab={closeTab} harnessHandles={harnessHandles} editorHandles={editorHandles}
+      <MountedViewLayers tabs={tabs} current={current} client={client} closeTab={closeTab} harnessHandles={harnessHandles} editorHandles={editorHandles} questionPanelRef={questionPanelRef}
         taskPickerOpen={taskPickerOpen} taskRows={visibleTasks} taskPickerIndex={taskPickerIndex} onPickTask={pickTask} onToggleTaskDir={toggleTaskDir}
         navOpen={navOpen} navQuery={navQuery} navIndex={navIndex} onPickTab={selectNavTab} />
 

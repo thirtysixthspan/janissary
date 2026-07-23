@@ -18,6 +18,12 @@ A pending question appears in a panel on its owning tab. The panel identifies th
 
 The panel is non-modal. It does not trap global keyboard or pointer input, and the human can switch tabs or use unrelated controls while it remains pending. The panel is shown when its owning tab is active and remains associated with that tab across tab switches.
 
+### Keyboard focus and navigation
+
+When an approval panel opens, keyboard focus starts on **Cancel**. When a free-text panel opens, keyboard focus starts on the text field. Tab moves focus forward between the panel's buttons (each approval option, or Submit, plus Cancel), wrapping from the last button back to the first instead of leaving the panel; Shift+Tab moves backward the same way, wrapping from the first to the last. The left and right arrow keys move between the same buttons in the same directions as Shift+Tab and Tab, respectively.
+
+Switching to a tab that already has a pending question moves keyboard focus to that panel's Cancel button, regardless of whether the question is a free-text or approval question — this is separate from, and takes priority over, the kind-based focus a question gets the moment it first opens.
+
 ### Notifications
 
 Registering a question while its owning tab is not focused records `Question from <tab>` in the notifications feed when that feed is open. This event has no configuration toggle. Its tab label is a link that focuses the asking tab.
