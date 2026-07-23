@@ -239,8 +239,16 @@ request, pressing Tab anywhere else on it instead moves keyboard focus to its st
 highlighting it; pressing Enter while the pill holds focus sends the request, the same as clicking
 it. Any other key clears the pill's focus and returns to ordinary editing of the query text.
 Shift+Enter inserts a line break in the query instead of sending the request, so a query can span
-several lines; Left/Right/Home/End and Backspace/Delete edit the query text as usual, and a paste
-or IME commit while the query line is focused lands in the query text rather than the buffer.
+several lines; a paste or IME commit while the query line is focused lands in the query text rather
+than the buffer.
+
+Apart from Tab and Enter, the query line accepts the same keybindings as the main buffer:
+Left/Right/Home/End and Backspace/Delete edit the query text; Cmd+S (Ctrl+S) saves the editor file,
+the same as saving from the buffer; Cmd+Z (Ctrl+Z) undoes and Shift+Cmd+Z (Shift+Ctrl+Z) redoes,
+scoped to the query line's own edits — a fresh query line never inherits undo history from a
+previous, already-closed one; Cmd+A (Ctrl+A) selects all of the query text; Cmd+C/Cmd+X
+(Ctrl+C/Ctrl+X) copy and cut the selection; and Cmd+Left/Right/Up/Down and the Ctrl emacs subset
+move the caret the same way they do in the buffer.
 
 Up/Down arrows move the cursor within the query's lines when there is a neighboring query line to
 move to. Pressing Up on the query's first line, or Down on its last line, instead moves keyboard

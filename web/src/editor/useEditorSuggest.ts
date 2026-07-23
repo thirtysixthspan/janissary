@@ -11,6 +11,9 @@ import { fromText, toText, clampPos } from './model';
 import type { JanusClient } from '../ws';
 import { parseSuggestRequest } from './suggest-request';
 import { spliceHunk } from './suggestDiff';
+import { applyKeyAction, type EditSurface } from './applyKeyAction';
+import type { KeyAction } from './keys';
+import { UndoBuffer } from './undo';
 
 export type PendingSuggest = {
   hunks: SuggestHunk[];
@@ -51,12 +54,20 @@ export type EditorSuggestApi = {
   // line when entering from above (`dir` 1, moving down) or its last line when entering from below
   // (`dir` -1, moving up), at `col`.
   enterQueryFromBuffer: (dir: -1 | 1, col: number) => void;
+  // Applies a symbolic key action (see keys.ts) to the query line's own text, undo, and kill
+  // state — the same dispatch the buffer uses, so the query line's keybindings match it.
+  applyQueryAction: (action: KeyAction, pageLines: number) => void;
   fireOnLine: (bufferState: EditorState) => void;
   acceptHunk: (state: EditorState, index: number) => void;
   declineHunk: (state: EditorState, index: number) => void;
 };
 
-export function useEditorSuggest(client: JanusClient, url: string, setState: (s: EditorState) => void): EditorSuggestApi {
+export function useEditorSuggest(
+  client: JanusClient,
+  url: string,
+  setState: (s: EditorState) => void,
+  onSave: () => void = () => {},
+): EditorSuggestApi {
   const [personas, setPersonas] = useState<string[]>([]);
   const [pending, setPending] = useState<PendingSuggest | null>(null);
   const [firingLine, setFiringLine] = useState<string | null>(null);
@@ -68,6 +79,8 @@ export function useEditorSuggest(client: JanusClient, url: string, setState: (s:
   const queryLineRef = useRef<QueryLine | null>(null);
   const firingRef = useRef(false);
   const firingCancelledRef = useRef(false);
+  const queryUndo = useRef(new UndoBuffer()).current;
+  const queryKill = useRef({ text: '' }).current;
   queryLineRef.current = queryLine;
 
   useEffect(() => {
@@ -80,6 +93,7 @@ export function useEditorSuggest(client: JanusClient, url: string, setState: (s:
   const setPendingBoth = (p: PendingSuggest | null) => { pendingRef.current = p; setPending(p); };
 
   const openQueryLine = (anchorLine: number) => {
+    queryUndo.clear();
     setQueryLine({ anchorLine, state: emptyQueryState() });
     setPillFocused(false);
     setFocusTarget('query');
@@ -91,6 +105,17 @@ export function useEditorSuggest(client: JanusClient, url: string, setState: (s:
     setFocusTarget('buffer');
   };
   const setQueryLineState = (s: EditorState) => { setQueryLine((q) => (q ? { ...q, state: s } : q)); };
+
+  const queryLineSurface: EditSurface = {
+    getState: () => queryLineRef.current?.state ?? null,
+    setState: setQueryLineState,
+    undo: queryUndo,
+    kill: queryKill,
+    onSave,
+  };
+  const applyQueryAction = (action: KeyAction, pageLines: number) => {
+    applyKeyAction(queryLineSurface, action, pageLines);
+  };
 
   const exitQueryToBuffer = (dir: -1 | 1, col: number, bufferState: EditorState) => {
     const q = queryLineRef.current;
@@ -170,6 +195,6 @@ export function useEditorSuggest(client: JanusClient, url: string, setState: (s:
     personas, pending, firingLine, noSuggestionLine, queryLine, pillFocused, setPillFocused,
     focusTarget, setFocusTarget,
     openQueryLine, closeQueryLine, setQueryLineState, exitQueryToBuffer, enterQueryFromBuffer,
-    fireOnLine, acceptHunk, declineHunk,
+    applyQueryAction, fireOnLine, acceptHunk, declineHunk,
   };
 }

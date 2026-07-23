@@ -67,4 +67,17 @@ describe('UndoBuffer', () => {
     for (let index = 0; index < 10; index++) buffer.record(snap(String(index), 0), 'other', index * 5000);
     expect(buffer.depth).toBe(3);
   });
+
+  it('clear() empties both stacks and resets coalescing state', () => {
+    const buffer = new UndoBuffer();
+    buffer.record(snap('a', 1), 'typing', 1000);
+    buffer.undo(snap('ab', 2));
+    buffer.clear();
+    expect(buffer.depth).toBe(0);
+    expect(buffer.undo(snap('x', 1))).toBeNull();
+    expect(buffer.redo(snap('x', 1))).toBeNull();
+    buffer.record(snap('y', 1), 'typing', 2000);
+    buffer.record(snap('yz', 2), 'typing', 2100);
+    expect(buffer.depth).toBe(1);
+  });
 });

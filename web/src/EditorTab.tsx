@@ -38,7 +38,7 @@ export const EditorTab = forwardRef<EditorTabHandle, { editor: EditorView; tab: 
 
   const api = useEditor(() => { void save(); });
   const { state } = api;
-  const suggest = useEditorSuggest(client, editor.url, api.setState);
+  const suggest = useEditorSuggest(client, editor.url, api.setState, () => { void save(); });
   const mouse = useEditorMouse(api, bodyRef, () => textareaRef.current?.focus(), suggest);
   const tokens = useSyntaxHighlight(state, editor.name);
   useEditorSync(state, editor.url, client);
@@ -166,7 +166,7 @@ export const EditorTab = forwardRef<EditorTabHandle, { editor: EditorView; tab: 
     if (e.nativeEvent.isComposing) return;
     // Nothing typed in the editor may reach App's global bindings (Ctrl+T, Ctrl+R, Ctrl+arrows).
     e.stopPropagation();
-    if (handleSuggestKeyDown(e, api, suggest)) return;
+    if (handleSuggestKeyDown(e, api, suggest, pageLines())) return;
     const action = actionForKey(e);
     if (!action) return;
     e.preventDefault();

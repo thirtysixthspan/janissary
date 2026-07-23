@@ -41,6 +41,7 @@ function makeSuggest(overrides: Partial<EditorSuggestApi> = {}): EditorSuggestAp
     setQueryLineState: vi.fn(),
     exitQueryToBuffer: vi.fn(),
     enterQueryFromBuffer: vi.fn(),
+    applyQueryAction: vi.fn(),
     fireOnLine: vi.fn(),
     acceptHunk: vi.fn(),
     declineHunk: vi.fn(),
@@ -119,7 +120,7 @@ describe('handleSuggestKeyDown while the query line is active', () => {
 
     expect(handled).toBe(true);
     expect(api.insert).not.toHaveBeenCalled();
-    expect(suggest.setQueryLineState).toHaveBeenCalledWith({ lines: ['>a'], cursor: { line: 0, col: 2 }, anchor: null });
+    expect(suggest.applyQueryAction).toHaveBeenCalledWith({ kind: 'insert', text: 'a' }, 20);
   });
 
   it('routes Backspace into the query text', () => {
@@ -129,7 +130,7 @@ describe('handleSuggestKeyDown while the query line is active', () => {
 
     handleSuggestKeyDown(e, api, suggest);
 
-    expect(suggest.setQueryLineState).toHaveBeenCalledWith({ lines: ['>a'], cursor: { line: 0, col: 2 }, anchor: null });
+    expect(suggest.applyQueryAction).toHaveBeenCalledWith({ kind: 'deleteBackward' }, 20);
   });
 
   it('routes Left/Right arrows within the query text', () => {
@@ -139,7 +140,7 @@ describe('handleSuggestKeyDown while the query line is active', () => {
 
     handleSuggestKeyDown(e, api, suggest);
 
-    expect(suggest.setQueryLineState).toHaveBeenCalledWith({ lines: ['>ab'], cursor: { line: 0, col: 2 }, anchor: null });
+    expect(suggest.applyQueryAction).toHaveBeenCalledWith({ kind: 'move', dir: 'right', extend: false }, 20);
   });
 
   it('exits a single-line query into the buffer on ArrowUp/ArrowDown, since both are at its edge', () => {
@@ -155,6 +156,41 @@ describe('handleSuggestKeyDown while the query line is active', () => {
     const down = handleSuggestKeyDown(makeEvent('ArrowDown'), api, suggest);
     expect(down).toBe(true);
     expect(suggest.exitQueryToBuffer).toHaveBeenCalledWith(1, 1, bufferState);
+  });
+
+  it('matches the buffer keybindings for save, undo/redo, select-all, and copy/cut on the query line', () => {
+    const api = makeApi(makeState(''));
+    const suggest = makeSuggest({ queryLine: makeQueryLine('>ab', 1) });
+
+    handleSuggestKeyDown(makeEvent('s', { metaKey: true }), api, suggest);
+    expect(suggest.applyQueryAction).toHaveBeenCalledWith({ kind: 'save' }, 20);
+
+    handleSuggestKeyDown(makeEvent('z', { metaKey: true }), api, suggest);
+    expect(suggest.applyQueryAction).toHaveBeenCalledWith({ kind: 'undo' }, 20);
+
+    handleSuggestKeyDown(makeEvent('z', { metaKey: true, shiftKey: true }), api, suggest);
+    expect(suggest.applyQueryAction).toHaveBeenCalledWith({ kind: 'redo' }, 20);
+
+    handleSuggestKeyDown(makeEvent('a', { metaKey: true }), api, suggest);
+    expect(suggest.applyQueryAction).toHaveBeenCalledWith({ kind: 'selectAll' }, 20);
+
+    handleSuggestKeyDown(makeEvent('c', { metaKey: true }), api, suggest);
+    expect(suggest.applyQueryAction).toHaveBeenCalledWith({ kind: 'copy' }, 20);
+
+    handleSuggestKeyDown(makeEvent('x', { metaKey: true }), api, suggest);
+    expect(suggest.applyQueryAction).toHaveBeenCalledWith({ kind: 'cut' }, 20);
+  });
+
+  it('a Cmd/Ctrl+ArrowUp on the query line moves within it instead of crossing into the buffer', () => {
+    const bufferState = makeState('one\n\ntwo', 1, 0);
+    const api = makeApi(bufferState);
+    const suggest = makeSuggest({ queryLine: makeQueryLine('>ab', 1, 1) });
+
+    const handled = handleSuggestKeyDown(makeEvent('ArrowUp', { metaKey: true }), api, suggest);
+
+    expect(handled).toBe(true);
+    expect(suggest.exitQueryToBuffer).not.toHaveBeenCalled();
+    expect(suggest.applyQueryAction).toHaveBeenCalledWith({ kind: 'docEdge', edge: 'start', extend: false }, 20);
   });
 
   it('moves within a multiline query instead of exiting when a neighboring query line exists', () => {

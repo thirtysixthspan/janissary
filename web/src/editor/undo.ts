@@ -35,6 +35,15 @@ export class UndoBuffer {
     this.lastKind = null;
   }
 
+  // Discards all undo/redo history and coalescing state, for a surface starting a fresh session
+  // (e.g. a newly opened ephemeral query line) that must not inherit a previous session's history.
+  clear(): void {
+    this.undoStack = [];
+    this.redoStack = [];
+    this.lastKind = null;
+    this.lastTime = 0;
+  }
+
   undo(current: EditorState): EditorState | null {
     const previous = this.undoStack.pop();
     if (!previous) return null;
