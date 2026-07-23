@@ -1,5 +1,5 @@
 import type { Tab } from '../types.js';
-import type { AggregatedScheduleView, ConnectionView, ScheduleView, TabView } from '../protocol.js';
+import type { AggregatedScheduleView, ConnectionView, PendingQuestionView, ScheduleView, TabView } from '../protocol.js';
 import { flattenBuffer } from './index.js';
 
 // Converts one internal Tab into the wire-format TabView sent to the client — the shape the
@@ -14,6 +14,7 @@ export function buildTabView(
   commandQueue: string[],
   shorten: (path: string) => string,
   aggregated: AggregatedScheduleView[],
+  pendingQuestion?: PendingQuestionView,
 ): TabView {
   return {
     label: tab.label,
@@ -36,6 +37,7 @@ export function buildTabView(
     cmdHistory: tab.cmdHistory,
     commandQueue,
     toolStepsExpanded: !!tab.toolStepsExpanded,
+    pendingQuestion,
     view: tab.view,
     title: tab.title,
     image: tab.image,

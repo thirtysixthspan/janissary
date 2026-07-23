@@ -25,12 +25,28 @@ export function formatMessageContent(entry: LogEntry, parts: string[]): BufferLi
   const lines: BufferLine[] = [];
 
   if (kind === 'response') {
-    lines.push({ type: 'message', text: '', from: entry.from, fromColor: entry.fromColor, msgKind: 'response', ...(entry.openFile && { openFile: entry.openFile }) });
+    lines.push({
+      type: 'message',
+      text: '',
+      from: entry.from,
+      fromColor: entry.fromColor,
+      msgKind: 'response',
+      ...(entry.openFile && { openFile: entry.openFile }),
+      ...(entry.openTab && { openTab: entry.openTab }),
+    });
     for (const line of parts) {
       lines.push({ type: 'output', text: expandTabs(line), fromColor: entry.fromColor });
     }
   } else {
-    lines.push({ type: 'message', text: expandTabs(parts[0] ?? ''), from: entry.from, fromColor: entry.fromColor, msgKind: kind, ...(entry.openFile && { openFile: entry.openFile }) });
+    lines.push({
+      type: 'message',
+      text: expandTabs(parts[0] ?? ''),
+      from: entry.from,
+      fromColor: entry.fromColor,
+      msgKind: kind,
+      ...(entry.openFile && { openFile: entry.openFile }),
+      ...(entry.openTab && { openTab: entry.openTab }),
+    });
     for (const extra of parts.slice(1)) {
       lines.push({ type: 'output', text: expandTabs(extra), fromColor: entry.fromColor });
     }

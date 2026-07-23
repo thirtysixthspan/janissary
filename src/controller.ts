@@ -215,6 +215,7 @@ export class Controller {
   }
 
   shutdown(): void {
+    this.managers.questions.closeAll();
     this.managers.fileTree.dispose();
     this.managers.editorWatch.dispose();
     this.managers.monitor.closeAll();

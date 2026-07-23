@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { AcpSession, AcpLoopHandlers } from '../types.js';
+import type { AcpSession, AcpLoopDeps, AcpLoopHandlers } from '../types.js';
 
 const mocks = vi.hoisted(() => ({
   connectAcp: vi.fn(),
@@ -39,6 +39,7 @@ const setup = () => {
   const append = vi.fn();
   const addBusy = vi.fn();
   const deleteBusy = vi.fn();
+  const registerQuestion = vi.fn(async () => 'Production');
   const managers = {
     tab: {
       tabs: [],
@@ -55,9 +56,10 @@ const setup = () => {
       extract: vi.fn(),
     },
     browser: { run: vi.fn() },
+    questions: { register: registerQuestion },
   } as never;
   const acp = new AcpManager(managers);
-  return { acp, append, addBusy, deleteBusy, managers };
+  return { acp, append, addBusy, deleteBusy, managers, registerQuestion };
 };
 
 describe('AcpManager.run', () => {
@@ -85,6 +87,24 @@ describe('AcpManager.run', () => {
     expect(typeof handlers.startTurn).toBe('function');
     expect(typeof handlers.finished).toBe('function');
     expect(typeof handlers.error).toBe('function');
+  });
+
+  it('runs an agent-issued question command and returns the human answer', async () => {
+    const { acp, registerQuestion } = setup();
+    acp.run('tab1', 'acp plan the release');
+    const dependencies = mocks.runAcpToolLoop.mock.calls[0][2] as AcpLoopDeps;
+
+    expect(dependencies.primer).toContain('question ask "<question>"');
+    expect(dependencies.extractCommand('question ask "What port?"')).toBe('question ask "What port?"');
+    await expect(dependencies.runCommand(
+      'question approve "Deploy?" Staging Production',
+    )).resolves.toBe('Production');
+    expect(registerQuestion).toHaveBeenCalledWith({
+      tab: 'tab1',
+      kind: 'approve',
+      question: 'Deploy?',
+      options: ['Staging', 'Production'],
+    });
   });
 
   it('error handler updates output, cleans up busy, and calls onDone', () => {

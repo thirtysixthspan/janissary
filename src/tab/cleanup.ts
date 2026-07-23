@@ -31,6 +31,7 @@ export function closeTabResources(
   managers.fileTree.closeTab(tab.label);
   managers.editorWatch.closeTab(tab.label);
   managers.schedule.delete(tab.label);
+  managers.questions.cancelTab(tab.label);
   managers.database.forgetTab(tab.label);
   if (tabsLength <= 1) managers.database.closeAll();
   messageBus.emit('transcript', { type: 'tab:removed', tabLabel: tab.label });

@@ -7,6 +7,7 @@ import { notify } from '../notifications.js';
 import { isRateLimitError } from './rate-limit.js';
 import { makeUpdateRunning } from './runner.js';
 import type { Managers } from '../managers.js';
+import { extractQuestionCommand, QUESTION_PRIMER, runQuestionCommand } from '../question-command.js';
 
 // The ACP agent the manager connects to and the model it runs. Hardcoded for now (the only provider
 // wired up); the model string drives the `provider/model` label shown in the connections panel.
@@ -104,9 +105,14 @@ export class AcpManager {
 
     let lastAnswer = '';
     runAcpToolLoop(session, prompt, {
-      primer: `${this.managers.database.primer}\n\n${BROWSER_PRIMER}\n\nWrite your replies in GitHub-flavored Markdown (headings, lists, tables, fenced code blocks, etc.); the tab renders them as formatted Markdown.`,
-      runCommand: (c) => (/^browser\b/i.test(c) ? this.managers.browser.run(label, c) : this.managers.database.runInTab(label, c)),
-      extractCommand: (t) => extractBrowserCommand(t) ?? this.managers.database.extract(t) ?? null,
+      primer: `${this.managers.database.primer}\n\n${BROWSER_PRIMER}\n\n${QUESTION_PRIMER}\n\nWrite your replies in GitHub-flavored Markdown (headings, lists, tables, fenced code blocks, etc.); the tab renders them as formatted Markdown.`,
+      runCommand: (c) => {
+        if (/^browser\b/i.test(c)) return this.managers.browser.run(label, c);
+        if (/^question\b/i.test(c)) return runQuestionCommand(c, label, this.managers.questions);
+        return this.managers.database.runInTab(label, c);
+      },
+      extractCommand: (t) =>
+        extractBrowserCommand(t) ?? this.managers.database.extract(t) ?? extractQuestionCommand(t),
     }, {
       startTurn: (isFirst) => { this.managers.tab.addBusy(label); if (isFirst) notify(this.managers, 'agent-start', label); this.managers.tab.append(label, { input: isFirst ? prompt : '', output: '', running: true, markdown: true }); },
       chunk: (buffer) => updateRunning(buffer, true),

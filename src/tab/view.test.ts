@@ -66,4 +66,11 @@ describe('buildTabView', () => {
     expect(view.files?.root).toBe('~/project');
     expect(view.files?.absoluteRoot).toBe('/Users/derrick/project');
   });
+
+  it('exposes the tab pending question', () => {
+    const tab = makeTab('agent-1', '#fff');
+    const pending = { id: 'question-1', tab: 'agent-1', kind: 'ask' as const, question: 'What port?' };
+    const view = buildTabView(tab, false, '/tmp', undefined, [], [], [], (p) => p, [], pending);
+    expect(view.pendingQuestion).toEqual(pending);
+  });
 });

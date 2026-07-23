@@ -76,4 +76,3 @@ function parseProjectDir(dirPositionals: string[]): string | undefined {
   }
   return resolved;
 }
-

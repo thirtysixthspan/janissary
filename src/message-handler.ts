@@ -19,6 +19,10 @@ export function handle(controller: Controller, message: ClientMessage, reply: (e
     }
     case 'setActiveTab': { controller.setActiveTab(message.params.index); break;
     }
+    case 'focusTab': {
+      controller.managers.tab.setActiveTab(controller.managers.tab.findIndex(message.params.label));
+      break;
+    }
     case 'closeTab': { controller.closeTab(message.params.index); break;
     }
     case 'renameTab': { controller.renameTab(message.params.index, message.params.title); break;
@@ -40,6 +44,12 @@ export function handle(controller: Controller, message: ClientMessage, reply: (e
     case 'closeHarnessLaunch': { controller.closeHarnessLaunch(); break;
     }
     case 'closeScheduleLaunch': { controller.closeScheduleLaunch(); break;
+    }
+    case 'answerQuestion': {
+      if (!controller.managers.questions.answer(message.params.tab, message.params.id, message.params.answer)) {
+        throw new Error('question not found');
+      }
+      break;
     }
     case 'complete': {
       reply({ t: 'rpc-reply', id: message.id, result: controller.complete(message.params.text, message.params.cursor) });

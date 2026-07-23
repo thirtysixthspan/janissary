@@ -147,7 +147,7 @@ html, body, #root {
 }
 
 .app { display: flex; flex-direction: row; height: 100%; }
-.app-center { display: flex; flex-direction: column; flex: 1; min-width: 0; height: 100%; }
+.app-center { position: relative; display: flex; flex-direction: column; flex: 1; min-width: 0; height: 100%; }
 
 /* Tab strip */
 .tabstrip { display: flex; flex-wrap: wrap; background: var(--bg-soft); align-items: stretch; }
@@ -394,8 +394,10 @@ html, body, #root {
 .line.message .message-time { color: var(--muted); font-size: 0.9em; }
 .line.message .message-tab {
   background: var(--from-color, var(--muted)); color: var(--bg);
-  border-radius: 10px; padding: 0 8px; font-size: 0.85em; line-height: 1.6;
+  border: none; border-radius: 10px; padding: 0 8px; font: inherit; font-size: 0.85em; line-height: 1.6;
 }
+.line.message .message-tab-link { cursor: pointer; }
+.line.message .message-tab-link:hover { filter: brightness(1.2); }
 .line.message .message-text { color: var(--fg); }
 .line.message .file-link {
   color: var(--accent); cursor: pointer; text-decoration: none;
@@ -490,6 +492,16 @@ html, body, #root {
 }
 .modal-button:hover { background: var(--border); }
 .modal-button.selected { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+.question-panel {
+  position: absolute; z-index: 50; top: 44px; right: 14px; width: min(420px, calc(100% - 28px));
+}
+.question-panel-text { margin-bottom: 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.question-panel-form { display: flex; flex-direction: column; gap: 10px; }
+.question-panel-form input {
+  background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 4px;
+  padding: 5px 7px; font-family: var(--mono); font-size: 13px;
+}
+.question-panel-options { display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-end; }
 .harness-launch .harness-launch-form { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
 .harness-launch-form label { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--muted); }
 .harness-launch-form label.harness-launch-check { flex-direction: row; align-items: center; gap: 6px; color: var(--fg); }
