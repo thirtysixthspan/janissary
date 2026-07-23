@@ -2,12 +2,12 @@ import { describe, it, expect, vi } from 'vitest';
 import { handle } from './message-handler.js';
 import type { Controller } from './controller.js';
 import type { ClientMessage, ServerEvent, RpcCall } from './protocol.js';
-import { openTranscriptFor } from './controller/transcript.js';
+import { openTranscriptFor, openAcpTranscript } from './controller/transcript.js';
 import { projectFilesFor } from './project-files.js';
 import { fileTreeSearch, revealFileTreeItem } from './controller/file-tree.js';
 import { setClientLayout } from './client-layout.js';
 
-vi.mock('./controller/transcript.js', () => ({ openTranscriptFor: vi.fn() }));
+vi.mock('./controller/transcript.js', () => ({ openTranscriptFor: vi.fn(), openAcpTranscript: vi.fn() }));
 vi.mock('./project-files.js', () => ({ projectFilesFor: vi.fn() }));
 vi.mock('./controller/file-tree.js', () => ({ fileTreeSearch: vi.fn(), revealFileTreeItem: vi.fn() }));
 vi.mock('./client-layout.js', () => ({ setClientLayout: vi.fn() }));
@@ -249,6 +249,12 @@ describe('handle', () => {
     const controller = makeController();
     dispatchCall(controller, 28, { method: 'openTranscriptFor', params: { label: 'janus' } });
     expect(openTranscriptFor).toHaveBeenCalledWith(controller.managers, 'janus');
+  });
+
+  it('routes openAcpTranscript to controller-transcript.js with the controller\'s managers', () => {
+    const controller = makeController();
+    dispatchCall(controller, 29, { method: 'openAcpTranscript', params: { acpRef: { scope: 'tab', label: 'janus' } } });
+    expect(openAcpTranscript).toHaveBeenCalledWith(controller.managers, { scope: 'tab', label: 'janus' });
   });
 
   it('routes reportLayout straight to client-layout.js', () => {

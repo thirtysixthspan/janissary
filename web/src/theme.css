@@ -328,6 +328,12 @@ html, body, #root {
   color: var(--muted); font-size: 12px; line-height: 1;
 }
 .panel-row-close:hover { color: var(--fg); }
+/* Transcript control on any ACP connection row (see acp-connection-row-transcript-button). */
+.panel-row-transcript {
+  margin-left: 6px; padding: 0 2px; border: none; background: none; cursor: pointer;
+  color: var(--muted); font-size: 12px; line-height: 1;
+}
+.panel-row-transcript:hover { color: var(--fg); }
 .line { white-space: pre-wrap; overflow-wrap: break-word; line-height: 1.4; }
 .line.prompt { color: var(--accent); }
 .line.prompt .cwd { color: var(--faint); margin-right: 6px; }

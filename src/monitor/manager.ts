@@ -10,7 +10,7 @@ import { validateTargets, matchesTargets, targetColor, formatTargets, resolveTar
 import { stopMonitor, closeIfUnfed } from './stop.js';
 import { seedFeedEntries, flushFeedEntries } from './feeds.js';
 import { generateSessionDelimiter, frameEntry } from './framing.js';
-import { recordContext, snapshotMonitorContext, type MonitorContextEntry } from './context.js';
+import { recordContext, snapshotMonitorContext, formatContext, type MonitorContextEntry } from './context.js';
 import { listMonitors, monitorConnections } from './info.js';
 import { askMonitor } from './ask.js';
 import { recordReply } from './reply.js';
@@ -215,6 +215,13 @@ export class MonitorManager {
   // Open a point-in-time snapshot of `name`'s monitor context in an editor tab (see monitor-context).
   snapshotContext(name: string): void {
     snapshotMonitorContext(this.monitors.values(), this.managers, name);
+  }
+
+  // The formatted context text for `name`'s monitor, for the connections-panel transcript button
+  // (see controller/transcript.ts). `''` when no such monitor is running or it has no context yet.
+  transcript(name: string): string {
+    const reg = [...this.monitors.values()].find((r) => !r.inline && r.name === name);
+    return reg ? formatContext(reg.contextText) : '';
   }
 
   // Stop one persona's monitor (or drop a single target from it). Returns false when no

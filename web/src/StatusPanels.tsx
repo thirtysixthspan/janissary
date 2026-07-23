@@ -1,6 +1,8 @@
 import React from 'react';
-import type { TabView, ConnectionView } from '@shared/protocol';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import type { TabView, ConnectionView, AcpRef } from '@shared/protocol';
 import type { StatusWindowHandlers } from './useStatusWindows';
+import { viewCaptureIcon } from './icons';
 
 type Properties = {
   tab: TabView;
@@ -11,7 +13,46 @@ type Properties = {
   // Renders a close control on each connection row when supplied (editor tabs' persona
   // connections); omitted elsewhere, so agent-tab rows stay read-only, as today.
   onCloseRow?: (row: ConnectionView, index: number) => void;
+  // Renders a clipboard-icon transcript button on any row carrying an `acpRef`, when supplied;
+  // omitted on the non-interactive harness-tab panel, where no button renders.
+  onOpenAcpTranscript?: (ref: AcpRef) => void;
 };
+
+function ConnectionRow({ row, index, onCloseRow, onOpenAcpTranscript }: {
+  row: ConnectionView;
+  index: number;
+  onCloseRow?: (row: ConnectionView, index: number) => void;
+  onOpenAcpTranscript?: (ref: AcpRef) => void;
+}) {
+  const acpRef = row.acpRef;
+  return (
+    <div className={`panel-row conn-${row.kind}`}>
+      {row.text}
+      {acpRef && onOpenAcpTranscript && (
+        <button
+          type="button"
+          className="panel-row-transcript"
+          title="Open transcript"
+          aria-label="Open transcript"
+          onClick={() => onOpenAcpTranscript(acpRef)}
+        >
+          <FontAwesomeIcon icon={viewCaptureIcon} />
+        </button>
+      )}
+      {onCloseRow && (
+        <button
+          type="button"
+          className="panel-row-close"
+          title="Close connection"
+          aria-label="Close connection"
+          onClick={() => onCloseRow(row, index)}
+        >
+          ×
+        </button>
+      )}
+    </div>
+  );
+}
 
 // Floating top-right panels mirroring the Ink ConnectionWindow / ScheduleWindow: the active
 // tab's open connections (shell / acp / terminal cards / sqlite) and its scheduled timers.
@@ -21,7 +62,7 @@ type Properties = {
 // the whole tab *is* the terminal connection and only the timers are worth overlaying.
 // `interactive` accepts pointer events on the panels themselves (agent tabs, Decision 8); on
 // harness tabs the panels stay non-interactive so they never intercept terminal input.
-export function StatusPanels({ tab, scheduleOnly = false, connections: connectionsWindow, schedule: scheduleWindow, interactive = false, onCloseRow }: Properties) {
+export function StatusPanels({ tab, scheduleOnly = false, connections: connectionsWindow, schedule: scheduleWindow, interactive = false, onCloseRow, onOpenAcpTranscript }: Properties) {
   const scheduleRows = tab.schedule;
   const connectionRows = scheduleOnly ? [] : tab.connections;
   const showConnections = connectionRows.length > 0 && connectionsWindow.visible;
@@ -38,20 +79,7 @@ export function StatusPanels({ tab, scheduleOnly = false, connections: connectio
         >
           <div className="panel-title">connections</div>
           {connectionRows.map((c, index) => (
-            <div key={index} className={`panel-row conn-${c.kind}`}>
-              {c.text}
-              {onCloseRow && (
-                <button
-                  type="button"
-                  className="panel-row-close"
-                  title="Close connection"
-                  aria-label="Close connection"
-                  onClick={() => onCloseRow(c, index)}
-                >
-                  ×
-                </button>
-              )}
-            </div>
+            <ConnectionRow key={index} row={c} index={index} onCloseRow={onCloseRow} onOpenAcpTranscript={onOpenAcpTranscript} />
           ))}
         </div>
       )}

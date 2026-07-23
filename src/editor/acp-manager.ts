@@ -2,6 +2,7 @@ import type { AcpSession } from '../types.js';
 import type { Persona } from '../personas.js';
 import type { ConnectionView } from '../protocol.js';
 import { spawnMonitorSession } from '../monitor/acp.js';
+import { formatContext, type MonitorContextEntry } from '../monitor/context.js';
 import type { Managers } from '../managers.js';
 
 type SessionHooks = { onError: (message: string) => void };
@@ -15,6 +16,7 @@ const key = (label: string, persona: string): string => `${label}:${persona}`;
 export class EditorAcpManager {
   private sessions = new Map<string, AcpSession>();
   private personas = new Map<string, string>();
+  private contexts = new Map<string, MonitorContextEntry[]>();
 
   constructor(private managers: Managers) {}
 
@@ -25,14 +27,31 @@ export class EditorAcpManager {
       session = spawnMonitorSession(persona, cwd, { onError: hooks.onError });
       this.sessions.set(k, session);
       this.personas.set(k, persona.name);
+      this.contexts.set(k, []);
     }
     return session;
+  }
+
+  // Append a block to `label`/`persona`'s recorded exchange (see acp-connection-row-transcript-
+  // button) — a plain append, unlike the monitor's `recordContext`, since editor-persona rows have
+  // no byte counter to grow alongside it.
+  record(label: string, persona: string, text: string, role: MonitorContextEntry['role']): void {
+    this.contexts.get(key(label, persona))?.push({ role, text });
+  }
+
+  // The formatted snapshot of `label`/`persona`'s recorded exchange, or `''` when the session is
+  // unknown or has recorded nothing yet.
+  transcript(label: string, persona: string): string {
+    const entries = this.contexts.get(key(label, persona));
+    return entries ? formatContext(entries) : '';
   }
 
   connectionsFor(label: string): ConnectionView[] {
     const rows: ConnectionView[] = [];
     for (const [k, persona] of this.personas) {
-      if (k.startsWith(`${label}:`) && this.sessions.has(k)) rows.push({ text: `${persona} (acp)`, kind: 'acp' });
+      if (k.startsWith(`${label}:`) && this.sessions.has(k)) {
+        rows.push({ text: `${persona} (acp)`, kind: 'acp', acpRef: { scope: 'editor', label, persona } });
+      }
     }
     return rows;
   }
@@ -44,6 +63,7 @@ export class EditorAcpManager {
     session.kill();
     this.sessions.delete(k);
     this.personas.delete(k);
+    this.contexts.delete(k);
     return true;
   }
 
@@ -53,6 +73,7 @@ export class EditorAcpManager {
       this.sessions.get(k)!.kill();
       this.sessions.delete(k);
       this.personas.delete(k);
+      this.contexts.delete(k);
     }
   }
 }

@@ -33,6 +33,6 @@ export function monitorConnections(monitors: Iterable<MonitorSub>, owner: string
     .filter((reg) => reg.owner === owner)
     .map((reg) => {
       const info = reg.info ? ` (${formatConnection(reg.info)})` : '';
-      return { text: `monitor:${reg.persona.name}${info}`, kind: 'acp' as const };
+      return { text: `monitor:${reg.persona.name}${info}`, kind: 'acp' as const, acpRef: { scope: 'monitor' as const, name: reg.name } };
     });
 }

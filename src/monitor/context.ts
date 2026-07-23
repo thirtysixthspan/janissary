@@ -22,6 +22,12 @@ export function recordContext(reg: MonitorSub, text: string, role: MonitorContex
   reg.contextText.push({ role, text });
 }
 
+// Join a run of context entries into the tagged snapshot body: each block wrapped between its
+// `SENT TO MODEL` / `MODEL RESPONSE` begin/end markers, in order.
+export function formatContext(entries: MonitorContextEntry[]): string {
+  return entries.map(({ role, text }) => `${HEADERS[role].begin}\n${text}\n${HEADERS[role].end}`).join('\n\n');
+}
+
 // Open a point-in-time snapshot of the external monitor feeding reporting tab `name` in an editor
 // tab (scrollable like any editor tab). Reuses the capture-file + editor path, so the accumulated
 // context text — priming, update prompts, asks, and replies — is written to a file with each block
@@ -30,7 +36,6 @@ export function recordContext(reg: MonitorSub, text: string, role: MonitorContex
 export function snapshotMonitorContext(monitors: Iterable<MonitorSub>, managers: Managers, name: string): void {
   const reg = [...monitors].find((r) => !r.inline && r.name === name);
   if (!reg || reg.contextText.length === 0) return;
-  const body = reg.contextText.map(({ role, text }) => `${HEADERS[role].begin}\n${text}\n${HEADERS[role].end}`).join('\n\n');
-  const file = writeCaptureFile(name, Date.now(), body);
+  const file = writeCaptureFile(name, Date.now(), formatContext(reg.contextText));
   managers.openFile.edit(`monitor context ${name}`, file, managers.tab.cur().label);
 }

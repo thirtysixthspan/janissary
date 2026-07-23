@@ -125,7 +125,13 @@ export function AgentTabBody({
           scrollRef={transcriptReference}
           highlight={highlight}
         />
-        <StatusPanels tab={current} connections={statusWindows.connections} schedule={statusWindows.schedule} interactive />
+        <StatusPanels
+          tab={current}
+          connections={statusWindows.connections}
+          schedule={statusWindows.schedule}
+          interactive
+          onOpenAcpTranscript={(acpRef) => client.send({ method: 'openAcpTranscript', params: { acpRef } })}
+        />
         <PickerOverlays
           route={route} routeIndex={routeIndex} onPickRoute={chooseRoute}
           syntaxTheme={syntaxTheme} themePickerOpen={themePickerOpen} themePickerIndex={themePickerIndex} onPickTheme={pickTheme}

@@ -14,7 +14,7 @@ export class ConnectionManager {
       rows.push({ text: `${SHELL_NAME}:${this.managers.tab.shorten(this.managers.tab.cwdOf(label) ?? process.cwd())}`, kind: 'shell' });
     }
     const acp = this.managers.acp.label(label);
-    if (acp) rows.push({ text: `acp:${acp}`, kind: 'acp' });
+    if (acp) rows.push({ text: `acp:${acp}`, kind: 'acp', acpRef: { scope: 'tab', label } });
     rows.push(...this.managers.monitor.connectionsFor(label), ...this.managers.editorAcp.connectionsFor(label));
     const b = this.managers.browser.info(label);
     if (b) for (const id of b.ids) rows.push({ text: `browser:${id} (${b.mode})`, kind: 'browser' });

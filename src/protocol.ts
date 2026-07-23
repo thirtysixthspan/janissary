@@ -6,8 +6,16 @@ import type { BufferLine, ImageView, PageView, HarnessView, MarkdownView, Editor
 // eslint-disable-next-line unicorn/prefer-export-from
 export type { BufferLine, ImageView, PageView, HarnessView, MarkdownView, EditorView, TerminalEntry, CompletionResult, FileTreeView, FileTreeRow, TaskRow };
 
-// One row in the floating "connections" panel (shell / acp / terminal card / sqlite).
-export type ConnectionView = { text: string; kind: 'shell' | 'acp' | 'browser' | 'terminal' | 'sqlite' | 'ssh' };
+// Identifies the ACP session behind a connections-panel row, for the `openAcpTranscript` RPC to
+// route on: the tab's own agent, a monitor session, or an editor-persona session.
+export type AcpRef =
+  | { scope: 'tab'; label: string }
+  | { scope: 'monitor'; name: string }
+  | { scope: 'editor'; label: string; persona: string };
+
+// One row in the floating "connections" panel (shell / acp / terminal card / sqlite). `acpRef` is
+// set on every `kind: 'acp'` row, identifying which session the row's transcript button opens.
+export type ConnectionView = { text: string; kind: 'shell' | 'acp' | 'browser' | 'terminal' | 'sqlite' | 'ssh'; acpRef?: AcpRef };
 
 // One proposed edit from an in-editor persona-suggestion query (see editorSuggest below): the
 // exact existing text to replace (empty means append at the end of the file) and its replacement
@@ -238,6 +246,10 @@ export type RpcCall =
   // tab, triggered by the clipboard button in an agent tab's metadata row. No-ops when the tab
   // is missing or its log is empty. `label` is the requesting tab's own label.
   | { method: 'openTranscriptFor'; params: { label: string } }
+  // Write the ACP session identified by `acpRef` to a plain-text capture file and open it in a
+  // read-only editor tab, triggered by the clipboard button on a connections-panel ACP row. An
+  // empty exchange substitutes a `No transcript yet.` placeholder rather than no-opping.
+  | { method: 'openAcpTranscript'; params: { acpRef: AcpRef } }
   // List every gitignore-aware file under the project/launch directory, for the Cmd+P quick-open
   // overlay. Replies (deferred) with `{ root, paths }` — `root` is the absolute launch directory,
   // `paths` are its root-relative paths — so the client can join them into an absolute path for

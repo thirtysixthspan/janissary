@@ -257,6 +257,32 @@ describe('MonitorManager', () => {
     expect(edit).not.toHaveBeenCalled();
   });
 
+  it('transcript returns the formatted context for a running monitor', () => {
+    const { managers } = makeFakeManagers([janus, agent2]);
+    const { spawn, sessions } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+    manager.start('janus', 'assistant', [{ kind: 'tab', label: 'agent2' }]);
+    emitEntry(agent2, 'npm test', '1 failing');
+    vi.advanceTimersByTime(FLUSH_MS);
+    sessions[0].reply('[SUGGESTION]: Fix the failing test');
+
+    const text = manager.transcript('assistant');
+
+    expect(text).toContain('SENT TO MODEL');
+    expect(text).toContain('npm test');
+    expect(text).toContain('MODEL RESPONSE');
+    expect(text).toContain('Fix the failing test');
+  });
+
+  it('transcript returns an empty string for an unknown monitor name', () => {
+    const { managers } = makeFakeManagers([janus, agent2]);
+    const { spawn } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+    manager.start('janus', 'assistant', [{ kind: 'tab', label: 'agent2' }]);
+
+    expect(manager.transcript('nonexistent')).toBe('');
+  });
+
   it('dropping one of two tab targets updates targets to the remaining one without closing the tab', () => {
     const agent3 = makeTab('agent3', '#ccc');
     const { managers } = makeFakeManagers([janus, agent2, agent3]);
