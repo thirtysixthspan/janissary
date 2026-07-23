@@ -1,14 +1,17 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 
-// AI monitor personas: markdown files in `ai/personas/`. The filename (without `.md`)
-// is the persona name used on the `monitor` command line. The first line is a required
-// harness directive; the rest of the file is the monitoring session's startup prompt.
+// AI personas: markdown files under `ai/personas/monitor/` (the `monitor` command) and
+// `ai/personas/editor/` (in-editor `>` suggestion requests). The filename (without `.md`)
+// is the persona name. The first line is a required harness directive; the rest of the file
+// is the session's startup prompt.
 
 import { parseDirective, isPersonaToolsLine, parsePersonaTools } from './persona-parsing.js';
 import type { PersonaHarness } from './persona-parsing.js';
 export type { PersonaHarness } from './persona-parsing.js';
 export { parseDirective } from './persona-parsing.js';
+
+export type PersonaKind = 'monitor' | 'editor';
 
 export type Persona = {
   name: string;
@@ -19,21 +22,19 @@ export type Persona = {
   tools: string[];
 };
 
-const PERSONAS_DIR = path.join('ai', 'personas');
-
-function personasDir(root: string): string {
-  return path.join(root, PERSONAS_DIR);
+function personasDir(root: string, kind: PersonaKind): string {
+  return path.join(root, 'ai', 'personas', kind);
 }
 
-// Read and parse `ai/personas/<name>.md` under `root` (the app's working directory).
+// Read and parse `ai/personas/<kind>/<name>.md` under `root` (the app's working directory).
 // Throws on a missing file or a missing/malformed/unknown-harness directive.
-export function loadPersona(name: string, root: string = process.cwd()): Persona {
-  const file = path.join(personasDir(root), `${name}.md`);
+export function loadPersona(name: string, kind: PersonaKind, root: string = process.cwd()): Persona {
+  const file = path.join(personasDir(root, kind), `${name}.md`);
   let raw: string;
   try {
     raw = readFileSync(file, 'utf8');
   } catch {
-    throw new Error(`No persona "${name}" (looked in ${path.join(PERSONAS_DIR, `${name}.md`)}).`);
+    throw new Error(`No persona "${name}" (looked in ${path.join('ai', 'personas', kind, `${name}.md`)}).`);
   }
   const lines = raw.split('\n');
   const harness = parseDirective(name, (lines[0] ?? '').trim());
@@ -46,10 +47,10 @@ export function loadPersona(name: string, root: string = process.cwd()): Persona
   return { name, harness, body, tools };
 }
 
-// Persona names available for the `monitor` command (used by completion and errors).
-export function listPersonas(root: string = process.cwd()): string[] {
+// Persona names available for the given kind (used by completion and errors).
+export function listPersonas(kind: PersonaKind, root: string = process.cwd()): string[] {
   try {
-    return readdirSync(personasDir(root))
+    return readdirSync(personasDir(root, kind))
       .filter((f) => f.endsWith('.md'))
       .map((f) => f.slice(0, -3))
       .toSorted((a, b) => a.localeCompare(b));

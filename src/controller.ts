@@ -205,7 +205,7 @@ export class Controller {
     const targets = [...actionTabs.map((t) => t.label).filter((l) => l !== tab.label), ...groups];
     return completeCommandLine(
       text, cursor, cwd, agents, this.managers.connection.completionConnections(tab.label),
-      { personas: listPersonas(), targets },
+      { personas: listPersonas('monitor'), targets },
     );
   }
 

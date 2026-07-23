@@ -29,14 +29,14 @@ export function editorSuggest(
   callback: (result: EditorSuggestResult) => void,
 ): void {
   const label = ownerLabel(managers, params.url);
-  const match = listPersonas().find((name) => name.toLowerCase() === params.persona.toLowerCase());
+  const match = listPersonas('editor').find((name) => name.toLowerCase() === params.persona.toLowerCase());
   if (!match) {
     notify(managers, 'editor-suggest', label, `${params.persona}: unknown persona`);
     callback({ hunks: [] });
     return;
   }
 
-  const persona = loadPersona(match);
+  const persona = loadPersona(match, 'editor');
   const cwd = managers.tab.cwdOf(label) ?? process.cwd();
   let settled = false;
   const finish = (hunks: SuggestHunk[], failureMessage?: string) => {

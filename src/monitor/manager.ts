@@ -87,7 +87,7 @@ export class MonitorManager {
 
     let persona: Persona;
     try {
-      persona = loadPersona(personaName);
+      persona = loadPersona(personaName, 'monitor');
     } catch (error) {
       return error instanceof Error ? error.message : String(error);
     }
