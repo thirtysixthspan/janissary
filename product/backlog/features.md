@@ -2,8 +2,6 @@
 
 ## ready
 
-* typing `>` in the editor should trigger the agent query line, and not a new line in the text file. The text of the query line should not save with the file or be considered part of the text buffer.
-
 ## development
 
 * Generate a set of given profiles derived from profiles used in other tools. research and clone. curated personas: researcher, critic, planner, summarizer. research and clone. Ambient background research persona that, when you mention an unfamiliar term/library/error, quietly researches it and drops a ready reference into a side tab, unasked. (Web-tool personas.)
