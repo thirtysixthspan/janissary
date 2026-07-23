@@ -1,7 +1,8 @@
 /* eslint-disable max-lines */
 import path from 'node:path';
-import type { Tab, LogEntry, AgentState, ImageView, MarkdownView, EditorView, PageView, FileTreeView } from '../types.js';
+import type { Tab, LogEntry, AgentState } from '../types.js';
 import type { AggregatedScheduleView, ConnectionView, ScheduleView, TabView } from '../protocol.js';
+import type { Managers } from '../managers.js';
 import {
   makeTab, distinctColor, insertTabInGroup,
 } from './index.js';
@@ -10,8 +11,7 @@ import { abbreviatePath } from '../paths.js';
 import { getConfig, TAB_RENAME_MAX_LENGTH } from '../config.js';
 import { messageBus } from '../bus.js';
 import { closeTabResources } from './cleanup.js';
-import type { Managers } from '../managers.js';
-import * as tabOpeners from './openers.js';
+import { TabOpeningState } from './opening-state.js';
 import { buildTabView } from './view.js';
 import { rehydrateTabs } from './rehydrate.js';
 import { applyRehydratedState } from './rehydrate-state.js';
@@ -24,13 +24,12 @@ import { navigatePageTab } from './navigate.js';
 import { recordHistory } from './history.js';
 import { FileRegistry } from './file-registry.js';
 import { renameEditorTab } from './rename-editor.js';
-import { TabQueueState } from './queue-state.js';
 import {
   markUnreadTab, startRunningTab, finishRunningTab, appendTab, clearTranscriptTab,
 } from './transcript-commands.js';
 import { setActiveTabOp, moveTabOp, reorderTabOp } from './navigation-commands.js';
 
-export class TabManager extends TabQueueState {
+export class TabManager extends TabOpeningState {
   tabs: Tab[] = [];
   activeTab = 0;
   private cwd = new Map<string, string>();
@@ -46,8 +45,8 @@ export class TabManager extends TabQueueState {
   get launchDir(): string { return this.rootDir; }
   static readonly OPEN_MAX_FILES = 10;
 
-  constructor(private managers: Managers, projectDir?: string) {
-    super();
+  constructor(managers: Managers, projectDir?: string) {
+    super(managers);
     this.rootDir = projectDir ?? process.cwd();
     this.tabs = [this.makeRootTab()];
     this.cwd.set('janus', this.rootDir);
@@ -308,34 +307,6 @@ export class TabManager extends TabQueueState {
       aggregatedSchedules,
       this.managers.questions.pendingFor(t.label),
     ));
-  }
-
-  openImageTab(image: ImageView): void {
-    tabOpeners.openImageTab(this, image);
-  }
-
-  openMarkdownTab(view: MarkdownView): void {
-    tabOpeners.openMarkdownTab(this, view);
-  }
-
-  openEditorTab(view: EditorView): void {
-    tabOpeners.openEditorTab(this, view, (label, path) => this.managers.editorWatch.watch(label, path));
-  }
-
-  openPageTab(view: Pick<PageView, 'url' | 'domain'>): void {
-    tabOpeners.openPageTab(this, view);
-  }
-
-  openFilesTab(view: FileTreeView): void {
-    tabOpeners.openFilesTab(this, view);
-  }
-
-  openNotificationsTab(): void {
-    tabOpeners.openNotificationsTab(this);
-  }
-
-  openSchedulesTab(): void {
-    tabOpeners.openSchedulesTab(this);
   }
 
   rehydrate(
