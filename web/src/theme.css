@@ -659,7 +659,7 @@ html, body, #root {
 .editor-save-button:disabled { color: var(--faint); cursor: default; }
 .editor-suggest-pill {
   margin-left: auto; background: var(--muted); color: var(--bg);
-  border-radius: 10px; padding: 0 8px; font-size: 0.85em; line-height: 1.6;
+  border-radius: 10px; padding: 0 8px; font-size: 0.85em; line-height: 1.6; align-self: flex-start;
 }
 .editor-suggest-pill-run { background: var(--accent); cursor: pointer; }
 .editor-suggest-pill-run:hover { opacity: 0.85; }
