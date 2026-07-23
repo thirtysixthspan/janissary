@@ -152,6 +152,16 @@ function renderPromptLine(
   );
 }
 
+function renderMessageTab(tab: string, openTab: string | undefined, client: JanusClient): React.ReactNode {
+  if (!openTab) return <span className="message-tab">{tab}</span>;
+  return (
+    <button className="message-tab message-tab-link" type="button"
+      onClick={() => client.send({ method: 'focusTab', params: { label: openTab } })}>
+      {tab}
+    </button>
+  );
+}
+
 export function renderLine(
   line: BufferLine,
   index: number,
@@ -190,17 +200,7 @@ export function renderLine(
         {...hitProps}
       >
         <span className="message-time">{time}</span>
-        {tab && (line.openTab
-          ? (
-            <button
-              className="message-tab message-tab-link"
-              type="button"
-              onClick={() => client.send({ method: 'focusTab', params: { label: line.openTab! } })}
-            >
-              {tab}
-            </button>
-          )
-          : <span className="message-tab">{tab}</span>)}
+        {tab && renderMessageTab(tab, line.openTab, client)}
         {line.openFile && <OpenFileLink path={line.openFile} client={client} />}
         {line.text && <span className="message-text">{highlightText(line.text, highlight, index)}</span>}
       </div>
