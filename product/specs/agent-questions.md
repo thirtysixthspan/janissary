@@ -10,6 +10,8 @@ An agent issues `question approve "<question>" <option> [<option> …]` on its o
 
 Janissary removes the command from the visible agent reply, waits for the human, and returns the answer as command output to the same agent's next turn. A malformed question command returns usage text to the agent without opening a panel.
 
+The human can issue the same two commands directly on any tab's command line, using the identical syntax. Typing `question ask` or `question approve` opens the same pending question panel, on the same tab, with the same validation and cancellation behavior described below. A malformed command typed this way returns usage text to the command line without opening a panel.
+
 ### Question panel
 
 A pending question appears in a panel on its owning tab. The panel identifies the tab, preserves the question text verbatim, and shows either a text field with a submit control or one button per approval option. Both forms include **Cancel**.
