@@ -12,6 +12,7 @@ import { runOpenCommand } from './open-file-command.js';
 import { getConfig } from './config.js';
 import { humanSize } from './openers/size.js';
 import { messageBus } from './bus.js';
+import { isSyncedPath } from './sync-path-match.js';
 
 export class OpenFileManager {
   constructor(private managers: Managers) {}
@@ -82,7 +83,7 @@ export class OpenFileManager {
     const launchDir = this.managers.tab.launchDir;
     if (!launchDir) return false;
     const relative = path.relative(launchDir, file).split(path.sep).join('/');
-    return getConfig().syncPaths.includes(relative);
+    return isSyncedPath(relative, getConfig().syncPaths);
   }
 
   // Mirrors `HarnessManager.spawnTab`/`finishSpawn`'s immediate-placeholder-then-async-fill-in
