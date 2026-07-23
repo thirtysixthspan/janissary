@@ -209,13 +209,14 @@ request fired directly from the editor).
 
 A request is written as an ordinary buffer line whose first non-whitespace character is `>`,
 immediately followed by the name of an available persona and then the request text, for example
-`> assistant rewrite this paragraph in one sentence`. The personas offered here are the ones
-written for in-editor requests, a separate set from the personas `monitor` offers — a persona
-made for watching a transcript and one made for editing a buffer are different jobs. While the
-caret sits in the persona-name word right after `>`, pressing Tab completes it against the
-available persona names — this is the only place the editor completes anything; it does not add
-general word-completion elsewhere in the buffer. Once the line is a complete, runnable request,
-pressing Tab anywhere else on it instead moves keyboard focus to that line's status pill,
+`> assistant rewrite this paragraph in one sentence`. Typing `>>` at the start of the line is a
+shorthand for `> assistant`, naming that persona without typing its name out. The personas offered
+here are the ones written for in-editor requests, a separate set from the personas `monitor`
+offers — a persona made for watching a transcript and one made for editing a buffer are different
+jobs. While the caret sits in the persona-name word right after `>`, pressing Tab completes it
+against the available persona names — this is the only place the editor completes anything; it
+does not add general word-completion elsewhere in the buffer. Once the line is a complete, runnable
+request, pressing Tab anywhere else on it instead moves keyboard focus to that line's status pill,
 highlighting it; pressing Enter while the pill holds focus sends the request, the same as clicking
 it. Any other key clears the pill's focus and returns to ordinary editing.
 

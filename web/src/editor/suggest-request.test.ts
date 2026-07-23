@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { parseSuggestRequest, personaTokenRange, completePersonaName, suggestPillLabel } from './suggest-request';
 
-const personas = ['summarizer', 'reviewer'];
+const personas = ['summarizer', 'reviewer', 'assistant'];
 
 describe('parseSuggestRequest', () => {
   it('parses a valid request line', () => {
@@ -30,6 +30,16 @@ describe('parseSuggestRequest', () => {
   it('is not a request for a line with no leading >', () => {
     expect(parseSuggestRequest('summarizer rewrite this', personas)).toBeUndefined();
   });
+
+  it('treats a leading >> as a shorthand for > assistant', () => {
+    expect(parseSuggestRequest('>> rewrite this paragraph', personas))
+      .toEqual({ persona: 'assistant', prompt: 'rewrite this paragraph' });
+  });
+
+  it('treats >> as the assistant shorthand even with no space before the prompt', () => {
+    expect(parseSuggestRequest('>>rewrite this', personas))
+      .toEqual({ persona: 'assistant', prompt: 'rewrite this' });
+  });
 });
 
 describe('personaTokenRange', () => {
@@ -43,6 +53,10 @@ describe('personaTokenRange', () => {
 
   it('returns undefined off a non-> line', () => {
     expect(personaTokenRange('plain text', 3)).toBeUndefined();
+  });
+
+  it('returns undefined right after a >> assistant shorthand, with no word to complete', () => {
+    expect(personaTokenRange('>> rewrite', 3)).toBeUndefined();
   });
 });
 
@@ -91,5 +105,14 @@ describe('suggestPillLabel', () => {
   it('shows [no suggestion] when the last reply for this line came back empty', () => {
     const line = '> summarizer rewrite this';
     expect(suggestPillLabel(line, personas, null, null, line)).toEqual({ text: '[no suggestion]', runnable: false });
+  });
+
+  it('shows [run] for a >> assistant shorthand line with a prompt', () => {
+    expect(suggestPillLabel('>> rewrite this', personas, null, null, null))
+      .toEqual({ text: '[run]', runnable: true });
+  });
+
+  it('shows [query?] for a >> assistant shorthand line with no prompt yet', () => {
+    expect(suggestPillLabel('>>', personas, null, null, null)).toEqual({ text: '[query?]', runnable: false });
   });
 });
