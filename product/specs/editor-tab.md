@@ -202,10 +202,14 @@ on first open. Subsequent cursor movement in that tab follows the normal into-vi
 
 ### GitHub syncing
 
-A file whose project-relative path is listed in the application config's sync-paths setting (see
+A file whose project-relative path is covered by the application config's sync-paths setting (see
 Application Config) is kept automatically synced with its `origin/master` branch. Syncing is
 entirely config-driven — there is no button or toggle anywhere in the editor to turn it on or off
-for a file; a file syncs if and only if its path appears in that list.
+for a file; a file syncs if and only if its path is covered by that setting. Each entry in the list
+is either an exact file path, a directory path written with a trailing slash (covering every file
+under that directory, at any depth), or a wildcard pattern using `*` to stand in for a single path
+segment (for example `product/backlog/*` covers files directly inside that directory but not in a
+subdirectory of it, while `product/plans/*/*` covers files exactly two directories deep).
 
 Every config-listed file is edited from inside a single shared workspace dedicated to syncing,
 separate from the main project checkout and from any agent workspace. This shared workspace is
