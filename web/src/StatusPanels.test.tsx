@@ -117,4 +117,44 @@ describe('StatusPanels', () => {
     const { container } = render(<StatusPanels tab={tab} connections={windowState()} schedule={windowState()} />);
     expect(container.querySelector('.panel-row-close')).not.toBeInTheDocument();
   });
+
+  it('renders the transcript button on a row with acpRef and calls onOpenAcpTranscript with it', () => {
+    const onOpenAcpTranscript = vi.fn();
+    const acpRef = { scope: 'tab' as const, label: 'janus' };
+    const tab = makeTab({ connections: [{ text: 'acp:opencode', kind: 'acp', acpRef }] });
+    const { container } = render(
+      <StatusPanels tab={tab} connections={windowState()} schedule={windowState()} onOpenAcpTranscript={onOpenAcpTranscript} />,
+    );
+    const button = container.querySelector('.panel-row-transcript');
+    expect(button).toBeInTheDocument();
+    fireEvent.click(button!);
+    expect(onOpenAcpTranscript).toHaveBeenCalledWith(acpRef);
+  });
+
+  it('renders no transcript button on a row without acpRef', () => {
+    const onOpenAcpTranscript = vi.fn();
+    const tab = makeTab({ connections: [{ text: 'ssh:devbox', kind: 'ssh' }] });
+    const { container } = render(
+      <StatusPanels tab={tab} connections={windowState()} schedule={windowState()} onOpenAcpTranscript={onOpenAcpTranscript} />,
+    );
+    expect(container.querySelector('.panel-row-transcript')).not.toBeInTheDocument();
+  });
+
+  it('renders the close button and the transcript button together on an editor-persona row', () => {
+    const onCloseRow = vi.fn();
+    const onOpenAcpTranscript = vi.fn();
+    const acpRef = { scope: 'editor' as const, label: 'notes', persona: 'reviewer' };
+    const tab = makeTab({ connections: [{ text: 'reviewer (acp)', kind: 'acp', acpRef }] });
+    const { container } = render(
+      <StatusPanels
+        tab={tab}
+        connections={windowState()}
+        schedule={windowState()}
+        onCloseRow={onCloseRow}
+        onOpenAcpTranscript={onOpenAcpTranscript}
+      />,
+    );
+    expect(container.querySelector('.panel-row-transcript')).toBeInTheDocument();
+    expect(container.querySelector('.panel-row-close')).toBeInTheDocument();
+  });
 });

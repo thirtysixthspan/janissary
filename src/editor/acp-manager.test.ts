@@ -58,8 +58,12 @@ describe('EditorAcpManager', () => {
     manager.session('notes', persona('reviewer'), '/repo', { onError: vi.fn() });
     manager.session('todo', persona('critic'), '/repo', { onError: vi.fn() });
 
-    expect(manager.connectionsFor('notes')).toEqual([{ text: 'reviewer (acp)', kind: 'acp' }]);
-    expect(manager.connectionsFor('todo')).toEqual([{ text: 'critic (acp)', kind: 'acp' }]);
+    expect(manager.connectionsFor('notes')).toEqual([
+      { text: 'reviewer (acp)', kind: 'acp', acpRef: { scope: 'editor', label: 'notes', persona: 'reviewer' } },
+    ]);
+    expect(manager.connectionsFor('todo')).toEqual([
+      { text: 'critic (acp)', kind: 'acp', acpRef: { scope: 'editor', label: 'todo', persona: 'critic' } },
+    ]);
     expect(manager.connectionsFor('other')).toEqual([]);
   });
 
@@ -75,7 +79,9 @@ describe('EditorAcpManager', () => {
 
     expect(reviewerKill).toHaveBeenCalledTimes(1);
     expect(criticKill).not.toHaveBeenCalled();
-    expect(manager.connectionsFor('notes')).toEqual([{ text: 'critic (acp)', kind: 'acp' }]);
+    expect(manager.connectionsFor('notes')).toEqual([
+      { text: 'critic (acp)', kind: 'acp', acpRef: { scope: 'editor', label: 'notes', persona: 'critic' } },
+    ]);
     expect(manager.close('notes', 'reviewer')).toBe(false);
   });
 
@@ -92,6 +98,58 @@ describe('EditorAcpManager', () => {
     expect(notesKill).toHaveBeenCalledTimes(1);
     expect(todoKill).not.toHaveBeenCalled();
     expect(manager.connectionsFor('notes')).toEqual([]);
-    expect(manager.connectionsFor('todo')).toEqual([{ text: 'reviewer (acp)', kind: 'acp' }]);
+    expect(manager.connectionsFor('todo')).toEqual([
+      { text: 'reviewer (acp)', kind: 'acp', acpRef: { scope: 'editor', label: 'todo', persona: 'reviewer' } },
+    ]);
+  });
+
+  it('record then transcript round-trips an input block and a response block', () => {
+    mocks.spawnMonitorSession.mockReturnValue(makeSession().session);
+    const manager = new EditorAcpManager({} as Managers);
+    manager.session('notes', persona('reviewer'), '/repo', { onError: vi.fn() });
+
+    manager.record('notes', 'reviewer', 'Review this diff', 'input');
+    manager.record('notes', 'reviewer', 'Looks good', 'response');
+
+    const text = manager.transcript('notes', 'reviewer');
+    expect(text).toContain('SENT TO MODEL');
+    expect(text).toContain('Review this diff');
+    expect(text).toContain('MODEL RESPONSE');
+    expect(text).toContain('Looks good');
+  });
+
+  it('transcript returns an empty string for a session with no recorded exchange', () => {
+    mocks.spawnMonitorSession.mockReturnValue(makeSession().session);
+    const manager = new EditorAcpManager({} as Managers);
+    manager.session('notes', persona('reviewer'), '/repo', { onError: vi.fn() });
+
+    expect(manager.transcript('notes', 'reviewer')).toBe('');
+  });
+
+  it('transcript returns an empty string for an unknown label/persona', () => {
+    const manager = new EditorAcpManager({} as Managers);
+    expect(manager.transcript('notes', 'reviewer')).toBe('');
+  });
+
+  it('close drops the context store for the closed session', () => {
+    mocks.spawnMonitorSession.mockReturnValue(makeSession().session);
+    const manager = new EditorAcpManager({} as Managers);
+    manager.session('notes', persona('reviewer'), '/repo', { onError: vi.fn() });
+    manager.record('notes', 'reviewer', 'hi', 'input');
+
+    manager.close('notes', 'reviewer');
+
+    expect(manager.transcript('notes', 'reviewer')).toBe('');
+  });
+
+  it('closeTab drops the context store for every closed session', () => {
+    mocks.spawnMonitorSession.mockReturnValue(makeSession().session);
+    const manager = new EditorAcpManager({} as Managers);
+    manager.session('notes', persona('reviewer'), '/repo', { onError: vi.fn() });
+    manager.record('notes', 'reviewer', 'hi', 'input');
+
+    manager.closeTab('notes');
+
+    expect(manager.transcript('notes', 'reviewer')).toBe('');
   });
 });

@@ -46,6 +46,10 @@ In the web app, the tab's metadata bar carries a connections button (a plug icon
 
 An editor tab carries the same connections button and window, listing its open persona connections (each shown as `<persona> (acp)`) alongside any other connections that tab has opened. Unlike every other kind of connection row, an editor tab's persona connection rows carry their own small close control; clicking it closes just that one persona's connection immediately, the same as running `connection close acp:<persona>`, without affecting any other open persona connection in that tab.
 
+### Transcript button on ACP connection rows
+
+Every ACP connection row in the connections window — the tab's own agent (`acp:opencode`), a monitor session (`monitor:<persona>`), or an editor tab's persona connection (`<persona> (acp)`) — carries a small clipboard-icon button, alongside any close control the row already has. Clicking it opens that session's transcript as a point-in-time, read-only snapshot in a scrollable editor tab: the tab's own agent shows its full tab transcript, a monitor row shows its accumulated exchange tagged into "sent to model" and "model response" blocks, and an editor-persona row shows that persona's own accumulated exchange the same way. The snapshot reflects the exchange at the moment of the click — clicking the button again opens a fresh snapshot rather than updating the first one. A session that has not yet exchanged anything still opens a tab, reading `No transcript yet.`, so every click gives visible feedback.
+
 ### `connection` command
 
 `connection <list|close> [kind:id]` lists or closes open connections. See the Connections section. `connection list` shows every open connection; `connection close <kind>:<id>` closes one, where `<kind>` is `sqlite`, `shell`, `acp`, `browser`, or `ssh`. Malformed invocations return a `Usage:` message.

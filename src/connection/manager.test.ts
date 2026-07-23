@@ -37,6 +37,15 @@ describe('ConnectionManager', () => {
       expect(rows.some((r) => r.kind === 'shell')).toBe(false);
     });
 
+    it('includes the tab\'s own agent row with a tab-scoped acpRef', () => {
+      const managers = makeManagers({ acp: { has: vi.fn(() => true), label: vi.fn(() => 'opencode') } } as unknown as Partial<Managers>);
+      const manager = new ConnectionManager(managers);
+
+      const rows = manager.connectionsFor('main');
+
+      expect(rows).toContainEqual({ text: 'acp:opencode', kind: 'acp', acpRef: { scope: 'tab', label: 'main' } });
+    });
+
     it('includes an editor tab\'s persona connection rows', () => {
       const managers = makeManagers({
         editorAcp: { connectionsFor: vi.fn(() => [{ text: 'reviewer (acp)', kind: 'acp' }]) },

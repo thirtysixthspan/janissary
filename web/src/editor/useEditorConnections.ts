@@ -3,7 +3,7 @@
 // EditorTab.tsx to stay under the 200-line file cap, mirroring useEditorSuggest.ts's own extraction
 // for the same reason (see product/plans/ready/editor-tab-persona-connections.md).
 
-import type { TabView, ConnectionView } from '@shared/protocol';
+import type { TabView, ConnectionView, AcpRef } from '@shared/protocol';
 import type { JanusClient } from '../ws';
 import type { StatusWindowButtonProps } from '../AgentTabMeta';
 import { useStatusWindows } from '../useStatusWindows';
@@ -11,6 +11,7 @@ import { useStatusWindows } from '../useStatusWindows';
 export type EditorConnectionsApi = ReturnType<typeof useStatusWindows> & {
   connectionsButton: StatusWindowButtonProps;
   closeRow: (row: ConnectionView) => void;
+  openAcpTranscript: (acpRef: AcpRef) => void;
 };
 
 export function useEditorConnections(client: JanusClient, tab: TabView): EditorConnectionsApi {
@@ -21,6 +22,10 @@ export function useEditorConnections(client: JanusClient, tab: TabView): EditorC
     client.send({ method: 'closeEditorConnection', params: { url: tab.editor!.url, persona } });
   };
 
+  const openAcpTranscript = (acpRef: AcpRef) => {
+    client.send({ method: 'openAcpTranscript', params: { acpRef } });
+  };
+
   const connectionsButton: StatusWindowButtonProps = {
     hasContent: tab.connections.length > 0,
     onEnter: windows.connections.onButtonEnter,
@@ -28,5 +33,5 @@ export function useEditorConnections(client: JanusClient, tab: TabView): EditorC
     onClick: windows.connections.onButtonClick,
   };
 
-  return { ...windows, connectionsButton, closeRow };
+  return { ...windows, connectionsButton, closeRow, openAcpTranscript };
 }

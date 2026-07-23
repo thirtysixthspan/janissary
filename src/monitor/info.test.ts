@@ -15,6 +15,7 @@ const session: AcpSession = { prompt: () => {}, kill: () => {} };
 function makeSub(overrides: Partial<MonitorSub> = {}): MonitorSub {
   return {
     owner: 'janus',
+    name: 'bilal',
     inline: true,
     persona: persona('bilal'),
     targets: [],
@@ -58,22 +59,30 @@ describe('monitorConnections', () => {
     expect(monitorConnections([sub], 'janus')).toEqual([]);
   });
 
+  it('carries the monitor scope and name on acpRef', () => {
+    const sub = makeSub({ name: 'security' });
+    const [row] = monitorConnections([sub], 'janus');
+    expect(row.acpRef).toEqual({ scope: 'monitor', name: 'security' });
+  });
+
   it('returns a connection row without model info', () => {
     const sub = makeSub();
-    expect(monitorConnections([sub], 'janus')).toEqual([{ text: 'monitor:bilal', kind: 'acp' }]);
+    expect(monitorConnections([sub], 'janus')).toEqual([
+      { text: 'monitor:bilal', kind: 'acp', acpRef: { scope: 'monitor', name: 'bilal' } },
+    ]);
   });
 
   it('includes provider/model info when present', () => {
     const sub = makeSub({ info: { provider: 'anthropic', model: 'sonnet' } });
     expect(monitorConnections([sub], 'janus')).toEqual([
-      { text: 'monitor:bilal (anthropic/sonnet)', kind: 'acp' },
+      { text: 'monitor:bilal (anthropic/sonnet)', kind: 'acp', acpRef: { scope: 'monitor', name: 'bilal' } },
     ]);
   });
 
   it('falls back to just the model when provider is missing', () => {
     const sub = makeSub({ info: { model: 'sonnet' } });
     expect(monitorConnections([sub], 'janus')).toEqual([
-      { text: 'monitor:bilal (sonnet)', kind: 'acp' },
+      { text: 'monitor:bilal (sonnet)', kind: 'acp', acpRef: { scope: 'monitor', name: 'bilal' } },
     ]);
   });
 });

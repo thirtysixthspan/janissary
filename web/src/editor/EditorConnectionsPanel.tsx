@@ -9,6 +9,13 @@ import type { EditorConnectionsApi } from './useEditorConnections';
 // useEditorConnections.ts's own top comment).
 export function EditorConnectionsPanel({ tab, api }: { tab: TabView; api: EditorConnectionsApi }) {
   return (
-    <StatusPanels tab={tab} connections={api.connections} schedule={api.schedule} interactive onCloseRow={api.closeRow} />
+    <StatusPanels
+      tab={tab}
+      connections={api.connections}
+      schedule={api.schedule}
+      interactive
+      onCloseRow={api.closeRow}
+      onOpenAcpTranscript={api.openAcpTranscript}
+    />
   );
 }
