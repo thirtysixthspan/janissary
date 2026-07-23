@@ -358,11 +358,27 @@ describe('EditorTab', () => {
     expect(container.querySelector('.editor-sync-icon')).toBeNull();
   });
 
-  it('renders the provisioning sync status icon for a synced tab not yet filled in', async () => {
+  it('renders the provisioning sync status icon for a synced tab not yet filled in, without loading content', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
     const { client } = makeClient();
     const view = makeView({ sync: 'provisioning' });
-    const { container } = await renderLoaded(client, view, makeTab({ editor: view }));
+    const { container } = render(<EditorTab editor={view} tab={makeTab({ editor: view })} client={client} active />);
     expect(container.querySelector('.editor-sync-icon--provisioning')).not.toBeNull();
+    expect(container.querySelectorAll('.editor-gutter')).toHaveLength(0);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('loads the real content once a provisioning synced tab transitions to synced', async () => {
+    const { client } = makeClient();
+    const view = makeView({ sync: 'provisioning' });
+    const { container, rerender } = render(<EditorTab editor={view} tab={makeTab({ editor: view })} client={client} active />);
+    expect(container.querySelectorAll('.editor-gutter')).toHaveLength(0);
+
+    const synced = { ...view, url: '/open/2', size: '12 B', sync: 'synced' as const };
+    rerender(<EditorTab editor={synced} tab={makeTab({ editor: synced })} client={client} active />);
+
+    await waitFor(() => expect(screen.getByText('line one')).toBeInTheDocument());
   });
 
   it('anchors the floating connections window below the metadata row, inside the editor body', async () => {
