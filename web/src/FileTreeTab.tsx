@@ -51,7 +51,7 @@ export function FileTreeTab({ files, client, index, dock, autoFocus = true, drop
   const drag = useFileTreeDrag(files.rows, client, index, dropRef);
   const rename = useFileTreeRename(files.rows, client, index, setSelected, () => containerRef.current?.focus());
   const search = useFileTreeSearch(client, index, files.rows, setSelected, () => containerRef.current?.focus());
-  const opener = useFileTreeOpener(client, index);
+  const opener = useFileTreeOpener(client, index, files.absoluteRoot);
   const deletion = useFileTreeDelete(client, index);
 
   useEffect(() => { if (autoFocus) containerRef.current?.focus(); }, [autoFocus]);
@@ -86,7 +86,7 @@ export function FileTreeTab({ files, client, index, dock, autoFocus = true, drop
 
   const toggle = (path: string) => client.send({ method: 'fileTreeToggle', params: { index, path } });
   const openFile = (path: string, edit: boolean) => opener.open(path, edit);
-  const editFile = (path: string) => client.send({ method: 'command', params: { text: `edit ${path}` } });
+  const editFile = (path: string) => client.send({ method: 'command', params: { text: `edit ${files.absoluteRoot}/${path}` } });
   const reroot = () => client.send({ method: 'fileTreeReroot', params: { index } });
   const rerootTo = (path: string) => client.send({ method: 'fileTreeReroot', params: { index, path } });
   const createNewFile = () => {

@@ -5,18 +5,18 @@ import type { JanusClient } from './ws';
 
 export type PendingOpeners = { path: string; choices: FileOpenerChoice[]; selected: number };
 
-export function useFileTreeOpener(client: JanusClient, index: number) {
+export function useFileTreeOpener(client: JanusClient, index: number, root: string) {
   const [pending, setPending] = useState<PendingOpeners | null>(null);
 
   const open = (path: string, edit: boolean) => {
     if (typeof client.request !== 'function') {
-      client.send({ method: 'command', params: { text: `${edit ? 'edit' : 'open'} ${path}` } });
+      client.send({ method: 'command', params: { text: `${edit ? 'edit' : 'open'} ${root}/${path}` } });
       return;
     }
     void client.request<{ command?: 'open' | 'edit'; choices: FileOpenerChoice[] }>({
       method: 'fileTreeOpeners', params: { index, relPath: path, edit },
     }).then((result) => {
-      if (result?.command) client.send({ method: 'command', params: { text: `${result.command} ${path}` } });
+      if (result?.command) client.send({ method: 'command', params: { text: `${result.command} ${root}/${path}` } });
       else if (result?.choices.length) setPending({ path, choices: result.choices, selected: 0 });
     });
   };
@@ -24,7 +24,7 @@ export function useFileTreeOpener(client: JanusClient, index: number) {
   const choose = (choiceIndex: number) => {
     if (!pending) return;
     const choice = pending.choices[choiceIndex];
-    if (choice) client.send({ method: 'command', params: { text: `${choice.command} ${pending.path}` } });
+    if (choice) client.send({ method: 'command', params: { text: `${choice.command} ${root}/${pending.path}` } });
     setPending(null);
   };
 

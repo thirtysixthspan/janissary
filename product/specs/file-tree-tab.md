@@ -138,8 +138,9 @@ stops refreshing automatically and can be refreshed manually by collapsing and r
 | Click-drag a row and release it over a directory row, or any file inside that directory | Moves the dragged file or directory into that directory on disk |
 
 Opening or editing a file from the tree uses the same `open`/`edit` commands available at any
-command line, dispatched with the tree tab's cwd set to its root — so a row's path (relative to
-the root) resolves correctly. The opened file's tab lands in the same group as the tree tab.
+command line, resolved against the tree's own root — never the currently focused tab's working
+directory, which may point elsewhere. The opened file's tab lands in the same group as the tree
+tab.
 
 If a file has no registered opener, double-clicking it presents a chooser with **Edit as text** and
 **Open externally**. Selecting an option runs that action for the file; Escape closes the chooser.
