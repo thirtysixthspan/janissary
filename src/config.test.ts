@@ -120,9 +120,18 @@ describe('loadConfig', () => {
     expect(config.notifications?.events.incomingMessage).toBe(true);
   });
 
-  it('defaults syncPaths to an empty list', () => {
+  it('defaults syncPaths to product/backlog/ and product/plans/', () => {
     const config = loadConfig(tmpDir);
-    expect(config.syncPaths).toEqual([]);
+    expect(config.syncPaths).toEqual(['product/backlog/', 'product/plans/']);
+  });
+
+  it('falls back to the default syncPaths when missing from an existing config.json', () => {
+    const configDir = path.join(tmpDir, '.janissary');
+    mkdirSync(configDir, { recursive: true });
+    writeFileSync(path.join(configDir, 'config.json'), JSON.stringify({ transcriptMaxLines: 100 }) + '\n');
+
+    const config = loadConfig(tmpDir);
+    expect(config.syncPaths).toEqual(['product/backlog/', 'product/plans/']);
   });
 
   it('reads a custom syncPaths list from an existing config.json', () => {

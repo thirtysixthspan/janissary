@@ -11,6 +11,7 @@ export const DEFAULT_ACTIVE_TAB_NAME_MAX_LENGTH = 50;
 // the tab strip's *display* label). Editor-tab renames go straight to a file-system rename, so
 // this needs to accommodate real file names rather than the short display length.
 export const TAB_RENAME_MAX_LENGTH = 50;
+export const DEFAULT_SYNC_PATHS = ['product/backlog/', 'product/plans/'];
 
 const DEFAULT_CONFIG: Config = {
   transcriptMaxLines: DEFAULT_TRANSCRIPT_MAX_LINES,
@@ -28,7 +29,7 @@ const DEFAULT_CONFIG: Config = {
       rateLimited: false,
     },
   },
-  syncPaths: [],
+  syncPaths: DEFAULT_SYNC_PATHS,
 };
 
 let config: Config = { ...DEFAULT_CONFIG };
