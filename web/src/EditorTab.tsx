@@ -68,6 +68,10 @@ export const EditorTab = forwardRef<EditorTabHandle, { editor: EditorView; tab: 
   };
 
   useEffect(() => {
+    // A synced tab opens immediately, before its shared workspace clone exists; loading here would
+    // fetch a not-yet-real file and get stuck. Wait for `sync` to leave 'provisioning' — the same
+    // signal `finishOpenSynced` already flips once the workspace is ready — before fetching.
+    if (editor.sync === 'provisioning') return;
     if (api.stateRef.current !== null) return;
     let cancelled = false;
     const token = new URLSearchParams(location.search).get('token') ?? '';
@@ -82,7 +86,7 @@ export const EditorTab = forwardRef<EditorTabHandle, { editor: EditorView; tab: 
     void load();
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editor.url, editor.name]);
+  }, [editor.url, editor.name, editor.sync]);
 
   const dirty = useMemo(() => state !== null && lastSaved !== null && toText(state) !== lastSaved, [state, lastSaved]);
 
