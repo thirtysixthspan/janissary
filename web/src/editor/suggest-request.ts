@@ -68,11 +68,11 @@ export function suggestPillLabel(
   const token = personaToken(line);
   if (!token) return undefined;
   const hasPersona = personas.some((p) => p.toLowerCase() === token.word.toLowerCase());
-  if (!hasPersona) return { text: '[agent?]', runnable: false };
+  if (!hasPersona) return { text: 'agent?', runnable: false };
   const prompt = line.slice(token.end).trimStart();
-  if (!prompt) return { text: '[query?]', runnable: false };
-  if (line === firingLine) return { text: '[running...]', runnable: false };
+  if (!prompt) return { text: 'query?', runnable: false };
+  if (line === firingLine) return { text: 'running...', runnable: false };
   if (line === pendingLine) return undefined;
-  if (line === noSuggestionLine) return { text: '[no suggestion]', runnable: false };
-  return { text: '[run]', runnable: true };
+  if (line === noSuggestionLine) return { text: 'no suggestion', runnable: false };
+  return { text: 'run', runnable: true };
 }

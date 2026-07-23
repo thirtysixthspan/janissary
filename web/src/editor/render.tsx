@@ -37,8 +37,6 @@ type LineProps = {
   // Whether this row is the ephemeral agent query line rather than a buffer line (Decision 1): a
   // visually distinct, non-buffer row rendered inline at its anchor line's position.
   query?: boolean;
-  // Placeholder shown after the `>` marker when the query line has no persona/prompt typed yet.
-  placeholder?: string;
 };
 
 // The caret is a zero-width inline span (its ::after paints the bar) inserted into the text flow
@@ -70,7 +68,7 @@ function contentSegments({ text, selFrom, selTo, caretCol, caretRef, tokens }: L
 // One logical line: gutter cell + soft-wrapped content cell. Wrapped lines occupy several visual
 // rows while the gutter number sits on the first — the flex row gives correct alignment for free.
 export const EditorLine = React.memo(function EditorLine(props: LineProps) {
-  const { line, gutterCh, isCurrent, pill, pillFocused, removed, query, placeholder, text } = props;
+  const { line, gutterCh, isCurrent, pill, pillFocused, removed, query } = props;
   const rowClass = ['editor-row', isCurrent && 'editor-row-current', removed && 'editor-diff-remove', query && 'editor-row-query']
     .filter(Boolean).join(' ');
   const pillClass = ['editor-suggest-pill', pill?.runnable && 'editor-suggest-pill-run', pillFocused && 'editor-suggest-pill-focused']
@@ -79,7 +77,6 @@ export const EditorLine = React.memo(function EditorLine(props: LineProps) {
     <div className={rowClass} data-editor-line={line}>
       <span className="editor-gutter" style={{ width: `${gutterCh}ch` }}>{line + 1}</span>
       <span className="editor-content">{contentSegments(props)}</span>
-      {query && placeholder && text === '>' && <span className="editor-placeholder">{placeholder}</span>}
       {pill && <span className={pillClass}>{pill.text}</span>}
     </div>
   );
