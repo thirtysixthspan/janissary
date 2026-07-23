@@ -14,6 +14,7 @@
 | `nav` | Open the fuzzy tab navigator (Ctrl+G); `nav <query>` pre-fills the search |
 | `msg` | Send a message to another agent |
 | `broadcast` | Send a message to several or all agents |
+| `question` | `question ask "<question>"` opens a free-text answer panel; `question approve "<question>" <option> …` opens an option-button panel |
 | `acp` | Send a prompt to the OpenCode ACP agent (`acp reset` starts a fresh session) |
 | `db` | Create, delete, query, or list SQLite databases |
 | `browser` | Drive a headless/headed web browser (open, goto, content, eval, shot) |
@@ -23,7 +24,7 @@
 | `connection` | List or close open connections (sqlite/shell/acp/browser/ssh) |
 | `schedule` | Run a command later — once or on a recurring schedule |
 | `schedules` | Open the aggregated, view-only tab listing every scheduled command across all tabs (`schedules left`/`right` to dock it) |
-| `profile` | Launch a saved set of agents for a use case |
+| `profile` | `profile launch <name>` launches a saved set of agents/harnesses (bare `profile launch` opens a picker); `profile save <name>` captures the running session; `profile list` lists profiles; `profile validate [name]` checks a profile's structure |
 | `harness` | Open an AI coding harness (claude/opencode/codex) in a full-tab terminal (add `-w` / `--workspace` to clone the repo, `-y` / `--yes` to auto-approve the harness's permission prompts — claude and codex only; without `-w` a security warning is shown in the terminal); `harness capture <name>` snapshots a harness tab's screen into an editor tab |
 | `ssh` | Open an SSH session to a remote host in a full-tab terminal |
 | `search` | `search transcript <pattern>` searches the current tab's transcript with a regex (Cmd+F opens it empty) |
