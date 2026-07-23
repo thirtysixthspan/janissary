@@ -15,7 +15,7 @@ import { initDbDir } from './connections.js';
 import { initProfileDir } from './profiles.js';
 import { initWorkspaceDir, clearWorkspaceDir } from './workspace.js';
 import { loadConfig } from './config.js';
-import { loadAgentNames } from './agent-names.js';
+import { loadAgentNames } from './agent/names.js';
 import { loadHarnessModels } from './harness/models.js';
 import { loadGithubToken } from './github-token.js';
 import { parseCliArgs, usageText, appVersion, CliUsageError } from './cli-args.js';
