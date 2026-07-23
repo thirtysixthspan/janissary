@@ -40,6 +40,10 @@ const textarea = () => screen.getByLabelText('Edit notes.txt');
 
 const nameText = (container: HTMLElement) => container.querySelector('.editor-name')?.textContent ?? '';
 
+// The end-of-line caret span carries a zero-width space so the browser gives it a line box height
+// (render.tsx); strip it before comparing textContent against plain expected text.
+const queryRowText = (container: HTMLElement) => (container.querySelector(':scope .editor-row-query .editor-content')?.textContent ?? '').replaceAll('\u{200B}', '');
+
 const hasEnabledSaveButton = (container: HTMLElement) => !container.querySelector<HTMLButtonElement>('.editor-save-button')!.disabled;
 const hasDirtyDot = hasEnabledSaveButton;
 
@@ -470,24 +474,90 @@ describe('EditorTab', () => {
     expect(screen.queryByText('This file changed on disk. Overwrite it with your changes?')).not.toBeInTheDocument();
   });
 
-  describe('in-editor persona suggestions', () => {
+  describe('in-editor agent query line', () => {
     function stubRequestFileContent(content: string) {
       vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, text: () => Promise.resolve(content) } as unknown as Response));
     }
 
-    it('fires an editorSuggest query on Ctrl/Cmd+Enter and previews the single hunk without the multi-change banner', async () => {
+    // Opens the query line on line 2 (an empty line at the end of the two-line fixture) and types
+    // a full `> <persona> <prompt>` request into it via the keydown path.
+    function openAndType(query: string) {
+      fireEvent.keyDown(textarea(), { key: '>' });
+      for (const key of query) fireEvent.keyDown(textarea(), { key });
+    }
+
+    it('opens an inline query row with a placeholder when > is pressed on an empty line', async () => {
+      const { client } = makeClient();
+      stubRequestFileContent('line one\n');
+      const { container } = await renderLoaded(client, makeView({ line: 2 }));
+
+      fireEvent.keyDown(textarea(), { key: '>' });
+
+      expect(container.querySelector('.editor-row-query')).not.toBeNull();
+      expect(container.querySelector('.editor-placeholder')?.textContent).toBe('persona request…');
+      expect(queryRowText(container)).toBe('>');
+    });
+
+    it('does not insert a literal > into the buffer when it opens the query line', async () => {
+      const { client } = makeClient();
+      stubRequestFileContent('line one\n');
+      const { container } = await renderLoaded(client, makeView({ line: 2 }));
+
+      fireEvent.keyDown(textarea(), { key: '>' });
+
+      const bufferTexts = [...container.querySelectorAll(':scope .editor-row:not(.editor-row-query) .editor-content')].map((n) => n.textContent);
+      expect(bufferTexts).not.toContain('>');
+      expect(bufferTexts).toEqual(['line one']);
+    });
+
+    it('inserts a literal > when typed on a non-empty line', async () => {
+      const { client } = makeClient();
+      const { container } = await renderLoaded(client);
+
+      fireEvent.keyDown(textarea(), { key: '>' });
+
+      expect(container.querySelector('.editor-row-query')).toBeNull();
+      expect(container.querySelector('.editor-content')?.textContent).toBe('>line one');
+    });
+
+    it('closes the query line and inserts nothing on Escape', async () => {
+      const { client } = makeClient();
+      stubRequestFileContent('line one\n');
+      const { container } = await renderLoaded(client, makeView({ line: 2 }));
+      fireEvent.keyDown(textarea(), { key: '>' });
+
+      fireEvent.keyDown(textarea(), { key: 'Escape' });
+
+      expect(container.querySelector('.editor-row-query')).toBeNull();
+      expect(container.querySelector(':scope .editor-row .editor-content')?.textContent).not.toContain('>');
+    });
+
+    it('opening, typing, and closing the query line never dirties the buffer', async () => {
+      const { client } = makeClient();
+      stubRequestFileContent('line one\n');
+      const { container } = await renderLoaded(client, makeView({ line: 2 }));
+
+      openAndType(' summarizer hi');
+      expect(hasEnabledSaveButton(container)).toBe(false);
+
+      fireEvent.keyDown(textarea(), { key: 'Escape' });
+      expect(hasEnabledSaveButton(container)).toBe(false);
+    });
+
+    it('fires an editorSuggest query on Ctrl/Cmd+Enter from the query text and previews the single hunk without the multi-change banner', async () => {
       const { client, request } = makeClient();
       request.mockReset();
       request.mockResolvedValueOnce({ names: ['summarizer'] });
       request.mockResolvedValueOnce({ hunks: [{ anchor: 'line one', replacement: 'LINE ONE' }] });
-      stubRequestFileContent('line one\n> summarizer rewrite this');
+      stubRequestFileContent('line one\n');
       const { container } = await renderLoaded(client, makeView({ line: 2 }));
 
+      openAndType(' summarizer rewrite this');
       fireEvent.keyDown(textarea(), { key: 'Enter', metaKey: true });
 
       expect(request).toHaveBeenCalledWith({
         method: 'editorSuggest',
-        params: { url: '/open/1', persona: 'summarizer', content: 'line one\n> summarizer rewrite this', prompt: 'rewrite this' },
+        params: { url: '/open/1', persona: 'summarizer', content: 'line one\n', prompt: 'rewrite this' },
       });
       await waitFor(() => expect(container.querySelector('.editor-diff-controls')).not.toBeNull());
       expect(screen.queryByText('Accept or decline each change below')).not.toBeInTheDocument();
@@ -498,9 +568,10 @@ describe('EditorTab', () => {
       request.mockReset();
       request.mockResolvedValueOnce({ names: ['summarizer'] });
       request.mockResolvedValueOnce({ hunks: [{ anchor: 'line one', replacement: 'LINE ONE' }] });
-      stubRequestFileContent('line one\n> summarizer rewrite this');
+      stubRequestFileContent('line one\n');
       const { container } = await renderLoaded(client, makeView({ line: 2 }));
 
+      openAndType(' summarizer rewrite this');
       fireEvent.keyDown(textarea(), { key: 'Enter', metaKey: true });
 
       await waitFor(() => expect(container.querySelector('.editor-diff-remove')).not.toBeNull());
@@ -510,48 +581,67 @@ describe('EditorTab', () => {
       expect(container.querySelector('.editor-diff-controls')).not.toBeNull();
     });
 
-    it('does not fire on a plain Enter', async () => {
+    it('does not fire on a plain Enter when the query is not yet runnable', async () => {
       const { client, request } = makeClient();
       request.mockReset();
       request.mockResolvedValueOnce({ names: ['summarizer'] });
-      stubRequestFileContent('line one\n> summarizer rewrite this');
+      stubRequestFileContent('line one\n');
       await renderLoaded(client, makeView({ line: 2 }));
 
+      fireEvent.keyDown(textarea(), { key: '>' });
       fireEvent.keyDown(textarea(), { key: 'Enter' });
 
       expect(request).toHaveBeenCalledTimes(1); // only the persona-list fetch
     });
 
-    it('accepts a hunk by clicking its accept icon, updates the buffer, and removes the request line', async () => {
+    it('sends via the [run] pill click as well as Enter', async () => {
       const { client, request } = makeClient();
       request.mockReset();
       request.mockResolvedValueOnce({ names: ['summarizer'] });
       request.mockResolvedValueOnce({ hunks: [{ anchor: 'line one', replacement: 'LINE ONE' }] });
-      stubRequestFileContent('line one\n> summarizer rewrite this');
+      stubRequestFileContent('line one\n');
       const { container } = await renderLoaded(client, makeView({ line: 2 }));
+      openAndType(' summarizer rewrite this');
+
+      const pill = container.querySelector('.editor-suggest-pill-run')!;
+      fireEvent.click(pill);
+
+      await waitFor(() => expect(container.querySelector('.editor-diff-controls')).not.toBeNull());
+    });
+
+    it('accepts a hunk by clicking its accept icon, updates the buffer, and closes the query line', async () => {
+      const { client, request } = makeClient();
+      request.mockReset();
+      request.mockResolvedValueOnce({ names: ['summarizer'] });
+      request.mockResolvedValueOnce({ hunks: [{ anchor: 'line one', replacement: 'LINE ONE' }] });
+      stubRequestFileContent('line one\n');
+      const { container } = await renderLoaded(client, makeView({ line: 2 }));
+      openAndType(' summarizer rewrite this');
       fireEvent.keyDown(textarea(), { key: 'Enter', metaKey: true });
       await waitFor(() => expect(container.querySelector('.editor-diff-controls')).not.toBeNull());
 
       fireEvent.click(screen.getByLabelText('Accept'));
 
       await waitFor(() => expect(container.querySelector('.editor-diff-controls')).toBeNull());
-      expect(container.querySelector('.editor-content')?.textContent).toBe('LINE ONE');
+      expect(container.querySelector(':scope .editor-row:not(.editor-row-query) .editor-content')?.textContent).toBe('LINE ONE');
+      expect(container.querySelector('.editor-row-query')).toBeNull();
     });
 
-    it('declines every hunk by clicking decline, leaving the buffer and request line unchanged', async () => {
+    it('declines every hunk, leaving the buffer unchanged, and keeps the query line open with its text', async () => {
       const { client, request } = makeClient();
       request.mockReset();
       request.mockResolvedValueOnce({ names: ['summarizer'] });
       request.mockResolvedValueOnce({ hunks: [{ anchor: 'line one', replacement: 'LINE ONE' }] });
-      stubRequestFileContent('line one\n> summarizer rewrite this');
+      stubRequestFileContent('line one\n');
       const { container } = await renderLoaded(client, makeView({ line: 2 }));
+      openAndType(' summarizer rewrite this');
       fireEvent.keyDown(textarea(), { key: 'Enter', metaKey: true });
       await waitFor(() => expect(container.querySelector('.editor-diff-controls')).not.toBeNull());
 
       fireEvent.click(screen.getByLabelText('Decline'));
 
       await waitFor(() => expect(container.querySelector('.editor-diff-controls')).toBeNull());
-      expect(screen.getByText('> summarizer rewrite this')).toBeInTheDocument();
+      expect(queryRowText(container)).toBe('> summarizer rewrite this');
     });
 
     it('blocks ordinary typing while a hunk is pending', async () => {
@@ -559,8 +649,9 @@ describe('EditorTab', () => {
       request.mockReset();
       request.mockResolvedValueOnce({ names: ['summarizer'] });
       request.mockResolvedValueOnce({ hunks: [{ anchor: 'line one', replacement: 'LINE ONE' }] });
-      stubRequestFileContent('line one\n> summarizer rewrite this');
+      stubRequestFileContent('line one\n');
       const { container } = await renderLoaded(client, makeView({ line: 2 }));
+      openAndType(' summarizer rewrite this');
       fireEvent.keyDown(textarea(), { key: 'Enter', metaKey: true });
       await waitFor(() => expect(container.querySelector('.editor-diff-controls')).not.toBeNull());
 
@@ -568,7 +659,7 @@ describe('EditorTab', () => {
       fireEvent.keyDown(textarea(), { key: 'z' });
 
       expect(container.querySelector('.editor-diff-controls')).not.toBeNull();
-      expect(screen.getByText('> summarizer rewrite this')).toBeInTheDocument();
+      expect(queryRowText(container)).toBe('> summarizer rewrite this');
     });
 
     it('previews multiple hunks simultaneously and resolves them independently', async () => {
@@ -581,8 +672,9 @@ describe('EditorTab', () => {
           { anchor: 'line two', replacement: 'LINE TWO' },
         ],
       });
-      stubRequestFileContent('line one\nline two\n> summarizer rewrite this');
+      stubRequestFileContent('line one\nline two\n');
       const { container } = await renderLoaded(client, makeView({ line: 3 }));
+      openAndType(' summarizer rewrite this');
       fireEvent.keyDown(textarea(), { key: 'Enter', metaKey: true });
 
       await waitFor(() => expect(screen.getByText('2 of 2 remaining')).toBeInTheDocument());
@@ -593,12 +685,24 @@ describe('EditorTab', () => {
 
       await waitFor(() => expect(screen.getByText('1 of 2 remaining')).toBeInTheDocument());
       expect(container.querySelector(':scope .editor-diff-add .editor-content')?.textContent).toBe('LINE TWO');
-      expect(screen.getByText('> summarizer rewrite this')).toBeInTheDocument();
+      expect(container.querySelector('.editor-row-query')).not.toBeNull();
 
       fireEvent.click(screen.getByLabelText('Accept'));
 
       await waitFor(() => expect(screen.queryByText('Accept or decline each change below')).not.toBeInTheDocument());
-      expect(screen.queryByText('> summarizer rewrite this')).not.toBeInTheDocument();
+      expect(container.querySelector('.editor-row-query')).toBeNull();
+    });
+
+    it('routes a paste (via the hidden textarea) into the query text, not the buffer, while the query line is active', async () => {
+      const { client } = makeClient();
+      stubRequestFileContent('line one\n');
+      const { container } = await renderLoaded(client, makeView({ line: 2 }));
+      fireEvent.keyDown(textarea(), { key: '>' });
+
+      type(' summarizer pasted text');
+
+      expect(queryRowText(container)).toBe('> summarizer pasted text');
+      expect(container.querySelector(':scope .editor-row:not(.editor-row-query) .editor-content')?.textContent).toBe('line one');
     });
   });
 

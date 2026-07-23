@@ -664,6 +664,10 @@ html, body, #root {
 .editor-suggest-pill-run { background: var(--accent); cursor: pointer; }
 .editor-suggest-pill-run:hover { opacity: 0.85; }
 .editor-suggest-pill-focused { outline: 2px solid var(--fg); outline-offset: 1px; }
+/* The ephemeral agent query line (Decision 1): a visually distinct, non-buffer row rendered inline
+   at its anchor line's position — never part of the buffer, so never saved or synced. */
+.editor-row-query { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.editor-placeholder { color: var(--faint); }
 /* Inline diff preview of the focused pending persona-suggestion hunk: real buffer lines the hunk
    would remove, and synthetic rows below them previewing what it would insert. */
 .editor-diff-remove { background: color-mix(in srgb, var(--error) 15%, transparent); }

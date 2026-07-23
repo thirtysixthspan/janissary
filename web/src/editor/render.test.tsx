@@ -73,6 +73,42 @@ describe('EditorLine suggestion pill', () => {
   });
 });
 
+describe('EditorLine query row', () => {
+  it('renders the > marker, placeholder, caret, and editor-row-query class when empty', () => {
+    const caretRef = createRef<HTMLSpanElement>();
+    const { container } = render(
+      <EditorLine
+        text=">" line={2} gutterCh={2} isCurrent selFrom={-1} selTo={-1} caretCol={1} caretRef={caretRef}
+        tokens={[]} query placeholder="persona request…"
+      />,
+    );
+    expect(container.querySelector('.editor-row')?.className).toContain('editor-row-query');
+    expect(container.querySelector('.editor-content')?.textContent?.replaceAll('\u{200B}', '')).toBe('>');
+    expect(container.querySelector('.editor-placeholder')?.textContent).toBe('persona request…');
+    expect(container.querySelector('.editor-caret')).toBeInTheDocument();
+  });
+
+  it('omits the placeholder once text has been typed after the marker', () => {
+    const { container } = render(
+      <EditorLine
+        text="> summarizer go" line={2} gutterCh={2} isCurrent selFrom={-1} selTo={-1} caretCol={-1} caretRef={null}
+        tokens={[]} query placeholder="persona request…"
+      />,
+    );
+    expect(container.querySelector('.editor-placeholder')).toBeNull();
+  });
+
+  it('suppresses the caret when the row is not active', () => {
+    const { container } = render(
+      <EditorLine
+        text=">" line={2} gutterCh={2} isCurrent selFrom={-1} selTo={-1} caretCol={-1} caretRef={null}
+        tokens={[]} query placeholder="persona request…"
+      />,
+    );
+    expect(container.querySelector('.editor-caret')).toBeNull();
+  });
+});
+
 describe('DiffAddedLine', () => {
   it('renders the added text with a + gutter and no line number', () => {
     const { container } = render(<DiffAddedLine text="new line" gutterCh={2} />);
