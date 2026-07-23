@@ -75,7 +75,7 @@ export const EditorLine = React.memo(function EditorLine(props: LineProps) {
     .filter(Boolean).join(' ');
   return (
     <div className={rowClass} data-editor-line={line}>
-      <span className="editor-gutter" style={{ width: `${gutterCh}ch` }}>{line + 1}</span>
+      <span className="editor-gutter" style={{ width: `${gutterCh}ch` }}>{query ? '' : line + 1}</span>
       <span className="editor-content">{contentSegments(props)}</span>
       {pill && <span className={pillClass}>{pill.text}</span>}
     </div>
