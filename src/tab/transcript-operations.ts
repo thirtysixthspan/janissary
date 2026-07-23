@@ -4,8 +4,9 @@ import type { Managers } from '../managers.js';
 import { listAgentStates } from '../agent/state.js';
 import { capLog } from './transcript.js';
 import {
-  appendTab, clearTranscriptTab, finishRunningTab, startRunningTab,
+  appendTab, clearTranscriptTab, startRunningTab,
 } from './transcript-commands.js';
+export { finishRunningTab as finishTabRunning } from './transcript-commands.js';
 import { buildTabView } from './view.js';
 import { rehydrateTabs } from './rehydrate.js';
 import { applyRehydratedState } from './rehydrate-state.js';
@@ -59,18 +60,6 @@ export function startTabRunning(
   append: (label: string, entry: LogEntry) => void,
 ): void {
   startRunningTab(busy, label, input, append);
-}
-
-export function finishTabRunning(
-  tabs: Tab[],
-  label: string,
-  output: string,
-  deleteBusy: (label: string) => void,
-  persist: (state: AgentState) => void,
-  buildAgentState: (tab: Tab) => AgentState,
-  markUnread: (label: string) => void,
-): void {
-  finishRunningTab(tabs, label, output, deleteBusy, persist, buildAgentState, markUnread);
 }
 
 export function capTabLog(log: LogEntry[], maxLines: number): LogEntry[] {
