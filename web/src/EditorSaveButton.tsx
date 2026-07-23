@@ -13,6 +13,7 @@ export function EditorSaveButton({ dirty, onSave }: Properties) {
       type="button"
       className="editor-save-button"
       aria-label="Save file"
+      title="Save"
       disabled={!dirty}
       onClick={onSave}
     >
