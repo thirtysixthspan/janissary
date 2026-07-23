@@ -47,6 +47,14 @@ const queryRowText = (container: HTMLElement) => (container.querySelector(':scop
 const hasEnabledSaveButton = (container: HTMLElement) => !container.querySelector<HTMLButtonElement>('.editor-save-button')!.disabled;
 const hasDirtyDot = hasEnabledSaveButton;
 
+// `Promise.withResolvers` (ES2024) predates this project's `lib` target; a small typed shim keeps
+// the tests off the disallowed "extract resolver from `new Promise()`" pattern regardless.
+function withResolvers<T>(): { promise: Promise<T>; resolve: (value: T) => void } {
+  const state = { resolve: undefined as unknown as (value: T) => void };
+  const promise = new Promise<T>((resolve) => { state.resolve = resolve; });
+  return { promise, resolve: state.resolve };
+}
+
 function type(text: string) {
   const element = textarea() as HTMLTextAreaElement;
   element.value = text;
@@ -529,6 +537,29 @@ describe('EditorTab', () => {
 
       expect(container.querySelector('.editor-row-query')).toBeNull();
       expect(container.querySelector(':scope .editor-row .editor-content')?.textContent).not.toContain('>');
+    });
+
+    it('cancels an in-flight request on Escape so its reply never opens a pending review', async () => {
+      const { client, request } = makeClient();
+      request.mockReset();
+      request.mockResolvedValueOnce({ names: ['summarizer'] });
+      const { promise, resolve } = withResolvers<{ hunks: { anchor: string; replacement: string }[] }>();
+      request.mockImplementationOnce(() => promise);
+      stubRequestFileContent('line one\n');
+      const { container } = await renderLoaded(client, makeView({ line: 2 }));
+
+      openAndType(' summarizer rewrite this');
+      fireEvent.keyDown(textarea(), { key: 'Enter', metaKey: true });
+      await waitFor(() => expect(request).toHaveBeenCalledWith(expect.objectContaining({ method: 'editorSuggest' })));
+
+      fireEvent.keyDown(textarea(), { key: 'Escape' });
+      expect(container.querySelector('.editor-row-query')).toBeNull();
+
+      await act(async () => { resolve({ hunks: [{ anchor: 'line one', replacement: 'LINE ONE' }] }); });
+
+      expect(container.querySelector('.editor-diff-controls')).toBeNull();
+      expect(container.querySelector('.editor-row-query')).toBeNull();
+      expect(screen.queryByText('Accept or decline each change below')).not.toBeInTheDocument();
     });
 
     it('opening, typing, and closing the query line never dirties the buffer', async () => {

@@ -239,7 +239,9 @@ once it is a valid `> <persona> <prompt>`; any of them while the query isn't yet
 no-op — Enter in the query line never inserts a buffer newline, since keyboard focus is in the
 ephemeral query, not the buffer. Escape closes the query line at any point, discarding whatever was
 typed and returning keyboard focus to the buffer at the line the query was anchored to, with nothing
-inserted. The named persona is primed with the editor's current buffer content exactly as it
+inserted. If a request had already been sent and is still awaiting a reply, closing with Escape
+discards that reply when it arrives — no pending review panel opens from it. The named persona is
+primed with the editor's current buffer content exactly as it
 stands at that moment — including any unsaved edits, and excluding the query text itself, since it
 was never part of the buffer — plus the request text.
 

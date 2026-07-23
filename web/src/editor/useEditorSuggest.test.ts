@@ -8,6 +8,14 @@ function makeState(text: string, cursorLine = 0): EditorState {
   return { lines: text.split('\n'), cursor: { line: cursorLine, col: 0 }, anchor: null };
 }
 
+// `Promise.withResolvers` (ES2024) predates this project's `lib` target; a small typed shim keeps
+// the tests off the disallowed "extract resolver from `new Promise()`" pattern regardless.
+function withResolvers<T>(): { promise: Promise<T>; resolve: (value: T) => void } {
+  const state = { resolve: undefined as unknown as (value: T) => void };
+  const promise = new Promise<T>((resolve) => { state.resolve = resolve; });
+  return { promise, resolve: state.resolve };
+}
+
 function makeClient(personas: string[] = ['summarizer'], hunksQueue: { hunks: { anchor: string; replacement: string }[] }[] = []) {
   const request = vi.fn();
   request.mockResolvedValueOnce({ names: personas });
@@ -60,6 +68,28 @@ describe('useEditorSuggest', () => {
     await waitFor(() => expect(result.current.pending).not.toBeNull());
     expect(result.current.pending?.hunks).toEqual([{ anchor: 'old', replacement: 'new' }]);
     expect(result.current.firingLine).toBeNull();
+  });
+
+  it('discards the reply and does not reopen the pending set when closed while a request is in flight', async () => {
+    const { client, request } = makeClient(['summarizer']);
+    const { promise, resolve } = withResolvers<{ hunks: { anchor: string; replacement: string }[] }>();
+    request.mockImplementationOnce(() => promise);
+    const { result } = renderHook(() => useEditorSuggest(client, '/open/1', vi.fn()));
+    await waitFor(() => expect(result.current.personas).toEqual(['summarizer']));
+    typeQuery(result, ' summarizer rewrite this');
+
+    act(() => { result.current.fireOnLine(makeState('old')); });
+    expect(result.current.firingLine).toBe('> summarizer rewrite this');
+
+    act(() => { result.current.closeQueryLine(); });
+    expect(result.current.queryLine).toBeNull();
+
+    await act(async () => { resolve({ hunks: [{ anchor: 'old', replacement: 'new' }] }); });
+
+    expect(result.current.pending).toBeNull();
+    expect(result.current.noSuggestionLine).toBeNull();
+    expect(result.current.firingLine).toBeNull();
+    expect(result.current.queryLine).toBeNull();
   });
 
   it('records the query as having no suggestion when the reply has no hunks', async () => {
