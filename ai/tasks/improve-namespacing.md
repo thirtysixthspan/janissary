@@ -1,6 +1,6 @@
 # Improve Code Namespacing (one directory namespace per run)
 
-Your job: make **one** safe, mechanical change that improves the codebase's organization by **moving a cohesive group of related files that share a naming prefix out of a flat directory and into a sub-directory that gives them a logical namespace** — renaming each file to drop the now-redundant prefix, and updating every import that points at or out of those files so nothing breaks. Do exactly one namespace, then verify.
+Your job: make **one** safe, mechanical change that improves the codebase's organization by **moving a cohesive group of related files that share a naming prefix out of a flat directory and into a new or existing sub-directory that gives them a logical namespace** — renaming each file to drop the now-redundant prefix, and updating every import that points at or out of those files so nothing breaks. Do exactly one namespace, then verify.
 
 For example, the flat files `src/acp-loop.ts`, `src/acp-manager.ts`, `src/acp-runner.ts`, `src/acp-tools.ts` all share the `acp-` prefix and belong together. They can move into `src/acp/` as `loop.ts`, `manager.ts`, `runner.ts`, `tools.ts` — the directory now carries the namespace, so the prefix is dropped from each filename. The same opportunity exists for `src/agent-*`, `src/harness-*`, and other prefix clusters.
 
@@ -22,15 +22,15 @@ Do the steps below **in order**. Do not skip steps. Do not invent your own proce
 
 When your plan is **only** safe work, you **must carry it out yourself, start to finish, without stopping.** Do **not** ask "Do you want me to proceed?". Do **not** pause to show the plan for approval. Do **not** wait for confirmation. Just make the change and verify it.
 
-Safe work is exactly this: **move one cohesive prefix group of files into a new sub-directory, drop the redundant prefix from each filename, and update every import path that points at or out of those files** — done by the Recipe in Step 5, and nothing else. Because the whole namespace moves as a unit, this **includes moving and re-pathing the group's colocated `*.test.ts(x)` files** — that is expected here, and is *not* the forbidden "editing a test" from other tasks, because you change only their location and import paths, never their assertions or logic.
+Safe work is exactly this: **move one cohesive prefix group of files into a new or existing namespace directory, drop the redundant prefix from each filename, and update every import path that points at or out of those files** — done by the Recipe in Step 5, and nothing else. When the namespace directory already exists, preserve its existing files and add only flat files that are clearly related to the code already in that namespace; an existing namespace may receive any number of related files. Because the whole namespace moves as a unit, this **includes moving and re-pathing the group's colocated `*.test.ts(x)` files** — that is expected here, and is *not* the forbidden "editing a test" from other tasks, because you change only their location and import paths, never their assertions or logic.
 
 ### Blocked work — skip and pick a different group
 
 If doing the move would require any of the following, **go back to Step 3** and pick the next-best group instead. Never ask the user — just skip and move on.
 
 1. Changing any file's **behavior, logic, exports' shapes, or call signatures** — a namespace move only relocates files and rewrites import *paths*. If a group can't be moved without a logic edit, it's blocked.
-2. A group **too small to be a namespace** — fewer than **3** source files sharing the prefix. Two files don't justify a directory; leave them flat.
-3. A **name collision**: the target sub-directory `src/<prefix>/` already exists, or dropping the prefix would make two moved files collide (e.g. both `acp-loop.ts` and some `acp/loop.ts` would land on `src/acp/loop.ts`).
+2. A **new** group too small to be a namespace — fewer than **3** source files sharing the prefix. Two files don't justify creating a directory; an existing namespace may receive any number of clearly related flat files.
+3. A **name collision**: dropping the prefix would make a moved file collide with an existing file in `src/<prefix>/` or with another moved file (e.g. both `acp-loop.ts` and some `acp/loop.ts` would land on `src/acp/loop.ts`). An existing target directory is not blocked; inspect it and add only files that belong to that namespace.
 4. Touching **`src/controller.ts`** — if it is one of the files you'd have to *move*, the group is blocked (it's the biggest, riskiest file). It may still *import* the moved files; updating those import paths in it is fine and expected.
 5. A **config or build file hard-codes an exact old path.** Glob patterns like `src/**/*.ts` in `tsconfig.json`, `vitest`/`vite` config, or `eslint.config.mjs` already cover sub-directories and need no change. But if `package.json`, a script, or a config literally names `src/acp-loop.ts` (not a glob), the group is blocked — skip it.
 
@@ -70,31 +70,33 @@ Always run these fresh. Do not trust earlier output in the conversation. If any 
 
 ## Step 2 — Find the prefix clusters
 
-You are looking for a group of flat files that share a leading `prefix-` and clearly form one concern. List the candidates by counting files per prefix:
+You are looking for a group of flat files that share a leading `prefix-` and clearly form one concern. Also list the namespace directories that already exist, because a flat prefix may belong in an existing namespace rather than a newly-created one:
 
 ```bash
 ls src/*.ts | grep -vE '\.test\.ts$' | sed -E 's#src/##; s#-.*##' | sort | uniq -c | sort -rn
+find src -mindepth 1 -maxdepth 1 -type d -print | sort
 ```
 
-Each row is a candidate namespace: the count is how many source files share that prefix, and the name is the prefix. Rows with **3 or more** files are real namespace opportunities (e.g. `acp`, `harness`, `agent`). Ignore rows with 1–2 files.
+Each row is a candidate namespace: the count is how many source files share that prefix, and the name is the prefix. Rows with **3 or more** files are real opportunities for a new namespace (e.g. `acp`, `harness`, `agent`). Rows with 1–2 files are eligible only when the corresponding namespace directory already exists and the files clearly belong there.
 
 ---
 
 ## Step 3 — Pick exactly one group to namespace
 
-1. From the counts, list every `src/` prefix group with **3+ source files**.
-2. **Cross out** any group that is blocked by **What you may and may not do** (too small, target dir already exists, would need a logic edit, includes `src/controller.ts` among the files to move, hard-coded in config), already namespaced, or only *coincidentally* shares a prefix (unrelated files that happen to start with the same word — a namespace must be one real concern).
-3. From what remains, prefer a group of **3 to 6 source files**. A moderate group is the least error-prone; that is the goal here. Only pick a larger group if no moderate one is available. Among eligible groups, pick the one whose files most obviously belong together.
+1. From the counts, list every `src/` prefix group with **3+ source files**, plus any prefix whose target directory `src/<prefix>/` already exists and has clearly related code. An existing namespace may qualify with any number of related flat files; do not reject it solely because it has fewer than three.
+2. For each existing namespace candidate, read the directory's files and the flat `src/<prefix>-*.ts` files together. Include only files that are related to the code already in the namespace; leave coincidental or unrelated prefix matches flat.
+3. **Cross out** any group that is blocked by **What you may and may not do** (a new group with fewer than 3 source files, a name collision, would need a logic edit, includes `src/controller.ts` among the files to move, hard-coded in config), already fully namespaced, or only *coincidentally* shares a prefix (unrelated files that happen to start with the same word — a namespace must be one real concern).
+4. From what remains, prefer an existing namespace with a clearly related set of files or a new group of **3 to 6 source files**. A moderate group is the least error-prone; that is the goal here. Only pick a larger one if no moderate one is available. Among eligible groups, pick the one whose files most obviously belong together.
 
 State your pick in one short sentence: the prefix and how many source and test files it has. Write those into your report draft.
 
-Now list the **exact files** in the group so nothing is guessed later:
+Now list the **exact flat files** in the group so nothing is guessed later. For an existing namespace, this list may contain any number of related source files and their colocated tests:
 
 ```bash
 ls src/<prefix>-*.ts
 ```
 
-This is your definitive move list, and it **includes the `*.test.ts` files** — that glob matches them too. Every source file *and* its `.test.ts` twin is on this list and must move. Confirm the pairs: if you see `<prefix>-name.ts`, you should also see `<prefix>-name.test.ts` right below it, and both move together. Also check for a **bare** entry file that matches the prefix exactly:
+This is your definitive move list, and it **includes the `*.test.ts` files** — that glob matches them too. Every selected source file *and* its `.test.ts` twin is on this list and must move. Confirm the pairs: if you see `<prefix>-name.ts`, you should also see `<prefix>-name.test.ts` right below it, and both move together. Existing namespace files are not move targets; they remain in place. Also check for a **bare** entry file that matches the prefix exactly:
 
 ```bash
 ls src/<prefix>.ts 2>&1
@@ -138,7 +140,7 @@ Do the three sub-steps **in order**: move, then rewire, then let the compiler ca
 
 ### 5a — Move every file with `git mv`
 
-Create the directory, then move each file from your inventory on its own line:
+Create the directory only when it does not already exist, then move each file from your inventory on its own line. Existing namespace files stay where they are:
 
 ```bash
 mkdir -p src/<prefix>
