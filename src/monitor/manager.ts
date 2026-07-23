@@ -1,12 +1,11 @@
 import type { AcpInfo, AcpSession, LogEntry, MonitorTarget } from '../types.js';
 import type { Subscription } from '../bus.js';
-import { messageBus } from '../bus.js';
 import { loadPersona, type Persona } from '../personas.js';
 import { parseSuggestion } from './parsing.js';
 import { openMonitorTab, pushSuggestion, rateSuggestion, updateMonitorMeta } from './window.js';
 import { openMonitorSession, respawnMonitorSession } from './session.js';
 import { spawnMonitorSession } from './acp.js';
-import { validateTargets, matchesTargets, targetColor, formatTargets, resolveTargetAliases } from './targets.js';
+import { validateTargets, targetColor, formatTargets, resolveTargetAliases } from './targets.js';
 import { stopMonitor, closeIfUnfed } from './stop.js';
 import { seedFeedEntries, flushFeedEntries } from './feeds.js';
 import { generateSessionDelimiter, frameEntry } from './framing.js';
@@ -18,7 +17,8 @@ import type { ConnectionView } from '../protocol.js';
 import type { Managers } from '../managers.js';
 import { notify } from '../notifications.js';
 import { isRateLimitError } from '../acp/rate-limit.js';
-import { SUGGESTION_PREFIX, buildSuggestion, formatInlineSuggestion } from './suggestion.js';
+import { buildSuggestion, formatInlineSuggestion } from './suggestion.js';
+import { subscribeMonitor } from './subscriptions.js';
 
 export { SUGGESTION_PREFIX } from './suggestion.js';
 
@@ -125,25 +125,11 @@ export class MonitorManager {
   }
 
   private subscribe(key: string, reg: MonitorSub): void {
-    reg.subs.push(
-      messageBus.on('transcript', 'entry:appended', (event) => {
-        if (event.type !== 'entry:appended' || !matchesTargets(this.managers.tab.tabs, reg.targets, event.tabLabel)) return;
-        // Never feed a monitor its own (or a sibling monitor's) inline suggestions.
-        if (event.entry.output.startsWith(SUGGESTION_PREFIX)) return;
-        reg.buffer.push({ tabLabel: event.tabLabel, entry: event.entry });
-      }),
-      messageBus.on('transcript', 'tab:removed', (event) => {
-        if (event.type !== 'tab:removed') return;
-        if (event.tabLabel === reg.owner) { this.handleOwnerClosed(reg.owner); return; }
-        // The reporting tab itself was closed directly: tear the monitor down fully,
-        // regardless of remaining targets, so its session doesn't linger and the same
-        // owner/persona can be started again.
-        if (!reg.inline && event.tabLabel === reg.name) { this.stop(reg.owner, reg.name); return; }
-        // Only tab targets drop out; group targets persist (the group may gain new tabs).
-        if (reg.targets.some((t) => t.kind === 'tab' && t.label === event.tabLabel)) {
-          this.stop(reg.owner, reg.name, { kind: 'tab', label: event.tabLabel });
-        }
-      }),
+    subscribeMonitor(
+      key, reg, this.managers,
+      (owner) => this.handleOwnerClosed(owner),
+      (owner, name) => this.stop(owner, name),
+      (owner, name, label) => this.stop(owner, name, { kind: 'tab', label }),
     );
   }
 
