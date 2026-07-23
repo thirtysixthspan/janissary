@@ -2,6 +2,8 @@
 
 ## ready
 
+* add a button on eack acp connection row that shows the transcript of the acp, similar to how the button in monitors shows the transcript of the monitoring acp.
+
 ## development
 
 * Generate a set of given profiles derived from profiles used in other tools. research and clone. curated personas: researcher, critic, planner, summarizer. research and clone. Ambient background research persona that, when you mention an unfamiliar term/library/error, quietly researches it and drops a ready reference into a side tab, unasked. (Web-tool personas.)
