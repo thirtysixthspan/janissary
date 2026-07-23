@@ -210,7 +210,9 @@ request fired directly from the editor).
 A request is entered in an ephemeral agent query line, not as buffer text. Pressing `>` while the
 caret sits at the very start of an otherwise-empty line opens the query line inline, right at that
 line's on-screen position, visually distinct from ordinary buffer rows — including showing no line
-number in its gutter, unlike every ordinary row; typing `>` anywhere else —
+number in its gutter, unlike every ordinary row. Lines after the query row keep the gutter numbers
+they would have shown if the query row's line were not present, so the query reads as an insertion
+between two lines of real text rather than a replacement of one of them; typing `>` anywhere else —
 mid-line, after other text, or when it would replace a selection — inserts a literal `>` exactly as
 before. Because the query line is not buffer text, it is never saved to disk, never counted toward
 whether the tab is dirty, and never sent to a monitor watching the buffer's live draft; opening,

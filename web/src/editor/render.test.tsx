@@ -60,6 +60,13 @@ describe('EditorLine token segments', () => {
     );
     expect(container.querySelector('.editor-gutter')?.textContent).toBe('5');
   });
+
+  it('overrides the gutter number with gutterNumber when given', () => {
+    const { container } = render(
+      <EditorLine text="plain text" line={4} gutterCh={2} isCurrent={false} selFrom={-1} selTo={-1} caretCol={-1} caretRef={null} tokens={[]} gutterNumber={3} />,
+    );
+    expect(container.querySelector('.editor-gutter')?.textContent).toBe('3');
+  });
 });
 
 describe('EditorLine suggestion pill', () => {

@@ -50,6 +50,9 @@ export function EditorLines({ state, tokens, suggest, active, gutterCh, caretRef
   const renderLine = (index: number, removed: boolean) => {
     const [selFrom, selTo] = lineSelection(state, index);
     const onCursorLine = index === state.cursor.line;
+    // A row after an open query line's anchor reads as if the anchor's line were not counted, so
+    // the query renders as an insertion between two lines rather than a replacement of one.
+    const gutterNumber = queryLine && index > queryLine.anchorLine ? index : index + 1;
     return (
       <EditorLine
         key={index}
@@ -63,6 +66,7 @@ export function EditorLines({ state, tokens, suggest, active, gutterCh, caretRef
         caretRef={onCursorLine ? caretRef : null}
         tokens={tokens[index] ?? []}
         removed={removed}
+        gutterNumber={gutterNumber}
       />
     );
   };
