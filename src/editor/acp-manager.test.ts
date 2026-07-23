@@ -67,6 +67,25 @@ describe('EditorAcpManager', () => {
     expect(manager.connectionsFor('other')).toEqual([]);
   });
 
+  it('hasSession reflects whether a session is currently open, including after close/closeTab', () => {
+    mocks.spawnMonitorSession.mockReturnValue(makeSession().session);
+    const manager = new EditorAcpManager({} as Managers);
+
+    expect(manager.hasSession('notes', 'reviewer')).toBe(false);
+
+    manager.session('notes', persona('reviewer'), '/repo', { onError: vi.fn() });
+    expect(manager.hasSession('notes', 'reviewer')).toBe(true);
+    expect(manager.hasSession('notes', 'critic')).toBe(false);
+    expect(manager.hasSession('todo', 'reviewer')).toBe(false);
+
+    manager.close('notes', 'reviewer');
+    expect(manager.hasSession('notes', 'reviewer')).toBe(false);
+
+    manager.session('notes', persona('reviewer'), '/repo', { onError: vi.fn() });
+    manager.closeTab('notes');
+    expect(manager.hasSession('notes', 'reviewer')).toBe(false);
+  });
+
   it('close kills and removes just the matching session, returning whether one was open', () => {
     const { session: reviewerSession, kill: reviewerKill } = makeSession();
     const { session: criticSession, kill: criticKill } = makeSession();

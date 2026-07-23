@@ -29,7 +29,7 @@ function makeManagers(session: ReturnType<typeof vi.fn>, record: ReturnType<type
       cur: () => ({ label: 'notes' }),
       cwdOf: () => '/repo',
     },
-    editorAcp: { session, record },
+    editorAcp: { session, record, hasSession: vi.fn(() => false) },
   } as unknown as Managers;
 }
 
@@ -112,6 +112,33 @@ describe('editorSuggest', () => {
 
     expect(sessionFn).toHaveBeenCalledTimes(2);
     expect(prompt).toHaveBeenCalledTimes(2);
+  });
+
+  it('only the first request in a tab/persona session primes with the persona body and hunk format; later requests send just the buffer and prompt', () => {
+    mocks.listPersonas.mockReturnValue(['reviewer']);
+    mocks.loadPersona.mockReturnValue({ name: 'reviewer', harness: { harness: 'claude', model: 'sonnet', variant: 'default' }, body: 'Watch for bugs.', tools: [] });
+    const { session, prompt } = makeSession();
+    const hasSession = vi.fn().mockReturnValueOnce(false).mockReturnValueOnce(true);
+    const sessionFn = vi.fn(() => session);
+    const record = vi.fn();
+    const managers = {
+      tab: { tabs: [{ label: 'notes', editor: { url: '/open/1' } }], cur: () => ({ label: 'notes' }), cwdOf: () => '/repo' },
+      editorAcp: { session: sessionFn, record, hasSession },
+    } as unknown as Managers;
+
+    editorSuggest(managers, baseParams, vi.fn());
+    (prompt.mock.calls[0][1] as PromptHandlers).onEnd('end_turn');
+    editorSuggest(managers, baseParams, vi.fn());
+    (prompt.mock.calls[1][1] as PromptHandlers).onEnd('end_turn');
+
+    const firstPrompt = prompt.mock.calls[0][0] as string;
+    const secondPrompt = prompt.mock.calls[1][0] as string;
+    expect(firstPrompt).toContain('Watch for bugs.');
+    expect(firstPrompt).toContain('Reply with zero or more proposed edits');
+    expect(secondPrompt).not.toContain('Watch for bugs.');
+    expect(secondPrompt).not.toContain('Reply with zero or more proposed edits');
+    expect(secondPrompt).toContain('hello world');
+    expect(secondPrompt).toContain('Request: rewrite this');
   });
 
   it('notifies and returns no hunks on a connect error', () => {

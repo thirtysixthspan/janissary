@@ -274,10 +274,14 @@ was never part of the buffer — plus the request text.
 The first request to a given persona in an editor tab opens a connection to that persona, which
 stays open for the rest of that tab's life; every later request to the same persona in that same
 tab reuses the same connection rather than starting a fresh one, and the persona's replies can draw
-on what it said earlier in the tab, the same as a multi-turn conversation. A request to a different
-persona in the same tab opens its own separate connection alongside it. These connections appear in
-the tab's connections window (see [[connection]]) and are closed automatically when the editor tab
-itself is closed, or manually from the connections window at any point.
+on what it said earlier in the tab, the same as a multi-turn conversation. As with any multi-turn
+conversation, the persona's full instructions are only needed once: only the first request on a
+connection includes them, while every later request on that same connection sends just the current
+buffer content and the new request text. A request to a different persona in the same tab opens its
+own separate connection alongside it. These connections appear in the tab's connections window (see
+[[connection]]) and are closed automatically when the editor tab itself is closed, or manually from
+the connections window at any point — closing a connection and firing a new request to that persona
+starts over with a fresh connection, primed again from the top.
 
 The persona may propose one or more edits anywhere in the file, not only at the request line's own
 location. Every proposed change previews inline at once, directly in the buffer at the position it
