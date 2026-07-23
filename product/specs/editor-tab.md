@@ -218,9 +218,8 @@ an empty line: a Markdown blockquote whose `>` is meant to be the very first cha
 line can't be typed by pressing `>` first — type the blockquote's body first, then insert the
 leading `>` once the line is no longer empty.
 
-The query line shows a `>` prompt marker followed by placeholder text reading "persona request…"
-until something is typed. The request itself follows the same shape as before: the name of an
-available persona immediately after the `>`, then the request text, for example
+The query line shows a `>` prompt marker. The request itself follows the same shape as before: the
+name of an available persona immediately after the `>`, then the request text, for example
 `> assistant rewrite this paragraph in one sentence`. Typing `>>` at the start of the query is a
 shorthand for `> assistant`, naming that persona without typing its name out. The personas offered
 here are the ones written for in-editor requests, a separate set from the personas `monitor`
@@ -235,7 +234,7 @@ arrows are no-ops within the query line, since it holds a single line; Left/Righ
 Backspace/Delete edit the query text as usual, and a paste or IME commit while the query line is
 focused lands in the query text rather than the buffer.
 
-Pressing Enter, Ctrl+Enter (Cmd+Enter on macOS), or clicking the `[run]` pill all send the request
+Pressing Enter, Ctrl+Enter (Cmd+Enter on macOS), or clicking the `run` pill all send the request
 once it is a valid `> <persona> <prompt>`; any of them while the query isn't yet runnable is a
 no-op — Enter in the query line never inserts a buffer newline, since keyboard focus is in the
 ephemeral query, not the buffer. Escape closes the query line at any point, discarding whatever was
@@ -283,11 +282,11 @@ buffer and the query line's text are left untouched.
 
 A status pill, styled as a colored badge (matching the agent-color badge shown on a cross-tab
 notification) and right-aligned at the end of the row, is rendered on the query line, tracking its
-progress: `[agent?]` before a known persona has been named, `[query?]` once the persona is named but
-no request text has been typed yet, and `[run]` once both are present — clicking `[run]` sends the
+progress: `agent?` before a known persona has been named, `query?` once the persona is named but
+no request text has been typed yet, and `run` once both are present — clicking `run` sends the
 request, the same as pressing Ctrl+Enter (Cmd+Enter on macOS), or pressing Enter while the pill
-holds keyboard focus (see above). While the request is in flight the pill reads `[running...]`; if
-the reply proposes no change at all, it reads `[no suggestion]` until the query is edited. While a
+holds keyboard focus (see above). While the request is in flight the pill reads `running...`; if
+the reply proposes no change at all, it reads `no suggestion` until the query is edited. While a
 proposed change is pending accept/decline, the pill is hidden — the pending-change prompt above the
 buffer is the request's state at that point, and the buffer's own caret is suppressed while the
 query line holds keyboard focus.

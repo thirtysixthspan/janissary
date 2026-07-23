@@ -486,7 +486,7 @@ describe('EditorTab', () => {
       for (const key of query) fireEvent.keyDown(textarea(), { key });
     }
 
-    it('opens an inline query row with a placeholder when > is pressed on an empty line', async () => {
+    it('opens an inline query row when > is pressed on an empty line', async () => {
       const { client } = makeClient();
       stubRequestFileContent('line one\n');
       const { container } = await renderLoaded(client, makeView({ line: 2 }));
@@ -494,7 +494,6 @@ describe('EditorTab', () => {
       fireEvent.keyDown(textarea(), { key: '>' });
 
       expect(container.querySelector('.editor-row-query')).not.toBeNull();
-      expect(container.querySelector('.editor-placeholder')?.textContent).toBe('persona request…');
       expect(queryRowText(container)).toBe('>');
     });
 
@@ -594,7 +593,7 @@ describe('EditorTab', () => {
       expect(request).toHaveBeenCalledTimes(1); // only the persona-list fetch
     });
 
-    it('sends via the [run] pill click as well as Enter', async () => {
+    it('sends via the run pill click as well as Enter', async () => {
       const { client, request } = makeClient();
       request.mockReset();
       request.mockResolvedValueOnce({ names: ['summarizer'] });

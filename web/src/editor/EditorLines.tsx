@@ -88,7 +88,6 @@ export function EditorLines({ state, tokens, suggest, active, gutterCh, caretRef
         pill={pill}
         pillFocused={suggest.pillFocused}
         query
-        placeholder="persona request…"
       />
     );
   };

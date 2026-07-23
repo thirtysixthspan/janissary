@@ -79,22 +79,22 @@ describe('suggestPillLabel', () => {
     expect(suggestPillLabel('plain text', personas, null, null, null)).toBeUndefined();
   });
 
-  it('shows [agent?] when no known persona is named yet', () => {
-    expect(suggestPillLabel('>', personas, null, null, null)).toEqual({ text: '[agent?]', runnable: false });
+  it('shows agent? when no known persona is named yet', () => {
+    expect(suggestPillLabel('>', personas, null, null, null)).toEqual({ text: 'agent?', runnable: false });
   });
 
-  it('shows [query?] when a known persona is named but there is no prompt yet', () => {
-    expect(suggestPillLabel('> summarizer', personas, null, null, null)).toEqual({ text: '[query?]', runnable: false });
+  it('shows query? when a known persona is named but there is no prompt yet', () => {
+    expect(suggestPillLabel('> summarizer', personas, null, null, null)).toEqual({ text: 'query?', runnable: false });
   });
 
-  it('shows [run] and is runnable once a persona and prompt are both present', () => {
+  it('shows run and is runnable once a persona and prompt are both present', () => {
     expect(suggestPillLabel('> summarizer rewrite this', personas, null, null, null))
-      .toEqual({ text: '[run]', runnable: true });
+      .toEqual({ text: 'run', runnable: true });
   });
 
-  it('shows [running...] while the line is firing', () => {
+  it('shows running... while the line is firing', () => {
     const line = '> summarizer rewrite this';
-    expect(suggestPillLabel(line, personas, line, null, null)).toEqual({ text: '[running...]', runnable: false });
+    expect(suggestPillLabel(line, personas, line, null, null)).toEqual({ text: 'running...', runnable: false });
   });
 
   it('returns undefined for a line whose pending hunk-review panel already owns its state', () => {
@@ -102,17 +102,17 @@ describe('suggestPillLabel', () => {
     expect(suggestPillLabel(line, personas, null, line, null)).toBeUndefined();
   });
 
-  it('shows [no suggestion] when the last reply for this line came back empty', () => {
+  it('shows no suggestion when the last reply for this line came back empty', () => {
     const line = '> summarizer rewrite this';
-    expect(suggestPillLabel(line, personas, null, null, line)).toEqual({ text: '[no suggestion]', runnable: false });
+    expect(suggestPillLabel(line, personas, null, null, line)).toEqual({ text: 'no suggestion', runnable: false });
   });
 
-  it('shows [run] for a >> assistant shorthand line with a prompt', () => {
+  it('shows run for a >> assistant shorthand line with a prompt', () => {
     expect(suggestPillLabel('>> rewrite this', personas, null, null, null))
-      .toEqual({ text: '[run]', runnable: true });
+      .toEqual({ text: 'run', runnable: true });
   });
 
-  it('shows [query?] for a >> assistant shorthand line with no prompt yet', () => {
-    expect(suggestPillLabel('>>', personas, null, null, null)).toEqual({ text: '[query?]', runnable: false });
+  it('shows query? for a >> assistant shorthand line with no prompt yet', () => {
+    expect(suggestPillLabel('>>', personas, null, null, null)).toEqual({ text: 'query?', runnable: false });
   });
 });
