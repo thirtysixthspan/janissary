@@ -26,7 +26,8 @@ Concretely, both the root directory and the state directory inside it are addres
 The shortcut is applied wherever the application itself renders a path into a tab's transcript, including:
 
 - the working directory shown alongside each command's prompt,
-- the working directory listed in a tab's connections panel, and
+- the working directory listed in a tab's connections panel,
+- the file's location in an editor tab's metadata header, and
 - the application's own status messages that name a path (for example, the location reported when a workspaced agent is created).
 
 ### Composition with the home shortcut

@@ -33,7 +33,9 @@ up/down, etc.) are not.
 
 ### Layout
 
-- **Metadata header** — a single row showing the file's name, size, and location.
+- **Metadata header** — a single row showing the file's name, size, and location. The location is
+  abbreviated using the `$root` and `~` shortcuts (see `root-path.md`), the same as elsewhere the
+  application displays a path.
 - The metadata header has a save button and a connections-status button aligned to the right,
   together in that same row. The save button is enabled when the buffer has unsaved changes and
   disabled and dimmed when the buffer is clean. The connections-status button opens the tab's
