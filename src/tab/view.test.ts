@@ -67,6 +67,15 @@ describe('buildTabView', () => {
     expect(view.files?.absoluteRoot).toBe('/Users/derrick/project');
   });
 
+  it('abbreviates the editor path using the given shorten callback', () => {
+    const tab = makeTab('agent-1', '#fff');
+    tab.editor = { name: 'notes.txt', path: '/Users/derrick/project/notes.txt', size: '8 B', url: '/open/1' };
+    const shorten = (p: string) => (p === tab.editor?.path ? '$root/notes.txt' : p);
+    const view = buildTabView(tab, false, '/tmp', undefined, [], [], [], shorten, []);
+    expect(view.editor?.path).toBe('$root/notes.txt');
+    expect(view.editor?.name).toBe('notes.txt');
+  });
+
   it('exposes the tab pending question', () => {
     const tab = makeTab('agent-1', '#fff');
     const pending = { id: 'question-1', tab: 'agent-1', kind: 'ask' as const, question: 'What port?' };
