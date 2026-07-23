@@ -6,7 +6,7 @@ import { EditorTab, type EditorTabHandle } from './EditorTab';
 import { PageTab } from './PageTab';
 import { HarnessTabLayer } from './HarnessTabLayer';
 import type { PickerOverlayProps } from './picker-overlay-props';
-import { QuestionPanel } from './QuestionPanel';
+import { QuestionPanel, type QuestionPanelHandle } from './QuestionPanel';
 
 type Properties = {
   tabs: TabView[];
@@ -15,6 +15,7 @@ type Properties = {
   closeTab: (index: number) => void;
   harnessHandles: React.RefObject<Map<string, HarnessTabHandle>>;
   editorHandles: React.RefObject<Map<string, EditorTabHandle>>;
+  questionPanelRef?: React.RefObject<QuestionPanelHandle | null>;
   // Ctrl+A and Ctrl+G open the task picker and tab navigator from a focused harness tab (see
   // `HarnessTab.harnessKeyFilter`); they're the only pickers/choosers those chords ever let bubble
   // there, so this renders just those two overlays rather than the full `PickerOverlays` stack the
@@ -25,7 +26,7 @@ type Properties = {
 // editor buffers, undo stacks, cursor/scroll position, and embedded-page navigation survive tab
 // switches. Split out of App.tsx to keep it under the file-size limit.
 export function MountedViewLayers({
-  tabs, current, client, closeTab, harnessHandles, editorHandles,
+  tabs, current, client, closeTab, harnessHandles, editorHandles, questionPanelRef,
   taskPickerOpen, taskRows, taskPickerIndex, onPickTask, onToggleTaskDir,
   navOpen, navQuery, navIndex, onPickTab,
 }: Properties) {
@@ -64,7 +65,7 @@ export function MountedViewLayers({
             <PageTab page={t.page!} closeTab={closeTab} index={index} client={client} />
           </div>
         ))}
-      {current.pendingQuestion && <QuestionPanel question={current.pendingQuestion} client={client} />}
+      {current.pendingQuestion && <QuestionPanel ref={questionPanelRef} question={current.pendingQuestion} client={client} />}
     </>
   );
 }

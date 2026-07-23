@@ -1,10 +1,10 @@
-import React from 'react';
+import React, { createRef } from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import type { PendingQuestionView } from '@shared/protocol';
 import type { JanusClient } from './ws';
-import { QuestionPanel } from './QuestionPanel';
+import { QuestionPanel, type QuestionPanelHandle } from './QuestionPanel';
 
 function client() {
   const send = vi.fn();
@@ -86,5 +86,56 @@ describe('QuestionPanel', () => {
     expect(screen.getByRole('dialog')).toHaveAttribute('aria-modal', 'false');
     await userEvent.click(screen.getByRole('button', { name: 'Other action' }));
     expect(behind).toHaveBeenCalledOnce();
+  });
+
+  it('focuses Cancel on render for an approve question', () => {
+    const { value } = client();
+    const question: PendingQuestionView = {
+      id: 'question-5', tab: 'build', kind: 'approve', question: 'Deploy to prod?', options: ['Yes', 'No'],
+    };
+    render(<QuestionPanel question={question} client={value} />);
+
+    expect(screen.getByRole('button', { name: 'Cancel' })).toHaveFocus();
+  });
+
+  it('focuses the text input on render for an ask question', () => {
+    const { value } = client();
+    const question: PendingQuestionView = { id: 'question-6', tab: 'build', kind: 'ask', question: 'What port?' };
+    render(<QuestionPanel question={question} client={value} />);
+
+    expect(screen.getByRole('textbox', { name: 'Answer' })).toHaveFocus();
+  });
+
+  it('cycles Tab and ArrowLeft/ArrowRight between the answer buttons, wrapping around', async () => {
+    const user = userEvent.setup();
+    const { value } = client();
+    const question: PendingQuestionView = {
+      id: 'question-7', tab: 'build', kind: 'approve', question: 'Deploy to prod?', options: ['Yes', 'No'],
+    };
+    render(<QuestionPanel question={question} client={value} />);
+    const yes = screen.getByRole('button', { name: 'Yes' });
+    const no = screen.getByRole('button', { name: 'No' });
+    const cancel = screen.getByRole('button', { name: 'Cancel' });
+
+    expect(cancel).toHaveFocus();
+    await user.keyboard('{Tab}');
+    expect(yes).toHaveFocus();
+    await user.keyboard('{ArrowRight}');
+    expect(no).toHaveFocus();
+    await user.keyboard('{ArrowRight}');
+    expect(cancel).toHaveFocus();
+    await user.keyboard('{ArrowLeft}');
+    expect(no).toHaveFocus();
+  });
+
+  it('exposes focusCancel via the imperative handle, regardless of question kind', () => {
+    const { value } = client();
+    const question: PendingQuestionView = { id: 'question-8', tab: 'build', kind: 'ask', question: 'What port?' };
+    const ref = createRef<QuestionPanelHandle>();
+    render(<QuestionPanel ref={ref} question={question} client={value} />);
+
+    expect(screen.getByRole('textbox', { name: 'Answer' })).toHaveFocus();
+    ref.current?.focusCancel();
+    expect(screen.getByRole('button', { name: 'Cancel' })).toHaveFocus();
   });
 });
