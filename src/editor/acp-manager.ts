@@ -20,6 +20,14 @@ export class EditorAcpManager {
 
   constructor(private managers: Managers) {}
 
+  // Whether a session already exists for `label`/`persona` — checked *before* `session()`
+  // lazily creates one, this tells the caller whether the upcoming request is the first for this
+  // persona in this tab (needs full priming) or a later one on an already-primed session (does
+  // not).
+  hasSession(label: string, persona: string): boolean {
+    return this.sessions.has(key(label, persona));
+  }
+
   session(label: string, persona: Persona, cwd: string, hooks: SessionHooks): AcpSession {
     const k = key(label, persona.name);
     let session = this.sessions.get(k);
