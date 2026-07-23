@@ -74,8 +74,7 @@ export async function resizeAppWindow(
   const { targetInfos } = await sendCdpCommand(writePipe, readPipe, 'Target.getTargets', {}) as {
     targetInfos: { targetId: string; type: string }[];
   };
-  const pageTarget = targetInfos.find((t) => t.type === 'page');
-  if (!pageTarget) throw new Error('resizeAppWindow: no page target found');
+  const pageTarget = findPageTarget(targetInfos, 'resizeAppWindow');
 
   const { windowId } = await sendCdpCommand(
     writePipe,
@@ -95,8 +94,7 @@ export async function getAppWindowBounds(
   const { targetInfos } = await sendCdpCommand(writePipe, readPipe, 'Target.getTargets', {}) as {
     targetInfos: { targetId: string; type: string }[];
   };
-  const pageTarget = targetInfos.find((t) => t.type === 'page');
-  if (!pageTarget) throw new Error('getAppWindowBounds: no page target found');
+  const pageTarget = findPageTarget(targetInfos, 'getAppWindowBounds');
 
   const { windowId } = await sendCdpCommand(
     writePipe,
@@ -108,4 +106,13 @@ export async function getAppWindowBounds(
     bounds: { width: number; height: number };
   };
   return { width: bounds.width, height: bounds.height };
+}
+
+function findPageTarget(
+  targetInfos: { targetId: string; type: string }[],
+  operation: string,
+): { targetId: string; type: string } {
+  const pageTarget = targetInfos.find((t) => t.type === 'page');
+  if (!pageTarget) throw new Error(`${operation}: no page target found`);
+  return pageTarget;
 }
