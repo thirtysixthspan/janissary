@@ -1,10 +1,10 @@
 import { existsSync, readFileSync } from 'node:fs';
-import { collectProfileProblems } from './profile-schema.js';
-import { profilePath } from './profiles.js';
+import { collectProfileProblems } from './schema.js';
+import { profilePath } from '../profiles.js';
 import type {
   AgentState, LoadedProfile, ProfileAgentFile, ProfileEntry, ProfileFile, ProfileHarnessEntry,
   ProfileHarnessFile, ProfileLayout, ProfileLayoutFile, ProfileMonitor, ProfileMonitorFile,
-} from './types.js';
+} from '../types.js';
 
 // The single-file profile loader: read `profiles/<name>.json` once, validate the whole structure
 // up front (all-or-nothing per the plan's Decision 6), and return a `LoadedProfile` carrying the

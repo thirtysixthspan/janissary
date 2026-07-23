@@ -1,4 +1,4 @@
-import type { ProfileParsed } from './types.js';
+import type { ProfileParsed } from '../types.js';
 
 // The `profile` command's parsing, split out of profiles.ts: a distinct concern from the
 // file-loading helpers that remain there.

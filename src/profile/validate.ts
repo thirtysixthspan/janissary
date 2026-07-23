@@ -1,5 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
-import { collectProfileProblems } from '../profile-schema.js';
+import { collectProfileProblems } from './schema.js';
 import { profilePath, profileExists, listProfiles } from '../profiles.js';
 
 // `profile validate [<name>]`: the same structural checks the loader runs, but collecting *every*

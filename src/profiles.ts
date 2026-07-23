@@ -1,7 +1,7 @@
 import { existsSync, readdirSync } from 'node:fs';
 import path from 'node:path';
-export { PROFILE_USAGE, parseProfileCommand } from './profile-command.js';
-export { loadProfile } from './profile-file.js';
+export { PROFILE_USAGE, parseProfileCommand } from './profile/command.js';
+export { loadProfile } from './profile/file.js';
 
 // A profile is a named, reusable set of agents and harnesses for a particular use case (writing
 // code, surfing the web, authoring a book, …). Each profile is a single JSON file `profiles/<name>.json`
