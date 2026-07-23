@@ -6,27 +6,25 @@ import type { Managers } from '../managers.js';
 import {
   makeTab, distinctColor, insertTabInGroup,
 } from './index.js';
-import { saveAgentState, listAgentStates } from '../agent/state.js';
+import { saveAgentState } from '../agent/state.js';
 import { abbreviatePath } from '../paths.js';
 import { getConfig, TAB_RENAME_MAX_LENGTH } from '../config.js';
 import { messageBus } from '../bus.js';
 import { closeTabResources } from './cleanup.js';
 import { TabOpeningState } from './opening-state.js';
-import { buildTabView } from './view.js';
-import { rehydrateTabs } from './rehydrate.js';
-import { applyRehydratedState } from './rehydrate-state.js';
 import { buildAgentStateFromTab } from './agent-state.js';
 import { recordLeavingActiveTab, popFocusHistory, mostRecentFileTreeLabel } from './focus-history.js';
 import { applyDock } from './dock.js';
-import { capLog } from './transcript.js';
 import { removeTabAt } from './reorder.js';
 import { navigatePageTab } from './navigate.js';
 import { recordHistory } from './history.js';
 import { FileRegistry } from './file-registry.js';
 import { renameEditorTab } from './rename-editor.js';
+import { markUnreadTab } from './transcript-commands.js';
 import {
-  markUnreadTab, startRunningTab, finishRunningTab, appendTab, clearTranscriptTab,
-} from './transcript-commands.js';
+  appendTabTranscript, buildTabViews, capTabLog, clearTabTranscript, finishTabRunning,
+  rehydrateTabState, startTabRunning,
+} from './transcript-operations.js';
 import { setActiveTabOp, moveTabOp, reorderTabOp } from './navigation-commands.js';
 
 export class TabManager extends TabOpeningState {
@@ -251,26 +249,26 @@ export class TabManager extends TabOpeningState {
   }
 
   startRunning(label: string, input: string): void {
-    startRunningTab(this.busy, label, input, (l, entry) => this.append(l, entry));
+    startTabRunning(this.busy, label, input, (l, entry) => this.append(l, entry));
   }
 
   finishRunning(label: string, output: string): void {
-    finishRunningTab(
+    finishTabRunning(
       this.tabs, label, output,
       (l) => this.deleteBusy(l), (s) => this.persist(s), (t) => this.buildAgentState(t), (l) => this.markUnread(l),
     );
   }
 
   private capLog(log: LogEntry[]): LogEntry[] {
-    return capLog(log, getConfig().transcriptMaxLines);
+    return capTabLog(log, getConfig().transcriptMaxLines);
   }
 
   append(label: string, entry: LogEntry): void {
-    appendTab(this.tabs, label, entry, (log) => this.capLog(log), (l) => this.markUnread(l));
+    appendTabTranscript(this.tabs, label, entry, (log) => this.capLog(log), (l) => this.markUnread(l));
   }
 
   clearTranscript(label: string): void {
-    clearTranscriptTab(this.tabs, label, (s) => this.persist(s), (t) => this.buildAgentState(t));
+    clearTabTranscript(this.tabs, label, (s) => this.persist(s), (t) => this.buildAgentState(t));
   }
 
   recordHistory(index: number, text: string): string {
@@ -295,28 +293,21 @@ export class TabManager extends TabOpeningState {
     scheduleView: (label: string) => ScheduleView[],
     aggregatedSchedules: AggregatedScheduleView[],
   ): TabView[] {
-    return this.tabs.map((t) => buildTabView(
-      t,
-      this.busy.has(t.label),
-      this.cwd.get(t.label) ?? process.cwd(),
-      acpLabel(t.label),
-      connectionsFor(t.label),
-      scheduleView(t.label),
-      this.queue.get(t.label) ?? [],
+    return buildTabViews(
+      this.tabs, this.cwd, this.busy, this.queue, this.managers,
+      connectionsFor, acpLabel, scheduleView, aggregatedSchedules,
       (p: string) => this.shorten(p),
-      aggregatedSchedules,
-      this.managers.questions.pendingFor(t.label),
-    ));
+    );
   }
 
   rehydrate(
     loadTranscript: (name: string) => LogEntry[] | undefined,
     onState: (state: AgentState) => void,
   ): void {
-    const states = listAgentStates().toSorted((a, b) => (a.number ?? Infinity) - (b.number ?? Infinity));
-    if (states.length === 0) return;
-    this.tabs = rehydrateTabs(states, loadTranscript, (log) => this.capLog(log));
-    applyRehydratedState(states, this.cwd, this.context, this.queue, onState);
+    this.tabs = rehydrateTabState(
+      this.tabs, this.cwd, this.context, this.queue, loadTranscript, onState,
+      (log) => this.capLog(log),
+    );
     this.activeTab = 0;
   }
 }
