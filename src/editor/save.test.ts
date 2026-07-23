@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -64,6 +64,70 @@ describe('saveFile', () => {
     managers.tab = new TabManager(managers);
     const url = managers.tab.registerFile('/no/such/dir/notes.txt');
     expect(() => saveFile(managers, url, 'x')).toThrow();
+  });
+});
+
+describe('saveFile git sync', () => {
+  function setupSynced(saveSync: () => Promise<{ ok: true } | { error: string }>) {
+    const managers = {} as Managers;
+    managers.tab = new TabManager(managers);
+    managers.editorWatch = { watch: () => {}, markSaved: () => {} } as unknown as Managers['editorWatch'];
+    managers.gitSync = { saveSync } as unknown as Managers['gitSync'];
+    const dir = mkdtempSync(path.join(tmpdir(), 'janus-save-sync-'));
+    const file = path.join(dir, 'synced.txt');
+    writeFileSync(file, 'original');
+    const url = managers.tab.registerFile(file);
+    managers.tab.openEditorTab({ name: 'synced.txt', path: file, size: '8 B', url, sync: 'synced' });
+    return { managers, file, url };
+  }
+
+  it('writes and updates size synchronously even while the sync cycle is still pending', async () => {
+    const { promise, resolve } = Promise.withResolvers<{ ok: true }>();
+    const { managers, file, url } = setupSynced(() => promise);
+
+    saveFile(managers, url, 'updated content');
+
+    expect(readFileSync(file, 'utf8')).toBe('updated content');
+    const tab = managers.tab.tabs.find((t) => t.editor);
+    expect(tab?.editor?.size).not.toBe('8 B');
+    expect(tab?.editor?.sync).toBe('syncing');
+
+    resolve({ ok: true });
+    await promise;
+  });
+
+  it('transitions sync from syncing to synced once the cycle resolves', async () => {
+    const { managers, url } = setupSynced(() => Promise.resolve({ ok: true }));
+    saveFile(managers, url, 'updated content');
+    const tab = managers.tab.tabs.find((t) => t.editor);
+    expect(tab?.editor?.sync).toBe('syncing');
+
+    await vi.waitFor(() => expect(tab?.editor?.sync).toBe('synced'));
+  });
+
+  it('transitions sync to error when the cycle rejects', async () => {
+    const { managers, url } = setupSynced(() => Promise.resolve({ error: 'push failed' }));
+    saveFile(managers, url, 'updated content');
+    const tab = managers.tab.tabs.find((t) => t.editor);
+
+    await vi.waitFor(() => expect(tab?.editor?.sync).toBe('error'));
+  });
+
+  it('does not start a sync cycle for a tab with no sync field', () => {
+    const saveSync = vi.fn();
+    const managers = {} as Managers;
+    managers.tab = new TabManager(managers);
+    managers.editorWatch = { watch: () => {}, markSaved: () => {} } as unknown as Managers['editorWatch'];
+    managers.gitSync = { saveSync } as unknown as Managers['gitSync'];
+    const dir = mkdtempSync(path.join(tmpdir(), 'janus-save-nosync-'));
+    const file = path.join(dir, 'plain.txt');
+    writeFileSync(file, 'original');
+    const url = managers.tab.registerFile(file);
+    managers.tab.openEditorTab({ name: 'plain.txt', path: file, size: '8 B', url });
+
+    saveFile(managers, url, 'updated content');
+
+    expect(saveSync).not.toHaveBeenCalled();
   });
 });
 

@@ -14,6 +14,7 @@ import type { OpenFileManager } from './open-file-manager.js';
 import type { CaptureManager } from './capture/manager.js';
 import type { CommandManager } from './command/manager.js';
 import type { WorkspaceManager } from './workspace-manager.js';
+import type { GitSync } from './git-sync.js';
 import type { MonitorManager } from './monitor/manager.js';
 import type { FileTreeManager } from './file-tree/manager.js';
 import type { EditorWatchManager } from './editor/watch-manager.js';
@@ -37,6 +38,7 @@ export interface Managers {
   capture: CaptureManager;
   command: CommandManager;
   workspace: WorkspaceManager;
+  gitSync: GitSync;
   monitor: MonitorManager;
   fileTree: FileTreeManager;
   editorWatch: EditorWatchManager;

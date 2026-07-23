@@ -110,6 +110,11 @@ export type EditorView = {
   // cleared once the buffer is saved. Drives the new-file-only save auto-suffix, de-dupe bypass,
   // and rename-sets-filename behavior (see the new-text-file-button plan).
   newFile?: boolean;
+  // Set only for a file whose project-relative path is config-listed for GitHub syncing (see
+  // `git-sync.ts`); absent entirely for an ordinary editor tab, so the sync status icon simply
+  // doesn't render. `provisioning` covers the shared sync workspace's first-open clone/pull;
+  // `syncing` covers an in-flight save-triggered commit/pull-rebase/push cycle.
+  sync?: 'provisioning' | 'syncing' | 'synced' | 'error';
 };
 
 // A single visible row in a file tree tab (opened via `files [path]`). `path` is relative to the
@@ -610,6 +615,10 @@ export type Config = {
   theme: string;
   // Which background events feed the notifications tab (all opt-in; see `notifications.ts`).
   notifications?: NotificationConfig;
+  // Project-relative file paths kept automatically synced with `origin/master` via a shared,
+  // lazily-created workspace clone (see `git-sync.ts`). Empty by default — syncing is entirely
+  // config-driven, with no UI toggle.
+  syncPaths: string[];
 };
 
 // --- completion.ts --------------------------------------------------------

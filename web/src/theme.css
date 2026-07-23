@@ -234,6 +234,10 @@ html, body, #root {
   color: var(--faint); cursor: default;
 }
 .tab-connections.status-window-button-empty:hover, .tab-schedule.status-window-button-empty:hover { color: var(--faint); }
+.editor-sync-icon { font-size: 13px; padding: 0 4px; line-height: 1; cursor: default; }
+.editor-sync-icon--provisioning, .editor-sync-icon--syncing { color: var(--muted); }
+.editor-sync-icon--synced { color: var(--success); }
+.editor-sync-icon--error { color: var(--error); }
 .page-domain { color: var(--fg); font-weight: 600; } /* deprecated — kept for back-compat */
 .page-url { font-size: 12px; word-break: break-all; }
 .page-url-input {
