@@ -10,7 +10,7 @@
     {
       "name": "debugging",
       "type": "claude",
-      "model": "claude-opus-4-8",
+      "model": "claude-opus-5",
       "effort": "high",
       "workspace": false,
       "offline": false,

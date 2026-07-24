@@ -138,14 +138,14 @@ describe('completeHarnessModel', () => {
     const r = completeHarnessModel(
       'harness', ['harness', 'claude', '--model'], 'claude-op', 'harness claude --model claude-op', '', 23,
     );
-    expect(r?.newInput).toBe('harness claude --model claude-opus-4-8 ');
+    expect(r?.newInput).toBe('harness claude --model claude-opus-5 ');
   });
 
   it('completes multiple matches to their longest common prefix', () => {
     const r = completeHarnessModel(
       'harness', ['harness', 'claude', '--model'], 'claude-', 'harness claude --model claude-', '', 23,
     );
-    expect(r?.matches).toEqual(['claude-fable-5', 'claude-haiku-4-5-20251001', 'claude-opus-4-8', 'claude-sonnet-5']);
+    expect(r?.matches).toEqual(['claude-fable-5', 'claude-haiku-4-5-20251001', 'claude-opus-5', 'claude-sonnet-5']);
   });
 
   it('returns null for a non-harness command', () => {
