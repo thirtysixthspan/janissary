@@ -40,7 +40,7 @@ Edit the **one plan file** you picked: cut unneeded scope, replace a described-f
 
 1. **Adding code to the plan.** Never add implementation code blocks — no function bodies, no method implementations, no JSX/CSS blocks, no "here's the code to write". Name the module, function, or type and describe its contract and behavior in prose instead. (Illustrative examples of *observable output* — a CLI transcript, an error message the user will see, an ASCII sketch of UI — are fine. A type or code the implementer would paste is not.)
 2. **Editing any file other than the chosen plan.** No source, no tests, no config, no other plans.
-3. **Moving the plan out of `./product/plans/draft/`.** Promotion to `ready/` is the human's status decision (see the plan-storage section in [`CLAUDE.md`](../../CLAUDE.md)).
+3. **Moving the plan out of `./product/plans/draft/`.** Promotion to `ready/` is the human's status decision (see the plan-storage section in [`CLAUDE.md`](../../../CLAUDE.md)).
 4. **Cutting anything the goal actually requires.** If trimming a piece would make the plan fail to deliver what its own goal promises, or would drop validation, error handling, security, or accessibility, leave it and say so in your report instead — do not cut it to make the plan smaller.
 5. **Deciding product scope.** If the plan's *goal* itself seems too broad, say so in your report — do not rewrite the goal.
 
@@ -65,7 +65,7 @@ State your pick in one sentence.
 
 1. Read the entire plan.
 2. For every new module, function, file, or dependency the plan proposes, open the real codebase around it: check whether a helper, util, or pattern already covers the same need, and what the relevant stdlib/platform/existing-dependency options actually are. Grep for symbols rather than trusting quoted line numbers — line anchors drift.
-3. Read the project constraints in [`CLAUDE.md`](../../CLAUDE.md): the 200-line file-size limit and its guidance to extract rather than compact, the ESLint rules, and the general instruction not to add abstractions, error handling, or validation for scenarios that can't happen.
+3. Read the project constraints in [`CLAUDE.md`](../../../CLAUDE.md): the 200-line file-size limit and its guidance to extract rather than compact, the ESLint rules, and the general instruction not to add abstractions, error handling, or validation for scenarios that can't happen.
 4. Skim one or two plans in `./product/plans/ready/` to match the house style, in particular their "What already exists (reuse, don't rebuild)" tables.
 
 ---

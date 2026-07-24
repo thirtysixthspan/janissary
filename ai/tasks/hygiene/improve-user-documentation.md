@@ -1,7 +1,7 @@
 # Improve User Documentation (one backlog item per run)
 
 Your job: take the **top** candidate from `product/backlog/user-documentation.md` — the gap
-backlog maintained by [`find-user-documentation-gaps.md`](research/find-user-documentation-gaps.md) —
+backlog maintained by [`find-user-documentation-gaps.md`](../research/find-user-documentation-gaps.md) —
 verify its gap description against the spec and source, fix the gap in
 `documentation/user-documentation/` and `help.md`, add visuals — character sprites per the
 guidelines, and a screenshot captured with the docs-screenshots pipeline whenever the page
@@ -128,7 +128,7 @@ That is your work order — Step 3's research focuses on verifying and completin
 re-deriving it.
 
 If the backlog file does not exist, or its `candidates` section is empty, STOP and tell the user
-to run [`find-user-documentation-gaps.md`](research/find-user-documentation-gaps.md) first — do not fall
+to run [`find-user-documentation-gaps.md`](../research/find-user-documentation-gaps.md) first — do not fall
 back to inventing your own candidate.
 
 State your pick in one sentence: the area ID, its score, the spec file, and the doc
@@ -202,8 +202,8 @@ follow it unless your Step 3 verification showed it's wrong:
   turn `help.md` into a second copy of the full doc page; link isn't needed there since it's
   in-app, just keep the one-liner accurate.
 
-Follow this checklist while writing (full detail in [`user-documentation.md`](../guidelines/user-documentation.md)
-and [`human-writing-guidelines.md`](../guidelines/human-writing-guidelines.md) if you want more):
+Follow this checklist while writing (full detail in [`user-documentation.md`](../../guidelines/user-documentation.md)
+and [`human-writing-guidelines.md`](../../guidelines/human-writing-guidelines.md) if you want more):
 
 - [ ] First sentence states what the reader can now do — not background or internals.
 - [ ] A runnable example/command appears before any explanation of flags or edge cases.
@@ -229,7 +229,7 @@ Do not touch anything outside the files listed in "Files you may touch".
 Every page you created or substantially reworked gets a visuals pass. Two kinds of visuals
 exist, with different rules and different guidelines — read both before placing anything:
 
-### Agent character sprites — [`documentation.md`](../guidelines/documentation.md)
+### Agent character sprites — [`documentation.md`](../../guidelines/documentation.md)
 
 Decorative pixel-art characters floated into the prose. Apply that guideline's rules exactly;
 the ones violated most often:
@@ -249,7 +249,7 @@ and placement rules after your change (your added text can shift a sprite agains
 push the page into a higher length bracket); fix placement if it broke, but don't churn
 sprites that already comply.
 
-### Screenshots — "Visuals: use them with intent" in [`user-documentation.md`](../guidelines/user-documentation.md)
+### Screenshots — "Visuals: use them with intent" in [`user-documentation.md`](../../guidelines/user-documentation.md)
 
 **Default to adding one.** Every page you create or substantially rework that documents visible
 UI — a tab type, a picker, a panel, a dialog, a badge, anything a reader has to recognize on
@@ -348,7 +348,7 @@ Now that the gap is closed and verified, update `product/backlog/user-documentat
    Get the date from `date -u "+%Y-%m-%d"` — do not write one from memory.
 3. Touch nothing else in the file: no rescoring other candidates, no reordering, no editing the
    `Last run` line or the `unverified` section — those belong to
-   [`find-user-documentation-gaps.md`](research/find-user-documentation-gaps.md).
+   [`find-user-documentation-gaps.md`](../research/find-user-documentation-gaps.md).
 
 If you skipped the top item because its gap was already closed (Blocked work, case 2), do the
 same removal for it, wording the `resolved` bullet as already-resolved instead — then continue

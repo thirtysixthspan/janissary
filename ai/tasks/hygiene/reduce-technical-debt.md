@@ -54,7 +54,7 @@ Keep a running list of every item you deferred along the way (text + rating) —
 
 ## Step 2 — Develop a plan
 
-1. Read the project constraints in [`CLAUDE.md`](../../CLAUDE.md): ESLint rules (200-line `max-lines`, `.js` import extensions in `src/`, type-aware rules), test conventions (`src/**/*.test.ts`, `web/src/**/*.tsx`).
+1. Read the project constraints in [`CLAUDE.md`](../../../CLAUDE.md): ESLint rules (200-line `max-lines`, `.js` import extensions in `src/`, type-aware rules), test conventions (`src/**/*.test.ts`, `web/src/**/*.tsx`).
 2. Read every file relevant to the item to understand the code involved.
 3. Write a plan file following the format of existing plans in `./product/plans/complete/` — include a complexity rating, goal, approach, implementation steps, tests, and out-of-scope items. Write it to `./product/plans/draft/<item-name>.md`.
 4. After the plan is written, move it from `./product/plans/draft/` to `./product/plans/ready/`:
