@@ -776,6 +776,33 @@ describe('FileTreeManager', () => {
     expect(closeFns[1]).toHaveBeenCalled();
   });
 
+  it('openOrRetarget opening a fresh tree also refreshes its branch and github url', async () => {
+    currentBranchMock.mockResolvedValue('main');
+    remoteUrlMock.mockResolvedValue('git@github.com:owner/repo.git');
+    const manager = run();
+    manager.openOrRetarget('other');
+    const label = tabs.find((t) => t.files)!.label;
+    await vi.waitFor(() => {
+      expect(tabs.find((t) => t.label === label)!.files!.githubUrl).toBe('https://github.com/owner/repo/commits/main/');
+    });
+  });
+
+  it('openOrRetarget retargeting an existing navigator also refreshes its branch and github url', async () => {
+    currentBranchMock.mockResolvedValue('main');
+    remoteUrlMock.mockResolvedValue('git@github.com:owner/repo.git');
+    const manager = run();
+    manager.openOrRetarget('janus');
+    const label = tabs.find((t) => t.files)!.label;
+    await vi.waitFor(() => expect(remoteUrlMock).toHaveBeenCalledTimes(1));
+    currentBranchMock.mockResolvedValue('feature');
+
+    manager.openOrRetarget('other');
+
+    await vi.waitFor(() => {
+      expect(tabs.find((t) => t.label === label)!.files!.githubUrl).toBe('https://github.com/owner/repo/commits/feature/');
+    });
+  });
+
   describe('git-modified coloring', () => {
     const navLabel = () => tabs.find((t) => t.label.startsWith('navigator'))!.label;
 

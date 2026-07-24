@@ -24,6 +24,7 @@ export function makeOpenPort(
   watchDir: OpenPort['watchDir'],
   unwatchDir: OpenPort['unwatchDir'],
   rebuild: OpenPort['rebuild'],
+  refreshGit: OpenPort['refreshGit'],
 ): OpenPort {
-  return { managers, states, watchDir, unwatchDir, rebuild };
+  return { managers, states, watchDir, unwatchDir, rebuild, refreshGit };
 }

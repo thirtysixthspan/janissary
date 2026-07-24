@@ -11,6 +11,7 @@ export interface OpenPort {
   watchDir(label: string, absDir: string, relPath: string): void;
   unwatchDir(state: FilesTabState, relPath: string): void;
   rebuild(label: string): void;
+  refreshGit(label: string): void;
 }
 
 // Open a file navigator at `label`'s cwd (the metadata-row 📁 button). If a file-tree tab is already
@@ -39,6 +40,7 @@ function openFresh(port: OpenPort, root: string): void {
   port.managers.tab.setCwd(newLabel, root);
   port.states.set(newLabel, { root, expanded, watchers: new Map(), undoStack: [], redoStack: [] });
   port.watchDir(newLabel, root, '');
+  port.refreshGit(newLabel);
   port.managers.tab.setDock(port.managers.tab.findIndex(newLabel), 'left');
 }
 
@@ -56,6 +58,7 @@ function retarget(port: OpenPort, label: string, root: string): void {
   state.undoStack = [];
   state.redoStack = [];
   port.watchDir(label, root, '');
+  port.refreshGit(label);
   if (port.managers.tab.tabs.some((t) => t.label === label)) port.managers.tab.setCwd(label, root);
   port.rebuild(label);
 }

@@ -112,6 +112,7 @@ export class FileTreeManager {
       this.managers, this.tabs,
       (label, absDir, relPath) => this.watchDir(label, absDir, relPath),
       (state, relPath) => this.unwatchDir(state, relPath), (label) => this.rebuild(label),
+      (label) => this.refreshGit(label),
     );
   }
 
