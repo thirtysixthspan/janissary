@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react';
 import type { FileTreeRow } from '@shared/protocol';
 import type { JanusClient } from './ws';
-import { computeRename, hasRenameCollision, siblingNames } from './file-tree-rename';
+import { computeRename, hasRenameCollision, siblingNames } from './file-navigator-rename';
 
 type PendingConflict = { relPath: string; newRelPath: string; newName: string };
 
 // In-place rename for a file tree row (Cmd+R / Ctrl+R): edit state, commit/cancel, same-directory
 // collision handling (via the shared `MoveConflictDialog`), and the RPC send — kept out of
-// `FileTreeTab.tsx` to stay under the file-size limit, mirroring `useFileTreeDrag`/`useFileTreeSearch`.
-export function useFileTreeRename(
+// `FileNavigatorTab.tsx` to stay under the file-size limit, mirroring `useFileNavigatorDrag`/`useFileNavigatorSearch`.
+export function useFileNavigatorRename(
   rows: FileTreeRow[], client: JanusClient, index: number, setSelected: (path: string) => void,
   focusTree: () => void,
 ) {

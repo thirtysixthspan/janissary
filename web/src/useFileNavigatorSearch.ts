@@ -2,9 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import type { FileTreeRow } from '@shared/protocol';
 import type { JanusClient } from './ws';
 
-// State and handlers for one file tree tab's Search-files pop-up. Split out of `FileTreeTab` to
+// State and handlers for one file tree tab's Search-files pop-up. Split out of `FileNavigatorTab` to
 // keep it under the file-size limit.
-export function useFileTreeSearch(
+export function useFileNavigatorSearch(
   client: JanusClient, index: number, rows: FileTreeRow[], setSelected: (path: string | null) => void, focusTree: () => void,
 ) {
   const [searchOpen, setSearchOpen] = useState(false);

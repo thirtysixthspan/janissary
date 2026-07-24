@@ -5,7 +5,7 @@ import { statusDotIcon, promptIcon } from './icons';
 import { handleTabCompletion } from './command-completion';
 import { findGhostSuggestion } from './ghost-suggestion';
 
-// Exposed via `dropRef` so a file-tree drag can insert a dropped path and highlight the command
+// Exposed via `dropRef` so a file-navigator drag can insert a dropped path and highlight the command
 // bar as a valid drop target, mirroring `recallRef`'s imperative-escape-hatch pattern.
 export type CommandInputDropHandle = {
   insertAtCaret: (text: string) => void;
@@ -61,7 +61,7 @@ export function CommandInput({
 
   // Splice `text` into the textarea at the current caret (or over the current selection),
   // mirroring `insertNewline` below but generalized to arbitrary inserted text. Focuses the
-  // textarea first: unlike a keyboard-driven insert, the caller is a file-tree drag release, so
+  // textarea first: unlike a keyboard-driven insert, the caller is a file-navigator drag release, so
   // the textarea is never already the focused/selected element.
   const insertAtCaret = (text: string) => {
     const element = inputRef.current;

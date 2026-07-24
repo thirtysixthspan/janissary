@@ -8,7 +8,7 @@ type ChordHandlers = {
 };
 
 // The file tree's own Ctrl/Cmd chords — undo/redo, new file, and rename — dispatched here so
-// `FileTreeTab.tsx`'s `onKeyDown` stays a single branch for the whole ctrl/meta case, keeping both
+// `FileNavigatorTab.tsx`'s `onKeyDown` stays a single branch for the whole ctrl/meta case, keeping both
 // its cognitive complexity and the file's line count within limits. Returns whether `key` was one
 // of these chords, so the caller knows whether to prevent the default browser/window handling.
 export function handleTreeChord(

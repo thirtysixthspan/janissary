@@ -8,8 +8,8 @@ type Properties = {
 
 // The file navigator header's GitHub button: opens the repository's commits page for the current
 // branch (see `github-url.ts`) as an in-app page tab, via the same `open <url>` command
-// `FileTreeTab`'s other header actions already use — never a native OS browser tab.
-export function FileTreeGithubButton({ githubUrl, client }: Properties) {
+// `FileNavigatorTab`'s other header actions already use — never a native OS browser tab.
+export function FileNavigatorGithubButton({ githubUrl, client }: Properties) {
   return (
     <button
       type="button" className="files-github" title="Open on GitHub"

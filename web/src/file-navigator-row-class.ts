@@ -6,11 +6,11 @@ const STATUS_CLASS: Record<NonNullable<FileTreeRow['gitStatus']>, string> = {
   conflict: 'files-name--conflict',
 };
 
-// Compute the class strings for one file-tree row: the row wrapper (its `selected`/`drop-target`
+// Compute the class strings for one file-navigator row: the row wrapper (its `selected`/`drop-target`
 // modifiers) and its name span (a `files-name--changed`/`files-name--staged`/`files-name--conflict`
 // modifier matching the row's `gitStatus`, or none when unset). Kept out of the component so
-// `FileTreeTab.tsx` stays under the file-size limit.
-export function fileTreeRowClass(
+// `FileNavigatorTab.tsx` stays under the file-size limit.
+export function fileNavigatorRowClass(
   row: FileTreeRow,
   selected: string | null,
   dropTargetPath: string | undefined,

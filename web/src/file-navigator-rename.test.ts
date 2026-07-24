@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { computeRename, hasRenameCollision, siblingNames } from './file-tree-rename';
+import { computeRename, hasRenameCollision, siblingNames } from './file-navigator-rename';
 
 describe('computeRename', () => {
   it('is a noop when the trimmed name equals the current basename', () => {

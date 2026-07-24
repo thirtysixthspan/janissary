@@ -14,7 +14,7 @@ type Properties = {
   // Compressed one-line-per-entry layout, used when the tab is docked into a sidebar.
   compact?: boolean;
   // The tab's current dock location (undefined means center). Drives the dock-cycle button,
-  // which is shown only while docked, matching FileTreeTab and NotificationsTab.
+  // which is shown only while docked, matching FileNavigatorTab and NotificationsTab.
   dock?: 'left' | 'right';
   index: number;
 };

@@ -1,7 +1,7 @@
 import { useRef, useState, type RefObject } from 'react';
 import type { FileTreeRow } from '@shared/protocol';
 import type { JanusClient } from './ws';
-import { resolveDropTarget, type DropTarget } from './file-tree-drag';
+import { resolveDropTarget, type DropTarget } from './file-navigator-drag';
 import type { CommandInputDropHandle } from './CommandInput';
 
 // Ignore incidental pointer jitter between mousedown and the first real move — below this, a
@@ -18,7 +18,7 @@ type PendingConflict = { fromRelPath: string; toRelPath: string; source: 'move' 
 // handling in `editor/useEditorMouse.ts`) rather than reusing `drag-resize.ts`'s `startDrag`, which
 // has no way to signal the drop moment back to the caller. A movement threshold gates when a
 // mousedown actually becomes a drag; a plain click never sets `draggedPath`.
-export function useFileTreeDrag(
+export function useFileNavigatorDrag(
   rows: FileTreeRow[],
   client: JanusClient,
   index: number,

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { FileTreeRow } from '@shared/protocol';
-import { newFileTargetDir, newFileCommand, newDirectoryCommand, newDirectoryTargetPath, findPendingNewDir } from './file-tree-new-file';
+import { newFileTargetDir, newFileCommand, newDirectoryCommand, newDirectoryTargetPath, findPendingNewDir } from './file-navigator-new-file';
 
 const rows: FileTreeRow[] = [
   { path: 'src', name: 'src', depth: 0, dir: true, expanded: true },

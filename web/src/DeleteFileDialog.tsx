@@ -1,7 +1,7 @@
 import React from 'react';
 import { ConfirmDialogShell } from './ConfirmDialogShell';
 
-// Shown when Backspace/Delete is pressed on a selected file-tree row, before the file or
+// Shown when Backspace/Delete is pressed on a selected file-navigator row, before the file or
 // directory is actually removed from disk.
 type Properties = { name: string; onConfirm: () => void; onCancel: () => void };
 

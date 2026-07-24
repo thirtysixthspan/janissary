@@ -70,7 +70,7 @@ describe('ViewTabBody', () => {
     await waitFor(() => screen.getByRole('heading', { level: 1 }));
   });
 
-  it('renders FileTreeTab when view is files with payload', () => {
+  it('renders FileNavigatorTab when view is files with payload', () => {
     const tab = baseTab({ view: 'files', files: { root: '/', absoluteRoot: '/', rows: [] } });
     const { container } = render(React.createElement(ViewTabBody, { tab, client: {} as never, index: 0 }));
     expect(container.querySelector('.tab-body')).toBeTruthy();

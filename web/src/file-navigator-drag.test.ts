@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { FileTreeRow } from '@shared/protocol';
-import { resolveDropTarget } from './file-tree-drag';
+import { resolveDropTarget } from './file-navigator-drag';
 
 function makeRows(): FileTreeRow[] {
   return [

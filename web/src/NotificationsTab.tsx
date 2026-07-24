@@ -13,7 +13,7 @@ type Properties = {
   client: JanusClient;
   index: number;
   // Current dock location (undefined means center). The dock-cycle button renders only
-  // while docked, matching FileTreeTab.
+  // while docked, matching FileNavigatorTab.
   dock?: 'left' | 'right';
 };
 
