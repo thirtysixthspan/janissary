@@ -9,7 +9,14 @@
 // `chromeMajor`) so the UA string and the engine-emitted client hints report the same
 // version. Only the platform/locale/timezone/viewport are randomized.
 
-import type { BrowserProfile } from './types.js';
+export type BrowserProfile = {
+  userAgent: string;
+  // Value for the `Sec-CH-UA-Platform` client-hint header (and what the UA token implies).
+  platform: 'Windows' | 'macOS' | 'Linux';
+  locale: string;
+  timezoneId: string;
+  viewport: { width: number; height: number };
+};
 
 const PLATFORMS = [
   {

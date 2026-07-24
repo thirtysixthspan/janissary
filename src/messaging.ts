@@ -1,6 +1,9 @@
-import type {
-  MessageKind, ParsedMsg as ParsedMessage, ParsedBroadcast,
-} from './types.js';
+// `response` is system-generated (the reply to a request), not something a user sends.
+export type MessageKind = 'info' | 'request' | 'command' | 'response';
+
+export type ParsedMsg = { to: string; kind: MessageKind; text: string };
+
+export type ParsedBroadcast = { targets: string[] | 'all'; kind: MessageKind; text: string };
 
 const KIND_ALIASES: Record<string, MessageKind> = {
   i: 'info', info: 'info', informational: 'info',
@@ -21,7 +24,7 @@ function parseKindAndText(parts: string[]): { kind: MessageKind; text: string } 
 }
 
 /** Parse a `msg <agent> <kind> <text...>` command (the leading `msg` is optional). */
-export function parseMsgCommand(input: string): ParsedMessage | { error: string } {
+export function parseMsgCommand(input: string): ParsedMsg | { error: string } {
   const body = input.trim().replace(/^msg\s+/i, '');
   const parts = body.split(/\s+/).filter(Boolean);
   if (parts.length < 3) return { error: 'Usage: msg <agent> <info|request|command> <text>' };

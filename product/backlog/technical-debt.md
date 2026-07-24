@@ -2,8 +2,6 @@
 
 ## ready
 
-* src/types.ts has grown to 672 lines holding type definitions for roughly 18 unrelated domains (tab, harness, schedule, acp, browser, connections, commands, db, config, completion, logger, and more, each marked off by its own section comment), even though almost every one of those domains already has its own folder under src/ (src/tab/, src/harness/, src/schedule/, src/browser/, src/database/, ...); split each section into a types.ts colocated in its matching domain folder, re-exported from a slim src/types.ts if a single cross-domain import point is still needed, so type definitions live next to the code that owns them like the rest of the codebase. Severity: medium.
-
 ## development
 
 * src/tab/manager.ts is 257 non-blank/non-comment lines (313 raw), over the 200-line guideline in ai/guidelines/code-guidelines.md, because TabManager keeps a few full inline operations (notably closeTab and renameTab) that never got extracted the way its other operations already were into sibling files like src/tab/dock.ts, src/tab/reorder.ts, and src/tab/navigation-commands.ts; extract the closeTab and renameTab bodies into new src/tab/*.ts helpers following that same established pattern and call them from TabManager. Severity: high.

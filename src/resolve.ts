@@ -1,6 +1,18 @@
 import { getOutput } from './commands.js';
 import { commands } from './commands/index.js';
-import type { Resolution } from './types.js';
+
+// A built-in command's name. Mirrors `Command['name']` (a string) without importing from
+// `commands/types.ts`, which would create a `resolve.ts` ↔ `commands/types.ts` import cycle.
+export type AppCommand = string;
+
+export type Resolution =
+  | { kind: 'empty' }
+  | { kind: 'shell'; cmd: string }
+  | { kind: 'app'; name: AppCommand; cmd: string }
+  | { kind: 'output'; cmd: string; output: string }
+  // An unprefixed command that matches no built-in. The interactive dispatcher runs probabilistic
+  // recognition on it; other callers fall back to `output` (the unknown-command message).
+  | { kind: 'unknown'; cmd: string; output: string };
 
 /**
  * Classify a prompt input into the action it represents, mirroring the dispatch order
