@@ -10,7 +10,7 @@ notifications right   open it docked in the right sidebar
 
 There is only ever one notifications tab, and it never appears on its own — it shows up only when you run `notifications`. The feed is a plain, scrollable list with no command line: it takes no input, it just displays notifications. Closing it and reopening it starts over with an empty feed.
 
-<img class="agent-float" src="/agents/malik-south-east.png" alt="" />
+<img class="agent-float" src="/agents/selim-south-east.png" alt="" />
 
 Nothing is collected while the feed is closed. Events that happen before you open it — and any `notify` message — are dropped, not saved up for later. Open the feed first, then the events that follow start landing in it.
 
@@ -44,7 +44,7 @@ A notification only fires for a **background** tab — the tab you're currently 
 
 ## Post your own line with `notify`
 
-<img class="agent-float left" src="/agents/fariz-south-west.png" alt="" />
+<img class="agent-float left" src="/agents/ahmed-south-west.png" alt="" />
 
 `notify <message>` posts a line of your own into the feed, labeled with the tab it came from — for example `build-agent: deploy finished`. Unlike the four events above, `notify` has no toggle and ignores the focused-tab rule: it always shows, even when you send it from the tab you're looking at, because you asked for it explicitly. It's meant for agents to flag something worth your attention. The one rule it still obeys is the same as everything else here: if the feed is closed, the message is dropped. `notify` on its own, with no message, just prints `Usage: notify <message>.`
 

@@ -1,6 +1,6 @@
 # Profiles
 
-<img class="agent-float" src="/agents/hakim-south.png" alt="" />
+<img class="agent-float" src="/agents/aslan-south-east.png" alt="" />
 
 A profile is a saved, named set of agents and harnesses you can relaunch as one unit — a working setup for a recurring job, recreated with a single command:
 
@@ -20,7 +20,7 @@ Bare `profile launch`, with no name, opens a picker listing every profile in you
 
 ## Writing a profile
 
-<img class="agent-float left" src="/agents/tahir-south-east.png" alt="" />
+<img class="agent-float left" src="/agents/bilal-south-west.png" alt="" />
 
 Profiles live in a `profiles/` directory in your project — plain files, meant to be committed and shared. Each profile is a single JSON file (dasherized, like `writing-code.json`) with an `agents` array and a `harnesses` array; every entry carries its own `name`, which becomes the tab's label:
 
@@ -74,7 +74,6 @@ Launching a profile that's already running resets it: any open tab whose label m
 
 ## Saving the running session as a profile
 
-<img class="agent-float" src="/agents/fariz-south-west.png" alt="" />
 
 `profile save <name>` captures your current session into `profiles/<name>.json`, the inverse of launching one. It writes `<name>` verbatim as the filename, with no dasherization, and captures every open tab, including the one you typed the command in. The one tab it always leaves out is the automatic root `janus` tab, since a relaunch always has its own fresh one to land in.
 

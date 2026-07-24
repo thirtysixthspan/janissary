@@ -26,13 +26,13 @@ Embedded web pages and ANSI-colored shell output are deliberately outside the th
 
 ## `syntax theme`
 
-<img class="agent-float" src="/agents/hakim-south.png" alt="" />
+<img class="agent-float" src="/agents/hamza-south-east.png" alt="" />
 
 `syntax theme <name>` sets the syntax-highlighting theme used by every open [editor tab](/user-documentation/tab-types/editor), and persists it so it survives a restart. Names match case-insensitively. An unrecognized name shows an error listing the available themes — which is also a quick way to see what's on offer. Bare `syntax theme` opens a picker overlay instead: arrows move, `Return` picks, `Escape` closes.
 
 ## `quit` and the confirmation dialog
 
-<img class="agent-float left" src="/agents/yusuf-south-east.png" alt="" />
+<img class="agent-float left" src="/agents/mahir-south-west.png" alt="" />
 
 `quit` is the only command that exits the whole app, and it always asks first: a dialog reading "Are you sure you want to quit?" with **Quit (y)** and **Cancel (n)** buttons. **Cancel** is selected by default, so a stray `Enter` is safe. Press `y` to confirm or `n` / `Escape` to cancel; `←`/`→` move the selection. While the dialog is open it traps all other input — clicks outside it and other keys do nothing.
 
@@ -40,7 +40,6 @@ Don't reach for `exit` to leave the app: `exit` is an alias of `close` and close
 
 ## `notifications` and `notify`
 
-<img class="agent-float" src="/agents/fariz-south-east.png" alt="" />
 
 `notifications` opens a single feed tab that collects background-tab events — an agent finishing, a message arriving, a scheduled command firing, an agent starting a turn. Each event type is off until you turn it on in `.janissary/config.json`. `notifications left` or `notifications right` docks the feed into a sidebar. `notify <message>` posts your own line into that feed from any tab, which always shows (even from the focused tab) as long as the feed is open. If the feed isn't open, events and `notify` messages are simply dropped — nothing is queued up. The full page is [Notifications](/user-documentation/tab-types/notifications).
 

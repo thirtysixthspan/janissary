@@ -1,4 +1,7 @@
 # Quick open
+<img class="agent-float" src="/agents/mahir-south-east.png" alt="" />
+
+<img class="agent-float left" src="/agents/orhan-south-west.png" alt="" />
 
 `Cmd+P` jumps to any file in the project by typing a few characters of its name, without browsing the [file navigator](/user-documentation/tab-types/file-navigator) tree.
 

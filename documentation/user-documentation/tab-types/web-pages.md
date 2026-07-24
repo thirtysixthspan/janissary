@@ -15,7 +15,7 @@ Only `http` and `https` addresses can be embedded; anything else (`javascript:`,
 
 ## Viewing, not driving
 
-<img class="agent-float" src="/agents/tahir-south-west.png" alt="" />
+<img class="agent-float" src="/agents/cavus-south-east.png" alt="" />
 
 A page tab only displays the site. The app doesn't script or read the embedded page's contents — whatever you can do inside it, you do by hand. (Programmatic browsing is a different feature: the `browser` command.) The metadata header's back, forward, and reload buttons are the one exception: they move the embedded page through its own history or reload it, without reading or scripting anything inside it. Double-clicking the address in the metadata header lets you edit it directly; press Enter to load the new address into the same tab, or Escape to cancel.
 
@@ -27,7 +27,7 @@ Each page tab is numbered `1`, `2`, `3`, … — always the smallest free number
 
 ## Closing
 
-<img class="agent-float right" src="/agents/hakim-south-west.png" alt="" />
+<img class="agent-float left" src="/agents/demir-south-west.png" alt="" />
 
 Four routes, same result:
 

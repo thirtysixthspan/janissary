@@ -47,7 +47,7 @@ Text in metadata rows and headers can be selected with the mouse and copied, inc
 
 ## Renaming a tab
 
-<img class="agent-float left" src="/agents/fariz-south-east.png" alt="" />
+<img class="agent-float" src="/agents/cavus-south-east.png" alt="" />
 
 `rename <newname>` gives the current tab a display alias — a name shown in the strip in place of its real label. Bare `rename` clears the alias. You can also double-click the label of the active tab and type a new name in place; Enter commits, Escape cancels.
 
@@ -78,7 +78,7 @@ Paths outside the project but under your home directory shorten to `~`. This is 
 
 ## Reading the transcript
 
-<img class="agent-float" src="/agents/tahir-south-east.png" alt="" />
+<img class="agent-float left" src="/agents/demir-south-west.png" alt="" />
 
 A path and line number in output, like `src/foo.ts:42`, is a clickable link. Click it to open that file in an editor tab with the cursor on that line. This works in your own shell output and in an agent's output alike.
 
@@ -92,6 +92,5 @@ Besides the keys in [Keyboard shortcuts](/user-documentation/getting-started/key
 
 ## Agent tool steps fold up
 
-<img class="agent-float left" src="/agents/yusuf-south-west.png" alt="" />
 
 When an agent runs a series of tool steps, the transcript collapses each run into a single summary line — `▸ N tool steps  (ctrl+t to expand)` — so the conversation stays readable. Your prompt and the agent's final answer always stay visible. Click the summary line, or press `Ctrl+T`, to expand or collapse the steps for the current tab.

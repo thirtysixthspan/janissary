@@ -1,4 +1,7 @@
 # Installing
+<img class="agent-float" src="/agents/ekrem-south-east.png" alt="" />
+
+<img class="agent-float left" src="/agents/hamza-south-west.png" alt="" />
 
 ## Prerequisites
 

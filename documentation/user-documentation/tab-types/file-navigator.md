@@ -55,7 +55,7 @@ Click the header's magnifying-glass button to open a search pop-up. Type part of
 
 Press `Tab` to accept the ghost completion into the input without closing the pop-up. Press `Enter` to jump to the top match: it expands every ancestor directory, selects the file's row, and scrolls it into view. Press `Escape`, or click outside the pop-up, to close it without changing the tree. An empty query shows nothing below the input; a query with no matches shows `(no matching files)` instead of a path.
 
-<img class="agent-float" src="/agents/hakim-south-east.png" alt="" />
+<img class="agent-float" src="/agents/demir-south-east.png" alt="" />
 
 ## The tree stays current
 
@@ -99,7 +99,7 @@ Rename the new tab's label to name the file — the typed text becomes the filen
 
 Click the adjacent **New directory** button to create a folder using the same selection rules. It is named `untitled`, or the next available name (`untitled-2`, and so on) if that name already exists. When the new `untitled` directory appears, it's selected automatically and its name is ready to edit right away; if a naming collision gave it a different name instead, select and rename it yourself.
 
-<img class="agent-float left" src="/agents/fariz-south.png" alt="" />
+<img class="agent-float left" src="/agents/dogan-south-west.png" alt="" />
 
 ## Renaming a file or directory
 
@@ -134,5 +134,3 @@ this way. Each tree keeps its own undo/redo history in memory for as long as it 
 it clears that history.
 
 Like other view tabs, a file navigator is a live view — closed with its × button or `close`, and not restored by `janus --relaunch`.
-
-<img class="agent-float" src="/agents/tahir-south-west.png" alt="" />

@@ -16,7 +16,7 @@ Running the command from a directory that isn't in a git repository, or in a rep
 
 ## Pushing to GitHub needs a token
 
-<img class="agent-float left" src="/agents/malik-south-east.png" alt="" />
+<img class="agent-float" src="/agents/ekrem-south-east.png" alt="" />
 
 Inside the workspace, day-to-day git works without any setup: commit, fetch, pull, branch. Pushing is different. The sandbox blocks SSH keys, so the workspace's `origin` is rewritten to HTTPS — and HTTPS pushes need a credential the sandbox will allow.
 
@@ -24,6 +24,7 @@ That credential is a scoped GitHub token placed in `.janissary/github-token` in 
 
 Create a [fine-grained personal access token](https://github.com/settings/personal-access-tokens/new) scoped to just the repositories the agent should reach, with **Contents: Read and write**, **Pull requests: Read and write**, and **Metadata: Read-only** permissions — nothing broader. Save the token value to `.janissary/github-token` (already gitignored; janissary only ever reads this file, never writes to it).
 
+<img class="agent-float left" src="/agents/hamza-south-west.png" alt="" />
 ## Lifecycle
 
 A workspace lasts exactly as long as its tab:

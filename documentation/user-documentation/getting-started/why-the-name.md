@@ -1,9 +1,10 @@
 # Why the name "Janissary"?
 
-<img class="agent-float" src="/agents/yusuf-south.png" alt="" />
+<img class="agent-float" src="/agents/hamza-south-east.png" alt="" />
 
 The name is a deliberate metaphor, not a random pick. It's worth knowing the history behind it, both for what it captures well and for what it leaves behind.
 
+<img class="agent-float left" src="/agents/mahir-south-west.png" alt="" />
 ## Who the Janissaries were
 
 The [Janissaries](https://en.wikipedia.org/wiki/Janissaries) (from the Ottoman Turkish *yeni çeri*, "new soldier") were the elite standing infantry corps of the [Ottoman Empire](https://en.wikipedia.org/wiki/Ottoman_Empire), formed in the late 14th century under [Sultan Murad I](https://en.wikipedia.org/wiki/Murad_I). For roughly 470 years, until the corps was abolished in 1826, they were the Sultan's household troops and personal bodyguard — the professional core of an army otherwise built around feudal levies and irregular cavalry.

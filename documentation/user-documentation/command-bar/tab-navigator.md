@@ -1,9 +1,10 @@
 # Tab navigator
 
-<img class="agent-float" src="/agents/malik-south.png" alt="" />
+<img class="agent-float" src="/agents/cavus-south-east.png" alt="" />
 
 With several tabs open, `Ctrl+G` (or the `nav` command) jumps straight to any of them by typing part of its label or number — no need to click through the tab strip or step through `Shift+←`/`Shift+→` one at a time.
 
+<img class="agent-float left" src="/agents/demir-south-west.png" alt="" />
 ## Opening the navigator
 
 `Ctrl+G` opens a window listing every open tab — agent, harness, SSH, viewer, and reporting tabs alike — floating above the command bar, in the same spot the [history picker](/user-documentation/command-bar/history) appears.

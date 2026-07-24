@@ -1,9 +1,10 @@
 # Task picker
 
-<img class="agent-float" src="/agents/hakim-south.png" alt="" />
+<img class="agent-float" src="/agents/dogan-south-east.png" alt="" />
 
 Your repository's `ai/tasks/` directory holds executable task files — self-contained instruction sets like `build-a-feature.md` or `fix-an-issue.md` that an agent can be told to run. The task picker lists them so you can drop one onto the command line without typing its path by hand.
 
+<img class="agent-float left" src="/agents/ekrem-south-west.png" alt="" />
 ## The `Ctrl+A` picker
 
 `Ctrl+A` (or the `tasks` command) opens a window listing the task files, sorted alphabetically. Since they all live under `ai/tasks/`, the window initially shows a single collapsed `tasks` row — expand it (`→` or `Return`) to see the individual task files:

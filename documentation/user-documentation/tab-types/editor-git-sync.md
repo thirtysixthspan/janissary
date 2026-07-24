@@ -1,9 +1,10 @@
 # Git-synced files
 
-<img class="agent-float" src="/agents/tahir-south-west.png" alt="" />
+<img class="agent-float" src="/agents/orhan-south-east.png" alt="" />
 
 Some files can be kept automatically synced with your project's `origin/master` branch: saving one commits and pushes the change for you, with no separate git workflow to run by hand. It's useful for files meant to be hand-edited right inside the app and kept current on GitHub without a manual `add`/`commit`/`push` cycle — the two cases this ships configured for out of the box are product-management files (a backlog, a set of plans) and hand-edited documentation living in the repo.
 
+<img class="agent-float left" src="/agents/selim-south-west.png" alt="" />
 ## Why sync a file at all
 
 An [editor tab](/user-documentation/tab-types/editor) already lets you open and edit any file in the project. Git-syncing closes the loop for files whose whole point is to be a shared, living record — a backlog, a plan, a doc page — where a stale local edit that never made it to GitHub is worse than useless to anyone else looking at the repo. Rather than remembering to commit and push after every tweak, a synced file's save button does that for you, so the file on GitHub is never more than one save behind what you're looking at.

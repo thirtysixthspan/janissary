@@ -1,6 +1,6 @@
 # Browser automation
 
-<img class="agent-float" src="/agents/malik-south-east.png" alt="" />
+<img class="agent-float" src="/agents/dogan-south-east.png" alt="" />
 
 The `browser` command drives a real Chromium browser from a tab, so you (or that tab's agent) can open a page, read its rendered text, run JavaScript against it, and capture a screenshot:
 
@@ -38,7 +38,7 @@ Each tab that uses `browser` gets its own Chromium process, separate from every 
 
 ## Headless by default, headed on request
 
-<img class="agent-float left" src="/agents/yusuf-south-west.png" alt="" />
+<img class="agent-float left" src="/agents/ekrem-south-west.png" alt="" />
 
 A tab's browser runs headless (no visible window) unless you launch it with `browser open --headed` (or `-H`). The mode is set once, when the browser first launches for that tab, and stays fixed for as long as that browser process runs. Asking for `--headed` against a browser that's already running headless does nothing but note that it's already headless. To switch modes, close every window in that tab (`browser close` for each, or `browser window close <id>`), which ends the process, then `browser open --headed` again.
 
