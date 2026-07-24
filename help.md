@@ -28,7 +28,7 @@
 | `harness` | Open an AI coding harness (claude/opencode/codex) in a full-tab terminal (add `-w` / `--workspace` to clone the repo, `-y` / `--yes` to auto-approve the harness's permission prompts — claude and codex only; without `-w` a security warning is shown in the terminal); `harness capture <name>` snapshots a harness tab's screen into an editor tab |
 | `ssh` | Open an SSH session to a remote host in a full-tab terminal |
 | `search` | `search transcript <pattern>` searches the current tab's transcript with a regex (Cmd+F opens it empty) |
-| `files` | `files [path]` opens a file tree tab rooted at the issuing tab's cwd, or at `path` |
+| `files` | `files [path]` opens a file navigator tab rooted at the issuing tab's cwd, or at `path` |
 | `notifications` | `notifications [left\|right]` opens (or docks) the notifications tab — a feed of background-tab events (see `.janissary/config.json` to enable events) |
 | `notify` | `notify <message>` pushes a custom line into the notifications feed (dropped if the tab is closed) |
 | `send` | Deliver a line of input to any tab — types into a harness, or runs a command in an agent tab |
@@ -84,7 +84,7 @@
 | `Page Up` / `Page Down` | Scroll up / down by a page |
 | Mouse wheel | Scroll up / down |
 
-**File tree tab controls** (active only while a file tree tab is focused):
+**File navigator controls** (active only while a file navigator is focused):
 
 | Key | Action |
 | --- | ------ |
