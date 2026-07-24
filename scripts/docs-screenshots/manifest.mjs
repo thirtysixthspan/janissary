@@ -112,14 +112,14 @@ export default [
     clipHeight: 560,
   },
   {
-    name: 'file-tree',
+    name: 'file-navigator',
     setup: ['files .'],
     actions: [{ press: 'ArrowDown' }, { press: 'ArrowDown' }, { press: 'ArrowRight' }, { wait: 500 }],
-    target: 'file-tree-view',
+    target: 'file-navigator-view',
     clipHeight: 380,
   },
   {
-    name: 'file-tree-sidebar',
+    name: 'file-navigator-sidebar',
     setup: ['files left .'],
     settle: 1000,
     target: 'page',

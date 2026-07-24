@@ -155,7 +155,7 @@ export function FileNavigatorTab({ files, client, index, dock, autoFocus = true,
   };
 
   return (
-    <div className="files-tab" data-doc-shot="file-tree-view" ref={containerRef} tabIndex={0} role="tree" onKeyDown={onKeyDown}>
+    <div className="files-tab" data-doc-shot="file-navigator-view" ref={containerRef} tabIndex={0} role="tree" onKeyDown={onKeyDown}>
       <FileNavigatorHeader
         root={files.root} branch={files.branch} githubUrl={files.githubUrl} client={client} index={index} dock={dock}
         onSearch={search.openSearch} onNewFile={createNewFile} onNewDirectory={createNewDirectory}
