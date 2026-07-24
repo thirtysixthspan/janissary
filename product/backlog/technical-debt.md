@@ -2,8 +2,6 @@
 
 ## ready
 
-* update all css to switch from using file tree (or similar) and begin using file navigator.
-
 ## development
 
 ## deferred
