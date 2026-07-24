@@ -42,6 +42,12 @@ plans/
 
 A plan that's still in `draft/` might have open questions or unresolved wording; a plan in `ready/` shouldn't. That distinction matters because an agent picking up work should only ever pull from `ready/` — a draft is a conversation still in progress, not an instruction.
 
+## Kept synced with GitHub by default
+
+The backlog and plans folders are exactly the kind of files [git-syncing](/user-documentation/tab-types/editor-git-sync) exists for: a shared, living record that's meant to be hand-edited and always reflect what's actually true on GitHub, not a local draft you have to remember to push. That's why a fresh project's `syncPaths` configuration already covers both out of the box — `product/backlog/` and `product/plans/`, or wherever this workflow's files live in your project — so saving a backlog or plan straight from an [editor tab](/user-documentation/tab-types/editor) commits and pushes it for you.
+
+That matters most for a loop like this one, where a plan moves between `draft/`, `ready/`, and `complete/` folders as work progresses: each move is a save, and each save is a commit that lands on GitHub immediately, so anyone (or any agent) looking at the repo sees the current status without needing you to run `git add`/`commit`/`push` by hand first. See [Git-synced files](/user-documentation/tab-types/editor-git-sync) for how to add more paths, or [the app's configuration](/user-documentation/getting-started/startup#configuration) for `syncPaths` itself.
+
 ## Specs
 
 A spec is different from a plan, and you don't write it yourself: a plan is what you decide before something is built; a spec is what an agent writes *after*, to record what the finished thing actually does. One file per feature or part of the product, generated or updated as the last step of executing a plan — never edited by hand ahead of time, and never a place to record decisions, rationale, or history. It exists purely to answer "how does this behave right now," so the next plan (or the next agent) has an accurate description of the current system to build on instead of having to rediscover it.
