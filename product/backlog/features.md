@@ -4,6 +4,9 @@
 
 ## development
 
+* A kanban-style board summarizing all currently-open workspaced agents and harnesses, the way Vibe Kanban and amux's built-in kanban board let a user managing many parallel AI coding sessions see task/status at a glance instead of checking each session individually. Janissary's tab strip and fuzzy tab navigator (`product/specs/tab-navigator.md`) let a user jump to any tab, but there is no aggregate view of what each workspaced tab is working on and whether it's idle, busy, or blocked on a permission prompt. A new dockable tab (alongside the existing `notifications`/`schedules` dockable tabs) could list every workspaced agent/harness tab with its busy state and last activity. do this as a tab plugin with a new plugin architecture.
+
+
 * extract harness transcripts directly from harness dot directories. useful for monitoring subagents.
 
 * long term durable transcripts - send trascripts off to seperate github repo? other durable storage options? 
@@ -73,9 +76,6 @@
 
 41. Adopt ECC's "curl credentials kept out of argv" and "gateguard gates force/path checkouts as destructive" hardening fixes (from the 2.0.0 changelog) as concrete review items for janissary's own sandbox/shell command handling in src/sandbox and src/shell.
 
-* Git-worktree-based workspace provisioning, the way amux, Claude Squad, and Conductor isolate parallel coding agents. Today `agent -w`/`harness -w` does a full `git clone` of `origin` into `.janissary/workspace/<name>/` (see `product/specs/workspaced-agent.md`), which is slower to provision and heavier on disk than a `git worktree add`, which shares the same object store and is near-instant to create. Adopting worktrees for the disposable clone step would speed up launching parallel workspaced agents/harnesses and reduce their footprint, while keeping the existing sandbox/isolation model unchanged.
-
-* A kanban-style board summarizing all currently-open workspaced agents and harnesses, the way Vibe Kanban and amux's built-in kanban board let a user managing many parallel AI coding sessions see task/status at a glance instead of checking each session individually. Janissary's tab strip and fuzzy tab navigator (`product/specs/tab-navigator.md`) let a user jump to any tab, but there is no aggregate view of what each workspaced tab is working on and whether it's idle, busy, or blocked on a permission prompt. A new dockable tab (alongside the existing `notifications`/`schedules` dockable tabs) could list every workspaced agent/harness tab with its busy state and last activity.
 
 * An in-app diff/merge review UI for a workspaced agent's changes, comparable to Conductor's per-worktree result view and amux's "smart merging" (auto-commit and merge cleanup across parallel branches). Janissary can run any number of `agent -w`/`harness -w` tabs, each with its own git clone (`product/specs/workspaced-agent.md`), but has no way to view a diff of what a given workspace changed, or to merge/cherry-pick it back into the root repo, without leaving the app and inspecting the clone directories by hand. A `workspace diff <label>` command opening a read-only diff view (reusing the editor tab's syntax highlighting) would close this gap.
 
@@ -87,10 +87,15 @@
 
 * A saved directory of SSH hosts with tags/groups and one-click connect, the way Termius and Royal TSX maintain a host list with saved keys and connection options instead of retyping a destination each time. Janissary's `ssh <destination> [options]` (`product/specs/ssh-tab.md`) is a thin passthrough to the real `ssh` binary with no saved-host concept — every connection is typed from scratch, with tab-completion only covering already-open ssh tabs' labels/destinations, not a saved list of hosts never yet connected to in this session.
 
-* Reusable, parametrized command "workflows" invocable from a command palette, the way Warp's Team Workflows turn a common command into a shared, versioned, named primitive any user can run and tune. This is distinct from janissary's existing `profiles/` (which launch a whole tab topology — agents, harnesses, layout) and `ai/tasks/*.md` (agent prompts run via the task picker, `product/specs/task-picker.md`): a workflow would be a lightweight, parametrized single-command template (e.g. a shell one-liner with placeholders) saved and invoked inline in any tab's command bar, without spinning up a new tab.
 
-* A floating, transient terminal overlay for a quick one-off shell command, the way Zellij's floating panes let a user pop open a temporary pane without disturbing the current layout, then dismiss it. Janissary's closest equivalent is PTY takeover (`product/specs/shell.md`), which replaces the whole tab body for an interactive program, or opening a whole new tab — there is no lightweight way to run one quick command in a small overlay without leaving the current tab's context or committing to a new tab.
 
 * Multi-user, read-only shared session viewing, the way tmux's multi-attach lets a second person view (and optionally drive) the same session, and Warp's Team Workflows share execution across a team. Janissary already ships a web client serving every tab over HTTP, but the spec surface (`product/specs/tabs.md`, `product/specs/connection.md`) describes a single-user session with no notion of a second, remote viewer watching a running harness or agent tab live — a natural extension given the app is already a served web app rather than a purely local terminal UI.
 
 ## deferred
+
+* Git-worktree-based workspace provisioning, the way amux, Claude Squad, and Conductor isolate parallel coding agents. Today `agent -w`/`harness -w` does a full `git clone` of `origin` into `.janissary/workspace/<name>/` (see `product/specs/workspaced-agent.md`), which is slower to provision and heavier on disk than a `git worktree add`, which shares the same object store and is near-instant to create. Adopting worktrees for the disposable clone step would speed up launching parallel workspaced agents/harnesses and reduce their footprint, while keeping the existing sandbox/isolation model unchanged.
+
+* A floating, transient terminal overlay for a quick one-off shell command, the way Zellij's floating panes let a user pop open a temporary pane without disturbing the current layout, then dismiss it. Janissary's closest equivalent is PTY takeover (`product/specs/shell.md`), which replaces the whole tab body for an interactive program, or opening a whole new tab — there is no lightweight way to run one quick command in a small overlay without leaving the current tab's context or committing to a new tab.
+
+* Reusable, parametrized command "workflows" invocable from a command palette, the way Warp's Team Workflows turn a common command into a shared, versioned, named primitive any user can run and tune. This is distinct from janissary's existing `profiles/` (which launch a whole tab topology — agents, harnesses, layout) and `ai/tasks/*.md` (agent prompts run via the task picker, `product/specs/task-picker.md`): a workflow would be a lightweight, parametrized single-command template (e.g. a shell one-liner with placeholders) saved and invoked inline in any tab's command bar, without spinning up a new tab.
+
