@@ -3,6 +3,7 @@ import type { FileNavigatorRow } from '@shared/protocol';
 import type { JanusClient } from './ws';
 import { resolveDropTarget, type DropTarget } from './file-navigator-drag';
 import type { CommandInputDropHandle } from './CommandInput';
+import type { EditorDropHandle } from './EditorTab';
 
 // Ignore incidental pointer jitter between mousedown and the first real move — below this, a
 // press-release is just a click, not a drag.
@@ -23,6 +24,7 @@ export function useFileNavigatorDrag(
   client: JanusClient,
   index: number,
   dropRef?: RefObject<CommandInputDropHandle | null>,
+  editorDropRef?: RefObject<EditorDropHandle | null>,
 ) {
   const [draggedPath, setDraggedPath] = useState<string | null>(null);
   const [dragPosition, setDragPosition] = useState<{ x: number; y: number } | null>(null);
@@ -35,6 +37,7 @@ export function useFileNavigatorDrag(
   dropTargetRef.current = dropTarget;
   const gestureRef = useRef<{ path: string; x: number; y: number; started: boolean } | null>(null);
   const overCommandBarRef = useRef(false);
+  const overEditorRef = useRef(false);
 
   const hoveredRowPath = (x: number, y: number): string | null => {
     const element = document.elementFromPoint(x, y);
@@ -49,6 +52,13 @@ export function useFileNavigatorDrag(
   const hoveredCommandBar = (x: number, y: number): boolean => {
     const element = document.elementFromPoint(x, y);
     return element instanceof Element && element.closest('[data-command-bar]') !== null;
+  };
+
+  // Present only while the currently active tab is an editor — mirrors `hoveredCommandBar`'s own
+  // marker-based hit test, but for `EditorTab`'s body instead of the command bar.
+  const hoveredEditorBody = (x: number, y: number): boolean => {
+    const element = document.elementFromPoint(x, y);
+    return element instanceof Element && element.closest('[data-editor-drop]') !== null;
   };
 
   const send = (fromRelPath: string, toRelPath: string) => {
@@ -66,12 +76,18 @@ export function useFileNavigatorDrag(
     setDragPosition(null);
     setDropTarget(null);
     setCommandBarHighlighted(false);
+    overEditorRef.current = false;
   };
 
   const drop = () => {
     const gesture = gestureRef.current;
     if (gesture?.started && overCommandBarRef.current) {
       dropRef?.current?.insertAtCaret(gesture.path);
+      resetGestureState();
+      return;
+    }
+    if (gesture?.started && overEditorRef.current) {
+      editorDropRef?.current?.insertAtCaret(gesture.path);
       resetGestureState();
       return;
     }
@@ -101,7 +117,9 @@ export function useFileNavigatorDrag(
     setDragPosition({ x: e.clientX, y: e.clientY });
     const overBar = hoveredCommandBar(e.clientX, e.clientY);
     if (overBar !== overCommandBarRef.current) setCommandBarHighlighted(overBar);
-    setDropTarget(overBar ? null : resolveDropTarget(rowsRef.current, gesture.path, hoveredRowPath(e.clientX, e.clientY)));
+    const overEditor = !overBar && hoveredEditorBody(e.clientX, e.clientY);
+    overEditorRef.current = overEditor;
+    setDropTarget(overBar || overEditor ? null : resolveDropTarget(rowsRef.current, gesture.path, hoveredRowPath(e.clientX, e.clientY)));
   };
 
   const onWindowUp = () => {

@@ -8,6 +8,7 @@ import { useEditor } from './editor/useEditor';
 import { useEditorMouse } from './editor/useEditorMouse';
 import { useSyntaxHighlight } from './editor/useSyntaxHighlight';
 import { useEditorSync } from './editor/useEditorSync';
+import { useEditorWatchReload } from './editor/useEditorWatchReload';
 import { useEditorSuggest } from './editor/useEditorSuggest';
 import { useEditorConnections } from './editor/useEditorConnections';
 import { EditorConnectionsPanel } from './editor/EditorConnectionsPanel';
@@ -20,9 +21,13 @@ import { EditorMetaRow } from './editor/EditorMetaRow';
 
 export type EditorTabHandle = { isDirty(): boolean; save(): Promise<void>; focus(): void };
 
+// Exposed via `dropRef` so a file-navigator drag can insert a dropped path at the cursor,
+// mirroring `CommandInputDropHandle`'s pattern for the command bar.
+export type EditorDropHandle = { insertAtCaret: (text: string) => void };
+
 // The plain-text editor tab. Mounted persistently by App (like harness tabs) so the buffer, undo
 // stacks, cursor, and scroll position survive tab switches; `active` gates focus and the caret.
-export const EditorTab = forwardRef<EditorTabHandle, { editor: EditorView; tab: TabView; client: JanusClient; active: boolean }>(function EditorTab({ editor, tab, client, active }, ref) {
+export const EditorTab = forwardRef<EditorTabHandle, { editor: EditorView; tab: TabView; client: JanusClient; active: boolean; dropRef?: React.RefObject<EditorDropHandle | null> }>(function EditorTab({ editor, tab, client, active, dropRef }, ref) {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [lastSaved, setLastSaved] = useState<string | null>(null);
@@ -43,6 +48,11 @@ export const EditorTab = forwardRef<EditorTabHandle, { editor: EditorView; tab: 
   const tokens = useSyntaxHighlight(state, editor.name);
   useEditorSync(state, editor.url, client);
   const connections = useEditorConnections(client, tab);
+
+  // Every open editor tab stays mounted at once (see the top-of-file comment), so only the
+  // currently active one may claim the shared drop handle — otherwise whichever tab rendered last
+  // would silently win regardless of which one is actually visible and drop-targetable.
+  if (dropRef && active) dropRef.current = { insertAtCaret: (text: string) => api.insert(text) };
 
   const writeToDisk = async (text: string) => {
     setSaveError(null);
@@ -90,30 +100,7 @@ export const EditorTab = forwardRef<EditorTabHandle, { editor: EditorView; tab: 
 
   const dirty = useMemo(() => state !== null && lastSaved !== null && toText(state) !== lastSaved, [state, lastSaved]);
 
-  // Live-reload from disk when another process changes the file, as long as the user hasn't
-  // touched the buffer yet; otherwise remember the conflict for the next save attempt.
-  const dirtyForWatchRef = useRef(dirty);
-  dirtyForWatchRef.current = dirty;
-  const seenMtimeRef = useRef<number | undefined>(undefined);
-  useEffect(() => {
-    if (editor.mtimeMs === undefined || editor.mtimeMs === seenMtimeRef.current) return;
-    const isFirstSighting = seenMtimeRef.current === undefined;
-    seenMtimeRef.current = editor.mtimeMs;
-    if (isFirstSighting) return;
-    if (dirtyForWatchRef.current) { conflictPendingRef.current = true; return; }
-    const token = new URLSearchParams(location.search).get('token') ?? '';
-    void (async () => {
-      try {
-        const text = await fetchContent(token);
-        const line = api.stateRef.current?.cursor.line;
-        api.load(text, line);
-        setLastSaved(text);
-      } catch {
-        // The reload is best-effort — the buffer just keeps showing the last content we had.
-      }
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editor.mtimeMs]);
+  useEditorWatchReload(editor.mtimeMs, dirty, conflictPendingRef, api, setLastSaved, fetchContent);
 
   const loaded = state !== null;
   useEffect(() => { if (active && loaded) textareaRef.current?.focus(); }, [active, loaded]);
@@ -202,6 +189,7 @@ export const EditorTab = forwardRef<EditorTabHandle, { editor: EditorView; tab: 
       <div
         className="editor-body"
         ref={bodyRef}
+        data-editor-drop
         onMouseDown={mouse.onMouseDown}
         onClick={(e) => { handleSuggestPillClick(e, state, suggest.fireOnLine); }}
       >

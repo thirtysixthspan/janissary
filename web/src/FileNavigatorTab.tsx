@@ -14,6 +14,7 @@ import { FileSearchPopup } from './FileSearchPopup';
 import { useFileNavigatorSearch } from './useFileNavigatorSearch';
 import { FileNavigatorHeader } from './FileNavigatorHeader';
 import type { CommandInputDropHandle } from './CommandInput';
+import type { EditorDropHandle } from './EditorTab';
 import { FileNavigatorOpenerOverlay } from './FileNavigatorOpenerOverlay';
 import { useFileNavigatorOpener } from './useFileNavigatorOpener';
 import { useFileNavigatorDelete } from './useFileNavigatorDelete';
@@ -35,6 +36,9 @@ type Properties = {
   // Omitted for a center-mounted tree, which per Decision 4 never has a reachable command-bar
   // target regardless.
   dropRef?: React.RefObject<CommandInputDropHandle | null>;
+  // The active tab's editor imperative handle, if it's an editor tab — only ever passed when this
+  // tree is docked into a sidebar, for the same reason as `dropRef` above.
+  editorDropRef?: React.RefObject<EditorDropHandle | null>;
 };
 
 const TYPEAHEAD_RESET_MS = 700;
@@ -43,12 +47,12 @@ const ROW_HEIGHT_PX = 22;
 const PRINTABLE = /^[ -~]$/;
 const MARKDOWN_EXTENSION = /\.(md|markdown)$/i;
 
-export function FileNavigatorTab({ files, client, index, dock, autoFocus = true, dropRef }: Properties) {
+export function FileNavigatorTab({ files, client, index, dock, autoFocus = true, dropRef, editorDropRef }: Properties) {
   const [selected, setSelected] = useState<string | null>(null);
   const [pendingNewDir, setPendingNewDir] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const typeahead = useRef<{ buffer: string; timer?: ReturnType<typeof setTimeout> }>({ buffer: '' });
-  const drag = useFileNavigatorDrag(files.rows, client, index, dropRef);
+  const drag = useFileNavigatorDrag(files.rows, client, index, dropRef, editorDropRef);
   const rename = useFileNavigatorRename(files.rows, client, index, setSelected, () => containerRef.current?.focus());
   const search = useFileNavigatorSearch(client, index, files.rows, setSelected, () => containerRef.current?.focus());
   const opener = useFileNavigatorOpener(client, index, files.absoluteRoot);

@@ -2,7 +2,7 @@ import React, { createRef } from 'react';
 import { render, screen, waitFor, fireEvent, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { EditorView, TabView } from '@shared/protocol';
-import { EditorTab, type EditorTabHandle } from './EditorTab';
+import { EditorTab, type EditorTabHandle, type EditorDropHandle } from './EditorTab';
 import type { JanusClient } from './ws';
 
 function makeView(overrides: Partial<EditorView> = {}): EditorView {
@@ -833,6 +833,30 @@ describe('EditorTab', () => {
         method: 'closeEditorConnection',
         params: { url: '/open/1', persona: 'reviewer' },
       });
+    });
+  });
+
+  describe('drop handle', () => {
+    it('exposes insertAtCaret via dropRef while active, inserting the dropped path at the cursor', async () => {
+      const { client } = makeClient();
+      const dropRef = createRef<EditorDropHandle | null>() as React.RefObject<EditorDropHandle | null>;
+      const view = makeView();
+      const { container } = render(<EditorTab editor={view} tab={makeTab({ editor: view })} client={client} active dropRef={dropRef} />);
+      await waitFor(() => expect(screen.getByText('line one')).toBeInTheDocument());
+
+      act(() => { dropRef.current?.insertAtCaret('src/notes.txt'); });
+
+      expect(container.querySelector(':scope .editor-row:not(.editor-row-query) .editor-content')?.textContent).toBe('src/notes.txtline one');
+    });
+
+    it('leaves a shared dropRef untouched when the tab is inactive', async () => {
+      const { client } = makeClient();
+      const dropRef = createRef<EditorDropHandle | null>() as React.RefObject<EditorDropHandle | null>;
+      const view = makeView();
+      render(<EditorTab editor={view} tab={makeTab({ editor: view })} client={client} active={false} dropRef={dropRef} />);
+      await waitFor(() => expect(screen.getByLabelText('Edit notes.txt')).toBeInTheDocument());
+
+      expect(dropRef.current).toBeNull();
     });
   });
 });

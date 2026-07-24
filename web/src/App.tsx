@@ -8,7 +8,7 @@ import { ViewTabBody } from './ViewTabBody';
 import { ReportingSection } from './ReportingSection';
 import { AppShell } from './AppShell';
 import type { CommandInputDropHandle } from './CommandInput';
-import type { EditorTabHandle } from './EditorTab';
+import type { EditorTabHandle, EditorDropHandle } from './EditorTab';
 import { useTabHandles } from './useTabHandles';
 import { ShellTabLayer } from './ShellTabLayer';
 import { MountedViewLayers } from './MountedViewLayers';
@@ -69,6 +69,9 @@ export function App() {
   // file-navigator drag, threaded down the sidebar's own branch of the tree, can insert a dropped path
   // into whichever tab's command bar is currently rendered here.
   const dropReference = useRef<CommandInputDropHandle | null>(null);
+  // Same imperative-escape-hatch pattern as `dropReference`, but targeting whichever editor tab
+  // is currently active — set by `EditorTab` itself during its own render (see `MountedViewLayers`).
+  const editorDropReference = useRef<EditorDropHandle | null>(null);
   const transcriptReference = useRef<HTMLDivElement>(null);
   const { harnessHandles, shellHandles, questionPanelRef } = useTabHandles();
   const currentRef = useRef<TabView | undefined>(undefined);
@@ -168,7 +171,7 @@ export function App() {
 
   return (
     <AppShell
-      tabs={tabs} client={client} dropRef={dropReference} tabNameMaxLength={tabNameMaxLength}
+      tabs={tabs} client={client} dropRef={dropReference} editorDropRef={editorDropReference} tabNameMaxLength={tabNameMaxLength}
       activeTabNameMaxLength={activeTabNameMaxLength}
       sidebarLeftWidth={sidebarLeftWidth} onSidebarLeftWidthChange={setSidebarLeftWidth}
       sidebarRightWidth={sidebarRightWidth} onSidebarRightWidthChange={setSidebarRightWidth}
@@ -191,7 +194,7 @@ export function App() {
       <ShellTabLayer tabs={tabs} activeLabel={current.label} client={client}
         onHandle={(id, h) => { if (h) shellHandles.current.set(id, h); else shellHandles.current.delete(id); }} />
 
-      <MountedViewLayers tabs={tabs} current={current} client={client} closeTab={closeTab} harnessHandles={harnessHandles} editorHandles={editorHandles} questionPanelRef={questionPanelRef}
+      <MountedViewLayers tabs={tabs} current={current} client={client} closeTab={closeTab} harnessHandles={harnessHandles} editorHandles={editorHandles} editorDropRef={editorDropReference} questionPanelRef={questionPanelRef}
         taskPickerOpen={taskPickerOpen} taskRows={visibleTasks} taskPickerIndex={taskPickerIndex} onPickTask={pickTask} onToggleTaskDir={toggleTaskDir}
         navOpen={navOpen} navQuery={navQuery} navIndex={navIndex} onPickTab={selectNavTab} />
 
