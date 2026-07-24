@@ -67,9 +67,7 @@ Press `>` at the very start of an empty line to open a request line, right there
 
 ## Keeping a file synced with GitHub
 
-Some files stay synced with their project's `origin/master` branch automatically, based on the paths listed in the app's [configuration](/user-documentation/getting-started/startup#configuration). There's no switch for this in the editor itself; a file syncs if its path is on that list, and doesn't if it isn't.
-
-The first time you open a synced file, it briefly shows a loading state while it pulls the latest `origin/master`, then shows the content. Saving it writes your change, commits it, and pushes it, always taking the remote version automatically if there's a conflict rather than asking you to resolve one. A status icon next to the connections button in the header shows whether the file is being set up, syncing, synced, or has hit an error.
+Some files stay synced with their project's `origin/master` branch automatically: saving one commits and pushes the change for you, based on the paths listed in the app's [configuration](/user-documentation/getting-started/startup#configuration). There's no switch for this in the editor itself; a file syncs if its path is on that list, and doesn't if it isn't. See [Git-synced files](/user-documentation/tab-types/editor-git-sync) for how to configure which paths sync, why it's useful, and exactly what happens on save.
 
 ## Lifecycle
 
