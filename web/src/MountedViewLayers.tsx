@@ -2,7 +2,7 @@ import React from 'react';
 import type { TabView } from '@shared/protocol';
 import type { JanusClient } from './ws';
 import type { HarnessTabHandle } from './HarnessTab';
-import { EditorTab, type EditorTabHandle } from './EditorTab';
+import { EditorTab, type EditorTabHandle, type EditorDropHandle } from './EditorTab';
 import { PageTab } from './PageTab';
 import { HarnessTabLayer } from './HarnessTabLayer';
 import type { PickerOverlayProps } from './picker-overlay-props';
@@ -15,6 +15,7 @@ type Properties = {
   closeTab: (index: number) => void;
   harnessHandles: React.RefObject<Map<string, HarnessTabHandle>>;
   editorHandles: React.RefObject<Map<string, EditorTabHandle>>;
+  editorDropRef?: React.RefObject<EditorDropHandle | null>;
   questionPanelRef?: React.RefObject<QuestionPanelHandle | null>;
   // Ctrl+A and Ctrl+G open the task picker and tab navigator from a focused harness tab (see
   // `HarnessTab.harnessKeyFilter`); they're the only pickers/choosers those chords ever let bubble
@@ -26,7 +27,7 @@ type Properties = {
 // editor buffers, undo stacks, cursor/scroll position, and embedded-page navigation survive tab
 // switches. Split out of App.tsx to keep it under the file-size limit.
 export function MountedViewLayers({
-  tabs, current, client, closeTab, harnessHandles, editorHandles, questionPanelRef,
+  tabs, current, client, closeTab, harnessHandles, editorHandles, editorDropRef, questionPanelRef,
   taskPickerOpen, taskRows, taskPickerIndex, onPickTask, onToggleTaskDir,
   navOpen, navQuery, navIndex, onPickTab,
 }: Properties) {
@@ -48,7 +49,7 @@ export function MountedViewLayers({
           className="tab-body"
           style={{ borderLeft: `4px solid ${t.dotColor}`, display: t.label === current.label ? 'flex' : 'none' }}
         >
-          <EditorTab editor={t.editor!} tab={t} client={client} active={t.label === current.label}
+          <EditorTab editor={t.editor!} tab={t} client={client} active={t.label === current.label} dropRef={editorDropRef}
             ref={(h) => { if (h) editorHandles.current.set(t.label, h); else editorHandles.current.delete(t.label); }} />
         </div>
       ))}

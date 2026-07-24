@@ -200,6 +200,19 @@ cases has no effect: no highlight, no insertion. In practice, dropping a row ont
 therefore only happens when the file navigator is docked into a sidebar while a different, plain tab is
 active in the center — a docked tree's own active-tab command bar is never a target for itself.
 
+### Dragging a row into an editor tab
+
+Releasing a dragged file or directory row over an open plain-text editor tab inserts its path at
+the editor's current cursor position, the same as typing or pasting it there — including undo — and
+without moving the file on disk. The inserted path is exactly as it appears in the tree, relative
+to the tree's root. Unlike dropping onto the command bar, the editor body shows no highlight while
+a drag passes over it; releasing there still inserts the path.
+
+An editor tab is only a valid drop target while it is the active tab and actually visible — in
+practice this means the file navigator is docked into a sidebar while an editor tab is active in
+the center, the same reachability condition as the command bar. Dragging over an inactive or
+not-currently-displayed editor tab has no effect.
+
 ### Undoing and redoing a move
 
 A focused file navigator tab captures `Cmd+Z` (`Ctrl+Z` on other platforms) to undo the most recent

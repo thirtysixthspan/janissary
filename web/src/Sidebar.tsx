@@ -8,6 +8,7 @@ import { TabStrip } from './TabStrip';
 import { ResizeButton } from './ResizeButton';
 import { beginResizeDrag } from './drag-resize';
 import type { CommandInputDropHandle } from './CommandInput';
+import type { EditorDropHandle } from './EditorTab';
 
 const MIN_WIDTH_PX = 180;
 const MAX_WIDTH_PCT = 50;
@@ -20,7 +21,7 @@ export const DEFAULT_WIDTH_PX = 300;
 // can drive it too — see `useLayoutState`), resized by dragging either the gutter button
 // or the border divider on the sidebar's inner edge.
 export function Sidebar({
-  side, tabs, client, dropRef, tabNameMaxLength = 16, activeTabNameMaxLength = 50,
+  side, tabs, client, dropRef, editorDropRef, tabNameMaxLength = 16, activeTabNameMaxLength = 50,
   width = DEFAULT_WIDTH_PX, onWidthChange, focusView,
 }: {
   side: 'left' | 'right';
@@ -29,6 +30,8 @@ export function Sidebar({
   // The active tab's command-bar drop handle, threaded down to a docked `FileNavigatorTab` so a drag
   // can find and insert into that tab's command bar. See `App.tsx`'s `dropRef`.
   dropRef?: React.RefObject<CommandInputDropHandle | null>;
+  // The active tab's editor drop handle, threaded down the same way. See `App.tsx`'s `editorDropRef`.
+  editorDropRef?: React.RefObject<EditorDropHandle | null>;
   tabNameMaxLength?: number;
   activeTabNameMaxLength?: number;
   width?: number;
@@ -101,7 +104,7 @@ export function Sidebar({
         {current.tab.view === 'files' && current.tab.files && (
           <FileNavigatorTab
             files={current.tab.files} client={client} index={current.index} dock={current.tab.dock} autoFocus={false}
-            dropRef={dropRef}
+            dropRef={dropRef} editorDropRef={editorDropRef}
           />
         )}
         {current.tab.view === 'notifications' && (
