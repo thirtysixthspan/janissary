@@ -3,7 +3,7 @@
 The **notifications tab** is a singleton, view-only feed that collects notification-worthy
 background events as lines in its own scrollable transcript. It is a non-agent **view tab**
 (`view: 'notifications'`): it renders the standard transcript body fed by its own log, but has no
-command bar and takes no typed input. Like the file tree tab (see `file-tree-tab.md`) it is a
+command bar and takes no typed input. Like the file navigator tab (see `file-navigator-tab.md`) it is a
 **live, in-memory view** — never persisted, never restored on `--relaunch`. When the feed is empty
 it shows no content at all — unlike an agent tab's empty transcript, it does not show the "Type
 `help` for available commands" hint, since there is no command bar to type into.
@@ -18,7 +18,7 @@ appended.
 `notifications` opens the notifications tab — or, if it is already open, focuses it (undocking it
 back to the center strip and making it active when it was docked, since focusing must make the feed
 visible). A leading `left` or `right` keyword docks it into that sidebar instead of the center
-strip, mirroring `files [left|right]` (see `file-tree-tab.md` and `sidebars.md`). When the target
+strip, mirroring `files [left|right]` (see `file-navigator-tab.md` and `sidebars.md`). When the target
 sidebar already holds another dockable tab (the file navigator or an existing notifications tab),
 that tab is displaced back to the center strip — nothing is closed as a side effect.
 
@@ -39,7 +39,7 @@ content area — the sidebar and the rest of the app never grow to accommodate i
 file navigator's own row list scrolls in place.
 
 The tab's own header carries a dock-cycle button (toggling left↔right) — shown **only while
-docked**, matching the file tree tab, and styled the same way as the file tree tab's metadata
+docked**, matching the file navigator tab, and styled the same way as the file navigator tab's metadata
 header. Center placement is reached via the bare `notifications` command, not the dock-cycle
 button. The header carries no close button of its own; a docked notifications tab is closed from
 the sidebar's own strip (see `sidebars.md`).

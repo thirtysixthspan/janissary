@@ -38,7 +38,7 @@ at least one tab (the center is always present). Moving keyboard focus into a se
 focuses that section's currently-visible tab — the docked tab shown in a sidebar, or the selected
 monitor in the reporting section.
 
-A focused file tree tab captures arrow keys, Home/End, PageUp/PageDown, Enter, Space, and printable
-characters (type-ahead) for its own tree navigation instead of the bindings above — see File Tree Tab.
+A focused file navigator tab captures arrow keys, Home/End, PageUp/PageDown, Enter, Space, and printable
+characters (type-ahead) for its own tree navigation instead of the bindings above — see File Navigator Tab.
 Shift+Tab is intercepted ahead of that file-tree capture and ahead of a focused harness terminal, so
 section navigation still escapes them.

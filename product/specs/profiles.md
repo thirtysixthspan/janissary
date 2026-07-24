@@ -47,7 +47,7 @@ A path that does not yet exist opens an empty, unsaved editor buffer, which crea
 
 ### Profile-level notifications tab
 
-A profile may declare that the notifications tab should open on launch under a `notifications` key — a JSON array of `{ dock?, focus? }` objects, where `dock` docks the feed into that sidebar (`left`/`right`) and `focus` (only meaningful alongside `dock`) makes the notifications tab the visible one in that sidebar's internal tab-switcher, overriding the default "most recently docked tab wins" behavior — useful when a file tree or the schedules tab is also docked to the same side. Once every profile entry is open, each entry opens or docks the singleton notifications tab, mirroring the `notifications [left|right]` command. Because the notifications tab is a singleton, more than one entry simply re-docks the same feed.
+A profile may declare that the notifications tab should open on launch under a `notifications` key — a JSON array of `{ dock?, focus? }` objects, where `dock` docks the feed into that sidebar (`left`/`right`) and `focus` (only meaningful alongside `dock`) makes the notifications tab the visible one in that sidebar's internal tab-switcher, overriding the default "most recently docked tab wins" behavior — useful when a file navigator or the schedules tab is also docked to the same side. Once every profile entry is open, each entry opens or docks the singleton notifications tab, mirroring the `notifications [left|right]` command. Because the notifications tab is a singleton, more than one entry simply re-docks the same feed.
 
 ### Profile-level schedules tab
 

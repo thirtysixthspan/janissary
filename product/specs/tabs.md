@@ -99,7 +99,7 @@ it ("Workspaced", "Auto-permitting"). More flags of the same kind are expected i
 Agent tabs and harness tabs also show a right-aligned file-navigator button (a folder icon, tooltip "Open file
 navigator here") at the end of the metadata row. Clicking it opens a file navigator rooted at that
 tab's own working directory; shell (PTY-takeover) tabs do not show this button. See "Opening from a
-tab's metadata row" in `file-tree-tab.md` for how it opens or retargets the navigator.
+tab's metadata row" in `file-navigator-tab.md` for how it opens or retargets the navigator.
 
 Beside the file-navigator button, agent tabs and harness tabs also show a launch-agent button (a plus icon,
 tooltip "New agent here"). Clicking it immediately creates a new, auto-named agent tab whose working
@@ -147,4 +147,4 @@ Closes the current tab and all of its associated connections — its shell, ACP 
 
 ### View tabs
 
-Besides agent tabs, several **view tabs** render a non-transcript body in place of the command line: image (`open <image>`), embedded web page (`open <url>`), rendered markdown, the plain-text editor, the file tree navigator (see `file-tree-tab.md`), the monitor reporting feed (see `monitoring.md`), and the notifications feed (see `notifications.md`). View tabs are **live, in-memory** — none are persisted to agent state or restored on `--relaunch`.
+Besides agent tabs, several **view tabs** render a non-transcript body in place of the command line: image (`open <image>`), embedded web page (`open <url>`), rendered markdown, the plain-text editor, the file navigator (see `file-navigator-tab.md`), the monitor reporting feed (see `monitoring.md`), and the notifications feed (see `notifications.md`). View tabs are **live, in-memory** — none are persisted to agent state or restored on `--relaunch`.
