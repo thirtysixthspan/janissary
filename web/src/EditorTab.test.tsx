@@ -364,7 +364,7 @@ describe('EditorTab', () => {
     const { client } = makeClient();
     const view = makeView({ sync: 'provisioning' });
     const { container } = render(<EditorTab editor={view} tab={makeTab({ editor: view })} client={client} active />);
-    expect(container.querySelector('.editor-sync-icon--provisioning')).not.toBeNull();
+    await waitFor(() => expect(container.querySelector('.editor-sync-icon--provisioning')).not.toBeNull());
     expect(container.querySelectorAll('.editor-gutter')).toHaveLength(0);
     expect(fetchMock).not.toHaveBeenCalled();
   });
