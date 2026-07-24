@@ -8,7 +8,7 @@ default and appear only once something is docked into them.
 A tab can be **docked** into a sidebar instead of living in the central tab strip. Docking is a
 placement, not a separate kind of tab — a docked tab keeps everything else about it (its group,
 its transcript or view, its RPC identity) exactly as it was. Two tab kinds can dock: the file
-navigator (see `file-tree-tab.md`) and the notifications tab (see `notifications.md`). They share
+navigator (see `file-navigator-tab.md`) and the notifications tab (see `notifications.md`). They share
 one docking mechanism and, being different kinds, can occupy the **same** sidebar at the same
 time — see "Sharing a sidebar" below — as well as different sidebars.
 
@@ -82,7 +82,7 @@ to the server or persisted.
 
 Dock placement and sidebar width both reset on relaunch — neither is saved. This matches file
 tree tabs generally: they are live, in-memory views, never persisted or restored (see
-`file-tree-tab.md`).
+`file-navigator-tab.md`).
 
 ### Keyboard focus
 

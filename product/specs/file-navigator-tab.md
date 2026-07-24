@@ -1,20 +1,20 @@
-# File Tree Tab
+# File Navigator Tab
 
-A **file tree tab** shows a directory tree, opened with `files [path]`. It is a non-agent **view
+A **file navigator tab** shows a directory tree, opened with `files [path]`. It is a non-agent **view
 tab**: a keyboard-navigable tree of files and directories shown in place of the usual transcript
 and command bar, controlled by direct interaction (clicking, arrow keys) rather than a command
 line. It behaves like a markdown tab (see Markdown Tab) — same lifecycle and tab-strip
 treatment — differing only in what fills the body and how that body is navigated.
 
 When the `files` command runs, a transcript entry for the command appears in the originating tab
-before the file tree tab opens and takes focus. The command text is recorded as the entry's input;
-the output is empty since the file tree tab is the side-effect.
+before the file navigator tab opens and takes focus. The command text is recorded as the entry's input;
+the output is empty since the file navigator tab is the side-effect.
 
-A file tree tab is created like an agent tab (see Tabs) — placed contiguously within the active
+A file navigator tab is created like an agent tab (see Tabs) — placed contiguously within the active
 tab's group, inheriting that group's number and bar color and taking a distinct dot color. Focus
-moves to the new file tree tab.
+moves to the new file navigator tab.
 
-Unlike an agent tab, a file tree tab has no shell, agent session, browser, transcript, or command
+Unlike an agent tab, a file navigator tab has no shell, agent session, browser, transcript, or command
 history, and no persisted agent state. It is a **live, in-memory view** — like markdown and image
 tabs, it is not saved and is not restored on `--relaunch`.
 
@@ -25,12 +25,12 @@ instead (resolved against the issuing tab's cwd if relative). If the resolved ta
 not a directory, an error (`files: <path>: not a directory`) is appended to the issuing tab's
 transcript and no tab is created.
 
-If the resolved target does not exist yet, a file tree tab still opens immediately, showing
+If the resolved target does not exist yet, a file navigator tab still opens immediately, showing
 "Looking for `<path>`…" in place of the (empty) tree while it waits. The tab polls until the
 directory is created, then populates with its contents and starts watching it like any other file
 tree tab — no error, and no need to re-run `files`. Closing the waiting tab stops the poll.
 
-If a file tree tab is already open on the same root, `files` **focuses that tab** instead of
+If a file navigator tab is already open on the same root, `files` **focuses that tab** instead of
 opening a duplicate — there is one tree per root, the same way there is one Explorer per
 workspace in a conventional editor.
 
@@ -197,12 +197,12 @@ is not present for a view tab (an image, a markdown preview, an editor, notifica
 tree itself when that tree is the active, non-docked tab), for a harness tab, or while transcript
 search has replaced it. Dragging over where the command bar would otherwise be in any of these
 cases has no effect: no highlight, no insertion. In practice, dropping a row onto a command bar
-therefore only happens when the file tree is docked into a sidebar while a different, plain tab is
+therefore only happens when the file navigator is docked into a sidebar while a different, plain tab is
 active in the center — a docked tree's own active-tab command bar is never a target for itself.
 
 ### Undoing and redoing a move
 
-A focused file tree tab captures `Cmd+Z` (`Ctrl+Z` on other platforms) to undo the most recent
+A focused file navigator tab captures `Cmd+Z` (`Ctrl+Z` on other platforms) to undo the most recent
 move made in that tab, reversing it back to where the moved item came from; `Cmd+Shift+Z`
 (`Ctrl+Shift+Z`) redoes, re-applying whatever undo just reversed. Each tab keeps its own stack of
 past moves and a separate stack of undone moves, in memory only — both start empty when the tab
@@ -254,7 +254,7 @@ tree.
 
 ### Keyboard interactions
 
-A focused file tree tab captures its own keys, following the ARIA treeview pattern (see
+A focused file navigator tab captures its own keys, following the ARIA treeview pattern (see
 `keyboard-navigation.md`):
 
 | Key | Behavior |
@@ -283,10 +283,10 @@ surviving row rather than pointing at nothing.
 
 ### Tab strip: name and close button
 
-In the tab strip a file tree tab reads exactly like an ordinary tab — same dot, group bar, active
+In the tab strip a file navigator tab reads exactly like an ordinary tab — same dot, group bar, active
 highlight, and ordering — with three differences:
 
-- **Placement.** A file tree tab is placed at the beginning of its tab group (other tab types land
+- **Placement.** A file navigator tab is placed at the beginning of its tab group (other tab types land
   at the end), so the tree sits left of the content it navigates.
 
 - **Name.** The tab label is always `navigator` (for the first tree tab; subsequent ones are (the tree's root path is shown in the tab's own
@@ -296,12 +296,12 @@ highlight, and ordering — with three differences:
 - **Close button.** A close control is shown right-aligned within the tab, identical to other
   view tabs (markdown, image, editor).
 
-While a file tree tab is **docked** into a sidebar (see `sidebars.md`), it leaves the tab strip
+While a file navigator tab is **docked** into a sidebar (see `sidebars.md`), it leaves the tab strip
 entirely — there is no duplicate representation of a docked tree in the strip.
 
 ### Header buttons
 
-Every file tree tab's own header carries a **Search files** button, **New file** and **New
+Every file navigator tab's own header carries a **Search files** button, **New file** and **New
 directory** buttons, and a **location button**. Search files opens the search pop-up — see
 "Finding a file by name" below. New file opens a fresh, unsaved editor tab named `untitled.md`;
 New directory creates a folder beside or inside the selected row — see the creating sections
@@ -379,18 +379,18 @@ any other row.
 This same dock/location-cycle mechanism is shared with the notifications tab (see
 `notifications.md`), which is the other dockable tab kind. The two can share one sidebar side at
 the same time, switching between them via the sidebar's own tab-switcher (see `sidebars.md`'s
-"Sharing a sidebar"); a second file tree tab docking into the same side still displaces the first.
+"Sharing a sidebar"); a second file navigator tab docking into the same side still displaces the first.
 
 ### Closing
 
-Closing a file tree tab (via its close button, the `close` command, or app shutdown) stops every
-watcher it opened. Because a file tree tab owns no shell, agent session, browser, or workspace,
+Closing a file navigator tab (via its close button, the `close` command, or app shutdown) stops every
+watcher it opened. Because a file navigator tab owns no shell, agent session, browser, or workspace,
 the rest of ordinary tab teardown simply does nothing for it. Closing the last remaining tab quits
 the app, exactly as the `close` command does elsewhere (see `tabs.md`).
 
 ### Reordering and grouping
 
-A file tree tab is an ordinary member of the tab strip: it belongs to a group, stays contiguous
+A file navigator tab is an ordinary member of the tab strip: it belongs to a group, stays contiguous
 within it (see Tabs → Tab grouping), and can be reordered within its group like any other tab.
 This applies while it sits in the strip; a docked tree keeps its group membership latent and
 returns to its position on undock.
