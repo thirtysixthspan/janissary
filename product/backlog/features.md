@@ -69,23 +69,11 @@
 
 36. Port /loop-start//loop-status (managed autonomous loop with safety defaults: safe/fast modes, explicit stop conditions) as a janissary scheduling pattern layered on top of scheduling.md's existing schedule grammar — a "loop" is really a self-rescheduling command with a stop condition.
 
-37. Adopt the santa-loop.md/loop-operator.md bounded-loop safety pattern (explicit stop conditions, checkpoint gates) as guardrails for any janissary schedule entry that reschedules itself indefinitely.
-
 38. Port recursive-decision-ledger skill's idea — a running ledger of decisions made across loop iterations — as an artifact janissary writes per schedule/loop for later audit.
 
 39. Evaluate importing AgentShield (ecc-agentshield npm package) directly as an optional janissary sandbox add-on for scanning agent-authored diffs/commands before they execute in a harness tab, rather than reimplementing.
 
 40. Port the-security-guide.md's attack-vector/sandboxing checklist as source material for hardening janissary's own sandbox.md filesystem/network policy documentation and defaults.
-
-41. Adopt ECC's "curl credentials kept out of argv" and "gateguard gates force/path checkouts as destructive" hardening fixes (from the 2.0.0 changelog) as concrete review items for janissary's own sandbox/shell command handling in src/sandbox and src/shell.
-
-
-
-
-
-
-
-
 
 
 ## deferred
