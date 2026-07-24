@@ -511,6 +511,16 @@ describe('EditorTab', () => {
     expect(screen.queryByText('This file changed on disk. Overwrite it with your changes?')).not.toBeInTheDocument();
   });
 
+  it('clicking the synced sync icon sends resyncEditorTab with the tab\'s url', async () => {
+    const { client } = makeClient();
+    const view = makeView({ sync: 'synced' });
+    const { container } = await renderLoaded(client, view);
+
+    fireEvent.click(container.querySelector('.editor-sync-icon')!);
+
+    expect(client.send).toHaveBeenCalledWith({ method: 'resyncEditorTab', params: { url: '/open/1' } });
+  });
+
   describe('in-editor agent query line', () => {
     function stubRequestFileContent(content: string) {
       vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, text: () => Promise.resolve(content) } as unknown as Response));

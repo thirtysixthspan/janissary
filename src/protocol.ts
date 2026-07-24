@@ -196,6 +196,11 @@ export type RpcCall =
   // state, debounced client-side after typing pauses. Never written to disk — see saveFile
   // for that. `url` identifies the tab the same way saveFile's does.
   | { method: 'editorSync'; params: { url: string; content: string } }
+  // Manually re-pull a GitHub-synced editor tab's shared workspace from origin/master (the sync
+  // status icon's click action). Fire-and-forget: the result surfaces via the tab's `sync` field
+  // over the next `state` broadcast(s), the same as the save-triggered sync cycle. `url` identifies
+  // the tab the same way saveFile's does.
+  | { method: 'resyncEditorTab'; params: { url: string } }
   // Report the client's current sidebar/tab-area sizes after a manual resize completes, so the
   // server always holds the latest values for `profile save` to read synchronously into a profile's
   // `layout` key. Client-only, no reply — the reverse of the server->client `layout` event.

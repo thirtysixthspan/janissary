@@ -1710,6 +1710,11 @@ describe('Controller direct RPC delegators', () => {
     expect(() => c.syncPageSnapshot('/open/ghost', 'text')).not.toThrow();
   });
 
+  it('resyncEditorTab RPC no-ops for an unresolvable url', () => {
+    const { c } = makeController();
+    expect(() => c.resyncEditorTab('/open/ghost')).not.toThrow();
+  });
+
   it('resetMonitorContext/monitorContextSnapshot RPCs no-op for an unknown persona name', () => {
     const { c } = makeController();
     expect(() => c.resetMonitorContext('ghost')).not.toThrow();

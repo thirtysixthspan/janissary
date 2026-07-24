@@ -6,6 +6,7 @@ import { wireControllerEvents } from './controller/events.js';
 import { createManagers } from './controller/create-managers.js';
 import { saveFile } from './editor/save.js';
 import { syncEditorBuffer } from './editor/sync.js';
+import { resyncEditorTab } from './editor/resync.js';
 import { syncPageSnapshot } from './page/sync.js';
 import { messageBus } from './bus.js';
 import { runSuggestion } from './monitor/window.js';
@@ -74,6 +75,12 @@ export class Controller {
   // In-memory only; never written to disk.
   syncEditorBuffer(url: string, content: string): void {
     syncEditorBuffer(this.managers, url, content);
+  }
+
+  // Manually re-pull a synced editor tab's shared workspace (the `resyncEditorTab` RPC,
+  // fire-and-forget — see editor/resync.js for the sync-status/reload handling).
+  resyncEditorTab(url: string): void {
+    void resyncEditorTab(this.managers, url);
   }
 
   // Cache a page tab's currently visible text as transient snapshot state (the `pageSync` RPC).

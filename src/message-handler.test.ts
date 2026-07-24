@@ -54,6 +54,7 @@ const makeController = () =>
     resetMonitorContext: vi.fn(),
     monitorContextSnapshot: vi.fn(),
     syncEditorBuffer: vi.fn(),
+    resyncEditorTab: vi.fn(),
     undoFileNavigatorItem: vi.fn(() => ({})),
     redoFileNavigatorItem: vi.fn(() => ({})),
     openFileNavigatorFor: vi.fn(),
@@ -236,6 +237,12 @@ describe('handle', () => {
     const controller = makeController();
     dispatchCall(controller, 24, { method: 'editorSync', params: { url: 'file:///a.ts', content: 'x' } });
     expect(controller.syncEditorBuffer).toHaveBeenCalledWith('file:///a.ts', 'x');
+  });
+
+  it('routes resyncEditorTab', () => {
+    const controller = makeController();
+    dispatchCall(controller, 26, { method: 'resyncEditorTab', params: { url: 'file:///a.ts' } });
+    expect(controller.resyncEditorTab).toHaveBeenCalledWith('file:///a.ts');
   });
 
   it('routes undoFileNavigatorItem and replies with its result', () => {
