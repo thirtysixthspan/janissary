@@ -13,7 +13,7 @@ Directories sort before files, both alphabetically. Version-control clutter (`.g
 
 If a tree is already open on the same root, `files` focuses it rather than opening a duplicate — or, with `left`/`right`, moves it into that sidebar. A target that isn't a directory prints `files: <path>: not a directory`. A target that doesn't exist *yet* still opens a tab, showing "Looking for `<path>`…" until the directory shows up — handy for pointing a navigator at a directory a build or clone is about to create.
 
-![A file navigator tab: a directory tree with one directory expanded and a row selected.](/screenshots/file-tree.png)
+![A file navigator tab: a directory tree with one directory expanded and a row selected.](/screenshots/file-navigator.png)
 
 ## Opening from a tab's metadata row
 
@@ -41,7 +41,7 @@ sidebar's own tab strip. Docking a second tree into an already-occupied side dis
 tree back to center; it never displaces a different kind. See
 [Tabs](/user-documentation/getting-started/tabs) for how a shared sidebar's strip works.
 
-![A file navigator docked in the left sidebar, with its resize divider on the right edge.](/screenshots/file-tree-sidebar.png)
+![A file navigator docked in the left sidebar, with its resize divider on the right edge.](/screenshots/file-navigator-sidebar.png)
 
 ## Opening the repository on GitHub
 
