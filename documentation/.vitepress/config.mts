@@ -99,6 +99,7 @@ export default defineConfig({
             { text: "Markdown preview", link: "/user-documentation/tab-types/markdown-preview" },
             { text: "Embedded web pages", link: "/user-documentation/tab-types/web-pages" },
             { text: "Editor", link: "/user-documentation/tab-types/editor" },
+            { text: "Asking a persona for a change", link: "/user-documentation/tab-types/editor-persona-query" },
             { text: "File navigator", link: "/user-documentation/tab-types/file-navigator" },
             { text: "Notifications", link: "/user-documentation/tab-types/notifications" },
           ],

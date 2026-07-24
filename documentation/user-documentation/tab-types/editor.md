@@ -63,19 +63,7 @@ One theme applies to every editor tab at once. Switch it with `syntax theme <nam
 
 <img class="agent-float" src="/agents/malik-south-east.png" alt="" />
 
-Press `>` at the very start of an empty line to open a request line, right there in the buffer. Name a persona and describe the change you want:
-
-```
-> assistant tighten this paragraph
-```
-
-`>>` is shorthand for `> assistant`. While your caret sits in the persona name, `Tab` completes it against the personas available for editor requests, a separate list from the ones `monitor` offers. Press `Ctrl+Enter` (`Cmd+Enter` on macOS) to send the request once it names a persona and has request text; the same key works no matter where your caret is on the line.
-
-A status pill at the end of the request line tracks where things stand: `agent?` before you've named a persona, `query?` once it's named but you haven't typed a request yet, `run` once both are ready (click it, or press `Enter` while it holds focus, to send), `running...` while the reply is in flight, and `no suggestion` if the persona proposed no change.
-
-The persona's proposed edits preview inline, wherever in the file they apply, with removed lines struck through and added lines highlighted. Each proposed change gets its own **thumbs up** and **thumbs down** so you can accept or decline it on its own. With more than one change pending, a banner above the buffer reads "Accept or decline each change below" and typing is blocked until every change is resolved. The request line closes once you've accepted at least one change; if you decline them all, it stays open with your text intact so you can edit and retry.
-
-`Escape` closes the request line at any point and discards it without touching the buffer. None of it is saved or restored: the request line and any pending changes exist only while the tab stays open.
+Press `>` at the very start of an empty line to open a request line, right there in the buffer, and ask an AI persona to make a change — for example `> assistant tighten this paragraph`. The persona's proposed edits preview inline for you to accept or decline. See [Asking a persona for a change](/user-documentation/tab-types/editor-persona-query) for the full syntax, keyboard shortcuts, and review flow.
 
 ## Keeping a file synced with GitHub
 
