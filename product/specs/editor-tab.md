@@ -233,12 +233,19 @@ message `sync: <filename>` (the saved file's name), the shared workspace is brou
 `origin/master`, and the commit is pushed. If updating with `origin/master` finds a conflicting
 change, the remote version always wins automatically; there is no merge-conflict prompt to resolve.
 
-The metadata header's connections-status button area also shows a read-only status icon for a synced
-file, reflecting whether that file's sync is currently being provisioned, syncing, synced, or has hit
-an error — it has no click behavior. A sync error (for example a network problem, an authentication
-failure, or a project whose default branch is not literally named `master`) never blocks editing or
-shows a dialog; it only changes the status icon and is otherwise reported through the notifications
-tab.
+The metadata header's connections-status button area also shows a status icon for a synced file,
+reflecting whether that file's sync is currently being provisioned, syncing, synced, or has hit an
+error. A sync error (for example a network problem, an authentication failure, or a project whose
+default branch is not literally named `master`) never blocks editing or shows a dialog; it only
+changes the status icon and is otherwise reported through the notifications tab.
+
+While the icon shows synced or error, clicking it manually pulls the latest `origin/master` into
+the shared workspace again, the same pull an open or a save-triggered sync already runs, showing
+syncing while that's in flight. If the pull brings in a change and the tab has no unsaved edits, the
+fresh content loads automatically; if it does have unsaved edits, the change is remembered and
+surfaces as the usual overwrite-confirmation prompt the next time the tab is saved, on the same
+remote-always-wins terms as any other conflicting sync. Clicking the icon while it shows
+provisioning or syncing does nothing, since either state means no pull can start yet.
 
 ### In-editor persona suggestions
 

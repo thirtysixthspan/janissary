@@ -184,6 +184,7 @@ export const EditorTab = forwardRef<EditorTabHandle, { editor: EditorView; tab: 
       <EditorMetaRow
         editor={editor} dirty={dirty} savedFlash={savedFlash} error={saveError ?? loadError}
         onSave={() => { void save(); }} onMouseUp={onMetaMouseUp} connectionsButton={connections.connectionsButton}
+        onSyncClick={() => client.send({ method: 'resyncEditorTab', params: { url: editor.url } })}
       />
       <PendingSuggestPanel pending={suggest.pending} />
       <div

@@ -14,11 +14,12 @@ type Properties = {
   onSave: () => void;
   onMouseUp: () => void;
   connectionsButton: StatusWindowButtonProps;
+  onSyncClick?: () => void;
 };
 
 // The editor tab's single metadata row: name/size/path, save state, and the connections button.
 // Split out so EditorTab.tsx stays under the 200-line file cap.
-export function EditorMetaRow({ editor, dirty, savedFlash, error, onSave, onMouseUp, connectionsButton }: Properties) {
+export function EditorMetaRow({ editor, dirty, savedFlash, error, onSave, onMouseUp, connectionsButton, onSyncClick }: Properties) {
   return (
     <div className="editor-meta" onMouseUp={onMouseUp}>
       <span className="editor-name">{editor.name}</span>
@@ -26,7 +27,7 @@ export function EditorMetaRow({ editor, dirty, savedFlash, error, onSave, onMous
       <span className="editor-loc">{editor.path}</span>
       {savedFlash && <span className="editor-saved">Saved</span>}
       {error && <span className="editor-error">{error}</span>}
-      <EditorSyncIcon sync={editor.sync} />
+      <EditorSyncIcon sync={editor.sync} onClick={onSyncClick} />
       <EditorSaveButton dirty={dirty} onSave={onSave} />
       <StatusWindowButton
         icon={connectionsWindowIcon}

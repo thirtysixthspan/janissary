@@ -75,6 +75,8 @@ export function handle(controller: Controller, message: ClientMessage, reply: (e
     }
     case 'editorSync': { controller.syncEditorBuffer(message.params.url, message.params.content); break;
     }
+    case 'resyncEditorTab': { controller.resyncEditorTab(message.params.url); break;
+    }
     // Bridges straight to client-layout.js (bypassing a Controller passthrough method) to keep
     // controller.ts under its line-size limit — see openTranscriptFor's comment above.
     case 'reportLayout': { setClientLayout(message.params); break;

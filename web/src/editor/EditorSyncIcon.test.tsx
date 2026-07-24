@@ -1,6 +1,6 @@
 import React from 'react';
-import { render } from '@testing-library/react';
-import { describe, it, expect } from 'vitest';
+import { render, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
 import { EditorSyncIcon } from './EditorSyncIcon';
 
 describe('EditorSyncIcon', () => {
@@ -27,5 +27,41 @@ describe('EditorSyncIcon', () => {
   it('renders the error state with its fixed, non-per-failure tooltip', () => {
     const { getByTitle } = render(<EditorSyncIcon sync="error" />);
     expect(getByTitle('GitHub sync: error — see notifications').className).toBe('editor-sync-icon editor-sync-icon--error');
+  });
+
+  describe('resync button', () => {
+    it('renders synced as a clickable button that calls onClick', () => {
+      const onClick = vi.fn();
+      const { getByTitle } = render(<EditorSyncIcon sync="synced" onClick={onClick} />);
+      const button = getByTitle('GitHub sync: synced — click to resync');
+      expect(button.tagName).toBe('BUTTON');
+      expect(button.className).toContain('editor-sync-icon--clickable');
+      fireEvent.click(button);
+      expect(onClick).toHaveBeenCalledTimes(1);
+    });
+
+    it('renders error as a clickable button that calls onClick', () => {
+      const onClick = vi.fn();
+      const { getByTitle } = render(<EditorSyncIcon sync="error" onClick={onClick} />);
+      const button = getByTitle('GitHub sync: error — see notifications — click to resync');
+      fireEvent.click(button);
+      expect(onClick).toHaveBeenCalledTimes(1);
+    });
+
+    it('stays non-interactive while provisioning even when onClick is provided', () => {
+      const onClick = vi.fn();
+      const { getByTitle } = render(<EditorSyncIcon sync="provisioning" onClick={onClick} />);
+      const el = getByTitle('GitHub sync: provisioning workspace');
+      expect(el.tagName).toBe('SPAN');
+      expect(el.className).not.toContain('clickable');
+    });
+
+    it('stays non-interactive while syncing even when onClick is provided', () => {
+      const onClick = vi.fn();
+      const { getByTitle } = render(<EditorSyncIcon sync="syncing" onClick={onClick} />);
+      const el = getByTitle('GitHub sync: syncing');
+      expect(el.tagName).toBe('SPAN');
+      expect(el.className).not.toContain('clickable');
+    });
   });
 });
