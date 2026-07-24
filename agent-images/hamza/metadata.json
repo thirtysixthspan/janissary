@@ -1,0 +1,28 @@
+{
+  "group_id": null,
+  "states": [{
+    "character": {
+      "id": "d7b9b4be-e1f4-47d3-9a37-f9e9a4f0bd3b",
+      "name": "Full-body pixel-art agent reference sheet",
+      "prompt": "A historically grounded early-18th-century Ottoman Janissary town guard with a white felt börk, indigo kaftan, cream sash, period flintlock-style long gun, and yatagan.",
+      "size": { "width": 128, "height": 128 },
+      "template_id": "mannequin",
+      "directions": 8,
+      "view": "low top-down",
+      "created_at": "2026-07-24T00:00:00+00:00"
+    },
+    "folder": "Full-body_pixel-art_agent_reference_sheet",
+    "frames": { "rotations": {
+      "south": "Full-body_pixel-art_agent_reference_sheet/rotations/south.png",
+      "south-east": "Full-body_pixel-art_agent_reference_sheet/rotations/south-east.png",
+      "east": "Full-body_pixel-art_agent_reference_sheet/rotations/east.png",
+      "north-east": "Full-body_pixel-art_agent_reference_sheet/rotations/north-east.png",
+      "north": "Full-body_pixel-art_agent_reference_sheet/rotations/north.png",
+      "north-west": "Full-body_pixel-art_agent_reference_sheet/rotations/north-west.png",
+      "west": "Full-body_pixel-art_agent_reference_sheet/rotations/west.png",
+      "south-west": "Full-body_pixel-art_agent_reference_sheet/rotations/south-west.png"
+    }, "animations": {} }
+  }],
+  "export_version": "3.0",
+  "export_date": "2026-07-24T00:00:00+00:00"
+}
