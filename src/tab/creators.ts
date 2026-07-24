@@ -1,4 +1,4 @@
-import type { Tab, ImageView, MarkdownView, EditorView, PageView, FileTreeView } from '../types.js';
+import type { Tab, ImageView, MarkdownView, EditorView, PageView, FileNavigatorView } from '../types.js';
 import {
   makeImageTab, makeMarkdownTab, makeEditorTab, makePageTab, makeFilesTab, makeNotificationsTab, makeSchedulesTab, distinctColor, insertTabInGroup,
 } from './index.js';
@@ -52,7 +52,7 @@ export function addEditorTab(tabs: Tab[], activeTab: number, view: EditorView): 
   return finalizeTab(tabs, tab, label, view.name);
 }
 
-export function addFilesTab(tabs: Tab[], activeTab: number, view: FileTreeView): TabAndActive {
+export function addFilesTab(tabs: Tab[], activeTab: number, view: FileNavigatorView): TabAndActive {
   const creator = tabs[activeTab];
   const label = uniqueFilesLabel(tabs);
   const dotColor = distinctColor(tabs.map((t) => t.dotColor));

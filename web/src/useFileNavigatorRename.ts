@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { FileTreeRow } from '@shared/protocol';
+import type { FileNavigatorRow } from '@shared/protocol';
 import type { JanusClient } from './ws';
 import { computeRename, hasRenameCollision, siblingNames } from './file-navigator-rename';
 
@@ -9,7 +9,7 @@ type PendingConflict = { relPath: string; newRelPath: string; newName: string };
 // collision handling (via the shared `MoveConflictDialog`), and the RPC send — kept out of
 // `FileNavigatorTab.tsx` to stay under the file-size limit, mirroring `useFileNavigatorDrag`/`useFileNavigatorSearch`.
 export function useFileNavigatorRename(
-  rows: FileTreeRow[], client: JanusClient, index: number, setSelected: (path: string) => void,
+  rows: FileNavigatorRow[], client: JanusClient, index: number, setSelected: (path: string) => void,
   focusTree: () => void,
 ) {
   const [editing, setEditing] = useState<string | null>(null);
@@ -29,7 +29,7 @@ export function useFileNavigatorRename(
   };
 
   const send = (relPath: string, newName: string, newRelPath: string) => {
-    client.send({ method: 'renameFileTreeItem', params: { index, relPath, newName } });
+    client.send({ method: 'renameFileNavigatorItem', params: { index, relPath, newName } });
     setSelected(newRelPath);
     setPendingSelection(newRelPath);
     focusTree();

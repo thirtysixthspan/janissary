@@ -4,12 +4,12 @@ import type { Controller } from './controller.js';
 import type { ClientMessage, ServerEvent, RpcCall } from './protocol.js';
 import { openTranscriptFor, openAcpTranscript } from './controller/transcript.js';
 import { projectFilesFor } from './project-files.js';
-import { fileTreeSearch, revealFileTreeItem } from './controller/file-tree.js';
+import { fileNavigatorSearch, revealFileNavigatorItem } from './controller/file-navigator.js';
 import { setClientLayout } from './client-layout.js';
 
 vi.mock('./controller/transcript.js', () => ({ openTranscriptFor: vi.fn(), openAcpTranscript: vi.fn() }));
 vi.mock('./project-files.js', () => ({ projectFilesFor: vi.fn() }));
-vi.mock('./controller/file-tree.js', () => ({ fileTreeSearch: vi.fn(), revealFileTreeItem: vi.fn() }));
+vi.mock('./controller/file-navigator.js', () => ({ fileNavigatorSearch: vi.fn(), revealFileNavigatorItem: vi.fn() }));
 vi.mock('./client-layout.js', () => ({ setClientLayout: vi.fn() }));
 
 const makeController = () =>
@@ -45,17 +45,17 @@ const makeController = () =>
     rateSuggestion: vi.fn(),
     saveFile: vi.fn(),
     syncPageSnapshot: vi.fn(),
-    fileTreeToggle: vi.fn(),
-    fileTreeCollapseAll: vi.fn(),
-    fileTreeReroot: vi.fn(),
-    moveFileTreeItem: vi.fn(),
-    deleteFileTreeItem: vi.fn(),
+    fileNavigatorToggle: vi.fn(),
+    fileNavigatorCollapseAll: vi.fn(),
+    fileNavigatorReroot: vi.fn(),
+    moveFileNavigatorItem: vi.fn(),
+    deleteFileNavigatorItem: vi.fn(),
     setDock: vi.fn(),
     resetMonitorContext: vi.fn(),
     monitorContextSnapshot: vi.fn(),
     syncEditorBuffer: vi.fn(),
-    undoFileTreeItem: vi.fn(() => ({})),
-    redoFileTreeItem: vi.fn(() => ({})),
+    undoFileNavigatorItem: vi.fn(() => ({})),
+    redoFileNavigatorItem: vi.fn(() => ({})),
     openFileNavigatorFor: vi.fn(),
   }) as unknown as Controller;
 
@@ -184,34 +184,34 @@ describe('handle', () => {
     expect(controller.syncPageSnapshot).toHaveBeenCalledWith('https://example.org', 'visible text');
   });
 
-  it('routes fileTreeToggle', () => {
+  it('routes fileNavigatorToggle', () => {
     const controller = makeController();
-    dispatchCall(controller, 15, { method: 'fileTreeToggle', params: { index: 0, path: '/a' } });
-    expect(controller.fileTreeToggle).toHaveBeenCalledWith(0, '/a');
+    dispatchCall(controller, 15, { method: 'fileNavigatorToggle', params: { index: 0, path: '/a' } });
+    expect(controller.fileNavigatorToggle).toHaveBeenCalledWith(0, '/a');
   });
 
-  it('routes fileTreeCollapseAll', () => {
+  it('routes fileNavigatorCollapseAll', () => {
     const controller = makeController();
-    dispatchCall(controller, 16, { method: 'fileTreeCollapseAll', params: { index: 0 } });
-    expect(controller.fileTreeCollapseAll).toHaveBeenCalledWith(0);
+    dispatchCall(controller, 16, { method: 'fileNavigatorCollapseAll', params: { index: 0 } });
+    expect(controller.fileNavigatorCollapseAll).toHaveBeenCalledWith(0);
   });
 
-  it('routes fileTreeReroot', () => {
+  it('routes fileNavigatorReroot', () => {
     const controller = makeController();
-    dispatchCall(controller, 17, { method: 'fileTreeReroot', params: { index: 0 } });
-    expect(controller.fileTreeReroot).toHaveBeenCalledWith(0, undefined);
+    dispatchCall(controller, 17, { method: 'fileNavigatorReroot', params: { index: 0 } });
+    expect(controller.fileNavigatorReroot).toHaveBeenCalledWith(0, undefined);
   });
 
-  it('routes moveFileTreeItem', () => {
+  it('routes moveFileNavigatorItem', () => {
     const controller = makeController();
-    dispatchCall(controller, 19, { method: 'moveFileTreeItem', params: { index: 0, fromRelPath: 'a', toRelPath: 'b' } });
-    expect(controller.moveFileTreeItem).toHaveBeenCalledWith(0, 'a', 'b');
+    dispatchCall(controller, 19, { method: 'moveFileNavigatorItem', params: { index: 0, fromRelPath: 'a', toRelPath: 'b' } });
+    expect(controller.moveFileNavigatorItem).toHaveBeenCalledWith(0, 'a', 'b');
   });
 
-  it('routes deleteFileTreeItem', () => {
+  it('routes deleteFileNavigatorItem', () => {
     const controller = makeController();
-    dispatchCall(controller, 20, { method: 'deleteFileTreeItem', params: { index: 0, relPath: 'a' } });
-    expect(controller.deleteFileTreeItem).toHaveBeenCalledWith(0, 'a');
+    dispatchCall(controller, 20, { method: 'deleteFileNavigatorItem', params: { index: 0, relPath: 'a' } });
+    expect(controller.deleteFileNavigatorItem).toHaveBeenCalledWith(0, 'a');
   });
 
   it('routes setDock', () => {
@@ -238,19 +238,19 @@ describe('handle', () => {
     expect(controller.syncEditorBuffer).toHaveBeenCalledWith('file:///a.ts', 'x');
   });
 
-  it('routes undoFileTreeItem and replies with its result', () => {
+  it('routes undoFileNavigatorItem and replies with its result', () => {
     const controller = makeController();
-    (controller.undoFileTreeItem as ReturnType<typeof vi.fn>).mockReturnValue({ conflict: { fromRelPath: 'a', toRelPath: 'b' } });
-    const replies = dispatchCall(controller, 25, { method: 'undoFileTreeItem', params: { index: 0, overwrite: true } });
-    expect(controller.undoFileTreeItem).toHaveBeenCalledWith(0, true);
+    (controller.undoFileNavigatorItem as ReturnType<typeof vi.fn>).mockReturnValue({ conflict: { fromRelPath: 'a', toRelPath: 'b' } });
+    const replies = dispatchCall(controller, 25, { method: 'undoFileNavigatorItem', params: { index: 0, overwrite: true } });
+    expect(controller.undoFileNavigatorItem).toHaveBeenCalledWith(0, true);
     expect(replies).toEqual([{ t: 'rpc-reply', id: 25, result: { conflict: { fromRelPath: 'a', toRelPath: 'b' } } }]);
   });
 
-  it('routes redoFileTreeItem and replies with its result', () => {
+  it('routes redoFileNavigatorItem and replies with its result', () => {
     const controller = makeController();
-    (controller.redoFileTreeItem as ReturnType<typeof vi.fn>).mockReturnValue({});
-    const replies = dispatchCall(controller, 26, { method: 'redoFileTreeItem', params: { index: 0 } });
-    expect(controller.redoFileTreeItem).toHaveBeenCalledWith(0, undefined);
+    (controller.redoFileNavigatorItem as ReturnType<typeof vi.fn>).mockReturnValue({});
+    const replies = dispatchCall(controller, 26, { method: 'redoFileNavigatorItem', params: { index: 0 } });
+    expect(controller.redoFileNavigatorItem).toHaveBeenCalledWith(0, undefined);
     expect(replies).toEqual([{ t: 'rpc-reply', id: 26, result: {} }]);
   });
 
@@ -306,29 +306,29 @@ describe('handle', () => {
     expect(replies).toEqual([{ t: 'rpc-reply', id: 30, result: { root: '/proj', paths: [] } }]);
   });
 
-  it('routes fileTreeSearch to a deferred reply carrying the resolved paths', async () => {
+  it('routes fileNavigatorSearch to a deferred reply carrying the resolved paths', async () => {
     const controller = makeController();
-    (fileTreeSearch as ReturnType<typeof vi.fn>).mockResolvedValue(['a.ts', 'b.ts']);
+    (fileNavigatorSearch as ReturnType<typeof vi.fn>).mockResolvedValue(['a.ts', 'b.ts']);
     const replies: ServerEvent[] = [];
-    handle(controller, { t: 'rpc', id: 31, method: 'fileTreeSearch', params: { index: 0 } } as ClientMessage, (event) => { replies.push(event); });
+    handle(controller, { t: 'rpc', id: 31, method: 'fileNavigatorSearch', params: { index: 0 } } as ClientMessage, (event) => { replies.push(event); });
     expect(replies).toEqual([]);
     await vi.waitFor(() => expect(replies).toHaveLength(1));
-    expect(fileTreeSearch).toHaveBeenCalledWith(controller.managers, 0);
+    expect(fileNavigatorSearch).toHaveBeenCalledWith(controller.managers, 0);
     expect(replies).toEqual([{ t: 'rpc-reply', id: 31, result: { paths: ['a.ts', 'b.ts'] } }]);
   });
 
-  it('replies with an empty paths list for fileTreeSearch — never leaving the request pending — when the listing rejects', async () => {
+  it('replies with an empty paths list for fileNavigatorSearch — never leaving the request pending — when the listing rejects', async () => {
     const controller = makeController();
-    (fileTreeSearch as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('boom'));
+    (fileNavigatorSearch as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('boom'));
     const replies: ServerEvent[] = [];
-    handle(controller, { t: 'rpc', id: 32, method: 'fileTreeSearch', params: { index: 0 } } as ClientMessage, (event) => { replies.push(event); });
+    handle(controller, { t: 'rpc', id: 32, method: 'fileNavigatorSearch', params: { index: 0 } } as ClientMessage, (event) => { replies.push(event); });
     await vi.waitFor(() => expect(replies).toHaveLength(1));
     expect(replies).toEqual([{ t: 'rpc-reply', id: 32, result: { paths: [] } }]);
   });
 
-  it('routes revealFileTreeItem to controller-file-tree.js with the controller\'s managers', () => {
+  it('routes revealFileNavigatorItem to controller-file-navigator.js with the controller\'s managers', () => {
     const controller = makeController();
-    dispatchCall(controller, 33, { method: 'revealFileTreeItem', params: { index: 0, relPath: 'src/a.ts' } });
-    expect(revealFileTreeItem).toHaveBeenCalledWith(controller.managers, 0, 'src/a.ts');
+    dispatchCall(controller, 33, { method: 'revealFileNavigatorItem', params: { index: 0, relPath: 'src/a.ts' } });
+    expect(revealFileNavigatorItem).toHaveBeenCalledWith(controller.managers, 0, 'src/a.ts');
   });
 });

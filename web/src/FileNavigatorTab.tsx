@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import type { FileTreeView, FileTreeRow } from '@shared/protocol';
+import type { FileNavigatorView, FileNavigatorRow } from '@shared/protocol';
 import type { JanusClient } from './ws';
 import { handleFileNavigatorKey, typeAheadMatch } from './file-navigator-keys';
 import { handleTreeChord } from './file-navigator-chords';
@@ -20,7 +20,7 @@ import { useFileNavigatorDelete } from './useFileNavigatorDelete';
 import { runFileNavigatorAction } from './file-navigator-actions';
 
 type Properties = {
-  files: FileTreeView;
+  files: FileNavigatorView;
   client: JanusClient;
   index: number;
   // The tab's current dock location (undefined means center). Drives the location-cycle
@@ -84,11 +84,11 @@ export function FileNavigatorTab({ files, client, index, dock, autoFocus = true,
     setPendingNewDir(null);
   }, [files.rows, pendingNewDir]); // eslint-disable-line react-hooks/exhaustive-deps -- `rename` is fresh each render
 
-  const toggle = (path: string) => client.send({ method: 'fileTreeToggle', params: { index, path } });
+  const toggle = (path: string) => client.send({ method: 'fileNavigatorToggle', params: { index, path } });
   const openFile = (path: string, edit: boolean) => opener.open(path, edit);
   const editFile = (path: string) => client.send({ method: 'command', params: { text: `edit ${files.absoluteRoot}/${path}` } });
-  const reroot = () => client.send({ method: 'fileTreeReroot', params: { index } });
-  const rerootTo = (path: string) => client.send({ method: 'fileTreeReroot', params: { index, path } });
+  const reroot = () => client.send({ method: 'fileNavigatorReroot', params: { index } });
+  const rerootTo = (path: string) => client.send({ method: 'fileNavigatorReroot', params: { index, path } });
   const createNewFile = () => {
     const text = newFileCommand(newFileTargetDir(files.rows, selected));
     client.send({ method: 'command', params: { text } });
@@ -99,12 +99,12 @@ export function FileNavigatorTab({ files, client, index, dock, autoFocus = true,
     client.send({ method: 'command', params: { text: newDirectoryCommand(targetDir) } });
   };
 
-  const onRowClick = (row: FileTreeRow) => {
+  const onRowClick = (row: FileNavigatorRow) => {
     setSelected(row.path);
     containerRef.current?.focus();
   };
 
-  const onRowDoubleClick = (row: FileTreeRow, shiftKey: boolean) => {
+  const onRowDoubleClick = (row: FileNavigatorRow, shiftKey: boolean) => {
     if (row.path === '..') reroot();
     else if (row.dir) toggle(row.path);
     else openFile(row.path, MARKDOWN_EXTENSION.test(row.path) !== shiftKey);

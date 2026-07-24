@@ -1,11 +1,11 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import type { FileTreeRow } from '@shared/protocol';
+import type { FileNavigatorRow } from '@shared/protocol';
 import { expandedIcon, collapsedIcon } from './icons';
 import { InlineEditInput } from './InlineEditInput';
 
 type Properties = {
-  row: FileTreeRow;
+  row: FileNavigatorRow;
   selected: string | null;
   rowClass: { row: string; name: string };
   editing: boolean;

@@ -10,7 +10,7 @@ import { ScheduleManager } from '../schedule/manager.js';
 import { ProfileManager } from '../profile/manager.js';
 import { ConnectionManager } from '../connection/manager.js';
 import { OpenFileManager } from '../open-file-manager.js';
-import { FileTreeManager } from '../file-tree/manager.js';
+import { FileNavigatorManager } from '../file-navigator/manager.js';
 import { EditorWatchManager } from '../editor/watch-manager.js';
 import { EditorAcpManager } from '../editor/acp-manager.js';
 import { CaptureManager } from '../capture/manager.js';
@@ -43,7 +43,7 @@ export function createManagers(managers: Managers, projectDir?: string): void {
   managers.browser = new BrowserManager(managers);
   managers.acp = new AcpManager(managers);
   managers.openFile = new OpenFileManager(managers);
-  managers.fileTree = new FileTreeManager(managers);
+  managers.fileNavigator = new FileNavigatorManager(managers);
   managers.editorWatch = new EditorWatchManager(managers);
   managers.editorAcp = new EditorAcpManager(managers);
   managers.pty = new PseudoterminalManager(managers);

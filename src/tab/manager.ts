@@ -13,7 +13,7 @@ import { messageBus } from '../bus.js';
 import { closeTabResources } from './cleanup.js';
 import { TabOpeningState } from './opening-state.js';
 import { buildAgentStateFromTab } from './agent-state.js';
-import { recordLeavingActiveTab, popFocusHistory, mostRecentFileTreeLabel } from './focus-history.js';
+import { recordLeavingActiveTab, popFocusHistory, mostRecentFileNavigatorLabel } from './focus-history.js';
 import { applyDock } from './dock.js';
 import { removeTabAt } from './reorder.js';
 import { navigatePageTab } from './navigate.js';
@@ -137,8 +137,8 @@ export class TabManager extends TabOpeningState {
     return index;
   }
 
-  mostRecentFileTreeLabel(): string | undefined {
-    return mostRecentFileTreeLabel(this.tabs, this.focusHistory);
+  mostRecentFileNavigatorLabel(): string | undefined {
+    return mostRecentFileNavigatorLabel(this.tabs, this.focusHistory);
   }
 
   // Applies the result of adding a new tab (or focusing an existing one) from the `openers.ts`

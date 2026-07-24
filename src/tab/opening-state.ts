@@ -1,4 +1,4 @@
-import type { Tab, ImageView, MarkdownView, EditorView, PageView, FileTreeView } from '../types.js';
+import type { Tab, ImageView, MarkdownView, EditorView, PageView, FileNavigatorView } from '../types.js';
 import type { Managers } from '../managers.js';
 import { TabQueueState } from './queue-state.js';
 import * as tabOpeners from './openers.js';
@@ -29,7 +29,7 @@ export abstract class TabOpeningState extends TabQueueState {
     tabOpeners.openPageTab(this, view);
   }
 
-  openFilesTab(view: FileTreeView): void {
+  openFilesTab(view: FileNavigatorView): void {
     tabOpeners.openFilesTab(this, view);
   }
 

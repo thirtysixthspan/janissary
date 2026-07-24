@@ -1,4 +1,4 @@
-import type { FileTreeRow } from '@shared/protocol';
+import type { FileNavigatorRow } from '@shared/protocol';
 
 // The result of a keydown on the file tree: the row that should now be selected, plus an
 // optional action to perform (toggle a directory, or open/edit a file). Pure — no DOM — so it's
@@ -8,14 +8,14 @@ export type FileNavigatorKeyOutcome = {
   action?: { type: 'toggle' | 'open' | 'edit' | 'reroot'; path: string };
 };
 
-function indexOf(rows: FileTreeRow[], selected: string | null): number {
+function indexOf(rows: FileNavigatorRow[], selected: string | null): number {
   const found = selected === null ? -1 : rows.findIndex((r) => r.path === selected);
   return found === -1 ? 0 : found;
 }
 
 // The nearest ancestor directory's path, found by walking backward for the first row at a
 // shallower depth (rows are a depth-first, pre-flattened list, so this is always the parent).
-function parentOf(rows: FileTreeRow[], index: number): string | null {
+function parentOf(rows: FileNavigatorRow[], index: number): string | null {
   const depth = rows[index].depth;
   for (let i = index - 1; i >= 0; i--) {
     if (rows[i].depth < depth) return rows[i].path;
@@ -24,7 +24,7 @@ function parentOf(rows: FileTreeRow[], index: number): string | null {
 }
 
 // `→`: collapsed dir expands; expanded dir reroots; file opens; ".." is a no-op.
-function onArrowRight(rows: FileTreeRow[], index: number): FileNavigatorKeyOutcome {
+function onArrowRight(rows: FileNavigatorRow[], index: number): FileNavigatorKeyOutcome {
   const row = rows[index];
   if (row.path === '..') return { selection: row.path };
   if (!row.dir) return { selection: row.path, action: { type: 'open', path: row.path } };
@@ -33,7 +33,7 @@ function onArrowRight(rows: FileTreeRow[], index: number): FileNavigatorKeyOutco
 }
 
 // `←`: expanded dir collapses; otherwise selection moves to the parent directory. ".." is a no-op.
-function onArrowLeft(rows: FileTreeRow[], index: number): FileNavigatorKeyOutcome {
+function onArrowLeft(rows: FileNavigatorRow[], index: number): FileNavigatorKeyOutcome {
   const row = rows[index];
   if (row.path === '..') return { selection: row.path };
   if (row.dir && row.expanded) return { selection: row.path, action: { type: 'toggle', path: row.path } };
@@ -42,7 +42,7 @@ function onArrowLeft(rows: FileTreeRow[], index: number): FileNavigatorKeyOutcom
 
 // `Enter`/`Space`: dir toggles expand/collapse; file opens (or edits, with Shift);
 // ".." navigates to the parent directory.
-function onActivate(rows: FileTreeRow[], index: number, shiftKey: boolean): FileNavigatorKeyOutcome {
+function onActivate(rows: FileNavigatorRow[], index: number, shiftKey: boolean): FileNavigatorKeyOutcome {
   const row = rows[index];
   if (row.path === '..') return { selection: row.path, action: { type: 'reroot', path: '..' } };
   if (row.dir) return { selection: row.path, action: { type: 'toggle', path: row.path } };
@@ -51,7 +51,7 @@ function onActivate(rows: FileTreeRow[], index: number, shiftKey: boolean): File
 
 // ARIA APG treeview keyboard pattern (VS Code-aligned) — see spec/file-tree-tab.md.
 export function handleFileNavigatorKey(
-  rows: FileTreeRow[],
+  rows: FileNavigatorRow[],
   selected: string | null,
   key: string,
   shiftKey: boolean,
@@ -75,7 +75,7 @@ export function handleFileNavigatorKey(
 
 // Jump to the next visible row whose name starts with `buffer` (case-insensitive), or null if
 // nothing matches. `buffer` is the accumulated type-ahead prefix; the caller owns its ~700ms reset.
-export function typeAheadMatch(rows: FileTreeRow[], buffer: string): string | null {
+export function typeAheadMatch(rows: FileNavigatorRow[], buffer: string): string | null {
   if (!buffer) return null;
   const lower = buffer.toLowerCase();
   return rows.find((r) => r.name.toLowerCase().startsWith(lower))?.path ?? null;

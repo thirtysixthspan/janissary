@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { handleFileNavigatorKey, typeAheadMatch } from './file-navigator-keys';
-import type { FileTreeRow } from '@shared/protocol';
+import type { FileNavigatorRow } from '@shared/protocol';
 
-function row(path: string, overrides: Partial<FileTreeRow> = {}): FileTreeRow {
+function row(path: string, overrides: Partial<FileNavigatorRow> = {}): FileNavigatorRow {
   const depth = path.split('/').length - 1;
   return { path, name: path.split('/').pop()!, depth, dir: false, ...overrides };
 }
@@ -12,7 +12,7 @@ function row(path: string, overrides: Partial<FileTreeRow> = {}): FileTreeRow {
 //   nested/        (collapsed)
 //   index.ts
 // README.md
-const rows: FileTreeRow[] = [
+const rows: FileNavigatorRow[] = [
   row('src', { dir: true, expanded: true }),
   row('src/nested', { dir: true, expanded: false }),
   row('src/index.ts'),
@@ -95,7 +95,7 @@ describe('handleFileNavigatorKey — expand/collapse/parent', () => {
   });
 
   it('ArrowLeft on a top-level row with no parent is a no-op', () => {
-    const flat: FileTreeRow[] = [row('a.txt'), row('b.txt')];
+    const flat: FileNavigatorRow[] = [row('a.txt'), row('b.txt')];
     const result = handleFileNavigatorKey(flat, 'a.txt', 'ArrowLeft', false, 10);
     expect(result.selection).toBe('a.txt');
     expect(result.action).toBeUndefined();
@@ -124,7 +124,7 @@ describe('handleFileNavigatorKey — activation', () => {
   });
 
   it('Enter on ".." reroots', () => {
-    const rowsWithDotdot: FileTreeRow[] = [
+    const rowsWithDotdot: FileNavigatorRow[] = [
       row('..', { dir: true }),
       ...rows,
     ];

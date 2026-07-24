@@ -1330,77 +1330,77 @@ describe('Controller files tab', () => {
     expect(c.view().some((t) => t.view === 'files')).toBe(false);
   });
 
-  it('fileTreeToggle RPC expands a directory row', () => {
+  it('fileNavigatorToggle RPC expands a directory row', () => {
     mkdirSync(path.join(root, 'src'));
     writeFileSync(path.join(root, 'src', 'index.ts'), '');
     const { c } = makeController();
     c.dispatch(`files ${root}`);
     const index = c.view().findIndex((t) => t.view === 'files');
-    c.fileTreeToggle(index, 'src');
+    c.fileNavigatorToggle(index, 'src');
     const tab = c.view()[index];
     expect(tab.files?.rows.some((r) => r.path === 'src/index.ts')).toBe(true);
   });
 
-  it('fileTreeCollapseAll RPC collapses every expanded directory', () => {
+  it('fileNavigatorCollapseAll RPC collapses every expanded directory', () => {
     mkdirSync(path.join(root, 'src'));
     writeFileSync(path.join(root, 'src', 'index.ts'), '');
     const { c } = makeController();
     c.dispatch(`files ${root}`);
     const index = c.view().findIndex((t) => t.view === 'files');
-    c.fileTreeToggle(index, 'src');
-    c.fileTreeCollapseAll(index);
+    c.fileNavigatorToggle(index, 'src');
+    c.fileNavigatorCollapseAll(index);
     const tab = c.view()[index];
     expect(tab.files?.rows.some((r) => r.path === 'src/index.ts')).toBe(false);
   });
 
-  it('fileTreeReroot RPC re-roots the tree to the parent directory', () => {
+  it('fileNavigatorReroot RPC re-roots the tree to the parent directory', () => {
     mkdirSync(path.join(root, 'sub'));
     const { c } = makeController();
     c.dispatch(`files ${path.join(root, 'sub')}`);
     const index = c.view().findIndex((t) => t.view === 'files');
-    c.fileTreeReroot(index);
+    c.fileNavigatorReroot(index);
     const tab = c.view()[index];
     expect(tab.files?.root).toBe(abbreviatePath(root, { root: process.cwd() }));
     expect(tab.files?.rows.some((r) => r.path === 'sub')).toBe(true);
   });
 
-  it('moveFileTreeItem RPC moves a file into a directory and rebuilds the tree', () => {
+  it('moveFileNavigatorItem RPC moves a file into a directory and rebuilds the tree', () => {
     mkdirSync(path.join(root, 'dest'));
     writeFileSync(path.join(root, 'notes.txt'), '');
     const { c } = makeController();
     c.dispatch(`files ${root}`);
     const index = c.view().findIndex((t) => t.view === 'files');
-    c.moveFileTreeItem(index, 'notes.txt', 'dest');
+    c.moveFileNavigatorItem(index, 'notes.txt', 'dest');
     const tab = c.view()[index];
     expect(tab.files?.rows.some((r) => r.path === 'notes.txt')).toBe(false);
   });
 
-  it('moveFileTreeItem RPC on an out-of-range index does nothing', () => {
+  it('moveFileNavigatorItem RPC on an out-of-range index does nothing', () => {
     const { c } = makeController();
     c.dispatch(`files ${root}`);
-    expect(() => c.moveFileTreeItem(99, 'a', 'b')).not.toThrow();
+    expect(() => c.moveFileNavigatorItem(99, 'a', 'b')).not.toThrow();
   });
 
-  it('deleteFileTreeItem RPC deletes a file and rebuilds the tree', () => {
+  it('deleteFileNavigatorItem RPC deletes a file and rebuilds the tree', () => {
     writeFileSync(path.join(root, 'notes.txt'), '');
     const { c } = makeController();
     c.dispatch(`files ${root}`);
     const index = c.view().findIndex((t) => t.view === 'files');
-    c.deleteFileTreeItem(index, 'notes.txt');
+    c.deleteFileNavigatorItem(index, 'notes.txt');
     const tab = c.view()[index];
     expect(tab.files?.rows.some((r) => r.path === 'notes.txt')).toBe(false);
   });
 
-  it('deleteFileTreeItem RPC on an out-of-range index does nothing', () => {
+  it('deleteFileNavigatorItem RPC on an out-of-range index does nothing', () => {
     const { c } = makeController();
     c.dispatch(`files ${root}`);
-    expect(() => c.deleteFileTreeItem(99, 'a')).not.toThrow();
+    expect(() => c.deleteFileNavigatorItem(99, 'a')).not.toThrow();
   });
 
-  it('fileTreeReroot RPC on an out-of-range index does nothing', () => {
+  it('fileNavigatorReroot RPC on an out-of-range index does nothing', () => {
     const { c } = makeController();
     c.dispatch(`files ${root}`);
-    expect(() => c.fileTreeReroot(99)).not.toThrow();
+    expect(() => c.fileNavigatorReroot(99)).not.toThrow();
   });
 
   it('closing a files tab disposes its watchers without throwing', () => {
@@ -1721,12 +1721,12 @@ describe('Controller direct RPC delegators', () => {
     expect(() => c.navigatePage(0, 'https://example.com')).not.toThrow();
   });
 
-  it('undoFileTreeItem RPC on an empty undo stack returns no conflict', () => {
+  it('undoFileNavigatorItem RPC on an empty undo stack returns no conflict', () => {
     const root = mkdtempSync(path.join(tmpdir(), 'janus-undo-'));
     const { c } = makeController();
     c.dispatch(`files ${root}`);
     const index = c.view().findIndex((t) => t.view === 'files');
-    expect(c.undoFileTreeItem(index)).toEqual({});
+    expect(c.undoFileNavigatorItem(index)).toEqual({});
   });
 
   it('openFileNavigatorFor RPC opens a file navigator rooted at the target tab\'s cwd', () => {

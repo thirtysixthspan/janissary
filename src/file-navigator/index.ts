@@ -1,6 +1,6 @@
 import { readdirSync } from 'node:fs';
 import path from 'node:path';
-import type { FileTreeRow } from '../types.js';
+import type { FileNavigatorRow } from '../types.js';
 export { markGitStatus } from './git-mark.js';
 
 // VS Code's `files.exclude` defaults. Other dotfiles are shown.
@@ -33,8 +33,8 @@ export function readDirSorted(absDir: string): Entry[] {
 // on. Children are read from disk only for expanded directories. An `expanded` entry for a path
 // that no longer exists (or isn't found under its parent) is simply never reached, so it's
 // naturally skipped rather than needing special-case pruning here.
-export function buildRows(root: string, expanded: Set<string>): FileTreeRow[] {
-  const rows: FileTreeRow[] = [];
+export function buildRows(root: string, expanded: Set<string>): FileNavigatorRow[] {
+  const rows: FileNavigatorRow[] = [];
   const walk = (absDir: string, relDir: string, depth: number): void => {
     for (const entry of readDirSorted(absDir)) {
       const relPath = relDir ? `${relDir}/${entry.name}` : entry.name;

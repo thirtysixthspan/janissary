@@ -22,10 +22,10 @@ vi.mock('../git-status.js', () => ({
   remoteUrl: (...args: [string]) => remoteUrlMock(...args),
 }));
 
-const { FileTreeManager } = await import('./manager.js');
-type FileTreeManagerInstance = InstanceType<typeof FileTreeManager>;
+const { FileNavigatorManager } = await import('./manager.js');
+type FileNavigatorManagerInstance = InstanceType<typeof FileNavigatorManager>;
 
-describe('FileTreeManager', () => {
+describe('FileNavigatorManager', () => {
   let root: string;
   let otherRoot: string;
   let outputs: string[];
@@ -36,8 +36,8 @@ describe('FileTreeManager', () => {
   let retargetEditorTabMock: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
-    root = mkdtempSync(path.join(tmpdir(), 'file-tree-mgr-'));
-    otherRoot = mkdtempSync(path.join(tmpdir(), 'file-tree-mgr-other-'));
+    root = mkdtempSync(path.join(tmpdir(), 'file-navigator-mgr-'));
+    otherRoot = mkdtempSync(path.join(tmpdir(), 'file-navigator-mgr-other-'));
     outputs = [];
     activeTab = 0;
     closeFns = [];
@@ -77,7 +77,7 @@ describe('FileTreeManager', () => {
           if (dock === null) activeTab = index;
         },
         cur: () => tabs[activeTab],
-        mostRecentFileTreeLabel: () => tabs.find((t) => t.files)?.label,
+        mostRecentFileNavigatorLabel: () => tabs.find((t) => t.files)?.label,
         setCwd: () => {},
         openFilesTab: (view: { root: string; rows: unknown[] }) => {
           const label = `navigator${tabs.length > 2 ? `-${tabs.length}` : ''}`;
@@ -93,7 +93,7 @@ describe('FileTreeManager', () => {
     rmSync(root, { recursive: true, force: true });
   });
 
-  const run = (): FileTreeManagerInstance => new FileTreeManager(managers as never);
+  const run = (): FileNavigatorManagerInstance => new FileNavigatorManager(managers as never);
 
   it('opens a files tab rooted at the issuing tab cwd and watches the root', () => {
     const manager = run();

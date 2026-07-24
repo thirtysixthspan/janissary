@@ -1,4 +1,4 @@
-import type { Tab, ImageView, MarkdownView, EditorView, PageView, FileTreeView } from '../types.js';
+import type { Tab, ImageView, MarkdownView, EditorView, PageView, FileNavigatorView } from '../types.js';
 import { messageBus } from '../bus.js';
 import {
   addImageTab, addMarkdownTab, addEditorTab, addPageTab, addFilesTab, addNotificationsTab, addSchedulesTab,
@@ -46,7 +46,7 @@ export function openPageTab(target: OpenTarget, { url, domain }: Pick<PageView, 
   activate(target, addPageTab(target.tabs, target.activeTab, url, domain));
 }
 
-export function openFilesTab(target: OpenTarget, view: FileTreeView): void {
+export function openFilesTab(target: OpenTarget, view: FileNavigatorView): void {
   activate(target, addFilesTab(target.tabs, target.activeTab, view));
 }
 

@@ -5,7 +5,7 @@ import type { ProfileFilesEntry } from '../types.js';
 
 function makeManagers(): { managers: Managers; open: ReturnType<typeof vi.fn> } {
   const open = vi.fn();
-  const managers = { fileTree: { open } } as unknown as Managers;
+  const managers = { fileNavigator: { open } } as unknown as Managers;
   return { managers, open };
 }
 

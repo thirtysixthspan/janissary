@@ -120,7 +120,7 @@ export type EditorView = {
 // A single visible row in a file tree tab (opened via `files [path]`). `path` is relative to the
 // tree root — the unique key, and the argument passed to `open`/`edit` when a file row is clicked.
 // Children of a directory are included only once it is expanded (present in the row list at all).
-export type FileTreeRow = {
+export type FileNavigatorRow = {
   path: string;
   name: string;
   depth: number;
@@ -140,15 +140,15 @@ export type FileTreeRow = {
 // current git branch when the root sits inside a git repository, undefined otherwise.
 // `waitingFor`, when set, is the absolute path the navigator is polling for (not yet created);
 // `rows` stays empty until it appears.
-export type FileTreeView = {
-  root: string; absoluteRoot: string; rows: FileTreeRow[]; branch?: string;
+export type FileNavigatorView = {
+  root: string; absoluteRoot: string; rows: FileNavigatorRow[]; branch?: string;
   // GitHub commits-page URL for the current origin/branch (see `github-url.ts`); undefined when
   // there's no github.com origin remote.
   githubUrl?: string;
   waitingFor?: string;
 };
 
-// A single row in the task picker's listing (executable `ai/*.md` prompts). Unlike `FileTreeRow`,
+// A single row in the task picker's listing (executable `ai/*.md` prompts). Unlike `FileNavigatorRow`,
 // this always contains the *full* recursive tree — the task list needs no live filesystem
 // watching, so expand/collapse is purely a client-side concern and carries no `expanded` field.
 export type TaskRow = { path: string; name: string; depth: number; dir: boolean; source: 'project' | 'janissary' };
@@ -207,8 +207,8 @@ export type Tab = {
   // the persona name, the monitored tabs/groups (pre-formatted), and the running total of bytes
   // sent/received on the monitor's dedicated ACP session.
   monitor?: { suggestions: MonitorSuggestion[]; persona: string; targets: string; contextBytes: number };
-  // The file-tree payload, present only when `view === 'files'`.
-  files?: FileTreeView;
+  // The file navigator payload, present only when `view === 'files'`.
+  files?: FileNavigatorView;
   // Group number, shared by an agent and every agent it (transitively) creates. The root agent
   // is group 1; a launched profile forms its own group.
   group: number;
@@ -328,7 +328,7 @@ export type ProfileMonitor = { name: string; persona: string; targets: string[] 
 // persona when omitted (preserving the one-monitor-per-persona default).
 export type ProfileMonitorFile = { name?: string; persona: string; targets: string[] };
 
-// A profile-level file-tree tab, authored under a profile's `files` key. `dock` docks it into that
+// A profile-level file navigator tab, authored under a profile's `files` key. `dock` docks it into that
 // sidebar; `in` roots it at the cwd of the named tab instead of the profile's first newly opened
 // tab; `path` roots it at a literal path, expanded like the `files` command's path argument (so
 // `$root` roots it at the launch dir regardless of any tab).

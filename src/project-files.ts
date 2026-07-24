@@ -1,5 +1,5 @@
 import type { Managers } from './managers.js';
-import { listProjectFiles } from './file-tree/search.js';
+import { listProjectFiles } from './file-navigator/search.js';
 
 // Resolve the project/launch directory's gitignore-aware file list for the `projectFiles` RPC
 // (Cmd+P quick open) — bridged straight off `message-handler.ts` (mirroring `openTranscriptFor`)

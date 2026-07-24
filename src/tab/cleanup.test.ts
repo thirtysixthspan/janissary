@@ -12,7 +12,7 @@ function makeManagers(): Managers {
     browser: { closeTab: vi.fn() },
     pty: { closeTab: vi.fn() },
     tab: { deleteBusy: vi.fn() },
-    fileTree: { closeTab: vi.fn() },
+    fileNavigator: { closeTab: vi.fn() },
     editorWatch: { closeTab: vi.fn() },
     editorAcp: { closeTab: vi.fn() },
     schedule: { delete: vi.fn() },
@@ -33,7 +33,7 @@ describe('closeTabResources', () => {
     expect(managers.browser.closeTab).toHaveBeenCalledWith('main');
     expect(managers.pty.closeTab).toHaveBeenCalledWith('main');
     expect(managers.tab.deleteBusy).toHaveBeenCalledWith('main');
-    expect(managers.fileTree.closeTab).toHaveBeenCalledWith('main');
+    expect(managers.fileNavigator.closeTab).toHaveBeenCalledWith('main');
     expect(managers.editorWatch.closeTab).toHaveBeenCalledWith('main');
     expect(managers.editorAcp.closeTab).toHaveBeenCalledWith('main');
     expect(managers.schedule.delete).toHaveBeenCalledWith('main');

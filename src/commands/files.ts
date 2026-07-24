@@ -10,6 +10,6 @@ export const command: Command = {
   match: (command_) => /^files\b/i.test(command_),
   run: (command_, tab, managers) => {
     managers.tab.append(tab.label, { input: command_, output: '' });
-    managers.fileTree.open(command_, tab.label);
+    managers.fileNavigator.open(command_, tab.label);
   },
 };

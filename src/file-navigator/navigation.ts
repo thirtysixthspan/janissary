@@ -2,7 +2,7 @@ import path from 'node:path';
 import { parentPath } from './index.js';
 import type { FilesTabState } from './manager.js';
 
-// The narrow slice of `FileTreeManager` internals this module needs, handed over as bound closures
+// The narrow slice of `FileNavigatorManager` internals this module needs, handed over as bound closures
 // so the tab-state map and watcher plumbing stay private to the manager (see `navPort()` there).
 export interface NavPort {
   states: Map<string, FilesTabState>;

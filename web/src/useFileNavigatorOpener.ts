@@ -14,7 +14,7 @@ export function useFileNavigatorOpener(client: JanusClient, index: number, root:
       return;
     }
     void client.request<{ command?: 'open' | 'edit'; choices: FileOpenerChoice[] }>({
-      method: 'fileTreeOpeners', params: { index, relPath: path, edit },
+      method: 'fileNavigatorOpeners', params: { index, relPath: path, edit },
     }).then((result) => {
       if (result?.command) client.send({ method: 'command', params: { text: `${result.command} ${root}/${path}` } });
       else if (result?.choices.length) setPending({ path, choices: result.choices, selected: 0 });
