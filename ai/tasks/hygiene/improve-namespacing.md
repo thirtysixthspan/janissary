@@ -102,7 +102,7 @@ This is your definitive move list, and it **includes the `*.test.ts` files** —
 ls src/<prefix>.ts 2>&1
 ```
 
-If `src/<prefix>.ts` exists, it is part of the move and becomes `src/<prefix>/index.ts`. If it doesn't exist (the `ls` errors), there is no bare entry — do **not** create one. We never invent a barrel `index.ts` where none existed; callers import files directly (see [`../guidelines/imports-and-barrel-files.md`](../guidelines/imports-and-barrel-files.md)).
+If `src/<prefix>.ts` exists, it is part of the move and becomes `src/<prefix>/index.ts`. If it doesn't exist (the `ls` errors), there is no bare entry — do **not** create one. We never invent a barrel `index.ts` where none existed; callers import files directly (see [`../guidelines/imports-and-barrel-files.md`](../../guidelines/imports-and-barrel-files.md)).
 
 ---
 

@@ -22,7 +22,7 @@ The improvement work itself follows one of these existing single-purpose task pl
 
 ## Step 0 — Prepare the workspace
 
-Execute [`prepare-workspace.md`](prepare-workspace.md) in full before doing anything else.
+Execute [`prepare-workspace.md`](../prepare-workspace.md) in full before doing anything else.
 
 Then establish a clean starting point:
 
@@ -63,7 +63,7 @@ State your pick in one sentence: the task playbook, the target file/function, an
 
 ## Step 3 — Execute the chosen playbook yourself
 
-Follow [`ai/tasks/<task>.md`](.) for the task you picked in Step 2, in full. 
+Follow [`ai/tasks/hygiene/<task>.md`](.) for the task you picked in Step 2, in full. 
 
 ## Final report
 

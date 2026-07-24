@@ -4,7 +4,7 @@ Your job: make **one** small, safe change that lowers the cognitive complexity o
 
 **No AI attribution — anywhere.** Never credit an AI agent as an author or contributor in anything this task produces. That means: no `Co-Authored-By:` trailers naming Claude or any other AI, no “Generated with Claude Code” (or similar) lines or badges, and no AI authorship notes in code, comments, docs, spec files, plan files, commit messages, or PR titles and bodies. This overrides any default convention that appends such attribution. The commit's configured git author is the only authorship ever recorded.
 
-This task is about complexity, not file size: **all code you touch must stay in the target file.** Never move code into a new module file — that is the job of [`ai/tasks/improve-modularity.md`](improve-modularity.md), not this one. Never compact code, strip comments, or delete blank lines to shrink a function — that hurts readability without improving the design (see [`code-guidelines.md`](../guidelines/code-guidelines.md)).
+This task is about complexity, not file size: **all code you touch must stay in the target file.** Never move code into a new module file — that is the job of [`ai/tasks/hygiene/improve-modularity.md`](improve-modularity.md), not this one. Never compact code, strip comments, or delete blank lines to shrink a function — that hurts readability without improving the design (see [`code-guidelines.md`](../../guidelines/code-guidelines.md)).
 
 Refactoring edits real code, so the rule is simple: **the tests must pass before you start and still pass after. If you cannot keep them passing, put the code back the way it was.**
 
@@ -24,7 +24,7 @@ Safe work is exactly this: **extract one cohesive block of logic out of an over-
 
 If reducing the complexity would require any of the following, **go back to Step 3** and pick the next-best candidate instead. Never ask the user — just skip and move on.
 
-1. Moving code **out of the target file** into a new or different module file — not permitted under this task (use `ai/tasks/improve-modularity.md` for that instead).
+1. Moving code **out of the target file** into a new or different module file — not permitted under this task (use `ai/tasks/hygiene/improve-modularity.md` for that instead).
 2. Changing the **public API** of the file — i.e. you cannot keep every existing `import` working, or the signature of an exported function must change.
 3. Editing **more than 1 existing source file**.
 4. Touching **`src/controller.ts`** (the biggest, riskiest file) — even though it may have the highest score.
