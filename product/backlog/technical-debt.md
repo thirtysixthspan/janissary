@@ -2,8 +2,6 @@
 
 ## ready
 
-* src/monitor/feed-diff.ts has no test file anywhere in the repo despite containing byte-length capping logic that truncates UTF-8 text at a byte boundary (cap()) and stateful diff-vs-full-snapshot logic keyed by a Map with distinct first-call, unchanged, and changed-since-last-call branches (diffFeedEntry()); add src/monitor/feed-diff.test.ts covering the multi-byte truncation boundary in cap() and all three branches of diffFeedEntry(). Severity: medium.
-
 * src/types.ts has grown to 672 lines holding type definitions for roughly 18 unrelated domains (tab, harness, schedule, acp, browser, connections, commands, db, config, completion, logger, and more, each marked off by its own section comment), even though almost every one of those domains already has its own folder under src/ (src/tab/, src/harness/, src/schedule/, src/browser/, src/database/, ...); split each section into a types.ts colocated in its matching domain folder, re-exported from a slim src/types.ts if a single cross-domain import point is still needed, so type definitions live next to the code that owns them like the rest of the codebase. Severity: medium.
 
 ## development
