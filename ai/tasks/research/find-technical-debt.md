@@ -1,6 +1,6 @@
 # Find Technical Debt
 
-Your job: read through the codebase and use your own judgment to spot likely sources of technical debt — code smells, architecture drift, inconsistency, and maintenance risk — then log what you find as new entries under the `## development` section of `product/backlog/technical-debt.md`. This task **researches and records** debt; it does not fix it, and other tasks own resolving what lands here ([`reduce-technical-debt.md`](reduce-technical-debt.md), [`reduce-complexity.md`](reduce-complexity.md), [`remove-deadcode.md`](remove-deadcode.md), [`remove-duplication.md`](remove-duplication.md), [`improve-modularity.md`](improve-modularity.md)).
+Your job: read through the codebase and use your own judgment to spot likely sources of technical debt — code smells, architecture drift, inconsistency, and maintenance risk — then log what you find as new entries under the `## development` section of `product/backlog/technical-debt.md`. This task **researches and records** debt; it does not fix it, and other tasks own resolving what lands here ([`reduce-technical-debt.md`](../reduce-technical-debt.md), [`reduce-complexity.md`](../reduce-complexity.md), [`remove-deadcode.md`](../remove-deadcode.md), [`remove-duplication.md`](../remove-duplication.md), [`improve-modularity.md`](../improve-modularity.md)).
 
 **Never run repository tools to assess debt.** Do not run `npm run lint`, `npm run typecheck`, `npm run test`, `npm run quality`, `./scripts/run.mjs check-diff`, FTA, or any other build/lint/test/analysis tooling — not even the diff-scoped fast commands. Those tools already have dedicated tasks that consume their output. This task's job is to **read the code yourself** and make a judgment call, the same way a human reviewer skimming the codebase would. Plain read-only shell commands used only to navigate (`ls`, `wc -l`, `grep`, `git log`) are fine — the restriction is on running the project's build/lint/test/quality machinery, not on looking at files.
 
@@ -27,7 +27,7 @@ This task follows the common industry framing of technical debt, so keep it in m
 
 ## Step 0 — Prepare the workspace
 
-This task only reads files and runs git — it never builds, tests, lints, or runs the app — so it does not need the full [`prepare-workspace.md`](prepare-workspace.md) install. Do this instead:
+This task only reads files and runs git — it never builds, tests, lints, or runs the app — so it does not need the full [`prepare-workspace.md`](../prepare-workspace.md) install. Do this instead:
 
 1. `git checkout master` and `git pull origin master`.
 2. Skip `npm install` entirely.
@@ -51,7 +51,7 @@ Collect every existing bullet from all three sections into one list. This is the
 
 Read broadly across `src/` and `web/src/`, using your own judgment — not a tool's — to spot technical debt. The signals below are drawn from the established code-smell taxonomy (Fowler's *Refactoring* catalog and the empirical literature on maintainability) — treat each as something to notice while reading, then ask *what design gap produced this?* before writing it down:
 
-- **Size and shape.** Files at or near the 200-line limit in [`ai/guidelines/code-guidelines.md`](../guidelines/code-guidelines.md) (`wc -l` is fine to check this), files that visibly mix unrelated responsibilities, or functions that read as doing too many things at once.
+- **Size and shape.** Files at or near the 200-line limit in [`ai/guidelines/code-guidelines.md`](../../guidelines/code-guidelines.md) (`wc -l` is fine to check this), files that visibly mix unrelated responsibilities, or functions that read as doing too many things at once.
 - **Duplication.** The same logic, validation, or shape of code repeated across multiple files instead of shared — read the files side by side to judge similarity, don't rely on a duplication detector.
 - **Inconsistency.** Two places that solve the same kind of problem in different ways (e.g. one module handles errors by throwing, another by returning a result type; inconsistent naming for the same concept across files).
 - **Markers left in code.** `TODO`, `FIXME`, `HACK`, `XXX` comments, commented-out code blocks, and stale comments that no longer match the code beside them.
@@ -111,7 +111,7 @@ If anything else changed on disk, revert it (`git checkout -- <file>`) before co
 
 ## Step 6 — Commit and push
 
-Execute [`quick-commit.md`](quick-commit.md) in full to commit the result on `master` and push it to the remote. Use a `chore` type subject, e.g.:
+Execute [`quick-commit.md`](../quick-commit.md) in full to commit the result on `master` and push it to the remote. Use a `chore` type subject, e.g.:
 
 ```
 chore(backlog): log new technical debt findings

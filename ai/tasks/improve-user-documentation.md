@@ -1,7 +1,7 @@
 # Improve User Documentation (one backlog item per run)
 
 Your job: take the **top** candidate from `product/backlog/user-documentation.md` — the gap
-backlog maintained by [`find-user-documentation-gaps.md`](find-user-documentation-gaps.md) —
+backlog maintained by [`find-user-documentation-gaps.md`](research/find-user-documentation-gaps.md) —
 verify its gap description against the spec and source, fix the gap in
 `documentation/user-documentation/` and `help.md`, add visuals — character sprites per the
 guidelines, and a screenshot captured with the docs-screenshots pipeline whenever the page
@@ -128,7 +128,7 @@ That is your work order — Step 3's research focuses on verifying and completin
 re-deriving it.
 
 If the backlog file does not exist, or its `candidates` section is empty, STOP and tell the user
-to run [`find-user-documentation-gaps.md`](find-user-documentation-gaps.md) first — do not fall
+to run [`find-user-documentation-gaps.md`](research/find-user-documentation-gaps.md) first — do not fall
 back to inventing your own candidate.
 
 State your pick in one sentence: the area ID, its score, the spec file, and the doc
@@ -348,7 +348,7 @@ Now that the gap is closed and verified, update `product/backlog/user-documentat
    Get the date from `date -u "+%Y-%m-%d"` — do not write one from memory.
 3. Touch nothing else in the file: no rescoring other candidates, no reordering, no editing the
    `Last run` line or the `unverified` section — those belong to
-   [`find-user-documentation-gaps.md`](find-user-documentation-gaps.md).
+   [`find-user-documentation-gaps.md`](research/find-user-documentation-gaps.md).
 
 If you skipped the top item because its gap was already closed (Blocked work, case 2), do the
 same removal for it, wording the `resolved` bullet as already-resolved instead — then continue
