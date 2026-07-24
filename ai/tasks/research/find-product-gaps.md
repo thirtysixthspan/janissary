@@ -25,7 +25,7 @@ Do the steps below **in order**. Do not skip steps. Do not invent your own proce
 
 ## Step 0 — Prepare the workspace
 
-This task only reads files, searches the web, and runs git — it never builds, tests, lints, or runs the app — so it does not need the full [`prepare-workspace.md`](prepare-workspace.md) install. Do this instead:
+This task only reads files, searches the web, and runs git — it never builds, tests, lints, or runs the app — so it does not need the full [`prepare-workspace.md`](../prepare-workspace.md) install. Do this instead:
 
 1. `git checkout master` and `git pull origin master`.
 2. Skip `npm install` entirely.
@@ -106,7 +106,7 @@ If anything else changed on disk, revert it (`git checkout -- <file>`) before co
 
 ## Step 7 — Commit and push
 
-Execute [`quick-commit.md`](quick-commit.md) in full to commit the result on `master` and push it to the remote. Use a `chore` type subject, e.g.:
+Execute [`quick-commit.md`](../quick-commit.md) in full to commit the result on `master` and push it to the remote. Use a `chore` type subject, e.g.:
 
 ```
 chore(backlog): log new product gap findings
