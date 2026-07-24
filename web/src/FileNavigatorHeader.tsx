@@ -52,7 +52,7 @@ export function FileNavigatorHeader({ root, branch, githubUrl, client, index, do
           type="button"
           className="files-collapse-all"
           title="Collapse all"
-          onClick={() => client.send({ method: 'fileTreeCollapseAll', params: { index } })}
+          onClick={() => client.send({ method: 'fileNavigatorCollapseAll', params: { index } })}
         >
           ⊟
         </button>

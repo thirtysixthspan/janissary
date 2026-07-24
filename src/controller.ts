@@ -1,7 +1,7 @@
 import { completeCommandLine } from './completion/index.js';
 import type { CompletionResult, Sinks } from './types.js';
 import { TranscriptStore } from './transcript/store.js';
-import * as fileTreeRpc from './controller/file-tree.js';
+import * as fileNavigatorRpc from './controller/file-navigator.js';
 import { wireControllerEvents } from './controller/events.js';
 import { createManagers } from './controller/create-managers.js';
 import { saveFile } from './editor/save.js';
@@ -145,34 +145,34 @@ export class Controller {
     this.managers.tab.toggleCollapse();
   }
 
-  // --- file tree tabs (see controller-file-tree.ts) ------------------------
+  // --- file navigator tabs (see controller/file-navigator.ts) ------------------------
 
-  fileTreeToggle(index: number, path: string): void {
-    fileTreeRpc.fileTreeToggle(this.managers, index, path);
+  fileNavigatorToggle(index: number, path: string): void {
+    fileNavigatorRpc.fileNavigatorToggle(this.managers, index, path);
   }
 
-  fileTreeCollapseAll(index: number): void {
-    fileTreeRpc.fileTreeCollapseAll(this.managers, index);
+  fileNavigatorCollapseAll(index: number): void {
+    fileNavigatorRpc.fileNavigatorCollapseAll(this.managers, index);
   }
 
-  fileTreeReroot(index: number, relPath?: string): void {
-    fileTreeRpc.fileTreeReroot(this.managers, index, relPath);
+  fileNavigatorReroot(index: number, relPath?: string): void {
+    fileNavigatorRpc.fileNavigatorReroot(this.managers, index, relPath);
   }
 
-  moveFileTreeItem(index: number, fromRelPath: string, toRelPath: string): void {
-    fileTreeRpc.moveFileTreeItem(this.managers, index, fromRelPath, toRelPath);
+  moveFileNavigatorItem(index: number, fromRelPath: string, toRelPath: string): void {
+    fileNavigatorRpc.moveFileNavigatorItem(this.managers, index, fromRelPath, toRelPath);
   }
 
-  deleteFileTreeItem(index: number, relPath: string): void {
-    fileTreeRpc.deleteFileTreeItem(this.managers, index, relPath);
+  deleteFileNavigatorItem(index: number, relPath: string): void {
+    fileNavigatorRpc.deleteFileNavigatorItem(this.managers, index, relPath);
   }
 
-  undoFileTreeItem(index: number, overwrite?: boolean): { conflict?: { fromRelPath: string; toRelPath: string } } {
-    return fileTreeRpc.undoFileTreeItem(this.managers, index, overwrite);
+  undoFileNavigatorItem(index: number, overwrite?: boolean): { conflict?: { fromRelPath: string; toRelPath: string } } {
+    return fileNavigatorRpc.undoFileNavigatorItem(this.managers, index, overwrite);
   }
 
-  redoFileTreeItem(index: number, overwrite?: boolean): { conflict?: { fromRelPath: string; toRelPath: string } } {
-    return fileTreeRpc.redoFileTreeItem(this.managers, index, overwrite);
+  redoFileNavigatorItem(index: number, overwrite?: boolean): { conflict?: { fromRelPath: string; toRelPath: string } } {
+    return fileNavigatorRpc.redoFileNavigatorItem(this.managers, index, overwrite);
   }
 
   // Dock/undock any dockable tab (file tree or notifications). The mechanism is view-agnostic —
@@ -182,9 +182,9 @@ export class Controller {
   }
 
   // Open (or retarget an existing) file navigator at the named tab's cwd — the 📁 metadata-row
-  // button (see controller-file-tree.ts).
+  // button (see controller/file-navigator.ts).
   openFileNavigatorFor(label: string): void {
-    fileTreeRpc.openFileNavigatorFor(this.managers, label);
+    fileNavigatorRpc.openFileNavigatorFor(this.managers, label);
   }
 
   // Launch a new agent tab rooted at the named tab's cwd — the ➕ metadata-row button.
@@ -216,7 +216,7 @@ export class Controller {
 
   shutdown(): void {
     this.managers.questions.closeAll();
-    this.managers.fileTree.dispose();
+    this.managers.fileNavigator.dispose();
     this.managers.editorWatch.dispose();
     this.managers.monitor.closeAll();
     messageBus.clear();

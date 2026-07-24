@@ -3,7 +3,7 @@ import type { ClientMessage, ServerEvent } from './protocol.js';
 import { buildStateEvent } from './state-event.js';
 import { openTranscriptFor, openAcpTranscript } from './controller/transcript.js';
 import { projectFilesFor } from './project-files.js';
-import { handleFileTreeMessage } from './message-handler-file-tree.js';
+import { handleFileNavigatorMessage } from './message-handler-file-navigator.js';
 import { setClientLayout } from './client-layout.js';
 import { listPersonas } from './personas.js';
 import { editorSuggest, ownerLabel } from './editor-suggest/handler.js';
@@ -81,18 +81,18 @@ export function handle(controller: Controller, message: ClientMessage, reply: (e
     }
     case 'pageSync': { controller.syncPageSnapshot(message.params.url, message.params.text); break;
     }
-    case 'fileTreeToggle':
-    case 'fileTreeCollapseAll':
-    case 'fileTreeReroot':
-    case 'moveFileTreeItem':
-    case 'deleteFileTreeItem':
-    case 'renameFileTreeItem':
-    case 'fileTreeSearch':
-    case 'revealFileTreeItem':
-    case 'fileTreeOpeners':
-    case 'undoFileTreeItem':
-    case 'redoFileTreeItem': {
-      handleFileTreeMessage(controller, message, reply);
+    case 'fileNavigatorToggle':
+    case 'fileNavigatorCollapseAll':
+    case 'fileNavigatorReroot':
+    case 'moveFileNavigatorItem':
+    case 'deleteFileNavigatorItem':
+    case 'renameFileNavigatorItem':
+    case 'fileNavigatorSearch':
+    case 'revealFileNavigatorItem':
+    case 'fileNavigatorOpeners':
+    case 'undoFileNavigatorItem':
+    case 'redoFileNavigatorItem': {
+      handleFileNavigatorMessage(controller, message, reply);
       return;
     }
     case 'cancelSchedule': { controller.cancelSchedule(message.params.tab, message.params.id); break;

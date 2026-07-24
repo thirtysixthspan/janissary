@@ -1,9 +1,9 @@
-import type { FileTreeRow } from '@shared/protocol';
+import type { FileNavigatorRow } from '@shared/protocol';
 
 export type DropTarget = { path: string; conflict: boolean } | null;
 
 // True if `candidate` is `base` itself, or is nested inside it — mirrors the server-side check in
-// `src/file-tree.ts`'s `isSameOrDescendantPath` (duplicated here since client and server code
+// `src/file-navigator/index.ts`'s `isSameOrDescendantPath` (duplicated here since client and server code
 // don't share a runtime module boundary).
 function isSameOrDescendantPath(candidate: string, base: string): boolean {
   return candidate === base || candidate.startsWith(`${base}/`);
@@ -28,7 +28,7 @@ function parentPath(path: string): string {
 // and only among that child's rows that are already loaded (a collapsed directory's children
 // aren't in `rows` at all, so a conflict inside one can't be detected client-side; the server
 // re-verifies against disk before acting regardless).
-export function resolveDropTarget(rows: FileTreeRow[], draggedPath: string, hoveredPath: string | null): DropTarget {
+export function resolveDropTarget(rows: FileNavigatorRow[], draggedPath: string, hoveredPath: string | null): DropTarget {
   if (hoveredPath === null || ['..', draggedPath].includes(hoveredPath)) return null;
   const hovered = rows.find((r) => r.path === hoveredPath);
   if (!hovered) return null;

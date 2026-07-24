@@ -2,7 +2,7 @@
 // command. Consumes leading `in <label>` / `on <left|right>` clauses (either order, each at most
 // once), then falls back to the bare `left`/`right` keyword if neither clause was used. Whatever's
 // left over is the path target.
-export function parseFileTreeArgs(rest: string): { inLabel?: string; dock: 'left' | 'right' | null; target: string } {
+export function parseFileNavigatorArgs(rest: string): { inLabel?: string; dock: 'left' | 'right' | null; target: string } {
   let cursor = rest;
   let inLabel: string | undefined;
   let dock: 'left' | 'right' | null = null;

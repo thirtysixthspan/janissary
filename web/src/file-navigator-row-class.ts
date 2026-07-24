@@ -1,6 +1,6 @@
-import type { FileTreeRow } from '@shared/protocol';
+import type { FileNavigatorRow } from '@shared/protocol';
 
-const STATUS_CLASS: Record<NonNullable<FileTreeRow['gitStatus']>, string> = {
+const STATUS_CLASS: Record<NonNullable<FileNavigatorRow['gitStatus']>, string> = {
   changed: 'files-name--changed',
   staged: 'files-name--staged',
   conflict: 'files-name--conflict',
@@ -11,7 +11,7 @@ const STATUS_CLASS: Record<NonNullable<FileTreeRow['gitStatus']>, string> = {
 // modifier matching the row's `gitStatus`, or none when unset). Kept out of the component so
 // `FileNavigatorTab.tsx` stays under the file-size limit.
 export function fileNavigatorRowClass(
-  row: FileTreeRow,
+  row: FileNavigatorRow,
   selected: string | null,
   dropTargetPath: string | undefined,
 ): { row: string; name: string } {

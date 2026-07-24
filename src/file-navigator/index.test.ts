@@ -2,13 +2,13 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtempSync, mkdirSync, writeFileSync, symlinkSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import type { FileTreeRow } from '../types.js';
+import type { FileNavigatorRow } from '../types.js';
 import { readDirSorted, buildRows, markGitStatus, isSameOrDescendantPath, hasNameConflict } from './index.js';
 
 describe('readDirSorted', () => {
   let root: string;
 
-  beforeEach(() => { root = mkdtempSync(path.join(tmpdir(), 'file-tree-')); });
+  beforeEach(() => { root = mkdtempSync(path.join(tmpdir(), 'file-navigator-')); });
   afterEach(() => { rmSync(root, { recursive: true, force: true }); });
 
   it('lists directories before files, case-insensitive alpha within each', () => {
@@ -49,7 +49,7 @@ describe('readDirSorted', () => {
 describe('buildRows', () => {
   let root: string;
 
-  beforeEach(() => { root = mkdtempSync(path.join(tmpdir(), 'file-tree-rows-')); });
+  beforeEach(() => { root = mkdtempSync(path.join(tmpdir(), 'file-navigator-rows-')); });
   afterEach(() => { rmSync(root, { recursive: true, force: true }); });
 
   it('collapsed root yields only depth-0 rows', () => {
@@ -83,7 +83,7 @@ describe('buildRows', () => {
 
 describe('markGitStatus', () => {
   it('marks a changed file and every ancestor directory — including collapsed ones — and leaves others unmarked', () => {
-    const rows: FileTreeRow[] = [
+    const rows: FileNavigatorRow[] = [
       { path: '..', name: '..', depth: 0, dir: true },
       { path: 'src', name: 'src', depth: 0, dir: true, expanded: true },
       { path: 'src/deep', name: 'deep', depth: 1, dir: true, expanded: false },
@@ -100,22 +100,22 @@ describe('markGitStatus', () => {
   });
 
   it('marks a file row with its own path\'s status', () => {
-    const rows: FileTreeRow[] = [{ path: 'a.txt', name: 'a.txt', depth: 0, dir: false }];
+    const rows: FileNavigatorRow[] = [{ path: 'a.txt', name: 'a.txt', depth: 0, dir: false }];
     expect(markGitStatus(rows, new Map([['a.txt', 'staged']]))[0].gitStatus).toBe('staged');
   });
 
   it('does not color a directory that merely shares a name prefix with a changed path', () => {
-    const rows: FileTreeRow[] = [{ path: 'src', name: 'src', depth: 0, dir: true, expanded: false }];
+    const rows: FileNavigatorRow[] = [{ path: 'src', name: 'src', depth: 0, dir: true, expanded: false }];
     expect(markGitStatus(rows, new Map([['src-backup/x.ts', 'changed']]))[0].gitStatus).toBeUndefined();
   });
 
   it('returns the rows unchanged when the status map is empty', () => {
-    const rows: FileTreeRow[] = [{ path: 'a.txt', name: 'a.txt', depth: 0, dir: false }];
+    const rows: FileNavigatorRow[] = [{ path: 'a.txt', name: 'a.txt', depth: 0, dir: false }];
     expect(markGitStatus(rows, new Map())).toBe(rows);
   });
 
   it('marks a directory row with the highest-priority status among its descendants', () => {
-    const rows: FileTreeRow[] = [{ path: 'src', name: 'src', depth: 0, dir: true, expanded: true }];
+    const rows: FileNavigatorRow[] = [{ path: 'src', name: 'src', depth: 0, dir: true, expanded: true }];
     const statuses = new Map<string, 'changed' | 'staged' | 'conflict'>([
       ['src/a.txt', 'changed'],
       ['src/b.txt', 'conflict'],
@@ -146,7 +146,7 @@ describe('isSameOrDescendantPath', () => {
 describe('hasNameConflict', () => {
   let root: string;
 
-  beforeEach(() => { root = mkdtempSync(path.join(tmpdir(), 'file-tree-conflict-')); });
+  beforeEach(() => { root = mkdtempSync(path.join(tmpdir(), 'file-navigator-conflict-')); });
   afterEach(() => { rmSync(root, { recursive: true, force: true }); });
 
   it('is true when the destination already has an entry with that name', () => {

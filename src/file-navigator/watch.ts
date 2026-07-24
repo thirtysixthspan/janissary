@@ -1,7 +1,7 @@
 import { watch, type FSWatcher } from 'node:fs';
 
 // The narrow slice of a files-tab's state this module touches — just its watcher map, so this
-// stays decoupled from FileTreeManager's full FilesTabState (and avoids a circular import).
+// stays decoupled from FileNavigatorManager's full FilesTabState (and avoids a circular import).
 type WatchableState = { watchers: Map<string, FSWatcher> };
 
 // Starts a non-recursive `fs.watch` on `absDir` (keyed by `relPath` in `label`'s watcher map),

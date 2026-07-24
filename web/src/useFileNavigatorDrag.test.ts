@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import type { FileTreeRow } from '@shared/protocol';
+import type { FileNavigatorRow } from '@shared/protocol';
 import type { JanusClient } from './ws';
 import { useFileNavigatorDrag } from './useFileNavigatorDrag';
 import type { CommandInputDropHandle } from './CommandInput';
 
-function makeRows(): FileTreeRow[] {
+function makeRows(): FileNavigatorRow[] {
   return [
     { path: 'notes.txt', name: 'notes.txt', depth: 0, dir: false },
     { path: 'dest', name: 'dest', depth: 0, dir: true, expanded: true },
@@ -46,7 +46,7 @@ describe('useFileNavigatorDrag', () => {
     const client = { send: vi.fn() } as unknown as JanusClient;
     const { result } = renderHook(() => useFileNavigatorDrag(makeRows(), client, 0));
 
-    act(() => { result.current.onRowMouseDown({ path: 'notes.txt' } as FileTreeRow, downEvent(0, 0)); });
+    act(() => { result.current.onRowMouseDown({ path: 'notes.txt' } as FileNavigatorRow, downEvent(0, 0)); });
     act(() => { globalThis.dispatchEvent(new MouseEvent('mousemove', { clientX: 1, clientY: 1 })); });
 
     expect(result.current.draggedPath).toBeNull();
@@ -58,7 +58,7 @@ describe('useFileNavigatorDrag', () => {
     const otherRow = makeRowElement('other');
     document.elementFromPoint = vi.fn().mockReturnValue(otherRow);
 
-    act(() => { result.current.onRowMouseDown({ path: 'notes.txt' } as FileTreeRow, downEvent(0, 0)); });
+    act(() => { result.current.onRowMouseDown({ path: 'notes.txt' } as FileNavigatorRow, downEvent(0, 0)); });
     act(() => { globalThis.dispatchEvent(new MouseEvent('mousemove', { clientX: 20, clientY: 0 })); });
 
     expect(result.current.draggedPath).toBe('notes.txt');
@@ -72,7 +72,7 @@ describe('useFileNavigatorDrag', () => {
     const otherRow = makeRowElement('other');
     document.elementFromPoint = vi.fn().mockReturnValue(otherRow);
 
-    act(() => { result.current.onRowMouseDown({ path: 'notes.txt' } as FileTreeRow, downEvent(0, 0)); });
+    act(() => { result.current.onRowMouseDown({ path: 'notes.txt' } as FileNavigatorRow, downEvent(0, 0)); });
     act(() => { globalThis.dispatchEvent(new MouseEvent('mousemove', { clientX: 20, clientY: 0 })); });
     act(() => { globalThis.dispatchEvent(new MouseEvent('mousemove', { clientX: 35, clientY: 10 })); });
 
@@ -83,17 +83,17 @@ describe('useFileNavigatorDrag', () => {
     expect(result.current.dragPosition).toBeNull();
   });
 
-  it('drop() sends moveFileTreeItem directly for a valid non-conflicting target', () => {
+  it('drop() sends moveFileNavigatorItem directly for a valid non-conflicting target', () => {
     const client = { send: vi.fn() } as unknown as JanusClient;
     const { result } = renderHook(() => useFileNavigatorDrag(makeRows(), client, 3));
     const otherRow = makeRowElement('other');
     document.elementFromPoint = vi.fn().mockReturnValue(otherRow);
 
-    act(() => { result.current.onRowMouseDown({ path: 'notes.txt' } as FileTreeRow, downEvent(0, 0)); });
+    act(() => { result.current.onRowMouseDown({ path: 'notes.txt' } as FileNavigatorRow, downEvent(0, 0)); });
     act(() => { globalThis.dispatchEvent(new MouseEvent('mousemove', { clientX: 20, clientY: 0 })); });
     act(() => { result.current.drop(); });
 
-    expect(client.send).toHaveBeenCalledWith({ method: 'moveFileTreeItem', params: { index: 3, fromRelPath: 'notes.txt', toRelPath: 'other' } });
+    expect(client.send).toHaveBeenCalledWith({ method: 'moveFileNavigatorItem', params: { index: 3, fromRelPath: 'notes.txt', toRelPath: 'other' } });
     expect(result.current.pendingConflict).toBeNull();
   });
 
@@ -103,7 +103,7 @@ describe('useFileNavigatorDrag', () => {
     const destRow = makeRowElement('dest');
     document.elementFromPoint = vi.fn().mockReturnValue(destRow);
 
-    act(() => { result.current.onRowMouseDown({ path: 'notes.txt' } as FileTreeRow, downEvent(0, 0)); });
+    act(() => { result.current.onRowMouseDown({ path: 'notes.txt' } as FileNavigatorRow, downEvent(0, 0)); });
     act(() => { globalThis.dispatchEvent(new MouseEvent('mousemove', { clientX: 20, clientY: 0 })); });
     act(() => { result.current.drop(); });
 
@@ -117,12 +117,12 @@ describe('useFileNavigatorDrag', () => {
     const destRow = makeRowElement('dest');
     document.elementFromPoint = vi.fn().mockReturnValue(destRow);
 
-    act(() => { result.current.onRowMouseDown({ path: 'notes.txt' } as FileTreeRow, downEvent(0, 0)); });
+    act(() => { result.current.onRowMouseDown({ path: 'notes.txt' } as FileNavigatorRow, downEvent(0, 0)); });
     act(() => { globalThis.dispatchEvent(new MouseEvent('mousemove', { clientX: 20, clientY: 0 })); });
     act(() => { result.current.drop(); });
     act(() => { result.current.confirmOverwrite(); });
 
-    expect(client.send).toHaveBeenCalledWith({ method: 'moveFileTreeItem', params: { index: 0, fromRelPath: 'notes.txt', toRelPath: 'dest' } });
+    expect(client.send).toHaveBeenCalledWith({ method: 'moveFileNavigatorItem', params: { index: 0, fromRelPath: 'notes.txt', toRelPath: 'dest' } });
     expect(result.current.pendingConflict).toBeNull();
   });
 
@@ -132,7 +132,7 @@ describe('useFileNavigatorDrag', () => {
     const destRow = makeRowElement('dest');
     document.elementFromPoint = vi.fn().mockReturnValue(destRow);
 
-    act(() => { result.current.onRowMouseDown({ path: 'notes.txt' } as FileTreeRow, downEvent(0, 0)); });
+    act(() => { result.current.onRowMouseDown({ path: 'notes.txt' } as FileNavigatorRow, downEvent(0, 0)); });
     act(() => { globalThis.dispatchEvent(new MouseEvent('mousemove', { clientX: 20, clientY: 0 })); });
     act(() => { result.current.drop(); });
     act(() => { result.current.cancelConflict(); });
@@ -147,7 +147,7 @@ describe('useFileNavigatorDrag', () => {
     const otherRow = makeRowElement('other');
     document.elementFromPoint = vi.fn().mockReturnValue(otherRow);
 
-    act(() => { result.current.onRowMouseDown({ path: 'notes.txt' } as FileTreeRow, downEvent(0, 0)); });
+    act(() => { result.current.onRowMouseDown({ path: 'notes.txt' } as FileNavigatorRow, downEvent(0, 0)); });
     act(() => { globalThis.dispatchEvent(new MouseEvent('mousemove', { clientX: 20, clientY: 0 })); });
     act(() => { globalThis.dispatchEvent(new Event('blur')); });
 
@@ -163,14 +163,14 @@ describe('useFileNavigatorDrag', () => {
     const otherRow = makeRowElement('other');
     document.elementFromPoint = vi.fn().mockReturnValue(otherRow);
 
-    act(() => { result.current.onRowMouseDown({ path: 'notes.txt' } as FileTreeRow, downEvent(0, 0)); });
+    act(() => { result.current.onRowMouseDown({ path: 'notes.txt' } as FileNavigatorRow, downEvent(0, 0)); });
     act(() => { globalThis.dispatchEvent(new MouseEvent('mousemove', { clientX: 20, clientY: 0 })); });
     act(() => { result.current.drop(); });
     act(() => { globalThis.dispatchEvent(new Event('blur')); });
 
     expect(client.send).toHaveBeenCalledTimes(1);
 
-    act(() => { result.current.onRowMouseDown({ path: 'notes.txt' } as FileTreeRow, downEvent(0, 0)); });
+    act(() => { result.current.onRowMouseDown({ path: 'notes.txt' } as FileNavigatorRow, downEvent(0, 0)); });
     act(() => { globalThis.dispatchEvent(new MouseEvent('mousemove', { clientX: 20, clientY: 0 })); });
 
     expect(result.current.draggedPath).toBe('notes.txt');
@@ -183,7 +183,7 @@ describe('useFileNavigatorDrag', () => {
     const otherRow = makeRowElement('other');
     document.elementFromPoint = vi.fn().mockReturnValue(otherRow);
 
-    act(() => { result.current.onRowMouseDown({ path: 'notes.txt' } as FileTreeRow, downEvent(0, 0)); });
+    act(() => { result.current.onRowMouseDown({ path: 'notes.txt' } as FileNavigatorRow, downEvent(0, 0)); });
     act(() => { globalThis.dispatchEvent(new MouseEvent('mousemove', { clientX: 20, clientY: 0 })); });
     act(() => { globalThis.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); });
 
@@ -199,7 +199,7 @@ describe('useFileNavigatorDrag', () => {
     const otherRow = makeRowElement('other');
     document.elementFromPoint = vi.fn().mockReturnValue(otherRow);
 
-    act(() => { result.current.onRowMouseDown({ path: 'notes.txt' } as FileTreeRow, downEvent(0, 0)); });
+    act(() => { result.current.onRowMouseDown({ path: 'notes.txt' } as FileNavigatorRow, downEvent(0, 0)); });
     act(() => { globalThis.dispatchEvent(new MouseEvent('mousemove', { clientX: 20, clientY: 0 })); });
     act(() => { globalThis.dispatchEvent(new KeyboardEvent('keydown', { key: 'a' })); });
 
@@ -221,7 +221,7 @@ describe('useFileNavigatorDrag', () => {
     const { result } = renderHook(() => useFileNavigatorDrag(makeRows(), client, 0));
     document.elementFromPoint = vi.fn().mockReturnValue(null);
 
-    act(() => { result.current.onRowMouseDown({ path: 'notes.txt' } as FileTreeRow, downEvent(0, 0)); });
+    act(() => { result.current.onRowMouseDown({ path: 'notes.txt' } as FileNavigatorRow, downEvent(0, 0)); });
     act(() => { globalThis.dispatchEvent(new MouseEvent('mousemove', { clientX: 20, clientY: 0 })); });
     act(() => { result.current.drop(); });
 
@@ -231,7 +231,7 @@ describe('useFileNavigatorDrag', () => {
   });
 
   describe('drop onto the command bar', () => {
-    it('a drag released over the command-bar marker inserts the path relative to the file tree root instead of sending moveFileTreeItem', () => {
+    it('a drag released over the command-bar marker inserts the path relative to the file tree root instead of sending moveFileNavigatorItem', () => {
       const client = { send: vi.fn() } as unknown as JanusClient;
       const dropHandle = makeDropHandle();
       const dropRef = { current: dropHandle };
@@ -239,7 +239,7 @@ describe('useFileNavigatorDrag', () => {
       const bar = makeCommandBarElement();
       document.elementFromPoint = vi.fn().mockReturnValue(bar);
 
-      act(() => { result.current.onRowMouseDown({ path: 'src/notes.txt' } as FileTreeRow, downEvent(0, 0)); });
+      act(() => { result.current.onRowMouseDown({ path: 'src/notes.txt' } as FileNavigatorRow, downEvent(0, 0)); });
       act(() => { globalThis.dispatchEvent(new MouseEvent('mousemove', { clientX: 20, clientY: 0 })); });
       act(() => { result.current.drop(); });
 
@@ -256,7 +256,7 @@ describe('useFileNavigatorDrag', () => {
       const otherRow = makeRowElement('other');
       document.elementFromPoint = vi.fn().mockReturnValue(bar);
 
-      act(() => { result.current.onRowMouseDown({ path: 'notes.txt' } as FileTreeRow, downEvent(0, 0)); });
+      act(() => { result.current.onRowMouseDown({ path: 'notes.txt' } as FileNavigatorRow, downEvent(0, 0)); });
       act(() => { globalThis.dispatchEvent(new MouseEvent('mousemove', { clientX: 20, clientY: 0 })); });
 
       expect(dropHandle.setDropHighlighted).toHaveBeenLastCalledWith(true);
@@ -275,11 +275,11 @@ describe('useFileNavigatorDrag', () => {
       const otherRow = makeRowElement('other');
       document.elementFromPoint = vi.fn().mockReturnValue(otherRow);
 
-      act(() => { result.current.onRowMouseDown({ path: 'notes.txt' } as FileTreeRow, downEvent(0, 0)); });
+      act(() => { result.current.onRowMouseDown({ path: 'notes.txt' } as FileNavigatorRow, downEvent(0, 0)); });
       act(() => { globalThis.dispatchEvent(new MouseEvent('mousemove', { clientX: 20, clientY: 0 })); });
       act(() => { result.current.drop(); });
 
-      expect(client.send).toHaveBeenCalledWith({ method: 'moveFileTreeItem', params: { index: 3, fromRelPath: 'notes.txt', toRelPath: 'other' } });
+      expect(client.send).toHaveBeenCalledWith({ method: 'moveFileNavigatorItem', params: { index: 3, fromRelPath: 'notes.txt', toRelPath: 'other' } });
       expect(dropRef.current.insertAtCaret).not.toHaveBeenCalled();
     });
 
@@ -289,7 +289,7 @@ describe('useFileNavigatorDrag', () => {
       const { result } = renderHook(() => useFileNavigatorDrag(makeRows(), client, 0, dropRef));
       document.elementFromPoint = vi.fn().mockReturnValue(null);
 
-      act(() => { result.current.onRowMouseDown({ path: 'notes.txt' } as FileTreeRow, downEvent(0, 0)); });
+      act(() => { result.current.onRowMouseDown({ path: 'notes.txt' } as FileNavigatorRow, downEvent(0, 0)); });
       act(() => { globalThis.dispatchEvent(new MouseEvent('mousemove', { clientX: 20, clientY: 0 })); });
       act(() => { result.current.drop(); });
 
@@ -306,7 +306,7 @@ describe('useFileNavigatorDrag', () => {
       document.body.append(plain);
       document.elementFromPoint = vi.fn().mockReturnValue(plain);
 
-      act(() => { result.current.onRowMouseDown({ path: 'notes.txt' } as FileTreeRow, downEvent(0, 0)); });
+      act(() => { result.current.onRowMouseDown({ path: 'notes.txt' } as FileNavigatorRow, downEvent(0, 0)); });
       act(() => { globalThis.dispatchEvent(new MouseEvent('mousemove', { clientX: 20, clientY: 0 })); });
 
       expect(dropRef.current.setDropHighlighted).not.toHaveBeenCalledWith(true);

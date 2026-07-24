@@ -1,7 +1,7 @@
 import { statSync } from 'node:fs';
 
 // The narrow slice of a files-tab's state this module touches — just its poll timer, so this
-// stays decoupled from FileTreeManager's full FilesTabState (mirrors watch.ts's WatchableState).
+// stays decoupled from FileNavigatorManager's full FilesTabState (mirrors watch.ts's WatchableState).
 type PollableState = { pollTimer?: ReturnType<typeof setInterval> };
 
 const POLL_INTERVAL_MS = 500;

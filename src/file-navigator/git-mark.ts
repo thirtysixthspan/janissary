@@ -1,4 +1,4 @@
-import type { FileTreeRow } from '../types.js';
+import type { FileNavigatorRow } from '../types.js';
 import type { GitFileStatus } from '../git-status.js';
 
 // Row git-status annotation, split out of index.ts: a distinct concern from the tree-building
@@ -13,7 +13,7 @@ const PRIORITY: Record<GitFileStatus, number> = { conflict: 2, staged: 1, change
 // with `${row.path}/`). Propagation is purely this flat-map prefix scan — no directory is re-read,
 // so a collapsed directory still colors when something deep inside it changed. Rows with no match
 // are returned as-is; an empty `statuses` map marks nothing.
-export function markGitStatus(rows: FileTreeRow[], statuses: Map<string, GitFileStatus>): FileTreeRow[] {
+export function markGitStatus(rows: FileNavigatorRow[], statuses: Map<string, GitFileStatus>): FileNavigatorRow[] {
   if (statuses.size === 0) return rows;
   return rows.map((row) => {
     if (!row.dir) {

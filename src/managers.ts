@@ -16,7 +16,7 @@ import type { CommandManager } from './command/manager.js';
 import type { WorkspaceManager } from './workspace-manager.js';
 import type { GitSync } from './git-sync.js';
 import type { MonitorManager } from './monitor/manager.js';
-import type { FileTreeManager } from './file-tree/manager.js';
+import type { FileNavigatorManager } from './file-navigator/manager.js';
 import type { EditorWatchManager } from './editor/watch-manager.js';
 import type { EditorAcpManager } from './editor/acp-manager.js';
 import type { Questions } from './questions.js';
@@ -40,7 +40,7 @@ export interface Managers {
   workspace: WorkspaceManager;
   gitSync: GitSync;
   monitor: MonitorManager;
-  fileTree: FileTreeManager;
+  fileNavigator: FileNavigatorManager;
   editorWatch: EditorWatchManager;
   editorAcp: EditorAcpManager;
   questions: Questions;

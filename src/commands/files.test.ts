@@ -34,7 +34,7 @@ describe('files command run', () => {
           appended.push(entry);
         },
       },
-      fileTree: {
+      fileNavigator: {
         open: (command_: string, label: string) => {
           openCalls.push({ command: command_, label });
         },
@@ -53,13 +53,13 @@ describe('files command run', () => {
     expect(openCalls[0]).toEqual({ command: 'files ./src', label: 'janus' });
   });
 
-  it('appends before fileTree.open is called', () => {
+  it('appends before fileNavigator.open is called', () => {
     const callOrder: string[] = [];
     const orderedManagers = {
       tab: {
         append: () => { callOrder.push('append'); },
       },
-      fileTree: {
+      fileNavigator: {
         open: () => { callOrder.push('open'); },
       },
     };

@@ -50,7 +50,7 @@ export type FilesTabState = {
 // Owns file tree tabs: opening/focusing them, their `expanded` directory sets, and one
 // non-recursive `fs.watch` per visible directory. Any watch event schedules a single per-tab
 // debounced rebuild; the server always owns the tree — the client only ever renders rows.
-export class FileTreeManager {
+export class FileNavigatorManager {
   private tabs = new Map<string, FilesTabState>();
 
   constructor(private managers: Managers) {}
@@ -97,15 +97,15 @@ export class FileTreeManager {
     );
   }
 
-  // Open a file navigator at `label`'s cwd (the metadata-row 📁 button). If a file-tree tab is
+  // Open a file navigator at `label`'s cwd (the metadata-row 📁 button). If a file-navigator tab is
   // already open, retarget the most-recently-focused one to that cwd in place — preserving its
   // identity, dock placement, and strip position; otherwise open a fresh tree docked in the left
-  // sidebar. Either way, focus stays on the tab whose button was clicked. See `file-tree-open.ts`.
+  // sidebar. Either way, focus stays on the tab whose button was clicked. See `file-navigator/open.ts`.
   openOrRetarget(label: string): void {
     openOrRetarget(this.openPort(), label);
   }
 
-  // The narrow set of manager internals `file-tree-open.ts` operates through, passed as bound
+  // The narrow set of manager internals `file-navigator/open.ts` operates through, passed as bound
   // closures so the tab-state map and watcher methods stay private to this class.
   private openPort(): OpenPort {
     return makeOpenPort(
@@ -185,7 +185,7 @@ export class FileTreeManager {
   }
 
   // The gitignore-aware candidate list for the tab's own Search-files pop-up (async, off the event
-  // loop — see `search.ts`), for the deferred `fileTreeSearch` RPC.
+  // loop — see `search.ts`), for the deferred `fileNavigatorSearch` RPC.
   async search(label: string): Promise<string[]> {
     const state = this.tabs.get(label);
     if (!state) return [];
@@ -275,7 +275,7 @@ export class FileTreeManager {
     messageBus.emit('state', { type: 'dirty' });
   }
 
-  // Looks up a tab's file-tree state and its open `files` payload together — both `onDirCreated`
+  // Looks up a tab's file-navigator state and its open `files` payload together — both `onDirCreated`
   // and `rebuild` bail out the same way if either is missing.
   private findOpenFilesTab(label: string) {
     const state = this.tabs.get(label);

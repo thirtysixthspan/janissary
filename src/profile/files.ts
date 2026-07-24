@@ -1,7 +1,7 @@
 import type { Managers } from '../managers.js';
 import type { ProfileFilesEntry } from '../types.js';
 
-// Open each profile-level file-tree tab (from the profile's `files` key) once every entry is
+// Open each profile-level file-navigator tab (from the profile's `files` key) once every entry is
 // open, rooted at `defaultLabel` (the profile's first newly opened tab) unless the entry names its
 // own `in` target. `defaultLabel` is undefined when the profile opened nothing, in which case an
 // entry with no `in` has nothing to root itself at and is skipped with a note. An entry's `path`,
@@ -18,7 +18,7 @@ export function openProfileFiles(
       entry.dock ? `on ${entry.dock}` : '',
       entry.path ? entry.path.trim() : '',
     ].filter(Boolean).join(' ');
-    managers.fileTree.open(`files ${clauses}`.trim(), label);
+    managers.fileNavigator.open(`files ${clauses}`.trim(), label);
     notes.push(`Opened file navigator${entry.dock ? ` (docked ${entry.dock})` : ''}.`);
   }
 }

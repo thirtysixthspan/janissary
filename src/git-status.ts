@@ -6,7 +6,7 @@ const execFileAsync = promisify(execFile);
 // The three git states a file navigator row can render as: an unresolved merge conflict, a
 // staged change (added to the index), or a plain change (unstaged modification or untracked
 // file). Priority for aggregating a directory row from its descendants is conflict > staged >
-// changed — see `PRIORITY` in `file-tree/index.ts`.
+// changed — see `PRIORITY` in `file-navigator/index.ts`.
 export type GitFileStatus = 'changed' | 'staged' | 'conflict';
 
 // Porcelain v1 unmerged-path codes (git's own fixed set for a conflicted file mid-merge/rebase).

@@ -14,7 +14,7 @@ function makeManagers(): Managers {
     acp: { close: vi.fn() },
     browser: { closeTab: vi.fn() },
     pty: { closeTab: vi.fn() },
-    fileTree: { closeTab: vi.fn() },
+    fileNavigator: { closeTab: vi.fn() },
     editorWatch: { closeTab: vi.fn(), watch: vi.fn() },
     editorAcp: { closeTab: vi.fn() },
     schedule: { delete: vi.fn() },
@@ -219,24 +219,24 @@ describe('TabManager focus history', () => {
   });
 });
 
-describe('TabManager mostRecentFileTreeLabel', () => {
-  it('returns the most-recently-left file-tree tab from the focus history', () => {
+describe('TabManager mostRecentFileNavigatorLabel', () => {
+  it('returns the most-recently-left file-navigator tab from the focus history', () => {
     const tm = makeTabManager();
     tm.tabs.push({ ...tm.cur(), label: 'files1', number: 2, view: 'files' });
     tm.setActiveTab(1); // -> files1 (records leaving janus)
     tm.setActiveTab(0); // -> janus (records leaving files1)
 
-    expect(tm.mostRecentFileTreeLabel()).toBe('files1');
+    expect(tm.mostRecentFileNavigatorLabel()).toBe('files1');
   });
 
-  it('returns a docked file-tree tab rather than skipping it (unlike popFocusHistory)', () => {
+  it('returns a docked file-navigator tab rather than skipping it (unlike popFocusHistory)', () => {
     const tm = makeTabManager();
     tm.tabs.push({ ...tm.cur(), label: 'files1', number: 2, view: 'files' });
     tm.setActiveTab(1); // -> files1
     tm.setActiveTab(0); // -> janus (files1 now in focus history)
     tm.setDock(1, 'left'); // files1 becomes docked
 
-    expect(tm.mostRecentFileTreeLabel()).toBe('files1');
+    expect(tm.mostRecentFileNavigatorLabel()).toBe('files1');
   });
 
   it('does not mutate the focus history (repeated calls return the same label)', () => {
@@ -245,25 +245,25 @@ describe('TabManager mostRecentFileTreeLabel', () => {
     tm.setActiveTab(1);
     tm.setActiveTab(0);
 
-    expect(tm.mostRecentFileTreeLabel()).toBe('files1');
-    expect(tm.mostRecentFileTreeLabel()).toBe('files1');
+    expect(tm.mostRecentFileNavigatorLabel()).toBe('files1');
+    expect(tm.mostRecentFileNavigatorLabel()).toBe('files1');
   });
 
-  it('falls back to the first file-tree tab in tab order when none is in the focus history', () => {
+  it('falls back to the first file-navigator tab in tab order when none is in the focus history', () => {
     const tm = makeTabManager();
     tm.tabs.push(
       { ...tm.cur(), label: 'files1', number: 2, view: 'files' },
       { ...tm.cur(), label: 'files2', number: 3, view: 'files' },
     );
     // Never focused either files tab, so neither is in the focus history.
-    expect(tm.mostRecentFileTreeLabel()).toBe('files1');
+    expect(tm.mostRecentFileNavigatorLabel()).toBe('files1');
   });
 
-  it('returns undefined when no file-tree tab exists', () => {
+  it('returns undefined when no file-navigator tab exists', () => {
     const tm = makeTabManager();
     tm.tabs.push({ ...tm.cur(), label: 'bob', number: 2 });
 
-    expect(tm.mostRecentFileTreeLabel()).toBeUndefined();
+    expect(tm.mostRecentFileNavigatorLabel()).toBeUndefined();
   });
 });
 

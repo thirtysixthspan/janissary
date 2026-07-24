@@ -1,5 +1,5 @@
 import { useRef, useState, type RefObject } from 'react';
-import type { FileTreeRow } from '@shared/protocol';
+import type { FileNavigatorRow } from '@shared/protocol';
 import type { JanusClient } from './ws';
 import { resolveDropTarget, type DropTarget } from './file-navigator-drag';
 import type { CommandInputDropHandle } from './CommandInput';
@@ -19,7 +19,7 @@ type PendingConflict = { fromRelPath: string; toRelPath: string; source: 'move' 
 // has no way to signal the drop moment back to the caller. A movement threshold gates when a
 // mousedown actually becomes a drag; a plain click never sets `draggedPath`.
 export function useFileNavigatorDrag(
-  rows: FileTreeRow[],
+  rows: FileNavigatorRow[],
   client: JanusClient,
   index: number,
   dropRef?: RefObject<CommandInputDropHandle | null>,
@@ -52,7 +52,7 @@ export function useFileNavigatorDrag(
   };
 
   const send = (fromRelPath: string, toRelPath: string) => {
-    client.send({ method: 'moveFileTreeItem', params: { index, fromRelPath, toRelPath } });
+    client.send({ method: 'moveFileNavigatorItem', params: { index, fromRelPath, toRelPath } });
   };
 
   const setCommandBarHighlighted = (active: boolean) => {
@@ -124,7 +124,7 @@ export function useFileNavigatorDrag(
     removeGestureListeners();
   };
 
-  const onRowMouseDown = (row: FileTreeRow, e: React.MouseEvent) => {
+  const onRowMouseDown = (row: FileNavigatorRow, e: React.MouseEvent) => {
     if (row.path === '..') return;
     e.preventDefault();
     gestureRef.current = { path: row.path, x: e.clientX, y: e.clientY, started: false };
@@ -137,7 +137,7 @@ export function useFileNavigatorDrag(
   const confirmOverwrite = () => {
     if (!pendingConflict) return;
     if (pendingConflict.source === 'move') send(pendingConflict.fromRelPath, pendingConflict.toRelPath);
-    else client.send({ method: pendingConflict.source === 'undo' ? 'undoFileTreeItem' : 'redoFileTreeItem', params: { index, overwrite: true } });
+    else client.send({ method: pendingConflict.source === 'undo' ? 'undoFileNavigatorItem' : 'redoFileNavigatorItem', params: { index, overwrite: true } });
     setPendingConflict(null);
   };
 
@@ -146,12 +146,12 @@ export function useFileNavigatorDrag(
   type UndoRedoResult = { conflict?: { fromRelPath: string; toRelPath: string } };
 
   const sendUndo = async () => {
-    const result = await client.request<UndoRedoResult>({ method: 'undoFileTreeItem', params: { index } });
+    const result = await client.request<UndoRedoResult>({ method: 'undoFileNavigatorItem', params: { index } });
     if (result.conflict) setPendingConflict({ ...result.conflict, source: 'undo' });
   };
 
   const sendRedo = async () => {
-    const result = await client.request<UndoRedoResult>({ method: 'redoFileTreeItem', params: { index } });
+    const result = await client.request<UndoRedoResult>({ method: 'redoFileNavigatorItem', params: { index } });
     if (result.conflict) setPendingConflict({ ...result.conflict, source: 'redo' });
   };
 

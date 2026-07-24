@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import type { FileTreeRow } from '@shared/protocol';
+import type { FileNavigatorRow } from '@shared/protocol';
 import type { JanusClient } from './ws';
 
 // State and handlers for one file tree tab's Search-files pop-up. Split out of `FileNavigatorTab` to
 // keep it under the file-size limit.
 export function useFileNavigatorSearch(
-  client: JanusClient, index: number, rows: FileTreeRow[], setSelected: (path: string | null) => void, focusTree: () => void,
+  client: JanusClient, index: number, rows: FileNavigatorRow[], setSelected: (path: string | null) => void, focusTree: () => void,
 ) {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -31,7 +31,7 @@ export function useFileNavigatorSearch(
     setSearchOpen(true);
     setSearchLoading(true);
     const requestId = ++requestRef.current;
-    void client.request<{ paths: string[] }>({ method: 'fileTreeSearch', params: { index } }).then((result) => {
+    void client.request<{ paths: string[] }>({ method: 'fileNavigatorSearch', params: { index } }).then((result) => {
       if (requestRef.current !== requestId) return;
       setSearchPaths(result.paths);
       setSearchLoading(false);
@@ -44,7 +44,7 @@ export function useFileNavigatorSearch(
 
   const revealFromSearch = (relPath: string) => {
     pendingReveal.current = relPath;
-    client.send({ method: 'revealFileTreeItem', params: { index, relPath } });
+    client.send({ method: 'revealFileNavigatorItem', params: { index, relPath } });
     setSearchOpen(false);
   };
 

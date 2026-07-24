@@ -27,13 +27,13 @@ export function popFocusHistory(tabs: Tab[], focusHistory: string[]): { index: n
   return { index: undefined, history };
 }
 
-// The label of the file-tree tab to retarget when the metadata-row 📁 button is clicked: the
+// The label of the file-navigator tab to retarget when the metadata-row 📁 button is clicked: the
 // most-recently-left still-open `view === 'files'` tab. Scans `focusHistory` from most-recent to
 // least-recent without mutating it and — unlike `popFocusHistory` — includes docked tabs, since a
 // docked file navigator is a valid retarget target. Falls back to the first `view === 'files'`
 // tab in `tabs` order (e.g. a tree that never lost focus since opening); returns `undefined` when
-// no file-tree tab exists.
-export function mostRecentFileTreeLabel(tabs: Tab[], focusHistory: string[]): string | undefined {
+// no file-navigator tab exists.
+export function mostRecentFileNavigatorLabel(tabs: Tab[], focusHistory: string[]): string | undefined {
   for (let i = focusHistory.length - 1; i >= 0; i--) {
     const tab = tabs.find((t) => t.label === focusHistory[i]);
     if (tab?.view === 'files') return tab.label;

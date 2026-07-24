@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import type { FileTreeRow } from '@shared/protocol';
+import type { FileNavigatorRow } from '@shared/protocol';
 import { newFileTargetDir, newFileCommand, newDirectoryCommand, newDirectoryTargetPath, findPendingNewDir } from './file-navigator-new-file';
 
-const rows: FileTreeRow[] = [
+const rows: FileNavigatorRow[] = [
   { path: 'src', name: 'src', depth: 0, dir: true, expanded: true },
   { path: 'src/index.ts', name: 'index.ts', depth: 1, dir: false },
   { path: 'README.md', name: 'README.md', depth: 0, dir: false },
@@ -31,7 +31,7 @@ describe('newFileTargetDir', () => {
   });
 
   it('handles nested relative paths', () => {
-    const nested: FileTreeRow[] = [
+    const nested: FileNavigatorRow[] = [
       { path: 'a', name: 'a', depth: 0, dir: true, expanded: true },
       { path: 'a/b', name: 'b', depth: 1, dir: true, expanded: true },
       { path: 'a/b/c.ts', name: 'c.ts', depth: 2, dir: false },
@@ -77,7 +77,7 @@ describe('findPendingNewDir', () => {
   });
 
   it('returns the matching directory row', () => {
-    const withNewDir: FileTreeRow[] = [...rows, { path: 'untitled', name: 'untitled', depth: 0, dir: true }];
+    const withNewDir: FileNavigatorRow[] = [...rows, { path: 'untitled', name: 'untitled', depth: 0, dir: true }];
     expect(findPendingNewDir(withNewDir, 'untitled')).toEqual({ path: 'untitled', name: 'untitled', depth: 0, dir: true });
   });
 
@@ -86,7 +86,7 @@ describe('findPendingNewDir', () => {
   });
 
   it('ignores a file row that happens to match the guessed path', () => {
-    const withFile: FileTreeRow[] = [...rows, { path: 'untitled', name: 'untitled', depth: 0, dir: false }];
+    const withFile: FileNavigatorRow[] = [...rows, { path: 'untitled', name: 'untitled', depth: 0, dir: false }];
     expect(findPendingNewDir(withFile, 'untitled')).toBeUndefined();
   });
 });

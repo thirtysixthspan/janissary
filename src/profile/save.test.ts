@@ -115,7 +115,7 @@ describe('saveProfile', () => {
     expect(load('demo').entries).toEqual([expect.objectContaining({ cwd: '$root/src' })]);
   });
 
-  it('skips image, editor, ssh, and non-docked file-tree tabs, and reports them', async () => {
+  it('skips image, editor, ssh, and non-docked file-navigator tabs, and reports them', async () => {
     const image = makeImageTab('pic', '#111', 1, 1, '#111', { name: 'a.png', path: '/a.png', size: '1KB', url: '/open/1' });
     const editor = makeEditorTab('notes', '#222', 1, 1, '#222', { name: 'notes.txt', path: '/notes.txt', size: '1KB', url: '/open/2' });
     const ssh = makeHarnessTab('server', '#333', 1, 1, '#333', { name: 'ssh', program: 'ssh', ptyId: 'pty2', status: 'running', destination: 'host' });
@@ -149,7 +149,7 @@ describe('saveProfile', () => {
     expect(summary.agents).toBe(2);
   });
 
-  it('captures docked file-tree/notifications/schedules tabs into their config keys', async () => {
+  it('captures docked file-navigator/notifications/schedules tabs into their config keys', async () => {
     const dockedFiles = { ...makeFilesTab('nav', '#444', 1, 1, '#444', { root: '~', absoluteRoot: '/home/bob', rows: [] }), dock: 'left' as const };
     const notifications = { ...makeNotificationsTab('notifications', '#555', 1, 1, '#555'), dock: 'right' as const };
     const schedules = { ...makeSchedulesTab('schedules', '#666', 1, 1, '#666'), dock: 'right' as const };

@@ -1,13 +1,13 @@
 import { statSync } from 'node:fs';
 import path from 'node:path';
 import { buildRows } from './index.js';
-import { parseFileTreeArgs } from './args.js';
+import { parseFileNavigatorArgs } from './args.js';
 import { expandUserPath } from '../paths.js';
 import { resolveTarget } from '../commands/resolve-target.js';
 import type { Managers } from '../managers.js';
 import type { FilesTabState } from './manager.js';
 
-// FileTreeManager.open, extracted whole: resolves a `files [left|right] [path]` command into a
+// FileNavigatorManager.open, extracted whole: resolves a `files [left|right] [path]` command into a
 // root directory, then either redocks an already-open tab on that root or opens a fresh one.
 export function openFilesCommand(
   managers: Managers, tabs: Map<string, FilesTabState>, command: string, label: string,
@@ -16,7 +16,7 @@ export function openFilesCommand(
   pollForCreation: (label: string, absDir: string) => void,
 ): void {
   const rest = command.replace(/^files\b\s*/i, '');
-  const { inLabel, dock, target } = parseFileTreeArgs(rest);
+  const { inLabel, dock, target } = parseFileNavigatorArgs(rest);
   const out = (text: string) => managers.tab.append(label, { input: command, output: text });
 
   let cwd: string;

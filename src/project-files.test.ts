@@ -3,7 +3,7 @@ import { TabManager } from './tab/manager.js';
 import type { Managers } from './managers.js';
 import { projectFilesFor } from './project-files.js';
 
-vi.mock('./file-tree/search.js', () => ({
+vi.mock('./file-navigator/search.js', () => ({
   listProjectFiles: vi.fn(async () => ['a.ts', 'b.ts']),
 }));
 

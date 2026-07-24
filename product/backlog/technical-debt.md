@@ -6,4 +6,4 @@
 
 ## deferred
 
-* update the web and server code, css, and all documentation to switch from using file tree (or similar) and begin using file navigator. — deferred: complexity 9/10, sweeping rename across the dedicated `src/file-tree/` backend module, wire-protocol type names in `protocol.ts` and the message handler, ~20 web components/hooks, CSS classes, ~15 spec files, help.md, CHANGELOG.md, and public documentation, plus all colocated tests.
+* update functional spec files to switch from using file tree (or similar) and begin using file navigator (or similar). — deferred: not yet re-rated since being split out. The backend (`src/file-tree/` module, `protocol.ts` wire types, message handler), all web components/hooks, CSS, and help.md/public documentation have each been resolved as separate items; only `product/specs/file-tree-tab.md` and its ~7 cross-referencing spec files remain. `CHANGELOG.md`'s historical entries are a permanent exception (a historical record, not current-state documentation) and are not part of this remaining scope.

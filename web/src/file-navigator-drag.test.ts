@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import type { FileTreeRow } from '@shared/protocol';
+import type { FileNavigatorRow } from '@shared/protocol';
 import { resolveDropTarget } from './file-navigator-drag';
 
-function makeRows(): FileTreeRow[] {
+function makeRows(): FileNavigatorRow[] {
   return [
     { path: '..', name: '..', depth: 0, dir: true },
     { path: 'src', name: 'src', depth: 0, dir: true, expanded: true },
