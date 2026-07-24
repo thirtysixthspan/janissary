@@ -13,6 +13,8 @@ act(() => {
 /* assert on the output */
 This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
 
+* add claude opus 5 to harness-models, removing prior versions.
+
 ## development
 
 ## deferred
