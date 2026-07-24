@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeAll, afterEach } from 'vitest';
 import type { FileTreeView, TabView } from '@shared/protocol';
 import type { JanusClient } from './ws';
-import { FileTreeTab } from './FileTreeTab';
+import { FileNavigatorTab } from './FileNavigatorTab';
 import { Sidebar } from './Sidebar';
 import type { CommandInputDropHandle } from './CommandInput';
 
@@ -25,10 +25,10 @@ function makeFiles(overrides: Partial<FileTreeView> = {}): FileTreeView {
   };
 }
 
-describe('FileTreeTab', () => {
+describe('FileNavigatorTab', () => {
   it('renders rows with indentation, chevrons on dirs, aria-expanded/aria-selected', () => {
     const client = { send: vi.fn() } as unknown as JanusClient;
-    const { container } = render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+    const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
     const srcRow = screen.getByText('src').closest('[role="treeitem"]') as HTMLElement;
     expect(srcRow.getAttribute('aria-expanded')).toBe('true');
     expect(srcRow.style.paddingLeft).toBe('12px');
@@ -47,7 +47,7 @@ describe('FileTreeTab', () => {
         { path: 'README.md', name: 'README.md', depth: 0, dir: false },
       ],
     });
-    render(<FileTreeTab files={files} client={client} index={0} />);
+    render(<FileNavigatorTab files={files} client={client} index={0} />);
     expect(screen.getByText('index.ts').className).toContain('files-name--changed');
     expect(screen.getByText('src').className).toContain('files-name--changed');
     expect(screen.getByText('README.md').className).not.toContain('files-name--changed');
@@ -61,14 +61,14 @@ describe('FileTreeTab', () => {
         { path: 'conflict.txt', name: 'conflict.txt', depth: 0, dir: false, gitStatus: 'conflict' },
       ],
     });
-    render(<FileTreeTab files={files} client={client} index={0} />);
+    render(<FileNavigatorTab files={files} client={client} index={0} />);
     expect(screen.getByText('staged.txt').className).toContain('files-name--staged');
     expect(screen.getByText('conflict.txt').className).toContain('files-name--conflict');
   });
 
   it('renders the branch name in .files-branch when present', () => {
     const client = { send: vi.fn() } as unknown as JanusClient;
-    const { container } = render(<FileTreeTab files={makeFiles({ branch: 'main' })} client={client} index={0} />);
+    const { container } = render(<FileNavigatorTab files={makeFiles({ branch: 'main' })} client={client} index={0} />);
     const branchEl = container.querySelector('.files-branch');
     expect(branchEl).not.toBeNull();
     expect(branchEl!.textContent).toBe('main');
@@ -76,28 +76,28 @@ describe('FileTreeTab', () => {
 
   it('renders no .files-branch element when branch is undefined', () => {
     const client = { send: vi.fn() } as unknown as JanusClient;
-    const { container } = render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+    const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
     expect(container.querySelector('.files-branch')).toBeNull();
   });
 
   it('renders a .files-github button when githubUrl is present', () => {
     const client = { send: vi.fn() } as unknown as JanusClient;
     const { container } = render(
-      <FileTreeTab files={makeFiles({ githubUrl: 'https://github.com/owner/repo/commits/main/' })} client={client} index={0} />,
+      <FileNavigatorTab files={makeFiles({ githubUrl: 'https://github.com/owner/repo/commits/main/' })} client={client} index={0} />,
     );
     expect(container.querySelector('.files-github')).not.toBeNull();
   });
 
   it('renders no .files-github element when githubUrl is undefined', () => {
     const client = { send: vi.fn() } as unknown as JanusClient;
-    const { container } = render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+    const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
     expect(container.querySelector('.files-github')).toBeNull();
   });
 
   it('renders a "Looking for" banner and no rows while waitingFor is set', () => {
     const client = { send: vi.fn() } as unknown as JanusClient;
     const { container } = render(
-      <FileTreeTab files={makeFiles({ rows: [], waitingFor: '/home/user/project/not-yet-there' })} client={client} index={0} />,
+      <FileNavigatorTab files={makeFiles({ rows: [], waitingFor: '/home/user/project/not-yet-there' })} client={client} index={0} />,
     );
     const banner = container.querySelector('.files-waiting');
     expect(banner).not.toBeNull();
@@ -107,14 +107,14 @@ describe('FileTreeTab', () => {
 
   it('renders no .files-waiting banner when waitingFor is undefined', () => {
     const client = { send: vi.fn() } as unknown as JanusClient;
-    const { container } = render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+    const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
     expect(container.querySelector('.files-waiting')).toBeNull();
   });
 
   it('click on a directory row selects but does not toggle', () => {
     const send = vi.fn();
     const client = { send } as unknown as JanusClient;
-    render(<FileTreeTab files={makeFiles()} client={client} index={2} />);
+    render(<FileNavigatorTab files={makeFiles()} client={client} index={2} />);
     fireEvent.click(screen.getByText('src'));
     expect(send).not.toHaveBeenCalled();
   });
@@ -122,7 +122,7 @@ describe('FileTreeTab', () => {
   it('double-click on a directory row sends fileTreeToggle', () => {
     const send = vi.fn();
     const client = { send } as unknown as JanusClient;
-    render(<FileTreeTab files={makeFiles()} client={client} index={2} />);
+    render(<FileNavigatorTab files={makeFiles()} client={client} index={2} />);
     fireEvent.dblClick(screen.getByText('src'));
     expect(send).toHaveBeenCalledWith({ method: 'fileTreeToggle', params: { index: 2, path: 'src' } });
   });
@@ -130,7 +130,7 @@ describe('FileTreeTab', () => {
   it('single click on a file row selects but does not open', () => {
     const send = vi.fn();
     const client = { send } as unknown as JanusClient;
-    render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+    render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
     fireEvent.click(screen.getByText('README.md'));
     expect(send).not.toHaveBeenCalled();
   });
@@ -138,7 +138,7 @@ describe('FileTreeTab', () => {
   it('double-click on a file row sends an open command', () => {
     const send = vi.fn();
     const client = { send } as unknown as JanusClient;
-    render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+    render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
     fireEvent.dblClick(screen.getByText('index.ts'));
     expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'open /home/user/project/src/index.ts' } });
   });
@@ -146,7 +146,7 @@ describe('FileTreeTab', () => {
   it('Shift+double-click on a file row sends an edit command', () => {
     const send = vi.fn();
     const client = { send } as unknown as JanusClient;
-    render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+    render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
     fireEvent.dblClick(screen.getByText('index.ts'), { shiftKey: true });
     expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'edit /home/user/project/src/index.ts' } });
   });
@@ -154,7 +154,7 @@ describe('FileTreeTab', () => {
   it('double-click on a markdown file row sends an edit command', () => {
     const send = vi.fn();
     const client = { send } as unknown as JanusClient;
-    render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+    render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
     fireEvent.dblClick(screen.getByText('README.md'));
     expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'edit /home/user/project/README.md' } });
   });
@@ -162,7 +162,7 @@ describe('FileTreeTab', () => {
   it('Shift+double-click on a markdown file row sends an open command', () => {
     const send = vi.fn();
     const client = { send } as unknown as JanusClient;
-    render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+    render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
     fireEvent.dblClick(screen.getByText('README.md'), { shiftKey: true });
     expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'open /home/user/project/README.md' } });
   });
@@ -171,7 +171,7 @@ describe('FileTreeTab', () => {
     const send = vi.fn();
     const client = { send } as unknown as JanusClient;
     const files = makeFiles({ root: '~/project', absoluteRoot: '/Users/derrick/project' });
-    render(<FileTreeTab files={files} client={client} index={0} />);
+    render(<FileNavigatorTab files={files} client={client} index={0} />);
     fireEvent.dblClick(screen.getByText('index.ts'));
     expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'open /Users/derrick/project/src/index.ts' } });
   });
@@ -184,7 +184,7 @@ describe('FileTreeTab', () => {
     ] });
     const client = { send, request } as unknown as JanusClient;
     const files = makeFiles({ rows: [{ path: 'data.xyz', name: 'data.xyz', depth: 0, dir: false }] });
-    render(<FileTreeTab files={files} client={client} index={3} />);
+    render(<FileNavigatorTab files={files} client={client} index={3} />);
     fireEvent.dblClick(screen.getByText('data.xyz'));
     await waitFor(() => expect(screen.getByRole('dialog', { name: 'Open data.xyz' })).toBeInTheDocument());
     fireEvent.click(screen.getByText('Edit as text'));
@@ -194,7 +194,7 @@ describe('FileTreeTab', () => {
   it('collapse-all button sends fileTreeCollapseAll', () => {
     const send = vi.fn();
     const client = { send } as unknown as JanusClient;
-    render(<FileTreeTab files={makeFiles()} client={client} index={1} />);
+    render(<FileNavigatorTab files={makeFiles()} client={client} index={1} />);
     fireEvent.click(screen.getByTitle('Collapse all'));
     expect(send).toHaveBeenCalledWith({ method: 'fileTreeCollapseAll', params: { index: 1 } });
   });
@@ -202,7 +202,7 @@ describe('FileTreeTab', () => {
   it('double-click on ".." row sends fileTreeReroot', () => {
     const send = vi.fn();
     const client = { send } as unknown as JanusClient;
-    render(<FileTreeTab files={makeFiles({ rows: [{ path: '..', name: '..', depth: 0, dir: true }, ...makeFiles().rows] })} client={client} index={0} />);
+    render(<FileNavigatorTab files={makeFiles({ rows: [{ path: '..', name: '..', depth: 0, dir: true }, ...makeFiles().rows] })} client={client} index={0} />);
     fireEvent.dblClick(screen.getByText('..'));
     expect(send).toHaveBeenCalledWith({ method: 'fileTreeReroot', params: { index: 0 } });
   });
@@ -210,7 +210,7 @@ describe('FileTreeTab', () => {
   it('ArrowDown moves selection and Enter opens the selected file', () => {
     const send = vi.fn();
     const client = { send } as unknown as JanusClient;
-    const { container } = render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+    const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
     const tree = container.querySelector('[role="tree"]')!;
     fireEvent.keyDown(tree, { key: 'ArrowDown' }); // no selection yet -> defaults to src (index 0), moves to src/index.ts
     fireEvent.keyDown(tree, { key: 'Enter' });
@@ -221,7 +221,7 @@ describe('FileTreeTab', () => {
     const send = vi.fn();
     const client = { send } as unknown as JanusClient;
     const files = makeFiles({ rows: [{ path: 'src', name: 'src', depth: 0, dir: true }] });
-    const { container } = render(<FileTreeTab files={files} client={client} index={0} />);
+    const { container } = render(<FileNavigatorTab files={files} client={client} index={0} />);
     const tree = container.querySelector('[role="tree"]')!;
     fireEvent.keyDown(tree, { key: 'ArrowDown' });
     fireEvent.keyDown(tree, { key: 'ArrowRight' });
@@ -232,7 +232,7 @@ describe('FileTreeTab', () => {
     const send = vi.fn();
     const client = { send } as unknown as JanusClient;
     const files = makeFiles({ rows: [{ path: '..', name: '..', depth: 0, dir: true }] });
-    const { container } = render(<FileTreeTab files={files} client={client} index={0} />);
+    const { container } = render(<FileNavigatorTab files={files} client={client} index={0} />);
     const tree = container.querySelector('[role="tree"]')!;
     fireEvent.keyDown(tree, { key: 'ArrowDown' });
     fireEvent.keyDown(tree, { key: 'Enter' });
@@ -242,7 +242,7 @@ describe('FileTreeTab', () => {
   it('Shift+Enter on a file sends an edit command', () => {
     const send = vi.fn();
     const client = { send } as unknown as JanusClient;
-    const { container } = render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+    const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
     const tree = container.querySelector('[role="tree"]')!;
     fireEvent.keyDown(tree, { key: 'ArrowDown' });
     fireEvent.keyDown(tree, { key: 'ArrowDown' });
@@ -253,7 +253,7 @@ describe('FileTreeTab', () => {
   it('type-ahead jumps to a matching row', () => {
     const send = vi.fn();
     const client = { send } as unknown as JanusClient;
-    const { container } = render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+    const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
     const tree = container.querySelector('[role="tree"]')!;
     fireEvent.keyDown(tree, { key: 'r' });
     expect(screen.getByText('README.md').closest('[role="treeitem"]')!.getAttribute('aria-selected')).toBe('true');
@@ -262,17 +262,17 @@ describe('FileTreeTab', () => {
   it('resets selected to first row when selected row disappears', () => {
     const send = vi.fn();
     const client = { send } as unknown as JanusClient;
-    const { rerender } = render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+    const { rerender } = render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
     const files1 = makeFiles();
-    rerender(<FileTreeTab files={files1} client={client} index={0} />);
+    rerender(<FileNavigatorTab files={files1} client={client} index={0} />);
     const files2 = makeFiles({ rows: files1.rows.slice(1) });
-    rerender(<FileTreeTab files={files2} client={client} index={0} />);
+    rerender(<FileNavigatorTab files={files2} client={client} index={0} />);
   });
 
   it('dock-cycle button is hidden when the navigator is in a center tab', () => {
     const send = vi.fn();
     const client = { send } as unknown as JanusClient;
-    render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+    render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
     expect(screen.queryByTitle('Move to left sidebar')).toBeNull();
     expect(screen.queryByTitle('Move to right sidebar')).toBeNull();
   });
@@ -280,7 +280,7 @@ describe('FileTreeTab', () => {
   it('dock-cycle button from left sends setDock to right', () => {
     const send = vi.fn();
     const client = { send } as unknown as JanusClient;
-    render(<FileTreeTab files={makeFiles()} client={client} index={0} dock="left" />);
+    render(<FileNavigatorTab files={makeFiles()} client={client} index={0} dock="left" />);
     fireEvent.click(screen.getByTitle('Move to right sidebar'));
     expect(send).toHaveBeenCalledWith({ method: 'setDock', params: { index: 0, dock: 'right' } });
   });
@@ -288,7 +288,7 @@ describe('FileTreeTab', () => {
   it('dock-cycle button from right sends setDock to left', () => {
     const send = vi.fn();
     const client = { send } as unknown as JanusClient;
-    render(<FileTreeTab files={makeFiles()} client={client} index={0} dock="right" />);
+    render(<FileNavigatorTab files={makeFiles()} client={client} index={0} dock="right" />);
     fireEvent.click(screen.getByTitle('Move to left sidebar'));
     expect(send).toHaveBeenCalledWith({ method: 'setDock', params: { index: 0, dock: 'left' } });
   });
@@ -297,9 +297,9 @@ describe('FileTreeTab', () => {
     const client = { send: vi.fn() } as unknown as JanusClient;
     const focusSpy = vi.spyOn(HTMLElement.prototype, 'focus');
     focusSpy.mockClear();
-    render(<FileTreeTab files={makeFiles()} client={client} index={0} autoFocus={false} />);
+    render(<FileNavigatorTab files={makeFiles()} client={client} index={0} autoFocus={false} />);
     expect(focusSpy).not.toHaveBeenCalled();
-    render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+    render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
     expect(focusSpy).toHaveBeenCalled();
     focusSpy.mockRestore();
   });
@@ -307,7 +307,7 @@ describe('FileTreeTab', () => {
   describe('delete', () => {
     it('Backspace with a row selected opens the delete dialog with that row\'s name', () => {
       const client = { send: vi.fn() } as unknown as JanusClient;
-      const { container } = render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+      const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
       const tree = container.querySelector('[role="tree"]')!;
       fireEvent.keyDown(tree, { key: 'r' });
       fireEvent.keyDown(tree, { key: 'Backspace' });
@@ -316,7 +316,7 @@ describe('FileTreeTab', () => {
 
     it('Delete key opens the delete dialog the same way', () => {
       const client = { send: vi.fn() } as unknown as JanusClient;
-      const { container } = render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+      const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
       const tree = container.querySelector('[role="tree"]')!;
       fireEvent.keyDown(tree, { key: 'r' });
       fireEvent.keyDown(tree, { key: 'Delete' });
@@ -326,7 +326,7 @@ describe('FileTreeTab', () => {
     it('Backspace/Delete with the ".." row selected does nothing', () => {
       const client = { send: vi.fn() } as unknown as JanusClient;
       const files = makeFiles({ rows: [{ path: '..', name: '..', depth: 0, dir: true }] });
-      const { container } = render(<FileTreeTab files={files} client={client} index={0} />);
+      const { container } = render(<FileNavigatorTab files={files} client={client} index={0} />);
       const tree = container.querySelector('[role="tree"]')!;
       fireEvent.keyDown(tree, { key: 'ArrowDown' });
       fireEvent.keyDown(tree, { key: 'Backspace' });
@@ -335,7 +335,7 @@ describe('FileTreeTab', () => {
 
     it('Backspace/Delete with no row selected does nothing', () => {
       const client = { send: vi.fn() } as unknown as JanusClient;
-      const { container } = render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+      const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
       const tree = container.querySelector('[role="tree"]')!;
       fireEvent.keyDown(tree, { key: 'Backspace' });
       expect(screen.queryByRole('alertdialog')).toBeNull();
@@ -344,7 +344,7 @@ describe('FileTreeTab', () => {
     it('confirming the dialog sends deleteFileTreeItem with the selected path and closes the dialog', () => {
       const send = vi.fn();
       const client = { send } as unknown as JanusClient;
-      const { container } = render(<FileTreeTab files={makeFiles()} client={client} index={3} />);
+      const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={3} />);
       const tree = container.querySelector('[role="tree"]')!;
       fireEvent.keyDown(tree, { key: 'r' });
       fireEvent.keyDown(tree, { key: 'Backspace' });
@@ -356,7 +356,7 @@ describe('FileTreeTab', () => {
     it('cancelling the dialog sends nothing and closes the dialog', () => {
       const send = vi.fn();
       const client = { send } as unknown as JanusClient;
-      const { container } = render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+      const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
       const tree = container.querySelector('[role="tree"]')!;
       fireEvent.keyDown(tree, { key: 'r' });
       fireEvent.keyDown(tree, { key: 'Backspace' });
@@ -373,7 +373,7 @@ describe('FileTreeTab', () => {
 
     it('Cmd+R on a selected file opens an editable field pre-filled with its name', () => {
       const client = { send: vi.fn() } as unknown as JanusClient;
-      const { container } = render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+      const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
       const tree = container.querySelector('[role="tree"]')!;
       selectReadme(tree);
       fireEvent.keyDown(tree, { key: 'r', metaKey: true });
@@ -383,7 +383,7 @@ describe('FileTreeTab', () => {
 
     it('Ctrl+R works the same as Cmd+R', () => {
       const client = { send: vi.fn() } as unknown as JanusClient;
-      const { container } = render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+      const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
       const tree = container.querySelector('[role="tree"]')!;
       selectReadme(tree);
       fireEvent.keyDown(tree, { key: 'r', ctrlKey: true });
@@ -393,7 +393,7 @@ describe('FileTreeTab', () => {
     it('Enter with a changed name sends renameFileTreeItem and closes the field', async () => {
       const send = vi.fn();
       const client = { send } as unknown as JanusClient;
-      const { container, rerender } = render(<FileTreeTab files={makeFiles()} client={client} index={2} />);
+      const { container, rerender } = render(<FileNavigatorTab files={makeFiles()} client={client} index={2} />);
       const tree = container.querySelector('[role="tree"]')!;
       selectReadme(tree);
       fireEvent.keyDown(tree, { key: 'r', metaKey: true });
@@ -403,7 +403,7 @@ describe('FileTreeTab', () => {
       expect(send).toHaveBeenCalledWith({ method: 'renameFileTreeItem', params: { index: 2, relPath: 'README.md', newName: 'renamed.md' } });
       expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
       const renamedFiles = makeFiles({ rows: makeFiles().rows.map((row) => row.path === 'README.md' ? { ...row, path: 'renamed.md', name: 'renamed.md' } : row) });
-      rerender(<FileTreeTab files={renamedFiles} client={client} index={2} />);
+      rerender(<FileNavigatorTab files={renamedFiles} client={client} index={2} />);
       expect(screen.getByText('renamed.md').closest('[role="treeitem"]')).toHaveAttribute('aria-selected', 'true');
       expect(document.activeElement).toBe(tree);
     });
@@ -411,7 +411,7 @@ describe('FileTreeTab', () => {
     it('Enter with no change sends nothing', () => {
       const send = vi.fn();
       const client = { send } as unknown as JanusClient;
-      const { container } = render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+      const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
       const tree = container.querySelector('[role="tree"]')!;
       selectReadme(tree);
       fireEvent.keyDown(tree, { key: 'r', metaKey: true });
@@ -423,7 +423,7 @@ describe('FileTreeTab', () => {
     it('Escape cancels without sending', () => {
       const send = vi.fn();
       const client = { send } as unknown as JanusClient;
-      const { container } = render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+      const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
       const tree = container.querySelector('[role="tree"]')!;
       selectReadme(tree);
       fireEvent.keyDown(tree, { key: 'r', metaKey: true });
@@ -436,7 +436,7 @@ describe('FileTreeTab', () => {
     it('blur cancels without sending', () => {
       const send = vi.fn();
       const client = { send } as unknown as JanusClient;
-      const { container } = render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+      const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
       const tree = container.querySelector('[role="tree"]')!;
       selectReadme(tree);
       fireEvent.keyDown(tree, { key: 'r', metaKey: true });
@@ -449,7 +449,7 @@ describe('FileTreeTab', () => {
     it('the chord on the ".." row does nothing', () => {
       const client = { send: vi.fn() } as unknown as JanusClient;
       const files = makeFiles({ rows: [{ path: '..', name: '..', depth: 0, dir: true }] });
-      const { container } = render(<FileTreeTab files={files} client={client} index={0} />);
+      const { container } = render(<FileNavigatorTab files={files} client={client} index={0} />);
       const tree = container.querySelector('[role="tree"]')!;
       fireEvent.keyDown(tree, { key: 'ArrowDown' });
       fireEvent.keyDown(tree, { key: 'r', metaKey: true });
@@ -458,7 +458,7 @@ describe('FileTreeTab', () => {
 
     it('the chord with no row selected does nothing', () => {
       const client = { send: vi.fn() } as unknown as JanusClient;
-      const { container } = render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+      const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
       const tree = container.querySelector('[role="tree"]')!;
       fireEvent.keyDown(tree, { key: 'r', metaKey: true });
       expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
@@ -467,7 +467,7 @@ describe('FileTreeTab', () => {
     it('committing a name colliding with a visible sibling opens MoveConflictDialog', async () => {
       const send = vi.fn();
       const client = { send } as unknown as JanusClient;
-      const { container } = render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+      const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
       const tree = container.querySelector('[role="tree"]')!;
       selectReadme(tree);
       fireEvent.keyDown(tree, { key: 'r', metaKey: true });
@@ -481,7 +481,7 @@ describe('FileTreeTab', () => {
     it('Overwrite on the rename conflict dialog sends the RPC', async () => {
       const send = vi.fn();
       const client = { send } as unknown as JanusClient;
-      const { container } = render(<FileTreeTab files={makeFiles()} client={client} index={4} />);
+      const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={4} />);
       const tree = container.querySelector('[role="tree"]')!;
       selectReadme(tree);
       fireEvent.keyDown(tree, { key: 'r', metaKey: true });
@@ -494,7 +494,7 @@ describe('FileTreeTab', () => {
 
     it('Cancel on the rename conflict dialog reopens the edit field', async () => {
       const client = { send: vi.fn() } as unknown as JanusClient;
-      const { container } = render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+      const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
       const tree = container.querySelector('[role="tree"]')!;
       selectReadme(tree);
       fireEvent.keyDown(tree, { key: 'r', metaKey: true });
@@ -514,7 +514,7 @@ describe('FileTreeTab', () => {
 
     it('dragging a file over a directory row highlights it as the drop target', () => {
       const client = { send: vi.fn() } as unknown as JanusClient;
-      render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+      render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
       const srcRow = screen.getByText('src').closest('[role="treeitem"]') as HTMLElement;
       document.elementFromPoint = vi.fn().mockReturnValue(srcRow);
 
@@ -527,7 +527,7 @@ describe('FileTreeTab', () => {
 
     it('dragging a file over another file row highlights that file\'s parent directory instead', () => {
       const client = { send: vi.fn() } as unknown as JanusClient;
-      render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+      render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
       const indexRow = screen.getByText('index.ts').closest('[role="treeitem"]') as HTMLElement;
       const srcRow = screen.getByText('src').closest('[role="treeitem"]') as HTMLElement;
       document.elementFromPoint = vi.fn().mockReturnValue(indexRow);
@@ -543,7 +543,7 @@ describe('FileTreeTab', () => {
     it('drop released over a file row moves the dragged item into that file\'s parent directory', () => {
       const send = vi.fn();
       const client = { send } as unknown as JanusClient;
-      render(<FileTreeTab files={makeFiles()} client={client} index={2} />);
+      render(<FileNavigatorTab files={makeFiles()} client={client} index={2} />);
       const indexRow = screen.getByText('index.ts').closest('[role="treeitem"]') as HTMLElement;
       document.elementFromPoint = vi.fn().mockReturnValue(indexRow);
 
@@ -556,7 +556,7 @@ describe('FileTreeTab', () => {
 
     it('dragging a file renders a ghost label with its name that follows the cursor', () => {
       const client = { send: vi.fn() } as unknown as JanusClient;
-      render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+      render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
       const srcRow = screen.getByText('src').closest('[role="treeitem"]') as HTMLElement;
       document.elementFromPoint = vi.fn().mockReturnValue(srcRow);
 
@@ -573,7 +573,7 @@ describe('FileTreeTab', () => {
     it('drop on a valid directory sends moveFileTreeItem with the right paths', () => {
       const send = vi.fn();
       const client = { send } as unknown as JanusClient;
-      render(<FileTreeTab files={makeFiles()} client={client} index={2} />);
+      render(<FileNavigatorTab files={makeFiles()} client={client} index={2} />);
       const srcRow = screen.getByText('src').closest('[role="treeitem"]') as HTMLElement;
       document.elementFromPoint = vi.fn().mockReturnValue(srcRow);
 
@@ -595,7 +595,7 @@ describe('FileTreeTab', () => {
           { path: 'dest/index.ts', name: 'index.ts', depth: 1, dir: false },
         ],
       });
-      const { container } = render(<FileTreeTab files={files} client={client} index={0} />);
+      const { container } = render(<FileNavigatorTab files={files} client={client} index={0} />);
       const destRow = screen.getByText('dest').closest('[role="treeitem"]') as HTMLElement;
       const draggedRow = container.querySelector('[data-path="src/index.ts"]') as HTMLElement;
       document.elementFromPoint = vi.fn().mockReturnValue(destRow);
@@ -639,14 +639,14 @@ describe('FileTreeTab', () => {
   describe('new file', () => {
     it('New file button renders with the tooltip', () => {
       const client = { send: vi.fn() } as unknown as JanusClient;
-      render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+      render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
       expect(screen.getByTitle('New file')).toBeInTheDocument();
     });
 
     it('clicking New file with a directory row selected dispatches newfile inside that directory', () => {
       const send = vi.fn();
       const client = { send } as unknown as JanusClient;
-      render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+      render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
       fireEvent.click(screen.getByText('src'));
       fireEvent.click(screen.getByTitle('New file'));
       expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'newfile src/untitled.md' } });
@@ -655,7 +655,7 @@ describe('FileTreeTab', () => {
     it('clicking New file with a file row selected dispatches newfile in its containing directory', () => {
       const send = vi.fn();
       const client = { send } as unknown as JanusClient;
-      render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+      render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
       fireEvent.click(screen.getByText('index.ts'));
       fireEvent.click(screen.getByTitle('New file'));
       expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'newfile src/untitled.md' } });
@@ -664,7 +664,7 @@ describe('FileTreeTab', () => {
     it('clicking New file with no row selected dispatches newfile at the tree root', () => {
       const send = vi.fn();
       const client = { send } as unknown as JanusClient;
-      render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+      render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
       fireEvent.click(screen.getByTitle('New file'));
       expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'newfile untitled.md' } });
     });
@@ -672,7 +672,7 @@ describe('FileTreeTab', () => {
     it('Cmd+N while focused dispatches the same new-file command', () => {
       const send = vi.fn();
       const client = { send } as unknown as JanusClient;
-      const { container } = render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+      const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
       const tree = container.querySelector('[role="tree"]')!;
       fireEvent.keyDown(tree, { key: 'n', metaKey: true });
       expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'newfile untitled.md' } });
@@ -681,7 +681,7 @@ describe('FileTreeTab', () => {
     it('Ctrl+N while focused dispatches the same new-file command', () => {
       const send = vi.fn();
       const client = { send } as unknown as JanusClient;
-      const { container } = render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+      const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
       const tree = container.querySelector('[role="tree"]')!;
       fireEvent.keyDown(tree, { key: 'n', ctrlKey: true });
       expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'newfile untitled.md' } });
@@ -690,7 +690,7 @@ describe('FileTreeTab', () => {
     it('Cmd+N does not fall through to the window handler', () => {
       const send = vi.fn();
       const client = { send } as unknown as JanusClient;
-      const { container } = render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+      const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
       const tree = container.querySelector('[role="tree"]')!;
       const nativeEvent = fireEvent.keyDown(tree, { key: 'n', metaKey: true });
       expect(nativeEvent).toBe(false); // preventDefault() was called
@@ -700,14 +700,14 @@ describe('FileTreeTab', () => {
   describe('new directory', () => {
     it('New directory button renders with the tooltip', () => {
       const client = { send: vi.fn() } as unknown as JanusClient;
-      render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+      render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
       expect(screen.getByTitle('New directory')).toBeInTheDocument();
     });
 
     it('creates inside a selected directory', () => {
       const send = vi.fn();
       const client = { send } as unknown as JanusClient;
-      render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+      render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
       fireEvent.click(screen.getByText('src'));
       fireEvent.click(screen.getByTitle('New directory'));
       expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'newdir src/untitled' } });
@@ -716,7 +716,7 @@ describe('FileTreeTab', () => {
     it("creates in a selected file's containing directory", () => {
       const send = vi.fn();
       const client = { send } as unknown as JanusClient;
-      render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+      render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
       fireEvent.click(screen.getByText('index.ts'));
       fireEvent.click(screen.getByTitle('New directory'));
       expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'newdir src/untitled' } });
@@ -725,42 +725,42 @@ describe('FileTreeTab', () => {
     it('creates at the tree root when nothing is selected', () => {
       const send = vi.fn();
       const client = { send } as unknown as JanusClient;
-      render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+      render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
       fireEvent.click(screen.getByTitle('New directory'));
       expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'newdir untitled' } });
     });
 
     it('selects and opens the rename field once the created directory appears in files.rows', () => {
       const client = { send: vi.fn() } as unknown as JanusClient;
-      const { rerender } = render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+      const { rerender } = render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
       fireEvent.click(screen.getByTitle('New directory'));
       const withNewDir = makeFiles({
         rows: [...makeFiles().rows, { path: 'untitled', name: 'untitled', depth: 0, dir: true }],
       });
-      rerender(<FileTreeTab files={withNewDir} client={client} index={0} />);
+      rerender(<FileNavigatorTab files={withNewDir} client={client} index={0} />);
       const input = screen.getByRole('textbox') as HTMLInputElement;
       expect(input.value).toBe('untitled');
     });
 
     it('does nothing when an unrelated row appears instead', () => {
       const client = { send: vi.fn() } as unknown as JanusClient;
-      const { rerender } = render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+      const { rerender } = render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
       fireEvent.click(screen.getByTitle('New directory'));
       const withOtherFile = makeFiles({
         rows: [...makeFiles().rows, { path: 'other.txt', name: 'other.txt', depth: 0, dir: false }],
       });
-      rerender(<FileTreeTab files={withOtherFile} client={client} index={0} />);
+      rerender(<FileNavigatorTab files={withOtherFile} client={client} index={0} />);
       expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
     });
 
     it('does nothing when the actual created name differs from the guess (collision)', () => {
       const client = { send: vi.fn() } as unknown as JanusClient;
-      const { rerender } = render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+      const { rerender } = render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
       fireEvent.click(screen.getByTitle('New directory'));
       const withRenamedDir = makeFiles({
         rows: [...makeFiles().rows, { path: 'untitled-2', name: 'untitled-2', depth: 0, dir: true }],
       });
-      rerender(<FileTreeTab files={withRenamedDir} client={client} index={0} />);
+      rerender(<FileNavigatorTab files={withRenamedDir} client={client} index={0} />);
       expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
     });
   });
@@ -769,7 +769,7 @@ describe('FileTreeTab', () => {
     it('Cmd+Z sends undoFileTreeItem', async () => {
       const request = vi.fn().mockResolvedValue({});
       const client = { send: vi.fn(), request } as unknown as JanusClient;
-      const { container } = render(<FileTreeTab files={makeFiles()} client={client} index={2} />);
+      const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={2} />);
       const tree = container.querySelector('[role="tree"]')!;
       await act(async () => { fireEvent.keyDown(tree, { key: 'z', metaKey: true }); });
       expect(request).toHaveBeenCalledWith({ method: 'undoFileTreeItem', params: { index: 2 } });
@@ -778,7 +778,7 @@ describe('FileTreeTab', () => {
     it('Ctrl+Z sends undoFileTreeItem', async () => {
       const request = vi.fn().mockResolvedValue({});
       const client = { send: vi.fn(), request } as unknown as JanusClient;
-      const { container } = render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+      const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
       const tree = container.querySelector('[role="tree"]')!;
       await act(async () => { fireEvent.keyDown(tree, { key: 'z', ctrlKey: true }); });
       expect(request).toHaveBeenCalledWith({ method: 'undoFileTreeItem', params: { index: 0 } });
@@ -787,7 +787,7 @@ describe('FileTreeTab', () => {
     it('Cmd+Shift+Z sends redoFileTreeItem', async () => {
       const request = vi.fn().mockResolvedValue({});
       const client = { send: vi.fn(), request } as unknown as JanusClient;
-      const { container } = render(<FileTreeTab files={makeFiles()} client={client} index={1} />);
+      const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={1} />);
       const tree = container.querySelector('[role="tree"]')!;
       await act(async () => { fireEvent.keyDown(tree, { key: 'z', metaKey: true, shiftKey: true }); });
       expect(request).toHaveBeenCalledWith({ method: 'redoFileTreeItem', params: { index: 1 } });
@@ -796,7 +796,7 @@ describe('FileTreeTab', () => {
     it('Ctrl+Shift+Z sends redoFileTreeItem', async () => {
       const request = vi.fn().mockResolvedValue({});
       const client = { send: vi.fn(), request } as unknown as JanusClient;
-      const { container } = render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+      const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
       const tree = container.querySelector('[role="tree"]')!;
       await act(async () => { fireEvent.keyDown(tree, { key: 'z', ctrlKey: true, shiftKey: true }); });
       expect(request).toHaveBeenCalledWith({ method: 'redoFileTreeItem', params: { index: 0 } });
@@ -805,7 +805,7 @@ describe('FileTreeTab', () => {
     it('a conflict response from undo opens MoveConflictDialog', async () => {
       const request = vi.fn().mockResolvedValue({ conflict: { fromRelPath: 'dest/README.md', toRelPath: '' } });
       const client = { send: vi.fn(), request } as unknown as JanusClient;
-      const { container } = render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+      const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
       const tree = container.querySelector('[role="tree"]')!;
       await act(async () => { fireEvent.keyDown(tree, { key: 'z', metaKey: true }); });
       expect(screen.getByRole('alertdialog')).toBeInTheDocument();
@@ -815,7 +815,7 @@ describe('FileTreeTab', () => {
       const request = vi.fn().mockResolvedValue({ conflict: { fromRelPath: 'dest/README.md', toRelPath: '' } });
       const send = vi.fn();
       const client = { send, request } as unknown as JanusClient;
-      const { container } = render(<FileTreeTab files={makeFiles()} client={client} index={4} />);
+      const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={4} />);
       const tree = container.querySelector('[role="tree"]')!;
       await act(async () => { fireEvent.keyDown(tree, { key: 'z', metaKey: true }); });
 
@@ -829,7 +829,7 @@ describe('FileTreeTab', () => {
       const request = vi.fn().mockResolvedValue({ conflict: { fromRelPath: 'README.md', toRelPath: 'dest' } });
       const send = vi.fn();
       const client = { send, request } as unknown as JanusClient;
-      const { container } = render(<FileTreeTab files={makeFiles()} client={client} index={5} />);
+      const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={5} />);
       const tree = container.querySelector('[role="tree"]')!;
       await act(async () => { fireEvent.keyDown(tree, { key: 'z', metaKey: true, shiftKey: true }); });
 
@@ -843,7 +843,7 @@ describe('FileTreeTab', () => {
       const request = vi.fn().mockResolvedValue({ conflict: { fromRelPath: 'dest/README.md', toRelPath: '' } });
       const send = vi.fn();
       const client = { send, request } as unknown as JanusClient;
-      const { container } = render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+      const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
       const tree = container.querySelector('[role="tree"]')!;
       await act(async () => { fireEvent.keyDown(tree, { key: 'z', metaKey: true }); });
 
@@ -857,7 +857,7 @@ describe('FileTreeTab', () => {
       const send = vi.fn();
       const request = vi.fn().mockResolvedValue({});
       const client = { send, request } as unknown as JanusClient;
-      const { container } = render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+      const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
       const tree = container.querySelector('[role="tree"]')!;
 
       for (const event of [
@@ -879,14 +879,14 @@ describe('FileTreeTab', () => {
   describe('search', () => {
     it('the Search files button renders with its tooltip', () => {
       const client = { send: vi.fn(), request: vi.fn(() => new Promise(() => { /* never resolves */ })) } as unknown as JanusClient;
-      render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+      render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
       expect(screen.getByTitle('Search files')).toBeInTheDocument();
     });
 
     it('clicking Search files opens the pop-up showing Searching… before the list resolves, then matches after', async () => {
       const { promise, resolve } = withResolvers<{ paths: string[] }>();
       const client = { send: vi.fn(), request: vi.fn(() => promise) } as unknown as JanusClient;
-      render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+      render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
       fireEvent.click(screen.getByTitle('Search files'));
       expect(screen.getByText('Searching…')).toBeInTheDocument();
       await act(async () => { resolve({ paths: ['src/index.ts', 'README.md'] }); await promise; });
@@ -896,7 +896,7 @@ describe('FileTreeTab', () => {
 
     it('shows (no matching files) for a non-matching query and Enter is a no-op', async () => {
       const client = { send: vi.fn(), request: vi.fn(() => Promise.resolve({ paths: ['README.md'] })) } as unknown as JanusClient;
-      render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+      render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
       fireEvent.click(screen.getByTitle('Search files'));
       await act(async () => { await Promise.resolve(); });
       const input = screen.getByPlaceholderText('Find file…');
@@ -908,7 +908,7 @@ describe('FileTreeTab', () => {
 
     it('Escape closes the pop-up and returns focus to the tree', async () => {
       const client = { send: vi.fn(), request: vi.fn(() => Promise.resolve({ paths: ['README.md'] })) } as unknown as JanusClient;
-      const { container } = render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+      const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
       fireEvent.click(screen.getByTitle('Search files'));
       await act(async () => { await Promise.resolve(); });
       fireEvent.keyDown(screen.getByPlaceholderText('Find file…'), { key: 'Escape' });
@@ -918,7 +918,7 @@ describe('FileTreeTab', () => {
 
     it('Tab accepts the ghost completion into the input without closing the pop-up', async () => {
       const client = { send: vi.fn(), request: vi.fn(() => Promise.resolve({ paths: ['src/index.ts'] })) } as unknown as JanusClient;
-      render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+      render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
       fireEvent.click(screen.getByTitle('Search files'));
       await act(async () => { await Promise.resolve(); });
       const input = screen.getByPlaceholderText('Find file…');
@@ -931,21 +931,21 @@ describe('FileTreeTab', () => {
     it('selecting a match sends revealFileTreeItem and selects the row once it appears', async () => {
       const send = vi.fn();
       const client = { send, request: vi.fn(() => Promise.resolve({ paths: ['src/index.ts'] })) } as unknown as JanusClient;
-      const { rerender } = render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+      const { rerender } = render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
       fireEvent.click(screen.getByTitle('Search files'));
       await act(async () => { await Promise.resolve(); });
       fireEvent.change(screen.getByPlaceholderText('Find file…'), { target: { value: 'index' } });
       fireEvent.keyDown(screen.getByPlaceholderText('Find file…'), { key: 'Enter' });
       expect(send).toHaveBeenCalledWith({ method: 'revealFileTreeItem', params: { index: 0, relPath: 'src/index.ts' } });
       expect(screen.queryByPlaceholderText('Find file…')).not.toBeInTheDocument();
-      rerender(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+      rerender(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
       expect(screen.getByText('index.ts').closest('[role="treeitem"]')).toHaveAttribute('aria-selected', 'true');
     });
 
     it('a reply that arrives after the pop-up is closed does not reopen or repopulate it', async () => {
       const { promise, resolve } = withResolvers<{ paths: string[] }>();
       const client = { send: vi.fn(), request: vi.fn(() => promise) } as unknown as JanusClient;
-      render(<FileTreeTab files={makeFiles()} client={client} index={0} />);
+      render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
       fireEvent.click(screen.getByTitle('Search files'));
       fireEvent.keyDown(screen.getByPlaceholderText('Find file…'), { key: 'Escape' });
       expect(screen.queryByPlaceholderText('Find file…')).not.toBeInTheDocument();

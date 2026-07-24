@@ -18,8 +18,8 @@ type Properties = {
   onMouseDown: (e: React.MouseEvent) => void;
 };
 
-// One row of the file tree — kept out of `FileTreeTab.tsx` to stay under the file-size limit.
-export function FileTreeRowView({
+// One row of the file tree — kept out of `FileNavigatorTab.tsx` to stay under the file-size limit.
+export function FileNavigatorRowView({
   row, selected, rowClass, editing, draft, onDraftChange, onCommit, onCancel, onClick, onDoubleClick, onMouseDown,
 }: Properties) {
   return (

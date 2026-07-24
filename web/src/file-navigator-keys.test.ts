@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { handleFileTreeKey, typeAheadMatch } from './file-tree-keys';
+import { handleFileNavigatorKey, typeAheadMatch } from './file-navigator-keys';
 import type { FileTreeRow } from '@shared/protocol';
 
 function row(path: string, overrides: Partial<FileTreeRow> = {}): FileTreeRow {
@@ -19,107 +19,107 @@ const rows: FileTreeRow[] = [
   row('README.md'),
 ];
 
-describe('handleFileTreeKey — selection movement', () => {
+describe('handleFileNavigatorKey — selection movement', () => {
   it('ArrowDown moves to the next visible row', () => {
-    expect(handleFileTreeKey(rows, 'src', 'ArrowDown', false, 10).selection).toBe('src/nested');
+    expect(handleFileNavigatorKey(rows, 'src', 'ArrowDown', false, 10).selection).toBe('src/nested');
   });
 
   it('ArrowDown clamps at the last row', () => {
-    expect(handleFileTreeKey(rows, 'README.md', 'ArrowDown', false, 10).selection).toBe('README.md');
+    expect(handleFileNavigatorKey(rows, 'README.md', 'ArrowDown', false, 10).selection).toBe('README.md');
   });
 
   it('ArrowUp moves to the previous visible row', () => {
-    expect(handleFileTreeKey(rows, 'src/index.ts', 'ArrowUp', false, 10).selection).toBe('src/nested');
+    expect(handleFileNavigatorKey(rows, 'src/index.ts', 'ArrowUp', false, 10).selection).toBe('src/nested');
   });
 
   it('ArrowUp clamps at the first row', () => {
-    expect(handleFileTreeKey(rows, 'src', 'ArrowUp', false, 10).selection).toBe('src');
+    expect(handleFileNavigatorKey(rows, 'src', 'ArrowUp', false, 10).selection).toBe('src');
   });
 
   it('Home selects the first row', () => {
-    expect(handleFileTreeKey(rows, 'README.md', 'Home', false, 10).selection).toBe('src');
+    expect(handleFileNavigatorKey(rows, 'README.md', 'Home', false, 10).selection).toBe('src');
   });
 
   it('End selects the last row', () => {
-    expect(handleFileTreeKey(rows, 'src', 'End', false, 10).selection).toBe('README.md');
+    expect(handleFileNavigatorKey(rows, 'src', 'End', false, 10).selection).toBe('README.md');
   });
 
   it('PageDown moves selection by the page size, clamped', () => {
-    expect(handleFileTreeKey(rows, 'src', 'PageDown', false, 2).selection).toBe('src/index.ts');
-    expect(handleFileTreeKey(rows, 'src', 'PageDown', false, 100).selection).toBe('README.md');
+    expect(handleFileNavigatorKey(rows, 'src', 'PageDown', false, 2).selection).toBe('src/index.ts');
+    expect(handleFileNavigatorKey(rows, 'src', 'PageDown', false, 100).selection).toBe('README.md');
   });
 
   it('PageUp moves selection by the page size, clamped', () => {
-    expect(handleFileTreeKey(rows, 'README.md', 'PageUp', false, 2).selection).toBe('src/nested');
-    expect(handleFileTreeKey(rows, 'README.md', 'PageUp', false, 100).selection).toBe('src');
+    expect(handleFileNavigatorKey(rows, 'README.md', 'PageUp', false, 2).selection).toBe('src/nested');
+    expect(handleFileNavigatorKey(rows, 'README.md', 'PageUp', false, 100).selection).toBe('src');
   });
 
   it('defaults to selecting the first row when nothing was selected', () => {
-    expect(handleFileTreeKey(rows, null, 'ArrowDown', false, 10).selection).toBe('src/nested');
+    expect(handleFileNavigatorKey(rows, null, 'ArrowDown', false, 10).selection).toBe('src/nested');
   });
 
   it('returns a null selection for an empty row list', () => {
-    expect(handleFileTreeKey([], null, 'ArrowDown', false, 10).selection).toBeNull();
+    expect(handleFileNavigatorKey([], null, 'ArrowDown', false, 10).selection).toBeNull();
   });
 });
 
-describe('handleFileTreeKey — expand/collapse/parent', () => {
+describe('handleFileNavigatorKey — expand/collapse/parent', () => {
   it('ArrowRight on a collapsed dir toggles it open, selection stays', () => {
-    const result = handleFileTreeKey(rows, 'src/nested', 'ArrowRight', false, 10);
+    const result = handleFileNavigatorKey(rows, 'src/nested', 'ArrowRight', false, 10);
     expect(result.selection).toBe('src/nested');
     expect(result.action).toEqual({ type: 'toggle', path: 'src/nested' });
   });
 
   it('ArrowRight on an expanded dir reroots to that directory', () => {
-    const result = handleFileTreeKey(rows, 'src', 'ArrowRight', false, 10);
+    const result = handleFileNavigatorKey(rows, 'src', 'ArrowRight', false, 10);
     expect(result.selection).toBe('src');
     expect(result.action).toEqual({ type: 'reroot', path: 'src' });
   });
 
   it('ArrowRight on a file opens it', () => {
-    const result = handleFileTreeKey(rows, 'README.md', 'ArrowRight', false, 10);
+    const result = handleFileNavigatorKey(rows, 'README.md', 'ArrowRight', false, 10);
     expect(result.selection).toBe('README.md');
     expect(result.action).toEqual({ type: 'open', path: 'README.md' });
   });
 
   it('ArrowLeft on an expanded dir collapses it', () => {
-    const result = handleFileTreeKey(rows, 'src', 'ArrowLeft', false, 10);
+    const result = handleFileNavigatorKey(rows, 'src', 'ArrowLeft', false, 10);
     expect(result.selection).toBe('src');
     expect(result.action).toEqual({ type: 'toggle', path: 'src' });
   });
 
   it('ArrowLeft on a child moves selection to its parent directory', () => {
-    const result = handleFileTreeKey(rows, 'src/index.ts', 'ArrowLeft', false, 10);
+    const result = handleFileNavigatorKey(rows, 'src/index.ts', 'ArrowLeft', false, 10);
     expect(result.selection).toBe('src');
     expect(result.action).toBeUndefined();
   });
 
   it('ArrowLeft on a top-level row with no parent is a no-op', () => {
     const flat: FileTreeRow[] = [row('a.txt'), row('b.txt')];
-    const result = handleFileTreeKey(flat, 'a.txt', 'ArrowLeft', false, 10);
+    const result = handleFileNavigatorKey(flat, 'a.txt', 'ArrowLeft', false, 10);
     expect(result.selection).toBe('a.txt');
     expect(result.action).toBeUndefined();
   });
 });
 
-describe('handleFileTreeKey — activation', () => {
+describe('handleFileNavigatorKey — activation', () => {
   it('Enter on a directory toggles it', () => {
-    const result = handleFileTreeKey(rows, 'src/nested', 'Enter', false, 10);
+    const result = handleFileNavigatorKey(rows, 'src/nested', 'Enter', false, 10);
     expect(result.action).toEqual({ type: 'toggle', path: 'src/nested' });
   });
 
   it('Enter on a file opens it', () => {
-    const result = handleFileTreeKey(rows, 'README.md', 'Enter', false, 10);
+    const result = handleFileNavigatorKey(rows, 'README.md', 'Enter', false, 10);
     expect(result.action).toEqual({ type: 'open', path: 'README.md' });
   });
 
   it('Shift+Enter on a file edits it', () => {
-    const result = handleFileTreeKey(rows, 'README.md', 'Enter', true, 10);
+    const result = handleFileNavigatorKey(rows, 'README.md', 'Enter', true, 10);
     expect(result.action).toEqual({ type: 'edit', path: 'README.md' });
   });
 
   it('Space behaves like Enter', () => {
-    const result = handleFileTreeKey(rows, 'README.md', ' ', false, 10);
+    const result = handleFileNavigatorKey(rows, 'README.md', ' ', false, 10);
     expect(result.action).toEqual({ type: 'open', path: 'README.md' });
   });
 
@@ -128,7 +128,7 @@ describe('handleFileTreeKey — activation', () => {
       row('..', { dir: true }),
       ...rows,
     ];
-    const result = handleFileTreeKey(rowsWithDotdot, '..', 'Enter', false, 10);
+    const result = handleFileNavigatorKey(rowsWithDotdot, '..', 'Enter', false, 10);
     expect(result.action).toEqual({ type: 'reroot', path: '..' });
   });
 });

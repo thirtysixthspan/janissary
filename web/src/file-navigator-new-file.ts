@@ -2,7 +2,7 @@ import type { FileTreeRow } from '@shared/protocol';
 
 // The directory row matching a pending new-directory creation's guessed path, or undefined if it
 // hasn't shown up yet (or a name collision meant the guess never matches — see
-// `newDirectoryTargetPath`). Kept out of `FileTreeTab.tsx` to stay under the file-size limit.
+// `newDirectoryTargetPath`). Kept out of `FileNavigatorTab.tsx` to stay under the file-size limit.
 export function findPendingNewDir(rows: FileTreeRow[], pendingNewDir: string | null): FileTreeRow | undefined {
   if (pendingNewDir === null) return undefined;
   return rows.find((r) => r.path === pendingNewDir && r.dir);
@@ -11,7 +11,7 @@ export function findPendingNewDir(rows: FileTreeRow[], pendingNewDir: string | n
 // The target directory for a new file, computed from the file tree's selected row (the keyboard
 // cursor): a selected directory row creates inside that directory; a selected file row creates in
 // its containing directory; no selection (or the ".." row) creates at the tree root. Kept out of
-// the component so `FileTreeTab.tsx` stays under the file-size limit.
+// the component so `FileNavigatorTab.tsx` stays under the file-size limit.
 export function newFileTargetDir(rows: FileTreeRow[], selected: string | null): string | null {
   if (selected === null || selected === '..') return null;
   const row = rows.find((r) => r.path === selected);

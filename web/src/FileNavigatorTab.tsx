@@ -1,23 +1,23 @@
 import React, { useEffect, useRef, useState } from 'react';
 import type { FileTreeView, FileTreeRow } from '@shared/protocol';
 import type { JanusClient } from './ws';
-import { handleFileTreeKey, typeAheadMatch } from './file-tree-keys';
-import { handleTreeChord } from './file-tree-chords';
-import { useFileTreeDrag } from './useFileTreeDrag';
-import { useFileTreeRename } from './useFileTreeRename';
-import { FileTreeRowView } from './FileTreeRowView';
-import { fileTreeRowClass } from './file-tree-row-class';
-import { newFileTargetDir, newFileCommand, newDirectoryCommand, newDirectoryTargetPath, findPendingNewDir } from './file-tree-new-file';
+import { handleFileNavigatorKey, typeAheadMatch } from './file-navigator-keys';
+import { handleTreeChord } from './file-navigator-chords';
+import { useFileNavigatorDrag } from './useFileNavigatorDrag';
+import { useFileNavigatorRename } from './useFileNavigatorRename';
+import { FileNavigatorRowView } from './FileNavigatorRowView';
+import { fileNavigatorRowClass } from './file-navigator-row-class';
+import { newFileTargetDir, newFileCommand, newDirectoryCommand, newDirectoryTargetPath, findPendingNewDir } from './file-navigator-new-file';
 import { MoveConflictDialog } from './MoveConflictDialog/MoveConflictDialog';
 import { DeleteFileDialog } from './DeleteFileDialog';
 import { FileSearchPopup } from './FileSearchPopup';
-import { useFileTreeSearch } from './useFileTreeSearch';
-import { FileTreeHeader } from './FileTreeHeader';
+import { useFileNavigatorSearch } from './useFileNavigatorSearch';
+import { FileNavigatorHeader } from './FileNavigatorHeader';
 import type { CommandInputDropHandle } from './CommandInput';
-import { FileTreeOpenerOverlay } from './FileTreeOpenerOverlay';
-import { useFileTreeOpener } from './useFileTreeOpener';
-import { useFileTreeDelete } from './useFileTreeDelete';
-import { runFileTreeAction } from './file-tree-actions';
+import { FileNavigatorOpenerOverlay } from './FileNavigatorOpenerOverlay';
+import { useFileNavigatorOpener } from './useFileNavigatorOpener';
+import { useFileNavigatorDelete } from './useFileNavigatorDelete';
+import { runFileNavigatorAction } from './file-navigator-actions';
 
 type Properties = {
   files: FileTreeView;
@@ -43,16 +43,16 @@ const ROW_HEIGHT_PX = 22;
 const PRINTABLE = /^[ -~]$/;
 const MARKDOWN_EXTENSION = /\.(md|markdown)$/i;
 
-export function FileTreeTab({ files, client, index, dock, autoFocus = true, dropRef }: Properties) {
+export function FileNavigatorTab({ files, client, index, dock, autoFocus = true, dropRef }: Properties) {
   const [selected, setSelected] = useState<string | null>(null);
   const [pendingNewDir, setPendingNewDir] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const typeahead = useRef<{ buffer: string; timer?: ReturnType<typeof setTimeout> }>({ buffer: '' });
-  const drag = useFileTreeDrag(files.rows, client, index, dropRef);
-  const rename = useFileTreeRename(files.rows, client, index, setSelected, () => containerRef.current?.focus());
-  const search = useFileTreeSearch(client, index, files.rows, setSelected, () => containerRef.current?.focus());
-  const opener = useFileTreeOpener(client, index, files.absoluteRoot);
-  const deletion = useFileTreeDelete(client, index);
+  const drag = useFileNavigatorDrag(files.rows, client, index, dropRef);
+  const rename = useFileNavigatorRename(files.rows, client, index, setSelected, () => containerRef.current?.focus());
+  const search = useFileNavigatorSearch(client, index, files.rows, setSelected, () => containerRef.current?.focus());
+  const opener = useFileNavigatorOpener(client, index, files.absoluteRoot);
+  const deletion = useFileNavigatorDelete(client, index);
 
   useEffect(() => { if (autoFocus) containerRef.current?.focus(); }, [autoFocus]);
 
@@ -137,9 +137,9 @@ export function FileTreeTab({ files, client, index, dock, autoFocus = true, drop
       e.preventDefault();
       e.stopPropagation();
       const pageSize = Math.max(1, Math.floor((containerRef.current?.clientHeight ?? ROW_HEIGHT_PX * 10) / ROW_HEIGHT_PX));
-      const result = handleFileTreeKey(files.rows, selected, e.key, e.shiftKey, pageSize);
+      const result = handleFileNavigatorKey(files.rows, selected, e.key, e.shiftKey, pageSize);
       setSelected(result.selection);
-      runFileTreeAction(result.action, { reroot: (path) => { if (path === '..') reroot(); else rerootTo(path); }, toggle, open: (path) => openFile(path, false), edit: editFile });
+      runFileNavigatorAction(result.action, { reroot: (path) => { if (path === '..') reroot(); else rerootTo(path); }, toggle, open: (path) => openFile(path, false), edit: editFile });
       return;
     }
     if (PRINTABLE.test(e.key)) {
@@ -156,7 +156,7 @@ export function FileTreeTab({ files, client, index, dock, autoFocus = true, drop
 
   return (
     <div className="files-tab" data-doc-shot="file-tree-view" ref={containerRef} tabIndex={0} role="tree" onKeyDown={onKeyDown}>
-      <FileTreeHeader
+      <FileNavigatorHeader
         root={files.root} branch={files.branch} githubUrl={files.githubUrl} client={client} index={index} dock={dock}
         onSearch={search.openSearch} onNewFile={createNewFile} onNewDirectory={createNewDirectory}
       />
@@ -165,11 +165,11 @@ export function FileTreeTab({ files, client, index, dock, autoFocus = true, drop
       )}
       <div className="files-rows">
         {files.rows.map((row) => (
-          <FileTreeRowView
+          <FileNavigatorRowView
             key={row.path}
             row={row}
             selected={selected}
-            rowClass={fileTreeRowClass(row, selected, drag.dropTarget?.path)}
+            rowClass={fileNavigatorRowClass(row, selected, drag.dropTarget?.path)}
             editing={rename.editing === row.path}
             draft={rename.draft}
             onDraftChange={rename.setDraft}
@@ -210,7 +210,7 @@ export function FileTreeTab({ files, client, index, dock, autoFocus = true, drop
         />
       )}
       {opener.pending && (
-        <FileTreeOpenerOverlay pending={opener.pending} onPick={opener.choose} />
+        <FileNavigatorOpenerOverlay pending={opener.pending} onPick={opener.choose} />
       )}
       {search.searchOpen && (
         <FileSearchPopup

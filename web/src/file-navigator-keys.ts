@@ -3,7 +3,7 @@ import type { FileTreeRow } from '@shared/protocol';
 // The result of a keydown on the file tree: the row that should now be selected, plus an
 // optional action to perform (toggle a directory, or open/edit a file). Pure — no DOM — so it's
 // unit-testable without rendering anything.
-export type FileTreeKeyOutcome = {
+export type FileNavigatorKeyOutcome = {
   selection: string | null;
   action?: { type: 'toggle' | 'open' | 'edit' | 'reroot'; path: string };
 };
@@ -24,7 +24,7 @@ function parentOf(rows: FileTreeRow[], index: number): string | null {
 }
 
 // `→`: collapsed dir expands; expanded dir reroots; file opens; ".." is a no-op.
-function onArrowRight(rows: FileTreeRow[], index: number): FileTreeKeyOutcome {
+function onArrowRight(rows: FileTreeRow[], index: number): FileNavigatorKeyOutcome {
   const row = rows[index];
   if (row.path === '..') return { selection: row.path };
   if (!row.dir) return { selection: row.path, action: { type: 'open', path: row.path } };
@@ -33,7 +33,7 @@ function onArrowRight(rows: FileTreeRow[], index: number): FileTreeKeyOutcome {
 }
 
 // `←`: expanded dir collapses; otherwise selection moves to the parent directory. ".." is a no-op.
-function onArrowLeft(rows: FileTreeRow[], index: number): FileTreeKeyOutcome {
+function onArrowLeft(rows: FileTreeRow[], index: number): FileNavigatorKeyOutcome {
   const row = rows[index];
   if (row.path === '..') return { selection: row.path };
   if (row.dir && row.expanded) return { selection: row.path, action: { type: 'toggle', path: row.path } };
@@ -42,7 +42,7 @@ function onArrowLeft(rows: FileTreeRow[], index: number): FileTreeKeyOutcome {
 
 // `Enter`/`Space`: dir toggles expand/collapse; file opens (or edits, with Shift);
 // ".." navigates to the parent directory.
-function onActivate(rows: FileTreeRow[], index: number, shiftKey: boolean): FileTreeKeyOutcome {
+function onActivate(rows: FileTreeRow[], index: number, shiftKey: boolean): FileNavigatorKeyOutcome {
   const row = rows[index];
   if (row.path === '..') return { selection: row.path, action: { type: 'reroot', path: '..' } };
   if (row.dir) return { selection: row.path, action: { type: 'toggle', path: row.path } };
@@ -50,13 +50,13 @@ function onActivate(rows: FileTreeRow[], index: number, shiftKey: boolean): File
 }
 
 // ARIA APG treeview keyboard pattern (VS Code-aligned) — see spec/file-tree-tab.md.
-export function handleFileTreeKey(
+export function handleFileNavigatorKey(
   rows: FileTreeRow[],
   selected: string | null,
   key: string,
   shiftKey: boolean,
   pageSize: number,
-): FileTreeKeyOutcome {
+): FileNavigatorKeyOutcome {
   if (rows.length === 0) return { selection: null };
   const index = indexOf(rows, selected);
 

@@ -5,7 +5,7 @@ import type { JanusClient } from './ws';
 
 export type PendingOpeners = { path: string; choices: FileOpenerChoice[]; selected: number };
 
-export function useFileTreeOpener(client: JanusClient, index: number, root: string) {
+export function useFileNavigatorOpener(client: JanusClient, index: number, root: string) {
   const [pending, setPending] = useState<PendingOpeners | null>(null);
 
   const open = (path: string, edit: boolean) => {

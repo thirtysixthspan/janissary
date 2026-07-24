@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import type { TabView } from '@shared/protocol';
 import type { JanusClient } from './ws';
-import { FileTreeTab } from './FileTreeTab';
+import { FileNavigatorTab } from './FileNavigatorTab';
 import { NotificationsTab } from './NotificationsTab';
 import { SchedulesTab } from './SchedulesTab';
 import { TabStrip } from './TabStrip';
@@ -26,7 +26,7 @@ export function Sidebar({
   side: 'left' | 'right';
   tabs: TabView[];
   client: JanusClient;
-  // The active tab's command-bar drop handle, threaded down to a docked `FileTreeTab` so a drag
+  // The active tab's command-bar drop handle, threaded down to a docked `FileNavigatorTab` so a drag
   // can find and insert into that tab's command bar. See `App.tsx`'s `dropRef`.
   dropRef?: React.RefObject<CommandInputDropHandle | null>;
   tabNameMaxLength?: number;
@@ -99,7 +99,7 @@ export function Sidebar({
           endControl={side === 'left' ? resizeButton : undefined}
         />
         {current.tab.view === 'files' && current.tab.files && (
-          <FileTreeTab
+          <FileNavigatorTab
             files={current.tab.files} client={client} index={current.index} dock={current.tab.dock} autoFocus={false}
             dropRef={dropRef}
           />

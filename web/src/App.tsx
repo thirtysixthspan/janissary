@@ -66,7 +66,7 @@ export function App() {
   // pickers so a selected row's text lands in the command line without submitting.
   const recallReference = useRef<((text: string) => void) | null>(null);
   // Assigned `CommandInput`'s insert-at-caret/highlight pair (the `guardRef` pattern) so a
-  // file-tree drag, threaded down the sidebar's own branch of the tree, can insert a dropped path
+  // file-navigator drag, threaded down the sidebar's own branch of the tree, can insert a dropped path
   // into whichever tab's command bar is currently rendered here.
   const dropReference = useRef<CommandInputDropHandle | null>(null);
   const transcriptReference = useRef<HTMLDivElement>(null);

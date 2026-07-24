@@ -7,7 +7,7 @@ type Handlers = {
   edit: (path: string) => void;
 };
 
-export function runFileTreeAction(action: Action, handlers: Handlers): void {
+export function runFileNavigatorAction(action: Action, handlers: Handlers): void {
   if (!action) return;
   switch (action.type) {
     case 'reroot': { handlers.reroot(action.path); break; }
