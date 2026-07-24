@@ -696,7 +696,7 @@ html, body, #root {
 }
 .editor-diff-controls button:hover { opacity: 1; }
 
-/* File tree tab: metadata header (image-tab classes) above a scrollable, keyboard-navigable tree. */
+/* File navigator tab: metadata header (image-tab classes) above a scrollable, keyboard-navigable tree. */
 .files-tab { flex: 1; min-height: 0; display: flex; flex-direction: column; outline: none; position: relative; }
 .files-header {
   display: flex; align-items: center; justify-content: space-between;
@@ -747,7 +747,7 @@ html, body, #root {
 .files-name--changed { color: var(--running); }
 .files-name--staged { color: var(--success); }
 .files-name--conflict { color: var(--error); }
-/* Inline file-tree rename input: matches the row's font and fills the same space .files-name does,
+/* Inline file-navigator rename input: matches the row's font and fills the same space .files-name does,
    so it extends to the row's right edge instead of falling back to the native default input width. */
 .files-rename-input {
   font: inherit; color: inherit; background: transparent; border: none; outline: none;
