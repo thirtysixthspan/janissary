@@ -2,7 +2,7 @@ import type { LogEntry, Tab } from './types.js';
 import type { Managers } from './managers.js';
 
 // The notifications tab is a singleton, view-only feed (`view: 'notifications'`) that receives
-// notification-worthy background events as ordinary transcript entries. It mirrors the file tree
+// notification-worthy background events as ordinary transcript entries. It mirrors the file navigator
 // tab's open-or-reuse, dockable shape (see `file-navigator/manager.ts`), but its body is a plain
 // transcript and it accepts no typed input. It is created only by the `notifications` command,
 // never by the event path, and events fired while it is closed are dropped (never buffered).

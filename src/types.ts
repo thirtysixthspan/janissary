@@ -117,7 +117,7 @@ export type EditorView = {
   sync?: 'provisioning' | 'syncing' | 'synced' | 'error';
 };
 
-// A single visible row in a file tree tab (opened via `files [path]`). `path` is relative to the
+// A single visible row in a file navigator tab (opened via `files [path]`). `path` is relative to the
 // tree root — the unique key, and the argument passed to `open`/`edit` when a file row is clicked.
 // Children of a directory are included only once it is expanded (present in the row list at all).
 export type FileNavigatorRow = {
@@ -133,7 +133,7 @@ export type FileNavigatorRow = {
   gitStatus?: 'changed' | 'staged' | 'conflict';
 };
 
-// A file tree view (opened via `files [path]`). The server owns the tree — `rows` is the
+// A file navigator view (opened via `files [path]`). The server owns the tree — `rows` is the
 // pre-flattened, already-sorted, currently-visible row list; the client never walks directories.
 // `root` is display-abbreviated for the header; `absoluteRoot` is the same root unshortened, used
 // client-side to resolve a dragged row's path relative to another tab's cwd. `branch` is the

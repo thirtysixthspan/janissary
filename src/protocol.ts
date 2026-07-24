@@ -79,7 +79,7 @@ export type TabView = {
   commandQueue: string[];
   toolStepsExpanded: boolean;
   pendingQuestion?: PendingQuestionView;
-  // Body kind: undefined/`'agent'` for a normal tab, `'image'` for an image view, `'page'` for an embedded web page, `'harness'` for a full-tab AI harness terminal, `'markdown'` for a rendered Markdown file, `'monitor'` for the AI-monitor suggestion feed, `'files'` for a file tree, `'notifications'` for the notification feed, `'schedules'` for the aggregated schedule list.
+  // Body kind: undefined/`'agent'` for a normal tab, `'image'` for an image view, `'page'` for an embedded web page, `'harness'` for a full-tab AI harness terminal, `'markdown'` for a rendered Markdown file, `'monitor'` for the AI-monitor suggestion feed, `'files'` for a file navigator, `'notifications'` for the notification feed, `'schedules'` for the aggregated schedule list.
   view?: 'agent' | 'image' | 'page' | 'harness' | 'markdown' | 'editor' | 'monitor' | 'files' | 'notifications' | 'schedules';
   // Display name when it differs from `label` (image tabs are all titled `image`).
   title?: string;
@@ -97,7 +97,7 @@ export type TabView = {
   // persona name, the monitored tabs/groups (pre-formatted), and the running total of bytes
   // sent/received on the monitor's dedicated ACP session.
   monitor?: { suggestions: SuggestionView[]; persona: string; targets: string; contextBytes: number };
-  // File-tree payload, present only when `view === 'files'`.
+  // File-navigator payload, present only when `view === 'files'`.
   files?: FileNavigatorView;
   // Aggregated schedule rows across all tabs, sorted next-to-run first. Present only when
   // `view === 'schedules'`.
@@ -204,29 +204,29 @@ export type RpcCall =
   // through the app's message-listener. Never persisted or sent to any client — see `pageSnapshot`.
   // `url` identifies the page tab the same way its `page.url` field does.
   | { method: 'pageSync'; params: { url: string; text: string } }
-  // Expand/collapse one directory row in a file tree tab. `index` is the tab's position in the
+  // Expand/collapse one directory row in a file navigator tab. `index` is the tab's position in the
   // server's full tab list (resolved to a label server-side); `path` is the row's tree-relative path.
   | { method: 'fileNavigatorToggle'; params: { index: number; path: string } }
-  // Collapse every expanded directory in a file tree tab back to just its root.
+  // Collapse every expanded directory in a file navigator tab back to just its root.
   | { method: 'fileNavigatorCollapseAll'; params: { index: number } }
-  // Re-root a file tree tab to the parent directory.
+  // Re-root a file navigator tab to the parent directory.
   | { method: 'fileNavigatorReroot'; params: { index: number; path?: string } }
-  // Move a file or directory in a file tree tab into a different directory (drag-and-release).
+  // Move a file or directory in a file navigator tab into a different directory (drag-and-release).
   // `fromRelPath` is the dragged item's tree-relative path; `toRelPath` is the destination
   // directory's tree-relative path.
   | { method: 'moveFileNavigatorItem'; params: { index: number; fromRelPath: string; toRelPath: string } }
-  // Delete a file or directory (recursively) from a file tree tab, after the client has already
+  // Delete a file or directory (recursively) from a file navigator tab, after the client has already
   // confirmed with the user. `relPath` is the tree-relative path of the row being removed.
   | { method: 'deleteFileNavigatorItem'; params: { index: number; relPath: string } }
-  // Rename a file or directory in place within a file tree tab (in-directory only — the client has
+  // Rename a file or directory in place within a file navigator tab (in-directory only — the client has
   // already confirmed an overwrite with the user, if the new name collides with a sibling).
   // `relPath` is the tree-relative path of the row being renamed; `newName` is the bare new name
   // (no path separators).
   | { method: 'renameFileNavigatorItem'; params: { index: number; relPath: string; newName: string } }
-  // List every gitignore-aware file under a file tree tab's own root, for its Search-files
+  // List every gitignore-aware file under a file navigator tab's own root, for its Search-files
   // pop-up. Replies (deferred) with `{ paths }` — root-relative, matching the tree's own rows.
   | { method: 'fileNavigatorSearch'; params: { index: number } }
-  // Expand every ancestor directory of `relPath` in a file tree tab (adding to `expanded`,
+  // Expand every ancestor directory of `relPath` in a file navigator tab (adding to `expanded`,
   // watching, rebuilding); the client separately selects and scrolls to it once the resulting
   // rows arrive. The search pop-up's Enter action.
   | { method: 'revealFileNavigatorItem'; params: { index: number; relPath: string } }
@@ -235,12 +235,12 @@ export type RpcCall =
   // has confirmed with the user (Backspace/Delete on a selected row in the aggregated schedules tab).
   | { method: 'cancelSchedule'; params: { tab: string; id: string } }
   | { method: 'clearSchedules'; params?: Record<string, never> }
-  // Undo/redo the most recent move in a file tree tab's per-tab undo/redo stack. `overwrite`
+  // Undo/redo the most recent move in a file navigator tab's per-tab undo/redo stack. `overwrite`
   // retries a pending entry after the client has confirmed an overwrite of a conflicting
   // destination; the reply's `result` carries `{ conflict }` when one is found instead.
   | { method: 'undoFileNavigatorItem'; params: { index: number; overwrite?: boolean } }
   | { method: 'redoFileNavigatorItem'; params: { index: number; overwrite?: boolean } }
-  // Dock a dockable tab (file tree or notifications) into a sidebar (`'left'` | `'right'`), or
+  // Dock a dockable tab (file navigator or notifications) into a sidebar (`'left'` | `'right'`), or
   // undock it back to the center tab strip (`null`). Explicit set, not "cycle" — the cycle order
   // lives client-side. The handler is generic, so both dockable tab kinds share this one RPC.
   | { method: 'setDock'; params: { index: number; dock: 'left' | 'right' | null } }

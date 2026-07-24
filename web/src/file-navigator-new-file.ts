@@ -8,7 +8,7 @@ export function findPendingNewDir(rows: FileNavigatorRow[], pendingNewDir: strin
   return rows.find((r) => r.path === pendingNewDir && r.dir);
 }
 
-// The target directory for a new file, computed from the file tree's selected row (the keyboard
+// The target directory for a new file, computed from the file navigator's selected row (the keyboard
 // cursor): a selected directory row creates inside that directory; a selected file row creates in
 // its containing directory; no selection (or the ".." row) creates at the tree root. Kept out of
 // the component so `FileNavigatorTab.tsx` stays under the file-size limit.

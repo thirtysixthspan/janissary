@@ -13,7 +13,7 @@ const DRAG_THRESHOLD_PX = 4;
 // itself with `overwrite: true` — the server already knows which stack entry is pending.
 type PendingConflict = { fromRelPath: string; toRelPath: string; source: 'move' | 'undo' | 'redo' };
 
-// Click-drag-release to move a file tree row into a directory row. Manages its own window-level
+// Click-drag-release to move a file navigator row into a directory row. Manages its own window-level
 // mousemove/mouseup listeners for the duration of one gesture (mirroring the editor's own mouse
 // handling in `editor/useEditorMouse.ts`) rather than reusing `drag-resize.ts`'s `startDrag`, which
 // has no way to signal the drop moment back to the caller. A movement threshold gates when a
@@ -44,7 +44,7 @@ export function useFileNavigatorDrag(
 
   // True when the pointer is over the command bar's hit-test marker — present only while
   // `CommandInput` is mounted for the currently active tab (see Decision 4 in the drag-to-command-
-  // bar plan). Not present for a harness tab, a docked file tree tab, or while transcript search
+  // bar plan). Not present for a harness tab, a docked file navigator tab, or while transcript search
   // has replaced the command bar.
   const hoveredCommandBar = (x: number, y: number): boolean => {
     const element = document.elementFromPoint(x, y);

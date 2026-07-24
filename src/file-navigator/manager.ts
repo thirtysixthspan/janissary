@@ -47,7 +47,7 @@ export type FilesTabState = {
   gitRefreshStale?: boolean;
 };
 
-// Owns file tree tabs: opening/focusing them, their `expanded` directory sets, and one
+// Owns file navigator tabs: opening/focusing them, their `expanded` directory sets, and one
 // non-recursive `fs.watch` per visible directory. Any watch event schedules a single per-tab
 // debounced rebuild; the server always owns the tree — the client only ever renders rows.
 export class FileNavigatorManager {

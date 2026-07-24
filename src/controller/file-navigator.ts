@@ -1,4 +1,4 @@
-// Controller-facing wrappers for file tree tab RPCs: resolve the tab index to its label, then
+// Controller-facing wrappers for file navigator tab RPCs: resolve the tab index to its label, then
 // delegate to `FileNavigatorManager`. Extracted from `controller.ts` to keep it under the file-size
 // limit — see `ai/guidelines/code-guidelines.md`.
 import type { Managers } from '../managers.js';

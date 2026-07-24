@@ -5,7 +5,7 @@ import { computeRename, hasRenameCollision, siblingNames } from './file-navigato
 
 type PendingConflict = { relPath: string; newRelPath: string; newName: string };
 
-// In-place rename for a file tree row (Cmd+R / Ctrl+R): edit state, commit/cancel, same-directory
+// In-place rename for a file navigator row (Cmd+R / Ctrl+R): edit state, commit/cancel, same-directory
 // collision handling (via the shared `MoveConflictDialog`), and the RPC send — kept out of
 // `FileNavigatorTab.tsx` to stay under the file-size limit, mirroring `useFileNavigatorDrag`/`useFileNavigatorSearch`.
 export function useFileNavigatorRename(
