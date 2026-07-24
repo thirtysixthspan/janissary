@@ -1,4 +1,4 @@
-# Find Product Gaps
+# Find Feature Ideas
 
 Your job: compare this application's current feature set — as described in `product/specs/` — against similar products in its category, using extensive external research, to spot incomplete or missing features. Log what you find as new entries under the `## development` section of `product/backlog/features.md`. This task **researches and records** gaps; it does not build them, and other tasks (`build-a-feature.md`, `plan-ready-features.md`) own turning what lands here into shipped work.
 
