@@ -1,0 +1,33 @@
+{
+  "group_id": null,
+  "states": [
+    {
+      "character": {
+        "id": "6a524c5b-38cc-4b8f-8c09-a12a9fa482a4",
+        "name": "Full-body pixel-art agent reference sheet",
+        "prompt": "A historically grounded early-17th-century Ottoman Janissary firearms specialist with a white felt börk, blue and burgundy coat, sash, yatagan, powder flask, and matchlock musket, rendered as crisp 16-bit RPG pixel art in eight compass rotations.",
+        "size": { "width": 128, "height": 128 },
+        "template_id": "mannequin",
+        "directions": 8,
+        "view": "low top-down",
+        "created_at": "2026-07-24T00:00:00+00:00"
+      },
+      "folder": "Full-body_pixel-art_agent_reference_sheet",
+      "frames": {
+        "rotations": {
+          "south": "Full-body_pixel-art_agent_reference_sheet/rotations/south.png",
+          "south-east": "Full-body_pixel-art_agent_reference_sheet/rotations/south-east.png",
+          "east": "Full-body_pixel-art_agent_reference_sheet/rotations/east.png",
+          "north-east": "Full-body_pixel-art_agent_reference_sheet/rotations/north-east.png",
+          "north": "Full-body_pixel-art_agent_reference_sheet/rotations/north.png",
+          "north-west": "Full-body_pixel-art_agent_reference_sheet/rotations/north-west.png",
+          "west": "Full-body_pixel-art_agent_reference_sheet/rotations/west.png",
+          "south-west": "Full-body_pixel-art_agent_reference_sheet/rotations/south-west.png"
+        },
+        "animations": {}
+      }
+    }
+  ],
+  "export_version": "3.0",
+  "export_date": "2026-07-24T00:00:00+00:00"
+}

@@ -1,6 +1,6 @@
 # Monitoring with personas
 
-<img class="agent-float" src="/agents/malik-south-east.png" alt="" />
+<img class="agent-float" src="/agents/selim-south-east.png" alt="" />
 
 `monitor` starts a persona-driven AI session that watches tab activity and surfaces suggestions, either inline in the tab you started it from or in a dedicated reporting tab:
 
@@ -22,7 +22,7 @@ A target is a tab label or `group:<n>`. A tab may also be named by its display a
 
 ## The reporting tab
 
-<img class="agent-float left" src="/agents/hakim-south-west.png" alt="" />
+<img class="agent-float left" src="/agents/ahmed-south-west.png" alt="" />
 
 A reporting-mode monitor's tab carries a metadata line above its suggestion feed: the persona name, the tab(s)/group(s) it watches, and the total size sent to and received from its session so far (shown in bytes/kilobytes/megabytes). Two buttons sit at the right of that line:
 

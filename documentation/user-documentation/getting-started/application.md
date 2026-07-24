@@ -1,6 +1,7 @@
 # What is Janissary?
 
-<img class="agent-float" src="/agents/fariz-south.png" alt="" />
+<img class="agent-float" src="/agents/ahmed-south-east.png" alt="" />
+<img class="agent-float left" src="/agents/aslan-south-west.png" alt="" />
 
 Janissary is an **Agentic Working Environment**: an app for directing AI agents rather than typing every command yourself. The core interaction is the agent — you open one, give it a task, and it works in its own space while you move on to something else. Each agent communicates through a **tab**: a text-based transcript where you send it commands or prompts and read what it does in return.
 

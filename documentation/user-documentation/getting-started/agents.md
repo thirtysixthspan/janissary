@@ -12,7 +12,7 @@ The new tab is focused as soon as it's created. See [Tabs](/user-documentation/g
 
 ## Names
 
-<img class="agent-float left" src="/agents/malik-south-east.png" alt="" />
+<img class="agent-float" src="/agents/orhan-south-east.png" alt="" />
 
 Agent names are always lowercased and must be unique among open tabs — `agent bilal` while a `bilal` tab exists prints `Agent "<name>" is already active.` and creates nothing.
 
@@ -20,6 +20,6 @@ Bare `agent` draws a random unused name from a preset pool of 52 lowercase names
 
 ## Workspaced agents
 
-<img class="agent-float" src="/agents/hakim-south.png" alt="" />
+<img class="agent-float left" src="/agents/selim-south-west.png" alt="" />
 
 `agent <name> --workspace` (or `-w`) gives the agent its own disposable clone of your repository instead of working in the project directly, isolated from the rest of your machine. That changes enough — where the clone lives, what the isolation blocks, how GitHub authentication works — that it has its own page: see [Workspaced agents](/user-documentation/advanced-agents/workspaced-agent).

@@ -1,6 +1,6 @@
 # Product development workflow
 
-<img class="agent-float" src="/agents/malik-south.png" alt="" />
+<img class="agent-float" src="/agents/dogan-south-east.png" alt="" />
 
 For creative work that runs over many sessions — building a product, writing a book, producing a series — a single prompt doesn't hold the whole project. You need somewhere to keep the list of things to do, a place to think through one of them before starting, and a record of what's actually true once it's done. This page describes a convention for that, built out of three plain-text pieces:
 
@@ -56,7 +56,7 @@ Together, the two answer different questions, from different sources: "what are 
 
 ## Driving the loop with task files
 
-<img class="agent-float left" src="/agents/tahir-south.png" alt="" />
+<img class="agent-float left" src="/agents/ekrem-south-west.png" alt="" />
 
 Each stage above is small enough to hand to an agent as a self-contained instruction file under `ai/tasks/`, opened without typing its path by hand through the [task picker](/user-documentation/command-bar/tasks) (`Ctrl+A`). A typical loop is four task files, each doing one stage and handing off to the next by moving a file between folders:
 

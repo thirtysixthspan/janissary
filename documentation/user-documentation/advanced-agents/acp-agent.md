@@ -1,6 +1,6 @@
 # ACP agents
 
-<img class="agent-float" src="/agents/tahir-south-east.png" alt="" />
+<img class="agent-float" src="/agents/ahmed-south-east.png" alt="" />
 
 `acp <prompt>` sends a prompt to an external AI agent and streams its reply into the current tab's transcript. The agent speaks the [Agent Client Protocol](https://agentclientprotocol.com) (ACP); in this app it is fixed to OpenCode, so there is nothing to configure:
 
@@ -30,7 +30,7 @@ An active session also appears as the connection `acp:opencode` in the tab's con
 
 ## The agent can look things up itself
 
-<img class="agent-float left" src="/agents/yusuf-south-west.png" alt="" />
+<img class="agent-float left" src="/agents/aslan-south-west.png" alt="" />
 
 When answering needs data, the agent can run the app's own `db` and `browser` commands on its own: query a SQLite database, fetch a web page, read its content. Each command it runs, and the result, is fed back to it so it can continue, up to a limit of 8 steps per prompt. If it hits the limit, the transcript shows `(stopped after 8 tool steps)`.
 

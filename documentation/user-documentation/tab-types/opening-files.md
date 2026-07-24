@@ -1,6 +1,6 @@
 # Opening files and pages
 
-<img class="agent-float" src="/agents/yusuf-south.png" alt="" />
+<img class="agent-float" src="/agents/aslan-south-east.png" alt="" />
 
 The `open` command views a file or web page in a new tab:
 
@@ -26,7 +26,7 @@ open external https://example.com the OS default browser
 
 ## Wildcards
 
-<img class="agent-float left" src="/agents/tahir-south-east.png" alt="" />
+<img class="agent-float left" src="/agents/bilal-south-west.png" alt="" />
 
 A path with shell wildcard characters opens every matching file, up to 10 at a time:
 

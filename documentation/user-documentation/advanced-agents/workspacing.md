@@ -1,6 +1,6 @@
 # Workspacing
 
-<img class="agent-float" src="/agents/yusuf-south-west.png" alt="" />
+<img class="agent-float" src="/agents/mahir-south-east.png" alt="" />
 
 A workspace is a disposable, isolated clone of your repository that an agent or harness works in instead of the project itself. It exists so you can let an AI agent loose on your code without betting the repo — or your machine — on its judgment: the agent gets a full, real checkout it can build, test, and commit in, while the workspace boundary decides what it can't touch.
 
@@ -8,7 +8,7 @@ Ask for one with `--workspace` (or `-w`) when creating an [agent](/user-document
 
 **Disposable.** The workspace is a fresh `git clone`, created when the tab opens and deleted when the tab closes. Nothing in it outlives the tab except what was pushed or merged out deliberately. Relaunching the app doesn't bring workspaces back. That makes a workspace cheap to abandon: if an experiment goes sideways, close the tab.
 
-<img class="agent-float left" src="/agents/malik-south.png" alt="" />
+<img class="agent-float left" src="/agents/orhan-south-west.png" alt="" />
 
 **Isolated.** On macOS, everything running in a workspaced tab — the shell, the harness, and anything they spawn — is confined by a kernel-enforced sandbox. In practice, from inside the workspace:
 

@@ -22,7 +22,8 @@ The rendered page scrolls vertically, with a visible scrollbar — there's no zo
 
 ## What to expect
 
-<img class="agent-float left" src="/agents/fariz-south-east.png" alt="" />
+<img class="agent-float" src="/agents/mahir-south-east.png" alt="" />
+<img class="agent-float left" src="/agents/orhan-south-west.png" alt="" />
 
 The view is a snapshot of the file as it was when you opened it — edits on disk aren't picked up until you open it again. Relative links to other local files (an image referenced as `./diagram.png`, say) aren't resolved; only the Markdown text itself renders. Active markup in the file is stripped before rendering, and a file that fails to parse falls back to plain text.
 

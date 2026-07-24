@@ -12,7 +12,8 @@ You don't manage groups directly — they follow from how tabs are created:
 
 A group's band color is fixed when the group is created (the color of its first member) and never shifts afterward, even as tabs are reordered or closed.
 
-<img class="agent-float" src="/agents/hakim-south-west.png" alt="" />
+<img class="agent-float" src="/agents/demir-south-east.png" alt="" />
+<img class="agent-float left" src="/agents/dogan-south-west.png" alt="" />
 
 Groups also stay contiguous. A new tab is inserted directly after the last tab of its group, and reordering with `Ctrl+←` / `Ctrl+→` only swaps a tab with a neighbor in the same group — you can rearrange within a band, but never drag a tab out of it.
 

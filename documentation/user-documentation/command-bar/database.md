@@ -1,6 +1,6 @@
 # Databases
 
-<img class="agent-float" src="/agents/fariz-south-east.png" alt="" />
+<img class="agent-float" src="/agents/ahmed-south-east.png" alt="" />
 
 The `db` command creates, queries, lists, and deletes SQLite databases that persist across sessions, so a tab (or its agent) can store and query structured data without any external service:
 
@@ -30,7 +30,7 @@ A database name must match `^[A-Za-z0-9_-]+$` — letters, numbers, `-`, and `_`
 
 ## Running queries
 
-<img class="agent-float left" src="/agents/hakim-south-west.png" alt="" />
+<img class="agent-float left" src="/agents/aslan-south-west.png" alt="" />
 
 `db sqlite query <name> <sql>` runs the SQL verbatim on the database:
 

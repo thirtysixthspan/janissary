@@ -9,7 +9,7 @@ Run
 ```
 from the project directory.
 
-<img class="agent-float" src="/agents/tahir-south-west.png" alt="" />
+<img class="agent-float" src="/agents/aslan-south-east.png" alt="" />
 
 `janus` starts the server in the background and hands your shell prompt straight back once it's ready. The terminal you launched from doesn't need to stay open, and closing it — or pressing `Ctrl+C` in it — no longer stops the app. Use [`janus stop`](#stopping-the-app) to shut it down.
 
@@ -35,7 +35,7 @@ A mistyped flag, a bare `--port` with no value, or a port outside 1–65535 stop
 
 ## Stopping the app
 
-<img class="agent-float left" src="/agents/malik-south.png" alt="" />
+<img class="agent-float left" src="/agents/bilal-south-west.png" alt="" />
 
 Since a normal launch detaches into the background, closing the terminal doesn't stop it. Run this from the project directory instead:
 
@@ -57,7 +57,6 @@ It shuts down the instance running against the current directory. Pass a directo
 janus --relaunch
 ```
 
-<img class="agent-float" src="/agents/hakim-south-east.png" alt="" />
 
 `--relaunch` rebuilds your tabs as you left them: every agent tab comes back in its saved order with its dot color, group, transcript, command history, and working directory. Tab aliases and scheduled commands are restored too. What doesn't come back: view tabs (images, Markdown, editors, web pages), harness tabs, and workspace clones — those are live views and processes, not saved state.
 

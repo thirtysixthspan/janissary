@@ -4,7 +4,7 @@ Decorative pixel-art Janissary characters appear throughout the user documentati
 
 ## Source images
 
-Agent character images live in `agent-images/` at the repo root. Each character has a subdirectory (`malik/`, `idris/`, `yusuf/`, `fariz/`, `hakim/`, `tahir/`) containing one or more character states, each with eight directional rotations. The VitePress build config (`documentation/.vitepress/config.mts`) copies the used facings into `documentation/public/agents/` at build time, trimmed and scaled — that directory is gitignored and must not be committed.
+Agent character images live in `agent-images/` at the repo root. Each character has a subdirectory containing one or more character states, each with eight directional rotations. The VitePress build config (`documentation/.vitepress/config.mts`) copies the used facings into `documentation/public/agents/` at build time, trimmed and scaled — that directory is gitignored and must not be committed. The current documentation roster is `ahmed`, `aslan`, `bilal`, `cavus`, `demir`, `dogan`, `ekrem`, `hamza`, `mahir`, `orhan`, and `selim`.
 
 ## Allowed facings
 
@@ -28,7 +28,7 @@ The animated `archer-firing.gif` is the landing-page hero image (`index.md` fron
 
 ### Count per page
 
-- **1 character** on short pages (under ~30 lines)
+- **At least 2 characters** on every page, including short pages
 - **2 characters** on medium pages (~30–50 lines)
 - **3 characters** on long pages (over ~50 lines)
 

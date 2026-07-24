@@ -25,7 +25,7 @@ A plain click on the header (the file name, size, or location) puts focus straig
 
 ## Saving
 
-<img class="agent-float" src="/agents/tahir-south-west.png" alt="" />
+<img class="agent-float" src="/agents/bilal-south-east.png" alt="" />
 
 Click the save button or press `Ctrl+S` / `Cmd+S` to write the buffer to disk. On success a brief
 "Saved" flash appears in the header; on failure the error is shown there and the save button stays
@@ -53,7 +53,7 @@ As you type, the editor also keeps a transient, unsaved copy of your buffer sync
 
 ## Syntax highlighting
 
-<img class="agent-float left" src="/agents/yusuf-south-east.png" alt="" />
+<img class="agent-float left" src="/agents/cavus-south-west.png" alt="" />
 
 Markdown, JavaScript, TypeScript, and JSON files are colored by syntax, chosen by file extension; anything else renders as plain text. Highlighting keeps up with your edits without slowing typing down, and is skipped for very large buffers (over 10,000 lines or 1 MB) so they stay responsive.
 
@@ -61,7 +61,6 @@ One theme applies to every editor tab at once. Switch it with `syntax theme <nam
 
 ## Ask a persona for a change
 
-<img class="agent-float" src="/agents/malik-south-east.png" alt="" />
 
 Press `>` at the very start of an empty line to open a request line, right there in the buffer, and ask an AI persona to make a change — for example `> assistant tighten this paragraph`. The persona's proposed edits preview inline for you to accept or decline. See [Asking a persona for a change](/user-documentation/tab-types/editor-persona-query) for the full syntax, keyboard shortcuts, and review flow.
 

@@ -1,9 +1,10 @@
 # Design principles
 
-<img class="agent-float" src="/agents/hakim-south.png" alt="" />
+<img class="agent-float" src="/agents/bilal-south-east.png" alt="" />
 
 Janissary is built around a small set of tenets. They explain why the app looks the way it does, and why some things it deliberately doesn't do.
 
+<img class="agent-float left" src="/agents/cavus-south-west.png" alt="" />
 ## Workflow support
 
 Janissary supports the work you're already doing rather than prescribing a workflow of its own. A tab can be a shell, an [agent](/user-documentation/getting-started/agents), an [editor](/user-documentation/tab-types/editor), or a [harness](/user-documentation/advanced-agents/harness) — mix and match freely, whether you're developing code, writing, or managing something else entirely. [Profiles](/user-documentation/automation/profiles) let you capture whatever multi-tab setup fits your work and recreate it with one command.

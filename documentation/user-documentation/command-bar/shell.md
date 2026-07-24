@@ -22,7 +22,7 @@ The prefix is the deterministic escape hatch — whatever follows it goes straig
 
 ## One shell per tab, and it persists
 
-<img class="agent-float" src="/agents/fariz-south-west.png" alt="" />
+<img class="agent-float" src="/agents/selim-south-east.png" alt="" />
 
 Each tab has its own shell process that lives as long as the tab does. State accumulates the way it would in a terminal: `cd` somewhere and later commands in that tab run there; exported variables stick around. The working directory is also remembered per agent, so after `janus --relaunch` a restored tab's shell starts where it left off. If the shell process dies unexpectedly, a fresh one is spawned on your next command.
 
@@ -30,7 +30,7 @@ Closing a tab kills its shell; quitting the app kills them all.
 
 ## Interactive programs take over the tab
 
-<img class="agent-float left" src="/agents/tahir-south-east.png" alt="" />
+<img class="agent-float left" src="/agents/ahmed-south-west.png" alt="" />
 
 Full-screen and interactive programs — `htop`, `vim`, `less`, `man`, `python` and other REPLs — can't run through the ordinary transcript. When you run one, the tab switches into a full-tab terminal: the transcript and command bar disappear and the program gets the whole tab, with every keystroke — including `Ctrl+C`, `Ctrl+D`, and `Ctrl+Z` — forwarded to it. Only `Shift+←`/`Shift+→` still switch tabs, and you can keep several tabs' interactive programs running at once; each keeps its screen state while you're elsewhere.
 

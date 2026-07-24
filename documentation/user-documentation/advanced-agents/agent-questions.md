@@ -1,6 +1,6 @@
 # Agent questions
 
-<img class="agent-float" src="/agents/hakim-south-east.png" alt="" />
+<img class="agent-float" src="/agents/bilal-south-east.png" alt="" />
 
 An agent can pause what it's doing and ask you something, then wait for your answer before it goes on. You can ask the same kind of question yourself, from any tab's command line:
 
@@ -22,7 +22,7 @@ Usage: question ask "<question>"
 
 The panel opens on the tab that asked the question and stays tied to that tab as you switch away and back. It doesn't block the rest of the app: it's non-modal, so you can keep typing in other tabs, switch away, or use any other control while it's still waiting for you.
 
-<img class="agent-float left" src="/agents/fariz-south-west.png" alt="" />
+<img class="agent-float left" src="/agents/cavus-south-west.png" alt="" />
 
 Both kinds of panel — text field and option buttons — include a **Cancel** button.
 

@@ -1,9 +1,10 @@
 # Command queue
 
-<img class="agent-float" src="/agents/hakim-south.png" alt="" />
+<img class="agent-float" src="/agents/ekrem-south-east.png" alt="" />
 
 When an agent tab is busy, anything you submit to it doesn't get lost — it's queued and runs automatically once the agent is free. You can also queue a command for a *different* agent with `queue <agent> <command>`.
 
+<img class="agent-float left" src="/agents/hamza-south-west.png" alt="" />
 ## Queue while busy
 
 Submit as many commands as you like while a tab's agent is working. Each one joins that tab's queue and runs, in order, one at a time, as soon as the agent finishes what it's doing.

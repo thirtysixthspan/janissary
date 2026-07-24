@@ -56,7 +56,7 @@ All of these categories solve real problems. But they all miss something:
 
 That's the gap Janissary fills.
 
-<img class="agent-float" src="/agents/yusuf-south.png" alt="" />
+<img class="agent-float" src="/agents/dogan-south-east.png" alt="" />
 
 You might:
 - Run an agent that writes tests while another refactors a module
@@ -71,6 +71,7 @@ Janissary is built from the ground up for this: **tab-based, developer-first, wi
 
 ---
 
+<img class="agent-float left" src="/agents/ekrem-south-west.png" alt="" />
 ## Who Is This For?
 
 ### You're a good fit if you:

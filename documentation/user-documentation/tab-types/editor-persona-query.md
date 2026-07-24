@@ -1,9 +1,10 @@
 # Asking a persona for a change
 
-<img class="agent-float" src="/agents/malik-south-east.png" alt="" />
+<img class="agent-float" src="/agents/ahmed-south-east.png" alt="" />
 
 An editor tab can ask an AI persona for a change to the text it's editing and apply the answer inline, without leaving the buffer and without opening a [monitor](/user-documentation/automation/monitoring) reporting tab. It's a single-shot request fired directly from the editor, not the batched, continuously-watching flow a monitor runs — though both read the same live buffer.
 
+<img class="agent-float left" src="/agents/aslan-south-west.png" alt="" />
 ## Opening the query line
 
 Press `>` while your caret sits at the very start of an otherwise-empty line to open a request line, right there in the buffer:

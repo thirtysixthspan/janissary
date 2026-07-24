@@ -1,6 +1,6 @@
 # Messaging
 
-<img class="agent-float" src="/agents/yusuf-south-east.png" alt="" />
+<img class="agent-float" src="/agents/demir-south-east.png" alt="" />
 
 The `msg` and `broadcast` commands send a message from one agent tab to another, so agents can hand off information or trigger work without a person relaying it:
 
@@ -29,7 +29,7 @@ A `request`'s response arrives in the sender's transcript as a `response from <a
 
 ## Broadcasting to several agents at once
 
-<img class="agent-float left" src="/agents/fariz-south-west.png" alt="" />
+<img class="agent-float left" src="/agents/dogan-south-west.png" alt="" />
 
 `broadcast <all|agent[,agent...]> <info|request|command> <text>` sends the same message to more than one agent:
 

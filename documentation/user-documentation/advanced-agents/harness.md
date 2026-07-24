@@ -1,6 +1,6 @@
 # Harness tabs
 
-<img class="agent-float" src="/agents/malik-south.png" alt="" />
+<img class="agent-float" src="/agents/demir-south-east.png" alt="" />
 
 `harness <name>` runs an AI coding harness — `claude`, `opencode`, or `codex` — as a full-tab terminal:
 
@@ -22,7 +22,7 @@ Tab reordering (`Ctrl+←/→`) isn't available while a harness has focus — sw
 
 ## Labels
 
-<img class="agent-float" src="/agents/hakim-south-west.png" alt="" />
+<img class="agent-float left" src="/agents/dogan-south-west.png" alt="" />
 
 The tab is labeled with the harness name by default; a second `harness claude` becomes `claude-2`, and so on. `as <label>` picks your own label instead (collisions get the same `-2` suffix):
 
@@ -131,7 +131,6 @@ You can point a monitor at a harness tab — `monitor <persona> <harness-label>`
 
 ## SSH sessions
 
-<img class="agent-float left" src="/agents/fariz-south-east.png" alt="" />
 
 `ssh <destination>` opens the same kind of full-tab terminal running a real `ssh` session:
 
