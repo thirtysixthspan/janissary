@@ -2,6 +2,236 @@
 
 All notable changes to this project are documented here.
 
+## [0.8.0] - 2026-07-24
+
+### Features
+
+- add a GitHub icon to the file navigator header (#601)
+- default syncPaths to product/backlog/ and product/plans/ (#598)
+- support directory-prefix and wildcard syncPaths entries (#596)
+- sync config-listed editor tabs with origin/master (#595)
+- allow the question command to be typed on the command line (#583)
+- add agent question and approval dialogs (#579)
+- support a multiline query line with cross-buffer up/down navigation (#582)
+- allow interchangeable editing between the buffer and the persona query line (#578)
+- enter agent persona requests via an ephemeral query line (#574)
+- add a transcript button to every ACP connection row (#572)
+- show a Save tooltip on the save button (#570)
+- add >> shorthand for the assistant persona (#569)
+- split personas into editor and monitor directories (#568)
+- open persistent per-persona ACP connections for in-editor suggestions (#563)
+- show all pending suggestion hunks at once with thumbs-icon approval (#562)
+- restyle the suggestion pill as a notification badge and add Tab/Enter keyboard focus (#561)
+- preview pending persona-suggestion hunks inline in the buffer (#560)
+- show inline status pill on persona-suggestion request lines (#559)
+- add in-editor persona suggestions (#558)
+- add clear-all button (#553)
+- offer choices for unsupported file types (#552)
+- add metadata save button (#551)
+- auto-select and rename a newly created directory (#548)
+- rename a file or directory in place in the file navigator (#546)
+- open editor tabs on launch (#542)
+- add new directory action (#537)
+- auto-approve codex permission prompts (#532)
+- add improve-plan-with-minimalism task (#531)
+- collapse each profile into a single JSON file (#530)
+- rewrite
+- add profile save <name> command (#524)
+- allow -y auto-approve without -w workspace (#522)
+- add sidebar-focus config and resize the claude profile sidebars
+- add profile-level window/sidebar/tab-area layout sizing (#521)
+
+### Bug Fixes
+
+- open/edit files relative to the navigator's own root (#606)
+- load synced file content only after its shared workspace is ready (#602)
+- abbreviate the path shown in the editor metadata bar (#599)
+- commit message identifies the synced file (#597)
+- only prime an editor persona session once per connection (#591)
+- don't count a tab-focus click toward the rename double-click (#593)
+- match keyboard focus and Tab/arrow cycling to spec (#587)
+- match query line keybindings to the buffer (#585)
+- keep the query line's status pill a fixed size (#581)
+- keep gutter numbers sequential around an open query line (#580)
+- hide the line number in the persona query line's gutter (#577)
+- cancel in-flight persona request when Escape closes the query line (#576)
+- drop brackets from query pill text and remove placeholder span (#575)
+- record editor-persona prompt/reply exchange so its transcript is non-empty (#573)
+- hide the multi-change banner when only one suggestion is pending (#566)
+- anchor the floating connections window below the metadata row (#565)
+- use editor-tab/editor-meta classes and merge buttons into one row (#564)
+- restore border resize dividers and left-float right sidebar's button (#557)
+- disable Claude Code autoupdates in harnesses (#555)
+- add draggable resize buttons to tab gutters (#554)
+- open Quick Open from every tab (#550)
+- focus renamed file in navigator (#549)
+- allow printf
+- return focus to buffer after tab-label rename (#544)
+- rely on janissary sandbox
+- preserve unsaved content when renaming a tab (#540)
+- make tab labels non-selectable (#539)
+- make metadata text selectable (#538)
+- preserve command draft during history recall (#536)
+- preserve editor buffer on rename (#535)
+- expand focused tab labels (#534)
+- wrap sentences at word boundaries (#533)
+- add permitted shell commands
+- badge a hidden harness tab unread when it finishes its run (#529)
+- poll for a not-yet-existing files target instead of failing (#528)
+- capture and resolve profile cwd relative to the project root (#527)
+- exclude the root janus tab from profile save (#526)
+- resolve the app window's target before resizing over CDP
+- detect permission gates beneath pinned chrome
+- translate --effort to each harness's own flag (#520)
+- allow persisting a refreshed OAuth token to the data-protection keychain (#519)
+- default route chooser to acp option (#518)
+- harden user doc task
+- simplify improve-codebase
+- resolve ci failure
+- remove checks from release script
+
+### Documentation
+
+- regenerate user-docs screenshots
+- document the append-only activity log (#608)
+- refresh user-documentation gap candidates
+- close seven user-documentation backlog gaps (#604)
+- refresh user-documentation gap candidates
+- rename fix-a-small-issue.md to fix-an-issue.md (#600)
+- draft editor tab GitHub syncing plan
+- support existing namespaces in namespacing task (#586)
+- draft editor agent query line plan (#571)
+- draft ACP connection-row transcript button plan
+- refresh user-documentation gap candidates
+- trim draft plans for reuse and minimalism
+- harden draft plans with verified references and complexity
+- draft in-editor persona suggestions and agent question dialog
+- draft plan for file navigator rename (#525)
+- draft plan for profile save command (#523)
+- draft plan for profile save command (#523)
+- note that credential-shaped env vars are scrubbed (#517)
+- note recordings capture only output, not keystrokes (#516)
+- document transcript interactive behavior (#515)
+- document ssh tab errors, transcript recording, and lifecycle (#514)
+- document the schedules tab and New schedule dialog (#513)
+- document search, drag-and-drop, delete, and new file (#512)
+- document janus stop and detached-launch behavior (#511)
+- document sandboxWorkspaces and notifications in the config table (#510)
+- correct sidebar sharing and document the sidebar strip (#509)
+- document the New harness dialog and missing harness flags (#508)
+- document monitor, unmonitor, and monitors (#507)
+- document the msg and broadcast commands (#506)
+- document the db command (#505)
+- document the connection command (#504)
+- document the browser command (#503)
+- document application themes (#502)
+- make screenshots a default part of improve-user-documentation
+- document the acp command and its OpenCode agent (#501)
+- add visuals pass to improve-user-documentation task
+- document the Cmd+P quick-open file finder (#500)
+- evaluate 10 more user-documentation gap areas
+- harden find-user-documentation-gaps from first-run lessons
+- add user-documentation gap candidates from first gap-finding run
+- add find-user-documentation-gaps task and improve-user-documentation task
+
+### Refactoring
+
+- extract transcript message tab renderer (#607)
+- reuse transcript operation export (#605)
+- extract CDP page target helper (#603)
+- extract tab operations (#594)
+- extract monitor subscriptions (#592)
+- namespace agent names (#590)
+- namespace profile modules (#589)
+- extract tab opening state (#584)
+- extract manager state modules (#567)
+- extract findOpenFilesTab helper (#556)
+- namespace command-manager, command-queue, and command-router under src/command/ (#499)
+- extract reply-format helpers from monitor parsing (#497)
+- extract connection-list helpers from ConnectionManager (#496)
+- extract message-queue helpers from AgentCommunicationManager (#495)
+- extract git-mark helper from file-tree index (#494)
+- extract expandTabs helper from tab formatting handlers (#493)
+- extract route-choices helpers from recognizers analyze (#492)
+- extract every-schedule parser from schedule helpers (#491)
+- extract harness command parsing from harness/index (#490)
+- extract suggestion helpers from monitor window (#489)
+- extract entry-resolve helpers from profile agent-opener (#488)
+- extract profile-command parsing from profiles.ts (#487)
+- extract open-file-command helper from OpenFileManager (#486)
+- extract newAgent helper from ProfileManager (#485)
+- extract usage/version helpers from cli-args (#484)
+- extract command-queue gate from CommandManager (#483)
+- extract view-shaping helpers from ScheduleManager (#482)
+- extract target-handlers helpers from completion handlers (#481)
+- extract open-command helper from FileTreeManager (#480)
+- extract navigation-commands helpers from TabManager (#479)
+- extract transcript-commands helpers from TabManager (#478)
+- extract file-tree RPC cases into message-handler-file-tree.ts (#477)
+- move controller-* files into src/controller/ (#476)
+- extract profile entry-opener helpers into entry-openers.ts (#475)
+- extract busy/ready classification into busy-classify.ts (#474)
+- extract file-tree navigation helpers into navigation.ts (#473)
+- extract DockCycleHeader component (#472)
+- extract InlineEditInput component (#471)
+- extract useLaunchDialog() hook from launch dialogs (#470)
+- extract parseHarnessFlags() from parseHarnessCommand (#469)
+- extract shared PickerOverlayProps type (#468)
+
+### Chores
+
+- planning
+- planning
+- planning
+- planning
+- planning
+- planning
+- planning
+- planning
+- planning
+- remove issue reintroduced by a rebase conflict (#588)
+- planning
+- planning
+- planning
+- planning
+- planning
+- planning
+- planning
+- planning
+- product
+- planning
+- planning
+- product
+- planning
+- planning
+- planning
+- planning
+- planning
+- planning
+- planning
+- update default harness perms
+- add screenshot
+- planning
+- planning
+- update demo image
+- planning
+- planning
+- planning
+- ai task simplification
+
+### Other
+
+- build: update react-fontawesome to 3.5.0 (#609)
+- sync: issues.md
+- sync: issues.md
+- planning: chores
+- planning
+- style(files): fill the file-tree rename input to the row's edge (#547)
+- test(codex): add regression fixture for edits-prompt shortcut variant (#545)
+- add codex auto-approve plan
+- add codex configuration
+- test: add coverage for project-files, schedules command, file-tree controller, formatting handlers, ScheduleDialog, and Controller RPC delegators (#498)
+
 ## [0.7.0] - 2026-07-19
 
 ### Features
