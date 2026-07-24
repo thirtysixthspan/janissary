@@ -10,7 +10,7 @@ const EXCLUDES = new Set(['.git', '.svn', '.hg', '.DS_Store', 'Thumbs.db']);
 
 // A recursive, promise-based walk of `absDir` that never blocks the event loop, used when `root`
 // is not inside a git repository (so `git ls-files` can't answer). Applies the same default
-// excludes as the file tree's own sync walk, but skips gitignore entirely — there's no `.git` to
+// excludes as the file navigator's own sync walk, but skips gitignore entirely — there's no `.git` to
 // ask. Collects files only; directories are traversed but never themselves returned.
 async function walkFiles(absDir: string, relDir: string): Promise<string[]> {
   let dirents;
@@ -36,7 +36,7 @@ async function walkFiles(absDir: string, relDir: string): Promise<string[]> {
 // gitignore-aware: tracked files plus untracked-but-not-ignored files, via `git ls-files
 // --cached --others --exclude-standard -z` (async, off the event loop — the exact `execFileAsync`
 // pattern `changedPaths` uses in `git-status.ts`). Falls back to an async recursive walk (also
-// off the event loop) applying the file tree's own default excludes when `root` is not inside a
+// off the event loop) applying the file navigator's own default excludes when `root` is not inside a
 // git repository or the git invocation fails for any other reason. Directories are never
 // included; every path is relative to `root`.
 export async function listProjectFiles(root: string): Promise<string[]> {

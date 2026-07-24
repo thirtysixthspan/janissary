@@ -40,5 +40,5 @@ monitor in the reporting section.
 
 A focused file navigator tab captures arrow keys, Home/End, PageUp/PageDown, Enter, Space, and printable
 characters (type-ahead) for its own tree navigation instead of the bindings above — see File Navigator Tab.
-Shift+Tab is intercepted ahead of that file-tree capture and ahead of a focused harness terminal, so
+Shift+Tab is intercepted ahead of that file-navigator capture and ahead of a focused harness terminal, so
 section navigation still escapes them.

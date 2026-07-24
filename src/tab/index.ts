@@ -56,7 +56,7 @@ export const makeHarnessTab = (label: string, dotColor: string, number: number, 
   view: 'harness', title: label, harness,
 });
 
-// A file tree view tab (opened via `files [path]`). Shows a directory tree rooted at `files.root`.
+// A file navigator view tab (opened via `files [path]`). Shows a directory tree rooted at `files.root`.
 export const makeFilesTab = (label: string, dotColor: string, number: number, group: number, groupColor: string, files: FileNavigatorView): Tab => ({
   ...makeTab(label, dotColor, number, [], [], undefined, group, groupColor),
   view: 'files',
@@ -66,7 +66,7 @@ export const makeFilesTab = (label: string, dotColor: string, number: number, gr
 
 // A notifications view tab (opened via `notifications`). A singleton, view-only feed whose body is
 // the standard transcript fed by its own `log`; it takes no typed input. Live and in-memory like
-// the file tree tab — never persisted, never restored on `--relaunch`.
+// the file navigator tab — never persisted, never restored on `--relaunch`.
 export const makeNotificationsTab = (label: string, dotColor: string, number: number, group: number, groupColor: string): Tab => ({
   ...makeTab(label, dotColor, number, [], [], undefined, group, groupColor),
   view: 'notifications',

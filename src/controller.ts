@@ -175,7 +175,7 @@ export class Controller {
     return fileNavigatorRpc.redoFileNavigatorItem(this.managers, index, overwrite);
   }
 
-  // Dock/undock any dockable tab (file tree or notifications). The mechanism is view-agnostic —
+  // Dock/undock any dockable tab (file navigator or notifications). The mechanism is view-agnostic —
   // `TabManager.setDock` operates on any tab index — so both kinds share this one handler.
   setDock(index: number, dock: 'left' | 'right' | null): void {
     this.managers.tab.setDock(index, dock);

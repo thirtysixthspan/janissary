@@ -1,6 +1,6 @@
 import type { FileNavigatorRow } from '@shared/protocol';
 
-// The result of a keydown on the file tree: the row that should now be selected, plus an
+// The result of a keydown on the file navigator: the row that should now be selected, plus an
 // optional action to perform (toggle a directory, or open/edit a file). Pure — no DOM — so it's
 // unit-testable without rendering anything.
 export type FileNavigatorKeyOutcome = {
@@ -49,7 +49,7 @@ function onActivate(rows: FileNavigatorRow[], index: number, shiftKey: boolean):
   return { selection: row.path, action: { type: shiftKey ? 'edit' : 'open', path: row.path } };
 }
 
-// ARIA APG treeview keyboard pattern (VS Code-aligned) — see spec/file-tree-tab.md.
+// ARIA APG treeview keyboard pattern (VS Code-aligned) — see spec/file-navigator-tab.md.
 export function handleFileNavigatorKey(
   rows: FileNavigatorRow[],
   selected: string | null,
