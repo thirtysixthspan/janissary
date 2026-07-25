@@ -9,10 +9,10 @@ import { trimAndScaleSprite } from "./sprite-trim";
 // used facings into public/agents/ when the config loads, so `docs:dev` and `docs:build` both
 // serve them at /agents/<name>.png without committing a second copy of the binaries
 // (public/agents/ is gitignored). Each PNG is trimmed to the figure (dropping the source's
-// transparent padding, so wrapped text sits close) and upscaled 2x with the pixels kept sharp;
+// transparent padding, so wrapped text sits close) with the pixels kept sharp;
 // pages show them at this natural size.
 const FACINGS = ["south", "south-east", "south-west"];
-const SPRITE_SCALE = 2;
+const SPRITE_SCALE = 1;
 
 const pkg = JSON.parse(
   readFileSync(path.resolve(fileURLToPath(import.meta.url), "..", "..", "..", "package.json"), "utf-8"),
@@ -25,7 +25,6 @@ function copyAgentImages() {
   const target = path.join(docsRoot, "public", "agents");
   mkdirSync(target, { recursive: true });
   for (const character of readdirSync(source)) {
-    if (character === "idris") continue;
     const characterDir = path.join(source, character);
     if (!statSync(characterDir).isDirectory()) continue;
     for (const facing of FACINGS) {

@@ -1,6 +1,6 @@
 # Design principles
 
-<img class="agent-float" src="/agents/aslan-south-east.png" alt="" />
+<img class="agent-float" src="/agents/aslan-south-west.png" alt="" />
 
 Janissary is built around a small set of tenets. They explain why the app looks the way it does, and why some things it deliberately doesn't do.
 
@@ -10,7 +10,7 @@ Janissary supports the work you're already doing rather than prescribing a workf
 
 ## Integrated agents
 
-<img class="agent-float left" src="/agents/bilal-south-west.png" alt="" />
+<img class="agent-float left" src="/agents/bilal-south-east.png" alt="" />
 
 Agents aren't a separate mode bolted onto a terminal — they're tabs like any other, sharing the same command bar, [tab-completion](/user-documentation/command-bar/tab-completion), and [history](/user-documentation/command-bar/history) as your shell tabs. You work alongside them in the same interface you already use.
 

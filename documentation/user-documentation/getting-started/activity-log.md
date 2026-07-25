@@ -4,7 +4,7 @@ Janissary saves everything that happens in every tab to a plain JSON log under `
 
 ## Where the log lives
 
-<img class="agent-float" src="/agents/dogan-south-east.png" alt="" />
+<img class="agent-float" src="/agents/dogan-south-west.png" alt="" />
 
 Each day gets its own file, named for the local calendar date:
 
@@ -32,7 +32,7 @@ Command input and its resulting output are logged as separate lines, so you can 
 
 ## Retention
 
-<img class="agent-float left" src="/agents/ekrem-south-west.png" alt="" />
+<img class="agent-float left" src="/agents/ekrem-south-east.png" alt="" />
 
 The log is never cleared or compacted. Daily files accumulate under `.janissary/log/` until you remove them yourself.
 

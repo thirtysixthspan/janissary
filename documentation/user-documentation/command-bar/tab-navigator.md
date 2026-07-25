@@ -1,6 +1,6 @@
 # Tab navigator
 
-<img class="agent-float" src="/agents/hamza-south-east.png" alt="" />
+<img class="agent-float" src="/agents/hamza-south-west.png" alt="" />
 
 With several tabs open, `Ctrl+G` (or the `nav` command) jumps straight to any of them by typing part of its label or number — no need to click through the tab strip or step through `Shift+←`/`Shift+→` one at a time.
 

@@ -1,6 +1,6 @@
 # Tab completion
 
-<img class="agent-float" src="/agents/ahmed-south-east.png" alt="" />
+<img class="agent-float" src="/agents/ahmed-south-west.png" alt="" />
 
 Press `Tab` to complete the token just before the cursor. One match replaces the token outright — with a trailing `/` for a directory or a space for a file. Several matches fill in their longest common prefix and list the candidates above the command bar; no match does nothing.
 

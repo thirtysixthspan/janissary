@@ -4,7 +4,7 @@ Decorative pixel-art Janissary characters appear throughout the user documentati
 
 ## Source images
 
-Agent character images live in `agent-images/` at the repo root. Each character has a subdirectory containing one or more character states, each with eight directional rotations. The VitePress build config (`documentation/.vitepress/config.mts`) copies the used facings into `documentation/public/agents/` at build time, trimmed and scaled — that directory is gitignored and must not be committed. The current documentation roster is `ahmed`, `aslan`, `bilal`, `cavus`, `demir`, `dogan`, `ekrem`, `hamza`, `mahir`, `orhan`, and `selim`.
+Agent character images live in `agent-images/` at the repo root. Each character has a subdirectory containing one or more character states, each with eight directional rotations. The VitePress build config (`documentation/.vitepress/config.mts`) copies the used facings into `documentation/public/agents/` at build time, trimmed and scaled — that directory is gitignored and must not be committed. The documentation roster is all seventeen characters in `agent-images/`: `ahmed`, `aslan`, `bilal`, `cavus`, `demir`, `dogan`, `ekrem`, `fariz`, `hakim`, `hamza`, `idris`, `mahir`, `malik`, `orhan`, `selim`, `tahir`, and `yusuf`.
 
 ## Allowed facings
 
@@ -22,7 +22,7 @@ The `north`, `north-east`, and `north-west` facings (showing the character's bac
 
 ## Characters used
 
-Only the eleven roster characters listed above (`ahmed`, `aslan`, `bilal`, `cavus`, `demir`, `dogan`, `ekrem`, `hamza`, `mahir`, `orhan`, `selim`) are used as inline sprites. `fariz`, `hakim`, `idris`, `malik`, `tahir`, and `yusuf` exist in `agent-images/` but are used elsewhere (e.g. game sprites), not in documentation. The animated `archer-firing.gif` must not appear anywhere in the documentation.
+All seventeen roster characters listed above are used as inline sprites. The animated `archer-firing.gif` must not appear anywhere in the documentation.
 
 ## Placement rules
 
@@ -65,7 +65,7 @@ Use the `left` class to float a character to the left instead of the default rig
 
 ### Vary characters across pages
 
-Don't use the same character on consecutive pages in the sidebar order when you can avoid it. Spread the eleven roster characters across the documentation so the reader sees variety.
+Don't use the same character on consecutive pages in the sidebar order when you can avoid it. Spread the seventeen roster characters across the documentation so the reader sees variety.
 
 ## Adding or changing a character
 

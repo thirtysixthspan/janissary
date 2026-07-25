@@ -1,6 +1,6 @@
 # License
 
-<img class="agent-float" src="/agents/hamza-south.png" alt="" />
+<img class="agent-float" src="/agents/hakim-south.png" alt="" />
 
 Janissary is free to use under the **[PolyForm Noncommercial License](https://polyformproject.org/licenses/noncommercial/1.0.0)** for any noncommercial purpose — personal use, research, education, hobby projects, nonprofits, and government institutions.
 

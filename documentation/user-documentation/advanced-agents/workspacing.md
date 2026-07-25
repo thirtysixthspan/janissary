@@ -1,6 +1,6 @@
 # Workspacing
 
-<img class="agent-float" src="/agents/bilal-south-west.png" alt="" />
+<img class="agent-float" src="/agents/tahir-south-west.png" alt="" />
 
 A workspace is a disposable, isolated clone of your repository that an agent or harness works in instead of the project itself. It exists so you can let an AI agent loose on your code without betting the repo — or your machine — on its judgment: the agent gets a full, real checkout it can build, test, and commit in, while the workspace boundary decides what it can't touch.
 

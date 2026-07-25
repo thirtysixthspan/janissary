@@ -1,6 +1,6 @@
 # Installing
 
-<img class="agent-float" src="/agents/demir-south-east.png" alt="" />
+<img class="agent-float" src="/agents/demir-south-west.png" alt="" />
 
 ## Prerequisites
 
@@ -21,7 +21,7 @@ npm install -g --allow-scripts=janissary,node-pty,fsevents janissary
 
 npm 12+ blocks install scripts from dependencies by default. `janissary` and its native dependencies (`node-pty`, `fsevents`) need their `postinstall` scripts to run — they fix native binary permissions after install — so `--allow-scripts` allows them explicitly.
 
-<img class="agent-float left" src="/agents/dogan-south-west.png" alt="" />
+<img class="agent-float left" src="/agents/dogan-south-east.png" alt="" />
 
 ## Installing the browser automation engine
 

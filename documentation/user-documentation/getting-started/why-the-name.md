@@ -1,6 +1,6 @@
 # Why the name "Janissary"?
 
-<img class="agent-float" src="/agents/cavus-south.png" alt="" />
+<img class="agent-float" src="/agents/idris-south.png" alt="" />
 
 The name is a deliberate metaphor, not a random pick. It's worth knowing the history behind it, both for what it captures well and for what it leaves behind.
 

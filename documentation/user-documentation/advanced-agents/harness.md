@@ -94,7 +94,7 @@ Wrapping the whole launch in a [`schedule`](/user-documentation/automation/sched
 
 ## Lifecycle
 
-<img class="agent-float" src="/agents/aslan-south-east.png" alt="" />
+<img class="agent-float" src="/agents/aslan-south-west.png" alt="" />
 
 The tab lives exactly as long as the harness process. When the harness exits — quitting normally, crashing, or the binary not being found — the tab closes with it, and its on-screen scrollback goes with it. The full session is preserved in a recording file, though (see below). The × button and `close` end it the same way. Harness tabs aren't restored by `janus --relaunch`; each launch starts fresh. If a harness tab is the last tab standing, its exit quits the app.
 

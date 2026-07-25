@@ -1,6 +1,6 @@
 # Tab groups
 
-<img class="agent-float" src="/agents/aslan-south.png" alt="" />
+<img class="agent-float" src="/agents/fariz-south.png" alt="" />
 
 Related tabs stay together as a group, drawn as a colored band along the top of every member tab. The band is the same color and full strength on every member, active or not, so a group reads as one connected run in the strip.
 

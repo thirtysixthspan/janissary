@@ -12,7 +12,7 @@ The new tab is focused as soon as it's created. See [Tabs](/user-documentation/g
 
 ## Names
 
-<img class="agent-float" src="/agents/bilal-south-east.png" alt="" />
+<img class="agent-float" src="/agents/bilal-south-west.png" alt="" />
 
 Agent names are always lowercased and must be unique among open tabs — `agent bilal` while a `bilal` tab exists prints `Agent "<name>" is already active.` and creates nothing.
 

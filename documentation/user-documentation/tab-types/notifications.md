@@ -50,7 +50,7 @@ A notification only fires for a **background** tab — the tab you're currently 
 
 ## Docking to a sidebar
 
-<img class="agent-float" src="/agents/orhan-south-east.png" alt="" />
+<img class="agent-float" src="/agents/orhan-south-west.png" alt="" />
 
 The notifications feed can sit in the central tab strip or dock into the left or right sidebar, exactly like the [file navigator](/user-documentation/tab-types/file-navigator). `notifications left` and `notifications right` open or move it into that sidebar; bare `notifications` brings a docked feed back to center and focuses it.
 

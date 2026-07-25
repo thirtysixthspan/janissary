@@ -15,7 +15,7 @@ Only `http` and `https` addresses can be embedded; anything else (`javascript:`,
 
 ## Viewing, not driving
 
-<img class="agent-float" src="/agents/dogan-south-east.png" alt="" />
+<img class="agent-float" src="/agents/dogan-south-west.png" alt="" />
 
 A page tab only displays the site. The app doesn't script or read the embedded page's contents — whatever you can do inside it, you do by hand. (Programmatic browsing is a different feature: the `browser` command.) The metadata header's back, forward, and reload buttons are the one exception: they move the embedded page through its own history or reload it, without reading or scripting anything inside it. Double-clicking the address in the metadata header lets you edit it directly; press Enter to load the new address into the same tab, or Escape to cancel.
 
@@ -23,7 +23,7 @@ Many sites send headers refusing to be embedded. When the app runs in its own ma
 
 ## Page numbers and labels
 
-<img class="agent-float left" src="/agents/ekrem-south-west.png" alt="" />
+<img class="agent-float left" src="/agents/ekrem-south-east.png" alt="" />
 
 Each page tab is numbered `1`, `2`, `3`, … — always the smallest free number, so open pages count up from 1 without gaps, and a closed page's number is reused. That number isn't shown in the strip; it's only how `close page <n>` identifies a page tab. The strip label itself is just the root domain, with any `www.` dropped (`docs.example.com` labels as `example.com`). The label and the address shown in the metadata header follow you as you navigate inside the embedded page — click through to another page on the same site (or a different one) and both update to match, as long as the app is running in its own managed browser.
 
