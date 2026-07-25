@@ -5,11 +5,12 @@ import { defineConfig } from "vitepress";
 import { trimAndScaleSprite } from "./sprite-trim";
 
 // Decorative agent sprites floated in the doc pages (see .vitepress/theme/custom.css). They
-// live in the repo's agent-images/ directory; copy the used facings into public/agents/ when
-// the config loads, so `docs:dev` and `docs:build` both serve them at /agents/<name>.png
-// without committing a second copy of the binaries (public/agents/ is gitignored). Each PNG is
-// trimmed to the figure (dropping the source's transparent padding, so wrapped text sits close)
-// and upscaled 2x with the pixels kept sharp; pages show them at this natural size.
+// live directly in each repo's agent-images/<character>/ directory as <facing>.png; copy the
+// used facings into public/agents/ when the config loads, so `docs:dev` and `docs:build` both
+// serve them at /agents/<name>.png without committing a second copy of the binaries
+// (public/agents/ is gitignored). Each PNG is trimmed to the figure (dropping the source's
+// transparent padding, so wrapped text sits close) and upscaled 2x with the pixels kept sharp;
+// pages show them at this natural size.
 const FACINGS = ["south", "south-east", "south-west"];
 const SPRITE_SCALE = 2;
 
@@ -27,12 +28,8 @@ function copyAgentImages() {
     if (character === "idris") continue;
     const characterDir = path.join(source, character);
     if (!statSync(characterDir).isDirectory()) continue;
-    const sheet = readdirSync(characterDir).find((entry) =>
-      statSync(path.join(characterDir, entry)).isDirectory(),
-    );
-    if (!sheet) continue;
     for (const facing of FACINGS) {
-      const rotation = path.join(characterDir, sheet, "rotations", `${facing}.png`);
+      const rotation = path.join(characterDir, `${facing}.png`);
       if (!existsSync(rotation)) continue;
       const sprite = trimAndScaleSprite(readFileSync(rotation), SPRITE_SCALE);
       writeFileSync(path.join(target, `${character}-${facing}.png`), sprite);
