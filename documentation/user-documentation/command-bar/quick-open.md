@@ -1,7 +1,6 @@
 # Quick open
-<img class="agent-float" src="/agents/mahir-south-east.png" alt="" />
 
-<img class="agent-float left" src="/agents/orhan-south-west.png" alt="" />
+<img class="agent-float" src="/agents/mahir-south-west.png" alt="" />
 
 `Cmd+P` jumps to any file in the project by typing a few characters of its name, without browsing the [file navigator](/user-documentation/tab-types/file-navigator) tree.
 
@@ -12,6 +11,8 @@ Press `Cmd+P`. The Quick Open window floats above the command bar with its own t
 The searchable set is every file under the directory the app was launched from. The list respects `.gitignore`, so `node_modules` and anything else your project ignores never appears. The window opens at once even for a large project; while the file list is still loading, the body shows `Searching…` and the input stays live.
 
 ## Filter the list
+
+<img class="agent-float left" src="/agents/orhan-south.png" alt="" />
 
 Typing narrows the list with a case-insensitive fuzzy match against each file's project-relative path. The characters you type must appear in the path in order, but not next to each other: typing `wsprof` can surface `web/src/ProfilePicker.tsx`.
 

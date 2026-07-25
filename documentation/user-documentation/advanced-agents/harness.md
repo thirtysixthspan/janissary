@@ -1,6 +1,6 @@
 # Harness tabs
 
-<img class="agent-float" src="/agents/demir-south-east.png" alt="" />
+<img class="agent-float" src="/agents/selim-south-west.png" alt="" />
 
 `harness <name>` runs an AI coding harness — `claude`, `opencode`, or `codex` — as a full-tab terminal:
 
@@ -22,7 +22,7 @@ Tab reordering (`Ctrl+←/→`) isn't available while a harness has focus — sw
 
 ## Labels
 
-<img class="agent-float left" src="/agents/dogan-south-west.png" alt="" />
+<img class="agent-float left" src="/agents/ahmed-south.png" alt="" />
 
 The tab is labeled with the harness name by default; a second `harness claude` becomes `claude-2`, and so on. `as <label>` picks your own label instead (collisions get the same `-2` suffix):
 
@@ -93,6 +93,8 @@ Everything after the standalone `with` keyword is the prompt, taken verbatim —
 Wrapping the whole launch in a [`schedule`](/user-documentation/automation/scheduling) command runs it — fresh harness plus prompt — at a future time: `schedule deploy at 5pm harness claude with fix the failing tests`.
 
 ## Lifecycle
+
+<img class="agent-float" src="/agents/aslan-south-east.png" alt="" />
 
 The tab lives exactly as long as the harness process. When the harness exits — quitting normally, crashing, or the binary not being found — the tab closes with it, and its on-screen scrollback goes with it. The full session is preserved in a recording file, though (see below). The × button and `close` end it the same way. Harness tabs aren't restored by `janus --relaunch`; each launch starts fresh. If a harness tab is the last tab standing, its exit quits the app.
 

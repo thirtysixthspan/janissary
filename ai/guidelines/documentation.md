@@ -20,19 +20,19 @@ Only three facings are used in documentation:
 
 The `north`, `north-east`, and `north-west` facings (showing the character's back) are available in `agent-images/` but not used in documentation.
 
-## The archer
+## Characters used
 
-The animated `archer-firing.gif` is the landing-page hero image (`index.md` frontmatter). **The archer must not appear in documentation body pages.** Only the five named characters (malik, yusuf, fariz, hakim, tahir) are used as inline sprites. The idris character is not used in documentation.
+Only the eleven roster characters listed above (`ahmed`, `aslan`, `bilal`, `cavus`, `demir`, `dogan`, `ekrem`, `hamza`, `mahir`, `orhan`, `selim`) are used as inline sprites. `fariz`, `hakim`, `idris`, `malik`, `tahir`, and `yusuf` exist in `agent-images/` but are used elsewhere (e.g. game sprites), not in documentation. The animated `archer-firing.gif` must not appear anywhere in the documentation.
 
 ## Placement rules
 
 ### Count per page
 
-- **At least 2 characters** on every page, including short pages
+- **1 character** on short pages (under ~30 lines)
 - **2 characters** on medium pages (~30–50 lines)
 - **3 characters** on long pages (over ~50 lines)
 
-Never place more than 3 characters on a single page, regardless of length.
+Every page gets at least 1 character. Never place more than 3 characters on a single page, regardless of length.
 
 ### Neighboring content
 
@@ -43,6 +43,7 @@ A character sprite must be placed **only next to normal paragraph text or headin
 - Tables
 - Bullet or numbered lists
 - Blockquotes
+- A horizontal rule (`---`) immediately below it — the float can cross over the rule instead of resolving cleanly, so leave a plain paragraph or heading between a sprite and the next `---`
 
 The sprite floats into the body text, so it needs flowing prose beside it to wrap naturally. A character wedged against a table or code block creates an awkward gap.
 
@@ -64,7 +65,7 @@ Use the `left` class to float a character to the left instead of the default rig
 
 ### Vary characters across pages
 
-Don't use the same character on consecutive pages in the sidebar order when you can avoid it. Spread the five characters across the documentation so the reader sees variety.
+Don't use the same character on consecutive pages in the sidebar order when you can avoid it. Spread the eleven roster characters across the documentation so the reader sees variety.
 
 ## Adding or changing a character
 
@@ -75,6 +76,6 @@ Don't use the same character on consecutive pages in the sidebar order when you 
 
 ## Build pipeline
 
-The `copyAgentImages()` function in `config.mts` runs at VitePress config load time. For each character directory under `agent-images/`, it finds the first subdirectory (the character state), then copies each facing listed in `FACINGS` through `trimAndScaleSprite()` (which crops transparent padding and upscales 2x) before writing the result to `public/agents/<name>-<facing>.png`. The animated `archer-firing.gif` is copied as-is without trimming.
+The `copyAgentImages()` function in `config.mts` runs at VitePress config load time. For each character directory under `agent-images/`, it finds the first subdirectory (the character state), then copies each facing listed in `FACINGS` through `trimAndScaleSprite()` (which crops transparent padding and upscales 2x) before writing the result to `public/agents/<name>-<facing>.png`.
 
 Run `npm run docs:dev` to preview changes locally, or `npm run docs:build` to verify the production build.

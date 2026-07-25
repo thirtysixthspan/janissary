@@ -1,6 +1,6 @@
 # Connections
 
-<img class="agent-float" src="/agents/orhan-south-east.png" alt="" />
+<img class="agent-float" src="/agents/mahir-south.png" alt="" />
 
 The `connection` command lists and closes the long-lived connections a tab holds: its shell, its ACP agent, its browser windows, plus the app-wide SQLite and SSH connections. Each connection is addressed as `<kind>:<id>`:
 
@@ -23,6 +23,8 @@ A bare `connection` prints a `Usage:` line.
 
 ## Listing connections
 
+<img class="agent-float left" src="/agents/orhan-south-east.png" alt="" />
+
 `connection list` prints one line per open connection for the current tab: its shell (`shell:bash`), its ACP agent (`acp:opencode`), its browser windows (`browser:w1`), every open ssh tab (`ssh:<destination>`, shown globally since ssh tabs have no command bar of their own), and every open SQLite connection (`sqlite:<name>`, also global). With nothing open it prints `No open connections.`
 
 ## Closing a connection
@@ -39,7 +41,7 @@ Each case reports `Closed connection <kind>:<id>.` on success, or `No open conne
 
 ## The connections window
 
-<img class="agent-float left" src="/agents/selim-south-west.png" alt="" />
+<img class="agent-float" src="/agents/selim-south-west.png" alt="" />
 
 A floating `connections` panel lists the active tab's live connections: its shell and working directory (`bash:~/dir`), its ACP agent, each browser window with its mode, and every SQLite database the tab has queried. Over an ssh tab, it shows only that tab's own `ssh:<destination>` row.
 

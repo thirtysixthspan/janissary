@@ -1,5 +1,7 @@
 # Scheduling
 
+<img class="agent-float" src="/agents/orhan-south.png" alt="" />
+
 `schedule` runs a command later — once, or on a repeating schedule:
 
 ```
@@ -40,7 +42,7 @@ schedule clear             remove them all
 
 ## Scheduling into another tab
 
-<img class="agent-float" src="/agents/cavus-south-east.png" alt="" />
+<img class="agent-float left" src="/agents/selim-south-east.png" alt="" />
 
 An `in <tab>` clause right after the name attaches the timer to a different tab:
 
@@ -54,7 +56,7 @@ The timer then belongs to the target tab — it shows in *that* tab's schedule w
 
 ## How firing behaves
 
-<img class="agent-float left" src="/agents/demir-south-west.png" alt="" />
+<img class="agent-float" src="/agents/ahmed-south-west.png" alt="" />
 
 In an agent tab, the command is dispatched as if typed. If the agent is busy when the timer fires, the command joins its [command queue](/user-documentation/command-bar/queue) instead of running right away — it runs once the agent is free, same as anything else queued there. In a [harness tab](/user-documentation/advanced-agents/harness), the command is typed into the harness as a line of input — and if the harness isn't accepting input yet, the timer stays due and retries until it lands. After firing, a one-shot timer is removed; a recurring one advances to its next run.
 

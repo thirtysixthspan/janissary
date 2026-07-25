@@ -1,4 +1,4 @@
-import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitepress";
@@ -38,8 +38,6 @@ function copyAgentImages() {
       writeFileSync(path.join(target, `${character}-${facing}.png`), sprite);
     }
   }
-  const animated = path.join(source, "archer-firing.gif");
-  if (existsSync(animated)) cpSync(animated, path.join(target, "archer-firing.gif"));
 }
 
 copyAgentImages();

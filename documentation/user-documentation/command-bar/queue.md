@@ -1,10 +1,9 @@
 # Command queue
 
-<img class="agent-float" src="/agents/ekrem-south-east.png" alt="" />
+<img class="agent-float" src="/agents/bilal-south-west.png" alt="" />
 
 When an agent tab is busy, anything you submit to it doesn't get lost — it's queued and runs automatically once the agent is free. You can also queue a command for a *different* agent with `queue <agent> <command>`.
 
-<img class="agent-float left" src="/agents/hamza-south-west.png" alt="" />
 ## Queue while busy
 
 Submit as many commands as you like while a tab's agent is working. Each one joins that tab's queue and runs, in order, one at a time, as soon as the agent finishes what it's doing.
@@ -12,6 +11,8 @@ Submit as many commands as you like while a tab's agent is working. Each one joi
 You'll always know a tab is busy and queuing: its command-line prompt reads `queue ❯` instead of the usual `❯`, and the dot beside it blinks — the same blink you already see on that tab in the tab strip.
 
 ## Queue for another agent
+
+<img class="agent-float left" src="/agents/cavus-south.png" alt="" />
 
 `queue <agent> <command>` appends a command to another agent's queue, whether or not you're on that agent's tab:
 

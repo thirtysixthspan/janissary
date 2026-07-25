@@ -4,6 +4,8 @@ Janissary solves a problem that existing tools were never designed to solve: **m
 
 To understand what makes Janissary different, it helps to understand the categories of tools that currently exist—and what gap Janissary fills.
 
+<img class="agent-float" src="/agents/bilal-south.png" alt="" />
+
 ## The Tool Landscape
 
 ### AI Code Editors
@@ -50,13 +52,13 @@ These are frameworks for defining workflows where multiple specialized agents wo
 
 ## The Gap: Developer-First Multi-Agent Orchestration
 
+<img class="agent-float left" src="/agents/dogan-south-east.png" alt="" />
+
 All of these categories solve real problems. But they all miss something:
 
 **You want to run multiple AI agents in parallel, interactively, with the ability to schedule them, have them message each other, and manage isolated workspaces—without leaving a unified interface.**
 
 That's the gap Janissary fills.
-
-<img class="agent-float" src="/agents/dogan-south-east.png" alt="" />
 
 You might:
 - Run an agent that writes tests while another refactors a module
@@ -71,7 +73,6 @@ Janissary is built from the ground up for this: **tab-based, developer-first, wi
 
 ---
 
-<img class="agent-float left" src="/agents/ekrem-south-west.png" alt="" />
 ## Who Is This For?
 
 ### You're a good fit if you:
@@ -116,6 +117,8 @@ Run commands at specific times, with Janissary managing the timing and persisten
 
 ### Inter-Agent Messaging
 Agents can message each other across tabs. One agent can wait for another to finish, then run based on the results. This enables complex workflows without leaving Janissary.
+
+<img class="agent-float" src="/agents/ekrem-south-west.png" alt="" />
 
 ### Profiles for Reproducibility
 Define a multi-tab setup once, save it as a profile, and recreate it anytime. Perfect for team workflows or personal habits.

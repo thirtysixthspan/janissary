@@ -1,6 +1,6 @@
 # Monitoring with personas
 
-<img class="agent-float" src="/agents/selim-south-east.png" alt="" />
+<img class="agent-float" src="/agents/aslan-south.png" alt="" />
 
 `monitor` starts a persona-driven AI session that watches tab activity and surfaces suggestions, either inline in the tab you started it from or in a dedicated reporting tab:
 
@@ -22,7 +22,7 @@ A target is a tab label or `group:<n>`. A tab may also be named by its display a
 
 ## The reporting tab
 
-<img class="agent-float left" src="/agents/ahmed-south-west.png" alt="" />
+<img class="agent-float left" src="/agents/bilal-south-east.png" alt="" />
 
 A reporting-mode monitor's tab carries a metadata line above its suggestion feed: the persona name, the tab(s)/group(s) it watches, and the total size sent to and received from its session so far (shown in bytes/kilobytes/megabytes). Two buttons sit at the right of that line:
 
@@ -50,6 +50,8 @@ Group membership is re-checked continuously, so a tab that joins a monitored gro
 New activity from every target is buffered and sent to the monitor's session as a single batch prompt every 30 seconds. Nothing is sent when the buffer is empty or a previous prompt is still in flight.
 
 ## Suggestions and summaries
+
+<img class="agent-float" src="/agents/cavus-south-west.png" alt="" />
 
 A monitor's reply is parsed for two possible marker lines: `[SUMMARY]:` recaps activity with no action attached, and `[SUGGESTION]:` offers something actionable, optionally paired with a `[COMMAND]:` line. A reply with neither marker (like a bare `OK`) delivers nothing.
 

@@ -1,6 +1,6 @@
 # Profiles
 
-<img class="agent-float" src="/agents/aslan-south-east.png" alt="" />
+<img class="agent-float" src="/agents/demir-south.png" alt="" />
 
 A profile is a saved, named set of agents and harnesses you can relaunch as one unit — a working setup for a recurring job, recreated with a single command:
 
@@ -20,7 +20,7 @@ Bare `profile launch`, with no name, opens a picker listing every profile in you
 
 ## Writing a profile
 
-<img class="agent-float left" src="/agents/bilal-south-west.png" alt="" />
+<img class="agent-float left" src="/agents/dogan-south-east.png" alt="" />
 
 Profiles live in a `profiles/` directory in your project — plain files, meant to be committed and shared. Each profile is a single JSON file (dasherized, like `writing-code.json`) with an `agents` array and a `harnesses` array; every entry carries its own `name`, which becomes the tab's label:
 
@@ -69,6 +69,8 @@ Each entry has a required `path`, optional resolving tab `in`, optional cursor `
 A harness entry's `run` and `schedule` live in memory only — closing the tab or quitting ends them. That's the point of the profile: the file is the source of truth, and every launch rebuilds the setup from it.
 
 ## Relaunching
+
+<img class="agent-float" src="/agents/ekrem-south-west.png" alt="" />
 
 Launching a profile that's already running resets it: any open tab whose label matches a profile entry is closed first — processes killed, schedules dropped, workspaces removed — then everything opens fresh, with schedules re-based to now and new clones where asked. The only tab spared is the one you ran `profile launch` from; if the profile has an entry by that name, it's reported and skipped so the launch report has somewhere to land.
 

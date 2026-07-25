@@ -1,5 +1,7 @@
 # Image viewer
 
+<img class="agent-float" src="/agents/aslan-south.png" alt="" />
+
 `open <image>` shows an image in its own tab — all the common formats work: PNG, JPEG, GIF, WebP, BMP, SVG, AVIF, ICO.
 
 ```
@@ -24,8 +26,7 @@ The tab shows a compact header with the file's name, size, and location, and the
 
 ## Lifecycle
 
-<img class="agent-float" src="/agents/ekrem-south-east.png" alt="" />
-<img class="agent-float left" src="/agents/hamza-south-west.png" alt="" />
+<img class="agent-float left" src="/agents/bilal-south-east.png" alt="" />
 
 An image tab is a live view, not saved state: zoom and pan reset when you switch away to another image tab, and image tabs are not restored by `janus --relaunch`. Closing one — via its × button or `close` — just removes the view; the file is untouched. Only files you've explicitly opened are ever served to the viewer.
 

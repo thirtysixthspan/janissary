@@ -1,5 +1,7 @@
 # Editor
 
+<img class="agent-float" src="/agents/hamza-south.png" alt="" />
+
 `edit <file>` opens a plain-text editor in its own tab:
 
 ```
@@ -25,7 +27,7 @@ A plain click on the header (the file name, size, or location) puts focus straig
 
 ## Saving
 
-<img class="agent-float" src="/agents/bilal-south-east.png" alt="" />
+<img class="agent-float left" src="/agents/mahir-south-east.png" alt="" />
 
 Click the save button or press `Ctrl+S` / `Cmd+S` to write the buffer to disk. On success a brief
 "Saved" flash appears in the header; on failure the error is shown there and the save button stays
@@ -53,7 +55,7 @@ As you type, the editor also keeps a transient, unsaved copy of your buffer sync
 
 ## Syntax highlighting
 
-<img class="agent-float left" src="/agents/cavus-south-west.png" alt="" />
+<img class="agent-float" src="/agents/orhan-south-west.png" alt="" />
 
 Markdown, JavaScript, TypeScript, and JSON files are colored by syntax, chosen by file extension; anything else renders as plain text. Highlighting keeps up with your edits without slowing typing down, and is skipped for very large buffers (over 10,000 lines or 1 MB) so they stay responsive.
 

@@ -41,13 +41,15 @@ Agent tabs also carry a 📋 button (tooltip "Open transcript") that harness tab
 
 Text in metadata rows and headers can be selected with the mouse and copied, including paths and other details shown by agent, file, editor, image, Markdown, page, and monitor tabs.
 
+<img class="agent-float" src="/agents/ahmed-south-west.png" alt="" />
+
 ## Switching and reordering
 
 `Shift+←` / `Shift+→` cycle through tabs; the `next` command switches to the next tab. `Ctrl+←` / `Ctrl+→` move the current tab one position left or right — within its own group only (see [Tab groups](/user-documentation/getting-started/groups)). With several tabs open, the [tab navigator](/user-documentation/command-bar/tab-navigator) (`Ctrl+G`) jumps straight to any of them by typing part of its label or number.
 
 ## Renaming a tab
 
-<img class="agent-float" src="/agents/cavus-south-east.png" alt="" />
+<img class="agent-float" src="/agents/orhan-south.png" alt="" />
 
 `rename <newname>` gives the current tab a display alias — a name shown in the strip in place of its real label. Bare `rename` clears the alias. You can also double-click the label of the active tab and type a new name in place; Enter commits, Escape cancels.
 
@@ -78,7 +80,7 @@ Paths outside the project but under your home directory shorten to `~`. This is 
 
 ## Reading the transcript
 
-<img class="agent-float left" src="/agents/demir-south-west.png" alt="" />
+<img class="agent-float left" src="/agents/selim-south-east.png" alt="" />
 
 A path and line number in output, like `src/foo.ts:42`, is a clickable link. Click it to open that file in an editor tab with the cursor on that line. This works in your own shell output and in an agent's output alike.
 

@@ -1,5 +1,7 @@
 # Application commands
 
+<img class="agent-float" src="/agents/mahir-south-east.png" alt="" />
+
 These commands manage the app itself — the current tab's transcript and name, the syntax theme, and quitting. For creating tabs see [Agents](/user-documentation/getting-started/agents); for opening files and pages see [Opening files and pages](/user-documentation/tab-types/opening-files).
 
 | Command | What it does |
@@ -26,13 +28,13 @@ Embedded web pages and ANSI-colored shell output are deliberately outside the th
 
 ## `syntax theme`
 
-<img class="agent-float" src="/agents/hamza-south-east.png" alt="" />
+<img class="agent-float left" src="/agents/orhan-south-west.png" alt="" />
 
 `syntax theme <name>` sets the syntax-highlighting theme used by every open [editor tab](/user-documentation/tab-types/editor), and persists it so it survives a restart. Names match case-insensitively. An unrecognized name shows an error listing the available themes — which is also a quick way to see what's on offer. Bare `syntax theme` opens a picker overlay instead: arrows move, `Return` picks, `Escape` closes.
 
 ## `quit` and the confirmation dialog
 
-<img class="agent-float left" src="/agents/mahir-south-west.png" alt="" />
+<img class="agent-float" src="/agents/selim-south.png" alt="" />
 
 `quit` is the only command that exits the whole app, and it always asks first: a dialog reading "Are you sure you want to quit?" with **Quit (y)** and **Cancel (n)** buttons. **Cancel** is selected by default, so a stray `Enter` is safe. Press `y` to confirm or `n` / `Escape` to cancel; `←`/`→` move the selection. While the dialog is open it traps all other input — clicks outside it and other keys do nothing.
 

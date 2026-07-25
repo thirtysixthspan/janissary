@@ -1,11 +1,12 @@
 # Asking a persona for a change
 
-<img class="agent-float" src="/agents/ahmed-south-east.png" alt="" />
+<img class="agent-float" src="/agents/selim-south.png" alt="" />
 
 An editor tab can ask an AI persona for a change to the text it's editing and apply the answer inline, without leaving the buffer and without opening a [monitor](/user-documentation/automation/monitoring) reporting tab. It's a single-shot request fired directly from the editor, not the batched, continuously-watching flow a monitor runs — though both read the same live buffer.
 
-<img class="agent-float left" src="/agents/aslan-south-west.png" alt="" />
 ## Opening the query line
+
+<img class="agent-float left" src="/agents/ahmed-south-east.png" alt="" />
 
 Press `>` while your caret sits at the very start of an otherwise-empty line to open a request line, right there in the buffer:
 
@@ -42,6 +43,8 @@ A status pill at the end of the row tracks progress:
 Only one request can be in flight or awaiting resolution per editor tab at a time; sending another while one is pending is ignored until the first resolves.
 
 ## Reviewing proposed changes
+
+<img class="agent-float" src="/agents/aslan-south-west.png" alt="" />
 
 The persona is primed with the buffer's current content — including any unsaved edits, but never the query text itself — plus your request. It can propose one or more edits anywhere in the file, not just at the query's own location. Each proposed change previews inline immediately: removed lines are struck through, and inserted lines are highlighted with a `+` in place of a line number.
 

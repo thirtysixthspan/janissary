@@ -1,6 +1,6 @@
 # Product development workflow
 
-<img class="agent-float" src="/agents/dogan-south-east.png" alt="" />
+<img class="agent-float" src="/agents/hamza-south.png" alt="" />
 
 For creative work that runs over many sessions — building a product, writing a book, producing a series — a single prompt doesn't hold the whole project. You need somewhere to keep the list of things to do, a place to think through one of them before starting, and a record of what's actually true once it's done. This page describes a convention for that, built out of three plain-text pieces:
 
@@ -56,7 +56,7 @@ Together, the two answer different questions, from different sources: "what are 
 
 ## Driving the loop with task files
 
-<img class="agent-float left" src="/agents/ekrem-south-west.png" alt="" />
+<img class="agent-float left" src="/agents/mahir-south-east.png" alt="" />
 
 Each stage above is small enough to hand to an agent as a self-contained instruction file under `ai/tasks/`, opened without typing its path by hand through the [task picker](/user-documentation/command-bar/tasks) (`Ctrl+A`). A typical loop is four task files, each doing one stage and handing off to the next by moving a file between folders:
 
@@ -68,5 +68,7 @@ Each stage above is small enough to hand to an agent as a self-contained instruc
 Because each stage only reads and writes plain markdown files, none of this is specific to writing code — the same three-piece structure (backlog, plans, specs) works for any project made of discrete, plannable pieces: chapters, episodes, research questions, design assets. What changes between projects is the last step of "build it" — running tests versus proofreading a draft versus rendering an asset — not the shape of the loop around it.
 
 ## Why bother with the split
+
+<img class="agent-float" src="/agents/orhan-south-west.png" alt="" />
 
 Three separate places to write things down feels like overhead until a project runs long enough that you'd otherwise lose track of where an idea stands. The backlog answers "what's next"; a plan answers "what did we decide about this one thing"; a spec answers "what's actually true right now." Collapsing them into one file or one running conversation works for a single session — it stops working once the project outlives your memory of it, which is exactly when this structure starts paying for itself.

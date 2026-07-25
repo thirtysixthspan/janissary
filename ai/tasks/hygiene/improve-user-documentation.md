@@ -236,11 +236,13 @@ the ones violated most often:
 
 - Count by page length: 1 character under ~30 lines, 2 for ~30–50, 3 over ~50 — never more
   than 3.
-- Only the five named characters (malik, yusuf, fariz, hakim, tahir); never the archer or
-  idris. Only the `south`, `south-east`, and `south-west` facings.
+- Only the eleven roster characters (ahmed, aslan, bilal, cavus, demir, dogan, ekrem, hamza,
+  mahir, orhan, selim); never the archer or any of fariz, hakim, idris, malik, tahir, yusuf.
+  Only the `south`, `south-east`, and `south-west` facings.
 - Place a sprite only beside flowing prose or a heading — never adjacent to code blocks,
-  screenshots, tables, lists, or blockquotes. The tag sits on its own line with blank lines
-  around it: `<img class="agent-float" src="/agents/<name>-<facing>.png" alt="" />`.
+  screenshots, tables, lists, blockquotes, or immediately above a horizontal rule (`---`, which
+  the float can cross over). The tag sits on its own line with blank lines around it:
+  `<img class="agent-float" src="/agents/<name>-<facing>.png" alt="" />`.
 - Alternate sides on multi-sprite pages (`agent-float` floats right, `agent-float left` left),
   and vary the character from the sidebar-adjacent pages.
 

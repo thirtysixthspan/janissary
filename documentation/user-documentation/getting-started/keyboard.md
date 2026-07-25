@@ -1,5 +1,7 @@
 # Keyboard shortcuts
 
+<img class="agent-float" src="/agents/cavus-south-west.png" alt="" />
+
 All bindings work from the command bar in any agent tab.
 
 | Key | Action |
@@ -32,5 +34,4 @@ All bindings work from the command bar in any agent tab.
 
 Two tab types take keyboard input for themselves. A focused [file navigator](/user-documentation/tab-types/file-navigator) captures arrow keys, `Home`/`End`, `PageUp`/`PageDown`, `Enter`, `Space`, and typed characters for tree navigation. A [harness tab](/user-documentation/advanced-agents/harness) sends everything to the harness except `Shift+←`/`Shift+→`/`Cmd+Shift+[`/`Cmd+Shift+]`/`Shift+Tab`, which still switch tabs or move focus between sections.
 
-<img class="agent-float" src="/agents/mahir-south-east.png" alt="" />
-<img class="agent-float left" src="/agents/orhan-south-west.png" alt="" />
+<img class="agent-float left" src="/agents/demir-south.png" alt="" />
