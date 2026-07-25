@@ -1,28 +1,13 @@
 {
-  "group_id": null,
-  "states": [{
-    "character": {
-      "id": "d7b9b4be-e1f4-47d3-9a37-f9e9a4f0bd3b",
-      "name": "Full-body pixel-art agent reference sheet",
-      "prompt": "A historically grounded early-18th-century Ottoman Janissary town guard with a white felt börk, indigo kaftan, cream sash, period flintlock-style long gun, and yatagan.",
-      "size": { "width": 128, "height": 128 },
-      "template_id": "mannequin",
-      "directions": 8,
-      "view": "low top-down",
-      "created_at": "2026-07-24T00:00:00+00:00"
-    },
-    "folder": "Full-body_pixel-art_agent_reference_sheet",
-    "frames": { "rotations": {
-      "south": "Full-body_pixel-art_agent_reference_sheet/rotations/south.png",
-      "south-east": "Full-body_pixel-art_agent_reference_sheet/rotations/south-east.png",
-      "east": "Full-body_pixel-art_agent_reference_sheet/rotations/east.png",
-      "north-east": "Full-body_pixel-art_agent_reference_sheet/rotations/north-east.png",
-      "north": "Full-body_pixel-art_agent_reference_sheet/rotations/north.png",
-      "north-west": "Full-body_pixel-art_agent_reference_sheet/rotations/north-west.png",
-      "west": "Full-body_pixel-art_agent_reference_sheet/rotations/west.png",
-      "south-west": "Full-body_pixel-art_agent_reference_sheet/rotations/south-west.png"
-    }, "animations": {} }
-  }],
-  "export_version": "3.0",
-  "export_date": "2026-07-24T00:00:00+00:00"
+  "id": "d7b9b4be-e1f4-47d3-9a37-f9e9a4f0bd3b",
+  "name": "Full-body pixel-art agent reference sheet",
+  "prompt": "32x32 pixel art sprite of a single Janissary town guard of the early 18th century, standing at a relaxed watch, rendered across eight compass-direction rotations, isolated on a transparent background, no environment. Male, mid-30s, solid and settled in build, the softer physique of long garrison duty rather than active campaigning, olive skin, a well-kept mustache with clean-shaven chin, dark hair greying at the temples beneath a white felt börk kept neat for daily public duty, its brass kaşıklık holder polished from routine care though the plume has grown modest with age, reflecting the corps' drift from battlefield elite toward civic policing. Wearing an indigo kaftan of practical civilian-adjacent cut, a cream sash at the waist, dark şalvar trousers, plain leather boots. A period flintlock-pattern long gun is carried at the shoulder, a yatağan sheathed at the hip more for authority than for war. A string of prayer beads visible looped at his belt. Expression watchful but unhurried, the settled authority of a man who knows every merchant on his street by name. Bold, saturated period-appropriate color palette, thick clean black outlines for silhouette clarity at 32x32 resolution, minimal anti-aliasing, flattened simplified detail suited to the tiny canvas, no gradients, no soft shadows, consistent proportions across all eight rotations.",
+  "size": {
+    "width": 128,
+    "height": 128
+  },
+  "template_id": "mannequin",
+  "directions": 8,
+  "view": "low top-down",
+  "created_at": "2026-07-24T00:00:00+00:00"
 }

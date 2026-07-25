@@ -1,28 +1,13 @@
 {
-  "group_id": null,
-  "states": [{
-    "character": {
-      "id": "c4a4c7a7-2c6b-4ee2-80af-e95bbf9d4a26",
-      "name": "Full-body pixel-art agent reference sheet",
-      "prompt": "A historically grounded late-15th-century Ottoman Janissary archer with a white felt börk, crimson kaftan, blue sash, composite bow, quiver, and yatagan.",
-      "size": { "width": 128, "height": 128 },
-      "template_id": "mannequin",
-      "directions": 8,
-      "view": "low top-down",
-      "created_at": "2026-07-24T00:00:00+00:00"
-    },
-    "folder": "Full-body_pixel-art_agent_reference_sheet",
-    "frames": { "rotations": {
-      "south": "Full-body_pixel-art_agent_reference_sheet/rotations/south.png",
-      "south-east": "Full-body_pixel-art_agent_reference_sheet/rotations/south-east.png",
-      "east": "Full-body_pixel-art_agent_reference_sheet/rotations/east.png",
-      "north-east": "Full-body_pixel-art_agent_reference_sheet/rotations/north-east.png",
-      "north": "Full-body_pixel-art_agent_reference_sheet/rotations/north.png",
-      "north-west": "Full-body_pixel-art_agent_reference_sheet/rotations/north-west.png",
-      "west": "Full-body_pixel-art_agent_reference_sheet/rotations/west.png",
-      "south-west": "Full-body_pixel-art_agent_reference_sheet/rotations/south-west.png"
-    }, "animations": {} }
-  }],
-  "export_version": "3.0",
-  "export_date": "2026-07-24T00:00:00+00:00"
+  "id": "c4a4c7a7-2c6b-4ee2-80af-e95bbf9d4a26",
+  "name": "Full-body pixel-art agent reference sheet",
+  "prompt": "32x32 pixel art sprite of a single Janissary archer of the late 15th century, standing at ease, rendered across eight compass-direction rotations, isolated on a transparent background, no environment. Male, early 20s, slender wiry build not yet filled out by years of campaigning, fair olive skin with a faint sunburn across the nose, high cheekbones suggesting Albanian or Bulgarian devşirme origin, a thin youthful mustache with clean-shaven chin, cropped dark hair hidden beneath a white felt börk folded low over the neck with a small brass kaşıklık holder and a short undyed plume. Wearing a crimson wool kaftan cinched at the waist with a blue silk sash, loose şalvar trousers tucked into soft leather boots. A recurve composite bow of horn and sinew is held diagonally across the body, a cylindrical leather quiver bristling with fletched arrows slung across his back, a slim yatağan tucked through the sash at his hip. Calloused fingertips and a leather thumb-ring visible on the draw hand. Expression calm, focused, the quiet confidence of a marksman rather than a brawler. Bold, saturated period-appropriate color palette, thick clean black outlines for silhouette clarity at 32x32 resolution, minimal anti-aliasing, flattened simplified detail suited to the tiny canvas, no gradients, no soft shadows, consistent proportions across all eight rotations.",
+  "size": {
+    "width": 128,
+    "height": 128
+  },
+  "template_id": "mannequin",
+  "directions": 8,
+  "view": "low top-down",
+  "created_at": "2026-07-24T00:00:00+00:00"
 }

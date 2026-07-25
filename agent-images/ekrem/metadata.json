@@ -1,28 +1,13 @@
 {
-  "group_id": null,
-  "states": [{
-    "character": {
-      "id": "6e1fd5d8-6a32-4dc1-b46a-f0d5ac46df45",
-      "name": "Full-body pixel-art agent reference sheet",
-      "prompt": "A historically grounded naval Janissary serving aboard an Ottoman war galley with deep blue kaftan, tied white felt börk, rope coil, boarding axe, short matchlock, and yatagan.",
-      "size": { "width": 128, "height": 128 },
-      "template_id": "mannequin",
-      "directions": 8,
-      "view": "low top-down",
-      "created_at": "2026-07-24T00:00:00+00:00"
-    },
-    "folder": "Full-body_pixel-art_agent_reference_sheet",
-    "frames": { "rotations": {
-      "south": "Full-body_pixel-art_agent_reference_sheet/rotations/south.png",
-      "south-east": "Full-body_pixel-art_agent_reference_sheet/rotations/south-east.png",
-      "east": "Full-body_pixel-art_agent_reference_sheet/rotations/east.png",
-      "north-east": "Full-body_pixel-art_agent_reference_sheet/rotations/north-east.png",
-      "north": "Full-body_pixel-art_agent_reference_sheet/rotations/north.png",
-      "north-west": "Full-body_pixel-art_agent_reference_sheet/rotations/north-west.png",
-      "west": "Full-body_pixel-art_agent_reference_sheet/rotations/west.png",
-      "south-west": "Full-body_pixel-art_agent_reference_sheet/rotations/south-west.png"
-    }, "animations": {} }
-  }],
-  "export_version": "3.0",
-  "export_date": "2026-07-24T00:00:00+00:00"
+  "id": "6e1fd5d8-6a32-4dc1-b46a-f0d5ac46df45",
+  "name": "Full-body pixel-art agent reference sheet",
+  "prompt": "32x32 pixel art sprite of a single Janissary serving aboard an Ottoman war galley, standing braced as if against a rolling deck, rendered across eight compass-direction rotations, isolated on a transparent background, no environment. Male, late 20s, broad-shouldered and barrel-chested, deeply sun-darkened skin and salt-cracked lips from months at sea, a thick black mustache with clean-shaven chin, dark hair beneath a white felt börk tied down at the sides with a leather cord against sea wind, its brass kaşıklık holder pitted with salt corrosion. Wearing a deep blue kaftan, shorter and less encumbering than a land soldier's for scrambling over rigging, sleeves rolled to the elbow, a plain rope-like sash, loose şalvar trousers rolled at the calf, bare feet or simple rope-soled sandals for grip on wet planking. A coil of rope slung over one shoulder, a heavy boarding axe gripped in one hand for hooking and hacking through an enemy hull, a short matchlock and a yatağan both secured at the waist for the close, brutal fighting of a galley boarding action. Rope-burn calluses across the palms. Expression hard, ready, eyes narrowed as if already watching an enemy sail. Bold, saturated period-appropriate color palette, thick clean black outlines for silhouette clarity at 32x32 resolution, minimal anti-aliasing, flattened simplified detail suited to the tiny canvas, no gradients, no soft shadows, consistent proportions across all eight rotations.",
+  "size": {
+    "width": 128,
+    "height": 128
+  },
+  "template_id": "mannequin",
+  "directions": 8,
+  "view": "low top-down",
+  "created_at": "2026-07-24T00:00:00+00:00"
 }

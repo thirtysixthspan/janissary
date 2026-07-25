@@ -1,36 +1,13 @@
 {
-  "group_id": null,
-  "states": [
-    {
-      "character": {
-        "id": "14fa5551-98f4-4757-a697-3636825976f3",
-        "name": "Full-body portrait of a single",
-        "prompt": "Full-body portrait of a single Janissary orta standard-bearer on a flat mid-grey background, studio lighting with no environment. Male, early 40s, stocky powerful build, weathered olive skin with leathery texture from decades of sun, deep-set brown eyes beneath heavy brows, a long drooping grey-flecked mustache extending past the jawline with a short squared beard, shaved head beneath a tall white bork headdress with a dented brass holder and a faded red plume. Wearing a deep forest green kaftan with brass-button frogging across the chest, a crimson sash knotted twice at the waist, dark brown sirwal trousers, scuffed brown leather boots with iron hobnails. Both hands grip the wooden staff of a heavy crimson silk sanjak banner trimmed in gold thread, its pole planted firmly on the ground, the draped fabric frozen mid-fold. A battle-axe hangs from a loop on his belt. Scarred knuckles and a burn mark climbing his left forearm from powder flash. Expression hard, unblinking, the face of a man who has held formation while cavalry charged. Symmetrical stance, three-point neutral light, no cast shadow. Hyperrealistic, 8K, clean character sheet, no background, no environment.",
-        "size": {
-          "width": 128,
-          "height": 128
-        },
-        "template_id": "mannequin",
-        "directions": 8,
-        "view": "low top-down",
-        "created_at": "2026-07-07T02:36:56.020096+00:00"
-      },
-      "folder": "Full-body_portrait_of_a_single",
-      "frames": {
-        "rotations": {
-          "south": "Full-body_portrait_of_a_single/rotations/south.png",
-          "south-east": "Full-body_portrait_of_a_single/rotations/south-east.png",
-          "east": "Full-body_portrait_of_a_single/rotations/east.png",
-          "north-east": "Full-body_portrait_of_a_single/rotations/north-east.png",
-          "north": "Full-body_portrait_of_a_single/rotations/north.png",
-          "north-west": "Full-body_portrait_of_a_single/rotations/north-west.png",
-          "west": "Full-body_portrait_of_a_single/rotations/west.png",
-          "south-west": "Full-body_portrait_of_a_single/rotations/south-west.png"
-        },
-        "animations": {}
-      }
-    }
-  ],
-  "export_version": "3.0",
-  "export_date": "2026-07-07T02:40:22.402151"
+  "id": "14fa5551-98f4-4757-a697-3636825976f3",
+  "name": "Full-body portrait of a single",
+  "prompt": "32x32 pixel art sprite of a single Janissary orta standard-bearer of the late 17th century, standing pose, rendered across eight compass-direction rotations, isolated on a transparent background, no environment. Male, early 40s, stocky powerful build, weathered olive skin with leathery texture from decades of sun, deep-set brown eyes beneath heavy brows, a long drooping grey-flecked mustache extending past the jawline with a short squared beard — a break from the corps' older mustache-only tradition, tolerated as discipline relaxed during the corps' long decline — shaved head beneath a tall white felt börk headdress with a dented brass kaşıklık holder and a faded red plume. Born a free Muslim in Anatolia rather than levied through the old devşirme system, and enrolled on the regimental rolls as a boy through hereditary right, one of many signs the ocak had drifted far from its founding rules. Wearing a deep forest green kaftan with brass-button frogging across the chest, a crimson sash knotted twice at the waist, dark brown şalvar trousers, scuffed brown leather boots with iron hobnails. Both hands grip the wooden staff of a heavy crimson silk sanjak banner trimmed in gold thread, its pole planted firmly on the ground, the draped fabric frozen mid-fold. A battle-axe hangs from a loop on his belt. Scarred knuckles and a burn mark climbing his left forearm from powder flash. Expression hard, unblinking, the face of a man who has held formation while cavalry charged. Bold, saturated period-appropriate color palette, thick clean black outlines for silhouette clarity at 32x32 resolution, minimal anti-aliasing, flattened simplified detail suited to the tiny canvas, no gradients, no soft shadows, consistent proportions across all eight rotations.",
+  "size": {
+    "width": 128,
+    "height": 128
+  },
+  "template_id": "mannequin",
+  "directions": 8,
+  "view": "low top-down",
+  "created_at": "2026-07-07T02:36:56.020096+00:00"
 }

@@ -1,28 +1,13 @@
 {
-  "group_id": null,
-  "states": [{
-    "character": {
-      "id": "2a9a347e-bd17-47c4-b9a5-8a5a3a4091fa",
-      "name": "Full-body pixel-art agent reference sheet",
-      "prompt": "A historically grounded late-16th-century Ottoman Janissary sapper with a white felt börk, charcoal kaftan, copper trim, hand axe, shovel, powder horn, and yatagan.",
-      "size": { "width": 128, "height": 128 },
-      "template_id": "mannequin",
-      "directions": 8,
-      "view": "low top-down",
-      "created_at": "2026-07-24T00:00:00+00:00"
-    },
-    "folder": "Full-body_pixel-art_agent_reference_sheet",
-    "frames": { "rotations": {
-      "south": "Full-body_pixel-art_agent_reference_sheet/rotations/south.png",
-      "south-east": "Full-body_pixel-art_agent_reference_sheet/rotations/south-east.png",
-      "east": "Full-body_pixel-art_agent_reference_sheet/rotations/east.png",
-      "north-east": "Full-body_pixel-art_agent_reference_sheet/rotations/north-east.png",
-      "north": "Full-body_pixel-art_agent_reference_sheet/rotations/north.png",
-      "north-west": "Full-body_pixel-art_agent_reference_sheet/rotations/north-west.png",
-      "west": "Full-body_pixel-art_agent_reference_sheet/rotations/west.png",
-      "south-west": "Full-body_pixel-art_agent_reference_sheet/rotations/south-west.png"
-    }, "animations": {} }
-  }],
-  "export_version": "3.0",
-  "export_date": "2026-07-24T00:00:00+00:00"
+  "id": "2a9a347e-bd17-47c4-b9a5-8a5a3a4091fa",
+  "name": "Full-body pixel-art agent reference sheet",
+  "prompt": "32x32 pixel art sprite of a single Janissary sapper of the late 16th century, standing with tools in hand, rendered across eight compass-direction rotations, isolated on a transparent background, no environment. Male, late 20s, compact and heavily muscled through the arms and back from digging siege trenches, dust-grimed olive skin, a thick mustache with clean-shaven chin, close-cropped dark hair beneath a white felt börk stained grey with dried mortar dust, its brass kaşıklık holder dented from close work under fortress walls. Wearing a charcoal-grey kaftan trimmed in copper thread at the seams, sleeves rolled and tied back, a plain leather sash, dark şalvar trousers tucked into heavy boots built for mud and rubble. A short hand axe is tucked through the sash, an iron-shod digging shovel carried over one shoulder, a leather powder horn for laying mine charges slung crossbody, a yatağan at the hip for close defense when a tunnel is breached. Grime under the fingernails and a fresh scrape along one forearm. Expression focused, unbothered, the calm of a man used to working within earshot of the enemy. Bold, saturated period-appropriate color palette, thick clean black outlines for silhouette clarity at 32x32 resolution, minimal anti-aliasing, flattened simplified detail suited to the tiny canvas, no gradients, no soft shadows, consistent proportions across all eight rotations.",
+  "size": {
+    "width": 128,
+    "height": 128
+  },
+  "template_id": "mannequin",
+  "directions": 8,
+  "view": "low top-down",
+  "created_at": "2026-07-24T00:00:00+00:00"
 }

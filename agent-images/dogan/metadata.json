@@ -1,28 +1,13 @@
 {
-  "group_id": null,
-  "states": [{
-    "character": {
-      "id": "b50a0d8a-7c8c-4f16-a4f8-24d6bc2cce11",
-      "name": "Full-body pixel-art agent reference sheet",
-      "prompt": "A historically grounded eighteenth-century tulumbacı Janissary firefighter of Istanbul with practical dark wool coat, white felt börk, hand axe, brass fire hook, and wooden hand-pump hose apparatus.",
-      "size": { "width": 128, "height": 128 },
-      "template_id": "mannequin",
-      "directions": 8,
-      "view": "low top-down",
-      "created_at": "2026-07-24T00:00:00+00:00"
-    },
-    "folder": "Full-body_pixel-art_agent_reference_sheet",
-    "frames": { "rotations": {
-      "south": "Full-body_pixel-art_agent_reference_sheet/rotations/south.png",
-      "south-east": "Full-body_pixel-art_agent_reference_sheet/rotations/south-east.png",
-      "east": "Full-body_pixel-art_agent_reference_sheet/rotations/east.png",
-      "north-east": "Full-body_pixel-art_agent_reference_sheet/rotations/north-east.png",
-      "north": "Full-body_pixel-art_agent_reference_sheet/rotations/north.png",
-      "north-west": "Full-body_pixel-art_agent_reference_sheet/rotations/north-west.png",
-      "west": "Full-body_pixel-art_agent_reference_sheet/rotations/west.png",
-      "south-west": "Full-body_pixel-art_agent_reference_sheet/rotations/south-west.png"
-    }, "animations": {} }
-  }],
-  "export_version": "3.0",
-  "export_date": "2026-07-24T00:00:00+00:00"
+  "id": "b50a0d8a-7c8c-4f16-a4f8-24d6bc2cce11",
+  "name": "Full-body pixel-art agent reference sheet",
+  "prompt": "32x32 pixel art sprite of a single tulumbacı, an 18th-century Janissary firefighter of Istanbul, standing ready, rendered across eight compass-direction rotations, isolated on a transparent background, no environment. Male, mid-30s, lean and quick rather than heavily built, skin ruddy from smoke and heat exposure, a soot-darkened mustache with clean-shaven chin, close-cropped hair beneath a white felt börk scorched at one edge, its brass kaşıklık holder blackened, worn low and practical rather than for display. Wearing a heavy dark wool coat cut short at the knee for running through narrow Istanbul alleys, sleeves cinched tight, a plain leather sash, coarse şalvar trousers, sturdy leather boots. A hand axe for breaking through burning timber hangs from the belt, a long brass fire hook carried over one shoulder for pulling down collapsing structures, and slung across his back the wooden barrel and leather hose of a hand-pump water apparatus, its brass fittings dulled by soot. Burn scars visible on both forearms. Expression alert, urgent, the readiness of a man who may be called out at any hour of the night. Bold, saturated period-appropriate color palette, thick clean black outlines for silhouette clarity at 32x32 resolution, minimal anti-aliasing, flattened simplified detail suited to the tiny canvas, no gradients, no soft shadows, consistent proportions across all eight rotations.",
+  "size": {
+    "width": 128,
+    "height": 128
+  },
+  "template_id": "mannequin",
+  "directions": 8,
+  "view": "low top-down",
+  "created_at": "2026-07-24T00:00:00+00:00"
 }

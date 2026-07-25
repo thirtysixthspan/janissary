@@ -1,36 +1,13 @@
 {
-  "group_id": null,
-  "states": [
-    {
-      "character": {
-        "id": "6da91c02-00b1-405a-a8f8-c33bc7fe4041",
-        "name": "Full-body character reference sheet of",
-        "prompt": "Full-body character reference sheet of a single Janissary soldier, standing at attention on a flat neutral grey background with even studio lighting, no environment. Male, late 20s, lean athletic build, light olive complexion, sharp cheekbones, prominent nose, thick well-groomed mustache with clean-shaven chin, dark brown hair cropped short beneath a tall white bork headdress with a polished brass holder and a single white plume. Wearing a deep crimson wool kaftan open at the chest to show a white linen undershirt, a leather sash bound tight at the waist holding a curved yataghan sword in a brass-trimmed scabbard, dark blue sirwal trousers loose to the knee, brown leather knee-high boots. A wooden-handled matchlock musket rests vertically against his right shoulder. Minimal ornamentation \u2014 this is a common soldier, not an officer. Expression neutral, alert, disciplined. Symmetrical A-pose, front-facing, evenly lit from three-point light rig, no cast shadow on background. Hyperrealistic, 8K, clean character design sheet style, no background detail, no environment.",
-        "size": {
-          "width": 128,
-          "height": 128
-        },
-        "template_id": "mannequin",
-        "directions": 8,
-        "view": "low top-down",
-        "created_at": "2026-07-07T02:26:12.946391+00:00"
-      },
-      "folder": "Full-body_character_reference_sheet_of",
-      "frames": {
-        "rotations": {
-          "south": "Full-body_character_reference_sheet_of/rotations/south.png",
-          "south-east": "Full-body_character_reference_sheet_of/rotations/south-east.png",
-          "east": "Full-body_character_reference_sheet_of/rotations/east.png",
-          "north-east": "Full-body_character_reference_sheet_of/rotations/north-east.png",
-          "north": "Full-body_character_reference_sheet_of/rotations/north.png",
-          "north-west": "Full-body_character_reference_sheet_of/rotations/north-west.png",
-          "west": "Full-body_character_reference_sheet_of/rotations/west.png",
-          "south-west": "Full-body_character_reference_sheet_of/rotations/south-west.png"
-        },
-        "animations": {}
-      }
-    }
-  ],
-  "export_version": "3.0",
-  "export_date": "2026-07-07T02:30:47.255969"
+  "id": "6da91c02-00b1-405a-a8f8-c33bc7fe4041",
+  "name": "Full-body character reference sheet of",
+  "prompt": "32x32 pixel art sprite of a single Janissary soldier of the early 16th century, standing at attention, rendered across eight compass-direction rotations, isolated on a transparent background, no environment. Male, late 20s, lean athletic build, light olive complexion inherited from a devşirme childhood in the Balkans, sharp cheekbones, prominent nose, thick well-groomed mustache with clean-shaven chin per Janissary custom, dark brown hair cropped short beneath a tall white felt börk headdress with a polished brass kaşıklık holder and a single white plume. Wearing a deep crimson wool kaftan open at the chest to show a white linen undershirt, a leather sash bound tight at the waist holding a curved yatağan sword in a brass-trimmed scabbard, dark blue şalvar trousers loose to the knee, brown leather knee-high boots. A wooden-handled matchlock tüfek rests vertically against his right shoulder. Minimal ornamentation — this is a common soldier, not an officer, one of many thousands raised through the acemi oğlan training pipeline in Constantinople. Expression neutral, alert, disciplined. Bold, saturated period-appropriate color palette, thick clean black outlines for silhouette clarity at 32x32 resolution, minimal anti-aliasing, flattened simplified detail suited to the tiny canvas, no gradients, no soft shadows, consistent proportions across all eight rotations.",
+  "size": {
+    "width": 128,
+    "height": 128
+  },
+  "template_id": "mannequin",
+  "directions": 8,
+  "view": "low top-down",
+  "created_at": "2026-07-07T02:26:12.946391+00:00"
 }

@@ -1,28 +1,13 @@
 {
-  "group_id": null,
-  "states": [{
-    "character": {
-      "id": "f1b1a6c3-6f7e-44a3-9ec7-0d4c3a52b2dd",
-      "name": "Full-body pixel-art agent reference sheet",
-      "prompt": "A historically grounded early-16th-century Ottoman Janissary grenadier with a white felt börk, ochre and blue kaftan, red sash, iron grenade pouch, short matchlock, and yatagan.",
-      "size": { "width": 128, "height": 128 },
-      "template_id": "mannequin",
-      "directions": 8,
-      "view": "low top-down",
-      "created_at": "2026-07-24T00:00:00+00:00"
-    },
-    "folder": "Full-body_pixel-art_agent_reference_sheet",
-    "frames": { "rotations": {
-      "south": "Full-body_pixel-art_agent_reference_sheet/rotations/south.png",
-      "south-east": "Full-body_pixel-art_agent_reference_sheet/rotations/south-east.png",
-      "east": "Full-body_pixel-art_agent_reference_sheet/rotations/east.png",
-      "north-east": "Full-body_pixel-art_agent_reference_sheet/rotations/north-east.png",
-      "north": "Full-body_pixel-art_agent_reference_sheet/rotations/north.png",
-      "north-west": "Full-body_pixel-art_agent_reference_sheet/rotations/north-west.png",
-      "west": "Full-body_pixel-art_agent_reference_sheet/rotations/west.png",
-      "south-west": "Full-body_pixel-art_agent_reference_sheet/rotations/south-west.png"
-    }, "animations": {} }
-  }],
-  "export_version": "3.0",
-  "export_date": "2026-07-24T00:00:00+00:00"
+  "id": "f1b1a6c3-6f7e-44a3-9ec7-0d4c3a52b2dd",
+  "name": "Full-body pixel-art agent reference sheet",
+  "prompt": "32x32 pixel art sprite of a single Janissary grenadier of the early 16th century, standing braced, rendered across eight compass-direction rotations, isolated on a transparent background, no environment. Male, late 20s, thick-set and broad-shouldered from carrying iron ordnance, weathered olive skin with old powder-burn scarring across the backs of both hands, a heavy black mustache with clean-shaven chin, dark hair cropped close beneath a white felt börk with a scorched brass kaşıklık holder and a singed plume. Wearing an ochre kaftan trimmed in blue at the collar and cuffs, a red sash wound twice around the waist supporting a bulky leather pouch fitted with individual pockets for cast-iron grenades, their fuses coiled and tucked. A short matchlock, its match cord smoldering faintly, is slung across one shoulder; a yatağan rides at his hip. Soot staining along the forearms and a leather apron guard over the chest. Expression wary and deliberate, the look of a man who handles fire for a living. Bold, saturated period-appropriate color palette, thick clean black outlines for silhouette clarity at 32x32 resolution, minimal anti-aliasing, flattened simplified detail suited to the tiny canvas, no gradients, no soft shadows, consistent proportions across all eight rotations.",
+  "size": {
+    "width": 128,
+    "height": 128
+  },
+  "template_id": "mannequin",
+  "directions": 8,
+  "view": "low top-down",
+  "created_at": "2026-07-24T00:00:00+00:00"
 }

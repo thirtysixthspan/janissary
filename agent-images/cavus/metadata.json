@@ -1,28 +1,13 @@
 {
-  "group_id": null,
-  "states": [{
-    "character": {
-      "id": "36ac3a5a-2f62-457a-b5fa-2cfadf79ac5a",
-      "name": "Full-body pixel-art agent reference sheet",
-      "prompt": "A historically grounded solak palace-guard Janissary archer with ceremonial white silk over-robe, white felt börk, red sash, composite bow, ornate quiver, and yatagan.",
-      "size": { "width": 128, "height": 128 },
-      "template_id": "mannequin",
-      "directions": 8,
-      "view": "low top-down",
-      "created_at": "2026-07-24T00:00:00+00:00"
-    },
-    "folder": "Full-body_pixel-art_agent_reference_sheet",
-    "frames": { "rotations": {
-      "south": "Full-body_pixel-art_agent_reference_sheet/rotations/south.png",
-      "south-east": "Full-body_pixel-art_agent_reference_sheet/rotations/south-east.png",
-      "east": "Full-body_pixel-art_agent_reference_sheet/rotations/east.png",
-      "north-east": "Full-body_pixel-art_agent_reference_sheet/rotations/north-east.png",
-      "north": "Full-body_pixel-art_agent_reference_sheet/rotations/north.png",
-      "north-west": "Full-body_pixel-art_agent_reference_sheet/rotations/north-west.png",
-      "west": "Full-body_pixel-art_agent_reference_sheet/rotations/west.png",
-      "south-west": "Full-body_pixel-art_agent_reference_sheet/rotations/south-west.png"
-    }, "animations": {} }
-  }],
-  "export_version": "3.0",
-  "export_date": "2026-07-24T00:00:00+00:00"
+  "id": "36ac3a5a-2f62-457a-b5fa-2cfadf79ac5a",
+  "name": "Full-body pixel-art agent reference sheet",
+  "prompt": "32x32 pixel art sprite of a single solak, an elite Janissary archer of the sultan's personal palace guard, standing in ceremonial stillness, rendered across eight compass-direction rotations, isolated on a transparent background, no environment. Male, early 30s, tall and immaculately postured, fair unblemished skin kept from the sun by palace duty, a precisely trimmed mustache with clean-shaven chin, dark hair concealed beneath a tall white felt üsküf headdress — taller and more ornate than the common börk — its polished brass kaşıklık holder set with a tall white plume. Wearing a flowing white silk over-robe atop a fine kaftan, immaculately pressed, a red silk sash tied with ceremonial precision, pristine white şalvar trousers, soft leather boots without a scuff. A finely lacquered composite bow is held at rest in one hand, an ornate quiver inlaid with silver thread slung across the back, a jewel-pommeled yatağan at the hip purely for ceremony rather than war. Expression impassive, almost statuesque, the trained stillness of a man who stands beside the sultan for hours without moving. Bold, saturated period-appropriate color palette, thick clean black outlines for silhouette clarity at 32x32 resolution, minimal anti-aliasing, flattened simplified detail suited to the tiny canvas, no gradients, no soft shadows, consistent proportions across all eight rotations.",
+  "size": {
+    "width": 128,
+    "height": 128
+  },
+  "template_id": "mannequin",
+  "directions": 8,
+  "view": "low top-down",
+  "created_at": "2026-07-24T00:00:00+00:00"
 }

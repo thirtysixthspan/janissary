@@ -1,28 +1,13 @@
 {
-  "group_id": null,
-  "states": [{
-    "character": {
-      "id": "8e4d5f75-0bb6-47f6-a5f2-f92b7b0ea00e",
-      "name": "Full-body pixel-art agent reference sheet",
-      "prompt": "A historically grounded mid-17th-century Ottoman Janissary musketeer with a white felt börk, burgundy coat, blue sash, matchlock musket, powder flask, and yatagan.",
-      "size": { "width": 128, "height": 128 },
-      "template_id": "mannequin",
-      "directions": 8,
-      "view": "low top-down",
-      "created_at": "2026-07-24T00:00:00+00:00"
-    },
-    "folder": "Full-body_pixel-art_agent_reference_sheet",
-    "frames": { "rotations": {
-      "south": "Full-body_pixel-art_agent_reference_sheet/rotations/south.png",
-      "south-east": "Full-body_pixel-art_agent_reference_sheet/rotations/south-east.png",
-      "east": "Full-body_pixel-art_agent_reference_sheet/rotations/east.png",
-      "north-east": "Full-body_pixel-art_agent_reference_sheet/rotations/north-east.png",
-      "north": "Full-body_pixel-art_agent_reference_sheet/rotations/north.png",
-      "north-west": "Full-body_pixel-art_agent_reference_sheet/rotations/north-west.png",
-      "west": "Full-body_pixel-art_agent_reference_sheet/rotations/west.png",
-      "south-west": "Full-body_pixel-art_agent_reference_sheet/rotations/south-west.png"
-    }, "animations": {} }
-  }],
-  "export_version": "3.0",
-  "export_date": "2026-07-24T00:00:00+00:00"
+  "id": "8e4d5f75-0bb6-47f6-a5f2-f92b7b0ea00e",
+  "name": "Full-body pixel-art agent reference sheet",
+  "prompt": "32x32 pixel art sprite of a single Janissary musketeer of the mid-17th century, standing at attention, rendered across eight compass-direction rotations, isolated on a transparent background, no environment. Male, mid-30s, sturdy and thick through the chest, sun-weathered olive skin, a long drooping mustache with clean-shaven chin, greying dark hair beneath a white felt börk grown slightly shabby with age, its brass kaşıklık holder tarnished and its plume worn thin from decades of use — this is a corps in slow decline, its discipline fraying even as its veterans remain deadly. Wearing a burgundy wool coat, heavier and more civilian-cut than the kaftans of earlier generations, a blue sash at the waist, loose şalvar trousers, scuffed leather boots. A long matchlock musket rests against his shoulder, a leather powder flask and priming horn crossed over his chest, a yatağan sheathed at his hip. Expression stern, settled, unhurried — a veteran who has outlived most of his orta. Bold, saturated period-appropriate color palette, thick clean black outlines for silhouette clarity at 32x32 resolution, minimal anti-aliasing, flattened simplified detail suited to the tiny canvas, no gradients, no soft shadows, consistent proportions across all eight rotations.",
+  "size": {
+    "width": 128,
+    "height": 128
+  },
+  "template_id": "mannequin",
+  "directions": 8,
+  "view": "low top-down",
+  "created_at": "2026-07-24T00:00:00+00:00"
 }
