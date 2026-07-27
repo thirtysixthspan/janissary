@@ -10,16 +10,15 @@ import { saveAgentState } from '../agent/state.js';
 import { abbreviatePath } from '../paths.js';
 import { getConfig, TAB_RENAME_MAX_LENGTH } from '../config.js';
 import { messageBus } from '../bus.js';
-import { closeTabResources } from './cleanup.js';
 import { TabOpeningState } from './opening-state.js';
 import { buildAgentStateFromTab } from './agent-state.js';
 import { recordLeavingActiveTab, popFocusHistory, mostRecentFileNavigatorLabel } from './focus-history.js';
 import { applyDock } from './dock.js';
-import { removeTabAt } from './reorder.js';
 import { navigatePageTab } from './navigate.js';
 import { recordHistory } from './history.js';
 import { FileRegistry } from './file-registry.js';
-import { renameEditorTab } from './rename-editor.js';
+import { closeTabOp } from './close.js';
+import { renameTabOp } from './rename.js';
 import { markUnreadTab } from './transcript-commands.js';
 import {
   appendTabTranscript, buildTabViews, capTabLog, clearTabTranscript, finishTabRunning,
@@ -173,42 +172,22 @@ export class TabManager extends TabOpeningState {
   }
 
   closeTab(index: number): void {
-    const tab = this.tabs[index];
-    if (!tab) return;
-    const nonDockedCount = this.tabs.filter((t) => !t.dock).length;
-    closeTabResources(tab, this.managers, this.fileRegistry.map, this.context, this.queue, nonDockedCount);
-    // Closing the last remaining non-docked tab quits the app (same as the `quit` command).
-    if (!tab.dock && nonDockedCount <= 1) {
-      messageBus.emit('app', { type: 'exit' });
-      return;
-    }
-    const wasActive = index === this.activeTab;
-    this.focusHistory = this.focusHistory.filter((l) => l !== tab.label);
-    this.tabs = removeTabAt(this.tabs, index);
-    const restored = wasActive ? this.popFocusHistory() : undefined;
-    this.activeTab = restored ?? Math.min(this.activeTab, this.tabs.length - 1);
-    const active = this.tabs[this.activeTab];
-    if (active) active.hasUnread = false;
-    messageBus.emit('state', { type: 'dirty' });
+    const result = closeTabOp(
+      this.tabs, this.activeTab, index, this.managers, this.fileRegistry.map, this.context, this.queue,
+      (label) => { this.focusHistory = this.focusHistory.filter((l) => l !== label); },
+      () => this.popFocusHistory(),
+    );
+    if (!result) return;
+    this.tabs = result.tabs;
+    this.activeTab = result.activeTab;
   }
 
   renameTab(index: number, title: string): void {
-    const tab = this.tabs[index];
-    if (!tab) return;
-    if (tab.editor) {
-      renameEditorTab(
-        tab, title, TAB_RENAME_MAX_LENGTH,
-        (p) => this.registerFile(p), (l, p) => this.managers.editorWatch.watch(l, p),
-      );
-      this.persist(this.buildAgentState(tab));
-      messageBus.emit('state', { type: 'dirty' });
-      return;
-    }
-    const trimmed = title.trim().slice(0, TAB_RENAME_MAX_LENGTH);
-    if (trimmed && trimmed !== tab.label) tab.title = trimmed;
-    else delete tab.title;
-    this.persist(this.buildAgentState(tab));
-    messageBus.emit('state', { type: 'dirty' });
+    renameTabOp(
+      this.tabs, index, title, TAB_RENAME_MAX_LENGTH,
+      (p) => this.registerFile(p), (l, p) => this.managers.editorWatch.watch(l, p),
+      (s) => this.persist(s), (t) => this.buildAgentState(t),
+    );
   }
 
   // Retarget an editor tab already open on `oldAbsPath` to `newAbsPath`, after something else (the
