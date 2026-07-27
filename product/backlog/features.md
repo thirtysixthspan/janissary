@@ -2,6 +2,8 @@
 
 ## ready
 
+* support click and drag of the tab labels to re-order them.
+
 ## development
 
 * A kanban-style board summarizing all currently-open workspaced agents and harnesses, the way Vibe Kanban and amux's built-in kanban board let a user managing many parallel AI coding sessions see task/status at a glance instead of checking each session individually. Janissary's tab strip and fuzzy tab navigator (`product/specs/tab-navigator.md`) let a user jump to any tab, but there is no aggregate view of what each workspaced tab is working on and whether it's idle, busy, or blocked on a permission prompt. A new dockable tab (alongside the existing `notifications`/`schedules` dockable tabs) could list every workspaced agent/harness tab with its busy state and last activity. do this as a tab plugin with a new plugin architecture.
