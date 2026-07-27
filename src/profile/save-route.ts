@@ -1,7 +1,7 @@
-import { writeAgentEntry, writeHarnessEntry } from './save-entries.js';
+import { writeAgentEntry, writeEditorEntry, writeHarnessEntry } from './save-entries.js';
 import type { Managers } from '../managers.js';
 import type {
-  ProfileAgentFile, ProfileFilesEntry, ProfileHarnessFile, ProfileNotificationsEntry,
+  ProfileAgentFile, ProfileEditorsEntry, ProfileFilesEntry, ProfileHarnessFile, ProfileNotificationsEntry,
   ProfileSchedulesEntry, Tab,
 } from '../types.js';
 
@@ -12,10 +12,12 @@ import type {
 export type CaptureState = {
   agents: number;
   harnesses: number;
+  editors: number;
   dockedViews: number;
   skipped: string[];
   agentEntries: ProfileAgentFile[];
   harnessEntries: ProfileHarnessFile[];
+  editorEntries: ProfileEditorsEntry[];
   filesEntries: ProfileFilesEntry[];
   notificationsEntries: ProfileNotificationsEntry[];
   schedulesEntries: ProfileSchedulesEntry[];
@@ -23,8 +25,8 @@ export type CaptureState = {
 
 export function newCaptureState(): CaptureState {
   return {
-    agents: 0, harnesses: 0, dockedViews: 0, skipped: [],
-    agentEntries: [], harnessEntries: [],
+    agents: 0, harnesses: 0, editors: 0, dockedViews: 0, skipped: [],
+    agentEntries: [], harnessEntries: [], editorEntries: [],
     filesEntries: [], notificationsEntries: [], schedulesEntries: [],
   };
 }
@@ -44,6 +46,12 @@ export function captureTab(tab: Tab, managers: Managers, state: CaptureState): v
       if (tab.harness?.name === 'ssh') { state.skipped.push(tab.label); return; }
       const entry = writeHarnessEntry(tab, managers);
       if (entry) { state.harnessEntries.push(entry); state.harnesses += 1; }
+      return;
+    }
+    case 'editor': {
+      const entry = writeEditorEntry(tab, managers);
+      if (entry) { state.editorEntries.push(entry); state.editors += 1; }
+      else state.skipped.push(tab.label);
       return;
     }
     case 'files': {

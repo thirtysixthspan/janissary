@@ -8,6 +8,7 @@ import type { ProfileFile } from '../types.js';
 export type SaveSummary = {
   agents: number;
   harnesses: number;
+  editors: number;
   monitors: number;
   dockedViews: number;
   skipped: string[];
@@ -35,6 +36,7 @@ export async function saveProfile(name: string, managers: Managers): Promise<Sav
   const root: ProfileFile = {};
   if (state.agentEntries.length > 0) root.agents = state.agentEntries;
   if (state.harnessEntries.length > 0) root.harnesses = state.harnessEntries;
+  if (state.editorEntries.length > 0) root.editors = state.editorEntries;
   if (monitors.length > 0) root.monitors = monitors;
   if (state.filesEntries.length > 0) root.files = state.filesEntries;
   if (state.notificationsEntries.length > 0) root.notifications = state.notificationsEntries;
@@ -45,6 +47,7 @@ export async function saveProfile(name: string, managers: Managers): Promise<Sav
   return {
     agents: state.agents,
     harnesses: state.harnesses,
+    editors: state.editors,
     monitors: monitors.length,
     dockedViews: state.dockedViews,
     skipped: state.skipped,
@@ -56,6 +59,7 @@ export function formatSaveSummary(name: string, summary: SaveSummary): string {
   const parts: string[] = [];
   if (summary.agents > 0) parts.push(`${summary.agents} agent${summary.agents === 1 ? '' : 's'}`);
   if (summary.harnesses > 0) parts.push(`${summary.harnesses} harness${summary.harnesses === 1 ? '' : 'es'}`);
+  if (summary.editors > 0) parts.push(`${summary.editors} editor tab${summary.editors === 1 ? '' : 's'}`);
   parts.push('layout');
   if (summary.monitors > 0) parts.push(`${summary.monitors} monitor${summary.monitors === 1 ? '' : 's'}`);
   if (summary.dockedViews > 0) parts.push(`${summary.dockedViews} docked tab${summary.dockedViews === 1 ? '' : 's'}`);
