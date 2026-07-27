@@ -1,6 +1,6 @@
 # Find Feature Ideas
 
-Your job: compare this application's current feature set — as described in `product/specs/` — against similar products in its category, using extensive external research, to spot incomplete or missing features. Log what you find as new entries under the `## development` section of `product/backlog/features.md`. This task **researches and records** gaps; it does not build them, and other tasks (`build-a-feature.md`, `plan-ready-features.md`) own turning what lands here into shipped work.
+Your job: compare this application's current feature set — as described in `product/specs/` — against similar products in its category, using extensive external research, to spot incomplete or missing features. Log what you find as new entries under the `## development` section of `product/backlog/features.md`. This task **researches and records** gaps; it does not build them, and other tasks (`build-a-feature.md`, `plan-new-feature.md`) own turning what lands here into shipped work.
 
 **Never run repository build/lint/test tooling.** Do not run `npm run lint`, `npm run typecheck`, `npm run test`, `npm run check`, `./scripts/run.mjs check-diff`, or any other build/lint/test/analysis tooling. Plain read-only shell commands used only to navigate (`ls`, `wc -l`, `grep`, `git log`) are fine — the restriction is on running the project's build/lint/test/quality machinery, not on looking at files.
 
