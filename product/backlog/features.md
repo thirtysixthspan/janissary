@@ -2,8 +2,6 @@
 
 ## ready
 
-* support click and drag of the tab labels to re-order them.
-
 * extract harness transcripts directly from harness dot directories (.claude, .codex, .opencode) in order that subagents can be monitored.
 
 * The file navigator tab (`product/specs/file-navigator-tab.md`) has no multi-select, the way VS Code's Explorer lets Ctrl/Cmd-click or the `workbench.list.multiSelectModifier` setting select several rows at once for a bulk move, delete, or drag. Janissary's spec states outright that "only a single row can be dragged at a time — the tree has no multi-select," so moving, deleting, or renaming several files at once requires repeating the action per file. Adding multi-select would touch the tree's selection state, its drag-and-drop handler, and the delete/rename confirmation dialogs to handle a list instead of one row. Complexity: medium.
