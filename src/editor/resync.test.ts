@@ -7,7 +7,7 @@ import type { EditorView } from '../tab/types.js';
 function setup(openSync: () => Promise<{ dir: string } | { error: string }>, sync: EditorView['sync'] = 'synced') {
   const managers = {} as Managers;
   managers.tab = new TabManager(managers);
-  managers.editorWatch = { watch: () => {}, markSaved: () => {} } as unknown as Managers['editorWatch'];
+  managers.editorWatch = { watch: () => {}, markSaved: () => {}, refresh: vi.fn() } as unknown as Managers['editorWatch'];
   managers.gitSync = { openSync } as unknown as Managers['gitSync'];
   const url = managers.tab.registerFile('/repo/synced.txt');
   managers.tab.openEditorTab({ name: 'synced.txt', path: '/repo/synced.txt', size: '8 B', url, sync });
@@ -48,6 +48,19 @@ describe('resyncEditorTab', () => {
     const { managers, url } = setup(openSync);
     await resyncEditorTab(managers, url);
     expect(openSync).toHaveBeenCalledTimes(1);
+  });
+
+  it('calls editorWatch.refresh after a successful pull', async () => {
+    const { managers, url } = setup(() => Promise.resolve({ dir: '/repo' }));
+    await resyncEditorTab(managers, url);
+    const tab = managers.tab.tabs.find((t) => t.editor);
+    expect(managers.editorWatch.refresh).toHaveBeenCalledWith(tab?.label);
+  });
+
+  it('does not call editorWatch.refresh when the pull errors', async () => {
+    const { managers, url } = setup(() => Promise.resolve({ error: 'network down' }));
+    await resyncEditorTab(managers, url);
+    expect(managers.editorWatch.refresh).not.toHaveBeenCalled();
   });
 
   it('no-ops for a tab with no sync field', async () => {

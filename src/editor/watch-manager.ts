@@ -42,6 +42,16 @@ export class EditorWatchManager {
     this.unwatch(label);
   }
 
+  // Re-checks a label's file immediately and re-arms its watcher, rather than waiting for an
+  // `fs.watch` event that a git-driven replace (e.g. a resync pull) may never deliver — confirmed
+  // by experiment, a single-file `fs.watch` survives one such replace but silently misses the next.
+  refresh(label: string): void {
+    const state = this.tabs.get(label);
+    if (!state) return;
+    this.check(label);
+    this.watch(label, state.filePath);
+  }
+
   dispose(): void {
     for (const label of this.tabs.keys()) this.unwatch(label);
   }

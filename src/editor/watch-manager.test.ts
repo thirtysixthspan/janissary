@@ -128,4 +128,28 @@ describe('EditorWatchManager', () => {
     expect(() => manager.closeTab('ghost')).not.toThrow();
     expect(() => manager.markSaved('ghost', 0)).not.toThrow();
   });
+
+  it('refresh detects a change since the last baseline and pushes the new mtimeMs onto the tab', () => {
+    const manager = run();
+    manager.watch('notes', file);
+    writeFileSync(file, 'changed elsewhere');
+
+    manager.refresh('notes');
+
+    expect(tabs[0].editor?.mtimeMs).toBe(statSync(file).mtimeMs);
+  });
+
+  it('refresh re-arms the watcher, replacing the previous one', () => {
+    const manager = run();
+    manager.watch('notes', file);
+    manager.refresh('notes');
+    expect(watchMock).toHaveBeenCalledTimes(2);
+    expect(closeFns[0]).toHaveBeenCalled();
+  });
+
+  it('refresh does nothing for an unknown label', () => {
+    const manager = run();
+    expect(() => manager.refresh('ghost')).not.toThrow();
+    expect(watchMock).not.toHaveBeenCalled();
+  });
 });
