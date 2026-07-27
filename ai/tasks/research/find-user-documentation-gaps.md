@@ -1,10 +1,10 @@
 # Find User Documentation Gaps
 
-Your job: survey the application's functional areas — derived from git logs, `product/specs/`, and source code — and compare each against the user documentation to find where the docs lag behind what the app actually does. Score each candidate area 1–10 for the size of the mismatch using the evidence-based rubric in Step 4, and maintain the results in `product/backlog/user-documentation.md`. This task **researches and records** gaps; it does not fix them.
+Your job: survey the application's functional areas — derived from git logs, `product/specs/`, and source code — and compare each against the user documentation to find where the docs lag behind what the app actually does. Score each candidate area 1–10 for the size of the mismatch using the evidence-based rubric in Step 4, and feed the results into `product/backlog/documentation.md`, the shared documentation work queue that [`update-documentation.md`](../work/update-documentation.md) draws from. This task **researches and records** gaps; it does not fix them.
 
 Throughout this task, "user documentation" means exactly two surfaces: `documentation/user-documentation/**/*.md` and `help.md`. A fact covered in either surface counts as documented.
 
-This task edits **one file only**: `product/backlog/user-documentation.md`. You will never touch application source code, specs, docs pages, `help.md`, tests, or config.
+This task edits **one file only**: `product/backlog/documentation.md`. You will never touch application source code, specs, docs pages, `help.md`, tests, or config. That file is shared with other producers of documentation work — human-typed requests and other tasks may also add bullets to it — so only ever add, update, or remove the bullets this task itself owns (tracked by area ID); never touch bullets you did not write.
 
 **No AI attribution — anywhere.** Never credit an AI agent as an author or contributor. No `Co-Authored-By:` trailers naming Claude or any other AI, no "Generated with Claude Code" lines or badges, no AI authorship notes anywhere in the files you write. The commit's configured git author is the only authorship ever recorded.
 
@@ -30,12 +30,18 @@ The working tree **must be clean** — no modified *and no untracked* files. Thi
 
 ## Step 1 — Load the existing backlog, if it exists
 
-Read `product/backlog/user-documentation.md` if it exists.
+Read `product/backlog/documentation.md` if it exists. This file carries no "last run" timestamp — the sections are `ready`, `development`, `deferred`, and `resolved`, the same shape as the other `product/backlog/` files, and other tasks or humans may add bullets to any of them alongside this task's own.
 
-1. Extract the `Last run:` date from the top of the file. If the file exists but the date is missing or unparseable, treat it as 3 months ago. Call this date `SINCE` — you will substitute it literally into the git commands in Step 2.
-2. List the area IDs already in the `candidates` section. Every one of them **must** be re-verified in Step 4 this run — a gap may have been closed since it was recorded, and stale entries are worse than no entries.
+1. Determine `SINCE`, the date to scan git history from: find this task's own last run.
 
-If the file does not exist, set `SINCE` to 3 months ago and start fresh — every functional area is a candidate.
+   ```bash
+   git log -1 --format=%cI --grep='^docs(backlog): refresh documentation gap candidates$' -- product/backlog/documentation.md
+   ```
+
+   Use that commit's date as `SINCE`. If it returns nothing (first run, or the commit subject changed), treat `SINCE` as 3 months ago.
+2. Of the bullets already in `ready` and `development`, identify which ones this task authored in a prior run — they carry a `(<score>/10)` after the area ID, e.g. `* ssh-tab (9/10) — ...` (bullets from other sources won't have this shape; leave those alone throughout this task). Every one of your own area IDs **must** be re-verified in Step 4 this run — a gap may have been closed since it was recorded, and stale entries are worse than no entries.
+
+If the file does not exist, set `SINCE` to 3 months ago and start fresh — every functional area is a candidate. (In that case create the file with the standard four empty sections before Step 5.)
 
 ---
 
@@ -80,7 +86,7 @@ Order the candidate list:
 2. New candidates with no doc page at all.
 3. New candidates flagged from git logs or code.
 
-Deep-evaluate (Step 4) the carried-over entries **plus at most 10 new candidates**, in that order. If more new candidates remain, list them in the backlog file's `unverified` section (Step 5) with the signal that flagged them and **no score** — never publish a score for an area you did not evaluate. The next run picks them up.
+Deep-evaluate (Step 4) the carried-over entries **plus at most 10 new candidates**, in that order. If more new candidates remain, list them in the backlog file's `development` section (Step 5) with the signal that flagged them and **no score** — never publish a score for an area you did not evaluate. The next run picks them up.
 
 ---
 
@@ -113,60 +119,52 @@ Rules that keep scores honest:
 
 - If the spec and the app disagree, the **app** is the ground truth for facts; note the stale spec in the gap description but do not edit it.
 - If you could not verify a fact (source too tangled to read confidently), leave it out of N rather than guessing its status.
-- Areas scoring 1–2 are not gaps: leave them out of the candidate table. If a previous run listed one, remove it and record it under `Resolved since last run`.
+- Areas scoring 1–2 are not gaps: leave them out of `ready`. If a previous run listed one there, remove it and record it under `resolved` (Step 5).
 - A carried-over entry keeps its area ID but gets a **fresh** score from this run's evidence — never copy last run's score forward.
 
 ---
 
 ## Step 5 — Integrate findings into the backlog file
 
-Get the current timestamp — do not write one from memory:
+Write the results to `product/backlog/documentation.md`. If the file already exists, **integrate** — update scores and descriptions for areas you re-verified, remove areas whose gaps are now closed, add newly found areas — touching only bullets this task owns (see Step 1 point 2). Never duplicate an area ID.
 
-```bash
-date -u "+%Y-%m-%d %H:%M UTC"
-```
-
-Write the results to `product/backlog/user-documentation.md`. If the file already exists, **integrate** — update scores, evidence, and descriptions for areas you re-verified, remove areas whose gaps are now closed, add newly found areas. Never duplicate an area ID.
-
-Format the file like the other `product/backlog/` files: lowercase headings, flat `*` bullet lists, one entry per bullet — no tables. Required shape:
+Format the file like the other `product/backlog/` files: lowercase headings, flat `*` bullet lists, one entry per bullet — no tables, no timestamp anywhere in the file. Required shape:
 
 ```markdown
-# user documentation gaps
+# documentation
 
-Last run: <output of the date command above>
-
-Functional areas where user documentation lags application behavior, scored 1–10 for the size of the mismatch (10 = completely undocumented).
-
-## candidates
+## ready
 
 * ssh-tab (9/10) — SSH tabs have no page under `documentation/user-documentation/` and only a terse `help.md` row. 8 of 8 facts are undocumented, including the `ssh <host>` command syntax, the reconnect behavior, and the tab-close semantics. The ground truth is `product/specs/ssh-tab.md` and `src/ssh-tab.ts`. Fix by adding a new page under `documentation/user-documentation/tab-types/` and verifying the `help.md` one-liner still matches.
 
 * monitoring (6/10) — <same shape: fact counts, the specific missing/wrong facts, ground-truth files, where the fix belongs>
 
-## unverified
+## development
 
 * <area-id> — flagged by <signal>; not yet evaluated (over this run's limit)
+
+## deferred
 
 ## resolved
 
 * <area-id> — <one line on why it no longer qualifies> (removed <YYYY-MM-DD>)
 ```
 
-Keep `candidates` sorted by score, highest first; break ties alphabetically by area ID. Each candidate bullet is exactly one paragraph, at most 10 sentences, written per Step 4 point 4. Update `Last run` on every run, even if nothing else changed. `resolved` holds only entries removed in *this* run — delete last run's entries from it. Leave `unverified` and `resolved` present but empty when they have no entries, matching how the other backlog files keep their empty sections.
+Within `ready`, keep this task's own bullets sorted by score, highest first (break ties alphabetically by area ID), grouped ahead of or behind other tasks'/humans' unscored bullets — whichever ordering keeps your own entries contiguous and easiest to re-verify next run; never reorder or reword a bullet you did not author. Each of your bullets is exactly one paragraph, at most 10 sentences, written per Step 4 point 4. `resolved` accumulates across runs — add this run's closures, don't delete earlier ones (including ones added by other tasks). Get removal dates from `date -u "+%Y-%m-%d"` — do not write one from memory.
 
 Before moving on, verify:
 
-1. `git status` shows `product/backlog/user-documentation.md` as the **only** changed file. If anything else changed, revert it (`git checkout -- <file>`) before committing.
-2. Re-read the file once: entries sorted by score, no duplicate area IDs, every candidate bullet is a single paragraph with fact counts and file paths but no line numbers, timestamp is this run's.
+1. `git status` shows `product/backlog/documentation.md` as the **only** changed file. If anything else changed, revert it (`git checkout -- <file>`) before committing.
+2. Re-read the file once: your own entries in `ready` are sorted by score, no duplicate area IDs among them, every one of your candidate bullets is a single paragraph with fact counts and file paths but no line numbers, and no bullet you don't own was altered.
 
 ---
 
 ## Step 6 — Commit and push
 
-Execute [`quick-commit.md`](../quick-commit.md) in full to commit the result on `master` and push it to the remote. Use a `docs` type subject, e.g.:
+Execute [`quick-commit.md`](../quick-commit.md) in full to commit the result on `master` and push it to the remote. Use exactly this commit subject, since Step 1 greps for it to find this task's last run:
 
 ```
-docs(backlog): refresh user-documentation gap candidates
+docs(backlog): refresh documentation gap candidates
 ```
 
 (The workspace was checked out on `master` in Step 0, so the quick-commit push lands the change directly on `master` remote — no separate merge step is needed.)
@@ -180,9 +178,9 @@ Give the user a short report in this exact shape:
 ```
 Areas evaluated:  <count> (<carried over> re-verified, <new> new)
 Gaps recorded:    <count> (top: <highest-scoring area> — <score>)
-Unverified:       <count deferred to next run>
+Deferred to next: <count deferred to next run>
 Resolved:         <count removed this run>
-Backlog file:     product/backlog/user-documentation.md
+Backlog file:     product/backlog/documentation.md
 Commit:           <short-sha> pushed to master | push failed (see above)
 ```
 
