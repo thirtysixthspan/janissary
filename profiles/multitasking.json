@@ -1,0 +1,73 @@
+{
+  "agents": [
+    {
+      "name": "janus",
+      "active": false,
+      "cwd": "$root/",
+      "tab": {
+        "color": "#5b9cff",
+        "number": 2,
+        "focus": true,
+        "group": 1,
+        "groupColor": "#5b9cff"
+      }
+    }
+  ],
+  "harnesses": [
+    {
+      "name": "feature",
+      "type": "claude",
+      "model": "claude-sonnet-5",
+      "workspace": true,
+      "offline": false,
+      "autoApprove": true,
+      "cwd": "$root/workspace/feature",
+      "tab": {
+        "color": "#5f27cd",
+        "number": 3,
+        "group": 1
+      }
+    },
+    {
+      "name": "plan",
+      "type": "claude",
+      "model": "claude-opus-5",
+      "workspace": true,
+      "offline": false,
+      "autoApprove": true,
+      "cwd": "$root/workspace/plan",
+      "tab": {
+        "color": "#6bcb77",
+        "number": 5,
+        "group": 1
+      }
+    },
+    {
+      "name": "refactor",
+      "type": "claude",
+      "model": "claude-sonnet-5",
+      "effort": "high",
+      "workspace": true,
+      "offline": false,
+      "autoApprove": true,
+      "cwd": "$root/workspace/refactor",
+      "tab": {
+        "color": "#a66cff",
+        "number": 7,
+        "group": 1
+      }
+    }
+  ],
+  "files": [
+    {
+      "dock": "left",
+      "path": "$root/"
+    }
+  ],
+  "layout": {
+    "window": {
+      "width": 1280,
+      "height": 800
+    }
+  }
+}
