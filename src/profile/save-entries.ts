@@ -1,5 +1,5 @@
 import { abbreviatePath } from '../paths.js';
-import type { ProfileAgentFile, ProfileHarnessFile, Tab } from '../types.js';
+import type { ProfileAgentFile, ProfileEditorsEntry, ProfileHarnessFile, Tab } from '../types.js';
 import type { Managers } from '../managers.js';
 
 // Entry builders for `profile save`: the inverse of the agent-state/harness-entry loaders. Each
@@ -15,6 +15,14 @@ export function writeAgentEntry(tab: Tab, managers: Managers): ProfileAgentFile 
     name: tab.label,
     active: false,
     cwd: cwd ? abbreviatePath(cwd, { root: managers.tab.launchDir }) : cwd,
+    tab: { color: tab.dotColor, number: tab.number, focus: tab === managers.tab.tabs[managers.tab.activeTab] || undefined, group: tab.group, groupColor: tab.groupColor },
+  };
+}
+
+export function writeEditorEntry(tab: Tab, managers: Managers): ProfileEditorsEntry | undefined {
+  if (!tab.editor) return undefined;
+  return {
+    path: abbreviatePath(tab.editor.path, { root: managers.tab.launchDir }),
     tab: { color: tab.dotColor, number: tab.number, focus: tab === managers.tab.tabs[managers.tab.activeTab] || undefined, group: tab.group, groupColor: tab.groupColor },
   };
 }

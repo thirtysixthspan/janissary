@@ -85,7 +85,8 @@ describe('saveProfile', () => {
   it('writes focus only on the active main-area tab', async () => {
     const bob = makeTab('bob', '#aaa');
     const claude = makeHarnessTab('claude', '#ccc', 1, 1, '#ccc', { name: 'claude', program: 'claude', ptyId: 'pty1', status: 'running' });
-    const managers = makeManagers([bob, claude]);
+    const notes = makeEditorTab('notes', '#ddd', 1, 1, '#ddd', { name: 'notes.txt', path: '/notes.txt', size: '1KB', url: '/open/1' });
+    const managers = makeManagers([bob, claude, notes]);
     managers.tab.activeTab = 1;
 
     await saveProfile('demo', managers);
@@ -94,6 +95,7 @@ describe('saveProfile', () => {
       expect.objectContaining({ name: 'bob', focus: undefined }),
       expect.objectContaining({ name: 'claude', focus: true }),
     ]);
+    expect(load('demo').editors[0]?.tab?.focus).toBeUndefined();
   });
 
   it('writes an agent entry cwd relative to the project root when it is under the root', async () => {
@@ -115,17 +117,37 @@ describe('saveProfile', () => {
     expect(load('demo').entries).toEqual([expect.objectContaining({ cwd: '$root/src' })]);
   });
 
-  it('skips image, editor, ssh, and non-docked file-navigator tabs, and reports them', async () => {
+  it('skips image, ssh, and non-docked file-navigator tabs, and reports them', async () => {
     const image = makeImageTab('pic', '#111', 1, 1, '#111', { name: 'a.png', path: '/a.png', size: '1KB', url: '/open/1' });
-    const editor = makeEditorTab('notes', '#222', 1, 1, '#222', { name: 'notes.txt', path: '/notes.txt', size: '1KB', url: '/open/2' });
     const ssh = makeHarnessTab('server', '#333', 1, 1, '#333', { name: 'ssh', program: 'ssh', ptyId: 'pty2', status: 'running', destination: 'host' });
     const undockedFiles = makeFilesTab('nav', '#444', 1, 1, '#444', { root: '~', absoluteRoot: '/home', rows: [] });
-    const managers = makeManagers([image, editor, ssh, undockedFiles]);
+    const managers = makeManagers([image, ssh, undockedFiles]);
 
     const summary = await saveProfile('demo', managers);
 
-    expect(summary.skipped).toEqual(['pic', 'notes', 'server', 'nav']);
+    expect(summary.skipped).toEqual(['pic', 'server', 'nav']);
     expect(load('demo').entries).toEqual([]);
+  });
+
+  it('writes an editor entry with a nested tab object', async () => {
+    const editor = makeEditorTab('notes', '#222', 1, 1, '#222', { name: 'notes.txt', path: '/notes.txt', size: '1KB', url: '/open/2' });
+    const managers = makeManagers([editor]);
+
+    const summary = await saveProfile('demo', managers);
+
+    expect(load('demo').editors).toEqual([
+      { path: '/notes.txt', tab: { color: '#222', number: 1, group: 1, groupColor: '#222' } },
+    ]);
+    expect(summary.editors).toBe(1);
+  });
+
+  it('writes an editor entry path relative to the project root when it is under the root', async () => {
+    const editor = makeEditorTab('notes', '#222', 1, 1, '#222', { name: 'notes.txt', path: '/proj/src/notes.txt', size: '1KB', url: '/open/2' });
+    const managers = makeManagers([editor], {}, [], '/proj');
+
+    await saveProfile('demo', managers);
+
+    expect(load('demo').editors).toEqual([expect.objectContaining({ path: '$root/src/notes.txt' })]);
   });
 
   it('does not capture the root janus tab, and does not count or report it', async () => {
@@ -172,6 +194,7 @@ describe('saveProfile', () => {
     const loaded = load('demo');
     expect(loaded.monitors).toEqual([]);
     expect(loaded.files).toEqual([]);
+    expect(loaded.editors).toEqual([]);
     expect(loaded.notifications).toEqual([]);
     expect(loaded.schedules).toEqual([]);
     expect(loaded.layout).not.toBeNull();
