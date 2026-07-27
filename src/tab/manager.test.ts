@@ -139,6 +139,25 @@ describe('TabManager queue', () => {
     expect(tm.tabs.length).toBe(3); // janus + a.ts + b.ts
   });
 
+  it('openImageTab deduplicates by path and focuses the existing tab', () => {
+    const tm = makeTabManager();
+    const path = '/test/photo.png';
+    tm.openImageTab({ name: 'photo.png', path, size: '1 KB', url: '/open/1' });
+    const countAfterFirst = tm.tabs.length;
+    const firstActive = tm.activeTab;
+
+    tm.openImageTab({ name: 'photo.png', path, size: '1 KB', url: '/open/2' });
+    expect(tm.tabs.length).toBe(countAfterFirst);
+    expect(tm.activeTab).toBe(firstActive);
+  });
+
+  it('openImageTab creates a new tab when the path differs', () => {
+    const tm = makeTabManager();
+    tm.openImageTab({ name: 'a.png', path: '/test/a.png', size: '1 KB', url: '/open/1' });
+    tm.openImageTab({ name: 'b.png', path: '/test/b.png', size: '1 KB', url: '/open/2' });
+    expect(tm.tabs.length).toBe(3); // janus + a.png + b.png
+  });
+
   it('openEditorTab bypasses de-dupe for a new-file view, allowing multiple untitled tabs', () => {
     const tm = makeTabManager();
     const path = '/test/untitled.md';
