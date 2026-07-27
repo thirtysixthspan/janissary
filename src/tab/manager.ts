@@ -172,14 +172,12 @@ export class TabManager extends TabOpeningState {
   }
 
   closeTab(index: number): void {
-    const result = closeTabOp(
+    closeTabOp(
       this.tabs, this.activeTab, index, this.managers, this.fileRegistry.map, this.context, this.queue,
       (label) => { this.focusHistory = this.focusHistory.filter((l) => l !== label); },
       () => this.popFocusHistory(),
+      (tabs, activeTab) => { this.tabs = tabs; this.activeTab = activeTab; },
     );
-    if (!result) return;
-    this.tabs = result.tabs;
-    this.activeTab = result.activeTab;
   }
 
   renameTab(index: number, title: string): void {

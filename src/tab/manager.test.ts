@@ -6,6 +6,7 @@ import { TabManager } from './manager.js';
 import type { Managers } from '../managers.js';
 import type { AgentState } from '../types.js';
 import * as agentState from '../agent/state.js';
+import { messageBus } from '../bus.js';
 
 function makeManagers(): Managers {
   return {
@@ -176,6 +177,20 @@ describe('TabManager queue', () => {
     tm.closeTab(index);
 
     expect(tm.queueFor('second')).toEqual([]);
+  });
+
+  it('closing a tab makes the removal visible to a state:dirty listener registered before the close', () => {
+    const tm = makeTabManager();
+    tm.tabs.push({ ...tm.cur(), label: 'second', number: 2 });
+    const index = tm.findIndex('second');
+
+    let labelsAtEmit: string[] = [];
+    const sub = messageBus.on('state', 'dirty', () => { labelsAtEmit = tm.tabs.map((t) => t.label); });
+
+    tm.closeTab(index);
+    sub.unsubscribe();
+
+    expect(labelsAtEmit).not.toContain('second');
   });
 });
 
