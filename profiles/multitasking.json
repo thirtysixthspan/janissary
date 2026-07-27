@@ -58,10 +58,39 @@
       }
     }
   ],
+  "editors": [
+    {
+      "path": "$root/workspace/git-sync/product/backlog/issues.md",
+      "tab": {
+        "color": "#01a3a4",
+        "number": 4,
+        "group": 1,
+        "groupColor": "#5f27cd"
+      }
+    },
+    {
+      "path": "$root/workspace/git-sync/product/backlog/features.md",
+      "tab": {
+        "color": "#ffd93d",
+        "number": 6,
+        "group": 1,
+        "groupColor": "#5f27cd"
+      }
+    },
+    {
+      "path": "$root/workspace/git-sync/product/backlog/technical-debt.md",
+      "tab": {
+        "color": "#ff6f91",
+        "number": 8,
+        "group": 1,
+        "groupColor": "#5f27cd"
+      }
+    }
+  ],
   "files": [
     {
       "dock": "left",
-      "path": "$root/"
+      "path": "/Users/ashmorgan/dev/janissary"
     }
   ],
   "layout": {
