@@ -19,6 +19,12 @@ function activate(target: OpenTarget, result: { tabs: Tab[]; activeTab: number }
 }
 
 export function openImageTab(target: OpenTarget, image: ImageView): void {
+  const existing = target.tabs.find((t) => t.image?.path === image.path);
+  if (existing) {
+    target.setActiveTab(target.tabs.indexOf(existing));
+    messageBus.emit('state', { type: 'dirty' });
+    return;
+  }
   activate(target, addImageTab(target.tabs, target.activeTab, image));
 }
 

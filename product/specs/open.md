@@ -73,7 +73,7 @@ Hands the image to the operating system's image viewer (on macOS, Preview), laun
 
 ### `open <image>` — image tab
 
-Opens the image in an **image tab**: a non-agent view tab that displays the image with its metadata and no command bar. The new tab is created and focused like an agent tab (placed within the active tab's group, distinct dot color); it is a live, in-memory view and is not persisted or restored on `--relaunch`. The image tab — its layout, sizing and zoom, the tab-strip name and close button, how it is closed, and how its bytes are served — is described in [[image-tab]].
+Opens the image in an **image tab**: a non-agent view tab that displays the image with its metadata and no command bar. The new tab is created and focused like an agent tab (placed within the active tab's group, distinct dot color); it is a live, in-memory view and is not persisted or restored on `--relaunch`. If the image is already open in an image tab, that existing tab is focused instead of opening a duplicate. The image tab — its layout, sizing and zoom, the tab-strip name and close button, how it is closed, and how its bytes are served — is described in [[image-tab]].
 
 ---
 
