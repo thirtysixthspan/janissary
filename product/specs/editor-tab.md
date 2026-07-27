@@ -222,7 +222,8 @@ stays open.
 
 If the shared workspace does not exist yet when a synced file is opened, its editor tab opens
 immediately showing a loading state instead of content, and only loads the file's real content once
-the workspace is ready. Opening a synced file — or another synced file finishing a save — also pulls
+the workspace is ready. While the tab shows this loading state, its sync status icon spins to
+communicate that syncing is in progress. Opening a synced file — or another synced file finishing a save — also pulls
 the latest `origin/master` into the shared workspace; any other open, unmodified synced tab whose
 file changed as a result refreshes automatically, exactly like an ordinary external file change (see
 "Live reload of external changes"). A synced tab with unsaved changes is left alone, same as always.

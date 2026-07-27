@@ -242,6 +242,8 @@ html, body, #root {
 .editor-sync-icon--synced { color: var(--success); }
 .editor-sync-icon--error { color: var(--error); }
 .editor-sync-icon--clickable { cursor: pointer; }
+.editor-sync-icon--provisioning svg, .editor-sync-icon--syncing svg { animation: editor-sync-spin 1s linear infinite; }
+@keyframes editor-sync-spin { to { transform: rotate(360deg); } }
 .page-domain { color: var(--fg); font-weight: 600; } /* deprecated — kept for back-compat */
 .page-url { font-size: 12px; word-break: break-all; }
 .page-url-input {
