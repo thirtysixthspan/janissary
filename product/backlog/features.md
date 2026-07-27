@@ -2,8 +2,6 @@
 
 ## ready
 
-* extract harness transcripts directly from harness dot directories (.claude, .codex, .opencode) in order that subagents can be monitored.
-
 * The file navigator tab (`product/specs/file-navigator-tab.md`) has no multi-select, the way VS Code's Explorer lets Ctrl/Cmd-click or the `workbench.list.multiSelectModifier` setting select several rows at once for a bulk move, delete, or drag. Janissary's spec states outright that "only a single row can be dragged at a time — the tree has no multi-select," so moving, deleting, or renaming several files at once requires repeating the action per file. Adding multi-select would touch the tree's selection state, its drag-and-drop handler, and the delete/rename confirmation dialogs to handle a list instead of one row. Complexity: medium.
 
 * Janissary's tab strip (`product/specs/tabs.md`, `product/specs/sidebars.md`) has no split-pane view showing two tabs side by side, the way tmux and Zellij split a single terminal window into multiple simultaneously-visible panes. Today only one central tab is visible at a time — the left/right sidebars dock the file navigator, notifications, or schedules tab alongside it, but two ordinary agent or harness tabs can never be viewed side by side without switching between them. Supporting even a single fixed horizontal or vertical split of the center tab area (independent of the existing sidebar docking) would let a user watch two harnesses or compare an agent's transcript against a file at once. Complexity: high — the tab-strip/active-tab model assumes exactly one visible central tab throughout the app.
