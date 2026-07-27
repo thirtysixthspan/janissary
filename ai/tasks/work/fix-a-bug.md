@@ -40,7 +40,7 @@ Execute `ai/tasks/prepare-workspace.md` in full before doing anything else.
 1. Read `./product/backlog/bugs.md`. Bugs are grouped under `## ready`, `## development`, and `## deferred`. Only consider bugs under `## ready`.
 2. If there are no bugs under `## ready`, report "No ready bugs in `./product/backlog/bugs.md`" and stop.
 3. Pick the bug to fix. Do **not** evaluate, rank, or compare the bugs for scope, tractability, or any other quality — the human who filed them decided they belong here:
-   - **If a specific bug is named in the task invocation** (e.g. `execute ai/tasks/fix-a-bug.md "<bug text>"`), fix that one. Find the entry in `./product/backlog/bugs.md` it refers to — the argument may be quoted text, a paraphrase, or a position such as "the second one". If no entry matches, report that no matching bug was found and stop.
+   - **If a specific bug is named in the task invocation** (e.g. `execute ai/tasks/work/fix-a-bug.md "<bug text>"`), fix that one. Find the entry in `./product/backlog/bugs.md` it refers to — the argument may be quoted text, a paraphrase, or a position such as "the second one". If no entry matches, report that no matching bug was found and stop.
    - **Otherwise**, take the **first** bug listed under `## ready` (top of the list).
 
    State which bug you selected in one sentence.
@@ -66,7 +66,7 @@ State the correct behavior in one or two sentences before planning the fix. If t
 
 ## Step 3 — Develop a plan
 
-1. Read the project constraints in [`CLAUDE.md`](../../CLAUDE.md): ESLint rules (200-line `max-lines`, `.js` import extensions in `src/`, type-aware rules), test conventions (`src/**/*.test.ts`, `web/src/**/*.test.tsx`).
+1. Read the project constraints in [`CLAUDE.md`](../../../CLAUDE.md): ESLint rules (200-line `max-lines`, `.js` import extensions in `src/`, type-aware rules), test conventions (`src/**/*.test.ts`, `web/src/**/*.test.tsx`).
 2. Read every file relevant to the fix to understand the code involved and the root cause of the bug — fix the cause, not just the symptom.
 3. Choose a short, descriptive `kebab-case` name for the fix — call it `<bug-name>` (for example `orientation-reset-on-load`). Use this exact same name for the plan file at every stage below.
 4. Write a plan file following the format of existing plans in `./product/plans/complete/` — include a complexity rating, the root cause, the correct behavior (from Step 2), the reproduction (from Step 1), the approach, implementation steps, the regression test, and out-of-scope items. Write it to `./product/plans/draft/<bug-name>.md`.

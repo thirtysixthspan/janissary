@@ -39,7 +39,7 @@ Execute `ai/tasks/prepare-workspace.md` in full before doing anything else.
 
 1. Read `./product/backlog/technical-debt.md`. If it has no items anywhere in the file (not even in `## deferred`), report "No items in `./product/backlog/technical-debt.md`" and stop.
 2. Work through the items **in the order they're listed**, starting from the top. For each item, in turn:
-   1. Review the codebase to understand what areas the item touches, then rate its complexity on a 1–10 scale (1 = trivial, localized change; 10 = a rewrite touching architecture across many files). Use the same judgment `ai/tasks/fix-an-issue.md` applies to issues: an item needing significant new architecture rates 7 or above.
+   1. Review the codebase to understand what areas the item touches, then rate its complexity on a 1–10 scale (1 = trivial, localized change; 10 = a rewrite touching architecture across many files). Use the same judgment `ai/tasks/work/fix-an-issue.md` applies to issues: an item needing significant new architecture rates 7 or above.
    2. **If the rating is 8 or higher** (exceeds the threshold of 7): do not resolve it. Remove the item's line from wherever it currently sits in `./product/backlog/technical-debt.md` and add it under the `## deferred` section, appending a note of the rated complexity and a one-sentence reason, e.g.:
       ```
       * <original item text> — deferred: complexity 8/10, requires a new persistence layer across three subsystems.

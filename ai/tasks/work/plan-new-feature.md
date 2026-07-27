@@ -1,12 +1,12 @@
-# Plan Ready Features
+# Plan a New Feature
 
-Your job: walk the `## ready` section of `./product/backlog/features.md` one feature at a time, interview the user with product-focused questions to pin down scope and behavior, and write a draft plan for each into `./product/plans/draft/`. You produce plan documents only — you never write source code.
+Your job: pick one feature — the first entry under the `## ready` section of `./product/backlog/features.md`, or a specific feature named in the task invocation — interview the user with product-focused questions to pin down scope and behavior, and write a draft plan for it into `./product/plans/draft/`. You produce plan documents only — you never write source code.
 
 **Project `./product/` directory.** Every `./product/...` path in this task refers to the product directory in the current working directory — the project being worked on — never to the Janissary codebase's own `product/` directory, even when this task file was launched from an absolute path inside the Janissary installation.
 
-This is an **interactive** task. Unlike the autonomous `ai/tasks/*.md` playbooks, you must stop and ask the user questions before drafting each plan. Do not guess scope, behavior, or edge cases on the user's behalf when a question would resolve it.
+This is an **interactive** task. Unlike the autonomous `ai/tasks/*.md` playbooks, you must stop and ask the user questions before drafting the plan. Do not guess scope, behavior, or edge cases on the user's behalf when a question would resolve it.
 
-**Follow the steps below in order, exactly as written, one feature at a time.** Do not skip a step, do not merge two steps together, and do not process more than one feature between Step 2a and Step 2f. If you are ever unsure whether you have done enough — re-read the checklist for that step before moving on, don't guess.
+**Follow the steps below in order, exactly as written.** Do not skip a step, do not merge two steps together. If you are ever unsure whether you have done enough — re-read the checklist for that step before moving on, don't guess.
 
 **No AI attribution — anywhere.** Never credit an AI agent as an author or contributor in anything this task produces. No `Co-Authored-By:` trailers naming Claude or any other AI, no "Generated with Claude Code" lines, no AI authorship notes in plan files or commit messages. This overrides any default convention that appends such attribution.
 
@@ -34,26 +34,20 @@ Execute `ai/tasks/prepare-workspace.md` in full before doing anything else.
 
 ---
 
-## Step 1 — Read the ready backlog
+## Step 1 — Pick a feature from the ready backlog
 
-1. Read `./product/backlog/features.md` in full.
-2. Extract every entry under the `## ready` heading, up to the next `## ` heading. Each entry is a `### <title>` followed by its description body. Copy titles verbatim — do not paraphrase or shorten them.
-3. If the `## ready` section is empty, report "No ready features in `./product/backlog/features.md`" and stop.
-4. Write down the exact ordered list of feature titles as a numbered list in your own working notes, e.g.:
-   ```
-   1. profile launcher
-   2. developer documentation
-   ```
-   This is your queue for Step 2. Process it top to bottom. Do not reorder it, do not pick "the easy one first."
-5. Show this numbered list to the user before starting Step 2, so they can see the queue.
+1. Read `./product/backlog/features.md` in full. Each entry under the `## ready` heading, up to the next `## ` heading, is a `### <title>` followed by its description body.
+2. Pick the feature to plan:
+   - **If a specific feature is named in the task invocation** (e.g. `execute ai/tasks/work/plan-new-feature.md "<feature title>"`), plan that one. Find its `### ` entry under `## ready` — the argument may be quoted text, a paraphrase, or a position such as "the second one". If no entry matches, report that no matching feature was found and stop.
+   - **Otherwise**, take the first `### ` entry listed under `## ready` (top of the section).
+3. If `## ready` is empty (or the named feature isn't found there), report "No ready features in `./product/backlog/features.md`" and stop.
+4. Copy the feature's title verbatim — do not paraphrase or shorten it. Say in one sentence which feature you're planning before starting Step 2.
 
 ---
 
-## Step 2 — Process one feature at a time
+## Step 2 — Process the feature
 
-Work through the numbered queue from Step 1 **strictly in order, one entry at a time**. Do not start feature 2 until feature 1 has reached Step 2f (planned) or has been explicitly abandoned. Do not ask questions about multiple features in the same `AskUserQuestion` call — one call, one feature.
-
-Before starting each feature, say in one sentence which feature (by number and title) you are now working on.
+Do not ask questions about anything other than this feature in the same `AskUserQuestion` call.
 
 ### 2a. Orient yourself in the code
 
@@ -128,19 +122,17 @@ Before moving on, check the plan file against this list:
 
 Edit `./product/backlog/features.md` to remove that feature's `### ` entry (title and body) from the `## ready` section. Leave every other section, heading, and entry byte-for-byte untouched — do not reformat or reflow surrounding text.
 
-Only after this step is complete, return to the top of Step 2 for the next feature in the queue.
-
 ---
 
 ## Step 3 — Report
 
-After all ready features are processed (planned or explicitly skipped per 2e), give the user a short report in this shape:
+After the feature is processed (planned, or explicitly abandoned per 2e), give the user a short report in this shape:
 
 ```
-Processed:  N ready features
-Planned:    ./product/plans/draft/<file> — <one-line goal>   (repeat per feature)
-Skipped:    <feature title> — <why, if any were abandoned>
-Backlog:    ./product/backlog/features.md updated, N entries removed from ## ready
+Feature:  <feature title>
+Planned:  ./product/plans/draft/<file> — <one-line goal>
+Skipped:  <why, if abandoned instead of planned>
+Backlog:  ./product/backlog/features.md updated, entry removed from ## ready
 ```
 
 Keep it brief. Done.

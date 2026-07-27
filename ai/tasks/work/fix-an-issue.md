@@ -35,19 +35,20 @@ Execute `ai/tasks/prepare-workspace.md` in full before doing anything else.
 
 ---
 
-## Step 1 — List small fixes and pick the first available
+## Step 1 — List small fixes and pick one
 
 1. Read `./product/backlog/issues.md` and list every issue.
-2. For each issue, assess the complexity by reviewing the codebase to understand what areas it touches. Do not use a shell loop for this.
-3. If no issues exist, report "No issues in `./product/backlog/issues.md`" and stop.
-4. If every issue requires significant new architecture (rating 7+), report the list with assessments and stop — do not pick one.
-5. Otherwise, pick the **first** issue listed in the file (top of the list). State your pick and why.
+2. If no issues exist, report "No issues in `./product/backlog/issues.md`" and stop.
+3. Pick the issue to fix:
+   - **If a specific issue is named in the task invocation** (e.g. `execute ai/tasks/work/fix-an-issue.md "<issue text>"`), fix that one. Find the entry in `./product/backlog/issues.md` it refers to — the argument may be quoted text, a paraphrase, or a position such as "the second one". If no entry matches, report that no matching issue was found and stop. Assess its complexity by reviewing the codebase to understand what areas it touches (do not use a shell loop for this); if it requires significant new architecture (rating 7+), report the assessment and stop — do not implement it.
+   - **Otherwise**, for each issue, assess the complexity by reviewing the codebase to understand what areas it touches. Do not use a shell loop for this. If every issue requires significant new architecture (rating 7+), report the list with assessments and stop — do not pick one. Otherwise, pick the **first** issue listed in the file (top of the list).
+4. State your pick and why.
 
 ---
 
 ## Step 2 — Develop a plan
 
-1. Read the project constraints in [`CLAUDE.md`](../../CLAUDE.md): ESLint rules (200-line `max-lines`, `.js` import extensions in `src/`, type-aware rules), test conventions (`src/**/*.test.ts`, `web/src/**/*.test.tsx`).
+1. Read the project constraints in [`CLAUDE.md`](../../../CLAUDE.md): ESLint rules (200-line `max-lines`, `.js` import extensions in `src/`, type-aware rules), test conventions (`src/**/*.test.ts`, `web/src/**/*.test.tsx`).
 2. Read every file relevant to the fix to understand the code involved.
 3. Write a plan file following the format of existing plans in `./product/plans/complete/` — include a complexity rating, goal, approach, implementation steps, tests, and out-of-scope items. Write it to `./product/plans/draft/<fix-name>.md`.
 4. After the plan is written, move it from `./product/plans/draft/` to `./product/plans/ready/`:
