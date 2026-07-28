@@ -305,7 +305,8 @@ applies only to harnesses added later.
   first). If the harness tab is the last remaining tab, closing it — including the harness
   process exiting on its own — quits the app (see `tabs.md`). There is no frozen "exited" state
   to inspect — the harness's own scrollback is gone once its tab closes, but the full timed session
-  is preserved in its recording file (see [[harness-recording]]).
+  is preserved in its recording file, and its normalized history (including any subagent activity)
+  in its transcript file (see [[harness-recording]]).
 
 ## Screen capture
 
@@ -336,6 +337,34 @@ in the project directory and opens it as a regular editor tab — each invocatio
 opens a new tab; the capture is a snapshot, not a live view. Capture files accumulate only within
 a run: the directory is cleared at the next normal launch (a `--relaunch` handoff preserves it,
 matching agent state).
+
+## Session transcript
+
+```
+harness transcript <name>
+```
+
+Opens a harness tab's **session transcript** — the linear session history extracted from the record
+the harness binary keeps in its own configuration directory, normalized to plain text — in a normal
+editor tab. `<name>` targets an **existing harness tab by its label** (matched exactly and
+case-sensitively), exactly as `harness capture` does.
+
+- `harness transcript` with no name — error: `Usage: harness transcript <name>.`
+- No tab has the label — error: `No tab labeled "<name>".`
+- The tab exists but is not a harness tab — error: `"<name>" is not a harness tab.`
+- The tab is a harness tab whose transcript is not available — nothing has been extracted yet, the
+  session record could not be found, or it is an ssh tab, which never has one — error:
+  `No transcript available for "<name>" yet.`
+
+Unlike a capture, the transcript is written continuously and automatically for the tab's whole life;
+the command only opens the file. It is a point-in-time open of the file as it stands, not a live
+view, so re-running it after more activity opens a newer version of the same growing file.
+
+What the transcript carries that a capture cannot is **subagent** activity. When a harness dispatches
+a subagent, the terminal shows only a collapsed progress line, so the subagent's own prompts, tool
+calls, and results appear nowhere on screen; in the transcript they appear as ordinary entries,
+labeled with the subagent that produced them. See [[harness-recording]] for the per-harness sources,
+file naming, and the fallback when no session record can be found.
 
 ## Session recording
 

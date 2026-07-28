@@ -6,8 +6,54 @@ Recording is **automatic** — there is no command to start or stop it — and i
 PTY byte stream (ANSI and all) for the whole session, so a harness's output survives after its tab
 closes (which is when its own scrollback would otherwise be lost, see [[harness]] § Lifecycle).
 
-This is distinct from [[harness]] § Screen capture: a *capture* is a point-in-time text snapshot of
-the visible screen written on demand; a *recording* is the entire timed stream written automatically.
+### The three harness observers
+
+A harness tab produces three distinct artifacts, each answering a different question:
+
+- A **capture** (see [[harness]] § Screen capture) is a point-in-time text snapshot of the visible
+  screen, written on demand by `harness capture <label>`.
+- A **recording** is the entire timed PTY byte stream, written automatically — everything the
+  terminal showed, in the order and at the pace it showed it.
+- A **transcript** (see [[harness]] § Session transcript) is the session's linear history in
+  normalized text, extracted automatically from the record the harness binary keeps in its own
+  configuration directory. It is the only one of the three that carries **subagent** activity: when a
+  harness dispatches a subagent, the terminal shows only a collapsed progress line, so the subagent's
+  own prompts, tool calls, and results appear in neither the screen nor the recording.
+
+### Session transcripts
+
+Each harness records its session in its own way, and a monitored tab's transcript is read from
+whichever applies:
+
+- `claude` — one file per session in its projects directory, named after the tab's working
+  directory, plus one file per subagent the session dispatched.
+- `codex` — one rollout file per session, filed under the date the session started and identified by
+  the working directory recorded in its header.
+- `opencode` — rows in its session database, where a subagent is a session whose parent is the tab's
+  own session.
+
+A tab follows only the session belonging to its own running harness process, starting from the moment
+the tab opened: earlier sessions in the same directory are never read, and no history predating the
+tab is imported. The harness's own directories are only ever read, never written to, and a harness
+launched into a sandboxed workspace (`-w`) still records its session normally.
+
+Entries are labeled with the subagent that produced them, so a subagent's work stays
+distinguishable from the parent's once the two are interleaved.
+
+The transcript file is `.janissary/harness-transcripts/<label>-<timestamp>.txt`, named on the same
+scheme as captures and recordings. It is created **lazily, on the first entry** — a harness that
+never produces one leaves no empty file — appended to for the life of the tab, and never truncated.
+The directory is **cleared at a fresh launch** and **preserved across `--relaunch`**, matching
+`.janissary/recordings/`. It is separate from `.janissary/transcripts/`, which holds ordinary tabs'
+own logs.
+
+A session record is not created the instant a harness starts; the binary writes it on its first turn,
+and the tab keeps looking until it appears. When none can be found, the tab silently keeps its
+existing behavior — screen snapshots to monitors, no transcript file — and a single
+`no harness transcript found` line is recorded in the notifications feed for that tab (see
+[[notifications]]), never repeated. The same applies when a harness's storage format is not one this
+version recognizes. SSH tabs get no transcript and no such notification: they share the harness tab
+shape but run no harness.
 
 ### Scope
 
@@ -56,12 +102,15 @@ keeps them.
 
 ### Retrieval
 
-There is no in-app retrieval command or viewer. Files accumulate under `.janissary/recordings/` and
-are replayed externally — `asciinema play .janissary/recordings/<file>.cast`, or any asciicast web
-player.
+There is no in-app retrieval command or viewer for a **recording**. Files accumulate under
+`.janissary/recordings/` and are replayed externally — `asciinema play
+.janissary/recordings/<file>.cast`, or any asciicast web player.
+
+A **transcript** is opened in the app with `harness transcript <label>`, which shows the file as it
+stands in a normal editor tab (see [[harness]] § Session transcript).
 
 ### Monitoring a harness tab
 
 Because the harness's output is now captured, a harness-view tab can be a monitor target
-(`monitor <persona> <harness-label>`). See [[monitoring]] for what the monitor receives (its latest
-rendered screen, not the raw recording).
+(`monitor <persona> <harness-label>`). See [[monitoring]] for what the monitor receives: its latest
+rendered screen plus its session transcript since the previous flush — never the raw recording.

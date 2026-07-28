@@ -38,6 +38,8 @@ function makeFakeManagers(tabs: Tab[]) {
   const appended: { label: string; entry: LogEntry }[] = [];
   const finished: { label: string; output: string }[] = [];
   const screens: Record<string, { text: string; capturedAt: number } | undefined> = {};
+  // Per-tab accumulated session-transcript entries, standing in for that tab's transcript tailer.
+  const transcripts: Record<string, string[] | undefined> = {};
   const openFiles = new Map<string, string>();
   const fakeTab = {
     tabs,
@@ -53,10 +55,16 @@ function makeFakeManagers(tabs: Tab[]) {
   const edit = vi.fn();
   const managers = {
     tab: fakeTab,
-    harness: { latestScreenText: (label: string) => screens[label] },
+    harness: {
+      latestScreenText: (label: string) => screens[label],
+      transcriptTailer: (label: string) => {
+        const entries = transcripts[label];
+        return entries && { entriesAfter: (index: number) => entries.slice(index) };
+      },
+    },
     openFile: { edit },
   } as unknown as Managers;
-  return { managers, appended, finished, screens, edit, openFiles };
+  return { managers, appended, finished, screens, transcripts, edit, openFiles };
 }
 
 function harnessTab(label: string): Tab {
@@ -758,6 +766,39 @@ describe('MonitorManager', () => {
     sessions[0].reply('no suggestion'); // complete the prompt so inFlight clears
     vi.advanceTimersByTime(FLUSH_MS); // idle: same capturedAt → buffer empty → no new prompt
     expect(sessions[0].prompts).toHaveLength(2);
+  });
+
+  it('seeds a harness target with its session transcript as well as its screen, transcript first', () => {
+    const claude = harnessTab('claude');
+    const { managers, screens, transcripts } = makeFakeManagers([janus, claude]);
+    screens.claude = { text: 'on-screen output', capturedAt: 100 };
+    transcripts.claude = ['[Explore: find the config] user: search the repo'];
+    const { spawn, sessions } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+
+    manager.start('janus', 'assistant', [{ kind: 'tab', label: 'claude' }]);
+    vi.advanceTimersByTime(FLUSH_MS);
+    const prompt = sessions[0].prompts[1];
+    expect(prompt).toContain('[Explore: find the config] user: search the repo');
+    expect(prompt).toContain('on-screen output');
+    expect(prompt.indexOf('search the repo')).toBeLessThan(prompt.indexOf('on-screen output'));
+  });
+
+  it('feeds a harness target\'s new transcript entries on flush', () => {
+    const claude = harnessTab('claude');
+    const { managers, screens, transcripts } = makeFakeManagers([janus, claude]);
+    screens.claude = { text: 'steady screen', capturedAt: 100 };
+    transcripts.claude = ['user: first turn'];
+    const { spawn, sessions } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+
+    manager.start('janus', 'assistant', [{ kind: 'tab', label: 'claude' }]);
+    vi.advanceTimersByTime(FLUSH_MS); // flushes the seeded transcript entry and screen
+    sessions[0].reply('no suggestion'); // complete the prompt so inFlight clears
+    transcripts.claude.push('assistant → Read({"file_path":"/a.ts"})');
+    vi.advanceTimersByTime(FLUSH_MS);
+    expect(sessions[0].prompts.at(-1)).toContain('assistant → Read({"file_path":"/a.ts"})');
+    expect(sessions[0].prompts.at(-1)).not.toContain('user: first turn');
   });
 
   it('feeds an editor target its file content on seed and a diff on change', () => {

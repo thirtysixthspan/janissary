@@ -93,6 +93,21 @@ describe('shouldNotify — auto-approve event', () => {
   });
 });
 
+describe('shouldNotify — transcript-unavailable event', () => {
+  it('fires regardless of the per-event toggles, like the other explicit events', () => {
+    expect(shouldNotify(allOff, 'transcript-unavailable', 'claude', 'janus')).toBe(true);
+    expect(shouldNotify(undefined, 'transcript-unavailable', 'claude', 'janus')).toBe(true);
+  });
+
+  it('fires even when the harness tab is the active one', () => {
+    expect(shouldNotify(allOn, 'transcript-unavailable', 'claude', 'claude')).toBe(true);
+  });
+
+  it('renders the fallback body, with the label supplied by the line header', () => {
+    expect(notificationText('transcript-unavailable', 'claude')).toBe('no harness transcript found');
+  });
+});
+
 describe('shouldNotify — question event', () => {
   it('fires regardless of notification config', () => {
     expect(shouldNotify(undefined, 'question', 'build', 'janus')).toBe(true);

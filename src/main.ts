@@ -6,6 +6,7 @@ import { makeToken } from './security.js';
 import { initAgentStateDirectory, clearStateDirectory } from './agent/state.js';
 import { initHarnessCaptureDirectory, clearCaptureDirectory } from './harness/capture-file.js';
 import { initHarnessRecordingDirectory, clearHarnessRecordingDirectory } from './harness/recording-file.js';
+import { initHarnessTranscriptDirectory, clearHarnessTranscriptDirectory } from './harness/transcript-file.js';
 import { acquireLock, releaseLock } from './instance-lock.js';
 import { stopInstance } from './stop-instance.js';
 import { initGlobalHistory } from './global-history.js';
@@ -157,6 +158,7 @@ export async function boot(argv = process.argv.slice(2)): Promise<void> {
   initAgentStateDirectory(cwd);
   initHarnessCaptureDirectory(cwd);
   initHarnessRecordingDirectory(cwd);
+  initHarnessTranscriptDirectory(cwd);
   initGlobalHistory();
   initDbDir(cwd);
   initProfileDir(cwd, path.join(import.meta.dirname, '..'));
@@ -167,7 +169,7 @@ export async function boot(argv = process.argv.slice(2)): Promise<void> {
   loadAgentNames(cwd);
   loadHarnessModels(cwd);
   loadGithubToken(cwd);
-  if (!args.relaunch) { clearStateDirectory(); TranscriptStore.clear(); clearWorkspaceDir(); clearCaptureDirectory(); clearHarnessRecordingDirectory(); }
+  if (!args.relaunch) { clearStateDirectory(); TranscriptStore.clear(); clearWorkspaceDir(); clearCaptureDirectory(); clearHarnessRecordingDirectory(); clearHarnessTranscriptDirectory(); }
 
   const webDir = path.join(import.meta.dirname, '..', 'web', 'dist');
   if (!existsSync(path.join(webDir, 'index.html'))) {
