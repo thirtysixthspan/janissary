@@ -65,6 +65,13 @@ describe('single-file profiles', () => {
     ]);
   });
 
+  it('never lists a subdirectory of profiles/ as a row', () => {
+    writeProfile('coding', {});
+    mkdirSync(path.join(root, 'profiles', 'archive'), { recursive: true });
+    mkdirSync(path.join(janissary, 'profiles', 'shipped'), { recursive: true });
+    expect(listProfileRows()).toEqual([{ name: 'coding', source: 'project' }]);
+  });
+
   it('resolves profilePath/profileExists to the file', () => {
     writeProfile('coding', {});
     expect(profilePath('coding')).toBe(path.join(root, 'profiles', 'coding.json'));

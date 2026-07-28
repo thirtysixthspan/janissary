@@ -46,9 +46,35 @@ describe('listTasks', () => {
     writeTask(root, 'top.md');
     writeTask(root, 'extra/nested.md');
     expect(listTasks(root, janissary)).toEqual([
+      { path: 'top.md', name: 'top.md', depth: 0, dir: false, source: 'project' },
       { path: 'extra', name: 'extra', depth: 0, dir: true, source: 'project' },
       { path: 'extra/nested.md', name: 'nested.md', depth: 1, dir: false, source: 'project' },
-      { path: 'top.md', name: 'top.md', depth: 0, dir: false, source: 'project' },
+    ]);
+  });
+
+  it('lists every task file before the subdirectories, each group alphabetical', () => {
+    writeTask(root, 'zebra.md');
+    writeTask(root, 'alpha.md');
+    writeTask(root, 'workspace/merge.md');
+    writeTask(root, 'hygiene/tidy.md');
+    expect(listTasks(root, janissary)).toEqual([
+      { path: 'alpha.md', name: 'alpha.md', depth: 0, dir: false, source: 'project' },
+      { path: 'zebra.md', name: 'zebra.md', depth: 0, dir: false, source: 'project' },
+      { path: 'hygiene', name: 'hygiene', depth: 0, dir: true, source: 'project' },
+      { path: 'hygiene/tidy.md', name: 'tidy.md', depth: 1, dir: false, source: 'project' },
+      { path: 'workspace', name: 'workspace', depth: 0, dir: true, source: 'project' },
+      { path: 'workspace/merge.md', name: 'merge.md', depth: 1, dir: false, source: 'project' },
+    ]);
+  });
+
+  it('lists files before subdirectories inside a nested directory too', () => {
+    writeTask(root, 'extra/inner/deep.md');
+    writeTask(root, 'extra/sibling.md');
+    expect(listTasks(root, janissary)).toEqual([
+      { path: 'extra', name: 'extra', depth: 0, dir: true, source: 'project' },
+      { path: 'extra/sibling.md', name: 'sibling.md', depth: 1, dir: false, source: 'project' },
+      { path: 'extra/inner', name: 'inner', depth: 1, dir: true, source: 'project' },
+      { path: 'extra/inner/deep.md', name: 'deep.md', depth: 2, dir: false, source: 'project' },
     ]);
   });
 

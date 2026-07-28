@@ -4,12 +4,17 @@ import type { TaskRow } from './types.js';
 
 // Depth-first walk of one directory: returns its entries (files and subdirectories, recursed
 // into) as a flat, pre-order `TaskRow[]` — a directory row immediately followed by its children,
-// so the array is already in display order. Sorted alphabetically within each directory. Every
-// row is stamped with `source` so the client can group and route it.
+// so the array is already in display order. Within each directory the task files come first and
+// the subdirectories last, each group sorted alphabetically. Every row is stamped with `source`
+// so the client can group and route it.
 function walk(dir: string, relativeDir: string, depth: number, source: TaskRow['source']): TaskRow[] {
   const entries = readdirSync(dir, { withFileTypes: true })
     .filter((dirent) => dirent.isDirectory() || (dirent.isFile() && dirent.name.endsWith('.md')))
-    .toSorted((a, b) => a.name.localeCompare(b.name));
+    .toSorted((a, b) => (
+      a.isDirectory() === b.isDirectory()
+        ? a.name.localeCompare(b.name)
+        : Number(a.isDirectory()) - Number(b.isDirectory())
+    ));
 
   const rows: TaskRow[] = [];
   for (const dirent of entries) {
