@@ -5,6 +5,7 @@ import { TAB_RENAME_MAX_LENGTH } from '@shared/config';
 import { statusDotIcon, unreadIcon } from './icons';
 import { InlineEditInput } from './InlineEditInput';
 import { truncateTabLabel } from './tab-label';
+import type { TabDragTransform } from './useTabReorder';
 
 // Shared with TabStrip, which passes these straight through to each TabItem it renders.
 export type TabItemActions = {
@@ -22,11 +23,14 @@ type Properties = TabItemActions & {
   index: number;
   active: boolean;
   windowFocused?: boolean;
+  dragTransform?: TabDragTransform;
+  onReorderMouseDown?: (event: React.MouseEvent) => void;
 };
 
 export function TabItem({
   tab, index, active, onSelect, onClose, onRename, tabNameMaxLength,
   activeTabNameMaxLength = 50, onFocusCommandBar, onFocusEditor, windowFocused = true,
+  dragTransform, onReorderMouseDown,
 }: Properties) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState('');
@@ -55,12 +59,16 @@ export function TabItem({
 
   return (
     <div
-      className={`tab${active ? ' active' : ''}`}
-      style={{ borderTopColor: borderColor }}
+      className={`tab${active ? ' active' : ''}${dragTransform ? dragTransform.dragged ? ' dragging' : ' shifting' : ''}`}
+      style={{
+        borderTopColor: borderColor,
+        transform: dragTransform ? `translate(${dragTransform.x}px, ${dragTransform.y}px)` : undefined,
+      }}
       onMouseDown={(e) => {
         if (e.detail <= 1) gestureStartedInactiveRef.current = !active;
         onFocusCommandBar?.();
         onSelect(index);
+        onReorderMouseDown?.(e);
       }}
     >
       <span className={`dot${tab.busy ? ' busy' : ''}`} style={{ color: tab.dotColor }}><FontAwesomeIcon icon={statusDotIcon} /></span>

@@ -4,10 +4,11 @@ import type { MouseEvent as ReactMouseEvent } from 'react';
 // `mousedown` handler: `onMove` fires on every `mousemove`, and both listeners remove
 // themselves on the following `mouseup`. Shared by every draggable resize divider
 // (ReportingSection's height divider, Sidebar's width divider).
-export function startDrag(onMove: (e: MouseEvent) => void): void {
-  const onUp = () => {
+export function startDrag(onMove: (e: MouseEvent) => void, onEnd?: (e: MouseEvent) => void): void {
+  const onUp = (event: MouseEvent) => {
     globalThis.removeEventListener('mousemove', onMove);
     globalThis.removeEventListener('mouseup', onUp);
+    onEnd?.(event);
   };
   globalThis.addEventListener('mousemove', onMove);
   globalThis.addEventListener('mouseup', onUp);

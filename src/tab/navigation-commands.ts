@@ -1,6 +1,6 @@
 import type { Tab, AgentState } from '../types.js';
 import { messageBus } from '../bus.js';
-import { computeReorder } from './reorder.js';
+import { computeReorder, computeReorderTo } from './reorder.js';
 
 // Active-tab navigation coordination extracted from TabManager: wraps the pure tab-array
 // computations in reorder.ts with the focus-history bookkeeping, persistence, and messageBus
@@ -45,5 +45,29 @@ export function reorderTabOp(
   if (active) active.hasUnread = false;
   persist(buildAgentState(result.tabs[from]));
   persist(buildAgentState(result.tabs[result.activeTab]));
+  messageBus.emit('state', { type: 'dirty' });
+}
+
+export function reorderTabToOp(
+  tabs: Tab[], activeTab: number, from: number, to: number,
+  applyResult: (tabs: Tab[], activeTab: number) => void,
+  persist: (state: AgentState) => void,
+  buildAgentState: (tab: Tab) => AgentState,
+): void {
+  const result = computeReorderTo(tabs, from, to);
+  if (!result) return;
+  const moved = result.tabs[result.activeTab];
+  const currentLabel = tabs[activeTab]?.label;
+  const nextActive = moved.dock || moved.group === 0
+    ? result.tabs.findIndex((tab) => tab.label === currentLabel)
+    : result.activeTab;
+  applyResult(result.tabs, nextActive);
+  moved.hasUnread = false;
+  const first = Math.min(from, to);
+  const last = Math.max(from, to);
+  const affectedTabs = result.tabs.slice(first, last + 1);
+  for (const tab of affectedTabs) {
+    if (!tab.view) persist(buildAgentState(tab));
+  }
   messageBus.emit('state', { type: 'dirty' });
 }

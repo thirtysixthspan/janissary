@@ -138,6 +138,35 @@ describe('Sidebar', () => {
     expect(getByText('a notification')).toBeTruthy();
   });
 
+  it('keeps the selected view visible after a sidebar reorder', () => {
+    const send = vi.fn();
+    const client = { send, renameTab: vi.fn() } as unknown as JanusClient;
+    const files = makeTab({
+      label: 'files', view: 'files', dock: 'left',
+      files: { root: '/tmp/project', absoluteRoot: '/tmp/project', rows: [] },
+    });
+    const notifications = makeTab({
+      label: 'notifications', title: 'notifications', view: 'notifications', dock: 'left',
+      bufferLines: [{ type: 'output', text: 'a notification' }],
+    });
+    const { container, getByText, rerender } = render(
+      <Sidebar side="left" tabs={[files, notifications]} client={client} />,
+    );
+    const tabElements = [...container.querySelectorAll<HTMLElement>('.tab')];
+    for (const [index, tab] of tabElements.entries()) {
+      vi.spyOn(tab, 'getBoundingClientRect').mockReturnValue({
+        x: index * 100, y: 0, left: index * 100, top: 0,
+        right: index * 100 + 80, bottom: 30, width: 80, height: 30, toJSON: vi.fn(),
+      });
+    }
+    fireEvent.mouseDown(getByText('notifications'), { clientX: 140 });
+    fireEvent.mouseMove(document, { clientX: 40 });
+    fireEvent.mouseUp(document);
+    expect(send).toHaveBeenCalledWith({ method: 'reorderTabTo', params: { from: 1, to: 0 } });
+    rerender(<Sidebar side="left" tabs={[notifications, files]} client={client} />);
+    expect(getByText('a notification')).toBeTruthy();
+  });
+
   it("each entry's close button closes that entry's own tab", () => {
     const send = vi.fn();
     const client = { send } as unknown as JanusClient;

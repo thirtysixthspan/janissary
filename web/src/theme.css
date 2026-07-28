@@ -157,6 +157,8 @@ html, body, #root {
   border-top: 3px solid var(--accent); user-select: none;
 }
 .tab.active { background: var(--bg); color: var(--fg); }
+.tab.shifting { transition: transform 120ms ease; }
+.tab.dragging { position: relative; z-index: 1; cursor: grabbing; }
 .tab .dot { font-size: 10px; line-height: 1; }
 /* Close button on an image tab, pushed to the tab's right edge, adjacent to the name. */
 .tab .tab-close {

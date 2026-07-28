@@ -16,6 +16,7 @@ import { agentNames } from './commands.js';
 import { spawnPty } from './pty.js';
 import type { PtyHandlers } from './pty.js';
 import type { BusEvent } from './bus.js';
+import { openMonitorTab } from './monitor/window.js';
 
 // The external-open path shells out to the OS image viewer; stub it so tests never launch an app.
 vi.mock('./openers/os-open.js', () => ({ didOsOpen: () => true }));
@@ -405,6 +406,33 @@ describe('Controller', () => {
     c.dispatch('profile launch writing'); // [janus(g1), writer(g2)], active = writer (index 1)
     c.reorderTab(-1); // would cross from group 2 into group 1 — blocked
     expect(c.view().map((t) => t.label)).toEqual(['janus', 'writer']);
+  });
+
+  it('reorders a non-active tab to an absolute position and follows it', () => {
+    const { c } = makeController();
+    c.dispatch('agent bob');
+    c.dispatch('agent carol');
+    openMonitorTab(c.managers, 'reviewer', '#fff');
+    c.reorderTabTo(1, 0);
+    expect(c.view().map((tab) => tab.label)).toEqual(['bob', 'janus', 'carol', 'reviewer']);
+    expect(c.view()[c.managers.tab.activeTab].label).toBe('bob');
+    expect(c.view().map((tab) => tab.number)).toEqual([1, 2, 3, 4]);
+  });
+
+  it('reorders reporting tabs without changing action focus or persisting view tabs', () => {
+    const root = mkdtempSync(path.join(tmpdir(), 'janus-reporting-reorder-'));
+    initAgentStateDirectory(root);
+    mkdirSync(path.join(root, '.janissary', 'state'), { recursive: true });
+    const { c } = makeController();
+    c.dispatch('agent bob');
+    const activeLabel = c.view()[c.managers.tab.activeTab].label;
+    openMonitorTab(c.managers, 'reviewer', '#fff');
+    openMonitorTab(c.managers, 'security', '#fff');
+    const stateFiles = readdirSync(path.join(root, '.janissary', 'state'));
+    c.reorderTabTo(3, 2);
+    expect(c.view().map((tab) => tab.label)).toEqual(['janus', 'bob', 'security', 'reviewer']);
+    expect(c.view()[c.managers.tab.activeTab].label).toBe(activeLabel);
+    expect(readdirSync(path.join(root, '.janissary', 'state'))).toEqual(stateFiles);
   });
 
   it('adds, lists, and clears scheduled commands', () => {

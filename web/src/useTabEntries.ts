@@ -1,6 +1,18 @@
 import { useMemo } from 'react';
 import type { TabView } from '@shared/protocol';
 import { isReportingTab } from './ReportingSection';
+import type { JanusClient } from './ws';
+
+type TabEntry = { tab: TabView; index: number };
+
+export function reorderTabEntries(
+  client: JanusClient, entries: TabEntry[], from: number, to: number,
+): void {
+  client.send({
+    method: 'reorderTabTo',
+    params: { from: entries[from].index, to: entries[to].index },
+  });
+}
 
 // Action tabs (above the command bar, take commands) vs. reporting tabs (below it, report-only).
 // Each entry keeps its index in the server's full tab list for RPCs. A tab docked into a sidebar

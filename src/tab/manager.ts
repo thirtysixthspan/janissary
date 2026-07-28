@@ -24,7 +24,7 @@ import {
   appendTabTranscript, buildTabViews, capTabLog, clearTabTranscript, finishTabRunning,
   rehydrateTabState, startTabRunning,
 } from './transcript-operations.js';
-import { setActiveTabOp, moveTabOp, reorderTabOp } from './navigation-commands.js';
+import { setActiveTabOp, moveTabOp, reorderTabOp, reorderTabToOp } from './navigation-commands.js';
 
 export class TabManager extends TabOpeningState {
   tabs: Tab[] = [];
@@ -166,6 +166,14 @@ export class TabManager extends TabOpeningState {
   reorderTab(dir: -1 | 1): void {
     reorderTabOp(
       this.tabs, this.activeTab, dir,
+      (tabs, activeTab) => { this.tabs = tabs; this.activeTab = activeTab; },
+      (s) => this.persist(s), (t) => this.buildAgentState(t),
+    );
+  }
+
+  reorderTabTo(from: number, to: number): void {
+    reorderTabToOp(
+      this.tabs, this.activeTab, from, to,
       (tabs, activeTab) => { this.tabs = tabs; this.activeTab = activeTab; },
       (s) => this.persist(s), (t) => this.buildAgentState(t),
     );

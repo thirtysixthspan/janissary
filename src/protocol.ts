@@ -166,6 +166,7 @@ export type RpcCall =
   | { method: 'deleteQueuedCommand'; params: { index: number } }
   | { method: 'moveTab'; params: { dir: -1 | 1 } }
   | { method: 'reorderTab'; params: { dir: -1 | 1 } }
+  | { method: 'reorderTabTo'; params: { from: number; to: number } }
   | { method: 'toggleCollapse'; params?: Record<string, never> }
   | { method: 'chooseRoute'; params: { index: number } }
   // Close the "New harness" launch dialog without launching (Cancel/Escape).

@@ -5,7 +5,7 @@ import { HarnessLaunchDialog } from './HarnessLaunchDialog';
 import { ScheduleDialog } from './ScheduleDialog';
 import { TabStrip } from './TabStrip';
 import { ViewTabBody } from './ViewTabBody';
-import { ReportingSection } from './ReportingSection';
+import { AppReportingSection } from './AppReportingSection';
 import { AppShell } from './AppShell';
 import type { CommandInputDropHandle } from './CommandInput';
 import type { EditorTabHandle, EditorDropHandle } from './EditorTab';
@@ -23,7 +23,7 @@ import { CloseSaveGuard } from './CloseSaveGuard';
 import { useUnsavedQuitGuard } from './useUnsavedQuitGuard';
 import { useFocusOnTabSwitch, focusCenterVisibleTab } from './useFocusOnTabSwitch';
 import { useSectionNav } from './useSectionNav';
-import { useTabEntries } from './useTabEntries';
+import { reorderTabEntries, useTabEntries } from './useTabEntries';
 import { useViewSearchState } from './useViewSearchState';
 import { getRecentHistory } from './history';
 import { useCmdW } from './useCmdW';
@@ -183,6 +183,7 @@ export function App() {
         onSelect={(index) => client.send({ method: 'setActiveTab', params: { index: actionEntries[index].index } })}
         onClose={(index) => closeTab(actionEntries[index].index)}
         onRename={(index, title) => client.renameTab(actionEntries[index].index, title)}
+        onReorder={(from, to) => reorderTabEntries(client, actionEntries, from, to)}
         tabNameMaxLength={tabNameMaxLength}
         activeTabNameMaxLength={activeTabNameMaxLength}
         onFocusCommandBar={() => inputReference.current?.focus()} onFocusEditor={(label) => editorHandles.current.get(label)?.focus()}
@@ -219,14 +220,8 @@ export function App() {
           dropRef={dropReference}
         />
       )}
-      <ReportingSection
-        entries={reportingEntries} onClose={closeTab}
-        onRun={(id) => client.send({ method: 'runSuggestion', params: { id } })}
-        onRate={(id, up) => client.send({ method: 'rateSuggestion', params: { id, up } })}
-        onReset={(name) => client.send({ method: 'resetMonitorContext', params: { name } })}
-        onSnapshot={(name) => client.send({ method: 'monitorContextSnapshot', params: { name } })}
-        heightPct={reportingHeightPct} onHeightPctChange={setReportingHeightPct}
-      />
+      <AppReportingSection entries={reportingEntries} client={client} onClose={closeTab}
+        heightPct={reportingHeightPct} onHeightPctChange={setReportingHeightPct} />
       {harnessLaunch && <HarnessLaunchDialog view={harnessLaunch} client={client} />}
       {scheduleLaunch && <ScheduleDialog view={scheduleLaunch} client={client} />}
       {quitConfirmOpen && <QuitDialog onConfirm={confirmQuit} onCancel={cancelQuit} />}

@@ -128,6 +128,10 @@ export class Controller {
     this.managers.tab.reorderTab(dir);
   }
 
+  reorderTabTo(from: number, to: number): void {
+    this.managers.tab.reorderTabTo(from, to);
+  }
+
   closeTab(index: number): void {
     this.managers.tab.closeTab(index);
   }

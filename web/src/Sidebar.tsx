@@ -96,6 +96,10 @@ export function Sidebar({
           onSelect={(i) => setSelectedView(entries[i].tab.view as 'files' | 'notifications' | 'schedules')}
           onClose={(i) => client.send({ method: 'closeTab', params: { index: entries[i].index } })}
           onRename={(i, title) => client.renameTab(entries[i].index, title)}
+          onReorder={(from, to) => client.send({
+            method: 'reorderTabTo',
+            params: { from: entries[from].index, to: entries[to].index },
+          })}
           tabNameMaxLength={tabNameMaxLength}
           activeTabNameMaxLength={activeTabNameMaxLength}
           startControl={side === 'right' ? resizeButton : undefined}

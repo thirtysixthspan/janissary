@@ -96,8 +96,24 @@ describe('ReportingSection', () => {
       }),
     );
     const tabs = container.querySelectorAll(':scope .reporting-strip .tab');
-    fireEvent.click(tabs[1]);
+    fireEvent.mouseDown(tabs[1]);
     expect(tabs[1].classList.contains('active')).toBe(true);
+  });
+
+  it('keeps the selected monitor visible after entries reorder', () => {
+    const alerts = makeEntry('alerts', 2, [{ id: 's1', text: 'alerts body' }]);
+    const log = makeEntry('log', 3, [{ id: 's2', text: 'log body' }]);
+    const properties = {
+      onClose: vi.fn(), onRun: vi.fn(), onRate: vi.fn(), onReset: vi.fn(), onSnapshot: vi.fn(),
+    };
+    const { container, getByText, rerender } = render(
+      React.createElement(ReportingSection, { entries: [alerts, log], ...properties }),
+    );
+    const tabs = container.querySelectorAll(':scope .reporting-strip .tab');
+    fireEvent.mouseDown(tabs[1]);
+    expect(getByText('log body')).toBeTruthy();
+    rerender(React.createElement(ReportingSection, { entries: [log, alerts], ...properties }));
+    expect(getByText('log body')).toBeTruthy();
   });
 
   it('close button calls onClose with the entry index', () => {
