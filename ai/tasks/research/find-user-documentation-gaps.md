@@ -1,6 +1,6 @@
 # Find User Documentation Gaps
 
-Your job: survey the application's functional areas — derived from git logs, `product/specs/`, and source code — and compare each against the user documentation to find where the docs lag behind what the app actually does. Score each candidate area 1–10 for the size of the mismatch using the evidence-based rubric in Step 4, and feed the results into `product/backlog/documentation.md`, the shared documentation work queue that [`update-documentation.md`](../work/update-documentation.md) draws from. This task **researches and records** gaps; it does not fix them.
+Your job: survey the application's functional areas — derived from git logs, `product/specs/`, and source code — and compare each against the user documentation to find where the docs lag behind what the app actually does. Score each candidate area 1–10 for the size of the mismatch using the evidence-based rubric in Step 4, and feed the results into `product/backlog/documentation.md`, the shared documentation work queue that [`update-documentation.md`](../update-documentation.md) draws from. This task **researches and records** gaps; it does not fix them.
 
 Throughout this task, "user documentation" means exactly two surfaces: `documentation/user-documentation/**/*.md` and `help.md`. A fact covered in either surface counts as documented.
 

@@ -10,6 +10,16 @@ Do the steps below **in order**. Do not skip steps. Do not invent your own proce
 
 **Run autonomously.** This task runs unattended — do not ask the user questions or wait for feedback at any step. Make the best judgment call yourself, using the rules in this document, and keep going. Only stop early if the project isn't green before you start, or if you cannot keep it green after a removal (put the code back and report instead of pausing).
 
+## The work item: named, handed over, or the whole report
+
+Unlike its sibling hygiene tasks, this one clears **every** safe finding in a pass by default. A named work item narrows that scope to one target:
+
+1. **Named by the user at invocation** — e.g. `execute ai/tasks/hygiene/remove-deadcode.md "<target>"`. The argument may be a file, an export, a dependency, or a paraphrase such as "the unused theme helpers". Act only on the Knip findings that fall inside it. If Knip reports nothing for the named target, report that and stop — do not widen the pass to other findings instead.
+2. **Handed over with a backlog item** — [`resolve-technical-debt.md`](../resolve-technical-debt.md) runs this task against the dead code a `./product/backlog/technical-debt.md` entry names (its Step 2A). Treat it exactly like a user-named target.
+3. **Neither** — clear all safe findings, exactly as the steps below describe.
+
+Narrowing the scope changes **nothing else**: the "leave alone" list, the guardrails, the backup in Step 4, and the Step 5 verification all apply unchanged. A named target that lands on the "leave alone" list stays there — say which rule protected it and stop; being named is not a reason to remove code that `src/controller.ts`, a security path, a test edit, or a non-obvious usage protects.
+
 ## The one safety rule (read this first)
 
 There are two kinds of finding: **remove automatically** and **leave alone**.
@@ -99,6 +109,8 @@ Two facts about how Knip is set up here:
 ---
 
 ## Step 3 — Decide what to remove
+
+**When a target was named or handed over, first drop every finding outside it** — those are not part of this run and do not belong on either list. Sort what remains exactly as below.
 
 Go through every finding from Step 2 and sort it:
 

@@ -12,6 +12,16 @@ Do the steps below **in order**. Do not skip steps. Do not invent your own proce
 
 **Run autonomously.** This task runs unattended — do not ask the user questions or wait for feedback at any step. Make the best judgment call yourself, using the rules in this document, and keep going. Only stop early if the project isn't green before you start (Step 1), or if every remaining candidate file/function is blocked (see "Blocked work" below).
 
+## The work item: named, handed over, or your own pick
+
+This task refactors one function. Which function comes from one of three places:
+
+1. **Named by the user at invocation** — e.g. `execute ai/tasks/hygiene/reduce-complexity.md "<target>"`. The argument may be a function name, a `file.ts function()` pair, a `path:line` location, or a paraphrase such as "the worst one in the message handler". Resolve it to exactly one function; if nothing in the codebase matches, report that no matching function was found and stop — do not fall back to picking your own.
+2. **Handed over with a backlog item** — [`resolve-technical-debt.md`](../resolve-technical-debt.md) runs this task against the function a `./product/backlog/technical-debt.md` entry names (its Step 2A). Treat that function exactly like a user-named one.
+3. **Neither** — you choose the function yourself, from the signals in Step 2 and the ranking in Step 3, as written.
+
+A named or handed-over function replaces **only** the selection in Step 3. Everything else runs unchanged: Step 1's baseline gates, Step 2's signals (you still need the before-numbers for the function you were given), the **Blocked work** rules below, the Step 5 recipe, and the Step 6 verification. If the named function is blocked by one of those rules, or does not exist, say which rule blocked it and stop — never silently substitute a different function. If lint reports no `sonarjs/cognitive-complexity` warning for it, still refactor it when it was named explicitly; record "not flagged by lint" in place of the before-score in your report.
+
 ## What you may and may not do
 
 ### Safe work — DO IT AUTOMATICALLY, never ask
@@ -84,6 +94,8 @@ It tells you the **file** and the **function line** that is carrying too much br
 ---
 
 ## Step 3 — Pick exactly one function to refactor
+
+**A named or handed-over function skips this step's selection** — it is already chosen. Check it against the exclusions in 2 below, then go straight to Step 4.
 
 1. From the lint output, list every `sonarjs/cognitive-complexity` warning in `src/`, together with the FTA score of the file it's in.
 2. **Cross out** any candidate whose file is:

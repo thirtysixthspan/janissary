@@ -42,7 +42,7 @@ Execute `ai/tasks/workspace/prepare-workspace.md` in full before doing anything 
 
 1. Read `./product/backlog/technical-debt.md`. If it has no items anywhere in the file (not even in `## deferred`), report "No items in `./product/backlog/technical-debt.md`" and stop.
 2. Work through the items **in the order they're listed**, starting from the top. For each item, in turn:
-   1. Review the codebase to understand what areas the item touches, then rate its complexity on a 1–10 scale (1 = trivial, localized change; 10 = a rewrite touching architecture across many files). Use the same judgment `ai/tasks/work/fix-an-issue.md` applies to issues: an item needing significant new architecture rates 7 or above.
+   1. Review the codebase to understand what areas the item touches, then rate its complexity on a 1–10 scale (1 = trivial, localized change; 10 = a rewrite touching architecture across many files). Use the same judgment `ai/tasks/work-an-issue.md` applies to issues: an item needing significant new architecture rates 7 or above.
    2. **If the rating is 8 or higher** (exceeds the threshold of 7): do not resolve it. Remove the item's line from wherever it currently sits in `./product/backlog/technical-debt.md` and add it under the `## deferred` section, appending a note of the rated complexity and a one-sentence reason, e.g.:
       ```
       * <original item text> — deferred: complexity 8/10, requires a new persistence layer across three subsystems.
@@ -61,26 +61,26 @@ Some backlog items describe work an existing hygiene playbook already automates.
 
 **Recognize a hygiene-owned item.** An item belongs to a hygiene task when either:
 
-1. **It names one.** The entry says so outright — e.g. "Resolve by running the `ai/tasks/hygiene/improve-namespacing.md` task against the `widget` prefix." Research tasks such as [`find-namespaces.md`](../research/find-namespaces.md) write this sentence deliberately; take it at its word and use the task it names.
+1. **It names one.** The entry says so outright — e.g. "Resolve by running the `ai/tasks/hygiene/improve-namespacing.md` task against the `widget` prefix." Research tasks such as [`find-namespaces.md`](research/find-namespaces.md) write this sentence deliberately; take it at its word and use the task it names.
 2. **Its described work matches one.** No task is named, but the fix the entry asks for is exactly what a playbook does:
 
 | What the item asks for | Task to trigger |
 | --- | --- |
-| Move a flat prefix cluster (`src/widget-*`) into a namespace directory | [`improve-namespacing.md`](../hygiene/improve-namespacing.md) |
-| Split an over-long file, or retire a `max-lines` suppression, by extracting a module | [`improve-modularity.md`](../hygiene/improve-modularity.md) |
-| Reduce a function's cognitive complexity in place | [`reduce-complexity.md`](../hygiene/reduce-complexity.md) |
-| Delete unused files, exports, or dependencies | [`remove-deadcode.md`](../hygiene/remove-deadcode.md) |
-| Collapse a duplicated block into one shared implementation | [`remove-duplication.md`](../hygiene/remove-duplication.md) |
-| Add missing tests for an untested or under-covered file | [`improve-test-coverage.md`](../hygiene/improve-test-coverage.md) |
-| Fix a CSS issue stylelint reports | [`improve-style.md`](../hygiene/improve-style.md) |
-| Apply a security or dependency-advisory patch | [`improve-security.md`](../hygiene/improve-security.md) |
+| Move a flat prefix cluster (`src/widget-*`) into a namespace directory | [`improve-namespacing.md`](hygiene/improve-namespacing.md) |
+| Split an over-long file, or retire a `max-lines` suppression, by extracting a module | [`improve-modularity.md`](hygiene/improve-modularity.md) |
+| Reduce a function's cognitive complexity in place | [`reduce-complexity.md`](hygiene/reduce-complexity.md) |
+| Delete unused files, exports, or dependencies | [`remove-deadcode.md`](hygiene/remove-deadcode.md) |
+| Collapse a duplicated block into one shared implementation | [`remove-duplication.md`](hygiene/remove-duplication.md) |
+| Add missing tests for an untested or under-covered file | [`improve-test-coverage.md`](hygiene/improve-test-coverage.md) |
+| Fix a CSS issue stylelint reports | [`improve-style.md`](hygiene/improve-style.md) |
+| Apply a security or dependency-advisory patch | [`improve-security.md`](hygiene/improve-security.md) |
 
 If neither test matches — the item asks for a design change, a behavior fix, a type moved across a boundary, a new validation guard, or anything else the table does not cover — it is **not** hygiene-owned. Go back to Step 2 and plan it yourself.
 
 **Trigger it.** When the item is hygiene-owned:
 
 1. State which playbook you are triggering and what target the backlog item names (the prefix, file, function, or module).
-2. Execute `ai/tasks/hygiene/<task>.md` in full, **against the target the backlog item names** — the item, not the playbook, chooses the target. Skip the playbook's own candidate-selection step (the one where it surveys the codebase and picks its own target); every other step of it applies as written.
+2. Execute `ai/tasks/hygiene/<task>.md` in full, **against the target the backlog item names** — the item, not the playbook, chooses the target. Every hygiene playbook documents this handoff under its own "The work item" section and accepts a target the same way a user-named one arrives; it skips its candidate-selection step and applies every other step as written.
 3. **Three parts of the playbook do not run here**, because this task already owns them: its workspace-preparation step (done in Step 0), any merge or pull-request step it ends with (done in Step 8), and its own final report (folded into Step 9's report instead). Everything between them — its verification gates, its undo rules, its file-by-file recipe — you follow exactly as written.
 4. If the playbook's own blocked-work rules rule the target out (a name collision, a change that would need a logic edit, a config file hard-coding a path, and so on), do **not** substitute a different target of your own and do not fall back to hand-resolving the item. Move the item into the `## deferred` section of `./product/backlog/technical-debt.md` with a one-sentence note naming the playbook and why it blocked, then return to Step 1 and continue walking from the next item.
 5. Run `./scripts/run.mjs check-diff` and confirm it is clean before leaving this step.
@@ -91,7 +91,7 @@ A hygiene-triggered run produces **no plan file** — the playbook is the plan. 
 
 ## Step 2 — Develop a plan
 
-1. Read the project constraints in [`CLAUDE.md`](../../../CLAUDE.md): ESLint rules (200-line `max-lines`, `.js` import extensions in `src/`, type-aware rules), test conventions (`src/**/*.test.ts`, `web/src/**/*.tsx`).
+1. Read the project constraints in [`CLAUDE.md`](../../CLAUDE.md): ESLint rules (200-line `max-lines`, `.js` import extensions in `src/`, type-aware rules), test conventions (`src/**/*.test.ts`, `web/src/**/*.tsx`).
 2. Read every file relevant to the item to understand the code involved.
 3. Write a plan file following the format of existing plans in `./product/plans/complete/` — include a complexity rating, goal, approach, implementation steps, tests, and out-of-scope items. Write it to `./product/plans/draft/<item-name>.md`.
 4. After the plan is written, move it from `./product/plans/draft/` to `./product/plans/ready/`:

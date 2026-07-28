@@ -1,4 +1,4 @@
-# Fix a Small Issue
+# Work an Issue
 
 Your job: pick the simplest issue from `./product/backlog/issues.md`, develop a plan to resolve it, implement the fix, update functional specs, update `help.md` and public documentation where the fix changes behavior they already document, record the plan in `./product/plans/complete/`, remove the issue from the issues file, and merge the change to master. You change source code, tests, spec files, `help.md`, `documentation/user-documentation/`, the issues file, and the plan file's location — nothing else.
 
@@ -40,7 +40,7 @@ Execute `ai/tasks/workspace/prepare-workspace.md` in full before doing anything 
 1. Read `./product/backlog/issues.md` and list every issue.
 2. If no issues exist, report "No issues in `./product/backlog/issues.md`" and stop.
 3. Pick the issue to fix:
-   - **If a specific issue is named in the task invocation** (e.g. `execute ai/tasks/work/fix-an-issue.md "<issue text>"`), fix that one. Find the entry in `./product/backlog/issues.md` it refers to — the argument may be quoted text, a paraphrase, or a position such as "the second one". If no entry matches, report that no matching issue was found and stop. Assess its complexity by reviewing the codebase to understand what areas it touches (do not use a shell loop for this); if it requires significant new architecture (rating 7+), report the assessment and stop — do not implement it.
+   - **If a specific issue is named in the task invocation** (e.g. `execute ai/tasks/work-an-issue.md "<issue text>"`), fix that one. Find the entry in `./product/backlog/issues.md` it refers to — the argument may be quoted text, a paraphrase, or a position such as "the second one". If no entry matches, report that no matching issue was found and stop. Assess its complexity by reviewing the codebase to understand what areas it touches (do not use a shell loop for this); if it requires significant new architecture (rating 7+), report the assessment and stop — do not implement it.
    - **Otherwise**, for each issue, assess the complexity by reviewing the codebase to understand what areas it touches. Do not use a shell loop for this. If every issue requires significant new architecture (rating 7+), report the list with assessments and stop — do not pick one. Otherwise, pick the **first** issue listed in the file (top of the list).
 4. State your pick and why.
 
@@ -48,7 +48,7 @@ Execute `ai/tasks/workspace/prepare-workspace.md` in full before doing anything 
 
 ## Step 2 — Develop a plan
 
-1. Read the project constraints in [`CLAUDE.md`](../../../CLAUDE.md): ESLint rules (200-line `max-lines`, `.js` import extensions in `src/`, type-aware rules), test conventions (`src/**/*.test.ts`, `web/src/**/*.test.tsx`).
+1. Read the project constraints in [`CLAUDE.md`](../../CLAUDE.md): ESLint rules (200-line `max-lines`, `.js` import extensions in `src/`, type-aware rules), test conventions (`src/**/*.test.ts`, `web/src/**/*.test.tsx`).
 2. Read every file relevant to the fix to understand the code involved.
 3. Write a plan file following the format of existing plans in `./product/plans/complete/` — include a complexity rating, goal, approach, implementation steps, tests, and out-of-scope items. Write it to `./product/plans/draft/<fix-name>.md`.
 4. After the plan is written, move it from `./product/plans/draft/` to `./product/plans/ready/`:

@@ -37,7 +37,7 @@ Execute `ai/tasks/workspace/prepare-workspace.md` in full before doing anything 
 1. List every `.md` file in `./product/plans/ready/`.
 2. If no plans exist, report "No plans in `./product/plans/ready/`" and stop.
 3. Pick the plan to implement:
-   - **If a specific plan is named in the task invocation** (e.g. `execute ai/tasks/work/build-a-feature.md "<plan name>"`), implement that one. Find the file in `./product/plans/ready/` it refers to — the argument may be the filename, a paraphrase of its title, or a position such as "the second one". If no file matches, report that no matching plan was found and stop. Read its complexity rating line (`**Complexity: N/10**`); if it is **7 or above**, report the rating and stop — do not implement it.
+   - **If a specific plan is named in the task invocation** (e.g. `execute ai/tasks/build-a-feature.md "<plan name>"`), implement that one. Find the file in `./product/plans/ready/` it refers to — the argument may be the filename, a paraphrase of its title, or a position such as "the second one". If no file matches, report that no matching plan was found and stop. Read its complexity rating line (`**Complexity: N/10**`); if it is **7 or above**, report the rating and stop — do not implement it.
    - **Otherwise**, for each file, use the `Read` tool to read the first few lines and find the complexity rating line: `**Complexity: N/10**`. Do not use a shell loop to do this. If the lowest complexity found is **7 or above**, report the list with ratings and stop — do not pick one. Otherwise, pick the plan with the **lowest** complexity number. On a tie, pick whichever plan name comes first alphabetically.
 
 State your pick and its complexity in one sentence.
@@ -47,7 +47,7 @@ State your pick and its complexity in one sentence.
 ## Step 2 — Read the plan and the project constraints
 
 1. Read the entire chosen plan.
-2. Read the project constraints that shape implementation: the ESLint rules and file-size limit in [`CLAUDE.md`](../../../CLAUDE.md) (200-line `max-lines`, `.js` import extensions in `src/`, type-aware rules), and the test conventions (`src/**/*.test.ts`, `web/src/**/*.test.tsx`).
+2. Read the project constraints that shape implementation: the ESLint rules and file-size limit in [`CLAUDE.md`](../../CLAUDE.md) (200-line `max-lines`, `.js` import extensions in `src/`, type-aware rules), and the test conventions (`src/**/*.test.ts`, `web/src/**/*.test.tsx`).
 3. Read every file the plan references to confirm the line anchors and code fragments still match. If a reference is stale, locate the correct position by the quoted code fragment — line numbers drift.
 
 ---

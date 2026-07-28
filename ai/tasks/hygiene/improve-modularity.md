@@ -12,6 +12,16 @@ Do the steps below **in order**. Do not skip steps. Do not invent your own proce
 
 **Run autonomously.** This task runs unattended — do not ask the user questions or wait for feedback at any step. Make the best judgment call yourself, using the rules in this document, and keep going. Only stop early if the project isn't green before you start (Step 1), or if every remaining candidate file is blocked (see "Blocked work" below).
 
+## The work item: named, handed over, or your own pick
+
+This task extracts from one file. Which file comes from one of three places:
+
+1. **Named by the user at invocation** — e.g. `execute ai/tasks/hygiene/improve-modularity.md "<target>"`. The argument may be a file path, a file name, a `max-lines` suppression to retire, or a paraphrase such as "the tab manager". Resolve it to exactly one file; if nothing in the codebase matches, report that no matching file was found and stop — do not fall back to picking your own.
+2. **Handed over with a backlog item** — [`resolve-technical-debt.md`](../resolve-technical-debt.md) runs this task against the file a `./product/backlog/technical-debt.md` entry names (its Step 2A). Treat that file exactly like a user-named one.
+3. **Neither** — you choose the file yourself, from the signals in Step 2 and the ranking in Step 3, as written.
+
+A named or handed-over file replaces **only** the selection in Step 3. Everything else runs unchanged: Step 1's baseline gates, Step 2's signals (you still need the before FTA score and line count for the file you were given), the **Blocked work** rules below, the Step 5 recipe, and the Step 6 verification. If the named file is blocked by one of those rules, or does not exist, say which rule blocked it and stop — never silently substitute a different file. If it is already small and simple, extract only when it was named explicitly, and say so in the report.
+
 ## What you may and may not do
 
 ### Safe work — DO IT AUTOMATICALLY, never ask
@@ -85,6 +95,8 @@ It tells you the **file** (and, for complexity, the **function line**) that is c
 ---
 
 ## Step 3 — Pick exactly one file to extract from
+
+**A named or handed-over file skips this step's selection** — it is already chosen. Check it against the exclusions in 2 below, then go straight to Step 4.
 
 1. From the FTA table, list the worst `src/` files together with any that carry a `max-lines` or `cognitive-complexity` warning.
 2. **Cross out** any file that is:

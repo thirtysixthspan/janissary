@@ -6,6 +6,16 @@ Your job: run the CSS linter, pick the single most valuable fix, assess its risk
 
 Do the steps below **in order**. Do not skip steps. Do not invent your own process.
 
+## The work item: named, handed over, or your own pick
+
+This task fixes one stylelint rule's findings. Which rule comes from one of three places:
+
+1. **Named by the user at invocation** — e.g. `execute ai/tasks/hygiene/improve-style.md "<target>"`. The argument may be a stylelint rule name (`color-function-notation`), a CSS file whose findings you should clear, or a paraphrase such as "the deprecated color keywords". Resolve it to exactly one rule; if `npm run lint:css` reports no finding matching it, report that and stop — do not fall back to picking your own.
+2. **Handed over with a backlog item** — [`resolve-technical-debt.md`](../resolve-technical-debt.md) runs this task against the rule or file a `./product/backlog/technical-debt.md` entry names (its Step 2A). Treat it exactly like a user-named one.
+3. **Neither** — you choose the rule yourself, by ranking the findings in Step 2 and picking the top one in Step 3, as written.
+
+A named or handed-over rule replaces **only** the selection in Step 3. Everything else runs unchanged: Step 1's baseline gates and full finding list, Step 4's change list, Step 5's risk assessment (a named rule does not make a risky fix safe — assess it the same way and escalate the same way), Step 6's edit, and Step 7's verification. When a file rather than a rule is named, fix the findings in that file only, still one rule at a time, highest-priority rule first.
+
 ---
 
 ## Step 0 — Prepare the workspace
@@ -57,6 +67,8 @@ Write out your ranked list before picking.
 ---
 
 ## Step 3 — Pick exactly one rule to fix
+
+**A named or handed-over rule skips this step** — it is already chosen. State it and its finding count, then go to Step 4.
 
 From the ranked list, pick the **top rule** — the highest-priority finding with the most occurrences.
 

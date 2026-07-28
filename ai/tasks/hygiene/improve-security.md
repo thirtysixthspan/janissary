@@ -10,6 +10,16 @@ Do the steps below **in order**. Do not skip steps. Do not invent your own proce
 
 **Run autonomously.** This task runs unattended — do not ask the user questions or wait for feedback at any step. Make the best judgment call yourself, using the rules in this document, and keep going. There is nothing to stop for: every finding either gets the one safe dependency-patch fix, or gets reported under "Never do on your own" below — you always finish by producing the Step 3 report, never by pausing to ask.
 
+## The work item: named, handed over, or the whole sweep
+
+Detection is always project-wide; a named work item narrows only what you *report on* and, where it is a dependency CVE, what you fix:
+
+1. **Named by the user at invocation** — e.g. `execute ai/tasks/hygiene/improve-security.md "<target>"`. The argument may be a package, an advisory, a file, or a rule name. Run all of Step 1 anyway — detection is cheap and a partial scan hides findings — then lead the Step 3 report with the named target and its status, followed by everything else you found.
+2. **Handed over with a backlog item** — [`resolve-technical-debt.md`](../resolve-technical-debt.md) runs this task against the finding a `./product/backlog/technical-debt.md` entry names (its Step 2A). Treat it exactly like a user-named target.
+3. **Neither** — report every finding, exactly as the steps below describe.
+
+**Being named never makes an unsafe fix safe.** The one safety rule below is absolute: only a dependency patch via `npm audit fix` gets applied, whoever asked and however specifically. If the named target is a validation gap, a regex, an `eval`, an auth/crypto path, or a committed secret, you **report** it and change nothing — and when the caller was `resolve-technical-debt.md`, say plainly that the item needs a human, so it gets deferred rather than counted as resolved.
+
 ## The one safety rule (read this first)
 
 ### Safe to do on your own — the ONLY change you may make

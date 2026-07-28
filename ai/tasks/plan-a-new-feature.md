@@ -20,10 +20,10 @@ Read any file in the repo to ground a plan in real code. Create new plan files u
 
 ### Forbidden — no exceptions
 
-1. **Writing implementation code into a plan.** No function bodies, no JSX/CSS blocks, no "here's the code." Name the module/type/contract in prose, per `ai/tasks/hygiene/improve-plan.md`'s rule — the same rule applies here since you are authoring, not implementing.
+1. **Writing implementation code into a plan.** No function bodies, no JSX/CSS blocks, no "here's the code." Name the module/type/contract in prose, per `ai/tasks/planning/improve-plan.md`'s rule — the same rule applies here since you are authoring, not implementing.
 2. **Editing any source, test, or config file.** This task only touches `./product/backlog/features.md` and files under `./product/plans/draft/`.
 3. **Skipping the question round.** Never invent a plan's scope, edge-case behavior, or UI wording without asking, when the answer is a product decision rather than something the codebase already settles.
-4. **Moving a plan to `./product/plans/ready/`.** That promotion is a separate human/`ai/tasks/hygiene/improve-plan.md` step. Everything this task produces lands in `./product/plans/draft/`.
+4. **Moving a plan to `./product/plans/ready/`.** That promotion is a separate human/`ai/tasks/planning/improve-plan.md` step. Everything this task produces lands in `./product/plans/draft/`.
 5. **Removing a feature's entry from `./product/backlog/features.md` before its plan is drafted and the user has confirmed it.** Don't clear the backlog ahead of the plan actually existing.
 
 ---
@@ -38,7 +38,7 @@ Execute `ai/tasks/workspace/prepare-workspace.md` in full before doing anything 
 
 1. Read `./product/backlog/features.md` in full. Each entry under the `## ready` heading, up to the next `## ` heading, is a `### <title>` followed by its description body.
 2. Pick the feature to plan:
-   - **If a specific feature is named in the task invocation** (e.g. `execute ai/tasks/work/plan-a-new-feature.md "<feature title>"`), plan that one. Find its `### ` entry under `## ready` — the argument may be quoted text, a paraphrase, or a position such as "the second one". If no entry matches, report that no matching feature was found and stop.
+   - **If a specific feature is named in the task invocation** (e.g. `execute ai/tasks/plan-a-new-feature.md "<feature title>"`), plan that one. Find its `### ` entry under `## ready` — the argument may be quoted text, a paraphrase, or a position such as "the second one". If no entry matches, report that no matching feature was found and stop.
    - **Otherwise**, take the first `### ` entry listed under `## ready` (top of the section).
 3. If `## ready` is empty (or the named feature isn't found there), report "No ready features in `./product/backlog/features.md`" and stop.
 4. Copy the feature's title verbatim — do not paraphrase or shorten it. Say in one sentence which feature you're planning before starting Step 2.
@@ -110,7 +110,7 @@ Write `./product/plans/draft/<slug>.md`, where `<slug>` is a kebab-case name der
 8. Open questions — anything still genuinely unresolved after 2c (write "None" if nothing remains).
 9. Verification section: `./scripts/run.mjs check-diff` plus a concrete manual check.
 
-Do not add a `**Complexity: N/10**` line — that is `ai/tasks/hygiene/improve-plan.md`'s job during the later verification pass, not this task's.
+Do not add a `**Complexity: N/10**` line — that is `ai/tasks/planning/improve-plan.md`'s job during the later verification pass, not this task's.
 
 Before moving on, check the plan file against this list:
 

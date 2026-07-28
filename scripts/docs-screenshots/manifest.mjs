@@ -87,7 +87,7 @@ export default [
     name: 'task-picker',
     setup: [
       'shell mkdir -p ai/tasks',
-      'shell touch ai/tasks/work/build-a-feature.md ai/tasks/work/fix-a-small-issue.md ai/tasks/hygiene/improve-test-coverage.md ai/tasks/workspace/merge-change-to-master.md ai/tasks/workspace/open-feature-pull-request.md ai/tasks/hygiene/reduce-complexity.md',
+      'shell touch ai/tasks/build-a-feature.md ai/tasks/fix-a-small-issue.md ai/tasks/hygiene/improve-test-coverage.md ai/tasks/workspace/merge-change-to-master.md ai/tasks/workspace/open-feature-pull-request.md ai/tasks/hygiene/reduce-complexity.md',
     ],
     actions: [{ press: 'Control+a' }, { press: 'ArrowRight' }, { press: 'ArrowDown' }],
     target: 'task-overlay',

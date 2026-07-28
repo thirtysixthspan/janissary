@@ -8,6 +8,16 @@ Your job: update **one** npm package to the latest version its existing `package
 
 The rule is simple: **the compiler, the linter, and the tests must be green before you start and green again after you finish.** If not green before you start, stop and tell the user. If you can't get it green again after two fix attempts, put the package back and stop.
 
+## The work item: named, handed over, or your own pick
+
+This task updates one package. Which package comes from one of three places:
+
+1. **Named by the user at invocation** — e.g. `execute ai/tasks/hygiene/update-package.md "<package>"`. The argument is normally the package name; a paraphrase such as "the vitest one" is also fine. Resolve it to exactly one dependency in `package.json`; if it is not a dependency of this project, report that and stop — do not fall back to picking your own.
+2. **Handed over with a backlog item** — [`resolve-technical-debt.md`](../resolve-technical-debt.md) runs this task against the package a `./product/backlog/technical-debt.md` entry names (its Step 2A). Treat it exactly like a user-named one.
+3. **Neither** — you take the first in-range row of `npm outdated`, exactly as Step 3 describes.
+
+A named or handed-over package replaces **only** the selection in Step 3. Everything else runs unchanged: Step 1's green gate, Step 2's `npm outdated` listing, the install in Step 4, the two fix attempts in Step 5, and the revert in Step 6. If the named package has no in-range update — `Current` and `Wanted` match — report that and stop. **Never widen the range in `package.json` to make an update possible**, even when the request names a version: this task only ever updates within the range already declared.
+
 ---
 
 ## Step 0 — Prepare the workspace
@@ -43,6 +53,8 @@ A non-zero exit code here is normal and expected when it lists rows — it is no
 ---
 
 ## Step 3 — Pick one package (mechanical, no judgment needed)
+
+**A named or handed-over package skips this step's selection** — it is already chosen. Find its row in the Step 2 table, confirm `Current` and `Wanted` differ (if they don't, report and stop per "The work item" above), state the pick, and go to Step 4.
 
 `npm outdated` prints a table with columns `Package`, `Current`, `Wanted`, `Latest`.
 

@@ -8,6 +8,16 @@ Do the steps below **in order**. Do not skip steps. Do not invent your own proce
 
 **Run autonomously.** This task runs unattended — do not ask the user questions or wait for feedback at any step. Make the best judgment call yourself, using the rules in this document, and keep going. Only stop early if the project isn't green before you start (Step 1), or if every remaining candidate target is blocked (see "Blocked work" below).
 
+## The work item: named, handed over, or your own pick
+
+This task covers one file. Which file comes from one of three places:
+
+1. **Named by the user at invocation** — e.g. `execute ai/tasks/hygiene/improve-test-coverage.md "<target>"`. The argument may be a file path, a file name, or a paraphrase such as "the move-operations hook". Resolve it to exactly one file; if nothing in the codebase matches, report that no matching file was found and stop — do not fall back to picking your own.
+2. **Handed over with a backlog item** — [`resolve-technical-debt.md`](../resolve-technical-debt.md) runs this task against the file a `./product/backlog/technical-debt.md` entry names (its Step 2A). Treat that file exactly like a user-named one.
+3. **Neither** — you choose the file yourself, from the coverage table in Step 2 and the procedure in Step 3, as written.
+
+A named or handed-over file replaces **only** the selection in Step 3. Everything else runs unchanged: Step 1's coverage and lint run, Step 2's table (you still read the file's current `% Lines` and its uncovered line numbers as the before-value), the **Blocked work** rules below, and the Step 6 verification. If the named file is blocked by one of those rules, or does not exist, say which rule blocked it and stop — never silently substitute a different file. The 90%-coverage cutoff does not block a named file: when the request names it, cover the lines it still misses, and say so in the report if it was already above the line.
+
 ## What you may and may not do
 
 ### Safe work — DO IT AUTOMATICALLY, never ask
@@ -69,6 +79,8 @@ The **right-most column ("Uncovered Line #s")** lists the exact line numbers tha
 ---
 
 ## Step 3 — Pick exactly one target file
+
+**A named or handed-over file skips this step's selection** — it is already chosen. Check it against the cross-out rules and the runtime restriction below (a file needing a real browser, terminal, network, or spawned program is blocked however it was chosen), then go straight to Step 4.
 
 Choose the target with this exact procedure:
 

@@ -2,7 +2,7 @@
 
 Your job: take the first item from the `ready` section of `product/backlog/documentation.md`, verify it against the spec and source (if it names any), work the item, add visuals — character sprites per the guidelines, and a screenshot captured with the docs-screenshots pipeline whenever the page documents visible UI (see Step 4b) — prove the docs still build, and then move the worked item from `ready` to `resolved`. Do exactly one item, then verify.
 
-The backlog is a general documentation work queue, not a single-source gap list. A `ready` item may have been added by [`find-user-documentation-gaps.md`](../research/find-user-documentation-gaps.md) (scored, with fact counts and file references), by some other task, or typed directly by a human — it may be as terse as one sentence. Work whatever the bullet says; don't assume it has a score or a rigid shape. If a human-written item is missing information you need (which file, which command), do your own research in Step 3 rather than skipping it for vagueness alone — only skip per the "Blocked work" rules below.
+The backlog is a general documentation work queue, not a single-source gap list. A `ready` item may have been added by [`find-user-documentation-gaps.md`](research/find-user-documentation-gaps.md) (scored, with fact counts and file references), by some other task, or typed directly by a human — it may be as terse as one sentence. Work whatever the bullet says; don't assume it has a score or a rigid shape. If a human-written item is missing information you need (which file, which command), do your own research in Step 3 rather than skipping it for vagueness alone — only skip per the "Blocked work" rules below.
 
 This task edits **documentation files only**. You will never touch application source code, specs, or tests, with one narrow exception: adding a `data-doc-shot` attribute to an existing JSX element in `web/src/` so a screenshot has something to crop to (see Step 4b) — nothing else in source ever changes. The only non-markdown files you may edit are the docs sidebar (and, if a new sprite facing is needed, the `FACINGS` array) in `documentation/.vitepress/config.mts`, the screenshot manifest `scripts/docs-screenshots/manifest.mjs` when a page needs a new or updated screenshot (see Step 4b), and that one-attribute `data-doc-shot` addition in `web/src/`. There is no test suite to run for this task.
 
@@ -97,7 +97,7 @@ Pick where the content belongs before you write — the backlog entry may say wh
 - **New page? Register it.** Add a sidebar entry for it in `documentation/.vitepress/config.mts`, in the section matching its subfolder, at the position where it reads naturally among its neighbors. Copy the exact `{ text: ..., link: ... }` shape of the surrounding entries; the `link` has no `.md` extension. Touch nothing else in that file. Skip this bullet entirely when you only edited existing pages.
 - **`help.md` too?** If the command/key binding is new or its description changed, update its row in `help.md`'s `Commands` or `Key Bindings` table. Keep it to the existing one-line style — don't turn `help.md` into a second copy of the full doc page; link isn't needed there since it's in-app, just keep the one-liner accurate.
 
-Follow this checklist while writing (full detail in [`user-documentation.md`](../../guidelines/user-documentation.md) and [`human-writing-guidelines.md`](../../guidelines/human-writing-guidelines.md) if you want more):
+Follow this checklist while writing (full detail in [`user-documentation.md`](../guidelines/user-documentation.md) and [`human-writing-guidelines.md`](../guidelines/human-writing-guidelines.md) if you want more):
 
 - [ ] First sentence states what the reader can now do — not background or internals.
 - [ ] A runnable example/command appears before any explanation of flags or edge cases.
@@ -118,7 +118,7 @@ Do not touch anything outside the files listed in "Files you may touch".
 
 Every page you created or substantially reworked gets a visuals pass. Two kinds of visuals exist, with different rules and different guidelines — read both before placing anything:
 
-### Agent character sprites — [`documentation.md`](../../guidelines/documentation.md)
+### Agent character sprites — [`documentation.md`](../guidelines/documentation.md)
 
 Decorative pixel-art characters floated into the prose. Apply that guideline's rules exactly; the ones violated most often:
 
@@ -129,7 +129,7 @@ Decorative pixel-art characters floated into the prose. Apply that guideline's r
 
 When you only made a small edit to an existing page, check the page still satisfies the count and placement rules after your change (your added text can shift a sprite against a table, or push the page into a higher length bracket); fix placement if it broke, but don't churn sprites that already comply.
 
-### Screenshots — "Visuals: use them with intent" in [`user-documentation.md`](../../guidelines/user-documentation.md)
+### Screenshots — "Visuals: use them with intent" in [`user-documentation.md`](../guidelines/user-documentation.md)
 
 **Default to adding one.** Every page you create or substantially rework that documents visible UI — a tab type, a picker, a panel, a dialog, a badge, anything a reader has to recognize on screen — gets a screenshot. Skipping is the exception, reserved for pages about pure command semantics with nothing visual to show; if you skip, say why in your Step 7 report. A screenshot is still never decoration and never a substitute for a copyable command.
 

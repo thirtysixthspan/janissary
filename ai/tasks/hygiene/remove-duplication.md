@@ -10,6 +10,16 @@ Do the steps below **in order**. Do not skip steps. Do not invent your own proce
 
 **Run autonomously.** This task runs unattended — do not ask the user questions or wait for feedback at any step. Make the best judgment call yourself, using the rules in this document, and keep going. Only stop early if the project isn't green before you start (Step 1), or if every remaining candidate clone is blocked (see "Blocked work" below).
 
+## The work item: named, handed over, or your own pick
+
+This task removes one clone. Which clone comes from one of three places:
+
+1. **Named by the user at invocation** — e.g. `execute ai/tasks/hygiene/remove-duplication.md "<target>"`. The argument may be a pair of file paths, one file whose duplication was reported, the duplicated construct itself (e.g. "the `lastIndexOf('/')` basename split"), or a paraphrase. Resolve it to exactly one clone — the specific duplicated block and every site that carries it; if you cannot find that duplication in the codebase, report so and stop — do not fall back to picking your own.
+2. **Handed over with a backlog item** — [`resolve-technical-debt.md`](../resolve-technical-debt.md) runs this task against the duplication a `./product/backlog/technical-debt.md` entry names (its Step 2A). Treat it exactly like a user-named one.
+3. **Neither** — you choose the clone yourself, from the clone list in Step 2 and the ranking in Step 3, as written.
+
+A named or handed-over clone replaces **only** the selection in Step 3. Everything else runs unchanged: Step 1's baseline gates, Step 2's clone list (you still record the before-numbers), the **Blocked work** rules below, the Step 5 recipes, and the Step 6 verification. If the named clone is blocked by one of those rules — it would rename an existing export, span more than 3 files, or bridge `src/` and `web/src/` — say which rule blocked it and stop; never silently substitute a different clone. A named clone need not appear in the jscpd report: hand-rolled repetition below the detector's threshold still counts when the request names it.
+
 ## What you may and may not do
 
 ### Safe work — DO IT AUTOMATICALLY, never ask
@@ -87,6 +97,8 @@ Reading it:
 ---
 
 ## Step 3 — Pick exactly one clone to remove
+
+**A named or handed-over clone skips sub-steps 1–3 below** — it is already chosen. Check it against the cross-out list in 2, then do sub-step 4 (open every site and confirm the fix stays inside the export/file-count limits) before moving to Step 4.
 
 1. List every clone from Step 2.
 2. **Cross out** any clone where **either** side is:

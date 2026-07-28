@@ -16,6 +16,16 @@ Do the steps below **in order**. Do not skip steps. Do not invent your own proce
 
 **Run autonomously.** This task runs unattended — do not ask the user questions or wait for feedback at any step. Make the best judgment call yourself, using the rules in this document, and keep going. Only stop early if the project isn't green before you start (Step 1), or if every remaining candidate group is blocked (see "Blocked work" below).
 
+## The work item: named, handed over, or your own pick
+
+This task moves one prefix group. Which group comes from one of three places:
+
+1. **Named by the user at invocation** — e.g. `execute ai/tasks/hygiene/improve-namespacing.md "<prefix>"`. The argument may be a bare prefix (`widget`), a glob (`src/widget-*`), a target directory (`src/widget/`), or a paraphrase such as "the monitor files". Resolve it to exactly one prefix group; if no flat files in `src/` carry that prefix, report that no matching group was found and stop — do not fall back to picking your own.
+2. **Handed over with a backlog item** — [`resolve-technical-debt.md`](../resolve-technical-debt.md) runs this task against the prefix a `./product/backlog/technical-debt.md` entry names (its Step 2A). Entries written by [`find-namespaces.md`](../research/find-namespaces.md) name that prefix explicitly; treat it exactly like a user-named one.
+3. **Neither** — you choose the group yourself, from the cluster survey in Step 2 and the ranking in Step 3, as written.
+
+A named or handed-over group replaces **only** the selection in Step 3. Everything else runs unchanged: Step 1's baseline gates, Step 3's file listing (you still enumerate the group's exact files and its bare entry), the **Blocked work** rules below, the Step 5 recipe, and the Step 6 compiler loop. If the named group is blocked by one of those rules — a name collision, a needed logic edit, a config file hard-coding a path — say which rule blocked it and stop; never silently substitute a different group. The fewer-than-3-files rule does not block a named group: when the request names it, move it however small it is.
+
 ## What you may and may not do
 
 ### Safe work — DO IT AUTOMATICALLY, never ask
@@ -29,7 +39,7 @@ Safe work is exactly this: **move one cohesive prefix group of files into a new 
 If doing the move would require any of the following, **go back to Step 3** and pick the next-best group instead. Never ask the user — just skip and move on.
 
 1. Changing any file's **behavior, logic, exports' shapes, or call signatures** — a namespace move only relocates files and rewrites import *paths*. If a group can't be moved without a logic edit, it's blocked.
-2. A **new** group too small to be a namespace — fewer than **3** source files sharing the prefix. Two files don't justify creating a directory; an existing namespace may receive any number of clearly related flat files.
+2. A **new** group too small to be a namespace — fewer than **3** source files sharing the prefix. Two files don't justify creating a directory; an existing namespace may receive any number of clearly related flat files. This rule governs your *own* pick only — a group named at invocation or handed over with a backlog item is never blocked by its size (see "The work item" above).
 3. A **name collision**: dropping the prefix would make a moved file collide with an existing file in `src/<prefix>/` or with another moved file (e.g. both `acp-loop.ts` and some `acp/loop.ts` would land on `src/acp/loop.ts`). An existing target directory is not blocked; inspect it and add only files that belong to that namespace.
 4. Touching **`src/controller.ts`** — if it is one of the files you'd have to *move*, the group is blocked (it's the biggest, riskiest file). It may still *import* the moved files; updating those import paths in it is fine and expected.
 5. A **config or build file hard-codes an exact old path.** Glob patterns like `src/**/*.ts` in `tsconfig.json`, `vitest`/`vite` config, or `eslint.config.mjs` already cover sub-directories and need no change. But if `package.json`, a script, or a config literally names `src/acp-loop.ts` (not a glob), the group is blocked — skip it.
@@ -82,6 +92,8 @@ Each row is a candidate namespace: the count is how many source files share that
 ---
 
 ## Step 3 — Pick exactly one group to namespace
+
+**A named or handed-over group skips sub-steps 1–4 below** — it is already chosen. Check it against **Blocked work**, then continue at "Now list the **exact flat files** in the group" further down this step, which you still do in full.
 
 1. From the counts, list every `src/` prefix group with **3+ source files**, plus any prefix whose target directory `src/<prefix>/` already exists and has clearly related code. An existing namespace may qualify with any number of related flat files; do not reject it solely because it has fewer than three.
 2. For each existing namespace candidate, read the directory's files and the flat `src/<prefix>-*.ts` files together. Include only files that are related to the code already in the namespace; leave coincidental or unrelated prefix matches flat.
