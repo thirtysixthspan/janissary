@@ -159,7 +159,7 @@ export async function boot(argv = process.argv.slice(2)): Promise<void> {
   initHarnessRecordingDirectory(cwd);
   initGlobalHistory();
   initDbDir(cwd);
-  initProfileDir(cwd);
+  initProfileDir(cwd, path.join(import.meta.dirname, '..'));
   initWorkspaceDir(cwd);
   new TranscriptLogger(cwd); // append-only transcript log under .janissary/log/ (never cleared)
   new TranscriptStore(cwd);

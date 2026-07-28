@@ -16,13 +16,13 @@ profile validate writing-code
 
 ## Picking a profile to launch
 
-Bare `profile launch`, with no name, opens a picker listing every profile in your project instead of erroring. `↑`/`↓` move the selection, and `Enter` or a click fills the command line with `profile launch <name>` without submitting it, so you can review or edit it first. `Escape` closes the picker without picking anything.
+Bare `profile launch`, with no name, opens a picker with a **Project** section followed by a **Janissary** section for the profiles bundled with the app. `↑`/`↓` move the selection and skip the section labels. `Enter` or a click fills the command line with `profile launch <name>` without submitting it, so you can review or edit it first. `Escape` closes the picker without picking anything.
 
 ## Writing a profile
 
 <img class="agent-float left" src="/agents/dogan-south-east.png" alt="" />
 
-Profiles live in a `profiles/` directory in your project — plain files, meant to be committed and shared. Each profile is a single JSON file (dasherized, like `writing-code.json`) with an `agents` array and a `harnesses` array; every entry carries its own `name`, which becomes the tab's label:
+Your profiles live in the `profiles/` directory in your project: plain files meant to be committed and shared. Janissary also includes built-in profiles. If both sources use the same profile name, your project copy wins. Saving always writes to your project, so you can customize a built-in profile by saving a same-named replacement. Each profile is a single JSON file (dasherized, like `writing-code.json`) with an `agents` array and a `harnesses` array; every entry carries its own `name`, which becomes the tab's label:
 
 ```json
 {

@@ -15,7 +15,7 @@ export type {
   ProfileHarnessEntry, ProfileAgentEntry, ProfileEntry, ProfileTab, ProfileAgentFile, ProfileHarnessFile,
   ProfileMonitor, ProfileMonitorFile, ProfileFilesEntry, ProfileEditorsEntry,
   ProfileNotificationsEntry, ProfileSchedulesEntry, ProfileLayout, ProfileLayoutFile, ProfileFile,
-  LoadedProfile, ProfileParsed,
+  LoadedProfile, ProfileParsed, ProfileRow,
 } from './profile/types.js';
 
 export type { TimeOfDay, ScheduleEntry, ScheduleParseResult } from './schedule/types.js';

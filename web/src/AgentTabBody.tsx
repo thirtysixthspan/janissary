@@ -9,6 +9,7 @@ import type { CommandInputDropHandle } from './CommandInput';
 import { AgentTabMeta } from './AgentTabMeta';
 import type { useViewSearchState } from './useViewSearchState';
 import type { VisibleTaskRow } from './task-picker-keys';
+import type { VisibleProfileRow } from './profile-picker-keys';
 import { useStatusWindows } from './useStatusWindows';
 import type { FuzzyMatchResult } from './fuzzy-match';
 
@@ -49,7 +50,7 @@ type Properties = {
   pickTask: (path: string) => void;
   toggleTaskDir: (path: string) => void;
   profilePickerOpen: boolean;
-  profiles: string[];
+  profiles: VisibleProfileRow[];
   profilePickerIndex: number;
   pickProfile: (name: string) => void;
   quickOpenOpen: boolean;

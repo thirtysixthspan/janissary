@@ -5,6 +5,7 @@ import { SYNTAX_THEMES } from '@shared/syntax-themes';
 import { APP_THEMES } from '@shared/app-themes';
 import { handleRouteChooserKey, handlePickerKey, handleTabNavKey, handleQueueKey } from './keyboard-handlers';
 import { dispatchTaskPickerKey, type VisibleTaskRow } from './task-picker-keys';
+import { dispatchProfilePickerKey, type VisibleProfileRow } from './profile-picker-keys';
 import type { TabNavEntry } from './TabNavPicker';
 
 export type StateSnapshot = {
@@ -34,7 +35,7 @@ export type StateSnapshot = {
   visibleTasks: VisibleTaskRow[];
   profilePickerOpen: boolean;
   profilePickerIdx: number;
-  profiles: string[];
+  profiles: VisibleProfileRow[];
   quickOpenOpen: boolean;
 };
 
@@ -104,7 +105,10 @@ function dispatchModalKey(e: KeyboardEvent, snap: StateSnapshot, cb: Callbacks):
     return true;
   }
   if (snap.profilePickerOpen) {
-    handlePickerKey(e, snap.profiles, snap.profilePickerIdx, cb.setProfilePickerIndex, cb.pickProfile, cb.setProfilePickerOpen);
+    dispatchProfilePickerKey(
+      e, snap.profiles, snap.profilePickerIdx,
+      cb.setProfilePickerIndex, cb.pickProfile, cb.setProfilePickerOpen,
+    );
     return true;
   }
   return false;

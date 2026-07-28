@@ -1,10 +1,10 @@
 // Wire types shared between the Node server and the React web client.
 // The web client imports these directly via the @shared path alias — no mirror needed.
-import type { BufferLine, ImageView, PageView, HarnessView, MarkdownView, EditorView, TerminalEntry, CompletionResult, FileNavigatorView, FileNavigatorRow, TaskRow } from './types.js';
+import type { BufferLine, ImageView, PageView, HarnessView, MarkdownView, EditorView, TerminalEntry, CompletionResult, FileNavigatorView, FileNavigatorRow, TaskRow, ProfileRow } from './types.js';
 
 // Used locally in TabView below, so separate import + export is required.
 // eslint-disable-next-line unicorn/prefer-export-from
-export type { BufferLine, ImageView, PageView, HarnessView, MarkdownView, EditorView, TerminalEntry, CompletionResult, FileNavigatorView, FileNavigatorRow, TaskRow };
+export type { BufferLine, ImageView, PageView, HarnessView, MarkdownView, EditorView, TerminalEntry, CompletionResult, FileNavigatorView, FileNavigatorRow, TaskRow, ProfileRow };
 
 // Identifies the ACP session behind a connections-panel row, for the `openAcpTranscript` RPC to
 // route on: the tab's own agent, a monitor session, or an editor-persona session.
@@ -126,7 +126,7 @@ export type StateEvent = {
   // Absolute path of the Janissary install's `ai/tasks` directory, used to build the `execute`
   // command for a built-in (Janissary-source) task row.
   janissaryTasksDir: string;
-  profiles: string[];
+  profiles: ProfileRow[];
   // Absolute path of the project directory the server was started against. Drives the titlebar.
   projectDir: string;
   // App version (semver only, e.g. "0.5.4"). Drives the titlebar.

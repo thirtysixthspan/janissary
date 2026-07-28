@@ -8,6 +8,7 @@ import { QueuePicker } from './QueuePicker';
 import { TaskPicker } from './TaskPicker';
 import type { VisibleTaskRow } from './task-picker-keys';
 import { ProfilePicker } from './ProfilePicker';
+import type { VisibleProfileRow } from './profile-picker-keys';
 import { SYNTAX_THEMES } from '@shared/syntax-themes';
 import { APP_THEMES } from '@shared/app-themes';
 import { AppThemePicker } from './AppThemePicker';
@@ -48,7 +49,7 @@ type Properties = {
   onPickTask: (path: string) => void;
   onToggleTaskDir: (path: string) => void;
   profilePickerOpen: boolean;
-  profiles: string[];
+  profiles: VisibleProfileRow[];
   profilePickerIndex: number;
   onPickProfile: (name: string) => void;
   quickOpenOpen: boolean;

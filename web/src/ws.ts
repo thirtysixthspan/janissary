@@ -1,10 +1,10 @@
-import type { ServerEvent, RpcCall, RouteChooserView, HarnessLaunchView, ScheduleLaunchView, TabView, TaskRow } from '@shared/protocol';
+import type { ServerEvent, RpcCall, RouteChooserView, HarnessLaunchView, ScheduleLaunchView, TabView, TaskRow, ProfileRow } from '@shared/protocol';
 
 type StateListener = (
   tabs: TabView[], activeTab: number, secondaryTab: number | undefined,
   route: RouteChooserView | null, tabNameMaxLength: number, globalHistory: string[],
   syntaxTheme: string, theme: string, tasks: TaskRow[], janissaryTasksDir: string,
-  profiles: string[], projectDir: string, version: string,
+  profiles: ProfileRow[], projectDir: string, version: string,
   harnessLaunch: HarnessLaunchView | null, scheduleLaunch: ScheduleLaunchView | null,
   activeTabNameMaxLength?: number,
 ) => void;

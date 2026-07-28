@@ -1,4 +1,4 @@
-import type { TaskRow } from '@shared/protocol';
+import type { ProfileRow, TaskRow } from '@shared/protocol';
 import type { JanusClient } from './ws';
 import type { CommandInputDropHandle } from './CommandInput';
 import { useTaskPicker } from './useTaskPicker';
@@ -10,6 +10,7 @@ import { useProfilePicker } from './useProfilePicker';
 export function usePopulatePickers(
   tasks: TaskRow[],
   janissaryTasksDir: string,
+  profiles: ProfileRow[],
   recallRef: React.RefObject<((text: string) => void) | null>,
   inputRef: React.RefObject<HTMLTextAreaElement | null>,
   client: JanusClient,
@@ -17,6 +18,6 @@ export function usePopulatePickers(
   dropRef: React.RefObject<CommandInputDropHandle | null>,
 ) {
   const task = useTaskPicker(tasks, janissaryTasksDir, client, harnessPtyId, dropRef);
-  const profile = useProfilePicker(recallRef, inputRef, client, harnessPtyId);
+  const profile = useProfilePicker(profiles, recallRef, inputRef, client, harnessPtyId);
   return { ...task, ...profile };
 }

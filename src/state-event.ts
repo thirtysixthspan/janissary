@@ -3,7 +3,7 @@ import type { ServerEvent } from './protocol.js';
 import { getConfig } from './config.js';
 import { globalCommands } from './global-history.js';
 import { listTasks, janissaryTasksDir } from './tasks.js';
-import { listProfiles } from './profiles.js';
+import { listProfileRows } from './profiles.js';
 import { appVersionNumber } from './cli-args.js';
 
 // Full state snapshot sent on `init` and whenever anything changes — shared by index.ts's
@@ -21,6 +21,6 @@ export function buildStateEvent(controller: Controller): ServerEvent {
     activeTabNameMaxLength: getConfig().activeTabNameMaxLength,
     globalHistory: globalCommands(), syntaxTheme: getConfig().syntaxTheme, theme: getConfig().theme,
     tasks: listTasks(controller.rootDir), janissaryTasksDir: janissaryTasksDir(),
-    profiles: listProfiles(), projectDir: controller.rootDir, version: appVersionNumber(),
+    profiles: listProfileRows(), projectDir: controller.rootDir, version: appVersionNumber(),
   };
 }
