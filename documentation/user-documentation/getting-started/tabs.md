@@ -37,6 +37,8 @@ Action tabs have a **Split** button at the right edge of their metadata header. 
 beside the first one. Each pane gets its own tab strip and keeps one tab visible; click anywhere in
 a pane to make it the focused one. New tabs opened from an action tab join that tab's pane.
 
+When both panes show agent tabs, both keep their command lines and the same metadata buttons. The command line in the unfocused pane stays visible without stealing keyboard focus. Click it to focus that pane, then type normally. Pickers, transcript search, and dialogs stay with the focused pane.
+
 Drag the divider between the panes to resize them. The divider starts in the middle and stops at
 15% or 85% of the center area, so neither pane can disappear accidentally. Moving, closing, or
 docking the last tab from one side collapses the split back to a single strip.

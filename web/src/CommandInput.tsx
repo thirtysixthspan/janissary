@@ -21,6 +21,7 @@ export type CommandInputProperties = {
   complete: (text: string, cursor: number) => Promise<CompletionResult>;
   pickerOpen: boolean;
   busy: boolean;
+  autoFocus?: boolean;
   // The queue popup (Ctrl+E / `queue`) is modal for Enter/ArrowUp/ArrowDown (the window handler
   // owns those) but not for typing — the command line is the popup's sole edit surface.
   queueOpen?: boolean;
@@ -34,7 +35,7 @@ export type CommandInputProperties = {
 
 export function CommandInput({
   dotColor, history, ghostHistory, onSubmit, inputRef, complete, pickerOpen, busy,
-  queueOpen, recallRef, onEditQueued, onDeleteQueued, dropRef,
+  autoFocus = true, queueOpen, recallRef, onEditQueued, onDeleteQueued, dropRef,
 }: CommandInputProperties) {
   const [value, setValue] = useState('');
   const [completions, setCompletions] = useState<string[]>([]);
@@ -224,7 +225,7 @@ export function CommandInput({
             ref={inputRef}
             rows={1}
             value={value}
-            autoFocus
+            autoFocus={autoFocus}
             spellCheck={false}
             onChange={(e) => {
               setValue(e.target.value);
