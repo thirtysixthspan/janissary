@@ -150,6 +150,28 @@ describe('saveProfile', () => {
     expect(load('demo').editors).toEqual([expect.objectContaining({ path: '$root/src/notes.txt' })]);
   });
 
+  it('writes a synced editor entry as its project-relative source path, not the workspace clone path', async () => {
+    const editor = makeEditorTab('issues', '#222', 1, 1, '#222', {
+      name: 'issues.md', path: '/proj/.janissary/workspace/git-sync/product/backlog/issues.md', size: '1KB', url: '/open/3', sync: 'synced',
+    });
+    const managers = makeManagers([editor], {}, [], '/proj');
+
+    await saveProfile('demo', managers);
+
+    expect(load('demo').editors).toEqual([expect.objectContaining({ path: '$root/product/backlog/issues.md' })]);
+  });
+
+  it('writes a still-provisioning synced editor entry as its project-relative source path too', async () => {
+    const editor = makeEditorTab('issues', '#222', 1, 1, '#222', {
+      name: 'issues.md', path: '/proj/.janissary/workspace/git-sync/product/backlog/issues.md', size: 'unknown', url: '/open/3', sync: 'provisioning',
+    });
+    const managers = makeManagers([editor], {}, [], '/proj');
+
+    await saveProfile('demo', managers);
+
+    expect(load('demo').editors).toEqual([expect.objectContaining({ path: '$root/product/backlog/issues.md' })]);
+  });
+
   it('does not capture the root janus tab, and does not count or report it', async () => {
     const managers = makeManagers([makeTab('janus', '#000'), makeTab('bob', '#aaa')]);
 
