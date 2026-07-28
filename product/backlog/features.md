@@ -2,8 +2,6 @@
 
 ## ready
 
-* Janissary's tab strip (`product/specs/tabs.md`, `product/specs/sidebars.md`) has no split-pane view showing two tabs side by side, the way tmux and Zellij split a single terminal window into multiple simultaneously-visible panes. Today only one central tab is visible at a time — the left/right sidebars dock the file navigator, notifications, or schedules tab alongside it, but two ordinary agent or harness tabs can never be viewed side by side without switching between them. Supporting even a single fixed horizontal or vertical split of the center tab area (independent of the existing sidebar docking) would let a user watch two harnesses or compare an agent's transcript against a file at once. Complexity: high — the tab-strip/active-tab model assumes exactly one visible central tab throughout the app.
-
 ## development
 
 * A kanban-style board summarizing all currently-open workspaced agents and harnesses, the way Vibe Kanban and amux's built-in kanban board let a user managing many parallel AI coding sessions see task/status at a glance instead of checking each session individually. Janissary's tab strip and fuzzy tab navigator (`product/specs/tab-navigator.md`) let a user jump to any tab, but there is no aggregate view of what each workspaced tab is working on and whether it's idle, busy, or blocked on a permission prompt. A new dockable tab (alongside the existing `notifications`/`schedules` dockable tabs) could list every workspaced agent/harness tab with its busy state and last activity. do this as a tab plugin with a new plugin architecture.
@@ -108,5 +106,4 @@
 * An in-app diff/merge review UI for a workspaced agent's changes, comparable to Conductor's per-worktree result view and amux's "smart merging" (auto-commit and merge cleanup across parallel branches). Janissary can run any number of `agent -w`/`harness -w` tabs, each with its own git clone (`product/specs/workspaced-agent.md`), but has no way to view a diff of what a given workspace changed, or to merge/cherry-pick it back into the root repo, without leaving the app and inspecting the clone directories by hand. A `workspace diff <label>` command opening a read-only diff view (reusing the editor tab's syntax highlighting) would close this gap. Determination: nope users should not need to know git so intimately
 
 * A saved directory of SSH hosts with tags/groups and one-click connect, the way Termius and Royal TSX maintain a host list with saved keys and connection options instead of retyping a destination each time. Janissary's `ssh <destination> [options]` (`product/specs/ssh-tab.md`) is a thin passthrough to the real `ssh` binary with no saved-host concept — every connection is typed from scratch, with tab-completion only covering already-open ssh tabs' labels/destinations, not a saved list of hosts never yet connected to in this session. Determination: Out of scope at the moment
-
 
