@@ -14,8 +14,8 @@ import { notify } from '../notifications.js';
 import { notificationsTab } from '../notifications-tab.js';
 import { sandboxNotice } from '../sandbox/index.js';
 import { oneShotRunEntry } from '../profile/harness-schedule.js';
-import { wireProvisioning, PROVISION_FAILURE_CLOSE_DELAY_MS } from '../workspace-provision-wire.js';
-import type { ProvisioningWorkspace } from '../workspace-manager.js';
+import { wireProvisioning, PROVISION_FAILURE_CLOSE_DELAY_MS } from '../workspace/provision-wire.js';
+import type { ProvisioningWorkspace } from '../workspace/manager.js';
 import type { Managers } from '../managers.js';
 
 // Owns harness command handling: launching a harness `<name>` as a PTY-backed tab (optionally in a

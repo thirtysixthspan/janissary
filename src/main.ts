@@ -13,7 +13,7 @@ import { TranscriptLogger } from './transcript/logger.js';
 import { TranscriptStore } from './transcript/store.js';
 import { initDbDir } from './connections.js';
 import { initProfileDir } from './profiles.js';
-import { initWorkspaceDir, clearWorkspaceDir } from './workspace.js';
+import { initWorkspaceDir, clearWorkspaceDir } from './workspace/index.js';
 import { loadConfig } from './config.js';
 import { loadAgentNames } from './agent/names.js';
 import { loadHarnessModels } from './harness/models.js';

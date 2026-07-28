@@ -2,7 +2,6 @@
 
 ## ready
 
-* Move the `workspace` prefix cluster into `src/workspace/`: `src/workspace.ts`, `src/workspace-manager.ts`, and `src/workspace-provision-wire.ts` are one concern — provisioning, tracking, and tearing down the git clones made for `--workspace` agents and harness tabs — but carry that grouping in a filename prefix instead of a directory, alongside four colocated tests (`workspace.test.ts`, `workspace-manager.test.ts`, `workspace-provision-wire.test.ts`, and `workspace-repo-root.unsandboxed.test.ts`, which has no source twin). `src/workspace/` does not exist yet; the bare `src/workspace.ts` entry becomes `src/workspace/index.ts` while the other two drop the prefix to `manager.ts` and `provision-wire.ts`, so nothing collides. Eight files import the group — `managers.ts`, `main.ts`, `git-sync.ts`, `git-sync.test.ts`, `github-url.ts`, `controller/create-managers.ts`, `harness/manager.ts`, `profile/new-agent.ts` — all inside `src/`, making this three renames plus eight import path rewrites, and no config or build file names any of the paths literally. One caveat for whoever picks it up: the prefix-count survey reports only two files here, because the bare `workspace.ts` entry counts as its own row — the group reaches the three-file threshold once that entry is included. Resolve by running the `ai/tasks/hygiene/improve-namespacing.md` task against the `workspace` prefix. Severity: **low**.
 
 ## development
 

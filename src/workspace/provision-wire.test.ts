@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { wireProvisioning } from './workspace-provision-wire.js';
+import { wireProvisioning } from './provision-wire.js';
 
 describe('wireProvisioning', () => {
   it('calls onReady once the promise resolves, when the tab still exists', async () => {

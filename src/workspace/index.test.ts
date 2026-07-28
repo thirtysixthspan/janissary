@@ -4,7 +4,7 @@ import path from 'node:path';
 import { execSync } from 'node:child_process';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { findRepoRoot, initWorkspaceDir, provisionWorkspace, removeWorkspace, clearWorkspaceDir, workspaceTempPath, getRemoteUrl, toHttpsUrl } from './workspace.js';
+import { findRepoRoot, initWorkspaceDir, provisionWorkspace, removeWorkspace, clearWorkspaceDir, workspaceTempPath, getRemoteUrl, toHttpsUrl } from './index.js';
 
 let tmpDir: string;
 let repoDir: string;
@@ -49,7 +49,7 @@ describe('findRepoRoot', () => {
     expect(findRepoRoot(sub)).toBe(repoDir);
   });
 
-  // 'returns undefined when no .git is found' lives in workspace-repo-root.unsandboxed.test.ts —
+  // 'returns undefined when no .git is found' lives in repo-root.unsandboxed.test.ts —
   // it assumes os.tmpdir() has no .git ancestor, which is false whenever the test runner itself
   // is executing inside a sandboxed workspace (TMPDIR is overridden to a path nested inside the
   // parent repo's own git tree).

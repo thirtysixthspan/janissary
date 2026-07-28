@@ -1,4 +1,4 @@
-import { findRepoRoot, getRemoteUrl, provisionWorkspace, removeWorkspace } from './workspace.js';
+import { findRepoRoot, getRemoteUrl, provisionWorkspace, removeWorkspace } from './index.js';
 
 const NO_REPO = 'No git repository found. Cannot create workspace.';
 

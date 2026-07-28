@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type * as Workspace from './workspace.js';
+import type * as Workspace from './index.js';
 
 const findRepoRootMock = vi.fn();
 const getRemoteUrlMock = vi.fn();
 const provisionWorkspaceMock = vi.fn();
 const removeWorkspaceMock = vi.fn();
 
-vi.mock('./workspace.js', async (importOriginal) => {
+vi.mock('./index.js', async (importOriginal) => {
   const actual = await importOriginal<typeof Workspace>();
   return {
     ...actual,
@@ -17,7 +17,7 @@ vi.mock('./workspace.js', async (importOriginal) => {
   };
 });
 
-const { WorkspaceManager } = await import('./workspace-manager.js');
+const { WorkspaceManager } = await import('./manager.js');
 
 function handle(dir: string, cancel: () => void = vi.fn()): { dir: string; ready: Promise<void>; cancel: () => void } {
   return { dir, ready: Promise.resolve(), cancel };
