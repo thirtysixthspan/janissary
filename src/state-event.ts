@@ -9,8 +9,12 @@ import { appVersionNumber } from './cli-args.js';
 // Full state snapshot sent on `init` and whenever anything changes — shared by index.ts's
 // broadcast-driving emitState and message-handler.ts's `init` reply.
 export function buildStateEvent(controller: Controller): ServerEvent {
+  const secondaryTab = controller.managers.tab.secondaryTabLabel === undefined
+    ? undefined
+    : controller.managers.tab.findIndex(controller.managers.tab.secondaryTabLabel);
   return {
     t: 'state', tabs: controller.view(), activeTab: controller.managers.tab.activeTab,
+    secondaryTab: secondaryTab === -1 ? undefined : secondaryTab,
     route: controller.routeView(), harnessLaunch: controller.harnessLaunchView(),
     scheduleLaunch: controller.scheduleLaunchView(),
     tabNameMaxLength: getConfig().tabNameMaxLength,

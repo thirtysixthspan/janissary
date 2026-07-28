@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, act, waitFor } from '@testing-library/react';
+import { render, screen, act, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { MarkdownView } from '@shared/protocol';
 import { MarkdownTab } from './MarkdownTab';
@@ -36,6 +36,20 @@ describe('MarkdownTab', () => {
     expect(screen.getByText('2.1 KB')).toBeInTheDocument();
     expect(screen.getByText('/home/user/README.md')).toBeInTheDocument();
     await waitFor(() => screen.getByRole('heading', { level: 1 }));
+  });
+
+  it('offers Split and ignores global keys while its pane is inactive', async () => {
+    const onSplit = vi.fn();
+    const { container } = render(
+      <MarkdownTab markdown={makeMarkdown()} active={false} onSplit={onSplit} />,
+    );
+    await waitFor(() => screen.getByRole('heading', { level: 1 }));
+    fireEvent.click(screen.getByRole('button', { name: 'Split' }));
+    expect(onSplit).toHaveBeenCalledOnce();
+    const stage = container.querySelector('.markdown-stage') as HTMLElement;
+    stage.scrollTop = 0;
+    expect(fireKey('ArrowDown').defaultPrevented).toBe(false);
+    expect(stage.scrollTop).toBe(0);
   });
 
   it('renders markdown content as HTML after fetch', async () => {

@@ -3,6 +3,13 @@ import { buildTabView } from './view.js';
 import { makeTab } from './index.js';
 
 describe('buildTabView', () => {
+  it('projects right-pane membership and keeps left as the absent wire value', () => {
+    const tab = makeTab('agent-1', '#fff');
+    expect(buildTabView(tab, false, '/tmp', undefined, [], [], [], (path) => path, []).pane).toBeUndefined();
+    tab.pane = 'right';
+    expect(buildTabView(tab, false, '/tmp', undefined, [], [], [], (path) => path, []).pane).toBe('right');
+  });
+
   it('never includes editorDraft in the TabView sent to clients', () => {
     const tab = makeTab('agent-1', '#fff');
     tab.editor = { name: 'notes.txt', path: '/tmp/notes.txt', size: '8 B', url: '/open/1' };

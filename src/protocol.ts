@@ -108,10 +108,11 @@ export type TabView = {
   // Set when this tab is docked into a sidebar instead of living in the central tab strip.
   // Absent means center. A docked tab is never the active tab. See product/specs/sidebars.md.
   dock?: 'left' | 'right';
+  pane?: 'right';
 };
 
 export type StateEvent = {
-  t: 'state'; tabs: TabView[]; activeTab: number; route: RouteChooserView | null;
+  t: 'state'; tabs: TabView[]; activeTab: number; secondaryTab?: number; route: RouteChooserView | null;
   // The open "New harness" launch dialog, or null when it is closed.
   harnessLaunch: HarnessLaunchView | null;
   // The open "New schedule" dialog, or null when it is closed.
@@ -165,6 +166,7 @@ export type RpcCall =
   | { method: 'editQueuedCommand'; params: { index: number; text: string } }
   | { method: 'deleteQueuedCommand'; params: { index: number } }
   | { method: 'moveTab'; params: { dir: -1 | 1 } }
+  | { method: 'moveTabToOtherPane'; params: { index: number } }
   | { method: 'reorderTab'; params: { dir: -1 | 1 } }
   | { method: 'reorderTabTo'; params: { from: number; to: number } }
   | { method: 'toggleCollapse'; params?: Record<string, never> }

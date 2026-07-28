@@ -1,4 +1,5 @@
 import type { AgentState } from '../agent/types.js';
+import type { CenterPane } from '../tab/types.js';
 
 // A profile entry describing a harness tab instead of an agent (discriminated by the presence of
 // `type`). This is the runtime shape the openers consume — the loader maps a `harnesses` array
@@ -30,25 +31,36 @@ export type ProfileHarnessEntry = {
   cwd?: string;
   run?: string[];
   schedule?: string[];
+  pane?: CenterPane;
 };
 
-export type ProfileEntry = AgentState | ProfileHarnessEntry;
+export type ProfileAgentEntry = AgentState & { pane?: CenterPane };
+export type ProfileEntry = ProfileAgentEntry | ProfileHarnessEntry;
 
 // On-disk tab presentation for a profile entry (both `agents` and `harnesses` elements): the dot
 // color, tab order, group, and group color, grouped under a `tab` object. The loader maps these down
 // to the flat `dotColor`/`number`/`group`/`groupColor` fields of the runtime `AgentState` /
 // `ProfileHarnessEntry`, and the saver maps them back up.
-export type ProfileTab = { color?: string; number?: number; focus?: boolean; group?: number; groupColor?: string };
+export type ProfileTab = {
+  color?: string;
+  number?: number;
+  focus?: boolean;
+  group?: number;
+  groupColor?: string;
+  pane?: CenterPane;
+};
 
 // An `agents` array element as authored/saved on disk: the agent-state fields, minus the flat tab
 // fields (which live nested under `tab`).
-export type ProfileAgentFile = Omit<AgentState, 'dotColor' | 'number' | 'group' | 'groupColor'> & {
+export type ProfileAgentFile = Omit<
+  ProfileAgentEntry, 'dotColor' | 'number' | 'group' | 'groupColor' | 'pane'
+> & {
   tab?: ProfileTab;
 };
 
 // A `harnesses` array element as authored/saved on disk: the runtime harness fields, minus the flat
 // tab fields (which live nested under `tab`).
-export type ProfileHarnessFile = Omit<ProfileHarnessEntry, 'dotColor' | 'number' | 'group'> & {
+export type ProfileHarnessFile = Omit<ProfileHarnessEntry, 'dotColor' | 'number' | 'group' | 'pane'> & {
   tab?: ProfileTab;
 };
 

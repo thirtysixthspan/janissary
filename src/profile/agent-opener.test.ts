@@ -29,6 +29,12 @@ function makeManagers(tabs: Tab[]): { managers: Managers; harnessOpen: ReturnTyp
       buildAgentState: vi.fn(() => ({ name: 'x', dotColor: 'red', active: true })),
       cwdOf: () => '/cwd',
       setActiveTab: vi.fn(),
+      placeProfileTabs: vi.fn((candidates: { label: string; pane?: 'left' | 'right' }[]) => {
+        for (const candidate of candidates) {
+          const tab = tabs.find((item) => item.label === candidate.label);
+          if (tab) tab.pane = candidate.pane === 'right' ? 'right' : undefined;
+        }
+      }),
       get activeTab() { return activeTab; },
       launchDir: '/proj',
     },
@@ -60,6 +66,24 @@ describe('openProfileEntries — editor tabs and focus', () => {
     // reorder pass below has already moved it ahead of "first" (number 2) in the tab strip.
     expect(managers.tab.setActiveTab).toHaveBeenLastCalledWith(1);
     expect(managers.tab.tabs.map((t) => t.label)).toEqual(['janus', 'second', 'first', 'editor-3']);
+  });
+
+  it('batches authored pane placement before applying the focus winner', () => {
+    const janus = makeTab('janus', 'red', 1, [], [], undefined, 1, 'red');
+    const { managers } = makeManagers([janus]);
+    const left: ProfileHarnessEntry = { name: 'left', type: 'claude', number: 2 };
+    const right: ProfileHarnessEntry = {
+      name: 'right', type: 'claude', number: 1, pane: 'right', focus: true,
+    };
+
+    openProfileEntries(loaded([left, right]), managers, 'demo', 'janus', () => {});
+
+    expect(managers.tab.placeProfileTabs).toHaveBeenCalledWith([
+      expect.objectContaining({ label: 'left', pane: undefined }),
+      expect.objectContaining({ label: 'right', pane: 'right' }),
+    ]);
+    expect(managers.tab.tabs.find((tab) => tab.label === 'right')?.pane).toBe('right');
+    expect(managers.tab.setActiveTab).toHaveBeenLastCalledWith(1);
   });
 
   it('keeps the first newly opened tab active when nothing declares focus', () => {

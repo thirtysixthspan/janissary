@@ -46,6 +46,26 @@ While the janus window itself lacks OS-level focus — the user has switched to 
 
 The active tab shows full-intensity foreground text on the content background color; inactive tabs show muted text on the bar background. These foreground/background colors — like all other state indicator colors in the strip and transcript — come from the active application theme (see `application-themes.md`); tab dot colors and group bar colors do not, staying per-tab in every theme.
 
+### Split tab strips
+
+The central action area may show two tab strips and bodies side by side. Eligible action tabs have a
+**Split** button in their header. Pressing it moves that tab to the other pane; the first split moves
+the current tab right and leaves the most recently focused eligible tab on the left. Each pane keeps
+one selected tab, while exactly one of those two selected tabs has keyboard focus. Pressing anywhere
+in the other pane focuses its selected tab before the interaction continues.
+
+Tab selection, creation, and reordering are pane-aware. A tab created from an action tab inherits
+that tab's pane. Dragging and `Ctrl+←` / `Ctrl+→` reorder only among tabs in the focused pane, while
+Shift+Left, Shift+Right, `next`, and the tab navigator continue through all non-docked action tabs.
+Moving the last tab out of either pane collapses the split and clears pane placement from the
+remaining tabs. Closing or docking a pane's selected tab chooses the most recently focused eligible
+replacement in that pane, and also collapses when no replacement remains.
+
+The divider starts at an even split, can be dragged horizontally, and is limited to 15–85% of the
+central width. Its size is client-local and resets on reload. Reporting tabs remain in their
+full-width lower section and cannot be moved into a split pane. Notifications likewise have no
+Split control.
+
 ### Busy indicator
 
 While a tab's agent is busy — running a shell command, an ACP turn, or any other in-flight work (the `busy` flag on the tab) — its colored dot **blinks**, toggling fully on and off (600ms each), so an at-a-glance scan of the strip shows which agents are working even when their tabs are not focused. The blink applies to every tab regardless of focus; when the work finishes the dot returns to a steady fill in the tab's dot color.
@@ -54,7 +74,7 @@ While a tab's agent is busy — running a shell command, an ACP turn, or any oth
 
 When an **inactive** tab receives new transcript content — a message from another agent (`msg`/`broadcast`), ACP/agent output, a shell command finishing, or a browser/connection command completing — an **unread badge** (a flag icon) appears on that tab in the tab strip, rendered as a sibling of the tab name so it does not inherit the busy-dot blink. The badge stays until the tab is focused, then clears. The active tab never shows the badge.
 
-**Marking.** Content delivery marks a tab unread via a single `TabManager.markUnread(label)` helper, which sets `hasUnread` only when the target tab is not the active tab and not docked into a sidebar. The helper is called from `append` (messages, command output, ACP output), `finishRunning` (browser/connection completion), and the shell manager's `onDone` callback (shell command completion). In-progress shell output (`onChunk`) does not mark — the busy dot already conveys that state; the badge signals completed new output.
+**Marking.** Content delivery marks a tab unread only when the target tab is neither the focused tab nor the visible selection in the other split pane, and is not docked into a sidebar. In-progress shell output does not mark — the busy dot already conveys that state; the badge signals completed new output.
 
 **Docked tabs never badge.** A tab docked into a sidebar (see `sidebars.md`) is permanently visible chrome and can never become the active tab, so it is never eligible for the unread badge either — new content delivered to a docked tab (for example the notifications tab) never sets `hasUnread`.
 

@@ -2,6 +2,7 @@ import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { TabView } from '@shared/protocol';
 import { statusDotIcon } from './icons';
+import { isReportingTab } from './ReportingSection';
 
 export type TabNavEntry = { tab: TabView; index: number };
 
@@ -15,7 +16,9 @@ function displayLabel(tab: TabView): string {
 // with number matches sorted first (typing "3" jumps straight to tab 3) then alphabetically by
 // display label.
 export function filterTabs(tabs: TabView[], query: string): TabNavEntry[] {
-  const entries = tabs.map((tab, index) => ({ tab, index }));
+  const entries = tabs
+    .map((tab, index) => ({ tab, index }))
+    .filter(({ tab }) => !tab.dock && !isReportingTab(tab));
   const q = query.trim().toLowerCase();
   if (!q) return entries;
 

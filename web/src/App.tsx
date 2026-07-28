@@ -3,15 +3,11 @@ import { JanusClient } from './ws';
 import type { TabView, RouteChooserView, HarnessLaunchView, ScheduleLaunchView, TaskRow } from '@shared/protocol';
 import { HarnessLaunchDialog } from './HarnessLaunchDialog';
 import { ScheduleDialog } from './ScheduleDialog';
-import { TabStrip } from './TabStrip';
-import { ViewTabBody } from './ViewTabBody';
 import { AppReportingSection } from './AppReportingSection';
 import { AppShell } from './AppShell';
 import type { CommandInputDropHandle } from './CommandInput';
 import type { EditorTabHandle, EditorDropHandle } from './EditorTab';
 import { useTabHandles } from './useTabHandles';
-import { ShellTabLayer } from './ShellTabLayer';
-import { MountedViewLayers } from './MountedViewLayers';
 import { useTabNav } from './useTabNav';
 import { useQuickOpen } from './useQuickOpen';
 import { useQueuePicker } from './useQueuePicker';
@@ -23,7 +19,7 @@ import { CloseSaveGuard } from './CloseSaveGuard';
 import { useUnsavedQuitGuard } from './useUnsavedQuitGuard';
 import { useFocusOnTabSwitch, focusCenterVisibleTab } from './useFocusOnTabSwitch';
 import { useSectionNav } from './useSectionNav';
-import { reorderTabEntries, useTabEntries } from './useTabEntries';
+import { useTabEntries } from './useTabEntries';
 import { useViewSearchState } from './useViewSearchState';
 import { getRecentHistory } from './history';
 import { useCmdW } from './useCmdW';
@@ -39,6 +35,7 @@ import { useLayoutState } from './useLayoutState';
 import { applySyntaxTheme } from './editor/highlight/themes';
 import { useWindowFocus } from './useWindowFocus';
 import { useCmdWRefs } from './useCmdWRefs';
+import { AppCenterActionArea } from './AppCenterActionArea';
 
 export function App() {
   const clientReference = useRef<JanusClient | null>(null);
@@ -47,6 +44,7 @@ export function App() {
 
   const [tabs, setTabs] = useState<TabView[]>([]);
   const [activeTab, setActiveTab] = useState(0);
+  const [secondaryTab, setSecondaryTab] = useState<number>();
   const { tabNameMaxLength, setTabNameMaxLength, activeTabNameMaxLength, setActiveTabNameMaxLength } = useTabNameLimits();
   const [globalHistory, setGlobalHistory] = useState<string[]>([]);
   const [syntaxTheme, setSyntaxTheme] = useState('github-dark');
@@ -85,16 +83,12 @@ export function App() {
   } = useLayoutState(client);
 
   const current = tabs[activeTab] ?? actionEntries[0]?.tab;
-  // `current`'s real index in the server's tab list — usually `activeTab`, but that can point
-  // past the end transiently (e.g. right after closing the last tab, before new state arrives),
-  // in which case `current` falls back to the first action tab and this must follow it.
-  const currentIndex = activeTab < tabs.length ? activeTab : (actionEntries[0]?.index ?? 0);
   currentRef.current = current;
   const lines = useMemo(() => current?.bufferLines ?? [], [current]);
   // The picker lists the tab's recent history, most recent at the bottom (suppressed when empty).
   const recent = useMemo(() => getRecentHistory(current?.cmdHistory ?? [], 10), [current]);
 
-  const { isViewTab, canSearch, search, highlight } = useViewSearchState(current, lines);
+  const { canSearch, search, highlight } = useViewSearchState(current, lines);
 
   const runCommand = useCallback((text: string) => client.send({ method: 'command', params: { text } }), [client]);
   const { themePickerOpen, themePickerIndex, setThemePickerIndex, setThemePickerOpen, openThemePicker, pickTheme } =
@@ -135,7 +129,9 @@ export function App() {
   const chooseRoute = useCallback((index: number) => client.send({ method: 'chooseRoute', params: { index } }), [client]);
 
   useServerState(client, {
-    setTabs, setActiveTab, setRoute, setHarnessLaunch, setScheduleLaunch, setTabNameMaxLength, setActiveTabNameMaxLength, setGlobalHistory, setSyntaxTheme, setTheme, setTasks, setJanissaryTasksDir, setProfiles, setRouteIndex,
+    setTabs, setActiveTab, setSecondaryTab, setRoute, setHarnessLaunch, setScheduleLaunch,
+    setTabNameMaxLength, setActiveTabNameMaxLength, setGlobalHistory, setSyntaxTheme, setTheme,
+    setTasks, setJanissaryTasksDir, setProfiles, setRouteIndex,
     routeRef: routeReference,
   });
 
@@ -169,6 +165,29 @@ export function App() {
 
   if (!current) return <div className="app" style={{ padding: 16, color: 'var(--muted)' }}>Connecting…</div>;
 
+  const focusedAgentBody = (
+    <AgentTabBody
+        current={current} client={client} lines={lines} runCommand={runCommand}
+        transcriptReference={transcriptReference} highlight={highlight} inputReference={inputReference}
+        route={route} routeIndex={routeIndex} chooseRoute={chooseRoute}
+        syntaxTheme={syntaxTheme} themePickerOpen={themePickerOpen} themePickerIndex={themePickerIndex} pickTheme={pickTheme}
+        theme={theme} appThemePickerOpen={appThemePickerOpen} appThemePickerIndex={appThemePickerIndex} pickAppTheme={pickAppTheme}
+        pickerOpen={pickerOpen} recent={recent} pickerIndex={pickerIndex} pick={pick}
+        navOpen={navOpen} navQuery={navQuery} navIndex={navIndex} tabs={tabs} selectNavTab={selectNavTab}
+        queueOpen={queueOpen} queueIndex={queueIndex} selectQueueIndex={selectQueueIndex}
+        taskPickerOpen={taskPickerOpen} visibleTasks={visibleTasks} taskPickerIndex={taskPickerIndex} pickTask={pickTask} toggleTaskDir={toggleTaskDir}
+        profilePickerOpen={profilePickerOpen} profiles={profiles} profilePickerIndex={profilePickerIndex} pickProfile={pickProfile}
+        quickOpenOpen={quickOpenOpen} quickOpenQuery={quickOpenQuery} setQuickOpenQuery={setQuickOpenQuery}
+        quickOpenResults={quickOpenResults} quickOpenIndex={quickOpenIndex} setQuickOpenIndex={setQuickOpenIndex}
+        quickOpenLoading={quickOpenLoading} pickQuickOpenFile={pickQuickOpenFile} closeQuickOpen={closeQuickOpen}
+        search={search} globalHistory={globalHistory} onCommandBarSubmit={onCommandBarSubmit}
+        quitConfirmOpen={quitConfirmOpen} unsavedQuitOpen={unsavedQuitOpen}
+        recallReference={recallReference} onEditQueued={onEditQueued} onDeleteQueued={onDeleteQueued}
+      dropRef={dropReference}
+      onSplit={() => client.send({ method: 'moveTabToOtherPane', params: { index: activeTab } })}
+    />
+  );
+
   return (
     <AppShell
       tabs={tabs} client={client} dropRef={dropReference} editorDropRef={editorDropReference} tabNameMaxLength={tabNameMaxLength}
@@ -177,49 +196,25 @@ export function App() {
       sidebarRightWidth={sidebarRightWidth} onSidebarRightWidthChange={setSidebarRightWidth}
       focusLeft={focusLeft} focusRight={focusRight}
     >
-      <TabStrip
-        tabs={actionEntries.map((e) => e.tab)}
-        activeTab={actionEntries.findIndex((e) => e.index === activeTab)}
-        onSelect={(index) => client.send({ method: 'setActiveTab', params: { index: actionEntries[index].index } })}
-        onClose={(index) => closeTab(actionEntries[index].index)}
-        onRename={(index, title) => client.renameTab(actionEntries[index].index, title)}
-        onReorder={(from, to) => reorderTabEntries(client, actionEntries, from, to)}
-        tabNameMaxLength={tabNameMaxLength}
+      <AppCenterActionArea
+        entries={actionEntries} tabs={tabs} activeTab={activeTab} secondaryTab={secondaryTab}
+        client={client} closeTab={closeTab} tabNameMaxLength={tabNameMaxLength}
         activeTabNameMaxLength={activeTabNameMaxLength}
-        onFocusCommandBar={() => inputReference.current?.focus()} onFocusEditor={(label) => editorHandles.current.get(label)?.focus()}
-        windowFocused={windowFocused}
+        onFocusCommandBar={() => inputReference.current?.focus()}
+        onFocusEditor={(label) => editorHandles.current.get(label)?.focus()}
+        windowFocused={windowFocused} current={current} focusedAgentBody={focusedAgentBody}
+        shellProps={{
+          onHandle: (id, handle) => {
+            if (handle) shellHandles.current.set(id, handle);
+            else shellHandles.current.delete(id);
+          },
+        }}
+        mountedProps={{
+          harnessHandles, editorHandles, editorDropRef: editorDropReference, questionPanelRef,
+          taskPickerOpen, taskRows: visibleTasks, taskPickerIndex, onPickTask: pickTask,
+          onToggleTaskDir: toggleTaskDir, navOpen, navQuery, navIndex, onPickTab: selectNavTab,
+        }}
       />
-
-      <ViewTabBody tab={current} client={client} index={currentIndex} tabs={tabs} />
-
-      <ShellTabLayer tabs={tabs} activeLabel={current.label} client={client}
-        onHandle={(id, h) => { if (h) shellHandles.current.set(id, h); else shellHandles.current.delete(id); }} />
-
-      <MountedViewLayers tabs={tabs} current={current} client={client} closeTab={closeTab} harnessHandles={harnessHandles} editorHandles={editorHandles} editorDropRef={editorDropReference} questionPanelRef={questionPanelRef}
-        taskPickerOpen={taskPickerOpen} taskRows={visibleTasks} taskPickerIndex={taskPickerIndex} onPickTask={pickTask} onToggleTaskDir={toggleTaskDir}
-        navOpen={navOpen} navQuery={navQuery} navIndex={navIndex} onPickTab={selectNavTab} />
-
-      {!isViewTab && !current.activePty && (
-        <AgentTabBody
-          current={current} client={client} lines={lines} runCommand={runCommand}
-          transcriptReference={transcriptReference} highlight={highlight} inputReference={inputReference}
-          route={route} routeIndex={routeIndex} chooseRoute={chooseRoute}
-          syntaxTheme={syntaxTheme} themePickerOpen={themePickerOpen} themePickerIndex={themePickerIndex} pickTheme={pickTheme}
-          theme={theme} appThemePickerOpen={appThemePickerOpen} appThemePickerIndex={appThemePickerIndex} pickAppTheme={pickAppTheme}
-          pickerOpen={pickerOpen} recent={recent} pickerIndex={pickerIndex} pick={pick}
-          navOpen={navOpen} navQuery={navQuery} navIndex={navIndex} tabs={tabs} selectNavTab={selectNavTab}
-          queueOpen={queueOpen} queueIndex={queueIndex} selectQueueIndex={selectQueueIndex}
-          taskPickerOpen={taskPickerOpen} visibleTasks={visibleTasks} taskPickerIndex={taskPickerIndex} pickTask={pickTask} toggleTaskDir={toggleTaskDir}
-          profilePickerOpen={profilePickerOpen} profiles={profiles} profilePickerIndex={profilePickerIndex} pickProfile={pickProfile}
-          quickOpenOpen={quickOpenOpen} quickOpenQuery={quickOpenQuery} setQuickOpenQuery={setQuickOpenQuery}
-          quickOpenResults={quickOpenResults} quickOpenIndex={quickOpenIndex} setQuickOpenIndex={setQuickOpenIndex}
-          quickOpenLoading={quickOpenLoading} pickQuickOpenFile={pickQuickOpenFile} closeQuickOpen={closeQuickOpen}
-          search={search} globalHistory={globalHistory} onCommandBarSubmit={onCommandBarSubmit}
-          quitConfirmOpen={quitConfirmOpen} unsavedQuitOpen={unsavedQuitOpen}
-          recallReference={recallReference} onEditQueued={onEditQueued} onDeleteQueued={onDeleteQueued}
-          dropRef={dropReference}
-        />
-      )}
       <AppReportingSection entries={reportingEntries} client={client} onClose={closeTab}
         heightPct={reportingHeightPct} onHeightPctChange={setReportingHeightPct} />
       {harnessLaunch && <HarnessLaunchDialog view={harnessLaunch} client={client} />}

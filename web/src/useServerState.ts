@@ -7,6 +7,7 @@ import { useProjectTitle } from './useProjectTitle';
 type Setters = {
   setTabs: (tabs: TabView[]) => void;
   setActiveTab: (index: number) => void;
+  setSecondaryTab: (index: number | undefined) => void;
   setRoute: (route: RouteChooserView | null) => void;
   setHarnessLaunch: (view: HarnessLaunchView | null) => void;
   setScheduleLaunch: (view: ScheduleLaunchView | null) => void;
@@ -33,14 +34,17 @@ export function useTabNameLimits() {
 // that field has no other consumer in `App.tsx`.
 export function useServerState(client: JanusClient, setters: Setters): void {
   const {
-    setTabs, setActiveTab, setRoute, setHarnessLaunch, setScheduleLaunch, setTabNameMaxLength, setActiveTabNameMaxLength, setGlobalHistory, setSyntaxTheme, setTheme, setTasks, setJanissaryTasksDir, setProfiles, setRouteIndex, routeRef,
+    setTabs, setActiveTab, setSecondaryTab, setRoute, setHarnessLaunch, setScheduleLaunch,
+    setTabNameMaxLength, setActiveTabNameMaxLength, setGlobalHistory, setSyntaxTheme, setTheme,
+    setTasks, setJanissaryTasksDir, setProfiles, setRouteIndex, routeRef,
   } = setters;
   const [projectDir, setProjectDir] = useState('');
   const [version, setVersion] = useState('');
   useProjectTitle(projectDir, version);
-  useEffect(() => client.onState((nextTabs, active, nextRoute, nextTabNameMaxLength, nextGlobalHistory, nextSyntaxTheme, nextTheme, nextTasks, nextJanissaryTasksDir, nextProfiles, nextProjectDir, nextVersion, nextHarnessLaunch, nextScheduleLaunch, nextActiveTabNameMaxLength = 50) => {
+  useEffect(() => client.onState((nextTabs, active, secondary, nextRoute, nextTabNameMaxLength, nextGlobalHistory, nextSyntaxTheme, nextTheme, nextTasks, nextJanissaryTasksDir, nextProfiles, nextProjectDir, nextVersion, nextHarnessLaunch, nextScheduleLaunch, nextActiveTabNameMaxLength = 50) => {
     setTabs(nextTabs);
     setActiveTab(active);
+    setSecondaryTab(secondary);
     setRoute(nextRoute);
     setHarnessLaunch(nextHarnessLaunch);
     setScheduleLaunch(nextScheduleLaunch);
@@ -62,6 +66,8 @@ export function useServerState(client: JanusClient, setters: Setters): void {
       setRouteIndex(Math.max(0, nextRoute.choices.length - 1));
     }
   }), [
-    client, setTabs, setActiveTab, setRoute, setHarnessLaunch, setScheduleLaunch, setTabNameMaxLength, setActiveTabNameMaxLength, setGlobalHistory, setSyntaxTheme, setTheme, setTasks, setJanissaryTasksDir, setProfiles, setRouteIndex, routeRef,
+    client, setTabs, setActiveTab, setSecondaryTab, setRoute, setHarnessLaunch, setScheduleLaunch,
+    setTabNameMaxLength, setActiveTabNameMaxLength, setGlobalHistory, setSyntaxTheme, setTheme,
+    setTasks, setJanissaryTasksDir, setProfiles, setRouteIndex, routeRef,
   ]);
 }

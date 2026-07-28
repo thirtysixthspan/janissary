@@ -9,8 +9,8 @@ const makeClient = () => {
   let listener: StateListener | undefined;
   return {
     onState: vi.fn((l: StateListener) => { listener = l; return () => {}; }),
-    emit: (route: RouteChooserView | null) => {
-      listener?.([], 0, route, 16, [], 'github-dark', 'dark', [], '', [], '', '', null, null, 50);
+    emit: (route: RouteChooserView | null, secondary?: number) => {
+      listener?.([], 0, secondary, route, 16, [], 'github-dark', 'dark', [], '', [], '', '', null, null, 50);
     },
   };
 };
@@ -18,6 +18,7 @@ const makeClient = () => {
 const makeSetters = () => ({
   setTabs: vi.fn(),
   setActiveTab: vi.fn(),
+  setSecondaryTab: vi.fn(),
   setRoute: vi.fn(),
   setHarnessLaunch: vi.fn(),
   setScheduleLaunch: vi.fn(),
@@ -34,6 +35,14 @@ const makeSetters = () => ({
 });
 
 describe('useServerState', () => {
+  it('fans out the synchronized secondary selection', () => {
+    const client = makeClient();
+    const setters = makeSetters();
+    renderHook(() => useServerState(client as never, setters));
+    client.emit(null, 3);
+    expect(setters.setSecondaryTab).toHaveBeenCalledWith(3);
+  });
+
   it('defaults routeIndex to the last choice (acp) when a chooser newly opens', () => {
     const client = makeClient();
     const setters = makeSetters();

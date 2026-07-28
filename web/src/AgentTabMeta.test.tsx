@@ -1,9 +1,20 @@
 import React from 'react';
-import { render, fireEvent } from '@testing-library/react';
+import { render, fireEvent, screen } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { AgentTabMeta } from './AgentTabMeta';
 
 describe('AgentTabMeta', () => {
+  it('renders the exact Split control only when enabled', () => {
+    const onSplit = vi.fn();
+    const { rerender } = render(<AgentTabMeta cwd="~/project" onSplit={onSplit} />);
+    const button = screen.getByRole('button', { name: 'Split' });
+    expect(button).toHaveAttribute('title', 'Split');
+    fireEvent.click(button);
+    expect(onSplit).toHaveBeenCalled();
+    rerender(<AgentTabMeta cwd="~/project" />);
+    expect(screen.queryByRole('button', { name: 'Split' })).toBeNull();
+  });
+
   it('renders the file-navigator button only when onOpenFileNavigator is provided', () => {
     const { getByTitle } = render(<AgentTabMeta cwd="~/project" onOpenFileNavigator={() => {}} />);
     expect(getByTitle('Open file navigator here')).toBeInTheDocument();

@@ -6,13 +6,13 @@
 export type {
   LogEntry, TerminalEntry, MessageRenderKind, BufferLine, HarnessView, ImageView, PageView,
   MarkdownView, EditorView, FileNavigatorRow, FileNavigatorView, TaskRow, MonitorTarget,
-  MonitorSuggestion, Tab,
+  MonitorSuggestion, CenterPane, Tab,
 } from './tab/types.js';
 
 export type { AgentState, AgentCommand } from './agent/types.js';
 
 export type {
-  ProfileHarnessEntry, ProfileEntry, ProfileTab, ProfileAgentFile, ProfileHarnessFile,
+  ProfileHarnessEntry, ProfileAgentEntry, ProfileEntry, ProfileTab, ProfileAgentFile, ProfileHarnessFile,
   ProfileMonitor, ProfileMonitorFile, ProfileFilesEntry, ProfileEditorsEntry,
   ProfileNotificationsEntry, ProfileSchedulesEntry, ProfileLayout, ProfileLayoutFile, ProfileFile,
   LoadedProfile, ProfileParsed,

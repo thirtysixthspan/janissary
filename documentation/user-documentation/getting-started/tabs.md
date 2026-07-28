@@ -27,9 +27,24 @@ The strip tells you what every tab is doing without switching to it. Three signa
 
 - **The colored dot.** Every tab gets a dot color picked to stand apart from the colors already on screen, so adjacent tabs are easy to tell apart. The colored band along the top of a tab is its [group](/user-documentation/getting-started/groups).
 - **A blinking dot means busy.** While a tab's agent is working — a shell command, an agent turn, anything in flight — its dot blinks on and off. It settles back to a steady fill when the work finishes.
-- **A flag icon means unread output.** When an inactive tab receives new content — a message from another agent, a shell command finishing, agent output — a flag badge appears on it. Focusing the tab clears it. The active tab never shows one.
+- **A flag icon means unread output.** When a tab that is not visible in either pane receives new content — a message from another agent, a shell command finishing, agent output — a flag badge appears on it. Selecting it clears the flag.
 
 The active tab is also highlighted: full-strength text on the content background, while inactive tabs are muted.
+
+## Working in two panes
+
+Action tabs have a **Split** button in their header. Click it to move that tab into a second pane
+beside the first one. Each pane gets its own tab strip and keeps one tab visible; click anywhere in
+a pane to make it the focused one. New tabs opened from an action tab join that tab's pane.
+
+Drag the divider between the panes to resize them. The divider starts in the middle and stops at
+15% or 85% of the center area, so neither pane can disappear accidentally. Moving, closing, or
+docking the last tab from one side collapses the split back to a single strip.
+
+Tab-strip dragging and `Ctrl+←` / `Ctrl+→` reorder tabs only inside the focused pane. Global
+navigation still crosses both panes: `Shift+←` / `Shift+→`, `next`, and `Ctrl+G` move through every
+central action tab. Sidebars remain outside the split, and the lower reporting area stays full
+width.
 
 ## The tab metadata row
 

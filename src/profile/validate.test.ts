@@ -55,8 +55,25 @@ describe('validateProfile', () => {
   });
 
   it('accepts a valid editor entry even when its file does not exist', () => {
-    writeJson('new-file', { editors: [{ path: '$root/not-yet-created.txt', tab: { focus: true } }] });
+    writeJson('new-file', {
+      agents: [{ name: 'left', tab: { pane: 'left' } }],
+      harnesses: [{ name: 'right', type: 'claude', tab: { pane: 'right' } }],
+      editors: [{ path: '$root/not-yet-created.txt', tab: { focus: true, pane: 'right' } }],
+    });
     expect(validateProfile('new-file')).toEqual([]);
+  });
+
+  it('rejects invalid pane values for every pane-capable entry kind', () => {
+    writeJson('bad-panes', {
+      agents: [{ name: 'agent', tab: { pane: 'bottom' } }],
+      harnesses: [{ name: 'harness', type: 'claude', tab: { pane: 2 } }],
+      editors: [{ path: 'notes.txt', tab: { pane: false } }],
+    });
+    expect(validateProfile('bad-panes')).toEqual([
+      'agents[0].tab: pane must be "left" or "right"',
+      'harnesses[0].tab: pane must be "left" or "right"',
+      'editors[0].tab: pane must be "left" or "right"',
+    ]);
   });
 
   it('returns a single "not valid JSON" item for unparseable JSON', () => {

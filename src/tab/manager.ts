@@ -1,6 +1,6 @@
 /* eslint-disable max-lines */
 import path from 'node:path';
-import type { Tab, LogEntry, AgentState } from '../types.js';
+import type { Tab, LogEntry, AgentState, CenterPane } from '../types.js';
 import type { AggregatedScheduleView, ConnectionView, ScheduleView, TabView } from '../protocol.js';
 import type { Managers } from '../managers.js';
 import {
@@ -25,10 +25,12 @@ import {
   rehydrateTabState, startTabRunning,
 } from './transcript-operations.js';
 import { setActiveTabOp, moveTabOp, reorderTabOp, reorderTabToOp } from './navigation-commands.js';
+import { centerPane, hasSplit, isCenterActionTab, moveToOtherPane } from './split.js';
 
 export class TabManager extends TabOpeningState {
   tabs: Tab[] = [];
   activeTab = 0;
+  secondaryTabLabel?: string;
   private cwd = new Map<string, string>();
   private busy = new Set<string>();
   private context = new Map<string, string[]>();
@@ -123,17 +125,60 @@ export class TabManager extends TabOpeningState {
   }
 
   markUnread(label: string): void {
-    markUnreadTab(this.tabs, label, this.activeLabel());
+    markUnreadTab(this.tabs, label, this.activeLabel(), this.secondaryTabLabel);
   }
 
   private recordLeavingActiveTab(newIndex: number): void {
     this.focusHistory = recordLeavingActiveTab(this.tabs, this.activeTab, this.focusHistory, newIndex);
   }
 
-  private popFocusHistory(): number | undefined {
-    const { index, history } = popFocusHistory(this.tabs, this.focusHistory);
+  private popFocusHistory(eligible?: (tab: Tab) => boolean): number | undefined {
+    const { index, history } = popFocusHistory(this.tabs, this.focusHistory, eligible);
     this.focusHistory = history;
     return index;
+  }
+
+  private recentLabel(eligible: (tab: Tab) => boolean, excluded?: string): string | undefined {
+    for (let index = this.focusHistory.length - 1; index >= 0; index--) {
+      const label = this.focusHistory[index];
+      const tab = this.tabs.find((candidate) => candidate.label === label);
+      if (tab && label !== excluded && eligible(tab)) return label;
+    }
+    return this.tabs.find((tab) => tab.label !== excluded && eligible(tab))?.label;
+  }
+
+  private focusedPane(): CenterPane {
+    const active = this.tabs[this.activeTab];
+    return active && isCenterActionTab(active) ? centerPane(active) : 'left';
+  }
+
+  private repairSelections(): void {
+    const centerTabs = this.tabs.filter((tab) => isCenterActionTab(tab));
+    const leftTabs = centerTabs.filter((tab) => centerPane(tab) === 'left');
+    const rightTabs = centerTabs.filter((tab) => centerPane(tab) === 'right');
+    if (leftTabs.length === 0 || rightTabs.length === 0) {
+      for (const tab of centerTabs) tab.pane = undefined;
+      this.secondaryTabLabel = undefined;
+      return;
+    }
+    const active = this.tabs[this.activeTab];
+    if (!active || !isCenterActionTab(active)) {
+      this.activeTab = this.tabs.findIndex((tab) => tab.label === leftTabs[0].label);
+    }
+    const liveActive = this.tabs[this.activeTab];
+    const oppositePane: CenterPane = centerPane(liveActive) === 'left' ? 'right' : 'left';
+    const secondary = this.tabs.find((tab) => tab.label === this.secondaryTabLabel);
+    if (
+      !secondary
+      || !isCenterActionTab(secondary)
+      || centerPane(secondary) !== oppositePane
+      || secondary.label === liveActive.label
+    ) {
+      this.secondaryTabLabel = centerTabs.find((tab) => centerPane(tab) === oppositePane)?.label;
+    }
+    liveActive.hasUnread = false;
+    const visible = this.tabs.find((tab) => tab.label === this.secondaryTabLabel);
+    if (visible) visible.hasUnread = false;
   }
 
   mostRecentFileNavigatorLabel(): string | undefined {
@@ -144,13 +189,42 @@ export class TabManager extends TabOpeningState {
   // helpers, which otherwise assign `tabs`/`activeTab` directly and would bypass focus-history
   // tracking — a freshly opened, auto-focused tab still needs its predecessor recorded.
   applyOpenResult(result: { tabs: Tab[]; activeTab: number }): void {
-    this.recordLeavingActiveTab(result.activeTab);
+    const previousTabs = this.tabs;
+    const previousActive = previousTabs[this.activeTab];
+    const previousLabels = new Set(previousTabs.map((tab) => tab.label));
+    const opened = result.tabs[result.activeTab];
+    if (opened && !previousLabels.has(opened.label) && isCenterActionTab(opened)) {
+      opened.pane = this.focusedPane() === 'right' ? 'right' : undefined;
+    }
+    if (opened?.label !== previousActive?.label && previousActive) {
+      this.focusHistory = [...this.focusHistory.filter((label) => label !== previousActive.label), previousActive.label];
+    }
     this.tabs = result.tabs;
     this.activeTab = result.activeTab;
+    if (
+      opened
+      && previousActive
+      && hasSplit(this.tabs)
+      && centerPane(opened) !== centerPane(previousActive)
+    ) this.secondaryTabLabel = previousActive.label;
+    this.repairSelections();
   }
 
   setActiveTab(index: number): void {
-    setActiveTabOp(this.tabs, index, (i) => this.recordLeavingActiveTab(i), (i) => { this.activeTab = i; });
+    setActiveTabOp(this.tabs, index, (i) => this.recordLeavingActiveTab(i), (i) => {
+      const previous = this.tabs[this.activeTab];
+      const next = this.tabs[i];
+      if (
+        previous
+        && next
+        && hasSplit(this.tabs)
+        && isCenterActionTab(previous)
+        && isCenterActionTab(next)
+        && centerPane(previous) !== centerPane(next)
+      ) this.secondaryTabLabel = previous.label;
+      this.activeTab = i;
+      this.repairSelections();
+    });
   }
 
   moveTab(dir: -1 | 1): void {
@@ -158,9 +232,67 @@ export class TabManager extends TabOpeningState {
   }
 
   setDock(index: number, dock: 'left' | 'right' | null): void {
-    if (this.tabs[index] === undefined) return;
+    const tab = this.tabs[index];
+    if (tab === undefined) return;
+    const sourcePane = centerPane(tab);
+    const wasActive = index === this.activeTab;
+    const wasSecondary = tab.label === this.secondaryTabLabel;
+    const focusedPane = this.focusedPane();
+    if (dock === null) tab.pane = focusedPane === 'right' ? 'right' : undefined;
+    else tab.pane = undefined;
     this.activeTab = applyDock(this.tabs, this.activeTab, index, dock, (i) => this.recordLeavingActiveTab(i));
+    if (dock !== null && wasActive && hasSplit(this.tabs)) {
+      const replacement = this.recentLabel(
+        (candidate) => isCenterActionTab(candidate) && centerPane(candidate) === sourcePane,
+        tab.label,
+      );
+      if (replacement) this.activeTab = this.findIndex(replacement);
+    }
+    if (dock !== null && wasSecondary) this.secondaryTabLabel = undefined;
+    if (dock === null) tab.hasUnread = false;
+    this.repairSelections();
     messageBus.emit('state', { type: 'dirty' });
+  }
+
+  moveTabToOtherPane(index: number): void {
+    const target = this.tabs[index];
+    const active = this.tabs[this.activeTab];
+    if (!target || !active) return;
+    const result = moveToOtherPane(
+      this.tabs, target.label, active.label, this.secondaryTabLabel, this.focusHistory,
+    );
+    if (!result) return;
+    if (target.label !== active.label) this.recordLeavingActiveTab(index);
+    this.tabs = result.tabs;
+    this.activeTab = this.findIndex(result.activeLabel);
+    this.secondaryTabLabel = result.secondaryLabel;
+    this.repairSelections();
+    messageBus.emit('state', { type: 'dirty' });
+  }
+
+  placeProfileTabs(candidates: { label: string; number?: number; pane?: CenterPane }[]): void {
+    const ordered = candidates.toSorted(
+      (a, b) => (a.number ?? Infinity) - (b.number ?? Infinity),
+    );
+    for (const candidate of candidates) {
+      const tab = this.tabs.find((item) => item.label === candidate.label);
+      if (tab && isCenterActionTab(tab)) tab.pane = candidate.pane === 'right' ? 'right' : undefined;
+    }
+    const left = ordered.find((candidate) => candidate.pane !== 'right');
+    const right = ordered.find((candidate) => candidate.pane === 'right');
+    if (left && right) {
+      this.activeTab = this.findIndex(left.label);
+      this.secondaryTabLabel = right.label;
+    } else if (left) {
+      const active = this.tabs[this.activeTab];
+      if (active?.pane === 'right') this.secondaryTabLabel = left.label;
+      else this.activeTab = this.findIndex(left.label);
+    } else if (right) {
+      const active = this.tabs[this.activeTab];
+      if (active?.pane === 'right') this.activeTab = this.findIndex(right.label);
+      else this.secondaryTabLabel = right.label;
+    }
+    this.repairSelections();
   }
 
   reorderTab(dir: -1 | 1): void {
@@ -180,11 +312,29 @@ export class TabManager extends TabOpeningState {
   }
 
   closeTab(index: number): void {
+    const closing = this.tabs[index];
+    if (!closing) return;
+    const closingPane = centerPane(closing);
+    const wasActive = index === this.activeTab;
+    const wasSecondary = closing.label === this.secondaryTabLabel;
     closeTabOp(
       this.tabs, this.activeTab, index, this.managers, this.fileRegistry.map, this.context, this.queue,
       (label) => { this.focusHistory = this.focusHistory.filter((l) => l !== label); },
-      () => this.popFocusHistory(),
-      (tabs, activeTab) => { this.tabs = tabs; this.activeTab = activeTab; },
+      () => this.popFocusHistory(
+        (tab) => isCenterActionTab(tab) && centerPane(tab) === closingPane && tab.label !== closing.label,
+      ),
+      (tabs, activeTab) => {
+        this.tabs = tabs;
+        this.activeTab = activeTab;
+        if (wasActive && hasSplit(tabs) && centerPane(tabs[activeTab]) !== closingPane) {
+          const replacement = this.recentLabel(
+            (tab) => isCenterActionTab(tab) && centerPane(tab) === closingPane,
+          );
+          if (replacement) this.activeTab = this.findIndex(replacement);
+        }
+        if (wasSecondary) this.secondaryTabLabel = undefined;
+        this.repairSelections();
+      },
     );
   }
 
@@ -224,6 +374,7 @@ export class TabManager extends TabOpeningState {
   }
 
   insertTabInGroup(tab: Tab): void {
+    if (isCenterActionTab(tab)) tab.pane = this.focusedPane() === 'right' ? 'right' : undefined;
     this.tabs = insertTabInGroup(this.tabs, tab);
   }
 
@@ -293,6 +444,8 @@ export class TabManager extends TabOpeningState {
       this.tabs, this.cwd, this.context, this.queue, loadTranscript, onState,
       (log) => this.capLog(log),
     );
+    for (const tab of this.tabs) tab.pane = undefined;
     this.activeTab = 0;
+    this.secondaryTabLabel = undefined;
   }
 }

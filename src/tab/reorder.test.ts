@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Tab } from '../types.js';
-import { computeReorderTo } from './reorder.js';
+import { computeReorder, computeReorderTo } from './reorder.js';
 
 const makeTab = (label: string, group: number, extra: Partial<Tab> = {}): Tab => ({
   label, dotColor: '#fff', number: 0, group, groupColor: '#fff',
@@ -56,5 +56,28 @@ describe('computeReorderTo', () => {
       [makeTab('a', 0, { view: 'monitor' }), makeTab('b', 0, { view: 'monitor' })], 1, 0,
     );
     expect(result?.tabs.map((tab) => tab.label)).toEqual(['b', 'a']);
+  });
+});
+
+describe('computeReorder', () => {
+  it('swaps with the nearest same-pane neighbor without moving opposite-pane slots', () => {
+    const tabs = [
+      makeTab('left-a', 1),
+      makeTab('right', 1, { pane: 'right' }),
+      makeTab('left-b', 1),
+    ];
+    const result = computeReorder(tabs, 0, 1);
+    expect(result?.tabs.map((tab) => tab.label)).toEqual(['left-b', 'right', 'left-a']);
+    expect(result?.activeTab).toBe(2);
+  });
+
+  it('keeps the group boundary when the nearest same-pane neighbor is in another group', () => {
+    const tabs = [makeTab('left-a', 1), makeTab('right', 1, { pane: 'right' }), makeTab('left-b', 2)];
+    expect(computeReorder(tabs, 0, 1)).toBeUndefined();
+  });
+
+  it('rejects dragging an action tab across panes', () => {
+    const tabs = [makeTab('left', 1), makeTab('right', 1, { pane: 'right' })];
+    expect(computeReorderTo(tabs, 0, 1)).toBeUndefined();
   });
 });

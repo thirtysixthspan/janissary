@@ -3,6 +3,10 @@
 A **left sidebar** and a **right sidebar** flank the central tab area. Both are hidden by
 default and appear only once something is docked into them.
 
+The sidebars are independent of the central action area's optional two-pane split. They remain
+outside both center panes, keep their existing widths when the center is split or collapsed, and
+never participate in the center divider's 15–85% sizing.
+
 ### Docking
 
 A tab can be **docked** into a sidebar instead of living in the central tab strip. Docking is a

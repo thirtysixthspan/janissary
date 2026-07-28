@@ -70,7 +70,7 @@ describe('JanusClient', () => {
     client.onState(listener);
     messageHandler!({
       data: JSON.stringify({
-        t: 'state', tabs: [], activeTab: 0, route: null, tabNameMaxLength: 20,
+        t: 'state', tabs: [], activeTab: 0, secondaryTab: 2, route: null, tabNameMaxLength: 20,
         activeTabNameMaxLength: 40,
         globalHistory: [], syntaxTheme: 'monokai', theme: 'dark', tasks: [],
         janissaryTasksDir: '/opt/janissary/ai/tasks',
@@ -79,7 +79,7 @@ describe('JanusClient', () => {
       }),
     });
     expect(listener).toHaveBeenCalledTimes(1);
-    expect(listener).toHaveBeenCalledWith([], 0, null, 20, [], 'monokai', 'dark', [], '/opt/janissary/ai/tasks', [], '/tmp', '1.2.3', { names: ['claude'], models: { claude: ['opus'] } }, null, 40);
+    expect(listener).toHaveBeenCalledWith([], 0, 2, null, 20, [], 'monokai', 'dark', [], '/opt/janissary/ai/tasks', [], '/tmp', '1.2.3', { names: ['claude'], models: { claude: ['opus'] } }, null, 40);
   });
 
   it('onState unsubscribe stops the listener from being called', () => {

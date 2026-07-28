@@ -62,7 +62,7 @@ export function openProfileEntries(
       openAgentEntry(entry, managers, group, groupColor, dotColor);
     }
     opened.push(label);
-    candidates.push({ label, number: entry.number, focus: entry.focus });
+    candidates.push({ label, number: entry.number, focus: entry.focus, pane: entry.pane });
   }
 
   // Profile-level file navigator(s) open next, rooted at the first newly opened tab by default, so
@@ -81,6 +81,7 @@ export function openProfileEntries(
       .filter((g): g is number => g !== undefined),
   );
   for (const g of usedGroups) reorderGroupByNumber(managers, g, numbers);
+  managers.tab.placeProfileTabs(candidates);
   const focusLabel = focusedMainAreaLabel(candidates, firstNewLabel);
   if (focusLabel !== undefined) managers.tab.setActiveTab(managers.tab.findIndex(focusLabel));
   // Profile-level notifications tab opens next, docked per the profile's `notifications` key.

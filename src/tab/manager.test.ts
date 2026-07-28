@@ -195,6 +195,23 @@ describe('TabManager queue', () => {
 });
 
 describe('TabManager markUnread', () => {
+  it('keeps both pane selections read while hidden tabs become unread', () => {
+    const tm = makeTabManager();
+    tm.tabs.push(
+      { ...tm.cur(), label: 'right', number: 2 },
+      { ...tm.cur(), label: 'hidden', number: 3 },
+    );
+    tm.moveTabToOtherPane(1);
+
+    tm.append('janus', { output: 'left visible' });
+    tm.append('right', { output: 'right visible' });
+    tm.append('hidden', { output: 'hidden' });
+
+    expect(tm.tabs.find((tab) => tab.label === 'janus')?.hasUnread).toBeFalsy();
+    expect(tm.tabs.find((tab) => tab.label === 'right')?.hasUnread).toBeFalsy();
+    expect(tm.tabs.find((tab) => tab.label === 'hidden')?.hasUnread).toBe(true);
+  });
+
   it('append does not mark a docked, non-active tab unread', () => {
     const tm = makeTabManager();
     tm.tabs.push({ ...tm.cur(), label: 'notifications', number: 2, view: 'notifications' });
@@ -212,6 +229,68 @@ describe('TabManager markUnread', () => {
     tm.append('second', { output: 'new line' });
 
     expect(tm.tabs.find((t) => t.label === 'second')?.hasUnread).toBe(true);
+  });
+});
+
+describe('TabManager split panes', () => {
+  it('creates a split, swaps focused selections across panes, and clears unread', () => {
+    const tm = makeTabManager();
+    tm.tabs.push(
+      { ...tm.cur(), label: 'second', number: 2 },
+      { ...tm.cur(), label: 'third', number: 3 },
+    );
+    tm.setActiveTab(1);
+    tm.setActiveTab(2);
+    tm.moveTabToOtherPane(2);
+    expect(tm.tabs[tm.activeTab].label).toBe('third');
+    expect(tm.secondaryTabLabel).toBe('second');
+
+    tm.tabs[1].hasUnread = true;
+    tm.setActiveTab(1);
+    expect(tm.tabs[tm.activeTab].label).toBe('second');
+    expect(tm.secondaryTabLabel).toBe('third');
+    expect(tm.tabs[1].hasUnread).toBe(false);
+  });
+
+  it('new center tabs inherit the focused pane', () => {
+    const tm = makeTabManager();
+    tm.tabs.push({ ...tm.cur(), label: 'right', number: 2 });
+    tm.moveTabToOtherPane(1);
+    tm.openEditorTab({ name: 'file.ts', path: '/test/file.ts', size: '1 KB', url: '/open/1' });
+    expect(tm.cur().pane).toBe('right');
+    expect(tm.secondaryTabLabel).toBe('janus');
+  });
+
+  it('closing or docking the last member collapses and normalizes the split', () => {
+    const tm = makeTabManager();
+    tm.tabs.push({ ...tm.cur(), label: 'right', number: 2 });
+    tm.moveTabToOtherPane(1);
+    tm.closeTab(1);
+    expect(tm.secondaryTabLabel).toBeUndefined();
+    expect(tm.tabs.every((tab) => tab.pane === undefined)).toBe(true);
+
+    tm.tabs.push({ ...tm.cur(), label: 'right-again', number: 2 });
+    tm.moveTabToOtherPane(1);
+    tm.setDock(1, 'right');
+    expect(tm.secondaryTabLabel).toBeUndefined();
+    expect(tm.tabs.filter((tab) => !tab.dock).every((tab) => tab.pane === undefined)).toBe(true);
+  });
+
+  it('places a profile batch and selects its lowest-numbered tab in each pane', () => {
+    const tm = makeTabManager();
+    tm.tabs.push(
+      { ...tm.cur(), label: 'left', number: 2 },
+      { ...tm.cur(), label: 'right-high', number: 3 },
+      { ...tm.cur(), label: 'right-low', number: 4 },
+    );
+    tm.placeProfileTabs([
+      { label: 'left', number: 3 },
+      { label: 'right-high', number: 2, pane: 'right' },
+      { label: 'right-low', number: 1, pane: 'right' },
+    ]);
+    expect(tm.tabs[tm.activeTab].label).toBe('left');
+    expect(tm.secondaryTabLabel).toBe('right-low');
+    expect(tm.tabs.find((tab) => tab.label === 'right-high')?.pane).toBe('right');
   });
 });
 

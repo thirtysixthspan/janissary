@@ -14,6 +14,9 @@ type Properties = {
   tabs: TabView[];
   client: JanusClient;
   harnessHandles: React.RefObject<Map<string, HarnessTabHandle>>;
+  visible: boolean;
+  index: number;
+  onSplit?: () => void;
 } & PickerOverlayProps;
 
 // One harness tab's body (terminal + meta bar) plus its status panels and picker overlays.
@@ -22,7 +25,7 @@ type Properties = {
 // All harness tabs stay mounted (hidden via `display: none`) so `t.label === current.label` is
 // this tab's own "just became active" signal, gating auto-show even though it never unmounts.
 export function HarnessTabLayer({
-  t, current, tabs, client, harnessHandles,
+  t, current, tabs, client, harnessHandles, visible, index, onSplit,
   taskPickerOpen, taskRows, taskPickerIndex, onPickTask, onToggleTaskDir,
   navOpen, navQuery, navIndex, onPickTab,
 }: Properties) {
@@ -36,7 +39,13 @@ export function HarnessTabLayer({
   return (
     <div
       className="tab-body"
-      style={{ borderLeft: `4px solid ${t.dotColor}`, position: 'relative', display: isActive ? 'flex' : 'none' }}
+      data-pane-index={index}
+      style={{
+        borderLeft: `4px solid ${t.dotColor}`, position: 'relative',
+        display: visible ? 'flex' : 'none',
+        gridColumn: t.pane === 'right' ? 2 : 1,
+        gridRow: 2,
+      }}
     >
       <HarnessTab harness={t.harness!} client={client} cwd={t.cwd} flags={t.flags} label={t.label}
         taskPickerOpen={!!taskPickerOpen && isActive}
@@ -53,6 +62,7 @@ export function HarnessTabLayer({
           onLeave: statusWindows.schedule.onButtonLeave,
           onClick: statusWindows.schedule.onButtonClick,
         }}
+        onSplit={onSplit}
         ref={(h) => { if (h) harnessHandles.current.set(t.harness!.ptyId, h); else harnessHandles.current.delete(t.harness!.ptyId); }} />
       <StatusPanels tab={t} scheduleOnly={scheduleOnly} connections={statusWindows.connections} schedule={statusWindows.schedule} />
       {taskPickerOpen && isActive && onPickTask && onToggleTaskDir && (

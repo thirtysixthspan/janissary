@@ -32,7 +32,7 @@ export class SshManager {
     const harness: HarnessView = { name: 'ssh', program: 'ssh', ptyId: '', status: 'running', destination };
     const tab = makeHarnessTab(label, dotColor, this.managers.tab.tabs.length + 1, group, groupColor, harness);
     this.managers.tab.insertTabInGroup(tab);
-    this.managers.tab.activeTab = this.managers.tab.findIndex(tab.label);
+    this.managers.tab.setActiveTab(this.managers.tab.findIndex(tab.label));
     const id = this.managers.pty.spawn(label, 'ssh', command, cwd);
     this.managers.harness.registerScreenReader(id);
     const liveTab = this.managers.tab.tabs.find((t) => t.label === label);

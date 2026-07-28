@@ -148,6 +148,22 @@ html, body, #root {
 
 .app { display: flex; flex-direction: row; height: 100%; }
 .app-center { position: relative; display: flex; flex-direction: column; flex: 1; min-width: 0; height: 100%; }
+.center-action-area {
+  --center-left-pct: 100%;
+
+  position: relative; display: grid; flex: 1; min-height: 0; min-width: 0;
+  grid-template-columns: minmax(0, var(--center-left-pct)) minmax(0, calc(100% - var(--center-left-pct)));
+  grid-template-rows: auto minmax(0, 1fr);
+}
+.center-strip-left, .center-pane-body-left { grid-column: 1; }
+.center-strip-right, .center-pane-body-right { grid-column: 2; }
+.center-strip { grid-row: 1; min-width: 0; }
+.center-pane-body { grid-row: 2; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+.center-split-resize {
+  position: absolute; z-index: 30; top: 0; bottom: 0; left: var(--center-left-pct);
+  width: 5px; transform: translateX(-2px); cursor: col-resize;
+  border-left: 1px solid var(--border);
+}
 
 /* Tab strip */
 .tabstrip { display: flex; flex-wrap: wrap; background: var(--bg-soft); align-items: stretch; }
@@ -166,6 +182,11 @@ html, body, #root {
   color: var(--muted); font-size: 14px; line-height: 1;
 }
 .tab .tab-close:hover { color: var(--fg); }
+.tab-split {
+  border: none; background: none; color: var(--muted); cursor: pointer; padding: 2px 4px;
+}
+.tab-split:hover { color: var(--fg); }
+.page-focus-catcher { position: absolute; inset: 0; z-index: 10; background: transparent; }
 /* Inline tab-rename input: matches the label's font so it reads as an in-place edit. */
 .tab-rename-input {
   font: inherit; color: inherit; background: transparent; border: none; outline: none;
@@ -191,7 +212,7 @@ html, body, #root {
 .image-stage .image-portrait { height: 100%; width: auto; flex-shrink: 0; }
 .image-zoom-badge { position: absolute; top: 8px; right: 8px; padding: 2px 6px; border-radius: 4px; background: rgb(0 0 0 / 45%); color: var(--fg); font-size: 12px; pointer-events: none; }
 /* Page view tab: full-height iframe with no chrome. */
-.page-tab { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.page-tab { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .page-header {
   display: flex; align-items: center; justify-content: space-between;
   padding: 6px 12px; color: var(--muted); font-size: 12px; border-bottom: 1px solid var(--border);

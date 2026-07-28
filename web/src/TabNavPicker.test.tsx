@@ -19,6 +19,19 @@ describe('filterTabs', () => {
     expect(filterTabs(tabs, '').map((e) => e.tab.label)).toEqual(['deploy', 'shell']);
   });
 
+  it('excludes docked and reporting tabs while preserving full-list indices', () => {
+    const tabs = [
+      makeTab({ label: 'left', dock: 'left' }),
+      makeTab({ label: 'agent', number: 2 }),
+      makeTab({ label: 'monitor', number: 3, view: 'monitor' }),
+      makeTab({ label: 'shell', number: 4 }),
+    ];
+    expect(filterTabs(tabs, '')).toEqual([
+      { tab: tabs[1], index: 1 },
+      { tab: tabs[3], index: 3 },
+    ]);
+  });
+
   it('matches by substring on label, case-insensitively', () => {
     const tabs = [makeTab({ label: 'Deploy' }), makeTab({ label: 'shell', number: 2 })];
     expect(filterTabs(tabs, 'depl').map((e) => e.tab.label)).toEqual(['Deploy']);

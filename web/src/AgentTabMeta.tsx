@@ -3,6 +3,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { tabFlagDisplay } from './tab-flag-display';
 import { openFilesIcon, newTabIcon, viewCaptureIcon, connectionsWindowIcon, scheduleWindowIcon } from './icons';
 import { StatusWindowButton } from './StatusWindowButton';
+import { SplitTabButton } from './SplitTabButton';
 
 export type StatusWindowButtonProps = { hasContent: boolean; onEnter: () => void; onLeave: () => void; onClick: () => void };
 
@@ -10,6 +11,7 @@ type Properties = {
   cwd?: string; flags?: string[]; model?: string; effort?: string;
   onOpenFileNavigator?: () => void; onLaunchAgentHere?: () => void; onOpenTranscript?: () => void;
   connectionsButton?: StatusWindowButtonProps; scheduleButton?: StatusWindowButtonProps;
+  onSplit?: () => void;
 };
 
 function MetaChip({ label, value }: { label: string; value: string }) {
@@ -20,7 +22,10 @@ function MetaChip({ label, value }: { label: string; value: string }) {
   );
 }
 
-export function AgentTabMeta({ cwd, flags, model, effort, onOpenFileNavigator, onLaunchAgentHere, onOpenTranscript, connectionsButton, scheduleButton }: Properties) {
+export function AgentTabMeta({
+  cwd, flags, model, effort, onOpenFileNavigator, onLaunchAgentHere, onOpenTranscript,
+  connectionsButton, scheduleButton, onSplit,
+}: Properties) {
   return (
     <div className="tab-meta">
       <span className="tab-cwd">{cwd}</span>
@@ -92,6 +97,7 @@ export function AgentTabMeta({ cwd, flags, model, effort, onOpenFileNavigator, o
           onClick={scheduleButton.onClick}
         />
       )}
+      {onSplit && <SplitTabButton onClick={onSplit} />}
     </div>
   );
 }

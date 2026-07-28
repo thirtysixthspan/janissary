@@ -27,7 +27,14 @@ export type EditorDropHandle = { insertAtCaret: (text: string) => void };
 
 // The plain-text editor tab. Mounted persistently by App (like harness tabs) so the buffer, undo
 // stacks, cursor, and scroll position survive tab switches; `active` gates focus and the caret.
-export const EditorTab = forwardRef<EditorTabHandle, { editor: EditorView; tab: TabView; client: JanusClient; active: boolean; dropRef?: React.RefObject<EditorDropHandle | null> }>(function EditorTab({ editor, tab, client, active, dropRef }, ref) {
+export const EditorTab = forwardRef<EditorTabHandle, {
+  editor: EditorView;
+  tab: TabView;
+  client: JanusClient;
+  active: boolean;
+  dropRef?: React.RefObject<EditorDropHandle | null>;
+  onSplit?: () => void;
+}>(function EditorTab({ editor, tab, client, active, dropRef, onSplit }, ref) {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [lastSaved, setLastSaved] = useState<string | null>(null);
@@ -185,6 +192,7 @@ export const EditorTab = forwardRef<EditorTabHandle, { editor: EditorView; tab: 
         editor={editor} dirty={dirty} savedFlash={savedFlash} error={saveError ?? loadError}
         onSave={() => { void save(); }} onMouseUp={onMetaMouseUp} connectionsButton={connections.connectionsButton}
         onSyncClick={() => client.send({ method: 'resyncEditorTab', params: { url: editor.url } })}
+        onSplit={onSplit}
       />
       <PendingSuggestPanel pending={suggest.pending} />
       <div

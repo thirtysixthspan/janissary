@@ -5,6 +5,7 @@ import { StatusWindowButton } from '../StatusWindowButton';
 import type { StatusWindowButtonProps } from '../AgentTabMeta';
 import { connectionsWindowIcon } from '../icons';
 import { EditorSyncIcon } from './EditorSyncIcon';
+import { SplitTabButton } from '../SplitTabButton';
 
 type Properties = {
   editor: EditorView;
@@ -15,11 +16,14 @@ type Properties = {
   onMouseUp: () => void;
   connectionsButton: StatusWindowButtonProps;
   onSyncClick?: () => void;
+  onSplit?: () => void;
 };
 
 // The editor tab's single metadata row: name/size/path, save state, and the connections button.
 // Split out so EditorTab.tsx stays under the 200-line file cap.
-export function EditorMetaRow({ editor, dirty, savedFlash, error, onSave, onMouseUp, connectionsButton, onSyncClick }: Properties) {
+export function EditorMetaRow({
+  editor, dirty, savedFlash, error, onSave, onMouseUp, connectionsButton, onSyncClick, onSplit,
+}: Properties) {
   return (
     <div className="editor-meta" onMouseUp={onMouseUp}>
       <span className="editor-name">{editor.name}</span>
@@ -39,6 +43,7 @@ export function EditorMetaRow({ editor, dirty, savedFlash, error, onSave, onMous
         onLeave={connectionsButton.onLeave}
         onClick={connectionsButton.onClick}
       />
+      {onSplit && <SplitTabButton onClick={onSplit} />}
     </div>
   );
 }

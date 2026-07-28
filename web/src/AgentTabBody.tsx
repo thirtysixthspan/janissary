@@ -70,6 +70,7 @@ type Properties = {
   onEditQueued: React.ComponentProps<typeof CommandArea>['onEditQueued'];
   onDeleteQueued: React.ComponentProps<typeof CommandArea>['onDeleteQueued'];
   dropRef: React.RefObject<CommandInputDropHandle | null>;
+  onSplit?: () => void;
 };
 
 // The normal agent-tab body: transcript, status panels, picker overlays, and the command bar.
@@ -84,7 +85,7 @@ export function AgentTabBody({
   quickOpenOpen, quickOpenQuery, setQuickOpenQuery, quickOpenResults, quickOpenIndex, setQuickOpenIndex,
   quickOpenLoading, pickQuickOpenFile, closeQuickOpen,
   search, globalHistory, onCommandBarSubmit, quitConfirmOpen, unsavedQuitOpen,
-  recallReference, onEditQueued, onDeleteQueued, dropRef,
+  recallReference, onEditQueued, onDeleteQueued, dropRef, onSplit,
 }: Properties) {
   const statusWindows = useStatusWindows(current.label, current.connections.length > 0, current.schedule.length > 0);
   return (
@@ -115,6 +116,7 @@ export function AgentTabBody({
           onLeave: statusWindows.schedule.onButtonLeave,
           onClick: statusWindows.schedule.onButtonClick,
         }}
+        onSplit={onSplit}
       />
       <div className="main">
         <Transcript

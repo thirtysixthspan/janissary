@@ -62,7 +62,10 @@ describe('saveProfile', () => {
     await saveProfile('demo', managers);
 
     expect(load('demo').entries).toEqual([
-      { name: 'bob', active: false, cwd: '/work/bob', dotColor: '#aaa', number: 2, group: 3, groupColor: '#bbb' },
+      {
+        name: 'bob', active: false, cwd: '/work/bob', dotColor: '#aaa', number: 2,
+        group: 3, groupColor: '#bbb', focus: undefined, pane: 'left',
+      },
     ]);
   });
 
@@ -78,7 +81,8 @@ describe('saveProfile', () => {
 
     expect(load('demo').entries).toEqual([{
       name: 'claude', type: 'claude', model: 'sonnet', effort: 'high', workspace: false,
-      offline: true, autoApprove: true, dotColor: '#ccc', cwd: '/work/claude', number: 1, group: 1,
+      offline: true, autoApprove: true, dotColor: '#ccc', cwd: '/work/claude',
+      number: 1, group: 1, focus: undefined, pane: 'left',
     }]);
   });
 
@@ -136,7 +140,10 @@ describe('saveProfile', () => {
     const summary = await saveProfile('demo', managers);
 
     expect(load('demo').editors).toEqual([
-      { path: '/notes.txt', tab: { color: '#222', number: 1, group: 1, groupColor: '#222' } },
+      {
+        path: '/notes.txt',
+        tab: { color: '#222', number: 1, group: 1, groupColor: '#222', pane: 'left' },
+      },
     ]);
     expect(summary.editors).toBe(1);
   });
@@ -178,7 +185,10 @@ describe('saveProfile', () => {
     const summary = await saveProfile('demo', managers);
 
     expect(load('demo').entries).toEqual([
-      { name: 'bob', active: false, dotColor: '#aaa', number: 1, group: 1, groupColor: '#aaa' },
+      {
+        name: 'bob', active: false, dotColor: '#aaa', number: 1, group: 1,
+        groupColor: '#aaa', focus: undefined, pane: 'left',
+      },
     ]);
     expect(summary.agents).toBe(1);
     expect(summary.skipped).not.toContain('janus');

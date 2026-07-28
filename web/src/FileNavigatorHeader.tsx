@@ -4,6 +4,7 @@ import type { JanusClient } from './ws';
 import { nextDock, dockTooltip } from './dock-cycle';
 import { dockSwapIcon, newDirectoryIcon, newFileIcon, searchFilesIcon } from './icons';
 import { FileNavigatorGithubButton } from './FileNavigatorGithubButton';
+import { SplitTabButton } from './SplitTabButton';
 
 type Properties = {
   root: string;
@@ -15,12 +16,15 @@ type Properties = {
   onSearch: () => void;
   onNewFile: () => void;
   onNewDirectory: () => void;
+  onSplit?: () => void;
 };
 
 // The file navigator's metadata row: root/branch on the left, action buttons (GitHub link, search,
 // new items, dock cycle, collapse all) on the right. Split out of `FileNavigatorTab` to keep it under
 // the file-size limit.
-export function FileNavigatorHeader({ root, branch, githubUrl, client, index, dock, onSearch, onNewFile, onNewDirectory }: Properties) {
+export function FileNavigatorHeader({
+  root, branch, githubUrl, client, index, dock, onSearch, onNewFile, onNewDirectory, onSplit,
+}: Properties) {
   return (
     <div className="files-header">
       <div className="files-meta">
@@ -48,6 +52,7 @@ export function FileNavigatorHeader({ root, branch, githubUrl, client, index, do
             <FontAwesomeIcon icon={dockSwapIcon} />
           </button>
         )}
+        {!dock && onSplit && <SplitTabButton onClick={onSplit} />}
         <button
           type="button"
           className="files-collapse-all"

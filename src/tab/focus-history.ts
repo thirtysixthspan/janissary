@@ -17,12 +17,14 @@ export function recordLeavingActiveTab(tabs: Tab[], activeTab: number, focusHist
 // Pops the most recent still-valid (existing, non-docked) label off the focus-history stack,
 // discarding any stale entries (closed or since-docked tabs) along the way. Returns the resolved
 // tab index (or `undefined` if none remain) and the history with all consumed entries removed.
-export function popFocusHistory(tabs: Tab[], focusHistory: string[]): { index: number | undefined; history: string[] } {
+export function popFocusHistory(
+  tabs: Tab[], focusHistory: string[], eligible: (tab: Tab) => boolean = (tab) => !tab.dock,
+): { index: number | undefined; history: string[] } {
   const history = [...focusHistory];
   while (history.length > 0) {
     const label = history.pop();
     const index = tabs.findIndex((t) => t.label === label);
-    if (index !== -1 && !tabs[index].dock) return { index, history };
+    if (index !== -1 && eligible(tabs[index])) return { index, history };
   }
   return { index: undefined, history };
 }

@@ -22,6 +22,7 @@ const makeController = () =>
         launchDir: '/proj',
         findIndex: vi.fn(() => 2),
         setActiveTab: vi.fn(),
+        moveTabToOtherPane: vi.fn(),
       },
       questions: { answer: vi.fn(() => true) },
     },
@@ -118,6 +119,12 @@ describe('handle', () => {
     const controller = makeController();
     dispatchCall(controller, 4, { method: 'moveTab', params: { dir: 1 } });
     expect(controller.moveTab).toHaveBeenCalledWith(1);
+  });
+
+  it('routes moveTabToOtherPane directly to the tab manager', () => {
+    const controller = makeController();
+    dispatchCall(controller, 34, { method: 'moveTabToOtherPane', params: { index: 2 } });
+    expect(controller.managers.tab.moveTabToOtherPane).toHaveBeenCalledWith(2);
   });
 
   it('routes reorderTab', () => {

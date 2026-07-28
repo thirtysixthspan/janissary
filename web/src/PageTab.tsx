@@ -5,8 +5,14 @@ import type { JanusClient } from './ws';
 import { usePageContentSync } from './page/usePageContentSync';
 import { pageBackIcon, pageForwardIcon, pageReloadIcon } from './icons';
 import { InlineEditInput } from './InlineEditInput';
+import { SplitTabButton } from './SplitTabButton';
 
-export function PageTab({ page, closeTab, index, client }: { page: PageView; closeTab: (index: number) => void; index: number; client: JanusClient }) {
+export function PageTab({
+  page, closeTab, index, client, active = true, onSplit,
+}: {
+  page: PageView; closeTab: (index: number) => void; index: number; client: JanusClient;
+  active?: boolean; onSplit?: () => void;
+}) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [reloadNonce, setReloadNonce] = useState(0);
   const [editing, setEditing] = useState(false);
@@ -49,6 +55,7 @@ export function PageTab({ page, closeTab, index, client }: { page: PageView; clo
           )}
         </div>
         <div className="page-actions">
+          {onSplit && <SplitTabButton onClick={onSplit} />}
           <button
             type="button"
             className="page-close"
@@ -67,6 +74,7 @@ export function PageTab({ page, closeTab, index, client }: { page: PageView; clo
         src={page.url}
         title={page.domain}
       />
+      {!active && <div className="page-focus-catcher" aria-label={`Focus ${page.domain}`} />}
     </div>
   );
 }

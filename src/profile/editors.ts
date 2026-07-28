@@ -33,7 +33,11 @@ export function openProfileEditors(
       relocateToGroup(managers, targetGroup, colorForGroup(targetGroup, dotColor));
     }
     const editorLabel = managers.tab.tabs[managers.tab.activeTab]?.label;
-    if (editorLabel) opened.push({ label: editorLabel, number: entry.tab?.number, focus: entry.tab?.focus });
+    if (editorLabel) {
+      opened.push({
+        label: editorLabel, number: entry.tab?.number, focus: entry.tab?.focus, pane: entry.tab?.pane,
+      });
+    }
     notes.push('Opened editor tab.');
   }
   return opened;
