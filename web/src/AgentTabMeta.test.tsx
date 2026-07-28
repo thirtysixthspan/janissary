@@ -66,6 +66,25 @@ describe('AgentTabMeta', () => {
     expect(onOpen).toHaveBeenCalledTimes(1);
   });
 
+  it('groups every optional metadata button in the right-side actions', () => {
+    const status = { hasContent: true, onEnter: () => {}, onLeave: () => {}, onClick: () => {} };
+    const { container } = render(
+      <AgentTabMeta
+        cwd="~/project"
+        onOpenFileNavigator={() => {}}
+        onLaunchAgentHere={() => {}}
+        onOpenTranscript={() => {}}
+        connectionsButton={status}
+        scheduleButton={status}
+        onSplit={() => {}}
+      />,
+    );
+    const actions = container.querySelector('.tab-meta-actions')!;
+
+    expect(actions.querySelectorAll('button')).toHaveLength(6);
+    expect(container.querySelector('.tab-meta')?.querySelectorAll(':scope > button')).toHaveLength(0);
+  });
+
   it('renders no model/effort chips when those props are omitted', () => {
     const { container } = render(<AgentTabMeta cwd="~/project" flags={['workspaced']} />);
     expect(container.querySelectorAll('.tab-meta-chip').length).toBe(0);

@@ -37,6 +37,13 @@ export function PageTab({
     <div className="page-tab" data-doc-shot="page-view">
       <div className="page-header">
         <div className="page-meta">
+          {editing ? (
+            <InlineEditInput className="page-url-input" value={draft} onChange={setDraft} onCommit={commit} onCancel={cancel} />
+          ) : (
+            <span className="page-url" onDoubleClick={startEdit}>{page.url}</span>
+          )}
+        </div>
+        <div className="page-actions">
           <div className="page-nav">
             <button type="button" className="page-back" title="Back" aria-label="Back" onClick={goBack}>
               <FontAwesomeIcon icon={pageBackIcon} />
@@ -48,13 +55,6 @@ export function PageTab({
               <FontAwesomeIcon icon={pageReloadIcon} />
             </button>
           </div>
-          {editing ? (
-            <InlineEditInput className="page-url-input" value={draft} onChange={setDraft} onCommit={commit} onCancel={cancel} />
-          ) : (
-            <span className="page-url" onDoubleClick={startEdit}>{page.url}</span>
-          )}
-        </div>
-        <div className="page-actions">
           {onSplit && <SplitTabButton onClick={onSplit} />}
           <button
             type="button"

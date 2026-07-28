@@ -236,7 +236,9 @@ describe('HarnessTab', () => {
     );
     const meta = container.querySelector('.tab-meta')!;
     const order = [...meta.children].map((el) => el.className);
-    expect(order).toEqual(['tab-cwd', 'tab-meta-chip', 'tab-meta-chip', 'tab-flags', 'tab-open-files', 'tab-launch-agent']);
+    expect(order).toEqual(['tab-cwd', 'tab-meta-chip', 'tab-meta-chip', 'tab-flags', 'tab-meta-actions']);
+    expect([...meta.querySelector('.tab-meta-actions')!.children].map((el) => el.className))
+      .toEqual(['tab-open-files', 'tab-launch-agent']);
     const chips = meta.querySelectorAll('.tab-meta-chip');
     expect(chips[0]).toHaveTextContent('opus');
     expect(chips[0]).toHaveAttribute('title', 'Model: opus');

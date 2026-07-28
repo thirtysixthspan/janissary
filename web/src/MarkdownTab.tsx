@@ -38,7 +38,7 @@ export function MarkdownTab({
         <span className="image-name">{markdown.name}</span>
         <span className="image-size">{markdown.size}</span>
         <span className="image-loc">{markdown.path}</span>
-        {onSplit && <SplitTabButton onClick={onSplit} />}
+        {onSplit && <span className="image-actions"><SplitTabButton onClick={onSplit} /></span>}
       </div>
       {html === undefined
         ? <div className="markdown-stage" ref={stageRef} />

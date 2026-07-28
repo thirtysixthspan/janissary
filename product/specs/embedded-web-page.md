@@ -90,9 +90,9 @@ the active tab as before.
 
 The page view shows, stacked top to bottom:
 
-1. **Metadata** — the page's full address in a compact header, preceded by left-floated back,
+1. **Metadata** — the page's full address in a compact header, followed by a right-aligned action group containing back,
    forward, and reload icon buttons that move the embedded page through its own navigation history
-   or reload it, and followed by a close button right-aligned on that same line. Clicking the close
+   or reload it, plus Split when available and the close button. Clicking the close
    button closes the tab directly — a second, independent close affordance alongside the tab
    strip's own close button (see "Tab strip: name and close button" below). Double-clicking the
    address opens it for editing in place; pressing Enter (or clicking away) loads the typed address

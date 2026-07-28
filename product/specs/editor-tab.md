@@ -36,8 +36,7 @@ up/down, etc.) are not.
 - **Metadata header** — a single row showing the file's name, size, and location. The location is
   abbreviated using the `$root` and `~` shortcuts (see `root-path.md`), the same as elsewhere the
   application displays a path.
-- The metadata header has a save button and a connections-status button aligned to the right,
-  together in that same row. The save button is enabled when the buffer has unsaved changes and
+- The metadata header groups every action at the right edge of that same row: the sync-status icon when present, save, connections status, and Split when available. The save button is enabled when the buffer has unsaved changes and
   disabled and dimmed when the buffer is clean. The connections-status button opens the tab's
   connections window (see [[connection]]) and is dimmed and inert when no persona connection is
   open.

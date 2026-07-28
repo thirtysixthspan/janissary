@@ -42,62 +42,64 @@ export function AgentTabMeta({
           );
         })}
       </span>
-      {onOpenFileNavigator && (
-        <button
-          type="button"
-          className="tab-open-files"
-          title="Open file navigator here"
-          onClick={onOpenFileNavigator}
-        >
-          <FontAwesomeIcon icon={openFilesIcon} />
-        </button>
-      )}
-      {onLaunchAgentHere && (
-        <button
-          type="button"
-          className="tab-launch-agent"
-          title="New agent here"
-          onClick={onLaunchAgentHere}
-        >
-          <FontAwesomeIcon icon={newTabIcon} />
-        </button>
-      )}
-      {onOpenTranscript && (
-        <button
-          type="button"
-          className="tab-open-transcript"
-          title="Open transcript"
-          aria-label="Open transcript"
-          onClick={onOpenTranscript}
-        >
-          <FontAwesomeIcon icon={viewCaptureIcon} />
-        </button>
-      )}
-      {connectionsButton && (
-        <StatusWindowButton
-          icon={connectionsWindowIcon}
-          className="tab-connections"
-          hasContent={connectionsButton.hasContent}
-          activeTitle="connections"
-          emptyTitle="no active connections"
-          onEnter={connectionsButton.onEnter}
-          onLeave={connectionsButton.onLeave}
-          onClick={connectionsButton.onClick}
-        />
-      )}
-      {scheduleButton && (
-        <StatusWindowButton
-          icon={scheduleWindowIcon}
-          className="tab-schedule"
-          hasContent={scheduleButton.hasContent}
-          activeTitle="schedule"
-          emptyTitle="no active schedules"
-          onEnter={scheduleButton.onEnter}
-          onLeave={scheduleButton.onLeave}
-          onClick={scheduleButton.onClick}
-        />
-      )}
-      {onSplit && <SplitTabButton onClick={onSplit} />}
+      <span className="tab-meta-actions">
+        {onOpenFileNavigator && (
+          <button
+            type="button"
+            className="tab-open-files"
+            title="Open file navigator here"
+            onClick={onOpenFileNavigator}
+          >
+            <FontAwesomeIcon icon={openFilesIcon} />
+          </button>
+        )}
+        {onLaunchAgentHere && (
+          <button
+            type="button"
+            className="tab-launch-agent"
+            title="New agent here"
+            onClick={onLaunchAgentHere}
+          >
+            <FontAwesomeIcon icon={newTabIcon} />
+          </button>
+        )}
+        {onOpenTranscript && (
+          <button
+            type="button"
+            className="tab-open-transcript"
+            title="Open transcript"
+            aria-label="Open transcript"
+            onClick={onOpenTranscript}
+          >
+            <FontAwesomeIcon icon={viewCaptureIcon} />
+          </button>
+        )}
+        {connectionsButton && (
+          <StatusWindowButton
+            icon={connectionsWindowIcon}
+            className="tab-connections"
+            hasContent={connectionsButton.hasContent}
+            activeTitle="connections"
+            emptyTitle="no active connections"
+            onEnter={connectionsButton.onEnter}
+            onLeave={connectionsButton.onLeave}
+            onClick={connectionsButton.onClick}
+          />
+        )}
+        {scheduleButton && (
+          <StatusWindowButton
+            icon={scheduleWindowIcon}
+            className="tab-schedule"
+            hasContent={scheduleButton.hasContent}
+            activeTitle="schedule"
+            emptyTitle="no active schedules"
+            onEnter={scheduleButton.onEnter}
+            onLeave={scheduleButton.onLeave}
+            onClick={scheduleButton.onClick}
+          />
+        )}
+        {onSplit && <SplitTabButton onClick={onSplit} />}
+      </span>
     </div>
   );
 }

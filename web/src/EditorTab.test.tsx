@@ -352,6 +352,24 @@ describe('EditorTab', () => {
     expect(meta.querySelector('.tab-connections')).not.toBeNull();
   });
 
+  it('groups every metadata button in the right-side actions', async () => {
+    const { client } = makeClient();
+    const { container } = render(
+      <EditorTab
+        editor={makeView({ sync: 'synced' })}
+        tab={makeTab({ editor: makeView({ sync: 'synced' }) })}
+        client={client}
+        active
+        onSplit={() => {}}
+      />,
+    );
+    await waitFor(() => expect(screen.getByText('line one')).toBeInTheDocument());
+    const actions = container.querySelector('.editor-actions')!;
+
+    expect(actions.querySelectorAll('button')).toHaveLength(4);
+    expect(container.querySelector('.editor-meta')?.querySelectorAll(':scope > button')).toHaveLength(0);
+  });
+
   it('does not render a sync status icon for an ordinary, non-synced editor tab', async () => {
     const { client } = makeClient();
     const { container } = await renderLoaded(client);

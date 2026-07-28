@@ -72,7 +72,7 @@ export function ImageTab({
         <span className="image-name">{image.name}</span>
         <span className="image-size">{image.size}</span>
         <span className="image-loc">{image.path}</span>
-        {onSplit && <SplitTabButton onClick={onSplit} />}
+        {onSplit && <span className="image-actions"><SplitTabButton onClick={onSplit} /></span>}
       </div>
       <div className="image-stage" ref={stageRef}>
         {zoom !== 1 && (

@@ -22,6 +22,15 @@ describe('metadata theme', () => {
     expect(metadataRule).toContain('user-select: text');
     expect(metadataRule).not.toContain('user-select: none');
   });
+
+  it('keeps metadata action groups at the right edge', () => {
+    const actionRule = theme.match(
+      /\.image-actions, \.tab-meta-actions, \.page-actions, \.monitor-actions, \.editor-actions, \.files-actions \{[^}]+\}/,
+    )?.[0];
+
+    expect(actionRule).toBeDefined();
+    expect(actionRule).toContain('margin-left: auto');
+  });
 });
 
 describe('tab strip theme', () => {

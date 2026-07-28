@@ -58,7 +58,7 @@ tab as before.
 The markdown view shows, stacked top to bottom:
 
 1. **Metadata** — the file's name, size, and location, in a compact header, consistent with the
-   image tab's header.
+   image tab's header, with the Split action at the right edge when available.
 2. **The rendered Markdown**, filling the space beneath the metadata and scrolling independently.
 
 ### Rendering
