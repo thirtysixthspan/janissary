@@ -12,6 +12,8 @@ import {
   openFileNavigatorFor,
   fileNavigatorSearch,
   revealFileNavigatorItem,
+  renameFileNavigatorItem,
+  fileNavigatorOpeners,
 } from './file-navigator.js';
 import type { Managers } from '../managers.js';
 
@@ -146,5 +148,33 @@ describe('controller-file-navigator', () => {
     const managers = makeManagers(undefined, { reveal: (...args: unknown[]) => { calls.push(args); } });
     revealFileNavigatorItem(managers, 0, 'src/foo.ts');
     expect(calls).toHaveLength(0);
+  });
+
+  it('renameFileNavigatorItem delegates to FileNavigatorManager.rename when the tab exists', () => {
+    const calls: unknown[] = [];
+    const managers = makeManagers('agent', { rename: (...args: unknown[]) => { calls.push(args); } });
+    renameFileNavigatorItem(managers, 0, 'src/foo.ts', 'bar.ts');
+    expect(calls).toEqual([['agent', 'src/foo.ts', 'bar.ts']]);
+  });
+
+  it('renameFileNavigatorItem is a no-op when the tab index has no label', () => {
+    const calls: unknown[] = [];
+    const managers = makeManagers(undefined, { rename: (...args: unknown[]) => { calls.push(args); } });
+    renameFileNavigatorItem(managers, 0, 'src/foo.ts', 'bar.ts');
+    expect(calls).toHaveLength(0);
+  });
+
+  it('fileNavigatorOpeners returns the manager result when the tab exists', () => {
+    const managers = makeManagers('agent', {
+      openers: (...args: unknown[]) => ({ command: 'edit', choices: [{ id: args[1] as string }] }),
+    });
+    const result = fileNavigatorOpeners(managers, 0, 'src/foo.ts', true);
+    expect(result).toEqual({ command: 'edit', choices: [{ id: 'src/foo.ts' }] });
+  });
+
+  it('fileNavigatorOpeners returns an empty choices list when the tab index has no label', () => {
+    const managers = makeManagers(undefined, { openers: () => ({ command: 'open', choices: [{ id: 'a' }] }) });
+    const result = fileNavigatorOpeners(managers, 0, 'src/foo.ts', false);
+    expect(result).toEqual({ choices: [] });
   });
 });
