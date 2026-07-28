@@ -6,6 +6,7 @@ import { MarkdownTab } from './MarkdownTab';
 import { FileNavigatorTab } from './FileNavigatorTab';
 import { NotificationsTab } from './NotificationsTab';
 import { SchedulesTab } from './SchedulesTab';
+import { tabBodyBorder } from './tab-body-border';
 
 // Renders the body for image, markdown, file navigator, and notifications view tabs. Harness, editor,
 // and page tabs are rendered separately in App (via MountedViewLayers) because they must all stay
@@ -19,7 +20,7 @@ export function ViewTabBody({
   tab: TabView; client: JanusClient; index: number; tabs?: TabView[];
   active?: boolean; onSplit?: () => void;
 }) {
-  const border = { borderLeft: `4px solid ${tab.dotColor}` };
+  const border = { borderLeft: tabBodyBorder(tab.dotColor, active) };
   if (tab.view === 'image' && tab.image) {
     return <div className="tab-body" style={border}><ImageTab key={tab.image.url} image={tab.image} active={active} onSplit={onSplit} /></div>;
   }

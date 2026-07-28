@@ -30,7 +30,8 @@ function setup() {
 
 describe('InactiveAgentTabBody', () => {
   it('keeps a non-autofocused command line in the visible pane and submits commands', () => {
-    const { send } = setup();
+    const { container, send } = setup();
+    expect(container.querySelector<HTMLElement>('.tab-body')?.style.borderLeft).toBe('4px solid var(--muted)');
     const input = screen.getByRole('textbox');
     expect(input).not.toHaveFocus();
     fireEvent.change(input, { target: { value: 'echo hello' } });

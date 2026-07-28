@@ -52,7 +52,7 @@ The central action area may show two tab strips and bodies side by side. Eligibl
 right-aligned **Split** button in their metadata header. Pressing it moves that tab to the other pane; the first split moves
 the current tab right and leaves the most recently focused eligible tab on the left. Each pane keeps
 one selected tab, while exactly one of those two selected tabs has keyboard focus. Pressing anywhere
-in the other pane focuses its selected tab before the interaction continues.
+in the other pane focuses its selected tab before the interaction continues. The focused pane's selected tab keeps its tab-colored left body border; the visible tab in the other pane uses the application theme's muted neutral border, making keyboard focus clear without dimming the pane's content.
 
 Each visible agent tab keeps its command line, including the agent tab in the pane without keyboard focus. The unfocused command line does not take focus when it mounts; interacting with it first focuses its pane through the normal pane-focus handoff, after which command submission targets that tab. An agent tab's metadata row shows the same working directory, flags, status buttons, file navigator, new-agent, transcript, and Split actions in either pane regardless of which pane has keyboard focus. Focused-only overlays such as pickers, transcript search, and dialogs remain attached only to the pane with keyboard focus.
 

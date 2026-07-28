@@ -6,6 +6,7 @@ import { Transcript } from './Transcript';
 import { CommandInput } from './CommandInput';
 import { StatusPanels } from './StatusPanels';
 import { useStatusWindows } from './useStatusWindows';
+import { tabBodyBorder } from './tab-body-border';
 
 export function InactiveAgentTabBody({
   tab, client, onSplit,
@@ -16,7 +17,7 @@ export function InactiveAgentTabBody({
   return (
     <div
       className="tab-body"
-      style={{ borderLeft: `4px solid ${tab.dotColor}` }}
+      style={{ borderLeft: tabBodyBorder(tab.dotColor, false) }}
       onMouseUp={() => {
         if (!globalThis.getSelection()?.toString()) inputReference.current?.focus();
       }}

@@ -12,6 +12,7 @@ import type { VisibleTaskRow } from './task-picker-keys';
 import type { VisibleProfileRow } from './profile-picker-keys';
 import { useStatusWindows } from './useStatusWindows';
 import type { FuzzyMatchResult } from './fuzzy-match';
+import { tabBodyBorder } from './tab-body-border';
 
 type Properties = {
   current: TabView;
@@ -92,7 +93,7 @@ export function AgentTabBody({
   return (
     <div
       className="tab-body"
-      style={{ borderLeft: `4px solid ${current.dotColor}` }}
+      style={{ borderLeft: tabBodyBorder(current.dotColor, true) }}
       onMouseUp={() => {
         const selection = globalThis.getSelection()?.toString();
         if (selection) { navigator.clipboard.writeText(selection); return; }

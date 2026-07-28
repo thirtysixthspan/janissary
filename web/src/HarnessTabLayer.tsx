@@ -7,6 +7,7 @@ import { TaskPicker } from './TaskPicker';
 import { TabNavPicker } from './TabNavPicker';
 import { useStatusWindows } from './useStatusWindows';
 import type { PickerOverlayProps } from './picker-overlay-props';
+import { tabBodyBorder } from './tab-body-border';
 
 type Properties = {
   t: TabView;
@@ -41,7 +42,7 @@ export function HarnessTabLayer({
       className="tab-body"
       data-pane-index={index}
       style={{
-        borderLeft: `4px solid ${t.dotColor}`, position: 'relative',
+        borderLeft: tabBodyBorder(t.dotColor, isActive), position: 'relative',
         display: visible ? 'flex' : 'none',
         gridColumn: t.pane === 'right' ? 2 : 1,
         gridRow: 2,

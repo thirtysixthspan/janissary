@@ -88,8 +88,8 @@ describe('ShellTabLayer', () => {
 
   it('shows both selected pane shells in their pane columns', () => {
     const tabs = [
-      makeTab({ label: 'a', activePty: 'pty1' }),
-      makeTab({ label: 'b', activePty: 'pty2', pane: 'right' }),
+      makeTab({ label: 'a', activePty: 'pty1', dotColor: '#111111' }),
+      makeTab({ label: 'b', activePty: 'pty2', pane: 'right', dotColor: '#222222' }),
     ];
     const { container } = render(
       <ShellTabLayer
@@ -100,6 +100,10 @@ describe('ShellTabLayer', () => {
     const bodies = [...container.querySelectorAll<HTMLElement>('.tab-body')];
     expect(bodies.map((body) => body.style.display)).toEqual(['flex', 'flex']);
     expect(bodies.map((body) => body.style.gridColumn)).toEqual(['1', '2']);
+    expect(bodies.map((body) => body.style.borderLeft)).toEqual([
+      '4px solid rgb(17, 17, 17)',
+      '4px solid var(--muted)',
+    ]);
   });
 
   it('passes the client to ShellTab', () => {
