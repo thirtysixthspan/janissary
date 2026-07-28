@@ -16,7 +16,7 @@ Do the steps below **in order**. Do not skip steps. Do not invent your own proce
 
 ## Step 0 — Prepare the workspace
 
-This task only reads files and runs git — it never builds, tests, or runs the app — so it does not need the full [`prepare-workspace.md`](../prepare-workspace.md) install. Do this instead:
+This task only reads files and runs git — it never builds, tests, or runs the app — so it does not need the full [`prepare-workspace.md`](../workspace/prepare-workspace.md) install. Do this instead:
 
 1. `git checkout master` and `git pull origin master`.
 2. Skip `npm install` entirely. If a later step's script fails for lack of dependencies, run `npm install --ignore-scripts`, then check `git status` — the install itself can rewrite `package-lock.json` (version-sync churn); if it did and you did not change dependencies, revert it with `git checkout -- package-lock.json`.
@@ -161,7 +161,7 @@ Before moving on, verify:
 
 ## Step 6 — Commit and push
 
-Execute [`quick-commit.md`](../quick-commit.md) in full to commit the result on `master` and push it to the remote. Use exactly this commit subject, since Step 1 greps for it to find this task's last run:
+Execute [`quick-commit.md`](../workspace/quick-commit.md) in full to commit the result on `master` and push it to the remote. Use exactly this commit subject, since Step 1 greps for it to find this task's last run:
 
 ```
 docs(backlog): refresh documentation gap candidates
