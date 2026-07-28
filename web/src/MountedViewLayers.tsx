@@ -7,6 +7,7 @@ import { PageTab } from './PageTab';
 import { HarnessTabLayer } from './HarnessTabLayer';
 import type { PickerOverlayProps } from './picker-overlay-props';
 import { QuestionPanel, type QuestionPanelHandle } from './QuestionPanel';
+import { tabBodyBorder } from './tab-body-border';
 
 type Properties = {
   tabs: TabView[];
@@ -54,7 +55,7 @@ export function MountedViewLayers({
           className="tab-body"
           data-pane-index={index}
           style={{
-            borderLeft: `4px solid ${t.dotColor}`,
+            borderLeft: tabBodyBorder(t.dotColor, t.label === current.label),
             display: visibleLabels.includes(t.label) ? 'flex' : 'none',
             gridColumn: t.pane === 'right' ? 2 : 1,
             gridRow: 2,
@@ -75,7 +76,7 @@ export function MountedViewLayers({
             className="tab-body"
             data-pane-index={index}
             style={{
-              borderLeft: `4px solid ${t.dotColor}`,
+              borderLeft: tabBodyBorder(t.dotColor, t.label === current.label),
               display: visibleLabels.includes(t.label) ? 'flex' : 'none',
               gridColumn: t.pane === 'right' ? 2 : 1,
               gridRow: 2,

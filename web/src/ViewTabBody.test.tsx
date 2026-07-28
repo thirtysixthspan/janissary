@@ -63,6 +63,18 @@ describe('ViewTabBody', () => {
     expect(container.querySelector('.tab-body')).toBeTruthy();
   });
 
+  it('greys the left border when the view is visible but unfocused', () => {
+    const tab = baseTab({
+      dotColor: '#123456',
+      view: 'image',
+      image: { name: 'test.png', path: '/a/test.png', size: '1 KB', url: '/open/1' },
+    });
+    const { container } = render(React.createElement(ViewTabBody, {
+      tab, client: {} as never, index: 0, active: false,
+    }));
+    expect(container.querySelector<HTMLElement>('.tab-body')?.style.borderLeft).toBe('4px solid var(--muted)');
+  });
+
   it('renders MarkdownTab when view is markdown with payload', async () => {
     const tab = baseTab({ view: 'markdown', markdown: { name: 'readme.md', path: '/a/readme.md', size: '2 KB', url: '/open/2' } });
     const { container } = render(React.createElement(ViewTabBody, { tab, client: {} as never, index: 0 }));

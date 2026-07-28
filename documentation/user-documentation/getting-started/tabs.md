@@ -35,7 +35,7 @@ The active tab is also highlighted: full-strength text on the content background
 
 Action tabs have a **Split** button at the right edge of their metadata header. Click it to move that tab into a second pane
 beside the first one. Each pane gets its own tab strip and keeps one tab visible; click anywhere in
-a pane to make it the focused one. New tabs opened from an action tab join that tab's pane.
+a pane to make it the focused one. The focused pane keeps its tab-colored left border; the other pane's border turns muted gray. New tabs opened from an action tab join that tab's pane.
 
 When both panes show agent tabs, both keep their command lines and the same metadata buttons. The command line in the unfocused pane stays visible without stealing keyboard focus. Click it to focus that pane, then type normally. Pickers, transcript search, and dialogs stay with the focused pane.
 
