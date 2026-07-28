@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, afterAll } from 'vitest';
 import { mkdtempSync, mkdirSync, writeFileSync, existsSync, statSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { saveProfile } from './save.js';
+import { saveProfile, formatSaveSummary, type SaveSummary } from './save.js';
 import { initProfileDir, profilePath, loadProfile } from '../profiles.js';
 import { setClientLayout } from '../client-layout.js';
 import { setWindowBoundsReader } from '../window-resizer.js';
@@ -281,5 +281,53 @@ describe('saveProfile', () => {
 
     expect(load('demo').layout).toEqual({ sidebarLeft: 320, sidebarRight: 280, tabAreaPct: 70 });
     expect(summary.notes).toEqual(['Window size not captured (no window open).']);
+  });
+});
+
+describe('formatSaveSummary', () => {
+  function makeSummary(overrides: Partial<SaveSummary> = {}): SaveSummary {
+    return {
+      agents: 0, harnesses: 0, editors: 0, monitors: 0, dockedViews: 0, skipped: [], notes: [], ...overrides,
+    };
+  }
+
+  it('reports only layout when every count is zero and there are no notes or skips', () => {
+    expect(formatSaveSummary('demo', makeSummary())).toBe('Saved profile "demo": layout.');
+  });
+
+  it('uses singular labels for a count of one', () => {
+    const summary = makeSummary({ agents: 1, harnesses: 1, editors: 1, monitors: 1, dockedViews: 1 });
+
+    expect(formatSaveSummary('demo', summary)).toBe(
+      'Saved profile "demo": 1 agent, 1 harness, 1 editor tab, layout, 1 monitor, 1 docked tab.',
+    );
+  });
+
+  it('uses plural labels for counts greater than one', () => {
+    const summary = makeSummary({ agents: 2, harnesses: 3, editors: 4, monitors: 5, dockedViews: 6 });
+
+    expect(formatSaveSummary('demo', summary)).toBe(
+      'Saved profile "demo": 2 agents, 3 harnesses, 4 editor tabs, layout, 5 monitors, 6 docked tabs.',
+    );
+  });
+
+  it('appends a notes line when notes are present', () => {
+    const summary = makeSummary({ notes: ['Window size not captured (no window open).'] });
+
+    expect(formatSaveSummary('demo', summary)).toBe(
+      'Saved profile "demo": layout. Window size not captured (no window open).',
+    );
+  });
+
+  it('appends a skipped line joining skipped tab names when present', () => {
+    const summary = makeSummary({ skipped: ['pic', 'ssh'] });
+
+    expect(formatSaveSummary('demo', summary)).toBe('Saved profile "demo": layout. Skipped: pic, ssh.');
+  });
+
+  it('appends both notes and skipped lines when both are present', () => {
+    const summary = makeSummary({ notes: ['a note'], skipped: ['pic'] });
+
+    expect(formatSaveSummary('demo', summary)).toBe('Saved profile "demo": layout. a note Skipped: pic.');
   });
 });
