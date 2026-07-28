@@ -1,9 +1,11 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import path from 'node:path';
 import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { OpenFileManager } from './open-file-manager.js';
 import type { Managers } from './managers.js';
+
+vi.mock('./config.js', () => ({ getConfig: () => ({ syncPaths: ['synced/'] }) }));
 
 describe('OpenFileManager.edit', () => {
   it('opens the editor for a new file that does not exist on disk', () => {
@@ -140,5 +142,86 @@ describe('OpenFileManager.newDirectory', () => {
     manager.newDirectory('untitled', 'janus');
 
     expect(existsSync(path.join(dir, 'untitled-3'))).toBe(true);
+  });
+});
+
+describe('OpenFileManager.run', () => {
+  it('opens a markdown file inline via the markdown opener', () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'janus-run-'));
+    writeFileSync(path.join(dir, 'readme.md'), '# Hello', 'utf8');
+    const opened: { name: string; path: string }[] = [];
+    const managers = {
+      tab: {
+        cwdOf: () => dir,
+        launchDir: dir,
+        append: () => {},
+        openMarkdownTab: (view: { name: string; path: string }) => { opened.push(view); },
+        registerFile: (p: string) => `/open/test-${p.length}`,
+      },
+    } as unknown as Managers;
+    const mgr = new OpenFileManager(managers);
+
+    mgr.run('open readme.md', 'janus');
+
+    expect(opened).toHaveLength(1);
+    expect(opened[0].path).toBe(path.join(dir, 'readme.md'));
+    expect(opened[0].name).toBe('readme.md');
+  });
+});
+
+describe('OpenFileManager.edit (synced path)', () => {
+  type EditorTab = { label: string; editor?: { path: string; size: string; url: string; sync?: string } };
+
+  const makeSyncedManagers = (dir: string, tabs: EditorTab[], openSync: () => Promise<{ dir: string } | { error: string }>) => ({
+    tab: {
+      cwdOf: () => dir,
+      launchDir: dir,
+      append: () => {},
+      openEditorTab: (view: { name: string; path: string; size: string; url: string; sync?: string }) => {
+        tabs.push({ label: 'janus', editor: view });
+      },
+      registerFile: (p: string) => `/open/test-${p.length}`,
+      tabs,
+    },
+    gitSync: {
+      workspaceFilePath: (relative: string) => path.join('/workspace', relative),
+      openSync,
+    },
+    editorWatch: {
+      watch: vi.fn(),
+    },
+  } as unknown as Managers);
+
+  it('marks the tab synced once the workspace pull succeeds', async () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'janus-synced-'));
+    mkdirSync(path.join(dir, 'synced'));
+    writeFileSync(path.join(dir, 'synced', 'foo.md'), 'hello', 'utf8');
+    const tabs: EditorTab[] = [];
+    const managers = makeSyncedManagers(dir, tabs, async () => ({ dir: '/workspace' }));
+    const mgr = new OpenFileManager(managers);
+
+    mgr.edit('edit synced/foo.md', 'synced/foo.md', 'janus');
+
+    expect(tabs).toHaveLength(1);
+    expect(tabs[0].editor?.sync).toBe('provisioning');
+
+    await vi.waitFor(() => expect(tabs[0].editor?.sync).toBe('synced'));
+
+    expect(managers.editorWatch.watch).toHaveBeenCalledWith('janus', path.join('/workspace', 'synced/foo.md'));
+  });
+
+  it('marks the tab errored when the workspace pull fails', async () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'janus-synced-'));
+    mkdirSync(path.join(dir, 'synced'));
+    writeFileSync(path.join(dir, 'synced', 'foo.md'), 'hello', 'utf8');
+    const tabs: EditorTab[] = [];
+    const managers = makeSyncedManagers(dir, tabs, async () => ({ error: 'clone failed' }));
+    const mgr = new OpenFileManager(managers);
+
+    mgr.edit('edit synced/foo.md', 'synced/foo.md', 'janus');
+
+    await vi.waitFor(() => expect(tabs[0].editor?.sync).toBe('error'));
+
+    expect(managers.editorWatch.watch).not.toHaveBeenCalled();
   });
 });
