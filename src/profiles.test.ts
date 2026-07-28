@@ -3,7 +3,8 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import {
-  initProfileDir, parseProfileCommand, listProfiles, loadProfile, profileExists, profilePath, PROFILE_USAGE,
+  initProfileDir, parseProfileCommand, listProfiles, listProfileRows, loadProfile, profileExists, profilePath,
+  profileReadPath, PROFILE_USAGE,
 } from './profiles.js';
 import type { LoadedProfile, ProfileFile } from './types.js';
 
@@ -25,19 +26,23 @@ describe('parseProfileCommand', () => {
 
 describe('single-file profiles', () => {
   let root: string;
+  let janissary: string;
 
-  const writeProfile = (name: string, file: ProfileFile) => {
-    writeFileSync(path.join(root, 'profiles', `${name}.json`), JSON.stringify(file));
+  const writeProfile = (name: string, file: ProfileFile, base = root) => {
+    writeFileSync(path.join(base, 'profiles', `${name}.json`), JSON.stringify(file));
   };
 
   beforeEach(() => {
     root = mkdtempSync(path.join(tmpdir(), 'janus-prof-'));
-    initProfileDir(root);
+    janissary = mkdtempSync(path.join(tmpdir(), 'janus-built-in-prof-'));
+    initProfileDir(root, janissary);
     mkdirSync(path.join(root, 'profiles'), { recursive: true });
+    mkdirSync(path.join(janissary, 'profiles'), { recursive: true });
   });
 
   afterAll(() => {
     if (root) rmSync(root, { recursive: true, force: true });
+    if (janissary) rmSync(janissary, { recursive: true, force: true });
   });
 
   it('lists profile files (extension stripped) sorted', () => {
@@ -46,11 +51,38 @@ describe('single-file profiles', () => {
     expect(listProfiles()).toEqual(['coding', 'surfing']);
   });
 
+  it('lists project profiles before built-in profiles and lets project names override', () => {
+    writeProfile('coding', {});
+    writeProfile('shared', {});
+    writeProfile('planning', {}, janissary);
+    writeProfile('shared', { agents: [{ name: 'built-in' }] }, janissary);
+    expect(listProfiles()).toEqual(['coding', 'shared', 'planning']);
+    expect(listProfileRows()).toEqual([
+      { name: 'coding', source: 'project' },
+      { name: 'shared', source: 'project' },
+      { name: 'planning', source: 'janissary' },
+    ]);
+  });
+
   it('resolves profilePath/profileExists to the file', () => {
     writeProfile('coding', {});
     expect(profilePath('coding')).toBe(path.join(root, 'profiles', 'coding.json'));
     expect(profileExists('coding')).toBe(true);
     expect(profileExists('missing')).toBe(false);
+  });
+
+  it('reads a built-in profile when no project profile has the same name', () => {
+    writeProfile('planning', { agents: [{ name: 'planner' }] }, janissary);
+    expect(profileReadPath('planning')).toBe(path.join(janissary, 'profiles', 'planning.json'));
+    expect(profileExists('planning')).toBe(true);
+    expect((loadProfile('planning') as LoadedProfile).entries[0].name).toBe('planner');
+    expect(profilePath('planning')).toBe(path.join(root, 'profiles', 'planning.json'));
+  });
+
+  it('reads the project profile when both sources use the same name', () => {
+    writeProfile('shared', { agents: [{ name: 'project-agent' }] });
+    writeProfile('shared', { agents: [{ name: 'built-in-agent' }] }, janissary);
+    expect((loadProfile('shared') as LoadedProfile).entries[0].name).toBe('project-agent');
   });
 
   it('loads agents and harnesses ordered by tab.number, each entry name as its label', () => {

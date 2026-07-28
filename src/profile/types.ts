@@ -1,6 +1,8 @@
 import type { AgentState } from '../agent/types.js';
 import type { CenterPane } from '../tab/types.js';
 
+export type ProfileRow = { name: string; source: 'project' | 'janissary' };
+
 // A profile entry describing a harness tab instead of an agent (discriminated by the presence of
 // `type`). This is the runtime shape the openers consume — the loader maps a `harnesses` array
 // element (`ProfileHarnessFile`) down to it. `schedule` entries are authored strings in the

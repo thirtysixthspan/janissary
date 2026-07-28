@@ -4,7 +4,7 @@ A profile is a reusable, named set of agents and/or AI harnesses for a particula
 
 ### Storage
 
-Profiles live in a top-level `profiles/` directory (`initProfileDir` in `src/cli.tsx`), kept separate from `.janissary/` so they are committable and are **not** cleared on launch. Each profile is a single JSON file named in dasherized text (e.g. `writing-code.json`). Its root object has an `agents` array and a `harnesses` array of entries, plus plain profile-level config keys (`monitors`, `files`, `editors`, `notifications`, `schedules`, `layout`). Membership in the `agents` vs `harnesses` array is the discriminator — an agent entry versus a harness entry — and each entry carries its own `name` field supplying its tab label. An unrecognized top-level key is ignored, reserving that namespace for future config.
+Project profiles live in a top-level `profiles/` directory (`initProfileDir` in `src/main.ts`), kept separate from `.janissary/` so they are committable and are **not** cleared on launch. Janissary also ships built-in profiles in its own `profiles/` directory. Profile reads search the project first and then the Janissary installation, so a project file with the same name overrides the built-in file; saves always write to the project directory. Each profile is a single JSON file named in dasherized text (e.g. `writing-code.json`). Its root object has an `agents` array and a `harnesses` array of entries, plus plain profile-level config keys (`monitors`, `files`, `editors`, `notifications`, `schedules`, `layout`). Membership in the `agents` vs `harnesses` array is the discriminator — an agent entry versus a harness entry — and each entry carries its own `name` field supplying its tab label. An unrecognized top-level key is ignored, reserving that namespace for future config.
 
 An agent entry uses the agent-state schema — the same format as `.janissary/state/<name>.json` — with a required `name` and the tab presentation (dot color, order, group, group color) grouped under a `tab` object (see below). A harness entry names which binary to launch with a **`type`** field (`claude`, `opencode`, or `codex`) and supports:
 
@@ -63,10 +63,7 @@ When the server was started with `--no-open` (no application window opened), the
 
 ### `profile launch <name>`
 
-Typing bare `profile launch` (no name) opens a picker listing the available profiles,
-mirroring the `tasks` picker's interaction: arrow keys move the selection, Enter or a
-click populates the command line with `profile launch <name>` without submitting it (so
-it can be reviewed or edited first), and Escape closes it.
+Typing bare `profile launch` (no name) opens a picker listing profiles from the project and the Janissary installation in two labeled sections, Project first and Janissary second. A same-named built-in profile is omitted when the project supplies an override, and an empty source's section is omitted. Mirroring the `tasks` picker's interaction, arrow keys move the selection while skipping section headers, Enter or a click populates the command line with `profile launch <name>` without submitting it (so it can be reviewed or edited first), and Escape closes it.
 
 Opens a tab for each entry in the named profile, in `number` order. For an agent entry, its state is written into the live state dir and the agent is initialized (`initAgentState`) and restored into a new tab — recovering its command history, transcript, working directory, schedule, and dot color (the entry's `tab.color` is used when it is distinct enough from the colors already on screen, otherwise the most distinct palette color is chosen). For a harness entry, a harness tab is opened directly (see Harness Tab) with the entry's model, starting directory, and workspace flag; it is never persisted to agent state. Profile-level editor tabs then open. Once every agent, harness, and editor tab from this launch is open, the whole set is reordered in the tab strip by `number` (agent/harness entries and editor tabs together, an unnumbered tab sorting last, after every numbered one), and the focused main-area entry with the lowest tab number becomes active; when none declares focus, the first newly opened tab remains active. A missing profile returns `No profile named "<name>".`, a malformed one returns `Profile "<name>" is malformed.`, and an empty one returns `Profile "<name>" has no agents.`.
 
@@ -76,7 +73,7 @@ Each agent, harness, and editor tab joins the group its own `tab.group` authors,
 
 ### `profile list`
 
-Lists the available profile names (each `profiles/*.json` file with its extension stripped, sorted), or `No profiles.` when none exist.
+Lists the available project profiles followed by built-in Janissary profiles (each `profiles/*.json` file with its extension stripped and each source sorted), or `No profiles.` when neither source has any. A project profile hides a same-named built-in profile.
 
 ### `profile validate [<name>]`
 

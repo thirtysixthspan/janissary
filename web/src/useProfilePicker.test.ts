@@ -5,22 +5,23 @@ import { useProfilePicker } from './useProfilePicker';
 import type { JanusClient } from './ws';
 
 const mockClient = { send: vi.fn(), request: vi.fn() } as unknown as JanusClient;
+const profiles = [{ name: 'writing', source: 'project' as const }];
 
 function TestComponent({ onHook }: { onHook: (hook: ReturnType<typeof useProfilePicker>) => void }) {
   const recallRef = useRef<((text: string) => void) | null>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const hook = useProfilePicker(recallRef, inputRef, mockClient, undefined);
+  const hook = useProfilePicker(profiles, recallRef, inputRef, mockClient, undefined);
   onHook(hook);
   return null;
 }
 
 describe('useProfilePicker', () => {
-  it('openProfilePicker resets the index to 0 and opens the popup', () => {
+  it('openProfilePicker resets the index to the first profile and opens the popup', () => {
     let hook: ReturnType<typeof useProfilePicker> | undefined;
     render(React.createElement(TestComponent, { onHook: (h) => { hook = h; } }));
     act(() => { hook!.setProfilePickerIndex(3); hook!.openProfilePicker(); });
     expect(hook!.profilePickerOpen).toBe(true);
-    expect(hook!.profilePickerIndex).toBe(0);
+    expect(hook!.profilePickerIndex).toBe(1);
   });
 
   it('pickProfile populates the command line with profile launch <name> and closes without submitting', () => {
@@ -29,7 +30,7 @@ describe('useProfilePicker', () => {
     function C() {
       const recallRef = useRef<((text: string) => void) | null>(recall);
       const inputRef = useRef<HTMLTextAreaElement>(null);
-      hook = useProfilePicker(recallRef, inputRef, mockClient, undefined);
+      hook = useProfilePicker(profiles, recallRef, inputRef, mockClient, undefined);
       return null;
     }
     render(React.createElement(C));
@@ -47,7 +48,7 @@ describe('useProfilePicker', () => {
     function C() {
       const recallRef = useRef<((text: string) => void) | null>(recall);
       const inputRef = useRef<HTMLTextAreaElement>(null);
-      hook = useProfilePicker(recallRef, inputRef, client, 'pty-1');
+      hook = useProfilePicker(profiles, recallRef, inputRef, client, 'pty-1');
       return null;
     }
     render(React.createElement(C));

@@ -1,13 +1,13 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { collectProfileProblems } from './schema.js';
-import { profilePath, profileExists, listProfiles } from '../profiles.js';
+import { profileReadPath, profileExists, listProfiles } from '../profiles.js';
 
 // `profile validate [<name>]`: the same structural checks the loader runs, but collecting *every*
 // problem with location context instead of failing on the first (Decision 9). Catalog-free — it
 // checks shape only, never the semantic launch-time checks (unknown model/harness, etc.).
 
 export function validateProfile(name: string): string[] {
-  const filePath = profilePath(name);
+  const filePath = profileReadPath(name);
   if (!existsSync(filePath)) return [`Profile file not found: ${filePath}`];
   let parsed: unknown;
   try {

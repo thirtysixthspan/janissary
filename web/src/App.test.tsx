@@ -1,7 +1,9 @@
 import React from 'react';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { TabView, RouteChooserView } from '@shared/protocol';
+import type {
+  HarnessLaunchView, ProfileRow, RouteChooserView, ScheduleLaunchView, TabView, TaskRow,
+} from '@shared/protocol';
 import userEvent from '@testing-library/user-event';
 
 const sendMock = vi.fn();
@@ -9,12 +11,14 @@ const renameTabMock = vi.fn();
 const requestMock = vi.fn().mockResolvedValue({ newInput: '', newCursor: 0, matches: [] });
 type StateListener = (
   tabs: TabView[], activeTab: number, route: RouteChooserView | null, tabNameMaxLength: number, globalHistory: string[],
-  syntaxTheme: string, theme: string, tasks: string[],
+  syntaxTheme: string, theme: string, tasks: TaskRow[],
 ) => void;
 type ServerStateListener = (
   tabs: TabView[], activeTab: number, secondaryTab: number | undefined,
   route: RouteChooserView | null, tabNameMaxLength: number, globalHistory: string[],
-  syntaxTheme: string, theme: string, tasks: string[],
+  syntaxTheme: string, theme: string, tasks: TaskRow[],
+  janissaryTasksDir: string, profiles: ProfileRow[], projectDir: string, version: string,
+  harnessLaunch: HarnessLaunchView | null, scheduleLaunch: ScheduleLaunchView | null,
 ) => void;
 let stateListener: StateListener | null = null;
 type LayoutListener = (event: {
@@ -32,7 +36,10 @@ vi.mock('./ws', () => {
     request = requestMock;
     onState(listener: ServerStateListener) {
       stateListener = (tabs, active, route, maxLength, history, syntax, theme, tasks) => {
-        listener(tabs, active, undefined, route, maxLength, history, syntax, theme, tasks);
+        listener(
+          tabs, active, undefined, route, maxLength, history, syntax, theme, tasks,
+          '', [], '/tmp', '1.2.3', null, null,
+        );
       };
       return () => {};
     }

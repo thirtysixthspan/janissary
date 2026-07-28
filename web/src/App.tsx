@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { JanusClient } from './ws';
-import type { TabView, RouteChooserView, HarnessLaunchView, ScheduleLaunchView, TaskRow } from '@shared/protocol';
+import type { TabView, RouteChooserView, HarnessLaunchView, ScheduleLaunchView, TaskRow, ProfileRow } from '@shared/protocol';
 import { HarnessLaunchDialog } from './HarnessLaunchDialog';
 import { ScheduleDialog } from './ScheduleDialog';
 import { AppReportingSection } from './AppReportingSection';
@@ -50,7 +50,7 @@ export function App() {
   const [syntaxTheme, setSyntaxTheme] = useState('github-dark');
   const [tasks, setTasks] = useState<TaskRow[]>([]);
   const [janissaryTasksDir, setJanissaryTasksDir] = useState('');
-  const [profiles, setProfiles] = useState<string[]>([]);
+  const [profiles, setProfiles] = useState<ProfileRow[]>([]);
   // Server-driven route chooser (null when closed); `routeIdx` is the highlighted option.
   const [route, setRoute] = useState<RouteChooserView | null>(null);
   // Server-driven "New harness" launch dialog (null when closed).
@@ -109,8 +109,12 @@ export function App() {
     queueOpen, queueIndex, setQueueIndex, setQueueOpen, openQueue, selectQueueIndex, onEditQueued, onDeleteQueued,
   } = useQueuePicker(client, current, inputReference, recallReference);
   const {
-    taskPickerOpen, taskPickerIndex, setTaskPickerIndex, setTaskPickerOpen, openTaskPicker, pickTask, visibleTasks, toggleTaskDir, profilePickerOpen, profilePickerIndex, setProfilePickerIndex, setProfilePickerOpen, openProfilePicker, pickProfile,
-  } = usePopulatePickers(tasks, janissaryTasksDir, recallReference, inputReference, client, current?.view === 'harness' ? current.harness?.ptyId : undefined, dropReference);
+    taskPickerOpen, taskPickerIndex, setTaskPickerIndex, setTaskPickerOpen, openTaskPicker, pickTask, visibleTasks, toggleTaskDir,
+    profilePickerOpen, profilePickerIndex, setProfilePickerIndex, setProfilePickerOpen, openProfilePicker, pickProfile, visibleProfiles,
+  } = usePopulatePickers(
+    tasks, janissaryTasksDir, profiles, recallReference, inputReference, client,
+    current?.view === 'harness' ? current.harness?.ptyId : undefined, dropReference,
+  );
 
   const { quitConfirmOpen, openQuitConfirm, confirmQuit, cancelQuit } = useQuitConfirm(runCommand, inputReference);
   const editorHandles = useRef<Map<string, EditorTabHandle>>(new Map());
@@ -148,7 +152,8 @@ export function App() {
     pickerOpen, pickerIdx: pickerIndex, recent, route, routeIdx: routeIndex, canSearch, searchOpen: search.searchOpen,
     themePickerOpen, themePickerIdx: themePickerIndex, appThemePickerOpen, appThemePickerIdx: appThemePickerIndex,
     navOpen, navQuery, navIdx: navIndex, navTabs, queueOpen, queueIdx: queueIndex, queueItems: current?.commandQueue ?? [],
-    taskPickerOpen, taskPickerIdx: taskPickerIndex, visibleTasks, profilePickerOpen, profilePickerIdx: profilePickerIndex, profiles,
+    taskPickerOpen, taskPickerIdx: taskPickerIndex, visibleTasks,
+    profilePickerOpen, profilePickerIdx: profilePickerIndex, profiles: visibleProfiles,
     quickOpenOpen,
     setRouteIndex, chooseRoute, runCommand, setPickerIndex, setPickerOpen, openPicker, openSearch: () => search.open(''),
     setThemePickerIndex, setThemePickerOpen, pickTheme, setAppThemePickerIndex, setAppThemePickerOpen, pickAppTheme,
@@ -176,7 +181,7 @@ export function App() {
         navOpen={navOpen} navQuery={navQuery} navIndex={navIndex} tabs={tabs} selectNavTab={selectNavTab}
         queueOpen={queueOpen} queueIndex={queueIndex} selectQueueIndex={selectQueueIndex}
         taskPickerOpen={taskPickerOpen} visibleTasks={visibleTasks} taskPickerIndex={taskPickerIndex} pickTask={pickTask} toggleTaskDir={toggleTaskDir}
-        profilePickerOpen={profilePickerOpen} profiles={profiles} profilePickerIndex={profilePickerIndex} pickProfile={pickProfile}
+        profilePickerOpen={profilePickerOpen} profiles={visibleProfiles} profilePickerIndex={profilePickerIndex} pickProfile={pickProfile}
         quickOpenOpen={quickOpenOpen} quickOpenQuery={quickOpenQuery} setQuickOpenQuery={setQuickOpenQuery}
         quickOpenResults={quickOpenResults} quickOpenIndex={quickOpenIndex} setQuickOpenIndex={setQuickOpenIndex}
         quickOpenLoading={quickOpenLoading} pickQuickOpenFile={pickQuickOpenFile} closeQuickOpen={closeQuickOpen}

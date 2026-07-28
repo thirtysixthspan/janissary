@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { collectProfileProblems } from './schema.js';
-import { profilePath } from '../profiles.js';
+import { profileReadPath } from '../profiles.js';
 import type {
   LoadedProfile, ProfileAgentEntry, ProfileAgentFile, ProfileEntry, ProfileFile, ProfileHarnessEntry,
   ProfileHarnessFile, ProfileLayout, ProfileLayoutFile, ProfileMonitor, ProfileMonitorFile,
@@ -57,7 +57,7 @@ function mapEntries(file: ProfileFile): ProfileEntry[] {
 }
 
 export function loadProfile(name: string): LoadedProfile | { error: string } {
-  const filePath = profilePath(name);
+  const filePath = profileReadPath(name);
   if (!existsSync(filePath)) return { error: `Profile file not found: ${filePath}` };
   let parsed: unknown;
   try {

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type React from 'react';
 import type { JanusClient } from './ws';
-import type { TabView, RouteChooserView, HarnessLaunchView, ScheduleLaunchView, TaskRow } from '@shared/protocol';
+import type { TabView, RouteChooserView, HarnessLaunchView, ScheduleLaunchView, TaskRow, ProfileRow } from '@shared/protocol';
 import { useProjectTitle } from './useProjectTitle';
 
 type Setters = {
@@ -18,7 +18,7 @@ type Setters = {
   setTheme: (theme: string) => void;
   setTasks: (tasks: TaskRow[]) => void;
   setJanissaryTasksDir: (dir: string) => void;
-  setProfiles: (profiles: string[]) => void;
+  setProfiles: (profiles: ProfileRow[]) => void;
   setRouteIndex: (index: number) => void;
   routeRef: React.RefObject<RouteChooserView | null>;
 };

@@ -10,7 +10,8 @@ function dispatchKey(key: string, opts: { metaKey?: boolean; ctrlKey?: boolean; 
 }
 
 function TestComponent({
-  route, themePickerOpen, pickerOpen, navOpen, queueOpen, taskPickerOpen, canSearch, searchOpen, quickOpenOpen, handleScrollKey, callbacks, client,
+  route, themePickerOpen, pickerOpen, navOpen, queueOpen, taskPickerOpen, profilePickerOpen,
+  canSearch, searchOpen, quickOpenOpen, handleScrollKey, callbacks, client,
 }: {
   route?: { cmd: string; choices: string[] } | null;
   themePickerOpen?: boolean;
@@ -18,6 +19,7 @@ function TestComponent({
   navOpen?: boolean;
   queueOpen?: boolean;
   taskPickerOpen?: boolean;
+  profilePickerOpen?: boolean;
   canSearch?: boolean;
   searchOpen?: boolean;
   quickOpenOpen?: boolean;
@@ -47,6 +49,9 @@ function TestComponent({
     openTaskPicker: () => void;
     pickTask: (n: string) => void;
     toggleTaskDir: (p: string) => void;
+    setProfilePickerIndex: (s: (p: number) => number) => void;
+    setProfilePickerOpen: (o: boolean) => void;
+    pickProfile: (n: string) => void;
     openQuickOpen: () => void;
   }>;
 }) {
@@ -72,6 +77,12 @@ function TestComponent({
     visibleTasks: [
       { path: 'build-a-feature.md', name: 'build-a-feature.md', depth: 0, dir: false },
       { path: 'fix-a-small-issue.md', name: 'fix-a-small-issue.md', depth: 0, dir: false },
+    ],
+    profilePickerOpen: profilePickerOpen ?? false,
+    profilePickerIdx: 1,
+    profiles: [
+      { name: 'Project', source: 'project' as const, header: true },
+      { name: 'coding', source: 'project' as const },
     ],
     quickOpenOpen: quickOpenOpen ?? false,
   });
@@ -99,6 +110,9 @@ function TestComponent({
     openTaskPicker: vi.fn(),
     pickTask: vi.fn(),
     toggleTaskDir: vi.fn(),
+    setProfilePickerIndex: vi.fn(),
+    setProfilePickerOpen: vi.fn(),
+    pickProfile: vi.fn(),
     openQuickOpen: vi.fn(),
     ...callbacks,
   };
@@ -217,6 +231,13 @@ describe('useWindowKeys', () => {
     render(React.createElement(TestComponent, { taskPickerOpen: true, callbacks: { pickTask } }));
     dispatchKey('Enter');
     expect(pickTask).toHaveBeenCalledWith('build-a-feature.md');
+  });
+
+  it('routes Enter to the selected profile when the profile picker is open', () => {
+    const pickProfile = vi.fn();
+    render(React.createElement(TestComponent, { profilePickerOpen: true, callbacks: { pickProfile } }));
+    dispatchKey('Enter');
+    expect(pickProfile).toHaveBeenCalledWith('coding');
   });
 
   it('Cmd+T runs the agent command to open a new root-project tab', () => {
