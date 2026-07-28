@@ -1,4 +1,4 @@
-import { distinctColor } from '../tab/index.js';
+import { distinctColor, renumberTabs } from '../tab/index.js';
 import { startProfileMonitors } from './monitors.js';
 import { openProfileFiles } from './files.js';
 import { openProfileEditors } from './editors.js';
@@ -10,6 +10,22 @@ import { openAgentEntry, openHarnessEntry } from './entry-openers.js';
 import type { Managers } from '../managers.js';
 import type { LoadedProfile } from '../types.js';
 import { isHarnessEntry, labelOf, closeMatchingTabs } from './entry-resolve.js';
+
+// Reorders only the tabs belonging to `group` so they read in ascending `numbers`-map order —
+// a tab with no authored number (or no entry in the map at all) sorts last, keeping its current
+// relative position among the other unnumbered tabs (stable sort). Tabs in every other group are
+// left untouched, both in value and in position.
+function reorderGroupByNumber(managers: Managers, group: number, numbers: Map<string, number>): void {
+  const tabs = managers.tab.tabs;
+  const indices: number[] = [];
+  for (const [i, t] of tabs.entries()) if (t.group === group) indices.push(i);
+  if (indices.length < 2) return;
+  const sorted = indices.map((i) => tabs[i])
+    .toSorted((a, b) => (numbers.get(a.label) ?? Infinity) - (numbers.get(b.label) ?? Infinity));
+  const next = [...tabs];
+  for (const [position, index] of indices.entries()) next[index] = sorted[position];
+  managers.tab.tabs = renumberTabs(next);
+}
 
 export function openProfileEntries(
   loaded: LoadedProfile,
@@ -55,6 +71,10 @@ export function openProfileEntries(
   const firstNewLabel = opened.length > 0 ? managers.tab.tabs[firstNew]?.label : undefined;
   openProfileFiles(loaded.files, managers, firstNewLabel, notes);
   candidates.push(...openProfileEditors(loaded.editors, managers, firstNewLabel, notes));
+  // Reorder this launch's group so harness/agent entries and editor tabs together read in
+  // ascending `number` order, instead of editors always trailing every entry (see profiles.md).
+  const numbers = new Map(candidates.filter((c) => c.number !== undefined).map((c) => [c.label, c.number as number]));
+  reorderGroupByNumber(managers, group, numbers);
   const focusLabel = focusedMainAreaLabel(candidates, firstNewLabel);
   if (focusLabel !== undefined) managers.tab.setActiveTab(managers.tab.findIndex(focusLabel));
   // Profile-level notifications tab opens next, docked per the profile's `notifications` key.

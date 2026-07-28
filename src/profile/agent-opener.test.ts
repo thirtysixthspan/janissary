@@ -9,7 +9,14 @@ function makeManagers(tabs: Tab[]): { managers: Managers; harnessOpen: ReturnTyp
     tabs = [...tabs, makeTab(label, 'blue', tabs.length + 1, [], [], undefined, group, groupColor)];
   });
   const fileNavigatorOpen = vi.fn();
-  const edit = vi.fn();
+  let activeTab = 0;
+  const edit = vi.fn((_command: string, _target: string, label: string) => {
+    const creator = tabs.find((t) => t.label === label);
+    const group = creator?.group ?? 1;
+    const groupColor = creator?.groupColor ?? 'green';
+    tabs = [...tabs, makeTab(`editor-${tabs.length}`, 'green', tabs.length + 1, [], [], undefined, group, groupColor)];
+    activeTab = tabs.length - 1;
+  });
   const managers = {
     tab: {
       get tabs() { return tabs; },
@@ -22,7 +29,7 @@ function makeManagers(tabs: Tab[]): { managers: Managers; harnessOpen: ReturnTyp
       buildAgentState: vi.fn(() => ({ name: 'x', dotColor: 'red', active: true })),
       cwdOf: () => '/cwd',
       setActiveTab: vi.fn(),
-      activeTab: 0,
+      get activeTab() { return activeTab; },
       launchDir: '/proj',
     },
     harness: { openFromProfile: harnessOpen },
@@ -49,7 +56,10 @@ describe('openProfileEntries — editor tabs and focus', () => {
 
     expect(harnessOpen).toHaveBeenCalledBefore(edit);
     expect(edit).toHaveBeenCalledWith('edit $root/notes.md', '$root/notes.md', 'first', undefined);
-    expect(managers.tab.setActiveTab).toHaveBeenLastCalledWith(2);
+    // "second" (number 1) is the lowest-numbered focused entry, so it's activated — and the
+    // reorder pass below has already moved it ahead of "first" (number 2) in the tab strip.
+    expect(managers.tab.setActiveTab).toHaveBeenLastCalledWith(1);
+    expect(managers.tab.tabs.map((t) => t.label)).toEqual(['janus', 'second', 'first', 'editor-3']);
   });
 
   it('keeps the first newly opened tab active when nothing declares focus', () => {
@@ -60,6 +70,49 @@ describe('openProfileEntries — editor tabs and focus', () => {
     openProfileEntries(loaded([entry]), managers, 'demo', 'janus', () => {});
 
     expect(managers.tab.setActiveTab).toHaveBeenLastCalledWith(1);
+  });
+});
+
+describe('openProfileEntries — tab strip ordering', () => {
+  it('interleaves editor tabs among harness/agent entries by tab number', () => {
+    const janus = makeTab('janus', 'red', 1, [], [], undefined, 1, 'red');
+    const { managers } = makeManagers([janus]);
+    const harnessEntry: ProfileHarnessEntry = { name: 'first', type: 'claude', number: 1 };
+    const agentEntry: AgentState = { name: 'third', dotColor: 'blue', active: false, number: 3 };
+
+    openProfileEntries(
+      loaded([harnessEntry, agentEntry], { editors: [{ path: '$root/notes.md', tab: { number: 2 } }] }),
+      managers, 'demo', 'janus', () => {},
+    );
+
+    expect(managers.tab.tabs.map((t) => t.label)).toEqual(['janus', 'first', 'editor-3', 'third']);
+  });
+
+  it('leaves a same-group tab with no authored number in its relative position', () => {
+    const janus = makeTab('janus', 'red', 1, [], [], undefined, 1, 'red');
+    const { managers } = makeManagers([janus]);
+    const first: ProfileHarnessEntry = { name: 'first', type: 'claude' };
+    const numbered: ProfileHarnessEntry = { name: 'numbered', type: 'claude', number: 1 };
+
+    openProfileEntries(loaded([first, numbered]), managers, 'demo', 'janus', () => {});
+
+    // "numbered" (number 1) sorts ahead of any unnumbered entry, but the unnumbered "first" keeps
+    // its existing relative order (stable sort) rather than being placed arbitrarily.
+    expect(managers.tab.tabs.map((t) => t.label)).toEqual(['janus', 'numbered', 'first']);
+  });
+
+  it('does not reorder tabs belonging to a different, already-open group', () => {
+    const janus = makeTab('janus', 'red', 1, [], [], undefined, 1, 'red');
+    const other = makeTab('other', 'green', 2, [], [], undefined, 2, 'green');
+    const { managers } = makeManagers([janus, other]);
+    const first: ProfileHarnessEntry = { name: 'first', type: 'claude', number: 2 };
+    const second: ProfileHarnessEntry = { name: 'second', type: 'claude', number: 1 };
+
+    openProfileEntries(loaded([first, second]), managers, 'demo', 'janus', () => {});
+
+    const labels = managers.tab.tabs.map((t) => t.label);
+    expect(labels.indexOf('other')).toBe(1);
+    expect(labels.slice(2)).toEqual(['second', 'first']);
   });
 });
 
