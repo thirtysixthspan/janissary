@@ -51,9 +51,9 @@ Execute `ai/tasks/workspace/prepare-workspace.md` in full before doing anything 
 1. Read the project constraints in [`CLAUDE.md`](../../CLAUDE.md): ESLint rules (200-line `max-lines`, `.js` import extensions in `src/`, type-aware rules), test conventions (`src/**/*.test.ts`, `web/src/**/*.test.tsx`).
 2. Read every file relevant to the fix to understand the code involved.
 3. Write a plan file following the format of existing plans in `./product/plans/complete/` — include a complexity rating, goal, approach, implementation steps, tests, and out-of-scope items. Write it to `./product/plans/draft/<fix-name>.md`.
-4. After the plan is written, move it from `./product/plans/draft/` to `./product/plans/ready/`:
+4. After the plan is written, move it from `./product/plans/draft/` to `./product/plans/ready/`. Use plain `mv` (not `git mv`) — the new plan file is not tracked by git yet, and `git mv` fails on an untracked file:
    ```bash
-   git mv ./product/plans/draft/<fix-name>.md ./product/plans/ready/<fix-name>.md
+   mv ./product/plans/draft/<fix-name>.md ./product/plans/ready/<fix-name>.md
    ```
 
 ---
@@ -104,9 +104,9 @@ The fix only needs a documentation update if it changes behavior that `help.md` 
 
 ## Step 7 — Promote the plan and remove the issue
 
-1. Move the plan file from `./product/plans/ready/` to `./product/plans/complete/`:
+1. Move the plan file from `./product/plans/ready/` to `./product/plans/complete/`. Use plain `mv` (not `git mv`) — the plan file is still untracked until the merge workflow stages it:
    ```bash
-   git mv ./product/plans/ready/<fix-name>.md ./product/plans/complete/<fix-name>.md
+   mv ./product/plans/ready/<fix-name>.md ./product/plans/complete/<fix-name>.md
    ```
 2. Remove the fixed issue's line from `./product/backlog/issues.md`. Only remove that single line — do not modify any other content in the file. If the work item came from the task invocation and was never listed in the file, there is nothing to remove: leave the file untouched.
 

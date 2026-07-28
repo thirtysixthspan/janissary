@@ -1,6 +1,6 @@
 # Fix a Bug
 
-Your job: take a reported bug from `./product/backlog/bugs.md` — the first one listed under `## ready`, or the specific bug the user names when running this task — **replicate it** to confirm the faulty behavior, determine the **correct** behavior from the bug report together with the functional specs and the code, implement a fix, **verify** the fix resolves the replicated failure, add a **regression test** that would fail without the fix and passes with it, update functional specs and public documentation where the fix changes behavior they already document, record the plan in `./product/plans/complete/`, remove the bug from the bugs file, and open a pull request that documents the replication steps and leaves the fix for a human to merge. You change source code, tests, spec files, `help.md`, `documentation/user-documentation/`, the bugs file, and the plan file's location — nothing else.
+Your job: take a reported bug — the first one listed under `## ready` in `./product/backlog/bugs.md`, or the specific bug the user names when running this task, which need not be listed there at all — **replicate it** to confirm the faulty behavior, determine the **correct** behavior from the bug report together with the functional specs and the code, implement a fix, **verify** the fix resolves the replicated failure, add a **regression test** that would fail without the fix and passes with it, update functional specs and public documentation where the fix changes behavior they already document, record the plan in `./product/plans/complete/`, remove the bug from the bugs file when that is where it came from, and open a pull request that documents the replication steps and leaves the fix for a human to merge. You change source code, tests, spec files, `help.md`, `documentation/user-documentation/`, the bugs file, and the plan file's location — nothing else.
 
 **Project `./product/` directory.** Every `./product/...` path in this task refers to the product directory in the current working directory — the project being worked on — never to the Janissary codebase's own `product/` directory, even when this task file was launched from an absolute path inside the Janissary installation.
 
@@ -24,7 +24,7 @@ Read any file in the repo. Run read-only commands to replicate the reported bug.
 2. **Editing files the fix does not touch.** Stay in scope. If you discover a fix requires changes beyond what you planned, update the plan first — do not silently expand scope.
 3. **Running `npm run check`.** That is the human's end-of-work gate. Use `./scripts/run.mjs check-diff` during development.
 4. **Skipping the regression test.** Every fix needs a test that fails without the fix and passes with it. Verify with `./scripts/run.mjs check-diff`.
-5. **Editing `./product/backlog/bugs.md` beyond removing the fixed entry.** Only remove the line for the bug you fixed — do not reorder, rephrase, or otherwise modify the remaining entries.
+5. **Editing `./product/backlog/bugs.md` beyond removing the fixed entry.** Only remove the line for the bug you fixed — do not reorder, rephrase, or otherwise modify the remaining entries, and never add a bug named at invocation to the file.
 6. **Merging the PR.** `ai/tasks/workspace/open-feature-pull-request.md` opens it; merging is the human's decision.
 
 ---
@@ -38,12 +38,12 @@ Execute `ai/tasks/workspace/prepare-workspace.md` in full before doing anything 
 ## Step 1 — Pick a bug and replicate it
 
 1. Read `./product/backlog/bugs.md`. Bugs are grouped under `## ready`, `## development`, and `## deferred`. Only consider bugs under `## ready`.
-2. If there are no bugs under `## ready`, report "No ready bugs in `./product/backlog/bugs.md`" and stop.
+2. If there are no bugs under `## ready` **and** the task invocation named no bug, report "No ready bugs in `./product/backlog/bugs.md`" and stop. When a bug was named, an empty `## ready` section is not a reason to stop — go on to the named-bug branch below.
 3. Pick the bug to fix. Do **not** evaluate, rank, or compare the bugs for scope, tractability, or any other quality — the human who filed them decided they belong here:
-   - **If a specific bug is named in the task invocation** (e.g. `execute ai/tasks/fix-a-bug.md "<bug text>"`), fix that one. Find the entry in `./product/backlog/bugs.md` it refers to — the argument may be quoted text, a paraphrase, or a position such as "the second one". If no entry matches, report that no matching bug was found and stop.
+   - **If a specific bug is named in the task invocation** (e.g. `execute ai/tasks/fix-a-bug.md "<bug text>"`), fix that one. First look for the entry in `./product/backlog/bugs.md` it refers to — the argument may be quoted text, a paraphrase, or a position such as "the second one". **If no entry matches, the named text is itself the bug report**: take it at face value and fix it exactly as if it had been listed, without stopping and without adding it to the bugs file. A named bug is never rejected for being absent from the backlog — but it is still subject to every rule below, above all the replication requirement in sub-step 4: an unlisted bug you cannot reproduce is reported and stopped on, exactly like a listed one.
    - **Otherwise**, take the **first** bug listed under `## ready` (top of the list).
 
-   State which bug you selected in one sentence.
+   State which bug you selected, and whether it came from the bugs file or from the invocation, in one sentence.
 4. **Replicate the reported failure** before writing any fix, so you can watch it fail:
    - Prefer writing a failing automated test that exercises the reported scenario — this becomes the regression test in Step 4. Colocate it per the test conventions (`src/**/*.test.ts`, `web/src/**/*.test.tsx`).
    - If a test cannot capture it, exercise the affected code path directly (a focused test, a `janus` CLI invocation, or a short throwaway script under `./temp/`) and observe the wrong behavior.
@@ -133,7 +133,7 @@ The fix only needs a documentation update if it changes behavior that `help.md` 
    ```bash
    mv ./product/plans/ready/<bug-name>.md ./product/plans/complete/<bug-name>.md
    ```
-2. Remove **only** the fixed bug's line from the `## ready` group in `./product/backlog/bugs.md`. Do not touch the `## development` or `## deferred` groups, the group headings, or any other bug entry.
+2. Remove **only** the fixed bug's line from the `## ready` group in `./product/backlog/bugs.md`. Do not touch the `## development` or `## deferred` groups, the group headings, or any other bug entry. If the bug came from the task invocation and was never listed in the file, there is nothing to remove: leave the file untouched.
 
 ---
 
@@ -159,7 +159,7 @@ Do not merge the PR — leave it open for a human.
 Give the user a short report in this exact shape:
 
 ```
-Bug:            <the bug text from ./product/backlog/bugs.md>
+Bug:            <the bug text from ./product/backlog/bugs.md, or the bug as named in the invocation when it was not listed there>
 Reproduction:   <one-line summary of how you replicated the faulty behavior>
 Correct:        <one-line statement of the correct behavior>
 Root cause:     <one-line summary of the underlying cause>

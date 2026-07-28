@@ -1,6 +1,6 @@
 # Plan a New Feature
 
-Your job: pick one feature — the first entry under the `## ready` section of `./product/backlog/features.md`, or a specific feature named in the task invocation — interview the user with product-focused questions to pin down scope and behavior, and write a draft plan for it into `./product/plans/draft/`. You produce plan documents only — you never write source code.
+Your job: pick one feature — the first entry under the `## ready` section of `./product/backlog/features.md`, or a specific feature named in the task invocation, which need not be listed there at all — interview the user with product-focused questions to pin down scope and behavior, and write a draft plan for it into `./product/plans/draft/`. You produce plan documents only — you never write source code.
 
 **Project `./product/` directory.** Every `./product/...` path in this task refers to the product directory in the current working directory — the project being worked on — never to the Janissary codebase's own `product/` directory, even when this task file was launched from an absolute path inside the Janissary installation.
 
@@ -24,7 +24,7 @@ Read any file in the repo to ground a plan in real code. Create new plan files u
 2. **Editing any source, test, or config file.** This task only touches `./product/backlog/features.md` and files under `./product/plans/draft/`.
 3. **Skipping the question round.** Never invent a plan's scope, edge-case behavior, or UI wording without asking, when the answer is a product decision rather than something the codebase already settles.
 4. **Moving a plan to `./product/plans/ready/`.** That promotion is a separate human/`ai/tasks/planning/improve-plan.md` step. Everything this task produces lands in `./product/plans/draft/`.
-5. **Removing a feature's entry from `./product/backlog/features.md` before its plan is drafted and the user has confirmed it.** Don't clear the backlog ahead of the plan actually existing.
+5. **Removing a feature's entry from `./product/backlog/features.md` before its plan is drafted and the user has confirmed it.** Don't clear the backlog ahead of the plan actually existing. Never add a feature named at invocation to the file either — an unlisted feature is planned without ever passing through the backlog.
 
 ---
 
@@ -38,10 +38,10 @@ Execute `ai/tasks/workspace/prepare-workspace.md` in full before doing anything 
 
 1. Read `./product/backlog/features.md` in full. Each entry under the `## ready` heading, up to the next `## ` heading, is a `### <title>` followed by its description body.
 2. Pick the feature to plan:
-   - **If a specific feature is named in the task invocation** (e.g. `execute ai/tasks/plan-a-new-feature.md "<feature title>"`), plan that one. Find its `### ` entry under `## ready` — the argument may be quoted text, a paraphrase, or a position such as "the second one". If no entry matches, report that no matching feature was found and stop.
+   - **If a specific feature is named in the task invocation** (e.g. `execute ai/tasks/plan-a-new-feature.md "<feature title>"`), plan that one. First look for its `### ` entry under `## ready` — the argument may be quoted text, a paraphrase, or a position such as "the second one". **If no entry matches, the named text is itself the feature**: take it at face value and plan it exactly as if it had been listed, without stopping and without adding it to the features file. A named feature is never rejected for being absent from the backlog; it simply arrives with no description body, so treat the named text as its entire description everywhere the steps below read one — and expect to ask about every question category in 2c, since nothing is pre-answered.
    - **Otherwise**, take the first `### ` entry listed under `## ready` (top of the section).
-3. If `## ready` is empty (or the named feature isn't found there), report "No ready features in `./product/backlog/features.md`" and stop.
-4. Copy the feature's title verbatim — do not paraphrase or shorten it. Say in one sentence which feature you're planning before starting Step 2.
+3. If `## ready` is empty **and** the invocation named no feature, report "No ready features in `./product/backlog/features.md`" and stop.
+4. Copy the feature's title verbatim — do not paraphrase or shorten it; for a feature named at invocation, that is the named text as given. Say in one sentence which feature you're planning, and whether it came from the features file or from the invocation, before starting Step 2.
 
 ---
 
@@ -120,7 +120,7 @@ Before moving on, check the plan file against this list:
 
 ### 2e. Remove the entry from the backlog
 
-Edit `./product/backlog/features.md` to remove that feature's `### ` entry (title and body) from the `## ready` section. Leave every other section, heading, and entry byte-for-byte untouched — do not reformat or reflow surrounding text.
+Edit `./product/backlog/features.md` to remove that feature's `### ` entry (title and body) from the `## ready` section. Leave every other section, heading, and entry byte-for-byte untouched — do not reformat or reflow surrounding text. If the feature came from the task invocation and was never listed in the file, there is nothing to remove: leave the file untouched.
 
 ---
 
@@ -132,7 +132,7 @@ After the feature is processed (planned, or explicitly abandoned per 2e), give t
 Feature:  <feature title>
 Planned:  ./product/plans/draft/<file> — <one-line goal>
 Skipped:  <why, if abandoned instead of planned>
-Backlog:  ./product/backlog/features.md updated, entry removed from ## ready
+Backlog:  ./product/backlog/features.md updated, entry removed from ## ready — or "not listed; nothing to remove" for a feature named at invocation
 ```
 
 Keep it brief. Done.

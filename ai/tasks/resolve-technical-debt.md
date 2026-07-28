@@ -94,9 +94,9 @@ A hygiene-triggered run produces **no plan file** — the playbook is the plan. 
 1. Read the project constraints in [`CLAUDE.md`](../../CLAUDE.md): ESLint rules (200-line `max-lines`, `.js` import extensions in `src/`, type-aware rules), test conventions (`src/**/*.test.ts`, `web/src/**/*.tsx`).
 2. Read every file relevant to the item to understand the code involved.
 3. Write a plan file following the format of existing plans in `./product/plans/complete/` — include a complexity rating, goal, approach, implementation steps, tests, and out-of-scope items. Write it to `./product/plans/draft/<item-name>.md`.
-4. After the plan is written, move it from `./product/plans/draft/` to `./product/plans/ready/`:
+4. After the plan is written, move it from `./product/plans/draft/` to `./product/plans/ready/`. Use plain `mv` (not `git mv`) — the new plan file is not tracked by git yet, and `git mv` fails on an untracked file:
    ```bash
-   git mv ./product/plans/draft/<item-name>.md ./product/plans/ready/<item-name>.md
+   mv ./product/plans/draft/<item-name>.md ./product/plans/ready/<item-name>.md
    ```
 
 ---
@@ -149,9 +149,9 @@ The fix only needs a documentation update if it changes behavior that `help.md` 
 
 ## Step 7 — Promote the plan and remove the item
 
-1. Move the plan file from `./product/plans/ready/` to `./product/plans/complete/`:
+1. Move the plan file from `./product/plans/ready/` to `./product/plans/complete/`. Use plain `mv` (not `git mv`) — the plan file is still untracked until the merge workflow stages it:
    ```bash
-   git mv ./product/plans/ready/<item-name>.md ./product/plans/complete/<item-name>.md
+   mv ./product/plans/ready/<item-name>.md ./product/plans/complete/<item-name>.md
    ```
    **Hygiene-triggered runs (Step 2A) have no plan file** — skip this sub-step entirely and do not write one after the fact.
 2. Remove the resolved item's line from `./product/backlog/technical-debt.md`. Leave any `## deferred` entries you added in Step 1 as they are — only remove the single line for the item you resolved, and do not otherwise modify the file.
