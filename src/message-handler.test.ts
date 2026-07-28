@@ -11,6 +11,8 @@ import {
   revealFileNavigatorItem,
 } from './controller/file-navigator.js';
 import { setClientLayout } from './client-layout.js';
+import { editorSuggest, ownerLabel } from './editor-suggest/handler.js';
+import { closeConnection } from './connection/close.js';
 
 vi.mock('./controller/transcript.js', () => ({ openTranscriptFor: vi.fn(), openAcpTranscript: vi.fn() }));
 vi.mock('./project-files.js', () => ({ projectFilesFor: vi.fn() }));
@@ -21,6 +23,8 @@ vi.mock('./controller/file-navigator.js', () => ({
   revealFileNavigatorItem: vi.fn(),
 }));
 vi.mock('./client-layout.js', () => ({ setClientLayout: vi.fn() }));
+vi.mock('./editor-suggest/handler.js', () => ({ editorSuggest: vi.fn(), ownerLabel: vi.fn(() => 'janus') }));
+vi.mock('./connection/close.js', () => ({ closeConnection: vi.fn() }));
 
 const makeController = () =>
   ({
@@ -35,8 +39,11 @@ const makeController = () =>
         moveTabToOtherPane: vi.fn(),
       },
       questions: { answer: vi.fn(() => true) },
+      schedule: { clearAll: vi.fn() },
     },
     dispatch: vi.fn(),
+    cancelSchedule: vi.fn(),
+    launchAgentFor: vi.fn(),
     setActiveTab: vi.fn(),
     closeTab: vi.fn(),
     renameTab: vi.fn(),
@@ -383,5 +390,53 @@ describe('handle', () => {
     const controller = makeController();
     dispatchCall(controller, 33, { method: 'revealFileNavigatorItem', params: { index: 0, relPath: 'src/a.ts' } });
     expect(revealFileNavigatorItem).toHaveBeenCalledWith(controller.managers, 0, 'src/a.ts');
+  });
+
+  it('routes cancelSchedule', () => {
+    const controller = makeController();
+    dispatchCall(controller, 40, { method: 'cancelSchedule', params: { tab: 'janus', id: 'sched-1' } });
+    expect(controller.cancelSchedule).toHaveBeenCalledWith('janus', 'sched-1');
+  });
+
+  it('routes clearSchedules straight to the schedule manager', () => {
+    const controller = makeController();
+    dispatchCall(controller, 41, { method: 'clearSchedules' });
+    expect(controller.managers.schedule.clearAll).toHaveBeenCalled();
+  });
+
+  it('routes launchAgentFor', () => {
+    const controller = makeController();
+    dispatchCall(controller, 42, { method: 'launchAgentFor', params: { label: 'janus' } });
+    expect(controller.launchAgentFor).toHaveBeenCalledWith('janus');
+  });
+
+  it('routes editorPersonas to a reply carrying the editor persona names', () => {
+    const controller = makeController();
+    const replies = dispatchCall(controller, 43, { method: 'editorPersonas' });
+    expect(replies).toEqual([{ t: 'rpc-reply', id: 43, result: { names: expect.any(Array) } }]);
+  });
+
+  it('routes editorSuggest to a deferred reply carrying the callback result', () => {
+    const controller = makeController();
+    vi.mocked(editorSuggest).mockImplementation((_managers, _params, callback) => {
+      callback({ hunks: [] });
+    });
+    const replies = dispatchCall(controller, 46, {
+      method: 'editorSuggest',
+      params: { url: 'file:///a.ts', persona: 'reviewer', content: 'x', prompt: 'improve' },
+    });
+    expect(editorSuggest).toHaveBeenCalledWith(controller.managers, { url: 'file:///a.ts', persona: 'reviewer', content: 'x', prompt: 'improve' }, expect.any(Function));
+    expect(replies).toEqual([{ t: 'rpc-reply', id: 46, result: { hunks: [] } }]);
+  });
+
+  it('routes closeEditorConnection to closeConnection with the resolved owner label and acknowledges', () => {
+    const controller = makeController();
+    const replies = dispatchCall(controller, 47, {
+      method: 'closeEditorConnection',
+      params: { url: 'file:///a.ts', persona: 'reviewer' },
+    });
+    expect(ownerLabel).toHaveBeenCalledWith(controller.managers, 'file:///a.ts');
+    expect(closeConnection).toHaveBeenCalledWith('acp', 'reviewer', controller.managers, 'janus', expect.any(Function));
+    expect(replies).toEqual([{ t: 'rpc-reply', id: 47, result: 'ok' }]);
   });
 });
