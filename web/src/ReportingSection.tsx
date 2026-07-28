@@ -1,10 +1,9 @@
 import React, { useCallback, useState } from 'react';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { TabView } from '@shared/protocol';
 import { MonitorTab } from './MonitorTab';
-import { statusDotIcon } from './icons';
 import { ResizeButton } from './ResizeButton';
 import { beginResizeDrag } from './drag-resize';
+import { TabStrip } from './TabStrip';
 
 // Reporting tabs are a separate class from action tabs: they report, they never take
 // commands. A tab is a reporting tab when its view kind is in this set (currently just
@@ -32,10 +31,13 @@ export const DEFAULT_PCT = 20;
 // controlled prop, owned by `App` (so a profile's `layout` key can drive it too — see
 // `useLayoutState`).
 export function ReportingSection({
-  entries, onClose, onRun, onRate, onReset, onSnapshot, heightPct = DEFAULT_PCT, onHeightPctChange,
+  entries, onClose, onRename, onReorder, onRun, onRate, onReset, onSnapshot,
+  heightPct = DEFAULT_PCT, onHeightPctChange,
 }: {
   entries: ReportingEntry[];
   onClose: (index: number) => void;
+  onRename?: (index: number, title: string) => void;
+  onReorder?: (from: number, to: number) => void;
   onRun: (id: string) => void;
   onRate: (id: string, up: boolean) => void;
   onReset: (name: string) => void;
@@ -43,7 +45,7 @@ export function ReportingSection({
   heightPct?: number;
   onHeightPctChange?: (heightPct: number) => void;
 }) {
-  const [selected, setSelected] = useState(0);
+  const [selectedLabel, setSelectedLabel] = useState<string>();
 
   const onResize = useCallback((_down: React.MouseEvent, move: MouseEvent) => {
     const pct = ((globalThis.innerHeight - move.clientY) / globalThis.innerHeight) * 100;
@@ -51,7 +53,8 @@ export function ReportingSection({
   }, [onHeightPctChange]);
 
   if (entries.length === 0) return null;
-  const current = entries[Math.min(selected, entries.length - 1)];
+  const current = entries.find((entry) => entry.tab.label === selectedLabel) ?? entries[0];
+  const activeIndex = entries.indexOf(current);
   const resizeButton = (
     <ResizeButton direction="vertical" label="Resize monitoring area" onResize={onResize} />
   );
@@ -59,29 +62,17 @@ export function ReportingSection({
   return (
     <div className="reporting-section" style={{ flex: `0 0 ${heightPct}%` }}>
       <div className="reporting-resize" onMouseDown={(down) => beginResizeDrag(down, onResize)} />
-      <div className="tabstrip reporting-strip">
-        {entries.map((entry, index) => (
-          <div
-            key={entry.tab.label}
-            className={`tab${entry === current ? ' active' : ''}`}
-            style={{ borderTopColor: entry.tab.groupColor }}
-            onClick={() => setSelected(index)}
-          >
-            <span className="dot" style={{ color: entry.tab.dotColor }}><FontAwesomeIcon icon={statusDotIcon} /></span>
-            <span>{entry.tab.title ?? entry.tab.label}</span>
-            <button
-              type="button"
-              className="tab-close"
-              title="Close tab"
-              aria-label="Close tab"
-              onClick={(e) => { e.stopPropagation(); onClose(entry.index); }}
-            >
-              ×
-            </button>
-          </div>
-        ))}
-        {resizeButton}
-      </div>
+      <TabStrip
+        className="reporting-strip"
+        tabs={entries.map((entry) => entry.tab)}
+        activeTab={activeIndex}
+        onSelect={(index) => setSelectedLabel(entries[index].tab.label)}
+        onClose={(index) => onClose(entries[index].index)}
+        onRename={(index, title) => onRename?.(entries[index].index, title)}
+        onReorder={onReorder}
+        tabNameMaxLength={50}
+        endControl={resizeButton}
+      />
       {current.tab.view === 'monitor' && current.tab.monitor && (
         <div className="reporting-body" data-doc-shot="reporting-tab" tabIndex={0} style={{ borderLeft: `4px solid ${current.tab.dotColor}` }}>
           <MonitorTab

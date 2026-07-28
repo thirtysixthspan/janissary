@@ -35,7 +35,7 @@ Every tab belongs to a **group**, identified by a `group` number and a fixed `gr
 - **Inheritance.** An agent created with `agent` / `agent <name>` joins the group of the tab it was created from (the active tab), inheriting that group's number and bar color. Because creation is transitive, a chain of agents spawned from one another all share a single group.
 - **Profiles form a group.** Launching a profile creates one new group (the next free group number) shared by all of that profile's agents; the group's bar color is fixed to the first launched agent's color. See Profiles.
 - **Fixed color.** A group's bar color is set when the group is first created (the color of its first member) and stored per tab, so it never shifts when tabs are reordered or a member is closed.
-- **Contiguity.** A new tab is inserted directly after the last tab of its group (`insertTabInGroup` in `src/tab.ts`) so each group stays a single connected run in the strip. Reordering (`Ctrl+←` / `Ctrl+→`) may only swap a tab with a neighbor **in the same group** (`canMoveTab`), so groups always stay contiguous and a tab can never be dragged out of its group. A tab can be temporarily absent from the strip while docked into a sidebar; see `sidebars.md`.
+- **Contiguity.** A new tab is inserted directly after the last tab of its group (`insertTabInGroup` in `src/tab.ts`) so each group stays a single connected run in the strip. Reordering with `Ctrl+←` / `Ctrl+→` or by dragging a label may only move a tab **within the same group** (`canMoveTab`), so groups always stay contiguous and a tab can never be dragged out of its group. A tab can be temporarily absent from the strip while docked into a sidebar; see `sidebars.md`.
 - **Persistence.** `group` and `groupColor` are saved in each agent's state file and restored on `--relaunch`, so groupings reappear exactly as they were left.
 
 ### Window focus dimming
@@ -75,6 +75,12 @@ The `next` command programmatically switches to the next tab.
 Pressing a tab's label immediately moves keyboard input focus to that tab's command bar, on mouse-down (before the click is released), so it fires reliably even when the app window itself was unfocused and is being brought forward by the same press. If the pressed tab is a harness or shell PTY tab, focus subsequently moves to that tab's terminal instead, once the tab becomes active.
 
 Releasing the mouse (mouse-up) anywhere in the body of an agent tab also moves focus to that tab's command bar — unless the mouse gesture produced a text selection in the transcript (a click-and-drag), in which case focus is left alone so the selection survives; the selected text is instead copied to the clipboard (see History → Click to execute).
+
+### Dragging tabs to reorder
+
+Dragging a tab label reorders it within its strip. Once the pointer moves past a small threshold, the dragged tab follows the pointer and neighboring tabs shift live to preview the resulting order. The destination is clamped to the dragged tab's own group, so dragging beyond a group edge leaves the preview pinned at that edge.
+
+Releasing the mouse commits the previewed order even when the pointer is outside the strip. Pressing Escape cancels instead, restores the original order, and sends no reorder. A press that stays below the movement threshold remains an ordinary click, so selecting and double-clicking to rename keep their existing behavior. After a committed drag, the dragged tab remains focused.
 
 ### Metadata row
 

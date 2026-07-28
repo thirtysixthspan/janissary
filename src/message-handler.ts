@@ -37,6 +37,8 @@ export function handle(controller: Controller, message: ClientMessage, reply: (e
     }
     case 'reorderTab': { controller.reorderTab(message.params.dir); break;
     }
+    case 'reorderTabTo': { controller.reorderTabTo(message.params.from, message.params.to); break;
+    }
     case 'toggleCollapse': { controller.toggleCollapse(); break;
     }
     case 'chooseRoute': { controller.chooseRoute(message.params.index); break;

@@ -34,6 +34,7 @@ const makeController = () =>
     deleteQueuedCommand: vi.fn(),
     moveTab: vi.fn(),
     reorderTab: vi.fn(),
+    reorderTabTo: vi.fn(),
     toggleCollapse: vi.fn(),
     chooseRoute: vi.fn(),
     complete: vi.fn(() => ({ suggestions: [] })),
@@ -123,6 +124,12 @@ describe('handle', () => {
     const controller = makeController();
     dispatchCall(controller, 5, { method: 'reorderTab', params: { dir: -1 } });
     expect(controller.reorderTab).toHaveBeenCalledWith(-1);
+  });
+
+  it('routes reorderTabTo', () => {
+    const controller = makeController();
+    dispatchCall(controller, 33, { method: 'reorderTabTo', params: { from: 1, to: 3 } });
+    expect(controller.reorderTabTo).toHaveBeenCalledWith(1, 3);
   });
 
   it('routes toggleCollapse', () => {

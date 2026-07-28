@@ -38,6 +38,22 @@ function StatefulTabStrip({ tabs, initialActiveTab = 0 }: { tabs: TabView[]; ini
   );
 }
 
+function mockTabRects(container: HTMLElement): void {
+  for (const [index, tab] of [...container.querySelectorAll<HTMLElement>('.tab')].entries()) {
+    vi.spyOn(tab, 'getBoundingClientRect').mockReturnValue({
+      x: index * 100,
+      y: 0,
+      left: index * 100,
+      top: 0,
+      right: index * 100 + 80,
+      bottom: 30,
+      width: 80,
+      height: 30,
+      toJSON: vi.fn(),
+    });
+  }
+}
+
 describe('TabStrip', () => {
   it('renders a tab label', () => {
     const tab = makeTab({ label: 'mytab' });
@@ -314,6 +330,97 @@ describe('TabStrip', () => {
     render(<TabStrip tabs={tabs} activeTab={0} onSelect={onSelect} onClose={vi.fn()} onRename={vi.fn()} tabNameMaxLength={100} />);
     fireEvent.mouseDown(screen.getByText('b'));
     expect(onSelect).toHaveBeenCalledWith(1);
+  });
+
+  it('selects without reordering when the mouse does not move', () => {
+    const onSelect = vi.fn();
+    const onReorder = vi.fn();
+    render(
+      <TabStrip
+        tabs={[makeTab({ label: 'a' }), makeTab({ label: 'b' })]}
+        activeTab={0} onSelect={onSelect} onClose={vi.fn()} onRename={vi.fn()}
+        onReorder={onReorder} tabNameMaxLength={100}
+      />,
+    );
+    fireEvent.mouseDown(screen.getByText('b'), { clientX: 140 });
+    fireEvent.mouseUp(document, { clientX: 140 });
+    expect(onSelect).toHaveBeenCalledWith(1);
+    expect(onReorder).not.toHaveBeenCalled();
+  });
+
+  it('reorders once after movement passes the drag threshold', () => {
+    const onReorder = vi.fn();
+    const tabs = [makeTab({ label: 'a' }), makeTab({ label: 'b' }), makeTab({ label: 'c' })];
+    const { container } = render(
+      <TabStrip tabs={tabs} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()}
+        onRename={vi.fn()} onReorder={onReorder} tabNameMaxLength={100} />,
+    );
+    mockTabRects(container);
+    fireEvent.mouseDown(screen.getByText('a'), { clientX: 40 });
+    fireEvent.mouseMove(document, { clientX: 240 });
+    fireEvent.mouseUp(document);
+    expect(onReorder).toHaveBeenCalledTimes(1);
+    expect(onReorder).toHaveBeenCalledWith(0, 2);
+  });
+
+  it('cancels a drag on Escape and restores the original positions', () => {
+    const onReorder = vi.fn();
+    const tabs = [makeTab({ label: 'a' }), makeTab({ label: 'b' }), makeTab({ label: 'c' })];
+    const { container } = render(
+      <TabStrip tabs={tabs} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()}
+        onRename={vi.fn()} onReorder={onReorder} tabNameMaxLength={100} />,
+    );
+    mockTabRects(container);
+    fireEvent.mouseDown(screen.getByText('a'), { clientX: 40 });
+    fireEvent.mouseMove(document, { clientX: 240 });
+    expect((container.querySelector('.tab') as HTMLElement).style.transform).not.toBe('');
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect((container.querySelector('.tab') as HTMLElement).style.transform).toBe('');
+    fireEvent.mouseUp(document);
+    expect(onReorder).not.toHaveBeenCalled();
+  });
+
+  it('commits the last previewed slot when released outside the strip', () => {
+    const onReorder = vi.fn();
+    const tabs = [makeTab({ label: 'a' }), makeTab({ label: 'b' }), makeTab({ label: 'c' })];
+    const { container } = render(
+      <TabStrip tabs={tabs} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()}
+        onRename={vi.fn()} onReorder={onReorder} tabNameMaxLength={100} />,
+    );
+    mockTabRects(container);
+    fireEvent.mouseDown(screen.getByText('a'), { clientX: 40 });
+    fireEvent.mouseMove(document, { clientX: 140 });
+    fireEvent.mouseUp(document.body, { clientX: 1000 });
+    expect(onReorder).toHaveBeenCalledWith(0, 1);
+  });
+
+  it('clamps a drag to the dragged tab group', () => {
+    const onReorder = vi.fn();
+    const tabs = [
+      makeTab({ label: 'a', group: 1 }),
+      makeTab({ label: 'b', group: 1 }),
+      makeTab({ label: 'c', group: 2 }),
+    ];
+    const { container } = render(
+      <TabStrip tabs={tabs} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()}
+        onRename={vi.fn()} onReorder={onReorder} tabNameMaxLength={100} />,
+    );
+    mockTabRects(container);
+    fireEvent.mouseDown(screen.getByText('a'), { clientX: 40 });
+    fireEvent.mouseMove(document, { clientX: 240 });
+    fireEvent.mouseUp(document);
+    expect(onReorder).toHaveBeenCalledWith(0, 1);
+  });
+
+  it('still renames after a press with no drag movement', async () => {
+    const onReorder = vi.fn();
+    render(
+      <TabStrip tabs={[makeTab({ label: 'a' })]} activeTab={0} onSelect={vi.fn()}
+        onClose={vi.fn()} onRename={vi.fn()} onReorder={onReorder} tabNameMaxLength={100} />,
+    );
+    await userEvent.dblClick(screen.getByText('a'));
+    expect(screen.getByDisplayValue('a')).toBeInTheDocument();
+    expect(onReorder).not.toHaveBeenCalled();
   });
 
   it('commits on blur', async () => {

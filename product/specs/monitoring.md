@@ -23,6 +23,10 @@ button vertically changes the reporting area's height; dragging up gives the rep
 space and dragging down gives the main tab area more space. Neither area can shrink below 15% of
 the viewport height.
 
+The reporting strip can be reordered by dragging a monitor tab label within the strip. The selected
+monitor remains visible after the move, and reordering reporting tabs does not change the active tab
+in the main tab area.
+
 ### Transcript access
 
 When a monitor starts, it receives the full existing transcript of every target tab — not just entries that arrive after the monitor starts. Inline monitors receive the owner tab's own transcript. External monitors receive the transcripts of all specified tabs and all members of specified groups. Entries appear in the order they were logged, giving the monitor full historical context from the moment it starts.

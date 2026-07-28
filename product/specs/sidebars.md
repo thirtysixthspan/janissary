@@ -37,7 +37,7 @@ tab quits the app, the same as if no sidebar existed.
 ### Leaving the strip
 
 While a tab is docked, it is **not shown in the central tab strip** — there is no duplicate
-representation of it there. It reappears in the strip, in its original position within its
+representation of it there. It reappears in the strip, in its current reordered position within its
 group, the moment it is undocked.
 
 ### The active-tab invariant
@@ -61,6 +61,9 @@ hugging its own content rather than stretching to fill the strip. The visible en
 tab-name limit while the other docked entries use the inactive limit. Double-clicking
 the visible entry's label opens the same inline rename control as any other tab, committing the new
 name the same way.
+
+Dragging a sidebar tab label reorders the docked tabs within that sidebar while keeping the same
+view visible. The gesture never docks a tab, undocks it, or moves it to another strip.
 
 ### Resizing
 
