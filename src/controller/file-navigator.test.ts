@@ -4,7 +4,9 @@ import {
   fileNavigatorCollapseAll,
   fileNavigatorReroot,
   moveFileNavigatorItem,
+  moveFileNavigatorItems,
   deleteFileNavigatorItem,
+  deleteFileNavigatorItems,
   undoFileNavigatorItem,
   redoFileNavigatorItem,
   openFileNavigatorFor,
@@ -61,6 +63,30 @@ describe('controller-file-navigator', () => {
     const managers = makeManagers('agent', { delete: (...args: unknown[]) => { calls.push(args); } });
     deleteFileNavigatorItem(managers, 0, 'a.ts');
     expect(calls).toEqual([['agent', 'a.ts']]);
+  });
+
+  it('moveFileNavigatorItems delegates to FileNavigatorManager.moveMany', () => {
+    const managers = makeManagers('agent', {
+      moveMany: (...args: unknown[]) => ({ total: args.length, failedPaths: [] }),
+    });
+    const result = moveFileNavigatorItems(managers, 0, ['a', 'b'], 'dest', 'skip-conflicts');
+    expect(result).toEqual({ total: 4, failedPaths: [] });
+  });
+
+  it('moveFileNavigatorItems returns a structured result for a missing tab', () => {
+    const managers = makeManagers(undefined, { moveMany: () => ({ conflictPaths: ['a'] }) });
+    expect(moveFileNavigatorItems(managers, 0, ['a'], 'dest')).toEqual({ total: 0, failedPaths: [] });
+  });
+
+  it('deleteFileNavigatorItems delegates and handles a missing tab', () => {
+    const managers = makeManagers('agent', {
+      deleteMany: (...args: unknown[]) => ({ total: (args[1] as string[]).length, failedPaths: [] }),
+    });
+    expect(deleteFileNavigatorItems(managers, 0, ['a', 'b'])).toEqual({ total: 2, failedPaths: [] });
+    expect(deleteFileNavigatorItems(makeManagers(undefined, {}), 0, ['a'])).toEqual({
+      total: 0,
+      failedPaths: [],
+    });
   });
 
   it('undoFileNavigatorItem returns the manager result when the tab exists', () => {

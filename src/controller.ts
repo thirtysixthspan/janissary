@@ -178,12 +178,12 @@ export class Controller {
     fileNavigatorRpc.deleteFileNavigatorItem(this.managers, index, relPath);
   }
 
-  undoFileNavigatorItem(index: number, overwrite?: boolean): { conflict?: { fromRelPath: string; toRelPath: string } } {
-    return fileNavigatorRpc.undoFileNavigatorItem(this.managers, index, overwrite);
+  undoFileNavigatorItem(index: number, overwrite?: boolean, skipConflicts?: boolean) {
+    return fileNavigatorRpc.undoFileNavigatorItem(this.managers, index, overwrite, skipConflicts);
   }
 
-  redoFileNavigatorItem(index: number, overwrite?: boolean): { conflict?: { fromRelPath: string; toRelPath: string } } {
-    return fileNavigatorRpc.redoFileNavigatorItem(this.managers, index, overwrite);
+  redoFileNavigatorItem(index: number, overwrite?: boolean, skipConflicts?: boolean) {
+    return fileNavigatorRpc.redoFileNavigatorItem(this.managers, index, overwrite, skipConflicts);
   }
 
   // Dock/undock any dockable tab (file navigator or notifications). The mechanism is view-agnostic —

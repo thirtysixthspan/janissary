@@ -1,10 +1,19 @@
 import type { Controller } from './controller.js';
 import type { ClientMessage, ServerEvent } from './protocol.js';
-import { fileNavigatorSearch, revealFileNavigatorItem, renameFileNavigatorItem, fileNavigatorOpeners } from './controller/file-navigator.js';
+import {
+  deleteFileNavigatorItems,
+  fileNavigatorOpeners,
+  fileNavigatorSearch,
+  moveFileNavigatorItems,
+  renameFileNavigatorItem,
+  revealFileNavigatorItem,
+} from './controller/file-navigator.js';
 
 type FileNavigatorMessage = Extract<ClientMessage, {
   method: 'fileNavigatorToggle' | 'fileNavigatorCollapseAll' | 'fileNavigatorReroot' | 'moveFileNavigatorItem'
-    | 'deleteFileNavigatorItem' | 'renameFileNavigatorItem' | 'fileNavigatorSearch' | 'revealFileNavigatorItem' | 'fileNavigatorOpeners' | 'undoFileNavigatorItem' | 'redoFileNavigatorItem';
+    | 'moveFileNavigatorItems' | 'deleteFileNavigatorItem' | 'deleteFileNavigatorItems'
+    | 'renameFileNavigatorItem' | 'fileNavigatorSearch' | 'revealFileNavigatorItem'
+    | 'fileNavigatorOpeners' | 'undoFileNavigatorItem' | 'redoFileNavigatorItem';
 }>;
 
 // The file-navigator RPC cases, split out of `handle()` to keep message-handler.ts under the line-size
@@ -19,7 +28,29 @@ export function handleFileNavigatorMessage(controller: Controller, message: File
     }
     case 'moveFileNavigatorItem': { controller.moveFileNavigatorItem(message.params.index, message.params.fromRelPath, message.params.toRelPath); break;
     }
+    case 'moveFileNavigatorItems': {
+      reply({
+        t: 'rpc-reply',
+        id: message.id,
+        result: moveFileNavigatorItems(
+          controller.managers,
+          message.params.index,
+          message.params.sourcePaths,
+          message.params.destinationPath,
+          message.params.policy,
+        ),
+      });
+      return;
+    }
     case 'deleteFileNavigatorItem': { controller.deleteFileNavigatorItem(message.params.index, message.params.relPath); break;
+    }
+    case 'deleteFileNavigatorItems': {
+      reply({
+        t: 'rpc-reply',
+        id: message.id,
+        result: deleteFileNavigatorItems(controller.managers, message.params.index, message.params.paths),
+      });
+      return;
     }
     case 'renameFileNavigatorItem': { renameFileNavigatorItem(controller.managers, message.params.index, message.params.relPath, message.params.newName); break;
     }
@@ -43,11 +74,27 @@ export function handleFileNavigatorMessage(controller: Controller, message: File
       return;
     }
     case 'undoFileNavigatorItem': {
-      reply({ t: 'rpc-reply', id: message.id, result: controller.undoFileNavigatorItem(message.params.index, message.params.overwrite) });
+      reply({
+        t: 'rpc-reply',
+        id: message.id,
+        result: controller.undoFileNavigatorItem(
+          message.params.index,
+          message.params.overwrite,
+          message.params.skipConflicts,
+        ),
+      });
       return;
     }
     case 'redoFileNavigatorItem': {
-      reply({ t: 'rpc-reply', id: message.id, result: controller.redoFileNavigatorItem(message.params.index, message.params.overwrite) });
+      reply({
+        t: 'rpc-reply',
+        id: message.id,
+        result: controller.redoFileNavigatorItem(
+          message.params.index,
+          message.params.overwrite,
+          message.params.skipConflicts,
+        ),
+      });
       return;
     }
   }

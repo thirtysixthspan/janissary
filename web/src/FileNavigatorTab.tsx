@@ -1,6 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react';
-import type { FileNavigatorView, FileNavigatorRow } from '@shared/protocol';
-import type { JanusClient } from './ws';
+import React, { useEffect, useId, useRef, useState } from 'react';
+import type { FileNavigatorRow } from '@shared/protocol';
 import { handleFileNavigatorKey, typeAheadMatch } from './file-navigator-keys';
 import { handleTreeChord } from './file-navigator-chords';
 import { useFileNavigatorDrag } from './useFileNavigatorDrag';
@@ -8,39 +7,14 @@ import { useFileNavigatorRename } from './useFileNavigatorRename';
 import { FileNavigatorRowView } from './FileNavigatorRowView';
 import { fileNavigatorRowClass } from './file-navigator-row-class';
 import { newFileTargetDir, newFileCommand, newDirectoryCommand, newDirectoryTargetPath, findPendingNewDir } from './file-navigator-new-file';
-import { MoveConflictDialog } from './MoveConflictDialog/MoveConflictDialog';
-import { DeleteFileDialog } from './DeleteFileDialog';
-import { FileSearchPopup } from './FileSearchPopup';
 import { useFileNavigatorSearch } from './useFileNavigatorSearch';
 import { FileNavigatorHeader } from './FileNavigatorHeader';
-import type { CommandInputDropHandle } from './CommandInput';
-import type { EditorDropHandle } from './EditorTab';
-import { FileNavigatorOpenerOverlay } from './FileNavigatorOpenerOverlay';
 import { useFileNavigatorOpener } from './useFileNavigatorOpener';
 import { useFileNavigatorDelete } from './useFileNavigatorDelete';
 import { runFileNavigatorAction } from './file-navigator-actions';
-
-type Properties = {
-  files: FileNavigatorView;
-  client: JanusClient;
-  index: number;
-  // The tab's current dock location (undefined means center). Drives the location-cycle
-  // button's destination.
-  dock?: 'left' | 'right';
-  // Whether the tree grabs keyboard focus on mount. True for a center tab (the default); false
-  // for a sidebar mount, where stealing focus would yank it away from the command bar every time
-  // a dock move remounts the tree.
-  autoFocus?: boolean;
-  // The active tab's command bar imperative handle — only ever passed when this tree is docked
-  // into a sidebar, where another tab's command bar can be a valid drop target alongside it.
-  // Omitted for a center-mounted tree, which per Decision 4 never has a reachable command-bar
-  // target regardless.
-  dropRef?: React.RefObject<CommandInputDropHandle | null>;
-  // The active tab's editor imperative handle, if it's an editor tab — only ever passed when this
-  // tree is docked into a sidebar, for the same reason as `dropRef` above.
-  editorDropRef?: React.RefObject<EditorDropHandle | null>;
-  onSplit?: () => void;
-};
+import { normalizeOperationPaths, useFileNavigatorSelection } from './useFileNavigatorSelection';
+import { FileNavigatorOverlays } from './FileNavigatorOverlays';
+import type { FileNavigatorTabProperties as Properties } from './file-navigator-tab-types';
 
 const TYPEAHEAD_RESET_MS = 700;
 const ROW_HEIGHT_PX = 22;
@@ -49,34 +23,35 @@ const PRINTABLE = /^[ -~]$/;
 const MARKDOWN_EXTENSION = /\.(md|markdown)$/i;
 
 export function FileNavigatorTab({
-  files, client, index, dock, autoFocus = true, dropRef, editorDropRef, onSplit,
+  files, client, index, dock, autoFocus = true, dropRef, editorDropRef,
+  targetCwd = files.absoluteRoot, onSplit,
 }: Properties) {
-  const [selected, setSelected] = useState<string | null>(null);
+  const selection = useFileNavigatorSelection(files.rows, files.absoluteRoot);
   const [pendingNewDir, setPendingNewDir] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const pointerHandledRef = useRef<string | null>(null);
+  const treeId = useId();
   const typeahead = useRef<{ buffer: string; timer?: ReturnType<typeof setTimeout> }>({ buffer: '' });
-  const drag = useFileNavigatorDrag(files.rows, client, index, dropRef, editorDropRef);
-  const rename = useFileNavigatorRename(files.rows, client, index, setSelected, () => containerRef.current?.focus());
-  const search = useFileNavigatorSearch(client, index, files.rows, setSelected, () => containerRef.current?.focus());
+  const drag = useFileNavigatorDrag(
+    files.rows, client, index, files.absoluteRoot, files.root, targetCwd, dropRef, editorDropRef,
+  );
+  const rename = useFileNavigatorRename(
+    files.rows, client, index, selection.rename, () => containerRef.current?.focus(),
+  );
+  const search = useFileNavigatorSearch(
+    client, index, files.rows, selection.replace, () => containerRef.current?.focus(),
+  );
   const opener = useFileNavigatorOpener(client, index, files.absoluteRoot);
-  const deletion = useFileNavigatorDelete(client, index);
+  const deletion = useFileNavigatorDelete(client, index, drag.reportFailure);
 
   useEffect(() => { if (autoFocus) containerRef.current?.focus(); }, [autoFocus]);
 
   // Scroll the selected row into view (nearest block alignment avoids unnecessary scroll
   // when the element is already fully visible).
   useEffect(() => {
-    if (selected === null) return;
-    containerRef.current?.querySelector(`[data-path="${CSS.escape(selected)}"]`)?.scrollIntoView({ block: 'nearest' });
-  }, [selected]);
-
-  // Selection clamp: if the selected row disappears (a watcher-driven rebuild), move to the
-  // nearest surviving row instead of pointing at nothing.
-  useEffect(() => {
-    if (selected !== null && files.rows.every((r) => r.path !== selected)) {
-      setSelected(files.rows[0]?.path ?? null);
-    }
-  }, [files.rows, selected]);
+    if (selection.cursor === null) return;
+    containerRef.current?.querySelector(`[data-path="${CSS.escape(selection.cursor)}"]`)?.scrollIntoView({ block: 'nearest' });
+  }, [selection.cursor]);
 
   // New-directory auto-rename: once the directory created by `createNewDirectory` shows up at its
   // guessed path (the OS-level watcher rebuild that already brings any newly created row into
@@ -86,7 +61,7 @@ export function FileNavigatorTab({
   useEffect(() => {
     const row = findPendingNewDir(files.rows, pendingNewDir);
     if (!row) return;
-    setSelected(row.path);
+    selection.replace(row.path);
     rename.begin(row.path, row.name);
     setPendingNewDir(null);
   }, [files.rows, pendingNewDir]); // eslint-disable-line react-hooks/exhaustive-deps -- `rename` is fresh each render
@@ -97,17 +72,32 @@ export function FileNavigatorTab({
   const reroot = () => client.send({ method: 'fileNavigatorReroot', params: { index } });
   const rerootTo = (path: string) => client.send({ method: 'fileNavigatorReroot', params: { index, path } });
   const createNewFile = () => {
-    const text = newFileCommand(newFileTargetDir(files.rows, selected));
+    const text = newFileCommand(newFileTargetDir(files.rows, selection.cursor));
     client.send({ method: 'command', params: { text } });
   };
   const createNewDirectory = () => {
-    const targetDir = newFileTargetDir(files.rows, selected);
+    const targetDir = newFileTargetDir(files.rows, selection.cursor);
     setPendingNewDir(newDirectoryTargetPath(targetDir));
     client.send({ method: 'command', params: { text: newDirectoryCommand(targetDir) } });
   };
 
+  const onRowMouseDown = (row: FileNavigatorRow, event: React.MouseEvent) => {
+    if (event.button !== 0) return;
+    if (event.target instanceof HTMLElement && event.target.closest('.files-rename-input')) return;
+    pointerHandledRef.current = row.path;
+    const modified = event.shiftKey || event.metaKey || event.ctrlKey;
+    const keepSelection = !modified && selection.selected.has(row.path) && row.path !== '..';
+    const next = keepSelection
+      ? selection
+      : selection.pointer(row.path, event.shiftKey, event.metaKey || event.ctrlKey);
+    const sourcePaths = files.rows.map((candidate) => candidate.path)
+      .filter((path) => path !== '..' && next.selected.has(path));
+    drag.onRowMouseDown(row, event, sourcePaths, normalizeOperationPaths(files.rows, next.selected));
+    containerRef.current?.focus();
+  };
   const onRowClick = (row: FileNavigatorRow) => {
-    setSelected(row.path);
+    if (pointerHandledRef.current === row.path) pointerHandledRef.current = null;
+    else selection.replace(row.path);
     containerRef.current?.focus();
   };
 
@@ -116,27 +106,29 @@ export function FileNavigatorTab({
     else if (row.dir) toggle(row.path);
     else openFile(row.path, MARKDOWN_EXTENSION.test(row.path) !== shiftKey);
   };
+  const beginRename = (row: FileNavigatorRow) => rename.begin(row.path, row.name);
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.target instanceof HTMLElement && e.target.closest('.files-rename-input')) return;
     if (opener.onKeyDown(e)) return;
     // While the rename field is open, its own Enter/Escape/typing handling in `InlineEditInput`
     // owns every keystroke; without this, those keydowns bubble here too and get double-handled
     // (e.g. Enter also re-triggering the tree's own "open selected row" navigation action).
     if (rename.editing !== null) return;
     if (e.ctrlKey || e.metaKey) {
-      const handled = handleTreeChord(e.key, e.shiftKey, files.rows, selected, {
+      const handled = handleTreeChord(e.key, e.shiftKey, files.rows, selection.cursor, {
         sendUndo: () => void drag.sendUndo(),
         sendRedo: () => void drag.sendRedo(),
         createNewFile,
-        beginRename: (row) => rename.begin(row.path, row.name),
+        beginRename,
       });
       if (handled) { e.preventDefault(); e.stopPropagation(); }
       return; // tab-management chords go to the window handler
     }
-    if ((e.key === 'Backspace' || e.key === 'Delete') && selected && selected !== '..') {
+    if ((e.key === 'Backspace' || e.key === 'Delete') && selection.operationPaths.length > 0) {
       e.preventDefault();
       e.stopPropagation();
-      deletion.request(selected);
+      deletion.request(selection.operationPaths);
       return;
     }
     const navKeys = new Set(['ArrowDown', 'ArrowUp', 'ArrowLeft', 'ArrowRight', 'Home', 'End', 'PageUp', 'PageDown', 'Enter', ' ']);
@@ -144,8 +136,8 @@ export function FileNavigatorTab({
       e.preventDefault();
       e.stopPropagation();
       const pageSize = Math.max(1, Math.floor((containerRef.current?.clientHeight ?? ROW_HEIGHT_PX * 10) / ROW_HEIGHT_PX));
-      const result = handleFileNavigatorKey(files.rows, selected, e.key, e.shiftKey, pageSize);
-      setSelected(result.selection);
+      const result = handleFileNavigatorKey(files.rows, selection.cursor, e.key, e.shiftKey, pageSize);
+      selection.replace(result.selection);
       runFileNavigatorAction(result.action, { reroot: (path) => { if (path === '..') reroot(); else rerootTo(path); }, toggle, open: (path) => openFile(path, false), edit: editFile });
       return;
     }
@@ -156,13 +148,24 @@ export function FileNavigatorTab({
       clearTimeout(state.timer);
       state.buffer += e.key;
       const match = typeAheadMatch(files.rows, state.buffer);
-      if (match) setSelected(match);
+      if (match) selection.replace(match);
       state.timer = setTimeout(() => { state.buffer = ''; }, TYPEAHEAD_RESET_MS);
     }
   };
 
   return (
-    <div className="files-tab" data-doc-shot="file-navigator-view" ref={containerRef} tabIndex={0} role="tree" onKeyDown={onKeyDown}>
+    <div
+      className="files-tab"
+      data-doc-shot="file-navigator-view"
+      ref={containerRef}
+      tabIndex={0}
+      role="tree"
+      aria-multiselectable="true"
+      aria-activedescendant={selection.cursor === null
+        ? undefined
+        : `${treeId}-row-${files.rows.findIndex((row) => row.path === selection.cursor)}`}
+      onKeyDown={onKeyDown}
+    >
       <FileNavigatorHeader
         root={files.root} branch={files.branch} githubUrl={files.githubUrl} client={client} index={index} dock={dock}
         onSearch={search.openSearch} onNewFile={createNewFile} onNewDirectory={createNewDirectory}
@@ -172,12 +175,19 @@ export function FileNavigatorTab({
         <div className="files-waiting">Looking for {files.waitingFor}…</div>
       )}
       <div className="files-rows">
-        {files.rows.map((row) => (
+        {files.rows.map((row, rowIndex) => (
           <FileNavigatorRowView
             key={row.path}
+            id={`${treeId}-row-${rowIndex}`}
             row={row}
-            selected={selected}
-            rowClass={fileNavigatorRowClass(row, selected, drag.dropTarget?.path)}
+            selected={selection.selected.has(row.path)}
+            cursor={selection.cursor === row.path}
+            rowClass={fileNavigatorRowClass(
+              row,
+              selection.selected.has(row.path),
+              selection.cursor === row.path,
+              drag.dropTarget?.path,
+            )}
             editing={rename.editing === row.path}
             draft={rename.draft}
             onDraftChange={rename.setDraft}
@@ -185,51 +195,18 @@ export function FileNavigatorTab({
             onCancel={rename.cancel}
             onClick={() => onRowClick(row)}
             onDoubleClick={(shiftKey) => onRowDoubleClick(row, shiftKey)}
-            onMouseDown={(e) => drag.onRowMouseDown(row, e)}
+            onMouseDown={(event) => onRowMouseDown(row, event)}
           />
         ))}
       </div>
-      {drag.draggedPath && drag.dragPosition && (
-        <div
-          className="files-drag-ghost"
-          style={{ left: drag.dragPosition.x, top: drag.dragPosition.y }}
-        >
-          {drag.draggedPath.slice(drag.draggedPath.lastIndexOf('/') + 1)}
-        </div>
-      )}
-      {drag.pendingConflict && (
-        <MoveConflictDialog
-          name={drag.pendingConflict.fromRelPath.slice(drag.pendingConflict.fromRelPath.lastIndexOf('/') + 1)}
-          onOverwrite={drag.confirmOverwrite}
-          onCancel={drag.cancelConflict}
-        />
-      )}
-      {rename.pendingConflict && (
-        <MoveConflictDialog
-          name={rename.pendingConflict.newName}
-          onOverwrite={rename.confirmOverwrite}
-          onCancel={rename.cancelConflict}
-        />
-      )}
-      {deletion.pendingDelete && (
-        <DeleteFileDialog
-          name={deletion.pendingDelete.slice(deletion.pendingDelete.lastIndexOf('/') + 1)}
-          onConfirm={deletion.confirm} onCancel={deletion.cancel}
-        />
-      )}
-      {opener.pending && (
-        <FileNavigatorOpenerOverlay pending={opener.pending} onPick={opener.choose} />
-      )}
-      {search.searchOpen && (
-        <FileSearchPopup
-          query={search.searchQuery}
-          onChangeQuery={search.setSearchQuery}
-          paths={search.searchPaths}
-          loading={search.searchLoading}
-          onReveal={search.revealFromSearch}
-          onClose={search.closeSearch}
-        />
-      )}
+      <FileNavigatorOverlays
+        drag={drag}
+        rename={rename}
+        deletion={deletion}
+        search={search}
+        opener={opener}
+        focusTree={() => containerRef.current?.focus()}
+      />
     </div>
   );
 }

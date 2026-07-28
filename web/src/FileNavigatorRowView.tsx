@@ -6,7 +6,9 @@ import { InlineEditInput } from './InlineEditInput';
 
 type Properties = {
   row: FileNavigatorRow;
-  selected: string | null;
+  id: string;
+  selected: boolean;
+  cursor: boolean;
   rowClass: { row: string; name: string };
   editing: boolean;
   draft: string;
@@ -20,12 +22,14 @@ type Properties = {
 
 // One row of the file navigator — kept out of `FileNavigatorTab.tsx` to stay under the file-size limit.
 export function FileNavigatorRowView({
-  row, selected, rowClass, editing, draft, onDraftChange, onCommit, onCancel, onClick, onDoubleClick, onMouseDown,
+  row, id, selected, cursor, rowClass, editing, draft, onDraftChange, onCommit, onCancel, onClick, onDoubleClick, onMouseDown,
 }: Properties) {
   return (
     <div
+      id={id}
       role="treeitem"
-      aria-selected={row.path === selected}
+      aria-selected={selected}
+      data-cursor={cursor || undefined}
       aria-expanded={row.dir ? !!row.expanded : undefined}
       className={rowClass.row}
       data-path={row.path}

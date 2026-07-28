@@ -29,6 +29,9 @@ export type AggregatedScheduleView = ScheduleView & { tab: string; command: stri
 // A pending route chooser: the unprefixed command plus the option labels to pick from.
 export type RouteChooserView = { cmd: string; choices: string[] };
 export type FileOpenerChoice = { label: string; command: 'edit' | 'open external' };
+export type BulkConflictPolicy = 'overwrite-all' | 'skip-conflicts';
+export type BatchResult = { total: number; failedPaths: string[] };
+export type BulkMoveResult = BatchResult | { conflictPaths: string[] };
 // The open "New harness" launch dialog's data: the ordered harness names and each harness's known
 // model catalog (empty for a harness with no catalog). Null in the snapshot when the dialog is closed.
 export type HarnessLaunchView = { names: string[]; models: Record<string, string[]> };
@@ -223,9 +226,19 @@ export type RpcCall =
   // `fromRelPath` is the dragged item's tree-relative path; `toRelPath` is the destination
   // directory's tree-relative path.
   | { method: 'moveFileNavigatorItem'; params: { index: number; fromRelPath: string; toRelPath: string } }
+  | {
+      method: 'moveFileNavigatorItems';
+      params: {
+        index: number;
+        sourcePaths: string[];
+        destinationPath: string;
+        policy?: BulkConflictPolicy;
+      };
+    }
   // Delete a file or directory (recursively) from a file navigator tab, after the client has already
   // confirmed with the user. `relPath` is the tree-relative path of the row being removed.
   | { method: 'deleteFileNavigatorItem'; params: { index: number; relPath: string } }
+  | { method: 'deleteFileNavigatorItems'; params: { index: number; paths: string[] } }
   // Rename a file or directory in place within a file navigator tab (in-directory only — the client has
   // already confirmed an overwrite with the user, if the new name collides with a sibling).
   // `relPath` is the tree-relative path of the row being renamed; `newName` is the bare new name
@@ -246,8 +259,8 @@ export type RpcCall =
   // Undo/redo the most recent move in a file navigator tab's per-tab undo/redo stack. `overwrite`
   // retries a pending entry after the client has confirmed an overwrite of a conflicting
   // destination; the reply's `result` carries `{ conflict }` when one is found instead.
-  | { method: 'undoFileNavigatorItem'; params: { index: number; overwrite?: boolean } }
-  | { method: 'redoFileNavigatorItem'; params: { index: number; overwrite?: boolean } }
+  | { method: 'undoFileNavigatorItem'; params: { index: number; overwrite?: boolean; skipConflicts?: boolean } }
+  | { method: 'redoFileNavigatorItem'; params: { index: number; overwrite?: boolean; skipConflicts?: boolean } }
   // Dock a dockable tab (file navigator or notifications) into a sidebar (`'left'` | `'right'`), or
   // undock it back to the center tab strip (`null`). Explicit set, not "cycle" — the cycle order
   // lives client-side. The handler is generic, so both dockable tab kinds share this one RPC.

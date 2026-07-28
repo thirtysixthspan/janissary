@@ -85,4 +85,9 @@ describe('DeleteFileDialog', () => {
     expect(onCancel).not.toHaveBeenCalled();
     expect(behind).not.toHaveBeenCalled();
   });
+
+  it('renders plural copy for a batch', () => {
+    render(<DeleteFileDialog count={3} onConfirm={vi.fn()} onCancel={vi.fn()} />);
+    expect(screen.getByText('Delete 3 items?')).toBeInTheDocument();
+  });
 });

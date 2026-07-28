@@ -1,40 +1,85 @@
+import { lstatSync, renameSync } from 'node:fs';
 import path from 'node:path';
-import { renameSync } from 'node:fs';
-import { hasNameConflict } from './index.js';
+import { moveReplacingDestination } from './filesystem.js';
+import { parentPath } from './index.js';
+import type { BatchResult, BulkConflictPolicy } from '../protocol.js';
 
-// One past move: the item's tree-relative path before (`from`) and after (`to`) the move. Enough
-// to reverse it (move `to` back to `from`'s directory) or re-apply it (move `from` to `to`'s
-// directory) without recomputing anything from disk.
 export type MoveEntry = { from: string; to: string };
+export type MoveGroup = { entries: MoveEntry[] };
+export type MoveConflict = { fromRelPath: string; toRelPath: string };
+export type UndoRedoResult = Partial<BatchResult> & {
+  conflict?: MoveConflict;
+  conflicts?: MoveConflict[];
+};
 
-// Reported by `undo`/`redo` when the destination is already occupied: neither stack is mutated, so
-// a caller-driven overwrite (passing `overwrite: true`) can retry the same pending entry.
-export type UndoRedoResult = { conflict?: { fromRelPath: string; toRelPath: string } };
+function exists(absolute: string): boolean {
+  try {
+    lstatSync(absolute);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
-// Shared reverse/re-apply logic for `undo`/`redo`: moves `sourceRel` (relative to `root`) into
-// `destDir`, unless the destination already has a same-named entry and the caller hasn't confirmed
-// an overwrite, in which case it reports the conflict and leaves both stacks untouched. On success
-// it pops `fromStack`, pushes `entry` onto `toStack`, and invokes `rebuild`.
+function replayPaths(root: string, entry: MoveEntry, direction: 'undo' | 'redo') {
+  const sourceRel = entry[direction === 'undo' ? 'to' : 'from'];
+  const destinationPath = parentPath(entry[direction === 'undo' ? 'from' : 'to']);
+  const source = path.join(root, sourceRel);
+  const destination = path.join(root, destinationPath, path.basename(source));
+  return { sourceRel, destinationPath, source, destination };
+}
+
+function tryMove(source: string, destination: string, overwrite: boolean): boolean {
+  if (overwrite) return moveReplacingDestination(source, destination);
+  try {
+    renameSync(source, destination);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function applyStackMove(
   root: string,
-  sourceRel: string,
-  destDir: string,
-  entry: MoveEntry,
-  fromStack: MoveEntry[],
-  toStack: MoveEntry[],
-  overwrite: boolean,
+  group: MoveGroup,
+  direction: 'undo' | 'redo',
+  fromStack: MoveGroup[],
+  toStack: MoveGroup[],
+  policy: BulkConflictPolicy | undefined,
   rebuild: () => void,
 ): UndoRedoResult {
-  const sourceAbs = path.join(root, sourceRel);
-  const name = path.basename(sourceAbs);
-  const destAbsDir = path.join(root, destDir);
-  const destAbs = path.join(destAbsDir, name);
-  if (!overwrite && sourceAbs !== destAbs && hasNameConflict(destAbsDir, name)) {
-    return { conflict: { fromRelPath: sourceRel, toRelPath: destDir } };
+  const ordered = direction === 'undo' ? group.entries.toReversed() : group.entries;
+  const conflicts = ordered
+    .map((entry) => replayPaths(root, entry, direction))
+    .filter(({ source, destination }) => source !== destination && exists(destination))
+    .map(({ sourceRel, destinationPath }) => ({ fromRelPath: sourceRel, toRelPath: destinationPath }));
+  if (conflicts.length > 0 && policy === undefined) {
+    return group.entries.length === 1
+      ? { total: group.entries.length, failedPaths: [], conflict: conflicts[0] }
+      : { total: group.entries.length, failedPaths: [], conflicts };
   }
-  try { renameSync(sourceAbs, destAbs); } catch { return {}; }
-  fromStack.pop();
-  toStack.push(entry);
-  rebuild();
-  return {};
+
+  const conflictSources = new Set(conflicts.map((conflict) => conflict.fromRelPath));
+  const successful = new Set<MoveEntry>();
+  const failed = new Set<MoveEntry>();
+  for (const entry of ordered) {
+    const replay = replayPaths(root, entry, direction);
+    if (policy === 'skip-conflicts' && conflictSources.has(replay.sourceRel)) continue;
+    if (tryMove(replay.source, replay.destination, policy === 'overwrite-all')) successful.add(entry);
+    else failed.add(entry);
+  }
+
+  if (successful.size > 0) {
+    fromStack.pop();
+    const remaining = group.entries.filter((entry) => !successful.has(entry));
+    if (remaining.length > 0) fromStack.push({ entries: remaining });
+    toStack.push({ entries: group.entries.filter((entry) => successful.has(entry)) });
+    rebuild();
+  }
+  return {
+    total: group.entries.length,
+    failedPaths: group.entries
+      .filter((entry) => failed.has(entry))
+      .map((entry) => replayPaths(root, entry, direction).sourceRel),
+  };
 }

@@ -1,11 +1,14 @@
-import { renameSync, rmSync, type FSWatcher } from 'node:fs';
+import type { FSWatcher } from 'node:fs';
 import path from 'node:path';
 import { messageBus } from '../bus.js';
-import { isSameOrDescendantPath, parentPath } from './index.js';
+import { isSameOrDescendantPath } from './index.js';
 import { refreshGit } from './git-refresh.js';
 import { openOrRetarget, type OpenPort } from './open.js';
 import { openFilesCommand } from './open-command.js';
-import { applyStackMove, type MoveEntry, type UndoRedoResult } from './moves.js';
+import type { MoveGroup, UndoRedoResult } from './moves.js';
+import { deleteItem, moveItem, renameItem } from './filesystem.js';
+import { replayHistory } from './manager-history.js';
+import { deleteMany, moveMany } from './manager-batch.js';
 import { toggleDir, collapseAllDirs, rerootTree, revealPath, type NavPort } from './navigation.js';
 import { watchDir, unwatchDir } from './watch.js';
 import { pollForDir, stopPolling } from './poll.js';
@@ -16,7 +19,7 @@ import { makeNavigationPort, makeOpenPort } from './manager-ports.js';
 import type { Managers } from '../managers.js';
 import type { GitFileStatus } from '../git-status.js';
 import { openerForExtension } from '../openers/index.js';
-import type { FileOpenerChoice } from '../protocol.js';
+import type { BatchResult, BulkConflictPolicy, BulkMoveResult, FileOpenerChoice } from '../protocol.js';
 
 const DEBOUNCE_MS = 100;
 
@@ -31,8 +34,8 @@ export type FilesTabState = {
   // Set while the tab is waiting for its root to be created (see `pollForCreation`); cleared once
   // the directory appears.
   pollTimer?: ReturnType<typeof setInterval>;
-  undoStack: MoveEntry[];
-  redoStack: MoveEntry[];
+  undoStack: MoveGroup[];
+  redoStack: MoveGroup[];
   // Last-computed map of git-changed, root-relative paths to their status (see `git-status.ts`).
   // Applied synchronously to every rebuild so interactive redraws are instant; recomputed
   // asynchronously by `refreshGit`. `gitRefreshing`/`gitRefreshStale` coalesce overlapping refresh
@@ -126,35 +129,46 @@ export class FileNavigatorManager {
     const state = this.tabs.get(label);
     if (!state) return;
     if (isSameOrDescendantPath(toRelPath, fromRelPath)) return;
-    const fromAbs = path.join(state.root, fromRelPath);
-    const name = path.basename(fromAbs);
-    const toAbs = path.join(state.root, toRelPath, name);
-    try { renameSync(fromAbs, toAbs); } catch { return; }
-    state.undoStack.push({ from: fromRelPath, to: toRelPath ? `${toRelPath}/${name}` : name });
+    const entry = moveItem(state.root, fromRelPath, toRelPath);
+    if (!entry) return;
+    state.undoStack.push({ entries: [entry] });
     state.redoStack = [];
     this.rebuild(label);
+  }
+
+  moveMany(
+    label: string,
+    sourcePaths: string[],
+    destinationPath: string,
+    policy?: BulkConflictPolicy,
+  ): BulkMoveResult {
+    const state = this.tabs.get(label);
+    if (!state) return { total: 0, failedPaths: [] };
+    return moveMany(state, sourcePaths, destinationPath, policy, () => this.rebuild(label));
+  }
+
+  deleteMany(label: string, sourcePaths: string[]): BatchResult {
+    const state = this.tabs.get(label);
+    if (!state) return { total: 0, failedPaths: [] };
+    return deleteMany(state, sourcePaths, () => this.rebuild(label));
   }
 
   // Undo the most recent move: moves the item back from `to` to `from`'s original directory. A
   // conflict at the destination is reported back without mutating either stack, so a caller-driven
   // overwrite (passing `overwrite: true`) can retry the same pending entry. An empty undo stack is
   // a silent no-op.
-  undo(label: string, overwrite = false): UndoRedoResult {
+  undo(label: string, overwrite = false, skipConflicts = false): UndoRedoResult {
     const state = this.tabs.get(label);
     if (!state) return {};
-    const entry = state.undoStack.at(-1);
-    if (!entry) return {};
-    return applyStackMove(state.root, entry.to, parentPath(entry.from), entry, state.undoStack, state.redoStack, overwrite, () => this.rebuild(label));
+    return replayHistory(state, 'undo', overwrite, skipConflicts, () => this.rebuild(label));
   }
 
   // Redo the most recently undone move: re-applies it from `from` to `to`'s original directory.
   // Same conflict-reporting and no-op behavior as `undo`.
-  redo(label: string, overwrite = false): UndoRedoResult {
+  redo(label: string, overwrite = false, skipConflicts = false): UndoRedoResult {
     const state = this.tabs.get(label);
     if (!state) return {};
-    const entry = state.redoStack.at(-1);
-    if (!entry) return {};
-    return applyStackMove(state.root, entry.from, parentPath(entry.to), entry, state.redoStack, state.undoStack, overwrite, () => this.rebuild(label));
+    return replayHistory(state, 'redo', overwrite, skipConflicts, () => this.rebuild(label));
   }
 
   // Rename a file or directory in place (same directory only — `newName` may not contain a path
@@ -165,10 +179,9 @@ export class FileNavigatorManager {
   rename(label: string, relPath: string, newName: string): void {
     const state = this.tabs.get(label);
     if (!state) return;
-    if (newName.includes('/') || newName.includes(path.sep)) return;
-    const oldAbs = path.join(state.root, relPath);
-    const newAbs = path.join(path.dirname(oldAbs), newName);
-    try { renameSync(oldAbs, newAbs); } catch { return; }
+    const renamed = renameItem(state.root, relPath, newName);
+    if (!renamed) return;
+    const [oldAbs, newAbs] = renamed;
     this.managers.tab.retargetEditorTab(oldAbs, newAbs);
     this.rebuild(label);
   }
@@ -179,8 +192,7 @@ export class FileNavigatorManager {
   delete(label: string, relPath: string): void {
     const state = this.tabs.get(label);
     if (!state) return;
-    const abs = path.join(state.root, relPath);
-    try { rmSync(abs, { recursive: true }); } catch { return; }
+    if (!deleteItem(state.root, relPath)) return;
     this.rebuild(label);
   }
 

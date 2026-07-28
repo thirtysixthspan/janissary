@@ -11,7 +11,7 @@ function isSameOrDescendantPath(candidate: string, base: string): boolean {
 
 // The containing directory of `path` — the empty string for a root-level entry, matching the
 // root-as-empty-string convention already used for the conflict-path check below.
-function parentPath(path: string): string {
+export function parentPath(path: string): string {
   const idx = path.lastIndexOf('/');
   return idx === -1 ? '' : path.slice(0, idx);
 }
@@ -28,15 +28,23 @@ function parentPath(path: string): string {
 // and only among that child's rows that are already loaded (a collapsed directory's children
 // aren't in `rows` at all, so a conflict inside one can't be detected client-side; the server
 // re-verifies against disk before acting regardless).
-export function resolveDropTarget(rows: FileNavigatorRow[], draggedPath: string, hoveredPath: string | null): DropTarget {
-  if (hoveredPath === null || ['..', draggedPath].includes(hoveredPath)) return null;
+export function resolveDropTarget(
+  rows: FileNavigatorRow[],
+  draggedPaths: string | string[],
+  hoveredPath: string | null,
+): DropTarget {
+  if (hoveredPath === null || hoveredPath === '..') return null;
+  const sources = typeof draggedPaths === 'string' ? [draggedPaths] : draggedPaths;
   const hovered = rows.find((r) => r.path === hoveredPath);
   if (!hovered) return null;
   const targetPath = hovered.dir ? hovered.path : parentPath(hovered.path);
-  if (isSameOrDescendantPath(targetPath, draggedPath)) return null;
-  if (targetPath === parentPath(draggedPath)) return null;
-  const name = draggedPath.slice(draggedPath.lastIndexOf('/') + 1);
-  const childPath = targetPath ? `${targetPath}/${name}` : name;
-  const conflict = rows.some((r) => r.path === childPath);
+  if (sources.some((source) => isSameOrDescendantPath(targetPath, source))) return null;
+  const sourcePaths = sources.filter((source) => targetPath !== parentPath(source));
+  if (sourcePaths.length === 0) return null;
+  const conflict = sourcePaths.some((source) => {
+    const name = source.slice(source.lastIndexOf('/') + 1);
+    const childPath = targetPath ? `${targetPath}/${name}` : name;
+    return rows.some((row) => row.path === childPath);
+  });
   return { path: targetPath, conflict };
 }

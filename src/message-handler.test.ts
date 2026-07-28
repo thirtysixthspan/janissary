@@ -4,12 +4,22 @@ import type { Controller } from './controller.js';
 import type { ClientMessage, ServerEvent, RpcCall } from './protocol.js';
 import { openTranscriptFor, openAcpTranscript } from './controller/transcript.js';
 import { projectFilesFor } from './project-files.js';
-import { fileNavigatorSearch, revealFileNavigatorItem } from './controller/file-navigator.js';
+import {
+  deleteFileNavigatorItems,
+  fileNavigatorSearch,
+  moveFileNavigatorItems,
+  revealFileNavigatorItem,
+} from './controller/file-navigator.js';
 import { setClientLayout } from './client-layout.js';
 
 vi.mock('./controller/transcript.js', () => ({ openTranscriptFor: vi.fn(), openAcpTranscript: vi.fn() }));
 vi.mock('./project-files.js', () => ({ projectFilesFor: vi.fn() }));
-vi.mock('./controller/file-navigator.js', () => ({ fileNavigatorSearch: vi.fn(), revealFileNavigatorItem: vi.fn() }));
+vi.mock('./controller/file-navigator.js', () => ({
+  deleteFileNavigatorItems: vi.fn(),
+  fileNavigatorSearch: vi.fn(),
+  moveFileNavigatorItems: vi.fn(),
+  revealFileNavigatorItem: vi.fn(),
+}));
 vi.mock('./client-layout.js', () => ({ setClientLayout: vi.fn() }));
 
 const makeController = () =>
@@ -229,6 +239,28 @@ describe('handle', () => {
     expect(controller.deleteFileNavigatorItem).toHaveBeenCalledWith(0, 'a');
   });
 
+  it('routes moveFileNavigatorItems and replies with its result', () => {
+    const controller = makeController();
+    vi.mocked(moveFileNavigatorItems).mockReturnValue({ total: 2, failedPaths: ['b'] });
+    const replies = dispatchCall(controller, 44, {
+      method: 'moveFileNavigatorItems',
+      params: { index: 0, sourcePaths: ['a', 'b'], destinationPath: 'dest' },
+    });
+    expect(moveFileNavigatorItems).toHaveBeenCalledWith(controller.managers, 0, ['a', 'b'], 'dest', undefined);
+    expect(replies).toEqual([{ t: 'rpc-reply', id: 44, result: { total: 2, failedPaths: ['b'] } }]);
+  });
+
+  it('routes deleteFileNavigatorItems and replies with its result', () => {
+    const controller = makeController();
+    vi.mocked(deleteFileNavigatorItems).mockReturnValue({ total: 2, failedPaths: [] });
+    const replies = dispatchCall(controller, 45, {
+      method: 'deleteFileNavigatorItems',
+      params: { index: 0, paths: ['a', 'b'] },
+    });
+    expect(deleteFileNavigatorItems).toHaveBeenCalledWith(controller.managers, 0, ['a', 'b']);
+    expect(replies).toEqual([{ t: 'rpc-reply', id: 45, result: { total: 2, failedPaths: [] } }]);
+  });
+
   it('routes setDock', () => {
     const controller = makeController();
     dispatchCall(controller, 18, { method: 'setDock', params: { index: 0, dock: 'left' } });
@@ -263,7 +295,7 @@ describe('handle', () => {
     const controller = makeController();
     (controller.undoFileNavigatorItem as ReturnType<typeof vi.fn>).mockReturnValue({ conflict: { fromRelPath: 'a', toRelPath: 'b' } });
     const replies = dispatchCall(controller, 25, { method: 'undoFileNavigatorItem', params: { index: 0, overwrite: true } });
-    expect(controller.undoFileNavigatorItem).toHaveBeenCalledWith(0, true);
+    expect(controller.undoFileNavigatorItem).toHaveBeenCalledWith(0, true, undefined);
     expect(replies).toEqual([{ t: 'rpc-reply', id: 25, result: { conflict: { fromRelPath: 'a', toRelPath: 'b' } } }]);
   });
 
@@ -271,7 +303,7 @@ describe('handle', () => {
     const controller = makeController();
     (controller.redoFileNavigatorItem as ReturnType<typeof vi.fn>).mockReturnValue({});
     const replies = dispatchCall(controller, 26, { method: 'redoFileNavigatorItem', params: { index: 0 } });
-    expect(controller.redoFileNavigatorItem).toHaveBeenCalledWith(0, undefined);
+    expect(controller.redoFileNavigatorItem).toHaveBeenCalledWith(0, undefined, undefined);
     expect(replies).toEqual([{ t: 'rpc-reply', id: 26, result: {} }]);
   });
 

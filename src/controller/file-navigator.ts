@@ -2,7 +2,7 @@
 // delegate to `FileNavigatorManager`. Extracted from `controller.ts` to keep it under the file-size
 // limit — see `ai/guidelines/code-guidelines.md`.
 import type { Managers } from '../managers.js';
-import type { FileOpenerChoice } from '../protocol.js';
+import type { BatchResult, BulkConflictPolicy, BulkMoveResult, FileOpenerChoice } from '../protocol.js';
 
 export function fileNavigatorToggle(managers: Managers, index: number, path: string): void {
   const label = managers.tab.tabs[index]?.label;
@@ -29,19 +29,47 @@ export function deleteFileNavigatorItem(managers: Managers, index: number, relPa
   if (label) managers.fileNavigator.delete(label, relPath);
 }
 
+export function moveFileNavigatorItems(
+  managers: Managers,
+  index: number,
+  sourcePaths: string[],
+  destinationPath: string,
+  policy?: BulkConflictPolicy,
+): BulkMoveResult {
+  const label = managers.tab.tabs[index]?.label;
+  return label
+    ? managers.fileNavigator.moveMany(label, sourcePaths, destinationPath, policy)
+    : { total: 0, failedPaths: [] };
+}
+
+export function deleteFileNavigatorItems(managers: Managers, index: number, paths: string[]): BatchResult {
+  const label = managers.tab.tabs[index]?.label;
+  return label ? managers.fileNavigator.deleteMany(label, paths) : { total: 0, failedPaths: [] };
+}
+
 export function renameFileNavigatorItem(managers: Managers, index: number, relPath: string, newName: string): void {
   const label = managers.tab.tabs[index]?.label;
   if (label) managers.fileNavigator.rename(label, relPath, newName);
 }
 
-export function undoFileNavigatorItem(managers: Managers, index: number, overwrite?: boolean): { conflict?: { fromRelPath: string; toRelPath: string } } {
+export function undoFileNavigatorItem(
+  managers: Managers,
+  index: number,
+  overwrite?: boolean,
+  skipConflicts?: boolean,
+) {
   const label = managers.tab.tabs[index]?.label;
-  return label ? managers.fileNavigator.undo(label, overwrite) : {};
+  return label ? managers.fileNavigator.undo(label, overwrite, skipConflicts) : {};
 }
 
-export function redoFileNavigatorItem(managers: Managers, index: number, overwrite?: boolean): { conflict?: { fromRelPath: string; toRelPath: string } } {
+export function redoFileNavigatorItem(
+  managers: Managers,
+  index: number,
+  overwrite?: boolean,
+  skipConflicts?: boolean,
+) {
   const label = managers.tab.tabs[index]?.label;
-  return label ? managers.fileNavigator.redo(label, overwrite) : {};
+  return label ? managers.fileNavigator.redo(label, overwrite, skipConflicts) : {};
 }
 
 export function openFileNavigatorFor(managers: Managers, label: string): void {
