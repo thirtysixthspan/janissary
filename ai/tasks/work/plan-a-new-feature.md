@@ -38,7 +38,7 @@ Execute `ai/tasks/workspace/prepare-workspace.md` in full before doing anything 
 
 1. Read `./product/backlog/features.md` in full. Each entry under the `## ready` heading, up to the next `## ` heading, is a `### <title>` followed by its description body.
 2. Pick the feature to plan:
-   - **If a specific feature is named in the task invocation** (e.g. `execute ai/tasks/work/plan-new-feature.md "<feature title>"`), plan that one. Find its `### ` entry under `## ready` — the argument may be quoted text, a paraphrase, or a position such as "the second one". If no entry matches, report that no matching feature was found and stop.
+   - **If a specific feature is named in the task invocation** (e.g. `execute ai/tasks/work/plan-a-new-feature.md "<feature title>"`), plan that one. Find its `### ` entry under `## ready` — the argument may be quoted text, a paraphrase, or a position such as "the second one". If no entry matches, report that no matching feature was found and stop.
    - **Otherwise**, take the first `### ` entry listed under `## ready` (top of the section).
 3. If `## ready` is empty (or the named feature isn't found there), report "No ready features in `./product/backlog/features.md`" and stop.
 4. Copy the feature's title verbatim — do not paraphrase or shorten it. Say in one sentence which feature you're planning before starting Step 2.
