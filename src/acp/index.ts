@@ -22,7 +22,7 @@ import { decidePermission } from './tools.js';
  * non-monitor caller and every tool-less persona) denies every request, as before.
  *
  * `workspaceDir`/`offline` confine the subprocess to that workspace via a Seatbelt sandbox (see
- * sandbox.ts); omitted (monitor sessions never set them), the command runs exactly as before.
+ * src/sandbox/index.ts); omitted (monitor sessions never set them), the command runs exactly as before.
  */
 export function connectAcp(options: AcpOptions): AcpSession {
   const baseEnv = options.env ? { ...process.env, ...options.env } : process.env;

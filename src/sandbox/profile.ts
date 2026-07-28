@@ -1,7 +1,7 @@
 // Static Seatbelt (`sandbox-exec`) profile text, built from the table-driven path/env lists in
 // sandbox-paths.ts. Dynamic paths (the workspace, its temp dir, `$HOME`, the parent repo's git
 // objects dir) are never string-interpolated into the profile — they're substituted at spawn time
-// via `-D KEY=value` params (see `sandbox.ts`), so this module has no injection surface and stays
+// via `-D KEY=value` params (see `index.ts`), so this module has no injection surface and stays
 // a plain constant.
 //
 // Rule ordering follows Seatbelt's "last matching rule wins" semantic: default deny → broad
@@ -117,7 +117,7 @@ ${keychainWriteClause})
 ; fail that self-read and the harness would appear logged out even with a valid Keychain item.
 ; SERVER_NODE_DIR_L/R (the janissary server's own process.execPath directory) is carved in for the
 ; same self-read reasoning, and so a script running inside the sandbox can invoke the known-good
-; node at JANISSARY_NODE (see sandbox.ts) instead of relying on PATH resolution inside the
+; node at JANISSARY_NODE (see index.ts) instead of relying on PATH resolution inside the
 ; sandboxed process, which doesn't always find a working node first.
 (allow file-read-data file-read-xattr
   (subpath (param "WORKSPACE"))

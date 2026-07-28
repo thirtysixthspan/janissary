@@ -2,8 +2,6 @@
 
 ## ready
 
-* Fix the stale filename references in source comments across `src/`: seven comments in `src/sandbox/paths.ts`, `src/sandbox/index.ts`, `src/controller/shell.unsandboxed.test.ts`, and `src/workspace-repo-root.unsandboxed.test.ts` point readers at `sandbox-profile.ts`, which does not exist — the code lives in `src/sandbox/profile.ts` and `src/sandbox/paths.ts`, and `src/sandbox/index.ts:128` sends readers to `sandbox-profile.ts` for `dualParams`, which is defined in `paths.ts`. Separately, `src/main.ts:190` and `src/harness/index.ts:2` cite `src/server/main.ts` and `src/server/controller.ts` from the pre-flattening layout, and `src/browser/command.ts:4` attributes Playwright actions to `src/cli.tsx`, a file that no longer exists. These are the same class of misdirection architecture principle 10 records as already having burned the project once. Severity: **low**.
-
 * Consolidate the three overlapping modal-dialog keyboard mechanisms in `web/src/`: `useDialogKeyboard.ts` focuses the dialog and registers capture-phase keydown/click-outside listeners, `useConfirmDialogKeys.ts` reimplements that identical focus-plus-capture-listener wiring inline rather than composing it (adding only the y/n/arrow selection on top), and `dialog-key-handler.ts` is a third entry point offering a key-to-handler map. New dialogs currently have to guess which of the three to reach for. Rebuild `useConfirmDialogKeys` on top of `useDialogKeyboard` and fold `dialogKeyHandler` into the same surface. Severity: **medium**.
 
 

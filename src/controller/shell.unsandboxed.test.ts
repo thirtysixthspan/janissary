@@ -8,7 +8,7 @@ import { initAgentStateDirectory, saveAgentState } from '../agent/state.js';
 // These tests spawn a real persistent shell (ShellManager.getShell → child_process.spawn) and
 // then tear it down via Controller.shutdown → ShellManager.closeAll, which calls the real
 // ChildProcess#kill(). Seatbelt denies the `signal` operation by default (there's no `(allow
-// signal ...)` rule in sandbox-profile.ts, and default is deny), so kill() throws EPERM whenever
+// signal ...)` rule in src/sandbox/profile.ts, and default is deny), so kill() throws EPERM whenever
 // the test runner itself is executing inside a sandboxed workspace. Kept out of `npm test` /
 // `npm run check` for that reason — run via `npm run test:unsandboxed` on the host.
 vi.mock('./openers/os-open.js', () => ({ didOsOpen: () => true }));

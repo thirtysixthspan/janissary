@@ -45,7 +45,7 @@ export function trustWorkspace(workspaceDir: string): void {
 
 // The workspace's private scratch dir, a sibling of the clone (`<name>.tmp`) — exported as
 // `TMPDIR` for a sandboxed workspace so scratch writes don't need to share global `/tmp` across
-// agents (see `sandbox.ts`).
+// agents (see `src/sandbox/index.ts`).
 export function workspaceTempPath(name: string): string {
   return `${workspacePath(name)}.tmp`;
 }
@@ -114,11 +114,11 @@ export function provisionWorkspace(name: string, remoteUrl: string): ProvisionHa
 async function finishProvisioning(name: string, target: string, remoteUrl: string): Promise<void> {
   // Rewrite the clone's own origin to HTTPS: later git operations from *inside* the workspace run
   // in the Seatbelt sandbox, which denies `~/.ssh` and scrubs `SSH_AUTH_SOCK`, so SSH can't
-  // authenticate there — only HTTPS + the injected `GH_TOKEN` can (see sandbox.ts).
+  // authenticate there — only HTTPS + the injected `GH_TOKEN` can (see src/sandbox/index.ts).
   await execFileAsync('git', ['remote', 'set-url', 'origin', toHttpsUrl(remoteUrl)], { cwd: target });
   // Local-only credential helper (never touches global git config) — `gh auth git-credential`
   // checks `GH_TOKEN` in its environment before falling back to its keychain-stored OAuth token,
-  // so once the sandbox injects `GH_TOKEN` (see sandbox.ts), `git push` authenticates via it.
+  // so once the sandbox injects `GH_TOKEN` (see src/sandbox/index.ts), `git push` authenticates via it.
   await execFileAsync('git', ['config', '--local', 'credential.helper', '!gh auth git-credential'], { cwd: target });
   trustWorkspace(target);
   mkdirSync(workspaceTempPath(name), { recursive: true });

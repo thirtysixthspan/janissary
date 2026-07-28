@@ -1,4 +1,4 @@
-// Table-driven path/env lists the Seatbelt profile in sandbox-profile.ts is built from.
+// Table-driven path/env lists the Seatbelt profile in profile.ts is built from.
 // Extending any restriction is a one-line table change here.
 
 // Narrow write carve-outs: harness auth/state directories and package-manager cache subpaths —
@@ -50,7 +50,7 @@ export const HOME_WRITE_CARVEOUTS = [
 // the comment on `SECRET_DENY_PATHS` — read access is needed for any Keychain lookup to work at all
 // on this OS, including harness login), `.nvm` (nvm's own `nvm.sh`/`bash_completion` loader
 // scripts plus every installed Node version's binaries and libs under `versions/` — broader than
-// SERVER_NODE_DIR_L/R in sandbox.ts, which only carves in the one version the janissary server
+// SERVER_NODE_DIR_L/R in index.ts, which only carves in the one version the janissary server
 // itself runs on; a sandboxed process that sources `nvm.sh` or shells out to a bare `node`/`npm`/
 // `npx`, or to a harness installed under a different nvm-managed version, needs to read the whole
 // tree. Execute access for these binaries doesn't need a separate carve-in — `process-exec` is
@@ -73,7 +73,7 @@ export const HOME_READ_CARVEINS = [
 // directory node itself to enumerate settings files before touching `settings.json` — a plain
 // `subpath` carve-in of the file alone only covers `open()`ing that one path, not the parent
 // directory's `file-read-data` (Seatbelt's listing operation, distinct from the `file-read-metadata`
-// stat access already allowed HOME-wide — see the deny-then-carve-in comment in sandbox-profile.ts).
+// stat access already allowed HOME-wide — see the deny-then-carve-in comment in profile.ts).
 // These use `literal`, not `subpath`: the directory node itself becomes listable, but files inside
 // it stay gated by the specific carve-ins in HOME_READ_CARVEINS above (or stay denied).
 export const HOME_READ_LISTING_DIRS = ['.claude'];
@@ -122,7 +122,7 @@ export const HOME_WRITE_PREFIX_CARVEOUTS = ['.claude/settings.json', 'Library/Ke
 // read surface than the other entries here, but the alternative breaks harness login outright.
 //
 // `.config/gh/hosts.yml`'s deny below now reads as ENOENT too (see the errno qualifier on the
-// final deny rule in buildProfile), which is exactly what `gh` needs — but `sandbox.ts` still
+// final deny rule in buildProfile), which is exactly what `gh` needs — but `index.ts` still
 // separately points `GH_CONFIG_DIR` at an empty, workspace-writable directory whenever a scoped
 // token is injected, so `gh` finds a real, uncomplicated absent `hosts.yml` there rather than
 // depending on this deny rule's errno behavior. Kept as defense in depth: `gh`'s Go config loader
@@ -159,7 +159,7 @@ function paramName(prefix: string, index: number): string {
   return `${prefix}${index}`;
 }
 
-// Two `-D` param names per table entry, in the same order — `sandbox.ts` pairs these with the
+// Two `-D` param names per table entry, in the same order — `index.ts` pairs these with the
 // literal (`~/…`, unresolved beyond `$HOME` itself) and fully realpath-resolved forms of the same
 // path. Both are needed: many dotfiles (`.gitconfig`, `.npmrc`, …) are themselves symlinks (e.g.
 // managed by a dotfile manager), and Seatbelt evaluates an `lstat`/`readlink` of the symlink node

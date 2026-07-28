@@ -1,5 +1,5 @@
 // The embeddable AI coding harnesses, mapped to the binary that launches each. In the web app a
-// harness runs in a PTY rendered as an inline terminal card (see src/server/controller.ts).
+// harness runs in a PTY rendered as an inline terminal card (see src/controller.ts).
 export const HARNESS_COMMANDS: Record<string, string> = {
   claude: 'claude',
   opencode: 'opencode',

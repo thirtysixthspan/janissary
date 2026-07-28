@@ -1,7 +1,7 @@
 // Parser for the `browser` command plus the two helpers the ACP tool loop needs
 // (`extractBrowserCommand` / `BROWSER_PRIMER`), mirroring `parseConnectionCommand`
-// (src/connections.ts) and the `db` equivalents in src/db.ts. Pure — no I/O. The host
-// (src/cli.tsx) performs the actual Playwright actions against the tab's browser.
+// (src/connection/parsing.ts) and `parseDatabaseCommand` in src/database/parsing.ts. Pure — no I/O.
+// The host (src/browser/index.ts) performs the actual Playwright actions against the tab's browser.
 
 import type { BrowserParsed } from '../types.js';
 

@@ -23,7 +23,7 @@ let counter = 0;
  * Spawn `cmd` in a pseudo-terminal. `program` is the display label for the card. Unlike the old
  * output is delivered to a callback (the server forwards it to the client's xterm)
  * rather than written to the real stdout, so many can run concurrently across tabs.
- * `sandbox`, when given a `workspaceDir`, confines the process to that workspace (see sandbox.ts);
+ * `sandbox`, when given a `workspaceDir`, confines the process to that workspace (see src/sandbox/index.ts);
  * omitted or workspaceDir-less, the command runs exactly as before.
  */
 export function spawnPty(
