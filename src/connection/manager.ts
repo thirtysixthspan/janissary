@@ -1,5 +1,5 @@
 import type { ConnectionView } from '../protocol.js';
-import { parseConnectionCommand } from '../connections.js';
+import { parseConnectionCommand } from './parsing.js';
 import { SHELL_NAME } from '../shell-manager.js';
 import { closeConnection } from './close.js';
 import type { Managers } from '../managers.js';

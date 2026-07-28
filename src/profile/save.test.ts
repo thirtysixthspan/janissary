@@ -3,7 +3,8 @@ import { mkdtempSync, mkdirSync, writeFileSync, existsSync, statSync, rmSync } f
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { saveProfile, formatSaveSummary, type SaveSummary } from './save.js';
-import { initProfileDir, profilePath, loadProfile } from '../profiles.js';
+import { initProfileDir, profilePath } from '../profiles.js';
+import { loadProfile } from './file.js';
 import { setClientLayout } from '../client-layout.js';
 import { setWindowBoundsReader } from '../window-resizer.js';
 import {

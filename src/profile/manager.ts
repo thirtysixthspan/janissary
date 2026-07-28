@@ -1,6 +1,8 @@
 import { makeTab, distinctColor } from '../tab/index.js';
-import { parseProfileCommand, loadProfile, listProfiles, profileExists } from '../profiles.js';
-import { resolveAgentName } from '../commands.js';
+import { listProfiles, profileExists } from '../profiles.js';
+import { parseProfileCommand } from './command.js';
+import { loadProfile } from './file.js';
+import { resolveAgentName } from '../agent/commands.js';
 import { openProfileEntries } from './agent-opener.js';
 import { reportValidation } from './validate.js';
 import { saveProfile, formatSaveSummary } from './save.js';

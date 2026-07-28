@@ -1,7 +1,6 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-export { resolveAgentName, parseAgentCommand } from './agent/commands.js';
 
 export const availableCommands = [
   'help',
@@ -58,5 +57,3 @@ export const getOutput = (command: string): string | null => {
   if (trimmed === '') return null;
   return `Unknown command: "${trimmed}". Type "help" for available commands.`;
 };
-
-export { agentNames } from './agent/names.js';
