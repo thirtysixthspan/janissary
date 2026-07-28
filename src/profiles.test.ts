@@ -3,9 +3,10 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import {
-  initProfileDir, parseProfileCommand, listProfiles, listProfileRows, loadProfile, profileExists, profilePath,
-  profileReadPath, PROFILE_USAGE,
+  initProfileDir, listProfiles, listProfileRows, profileExists, profilePath, profileReadPath,
 } from './profiles.js';
+import { parseProfileCommand, PROFILE_USAGE } from './profile/command.js';
+import { loadProfile } from './profile/file.js';
 import type { LoadedProfile, ProfileFile } from './types.js';
 
 describe('parseProfileCommand', () => {

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { parseConnectionCommand, dbPath, initDbDir } from './connections.js';
+import { dbPath, initDbDir } from './connections.js';
+import { parseConnectionCommand } from './connection/parsing.js';
 
 describe('parseConnectionCommand', () => {
   it('parses list', () => {

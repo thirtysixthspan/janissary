@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { command } from './agent.js';
-import { resolveAgentName, parseAgentCommand, agentNames } from '../commands.js';
+import { resolveAgentName, parseAgentCommand } from '../agent/commands.js';
+import { agentNames } from '../agent/names.js';
 
 describe('agent command', () => {
   it('has the correct name', () => {

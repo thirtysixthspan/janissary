@@ -2,7 +2,8 @@ import { describe, it, expect, beforeEach, afterAll } from 'vitest';
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { initProfileDir, loadProfile } from '../profiles.js';
+import { initProfileDir } from '../profiles.js';
+import { loadProfile } from './file.js';
 import type { LoadedProfile } from '../types.js';
 
 // The all-or-nothing single-file loader: a structurally invalid file yields `{ error }` and opens
