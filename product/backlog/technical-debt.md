@@ -2,7 +2,6 @@
 
 ## ready
 
-* Replace the three identical `{ tab: TabView; index: number }` aliases in `web/src/` with one: `TabEntry` (`useTabEntries.ts:6`), `ReportingEntry` (`ReportingSection.tsx:16`), and `TabNavEntry` (`TabNavPicker.tsx:7`) are the same pair of fields under three names, so code moving between the tab strip, the reporting section, and the nav picker has to re-learn which alias the local file happens to use, and a change to the pair has three places to land. Keep one exported alias and import it in the other two. Severity: **low**.
 
 * Split `web/src/EditorTab.tsx` along its responsibilities: at 238 lines it is one of the two largest components in `web/src/` and holds five `useState`s, nine `useRef`s, and three effects spanning load-with-fallback, save with conflict detection, dirty tracking, focus-on-activate, caret scroll-into-view, and IME composition — six concerns whose only relationship is that they touch the same textarea, and the reason two of the undocumented `exhaustive-deps` suppressions live here. The neighboring `web/src/editor/` directory already holds the extracted-hook pattern to follow (`useEditor`, `useEditorSync`, `useEditorMouse`, `useEditorSuggest`); move the load/save/conflict lifecycle into its own hook and leave the component rendering. Severity: **medium**.
 

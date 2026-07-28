@@ -4,6 +4,7 @@ import { MonitorTab } from './MonitorTab';
 import { ResizeButton } from './ResizeButton';
 import { beginResizeDrag } from './drag-resize';
 import { TabStrip } from './TabStrip';
+import type { TabEntry } from './useTabEntries';
 
 // Reporting tabs are a separate class from action tabs: they report, they never take
 // commands. A tab is a reporting tab when its view kind is in this set (currently just
@@ -13,7 +14,7 @@ export function isReportingTab(tab: TabView): boolean {
 }
 
 // One reporting tab plus its index in the server's full tab list (close RPCs need it).
-export type ReportingEntry = { tab: TabView; index: number };
+export type ReportingEntry = TabEntry;
 
 // Neither the reporting section nor the action area may shrink below 15% of the
 // viewport height; the divider drag clamps to this band.
