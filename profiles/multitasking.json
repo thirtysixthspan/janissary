@@ -60,7 +60,7 @@
   ],
   "editors": [
     {
-      "path": "$root/workspace/git-sync/product/backlog/issues.md",
+      "path": "$root/product/backlog/issues.md",
       "tab": {
         "color": "#01a3a4",
         "number": 4,
@@ -69,7 +69,7 @@
       }
     },
     {
-      "path": "$root/workspace/git-sync/product/backlog/features.md",
+      "path": "$root/product/backlog/features.md",
       "tab": {
         "color": "#ffd93d",
         "number": 6,
@@ -78,7 +78,7 @@
       }
     },
     {
-      "path": "$root/workspace/git-sync/product/backlog/technical-debt.md",
+      "path": "$root/product/backlog/technical-debt.md",
       "tab": {
         "color": "#ff6f91",
         "number": 8,
