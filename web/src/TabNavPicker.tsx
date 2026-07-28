@@ -3,8 +3,9 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { TabView } from '@shared/protocol';
 import { statusDotIcon } from './icons';
 import { isReportingTab } from './ReportingSection';
+import type { TabEntry } from './useTabEntries';
 
-export type TabNavEntry = { tab: TabView; index: number };
+export type TabNavEntry = TabEntry;
 
 // The alias (see `rename`) when set, otherwise the internal label — mirrors TabItem's tab-strip
 // display so a renamed tab shows and matches the same way in both places.
