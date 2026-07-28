@@ -12,10 +12,11 @@ const STATUS_CLASS: Record<NonNullable<FileNavigatorRow['gitStatus']>, string> =
 // `FileNavigatorTab.tsx` stays under the file-size limit.
 export function fileNavigatorRowClass(
   row: FileNavigatorRow,
-  selected: string | null,
+  selected: boolean,
+  cursor: boolean,
   dropTargetPath: string | undefined,
 ): { row: string; name: string } {
-  const rowClass = `files-row${row.path === selected ? ' selected' : ''}${dropTargetPath === row.path ? ' drop-target' : ''}`;
+  const rowClass = `files-row${selected ? ' selected' : ''}${cursor ? ' cursor' : ''}${dropTargetPath === row.path ? ' drop-target' : ''}`;
   const nameClass = `files-name${row.gitStatus ? ` ${STATUS_CLASS[row.gitStatus]}` : ''}`;
   return { row: rowClass, name: nameClass };
 }

@@ -191,6 +191,7 @@ export function App() {
   return (
     <AppShell
       tabs={tabs} client={client} dropRef={dropReference} editorDropRef={editorDropReference} tabNameMaxLength={tabNameMaxLength}
+      targetCwd={current.cwd}
       activeTabNameMaxLength={activeTabNameMaxLength}
       sidebarLeftWidth={sidebarLeftWidth} onSidebarLeftWidthChange={setSidebarLeftWidth}
       sidebarRightWidth={sidebarRightWidth} onSidebarRightWidthChange={setSidebarRightWidth}

@@ -21,7 +21,8 @@ export const DEFAULT_WIDTH_PX = 300;
 // can drive it too — see `useLayoutState`), resized by dragging either the gutter button
 // or the border divider on the sidebar's inner edge.
 export function Sidebar({
-  side, tabs, client, dropRef, editorDropRef, tabNameMaxLength = 16, activeTabNameMaxLength = 50,
+  side, tabs, client, dropRef, editorDropRef, targetCwd,
+  tabNameMaxLength = 16, activeTabNameMaxLength = 50,
   width = DEFAULT_WIDTH_PX, onWidthChange, focusView,
 }: {
   side: 'left' | 'right';
@@ -32,6 +33,7 @@ export function Sidebar({
   dropRef?: React.RefObject<CommandInputDropHandle | null>;
   // The active tab's editor drop handle, threaded down the same way. See `App.tsx`'s `editorDropRef`.
   editorDropRef?: React.RefObject<EditorDropHandle | null>;
+  targetCwd?: string;
   tabNameMaxLength?: number;
   activeTabNameMaxLength?: number;
   width?: number;
@@ -108,7 +110,7 @@ export function Sidebar({
         {current.tab.view === 'files' && current.tab.files && (
           <FileNavigatorTab
             files={current.tab.files} client={client} index={current.index} dock={current.tab.dock} autoFocus={false}
-            dropRef={dropRef} editorDropRef={editorDropRef}
+            dropRef={dropRef} editorDropRef={editorDropRef} targetCwd={targetCwd ?? current.tab.cwd}
           />
         )}
         {current.tab.view === 'notifications' && (

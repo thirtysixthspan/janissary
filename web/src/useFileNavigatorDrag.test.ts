@@ -120,7 +120,13 @@ describe('useFileNavigatorDrag', () => {
     act(() => { result.current.drop(); });
 
     expect(client.send).not.toHaveBeenCalled();
-    expect(result.current.pendingConflict).toEqual({ fromRelPath: 'notes.txt', toRelPath: 'dest', source: 'move' });
+    expect(result.current.pendingConflict).toEqual({
+      kind: 'scalar',
+      fromRelPath: 'notes.txt',
+      toRelPath: 'dest',
+      source: 'move',
+      title: '"notes.txt" already exists here. Overwrite it?',
+    });
   });
 
   it('confirmOverwrite sends the move and clears the pending conflict', () => {
@@ -376,5 +382,62 @@ describe('useFileNavigatorDrag', () => {
       expect(client.send).toHaveBeenCalledWith({ method: 'moveFileNavigatorItem', params: { index: 3, fromRelPath: 'notes.txt', toRelPath: 'other' } });
       expect(editorDropRef.current.insertAtCaret).not.toHaveBeenCalled();
     });
+  });
+
+  it('sends a request/reply batch for multiple operation paths', () => {
+    const client = {
+      send: vi.fn(),
+      request: vi.fn().mockResolvedValue({ total: 2, failedPaths: [] }),
+    } as unknown as JanusClient;
+    const { result } = renderHook(() =>
+      useFileNavigatorDrag(makeRows(), client, 4, '/work/tree', 'tree', '/work'));
+    const target = makeRowElement('other');
+    document.elementFromPoint = vi.fn().mockReturnValue(target);
+
+    act(() => {
+      result.current.onRowMouseDown(
+        { path: 'notes.txt' } as FileNavigatorRow,
+        downEvent(0, 0),
+        ['notes.txt', 'second.txt'],
+        ['notes.txt', 'second.txt'],
+      );
+    });
+    act(() => { globalThis.dispatchEvent(new MouseEvent('mousemove', { clientX: 20, clientY: 0 })); });
+    act(() => { result.current.drop(); });
+
+    expect(client.request).toHaveBeenCalledWith({
+      method: 'moveFileNavigatorItems',
+      params: {
+        index: 4,
+        sourcePaths: ['notes.txt', 'second.txt'],
+        destinationPath: 'other',
+        policy: undefined,
+      },
+    });
+    expect(client.send).not.toHaveBeenCalled();
+  });
+
+  it('inserts every selected path once with target-specific separators and command cwd relativity', () => {
+    const client = { send: vi.fn() } as unknown as JanusClient;
+    const commandHandle = makeDropHandle();
+    const commandRef = { current: commandHandle };
+    const { result } = renderHook(() =>
+      useFileNavigatorDrag(makeRows(), client, 0, '/work/tree', 'tree', '/work', commandRef));
+    document.elementFromPoint = vi.fn().mockReturnValue(makeCommandBarElement());
+
+    act(() => {
+      result.current.onRowMouseDown(
+        { path: 'notes.txt' } as FileNavigatorRow,
+        downEvent(0, 0),
+        ['notes.txt', 'src/a.ts'],
+        ['notes.txt', 'src/a.ts'],
+      );
+    });
+    act(() => { globalThis.dispatchEvent(new MouseEvent('mousemove', { clientX: 20, clientY: 0 })); });
+    act(() => { result.current.drop(); });
+
+    expect(commandHandle.insertAtCaret).toHaveBeenCalledOnce();
+    expect(commandHandle.insertAtCaret).toHaveBeenCalledWith('tree/notes.txt tree/src/a.ts');
+    expect(client.send).not.toHaveBeenCalled();
   });
 });

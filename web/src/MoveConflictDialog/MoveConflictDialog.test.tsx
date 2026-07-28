@@ -96,4 +96,25 @@ describe('MoveConflictDialog', () => {
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(onCancel).not.toHaveBeenCalled();
   });
+
+  it('renders and cycles the three batch actions with Cancel selected by default', () => {
+    const onSkip = vi.fn();
+    render(
+      <MoveConflictDialog
+        title={'Some items already exist in "dest".'}
+        onOverwrite={vi.fn()}
+        onSkip={onSkip}
+        onCancel={vi.fn()}
+      />,
+    );
+    expect(screen.getByText('Some items already exist in "dest".')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Overwrite all' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Skip conflicts' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Cancel (Esc)' })).toHaveClass('selected');
+    fireEvent.keyDown(document, { key: 'ArrowRight' });
+    expect(screen.getByRole('button', { name: 'Overwrite all' })).toHaveClass('selected');
+    fireEvent.keyDown(document, { key: 'ArrowRight' });
+    fireEvent.keyDown(document, { key: 'Enter' });
+    expect(onSkip).toHaveBeenCalledTimes(1);
+  });
 });

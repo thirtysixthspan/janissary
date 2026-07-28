@@ -70,4 +70,26 @@ describe('resolveDropTarget', () => {
   it('is null when not hovering any row', () => {
     expect(resolveDropTarget(makeRows(), 'README.md', null)).toBeNull();
   });
+
+  it('allows a mixed selection when only some sources are same-parent no-ops', () => {
+    expect(resolveDropTarget(makeRows(), ['src/index.ts', 'README.md'], 'src')).toEqual({
+      path: 'src',
+      conflict: false,
+    });
+  });
+
+  it('is null when every selected source is already in the destination', () => {
+    expect(resolveDropTarget(makeRows(), ['src/index.ts', 'src/other.ts'], 'src')).toBeNull();
+  });
+
+  it('rejects a destination inside any selected source directory', () => {
+    expect(resolveDropTarget(makeRows(), ['README.md', 'src'], 'src/nested')).toBeNull();
+  });
+
+  it('does not invent conflicts for children absent from collapsed client rows', () => {
+    expect(resolveDropTarget(makeRows(), ['README.md', 'LICENSE'], 'src/nested')).toEqual({
+      path: 'src/nested',
+      conflict: false,
+    });
+  });
 });

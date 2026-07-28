@@ -8,7 +8,8 @@ import type { EditorDropHandle } from './EditorTab';
 // The root layout: left sidebar / center column (everything App renders today) / right sidebar.
 // Split out of App.tsx to keep it under the file-size limit.
 export function AppShell({
-  tabs, client, children, dropRef, editorDropRef, tabNameMaxLength = 16, activeTabNameMaxLength = 50,
+  tabs, client, children, dropRef, editorDropRef, targetCwd,
+  tabNameMaxLength = 16, activeTabNameMaxLength = 50,
   sidebarLeftWidth, onSidebarLeftWidthChange, sidebarRightWidth, onSidebarRightWidthChange,
   focusLeft, focusRight,
 }: {
@@ -17,6 +18,7 @@ export function AppShell({
   children: React.ReactNode;
   dropRef?: React.RefObject<CommandInputDropHandle | null>;
   editorDropRef?: React.RefObject<EditorDropHandle | null>;
+  targetCwd?: string;
   tabNameMaxLength?: number;
   activeTabNameMaxLength?: number;
   sidebarLeftWidth?: number;
@@ -29,13 +31,15 @@ export function AppShell({
   return (
     <div className="app">
       <Sidebar
-        side="left" tabs={tabs} client={client} dropRef={dropRef} editorDropRef={editorDropRef} tabNameMaxLength={tabNameMaxLength}
+        side="left" tabs={tabs} client={client} dropRef={dropRef} editorDropRef={editorDropRef}
+        targetCwd={targetCwd} tabNameMaxLength={tabNameMaxLength}
         activeTabNameMaxLength={activeTabNameMaxLength}
         width={sidebarLeftWidth} onWidthChange={onSidebarLeftWidthChange} focusView={focusLeft}
       />
       <div className="app-center">{children}</div>
       <Sidebar
-        side="right" tabs={tabs} client={client} dropRef={dropRef} editorDropRef={editorDropRef} tabNameMaxLength={tabNameMaxLength}
+        side="right" tabs={tabs} client={client} dropRef={dropRef} editorDropRef={editorDropRef}
+        targetCwd={targetCwd} tabNameMaxLength={tabNameMaxLength}
         activeTabNameMaxLength={activeTabNameMaxLength}
         width={sidebarRightWidth} onWidthChange={onSidebarRightWidthChange} focusView={focusRight}
       />

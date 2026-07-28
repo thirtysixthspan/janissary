@@ -125,8 +125,9 @@ stops refreshing automatically and can be refreshed manually by collapsing and r
 
 | Interaction | Behavior |
 |---|---|---|
-| Click a directory row (anywhere on the row) | Select it and give the tree keyboard focus |
-| Click a file row | Select it and give the tree keyboard focus |
+| Click a row | Replace the selection with that row, make it the keyboard cursor and range anchor, and give the tree keyboard focus |
+| Shift-click a row | Replace the selection with the visible range from the anchor to that row; `..` is omitted from ranges |
+| Cmd-click / Ctrl-click a row | Add or remove that row, then make it the keyboard cursor and range anchor |
 | Double-click a file row | Select it and open it (with `open`) — for Markdown files, this opens the plain-text editor instead (with `edit`) |
 | Double-click a directory row | Select it and toggle expand/collapse |
 | Double-click the `..` row | Navigate the tree up one directory |
@@ -147,10 +148,11 @@ If a file has no registered opener, double-clicking it presents a chooser with *
 
 ### Moving files by drag-and-drop
 
-Pressing down on a row and dragging it onto a directory row — or onto any file row inside that
-directory — then releasing, moves the dragged file or directory into that directory. While a drag
-is in progress, a small label showing the dragged item's name follows the mouse cursor, indicating
-which row is being moved. The directory currently targeted is highlighted on its own row, whether
+Pressing down on a selected row and dragging it onto a directory row — or onto any file row inside
+that directory — then releasing, moves the selection into that directory. Dragging an unselected
+row first replaces the selection with that row. While a drag is in progress, a small label showing
+the lead row's name follows the mouse cursor. With multiple rows it reads `<name> +<additional count>`.
+The directory currently targeted is highlighted on its own row, whether
 the pointer is directly over that directory row or over one of the files inside it; empty space
 shows no highlight, and releasing there does nothing. Dropping onto the dragged item itself, or
 onto one of its own descendants (if it's a directory), is also blocked outright: no highlight is
@@ -158,18 +160,18 @@ shown, and releasing there does nothing. Releasing over a file at the root of th
 dragged item into the root itself — since the root has no row of its own, nothing highlights for
 this target, but the move still happens.
 
-Dropping the item back onto the directory it's already in — its own row, or any other row already
-inside that same directory — is also a no-op: no confirmation dialog appears, and the file stays
-exactly where it was.
+Before a move, duplicate paths, `..`, and descendants of selected directories are removed from the
+operation without changing the visible highlights. Items already in the destination are individual
+no-ops; the other selected items still move. A destination at or inside any selected source
+directory is blocked for the whole selection.
 
-If the target directory already contains an entry with the same name as the dragged item, the
-move does not happen immediately. Instead a confirmation dialog appears, offering **Overwrite** or
-**Cancel**. Confirming replaces the existing entry with the dragged one; cancelling leaves both
-where they were, unmoved.
-
-Only a single row can be dragged at a time — the tree has no multi-select. The tree already
-watches every visible directory, so a completed move is reflected automatically once its watcher
-picks up the change, the same as any other on-disk change made outside the app.
+For one item, a visible name conflict continues to offer **Overwrite** or **Cancel**. A bulk move
+preflights every destination before moving anything. If conflicts exist, one dialog says
+`Some items already exist in "<folder>".` and offers **Overwrite all**, **Skip conflicts**, and
+**Cancel**. Two selected sources with the same output name are left unmoved and reported as
+failures. Other per-item failures do not stop the batch. A result dialog says
+`Could not move <failed> of <total> items.`, lists failed paths in selection order, and offers
+**Dismiss**.
 
 If the window loses focus while a drag is in progress — switching to another application or
 virtual desktop with the mouse button still held — the drag is cancelled outright: the drag label
@@ -181,11 +183,10 @@ drag label disappears and nothing is moved.
 ### Dragging a row into the command bar
 
 The same click-drag-release gesture used to move a file also has a second possible destination:
-the command bar of whichever tab is active. Releasing a dragged file or directory row over that
-command bar inserts its path at the current caret position — replacing any active selection, the
-same as a normal paste — without moving the file on disk. The inserted path is relative to the
-active tab's own working directory, not the tree's root, so it lines up with how that tab's own
-commands (`open`, `edit`) already resolve relative arguments. While the drag is over the command
+the command bar of whichever tab is active. Releasing there inserts every selected visible path
+at the current caret position, separated by single spaces and replacing any active text selection,
+without moving anything on disk. Each inserted path is relative to the active tab's own working
+directory, not the tree's root. While the drag is over the command
 bar, it is highlighted the same way a valid directory drop target is; releasing over it never
 triggers the file-move flow, and no move confirmation or conflict dialog can appear for it.
 
@@ -202,11 +203,10 @@ active in the center — a docked tree's own active-tab command bar is never a t
 
 ### Dragging a row into an editor tab
 
-Releasing a dragged file or directory row over an open plain-text editor tab inserts its path at
-the editor's current cursor position, the same as typing or pasting it there — including undo — and
-without moving the file on disk. The inserted path is exactly as it appears in the tree, relative
-to the tree's root. Unlike dropping onto the command bar, the editor body shows no highlight while
-a drag passes over it; releasing there still inserts the path.
+Releasing a selection over an open plain-text editor inserts every selected visible tree-relative
+path at the editor's current cursor position, separated by newlines and recorded as one editor undo
+step, without moving anything on disk. Unlike dropping onto the command bar, the editor body shows
+no highlight while a drag passes over it.
 
 An editor tab is only a valid drop target while it is the active tab and actually visible — in
 practice this means the file navigator is docked into a sidebar while an editor tab is active in
@@ -221,24 +221,24 @@ move made in that tab, reversing it back to where the moved item came from; `Cmd
 past moves and a separate stack of undone moves, in memory only — both start empty when the tab
 opens and are discarded when it closes; reopening a tree on the same root does not restore them.
 
-Undo steps back through the stack one move at a time, oldest last; redo steps forward through
-whatever was just undone, for as long as the tab has stayed open. Making a new move — whether by
-drag-and-drop or by redoing — clears the redo stack: once the timeline diverges from an undone
-move, that move is no longer reachable by redo. If there is nothing to undo, or nothing to redo,
-the corresponding chord does nothing — no message, no dialog, no sound.
+One bulk move is one history step. Undo replays its successful pairs in reverse order and redo
+replays them in forward order. Making a new forward move clears the redo stack. If there is
+nothing to undo or redo, the corresponding chord does nothing.
 
-If an undo or redo would land on a path that already has an entry with the same name, the same
-overwrite confirmation used for a drag-and-drop move appears, offering **Overwrite** or **Cancel**.
-Confirming replaces the existing entry with the moved item and completes the undo or redo;
-cancelling leaves both where they are, and the same undo or redo can be retried later.
+Grouped undo and redo preflight every destination before moving anything. Conflicts offer
+**Overwrite all**, **Skip conflicts**, and **Cancel** under the title
+`Some items already exist in their destinations.` Successful pairs move to the opposite history
+stack; failed and skipped pairs remain available for a later retry.
 
 Deletions are not covered by undo/redo — a deleted file or directory cannot be restored this way.
 
 ### Deleting a file or directory
 
-Pressing Backspace or Delete while a row is selected (any row other than `..`) opens a
-confirmation dialog: `Delete "<name>"?`, offering **Delete** and **Cancel**. Confirming removes the
-file or directory — recursively, if it's a directory — from disk; cancelling leaves it untouched.
+Pressing Backspace or Delete normalizes the selection using the same rules as moving. One path
+opens `Delete "<name>"?`; multiple paths open `Delete <count> items?`. Both dialogs offer
+**Delete** and **Cancel**. A confirmed bulk delete continues after individual failures. Its result
+dialog says `Could not delete <failed> of <total> items.`, lists failed paths in selection order,
+and offers **Dismiss**.
 The tree already watches every visible directory, so the removed row disappears automatically once
 the watcher picks up the change, the same as any other on-disk change made outside the app. If the
 selected row was the one removed, selection moves to the nearest surviving row rather than pointing
@@ -262,8 +262,8 @@ If the renamed file is already open in an editor tab, that tab updates to the ne
 automatically — its unsaved content, dirty state, cursor, and undo history are preserved exactly as
 when the same file is renamed from the editor tab's own label (see `editor-tab.md`).
 
-After a successful rename, the renamed row remains selected and keyboard focus returns to the file
-tree.
+After a successful rename, the renamed row replaces its old path in the cursor, anchor, and
+selection while other selected rows remain selected. Keyboard focus returns to the tree.
 
 ### Keyboard interactions
 
@@ -272,15 +272,15 @@ A focused file navigator tab captures its own keys, following the ARIA treeview 
 
 | Key | Behavior |
 |---|---|
-| `↑` / `↓` | Move selection to the previous / next visible row |
+| `↑` / `↓` | Move the keyboard cursor to the previous / next visible row and collapse selection to it |
 | `→` | Collapsed directory: expand. Expanded directory: reroot. File: open. `..`: no-op |
 | `←` | Expanded directory: collapse. Otherwise: move selection to the parent directory |
 | `Enter` / `Space` | File: open. Directory: toggle expand/collapse. `..`: navigate to parent directory |
 | `Shift+Enter` | File: open in the plain-text editor (mirrors Shift+double-click) |
-| `Home` / `End` | Select the first / last visible row |
-| `Page Up` / `Page Down` | Move selection by one viewport of rows |
-| `Backspace` / `Delete` | Selected file or directory (not `..`): open a delete confirmation dialog |
-| Printable characters | Type-ahead: jump to the next visible row whose name starts with what's typed; the typed buffer resets after a pause |
+| `Home` / `End` | Move the cursor to the first / last visible row and collapse selection to it |
+| `Page Up` / `Page Down` | Move the cursor by one viewport of rows and collapse selection to it |
+| `Backspace` / `Delete` | Delete the normalized selection after one confirmation |
+| Printable characters | Type-ahead: jump to a matching row and collapse selection to it |
 | `Cmd+Z` / `Ctrl+Z` | Undo the most recent move made in this tab |
 | `Cmd+Shift+Z` / `Ctrl+Shift+Z` | Redo the most recently undone move |
 | `Cmd+N` / `Ctrl+N` | Create a new file (see "Creating a new file") |
@@ -291,8 +291,13 @@ captured by the tree and reach the normal window-level bindings instead, except 
 undo/redo chords, `Cmd+N`/`Ctrl+N`, and `Cmd+R`/`Ctrl+R` above, which the tree captures for
 itself — the same way an editor tab captures its own `Cmd+Z`/`Cmd+Shift+Z` for text undo/redo.
 
-If the selected row disappears (the directory watcher removed it), selection moves to the nearest
-surviving row rather than pointing at nothing.
+Keyboard navigation, type-ahead, search reveal, and new-directory auto-selection collapse the
+selection to their resulting cursor. Shift+Arrow range extension and Cmd/Ctrl+A are not supported.
+Open, expand/collapse, reroot, New file, New directory, and rename act only on the cursor.
+
+When rows disappear or become hidden, surviving visible selections remain. A missing cursor moves
+to its nearest visible ancestor, or falls back near its former row index. A missing anchor resets
+to that cursor. Changing the navigator root clears cursor, anchor, and selection.
 
 ### Tab strip: name and close button
 

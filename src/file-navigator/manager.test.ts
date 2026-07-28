@@ -700,6 +700,64 @@ describe('FileNavigatorManager', () => {
     expect(existsSync(path.join(root, 'notes.txt'))).toBe(true);
   });
 
+  it('moves a batch as one undo and redo history step', () => {
+    mkdirSync(path.join(root, 'dest'));
+    writeFileSync(path.join(root, 'a.txt'), 'a');
+    writeFileSync(path.join(root, 'b.txt'), 'b');
+    const manager = run();
+    manager.open('files', 'janus');
+    const label = tabs.find((tab) => tab.label.startsWith('navigator'))!.label;
+
+    expect(manager.moveMany(label, ['a.txt', 'b.txt'], 'dest')).toEqual({
+      total: 2,
+      failedPaths: [],
+    });
+    expect(manager.undo(label)).toEqual({ total: 2, failedPaths: [] });
+    expect(existsSync(path.join(root, 'a.txt'))).toBe(true);
+    expect(existsSync(path.join(root, 'b.txt'))).toBe(true);
+    expect(manager.redo(label)).toEqual({ total: 2, failedPaths: [] });
+    expect(existsSync(path.join(root, 'dest', 'a.txt'))).toBe(true);
+    expect(existsSync(path.join(root, 'dest', 'b.txt'))).toBe(true);
+  });
+
+  it('preflights all grouped undo conflicts before moving anything', () => {
+    mkdirSync(path.join(root, 'dest'));
+    writeFileSync(path.join(root, 'a.txt'), 'a');
+    writeFileSync(path.join(root, 'b.txt'), 'b');
+    const manager = run();
+    manager.open('files', 'janus');
+    const label = tabs.find((tab) => tab.label.startsWith('navigator'))!.label;
+    manager.moveMany(label, ['a.txt', 'b.txt'], 'dest');
+    writeFileSync(path.join(root, 'a.txt'), 'blocked a');
+    writeFileSync(path.join(root, 'b.txt'), 'blocked b');
+
+    expect(manager.undo(label)).toEqual({
+      total: 2,
+      failedPaths: [],
+      conflicts: [
+        { fromRelPath: 'dest/b.txt', toRelPath: '' },
+        { fromRelPath: 'dest/a.txt', toRelPath: '' },
+      ],
+    });
+    expect(existsSync(path.join(root, 'dest', 'a.txt'))).toBe(true);
+    expect(existsSync(path.join(root, 'dest', 'b.txt'))).toBe(true);
+  });
+
+  it('skips grouped undo conflicts and moves the remaining entries', () => {
+    mkdirSync(path.join(root, 'dest'));
+    writeFileSync(path.join(root, 'a.txt'), 'a');
+    writeFileSync(path.join(root, 'b.txt'), 'b');
+    const manager = run();
+    manager.open('files', 'janus');
+    const label = tabs.find((tab) => tab.label.startsWith('navigator'))!.label;
+    manager.moveMany(label, ['a.txt', 'b.txt'], 'dest');
+    writeFileSync(path.join(root, 'a.txt'), 'blocked');
+
+    expect(manager.undo(label, false, true)).toEqual({ total: 2, failedPaths: [] });
+    expect(existsSync(path.join(root, 'dest', 'a.txt'))).toBe(true);
+    expect(existsSync(path.join(root, 'b.txt'))).toBe(true);
+  });
+
   it('closeTab closes every watcher for that tab', () => {
     mkdirSync(path.join(root, 'src'));
     const manager = run();

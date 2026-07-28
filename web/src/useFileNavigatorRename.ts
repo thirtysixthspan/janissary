@@ -9,19 +9,20 @@ type PendingConflict = { relPath: string; newRelPath: string; newName: string };
 // collision handling (via the shared `MoveConflictDialog`), and the RPC send — kept out of
 // `FileNavigatorTab.tsx` to stay under the file-size limit, mirroring `useFileNavigatorDrag`/`useFileNavigatorSearch`.
 export function useFileNavigatorRename(
-  rows: FileNavigatorRow[], client: JanusClient, index: number, setSelected: (path: string) => void,
+  rows: FileNavigatorRow[], client: JanusClient, index: number,
+  replaceRenamedPath: (oldPath: string, newPath: string) => void,
   focusTree: () => void,
 ) {
   const [editing, setEditing] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
   const [pendingConflict, setPendingConflict] = useState<PendingConflict | null>(null);
-  const [pendingSelection, setPendingSelection] = useState<string | null>(null);
+  const [pendingSelection, setPendingSelection] = useState<{ oldPath: string; newPath: string } | null>(null);
 
   useEffect(() => {
-    if (pendingSelection === null || rows.every((row) => row.path !== pendingSelection)) return;
-    setSelected(pendingSelection);
+    if (pendingSelection === null || rows.every((row) => row.path !== pendingSelection.newPath)) return;
+    replaceRenamedPath(pendingSelection.oldPath, pendingSelection.newPath);
     setPendingSelection(null);
-  }, [pendingSelection, rows, setSelected]);
+  }, [pendingSelection, replaceRenamedPath, rows]);
 
   const begin = (relPath: string, currentName: string) => {
     setEditing(relPath);
@@ -30,8 +31,8 @@ export function useFileNavigatorRename(
 
   const send = (relPath: string, newName: string, newRelPath: string) => {
     client.send({ method: 'renameFileNavigatorItem', params: { index, relPath, newName } });
-    setSelected(newRelPath);
-    setPendingSelection(newRelPath);
+    replaceRenamedPath(relPath, newRelPath);
+    setPendingSelection({ oldPath: relPath, newPath: newRelPath });
     focusTree();
   };
 

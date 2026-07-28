@@ -135,6 +135,36 @@ describe('FileNavigatorTab', () => {
     expect(send).not.toHaveBeenCalled();
   });
 
+  it('supports range and toggle selection with separate cursor accessibility state', () => {
+    const client = { send: vi.fn() } as unknown as JanusClient;
+    const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
+    const tree = container.querySelector('[role="tree"]')!;
+    fireEvent.mouseDown(screen.getByText('src'), { button: 0 });
+    fireEvent.mouseDown(screen.getByText('README.md'), { button: 0, shiftKey: true });
+
+    expect(tree).toHaveAttribute('aria-multiselectable', 'true');
+    expect(container.querySelectorAll('[aria-selected="true"]')).toHaveLength(3);
+    expect(tree.getAttribute('aria-activedescendant')).toBe(
+      screen.getByText('README.md').closest('[role="treeitem"]')!.id,
+    );
+
+    fireEvent.mouseDown(screen.getByText('index.ts'), { button: 0, metaKey: true });
+    const indexRow = screen.getByText('index.ts').closest('[role="treeitem"]')!;
+    expect(indexRow).toHaveAttribute('aria-selected', 'false');
+    expect(indexRow).toHaveClass('cursor');
+  });
+
+  it('modified parent-row presses collapse selection to the parent row', () => {
+    const files = makeFiles({ rows: [{ path: '..', name: '..', depth: 0, dir: true }, ...makeFiles().rows] });
+    const client = { send: vi.fn() } as unknown as JanusClient;
+    const { container } = render(<FileNavigatorTab files={files} client={client} index={0} />);
+    fireEvent.mouseDown(screen.getByText('src'), { button: 0 });
+    fireEvent.mouseDown(screen.getByText('README.md'), { button: 0, metaKey: true });
+    fireEvent.mouseDown(screen.getByText('..'), { button: 0, shiftKey: true });
+    expect(container.querySelectorAll('[aria-selected="true"]')).toHaveLength(1);
+    expect(screen.getByText('..').closest('[role="treeitem"]')).toHaveAttribute('aria-selected', 'true');
+  });
+
   it('double-click on a file row sends an open command', () => {
     const send = vi.fn();
     const client = { send } as unknown as JanusClient;
@@ -363,6 +393,23 @@ describe('FileNavigatorTab', () => {
       fireEvent.click(screen.getByRole('button', { name: /cancel/i }));
       expect(send).not.toHaveBeenCalled();
       expect(screen.queryByRole('alertdialog')).toBeNull();
+    });
+
+    it('confirms one normalized batch and displays partial failures', async () => {
+      const request = vi.fn().mockResolvedValue({ total: 2, failedPaths: ['README.md'] });
+      const client = { send: vi.fn(), request } as unknown as JanusClient;
+      const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={3} />);
+      const tree = container.querySelector('[role="tree"]')!;
+      fireEvent.mouseDown(screen.getByText('src'), { button: 0 });
+      fireEvent.mouseDown(screen.getByText('README.md'), { button: 0, metaKey: true });
+      fireEvent.keyDown(tree, { key: 'Delete' });
+      expect(screen.getByText('Delete 2 items?')).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: /delete/i }));
+      expect(request).toHaveBeenCalledWith({
+        method: 'deleteFileNavigatorItems',
+        params: { index: 3, paths: ['src', 'README.md'] },
+      });
+      expect(await screen.findByText('Could not delete 1 of 2 items.')).toBeInTheDocument();
     });
   });
 
@@ -618,7 +665,9 @@ describe('FileNavigatorTab', () => {
         bufferLines: [], cmdHistory: [], commandQueue: [], toolStepsExpanded: false,
         view: 'files', dock: 'left', files: makeFiles(),
       };
-      const { container } = render(<Sidebar side="left" tabs={[tab]} client={client} dropRef={dropRef} />);
+      const { container } = render(
+        <Sidebar side="left" tabs={[tab]} client={client} dropRef={dropRef} targetCwd="/home/user" />,
+      );
       const bar = document.createElement('div');
       bar.dataset.commandBar = '';
       document.body.append(bar);
@@ -632,6 +681,7 @@ describe('FileNavigatorTab', () => {
       expect(container.querySelectorAll('.drop-target')).toHaveLength(0);
 
       act(() => { globalThis.dispatchEvent(new MouseEvent('mouseup')); });
+      expect(dropHandle.insertAtCaret).toHaveBeenCalledWith('project/README.md');
       bar.remove();
     });
   });
