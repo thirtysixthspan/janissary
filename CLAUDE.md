@@ -159,7 +159,7 @@ All scripts in `scripts/` are considered trusted. Do not invoke them directly wi
 - `product/specs/` — functional specs, one file per feature; when a change alters behavior, update the matching spec
 - `product/plans/` — implementation plans by status (see [Plan storage](#plan-storage))
 - `product/backlog/` — backlogs of smaller items (`bugs.md`, `chores.md`, `features.md`, `issues.md`)
-- `ai/` — agent workflow playbooks (`ai/tasks/*.md`), binding guidelines (`ai/guidelines/`), and personas (`ai/personas/`)
+- `ai/` — agent workflow playbooks (`ai/tasks/**/*.md`), binding guidelines (`ai/guidelines/`), and personas (`ai/personas/`)
 - `documentation/` — docs site (VitePress; `npm run docs:dev` / `docs:build`), with `documentation/user-documentation/` (user-facing) and `documentation/developer-documentation/` (contributor-facing) sections
 - `scripts/` — project scripts; invoke only via `./scripts/run.mjs` (see [Running scripts](#running-scripts))
 - `profiles/` — harness profiles (see `product/specs/profiles.md`)

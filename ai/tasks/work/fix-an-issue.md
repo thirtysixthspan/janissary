@@ -16,7 +16,7 @@ This overrides CLAUDE.md's "Capturing command output" guidance (write the output
 
 ### Allowed — do it automatically, never ask
 
-Read any file in the repo. Edit source, tests, CSS, and spec files as the fix requires. Update `help.md` and files under `documentation/user-documentation/` when the fix changes behavior they already document. Write a plan file to `./product/plans/complete/`. Remove the fixed issue from `./product/backlog/issues.md`. Run `./scripts/run.mjs check-diff` after each change. Execute the full merge workflow via `ai/tasks/merge-change-to-master.md` when implementation is done.
+Read any file in the repo. Edit source, tests, CSS, and spec files as the fix requires. Update `help.md` and files under `documentation/user-documentation/` when the fix changes behavior they already document. Write a plan file to `./product/plans/complete/`. Remove the fixed issue from `./product/backlog/issues.md`. Run `./scripts/run.mjs check-diff` after each change. Execute the full merge workflow via `ai/tasks/workspace/merge-change-to-master.md` when implementation is done.
 
 ### Forbidden — no exceptions
 
@@ -25,13 +25,13 @@ Read any file in the repo. Edit source, tests, CSS, and spec files as the fix re
 3. **Skipping tests.** Every fix needs tests that cover the changed behavior. Verify with `./scripts/run.mjs check-diff`.
 4. **Choosing an issue that requires significant new architecture.** If an issue would require high complexity error or prone work, pick a simpler issue instead and report why.
 5. **Editing `./product/backlog/issues.md` beyond removing the fixed entry.** Only remove the line for the issue you fixed — do not reorder, rephrase, or otherwise modify the remaining entries.
-6. **Merging before all checks pass.** The `ai/tasks/merge-change-to-master.md` workflow handles merge; do not bypass it.
+6. **Merging before all checks pass.** The `ai/tasks/workspace/merge-change-to-master.md` workflow handles merge; do not bypass it.
 
 ---
 
 ## Step 0 — Prepare the workspace
 
-Execute `ai/tasks/prepare-workspace.md` in full before doing anything else.
+Execute `ai/tasks/workspace/prepare-workspace.md` in full before doing anything else.
 
 ---
 
@@ -114,7 +114,7 @@ The fix only needs a documentation update if it changes behavior that `help.md` 
 
 ## Step 8 — Merge the change to master
 
-Execute `ai/tasks/merge-change-to-master.md` in full. That document owns the merge workflow — follow its steps without deviation.
+Execute `ai/tasks/workspace/merge-change-to-master.md` in full. That document owns the merge workflow — follow its steps without deviation.
 
 ---
 

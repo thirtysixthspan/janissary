@@ -30,7 +30,7 @@ playbooks written root-relative (`` `ai/merge-change-to-master.md` ``), and a fe
 links using file-relative paths (`` [`code-guidelines.md`](guidelines/code-guidelines.md) ``, `` [`ai/improve-modularity.md`](improve-modularity.md) ``,
 `` [`CLAUDE.md`](../CLAUDE.md) ``). Each is updated according to its own kind:
 - Root-relative text mentions get `tasks/` inserted (`ai/merge-change-to-master.md` →
-  `ai/tasks/merge-change-to-master.md`).
+  `ai/tasks/workspace/merge-change-to-master.md`).
 - File-relative markdown links get re-derived for the new depth: a link to a same-directory
   sibling playbook (`improve-modularity.md` from `reduce-complexity.md`) needs no change — both
   move together and stay siblings. A link that climbs out of `ai/` (`../CLAUDE.md`,
@@ -80,7 +80,7 @@ untouched).
 **Other real, live references updated:**
 - `CLAUDE.md` — project-structure line: `` `ai/*.md` `` → `` `ai/tasks/*.md` ``.
 - `ai/guidelines/pull-request-automation.md` — its two mentions of
-  `` `ai/merge-change-to-master.md` `` → `` `ai/tasks/merge-change-to-master.md` ``.
+  `` `ai/merge-change-to-master.md` `` → `` `ai/tasks/workspace/merge-change-to-master.md` ``.
 - `commands.md` — every `./ai/<file>.md` → `./ai/tasks/<file>.md`.
 - `profiles/small-fix/opencode.json` — both `execute ./ai/fix-a-small-issue.md` strings →
   `execute ./ai/tasks/fix-a-small-issue.md`.

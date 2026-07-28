@@ -43,7 +43,7 @@ A skipped-as-blocked item (case 1) keeps its backlog entry in `ready` — only w
 
 ## Step 0 — Prepare the workspace
 
-Execute `ai/tasks/prepare-workspace.md` in full before doing anything else. Then confirm a clean starting point with `git status` — no modified *and no untracked* files (an install can rewrite `package-lock.json`; if it did and you did not change dependencies, revert it with `git checkout -- package-lock.json`). If the tree still is not clean, STOP and report what is there — a dirty tree makes the Step 5 ownership check meaningless, because you can no longer tell your changes from pre-existing ones.
+Execute `ai/tasks/workspace/prepare-workspace.md` in full before doing anything else. Then confirm a clean starting point with `git status` — no modified *and no untracked* files (an install can rewrite `package-lock.json`; if it did and you did not change dependencies, revert it with `git checkout -- package-lock.json`). If the tree still is not clean, STOP and report what is there — a dirty tree makes the Step 5 ownership check meaningless, because you can no longer tell your changes from pre-existing ones.
 
 **Command hygiene for the whole run:** run each command plainly and read its output from the result — no piping into `tail`/`head`, no `>` redirects, no `$(...)` capture. These trigger permission prompts or hook rejections in this repo (see CLAUDE.md) and cost a wasted call each time. If you need to filter a slow command's output (the docs build, a long git log) more than once, save the output with the **Write tool** to `./temp/` and grep that file.
 

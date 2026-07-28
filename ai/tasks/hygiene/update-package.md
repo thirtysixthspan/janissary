@@ -12,7 +12,7 @@ The rule is simple: **the compiler, the linter, and the tests must be green befo
 
 ## Step 0 — Prepare the workspace
 
-Execute `ai/tasks/prepare-workspace.md` in full before doing anything else.
+Execute `ai/tasks/workspace/prepare-workspace.md` in full before doing anything else.
 
 ---
 
@@ -112,7 +112,7 @@ If this is the **first** package you've reverted this run, go back to Step 3 and
 
 ## Step 7 — Merge the change to master
 
-Execute `ai/tasks/merge-change-to-master.md` in full. That document owns the merge workflow — follow its steps without deviation. Use commit type `build`, unless the code fixes from Step 5 are large enough that `fix` describes the change better.
+Execute `ai/tasks/workspace/merge-change-to-master.md` in full. That document owns the merge workflow — follow its steps without deviation. Use commit type `build`, unless the code fixes from Step 5 are large enough that `fix` describes the change better.
 
 ---
 

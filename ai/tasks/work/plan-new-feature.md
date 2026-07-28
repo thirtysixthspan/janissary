@@ -30,7 +30,7 @@ Read any file in the repo to ground a plan in real code. Create new plan files u
 
 ## Step 0 — Prepare the workspace
 
-Execute `ai/tasks/prepare-workspace.md` in full before doing anything else.
+Execute `ai/tasks/workspace/prepare-workspace.md` in full before doing anything else.
 
 ---
 

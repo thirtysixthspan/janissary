@@ -45,8 +45,8 @@ ship internally inconsistent about its own new location.
   already established for the first `ai/`→`ai/tasks/` move.
 - `CHANGELOG.md` and every `product/plans/complete/*.md` mention — historical records, not
   retroactively rewritten.
-- Root-relative plain-text mentions of files that are **not** moving (`ai/tasks/prepare-workspace.md`,
-  `ai/tasks/merge-change-to-master.md`, `ai/tasks/fix-an-issue.md`, `ai/guidelines/code-guidelines.md`
+- Root-relative plain-text mentions of files that are **not** moving (`ai/tasks/workspace/prepare-workspace.md`,
+  `ai/tasks/workspace/merge-change-to-master.md`, `ai/tasks/work/fix-an-issue.md`, `ai/guidelines/code-guidelines.md`
   as a bare root-relative mention rather than a file-relative link) — these stay correct regardless
   of the referencing file's own depth.
 

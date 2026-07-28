@@ -48,7 +48,7 @@ Edit the **one plan file** you picked: cut unneeded scope, replace a described-f
 
 ## Step 0 — Prepare the workspace
 
-Execute `ai/tasks/prepare-workspace.md` in full before doing anything else.
+Execute `ai/tasks/workspace/prepare-workspace.md` in full before doing anything else.
 
 ---
 

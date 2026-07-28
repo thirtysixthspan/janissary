@@ -16,7 +16,7 @@ This overrides CLAUDE.md's "Capturing command output" guidance (write the output
 
 ### Allowed — do it automatically, never ask
 
-Read any file in the repo. Edit source, tests, CSS, and spec files as the fix requires. Update `help.md` and files under `documentation/user-documentation/` when the fix changes behavior they already document. Write a plan file to `./product/plans/complete/`. Remove the resolved item from `./product/backlog/technical-debt.md`, and move any over-threshold item(s) encountered along the way into its `## deferred` section with a complexity note. Run `./scripts/run.mjs check-diff` after each change. Execute the full merge workflow via `ai/tasks/merge-change-to-master.md` once, at the end, covering every deferral plus the fix (if any).
+Read any file in the repo. Edit source, tests, CSS, and spec files as the fix requires. Update `help.md` and files under `documentation/user-documentation/` when the fix changes behavior they already document. Write a plan file to `./product/plans/complete/`. Remove the resolved item from `./product/backlog/technical-debt.md`, and move any over-threshold item(s) encountered along the way into its `## deferred` section with a complexity note. Run `./scripts/run.mjs check-diff` after each change. Execute the full merge workflow via `ai/tasks/workspace/merge-change-to-master.md` once, at the end, covering every deferral plus the fix (if any).
 
 ### Forbidden — no exceptions
 
@@ -25,13 +25,13 @@ Read any file in the repo. Edit source, tests, CSS, and spec files as the fix re
 3. **Skipping tests.** Every fix needs tests that cover the changed behavior. Verify with `./scripts/run.mjs check-diff`.
 4. **Resolving an item whose complexity exceeds the threshold.** If an item rates above 7/10, do not attempt to implement it — defer it and move to the next item instead (Step 1).
 5. **Editing `./product/backlog/technical-debt.md` beyond the entries in play.** Only remove the line for the item you resolved, and move the line(s) for the item(s) you deferred into `## deferred` with a complexity note — do not reorder, rephrase, or otherwise modify any other entry.
-6. **Merging before all checks pass.** The `ai/tasks/merge-change-to-master.md` workflow handles merge; do not bypass it.
+6. **Merging before all checks pass.** The `ai/tasks/workspace/merge-change-to-master.md` workflow handles merge; do not bypass it.
 
 ---
 
 ## Step 0 — Prepare the workspace
 
-Execute `ai/tasks/prepare-workspace.md` in full before doing anything else.
+Execute `ai/tasks/workspace/prepare-workspace.md` in full before doing anything else.
 
 ---
 
@@ -120,7 +120,7 @@ The fix only needs a documentation update if it changes behavior that `help.md` 
 
 ## Step 8 — Merge the change to master
 
-Execute `ai/tasks/merge-change-to-master.md` in full. That document owns the merge workflow — follow its steps without deviation.
+Execute `ai/tasks/workspace/merge-change-to-master.md` in full. That document owns the merge workflow — follow its steps without deviation.
 
 ---
 

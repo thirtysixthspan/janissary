@@ -15,7 +15,7 @@ git status
 git diff HEAD
 ```
 
-Write a single subject line following [Conventional Commits 1.0.0](../guidelines/conventional-commits.md): `<type>[optional scope]: <description>`. Valid types: `feat`, `fix`, `build`, `chore`, `ci`, `docs`, `style`, `refactor`, `perf`, `test`, `revert`. Guidance:
+Write a single subject line following [Conventional Commits 1.0.0](../../guidelines/conventional-commits.md): `<type>[optional scope]: <description>`. Valid types: `feat`, `fix`, `build`, `chore`, `ci`, `docs`, `style`, `refactor`, `perf`, `test`, `revert`. Guidance:
 
 - Choose the type that best represents the change as a whole (one commit ships here). If the changes are genuinely unrelated concerns, prefer the dominant one for the subject and describe the rest in the body.
 - Keep the subject short, imperative, and specific — describe the actual change, not "update files" or "changes".

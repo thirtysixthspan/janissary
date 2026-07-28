@@ -27,7 +27,7 @@ Edit the **one plan file** you picked: correct it, disambiguate it, restructure 
 
 ## Step 0 — Prepare the workspace
 
-Execute `ai/tasks/prepare-workspace.md` in full before doing anything else.
+Execute `ai/tasks/workspace/prepare-workspace.md` in full before doing anything else.
 
 ---
 

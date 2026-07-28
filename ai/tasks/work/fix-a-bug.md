@@ -16,7 +16,7 @@ This overrides CLAUDE.md's "Capturing command output" guidance (write the output
 
 ### Allowed — do it automatically, never ask
 
-Read any file in the repo. Run read-only commands to replicate the reported bug. Edit source, tests, CSS, and spec files as the fix requires. Update `help.md` and files under `documentation/user-documentation/` when the fix changes behavior they already document. Write a plan file under `./product/plans/` and move it through `draft/` → `ready/` → `complete/`. Remove the fixed bug from `./product/backlog/bugs.md`. Run `./scripts/run.mjs check-diff` after each change. Run the full PR workflow via `ai/tasks/open-feature-pull-request.md` when implementation is done.
+Read any file in the repo. Run read-only commands to replicate the reported bug. Edit source, tests, CSS, and spec files as the fix requires. Update `help.md` and files under `documentation/user-documentation/` when the fix changes behavior they already document. Write a plan file under `./product/plans/` and move it through `draft/` → `ready/` → `complete/`. Remove the fixed bug from `./product/backlog/bugs.md`. Run `./scripts/run.mjs check-diff` after each change. Run the full PR workflow via `ai/tasks/workspace/open-feature-pull-request.md` when implementation is done.
 
 ### Forbidden — no exceptions
 
@@ -25,13 +25,13 @@ Read any file in the repo. Run read-only commands to replicate the reported bug.
 3. **Running `npm run check`.** That is the human's end-of-work gate. Use `./scripts/run.mjs check-diff` during development.
 4. **Skipping the regression test.** Every fix needs a test that fails without the fix and passes with it. Verify with `./scripts/run.mjs check-diff`.
 5. **Editing `./product/backlog/bugs.md` beyond removing the fixed entry.** Only remove the line for the bug you fixed — do not reorder, rephrase, or otherwise modify the remaining entries.
-6. **Merging the PR.** `ai/tasks/open-feature-pull-request.md` opens it; merging is the human's decision.
+6. **Merging the PR.** `ai/tasks/workspace/open-feature-pull-request.md` opens it; merging is the human's decision.
 
 ---
 
 ## Step 0 — Prepare the workspace
 
-Execute `ai/tasks/prepare-workspace.md` in full before doing anything else.
+Execute `ai/tasks/workspace/prepare-workspace.md` in full before doing anything else.
 
 ---
 
@@ -139,7 +139,7 @@ The fix only needs a documentation update if it changes behavior that `help.md` 
 
 ## Step 9 — Open the pull request
 
-Execute `ai/tasks/open-feature-pull-request.md` in full — it owns the branch, commit, push, and PR-open workflow. Follow its steps as written, and additionally satisfy the two bug-specific requirements below.
+Execute `ai/tasks/workspace/open-feature-pull-request.md` in full — it owns the branch, commit, push, and PR-open workflow. Follow its steps as written, and additionally satisfy the two bug-specific requirements below.
 
 **Requirement 1 — use the `fix:` type.** The commit subject and PR title must use the `fix:` Conventional Commits type (that workflow's Step 3 and Step 6), for example `fix(web): reset image orientation on reload`.
 

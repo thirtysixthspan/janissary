@@ -14,7 +14,7 @@ Your job: pick the simplest available plan from `./product/plans/ready/`, implem
 
 ### Allowed — do it automatically, never ask
 
-Read any file in the repo. Edit source, tests, CSS, and spec files as the plan directs. Move the chosen plan file from `./product/plans/ready/` to `./product/plans/complete/`. Run `./scripts/run.mjs check-diff` after each change. Run the full PR workflow via `ai/tasks/open-feature-pull-request.md` when implementation is done.
+Read any file in the repo. Edit source, tests, CSS, and spec files as the plan directs. Move the chosen plan file from `./product/plans/ready/` to `./product/plans/complete/`. Run `./scripts/run.mjs check-diff` after each change. Run the full PR workflow via `ai/tasks/workspace/open-feature-pull-request.md` when implementation is done.
 
 ### Forbidden — no exceptions
 
@@ -22,13 +22,13 @@ Read any file in the repo. Edit source, tests, CSS, and spec files as the plan d
 2. **Running `npm run check`.** That is the human's end-of-work gate. Use `./scripts/run.mjs check-diff` during development.
 3. **Skipping tests.** If the plan specifies tests, write them. If it does not, still verify with `./scripts/run.mjs check-diff`.
 4. **Choosing a plan at complexity 7 or above.** If every plan in `./product/plans/ready/` is rated 7+, stop and report — do not pick one anyway.
-5. **Merging the PR.** `ai/tasks/open-feature-pull-request.md` opens it; merging is the human's decision.
+5. **Merging the PR.** `ai/tasks/workspace/open-feature-pull-request.md` opens it; merging is the human's decision.
 
 ---
 
 ## Step 0 — Prepare the workspace
 
-Execute `ai/tasks/prepare-workspace.md` in full before doing anything else.
+Execute `ai/tasks/workspace/prepare-workspace.md` in full before doing anything else.
 
 ---
 
@@ -101,7 +101,7 @@ git mv ./product/plans/ready/<plan-file> ./product/plans/complete/<plan-file>
 
 ## Step 7 — Open the pull request
 
-Execute `ai/tasks/open-feature-pull-request.md` in full. That document owns the PR workflow — follow its steps without deviation.
+Execute `ai/tasks/workspace/open-feature-pull-request.md` in full. That document owns the PR workflow — follow its steps without deviation.
 
 ---
 
