@@ -2,6 +2,9 @@
 
 ## ready
 
+* Replace the three identical `{ tab: TabView; index: number }` aliases in `web/src/` with one: `TabEntry` (`useTabEntries.ts:6`), `ReportingEntry` (`ReportingSection.tsx:16`), and `TabNavEntry` (`TabNavPicker.tsx:7`) are the same pair of fields under three names, so code moving between the tab strip, the reporting section, and the nav picker has to re-learn which alias the local file happens to use, and a change to the pair has three places to land. Keep one exported alias and import it in the other two. Severity: **low**.
+
+* Split `web/src/EditorTab.tsx` along its responsibilities: at 238 lines it is one of the two largest components in `web/src/` and holds five `useState`s, nine `useRef`s, and three effects spanning load-with-fallback, save with conflict detection, dirty tracking, focus-on-activate, caret scroll-into-view, and IME composition — six concerns whose only relationship is that they touch the same textarea, and the reason two of the undocumented `exhaustive-deps` suppressions live here. The neighboring `web/src/editor/` directory already holds the extracted-hook pattern to follow (`useEditor`, `useEditorSync`, `useEditorMouse`, `useEditorSuggest`); move the load/save/conflict lifecycle into its own hook and leave the component rendering. Severity: **medium**.
 
 ## development
 
@@ -20,12 +23,6 @@
 * Collapse the repeated per-tab lookup in `src/file-navigator/manager.ts` and split `FilesTabState`: eleven methods (`move`, `moveMany`, `deleteMany`, `undo`, `redo`, `rename`, `delete`, `search`, `openers`, `closeTab`, `scheduleRebuild`) each open with the same `const state = this.tabs.get(label); if (!state) return …` and then return a different silent sentinel — bare `undefined`, `{}`, `[]`, `{ total: 0, failedPaths: [] }`, `{ choices: [] }` — so an unknown label is indistinguishable from a successful no-op at every call site. The `FilesTabState` type behind it (lines 29-51) compounds this by mixing five unrelated concerns in one record: tree state (`root`, `expanded`), watcher plumbing (`watchers`, `debounce`, `pollTimer`), the undo/redo stacks, and a git-status cache carrying its own two-flag coalescing protocol. Add a private `withState(label, fn)` helper (or move these methods onto a per-tab object, per architecture principle 2) and lift the git cache into its own type. Severity: **medium**.
 
 * Add a colocated test for `web/src/useFileNavigatorMoveOperations.ts`: the hook is a 169-line conflict state machine — a three-variant `PendingConflict` union (`scalar`, `batch-move`, `history`), a `retry` function whose four branches each re-issue a different RPC, and single-versus-batch routing inside `requestMove` — and it is the largest of the four file-navigator hooks with no test beside it (`useFileNavigatorRename.ts`, `useFileNavigatorSearch.ts`, and `useFileNavigatorOpener.ts` are the others), while `useFileNavigatorSelection`, `useFileNavigatorDrag`, and the editor hooks all have one. Every path through `retry` moves or overwrites real files on disk, so picking the wrong branch is data loss rather than a rendering glitch. Cover each `PendingConflict` variant's request/retry/cancel cycle. Severity: **medium**.
-
-* Split `web/src/EditorTab.tsx` along its responsibilities: at 238 lines it is one of the two largest components in `web/src/` and holds five `useState`s, nine `useRef`s, and three effects spanning load-with-fallback, save with conflict detection, dirty tracking, focus-on-activate, caret scroll-into-view, and IME composition — six concerns whose only relationship is that they touch the same textarea, and the reason two of the undocumented `exhaustive-deps` suppressions live here. The neighboring `web/src/editor/` directory already holds the extracted-hook pattern to follow (`useEditor`, `useEditorSync`, `useEditorMouse`, `useEditorSuggest`); move the load/save/conflict lifecycle into its own hook and leave the component rendering. Severity: **medium**.
-
-* Replace the three identical `{ tab: TabView; index: number }` aliases in `web/src/` with one: `TabEntry` (`useTabEntries.ts:6`), `ReportingEntry` (`ReportingSection.tsx:16`), and `TabNavEntry` (`TabNavPicker.tsx:7`) are the same pair of fields under three names, so code moving between the tab strip, the reporting section, and the nav picker has to re-learn which alias the local file happens to use, and a change to the pair has three places to land. Keep one exported alias and import it in the other two. Severity: **low**.
-
-
 
 ## deferred
 
