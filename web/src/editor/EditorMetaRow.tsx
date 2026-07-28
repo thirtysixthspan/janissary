@@ -31,19 +31,21 @@ export function EditorMetaRow({
       <span className="editor-loc">{editor.path}</span>
       {savedFlash && <span className="editor-saved">Saved</span>}
       {error && <span className="editor-error">{error}</span>}
-      <EditorSyncIcon sync={editor.sync} onClick={onSyncClick} />
-      <EditorSaveButton dirty={dirty} onSave={onSave} />
-      <StatusWindowButton
-        icon={connectionsWindowIcon}
-        className="tab-connections"
-        hasContent={connectionsButton.hasContent}
-        activeTitle="connections"
-        emptyTitle="no active connections"
-        onEnter={connectionsButton.onEnter}
-        onLeave={connectionsButton.onLeave}
-        onClick={connectionsButton.onClick}
-      />
-      {onSplit && <SplitTabButton onClick={onSplit} />}
+      <span className="editor-actions">
+        <EditorSyncIcon sync={editor.sync} onClick={onSyncClick} />
+        <EditorSaveButton dirty={dirty} onSave={onSave} />
+        <StatusWindowButton
+          icon={connectionsWindowIcon}
+          className="tab-connections"
+          hasContent={connectionsButton.hasContent}
+          activeTitle="connections"
+          emptyTitle="no active connections"
+          onEnter={connectionsButton.onEnter}
+          onLeave={connectionsButton.onLeave}
+          onClick={connectionsButton.onClick}
+        />
+        {onSplit && <SplitTabButton onClick={onSplit} />}
+      </span>
     </div>
   );
 }

@@ -52,6 +52,13 @@ describe('MarkdownTab', () => {
     expect(stage.scrollTop).toBe(0);
   });
 
+  it('places Split in the right-side metadata actions', async () => {
+    const { container } = render(<MarkdownTab markdown={makeMarkdown()} onSplit={() => {}} />);
+    await waitFor(() => screen.getByRole('heading', { level: 1 }));
+
+    expect(container.querySelector(':scope .image-actions .tab-split')).not.toBeNull();
+  });
+
   it('renders markdown content as HTML after fetch', async () => {
     render(<MarkdownTab markdown={makeMarkdown()} />);
     await waitFor(() => {

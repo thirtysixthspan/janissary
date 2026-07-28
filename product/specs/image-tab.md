@@ -45,7 +45,7 @@ active tab as before.
 
 The image view shows, stacked top to bottom:
 
-1. **Metadata** — the image's name, size, and location, in a compact header.
+1. **Metadata** — the image's name, size, and location, in a compact header, with the Split action at the right edge when available.
 2. **The image** itself, filling the space beneath the metadata.
 
 ### Sizing

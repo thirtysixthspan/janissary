@@ -7,7 +7,6 @@ export function SplitTabButton({ onClick }: { onClick: () => void }) {
     <button
       type="button"
       className="tab-split"
-      style={{ marginLeft: 'auto' }}
       title="Split"
       aria-label="Split"
       onClick={onClick}

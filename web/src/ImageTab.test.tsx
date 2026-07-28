@@ -49,6 +49,12 @@ describe('ImageTab', () => {
     expect(screen.queryByText('110%')).not.toBeInTheDocument();
   });
 
+  it('places Split in the right-side metadata actions', () => {
+    const { container } = render(<ImageTab image={makeImage()} onSplit={() => {}} />);
+
+    expect(container.querySelector(':scope .image-actions .tab-split')).not.toBeNull();
+  });
+
   it('hides the zoom badge at 100%', () => {
     render(<ImageTab image={makeImage()} />);
     expect(screen.queryByText(/\d+%/)).not.toBeInTheDocument();

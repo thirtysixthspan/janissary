@@ -49,7 +49,7 @@ The active tab shows full-intensity foreground text on the content background co
 ### Split tab strips
 
 The central action area may show two tab strips and bodies side by side. Eligible action tabs have a
-right-aligned **Split** button in their metadata header. Pressing it moves that tab to the other pane; the first split moves
+**Split** button grouped with the other action buttons at the right edge of their metadata header. Pressing it moves that tab to the other pane; the first split moves
 the current tab right and leaves the most recently focused eligible tab on the left. Each pane keeps
 one selected tab, while exactly one of those two selected tabs has keyboard focus. Pressing anywhere
 in the other pane focuses its selected tab before the interaction continues. The focused pane's selected tab keeps its tab-colored left body border; the visible tab in the other pane uses the application theme's muted neutral border, making keyboard focus clear without dimming the pane's content.
@@ -124,8 +124,8 @@ git clone, and **auto-permitting** (a bolt icon), shown when harness auto-approv
 only — see Auto-approve permissions in `harness.md`). Hovering a flag's icon shows a tooltip naming
 it ("Workspaced", "Auto-permitting"). More flags of the same kind are expected in the future.
 
-Agent tabs and harness tabs also show a right-aligned file-navigator button (a folder icon, tooltip "Open file
-navigator here") at the end of the metadata row. Clicking it opens a file navigator rooted at that
+Agent tabs and harness tabs also show a file-navigator button (a folder icon, tooltip "Open file
+navigator here") in an action group at the right edge of the metadata row. Every other metadata button joins that same right-aligned group regardless of which optional buttons are present. Clicking the file-navigator button opens a file navigator rooted at that
 tab's own working directory; shell (PTY-takeover) tabs do not show this button. See "Opening from a
 tab's metadata row" in `file-navigator-tab.md` for how it opens or retargets the navigator.
 

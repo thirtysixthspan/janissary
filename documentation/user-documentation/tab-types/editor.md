@@ -11,8 +11,7 @@ edit notes/new-idea.md      the path doesn't have to exist yet
 
 The tab shows the file's name, size, and location in a header, with the editable buffer below.
 Typing, arrow keys, `Home`/`End`, `PageUp`/`PageDown`, mouse clicks and selection, and paste all
-work as you'd expect. A save button sits at the right of the header: it is enabled when you have
-unsaved changes and dimmed when the buffer is clean.
+work as you'd expect. The save, connection, sync, and Split controls that are available stay grouped at the right edge of the header. The save button is enabled when you have unsaved changes and dimmed when the buffer is clean.
 Long sentences wrap between words when they reach the editor's edge. A single token wider than the editor can still break so it doesn't create horizontal scrolling.
 
 You can also land in an editor by clicking a `file.ts:42`-style link in any transcript — the file opens with the cursor already on that line, centered in view — or from the [file navigator](/user-documentation/tab-types/file-navigator) with `Shift+Enter` on a file.
