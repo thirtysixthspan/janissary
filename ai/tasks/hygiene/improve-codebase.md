@@ -32,7 +32,7 @@ A named or handed-over target replaces **only** Step 2's selection. Step 1's dia
 
 ## Step 0 — Prepare the workspace
 
-Execute [`prepare-workspace.md`](../prepare-workspace.md) in full before doing anything else.
+Execute [`prepare-workspace.md`](../workspace/prepare-workspace.md) in full before doing anything else.
 
 Then establish a clean starting point:
 
