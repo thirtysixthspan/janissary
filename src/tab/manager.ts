@@ -26,6 +26,7 @@ import {
 } from './transcript-operations.js';
 import { setActiveTabOp, moveTabOp, reorderTabOp, reorderTabToOp } from './navigation-commands.js';
 import { centerPane, hasSplit, isCenterActionTab, moveToOtherPane } from './split.js';
+import { applyProfileTabPanes, resolveProfileTabFocus } from './place-profile-tabs.js';
 
 export class TabManager extends TabOpeningState {
   tabs: Tab[] = [];
@@ -271,27 +272,10 @@ export class TabManager extends TabOpeningState {
   }
 
   placeProfileTabs(candidates: { label: string; number?: number; pane?: CenterPane }[]): void {
-    const ordered = candidates.toSorted(
-      (a, b) => (a.number ?? Infinity) - (b.number ?? Infinity),
-    );
-    for (const candidate of candidates) {
-      const tab = this.tabs.find((item) => item.label === candidate.label);
-      if (tab && isCenterActionTab(tab)) tab.pane = candidate.pane === 'right' ? 'right' : undefined;
-    }
-    const left = ordered.find((candidate) => candidate.pane !== 'right');
-    const right = ordered.find((candidate) => candidate.pane === 'right');
-    if (left && right) {
-      this.activeTab = this.findIndex(left.label);
-      this.secondaryTabLabel = right.label;
-    } else if (left) {
-      const active = this.tabs[this.activeTab];
-      if (active?.pane === 'right') this.secondaryTabLabel = left.label;
-      else this.activeTab = this.findIndex(left.label);
-    } else if (right) {
-      const active = this.tabs[this.activeTab];
-      if (active?.pane === 'right') this.activeTab = this.findIndex(right.label);
-      else this.secondaryTabLabel = right.label;
-    }
+    applyProfileTabPanes(this.tabs, candidates);
+    const focus = resolveProfileTabFocus(this.tabs, this.activeTab, candidates, (label) => this.findIndex(label));
+    if (focus.activeTab !== undefined) this.activeTab = focus.activeTab;
+    if (focus.secondaryTabLabel !== undefined) this.secondaryTabLabel = focus.secondaryTabLabel;
     this.repairSelections();
   }
 
