@@ -112,9 +112,9 @@ The fix only needs a documentation update if it changes behavior that `help.md` 
 
 ---
 
-## Step 8 — Merge the change to master
+## Step 8 — Merge the resolved change to master
 
-Execute `ai/tasks/workspace/merge-change-to-master.md` in full. That document owns the merge workflow — follow its steps without deviation.
+After implementation, tests, specs/docs, plan promotion, and issue removal are complete, execute `ai/tasks/workspace/merge-change-to-master.md` in full. That document owns the merge workflow — follow its steps without deviation before giving the final report.
 
 ---
 

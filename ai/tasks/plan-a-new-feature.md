@@ -122,6 +122,16 @@ Before moving on, check the plan file against this list:
 
 Edit `./product/backlog/features.md` to remove that feature's `### ` entry (title and body) from the `## ready` section. Leave every other section, heading, and entry byte-for-byte untouched — do not reformat or reflow surrounding text. If the feature came from the task invocation and was never listed in the file, there is nothing to remove: leave the file untouched.
 
+### 2f. Improve and merge the completed plan
+
+Once the draft plan and backlog update are complete, execute these tasks in order and in full:
+
+1. `ai/tasks/planning/improve-plan.md`
+2. `ai/tasks/planning/improve-plan-with-minimalism.md`
+3. `ai/tasks/workspace/merge-change-to-master.md`
+
+Do not stop for approval between these tasks. The two planning tasks refine the draft plan in sequence; the merge task then packages and merges the resulting change.
+
 ---
 
 ## Step 3 — Report
@@ -133,6 +143,7 @@ Feature:  <feature title>
 Planned:  ./product/plans/draft/<file> — <one-line goal>
 Skipped:  <why, if abandoned instead of planned>
 Backlog:  ./product/backlog/features.md updated, entry removed from ## ready — or "not listed; nothing to remove" for a feature named at invocation
+Merged:   <status and PR reported by ai/tasks/workspace/merge-change-to-master.md>
 ```
 
 Keep it brief. Done.
