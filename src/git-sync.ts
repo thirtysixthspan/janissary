@@ -1,8 +1,8 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import path from 'node:path';
-import type { WorkspaceManager } from './workspace-manager.js';
-import { workspacePath } from './workspace.js';
+import type { WorkspaceManager } from './workspace/manager.js';
+import { workspacePath } from './workspace/index.js';
 import { getGithubToken } from './github-token.js';
 
 const execFileAsync = promisify(execFile);

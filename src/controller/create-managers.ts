@@ -3,7 +3,7 @@ import { SshManager } from '../ssh-manager.js';
 import { DatabaseManager } from '../database/manager.js';
 import { AcpManager } from '../acp/manager.js';
 import { ShellManager } from '../shell-manager.js';
-import { WorkspaceManager } from '../workspace-manager.js';
+import { WorkspaceManager } from '../workspace/manager.js';
 import { GitSync } from '../git-sync.js';
 import { PseudoterminalManager } from '../pseudoterminal-manager.js';
 import { ScheduleManager } from '../schedule/manager.js';

@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { findRepoRoot } from './workspace.js';
+import { findRepoRoot } from './index.js';
 
 // Assumes os.tmpdir() (== $TMPDIR) has no .git ancestor. True on a normal host, but false inside
 // a sandboxed workspace: src/sandbox/index.ts overrides TMPDIR to a path nested inside the parent

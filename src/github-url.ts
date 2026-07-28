@@ -1,4 +1,4 @@
-import { toHttpsUrl } from './workspace.js';
+import { toHttpsUrl } from './workspace/index.js';
 
 // Builds a GitHub commits-page URL for `remote`/`branch` (e.g.
 // https://github.com/owner/repo/commits/main/), or undefined when `remote` isn't a github.com
