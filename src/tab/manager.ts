@@ -19,11 +19,12 @@ import { recordHistory } from './history.js';
 import { FileRegistry } from './file-registry.js';
 import { closeTabOp } from './close.js';
 import { renameTabOp } from './rename.js';
-import { markUnreadTab } from './transcript-commands.js';
 import {
-  appendTabTranscript, buildTabViews, capTabLog, clearTabTranscript, finishTabRunning,
-  rehydrateTabState, startTabRunning,
-} from './transcript-operations.js';
+  appendTab, clearTranscriptTab, finishRunningTab, markUnreadTab, startRunningTab,
+} from './transcript-events.js';
+import { capLog } from './transcript-log.js';
+import { buildTabViews } from './view.js';
+import { rehydrateTabState } from './rehydrate.js';
 import { setActiveTabOp, moveTabOp, reorderTabOp, reorderTabToOp } from './navigation-commands.js';
 import { centerPane, hasSplit, isCenterActionTab, moveToOtherPane } from './split.js';
 import { applyProfileTabPanes, resolveProfileTabFocus } from './place-profile-tabs.js';
@@ -369,26 +370,26 @@ export class TabManager extends TabOpeningState {
   }
 
   startRunning(label: string, input: string): void {
-    startTabRunning(this.busy, label, input, (l, entry) => this.append(l, entry));
+    startRunningTab(this.busy, label, input, (l, entry) => this.append(l, entry));
   }
 
   finishRunning(label: string, output: string): void {
-    finishTabRunning(
+    finishRunningTab(
       this.tabs, label, output,
       (l) => this.deleteBusy(l), (s) => this.persist(s), (t) => this.buildAgentState(t), (l) => this.markUnread(l),
     );
   }
 
-  private capLog(log: LogEntry[]): LogEntry[] {
-    return capTabLog(log, getConfig().transcriptMaxLines);
+  private capToConfiguredMax(log: LogEntry[]): LogEntry[] {
+    return capLog(log, getConfig().transcriptMaxLines);
   }
 
   append(label: string, entry: LogEntry): void {
-    appendTabTranscript(this.tabs, label, entry, (log) => this.capLog(log), (l) => this.markUnread(l));
+    appendTab(this.tabs, label, entry, (log) => this.capToConfiguredMax(log), (l) => this.markUnread(l));
   }
 
   clearTranscript(label: string): void {
-    clearTabTranscript(this.tabs, label, (s) => this.persist(s), (t) => this.buildAgentState(t));
+    clearTranscriptTab(this.tabs, label, (s) => this.persist(s), (t) => this.buildAgentState(t));
   }
 
   recordHistory(index: number, text: string): string {
@@ -426,7 +427,7 @@ export class TabManager extends TabOpeningState {
   ): void {
     this.tabs = rehydrateTabState(
       this.tabs, this.cwd, this.context, this.queue, loadTranscript, onState,
-      (log) => this.capLog(log),
+      (log) => this.capToConfiguredMax(log),
     );
     for (const tab of this.tabs) tab.pane = undefined;
     this.activeTab = 0;

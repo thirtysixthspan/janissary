@@ -1,6 +1,35 @@
 import type { Tab } from '../types.js';
 import type { AggregatedScheduleView, ConnectionView, PendingQuestionView, ScheduleView, TabView } from '../protocol.js';
+import type { Managers } from '../managers.js';
 import { flattenBuffer } from './index.js';
+
+// Maps every tab through buildTabView, pulling each tab's per-label state out of the maps
+// TabManager keeps it in.
+export function buildTabViews(
+  tabs: Tab[],
+  cwd: Map<string, string>,
+  busy: Set<string>,
+  queue: Map<string, string[]>,
+  managers: Managers,
+  connectionsFor: (label: string) => ConnectionView[],
+  acpLabel: (label: string) => string | undefined,
+  scheduleView: (label: string) => ScheduleView[],
+  aggregatedSchedules: AggregatedScheduleView[],
+  shorten: (path: string) => string,
+): TabView[] {
+  return tabs.map((tab) => buildTabView(
+    tab,
+    busy.has(tab.label),
+    cwd.get(tab.label) ?? process.cwd(),
+    acpLabel(tab.label),
+    connectionsFor(tab.label),
+    scheduleView(tab.label),
+    queue.get(tab.label) ?? [],
+    shorten,
+    aggregatedSchedules,
+    managers.questions.pendingFor(tab.label),
+  ));
+}
 
 // Converts one internal Tab into the wire-format TabView sent to the client — the shape the
 // client actually renders, as opposed to Tab's server-side bookkeeping fields.
