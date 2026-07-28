@@ -1,10 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { JanusClient } from './ws';
 import type { TabView, RouteChooserView, HarnessLaunchView, ScheduleLaunchView, TaskRow, ProfileRow } from '@shared/protocol';
-import { HarnessLaunchDialog } from './HarnessLaunchDialog';
-import { ScheduleDialog } from './ScheduleDialog';
-import { AppReportingSection } from './AppReportingSection';
-import { AppShell } from './AppShell';
+import { AppMain } from './AppMain';
 import type { CommandInputDropHandle } from './CommandInput';
 import type { EditorTabHandle, EditorDropHandle } from './EditorTab';
 import { useTabHandles } from './useTabHandles';
@@ -13,9 +10,6 @@ import { useQuickOpen } from './useQuickOpen';
 import { useQueuePicker } from './useQueuePicker';
 import { usePopulatePickers } from './usePopulatePickers';
 import { useCommandBarSubmit } from './useCommandBarSubmit';
-import { QuitDialog } from './QuitDialog/QuitDialog';
-import { UnsavedQuitDialog } from './UnsavedQuitDialog';
-import { CloseSaveGuard } from './CloseSaveGuard';
 import { useUnsavedQuitGuard } from './useUnsavedQuitGuard';
 import { useFocusOnTabSwitch, focusCenterVisibleTab } from './useFocusOnTabSwitch';
 import { useSectionNav } from './useSectionNav';
@@ -23,7 +17,6 @@ import { useTabEntries } from './useTabEntries';
 import { useViewSearchState } from './useViewSearchState';
 import { getRecentHistory } from './history';
 import { useCmdW } from './useCmdW';
-import { AgentTabBody } from './AgentTabBody';
 import { useTranscriptScroll } from './useTranscriptScroll';
 import { useQuitConfirm } from './QuitDialog/useQuitConfirm';
 import { useAppWindowKeys } from './useAppWindowKeys';
@@ -35,7 +28,6 @@ import { useLayoutState } from './useLayoutState';
 import { applySyntaxTheme } from './editor/highlight/themes';
 import { useWindowFocus } from './useWindowFocus';
 import { useCmdWRefs } from './useCmdWRefs';
-import { AppCenterActionArea } from './AppCenterActionArea';
 
 export function App() {
   const clientReference = useRef<JanusClient | null>(null);
@@ -170,64 +162,38 @@ export function App() {
 
   if (!current) return <div className="app" style={{ padding: 16, color: 'var(--muted)' }}>Connecting…</div>;
 
-  const focusedAgentBody = (
-    <AgentTabBody
-        current={current} client={client} lines={lines} runCommand={runCommand}
-        transcriptReference={transcriptReference} highlight={highlight} inputReference={inputReference}
-        route={route} routeIndex={routeIndex} chooseRoute={chooseRoute}
-        syntaxTheme={syntaxTheme} themePickerOpen={themePickerOpen} themePickerIndex={themePickerIndex} pickTheme={pickTheme}
-        theme={theme} appThemePickerOpen={appThemePickerOpen} appThemePickerIndex={appThemePickerIndex} pickAppTheme={pickAppTheme}
-        pickerOpen={pickerOpen} recent={recent} pickerIndex={pickerIndex} pick={pick}
-        navOpen={navOpen} navQuery={navQuery} navIndex={navIndex} tabs={tabs} selectNavTab={selectNavTab}
-        queueOpen={queueOpen} queueIndex={queueIndex} selectQueueIndex={selectQueueIndex}
-        taskPickerOpen={taskPickerOpen} visibleTasks={visibleTasks} taskPickerIndex={taskPickerIndex} pickTask={pickTask} toggleTaskDir={toggleTaskDir}
-        profilePickerOpen={profilePickerOpen} profiles={visibleProfiles} profilePickerIndex={profilePickerIndex} pickProfile={pickProfile}
-        quickOpenOpen={quickOpenOpen} quickOpenQuery={quickOpenQuery} setQuickOpenQuery={setQuickOpenQuery}
-        quickOpenResults={quickOpenResults} quickOpenIndex={quickOpenIndex} setQuickOpenIndex={setQuickOpenIndex}
-        quickOpenLoading={quickOpenLoading} pickQuickOpenFile={pickQuickOpenFile} closeQuickOpen={closeQuickOpen}
-        search={search} globalHistory={globalHistory} onCommandBarSubmit={onCommandBarSubmit}
-        quitConfirmOpen={quitConfirmOpen} unsavedQuitOpen={unsavedQuitOpen}
-        recallReference={recallReference} onEditQueued={onEditQueued} onDeleteQueued={onDeleteQueued}
-      dropRef={dropReference}
-      onSplit={() => client.send({ method: 'moveTabToOtherPane', params: { index: activeTab } })}
-    />
-  );
-
   return (
-    <AppShell
-      tabs={tabs} client={client} dropRef={dropReference} editorDropRef={editorDropReference} tabNameMaxLength={tabNameMaxLength}
-      targetCwd={current.cwd}
-      activeTabNameMaxLength={activeTabNameMaxLength}
-      sidebarLeftWidth={sidebarLeftWidth} onSidebarLeftWidthChange={setSidebarLeftWidth}
-      sidebarRightWidth={sidebarRightWidth} onSidebarRightWidthChange={setSidebarRightWidth}
+    <AppMain
+      current={current} client={client} lines={lines} runCommand={runCommand}
+      transcriptReference={transcriptReference} highlight={highlight} inputReference={inputReference}
+      route={route} routeIndex={routeIndex} chooseRoute={chooseRoute}
+      syntaxTheme={syntaxTheme} themePickerOpen={themePickerOpen} themePickerIndex={themePickerIndex} pickTheme={pickTheme}
+      theme={theme} appThemePickerOpen={appThemePickerOpen} appThemePickerIndex={appThemePickerIndex} pickAppTheme={pickAppTheme}
+      pickerOpen={pickerOpen} recent={recent} pickerIndex={pickerIndex} pick={pick}
+      navOpen={navOpen} navQuery={navQuery} navIndex={navIndex} tabs={tabs} selectNavTab={selectNavTab}
+      queueOpen={queueOpen} queueIndex={queueIndex} selectQueueIndex={selectQueueIndex}
+      taskPickerOpen={taskPickerOpen} visibleTasks={visibleTasks} taskPickerIndex={taskPickerIndex} pickTask={pickTask} toggleTaskDir={toggleTaskDir}
+      profilePickerOpen={profilePickerOpen} profiles={visibleProfiles} profilePickerIndex={profilePickerIndex} pickProfile={pickProfile}
+      quickOpenOpen={quickOpenOpen} quickOpenQuery={quickOpenQuery} setQuickOpenQuery={setQuickOpenQuery}
+      quickOpenResults={quickOpenResults} quickOpenIndex={quickOpenIndex} setQuickOpenIndex={setQuickOpenIndex}
+      quickOpenLoading={quickOpenLoading} pickQuickOpenFile={pickQuickOpenFile} closeQuickOpen={closeQuickOpen}
+      search={search} globalHistory={globalHistory} onCommandBarSubmit={onCommandBarSubmit}
+      quitConfirmOpen={quitConfirmOpen} unsavedQuitOpen={unsavedQuitOpen}
+      recallReference={recallReference} onEditQueued={onEditQueued} onDeleteQueued={onDeleteQueued}
+      dropRef={dropReference}
+      activeTab={activeTab} secondaryTab={secondaryTab} windowFocused={windowFocused}
+      actionEntries={actionEntries} reportingEntries={reportingEntries} closeTab={closeTab}
+      tabNameMaxLength={tabNameMaxLength} activeTabNameMaxLength={activeTabNameMaxLength}
+      sidebarLeftWidth={sidebarLeftWidth} setSidebarLeftWidth={setSidebarLeftWidth}
+      sidebarRightWidth={sidebarRightWidth} setSidebarRightWidth={setSidebarRightWidth}
+      reportingHeightPct={reportingHeightPct} setReportingHeightPct={setReportingHeightPct}
       focusLeft={focusLeft} focusRight={focusRight}
-    >
-      <AppCenterActionArea
-        entries={actionEntries} tabs={tabs} activeTab={activeTab} secondaryTab={secondaryTab}
-        client={client} closeTab={closeTab} tabNameMaxLength={tabNameMaxLength}
-        activeTabNameMaxLength={activeTabNameMaxLength}
-        onFocusCommandBar={() => inputReference.current?.focus()}
-        onFocusEditor={(label) => editorHandles.current.get(label)?.focus()}
-        windowFocused={windowFocused} current={current} focusedAgentBody={focusedAgentBody}
-        shellProps={{
-          onHandle: (id, handle) => {
-            if (handle) shellHandles.current.set(id, handle);
-            else shellHandles.current.delete(id);
-          },
-        }}
-        mountedProps={{
-          harnessHandles, editorHandles, editorDropRef: editorDropReference, questionPanelRef,
-          taskPickerOpen, taskRows: visibleTasks, taskPickerIndex, onPickTask: pickTask,
-          onToggleTaskDir: toggleTaskDir, navOpen, navQuery, navIndex, onPickTab: selectNavTab,
-        }}
-      />
-      <AppReportingSection entries={reportingEntries} client={client} onClose={closeTab}
-        heightPct={reportingHeightPct} onHeightPctChange={setReportingHeightPct} />
-      {harnessLaunch && <HarnessLaunchDialog view={harnessLaunch} client={client} />}
-      {scheduleLaunch && <ScheduleDialog view={scheduleLaunch} client={client} />}
-      {quitConfirmOpen && <QuitDialog onConfirm={confirmQuit} onCancel={cancelQuit} />}
-      {unsavedQuitOpen && <UnsavedQuitDialog onConfirm={confirmUnsavedQuit} onCancel={cancelUnsavedQuit} />}
-      <CloseSaveGuard tabs={tabs} editorHandles={editorHandles} client={client} guardRef={guardRef} />
-    </AppShell>
+      harnessHandles={harnessHandles} shellHandles={shellHandles} questionPanelRef={questionPanelRef}
+      editorHandles={editorHandles} editorDropReference={editorDropReference}
+      harnessLaunch={harnessLaunch} scheduleLaunch={scheduleLaunch}
+      confirmQuit={confirmQuit} cancelQuit={cancelQuit}
+      confirmUnsavedQuit={confirmUnsavedQuit} cancelUnsavedQuit={cancelUnsavedQuit}
+      guardRef={guardRef}
+    />
   );
 }
