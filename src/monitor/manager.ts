@@ -34,6 +34,9 @@ export type MonitorSub = {
   persona: Persona;
   targets: MonitorTarget[];
   buffer: { tabLabel: string; entry: LogEntry }[];
+  // Per-harness-target count of session-transcript entries already fed, so each monitor advances its
+  // own cursor through the tab's accumulated transcript (see monitor-harness-transcript-feed).
+  harnessTranscriptSeen: Map<string, number>;
   // Per-harness-target last-fed capture time, so an unchanged screen is not re-fed (see monitor-harness-feed).
   harnessSeen: Map<string, number>;
   // Per-editor-target last-fed file content, so an unchanged file is not re-fed and a changed one is
@@ -93,7 +96,7 @@ export class MonitorManager {
     }
 
     const reg: MonitorSub = {
-      owner, name, inline, persona, targets: resolved, buffer: [], harnessSeen: new Map(), editorSeen: new Map(), pageSeen: new Map(), delimiter: generateSessionDelimiter(), inFlight: true, delivered: 0,
+      owner, name, inline, persona, targets: resolved, buffer: [], harnessTranscriptSeen: new Map(), harnessSeen: new Map(), editorSeen: new Map(), pageSeen: new Map(), delimiter: generateSessionDelimiter(), inFlight: true, delivered: 0,
       contextBytes: 0, contextText: [],
       session: undefined as unknown as AcpSession, timer: undefined as unknown as ReturnType<typeof setInterval>, subs: [],
     };

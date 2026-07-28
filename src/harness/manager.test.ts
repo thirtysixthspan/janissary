@@ -27,6 +27,17 @@ vi.mock('./recorder.js', () => ({
   }),
 }));
 
+// Mock the transcript tailer for the same reason as the recorder: the manager's lifecycle wiring is
+// what's under test here, not the tailing itself (that lives in `transcript/tailer.test.ts`).
+const tailerMock = vi.hoisted(() => ({ instances: [] as { dispose: ReturnType<typeof vi.fn>; transcriptFile: ReturnType<typeof vi.fn> }[] }));
+vi.mock('./transcript/tailer.js', () => ({
+  HarnessTranscriptTailer: vi.fn(function () {
+    const instance = { dispose: vi.fn(), transcriptFile: vi.fn(), entriesAfter: vi.fn(() => []) };
+    tailerMock.instances.push(instance);
+    return instance;
+  }),
+}));
+
 function makeManagers(): { managers: Managers; tabs: Tab[]; edit: ReturnType<typeof vi.fn>; scheduleSet: ReturnType<typeof vi.fn> } {
   const tabs: Tab[] = [];
   const creator = { label: 'janus', log: [] } as unknown as Tab;
@@ -63,7 +74,7 @@ function makeManagers(): { managers: Managers; tabs: Tab[]; edit: ReturnType<typ
   return { managers, tabs, edit, scheduleSet };
 }
 
-describe('HarnessManager.capture', () => {
+describe('harness capture', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     recorderMock.instances.length = 0;
@@ -78,28 +89,28 @@ describe('HarnessManager.capture', () => {
   it('errors when no tab has the label', () => {
     const { managers } = makeManagers();
     const manager = new HarnessManager(managers);
-    expect(manager.capture('harness capture nope', 'nope')).toBe('No tab labeled "nope".');
+    expect(manager.run('harness capture nope')).toBe('No tab labeled "nope".');
   });
 
   it('errors when the tab is not a harness tab', () => {
     const { managers, tabs } = makeManagers();
     const manager = new HarnessManager(managers);
     tabs.push({ label: 'plain' } as unknown as Tab);
-    expect(manager.capture('harness capture plain', 'plain')).toBe('"plain" is not a harness tab.');
+    expect(manager.run('harness capture plain')).toBe('"plain" is not a harness tab.');
   });
 
   it('reports no capture for a harness-payload tab with no reader (the ssh case)', () => {
     const { managers, tabs } = makeManagers();
     const manager = new HarnessManager(managers);
     tabs.push({ label: 'ssh', harness: { name: 'ssh', program: 'ssh', ptyId: 'pty-ssh', status: 'running' } } as unknown as Tab);
-    expect(manager.capture('harness capture ssh', 'ssh')).toBe('No capture available for "ssh" yet.');
+    expect(manager.run('harness capture ssh')).toBe('No capture available for "ssh" yet.');
   });
 
   it('reports no capture before the harness has produced settled output', () => {
     const { managers } = makeManagers();
     const manager = new HarnessManager(managers);
     expect(manager.run('harness claude')).toBeUndefined();
-    expect(manager.capture('harness capture claude', 'claude')).toBe('No capture available for "claude" yet.');
+    expect(manager.run('harness capture claude')).toBe('No capture available for "claude" yet.');
   });
 
   it('writes the latest capture to a file and opens it in the editor', async () => {
@@ -108,9 +119,62 @@ describe('HarnessManager.capture', () => {
     expect(manager.run('harness claude')).toBeUndefined();
     messageBus.emit('pty', { type: 'data', id: 'pty-1', data: 'screen contents' });
     await vi.advanceTimersByTimeAsync(1001);
-    expect(manager.capture('harness capture claude', 'claude')).toBeUndefined();
+    expect(manager.run('harness capture claude')).toBeUndefined();
     expect(writeCaptureFile).toHaveBeenCalledWith('claude', expect.any(Number), 'screen contents');
     expect(edit).toHaveBeenCalledWith('harness capture claude', '/project/.janissary/captures/claude-now.txt', 'janus');
+  });
+});
+
+describe('harness transcript', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    tailerMock.instances.length = 0;
+  });
+
+  afterEach(() => {
+    messageBus.emit('pty', { type: 'exit', id: 'pty-1', exitCode: 0 });
+    vi.useRealTimers();
+    vi.clearAllMocks();
+  });
+
+  it('errors when no tab has the label', () => {
+    const { managers } = makeManagers();
+    const manager = new HarnessManager(managers);
+    expect(manager.run('harness transcript nope')).toBe('No tab labeled "nope".');
+  });
+
+  it('errors when the tab is not a harness tab', () => {
+    const { managers, tabs } = makeManagers();
+    const manager = new HarnessManager(managers);
+    tabs.push({ label: 'plain' } as unknown as Tab);
+    expect(manager.run('harness transcript plain')).toBe('"plain" is not a harness tab.');
+  });
+
+  it('reports no transcript for an ssh tab, which has a harness payload but no tailer', () => {
+    const { managers, tabs } = makeManagers();
+    const manager = new HarnessManager(managers);
+    tabs.push({ label: 'ssh', harness: { name: 'ssh', program: 'ssh', ptyId: 'pty-ssh', status: 'running' } } as unknown as Tab);
+    expect(manager.run('harness transcript ssh')).toBe('No transcript available for "ssh" yet.');
+  });
+
+  it('reports no transcript before the tailer has written a file', () => {
+    const { managers } = makeManagers();
+    const manager = new HarnessManager(managers);
+    expect(manager.run('harness claude')).toBeUndefined();
+    expect(manager.run('harness transcript claude')).toBe('No transcript available for "claude" yet.');
+  });
+
+  it('opens the transcript file in the editor once one exists', () => {
+    const { managers, edit } = makeManagers();
+    const manager = new HarnessManager(managers);
+    expect(manager.run('harness claude')).toBeUndefined();
+    tailerMock.instances[0].transcriptFile.mockReturnValue('/project/.janissary/harness-transcripts/claude-now.txt');
+    expect(manager.run('harness transcript claude')).toBeUndefined();
+    expect(edit).toHaveBeenCalledWith(
+      'harness transcript claude',
+      '/project/.janissary/harness-transcripts/claude-now.txt',
+      'janus',
+    );
   });
 });
 
@@ -138,6 +202,43 @@ describe('HarnessManager recorder lifecycle', () => {
     manager.run('harness claude');
     messageBus.emit('pty', { type: 'exit', id: 'pty-1', exitCode: 0 });
     expect(recorderMock.instances[0].dispose).toHaveBeenCalled();
+  });
+});
+
+describe('HarnessManager transcript tailer lifecycle', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    tailerMock.instances.length = 0;
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.clearAllMocks();
+  });
+
+  it('creates a tailer when a harness tab spawns and exposes it by label', () => {
+    const { managers } = makeManagers();
+    const manager = new HarnessManager(managers);
+    expect(manager.run('harness claude')).toBeUndefined();
+    expect(tailerMock.instances).toHaveLength(1);
+    expect(manager.transcriptTailer('claude')).toBe(tailerMock.instances[0]);
+  });
+
+  it('has no tailer for an ssh tab, which shares the harness-view shape but runs no harness', () => {
+    const { managers, tabs } = makeManagers();
+    const manager = new HarnessManager(managers);
+    tabs.push({ label: 'ssh', harness: { name: 'ssh', program: 'ssh', ptyId: 'pty-ssh', status: 'running' } } as unknown as Tab);
+    expect(manager.transcriptTailer('ssh')).toBeUndefined();
+    expect(tailerMock.instances).toHaveLength(0);
+  });
+
+  it('disposes the tailer when its PTY exits', () => {
+    const { managers } = makeManagers();
+    const manager = new HarnessManager(managers);
+    manager.run('harness claude');
+    messageBus.emit('pty', { type: 'exit', id: 'pty-1', exitCode: 0 });
+    expect(tailerMock.instances[0].dispose).toHaveBeenCalled();
+    expect(manager.transcriptTailer('claude')).toBeUndefined();
   });
 });
 

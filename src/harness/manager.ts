@@ -5,13 +5,15 @@ import { isKnownModel, modelsFor } from './models.js';
 import type { HarnessLaunchView } from '../protocol.js';
 import { HarnessScreenReader, type ScreenCapture } from './screen.js';
 import { HarnessRecorder } from './recorder.js';
-import { HarnessAutoApprover, autoApproveWithoutWorkspaceWarning } from './auto-approve.js';
+import { type HarnessAutoApprover, autoApproveWithoutWorkspaceWarning } from './auto-approve.js';
+import { buildAutoApprover } from './auto-approve-wire.js';
 import { busyStatusHandler } from './busy-status.js';
-import { writeCaptureFile } from './capture-file.js';
+import { captureSubcommand, transcriptSubcommand } from './subcommands.js';
+import { HarnessTranscriptTailer } from './transcript/tailer.js';
+import { createTranscriptSource } from './transcript/sources.js';
 import type { HarnessView, ProfileHarnessEntry } from '../types.js';
 import { messageBus } from '../bus.js';
 import { notify } from '../notifications.js';
-import { notificationsTab } from '../notifications-tab.js';
 import { sandboxNotice } from '../sandbox/index.js';
 import { oneShotRunEntry } from '../profile/harness-schedule.js';
 import { wireProvisioning, PROVISION_FAILURE_CLOSE_DELAY_MS } from '../workspace/provision-wire.js';
@@ -25,6 +27,7 @@ import type { Managers } from '../managers.js';
 export class HarnessManager {
   private screenReaders = new Map<string, HarnessScreenReader>();
   private recorders = new Map<string, HarnessRecorder>();
+  private tailers = new Map<string, HarnessTranscriptTailer>();
   private autoApprovers = new Map<string, HarnessAutoApprover>();
   private launchDialogOpen = false;
 
@@ -35,6 +38,8 @@ export class HarnessManager {
       this.screenReaders.delete(event.id);
       this.recorders.get(event.id)?.dispose();
       this.recorders.delete(event.id);
+      this.tailers.get(event.id)?.dispose();
+      this.tailers.delete(event.id);
       this.autoApprovers.delete(event.id);
     });
   }
@@ -46,6 +51,16 @@ export class HarnessManager {
     const tab = this.managers.tab.tabs.find((t) => t.label === label);
     if (!tab?.harness) return undefined;
     return this.screenReaders.get(tab.harness.ptyId)?.latestCapture();
+  }
+
+  // The named tab's transcript tailer, or undefined when the tab is missing, is not a harness tab,
+  // or never got one. Only `finishSpawn` creates a tailer, so this is also what tells a real harness
+  // tab apart from an ssh tab — which carries the same harness-view shape and a `ptyId`, but runs no
+  // harness binary and has no dot directory. Callers ask the tailer itself for entries or its file.
+  transcriptTailer(label: string): HarnessTranscriptTailer | undefined {
+    const tab = this.managers.tab.tabs.find((t) => t.label === label);
+    if (!tab?.harness) return undefined;
+    return this.tailers.get(tab.harness.ptyId);
   }
 
   // Register a screen reader for a PTY this manager did not spawn itself (currently: ssh tabs,
@@ -62,7 +77,8 @@ export class HarnessManager {
   run(input: string): string | undefined {
     const parsed = parseHarnessCommand(input);
     if ('error' in parsed) return parsed.error;
-    if ('capture' in parsed) return this.capture(input, parsed.label);
+    if ('capture' in parsed) return captureSubcommand(this.managers, (l) => this.latestScreenText(l), input, parsed.label);
+    if ('transcript' in parsed) return transcriptSubcommand(this.managers, (l) => this.transcriptTailer(l), input, parsed.label);
     if (parsed.model && !isKnownModel(parsed.name, parsed.model)) {
       return `Unknown model "${parsed.model}" for harness "${parsed.name}" — add it to harness-models.json.`;
     }
@@ -89,20 +105,6 @@ export class HarnessManager {
     if (!this.launchDialogOpen) return null;
     const models = Object.fromEntries(HARNESS_NAMES.map((name) => [name, modelsFor(name)]));
     return { names: HARNESS_NAMES, models };
-  }
-
-  // Handle `harness capture <name>`: write the target tab's latest in-memory screen capture to a
-  // file under .janissary/captures/ and open it in a normal editor tab. Returns an error message
-  // to surface in the invoking tab's transcript, or undefined on success.
-  capture(input: string, label: string): string | undefined {
-    const tab = this.managers.tab.tabs.find((t) => t.label === label);
-    if (!tab) return `No tab labeled "${label}".`;
-    if (!tab.harness) return `"${label}" is not a harness tab.`;
-    const latest = this.screenReaders.get(tab.harness.ptyId)?.latestCapture();
-    if (!latest) return `No capture available for "${label}" yet.`;
-    const file = writeCaptureFile(label, latest.capturedAt, latest.text);
-    this.managers.openFile.edit(input, file, this.managers.tab.cur().label);
-    return undefined;
   }
 
   // Open (and focus) a harness tab running `name`, labeled `label` if given (otherwise `name`).
@@ -194,6 +196,10 @@ export class HarnessManager {
     const dims = this.managers.pty.spawnDimensions();
     this.screenReaders.set(id, new HarnessScreenReader(id, dims.cols, dims.rows, this.captureHandler(name, label, id, autoApprove)));
     this.recorders.set(id, new HarnessRecorder(id, label, program, dims.cols, dims.rows));
+    const source = createTranscriptSource(name, cwd, Date.now());
+    if (source) {
+      this.tailers.set(id, new HarnessTranscriptTailer(label, source, () => { notify(this.managers, 'transcript-unavailable', label); }));
+    }
     const liveTab = this.managers.tab.tabs.find((t) => t.label === label);
     if (liveTab?.harness) {
       liveTab.harness.ptyId = id;
@@ -223,33 +229,14 @@ export class HarnessManager {
   // of the same capture. Returns undefined when neither applies, so the reader runs exactly as it
   // would with no consumers.
   private captureHandler(name: string, label: string, id: string, autoApprove: boolean): ((capture: ScreenCapture) => void) | undefined {
-    const approver = this.buildAutoApprover(name, label, id, autoApprove);
+    const approver = autoApprove ? buildAutoApprover(this.managers, name, label, id) : undefined;
+    if (approver) this.autoApprovers.set(id, approver);
     const busyHandler = busyStatusHandler(name, label, this.managers, approver);
     if (!approver && !busyHandler) return undefined;
     return (capture) => {
       approver?.onCapture(capture);
       busyHandler?.(capture);
     };
-  }
-
-  // When `autoApprove` is on, build the tab's auto-approver and register it under the PTY id;
-  // otherwise return undefined. The approver injects the approval keystroke back into this PTY
-  // and reports each approval to the notifications feed (label-free — `notify` prefixes the tab
-  // label).
-  private buildAutoApprover(name: string, label: string, id: string, autoApprove: boolean): HarnessAutoApprover | undefined {
-    if (!autoApprove) return undefined;
-    const approver = new HarnessAutoApprover({
-      harnessName: name,
-      approve: (keystroke) => this.managers.pty.input(id, keystroke),
-      notify: (message, capture) => {
-        const openFile = capture && notificationsTab(this.managers)
-          ? writeCaptureFile(label, capture.capturedAt, capture.text)
-          : undefined;
-        notify(this.managers, 'auto-approve', label, message, openFile);
-      },
-    });
-    this.autoApprovers.set(id, approver);
-    return approver;
   }
 
   // Parse `resolveCwd`'s result into a clean `{ cwd, workspaceDir, ready }` or return the error

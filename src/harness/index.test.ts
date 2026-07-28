@@ -51,6 +51,30 @@ describe('parseHarnessCommand', () => {
     expect('name' in result).toBe(false);
   });
 
+  it('recognizes the transcript subcommand with a target label', () => {
+    const result = parseHarnessCommand('harness transcript claude');
+    expect('transcript' in result && result.transcript).toBe(true);
+    expect('label' in result && result.label).toBe('claude');
+  });
+
+  it('is case-insensitive for the transcript keyword but preserves the label case', () => {
+    const result = parseHarnessCommand('harness TRANSCRIPT MyTab');
+    expect('transcript' in result && result.transcript).toBe(true);
+    expect('label' in result && result.label).toBe('MyTab');
+  });
+
+  it('returns a usage error for transcript with no label', () => {
+    const result = parseHarnessCommand('harness transcript');
+    expect('error' in result).toBe(true);
+    expect((result as { error: string }).error).toBe('Usage: harness transcript <name>.');
+  });
+
+  it('never treats transcript as an unknown harness name', () => {
+    const result = parseHarnessCommand('harness transcript x');
+    expect('error' in result).toBe(false);
+    expect('name' in result).toBe(false);
+  });
+
   it('ignores unrecognized extra arguments after the name', () => {
     const result = parseHarnessCommand('harness claude --some-flag');
     expect('name' in result && result.name).toBe('claude');

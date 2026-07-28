@@ -7,6 +7,7 @@ import { supportsHarnessAutoApprove } from './auto-approve.js';
 export type HarnessParsed =
   | { name: string; workspace: boolean; offline: boolean; autoApprove: boolean; label?: string; model?: string; effort?: string; prompt?: string }
   | { capture: true; label: string }
+  | { transcript: true; label: string }
   | { error: string };
 
 // Find a `--flag <value>` pair anywhere in `tokens`. Returns the value, `undefined` if the flag
@@ -57,6 +58,18 @@ function parseHarnessFlags(
   return { workspace, offline, autoApprove, model, effort, label };
 }
 
+// The `harness <subcommand> <label>` forms, which target an existing harness tab instead of
+// launching one. Both share a shape, so they parse through one branch — keeping
+// `parseHarnessCommand`'s own branching under the complexity limit and the usage string singular.
+// Returns undefined when the first token is not one of them.
+function parseLabelSubcommand(tokens: string[]): HarnessParsed | undefined {
+  const subcommand = tokens[0].toLowerCase();
+  if (subcommand !== 'capture' && subcommand !== 'transcript') return undefined;
+  const label = tokens[1];
+  if (!label) return { error: `Usage: harness ${subcommand} <name>.` };
+  return subcommand === 'capture' ? { capture: true, label } : { transcript: true, label };
+}
+
 /**
  * Parse a `harness <name> [as <label>] [-w|--workspace] [--offline] [-y|--yes] [--model <name>]
  * [--effort <level>]` command, validating the harness name against the known set. `as <label>`
@@ -71,8 +84,9 @@ function parseHarnessFlags(
  * A trailing `with <prompt>` clause (after all options) carries free-text to inject into the new
  * harness once it is running; everything after the standalone `with` token to end of line is the
  * prompt, with internal spaces preserved verbatim. A `with` with no following text is a usage error.
- * `harness capture <name>` is the other form: `<name>` targets an existing harness tab by label
- * (`capture` can never collide with a harness name — it is not a HARNESS_COMMANDS key).
+ * `harness capture <name>` and `harness transcript <name>` are the other forms: `<name>` targets an
+ * existing harness tab by label (neither keyword can collide with a harness name — neither is a
+ * HARNESS_COMMANDS key).
  */
 export function parseHarnessCommand(input: string): HarnessParsed {
   const rest = input.replace(/^harness\b\s*/i, '').trim();
@@ -81,11 +95,8 @@ export function parseHarnessCommand(input: string): HarnessParsed {
   if ('error' in clause) return clause;
   const { left, prompt } = clause;
   const tokens = left.split(/\s+/);
-  if (tokens[0].toLowerCase() === 'capture') {
-    const label = tokens[1];
-    if (!label) return { error: 'Usage: harness capture <name>.' };
-    return { capture: true, label };
-  }
+  const subcommand = parseLabelSubcommand(tokens);
+  if (subcommand) return subcommand;
   const name = tokens[0].toLowerCase();
   if (HARNESS_COMMANDS[name] === undefined) {
     return { error: `Unknown harness "${name}". Choose from: ${HARNESS_NAMES.join(', ')}.` };

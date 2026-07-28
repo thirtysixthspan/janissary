@@ -1,5 +1,6 @@
 import { mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import path from 'node:path';
+import { harnessArtifactFilename } from './artifact-name.js';
 
 let captureDirectory = '';
 
@@ -12,12 +13,9 @@ export function ensureCaptureDirectory(): void {
 }
 
 // Write a screen capture for the tab labeled `label` to `<label>-<capturedAt-iso>.txt` and return
-// the absolute path. The label is sanitized rather than rejected — the tab exists, so its label is
-// legitimate even when it holds filename-hostile characters (`/`, `.`).
+// the absolute path, named by the shared harness artifact builder.
 export function writeCaptureFile(label: string, capturedAt: number, text: string): string {
-  const safeLabel = label.replaceAll(/[^\w-]/g, '-');
-  const timestamp = new Date(capturedAt).toISOString().replaceAll(/[:.]/g, '-');
-  const file = path.join(captureDirectory, `${safeLabel}-${timestamp}.txt`);
+  const file = path.join(captureDirectory, harnessArtifactFilename(label, capturedAt, '.txt'));
   ensureCaptureDirectory();
   writeFileSync(file, text);
   return file;
