@@ -3,7 +3,7 @@ import type { TabView } from '@shared/protocol';
 import { isReportingTab } from './ReportingSection';
 import type { JanusClient } from './ws';
 
-type TabEntry = { tab: TabView; index: number };
+export type TabEntry = { tab: TabView; index: number };
 
 export function reorderTabEntries(
   client: JanusClient, entries: TabEntry[], from: number, to: number,

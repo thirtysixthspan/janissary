@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { collectProfileProblems } from './schema.js';
 import { profilePath } from '../profiles.js';
 import type {
-  AgentState, LoadedProfile, ProfileAgentFile, ProfileEntry, ProfileFile, ProfileHarnessEntry,
+  LoadedProfile, ProfileAgentEntry, ProfileAgentFile, ProfileEntry, ProfileFile, ProfileHarnessEntry,
   ProfileHarnessFile, ProfileLayout, ProfileLayoutFile, ProfileMonitor, ProfileMonitorFile,
 } from '../types.js';
 
@@ -13,16 +13,22 @@ import type {
 // launcher maps to the terse "malformed" message.
 
 // Map an on-disk agent element to the flat runtime `AgentState`: `tab.*` → the flat tab fields.
-function mapAgent(file: ProfileAgentFile): AgentState {
+function mapAgent(file: ProfileAgentFile): ProfileAgentEntry {
   const { tab, ...rest } = file;
-  return { ...rest, dotColor: tab?.color ?? '', number: tab?.number, focus: tab?.focus, group: tab?.group, groupColor: tab?.groupColor };
+  return {
+    ...rest, dotColor: tab?.color ?? '', number: tab?.number, focus: tab?.focus,
+    group: tab?.group, groupColor: tab?.groupColor, pane: tab?.pane,
+  };
 }
 
 // Map an on-disk harness element to the flat runtime `ProfileHarnessEntry` (which keeps `type`,
 // `name`, and the flat tab fields).
 function mapHarness(file: ProfileHarnessFile): ProfileHarnessEntry {
   const { tab, ...rest } = file;
-  return { ...rest, dotColor: tab?.color, number: tab?.number, focus: tab?.focus, group: tab?.group };
+  return {
+    ...rest, dotColor: tab?.color, number: tab?.number, focus: tab?.focus,
+    group: tab?.group, pane: tab?.pane,
+  };
 }
 
 // An on-disk monitor's `name` defaults to its persona when omitted (Decision 13).

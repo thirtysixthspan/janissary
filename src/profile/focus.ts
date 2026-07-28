@@ -1,4 +1,11 @@
-export type MainAreaCandidate = { label: string; number?: number; focus?: boolean };
+import type { CenterPane } from '../types.js';
+
+export type MainAreaCandidate = {
+  label: string;
+  number?: number;
+  focus?: boolean;
+  pane?: CenterPane;
+};
 
 export function focusedMainAreaLabel(candidates: MainAreaCandidate[], firstNewLabel: string | undefined): string | undefined {
   return candidates

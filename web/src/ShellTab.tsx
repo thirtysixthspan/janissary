@@ -3,7 +3,9 @@ import type { JanusClient } from './ws';
 import { useXterm } from './useXterm';
 import { AgentTabMeta } from './AgentTabMeta';
 
-type Properties = { ptyId: string; client: JanusClient; cwd?: string; flags?: string[] };
+type Properties = {
+  ptyId: string; client: JanusClient; cwd?: string; flags?: string[]; onSplit?: () => void;
+};
 export type ShellTabHandle = { focus(): void };
 
 // Only the tab-switch chords (Shift+←/→ and Cmd+Shift+[/]) bubble to the window; everything
@@ -17,7 +19,9 @@ function shellKeyFilter(e: KeyboardEvent): boolean {
 
 // Full-tab terminal that takes over the agent tab body while an interactive program is running.
 // Unmounts when the program exits; the transcript is restored by the parent.
-export const ShellTab = forwardRef<ShellTabHandle, Properties>(function ShellTab({ ptyId, client, cwd, flags }, ref) {
+export const ShellTab = forwardRef<ShellTabHandle, Properties>(function ShellTab({
+  ptyId, client, cwd, flags, onSplit,
+}, ref) {
   const hostReference = useRef<HTMLDivElement>(null);
   const focusTerm = useXterm({
     ptyId,
@@ -29,7 +33,7 @@ export const ShellTab = forwardRef<ShellTabHandle, Properties>(function ShellTab
   useImperativeHandle(ref, () => ({ focus: focusTerm }), [focusTerm]);
   return (
     <div className="harness-tab">
-      <AgentTabMeta cwd={cwd} flags={flags} />
+      <AgentTabMeta cwd={cwd} flags={flags} onSplit={onSplit} />
       <div className="harness-body" ref={hostReference} />
     </div>
   );

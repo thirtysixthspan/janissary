@@ -37,7 +37,7 @@ Profiles live in a `profiles/` directory in your project — plain files, meant 
       "workspace": true,
       "run": ["review the open pull requests"],
       "schedule": ["tests every 2h npm test"],
-      "tab": { "number": 2 }
+      "tab": { "number": 2, "pane": "right" }
     }
   ]
 }
@@ -52,7 +52,7 @@ An agent entry uses the same format as saved agent state — just a `name` is a 
 - **`run`** — commands typed into the harness once, shortly after launch.
 - **`schedule`** — timers in the [`schedule` grammar](/user-documentation/automation/scheduling), minus the leading `schedule` keyword and any `in <tab>` clause (each line belongs to this tab). A line that doesn't parse is reported at launch and skipped.
 
-Both kinds of entry group their tab presentation under a `tab` object: `color` (the dot color), `number` (tab order), `group`, `groupColor`, and `focus`. Any agent, harness, or editor entry with `focus: true` can claim the main area after launch; the lowest-numbered focused entry wins. Without one, the first newly opened profile tab stays active.
+Both kinds of entry group their tab presentation under a `tab` object: `color` (the dot color), `number` (tab order), `group`, `groupColor`, `pane`, and `focus`. Set `pane` to `left` or `right` to reopen that entry in a two-pane center layout; omitting it means left. Any agent, harness, or editor entry with `focus: true` can claim keyboard focus after launch; the lowest-numbered focused entry wins, while the other pane keeps one of its own tabs visible. Without one, the first newly opened profile tab stays active.
 
 Profile-level configuration lives under plain top-level keys alongside the arrays: `monitors`, `files`, `editors`, `notifications`, `schedules`, and `layout`. The `layout` key groups the sidebar widths under a nested `sidebar` object, e.g. `"layout": { "sidebar": { "left": 300, "right": 280 }, "tabAreaPct": 75, "window": { "width": 1280, "height": 800 } }`. It applies on every launch, including a relaunch, and always wins over anything you resized by hand: any dimension the key doesn't mention resets to the app's own default rather than staying at whatever it currently is.
 
@@ -79,7 +79,7 @@ Launching a profile that's already running resets it: any open tab whose label m
 
 `profile save <name>` captures your current session into `profiles/<name>.json`, the inverse of launching one. It writes `<name>` verbatim as the filename, with no dasherization, and captures every open tab, including the one you typed the command in. The one tab it always leaves out is the automatic root `janus` tab, since a relaunch always has its own fresh one to land in.
 
-Each agent is captured as a clean template: its name, working directory, and tab presentation only. Command history, transcript, and any queued commands are deliberately left out, so launching the saved profile always starts that agent from scratch, not from where you left off. Each harness is captured the same way, plus its type, model, effort, and workspace/offline/auto-approve flags; its scheduled and one-shot commands are never captured, since they only ever lived in memory. Whichever tab is currently active is saved with `tab.focus: true` so a relaunch lands you back in the same place; editor tabs are launch-only and are never captured.
+Each agent is captured as a clean template: its name, working directory, and tab presentation only. Command history, transcript, and any queued commands are deliberately left out, so launching the saved profile always starts that agent from scratch, not from where you left off. Each harness is captured the same way, plus its type, model, effort, and workspace/offline/auto-approve flags; its scheduled and one-shot commands are never captured, since they only ever lived in memory. Whichever tab is currently active is saved with `tab.focus: true` so a relaunch lands you back in the same place. Each captured agent, harness, and editor also saves `tab.pane` as `left` or `right`, preserving which side of a split it occupied; the exact divider position is screen-local and resets to the middle.
 
 The window size, sidebar widths, and reporting-area split are captured into the profile's layout as they currently look, along with any running monitors and any file navigator, notifications, or schedules tab docked to a sidebar. A tab with no profile equivalent, an image, a web page, a markdown viewer, an editor, an SSH session, or an undocked file navigator, is left out and named in the command's report so you know what didn't make it in.
 

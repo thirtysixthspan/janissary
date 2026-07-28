@@ -45,7 +45,17 @@ describe('openProfileEditors', () => {
     const opened = openProfileEditors([{ path: '$root/product/backlog/features.md', tab: { number: 2, focus: true } }], managers, 'agent', [], 1, identityColor);
 
     expect(edit).toHaveBeenCalledWith('edit $root/product/backlog/features.md', '$root/product/backlog/features.md', 'agent', undefined);
-    expect(opened).toEqual([{ label: 'editor', number: 2, focus: true }]);
+    expect(opened).toEqual([{ label: 'editor', number: 2, focus: true, pane: undefined }]);
+  });
+
+  it('carries authored pane placement into the launch candidate', () => {
+    const { managers } = makeManagers();
+    const opened = openProfileEditors([
+      { path: 'notes.md', tab: { pane: 'right' } },
+    ], managers, 'agent', [], 1, identityColor);
+    expect(opened).toEqual([
+      { label: 'editor', number: undefined, focus: undefined, pane: 'right' },
+    ]);
   });
 
   it('uses the named resolving tab and passes a requested line through', () => {

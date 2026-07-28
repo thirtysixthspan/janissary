@@ -6,6 +6,7 @@ import { clearSchedulesIcon } from './icons';
 import { nextSelection } from './schedules-keys';
 import { DockCycleHeader } from './DockCycleHeader';
 import { DeleteScheduleDialog } from './DeleteScheduleDialog';
+import { SplitTabButton } from './SplitTabButton';
 
 type Properties = {
   entries: AggregatedScheduleView[];
@@ -17,6 +18,7 @@ type Properties = {
   // which is shown only while docked, matching FileNavigatorTab and NotificationsTab.
   dock?: 'left' | 'right';
   index: number;
+  onSplit?: () => void;
 };
 
 const NAV_KEYS = new Set(['ArrowDown', 'ArrowUp', 'Home', 'End']);
@@ -26,7 +28,9 @@ const NAV_KEYS = new Set(['ArrowDown', 'ArrowUp', 'Home', 'End']);
 // on the selected row) focuses the tab that owns it via setActiveTab. Arrow Up/Down/Home/End move
 // the selection. Rendered full-width in the main area, or as a compressed one-line-per-entry list
 // when docked (`compact`); both layouts share the same selection and focus behavior.
-export function SchedulesTab({ entries, tabs, client, compact = false, dock, index }: Properties) {
+export function SchedulesTab({
+  entries, tabs, client, compact = false, dock, index, onSplit,
+}: Properties) {
   const [selected, setSelected] = useState<number | null>(null);
   const [pendingDelete, setPendingDelete] = useState<AggregatedScheduleView | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -84,6 +88,7 @@ export function SchedulesTab({ entries, tabs, client, compact = false, dock, ind
       data-doc-shot="schedules-tab"
     >
       <DockCycleHeader dock={dock} client={client} index={index} classPrefix="schedules">
+        {!dock && onSplit && <SplitTabButton onClick={onSplit} />}
         <button
           type="button"
           className="schedules-clear"

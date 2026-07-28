@@ -3,6 +3,7 @@ import { abbreviatePath } from '../paths.js';
 import { SYNC_WORKSPACE_NAME } from '../git-sync.js';
 import type { ProfileAgentFile, ProfileEditorsEntry, ProfileHarnessFile, Tab } from '../types.js';
 import type { Managers } from '../managers.js';
+import { centerPane } from '../tab/split.js';
 
 // Entry builders for `profile save`: the inverse of the agent-state/harness-entry loaders. Each
 // returns a clean reusable template — no transcript/history fields — carrying its own `name` (the
@@ -17,7 +18,11 @@ export function writeAgentEntry(tab: Tab, managers: Managers): ProfileAgentFile 
     name: tab.label,
     active: false,
     cwd: cwd ? abbreviatePath(cwd, { root: managers.tab.launchDir }) : cwd,
-    tab: { color: tab.dotColor, number: tab.number, focus: tab === managers.tab.tabs[managers.tab.activeTab] || undefined, group: tab.group, groupColor: tab.groupColor },
+    tab: {
+      color: tab.dotColor, number: tab.number,
+      focus: tab === managers.tab.tabs[managers.tab.activeTab] || undefined,
+      group: tab.group, groupColor: tab.groupColor, pane: centerPane(tab),
+    },
   };
 }
 
@@ -26,7 +31,11 @@ export function writeEditorEntry(tab: Tab, managers: Managers): ProfileEditorsEn
   const source = syncedSourcePath(tab.editor, managers.tab.launchDir);
   return {
     path: source ?? abbreviatePath(tab.editor.path, { root: managers.tab.launchDir }),
-    tab: { color: tab.dotColor, number: tab.number, focus: tab === managers.tab.tabs[managers.tab.activeTab] || undefined, group: tab.group, groupColor: tab.groupColor },
+    tab: {
+      color: tab.dotColor, number: tab.number,
+      focus: tab === managers.tab.tabs[managers.tab.activeTab] || undefined,
+      group: tab.group, groupColor: tab.groupColor, pane: centerPane(tab),
+    },
   };
 }
 
@@ -55,6 +64,10 @@ export function writeHarnessEntry(tab: Tab, managers: Managers): ProfileHarnessF
     offline: tab.offline,
     autoApprove: tab.autoApprove,
     cwd: cwd ? abbreviatePath(cwd, { root: managers.tab.launchDir }) : cwd,
-    tab: { color: tab.dotColor, number: tab.number, focus: tab === managers.tab.tabs[managers.tab.activeTab] || undefined, group: tab.group },
+    tab: {
+      color: tab.dotColor, number: tab.number,
+      focus: tab === managers.tab.tabs[managers.tab.activeTab] || undefined,
+      group: tab.group, pane: centerPane(tab),
+    },
   };
 }

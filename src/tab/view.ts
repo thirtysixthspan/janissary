@@ -55,5 +55,6 @@ export function buildTabView(
     aggregatedSchedules: tab.view === 'schedules' ? aggregated : undefined,
     activePty: tab.activePty,
     dock: tab.dock,
+    pane: tab.pane,
   };
 }

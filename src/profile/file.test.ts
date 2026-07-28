@@ -86,4 +86,18 @@ describe('loadProfile', () => {
       expect.objectContaining({ name: 'agent', number: 2, focus: true }),
     ]);
   });
+
+  it('maps pane placement and leaves missing pane values for the launch default', () => {
+    writeJson('panes', {
+      agents: [{ name: 'agent', tab: { pane: 'left' } }],
+      harnesses: [{ name: 'harness', type: 'claude', tab: { pane: 'right' } }],
+      editors: [{ path: 'notes.md', tab: { pane: 'right' } }],
+    });
+    const loaded = loadProfile('panes') as LoadedProfile;
+    expect(loaded.entries).toEqual([
+      expect.objectContaining({ name: 'agent', pane: 'left' }),
+      expect.objectContaining({ name: 'harness', pane: 'right' }),
+    ]);
+    expect(loaded.editors[0]?.tab?.pane).toBe('right');
+  });
 });

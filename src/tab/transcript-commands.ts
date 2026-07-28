@@ -6,9 +6,11 @@ import { appendEntry, finishEntry, clearLog } from './transcript-ops.js';
 // mutations in transcript-ops.ts with the messageBus emits, persistence, and unread-marking
 // that make them visible to the rest of the app.
 
-export function markUnreadTab(tabs: Tab[], label: string, activeLabel: string | undefined): void {
+export function markUnreadTab(
+  tabs: Tab[], label: string, activeLabel: string | undefined, secondaryLabel?: string,
+): void {
   const tab = tabs.find((t) => t.label === label);
-  if (!tab || tab.dock || label === activeLabel) return;
+  if (!tab || tab.dock || label === activeLabel || label === secondaryLabel) return;
   tab.hasUnread = true;
 }
 

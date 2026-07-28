@@ -46,6 +46,7 @@ function makeManagers(): { managers: Managers; tabs: Tab[]; edit: ReturnType<typ
       deleteBusy: vi.fn((label: string) => { busy.delete(label); }),
       markUnread: vi.fn(),
       findIndex: () => tabs.length - 1,
+      setActiveTab: vi.fn((index: number) => { managers.tab.activeTab = index; }),
       append: () => {},
       activeTab: 0,
       closeTab: vi.fn((index: number) => { tabs.splice(index, 1); }),

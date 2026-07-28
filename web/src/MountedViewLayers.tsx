@@ -17,6 +17,8 @@ type Properties = {
   editorHandles: React.RefObject<Map<string, EditorTabHandle>>;
   editorDropRef?: React.RefObject<EditorDropHandle | null>;
   questionPanelRef?: React.RefObject<QuestionPanelHandle | null>;
+  visibleLabels?: string[];
+  onSplit?: (index: number) => void;
   // Ctrl+A and Ctrl+G open the task picker and tab navigator from a focused harness tab (see
   // `HarnessTab.harnessKeyFilter`); they're the only pickers/choosers those chords ever let bubble
   // there, so this renders just those two overlays rather than the full `PickerOverlays` stack the
@@ -28,28 +30,38 @@ type Properties = {
 // switches. Split out of App.tsx to keep it under the file-size limit.
 export function MountedViewLayers({
   tabs, current, client, closeTab, harnessHandles, editorHandles, editorDropRef, questionPanelRef,
+  visibleLabels = [current.label], onSplit,
   taskPickerOpen, taskRows, taskPickerIndex, onPickTask, onToggleTaskDir,
   navOpen, navQuery, navIndex, onPickTab,
 }: Properties) {
   return (
     <>
-      {tabs.filter((t) => t.view === 'harness' && t.harness).map((t) => (
+      {tabs.map((t, index) => ({ t, index })).filter(({ t }) => t.view === 'harness' && t.harness).map(({ t, index }) => (
         <HarnessTabLayer
           key={t.harness!.ptyId}
           t={t} current={current} tabs={tabs} client={client} harnessHandles={harnessHandles}
+          visible={visibleLabels.includes(t.label)} index={index}
+          onSplit={onSplit ? () => onSplit(index) : undefined}
           taskPickerOpen={taskPickerOpen} taskRows={taskRows} taskPickerIndex={taskPickerIndex}
           onPickTask={onPickTask} onToggleTaskDir={onToggleTaskDir}
           navOpen={navOpen} navQuery={navQuery} navIndex={navIndex} onPickTab={onPickTab}
         />
       ))}
 
-      {tabs.filter((t) => t.view === 'editor' && t.editor).map((t) => (
+      {tabs.map((t, index) => ({ t, index })).filter(({ t }) => t.view === 'editor' && t.editor).map(({ t, index }) => (
         <div
           key={t.label}
           className="tab-body"
-          style={{ borderLeft: `4px solid ${t.dotColor}`, display: t.label === current.label ? 'flex' : 'none' }}
+          data-pane-index={index}
+          style={{
+            borderLeft: `4px solid ${t.dotColor}`,
+            display: visibleLabels.includes(t.label) ? 'flex' : 'none',
+            gridColumn: t.pane === 'right' ? 2 : 1,
+            gridRow: 2,
+          }}
         >
           <EditorTab editor={t.editor!} tab={t} client={client} active={t.label === current.label} dropRef={editorDropRef}
+            onSplit={onSplit ? () => onSplit(index) : undefined}
             ref={(h) => { if (h) editorHandles.current.set(t.label, h); else editorHandles.current.delete(t.label); }} />
         </div>
       ))}
@@ -61,9 +73,19 @@ export function MountedViewLayers({
           <div
             key={t.page!.url}
             className="tab-body"
-            style={{ borderLeft: `4px solid ${t.dotColor}`, display: t.label === current.label ? 'flex' : 'none' }}
+            data-pane-index={index}
+            style={{
+              borderLeft: `4px solid ${t.dotColor}`,
+              display: visibleLabels.includes(t.label) ? 'flex' : 'none',
+              gridColumn: t.pane === 'right' ? 2 : 1,
+              gridRow: 2,
+            }}
           >
-            <PageTab page={t.page!} closeTab={closeTab} index={index} client={client} />
+            <PageTab
+              page={t.page!} closeTab={closeTab} index={index} client={client}
+              active={t.label === current.label}
+              onSplit={onSplit ? () => onSplit(index) : undefined}
+            />
           </div>
         ))}
       {current.pendingQuestion && <QuestionPanel ref={questionPanelRef} question={current.pendingQuestion} client={client} />}

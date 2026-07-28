@@ -35,6 +35,8 @@ export function handle(controller: Controller, message: ClientMessage, reply: (e
     }
     case 'moveTab': { controller.moveTab(message.params.dir); break;
     }
+    case 'moveTabToOtherPane': { controller.managers.tab.moveTabToOtherPane(message.params.index); break;
+    }
     case 'reorderTab': { controller.reorderTab(message.params.dir); break;
     }
     case 'reorderTabTo': { controller.reorderTabTo(message.params.from, message.params.to); break;

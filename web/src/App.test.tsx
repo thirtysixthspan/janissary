@@ -11,6 +11,11 @@ type StateListener = (
   tabs: TabView[], activeTab: number, route: RouteChooserView | null, tabNameMaxLength: number, globalHistory: string[],
   syntaxTheme: string, theme: string, tasks: string[],
 ) => void;
+type ServerStateListener = (
+  tabs: TabView[], activeTab: number, secondaryTab: number | undefined,
+  route: RouteChooserView | null, tabNameMaxLength: number, globalHistory: string[],
+  syntaxTheme: string, theme: string, tasks: string[],
+) => void;
 let stateListener: StateListener | null = null;
 type LayoutListener = (event: {
   sidebarLeft?: number;
@@ -25,7 +30,12 @@ vi.mock('./ws', () => {
   class JanusClient {
     send = sendMock;
     request = requestMock;
-    onState(l: StateListener) { stateListener = l; return () => {}; }
+    onState(listener: ServerStateListener) {
+      stateListener = (tabs, active, route, maxLength, history, syntax, theme, tasks) => {
+        listener(tabs, active, undefined, route, maxLength, history, syntax, theme, tasks);
+      };
+      return () => {};
+    }
     onPtyExit() { return () => {}; }
     onLayout(l: LayoutListener) { layoutListener = l; return () => {}; }
     attachPty() { return () => {}; }

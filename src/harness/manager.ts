@@ -162,7 +162,7 @@ export class HarnessManager {
     this.managers.tab.insertTabInGroup(tab);
     this.managers.tab.setCwd(label, cwd);
     this.managers.tab.addBusy(label);
-    this.managers.tab.activeTab = this.managers.tab.findIndex(tab.label);
+    this.managers.tab.setActiveTab(this.managers.tab.findIndex(tab.label));
 
     if (!ready) {
       this.finishSpawn(name, label, cwd, workspaceDir, offline, autoApprove, model, effort);

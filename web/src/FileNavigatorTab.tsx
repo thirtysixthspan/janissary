@@ -39,6 +39,7 @@ type Properties = {
   // The active tab's editor imperative handle, if it's an editor tab — only ever passed when this
   // tree is docked into a sidebar, for the same reason as `dropRef` above.
   editorDropRef?: React.RefObject<EditorDropHandle | null>;
+  onSplit?: () => void;
 };
 
 const TYPEAHEAD_RESET_MS = 700;
@@ -47,7 +48,9 @@ const ROW_HEIGHT_PX = 22;
 const PRINTABLE = /^[ -~]$/;
 const MARKDOWN_EXTENSION = /\.(md|markdown)$/i;
 
-export function FileNavigatorTab({ files, client, index, dock, autoFocus = true, dropRef, editorDropRef }: Properties) {
+export function FileNavigatorTab({
+  files, client, index, dock, autoFocus = true, dropRef, editorDropRef, onSplit,
+}: Properties) {
   const [selected, setSelected] = useState<string | null>(null);
   const [pendingNewDir, setPendingNewDir] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -163,6 +166,7 @@ export function FileNavigatorTab({ files, client, index, dock, autoFocus = true,
       <FileNavigatorHeader
         root={files.root} branch={files.branch} githubUrl={files.githubUrl} client={client} index={index} dock={dock}
         onSearch={search.openSearch} onNewFile={createNewFile} onNewDirectory={createNewDirectory}
+        onSplit={onSplit}
       />
       {files.waitingFor !== undefined && (
         <div className="files-waiting">Looking for {files.waitingFor}…</div>

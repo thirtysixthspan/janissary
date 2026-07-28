@@ -28,5 +28,6 @@ export {
   faFloppyDisk as saveIcon,
   faArrowsUpDown as resizeIcon,
   faArrowsRotate as syncIcon,
+  faTableColumns as splitTabIcon,
 } from '@fortawesome/free-solid-svg-icons';
 export { faFlag as unreadIcon, faClipboard as viewCaptureIcon } from '@fortawesome/free-regular-svg-icons';

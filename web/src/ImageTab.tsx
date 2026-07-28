@@ -1,12 +1,15 @@
 import React, { useEffect, useRef, useState } from 'react';
 import type { ImageView } from '@shared/protocol';
 import { onImageKey, ZOOM_STEP } from './image-handlers';
+import { SplitTabButton } from './SplitTabButton';
 
 // An image view tab body: a compact metadata header (name, size, location) above the image, which
 // fills the remaining space. Orientation is intrinsic to the image and read once it loads: a
 // landscape image (wider than tall) spans the full width; a portrait image fills the full remaining
 // height beneath the header. CSS keeps either fit responsive to tab resizes.
-export function ImageTab({ image }: { image: ImageView }) {
+export function ImageTab({
+  image, active = true, onSplit,
+}: { image: ImageView; active?: boolean; onSplit?: () => void }) {
   const [orientation, setOrientation] = useState<'image-landscape' | 'image-portrait'>('image-landscape');
   const [zoom, setZoom] = useState(1);
   const stageRef = useRef<HTMLDivElement>(null);
@@ -16,7 +19,7 @@ export function ImageTab({ image }: { image: ImageView }) {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => onImageKey(e, stageRef.current, setZoom);
-    globalThis.addEventListener('keydown', onKey);
+    if (active) globalThis.addEventListener('keydown', onKey);
 
     const stage = stageRef.current;
 
@@ -50,13 +53,13 @@ export function ImageTab({ image }: { image: ImageView }) {
     globalThis.addEventListener('mouseup', onMouseUp);
 
     return () => {
-      globalThis.removeEventListener('keydown', onKey);
+      if (active) globalThis.removeEventListener('keydown', onKey);
       stage?.removeEventListener('wheel', onWheel);
       stage?.removeEventListener('mousedown', onMouseDown);
       globalThis.removeEventListener('mousemove', onMouseMove);
       globalThis.removeEventListener('mouseup', onMouseUp);
     };
-  }, []);
+  }, [active]);
 
   const imgStyle: React.CSSProperties =
     orientation === 'image-landscape'
@@ -69,6 +72,7 @@ export function ImageTab({ image }: { image: ImageView }) {
         <span className="image-name">{image.name}</span>
         <span className="image-size">{image.size}</span>
         <span className="image-loc">{image.path}</span>
+        {onSplit && <SplitTabButton onClick={onSplit} />}
       </div>
       <div className="image-stage" ref={stageRef}>
         {zoom !== 1 && (

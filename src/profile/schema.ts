@@ -32,6 +32,12 @@ function checkDock(obj: Record<string, unknown>, loc: string): string[] {
   return [`${loc}: dock must be "left" or "right"`];
 }
 
+function checkPane(obj: Record<string, unknown>, loc: string): string[] {
+  const pane = obj.pane;
+  if (pane === undefined || (typeof pane === 'string' && ['left', 'right'].includes(pane))) return [];
+  return [`${loc}: pane must be "left" or "right"`];
+}
+
 // The nested `tab` presentation object, shared by agent and harness entries.
 function tabProblems(tab: unknown, loc: string): string[] {
   if (tab === undefined) return [];
@@ -42,6 +48,7 @@ function tabProblems(tab: unknown, loc: string): string[] {
     ...checkField(tab, 'focus', 'boolean', `${loc}.tab`),
     ...checkField(tab, 'group', 'number', `${loc}.tab`),
     ...checkField(tab, 'groupColor', 'string', `${loc}.tab`),
+    ...checkPane(tab, `${loc}.tab`),
   ];
 }
 

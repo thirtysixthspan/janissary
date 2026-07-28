@@ -21,10 +21,10 @@ describe('next command', () => {
 
 describe('next command run', () => {
   const makeManagers = (activeTab: number, length: number) => {
-    const setActiveTab = (index: number) => { activeTab = index; };
+    const moveTab = (dir: -1 | 1) => { activeTab = (activeTab + dir + length) % length; };
     return {
       get activeTab() { return activeTab; },
-      managers: { tab: { get activeTab() { return activeTab; }, setActiveTab, tabs: { length } } },
+      managers: { tab: { get activeTab() { return activeTab; }, moveTab, tabs: { length } } },
     };
   };
 

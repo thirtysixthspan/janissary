@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen, act, fireEvent } from '@testing-library/react';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import type { ImageView } from '@shared/protocol';
 import { ImageTab } from './ImageTab';
 
@@ -38,6 +38,15 @@ describe('ImageTab', () => {
     expect(screen.getByText('photo.png')).toBeInTheDocument();
     expect(screen.getByText('1.2 MB')).toBeInTheDocument();
     expect(screen.getByText('/home/user/photo.png')).toBeInTheDocument();
+  });
+
+  it('offers Split and ignores global keys while its pane is inactive', () => {
+    const onSplit = vi.fn();
+    render(<ImageTab image={makeImage()} active={false} onSplit={onSplit} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Split' }));
+    expect(onSplit).toHaveBeenCalledOnce();
+    expect(fireKey('PageUp').defaultPrevented).toBe(false);
+    expect(screen.queryByText('110%')).not.toBeInTheDocument();
   });
 
   it('hides the zoom badge at 100%', () => {

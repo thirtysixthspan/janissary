@@ -51,6 +51,19 @@ describe('PageTab', () => {
     expect(closeTab).toHaveBeenCalledWith(4);
   });
 
+  it('offers Split and covers an inactive iframe until its pane is focused', () => {
+    const onSplit = vi.fn();
+    const { container, getByRole } = render(
+      <PageTab
+        page={makePage()} closeTab={vi.fn()} index={0} client={makeClient()}
+        active={false} onSplit={onSplit}
+      />,
+    );
+    fireEvent.click(getByRole('button', { name: 'Split' }));
+    expect(onSplit).toHaveBeenCalledOnce();
+    expect(container.querySelector('.page-focus-catcher')).toBeInTheDocument();
+  });
+
   it('renders back, forward, and reload buttons before the URL', () => {
     const { container } = render(<PageTab page={makePage()} closeTab={vi.fn()} index={0} client={makeClient()} />);
     const meta = container.querySelector('.page-meta')!;

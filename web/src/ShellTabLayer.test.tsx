@@ -86,6 +86,22 @@ describe('ShellTabLayer', () => {
     expect(inactiveStyle).toContain('display: none');
   });
 
+  it('shows both selected pane shells in their pane columns', () => {
+    const tabs = [
+      makeTab({ label: 'a', activePty: 'pty1' }),
+      makeTab({ label: 'b', activePty: 'pty2', pane: 'right' }),
+    ];
+    const { container } = render(
+      <ShellTabLayer
+        tabs={tabs} activeLabel="a" visibleLabels={['a', 'b']}
+        client={fakeClient()} onHandle={() => {}}
+      />,
+    );
+    const bodies = [...container.querySelectorAll<HTMLElement>('.tab-body')];
+    expect(bodies.map((body) => body.style.display)).toEqual(['flex', 'flex']);
+    expect(bodies.map((body) => body.style.gridColumn)).toEqual(['1', '2']);
+  });
+
   it('passes the client to ShellTab', () => {
     const client = fakeClient();
     const tabs = [makeTab({ label: 'a', activePty: 'pty1' })];

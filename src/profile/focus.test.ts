@@ -15,7 +15,7 @@ describe('focusedMainAreaLabel', () => {
   });
 
   it('returns the single focused candidate', () => {
-    expect(focusedMainAreaLabel([{ label: 'editor', focus: true }], 'agent')).toBe('editor');
+    expect(focusedMainAreaLabel([{ label: 'editor', focus: true, pane: 'right' }], 'agent')).toBe('editor');
   });
 
   it('handles an empty candidate list', () => {
