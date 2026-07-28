@@ -1,7 +1,5 @@
 import React, { useRef, useState } from 'react';
 import { useDialogKeyboard } from '../useDialogKeyboard';
-import { useLatestRef } from '../useLatestRef';
-import { dialogKeyHandler } from '../dialog-key-handler';
 import { ModalDialog } from '../ModalDialog';
 
 type Action = 'save' | 'discard' | 'cancel';
@@ -11,24 +9,19 @@ type Properties = { onSave: () => void; onDiscard: () => void; onCancel: () => v
 export function SaveChangesDialog({ onSave, onDiscard, onCancel }: Properties) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const [selected, setSelected] = useState<Action>('save');
-  const onSaveRef = useLatestRef(onSave);
-  const onDiscardRef = useLatestRef(onDiscard);
-  const onCancelRef = useLatestRef(onCancel);
-  const selectedRef = useLatestRef(selected);
 
-  const onKeyDown = dialogKeyHandler({
-    y: () => onSaveRef.current(),
-    n: () => onDiscardRef.current(),
+  useDialogKeyboard(dialogRef, {
+    y: onSave,
+    n: onDiscard,
     enter: () => {
-      if (selectedRef.current === 'save') onSaveRef.current();
-      else if (selectedRef.current === 'discard') onDiscardRef.current();
-      else onCancelRef.current();
+      if (selected === 'save') onSave();
+      else if (selected === 'discard') onDiscard();
+      else onCancel();
     },
-    escape: () => onCancelRef.current(),
+    escape: onCancel,
     arrowleft: () => setSelected((s) => (s === 'save' ? 'cancel' : s === 'discard' ? 'save' : 'discard')),
     arrowright: () => setSelected((s) => (s === 'save' ? 'discard' : s === 'discard' ? 'cancel' : 'save')),
   });
-  useDialogKeyboard(dialogRef, onKeyDown);
 
   return (
     <ModalDialog dialogRef={dialogRef} title="Do you want to save changes to this file?">

@@ -2,8 +2,6 @@
 
 ## ready
 
-* Consolidate the three overlapping modal-dialog keyboard mechanisms in `web/src/`: `useDialogKeyboard.ts` focuses the dialog and registers capture-phase keydown/click-outside listeners, `useConfirmDialogKeys.ts` reimplements that identical focus-plus-capture-listener wiring inline rather than composing it (adding only the y/n/arrow selection on top), and `dialog-key-handler.ts` is a third entry point offering a key-to-handler map. New dialogs currently have to guess which of the three to reach for. Rebuild `useConfirmDialogKeys` on top of `useDialogKeyboard` and fold `dialogKeyHandler` into the same surface. Severity: **medium**.
-
 
 ## development
 
