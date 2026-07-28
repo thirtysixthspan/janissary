@@ -1,6 +1,6 @@
 # Work an Issue
 
-Your job: pick the simplest issue from `./product/backlog/issues.md`, develop a plan to resolve it, implement the fix, update functional specs, update `help.md` and public documentation where the fix changes behavior they already document, record the plan in `./product/plans/complete/`, remove the issue from the issues file, and merge the change to master. You change source code, tests, spec files, `help.md`, `documentation/user-documentation/`, the issues file, and the plan file's location — nothing else.
+Your job: take a work item — the simplest issue in `./product/backlog/issues.md`, or the one the user names when running this task, which need not be listed there at all — develop a plan to resolve it, implement the fix, update functional specs, update `help.md` and public documentation where the fix changes behavior they already document, record the plan in `./product/plans/complete/`, remove the issue from the issues file when that is where it came from, and merge the change to master. You change source code, tests, spec files, `help.md`, `documentation/user-documentation/`, the issues file, and the plan file's location — nothing else.
 
 **Project `./product/` directory.** Every `./product/...` path in this task refers to the product directory in the current working directory — the project being worked on — never to the Janissary codebase's own `product/` directory, even when this task file was launched from an absolute path inside the Janissary installation.
 
@@ -24,7 +24,7 @@ Read any file in the repo. Edit source, tests, CSS, and spec files as the fix re
 2. **Running `npm run check`.** That is the human's end-of-work gate. Use `./scripts/run.mjs check-diff` during development.
 3. **Skipping tests.** Every fix needs tests that cover the changed behavior. Verify with `./scripts/run.mjs check-diff`.
 4. **Choosing an issue that requires significant new architecture.** If an issue would require high complexity error or prone work, pick a simpler issue instead and report why.
-5. **Editing `./product/backlog/issues.md` beyond removing the fixed entry.** Only remove the line for the issue you fixed — do not reorder, rephrase, or otherwise modify the remaining entries.
+5. **Editing `./product/backlog/issues.md` beyond removing the fixed entry.** Only remove the line for the issue you fixed — do not reorder, rephrase, or otherwise modify the remaining entries, and never add a work item named at invocation to the file.
 6. **Merging before all checks pass.** The `ai/tasks/workspace/merge-change-to-master.md` workflow handles merge; do not bypass it.
 
 ---
@@ -38,11 +38,11 @@ Execute `ai/tasks/workspace/prepare-workspace.md` in full before doing anything 
 ## Step 1 — List small fixes and pick one
 
 1. Read `./product/backlog/issues.md` and list every issue.
-2. If no issues exist, report "No issues in `./product/backlog/issues.md`" and stop.
+2. If no issues exist **and** the task invocation named no work item, report "No issues in `./product/backlog/issues.md`" and stop. When a work item was named, an empty issues file is not a reason to stop — go on to the named-item branch below.
 3. Pick the issue to fix:
-   - **If a specific issue is named in the task invocation** (e.g. `execute ai/tasks/work-an-issue.md "<issue text>"`), fix that one. Find the entry in `./product/backlog/issues.md` it refers to — the argument may be quoted text, a paraphrase, or a position such as "the second one". If no entry matches, report that no matching issue was found and stop. Assess its complexity by reviewing the codebase to understand what areas it touches (do not use a shell loop for this); if it requires significant new architecture (rating 7+), report the assessment and stop — do not implement it.
+   - **If a specific work item is named in the task invocation** (e.g. `execute ai/tasks/work-an-issue.md "<issue text>"`), fix that one. First look for the entry in `./product/backlog/issues.md` it refers to — the argument may be quoted text, a paraphrase, or a position such as "the second one". **If no entry matches, the named text is itself the work item**: take it at face value and fix it exactly as if it had been listed, without stopping and without adding it to the issues file. A named work item is never rejected for being absent from the backlog. Assess its complexity by reviewing the codebase to understand what areas it touches (do not use a shell loop for this); if it requires significant new architecture (rating 7+), report the assessment and stop — do not implement it.
    - **Otherwise**, for each issue, assess the complexity by reviewing the codebase to understand what areas it touches. Do not use a shell loop for this. If every issue requires significant new architecture (rating 7+), report the list with assessments and stop — do not pick one. Otherwise, pick the **first** issue listed in the file (top of the list).
-4. State your pick and why.
+4. State your pick, whether it came from the issues file or from the invocation, and why.
 
 ---
 
@@ -108,7 +108,7 @@ The fix only needs a documentation update if it changes behavior that `help.md` 
    ```bash
    git mv ./product/plans/ready/<fix-name>.md ./product/plans/complete/<fix-name>.md
    ```
-2. Remove the fixed issue's line from `./product/backlog/issues.md`. Only remove that single line — do not modify any other content in the file.
+2. Remove the fixed issue's line from `./product/backlog/issues.md`. Only remove that single line — do not modify any other content in the file. If the work item came from the task invocation and was never listed in the file, there is nothing to remove: leave the file untouched.
 
 ---
 
@@ -123,7 +123,7 @@ Execute `ai/tasks/workspace/merge-change-to-master.md` in full. That document ow
 Give the user a short report in this exact shape:
 
 ```
-Issue:          <the issue text from ./product/backlog/issues.md>
+Issue:          <the issue text from ./product/backlog/issues.md, or the work item as named in the invocation when it was not listed there>
 Plan:           ./product/plans/ready/<file> → ./product/plans/complete/<file>
 Complexity:     N/10
 Implementation: <one-line summary of the fix>
