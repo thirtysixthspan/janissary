@@ -187,7 +187,7 @@ export async function boot(argv = process.argv.slice(2)): Promise<void> {
   process.on('exit', killApp);
 }
 
-// Run when executed directly (node dist/server/main.js or tsx src/server/main.ts).
+// Run when executed directly (node dist/main.js or tsx src/main.ts).
 try {
   await boot();
 } catch (error) {

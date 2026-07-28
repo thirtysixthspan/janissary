@@ -23,7 +23,7 @@ export type AcpOptions = {
   // Extra environment variables to pass to the subprocess.
   env?: Record<string, string>;
   // When the session belongs to a workspaced tab, confines the ACP subprocess to that workspace
-  // via a Seatbelt sandbox (see sandbox.ts). Monitor sessions never set this.
+  // via a Seatbelt sandbox (see src/sandbox/index.ts). Monitor sessions never set this.
   workspaceDir?: string;
   offline?: boolean;
   // Tool ids the connection's permission handler may approve (see acp-tools.ts). Undefined/empty

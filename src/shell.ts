@@ -2,7 +2,7 @@ import { spawn, type ChildProcess } from 'node:child_process';
 import { sandboxSpawn, type SandboxOptions } from './sandbox/index.js';
 
 // `sandbox`, when given a `workspaceDir`, confines the shell (and everything it spawns) to that
-// workspace (see sandbox.ts); omitted or workspaceDir-less, the shell runs exactly as before.
+// workspace (see src/sandbox/index.ts); omitted or workspaceDir-less, the shell runs exactly as before.
 export function spawnShell(
   _tabIndex: number,
   extraEnvironment?: Record<string, string>,

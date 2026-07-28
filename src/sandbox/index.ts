@@ -125,7 +125,7 @@ function packageRootDir(resolvedBin: string): string {
 // (unresolved — e.g. many npm-global installs are a `bin/foo` symlink into `lib/node_modules/...`)
 // and fully realpath-resolved directory (widened to the enclosing `node_modules/` via
 // `packageRootDir` above, for packages — like npm — that are more than a single bundled file), same
-// dual reasoning as `dualParams` in sandbox-profile.ts: a framework may `opendir`/`lstat` the
+// dual reasoning as `dualParams` in paths.ts: a framework may `opendir`/`lstat` the
 // symlink's own directory as well as the resolved target's. Falls back to a path that matches
 // nothing so the profile's params always have a bound value.
 function resolveExecutableDirs(command: string): { literal: string; real: string } {
@@ -165,7 +165,7 @@ function parentGitObjectsDir(workspaceDir: string): string {
   }
 }
 
-// Drop credential-shaped vars and agent-socket escape vectors (see `sandbox-profile.ts`).
+// Drop credential-shaped vars and agent-socket escape vectors (see `ENV_SCRUB_PATTERNS` in paths.ts).
 function scrubEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
   const scrubbed: NodeJS.ProcessEnv = {};
   for (const [key, value] of Object.entries(env)) {
@@ -178,7 +178,7 @@ function scrubEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
 // `-D <param>=<path>` for each home-relative table entry, in both its literal (`~/…`, as named —
 // covers an `lstat`/`readlink` of a symlinked dotfile) and fully realpath-resolved (covers a
 // `read`/`open` that follows the symlink) forms. See the comment on `dualParams` in
-// sandbox-profile.ts for why both are needed.
+// paths.ts for why both are needed.
 function homeDParams(home: string, relPaths: string[], params: { literal: string[]; real: string[] }): string[] {
   const args: string[] = [];
   for (const [i, rel] of relPaths.entries()) {
@@ -220,7 +220,7 @@ export function sandboxSpawn(
     scrubbed.GH_TOKEN = options.githubToken;
     // `gh` reads `~/.config/gh/hosts.yml` on every invocation regardless of `GH_TOKEN`, and its
     // config loader treats the sandbox's EPERM deny on that file (see SECRET_DENY_PATHS in
-    // sandbox-profile.ts) as fatal, refusing to run at all. Pointing `GH_CONFIG_DIR` at an empty,
+    // paths.ts) as fatal, refusing to run at all. Pointing `GH_CONFIG_DIR` at an empty,
     // workspace-private directory instead gives `gh` a genuinely absent hosts.yml (real ENOENT),
     // which it handles by falling through to `GH_TOKEN` normally.
     scrubbed.GH_CONFIG_DIR = path.join(tmpDir, 'gh-config');

@@ -23,6 +23,6 @@ export type AgentCommand = {
   name: string;
   workspace: boolean;
   // `--offline`: adds a network-deny rule to the tab's sandbox profile (workspaced tabs only —
-  // see sandbox.ts). Ignored (but still parsed and stored) when the tab isn't workspaced.
+  // see src/sandbox/index.ts). Ignored (but still parsed and stored) when the tab isn't workspaced.
   offline: boolean;
 };
