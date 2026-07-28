@@ -136,6 +136,41 @@ describe('openProfileEntries — group authoring', () => {
 
     expect(harnessOpen).toHaveBeenCalledWith(expect.objectContaining({ name: 'claude' }), 'claude', 1, expect.any(String));
   });
+
+  it('splits entries across their own authored groups plus the shared default for unnumbered ones', () => {
+    const janus = makeTab('janus', 'red', 1, [], [], undefined, 1, 'red');
+    const other = makeTab('other', 'yellow', 2, [], [], undefined, 5, 'yellow');
+    const { managers, harnessOpen } = makeManagers([janus, other]);
+    const joinsJanus: ProfileHarnessEntry = { name: 'a', type: 'claude', group: 1 };
+    const joinsOther: ProfileHarnessEntry = { name: 'b', type: 'claude', group: 5 };
+    const noGroup: ProfileHarnessEntry = { name: 'c', type: 'claude' };
+
+    openProfileEntries(loaded([joinsJanus, joinsOther, noGroup]), managers, 'demo', 'janus', () => {});
+
+    expect(harnessOpen).toHaveBeenCalledWith(expect.objectContaining({ name: 'a' }), 'a', 1, 'red');
+    expect(harnessOpen).toHaveBeenCalledWith(expect.objectContaining({ name: 'b' }), 'b', 5, 'yellow');
+    expect(harnessOpen).toHaveBeenCalledWith(expect.objectContaining({ name: 'c' }), 'c', 6, expect.any(String));
+  });
+
+  it('inserts an agent entry contiguously into an existing group instead of appending past it', () => {
+    const janus = makeTab('janus', 'red', 1, [], [], undefined, 1, 'red');
+    const other = makeTab('other', 'yellow', 2, [], [], undefined, 5, 'yellow');
+    const { managers } = makeManagers([janus, other]);
+    const joinsJanus: AgentState = { name: 'a', dotColor: 'blue', active: false, group: 1 };
+    const newGroup: AgentState = { name: 'b', dotColor: 'green', active: false };
+
+    openProfileEntries(loaded([joinsJanus, newGroup]), managers, 'demo', 'janus', () => {});
+
+    expect(managers.tab.tabs.map((t) => ({ label: t.label, group: t.group }))).toEqual([
+      { label: 'janus', group: 1 },
+      { label: 'a', group: 1 },
+      { label: 'other', group: 5 },
+      { label: 'b', group: 6 },
+    ]);
+    expect(managers.tab.tabs.find((t) => t.label === 'a')?.groupColor).toBe('red');
+    const bTab = managers.tab.tabs.find((t) => t.label === 'b');
+    expect(bTab?.groupColor).toBe(bTab?.dotColor);
+  });
 });
 
 describe('openProfileEntries — profile-level file navigator', () => {

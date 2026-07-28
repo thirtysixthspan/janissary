@@ -35,10 +35,9 @@ export function openProfileEntries(
   out: (text: string) => void,
 ): void {
   const entries = loaded.entries;
-  const authoredGroup = entries
-    .map((e) => e.group)
-    .find((g): g is number => typeof g === 'number');
-  const group = authoredGroup ?? Math.max(0, ...managers.tab.tabs.map((t) => t.group)) + 1;
+  const defaultGroup = Math.max(0, ...managers.tab.tabs.map((t) => t.group)) + 1;
+  const colorForGroup = (group: number, fallbackDotColor: string): string =>
+    managers.tab.tabs.find((t) => t.group === group)?.groupColor ?? fallbackDotColor;
 
   const skipped: string[] = [];
   const notes: string[] = [];
@@ -47,7 +46,6 @@ export function openProfileEntries(
   const used = new Set(managers.tab.tabs.map((t) => t.dotColor));
   const opened: string[] = [];
   const candidates: MainAreaCandidate[] = [];
-  let groupColor: string | undefined;
   const firstNew = managers.tab.tabs.length;
   const issuingCwd = managers.tab.cwdOf(issuingLabel) ?? process.cwd();
 
@@ -55,7 +53,8 @@ export function openProfileEntries(
     const label = labelOf(entry);
     const dotColor = distinctColor(used, entry.dotColor);
     used.add(dotColor);
-    groupColor ??= dotColor;
+    const group = typeof entry.group === 'number' ? entry.group : defaultGroup;
+    const groupColor = colorForGroup(group, dotColor);
     if (isHarnessEntry(entry)) {
       const error = openHarnessEntry(entry, managers, group, groupColor, issuingCwd, notes);
       if (error) { skipped.push(`${label} (${error})`); continue; }
@@ -70,11 +69,18 @@ export function openProfileEntries(
   // their tabs are part of the list by the time monitor targets are resolved below.
   const firstNewLabel = opened.length > 0 ? managers.tab.tabs[firstNew]?.label : undefined;
   openProfileFiles(loaded.files, managers, firstNewLabel, notes);
-  candidates.push(...openProfileEditors(loaded.editors, managers, firstNewLabel, notes));
-  // Reorder this launch's group so harness/agent entries and editor tabs together read in
-  // ascending `number` order, instead of editors always trailing every entry (see profiles.md).
+  candidates.push(...openProfileEditors(loaded.editors, managers, firstNewLabel, notes, defaultGroup, colorForGroup));
+  // Reorder each group touched by this launch so harness/agent entries and editor tabs sharing a
+  // group read in ascending `number` order, instead of editors always trailing every entry (see
+  // profiles.md). Entries/editors may land in different groups (their own authored `group`), so
+  // the pass runs once per distinct group actually used, not once for a single shared group.
   const numbers = new Map(candidates.filter((c) => c.number !== undefined).map((c) => [c.label, c.number as number]));
-  reorderGroupByNumber(managers, group, numbers);
+  const usedGroups = new Set(
+    candidates
+      .map((c) => managers.tab.tabs[managers.tab.findIndex(c.label)]?.group)
+      .filter((g): g is number => g !== undefined),
+  );
+  for (const g of usedGroups) reorderGroupByNumber(managers, g, numbers);
   const focusLabel = focusedMainAreaLabel(candidates, firstNewLabel);
   if (focusLabel !== undefined) managers.tab.setActiveTab(managers.tab.findIndex(focusLabel));
   // Profile-level notifications tab opens next, docked per the profile's `notifications` key.

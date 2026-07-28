@@ -1,4 +1,4 @@
-import { makeTab } from '../tab/index.js';
+import { makeTab, insertTabInGroup } from '../tab/index.js';
 import { HARNESS_COMMANDS } from '../harness/index.js';
 import { supportsHarnessAutoApprove } from '../harness/auto-approve.js';
 import { isKnownModel } from '../harness/models.js';
@@ -12,7 +12,7 @@ export function openAgentEntry(state: AgentState, managers: Managers, group: num
   const tab = makeTab(state.name, dotColor, managers.tab.tabs.length + 1, state.cmdHistory ?? [],
     log, state.workspaceDir, group, groupColor);
   tab.toolStepsExpanded = false;
-  managers.tab.tabs = [...managers.tab.tabs, tab];
+  managers.tab.tabs = insertTabInGroup(managers.tab.tabs, tab);
   if (state.cwd) managers.tab.setCwd(state.name, expandUserPath(state.cwd, { root: managers.tab.launchDir }));
   if (state.context) managers.tab.setContext(state.name, state.context);
   if (state.schedule) managers.schedule.set(state.name, state.schedule);
