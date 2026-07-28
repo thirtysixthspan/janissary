@@ -10,7 +10,7 @@ profile list
 profile validate writing-code
 ```
 
-`profile launch <name>` opens a tab for every entry in the profile. Each one starts fresh, from the entry's saved name, working directory, and tab presentation: an agent tab does not come back with the transcript, command history, or schedule it had when it was saved, and a harness launches with whatever model, directory, workspace flag, and startup commands the profile specifies. All the launched tabs land in one new [group](/user-documentation/getting-started/groups), so the profile reads as its own colored band in the strip. `profile list` names the profiles you have; a name that doesn't exist gets `No profile named "<name>".`
+`profile launch <name>` opens a tab for every entry in the profile. Each one starts fresh, from the entry's saved name, working directory, and tab presentation: an agent tab does not come back with the transcript, command history, or schedule it had when it was saved, and a harness launches with whatever model, directory, workspace flag, and startup commands the profile specifies. Each entry joins the [group](/user-documentation/getting-started/groups) its own `tab.group` names; any entry that names none instead lands in one shared new group, so a profile with no authored groups reads as its own colored band in the strip. `profile list` names the profiles you have; a name that doesn't exist gets `No profile named "<name>".`
 
 ![The tab strip after a profile launch: the profile's tabs grouped under one new band color, distinct from the root group.](/screenshots/profile-group.png)
 
