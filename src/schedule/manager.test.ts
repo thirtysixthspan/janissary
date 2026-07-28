@@ -320,6 +320,58 @@ describe('ScheduleManager cancel', () => {
   });
 });
 
+describe('ScheduleManager clearAll', () => {
+  function makeMgr(tabs: Partial<Tab>[]): { mgr: ScheduleManager; persist: ReturnType<typeof vi.fn> } {
+    const persist = vi.fn();
+    const managers = {
+      tab: { tabs, persist, buildAgentState: () => ({}) },
+    } as unknown as Managers;
+    return { mgr: new ScheduleManager(managers), persist };
+  }
+
+  function entry(id: string): ScheduleEntry {
+    return { id, command: 'clear', spec: 'every 5m', nextRun: Date.now() + 60_000, recurring: true, intervalMs: 60_000 };
+  }
+
+  it('clears an agent tab schedule, persists it, and emits state.dirty', () => {
+    const { mgr, persist } = makeMgr([{ label: 'janus' }]);
+    mgr.set('janus', [entry('a')]);
+    const emitSpy = vi.spyOn(messageBus, 'emit');
+
+    expect(mgr.clearAll()).toBe(true);
+    expect(mgr.get('janus')).toEqual([]);
+    expect(persist).toHaveBeenCalledTimes(1);
+    expect(emitSpy).toHaveBeenCalledWith('state', { type: 'dirty' });
+    emitSpy.mockRestore();
+  });
+
+  it('clears a harness tab schedule without persisting it', () => {
+    const { mgr, persist } = makeMgr([{ label: 'claude', view: 'harness' }]);
+    mgr.set('claude', [entry('a')]);
+
+    expect(mgr.clearAll()).toBe(true);
+    expect(mgr.get('claude')).toEqual([]);
+    expect(persist).not.toHaveBeenCalled();
+  });
+
+  it('leaves an already-empty schedule untouched and does not persist it', () => {
+    const { mgr, persist } = makeMgr([{ label: 'janus' }]);
+    mgr.set('janus', []);
+
+    expect(mgr.clearAll()).toBe(false);
+    expect(persist).not.toHaveBeenCalled();
+  });
+
+  it('returns false and does not emit when there are no schedules at all', () => {
+    const { mgr } = makeMgr([{ label: 'janus' }]);
+    const emitSpy = vi.spyOn(messageBus, 'emit');
+
+    expect(mgr.clearAll()).toBe(false);
+    expect(emitSpy).not.toHaveBeenCalledWith('state', { type: 'dirty' });
+    emitSpy.mockRestore();
+  });
+});
+
 describe('ScheduleManager aggregatedView', () => {
   function makeMgr(labels: string[]): ScheduleManager {
     const managers = {
