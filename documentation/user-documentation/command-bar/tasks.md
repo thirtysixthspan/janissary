@@ -6,7 +6,7 @@ Your repository's `ai/tasks/` directory holds executable task files — self-con
 
 ## The `Ctrl+A` picker
 
-`Ctrl+A` (or the `tasks` command) opens a window listing the task files, sorted alphabetically. Since they all live under `ai/tasks/`, the window initially shows a single collapsed `tasks` row — expand it (`→` or `Return`) to see the individual task files:
+`Ctrl+A` (or the `tasks` command) opens a window listing the task files, with the task files in a directory listed first and its subdirectories last, each group sorted alphabetically. So the runnable tasks sit at the top and any subdirectory collects beneath them — expand one (`→` or `Return`) to see the task files inside it:
 
 ![The task picker overlay listing executable task files above the command bar, with one row selected.](/screenshots/task-picker.png)
 

@@ -81,15 +81,19 @@ export default [
   {
     // The scratch fixture has no `ai/` directory, so seed one with a few realistically named task
     // files before opening the picker — otherwise Ctrl+A would capture the empty `(no tasks)` state.
-    // They go under `ai/tasks/` to match the real layout, which means the picker opens on a single
-    // collapsed `tasks` row: expand it (Right) and step onto a file (Down) so the shot shows the
-    // task files with one selected, as the doc page describes.
+    // They go under `ai/tasks/` to match the real layout: the two task files are listed first and
+    // the two subdirectories last, so the picker opens on `build-a-feature.md`. Step down past the
+    // files onto the first directory (Down, Down), expand it (Right), and step onto a file inside
+    // it (Down) so the shot shows both a nested and a top-level task, as the doc page describes.
     name: 'task-picker',
     setup: [
       'shell mkdir -p ai/tasks/hygiene ai/tasks/workspace',
       'shell touch ai/tasks/build-a-feature.md ai/tasks/work-an-issue.md ai/tasks/hygiene/improve-test-coverage.md ai/tasks/workspace/merge-change-to-master.md ai/tasks/workspace/open-feature-pull-request.md ai/tasks/hygiene/reduce-complexity.md',
     ],
-    actions: [{ press: 'Control+a' }, { press: 'ArrowRight' }, { press: 'ArrowDown' }],
+    actions: [
+      { press: 'Control+a' }, { press: 'ArrowDown' }, { press: 'ArrowDown' },
+      { press: 'ArrowRight' }, { press: 'ArrowDown' },
+    ],
     target: 'task-overlay',
   },
   { name: 'ghost-text', setup: ['shell git status'], actions: [{ type: 'shell git' }], target: 'command-bar' },

@@ -12,9 +12,12 @@ Janissary installation's own built-in `ai/tasks/` (the task prompts that ship wi
 two are shown as two labeled sections — a **Project** section first, then a **Janissary** section —
 each introduced by a non-selectable section header, so the origin of every task is always clear.
 
-Within each section the `.md` files inside `ai/tasks/` are listed sorted alphabetically, recursing
-into subdirectories. Any subdirectory appears as a row of its own, collapsed by default; its task
-files become visible once it is expanded (see "Picker behavior" below). The list is read fresh from
+Within each section the `.md` files inside `ai/tasks/` are listed, recursing into subdirectories.
+Any subdirectory appears as a row of its own, collapsed by default; its task files become visible
+once it is expanded (see "Picker behavior" below). Every directory lists its own task files first
+and its subdirectories last, each of the two groups sorted alphabetically — so a section opens on
+its directly runnable tasks, with the expandable subdirectories collected beneath them, and the
+same ordering repeats inside each subdirectory once it is expanded. The list is read fresh from
 disk each time the picker opens, so adding, renaming, or removing a task file (or subdirectory) is
 reflected immediately. Each file row displays its name with the `.md` extension hidden
 (`work-an-issue`, not `work-an-issue.md`); the extension is still present in the command
