@@ -1,7 +1,5 @@
 import React, { useRef, useState } from 'react';
 import { useDialogKeyboard } from './useDialogKeyboard';
-import { useLatestRef } from './useLatestRef';
-import { dialogKeyHandler } from './dialog-key-handler';
 import { ModalDialog } from './ModalDialog';
 
 type Action = 'save' | 'cancel';
@@ -13,18 +11,15 @@ type Properties = { onSave: () => void; onCancel: () => void };
 export function OverwriteConflictDialog({ onSave, onCancel }: Properties) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const [selected, setSelected] = useState<Action>('save');
-  const onSaveRef = useLatestRef(onSave);
-  const onCancelRef = useLatestRef(onCancel);
-  const selectedRef = useLatestRef(selected);
+  const toggle = () => setSelected((s) => (s === 'save' ? 'cancel' : 'save'));
 
-  const onKeyDown = dialogKeyHandler({
-    y: () => onSaveRef.current(),
-    enter: () => (selectedRef.current === 'save' ? onSaveRef.current() : onCancelRef.current()),
-    escape: () => onCancelRef.current(),
-    arrowleft: () => setSelected((s) => (s === 'save' ? 'cancel' : 'save')),
-    arrowright: () => setSelected((s) => (s === 'save' ? 'cancel' : 'save')),
+  useDialogKeyboard(dialogRef, {
+    y: onSave,
+    enter: () => (selected === 'save' ? onSave() : onCancel()),
+    escape: onCancel,
+    arrowleft: toggle,
+    arrowright: toggle,
   });
-  useDialogKeyboard(dialogRef, onKeyDown);
 
   return (
     <ModalDialog dialogRef={dialogRef} title="This file changed on disk. Overwrite it with your changes?">
