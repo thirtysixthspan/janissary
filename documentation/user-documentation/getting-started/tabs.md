@@ -33,7 +33,7 @@ The active tab is also highlighted: full-strength text on the content background
 
 ## Working in two panes
 
-Action tabs have a **Split** button in their header. Click it to move that tab into a second pane
+Action tabs have a **Split** button at the right edge of their metadata header. Click it to move that tab into a second pane
 beside the first one. Each pane gets its own tab strip and keeps one tab visible; click anywhere in
 a pane to make it the focused one. New tabs opened from an action tab join that tab's pane.
 

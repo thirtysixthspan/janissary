@@ -4,7 +4,14 @@ import { splitTabIcon } from './icons';
 
 export function SplitTabButton({ onClick }: { onClick: () => void }) {
   return (
-    <button type="button" className="tab-split" title="Split" aria-label="Split" onClick={onClick}>
+    <button
+      type="button"
+      className="tab-split"
+      style={{ marginLeft: 'auto' }}
+      title="Split"
+      aria-label="Split"
+      onClick={onClick}
+    >
       <FontAwesomeIcon icon={splitTabIcon} />
     </button>
   );

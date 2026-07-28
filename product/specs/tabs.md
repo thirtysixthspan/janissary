@@ -49,7 +49,7 @@ The active tab shows full-intensity foreground text on the content background co
 ### Split tab strips
 
 The central action area may show two tab strips and bodies side by side. Eligible action tabs have a
-**Split** button in their header. Pressing it moves that tab to the other pane; the first split moves
+right-aligned **Split** button in their metadata header. Pressing it moves that tab to the other pane; the first split moves
 the current tab right and leaves the most recently focused eligible tab on the left. Each pane keeps
 one selected tab, while exactly one of those two selected tabs has keyboard focus. Pressing anywhere
 in the other pane focuses its selected tab before the interaction continues.
