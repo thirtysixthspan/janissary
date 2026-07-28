@@ -20,7 +20,9 @@ Today per-tab state is scattered across a dozen parallel maps in `Controller` �
 
 ## 3. The controller dispatches; feature services execute
 
-`controller.ts` is ~1130 lines and violates the project's own 200-line guideline by 5×. It is a classic God Object: command routing, shell I/O, PTY management, ACP loops, browser glue, scheduling, messaging, globbing, file serving, and persistence all in one class. Controller methods should be light — routing and orchestration — with the real work in focused, independently testable modules. (Self-contained command logic has moved out into `src/commands/*.ts` per principle 5; the remaining bulk is the per-tab resource machinery principle 2 targets.)
+`controller.ts` was once a ~1130-line God Object holding command routing, shell I/O, PTY management, ACP loops, browser glue, scheduling, messaging, globbing, file serving, and persistence in one class. It is now 242 lines and does none of that work itself: every method forwards to a manager on `Managers` or to a feature module (`controller/file-navigator.ts`, `editor/save.ts`, `page/sync.ts`, `monitor/window.ts`). Self-contained command logic lives in `src/commands/*.ts` per principle 5.
+
+The pressure did not disappear — it moved. `src/tab/manager.ts` is now the largest non-test source file in the repo and the only one carrying an `/* eslint-disable max-lines */` suppression, because it absorbed the per-tab resource machinery principle 2 targets. That file, not the controller, is where this principle is currently unmet.
 
 **Rule.** The controller maps an intent to a feature and delegates. Business logic lives in feature modules (`shell`, `db`, `browser-tab`, `schedule`, `messaging`, `acp-loop`, openers). When you find yourself adding a method to the controller, ask whether it belongs to a feature instead. Keep files at or under **200 lines**; a file that exceeds it is signalling that it should be split.
 
@@ -44,9 +46,11 @@ A tab can own a shell, PTYs, an ACP session and its info, a browser, a workspace
 
 ## 7. One wire contract, shared — not mirrored
 
-`src/protocol.ts` and `web/src/protocol.ts` are kept in sync by hand ("the web bundle mirrors these locally… keep them in sync"). Manually mirrored types are the textbook cause of type drift: change an event shape on one side, forget the other, and the bug surfaces only at runtime. A single shared definition makes the compiler flag every affected site across both apps.
+`src/protocol.ts` is the only definition of the wire contract. The web app used to keep a hand-mirrored `web/src/protocol.ts` alongside it — the textbook cause of type drift, where changing an event shape on one side and forgetting the other surfaces only at runtime. That mirror is gone: `web/src/` imports `ServerEvent`, `RpcCall`, `TabView`, `BufferLine`, and the rest from `@shared/protocol`, so the compiler flags every affected site across both apps from a single edit.
 
-**Rule.** Wire types (`ServerEvent`, `ClientMessage`, `TabView`, …) have exactly one definition that both server and client import. Treat manual mirroring as technical debt to retire, and until then, any change to one file must be made to the other in the same commit.
+The `@shared` alias is declared in three places that must agree: `web/tsconfig.json` (`paths`) for typechecking, `web/vite.config.ts` (`resolve.alias`) for the production build, and the `client` project in `vitest.config.ts` for tests. Most `@shared/*` imports are type-only and erased at transpile time, but some — `src/search-matches.ts`, `src/syntax-themes.ts`, `src/app-themes.ts` — are imported for real runtime values, which is why the bundler and test runner need the alias and not just the typechecker.
+
+**Rule.** Wire types (`ServerEvent`, `ClientMessage`, `TabView`, …) have exactly one definition, in `src/protocol.ts`, that both server and client import. Never re-declare a wire shape locally in `web/src/` — not as a convenience copy, not as a "close enough" structural type. When you add a shared module that the client imports for runtime values rather than types alone, confirm all three alias declarations resolve it.
 
 ## 8. Synchronize by minimal, ordered change — not whole-world snapshots
 
@@ -70,6 +74,5 @@ The strongest boundary in the system: the server binds to `127.0.0.1`, requires 
 
 ## How to use these
 
-- **Developers:** before opening a PR, check it against principles 2–7 (the ones most easily eroded). If you added a `Map<label, …>` to the controller, grew a file past 200 lines, or edited one `protocol.ts` but not the other, reconsider.
+- **Developers:** before opening a PR, check it against principles 2–7 (the ones most easily eroded). If you added a `Map<label, …>` keyed by tab label, grew a file past 200 lines, or declared a wire type in `web/src/` instead of importing it from `@shared/protocol`, reconsider.
 - **AI assistants:** treat these as constraints, not suggestions. When asked to "add a feature," default to a feature module + a session-owned resource, wire one command definition, update the spec and a test, and keep the controller change to delegation. Surface — don't silently resolve — any request that forces a principle to break.
-</content>
