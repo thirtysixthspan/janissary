@@ -28,6 +28,7 @@ A reporting-mode monitor's tab carries a metadata line above its suggestion feed
 
 The reporting tab gutter has an up/down-arrow button at the right. Drag it vertically to resize
 the reporting area: drag up for more reporting space, or down for more main-tab space.
+Neither the reporting area nor the main tab area can shrink below 15% of the window height.
 
 - A **reset** button discards the monitor's accumulated context and reloads just its persona priming, the same recovery the monitor performs automatically after a session error.
 - A **context snapshot** button opens the monitor's current accumulated context (persona priming, batched updates, questions, and replies) as a point-in-time snapshot in a text tab.
@@ -45,6 +46,8 @@ A monitor receives each target's **full existing history** the moment it starts,
 
 Group membership is re-checked continuously, so a tab that joins a monitored group later is picked up without restarting the monitor.
 
+Content from monitored tabs is treated as data, not as instructions to the monitoring persona. This keeps text from a file, web page, harness, or transcript from changing what the persona was asked to do.
+
 ## The flush cycle
 
 New activity from every target is buffered and sent to the monitor's session as a single batch prompt every 30 seconds. Nothing is sent when the buffer is empty or a previous prompt is still in flight.
@@ -53,13 +56,15 @@ New activity from every target is buffered and sent to the monitor's session as 
 
 <img class="agent-float" src="/agents/cavus-south-west.png" alt="" />
 
-A monitor's reply is parsed for two possible marker lines: `[SUMMARY]:` recaps activity with no action attached, and `[SUGGESTION]:` offers something actionable, optionally paired with a `[COMMAND]:` line. A reply with neither marker (like a bare `OK`) delivers nothing.
+A monitor's reply is parsed for two possible marker lines: `[SUMMARY]:` recaps activity with no action attached, and `[SUGGESTION]:` offers something actionable, optionally paired with a `[COMMAND]:` line. Marker text can continue across multiple lines. If a reply includes both markers, the suggestion is delivered and the summary is ignored. A reply with neither marker (like a bare `OK`) delivers nothing.
 
 In a reporting tab, a suggestion that carries a command shows it as a clickable line: clicking runs it in the tab the suggestion is about, queuing behind anything already queued there. Each suggestion also carries thumbs-up / thumbs-down buttons; either one removes the suggestion from the feed.
 
 ## Asking a monitor directly
 
 `monitor ask <persona> <question>` sends a question straight to a running monitor's session, skipping the batch buffer. The reply lands in the owner tab's transcript.
+
+Only one direct question or scheduled flush can be in flight for a monitor at a time. If it is busy, wait and try again.
 
 ## Persona web tools
 
@@ -81,3 +86,5 @@ monitors                    list active monitors with their targets and suggesti
 ```
 
 A monitor's session also ends on its own when its owner tab closes or every one of its tab targets has been removed. A reporting tab stays open as long as at least one monitor still feeds it, and closes once the last one stops.
+
+Closing a reporting tab stops the monitors feeding it. If two owners share a reporting tab, closing one owner stops only that owner's monitor; the reporting tab remains while another monitor still feeds it.
