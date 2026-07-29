@@ -20,6 +20,18 @@ shell find . -name "*.ts"
 
 The prefix is the deterministic escape hatch — whatever follows it goes straight to the shell.
 
+The chooser always lists `shell` and `acp (agent prompt)`. It also lists one `db query → <name>`
+option for each database connection open in the current tab. It does not offer a database route
+when that tab has no open database. A confident SQL guess runs immediately when exactly one database
+is open. With zero or several open databases, the guess opens the chooser instead so you can pick
+the target. You can also bypass recognition with the `db ` or `acp ` prefix.
+
+The chooser is modal, so the command bar is disabled until you choose or cancel. Use `↑` and `↓`,
+press `Return`, or click a row. `acp (agent prompt)` is highlighted when the chooser opens.
+
+See [Databases](/user-documentation/command-bar/database) for database routing and [ACP agents](/user-documentation/advanced-agents/acp-agent)
+for agent-prompt routing.
+
 ## One shell per tab, and it persists
 
 <img class="agent-float" src="/agents/aslan-south-west.png" alt="" />

@@ -8,6 +8,11 @@
 acp summarize the open TODO comments in this project
 ```
 
+You can also type an unprefixed natural-language prompt. If the app cannot recognize the line with
+confidence, it opens a route chooser with `shell`, any available database targets, and
+`acp (agent prompt)`. The ACP option is highlighted by default. Press `Return`, or click it, to
+send the prompt. Prefix the prompt with `acp ` when you want to bypass recognition.
+
 The reply arrives as formatted Markdown: headings, lists, tables, and code blocks all render as it streams in.
 
 ## Before the first prompt
