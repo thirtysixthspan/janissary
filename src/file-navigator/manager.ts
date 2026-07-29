@@ -1,11 +1,9 @@
-import type { FSWatcher } from 'node:fs';
-import path from 'node:path';
 import { messageBus } from '../bus.js';
 import { isSameOrDescendantPath } from './index.js';
 import { refreshGit } from './git-refresh.js';
 import { openOrRetarget, type OpenPort } from './open.js';
 import { openFilesCommand } from './open-command.js';
-import type { MoveGroup, UndoRedoResult } from './moves.js';
+import type { UndoRedoResult } from './moves.js';
 import { deleteItem, moveItem, renameItem } from './filesystem.js';
 import { replayHistory } from './manager-history.js';
 import { deleteMany, moveMany } from './manager-batch.js';
@@ -16,39 +14,13 @@ import { pruneAndBuildRows } from './rebuild.js';
 import { buildRows } from './index.js';
 import { listProjectFiles } from './search.js';
 import { makeNavigationPort, makeOpenPort } from './manager-ports.js';
+import { openersForRow } from './openers-for-row.js';
+import { restoreTreeView, type SavedTreeView } from './restore.js';
+import type { FilesTabState } from './state.js';
 import type { Managers } from '../managers.js';
-import type { GitFileStatus } from '../git-status.js';
-import { openerForExtension } from '../openers/index.js';
 import type { BatchResult, BulkConflictPolicy, BulkMoveResult, FileOpenerChoice } from '../protocol.js';
 
 const DEBOUNCE_MS = 100;
-
-// Per files-tab state, keyed by the tab's label. `watchers` is keyed by each visible directory's
-// tree-relative path ('' for the root itself). `undoStack`/`redoStack` are purely in-memory and
-// reset with the rest of the tab's state on close.
-export type FilesTabState = {
-  root: string;
-  expanded: Set<string>;
-  watchers: Map<string, FSWatcher>;
-  debounce?: ReturnType<typeof setTimeout>;
-  // Set while the tab is waiting for its root to be created (see `pollForCreation`); cleared once
-  // the directory appears.
-  pollTimer?: ReturnType<typeof setInterval>;
-  undoStack: MoveGroup[];
-  redoStack: MoveGroup[];
-  // Last-computed map of git-changed, root-relative paths to their status (see `git-status.ts`).
-  // Applied synchronously to every rebuild so interactive redraws are instant; recomputed
-  // asynchronously by `refreshGit`. `gitRefreshing`/`gitRefreshStale` coalesce overlapping refresh
-  // requests into at most one in-flight git call plus one queued follow-up.
-  gitStatuses?: Map<string, GitFileStatus>;
-  // Last-computed current git branch name (see `git-status.ts`), refreshed alongside `changed`.
-  branch?: string;
-  // Last-computed GitHub commits-page URL for the current origin/branch (see `github-url.ts`),
-  // refreshed alongside `branch`. Undefined when there's no github.com origin remote.
-  githubUrl?: string;
-  gitRefreshing?: boolean;
-  gitRefreshStale?: boolean;
-};
 
 // Owns file navigator tabs: opening/focusing them, their `expanded` directory sets, and one
 // non-recursive `fs.watch` per visible directory. Any watch event schedules a single per-tab
@@ -67,8 +39,10 @@ export class FileNavigatorManager {
   // keyword provides; both are optional, independent, and may appear in either order (`files in
   // claude on left`). Like `left`/`right`, they are only recognized as clause keywords — a
   // directory literally named `in`/`on` stays reachable via a path form (`files ./in`).
-  open(command: string, label: string): void {
-    openFilesCommand(
+  // Returns the label of the tab it opened, redocked, or focused, so a profile launch can restore
+  // that tree's saved view onto it.
+  open(command: string, label: string): string | undefined {
+    return openFilesCommand(
       this.managers, this.tabs, command, label,
       (l, a, r) => this.watchDir(l, a, r), (l) => this.refreshGit(l), (l, a) => this.pollForCreation(l, a),
     );
@@ -214,14 +188,24 @@ export class FileNavigatorManager {
   openers(label: string, relPath: string, edit: boolean): { command?: 'open' | 'edit'; choices: FileOpenerChoice[] } {
     const state = this.tabs.get(label);
     if (!state) return { choices: [] };
-    const opener = openerForExtension(path.extname(path.resolve(state.root, relPath)));
-    if (opener) return { command: edit ? 'edit' : 'open', choices: [] };
-    return {
-      choices: [
-        { label: 'Edit as text', command: 'edit' },
-        { label: 'Open externally', command: 'open external' },
-      ],
-    };
+    return openersForRow(state.root, relPath, edit);
+  }
+
+  // This tab's expanded directories as a plain sorted array, for `profile save`. Sorted only so the
+  // written file is deterministic (profiles are committable); restore order does not matter, since
+  // `buildRows` walks from the root and consults the expanded set rather than replaying insertion
+  // order.
+  expandedPaths(label: string): string[] {
+    const state = this.tabs.get(label);
+    if (!state) return [];
+    return [...state.expanded].toSorted((a, b) => a.localeCompare(b));
+  }
+
+  // Replay a saved tree view onto this tab: expand every saved directory that still resolves, then
+  // record the surviving cursor/anchor/selection as a restore hint for the client. Best effort and
+  // silent — a path that no longer exists is simply dropped.
+  restoreView(label: string, view: SavedTreeView): void {
+    restoreTreeView(this.navPort(), label, view);
   }
 
   // Tear down one tab's watchers and debounce timer (on tab close).
@@ -282,7 +266,7 @@ export class FileNavigatorManager {
     const { state, tab } = found;
     tab.files = {
       root: state.root, absoluteRoot: state.root, rows: pruneAndBuildRows(state),
-      branch: state.branch, githubUrl: state.githubUrl,
+      branch: state.branch, githubUrl: state.githubUrl, restore: state.restore,
     };
     messageBus.emit('state', { type: 'dirty' });
   }

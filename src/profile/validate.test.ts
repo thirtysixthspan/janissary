@@ -130,6 +130,32 @@ describe('validateProfile', () => {
     ]);
   });
 
+  it('accepts a files entry carrying tree state and presentation keys', () => {
+    writeJson('tree', {
+      tabs: [{
+        type: 'files', path: '$root', expanded: ['src', 'src/inner'], cursor: 'src/a.ts',
+        anchor: 'src', selected: ['src', 'src/a.ts'], number: 3, group: 2, pane: 'right',
+      }],
+    });
+    expect(validateProfile('tree')).toEqual([]);
+  });
+
+  it('locates a malformed tree-state field on a files entry', () => {
+    writeJson('bad-tree', {
+      tabs: [
+        { type: 'files', expanded: 'src' },
+        { type: 'files', cursor: 1 },
+        { type: 'files', selected: [2] },
+        { type: 'files', number: 'first' },
+      ],
+    });
+    const problems = validateProfile('bad-tree');
+    expect(problems).toContain('tabs[0]: expanded must be an array of strings');
+    expect(problems).toContain('tabs[1]: cursor must be a string');
+    expect(problems).toContain('tabs[2]: selected must be an array of strings');
+    expect(problems).toContain('tabs[3]: number must be a number');
+  });
+
   it('reports no problems for a file still using the old per-kind keys', () => {
     writeJson('old', { agents: [{ name: 'bob' }], harnesses: [{ name: 'c' }], editors: [{}] });
     expect(validateProfile('old')).toEqual([]);

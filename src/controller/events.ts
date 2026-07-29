@@ -24,6 +24,7 @@ export function wireControllerEvents(managers: Managers, sinks: Sinks): void {
     focusLeft: event.focusLeft,
     focusRight: event.focusRight,
   }));
+  messageBus.on('fileNavigator', 'collect', (event) => sinks.sendCollectTreeState?.({ id: event.id }));
   messageBus.on('pty', ['data', 'exit'], (event) => {
     if (event.type === 'data') { sinks.sendPty(event.id, event.data); return; }
     if (event.type !== 'exit') return;

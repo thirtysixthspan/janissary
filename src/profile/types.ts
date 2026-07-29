@@ -61,8 +61,18 @@ export type ProfileTabPresentation = {
 // A profile-level file navigator tab. `dock` docks it into that sidebar; `in` roots it at the cwd
 // of the named tab instead of the profile's first newly opened tab; `path` roots it at a literal
 // path, expanded like the `files` command's path argument (so `$root` roots it at the launch dir
-// regardless of any tab).
-export type ProfileFilesEntry = { dock?: 'left' | 'right'; in?: string; path?: string };
+// regardless of any tab). `expanded`, `cursor`, `anchor`, and `selected` are the tree's saved view,
+// every path relative to its root; restoring them is best effort and silent. An undocked navigator
+// takes a place in the tab strip, so it also carries the usual presentation keys.
+export type ProfileFilesEntry = ProfileTabRuntime & {
+  dock?: 'left' | 'right';
+  in?: string;
+  path?: string;
+  expanded?: string[];
+  cursor?: string;
+  anchor?: string;
+  selected?: string[];
+};
 
 // A profile-level editor tab. Its path resolves from `in`, or the profile's first newly opened
 // tab, using the same rules as the `edit` command.
@@ -96,7 +106,8 @@ export type ProfileHarnessTabFile = { type: 'harness' }
 export type ProfileEditorTabFile = { type: 'editor'; path: string; in?: string; line?: number }
   & ProfileTabPresentation;
 
-export type ProfileFilesTabFile = { type: 'files' } & ProfileFilesEntry;
+export type ProfileFilesTabFile = { type: 'files' }
+  & Omit<ProfileFilesEntry, keyof ProfileTabRuntime> & ProfileTabPresentation;
 export type ProfileNotificationsTabFile = { type: 'notifications' } & ProfileNotificationsEntry;
 export type ProfileSchedulesTabFile = { type: 'schedules' } & ProfileSchedulesEntry;
 

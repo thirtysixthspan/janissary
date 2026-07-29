@@ -18,10 +18,12 @@ type Snapshot = { name: string; persona: string; targets: MonitorTarget[]; inlin
 
 function makeManagers(
   tabs: Tab[], cwdByLabel: Record<string, string> = {}, monitors: Snapshot = [], launchDir = '/proj',
+  expandedByLabel: Record<string, string[]> = {},
 ): Managers {
   return {
     tab: { tabs, cwdOf: (label: string) => cwdByLabel[label], launchDir },
     monitor: { snapshot: () => monitors },
+    fileNavigator: { expandedPaths: (label: string) => expandedByLabel[label] ?? [] },
   } as unknown as Managers;
 }
 
@@ -148,7 +150,7 @@ describe('saveProfile', () => {
     expect(load('demo').entries).toEqual([expect.objectContaining({ cwd: '$root/src' })]);
   });
 
-  it('skips only a non-docked file navigator, now that image and ssh tabs are captured', async () => {
+  it('skips nothing now that image, ssh, and undocked navigator tabs are all captured', async () => {
     const image = makeImageTab('pic', '#111', 1, 1, '#111', { name: 'a.png', path: '/a.png', size: '1KB', url: '/open/1' });
     const ssh = makeHarnessTab('server', '#333', 1, 1, '#333', { name: 'ssh', program: 'ssh', ptyId: 'pty2', status: 'running', destination: 'host' });
     const undockedFiles = makeFilesTab('nav', '#444', 1, 1, '#444', { root: '~', absoluteRoot: '/home', rows: [] });
@@ -156,8 +158,43 @@ describe('saveProfile', () => {
 
     const summary = await saveProfile('demo', managers);
 
-    expect(summary.skipped).toEqual(['nav']);
+    expect(summary.skipped).toEqual([]);
     expect(load('demo').views.map((v) => v.type)).toEqual(['image', 'ssh']);
+    expect(summary.fileNavigators).toBe(1);
+  });
+
+  it('writes an undocked navigator with presentation keys and no dock', async () => {
+    const undockedFiles = makeFilesTab('nav', '#444', 3, 2, '#555', { root: '~', absoluteRoot: '/proj/src', rows: [] });
+    const managers = makeManagers([undockedFiles], {}, [], '/proj', { nav: ['a', 'a/b'] });
+
+    await saveProfile('demo', managers);
+
+    expect(load('demo').files).toEqual([{
+      path: '$root/src', expanded: ['a', 'a/b'], dotColor: '#444', number: 3, group: 2,
+      groupColor: '#555', pane: 'left', focus: undefined, dock: undefined,
+    }]);
+  });
+
+  it('writes a docked navigator with its expanded set and no presentation keys', async () => {
+    const dockedFiles = { ...makeFilesTab('nav', '#444', 1, 1, '#444', { root: '~', absoluteRoot: '/proj', rows: [] }), dock: 'left' as const };
+    const managers = makeManagers([dockedFiles], {}, [], '/proj', { nav: ['src'] });
+
+    await saveProfile('demo', managers);
+
+    expect(load('demo').files).toEqual([{ dock: 'left', path: '$root/', expanded: ['src'] }]);
+  });
+
+  it('omits the three selection keys when no client answers the request in time', async () => {
+    const dockedFiles = { ...makeFilesTab('nav', '#444', 1, 1, '#444', { root: '~', absoluteRoot: '/proj/src', rows: [] }), dock: 'left' as const };
+    const managers = makeManagers([dockedFiles], {}, [], '/proj', { nav: ['src'] });
+
+    await saveProfile('demo', managers);
+
+    const entry = load('demo').files[0];
+    expect(entry.expanded).toEqual(['src']);
+    expect(entry.cursor).toBeUndefined();
+    expect(entry.anchor).toBeUndefined();
+    expect(entry.selected).toBeUndefined();
   });
 
   it('round-trips an image, markdown, page, and ssh tab through the views list', async () => {
@@ -251,7 +288,7 @@ describe('saveProfile', () => {
     expect(summary.agents).toBe(2);
   });
 
-  it('captures docked file-navigator/notifications/schedules tabs into their config keys', async () => {
+  it('captures docked file-navigator/notifications/schedules tabs, counting navigators on their own', async () => {
     const dockedFiles = { ...makeFilesTab('nav', '#444', 1, 1, '#444', { root: '~', absoluteRoot: '/home/bob', rows: [] }), dock: 'left' as const };
     const notifications = { ...makeNotificationsTab('notifications', '#555', 1, 1, '#555'), dock: 'right' as const };
     const schedules = { ...makeSchedulesTab('schedules', '#666', 1, 1, '#666'), dock: 'right' as const };
@@ -259,7 +296,8 @@ describe('saveProfile', () => {
 
     const summary = await saveProfile('demo', managers);
 
-    expect(summary.dockedViews).toBe(3);
+    expect(summary.dockedViews).toBe(2);
+    expect(summary.fileNavigators).toBe(1);
     const loaded = load('demo');
     expect(loaded.files).toEqual([{ dock: 'left', path: '/home/bob' }]);
     expect(loaded.notifications).toEqual([{ dock: 'right' }]);
@@ -332,7 +370,7 @@ describe('formatSaveSummary', () => {
   function makeSummary(overrides: Partial<SaveSummary> = {}): SaveSummary {
     return {
       agents: 0, harnesses: 0, editors: 0, images: 0, markdown: 0, pages: 0, ssh: 0,
-      monitors: 0, dockedViews: 0, skipped: [], notes: [], ...overrides,
+      fileNavigators: 0, monitors: 0, dockedViews: 0, skipped: [], notes: [], ...overrides,
     };
   }
 
@@ -342,23 +380,25 @@ describe('formatSaveSummary', () => {
 
   it('uses singular labels for a count of one', () => {
     const summary = makeSummary({
-      agents: 1, harnesses: 1, editors: 1, images: 1, markdown: 1, pages: 1, ssh: 1, monitors: 1, dockedViews: 1,
+      agents: 1, harnesses: 1, editors: 1, images: 1, markdown: 1, pages: 1, ssh: 1,
+      fileNavigators: 1, monitors: 1, dockedViews: 1,
     });
 
     expect(formatSaveSummary('demo', summary)).toBe(
       'Saved profile "demo": 1 agent, 1 harness, 1 editor tab, 1 image tab, 1 markdown tab, 1 page tab, '
-      + '1 ssh tab, layout, 1 monitor, 1 docked tab.',
+      + '1 ssh tab, 1 file navigator, layout, 1 monitor, 1 docked tab.',
     );
   });
 
   it('uses plural labels for counts greater than one', () => {
     const summary = makeSummary({
-      agents: 2, harnesses: 3, editors: 4, images: 2, markdown: 2, pages: 2, ssh: 2, monitors: 5, dockedViews: 6,
+      agents: 2, harnesses: 3, editors: 4, images: 2, markdown: 2, pages: 2, ssh: 2,
+      fileNavigators: 2, monitors: 5, dockedViews: 6,
     });
 
     expect(formatSaveSummary('demo', summary)).toBe(
       'Saved profile "demo": 2 agents, 3 harnesses, 4 editor tabs, 2 image tabs, 2 markdown tabs, '
-      + '2 page tabs, 2 ssh tabs, layout, 5 monitors, 6 docked tabs.',
+      + '2 page tabs, 2 ssh tabs, 2 file navigators, layout, 5 monitors, 6 docked tabs.',
     );
   });
 

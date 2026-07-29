@@ -1,5 +1,5 @@
 import type { Managers } from '../managers.js';
-import type { FilesTabState } from './manager.js';
+import type { FilesTabState } from './state.js';
 import type { NavPort } from './navigation.js';
 import type { OpenPort } from './open.js';
 

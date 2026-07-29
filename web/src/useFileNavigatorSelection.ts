@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { FileNavigatorRow } from '@shared/protocol';
+import { clearNavigatorSelection, publishNavigatorSelection } from './file-navigator-selection-registry';
 
 export type FileNavigatorSelection = {
   cursor: string | null;
@@ -103,10 +104,37 @@ export function reconcileSelection(
   return { cursor, anchor, selected };
 }
 
-export function useFileNavigatorSelection(rows: FileNavigatorRow[], absoluteRoot: string) {
+// A tree view restored from a profile, as it arrives on the navigator's payload.
+export type TreeRestoreHint = {
+  revision: number;
+  cursor?: string;
+  anchor?: string;
+  selected: string[];
+};
+
+// Turn a restore hint into a selection, dropping every path with no visible row — a directory that
+// vanished between the save and the launch simply doesn't come back. Exported (rather than inlined
+// in the effect below) so it is testable without rendering, matching `reconcileSelection`.
+export function selectionFromRestore(
+  hint: TreeRestoreHint, rows: FileNavigatorRow[],
+): FileNavigatorSelection {
+  const visible = new Set(rows.map((row) => row.path));
+  const survives = (path: string | undefined): string | null =>
+    (path !== undefined && visible.has(path) ? path : null);
+  return {
+    cursor: survives(hint.cursor),
+    anchor: survives(hint.anchor),
+    selected: new Set(hint.selected.filter((path) => visible.has(path))),
+  };
+}
+
+export function useFileNavigatorSelection(
+  rows: FileNavigatorRow[], absoluteRoot: string, index?: number, restore?: TreeRestoreHint,
+) {
   const [state, setState] = useState<FileNavigatorSelection>(EMPTY_SELECTION);
   const previousRows = useRef(rows);
   const previousRoot = useRef(absoluteRoot);
+  const appliedRestore = useRef<number | undefined>(undefined);
 
   useEffect(() => {
     if (previousRoot.current !== absoluteRoot) {
@@ -118,6 +146,26 @@ export function useFileNavigatorSelection(rows: FileNavigatorRow[], absoluteRoot
     setState((current) => reconcileSelection(current, previousRows.current, rows));
     previousRows.current = rows;
   }, [absoluteRoot, rows]);
+
+  // A restore hint is applied once per revision, so the repeated full-state broadcasts never
+  // overwrite a selection the user has changed since the launch.
+  useEffect(() => {
+    if (!restore || appliedRestore.current === restore.revision) return;
+    appliedRestore.current = restore.revision;
+    setState(selectionFromRestore(restore, rows));
+  }, [restore, rows]);
+
+  // Publish into the registry `ws.ts` answers a `collect-tree-state` request from, and drop this
+  // navigator's entry when it unmounts.
+  useEffect(() => {
+    if (index === undefined) return;
+    publishNavigatorSelection(index, state);
+  }, [index, state]);
+
+  useEffect(() => {
+    if (index === undefined) return;
+    return () => { clearNavigatorSelection(index); };
+  }, [index]);
 
   const replace = useCallback((path: string | null) => setState(replaceSelection(path)), []);
   const pointer = useCallback((

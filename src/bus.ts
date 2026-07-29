@@ -95,5 +95,11 @@ type LayoutEvent = {
   focusLeft?: 'files' | 'notifications' | 'schedules';
   focusRight?: 'files' | 'notifications' | 'schedules';
 };
-export type BusChannels = { transcript: BusEvent; state: StateEvent; app: AppEvent; pty: PtyEvent; layout: LayoutEvent };
+// A one-shot request for every connected client's file-navigator selections, issued by
+// `profile save` (see src/file-navigator/selection-request.ts) and broadcast as `collect-tree-state`.
+type FileNavigatorEvent = { type: 'collect'; id: number };
+export type BusChannels = {
+  transcript: BusEvent; state: StateEvent; app: AppEvent; pty: PtyEvent; layout: LayoutEvent;
+  fileNavigator: FileNavigatorEvent;
+};
 export const messageBus = new MessageBus<BusChannels>();

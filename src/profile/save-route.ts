@@ -1,9 +1,10 @@
 import {
-  writeAgentEntry, writeEditorEntry, writeHarnessEntry, writeImageEntry, writeMarkdownEntry,
-  writePageEntry, writeSshEntry,
+  writeAgentEntry, writeEditorEntry, writeFilesEntry, writeHarnessEntry, writeImageEntry,
+  writeMarkdownEntry, writePageEntry, writeSshEntry,
 } from './save-entries.js';
 import type { Managers } from '../managers.js';
 import type { ProfileTabFile, Tab } from '../types.js';
+import type { TreeSelection } from '../file-navigator/selection-request.js';
 
 // Per-tab routing for `profile save`, split out of save.ts to keep its cognitive complexity down.
 // Each tab produces one element of the profile's single `tabs` array, appended in tab-strip order,
@@ -18,6 +19,9 @@ export type CaptureState = {
   markdown: number;
   pages: number;
   ssh: number;
+  // File navigators, counted together whether docked or not — `dockedViews` covers only the
+  // notifications and schedules tabs now.
+  fileNavigators: number;
   dockedViews: number;
   skipped: string[];
   tabEntries: ProfileTabFile[];
@@ -26,11 +30,12 @@ export type CaptureState = {
 export function newCaptureState(): CaptureState {
   return {
     agents: 0, harnesses: 0, editors: 0, images: 0, markdown: 0, pages: 0, ssh: 0,
-    dockedViews: 0, skipped: [], tabEntries: [],
+    fileNavigators: 0, dockedViews: 0, skipped: [], tabEntries: [],
   };
 }
 
-type CaptureCount = 'agents' | 'harnesses' | 'editors' | 'images' | 'markdown' | 'pages' | 'ssh';
+type CaptureCount =
+  'agents' | 'harnesses' | 'editors' | 'images' | 'markdown' | 'pages' | 'ssh' | 'fileNavigators';
 
 // Append an entry and bump its counter, when the writer produced one at all.
 function push(state: CaptureState, entry: ProfileTabFile | undefined, count: CaptureCount): void {
@@ -39,7 +44,9 @@ function push(state: CaptureState, entry: ProfileTabFile | undefined, count: Cap
   state[count] += 1;
 }
 
-export function captureTab(tab: Tab, managers: Managers, state: CaptureState): void {
+export function captureTab(
+  tab: Tab, managers: Managers, state: CaptureState, selections: Map<number, TreeSelection> = new Map(),
+): void {
   switch (tab.view) {
     case undefined:
     case 'agent': {
@@ -74,8 +81,7 @@ export function captureTab(tab: Tab, managers: Managers, state: CaptureState): v
       return;
     }
     case 'files': {
-      if (tab.dock) { state.tabEntries.push({ type: 'files', dock: tab.dock, path: tab.files?.absoluteRoot }); state.dockedViews += 1; }
-      else state.skipped.push(tab.label);
+      push(state, writeFilesEntry(tab, managers, selections.get(managers.tab.tabs.indexOf(tab))), 'fileNavigators');
       return;
     }
     case 'notifications': {

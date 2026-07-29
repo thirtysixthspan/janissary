@@ -3,6 +3,9 @@ import { handleFileNavigatorMessage } from './message-handler-file-navigator.js'
 import type { Controller } from './controller.js';
 import type { ClientMessage, ServerEvent } from './protocol.js';
 import { renameFileNavigatorItem, fileNavigatorOpeners } from './controller/file-navigator.js';
+import { resolveTreeSelections } from './file-navigator/selection-request.js';
+
+vi.mock('./file-navigator/selection-request.js', () => ({ resolveTreeSelections: vi.fn() }));
 
 vi.mock('./controller/file-navigator.js', () => ({
   deleteFileNavigatorItems: vi.fn(),
@@ -27,6 +30,16 @@ const dispatch = (controller: Controller, id: number, call: Omit<ClientMessage, 
 };
 
 describe('handleFileNavigatorMessage', () => {
+  it('routes reportFileNavigatorSelection straight to the resolver with its id and records', () => {
+    const controller = makeController();
+    const navigators = [{ index: 2, cursor: 'src/a.ts', anchor: 'src', selected: ['src', 'src/a.ts'] }];
+
+    const replies = dispatch(controller, 7, { method: 'reportFileNavigatorSelection', params: { id: 4, navigators } });
+
+    expect(resolveTreeSelections).toHaveBeenCalledWith(4, navigators);
+    expect(replies).toEqual([{ t: 'rpc-reply', id: 7, result: 'ok' }]);
+  });
+
   it('routes renameFileNavigatorItem to controller-file-navigator.js and acknowledges', () => {
     const controller = makeController();
     const replies = dispatch(controller, 1, {

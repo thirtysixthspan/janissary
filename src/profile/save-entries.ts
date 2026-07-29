@@ -3,9 +3,11 @@ import { abbreviatePath } from '../paths.js';
 import { SYNC_WORKSPACE_NAME } from '../git-sync.js';
 import type { Tab } from '../types.js';
 import type {
-  ProfileAgentTabFile, ProfileEditorTabFile, ProfileHarnessTabFile, ProfileImageTabFile,
-  ProfileMarkdownTabFile, ProfilePageTabFile, ProfileSshTabFile, ProfileTabPresentation,
+  ProfileAgentTabFile, ProfileEditorTabFile, ProfileFilesTabFile, ProfileHarnessTabFile,
+  ProfileImageTabFile, ProfileMarkdownTabFile, ProfilePageTabFile, ProfileSshTabFile,
+  ProfileTabPresentation,
 } from './types.js';
+import type { TreeSelection } from '../file-navigator/selection-request.js';
 import type { Managers } from '../managers.js';
 import { centerPane } from '../tab/split.js';
 
@@ -77,6 +79,29 @@ export function writeHarnessEntry(tab: Tab, managers: Managers): ProfileHarnessT
     autoApprove: tab.autoApprove,
     cwd: cwd ? portablePath(cwd, managers) : cwd,
     ...presentation(tab, managers),
+  };
+}
+
+// A file navigator, docked or not. A docked tree has no place in the tab strip, so it keeps `dock`
+// and gets no presentation; an undocked one carries the usual presentation keys instead, so it
+// reopens in its saved group, order, and pane. `expanded` comes from server state and always
+// writes; the three selection keys are whatever the client reported in time (see
+// `file-navigator/selection-request.ts`), and an absent or empty one is simply omitted.
+export function writeFilesEntry(
+  tab: Tab, managers: Managers, selection: TreeSelection | undefined,
+): ProfileFilesTabFile | undefined {
+  if (!tab.files) return undefined;
+  const expanded = managers.fileNavigator.expandedPaths(tab.label);
+  const selected = selection?.selected ?? [];
+  return {
+    type: 'files',
+    dock: tab.dock,
+    path: portablePath(tab.files.absoluteRoot, managers),
+    expanded: expanded.length > 0 ? expanded : undefined,
+    cursor: selection?.cursor,
+    anchor: selection?.anchor,
+    selected: selected.length > 0 ? selected : undefined,
+    ...(!tab.dock && presentation(tab, managers)),
   };
 }
 

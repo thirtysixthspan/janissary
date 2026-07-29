@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { parentPath } from './index.js';
-import type { FilesTabState } from './manager.js';
+import type { FilesTabState } from './state.js';
 
 // The narrow slice of `FileNavigatorManager` internals this module needs, handed over as bound closures
 // so the tab-state map and watcher plumbing stay private to the manager (see `navPort()` there).
@@ -55,6 +55,14 @@ export function rerootTree(port: NavPort, label: string, relPath?: string): void
   port.refreshGit(label);
 }
 
+// Mark one directory expanded and start watching it, unless it already is. Shared with
+// `restore.ts`, which replays a saved expanded set through the same pair of steps.
+export function expandAndWatch(port: NavPort, label: string, state: FilesTabState, relPath: string): void {
+  if (state.expanded.has(relPath)) return;
+  state.expanded.add(relPath);
+  port.watchDir(label, path.join(state.root, relPath), relPath);
+}
+
 // Expand every ancestor directory of `relPath` not already expanded (adding to `expanded`,
 // watching each newly-expanded one), then rebuild — the search pop-up's Enter action, so the
 // target row exists in the client's next `rows` update for it to select and scroll to.
@@ -66,9 +74,7 @@ export function revealPath(port: NavPort, label: string, relPath: string): void 
   let cur = '';
   for (const segment of segments) {
     cur = cur ? `${cur}/${segment}` : segment;
-    if (state.expanded.has(cur)) continue;
-    state.expanded.add(cur);
-    port.watchDir(label, path.join(state.root, cur), cur);
+    expandAndWatch(port, label, state, cur);
   }
   port.rebuild(label);
 }

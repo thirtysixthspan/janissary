@@ -45,7 +45,7 @@ function partitionTabs(tabs: ProfileTabFile[]): PartitionedTabs {
     }
     case 'harness': { out.entries.push({ ...stripFileKeys(tab), ...presentation(tab) }); break; }
     case 'editor': { out.editors.push({ ...stripFileKeys(tab), ...presentation(tab) }); break; }
-    case 'files': { out.files.push(stripFileKeys(tab)); break; }
+    case 'files': { out.files.push({ ...stripFileKeys(tab), ...presentation(tab) }); break; }
     case 'notifications': { out.notifications.push(stripFileKeys(tab)); break; }
     case 'schedules': { out.schedules.push(stripFileKeys(tab)); break; }
     case 'page': { out.views.push({ ...presentation(tab), type: 'page', url: tab.url }); break; }

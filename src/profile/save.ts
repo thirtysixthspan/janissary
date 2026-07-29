@@ -2,6 +2,7 @@ import { rmSync, writeFileSync } from 'node:fs';
 import { profilePath } from '../profiles.js';
 import { captureTab, newCaptureState } from './save-route.js';
 import { buildMonitors, buildLayout } from './save-reserved.js';
+import { requestTreeSelections } from '../file-navigator/selection-request.js';
 import type { Managers } from '../managers.js';
 import type { ProfileFile } from '../types.js';
 
@@ -13,6 +14,7 @@ export type SaveSummary = {
   markdown: number;
   pages: number;
   ssh: number;
+  fileNavigators: number;
   monitors: number;
   dockedViews: number;
   skipped: string[];
@@ -30,8 +32,12 @@ export async function saveProfile(name: string, managers: Managers): Promise<Sav
   rmSync(file, { recursive: true, force: true });
   rmSync(file.replace(/\.json$/, ''), { recursive: true, force: true });
 
+  // Every navigator's cursor/anchor/selection lives in the web client, so ask for it before
+  // routing tabs — the same shape as awaiting `buildLayout`'s window-bounds read below. A save
+  // with no client attached simply gets an empty map and writes the trees without those keys.
+  const selections = await requestTreeSelections();
   const state = newCaptureState();
-  for (const tab of managers.tab.tabs) captureTab(tab, managers, state);
+  for (const tab of managers.tab.tabs) captureTab(tab, managers, state, selections);
 
   const notes: string[] = [];
   const layout = await buildLayout(notes);
@@ -51,6 +57,7 @@ export async function saveProfile(name: string, managers: Managers): Promise<Sav
     markdown: state.markdown,
     pages: state.pages,
     ssh: state.ssh,
+    fileNavigators: state.fileNavigators,
     monitors: monitors.length,
     dockedViews: state.dockedViews,
     skipped: state.skipped,
@@ -76,6 +83,7 @@ export function formatSaveSummary(name: string, summary: SaveSummary): string {
     ...countPart(summary.markdown, 'markdown tab'),
     ...countPart(summary.pages, 'page tab'),
     ...countPart(summary.ssh, 'ssh tab'),
+    ...countPart(summary.fileNavigators, 'file navigator'),
     'layout',
     ...countPart(summary.monitors, 'monitor'),
     ...countPart(summary.dockedViews, 'docked tab'),

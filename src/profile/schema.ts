@@ -75,10 +75,11 @@ const TAB_TYPES: string[] = [
   'agent', 'harness', 'editor', 'files', 'notifications', 'schedules', 'image', 'markdown', 'page', 'ssh',
 ];
 
-// The kinds that occupy a place in the tab strip, and so carry the flat presentation fields. A
-// docked `files`/`schedules` entry has no strip position, and a `notifications` entry's own `focus`
-// means "visible in the sidebar switcher" rather than "active after launch".
-const PRESENTATION_TYPES = new Set(['agent', 'harness', 'editor', 'image', 'markdown', 'page', 'ssh']);
+// The kinds that can occupy a place in the tab strip, and so carry the flat presentation fields. A
+// `files` entry is included because an undocked navigator lands in the strip like any other tab; a
+// `schedules` entry is always docked, and a `notifications` entry's own `focus` means "visible in
+// the sidebar switcher" rather than "active after launch".
+const PRESENTATION_TYPES = new Set(['agent', 'harness', 'editor', 'files', 'image', 'markdown', 'page', 'ssh']);
 
 // One element of the `tabs` array: an object carrying a recognized `type`, the presentation fields
 // its type allows, and whatever else that type requires.
@@ -94,7 +95,7 @@ function tabProblems(value: unknown, loc: string): string[] {
   case 'agent': { return [...shared, ...agentProblems(value, loc)]; }
   case 'harness': { return [...shared, ...harnessProblems(value, loc)]; }
   case 'editor': { return [...shared, ...editorProblems(value, loc)]; }
-  case 'files': { return filesProblems(value, loc); }
+  case 'files': { return [...shared, ...filesProblems(value, loc)]; }
   case 'notifications': { return notificationsProblems(value, loc); }
   case 'schedules': { return schedulesProblems(value, loc); }
   case 'page': { return [...shared, ...pageProblems(value, loc)]; }
@@ -113,7 +114,15 @@ function monitorProblems(value: unknown, loc: string): string[] {
 }
 
 function filesProblems(value: Record<string, unknown>, loc: string): string[] {
-  return [...checkDock(value, loc), ...checkField(value, 'in', 'string', loc), ...checkField(value, 'path', 'string', loc)];
+  return [
+    ...checkDock(value, loc),
+    ...checkField(value, 'in', 'string', loc),
+    ...checkField(value, 'path', 'string', loc),
+    ...checkField(value, 'expanded', 'string[]', loc),
+    ...checkField(value, 'cursor', 'string', loc),
+    ...checkField(value, 'anchor', 'string', loc),
+    ...checkField(value, 'selected', 'string[]', loc),
+  ];
 }
 
 function editorProblems(value: Record<string, unknown>, loc: string): string[] {

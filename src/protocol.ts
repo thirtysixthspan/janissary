@@ -150,7 +150,21 @@ export type LayoutEvent = {
   focusLeft?: 'files' | 'notifications' | 'schedules';
   focusRight?: 'files' | 'notifications' | 'schedules';
 };
-export type ServerEvent = StateEvent | PtyDataEvent | PtyExitEvent | RpcReply | ByeEvent | LayoutEvent;
+// Asks every connected client to report its file navigators' cursor/anchor/selection, which live
+// only in client state. Issued by `profile save`, which waits briefly for the matching
+// `reportFileNavigatorSelection` reply before writing the file — see src/file-navigator/selection-request.ts.
+export type CollectTreeStateEvent = { t: 'collect-tree-state'; id: number };
+export type ServerEvent =
+  StateEvent | PtyDataEvent | PtyExitEvent | RpcReply | ByeEvent | LayoutEvent | CollectTreeStateEvent;
+
+// One navigator's client-side selection, keyed by the tab `index` every other `fileNavigator*` RPC
+// uses. Paths are relative to that tree's root, matching the server's own `expanded` vocabulary.
+export type FileNavigatorSelectionRecord = {
+  index: number;
+  cursor?: string;
+  anchor?: string;
+  selected: string[];
+};
 
 // Client -> server requests. Tab creation/closing flow through `command` (`agent`, `close`);
 // `setActiveTab`/`moveTab`/`toggleCollapse` are pure-UI shortcuts.
@@ -252,6 +266,10 @@ export type RpcCall =
   // rows arrive. The search pop-up's Enter action.
   | { method: 'revealFileNavigatorItem'; params: { index: number; relPath: string } }
   | { method: 'fileNavigatorOpeners'; params: { index: number; relPath: string; edit: boolean } }
+  // Answer to a `collect-tree-state` event: every mounted file navigator's cursor/anchor/selection,
+  // tagged with the request `id` so a late reply to an earlier `profile save` is discarded.
+  // Fire-and-forget — the server sends no reply of its own.
+  | { method: 'reportFileNavigatorSelection'; params: { id: number; navigators: FileNavigatorSelectionRecord[] } }
   // Remove one scheduled entry, identified by its owning tab label and timer id, after the client
   // has confirmed with the user (Backspace/Delete on a selected row in the aggregated schedules tab).
   | { method: 'cancelSchedule'; params: { tab: string; id: string } }
