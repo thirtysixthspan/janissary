@@ -11,6 +11,11 @@ db sqlite query notes CREATE TABLE items (id INTEGER PRIMARY KEY, text TEXT)
 
 `sqlite` is the only supported engine (the first word after `db`); any other engine name is rejected.
 
+You can type an unprefixed SQL statement when this tab has an open database. If exactly one database
+is open and the statement is recognized confidently, it runs there. With no database or several
+databases open, the route chooser lets you pick the destination. Prefix a statement with `db ` to
+bypass recognition and choose the database explicitly.
+
 ![A db sqlite create command followed by a db sqlite query command in the transcript, with the query's result table printed below it.](/screenshots/db-output.png)
 
 ## Subcommands
