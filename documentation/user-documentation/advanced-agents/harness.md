@@ -96,7 +96,7 @@ Wrapping the whole launch in a [`schedule`](/user-documentation/automation/sched
 
 <img class="agent-float" src="/agents/aslan-south-west.png" alt="" />
 
-The tab lives exactly as long as the harness process. When the harness exits — quitting normally, crashing, or the binary not being found — the tab closes with it, and its on-screen scrollback goes with it. The full session is preserved in a recording file, though (see below). The × button and `close` end it the same way. Harness tabs aren't restored by `janus --relaunch`; each launch starts fresh. If a harness tab is the last tab standing, its exit quits the app.
+The tab lives exactly as long as the harness process. When the harness exits — quitting normally, crashing, or the binary not being found — the tab closes with it, and its on-screen scrollback goes with it. The full session is preserved in a recording file and a normalized session transcript, though (see below). The × button and `close` end it the same way. Harness tabs aren't restored by `janus --relaunch`; each launch starts fresh. If a harness tab is the last tab standing, its exit quits the app.
 
 Other tabs can drive a harness: `send <tab> <text>` types a line into it, and [scheduled commands](/user-documentation/automation/scheduling) targeted at a harness tab are typed into it the same way. A harness launched by a [profile](/user-documentation/automation/profiles) can also be given a model, an effort level, and startup commands, the same as typing the command directly.
 
@@ -127,9 +127,31 @@ Writes the harness tab labeled `<name>`'s current screen to a file and opens it 
 - The tab isn't a harness tab: `"<name>" is not a harness tab.`
 - The tab is a harness tab but nothing has been captured yet: `No capture available for "<name>" yet.`
 
+## Opening a session transcript
+
+```
+harness transcript <name>
+```
+
+This opens the named harness tab's normalized session history in a regular editor tab. `<name>` is
+the existing tab label, matched exactly and case-sensitively. The transcript includes the harness's
+subagent prompts, tool calls, and results, even when the terminal shows only a collapsed progress
+line. The editor shows the file as it exists when you open it, so run the command again after more
+activity to open a newer point-in-time view.
+
+The transcript file is created lazily at `.janissary/harness-transcripts/<label>-<timestamp>.txt`
+when the first transcript entry arrives. A harness that produces no transcript leaves no empty file.
+The directory is cleared on a fresh launch and preserved by `janus --relaunch`. SSH tabs never have
+a session transcript.
+
+- `harness transcript` with no name: `Usage: harness transcript <name>.`
+- No tab has that label: `No tab labeled "<name>".`
+- The tab is not a harness tab: `"<name>" is not a harness tab.`
+- No transcript is available yet: `No transcript available for "<name>" yet.`
+
 ## Watching a harness with a monitor
 
-You can point a monitor at a harness tab — `monitor <persona> <harness-label>` — to have a persona watch the harness's on-screen output and surface suggestions. The monitor reads the harness's current screen (refreshed as the screen changes), so it reacts to what the harness is actually showing. SSH tabs can be watched the same way. See [Monitoring with personas](/user-documentation/automation/monitoring) for the full picture.
+You can point a monitor at a harness tab — `monitor <persona> <harness-label>` — to have a persona watch the harness's session history and current screen. The monitor receives transcript history before the latest screen, so it gets both what the harness has done and its current interactive state. SSH tabs can be watched the same way for screen output only. See [Monitoring with personas](/user-documentation/automation/monitoring) for the full picture.
 
 ## SSH sessions
 
