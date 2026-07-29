@@ -2,8 +2,6 @@
 
 ## ready
 
-* markdown-rendering — flagged by a 63-line spec with no page of its own beyond `documentation/user-documentation/tab-types/markdown-preview.md`, which covers the tab rather than the rendering rules; not yet evaluated (over this run's limit)
-
 * keyboard-navigation — flagged by section-focus and chord behavior spread between `product/specs/keyboard-navigation.md` and a single `Shift+Tab` row in the docs; not yet evaluated (over this run's limit)
 
 * agent-command-queue — flagged by git activity on queueing and the never-queue command list; not yet evaluated (over this run's limit)
@@ -20,6 +18,7 @@
 
 ## resolved
 
+* markdown-rendering — documented in documentation/user-documentation/advanced-agents/markdown-rendering.md (removed 2026-07-29)
 * ssh-tab — documented in documentation/user-documentation/advanced-agents/harness.md (removed 2026-07-29)
 * transcript — documented in documentation/user-documentation/getting-started/tabs.md (removed 2026-07-29)
 * tab-reorder-drag — documented in documentation/user-documentation/getting-started/tabs.md (removed 2026-07-29)
