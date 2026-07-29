@@ -56,7 +56,7 @@ describe('single-file profiles', () => {
     writeProfile('coding', {});
     writeProfile('shared', {});
     writeProfile('planning', {}, janissary);
-    writeProfile('shared', { agents: [{ name: 'built-in' }] }, janissary);
+    writeProfile('shared', { tabs: [{ type: 'agent', name: 'built-in', active: false }] }, janissary);
     expect(listProfiles()).toEqual(['coding', 'shared', 'planning']);
     expect(listProfileRows()).toEqual([
       { name: 'coding', source: 'project' },
@@ -80,7 +80,7 @@ describe('single-file profiles', () => {
   });
 
   it('reads a built-in profile when no project profile has the same name', () => {
-    writeProfile('planning', { agents: [{ name: 'planner' }] }, janissary);
+    writeProfile('planning', { tabs: [{ type: 'agent', name: 'planner', active: false }] }, janissary);
     expect(profileReadPath('planning')).toBe(path.join(janissary, 'profiles', 'planning.json'));
     expect(profileExists('planning')).toBe(true);
     expect((loadProfile('planning') as LoadedProfile).entries[0].name).toBe('planner');
@@ -88,32 +88,36 @@ describe('single-file profiles', () => {
   });
 
   it('reads the project profile when both sources use the same name', () => {
-    writeProfile('shared', { agents: [{ name: 'project-agent' }] });
-    writeProfile('shared', { agents: [{ name: 'built-in-agent' }] }, janissary);
+    writeProfile('shared', { tabs: [{ type: 'agent', name: 'project-agent', active: false }] });
+    writeProfile('shared', { tabs: [{ type: 'agent', name: 'built-in-agent', active: false }] }, janissary);
     expect((loadProfile('shared') as LoadedProfile).entries[0].name).toBe('project-agent');
   });
 
-  it('loads agents and harnesses ordered by tab.number, each entry name as its label', () => {
+  it('loads agent and harness tabs ordered by number, each entry name as its label', () => {
     writeProfile('coding', {
-      agents: [{ name: 'reviewer', active: false, tab: { number: 2, color: '#aaa', group: 3, groupColor: '#bbb' } }],
-      harnesses: [{ name: 'builder', type: 'opencode', model: 'opencode-go/deepseek-v4-pro', run: ['do it'], tab: { number: 1 } }],
+      tabs: [
+        { type: 'agent', name: 'reviewer', active: false, number: 2, color: '#aaa', group: 3, groupColor: '#bbb' },
+        { type: 'harness', name: 'builder', tool: 'opencode', model: 'opencode-go/deepseek-v4-pro', run: ['do it'], number: 1 },
+      ],
     });
     const loaded = loadProfile('coding') as LoadedProfile;
     expect(loaded.entries.map((e) => e.name)).toEqual(['builder', 'reviewer']);
     const builder = loaded.entries[0];
-    expect('type' in builder && builder.type).toBe('opencode');
+    expect('tool' in builder && builder.tool).toBe('opencode');
     const reviewer = loaded.entries[1];
     expect(reviewer.dotColor).toBe('#aaa');
     expect(reviewer.group).toBe(3);
     expect(reviewer.groupColor).toBe('#bbb');
   });
 
-  it('parses the reserved config sections', () => {
+  it('parses the docked tab types and the monitors key', () => {
     writeProfile('assist', {
       monitors: [{ persona: 'assistant', targets: ['group:1'] }],
-      files: [{ dock: 'left', path: '$root' }],
-      notifications: [{ dock: 'right', focus: true }],
-      schedules: [{ dock: 'right' }],
+      tabs: [
+        { type: 'files', dock: 'left', path: '$root' },
+        { type: 'notifications', dock: 'right', focus: true },
+        { type: 'schedules', dock: 'right' },
+      ],
     });
     const loaded = loadProfile('assist') as LoadedProfile;
     expect(loaded.monitors).toEqual([{ name: 'assistant', persona: 'assistant', targets: ['group:1'] }]);

@@ -27,7 +27,7 @@ describe('loadProfile', () => {
   });
 
   it('returns a LoadedProfile for a valid file', () => {
-    writeJson('ok', { agents: [{ name: 'bob', active: false }], harnesses: [{ name: 'c', type: 'claude' }] });
+    writeJson('ok', { tabs: [{ type: 'agent', name: 'bob', active: false }, { type: 'harness', name: 'c', tool: 'claude' }] });
     const loaded = loadProfile('ok');
     expect('error' in loaded).toBe(false);
     expect((loaded as LoadedProfile).entries.map((e) => e.name)).toEqual(['bob', 'c']);
@@ -44,13 +44,18 @@ describe('loadProfile', () => {
   });
 
   it('errors when an agent entry lacks a string name', () => {
-    writeJson('a', { agents: [{ active: false }] });
+    writeJson('a', { tabs: [{ type: 'agent', active: false }] });
     expect(loadProfile('a')).toHaveProperty('error');
   });
 
-  it('errors when a harness entry lacks a string type', () => {
-    writeJson('h', { harnesses: [{ name: 'c' }] });
+  it('errors when a harness entry lacks a string tool', () => {
+    writeJson('h', { tabs: [{ type: 'harness', name: 'c' }] });
     expect(loadProfile('h')).toHaveProperty('error');
+  });
+
+  it('errors on an unrecognized tab type', () => {
+    writeJson('t', { tabs: [{ type: 'terminal', name: 'c' }] });
+    expect(loadProfile('t')).toHaveProperty('error');
   });
 
   it('errors on a bad element in a reserved section', () => {
@@ -64,8 +69,15 @@ describe('loadProfile', () => {
   });
 
   it('ignores an unrecognized top-level key', () => {
-    writeJson('x', { agents: [{ name: 'bob', active: false }], future: { anything: true } });
+    writeJson('x', { tabs: [{ type: 'agent', name: 'bob', active: false }], future: { anything: true } });
     expect('error' in loadProfile('x')).toBe(false);
+  });
+
+  it('loads an old-format file as a profile with no tabs, since its keys are now unrecognized', () => {
+    writeJson('old', { agents: [{ name: 'bob', active: false }], harnesses: [{ name: 'c', type: 'claude' }] });
+    const loaded = loadProfile('old') as LoadedProfile;
+    expect(loaded.entries).toEqual([]);
+    expect(loaded.editors).toEqual([]);
   });
 
   it('maps layout.sidebar.left/right through to the flat fields', () => {
@@ -76,12 +88,14 @@ describe('loadProfile', () => {
 
   it('loads editors and maps tab focus for agents and harnesses', () => {
     writeJson('editor', {
-      agents: [{ name: 'agent', active: false, tab: { number: 2, focus: true } }],
-      harnesses: [{ name: 'harness', type: 'claude', tab: { number: 1 } }],
-      editors: [{ path: '$root/notes.md', line: 4 }],
+      tabs: [
+        { type: 'agent', name: 'agent', active: false, number: 2, focus: true },
+        { type: 'harness', name: 'harness', tool: 'claude', number: 1 },
+        { type: 'editor', path: '$root/notes.md', line: 4 },
+      ],
     });
     const loaded = loadProfile('editor') as LoadedProfile;
-    expect(loaded.editors).toEqual([{ path: '$root/notes.md', line: 4 }]);
+    expect(loaded.editors).toEqual([expect.objectContaining({ path: '$root/notes.md', line: 4 })]);
     expect(loaded.entries).toEqual([
       expect.objectContaining({ name: 'harness', number: 1, focus: undefined }),
       expect.objectContaining({ name: 'agent', number: 2, focus: true }),
@@ -90,15 +104,70 @@ describe('loadProfile', () => {
 
   it('maps pane placement and leaves missing pane values for the launch default', () => {
     writeJson('panes', {
-      agents: [{ name: 'agent', tab: { pane: 'left' } }],
-      harnesses: [{ name: 'harness', type: 'claude', tab: { pane: 'right' } }],
-      editors: [{ path: 'notes.md', tab: { pane: 'right' } }],
+      tabs: [
+        { type: 'agent', name: 'agent', pane: 'left' },
+        { type: 'harness', name: 'harness', tool: 'claude', pane: 'right' },
+        { type: 'editor', path: 'notes.md', pane: 'right' },
+      ],
     });
     const loaded = loadProfile('panes') as LoadedProfile;
     expect(loaded.entries).toEqual([
       expect.objectContaining({ name: 'agent', pane: 'left' }),
       expect.objectContaining({ name: 'harness', pane: 'right' }),
     ]);
-    expect(loaded.editors[0]?.tab?.pane).toBe('right');
+    expect(loaded.editors[0]?.pane).toBe('right');
+  });
+
+  it('partitions one tabs array into every per-kind list', () => {
+    writeJson('all', {
+      tabs: [
+        { type: 'agent', name: 'agent', active: false },
+        { type: 'harness', name: 'harness', tool: 'claude' },
+        { type: 'editor', path: 'notes.md' },
+        { type: 'files', dock: 'left', path: '$root' },
+        { type: 'notifications', dock: 'right', focus: true },
+        { type: 'schedules', dock: 'right' },
+        { type: 'image', path: 'a.png' },
+        { type: 'markdown', path: 'readme.md' },
+        { type: 'page', url: 'https://example.com/' },
+        { type: 'ssh', destination: 'host', options: ['-p', '2222'] },
+      ],
+    });
+    const loaded = loadProfile('all') as LoadedProfile;
+    expect(loaded.entries.map((e) => e.name)).toEqual(['agent', 'harness']);
+    expect(loaded.editors).toEqual([expect.objectContaining({ path: 'notes.md' })]);
+    expect(loaded.files).toEqual([{ dock: 'left', path: '$root' }]);
+    expect(loaded.notifications).toEqual([{ dock: 'right', focus: true }]);
+    expect(loaded.schedules).toEqual([{ dock: 'right' }]);
+    expect(loaded.views.map((v) => v.type)).toEqual(['image', 'markdown', 'page', 'ssh']);
+    expect(loaded.views[3]).toEqual(expect.objectContaining({ destination: 'host', options: ['-p', '2222'] }));
+  });
+
+  it('maps color to dotColor and leaves the other presentation fields flat', () => {
+    writeJson('flat', {
+      tabs: [{ type: 'agent', name: 'bob', color: '#aaa', number: 2, group: 3, groupColor: '#bbb', pane: 'right' }],
+    });
+    const loaded = loadProfile('flat') as LoadedProfile;
+    expect(loaded.entries[0]).toEqual(expect.objectContaining({
+      dotColor: '#aaa', number: 2, group: 3, groupColor: '#bbb', pane: 'right',
+    }));
+  });
+
+  it('reaches ProfileHarnessEntry.tool from a harness element', () => {
+    writeJson('tool', { tabs: [{ type: 'harness', name: 'c', tool: 'opencode' }] });
+    const entry = (loadProfile('tool') as LoadedProfile).entries[0];
+    expect('tool' in entry && entry.tool).toBe('opencode');
+  });
+
+  it('sorts entries by number, unnumbered last and in array order among themselves', () => {
+    writeJson('order', {
+      tabs: [
+        { type: 'agent', name: 'unnumbered-first' },
+        { type: 'agent', name: 'numbered', number: 1 },
+        { type: 'agent', name: 'unnumbered-second' },
+      ],
+    });
+    const loaded = loadProfile('order') as LoadedProfile;
+    expect(loaded.entries.map((e) => e.name)).toEqual(['numbered', 'unnumbered-first', 'unnumbered-second']);
   });
 });

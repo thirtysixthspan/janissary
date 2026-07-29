@@ -32,8 +32,13 @@ function makeManagers(creator: Tab, tabs: Tab[] = [creator]): { managers: Manage
       persist: vi.fn(),
       buildAgentState: vi.fn(() => ({ name: creator.label, dotColor: creator.dotColor, active: true })),
       shorten: (p: string) => p,
+      cwdOf: () => '/proj',
+      launchDir: '/proj',
+      activeTab: 0,
+      placeProfileTabs: vi.fn(),
     },
     workspace: { create: vi.fn() },
+    openFile: { edit: vi.fn() },
   } as unknown as Managers;
   return { managers, appended };
 }
@@ -65,7 +70,7 @@ describe('ProfileManager.run', () => {
     expect(appended).toEqual([{ input: 'profile launch ghost', output: 'No profile named "ghost".' }]);
   });
 
-  it('reports an existing profile that has no entries', () => {
+  it('reports an existing profile that has no tabs', () => {
     writeProfile('empty', JSON.stringify({}));
 
     const janus = makeTab('janus', 'red');
@@ -74,11 +79,31 @@ describe('ProfileManager.run', () => {
 
     manager.run('profile launch empty', 'janus');
 
-    expect(appended).toEqual([{ input: 'profile launch empty', output: 'Profile "empty" has no agents.' }]);
+    expect(appended).toEqual([{ input: 'profile launch empty', output: 'Profile "empty" has no tabs.' }]);
+  });
+
+  it('reports an empty tabs array as having no tabs', () => {
+    writeProfile('none', JSON.stringify({ tabs: [] }));
+
+    const janus = makeTab('janus', 'red');
+    const { managers, appended } = makeManagers(janus);
+    new ProfileManager(managers).run('profile launch none', 'janus');
+
+    expect(appended).toEqual([{ input: 'profile launch none', output: 'Profile "none" has no tabs.' }]);
+  });
+
+  it('launches a profile holding only an editor entry rather than calling it empty', () => {
+    writeProfile('editor-only', JSON.stringify({ tabs: [{ type: 'editor', path: '$root/notes.md' }] }));
+
+    const janus = makeTab('janus', 'red');
+    const { managers, appended } = makeManagers(janus);
+    new ProfileManager(managers).run('profile launch editor-only', 'janus');
+
+    expect(appended[0].output).not.toContain('has no tabs.');
   });
 
   it('reports a malformed profile and opens nothing', () => {
-    writeProfile('broken', JSON.stringify({ harnesses: [{ name: 'c' }] }));
+    writeProfile('broken', JSON.stringify({ tabs: [{ type: 'harness', name: 'c' }] }));
 
     const janus = makeTab('janus', 'red');
     const { managers, appended } = makeManagers(janus);
@@ -90,9 +115,20 @@ describe('ProfileManager.run', () => {
     expect(managers.tab.insertTabInGroup).not.toHaveBeenCalled();
   });
 
+  it('reports an unrecognized tab type as malformed', () => {
+    writeProfile('mystery', JSON.stringify({ tabs: [{ type: 'terminal' }] }));
+
+    const janus = makeTab('janus', 'red');
+    const { managers, appended } = makeManagers(janus);
+    new ProfileManager(managers).run('profile launch mystery', 'janus');
+
+    expect(appended[0].output).toContain('Profile "mystery" is malformed.');
+    expect(managers.tab.insertTabInGroup).not.toHaveBeenCalled();
+  });
+
   it('routes the validate action to the validator', () => {
-    writeProfile('good', JSON.stringify({ agents: [{ name: 'bob', active: false }] }));
-    writeProfile('bad', JSON.stringify({ harnesses: [{ name: 'c' }] }));
+    writeProfile('good', JSON.stringify({ tabs: [{ type: 'agent', name: 'bob', active: false }] }));
+    writeProfile('bad', JSON.stringify({ tabs: [{ type: 'harness', name: 'c' }] }));
 
     const janus = makeTab('janus', 'red');
     const { managers, appended } = makeManagers(janus);

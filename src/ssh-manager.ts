@@ -16,12 +16,12 @@ export class SshManager {
   run(input: string): string | undefined {
     const parsed = parseSshCommand(input);
     if ('error' in parsed) return parsed.error;
-    return this.open(parsed.command, parsed.destination, parsed.label);
+    return this.open(parsed.command, parsed.destination, parsed.label, parsed.options);
   }
 
   // Open (and focus) an ssh tab labeled after the destination's host, running `command`
   // (the verbatim `ssh …` invocation) in the creator's cwd.
-  private open(command: string, destination: string, label_: string): string | undefined {
+  private open(command: string, destination: string, label_: string, options: string[]): string | undefined {
     const creator = this.managers.tab.cur();
     const label = uniqueLabel(this.managers.tab.tabs, label_);
     const cwd = this.managers.tab.cwdOf(creator.label) ?? process.cwd();
@@ -30,6 +30,7 @@ export class SshManager {
     const group = creator?.group ?? 1;
     const groupColor = creator?.groupColor ?? dotColor;
     const harness: HarnessView = { name: 'ssh', program: 'ssh', ptyId: '', status: 'running', destination };
+    if (options.length > 0) harness.sshOptions = options;
     const tab = makeHarnessTab(label, dotColor, this.managers.tab.tabs.length + 1, group, groupColor, harness);
     this.managers.tab.insertTabInGroup(tab);
     this.managers.tab.setActiveTab(this.managers.tab.findIndex(tab.label));

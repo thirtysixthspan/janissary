@@ -89,6 +89,15 @@ reachable.
 Like harness tabs, ssh tabs are **live and in-memory**: not saved to agent state, not restored on
 `--relaunch`. Each `ssh` invocation starts a fresh session.
 
+A **profile** is the one thing that does bring an ssh session back. `profile save` captures each
+open ssh tab as an `ssh` entry carrying its destination and the options the session was opened
+with — every token of the original invocation other than the destination itself, in order — and
+`profile launch` reconnects with those same flags. Splitting on whitespace does not preserve
+quoting, so an option value containing spaces comes back as separate tokens. A relaunch closes an
+ssh tab already connected to the same destination before opening the new one, so relaunching twice
+leaves one session rather than a second live connection. Nothing else about the session is
+captured: no scrollback, and no remote state.
+
 ## Regression: `shell ssh <host>`
 
 `shell ssh <host>` (an explicit `shell`-prefixed invocation) still opens an inline terminal card in

@@ -5,7 +5,7 @@ import type { ProfileEntry, ProfileHarnessEntry } from '../types.js';
 // concern from the tab-opening orchestration that remains there.
 
 export function isHarnessEntry(e: ProfileEntry): e is ProfileHarnessEntry {
-  return 'type' in e;
+  return 'tool' in e;
 }
 
 export function labelOf(e: ProfileEntry): string {

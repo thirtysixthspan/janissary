@@ -25,12 +25,12 @@ export function openHarnessEntry(
   entry: ProfileHarnessEntry, managers: Managers, group: number, groupColor: string,
   issuingCwd: string, notes: string[],
 ): string | undefined {
-  if (HARNESS_COMMANDS[entry.type] === undefined) return `unknown harness "${entry.type}"`;
-  if (entry.model && !isKnownModel(entry.type, entry.model)) {
-    return `Unknown model "${entry.model}" for harness "${entry.type}" — add it to harness-models.json.`;
+  if (HARNESS_COMMANDS[entry.tool] === undefined) return `unknown tool "${entry.tool}"`;
+  if (entry.model && !isKnownModel(entry.tool, entry.model)) {
+    return `Unknown model "${entry.model}" for harness "${entry.tool}" — add it to harness-models.json.`;
   }
   // Mirror `parseHarnessCommand`: -y is supported for claude and codex. Report and skip rather than open unsafely.
-  if (entry.autoApprove && !supportsHarnessAutoApprove(entry.type)) {
+  if (entry.autoApprove && !supportsHarnessAutoApprove(entry.tool)) {
     return 'autoApprove (-y) is only supported for the claude and codex harnesses';
   }
   const cwd = entry.cwd ? expandUserPath(entry.cwd, { root: managers.tab.launchDir }) : issuingCwd;
