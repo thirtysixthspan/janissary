@@ -88,14 +88,33 @@ Closing the **last** remaining tab quits the app. If you type `close` (or `exit`
 
 ## How paths are shown: `$root`
 
-Wherever the app prints a filesystem path in a transcript, paths inside the directory you launched from are shortened to `$root`:
+The app shortens project paths to `$root` in its prompts, panels, headers, and status messages:
 
 ```
+$root/                  = /Users/name/dev/project
 $root/src/cli.ts        = /Users/name/dev/project/src/cli.ts
 $root/workspace/emrah   = a workspaced agent's clone, inside the project
 ```
 
-Paths outside the project but under your home directory shorten to `~`. This is display-only — the real absolute paths are what actually get used, and the raw output of your own shell commands is never rewritten.
+The hidden `.janissary` state directory folds into the root, so a workspaced clone appears as
+`$root/workspace/emrah` even though its full path includes `.janissary`. The most specific matching
+prefix wins. The root directory itself appears as `$root/`. Paths elsewhere under your home
+directory shorten to `~`.
+
+The shortcut appears in the working directory beside a command prompt, the connections panel, an
+editor tab's metadata header, and app status messages that name a path. It is display-only. The
+underlying absolute paths do not change, and the raw output of your shell commands is never rewritten.
+
+You can also type `$root` or `~` at the start of a path passed to `open`, `edit`, or `files`:
+
+```
+open $root/src/cli.ts
+edit ~/notes.txt
+files $root
+```
+
+Only a path prefix is expanded. A `$root` or `~` in the middle of a path stays literal. The window
+titlebar is the one exception to display shortening. It reads `Janissary (<version>): <full absolute path>`.
 
 ## Reading the transcript
 
