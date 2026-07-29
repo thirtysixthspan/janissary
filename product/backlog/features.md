@@ -2,8 +2,6 @@
 
 ## ready
 
-* record the tree state directories open/closed and keyboard focus of the file navigator during `profile save` and restore that state with `profile launch`.
-
 * migrate the profile format to include a `tabs` key that is an array of polymorphic tab entries keyed by a type property that distinguishes types of tabs, editor, image, harness, etc. removing the root level indexing of tabs by type.
 
 ## development
