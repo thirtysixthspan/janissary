@@ -238,7 +238,7 @@ describe('HarnessTab', () => {
     const order = [...meta.children].map((el) => el.className);
     expect(order).toEqual(['tab-cwd', 'tab-meta-chip', 'tab-meta-chip', 'tab-flags', 'tab-meta-actions']);
     expect([...meta.querySelector('.tab-meta-actions')!.children].map((el) => el.className))
-      .toEqual(['tab-open-files', 'tab-launch-agent']);
+      .toEqual(['tab-open-files', 'tab-launch-agent', 'tab-open-transcript']);
     const chips = meta.querySelectorAll('.tab-meta-chip');
     expect(chips[0]).toHaveTextContent('opus');
     expect(chips[0]).toHaveAttribute('title', 'Model: opus');
@@ -291,6 +291,18 @@ describe('HarnessTab', () => {
     getByTitle('New agent here').click();
     expect(vi.mocked(mockClient.send as ReturnType<typeof vi.fn>)).toHaveBeenCalledWith({
       method: 'launchAgentFor',
+      params: { label: 'claude' },
+    });
+  });
+
+  it('dispatches openHarnessTranscriptFor with the tab label when the transcript button is clicked', () => {
+    const { getByTitle } = render(
+      <HarnessTab harness={makeHarness()} client={mockClient} label="claude" />,
+    );
+    vi.mocked(mockClient.send as ReturnType<typeof vi.fn>).mockClear();
+    getByTitle('Open transcript').click();
+    expect(vi.mocked(mockClient.send as ReturnType<typeof vi.fn>)).toHaveBeenCalledWith({
+      method: 'openHarnessTranscriptFor',
       params: { label: 'claude' },
     });
   });

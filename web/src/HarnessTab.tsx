@@ -53,6 +53,7 @@ export const HarnessTab = forwardRef<HarnessTabHandle, Properties>(function Harn
         effort={harness.effort}
         onOpenFileNavigator={() => client.send({ method: 'openFileNavigatorFor', params: { label } })}
         onLaunchAgentHere={cwd === undefined ? undefined : () => client.send({ method: 'launchAgentFor', params: { label } })}
+        onOpenTranscript={() => client.send({ method: 'openHarnessTranscriptFor', params: { label } })}
         connectionsButton={connectionsButton}
         scheduleButton={scheduleButton}
         onSplit={onSplit}

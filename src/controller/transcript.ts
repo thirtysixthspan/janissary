@@ -12,6 +12,16 @@ export function openTranscriptFor(managers: Managers, label: string): void {
   managers.openFile.edit(`transcript ${label}`, file, label);
 }
 
+// Open the named harness tab's session transcript file as it stands — the clipboard metadata-row
+// button on a harness tab (see AgentTabMeta.tsx), mirroring `harness transcript` (see
+// harness/subcommands.ts) but silently no-opping instead of returning an error string, since a
+// harness tab has no transcript of its own to print one into.
+export function openHarnessTranscriptFor(managers: Managers, label: string): void {
+  const file = managers.harness.transcriptTailer(label)?.transcriptFile();
+  if (!file) return;
+  managers.openFile.edit(`transcript ${label}`, file, label);
+}
+
 // Open the ACP session identified by `acpRef` as a point-in-time transcript snapshot in an editor
 // tab — the clipboard button on a connections-panel ACP row (see acp-connection-row-transcript-
 // button). Unlike `openTranscriptFor`, an empty exchange still opens a tab, reading the literal

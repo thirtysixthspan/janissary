@@ -139,10 +139,15 @@ If a new agent cannot be created because all pool names are already in use, the 
 in use." message is posted to the notifications feed (when that feed is open) rather than to the
 source tab, so the click still gives visible feedback even from a harness tab that has no transcript.
 
-Agent tabs (not harness tabs) also show a clipboard-icon button, tooltip "Open transcript". Clicking
-it writes the tab's full transcript — every entry's input and output — to a plain-text file and opens
-it in an editor tab, mirroring the existing screen-capture and monitor-context-snapshot affordances
-elsewhere in the app. The button is a no-op when the tab's transcript is empty.
+Agent tabs also show a clipboard-icon button, tooltip "Open transcript". Clicking it writes the
+tab's full transcript — every entry's input and output — to a plain-text file and opens it in an
+editor tab, mirroring the existing screen-capture and monitor-context-snapshot affordances elsewhere
+in the app. The button is a no-op when the tab's transcript is empty.
+
+Harness tabs show the same clipboard-icon button, tooltip "Open transcript", but clicking it opens
+the harness's **session transcript** file instead (the same file `harness transcript` opens — see
+[[harness]] § Session transcript), since a harness tab has no command-bar transcript of its own. The
+button is a no-op when the harness has no session transcript available yet.
 
 ### Per-tab state isolation
 

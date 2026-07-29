@@ -278,6 +278,11 @@ export type RpcCall =
   // tab, triggered by the clipboard button in an agent tab's metadata row. No-ops when the tab
   // is missing or its log is empty. `label` is the requesting tab's own label.
   | { method: 'openTranscriptFor'; params: { label: string } }
+  // Open the named harness tab's session transcript file (the same file `harness transcript`
+  // opens) in an editor tab, triggered by the clipboard button in a harness tab's metadata row.
+  // No-ops when the tab has no transcript tailer or no transcript file yet. `label` is the
+  // requesting harness tab's own label.
+  | { method: 'openHarnessTranscriptFor'; params: { label: string } }
   // Write the ACP session identified by `acpRef` to a plain-text capture file and open it in a
   // read-only editor tab, triggered by the clipboard button on a connections-panel ACP row. An
   // empty exchange substitutes a `No transcript yet.` placeholder rather than no-opping.
