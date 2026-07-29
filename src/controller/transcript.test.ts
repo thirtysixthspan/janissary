@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { openTranscriptFor, openAcpTranscript } from './transcript.js';
+import { openTranscriptFor, openHarnessTranscriptFor, openAcpTranscript } from './transcript.js';
 import { writeCaptureFile } from '../harness/capture-file.js';
 import type { Managers } from '../managers.js';
 
@@ -52,6 +52,42 @@ describe('openTranscriptFor', () => {
     const edit = vi.fn();
     const managers = makeManagers([{ label: 'agent', log: [] }], edit);
     openTranscriptFor(managers, 'agent');
+    expect(edit).not.toHaveBeenCalled();
+  });
+});
+
+function makeHarnessManagers(tailer: { transcriptFile: () => string | undefined } | undefined, edit = vi.fn()) {
+  return {
+    harness: { transcriptTailer: vi.fn(() => tailer) },
+    openFile: { edit },
+  } as unknown as Managers;
+}
+
+describe('openHarnessTranscriptFor', () => {
+  it('opens the tailer\'s transcript file in an editor tab', () => {
+    const edit = vi.fn();
+    const managers = makeHarnessManagers({ transcriptFile: () => '/project/.janissary/harness-transcripts/claude-now.txt' }, edit);
+
+    openHarnessTranscriptFor(managers, 'claude');
+
+    expect(edit).toHaveBeenCalledWith('transcript claude', '/project/.janissary/harness-transcripts/claude-now.txt', 'claude');
+  });
+
+  it('is a no-op when the tab has no transcript tailer', () => {
+    const edit = vi.fn();
+    const managers = makeHarnessManagers(undefined, edit);
+
+    openHarnessTranscriptFor(managers, 'claude');
+
+    expect(edit).not.toHaveBeenCalled();
+  });
+
+  it('is a no-op when the tailer has no transcript file yet', () => {
+    const edit = vi.fn();
+    const managers = makeHarnessManagers({ transcriptFile: (): string | undefined => { return; } }, edit);
+
+    openHarnessTranscriptFor(managers, 'claude');
+
     expect(edit).not.toHaveBeenCalled();
   });
 });

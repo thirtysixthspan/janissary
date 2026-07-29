@@ -54,7 +54,9 @@ Agent and harness tabs show a small metadata row above their body: the tab's wor
 
 Next to it, agent and harness tabs also carry a ➕ button (tooltip "New agent here"). Clicking it creates a new, auto-named agent tab rooted at the same working directory, joins it to the same group, and focuses it right away: the one-click version of typing `agent`, except the new tab starts where you clicked instead of the server's own directory. Nothing happens if there's no known working directory to start from, and shell tabs don't show this button either. If every agent name is already taken, you get `All agent names are in use.` in the [notifications](/user-documentation/tab-types/notifications) feed instead of the source tab, since a harness tab has no transcript of its own to report into.
 
-Agent tabs also carry a 📋 button (tooltip "Open transcript") that harness tabs don't have. Clicking it writes the tab's full transcript, every command and its output, to a plain-text file and opens that file in an [editor](/user-documentation/tab-types/editor) tab, the same way a screen capture or a monitor snapshot does elsewhere in the app. It's a no-op on a tab with nothing in its transcript yet.
+Agent tabs also carry a 📋 button (tooltip "Open transcript"). Clicking it writes the tab's full transcript, every command and its output, to a plain-text file and opens that file in an [editor](/user-documentation/tab-types/editor) tab, the same way a screen capture or a monitor snapshot does elsewhere in the app. It's a no-op on a tab with nothing in its transcript yet.
+
+Harness tabs carry the same 📋 button, but clicking it opens the harness's session transcript instead — the same file `harness transcript` opens (see [Harness](/user-documentation/advanced-agents/harness)) — since a harness tab has no command transcript of its own. It's a no-op when the harness has no session transcript available yet.
 
 Text in metadata rows and headers can be selected with the mouse and copied, including paths and other details shown by agent, file, editor, image, Markdown, page, and monitor tabs.
 

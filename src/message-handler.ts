@@ -1,7 +1,7 @@
 import type { Controller } from './controller.js';
 import type { ClientMessage, ServerEvent } from './protocol.js';
 import { buildStateEvent } from './state-event.js';
-import { openTranscriptFor, openAcpTranscript } from './controller/transcript.js';
+import { openTranscriptFor, openHarnessTranscriptFor, openAcpTranscript } from './controller/transcript.js';
 import { projectFilesFor } from './project-files.js';
 import { handleFileNavigatorMessage } from './message-handler-file-navigator.js';
 import { setClientLayout } from './client-layout.js';
@@ -116,6 +116,8 @@ export function handle(controller: Controller, message: ClientMessage, reply: (e
     // Bridges straight to controller/transcript.js (bypassing a Controller passthrough method)
     // to keep controller.ts under its line-size limit — see that module's own comment.
     case 'openTranscriptFor': { openTranscriptFor(controller.managers, message.params.label); break;
+    }
+    case 'openHarnessTranscriptFor': { openHarnessTranscriptFor(controller.managers, message.params.label); break;
     }
     case 'openAcpTranscript': { openAcpTranscript(controller.managers, message.params.acpRef); break;
     }
