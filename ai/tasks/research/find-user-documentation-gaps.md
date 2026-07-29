@@ -39,7 +39,7 @@ Read `product/backlog/documentation.md` if it exists. This file carries no "last
    ```
 
    Use that commit's date as `SINCE`. If it returns nothing (first run, or the commit subject changed), treat `SINCE` as 3 months ago.
-2. Of the bullets already in `ready` and `development`, identify which ones this task authored in a prior run — they carry a `(<score>/10)` after the area ID, e.g. `* ssh-tab (9/10) — ...` (bullets from other sources won't have this shape; leave those alone throughout this task). Every one of your own area IDs **must** be re-verified in Step 4 this run — a gap may have been closed since it was recorded, and stale entries are worse than no entries.
+2. Of the bullets already in `ready` and `development`, identify which ones this task authored in a prior run — they carry a `(<score>/10)` after the area ID, e.g. `* ssh-tab (9/10) — ...` (bullets from other sources won't have this shape; leave those alone throughout this task). Every one of your own area IDs **must** be re-verified in Step 4 this run — a gap may have been closed since it was recorded, and stale entries are worse than no entries. `ready` is reserved for carried-over candidates; new candidates always belong in `development`.
 
 If the file does not exist, set `SINCE` to 3 months ago and start fresh — every functional area is a candidate. (In that case create the file with the standard four empty sections before Step 5.)
 
@@ -74,7 +74,7 @@ Build a candidate list of functional areas from three sources. Do all three — 
    From the first list, flag subjects that sound user-facing: new commands, new flags, renames, removed behavior, changed defaults. For each flagged commit whose area does **not** appear in the second list in the same period, add that area as a candidate. If a subject is unclear, run `git show --stat <hash>` to see what it touched before deciding — do not guess from the subject line alone.
 3. **Code.** Look for user-facing surface with no spec: commands registered in the command bar, key bindings, CLI flags in `bin/janus.mjs`. Grep the relevant registries in `src/` and `web/src/` — read only, never edit. Anything a user can invoke that has no spec **and** no doc page is a candidate.
 
-Merge the three lists with the carried-over entries from Step 1 into one deduplicated list, keyed by area ID. Record next to each area *why* it is a candidate (no page / user-facing commits since `SINCE` / carried over) — you will need this in Step 4.
+Merge the three lists with the carried-over entries from Step 1 into one deduplicated list, keyed by area ID. Record next to each area *why* it is a candidate (no page / user-facing commits since `SINCE` / carried over) — you will need this in Step 4. Treat every area not already carried over from `ready` as a new candidate, even when it was discovered through a spec rather than a recent commit.
 
 ---
 
@@ -82,11 +82,11 @@ Merge the three lists with the carried-over entries from Step 1 into one dedupli
 
 Order the candidate list:
 
-1. All carried-over entries from Step 1 (these must always be re-verified).
+1. All carried-over entries from Step 1 that are already in `ready` (these must always be re-verified).
 2. New candidates with no doc page at all.
 3. New candidates flagged from git logs or code.
 
-Deep-evaluate (Step 4) the carried-over entries **plus at most 10 new candidates**, in that order. If more new candidates remain, list them in the backlog file's `development` section (Step 5) with the signal that flagged them and **no score** — never publish a score for an area you did not evaluate. The next run picks them up.
+Deep-evaluate (Step 4) the carried-over entries **plus at most 10 new candidates**, in that order. Every new candidate — whether evaluated this run or left over the limit — is recorded in the backlog file's `development` section (Step 5). Evaluated new candidates receive their evidence-based score and full gap description there; candidates not evaluated receive only the signal that flagged them and **no score**. Never add a new candidate to `ready`; the next run picks new development entries up for re-verification or promotion only if a later workflow explicitly moves them.
 
 ---
 
@@ -119,14 +119,14 @@ Rules that keep scores honest:
 
 - If the spec and the app disagree, the **app** is the ground truth for facts; note the stale spec in the gap description but do not edit it.
 - If you could not verify a fact (source too tangled to read confidently), leave it out of N rather than guessing its status.
-- Areas scoring 1–2 are not gaps: leave them out of `ready`. If a previous run listed one there, remove it and record it under `resolved` (Step 5).
+- Areas scoring 1–2 are not gaps: leave carried-over entries out of `ready`. If a previous run listed one there, remove it and record it under `resolved` (Step 5). A newly discovered area is still recorded in `development` because all new candidates belong there.
 - A carried-over entry keeps its area ID but gets a **fresh** score from this run's evidence — never copy last run's score forward.
 
 ---
 
 ## Step 5 — Integrate findings into the backlog file
 
-Write the results to `product/backlog/documentation.md`. If the file already exists, **integrate** — update scores and descriptions for areas you re-verified, remove areas whose gaps are now closed, add newly found areas — touching only bullets this task owns (see Step 1 point 2). Never duplicate an area ID.
+Write the results to `product/backlog/documentation.md`. If the file already exists, **integrate** — update scores and descriptions for carried-over areas you re-verified, remove carried-over areas whose gaps are now closed, and add or update every new candidate in `development` — touching only bullets this task owns (see Step 1 point 2). Never duplicate an area ID. Do not move a new candidate into `ready`; only existing carried-over `ready` entries may remain there or be updated.
 
 Format the file like the other `product/backlog/` files: lowercase headings, flat `*` bullet lists, one entry per bullet — no tables, no timestamp anywhere in the file. Required shape:
 
@@ -141,6 +141,8 @@ Format the file like the other `product/backlog/` files: lowercase headings, fla
 
 ## development
 
+* <new-area-id> (6/10) — <evaluated new candidate: fact counts, specific missing/wrong facts, ground-truth files, and where the fix belongs>
+
 * <area-id> — flagged by <signal>; not yet evaluated (over this run's limit)
 
 ## deferred
@@ -150,12 +152,12 @@ Format the file like the other `product/backlog/` files: lowercase headings, fla
 * <area-id> — <one line on why it no longer qualifies> (removed <YYYY-MM-DD>)
 ```
 
-Within `ready`, keep this task's own bullets sorted by score, highest first (break ties alphabetically by area ID), grouped ahead of or behind other tasks'/humans' unscored bullets — whichever ordering keeps your own entries contiguous and easiest to re-verify next run; never reorder or reword a bullet you did not author. Each of your bullets is exactly one paragraph, at most 10 sentences, written per Step 4 point 4. `resolved` accumulates across runs — add this run's closures, don't delete earlier ones (including ones added by other tasks). Get removal dates from `date -u "+%Y-%m-%d"` — do not write one from memory.
+Within `ready`, keep this task's own carried-over bullets sorted by score, highest first (break ties alphabetically by area ID), grouped ahead of or behind other tasks'/humans' unscored bullets — whichever ordering keeps your own entries contiguous and easiest to re-verify next run; never reorder or reword a bullet you did not author. Keep new-candidate bullets in `development`, with scored evaluated entries before unscored over-limit entries if that keeps the section readable. Each scored bullet is exactly one paragraph, at most 10 sentences, written per Step 4 point 4; each unscored bullet names the signal and says it was not evaluated. `resolved` accumulates across runs — add this run's closures, don't delete earlier ones (including ones added by other tasks). Get removal dates from `date -u "+%Y-%m-%d"` — do not write one from memory.
 
 Before moving on, verify:
 
 1. `git status` shows `product/backlog/documentation.md` as the **only** changed file. If anything else changed, revert it (`git checkout -- <file>`) before committing.
-2. Re-read the file once: your own entries in `ready` are sorted by score, no duplicate area IDs among them, every one of your candidate bullets is a single paragraph with fact counts and file paths but no line numbers, and no bullet you don't own was altered.
+2. Re-read the file once: your carried-over entries in `ready` are sorted by score, all new candidates are in `development`, no area ID is duplicated among your own entries, every scored candidate bullet is a single paragraph with fact counts and file paths but no line numbers, and no bullet you don't own was altered.
 
 ---
 
