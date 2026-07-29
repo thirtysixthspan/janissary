@@ -192,3 +192,12 @@ Docs build:       clean / <errors, if any>
 ```
 
 Keep it brief. Done.
+
+---
+
+## Step 8 — Merge completed changes
+
+If this run made changes, execute [`merge-change-to-master.md`](workspace/merge-change-to-master.md)
+in full after Step 7. This includes moving a worked or already-resolved item in the backlog, even
+if the only documentation change was a backlog update. Do not execute the merge task when the run
+made no changes, such as when every ready item was blocked.
