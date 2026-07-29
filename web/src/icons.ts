@@ -7,7 +7,7 @@ export {
   faBolt as autoPermitIcon,
   faThumbsUp as approveIcon,
   faThumbsDown as rejectIcon,
-  faBars as snapshotIcon,
+  faClipboard as snapshotIcon,
   faRotateLeft as resetIcon,
   faRightLeft as dockSwapIcon,
   faCheck as selectedIcon,
