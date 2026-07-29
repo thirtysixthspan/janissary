@@ -14,6 +14,8 @@
 
 * monitoring — flagged by sustained `feat(monitor)` activity since the last docs pass; not yet evaluated (over this run's limit)
 
+* image-tab (3/10) — `open <image>` focuses the existing image tab instead of creating a duplicate, but this recent behavior is not stated in `documentation/user-documentation/tab-types/image-viewer.md` (verified against the image opener behavior and `product/specs/open.md`)
+
 ## deferred
 
 ## resolved
