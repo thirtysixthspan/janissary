@@ -4,6 +4,8 @@
 
 * record the tree state directories open/closed and keyboard focus of the file navigator during `profile save` and restore that state with `profile launch`.
 
+* migrate the profile format to include a `tabs` key that is an array of polymorphic tab entries keyed by a type property that distinguishes types of tabs, editor, image, harness, etc. removing the root level indexing of tabs by type.
+
 ## development
 
 * The ssh tab (`product/specs/ssh-tab.md`) has no session logging to disk, the way iTerm2's per-profile "Automatically Log Session Input to Files" setting captures a session's raw I/O for later audit, independent of on-demand scrollback. Janissary's spec states plainly that ssh tabs "get no screen reader either" and are excluded from the automatic harness-recording that named-harness tabs get (`product/specs/harness-recording.md`) — a remote session's output is gone the moment its tab closes, with no way to review what happened on a host after the fact. Extending the existing asciicast recording mechanism to ssh tabs (the same lazy-file, PTY-lifetime-scoped approach harness tabs already use) would close this without a new recording format. Complexity: low-medium — the recording plumbing already exists for harness tabs; this is mostly widening its scope.
