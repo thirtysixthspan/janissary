@@ -2,6 +2,211 @@
 
 All notable changes to this project are documented here.
 
+## [0.9.0] - 2026-07-29
+
+### ⚠ Breaking Changes
+
+- feat(profiles)!: migrate the profile format to a polymorphic tabs array (#698)
+
+### Features
+
+- record and restore file navigator tree state (#699)
+- migrate the profile format to a polymorphic tabs array (#698)
+- add transcript button to harness tab metadata bar (#680)
+- compress harness screen text sent to monitor ACP sessions (#679)
+- extract session transcripts from harness dot directories (#676)
+- add bulk selection and file operations (#647)
+- list project and built-in profiles (#643)
+- add split-pane tab strips (#642)
+- add drag-to-reorder (#641)
+- update multitasking profile with backlog tabs
+- update tasks and backlog name
+- capture open editor tabs in profile save (#636)
+- add multitasking profile
+- add a clickable resync button to the GitHub sync status icon (#627)
+- insert dragged file path at the cursor on drop (#625)
+- add reduce-technical-debt task and backlog file
+
+### Bug Fixes
+
+- list a directory's task files before its subdirectories (#673)
+- repoint stale workspace-task links and repair the task-picker screenshot fixture
+- split render tree out of App.tsx into AppMain (#654)
+- right-align metadata actions (#649)
+- mute unfocused pane borders (#646)
+- keep both split command bars (#645)
+- right-align split controls (#644)
+- respect each entry's authored group on profile launch (#640)
+- capture synced editor tabs by their source path (#639)
+- order profile-launch tabs by number across entries and editors (#638)
+- close a tab's state:dirty broadcast before applying the removal (#637)
+- reload editor content when clicking resync pulls a remote change (#635)
+- focus existing image tab instead of duplicating it (#630)
+- docs
+- resolve agent sprites from their new flat agent-images layout
+- refresh branch and github url when opening via openOrRetarget
+
+### Documentation
+
+- document image tab reuse (#697)
+- refresh monitoring guide (#696)
+- update agent command queue guide (#695)
+- clarify keyboard navigation (#694)
+- document Markdown transcript rendering (#693)
+- refresh documentation gap candidates
+- plan profile format migration to a polymorphic tabs array (#691)
+- document SSH tab details (#690)
+- document transcript behavior (#689)
+- document sidebar tab reordering (#688)
+- document sidebar behavior (#687)
+- document harness session transcripts (#686)
+- document root path shortcuts (#685)
+- document command routing (#684)
+- merge completed documentation updates
+- document file navigator bulk operations (#683)
+- plan file navigator tree state capture in profiles (#681)
+- keep new documentation candidates in development
+- refresh documentation gap candidates
+- make task workflow handoffs explicit (#675)
+- accept an unlisted named item and stop moving untracked plans with git mv
+- let work-an-issue take a work item that is not in the backlog (#674)
+- add find-namespaces research task
+- repoint stale filename references across src/ (#657)
+- refresh architecture principles 3 and 7 (#650)
+- refresh documentation gap candidates
+- add tab strip split-view plan
+- plan bulk file navigator selection
+- plan harness transcript extraction from dot directories
+- plan drag-to-reorder for tab labels
+- scale agent-sprite count to page length and drop the archer
+- balance generated agent sprites (#626)
+- add find-product-gaps task
+- add find-technical-debt task
+- rename file-tree-tab spec to file-navigator-tab (#619)
+- rename file tree to file navigator in help.md (#614)
+- note default git-sync for backlog and plans (#612)
+- add git-synced files page (#611)
+- add dedicated page for in-editor persona query (#610)
+
+### Refactoring
+
+- extract the editor tab file lifecycle into useEditorFile (#692)
+- rename summarizer persona to activity and narrow its scope (#682)
+- share tab entry type aliases (#677)
+- flatten the work tasks, add a planning directory, and let hygiene playbooks take a named target
+- rename plan-new-feature to plan-a-new-feature
+- resolve technical debt as a work task that triggers hygiene playbooks
+- move the workspace prefix cluster into src/workspace/ (#671)
+- consolidate the modal-dialog keyboard mechanisms into one surface (#658)
+- collapse the transcript module chain to a pure and an effectful layer (#653)
+- retire the partial barrel re-exports in commands, connections, and profiles (#652)
+- extract placeProfileTabs focus logic from tab manager (#648)
+- move workspace playbooks into subdirectory
+- extract closeTab and renameTab helpers from TabManager (#634)
+- split src/types.ts into per-domain type files (#624)
+- rename backend file-tree module and wire protocol to file-navigator (#618)
+- rename file-tree components/hooks to file-navigator (#617)
+
+### Chores
+
+- planning
+- log namespacing opportunities
+- log new technical debt findings
+- log new technical debt findings
+- planning
+- move work-item tasks into ai/tasks/work/ and accept a named item (#633)
+- generate agents
+- rewrite character metadata as 32x32 pixel-art prompts
+- cleaning out assets
+- log new feature implementation gaps
+- move improve-/reduce-/remove-/update- task playbooks into ai/tasks/hygiene/ (#629)
+- add find-feature-gaps task
+- rename find-product-gaps to find-feature-ideas
+- move find-* task playbooks into ai/tasks/research/ (#628)
+- log new product gap findings
+- replace claude-opus-4-8 with claude-opus-5 in harness-models
+- log new technical debt findings
+- rename file-tree-view doc-shot hook to file-navigator-view (#621)
+- defer file-navigator rename as too complex (#613)
+
+### Other
+
+- sync: documentation.md
+- style: use clipboard icon in monitor metadata bar (#678)
+- sync: issues.md
+- sync: features.md
+- sync: issues.md
+- sync: issues.md
+- sync: issues.md
+- sync: features.md
+- sync: technical-debt.md
+- sync: issues.md
+- sync: issues.md
+- sync: issues.md
+- test(file-navigator-overlays): type the undo/redo drag stubs as promises
+- test(inactive-agent-tab-body): cover mouse-up focus, transcript prompt/collapse, and acp transcript button (#672)
+- sync: technical-debt.md
+- build(deps): update @emnapi/core to 1.11.3 (#670)
+- test(file-navigator): cover FileNavigatorOverlays empty state and failure dismissal (#669)
+- test(web): cover useLatestRef ref identity and value updates (#668)
+- test(tab): cover openMarkdownTab in opening-state (#667)
+- test(controller): cover question-pending notification wiring in create-managers (#666)
+- test(message-handler): cover rename and openers routes in file-navigator dispatch (#665)
+- test(schedule): cover ScheduleManager.clearAll (#664)
+- test(tab): cover place-profile-tabs pane placement and focus resolution (#663)
+- test(controller): cover rename and openers paths in file-navigator (#662)
+- test(cdp-window-resize): cover timeout, malformed frames, and getAppWindowBounds (#661)
+- test(message-handler): cover schedule, agent, and editor-suggest routes (#660)
+- test(file-navigator): cover filesystem move, rename, and delete helpers (#659)
+- test(file-navigator): cover moveMany and deleteMany in manager-batch.ts (#656)
+- test(open-file-manager): cover synced edit and markdown open paths (#655)
+- test(profile): cover formatSaveSummary branches in save.ts (#651)
+- sync: technical-debt.md
+- sync: issues.md
+- sync: issues.md
+- sync: issues.md
+- sync: features.md
+- sync: issues.md
+- sync: issues.md
+- sync: issues.md
+- sync: issues.md
+- sync: issues.md
+- sync: issues.md
+- sync: technical-debt.md
+- sync: issues.md
+- style: spin the git sync icon while a synced tab is loading (#632)
+- style: remove buttonface chrome from the git sync icon (#631)
+- sync: features.md
+- sync: features.md
+- sync: features.md
+- sync: features.md
+- sync: features.md
+- sync: issues.md
+- sync: issues.md
+- sync: issues.md
+- Add black outlines to new agent sprites
+- Match new agent sprite scale and pixel shading
+- sync: features.md
+- sync: features.md
+- sync: features.md
+- sync: issues.md
+- sync: issues.md
+- test(editor): flush persona-fetch promise inside act() in provisioning tab test
+- sync: issues.md
+- sync: issues.md
+- sync: issues.md
+- test(monitor): add coverage for feed-diff capping and diff logic (#623)
+- test(database): add coverage for query classification and row formatting (#622)
+- sync: technical-debt.md
+- sync: technical-debt.md
+- sync: technical-debt.md
+- style: rename file tree to file navigator in remaining comments (#620)
+- sync: technical-debt.md
+- sync: technical-debt.md
+- style: rename file tree to file navigator in theme.css comments (#615)
+- sync: technical-debt.md
+- sync: technical-debt.md
+
 ## [0.8.0] - 2026-07-24
 
 ### Features
