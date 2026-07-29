@@ -87,6 +87,9 @@
       }
     }
   ],
+  "monitors": [
+    { "name": "activity", "persona": "activity", "targets": ["group:1"] }
+  ],
   "files": [
     {
       "dock": "left",

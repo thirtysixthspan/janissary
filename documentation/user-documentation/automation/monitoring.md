@@ -6,7 +6,7 @@
 
 ```
 monitor security bilal
-monitor summarizer group:2
+monitor activity group:2
 ```
 
 Monitors are tool-less by default and receive no filesystem or terminal access. See Persona web tools below for the one narrow exception.
