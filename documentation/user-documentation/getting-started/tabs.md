@@ -11,6 +11,8 @@ When a sidebar holds more than one docked tab, it shows its own small tab strip 
 A docked tab is never the active tab. Docking the active tab moves focus to the nearest central tab,
 and undocking it makes it active again. Tab-cycling commands skip docked tabs. A docked tab leaves
 the central strip completely and returns to its reordered position in its group when you undock it.
+Dragging a sidebar tab label reorders docked tabs within that sidebar without docking, undocking,
+or moving the tab to another strip.
 The sidebar entry's **×** is its only direct close button. Typing `close` cannot target a docked tab,
 but `close <label>` still works.
 
