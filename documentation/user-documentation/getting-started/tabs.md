@@ -135,7 +135,12 @@ titlebar is the one exception to display shortening. It reads `Janissary (<versi
 
 A path and line number in output, like `src/foo.ts:42`, is a clickable link. Click it to open that file in an editor tab with the cursor on that line. This works in your own shell output and in an agent's output alike.
 
-Double-click a previous command's prompt line — the chevron and the command text — to run it again. Clicking the leading working-directory text on that line does nothing; only the command text after it re-runs. A single click does nothing either, so click-and-drag text selection still works.
+Double-click a previous command's prompt line — the chevron and the command text — to run it again. Clicking the leading working-directory text on that line does nothing; only the command text after it re-runs. A single click does nothing either, so click-and-drag text selection still works. If the double-click lands on text that is still selected from an earlier selection, it is suppressed and does not run the command.
+
+When an interactive program such as `vim` or `less` takes over the tab, the transcript and command
+bar disappear while the full-tab terminal is active. They return exactly as they were when the
+program exits, with no new transcript entries. New output normally returns the transcript to the
+bottom automatically.
 
 Shell output keeps its color, whether you ran the command yourself or an agent did: a test suite's colored pass/fail summary, for example, renders with the same colors it would in a real terminal.
 
