@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import type { Tab } from '../types.js';
 import type { Managers } from '../managers.js';
 import type { ScreenCapture } from '../harness/screen.js';
-import { harnessFeedEntries } from './harness-feed.js';
+import { compressScreenText, harnessFeedEntries } from './harness-feed.js';
 
 function harnessTab(label: string, group = 1): Tab {
   return { label, view: 'harness', group } as unknown as Tab;
@@ -65,5 +65,40 @@ describe('harnessFeedEntries', () => {
     });
     const entries = harnessFeedEntries(managers, [{ kind: 'group', group: 2 }], new Map());
     expect(entries.map((e) => e.tabLabel)).toEqual(['claude', 'opencode']);
+  });
+
+  it('strips decorative box-drawing chrome from the fed screen', () => {
+    const tabs = [harnessTab('claude')];
+    const managers = makeManagers(tabs, {
+      claude: { text: '╭─────╮\n│ hi  │\n╰─────╯', capturedAt: 1 },
+    });
+    const entries = harnessFeedEntries(managers, [{ kind: 'tab', label: 'claude' }], new Map());
+    expect(entries[0].entry.output).toBe('\n hi\n');
+  });
+});
+
+describe('compressScreenText', () => {
+  it('strips box-drawing characters from a bordered line, leaving the enclosed text', () => {
+    expect(compressScreenText('│ some text │')).toBe(' some text');
+  });
+
+  it('strips Braille spinner glyphs', () => {
+    expect(compressScreenText('⠋ Loading...')).toBe(' Loading...');
+  });
+
+  it('collapses consecutive blank lines produced by stripping into one', () => {
+    expect(compressScreenText('above\n───\n───\n───\nbelow')).toBe('above\n\nbelow');
+  });
+
+  it('collapses a line repeated on the next line into a single occurrence', () => {
+    expect(compressScreenText('status: ready\nstatus: ready\nnext line')).toBe('status: ready\nnext line');
+  });
+
+  it('leaves non-adjacent duplicate lines untouched', () => {
+    expect(compressScreenText('$ prompt\ncommand output\n$ prompt')).toBe('$ prompt\ncommand output\n$ prompt');
+  });
+
+  it('leaves ordinary multi-line text with no chrome unchanged', () => {
+    expect(compressScreenText('line one\nline two\nline three')).toBe('line one\nline two\nline three');
   });
 });
