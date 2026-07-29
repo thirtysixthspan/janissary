@@ -3,8 +3,6 @@
 ## ready
 
 
-* Split `web/src/EditorTab.tsx` along its responsibilities: at 238 lines it is one of the two largest components in `web/src/` and holds five `useState`s, nine `useRef`s, and three effects spanning load-with-fallback, save with conflict detection, dirty tracking, focus-on-activate, caret scroll-into-view, and IME composition — six concerns whose only relationship is that they touch the same textarea, and the reason two of the undocumented `exhaustive-deps` suppressions live here. The neighboring `web/src/editor/` directory already holds the extracted-hook pattern to follow (`useEditor`, `useEditorSync`, `useEditorMouse`, `useEditorSuggest`); move the load/save/conflict lifecycle into its own hook and leave the component rendering. Severity: **medium**.
-
 ## development
 
 * Move `UndoRedoResult` into `src/protocol.ts` and import it on the client: the undo/redo RPC reply shape is defined at `src/file-navigator/moves.ts:10` and hand-mirrored field for field at `web/src/useFileNavigatorMoveOperations.ts:27` — the re-declared wire shape architecture principle 7 says never to keep in `web/src/`, and the one copy that survived the `web/src/protocol.ts` mirror deletion. The client's copy spells `conflict`/`conflicts` with an inline `{ fromRelPath: string; toRelPath: string }` literal instead of the server's named `MoveConflict`, so adding a field to the conflict payload still compiles cleanly on both sides while the client silently drops it. Move `UndoRedoResult` and `MoveConflict` to `src/protocol.ts` beside `BatchResult`/`BulkMoveResult`, have both `moves.ts` and the hook import from there, and delete the local declaration. Severity: **high**.

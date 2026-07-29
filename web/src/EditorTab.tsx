@@ -1,14 +1,14 @@
-import React, { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import React, { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
 import type { EditorView, TabView } from '@shared/protocol';
 import type { JanusClient } from './ws';
-import { insertText, toText } from './editor/model';
+import { insertText } from './editor/model';
 import { actionForKey } from './editor/keys';
 import { visualVerticalHit } from './editor/mouse';
 import { useEditor } from './editor/useEditor';
+import { useEditorFile } from './editor/useEditorFile';
 import { useEditorMouse } from './editor/useEditorMouse';
 import { useSyntaxHighlight } from './editor/useSyntaxHighlight';
 import { useEditorSync } from './editor/useEditorSync';
-import { useEditorWatchReload } from './editor/useEditorWatchReload';
 import { useEditorSuggest } from './editor/useEditorSuggest';
 import { useEditorConnections } from './editor/useEditorConnections';
 import { EditorConnectionsPanel } from './editor/EditorConnectionsPanel';
@@ -35,79 +35,29 @@ export const EditorTab = forwardRef<EditorTabHandle, {
   dropRef?: React.RefObject<EditorDropHandle | null>;
   onSplit?: () => void;
 }>(function EditorTab({ editor, tab, client, active, dropRef, onSplit }, ref) {
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const [saveError, setSaveError] = useState<string | null>(null);
-  const [lastSaved, setLastSaved] = useState<string | null>(null);
-  const [savedFlash, setSavedFlash] = useState(false);
-  const [conflictOpen, setConflictOpen] = useState(false);
   const bodyRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const caretRef = useRef<HTMLSpanElement>(null);
   const composingRef = useRef(false);
-  // Set once a watched external change lands while the buffer is dirty; cleared on a successful
-  // save. Drives the overwrite-conflict prompt instead of a normal save.
-  const conflictPendingRef = useRef(false);
+  // The save entry point lives on the file hook, which needs the editor state hook that in turn
+  // takes the save callback — so both callbacks reach it through this ref, filled in below.
+  const saveRef = useRef<() => Promise<void>>(async () => {});
+  const requestSave = () => { void saveRef.current(); };
 
-  const api = useEditor(() => { void save(); });
+  const api = useEditor(requestSave);
   const { state } = api;
-  const suggest = useEditorSuggest(client, editor.url, api.setState, () => { void save(); });
+  const suggest = useEditorSuggest(client, editor.url, api.setState, requestSave);
   const mouse = useEditorMouse(api, bodyRef, () => textareaRef.current?.focus(), suggest);
   const tokens = useSyntaxHighlight(state, editor.name);
   useEditorSync(state, editor.url, client);
   const connections = useEditorConnections(client, tab);
+  const file = useEditorFile(client, editor, api);
+  saveRef.current = file.save;
 
   // Every open editor tab stays mounted at once (see the top-of-file comment), so only the
   // currently active one may claim the shared drop handle — otherwise whichever tab rendered last
   // would silently win regardless of which one is actually visible and drop-targetable.
   if (dropRef && active) dropRef.current = { insertAtCaret: (text: string) => api.insert(text) };
-
-  const writeToDisk = async (text: string) => {
-    setSaveError(null);
-    const error = await client.saveFile(editor.url, text);
-    if (error) { setSaveError(error); return; }
-    setLastSaved(text);
-    conflictPendingRef.current = false;
-    setSavedFlash(true);
-    setTimeout(() => setSavedFlash(false), 1500);
-  };
-
-  const save = async () => {
-    const s = api.stateRef.current;
-    if (!s) return;
-    if (conflictPendingRef.current) { setConflictOpen(true); return; }
-    await writeToDisk(toText(s));
-  };
-
-  const fetchContent = async (token: string) => {
-    const r = await fetch(`${editor.url}?token=${encodeURIComponent(token)}`);
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    return r.text();
-  };
-
-  useEffect(() => {
-    // A synced tab opens immediately, before its shared workspace clone exists; loading here would
-    // fetch a not-yet-real file and get stuck. Wait for `sync` to leave 'provisioning' — the same
-    // signal `finishOpenSynced` already flips once the workspace is ready — before fetching.
-    if (editor.sync === 'provisioning') return;
-    if (api.stateRef.current !== null) return;
-    let cancelled = false;
-    const token = new URLSearchParams(location.search).get('token') ?? '';
-    const load = async () => {
-      try {
-        const text = await fetchContent(token);
-        if (!cancelled) { api.load(text, editor.line === undefined ? undefined : editor.line - 1); setLastSaved(text); }
-      } catch {
-        if (!cancelled) setLoadError(`Failed to load ${editor.name}`);
-      }
-    };
-    void load();
-    return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editor.url, editor.name, editor.sync]);
-
-  const dirty = useMemo(() => state !== null && lastSaved !== null && toText(state) !== lastSaved, [state, lastSaved]);
-
-  useEditorWatchReload(editor.mtimeMs, dirty, conflictPendingRef, api, setLastSaved, fetchContent);
 
   const loaded = state !== null;
   useEffect(() => { if (active && loaded) textareaRef.current?.focus(); }, [active, loaded]);
@@ -131,10 +81,8 @@ export const EditorTab = forwardRef<EditorTabHandle, {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active, state?.cursor.line, state?.cursor.col]);
 
-  const dirtyRef = useRef(dirty);
-  dirtyRef.current = dirty;
-  const saveRef = useRef(save);
-  saveRef.current = save;
+  const dirtyRef = useRef(file.dirty);
+  dirtyRef.current = file.dirty;
 
   useImperativeHandle(ref, () => ({
     isDirty: () => dirtyRef.current,
@@ -189,8 +137,8 @@ export const EditorTab = forwardRef<EditorTabHandle, {
   return (
     <div className="editor-tab" data-doc-shot="editor-view">
       <EditorMetaRow
-        editor={editor} dirty={dirty} savedFlash={savedFlash} error={saveError ?? loadError}
-        onSave={() => { void save(); }} onMouseUp={onMetaMouseUp} connectionsButton={connections.connectionsButton}
+        editor={editor} dirty={file.dirty} savedFlash={file.savedFlash} error={file.saveError ?? file.loadError}
+        onSave={requestSave} onMouseUp={onMetaMouseUp} connectionsButton={connections.connectionsButton}
         onSyncClick={() => client.send({ method: 'resyncEditorTab', params: { url: editor.url } })}
         onSplit={onSplit}
       />
@@ -223,15 +171,8 @@ export const EditorTab = forwardRef<EditorTabHandle, {
           />
         )}
       </div>
-      {conflictOpen && (
-        <OverwriteConflictDialog
-          onSave={() => {
-            setConflictOpen(false);
-            const s = api.stateRef.current;
-            if (s) void writeToDisk(toText(s));
-          }}
-          onCancel={() => setConflictOpen(false)}
-        />
+      {file.conflictOpen && (
+        <OverwriteConflictDialog onSave={file.overwrite} onCancel={file.dismissConflict} />
       )}
     </div>
   );
