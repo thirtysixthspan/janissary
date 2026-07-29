@@ -173,3 +173,5 @@ the redo stack. Grouped undo and redo use **Overwrite all**, **Skip conflicts**,
 destinations now contain conflicts. Failed and skipped items stay available for a later retry.
 
 Like other view tabs, a file navigator is a live view — closed with its × button or `close`, and not restored by `janus --relaunch`.
+
+A [profile](/user-documentation/automation/profiles) is the one thing that does bring a tree back the way you left it. `profile save` records which directories you had expanded, where the cursor was, and every row you had selected; `profile launch` puts them back, silently skipping anything that has since been deleted. The undo/redo history is not part of that — it stays in memory and dies with the tab.

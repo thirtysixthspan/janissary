@@ -1,6 +1,6 @@
 import { changedPaths, currentBranch, remoteUrl } from '../git-status.js';
 import { githubCommitsUrl } from '../github-url.js';
-import type { FilesTabState } from './manager.js';
+import type { FilesTabState } from './state.js';
 
 // Recompute one tab's git statuses and current branch off the event loop, then re-render with
 // them via `rebuild` (decision 6's second `dirty` emit). Coalesced: if a refresh is already in

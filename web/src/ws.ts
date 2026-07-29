@@ -1,4 +1,5 @@
 import type { ServerEvent, RpcCall, RouteChooserView, HarnessLaunchView, ScheduleLaunchView, TabView, TaskRow, ProfileRow } from '@shared/protocol';
+import { collectNavigatorSelections } from './file-navigator-selection-registry';
 
 type StateListener = (
   tabs: TabView[], activeTab: number, secondaryTab: number | undefined,
@@ -71,6 +72,16 @@ export class JanusClient {
           focusLeft: event.focusLeft, focusRight: event.focusRight,
         });
       }
+
+    break;
+    }
+    case 'collect-tree-state': {
+      // `profile save` is asking for the tree selections only this client knows about. Answer with
+      // every mounted navigator's, or an empty list when none are open.
+      this.send({
+        method: 'reportFileNavigatorSelection',
+        params: { id: event.id, navigators: collectNavigatorSelections() },
+      });
 
     break;
     }

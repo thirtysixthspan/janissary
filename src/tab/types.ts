@@ -140,6 +140,9 @@ export type FileNavigatorView = {
   // there's no github.com origin remote.
   githubUrl?: string;
   waitingFor?: string;
+  // A selection restored from a profile, applied by the client once per `revision` (see
+  // `file-navigator/restore.ts`). Absent for a tree that was never launched from a profile.
+  restore?: { revision: number; cursor?: string; anchor?: string; selected: string[] };
 };
 
 // A single row in the task picker's listing (executable `ai/*.md` prompts). Unlike `FileNavigatorRow`,

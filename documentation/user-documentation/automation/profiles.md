@@ -74,6 +74,21 @@ The `image`, `markdown`, `page`, and `ssh` types reopen the rest of a working se
 
 None of these needs a `name` — the label is derived the same way typing `open` or `ssh` derives it. Relaunching closes a markdown, page, or ssh tab already showing the same file, url, or destination before reopening it, so you end up with one of each rather than a duplicate; an already-open image is simply reused.
 
+A `files` entry opens a [file navigator](/user-documentation/tab-types/file-navigator), and can bring back the state of the tree itself — which directories were open, and which rows were selected:
+
+```json
+{
+  "type": "files",
+  "dock": "left",
+  "path": "$root",
+  "expanded": ["src", "src/file-navigator"],
+  "cursor": "src/file-navigator/manager.ts",
+  "selected": ["src/file-navigator/manager.ts"]
+}
+```
+
+Every path is relative to the tree's root. Restoring is quiet and forgiving: a directory or row that no longer exists is dropped without a word, and a restored selection never steals keyboard focus — the profile's own `focus` still decides where you land. Leave off `dock` and the tree opens in the center strip instead, where it takes `number`, `group`, and `pane` like any other tab.
+
 A harness entry's `run` and `schedule` live in memory only — closing the tab or quitting ends them. That's the point of the profile: the file is the source of truth, and every launch rebuilds the setup from it.
 
 ## Relaunching
@@ -89,7 +104,9 @@ Launching a profile that's already running resets it: any open tab whose label m
 
 Each agent is captured as a clean template: its name, working directory, and tab presentation only. Command history, transcript, and any queued commands are deliberately left out, so launching the saved profile always starts that agent from scratch, not from where you left off. Each harness is captured the same way, plus its `tool`, model, effort, and workspace/offline/auto-approve flags; its scheduled and one-shot commands are never captured, since they only ever lived in memory. Whichever tab is currently active is saved with `focus: true` so a relaunch lands you back in the same place. Every captured main-area entry also saves `pane` as `left` or `right`, preserving which side of a split it occupied; the exact divider position is screen-local and resets to the middle.
 
-Open images, markdown viewers, web pages, and SSH sessions are captured too — an SSH entry keeps the flags you connected with, so a relaunch reconnects the same way. The window size, sidebar widths, and reporting-area split are captured into the profile's layout as they currently look, along with any running monitors and any file navigator, notifications, or schedules tab docked to a sidebar. Only two things are left out and named in the command's report: a monitor's own reporting tab, and a file navigator you haven't docked into a sidebar.
+Open images, markdown viewers, web pages, and SSH sessions are captured too — an SSH entry keeps the flags you connected with, so a relaunch reconnects the same way. Every file navigator is captured, docked or not, along with its tree view: which directories you had expanded, which row the cursor was on, and every row you had selected. Launching the profile puts the tree back the way you left it, quietly skipping anything that no longer exists. A navigator left in the center strip also remembers its group, order, and pane.
+
+The window size, sidebar widths, and reporting-area split are captured into the profile's layout as they currently look, along with any running monitors. The only thing left out and named in the command's report is a monitor's own reporting tab.
 
 Saving over an existing profile name replaces it outright, with no confirmation prompt. The command reports what it captured: counts per tab type, plus monitors and docked tabs, followed by the list of anything skipped.
 

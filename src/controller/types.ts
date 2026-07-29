@@ -10,4 +10,5 @@ export type Sinks = {
     focusLeft?: 'files' | 'notifications' | 'schedules';
     focusRight?: 'files' | 'notifications' | 'schedules';
   }) => void;
+  sendCollectTreeState?: (event: { id: number }) => void;
 };

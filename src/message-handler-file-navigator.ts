@@ -8,12 +8,14 @@ import {
   renameFileNavigatorItem,
   revealFileNavigatorItem,
 } from './controller/file-navigator.js';
+import { resolveTreeSelections } from './file-navigator/selection-request.js';
 
 type FileNavigatorMessage = Extract<ClientMessage, {
   method: 'fileNavigatorToggle' | 'fileNavigatorCollapseAll' | 'fileNavigatorReroot' | 'moveFileNavigatorItem'
     | 'moveFileNavigatorItems' | 'deleteFileNavigatorItem' | 'deleteFileNavigatorItems'
     | 'renameFileNavigatorItem' | 'fileNavigatorSearch' | 'revealFileNavigatorItem'
-    | 'fileNavigatorOpeners' | 'undoFileNavigatorItem' | 'redoFileNavigatorItem';
+    | 'fileNavigatorOpeners' | 'undoFileNavigatorItem' | 'redoFileNavigatorItem'
+    | 'reportFileNavigatorSelection';
 }>;
 
 // The file-navigator RPC cases, split out of `handle()` to keep message-handler.ts under the line-size
@@ -68,6 +70,10 @@ export function handleFileNavigatorMessage(controller: Controller, message: File
       return;
     }
     case 'revealFileNavigatorItem': { revealFileNavigatorItem(controller.managers, message.params.index, message.params.relPath); break;
+    }
+    // Fire-and-forget: the answer to a `collect-tree-state` request goes straight to the resolver,
+    // which discards it if it isn't the request currently in flight.
+    case 'reportFileNavigatorSelection': { resolveTreeSelections(message.params.id, message.params.navigators); break;
     }
     case 'fileNavigatorOpeners': {
       reply({ t: 'rpc-reply', id: message.id, result: fileNavigatorOpeners(controller.managers, message.params.index, message.params.relPath, message.params.edit) });

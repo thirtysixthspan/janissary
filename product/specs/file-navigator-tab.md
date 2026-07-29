@@ -232,6 +232,15 @@ stack; failed and skipped pairs remain available for a later retry.
 
 Deletions are not covered by undo/redo — a deleted file or directory cannot be restored this way.
 
+### Saving and restoring a tree's view
+
+A tree's own view does round-trip through a profile, unlike its undo/redo stacks. `profile save`
+records which directories are expanded, which row holds the keyboard cursor, the range anchor, and
+the full row selection; `profile launch` replays them, re-expanding the directories that still
+exist and re-highlighting the saved rows with the cursor row scrolled into view. Anything that no
+longer exists is dropped silently, and restoring a selection never moves keyboard focus. See
+Profiles for the full rules.
+
 ### Deleting a file or directory
 
 Pressing Backspace or Delete normalizes the selection using the same rules as moving. One path

@@ -861,6 +861,88 @@ describe('FileNavigatorManager', () => {
     });
   });
 
+  describe('profile capture and restore', () => {
+    const navLabel = () => tabs.find((t) => t.label.startsWith('navigator'))!.label;
+
+    it('returns the expanded set as a sorted array', () => {
+      mkdirSync(path.join(root, 'src'));
+      mkdirSync(path.join(root, 'src', 'inner'));
+      mkdirSync(path.join(root, 'docs'));
+      const manager = run();
+      manager.open('files', 'janus');
+      const label = navLabel();
+      manager.toggle(label, 'src');
+      manager.toggle(label, 'src/inner');
+      manager.toggle(label, 'docs');
+
+      expect(manager.expandedPaths(label)).toEqual(['docs', 'src', 'src/inner']);
+    });
+
+    it('returns an empty array for a label with no tab', () => {
+      expect(run().expandedPaths('ghost')).toEqual([]);
+    });
+
+    it('expands and watches every saved directory that still exists, skipping one that does not', () => {
+      mkdirSync(path.join(root, 'src'));
+      const manager = run();
+      manager.open('files', 'janus');
+      const label = navLabel();
+      watchMock.mockClear();
+
+      manager.restoreView(label, { expanded: ['src', 'gone'] });
+
+      expect(manager.expandedPaths(label)).toEqual(['src']);
+      expect(watchMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('keeps only selection paths that have a visible row', () => {
+      mkdirSync(path.join(root, 'src'));
+      writeFileSync(path.join(root, 'src', 'a.ts'), '');
+      const manager = run();
+      manager.open('files', 'janus');
+      const label = navLabel();
+
+      manager.restoreView(label, {
+        expanded: ['src'], cursor: 'src/a.ts', anchor: 'src/gone.ts', selected: ['src', 'src/a.ts', 'src/gone.ts'],
+      });
+
+      const restore = tabs.find((t) => t.label === label)!.files!.restore!;
+      expect(restore.cursor).toBe('src/a.ts');
+      expect(restore.anchor).toBeUndefined();
+      expect(restore.selected).toEqual(['src', 'src/a.ts']);
+    });
+
+    it('bumps the restore revision exactly once per call', () => {
+      const manager = run();
+      manager.open('files', 'janus');
+      const label = navLabel();
+
+      manager.restoreView(label, {});
+      const first = tabs.find((t) => t.label === label)!.files!.restore!.revision;
+      manager.restoreView(label, {});
+      const second = tabs.find((t) => t.label === label)!.files!.restore!.revision;
+
+      expect(second).toBe(first + 1);
+    });
+
+    it('returns the opened label, the waiting label, and an existing tab\'s label', () => {
+      const manager = run();
+
+      const opened = manager.open('files', 'janus');
+      expect(opened).toBe(navLabel());
+      // The same root again finds the existing tab and redocks it, returning that same label.
+      expect(manager.open('files on left', 'janus')).toBe(opened);
+
+      const waiting = manager.open('files not-yet-there', 'janus');
+      expect(waiting).toBe(tabs.at(-1)!.label);
+    });
+
+    it('returns undefined when the target is not a directory', () => {
+      writeFileSync(path.join(root, 'file.txt'), '');
+      expect(run().open('files file.txt', 'janus')).toBeUndefined();
+    });
+  });
+
   describe('git-modified coloring', () => {
     const navLabel = () => tabs.find((t) => t.label.startsWith('navigator'))!.label;
 

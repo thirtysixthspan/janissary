@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { JanusClient } from './ws';
+import { clearNavigatorSelection, publishNavigatorSelection } from './file-navigator-selection-registry';
 
 describe('JanusClient', () => {
   let messageHandler: ((event: { data: string }) => void) | undefined;
@@ -160,6 +161,29 @@ describe('JanusClient', () => {
     client.pageSync('https://example.org', 'visible text');
     expect(inst.send).toHaveBeenCalledWith(
       expect.stringContaining('"method":"pageSync"'),
+    );
+  });
+
+  it('collect-tree-state answers with every registered navigator selection, carrying the request id', () => {
+    publishNavigatorSelection(2, { cursor: 'src/a.ts', anchor: 'src', selected: new Set(['src', 'src/a.ts']) });
+    new JanusClient();
+
+    messageHandler!({ data: JSON.stringify({ t: 'collect-tree-state', id: 9 }) });
+
+    expect(inst.send).toHaveBeenCalledWith(JSON.stringify({
+      t: 'rpc', id: 1, method: 'reportFileNavigatorSelection',
+      params: { id: 9, navigators: [{ index: 2, cursor: 'src/a.ts', anchor: 'src', selected: ['src', 'src/a.ts'] }] },
+    }));
+    clearNavigatorSelection(2);
+  });
+
+  it('collect-tree-state replies with no records when no navigator is mounted', () => {
+    new JanusClient();
+
+    messageHandler!({ data: JSON.stringify({ t: 'collect-tree-state', id: 4 }) });
+
+    expect(inst.send).toHaveBeenCalledWith(
+      expect.stringContaining('"params":{"id":4,"navigators":[]}'),
     );
   });
 });

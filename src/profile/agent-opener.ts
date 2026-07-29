@@ -69,8 +69,8 @@ export function openProfileEntries(
   // Profile-level file navigator(s) open next, rooted at the first newly opened tab by default, so
   // their tabs are part of the list by the time monitor targets are resolved below.
   const firstNewLabel = opened.length > 0 ? managers.tab.tabs[firstNew]?.label : undefined;
-  openProfileFiles(loaded.files, managers, firstNewLabel, notes);
   candidates.push(
+    ...openProfileFiles(loaded.files, managers, firstNewLabel, notes, defaultGroup, colorForGroup),
     ...openProfileEditors(loaded.editors, managers, firstNewLabel, notes, defaultGroup, colorForGroup),
     ...openProfileViewTabs(loaded.views, managers, issuingLabel, defaultGroup, colorForGroup, notes),
   );

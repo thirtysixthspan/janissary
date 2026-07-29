@@ -1,7 +1,7 @@
 import { statSync } from 'node:fs';
 import { buildRows } from './index.js';
 import type { Managers } from '../managers.js';
-import type { FilesTabState } from './manager.js';
+import type { FilesTabState } from './state.js';
 
 // The narrow slice of `FileNavigatorManager` internals this module needs, handed over as bound closures
 // so the tab-state map and watcher plumbing stay private to the manager (see `openPort()` there).
