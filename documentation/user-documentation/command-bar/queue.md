@@ -1,37 +1,58 @@
-# Command queue
+# Queue commands for an agent
 
-<img class="agent-float" src="/agents/bilal-south-west.png" alt="" />
-
-When an agent tab is busy, anything you submit to it doesn't get lost — it's queued and runs automatically once the agent is free. You can also queue a command for a *different* agent with `queue <agent> <command>`.
-
-## Queue while busy
-
-Submit as many commands as you like while a tab's agent is working. Each one joins that tab's queue and runs, in order, one at a time, as soon as the agent finishes what it's doing.
-
-You'll always know a tab is busy and queuing: its command-line prompt reads `queue ❯` instead of the usual `❯`, and the dot beside it blinks — the same blink you already see on that tab in the tab strip.
-
-## Queue for another agent
-
-<img class="agent-float left" src="/agents/cavus-south.png" alt="" />
-
-`queue <agent> <command>` appends a command to another agent's queue, whether or not you're on that agent's tab:
+Queue work for the current agent or send work to another agent with `queue <agent> <command>`:
 
 ```
 queue worker db vacuum
 ```
 
-If `worker` is idle with nothing else queued, the command runs right away. If it's busy, or already has commands waiting, this one joins the back of the line.
+The command appends `db vacuum` to `worker`'s queue. If `worker` is idle with no waiting work, it runs immediately. Otherwise it runs after the commands already in that queue.
 
-## The queue popup
+<img class="agent-float" src="/agents/bilal-south-west.png" alt="" />
 
-`Cmd+E` (or the `queue` command) opens a window listing everything queued for the current tab, with the next command to run at the top.
+## Queue work while an agent is busy
 
-`↑`/`↓` move the selection, and selecting a row copies its text into the command line — that's also how you edit it: whatever you type there patches the selected row live. Backspacing all the way to an empty line and pressing Backspace once more removes that row and moves on to the next. `Escape` closes the popup; `Return` does nothing while it's open. Clicking a row selects it the same way the arrow keys do.
+Every agent tab has its own unbounded, first-in-first-out queue. A command submitted while that agent is busy joins the queue instead of running immediately. A command sent to an idle agent that already has waiting work joins the back of that queue too.
 
-With nothing queued, the popup shows `(no commands queued)`.
+The issuing tab records `Queued: <command>` so you know the submission was accepted. The queue drains automatically from the front when the agent becomes idle. Shell commands run in order on the same shell, and a route chooser pauses the queue until you choose or cancel it.
 
-## What's kept, and where
+While the current agent is busy, its command prompt shows `queue` before the chevron and its dot blinks. Submitting text at that prompt adds it to the queue.
 
-A tab's queue is part of its saved state, so it survives `janus --relaunch`. A relaunched tab always comes back idle — a restored queue waits and starts running as soon as you submit anything to that tab.
+<img class="agent-float left" src="/agents/cavus-south.png" alt="" />
 
-A few commands are always handled instantly and never queue, no matter how busy the tab is: `hist`, `nav`, `syntax theme`, `quit`, `close`, `exit`, `tasks`, and `queue` itself.
+Non-agent tabs never have command queues. Submissions to harness, image, page, Markdown, editor, file navigator, monitor, notification, and schedule tabs keep their normal behavior. The queue picker also does nothing when one of these tabs is exposed.
+
+## Edit queued commands
+
+Press `Ctrl+E`, or enter the bare `queue` command, to open the queue popup for the exposed agent tab. The next command to run appears at the top. When the queue is empty, the popup shows `(no commands queued)`.
+
+<img class="agent-float" src="/agents/hamza-south-east.png" alt="" />
+
+Opening the popup selects the front command and copies its text into the command line. The command line is the popup's only editing surface:
+
+| Input | Effect |
+|---|---|
+| `↑` / `↓` or click | Select a row and copy its text into the command line |
+| Typing | Patch the selected row immediately |
+| `Backspace` / `Delete` with text | Edit the selected row normally |
+| `Backspace` / `Delete` on an empty line | Remove the selected row and keep the popup open |
+| `Enter` / `Return` | Do nothing |
+| `Escape` | Close the popup and clear the command line |
+
+An empty row is allowed until it reaches the front of the queue. It then runs as a no-op.
+
+## Handle queue errors
+
+`queue <agent> <command>` requires both an agent name and a command. If either is missing, the app prints:
+
+```
+Usage: queue <agent> <command>
+```
+
+An unknown target prints `No tab named "<label>".`. A known non-agent target prints `Tab "<label>" has no command queue.`. On success, the issuing tab records `→ <label> (queued): <command>`.
+
+## Commands that never queue
+
+These commands are handled immediately, even when the current agent is busy: `hist`, `nav`, `syntax theme`, `quit`, `close`, `exit`, bare `queue`, and bare `tasks`. The argument form `queue <agent> <command>` still reaches the target queue. `msg` and `broadcast` use their own per-recipient delivery order.
+
+An agent's queue is saved with its state and restored by `janus --relaunch`. The relaunched agent starts idle, so restored commands wait until the first command is dispatched to that tab.
