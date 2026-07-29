@@ -8,6 +8,17 @@ A left and right sidebar flank the tab area, hidden until something is docked in
 
 When a sidebar holds more than one docked tab, it shows its own small tab strip above the visible one — one entry per docked tab, each with its own **×** close button. Clicking an entry switches which docked tab is visible; double-clicking its label opens the same inline rename control as any tab in the center strip. Which entry is visible is only ever remembered on your screen — it resets the next time you launch or relaunch the app.
 
+A docked tab is never the active tab. Docking the active tab moves focus to the nearest central tab,
+and undocking it makes it active again. Tab-cycling commands skip docked tabs. A docked tab leaves
+the central strip completely and returns to its reordered position in its group when you undock it.
+The sidebar entry's **×** is its only direct close button. Typing `close` cannot target a docked tab,
+but `close <label>` still works.
+
+Sidebar visibility is derived from its contents. An empty sidebar cannot be shown, and a docked tab
+does not keep the app alive: closing the last non-docked tab still quits. Dragging a sidebar's
+resize control changes its width within a minimum and roughly half the viewport. Sidebar width and
+dock placement reset on relaunch and are never persisted.
+
 ![A sidebar holding a file navigator and the notifications feed together, with its own small tab strip above the visible one.](/screenshots/sidebar-shared.png)
 
 ![The tab strip with several agent tabs: each has a colored dot, one dot is blinking to show a busy agent, and an inactive tab carries a flag badge for unread output.](/screenshots/tabs-overview.png)
