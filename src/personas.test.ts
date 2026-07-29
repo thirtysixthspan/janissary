@@ -97,6 +97,22 @@ describe('the assistant persona', () => {
   });
 });
 
+describe('the activity persona', () => {
+  it('loads from the project and is a summarize-only opencode persona', () => {
+    // Loads the real ai/personas/monitor/activity.md (default root = project cwd), not a synthetic one.
+    const persona = loadPersona('activity', 'monitor');
+    expect(persona.harness).toEqual({ harness: 'opencode', model: 'opencode/deepseek-v4-flash-free', variant: 'default' });
+    expect(persona.body.toLowerCase()).toContain('summarize');
+    expect(persona.body.toLowerCase()).toContain('never make suggestions');
+  });
+
+  it('is listed among monitor personas, replacing the old summarizer name', () => {
+    const names = listPersonas('monitor');
+    expect(names).toContain('activity');
+    expect(names).not.toContain('summarizer');
+  });
+});
+
 describe('listPersonas', () => {
   it('lists persona names sorted, without extensions', () => {
     writePersona('monitor', 'security', 'x');
