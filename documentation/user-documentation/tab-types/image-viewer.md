@@ -8,6 +8,8 @@
 open diagram.png
 ```
 
+If that image is already open, `open <image>` focuses the existing image tab instead of creating a duplicate.
+
 The tab shows a compact header with the file's name, size, and location, and the image fills the space below, fit to the tab: a landscape image spans the full width, a portrait one the full height. The tab is labeled `image` in the strip (the filename is in the header) and carries a × close button.
 
 ![An image tab: the metadata header above the image, with the zoom percentage indicator visible in the corner.](/screenshots/image-tab.png)
