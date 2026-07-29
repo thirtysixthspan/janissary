@@ -24,56 +24,115 @@ describe('validateProfile', () => {
   });
 
   it('returns [] for a valid profile', () => {
-    writeJson('ok', { agents: [{ name: 'bob', active: false }], harnesses: [{ name: 'c', type: 'claude' }], layout: { sidebar: { left: 300 } } });
+    writeJson('ok', {
+      tabs: [{ type: 'agent', name: 'bob', active: false }, { type: 'harness', name: 'c', tool: 'claude' }],
+      layout: { sidebar: { left: 300 } },
+    });
     expect(validateProfile('ok')).toEqual([]);
+  });
+
+  it('accepts every tab type in one array', () => {
+    writeJson('every', {
+      tabs: [
+        { type: 'agent', name: 'a' },
+        { type: 'harness', name: 'h', tool: 'claude' },
+        { type: 'editor', path: 'notes.md' },
+        { type: 'files', dock: 'left' },
+        { type: 'notifications', dock: 'right', focus: true },
+        { type: 'schedules', dock: 'right' },
+        { type: 'image', path: 'a.png' },
+        { type: 'markdown', path: 'readme.md' },
+        { type: 'page', url: 'https://example.com' },
+        { type: 'ssh', destination: 'host', options: ['-p', '2222'] },
+      ],
+    });
+    expect(validateProfile('every')).toEqual([]);
   });
 
   it('names the offending field for each malformation', () => {
     writeJson('bad', {
-      harnesses: [{ name: 'c', type: 42 }],
+      tabs: [{ type: 'harness', name: 'c', tool: 42 }],
       monitors: [{ persona: 'x', targets: 'group:1' }],
       layout: { window: { width: 'wide', height: 900 } },
     });
     const problems = validateProfile('bad');
-    expect(problems).toContain('harnesses[0]: type must be a string');
+    expect(problems).toContain('tabs[0]: tool must be a string');
     expect(problems).toContain('monitors[0]: targets must be an array of strings');
     expect(problems).toContain('layout.window: width must be a number');
   });
 
+  it('reports a missing or unrecognized tab type, naming every valid one', () => {
+    writeJson('bad-type', { tabs: [{ name: 'a' }, { type: 'terminal' }] });
+    const problems = validateProfile('bad-type');
+    const expected = 'type must be one of agent, harness, editor, files, notifications, schedules, image, markdown, page, ssh';
+    expect(problems).toEqual([`tabs[0]: ${expected}`, `tabs[1]: ${expected}`]);
+  });
+
+  it('reports a missing per-type required field, located by its array position', () => {
+    writeJson('missing', {
+      tabs: [
+        { type: 'harness', name: 'h' },
+        { type: 'editor' },
+        { type: 'page' },
+        { type: 'ssh' },
+      ],
+    });
+    const problems = validateProfile('missing');
+    expect(problems).toContain('tabs[0]: tool is required');
+    expect(problems).toContain('tabs[1]: path is required');
+    expect(problems).toContain('tabs[2]: url is required');
+    expect(problems).toContain('tabs[3]: destination is required');
+  });
+
+  it('locates a bad presentation field at the entry root, not under a tab object', () => {
+    writeJson('bad-presentation', { tabs: [{ type: 'agent', name: 'a', number: '2' }] });
+    expect(validateProfile('bad-presentation')).toEqual(['tabs[0]: number must be a number']);
+  });
+
   it('validates editor entries and locates malformed editor fields', () => {
     writeJson('bad-editors', {
-      editors: [
-        {}, { path: 1 }, { path: 'x', line: '1' }, { path: 'x', in: 1 }, { path: 'x', tab: { focus: 'yes' } },
+      tabs: [
+        { type: 'editor' }, { type: 'editor', path: 1 }, { type: 'editor', path: 'x', line: '1' },
+        { type: 'editor', path: 'x', in: 1 }, { type: 'editor', path: 'x', focus: 'yes' },
       ],
     });
     const problems = validateProfile('bad-editors');
-    expect(problems).toContain('editors[0]: path is required');
-    expect(problems).toContain('editors[1]: path must be a string');
-    expect(problems).toContain('editors[2]: line must be a number');
-    expect(problems).toContain('editors[3]: in must be a string');
-    expect(problems).toContain('editors[4].tab: focus must be a boolean');
+    expect(problems).toContain('tabs[0]: path is required');
+    expect(problems).toContain('tabs[1]: path must be a string');
+    expect(problems).toContain('tabs[2]: line must be a number');
+    expect(problems).toContain('tabs[3]: in must be a string');
+    expect(problems).toContain('tabs[4]: focus must be a boolean');
   });
 
   it('accepts a valid editor entry even when its file does not exist', () => {
     writeJson('new-file', {
-      agents: [{ name: 'left', tab: { pane: 'left' } }],
-      harnesses: [{ name: 'right', type: 'claude', tab: { pane: 'right' } }],
-      editors: [{ path: '$root/not-yet-created.txt', tab: { focus: true, pane: 'right' } }],
+      tabs: [
+        { type: 'agent', name: 'left', pane: 'left' },
+        { type: 'harness', name: 'right', tool: 'claude', pane: 'right' },
+        { type: 'editor', path: '$root/not-yet-created.txt', focus: true, pane: 'right' },
+      ],
     });
     expect(validateProfile('new-file')).toEqual([]);
   });
 
   it('rejects invalid pane values for every pane-capable entry kind', () => {
     writeJson('bad-panes', {
-      agents: [{ name: 'agent', tab: { pane: 'bottom' } }],
-      harnesses: [{ name: 'harness', type: 'claude', tab: { pane: 2 } }],
-      editors: [{ path: 'notes.txt', tab: { pane: false } }],
+      tabs: [
+        { type: 'agent', name: 'agent', pane: 'bottom' },
+        { type: 'harness', name: 'harness', tool: 'claude', pane: 2 },
+        { type: 'editor', path: 'notes.txt', pane: false },
+      ],
     });
     expect(validateProfile('bad-panes')).toEqual([
-      'agents[0].tab: pane must be "left" or "right"',
-      'harnesses[0].tab: pane must be "left" or "right"',
-      'editors[0].tab: pane must be "left" or "right"',
+      'tabs[0]: pane must be "left" or "right"',
+      'tabs[1]: pane must be "left" or "right"',
+      'tabs[2]: pane must be "left" or "right"',
     ]);
+  });
+
+  it('reports no problems for a file still using the old per-kind keys', () => {
+    writeJson('old', { agents: [{ name: 'bob' }], harnesses: [{ name: 'c' }], editors: [{}] });
+    expect(validateProfile('old')).toEqual([]);
   });
 
   it('returns a single "not valid JSON" item for unparseable JSON', () => {
@@ -100,15 +159,15 @@ describe('reportValidation', () => {
   });
 
   it('reports a single valid profile', () => {
-    writeJson('good', { agents: [{ name: 'bob', active: false }] });
+    writeJson('good', { tabs: [{ type: 'agent', name: 'bob', active: false }] });
     expect(reportValidation('good')).toBe('Profile "good" is valid.');
   });
 
   it('lists the problems of an invalid profile', () => {
-    writeJson('bad', { harnesses: [{ name: 'c' }] });
+    writeJson('bad', { tabs: [{ type: 'harness', name: 'c' }] });
     const report = reportValidation('bad');
     expect(report).toContain('Profile "bad" is not valid:');
-    expect(report).toContain('harnesses[0]: type is required');
+    expect(report).toContain('tabs[0]: tool is required');
   });
 
   it('reports No profile named for an unknown name', () => {
@@ -116,8 +175,8 @@ describe('reportValidation', () => {
   });
 
   it('validates every profile when given no name', () => {
-    writeJson('alpha', { agents: [{ name: 'a', active: false }] });
-    writeJson('beta', { harnesses: [{ name: 'c' }] });
+    writeJson('alpha', { tabs: [{ type: 'agent', name: 'a', active: false }] });
+    writeJson('beta', { tabs: [{ type: 'harness', name: 'c' }] });
     const report = reportValidation(undefined);
     expect(report).toContain('Profile "alpha" is valid.');
     expect(report).toContain('Profile "beta" is not valid:');

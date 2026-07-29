@@ -8,11 +8,13 @@ const PORT_SUFFIX = /:\d+$/;
 
 const USAGE = 'Usage: ssh <destination> [ssh options].';
 
-export type SshParsed = { command: string; destination: string; label: string } | { error: string };
+export type SshParsed = { command: string; destination: string; label: string; options: string[] } | { error: string };
 
-// Find the first non-option token in an `ssh` command's arguments, skipping any flag and (for
-// value-taking flags) the value that follows it.
-function findDestination(tokens: string[]): string | undefined {
+// Find the index of the first non-option token in an `ssh` command's arguments, skipping any flag
+// and (for value-taking flags) the value that follows it. The index — rather than the token itself —
+// is what lets the caller lift the destination out of the token list without matching a same-named
+// flag value earlier in the line.
+function findDestination(tokens: string[]): number {
   let i = 0;
   while (i < tokens.length) {
     const token = tokens[i];
@@ -20,24 +22,29 @@ function findDestination(tokens: string[]): string | undefined {
       i += VALUE_FLAGS.has(token) ? 2 : 1;
       continue;
     }
-    return token;
+    return i;
   }
-  return undefined;
+  return -1;
 }
 
 /**
  * Parse an `ssh <destination> [ssh options…]` command. `command` is the input verbatim
  * (trimmed), spawned as-is — every flag, `user@host`, port, jump host, or trailing remote
  * command works without modeling ssh's own CLI grammar. `destination` is the connection
- * identity (scheme stripped, if any); `label` is its bare host, used as the tab label.
+ * identity (scheme stripped, if any); `label` is its bare host, used as the tab label;
+ * `options` is every remaining token, in order, so a captured session can be relaunched with
+ * the flags it was opened with. Splitting on whitespace does not preserve quoting, so an option
+ * value containing spaces comes back as separate tokens.
  */
 export function parseSshCommand(input: string): SshParsed {
   const trimmed = input.trim();
   const rest = trimmed.replace(/^ssh\b\s*/i, '').trim();
   if (!rest) return { error: USAGE };
-  const destinationToken = findDestination(rest.split(/\s+/));
-  if (!destinationToken) return { error: USAGE };
-  const destination = destinationToken.replace(SCHEME, '');
+  const tokens = rest.split(/\s+/);
+  const index = findDestination(tokens);
+  if (index === -1) return { error: USAGE };
+  const destination = tokens[index].replace(SCHEME, '');
   const label = destination.replace(USER_PREFIX, '').replace(PORT_SUFFIX, '');
-  return { command: trimmed, destination, label };
+  const options = [...tokens.slice(0, index), ...tokens.slice(index + 1)];
+  return { command: trimmed, destination, label, options };
 }

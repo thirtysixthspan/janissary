@@ -101,7 +101,7 @@ describe('Controller', () => {
     const root = mkdtempSync(path.join(tmpdir(), 'janus-prof-'));
     initProfileDir(root); // profiles live under <root>/profiles/<name>
     mkdirSync(path.join(root, 'profiles'), { recursive: true });
-    writeFileSync(path.join(root, 'profiles', 'writing.json'), JSON.stringify({ agents: [{ name: 'writer', active: false, tab: { color: '#6bcb77' } }] }));
+    writeFileSync(path.join(root, 'profiles', 'writing.json'), JSON.stringify({ tabs: [{ type: 'agent', name: 'writer', active: false, color: '#6bcb77' }] }));
     const { c } = makeController();
     c.dispatch('profile launch writing');
     const janus = c.view().find((t) => t.label === 'janus')!;
@@ -114,7 +114,7 @@ describe('Controller', () => {
     const root = mkdtempSync(path.join(tmpdir(), 'janus-prof-grp-'));
     initProfileDir(root);
     mkdirSync(path.join(root, 'profiles'), { recursive: true });
-    writeFileSync(path.join(root, 'profiles', 'team.json'), JSON.stringify({ agents: [{ name: 'writer', active: false, tab: { color: '#6bcb77', group: 7 } }] }));
+    writeFileSync(path.join(root, 'profiles', 'team.json'), JSON.stringify({ tabs: [{ type: 'agent', name: 'writer', active: false, color: '#6bcb77', group: 7 }] }));
     const { c } = makeController();
     c.dispatch('profile launch team');
     expect(c.view().find((t) => t.label === 'writer')!.group).toBe(7);
@@ -401,7 +401,7 @@ describe('Controller', () => {
     const root = mkdtempSync(path.join(tmpdir(), 'janus-reorder-'));
     initProfileDir(root);
     mkdirSync(path.join(root, 'profiles'), { recursive: true });
-    writeFileSync(path.join(root, 'profiles', 'writing.json'), JSON.stringify({ agents: [{ name: 'writer', active: false, tab: { color: '#6bcb77' } }] }));
+    writeFileSync(path.join(root, 'profiles', 'writing.json'), JSON.stringify({ tabs: [{ type: 'agent', name: 'writer', active: false, color: '#6bcb77' }] }));
     const { c } = makeController();
     c.dispatch('profile launch writing'); // [janus(g1), writer(g2)], active = writer (index 1)
     c.reorderTab(-1); // would cross from group 2 into group 1 — blocked
@@ -1193,8 +1193,8 @@ describe('Controller profile launch (harness entries)', () => {
   const writeHarnessEntry = (root: string, profile: string, filename: string, entry: Record<string, unknown>) => {
     mkdirSync(path.join(root, 'profiles'), { recursive: true });
     const { harness = 'opencode', ...rest } = entry;
-    const harnesses = [{ name: filename, type: harness, ...rest }];
-    writeFileSync(path.join(root, 'profiles', `${profile}.json`), JSON.stringify({ harnesses }));
+    const tabs = [{ type: 'harness', name: filename, tool: harness, ...rest }];
+    writeFileSync(path.join(root, 'profiles', `${profile}.json`), JSON.stringify({ tabs }));
   };
 
   beforeEach(() => {
@@ -1266,14 +1266,14 @@ describe('Controller profile launch (harness entries)', () => {
     }
   });
 
-  it('reports and skips an unknown harness name', () => {
+  it('reports and skips an unknown harness tool', () => {
     const root = mkdtempSync(path.join(tmpdir(), 'janus-profile-harness-badname-'));
     initProfileDir(root);
     writeHarnessEntry(root, 'bad', 'thing', { harness: 'gemini' });
     vi.mocked(spawnPty).mockImplementation((program) => ({ id: 'mock-pty-1', program, write: vi.fn(), resize: vi.fn(), kill: vi.fn() }));
     const { c } = makeController();
     c.dispatch('profile launch bad');
-    expect(allText(c)).toContain('unknown harness');
+    expect(allText(c)).toContain('unknown tool');
     expect(c.view().map((t) => t.label)).not.toContain('thing');
   });
 
@@ -1700,7 +1700,7 @@ describe('Controller direct RPC delegators', () => {
     const root = mkdtempSync(path.join(tmpdir(), 'janus-complete-groups-'));
     initProfileDir(root);
     mkdirSync(path.join(root, 'profiles'), { recursive: true });
-    writeFileSync(path.join(root, 'profiles', 'team.json'), JSON.stringify({ agents: [{ name: 'writer', active: false, tab: { color: '#6bcb77', group: 7 } }] }));
+    writeFileSync(path.join(root, 'profiles', 'team.json'), JSON.stringify({ tabs: [{ type: 'agent', name: 'writer', active: false, color: '#6bcb77', group: 7 }] }));
     const { c } = makeController();
     c.dispatch('profile launch team');
     c.setActiveTab(0);

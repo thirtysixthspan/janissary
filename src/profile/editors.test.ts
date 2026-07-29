@@ -42,7 +42,7 @@ function makeMutableManagers(tabs: Tab[]): { managers: Managers; edit: ReturnTyp
 describe('openProfileEditors', () => {
   it('opens an editor at the default label and returns its focus presentation', () => {
     const { managers, edit } = makeManagers();
-    const opened = openProfileEditors([{ path: '$root/product/backlog/features.md', tab: { number: 2, focus: true } }], managers, 'agent', [], 1, identityColor);
+    const opened = openProfileEditors([{ path: '$root/product/backlog/features.md', number: 2, focus: true }], managers, 'agent', [], 1, identityColor);
 
     expect(edit).toHaveBeenCalledWith('edit $root/product/backlog/features.md', '$root/product/backlog/features.md', 'agent', undefined);
     expect(opened).toEqual([{ label: 'editor', number: 2, focus: true, pane: undefined }]);
@@ -51,7 +51,7 @@ describe('openProfileEditors', () => {
   it('carries authored pane placement into the launch candidate', () => {
     const { managers } = makeManagers();
     const opened = openProfileEditors([
-      { path: 'notes.md', tab: { pane: 'right' } },
+      { path: 'notes.md', pane: 'right' },
     ], managers, 'agent', [], 1, identityColor);
     expect(opened).toEqual([
       { label: 'editor', number: undefined, focus: undefined, pane: 'right' },
@@ -97,7 +97,7 @@ describe('openProfileEditors', () => {
     const colorForGroup = (group: number, fallback: string): string =>
       managers.tab.tabs.find((t) => t.group === group)?.groupColor ?? fallback;
 
-    openProfileEditors([{ path: './notes.txt', in: 'janus-2', tab: { group: 1 } }], managers, 'janus-2', [], 3, colorForGroup);
+    openProfileEditors([{ path: './notes.txt', in: 'janus-2', group: 1 }], managers, 'janus-2', [], 3, colorForGroup);
 
     expect(managers.tab.tabs.map((t) => ({ label: t.label, group: t.group }))).toEqual([
       { label: 'janus', group: 1 },

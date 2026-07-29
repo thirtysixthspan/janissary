@@ -56,6 +56,9 @@ export type BufferLine = {
 export type HarnessView = {
   name: string; program: string; ptyId: string; status: 'running' | 'exited' | 'provisioning'; exitCode?: number;
   destination?: string; model?: string; effort?: string;
+  // Set only on an ssh tab: the non-destination tokens of the original `ssh …` invocation, kept so
+  // `profile save` can write an entry that reconnects with the same flags.
+  sshOptions?: string[];
   // Set only when a `-w` launch's workspace clone fails; the tab closes shortly after.
   provisionError?: string;
 };

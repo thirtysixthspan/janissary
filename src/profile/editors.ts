@@ -5,9 +5,10 @@ import type { MainAreaCandidate } from './focus.js';
 
 // A newly created editor tab inherits its group from whichever tab is currently active in the
 // TabManager (see `addEditorTab`), which does not necessarily match this entry's own authored
-// `tab.group` (or the launch's default group, when the entry authors none). When it doesn't,
+// `group` (or the launch's default group, when the entry authors none). When it doesn't,
 // relocate the tab into its intended group, preserving that group's contiguity in the tab strip.
-function relocateToGroup(managers: Managers, targetGroup: number, groupColor: string): void {
+// Shared with `view-tabs.ts`, whose four tab kinds are opened the same way.
+export function relocateToGroup(managers: Managers, targetGroup: number, groupColor: string): void {
   const index = managers.tab.activeTab;
   const tab = managers.tab.tabs[index];
   if (!tab || tab.group === targetGroup) return;
@@ -28,15 +29,13 @@ export function openProfileEditors(
     const before = managers.tab.tabs.length;
     managers.openFile.edit(`edit ${entry.path}`, entry.path, label, entry.line);
     if (managers.tab.tabs.length > before) {
-      const targetGroup = entry.tab?.group ?? defaultGroup;
+      const targetGroup = entry.group ?? defaultGroup;
       const dotColor = managers.tab.tabs[managers.tab.activeTab]?.dotColor ?? '';
       relocateToGroup(managers, targetGroup, colorForGroup(targetGroup, dotColor));
     }
     const editorLabel = managers.tab.tabs[managers.tab.activeTab]?.label;
     if (editorLabel) {
-      opened.push({
-        label: editorLabel, number: entry.tab?.number, focus: entry.tab?.focus, pane: entry.tab?.pane,
-      });
+      opened.push({ label: editorLabel, number: entry.number, focus: entry.focus, pane: entry.pane });
     }
     notes.push('Opened editor tab.');
   }

@@ -378,7 +378,7 @@ describe('HarnessManager auto-approve', () => {
     const { managers } = makeManagers();
     const manager = new HarnessManager(managers);
     expect(manager.openFromProfile(
-      { name: 'claude', type: 'claude', workspace: true, autoApprove: true }, 'claude', 2, '#fff',
+      { name: 'claude', tool: 'claude', workspace: true, autoApprove: true }, 'claude', 2, '#fff',
     )).toBeUndefined();
     messageBus.emit('pty', { type: 'data', id: 'pty-1', data: GATE });
     await vi.advanceTimersByTimeAsync(1001);
@@ -389,7 +389,7 @@ describe('HarnessManager auto-approve', () => {
     const { managers, tabs } = makeManagers();
     const manager = new HarnessManager(managers);
     manager.openFromProfile(
-      { name: 'claude', type: 'claude', workspace: true, offline: true }, 'claude', 2, '#fff',
+      { name: 'claude', tool: 'claude', workspace: true, offline: true }, 'claude', 2, '#fff',
     );
     expect(tabs.at(-1)?.offline).toBe(true);
   });
@@ -398,7 +398,7 @@ describe('HarnessManager auto-approve', () => {
     const { managers, tabs } = makeManagers();
     const manager = new HarnessManager(managers);
     manager.openFromProfile(
-      { name: 'claude', type: 'claude', workspace: true, autoApprove: true }, 'claude', 2, '#fff',
+      { name: 'claude', tool: 'claude', workspace: true, autoApprove: true }, 'claude', 2, '#fff',
     );
     expect(tabs.at(-1)?.autoApprove).toBe(true);
   });
@@ -409,7 +409,7 @@ describe('HarnessManager auto-approve', () => {
     (managers.tab as unknown as { setCwd: typeof setCwd }).setCwd = setCwd;
     const manager = new HarnessManager(managers);
     manager.openFromProfile(
-      { name: 'claude', type: 'claude', workspace: true }, 'claude', 2, '#fff',
+      { name: 'claude', tool: 'claude', workspace: true }, 'claude', 2, '#fff',
     );
     expect(setCwd).toHaveBeenCalledWith('claude', '/workspace/claude');
   });
@@ -498,7 +498,7 @@ describe('HarnessManager model/effort', () => {
     const { managers } = makeManagers();
     const manager = new HarnessManager(managers);
     expect(manager.openFromProfile(
-      { name: 'claude', type: 'claude', effort: 'high' }, 'claude', 2, '#fff',
+      { name: 'claude', tool: 'claude', effort: 'high' }, 'claude', 2, '#fff',
     )).toBeUndefined();
     expect(managers.pty.spawn).toHaveBeenCalledWith(
       'claude', 'claude', "claude --effort 'high'", expect.any(String), undefined, false,
@@ -613,7 +613,7 @@ describe('HarnessManager busy/ready status', () => {
   it('builds no busy/ready callback for a harness with no detector, leaving busy set', async () => {
     const { managers } = makeManagers();
     const manager = new HarnessManager(managers);
-    expect(manager.openFromProfile({ name: 'mystery', type: 'mystery' }, 'mystery', 2, '#fff')).toBeUndefined();
+    expect(manager.openFromProfile({ name: 'mystery', tool: 'mystery' }, 'mystery', 2, '#fff')).toBeUndefined();
     vi.clearAllMocks();
     await settle('idle-looking output');
     await settle('still idle');
@@ -739,7 +739,7 @@ describe('HarnessManager workspace provisioning', () => {
     const { managers, tabs } = pendingWorkspaceLaunch();
     const manager = new HarnessManager(managers);
     expect(manager.openFromProfile(
-      { name: 'claude', type: 'claude', workspace: true }, 'claude', 2, '#fff',
+      { name: 'claude', tool: 'claude', workspace: true }, 'claude', 2, '#fff',
     )).toBeUndefined();
     expect(tabs.at(-1)!.harness).toMatchObject({ ptyId: '', status: 'provisioning' });
     expect(managers.pty.spawn).not.toHaveBeenCalled();
@@ -749,7 +749,7 @@ describe('HarnessManager workspace provisioning', () => {
     const { managers, tabs, resolve } = pendingWorkspaceLaunch();
     const manager = new HarnessManager(managers);
     expect(manager.openFromProfile(
-      { name: 'claude', type: 'claude', workspace: true }, 'claude', 2, '#fff',
+      { name: 'claude', tool: 'claude', workspace: true }, 'claude', 2, '#fff',
     )).toBeUndefined();
     resolve();
     await vi.advanceTimersByTimeAsync(0);

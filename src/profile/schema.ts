@@ -38,30 +38,26 @@ function checkPane(obj: Record<string, unknown>, loc: string): string[] {
   return [`${loc}: pane must be "left" or "right"`];
 }
 
-// The nested `tab` presentation object, shared by agent and harness entries.
-function tabProblems(tab: unknown, loc: string): string[] {
-  if (tab === undefined) return [];
-  if (!isObject(tab)) return [`${loc}.tab must be an object`];
+// The flat tab presentation fields, shared by every entry type that produces a main-area tab.
+function presentationProblems(value: Record<string, unknown>, loc: string): string[] {
   return [
-    ...checkField(tab, 'color', 'string', `${loc}.tab`),
-    ...checkField(tab, 'number', 'number', `${loc}.tab`),
-    ...checkField(tab, 'focus', 'boolean', `${loc}.tab`),
-    ...checkField(tab, 'group', 'number', `${loc}.tab`),
-    ...checkField(tab, 'groupColor', 'string', `${loc}.tab`),
-    ...checkPane(tab, `${loc}.tab`),
+    ...checkField(value, 'color', 'string', loc),
+    ...checkField(value, 'number', 'number', loc),
+    ...checkField(value, 'focus', 'boolean', loc),
+    ...checkField(value, 'group', 'number', loc),
+    ...checkField(value, 'groupColor', 'string', loc),
+    ...checkPane(value, loc),
   ];
 }
 
-function agentProblems(value: unknown, loc: string): string[] {
-  if (!isObject(value)) return [`${loc} must be an object`];
-  return [...checkField(value, 'name', 'string', loc, true), ...tabProblems(value.tab, loc)];
+function agentProblems(value: Record<string, unknown>, loc: string): string[] {
+  return checkField(value, 'name', 'string', loc, true);
 }
 
-function harnessProblems(value: unknown, loc: string): string[] {
-  if (!isObject(value)) return [`${loc} must be an object`];
+function harnessProblems(value: Record<string, unknown>, loc: string): string[] {
   return [
     ...checkField(value, 'name', 'string', loc, true),
-    ...checkField(value, 'type', 'string', loc, true),
+    ...checkField(value, 'tool', 'string', loc, true),
     ...checkField(value, 'model', 'string', loc),
     ...checkField(value, 'effort', 'string', loc),
     ...checkField(value, 'cwd', 'string', loc),
@@ -70,8 +66,41 @@ function harnessProblems(value: unknown, loc: string): string[] {
     ...checkField(value, 'offline', 'boolean', loc),
     ...checkField(value, 'run', 'string[]', loc),
     ...checkField(value, 'schedule', 'string[]', loc),
-    ...tabProblems(value.tab, loc),
   ];
+}
+
+// The ten kinds of tab a profile may declare. Listed once, so the dispatcher's default arm and the
+// message it produces cannot drift apart.
+const TAB_TYPES: string[] = [
+  'agent', 'harness', 'editor', 'files', 'notifications', 'schedules', 'image', 'markdown', 'page', 'ssh',
+];
+
+// The kinds that occupy a place in the tab strip, and so carry the flat presentation fields. A
+// docked `files`/`schedules` entry has no strip position, and a `notifications` entry's own `focus`
+// means "visible in the sidebar switcher" rather than "active after launch".
+const PRESENTATION_TYPES = new Set(['agent', 'harness', 'editor', 'image', 'markdown', 'page', 'ssh']);
+
+// One element of the `tabs` array: an object carrying a recognized `type`, the presentation fields
+// its type allows, and whatever else that type requires.
+function tabProblems(value: unknown, loc: string): string[] {
+  if (!isObject(value)) return [`${loc} must be an object`];
+  const type = value.type;
+  if (typeof type !== 'string' || !TAB_TYPES.includes(type)) {
+    return [`${loc}: type must be one of ${TAB_TYPES.join(', ')}`];
+  }
+  const shared = PRESENTATION_TYPES.has(type) ? presentationProblems(value, loc) : [];
+  // `image` and `markdown` reach the default arm: both are fully checked by `pathProblems`.
+  switch (type) {
+  case 'agent': { return [...shared, ...agentProblems(value, loc)]; }
+  case 'harness': { return [...shared, ...harnessProblems(value, loc)]; }
+  case 'editor': { return [...shared, ...editorProblems(value, loc)]; }
+  case 'files': { return filesProblems(value, loc); }
+  case 'notifications': { return notificationsProblems(value, loc); }
+  case 'schedules': { return schedulesProblems(value, loc); }
+  case 'page': { return [...shared, ...pageProblems(value, loc)]; }
+  case 'ssh': { return [...shared, ...sshProblems(value, loc)]; }
+  default: { return [...shared, ...pathProblems(value, loc)]; }
+  }
 }
 
 function monitorProblems(value: unknown, loc: string): string[] {
@@ -83,29 +112,40 @@ function monitorProblems(value: unknown, loc: string): string[] {
   ];
 }
 
-function filesProblems(value: unknown, loc: string): string[] {
-  if (!isObject(value)) return [`${loc} must be an object`];
+function filesProblems(value: Record<string, unknown>, loc: string): string[] {
   return [...checkDock(value, loc), ...checkField(value, 'in', 'string', loc), ...checkField(value, 'path', 'string', loc)];
 }
 
-function editorsProblems(value: unknown, loc: string): string[] {
-  if (!isObject(value)) return [`${loc} must be an object`];
+function editorProblems(value: Record<string, unknown>, loc: string): string[] {
   return [
     ...checkField(value, 'path', 'string', loc, true),
     ...checkField(value, 'in', 'string', loc),
     ...checkField(value, 'line', 'number', loc),
-    ...tabProblems(value.tab, loc),
   ];
 }
 
-function notificationsProblems(value: unknown, loc: string): string[] {
-  if (!isObject(value)) return [`${loc} must be an object`];
+function notificationsProblems(value: Record<string, unknown>, loc: string): string[] {
   return [...checkDock(value, loc), ...checkField(value, 'focus', 'boolean', loc)];
 }
 
-function schedulesProblems(value: unknown, loc: string): string[] {
-  if (!isObject(value)) return [`${loc} must be an object`];
+function schedulesProblems(value: Record<string, unknown>, loc: string): string[] {
   return checkDock(value, loc);
+}
+
+// An image or markdown entry names the file it opens; neither authors a label.
+function pathProblems(value: Record<string, unknown>, loc: string): string[] {
+  return checkField(value, 'path', 'string', loc, true);
+}
+
+function pageProblems(value: Record<string, unknown>, loc: string): string[] {
+  return checkField(value, 'url', 'string', loc, true);
+}
+
+function sshProblems(value: Record<string, unknown>, loc: string): string[] {
+  return [
+    ...checkField(value, 'destination', 'string', loc, true),
+    ...checkField(value, 'options', 'string[]', loc),
+  ];
 }
 
 function windowProblems(value: unknown): string[] {
@@ -143,13 +183,8 @@ function sectionProblems(
 export function collectProfileProblems(root: unknown): string[] {
   if (!isObject(root)) return ['profile must be a JSON object'];
   const problems = [
-    ...sectionProblems(root, 'agents', agentProblems),
-    ...sectionProblems(root, 'harnesses', harnessProblems),
+    ...sectionProblems(root, 'tabs', tabProblems),
     ...sectionProblems(root, 'monitors', monitorProblems),
-    ...sectionProblems(root, 'files', filesProblems),
-    ...sectionProblems(root, 'editors', editorsProblems),
-    ...sectionProblems(root, 'notifications', notificationsProblems),
-    ...sectionProblems(root, 'schedules', schedulesProblems),
   ];
   if (root.layout !== undefined) problems.push(...layoutProblems(root.layout));
   return problems;

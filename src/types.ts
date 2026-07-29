@@ -12,10 +12,10 @@ export type {
 export type { AgentState, AgentCommand } from './agent/types.js';
 
 export type {
-  ProfileHarnessEntry, ProfileAgentEntry, ProfileEntry, ProfileTab, ProfileAgentFile, ProfileHarnessFile,
-  ProfileMonitor, ProfileMonitorFile, ProfileFilesEntry, ProfileEditorsEntry,
-  ProfileNotificationsEntry, ProfileSchedulesEntry, ProfileLayout, ProfileLayoutFile, ProfileFile,
-  LoadedProfile, ProfileParsed, ProfileRow,
+  ProfileHarnessEntry, ProfileAgentEntry, ProfileEntry, ProfileTabFile, ProfileTabPresentation,
+  ProfileTabRuntime, ProfileViewEntry, ProfileMonitor, ProfileMonitorFile, ProfileFilesEntry,
+  ProfileEditorsEntry, ProfileNotificationsEntry, ProfileSchedulesEntry, ProfileLayout,
+  ProfileLayoutFile, ProfileFile, LoadedProfile, ProfileParsed, ProfileRow,
 } from './profile/types.js';
 
 export type { TimeOfDay, ScheduleEntry, ScheduleParseResult } from './schedule/types.js';

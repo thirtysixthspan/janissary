@@ -17,6 +17,14 @@ function makeManagers(tabs: Tab[]): { managers: Managers; harnessOpen: ReturnTyp
     tabs = [...tabs, makeTab(`editor-${tabs.length}`, 'green', tabs.length + 1, [], [], undefined, group, groupColor)];
     activeTab = tabs.length - 1;
   });
+  // `open <image>` in this mock produces an image tab carrying the resolved path, which is the
+  // identity `openProfileViewTabs` matches on.
+  const run = vi.fn((command: string) => {
+    const target = command.replace(/^open\s+/, '').replace('$root', '/proj');
+    const tab = makeTab(`image-${tabs.length}`, 'purple', tabs.length + 1, [], [], undefined, 1, 'purple');
+    tabs = [...tabs, { ...tab, view: 'image' as const, image: { name: 'a.png', path: target, size: '1KB', url: '/open/1' } }];
+    activeTab = tabs.length - 1;
+  });
   const managers = {
     tab: {
       get tabs() { return tabs; },
@@ -42,21 +50,24 @@ function makeManagers(tabs: Tab[]): { managers: Managers; harnessOpen: ReturnTyp
     schedule: { set: vi.fn() },
     monitor: { stop: vi.fn(() => true), start: vi.fn(() => null) },
     fileNavigator: { open: fileNavigatorOpen },
-    openFile: { edit },
+    openFile: { edit, run },
   } as unknown as Managers;
   return { managers, harnessOpen, fileNavigatorOpen, edit };
 }
 
 function loaded(entries: ProfileEntry[], extra: Partial<LoadedProfile> = {}): LoadedProfile {
-  return { entries, monitors: [], files: [], editors: [], notifications: [], schedules: [], layout: null, ...extra };
+  return {
+    entries, monitors: [], files: [], editors: [], notifications: [], schedules: [], views: [],
+    layout: null, ...extra,
+  };
 }
 
 describe('openProfileEntries — editor tabs and focus', () => {
   it('opens editors after entries and activates the lowest-numbered focused entry', () => {
     const janus = makeTab('janus', 'red', 1, [], [], undefined, 1, 'red');
     const { managers, harnessOpen, edit } = makeManagers([janus]);
-    const first: ProfileHarnessEntry = { name: 'first', type: 'claude', number: 2, focus: true };
-    const second: ProfileHarnessEntry = { name: 'second', type: 'claude', number: 1, focus: true };
+    const first: ProfileHarnessEntry = { name: 'first', tool: 'claude', number: 2, focus: true };
+    const second: ProfileHarnessEntry = { name: 'second', tool: 'claude', number: 1, focus: true };
 
     openProfileEntries(loaded([first, second], { editors: [{ path: '$root/notes.md' }] }), managers, 'demo', 'janus', () => {});
 
@@ -71,9 +82,9 @@ describe('openProfileEntries — editor tabs and focus', () => {
   it('batches authored pane placement before applying the focus winner', () => {
     const janus = makeTab('janus', 'red', 1, [], [], undefined, 1, 'red');
     const { managers } = makeManagers([janus]);
-    const left: ProfileHarnessEntry = { name: 'left', type: 'claude', number: 2 };
+    const left: ProfileHarnessEntry = { name: 'left', tool: 'claude', number: 2 };
     const right: ProfileHarnessEntry = {
-      name: 'right', type: 'claude', number: 1, pane: 'right', focus: true,
+      name: 'right', tool: 'claude', number: 1, pane: 'right', focus: true,
     };
 
     openProfileEntries(loaded([left, right]), managers, 'demo', 'janus', () => {});
@@ -89,7 +100,7 @@ describe('openProfileEntries — editor tabs and focus', () => {
   it('keeps the first newly opened tab active when nothing declares focus', () => {
     const janus = makeTab('janus', 'red', 1, [], [], undefined, 1, 'red');
     const { managers } = makeManagers([janus]);
-    const entry: ProfileHarnessEntry = { name: 'first', type: 'claude' };
+    const entry: ProfileHarnessEntry = { name: 'first', tool: 'claude' };
 
     openProfileEntries(loaded([entry]), managers, 'demo', 'janus', () => {});
 
@@ -101,22 +112,36 @@ describe('openProfileEntries — tab strip ordering', () => {
   it('interleaves editor tabs among harness/agent entries by tab number', () => {
     const janus = makeTab('janus', 'red', 1, [], [], undefined, 1, 'red');
     const { managers } = makeManagers([janus]);
-    const harnessEntry: ProfileHarnessEntry = { name: 'first', type: 'claude', number: 1 };
+    const harnessEntry: ProfileHarnessEntry = { name: 'first', tool: 'claude', number: 1 };
     const agentEntry: AgentState = { name: 'third', dotColor: 'blue', active: false, number: 3 };
 
     openProfileEntries(
-      loaded([harnessEntry, agentEntry], { editors: [{ path: '$root/notes.md', tab: { number: 2 } }] }),
+      loaded([harnessEntry, agentEntry], { editors: [{ path: '$root/notes.md', number: 2 }] }),
       managers, 'demo', 'janus', () => {},
     );
 
     expect(managers.tab.tabs.map((t) => t.label)).toEqual(['janus', 'first', 'editor-3', 'third']);
   });
 
+  it('interleaves a view tab among harness entries by tab number', () => {
+    const janus = makeTab('janus', 'red', 1, [], [], undefined, 1, 'red');
+    const { managers } = makeManagers([janus]);
+    const first: ProfileHarnessEntry = { name: 'first', tool: 'claude', number: 1, group: 2 };
+    const third: ProfileHarnessEntry = { name: 'third', tool: 'claude', number: 3, group: 2 };
+
+    openProfileEntries(
+      loaded([first, third], { views: [{ type: 'image', path: '$root/a.png', number: 2, group: 2 }] }),
+      managers, 'demo', 'janus', () => {},
+    );
+
+    expect(managers.tab.tabs.map((t) => t.label)).toEqual(['janus', 'first', 'image-3', 'third']);
+  });
+
   it('leaves a same-group tab with no authored number in its relative position', () => {
     const janus = makeTab('janus', 'red', 1, [], [], undefined, 1, 'red');
     const { managers } = makeManagers([janus]);
-    const first: ProfileHarnessEntry = { name: 'first', type: 'claude' };
-    const numbered: ProfileHarnessEntry = { name: 'numbered', type: 'claude', number: 1 };
+    const first: ProfileHarnessEntry = { name: 'first', tool: 'claude' };
+    const numbered: ProfileHarnessEntry = { name: 'numbered', tool: 'claude', number: 1 };
 
     openProfileEntries(loaded([first, numbered]), managers, 'demo', 'janus', () => {});
 
@@ -129,8 +154,8 @@ describe('openProfileEntries — tab strip ordering', () => {
     const janus = makeTab('janus', 'red', 1, [], [], undefined, 1, 'red');
     const other = makeTab('other', 'green', 2, [], [], undefined, 2, 'green');
     const { managers } = makeManagers([janus, other]);
-    const first: ProfileHarnessEntry = { name: 'first', type: 'claude', number: 2 };
-    const second: ProfileHarnessEntry = { name: 'second', type: 'claude', number: 1 };
+    const first: ProfileHarnessEntry = { name: 'first', tool: 'claude', number: 2 };
+    const second: ProfileHarnessEntry = { name: 'second', tool: 'claude', number: 1 };
 
     openProfileEntries(loaded([first, second]), managers, 'demo', 'janus', () => {});
 
@@ -144,7 +169,7 @@ describe('openProfileEntries — group authoring', () => {
   it('uses the next free group when no entry authors one', () => {
     const janus = makeTab('janus', 'red', 1, [], [], undefined, 1, 'red');
     const { managers, harnessOpen } = makeManagers([janus]);
-    const entry: ProfileHarnessEntry = { name: 'claude', type: 'claude' };
+    const entry: ProfileHarnessEntry = { name: 'claude', tool: 'claude' };
 
     openProfileEntries(loaded([entry]), managers, 'claude', 'janus', () => {});
 
@@ -154,7 +179,7 @@ describe('openProfileEntries — group authoring', () => {
   it('uses a harness entry\'s authored group instead of the next free one', () => {
     const janus = makeTab('janus', 'red', 1, [], [], undefined, 1, 'red');
     const { managers, harnessOpen } = makeManagers([janus]);
-    const entry: ProfileHarnessEntry = { name: 'claude', type: 'claude', group: 1 };
+    const entry: ProfileHarnessEntry = { name: 'claude', tool: 'claude', group: 1 };
 
     openProfileEntries(loaded([entry]), managers, 'claude', 'janus', () => {});
 
@@ -165,9 +190,9 @@ describe('openProfileEntries — group authoring', () => {
     const janus = makeTab('janus', 'red', 1, [], [], undefined, 1, 'red');
     const other = makeTab('other', 'yellow', 2, [], [], undefined, 5, 'yellow');
     const { managers, harnessOpen } = makeManagers([janus, other]);
-    const joinsJanus: ProfileHarnessEntry = { name: 'a', type: 'claude', group: 1 };
-    const joinsOther: ProfileHarnessEntry = { name: 'b', type: 'claude', group: 5 };
-    const noGroup: ProfileHarnessEntry = { name: 'c', type: 'claude' };
+    const joinsJanus: ProfileHarnessEntry = { name: 'a', tool: 'claude', group: 1 };
+    const joinsOther: ProfileHarnessEntry = { name: 'b', tool: 'claude', group: 5 };
+    const noGroup: ProfileHarnessEntry = { name: 'c', tool: 'claude' };
 
     openProfileEntries(loaded([joinsJanus, joinsOther, noGroup]), managers, 'demo', 'janus', () => {});
 
@@ -201,7 +226,7 @@ describe('openProfileEntries — profile-level file navigator', () => {
   it('opens a file navigator rooted at the first newly opened tab once entries are up', () => {
     const janus = makeTab('janus', 'red', 1, [], [], undefined, 1, 'red');
     const { managers, fileNavigatorOpen } = makeManagers([janus]);
-    const entry: ProfileHarnessEntry = { name: 'claude', type: 'claude', group: 1 };
+    const entry: ProfileHarnessEntry = { name: 'claude', tool: 'claude', group: 1 };
 
     openProfileEntries(loaded([entry], { files: [{ dock: 'left' }] }), managers, 'claude', 'janus', () => {});
 
@@ -211,7 +236,7 @@ describe('openProfileEntries — profile-level file navigator', () => {
   it('opens no file navigator when the profile has no files section', () => {
     const janus = makeTab('janus', 'red', 1, [], [], undefined, 1, 'red');
     const { managers, fileNavigatorOpen } = makeManagers([janus]);
-    const entry: ProfileHarnessEntry = { name: 'claude', type: 'claude', group: 1 };
+    const entry: ProfileHarnessEntry = { name: 'claude', tool: 'claude', group: 1 };
 
     openProfileEntries(loaded([entry]), managers, 'claude', 'janus', () => {});
 
@@ -223,7 +248,7 @@ describe('openProfileEntries — cwd expansion', () => {
   it('expands a $root-relative harness entry cwd to an absolute path before opening', () => {
     const janus = makeTab('janus', 'red', 1, [], [], undefined, 1, 'red');
     const { managers, harnessOpen } = makeManagers([janus]);
-    const entry: ProfileHarnessEntry = { name: 'claude', type: 'claude', cwd: '$root/src' };
+    const entry: ProfileHarnessEntry = { name: 'claude', tool: 'claude', cwd: '$root/src' };
 
     openProfileEntries(loaded([entry]), managers, 'claude', 'janus', () => {});
 
@@ -233,7 +258,7 @@ describe('openProfileEntries — cwd expansion', () => {
   it('leaves a legacy absolute harness entry cwd unchanged', () => {
     const janus = makeTab('janus', 'red', 1, [], [], undefined, 1, 'red');
     const { managers, harnessOpen } = makeManagers([janus]);
-    const entry: ProfileHarnessEntry = { name: 'claude', type: 'claude', cwd: '/elsewhere/src' };
+    const entry: ProfileHarnessEntry = { name: 'claude', tool: 'claude', cwd: '/elsewhere/src' };
 
     openProfileEntries(loaded([entry]), managers, 'claude', 'janus', () => {});
 
@@ -255,7 +280,7 @@ describe('openProfileEntries — semantic launch-time checks (Decision 7)', () =
   it('skips a structurally valid entry naming an unknown model, without opening it', () => {
     const janus = makeTab('janus', 'red', 1, [], [], undefined, 1, 'red');
     const { managers, harnessOpen } = makeManagers([janus]);
-    const entry: ProfileHarnessEntry = { name: 'claude', type: 'claude', model: 'not-a-real-model' };
+    const entry: ProfileHarnessEntry = { name: 'claude', tool: 'claude', model: 'not-a-real-model' };
     const messages: string[] = [];
 
     openProfileEntries(loaded([entry]), managers, 'claude', 'janus', (text) => { messages.push(text); });
@@ -268,19 +293,19 @@ describe('openProfileEntries — semantic launch-time checks (Decision 7)', () =
   it('launches a codex entry with autoApprove, reaching openFromProfile', () => {
     const janus = makeTab('janus', 'red', 1, [], [], undefined, 1, 'red');
     const { managers, harnessOpen } = makeManagers([janus]);
-    const entry: ProfileHarnessEntry = { name: 'codex', type: 'codex', autoApprove: true };
+    const entry: ProfileHarnessEntry = { name: 'codex', tool: 'codex', autoApprove: true };
     const messages: string[] = [];
 
     openProfileEntries(loaded([entry]), managers, 'codex', 'janus', (text) => { messages.push(text); });
 
-    expect(harnessOpen).toHaveBeenCalledWith(expect.objectContaining({ type: 'codex', autoApprove: true }), 'codex', expect.any(Number), expect.any(String));
+    expect(harnessOpen).toHaveBeenCalledWith(expect.objectContaining({ tool: 'codex', autoApprove: true }), 'codex', expect.any(Number), expect.any(String));
     expect(messages.join(' ')).not.toMatch(/Skipped/);
   });
 
   it('skips an opencode entry with autoApprove, reporting the updated message', () => {
     const janus = makeTab('janus', 'red', 1, [], [], undefined, 1, 'red');
     const { managers, harnessOpen } = makeManagers([janus]);
-    const entry: ProfileHarnessEntry = { name: 'opencode', type: 'opencode', autoApprove: true };
+    const entry: ProfileHarnessEntry = { name: 'opencode', tool: 'opencode', autoApprove: true };
     const messages: string[] = [];
 
     openProfileEntries(loaded([entry]), managers, 'opencode', 'janus', (text) => { messages.push(text); });
@@ -295,7 +320,7 @@ describe('openProfileEntries — effort field', () => {
   it('opens an entry with an effort set successfully, regardless of the value', () => {
     const janus = makeTab('janus', 'red', 1, [], [], undefined, 1, 'red');
     const { managers, harnessOpen } = makeManagers([janus]);
-    const entry: ProfileHarnessEntry = { name: 'claude', type: 'claude', effort: 'not-a-real-effort-level' };
+    const entry: ProfileHarnessEntry = { name: 'claude', tool: 'claude', effort: 'not-a-real-effort-level' };
     const messages: string[] = [];
 
     openProfileEntries(loaded([entry]), managers, 'claude', 'janus', (text) => { messages.push(text); });

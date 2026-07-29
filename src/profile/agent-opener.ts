@@ -2,6 +2,7 @@ import { distinctColor, renumberTabs } from '../tab/index.js';
 import { startProfileMonitors } from './monitors.js';
 import { openProfileFiles } from './files.js';
 import { openProfileEditors } from './editors.js';
+import { openProfileViewTabs } from './view-tabs.js';
 import { focusedMainAreaLabel, type MainAreaCandidate } from './focus.js';
 import { openProfileNotifications } from './notifications.js';
 import { openProfileSchedules } from './schedules.js';
@@ -69,7 +70,10 @@ export function openProfileEntries(
   // their tabs are part of the list by the time monitor targets are resolved below.
   const firstNewLabel = opened.length > 0 ? managers.tab.tabs[firstNew]?.label : undefined;
   openProfileFiles(loaded.files, managers, firstNewLabel, notes);
-  candidates.push(...openProfileEditors(loaded.editors, managers, firstNewLabel, notes, defaultGroup, colorForGroup));
+  candidates.push(
+    ...openProfileEditors(loaded.editors, managers, firstNewLabel, notes, defaultGroup, colorForGroup),
+    ...openProfileViewTabs(loaded.views, managers, issuingLabel, defaultGroup, colorForGroup, notes),
+  );
   // Reorder each group touched by this launch so harness/agent entries and editor tabs sharing a
   // group read in ascending `number` order, instead of editors always trailing every entry (see
   // profiles.md). Entries/editors may land in different groups (their own authored `group`), so
@@ -97,5 +101,5 @@ export function openProfileEntries(
   if (opened.length > 0) parts.push(`Launched profile "${name}": ${opened.join(', ')}.`);
   if (notes.length > 0) parts.push(notes.join(' '));
   if (skipped.length > 0) parts.push(`Skipped: ${skipped.join('; ')}.`);
-  out(parts.length > 0 ? parts.join(' ') : `Profile "${name}" has no agents to open.`);
+  out(parts.length > 0 ? parts.join(' ') : `Profile "${name}" has no tabs to open.`);
 }

@@ -9,6 +9,10 @@ export type SaveSummary = {
   agents: number;
   harnesses: number;
   editors: number;
+  images: number;
+  markdown: number;
+  pages: number;
+  ssh: number;
   monitors: number;
   dockedViews: number;
   skipped: string[];
@@ -34,13 +38,8 @@ export async function saveProfile(name: string, managers: Managers): Promise<Sav
   const monitors = buildMonitors(managers);
 
   const root: ProfileFile = {};
-  if (state.agentEntries.length > 0) root.agents = state.agentEntries;
-  if (state.harnessEntries.length > 0) root.harnesses = state.harnessEntries;
-  if (state.editorEntries.length > 0) root.editors = state.editorEntries;
+  if (state.tabEntries.length > 0) root.tabs = state.tabEntries;
   if (monitors.length > 0) root.monitors = monitors;
-  if (state.filesEntries.length > 0) root.files = state.filesEntries;
-  if (state.notificationsEntries.length > 0) root.notifications = state.notificationsEntries;
-  if (state.schedulesEntries.length > 0) root.schedules = state.schedulesEntries;
   root.layout = layout;
   writeFileSync(file, JSON.stringify(root, null, 2));
 
@@ -48,6 +47,10 @@ export async function saveProfile(name: string, managers: Managers): Promise<Sav
     agents: state.agents,
     harnesses: state.harnesses,
     editors: state.editors,
+    images: state.images,
+    markdown: state.markdown,
+    pages: state.pages,
+    ssh: state.ssh,
     monitors: monitors.length,
     dockedViews: state.dockedViews,
     skipped: state.skipped,
@@ -55,14 +58,28 @@ export async function saveProfile(name: string, managers: Managers): Promise<Sav
   };
 }
 
+// `N <label>`, pluralized by appending `s` — the shape every count in the report shares except
+// "harnesses", which supplies its own plural.
+function countPart(count: number, label: string): string[] {
+  return count > 0 ? [`${count} ${label}${count === 1 ? '' : 's'}`] : [];
+}
+
 export function formatSaveSummary(name: string, summary: SaveSummary): string {
-  const parts: string[] = [];
-  if (summary.agents > 0) parts.push(`${summary.agents} agent${summary.agents === 1 ? '' : 's'}`);
-  if (summary.harnesses > 0) parts.push(`${summary.harnesses} harness${summary.harnesses === 1 ? '' : 'es'}`);
-  if (summary.editors > 0) parts.push(`${summary.editors} editor tab${summary.editors === 1 ? '' : 's'}`);
-  parts.push('layout');
-  if (summary.monitors > 0) parts.push(`${summary.monitors} monitor${summary.monitors === 1 ? '' : 's'}`);
-  if (summary.dockedViews > 0) parts.push(`${summary.dockedViews} docked tab${summary.dockedViews === 1 ? '' : 's'}`);
+  const harnesses = summary.harnesses > 0
+    ? [`${summary.harnesses} harness${summary.harnesses === 1 ? '' : 'es'}`]
+    : [];
+  const parts = [
+    ...countPart(summary.agents, 'agent'),
+    ...harnesses,
+    ...countPart(summary.editors, 'editor tab'),
+    ...countPart(summary.images, 'image tab'),
+    ...countPart(summary.markdown, 'markdown tab'),
+    ...countPart(summary.pages, 'page tab'),
+    ...countPart(summary.ssh, 'ssh tab'),
+    'layout',
+    ...countPart(summary.monitors, 'monitor'),
+    ...countPart(summary.dockedViews, 'docked tab'),
+  ];
 
   const lines = [`Saved profile "${name}": ${parts.join(', ')}.`];
   if (summary.notes.length > 0) lines.push(summary.notes.join(' '));
