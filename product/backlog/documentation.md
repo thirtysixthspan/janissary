@@ -2,8 +2,6 @@
 
 ## ready
 
-* agent-command-queue — flagged by git activity on queueing and the never-queue command list; not yet evaluated (over this run's limit)
-
 * monitoring — flagged by sustained `feat(monitor)` activity since the last docs pass; not yet evaluated (over this run's limit)
 
 * image-tab (3/10) — `open <image>` focuses the existing image tab instead of creating a duplicate, but this recent behavior is not stated in `documentation/user-documentation/tab-types/image-viewer.md` (verified against the image opener behavior and `product/specs/open.md`)
@@ -16,6 +14,7 @@
 
 ## resolved
 
+* agent-command-queue — documented in documentation/user-documentation/command-bar/queue.md (removed 2026-07-29)
 * keyboard-navigation — documented in documentation/user-documentation/getting-started/keyboard.md (removed 2026-07-29)
 * markdown-rendering — documented in documentation/user-documentation/advanced-agents/markdown-rendering.md (removed 2026-07-29)
 * ssh-tab — documented in documentation/user-documentation/advanced-agents/harness.md (removed 2026-07-29)
