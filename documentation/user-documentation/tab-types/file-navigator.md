@@ -79,6 +79,11 @@ Inside a git repository, a file's name is colored by its git status: **green** f
 | Header × button | Shown while docked; closes the tree (a docked tree has no strip × of its own) |
 | Press a row, drag, and release over a directory (or any file inside it) | Moves the dragged file or directory into that directory on disk |
 
+Click a row to replace the selection. Hold `Shift` while you click to select the visible range from
+the current anchor to that row. Hold `Cmd` on macOS, or `Ctrl` on other platforms, to add or remove
+one row. A click also makes that row the keyboard cursor and the new range anchor. The `..` row is
+not included in a range.
+
 Files opened from the tree land in the same [group](/user-documentation/getting-started/groups) as the tree tab —
 including while the tree is docked to a sidebar; opened files still land in that group.
 
@@ -87,11 +92,36 @@ and **Open externally**. Choose the action you want, or press `Escape` to close 
 
 ## Moving files by drag-and-drop
 
-Press down on a row, drag it onto a directory row (or any file row inside that directory), and release to move the dragged file or directory into that directory. A small label follows the cursor while you drag, and the targeted directory highlights. Dropping onto the item itself, one of its own descendants, or the directory it's already in does nothing. If the target already has an entry with the same name, a dialog offers **Overwrite** or **Cancel** instead of moving right away. Releasing over empty space, losing window focus mid-drag, or pressing `Escape` cancels the drag with nothing moved.
+Press down on a selected row, drag it onto a directory row (or any file row inside that directory),
+and release to move the selection into that directory. Dragging an unselected row first selects
+only that row. A small label follows the cursor and shows the lead name plus the number of
+additional items. The targeted directory highlights. Dropping onto a selected item, one of its
+descendants, or an item already in the destination does nothing for that item. Dropping onto a
+file in the tree's root moves the selection into the root. Releasing over empty space, losing
+window focus, or pressing `Escape` cancels the drag with nothing moved.
 
-Only one row can be dragged at a time — the tree has no multi-select.
+Before a bulk move starts, duplicate paths and `..` are removed. When a selected directory is an
+ancestor of another selected path, the descendant is removed too. Items already in the destination
+are also removed from that move. A destination at or inside a selected directory blocks the whole
+move. If two selected items have the same output name, both stay in place and appear in the failure
+report.
 
-You can also drag a row onto the command bar of the active tab to insert its path at the cursor, without moving the file. This only works while the tree is docked to a sidebar and a different tab is active in the center, since a non-docked tree has no other tab's command bar to drop onto.
+For one item, a name conflict opens a dialog with **Overwrite** and **Cancel**. A bulk move checks
+all destinations first. If any conflict exists, the dialog says `Some items already exist in "<folder>".`
+and offers **Overwrite all**, **Skip conflicts**, and **Cancel**. Other items still move when an
+individual item fails. The result dialog says `Could not move <failed> of <total> items.`, lists
+failed paths in selection order, and offers **Dismiss**.
+
+You can also drag selected rows onto the command bar of the active tab to insert their paths at the
+caret without moving anything. The paths are relative to the active tab's working directory,
+separated by single spaces, and replace any selected command text. This works when the navigator
+is docked and a plain tab is active in the center. It does not work for a view tab, harness tab,
+the file tree itself, or transcript search. Paths are inserted exactly as computed, without quotes,
+even when a name contains spaces.
+
+Drag selected rows onto an active plain-text editor to insert their tree-relative paths, separated
+by newlines, as one editor undo step. The editor does not highlight during the drag. Inactive or
+hidden editors are not drop targets.
 
 ## Creating files and directories
 
@@ -129,10 +159,17 @@ A focused tree captures these keys for itself (tab-switching and other `Ctrl`/`C
 | `Cmd+N` / `Ctrl+N` | Create a new file (see "Creating a new file" above) |
 | `Cmd+R` / `Ctrl+R` | Rename the selected file or directory in place (see "Renaming a file or directory" above) |
 
-Deleting asks first: `Delete "<name>"?`, offering **Delete** and **Cancel**. Confirming removes the file or directory (recursively, for a directory) from disk; cancelling leaves it untouched.
+Deleting uses the same selection normalization as moving. One item asks `Delete "<name>"?`.
+Multiple items ask `Delete <count> items?`.
+Both dialogs offer **Delete** and **Cancel**. A confirmed bulk delete continues after individual
+failures. Its result dialog says `Could not delete <failed> of <total> items.`, lists failed paths
+in selection order, and offers **Dismiss**. Deletion is recursive for directories and cannot be
+undone.
 
-Undo and redo only apply to moves — deleting a file or directory is permanent and can't be undone
-this way. Each tree keeps its own undo/redo history in memory for as long as it stays open; closing
-it clears that history.
+Undo and redo only apply to moves. Each tree keeps its own undo/redo history in memory for as long
+as it stays open; closing it clears that history. One bulk move is one history step. Undo reverses
+its successful moves in reverse order, and redo reapplies them in forward order. A new move clears
+the redo stack. Grouped undo and redo use **Overwrite all**, **Skip conflicts**, and **Cancel** if
+destinations now contain conflicts. Failed and skipped items stay available for a later retry.
 
 Like other view tabs, a file navigator is a live view — closed with its × button or `close`, and not restored by `janus --relaunch`.
