@@ -13,7 +13,15 @@ git init
 git remote add origin <your-repo-url>
 ```
 
-Create the remote on GitHub first (or use `gh repo create`) and use the URL it gives you. If you already have a repository cloned locally, you can skip straight to the next step.
+Create the remote on GitHub first — either from [github.com/new](https://github.com/new) or with `gh repo create` — and use the URL it gives you for `origin`. If you already have a repository cloned locally, you can skip straight to the next step.
+
+## Add a GitHub token for workspaced pushes
+
+<img class="agent-float left" src="/agents/idris-south-east.png" alt="" />
+
+This step is optional. [Workspaced agents](/user-documentation/advanced-agents/workspaced-agent) run inside a sandbox that can't authenticate git over SSH, so pushing or using `gh` from inside a workspace needs an HTTPS-compatible token. Without one, workspaces still work fine for local development — commit, fetch, pull all just work — only `git push` and `gh` (PR creation, merging) from inside a workspace will fail.
+
+To set one up: create a fine-grained personal access token at [github.com/settings/tokens](https://github.com/settings/tokens), scoped to this repository, with **Contents** (write), **Pull requests** (write), and **Metadata** (read) permissions. Save it to `.janissary/github-token` in the project's root directory — a plain text file containing just the token. `.janissary/` is gitignored by default, so the token is never committed.
 
 ## Scaffold the project
 
