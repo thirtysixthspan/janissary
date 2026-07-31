@@ -2,6 +2,37 @@
 
 All notable changes to this project are documented here.
 
+## [0.10.0] - 2026-07-31
+
+### Features
+
+- copy, cut, and paste files with Ctrl+C / Ctrl+X / Ctrl+V (#708)
+- seed documentation and technical-debt backlogs (#706)
+- seed product/backlog with the standard backlog files (#704)
+- add init command to scaffold ai/ and product/ directories (#701)
+- add --pty flag to force interactive PTY mode (#700)
+
+### Bug Fixes
+
+- route the paste RPC and finish the clipboard's visible state
+- reload editor tab on first external change after open (#703)
+- return keyboard focus to the tree after the delete dialog (#702)
+
+### Documentation
+
+- add Creating a New Project user-documentation page (#707)
+- plan file navigator copy, cut, and paste (#705)
+
+### Other
+
+- sync: issues.md
+- sync: issues.md
+- sync: issues.md
+- sync: features.md
+- sync: issues.md
+- sync: issues.md
+- sync: issues.md
+
 ## [0.9.0] - 2026-07-29
 
 ### ⚠ Breaking Changes
