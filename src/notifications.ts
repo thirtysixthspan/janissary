@@ -6,9 +6,10 @@ import { NOTIFICATIONS_LABEL, notificationsTab, appendNotification } from './not
 // The events that can feed the notifications tab. Five are ambient (a background tab's own
 // activity); `manual` is an explicit `notify <message>`, `auto-approve` is a workspaced harness's
 // auto-approved permission gate, `editor-suggest` is an in-editor persona-suggestion query's
-// failure or empty reply, `question` is an agent waiting for a human answer, and
+// failure or empty reply, `question` is an agent waiting for a human answer,
 // `transcript-unavailable` reports that a harness tab's session record could not be found, so the
-// tab is limited to screen snapshots. Explicit events are always eligible and bypass focus
+// tab is limited to screen snapshots, and `file-operation` reports a failed file-navigator copy,
+// paste, move, delete, or undo/redo replay. Explicit events are always eligible and bypass focus
 // suppression.
 export type NotificationEventType =
   | 'state-change'
@@ -20,7 +21,8 @@ export type NotificationEventType =
   | 'auto-approve'
   | 'editor-suggest'
   | 'question'
-  | 'transcript-unavailable';
+  | 'transcript-unavailable'
+  | 'file-operation';
 
 // Whether an event should be recorded, given the config and the active tab. Defensive against the
 // tab feeding itself. For the five ambient events, both the per-event opt-in toggle and focus
@@ -39,7 +41,8 @@ export function shouldNotify(
     case 'auto-approve':
     case 'editor-suggest':
     case 'question':
-    case 'transcript-unavailable': { return true; }
+    case 'transcript-unavailable':
+    case 'file-operation': { return true; }
     default: { break; }
   }
   if (tabLabel === activeLabel) return false;
@@ -78,7 +81,8 @@ export function notificationText(event: NotificationEventType, tabLabel: string,
     case 'incoming-message': { return `Message from ${detail} in ${tabLabel}`; }
     case 'manual':
     case 'auto-approve':
-    case 'editor-suggest': { return detail ?? ''; }
+    case 'editor-suggest':
+    case 'file-operation': { return detail ?? ''; }
     case 'question': { return `Question from ${tabLabel}`; }
     case 'transcript-unavailable': { return 'no harness transcript found'; }
   }

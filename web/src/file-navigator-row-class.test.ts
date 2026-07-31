@@ -39,4 +39,13 @@ describe('fileNavigatorRowClass', () => {
     expect(cls.row).toBe('files-row');
     expect(cls.name).toBe('files-name');
   });
+
+  it('composes the cut modifier with selected, cursor, and drop-target', () => {
+    expect(fileNavigatorRowClass(row(), true, true, 'src/index.ts', true).row)
+      .toBe('files-row selected cursor drop-target cut');
+  });
+
+  it('omits the cut modifier by default', () => {
+    expect(fileNavigatorRowClass(row(), false, false, undefined).row).toBe('files-row');
+  });
 });

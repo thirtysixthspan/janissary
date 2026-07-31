@@ -758,6 +758,69 @@ describe('FileNavigatorManager', () => {
     expect(existsSync(path.join(root, 'b.txt'))).toBe(true);
   });
 
+  it('paste (copy) creates the item and undo removes what it created', () => {
+    mkdirSync(path.join(root, 'dest'));
+    writeFileSync(path.join(root, 'a.txt'), 'a');
+    const manager = run();
+    manager.open('files', 'janus');
+    const label = tabs.find((t) => t.label.startsWith('navigator'))!.label;
+
+    expect(manager.paste(label, [path.join(root, 'a.txt')], 'dest', 'copy')).toEqual({ total: 1, failedPaths: [] });
+    expect(existsSync(path.join(root, 'dest', 'a.txt'))).toBe(true);
+    expect(existsSync(path.join(root, 'a.txt'))).toBe(true);
+
+    expect(manager.undo(label)).toEqual({ total: 1, failedPaths: [] });
+    expect(existsSync(path.join(root, 'dest', 'a.txt'))).toBe(false);
+    expect(existsSync(path.join(root, 'a.txt'))).toBe(true);
+  });
+
+  it('paste (cut) moves the item and undo restores it, including across two different roots', () => {
+    mkdirSync(path.join(otherRoot, 'dest'));
+    writeFileSync(path.join(root, 'a.txt'), 'a');
+    const manager = run();
+    manager.open('files', 'janus');
+    manager.open('files', 'other');
+    const label = tabs.find((t) => t.files?.root === otherRoot)!.label;
+
+    expect(manager.paste(label, [path.join(root, 'a.txt')], 'dest', 'cut')).toEqual({ total: 1, failedPaths: [] });
+    expect(existsSync(path.join(root, 'a.txt'))).toBe(false);
+    expect(existsSync(path.join(otherRoot, 'dest', 'a.txt'))).toBe(true);
+
+    expect(manager.undo(label)).toEqual({ total: 1, failedPaths: [] });
+    expect(existsSync(path.join(otherRoot, 'dest', 'a.txt'))).toBe(false);
+    expect(existsSync(path.join(root, 'a.txt'))).toBe(true);
+  });
+
+  it('redo re-applies a paste (copy) after undo', () => {
+    mkdirSync(path.join(root, 'dest'));
+    writeFileSync(path.join(root, 'a.txt'), 'a');
+    const manager = run();
+    manager.open('files', 'janus');
+    const label = tabs.find((t) => t.label.startsWith('navigator'))!.label;
+    manager.paste(label, [path.join(root, 'a.txt')], 'dest', 'copy');
+    manager.undo(label);
+
+    expect(manager.redo(label)).toEqual({ total: 1, failedPaths: [] });
+    expect(existsSync(path.join(root, 'dest', 'a.txt'))).toBe(true);
+  });
+
+  it('a plain move step still undoes exactly as before, alongside a paste step', () => {
+    mkdirSync(path.join(root, 'dest'));
+    writeFileSync(path.join(root, 'a.txt'), 'a');
+    writeFileSync(path.join(root, 'b.txt'), 'b');
+    const manager = run();
+    manager.open('files', 'janus');
+    const label = tabs.find((t) => t.label.startsWith('navigator'))!.label;
+    manager.move(label, 'a.txt', 'dest');
+    manager.paste(label, [path.join(root, 'b.txt')], 'dest', 'copy');
+
+    expect(manager.undo(label)).toEqual({ total: 1, failedPaths: [] });
+    expect(existsSync(path.join(root, 'dest', 'b.txt'))).toBe(false);
+    expect(manager.undo(label)).toEqual({});
+    expect(existsSync(path.join(root, 'a.txt'))).toBe(true);
+    expect(existsSync(path.join(root, 'dest', 'a.txt'))).toBe(false);
+  });
+
   it('closeTab closes every watcher for that tab', () => {
     mkdirSync(path.join(root, 'src'));
     const manager = run();

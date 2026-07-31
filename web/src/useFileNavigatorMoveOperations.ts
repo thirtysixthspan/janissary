@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { BatchResult, BulkConflictPolicy, BulkMoveResult } from '@shared/protocol';
+import type { BulkConflictPolicy, BulkMoveResult } from '@shared/protocol';
 import type { JanusClient } from './ws';
 
 type Method = 'undoFileNavigatorItem' | 'redoFileNavigatorItem';
@@ -23,19 +23,15 @@ type PendingConflict =
       title: string;
     };
 
-export type FileNavigatorFailure = BatchResult & { operation: 'move' | 'delete' };
-type UndoRedoResult = Partial<BatchResult> & {
+type UndoRedoResult = {
+  total?: number;
+  failedPaths?: string[];
   conflict?: { fromRelPath: string; toRelPath: string };
   conflicts?: Array<{ fromRelPath: string; toRelPath: string }>;
 };
 
 export function useFileNavigatorMoveOperations(client: JanusClient, index: number) {
   const [pendingConflict, setPendingConflict] = useState<PendingConflict | null>(null);
-  const [failure, setFailure] = useState<FileNavigatorFailure | null>(null);
-
-  const applyResult = (result: BatchResult, operation: 'move' | 'delete' = 'move') => {
-    if (result.failedPaths.length > 0) setFailure({ ...result, operation });
-  };
 
   const sendBatchMove = async (
     sourcePaths: string[],
@@ -52,7 +48,6 @@ export function useFileNavigatorMoveOperations(client: JanusClient, index: numbe
       return;
     }
     setPendingConflict(null);
-    applyResult(result);
   };
 
   const requestMove = (
@@ -104,8 +99,6 @@ export function useFileNavigatorMoveOperations(client: JanusClient, index: numbe
         method,
         title: 'Some items already exist in their destinations.',
       });
-    } else if (result.total !== undefined && result.failedPaths) {
-      applyResult({ total: result.total, failedPaths: result.failedPaths });
     }
   };
 
@@ -128,11 +121,8 @@ export function useFileNavigatorMoveOperations(client: JanusClient, index: numbe
           overwrite: policy === 'overwrite-all' || undefined,
           skipConflicts: policy === 'skip-conflicts' || undefined,
         },
-      }).then((result) => {
+      }).then(() => {
         setPendingConflict(null);
-        if (result.total !== undefined && result.failedPaths) {
-          applyResult({ total: result.total, failedPaths: result.failedPaths });
-        }
       });
       return;
     }
@@ -156,14 +146,11 @@ export function useFileNavigatorMoveOperations(client: JanusClient, index: numbe
 
   return {
     pendingConflict,
-    failure,
     requestMove,
     sendUndo: () => history('undoFileNavigatorItem'),
     sendRedo: () => history('redoFileNavigatorItem'),
     confirmOverwrite: () => retry('overwrite-all'),
     skipConflicts: () => retry('skip-conflicts'),
     cancelConflict: () => setPendingConflict(null),
-    dismissFailure: () => setFailure(null),
-    reportFailure: applyResult,
   };
 }

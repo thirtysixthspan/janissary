@@ -249,6 +249,19 @@ export type RpcCall =
         policy?: BulkConflictPolicy;
       };
     }
+  // Copy- or cut-paste the clipboard's absolute source paths into a file navigator tab.
+  // `destinationPath` is tree-relative to the pasting tab's own root; `sources` are absolute, since
+  // the app-wide clipboard's items may live outside that root.
+  | {
+      method: 'pasteFileNavigatorItems';
+      params: {
+        index: number;
+        sources: string[];
+        destinationPath: string;
+        mode: 'copy' | 'cut';
+        policy?: BulkConflictPolicy;
+      };
+    }
   // Delete a file or directory (recursively) from a file navigator tab, after the client has already
   // confirmed with the user. `relPath` is the tree-relative path of the row being removed.
   | { method: 'deleteFileNavigatorItem'; params: { index: number; relPath: string } }

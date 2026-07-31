@@ -3,10 +3,10 @@ import { MoveConflictDialog } from './MoveConflictDialog/MoveConflictDialog';
 import { DeleteFileDialog } from './DeleteFileDialog';
 import { FileSearchPopup } from './FileSearchPopup';
 import { FileNavigatorOpenerOverlay } from './FileNavigatorOpenerOverlay';
-import { FileNavigatorFailureDialog } from './FileNavigatorFailureDialog';
 import type { useFileNavigatorDrag } from './useFileNavigatorDrag';
 import type { useFileNavigatorRename } from './useFileNavigatorRename';
 import type { useFileNavigatorDelete } from './useFileNavigatorDelete';
+import type { useFileNavigatorPaste } from './useFileNavigatorPaste';
 import type { useFileNavigatorSearch } from './useFileNavigatorSearch';
 import type { useFileNavigatorOpener } from './useFileNavigatorOpener';
 
@@ -14,6 +14,7 @@ type Properties = {
   drag: ReturnType<typeof useFileNavigatorDrag>;
   rename: ReturnType<typeof useFileNavigatorRename>;
   deletion: ReturnType<typeof useFileNavigatorDelete>;
+  paste: ReturnType<typeof useFileNavigatorPaste>;
   search: ReturnType<typeof useFileNavigatorSearch>;
   opener: ReturnType<typeof useFileNavigatorOpener>;
   focusTree: () => void;
@@ -23,6 +24,7 @@ export function FileNavigatorOverlays({
   drag,
   rename,
   deletion,
+  paste,
   search,
   opener,
   focusTree,
@@ -53,6 +55,14 @@ export function FileNavigatorOverlays({
           onCancel={rename.cancelConflict}
         />
       )}
+      {paste.pendingConflict && (
+        <MoveConflictDialog
+          title={paste.pendingConflict.title}
+          onOverwrite={paste.confirmOverwrite}
+          onSkip={paste.pendingConflict.sources.length > 1 ? paste.skipConflicts : undefined}
+          onCancel={paste.cancelConflict}
+        />
+      )}
       {deletion.pendingDelete && (
         <DeleteFileDialog
           name={deletion.pendingDelete.length === 1
@@ -61,15 +71,6 @@ export function FileNavigatorOverlays({
           count={deletion.pendingDelete.length > 1 ? deletion.pendingDelete.length : undefined}
           onConfirm={() => { deletion.confirm(); focusTree(); }}
           onCancel={() => { deletion.cancel(); focusTree(); }}
-        />
-      )}
-      {drag.failure && (
-        <FileNavigatorFailureDialog
-          failure={drag.failure}
-          onDismiss={() => {
-            drag.dismissFailure();
-            focusTree();
-          }}
         />
       )}
       {opener.pending && (

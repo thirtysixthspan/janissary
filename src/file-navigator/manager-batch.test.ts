@@ -2,8 +2,8 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import { deleteMany, moveMany } from './manager-batch.js';
-import type { MoveGroup } from './moves.js';
+import { deleteMany, moveMany, pasteMany } from './manager-batch.js';
+import type { HistoryStep } from './moves.js';
 
 let roots: string[] = [];
 
@@ -18,7 +18,7 @@ afterEach(() => {
   roots = [];
 });
 
-function state(directory: string): { root: string; undoStack: MoveGroup[]; redoStack: MoveGroup[] } {
+function state(directory: string): { root: string; undoStack: HistoryStep[]; redoStack: HistoryStep[] } {
   return { root: directory, undoStack: [], redoStack: [] };
 }
 
@@ -81,5 +81,50 @@ describe('deleteMany', () => {
     const result = deleteMany(current, ['missing.txt'], () => { rebuilt += 1; });
     expect(result).toEqual({ total: 1, failedPaths: ['missing.txt'] });
     expect(rebuilt).toBe(0);
+  });
+});
+
+describe('pasteMany', () => {
+  it('pushes one history step, clears redo, and rebuilds when something changed', () => {
+    const directory = root();
+    mkdirSync(path.join(directory, 'dest'));
+    writeFileSync(path.join(directory, 'a.txt'), 'a');
+    const current = state(directory);
+    current.redoStack.push({ entries: [{ from: 'old', to: 'older' }] });
+    let rebuilt = 0;
+    const result = pasteMany(
+      current, [path.join(directory, 'a.txt')], 'dest', 'copy', undefined, () => { rebuilt += 1; },
+    );
+    expect(result).toEqual({ total: 1, failedPaths: [] });
+    expect(current.undoStack).toEqual([
+      { mode: 'copy', pairs: [{ from: path.join(directory, 'a.txt'), to: path.join(directory, 'dest', 'a.txt') }] },
+    ]);
+    expect(current.redoStack).toEqual([]);
+    expect(rebuilt).toBe(1);
+  });
+
+  it('does not rebuild or push a step when nothing pasted', () => {
+    const directory = root();
+    const current = state(directory);
+    let rebuilt = 0;
+    const result = pasteMany(
+      current, [path.join(directory, 'missing.txt')], '', 'copy', undefined, () => { rebuilt += 1; },
+    );
+    expect(result).toEqual({ total: 1, failedPaths: [path.join(directory, 'missing.txt')] });
+    expect(current.undoStack).toEqual([]);
+    expect(rebuilt).toBe(0);
+  });
+
+  it('passes conflicts straight through without touching the undo stack', () => {
+    const directory = root();
+    mkdirSync(path.join(directory, 'dest'));
+    writeFileSync(path.join(directory, 'a.txt'), 'new');
+    writeFileSync(path.join(directory, 'dest', 'a.txt'), 'old');
+    const current = state(directory);
+    const result = pasteMany(
+      current, [path.join(directory, 'a.txt')], 'dest', 'copy', undefined, () => {},
+    );
+    expect(result).toEqual({ conflictPaths: [path.join(directory, 'a.txt')] });
+    expect(current.undoStack).toEqual([]);
   });
 });

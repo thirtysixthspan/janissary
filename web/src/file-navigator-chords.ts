@@ -1,10 +1,13 @@
 import type { FileNavigatorRow } from '@shared/protocol';
 
-type ChordHandlers = {
+export type ChordHandlers = {
   sendUndo: () => void;
   sendRedo: () => void;
   createNewFile: () => void;
   beginRename: (row: FileNavigatorRow) => void;
+  copySelection: () => void;
+  cutSelection: () => void;
+  paste: () => void;
 };
 
 // The file navigator's own Ctrl/Cmd chords — undo/redo, new file, and rename — dispatched here so
@@ -22,5 +25,8 @@ export function handleTreeChord(
     if (row) handlers.beginRename(row);
     return true;
   }
+  if (lower === 'c') { handlers.copySelection(); return true; }
+  if (lower === 'x') { handlers.cutSelection(); return true; }
+  if (lower === 'v') { handlers.paste(); return true; }
   return false;
 }

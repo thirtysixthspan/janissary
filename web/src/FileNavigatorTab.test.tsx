@@ -7,6 +7,7 @@ import type { JanusClient } from './ws';
 import { FileNavigatorTab } from './FileNavigatorTab';
 import { Sidebar } from './Sidebar';
 import type { CommandInputDropHandle } from './CommandInput';
+import { clearClipboard } from './file-navigator-clipboard';
 
 beforeAll(() => {
   Element.prototype.scrollIntoView = vi.fn();
@@ -395,9 +396,9 @@ describe('FileNavigatorTab', () => {
       expect(screen.queryByRole('alertdialog')).toBeNull();
     });
 
-    it('confirms one normalized batch and displays partial failures', async () => {
-      const request = vi.fn().mockResolvedValue({ total: 2, failedPaths: ['README.md'] });
-      const client = { send: vi.fn(), request } as unknown as JanusClient;
+    it('confirms one normalized batch as a single send, with no failure dialog', () => {
+      const send = vi.fn();
+      const client = { send } as unknown as JanusClient;
       const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={3} />);
       const tree = container.querySelector('[role="tree"]')!;
       fireEvent.mouseDown(screen.getByText('src'), { button: 0 });
@@ -405,11 +406,46 @@ describe('FileNavigatorTab', () => {
       fireEvent.keyDown(tree, { key: 'Delete' });
       expect(screen.getByText('Delete 2 items?')).toBeInTheDocument();
       fireEvent.click(screen.getByRole('button', { name: /delete/i }));
-      expect(request).toHaveBeenCalledWith({
+      expect(send).toHaveBeenCalledWith({
         method: 'deleteFileNavigatorItems',
         params: { index: 3, paths: ['src', 'README.md'] },
       });
-      expect(await screen.findByText('Could not delete 1 of 2 items.')).toBeInTheDocument();
+    });
+  });
+
+  describe('copy, cut, and paste', () => {
+    afterEach(() => {
+      clearClipboard();
+    });
+
+    it('Ctrl+C then Ctrl+V on a directory row sends the RPC with the expected params', () => {
+      const request = vi.fn().mockResolvedValue({ total: 1, failedPaths: [] });
+      const client = { send: vi.fn(), request } as unknown as JanusClient;
+      const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={3} />);
+      const tree = container.querySelector('[role="tree"]')!;
+      fireEvent.mouseDown(screen.getByText('README.md'), { button: 0 });
+      fireEvent.keyDown(tree, { key: 'c', ctrlKey: true });
+      fireEvent.mouseDown(screen.getByText('src'), { button: 0 });
+      fireEvent.keyDown(tree, { key: 'v', ctrlKey: true });
+      expect(request).toHaveBeenCalledWith({
+        method: 'pasteFileNavigatorItems',
+        params: {
+          index: 3,
+          sources: ['/home/user/project/README.md'],
+          destinationPath: 'src',
+          mode: 'copy',
+          policy: undefined,
+        },
+      });
+    });
+
+    it('Ctrl+X dims the cut rows', () => {
+      const client = { send: vi.fn() } as unknown as JanusClient;
+      const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
+      const tree = container.querySelector('[role="tree"]')!;
+      fireEvent.mouseDown(screen.getByText('README.md'), { button: 0 });
+      fireEvent.keyDown(tree, { key: 'x', ctrlKey: true });
+      expect(screen.getByText('README.md').closest('.files-row')).toHaveClass('cut');
     });
   });
 

@@ -6,7 +6,7 @@ import { openFilesCommand } from './open-command.js';
 import type { UndoRedoResult } from './moves.js';
 import { deleteItem, moveItem, renameItem } from './filesystem.js';
 import { replayHistory } from './manager-history.js';
-import { deleteMany, moveMany } from './manager-batch.js';
+import { deleteMany, moveMany, pasteMany } from './manager-batch.js';
 import { toggleDir, collapseAllDirs, rerootTree, revealPath, type NavPort } from './navigation.js';
 import { watchDir, unwatchDir } from './watch.js';
 import { pollForDir, stopPolling } from './poll.js';
@@ -99,15 +99,16 @@ export class FileNavigatorManager {
   // before sending this). Pushes the move onto the tab's undo stack and clears its redo stack —
   // mirroring the editor's own "any new edit invalidates the redo stack" rule. Rebuilds so the
   // tree reflects the change immediately, without waiting on the directory watcher's own debounce.
-  move(label: string, fromRelPath: string, toRelPath: string): void {
+  move(label: string, fromRelPath: string, toRelPath: string): BatchResult {
     const state = this.tabs.get(label);
-    if (!state) return;
-    if (isSameOrDescendantPath(toRelPath, fromRelPath)) return;
+    if (!state) return { total: 1, failedPaths: [fromRelPath] };
+    if (isSameOrDescendantPath(toRelPath, fromRelPath)) return { total: 1, failedPaths: [fromRelPath] };
     const entry = moveItem(state.root, fromRelPath, toRelPath);
-    if (!entry) return;
+    if (!entry) return { total: 1, failedPaths: [fromRelPath] };
     state.undoStack.push({ entries: [entry] });
     state.redoStack = [];
     this.rebuild(label);
+    return { total: 1, failedPaths: [] };
   }
 
   moveMany(
@@ -125,6 +126,19 @@ export class FileNavigatorManager {
     const state = this.tabs.get(label);
     if (!state) return { total: 0, failedPaths: [] };
     return deleteMany(state, sourcePaths, () => this.rebuild(label));
+  }
+
+  // Copy- or cut-paste a clipboard's absolute source paths into this tab's tree.
+  paste(
+    label: string,
+    sources: string[],
+    destinationPath: string,
+    mode: 'copy' | 'cut',
+    policy?: BulkConflictPolicy,
+  ): BulkMoveResult {
+    const state = this.tabs.get(label);
+    if (!state) return { total: 0, failedPaths: [] };
+    return pasteMany(state, sources, destinationPath, mode, policy, () => this.rebuild(label));
   }
 
   // Undo the most recent move: moves the item back from `to` to `from`'s original directory. A
@@ -163,11 +177,12 @@ export class FileNavigatorManager {
   // Delete a file or directory (recursively) from disk — the client has already confirmed with
   // the user before sending this. Rebuilds so the tree reflects the removal immediately, without
   // waiting on the directory watcher's own debounce.
-  delete(label: string, relPath: string): void {
+  delete(label: string, relPath: string): BatchResult {
     const state = this.tabs.get(label);
-    if (!state) return;
-    if (!deleteItem(state.root, relPath)) return;
+    if (!state) return { total: 1, failedPaths: [relPath] };
+    if (!deleteItem(state.root, relPath)) return { total: 1, failedPaths: [relPath] };
     this.rebuild(label);
+    return { total: 1, failedPaths: [] };
   }
 
   // The gitignore-aware candidate list for the tab's own Search-files pop-up (async, off the event

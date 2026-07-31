@@ -1,6 +1,7 @@
 // Controller-facing wrappers for file navigator tab RPCs: resolve the tab index to its label, then
 // delegate to `FileNavigatorManager`. Extracted from `controller.ts` to keep it under the file-size
 // limit — see `ai/guidelines/code-guidelines.md`.
+import { reportOperationFailure } from '../file-navigator/operation-report.js';
 import type { Managers } from '../managers.js';
 import type { BatchResult, BulkConflictPolicy, BulkMoveResult, FileOpenerChoice } from '../protocol.js';
 
@@ -21,12 +22,16 @@ export function fileNavigatorReroot(managers: Managers, index: number, relPath?:
 
 export function moveFileNavigatorItem(managers: Managers, index: number, fromRelPath: string, toRelPath: string): void {
   const label = managers.tab.tabs[index]?.label;
-  if (label) managers.fileNavigator.move(label, fromRelPath, toRelPath);
+  if (!label) return;
+  const result = managers.fileNavigator.move(label, fromRelPath, toRelPath);
+  reportOperationFailure(managers, label, 'move', result);
 }
 
 export function deleteFileNavigatorItem(managers: Managers, index: number, relPath: string): void {
   const label = managers.tab.tabs[index]?.label;
-  if (label) managers.fileNavigator.delete(label, relPath);
+  if (!label) return;
+  const result = managers.fileNavigator.delete(label, relPath);
+  reportOperationFailure(managers, label, 'delete', result);
 }
 
 export function moveFileNavigatorItems(
@@ -37,14 +42,33 @@ export function moveFileNavigatorItems(
   policy?: BulkConflictPolicy,
 ): BulkMoveResult {
   const label = managers.tab.tabs[index]?.label;
-  return label
-    ? managers.fileNavigator.moveMany(label, sourcePaths, destinationPath, policy)
-    : { total: 0, failedPaths: [] };
+  if (!label) return { total: 0, failedPaths: [] };
+  const result = managers.fileNavigator.moveMany(label, sourcePaths, destinationPath, policy);
+  if (!('conflictPaths' in result)) reportOperationFailure(managers, label, 'move', result);
+  return result;
+}
+
+export function pasteFileNavigatorItems(
+  managers: Managers,
+  index: number,
+  sources: string[],
+  destinationPath: string,
+  mode: 'copy' | 'cut',
+  policy?: BulkConflictPolicy,
+): BulkMoveResult {
+  const label = managers.tab.tabs[index]?.label;
+  if (!label) return { total: 0, failedPaths: [] };
+  const result = managers.fileNavigator.paste(label, sources, destinationPath, mode, policy);
+  if (!('conflictPaths' in result)) reportOperationFailure(managers, label, mode === 'copy' ? 'copy' : 'move', result);
+  return result;
 }
 
 export function deleteFileNavigatorItems(managers: Managers, index: number, paths: string[]): BatchResult {
   const label = managers.tab.tabs[index]?.label;
-  return label ? managers.fileNavigator.deleteMany(label, paths) : { total: 0, failedPaths: [] };
+  if (!label) return { total: 0, failedPaths: [] };
+  const result = managers.fileNavigator.deleteMany(label, paths);
+  reportOperationFailure(managers, label, 'delete', result);
+  return result;
 }
 
 export function renameFileNavigatorItem(managers: Managers, index: number, relPath: string, newName: string): void {
@@ -59,7 +83,10 @@ export function undoFileNavigatorItem(
   skipConflicts?: boolean,
 ) {
   const label = managers.tab.tabs[index]?.label;
-  return label ? managers.fileNavigator.undo(label, overwrite, skipConflicts) : {};
+  if (!label) return {};
+  const result = managers.fileNavigator.undo(label, overwrite, skipConflicts);
+  reportHistoryFailure(managers, label, result);
+  return result;
 }
 
 export function redoFileNavigatorItem(
@@ -69,7 +96,23 @@ export function redoFileNavigatorItem(
   skipConflicts?: boolean,
 ) {
   const label = managers.tab.tabs[index]?.label;
-  return label ? managers.fileNavigator.redo(label, overwrite, skipConflicts) : {};
+  if (!label) return {};
+  const result = managers.fileNavigator.redo(label, overwrite, skipConflicts);
+  reportHistoryFailure(managers, label, result);
+  return result;
+}
+
+// Shared by undo/redo: reports a replay's failures as one `file-operation` notification when the
+// result carries `failedPaths` and no conflict — a conflict is a question for the user, not a
+// failure, so it is left for the client's own retry flow to resolve.
+function reportHistoryFailure(
+  managers: Managers,
+  label: string,
+  result: { total?: number; failedPaths?: string[]; conflict?: unknown; conflicts?: unknown },
+): void {
+  if (result.conflict || result.conflicts) return;
+  if (result.total === undefined || !result.failedPaths) return;
+  reportOperationFailure(managers, label, 'move', { total: result.total, failedPaths: result.failedPaths });
 }
 
 export function openFileNavigatorFor(managers: Managers, label: string): void {

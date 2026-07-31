@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { handleFileNavigatorMessage } from './message-handler-file-navigator.js';
 import type { Controller } from './controller.js';
 import type { ClientMessage, ServerEvent } from './protocol.js';
-import { renameFileNavigatorItem, fileNavigatorOpeners } from './controller/file-navigator.js';
+import { renameFileNavigatorItem, fileNavigatorOpeners, pasteFileNavigatorItems } from './controller/file-navigator.js';
 import { resolveTreeSelections } from './file-navigator/selection-request.js';
 
 vi.mock('./file-navigator/selection-request.js', () => ({ resolveTreeSelections: vi.fn() }));
@@ -12,6 +12,7 @@ vi.mock('./controller/file-navigator.js', () => ({
   fileNavigatorOpeners: vi.fn(),
   fileNavigatorSearch: vi.fn(),
   moveFileNavigatorItems: vi.fn(),
+  pasteFileNavigatorItems: vi.fn(),
   renameFileNavigatorItem: vi.fn(),
   revealFileNavigatorItem: vi.fn(),
 }));
@@ -48,6 +49,17 @@ describe('handleFileNavigatorMessage', () => {
     });
     expect(renameFileNavigatorItem).toHaveBeenCalledWith(controller.managers, 0, 'src/a.ts', 'b.ts');
     expect(replies).toEqual([{ t: 'rpc-reply', id: 1, result: 'ok' }]);
+  });
+
+  it('routes pasteFileNavigatorItems through the deferred rpc-reply path with the batch result', () => {
+    const controller = makeController();
+    vi.mocked(pasteFileNavigatorItems).mockReturnValue({ total: 1, failedPaths: [] });
+    const replies = dispatch(controller, 3, {
+      method: 'pasteFileNavigatorItems',
+      params: { index: 0, sources: ['/a/b.txt'], destinationPath: 'dest', mode: 'copy' },
+    });
+    expect(pasteFileNavigatorItems).toHaveBeenCalledWith(controller.managers, 0, ['/a/b.txt'], 'dest', 'copy', undefined);
+    expect(replies).toEqual([{ t: 'rpc-reply', id: 3, result: { total: 1, failedPaths: [] } }]);
   });
 
   it('routes fileNavigatorOpeners to controller-file-navigator.js and replies with its result', () => {
