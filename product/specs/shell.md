@@ -24,7 +24,7 @@ Shell output uses the tab index captured at execution time via a ref, so output 
 
 ## Interactive PTY takeover
 
-Full-screen and interactive programs — `htop`, `vim`, `less`, `top`, `man`, `python`, REPLs, etc. — cannot run through the persistent piped shell. When a shell command is detected as interactive (see `src/interactive.ts`), the tab switches into **PTY takeover mode**:
+Full-screen and interactive programs — `htop`, `vim`, `less`, `top`, `man`, `python`, REPLs, etc. — cannot run through the persistent piped shell. When a shell command is detected as interactive (see `src/interactive.ts`), or when the `shell` command is given a `--pty` flag, the tab switches into **PTY takeover mode**:
 
 - The transcript and command bar are hidden.
 - A full-tab xterm.js terminal takes over the tab body, exactly like a harness tab.
@@ -36,6 +36,10 @@ When the program exits, the tab returns to the normal transcript view exactly as
 
 While in PTY takeover mode, the tab shows the same metadata row (working directory and active-flag
 icons) as the underlying agent tab — see Metadata row in `tabs.md`.
+
+### Forcing PTY mode with `--pty`
+
+`shell --pty <command>` forces PTY takeover regardless of whether `<command>` is on the interactive-program list, for commands that need a real terminal but aren't auto-detected. A bare `shell --pty`, with no command following, opens the user's login shell (`$SHELL`, falling back to `bash`) directly in a PTY — an interactive shell prompt inside the tab.
 
 ### Multi-tab persistence
 

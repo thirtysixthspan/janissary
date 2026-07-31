@@ -1,5 +1,5 @@
 import type { RouteChoice } from '../recognizers/types.js';
-import { resolveCommand } from '../resolve.js';
+import { resolveCommand, type Resolution } from '../resolve.js';
 import { isInteractive } from '../interactive.js';
 import { commands } from '../commands/index.js';
 import { toPrefixedCommand } from '../recognizers/index.js';
@@ -82,10 +82,7 @@ export class CommandManager {
     switch (res.kind) {
       case 'empty': { return;
       }
-      case 'shell': {
-        if (res.cmd && isInteractive(res.cmd)) this.managers.pty.openInlinePty(label, res.cmd, res.cmd.split(/\s+/, 1)[0]);
-        else this.managers.shell.run(label, res.cmd);
-        return;
+      case 'shell': { this.runShell(res, label); return;
       }
       case 'output': { this.managers.tab.append(label, { input, output: res.output, markdown: true }); return;
       }
@@ -96,6 +93,18 @@ export class CommandManager {
       case 'app': { this.executeCommand(res.name, res.cmd, label, index); return;
       }
     }
+  }
+
+  // Routes a `shell` resolution to either the piped shell or a PTY: auto-detected interactive
+  // commands and any `--pty`-flagged command (including a bare `shell --pty`, which falls back
+  // to the user's login shell) go to the PTY; everything else runs in the tab's piped shell.
+  private runShell(res: Extract<Resolution, { kind: 'shell' }>, label: string): void {
+    if (!res.pty && !(res.cmd && isInteractive(res.cmd))) { this.managers.shell.run(label, res.cmd); return;
+    }
+    const fallbackShell = process.env.SHELL || 'bash';
+    const command = res.cmd || fallbackShell;
+    const program = res.cmd ? res.cmd.split(/\s+/, 1)[0] : fallbackShell.split('/').pop()!;
+    this.managers.pty.openInlinePty(label, command, program);
   }
 
   executeCommand(name: string, command: string, label: string, index: number): void {
