@@ -17,7 +17,7 @@ const SCAFFOLD_DIRS = [
 
 // The backlog files documented in `CLAUDE.md`'s Project Structure section, each seeded with the
 // standard empty `ready`/`development`/`deferred` structure.
-const BACKLOG_FILES = ['bugs', 'chores', 'features', 'issues'];
+const BACKLOG_FILES = ['bugs', 'chores', 'documentation', 'features', 'issues', 'technical-debt'];
 
 function backlogFileContent(name: string): string {
   return `# ${name}\n\n## ready\n\n## development\n\n## deferred\n`;
