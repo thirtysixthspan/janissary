@@ -14,6 +14,8 @@ If no git repository is found from the current directory, or the repository has 
 
 The tab appears immediately, marked busy, with its workspace directory already known — it does not wait for the clone to finish. Anything typed into it while the clone is still running is queued and runs once the tab goes idle, the same as typing into any other busy agent tab. The creator tab's "Agent ready" confirmation (and the sandbox notice, if any) is posted once the clone actually finishes, not before. If the clone fails after the tab was created, the creator tab reports the failure and the half-created tab closes on its own shortly after.
 
+The "New agent here" button (➕) in a tab's metadata row creates a new agent tab rooted at that tab's directory. When the source tab is itself workspaced, the new agent tab gets its own cloned workspace too, following the same immediate-tab/busy/clone/ready flow described above — the ready confirmation, any sandbox notice, and clone failures are reported as notifications rather than into a transcript, since the source tab may be a harness with no transcript of its own.
+
 ### Workspace harness tab
 
 `harness <name> -w` (or `--workspace`) creates a harness tab with a cloned workspace using the same
