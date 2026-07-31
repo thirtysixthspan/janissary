@@ -83,8 +83,9 @@ opening or retargeting the navigator does not steal focus.
 The tree shows, for the root and every directory the user has expanded:
 
 - **Directories before files**, each group sorted alphabetically, case-insensitive.
-- **Default excludes**: `.git`, `.svn`, `.hg`, `.DS_Store`, `Thumbs.db` (VS Code's `files.exclude`
-  defaults) are never shown. Every other dotfile (`.env`, `.gitignore`, …) is shown.
+- **Default excludes**: `.svn`, `.hg`, `.DS_Store`, `Thumbs.db` (VS Code's `files.exclude`
+  defaults) are never shown. `.git` and every other dotfile (`.env`, `.gitignore`, …) are shown
+  like any other entry — `.git` as an ordinary, expandable directory.
 - **Symlinks** (to a file or a directory) render as a leaf file — never expandable.
 
 A directory's children are read from disk only once it is **expanded** — an unopened directory

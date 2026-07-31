@@ -3,8 +3,9 @@ import path from 'node:path';
 import type { FileNavigatorRow } from '../types.js';
 export { markGitStatus } from './git-mark.js';
 
-// VS Code's `files.exclude` defaults. Other dotfiles are shown.
-const EXCLUDES = new Set(['.git', '.svn', '.hg', '.DS_Store', 'Thumbs.db']);
+// VS Code's `files.exclude` defaults, minus `.git` — shown intentionally, like any other
+// directory, rather than hidden. Other dotfiles are shown too.
+const EXCLUDES = new Set(['.svn', '.hg', '.DS_Store', 'Thumbs.db']);
 
 type Entry = { name: string; dir: boolean };
 

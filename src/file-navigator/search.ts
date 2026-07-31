@@ -5,7 +5,9 @@ import path from 'node:path';
 
 const execFileAsync = promisify(execFile);
 
-// VS Code's `files.exclude` defaults, matching the sync walk in `file-navigator/index.ts` (`EXCLUDES`).
+// VS Code's `files.exclude` defaults, plus `.git` — unlike the navigator tree's own `EXCLUDES`
+// (`file-navigator/index.ts`), which shows `.git` as a directory, its contents still aren't
+// meaningful search results, so this walker keeps excluding it.
 const EXCLUDES = new Set(['.git', '.svn', '.hg', '.DS_Store', 'Thumbs.db']);
 
 // A recursive, promise-based walk of `absDir` that never blocks the event loop, used when `root`
