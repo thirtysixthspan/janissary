@@ -13,6 +13,7 @@
 | Command | Description |
 | ------- | ----------- |
 | `janus stop [<project-dir>]` | Stop the running instance for a directory. See "Stopping a running instance" below. |
+| `janus init [<project-dir>]` | Scaffold the `ai/` and `product/` directory tree in a directory. See "Scaffolding a new project" below. |
 
 ### Flags
 
@@ -80,6 +81,10 @@ The server broadcasts a `bye` event to all connected browser windows (telling th
 ### Stopping a running instance
 
 `janus stop [<project-dir>]` runs attached, printing straight to the terminal. It reads the instance lock (`.janissary/lock`) for the target directory (current directory by default) and, if the recorded process ID is alive, sends it SIGTERM — triggering the same graceful shutdown sequence above. If no lock file exists for that directory, or the recorded process is no longer alive, it prints `no running janus instance for <dir>` and exits 0 (there being nothing to stop is not an error).
+
+### Scaffolding a new project
+
+`janus init [<project-dir>]` runs attached, printing straight to the terminal, the same as `stop`. It creates the standard `ai/` and `product/` directory tree (`ai/guidelines`, `ai/personas`, `ai/tasks`, `product/backlog`, `product/plans/draft`, `product/plans/ready`, `product/plans/complete`, `product/plans/deferred`, `product/specs`) in the target directory (current directory by default), creating parent directories as needed. Every directory that is still empty once the tree exists gets a `.gitkeep` file so git tracks it. Running `init` again against a directory that already has some or all of the scaffold in place is safe — existing directories and their contents are left alone. It prints the list of directories created and exits 0.
 
 ### Project directory scope
 

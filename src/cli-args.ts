@@ -11,6 +11,7 @@ export interface CliArgs {
   relaunch: boolean;
   noOpen: boolean;
   stop: boolean;
+  init: boolean;
   port: number | undefined;
   projectDir: string | undefined;
 }
@@ -46,10 +47,12 @@ export function parseCliArgs(argv: string[]): CliArgs {
     throw new CliUsageError(`invalid --port value: ${values.port}`);
   }
 
-  // `stop` is a positional subcommand, not a project directory: `janus stop [<project-dir>]`
-  // takes its own optional directory argument after the keyword.
+  // `stop` and `init` are positional subcommands, not a project directory: `janus stop
+  // [<project-dir>]` and `janus init [<project-dir>]` each take their own optional directory
+  // argument after the keyword.
   const stop = positionals[0] === 'stop';
-  const projectDir = parseProjectDir(stop ? positionals.slice(1) : positionals);
+  const init = positionals[0] === 'init';
+  const projectDir = parseProjectDir(stop || init ? positionals.slice(1) : positionals);
 
   return {
     help: Boolean(values.help),
@@ -57,6 +60,7 @@ export function parseCliArgs(argv: string[]): CliArgs {
     relaunch: Boolean(values.relaunch),
     noOpen: Boolean(values['no-open']),
     stop,
+    init,
     port,
     projectDir,
   };

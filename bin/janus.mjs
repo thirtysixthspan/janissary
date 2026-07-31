@@ -4,9 +4,10 @@ import path from 'node:path';
 import { existsSync, mkdirSync, openSync, readFileSync } from 'node:fs';
 
 // Janissary runs as a local web app: this launcher boots the Node server (which opens the
-// browser to a token-gated localhost URL). `stop`/`--help`/`--version` run attached, printing
-// straight to the terminal; every other invocation detaches the server, redirects its output to
-// a log file, and returns the shell prompt as soon as the server is ready (or reports failure).
+// browser to a token-gated localhost URL). `stop`/`init`/`--help`/`--version` run attached,
+// printing straight to the terminal; every other invocation detaches the server, redirects its
+// output to a log file, and returns the shell prompt as soon as the server is ready (or reports
+// failure).
 const root = path.join(import.meta.dirname, '..');
 const compiled = path.join(root, 'dist', 'main.js');
 const source = path.join(root, 'src', 'main.ts');
@@ -25,7 +26,7 @@ if (existsSync(compiled)) {
   commandArguments = ['tsx', source, ...arguments_];
 }
 
-const isForeground = arguments_[0] === 'stop' || arguments_.includes('--help') || arguments_.includes('--version');
+const isForeground = arguments_[0] === 'stop' || arguments_[0] === 'init' || arguments_.includes('--help') || arguments_.includes('--version');
 
 if (isForeground) {
   const result = spawnSync(command, commandArguments, { stdio: 'inherit' });

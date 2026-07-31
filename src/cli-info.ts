@@ -7,6 +7,7 @@ import path from 'node:path';
 export function usageText(): string {
   return `Usage: janus [options] [<project-dir>]
        janus stop [<project-dir>]
+       janus init [<project-dir>]
 
 A terminal UI shell with built-in commands and shell execution.
 
@@ -15,6 +16,7 @@ Arguments:
 
 Commands:
   stop           Stop the running instance for a directory
+  init           Scaffold the ai/ and product/ directory tree in a directory
 
 Options:
   --port=<n>     Port to listen on (default: auto)

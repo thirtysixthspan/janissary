@@ -106,6 +106,27 @@ describe('parseCliArgs', () => {
     expect(() => parseCliArgs(['stop', tmpDir, 'extra'])).toThrow(CliUsageError);
   });
 
+  it('recognizes `init` as a subcommand with no project directory', () => {
+    const args = parseCliArgs(['init']);
+    expect(args.init).toBe(true);
+    expect(args.projectDir).toBeUndefined();
+  });
+
+  it('recognizes `init <project-dir>` without raising the unexpected-argument error', () => {
+    const args = parseCliArgs(['init', tmpDir]);
+    expect(args.init).toBe(true);
+    expect(args.projectDir).toBe(tmpDir);
+  });
+
+  it('leaves init false for a normal invocation', () => {
+    expect(parseCliArgs([]).init).toBe(false);
+    expect(parseCliArgs([tmpDir]).init).toBe(false);
+  });
+
+  it('throws CliUsageError for `init` with more than one extra argument', () => {
+    expect(() => parseCliArgs(['init', tmpDir, 'extra'])).toThrow(CliUsageError);
+  });
+
   it('throws CliUsageError for a nonexistent positional project directory', () => {
     expect(() => parseCliArgs([path.join(tmpDir, 'nope')])).toThrow(CliUsageError);
   });
@@ -128,6 +149,10 @@ describe('usageText', () => {
 
   it('mentions the stop subcommand', () => {
     expect(usageText()).toContain('stop');
+  });
+
+  it('mentions the init subcommand', () => {
+    expect(usageText()).toContain('init');
   });
 });
 

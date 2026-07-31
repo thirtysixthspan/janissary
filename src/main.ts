@@ -9,6 +9,7 @@ import { initHarnessRecordingDirectory, clearHarnessRecordingDirectory } from '.
 import { initHarnessTranscriptDirectory, clearHarnessTranscriptDirectory } from './harness/transcript-file.js';
 import { acquireLock, releaseLock } from './instance-lock.js';
 import { stopInstance } from './stop-instance.js';
+import { scaffoldProject } from './project-init.js';
 import { initGlobalHistory } from './global-history.js';
 import { TranscriptLogger } from './transcript/logger.js';
 import { TranscriptStore } from './transcript/store.js';
@@ -152,6 +153,11 @@ export async function boot(argv = process.argv.slice(2)): Promise<void> {
 
   const cwd = args.projectDir ?? process.cwd();
   if (args.stop) { stopInstance(cwd); return; }
+  if (args.init) {
+    const created = scaffoldProject(cwd);
+    process.stdout.write(`Scaffolded ai/ and product/ in ${cwd}:\n${created.map((dir) => `  ${dir}`).join('\n')}\n`);
+    return;
+  }
 
   acquireLock(cwd);
   lockedDir = cwd;
