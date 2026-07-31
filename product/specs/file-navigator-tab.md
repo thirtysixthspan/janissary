@@ -293,8 +293,12 @@ the client, so a selection copied in one navigator pastes into any other, even o
 unrelated path. `Ctrl+C` with nothing selected leaves the clipboard untouched; `Ctrl+V` with an
 empty clipboard is a silent no-op.
 
-Rows on the clipboard from a cut render dimmed in every open navigator that shows them, until the
-paste lands or a later `Ctrl+C`/`Ctrl+X` replaces the clipboard. After a successful cut-paste the
+Rows on the clipboard are marked in every open navigator that shows them, until the paste lands, a
+later `Ctrl+C`/`Ctrl+X` replaces the clipboard, or Escape disarms it. A cut renders its rows dimmed with a muted dashed
+outline — they are about to leave. A copy renders its rows at full strength with an accent dashed
+outline — the originals stay exactly where they are, so nothing about them is faded. Either mark
+takes precedence over the cursor's own outline on the same row, and a row being dragged onto still
+reads as the drop target. After a successful cut-paste the
 clipboard empties, so a second `Ctrl+V` does nothing; a copy-paste leaves the clipboard as-is, so
 the same selection can be pasted again elsewhere.
 
@@ -329,6 +333,7 @@ A focused file navigator tab captures its own keys, following the ARIA treeview 
 | `Home` / `End` | Move the cursor to the first / last visible row and collapse selection to it |
 | `Page Up` / `Page Down` | Move the cursor by one viewport of rows and collapse selection to it |
 | `Backspace` / `Delete` | Delete the normalized selection after one confirmation |
+| `Escape` | Clear the selection and the keyboard cursor, and disarm any pending copy or cut |
 | Printable characters | Type-ahead: jump to a matching row and collapse selection to it |
 | `Cmd+Z` / `Ctrl+Z` | Undo the most recent move made in this tab |
 | `Cmd+Shift+Z` / `Ctrl+Shift+Z` | Redo the most recently undone move |
@@ -347,6 +352,14 @@ captures its own `Cmd+Z`/`Cmd+Shift+Z` for text undo/redo.
 Keyboard navigation, type-ahead, search reveal, and new-directory auto-selection collapse the
 selection to their resulting cursor. Shift+Arrow range extension and Cmd/Ctrl+A are not supported.
 Open, expand/collapse, reroot, New file, New directory, and rename act only on the cursor.
+
+Escape clears cursor, anchor, and every selected row at once, the same empty state the tab starts
+in — a cleared tree resumes navigating from the top row, exactly as one that has never been
+touched: `↓` selects its second row, `↑` and `Home` its first. It also disarms the clipboard, so a
+pending copy or cut is abandoned and its marks disappear; because the clipboard is app-wide, that
+clears the marks in every open navigator, not only the one Escape was pressed in. The tree only
+takes Escape when it has something to clear; with nothing selected and nothing on the clipboard the
+key falls through to the window-level bindings untouched.
 
 When rows disappear or become hidden, surviving visible selections remain. A missing cursor moves
 to its nearest visible ancestor, or falls back near its former row index. A missing anchor resets

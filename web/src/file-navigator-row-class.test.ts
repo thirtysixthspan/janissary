@@ -41,11 +41,16 @@ describe('fileNavigatorRowClass', () => {
   });
 
   it('composes the cut modifier with selected, cursor, and drop-target', () => {
-    expect(fileNavigatorRowClass(row(), true, true, 'src/index.ts', true).row)
+    expect(fileNavigatorRowClass(row(), true, true, 'src/index.ts', 'cut').row)
       .toBe('files-row selected cursor drop-target cut');
   });
 
-  it('omits the cut modifier by default', () => {
+  it('composes the copied modifier with selected, cursor, and drop-target', () => {
+    expect(fileNavigatorRowClass(row(), true, true, 'src/index.ts', 'copy').row)
+      .toBe('files-row selected cursor drop-target copied');
+  });
+
+  it('omits both clipboard modifiers by default', () => {
     expect(fileNavigatorRowClass(row(), false, false, undefined).row).toBe('files-row');
   });
 });

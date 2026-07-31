@@ -158,7 +158,7 @@ export function FileNavigatorTab({
               selection.selected.has(row.path),
               selection.cursor === row.path,
               drag.dropTarget?.path,
-              paste.isCut(row.path),
+              paste.clipboardMark(row.path),
             )}
             editing={rename.editing === row.path}
             draft={rename.draft}

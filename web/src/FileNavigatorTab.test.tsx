@@ -7,7 +7,7 @@ import type { JanusClient } from './ws';
 import { FileNavigatorTab } from './FileNavigatorTab';
 import { Sidebar } from './Sidebar';
 import type { CommandInputDropHandle } from './CommandInput';
-import { clearClipboard } from './file-navigator-clipboard';
+import { clearClipboard, getClipboardSnapshot, setClipboard } from './file-navigator-clipboard';
 
 beforeAll(() => {
   Element.prototype.scrollIntoView = vi.fn();
@@ -164,6 +164,66 @@ describe('FileNavigatorTab', () => {
     fireEvent.mouseDown(screen.getByText('..'), { button: 0, shiftKey: true });
     expect(container.querySelectorAll('[aria-selected="true"]')).toHaveLength(1);
     expect(screen.getByText('..').closest('[role="treeitem"]')).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('Escape clears every selected row and the cursor', () => {
+    const client = { send: vi.fn() } as unknown as JanusClient;
+    const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
+    const tree = container.querySelector('[role="tree"]')!;
+    fireEvent.mouseDown(screen.getByText('src'), { button: 0 });
+    fireEvent.mouseDown(screen.getByText('README.md'), { button: 0, shiftKey: true });
+    expect(container.querySelectorAll('[aria-selected="true"]').length).toBeGreaterThan(1);
+
+    fireEvent.keyDown(tree, { key: 'Escape' });
+    expect(container.querySelectorAll('[aria-selected="true"]')).toHaveLength(0);
+    expect(container.querySelectorAll('.files-row.cursor')).toHaveLength(0);
+    expect(tree.getAttribute('aria-activedescendant')).toBeNull();
+  });
+
+  it('Escape with nothing selected and nothing on the clipboard is left to the window bindings', () => {
+    const client = { send: vi.fn() } as unknown as JanusClient;
+    const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
+    const tree = container.querySelector('[role="tree"]')!;
+    const handled = fireEvent.keyDown(tree, { key: 'Escape' });
+    expect(handled).toBe(true); // not preventDefault-ed by the tree
+  });
+
+  it('Escape disarms a pending copy: the mark clears and a later paste sends nothing', () => {
+    const request = vi.fn().mockResolvedValue({ total: 1, failedPaths: [] });
+    const client = { send: vi.fn(), request } as unknown as JanusClient;
+    const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
+    const tree = container.querySelector('[role="tree"]')!;
+    fireEvent.mouseDown(screen.getByText('README.md'), { button: 0 });
+    fireEvent.keyDown(tree, { key: 'c', ctrlKey: true });
+    expect(screen.getByText('README.md').closest('.files-row')).toHaveClass('copied');
+
+    fireEvent.keyDown(tree, { key: 'Escape' });
+    expect(screen.getByText('README.md').closest('.files-row')).not.toHaveClass('copied');
+    fireEvent.mouseDown(screen.getByText('src'), { button: 0 });
+    fireEvent.keyDown(tree, { key: 'v', ctrlKey: true });
+    expect(request).not.toHaveBeenCalled();
+  });
+
+  it('Escape disarms a pending cut, clearing its dimming', () => {
+    const client = { send: vi.fn() } as unknown as JanusClient;
+    const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
+    const tree = container.querySelector('[role="tree"]')!;
+    fireEvent.mouseDown(screen.getByText('README.md'), { button: 0 });
+    fireEvent.keyDown(tree, { key: 'x', ctrlKey: true });
+    fireEvent.keyDown(tree, { key: 'Escape' }); // clears selection and clipboard together
+    expect(screen.getByText('README.md').closest('.files-row')).not.toHaveClass('cut');
+  });
+
+  // The armed-clipboard half of the Escape guard on its own: a navigator with nothing selected
+  // still takes Escape when another navigator armed the app-wide clipboard.
+  it('Escape claims the key for a clipboard armed elsewhere, with no selection of its own', () => {
+    const client = { send: vi.fn() } as unknown as JanusClient;
+    const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
+    const tree = container.querySelector('[role="tree"]')!;
+    setClipboard('copy', ['/elsewhere/notes.md']);
+    const handled = fireEvent.keyDown(tree, { key: 'Escape' });
+    expect(handled).toBe(false); // prevent-defaulted by the tree
+    expect(getClipboardSnapshot()).toBeNull();
   });
 
   it('double-click on a file row sends an open command', () => {
@@ -446,6 +506,30 @@ describe('FileNavigatorTab', () => {
       fireEvent.mouseDown(screen.getByText('README.md'), { button: 0 });
       fireEvent.keyDown(tree, { key: 'x', ctrlKey: true });
       expect(screen.getByText('README.md').closest('.files-row')).toHaveClass('cut');
+    });
+
+    it('Ctrl+C marks the copied rows without dimming them', () => {
+      const client = { send: vi.fn() } as unknown as JanusClient;
+      const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
+      const tree = container.querySelector('[role="tree"]')!;
+      fireEvent.mouseDown(screen.getByText('README.md'), { button: 0 });
+      fireEvent.keyDown(tree, { key: 'c', ctrlKey: true });
+      const row = screen.getByText('README.md').closest('.files-row');
+      expect(row).toHaveClass('copied');
+      expect(row).not.toHaveClass('cut');
+      expect(screen.getByText('src').closest('.files-row')).not.toHaveClass('copied');
+    });
+
+    it('a later Ctrl+X replaces the copy mark with the cut mark', () => {
+      const client = { send: vi.fn() } as unknown as JanusClient;
+      const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
+      const tree = container.querySelector('[role="tree"]')!;
+      fireEvent.mouseDown(screen.getByText('README.md'), { button: 0 });
+      fireEvent.keyDown(tree, { key: 'c', ctrlKey: true });
+      fireEvent.mouseDown(screen.getByText('src'), { button: 0 });
+      fireEvent.keyDown(tree, { key: 'x', ctrlKey: true });
+      expect(screen.getByText('README.md').closest('.files-row')).not.toHaveClass('copied');
+      expect(screen.getByText('src').closest('.files-row')).toHaveClass('cut');
     });
   });
 

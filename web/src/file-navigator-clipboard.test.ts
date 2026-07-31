@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   clearClipboard,
   getClipboardSnapshot,
-  isPendingCut,
+  pendingClipboardMode,
   setClipboard,
   subscribeClipboard,
 } from './file-navigator-clipboard';
@@ -26,15 +26,16 @@ describe('file-navigator-clipboard', () => {
     expect(getClipboardSnapshot()).toEqual({ mode: 'cut', paths: ['/root/a.txt'] });
   });
 
-  it('answers the cut membership query correctly for a navigator rooted elsewhere', () => {
+  it('answers the membership query correctly for a navigator rooted elsewhere', () => {
     setClipboard('cut', ['/root/a/b.txt']);
-    expect(isPendingCut('/root/a', 'b.txt')).toBe(true);
-    expect(isPendingCut('/other/root', 'b.txt')).toBe(false);
+    expect(pendingClipboardMode('/root/a', 'b.txt')).toBe('cut');
+    expect(pendingClipboardMode('/other/root', 'b.txt')).toBeNull();
   });
 
-  it('never reports a pending cut for a copy-mode clipboard', () => {
+  it('reports the copy mode for a copy-mode clipboard so copied rows are marked too', () => {
     setClipboard('copy', ['/root/a/b.txt']);
-    expect(isPendingCut('/root/a', 'b.txt')).toBe(false);
+    expect(pendingClipboardMode('/root/a', 'b.txt')).toBe('copy');
+    expect(pendingClipboardMode('/root/a', 'other.txt')).toBeNull();
   });
 
   it('subscribers fire on a set or clear', () => {

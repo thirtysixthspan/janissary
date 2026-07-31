@@ -33,10 +33,12 @@ export function subscribeClipboard(listener: () => void): () => void {
   return () => { listeners.delete(listener); };
 }
 
-// Whether a tree-relative `path` in the navigator rooted at `absoluteRoot` is on a pending cut —
-// so a row can ask "am I on the clipboard?" without recomputing the whole set itself.
-export function isPendingCut(absoluteRoot: string, path: string): boolean {
-  if (!snapshot || snapshot.mode !== 'cut') return false;
+// The clipboard mode a tree-relative `path` in the navigator rooted at `absoluteRoot` is currently
+// on, or `null` when it isn't on the clipboard at all — so a row can ask "am I on the clipboard,
+// and how?" without recomputing the whole set itself. Both modes are marked, each in its own way
+// (see `.files-row.cut` / `.files-row.copied` in theme.css).
+export function pendingClipboardMode(absoluteRoot: string, path: string): ClipboardMode | null {
+  if (!snapshot) return null;
   const absolute = path === '' ? absoluteRoot : `${absoluteRoot}/${path}`;
-  return snapshot.paths.includes(absolute);
+  return snapshot.paths.includes(absolute) ? snapshot.mode : null;
 }

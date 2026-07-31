@@ -94,6 +94,8 @@ export function handle(controller: Controller, message: ClientMessage, reply: (e
     case 'moveFileNavigatorItems':
     case 'deleteFileNavigatorItem':
     case 'deleteFileNavigatorItems':
+    case 'pasteFileNavigatorItems':
+    case 'reportFileNavigatorSelection':
     case 'renameFileNavigatorItem':
     case 'fileNavigatorSearch':
     case 'revealFileNavigatorItem':

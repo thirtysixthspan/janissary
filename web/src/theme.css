@@ -771,8 +771,13 @@ html, body, #root {
 .files-row:hover { background: var(--bg-soft); }
 .files-row.selected { background: var(--bg-soft); border-left-color: var(--accent); }
 .files-row.cursor { outline: 1px solid var(--muted); outline-offset: -2px; }
+/* Clipboard marks. A copy keeps the row at full strength and outlines it — the original stays put,
+   so dimming it would be a lie; a cut dims it, since the row is about to leave. Both sit after
+   `.cursor` so the clipboard outline wins over the cursor's on the same row, and before
+   `.drop-target` so a live drag still reads as the drop target. */
+.files-row.copied { outline: 1px dashed var(--accent); outline-offset: -2px; }
+.files-row.cut { opacity: 0.5; outline: 1px dashed var(--muted); outline-offset: -2px; }
 .files-row.drop-target { background: var(--bg-soft); border-left-color: var(--accent); outline: 1px dashed var(--accent); outline-offset: -1px; }
-.files-row.cut { opacity: 0.5; }
 .files-drag-ghost {
   position: fixed; pointer-events: none; z-index: 100;
   transform: translate(12px, -8px);

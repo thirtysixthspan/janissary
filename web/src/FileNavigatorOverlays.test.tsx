@@ -67,7 +67,7 @@ function makePaste(overrides: Partial<Paste> = {}): Paste {
     confirmOverwrite: () => {},
     skipConflicts: () => {},
     cancelConflict: () => {},
-    isCut: () => false,
+    clipboardMark: () => null,
     ...overrides,
   };
 }

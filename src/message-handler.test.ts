@@ -8,8 +8,10 @@ import {
   deleteFileNavigatorItems,
   fileNavigatorSearch,
   moveFileNavigatorItems,
+  pasteFileNavigatorItems,
   revealFileNavigatorItem,
 } from './controller/file-navigator.js';
+import { resolveTreeSelections } from './file-navigator/selection-request.js';
 import { setClientLayout } from './client-layout.js';
 import { editorSuggest, ownerLabel } from './editor-suggest/handler.js';
 import { closeConnection } from './connection/close.js';
@@ -20,8 +22,10 @@ vi.mock('./controller/file-navigator.js', () => ({
   deleteFileNavigatorItems: vi.fn(),
   fileNavigatorSearch: vi.fn(),
   moveFileNavigatorItems: vi.fn(),
+  pasteFileNavigatorItems: vi.fn(),
   revealFileNavigatorItem: vi.fn(),
 }));
+vi.mock('./file-navigator/selection-request.js', () => ({ resolveTreeSelections: vi.fn() }));
 vi.mock('./client-layout.js', () => ({ setClientLayout: vi.fn() }));
 vi.mock('./editor-suggest/handler.js', () => ({ editorSuggest: vi.fn(), ownerLabel: vi.fn(() => 'janus') }));
 vi.mock('./connection/close.js', () => ({ closeConnection: vi.fn() }));
@@ -266,6 +270,26 @@ describe('handle', () => {
     });
     expect(deleteFileNavigatorItems).toHaveBeenCalledWith(controller.managers, 0, ['a', 'b']);
     expect(replies).toEqual([{ t: 'rpc-reply', id: 45, result: { total: 2, failedPaths: [] } }]);
+  });
+
+  it('routes pasteFileNavigatorItems and replies with its result', () => {
+    const controller = makeController();
+    vi.mocked(pasteFileNavigatorItems).mockReturnValue({ total: 1, failedPaths: [] });
+    const replies = dispatchCall(controller, 46, {
+      method: 'pasteFileNavigatorItems',
+      params: { index: 0, sources: ['/a/b.txt'], destinationPath: 'dest', mode: 'copy' },
+    });
+    expect(pasteFileNavigatorItems).toHaveBeenCalledWith(controller.managers, 0, ['/a/b.txt'], 'dest', 'copy', undefined);
+    expect(replies).toEqual([{ t: 'rpc-reply', id: 46, result: { total: 1, failedPaths: [] } }]);
+  });
+
+  it('routes reportFileNavigatorSelection to the tree-state resolver', () => {
+    const controller = makeController();
+    dispatchCall(controller, 47, {
+      method: 'reportFileNavigatorSelection',
+      params: { id: 7, navigators: [] },
+    });
+    expect(resolveTreeSelections).toHaveBeenCalledWith(7, []);
   });
 
   it('routes setDock', () => {

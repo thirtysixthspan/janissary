@@ -2,7 +2,7 @@ import { useState, useSyncExternalStore } from 'react';
 import type { BulkConflictPolicy, BulkMoveResult, FileNavigatorRow } from '@shared/protocol';
 import type { JanusClient } from './ws';
 import { newFileTargetDir } from './file-navigator-new-file';
-import { clearClipboard, getClipboardSnapshot, isPendingCut, subscribeClipboard, type ClipboardMode } from './file-navigator-clipboard';
+import { clearClipboard, getClipboardSnapshot, pendingClipboardMode, subscribeClipboard, type ClipboardMode } from './file-navigator-clipboard';
 
 type PendingPasteConflict = {
   sources: string[];
@@ -62,6 +62,6 @@ export function useFileNavigatorPaste(client: JanusClient, index: number, absolu
     confirmOverwrite: () => retry('overwrite-all'),
     skipConflicts: () => retry('skip-conflicts'),
     cancelConflict: () => setPendingConflict(null),
-    isCut: (path: string) => isPendingCut(absoluteRoot, path),
+    clipboardMark: (path: string) => pendingClipboardMode(absoluteRoot, path),
   };
 }

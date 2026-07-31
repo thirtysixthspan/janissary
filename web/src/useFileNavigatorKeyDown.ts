@@ -4,6 +4,7 @@ import type { FileNavigatorRow } from '@shared/protocol';
 import { handleFileNavigatorKey, typeAheadMatch } from './file-navigator-keys';
 import { handleTreeChord, type ChordHandlers } from './file-navigator-chords';
 import { runFileNavigatorAction } from './file-navigator-actions';
+import { clearClipboard, getClipboardSnapshot } from './file-navigator-clipboard';
 import type { useFileNavigatorSelection } from './useFileNavigatorSelection';
 import type { useFileNavigatorOpener } from './useFileNavigatorOpener';
 import type { useFileNavigatorRename } from './useFileNavigatorRename';
@@ -53,6 +54,20 @@ export function useFileNavigatorKeyDown({
       const handled = handleTreeChord(e.key, e.shiftKey, rows, selection.cursor, chordHandlers);
       if (handled) { e.preventDefault(); e.stopPropagation(); }
       return; // tab-management chords go to the window handler
+    }
+    // Escape clears the whole selection, cursor included, and disarms the clipboard along with it —
+    // one key puts the tree back to "nothing chosen, nothing pending". The clipboard is app-wide, so
+    // this clears the copy/cut mark in every navigator, not just this one. Only swallowed when
+    // there is something to clear; with nothing selected and nothing armed Escape stays the
+    // window's to handle.
+    if (e.key === 'Escape') {
+      const armed = getClipboardSnapshot() !== null;
+      if (selection.selected.size === 0 && selection.cursor === null && !armed) return;
+      e.preventDefault();
+      e.stopPropagation();
+      selection.replace(null);
+      clearClipboard();
+      return;
     }
     if ((e.key === 'Backspace' || e.key === 'Delete') && selection.operationPaths.length > 0) {
       e.preventDefault();
