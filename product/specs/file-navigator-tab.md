@@ -252,6 +252,9 @@ The tree already watches every visible directory, so the removed row disappears 
 the watcher picks up the change, the same as any other on-disk change made outside the app. If the
 selected row was the one removed, selection moves to the nearest surviving row rather than pointing
 at nothing.
+Acting on the dialog always returns keyboard focus to the tree. Confirming leaves the parent
+directory as the active row once the deletion lands; canceling leaves the file that was about to be
+deleted as the active row.
 
 ### Renaming a file or directory
 
