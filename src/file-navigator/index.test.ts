@@ -21,11 +21,21 @@ describe('readDirSorted', () => {
     expect(entries.map((e) => e.dir)).toEqual([true, true, false, false]);
   });
 
-  it('excludes .git, .DS_Store, and other VS Code default excludes', () => {
+  it('excludes .DS_Store and other VS Code default excludes, but not .git', () => {
     mkdirSync(path.join(root, '.git'));
+    mkdirSync(path.join(root, '.svn'));
+    mkdirSync(path.join(root, '.hg'));
     writeFileSync(path.join(root, '.DS_Store'), '');
+    writeFileSync(path.join(root, 'Thumbs.db'), '');
     writeFileSync(path.join(root, 'keep.txt'), '');
-    expect(readDirSorted(root).map((e) => e.name)).toEqual(['keep.txt']);
+    const entries = readDirSorted(root);
+    expect(entries.map((e) => e.name)).toEqual(['.git', 'keep.txt']);
+  });
+
+  it('shows .git as a directory', () => {
+    mkdirSync(path.join(root, '.git'));
+    const entry = readDirSorted(root).find((e) => e.name === '.git');
+    expect(entry?.dir).toBe(true);
   });
 
   it('shows other dotfiles', () => {
