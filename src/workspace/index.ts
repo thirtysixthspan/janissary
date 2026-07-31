@@ -119,7 +119,17 @@ async function finishProvisioning(name: string, target: string, remoteUrl: strin
   // Local-only credential helper (never touches global git config) — `gh auth git-credential`
   // checks `GH_TOKEN` in its environment before falling back to its keychain-stored OAuth token,
   // so once the sandbox injects `GH_TOKEN` (see src/sandbox/index.ts), `git push` authenticates via it.
-  await execFileAsync('git', ['config', '--local', 'credential.helper', '!gh auth git-credential'], { cwd: target });
+  //
+  // Reset the inherited helper list before adding ours: git accumulates `credential.helper` across
+  // the system, global, and local scopes and the *first* helper to answer a query wins, so a
+  // system/global `osxkeychain` entry (the macOS default, commonly holding a since-revoked token
+  // `gh` stored on an earlier login) answers first and `gh` is never consulted — the push fails
+  // with a 403 even though `GH_TOKEN` is present and valid. Setting the key to the empty string
+  // clears the accumulated list for this repo only; the `--add` below then makes `gh` the sole
+  // helper. Both scoping and ordering matter here: `--replace-all` on its own would only replace
+  // the local scope's own entries, leaving the inherited ones ahead of us.
+  await execFileAsync('git', ['config', '--local', '--replace-all', 'credential.helper', ''], { cwd: target });
+  await execFileAsync('git', ['config', '--local', '--add', 'credential.helper', '!gh auth git-credential'], { cwd: target });
   trustWorkspace(target);
   mkdirSync(workspaceTempPath(name), { recursive: true });
 }

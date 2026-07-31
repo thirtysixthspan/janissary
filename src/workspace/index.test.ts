@@ -70,10 +70,26 @@ describe('createWorkspace', () => {
     removeWorkspace(ws);
   });
 
-  it('sets a local credential helper on the clone', async () => {
+  it('makes gh the only credential helper git will actually consult', async () => {
+    // Asserting on `git config --local credential.helper` alone would pass even when the helper is
+    // shadowed: git accumulates the key across the system, global, and local scopes and the first
+    // helper to answer wins, so an ambient `osxkeychain` entry (the macOS default) would be queried
+    // first and `gh` — and therefore the injected `GH_TOKEN` — never consulted. Stand up throwaway
+    // system and global configs holding exactly that ambient entry, and assert on the *effective*
+    // list git resolves in the workspace.
     const ws = await createWorkspace('test-agent-credhelper', repoDir);
-    const helper = execSync('git config --local credential.helper', { cwd: ws, stdio: 'pipe' }).toString().trim();
-    expect(helper).toBe('!gh auth git-credential');
+    const ambientConfig = path.join(tmpDir, 'ambient.gitconfig');
+    writeFileSync(ambientConfig, '[credential]\n\thelper = osxkeychain\n');
+    const raw = execSync('git config --get-all credential.helper', {
+      cwd: ws,
+      stdio: 'pipe',
+      env: { ...process.env, GIT_CONFIG_SYSTEM: ambientConfig, GIT_CONFIG_GLOBAL: ambientConfig },
+    }).toString().split('\n').slice(0, -1);
+
+    // git's own reset rule: an empty value discards every helper accumulated so far, so only the
+    // entries after the last empty one are ever queried.
+    const lastReset = raw.lastIndexOf('');
+    expect(raw.slice(lastReset + 1)).toEqual(['!gh auth git-credential']);
     removeWorkspace(ws);
   });
 
