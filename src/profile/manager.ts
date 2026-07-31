@@ -7,6 +7,9 @@ import { openProfileEntries } from './agent-opener.js';
 import { reportValidation } from './validate.js';
 import { saveProfile, formatSaveSummary } from './save.js';
 import { notify } from '../notifications.js';
+import { sandboxNotice } from '../sandbox/index.js';
+import { wireProvisioning, PROVISION_FAILURE_CLOSE_DELAY_MS } from '../workspace/provision-wire.js';
+import { messageBus } from '../bus.js';
 import type { Tab } from '../types.js';
 import type { Managers } from '../managers.js';
 import { newAgentOp } from './new-agent.js';
@@ -58,14 +61,45 @@ export class ProfileManager {
   }
 
   // Launch a bare, auto-named agent tab rooted at the named source tab's cwd, joining its group —
-  // the ➕ metadata-row button. A no-op for an unknown label; on pool exhaustion the error reaches
-  // the notifications feed (the source tab may be a harness with no transcript to print into).
+  // the ➕ metadata-row button. A no-op for an unknown label; every message (pool exhaustion, a
+  // workspace-clone error or its ready confirmation) reaches the notifications feed rather than a
+  // transcript, since the source tab may be a harness with no transcript to print into.
   newAgentAt(label: string): void {
     const creator = this.managers.tab.tabs.find((t) => t.label === label);
     if (!creator) return;
     const resolved = resolveAgentName('agent', this.managers.tab.allLabels());
     if (resolved === null) { notify(this.managers, 'manual', label, 'All agent names are in use.'); return; }
-    this.placeAgent(resolved, creator, this.managers.tab.cwdOf(label) ?? process.cwd(), undefined, false);
+    const cwd = this.managers.tab.cwdOf(label) ?? process.cwd();
+
+    if (creator.workspaceDir === undefined) {
+      this.placeAgent(resolved, creator, cwd, undefined, false);
+      return;
+    }
+
+    // Creator tab is workspaced — the new agent inherits its own cloned workspace, following the
+    // same clone/busy/provisioning flow as `agent --workspace` (see `newAgentOp`).
+    const result = this.managers.workspace.create(resolved);
+    if ('error' in result) { notify(this.managers, 'manual', label, result.error); return; }
+    this.placeAgent(resolved, creator, result.dir, result.dir, false, true);
+    wireProvisioning(
+      resolved,
+      result.ready,
+      (l) => this.managers.tab.tabs.some((t) => t.label === l),
+      () => {
+        this.managers.tab.deleteBusy(resolved);
+        messageBus.emit('state', { type: 'dirty' });
+        const notice = sandboxNotice();
+        notify(this.managers, 'manual', label, `Agent "${resolved}" ready. (workspace: ${this.managers.tab.shorten(result.dir)})`);
+        if (notice) notify(this.managers, 'manual', label, notice);
+      },
+      (message) => {
+        notify(this.managers, 'manual', label, `Failed to create workspace for "${resolved}": ${message}`);
+        setTimeout(() => {
+          const index = this.managers.tab.findIndex(resolved);
+          if (index !== -1) this.managers.tab.closeTab(index);
+        }, PROVISION_FAILURE_CLOSE_DELAY_MS);
+      },
+    );
   }
 
   // Build the agent tab, insert it into its creator's group, set its cwd, focus it, and persist —
