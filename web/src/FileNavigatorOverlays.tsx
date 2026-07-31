@@ -59,8 +59,8 @@ export function FileNavigatorOverlays({
             ? deletion.pendingDelete[0].slice(deletion.pendingDelete[0].lastIndexOf('/') + 1)
             : undefined}
           count={deletion.pendingDelete.length > 1 ? deletion.pendingDelete.length : undefined}
-          onConfirm={deletion.confirm}
-          onCancel={deletion.cancel}
+          onConfirm={() => { deletion.confirm(); focusTree(); }}
+          onCancel={() => { deletion.cancel(); focusTree(); }}
         />
       )}
       {drag.failure && (

@@ -121,4 +121,40 @@ describe('FileNavigatorOverlays', () => {
     expect(dismissFailure).toHaveBeenCalledTimes(1);
     expect(focusTree).toHaveBeenCalledTimes(1);
   });
+
+  it('confirms the delete dialog and refocuses the tree', () => {
+    const confirm = vi.fn();
+    const focusTree = vi.fn();
+    render(
+      <FileNavigatorOverlays
+        drag={makeDrag()}
+        rename={makeRename()}
+        deletion={makeDeletion({ pendingDelete: ['notes.txt'], confirm })}
+        search={makeSearch()}
+        opener={makeOpener()}
+        focusTree={focusTree}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /delete/i }));
+    expect(confirm).toHaveBeenCalledTimes(1);
+    expect(focusTree).toHaveBeenCalledTimes(1);
+  });
+
+  it('cancels the delete dialog and refocuses the tree', () => {
+    const cancel = vi.fn();
+    const focusTree = vi.fn();
+    render(
+      <FileNavigatorOverlays
+        drag={makeDrag()}
+        rename={makeRename()}
+        deletion={makeDeletion({ pendingDelete: ['notes.txt'], cancel })}
+        search={makeSearch()}
+        opener={makeOpener()}
+        focusTree={focusTree}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /cancel/i }));
+    expect(cancel).toHaveBeenCalledTimes(1);
+    expect(focusTree).toHaveBeenCalledTimes(1);
+  });
 });
