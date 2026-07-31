@@ -80,6 +80,8 @@
   },
   "files": [
     "ai",
+    ".codex",
+    ".claude",
     "profiles",
     "bin",
     "dist",

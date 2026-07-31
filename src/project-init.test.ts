@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { existsSync, mkdtempSync, rmSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, rmSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { tmpdir } from 'node:os';
 import { scaffoldProject } from './project-init.js';
@@ -35,6 +35,32 @@ describe('scaffoldProject', () => {
       expect(content).toContain('## development');
       expect(content).toContain('## deferred');
     }
+  });
+
+  it('installs the standard Codex and Claude configurations', () => {
+    scaffoldProject(projectDir);
+    for (const relativePath of ['.codex/config.toml', '.codex/rules/default.rules', '.claude/settings.json']) {
+      expect(readFileSync(path.join(projectDir, relativePath), 'utf8'))
+        .toBe(readFileSync(path.join(import.meta.dirname, '..', relativePath), 'utf8'));
+    }
+  });
+
+  it('refreshes standard configuration while preserving custom files', () => {
+    const codexRules = path.join(projectDir, '.codex', 'rules');
+    mkdirSync(codexRules, { recursive: true });
+    mkdirSync(path.join(projectDir, '.claude'), { recursive: true });
+    writeFileSync(path.join(projectDir, '.codex', 'config.toml'), 'custom config\n');
+    writeFileSync(path.join(codexRules, 'custom.rules'), 'custom rules\n');
+    writeFileSync(path.join(projectDir, '.claude', 'settings.json'), '{"custom":true}\n');
+
+    scaffoldProject(projectDir);
+
+    expect(readFileSync(path.join(projectDir, '.codex', 'config.toml'), 'utf8'))
+      .toBe(readFileSync(path.join(import.meta.dirname, '..', '.codex/config.toml'), 'utf8'));
+    expect(readFileSync(path.join(codexRules, 'custom.rules'), 'utf8')).toBe('custom rules\n');
+    expect(existsSync(path.join(codexRules, 'default.rules'))).toBe(true);
+    expect(readFileSync(path.join(projectDir, '.claude', 'settings.json'), 'utf8'))
+      .toBe(readFileSync(path.join(import.meta.dirname, '..', '.claude/settings.json'), 'utf8'));
   });
 
   it('is idempotent: running twice does not throw', () => {
