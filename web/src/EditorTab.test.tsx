@@ -481,6 +481,22 @@ describe('EditorTab', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
+  it('reloads content on the first mtimeMs change after a freshly-opened tab (e.g. a resync)', async () => {
+    const { client } = makeClient();
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, text: () => Promise.resolve('line one\nline two') })
+      .mockResolvedValueOnce({ ok: true, text: () => Promise.resolve('line one') });
+    vi.stubGlobal('fetch', fetchMock);
+    const view = makeView({ sync: 'synced' });
+    const { rerender } = await renderLoaded(client, view);
+
+    rerender(<EditorTab editor={{ ...view, mtimeMs: 1 }} tab={makeTab({ editor: view })} client={client} active />);
+
+    await waitFor(() => expect(screen.queryByText('line two')).not.toBeInTheDocument());
+    expect(screen.getByText('line one')).toBeInTheDocument();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
   it('does not reload a dirty buffer when mtimeMs changes, and prompts to overwrite on save', async () => {
     const { client, saveFile } = makeClient();
     const view = makeView({ mtimeMs: 1 });

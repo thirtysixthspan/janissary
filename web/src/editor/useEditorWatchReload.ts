@@ -14,12 +14,10 @@ export function useEditorWatchReload(
 ): void {
   const dirtyForWatchRef = useRef(dirty);
   dirtyForWatchRef.current = dirty;
-  const seenMtimeRef = useRef<number | undefined>(undefined);
+  const seenMtimeRef = useRef<number | undefined>(mtimeMs);
   useEffect(() => {
     if (mtimeMs === undefined || mtimeMs === seenMtimeRef.current) return;
-    const isFirstSighting = seenMtimeRef.current === undefined;
     seenMtimeRef.current = mtimeMs;
-    if (isFirstSighting) return;
     if (dirtyForWatchRef.current) { conflictPendingRef.current = true; return; }
     const token = new URLSearchParams(location.search).get('token') ?? '';
     void (async () => {
