@@ -28,7 +28,7 @@ describe('scaffoldProject', () => {
 
   it('seeds product/backlog with the standard backlog files, empty sections', () => {
     scaffoldProject(projectDir);
-    for (const name of ['bugs', 'chores', 'features', 'issues']) {
+    for (const name of ['bugs', 'chores', 'documentation', 'features', 'issues', 'technical-debt']) {
       const content = readFileSync(path.join(projectDir, 'product/backlog', `${name}.md`), 'utf8');
       expect(content).toContain(`# ${name}`);
       expect(content).toContain('## ready');
