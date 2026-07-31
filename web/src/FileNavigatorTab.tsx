@@ -1,7 +1,5 @@
 import React, { useEffect, useId, useRef, useState } from 'react';
 import type { FileNavigatorRow } from '@shared/protocol';
-import { handleFileNavigatorKey, typeAheadMatch } from './file-navigator-keys';
-import { handleTreeChord } from './file-navigator-chords';
 import { useFileNavigatorDrag } from './useFileNavigatorDrag';
 import { useFileNavigatorRename } from './useFileNavigatorRename';
 import { FileNavigatorRowView } from './FileNavigatorRowView';
@@ -11,15 +9,13 @@ import { useFileNavigatorSearch } from './useFileNavigatorSearch';
 import { FileNavigatorHeader } from './FileNavigatorHeader';
 import { useFileNavigatorOpener } from './useFileNavigatorOpener';
 import { useFileNavigatorDelete } from './useFileNavigatorDelete';
-import { runFileNavigatorAction } from './file-navigator-actions';
+import { useFileNavigatorKeyDown } from './useFileNavigatorKeyDown';
+import { useFileNavigatorPaste } from './useFileNavigatorPaste';
+import { setClipboard } from './file-navigator-clipboard';
 import { normalizeOperationPaths, useFileNavigatorSelection } from './useFileNavigatorSelection';
 import { FileNavigatorOverlays } from './FileNavigatorOverlays';
 import type { FileNavigatorTabProperties as Properties } from './file-navigator-tab-types';
 
-const TYPEAHEAD_RESET_MS = 700;
-const ROW_HEIGHT_PX = 22;
-// Printable, unmodified single characters — used for type-ahead. Excludes space (the action key).
-const PRINTABLE = /^[ -~]$/;
 const MARKDOWN_EXTENSION = /\.(md|markdown)$/i;
 
 export function FileNavigatorTab({
@@ -31,7 +27,6 @@ export function FileNavigatorTab({
   const containerRef = useRef<HTMLDivElement>(null);
   const pointerHandledRef = useRef<string | null>(null);
   const treeId = useId();
-  const typeahead = useRef<{ buffer: string; timer?: ReturnType<typeof setTimeout> }>({ buffer: '' });
   const drag = useFileNavigatorDrag(
     files.rows, client, index, files.absoluteRoot, files.root, targetCwd, dropRef, editorDropRef,
   );
@@ -42,7 +37,8 @@ export function FileNavigatorTab({
     client, index, files.rows, selection.replace, () => containerRef.current?.focus(),
   );
   const opener = useFileNavigatorOpener(client, index, files.absoluteRoot);
-  const deletion = useFileNavigatorDelete(client, index, drag.reportFailure);
+  const deletion = useFileNavigatorDelete(client, index);
+  const paste = useFileNavigatorPaste(client, index, files.absoluteRoot);
 
   useEffect(() => { if (autoFocus) containerRef.current?.focus(); }, [autoFocus]);
 
@@ -107,51 +103,26 @@ export function FileNavigatorTab({
     else openFile(row.path, MARKDOWN_EXTENSION.test(row.path) !== shiftKey);
   };
   const beginRename = (row: FileNavigatorRow) => rename.begin(row.path, row.name);
+  const clipboardPaths = () => selection.operationPaths.map((relPath) => `${files.absoluteRoot}/${relPath}`);
 
-  const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    if (e.target instanceof HTMLElement && e.target.closest('.files-rename-input')) return;
-    if (opener.onKeyDown(e)) return;
-    // While the rename field is open, its own Enter/Escape/typing handling in `InlineEditInput`
-    // owns every keystroke; without this, those keydowns bubble here too and get double-handled
-    // (e.g. Enter also re-triggering the tree's own "open selected row" navigation action).
-    if (rename.editing !== null) return;
-    if (e.ctrlKey || e.metaKey) {
-      const handled = handleTreeChord(e.key, e.shiftKey, files.rows, selection.cursor, {
-        sendUndo: () => void drag.sendUndo(),
-        sendRedo: () => void drag.sendRedo(),
-        createNewFile,
-        beginRename,
-      });
-      if (handled) { e.preventDefault(); e.stopPropagation(); }
-      return; // tab-management chords go to the window handler
-    }
-    if ((e.key === 'Backspace' || e.key === 'Delete') && selection.operationPaths.length > 0) {
-      e.preventDefault();
-      e.stopPropagation();
-      deletion.request(selection.operationPaths);
-      return;
-    }
-    const navKeys = new Set(['ArrowDown', 'ArrowUp', 'ArrowLeft', 'ArrowRight', 'Home', 'End', 'PageUp', 'PageDown', 'Enter', ' ']);
-    if (navKeys.has(e.key)) {
-      e.preventDefault();
-      e.stopPropagation();
-      const pageSize = Math.max(1, Math.floor((containerRef.current?.clientHeight ?? ROW_HEIGHT_PX * 10) / ROW_HEIGHT_PX));
-      const result = handleFileNavigatorKey(files.rows, selection.cursor, e.key, e.shiftKey, pageSize);
-      selection.replace(result.selection);
-      runFileNavigatorAction(result.action, { reroot: (path) => { if (path === '..') reroot(); else rerootTo(path); }, toggle, open: (path) => openFile(path, false), edit: editFile });
-      return;
-    }
-    if (PRINTABLE.test(e.key)) {
-      e.preventDefault();
-      e.stopPropagation();
-      const state = typeahead.current;
-      clearTimeout(state.timer);
-      state.buffer += e.key;
-      const match = typeAheadMatch(files.rows, state.buffer);
-      if (match) selection.replace(match);
-      state.timer = setTimeout(() => { state.buffer = ''; }, TYPEAHEAD_RESET_MS);
-    }
-  };
+  const onKeyDown = useFileNavigatorKeyDown({
+    rows: files.rows,
+    selection,
+    opener,
+    rename,
+    deletion,
+    containerRef,
+    chordHandlers: {
+      sendUndo: () => void drag.sendUndo(),
+      sendRedo: () => void drag.sendRedo(),
+      createNewFile,
+      beginRename,
+      copySelection: () => setClipboard('copy', clipboardPaths()),
+      cutSelection: () => setClipboard('cut', clipboardPaths()),
+      paste: () => paste.paste(files.rows, selection.cursor),
+    },
+    actions: { reroot, rerootTo, toggle, openFile, editFile },
+  });
 
   return (
     <div
@@ -187,6 +158,7 @@ export function FileNavigatorTab({
               selection.selected.has(row.path),
               selection.cursor === row.path,
               drag.dropTarget?.path,
+              paste.isCut(row.path),
             )}
             editing={rename.editing === row.path}
             draft={rename.draft}
@@ -203,6 +175,7 @@ export function FileNavigatorTab({
         drag={drag}
         rename={rename}
         deletion={deletion}
+        paste={paste}
         search={search}
         opener={opener}
         focusTree={() => containerRef.current?.focus()}

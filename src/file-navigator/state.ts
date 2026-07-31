@@ -1,6 +1,6 @@
 import type { FSWatcher } from 'node:fs';
 import type { GitFileStatus } from '../git-status.js';
-import type { MoveGroup } from './moves.js';
+import type { HistoryStep } from './moves.js';
 import type { TreeRestoreHint } from './restore.js';
 
 // Per files-tab state, keyed by the tab's label. `watchers` is keyed by each visible directory's
@@ -15,8 +15,8 @@ export type FilesTabState = {
   // Set while the tab is waiting for its root to be created (see `pollForCreation`); cleared once
   // the directory appears.
   pollTimer?: ReturnType<typeof setInterval>;
-  undoStack: MoveGroup[];
-  redoStack: MoveGroup[];
+  undoStack: HistoryStep[];
+  redoStack: HistoryStep[];
   // Last-computed map of git-changed, root-relative paths to their status (see `git-status.ts`).
   // Applied synchronously to every rebuild so interactive redraws are instant; recomputed
   // asynchronously by `refreshGit`. `gitRefreshing`/`gitRefreshStale` coalesce overlapping refresh

@@ -5,12 +5,14 @@ import { FileNavigatorOverlays } from './FileNavigatorOverlays';
 import type { useFileNavigatorDrag } from './useFileNavigatorDrag';
 import type { useFileNavigatorRename } from './useFileNavigatorRename';
 import type { useFileNavigatorDelete } from './useFileNavigatorDelete';
+import type { useFileNavigatorPaste } from './useFileNavigatorPaste';
 import type { useFileNavigatorSearch } from './useFileNavigatorSearch';
 import type { useFileNavigatorOpener } from './useFileNavigatorOpener';
 
 type Drag = ReturnType<typeof useFileNavigatorDrag>;
 type Rename = ReturnType<typeof useFileNavigatorRename>;
 type Deletion = ReturnType<typeof useFileNavigatorDelete>;
+type Paste = ReturnType<typeof useFileNavigatorPaste>;
 type Search = ReturnType<typeof useFileNavigatorSearch>;
 type Opener = ReturnType<typeof useFileNavigatorOpener>;
 
@@ -23,15 +25,12 @@ function makeDrag(overrides: Partial<Drag> = {}): Drag {
     onRowMouseDown: () => {},
     drop: () => {},
     pendingConflict: null,
-    failure: null,
     requestMove: () => {},
     sendUndo: () => Promise.resolve(),
     sendRedo: () => Promise.resolve(),
     confirmOverwrite: () => {},
     skipConflicts: () => {},
     cancelConflict: () => {},
-    dismissFailure: () => {},
-    reportFailure: () => {},
     ...overrides,
   };
 }
@@ -57,6 +56,18 @@ function makeDeletion(overrides: Partial<Deletion> = {}): Deletion {
     request: () => {},
     confirm: () => {},
     cancel: () => {},
+    ...overrides,
+  };
+}
+
+function makePaste(overrides: Partial<Paste> = {}): Paste {
+  return {
+    pendingConflict: null,
+    paste: () => {},
+    confirmOverwrite: () => {},
+    skipConflicts: () => {},
+    cancelConflict: () => {},
+    isCut: () => false,
     ...overrides,
   };
 }
@@ -92,34 +103,13 @@ describe('FileNavigatorOverlays', () => {
         drag={makeDrag()}
         rename={makeRename()}
         deletion={makeDeletion()}
+        paste={makePaste()}
         search={makeSearch()}
         opener={makeOpener()}
         focusTree={() => {}}
       />,
     );
     expect(container.textContent).toBe('');
-  });
-
-  it('dismisses the failure dialog and refocuses the tree', async () => {
-    const dismissFailure = vi.fn();
-    const focusTree = vi.fn();
-    render(
-      <FileNavigatorOverlays
-        drag={makeDrag({
-          failure: { total: 2, failedPaths: ['a.txt', 'b.txt'], operation: 'move' },
-          dismissFailure,
-        })}
-        rename={makeRename()}
-        deletion={makeDeletion()}
-        search={makeSearch()}
-        opener={makeOpener()}
-        focusTree={focusTree}
-      />,
-    );
-    const dismissButton = screen.getByRole('button', { name: /ok|dismiss|close/i });
-    fireEvent.click(dismissButton);
-    expect(dismissFailure).toHaveBeenCalledTimes(1);
-    expect(focusTree).toHaveBeenCalledTimes(1);
   });
 
   it('confirms the delete dialog and refocuses the tree', () => {
@@ -130,6 +120,7 @@ describe('FileNavigatorOverlays', () => {
         drag={makeDrag()}
         rename={makeRename()}
         deletion={makeDeletion({ pendingDelete: ['notes.txt'], confirm })}
+        paste={makePaste()}
         search={makeSearch()}
         opener={makeOpener()}
         focusTree={focusTree}
@@ -148,6 +139,7 @@ describe('FileNavigatorOverlays', () => {
         drag={makeDrag()}
         rename={makeRename()}
         deletion={makeDeletion({ pendingDelete: ['notes.txt'], cancel })}
+        paste={makePaste()}
         search={makeSearch()}
         opener={makeOpener()}
         focusTree={focusTree}
@@ -156,5 +148,41 @@ describe('FileNavigatorOverlays', () => {
     fireEvent.click(screen.getByRole('button', { name: /cancel/i }));
     expect(cancel).toHaveBeenCalledTimes(1);
     expect(focusTree).toHaveBeenCalledTimes(1);
+  });
+
+  it('a single-item paste conflict renders MoveConflictDialog without a Skip option', () => {
+    render(
+      <FileNavigatorOverlays
+        drag={makeDrag()}
+        rename={makeRename()}
+        deletion={makeDeletion()}
+        paste={makePaste({ pendingConflict: { sources: ['/a/b.txt'], destinationPath: 'dest', mode: 'copy', title: 'conflict!' } })}
+        search={makeSearch()}
+        opener={makeOpener()}
+        focusTree={() => {}}
+      />,
+    );
+    expect(screen.getByText('conflict!')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /skip/i })).not.toBeInTheDocument();
+  });
+
+  it('a multi-item paste conflict offers Skip conflicts', () => {
+    const skipConflicts = vi.fn();
+    render(
+      <FileNavigatorOverlays
+        drag={makeDrag()}
+        rename={makeRename()}
+        deletion={makeDeletion()}
+        paste={makePaste({
+          pendingConflict: { sources: ['/a/b.txt', '/a/c.txt'], destinationPath: 'dest', mode: 'copy', title: 'conflict!' },
+          skipConflicts,
+        })}
+        search={makeSearch()}
+        opener={makeOpener()}
+        focusTree={() => {}}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /skip/i }));
+    expect(skipConflicts).toHaveBeenCalledTimes(1);
   });
 });

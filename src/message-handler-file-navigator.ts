@@ -5,6 +5,7 @@ import {
   fileNavigatorOpeners,
   fileNavigatorSearch,
   moveFileNavigatorItems,
+  pasteFileNavigatorItems,
   renameFileNavigatorItem,
   revealFileNavigatorItem,
 } from './controller/file-navigator.js';
@@ -15,7 +16,7 @@ type FileNavigatorMessage = Extract<ClientMessage, {
     | 'moveFileNavigatorItems' | 'deleteFileNavigatorItem' | 'deleteFileNavigatorItems'
     | 'renameFileNavigatorItem' | 'fileNavigatorSearch' | 'revealFileNavigatorItem'
     | 'fileNavigatorOpeners' | 'undoFileNavigatorItem' | 'redoFileNavigatorItem'
-    | 'reportFileNavigatorSelection';
+    | 'reportFileNavigatorSelection' | 'pasteFileNavigatorItems';
 }>;
 
 // The file-navigator RPC cases, split out of `handle()` to keep message-handler.ts under the line-size
@@ -39,6 +40,21 @@ export function handleFileNavigatorMessage(controller: Controller, message: File
           message.params.index,
           message.params.sourcePaths,
           message.params.destinationPath,
+          message.params.policy,
+        ),
+      });
+      return;
+    }
+    case 'pasteFileNavigatorItems': {
+      reply({
+        t: 'rpc-reply',
+        id: message.id,
+        result: pasteFileNavigatorItems(
+          controller.managers,
+          message.params.index,
+          message.params.sources,
+          message.params.destinationPath,
+          message.params.mode,
           message.params.policy,
         ),
       });

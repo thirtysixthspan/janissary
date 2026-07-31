@@ -108,6 +108,21 @@ describe('shouldNotify — transcript-unavailable event', () => {
   });
 });
 
+describe('shouldNotify — file-operation event', () => {
+  it('fires regardless of notification config', () => {
+    expect(shouldNotify(undefined, 'file-operation', 'build', 'janus')).toBe(true);
+    expect(shouldNotify(allOff, 'file-operation', 'build', 'janus')).toBe(true);
+  });
+
+  it('fires even when the issuing tab is active', () => {
+    expect(shouldNotify(allOn, 'file-operation', 'janus', 'janus')).toBe(true);
+  });
+
+  it('returns the bare message (the label lives in the header)', () => {
+    expect(notificationText('file-operation', 'janus', 'Could not delete 1 of 2 items: a.md')).toBe('Could not delete 1 of 2 items: a.md');
+  });
+});
+
 describe('shouldNotify — question event', () => {
   it('fires regardless of notification config', () => {
     expect(shouldNotify(undefined, 'question', 'build', 'janus')).toBe(true);

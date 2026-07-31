@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import { deleteItem, moveItem, moveReplacingDestination, renameItem } from './filesystem.js';
+import { copyItem, deleteItem, moveItem, moveReplacingDestination, renameItem } from './filesystem.js';
 
 let roots: string[] = [];
 
@@ -48,6 +48,48 @@ describe('moveReplacingDestination', () => {
     writeFileSync(destination, 'old');
     expect(moveReplacingDestination(source, destination)).toBe(false);
     expect(readFileSync(destination, 'utf8')).toBe('old');
+  });
+});
+
+describe('copyItem', () => {
+  it('copies a file, leaving the source in place', () => {
+    const directory = root();
+    const source = path.join(directory, 'a.txt');
+    const destination = path.join(directory, 'b.txt');
+    writeFileSync(source, 'a');
+    expect(copyItem(source, destination, false)).toBe(true);
+    expect(readFileSync(source, 'utf8')).toBe('a');
+    expect(readFileSync(destination, 'utf8')).toBe('a');
+  });
+
+  it('copies a directory tree', () => {
+    const directory = root();
+    const source = path.join(directory, 'src');
+    mkdirSync(source);
+    writeFileSync(path.join(source, 'x.txt'), 'x');
+    const destination = path.join(directory, 'dest');
+    expect(copyItem(source, destination, false)).toBe(true);
+    expect(readFileSync(path.join(destination, 'x.txt'), 'utf8')).toBe('x');
+  });
+
+  it('refuses an existing destination without overwrite', () => {
+    const directory = root();
+    const source = path.join(directory, 'a.txt');
+    const destination = path.join(directory, 'b.txt');
+    writeFileSync(source, 'new');
+    writeFileSync(destination, 'old');
+    expect(copyItem(source, destination, false)).toBe(false);
+    expect(readFileSync(destination, 'utf8')).toBe('old');
+  });
+
+  it('replaces an existing destination with overwrite', () => {
+    const directory = root();
+    const source = path.join(directory, 'a.txt');
+    const destination = path.join(directory, 'b.txt');
+    writeFileSync(source, 'new');
+    writeFileSync(destination, 'old');
+    expect(copyItem(source, destination, true)).toBe(true);
+    expect(readFileSync(destination, 'utf8')).toBe('new');
   });
 });
 

@@ -169,9 +169,10 @@ For one item, a visible name conflict continues to offer **Overwrite** or **Canc
 preflights every destination before moving anything. If conflicts exist, one dialog says
 `Some items already exist in "<folder>".` and offers **Overwrite all**, **Skip conflicts**, and
 **Cancel**. Two selected sources with the same output name are left unmoved and reported as
-failures. Other per-item failures do not stop the batch. A result dialog says
-`Could not move <failed> of <total> items.`, lists failed paths in selection order, and offers
-**Dismiss**.
+failures. Other per-item failures do not stop the batch. Rather than a dialog, any failures are
+reported as one line in the notifications feed: `Could not move <failed> of <total> items:
+<names>`, naming the failing items in selection order and truncating past three names with
+`… and N more`.
 
 If the window loses focus while a drag is in progress — switching to another application or
 virtual desktop with the mouse button still held — the drag is cancelled outright: the drag label
@@ -228,9 +229,12 @@ nothing to undo or redo, the corresponding chord does nothing.
 Grouped undo and redo preflight every destination before moving anything. Conflicts offer
 **Overwrite all**, **Skip conflicts**, and **Cancel** under the title
 `Some items already exist in their destinations.` Successful pairs move to the opposite history
-stack; failed and skipped pairs remain available for a later retry.
+stack; failed and skipped pairs remain available for a later retry, and any failures are reported
+as a notifications-feed line the same way a move or delete's failures are.
 
-Deletions are not covered by undo/redo — a deleted file or directory cannot be restored this way.
+A user-initiated deletion is not covered by undo/redo — a file or directory removed with Backspace
+or Delete cannot be restored this way. A paste is undoable, however, and undoing one may delete the
+items it created — see Copying, cutting, and pasting below.
 
 ### Saving and restoring a tree's view
 
@@ -245,9 +249,10 @@ Profiles for the full rules.
 
 Pressing Backspace or Delete normalizes the selection using the same rules as moving. One path
 opens `Delete "<name>"?`; multiple paths open `Delete <count> items?`. Both dialogs offer
-**Delete** and **Cancel**. A confirmed bulk delete continues after individual failures. Its result
-dialog says `Could not delete <failed> of <total> items.`, lists failed paths in selection order,
-and offers **Dismiss**.
+**Delete** and **Cancel**. A confirmed bulk delete continues after individual failures; rather than
+a dialog, any failures are reported as one line in the notifications feed: `Could not delete
+<failed> of <total> items: <names>`, naming the failing items in selection order and truncating
+past three names with `… and N more`.
 The tree already watches every visible directory, so the removed row disappears automatically once
 the watcher picks up the change, the same as any other on-disk change made outside the app. If the
 selected row was the one removed, selection moves to the nearest surviving row rather than pointing
@@ -277,6 +282,38 @@ when the same file is renamed from the editor tab's own label (see `editor-tab.m
 After a successful rename, the renamed row replaces its old path in the cursor, anchor, and
 selection while other selected rows remain selected. Keyboard focus returns to the tree.
 
+### Copying, cutting, and pasting
+
+`Ctrl+C` (`Cmd+C`) copies the current selection onto an app-wide clipboard; `Ctrl+X` (`Cmd+X`)
+cuts it the same way, arming it to be moved rather than duplicated. `Ctrl+V` (`Cmd+V`) pastes into
+the directory the keyboard cursor implies — the same rule New file and New directory use: a
+selected directory row pastes inside it, a selected file row pastes into its containing directory,
+and no selection (or the `..` row) pastes at the tree root. The clipboard is app-wide and lives on
+the client, so a selection copied in one navigator pastes into any other, even one rooted at an
+unrelated path. `Ctrl+C` with nothing selected leaves the clipboard untouched; `Ctrl+V` with an
+empty clipboard is a silent no-op.
+
+Rows on the clipboard from a cut render dimmed in every open navigator that shows them, until the
+paste lands or a later `Ctrl+C`/`Ctrl+X` replaces the clipboard. After a successful cut-paste the
+clipboard empties, so a second `Ctrl+V` does nothing; a copy-paste leaves the clipboard as-is, so
+the same selection can be pasted again elsewhere.
+
+Pasting a copy into the source's own directory always duplicates it with the same `-2` naming used
+elsewhere in the app (`report.md` → `report-2.md` → `report-3.md`); this never prompts and never
+overwrites, since duplicating a file in place is the point of the gesture. Pasting a cut back into
+its own directory is a silent no-op. Every other name collision — one item or several, within one
+navigator or across two — raises the same Overwrite/Cancel or Overwrite all/Skip conflicts/Cancel
+dialogs a drag-and-drop move already uses. A paste whose source has vanished, or whose destination
+lies inside the very directory being copied, counts as a failure the same way a move or delete
+failure does — reported through the notifications feed, never a dialog.
+
+A paste is one step on the tab's own undo/redo stack, so `Cmd+Z` reverses it and `Cmd+Shift+Z`
+re-applies it. Undoing a copy-paste deletes exactly the items that paste created, with no
+confirmation; undoing a cut-paste moves them back to where they came from, even when that source
+lay in a different navigator's tree entirely. Redo re-applies either.
+
+Copying, cutting, and pasting have no route through the mouse or a menu — keyboard only.
+
 ### Keyboard interactions
 
 A focused file navigator tab captures its own keys, following the ARIA treeview pattern (see
@@ -297,11 +334,15 @@ A focused file navigator tab captures its own keys, following the ARIA treeview 
 | `Cmd+Shift+Z` / `Ctrl+Shift+Z` | Redo the most recently undone move |
 | `Cmd+N` / `Ctrl+N` | Create a new file (see "Creating a new file") |
 | `Cmd+R` / `Ctrl+R` | Selected file or directory (not `..`): begin renaming it in place (see "Renaming a file or directory") |
+| `Cmd+C` / `Ctrl+C` | Copy the normalized selection onto the clipboard |
+| `Cmd+X` / `Ctrl+X` | Cut the normalized selection onto the clipboard |
+| `Cmd+V` / `Ctrl+V` | Paste the clipboard into the directory the cursor implies |
 
 Chords carrying Ctrl or Cmd (tab switching, tab reordering, closing the tab, etc.) are not
 captured by the tree and reach the normal window-level bindings instead, except for the
-undo/redo chords, `Cmd+N`/`Ctrl+N`, and `Cmd+R`/`Ctrl+R` above, which the tree captures for
-itself — the same way an editor tab captures its own `Cmd+Z`/`Cmd+Shift+Z` for text undo/redo.
+undo/redo chords, `Cmd+N`/`Ctrl+N`, `Cmd+R`/`Ctrl+R`, and `Cmd+C`/`Cmd+X`/`Cmd+V`
+(`Ctrl+C`/`Ctrl+X`/`Ctrl+V`) above, which the tree captures for itself — the same way an editor tab
+captures its own `Cmd+Z`/`Cmd+Shift+Z` for text undo/redo.
 
 Keyboard navigation, type-ahead, search reveal, and new-directory auto-selection collapse the
 selection to their resulting cursor. Shift+Arrow range extension and Cmd/Ctrl+A are not supported.

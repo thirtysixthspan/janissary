@@ -772,6 +772,7 @@ html, body, #root {
 .files-row.selected { background: var(--bg-soft); border-left-color: var(--accent); }
 .files-row.cursor { outline: 1px solid var(--muted); outline-offset: -2px; }
 .files-row.drop-target { background: var(--bg-soft); border-left-color: var(--accent); outline: 1px dashed var(--accent); outline-offset: -1px; }
+.files-row.cut { opacity: 0.5; }
 .files-drag-ghost {
   position: fixed; pointer-events: none; z-index: 100;
   transform: translate(12px, -8px);

@@ -1,4 +1,4 @@
-import { lstatSync, renameSync, rmSync } from 'node:fs';
+import { cpSync, lstatSync, renameSync, rmSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 
@@ -34,6 +34,23 @@ export function moveReplacingDestination(source: string, destination: string): b
   }
   try { rmSync(backup, { recursive: true }); } catch { /* destination already moved safely */ }
   return true;
+}
+
+// Copies `source` to `destination`, recursively for a directory. `errorOnExist` guards the
+// non-overwrite case since `cpSync`'s own `force` merges directories rather than replacing them;
+// an overwrite instead removes the destination first, then copies fresh. Deliberately does not
+// stage a backup the way `moveReplacingDestination` does — a mid-overwrite failure here leaves the
+// destination gone, which is acceptable because the source (unlike a move) still exists.
+export function copyItem(source: string, destination: string, overwrite: boolean): boolean {
+  try {
+    if (overwrite) {
+      try { rmSync(destination, { recursive: true }); } catch { /* nothing to remove */ }
+    }
+    cpSync(source, destination, { recursive: true, errorOnExist: !overwrite, force: false });
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export function moveItem(

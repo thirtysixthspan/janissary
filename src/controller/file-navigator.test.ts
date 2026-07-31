@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
   fileNavigatorToggle,
   fileNavigatorCollapseAll,
@@ -15,11 +15,27 @@ import {
   renameFileNavigatorItem,
   fileNavigatorOpeners,
 } from './file-navigator.js';
+import { NOTIFICATIONS_LABEL } from '../notifications-tab.js';
 import type { Managers } from '../managers.js';
 
 function makeManagers(label: string | undefined, fileNavigator: Record<string, (...args: unknown[]) => unknown>) {
   return {
     tab: { tabs: label === undefined ? [] : [{ label }] },
+    fileNavigator,
+  } as unknown as Managers;
+}
+
+// A managers mock whose tab list includes an open notifications tab, so `reportOperationFailure`
+// actually appends — used by the tests that assert on notification posting.
+function makeManagersWithNotifications(
+  label: string,
+  fileNavigator: Record<string, (...args: unknown[]) => unknown>,
+  append: (...args: unknown[]) => void,
+) {
+  const notif = { label: NOTIFICATIONS_LABEL, view: 'notifications', log: [] };
+  const active = { label, log: [] };
+  return {
+    tab: { tabs: [active, notif], cur: () => active, append },
     fileNavigator,
   } as unknown as Managers;
 }
@@ -55,16 +71,46 @@ describe('controller-file-navigator', () => {
 
   it('moveFileNavigatorItem delegates to FileNavigatorManager.move when the tab exists', () => {
     const calls: unknown[] = [];
-    const managers = makeManagers('agent', { move: (...args: unknown[]) => { calls.push(args); } });
+    const managers = makeManagers('agent', {
+      move: (...args: unknown[]) => { calls.push(args); return { total: 1, failedPaths: [] }; },
+    });
     moveFileNavigatorItem(managers, 0, 'a.ts', 'b.ts');
     expect(calls).toEqual([['agent', 'a.ts', 'b.ts']]);
   });
 
   it('deleteFileNavigatorItem delegates to FileNavigatorManager.delete when the tab exists', () => {
     const calls: unknown[] = [];
-    const managers = makeManagers('agent', { delete: (...args: unknown[]) => { calls.push(args); } });
+    const managers = makeManagers('agent', {
+      delete: (...args: unknown[]) => { calls.push(args); return { total: 1, failedPaths: [] }; },
+    });
     deleteFileNavigatorItem(managers, 0, 'a.ts');
     expect(calls).toEqual([['agent', 'a.ts']]);
+  });
+
+  it('moveFileNavigatorItem posts one notification when the move fails', () => {
+    const append = vi.fn();
+    const managers = makeManagersWithNotifications('agent', {
+      move: () => ({ total: 1, failedPaths: ['a.ts'] }),
+    }, append);
+    moveFileNavigatorItem(managers, 0, 'a.ts', 'b.ts');
+    expect(append).toHaveBeenCalledTimes(1);
+  });
+
+  it('deleteFileNavigatorItem posts one notification when the delete fails', () => {
+    const append = vi.fn();
+    const managers = makeManagersWithNotifications('agent', {
+      delete: () => ({ total: 1, failedPaths: ['a.ts'] }),
+    }, append);
+    deleteFileNavigatorItem(managers, 0, 'a.ts');
+    expect(append).toHaveBeenCalledTimes(1);
+  });
+
+  it('undoFileNavigatorItem posts no notification when the result is a conflict', () => {
+    const append = vi.fn();
+    const conflict = { fromRelPath: 'a.ts', toRelPath: 'b.ts' };
+    const managers = makeManagersWithNotifications('agent', { undo: () => ({ conflict }) }, append);
+    undoFileNavigatorItem(managers, 0);
+    expect(append).not.toHaveBeenCalled();
   });
 
   it('moveFileNavigatorItems delegates to FileNavigatorManager.moveMany', () => {
