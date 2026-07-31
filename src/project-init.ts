@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync, readdirSync, existsSync } from 'node:fs';
+import { copyFileSync, mkdirSync, writeFileSync, readdirSync, existsSync } from 'node:fs';
 import path from 'node:path';
 
 // The `ai/` and `product/` directory tree this tool's task/backlog/plan/spec workflow expects,
@@ -18,9 +18,24 @@ const SCAFFOLD_DIRS = [
 // The backlog files documented in `CLAUDE.md`'s Project Structure section, each seeded with the
 // standard empty `ready`/`development`/`deferred` structure.
 const BACKLOG_FILES = ['bugs', 'chores', 'documentation', 'features', 'issues', 'technical-debt'];
+const CONFIG_DIRS = ['.codex', '.claude'];
 
 function backlogFileContent(name: string): string {
   return `# ${name}\n\n## ready\n\n## development\n\n## deferred\n`;
+}
+
+function installConfigDirectory(source: string, destination: string): void {
+  mkdirSync(destination, { recursive: true });
+  const entries = readdirSync(source, { withFileTypes: true });
+  for (const entry of entries) {
+    const sourcePath = path.join(source, entry.name);
+    const destinationPath = path.join(destination, entry.name);
+    if (entry.isDirectory()) {
+      installConfigDirectory(sourcePath, destinationPath);
+    } else {
+      copyFileSync(sourcePath, destinationPath);
+    }
+  }
 }
 
 // `janus init [<project-dir>]`: create the standard `ai/`/`product/` scaffold recursively, seed
@@ -36,6 +51,12 @@ export function scaffoldProject(projectDir: string): string[] {
     if (!existsSync(filePath)) {
       writeFileSync(filePath, backlogFileContent(name));
     }
+  }
+  for (const configDir of CONFIG_DIRS) {
+    installConfigDirectory(
+      path.join(import.meta.dirname, '..', configDir),
+      path.join(projectDir, configDir),
+    );
   }
   for (const dir of SCAFFOLD_DIRS) {
     const absolute = path.join(projectDir, dir);

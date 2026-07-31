@@ -155,7 +155,7 @@ export async function boot(argv = process.argv.slice(2)): Promise<void> {
   if (args.stop) { stopInstance(cwd); return; }
   if (args.init) {
     const created = scaffoldProject(cwd);
-    process.stdout.write(`Scaffolded ai/ and product/ in ${cwd}:\n${created.map((dir) => `  ${dir}`).join('\n')}\n`);
+    process.stdout.write(`Scaffolded ai/ and product/ in ${cwd}:\n${created.map((dir) => `  ${dir}`).join('\n')}\nInstalled .codex/ and .claude/ configurations (standard files overwritten).\n`);
     return;
   }
 
