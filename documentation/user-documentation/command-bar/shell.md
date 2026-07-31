@@ -49,3 +49,11 @@ Full-screen and interactive programs — `htop`, `vim`, `less`, `man`, `python` 
 `Shift+Enter` inserts a line continuation rather than submitting, which matters for programs (AI harnesses in particular) that accept multi-line input.
 
 When the program exits, the transcript comes back exactly as it was — nothing about the takeover is logged.
+
+To force a command into a full-tab PTY that isn't auto-detected, add `--pty` right after `shell`:
+
+```
+shell --pty ./some-interactive-script.sh
+```
+
+A bare `shell --pty`, with no command after it, opens your login shell directly in the tab — a plain interactive shell prompt.

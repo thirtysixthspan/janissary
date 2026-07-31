@@ -24,6 +24,7 @@ function makeManagers(): { managers: Managers; recorder: string[] } {
   return { managers, recorder };
 }
 
+
 describe('CommandManager queue gate', () => {
   it('runs directly when the tab is idle with an empty queue', () => {
     const { managers, recorder } = makeManagers();
@@ -113,6 +114,28 @@ describe('CommandManager queue gate', () => {
 
     expect(managers.tab.queueFor('janus')).toEqual([]);
     expect(managers.tab.cur().log).toEqual([]);
+  });
+});
+
+describe('CommandManager shell --pty flag', () => {
+  it('routes a `--pty`-flagged command to the PTY manager instead of the piped shell', () => {
+    const { managers } = makeManagers();
+    managers.command.dispatch('shell --pty echo hi');
+    expect(managers.pty.openInlinePty).toHaveBeenCalledWith('janus', 'echo hi', 'echo');
+    expect(managers.shell.run).not.toHaveBeenCalled();
+  });
+
+  it('opens the fallback login shell in a PTY for a bare `shell --pty`', () => {
+    const previousShell = process.env.SHELL;
+    process.env.SHELL = '/bin/zsh';
+    try {
+      const { managers } = makeManagers();
+      managers.command.dispatch('shell --pty');
+      expect(managers.pty.openInlinePty).toHaveBeenCalledWith('janus', '/bin/zsh', 'zsh');
+      expect(managers.shell.run).not.toHaveBeenCalled();
+    } finally {
+      if (previousShell === undefined) delete process.env.SHELL; else process.env.SHELL = previousShell;
+    }
   });
 });
 

@@ -7,7 +7,7 @@ export type AppCommand = string;
 
 export type Resolution =
   | { kind: 'empty' }
-  | { kind: 'shell'; cmd: string }
+  | { kind: 'shell'; cmd: string; pty?: boolean }
   | { kind: 'app'; name: AppCommand; cmd: string }
   | { kind: 'output'; cmd: string; output: string }
   // An unprefixed command that matches no built-in. The interactive dispatcher runs probabilistic
@@ -30,9 +30,14 @@ export function resolveCommand(raw: string): Resolution {
   if (!trimmed) return { kind: 'empty' };
 
   // Shell commands are launched with the `shell` keyword, which is stripped before the
-  // command reaches the shell.
+  // command reaches the shell. A leading `--pty` flag forces the command into an interactive
+  // PTY session (see `interactive.ts` for the auto-detected path this bypasses); with no
+  // command after it, it opens a bare interactive shell.
   if (/^shell\b/i.test(trimmed)) {
-    return { kind: 'shell', cmd: trimmed.replace(/^shell\b\s*/i, '') };
+    const rest = trimmed.replace(/^shell\b\s*/i, '');
+    const ptyMatch = /^--pty\b\s*/.exec(rest);
+    if (ptyMatch) return { kind: 'shell', cmd: rest.slice(ptyMatch[0].length), pty: true };
+    return { kind: 'shell', cmd: rest };
   }
 
   const command = trimmed.replace(/^\//, '');

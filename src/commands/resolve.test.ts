@@ -16,6 +16,12 @@ describe('resolveCommand', () => {
     expect(resolveCommand('shell')).toEqual({ kind: 'shell', cmd: '' });
   });
 
+  it('recognizes a `--pty` flag, stripping it and marking the resolution', () => {
+    expect(resolveCommand('shell --pty vim file.ts')).toEqual({ kind: 'shell', cmd: 'vim file.ts', pty: true });
+    expect(resolveCommand('shell --pty')).toEqual({ kind: 'shell', cmd: '', pty: true });
+    expect(resolveCommand('shell --pty  echo hi')).toEqual({ kind: 'shell', cmd: 'echo hi', pty: true });
+  });
+
   it('does not treat a word merely starting with "shell" as the keyword', () => {
     const result = resolveCommand('shellcheck script.sh');
     expect(result.kind).toBe('unknown');
