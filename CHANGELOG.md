@@ -2,6 +2,23 @@
 
 All notable changes to this project are documented here.
 
+## [0.10.1] - 2026-07-31
+
+### Features
+
+- install agent configurations (#709)
+
+### Bug Fixes
+
+- reset the inherited credential helper list before adding gh
+
+### Other
+
+- sync: issues.md
+- sync: issues.md
+- sync: issues.md
+- sync: issues.md
+
 ## [0.10.0] - 2026-07-31
 
 ### Features
