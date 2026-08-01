@@ -2,6 +2,8 @@
 
 ## ready
 
+* Fuzzy full-text search over a tab's own scrollback/output/editor buffer. A search overlay over the tab reusing the file navigator's `Cmd+P`/Quick Open-style fuzzy match — would let a user jump directly to a matching line in a tab.
+
 ## development
 
 * The ssh tab (`product/specs/ssh-tab.md`) has no session logging to disk, the way iTerm2's per-profile "Automatically Log Session Input to Files" setting captures a session's raw I/O for later audit, independent of on-demand scrollback. Janissary's spec states plainly that ssh tabs "get no screen reader either" and are excluded from the automatic harness-recording that named-harness tabs get (`product/specs/harness-recording.md`) — a remote session's output is gone the moment its tab closes, with no way to review what happened on a host after the fact. Extending the existing asciicast recording mechanism to ssh tabs (the same lazy-file, PTY-lifetime-scoped approach harness tabs already use) would close this without a new recording format. Complexity: low-medium — the recording plumbing already exists for harness tabs; this is mostly widening its scope.
@@ -10,7 +12,7 @@
 
 * Multi-user, read-only shared session viewing, the way tmux's multi-attach lets a second person view (and optionally drive) the same session, and Warp's Team Workflows share execution across a team. Janissary already ships a web client serving every tab over HTTP, but the spec surface (`product/specs/tabs.md`, `product/specs/connection.md`) describes a single-user session with no notion of a second, remote viewer watching a running harness or agent tab live — a natural extension given the app is already a served web app rather than a purely local terminal UI. Cool but low priority.
 
-* Fuzzy full-text search over a tab's own scrollback/output, the way tmux-fuzzback, the `cy` "time-traveling" terminal multiplexer, and iTerm2's command-history browser (Shift-Cmd-;) let a user jump straight to a past command or its output. Janissary's `Ctrl+R` history picker (`product/specs/history.md`) only recalls previously *typed* commands, not the transcript's rendered output, so finding a past error message or a tool's result requires scrolling by eye. A search overlay over the transcript body — reusing the file navigator's `Cmd+P`/Quick Open-style fuzzy match — would let a user jump directly to a matching line in a tab's own history.
+
 
 * long term durable transcripts - send trascripts off to seperate github repo? other durable storage options? 
 
