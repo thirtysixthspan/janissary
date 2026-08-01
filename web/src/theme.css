@@ -744,11 +744,11 @@ html, body, #root {
 .files-loc { font-size: 12px; word-break: break-all; color: var(--muted); }
 .files-branch { font-size: 12px; color: var(--muted); }
 .files-actions { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
-.files-collapse-all, .files-dock-cycle, .files-github, .files-new-directory, .files-new-file, .files-search, .files-sync {
+.files-collapse-all, .files-detail-cycle, .files-dock-cycle, .files-github, .files-new-directory, .files-new-file, .files-search, .files-sync {
   background: transparent; border: none; color: var(--muted); cursor: pointer; font-size: 13px;
   padding: 0 4px; line-height: 1;
 }
-.files-collapse-all:hover, .files-dock-cycle:hover, .files-github:hover, .files-new-directory:hover, .files-new-file:hover, .files-search:hover, .files-sync:hover { color: var(--fg); }
+.files-collapse-all:hover, .files-detail-cycle:hover, .files-dock-cycle:hover, .files-github:hover, .files-new-directory:hover, .files-new-file:hover, .files-search:hover, .files-sync:hover { color: var(--fg); }
 .files-sync--synced { color: var(--success); }
 .files-sync--error { color: var(--error); }
 .files-sync--syncing { cursor: default; }
@@ -789,7 +789,16 @@ html, body, #root {
   padding: 2px 8px; font-size: 12px; color: var(--fg); white-space: nowrap;
 }
 .files-chevron { flex: none; width: 1em; color: var(--muted); font-size: 10px; }
-.files-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+/* The filename owns the row: it takes its natural width and never shrinks to make room for the
+   detail value, capping at the row's own width so an over-long name still ellipsizes. */
+.files-name { flex: 0 0 auto; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+/* The per-row detail value (size, modified time, or permissions), right-aligned so the values line
+   up as a column. It yields whatever space the filename needs — shrinking, and disappearing
+   entirely once the name fills the row — rather than truncating the name. */
+.files-detail {
+  flex: 0 1 auto; min-width: 0; overflow: hidden; margin-left: auto; padding-left: 8px;
+  font-size: 12px; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums;
+}
 .files-name--changed { color: var(--running); }
 .files-name--staged { color: var(--success); }
 .files-name--conflict { color: var(--error); }

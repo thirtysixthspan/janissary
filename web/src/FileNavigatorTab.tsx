@@ -139,7 +139,7 @@ export function FileNavigatorTab({
     >
       <FileNavigatorHeader
         root={files.root} branch={files.branch} githubUrl={files.githubUrl} sync={files.sync}
-        client={client} index={index} dock={dock}
+        client={client} index={index} dock={dock} details={files.details}
         onSearch={search.openSearch} onNewFile={createNewFile} onNewDirectory={createNewDirectory}
         onSplit={onSplit}
       />
@@ -152,6 +152,7 @@ export function FileNavigatorTab({
             key={row.path}
             id={`${treeId}-row-${rowIndex}`}
             row={row}
+            details={files.details}
             selected={selection.selected.has(row.path)}
             cursor={selection.cursor === row.path}
             rowClass={fileNavigatorRowClass(

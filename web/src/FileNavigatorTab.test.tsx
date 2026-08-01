@@ -134,6 +134,65 @@ describe('FileNavigatorTab', () => {
     expect(container.querySelector('.files-waiting')).toBeNull();
   });
 
+  it('renders no detail values when the view carries no details mode', () => {
+    const client = { send: vi.fn() } as unknown as JanusClient;
+    const files = makeFiles({
+      rows: [{ path: 'README.md', name: 'README.md', depth: 0, dir: false, size: 22 }],
+    });
+    const { container } = render(<FileNavigatorTab files={files} client={client} index={0} />);
+    expect(container.querySelector('.files-detail')).toBeNull();
+  });
+
+  it('renders the value each detail mode asks for', () => {
+    const client = { send: vi.fn() } as unknown as JanusClient;
+    const row = {
+      path: 'README.md', name: 'README.md', depth: 0, dir: false,
+      size: 22, modified: new Date(2024, 6, 13, 23, 29).getTime(), mode: 0o10_0644,
+    };
+
+    const sized = render(<FileNavigatorTab files={makeFiles({ rows: [row], details: 'size' })} client={client} index={0} />);
+    expect(sized.container.querySelector('.files-detail')!.textContent).toBe('22b');
+    sized.unmount();
+
+    const modified = render(<FileNavigatorTab files={makeFiles({ rows: [row], details: 'modified' })} client={client} index={0} />);
+    expect(modified.container.querySelector('.files-detail')!.textContent).toBe('Jul 13 23:29');
+    modified.unmount();
+
+    const permissions = render(<FileNavigatorTab files={makeFiles({ rows: [row], details: 'permissions' })} client={client} index={0} />);
+    expect(permissions.container.querySelector('.files-detail')!.textContent).toBe('-rw-r--r--');
+  });
+
+  it('leaves directory rows, the .. row, and a row missing its value blank in size mode', () => {
+    const client = { send: vi.fn() } as unknown as JanusClient;
+    const files = makeFiles({
+      details: 'size',
+      rows: [
+        { path: '..', name: '..', depth: 0, dir: true },
+        { path: 'src', name: 'src', depth: 0, dir: true, expanded: false },
+        { path: 'README.md', name: 'README.md', depth: 0, dir: false },
+      ],
+    });
+    const { container } = render(<FileNavigatorTab files={files} client={client} index={0} />);
+    expect(container.querySelectorAll('.files-detail')).toHaveLength(0);
+  });
+
+  it('detail button names the next mode and sends fileNavigatorSetDetail for it', () => {
+    const send = vi.fn();
+    const client = { send } as unknown as JanusClient;
+    const { container } = render(<FileNavigatorTab files={makeFiles({ details: 'size' })} client={client} index={2} />);
+
+    const button = container.querySelector('.files-detail-cycle') as HTMLElement;
+    expect(button.getAttribute('title')).toBe('Show modified');
+    fireEvent.click(button);
+    expect(send).toHaveBeenCalledWith({ method: 'fileNavigatorSetDetail', params: { index: 2, details: 'modified' } });
+  });
+
+  it('detail button offers size first for a tree with no details mode', () => {
+    const client = { send: vi.fn() } as unknown as JanusClient;
+    const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
+    expect(container.querySelector('.files-detail-cycle')!.getAttribute('title')).toBe('Show size');
+  });
+
   it('click on a directory row selects but does not toggle', () => {
     const send = vi.fn();
     const client = { send } as unknown as JanusClient;

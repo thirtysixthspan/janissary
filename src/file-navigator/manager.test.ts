@@ -983,6 +983,71 @@ describe('FileNavigatorManager', () => {
     });
   });
 
+  describe('detail modes', () => {
+    const navLabel = () => tabs.find((t) => t.label.startsWith('navigator'))!.label;
+    const navTab = () => tabs.find((t) => t.label.startsWith('navigator'))!;
+
+    it('opens in name mode with no per-row stat values', () => {
+      writeFileSync(path.join(root, 'a.txt'), 'hello');
+      const manager = run();
+      manager.open('files', 'janus');
+
+      expect(navTab().files!.details).toBe('name');
+      expect(navTab().files!.rows.find((r) => r.path === 'a.txt')!.size).toBeUndefined();
+      expect(manager.detailOf(navLabel())).toBe('name');
+    });
+
+    it('paints stat values on the first payload when opened with a mode', () => {
+      writeFileSync(path.join(root, 'a.txt'), 'hello');
+      const manager = run();
+      manager.open('files with size', 'janus');
+
+      expect(navTab().files!.details).toBe('size');
+      expect(navTab().files!.rows.find((r) => r.path === 'a.txt')!.size).toBe(5);
+    });
+
+    it('switches an open tree via setDetail and rebuilds its rows', () => {
+      writeFileSync(path.join(root, 'a.txt'), 'hello');
+      const manager = run();
+      manager.open('files', 'janus');
+
+      manager.setDetail(navLabel(), 'permissions');
+
+      expect(navTab().files!.details).toBe('permissions');
+      expect(typeof navTab().files!.rows.find((r) => r.path === 'a.txt')!.mode).toBe('number');
+    });
+
+    it('applies a with clause to an already-open tree instead of opening a second one', () => {
+      writeFileSync(path.join(root, 'a.txt'), 'hello');
+      const manager = run();
+      manager.open('files', 'janus');
+      const before = tabs.length;
+
+      manager.open('files with modified', 'janus');
+
+      expect(tabs.length).toBe(before);
+      expect(navTab().files!.details).toBe('modified');
+      expect(typeof navTab().files!.rows.find((r) => r.path === 'a.txt')!.modified).toBe('number');
+    });
+
+    it('combines a with clause with in and on in one command', () => {
+      writeFileSync(path.join(otherRoot, 'a.txt'), 'hello');
+      const manager = run();
+      manager.open('files in other on left with size', 'janus');
+
+      expect(navTab().files!.root).toBe(otherRoot);
+      expect(navTab().dock).toBe('left');
+      expect(navTab().files!.details).toBe('size');
+      expect(navTab().files!.rows.find((r) => r.path === 'a.txt')!.size).toBe(5);
+    });
+
+    it('reads the default mode for a label with no tab and ignores setDetail for it', () => {
+      const manager = run();
+      manager.setDetail('ghost', 'size');
+      expect(manager.detailOf('ghost')).toBe('name');
+    });
+  });
+
   describe('profile capture and restore', () => {
     const navLabel = () => tabs.find((t) => t.label.startsWith('navigator'))!.label;
 

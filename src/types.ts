@@ -5,7 +5,7 @@
 
 export type {
   LogEntry, TerminalEntry, MessageRenderKind, BufferLine, HarnessView, ImageView, PageView,
-  MarkdownView, EditorView, FileNavigatorRow, FileNavigatorView, TaskRow, MonitorTarget,
+  MarkdownView, EditorView, FileNavigatorDetail, FileNavigatorRow, FileNavigatorView, TaskRow, MonitorTarget,
   MonitorSuggestion, CenterPane, Tab,
 } from './tab/types.js';
 

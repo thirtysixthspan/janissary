@@ -50,6 +50,7 @@ export function rerootTree(port: NavPort, label: string, relPath?: string): void
   state.gitStatuses = new Map();
   state.branch = undefined;
   state.sync = undefined;
+  state.stats.clear();
   port.watchDir(label, target, '');
   if (port.hasTab(label)) port.setCwd(label, target);
   port.rebuild(label);

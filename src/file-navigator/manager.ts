@@ -9,14 +9,15 @@ import { replayHistory } from './manager-history.js';
 import { deleteMany, moveMany, pasteMany } from './manager-batch.js';
 import { toggleDir, collapseAllDirs, rerootTree, revealPath, type NavPort } from './navigation.js';
 import { watchDir, unwatchDir } from './watch.js';
-import { pollForDir, stopPolling } from './poll.js';
-import { pruneAndBuildRows } from './rebuild.js';
-import { buildRows } from './index.js';
+import { pollForDir } from './poll.js';
+import { writeCreatedPayload, writeRebuiltPayload } from './manager-payload.js';
+import { closeTabState, detailOfTab, expandedPathsOf, setTabDetail } from './manager-profile.js';
 import { listProjectFiles } from './search.js';
 import { makeNavigationPort, makeOpenPort } from './manager-ports.js';
 import { openersForRow } from './openers-for-row.js';
 import { restoreTreeView, type SavedTreeView } from './restore.js';
 import type { FilesTabState } from './state.js';
+import type { FileNavigatorDetail } from '../types.js';
 import type { Managers } from '../managers.js';
 import type { BatchResult, BulkConflictPolicy, BulkMoveResult, FileOpenerChoice } from '../protocol.js';
 import { findOpenFilesTab } from './find-tab.js';
@@ -47,6 +48,7 @@ export class FileNavigatorManager {
     return openFilesCommand(
       this.managers, this.tabs, command, label,
       (l, a, r) => this.watchDir(l, a, r), (l) => this.refreshGit(l), (l, a) => this.pollForCreation(l, a),
+      (l) => this.rebuild(l),
     );
   }
 
@@ -212,14 +214,18 @@ export class FileNavigatorManager {
     resyncFileNavigator(this.managers, this.tabs, label, (current) => this.rebuild(current), (current) => this.refreshGit(current));
   }
 
-  // This tab's expanded directories as a plain sorted array, for `profile save`. Sorted only so the
-  // written file is deterministic (profiles are committable); restore order does not matter, since
-  // `buildRows` walks from the root and consults the expanded set rather than replaying insertion
-  // order.
+  // This tab's expanded directories and detail mode, both for `profile save`.
   expandedPaths(label: string): string[] {
-    const state = this.tabs.get(label);
-    if (!state) return [];
-    return [...state.expanded].toSorted((a, b) => a.localeCompare(b));
+    return expandedPathsOf(this.tabs, label);
+  }
+
+  detailOf(label: string): FileNavigatorDetail {
+    return detailOfTab(this.tabs, label);
+  }
+
+  // Switch which detail this tree shows beside each row name (the header's detail button).
+  setDetail(label: string, details: FileNavigatorDetail): void {
+    setTabDetail(this.tabs, label, details, (l) => this.rebuild(l));
   }
 
   // Replay a saved tree view onto this tab: expand every saved directory that still resolves, then
@@ -231,12 +237,7 @@ export class FileNavigatorManager {
 
   // Tear down one tab's watchers and debounce timer (on tab close).
   closeTab(label: string): void {
-    const state = this.tabs.get(label);
-    if (!state) return;
-    if (state.debounce) clearTimeout(state.debounce);
-    stopPolling(state);
-    for (const watcher of state.watchers.values()) { try { watcher.close(); } catch { /* already gone */ } }
-    this.tabs.delete(label);
+    closeTabState(this.tabs, label);
   }
 
   // Tear down every tab's watchers (app shutdown).
@@ -259,7 +260,7 @@ export class FileNavigatorManager {
     if (!found) return;
     const { state, tab } = found;
     state.sync = syncStatusForRoot(this.managers, absDir, state.sync);
-    tab.files = { root: absDir, absoluteRoot: absDir, rows: buildRows(absDir, state.expanded), sync: state.sync };
+    writeCreatedPayload(tab, state, absDir);
     this.watchDir(label, absDir, '');
     this.refreshGit(label);
     messageBus.emit('state', { type: 'dirty' });
@@ -273,6 +274,9 @@ export class FileNavigatorManager {
     const state = this.tabs.get(label);
     if (!state) return;
     if (state.debounce) clearTimeout(state.debounce);
+    // The watcher fired, so every cached stat is suspect — empty the cache and let the rebuild
+    // re-read only the rows that are actually visible.
+    state.stats.clear();
     state.debounce = setTimeout(() => { this.rebuild(label); this.refreshGit(label); }, DEBOUNCE_MS);
   }
 
@@ -287,10 +291,7 @@ export class FileNavigatorManager {
     if (!found) return;
     const { state, tab } = found;
     state.sync = syncStatusForRoot(this.managers, state.root, state.sync);
-    tab.files = {
-      root: state.root, absoluteRoot: state.root, rows: pruneAndBuildRows(state),
-      branch: state.branch, githubUrl: state.githubUrl, sync: state.sync, restore: state.restore,
-    };
+    writeRebuiltPayload(tab, state);
     messageBus.emit('state', { type: 'dirty' });
   }
 }

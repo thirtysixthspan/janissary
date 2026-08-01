@@ -84,8 +84,9 @@ export function writeHarnessEntry(tab: Tab, managers: Managers): ProfileHarnessT
 
 // A file navigator, docked or not. A docked tree has no place in the tab strip, so it keeps `dock`
 // and gets no presentation; an undocked one carries the usual presentation keys instead, so it
-// reopens in its saved group, order, and pane. `expanded` comes from server state and always
-// writes; the three selection keys are whatever the client reported in time (see
+// reopens in its saved group, order, and pane. `expanded` and `details` come from server state and
+// always write, except that the default `name` detail mode writes no key at all; the three
+// selection keys are whatever the client reported in time (see
 // `file-navigator/selection-request.ts`), and an absent or empty one is simply omitted.
 export function writeFilesEntry(
   tab: Tab, managers: Managers, selection: TreeSelection | undefined,
@@ -93,10 +94,12 @@ export function writeFilesEntry(
   if (!tab.files) return undefined;
   const expanded = managers.fileNavigator.expandedPaths(tab.label);
   const selected = selection?.selected ?? [];
+  const details = managers.fileNavigator.detailOf(tab.label);
   return {
     type: 'files',
     dock: tab.dock,
     path: portablePath(tab.files.absoluteRoot, managers),
+    details: details === 'name' ? undefined : details,
     expanded: expanded.length > 0 ? expanded : undefined,
     cursor: selection?.cursor,
     anchor: selection?.anchor,

@@ -90,6 +90,7 @@ export function handle(controller: Controller, message: ClientMessage, reply: (e
     case 'fileNavigatorToggle':
     case 'fileNavigatorCollapseAll':
     case 'resyncFileNavigator':
+    case 'fileNavigatorSetDetail':
     case 'fileNavigatorReroot':
     case 'moveFileNavigatorItem':
     case 'moveFileNavigatorItems':

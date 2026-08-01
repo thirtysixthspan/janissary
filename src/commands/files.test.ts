@@ -75,4 +75,11 @@ describe('files command run', () => {
     expect(appended[0]).toEqual({ input: 'files left ./src', output: '' });
     expect(openCalls[0]).toEqual({ command: 'files left ./src', label: 'janus' });
   });
+
+  it('passes a with clause through alongside the other clauses', () => {
+    run('files in claude on left with size');
+
+    expect(appended[0]).toEqual({ input: 'files in claude on left with size', output: '' });
+    expect(openCalls[0]).toEqual({ command: 'files in claude on left with size', label: 'janus' });
+  });
 });

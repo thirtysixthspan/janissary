@@ -1,8 +1,9 @@
 import type { FSWatcher } from 'node:fs';
 import type { GitFileStatus } from '../git-status.js';
-import type { FileNavigatorView } from '../types.js';
+import type { FileNavigatorDetail, FileNavigatorView } from '../types.js';
 import type { HistoryStep } from './moves.js';
 import type { TreeRestoreHint } from './restore.js';
+import type { RowStat } from './stats.js';
 
 // Per files-tab state, keyed by the tab's label. `watchers` is keyed by each visible directory's
 // tree-relative path ('' for the root itself). `undoStack`/`redoStack` are purely in-memory and
@@ -36,4 +37,11 @@ export type FilesTabState = {
   // repeated full-state broadcasts from re-applying an old hint over a selection the user has
   // since changed.
   restore?: TreeRestoreHint;
+  // Which detail this tree shows to the right of each row name. Every tab starts at 'name', which
+  // reproduces the display the navigator had before detail modes existed and stats nothing.
+  details: FileNavigatorDetail;
+  // Cached `lstat` results keyed by tree-relative path, filled lazily by `stats.ts` and emptied
+  // wholesale by `scheduleRebuild` when a watcher fires — a path whose stat failed caches `null`,
+  // so a broken symlink is not re-stat'd on every rebuild either.
+  stats: Map<string, RowStat | null>;
 };

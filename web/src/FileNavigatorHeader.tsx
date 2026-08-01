@@ -1,9 +1,10 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import type { FileNavigatorView } from '@shared/protocol';
+import type { FileNavigatorDetail, FileNavigatorView } from '@shared/protocol';
 import type { JanusClient } from './ws';
 import { nextDock, dockTooltip } from './dock-cycle';
-import { dockSwapIcon, newDirectoryIcon, newFileIcon, searchFilesIcon, syncIcon } from './icons';
+import { nextDetail, detailTooltip } from './file-navigator-detail';
+import { dockSwapIcon, fileDetailIcon, newDirectoryIcon, newFileIcon, searchFilesIcon, syncIcon } from './icons';
 import { FileNavigatorGithubButton } from './FileNavigatorGithubButton';
 import { SplitTabButton } from './SplitTabButton';
 
@@ -15,6 +16,7 @@ type Properties = {
   client: JanusClient;
   index: number;
   dock?: 'left' | 'right';
+  details?: FileNavigatorDetail;
   onSearch: () => void;
   onNewFile: () => void;
   onNewDirectory: () => void;
@@ -31,8 +33,9 @@ const SYNC_TITLES: Record<NonNullable<FileNavigatorView['sync']>, string> = {
 // new items, dock cycle, collapse all) on the right. Split out of `FileNavigatorTab` to keep it under
 // the file-size limit.
 export function FileNavigatorHeader({
-  root, branch, githubUrl, sync, client, index, dock, onSearch, onNewFile, onNewDirectory, onSplit,
+  root, branch, githubUrl, sync, client, index, dock, details, onSearch, onNewFile, onNewDirectory, onSplit,
 }: Properties) {
+  const following = nextDetail(details);
   return (
     <div className="files-header">
       <div className="files-meta">
@@ -71,6 +74,14 @@ export function FileNavigatorHeader({
             <FontAwesomeIcon icon={dockSwapIcon} />
           </button>
         )}
+        <button
+          type="button"
+          className="files-detail-cycle"
+          title={detailTooltip(following)}
+          onClick={() => client.send({ method: 'fileNavigatorSetDetail', params: { index, details: following } })}
+        >
+          <FontAwesomeIcon icon={fileDetailIcon} />
+        </button>
         {!dock && onSplit && <SplitTabButton onClick={onSplit} />}
         <button
           type="button"

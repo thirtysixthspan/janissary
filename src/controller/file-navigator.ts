@@ -3,7 +3,7 @@
 // limit — see `ai/guidelines/code-guidelines.md`.
 import { reportOperationFailure } from '../file-navigator/operation-report.js';
 import type { Managers } from '../managers.js';
-import type { BatchResult, BulkConflictPolicy, BulkMoveResult, FileOpenerChoice } from '../protocol.js';
+import type { BatchResult, BulkConflictPolicy, BulkMoveResult, FileNavigatorDetail, FileOpenerChoice } from '../protocol.js';
 
 export function fileNavigatorToggle(managers: Managers, index: number, path: string): void {
   const label = managers.tab.tabs[index]?.label;
@@ -18,6 +18,11 @@ export function fileNavigatorCollapseAll(managers: Managers, index: number): voi
 export function resyncFileNavigator(managers: Managers, index: number): void {
   const label = managers.tab.tabs[index]?.label;
   if (label) managers.fileNavigator.sync(label);
+}
+
+export function fileNavigatorSetDetail(managers: Managers, index: number, details: FileNavigatorDetail): void {
+  const label = managers.tab.tabs[index]?.label;
+  if (label) managers.fileNavigator.setDetail(label, details);
 }
 
 export function fileNavigatorReroot(managers: Managers, index: number, relPath?: string): void {

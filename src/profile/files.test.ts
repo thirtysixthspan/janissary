@@ -77,6 +77,16 @@ describe('openProfileFiles', () => {
     expect(open).toHaveBeenCalledWith('files in other on right ./sub', 'other');
   });
 
+  it('replays a saved detail mode as a with clause, before the path', () => {
+    const { open } = run([{ details: 'size', path: './sub' }], 'claude');
+    expect(open).toHaveBeenCalledWith('files with size ./sub', 'claude');
+  });
+
+  it('combines the with clause with in and dock', () => {
+    const { open } = run([{ in: 'other', dock: 'right', details: 'modified' }], 'claude');
+    expect(open).toHaveBeenCalledWith('files in other on right with modified', 'other');
+  });
+
   it('skips with a note when there is no default label and the entry has no in', () => {
     const { open, notes } = run([{ dock: 'left' }], undefined);
     expect(open).not.toHaveBeenCalled();

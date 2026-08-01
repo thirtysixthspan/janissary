@@ -1,5 +1,5 @@
 import { completeCommandLine } from './completion/index.js';
-import type { CompletionResult, Sinks } from './types.js';
+import type { CompletionResult, FileNavigatorDetail, Sinks } from './types.js';
 import { TranscriptStore } from './transcript/store.js';
 import * as fileNavigatorRpc from './controller/file-navigator.js';
 import { wireControllerEvents } from './controller/events.js';
@@ -164,6 +164,10 @@ export class Controller {
 
   fileNavigatorCollapseAll(index: number): void {
     fileNavigatorRpc.fileNavigatorCollapseAll(this.managers, index);
+  }
+
+  fileNavigatorSetDetail(index: number, details: FileNavigatorDetail): void {
+    fileNavigatorRpc.fileNavigatorSetDetail(this.managers, index, details);
   }
 
   fileNavigatorReroot(index: number, relPath?: string): void {

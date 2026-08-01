@@ -13,11 +13,13 @@ import type { MainAreaCandidate } from './focus.js';
 // A docked tree has no place in the tab strip and produces no launch candidate; an undocked one
 // carries the usual presentation keys and is relocated into its authored group, returning a
 // candidate so the caller's reorder and placement passes cover it like an editor tab.
-// The `files …` command this entry is equivalent to, built from its optional clauses.
+// The `files …` command this entry is equivalent to, built from its optional clauses. `path` stays
+// last — it is the command's target, not a keyword clause.
 function filesCommand(entry: ProfileFilesEntry): string {
   const clauses = [
     entry.in ? `in ${entry.in}` : '',
     entry.dock ? `on ${entry.dock}` : '',
+    entry.details ? `with ${entry.details}` : '',
     entry.path ? entry.path.trim() : '',
   ].filter(Boolean).join(' ');
   return `files ${clauses}`.trim();

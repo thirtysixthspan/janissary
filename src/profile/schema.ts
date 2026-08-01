@@ -5,6 +5,9 @@
 
 type FieldKind = 'string' | 'number' | 'boolean' | 'string[]';
 
+// The four file-navigator detail modes a `files` entry's `details` key may name.
+const DETAIL_MODES = new Set(['name', 'size', 'modified', 'permissions']);
+
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -113,9 +116,17 @@ function monitorProblems(value: unknown, loc: string): string[] {
   ];
 }
 
+// `details`, when present, must name one of the four file-navigator detail modes.
+function checkDetails(obj: Record<string, unknown>, loc: string): string[] {
+  const details = obj.details;
+  if (details === undefined || (typeof details === 'string' && DETAIL_MODES.has(details))) return [];
+  return [`${loc}: details must be "name", "size", "modified" or "permissions"`];
+}
+
 function filesProblems(value: Record<string, unknown>, loc: string): string[] {
   return [
     ...checkDock(value, loc),
+    ...checkDetails(value, loc),
     ...checkField(value, 'in', 'string', loc),
     ...checkField(value, 'path', 'string', loc),
     ...checkField(value, 'expanded', 'string[]', loc),

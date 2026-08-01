@@ -56,6 +56,14 @@ form (`files ./left`).
 instead of the issuing tab's own cwd. If no tab has that label, an error (`No tab named
 "<label>".`) is appended to the issuing tab's transcript and no tree is opened or moved.
 
+`files with <mode>` opens (or retargets) the tree showing a per-row detail beside each name, where
+`<mode>` is `name`, `size`, `modified`, or `permissions` — see "Row detail modes" below. Like `in`
+and `on`, it is an independent clause recognized only in that position, so a directory literally
+named `with` is still reachable through a path form (`files ./with`), and the clauses may appear in
+any order (`files in claude on left with size`). When the command lands on a tree that is already
+open — focusing, redocking, or retargeting it rather than opening a second one — the clause still
+applies, so re-running `files with modified` is a second way to switch an open tree's mode.
+
 `files on left`/`files on right` is an explicit spelling of the same docking `files left`/`files
 right` provides. The two clauses are independent and may be combined in either order — `files in
 <label> on <side>` or `files on <side> in <label>` — to root the tree at another tab's cwd and dock
@@ -115,6 +123,29 @@ git status cannot be determined, shows no coloring and no error.
 **Git-sync refresh.** When the tree's root is the shared workspace used for Git-synced files, or a directory inside that workspace, the header shows a Git sync icon. The icon appears once for the tree root in the header; nested directory and file rows never show it. An ordinary navigator rooted in the main project checkout, an agent workspace, or any other directory has no sync icon.
 
 While the icon shows synced or error, clicking it runs the shared workspace's pull-only sync against `origin/master`. It changes to syncing and ignores further clicks until the pull finishes. A successful pull rebuilds the visible tree immediately, including every expanded directory, then refreshes its Git status colors, branch, and GitHub link. The conflict policy is the same as synced-file editing: if rebasing conflicts, the remote version wins. A failed pull leaves the existing tree visible and changes the icon to error; clicking the error icon retries.
+
+### Row detail modes
+
+Each row can show one value to the right of its name, right-aligned so the values line up as a
+column. Four modes cycle in this order:
+
+- **`name`** — just the filename, left-aligned. This is the default for every newly opened tree.
+- **`size`** — a compact human-readable size: `22b`, `24k`, `32M`, `5G`.
+- **`modified`** — the last-modified time as `Jul 13 23:29`. The time is always shown and the year
+  never is, so every value is the same width regardless of a file's age.
+- **`permissions`** — the permission string, `drwxr-xr-x`. Owner and group are not shown.
+
+A row that has no value for the current mode shows nothing at all — no dash and no placeholder.
+That covers directory rows and the `..` row in `size` mode, and any row whose details cannot be
+read, the same quiet degradation the tree applies when git status cannot be determined. A symlink
+describes itself rather than what it points at, matching the way the tree already renders it as a
+leaf file.
+
+The mode belongs to one tree: switching it in one navigator leaves every other open navigator
+alone. The filename always takes precedence over the value: when a row cannot fit both — a long
+name, a squeezed sidebar — the name keeps its full width and the value gives way, shrinking and
+then disappearing behind it rather than truncating the name. The mode itself is unchanged, so
+widening the tree, or moving to a row with a shorter name, brings the value straight back.
 
 ### Watching
 
@@ -244,9 +275,10 @@ items it created — see Copying, cutting, and pasting below.
 ### Saving and restoring a tree's view
 
 A tree's own view does round-trip through a profile, unlike its undo/redo stacks. `profile save`
-records which directories are expanded, which row holds the keyboard cursor, the range anchor, and
-the full row selection; `profile launch` replays them, re-expanding the directories that still
-exist and re-highlighting the saved rows with the cursor row scrolled into view. Anything that no
+records which directories are expanded, which row holds the keyboard cursor, the range anchor, the
+full row selection, and the tree's current detail mode; `profile launch` replays them, re-expanding
+the directories that still exist, reopening the tree in its saved detail mode, and re-highlighting
+the saved rows with the cursor row scrolled into view. Anything that no
 longer exists is dropped silently, and restoring a selection never moves keyboard focus. See
 Profiles for the full rules.
 
@@ -391,10 +423,13 @@ entirely — there is no duplicate representation of a docked tree in the strip.
 ### Header buttons
 
 Every file navigator tab's own header carries a **Search files** button, **New file** and **New
-directory** buttons, and a **location button**. Search files opens the search pop-up — see
+directory** buttons, a **detail button**, and a **location button**. Search files opens the search pop-up — see
 "Finding a file by name" below. New file opens a fresh, unsaved editor tab named `untitled.md`;
 New directory creates a folder beside or inside the selected row — see the creating sections
-below. The location button cycles the tree through left sidebar → center tab strip → right sidebar → left
+below. The detail button cycles that tree through the four row detail modes — name → size →
+modified → permissions → name — one step per click, with a tooltip naming what the next click will
+show (`Show size`, `Show modified`, `Show permissions`, `Show name only`); it is present whether or
+not the tree is docked. The location button cycles the tree through left sidebar → center tab strip → right sidebar → left
 sidebar, one step per click, with a tooltip naming the destination. The header itself carries no
 close button — while docked, the sidebar's own strip (see `sidebars.md`) shows the tab's name and
 the close affordance, so a docked tree is closed from there (`close files` by label still works as
