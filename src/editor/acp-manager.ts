@@ -84,4 +84,11 @@ export class EditorAcpManager {
       this.contexts.delete(k);
     }
   }
+
+  dispose(): void {
+    for (const session of this.sessions.values()) session.kill();
+    this.sessions.clear();
+    this.personas.clear();
+    this.contexts.clear();
+  }
 }

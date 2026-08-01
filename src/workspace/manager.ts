@@ -68,4 +68,8 @@ export class WorkspaceManager {
     for (const dir of this.dirs) removeWorkspace(dir);
     this.dirs.clear();
   }
+
+  dispose(): void {
+    this.removeAll();
+  }
 }

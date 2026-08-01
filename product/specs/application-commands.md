@@ -40,4 +40,4 @@ directly (e.g. from a scheduled dispatch or another agent), it is a no-op.
 
 ### `quit`
 
-Exits the application: closes the app window (the web page) and stops the server, after killing every tab's shell, ACP session, browser, and terminals and closing all connections. Requires confirmation first — see `quit-confirmation.md`. (To close a single tab, use `close`; `exit` is an alias of `close`, not `quit`.)
+Exits the application: closes the app window (the web page) and stops the server after killing all shells, ACP and editor-suggestion sessions, browsers, terminals, and monitors; stopping schedules and file watchers; cancelling pending questions; closing harness recordings and transcripts; closing database connections; and removing disposable workspaces. Requires confirmation first — see `quit-confirmation.md`. (To close a single tab, use `close`; `exit` is an alias of `close`, not `quit`.)

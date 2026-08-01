@@ -65,6 +65,10 @@ export class DatabaseManager {
     this.tabConns.clear();
   }
 
+  dispose(): void {
+    this.closeAll();
+  }
+
   // Drop a database name from every tab's tracked connections (on `db delete`).
   private forgetConn(name: string): void {
     for (const [label, names] of this.tabConns) {

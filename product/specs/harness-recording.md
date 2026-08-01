@@ -43,6 +43,7 @@ distinguishable from the parent's once the two are interleaved.
 The transcript file is `.janissary/harness-transcripts/<label>-<timestamp>.txt`, named on the same
 scheme as captures and recordings. It is created **lazily, on the first entry** — a harness that
 never produces one leaves no empty file — appended to for the life of the tab, and never truncated.
+Closing the harness tab or quitting the application stops transcript collection and closes the file.
 The directory is **cleared at a fresh launch** and **preserved across `--relaunch`**, matching
 `.janissary/recordings/`. It is separate from `.janissary/transcripts/`, which holds ordinary tabs'
 own logs.
@@ -94,7 +95,7 @@ The file is created **lazily, on the first output**: a harness that exits before
 (e.g. a binary not found on `PATH`, whose PTY exits immediately) leaves no empty file behind. A
 resize arriving before the first output only updates the pending header dimensions; it does not
 create the file. The file's append stream is opened on that first output and closed when the PTY
-exits.
+exits or the application shuts down.
 
 The recordings directory is **cleared at a fresh launch** and **preserved across `--relaunch`**,
 matching `.janissary/captures/` — a run's recordings are bounded to that run, and a relaunch handoff

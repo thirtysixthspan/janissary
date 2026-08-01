@@ -83,6 +83,10 @@ export class PseudoterminalManager {
     this.ptys.clear();
   }
 
+  dispose(): void {
+    this.closeAll();
+  }
+
   // Drop the exited PTY from the registry, clear `activePty` on full-tab takeovers, update inline
   // terminal card entries, then let the controller handle harness updates and client notification.
   private handleExit(id: string, exitCode: number): void {

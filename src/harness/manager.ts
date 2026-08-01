@@ -12,7 +12,7 @@ import { captureSubcommand, transcriptSubcommand } from './subcommands.js';
 import { HarnessTranscriptTailer } from './transcript/tailer.js';
 import { createTranscriptSource } from './transcript/sources.js';
 import type { HarnessView, ProfileHarnessEntry } from '../types.js';
-import { messageBus } from '../bus.js';
+import { messageBus, type Subscription } from '../bus.js';
 import { notify } from '../notifications.js';
 import { sandboxNotice } from '../sandbox/index.js';
 import { oneShotRunEntry } from '../profile/harness-schedule.js';
@@ -30,9 +30,10 @@ export class HarnessManager {
   private tailers = new Map<string, HarnessTranscriptTailer>();
   private autoApprovers = new Map<string, HarnessAutoApprover>();
   private launchDialogOpen = false;
+  private subscription: Subscription;
 
   constructor(private managers: Managers) {
-    messageBus.on('pty', 'exit', (event) => {
+    this.subscription = messageBus.on('pty', 'exit', (event) => {
       if (event.type !== 'exit') return;
       this.screenReaders.get(event.id)?.dispose();
       this.screenReaders.delete(event.id);
@@ -42,6 +43,17 @@ export class HarnessManager {
       this.tailers.delete(event.id);
       this.autoApprovers.delete(event.id);
     });
+  }
+
+  dispose(): void {
+    this.subscription.unsubscribe();
+    for (const reader of this.screenReaders.values()) reader.dispose();
+    for (const recorder of this.recorders.values()) recorder.dispose();
+    for (const tailer of this.tailers.values()) tailer.dispose();
+    this.screenReaders.clear();
+    this.recorders.clear();
+    this.tailers.clear();
+    this.autoApprovers.clear();
   }
 
   // The named harness tab's most recent rendered-screen capture, or undefined when the tab is

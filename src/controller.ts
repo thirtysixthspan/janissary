@@ -230,17 +230,8 @@ export class Controller {
   }
 
   shutdown(): void {
-    this.managers.questions.closeAll();
-    this.managers.fileNavigator.dispose();
-    this.managers.editorWatch.dispose();
-    this.managers.monitor.closeAll();
+    const names = Object.keys(this.managers) as Array<keyof Managers>;
+    for (const name of names.toReversed()) this.managers[name].dispose?.();
     messageBus.clear();
-    this.managers.schedule.stop();
-    this.managers.shell.closeAll();
-    this.managers.acp.closeAll();
-    this.managers.pty.closeAll();
-    this.managers.browser.closeAll();
-    this.managers.database.closeAll();
-    this.managers.workspace.removeAll();
   }
 }

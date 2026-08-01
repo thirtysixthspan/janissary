@@ -21,7 +21,11 @@ import type { EditorWatchManager } from './editor/watch-manager.js';
 import type { EditorAcpManager } from './editor/acp-manager.js';
 import type { Questions } from './questions.js';
 
-export interface Managers {
+export type ManagerLifecycle = {
+  dispose?(): void;
+};
+
+type ManagerRegistry = {
   tab: TabManager;
   shell: ShellManager;
   acp: AcpManager;
@@ -44,4 +48,8 @@ export interface Managers {
   editorWatch: EditorWatchManager;
   editorAcp: EditorAcpManager;
   questions: Questions;
-}
+};
+
+export type Managers = {
+  [Name in keyof ManagerRegistry]: ManagerRegistry[Name] & ManagerLifecycle;
+};

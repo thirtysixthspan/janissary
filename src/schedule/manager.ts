@@ -51,6 +51,10 @@ export class ScheduleManager {
     clearInterval(this.timer);
   }
 
+  dispose(): void {
+    this.stop();
+  }
+
   // A tab's scheduled commands, or undefined when it has none (raw — for persistence and the command
   // context, both of which distinguish "no schedule" from "empty schedule").
   get(label: string): ScheduleEntry[] | undefined {
