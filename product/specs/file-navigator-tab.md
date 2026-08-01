@@ -142,9 +142,10 @@ describes itself rather than what it points at, matching the way the tree alread
 leaf file.
 
 The mode belongs to one tree: switching it in one navigator leaves every other open navigator
-alone. When the navigator is too narrow to fit a name and a value on one line — a squeezed sidebar,
-say — the values are dropped entirely and rows read as names only; the mode itself is unchanged, so
-widening the tree brings them straight back.
+alone. The filename always takes precedence over the value: when a row cannot fit both — a long
+name, a squeezed sidebar — the name keeps its full width and the value gives way, shrinking and
+then disappearing behind it rather than truncating the name. The mode itself is unchanged, so
+widening the tree, or moving to a row with a shorter name, brings the value straight back.
 
 ### Watching
 
