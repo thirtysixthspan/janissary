@@ -12,7 +12,7 @@ None of this needs special support from janissary beyond files and folders. What
 
 ## The backlog
 
-Keep a small set of markdown lists — one per category of work (say, `features.md`, `fixes.md`, `chores.md`) — each with three headings:
+Keep a small set of markdown lists — one per category of work (say, `features.md`, `fixes.md`, `chores.md`) — each with four headings:
 
 ```markdown
 # features
@@ -21,12 +21,14 @@ Keep a small set of markdown lists — one per category of work (say, `features.
 
 * a short line describing the next thing worth doing
 
-## in progress
+## development
 
 ## deferred
+
+## declined
 ```
 
-An entry is a line or two, not a spec — just enough to recognize the idea later. `ready` is the queue; `in progress` holds anything a plan already exists for; `deferred` is things you're intentionally not doing yet. Moving an entry between headings *is* the status update — there's nothing else to synchronize.
+An entry is a line or two, not a spec — just enough to recognize the idea later. `ready` is the queue; `development` holds anything a plan already exists for; `deferred` is things you're intentionally not doing yet; `declined` records ideas you've considered and decided not to pursue. Moving an entry between headings *is* the status update — there's nothing else to synchronize.
 
 ## Plans
 

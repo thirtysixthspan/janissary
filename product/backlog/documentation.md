@@ -8,6 +8,8 @@
 
 * sandbox — flagged by a 190-line spec whose coverage is scattered across `documentation/user-documentation/advanced-agents/workspacing.md` and `workspaced-agent.md`; not yet evaluated fact-by-fact (over this run's limit)
 
+## declined
+
 ## resolved
 
 * image-tab — documented in documentation/user-documentation/tab-types/image-viewer.md (removed 2026-07-29)
