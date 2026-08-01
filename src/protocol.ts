@@ -1,10 +1,10 @@
 // Wire types shared between the Node server and the React web client.
 // The web client imports these directly via the @shared path alias — no mirror needed.
-import type { BufferLine, ImageView, PageView, HarnessView, MarkdownView, EditorView, TerminalEntry, CompletionResult, FileNavigatorView, FileNavigatorRow, TaskRow, ProfileRow } from './types.js';
+import type { BufferLine, ImageView, PageView, HarnessView, MarkdownView, EditorView, TerminalEntry, CompletionResult, FileNavigatorView, FileNavigatorDetail, FileNavigatorRow, TaskRow, ProfileRow } from './types.js';
 
 // Used locally in TabView below, so separate import + export is required.
 // eslint-disable-next-line unicorn/prefer-export-from
-export type { BufferLine, ImageView, PageView, HarnessView, MarkdownView, EditorView, TerminalEntry, CompletionResult, FileNavigatorView, FileNavigatorRow, TaskRow, ProfileRow };
+export type { BufferLine, ImageView, PageView, HarnessView, MarkdownView, EditorView, TerminalEntry, CompletionResult, FileNavigatorView, FileNavigatorDetail, FileNavigatorRow, TaskRow, ProfileRow };
 
 // Identifies the ACP session behind a connections-panel row, for the `openAcpTranscript` RPC to
 // route on: the tab's own agent, a monitor session, or an editor-persona session.
@@ -236,6 +236,8 @@ export type RpcCall =
   | { method: 'fileNavigatorCollapseAll'; params: { index: number } }
   // Pull the shared Git-sync workspace from origin/master and rebuild this navigator's rows.
   | { method: 'resyncFileNavigator'; params: { index: number } }
+  // Switch which per-row detail a file navigator tab shows (its header's detail button).
+  | { method: 'fileNavigatorSetDetail'; params: { index: number; details: FileNavigatorDetail } }
   // Re-root a file navigator tab to the parent directory.
   | { method: 'fileNavigatorReroot'; params: { index: number; path?: string } }
   // Move a file or directory in a file navigator tab into a different directory (drag-and-release).

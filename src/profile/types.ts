@@ -1,5 +1,5 @@
 import type { AgentState } from '../agent/types.js';
-import type { CenterPane } from '../tab/types.js';
+import type { CenterPane, FileNavigatorDetail } from '../tab/types.js';
 
 export type ProfileRow = { name: string; source: 'project' | 'janissary' };
 
@@ -61,13 +61,15 @@ export type ProfileTabPresentation = {
 // A profile-level file navigator tab. `dock` docks it into that sidebar; `in` roots it at the cwd
 // of the named tab instead of the profile's first newly opened tab; `path` roots it at a literal
 // path, expanded like the `files` command's path argument (so `$root` roots it at the launch dir
-// regardless of any tab). `expanded`, `cursor`, `anchor`, and `selected` are the tree's saved view,
+// regardless of any tab); `details` reopens it in a saved detail mode, omitted for the default
+// `name`. `expanded`, `cursor`, `anchor`, and `selected` are the tree's saved view,
 // every path relative to its root; restoring them is best effort and silent. An undocked navigator
 // takes a place in the tab strip, so it also carries the usual presentation keys.
 export type ProfileFilesEntry = ProfileTabRuntime & {
   dock?: 'left' | 'right';
   in?: string;
   path?: string;
+  details?: FileNavigatorDetail;
   expanded?: string[];
   cursor?: string;
   anchor?: string;

@@ -12,18 +12,22 @@ import {
   makeNotificationsTab, makeSchedulesTab,
 } from '../tab/index.js';
 import type { Managers } from '../managers.js';
-import type { LoadedProfile, MonitorTarget, ProfileFile, Tab } from '../types.js';
+import type { FileNavigatorDetail, LoadedProfile, MonitorTarget, ProfileFile, Tab } from '../types.js';
 
 type Snapshot = { name: string; persona: string; targets: MonitorTarget[]; inline: boolean }[];
 
 function makeManagers(
   tabs: Tab[], cwdByLabel: Record<string, string> = {}, monitors: Snapshot = [], launchDir = '/proj',
   expandedByLabel: Record<string, string[]> = {},
+  detailByLabel: Record<string, FileNavigatorDetail> = {},
 ): Managers {
   return {
     tab: { tabs, cwdOf: (label: string) => cwdByLabel[label], launchDir },
     monitor: { snapshot: () => monitors },
-    fileNavigator: { expandedPaths: (label: string) => expandedByLabel[label] ?? [] },
+    fileNavigator: {
+      expandedPaths: (label: string) => expandedByLabel[label] ?? [],
+      detailOf: (label: string) => detailByLabel[label] ?? 'name',
+    },
   } as unknown as Managers;
 }
 
@@ -182,6 +186,15 @@ describe('saveProfile', () => {
     await saveProfile('demo', managers);
 
     expect(load('demo').files).toEqual([{ dock: 'left', path: '$root/', expanded: ['src'] }]);
+  });
+
+  it('writes the navigator detail mode, and omits it for the default name mode', async () => {
+    const sized = { ...makeFilesTab('nav', '#444', 1, 1, '#444', { root: '~', absoluteRoot: '/proj', rows: [] }), dock: 'left' as const };
+    await saveProfile('demo', makeManagers([sized], {}, [], '/proj', { nav: ['src'] }, { nav: 'permissions' }));
+    expect(load('demo').files[0].details).toBe('permissions');
+
+    await saveProfile('demo', makeManagers([sized], {}, [], '/proj', { nav: ['src'] }, { nav: 'name' }));
+    expect(load('demo').files[0].details).toBeUndefined();
   });
 
   it('omits the three selection keys when no client answers the request in time', async () => {

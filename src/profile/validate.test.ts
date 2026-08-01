@@ -156,6 +156,23 @@ describe('validateProfile', () => {
     expect(problems).toContain('tabs[3]: number must be a number');
   });
 
+  it('accepts every detail mode on a files entry and rejects anything else', () => {
+    writeJson('detail', {
+      tabs: [
+        { type: 'files', details: 'name' },
+        { type: 'files', details: 'size' },
+        { type: 'files', details: 'modified' },
+        { type: 'files', details: 'permissions' },
+      ],
+    });
+    expect(validateProfile('detail')).toEqual([]);
+
+    writeJson('bad-detail', { tabs: [{ type: 'files', details: 'owner' }, { type: 'files', details: 2 }] });
+    const problems = validateProfile('bad-detail');
+    expect(problems).toContain('tabs[0]: details must be "name", "size", "modified" or "permissions"');
+    expect(problems).toContain('tabs[1]: details must be "name", "size", "modified" or "permissions"');
+  });
+
   it('reports no problems for a file still using the old per-kind keys', () => {
     writeJson('old', { agents: [{ name: 'bob' }], harnesses: [{ name: 'c' }], editors: [{}] });
     expect(validateProfile('old')).toEqual([]);

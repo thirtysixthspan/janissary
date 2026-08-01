@@ -732,7 +732,13 @@ html, body, #root {
 .editor-diff-controls button:hover { opacity: 1; }
 
 /* File navigator tab: metadata header (image-tab classes) above a scrollable, keyboard-navigable tree. */
-.files-tab { flex: 1; min-height: 0; display: flex; flex-direction: column; outline: none; position: relative; }
+/* `container-type: inline-size` makes the tree its own query container, so the per-row detail
+   column can drop out when the navigator itself is narrow — the sidebar is user-resizable, so its
+   width is what matters here, not the viewport's. */
+.files-tab {
+  flex: 1; min-height: 0; display: flex; flex-direction: column; outline: none; position: relative;
+  container-type: inline-size;
+}
 .files-header {
   display: flex; align-items: center; justify-content: space-between;
   padding: 6px 12px; color: var(--muted); font-size: 12px; border-bottom: 1px solid var(--border);
@@ -744,11 +750,11 @@ html, body, #root {
 .files-loc { font-size: 12px; word-break: break-all; color: var(--muted); }
 .files-branch { font-size: 12px; color: var(--muted); }
 .files-actions { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
-.files-collapse-all, .files-dock-cycle, .files-github, .files-new-directory, .files-new-file, .files-search, .files-sync {
+.files-collapse-all, .files-detail-cycle, .files-dock-cycle, .files-github, .files-new-directory, .files-new-file, .files-search, .files-sync {
   background: transparent; border: none; color: var(--muted); cursor: pointer; font-size: 13px;
   padding: 0 4px; line-height: 1;
 }
-.files-collapse-all:hover, .files-dock-cycle:hover, .files-github:hover, .files-new-directory:hover, .files-new-file:hover, .files-search:hover, .files-sync:hover { color: var(--fg); }
+.files-collapse-all:hover, .files-detail-cycle:hover, .files-dock-cycle:hover, .files-github:hover, .files-new-directory:hover, .files-new-file:hover, .files-search:hover, .files-sync:hover { color: var(--fg); }
 .files-sync--synced { color: var(--success); }
 .files-sync--error { color: var(--error); }
 .files-sync--syncing { cursor: default; }
@@ -790,6 +796,16 @@ html, body, #root {
 }
 .files-chevron { flex: none; width: 1em; color: var(--muted); font-size: 10px; }
 .files-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+/* The per-row detail value (size, modified time, or permissions), right-aligned so the values line
+   up as a column. Below a narrow navigator it is dropped outright rather than squeezing the
+   filename — the mode is unchanged, so widening the tree brings the values back. */
+.files-detail {
+  flex-shrink: 0; margin-left: auto; padding-left: 8px;
+  font-size: 12px; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums;
+}
+@container (max-width: 220px) {
+  .files-detail { display: none; }
+}
 .files-name--changed { color: var(--running); }
 .files-name--staged { color: var(--success); }
 .files-name--conflict { color: var(--error); }

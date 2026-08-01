@@ -111,6 +111,11 @@ export type EditorView = {
   sync?: 'provisioning' | 'syncing' | 'synced' | 'error';
 };
 
+// Which per-row detail a file navigator shows to the right of each name: none, a human-readable
+// size, a last-modified timestamp, or a permission string. Cycled by the tree's own detail button,
+// set by the `files with <mode>` clause, and saved in a profile's `details` key.
+export type FileNavigatorDetail = 'name' | 'size' | 'modified' | 'permissions';
+
 // A single visible row in a file navigator tab (opened via `files [path]`). `path` is relative to the
 // tree root — the unique key, and the argument passed to `open`/`edit` when a file row is clicked.
 // Children of a directory are included only once it is expanded (present in the row list at all).
@@ -125,6 +130,12 @@ export type FileNavigatorRow = {
   // directory row: the highest-priority status (conflict > staged > changed) found among the
   // files beneath it, at any depth. Drives yellow/green/red coloring respectively.
   gitStatus?: 'changed' | 'staged' | 'conflict';
+  // Stat values for the tab's current detail mode, absent in `name` mode and whenever the row's
+  // own stat failed (a broken symlink, a path deleted mid-rebuild). `size` is in bytes and is set
+  // for file rows only; `modified` is epoch milliseconds; `mode` is the raw numeric stat mode.
+  size?: number;
+  modified?: number;
+  mode?: number;
 };
 
 // A file navigator view (opened via `files [path]`). The server owns the tree — `rows` is the
@@ -144,6 +155,9 @@ export type FileNavigatorView = {
   // A selection restored from a profile, applied by the client once per `revision` (see
   // `file-navigator/restore.ts`). Absent for a tree that was never launched from a profile.
   restore?: { revision: number; cursor?: string; anchor?: string; selected: string[] };
+  // The tab's current detail mode, driving which stat value each row renders and which mode the
+  // header's detail button offers next. Absent means `name`.
+  details?: FileNavigatorDetail;
 };
 
 // A single row in the task picker's listing (executable `ai/*.md` prompts). Unlike `FileNavigatorRow`,

@@ -40,7 +40,9 @@ function openFresh(port: OpenPort, root: string): void {
   port.managers.tab.openFilesTab({ root, absoluteRoot: root, rows: buildRows(root, expanded), sync });
   const newLabel = port.managers.tab.cur().label;
   port.managers.tab.setCwd(newLabel, root);
-  port.states.set(newLabel, { root, expanded, watchers: new Map(), undoStack: [], redoStack: [], sync });
+  port.states.set(newLabel, {
+    root, expanded, watchers: new Map(), undoStack: [], redoStack: [], sync, details: 'name', stats: new Map(),
+  });
   port.watchDir(newLabel, root, '');
   port.refreshGit(newLabel);
   port.managers.tab.setDock(port.managers.tab.findIndex(newLabel), 'left');
@@ -60,6 +62,7 @@ function retarget(port: OpenPort, label: string, root: string): void {
   state.undoStack = [];
   state.redoStack = [];
   state.sync = undefined;
+  state.stats.clear();
   port.watchDir(label, root, '');
   port.refreshGit(label);
   if (port.managers.tab.tabs.some((t) => t.label === label)) port.managers.tab.setCwd(label, root);

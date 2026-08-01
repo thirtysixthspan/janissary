@@ -1,11 +1,13 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import type { FileNavigatorRow } from '@shared/protocol';
+import type { FileNavigatorDetail, FileNavigatorRow } from '@shared/protocol';
 import { expandedIcon, collapsedIcon } from './icons';
+import { rowDetail } from './file-navigator-detail';
 import { InlineEditInput } from './InlineEditInput';
 
 type Properties = {
   row: FileNavigatorRow;
+  details?: FileNavigatorDetail;
   id: string;
   selected: boolean;
   cursor: boolean;
@@ -22,8 +24,9 @@ type Properties = {
 
 // One row of the file navigator — kept out of `FileNavigatorTab.tsx` to stay under the file-size limit.
 export function FileNavigatorRowView({
-  row, id, selected, cursor, rowClass, editing, draft, onDraftChange, onCommit, onCancel, onClick, onDoubleClick, onMouseDown,
+  row, details, id, selected, cursor, rowClass, editing, draft, onDraftChange, onCommit, onCancel, onClick, onDoubleClick, onMouseDown,
 }: Properties) {
+  const detail = rowDetail(row, details);
   return (
     <div
       id={id}
@@ -51,6 +54,7 @@ export function FileNavigatorRowView({
       ) : (
         <span className={rowClass.name}>{row.name}</span>
       )}
+      {detail && <span className="files-detail">{detail}</span>}
     </div>
   );
 }
