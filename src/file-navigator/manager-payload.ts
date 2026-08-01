@@ -6,8 +6,7 @@ import type { Tab } from '../types.js';
 
 // The two `files` payload writes `FileNavigatorManager` makes, kept here so the manager itself
 // stays under the file-size limit — see `ai/guidelines/code-guidelines.md`. Both attach the tab's
-// detail mode alongside its rows, so the client always knows which stat value to render, and both
-// pass through the Git-sync status the manager refreshed just before calling in.
+// detail mode alongside its rows, so the client always knows which stat value to render.
 
 // The payload for a tree whose awaited root has just appeared: real rows in place of the waiting
 // state, still without git metadata, which `refreshGit` fills in on its own pass.
@@ -16,7 +15,6 @@ export function writeCreatedPayload(tab: Tab, state: FilesTabState, absDir: stri
     root: absDir,
     absoluteRoot: absDir,
     rows: markStats(state, buildRows(absDir, state.expanded)),
-    sync: state.sync,
     details: state.details,
   };
 }
@@ -30,7 +28,6 @@ export function writeRebuiltPayload(tab: Tab, state: FilesTabState): void {
     rows: pruneAndBuildRows(state),
     branch: state.branch,
     githubUrl: state.githubUrl,
-    sync: state.sync,
     restore: state.restore,
     details: state.details,
   };

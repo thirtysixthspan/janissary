@@ -7,13 +7,12 @@ import {
   moveFileNavigatorItems,
   pasteFileNavigatorItems,
   renameFileNavigatorItem,
-  resyncFileNavigator,
   revealFileNavigatorItem,
 } from './controller/file-navigator.js';
 import { resolveTreeSelections } from './file-navigator/selection-request.js';
 
 type FileNavigatorMessage = Extract<ClientMessage, {
-  method: 'fileNavigatorToggle' | 'fileNavigatorCollapseAll' | 'resyncFileNavigator'
+  method: 'fileNavigatorToggle' | 'fileNavigatorCollapseAll'
     | 'fileNavigatorSetDetail' | 'fileNavigatorReroot' | 'moveFileNavigatorItem'
     | 'moveFileNavigatorItems' | 'deleteFileNavigatorItem' | 'deleteFileNavigatorItems'
     | 'renameFileNavigatorItem' | 'fileNavigatorSearch' | 'revealFileNavigatorItem'
@@ -28,8 +27,6 @@ export function handleFileNavigatorMessage(controller: Controller, message: File
     case 'fileNavigatorToggle': { controller.fileNavigatorToggle(message.params.index, message.params.path); break;
     }
     case 'fileNavigatorCollapseAll': { controller.fileNavigatorCollapseAll(message.params.index); break;
-    }
-    case 'resyncFileNavigator': { resyncFileNavigator(controller.managers, message.params.index); break;
     }
     case 'fileNavigatorSetDetail': { controller.fileNavigatorSetDetail(message.params.index, message.params.details); break;
     }

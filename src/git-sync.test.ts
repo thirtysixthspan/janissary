@@ -5,7 +5,6 @@ type Call = { args: string[]; options: { cwd?: string; env?: NodeJS.ProcessEnv }
 
 let calls: Call[] = [];
 let failPatterns: string[][] = [];
-let workspaceInitialized = true;
 
 vi.mock('node:child_process', () => ({
   execFile: (
@@ -20,12 +19,7 @@ vi.mock('node:child_process', () => ({
 }));
 
 vi.mock('./github-token.js', () => ({ getGithubToken: () => 'test-token' }));
-vi.mock('./workspace/index.js', () => ({
-  workspacePath: (name: string) => {
-    if (!workspaceInitialized) throw new Error('workspace not initialized');
-    return `/repo/.janissary/workspace/${name}`;
-  },
-}));
+vi.mock('./workspace/index.js', () => ({ workspacePath: (name: string) => `/repo/.janissary/workspace/${name}` }));
 
 const { GitSync, SYNC_WORKSPACE_NAME } = await import('./git-sync.js');
 
@@ -41,27 +35,12 @@ function argLists(): string[][] {
 beforeEach(() => {
   calls = [];
   failPatterns = [];
-  workspaceInitialized = true;
 });
 
 describe('GitSync', () => {
   it('resolves a synced file\'s path inside the shared workspace', () => {
     const sync = new GitSync(makeWorkspace());
     expect(sync.workspaceFilePath('notes/todo.md')).toBe(`/repo/.janissary/workspace/${SYNC_WORKSPACE_NAME}/notes/todo.md`);
-  });
-
-  it('recognizes the shared workspace root and descendants without matching sibling paths', () => {
-    const sync = new GitSync(makeWorkspace());
-    expect(sync.isWorkspacePath('/repo/.janissary/workspace/git-sync')).toBe(true);
-    expect(sync.isWorkspacePath('/repo/.janissary/workspace/git-sync/product/plans')).toBe(true);
-    expect(sync.isWorkspacePath('/repo/.janissary/workspace/git-sync-copy')).toBe(false);
-    expect(sync.isWorkspacePath('/repo/product/plans')).toBe(false);
-  });
-
-  it('treats paths as unsynced before the workspace directory is initialized', () => {
-    workspaceInitialized = false;
-    const sync = new GitSync(makeWorkspace());
-    expect(sync.isWorkspacePath('/repo/.janissary/workspace/git-sync')).toBe(false);
   });
 
   it('provisions the shared workspace lazily exactly once for concurrent opens', async () => {

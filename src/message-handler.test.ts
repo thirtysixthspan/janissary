@@ -9,7 +9,6 @@ import {
   fileNavigatorSearch,
   moveFileNavigatorItems,
   pasteFileNavigatorItems,
-  resyncFileNavigator,
   revealFileNavigatorItem,
 } from './controller/file-navigator.js';
 import { resolveTreeSelections } from './file-navigator/selection-request.js';
@@ -24,7 +23,6 @@ vi.mock('./controller/file-navigator.js', () => ({
   fileNavigatorSearch: vi.fn(),
   moveFileNavigatorItems: vi.fn(),
   pasteFileNavigatorItems: vi.fn(),
-  resyncFileNavigator: vi.fn(),
   revealFileNavigatorItem: vi.fn(),
 }));
 vi.mock('./file-navigator/selection-request.js', () => ({ resolveTreeSelections: vi.fn() }));
@@ -232,12 +230,6 @@ describe('handle', () => {
     const controller = makeController();
     dispatchCall(controller, 16, { method: 'fileNavigatorCollapseAll', params: { index: 0 } });
     expect(controller.fileNavigatorCollapseAll).toHaveBeenCalledWith(0);
-  });
-
-  it('routes resyncFileNavigator through the file navigator helper', () => {
-    const controller = makeController();
-    dispatchCall(controller, 48, { method: 'resyncFileNavigator', params: { index: 3 } });
-    expect(resyncFileNavigator).toHaveBeenCalledWith(controller.managers, 3);
   });
 
   it('routes fileNavigatorReroot', () => {
