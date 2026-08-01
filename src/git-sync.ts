@@ -35,6 +35,11 @@ export class GitSync {
     return path.join(workspacePath(SYNC_WORKSPACE_NAME), relativePath);
   }
 
+  isWorkspacePath(candidate: string): boolean {
+    const relative = path.relative(workspacePath(SYNC_WORKSPACE_NAME), candidate);
+    return relative === '' || (relative !== '..' && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative));
+  }
+
   private ensureWorkspace(): ProvisioningWorkspace | { error: string } {
     this.handle ??= this.workspace.create(SYNC_WORKSPACE_NAME);
     return this.handle;

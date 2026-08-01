@@ -51,6 +51,12 @@ When the tree is rooted inside a git repository whose `origin` remote points at 
 
 The button doesn't show up for a directory with no `origin` remote, a remote that isn't a `github.com` URL, or a branch the app can't determine. It refreshes along with the rest of the header whenever the tree does.
 
+## Refreshing a Git-synced tree
+
+If the tree is rooted in the shared workspace used by [Git-synced files](/user-documentation/tab-types/editor-git-sync), its header shows a Git sync icon. The icon appears only in the header, not beside directories or files inside the tree.
+
+Click the icon while it shows synced or error to pull the latest `origin/master`. It spins while the refresh runs and ignores extra clicks until the pull finishes. When the refresh succeeds, the visible tree and its expanded directories update immediately. If it fails, the icon shows an error and you can click it to retry.
+
 ## Finding a file by name
 
 Click the header's magnifying-glass button to open a search pop-up. Type part of a filename and the input shows a ghost completion of the best-matching file, with its full path (relative to the tree root) below, prefixed with `> ` — for example, `> src/tasks.md`. Matching is a case-insensitive substring on the filename, with a name that starts with what you typed ranked first; only the single top match is shown, there's no results list.

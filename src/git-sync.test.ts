@@ -43,6 +43,14 @@ describe('GitSync', () => {
     expect(sync.workspaceFilePath('notes/todo.md')).toBe(`/repo/.janissary/workspace/${SYNC_WORKSPACE_NAME}/notes/todo.md`);
   });
 
+  it('recognizes the shared workspace root and descendants without matching sibling paths', () => {
+    const sync = new GitSync(makeWorkspace());
+    expect(sync.isWorkspacePath('/repo/.janissary/workspace/git-sync')).toBe(true);
+    expect(sync.isWorkspacePath('/repo/.janissary/workspace/git-sync/product/plans')).toBe(true);
+    expect(sync.isWorkspacePath('/repo/.janissary/workspace/git-sync-copy')).toBe(false);
+    expect(sync.isWorkspacePath('/repo/product/plans')).toBe(false);
+  });
+
   it('provisions the shared workspace lazily exactly once for concurrent opens', async () => {
     const workspace = makeWorkspace();
     const sync = new GitSync(workspace);

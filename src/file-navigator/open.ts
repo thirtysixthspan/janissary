@@ -2,6 +2,7 @@ import { statSync } from 'node:fs';
 import { buildRows } from './index.js';
 import type { Managers } from '../managers.js';
 import type { FilesTabState } from './state.js';
+import { syncStatusForRoot } from './sync.js';
 
 // The narrow slice of `FileNavigatorManager` internals this module needs, handed over as bound closures
 // so the tab-state map and watcher plumbing stay private to the manager (see `openPort()` there).
@@ -35,10 +36,11 @@ export function openOrRetarget(port: OpenPort, label: string): void {
 // center-strip default). Mirrors `FileNavigatorManager.open()`'s create-and-watch sequence.
 function openFresh(port: OpenPort, root: string): void {
   const expanded = new Set<string>();
-  port.managers.tab.openFilesTab({ root, absoluteRoot: root, rows: buildRows(root, expanded) });
+  const sync = syncStatusForRoot(port.managers, root);
+  port.managers.tab.openFilesTab({ root, absoluteRoot: root, rows: buildRows(root, expanded), sync });
   const newLabel = port.managers.tab.cur().label;
   port.managers.tab.setCwd(newLabel, root);
-  port.states.set(newLabel, { root, expanded, watchers: new Map(), undoStack: [], redoStack: [] });
+  port.states.set(newLabel, { root, expanded, watchers: new Map(), undoStack: [], redoStack: [], sync });
   port.watchDir(newLabel, root, '');
   port.refreshGit(newLabel);
   port.managers.tab.setDock(port.managers.tab.findIndex(newLabel), 'left');
@@ -57,6 +59,7 @@ function retarget(port: OpenPort, label: string, root: string): void {
   state.root = root;
   state.undoStack = [];
   state.redoStack = [];
+  state.sync = undefined;
   port.watchDir(label, root, '');
   port.refreshGit(label);
   if (port.managers.tab.tabs.some((t) => t.label === label)) port.managers.tab.setCwd(label, root);

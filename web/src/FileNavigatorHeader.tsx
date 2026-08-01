@@ -1,8 +1,9 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import type { FileNavigatorView } from '@shared/protocol';
 import type { JanusClient } from './ws';
 import { nextDock, dockTooltip } from './dock-cycle';
-import { dockSwapIcon, newDirectoryIcon, newFileIcon, searchFilesIcon } from './icons';
+import { dockSwapIcon, newDirectoryIcon, newFileIcon, searchFilesIcon, syncIcon } from './icons';
 import { FileNavigatorGithubButton } from './FileNavigatorGithubButton';
 import { SplitTabButton } from './SplitTabButton';
 
@@ -10,6 +11,7 @@ type Properties = {
   root: string;
   branch?: string;
   githubUrl?: string;
+  sync?: FileNavigatorView['sync'];
   client: JanusClient;
   index: number;
   dock?: 'left' | 'right';
@@ -19,11 +21,17 @@ type Properties = {
   onSplit?: () => void;
 };
 
+const SYNC_TITLES: Record<NonNullable<FileNavigatorView['sync']>, string> = {
+  syncing: 'GitHub sync: syncing',
+  synced: 'GitHub sync: synced — click to refresh',
+  error: 'GitHub sync: error — click to retry',
+};
+
 // The file navigator's metadata row: root/branch on the left, action buttons (GitHub link, search,
 // new items, dock cycle, collapse all) on the right. Split out of `FileNavigatorTab` to keep it under
 // the file-size limit.
 export function FileNavigatorHeader({
-  root, branch, githubUrl, client, index, dock, onSearch, onNewFile, onNewDirectory, onSplit,
+  root, branch, githubUrl, sync, client, index, dock, onSearch, onNewFile, onNewDirectory, onSplit,
 }: Properties) {
   return (
     <div className="files-header">
@@ -32,6 +40,17 @@ export function FileNavigatorHeader({
         {branch && <span className="files-branch">{branch}</span>}
       </div>
       <div className="files-actions">
+        {sync && (
+          <button
+            type="button"
+            className={`files-sync files-sync--${sync}`}
+            title={SYNC_TITLES[sync]}
+            disabled={sync === 'syncing'}
+            onClick={() => client.send({ method: 'resyncFileNavigator', params: { index } })}
+          >
+            <FontAwesomeIcon icon={syncIcon} />
+          </button>
+        )}
         {githubUrl && <FileNavigatorGithubButton githubUrl={githubUrl} client={client} />}
         <button type="button" className="files-search" title="Search files" onClick={onSearch}>
           <FontAwesomeIcon icon={searchFilesIcon} />

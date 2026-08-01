@@ -15,6 +15,11 @@ export function fileNavigatorCollapseAll(managers: Managers, index: number): voi
   if (label) managers.fileNavigator.collapseAll(label);
 }
 
+export function resyncFileNavigator(managers: Managers, index: number): void {
+  const label = managers.tab.tabs[index]?.label;
+  if (label) managers.fileNavigator.sync(label);
+}
+
 export function fileNavigatorReroot(managers: Managers, index: number, relPath?: string): void {
   const label = managers.tab.tabs[index]?.label;
   if (label) managers.fileNavigator.reroot(label, relPath);

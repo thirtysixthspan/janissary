@@ -6,6 +6,7 @@ import { expandUserPath } from '../paths.js';
 import { resolveTarget } from '../commands/resolve-target.js';
 import type { Managers } from '../managers.js';
 import type { FilesTabState } from './state.js';
+import { syncStatusForRoot } from './sync.js';
 
 // FileNavigatorManager.open, extracted whole: resolves a `files [left|right] [path]` command into a
 // root directory, then either redocks an already-open tab on that root or opens a fresh one.
@@ -42,21 +43,22 @@ export function openFilesCommand(
   if (existing) { managers.tab.setDock(managers.tab.findIndex(existing.label), dock); return existing.label; }
 
   const expanded = new Set<string>();
+  const sync = syncStatusForRoot(managers, root);
 
   if (!exists) {
-    managers.tab.openFilesTab({ root, absoluteRoot: root, rows: [], waitingFor: root });
+    managers.tab.openFilesTab({ root, absoluteRoot: root, rows: [], waitingFor: root, sync });
     const waitingLabel = managers.tab.cur().label;
     managers.tab.setCwd(waitingLabel, root);
-    tabs.set(waitingLabel, { root, expanded, watchers: new Map(), undoStack: [], redoStack: [], gitStatuses: new Map() });
+    tabs.set(waitingLabel, { root, expanded, watchers: new Map(), undoStack: [], redoStack: [], gitStatuses: new Map(), sync });
     pollForCreation(waitingLabel, root);
     if (dock) managers.tab.setDock(managers.tab.findIndex(waitingLabel), dock);
     return waitingLabel;
   }
 
-  managers.tab.openFilesTab({ root, absoluteRoot: root, rows: buildRows(root, expanded) });
+  managers.tab.openFilesTab({ root, absoluteRoot: root, rows: buildRows(root, expanded), sync });
   const newLabel = managers.tab.cur().label;
   managers.tab.setCwd(newLabel, root);
-  tabs.set(newLabel, { root, expanded, watchers: new Map(), undoStack: [], redoStack: [], gitStatuses: new Map() });
+  tabs.set(newLabel, { root, expanded, watchers: new Map(), undoStack: [], redoStack: [], gitStatuses: new Map(), sync });
   watchDir(newLabel, root, '');
   if (dock) managers.tab.setDock(managers.tab.findIndex(newLabel), dock);
   refreshGit(newLabel);

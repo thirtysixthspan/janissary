@@ -19,6 +19,8 @@ import { restoreTreeView, type SavedTreeView } from './restore.js';
 import type { FilesTabState } from './state.js';
 import type { Managers } from '../managers.js';
 import type { BatchResult, BulkConflictPolicy, BulkMoveResult, FileOpenerChoice } from '../protocol.js';
+import { findOpenFilesTab } from './find-tab.js';
+import { resyncFileNavigator, syncStatusForRoot } from './sync.js';
 
 const DEBOUNCE_MS = 100;
 
@@ -206,6 +208,10 @@ export class FileNavigatorManager {
     return openersForRow(state.root, relPath, edit);
   }
 
+  sync(label: string): void {
+    resyncFileNavigator(this.managers, this.tabs, label, (current) => this.rebuild(current), (current) => this.refreshGit(current));
+  }
+
   // This tab's expanded directories as a plain sorted array, for `profile save`. Sorted only so the
   // written file is deterministic (profiles are committable); restore order does not matter, since
   // `buildRows` walks from the root and consults the expanded set rather than replaying insertion
@@ -249,10 +255,11 @@ export class FileNavigatorManager {
   }
 
   private onDirCreated(label: string, absDir: string): void {
-    const found = this.findOpenFilesTab(label);
+    const found = findOpenFilesTab(this.managers, this.tabs, label);
     if (!found) return;
     const { state, tab } = found;
-    tab.files = { root: absDir, absoluteRoot: absDir, rows: buildRows(absDir, state.expanded) };
+    state.sync = syncStatusForRoot(this.managers, absDir, state.sync);
+    tab.files = { root: absDir, absoluteRoot: absDir, rows: buildRows(absDir, state.expanded), sync: state.sync };
     this.watchDir(label, absDir, '');
     this.refreshGit(label);
     messageBus.emit('state', { type: 'dirty' });
@@ -276,23 +283,14 @@ export class FileNavigatorManager {
   // Rebuild the visible row list (pruning expanded directories that no longer exist) and write it
   // onto the tab's payload.
   private rebuild(label: string): void {
-    const found = this.findOpenFilesTab(label);
+    const found = findOpenFilesTab(this.managers, this.tabs, label);
     if (!found) return;
     const { state, tab } = found;
+    state.sync = syncStatusForRoot(this.managers, state.root, state.sync);
     tab.files = {
       root: state.root, absoluteRoot: state.root, rows: pruneAndBuildRows(state),
-      branch: state.branch, githubUrl: state.githubUrl, restore: state.restore,
+      branch: state.branch, githubUrl: state.githubUrl, sync: state.sync, restore: state.restore,
     };
     messageBus.emit('state', { type: 'dirty' });
-  }
-
-  // Looks up a tab's file-navigator state and its open `files` payload together — both `onDirCreated`
-  // and `rebuild` bail out the same way if either is missing.
-  private findOpenFilesTab(label: string) {
-    const state = this.tabs.get(label);
-    if (!state) return;
-    const tab = this.managers.tab.tabs.find((t) => t.label === label);
-    if (!tab?.files) return;
-    return { state, tab };
   }
 }
