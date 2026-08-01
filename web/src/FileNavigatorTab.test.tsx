@@ -95,28 +95,6 @@ describe('FileNavigatorTab', () => {
     expect(container.querySelector('.files-github')).toBeNull();
   });
 
-  it('renders one root-header sync button for a Git-synced tree and dispatches refresh', () => {
-    const send = vi.fn();
-    const client = { send } as unknown as JanusClient;
-    const { container } = render(<FileNavigatorTab files={makeFiles({ sync: 'synced' })} client={client} index={4} />);
-    const buttons = container.querySelectorAll('.files-sync');
-    expect(buttons).toHaveLength(1);
-    fireEvent.click(buttons[0]);
-    expect(send).toHaveBeenCalledWith({ method: 'resyncFileNavigator', params: { index: 4 } });
-  });
-
-  it('renders no sync button for an ordinary tree', () => {
-    const client = { send: vi.fn() } as unknown as JanusClient;
-    const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
-    expect(container.querySelector('.files-sync')).toBeNull();
-  });
-
-  it('disables the root sync button while a refresh is in flight', () => {
-    const client = { send: vi.fn() } as unknown as JanusClient;
-    render(<FileNavigatorTab files={makeFiles({ sync: 'syncing' })} client={client} index={0} />);
-    expect(screen.getByTitle('GitHub sync: syncing')).toBeDisabled();
-  });
-
   it('renders a "Looking for" banner and no rows while waitingFor is set', () => {
     const client = { send: vi.fn() } as unknown as JanusClient;
     const { container } = render(

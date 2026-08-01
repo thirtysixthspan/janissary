@@ -138,7 +138,7 @@ export function FileNavigatorTab({
       onKeyDown={onKeyDown}
     >
       <FileNavigatorHeader
-        root={files.root} branch={files.branch} githubUrl={files.githubUrl} sync={files.sync}
+        root={files.root} branch={files.branch} githubUrl={files.githubUrl}
         client={client} index={index} dock={dock} details={files.details}
         onSearch={search.openSearch} onNewFile={createNewFile} onNewDirectory={createNewDirectory}
         onSplit={onSplit}

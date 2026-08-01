@@ -234,8 +234,6 @@ export type RpcCall =
   | { method: 'fileNavigatorToggle'; params: { index: number; path: string } }
   // Collapse every expanded directory in a file navigator tab back to just its root.
   | { method: 'fileNavigatorCollapseAll'; params: { index: number } }
-  // Pull the shared Git-sync workspace from origin/master and rebuild this navigator's rows.
-  | { method: 'resyncFileNavigator'; params: { index: number } }
   // Switch which per-row detail a file navigator tab shows (its header's detail button).
   | { method: 'fileNavigatorSetDetail'; params: { index: number; details: FileNavigatorDetail } }
   // Re-root a file navigator tab to the parent directory.

@@ -8,7 +8,6 @@ import { resolveTarget } from '../commands/resolve-target.js';
 import type { Managers } from '../managers.js';
 import type { FileNavigatorDetail } from '../types.js';
 import type { FilesTabState } from './state.js';
-import { syncStatusForRoot } from './sync.js';
 
 // The directory a `files` command roots its tree at: the issuing tab's cwd, or — with an `in
 // <label>` clause — the named tab's. Undefined when the named tab doesn't exist, which
@@ -22,11 +21,8 @@ function resolveCwd(
   return managers.tab.cwdOf(sourceTab.label) ?? process.cwd();
 }
 
-// A fresh per-tab state record for a tree rooted at `root`, starting in `details` mode and
-// carrying the Git-sync status resolved for that root.
-function freshState(
-  root: string, details: FileNavigatorDetail, sync: FilesTabState['sync'],
-): FilesTabState {
+// A fresh per-tab state record for a tree rooted at `root`, starting in `details` mode.
+function freshState(root: string, details: FileNavigatorDetail): FilesTabState {
   return {
     root,
     expanded: new Set<string>(),
@@ -34,7 +30,6 @@ function freshState(
     undoStack: [],
     redoStack: [],
     gitStatuses: new Map(),
-    sync,
     details,
     stats: new Map(),
   };
@@ -62,7 +57,7 @@ function openWaitingTree(
   managers: Managers, tabs: Map<string, FilesTabState>, root: string, state: FilesTabState,
   dock: 'left' | 'right' | null, pollForCreation: (label: string, absDir: string) => void,
 ): string {
-  managers.tab.openFilesTab({ root, absoluteRoot: root, rows: [], waitingFor: root, sync: state.sync });
+  managers.tab.openFilesTab({ root, absoluteRoot: root, rows: [], waitingFor: root });
   const waitingLabel = managers.tab.cur().label;
   managers.tab.setCwd(waitingLabel, root);
   tabs.set(waitingLabel, state);
@@ -81,7 +76,7 @@ function openTree(
   refreshGit: (label: string) => void,
 ): string {
   const rows = markStats(state, buildRows(root, state.expanded));
-  managers.tab.openFilesTab({ root, absoluteRoot: root, rows, sync: state.sync, details: state.details });
+  managers.tab.openFilesTab({ root, absoluteRoot: root, rows, details: state.details });
   const newLabel = managers.tab.cur().label;
   managers.tab.setCwd(newLabel, root);
   tabs.set(newLabel, state);
@@ -120,7 +115,7 @@ export function openFilesCommand(
   const existing = managers.tab.tabs.find((t) => t.files?.root === root);
   if (existing) return focusExisting(managers, tabs, existing.label, dock, details, rebuild);
 
-  const state = freshState(root, details ?? 'name', syncStatusForRoot(managers, root));
+  const state = freshState(root, details ?? 'name');
   if (!exists) return openWaitingTree(managers, tabs, root, state, dock, pollForCreation);
   return openTree(managers, tabs, root, state, dock, watchDir, refreshGit);
 }

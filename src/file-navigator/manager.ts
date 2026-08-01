@@ -20,8 +20,6 @@ import type { FilesTabState } from './state.js';
 import type { FileNavigatorDetail } from '../types.js';
 import type { Managers } from '../managers.js';
 import type { BatchResult, BulkConflictPolicy, BulkMoveResult, FileOpenerChoice } from '../protocol.js';
-import { findOpenFilesTab } from './find-tab.js';
-import { resyncFileNavigator, syncStatusForRoot } from './sync.js';
 
 const DEBOUNCE_MS = 100;
 
@@ -210,10 +208,6 @@ export class FileNavigatorManager {
     return openersForRow(state.root, relPath, edit);
   }
 
-  sync(label: string): void {
-    resyncFileNavigator(this.managers, this.tabs, label, (current) => this.rebuild(current), (current) => this.refreshGit(current));
-  }
-
   // This tab's expanded directories and detail mode, both for `profile save`.
   expandedPaths(label: string): string[] {
     return expandedPathsOf(this.tabs, label);
@@ -256,10 +250,9 @@ export class FileNavigatorManager {
   }
 
   private onDirCreated(label: string, absDir: string): void {
-    const found = findOpenFilesTab(this.managers, this.tabs, label);
+    const found = this.findOpenFilesTab(label);
     if (!found) return;
     const { state, tab } = found;
-    state.sync = syncStatusForRoot(this.managers, absDir, state.sync);
     writeCreatedPayload(tab, state, absDir);
     this.watchDir(label, absDir, '');
     this.refreshGit(label);
@@ -287,11 +280,20 @@ export class FileNavigatorManager {
   // Rebuild the visible row list (pruning expanded directories that no longer exist) and write it
   // onto the tab's payload.
   private rebuild(label: string): void {
-    const found = findOpenFilesTab(this.managers, this.tabs, label);
+    const found = this.findOpenFilesTab(label);
     if (!found) return;
     const { state, tab } = found;
-    state.sync = syncStatusForRoot(this.managers, state.root, state.sync);
     writeRebuiltPayload(tab, state);
     messageBus.emit('state', { type: 'dirty' });
+  }
+
+  // Looks up a tab's file-navigator state and its open `files` payload together — both `onDirCreated`
+  // and `rebuild` bail out the same way if either is missing.
+  private findOpenFilesTab(label: string) {
+    const state = this.tabs.get(label);
+    if (!state) return;
+    const tab = this.managers.tab.tabs.find((t) => t.label === label);
+    if (!tab?.files) return;
+    return { state, tab };
   }
 }

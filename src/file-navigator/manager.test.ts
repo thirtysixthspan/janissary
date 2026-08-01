@@ -34,8 +34,6 @@ describe('FileNavigatorManager', () => {
   let managers: unknown;
   let closeFns: (() => void)[];
   let retargetEditorTabMock: ReturnType<typeof vi.fn>;
-  let isWorkspacePathMock: ReturnType<typeof vi.fn>;
-  let openSyncMock: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     root = mkdtempSync(path.join(tmpdir(), 'file-navigator-mgr-'));
@@ -55,8 +53,6 @@ describe('FileNavigatorManager', () => {
       closeFns.push(close);
       return { close };
     });
-    isWorkspacePathMock = vi.fn(() => false);
-    openSyncMock = vi.fn().mockResolvedValue({ dir: root });
     const janus: Tab = {
       label: 'janus', dotColor: '#fff', number: 1, group: 1, groupColor: '#fff',
       log: [], cmdHistory: [], cmdHistoryIdx: -1, scrollOffset: 0,
@@ -68,7 +64,6 @@ describe('FileNavigatorManager', () => {
     tabs = [janus, other];
     retargetEditorTabMock = vi.fn();
     managers = {
-      gitSync: { isWorkspacePath: isWorkspacePathMock, openSync: openSyncMock },
       tab: {
         get tabs() { return tabs; },
         cwdOf: (label: string) => (label === 'other' ? otherRoot : root),
@@ -107,60 +102,6 @@ describe('FileNavigatorManager', () => {
     expect(tab).toBeDefined();
     expect(tab!.files!.root).toBe(root);
     expect(watchMock).toHaveBeenCalledTimes(1);
-  });
-
-  it('marks only trees rooted in the shared Git-sync workspace as synced', () => {
-    isWorkspacePathMock.mockImplementation((candidate: string) => candidate === root);
-    const manager = run();
-    manager.open('files', 'janus');
-    manager.open('files in other', 'janus');
-    expect(tabs.find((tab) => tab.files?.root === root)?.files?.sync).toBe('synced');
-    expect(tabs.find((tab) => tab.files?.root === otherRoot)?.files?.sync).toBeUndefined();
-  });
-
-  it('pulls and rebuilds a synced tree when manually refreshed', async () => {
-    isWorkspacePathMock.mockImplementation((candidate: string) => candidate === root);
-    openSyncMock.mockImplementation(async () => {
-      writeFileSync(path.join(root, 'remote.md'), 'remote');
-      return { dir: root };
-    });
-    const manager = run();
-    manager.open('files', 'janus');
-    const tab = tabs.find((candidate) => candidate.files?.root === root)!;
-    manager.sync(tab.label);
-    expect(tab.files?.sync).toBe('syncing');
-    await vi.waitFor(() => expect(tab.files?.sync).toBe('synced'));
-    expect(tab.files?.rows.some((row) => row.path === 'remote.md')).toBe(true);
-    expect(openSyncMock).toHaveBeenCalledTimes(1);
-  });
-
-  it('ignores a second refresh in flight and exposes a pull error', async () => {
-    isWorkspacePathMock.mockImplementation((candidate: string) => candidate === root);
-    const { promise, resolve } = Promise.withResolvers<{ error: string }>();
-    openSyncMock.mockReturnValue(promise);
-    const manager = run();
-    manager.open('files', 'janus');
-    const tab = tabs.find((candidate) => candidate.files?.root === root)!;
-    manager.sync(tab.label);
-    manager.sync(tab.label);
-    expect(openSyncMock).toHaveBeenCalledTimes(1);
-    resolve({ error: 'offline' });
-    await vi.waitFor(() => expect(tab.files?.sync).toBe('error'));
-  });
-
-  it('discards an in-flight refresh when the tree changes roots', async () => {
-    isWorkspacePathMock.mockImplementation((candidate: string) => candidate === root);
-    const { promise, resolve } = Promise.withResolvers<{ dir: string }>();
-    openSyncMock.mockReturnValue(promise);
-    const manager = run();
-    manager.open('files', 'janus');
-    const tab = tabs.find((candidate) => candidate.files?.root === root)!;
-    manager.sync(tab.label);
-    manager.reroot(tab.label);
-    expect(tab.files?.sync).toBeUndefined();
-    resolve({ dir: root });
-    await Promise.resolve();
-    expect(tab.files?.sync).toBeUndefined();
   });
 
   it('resolves a relative path against cwd', () => {

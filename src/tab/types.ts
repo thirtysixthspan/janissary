@@ -150,7 +150,6 @@ export type FileNavigatorView = {
   // GitHub commits-page URL for the current origin/branch (see `github-url.ts`); undefined when
   // there's no github.com origin remote.
   githubUrl?: string;
-  sync?: 'syncing' | 'synced' | 'error';
   waitingFor?: string;
   // A selection restored from a profile, applied by the client once per `revision` (see
   // `file-navigator/restore.ts`). Absent for a tree that was never launched from a profile.
