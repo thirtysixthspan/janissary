@@ -2,6 +2,7 @@
 
 ## ready
 
+* setup the default actions in the file navigator when clicking on video files to open an external viewer configured in the janissary/config.json file, and the same change applies to the open command. the configuration should be set by default to be to run the quicktime player.
 
 ## development
 
