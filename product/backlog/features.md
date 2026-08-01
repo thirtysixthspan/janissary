@@ -2,8 +2,6 @@
 
 ## ready
 
-* add a metadata button in the file navigator metadata row, which when clicked cycles the display through a number of different formats. the first and default is the current display with just filename left justified. the second mode adds to the filename a right floated on each line in the file navigator to include human readable size like 22b, 24k, 32M, 5G. the third mode shows the last modified time stamp like Jul 13 23:29. The forth mode shows with permission like drwxr-xr-x and the file owner and group like username:groupname. 
-
 
 ## development
 
