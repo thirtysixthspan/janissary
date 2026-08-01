@@ -5,7 +5,6 @@
 * add a metadata button in the file navigator metadata row, which when clicked cycles the display through a number of different formats. the first and default is the current display with just filename left justified. the second mode adds to the filename a right floated on each line in the file navigator to include human readable size like 22b, 24k, 32M, 5G. the third mode shows the last modified time stamp like Jul 13 23:29. The forth mode shows with permission like drwxr-xr-x and the file owner and group like username:groupname. 
 
 
-
 ## development
 
 * The ssh tab (`product/specs/ssh-tab.md`) has no session logging to disk, the way iTerm2's per-profile "Automatically Log Session Input to Files" setting captures a session's raw I/O for later audit, independent of on-demand scrollback. Janissary's spec states plainly that ssh tabs "get no screen reader either" and are excluded from the automatic harness-recording that named-harness tabs get (`product/specs/harness-recording.md`) — a remote session's output is gone the moment its tab closes, with no way to review what happened on a host after the fact. Extending the existing asciicast recording mechanism to ssh tabs (the same lazy-file, PTY-lifetime-scoped approach harness tabs already use) would close this without a new recording format. Complexity: low-medium — the recording plumbing already exists for harness tabs; this is mostly widening its scope.
