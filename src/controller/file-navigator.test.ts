@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import {
   fileNavigatorToggle,
   fileNavigatorCollapseAll,
+  resyncFileNavigator,
   fileNavigatorReroot,
   moveFileNavigatorItem,
   moveFileNavigatorItems,
@@ -59,6 +60,13 @@ describe('controller-file-navigator', () => {
     const calls: unknown[] = [];
     const managers = makeManagers('agent', { collapseAll: (...args: unknown[]) => { calls.push(args); } });
     fileNavigatorCollapseAll(managers, 0);
+    expect(calls).toEqual([['agent']]);
+  });
+
+  it('resyncFileNavigator delegates to FileNavigatorManager.sync for the selected tab', () => {
+    const calls: unknown[] = [];
+    const managers = makeManagers('agent', { sync: (...args: unknown[]) => { calls.push(args); } });
+    resyncFileNavigator(managers, 0);
     expect(calls).toEqual([['agent']]);
   });
 

@@ -112,6 +112,10 @@ every automatic or interactive refresh), never on a timer of its own, and is com
 blocking the interface. A tree rooted in a directory that is not part of a git repository, or where
 git status cannot be determined, shows no coloring and no error.
 
+**Git-sync refresh.** When the tree's root is the shared workspace used for Git-synced files, or a directory inside that workspace, the header shows a Git sync icon. The icon appears once for the tree root in the header; nested directory and file rows never show it. An ordinary navigator rooted in the main project checkout, an agent workspace, or any other directory has no sync icon.
+
+While the icon shows synced or error, clicking it runs the shared workspace's pull-only sync against `origin/master`. It changes to syncing and ignores further clicks until the pull finishes. A successful pull rebuilds the visible tree immediately, including every expanded directory, then refreshes its Git status colors, branch, and GitHub link. The conflict policy is the same as synced-file editing: if rebasing conflicts, the remote version wins. A failed pull leaves the existing tree visible and changes the icon to error; clicking the error icon retries.
+
 ### Watching
 
 Every currently visible directory (the root, plus every expanded directory) is watched for

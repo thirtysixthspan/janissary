@@ -1,5 +1,6 @@
 import type { FSWatcher } from 'node:fs';
 import type { GitFileStatus } from '../git-status.js';
+import type { FileNavigatorView } from '../types.js';
 import type { HistoryStep } from './moves.js';
 import type { TreeRestoreHint } from './restore.js';
 
@@ -27,6 +28,7 @@ export type FilesTabState = {
   // Last-computed GitHub commits-page URL for the current origin/branch (see `github-url.ts`),
   // refreshed alongside `branch`. Undefined when there's no github.com origin remote.
   githubUrl?: string;
+  sync?: NonNullable<FileNavigatorView['sync']>;
   gitRefreshing?: boolean;
   gitRefreshStale?: boolean;
   // The most recent selection hint applied by `restoreView`, copied onto every payload the tab
