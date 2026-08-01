@@ -220,6 +220,16 @@ describe('Controller', () => {
     expect(isConnectionOpen('shutdb')).toBe(false);
   });
 
+  it('shutdown invokes a disposer added to any registered manager', () => {
+    const { c } = makeController();
+    const dispose = vi.fn();
+    c.managers.capture.dispose = dispose;
+
+    c.shutdown();
+
+    expect(dispose).toHaveBeenCalledOnce();
+  });
+
   it('records an info message in the recipient context[] and persists it', () => {
     initAgentStateDirectory(mkdtempSync(path.join(tmpdir(), 'janus-ctx-')));
     const { c } = makeController();

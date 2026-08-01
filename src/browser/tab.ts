@@ -36,6 +36,10 @@ export class BrowserManager {
     this.browsers.clear();
   }
 
+  dispose(): void {
+    this.closeAll();
+  }
+
   // Run a `browser ...` command against a tab's browser, returning text to show/return. Shared by
   // the interactive `browser` command, `connection close browser:*`, and the ACP tool loop.
   async run(label: string, command: string): Promise<string> {

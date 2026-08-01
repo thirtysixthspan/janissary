@@ -144,4 +144,8 @@ export class ShellManager {
     this.shells.clear();
     this.shellQueues.clear();
   }
+
+  dispose(): void {
+    this.closeAll();
+  }
 }

@@ -256,4 +256,8 @@ export class MonitorManager {
     const all = [...this.monitors.values()];
     for (const reg of all) this.stop(reg.owner, reg.name);
   }
+
+  dispose(): void {
+    this.closeAll();
+  }
 }

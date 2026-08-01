@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { HarnessManager } from './manager.js';
+import { HarnessScreenReader } from './screen.js';
 import { writeCaptureFile } from './capture-file.js';
 import { notify } from '../notifications.js';
 import { messageBus } from '../bus.js';
@@ -239,6 +240,44 @@ describe('HarnessManager transcript tailer lifecycle', () => {
     messageBus.emit('pty', { type: 'exit', id: 'pty-1', exitCode: 0 });
     expect(tailerMock.instances[0].dispose).toHaveBeenCalled();
     expect(manager.transcriptTailer('claude')).toBeUndefined();
+  });
+});
+
+describe('HarnessManager disposal', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    recorderMock.instances.length = 0;
+    tailerMock.instances.length = 0;
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  it('disposes every observer, clears lookups, and ignores later PTY activity', async () => {
+    const { managers } = makeManagers();
+    const readerDispose = vi.spyOn(HarnessScreenReader.prototype, 'dispose');
+    const manager = new HarnessManager(managers);
+    manager.run('harness claude -w -y');
+    vi.clearAllMocks();
+
+    manager.dispose();
+    manager.dispose();
+
+    expect(readerDispose).toHaveBeenCalledOnce();
+    expect(recorderMock.instances[0].dispose).toHaveBeenCalledOnce();
+    expect(tailerMock.instances[0].dispose).toHaveBeenCalledOnce();
+    expect(manager.latestScreenText('claude')).toBeUndefined();
+    expect(manager.transcriptTailer('claude')).toBeUndefined();
+
+    messageBus.emit('pty', {
+      type: 'data',
+      id: 'pty-1',
+      data: 'Do you want to proceed?\r\n ❯ 1. Yes\r\n   2. No\r\n\r\n Esc to cancel',
+    });
+    await vi.advanceTimersByTimeAsync(1001);
+    expect(managers.pty.input).not.toHaveBeenCalled();
   });
 });
 

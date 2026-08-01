@@ -67,6 +67,10 @@ export class Questions {
     for (const tab of tabs) this.cancelTab(tab);
   }
 
+  dispose(): void {
+    this.closeAll();
+  }
+
   private activate(entry: QueuedQuestion): void {
     this.active.set(entry.tab, entry);
     this.onChange(entry.tab, this.pendingFor(entry.tab));

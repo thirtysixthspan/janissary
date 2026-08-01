@@ -92,6 +92,10 @@ export class AcpManager {
     this.info.clear();
   }
 
+  dispose(): void {
+    this.closeAll();
+  }
+
   run(label: string, command: string, onDone?: (output: string) => void): void {
     const prompt = command.replace(/^acp\b\s*/i, '').trim();
     if (!prompt) { this.managers.tab.append(label, { input: command, output: 'Usage: acp <prompt>.' }); return; }

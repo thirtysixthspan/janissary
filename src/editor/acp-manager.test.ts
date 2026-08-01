@@ -122,6 +122,25 @@ describe('EditorAcpManager', () => {
     ]);
   });
 
+  it('dispose kills every session and clears connection and transcript state', () => {
+    const { session: notesSession, kill: notesKill } = makeSession();
+    const { session: todoSession, kill: todoKill } = makeSession();
+    mocks.spawnMonitorSession.mockReturnValueOnce(notesSession).mockReturnValueOnce(todoSession);
+    const manager = new EditorAcpManager({} as Managers);
+    manager.session('notes', persona('reviewer'), '/repo', { onError: vi.fn() });
+    manager.session('todo', persona('critic'), '/repo', { onError: vi.fn() });
+    manager.record('notes', 'reviewer', 'Review this', 'input');
+
+    manager.dispose();
+    manager.dispose();
+
+    expect(notesKill).toHaveBeenCalledOnce();
+    expect(todoKill).toHaveBeenCalledOnce();
+    expect(manager.connectionsFor('notes')).toEqual([]);
+    expect(manager.connectionsFor('todo')).toEqual([]);
+    expect(manager.transcript('notes', 'reviewer')).toBe('');
+  });
+
   it('record then transcript round-trips an input block and a response block', () => {
     mocks.spawnMonitorSession.mockReturnValue(makeSession().session);
     const manager = new EditorAcpManager({} as Managers);

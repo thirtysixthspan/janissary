@@ -104,6 +104,8 @@ Other tabs can drive a harness: `send <tab> <text>` types a line into it, and [s
 
 Every harness session is recorded automatically — there's no command to start it. The full session, with its timing and colors, is written to a `.cast` file under `.janissary/recordings/` in your project, named `<label>-<timestamp>.cast`. Because the whole stream is saved, you can review a session even after its tab has closed and its scrollback is gone. Only the harness's output is recorded. Nothing you type is ever written to the file.
 
+Closing the harness tab or quitting the app closes the recording cleanly before the process ends.
+
 The file is created only once the harness produces its first output, so a harness that exits immediately (for example, a binary that isn't found) leaves no recording behind.
 
 Replay a recording with [asciinema](https://asciinema.org):
@@ -141,6 +143,7 @@ activity to open a newer point-in-time view.
 
 The transcript file is created lazily at `.janissary/harness-transcripts/<label>-<timestamp>.txt`
 when the first transcript entry arrives. A harness that produces no transcript leaves no empty file.
+Closing the harness tab or quitting the app stops transcript updates and closes the file cleanly.
 The directory is cleared on a fresh launch and preserved by `janus --relaunch`. SSH tabs never have
 a session transcript.
 
