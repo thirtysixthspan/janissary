@@ -33,7 +33,7 @@ With a repository in place, run:
 janus init
 ```
 
-This creates the `ai/` and `product/` directory tree that the rest of Janissary's task workflow expects: `ai/guidelines`, `ai/personas`, and `ai/tasks` under `ai/`, and `product/backlog`, `product/plans/draft`, `product/plans/ready`, `product/plans/complete`, `product/plans/deferred`, and `product/specs` under `product/`. It also seeds `product/backlog/` with six starter files — `bugs.md`, `chores.md`, `documentation.md`, `features.md`, `issues.md`, and `technical-debt.md` — each with the same empty `ready`/`development`/`deferred` structure. Finally, it installs the standard `.codex/config.toml`, `.codex/rules/default.rules`, and `.claude/settings.json` files for the project's coding-agent workflow.
+This creates the `ai/` and `product/` directory tree that the rest of Janissary's task workflow expects: `ai/guidelines`, `ai/personas`, and `ai/tasks` under `ai/`, and `product/backlog`, `product/plans/draft`, `product/plans/ready`, `product/plans/complete`, `product/plans/deferred`, and `product/specs` under `product/`. It also seeds `product/backlog/` with six starter files — `bugs.md`, `chores.md`, `documentation.md`, `features.md`, `issues.md`, and `technical-debt.md` — each with the same empty `ready`/`development`/`deferred`/`declined` structure. Finally, it installs the standard `.codex/config.toml`, `.codex/rules/default.rules`, and `.claude/settings.json` files for the project's coding-agent workflow.
 
 Running `janus init` again refreshes those standard configuration files, so updates to Janissary's defaults reach an existing project. It preserves any other files you add under `.codex/` or `.claude/`, as well as the contents of existing backlog files.
 

@@ -16,12 +16,12 @@ const SCAFFOLD_DIRS = [
 ];
 
 // The backlog files documented in `CLAUDE.md`'s Project Structure section, each seeded with the
-// standard empty `ready`/`development`/`deferred` structure.
+// standard empty `ready`/`development`/`deferred`/`declined` structure.
 const BACKLOG_FILES = ['bugs', 'chores', 'documentation', 'features', 'issues', 'technical-debt'];
 const CONFIG_DIRS = ['.codex', '.claude'];
 
 function backlogFileContent(name: string): string {
-  return `# ${name}\n\n## ready\n\n## development\n\n## deferred\n`;
+  return `# ${name}\n\n## ready\n\n## development\n\n## deferred\n\n## declined\n`;
 }
 
 function installConfigDirectory(source: string, destination: string): void {

@@ -34,6 +34,7 @@ describe('scaffoldProject', () => {
       expect(content).toContain('## ready');
       expect(content).toContain('## development');
       expect(content).toContain('## deferred');
+      expect(content).toContain('## declined');
     }
   });
 
