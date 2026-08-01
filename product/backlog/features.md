@@ -2,8 +2,6 @@
 
 ## ready
 
-* setup the default actions in the file navigator when clicking on video files to open an external viewer configured in the janissary/config.json file, and the same change applies to the open command. the configuration should be set by default to be to run the quicktime player.
-
 ## development
 
 * The ssh tab (`product/specs/ssh-tab.md`) has no session logging to disk, the way iTerm2's per-profile "Automatically Log Session Input to Files" setting captures a session's raw I/O for later audit, independent of on-demand scrollback. Janissary's spec states plainly that ssh tabs "get no screen reader either" and are excluded from the automatic harness-recording that named-harness tabs get (`product/specs/harness-recording.md`) — a remote session's output is gone the moment its tab closes, with no way to review what happened on a host after the fact. Extending the existing asciicast recording mechanism to ssh tabs (the same lazy-file, PTY-lifetime-scoped approach harness tabs already use) would close this without a new recording format. Complexity: low-medium — the recording plumbing already exists for harness tabs; this is mostly widening its scope.
