@@ -136,29 +136,29 @@ describe('FileNavigatorManager', () => {
 
   it('ignores a second refresh in flight and exposes a pull error', async () => {
     isWorkspacePathMock.mockImplementation((candidate: string) => candidate === root);
-    let resolvePull: (result: { error: string }) => void = () => {};
-    openSyncMock.mockReturnValue(new Promise((resolve) => { resolvePull = resolve; }));
+    const { promise, resolve } = Promise.withResolvers<{ error: string }>();
+    openSyncMock.mockReturnValue(promise);
     const manager = run();
     manager.open('files', 'janus');
     const tab = tabs.find((candidate) => candidate.files?.root === root)!;
     manager.sync(tab.label);
     manager.sync(tab.label);
     expect(openSyncMock).toHaveBeenCalledTimes(1);
-    resolvePull({ error: 'offline' });
+    resolve({ error: 'offline' });
     await vi.waitFor(() => expect(tab.files?.sync).toBe('error'));
   });
 
   it('discards an in-flight refresh when the tree changes roots', async () => {
     isWorkspacePathMock.mockImplementation((candidate: string) => candidate === root);
-    let resolvePull: (result: { dir: string }) => void = () => {};
-    openSyncMock.mockReturnValue(new Promise((resolve) => { resolvePull = resolve; }));
+    const { promise, resolve } = Promise.withResolvers<{ dir: string }>();
+    openSyncMock.mockReturnValue(promise);
     const manager = run();
     manager.open('files', 'janus');
     const tab = tabs.find((candidate) => candidate.files?.root === root)!;
     manager.sync(tab.label);
     manager.reroot(tab.label);
     expect(tab.files?.sync).toBeUndefined();
-    resolvePull({ dir: root });
+    resolve({ dir: root });
     await Promise.resolve();
     expect(tab.files?.sync).toBeUndefined();
   });
