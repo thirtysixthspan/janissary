@@ -1,4 +1,4 @@
-import type { LogEntry, MonitorTarget, Tab } from '../types.js';
+import type { LogEntry, MonitorTarget, Tab } from '../tab/types.js';
 
 // Target helpers for the monitor manager: validation, live matching, and the color a
 // reporting tab inherits. All operate on the current tab list — group targets are

@@ -117,6 +117,13 @@ describe('moveItem', () => {
     const result = moveItem(directory, 'missing.txt', 'dest');
     expect(result).toBeUndefined();
   });
+
+  it('rejects source and destination paths outside the navigator root', () => {
+    const directory = root();
+    writeFileSync(path.join(directory, 'a.txt'), 'a');
+    expect(moveItem(directory, '../a.txt', '')).toBeUndefined();
+    expect(moveItem(directory, 'a.txt', '..')).toBeUndefined();
+  });
 });
 
 describe('renameItem', () => {
@@ -139,6 +146,11 @@ describe('renameItem', () => {
     const directory = root();
     expect(renameItem(directory, 'missing.txt', 'b.txt')).toBeUndefined();
   });
+
+  it('rejects a path outside the navigator root', () => {
+    const directory = root();
+    expect(renameItem(directory, '../outside.txt', 'b.txt')).toBeUndefined();
+  });
 });
 
 describe('deleteItem', () => {
@@ -152,5 +164,10 @@ describe('deleteItem', () => {
   it('returns false when the path does not exist', () => {
     const directory = root();
     expect(deleteItem(directory, 'missing.txt')).toBe(false);
+  });
+
+  it('rejects a path outside the navigator root', () => {
+    const directory = root();
+    expect(deleteItem(directory, '../outside.txt')).toBe(false);
   });
 });

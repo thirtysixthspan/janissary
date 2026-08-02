@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtempSync, mkdirSync, writeFileSync, symlinkSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import type { FileNavigatorRow } from '../types.js';
+import type { FileNavigatorRow } from '../tab/types.js';
 import { readDirSorted, buildRows, markGitStatus, isSameOrDescendantPath, hasNameConflict } from './index.js';
 
 describe('readDirSorted', () => {

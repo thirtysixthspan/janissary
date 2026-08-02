@@ -1,6 +1,6 @@
 import { mkdirSync, writeFileSync, readFileSync, existsSync, rmSync } from 'node:fs';
 import path from 'node:path';
-import type { LogEntry } from '../types.js';
+import type { LogEntry } from '../tab/types.js';
 import { messageBus } from '../bus.js';
 
 const VALID_NAME = /^[\w-]+$/;

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { command, parseQueueCommand } from './queue.js';
 import type { Managers } from '../managers.js';
-import type { Tab } from '../types.js';
+import type { Tab } from '../tab/types.js';
 
 describe('queue command', () => {
   it('has the correct name', () => {

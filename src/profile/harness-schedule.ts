@@ -1,5 +1,6 @@
 import { parseScheduleCommand } from '../schedule/index.js';
-import type { ProfileHarnessEntry, ScheduleEntry } from '../types.js';
+import type { ProfileHarnessEntry } from './types.js';
+import type { ScheduleEntry } from '../schedule/types.js';
 
 // A one-shot schedule entry that fires `command` once, immediately (as soon as the tab's harness is
 // running). This is the shape a profile `run` line produces, reused to inject a `harness … with …`

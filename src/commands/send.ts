@@ -1,5 +1,5 @@
 import type { Command } from './types.js';
-import type { Tab } from '../types.js';
+import type { Tab } from '../tab/types.js';
 import type { CommandManagers } from './types.js';
 import { resolveTarget } from './resolve-target.js';
 

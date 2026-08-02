@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Tab } from '../types.js';
+import type { Tab } from './types.js';
 import { applyProfileTabPanes, resolveProfileTabFocus } from './place-profile-tabs.js';
 
 function tab(label: string, extra: Partial<Tab> = {}): Tab {

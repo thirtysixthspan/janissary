@@ -1,4 +1,4 @@
-import type { Tab, ImageView, VideoView, MarkdownView, EditorView, PageView, FileNavigatorView } from '../types.js';
+import type { Tab, ImageView, VideoView, MarkdownView, EditorView, PageView, FileNavigatorView } from './types.js';
 import { messageBus } from '../bus.js';
 import {
   addImageTab, addVideoTab, addMarkdownTab, addEditorTab, addPageTab, addFilesTab, addNotificationsTab, addSchedulesTab,

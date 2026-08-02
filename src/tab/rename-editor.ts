@@ -1,6 +1,6 @@
 import { existsSync, renameSync } from 'node:fs';
 import path from 'node:path';
-import type { Tab } from '../types.js';
+import type { Tab } from './types.js';
 
 // Rename branch for any editor tab: the tab label sets the filename literally (no extension
 // appended), rather than acting as a display-only alias — editor tabs represent a file on disk,

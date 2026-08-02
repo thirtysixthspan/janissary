@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { insertTabInGroup } from './utils.js';
-import type { Tab } from '../types.js';
+import type { Tab } from './types.js';
 
 const makeTab = (label: string, group: number): Tab => ({
   label, dotColor: '#fff', number: 0, group, groupColor: '#fff',

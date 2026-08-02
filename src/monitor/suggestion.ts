@@ -1,4 +1,4 @@
-import type { MonitorSuggestion } from '../types.js';
+import type { MonitorSuggestion } from '../tab/types.js';
 
 // Marks inline suggestion entries so monitors never feed on their own output.
 export const SUGGESTION_PREFIX = '💡';

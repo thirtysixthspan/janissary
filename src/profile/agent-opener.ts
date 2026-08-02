@@ -9,7 +9,7 @@ import { openProfileSchedules } from './schedules.js';
 import { applyProfileLayout } from './layout.js';
 import { openAgentEntry, openHarnessEntry } from './entry-openers.js';
 import type { Managers } from '../managers.js';
-import type { LoadedProfile } from '../types.js';
+import type { LoadedProfile } from './types.js';
 import { isHarnessEntry, labelOf, closeMatchingTabs } from './entry-resolve.js';
 
 // Reorders only the tabs belonging to `group` so they read in ascending `numbers`-map order —

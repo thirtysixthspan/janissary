@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { TabManager } from './manager.js';
 import type { Managers } from '../managers.js';
-import type { AgentState } from '../types.js';
+import type { AgentState } from '../agent/types.js';
 import * as agentState from '../agent/state.js';
 import { messageBus } from '../bus.js';
 

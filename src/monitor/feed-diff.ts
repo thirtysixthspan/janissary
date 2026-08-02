@@ -1,5 +1,5 @@
 import { createPatch } from 'diff';
-import type { LogEntry } from '../types.js';
+import type { LogEntry } from '../tab/types.js';
 
 const MAX_FEED_BYTES = 20_000;
 

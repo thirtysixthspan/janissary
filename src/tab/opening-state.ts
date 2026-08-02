@@ -1,4 +1,4 @@
-import type { Tab, ImageView, VideoView, MarkdownView, EditorView, PageView, FileNavigatorView } from '../types.js';
+import type { Tab, ImageView, VideoView, MarkdownView, EditorView, PageView, FileNavigatorView } from './types.js';
 import type { Managers } from '../managers.js';
 import { TabQueueState } from './queue-state.js';
 import * as tabOpeners from './openers.js';

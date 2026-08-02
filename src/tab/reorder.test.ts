@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Tab } from '../types.js';
+import type { Tab } from './types.js';
 import { computeReorder, computeReorderTo } from './reorder.js';
 
 const makeTab = (label: string, group: number, extra: Partial<Tab> = {}): Tab => ({

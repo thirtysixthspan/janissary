@@ -2,7 +2,9 @@ import { describe, it, expect, vi } from 'vitest';
 import { openProfileEntries } from './agent-opener.js';
 import { makeTab } from '../tab/index.js';
 import type { Managers } from '../managers.js';
-import type { AgentState, LoadedProfile, ProfileEntry, ProfileHarnessEntry, Tab } from '../types.js';
+import type { AgentState } from '../agent/types.js';
+import type { LoadedProfile, ProfileEntry, ProfileHarnessEntry } from './types.js';
+import type { Tab } from '../tab/types.js';
 
 function makeManagers(tabs: Tab[]): { managers: Managers; harnessOpen: ReturnType<typeof vi.fn>; fileNavigatorOpen: ReturnType<typeof vi.fn>; edit: ReturnType<typeof vi.fn> } {
   const harnessOpen = vi.fn((_entry: ProfileHarnessEntry, label: string, group: number, groupColor: string): string | undefined => {

@@ -1,4 +1,4 @@
-import type { ImageView, VideoView, MarkdownView, EditorView, PageView } from '../types.js';
+import type { ImageView, VideoView, MarkdownView, EditorView, PageView } from '../tab/types.js';
 
 // Capabilities an opener may use, supplied by the dispatcher (the Controller). Kept deliberately
 // narrow so an opener can only do the two things its surfaces promise — launch an external viewer

@@ -3,7 +3,8 @@ import { expandUserPath } from '../paths.js';
 import { normalizeWebUrl } from '../openers/page.js';
 import { relocateToGroup } from './editors.js';
 import type { Managers } from '../managers.js';
-import type { ProfileViewEntry, Tab } from '../types.js';
+import type { ProfileViewEntry } from './types.js';
+import type { Tab } from '../tab/types.js';
 import type { MainAreaCandidate } from './focus.js';
 
 // Opens the four tab kinds that carry no authored label — image, markdown, page, and ssh — by

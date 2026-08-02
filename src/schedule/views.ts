@@ -1,4 +1,5 @@
-import type { ScheduleEntry, Tab } from '../types.js';
+import type { ScheduleEntry } from './types.js';
+import type { Tab } from '../tab/types.js';
 import type { AggregatedScheduleView, ScheduleView } from '../protocol.js';
 import { fmtNextRun } from './index.js';
 

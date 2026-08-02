@@ -3,7 +3,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, existsSync
 import type * as NodeFs from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import type { LogEntry, Tab } from '../types.js';
+import type { LogEntry, Tab } from '../tab/types.js';
 
 const watchMock = vi.fn();
 
@@ -190,6 +190,14 @@ describe('FileNavigatorManager', () => {
     expect(closeFns[1]).toHaveBeenCalled();
   });
 
+  it('ignores toggle paths that escape the navigator root', () => {
+    const manager = run();
+    manager.open('files', 'janus');
+    const label = tabs.find((t) => t.label.startsWith('navigator'))!.label;
+    manager.toggle(label, '../outside');
+    expect(watchMock).toHaveBeenCalledTimes(1);
+  });
+
   it('collapseAll leaves only the root watcher open', () => {
     mkdirSync(path.join(root, 'a'));
     mkdirSync(path.join(root, 'b'));
@@ -357,6 +365,14 @@ describe('FileNavigatorManager', () => {
     expect(tab.files!.root).toBe(path.join(root, 'sub', 'inner'));
     expect(watchMock).toHaveBeenCalledTimes(2);
     expect(closeFns[0]).toHaveBeenCalled();
+  });
+
+  it('ignores reroot paths that escape the navigator root', () => {
+    const manager = run();
+    manager.open('files', 'janus');
+    const label = tabs.find((t) => t.label.startsWith('navigator'))!.label;
+    manager.reroot(label, '../outside');
+    expect(tabs.find((t) => t.label === label)!.files!.root).toBe(root);
   });
 
   it('files left docks a newly created tab into the left sidebar', () => {

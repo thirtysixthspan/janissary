@@ -1,6 +1,6 @@
 import { lstatSync } from 'node:fs';
 import path from 'node:path';
-import type { FileNavigatorDetail, FileNavigatorRow } from '../types.js';
+import type { FileNavigatorDetail, FileNavigatorRow } from '../tab/types.js';
 
 // One cached stat result: only the three values a row can display, so the cache holds no more of
 // the `Stats` object than the tree needs.

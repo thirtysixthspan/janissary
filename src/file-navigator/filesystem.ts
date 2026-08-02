@@ -1,6 +1,7 @@
 import { cpSync, lstatSync, renameSync, rmSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
+import { containedPath } from './batch-paths.js';
 
 function exists(absolute: string): boolean {
   try {
@@ -58,10 +59,12 @@ export function moveItem(
   fromRelPath: string,
   toRelPath: string,
 ): { from: string; to: string } | undefined {
-  const source = path.join(root, fromRelPath);
+  const source = containedPath(root, fromRelPath);
+  const destination = toRelPath ? containedPath(root, toRelPath) : path.resolve(root);
+  if (!source || !destination) return;
   const name = path.basename(source);
   try {
-    renameSync(source, path.join(root, toRelPath, name));
+    renameSync(source, path.join(destination, name));
   } catch {
     return;
   }
@@ -70,7 +73,8 @@ export function moveItem(
 
 export function renameItem(root: string, relPath: string, newName: string): [string, string] | undefined {
   if (newName.includes('/') || newName.includes(path.sep)) return;
-  const oldAbsolute = path.join(root, relPath);
+  const oldAbsolute = containedPath(root, relPath);
+  if (!oldAbsolute) return;
   const newAbsolute = path.join(path.dirname(oldAbsolute), newName);
   try {
     renameSync(oldAbsolute, newAbsolute);
@@ -81,8 +85,10 @@ export function renameItem(root: string, relPath: string, newName: string): [str
 }
 
 export function deleteItem(root: string, relPath: string): boolean {
+  const absolute = containedPath(root, relPath);
+  if (!absolute) return false;
   try {
-    rmSync(path.join(root, relPath), { recursive: true });
+    rmSync(absolute, { recursive: true });
     return true;
   } catch {
     return false;

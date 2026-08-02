@@ -1,4 +1,5 @@
 import path from 'node:path';
+import { containedPath } from './batch-paths.js';
 import { parentPath } from './index.js';
 import type { FilesTabState } from './state.js';
 
@@ -18,12 +19,14 @@ export interface NavPort {
 export function toggleDir(port: NavPort, label: string, relPath: string): void {
   const state = port.states.get(label);
   if (!state) return;
+  const absolute = relPath ? containedPath(state.root, relPath) : state.root;
+  if (!absolute) return;
   if (state.expanded.has(relPath)) {
     state.expanded.delete(relPath);
     port.unwatchDir(state, relPath);
   } else {
     state.expanded.add(relPath);
-    port.watchDir(label, path.join(state.root, relPath), relPath);
+    port.watchDir(label, absolute, relPath);
   }
   port.rebuild(label);
 }
@@ -41,7 +44,12 @@ export function collapseAllDirs(port: NavPort, label: string): void {
 export function rerootTree(port: NavPort, label: string, relPath?: string): void {
   const state = port.states.get(label);
   if (!state) return;
-  const target = relPath ? path.resolve(state.root, relPath) : path.resolve(state.root, '..');
+  const target = relPath === undefined
+    ? path.resolve(state.root, '..')
+    : relPath === '' || relPath === '.'
+      ? state.root
+      : containedPath(state.root, relPath);
+  if (!target) return;
   if (target === state.root) return;
   for (const relPath2 of state.expanded) port.unwatchDir(state, relPath2);
   state.expanded.clear();
@@ -60,8 +68,10 @@ export function rerootTree(port: NavPort, label: string, relPath?: string): void
 // `restore.ts`, which replays a saved expanded set through the same pair of steps.
 export function expandAndWatch(port: NavPort, label: string, state: FilesTabState, relPath: string): void {
   if (state.expanded.has(relPath)) return;
+  const absolute = relPath ? containedPath(state.root, relPath) : state.root;
+  if (!absolute) return;
   state.expanded.add(relPath);
-  port.watchDir(label, path.join(state.root, relPath), relPath);
+  port.watchDir(label, absolute, relPath);
 }
 
 // Expand every ancestor directory of `relPath` not already expanded (adding to `expanded`,

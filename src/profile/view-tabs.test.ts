@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { openProfileViewTabs } from './view-tabs.js';
 import { makeTab, makeImageTab, makeMarkdownTab, makePageTab, makeHarnessTab } from '../tab/index.js';
 import type { Managers } from '../managers.js';
-import type { Tab } from '../types.js';
+import type { Tab } from '../tab/types.js';
 
 const identityColor = (_group: number, fallbackDotColor: string): string => fallbackDotColor;
 

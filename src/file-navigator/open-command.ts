@@ -6,7 +6,7 @@ import { parseFileNavigatorArgs } from './args.js';
 import { expandUserPath } from '../paths.js';
 import { resolveTarget } from '../commands/resolve-target.js';
 import type { Managers } from '../managers.js';
-import type { FileNavigatorDetail } from '../types.js';
+import type { FileNavigatorDetail } from '../tab/types.js';
 import type { FilesTabState } from './state.js';
 
 // The directory a `files` command roots its tree at: the issuing tab's cwd, or — with an `in

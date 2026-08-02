@@ -1,4 +1,4 @@
-import type { ScheduleEntry, TimeOfDay } from '../types.js';
+import type { ScheduleEntry, TimeOfDay } from './types.js';
 import { MONTHS } from './parsing.js';
 
 export function fmtTime({ hour, minute }: TimeOfDay): string {

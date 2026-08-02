@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { Tab } from '../types.js';
+import type { Tab } from '../tab/types.js';
 import type { Managers } from '../managers.js';
 import { makeTab } from '../tab/index.js';
 import { messageBus } from '../bus.js';

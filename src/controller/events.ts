@@ -1,6 +1,6 @@
 import { messageBus } from '../bus.js';
 import { notify } from '../notifications.js';
-import type { Sinks } from '../types.js';
+import type { Sinks } from './types.js';
 import type { Managers } from '../managers.js';
 
 // Wires the message-bus subscriptions the Controller needs for the lifetime of the process:

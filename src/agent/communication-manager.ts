@@ -1,4 +1,4 @@
-import type { MessageKind } from '../types.js';
+import type { MessageKind } from '../messaging.js';
 import type { Managers } from '../managers.js';
 import { sendMessage, pumpQueue } from './message-queue.js';
 

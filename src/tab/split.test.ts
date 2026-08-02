@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Tab } from '../types.js';
+import type { Tab } from './types.js';
 import { centerPane, moveToOtherPane } from './split.js';
 
 function tab(label: string, extra: Partial<Tab> = {}): Tab {

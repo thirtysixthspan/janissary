@@ -1,4 +1,4 @@
-import type { CompletionResult } from '../types.js';
+import type { CompletionResult } from './types.js';
 import { completeWord } from './helpers.js';
 import { modelsFor } from '../harness/models.js';
 export { completeBrowserCommand } from './browser.js';

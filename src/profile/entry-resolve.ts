@@ -1,5 +1,5 @@
 import type { Managers } from '../managers.js';
-import type { ProfileEntry, ProfileHarnessEntry } from '../types.js';
+import type { ProfileEntry, ProfileHarnessEntry } from './types.js';
 
 // Entry-label resolution and the relaunch close-pass, split out of agent-opener.ts: a distinct
 // concern from the tab-opening orchestration that remains there.

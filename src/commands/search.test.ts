@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { command, SEARCH_USAGE } from './search.js';
-import type { LogEntry } from '../types.js';
+import type { LogEntry } from '../tab/types.js';
 
 describe('search command', () => {
   it('has the correct name', () => {

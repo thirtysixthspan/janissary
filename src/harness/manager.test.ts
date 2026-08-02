@@ -5,7 +5,7 @@ import { writeCaptureFile } from './capture-file.js';
 import { notify } from '../notifications.js';
 import { messageBus } from '../bus.js';
 import type { Managers } from '../managers.js';
-import type { Tab } from '../types.js';
+import type { Tab } from '../tab/types.js';
 
 vi.mock('./capture-file.js', () => ({
   writeCaptureFile: vi.fn(() => '/project/.janissary/captures/claude-now.txt'),

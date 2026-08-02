@@ -2,7 +2,7 @@
 // each channel events are discriminated by a `type` string. Listeners are isolated via per-call
 // try/catch so a throwing subscriber never breaks the emit path.
 
-import type { LogEntry, Tab } from './types.js';
+import type { LogEntry, Tab } from './tab/types.js';
 
 export type Subscription = { unsubscribe: () => void };
 export type Listener<E> = (event: E) => void;

@@ -3,7 +3,7 @@ import { spawnPty } from './pty.js';
 import { PseudoterminalManager } from './pseudoterminal-manager.js';
 import { makeTab } from './tab/index.js';
 import type { Managers } from './managers.js';
-import type { Tab } from './types.js';
+import type { Tab } from './tab/types.js';
 
 // Mock spawnPty so tests never spawn a real process (mirrors controller.test.ts).
 vi.mock('./pty.js');

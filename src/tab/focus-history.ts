@@ -2,7 +2,7 @@
 // focus to its predecessor rather than just clamping to the nearest surviving index. Pure
 // operations on the `tabs`/`focusHistory` state; TabManager owns the state itself.
 
-import type { Tab } from '../types.js';
+import type { Tab } from './types.js';
 
 // Records that `activeTab` is about to stop being active in favor of `newIndex`, so closing
 // `newIndex` later can restore focus to it. No-ops (returns `focusHistory` unchanged) if

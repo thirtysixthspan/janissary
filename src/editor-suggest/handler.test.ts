@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { AcpSession, PromptHandlers } from '../types.js';
+import type { AcpSession, PromptHandlers } from '../acp/types.js';
 import type { Managers } from '../managers.js';
 
 const mocks = vi.hoisted(() => ({

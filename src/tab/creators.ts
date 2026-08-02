@@ -1,4 +1,4 @@
-import type { Tab, ImageView, VideoView, MarkdownView, EditorView, PageView, FileNavigatorView } from '../types.js';
+import type { Tab, ImageView, VideoView, MarkdownView, EditorView, PageView, FileNavigatorView } from './types.js';
 import {
   makeImageTab, makeVideoTab, makeMarkdownTab, makeEditorTab, makePageTab, makeFilesTab, makeNotificationsTab, makeSchedulesTab, distinctColor, insertTabInGroup,
 } from './index.js';

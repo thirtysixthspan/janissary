@@ -12,7 +12,8 @@ import {
   makeNotificationsTab, makeSchedulesTab,
 } from '../tab/index.js';
 import type { Managers } from '../managers.js';
-import type { FileNavigatorDetail, LoadedProfile, MonitorTarget, ProfileFile, Tab } from '../types.js';
+import type { FileNavigatorDetail, MonitorTarget, Tab } from '../tab/types.js';
+import type { LoadedProfile, ProfileFile } from './types.js';
 
 type Snapshot = { name: string; persona: string; targets: MonitorTarget[]; inline: boolean }[];
 

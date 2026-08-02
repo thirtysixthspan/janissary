@@ -5,7 +5,8 @@ vi.mock('../notifications.js', () => ({ notify: mocks.notify }));
 
 import { ScheduleManager } from './manager.js';
 import type { Managers } from '../managers.js';
-import type { Tab, ScheduleEntry } from '../types.js';
+import type { Tab } from '../tab/types.js';
+import type { ScheduleEntry } from './types.js';
 import { messageBus } from '../bus.js';
 
 function makeManagers(overrides: Partial<Tab> = {}): { managers: Managers; tab: Tab } {

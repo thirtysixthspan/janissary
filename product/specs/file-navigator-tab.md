@@ -507,6 +507,11 @@ the same time, switching between them via the sidebar's own tab-switcher (see `s
 
 ### Closing
 
+Explicit paths supplied to scalar file actions and directory expansion are contained within the
+navigator's current root. An escaping path is ignored, so file moves, renames, deletes, and
+watchers cannot operate outside that root. The parent-navigation action remains available when it
+does not supply an explicit path.
+
 Closing a file navigator tab (via its close button, the `close` command, or app shutdown) stops every
 watcher it opened. Because a file navigator tab owns no shell, agent session, browser, or workspace,
 the rest of ordinary tab teardown simply does nothing for it. Closing the last remaining tab quits

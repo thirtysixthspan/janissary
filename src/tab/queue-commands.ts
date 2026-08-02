@@ -4,33 +4,33 @@
 
 import { getQueue, pushQueue, shiftQueue, updateQueueEntry, removeQueueEntry } from './queue.js';
 
-export function queueFor(queue: Map<string, string[]>, label: string): string[] {
-  return getQueue(queue, label);
+export function queueFor(queue: string[]): string[] {
+  return getQueue(queue);
 }
 
 export function enqueue(
-  queue: Map<string, string[]>, label: string, text: string, persistQueue: (label: string) => void,
+  queue: string[], text: string, persistQueue: () => void,
 ): void {
-  pushQueue(queue, label, text);
-  persistQueue(label);
+  pushQueue(queue, text);
+  persistQueue();
 }
 
 export function dequeue(
-  queue: Map<string, string[]>, label: string, persistQueue: (label: string) => void,
+  queue: string[], persistQueue: () => void,
 ): string | undefined {
-  const front = shiftQueue(queue, label);
-  if (front !== undefined) persistQueue(label);
+  const front = shiftQueue(queue);
+  if (front !== undefined) persistQueue();
   return front;
 }
 
 export function editQueued(
-  queue: Map<string, string[]>, label: string, index: number, text: string, persistQueue: (label: string) => void,
+  queue: string[], index: number, text: string, persistQueue: () => void,
 ): void {
-  if (updateQueueEntry(queue, label, index, text)) persistQueue(label);
+  if (updateQueueEntry(queue, index, text)) persistQueue();
 }
 
 export function deleteQueued(
-  queue: Map<string, string[]>, label: string, index: number, persistQueue: (label: string) => void,
+  queue: string[], index: number, persistQueue: () => void,
 ): void {
-  if (removeQueueEntry(queue, label, index)) persistQueue(label);
+  if (removeQueueEntry(queue, index)) persistQueue();
 }

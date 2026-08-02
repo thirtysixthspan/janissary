@@ -1,4 +1,4 @@
-import type { Tab } from '../types.js';
+import type { Tab } from './types.js';
 import { stripComments } from './index.js';
 
 // Appends `text` (after stripping shell comments) to `tab`'s command history, deduping an

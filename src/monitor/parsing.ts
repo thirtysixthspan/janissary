@@ -1,4 +1,4 @@
-import type { MonitorTarget } from '../types.js';
+import type { MonitorTarget } from '../tab/types.js';
 export { parseSuggestion, SUGGESTION_FORMAT } from './reply-format.js';
 
 // Pure parsing for the monitor commands and the monitoring AI's reply format.

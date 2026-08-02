@@ -4,8 +4,8 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { TranscriptStore } from './store.js';
 import { messageBus } from '../bus.js';
-import type { LogEntry } from '../types.js';
-import type { Tab } from '../types.js';
+import type { LogEntry } from '../tab/types.js';
+import type { Tab } from '../tab/types.js';
 
 const entry = (input: string, output: string): LogEntry => ({ input, output });
 const tabWith = (label: string, log: LogEntry[]): Readonly<Tab> => ({ label, log }) as Readonly<Tab>;

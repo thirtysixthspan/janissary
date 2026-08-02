@@ -5,7 +5,8 @@ import {
 import { capLog } from './transcript-log.js';
 import { makeTab } from './index.js';
 import { messageBus } from '../bus.js';
-import type { AgentState, Tab } from '../types.js';
+import type { AgentState } from '../agent/types.js';
+import type { Tab } from './types.js';
 
 const buildAgentState = (tab: Tab) => ({ name: tab.label }) as AgentState;
 

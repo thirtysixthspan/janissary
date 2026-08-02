@@ -2,7 +2,7 @@ import { parseAgentCommand, resolveAgentName } from '../agent/commands.js';
 import { sandboxNotice } from '../sandbox/index.js';
 import { wireProvisioning, PROVISION_FAILURE_CLOSE_DELAY_MS } from '../workspace/provision-wire.js';
 import { messageBus } from '../bus.js';
-import type { Tab } from '../types.js';
+import type { Tab } from '../tab/types.js';
 import type { Managers } from '../managers.js';
 
 // ProfileManager.newAgent, extracted whole: resolves a unique agent name, then either places the

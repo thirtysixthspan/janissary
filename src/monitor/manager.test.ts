@@ -2,7 +2,7 @@ import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest';
 import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import type { LogEntry, Tab } from '../types.js';
+import type { LogEntry, Tab } from '../tab/types.js';
 import type { Managers } from '../managers.js';
 import { makeTab } from '../tab/index.js';
 import { messageBus } from '../bus.js';

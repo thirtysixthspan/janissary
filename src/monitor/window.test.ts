@@ -13,7 +13,7 @@ import {
 import { makeTab } from '../tab/index.js';
 import { messageBus } from '../bus.js';
 import type { Managers } from '../managers.js';
-import type { MonitorSuggestion, Tab } from '../types.js';
+import type { MonitorSuggestion, Tab } from '../tab/types.js';
 
 function makeSuggestion(id: string): MonitorSuggestion {
   return { id, text: 'looks off', timestamp: Date.now(), persona: 'reviewer', about: 'main' };

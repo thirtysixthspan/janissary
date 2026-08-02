@@ -1,4 +1,4 @@
-import type { Tab } from '../types.js';
+import type { Tab } from './types.js';
 import type { Managers } from '../managers.js';
 import { messageBus } from '../bus.js';
 import { closeTabResources } from './cleanup.js';
@@ -16,8 +16,6 @@ export function closeTabOp(
   index: number,
   managers: Managers,
   openFiles: Map<string, string>,
-  context: Map<string, string[]>,
-  queue: Map<string, string[]>,
   discardFocusHistoryLabel: (label: string) => void,
   popFocusHistory: () => number | undefined,
   applyResult: (tabs: Tab[], activeTab: number) => void,
@@ -25,7 +23,7 @@ export function closeTabOp(
   const tab = tabs[index];
   if (!tab) return;
   const nonDockedCount = tabs.filter((t) => !t.dock).length;
-  closeTabResources(tab, managers, openFiles, context, queue, nonDockedCount);
+  closeTabResources(tab, managers, openFiles, nonDockedCount);
   // Closing the last remaining non-docked tab quits the app (same as the `quit` command).
   if (!tab.dock && nonDockedCount <= 1) {
     messageBus.emit('app', { type: 'exit' });

@@ -1,4 +1,4 @@
-import type { MonitorSuggestion } from '../types.js';
+import type { MonitorSuggestion } from '../tab/types.js';
 import type { MonitorSub } from './manager.js';
 import { messageBus } from '../bus.js';
 import type { Managers } from '../managers.js';

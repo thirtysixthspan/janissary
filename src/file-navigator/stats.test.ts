@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node
 import path from 'node:path';
 import os from 'node:os';
 import { markStats, type RowStat } from './stats.js';
-import type { FileNavigatorDetail, FileNavigatorRow } from '../types.js';
+import type { FileNavigatorDetail, FileNavigatorRow } from '../tab/types.js';
 
 let roots: string[] = [];
 

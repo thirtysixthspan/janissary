@@ -1,4 +1,4 @@
-import type { CompletionResult } from '../types.js';
+import type { CompletionResult } from './types.js';
 import { completeWord } from './helpers.js';
 
 // The label/target-completing handlers, split out of handlers.ts: each completes against a flat

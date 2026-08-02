@@ -1,4 +1,4 @@
-import type { TimeOfDay } from '../types.js';
+import type { TimeOfDay } from './types.js';
 import type { ScheduleBodyResult } from './helpers.js';
 
 // `every <interval|day> [at TIME]` parsing, split out of helpers.ts: the largest and most

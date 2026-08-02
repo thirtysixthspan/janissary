@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { startProfileMonitors } from './monitors.js';
 import type { Managers } from '../managers.js';
-import type { ProfileMonitor } from '../types.js';
+import type { ProfileMonitor } from './types.js';
 
 function makeManagers(): { managers: Managers; stop: ReturnType<typeof vi.fn>; start: ReturnType<typeof vi.fn> } {
   const stop = vi.fn(() => true);

@@ -6,7 +6,7 @@ import { mkdtempSync } from 'node:fs';
 import { TranscriptLogger } from './logger.js';
 import { messageBus } from '../bus.js';
 import { getDateStr, getTimeStr as getTimeString } from '../datetime.js';
-import type { LogEntry, Tab } from '../types.js';
+import type { LogEntry, Tab } from '../tab/types.js';
 
 const makeTab = (label: string, log: LogEntry[] = []): Readonly<Tab> =>
   ({ label, log }) as Readonly<Tab>;

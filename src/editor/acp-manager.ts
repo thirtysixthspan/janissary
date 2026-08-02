@@ -1,4 +1,4 @@
-import type { AcpSession } from '../types.js';
+import type { AcpSession } from '../acp/types.js';
 import type { Persona } from '../personas.js';
 import type { ConnectionView } from '../protocol.js';
 import { spawnMonitorSession } from '../monitor/acp.js';

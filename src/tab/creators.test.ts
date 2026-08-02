@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { makeTab, makeEditorTab, makeMarkdownTab, makeVideoTab } from './index.js';
 import { uniqueEditorLabel, addEditorTab, uniqueMarkdownLabel, addMarkdownTab, addImageTab, uniqueVideoLabel, addVideoTab } from './creators.js';
-import type { EditorView, MarkdownView, ImageView, VideoView } from '../types.js';
+import type { EditorView, MarkdownView, ImageView, VideoView } from './types.js';
 
 const view: EditorView = { name: 'notes.txt', path: '/tmp/notes.txt', size: '5 B', url: '/open/1' };
 const markdownView: MarkdownView = { name: 'readme.md', path: '/tmp/readme.md', size: '5 B', url: '/open/1' };

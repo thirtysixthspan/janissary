@@ -1,4 +1,4 @@
-import type { Tab } from './types.js';
+import type { Tab } from './tab/types.js';
 import type { Managers } from './managers.js';
 
 // The schedules tab is a singleton, view-only tab (`view: 'schedules'`) that aggregates every

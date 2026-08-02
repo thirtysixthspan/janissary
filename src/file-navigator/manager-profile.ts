@@ -1,5 +1,5 @@
 import { stopPolling } from './poll.js';
-import type { FileNavigatorDetail } from '../types.js';
+import type { FileNavigatorDetail } from '../tab/types.js';
 import type { FilesTabState } from './state.js';
 
 // The tree-view state `profile save` reads back off a navigator, the detail-mode switch its header

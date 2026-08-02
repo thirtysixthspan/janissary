@@ -3,7 +3,8 @@ import {
   writeMarkdownEntry, writePageEntry, writeSshEntry,
 } from './save-entries.js';
 import type { Managers } from '../managers.js';
-import type { ProfileTabFile, Tab } from '../types.js';
+import type { ProfileTabFile } from './types.js';
+import type { Tab } from '../tab/types.js';
 import type { TreeSelection } from '../file-navigator/selection-request.js';
 
 // Per-tab routing for `profile save`, split out of save.ts to keep its cognitive complexity down.

@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { initProfileDir } from '../profiles.js';
 import { loadProfile } from './file.js';
-import type { LoadedProfile } from '../types.js';
+import type { LoadedProfile } from './types.js';
 
 // The all-or-nothing single-file loader: a structurally invalid file yields `{ error }` and opens
 // nothing (Decision 6); an unrecognized top-level key is ignored, not an error (Decision 3).

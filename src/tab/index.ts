@@ -1,4 +1,4 @@
-import type { LogEntry, Tab, ImageView, VideoView, MarkdownView, EditorView, PageView, HarnessView, FileNavigatorView } from '../types.js';
+import type { LogEntry, Tab, ImageView, VideoView, MarkdownView, EditorView, PageView, HarnessView, FileNavigatorView } from './types.js';
 export { expandTabs, wordWrap, flattenBuffer } from './formatting.js';
 export { distinctColor, dotColors } from './colors.js';
 export { stripComments, renumberTabs, canMoveTab, swapTabsLeft, swapTabsRight, insertTabInGroup, uniqueLabel } from './utils.js';
@@ -13,6 +13,7 @@ export const makeTab = (label: string, dotColor: string, number: number = 1, com
   cmdHistory: commandHistory,
   cmdHistoryIdx: -1,
   scrollOffset: 0,
+  runtime: { busy: false, context: [], queue: [] },
   workspaceDir: workspaceDirectory,
 });
 
@@ -90,6 +91,5 @@ export const makeSchedulesTab = (label: string, dotColor: string, number: number
   view: 'schedules',
   title: 'schedules',
 });
-
 
 

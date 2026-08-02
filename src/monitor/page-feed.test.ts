@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import type { Tab } from '../types.js';
+import type { Tab } from '../tab/types.js';
 import type { Managers } from '../managers.js';
 import { pageFeedEntries } from './page-feed.js';
 

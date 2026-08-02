@@ -1,6 +1,6 @@
 import { readdirSync } from 'node:fs';
 import path from 'node:path';
-import type { FileNavigatorRow } from '../types.js';
+import type { FileNavigatorRow } from '../tab/types.js';
 export { markGitStatus } from './git-mark.js';
 
 // VS Code's `files.exclude` defaults, minus `.git` — shown intentionally, like any other

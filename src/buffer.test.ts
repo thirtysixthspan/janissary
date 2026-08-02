@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { tryCollapseToolSteps, formatMessageContent } from './buffer.js';
-import type { LogEntry } from './types.js';
+import type { LogEntry } from './tab/types.js';
 
 const acpEntry = (extra: Partial<LogEntry> = {}): LogEntry => ({ input: '', output: 'did a thing', acp: true, ...extra });
 
