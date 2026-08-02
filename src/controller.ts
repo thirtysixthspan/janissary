@@ -5,11 +5,12 @@ import { complete as completeCommand } from './controller/completion.js';
 import { wireControllerEvents } from './controller/events.js';
 import { createManagers } from './controller/create-managers.js';
 import { saveFile } from './editor/save.js';
+import { saveVideoShot } from './video-shot.js';
 import { syncEditorBuffer } from './editor/sync.js';
 import { resyncEditorTab } from './editor/resync.js';
 import { syncPageSnapshot } from './page/sync.js';
 import { messageBus } from './bus.js';
-import { runSuggestion } from './monitor/window.js';
+import * as monitorRpc from './controller/monitor.js';
 import { listPersonas } from './personas.js';
 import type { TabView } from './protocol.js';
 import type { Managers } from './managers.js';
@@ -87,6 +88,12 @@ export class Controller {
     saveFile(this.managers, url, content);
   }
 
+  // Write a frame captured from a video tab beside its video file (the `captureVideoFrame` RPC),
+  // returning the basename chosen. Throws on error; the RPC layer relays the message to the client.
+  captureVideoFrame(url: string, dataUrl: string): string {
+    return saveVideoShot(this.managers, url, dataUrl);
+  }
+
   // Cache an editor tab's in-progress buffer as transient draft state (the `editorSync` RPC).
   // In-memory only; never written to disk.
   syncEditorBuffer(url: string, content: string): void {
@@ -107,21 +114,10 @@ export class Controller {
 
   // --- monitor reporting tabs ------------------------------------------------
 
-  runSuggestion(id: string): void {
-    runSuggestion(this.managers, id);
-  }
-
-  rateSuggestion(id: string, up: boolean): void {
-    this.managers.monitor.rate(id, up);
-  }
-
-  resetMonitorContext(name: string): void {
-    this.managers.monitor.resetContext(name);
-  }
-
-  monitorContextSnapshot(name: string): void {
-    this.managers.monitor.snapshotContext(name);
-  }
+  runSuggestion(id: string): void { monitorRpc.runSuggestion(this.managers, id); }
+  rateSuggestion(id: string, up: boolean): void { monitorRpc.rateSuggestion(this.managers, id, up); }
+  resetMonitorContext(name: string): void { monitorRpc.resetMonitorContext(this.managers, name); }
+  monitorContextSnapshot(name: string): void { monitorRpc.monitorContextSnapshot(this.managers, name); }
 
   // --- inline terminal cards (PTY) -----------------------------------------
 

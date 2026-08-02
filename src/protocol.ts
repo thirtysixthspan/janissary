@@ -224,6 +224,12 @@ export type RpcCall =
   // Write an editor tab's buffer back to disk. `url` is the tab's `/open/<id>` ref — the server
   // resolves it through the open-file allow-list, so only explicitly opened files are writable.
   | { method: 'saveFile'; params: { url: string; content: string } }
+  // Write one frame captured from a video tab's player to a PNG beside the video file, replying
+  // (deferred) with `{ name }` — the basename the server chose. `url` identifies the owning video
+  // tab the same way saveFile's does, and is the only thing that determines where the file lands:
+  // the server resolves it through the open-file allow-list and names the output itself, so a
+  // caller can never choose the path. `dataUrl` must be a `data:image/png;base64,` payload.
+  | { method: 'captureVideoFrame'; params: { url: string; dataUrl: string } }
   // Sync an editor tab's in-progress (unsaved) buffer to the server as transient draft
   // state, debounced client-side after typing pauses. Never written to disk — see saveFile
   // for that. `url` identifies the tab the same way saveFile's does.

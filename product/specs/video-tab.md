@@ -73,6 +73,26 @@ Playback state is still live and in-memory: it belongs to the open tab, not to t
 same file again after closing its tab starts from the beginning, and nothing about playback is
 persisted or restored on `--relaunch`.
 
+### Capturing a frame
+
+The metadata header carries a **capture** control that writes the frame currently on screen to an
+image file beside the video. The capture is taken at the video's own full resolution, not the size
+the tab happens to be showing it at, so shrinking the window does not shrink the result.
+
+The file is named after the video with a numbered suffix and a `.png` extension: capturing from
+`clip.mp4` writes `clip.shot-1.png`, then `clip.shot-2.png`, and so on. Numbering always starts at
+one and takes the lowest name not already on disk, so repeated captures accumulate instead of
+overwriting each other, and deleting an earlier shot frees its number for reuse. The result is an
+ordinary image file that can be opened in the app like any other.
+
+The name that was written is shown briefly in the header as confirmation. Nothing else is reported,
+and the capture is not opened automatically.
+
+The user never chooses the destination. The file always lands in the directory the video was opened
+from, under the name described above — there is no prompt, no format choice, and no setting. The
+control is offered only while the player is showing; there is nothing to capture from a video that
+could not be decoded, and none at all for a container that only ever opens in an external player.
+
 ### When the video cannot be played
 
 A container in the playable set can still hold a codec the app cannot decode, and a file can be

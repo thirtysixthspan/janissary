@@ -1,7 +1,10 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { VideoView } from '@shared/protocol';
 import type { JanusClient } from './ws';
 import { SplitTabButton } from './SplitTabButton';
+import { captureFrameIcon } from './icons';
+import { useVideoShot } from './useVideoShot';
 
 // A video view tab body: the same compact metadata header the image tab uses (name, size, location)
 // above a native `<video controls>` element filling the remaining space. There is no custom
@@ -14,6 +17,8 @@ export function VideoTab({
   video, client, onSplit,
 }: { video: VideoView; client: JanusClient; onSplit?: () => void }) {
   const [failed, setFailed] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const { capture, saved, busy } = useVideoShot(videoRef, video, client);
   const token = new URLSearchParams(location.search).get('token') ?? '';
   const source = `${video.url}?token=${encodeURIComponent(token)}`;
   const openLabel = video.player ? `Open in ${video.player}` : 'Open externally';
@@ -24,7 +29,22 @@ export function VideoTab({
         <span className="image-name">{video.name}</span>
         <span className="image-size">{video.size}</span>
         <span className="image-loc">{video.path}</span>
-        {onSplit && <span className="image-actions"><SplitTabButton onClick={onSplit} /></span>}
+        {saved && <span className="video-shot-saved">Saved {saved}</span>}
+        <span className="image-actions">
+          {!failed && (
+            <button
+              type="button"
+              className="tab-split"
+              title="Capture frame"
+              aria-label="Capture frame"
+              disabled={busy}
+              onClick={capture}
+            >
+              <FontAwesomeIcon icon={captureFrameIcon} />
+            </button>
+          )}
+          {onSplit && <SplitTabButton onClick={onSplit} />}
+        </span>
       </div>
       <div className="image-stage">
         {failed ? (
@@ -40,6 +60,7 @@ export function VideoTab({
           </div>
         ) : (
           <video
+            ref={videoRef}
             className="video-player"
             src={source}
             controls
