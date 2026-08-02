@@ -160,6 +160,11 @@ export default ts.config(
     // docs-screenshots fixtures are capture *content* (files the app opens on screen), not code.
     // chrome-extension/ is a plain browser-executed extension bundle (Chrome's runtime, not
     // Node/bundler tooling), so the project's Node/TS-oriented lint rules don't apply to it.
-    ignores: ['dist/', 'web/dist/', 'node_modules/', '.janissary/', 'coverage/', 'scripts/docs-screenshots/fixtures/', 'documentation/.vitepress/', 'chrome-extension/'],
+    // `.janissary/` and `coverage/` carry a `**/` prefix because a bare `dir/` pattern anchors to
+    // the project root: the app writes a `.janissary/` runtime directory (browser profile, logs)
+    // into whatever working directory it runs in, so nested copies appear under the repo and an
+    // unanchored pattern misses them. One stray profile is ~10 MB of minified vendor bundles and
+    // takes a full lint run from ~2 minutes to 15+.
+    ignores: ['dist/', 'web/dist/', 'node_modules/', '**/.janissary/', '**/coverage/', 'scripts/docs-screenshots/fixtures/', 'documentation/.vitepress/', 'chrome-extension/'],
   },
 );
