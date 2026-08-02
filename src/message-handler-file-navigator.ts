@@ -1,15 +1,5 @@
 import type { Controller } from './controller.js';
 import type { ClientMessage, ServerEvent } from './protocol.js';
-import {
-  deleteFileNavigatorItems,
-  fileNavigatorOpeners,
-  fileNavigatorSearch,
-  moveFileNavigatorItems,
-  pasteFileNavigatorItems,
-  renameFileNavigatorItem,
-  revealFileNavigatorItem,
-} from './controller/file-navigator.js';
-import { resolveTreeSelections } from './file-navigator/selection-request.js';
 
 type FileNavigatorMessage = Extract<ClientMessage, {
   method: 'fileNavigatorToggle' | 'fileNavigatorCollapseAll'
@@ -38,8 +28,7 @@ export function handleFileNavigatorMessage(controller: Controller, message: File
       reply({
         t: 'rpc-reply',
         id: message.id,
-        result: moveFileNavigatorItems(
-          controller.managers,
+        result: controller.moveFileNavigatorItems(
           message.params.index,
           message.params.sourcePaths,
           message.params.destinationPath,
@@ -52,8 +41,7 @@ export function handleFileNavigatorMessage(controller: Controller, message: File
       reply({
         t: 'rpc-reply',
         id: message.id,
-        result: pasteFileNavigatorItems(
-          controller.managers,
+        result: controller.pasteFileNavigatorItems(
           message.params.index,
           message.params.sources,
           message.params.destinationPath,
@@ -69,11 +57,11 @@ export function handleFileNavigatorMessage(controller: Controller, message: File
       reply({
         t: 'rpc-reply',
         id: message.id,
-        result: deleteFileNavigatorItems(controller.managers, message.params.index, message.params.paths),
+        result: controller.deleteFileNavigatorItems(message.params.index, message.params.paths),
       });
       return;
     }
-    case 'renameFileNavigatorItem': { renameFileNavigatorItem(controller.managers, message.params.index, message.params.relPath, message.params.newName); break;
+    case 'renameFileNavigatorItem': { controller.renameFileNavigatorItem(message.params.index, message.params.relPath, message.params.newName); break;
     }
     // Deferred reply: the listing is async (never blocks the event loop) — see fileNavigatorSearch
     // in controller/file-navigator.ts and the `projectFiles` case in message-handler.ts for the same
@@ -81,21 +69,21 @@ export function handleFileNavigatorMessage(controller: Controller, message: File
     case 'fileNavigatorSearch': {
       void (async () => {
         try {
-          reply({ t: 'rpc-reply', id: message.id, result: { paths: await fileNavigatorSearch(controller.managers, message.params.index) } });
+          reply({ t: 'rpc-reply', id: message.id, result: { paths: await controller.fileNavigatorSearch(message.params.index) } });
         } catch {
           reply({ t: 'rpc-reply', id: message.id, result: { paths: [] } });
         }
       })();
       return;
     }
-    case 'revealFileNavigatorItem': { revealFileNavigatorItem(controller.managers, message.params.index, message.params.relPath); break;
+    case 'revealFileNavigatorItem': { controller.revealFileNavigatorItem(message.params.index, message.params.relPath); break;
     }
     // Fire-and-forget: the answer to a `collect-tree-state` request goes straight to the resolver,
     // which discards it if it isn't the request currently in flight.
-    case 'reportFileNavigatorSelection': { resolveTreeSelections(message.params.id, message.params.navigators); break;
+    case 'reportFileNavigatorSelection': { controller.reportFileNavigatorSelection(message.params.id, message.params.navigators); break;
     }
     case 'fileNavigatorOpeners': {
-      reply({ t: 'rpc-reply', id: message.id, result: fileNavigatorOpeners(controller.managers, message.params.index, message.params.relPath, message.params.edit) });
+      reply({ t: 'rpc-reply', id: message.id, result: controller.fileNavigatorOpeners(message.params.index, message.params.relPath, message.params.edit) });
       return;
     }
     case 'undoFileNavigatorItem': {

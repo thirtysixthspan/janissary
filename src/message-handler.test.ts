@@ -2,38 +2,12 @@ import { describe, it, expect, vi } from 'vitest';
 import { handle } from './message-handler.js';
 import type { Controller } from './controller.js';
 import type { ClientMessage, ServerEvent, RpcCall } from './protocol.js';
-import { openTranscriptFor, openHarnessTranscriptFor, openAcpTranscript } from './controller/transcript.js';
-import { projectFilesFor } from './project-files.js';
-import {
-  deleteFileNavigatorItems,
-  fileNavigatorSearch,
-  moveFileNavigatorItems,
-  pasteFileNavigatorItems,
-  revealFileNavigatorItem,
-} from './controller/file-navigator.js';
-import { resolveTreeSelections } from './file-navigator/selection-request.js';
-import { setClientLayout } from './client-layout.js';
-import { editorSuggest, ownerLabel } from './editor-suggest/handler.js';
-import { closeConnection } from './connection/close.js';
-
-vi.mock('./controller/transcript.js', () => ({ openTranscriptFor: vi.fn(), openHarnessTranscriptFor: vi.fn(), openAcpTranscript: vi.fn() }));
-vi.mock('./project-files.js', () => ({ projectFilesFor: vi.fn() }));
-vi.mock('./controller/file-navigator.js', () => ({
-  deleteFileNavigatorItems: vi.fn(),
-  fileNavigatorSearch: vi.fn(),
-  moveFileNavigatorItems: vi.fn(),
-  pasteFileNavigatorItems: vi.fn(),
-  revealFileNavigatorItem: vi.fn(),
-}));
-vi.mock('./file-navigator/selection-request.js', () => ({ resolveTreeSelections: vi.fn() }));
-vi.mock('./client-layout.js', () => ({ setClientLayout: vi.fn() }));
-vi.mock('./editor-suggest/handler.js', () => ({ editorSuggest: vi.fn(), ownerLabel: vi.fn(() => 'janus') }));
-vi.mock('./connection/close.js', () => ({ closeConnection: vi.fn() }));
 
 const makeController = () =>
   ({
     view: vi.fn(() => []),
     routeView: vi.fn(() => null),
+    stateEvent: vi.fn(() => ({ t: 'state' })),
     managers: {
       tab: {
         activeTab: 0,
@@ -47,8 +21,12 @@ const makeController = () =>
     },
     dispatch: vi.fn(),
     cancelSchedule: vi.fn(),
+    clearSchedules: vi.fn(),
+    answerQuestion: vi.fn(),
     launchAgentFor: vi.fn(),
     setActiveTab: vi.fn(),
+    focusTab: vi.fn(),
+    moveTabToOtherPane: vi.fn(),
     closeTab: vi.fn(),
     renameTab: vi.fn(),
     navigatePage: vi.fn(),
@@ -81,6 +59,23 @@ const makeController = () =>
     undoFileNavigatorItem: vi.fn(() => ({})),
     redoFileNavigatorItem: vi.fn(() => ({})),
     openFileNavigatorFor: vi.fn(),
+    moveFileNavigatorItems: vi.fn(() => ({ total: 0, failedPaths: [] })),
+    pasteFileNavigatorItems: vi.fn(() => ({ total: 0, failedPaths: [] })),
+    deleteFileNavigatorItems: vi.fn(() => ({ total: 0, failedPaths: [] })),
+    renameFileNavigatorItem: vi.fn(),
+    fileNavigatorSearch: vi.fn(async () => []),
+    revealFileNavigatorItem: vi.fn(),
+    fileNavigatorOpeners: vi.fn(() => ({ choices: [] })),
+    reportFileNavigatorSelection: vi.fn(),
+    openTranscriptFor: vi.fn(),
+    openHarnessTranscriptFor: vi.fn(),
+    openAcpTranscript: vi.fn(),
+    reportLayout: vi.fn(),
+    projectFiles: vi.fn(async () => ({ root: '/proj', paths: [] })),
+    projectFilesFallback: vi.fn(() => ({ root: '/proj', paths: [] })),
+    editorPersonas: vi.fn(() => []),
+    editorSuggest: vi.fn(),
+    closeEditorConnection: vi.fn(),
   }) as unknown as Controller;
 
 const dispatchCall = (controller: Controller, id: number, call: RpcCall) => {
@@ -110,11 +105,10 @@ describe('handle', () => {
     expect(replies).toEqual([{ t: 'rpc-reply', id: 1, result: 'ok' }]);
   });
 
-  it('focuses a tab by label', () => {
+  it('focuses a tab through the controller façade', () => {
     const controller = makeController();
     dispatchCall(controller, 32, { method: 'focusTab', params: { label: 'build' } });
-    expect(controller.managers.tab.findIndex).toHaveBeenCalledWith('build');
-    expect(controller.managers.tab.setActiveTab).toHaveBeenCalledWith(2);
+    expect(controller.focusTab).toHaveBeenCalledWith('build');
   });
 
   it('routes closeTab', () => {
@@ -153,10 +147,10 @@ describe('handle', () => {
     expect(controller.moveTab).toHaveBeenCalledWith(1);
   });
 
-  it('routes moveTabToOtherPane directly to the tab manager', () => {
+  it('routes moveTabToOtherPane through the controller façade', () => {
     const controller = makeController();
     dispatchCall(controller, 34, { method: 'moveTabToOtherPane', params: { index: 2 } });
-    expect(controller.managers.tab.moveTabToOtherPane).toHaveBeenCalledWith(2);
+    expect(controller.moveTabToOtherPane).toHaveBeenCalledWith(2);
   });
 
   it('routes reorderTab', () => {
@@ -263,34 +257,34 @@ describe('handle', () => {
 
   it('routes moveFileNavigatorItems and replies with its result', () => {
     const controller = makeController();
-    vi.mocked(moveFileNavigatorItems).mockReturnValue({ total: 2, failedPaths: ['b'] });
+    (controller.moveFileNavigatorItems as ReturnType<typeof vi.fn>).mockReturnValue({ total: 2, failedPaths: ['b'] });
     const replies = dispatchCall(controller, 44, {
       method: 'moveFileNavigatorItems',
       params: { index: 0, sourcePaths: ['a', 'b'], destinationPath: 'dest' },
     });
-    expect(moveFileNavigatorItems).toHaveBeenCalledWith(controller.managers, 0, ['a', 'b'], 'dest', undefined);
+    expect(controller.moveFileNavigatorItems).toHaveBeenCalledWith(0, ['a', 'b'], 'dest', undefined);
     expect(replies).toEqual([{ t: 'rpc-reply', id: 44, result: { total: 2, failedPaths: ['b'] } }]);
   });
 
   it('routes deleteFileNavigatorItems and replies with its result', () => {
     const controller = makeController();
-    vi.mocked(deleteFileNavigatorItems).mockReturnValue({ total: 2, failedPaths: [] });
+    (controller.deleteFileNavigatorItems as ReturnType<typeof vi.fn>).mockReturnValue({ total: 2, failedPaths: [] });
     const replies = dispatchCall(controller, 45, {
       method: 'deleteFileNavigatorItems',
       params: { index: 0, paths: ['a', 'b'] },
     });
-    expect(deleteFileNavigatorItems).toHaveBeenCalledWith(controller.managers, 0, ['a', 'b']);
+    expect(controller.deleteFileNavigatorItems).toHaveBeenCalledWith(0, ['a', 'b']);
     expect(replies).toEqual([{ t: 'rpc-reply', id: 45, result: { total: 2, failedPaths: [] } }]);
   });
 
   it('routes pasteFileNavigatorItems and replies with its result', () => {
     const controller = makeController();
-    vi.mocked(pasteFileNavigatorItems).mockReturnValue({ total: 1, failedPaths: [] });
+    (controller.pasteFileNavigatorItems as ReturnType<typeof vi.fn>).mockReturnValue({ total: 1, failedPaths: [] });
     const replies = dispatchCall(controller, 46, {
       method: 'pasteFileNavigatorItems',
       params: { index: 0, sources: ['/a/b.txt'], destinationPath: 'dest', mode: 'copy' },
     });
-    expect(pasteFileNavigatorItems).toHaveBeenCalledWith(controller.managers, 0, ['/a/b.txt'], 'dest', 'copy', undefined);
+    expect(controller.pasteFileNavigatorItems).toHaveBeenCalledWith(0, ['/a/b.txt'], 'dest', 'copy', undefined);
     expect(replies).toEqual([{ t: 'rpc-reply', id: 46, result: { total: 1, failedPaths: [] } }]);
   });
 
@@ -300,7 +294,7 @@ describe('handle', () => {
       method: 'reportFileNavigatorSelection',
       params: { id: 7, navigators: [] },
     });
-    expect(resolveTreeSelections).toHaveBeenCalledWith(7, []);
+    expect(controller.reportFileNavigatorSelection).toHaveBeenCalledWith(7, []);
   });
 
   it('routes setDock', () => {
@@ -355,42 +349,42 @@ describe('handle', () => {
     expect(controller.openFileNavigatorFor).toHaveBeenCalledWith('janus');
   });
 
-  it('routes answerQuestion through the question registry', () => {
+  it('routes answerQuestion through the controller façade', () => {
     const controller = makeController();
     dispatchCall(controller, 31, {
       method: 'answerQuestion',
       params: { tab: 'janus', id: 'question-1', answer: 'Yes' },
     });
-    expect(controller.managers.questions.answer).toHaveBeenCalledWith('janus', 'question-1', 'Yes');
+    expect(controller.answerQuestion).toHaveBeenCalledWith('janus', 'question-1', 'Yes');
   });
 
-  it('routes openTranscriptFor to controller-transcript.js with the controller\'s managers', () => {
+  it('routes openTranscriptFor through the controller façade', () => {
     const controller = makeController();
     dispatchCall(controller, 28, { method: 'openTranscriptFor', params: { label: 'janus' } });
-    expect(openTranscriptFor).toHaveBeenCalledWith(controller.managers, 'janus');
+    expect(controller.openTranscriptFor).toHaveBeenCalledWith('janus');
   });
 
-  it('routes openHarnessTranscriptFor to controller-transcript.js with the controller\'s managers', () => {
+  it('routes openHarnessTranscriptFor through the controller façade', () => {
     const controller = makeController();
     dispatchCall(controller, 30, { method: 'openHarnessTranscriptFor', params: { label: 'claude' } });
-    expect(openHarnessTranscriptFor).toHaveBeenCalledWith(controller.managers, 'claude');
+    expect(controller.openHarnessTranscriptFor).toHaveBeenCalledWith('claude');
   });
 
-  it('routes openAcpTranscript to controller-transcript.js with the controller\'s managers', () => {
+  it('routes openAcpTranscript through the controller façade', () => {
     const controller = makeController();
     dispatchCall(controller, 29, { method: 'openAcpTranscript', params: { acpRef: { scope: 'tab', label: 'janus' } } });
-    expect(openAcpTranscript).toHaveBeenCalledWith(controller.managers, { scope: 'tab', label: 'janus' });
+    expect(controller.openAcpTranscript).toHaveBeenCalledWith({ scope: 'tab', label: 'janus' });
   });
 
-  it('routes reportLayout straight to client-layout.js', () => {
+  it('routes reportLayout through the controller façade', () => {
     const controller = makeController();
     dispatchCall(controller, 30, { method: 'reportLayout', params: { sidebarLeft: 320, sidebarRight: 280, tabAreaPct: 70 } });
-    expect(setClientLayout).toHaveBeenCalledWith({ sidebarLeft: 320, sidebarRight: 280, tabAreaPct: 70 });
+    expect(controller.reportLayout).toHaveBeenCalledWith({ sidebarLeft: 320, sidebarRight: 280, tabAreaPct: 70 });
   });
 
   it('routes projectFiles to a deferred reply carrying the resolved root and paths', async () => {
     const controller = makeController();
-    (projectFilesFor as ReturnType<typeof vi.fn>).mockResolvedValue({ root: '/proj', paths: ['a.ts', 'b.ts'] });
+    (controller.projectFiles as ReturnType<typeof vi.fn>).mockResolvedValue({ root: '/proj', paths: ['a.ts', 'b.ts'] });
     const replies: ServerEvent[] = [];
     handle(controller, { t: 'rpc', id: 29, method: 'projectFiles', params: {} } as ClientMessage, (event) => { replies.push(event); });
     expect(replies).toEqual([]);
@@ -400,7 +394,7 @@ describe('handle', () => {
 
   it('replies with an empty paths list — never leaving the request pending — when the listing rejects', async () => {
     const controller = makeController();
-    (projectFilesFor as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('boom'));
+    (controller.projectFiles as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('boom'));
     const replies: ServerEvent[] = [];
     handle(controller, { t: 'rpc', id: 30, method: 'projectFiles', params: {} } as ClientMessage, (event) => { replies.push(event); });
     await vi.waitFor(() => expect(replies).toHaveLength(1));
@@ -409,28 +403,28 @@ describe('handle', () => {
 
   it('routes fileNavigatorSearch to a deferred reply carrying the resolved paths', async () => {
     const controller = makeController();
-    (fileNavigatorSearch as ReturnType<typeof vi.fn>).mockResolvedValue(['a.ts', 'b.ts']);
+    (controller.fileNavigatorSearch as ReturnType<typeof vi.fn>).mockResolvedValue(['a.ts', 'b.ts']);
     const replies: ServerEvent[] = [];
     handle(controller, { t: 'rpc', id: 31, method: 'fileNavigatorSearch', params: { index: 0 } } as ClientMessage, (event) => { replies.push(event); });
     expect(replies).toEqual([]);
     await vi.waitFor(() => expect(replies).toHaveLength(1));
-    expect(fileNavigatorSearch).toHaveBeenCalledWith(controller.managers, 0);
+    expect(controller.fileNavigatorSearch).toHaveBeenCalledWith(0);
     expect(replies).toEqual([{ t: 'rpc-reply', id: 31, result: { paths: ['a.ts', 'b.ts'] } }]);
   });
 
   it('replies with an empty paths list for fileNavigatorSearch — never leaving the request pending — when the listing rejects', async () => {
     const controller = makeController();
-    (fileNavigatorSearch as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('boom'));
+    (controller.fileNavigatorSearch as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('boom'));
     const replies: ServerEvent[] = [];
     handle(controller, { t: 'rpc', id: 32, method: 'fileNavigatorSearch', params: { index: 0 } } as ClientMessage, (event) => { replies.push(event); });
     await vi.waitFor(() => expect(replies).toHaveLength(1));
     expect(replies).toEqual([{ t: 'rpc-reply', id: 32, result: { paths: [] } }]);
   });
 
-  it('routes revealFileNavigatorItem to controller-file-navigator.js with the controller\'s managers', () => {
+  it('routes revealFileNavigatorItem through the controller façade', () => {
     const controller = makeController();
     dispatchCall(controller, 33, { method: 'revealFileNavigatorItem', params: { index: 0, relPath: 'src/a.ts' } });
-    expect(revealFileNavigatorItem).toHaveBeenCalledWith(controller.managers, 0, 'src/a.ts');
+    expect(controller.revealFileNavigatorItem).toHaveBeenCalledWith(0, 'src/a.ts');
   });
 
   it('routes cancelSchedule', () => {
@@ -439,10 +433,10 @@ describe('handle', () => {
     expect(controller.cancelSchedule).toHaveBeenCalledWith('janus', 'sched-1');
   });
 
-  it('routes clearSchedules straight to the schedule manager', () => {
+  it('routes clearSchedules through the controller façade', () => {
     const controller = makeController();
     dispatchCall(controller, 41, { method: 'clearSchedules', params: {} });
-    expect(controller.managers.schedule.clearAll).toHaveBeenCalled();
+    expect(controller.clearSchedules).toHaveBeenCalled();
   });
 
   it('routes launchAgentFor', () => {
@@ -454,30 +448,30 @@ describe('handle', () => {
   it('routes editorPersonas to a reply carrying the editor persona names', () => {
     const controller = makeController();
     const replies = dispatchCall(controller, 43, { method: 'editorPersonas', params: {} });
+    expect(controller.editorPersonas).toHaveBeenCalled();
     expect(replies).toEqual([{ t: 'rpc-reply', id: 43, result: { names: expect.any(Array) } }]);
   });
 
   it('routes editorSuggest to a deferred reply carrying the callback result', () => {
     const controller = makeController();
-    vi.mocked(editorSuggest).mockImplementation((_managers, _params, callback) => {
+    (controller.editorSuggest as ReturnType<typeof vi.fn>).mockImplementation((_params, callback) => {
       callback({ hunks: [] });
     });
     const replies = dispatchCall(controller, 46, {
       method: 'editorSuggest',
       params: { url: 'file:///a.ts', persona: 'reviewer', content: 'x', prompt: 'improve' },
     });
-    expect(editorSuggest).toHaveBeenCalledWith(controller.managers, { url: 'file:///a.ts', persona: 'reviewer', content: 'x', prompt: 'improve' }, expect.any(Function));
+    expect(controller.editorSuggest).toHaveBeenCalledWith({ url: 'file:///a.ts', persona: 'reviewer', content: 'x', prompt: 'improve' }, expect.any(Function));
     expect(replies).toEqual([{ t: 'rpc-reply', id: 46, result: { hunks: [] } }]);
   });
 
-  it('routes closeEditorConnection to closeConnection with the resolved owner label and acknowledges', () => {
+  it('routes closeEditorConnection through the controller façade and acknowledges', () => {
     const controller = makeController();
     const replies = dispatchCall(controller, 47, {
       method: 'closeEditorConnection',
       params: { url: 'file:///a.ts', persona: 'reviewer' },
     });
-    expect(ownerLabel).toHaveBeenCalledWith(controller.managers, 'file:///a.ts');
-    expect(closeConnection).toHaveBeenCalledWith('acp', 'reviewer', controller.managers, 'janus', expect.any(Function));
+    expect(controller.closeEditorConnection).toHaveBeenCalledWith('file:///a.ts', 'reviewer');
     expect(replies).toEqual([{ t: 'rpc-reply', id: 47, result: 'ok' }]);
   });
 });
