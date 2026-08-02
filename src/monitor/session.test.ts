@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { openMonitorSession, respawnMonitorSession } from './session.js';
+import { createMonitorSession, openMonitorSession, primeMonitorSession, respawnMonitorSession } from './session.js';
 import { messageBus } from '../bus.js';
 import type { Managers } from '../managers.js';
 import type { MonitorSub } from './manager.js';
@@ -46,6 +46,29 @@ function makeManagers(cwd?: string): { managers: Managers; append: ReturnType<ty
 }
 
 describe('openMonitorSession', () => {
+  it('creates a live session before priming begins', () => {
+    const reg = makeReg();
+    const { managers } = makeManagers('/repo');
+    const { session } = makeSession();
+    const spawn = vi.fn(() => session);
+
+    const created = createMonitorSession(reg, managers, spawn);
+
+    expect(created).toBe(session);
+    expect(session.prompt).not.toHaveBeenCalled();
+  });
+
+  it('primes a record that already owns its live session', () => {
+    const reg = makeReg();
+    const { session, prompt } = makeSession();
+    reg.session = session;
+
+    primeMonitorSession(reg);
+
+    expect(reg.inFlight).toBe(true);
+    expect(prompt).toHaveBeenCalledTimes(1);
+  });
+
   it('marks the registration in-flight and spawns a session with the tab cwd', () => {
     const reg = makeReg();
     const { managers } = makeManagers('/repo');

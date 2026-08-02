@@ -3,7 +3,7 @@ import type { Subscription } from '../bus.js';
 import { loadPersona, type Persona } from '../personas.js';
 import { parseSuggestion } from './parsing.js';
 import { openMonitorTab, pushSuggestion, rateSuggestion, updateMonitorMeta } from './window.js';
-import { openMonitorSession, respawnMonitorSession } from './session.js';
+import { createMonitorSession, openMonitorSession, primeMonitorSession, respawnMonitorSession } from './session.js';
 import { spawnMonitorSession } from './acp.js';
 import { validateTargets, targetColor, formatTargets, resolveTargetAliases } from './targets.js';
 import { stopMonitor, closeIfUnfed } from './stop.js';
@@ -61,6 +61,8 @@ export type MonitorSub = {
   subs: Subscription[];
 };
 
+export type MonitorSubSetup = Omit<MonitorSub, 'session' | 'timer'>;
+
 // Owns all live monitors, keyed by `${ownerLabel}:${name}`. Each monitor is a
 // dedicated, tool-less ACP session primed with its persona; transcript entries from its
 // targets buffer up and flush as one prompt every 30s (never when the buffer is empty,
@@ -95,15 +97,16 @@ export class MonitorManager {
       return error instanceof Error ? error.message : String(error);
     }
 
-    const reg: MonitorSub = {
+    const setup: MonitorSubSetup = {
       owner, name, inline, persona, targets: resolved, buffer: [], harnessTranscriptSeen: new Map(), harnessSeen: new Map(), editorSeen: new Map(), pageSeen: new Map(), delimiter: generateSessionDelimiter(), inFlight: true, delivered: 0,
       contextBytes: 0, contextText: [],
-      session: undefined as unknown as AcpSession, timer: undefined as unknown as ReturnType<typeof setInterval>, subs: [],
+      subs: [],
     };
-    this.openSession(reg);
+    const session = createMonitorSession(setup, this.managers, this.spawn);
+    const reg: MonitorSub = { ...setup, session, timer: setInterval(() => this.flush(key), this.flushMs) };
+    primeMonitorSession(reg);
     this.subscribe(key, reg);
     reg.buffer.push(...seedFeedEntries(this.managers, this.managers.tab.tabs, resolved, reg));
-    reg.timer = setInterval(() => this.flush(key), this.flushMs);
     this.monitors.set(key, reg);
     // External mode: open the reporting tab right away (empty feed) so starting the
     // monitor is visible immediately, not only when the first suggestion lands.
