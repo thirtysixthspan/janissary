@@ -30,6 +30,6 @@ export function useEditorWatchReload(
         // The reload is best-effort — the buffer just keeps showing the last content we had.
       }
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- refs hold mutable editor state; mtimeMs is the external-change trigger
   }, [mtimeMs]);
 }

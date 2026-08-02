@@ -87,7 +87,7 @@ export function useEditorSuggest(
     void client.request<{ names: string[] }>({ method: 'editorPersonas', params: {} }).then((res) => {
       setPersonas(res?.names ?? []);
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- persona discovery is intentionally fetched once per mounted editor
   }, []);
 
   const setPendingBoth = (p: PendingSuggest | null) => { pendingRef.current = p; setPending(p); };

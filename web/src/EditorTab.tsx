@@ -78,7 +78,7 @@ export const EditorTab = forwardRef<EditorTabHandle, {
     const moved = !last || last.line !== state.cursor.line || last.col !== state.cursor.col;
     lastCursorRef.current = { line: state.cursor.line, col: state.cursor.col };
     if (moved) caretRef.current?.scrollIntoView({ block: 'nearest' });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- stable refs hold caret/scroll state; active and cursor changes trigger scrolling
   }, [active, state?.cursor.line, state?.cursor.col]);
 
   const dirtyRef = useRef(file.dirty);
