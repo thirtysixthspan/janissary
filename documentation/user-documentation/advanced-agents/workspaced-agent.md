@@ -12,6 +12,8 @@ The clone is made from your repository's `origin` remote and lands at `$root/wor
 
 Running the command from a directory that isn't in a git repository, or in a repo without an `origin` remote, shows an error and creates no tab.
 
+The tab appears right away, marked busy, while the clone runs in the background — anything you type into it joins its [command queue](/user-documentation/command-bar/queue) and runs once the clone finishes. A ready confirmation (and the isolation notice, if isolation isn't actually active) posts to the tab once the clone completes; if the clone fails instead, the tab reports the failure and closes on its own shortly after.
+
 ![The connections panel of a workspaced agent, showing its shell running in the workspace clone's directory.](/screenshots/workspaced-agent.png)
 
 ## Pushing to GitHub needs a token
@@ -24,6 +26,8 @@ That credential is a scoped GitHub token placed in `.janissary/github-token` in 
 
 Create a [fine-grained personal access token](https://github.com/settings/personal-access-tokens/new) scoped to just the repositories the agent should reach, with **Contents: Read and write**, **Pull requests: Read and write**, and **Metadata: Read-only** permissions — nothing broader. Save the token value to `.janissary/github-token` (already gitignored; janissary only ever reads this file, never writes to it).
 
+Pushing from inside a workspace never touches your own git config or an ambient GitHub credential cached elsewhere on your machine, such as an old keychain-stored login — only the token in `.janissary/github-token` is used. That keeps a stale cached credential from intercepting the push and failing with `Write access to repository not granted` even though your token is valid.
+
 ## Lifecycle
 
 <img class="agent-float left" src="/agents/demir-south-east.png" alt="" />
@@ -31,6 +35,7 @@ Create a [fine-grained personal access token](https://github.com/settings/person
 A workspace lasts exactly as long as its tab:
 
 - **Created** when the tab opens — always a fresh clone.
+- **Cancelled** if you close the tab, or quit the app, while the clone is still running — it stops right away instead of finishing in the background.
 - **Removed** when the tab closes, along with everything in it that wasn't pushed.
 - **Not restored**: `janus --relaunch` brings the agent tab back, but not its workspace — the restored tab starts in its last known working directory. Fresh app launches also clear any workspace directories left behind.
 
