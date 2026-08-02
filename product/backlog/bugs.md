@@ -4,7 +4,7 @@
 
 ## development
 
-* claude re-authentication not working in sandbox
+* claude re-authentication not working in workspaced harness tabs.
 
 ## deferred
 
