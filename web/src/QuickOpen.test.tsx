@@ -28,8 +28,8 @@ function renderQuickOpen(overrides: Partial<React.ComponentProps<typeof QuickOpe
 }
 
 const results: FuzzyMatchResult[] = [
-  { path: 'web/src/App.tsx', score: 10, ranges: [[8, 11]] },
-  { path: 'web/src/Api.ts', score: 5, ranges: [[8, 10]] },
+  { path: 'web/src/App.tsx', index: 0, score: 10, ranges: [[8, 11]] },
+  { path: 'web/src/Api.ts', index: 1, score: 5, ranges: [[8, 10]] },
 ];
 
 describe('QuickOpen', () => {

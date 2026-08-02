@@ -1,6 +1,9 @@
 import { basename } from './rel-path';
 
-export type FuzzyMatchResult = { path: string; score: number; ranges: [number, number][] };
+// `index` is the candidate's position in the array passed to `fuzzyMatch` — the only thing that
+// tells two identical candidates apart (identical buffer lines are the common case when the
+// candidates are a file's lines rather than its paths).
+export type FuzzyMatchResult = { path: string; index: number; score: number; ranges: [number, number][] };
 
 const CONSECUTIVE_BONUS = 5;
 const BOUNDARY_BONUS = 3;
@@ -72,29 +75,31 @@ function matchPath(
 
 // Fuzzy subsequence match every candidate path against `query`, returning at most `limit` results
 // ranked best-first: a filename match outranks a directory-only one, consecutive/boundary matches
-// outrank scattered ones, and a shorter path breaks an exact score tie. An empty (post-trim) query
-// short-circuits to no results (Decision 4/11) — there is nothing to rank against.
+// outrank scattered ones, and a shorter path breaks an exact score tie. Two candidates that are
+// equal on all three fall back to their input order, so identical candidates rank adjacently and
+// stably. An empty (post-trim) query short-circuits to no results (Decision 4/11) — there is
+// nothing to rank against.
 export function fuzzyMatch(paths: string[], query: string, limit: number): FuzzyMatchResult[] {
   const trimmed = query.trim();
   if (!trimmed) return [];
   const lowerQuery = trimmed.toLowerCase();
 
-  const scored: { path: string; score: number }[] = [];
-  for (const path of paths) {
+  const scored: { path: string; index: number; score: number }[] = [];
+  for (const [index, path] of paths.entries()) {
     const lowerPath = path.toLowerCase();
     if (!hasSubsequence(lowerPath, lowerQuery)) continue;
     const basenameStart = path.length - basename(path).length;
     const matched = matchPath(path, lowerPath, lowerQuery, basenameStart, false);
-    if (matched) scored.push({ path, score: matched.score });
+    if (matched) scored.push({ path, index, score: matched.score });
   }
 
-  scored.sort((a, b) => b.score - a.score || a.path.length - b.path.length || a.path.localeCompare(b.path));
+  scored.sort((a, b) => b.score - a.score || a.path.length - b.path.length || a.path.localeCompare(b.path) || a.index - b.index);
   const top = scored.slice(0, limit);
 
-  return top.map(({ path, score }) => {
+  return top.map(({ path, index, score }) => {
     const lowerPath = path.toLowerCase();
     const basenameStart = path.length - basename(path).length;
     const ranges = matchPath(path, lowerPath, lowerQuery, basenameStart, true)?.ranges ?? [];
-    return { path, score, ranges };
+    return { path, index, score, ranges };
   });
 }

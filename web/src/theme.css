@@ -198,8 +198,10 @@ html, body, #root {
 .image-meta { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; color: var(--muted); }
 .image-meta .image-name { color: var(--fg); font-weight: 600; }
 .image-meta .image-loc { font-size: 12px; word-break: break-all; }
-/* Editor tab: same layout as the image tab, under its own class names (it isn't an image). */
-.editor-tab { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 8px 12px; gap: 8px; }
+/* Editor tab: same layout as the image tab, under its own class names (it isn't an image).
+   `position: relative` makes it the positioning context for the find overlay (.editor-find), which
+   would otherwise span the whole pane grid in a split. */
+.editor-tab { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 8px 12px; gap: 8px; }
 .editor-meta { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; color: var(--muted); }
 .editor-meta .editor-name { color: var(--fg); font-weight: 600; }
 .editor-meta .editor-loc { font-size: 12px; word-break: break-all; }
@@ -511,6 +513,20 @@ html, body, #root {
 .quick-open-dir { color: var(--muted); margin-left: 8px; }
 .quick-open-row mark { background: var(--accent); color: var(--bg); border-radius: 2px; }
 .quick-open-row.selected mark { background: var(--bg); color: var(--accent); }
+
+/* Editor find overlay (Cmd+F) */
+.editor-find .command { border-top: none; border-bottom: 1px solid var(--border); }
+.editor-find .command input {
+  flex: 1; background: transparent; border: none; outline: none;
+  color: var(--fg); font-family: var(--mono); font-size: 13.1625px;
+}
+.editor-find-row { gap: 8px; font-family: var(--mono); }
+.editor-find-line { flex: none; color: var(--muted); text-align: right; min-width: 3ch; }
+/* One row per line, clipped at the overlay's width — no wrapping, no windowing around the match. */
+.editor-find-text { overflow: hidden; text-overflow: ellipsis; }
+.editor-find-row mark { background: var(--accent); color: var(--bg); border-radius: 2px; }
+.editor-find-row.selected mark { background: var(--bg); color: var(--accent); }
+.editor-find-row.selected .editor-find-line { color: var(--bg); }
 
 /* Quit confirmation dialog (modal: backdrop blocks all input outside the dialog) */
 .modal-backdrop {
