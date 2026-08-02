@@ -124,7 +124,13 @@ Match the existing style in `product/backlog/technical-debt.md`: one `*` bullet,
 - Say whether `src/<prefix>/` already exists, and if so, what is in it and why the flat files belong beside it.
 - Say what the cluster is, in one clause, so the reader can tell it is a real concern and not a prefix coincidence.
 - Note the blast radius: roughly how many files import the group and would need an import path rewrite.
-- **State the resolution explicitly**: resolved by running the [`improve-namespacing.md`](../hygiene/improve-namespacing.md) task against this prefix. Every entry needs this sentence. It is what tells whoever picks the item up that the work is a scripted, mechanical move rather than a judgment call they have to design.
+- **Carry the trigger sentence, verbatim in this form:**
+
+  ```
+  Resolve by running the `ai/tasks/hygiene/improve-namespacing.md` task against the `<prefix>` prefix.
+  ```
+
+  Every entry needs it, and the wording is not optional. [`resolve-technical-debt.md`](../resolve-technical-debt.md) routes an item to a hygiene playbook **only** when the entry names the playbook like this — an item that merely describes a flat prefix cluster gets hand-planned instead, which is not what you want here. The same sentence also tells a human reader that the work is a scripted, mechanical move rather than a judgment call they have to design.
 - Carry a severity rating.
 
 Severity for namespacing debt sits lower than for most other technical debt, because nothing here is a bug risk. The cost is navigability and the drag on every future file added to the concern. Rate it this way:
@@ -142,6 +148,8 @@ An entry in the right shape reads roughly like this:
 * Move the four flat `src/widget-*.ts` files into `src/widget/`: `widget-loop.ts`, `widget-manager.ts`, `widget-runner.ts`, and `widget-tools.ts` sit in the flat `src/` root with four colocated tests and no bare `src/widget.ts` entry, carrying their grouping in a filename prefix instead of a directory. They are one concern — the widget session lifecycle — and eleven files across `src/` and `web/src/` import them, so the move is a rename plus eleven import path rewrites. `src/widget/` does not exist yet and no config file names any of the four paths literally. Resolve by running the `ai/tasks/hygiene/improve-namespacing.md` task against the `widget` prefix. Severity: **medium**.
 ```
 
+The trigger sentence sits inside the bullet, in the exact form given above — `resolve-technical-debt.md` routes on it.
+
 ---
 
 ## Step 6 — Integrate into the `## development` section
@@ -152,7 +160,7 @@ Before moving on, verify:
 
 1. `git status` shows `product/backlog/technical-debt.md` as the **only** changed file. No file under `src/` may appear. If one does, you moved something, which this task never does — revert it.
 2. `git diff` shows the only changes are new lines appended inside `## development` — nothing removed, nothing changed elsewhere in the file.
-3. Every new bullet names its target directory and says it is resolved by `improve-namespacing.md`.
+3. Every new bullet names its target directory and carries the trigger sentence in the exact form given in Step 5.
 4. None of the new bullets duplicate an item from Step 1's dedupe set.
 
 If anything else changed on disk, revert it (`git checkout -- <file>`) before committing.
