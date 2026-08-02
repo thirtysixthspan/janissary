@@ -1,4 +1,4 @@
-import type { ImageView, MarkdownView, EditorView, PageView } from '../types.js';
+import type { ImageView, VideoView, MarkdownView, EditorView, PageView } from '../types.js';
 
 // Capabilities an opener may use, supplied by the dispatcher (the Controller). Kept deliberately
 // narrow so an opener can only do the two things its surfaces promise — launch an external viewer
@@ -9,6 +9,8 @@ export type OpenContext = {
   note: (text: string) => void;
   // Create and focus an in-app image view tab.
   openImageTab: (image: ImageView) => void;
+  // Create and focus an in-app video view tab.
+  openVideoTab: (video: VideoView) => void;
   // Create and focus an in-app markdown view tab.
   openMarkdownTab: (view: MarkdownView) => void;
   // Create and focus an in-app plain-text editor tab.

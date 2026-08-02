@@ -1,10 +1,10 @@
 // Wire types shared between the Node server and the React web client.
 // The web client imports these directly via the @shared path alias — no mirror needed.
-import type { BufferLine, ImageView, PageView, HarnessView, MarkdownView, EditorView, TerminalEntry, CompletionResult, FileNavigatorView, FileNavigatorDetail, FileNavigatorRow, TaskRow, ProfileRow } from './types.js';
+import type { BufferLine, ImageView, VideoView, PageView, HarnessView, MarkdownView, EditorView, TerminalEntry, CompletionResult, FileNavigatorView, FileNavigatorDetail, FileNavigatorRow, TaskRow, ProfileRow } from './types.js';
 
 // Used locally in TabView below, so separate import + export is required.
 // eslint-disable-next-line unicorn/prefer-export-from
-export type { BufferLine, ImageView, PageView, HarnessView, MarkdownView, EditorView, TerminalEntry, CompletionResult, FileNavigatorView, FileNavigatorDetail, FileNavigatorRow, TaskRow, ProfileRow };
+export type { BufferLine, ImageView, VideoView, PageView, HarnessView, MarkdownView, EditorView, TerminalEntry, CompletionResult, FileNavigatorView, FileNavigatorDetail, FileNavigatorRow, TaskRow, ProfileRow };
 
 // Identifies the ACP session behind a connections-panel row, for the `openAcpTranscript` RPC to
 // route on: the tab's own agent, a monitor session, or an editor-persona session.
@@ -29,6 +29,11 @@ export type AggregatedScheduleView = ScheduleView & { tab: string; command: stri
 // A pending route chooser: the unprefixed command plus the option labels to pick from.
 export type RouteChooserView = { cmd: string; choices: string[] };
 export type FileOpenerChoice = { label: string; command: 'edit' | 'open external' };
+// How activating one file navigator row resolves (see the `fileNavigatorOpeners` RPC): either a
+// single command the client runs straight away, or the fallback options it renders as a chooser.
+// `open external` is the command a video row's edit gesture resolves to — a plain-text editor is
+// useless for a binary video, so the gesture hands the file to the configured player instead.
+export type FileOpenerResolution = { command?: 'open' | 'edit' | 'open external'; choices: FileOpenerChoice[] };
 export type BulkConflictPolicy = 'overwrite-all' | 'skip-conflicts';
 export type BatchResult = { total: number; failedPaths: string[] };
 export type BulkMoveResult = BatchResult | { conflictPaths: string[] };
@@ -87,12 +92,14 @@ export type TabView = {
   commandQueue: string[];
   toolStepsExpanded: boolean;
   pendingQuestion?: PendingQuestionView;
-  // Body kind: undefined/`'agent'` for a normal tab, `'image'` for an image view, `'page'` for an embedded web page, `'harness'` for a full-tab AI harness terminal, `'markdown'` for a rendered Markdown file, `'monitor'` for the AI-monitor suggestion feed, `'files'` for a file navigator, `'notifications'` for the notification feed, `'schedules'` for the aggregated schedule list.
-  view?: 'agent' | 'image' | 'page' | 'harness' | 'markdown' | 'editor' | 'monitor' | 'files' | 'notifications' | 'schedules';
+  // Body kind: undefined/`'agent'` for a normal tab, `'image'` for an image view, `'video'` for a video player, `'page'` for an embedded web page, `'harness'` for a full-tab AI harness terminal, `'markdown'` for a rendered Markdown file, `'monitor'` for the AI-monitor suggestion feed, `'files'` for a file navigator, `'notifications'` for the notification feed, `'schedules'` for the aggregated schedule list.
+  view?: 'agent' | 'image' | 'video' | 'page' | 'harness' | 'markdown' | 'editor' | 'monitor' | 'files' | 'notifications' | 'schedules';
   // Display name when it differs from `label` (image tabs are all titled `image`).
   title?: string;
   // Image-view payload, present only when `view === 'image'`.
   image?: ImageView;
+  // Video-view payload, present only when `view === 'video'`.
+  video?: VideoView;
   // Page-view payload, present only when `view === 'page'`.
   page?: PageView;
   // Harness-view payload, present only when `view === 'harness'`.

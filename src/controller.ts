@@ -13,7 +13,7 @@ import { runSuggestion } from './monitor/window.js';
 import { listPersonas } from './personas.js';
 import type { TabView } from './protocol.js';
 import type { Managers } from './managers.js';
-import type { AcpRef, BatchResult, BulkConflictPolicy, BulkMoveResult, FileOpenerChoice, FileNavigatorSelectionRecord } from './protocol.js';
+import type { AcpRef, BatchResult, BulkConflictPolicy, BulkMoveResult, FileOpenerResolution, FileNavigatorSelectionRecord } from './protocol.js';
 import type { EditorSuggestParams, EditorSuggestResult } from './editor-suggest/handler.js';
 import { buildStateEvent } from './state-event.js';
 import { openTranscriptFor, openHarnessTranscriptFor, openAcpTranscript } from './controller/transcript.js';
@@ -219,7 +219,7 @@ export class Controller {
 
   fileNavigatorSearch(index: number): Promise<string[]> { return fileNavigatorRpc.fileNavigatorSearch(this.managers, index); }
   revealFileNavigatorItem(index: number, relPath: string): void { fileNavigatorRpc.revealFileNavigatorItem(this.managers, index, relPath); }
-  fileNavigatorOpeners(index: number, relPath: string, edit: boolean): { command?: 'open' | 'edit'; choices: FileOpenerChoice[] } {
+  fileNavigatorOpeners(index: number, relPath: string, edit: boolean): FileOpenerResolution {
     return fileNavigatorRpc.fileNavigatorOpeners(this.managers, index, relPath, edit);
   }
   reportFileNavigatorSelection(id: number, navigators: FileNavigatorSelectionRecord[]): void { resolveTreeSelections(id, navigators); }

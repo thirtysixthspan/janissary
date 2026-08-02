@@ -1,4 +1,4 @@
-import type { LogEntry, Tab, ImageView, MarkdownView, EditorView, PageView, HarnessView, FileNavigatorView } from '../types.js';
+import type { LogEntry, Tab, ImageView, VideoView, MarkdownView, EditorView, PageView, HarnessView, FileNavigatorView } from '../types.js';
 export { expandTabs, wordWrap, flattenBuffer } from './formatting.js';
 export { distinctColor, dotColors } from './colors.js';
 export { stripComments, renumberTabs, canMoveTab, swapTabsLeft, swapTabsRight, insertTabInGroup, uniqueLabel } from './utils.js';
@@ -23,6 +23,15 @@ export const makeImageTab = (label: string, dotColor: string, number: number, gr
   view: 'image',
   title: 'image',
   image,
+});
+
+// A video view tab (opened via `open <video>` for a browser-decodable container). Hosts a native
+// video player; carries no transcript/history/shell, like the image tab it mirrors.
+export const makeVideoTab = (label: string, dotColor: string, number: number, group: number, groupColor: string, video: VideoView): Tab => ({
+  ...makeTab(label, dotColor, number, [], [], undefined, group, groupColor),
+  view: 'video',
+  title: 'video',
+  video,
 });
 
 // A page view tab (opened via `open https://…` or `open page …`). Renders an iframe; carries no

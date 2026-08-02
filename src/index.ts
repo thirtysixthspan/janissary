@@ -8,6 +8,7 @@ import type { ServerEvent } from './protocol.js';
 import { handle } from './message-handler.js';
 import { buildStateEvent } from './state-event.js';
 import { isClientMessage } from './client-message.js';
+import { serveOpenFile } from './open-route.js';
 
 // Applied to every HTTP response: defence-in-depth for the XSS path and token leak.
 const SECURITY_HEADERS = {
@@ -22,6 +23,10 @@ const MIME: Record<string, string> = {
   // Image types served via the `/open/<id>` route (opened files).
   '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.gif': 'image/gif',
   '.webp': 'image/webp', '.bmp': 'image/bmp', '.avif': 'image/avif',
+  // Video types served via the `/open/<id>` route. Only the browser-decodable containers the video
+  // opener plays inline need an entry; the rest never reach the server (see `openers/video.ts`).
+  '.mp4': 'video/mp4', '.m4v': 'video/mp4', '.webm': 'video/webm', '.ogv': 'video/ogg',
+  '.mov': 'video/quicktime',
   // Markdown files served via the `/open/<id>` route.
   '.md': 'text/markdown; charset=utf-8', '.markdown': 'text/markdown; charset=utf-8',
   // Text types with their own registered MIME, served via the `/open/<id>` route (editor opener).
@@ -72,11 +77,10 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
       const id = decodeURIComponent(urlPath.slice('/open/'.length));
       const filePath = controller.openFilePath(id);
       if (!filePath) { res.writeHead(404).end('not found'); return; }
-      let bytes: Buffer;
-      try { bytes = await readFile(filePath); }
-      catch { bytes = Buffer.alloc(0); }
-      res.writeHead(200, { ...SECURITY_HEADERS, 'content-type': MIME[path.extname(filePath).toLowerCase()] ?? 'application/octet-stream' });
-      res.end(bytes);
+      await serveOpenFile(request, res, filePath, {
+        ...SECURITY_HEADERS,
+        'content-type': MIME[path.extname(filePath).toLowerCase()] ?? 'application/octet-stream',
+      });
       return;
     }
     // Resolve within webDir; fall back to index.html for SPA routes / unknown assets.

@@ -35,6 +35,11 @@ export type Config = {
   // lazily-created workspace clone (see `git-sync.ts`). Empty by default — syncing is entirely
   // config-driven, with no UI toggle.
   syncPaths: string[];
+  // The external application each opener hands a file to, keyed by opener name (see `openers/`).
+  // A macOS application name, launched via the OS `open` command's `-a` flag; an empty or missing
+  // entry means "use the OS default handler". Only the `video` entry is read today. Hand-edited
+  // in `.janissary/config.json`, like `syncPaths` and `notifications`.
+  externalViewers: Record<string, string>;
 };
 
 export const DEFAULT_TRANSCRIPT_MAX_LINES = 25_000;
@@ -45,6 +50,7 @@ export const DEFAULT_ACTIVE_TAB_NAME_MAX_LENGTH = 50;
 // this needs to accommodate real file names rather than the short display length.
 export const TAB_RENAME_MAX_LENGTH = 50;
 export const DEFAULT_SYNC_PATHS = ['product/backlog/', 'product/plans/'];
+export const DEFAULT_EXTERNAL_VIEWERS: Record<string, string> = { video: 'QuickTime Player' };
 
 const DEFAULT_CONFIG: Config = {
   transcriptMaxLines: DEFAULT_TRANSCRIPT_MAX_LINES,
@@ -63,6 +69,7 @@ const DEFAULT_CONFIG: Config = {
     },
   },
   syncPaths: DEFAULT_SYNC_PATHS,
+  externalViewers: DEFAULT_EXTERNAL_VIEWERS,
 };
 
 let config: Config = { ...DEFAULT_CONFIG };

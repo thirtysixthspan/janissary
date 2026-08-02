@@ -4,7 +4,7 @@
 // sites across the codebase don't need to change.
 
 export type {
-  LogEntry, TerminalEntry, MessageRenderKind, BufferLine, HarnessView, ImageView, PageView,
+  LogEntry, TerminalEntry, MessageRenderKind, BufferLine, HarnessView, ImageView, VideoView, PageView,
   MarkdownView, EditorView, FileNavigatorDetail, FileNavigatorRow, FileNavigatorView, TaskRow, MonitorTarget,
   MonitorSuggestion, CenterPane, Tab,
 } from './tab/types.js';

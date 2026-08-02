@@ -33,3 +33,30 @@ describe('TabOpeningState.openMarkdownTab', () => {
     expect(tm.tabs[tm.activeTab].markdown?.path).toBe('/tmp/notes.md');
   });
 });
+
+describe('TabOpeningState.openVideoTab', () => {
+  const clip = { name: 'clip.mp4', path: '/tmp/clip.mp4', size: '1 KB', url: '/open/1', player: 'QuickTime Player' };
+
+  it('adds a new video tab and makes it active', () => {
+    const tm = makeTabManager();
+    const before = tm.tabs.length;
+
+    tm.openVideoTab(clip);
+
+    expect(tm.tabs.length).toBe(before + 1);
+    expect(tm.activeTab).toBe(tm.tabs.length - 1);
+    expect(tm.tabs[tm.activeTab].video?.path).toBe('/tmp/clip.mp4');
+  });
+
+  it('focuses the existing tab instead of opening the same video twice', () => {
+    const tm = makeTabManager();
+    tm.openVideoTab(clip);
+    const opened = tm.tabs.length;
+    tm.setActiveTab(0);
+
+    tm.openVideoTab({ ...clip, url: '/open/2' });
+
+    expect(tm.tabs.length).toBe(opened);
+    expect(tm.tabs[tm.activeTab].video?.path).toBe('/tmp/clip.mp4');
+  });
+});

@@ -163,7 +163,7 @@ stops refreshing automatically and can be refreshed manually by collapsing and r
 | Double-click a file row | Select it and open it (with `open`) — for Markdown files, this opens the plain-text editor instead (with `edit`) |
 | Double-click a directory row | Select it and toggle expand/collapse |
 | Double-click the `..` row | Navigate the tree up one directory |
-| Shift+double-click a file row | Select it and open it in the plain-text editor (with `edit`), even for files whose normal opener is a viewer (images) — for Markdown files, this instead opens the rendered preview (with `open`) |
+| Shift+double-click a file row | Select it and open it in the plain-text editor (with `edit`), even for files whose normal opener is a viewer (images) — for Markdown files, this instead opens the rendered preview (with `open`), and for video files it hands the file to the configured external player (with `open external`), since a binary video has nothing to edit as text |
 | Chevron (a caret icon, pointing right when collapsed and down when expanded) | Visual affordance only — the whole row is the click target |
 | Double-clicking any row | Does not select the row's text |
 | Header collapse-all button | Collapse every expanded directory back to just the root |
@@ -366,7 +366,7 @@ A focused file navigator tab captures its own keys, following the ARIA treeview 
 | `→` | Collapsed directory: expand. Expanded directory: reroot. File: open. `..`: no-op |
 | `←` | Expanded directory: collapse. Otherwise: move selection to the parent directory |
 | `Enter` / `Space` | File: open. Directory: toggle expand/collapse. `..`: navigate to parent directory |
-| `Shift+Enter` | File: open in the plain-text editor (mirrors Shift+double-click) |
+| `Shift+Enter` | File: open in the plain-text editor (mirrors Shift+double-click, including its Markdown and video exceptions) |
 | `Home` / `End` | Move the cursor to the first / last visible row and collapse selection to it |
 | `Page Up` / `Page Down` | Move the cursor by one viewport of rows and collapse selection to it |
 | `Backspace` / `Delete` | Delete the normalized selection after one confirmation |

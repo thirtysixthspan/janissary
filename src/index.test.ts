@@ -98,6 +98,20 @@ describe('startServer (WS + RPC + security)', () => {
     exitSpy.mockRestore();
   });
 
+  it('rejects an /open/ request with no token, and 404s an unregistered id with one', async () => {
+    server = await startServer({ webDir });
+    const get = (query: string) => new Promise<number>((res, rej) => {
+      const request = http.get(`http://127.0.0.1:${server!.port}/open/not-registered${query}`, (r) => {
+        r.resume();
+        res(r.statusCode ?? 0);
+      });
+      request.on('error', rej);
+    });
+
+    expect(await get('')).toBe(403);
+    expect(await get(`?token=${server.token}`)).toBe(404);
+  });
+
   it('rejects a connection with a bad token', async () => {
     server = await startServer({ webDir: tmpdir() });
     const ws = new WebSocket(`ws://127.0.0.1:${server.port}/?token=wrong`);

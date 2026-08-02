@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type React from 'react';
-import type { FileOpenerChoice } from '@shared/protocol';
+import type { FileOpenerChoice, FileOpenerResolution } from '@shared/protocol';
 import type { JanusClient } from './ws';
 
 export type PendingOpeners = { path: string; choices: FileOpenerChoice[]; selected: number };
@@ -13,7 +13,7 @@ export function useFileNavigatorOpener(client: JanusClient, index: number, root:
       client.send({ method: 'command', params: { text: `${edit ? 'edit' : 'open'} ${root}/${path}` } });
       return;
     }
-    void client.request<{ command?: 'open' | 'edit'; choices: FileOpenerChoice[] }>({
+    void client.request<FileOpenerResolution>({
       method: 'fileNavigatorOpeners', params: { index, relPath: path, edit },
     }).then((result) => {
       if (result?.command) client.send({ method: 'command', params: { text: `${result.command} ${root}/${path}` } });

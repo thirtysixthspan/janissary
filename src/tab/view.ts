@@ -70,6 +70,7 @@ export function buildTabView(
     view: tab.view,
     title: tab.title,
     image: tab.image,
+    video: tab.video,
     page: tab.page,
     harness: tab.harness,
     markdown: tab.markdown,

@@ -75,6 +75,22 @@ describe('ViewTabBody', () => {
     expect(container.querySelector<HTMLElement>('.tab-body')?.style.borderLeft).toBe('4px solid var(--muted)');
   });
 
+  it('returns null when view is video but no video payload', () => {
+    const tab = baseTab({ view: 'video' });
+    const { container } = render(React.createElement(ViewTabBody, { tab, client: {} as never, index: 0 }));
+    expect(container.innerHTML).toBe('');
+  });
+
+  it('renders VideoTab when view is video with payload', () => {
+    const tab = baseTab({
+      view: 'video',
+      video: { name: 'clip.mp4', path: '/a/clip.mp4', size: '1 MB', url: '/open/3', player: 'QuickTime Player' },
+    });
+    const { container } = render(React.createElement(ViewTabBody, { tab, client: {} as never, index: 0 }));
+    expect(container.querySelector('.tab-body')).toBeTruthy();
+    expect(container.querySelector(':scope .video-tab video')).toBeTruthy();
+  });
+
   it('renders MarkdownTab when view is markdown with payload', async () => {
     const tab = baseTab({ view: 'markdown', markdown: { name: 'readme.md', path: '/a/readme.md', size: '2 KB', url: '/open/2' } });
     const { container } = render(React.createElement(ViewTabBody, { tab, client: {} as never, index: 0 }));
