@@ -220,6 +220,7 @@ html, body, #root {
 .image-stage .video-player { max-width: 100%; max-height: 100%; }
 .video-unplayable { display: flex; flex-direction: column; align-items: center; gap: 8px; color: var(--muted); text-align: center; }
 .video-unplayable .video-unplayable-path { font-size: 12px; word-break: break-all; }
+.image-meta .video-shot-saved { color: var(--fg); font-size: 12px; }
 /* Page view tab: full-height iframe with no chrome. */
 .page-tab { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .page-header {

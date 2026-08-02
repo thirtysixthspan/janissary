@@ -45,6 +45,7 @@ const makeController = () =>
     runSuggestion: vi.fn(),
     rateSuggestion: vi.fn(),
     saveFile: vi.fn(),
+    captureVideoFrame: vi.fn(() => 'clip.shot-1.png'),
     syncPageSnapshot: vi.fn(),
     fileNavigatorToggle: vi.fn(),
     fileNavigatorCollapseAll: vi.fn(),
@@ -211,6 +212,15 @@ describe('handle', () => {
     const controller = makeController();
     dispatchCall(controller, 13, { method: 'rateSuggestion', params: { id: 's1', up: true } });
     expect(controller.rateSuggestion).toHaveBeenCalledWith('s1', true);
+  });
+
+  it('routes captureVideoFrame and replies with the name the server chose', () => {
+    const controller = makeController();
+    const replies = dispatchCall(controller, 15, {
+      method: 'captureVideoFrame', params: { url: '/open/v1', dataUrl: 'data:image/png;base64,AA==' },
+    });
+    expect(controller.captureVideoFrame).toHaveBeenCalledWith('/open/v1', 'data:image/png;base64,AA==');
+    expect(replies).toEqual([{ t: 'rpc-reply', id: 15, result: { name: 'clip.shot-1.png' } }]);
   });
 
   it('routes saveFile', () => {

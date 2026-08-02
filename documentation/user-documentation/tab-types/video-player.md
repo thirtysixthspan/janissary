@@ -35,6 +35,21 @@ A playing video keeps playing when you switch to another tab. It isn't paused or
 
 This means sound can come from a tab you can't see. To stop it, pause the video before you leave the tab, or close the tab.
 
+## Capture a still frame
+
+The camera button in the tab header saves the frame you're looking at as a PNG next to the video file:
+
+```
+clip.mp4  →  clip.shot-1.png
+             clip.shot-2.png
+```
+
+Frames are captured at the video's full resolution, whatever size the tab is. Each capture takes the next free number, so pressing the button repeatedly builds up a set instead of overwriting one file. The name it used appears briefly in the header.
+
+You can't choose where it goes or what it's called — the file always lands beside the video. Open one like any other image: `open clip.shot-1.png`.
+
+The button only appears while the video is playable. There's nothing to capture from a file that wouldn't decode, or from a format that opens in an external player.
+
 ## Opening in an external player
 
 `open external <video>` hands any video to a player outside the app:

@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import type { VideoView } from '@shared/protocol';
 import type { JanusClient } from './ws';
@@ -18,7 +18,8 @@ function makeVideo(overrides: Partial<VideoView> = {}): VideoView {
 
 function makeClient() {
   const send = vi.fn();
-  return { client: { send } as unknown as JanusClient, send };
+  const request = vi.fn(async () => ({ name: 'clip.shot-1.png' }));
+  return { client: { send, request } as unknown as JanusClient, send, request };
 }
 
 describe('VideoTab', () => {
@@ -68,6 +69,44 @@ describe('VideoTab', () => {
       method: 'command',
       params: { text: 'open external /home/user/clip.mp4' },
     });
+  });
+
+  it('offers Capture frame beside Split while the player is showing', () => {
+    const { client } = makeClient();
+    const { container } = render(<VideoTab video={makeVideo()} client={client} onSplit={vi.fn()} />);
+
+    expect(screen.getByRole('button', { name: 'Capture frame' })).toBeInTheDocument();
+    expect(container.querySelector(':scope .image-actions .tab-split')).not.toBeNull();
+  });
+
+  it('drops Capture frame in the unplayable state, where there is no frame to capture', () => {
+    const { client } = makeClient();
+    const { container } = render(<VideoTab video={makeVideo()} client={client} />);
+
+    fireEvent.error(container.querySelector('video')!);
+
+    expect(screen.queryByRole('button', { name: 'Capture frame' })).not.toBeInTheDocument();
+  });
+
+  it('captures a frame and shows the name the server saved it under', async () => {
+    const { client, request } = makeClient();
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext')
+      .mockImplementation(() => ({ drawImage: vi.fn() }) as unknown as CanvasRenderingContext2D);
+    vi.spyOn(HTMLCanvasElement.prototype, 'toDataURL').mockReturnValue('data:image/png;base64,AAAA');
+    const { container } = render(<VideoTab video={makeVideo()} client={client} />);
+    Object.defineProperties(container.querySelector('video')!, {
+      videoWidth: { value: 640, configurable: true },
+      videoHeight: { value: 480, configurable: true },
+    });
+
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Capture frame' })); });
+
+    expect(request).toHaveBeenCalledWith({
+      method: 'captureVideoFrame',
+      params: { url: '/open/1', dataUrl: 'data:image/png;base64,AAAA' },
+    });
+    expect(screen.getByText('Saved clip.shot-1.png')).toBeInTheDocument();
+    vi.restoreAllMocks();
   });
 
   it('labels the fallback button generically when no player is configured', () => {

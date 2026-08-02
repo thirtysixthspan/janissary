@@ -30,5 +30,6 @@ export {
   faArrowsRotate as syncIcon,
   faTableColumns as splitTabIcon,
   faTableList as fileDetailIcon,
+  faCamera as captureFrameIcon,
 } from '@fortawesome/free-solid-svg-icons';
 export { faFlag as unreadIcon, faClipboard as viewCaptureIcon } from '@fortawesome/free-regular-svg-icons';

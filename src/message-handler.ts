@@ -68,6 +68,10 @@ export function handle(controller: Controller, message: ClientMessage, reply: (e
     }
     case 'saveFile': { controller.saveFile(message.params.url, message.params.content); break;
     }
+    case 'captureVideoFrame': {
+      reply({ t: 'rpc-reply', id: message.id, result: { name: controller.captureVideoFrame(message.params.url, message.params.dataUrl) } });
+      return;
+    }
     case 'editorSync': { controller.syncEditorBuffer(message.params.url, message.params.content); break;
     }
     case 'resyncEditorTab': { controller.resyncEditorTab(message.params.url); break;
