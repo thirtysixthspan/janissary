@@ -4,9 +4,8 @@ import type { ProfileFilesEntry } from './types.js';
 import type { MainAreaCandidate } from './focus.js';
 
 // Open each profile-level file-navigator tab once every entry is open, rooted at `defaultLabel`
-// (the profile's first newly opened tab) unless the entry names its own `in` target. `defaultLabel`
-// is undefined when the profile opened nothing, in which case an entry with no `in` has nothing to
-// root itself at and is skipped with a note. An entry's `path`, when set, is appended after the
+// (the profile's first newly opened tab, or the issuing tab when the launch opened none of its own)
+// unless the entry names its own `in` target. An entry's `path`, when set, is appended after the
 // clauses so the tree roots at that literal path (e.g. `$root`), leaving the resolved label only as
 // the tab the output note appends to.
 //
@@ -39,13 +38,12 @@ function placeInGroup(
 }
 
 export function openProfileFiles(
-  files: ProfileFilesEntry[], managers: Managers, defaultLabel: string | undefined, notes: string[],
+  files: ProfileFilesEntry[], managers: Managers, defaultLabel: string, notes: string[],
   defaultGroup: number, colorForGroup: (group: number, fallbackDotColor: string) => string,
 ): MainAreaCandidate[] {
   const opened: MainAreaCandidate[] = [];
   for (const entry of files) {
     const label = entry.in ?? defaultLabel;
-    if (label === undefined) { notes.push('File navigator: no tab to root it at.'); continue; }
     const treeLabel = managers.fileNavigator.open(filesCommand(entry), label);
     notes.push(`Opened file navigator${entry.dock ? ` (docked ${entry.dock})` : ''}.`);
     if (treeLabel === undefined) continue;

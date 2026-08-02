@@ -65,14 +65,6 @@ describe('openProfileEditors', () => {
     expect(edit).toHaveBeenCalledWith('edit ./notes.txt', './notes.txt', 'harness', 8);
   });
 
-  it('skips an unrooted editor with a note', () => {
-    const { managers, edit } = makeManagers();
-    const notes: string[] = [];
-    expect(openProfileEditors([{ path: 'new.txt' }], managers, undefined, notes, 1, identityColor)).toEqual([]);
-    expect(edit).not.toHaveBeenCalled();
-    expect(notes).toEqual(['Editor tab: no tab to root it at.']);
-  });
-
   it('passes a missing-file path to edit without checking the disk', () => {
     const { managers, edit } = makeManagers();
     openProfileEditors([{ path: './missing.txt' }], managers, 'agent', [], 1, identityColor);

@@ -1,0 +1,75 @@
+{
+  "tabs": [
+    {
+      "type": "agent",
+      "name": "janus",
+      "active": false,
+      "cwd": "$root/",
+      "color": "#5b9cff",
+      "number": 2,
+      "focus": true,
+      "group": 1,
+      "groupColor": "#5b9cff",
+      "pane": "left"
+    },
+    {
+      "type": "files",
+      "dock": "left",
+      "path": "$root/",
+      "expanded": [
+        "product",
+        "product/backlog",
+        "product/plans",
+        "product/plans/draft",
+        "product/plans/ready"
+      ],
+      "cursor": "product",
+      "anchor": "product",
+      "selected": [
+        "product"
+      ]
+    },
+    {
+      "type": "editor",
+      "path": "$root/product/backlog/issues.md",
+      "color": "#ffd93d",
+      "number": 3,
+      "group": 1,
+      "groupColor": "#5b9cff",
+      "pane": "left"
+    },
+    {
+      "type": "editor",
+      "path": "$root/product/backlog/features.md",
+      "color": "#f368e0",
+      "number": 4,
+      "group": 1,
+      "groupColor": "#5b9cff",
+      "pane": "left"
+    },
+    {
+      "type": "editor",
+      "path": "$root/product/backlog/technical-debt.md",
+      "color": "#5f27cd",
+      "number": 5,
+      "group": 1,
+      "groupColor": "#5b9cff",
+      "pane": "left"
+    },
+    {
+      "type": "editor",
+      "path": "$root/product/backlog/bugs.md",
+      "color": "#6bcb77",
+      "number": 6,
+      "group": 1,
+      "groupColor": "#5b9cff",
+      "pane": "left"
+    }
+  ],
+  "layout": {
+    "window": {
+      "width": 1280,
+      "height": 800
+    }
+  }
+}

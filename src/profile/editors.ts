@@ -18,14 +18,16 @@ export function relocateToGroup(managers: Managers, targetGroup: number, groupCo
   managers.tab.setActiveTab(managers.tab.findIndex(moved.label));
 }
 
+// Open each profile-level editor tab, resolving a relative `path` against `defaultLabel` — the
+// profile's first newly opened tab, or the issuing tab when the launch opened none of its own —
+// unless the entry names its own `in` target.
 export function openProfileEditors(
-  editors: ProfileEditorsEntry[], managers: Managers, defaultLabel: string | undefined, notes: string[],
+  editors: ProfileEditorsEntry[], managers: Managers, defaultLabel: string, notes: string[],
   defaultGroup: number, colorForGroup: (group: number, fallbackDotColor: string) => string,
 ): MainAreaCandidate[] {
   const opened: MainAreaCandidate[] = [];
   for (const entry of editors) {
     const label = entry.in ?? defaultLabel;
-    if (label === undefined) { notes.push('Editor tab: no tab to root it at.'); continue; }
     const before = managers.tab.tabs.length;
     managers.openFile.edit(`edit ${entry.path}`, entry.path, label, entry.line);
     if (managers.tab.tabs.length > before) {

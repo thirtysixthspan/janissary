@@ -34,7 +34,7 @@ function makeManagers(initial: Tab[] = []): {
 }
 
 describe('openProfileFiles', () => {
-  const run = (files: ProfileFilesEntry[], defaultLabel: string | undefined, notes: string[] = []) => {
+  const run = (files: ProfileFilesEntry[], defaultLabel: string, notes: string[] = []) => {
     const { managers, open, restoreView } = makeManagers();
     const opened = openProfileFiles(files, managers, defaultLabel, notes, 1, identityColor);
     return { open, notes, restoreView, opened, managers };
@@ -86,12 +86,6 @@ describe('openProfileFiles', () => {
   it('combines the with clause with in and dock', () => {
     const { open } = run([{ in: 'other', dock: 'right', details: 'modified' }], 'claude');
     expect(open).toHaveBeenCalledWith('files in other on right with modified', 'other');
-  });
-
-  it('skips with a note when there is no default label and the entry has no in', () => {
-    const { open, notes } = run([{ dock: 'left' }], undefined);
-    expect(open).not.toHaveBeenCalled();
-    expect(notes).toEqual(['File navigator: no tab to root it at.']);
   });
 
   it('does nothing when there are no files entries', () => {

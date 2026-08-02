@@ -235,6 +235,24 @@ describe('openProfileEntries — profile-level file navigator', () => {
     expect(fileNavigatorOpen).toHaveBeenCalledWith('files on left', 'claude');
   });
 
+  // A profile whose only entry names the issuing tab opens no tab of its own, but its navigators
+  // and editors still have the issuing tab to root against instead of being skipped wholesale.
+  it('roots navigators and editors at the issuing tab when the launch opened no tab of its own', () => {
+    const janus = makeTab('janus', 'red', 1, [], [], undefined, 1, 'red');
+    const { managers, fileNavigatorOpen, edit } = makeManagers([janus]);
+    const entry: AgentState = { name: 'janus', dotColor: 'blue', active: false };
+    const messages: string[] = [];
+
+    openProfileEntries(
+      loaded([entry], { files: [{ dock: 'left', path: '$root/' }], editors: [{ path: '$root/notes.md' }] }),
+      managers, 'demo', 'janus', (text) => { messages.push(text); },
+    );
+
+    expect(fileNavigatorOpen).toHaveBeenCalledWith('files on left $root/', 'janus');
+    expect(edit).toHaveBeenCalledWith('edit $root/notes.md', '$root/notes.md', 'janus', undefined);
+    expect(messages.join(' ')).not.toContain('no tab to root it at');
+  });
+
   it('opens no file navigator when the profile has no files section', () => {
     const janus = makeTab('janus', 'red', 1, [], [], undefined, 1, 'red');
     const { managers, fileNavigatorOpen } = makeManagers([janus]);

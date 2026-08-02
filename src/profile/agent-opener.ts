@@ -69,9 +69,15 @@ export function openProfileEntries(
   // Profile-level file navigator(s) open next, rooted at the first newly opened tab by default, so
   // their tabs are part of the list by the time monitor targets are resolved below.
   const firstNewLabel = opened.length > 0 ? managers.tab.tabs[firstNew]?.label : undefined;
+  // A launch that opened no tab of its own — every entry skipped, or a profile whose only entry
+  // matches the issuing tab — still has the issuing tab to root against, the same tab a harness
+  // entry takes its default cwd from and the one the view tabs already use. Without it, navigators
+  // and editors carrying an absolute `$root` path, which need no resolving tab at all, would be
+  // dropped alongside the relative ones.
+  const rootLabel = firstNewLabel ?? issuingLabel;
   candidates.push(
-    ...openProfileFiles(loaded.files, managers, firstNewLabel, notes, defaultGroup, colorForGroup),
-    ...openProfileEditors(loaded.editors, managers, firstNewLabel, notes, defaultGroup, colorForGroup),
+    ...openProfileFiles(loaded.files, managers, rootLabel, notes, defaultGroup, colorForGroup),
+    ...openProfileEditors(loaded.editors, managers, rootLabel, notes, defaultGroup, colorForGroup),
     ...openProfileViewTabs(loaded.views, managers, issuingLabel, defaultGroup, colorForGroup, notes),
   );
   // Reorder each group touched by this launch so harness/agent entries and editor tabs sharing a
