@@ -211,21 +211,21 @@ describe('Controller', () => {
     expect(isConnectionOpen('lastdb')).toBe(false);
   });
 
-  it('shutdown closes all SQLite connections (quit)', () => {
+  it('shutdown closes all SQLite connections (quit)', async () => {
     initDbDir(mkdtempSync(path.join(tmpdir(), 'janus-db3-')));
     const { c } = makeController();
     c.dispatch('db sqlite create shutdb');
     expect(isConnectionOpen('shutdb')).toBe(true);
-    c.shutdown();
+    await c.shutdown();
     expect(isConnectionOpen('shutdb')).toBe(false);
   });
 
-  it('shutdown invokes a disposer added to any registered manager', () => {
+  it('shutdown invokes a disposer added to any registered manager', async () => {
     const { c } = makeController();
     const dispose = vi.fn();
     c.managers.capture.dispose = dispose;
 
-    c.shutdown();
+    await c.shutdown();
 
     expect(dispose).toHaveBeenCalledOnce();
   });

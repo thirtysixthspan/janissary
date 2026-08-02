@@ -18,6 +18,7 @@ npm run test:diff:web       # web tests related to changes
 
 - Server tests only if `src/` files changed
 - Web tests only if `web/src/` files changed
+- Both server and web tests for any `src/plugins/` change
 - Both if changes touch both areas
 
 Completes in seconds. You can also run individual commands above if you want to focus on a specific check.

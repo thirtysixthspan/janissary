@@ -146,6 +146,8 @@ export default defineConfig({
             { text: "Linting", link: "/developer-documentation/linting" },
             { text: "Commit conventions", link: "/developer-documentation/commit-conventions" },
             { text: "Workspace sandbox", link: "/developer-documentation/workspace-sandbox" },
+            { text: "Tab plugins", link: "/developer-documentation/tab-plugins" },
+            { text: "Tab-plugin API changelog", link: "/developer-documentation/tab-plugin-api-changelog" },
           ],
         },
       ],

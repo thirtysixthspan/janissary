@@ -74,7 +74,7 @@ describe('CaptureManager.run', () => {
     expect(managers.browser.runInteractive).toHaveBeenCalledWith('browser https://example.com', 'main', callback);
   });
 
-  it('executes a matched command and reports its logged output', () => {
+  it('executes a matched command and reports its logged output after it settles', async () => {
     const tab = makeTab('main', 'red');
     const managers = makeManagers({
       tab: {
@@ -93,7 +93,39 @@ describe('CaptureManager.run', () => {
     capture.run('main', 'close', callback);
 
     expect(managers.command.executeCommand).toHaveBeenCalledWith('close', 'close', 'main', 0);
-    expect(callback).toHaveBeenCalledWith('closed tab');
+    await vi.waitFor(() => { expect(callback).toHaveBeenCalledWith('closed tab'); });
+  });
+
+  it('waits for an asynchronous matched command before invoking the callback', async () => {
+    const tab = makeTab('main', 'red');
+    const { promise: pending, resolve: finish } = Promise.withResolvers<void>();
+    const managers = makeManagers({
+      tab: { findIndex: vi.fn(() => 0), tabs: [tab] },
+      command: { executeCommand: vi.fn(async () => {
+        await pending;
+        tab.log.push({ input: 'close', output: 'settled' });
+      }) },
+    } as unknown as Partial<Managers>);
+    const callback = vi.fn();
+
+    new CaptureManager(managers).run('main', 'close', callback);
+    expect(callback).not.toHaveBeenCalled();
+    finish();
+    await vi.waitFor(() => { expect(callback).toHaveBeenCalledWith('settled'); });
+  });
+
+  it('still answers the caller when a matched command rejects', async () => {
+    const tab = makeTab('main', 'red');
+    const managers = makeManagers({
+      tab: { findIndex: vi.fn(() => 0), tabs: [tab] },
+      command: { executeCommand: vi.fn(() => Promise.reject(new Error('dispatch broke'))) },
+    } as unknown as Partial<Managers>);
+    const callback = vi.fn();
+
+    new CaptureManager(managers).run('main', 'close', callback);
+
+    await vi.waitFor(() => { expect(callback).toHaveBeenCalledWith(''); });
+    expect(callback).toHaveBeenCalledOnce();
   });
 
   it('falls back to routing an unknown command', () => {

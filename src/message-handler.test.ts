@@ -45,7 +45,7 @@ const makeController = () =>
     runSuggestion: vi.fn(),
     rateSuggestion: vi.fn(),
     saveFile: vi.fn(),
-    captureVideoFrame: vi.fn(() => 'clip.shot-1.png'),
+    pluginIntent: vi.fn(async () => ({ schemaVersion: 1, payload: { name: 'clip.shot-1.png' } })),
     syncPageSnapshot: vi.fn(),
     fileNavigatorToggle: vi.fn(),
     fileNavigatorCollapseAll: vi.fn(),
@@ -214,13 +214,47 @@ describe('handle', () => {
     expect(controller.rateSuggestion).toHaveBeenCalledWith('s1', true);
   });
 
-  it('routes captureVideoFrame and replies with the name the server chose', () => {
+  it('answers a malformed plugin intent with an RPC error and never reaches the controller', () => {
     const controller = makeController();
+    for (const params of [
+      { tab: '', schemaVersion: 1, intent: 'capture-frame', payload: {} },
+      { tab: 'video', schemaVersion: 0, intent: 'capture-frame', payload: {} },
+      { tab: 'video', schemaVersion: 1, intent: '', payload: {} },
+      { tab: 'video', schemaVersion: 1, intent: 'capture-frame', payload: { nested: undefined } },
+    ]) {
+      const replies: ServerEvent[] = [];
+      handle(controller, { t: 'rpc', id: 17, method: 'pluginIntent', params } as ClientMessage, (event) => { replies.push(event); });
+      expect(replies).toEqual([{ t: 'rpc-reply', id: 17, error: 'pluginIntent: invalid request' }]);
+    }
+    expect(controller.pluginIntent).not.toHaveBeenCalled();
+  });
+
+  it('routes pluginIntent and replies with the plugin-owned envelope', async () => {
+    const controller = makeController();
+    const request = {
+      tab: 'video', schemaVersion: 1, intent: 'capture-frame', payload: { dataUrl: 'data:image/png;base64,AA==' },
+    };
     const replies = dispatchCall(controller, 15, {
-      method: 'captureVideoFrame', params: { url: '/open/v1', dataUrl: 'data:image/png;base64,AA==' },
+      method: 'pluginIntent', params: request,
     });
-    expect(controller.captureVideoFrame).toHaveBeenCalledWith('/open/v1', 'data:image/png;base64,AA==');
-    expect(replies).toEqual([{ t: 'rpc-reply', id: 15, result: { name: 'clip.shot-1.png' } }]);
+    expect(controller.pluginIntent).toHaveBeenCalledWith(request);
+    await vi.waitFor(() => {
+      expect(replies).toEqual([{
+        t: 'rpc-reply', id: 15, result: { schemaVersion: 1, payload: { name: 'clip.shot-1.png' } },
+      }]);
+    });
+  });
+
+  it('returns a plugin-intent rejection through the ordinary RPC error path', async () => {
+    const controller = makeController();
+    vi.mocked(controller.pluginIntent).mockRejectedValueOnce(new Error('pluginIntent: invalid payload'));
+    const replies = dispatchCall(controller, 16, {
+      method: 'pluginIntent',
+      params: { tab: 'video', schemaVersion: 1, intent: 'bad', payload: {} },
+    });
+    await vi.waitFor(() => {
+      expect(replies).toEqual([{ t: 'rpc-reply', id: 16, error: 'pluginIntent: invalid payload' }]);
+    });
   });
 
   it('routes saveFile', () => {

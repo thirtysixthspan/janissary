@@ -12,5 +12,5 @@
     "noEmit": true,
     "paths": { "@shared/*": ["../src/*"] }
   },
-  "include": ["src", "vite.config.ts"]
+  "include": ["src", "../src/plugins/**/client/**/*", "vite.config.ts"]
 }

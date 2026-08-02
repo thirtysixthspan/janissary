@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { resolveCommand } from '../resolve.js';
+import { fixtureV1Manifest } from '../plugins/fixture-v1/manifest.js';
 
 describe('resolveCommand', () => {
   it('treats empty/whitespace input as empty', () => {
@@ -71,5 +72,19 @@ describe('resolveCommand', () => {
 
   it('strips a leading slash to force the built-in dispatcher', () => {
     expect(resolveCommand('/clear')).toEqual({ kind: 'app', name: 'clear', cmd: 'clear' });
+  });
+
+  it('does not register the frozen fixture command in production', () => {
+    expect(resolveCommand('fixture-tab').kind).toBe('unknown');
+  });
+
+  it('resolves a contributed command through the same registry when its declaration is registered', async () => {
+    vi.resetModules();
+    vi.doMock('../plugins/manifests.js', () => ({ pluginManifests: [fixtureV1Manifest] }));
+    const { resolveCommand: resolveWithFixture } = await import('../resolve.js');
+    expect(resolveWithFixture('FiXtUrE-TaB now')).toEqual({
+      kind: 'app', name: 'fixture-tab', cmd: 'FiXtUrE-TaB now',
+    });
+    vi.doUnmock('../plugins/manifests.js');
   });
 });

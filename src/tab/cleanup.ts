@@ -44,6 +44,8 @@ export function closeTabResources(
     const id = tab.markdown.url.replace(/^\/open\//, '');
     openFiles.delete(id);
   }
+  const pluginResourceRefs = tab.plugin?.resourceRefs ?? [];
+  for (const id of pluginResourceRefs) openFiles.delete(id);
   if (typeof contextOrTabsLength !== 'number') contextOrTabsLength.delete(tab.label);
   queue?.delete(tab.label);
 }

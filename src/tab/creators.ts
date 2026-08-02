@@ -1,15 +1,15 @@
-import type { Tab, ImageView, VideoView, MarkdownView, EditorView, PageView, FileNavigatorView } from './types.js';
+import type { Tab, ImageView, PluginTabRuntime, MarkdownView, EditorView, PageView, FileNavigatorView } from './types.js';
 import {
-  makeImageTab, makeVideoTab, makeMarkdownTab, makeEditorTab, makePageTab, makeFilesTab, makeNotificationsTab, makeSchedulesTab, distinctColor, insertTabInGroup,
+  makeImageTab, makePluginTab, makeMarkdownTab, makeEditorTab, makePageTab, makeFilesTab, makeNotificationsTab, makeSchedulesTab, distinctColor, insertTabInGroup,
 } from './index.js';
 import { NOTIFICATIONS_LABEL } from '../notifications-tab.js';
 import { SCHEDULES_LABEL } from '../schedules-tab.js';
 import {
-  uniqueImageLabel, uniqueVideoLabel, uniqueMarkdownLabel, uniqueEditorLabel, uniqueFilesLabel, uniquePageNumber,
+  uniqueImageLabel, uniquePluginLabel, uniqueMarkdownLabel, uniqueEditorLabel, uniqueFilesLabel, uniquePageNumber,
 } from './unique-labels.js';
 
 export {
-  uniqueImageLabel, uniqueVideoLabel, uniqueMarkdownLabel, uniqueEditorLabel, uniqueFilesLabel, uniquePageNumber,
+  uniqueImageLabel, uniquePluginLabel, uniqueMarkdownLabel, uniqueEditorLabel, uniqueFilesLabel, uniquePageNumber,
 } from './unique-labels.js';
 
 type TabAndActive = { tabs: Tab[]; activeTab: number };
@@ -32,14 +32,16 @@ function finalizeTab(tabs: Tab[], tab: Tab, label: string, title: string): TabAn
   return { tabs: newTabs, activeTab: newTabs.findIndex((t) => t.label === label) };
 }
 
-export function addVideoTab(tabs: Tab[], activeTab: number, video: VideoView): TabAndActive {
+export function addPluginTab(
+  tabs: Tab[], activeTab: number, labelPrefix: string, title: string, plugin: PluginTabRuntime,
+): TabAndActive {
   const creator = tabs[activeTab];
-  const label = uniqueVideoLabel(tabs);
+  const label = uniquePluginLabel(tabs, labelPrefix);
   const dotColor = distinctColor(tabs.map((t) => t.dotColor));
   const group = creator?.group ?? 1;
   const groupColor = creator?.groupColor ?? dotColor;
-  const tab = makeVideoTab(label, dotColor, tabs.length + 1, group, groupColor, video);
-  return finalizeTab(tabs, tab, label, video.name);
+  const tab = makePluginTab(label, dotColor, tabs.length + 1, group, groupColor, title, plugin);
+  return finalizeTab(tabs, tab, label, title);
 }
 
 export function addMarkdownTab(tabs: Tab[], activeTab: number, view: MarkdownView): TabAndActive {

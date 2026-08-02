@@ -9,6 +9,8 @@ import { handle } from './message-handler.js';
 import { buildStateEvent } from './state-event.js';
 import { isClientMessage } from './client-message.js';
 import { serveOpenFile } from './open-route.js';
+import { pluginMimeTypes } from './plugins/manifests.js';
+import { CORE_MIME } from './mime-types.js';
 
 // Applied to every HTTP response: defence-in-depth for the XSS path and token leak.
 const SECURITY_HEADERS = {
@@ -16,29 +18,13 @@ const SECURITY_HEADERS = {
   'Content-Security-Policy': "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self'; frame-src https: http:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'",
 } as const;
 
-const MIME: Record<string, string> = {
-  '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css',
-  '.json': 'application/json', '.svg': 'image/svg+xml', '.ico': 'image/x-icon',
-  '.woff2': 'font/woff2', '.map': 'application/json',
-  // Image types served via the `/open/<id>` route (opened files).
-  '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.gif': 'image/gif',
-  '.webp': 'image/webp', '.bmp': 'image/bmp', '.avif': 'image/avif',
-  // Video types served via the `/open/<id>` route. Only the browser-decodable containers the video
-  // opener plays inline need an entry; the rest never reach the server (see `openers/video.ts`).
-  '.mp4': 'video/mp4', '.m4v': 'video/mp4', '.webm': 'video/webm', '.ogv': 'video/ogg',
-  '.mov': 'video/quicktime',
-  // Markdown files served via the `/open/<id>` route.
-  '.md': 'text/markdown; charset=utf-8', '.markdown': 'text/markdown; charset=utf-8',
-  // Text types with their own registered MIME, served via the `/open/<id>` route (editor opener).
-  '.mjs': 'text/javascript', '.cjs': 'text/javascript', '.xml': 'application/xml',
-  '.csv': 'text/csv; charset=utf-8',
-  // The rest of the editor opener's plain-text extensions all serve as text/plain.
-  ...Object.fromEntries([
-    '.txt', '.text', '.log', '.yaml', '.yml', '.toml', '.ini', '.conf', '.cfg', '.env',
-    '.ts', '.tsx', '.jsx', '.py', '.rb', '.go', '.rs', '.c', '.h', '.cpp', '.hpp', '.java',
-    '.sh', '.bash', '.zsh', '.sql',
-  ].map((extension) => [extension, 'text/plain; charset=utf-8'])),
-};
+// Plugin claims are spread first so a core entry always wins a collision. The catalog already
+// rejects a declaration that claims a core extension, so this is belt-and-braces rather than policy.
+const MIME: Record<string, string> = { ...pluginMimeTypes(), ...CORE_MIME };
+
+export function mimeTypeForPath(file: string): string {
+  return MIME[path.extname(file).toLowerCase()] ?? 'application/octet-stream';
+}
 
 export type ServerOptions = { webDir: string; host?: string; port?: number; token?: string; relaunch?: boolean; projectDir?: string };
 export type RunningServer = { url: string; port: number; token: string; close: () => Promise<void>; shutdown: () => void };
@@ -79,7 +65,7 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
       if (!filePath) { res.writeHead(404).end('not found'); return; }
       await serveOpenFile(request, res, filePath, {
         ...SECURITY_HEADERS,
-        'content-type': MIME[path.extname(filePath).toLowerCase()] ?? 'application/octet-stream',
+        'content-type': mimeTypeForPath(filePath),
       });
       return;
     }
@@ -94,7 +80,7 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
       try { body = await readFile(path.join(options.webDir, 'index.html')); file = 'index.html'; }
       catch { res.writeHead(404).end('not found'); return; }
     }
-    res.writeHead(200, { ...SECURITY_HEADERS, 'content-type': MIME[path.extname(file)] ?? 'application/octet-stream' });
+    res.writeHead(200, { ...SECURITY_HEADERS, 'content-type': mimeTypeForPath(file) });
     res.end(body);
   };
 
@@ -135,13 +121,13 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
     });
   });
 
-  const close = (): Promise<void> => new Promise((resolve) => {
+  const close = async (): Promise<void> => {
     closed = true;
     if (exitTimer) clearTimeout(exitTimer);
-    controller.shutdown();
+    await controller.shutdown();
     for (const c of clients) c.close();
-    wss.close(() => http.close(() => resolve()));
-  });
+    await new Promise<void>((resolve) => { wss.close(() => http.close(() => resolve())); });
+  };
   requestExit = () => {
     // Ask connected windows to close themselves, then stop the server and process.
     broadcast({ t: 'bye' });

@@ -193,7 +193,14 @@ html, body, #root {
   padding: 0; margin: 0;
 }
 
-/* Image view tab: a metadata header above the image, which fills the remaining space. */
+/* Image view tab: a metadata header above the image, which fills the remaining space.
+
+   The `image-*` classes are the shared view-tab chrome, not the image tab's private styling: the
+   editor and file navigator tabs build on them (see their sections below), and a bundled tab plugin
+   may too — the video plugin does. They keep the historical name because renaming them would touch
+   every view tab for no behavioral gain, but treat them as a published surface: changing their
+   shape is a change to what plugin views can rely on, so check the plugin-local stylesheets under
+   `src/plugins/` too. */
 .image-tab { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 8px 12px; gap: 8px; }
 .image-meta { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; color: var(--muted); }
 .image-meta .image-name { color: var(--fg); font-weight: 600; }
@@ -213,14 +220,7 @@ html, body, #root {
 .image-stage .image-landscape { width: 100%; height: auto; flex-shrink: 0; }
 .image-stage .image-portrait { height: 100%; width: auto; flex-shrink: 0; }
 .image-zoom-badge { position: absolute; top: 8px; right: 8px; padding: 2px 6px; border-radius: 4px; background: rgb(0 0 0 / 45%); color: var(--fg); font-size: 12px; pointer-events: none; }
-/* Video view tab: reuses the image tab's metadata header and stage. The stage's grab cursor belongs
-   to image panning, which a video has no equivalent for, and the player fits the stage rather than
-   spanning it, so a portrait clip is not stretched. */
-.video-tab .image-stage { cursor: default; }
-.image-stage .video-player { max-width: 100%; max-height: 100%; }
-.video-unplayable { display: flex; flex-direction: column; align-items: center; gap: 8px; color: var(--muted); text-align: center; }
-.video-unplayable .video-unplayable-path { font-size: 12px; word-break: break-all; }
-.image-meta .video-shot-saved { color: var(--fg); font-size: 12px; }
+.plugin-loading, .plugin-failure { margin: auto; color: var(--muted); text-align: center; }
 /* Page view tab: full-height iframe with no chrome. */
 .page-tab { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .page-header {

@@ -23,6 +23,7 @@ import type { Managers } from '../managers.js';
 import { Questions } from '../questions.js';
 import { messageBus } from '../bus.js';
 import { notify } from '../notifications.js';
+import { PluginHost } from '../plugins/server/host.js';
 
 // Populates every manager onto an already-allocated (empty) `Managers` object, in construction
 // order (later managers may reference earlier ones via `this.managers` at call time, not
@@ -32,6 +33,7 @@ import { notify } from '../notifications.js';
 export function createManagers(managers: Managers, projectDir?: string): void {
   managers.database = new DatabaseManager();
   managers.tab = new TabManager(managers, projectDir);
+  managers.plugins = new PluginHost(managers);
   managers.questions = new Questions((label, pending) => {
     messageBus.emit('state', { type: 'dirty' });
     if (pending && managers.tab.cur().label !== label) {

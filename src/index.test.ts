@@ -4,7 +4,7 @@ import { mkdtempSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import http from 'node:http';
 import { WebSocket } from 'ws';
-import { startServer, type RunningServer } from './index.js';
+import { mimeTypeForPath, startServer, type RunningServer } from './index.js';
 import type { ServerEvent } from './protocol.js';
 
 const webDir = mkdtempSync(path.join(tmpdir(), 'janus-test-'));
@@ -20,6 +20,11 @@ const waitFor = async (pred: () => boolean, ms = 2000) => {
     await new Promise((r) => setTimeout(r, 10));
   }
 };
+
+it('composes video MIME types from static plugin declarations', () => {
+  expect(mimeTypeForPath('/tmp/clip.MP4')).toBe('video/mp4');
+  expect(mimeTypeForPath('/tmp/clip.webm')).toBe('video/webm');
+});
 
 describe('startServer (WS + RPC + security)', () => {
   it('accepts a token-gated client and streams transcript state', async () => {
@@ -63,10 +68,14 @@ describe('startServer (WS + RPC + security)', () => {
     ws.send(JSON.stringify({ t: 'rpc', id: 61, method: 'command' }));
     ws.send(JSON.stringify({ t: 'rpc', id: 62, method: 'command', params: [] }));
     ws.send(JSON.stringify({ t: 'event', id: 63, method: 'command', params: {} }));
+    ws.send(JSON.stringify({ t: 'rpc', id: 65, method: 'pluginIntent', params: { tab: '', schemaVersion: 0 } }));
     ws.send(JSON.stringify({ t: 'rpc', id: 64, method: 'complete', params: { text: 'shell READ', cursor: 10 } }));
 
-    await waitFor(() => events.some((event) => event.t === 'rpc-reply' && event.id === 64));
+    await waitFor(() => [64, 65].every((id) => events.some((event) => event.t === 'rpc-reply' && event.id === id)));
     expect(events.some((event) => event.t === 'rpc-reply' && [60, 61, 62, 63].includes(event.id))).toBe(false);
+    expect(events.find((event) => event.t === 'rpc-reply' && event.id === 65)).toMatchObject({
+      error: 'pluginIntent: invalid request',
+    });
     ws.close();
   });
 

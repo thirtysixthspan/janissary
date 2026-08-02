@@ -70,7 +70,7 @@ export default ts.config(
   // TypeScript project service can supply type information.
   {
     files: ['src/**/*.ts', 'src/**/*.tsx', 'web/src/**/*.ts', 'web/src/**/*.tsx'],
-    ignores: ['**/*.test.ts', '**/*.test.tsx'],
+    ignores: ['**/*.test.ts', '**/*.test.tsx', 'src/plugins/**/client/**'],
     languageOptions: {
       parserOptions: {
         projectService: true,
@@ -80,6 +80,22 @@ export default ts.config(
     rules: {
       // Intentional `||` string fallbacks (e.g. `process.env.SHELL || 'bash'`, where an empty
       // string must also fall through) are allowed; non-string `||` defaults are flagged.
+      '@typescript-eslint/prefer-nullish-coalescing': ['error', { ignorePrimitives: { string: true } }],
+      '@typescript-eslint/no-unnecessary-type-assertion': 'error',
+      '@typescript-eslint/no-unsafe-assignment': 'error',
+      '@typescript-eslint/no-unsafe-member-access': 'error',
+    },
+  },
+  {
+    files: ['src/plugins/**/client/**/*.ts', 'src/plugins/**/client/**/*.tsx'],
+    ignores: ['**/*.test.ts', '**/*.test.tsx'],
+    languageOptions: {
+      parserOptions: {
+        project: './web/tsconfig.json',
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
+    rules: {
       '@typescript-eslint/prefer-nullish-coalescing': ['error', { ignorePrimitives: { string: true } }],
       '@typescript-eslint/no-unnecessary-type-assertion': 'error',
       '@typescript-eslint/no-unsafe-assignment': 'error',
@@ -119,6 +135,7 @@ export default ts.config(
   // extensionless, while stylesheet imports keep their extension.
   {
     files: ['src/**/*.ts', 'src/**/*.tsx'],
+    ignores: ['src/plugins/**/client/**'],
     plugins: { 'import-x': importX },
     // TypeScript-aware resolver so import rules can follow NodeNext `./foo.js` imports to `foo.ts`.
     settings: {
@@ -133,7 +150,7 @@ export default ts.config(
     },
   },
   {
-    files: ['web/src/**/*.ts', 'web/src/**/*.tsx'],
+    files: ['web/src/**/*.ts', 'web/src/**/*.tsx', 'src/plugins/**/client/**/*.ts', 'src/plugins/**/client/**/*.tsx'],
     plugins: { 'import-x': importX },
     rules: {
       'import-x/extensions': ['error', 'never', { css: 'always' }],
@@ -141,11 +158,58 @@ export default ts.config(
   },
   // React hooks correctness (web client only).
   {
-    files: ['web/src/**/*.ts', 'web/src/**/*.tsx'],
+    files: ['web/src/**/*.ts', 'web/src/**/*.tsx', 'src/plugins/**/client/**/*.ts', 'src/plugins/**/client/**/*.tsx'],
     plugins: { 'react-hooks': reactHooks },
     rules: {
       'react-hooks/rules-of-hooks': 'error',
       'react-hooks/exhaustive-deps': 'error',
+    },
+  },
+  // Concrete plugins see only the versioned host API, their own manifest/shared contract, Node
+  // built-ins, and packages. They must not reach into host internals or another plugin. Core may
+  // reference static manifests and literal loaders, but never statically import a client entry.
+  {
+    files: ['src/**/*.ts', 'src/**/*.tsx', 'web/src/**/*.ts', 'web/src/**/*.tsx'],
+    ignores: ['src/plugins/*/client/**'],
+    rules: {
+      'no-restricted-imports': ['error', { patterns: [{
+        group: ['**/plugins/*/client/**'],
+        message: 'Concrete plugin clients must stay behind a literal dynamic import.',
+      }] }],
+    },
+  },
+  // The host's own client layer ships inside the entry bundle, and its relative specifiers
+  // (`../video/client/…`) never contain the `plugins/` segment the rule above matches on. It gets
+  // its own ban so the only path from the entry bundle to a concrete plugin client stays the
+  // literal dynamic imports in `loaders.ts`.
+  {
+    files: ['src/plugins/client/**/*.ts', 'src/plugins/client/**/*.tsx'],
+    ignores: ['src/plugins/client/loaders.ts', '**/*.test.ts', '**/*.test.tsx'],
+    rules: {
+      'no-restricted-imports': ['error', { patterns: [{
+        group: ['../*/client/**', '**/plugins/*/client/**'],
+        message: 'Concrete plugin clients must stay behind the literal dynamic imports in loaders.ts.',
+      }] }],
+    },
+  },
+  {
+    files: ['src/plugins/*/server/**/*.ts', 'src/plugins/*/server/**/*.tsx'],
+    ignores: ['**/*.test.ts', '**/*.test.tsx'],
+    rules: {
+      'no-restricted-imports': ['error', { patterns: [{
+        regex: String.raw`^(?:\.\./\.\./\.\./(?!openers/size\.js$)|\.\./\.\./(?:(?!\.\./)[^/]+/|(?:manifests|failure|validation|budget)\.js$))`,
+        message: 'Server plugins may import only the host API and their own plugin modules.',
+      }] }],
+    },
+  },
+  {
+    files: ['src/plugins/*/client/**/*.ts', 'src/plugins/*/client/**/*.tsx'],
+    ignores: ['**/*.test.ts', '**/*.test.tsx'],
+    rules: {
+      'no-restricted-imports': ['error', { patterns: [{
+        group: ['../../../**', '../../*/**', '../../manifests', '../../failure', '../../validation', '../../budget'],
+        message: 'Client plugins may import only the host API and their own plugin modules.',
+      }] }],
     },
   },
   {

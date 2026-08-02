@@ -20,13 +20,15 @@ import type { FileNavigatorManager } from './file-navigator/manager.js';
 import type { EditorWatchManager } from './editor/watch-manager.js';
 import type { EditorAcpManager } from './editor/acp-manager.js';
 import type { Questions } from './questions.js';
+import type { PluginHost } from './plugins/server/host.js';
 
 export type ManagerLifecycle = {
-  dispose?(): void;
+  dispose?(): void | Promise<void>;
 };
 
 type ManagerRegistry = {
   tab: TabManager;
+  plugins: PluginHost;
   shell: ShellManager;
   acp: AcpManager;
   database: DatabaseManager;

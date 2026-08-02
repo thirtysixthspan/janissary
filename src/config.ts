@@ -35,9 +35,9 @@ export type Config = {
   // lazily-created workspace clone (see `git-sync.ts`). Empty by default — syncing is entirely
   // config-driven, with no UI toggle.
   syncPaths: string[];
-  // The external application each opener hands a file to, keyed by opener name (see `openers/`).
+  // The external application each bundled plugin hands a file to, keyed by plugin id.
   // A macOS application name, launched via the OS `open` command's `-a` flag; an empty or missing
-  // entry means "use the OS default handler". Only the `video` entry is read today. Hand-edited
+  // entry means "use the OS default handler". Video is the only configured plugin today. Hand-edited
   // in `.janissary/config.json`, like `syncPaths` and `notifications`.
   externalViewers: Record<string, string>;
 };

@@ -1,6 +1,9 @@
 # CSS linting
 
-Lint `web/src/theme.css` for correctness with [stylelint](https://stylelint.io) + `stylelint-config-standard`. Prettier already handles formatting; stylelint covers correctness conventions (modern color notation, deprecated property values, etc.).
+Lint `web/src/**/*.css` and bundled plugin client styles under `src/plugins/**/client/**/*.css` for
+correctness with [stylelint](https://stylelint.io) + `stylelint-config-standard`. Prettier already
+handles formatting; stylelint covers correctness conventions (modern color notation, deprecated
+property values, etc.).
 
 ```bash
 npm run lint:css        # check for issues — exits non-zero if any are found

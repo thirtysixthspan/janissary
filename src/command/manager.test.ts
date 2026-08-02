@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { CommandManager } from './manager.js';
 import { TabManager } from '../tab/manager.js';
 import type { Managers } from '../managers.js';
+import { commands } from '../commands/index.js';
 
 function makeManagers(): { managers: Managers; recorder: string[] } {
   const recorder: string[] = [];
@@ -114,6 +115,53 @@ describe('CommandManager queue gate', () => {
 
     expect(managers.tab.queueFor('janus')).toEqual([]);
     expect(managers.tab.cur().log).toEqual([]);
+  });
+});
+
+describe('CommandManager asynchronous commands', () => {
+  it('awaits a successful asynchronous registry handler', async () => {
+    const { managers } = makeManagers();
+    let settled = false;
+    commands.push({
+      name: 'async-success', match: () => false,
+      run: async () => { await Promise.resolve(); settled = true; },
+    });
+    try {
+      await managers.command.executeCommand('async-success', 'async-success', 'janus', 0);
+      expect(settled).toBe(true);
+    } finally {
+      commands.pop();
+    }
+  });
+
+  // Awaiting commands also changed what a synchronous throw does: it used to escape to the socket's
+  // catch-all, and now reaches the tab that asked for it, like a rejection.
+  it('reports a synchronous throw to the invoking tab instead of propagating', async () => {
+    const { managers } = makeManagers();
+    commands.push({
+      name: 'sync-throw', match: () => false,
+      run: () => { throw new Error('sync plugin failed'); },
+    });
+    try {
+      await expect(managers.command.executeCommand('sync-throw', 'sync-throw', 'janus', 0)).resolves.toBeUndefined();
+      expect(managers.tab.cur().log.at(-1)?.output).toBe('sync plugin failed');
+    } finally {
+      commands.pop();
+    }
+  });
+
+  it('observes an asynchronous rejection and reports it in the transcript', async () => {
+    const { managers } = makeManagers();
+    commands.push({
+      name: 'async-rejection', match: () => false,
+      run: async () => { throw new Error('async plugin failed'); },
+    });
+    try {
+      await managers.command.executeCommand('async-rejection', 'async-rejection', 'janus', 0);
+      expect(managers.tab.cur().log.at(-1)?.output).toBe('async plugin failed');
+    } finally {
+      commands.pop();
+    }
   });
 });
 

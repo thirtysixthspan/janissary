@@ -1,4 +1,4 @@
-import type { ImageView, VideoView, MarkdownView, EditorView, PageView } from '../tab/types.js';
+import type { ImageView, MarkdownView, EditorView, PageView } from '../tab/types.js';
 
 // Capabilities an opener may use, supplied by the dispatcher (the Controller). Kept deliberately
 // narrow so an opener can only do the two things its surfaces promise — launch an external viewer
@@ -9,8 +9,6 @@ export type OpenContext = {
   note: (text: string) => void;
   // Create and focus an in-app image view tab.
   openImageTab: (image: ImageView) => void;
-  // Create and focus an in-app video view tab.
-  openVideoTab: (video: VideoView) => void;
   // Create and focus an in-app markdown view tab.
   openMarkdownTab: (view: MarkdownView) => void;
   // Create and focus an in-app plain-text editor tab.
@@ -22,6 +20,7 @@ export type OpenContext = {
   // Hand a file to the operating system's default viewer (detached). Returns false when no viewer
   // could be launched on this platform.
   openExternally: (absPath: string) => boolean;
+  invokePluginOpener: (pluginId: string, action: 'inline' | 'external', file: string) => Promise<void>;
 };
 
 // An opener handles one family of file types. Supporting a new type means registering one new
@@ -29,6 +28,7 @@ export type OpenContext = {
 export interface Opener {
   // Identifier for the opener (e.g. 'image').
   name: string;
+  plugin?: { id: string; editAction?: 'open external' };
   // The file extensions this opener claims, lowercased and dot-prefixed (e.g. '.png').
   extensions: string[];
   // Hand the file to a program outside the app.

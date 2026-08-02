@@ -15,8 +15,9 @@ import { createTabControllerAdapter, type TabControllerAdapter } from './control
 import { createMonitorControllerAdapter, type MonitorControllerAdapter } from './controller/monitor-adapter.js';
 import { createEditorControllerAdapter, type EditorControllerAdapter } from './controller/editor-adapter.js';
 import { createFileNavigatorControllerAdapter, type FileNavigatorControllerAdapter } from './controller/file-navigator-adapter.js';
+import { createPluginControllerAdapter, type PluginControllerAdapter } from './controller/plugin-adapter.js';
 
-export class Controller implements TabControllerAdapter, MonitorControllerAdapter, EditorControllerAdapter, FileNavigatorControllerAdapter {
+export class Controller implements TabControllerAdapter, MonitorControllerAdapter, EditorControllerAdapter, FileNavigatorControllerAdapter, PluginControllerAdapter {
   managers: Managers = {} as Managers;
 
   declare setActiveTab: TabControllerAdapter['setActiveTab'];
@@ -40,7 +41,7 @@ export class Controller implements TabControllerAdapter, MonitorControllerAdapte
   declare resetMonitorContext: MonitorControllerAdapter['resetMonitorContext'];
   declare monitorContextSnapshot: MonitorControllerAdapter['monitorContextSnapshot'];
   declare saveFile: EditorControllerAdapter['saveFile'];
-  declare captureVideoFrame: EditorControllerAdapter['captureVideoFrame'];
+  declare pluginIntent: PluginControllerAdapter['pluginIntent'];
   declare syncEditorBuffer: EditorControllerAdapter['syncEditorBuffer'];
   declare resyncEditorTab: EditorControllerAdapter['resyncEditorTab'];
   declare syncPageSnapshot: EditorControllerAdapter['syncPageSnapshot'];
@@ -80,6 +81,7 @@ export class Controller implements TabControllerAdapter, MonitorControllerAdapte
       createMonitorControllerAdapter(this.managers),
       createEditorControllerAdapter(this.managers),
       createFileNavigatorControllerAdapter(this.managers),
+      createPluginControllerAdapter(this.managers),
     );
     this.managers.schedule.start();
   }
@@ -143,9 +145,13 @@ export class Controller implements TabControllerAdapter, MonitorControllerAdapte
     return completeCommand(this.managers, text, cursor);
   }
 
-  shutdown(): void {
+  // Managers are disposed in reverse construction order, each awaited before the next starts, so a
+  // consumer has fully released its references by the time the manager it depends on tears down.
+  // A manager whose disposal is asynchronous — the plugin host, which hands each activated plugin a
+  // bounded disposal window — would otherwise be cut short by process exit.
+  async shutdown(): Promise<void> {
     const names = Object.keys(this.managers) as Array<keyof Managers>;
-    for (const name of names.toReversed()) this.managers[name].dispose?.();
+    for (const name of names.toReversed()) await this.managers[name].dispose?.();
     messageBus.clear();
   }
 }

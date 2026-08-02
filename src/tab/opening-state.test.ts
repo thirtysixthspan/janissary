@@ -21,6 +21,12 @@ function makeTabManager(): TabManager {
   return managers.tab;
 }
 
+const videoPlugin = (url: string) => ({
+  pluginId: 'video', schemaVersion: 1,
+  payload: { name: 'clip.mp4', path: '/tmp/clip.mp4', size: '1 KB', url, player: 'QuickTime Player' },
+  instanceKey: '/tmp/clip.mp4', originLabel: 'janus', resourceRefs: [url.slice('/open/'.length)],
+});
+
 describe('TabOpeningState.openMarkdownTab', () => {
   it('adds a new markdown tab and makes it active', () => {
     const tm = makeTabManager();
@@ -34,29 +40,29 @@ describe('TabOpeningState.openMarkdownTab', () => {
   });
 });
 
-describe('TabOpeningState.openVideoTab', () => {
-  const clip = { name: 'clip.mp4', path: '/tmp/clip.mp4', size: '1 KB', url: '/open/1', player: 'QuickTime Player' };
-
-  it('adds a new video tab and makes it active', () => {
+describe('TabOpeningState.openPluginTab', () => {
+  it('adds a plugin tab and makes it active', () => {
     const tm = makeTabManager();
     const before = tm.tabs.length;
 
-    tm.openVideoTab(clip);
+    tm.openPluginTab('video', 'clip.mp4', videoPlugin('/open/1'));
 
     expect(tm.tabs.length).toBe(before + 1);
     expect(tm.activeTab).toBe(tm.tabs.length - 1);
-    expect(tm.tabs[tm.activeTab].video?.path).toBe('/tmp/clip.mp4');
+    expect(tm.tabs[tm.activeTab].plugin?.pluginId).toBe('video');
+    expect(tm.tabs[tm.activeTab].title).toBe('clip.mp4');
   });
 
-  it('focuses the existing tab instead of opening the same video twice', () => {
+  it('focuses an existing stable plugin instance', () => {
     const tm = makeTabManager();
-    tm.openVideoTab(clip);
+    tm.openPluginTab('video', 'clip.mp4', videoPlugin('/open/1'));
     const opened = tm.tabs.length;
     tm.setActiveTab(0);
 
-    tm.openVideoTab({ ...clip, url: '/open/2' });
+    const label = tm.focusPluginTab('video', '/tmp/clip.mp4');
 
     expect(tm.tabs.length).toBe(opened);
-    expect(tm.tabs[tm.activeTab].video?.path).toBe('/tmp/clip.mp4');
+    expect(label).toBe('video');
+    expect(tm.tabs[tm.activeTab].plugin?.instanceKey).toBe('/tmp/clip.mp4');
   });
 });

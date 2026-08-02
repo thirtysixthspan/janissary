@@ -1,6 +1,7 @@
 import type { Controller } from './controller.js';
 import type { ClientMessage, ServerEvent } from './protocol.js';
 import { handleFileNavigatorMessage } from './message-handler-file-navigator.js';
+import { isPluginIntentRequest } from './plugins/validation.js';
 
 export function handle(controller: Controller, message: ClientMessage, reply: (event: ServerEvent) => void): void {
   switch (message.method) {
@@ -68,8 +69,15 @@ export function handle(controller: Controller, message: ClientMessage, reply: (e
     }
     case 'saveFile': { controller.saveFile(message.params.url, message.params.content); break;
     }
-    case 'captureVideoFrame': {
-      reply({ t: 'rpc-reply', id: message.id, result: { name: controller.captureVideoFrame(message.params.url, message.params.dataUrl) } });
+    case 'pluginIntent': {
+      if (!isPluginIntentRequest(message.params)) {
+        reply({ t: 'rpc-reply', id: message.id, error: 'pluginIntent: invalid request' });
+        return;
+      }
+      void controller.pluginIntent(message.params).then(
+        (result) => { reply({ t: 'rpc-reply', id: message.id, result }); },
+        (error: unknown) => { reply({ t: 'rpc-reply', id: message.id, error: error instanceof Error ? error.message : String(error) }); },
+      );
       return;
     }
     case 'editorSync': { controller.syncEditorBuffer(message.params.url, message.params.content); break;

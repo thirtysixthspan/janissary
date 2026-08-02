@@ -17,3 +17,5 @@ Start with `npm start` to run the app and `npm test` to run the test suite. From
 - [Linting](/developer-documentation/linting) — ESLint over the full tree or just your changes
 - [Commit conventions](/developer-documentation/commit-conventions) — the Conventional Commits format this repo requires
 - [Workspace sandbox](/developer-documentation/workspace-sandbox) — how workspaced agent tabs are confined on macOS
+- [Tab plugins](/developer-documentation/tab-plugins) — the bundled tab-extension contract and smallest v1 example
+- [Tab-plugin API changelog](/developer-documentation/tab-plugin-api-changelog) — compatibility, deprecation, and migration history

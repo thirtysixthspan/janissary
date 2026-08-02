@@ -1,6 +1,6 @@
 # Open
 
-The `open` command is a **dispatcher** for handling targets — local files and web addresses: it inspects the target, picks the opener that handles it, and hands the target to it. Every type is handled by its own **opener**; the dispatcher itself knows only enough to tell a **web address** from a **file** and route each to its opener. Images and embedded web pages are the supported types.
+The `open` command is a **dispatcher** for handling targets — local files and web addresses: it inspects the target, picks the opener that handles it, and hands the target to it. Every type is handled by its own **opener**; the dispatcher itself knows only enough to tell a **web address** from a **file** and route each to its opener. Core openers handle images, Markdown, text, and web pages; bundled tab plugins can add file claims without adding a new dispatcher branch.
 
 ### Open for extension, closed for modification
 
@@ -42,7 +42,7 @@ The dispatcher resolves the opener and surfaces these errors; the opener owns ev
 
 ### Wildcards
 
-When the path contains shell wildcard characters, it is treated as a pattern rather than a single file. The pattern is expanded **by the shell** — exactly as it would be on the command line — into the list of files it matches, resolved against the active tab's working directory. `open` then acts on each matched file in turn, applying the same presentation (inline or external) to every one.
+When the path contains shell wildcard characters, it is treated as a pattern rather than a single file. The pattern is expanded **by the shell** — exactly as it would be on the command line — into the list of files it matches, resolved against the active tab's working directory. `open` then acts on the stable sorted list one file at a time, awaiting each presentation before starting the next and applying the same presentation (inline or external) to every one.
 
 - A wildcard `open` acts on **at most 10 files**. When a pattern matches more than 10, only the first 10 (in the shell's match order) are opened and the rest are skipped, with a note reporting how many were matched.
 - A pattern that matches nothing reports that there were no matching files.
@@ -79,7 +79,10 @@ Opens the image in an **image tab**: a non-agent view tab that displays the imag
 
 ## Video opener
 
-The video opener claims the common video containers (case-insensitive) and splits them into two groups:
+Video is a bundled tab plugin. Its side-effect-free declaration claims the common video containers
+(case-insensitive), supplies their MIME types and file-navigator edit behavior, and can be consulted
+without loading video behavior. The server behavior activates only after an existing file resolves
+to one of those claims. It splits containers into two groups:
 
 - **Playable** — MP4, M4V, WebM, OGV, and MOV. These are the containers the app can play in a video tab.
 - **External only** — MKV, AVI, WMV, FLV, MPG, and MPEG. These are claimed so that opening one is never reported as an unsupported file type, but they cannot be played in-app; both of their presentations hand the file to an external player.
@@ -97,6 +100,11 @@ Hands the video to the configured player, launched detached so it never blocks t
 For a **playable** container, opens the video in a **video tab**: a non-agent view tab that plays the file with its metadata and no command bar. The new tab is created and focused like an agent tab (placed within the active tab's group, distinct dot color); it is a live, in-memory view and is not persisted or restored on `--relaunch`. If the video is already open in a video tab, that existing tab is focused instead of opening a duplicate. The video tab is described in [[video-tab]].
 
 For an **external-only** container, no tab opens: the file is handed to the configured player exactly as `open external` does. Opening a video therefore always does something useful, whatever the container.
+
+If the plugin cannot load, activate, validate its output, or finish an opener before its deadline,
+it is disabled until Janissary restarts. The originating transcript reports
+`Tab plugin "video" disabled: <reason>.`; the failure does not affect core openers or other tabs. See
+[[tab-plugins]] for the shared lifecycle and notification policy.
 
 ### File navigator gesture
 

@@ -30,3 +30,34 @@ describe('createManagers question-pending wiring', () => {
     expect(feedText(c)).not.toContain('Question from janus');
   });
 });
+
+describe('createManagers plugin-host lifecycle', () => {
+  it('constructs the plugin host before managers that consume its registries', () => {
+    const c = makeController();
+    const order = Object.keys(c.managers);
+    expect(order.indexOf('plugins')).toBeLessThan(order.indexOf('openFile'));
+    expect(order.indexOf('plugins')).toBeLessThan(order.indexOf('command'));
+  });
+
+  it('disposes consumers before the plugin host during reverse-order shutdown', async () => {
+    const c = makeController();
+    const disposed: string[] = [];
+    c.managers.plugins.dispose = vi.fn(() => { disposed.push('plugins'); });
+    c.managers.openFile.dispose = vi.fn(() => { disposed.push('openFile'); });
+    await c.shutdown();
+    expect(disposed).toEqual(['openFile', 'plugins']);
+  });
+
+  it('waits for an asynchronous manager disposal before shutdown resolves', async () => {
+    const c = makeController();
+    let settled = false;
+    c.managers.plugins.dispose = vi.fn(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      settled = true;
+    });
+
+    await c.shutdown();
+
+    expect(settled).toBe(true);
+  });
+});

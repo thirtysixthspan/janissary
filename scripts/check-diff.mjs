@@ -23,7 +23,7 @@ const hasLintable = files.some((f) => {
   return !base.includes('.') || LINTABLE.test(f);
 });
 const touchesSrc = files.some((f) => f.startsWith('src/'));
-const touchesWeb = files.some((f) => f.startsWith('web/'));
+const touchesWeb = files.some((f) => f.startsWith('web/') || f.startsWith('src/plugins/'));
 
 // Tools to run with timing
 const tools = [];

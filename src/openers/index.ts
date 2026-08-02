@@ -1,18 +1,20 @@
 import type { Opener } from './types.js';
 import { opener as image } from './image.js';
-import { opener as video } from './video.js';
 import { opener as markdown } from './markdown.js';
 import { opener as editor } from './editor.js';
+import { pluginManifests } from '../plugins/manifests.js';
+import { pluginOpeners } from '../plugins/server/adapters.js';
 
 // The opener registry. The `open` dispatcher walks this list in order and picks the first opener
 // whose `extensions` include the target file's extension. Supporting a new file type is additive:
 // add one opener module and one entry here — the dispatcher is never touched.
-export const openers: Opener[] = [
+export const coreOpeners: Opener[] = [
   image,
-  video,
   markdown,
   editor,
 ];
+
+export const openers: Opener[] = [...coreOpeners, ...pluginOpeners(pluginManifests, coreOpeners)];
 
 // Find the opener registered for a file extension (lowercased, dot-prefixed), or undefined.
 export function openerForExtension(extension: string): Opener | undefined {

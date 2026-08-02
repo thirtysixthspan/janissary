@@ -19,6 +19,20 @@ describe('buildTabView', () => {
     expect(view.editor).toEqual(tab.editor);
   });
 
+  it('projects only the generic plugin envelope and omits server runtime ownership', () => {
+    const tab = makeTab('video', '#fff');
+    tab.view = 'plugin';
+    tab.plugin = {
+      pluginId: 'video', schemaVersion: 1, payload: { name: 'clip.mp4' },
+      instanceKey: '/tmp/clip.mp4', originLabel: 'janus', resourceRefs: ['7'],
+    };
+    const view = buildTabView(tab, false, '/tmp', undefined, [], [], [], (path) => path, []);
+    expect(view.plugin).toEqual({ pluginId: 'video', schemaVersion: 1, payload: { name: 'clip.mp4' } });
+    expect(view.plugin).not.toHaveProperty('instanceKey');
+    expect(view.plugin).not.toHaveProperty('originLabel');
+    expect(view.plugin).not.toHaveProperty('resourceRefs');
+  });
+
   it('includes \'workspaced\' in flags when the tab has a workspaceDir', () => {
     const tab = makeTab('agent-1', '#fff');
     tab.workspaceDir = '/tmp/clone';

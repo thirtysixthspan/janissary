@@ -32,24 +32,24 @@ describe('Controller — real shell lifecycle', () => {
     const deadline = Date.now() + 4000;
     while (!allText(c).includes(workCwd) && Date.now() < deadline) await new Promise((r) => setTimeout(r, 20));
     expect(allText(c)).toContain(workCwd);
-    c.shutdown();
+    await c.shutdown();
   });
 });
 
 describe('Controller root-path display', () => {
-  it('abbreviates the working directory on a command prompt to $root', () => {
+  it('abbreviates the working directory on a command prompt to $root', async () => {
     const { c } = makeController(); // janus cwd is the launch (root) directory
     c.dispatch('shell true');
     const prompt = c.view()[0].bufferLines.find((l) => l.type === 'prompt');
     expect(prompt?.cwd).toBe('$root/');
-    c.shutdown();
+    await c.shutdown();
   });
 
-  it('abbreviates the shell working directory in the connections panel', () => {
+  it('abbreviates the shell working directory in the connections panel', async () => {
     const { c } = makeController();
     c.dispatch('shell true');
     const shellConn = c.view()[0].connections.find((r) => r.kind === 'shell');
     expect(shellConn?.text).toContain('$root/');
-    c.shutdown();
+    await c.shutdown();
   });
 });

@@ -11,7 +11,9 @@ export function openersForRow(
   root: string, relPath: string, edit: boolean,
 ): FileOpenerResolution {
   const opener = openerForExtension(path.extname(path.resolve(root, relPath)));
-  if (opener?.name === 'video') return { command: edit ? 'open external' : 'open', choices: [] };
+  if (opener?.plugin?.editAction === 'open external') {
+    return { command: edit ? 'open external' : 'open', choices: [] };
+  }
   if (opener) return { command: edit ? 'edit' : 'open', choices: [] };
   return {
     choices: [

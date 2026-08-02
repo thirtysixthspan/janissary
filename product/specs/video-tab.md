@@ -1,8 +1,10 @@
 # Video Tab
 
-A **video tab** plays a single video opened with the `open` command (see Open → Video opener).
-It is a non-agent **view tab**: it shows the video and its metadata in place of the usual transcript
-and command bar, and is controlled by the player's own transport controls rather than a command line.
+A **video tab** is the view contributed by the bundled video tab plugin. It plays a single video
+opened with the `open` command (see Open → Video opener). It is a non-agent **view tab**: it shows the
+video and its metadata in place of the usual transcript and command bar, and is controlled by the
+player's own transport controls rather than a command line. The shared plugin lifecycle is specified
+in [[tab-plugins]].
 
 A video tab is created like an agent tab (see Tabs) — placed contiguously within the active tab's
 group, inheriting that group's number and bar color and taking a distinct dot color. Focus moves to
@@ -15,8 +17,8 @@ restored on `--relaunch`, and is not recorded in or reopened by a profile.
 
 ### Video tab data
 
-A video tab is distinguished from an ordinary tab by a **view kind** marking it as a video view.
-Alongside it the tab carries the data the view needs:
+A video tab uses the generic plugin view envelope, identifying the `video` plugin and its exact
+payload schema version. Its plugin-owned payload carries only the data the video view needs:
 
 - **name** — the file's name, which is also the tab's name in the tab strip.
 - **location** — the file's full path.
@@ -30,7 +32,9 @@ Alongside it the tab carries the data the view needs:
 The video's bytes are served the same way an image tab's are: opening the file **registers** it,
 which adds it to an allow-list and yields a reference the client can request, subject to the same
 origin and authentication checks as the rest of the app. Only files the user has explicitly opened
-are served; arbitrary paths are never reachable.
+are served; arbitrary paths are never reachable. The reference is owned by the plugin tab and is
+unregistered when that tab closes. Reopening the same file focuses the existing plugin instance
+before another reference or payload is created.
 
 Video serving additionally honors **partial requests**. When the player asks for a specific byte
 range — which is how seeking works — the server answers just that window rather than the whole
@@ -102,6 +106,11 @@ configured player** (named on the button, or a generic "open externally" when no
 configured). Nothing launches on its own — the tab stays open and the user decides. Pressing the
 button runs the video opener's external presentation for that file, exactly as `open external`
 would.
+
+The client video code is loaded only when a video plugin tab first mounts. A chunk, activation,
+payload-validation, or render failure stays inside the tab, disables the video plugin until process
+restart, and reports `Tab plugin "video" disabled: <reason>.` to the live origin and any already-open
+notifications feed. It does not stop other tabs or trigger a second load attempt.
 
 ### Tab strip, closing, reordering
 

@@ -32,8 +32,11 @@ import { command as theme } from './theme.js';
 import { command as tasks } from './tasks.js';
 import { command as question } from './question.js';
 import { monitor, unmonitor, monitors } from './monitor.js';
+import { availableCommands } from '../commands.js';
+import { pluginManifests } from '../plugins/manifests.js';
+import { pluginCommands } from '../plugins/server/adapters.js';
 
-export const commands: Command[] = [
+export const coreCommands: Command[] = [
   agent,
   next,
   message,
@@ -69,6 +72,10 @@ export const commands: Command[] = [
   monitors,
   monitor,
   unmonitor,
+];
+
+export const commands: Command[] = [
+  ...coreCommands, ...pluginCommands(pluginManifests, coreCommands, availableCommands),
 ];
 
 export type { Command } from './types.js';

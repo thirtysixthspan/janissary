@@ -1,4 +1,4 @@
-import type { Tab, ImageView, VideoView, MarkdownView, EditorView, PageView, FileNavigatorView } from './types.js';
+import type { Tab, ImageView, PluginTabRuntime, MarkdownView, EditorView, PageView, FileNavigatorView } from './types.js';
 import type { Managers } from '../managers.js';
 import { TabQueueState } from './queue-state.js';
 import * as tabOpeners from './openers.js';
@@ -17,8 +17,12 @@ export abstract class TabOpeningState extends TabQueueState {
     tabOpeners.openImageTab(this, image);
   }
 
-  openVideoTab(video: VideoView): void {
-    tabOpeners.openVideoTab(this, video);
+  focusPluginTab(pluginId: string, instanceKey: string): string | undefined {
+    return tabOpeners.focusPluginTab(this, pluginId, instanceKey);
+  }
+
+  openPluginTab(labelPrefix: string, title: string, plugin: PluginTabRuntime): string {
+    return tabOpeners.openPluginTab(this, labelPrefix, title, plugin);
   }
 
   openMarkdownTab(view: MarkdownView): void {

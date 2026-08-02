@@ -1,17 +1,26 @@
 import { describe, it, expect } from 'vitest';
+import { openerForExtension } from '../openers/index.js';
+import { videoManifest } from '../plugins/video/manifest.js';
 import { openersForRow } from './openers-for-row.js';
 
 describe('openersForRow', () => {
-  it('resolves a video row to `open` on plain activation and `open external` on the edit gesture', () => {
-    expect(openersForRow('/root', 'media/clip.mp4', false)).toEqual({ command: 'open', choices: [] });
-    expect(openersForRow('/root', 'media/clip.mp4', true)).toEqual({ command: 'open external', choices: [] });
+  // The inverted edit gesture comes from the declaration's `editAction`, not from the opener being
+  // named 'video', so every container the manifest claims gets it — including the ones no `<video>`
+  // element can decode, which have nothing to edit as text either.
+  it('resolves every extension the video declaration claims from its declared edit action', () => {
+    for (const extension of videoManifest.opener.extensions) {
+      expect(openerForExtension(extension)?.plugin?.editAction).toBe('open external');
+      expect(openersForRow('/root', `media/clip${extension}`, false)).toEqual({ command: 'open', choices: [] });
+      expect(openersForRow('/root', `media/clip${extension}`, true)).toEqual({ command: 'open external', choices: [] });
+    }
   });
 
-  it('routes a container the browser cannot decode the same way', () => {
-    expect(openersForRow('/root', 'media/show.mkv', true)).toEqual({ command: 'open external', choices: [] });
+  it('matches a claimed extension case-insensitively', () => {
+    expect(openersForRow('/root', 'media/CLIP.MP4', true)).toEqual({ command: 'open external', choices: [] });
   });
 
-  it('keeps the plain-text editor for the edit gesture on a non-video claimed row', () => {
+  it('keeps the plain-text editor for the edit gesture on a claimed row that declares no edit action', () => {
+    expect(openerForExtension('.ts')?.plugin?.editAction).toBeUndefined();
     expect(openersForRow('/root', 'src/main.ts', true)).toEqual({ command: 'edit', choices: [] });
     expect(openersForRow('/root', 'docs/readme.md', true)).toEqual({ command: 'edit', choices: [] });
   });

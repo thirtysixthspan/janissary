@@ -65,7 +65,11 @@ export function buildTabView(
     view: tab.view,
     title: tab.title,
     image: tab.image,
-    video: tab.video,
+    plugin: tab.plugin ? {
+      pluginId: tab.plugin.pluginId,
+      schemaVersion: tab.plugin.schemaVersion,
+      payload: tab.plugin.payload,
+    } : undefined,
     page: tab.page,
     harness: tab.harness,
     markdown: tab.markdown,

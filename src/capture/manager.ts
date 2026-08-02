@@ -39,8 +39,18 @@ export class CaptureManager {
     if (c.name === 'browser') { this.managers.browser.runInteractive(trimmed, label, callback); return; }
     const tab = this.managers.tab.tabs.find((t) => t.label === label);
     const before = tab?.log.length ?? 0;
-    this.managers.command.executeCommand(c.name, trimmed, label, index);
-    const after = this.managers.tab.tabs.find((t) => t.label === label)?.log.length ?? 0;
-    callback(after > before ? this.managers.tab.tabs.find((t) => t.label === label)!.log[after - 1].output : '');
+    // A plugin command settles asynchronously, so the reply waits for it. The remote caller is
+    // blocked on this callback, so it fires exactly once whatever the command did — a command that
+    // failed has already reported itself to the transcript.
+    const finish = async () => {
+      let output = '';
+      try {
+        await this.managers.command.executeCommand(c.name, trimmed, label, index);
+        const after = this.managers.tab.tabs.find((t) => t.label === label)?.log.length ?? 0;
+        if (after > before) output = this.managers.tab.tabs.find((t) => t.label === label)!.log[after - 1].output;
+      } catch { /* reported already; the caller still gets its reply */ }
+      callback(output);
+    };
+    void finish();
   }
 }

@@ -8,10 +8,8 @@ import { NotificationsTab } from './NotificationsTab';
 import { SchedulesTab } from './SchedulesTab';
 import { tabBodyBorder } from './tab-body-border';
 
-// Renders the body for image, markdown, file navigator, and notifications view tabs. Harness, editor,
-// page, and video tabs are rendered separately in App (via MountedViewLayers) because they must all stay
-// mounted simultaneously — for xterm state, editor buffer, embedded-page navigation, and video
-// playback preservation across tab switches; monitor tabs are reporting tabs, rendered in the
+// Renders core view bodies. Harness, editor, page, and plugin tabs use persistent layers; monitor
+// tabs are reporting tabs, rendered in the
 // ReportingSection below the command bar. `client`/`index` are used by the files branch to send
 // its RPCs.
 export function ViewTabBody({

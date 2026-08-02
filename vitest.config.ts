@@ -15,6 +15,7 @@ export default defineConfig({
           exclude: [
             ...configDefaults.exclude,
             '**/*.browser.test.{ts,tsx}', '**/*.sandbox.test.{ts,tsx}', '**/*.unsandboxed.test.{ts,tsx}',
+            'src/plugins/**/client/**',
           ],
           hookTimeout: 30_000,
         },
@@ -74,7 +75,7 @@ export default defineConfig({
         test: {
           name: 'client',
           environment: 'jsdom',
-          include: ['web/src/**/*.test.{ts,tsx}'],
+          include: ['web/src/**/*.test.{ts,tsx}', 'src/plugins/**/client/**/*.test.{ts,tsx}'],
           exclude: [
             ...configDefaults.exclude,
             '**/*.browser.test.{ts,tsx}', '**/*.sandbox.test.{ts,tsx}', '**/*.unsandboxed.test.{ts,tsx}',

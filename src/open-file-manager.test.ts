@@ -4,6 +4,8 @@ import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { OpenFileManager } from './open-file-manager.js';
 import type { Managers } from './managers.js';
+import { TabManager } from './tab/manager.js';
+import { PluginHost } from './plugins/server/host.js';
 
 const osOpen = vi.hoisted(() => ({ didOsOpen: vi.fn<(file: string, application?: string) => boolean>(() => true) }));
 
@@ -175,61 +177,72 @@ describe('OpenFileManager.run', () => {
 });
 
 describe('OpenFileManager.run (video)', () => {
-  type Note = { input: string; output: string };
-
-  const makeVideoManagers = (dir: string, opened: { path: string; player: string }[], notes: Note[]) => ({
-    tab: {
-      cwdOf: () => dir,
-      launchDir: dir,
-      append: (_label: string, entry: Note) => { notes.push(entry); },
-      openVideoTab: (view: { path: string; player: string }) => { opened.push(view); },
-      registerFile: (p: string) => `/open/test-${p.length}`,
-    },
-  } as unknown as Managers);
+  const makeVideoManagers = (directory: string): Managers => {
+    const managers = {} as Managers;
+    managers.tab = new TabManager(managers, directory);
+    managers.plugins = new PluginHost(managers);
+    return managers;
+  };
 
   beforeEach(() => {
     osOpen.didOsOpen.mockReset();
     osOpen.didOsOpen.mockReturnValue(true);
   });
 
-  it('opens a playable video inline in a video tab', () => {
+  it('opens a playable video through the plugin host', async () => {
     const dir = mkdtempSync(path.join(tmpdir(), 'janus-video-'));
     writeFileSync(path.join(dir, 'clip.mp4'), Buffer.alloc(10));
-    const opened: { path: string; player: string }[] = [];
-    const mgr = new OpenFileManager(makeVideoManagers(dir, opened, []));
+    const managers = makeVideoManagers(dir);
+    const mgr = new OpenFileManager(managers);
 
-    mgr.run('open clip.mp4', 'janus');
+    await mgr.run('open clip.mp4', 'janus');
 
-    expect(opened).toHaveLength(1);
-    expect(opened[0].path).toBe(path.join(dir, 'clip.mp4'));
-    expect(opened[0].player).toBe('QuickTime Player');
+    const opened = managers.tab.tabs.find((tab) => tab.view === 'plugin');
+    expect(opened?.plugin?.pluginId).toBe('video');
+    expect(opened?.plugin?.payload).toMatchObject({
+      path: path.join(dir, 'clip.mp4'), player: 'QuickTime Player',
+    });
     expect(osOpen.didOsOpen).not.toHaveBeenCalled();
   });
 
-  it('hands a video to the configured player on `open external`, opening no tab', () => {
+  it('deduplicates before building another payload or registering another file', async () => {
     const dir = mkdtempSync(path.join(tmpdir(), 'janus-video-'));
     writeFileSync(path.join(dir, 'clip.mp4'), Buffer.alloc(10));
-    const opened: { path: string; player: string }[] = [];
-    const notes: Note[] = [];
-    const mgr = new OpenFileManager(makeVideoManagers(dir, opened, notes));
+    const managers = makeVideoManagers(dir);
+    const mgr = new OpenFileManager(managers);
+    await mgr.run('open clip.mp4', 'janus');
+    const refs = managers.tab.openFiles.size;
+    managers.tab.setActiveTab(0);
 
-    mgr.run('open external clip.mp4', 'janus');
+    await mgr.run('open clip.mp4', 'janus');
 
-    expect(opened).toHaveLength(0);
-    expect(osOpen.didOsOpen).toHaveBeenCalledWith(path.join(dir, 'clip.mp4'), 'QuickTime Player');
-    expect(notes[0].output).toBe('Opening clip.mp4 in QuickTime Player…');
+    expect(managers.tab.tabs.filter((tab) => tab.view === 'plugin')).toHaveLength(1);
+    expect(managers.tab.openFiles.size).toBe(refs);
+    expect(managers.tab.cur().view).toBe('plugin');
   });
 
-  it('reports no such file for a missing video', () => {
+  it('hands a video to the configured player on `open external`, opening no tab', async () => {
     const dir = mkdtempSync(path.join(tmpdir(), 'janus-video-'));
-    const opened: { path: string; player: string }[] = [];
-    const notes: Note[] = [];
-    const mgr = new OpenFileManager(makeVideoManagers(dir, opened, notes));
+    writeFileSync(path.join(dir, 'clip.mp4'), Buffer.alloc(10));
+    const managers = makeVideoManagers(dir);
+    const mgr = new OpenFileManager(managers);
 
-    mgr.run('open missing.mp4', 'janus');
+    await mgr.run('open external clip.mp4', 'janus');
 
-    expect(opened).toHaveLength(0);
-    expect(notes[0].output).toContain('no such file');
+    expect(managers.tab.tabs.filter((tab) => tab.view === 'plugin')).toHaveLength(0);
+    expect(osOpen.didOsOpen).toHaveBeenCalledWith(path.join(dir, 'clip.mp4'), 'QuickTime Player');
+    expect(managers.tab.tabs[0].log.at(-1)?.output).toBe('Opening clip.mp4 in QuickTime Player…');
+  });
+
+  it('reports no such file before plugin activation', async () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'janus-video-'));
+    const managers = makeVideoManagers(dir);
+    const mgr = new OpenFileManager(managers);
+
+    await mgr.run('open missing.mp4', 'janus');
+
+    expect(managers.plugins.status('video').state).toBe('inactive');
+    expect(managers.tab.tabs[0].log.at(-1)?.output).toContain('no such file');
   });
 });
 

@@ -3,7 +3,6 @@ import type { ClientMessage } from './protocol.js';
 const CLIENT_METHODS = {
   answerQuestion: true,
   cancelSchedule: true,
-  captureVideoFrame: true,
   chooseRoute: true,
   clearSchedules: true,
   closeEditorConnection: true,
@@ -40,6 +39,7 @@ const CLIENT_METHODS = {
   openTranscriptFor: true,
   pageSync: true,
   pasteFileNavigatorItems: true,
+  pluginIntent: true,
   projectFiles: true,
   ptyInput: true,
   ptyKill: true,
@@ -72,6 +72,10 @@ function isClientMethod(value: unknown): value is ClientMessage['method'] {
   return typeof value === 'string' && Object.hasOwn(CLIENT_METHODS, value);
 }
 
+// Envelope shape only, as for every other method: a well-formed envelope reaches the handler, and
+// the handler validates the params it actually understands. `pluginIntent` carries plugin-supplied
+// data, so its deep check lives beside the dispatch that needs it and answers with an ordinary RPC
+// error rather than a silently dropped message.
 export function isClientMessage(value: unknown): value is ClientMessage {
   return isRecord(value)
     && value.t === 'rpc'
