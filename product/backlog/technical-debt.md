@@ -2,8 +2,6 @@
 
 ## ready
 
-* Replace `src/harness/manager.ts`'s four independent PTY-keyed maps (`screenReaders`, `recorders`, `tailers`, and `autoApprovers`) with one per-PTY runtime record that owns disposal, because the exit handler and `dispose()` currently maintain separate cleanup checklists that can leak a newly added harness resource. Severity: **high**.
-
 * Finish the type ownership migration by replacing the compatibility re-export hub in `src/types.ts` with direct imports from modules such as `src/tab/types.ts`, `src/profile/types.ts`, and `src/acp/types.ts`, because dozens of callers still depend on a barrel that hides the defining domain and violates the project's direct-import rule. Severity: **medium**.
 
 * Split the 279-line RPC facade in `src/controller.ts` into feature-specific controller adapters for tabs, monitors, editors, and file navigation so the controller stops accumulating forwarding methods across unrelated domains and remains a small orchestration boundary. Severity: **medium**.

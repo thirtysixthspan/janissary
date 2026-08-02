@@ -306,7 +306,8 @@ applies only to harnesses added later.
   process exiting on its own — quits the app (see `tabs.md`). There is no frozen "exited" state
   to inspect — the harness's own scrollback is gone once its tab closes, but the full timed session
   is preserved in its recording file, and its normalized history (including any subagent activity)
-  in its transcript file (see [[harness-recording]]).
+  in its transcript file (see [[harness-recording]]). Screen capture, recording, and transcript
+  observers stop with the PTY and are not retained after the tab closes.
 
 ## Screen capture
 
