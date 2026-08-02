@@ -45,6 +45,23 @@ tree back to center; it never displaces a different kind. See
 
 ![A file navigator docked in the left sidebar, with its resize divider on the right edge.](/screenshots/file-navigator-sidebar.png)
 
+## Row detail modes
+
+`files with <mode>` opens (or retargets) a tree showing a detail column beside each row, where `<mode>` is `name`, `size`, `modified`, or `permissions`:
+
+```
+files with size                rooted at the working directory, showing file sizes
+files in claude with modified  rooted at claude's working directory, showing modified times
+```
+
+Every newly opened tree starts in `name` mode — just the filename, no extra column. The other three modes add a right-aligned value: `size` shows a compact size like `22b`, `24k`, `32M`, or `5G`; `modified` shows the last-modified time as `Jul 13 23:29`, with no year, so every value is the same width; `permissions` shows the permission string, `drwxr-xr-x`.
+
+A row with nothing to show for the current mode — a directory in `size` mode, or anything the tree can't read — shows a blank column rather than a dash. The mode belongs to one tree; switching it doesn't affect any other open navigator. If a long filename and its value can't both fit, the filename keeps its full width and the value shrinks and then disappears, rather than the name getting truncated.
+
+The header's detail button cycles a tree through the four modes, one click at a time, with a tooltip naming what the next click shows (`Show size`, `Show modified`, `Show permissions`, `Show name only`). Re-running `files with <mode>` on an already-open tree is a second way to switch it, and `in`/`on`/`with` clauses can combine in any order (`files in claude on left with size`).
+
+A [profile](/user-documentation/automation/profiles) that saves this tree restores its detail mode along with its expanded directories and selection.
+
 ## Opening the repository on GitHub
 
 When the tree is rooted inside a git repository whose `origin` remote points at GitHub, its header shows a **GitHub** button (tooltip "Open on GitHub") before the search button. Clicking it opens the repository's commits page for the branch you currently have checked out, in a page tab inside the app rather than your OS browser.
