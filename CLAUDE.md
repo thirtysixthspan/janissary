@@ -2,7 +2,7 @@
 
 ## Guidelines
 
-Before starting work, read every file in [`ai/guidelines/`](ai/guidelines/) — it holds the project's architecture principles, code guidelines, PR automation, and writing/summary conventions. Treat all of it as binding.
+Before starting work, read every file in [`ai/guidelines/`](ai/guidelines/) — it holds the project's architecture principles, code guidelines, plugin architecture guidance, PR automation, and writing/summary conventions. Treat all of it as binding.
 
 ## ESLint rules
 
@@ -123,6 +123,14 @@ Backlogs of smaller items live in `product/backlog/`: `bugs.md`, `chores.md`, `f
 Follow the conventions in [`ai/guidelines/code-guidelines.md`](ai/guidelines/code-guidelines.md), including the
 file-size limit and how to respond to it (extract code into a new module — never compact
 code, strip comments, or delete spacing to get under the limit).
+
+## Plugin architecture
+
+When designing or building anything loaded at runtime through a published contract, follow
+[`ai/guidelines/plugins.md`](ai/guidelines/plugins.md). It sets the design criteria for extension
+points and plugins — capability-narrow contexts, registry over conditionals, static declaration with
+lazy activation, API versioning and deprecation windows, failure isolation, performance budgets, and
+the server/client integration points.
 
 ## Commits and pull requests
 
