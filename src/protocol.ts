@@ -32,6 +32,11 @@ export type FileOpenerChoice = { label: string; command: 'edit' | 'open external
 export type BulkConflictPolicy = 'overwrite-all' | 'skip-conflicts';
 export type BatchResult = { total: number; failedPaths: string[] };
 export type BulkMoveResult = BatchResult | { conflictPaths: string[] };
+export type MoveConflict = { fromRelPath: string; toRelPath: string };
+export type UndoRedoResult = Partial<BatchResult> & {
+  conflict?: MoveConflict;
+  conflicts?: MoveConflict[];
+};
 // The open "New harness" launch dialog's data: the ordered harness names and each harness's known
 // model catalog (empty for a harness with no catalog). Null in the snapshot when the dialog is closed.
 export type HarnessLaunchView = { names: string[]; models: Record<string, string[]> };

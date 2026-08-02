@@ -3,7 +3,6 @@ import { isSameOrDescendantPath } from './index.js';
 import { refreshGit } from './git-refresh.js';
 import { openOrRetarget, type OpenPort } from './open.js';
 import { openFilesCommand } from './open-command.js';
-import type { UndoRedoResult } from './moves.js';
 import { deleteItem, moveItem, renameItem } from './filesystem.js';
 import { replayHistory } from './manager-history.js';
 import { deleteMany, moveMany, pasteMany } from './manager-batch.js';
@@ -19,7 +18,7 @@ import { restoreTreeView, type SavedTreeView } from './restore.js';
 import type { FilesTabState } from './state.js';
 import type { FileNavigatorDetail } from '../types.js';
 import type { Managers } from '../managers.js';
-import type { BatchResult, BulkConflictPolicy, BulkMoveResult, FileOpenerChoice } from '../protocol.js';
+import type { BatchResult, BulkConflictPolicy, BulkMoveResult, FileOpenerChoice, UndoRedoResult } from '../protocol.js';
 
 const DEBOUNCE_MS = 100;
 
