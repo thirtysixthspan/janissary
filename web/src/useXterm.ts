@@ -59,7 +59,7 @@ export function useXterm({ ptyId, client, containerRef, keyFilter, onMount }: Us
     onMount?.(term);
 
     return () => { termRef.current = null; detach(); onInput.dispose(); ro.disconnect(); term.dispose(); };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- keyFilterRef carries the latest filter; setup callbacks apply per PTY/client
   }, [ptyId, client]);
 
   return useCallback(() => termRef.current?.focus(), []);

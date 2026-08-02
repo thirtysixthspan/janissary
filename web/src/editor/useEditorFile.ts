@@ -71,7 +71,7 @@ export function useEditorFile(client: JanusClient, editor: EditorView, api: Edit
     };
     void load();
     return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- editor identity triggers loading; refs and setters remain stable for the mounted file
   }, [editor.url, editor.name, editor.sync]);
 
   const dirty = useMemo(

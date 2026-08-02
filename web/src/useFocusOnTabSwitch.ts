@@ -33,6 +33,6 @@ export function useFocusOnTabSwitch(
   useEffect(() => {
     if (currentRef.current?.pendingQuestion) { questionPanelRef.current?.focusCancel(); return; }
     focusCenterVisibleTab(currentRef.current, harnessHandles, shellHandles, inputReference);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- refs and focus helper are stable; activeTab is the trigger
   }, [activeTab]);
 }
