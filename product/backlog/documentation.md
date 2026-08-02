@@ -2,8 +2,6 @@
 
 ## ready
 
-* editor-tab (4/10) — The editor coverage in `documentation/user-documentation/tab-types/editor.md`, `documentation/user-documentation/tab-types/editor-git-sync.md`, and `documentation/user-documentation/tab-types/editor-persona-query.md` is accurate, including the recently fixed first external-change reload, but 4 of 20 facts are missing and none are wrong. The missing facts are transcript-log scrubbing for text-bearing editor input, visual-row cursor movement across soft-wrapped lines, IME composition handling, and the detailed caret/scroll rules that keep movement visible without snapping the viewport merely because a tab was reactivated. The ground truth is `product/specs/editor-tab.md`, `web/src/EditorTab.tsx`, `web/src/editor/keys.ts`, and `web/src/editor/useEditorWatchReload.ts`. Fix by adding concise keyboard/input and caret/scroll subsections to `documentation/user-documentation/tab-types/editor.md`; the Git-sync and persona-query pages need no change for this gap.
-
 ## development
 
 ## deferred
@@ -12,6 +10,7 @@
 
 ## resolved
 
+* editor-tab — documented in documentation/user-documentation/tab-types/editor.md (removed 2026-08-02)
 * workspaced-agent — documented in documentation/user-documentation/advanced-agents/workspaced-agent.md (removed 2026-08-02)
 * file-navigator-detail-modes — documented in documentation/user-documentation/tab-types/file-navigator.md, help.md (removed 2026-08-02)
 * websocket-rpc — the flagged protocol is internal wire types shared between the Node server and the web client (see `src/protocol.ts`); per the developer-documentation guideline such implementation detail belongs in `product/specs/`, not `documentation/user-documentation/`, and it is already fully covered by `product/specs/websocket-rpc.md` (removed 2026-08-02)
