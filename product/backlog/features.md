@@ -30,7 +30,6 @@
 
 * Integration commands and ability to arbitrarily permit workspaces. a library of built-in connection commands (Slack, GitHub issues, HTTP) invokable through the sandboxed tool loop. Look for external libraries and tooling to adopt.
 
-* The editor (`product/specs/editor-tab.md`) only supports one caret and one active selection, while VS Code's core editor supports multiple independent cursors for simultaneous edits and column selection. Closing this gap would add multi-caret creation (including keyboard and mouse gestures), rectangular selection, per-caret insertion/deletion, and coherent undo, rendering, and paste behavior. Complexity: medium-high.
 
 * The editor (`product/specs/editor-tab.md`) has syntax highlighting and fuzzy search within the current buffer but no language-aware symbol navigation, while VS Code combines language services with Go to Symbol, Go to Definition/References, Peek, Outline, and breadcrumbs. Closing this gap would add a pluggable language-service/indexing layer and editor commands for symbol search, definition/reference jumps, and the current file's symbol outline. Complexity: high.
 
@@ -47,6 +46,8 @@
 * The SSH tab (`product/specs/ssh-tab.md`) passes flags through to a raw ssh PTY but has no first-class management for auxiliary remote-session workflows, while Termius exposes port forwarding and file transfer alongside the terminal. Closing this gap would add an SSH session panel for creating, inspecting, stopping, and restoring local/remote forwards plus an SFTP-style file transfer view tied to the active connection, without conflating it with the separate saved-host backlog item. Complexity: high.
 
 ## deferred
+
+
 
 * The `schedules` tab (`product/specs/scheduling.md`) has no calendar/timeline view or failure-retry handling, the way Cronicle's web UI shows a visual multi-select calendar widget for authoring a schedule and a run-history timeline with automatic retries and alerts on failure. Janissary's schedules tab is a flat table sorted by next-run time, and a fired command that errors is recorded like any other output with no distinct failure marker, no retry, and no alert. A "last run failed" indicator on each row (reusing the notification system's existing rate-limited/error detection patterns) would be a smaller first step than a full calendar authoring UI. Complexity: medium. Determination: UI improvement 
 
@@ -67,4 +68,6 @@
 * A floating, transient terminal overlay for a quick one-off shell command, the way Zellij's floating panes let a user pop open a temporary pane without disturbing the current layout, then dismiss it. Janissary's closest equivalent is PTY takeover (`product/specs/shell.md`), which replaces the whole tab body for an interactive program, or opening a whole new tab — there is no lightweight way to run one quick command in a small overlay without leaving the current tab's context or committing to a new tab. Determinination: nope
 
 * Reusable, parametrized command "workflows" invocable from a command palette, the way Warp's Team Workflows turn a common command into a shared, versioned, named primitive any user can run and tune. This is distinct from janissary's existing `profiles/` (which launch a whole tab topology — agents, harnesses, layout) and `ai/tasks/*.md` (agent prompts run via the task picker, `product/specs/task-picker.md`): a workflow would be a lightweight, parametrized single-command template (e.g. a shell one-liner with placeholders) saved and invoked inline in any tab's command bar, without spinning up a new tab. Determination: nope
+
+* The editor (`product/specs/editor-tab.md`) only supports one caret and one active selection, while VS Code's core editor supports multiple independent cursors for simultaneous edits and column selection. Closing this gap would add multi-caret creation (including keyboard and mouse gestures), rectangular selection, per-caret insertion/deletion, and coherent undo, rendering, and paste behavior. Complexity: medium-high. Determination: nope
 
