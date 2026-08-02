@@ -92,6 +92,17 @@ const dispatchCall = (controller: Controller, id: number, call: RpcCall) => {
 };
 
 describe('handle', () => {
+  it('does not acknowledge an unknown method', () => {
+    const controller = makeController();
+    const replies: ServerEvent[] = [];
+    handle(
+      controller,
+      { t: 'rpc', id: 99, method: 'unknown', params: {} } as unknown as ClientMessage,
+      (event) => { replies.push(event); },
+    );
+    expect(replies).toEqual([]);
+  });
+
   it('routes setActiveTab and acknowledges', () => {
     const controller = makeController();
     const replies = dispatchCall(controller, 1, { method: 'setActiveTab', params: { index: 2 } });
@@ -162,7 +173,7 @@ describe('handle', () => {
 
   it('routes toggleCollapse', () => {
     const controller = makeController();
-    dispatchCall(controller, 6, { method: 'toggleCollapse' });
+    dispatchCall(controller, 6, { method: 'toggleCollapse', params: {} });
     expect(controller.toggleCollapse).toHaveBeenCalled();
   });
 
@@ -430,7 +441,7 @@ describe('handle', () => {
 
   it('routes clearSchedules straight to the schedule manager', () => {
     const controller = makeController();
-    dispatchCall(controller, 41, { method: 'clearSchedules' });
+    dispatchCall(controller, 41, { method: 'clearSchedules', params: {} });
     expect(controller.managers.schedule.clearAll).toHaveBeenCalled();
   });
 
@@ -442,7 +453,7 @@ describe('handle', () => {
 
   it('routes editorPersonas to a reply carrying the editor persona names', () => {
     const controller = makeController();
-    const replies = dispatchCall(controller, 43, { method: 'editorPersonas' });
+    const replies = dispatchCall(controller, 43, { method: 'editorPersonas', params: {} });
     expect(replies).toEqual([{ t: 'rpc-reply', id: 43, result: { names: expect.any(Array) } }]);
   });
 
