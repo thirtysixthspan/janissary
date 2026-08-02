@@ -1,15 +1,15 @@
-import type { Tab, ImageView, MarkdownView, EditorView, PageView, FileNavigatorView } from '../types.js';
+import type { Tab, ImageView, VideoView, MarkdownView, EditorView, PageView, FileNavigatorView } from '../types.js';
 import {
-  makeImageTab, makeMarkdownTab, makeEditorTab, makePageTab, makeFilesTab, makeNotificationsTab, makeSchedulesTab, distinctColor, insertTabInGroup,
+  makeImageTab, makeVideoTab, makeMarkdownTab, makeEditorTab, makePageTab, makeFilesTab, makeNotificationsTab, makeSchedulesTab, distinctColor, insertTabInGroup,
 } from './index.js';
 import { NOTIFICATIONS_LABEL } from '../notifications-tab.js';
 import { SCHEDULES_LABEL } from '../schedules-tab.js';
 import {
-  uniqueImageLabel, uniqueMarkdownLabel, uniqueEditorLabel, uniqueFilesLabel, uniquePageNumber,
+  uniqueImageLabel, uniqueVideoLabel, uniqueMarkdownLabel, uniqueEditorLabel, uniqueFilesLabel, uniquePageNumber,
 } from './unique-labels.js';
 
 export {
-  uniqueImageLabel, uniqueMarkdownLabel, uniqueEditorLabel, uniqueFilesLabel, uniquePageNumber,
+  uniqueImageLabel, uniqueVideoLabel, uniqueMarkdownLabel, uniqueEditorLabel, uniqueFilesLabel, uniquePageNumber,
 } from './unique-labels.js';
 
 type TabAndActive = { tabs: Tab[]; activeTab: number };
@@ -30,6 +30,16 @@ function finalizeTab(tabs: Tab[], tab: Tab, label: string, title: string): TabAn
   tab.title = title;
   const newTabs = insertTabInGroup(tabs, tab);
   return { tabs: newTabs, activeTab: newTabs.findIndex((t) => t.label === label) };
+}
+
+export function addVideoTab(tabs: Tab[], activeTab: number, video: VideoView): TabAndActive {
+  const creator = tabs[activeTab];
+  const label = uniqueVideoLabel(tabs);
+  const dotColor = distinctColor(tabs.map((t) => t.dotColor));
+  const group = creator?.group ?? 1;
+  const groupColor = creator?.groupColor ?? dotColor;
+  const tab = makeVideoTab(label, dotColor, tabs.length + 1, group, groupColor, video);
+  return finalizeTab(tabs, tab, label, video.name);
 }
 
 export function addMarkdownTab(tabs: Tab[], activeTab: number, view: MarkdownView): TabAndActive {

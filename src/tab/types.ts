@@ -74,6 +74,20 @@ export type ImageView = {
   url: string;
 };
 
+export type VideoView = {
+  // Display name (basename), e.g. "clip.mp4".
+  name: string;
+  // Absolute path of the file (the "location").
+  path: string;
+  // Human-readable file size, e.g. "1.4 MB".
+  size: string;
+  // App-relative ref the web client loads to fetch the video bytes (see the `/open/<id>` route).
+  url: string;
+  // Display name of the external player configured for the `video` opener (see `externalViewers`
+  // in `config.ts`), so the tab's "cannot be played" fallback can name it on its button.
+  player: string;
+};
+
 // Embedded web page view (opened via `open https://…` or `open page …`); renders an iframe.
 // `url`: URL loaded in the iframe; `domain`: registrable domain for the display name;
 // `number`: 1-based page number shown in the tab title (e.g. "1) slashdot.org").
@@ -190,7 +204,7 @@ export type Tab = {
   number: number;
   // The tab's body kind. Undefined/`'agent'` renders the normal transcript + command line; `'image'`
   // renders the image view (no command bar). View tabs are live and in-memory — not persisted.
-  view?: 'agent' | 'image' | 'page' | 'harness' | 'markdown' | 'editor' | 'monitor' | 'files' | 'notifications' | 'schedules';
+  view?: 'agent' | 'image' | 'video' | 'page' | 'harness' | 'markdown' | 'editor' | 'monitor' | 'files' | 'notifications' | 'schedules';
   // Display name shown in the tab strip when it differs from the (unique) internal `label` — e.g.
   // every image tab is titled `image` while keeping a distinct label (`image`, `image-2`, …).
   title?: string;
@@ -199,6 +213,8 @@ export type Tab = {
   activePty?: string;
   // The image-view payload, present only when `view === 'image'`.
   image?: ImageView;
+  // The video-view payload, present only when `view === 'video'`.
+  video?: VideoView;
   // The page-view payload, present only when `view === 'page'`.
   page?: PageView;
   // The harness-view payload, present only when `view === 'harness'`.

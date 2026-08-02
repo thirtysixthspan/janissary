@@ -18,7 +18,7 @@ import { restoreTreeView, type SavedTreeView } from './restore.js';
 import type { FilesTabState } from './state.js';
 import type { FileNavigatorDetail } from '../types.js';
 import type { Managers } from '../managers.js';
-import type { BatchResult, BulkConflictPolicy, BulkMoveResult, FileOpenerChoice, UndoRedoResult } from '../protocol.js';
+import type { BatchResult, BulkConflictPolicy, BulkMoveResult, FileOpenerResolution, UndoRedoResult } from '../protocol.js';
 
 const DEBOUNCE_MS = 100;
 
@@ -189,7 +189,7 @@ export class FileNavigatorManager {
     revealPath(this.navPort(), label, relPath);
   }
 
-  openers(label: string, relPath: string, edit: boolean): { command?: 'open' | 'edit'; choices: FileOpenerChoice[] } {
+  openers(label: string, relPath: string, edit: boolean): FileOpenerResolution {
     return this.withState(label, { choices: [] }, (state) => openersForRow(state.root, relPath, edit));
   }
 

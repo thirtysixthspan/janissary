@@ -3,7 +3,7 @@
 // limit — see `ai/guidelines/code-guidelines.md`.
 import { reportOperationFailure } from '../file-navigator/operation-report.js';
 import type { Managers } from '../managers.js';
-import type { BatchResult, BulkConflictPolicy, BulkMoveResult, FileNavigatorDetail, FileOpenerChoice } from '../protocol.js';
+import type { BatchResult, BulkConflictPolicy, BulkMoveResult, FileNavigatorDetail, FileOpenerResolution } from '../protocol.js';
 
 export function fileNavigatorToggle(managers: Managers, index: number, path: string): void {
   const label = managers.tab.tabs[index]?.label;
@@ -134,7 +134,7 @@ export function revealFileNavigatorItem(managers: Managers, index: number, relPa
   if (label) managers.fileNavigator.reveal(label, relPath);
 }
 
-export function fileNavigatorOpeners(managers: Managers, index: number, relPath: string, edit: boolean): { command?: 'open' | 'edit'; choices: FileOpenerChoice[] } {
+export function fileNavigatorOpeners(managers: Managers, index: number, relPath: string, edit: boolean): FileOpenerResolution {
   const label = managers.tab.tabs[index]?.label;
   return label ? managers.fileNavigator.openers(label, relPath, edit) : { choices: [] };
 }

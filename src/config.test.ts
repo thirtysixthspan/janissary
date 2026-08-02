@@ -142,6 +142,33 @@ describe('loadConfig', () => {
     const config = loadConfig(tmpDir);
     expect(config.syncPaths).toEqual(['docs/notes.md']);
   });
+
+  it('defaults externalViewers to the QuickTime Player entry for the video opener', () => {
+    const config = loadConfig(tmpDir);
+    expect(config.externalViewers).toEqual({ video: 'QuickTime Player' });
+
+    const configPath = path.join(tmpDir, '.janissary', 'config.json');
+    const parsed = JSON.parse(readFileSync(configPath, 'utf8'));
+    expect(parsed.externalViewers.video).toBe('QuickTime Player');
+  });
+
+  it('replaces the whole externalViewers map with a user-supplied one', () => {
+    const configDir = path.join(tmpDir, '.janissary');
+    mkdirSync(configDir, { recursive: true });
+    writeFileSync(path.join(configDir, 'config.json'), JSON.stringify({ externalViewers: { video: 'VLC' } }) + '\n');
+
+    const config = loadConfig(tmpDir);
+    expect(config.externalViewers).toEqual({ video: 'VLC' });
+  });
+
+  it('falls back to the default externalViewers when the key is missing', () => {
+    const configDir = path.join(tmpDir, '.janissary');
+    mkdirSync(configDir, { recursive: true });
+    writeFileSync(path.join(configDir, 'config.json'), JSON.stringify({ transcriptMaxLines: 100 }) + '\n');
+
+    const config = loadConfig(tmpDir);
+    expect(config.externalViewers).toEqual({ video: 'QuickTime Player' });
+  });
 });
 
 describe('updateConfig', () => {

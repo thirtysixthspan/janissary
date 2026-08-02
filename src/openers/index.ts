@@ -1,5 +1,6 @@
 import type { Opener } from './types.js';
 import { opener as image } from './image.js';
+import { opener as video } from './video.js';
 import { opener as markdown } from './markdown.js';
 import { opener as editor } from './editor.js';
 
@@ -8,6 +9,7 @@ import { opener as editor } from './editor.js';
 // add one opener module and one entry here — the dispatcher is never touched.
 export const openers: Opener[] = [
   image,
+  video,
   markdown,
   editor,
 ];

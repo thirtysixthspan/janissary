@@ -2,13 +2,14 @@ import React from 'react';
 import type { TabView } from '@shared/protocol';
 import type { JanusClient } from './ws';
 import { ImageTab } from './ImageTab';
+import { VideoTab } from './VideoTab';
 import { MarkdownTab } from './MarkdownTab';
 import { FileNavigatorTab } from './FileNavigatorTab';
 import { NotificationsTab } from './NotificationsTab';
 import { SchedulesTab } from './SchedulesTab';
 import { tabBodyBorder } from './tab-body-border';
 
-// Renders the body for image, markdown, file navigator, and notifications view tabs. Harness, editor,
+// Renders the body for image, video, markdown, file navigator, and notifications view tabs. Harness, editor,
 // and page tabs are rendered separately in App (via MountedViewLayers) because they must all stay
 // mounted simultaneously — for xterm state, editor buffer, and embedded-page navigation
 // preservation across tab switches; monitor tabs are reporting tabs, rendered in the
@@ -23,6 +24,9 @@ export function ViewTabBody({
   const border = { borderLeft: tabBodyBorder(tab.dotColor, active) };
   if (tab.view === 'image' && tab.image) {
     return <div className="tab-body" style={border}><ImageTab key={tab.image.url} image={tab.image} active={active} onSplit={onSplit} /></div>;
+  }
+  if (tab.view === 'video' && tab.video) {
+    return <div className="tab-body" style={border}><VideoTab key={tab.video.url} video={tab.video} client={client} onSplit={onSplit} /></div>;
   }
   if (tab.view === 'markdown' && tab.markdown) {
     return <div className="tab-body" style={border}><MarkdownTab key={tab.markdown.url} markdown={tab.markdown} active={active} onSplit={onSplit} /></div>;

@@ -1,7 +1,7 @@
-import type { Tab, ImageView, MarkdownView, EditorView, PageView, FileNavigatorView } from '../types.js';
+import type { Tab, ImageView, VideoView, MarkdownView, EditorView, PageView, FileNavigatorView } from '../types.js';
 import { messageBus } from '../bus.js';
 import {
-  addImageTab, addMarkdownTab, addEditorTab, addPageTab, addFilesTab, addNotificationsTab, addSchedulesTab,
+  addImageTab, addVideoTab, addMarkdownTab, addEditorTab, addPageTab, addFilesTab, addNotificationsTab, addSchedulesTab,
 } from './creators.js';
 
 // Minimal surface these openers need from the TabManager. Kept structural (rather than importing
@@ -26,6 +26,16 @@ export function openImageTab(target: OpenTarget, image: ImageView): void {
     return;
   }
   activate(target, addImageTab(target.tabs, target.activeTab, image));
+}
+
+export function openVideoTab(target: OpenTarget, video: VideoView): void {
+  const existing = target.tabs.find((t) => t.video?.path === video.path);
+  if (existing) {
+    target.setActiveTab(target.tabs.indexOf(existing));
+    messageBus.emit('state', { type: 'dirty' });
+    return;
+  }
+  activate(target, addVideoTab(target.tabs, target.activeTab, video));
 }
 
 export function openMarkdownTab(target: OpenTarget, view: MarkdownView): void {

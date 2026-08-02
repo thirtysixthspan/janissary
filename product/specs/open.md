@@ -77,6 +77,33 @@ Opens the image in an **image tab**: a non-agent view tab that displays the imag
 
 ---
 
+## Video opener
+
+The video opener claims the common video containers (case-insensitive) and splits them into two groups:
+
+- **Playable** — MP4, M4V, WebM, OGV, and MOV. These are the containers the app can play in a video tab.
+- **External only** — MKV, AVI, WMV, FLV, MPG, and MPEG. These are claimed so that opening one is never reported as an unsupported file type, but they cannot be played in-app; both of their presentations hand the file to an external player.
+
+### The configured player
+
+Which application receives a video is set by the **external viewers** setting (see [[application-config]]), a map keyed by opener name whose `video` entry defaults to QuickTime Player. Clearing the entry means "use the operating system's default handler for the file type". The setting is edited by hand; there is no command to change it.
+
+### `open external <video>`
+
+Hands the video to the configured player, launched detached so it never blocks the app, and confirms in the active tab which player was used. When no player is configured — or the app cannot launch one by name on this platform — the file goes to the operating system's default handler instead, with a correspondingly generic confirmation. If neither can be launched, the file's path is reported instead.
+
+### `open <video>` — video tab
+
+For a **playable** container, opens the video in a **video tab**: a non-agent view tab that plays the file with its metadata and no command bar. The new tab is created and focused like an agent tab (placed within the active tab's group, distinct dot color); it is a live, in-memory view and is not persisted or restored on `--relaunch`. If the video is already open in a video tab, that existing tab is focused instead of opening a duplicate. The video tab is described in [[video-tab]].
+
+For an **external-only** container, no tab opens: the file is handed to the configured player exactly as `open external` does. Opening a video therefore always does something useful, whatever the container.
+
+### File navigator gesture
+
+In a file navigator, the gesture that normally forces the plain-text editor is inverted for a video row: because a binary video has nothing to edit as text, that gesture runs the external presentation and hands the file to the configured player. Plain activation opens the video in the app as usual. See [[file-navigator-tab]].
+
+---
+
 ## Markdown opener
 
 The Markdown opener claims the `.md` and `.markdown` extensions (case-insensitive) and implements both presentations.

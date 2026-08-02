@@ -61,6 +61,7 @@ export class OpenFileManager {
     return {
       note: (text) => this.managers.tab.append(label, { input: command, output: text }),
       openImageTab: (image) => this.managers.tab.openImageTab(image),
+      openVideoTab: (video) => this.managers.tab.openVideoTab(video),
       openMarkdownTab: (view) => this.managers.tab.openMarkdownTab(view),
       openEditorTab: (view) => this.managers.tab.openEditorTab(view),
       openPageTab: (view) => this.managers.tab.openPageTab(view),

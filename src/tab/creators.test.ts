@@ -1,16 +1,39 @@
 import { describe, it, expect } from 'vitest';
-import { makeTab, makeEditorTab, makeMarkdownTab } from './index.js';
-import { uniqueEditorLabel, addEditorTab, uniqueMarkdownLabel, addMarkdownTab, addImageTab } from './creators.js';
-import type { EditorView, MarkdownView, ImageView } from '../types.js';
+import { makeTab, makeEditorTab, makeMarkdownTab, makeVideoTab } from './index.js';
+import { uniqueEditorLabel, addEditorTab, uniqueMarkdownLabel, addMarkdownTab, addImageTab, uniqueVideoLabel, addVideoTab } from './creators.js';
+import type { EditorView, MarkdownView, ImageView, VideoView } from '../types.js';
 
 const view: EditorView = { name: 'notes.txt', path: '/tmp/notes.txt', size: '5 B', url: '/open/1' };
 const markdownView: MarkdownView = { name: 'readme.md', path: '/tmp/readme.md', size: '5 B', url: '/open/1' };
+const videoView: VideoView = { name: 'clip.mp4', path: '/tmp/clip.mp4', size: '5 B', url: '/open/1', player: 'QuickTime Player' };
 
 describe('addImageTab', () => {
   it('retains a long image filename as the complete tab title', () => {
     const image: ImageView = { name: 'very-long-reference-image-name.png', path: '/tmp/image.png', size: '1 kB', url: '/open/2' };
     const result = addImageTab([makeTab('janus', '#fff')], 0, image);
     expect(result.tabs[result.activeTab].title).toBe(image.name);
+  });
+});
+
+describe('uniqueVideoLabel', () => {
+  it('suffixes the label when video tabs already exist', () => {
+    const tabs = [makeTab('janus', '#fff'), makeVideoTab('video', '#fff', 2, 1, '#fff', videoView)];
+    expect(uniqueVideoLabel(tabs)).toBe('video-2');
+  });
+});
+
+describe('addVideoTab', () => {
+  it('adds the tab to the creator group with a distinct dot color and the file name as title', () => {
+    const tabs = [makeTab('janus', '#fff')];
+    const result = addVideoTab(tabs, 0, videoView);
+    expect(result.tabs).toHaveLength(2);
+    const added = result.tabs[result.activeTab];
+    expect(added.label).toBe('video');
+    expect(added.group).toBe(1);
+    expect(added.groupColor).toBe('#fff');
+    expect(added.dotColor).not.toBe('#fff');
+    expect(added.video).toEqual(videoView);
+    expect(added.title).toBe('clip.mp4');
   });
 });
 
