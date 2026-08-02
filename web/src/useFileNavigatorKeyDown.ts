@@ -35,6 +35,23 @@ type Params = {
   actions: NavActions;
 };
 
+// Escape clears the whole selection, cursor included, and disarms the clipboard along with it —
+// one key puts the tree back to "nothing chosen, nothing pending". The clipboard is app-wide, so
+// this clears the copy/cut mark in every navigator, not just this one. Only swallowed when
+// there is something to clear; with nothing selected and nothing armed Escape stays the
+// window's to handle.
+function clearSelectionAndClipboard(
+  e: React.KeyboardEvent<HTMLDivElement>,
+  selection: Params['selection'],
+): void {
+  const armed = getClipboardSnapshot() !== null;
+  if (selection.selected.size === 0 && selection.cursor === null && !armed) return;
+  e.preventDefault();
+  e.stopPropagation();
+  selection.replace(null);
+  clearClipboard();
+}
+
 // The file navigator tree's own `onKeyDown` handler, extracted from `FileNavigatorTab.tsx` so that
 // component stays under the file-size limit. Owns the rename-field bypass, the ctrl/meta chord
 // dispatch, delete, arrow/paging navigation, and type-ahead.
@@ -55,18 +72,8 @@ export function useFileNavigatorKeyDown({
       if (handled) { e.preventDefault(); e.stopPropagation(); }
       return; // tab-management chords go to the window handler
     }
-    // Escape clears the whole selection, cursor included, and disarms the clipboard along with it —
-    // one key puts the tree back to "nothing chosen, nothing pending". The clipboard is app-wide, so
-    // this clears the copy/cut mark in every navigator, not just this one. Only swallowed when
-    // there is something to clear; with nothing selected and nothing armed Escape stays the
-    // window's to handle.
     if (e.key === 'Escape') {
-      const armed = getClipboardSnapshot() !== null;
-      if (selection.selected.size === 0 && selection.cursor === null && !armed) return;
-      e.preventDefault();
-      e.stopPropagation();
-      selection.replace(null);
-      clearClipboard();
+      clearSelectionAndClipboard(e, selection);
       return;
     }
     if ((e.key === 'Backspace' || e.key === 'Delete') && selection.operationPaths.length > 0) {
