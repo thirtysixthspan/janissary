@@ -31,10 +31,6 @@
 * Integration commands and ability to arbitrarily permit workspaces. a library of built-in connection commands (Slack, GitHub issues, HTTP) invokable through the sandboxed tool loop. Look for external libraries and tooling to adopt.
 
 
-
-
-* The database feature (`product/specs/database.md`, `product/specs/connection.md`) is a SQLite command surface that renders row queries as aligned text tables, whereas DBeaver provides a schema/object navigator plus a data grid with filtering, ordering, editing, refresh, export, and SQL generation. Closing this gap would add a dockable SQLite schema browser and table data view with safe cell editing, filters, refresh, CSV export, and generated SQL actions. Complexity: high.
-
 * The browser automation feature (`product/specs/browser.md`) exposes goto, rendered content, eval, and screenshots but does not retain an inspectable action history or browser diagnostics; Playwright Trace Viewer provides a timeline with DOM snapshots, screenshots, console messages, network requests, and action details. Closing this gap would add an opt-in per-window trace/inspection mode with a replayable timeline and links from each action to its DOM, console, network, and screenshot evidence. Complexity: high.
 
 * The Markdown view (`product/specs/markdown-tab.md`, `product/specs/markdown-rendering.md`) is a read-only snapshot that must be reopened after a file changes, while Obsidian offers an editable Live Preview/Source mode toggle for the same Markdown note. Closing this gap would turn the Markdown tab into an editable note view with source/live-preview switching, debounced saves, dirty-file protection, and external-change handling while retaining the existing sanitized renderer. Complexity: medium-high.
@@ -44,6 +40,10 @@
 * The SSH tab (`product/specs/ssh-tab.md`) passes flags through to a raw ssh PTY but has no first-class management for auxiliary remote-session workflows, while Termius exposes port forwarding and file transfer alongside the terminal. Closing this gap would add an SSH session panel for creating, inspecting, stopping, and restoring local/remote forwards plus an SFTP-style file transfer view tied to the active connection, without conflating it with the separate saved-host backlog item. Complexity: high.
 
 ## deferred
+
+
+* The database feature (`product/specs/database.md`, `product/specs/connection.md`) is a SQLite command surface that renders row queries as aligned text tables, whereas DBeaver provides a schema/object navigator plus a data grid with filtering, ordering, editing, refresh, export, and SQL generation. Closing this gap would add a dockable SQLite schema browser and table data view with safe cell editing, filters, refresh, CSV export, and generated SQL actions. Complexity: high. Determination: database interactions would make a nice tab plugin.
+
 
 * The file navigator (`product/specs/file-navigator-tab.md`) supports mouse range/modifier selection and keyboard copy/cut/paste, but explicitly lacks Shift+Arrow range extension, Cmd/Ctrl+A, and mouse/menu routes for those clipboard actions; VS Code's Explorer supports keyboard-modifier multi-selection and actions over the selected set. Closing this gap would make selection semantics consistent across pointer and keyboard input and expose copy/cut/paste plus bulk actions through an accessible context menu. Complexity: medium. Determination: UI improvement. Context menus would be nice to have.
 
