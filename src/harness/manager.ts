@@ -7,6 +7,7 @@ import { HarnessScreenReader, type ScreenCapture } from './screen.js';
 import { HarnessRecorder } from './recorder.js';
 import { type HarnessAutoApprover, autoApproveWithoutWorkspaceWarning } from './auto-approve.js';
 import { buildAutoApprover } from './auto-approve-wire.js';
+import { HarnessRuntime } from './runtime.js';
 import { busyStatusHandler } from './busy-status.js';
 import { captureSubcommand, transcriptSubcommand } from './subcommands.js';
 import { HarnessTranscriptTailer } from './transcript/tailer.js';
@@ -25,35 +26,22 @@ import type { Managers } from '../managers.js';
 // The controller owns the shared tab and PTY state; this module owns the harness-specific decisions
 // and wiring.
 export class HarnessManager {
-  private screenReaders = new Map<string, HarnessScreenReader>();
-  private recorders = new Map<string, HarnessRecorder>();
-  private tailers = new Map<string, HarnessTranscriptTailer>();
-  private autoApprovers = new Map<string, HarnessAutoApprover>();
+  private runtimes = new Map<string, HarnessRuntime>();
   private launchDialogOpen = false;
   private subscription: Subscription;
 
   constructor(private managers: Managers) {
     this.subscription = messageBus.on('pty', 'exit', (event) => {
       if (event.type !== 'exit') return;
-      this.screenReaders.get(event.id)?.dispose();
-      this.screenReaders.delete(event.id);
-      this.recorders.get(event.id)?.dispose();
-      this.recorders.delete(event.id);
-      this.tailers.get(event.id)?.dispose();
-      this.tailers.delete(event.id);
-      this.autoApprovers.delete(event.id);
+      this.runtimes.get(event.id)?.dispose();
+      this.runtimes.delete(event.id);
     });
   }
 
   dispose(): void {
     this.subscription.unsubscribe();
-    for (const reader of this.screenReaders.values()) reader.dispose();
-    for (const recorder of this.recorders.values()) recorder.dispose();
-    for (const tailer of this.tailers.values()) tailer.dispose();
-    this.screenReaders.clear();
-    this.recorders.clear();
-    this.tailers.clear();
-    this.autoApprovers.clear();
+    for (const runtime of this.runtimes.values()) runtime.dispose();
+    this.runtimes.clear();
   }
 
   // The named harness tab's most recent rendered-screen capture, or undefined when the tab is
@@ -62,7 +50,7 @@ export class HarnessManager {
   latestScreenText(label: string): ScreenCapture | undefined {
     const tab = this.managers.tab.tabs.find((t) => t.label === label);
     if (!tab?.harness) return undefined;
-    return this.screenReaders.get(tab.harness.ptyId)?.latestCapture();
+    return this.runtimes.get(tab.harness.ptyId)?.reader.latestCapture();
   }
 
   // The named tab's transcript tailer, or undefined when the tab is missing, is not a harness tab,
@@ -72,7 +60,7 @@ export class HarnessManager {
   transcriptTailer(label: string): HarnessTranscriptTailer | undefined {
     const tab = this.managers.tab.tabs.find((t) => t.label === label);
     if (!tab?.harness) return undefined;
-    return this.tailers.get(tab.harness.ptyId);
+    return this.runtimes.get(tab.harness.ptyId)?.tailer;
   }
 
   // Register a screen reader for a PTY this manager did not spawn itself (currently: ssh tabs,
@@ -80,7 +68,7 @@ export class HarnessManager {
   // capture handler — auto-approve and busy detection are harness-specific and don't apply.
   registerScreenReader(id: string): void {
     const dims = this.managers.pty.spawnDimensions();
-    this.screenReaders.set(id, new HarnessScreenReader(id, dims.cols, dims.rows));
+    this.runtimes.set(id, new HarnessRuntime(new HarnessScreenReader(id, dims.cols, dims.rows)));
   }
 
   // Handle a `harness <name> [as <label>] [-w] [--offline] [--model <name>] [--effort <level>]`
@@ -206,12 +194,14 @@ export class HarnessManager {
       : undefined;
     const id = this.managers.pty.spawn(label, program, buildHarnessCommand(name, model, effort), cwd, workspaceDir, offline, extraEnv);
     const dims = this.managers.pty.spawnDimensions();
-    this.screenReaders.set(id, new HarnessScreenReader(id, dims.cols, dims.rows, this.captureHandler(name, label, id, autoApprove)));
-    this.recorders.set(id, new HarnessRecorder(id, label, program, dims.cols, dims.rows));
+    const capture = this.captureHandler(name, label, id, autoApprove);
+    const reader = new HarnessScreenReader(id, dims.cols, dims.rows, capture.handler);
+    const recorder = new HarnessRecorder(id, label, program, dims.cols, dims.rows);
     const source = createTranscriptSource(name, cwd, Date.now());
-    if (source) {
-      this.tailers.set(id, new HarnessTranscriptTailer(label, source, () => { notify(this.managers, 'transcript-unavailable', label); }));
-    }
+    const tailer = source
+      ? new HarnessTranscriptTailer(label, source, () => { notify(this.managers, 'transcript-unavailable', label); })
+      : undefined;
+    this.runtimes.set(id, new HarnessRuntime(reader, recorder, tailer, capture.autoApprover));
     const liveTab = this.managers.tab.tabs.find((t) => t.label === label);
     if (liveTab?.harness) {
       liveTab.harness.ptyId = id;
@@ -240,14 +230,18 @@ export class HarnessManager {
   // harness has a detector). The approver runs first so the busy handler reads its stuck state as
   // of the same capture. Returns undefined when neither applies, so the reader runs exactly as it
   // would with no consumers.
-  private captureHandler(name: string, label: string, id: string, autoApprove: boolean): ((capture: ScreenCapture) => void) | undefined {
+  private captureHandler(
+    name: string, label: string, id: string, autoApprove: boolean,
+  ): { handler: ((capture: ScreenCapture) => void) | undefined; autoApprover: HarnessAutoApprover | undefined } {
     const approver = autoApprove ? buildAutoApprover(this.managers, name, label, id) : undefined;
-    if (approver) this.autoApprovers.set(id, approver);
     const busyHandler = busyStatusHandler(name, label, this.managers, approver);
-    if (!approver && !busyHandler) return undefined;
-    return (capture) => {
+    if (!approver && !busyHandler) return { handler: undefined, autoApprover: undefined };
+    return {
+      autoApprover: approver,
+      handler: (capture) => {
       approver?.onCapture(capture);
       busyHandler?.(capture);
+      },
     };
   }
 

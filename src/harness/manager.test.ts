@@ -243,6 +243,33 @@ describe('HarnessManager transcript tailer lifecycle', () => {
   });
 });
 
+describe('HarnessManager PTY runtime lifecycle', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    recorderMock.instances.length = 0;
+    tailerMock.instances.length = 0;
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  it('disposes every resource owned by a PTY runtime when the PTY exits', () => {
+    const { managers } = makeManagers();
+    const readerDispose = vi.spyOn(HarnessScreenReader.prototype, 'dispose');
+    const manager = new HarnessManager(managers);
+    manager.run('harness claude');
+
+    messageBus.emit('pty', { type: 'exit', id: 'pty-1', exitCode: 0 });
+
+    expect(readerDispose).toHaveBeenCalled();
+    expect(recorderMock.instances[0].dispose).toHaveBeenCalledOnce();
+    expect(tailerMock.instances[0].dispose).toHaveBeenCalledOnce();
+    expect(manager.transcriptTailer('claude')).toBeUndefined();
+  });
+});
+
 describe('HarnessManager disposal', () => {
   beforeEach(() => {
     vi.useFakeTimers();
