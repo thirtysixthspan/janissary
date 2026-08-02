@@ -24,6 +24,22 @@ Click anywhere in the editor body, including the empty space below the last line
 
 A plain click on the header (the file name, size, or location) puts focus straight back in the buffer once you release the mouse, so your cursor and typing pick up right where they were. If you drag to select header text instead, for example to copy the file's path, focus stays in the header so the selection sticks.
 
+## Keyboard input
+
+Typing, arrow keys, `Home`/`End`, `PageUp`/`PageDown`, and the usual editing keys all work as you'd expect, including holding a key down to repeat it. `Shift` with any arrow extends the selection, the same in both directions.
+
+A long line wraps across several visual rows instead of scrolling horizontally. `↑`/`↓` (or `Ctrl+P`/`Ctrl+N`) move the cursor one visual row at a time, so crossing a wrapped line takes as many presses as it has rows on screen; once you reach the wrapped line's first or last row, the next press continues into the line above or below it.
+
+Typing with an IME — composing characters from several keystrokes, as Japanese or Chinese input methods do — works normally: the editor waits for composition to finish before applying what you typed.
+
+## Caret and scroll
+
+The blinking caret marks where text will be inserted, and is only visible while the editor tab is active — switching away hides it.
+
+Moving the cursor, whether by typing, arrow keys, a click, or paging, always scrolls it into view; staying in place doesn't re-scroll. At the very top or bottom of the visible area, `↑`/`↓` still moves the cursor by exactly one line and scrolls just enough to keep it in sight, rather than jumping to the start or end of the file.
+
+Switching to another tab and back leaves your scroll position exactly where you left it, even if the cursor itself is out of view — only an actual cursor move while the tab is active pulls the view back to it.
+
 ## Saving
 
 <img class="agent-float left" src="/agents/mahir-south-east.png" alt="" />
