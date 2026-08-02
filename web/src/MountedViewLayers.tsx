@@ -4,6 +4,7 @@ import type { JanusClient } from './ws';
 import type { HarnessTabHandle } from './HarnessTab';
 import { EditorTab, type EditorTabHandle, type EditorDropHandle } from './EditorTab';
 import { PageTab } from './PageTab';
+import { VideoTab } from './VideoTab';
 import { HarnessTabLayer } from './HarnessTabLayer';
 import type { PickerOverlayProps } from './picker-overlay-props';
 import { QuestionPanel, type QuestionPanelHandle } from './QuestionPanel';
@@ -26,9 +27,9 @@ type Properties = {
   // agent-tab body uses.
 } & PickerOverlayProps;
 
-// Harness, editor, and page tabs stay mounted (hidden when inactive) so terminal/xterm state,
-// editor buffers, undo stacks, cursor/scroll position, and embedded-page navigation survive tab
-// switches. Split out of App.tsx to keep it under the file-size limit.
+// Harness, editor, page, and video tabs stay mounted (hidden when inactive) so terminal/xterm
+// state, editor buffers, undo stacks, cursor/scroll position, embedded-page navigation, and video
+// playback position survive tab switches. Split out of App.tsx to keep it under the file-size limit.
 export function MountedViewLayers({
   tabs, current, client, closeTab, harnessHandles, editorHandles, editorDropRef, questionPanelRef,
   visibleLabels = [current.label], onSplit,
@@ -85,6 +86,27 @@ export function MountedViewLayers({
             <PageTab
               page={t.page!} closeTab={closeTab} index={index} client={client}
               active={t.label === current.label}
+              onSplit={onSplit ? () => onSplit(index) : undefined}
+            />
+          </div>
+        ))}
+      {tabs
+        .map((t, index) => ({ t, index }))
+        .filter(({ t }) => t.view === 'video' && t.video)
+        .map(({ t, index }) => (
+          <div
+            key={t.label}
+            className="tab-body"
+            data-pane-index={index}
+            style={{
+              borderLeft: tabBodyBorder(t.dotColor, t.label === current.label),
+              display: visibleLabels.includes(t.label) ? 'flex' : 'none',
+              gridColumn: t.pane === 'right' ? 2 : 1,
+              gridRow: 2,
+            }}
+          >
+            <VideoTab
+              video={t.video!} client={client}
               onSplit={onSplit ? () => onSplit(index) : undefined}
             />
           </div>

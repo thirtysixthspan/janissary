@@ -54,9 +54,16 @@ Playback uses the platform's **native video controls** — play/pause, the timel
 and fullscreen — shown on the player itself. There is no custom transport UI and no tab-level
 playback shortcuts; while the player has focus, the keyboard belongs to the native controls.
 
-Playback position is live and in-memory: reopening a file starts it from the beginning, and nothing
-about playback is persisted or restored on `--relaunch`. Switching to another tab unmounts the video
-view, which stops playback; switching back starts the video over.
+### Playback survives a tab switch
+
+Leaving a video tab does not disturb its player. Switching to another tab and back returns the video
+exactly as it was left — the same position on the timeline, the same paused or playing state, and the
+same volume and playback rate. A video that was playing when the tab lost focus is still playing when
+it regains it, having advanced in the meantime.
+
+Playback state is still live and in-memory: it belongs to the open tab, not to the file. Opening the
+same file again after closing its tab starts from the beginning, and nothing about playback is
+persisted or restored on `--relaunch`.
 
 ### When the video cannot be played
 

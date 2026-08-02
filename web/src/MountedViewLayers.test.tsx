@@ -32,6 +32,19 @@ vi.mock('./EditorTab', () => {
   };
 });
 
+// VideoTab is mounted persistently so playback survives tab switches; the mount effect increments a
+// shared counter so tests can assert it was never torn down and recreated across a re-render.
+let videoMountCount = 0;
+vi.mock('./VideoTab', () => {
+  const { useEffect, createElement } = React;
+  return {
+    VideoTab: () => {
+      useEffect(() => { videoMountCount += 1; }, []);
+      return createElement('div', { 'data-testid': 'video' });
+    },
+  };
+});
+
 function makeEditorTab(label: string, url: string): TabView {
   return {
     label, view: 'editor' as const, dotColor: '#0f0', groupColor: '#ccc',
@@ -53,6 +66,14 @@ function makePageTab(label: string, url: string): TabView {
   return {
     label, view: 'page' as const, dotColor: '#00f', groupColor: '#ccc',
     page: { url, domain: 'example.com', number: 1 },
+    connections: [], schedule: [], bufferLines: [], cmdHistory: [],
+  } as unknown as TabView;
+}
+
+function makeVideoTab(label: string, url: string): TabView {
+  return {
+    label, view: 'video' as const, dotColor: '#ff0', groupColor: '#ccc',
+    video: { name: 'clip.mp4', path: '/a/clip.mp4', size: '1 MB', url, player: 'QuickTime Player' },
     connections: [], schedule: [], bufferLines: [], cmdHistory: [],
   } as unknown as TabView;
 }
@@ -349,6 +370,105 @@ describe('MountedViewLayers', () => {
       }),
     );
     expect(container.querySelector('.tab-body')).toBeNull();
+  });
+
+  it('renders video tabs', () => {
+    const tabs = [makeVideoTab('vtab', '/open/1')];
+    const harnessHandles = makeHarnessHandles();
+    const editorHandles = makeEditorHandles();
+    const { container } = render(
+      React.createElement(MountedViewLayers, {
+        tabs, current: tabs[0], client: { send: vi.fn() } as never, closeTab: vi.fn(),
+        harnessHandles, editorHandles,
+      }),
+    );
+    expect(container.querySelector('.tab-body')).toBeTruthy();
+  });
+
+  it('hides video tab when not current', () => {
+    const tabs = [makeVideoTab('vtab', '/open/1')];
+    const other = makeVideoTab('other', '/open/2');
+    const harnessHandles = makeHarnessHandles();
+    const editorHandles = makeEditorHandles();
+    const { container } = render(
+      React.createElement(MountedViewLayers, {
+        tabs, current: other, client: { send: vi.fn() } as never, closeTab: vi.fn(),
+        harnessHandles, editorHandles,
+      }),
+    );
+    const el = container.querySelector('.tab-body') as HTMLElement;
+    expect(el.style.display).toBe('none');
+  });
+
+  it('renders video tab as flex when current', () => {
+    const tabs = [makeVideoTab('vtab', '/open/1')];
+    const harnessHandles = makeHarnessHandles();
+    const editorHandles = makeEditorHandles();
+    const { container } = render(
+      React.createElement(MountedViewLayers, {
+        tabs, current: tabs[0], client: { send: vi.fn() } as never, closeTab: vi.fn(),
+        harnessHandles, editorHandles,
+      }),
+    );
+    const el = container.querySelector('.tab-body') as HTMLElement;
+    expect(el.style.display).toBe('flex');
+  });
+
+  it('filters out tabs without video payload', () => {
+    const harnessHandles = makeHarnessHandles();
+    const editorHandles = makeEditorHandles();
+    const { container } = render(
+      React.createElement(MountedViewLayers, {
+        tabs: [{ label: 'a', view: 'video', dotColor: '#ff0', groupColor: '#ccc' }] as TabView[],
+        current: { label: 'a' } as TabView,
+        client: { send: vi.fn() } as never,
+        closeTab: vi.fn(),
+        harnessHandles, editorHandles,
+      }),
+    );
+    expect(container.querySelector('.tab-body')).toBeNull();
+  });
+
+  it('keeps the video tab mounted while it is not current, so playback state survives', () => {
+    videoMountCount = 0;
+    const tab = makeVideoTab('vtab', '/open/1');
+    const other = makeEditorTab('etab', '/test.ts');
+    const harnessHandles = makeHarnessHandles();
+    const editorHandles = makeEditorHandles();
+    const props = (current: TabView) => ({
+      tabs: [tab, other], current, client: { send: vi.fn() } as never, closeTab: vi.fn(),
+      harnessHandles, editorHandles,
+    });
+    const { rerender } = render(React.createElement(MountedViewLayers, props(tab)));
+    expect(videoMountCount).toBe(1);
+
+    rerender(React.createElement(MountedViewLayers, props(other)));
+    rerender(React.createElement(MountedViewLayers, props(tab)));
+
+    expect(videoMountCount).toBe(1);
+  });
+
+  it('does not remount the video tab when only its payload url changes', () => {
+    videoMountCount = 0;
+    const tab = makeVideoTab('vtab', '/open/1');
+    const harnessHandles = makeHarnessHandles();
+    const editorHandles = makeEditorHandles();
+    const { rerender } = render(
+      React.createElement(MountedViewLayers, {
+        tabs: [tab], current: tab, client: { send: vi.fn() } as never, closeTab: vi.fn(),
+        harnessHandles, editorHandles,
+      }),
+    );
+    expect(videoMountCount).toBe(1);
+
+    const refreshed: TabView = { ...tab, video: { ...tab.video!, url: '/open/2' } };
+    rerender(
+      React.createElement(MountedViewLayers, {
+        tabs: [refreshed], current: refreshed, client: { send: vi.fn() } as never, closeTab: vi.fn(),
+        harnessHandles, editorHandles,
+      }),
+    );
+    expect(videoMountCount).toBe(1);
   });
 
   it('wires closeTab through with the tab\'s real index in the full tabs array', () => {
