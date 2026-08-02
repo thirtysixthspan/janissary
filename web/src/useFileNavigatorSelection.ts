@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { FileNavigatorRow } from '@shared/protocol';
 import { clearNavigatorSelection, publishNavigatorSelection } from './file-navigator-selection-registry';
+import { dirname } from './rel-path';
 
 export type FileNavigatorSelection = {
   cursor: string | null;
@@ -77,7 +78,7 @@ export function replaceRenamedPath(
 function nearestVisibleAncestor(path: string, visible: Set<string>): string | null {
   let candidate = path;
   while (candidate.includes('/')) {
-    candidate = candidate.slice(0, candidate.lastIndexOf('/'));
+    candidate = dirname(candidate);
     if (visible.has(candidate)) return candidate;
   }
   return null;

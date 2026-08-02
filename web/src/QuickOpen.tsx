@@ -1,5 +1,6 @@
 import React from 'react';
 import type { FuzzyMatchResult } from './fuzzy-match';
+import { basename, dirname } from './rel-path';
 
 type Properties = {
   query: string;
@@ -14,9 +15,8 @@ type Properties = {
 };
 
 function QuickOpenRow({ result, selected, onPick }: { result: FuzzyMatchResult; selected: boolean; onPick: () => void }) {
-  const basenameStart = result.path.lastIndexOf('/') + 1;
-  const dir = result.path.slice(0, Math.max(basenameStart - 1, 0));
-  const name = result.path.slice(basenameStart);
+  const dir = dirname(result.path);
+  const name = basename(result.path);
   return (
     <div className={`picker-row quick-open-row${selected ? ' selected' : ''}`} onClick={onPick}>
       <span className="quick-open-name">{name}</span>

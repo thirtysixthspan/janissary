@@ -1,10 +1,12 @@
+import { basename } from './rel-path';
+
 // Rank a single candidate path against the lowercase query on its basename: `0` for a
 // filename-prefix match (ranked highest), `1` for any other substring match, `undefined` for no
 // match at all.
 function rankOf(path: string, lowerQuery: string): 0 | 1 | undefined {
-  const basename = path.slice(path.lastIndexOf('/') + 1).toLowerCase();
-  if (basename.startsWith(lowerQuery)) return 0;
-  if (basename.includes(lowerQuery)) return 1;
+  const name = basename(path).toLowerCase();
+  if (name.startsWith(lowerQuery)) return 0;
+  if (name.includes(lowerQuery)) return 1;
   return undefined;
 }
 
@@ -42,7 +44,7 @@ export function bestFileMatch(paths: string[], query: string): string | undefine
 export function ghostSuffix(path: string, query: string): string | undefined {
   const trimmed = query.trim();
   if (!trimmed) return undefined;
-  const basename = path.slice(path.lastIndexOf('/') + 1);
-  if (!basename.toLowerCase().startsWith(trimmed.toLowerCase())) return undefined;
-  return basename.slice(trimmed.length);
+  const name = basename(path);
+  if (!name.toLowerCase().startsWith(trimmed.toLowerCase())) return undefined;
+  return name.slice(trimmed.length);
 }

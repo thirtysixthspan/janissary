@@ -9,6 +9,7 @@ import type { useFileNavigatorDelete } from './useFileNavigatorDelete';
 import type { useFileNavigatorPaste } from './useFileNavigatorPaste';
 import type { useFileNavigatorSearch } from './useFileNavigatorSearch';
 import type { useFileNavigatorOpener } from './useFileNavigatorOpener';
+import { basename } from './rel-path';
 
 type Properties = {
   drag: ReturnType<typeof useFileNavigatorDrag>;
@@ -36,7 +37,7 @@ export function FileNavigatorOverlays({
           className="files-drag-ghost"
           style={{ left: drag.dragPosition.x, top: drag.dragPosition.y }}
         >
-          {drag.draggedPath.slice(drag.draggedPath.lastIndexOf('/') + 1)}
+          {basename(drag.draggedPath)}
           {drag.draggedCount > 1 ? ` +${drag.draggedCount - 1}` : ''}
         </div>
       )}
@@ -66,7 +67,7 @@ export function FileNavigatorOverlays({
       {deletion.pendingDelete && (
         <DeleteFileDialog
           name={deletion.pendingDelete.length === 1
-            ? deletion.pendingDelete[0].slice(deletion.pendingDelete[0].lastIndexOf('/') + 1)
+            ? basename(deletion.pendingDelete[0])
             : undefined}
           count={deletion.pendingDelete.length > 1 ? deletion.pendingDelete.length : undefined}
           onConfirm={() => { deletion.confirm(); focusTree(); }}
