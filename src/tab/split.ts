@@ -22,10 +22,14 @@ export function hasSplit(tabs: Tab[]): boolean {
   return tabs.some((tab) => isSplitEligibleTab(tab) && tab.pane === 'right');
 }
 
+function isRestorable(tab: Tab | undefined, pane: CenterPane, excluded: string): tab is Tab {
+  return tab !== undefined && tab.label !== excluded && isSplitEligibleTab(tab) && centerPane(tab) === pane;
+}
+
 function nearestLabel(tabs: Tab[], index: number, pane: CenterPane, excluded: string): string | undefined {
   const candidates = tabs
     .map((tab, candidateIndex) => ({ tab, candidateIndex }))
-    .filter(({ tab }) => tab.label !== excluded && isSplitEligibleTab(tab) && centerPane(tab) === pane)
+    .filter(({ tab }) => isRestorable(tab, pane, excluded))
     .toSorted((a, b) => Math.abs(a.candidateIndex - index) - Math.abs(b.candidateIndex - index));
   return candidates[0]?.tab.label;
 }
@@ -33,9 +37,19 @@ function nearestLabel(tabs: Tab[], index: number, pane: CenterPane, excluded: st
 function historyLabel(tabs: Tab[], history: string[], pane: CenterPane, excluded: string): string | undefined {
   for (let index = history.length - 1; index >= 0; index--) {
     const tab = tabs.find((candidate) => candidate.label === history[index]);
-    if (tab && tab.label !== excluded && isSplitEligibleTab(tab) && centerPane(tab) === pane) return tab.label;
+    if (isRestorable(tab, pane, excluded)) return tab.label;
   }
   return undefined;
+}
+
+function restorableLabel(
+  tabs: Tab[],
+  label: string | undefined,
+  pane: CenterPane,
+  excluded: string,
+): string | undefined {
+  const tab = tabs.find((candidate) => candidate.label === label);
+  return isRestorable(tab, pane, excluded) ? tab.label : undefined;
 }
 
 export function moveToOtherPane(
@@ -72,16 +86,9 @@ export function moveToOtherPane(
     return { tabs: nextTabs, activeLabel: targetLabel };
   }
 
-  const previousActive = nextTabs.find((tab) => tab.label === activeLabel);
-  const previousSecondary = nextTabs.find((tab) => tab.label === secondaryLabel);
-  const restored =
-    previousActive && isSplitEligibleTab(previousActive)
-      && previousActive.label !== targetLabel && centerPane(previousActive) === sourcePane
-      ? previousActive.label
-      : previousSecondary && isSplitEligibleTab(previousSecondary)
-        && previousSecondary.label !== targetLabel && centerPane(previousSecondary) === sourcePane
-        ? previousSecondary.label
-        : historyLabel(nextTabs, focusHistory, sourcePane, targetLabel)
-          ?? nearestLabel(nextTabs, targetIndex, sourcePane, targetLabel);
+  const restored = restorableLabel(nextTabs, activeLabel, sourcePane, targetLabel)
+    ?? restorableLabel(nextTabs, secondaryLabel, sourcePane, targetLabel)
+    ?? historyLabel(nextTabs, focusHistory, sourcePane, targetLabel)
+    ?? nearestLabel(nextTabs, targetIndex, sourcePane, targetLabel);
   return { tabs: nextTabs, activeLabel: targetLabel, secondaryLabel: restored };
 }
