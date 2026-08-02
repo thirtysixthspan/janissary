@@ -258,6 +258,10 @@ One bulk move is one history step. Undo replays its successful pairs in reverse 
 replays them in forward order. Making a new forward move clears the redo stack. If there is
 nothing to undo or redo, the corresponding chord does nothing.
 
+For a single-item undo or redo, an occupied destination opens the ordinary **Overwrite** / **Cancel**
+conflict dialog for that item. Cancelling leaves both history stacks and the filesystem unchanged;
+overwriting retries the same undo or redo against the recorded source and destination.
+
 Grouped undo and redo preflight every destination before moving anything. Conflicts offer
 **Overwrite all**, **Skip conflicts**, and **Cancel** under the title
 `Some items already exist in their destinations.` Successful pairs move to the opposite history

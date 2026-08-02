@@ -3,15 +3,10 @@ import path from 'node:path';
 import { copyItem, moveReplacingDestination } from './filesystem.js';
 import { parentPath } from './index.js';
 import type { PastePair } from './paste.js';
-import type { BatchResult, BulkConflictPolicy } from '../protocol.js';
+import type { BulkConflictPolicy, UndoRedoResult } from '../protocol.js';
 
 export type MoveEntry = { from: string; to: string };
 export type MoveGroup = { entries: MoveEntry[] };
-export type MoveConflict = { fromRelPath: string; toRelPath: string };
-export type UndoRedoResult = Partial<BatchResult> & {
-  conflict?: MoveConflict;
-  conflicts?: MoveConflict[];
-};
 
 // A paste (copy or cut) as one undo/redo history step, alongside `MoveGroup`. Its pairs are
 // absolute paths, since the clipboard's sources may lie outside the pasting tab's root — a

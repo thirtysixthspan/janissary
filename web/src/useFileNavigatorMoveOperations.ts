@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { BulkConflictPolicy, BulkMoveResult } from '@shared/protocol';
+import type { BulkConflictPolicy, BulkMoveResult, UndoRedoResult } from '@shared/protocol';
 import type { JanusClient } from './ws';
 
 type Method = 'undoFileNavigatorItem' | 'redoFileNavigatorItem';
@@ -22,13 +22,6 @@ type PendingConflict =
       method: Method;
       title: string;
     };
-
-type UndoRedoResult = {
-  total?: number;
-  failedPaths?: string[];
-  conflict?: { fromRelPath: string; toRelPath: string };
-  conflicts?: Array<{ fromRelPath: string; toRelPath: string }>;
-};
 
 export function useFileNavigatorMoveOperations(client: JanusClient, index: number) {
   const [pendingConflict, setPendingConflict] = useState<PendingConflict | null>(null);

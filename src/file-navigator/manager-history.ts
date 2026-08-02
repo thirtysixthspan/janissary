@@ -1,4 +1,5 @@
-import { applyStackMove, applyStackPaste, isPasteGroup, type HistoryStep, type UndoRedoResult } from './moves.js';
+import { applyStackMove, applyStackPaste, isPasteGroup, type HistoryStep } from './moves.js';
+import type { UndoRedoResult } from '../protocol.js';
 
 type HistoryState = {
   root: string;
