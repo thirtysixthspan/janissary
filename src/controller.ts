@@ -1,7 +1,7 @@
-import { completeCommandLine } from './completion/index.js';
 import type { CompletionResult, FileNavigatorDetail, Sinks } from './types.js';
 import { TranscriptStore } from './transcript/store.js';
 import * as fileNavigatorRpc from './controller/file-navigator.js';
+import { complete as completeCommand } from './controller/completion.js';
 import { wireControllerEvents } from './controller/events.js';
 import { createManagers } from './controller/create-managers.js';
 import { saveFile } from './editor/save.js';
@@ -13,6 +13,15 @@ import { runSuggestion } from './monitor/window.js';
 import { listPersonas } from './personas.js';
 import type { TabView } from './protocol.js';
 import type { Managers } from './managers.js';
+import type { AcpRef, BatchResult, BulkConflictPolicy, BulkMoveResult, FileOpenerChoice, FileNavigatorSelectionRecord } from './protocol.js';
+import type { EditorSuggestParams, EditorSuggestResult } from './editor-suggest/handler.js';
+import { buildStateEvent } from './state-event.js';
+import { openTranscriptFor, openHarnessTranscriptFor, openAcpTranscript } from './controller/transcript.js';
+import { projectFilesFor } from './project-files.js';
+import { setClientLayout } from './client-layout.js';
+import { editorSuggest, ownerLabel } from './editor-suggest/handler.js';
+import { closeConnection } from './connection/close.js';
+import { resolveTreeSelections } from './file-navigator/selection-request.js';
 
 export class Controller {
   managers: Managers = {} as Managers;
@@ -46,6 +55,8 @@ export class Controller {
     return this.managers.command.routeView();
   }
 
+  stateEvent() { return buildStateEvent(this); }
+
   chooseRoute(index: number): void {
     this.managers.command.chooseRoute(index);
   }
@@ -55,6 +66,11 @@ export class Controller {
   scheduleLaunchView() { return this.managers.schedule.scheduleLaunchView(); }
   closeScheduleLaunch(): void { this.managers.schedule.closeScheduleLaunch(); }
   cancelSchedule(tab: string, id: string): void { this.managers.schedule.cancel(tab, id); }
+  clearSchedules(): void { this.managers.schedule.clearAll(); }
+
+  answerQuestion(tab: string, id: string, answer: string | null): void {
+    if (!this.managers.questions.answer(tab, id, answer)) throw new Error('question not found');
+  }
 
   dispatch(text: string): void {
     this.managers.command.dispatch(text);
@@ -120,6 +136,9 @@ export class Controller {
     this.managers.tab.setActiveTab(index);
   }
 
+  focusTab(label: string): void { this.managers.tab.setActiveTab(this.managers.tab.findIndex(label)); }
+  moveTabToOtherPane(index: number): void { this.managers.tab.moveTabToOtherPane(index); }
+
   moveTab(dir: -1 | 1): void {
     this.managers.tab.moveTab(dir);
   }
@@ -178,9 +197,32 @@ export class Controller {
     fileNavigatorRpc.moveFileNavigatorItem(this.managers, index, fromRelPath, toRelPath);
   }
 
+  moveFileNavigatorItems(index: number, sourcePaths: string[], destinationPath: string, policy?: BulkConflictPolicy): BulkMoveResult {
+    return fileNavigatorRpc.moveFileNavigatorItems(this.managers, index, sourcePaths, destinationPath, policy);
+  }
+
+  pasteFileNavigatorItems(index: number, sources: string[], destinationPath: string, mode: 'copy' | 'cut', policy?: BulkConflictPolicy): BulkMoveResult {
+    return fileNavigatorRpc.pasteFileNavigatorItems(this.managers, index, sources, destinationPath, mode, policy);
+  }
+
   deleteFileNavigatorItem(index: number, relPath: string): void {
     fileNavigatorRpc.deleteFileNavigatorItem(this.managers, index, relPath);
   }
+
+  deleteFileNavigatorItems(index: number, paths: string[]): BatchResult {
+    return fileNavigatorRpc.deleteFileNavigatorItems(this.managers, index, paths);
+  }
+
+  renameFileNavigatorItem(index: number, relPath: string, newName: string): void {
+    fileNavigatorRpc.renameFileNavigatorItem(this.managers, index, relPath, newName);
+  }
+
+  fileNavigatorSearch(index: number): Promise<string[]> { return fileNavigatorRpc.fileNavigatorSearch(this.managers, index); }
+  revealFileNavigatorItem(index: number, relPath: string): void { fileNavigatorRpc.revealFileNavigatorItem(this.managers, index, relPath); }
+  fileNavigatorOpeners(index: number, relPath: string, edit: boolean): { command?: 'open' | 'edit'; choices: FileOpenerChoice[] } {
+    return fileNavigatorRpc.fileNavigatorOpeners(this.managers, index, relPath, edit);
+  }
+  reportFileNavigatorSelection(id: number, navigators: FileNavigatorSelectionRecord[]): void { resolveTreeSelections(id, navigators); }
 
   undoFileNavigatorItem(index: number, overwrite?: boolean, skipConflicts?: boolean) {
     return fileNavigatorRpc.undoFileNavigatorItem(this.managers, index, overwrite, skipConflicts);
@@ -207,26 +249,26 @@ export class Controller {
     this.managers.profile.newAgentAt(label);
   }
 
+  openTranscriptFor(label: string): void { openTranscriptFor(this.managers, label); }
+  openHarnessTranscriptFor(label: string): void { openHarnessTranscriptFor(this.managers, label); }
+  openAcpTranscript(acpRef: AcpRef): void { openAcpTranscript(this.managers, acpRef); }
+  reportLayout(layout: { sidebarLeft: number; sidebarRight: number; tabAreaPct: number }): void { setClientLayout(layout); }
+
+  projectFiles(): Promise<{ root: string; paths: string[] }> { return projectFilesFor(this.managers); }
+  projectFilesFallback(): { root: string; paths: string[] } { return { root: this.managers.tab.launchDir, paths: [] }; }
+  editorPersonas(): string[] { return listPersonas('editor'); }
+
+  editorSuggest(params: EditorSuggestParams, callback: (result: EditorSuggestResult) => void): void {
+    editorSuggest(this.managers, params, callback);
+  }
+
+  closeEditorConnection(url: string, persona: string): void { closeConnection('acp', persona, this.managers, ownerLabel(this.managers, url), () => { /* no-op */ }); }
+
   // Tab-completion for the command line (reuses the shared `completeCommandLine`): filesystem
   // paths against the active tab's cwd, `msg`/`broadcast` agent names, `connection close` targets,
   // and `browser` subcommands / window ids.
   complete(text: string, cursor: number): CompletionResult {
-    const tab = this.managers.tab.cur();
-    const cwd = this.managers.tab.cwdOf(tab.label) ?? process.cwd();
-    const agents = this.managers.tab.allLabels();
-    // Monitor targets: every other action tab, plus `group:<n>` for each existing group.
-    const actionTabs = this.managers.tab.tabs.filter((t) => t.view !== 'monitor');
-    const groups = [...new Set(actionTabs.map((t) => t.group))].toSorted((a, b) => a - b).map((g) => `group:${g}`);
-    const targets = [...actionTabs.map((t) => t.label).filter((l) => l !== tab.label), ...groups];
-    return completeCommandLine(
-      text, cursor, cwd, agents, this.managers.connection.completionConnections(tab.label),
-      { personas: listPersonas('monitor'), targets },
-    );
-  }
-
-  // Canonical connection strings for `connection close` completion (shell/acp/browser/sqlite).
-  private completionConnections(label: string): string[] {
-    return this.managers.connection.completionConnections(label);
+    return completeCommand(this.managers, text, cursor);
   }
 
   shutdown(): void {
