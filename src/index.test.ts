@@ -52,6 +52,24 @@ describe('startServer (WS + RPC + security)', () => {
     ws.close();
   });
 
+  it('drops invalid RPC envelopes without making the socket unusable', async () => {
+    server = await startServer({ webDir: tmpdir() });
+    const ws = new WebSocket(`ws://127.0.0.1:${server.port}/?token=${server.token}`);
+    const events: ServerEvent[] = [];
+    ws.on('message', (data) => { events.push(JSON.parse(data.toString())); });
+    await new Promise((resolve, reject) => { ws.on('open', resolve); ws.on('error', reject); });
+
+    ws.send(JSON.stringify({ t: 'rpc', id: 60, method: 'unknown', params: {} }));
+    ws.send(JSON.stringify({ t: 'rpc', id: 61, method: 'command' }));
+    ws.send(JSON.stringify({ t: 'rpc', id: 62, method: 'command', params: [] }));
+    ws.send(JSON.stringify({ t: 'event', id: 63, method: 'command', params: {} }));
+    ws.send(JSON.stringify({ t: 'rpc', id: 64, method: 'complete', params: { text: 'shell READ', cursor: 10 } }));
+
+    await waitFor(() => events.some((event) => event.t === 'rpc-reply' && event.id === 64));
+    expect(events.some((event) => event.t === 'rpc-reply' && [60, 61, 62, 63].includes(event.id))).toBe(false);
+    ws.close();
+  });
+
   it('serves security headers on HTTP responses', async () => {
     server = await startServer({ webDir });
     const headers = await new Promise<http.IncomingMessage['headers']>((res, rej) => {

@@ -174,7 +174,7 @@ export type FileNavigatorSelectionRecord = {
 // Client -> server requests. Tab creation/closing flow through `command` (`agent`, `close`);
 // `setActiveTab`/`moveTab`/`toggleCollapse` are pure-UI shortcuts.
 export type RpcCall =
-  | { method: 'init'; params?: Record<string, never> }
+  | { method: 'init'; params: Record<string, never> }
   | { method: 'command'; params: { text: string } }
   | { method: 'setActiveTab'; params: { index: number } }
   | { method: 'focusTab'; params: { label: string } }
@@ -191,12 +191,12 @@ export type RpcCall =
   | { method: 'moveTabToOtherPane'; params: { index: number } }
   | { method: 'reorderTab'; params: { dir: -1 | 1 } }
   | { method: 'reorderTabTo'; params: { from: number; to: number } }
-  | { method: 'toggleCollapse'; params?: Record<string, never> }
+  | { method: 'toggleCollapse'; params: Record<string, never> }
   | { method: 'chooseRoute'; params: { index: number } }
   // Close the "New harness" launch dialog without launching (Cancel/Escape).
-  | { method: 'closeHarnessLaunch'; params?: Record<string, never> }
+  | { method: 'closeHarnessLaunch'; params: Record<string, never> }
   // Close the "New schedule" dialog without scheduling (Cancel/Escape, or after a submit).
-  | { method: 'closeScheduleLaunch'; params?: Record<string, never> }
+  | { method: 'closeScheduleLaunch'; params: Record<string, never> }
   | { method: 'answerQuestion'; params: { tab: string; id: string; answer: string | null } }
   | { method: 'complete'; params: { text: string; cursor: number } }
   | { method: 'resize'; params: { cols: number; rows: number } }
@@ -293,7 +293,7 @@ export type RpcCall =
   // Remove one scheduled entry, identified by its owning tab label and timer id, after the client
   // has confirmed with the user (Backspace/Delete on a selected row in the aggregated schedules tab).
   | { method: 'cancelSchedule'; params: { tab: string; id: string } }
-  | { method: 'clearSchedules'; params?: Record<string, never> }
+  | { method: 'clearSchedules'; params: Record<string, never> }
   // Undo/redo the most recent move in a file navigator tab's per-tab undo/redo stack. `overwrite`
   // retries a pending entry after the client has confirmed an overwrite of a conflicting
   // destination; the reply's `result` carries `{ conflict }` when one is found instead.
@@ -329,10 +329,10 @@ export type RpcCall =
   // overlay. Replies (deferred) with `{ root, paths }` — `root` is the absolute launch directory,
   // `paths` are its root-relative paths — so the client can join them into an absolute path for
   // the `edit` command regardless of the active tab's own cwd.
-  | { method: 'projectFiles'; params?: Record<string, never> }
+  | { method: 'projectFiles'; params: Record<string, never> }
   // List the persona names available to an editor tab's `>`-led suggestion requests, for
   // Tab-completion after `>` (see product/specs/editor-tab.md). Replies (deferred) with `{ names }`.
-  | { method: 'editorPersonas'; params?: Record<string, never> }
+  | { method: 'editorPersonas'; params: Record<string, never> }
   // Fire a single-shot in-editor persona-suggestion query: prime the named persona with the
   // editor's live buffer content (including unsaved edits) and the request prompt, and reply
   // (deferred) with `{ hunks }` — the parsed edit hunks the persona proposed (empty when the

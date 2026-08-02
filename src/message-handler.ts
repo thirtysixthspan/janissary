@@ -158,6 +158,9 @@ export function handle(controller: Controller, message: ClientMessage, reply: (e
       reply({ t: 'rpc-reply', id: message.id, result: 'ok' });
       return;
     }
+    default: {
+      return;
+    }
   }
   reply({ t: 'rpc-reply', id: message.id, result: 'ok' });
 }

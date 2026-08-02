@@ -4,9 +4,10 @@ import path from 'node:path';
 import { WebSocketServer, WebSocket } from 'ws';
 import { Controller } from './controller.js';
 import { makeToken, originAllowed, tokenFromReq as tokenFromRequest, tokenMatches } from './security.js';
-import type { ClientMessage, ServerEvent } from './protocol.js';
+import type { ServerEvent } from './protocol.js';
 import { handle } from './message-handler.js';
 import { buildStateEvent } from './state-event.js';
+import { isClientMessage } from './client-message.js';
 
 // Applied to every HTTP response: defence-in-depth for the XSS path and token leak.
 const SECURITY_HEADERS = {
@@ -104,8 +105,9 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
   wss.on('connection', (ws: WebSocket) => {
     clients.add(ws);
     ws.on('message', (raw) => {
-      let message: ClientMessage;
-      try { message = JSON.parse(raw.toString()) as ClientMessage; } catch { return; }
+      let message: unknown;
+      try { message = JSON.parse(raw.toString()) as unknown; } catch { return; }
+      if (!isClientMessage(message)) return;
       try {
         handle(controller, message, (event) => ws.send(JSON.stringify(event)));
       } catch (error) {
