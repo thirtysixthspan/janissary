@@ -2,8 +2,6 @@
 
 ## ready
 
-* video tabs must remember state of the video so that you can switch between tabs and return to the player in the same state.
-
 * videos should continue to play, even when the tab is no longer focused.
 
 * add user documentation of video tabs.
