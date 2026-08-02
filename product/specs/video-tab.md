@@ -58,8 +58,16 @@ playback shortcuts; while the player has focus, the keyboard belongs to the nati
 
 Leaving a video tab does not disturb its player. Switching to another tab and back returns the video
 exactly as it was left — the same position on the timeline, the same paused or playing state, and the
-same volume and playback rate. A video that was playing when the tab lost focus is still playing when
-it regains it, having advanced in the meantime.
+same volume and playback rate.
+
+A playing video **keeps playing while its tab is not the focused one**. It is not paused, stopped, or
+rewound when focus moves elsewhere; it goes on advancing in the background, audio included, and is
+found further along the timeline on return. This is deliberate: a video is worth listening to while
+working in another tab. The consequence is that sound can come from a tab that is not on screen — to
+stop it, pause the video before leaving the tab, or close the tab, which ends playback outright.
+
+Playback also continues while the tab is merely off to one side: a video shown in one pane of a split
+view plays whether or not that pane holds the keyboard focus.
 
 Playback state is still live and in-memory: it belongs to the open tab, not to the file. Opening the
 same file again after closing its tab starts from the beginning, and nothing about playback is
