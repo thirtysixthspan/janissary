@@ -2,19 +2,19 @@
 
 ## ready
 
-## development
+* The Markdown view (`product/specs/markdown-tab.md`, `product/specs/markdown-rendering.md`) is a read-only snapshot that must be reopened after a file changes, while Obsidian offers an editable Live Preview/Source mode toggle for the same Markdown note. Closing this gap would turn the Markdown tab into an editable note view with source/live-preview switching, debounced saves, dirty-file protection, and external-change handling while retaining the existing sanitized renderer. Complexity: medium-high.
 
 * The ssh tab (`product/specs/ssh-tab.md`) has no session logging to disk, the way iTerm2's per-profile "Automatically Log Session Input to Files" setting captures a session's raw I/O for later audit, independent of on-demand scrollback. Janissary's spec states plainly that ssh tabs "get no screen reader either" and are excluded from the automatic harness-recording that named-harness tabs get (`product/specs/harness-recording.md`) — a remote session's output is gone the moment its tab closes, with no way to review what happened on a host after the fact. Extending the existing asciicast recording mechanism to ssh tabs (the same lazy-file, PTY-lifetime-scoped approach harness tabs already use) would close this without a new recording format. Complexity: low-medium — the recording plumbing already exists for harness tabs; this is mostly widening its scope.
 
-* A kanban-style board summarizing all currently-open workspaced agents and harnesses, the way Vibe Kanban and amux's built-in kanban board let a user managing many parallel AI coding sessions see task/status at a glance instead of checking each session individually. Janissary's tab strip and fuzzy tab navigator (`product/specs/tab-navigator.md`) let a user jump to any tab, but there is no aggregate view of what each workspaced tab is working on and whether it's idle, busy, or blocked on a permission prompt. A new dockable tab (alongside the existing `notifications`/`schedules` dockable tabs) could list every workspaced agent/harness tab with its busy state and last activity. do this as a tab plugin with a new plugin architecture.
+* The file navigator (`product/specs/file-navigator-tab.md`) supports mouse range/modifier selection and keyboard copy/cut/paste, but explicitly lacks Shift+Arrow range extension, Cmd/Ctrl+A, and mouse/menu routes for those clipboard actions; VS Code's Explorer supports keyboard-modifier multi-selection and actions over the selected set. Closing this gap would make selection semantics consistent across pointer and keyboard input and expose copy/cut/paste plus bulk actions through an accessible context menu. Complexity: medium. Determination: UI improvement. Context menus would be nice to have.
 
-* Multi-user, read-only shared session viewing, the way tmux's multi-attach lets a second person view (and optionally drive) the same session, and Warp's Team Workflows share execution across a team. Janissary already ships a web client serving every tab over HTTP, but the spec surface (`product/specs/tabs.md`, `product/specs/connection.md`) describes a single-user session with no notion of a second, remote viewer watching a running harness or agent tab live — a natural extension given the app is already a served web app rather than a purely local terminal UI. Cool but low priority.
+* The shell transcript (`product/specs/shell.md`, `product/specs/transcript.md`) is line-oriented and can rerun a prompt by double-click, but it does not expose command-level duration, exit status, or a selectable command-plus-output block; iTerm2's shell integration supplies command selection and an info panel with duration, status, resend, copy, share, and named marks. Closing this gap would track command boundaries and completion metadata, then add block selection with copy/rerun/bookmark actions and a compact command-info view. Complexity: medium.
 
+## development
 
+## deferred
 
 * long term durable transcripts - send trascripts off to seperate github repo? other durable storage options? 
-
-* Generate a set of given profiles derived from profiles used in other tools. research and clone. curated personas: researcher, critic, planner, summarizer. research and clone. Ambient background research persona that, when you mention an unfamiliar term/library/error, quietly researches it and drops a ready reference into a side tab, unasked. (Web-tool personas.)
 
 * centralized model selection and usage statistics
 
@@ -22,31 +22,13 @@
 
 * Durable flows across relaunch - capture exit information from a harness and be able to use it to restart a session. a relaunch harness picker. workspace dir would need saved and re-created.
 
-* Cross-agent shared memory store memory set/get KV any agent can read/write, distinct from per-agent context[]. This could be a redis/postgress integration.
-
 * support monitor -> trigger -> action workflows. monitors are agent tasks that interact with web, files, databases to capture and summarize data. triggers are agent tasks that take monitor data and evaluate if the data meets some criteria. actions take data and affect some outcome. requires a way to encode and visualize entities and workflows, dataflows and outcomes. could be OODA loop instead Observers - Orienters - Deciders - Actors.
 
 * integration plugin api to support data access and triggers from sources like chat, github. should be tooling around api calls not MCP protocal support. 
 
-* Integration commands and ability to arbitrarily permit workspaces. a library of built-in connection commands (Slack, GitHub issues, HTTP) invokable through the sandboxed tool loop. Look for external libraries and tooling to adopt.
-
-
-* The browser automation feature (`product/specs/browser.md`) exposes goto, rendered content, eval, and screenshots but does not retain an inspectable action history or browser diagnostics; Playwright Trace Viewer provides a timeline with DOM snapshots, screenshots, console messages, network requests, and action details. Closing this gap would add an opt-in per-window trace/inspection mode with a replayable timeline and links from each action to its DOM, console, network, and screenshot evidence. Complexity: high.
-
-* The Markdown view (`product/specs/markdown-tab.md`, `product/specs/markdown-rendering.md`) is a read-only snapshot that must be reopened after a file changes, while Obsidian offers an editable Live Preview/Source mode toggle for the same Markdown note. Closing this gap would turn the Markdown tab into an editable note view with source/live-preview switching, debounced saves, dirty-file protection, and external-change handling while retaining the existing sanitized renderer. Complexity: medium-high.
-
-* The shell transcript (`product/specs/shell.md`, `product/specs/transcript.md`) is line-oriented and can rerun a prompt by double-click, but it does not expose command-level duration, exit status, or a selectable command-plus-output block; iTerm2's shell integration supplies command selection and an info panel with duration, status, resend, copy, share, and named marks. Closing this gap would track command boundaries and completion metadata, then add block selection with copy/rerun/bookmark actions and a compact command-info view. Complexity: medium.
-
-* The SSH tab (`product/specs/ssh-tab.md`) passes flags through to a raw ssh PTY but has no first-class management for auxiliary remote-session workflows, while Termius exposes port forwarding and file transfer alongside the terminal. Closing this gap would add an SSH session panel for creating, inspecting, stopping, and restoring local/remote forwards plus an SFTP-style file transfer view tied to the active connection, without conflating it with the separate saved-host backlog item. Complexity: high.
-
-## deferred
-
+* The SSH tab (`product/specs/ssh-tab.md`) passes flags through to a raw ssh PTY but has no first-class management for auxiliary remote-session workflows, while Termius exposes port forwarding and file transfer alongside the terminal. Closing this gap would add an SSH session panel for creating, inspecting, stopping, and restoring local/remote forwards plus an SFTP-style file transfer view tied to the active connection, without conflating it with the separate saved-host backlog item. Complexity: high. Determination: possibly valuable in the future when ssh become more used.
 
 * The database feature (`product/specs/database.md`, `product/specs/connection.md`) is a SQLite command surface that renders row queries as aligned text tables, whereas DBeaver provides a schema/object navigator plus a data grid with filtering, ordering, editing, refresh, export, and SQL generation. Closing this gap would add a dockable SQLite schema browser and table data view with safe cell editing, filters, refresh, CSV export, and generated SQL actions. Complexity: high. Determination: database interactions would make a nice tab plugin.
-
-
-* The file navigator (`product/specs/file-navigator-tab.md`) supports mouse range/modifier selection and keyboard copy/cut/paste, but explicitly lacks Shift+Arrow range extension, Cmd/Ctrl+A, and mouse/menu routes for those clipboard actions; VS Code's Explorer supports keyboard-modifier multi-selection and actions over the selected set. Closing this gap would make selection semantics consistent across pointer and keyboard input and expose copy/cut/paste plus bulk actions through an accessible context menu. Complexity: medium. Determination: UI improvement. Context menus would be nice to have.
-
 
 * The `schedules` tab (`product/specs/scheduling.md`) has no calendar/timeline view or failure-retry handling, the way Cronicle's web UI shows a visual multi-select calendar widget for authoring a schedule and a run-history timeline with automatic retries and alerts on failure. Janissary's schedules tab is a flat table sorted by next-run time, and a fired command that errors is recorded like any other output with no distinct failure marker, no retry, and no alert. A "last run failed" indicator on each row (reusing the notification system's existing rate-limited/error detection patterns) would be a smaller first step than a full calendar authoring UI. Complexity: medium. Determination: UI improvement 
 
@@ -54,15 +36,17 @@
 
 * AI-generated, descriptive workspace names for `agent -w`/`harness -w` launches, the way amux auto-generates branch names and commit messages via an LLM call so parallel worktrees are self-describing without the user picking a name. Today a workspaced agent's directory is named after its tab label — either a random pool name (`product/specs/agents.md`) or a user-chosen `as <label>` — with no connection to the task it's actually doing. Optionally deriving the workspace/branch name from the agent's first prompt would make a long tab strip of parallel workspaced agents easier to tell apart at a glance. Determination: LLM in the application is difficult, now we just wrap LLM.
 
-
 * Git-worktree-based workspace provisioning, the way amux, Claude Squad, and Conductor isolate parallel coding agents. Today `agent -w`/`harness -w` does a full `git clone` of `origin` into `.janissary/workspace/<name>/` (see `product/specs/workspaced-agent.md`), which is slower to provision and heavier on disk than a `git worktree add`, which shares the same object store and is near-instant to create. Adopting worktrees for the disposable clone step would speed up launching parallel workspaced agents/harnesses and reduce their footprint, while keeping the existing sandbox/isolation model unchanged. Determination: maybe when cloning gets slow there could be a worktree option but this makes sandboxing harder.
 
+* A kanban-style board summarizing all currently-open workspaced agents and harnesses, the way Vibe Kanban and amux's built-in kanban board let a user managing many parallel AI coding sessions see task/status at a glance instead of checking each session individually. Janissary's tab strip and fuzzy tab navigator (`product/specs/tab-navigator.md`) let a user jump to any tab, but there is no aggregate view of what each workspaced tab is working on and whether it's idle, busy, or blocked on a permission prompt. A new dockable tab (alongside the existing `notifications`/`schedules` dockable tabs) could list every workspaced agent/harness tab with its busy state and last activity. do this as a tab plugin with a new plugin architecture. 
 
-* An in-app diff/merge review UI for a workspaced agent's changes, comparable to Conductor's per-worktree result view and amux's "smart merging" (auto-commit and merge cleanup across parallel branches). Janissary can run any number of `agent -w`/`harness -w` tabs, each with its own git clone (`product/specs/workspaced-agent.md`), but has no way to view a diff of what a given workspace changed, or to merge/cherry-pick it back into the root repo, without leaving the app and inspecting the clone directories by hand. A `workspace diff <label>` command opening a read-only diff view (reusing the editor tab's syntax highlighting) would close this gap. Determination: nope users should not need to know git so intimately
+## declined
 
 * A saved directory of SSH hosts with tags/groups and one-click connect, the way Termius and Royal TSX maintain a host list with saved keys and connection options instead of retyping a destination each time. Janissary's `ssh <destination> [options]` (`product/specs/ssh-tab.md`) is a thin passthrough to the real `ssh` binary with no saved-host concept — every connection is typed from scratch, with tab-completion only covering already-open ssh tabs' labels/destinations, not a saved list of hosts never yet connected to in this session. Determination: Out of scope at the moment
 
-## declined
+* An in-app diff/merge review UI for a workspaced agent's changes, comparable to Conductor's per-worktree result view and amux's "smart merging" (auto-commit and merge cleanup across parallel branches). Janissary can run any number of `agent -w`/`harness -w` tabs, each with its own git clone (`product/specs/workspaced-agent.md`), but has no way to view a diff of what a given workspace changed, or to merge/cherry-pick it back into the root repo, without leaving the app and inspecting the clone directories by hand. A `workspace diff <label>` command opening a read-only diff view (reusing the editor tab's syntax highlighting) would close this gap. Determination: nope users should not need to know git so intimately
+
+* Multi-user, read-only shared session viewing, the way tmux's multi-attach lets a second person view (and optionally drive) the same session, and Warp's Team Workflows share execution across a team. Janissary already ships a web client serving every tab over HTTP, but the spec surface (`product/specs/tabs.md`, `product/specs/connection.md`) describes a single-user session with no notion of a second, remote viewer watching a running harness or agent tab live — a natural extension given the app is already a served web app rather than a purely local terminal UI. Determination: Cool but low priority.
 
 * A floating, transient terminal overlay for a quick one-off shell command, the way Zellij's floating panes let a user pop open a temporary pane without disturbing the current layout, then dismiss it. Janissary's closest equivalent is PTY takeover (`product/specs/shell.md`), which replaces the whole tab body for an interactive program, or opening a whole new tab — there is no lightweight way to run one quick command in a small overlay without leaving the current tab's context or committing to a new tab. Determinination: nope
 
@@ -72,5 +56,6 @@
 
 * The editor (`product/specs/editor-tab.md`) has syntax highlighting and fuzzy search within the current buffer but no language-aware symbol navigation, while VS Code combines language services with Go to Symbol, Go to Definition/References, Peek, Outline, and breadcrumbs. Closing this gap would add a pluggable language-service/indexing layer and editor commands for symbol search, definition/reference jumps, and the current file's symbol outline. Complexity: high. Determination: the editor is general purpose not specifically a code editor.
 
+* The browser automation feature (`product/specs/browser.md`) exposes goto, rendered content, eval, and screenshots but does not retain an inspectable action history or browser diagnostics; Playwright Trace Viewer provides a timeline with DOM snapshots, screenshots, console messages, network requests, and action details. Closing this gap would add an opt-in per-window trace/inspection mode with a replayable timeline and links from each action to its DOM, console, network, and screenshot evidence. Complexity: high. Determination: low value at this point in time.
 
 
