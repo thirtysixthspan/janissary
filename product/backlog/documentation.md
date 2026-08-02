@@ -2,9 +2,7 @@
 
 ## ready
 
-## development
-
-* websocket-rpc (10/10) — There is no matching page under `documentation/user-documentation/` and no coverage in `help.md`, so 12 of 12 documentable facts are missing. Those facts include the required `t: "rpc"`, numeric `id`, recognized `method`, and object-valued `params` envelope; silent dropping of malformed JSON, unknown methods, and invalid params without closing the socket; recovery on a later valid frame; and `rpc-reply` error semantics for synchronous dispatch failures. The ground truth is `product/specs/websocket-rpc.md`, `src/client-message.ts`, `src/index.ts`, `src/message-handler.ts`, and `src/protocol.ts`. Fix by adding an advanced reference page such as `documentation/user-documentation/advanced-agents/websocket-rpc.md` that documents the accepted envelope, invalid-frame behavior, and normal, deferred, and error reply shapes.
+* websocket-rpc (10/10) — There is no matching page under `documentation/user-documentation/` and no coverage in `help.md`, so 12 of 12 documentable facts are missing. Those facts include the required `t: "rpc"`, numeric `id`, recognized `method`, and object-valued `params` envelope; silent dropping of malformed JSON, unknown methods, and invalid params without closing the socket; recovery on a later valid frame; and `rpc-reply` error semantics for synchronous dispatch failures. The ground truth is `product/specs/websocket-rpc.md`, `src/client-message.ts`, `src/index.ts`, `src/message-handler.ts`, and `src/protocol.ts`. Fix by adding an advanced reference page such as `documentation/user-documentation/advanced-agents/websocket-rpc.md` that documents the accepted envelope, invalid-frame behavior, and normal, deferred, and error reply shapes. This should be a topic in developer documentation, not user documentation.
 
 * file-navigator-copy-and-paste (8/10) — `documentation/user-documentation/tab-types/file-navigator.md` has no clipboard section and `help.md` omits the copy, cut, and paste chords, leaving 11 of 12 facts missing and 1 wrong. Missing facts include the app-wide clipboard, `Cmd`/`Ctrl+C`, `X`, and `V`, cursor-derived paste destinations, copy-versus-cut marks and clipboard lifetime, same-directory auto-numbering, cross-navigator pastes, conflict choices, failure handling, and undo/redo semantics; the wrong fact says failed file operations open a result dialog when they now post one summarized notifications-feed line. The ground truth is `product/specs/file-navigator-tab.md`, `web/src/file-navigator-chords.ts`, `web/src/file-navigator-clipboard.ts`, `src/file-navigator/paste.ts`, and `src/file-navigator/operation-report.ts`. Fix by adding a copying, cutting, and pasting section and correcting the shared failure-reporting text in `documentation/user-documentation/tab-types/file-navigator.md`, then adding the three chords to the file-navigator controls in `help.md`.
 
@@ -14,9 +12,9 @@
 
 * editor-tab (4/10) — The editor coverage in `documentation/user-documentation/tab-types/editor.md`, `documentation/user-documentation/tab-types/editor-git-sync.md`, and `documentation/user-documentation/tab-types/editor-persona-query.md` is accurate, including the recently fixed first external-change reload, but 4 of 20 facts are missing and none are wrong. The missing facts are transcript-log scrubbing for text-bearing editor input, visual-row cursor movement across soft-wrapped lines, IME composition handling, and the detailed caret/scroll rules that keep movement visible without snapping the viewport merely because a tab was reactivated. The ground truth is `product/specs/editor-tab.md`, `web/src/EditorTab.tsx`, `web/src/editor/keys.ts`, and `web/src/editor/useEditorWatchReload.ts`. Fix by adding concise keyboard/input and caret/scroll subsections to `documentation/user-documentation/tab-types/editor.md`; the Git-sync and persona-query pages need no change for this gap.
 
-## deferred
+## development
 
-* sandbox — flagged by a 190-line spec whose coverage is scattered across `documentation/user-documentation/advanced-agents/workspacing.md` and `workspaced-agent.md`; not yet evaluated fact-by-fact (over this run's limit)
+## deferred
 
 ## declined
 
