@@ -32,7 +32,6 @@
 
 
 
-* The file navigator (`product/specs/file-navigator-tab.md`) supports mouse range/modifier selection and keyboard copy/cut/paste, but explicitly lacks Shift+Arrow range extension, Cmd/Ctrl+A, and mouse/menu routes for those clipboard actions; VS Code's Explorer supports keyboard-modifier multi-selection and actions over the selected set. Closing this gap would make selection semantics consistent across pointer and keyboard input and expose copy/cut/paste plus bulk actions through an accessible context menu. Complexity: medium.
 
 * The database feature (`product/specs/database.md`, `product/specs/connection.md`) is a SQLite command surface that renders row queries as aligned text tables, whereas DBeaver provides a schema/object navigator plus a data grid with filtering, ordering, editing, refresh, export, and SQL generation. Closing this gap would add a dockable SQLite schema browser and table data view with safe cell editing, filters, refresh, CSV export, and generated SQL actions. Complexity: high.
 
@@ -46,6 +45,7 @@
 
 ## deferred
 
+* The file navigator (`product/specs/file-navigator-tab.md`) supports mouse range/modifier selection and keyboard copy/cut/paste, but explicitly lacks Shift+Arrow range extension, Cmd/Ctrl+A, and mouse/menu routes for those clipboard actions; VS Code's Explorer supports keyboard-modifier multi-selection and actions over the selected set. Closing this gap would make selection semantics consistent across pointer and keyboard input and expose copy/cut/paste plus bulk actions through an accessible context menu. Complexity: medium. Determination: UI improvement. Context menus would be nice to have.
 
 
 * The `schedules` tab (`product/specs/scheduling.md`) has no calendar/timeline view or failure-retry handling, the way Cronicle's web UI shows a visual multi-select calendar widget for authoring a schedule and a run-history timeline with automatic retries and alerts on failure. Janissary's schedules tab is a flat table sorted by next-run time, and a fired command that errors is recorded like any other output with no distinct failure marker, no retry, and no alert. A "last run failed" indicator on each row (reusing the notification system's existing rate-limited/error detection patterns) would be a smaller first step than a full calendar authoring UI. Complexity: medium. Determination: UI improvement 
