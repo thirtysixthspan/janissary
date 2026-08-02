@@ -6,12 +6,13 @@ The `open` command views a file or web page in a new tab:
 
 ```
 open diagram.png              image, in an image tab
+open clip.mp4                 video, played in a video tab
 open notes.md                 Markdown, rendered in a markdown tab
 open https://example.com      web page, embedded in a page tab
 open page example.com         same, for a bare address
 ```
 
-Full form: `open [external] [page] <target>`. Relative paths resolve against the tab's working directory. What kind of tab you get depends on the file type — see [Image viewer](/user-documentation/tab-types/image-viewer), [Markdown preview](/user-documentation/tab-types/markdown-preview), and [Embedded web pages](/user-documentation/tab-types/web-pages). Every tab it opens joins the current tab's [group](/user-documentation/getting-started/groups) and can be closed from the strip with its × button.
+Full form: `open [external] [page] <target>`. Relative paths resolve against the tab's working directory. What kind of tab you get depends on the file type — see [Image viewer](/user-documentation/tab-types/image-viewer), [Video player](/user-documentation/tab-types/video-player), [Markdown preview](/user-documentation/tab-types/markdown-preview), and [Embedded web pages](/user-documentation/tab-types/web-pages). Every tab it opens joins the current tab's [group](/user-documentation/getting-started/groups) and can be closed from the strip with its × button.
 
 Targets with an `http://` or `https://` scheme are treated as web addresses; the `page` keyword forces web interpretation and assumes `https://` for a bare address like `example.com`. Anything else is a file path. Only `http` and `https` pages can be opened — other schemes are rejected as invalid.
 
@@ -21,8 +22,11 @@ Targets with an `http://` or `https://` scheme are treated as web addresses; the
 
 ```
 open external photo.jpg           the OS image viewer (Preview on macOS)
+open external clip.mp4            your configured video player (QuickTime Player by default)
 open external https://example.com the OS default browser
 ```
+
+A few video formats can only be opened this way — `open clip.mkv` goes straight to the external player with no tab. See [Video player](/user-documentation/tab-types/video-player).
 
 ## Wildcards
 
