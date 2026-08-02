@@ -57,6 +57,17 @@ describe('fuzzyMatch', () => {
     }
   });
 
+  it('carries each result\'s position in the candidate array', () => {
+    const results = fuzzyMatch(['zzz.ts', 'dir/App.ts', 'longerdir/App.ts'], 'App', 10);
+    expect(results.map((r) => [r.path, r.index])).toEqual([['dir/App.ts', 1], ['longerdir/App.ts', 2]]);
+  });
+
+  it('keeps two identical candidates apart by index, first-in-array-first', () => {
+    const results = fuzzyMatch(['  }', 'const x = 1;', '  }'], '}', 10);
+    expect(results.map((r) => r.index)).toEqual([0, 2]);
+    expect(results.map((r) => r.path)).toEqual(['  }', '  }']);
+  });
+
   it('returns no results for an empty query', () => {
     expect(fuzzyMatch(['a.ts', 'b.ts'], '', 10)).toEqual([]);
     expect(fuzzyMatch(['a.ts', 'b.ts'], ' '.repeat(3), 10)).toEqual([]);

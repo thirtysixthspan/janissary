@@ -201,6 +201,36 @@ Clicking a `path:line` link in the transcript (see Transcript) opens the editor 
 already on the target line, scrolled to the middle of the tab so the surrounding context is visible
 on first open. Subsequent cursor movement in that tab follows the normal into-view scrolling above.
 
+### Finding a line
+
+Cmd+F opens a find overlay at the bottom of the editor tab, with its own focused text input
+labelled "Search buffer". It searches the tab's own buffer — the lines as they are right now,
+including unsaved edits — and nothing else: not the transcript, not other tabs, and not files on
+disk. Reaching another file is still Quick Open's job (see [[quick-open]]). The browser's own find
+bar never appears. Ctrl+F is unaffected and keeps moving the cursor one character to the right.
+
+Typing fuzzy-matches the buffer's lines and lists the ten best-scoring ones, best first. Each row is
+the line's 1-based number, dimmed, beside the line's text with the matched characters emphasized. A
+line too long for the overlay is clipped with an ellipsis rather than wrapped; its number and the
+jump still identify it. Matching is case-insensitive subsequence matching, with no regex, case, or
+whole-word options. Two identical lines appear as two rows with their own line numbers, in
+first-in-file order.
+
+↑/↓ move the highlighted row and immediately move the editor cursor to that line, scrolling the
+buffer behind the overlay so the match is read in context. Clicking a row does the same. There is no
+separate commit step — Return does nothing, because the jump has already happened. The cursor move
+is not an edit: it never dirties the buffer and never becomes an undo step, so an undo right after a
+jump undoes the last real edit.
+
+Escape closes the overlay and leaves the cursor on the last previewed line, with focus back in the
+buffer ready to type. Switching away from the editor tab also closes it; returning to the tab shows
+no overlay, and Cmd+F opens a fresh, empty one. Nothing about the overlay — its query or its
+selection — survives a close.
+
+An empty query shows a "type to search" hint with no rows, and a query matching no line shows
+"No matching lines". While a persona suggestion is pending review (see In-editor persona
+suggestions), Cmd+F is suppressed along with every other keystroke.
+
 ### GitHub syncing
 
 A file whose project-relative path is covered by the application config's sync-paths setting (see

@@ -844,6 +844,162 @@ describe('EditorTab', () => {
     });
   });
 
+  describe('find overlay', () => {
+    const findInput = () => screen.getByPlaceholderText('Search buffer');
+    const noFindInput = () => screen.queryByPlaceholderText('Search buffer');
+    const currentLine = (container: HTMLElement) => container.querySelector(':scope .editor-row-current .editor-content')?.textContent;
+    const bufferTexts = (container: HTMLElement) =>
+      [...container.querySelectorAll(':scope .editor-row:not(.editor-row-query) .editor-content')].map((n) => n.textContent);
+
+    const findRows = (container: HTMLElement) => container.querySelectorAll('.editor-find-row');
+
+    function openFind() {
+      fireEvent.keyDown(textarea(), { key: 'f', metaKey: true });
+    }
+
+    function search(text: string) {
+      fireEvent.change(findInput(), { target: { value: text } });
+    }
+
+    // The overlay filters on the buffer as it renders, so a freshly typed query settles a tick later.
+    async function searchForOneRow(container: HTMLElement, text: string) {
+      search(text);
+      await waitFor(() => expect(findRows(container)).toHaveLength(1));
+    }
+
+    it('opens on Cmd+F without typing an f into the buffer', async () => {
+      const { client } = makeClient();
+      const { container } = await renderLoaded(client);
+
+      openFind();
+
+      expect(findInput()).toBeInTheDocument();
+      expect(screen.getByText('type to search')).toBeInTheDocument();
+      expect(bufferTexts(container)).toEqual(['line one', 'line two']);
+    });
+
+    it('renders the overlay inside the editor tab, not the editor body', async () => {
+      const { client } = makeClient();
+      const { container } = await renderLoaded(client);
+
+      openFind();
+
+      expect(container.querySelector(':scope .editor-tab > .editor-find')).not.toBeNull();
+      expect(container.querySelector(':scope .editor-body .editor-find')).toBeNull();
+    });
+
+    it('lists the matching buffer lines with their line numbers', async () => {
+      const { client } = makeClient();
+      const { container } = await renderLoaded(client);
+
+      openFind();
+      await searchForOneRow(container, 'two');
+
+      expect(container.querySelector('.editor-find-line')?.textContent).toBe('2');
+      expect(container.querySelector('.editor-find-text')?.textContent).toBe('line two');
+    });
+
+    it('reports a query that matches no line', async () => {
+      const { client } = makeClient();
+      await renderLoaded(client);
+
+      openFind();
+      search('zzz');
+
+      await waitFor(() => expect(screen.getByText('No matching lines')).toBeInTheDocument());
+    });
+
+    it('moves the cursor to the highlighted line as the selection changes', async () => {
+      const { client } = makeClient();
+      const { container } = await renderLoaded(client);
+      expect(currentLine(container)).toBe('line one');
+
+      openFind();
+      await searchForOneRow(container, 'two');
+      fireEvent.keyDown(findInput(), { key: 'ArrowDown' });
+
+      await waitFor(() => expect(currentLine(container)).toBe('line two'));
+    });
+
+    it('closes on Escape and leaves the cursor on the previewed line', async () => {
+      const { client } = makeClient();
+      const { container } = await renderLoaded(client);
+      openFind();
+      await searchForOneRow(container, 'two');
+      fireEvent.keyDown(findInput(), { key: 'ArrowDown' });
+      await waitFor(() => expect(currentLine(container)).toBe('line two'));
+
+      fireEvent.keyDown(findInput(), { key: 'Escape' });
+
+      expect(noFindInput()).toBeNull();
+      expect(currentLine(container)).toBe('line two');
+      expect(document.activeElement).toBe(textarea());
+    });
+
+    it('closes when the tab goes inactive and reopens empty', async () => {
+      const { client } = makeClient();
+      const view = makeView();
+      const { rerender } = await renderLoaded(client, view);
+      openFind();
+      search('two');
+      expect(findInput()).toBeInTheDocument();
+
+      rerender(<EditorTab editor={view} tab={makeTab({ editor: view })} client={client} active={false} />);
+      expect(noFindInput()).toBeNull();
+
+      rerender(<EditorTab editor={view} tab={makeTab({ editor: view })} client={client} active />);
+      expect(noFindInput()).toBeNull();
+
+      openFind();
+      expect(findInput()).toHaveValue('');
+    });
+
+    it('does not let the query reach the buffer or dirty it', async () => {
+      const { client } = makeClient();
+      const { container } = await renderLoaded(client);
+
+      openFind();
+      await searchForOneRow(container, 'one');
+
+      expect(bufferTexts(container)).toEqual(['line one', 'line two']);
+      expect(hasEnabledSaveButton(container)).toBe(false);
+    });
+
+    it('does not record the jump as an undo step', async () => {
+      const { client } = makeClient();
+      const { container } = await renderLoaded(client);
+      type('abc');
+      await waitFor(() => expect(bufferTexts(container)).toEqual(['abcline one', 'line two']));
+
+      openFind();
+      await searchForOneRow(container, 'two');
+      fireEvent.keyDown(findInput(), { key: 'ArrowDown' });
+      await waitFor(() => expect(currentLine(container)).toBe('line two'));
+      fireEvent.keyDown(findInput(), { key: 'Escape' });
+
+      fireEvent.keyDown(textarea(), { key: 'z', metaKey: true });
+
+      await waitFor(() => expect(bufferTexts(container)).toEqual(['line one', 'line two']));
+    });
+
+    it('stays closed while a persona suggestion is pending', async () => {
+      const { client, request } = makeClient();
+      request.mockReset();
+      request.mockResolvedValueOnce({ names: ['summarizer'] });
+      request.mockResolvedValueOnce({ hunks: [{ anchor: 'line one', replacement: 'LINE ONE' }] });
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, text: () => Promise.resolve('line one\n') } as unknown as Response));
+      const { container } = await renderLoaded(client, makeView({ line: 2 }));
+      fireEvent.keyDown(textarea(), { key: '>' });
+      for (const key of ' summarizer rewrite this') fireEvent.keyDown(textarea(), { key });
+      fireEvent.keyDown(textarea(), { key: 'Enter', metaKey: true });
+      await waitFor(() => expect(container.querySelector('.editor-diff-controls')).not.toBeNull());
+
+      openFind();
+
+      expect(noFindInput()).toBeNull();
+    });
+  });
+
   describe('persona connections window', () => {
     it('shows the connections button dark/disabled with no open persona connections', async () => {
       const { client } = makeClient();

@@ -18,6 +18,7 @@ export type KeyAction =
   | { kind: 'kill' }
   | { kind: 'yank' }
   | { kind: 'escape' }
+  | { kind: 'find' }
   | { kind: 'save' }
   | { kind: 'undo' }
   | { kind: 'redo' }
@@ -36,6 +37,9 @@ function metaAction(e: KeyLike): KeyAction | null {
     case 'a': { return { kind: 'selectAll' }; }
     case 'c': { return { kind: 'copy' }; }
     case 'x': { return { kind: 'cut' }; }
+    // Opens the find overlay (EditorFind.tsx); handled here rather than at the window level so the
+    // preventDefault() also suppresses the browser's own find bar. Ctrl+F stays "move right".
+    case 'f': { return { kind: 'find' }; }
     // Cmd+Left/Right = line edges (many Mac keyboards have no Home/End); Cmd+Up/Down = document edges.
     case 'arrowleft': { return { kind: 'lineEdge', edge: 'home', extend: e.shiftKey }; }
     case 'arrowright': { return { kind: 'lineEdge', edge: 'end', extend: e.shiftKey }; }

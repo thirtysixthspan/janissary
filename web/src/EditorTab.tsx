@@ -11,7 +11,9 @@ import { useSyntaxHighlight } from './editor/useSyntaxHighlight';
 import { useEditorSync } from './editor/useEditorSync';
 import { useEditorSuggest } from './editor/useEditorSuggest';
 import { useEditorConnections } from './editor/useEditorConnections';
+import { useEditorFind } from './editor/useEditorFind';
 import { EditorConnectionsPanel } from './editor/EditorConnectionsPanel';
+import { EditorFind } from './editor/EditorFind';
 import { handleSuggestKeyDown } from './editor/handleSuggestKeyDown';
 import { handleSuggestPillClick } from './editor/handleSuggestPillClick';
 import { EditorLines } from './editor/EditorLines';
@@ -53,6 +55,7 @@ export const EditorTab = forwardRef<EditorTabHandle, {
   const connections = useEditorConnections(client, tab);
   const file = useEditorFile(client, editor, api);
   saveRef.current = file.save;
+  const find = useEditorFind(state?.lines ?? null, active);
 
   // Every open editor tab stays mounted at once (see the top-of-file comment), so only the
   // currently active one may claim the shared drop handle — otherwise whichever tab rendered last
@@ -108,6 +111,18 @@ export const EditorTab = forwardRef<EditorTabHandle, {
     return hit ? { line: hit.line, col: hit.col } : null;
   };
 
+  // Highlighting a find result previews it immediately: the caret moves to that line, which the
+  // caret effect above then scrolls into view behind the overlay. A cursor-only move is never an
+  // undo step, so it seals the coalescing group instead of recording one (like applyKeyAction).
+  const selectFindResult = (row: number) => {
+    find.setSelected(row);
+    const result = find.results[row];
+    const current = api.stateRef.current;
+    if (!result || !current) return;
+    api.sealUndo();
+    api.setState({ ...current, cursor: { line: result.index, col: 0 }, anchor: null });
+  };
+
   const onKeyDown = (e: React.KeyboardEvent) => {
     if (e.nativeEvent.isComposing) return;
     // Nothing typed in the editor may reach App's global bindings (Ctrl+T, Ctrl+R, Ctrl+arrows).
@@ -116,6 +131,7 @@ export const EditorTab = forwardRef<EditorTabHandle, {
     const action = actionForKey(e);
     if (!action) return;
     e.preventDefault();
+    if (action.kind === 'find') { find.open(); return; }
     api.apply(action, pageLines(), resolveVertical);
   };
 
@@ -173,6 +189,14 @@ export const EditorTab = forwardRef<EditorTabHandle, {
       </div>
       {file.conflictOpen && (
         <OverwriteConflictDialog onSave={file.overwrite} onCancel={file.dismissConflict} />
+      )}
+      {find.findOpen && (
+        <EditorFind
+          query={find.query} onChangeQuery={find.setQuery}
+          results={find.results} selected={find.selected}
+          onChangeSelected={selectFindResult}
+          onClose={() => { find.close(); textareaRef.current?.focus(); }}
+        />
       )}
     </div>
   );

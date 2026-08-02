@@ -43,6 +43,7 @@ describe('actionForKey', () => {
     expect(actionForKey(key('a', { metaKey: true }))).toEqual({ kind: 'selectAll' });
     expect(actionForKey(key('c', { metaKey: true }))).toEqual({ kind: 'copy' });
     expect(actionForKey(key('x', { metaKey: true }))).toEqual({ kind: 'cut' });
+    expect(actionForKey(key('f', { metaKey: true }))).toEqual({ kind: 'find' });
     expect(actionForKey(key('ArrowLeft', { metaKey: true }))).toEqual({ kind: 'lineEdge', edge: 'home', extend: false });
     expect(actionForKey(key('ArrowUp', { metaKey: true }))).toEqual({ kind: 'docEdge', edge: 'start', extend: false });
   });
@@ -56,5 +57,8 @@ describe('actionForKey', () => {
     expect(actionForKey(key('v', { metaKey: true }))).toBeNull();
     // Alt+letter is suppressed — the altKey guard in actionForKey returns null before plainAction.
     expect(actionForKey(key('x', { altKey: true }))).toBeNull();
+    // Cmd+F opens the find overlay without shadowing the Emacs-style Ctrl+F, and Alt+F is nothing.
+    expect(actionForKey(key('f', { ctrlKey: true }))).toEqual({ kind: 'move', dir: 'right', extend: false });
+    expect(actionForKey(key('f', { altKey: true }))).toBeNull();
   });
 });
