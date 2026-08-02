@@ -2,15 +2,16 @@
 
 ## ready
 
+* Replace `src/harness/manager.ts`'s four independent PTY-keyed maps (`screenReaders`, `recorders`, `tailers`, and `autoApprovers`) with one per-PTY runtime record that owns disposal, because the exit handler and `dispose()` currently maintain separate cleanup checklists that can leak a newly added harness resource. Severity: **high**.
+
+* Finish the type ownership migration by replacing the compatibility re-export hub in `src/types.ts` with direct imports from modules such as `src/tab/types.ts`, `src/profile/types.ts`, and `src/acp/types.ts`, because dozens of callers still depend on a barrel that hides the defining domain and violates the project's direct-import rule. Severity: **medium**.
+
+* Split the 279-line RPC facade in `src/controller.ts` into feature-specific controller adapters for tabs, monitors, editors, and file navigation so the controller stops accumulating forwarding methods across unrelated domains and remains a small orchestration boundary. Severity: **medium**.
+
+* Validate client-supplied file-navigator paths at the manager boundary and reuse `containedPath` in `src/file-navigator/filesystem.ts` and `src/file-navigator/navigation.ts`: unlike the bulk operations in `src/file-navigator/batch-paths.ts`, scalar move/rename/delete and toggle/reroot currently pass raw `../` values to `path.join`/`path.resolve`, allowing operations and watchers to escape the current navigator root. Severity: **high**.
 
 ## development
 
-* Validate client-supplied file-navigator paths at the manager boundary and reuse `containedPath` in `src/file-navigator/filesystem.ts` and `src/file-navigator/navigation.ts`: unlike the bulk operations in `src/file-navigator/batch-paths.ts`, scalar move/rename/delete and toggle/reroot currently pass raw `../` values to `path.join`/`path.resolve`, allowing operations and watchers to escape the current navigator root. Severity: **high**.
-* Replace `src/harness/manager.ts`'s four independent PTY-keyed maps (`screenReaders`, `recorders`, `tailers`, and `autoApprovers`) with one per-PTY runtime record that owns disposal, because the exit handler and `dispose()` currently maintain separate cleanup checklists that can leak a newly added harness resource. Severity: **high**.
-* Extract a shared bulk-operation pipeline for normalization, conflict preflight, policy handling, and failure aggregation from `src/file-navigator/batch.ts` and `src/file-navigator/paste.ts`, which independently implement the same stages with only relative-versus-absolute sources and copy-versus-move behavior differing. Severity: **medium**.
-* Share the conflict preflight, partial-success stack bookkeeping, and rebuild handling between `applyStackMove` and `applyStackPaste` in `src/file-navigator/moves.ts`, where undo/redo for moves and pastes currently duplicate the same replay contract and can drift in conflict behavior. Severity: **medium**.
-* Finish the type ownership migration by replacing the compatibility re-export hub in `src/types.ts` with direct imports from modules such as `src/tab/types.ts`, `src/profile/types.ts`, and `src/acp/types.ts`, because dozens of callers still depend on a barrel that hides the defining domain and violates the project's direct-import rule. Severity: **medium**.
-* Split the 279-line RPC facade in `src/controller.ts` into feature-specific controller adapters for tabs, monitors, editors, and file navigation so the controller stops accumulating forwarding methods across unrelated domains and remains a small orchestration boundary. Severity: **medium**.
 
 ## deferred
 
