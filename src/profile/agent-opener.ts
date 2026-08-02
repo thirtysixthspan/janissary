@@ -28,6 +28,14 @@ function reorderGroupByNumber(managers: Managers, group: number, numbers: Map<st
   managers.tab.tabs = renumberTabs(next);
 }
 
+function launchSummary(name: string, opened: string[], notes: string[], skipped: string[]): string {
+  const parts: string[] = [];
+  if (opened.length > 0) parts.push(`Launched profile "${name}": ${opened.join(', ')}.`);
+  if (notes.length > 0) parts.push(notes.join(' '));
+  if (skipped.length > 0) parts.push(`Skipped: ${skipped.join('; ')}.`);
+  return parts.length > 0 ? parts.join(' ') : `Profile "${name}" has no tabs to open.`;
+}
+
 export function openProfileEntries(
   loaded: LoadedProfile,
   managers: Managers,
@@ -103,9 +111,5 @@ export function openProfileEntries(
   // Profile-level monitors start after every entry is open, owned by the issuing tab, so their
   // targets (e.g. `group:1`) can resolve against the now-complete tab list.
   startProfileMonitors(loaded.monitors, managers, issuingLabel, notes);
-  const parts: string[] = [];
-  if (opened.length > 0) parts.push(`Launched profile "${name}": ${opened.join(', ')}.`);
-  if (notes.length > 0) parts.push(notes.join(' '));
-  if (skipped.length > 0) parts.push(`Skipped: ${skipped.join('; ')}.`);
-  out(parts.length > 0 ? parts.join(' ') : `Profile "${name}" has no tabs to open.`);
+  out(launchSummary(name, opened, notes, skipped));
 }
