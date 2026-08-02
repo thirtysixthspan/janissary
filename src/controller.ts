@@ -1,37 +1,86 @@
-import type { CompletionResult, FileNavigatorDetail, Sinks } from './types.js';
+import type { CompletionResult } from './completion/types.js';
+import type { Sinks } from './controller/types.js';
 import { TranscriptStore } from './transcript/store.js';
-import * as fileNavigatorRpc from './controller/file-navigator.js';
 import { complete as completeCommand } from './controller/completion.js';
 import { wireControllerEvents } from './controller/events.js';
 import { createManagers } from './controller/create-managers.js';
-import { saveFile } from './editor/save.js';
-import { saveVideoShot } from './video-shot.js';
-import { syncEditorBuffer } from './editor/sync.js';
-import { resyncEditorTab } from './editor/resync.js';
-import { syncPageSnapshot } from './page/sync.js';
 import { messageBus } from './bus.js';
-import * as monitorRpc from './controller/monitor.js';
-import { listPersonas } from './personas.js';
 import type { TabView } from './protocol.js';
 import type { Managers } from './managers.js';
-import type { AcpRef, BatchResult, BulkConflictPolicy, BulkMoveResult, FileOpenerResolution, FileNavigatorSelectionRecord } from './protocol.js';
-import type { EditorSuggestParams, EditorSuggestResult } from './editor-suggest/handler.js';
+import type { AcpRef } from './protocol.js';
 import { buildStateEvent } from './state-event.js';
 import { openTranscriptFor, openHarnessTranscriptFor, openAcpTranscript } from './controller/transcript.js';
-import { projectFilesFor } from './project-files.js';
 import { setClientLayout } from './client-layout.js';
-import { editorSuggest, ownerLabel } from './editor-suggest/handler.js';
-import { closeConnection } from './connection/close.js';
-import { resolveTreeSelections } from './file-navigator/selection-request.js';
+import { createTabControllerAdapter, type TabControllerAdapter } from './controller/tab-adapter.js';
+import { createMonitorControllerAdapter, type MonitorControllerAdapter } from './controller/monitor-adapter.js';
+import { createEditorControllerAdapter, type EditorControllerAdapter } from './controller/editor-adapter.js';
+import { createFileNavigatorControllerAdapter, type FileNavigatorControllerAdapter } from './controller/file-navigator-adapter.js';
 
-export class Controller {
+export class Controller implements TabControllerAdapter, MonitorControllerAdapter, EditorControllerAdapter, FileNavigatorControllerAdapter {
   managers: Managers = {} as Managers;
+
+  declare setActiveTab: TabControllerAdapter['setActiveTab'];
+  declare focusTab: TabControllerAdapter['focusTab'];
+  declare moveTabToOtherPane: TabControllerAdapter['moveTabToOtherPane'];
+  declare moveTab: TabControllerAdapter['moveTab'];
+  declare reorderTab: TabControllerAdapter['reorderTab'];
+  declare reorderTabTo: TabControllerAdapter['reorderTabTo'];
+  declare closeTab: TabControllerAdapter['closeTab'];
+  declare renameTab: TabControllerAdapter['renameTab'];
+  declare navigatePage: TabControllerAdapter['navigatePage'];
+  declare editQueuedCommand: TabControllerAdapter['editQueuedCommand'];
+  declare deleteQueuedCommand: TabControllerAdapter['deleteQueuedCommand'];
+  declare toggleCollapse: TabControllerAdapter['toggleCollapse'];
+  declare ptyInput: TabControllerAdapter['ptyInput'];
+  declare ptyResize: TabControllerAdapter['ptyResize'];
+  declare ptyKill: TabControllerAdapter['ptyKill'];
+  declare resize: TabControllerAdapter['resize'];
+  declare runSuggestion: MonitorControllerAdapter['runSuggestion'];
+  declare rateSuggestion: MonitorControllerAdapter['rateSuggestion'];
+  declare resetMonitorContext: MonitorControllerAdapter['resetMonitorContext'];
+  declare monitorContextSnapshot: MonitorControllerAdapter['monitorContextSnapshot'];
+  declare saveFile: EditorControllerAdapter['saveFile'];
+  declare captureVideoFrame: EditorControllerAdapter['captureVideoFrame'];
+  declare syncEditorBuffer: EditorControllerAdapter['syncEditorBuffer'];
+  declare resyncEditorTab: EditorControllerAdapter['resyncEditorTab'];
+  declare syncPageSnapshot: EditorControllerAdapter['syncPageSnapshot'];
+  declare projectFiles: EditorControllerAdapter['projectFiles'];
+  declare projectFilesFallback: EditorControllerAdapter['projectFilesFallback'];
+  declare editorPersonas: EditorControllerAdapter['editorPersonas'];
+  declare editorSuggest: EditorControllerAdapter['editorSuggest'];
+  declare closeEditorConnection: EditorControllerAdapter['closeEditorConnection'];
+  declare fileNavigatorToggle: FileNavigatorControllerAdapter['fileNavigatorToggle'];
+  declare fileNavigatorCollapseAll: FileNavigatorControllerAdapter['fileNavigatorCollapseAll'];
+  declare fileNavigatorSetDetail: FileNavigatorControllerAdapter['fileNavigatorSetDetail'];
+  declare fileNavigatorReroot: FileNavigatorControllerAdapter['fileNavigatorReroot'];
+  declare moveFileNavigatorItem: FileNavigatorControllerAdapter['moveFileNavigatorItem'];
+  declare moveFileNavigatorItems: FileNavigatorControllerAdapter['moveFileNavigatorItems'];
+  declare pasteFileNavigatorItems: FileNavigatorControllerAdapter['pasteFileNavigatorItems'];
+  declare deleteFileNavigatorItem: FileNavigatorControllerAdapter['deleteFileNavigatorItem'];
+  declare deleteFileNavigatorItems: FileNavigatorControllerAdapter['deleteFileNavigatorItems'];
+  declare renameFileNavigatorItem: FileNavigatorControllerAdapter['renameFileNavigatorItem'];
+  declare fileNavigatorSearch: FileNavigatorControllerAdapter['fileNavigatorSearch'];
+  declare revealFileNavigatorItem: FileNavigatorControllerAdapter['revealFileNavigatorItem'];
+  declare fileNavigatorOpeners: FileNavigatorControllerAdapter['fileNavigatorOpeners'];
+  declare reportFileNavigatorSelection: FileNavigatorControllerAdapter['reportFileNavigatorSelection'];
+  declare undoFileNavigatorItem: FileNavigatorControllerAdapter['undoFileNavigatorItem'];
+  declare redoFileNavigatorItem: FileNavigatorControllerAdapter['redoFileNavigatorItem'];
+  declare setDock: FileNavigatorControllerAdapter['setDock'];
+  declare openFileNavigatorFor: FileNavigatorControllerAdapter['openFileNavigatorFor'];
+  declare launchAgentFor: FileNavigatorControllerAdapter['launchAgentFor'];
 
   get rootDir(): string { return this.projectDir ?? process.cwd(); }
 
   constructor(private sinks: Sinks, private projectDir?: string) {
     createManagers(this.managers, projectDir);
     wireControllerEvents(this.managers, this.sinks);
+    Object.assign(
+      this,
+      createTabControllerAdapter(this.managers),
+      createMonitorControllerAdapter(this.managers),
+      createEditorControllerAdapter(this.managers),
+      createFileNavigatorControllerAdapter(this.managers),
+    );
     this.managers.schedule.start();
   }
 
@@ -82,183 +131,10 @@ export class Controller {
     return this.managers.tab.openFilePath(id);
   }
 
-  // Write an editor tab's buffer back to disk (the `saveFile` RPC). Throws on error; the RPC
-  // layer relays the message to the client.
-  saveFile(url: string, content: string): void {
-    saveFile(this.managers, url, content);
-  }
-
-  // Write a frame captured from a video tab beside its video file (the `captureVideoFrame` RPC),
-  // returning the basename chosen. Throws on error; the RPC layer relays the message to the client.
-  captureVideoFrame(url: string, dataUrl: string): string {
-    return saveVideoShot(this.managers, url, dataUrl);
-  }
-
-  // Cache an editor tab's in-progress buffer as transient draft state (the `editorSync` RPC).
-  // In-memory only; never written to disk.
-  syncEditorBuffer(url: string, content: string): void {
-    syncEditorBuffer(this.managers, url, content);
-  }
-
-  // Manually re-pull a synced editor tab's shared workspace (the `resyncEditorTab` RPC,
-  // fire-and-forget — see editor/resync.js for the sync-status/reload handling).
-  resyncEditorTab(url: string): void {
-    void resyncEditorTab(this.managers, url);
-  }
-
-  // Cache a page tab's currently visible text as transient snapshot state (the `pageSync` RPC).
-  // In-memory only; never written to disk or sent to any client.
-  syncPageSnapshot(url: string, text: string): void {
-    syncPageSnapshot(this.managers, url, text);
-  }
-
-  // --- monitor reporting tabs ------------------------------------------------
-
-  runSuggestion(id: string): void { monitorRpc.runSuggestion(this.managers, id); }
-  rateSuggestion(id: string, up: boolean): void { monitorRpc.rateSuggestion(this.managers, id, up); }
-  resetMonitorContext(name: string): void { monitorRpc.resetMonitorContext(this.managers, name); }
-  monitorContextSnapshot(name: string): void { monitorRpc.monitorContextSnapshot(this.managers, name); }
-
-  // --- inline terminal cards (PTY) -----------------------------------------
-
-  ptyInput(id: string, data: string): void { this.managers.pty.input(id, data); }
-  ptyResize(id: string, cols: number, rows: number): void { this.managers.pty.resizeOne(id, cols, rows); }
-  ptyKill(id: string): void { this.managers.pty.kill(id); }
-  resize(cols: number, rows: number): void { this.managers.pty.resize(cols, rows); }
-
-  // --- tab management ------------------------------------------------------
-
-  setActiveTab(index: number): void {
-    this.managers.tab.setActiveTab(index);
-  }
-
-  focusTab(label: string): void { this.managers.tab.setActiveTab(this.managers.tab.findIndex(label)); }
-  moveTabToOtherPane(index: number): void { this.managers.tab.moveTabToOtherPane(index); }
-
-  moveTab(dir: -1 | 1): void {
-    this.managers.tab.moveTab(dir);
-  }
-
-  reorderTab(dir: -1 | 1): void {
-    this.managers.tab.reorderTab(dir);
-  }
-
-  reorderTabTo(from: number, to: number): void {
-    this.managers.tab.reorderTabTo(from, to);
-  }
-
-  closeTab(index: number): void {
-    this.managers.tab.closeTab(index);
-  }
-
-  renameTab(index: number, title: string): void {
-    this.managers.tab.renameTab(index, title);
-  }
-
-  navigatePage(index: number, url: string): void {
-    this.managers.tab.navigatePage(index, url);
-  }
-
-  editQueuedCommand(index: number, text: string): void {
-    this.managers.tab.editQueued(this.managers.tab.cur().label, index, text);
-  }
-
-  deleteQueuedCommand(index: number): void {
-    this.managers.tab.deleteQueued(this.managers.tab.cur().label, index);
-  }
-
-  toggleCollapse(): void {
-    this.managers.tab.toggleCollapse();
-  }
-
-  // --- file navigator tabs (see controller/file-navigator.ts) ------------------------
-
-  fileNavigatorToggle(index: number, path: string): void {
-    fileNavigatorRpc.fileNavigatorToggle(this.managers, index, path);
-  }
-
-  fileNavigatorCollapseAll(index: number): void {
-    fileNavigatorRpc.fileNavigatorCollapseAll(this.managers, index);
-  }
-
-  fileNavigatorSetDetail(index: number, details: FileNavigatorDetail): void {
-    fileNavigatorRpc.fileNavigatorSetDetail(this.managers, index, details);
-  }
-
-  fileNavigatorReroot(index: number, relPath?: string): void {
-    fileNavigatorRpc.fileNavigatorReroot(this.managers, index, relPath);
-  }
-
-  moveFileNavigatorItem(index: number, fromRelPath: string, toRelPath: string): void {
-    fileNavigatorRpc.moveFileNavigatorItem(this.managers, index, fromRelPath, toRelPath);
-  }
-
-  moveFileNavigatorItems(index: number, sourcePaths: string[], destinationPath: string, policy?: BulkConflictPolicy): BulkMoveResult {
-    return fileNavigatorRpc.moveFileNavigatorItems(this.managers, index, sourcePaths, destinationPath, policy);
-  }
-
-  pasteFileNavigatorItems(index: number, sources: string[], destinationPath: string, mode: 'copy' | 'cut', policy?: BulkConflictPolicy): BulkMoveResult {
-    return fileNavigatorRpc.pasteFileNavigatorItems(this.managers, index, sources, destinationPath, mode, policy);
-  }
-
-  deleteFileNavigatorItem(index: number, relPath: string): void {
-    fileNavigatorRpc.deleteFileNavigatorItem(this.managers, index, relPath);
-  }
-
-  deleteFileNavigatorItems(index: number, paths: string[]): BatchResult {
-    return fileNavigatorRpc.deleteFileNavigatorItems(this.managers, index, paths);
-  }
-
-  renameFileNavigatorItem(index: number, relPath: string, newName: string): void {
-    fileNavigatorRpc.renameFileNavigatorItem(this.managers, index, relPath, newName);
-  }
-
-  fileNavigatorSearch(index: number): Promise<string[]> { return fileNavigatorRpc.fileNavigatorSearch(this.managers, index); }
-  revealFileNavigatorItem(index: number, relPath: string): void { fileNavigatorRpc.revealFileNavigatorItem(this.managers, index, relPath); }
-  fileNavigatorOpeners(index: number, relPath: string, edit: boolean): FileOpenerResolution {
-    return fileNavigatorRpc.fileNavigatorOpeners(this.managers, index, relPath, edit);
-  }
-  reportFileNavigatorSelection(id: number, navigators: FileNavigatorSelectionRecord[]): void { resolveTreeSelections(id, navigators); }
-
-  undoFileNavigatorItem(index: number, overwrite?: boolean, skipConflicts?: boolean) {
-    return fileNavigatorRpc.undoFileNavigatorItem(this.managers, index, overwrite, skipConflicts);
-  }
-
-  redoFileNavigatorItem(index: number, overwrite?: boolean, skipConflicts?: boolean) {
-    return fileNavigatorRpc.redoFileNavigatorItem(this.managers, index, overwrite, skipConflicts);
-  }
-
-  // Dock/undock any dockable tab (file navigator or notifications). The mechanism is view-agnostic —
-  // `TabManager.setDock` operates on any tab index — so both kinds share this one handler.
-  setDock(index: number, dock: 'left' | 'right' | null): void {
-    this.managers.tab.setDock(index, dock);
-  }
-
-  // Open (or retarget an existing) file navigator at the named tab's cwd — the 📁 metadata-row
-  // button (see controller/file-navigator.ts).
-  openFileNavigatorFor(label: string): void {
-    fileNavigatorRpc.openFileNavigatorFor(this.managers, label);
-  }
-
-  // Launch a new agent tab rooted at the named tab's cwd — the ➕ metadata-row button.
-  launchAgentFor(label: string): void {
-    this.managers.profile.newAgentAt(label);
-  }
-
   openTranscriptFor(label: string): void { openTranscriptFor(this.managers, label); }
   openHarnessTranscriptFor(label: string): void { openHarnessTranscriptFor(this.managers, label); }
   openAcpTranscript(acpRef: AcpRef): void { openAcpTranscript(this.managers, acpRef); }
   reportLayout(layout: { sidebarLeft: number; sidebarRight: number; tabAreaPct: number }): void { setClientLayout(layout); }
-
-  projectFiles(): Promise<{ root: string; paths: string[] }> { return projectFilesFor(this.managers); }
-  projectFilesFallback(): { root: string; paths: string[] } { return { root: this.managers.tab.launchDir, paths: [] }; }
-  editorPersonas(): string[] { return listPersonas('editor'); }
-
-  editorSuggest(params: EditorSuggestParams, callback: (result: EditorSuggestResult) => void): void {
-    editorSuggest(this.managers, params, callback);
-  }
-
-  closeEditorConnection(url: string, persona: string): void { closeConnection('acp', persona, this.managers, ownerLabel(this.managers, url), () => { /* no-op */ }); }
 
   // Tab-completion for the command line (reuses the shared `completeCommandLine`): filesystem
   // paths against the active tab's cwd, `msg`/`broadcast` agent names, `connection close` targets,

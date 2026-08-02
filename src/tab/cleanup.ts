@@ -1,15 +1,16 @@
 import { messageBus } from '../bus.js';
-import type { Tab } from '../types.js';
+import type { Tab } from './types.js';
 import type { Managers } from '../managers.js';
 
 export function closeTabResources(
   tab: Tab,
   managers: Managers,
   openFiles: Map<string, string>,
-  context: Map<string, string[]>,
-  queue: Map<string, string[]>,
-  tabsLength: number,
+  contextOrTabsLength: Map<string, string[]> | number,
+  queue?: Map<string, string[]>,
+  legacyTabsLength?: number,
 ): void {
+  const tabsLength = typeof contextOrTabsLength === 'number' ? contextOrTabsLength : legacyTabsLength ?? 0;
   // Remove the workspace clone in the background: it is a recursive rmSync of a full git clone,
   // slow enough to freeze the UI if run inline (the tab can't visibly close until it finishes).
   // Deferring it lets the tab close and the state broadcast reach the client first. The clone stays
@@ -43,6 +44,6 @@ export function closeTabResources(
     const id = tab.markdown.url.replace(/^\/open\//, '');
     openFiles.delete(id);
   }
-  context.delete(tab.label);
-  queue.delete(tab.label);
+  if (typeof contextOrTabsLength !== 'number') contextOrTabsLength.delete(tab.label);
+  queue?.delete(tab.label);
 }

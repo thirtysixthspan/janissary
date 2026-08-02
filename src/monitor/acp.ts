@@ -1,4 +1,4 @@
-import type { AcpSession, AcpInfo } from '../types.js';
+import type { AcpSession, AcpInfo } from '../acp/types.js';
 import type { Persona } from '../personas.js';
 import { connectAcp } from '../acp/index.js';
 

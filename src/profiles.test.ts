@@ -7,7 +7,7 @@ import {
 } from './profiles.js';
 import { parseProfileCommand, PROFILE_USAGE } from './profile/command.js';
 import { loadProfile } from './profile/file.js';
-import type { LoadedProfile, ProfileFile } from './types.js';
+import type { LoadedProfile, ProfileFile } from './profile/types.js';
 
 describe('parseProfileCommand', () => {
   it('parses launch with a name', () => {

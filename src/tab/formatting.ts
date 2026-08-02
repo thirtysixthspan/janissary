@@ -1,4 +1,4 @@
-import type { LogEntry, BufferLine } from '../types.js';
+import type { LogEntry, BufferLine } from './types.js';
 import { handleCollapsedToolSteps, handleTerminalEntry, handleMessageEntry, handleInputOutput } from './formatting-handlers.js';
 
 export { expandTabs } from './formatting-handlers.js';

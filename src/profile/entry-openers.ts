@@ -5,7 +5,8 @@ import { isKnownModel } from '../harness/models.js';
 import { buildHarnessSchedule } from './harness-schedule.js';
 import { expandUserPath } from '../paths.js';
 import type { Managers } from '../managers.js';
-import type { AgentState, ProfileHarnessEntry } from '../types.js';
+import type { AgentState } from '../agent/types.js';
+import type { ProfileHarnessEntry } from './types.js';
 
 export function openAgentEntry(state: AgentState, managers: Managers, group: number, groupColor: string, dotColor: string): void {
   const log = state.log ?? [];

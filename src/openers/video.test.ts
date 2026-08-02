@@ -3,7 +3,7 @@ import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import type { OpenContext } from './types.js';
-import type { VideoView } from '../types.js';
+import type { VideoView } from '../tab/types.js';
 
 const mocks = vi.hoisted(() => ({
   didOsOpen: vi.fn<(file: string, application?: string) => boolean>(() => true),

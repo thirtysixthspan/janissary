@@ -1,4 +1,4 @@
-import type { Tab } from '../types.js';
+import type { Tab } from '../tab/types.js';
 import type { CommandManagers } from './types.js';
 
 // Resolve a command's target tab by its label or display alias (see `rename`), appending the

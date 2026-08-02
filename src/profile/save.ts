@@ -4,7 +4,7 @@ import { captureTab, newCaptureState } from './save-route.js';
 import { buildMonitors, buildLayout } from './save-reserved.js';
 import { requestTreeSelections } from '../file-navigator/selection-request.js';
 import type { Managers } from '../managers.js';
-import type { ProfileFile } from '../types.js';
+import type { ProfileFile } from './types.js';
 
 export type SaveSummary = {
   agents: number;

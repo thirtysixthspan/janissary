@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { SshManager } from './ssh-manager.js';
 import { makeTab } from './tab/index.js';
 import type { Managers } from './managers.js';
-import type { Tab } from './types.js';
+import type { Tab } from './tab/types.js';
 
 function makeManagers(): { managers: Managers; tabs: Tab[] } {
   const creator = makeTab('janus', 'red', 1, [], [], undefined, 1, 'red');

@@ -5,7 +5,7 @@ import {
   handleMessageEntry,
   handleInputOutput,
 } from './formatting-handlers.js';
-import type { LogEntry, BufferLine } from '../types.js';
+import type { LogEntry, BufferLine } from './types.js';
 
 function makeEntry(overrides: Partial<LogEntry> = {}): LogEntry {
   return { input: '', output: '', ...overrides };

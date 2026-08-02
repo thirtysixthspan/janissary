@@ -6,7 +6,7 @@ import { openerForExtension, openers } from './index.js';
 import { opener as editor, openInEditor, EDITOR_MAX_BYTES } from './editor.js';
 import { opener as markdown } from './markdown.js';
 import type { OpenContext } from './index.js';
-import type { EditorView } from '../types.js';
+import type { EditorView } from '../tab/types.js';
 
 function fakeContext(overrides: Partial<OpenContext> = {}) {
   const notes: string[] = [];

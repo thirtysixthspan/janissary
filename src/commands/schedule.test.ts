@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { command } from './schedule.js';
-import type { ScheduleEntry, LogEntry } from '../types.js';
+import type { ScheduleEntry } from '../schedule/types.js';
+import type { LogEntry } from '../tab/types.js';
 
 
 describe('schedule command', () => {

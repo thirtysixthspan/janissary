@@ -1,4 +1,4 @@
-import type { Tab } from '../types.js';
+import type { Tab } from './types.js';
 import { renumberTabs } from './utils.js';
 import { centerPane, isCenterActionTab } from './split.js';
 

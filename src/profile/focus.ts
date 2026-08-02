@@ -1,4 +1,4 @@
-import type { CenterPane } from '../types.js';
+import type { CenterPane } from '../tab/types.js';
 
 export type MainAreaCandidate = {
   label: string;

@@ -1,6 +1,6 @@
 import { mkdirSync, appendFileSync } from 'node:fs';
 import path from 'node:path';
-import type { LogRecord } from '../types.js';
+import type { LogRecord } from './types.js';
 import { getDateStr, getTimeStr } from '../datetime.js';
 import type { Subscription } from '../bus.js';
 import { messageBus } from '../bus.js';

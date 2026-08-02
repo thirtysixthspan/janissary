@@ -16,7 +16,7 @@ import { makeNavigationPort, makeOpenPort } from './manager-ports.js';
 import { openersForRow } from './openers-for-row.js';
 import { restoreTreeView, type SavedTreeView } from './restore.js';
 import type { FilesTabState } from './state.js';
-import type { FileNavigatorDetail } from '../types.js';
+import type { FileNavigatorDetail } from '../tab/types.js';
 import type { Managers } from '../managers.js';
 import type { BatchResult, BulkConflictPolicy, BulkMoveResult, FileOpenerResolution, UndoRedoResult } from '../protocol.js';
 

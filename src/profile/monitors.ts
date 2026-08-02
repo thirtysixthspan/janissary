@@ -1,7 +1,7 @@
 import { parseMonitorCommand } from '../monitor/parsing.js';
 import { formatTargets } from '../monitor/targets.js';
 import type { Managers } from '../managers.js';
-import type { ProfileMonitor } from '../types.js';
+import type { ProfileMonitor } from './types.js';
 
 // Start each profile-level monitor (from the profile's `monitors` key) once its tabs are open,
 // owned by the launch's issuing tab. Idempotent across relaunch: any existing same-owner monitor

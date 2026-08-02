@@ -1,5 +1,5 @@
 import { messageBus } from '../bus.js';
-import type { Tab } from '../types.js';
+import type { Tab } from '../tab/types.js';
 import type { Managers } from '../managers.js';
 
 export function makeUpdateRunning(

@@ -1,6 +1,6 @@
 import { relocateToGroup } from './editors.js';
 import type { Managers } from '../managers.js';
-import type { ProfileFilesEntry } from '../types.js';
+import type { ProfileFilesEntry } from './types.js';
 import type { MainAreaCandidate } from './focus.js';
 
 // Open each profile-level file-navigator tab once every entry is open, rooted at `defaultLabel`

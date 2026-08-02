@@ -1,4 +1,5 @@
-import type { ScheduleEntry, Tab } from '../types.js';
+import type { ScheduleEntry } from './types.js';
+import type { Tab } from '../tab/types.js';
 import type { AggregatedScheduleView, ScheduleLaunchView, ScheduleView } from '../protocol.js';
 import { computeNextRun } from './index.js';
 import type { Managers } from '../managers.js';

@@ -1,4 +1,4 @@
-import type { LogEntry, MonitorTarget } from '../types.js';
+import type { LogEntry, MonitorTarget } from '../tab/types.js';
 import type { Managers } from '../managers.js';
 import { resolveTargetTabs } from './targets.js';
 import { cap } from './feed-diff.js';

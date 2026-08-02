@@ -1,4 +1,4 @@
-import type { FileNavigatorRow } from '../types.js';
+import type { FileNavigatorRow } from '../tab/types.js';
 import type { GitFileStatus } from '../git-status.js';
 
 // Row git-status annotation, split out of index.ts: a distinct concern from the tree-building

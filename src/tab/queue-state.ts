@@ -1,29 +1,36 @@
 import {
   queueFor as queueForOp, enqueue as enqueueOp, dequeue as dequeueOp, editQueued as editQueuedOp, deleteQueued as deleteQueuedOp,
 } from './queue-commands.js';
+import type { Tab } from './types.js';
+import { runtimeFor } from './runtime.js';
 
 export abstract class TabQueueState {
-  protected readonly queue = new Map<string, string[]>();
+  protected abstract tabs: Tab[];
 
   protected abstract persistQueue(label: string): void;
 
   queueFor(label: string): string[] {
-    return queueForOp(this.queue, label);
+    const queue = runtimeFor(this.tabs, label)?.queue;
+    return queue ? queueForOp(queue) : [];
   }
 
   enqueue(label: string, text: string): void {
-    enqueueOp(this.queue, label, text, (l) => this.persistQueue(l));
+    const queue = runtimeFor(this.tabs, label);
+    if (queue) enqueueOp(queue.queue, text, () => this.persistQueue(label));
   }
 
   dequeue(label: string): string | undefined {
-    return dequeueOp(this.queue, label, (l) => this.persistQueue(l));
+    const queue = runtimeFor(this.tabs, label);
+    return queue ? dequeueOp(queue.queue, () => this.persistQueue(label)) : undefined;
   }
 
   editQueued(label: string, index: number, text: string): void {
-    editQueuedOp(this.queue, label, index, text, (l) => this.persistQueue(l));
+    const queue = runtimeFor(this.tabs, label);
+    if (queue) editQueuedOp(queue.queue, index, text, () => this.persistQueue(label));
   }
 
   deleteQueued(label: string, index: number): void {
-    deleteQueuedOp(this.queue, label, index, (l) => this.persistQueue(l));
+    const queue = runtimeFor(this.tabs, label);
+    if (queue) deleteQueuedOp(queue.queue, index, () => this.persistQueue(label));
   }
 }

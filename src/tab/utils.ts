@@ -1,4 +1,4 @@
-import type { Tab } from '../types.js';
+import type { Tab } from './types.js';
 
 export function stripComments(command: string): string {
   return command.replaceAll(/\s*##(?:[\s\S]*?##\s*|[\s\S]*)/g, ' ').trim();

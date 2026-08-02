@@ -1,4 +1,4 @@
-import type { AcpSession, AcpInfo } from '../types.js';
+import type { AcpSession, AcpInfo } from './types.js';
 import { connectAcp } from './index.js';
 import { runAcpToolLoop } from './loop.js';
 import { extractBrowserCommand, BROWSER_PRIMER } from '../browser/command.js';

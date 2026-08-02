@@ -1,4 +1,4 @@
-import type { Tab } from '../types.js';
+import type { Tab } from './types.js';
 import { normalizeWebUrl, rootDomain } from '../openers/page.js';
 
 // Navigates an existing page tab to a new address in place, keeping its page number and tab

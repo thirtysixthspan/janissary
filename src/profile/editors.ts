@@ -1,6 +1,6 @@
 import { insertTabInGroup } from '../tab/index.js';
 import type { Managers } from '../managers.js';
-import type { ProfileEditorsEntry } from '../types.js';
+import type { ProfileEditorsEntry } from './types.js';
 import type { MainAreaCandidate } from './focus.js';
 
 // A newly created editor tab inherits its group from whichever tab is currently active in the

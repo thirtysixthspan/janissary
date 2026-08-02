@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import type { NotificationConfig } from './types.js';
+import type { NotificationConfig } from './config.js';
 import type { Managers } from './managers.js';
 import { shouldNotify, formatTimestamp, notificationText, notify } from './notifications.js';
 import { NOTIFICATIONS_LABEL } from './notifications-tab.js';

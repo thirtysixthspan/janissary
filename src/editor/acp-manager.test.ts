@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { AcpSession } from '../types.js';
+import type { AcpSession } from '../acp/types.js';
 import type { Persona } from '../personas.js';
 import type { Managers } from '../managers.js';
 

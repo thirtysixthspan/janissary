@@ -1,6 +1,8 @@
-import type { Tab, LogEntry, AgentState } from '../types.js';
+import type { Tab, LogEntry } from './types.js';
+import type { AgentState } from '../agent/types.js';
 import { messageBus } from '../bus.js';
 import { appendEntry, finishEntry, clearLog } from './transcript-log.js';
+import { runtimeFor } from './runtime.js';
 
 // Transcript/busy-tracking coordination extracted from TabManager: wraps the pure log
 // mutations in transcript-log.ts with the messageBus emits, persistence, and unread-marking
@@ -15,9 +17,13 @@ export function markUnreadTab(
 }
 
 export function startRunningTab(
-  busy: Set<string>, label: string, input: string, append: (label: string, entry: LogEntry) => void,
+  tabsOrBusy: Tab[] | Set<string>, label: string, input: string, append: (label: string, entry: LogEntry) => void,
 ): void {
-  busy.add(label);
+  if (tabsOrBusy instanceof Set) tabsOrBusy.add(label);
+  else {
+    const runtime = runtimeFor(tabsOrBusy, label);
+    if (runtime) runtime.busy = true;
+  }
   append(label, { input, output: '', running: true });
 }
 

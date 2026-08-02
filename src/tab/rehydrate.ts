@@ -1,4 +1,5 @@
-import type { Tab, LogEntry, AgentState } from '../types.js';
+import type { Tab, LogEntry } from './types.js';
+import type { AgentState } from '../agent/types.js';
 import { makeTab, distinctColor } from './index.js';
 import { listAgentStates } from '../agent/state.js';
 import { applyRehydratedState } from './rehydrate-state.js';
@@ -27,9 +28,6 @@ export function rehydrateTabs(
 // and queue maps alongside it. Returns `tabs` unchanged when nothing was persisted.
 export function rehydrateTabState(
   tabs: Tab[],
-  cwd: Map<string, string>,
-  context: Map<string, string[]>,
-  queue: Map<string, string[]>,
   loadTranscript: (name: string) => LogEntry[] | undefined,
   onState: (state: AgentState) => void,
   cap: (log: LogEntry[]) => LogEntry[],
@@ -37,6 +35,6 @@ export function rehydrateTabState(
   const states = listAgentStates().toSorted((a, b) => (a.number ?? Infinity) - (b.number ?? Infinity));
   if (states.length === 0) return tabs;
   const rehydrated = rehydrateTabs(states, loadTranscript, cap);
-  applyRehydratedState(states, cwd, context, queue, onState);
+  applyRehydratedState(states, rehydrated, onState);
   return rehydrated;
 }

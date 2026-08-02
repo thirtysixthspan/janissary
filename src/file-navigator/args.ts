@@ -1,4 +1,4 @@
-import type { FileNavigatorDetail } from '../types.js';
+import type { FileNavigatorDetail } from '../tab/types.js';
 
 type ParsedArgs = {
   inLabel?: string; dock: 'left' | 'right' | null; details?: FileNavigatorDetail; target: string;

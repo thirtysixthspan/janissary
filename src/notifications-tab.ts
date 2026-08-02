@@ -1,4 +1,4 @@
-import type { LogEntry, Tab } from './types.js';
+import type { LogEntry, Tab } from './tab/types.js';
 import type { Managers } from './managers.js';
 
 // The notifications tab is a singleton, view-only feed (`view: 'notifications'`) that receives

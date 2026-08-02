@@ -1,4 +1,4 @@
-import type { CenterPane, Tab } from '../types.js';
+import type { CenterPane, Tab } from './types.js';
 
 export type SplitState = {
   tabs: Tab[];

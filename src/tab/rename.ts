@@ -1,4 +1,5 @@
-import type { Tab, AgentState } from '../types.js';
+import type { Tab } from './types.js';
+import type { AgentState } from '../agent/types.js';
 import { messageBus } from '../bus.js';
 import { renameEditorTab } from './rename-editor.js';
 

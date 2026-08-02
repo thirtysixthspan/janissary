@@ -1,6 +1,6 @@
 import { messageBus } from '../bus.js';
 import type { Managers } from '../managers.js';
-import type { AcpSession } from '../types.js';
+import type { AcpSession } from '../acp/types.js';
 import type { MonitorSub, MonitorSubSetup } from './manager.js';
 import { spawnMonitorSession } from './acp.js';
 import { SUGGESTION_FORMAT } from './parsing.js';

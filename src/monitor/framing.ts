@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { LogEntry } from '../types.js';
+import type { LogEntry } from '../tab/types.js';
 
 // Content framing (Microsoft "spotlighting" delimiting mode): every entry `flush()` buffers from a
 // monitored target is wrapped in a per-session, unguessable delimiter, and the persona is primed to

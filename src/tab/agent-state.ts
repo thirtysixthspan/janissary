@@ -1,26 +1,20 @@
-import type { Tab, AgentState } from '../types.js';
+import type { Tab } from './types.js';
+import type { AgentState } from '../agent/types.js';
 
-// Assembles the persisted-state snapshot for one tab — the shape saved to disk and restored by
-// rehydrate() (see tab-rehydrate.ts) — from the tab itself plus the manager's per-label maps.
-export function buildAgentStateFromTab(
-  tab: Tab,
-  busy: boolean,
-  cwd: string | undefined,
-  context: string[] | undefined,
-  commandQueue: string[] | undefined,
-  extra?: Partial<AgentState>,
-): AgentState {
+// Assembles the persisted-state snapshot for one tab from the tab and its owned runtime state.
+export function buildAgentStateFromTab(tab: Tab, extra?: Partial<AgentState>): AgentState {
+  const runtime = tab.runtime;
   return {
     name: tab.label,
     dotColor: tab.dotColor,
-    active: busy,
+    active: runtime?.busy ?? false,
     number: tab.number,
     group: tab.group,
     groupColor: tab.groupColor,
     cmdHistory: tab.cmdHistory,
-    cwd,
-    context,
-    commandQueue,
+    cwd: runtime?.cwd,
+    context: runtime?.context,
+    commandQueue: runtime?.queue,
     title: tab.title,
     offline: tab.offline,
     ...extra,

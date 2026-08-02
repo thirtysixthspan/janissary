@@ -1,6 +1,6 @@
 import { openSchedulesTab } from '../schedules-tab.js';
 import type { Managers } from '../managers.js';
-import type { ProfileSchedulesEntry } from '../types.js';
+import type { ProfileSchedulesEntry } from './types.js';
 
 // Open (or dock) the singleton schedules tab for each profile-level schedules entry (from the
 // profile's `schedules` key) once every entry is open, mirroring `openProfileNotifications`. The

@@ -3,7 +3,7 @@ import { openProfileSchedules } from './schedules.js';
 import { schedulesTab } from '../schedules-tab.js';
 import { TabManager } from '../tab/manager.js';
 import type { Managers } from '../managers.js';
-import type { ProfileSchedulesEntry } from '../types.js';
+import type { ProfileSchedulesEntry } from './types.js';
 
 function makeManagers(): Managers {
   const managers = {} as Managers;

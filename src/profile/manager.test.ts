@@ -12,7 +12,7 @@ import { initProfileDir } from '../profiles.js';
 import { makeTab } from '../tab/index.js';
 import { agentNames } from '../agent/names.js';
 import type { Managers } from '../managers.js';
-import type { Tab } from '../types.js';
+import type { Tab } from '../tab/types.js';
 
 function makeManagers(creator: Tab, tabs: Tab[] = [creator]): { managers: Managers; appended: { input: string; output: string }[] } {
   const appended: { input: string; output: string }[] = [];

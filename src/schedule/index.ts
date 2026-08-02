@@ -1,7 +1,7 @@
 // Parsing and next-run math for the `schedule` command. Pure (no I/O) so it is fully
 // unit-testable; callers (the command + the scheduler tick) own the side effects.
 
-import type { ScheduleEntry, ScheduleParseResult } from '../types.js';
+import type { ScheduleEntry, ScheduleParseResult } from './types.js';
 import { parseAtSchedule, parseOnSchedule, parseEverySchedule } from './helpers.js';
 import { parseTimeOfDay, parseInterval, parseMonthDay } from './parsing.js';
 export { parseTimeOfDay, parseInterval, parseMonthDay } from './parsing.js';

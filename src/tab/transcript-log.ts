@@ -1,4 +1,4 @@
-import type { Tab, LogEntry } from '../types.js';
+import type { Tab, LogEntry } from './types.js';
 
 // Pure per-tab transcript mutations. Everything here takes a log (or a tab) and returns or
 // rewrites data — side effects (messageBus emits, persistence, unread-marking) are the caller's

@@ -2,7 +2,7 @@ import { describe, it, expect, afterAll } from 'vitest';
 import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import type { Tab } from '../types.js';
+import type { Tab } from '../tab/types.js';
 import type { Managers } from '../managers.js';
 import { editorFeedEntries } from './editor-feed.js';
 

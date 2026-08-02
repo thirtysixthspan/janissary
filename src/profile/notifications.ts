@@ -1,7 +1,7 @@
 import { openNotificationsTab } from '../notifications-tab.js';
 import { messageBus } from '../bus.js';
 import type { Managers } from '../managers.js';
-import type { ProfileNotificationsEntry } from '../types.js';
+import type { ProfileNotificationsEntry } from './types.js';
 
 // Open (or dock) the singleton notifications tab for each profile-level notifications entry (from
 // the profile's `notifications` key) once every entry is open, mirroring `openProfileFiles`. The

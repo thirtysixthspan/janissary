@@ -1,4 +1,4 @@
-import type { CompletionResult } from '../types.js';
+import type { CompletionResult } from './types.js';
 import { completeAgentName, completeSendTarget, completeScheduleTarget, completeConnectionClose, completeBrowserCommand, completeMonitorCommand, completeSearchCommand, completeSyntaxTheme, completeHarnessModel } from './handlers.js';
 import { completeFilePath } from './fs.js';
 import { SYNTAX_THEMES } from '../syntax-themes.js';

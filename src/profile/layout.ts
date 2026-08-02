@@ -1,7 +1,7 @@
 import { getWindowResizer } from '../window-resizer.js';
 import { messageBus } from '../bus.js';
 import type { Managers } from '../managers.js';
-import type { ProfileLayout } from '../types.js';
+import type { ProfileLayout } from './types.js';
 
 // Wraps a window resize so a CDP failure (e.g. the app window isn't ready yet) logs a warning
 // instead of becoming an unhandled promise rejection that crashes the process.

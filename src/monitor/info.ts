@@ -1,7 +1,7 @@
 import type { ConnectionView } from '../protocol.js';
 import type { MonitorSub } from './manager.js';
 import type { Persona } from '../personas.js';
-import type { AcpInfo } from '../types.js';
+import type { AcpInfo } from '../acp/types.js';
 import { formatTargets } from './targets.js';
 
 // Read-only projections of the live monitor registry: the `monitors` command listing

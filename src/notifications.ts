@@ -1,4 +1,4 @@
-import type { NotificationConfig } from './types.js';
+import type { NotificationConfig } from './config.js';
 import type { Managers } from './managers.js';
 import { getConfig } from './config.js';
 import { NOTIFICATIONS_LABEL, notificationsTab, appendNotification } from './notifications-tab.js';

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import type { AcpSession } from '../types.js';
+import type { AcpSession } from '../acp/types.js';
 
 const mocks = vi.hoisted(() => ({
   connectAcp: vi.fn(),

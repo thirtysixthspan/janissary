@@ -1,4 +1,5 @@
-import type { AcpInfo, AcpSession, LogEntry, MonitorTarget } from '../types.js';
+import type { AcpInfo, AcpSession } from '../acp/types.js';
+import type { LogEntry, MonitorTarget } from '../tab/types.js';
 import type { Subscription } from '../bus.js';
 import { loadPersona, type Persona } from '../personas.js';
 import { parseSuggestion } from './parsing.js';

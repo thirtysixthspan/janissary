@@ -3,7 +3,7 @@ import { mkdtempSync, writeFileSync, rmSync, statSync } from 'node:fs';
 import type * as NodeFs from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import type { EditorView, Tab } from '../types.js';
+import type { EditorView, Tab } from '../tab/types.js';
 
 const watchMock = vi.fn();
 

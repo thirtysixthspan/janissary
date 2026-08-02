@@ -1,6 +1,6 @@
 import type { FSWatcher } from 'node:fs';
 import type { GitFileStatus } from '../git-status.js';
-import type { FileNavigatorDetail } from '../types.js';
+import type { FileNavigatorDetail } from '../tab/types.js';
 import type { HistoryStep } from './moves.js';
 import type { TreeRestoreHint } from './restore.js';
 import type { RowStat } from './stats.js';

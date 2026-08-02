@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { listMonitors, monitorConnections, formatConnection, personaSummary } from './info.js';
 import type { MonitorSub } from './manager.js';
 import type { Persona } from '../personas.js';
-import type { AcpSession } from '../types.js';
+import type { AcpSession } from '../acp/types.js';
 
 const persona = (name: string): Persona => ({
   name,

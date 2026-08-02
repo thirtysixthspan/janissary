@@ -1,4 +1,4 @@
-import type { LogEntry, MonitorTarget, Tab } from '../types.js';
+import type { LogEntry, MonitorTarget, Tab } from '../tab/types.js';
 import type { Managers } from '../managers.js';
 import { seedEntries } from './targets.js';
 import { harnessFeedEntries } from './harness-feed.js';

@@ -1,4 +1,4 @@
-import type { BufferLine } from './types.js';
+import type { BufferLine } from './tab/types.js';
 
 // Line types with no meaningful text to search: a terminal card renders a live PTY (no static
 // text) and a spacer is blank.

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { compilePattern, findMatches, matchRange } from './search-matches.js';
-import type { BufferLine } from './types.js';
+import type { BufferLine } from './tab/types.js';
 
 function line(text: string, type: BufferLine['type'] = 'output'): BufferLine {
   return { type, text };

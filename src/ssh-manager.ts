@@ -1,6 +1,6 @@
 import { makeHarnessTab, distinctColor, uniqueLabel } from './tab/index.js';
 import { parseSshCommand } from './ssh.js';
-import type { HarnessView } from './types.js';
+import type { HarnessView } from './tab/types.js';
 import { messageBus } from './bus.js';
 import type { Managers } from './managers.js';
 

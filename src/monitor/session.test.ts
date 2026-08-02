@@ -3,7 +3,7 @@ import { createMonitorSession, openMonitorSession, primeMonitorSession, respawnM
 import { messageBus } from '../bus.js';
 import type { Managers } from '../managers.js';
 import type { MonitorSub } from './manager.js';
-import type { AcpSession, PromptHandlers } from '../types.js';
+import type { AcpSession, PromptHandlers } from '../acp/types.js';
 import type { Persona } from '../personas.js';
 
 function makePersona(): Persona {

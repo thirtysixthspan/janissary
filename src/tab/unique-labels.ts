@@ -1,4 +1,4 @@
-import type { Tab } from '../types.js';
+import type { Tab } from './types.js';
 
 function uniqueLabel(used: Set<string>, prefix: string): string {
   if (!used.has(prefix)) return prefix;

@@ -3,7 +3,7 @@ import path from 'node:path';
 import { buildRows, markGitStatus } from './index.js';
 import { markStats, type RowStat } from './stats.js';
 import { unwatchDir } from './watch.js';
-import type { FileNavigatorDetail, FileNavigatorRow } from '../types.js';
+import type { FileNavigatorDetail, FileNavigatorRow } from '../tab/types.js';
 import type { GitFileStatus } from '../git-status.js';
 
 type RebuildableState = {

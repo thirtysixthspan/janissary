@@ -198,6 +198,13 @@ export type MonitorSuggestion = {
 
 export type CenterPane = 'left' | 'right';
 
+export type TabRuntime = {
+  cwd?: string;
+  busy: boolean;
+  context: string[];
+  queue: string[];
+};
+
 export type Tab = {
   label: string;
   dotColor: string;
@@ -248,6 +255,7 @@ export type Tab = {
   cmdHistory: string[];
   cmdHistoryIdx: number;
   scrollOffset: number;
+  runtime?: TabRuntime;
   workspaceDir?: string;
   // `--offline` on the tab's creating `agent`/`harness` command: adds a network-deny rule to the
   // tab's sandbox profile (only meaningful alongside `workspaceDir`). Kept so a relaunch restores it.

@@ -1,4 +1,4 @@
-import type { LogEntry, BufferLine } from './types.js';
+import type { LogEntry, BufferLine } from './tab/types.js';
 import { expandTabs } from './tab/index.js';
 
 function isEmptyEntry(entry: LogEntry): boolean {

@@ -1,7 +1,7 @@
 import path from 'node:path';
 import { abbreviatePath } from '../paths.js';
 import { SYNC_WORKSPACE_NAME } from '../git-sync.js';
-import type { Tab } from '../types.js';
+import type { Tab } from '../tab/types.js';
 import type {
   ProfileAgentTabFile, ProfileEditorTabFile, ProfileFilesTabFile, ProfileHarnessTabFile,
   ProfileImageTabFile, ProfileMarkdownTabFile, ProfilePageTabFile, ProfileSshTabFile,

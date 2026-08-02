@@ -3,7 +3,7 @@
 // (src/connection/parsing.ts) and `parseDatabaseCommand` in src/database/parsing.ts. Pure — no I/O.
 // The host (src/browser/index.ts) performs the actual Playwright actions against the tab's browser.
 
-import type { BrowserParsed } from '../types.js';
+import type { BrowserParsed } from './types.js';
 
 const USAGE =
   'Usage: browser <open [name] [--headed]|list|use <id>|goto <url>|eval <js>|shot|content|close [id]|window close <id>>';

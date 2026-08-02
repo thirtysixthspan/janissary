@@ -5,7 +5,7 @@ import path from 'node:path';
 import { openerForExtension, openers } from './index.js';
 import { opener as markdown } from './markdown.js';
 import type { OpenContext, ImageView } from './index.js';
-import type { MarkdownView } from '../types.js';
+import type { MarkdownView } from '../tab/types.js';
 
 function fakeContext(overrides: Partial<OpenContext> = {}) {
   const notes: string[] = [];

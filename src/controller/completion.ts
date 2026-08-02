@@ -1,6 +1,6 @@
 import { completeCommandLine } from '../completion/index.js';
 import type { Managers } from '../managers.js';
-import type { CompletionResult } from '../types.js';
+import type { CompletionResult } from '../completion/types.js';
 import { listPersonas } from '../personas.js';
 
 export function complete(managers: Managers, text: string, cursor: number): CompletionResult {

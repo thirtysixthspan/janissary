@@ -1,4 +1,4 @@
-import type { CompletionResult } from '../types.js';
+import type { CompletionResult } from './types.js';
 import { completeWord } from './helpers.js';
 import { BROWSER_SUBCOMMANDS } from '../browser/command.js';
 

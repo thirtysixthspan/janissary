@@ -1,4 +1,4 @@
-import type { Tab } from '../types.js';
+import type { Tab } from './types.js';
 
 // Resolves docking a tab into a sidebar (`'left'` | `'right'`), or undocking it back to the
 // center strip (`null`, which also makes it the active tab). Docking into a side that already

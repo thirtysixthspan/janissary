@@ -4,7 +4,7 @@ import { notificationsTab } from '../notifications-tab.js';
 import { TabManager } from '../tab/manager.js';
 import { messageBus } from '../bus.js';
 import type { Managers } from '../managers.js';
-import type { ProfileNotificationsEntry } from '../types.js';
+import type { ProfileNotificationsEntry } from './types.js';
 
 function makeManagers(): Managers {
   const managers = {} as Managers;

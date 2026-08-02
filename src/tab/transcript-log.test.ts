@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { capLog, finishRunningEntry, appendEntry, finishEntry, clearLog } from './transcript-log.js';
 import { makeTab } from './index.js';
-import type { LogEntry } from '../types.js';
+import type { LogEntry } from './types.js';
 
 function entries(count: number): LogEntry[] {
   return Array.from({ length: count }, (_, i) => ({ input: `in${i}`, output: `out${i}` }));

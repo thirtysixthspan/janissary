@@ -1,6 +1,6 @@
 import { readdirSync } from 'node:fs';
 import path from 'node:path';
-import type { TaskRow } from './types.js';
+import type { TaskRow } from './tab/types.js';
 
 // Depth-first walk of one directory: returns its entries (files and subdirectories, recursed
 // into) as a flat, pre-order `TaskRow[]` — a directory row immediately followed by its children,

@@ -1,4 +1,4 @@
-import type { AgentCommand } from '../types.js';
+import type { AgentCommand } from './types.js';
 import { agentNames } from './names.js';
 import { getConfig } from '../config.js';
 

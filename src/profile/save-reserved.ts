@@ -1,4 +1,4 @@
-import type { ProfileLayoutFile, ProfileMonitorFile } from '../types.js';
+import type { ProfileLayoutFile, ProfileMonitorFile } from './types.js';
 import { getClientLayout } from '../client-layout.js';
 import { getWindowBoundsReader } from '../window-resizer.js';
 import type { Managers } from '../managers.js';

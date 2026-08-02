@@ -1,6 +1,8 @@
 // Wire types shared between the Node server and the React web client.
 // The web client imports these directly via the @shared path alias — no mirror needed.
-import type { BufferLine, ImageView, VideoView, PageView, HarnessView, MarkdownView, EditorView, TerminalEntry, CompletionResult, FileNavigatorView, FileNavigatorDetail, FileNavigatorRow, TaskRow, ProfileRow } from './types.js';
+import type { BufferLine, ImageView, VideoView, PageView, HarnessView, MarkdownView, EditorView, TerminalEntry, FileNavigatorView, FileNavigatorDetail, FileNavigatorRow, TaskRow } from './tab/types.js';
+import type { CompletionResult } from './completion/types.js';
+import type { ProfileRow } from './profile/types.js';
 
 // Used locally in TabView below, so separate import + export is required.
 // eslint-disable-next-line unicorn/prefer-export-from
