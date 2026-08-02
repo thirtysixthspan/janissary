@@ -101,15 +101,15 @@ export class FileNavigatorManager {
   // mirroring the editor's own "any new edit invalidates the redo stack" rule. Rebuilds so the
   // tree reflects the change immediately, without waiting on the directory watcher's own debounce.
   move(label: string, fromRelPath: string, toRelPath: string): BatchResult {
-    const state = this.tabs.get(label);
-    if (!state) return { total: 1, failedPaths: [fromRelPath] };
-    if (isSameOrDescendantPath(toRelPath, fromRelPath)) return { total: 1, failedPaths: [fromRelPath] };
-    const entry = moveItem(state.root, fromRelPath, toRelPath);
-    if (!entry) return { total: 1, failedPaths: [fromRelPath] };
-    state.undoStack.push({ entries: [entry] });
-    state.redoStack = [];
-    this.rebuild(label);
-    return { total: 1, failedPaths: [] };
+    return this.withState(label, { total: 1, failedPaths: [fromRelPath] }, (state) => {
+      if (isSameOrDescendantPath(toRelPath, fromRelPath)) return { total: 1, failedPaths: [fromRelPath] };
+      const entry = moveItem(state.root, fromRelPath, toRelPath);
+      if (!entry) return { total: 1, failedPaths: [fromRelPath] };
+      state.undoStack.push({ entries: [entry] });
+      state.redoStack = [];
+      this.rebuild(label);
+      return { total: 1, failedPaths: [] };
+    });
   }
 
   moveMany(
@@ -118,15 +118,11 @@ export class FileNavigatorManager {
     destinationPath: string,
     policy?: BulkConflictPolicy,
   ): BulkMoveResult {
-    const state = this.tabs.get(label);
-    if (!state) return { total: 0, failedPaths: [] };
-    return moveMany(state, sourcePaths, destinationPath, policy, () => this.rebuild(label));
+    return this.withState(label, { total: 0, failedPaths: [] }, (state) => moveMany(state, sourcePaths, destinationPath, policy, () => this.rebuild(label)));
   }
 
   deleteMany(label: string, sourcePaths: string[]): BatchResult {
-    const state = this.tabs.get(label);
-    if (!state) return { total: 0, failedPaths: [] };
-    return deleteMany(state, sourcePaths, () => this.rebuild(label));
+    return this.withState(label, { total: 0, failedPaths: [] }, (state) => deleteMany(state, sourcePaths, () => this.rebuild(label)));
   }
 
   // Copy- or cut-paste a clipboard's absolute source paths into this tab's tree.
@@ -137,9 +133,7 @@ export class FileNavigatorManager {
     mode: 'copy' | 'cut',
     policy?: BulkConflictPolicy,
   ): BulkMoveResult {
-    const state = this.tabs.get(label);
-    if (!state) return { total: 0, failedPaths: [] };
-    return pasteMany(state, sources, destinationPath, mode, policy, () => this.rebuild(label));
+    return this.withState(label, { total: 0, failedPaths: [] }, (state) => pasteMany(state, sources, destinationPath, mode, policy, () => this.rebuild(label)));
   }
 
   // Undo the most recent move: moves the item back from `to` to `from`'s original directory. A
@@ -147,17 +141,13 @@ export class FileNavigatorManager {
   // overwrite (passing `overwrite: true`) can retry the same pending entry. An empty undo stack is
   // a silent no-op.
   undo(label: string, overwrite = false, skipConflicts = false): UndoRedoResult {
-    const state = this.tabs.get(label);
-    if (!state) return {};
-    return replayHistory(state, 'undo', overwrite, skipConflicts, () => this.rebuild(label));
+    return this.withState(label, {}, (state) => replayHistory(state, 'undo', overwrite, skipConflicts, () => this.rebuild(label)));
   }
 
   // Redo the most recently undone move: re-applies it from `from` to `to`'s original directory.
   // Same conflict-reporting and no-op behavior as `undo`.
   redo(label: string, overwrite = false, skipConflicts = false): UndoRedoResult {
-    const state = this.tabs.get(label);
-    if (!state) return {};
-    return replayHistory(state, 'redo', overwrite, skipConflicts, () => this.rebuild(label));
+    return this.withState(label, {}, (state) => replayHistory(state, 'redo', overwrite, skipConflicts, () => this.rebuild(label)));
   }
 
   // Rename a file or directory in place (same directory only — `newName` may not contain a path
@@ -166,32 +156,30 @@ export class FileNavigatorManager {
   // If an editor tab is already open on the renamed file, it is retargeted to the new path so it
   // doesn't go stale. Rebuilds so the tree reflects the new name immediately.
   rename(label: string, relPath: string, newName: string): void {
-    const state = this.tabs.get(label);
-    if (!state) return;
-    const renamed = renameItem(state.root, relPath, newName);
-    if (!renamed) return;
-    const [oldAbs, newAbs] = renamed;
-    this.managers.tab.retargetEditorTab(oldAbs, newAbs);
-    this.rebuild(label);
+    this.withState(label, undefined, (state) => {
+      const renamed = renameItem(state.root, relPath, newName);
+      if (!renamed) return;
+      const [oldAbs, newAbs] = renamed;
+      this.managers.tab.retargetEditorTab(oldAbs, newAbs);
+      this.rebuild(label);
+    });
   }
 
   // Delete a file or directory (recursively) from disk — the client has already confirmed with
   // the user before sending this. Rebuilds so the tree reflects the removal immediately, without
   // waiting on the directory watcher's own debounce.
   delete(label: string, relPath: string): BatchResult {
-    const state = this.tabs.get(label);
-    if (!state) return { total: 1, failedPaths: [relPath] };
-    if (!deleteItem(state.root, relPath)) return { total: 1, failedPaths: [relPath] };
-    this.rebuild(label);
-    return { total: 1, failedPaths: [] };
+    return this.withState(label, { total: 1, failedPaths: [relPath] }, (state) => {
+      if (!deleteItem(state.root, relPath)) return { total: 1, failedPaths: [relPath] };
+      this.rebuild(label);
+      return { total: 1, failedPaths: [] };
+    });
   }
 
   // The gitignore-aware candidate list for the tab's own Search-files pop-up (async, off the event
   // loop — see `search.ts`), for the deferred `fileNavigatorSearch` RPC.
   async search(label: string): Promise<string[]> {
-    const state = this.tabs.get(label);
-    if (!state) return [];
-    return listProjectFiles(state.root);
+    return this.withState(label, Promise.resolve([] as string[]), (state) => listProjectFiles(state.root));
   }
 
   // Expand every ancestor directory of `relPath` not already expanded (adding to `expanded`,
@@ -202,9 +190,7 @@ export class FileNavigatorManager {
   }
 
   openers(label: string, relPath: string, edit: boolean): { command?: 'open' | 'edit'; choices: FileOpenerChoice[] } {
-    const state = this.tabs.get(label);
-    if (!state) return { choices: [] };
-    return openersForRow(state.root, relPath, edit);
+    return this.withState(label, { choices: [] }, (state) => openersForRow(state.root, relPath, edit));
   }
 
   // This tab's expanded directories and detail mode, both for `profile save`.
@@ -263,13 +249,13 @@ export class FileNavigatorManager {
   }
 
   private scheduleRebuild(label: string): void {
-    const state = this.tabs.get(label);
-    if (!state) return;
-    if (state.debounce) clearTimeout(state.debounce);
-    // The watcher fired, so every cached stat is suspect — empty the cache and let the rebuild
-    // re-read only the rows that are actually visible.
-    state.stats.clear();
-    state.debounce = setTimeout(() => { this.rebuild(label); this.refreshGit(label); }, DEBOUNCE_MS);
+    this.withState(label, undefined, (state) => {
+      if (state.debounce) clearTimeout(state.debounce);
+      // The watcher fired, so every cached stat is suspect — empty the cache and let the rebuild
+      // re-read only the rows that are actually visible.
+      state.stats.clear();
+      state.debounce = setTimeout(() => { this.rebuild(label); this.refreshGit(label); }, DEBOUNCE_MS);
+    });
   }
 
   private refreshGit(label: string): void {
@@ -289,10 +275,15 @@ export class FileNavigatorManager {
   // Looks up a tab's file-navigator state and its open `files` payload together — both `onDirCreated`
   // and `rebuild` bail out the same way if either is missing.
   private findOpenFilesTab(label: string) {
+    return this.withState(label, undefined, (state) => {
+      const tab = this.managers.tab.tabs.find((t) => t.label === label);
+      if (!tab?.files) return;
+      return { state, tab };
+    });
+  }
+
+  private withState<T>(label: string, missing: T, use: (state: FilesTabState) => T): T {
     const state = this.tabs.get(label);
-    if (!state) return;
-    const tab = this.managers.tab.tabs.find((t) => t.label === label);
-    if (!tab?.files) return;
-    return { state, tab };
+    return state ? use(state) : missing;
   }
 }
