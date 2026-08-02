@@ -31,7 +31,6 @@
 * Integration commands and ability to arbitrarily permit workspaces. a library of built-in connection commands (Slack, GitHub issues, HTTP) invokable through the sandboxed tool loop. Look for external libraries and tooling to adopt.
 
 
-* The editor (`product/specs/editor-tab.md`) has syntax highlighting and fuzzy search within the current buffer but no language-aware symbol navigation, while VS Code combines language services with Go to Symbol, Go to Definition/References, Peek, Outline, and breadcrumbs. Closing this gap would add a pluggable language-service/indexing layer and editor commands for symbol search, definition/reference jumps, and the current file's symbol outline. Complexity: high.
 
 * The file navigator (`product/specs/file-navigator-tab.md`) supports mouse range/modifier selection and keyboard copy/cut/paste, but explicitly lacks Shift+Arrow range extension, Cmd/Ctrl+A, and mouse/menu routes for those clipboard actions; VS Code's Explorer supports keyboard-modifier multi-selection and actions over the selected set. Closing this gap would make selection semantics consistent across pointer and keyboard input and expose copy/cut/paste plus bulk actions through an accessible context menu. Complexity: medium.
 
@@ -70,4 +69,8 @@
 * Reusable, parametrized command "workflows" invocable from a command palette, the way Warp's Team Workflows turn a common command into a shared, versioned, named primitive any user can run and tune. This is distinct from janissary's existing `profiles/` (which launch a whole tab topology — agents, harnesses, layout) and `ai/tasks/*.md` (agent prompts run via the task picker, `product/specs/task-picker.md`): a workflow would be a lightweight, parametrized single-command template (e.g. a shell one-liner with placeholders) saved and invoked inline in any tab's command bar, without spinning up a new tab. Determination: nope
 
 * The editor (`product/specs/editor-tab.md`) only supports one caret and one active selection, while VS Code's core editor supports multiple independent cursors for simultaneous edits and column selection. Closing this gap would add multi-caret creation (including keyboard and mouse gestures), rectangular selection, per-caret insertion/deletion, and coherent undo, rendering, and paste behavior. Complexity: medium-high. Determination: nope
+
+* The editor (`product/specs/editor-tab.md`) has syntax highlighting and fuzzy search within the current buffer but no language-aware symbol navigation, while VS Code combines language services with Go to Symbol, Go to Definition/References, Peek, Outline, and breadcrumbs. Closing this gap would add a pluggable language-service/indexing layer and editor commands for symbol search, definition/reference jumps, and the current file's symbol outline. Complexity: high. Determination: the editor is general purpose not specifically a code editor.
+
+
 
