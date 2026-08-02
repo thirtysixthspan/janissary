@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { BulkConflictPolicy, BulkMoveResult, UndoRedoResult } from '@shared/protocol';
 import type { JanusClient } from './ws';
+import { basename } from './rel-path';
 
 type Method = 'undoFileNavigatorItem' | 'redoFileNavigatorItem';
 type PendingConflict =
@@ -52,7 +53,7 @@ export function useFileNavigatorMoveOperations(client: JanusClient, index: numbe
     if (sourcePaths.length === 1) {
       const fromRelPath = sourcePaths[0];
       if (clientConflict) {
-        const name = fromRelPath.slice(fromRelPath.lastIndexOf('/') + 1);
+        const name = basename(fromRelPath);
         setPendingConflict({
           kind: 'scalar',
           fromRelPath,
@@ -79,7 +80,7 @@ export function useFileNavigatorMoveOperations(client: JanusClient, index: numbe
     const result = await client.request<UndoRedoResult>({ method, params: { index } });
     const source = method === 'undoFileNavigatorItem' ? 'undo' : 'redo';
     if (result.conflict) {
-      const name = result.conflict.fromRelPath.slice(result.conflict.fromRelPath.lastIndexOf('/') + 1);
+      const name = basename(result.conflict.fromRelPath);
       setPendingConflict({
         kind: 'scalar',
         ...result.conflict,

@@ -1,4 +1,5 @@
 import type { FileNavigatorRow } from '@shared/protocol';
+import { basename, dirname } from './rel-path';
 
 export type DropTarget = { path: string; conflict: boolean } | null;
 
@@ -12,8 +13,7 @@ function isSameOrDescendantPath(candidate: string, base: string): boolean {
 // The containing directory of `path` — the empty string for a root-level entry, matching the
 // root-as-empty-string convention already used for the conflict-path check below.
 export function parentPath(path: string): string {
-  const idx = path.lastIndexOf('/');
-  return idx === -1 ? '' : path.slice(0, idx);
+  return dirname(path);
 }
 
 // Given the current visible rows, the path being dragged, and the row path currently under the
@@ -42,7 +42,7 @@ export function resolveDropTarget(
   const sourcePaths = sources.filter((source) => targetPath !== parentPath(source));
   if (sourcePaths.length === 0) return null;
   const conflict = sourcePaths.some((source) => {
-    const name = source.slice(source.lastIndexOf('/') + 1);
+    const name = basename(source);
     const childPath = targetPath ? `${targetPath}/${name}` : name;
     return rows.some((row) => row.path === childPath);
   });

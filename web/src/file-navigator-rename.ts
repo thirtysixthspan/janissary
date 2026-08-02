@@ -1,5 +1,6 @@
 // Pure, DOM-free helpers for the file navigator's in-place rename field — kept out of `FileNavigatorTab.tsx`
 // so the component stays under the file-size limit, mirroring `file-navigator-new-file.ts`.
+import { basename, dirname } from './rel-path';
 
 export type RenameOutcome = { type: 'noop' } | { type: 'rename'; newRelPath: string };
 
@@ -8,10 +9,9 @@ export type RenameOutcome = { type: 'noop' } | { type: 'rename'; newRelPath: str
 // basename). A real rename stays in the same directory — only the basename changes.
 export function computeRename(relPath: string, rawName: string): RenameOutcome {
   const trimmed = rawName.trim();
-  const lastSlash = relPath.lastIndexOf('/');
-  const originalName = lastSlash === -1 ? relPath : relPath.slice(lastSlash + 1);
+  const originalName = basename(relPath);
   if (!trimmed || trimmed === originalName) return { type: 'noop' };
-  const parent = lastSlash === -1 ? '' : relPath.slice(0, lastSlash);
+  const parent = dirname(relPath);
   return { type: 'rename', newRelPath: parent ? `${parent}/${trimmed}` : trimmed };
 }
 
@@ -24,13 +24,11 @@ export function hasRenameCollision(newName: string, siblingNames: string[]): boo
 // The names of every visible row sharing `relPath`'s parent directory, excluding `relPath` itself
 // — the candidate set `hasRenameCollision` checks the new name against.
 export function siblingNames(rows: { path: string; name: string }[], relPath: string): string[] {
-  const lastSlash = relPath.lastIndexOf('/');
-  const parent = lastSlash === -1 ? '' : relPath.slice(0, lastSlash);
+  const parent = dirname(relPath);
   return rows
     .filter((r) => r.path !== relPath)
     .filter((r) => {
-      const rSlash = r.path.lastIndexOf('/');
-      const rParent = rSlash === -1 ? '' : r.path.slice(0, rSlash);
+      const rParent = dirname(r.path);
       return rParent === parent;
     })
     .map((r) => r.name);

@@ -3,6 +3,7 @@ import type { BulkConflictPolicy, BulkMoveResult, FileNavigatorRow } from '@shar
 import type { JanusClient } from './ws';
 import { newFileTargetDir } from './file-navigator-new-file';
 import { clearClipboard, getClipboardSnapshot, pendingClipboardMode, subscribeClipboard, type ClipboardMode } from './file-navigator-clipboard';
+import { basename } from './rel-path';
 
 type PendingPasteConflict = {
   sources: string[];
@@ -13,10 +14,10 @@ type PendingPasteConflict = {
 
 function conflictTitle(sources: string[], destinationPath: string): string {
   if (sources.length === 1) {
-    const name = sources[0].slice(sources[0].lastIndexOf('/') + 1);
+    const name = basename(sources[0]);
     return `"${name}" already exists here. Overwrite it?`;
   }
-  const folderName = destinationPath.slice(destinationPath.lastIndexOf('/') + 1);
+  const folderName = basename(destinationPath);
   return `Some items already exist in "${folderName}".`;
 }
 

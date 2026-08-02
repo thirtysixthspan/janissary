@@ -1,4 +1,5 @@
 import type { FileNavigatorRow } from '@shared/protocol';
+import { dirname } from './rel-path';
 
 // The directory row matching a pending new-directory creation's guessed path, or undefined if it
 // hasn't shown up yet (or a name collision meant the guess never matches — see
@@ -17,8 +18,7 @@ export function newFileTargetDir(rows: FileNavigatorRow[], selected: string | nu
   const row = rows.find((r) => r.path === selected);
   if (!row) return null;
   if (row.dir) return row.path;
-  const lastSlash = row.path.lastIndexOf('/');
-  return lastSlash === -1 ? null : row.path.slice(0, lastSlash);
+  return row.path.includes('/') ? dirname(row.path) : null;
 }
 
 // The `newfile` command target for a new `untitled.md` file, given the resolved target directory.

@@ -1,3 +1,5 @@
+import { basename } from './rel-path';
+
 export type FuzzyMatchResult = { path: string; score: number; ranges: [number, number][] };
 
 const CONSECUTIVE_BONUS = 5;
@@ -81,7 +83,7 @@ export function fuzzyMatch(paths: string[], query: string, limit: number): Fuzzy
   for (const path of paths) {
     const lowerPath = path.toLowerCase();
     if (!hasSubsequence(lowerPath, lowerQuery)) continue;
-    const basenameStart = path.lastIndexOf('/') + 1;
+    const basenameStart = path.length - basename(path).length;
     const matched = matchPath(path, lowerPath, lowerQuery, basenameStart, false);
     if (matched) scored.push({ path, score: matched.score });
   }
@@ -91,7 +93,7 @@ export function fuzzyMatch(paths: string[], query: string, limit: number): Fuzzy
 
   return top.map(({ path, score }) => {
     const lowerPath = path.toLowerCase();
-    const basenameStart = path.lastIndexOf('/') + 1;
+    const basenameStart = path.length - basename(path).length;
     const ranges = matchPath(path, lowerPath, lowerQuery, basenameStart, true)?.ranges ?? [];
     return { path, score, ranges };
   });
