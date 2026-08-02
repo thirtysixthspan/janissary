@@ -109,8 +109,9 @@ report.
 For one item, a name conflict opens a dialog with **Overwrite** and **Cancel**. A bulk move checks
 all destinations first. If any conflict exists, the dialog says `Some items already exist in "<folder>".`
 and offers **Overwrite all**, **Skip conflicts**, and **Cancel**. Other items still move when an
-individual item fails. The result dialog says `Could not move <failed> of <total> items.`, lists
-failed paths in selection order, and offers **Dismiss**.
+individual item fails; failures are reported as one line in the notifications feed instead of a
+dialog: `Could not move <failed> of <total> items: <names>`, naming up to three failed items and
+truncating the rest with `… and N more`.
 
 You can also drag selected rows onto the command bar of the active tab to insert their paths at the
 caret without moving anything. The paths are relative to the active tab's working directory,
@@ -139,6 +140,20 @@ Press `Cmd+R` (`Ctrl+R`) while a row other than `..` is selected to turn its nam
 
 If the renamed file is already open in an editor tab, that tab's name and path update automatically, with unsaved content and cursor position preserved.
 
+## Copying, cutting, and pasting
+
+`Cmd+C` (`Ctrl+C`) copies the selected files and directories onto an app-wide clipboard. `Cmd+X` (`Ctrl+X`) cuts them instead, marking them to move rather than duplicate. `Cmd+V` (`Ctrl+V`) pastes into the directory your selection implies — a selected directory pastes inside it, a selected file pastes into its containing directory, and no selection (or the `..` row) pastes at the tree root.
+
+The clipboard is shared across the whole app, so you can copy in one navigator and paste into any other, even one rooted at a different path. Copying with nothing selected leaves the clipboard untouched, and pasting an empty clipboard does nothing.
+
+Rows on the clipboard are marked in every open navigator that shows them, until you paste, copy or cut something else, or press `Escape` to clear it. A cut shows its rows dimmed with a dashed outline; a copy shows its rows at full strength with a dashed outline, since the originals aren't going anywhere. Pasting a cut selection empties the clipboard, so pasting again does nothing; pasting a copy leaves the clipboard as-is, so you can paste the same selection again elsewhere.
+
+Pasting a copy back into its own directory duplicates it, using the same `-2` naming as elsewhere in the app (`report.md` → `report-2.md`). Pasting a cut back into its own directory does nothing. Any other name collision opens the same Overwrite/Cancel, or Overwrite all/Skip conflicts/Cancel, dialog a drag-and-drop move uses. A paste whose source is gone, or whose destination is inside what you're copying, is reported through the notifications feed like any other failed operation.
+
+A paste is one step on the tab's undo/redo stack: `Cmd+Z` reverses it and `Cmd+Shift+Z` re-applies it. Undoing a copy-paste deletes what it created; undoing a cut-paste moves the items back to where they came from.
+
+Copying, cutting, and pasting are keyboard-only — there's no mouse or menu route.
+
 ## Keyboard
 
 A focused tree captures these keys for itself (tab-switching and other `Ctrl`/`Cmd` chords still work):
@@ -158,12 +173,16 @@ A focused tree captures these keys for itself (tab-switching and other `Ctrl`/`C
 | `Cmd+Shift+Z` / `Ctrl+Shift+Z` | Redo the most recently undone move |
 | `Cmd+N` / `Ctrl+N` | Create a new file (see "Creating a new file" above) |
 | `Cmd+R` / `Ctrl+R` | Rename the selected file or directory in place (see "Renaming a file or directory" above) |
+| `Cmd+C` / `Ctrl+C` | Copy the selection onto the clipboard |
+| `Cmd+X` / `Ctrl+X` | Cut the selection onto the clipboard |
+| `Cmd+V` / `Ctrl+V` | Paste the clipboard into the directory the selection implies |
 
 Deleting uses the same selection normalization as moving. One item asks `Delete "<name>"?`.
 Multiple items ask `Delete <count> items?`.
 Both dialogs offer **Delete** and **Cancel**. A confirmed bulk delete continues after individual
-failures. Its result dialog says `Could not delete <failed> of <total> items.`, lists failed paths
-in selection order, and offers **Dismiss**. Deletion is recursive for directories and cannot be
+failures, reported as one line in the notifications feed instead of a dialog:
+`Could not delete <failed> of <total> items: <names>`, naming up to three failed items and
+truncating the rest with `… and N more`. Deletion is recursive for directories and cannot be
 undone.
 
 Undo and redo only apply to moves. Each tree keeps its own undo/redo history in memory for as long

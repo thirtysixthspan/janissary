@@ -96,5 +96,8 @@
 | `Home` / `End` | Select the first / last visible row |
 | `Page Up` / `Page Down` | Move selection by one viewport of rows |
 | Printable characters | Type-ahead: jump to the next visible row whose name starts with what's typed |
+| `Cmd+C` / `Ctrl+C` | Copy the selected rows onto the clipboard |
+| `Cmd+X` / `Ctrl+X` | Cut the selected rows onto the clipboard |
+| `Cmd+V` / `Ctrl+V` | Paste the clipboard into the directory the selection implies |
 
 `Tab` completes the word at the cursor: filesystem paths against the tab's working directory; at the recipient position of `msg` / `broadcast`, active agent names (`broadcast` also offers `all` and completes each entry of a comma-separated list); at the target of `connection close`, the tab's open connection strings (`sqlite:<name>`, `shell:<shell>`, `acp:opencode`, `browser:<id>`, `ssh:<label>`); and for the `browser` command, its subcommands (`open`, `goto`, `content`, …) plus the tab's open window ids where one is expected (`browser use`, `browser window close`). For `monitor` / `unmonitor`, the first argument completes against persona names (from `ai/personas/monitor/`) and later arguments against tab labels and `group:<n>` tokens (`unmonitor` also offers `--all`).
