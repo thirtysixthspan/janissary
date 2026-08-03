@@ -7,6 +7,11 @@ export type TabPluginClientCapabilities = {
   resourceUrl(reference: string): string;
   intent<Result>(name: string, payload: unknown): Promise<Result>;
   splitAction: React.ReactNode;
+  // Whether this plugin's tab is the visible one in its pane. A plugin tab stays mounted while
+  // hidden — that is what preserves video playback and editor-style view state across tab switches —
+  // so anything a plugin binds globally (a window key listener, say) has to consult this rather than
+  // assume it is on screen. The host owns the answer; a plugin must never read it off the DOM.
+  active: boolean;
   reportFailure(reason: string): void;
 };
 
@@ -14,9 +19,11 @@ export function createPluginClientCapabilities(
   pluginId: string,
   label: string,
   client: JanusClient,
+  active: boolean,
   onSplit?: () => void,
 ): TabPluginClientCapabilities {
   return {
+    active,
     resourceUrl: (reference) => {
       const token = new URLSearchParams(location.search).get('token') ?? '';
       return `${reference}?token=${encodeURIComponent(token)}`;

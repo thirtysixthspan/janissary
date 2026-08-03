@@ -12,7 +12,7 @@
 // maps are the only sanctioned way in, and everything else is closed.
 export const pluginBoundaries = [
   // Concrete plugin implementations receive only their public host API, their own files, and
-  // external/Node modules. Video's pure size formatter is the single documented host utility.
+  // external/Node modules. The pure size formatter is the single documented host utility.
   {
     files: ['src/plugins/*/**/*.ts', 'src/plugins/*/*.ts'],
     ignores: ['**/*.test.ts', '**/*.test.tsx'],

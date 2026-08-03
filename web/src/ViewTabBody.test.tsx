@@ -33,12 +33,6 @@ describe('ViewTabBody', () => {
     expect(container.innerHTML).toBe('');
   });
 
-  it('returns null when view is image but no image payload', () => {
-    const tab = baseTab({ view: 'image' });
-    const { container } = render(React.createElement(ViewTabBody, { tab, client: {} as never, index: 0 }));
-    expect(container.innerHTML).toBe('');
-  });
-
   it('returns null when view is page (page tabs are rendered by MountedViewLayers)', () => {
     const tab = baseTab({ view: 'page', page: { url: 'https://example.com', domain: 'example.com', number: 1 } });
     const { container } = render(React.createElement(ViewTabBody, { tab, client: {} as never, index: 0 }));
@@ -57,8 +51,8 @@ describe('ViewTabBody', () => {
     expect(container.innerHTML).toBe('');
   });
 
-  it('renders ImageTab when view is image with payload', () => {
-    const tab = baseTab({ view: 'image', image: { name: 'test.png', path: '/a/test.png', size: '1 KB', url: '/open/1' } });
+  it('renders MarkdownTab when view is markdown with payload', () => {
+    const tab = baseTab({ view: 'markdown', markdown: { name: 'a.md', path: '/a/a.md', size: '1 KB', url: '/open/1' } });
     const { container } = render(React.createElement(ViewTabBody, { tab, client: {} as never, index: 0 }));
     expect(container.querySelector('.tab-body')).toBeTruthy();
   });
@@ -66,8 +60,8 @@ describe('ViewTabBody', () => {
   it('greys the left border when the view is visible but unfocused', () => {
     const tab = baseTab({
       dotColor: '#123456',
-      view: 'image',
-      image: { name: 'test.png', path: '/a/test.png', size: '1 KB', url: '/open/1' },
+      view: 'markdown',
+      markdown: { name: 'a.md', path: '/a/a.md', size: '1 KB', url: '/open/1' },
     });
     const { container } = render(React.createElement(ViewTabBody, {
       tab, client: {} as never, index: 0, active: false,

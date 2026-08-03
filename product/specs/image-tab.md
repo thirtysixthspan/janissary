@@ -5,18 +5,25 @@ It is a non-agent **view tab**: it shows the image and its metadata in place of 
 transcript and command bar, and is controlled by direct interaction (zoom, pan, and the scroll wheel)
 rather than a command line.
 
+The image view is contributed by a **bundled tab plugin** rather than by the application core (see
+[[tab-plugins]]). Nothing about the view changes because of that: the same file types open the same
+way, and the plugin is present in every build. What follows describes the behavior; where it differs
+from other plugin tabs, the difference is called out.
+
 An image tab is created like an agent tab (see Tabs) — placed contiguously within the active tab's
 group, inheriting that group's number and bar color and taking a distinct dot color. Focus moves
 to the new image tab.
 
 Unlike an agent tab, an image tab has no shell, agent session, browser, transcript, or command
 history, and no persisted agent state. It is a **live, in-memory view** — like browser windows
-(see Browser), it is not saved and is not restored on `--relaunch`.
+(see Browser), it is not saved and is not restored on `--relaunch`. A profile can still capture one
+and reopen it on launch (see [[profiles]]).
 
 ### Image tab data
 
-An image tab is distinguished from an ordinary tab by a **view kind** marking it as an image view.
-Alongside it the tab carries the data the view needs:
+An image tab is distinguished from an ordinary tab by a **view kind** marking it as a plugin view,
+together with the identity of the plugin that owns it. Alongside it the tab carries the data the
+view needs:
 
 - **name** — the file's name.
 - **location** — the file's full path.
@@ -89,15 +96,17 @@ When the image is zoomed in beyond the tab area, the out-of-view parts are reach
 No scrollbars are shown; panning is via the arrow keys and drag. Zoom and pan are live, in-memory:
 a newly opened image tab starts at 100% zoom with no offset, and the state is not persisted or
 restored on `--relaunch`. Switching to a different image tab resets zoom and pan to their defaults.
+The zoom and pan keys act only on the image tab currently on screen: an image tab in the other split
+pane, or one hidden behind another tab, ignores them entirely.
 
 ### Tab strip: name and close button
 
 In the tab strip an image tab reads exactly like an ordinary tab — same dot, group bar, active
 highlight, and ordering — with two differences:
 
-- **Name.** The tab's name is always `image` (the file name is shown in the tab's metadata header,
-  not in the strip). Per [[tab-label-no-markers]], no type or status marker is appended — the name
-  only.
+- **Name.** The tab's name is the image's file name, while its internal label stays distinct
+  (`image`, `image-2`, …) so several image tabs can coexist. Per [[tab-label-no-markers]], no type
+  or status marker is appended — the name only.
 - **Close button.** A close control is shown **right-aligned within the tab, immediately after the
   name**. Clicking it removes that tab without first selecting it; the click does not also trigger
   tab selection. The close button is specific to view tabs (agent tabs continue to close via the

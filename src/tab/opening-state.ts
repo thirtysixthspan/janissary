@@ -1,4 +1,4 @@
-import type { Tab, ImageView, MarkdownView, EditorView, PageView, FileNavigatorView } from './types.js';
+import type { Tab, MarkdownView, EditorView, PageView, FileNavigatorView } from './types.js';
 import type { TabPluginPayload, TabPluginResources } from '../plugins/api.js';
 import type { Managers } from '../managers.js';
 import { TabQueueState } from './queue-state.js';
@@ -14,10 +14,6 @@ export abstract class TabOpeningState extends TabQueueState {
 
   protected constructor(protected managers: Managers) {
     super();
-  }
-
-  openImageTab(image: ImageView): void {
-    tabOpeners.openImageTab(this, image);
   }
 
   openPluginTab(

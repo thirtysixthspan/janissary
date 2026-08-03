@@ -556,41 +556,48 @@ describe('Controller open command', () => {
     return file;
   };
 
-  it('open <image> creates a focused image tab titled "image"', () => {
+  // The image opener is a bundled tab plugin, so `open <image>` resolves through that plugin's
+  // activation: the tab appears a turn of the event loop after `dispatch` returns.
+  const imageTabs = (c: ReturnType<typeof makeController>['c']) =>
+    c.view().filter((t) => t.view === 'plugin' && t.plugin?.id === 'image');
+
+  it('open <image> creates a focused image tab titled with the file name', async () => {
     const file = temporaryImage();
     const { c } = makeController();
     c.dispatch(`open ${file}`);
-    expect(c.view()).toHaveLength(2);
+    await vi.waitFor(() => expect(c.view()).toHaveLength(2));
     const img = c.view()[1];
-    expect(img.view).toBe('image');
+    expect(img.view).toBe('plugin');
     expect(img.title).toBe('pic.png');
-    expect(img.image?.name).toBe('pic.png');
-    expect(img.image?.path).toBe(file);
+    expect(img.plugin?.id).toBe('image');
+    expect(img.plugin?.payload).toMatchObject({ name: 'pic.png', path: file });
     expect(c.managers.tab.activeTab).toBe(1); // focus moves to the new image tab
   });
 
-  it('gives each image tab a unique internal label while using the filename as display title', () => {
+  it('gives each image tab a unique internal label while using the filename as display title', async () => {
     const { c } = makeController();
     c.dispatch(`open ${temporaryImage('a.png')}`);
     c.dispatch(`open ${temporaryImage('b.png')}`);
-    const imgs = c.view().filter((t) => t.view === 'image');
-    expect(imgs).toHaveLength(2);
+    await vi.waitFor(() => expect(imageTabs(c)).toHaveLength(2));
+    const imgs = imageTabs(c);
     expect(new Set(imgs.map((t) => t.label)).size).toBe(2); // distinct labels
-    expect(imgs.map((t) => t.title)).toEqual(['a.png', 'b.png']); // filenames as display names
+    expect(imgs.map((t) => t.title).toSorted((a, b) => (a ?? '').localeCompare(b ?? '')))
+      .toEqual(['a.png', 'b.png']); // filenames as display names
   });
 
-  it('does not persist an image tab to agent state', () => {
+  it('does not persist an image tab to agent state', async () => {
     initAgentStateDirectory(mkdtempSync(path.join(tmpdir(), 'janus-open-state-')));
     const { c } = makeController();
     c.dispatch(`open ${temporaryImage()}`);
+    await vi.waitFor(() => expect(imageTabs(c)).toHaveLength(1));
     expect(loadAgentState('image')).toBeFalsy();
   });
 
-  it('open external <image> confirms without creating a tab', () => {
+  it('open external <image> confirms without creating a tab', async () => {
     const { c } = makeController();
     c.dispatch(`open external ${temporaryImage()}`);
+    await vi.waitFor(() => expect(allText(c)).toContain('Opening pic.png'));
     expect(c.view()).toHaveLength(1);
-    expect(allText(c)).toContain('Opening pic.png');
   });
 
   it('reports no opener for an unsupported file type', () => {
@@ -608,10 +615,11 @@ describe('Controller open command', () => {
     expect(c.view()).toHaveLength(1);
   });
 
-  it('closeTab removes an image tab and unregisters its served file', () => {
+  it('closeTab removes an image tab and unregisters its served file', async () => {
     const { c } = makeController();
     c.dispatch(`open ${temporaryImage()}`);
-    const id = c.view()[1].image!.url.replace('/open/', '');
+    await vi.waitFor(() => expect(c.view()).toHaveLength(2));
+    const id = (c.view()[1].plugin!.payload as { url: string }).url.replace('/open/', '');
     expect(c.openFilePath(id)).toBeTruthy();
     c.closeTab(1);
     expect(c.view().map((t) => t.label)).toEqual(['janus']);
@@ -625,29 +633,29 @@ describe('Controller open command', () => {
     return dir;
   };
 
-  it('open <glob> expands via the shell and opens a tab per matching file', () => {
+  it('open <glob> expands via the shell and opens a tab per matching file', async () => {
     const dir = tmpDirWith(['a.png', 'b.png', 'c.png', 'notes.txt']);
     const { c } = makeController();
     c.dispatch(`open ${dir}/*.png`);
-    const imgs = c.view().filter((t) => t.view === 'image');
-    expect(imgs).toHaveLength(3); // the .txt is not matched by *.png
-    expect(imgs.map((t) => t.image!.name).toSorted((a, b) => a.localeCompare(b))).toEqual(['a.png', 'b.png', 'c.png']);
+    await vi.waitFor(() => expect(imageTabs(c)).toHaveLength(3)); // the .txt is not matched by *.png
+    expect(imageTabs(c).map((t) => (t.plugin!.payload as { name: string }).name)
+      .toSorted((a, b) => a.localeCompare(b))).toEqual(['a.png', 'b.png', 'c.png']);
   });
 
-  it('caps a wildcard open at 10 files and notes the overflow', () => {
+  it('caps a wildcard open at 10 files and notes the overflow', async () => {
     const dir = tmpDirWith(Array.from({ length: 15 }, (_, index) => `f${index}.png`));
     const { c } = makeController();
     c.dispatch(`open ${dir}/*.png`);
-    expect(c.view().filter((t) => t.view === 'image')).toHaveLength(10);
+    await vi.waitFor(() => expect(imageTabs(c)).toHaveLength(10));
     expect(allText(c)).toContain('first 10 of 15 matching files');
   });
 
-  it('reports when a wildcard matches nothing', () => {
+  it('reports when a wildcard matches nothing', async () => {
     const dir = tmpDirWith([]);
     const { c } = makeController();
     c.dispatch(`open ${dir}/*.png`);
-    expect(c.view().filter((t) => t.view === 'image')).toHaveLength(0);
-    expect(allText(c)).toContain('no matching files');
+    await vi.waitFor(() => expect(allText(c)).toContain('no matching files'));
+    expect(imageTabs(c)).toHaveLength(0);
   });
 });
 
@@ -1276,29 +1284,29 @@ describe('Controller profile launch (harness entries)', () => {
     }
   });
 
-  it('reports and skips an unknown harness tool', () => {
+  it('reports and skips an unknown harness tool', async () => {
     const root = mkdtempSync(path.join(tmpdir(), 'janus-profile-harness-badname-'));
     initProfileDir(root);
     writeHarnessEntry(root, 'bad', 'thing', { harness: 'gemini' });
     vi.mocked(spawnPty).mockImplementation((program) => ({ id: 'mock-pty-1', program, write: vi.fn(), resize: vi.fn(), kill: vi.fn() }));
     const { c } = makeController();
     c.dispatch('profile launch bad');
-    expect(allText(c)).toContain('unknown tool');
+    await vi.waitFor(() => expect(allText(c)).toContain('unknown tool'));
     expect(c.view().map((t) => t.label)).not.toContain('thing');
   });
 
-  it('reports and skips a model missing from the catalog', () => {
+  it('reports and skips a model missing from the catalog', async () => {
     const root = mkdtempSync(path.join(tmpdir(), 'janus-profile-harness-badmodel-'));
     initProfileDir(root);
     writeHarnessEntry(root, 'bad-model', 'opencode', { model: 'no-such-model' });
     vi.mocked(spawnPty).mockImplementation((program) => ({ id: 'mock-pty-1', program, write: vi.fn(), resize: vi.fn(), kill: vi.fn() }));
     const { c } = makeController();
     c.dispatch('profile launch bad-model');
-    expect(allText(c)).toContain('Unknown model');
+    await vi.waitFor(() => expect(allText(c)).toContain('Unknown model'));
     expect(c.view().map((t) => t.label)).not.toContain('opencode');
   });
 
-  it('reports and skips a malformed schedule string, still opening the tab', () => {
+  it('reports and skips a malformed schedule string, still opening the tab', async () => {
     const root = mkdtempSync(path.join(tmpdir(), 'janus-profile-harness-badsched-'));
     initProfileDir(root);
     writeHarnessEntry(root, 'bad-sched', 'opencode', { schedule: ['not a valid schedule line'] });
@@ -1306,7 +1314,7 @@ describe('Controller profile launch (harness entries)', () => {
     const { c } = makeController();
     c.dispatch('profile launch bad-sched');
     expect(c.view().map((t) => t.label)).toContain('opencode');
-    expect(allText(c)).toContain('Usage');
+    await vi.waitFor(() => expect(allText(c)).toContain('Usage'));
   });
 
   it('relaunching the profile closes the old tab (killing its PTY) and opens a fresh one with a re-based schedule', () => {
@@ -1330,15 +1338,15 @@ describe('Controller profile launch (harness entries)', () => {
     expect(tabs[0].harness!.ptyId).toBe('mock-pty-2');
   });
 
-  it('a profile entry matching the issuing tab label is reported and skipped; the issuing tab stays open', () => {
+  it('a profile entry matching the issuing tab label is reported and skipped; the issuing tab stays open', async () => {
     const root = mkdtempSync(path.join(tmpdir(), 'janus-profile-harness-self-'));
     initProfileDir(root);
     writeHarnessEntry(root, 'self', 'janus', {});
     vi.mocked(spawnPty).mockImplementation((program) => ({ id: 'mock-pty-1', program, write: vi.fn(), resize: vi.fn(), kill: vi.fn() }));
     const { c } = makeController();
     c.dispatch('profile launch self');
+    await vi.waitFor(() => expect(allText(c)).toContain('issuing tab'));
     expect(c.view().map((t) => t.label)).toEqual(['janus']);
-    expect(allText(c)).toContain('issuing tab');
   });
 });
 

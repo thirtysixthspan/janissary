@@ -7,24 +7,26 @@ import type { ProfileViewEntry } from './types.js';
 import type { Tab } from '../tab/types.js';
 import type { MainAreaCandidate } from './focus.js';
 
-// Opens the four tab kinds that carry no authored label — image, markdown, page, and ssh — by
-// issuing the same command a user would type, then placing the resulting tab into its authored
-// group and position. Modeled on `openProfileEditors`: the openers behind `open` and `ssh` are all
-// synchronous and leave the new tab active, so the tab is available to place as soon as the call
-// returns.
+// Opens the four tab kinds that carry no authored label — a bundled-plugin tab, markdown, page, and
+// ssh — by issuing the same command a user would type, then placing the resulting tab into its
+// authored group and position. Modeled on `openProfileEditors`, except that a plugin opener resolves
+// through activation: every open is awaited, so the tab is available to place once `run` settles.
 
 type ViewTarget = {
   // The identity a relaunch matches an already-open tab by, standing in for the label these tab
   // kinds don't author.
   matches: (tab: Tab) => boolean;
-  // Whether an identity match is closed before opening. False only for an image tab, which
-  // `openImageTab` reuses in place for the same path.
+  // Whether an identity match is closed before opening. False only for a plugin tab, which the host
+  // reuses in place for the same instance key.
   preClose: boolean;
   // Issue the equivalent user command. `open` reports its own failures into the issuing tab's
   // transcript and so returns nothing; `ssh` returns a parse error to report here.
-  run: () => string | void;
+  run: () => Promise<string | void> | string | void;
   // The identity as authored, for the note reporting a failed open.
   subject: string;
+  // What the entry opens, for the launch notes — a plugin entry names its plugin (`image`) rather
+  // than the generic word, so the note reads the way it did before plugins owned these tabs.
+  kind: string;
 };
 
 // Resolve an entry's path the way `open` does: `$root`/`~` expand against the launch directory,
@@ -47,7 +49,7 @@ function buildTarget(entry: ProfileViewEntry, managers: Managers, issuingLabel: 
   case 'page': {
     const url = pageUrl(entry.url);
     return {
-      matches: (tab) => tab.page?.url === url, preClose: true, subject: entry.url,
+      matches: (tab) => tab.page?.url === url, preClose: true, subject: entry.url, kind: 'page',
       run: () => { managers.openFile.run(`open ${entry.url}`, issuingLabel); },
     };
   }
@@ -55,20 +57,22 @@ function buildTarget(entry: ProfileViewEntry, managers: Managers, issuingLabel: 
     const command = [`ssh ${entry.destination}`, ...(entry.options ?? [])].join(' ');
     return {
       matches: (tab) => tab.harness?.name === 'ssh' && tab.harness.destination === entry.destination,
-      preClose: true, subject: entry.destination, run: () => managers.ssh.run(command),
+      preClose: true, subject: entry.destination, kind: 'ssh', run: () => managers.ssh.run(command),
     };
   }
-  case 'image': {
+  case 'plugin': {
     const file = resolvePath(managers, issuingLabel, entry.path);
     return {
-      matches: (tab) => tab.image?.path === file, preClose: false, subject: entry.path,
-      run: () => { managers.openFile.run(`open ${entry.path}`, issuingLabel); },
+      matches: (tab) => tab.plugin?.id === entry.id && tab.plugin.instanceKey === file,
+      preClose: false, subject: entry.path, kind: entry.id,
+      run: () => managers.openFile.run(`open ${entry.path}`, issuingLabel),
     };
   }
   default: {
     const file = resolvePath(managers, issuingLabel, entry.path);
     return {
       matches: (tab) => tab.markdown?.path === file, preClose: true, subject: entry.path,
+      kind: 'markdown',
       run: () => { managers.openFile.run(`open ${entry.path}`, issuingLabel); },
     };
   }
@@ -85,25 +89,25 @@ function closeMatching(managers: Managers, target: ViewTarget, notes: string[]):
   notes.push(`Relaunched "${label}".`);
 }
 
-export function openProfileViewTabs(
+export async function openProfileViewTabs(
   views: ProfileViewEntry[], managers: Managers, issuingLabel: string,
   defaultGroup: number, colorForGroup: (group: number, fallbackDotColor: string) => string,
   notes: string[],
-): MainAreaCandidate[] {
+): Promise<MainAreaCandidate[]> {
   const opened: MainAreaCandidate[] = [];
   for (const entry of views) {
     const target = buildTarget(entry, managers, issuingLabel);
     if (target.preClose) closeMatching(managers, target, notes);
-    const error = target.run();
+    const error = await target.run();
     const tab = managers.tab.tabs.find((t) => target.matches(t));
     if (!tab) {
-      notes.push(typeof error === 'string' ? error : `Could not open ${entry.type} tab "${target.subject}".`);
+      notes.push(typeof error === 'string' ? error : `Could not open ${target.kind} tab "${target.subject}".`);
       continue;
     }
     const group = entry.group ?? defaultGroup;
     relocateToGroup(managers, group, colorForGroup(group, tab.dotColor));
     opened.push({ label: tab.label, number: entry.number, focus: entry.focus, pane: entry.pane });
-    notes.push(`Opened ${entry.type} tab.`);
+    notes.push(`Opened ${target.kind} tab.`);
   }
   return opened;
 }

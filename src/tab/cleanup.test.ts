@@ -91,16 +91,6 @@ describe('closeTabResources', () => {
     emitSpy.mockRestore();
   });
 
-  it('drops an image tab\'s open-file entry', () => {
-    const managers = makeManagers();
-    const tab = { ...makeTab('image', 'red'), image: { name: 'pic.png', path: '/tmp/pic.png', size: '1 KB', url: '/open/abc' } };
-    const openFiles = new Map([['abc', '/tmp/pic.png']]);
-
-    closeTabResources(tab, managers, openFiles, new Map(), new Map(), 2);
-
-    expect(openFiles.has('abc')).toBe(false);
-  });
-
   it('drops a markdown tab\'s open-file entry', () => {
     const managers = makeManagers();
     const tab = { ...makeTab('markdown', 'red'), markdown: { name: 'readme.md', path: '/tmp/readme.md', size: '1 KB', url: '/open/xyz' } };

@@ -1,6 +1,6 @@
 # Open
 
-The `open` command is a **dispatcher** for handling targets — local files and web addresses: it inspects the target, picks the opener that handles it, and hands the target to it. Every type is handled by its own **opener**; the dispatcher itself knows only enough to tell a **web address** from a **file** and route each to its opener. Core openers handle images, Markdown, text files, and embedded web pages; bundled tab plugins may contribute more file types, beginning with video.
+The `open` command is a **dispatcher** for handling targets — local files and web addresses: it inspects the target, picks the opener that handles it, and hands the target to it. Every type is handled by its own **opener**; the dispatcher itself knows only enough to tell a **web address** from a **file** and route each to its opener. Core openers handle Markdown, text files, and embedded web pages; bundled tab plugins contribute the rest, currently images and video.
 
 ### Open for extension, closed for modification
 
@@ -63,9 +63,9 @@ Malformed invocations return a usage message; an unrecognized file type reports 
 
 ---
 
-## Image opener
+## Image plugin opener
 
-The first opener handles all common image types — including PNG, JPEG, GIF, WebP, BMP, SVG, AVIF, and ICO — and implements both presentations.
+The bundled `image` tab plugin contributes an opener for all common image types — including PNG, JPEG, GIF, WebP, BMP, SVG, AVIF, and ICO (case-insensitive) — and implements both presentations. Its static declaration is available at startup; its behavior activates only on the first matching `open`. It claims no command of its own, so `open` is the only route to it.
 
 ### `open external <image>`
 

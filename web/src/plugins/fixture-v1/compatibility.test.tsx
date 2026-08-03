@@ -18,6 +18,7 @@ function capabilities(): TabPluginClientCapabilities {
     resourceUrl: (reference) => `${reference}?token=test`,
     intent: async <Result,>() => ({ echoed: 'fixture round trip' }) as Result,
     splitAction: null,
+    active: true,
     reportFailure: vi.fn(),
   };
 }

@@ -45,6 +45,10 @@ function partitionTabs(tabs: ProfileTabFile[]): PartitionedTabs {
     case 'files': { out.files.push({ ...stripFileKeys(tab), ...presentation(tab) }); break; }
     case 'notifications': { out.notifications.push(stripFileKeys(tab)); break; }
     case 'schedules': { out.schedules.push(stripFileKeys(tab)); break; }
+    case 'plugin': { out.views.push({ ...presentation(tab), type: 'plugin', id: tab.id, path: tab.path }); break; }
+    // The pre-plugin spelling of an image tab: same file, same reopen path, so it loads as the
+    // plugin entry `profile save` writes today rather than as a second kind of view entry.
+    case 'image': { out.views.push({ ...presentation(tab), type: 'plugin', id: 'image', path: tab.path }); break; }
     case 'page': { out.views.push({ ...presentation(tab), type: 'page', url: tab.url }); break; }
     case 'ssh': {
       out.views.push({ ...presentation(tab), type: 'ssh', destination: tab.destination, options: tab.options });

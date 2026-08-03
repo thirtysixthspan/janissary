@@ -19,20 +19,20 @@ describe('createPluginClientCapabilities', () => {
   it('builds an authenticated resource URL from the session token', () => {
     history.replaceState(null, '', '/?token=s3cr3t%2Ftoken');
     const { client } = makeClient();
-    const capabilities = createPluginClientCapabilities('video', 'video', client);
+    const capabilities = createPluginClientCapabilities('video', 'video', client, true);
     expect(capabilities.resourceUrl('/open/abc')).toBe('/open/abc?token=s3cr3t%2Ftoken');
   });
 
   it('sends an empty token when the page has none, rather than omitting the parameter', () => {
     history.replaceState(null, '', '/');
     const { client } = makeClient();
-    expect(createPluginClientCapabilities('video', 'video', client).resourceUrl('/open/abc'))
+    expect(createPluginClientCapabilities('video', 'video', client, true).resourceUrl('/open/abc'))
       .toBe('/open/abc?token=');
   });
 
   it('binds every intent to its own tab label and returns the result', async () => {
     const { client } = makeClient(async () => ({ name: 'clip.shot-1.png' }));
-    const capabilities = createPluginClientCapabilities('video', 'video-2', client);
+    const capabilities = createPluginClientCapabilities('video', 'video-2', client, true);
 
     await expect(capabilities.intent('capture-frame', { dataUrl: 'data:image/png;base64,AA==' }))
       .resolves.toEqual({ name: 'clip.shot-1.png' });
@@ -46,13 +46,13 @@ describe('createPluginClientCapabilities', () => {
 
   it('rejects when the server answers an intent with no result', async () => {
     const { client } = makeClient(async () => { /* server replied with no result */ });
-    await expect(createPluginClientCapabilities('video', 'video', client).intent('capture-frame', {}))
+    await expect(createPluginClientCapabilities('video', 'video', client, true).intent('capture-frame', {}))
       .rejects.toThrow('Plugin intent "capture-frame" failed');
   });
 
   it('reports a failure against its own tab label', () => {
     const { client, send } = makeClient();
-    createPluginClientCapabilities('video', 'video', client).reportFailure('chunk rejected');
+    createPluginClientCapabilities('video', 'video', client, true).reportFailure('chunk rejected');
     expect(send).toHaveBeenCalledWith({
       method: 'pluginFailed', params: { tab: 'video', reason: 'chunk rejected' },
     });
@@ -63,8 +63,8 @@ describe('createPluginClientCapabilities', () => {
   // would race that teardown rather than tell the server anything it does not already know.
   it('sends only the first report for a plugin, across every tab it owns', () => {
     const { client, send } = makeClient();
-    createPluginClientCapabilities('video', 'video', client).reportFailure('render exploded');
-    createPluginClientCapabilities('video', 'video-2', client).reportFailure('render exploded too');
+    createPluginClientCapabilities('video', 'video', client, true).reportFailure('render exploded');
+    createPluginClientCapabilities('video', 'video-2', client, true).reportFailure('render exploded too');
     expect(send).toHaveBeenCalledOnce();
     expect(send).toHaveBeenCalledWith({
       method: 'pluginFailed', params: { tab: 'video', reason: 'render exploded' },
@@ -73,15 +73,23 @@ describe('createPluginClientCapabilities', () => {
 
   it('keeps one plugin\'s failure from silencing another\'s', () => {
     const { client, send } = makeClient();
-    createPluginClientCapabilities('video', 'video', client).reportFailure('render exploded');
-    createPluginClientCapabilities('other', 'other', client).reportFailure('chunk rejected');
+    createPluginClientCapabilities('video', 'video', client, true).reportFailure('render exploded');
+    createPluginClientCapabilities('other', 'other', client, true).reportFailure('chunk rejected');
     expect(send).toHaveBeenCalledTimes(2);
+  });
+
+  // A plugin tab stays mounted while hidden, so the host — not the plugin's own DOM — is what says
+  // whether the tab is the visible one.
+  it('reports the host\'s answer for whether this tab is active', () => {
+    const { client } = makeClient();
+    expect(createPluginClientCapabilities('video', 'video', client, true).active).toBe(true);
+    expect(createPluginClientCapabilities('video', 'video', client, false).active).toBe(false);
   });
 
   it('offers no split action when the host did not supply one', () => {
     const { client } = makeClient();
-    expect(createPluginClientCapabilities('video', 'video', client).splitAction).toBeNull();
-    expect(createPluginClientCapabilities('video', 'video', client, () => {}).splitAction)
+    expect(createPluginClientCapabilities('video', 'video', client, true).splitAction).toBeNull();
+    expect(createPluginClientCapabilities('video', 'video', client, true, () => {}).splitAction)
       .not.toBeNull();
   });
 });

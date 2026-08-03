@@ -13,7 +13,6 @@ function fakeContext(overrides: Partial<OpenContext> = {}) {
   const opened: EditorView[] = [];
   const context: OpenContext = {
     note: (t) => { notes.push(t); },
-    openImageTab: () => {},
     openMarkdownTab: () => {},
     openEditorTab: (v) => { opened.push(v); },
     openPageTab: () => {},

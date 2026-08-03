@@ -2,7 +2,6 @@
 
 ## ready
 
-* move image tab functionality into an image plugin.
 
 ## development
 

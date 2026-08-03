@@ -72,17 +72,18 @@ function harnessProblems(value: Record<string, unknown>, loc: string): string[] 
   ];
 }
 
-// The ten kinds of tab a profile may declare. Listed once, so the dispatcher's default arm and the
-// message it produces cannot drift apart.
+// The eleven kinds of tab a profile may declare. Listed once, so the dispatcher's default arm and
+// the message it produces cannot drift apart. `image` is the pre-plugin spelling of a `plugin`
+// entry with id `image` and stays accepted so a saved profile keeps launching.
 const TAB_TYPES: string[] = [
-  'agent', 'harness', 'editor', 'files', 'notifications', 'schedules', 'image', 'markdown', 'page', 'ssh',
+  'agent', 'harness', 'editor', 'files', 'notifications', 'schedules', 'plugin', 'image', 'markdown', 'page', 'ssh',
 ];
 
 // The kinds that can occupy a place in the tab strip, and so carry the flat presentation fields. A
 // `files` entry is included because an undocked navigator lands in the strip like any other tab; a
 // `schedules` entry is always docked, and a `notifications` entry's own `focus` means "visible in
 // the sidebar switcher" rather than "active after launch".
-const PRESENTATION_TYPES = new Set(['agent', 'harness', 'editor', 'files', 'image', 'markdown', 'page', 'ssh']);
+const PRESENTATION_TYPES = new Set(['agent', 'harness', 'editor', 'files', 'plugin', 'image', 'markdown', 'page', 'ssh']);
 
 // One element of the `tabs` array: an object carrying a recognized `type`, the presentation fields
 // its type allows, and whatever else that type requires.
@@ -101,6 +102,7 @@ function tabProblems(value: unknown, loc: string): string[] {
   case 'files': { return [...shared, ...filesProblems(value, loc)]; }
   case 'notifications': { return notificationsProblems(value, loc); }
   case 'schedules': { return schedulesProblems(value, loc); }
+  case 'plugin': { return [...shared, ...pluginProblems(value, loc)]; }
   case 'page': { return [...shared, ...pageProblems(value, loc)]; }
   case 'ssh': { return [...shared, ...sshProblems(value, loc)]; }
   default: { return [...shared, ...pathProblems(value, loc)]; }
@@ -155,6 +157,11 @@ function schedulesProblems(value: Record<string, unknown>, loc: string): string[
 // An image or markdown entry names the file it opens; neither authors a label.
 function pathProblems(value: Record<string, unknown>, loc: string): string[] {
   return checkField(value, 'path', 'string', loc, true);
+}
+
+// A plugin entry names the file it opens and the plugin that owns the resulting tab.
+function pluginProblems(value: Record<string, unknown>, loc: string): string[] {
+  return [...checkField(value, 'id', 'string', loc, true), ...pathProblems(value, loc)];
 }
 
 function pageProblems(value: Record<string, unknown>, loc: string): string[] {

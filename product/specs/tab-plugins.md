@@ -29,11 +29,11 @@ An active plugin also shows `activation=<milliseconds>ms`. A disabled plugin sho
 
 ### Plugin tabs
 
-Every v1 plugin tab is a live, in-memory view tab. It inherits the creating tab's group and group color, receives a distinct dot color, can move into either split pane, and stays mounted while hidden so view state survives focus changes. Plugin tabs are not persisted or restored by `--relaunch` or profiles.
+Every v1 plugin tab is a live, in-memory view tab. It inherits the creating tab's group and group color, receives a distinct dot color, can move into either split pane, and stays mounted while hidden so view state survives focus changes. Plugin tabs are not persisted or restored by `--relaunch`. A profile does save one, as the plugin that owns it plus the file it was opened on, and reopens it by issuing the same `open` a user would type (see [[profiles]]).
 
 The wire view identifies the plugin, the payload schema version, and an opaque payload. Instance keys, source-tab ownership, and served-file reference ownership remain server-only. The host checks a stable instance key before asking the plugin to construct a payload, so reopening the same resource focuses the existing tab and registers no duplicate served file.
 
-The client loads the declared chunk only when a matching plugin tab first exists. It validates the schema version and payload before rendering. Plugin components receive only authenticated resource URL construction, a tab-bound intent function, the host-rendered split action, and failure reporting; they do not receive the WebSocket client.
+The client loads the declared chunk only when a matching plugin tab first exists. It validates the schema version and payload before rendering. Plugin components receive only authenticated resource URL construction, a tab-bound intent function, the host-rendered split action, whether their tab is the currently visible one, and failure reporting; they do not receive the WebSocket client. Because a hidden plugin tab stays mounted, the host is the only source of that visibility answer — a plugin that binds a window-wide key listener consults it rather than assuming it is on screen.
 
 ### Intents and resources
 
@@ -54,6 +54,10 @@ The visible message is exactly:
 The reason is one line, contains no stack, trims trailing punctuation, and ends with one period through the wrapper. The originating transcript always receives the message if that tab is still open. An already-open notifications feed receives the same message; failure never creates the feed or recreates a closed origin.
 
 A disabled plugin owns no tabs. Failure before mount leaves no tab or served-file reference. Failure after mount closes every tab belonging to that plugin, releases their references, and disposes the activated plugin once. Later attempts do not import or call it again and report the recorded reason. Other plugins, tabs, and commands continue working. Restarting Janissary is the only way to retry a disabled plugin.
+
+### Bundled image plugin
+
+Image is a bundled plugin like any other: it contributes the common raster and vector image extensions and their content types, and both presentations of `open`. It declares no command and no file-navigator edit gesture, so `open <image>` and `open external <image>` behave exactly as they always have and a shift-activated image row still opens in the text editor. It answers no intents; the view's zoom, pan, and orientation are entirely client-side. See [[image-tab]] and [[open]].
 
 ### Bundled video plugin
 

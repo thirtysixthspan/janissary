@@ -47,9 +47,9 @@ export type BufferLine = {
   openTab?: string;
 };
 
-// An in-app file view mounted in a tab instead of the agent transcript/command-line body. Image
-// tabs (opened via `open <image>`) use `view: 'image'` and carry an `image` payload; ordinary agent
-// tabs leave `view` undefined.
+// An in-app file view mounted in a tab instead of the agent transcript/command-line body. A tab
+// opened by a bundled plugin (`open <image>`, `open <video>`) uses `view: 'plugin'` and carries a
+// `plugin` record; ordinary agent tabs leave `view` undefined.
 // Full-tab AI coding harness view (opened via `harness <name>`); the body is a live PTY terminal.
 // An ssh tab (opened via `ssh <destination>`) reuses this same shape, recognized by
 // `name === 'ssh'`: `destination` carries the connection identity for the connections panel.
@@ -61,17 +61,6 @@ export type HarnessView = {
   sshOptions?: string[];
   // Set only when a `-w` launch's workspace clone fails; the tab closes shortly after.
   provisionError?: string;
-};
-
-export type ImageView = {
-  // Display name (basename), e.g. "diagram.png".
-  name: string;
-  // Absolute path of the file (the "location").
-  path: string;
-  // Human-readable file size, e.g. "1.4 MB".
-  size: string;
-  // App-relative ref the web client loads to fetch the image bytes (see the `/open/<id>` route).
-  url: string;
 };
 
 export type PluginTabRecord = {
@@ -204,17 +193,15 @@ export type Tab = {
   label: string;
   dotColor: string;
   number: number;
-  // The tab's body kind. Undefined/`'agent'` renders the normal transcript + command line; `'image'`
-  // renders the image view (no command bar). View tabs are live and in-memory — not persisted.
-  view?: 'agent' | 'image' | 'plugin' | 'page' | 'harness' | 'markdown' | 'editor' | 'monitor' | 'files' | 'notifications' | 'schedules';
+  // The tab's body kind. Undefined/`'agent'` renders the normal transcript + command line; `'plugin'`
+  // renders a bundled plugin's view (no command bar). View tabs are live and in-memory — not persisted.
+  view?: 'agent' | 'plugin' | 'page' | 'harness' | 'markdown' | 'editor' | 'monitor' | 'files' | 'notifications' | 'schedules';
   // Display name shown in the tab strip when it differs from the (unique) internal `label` — e.g.
-  // every image tab is titled `image` while keeping a distinct label (`image`, `image-2`, …).
+  // every image tab is titled with its file name while keeping a distinct label (`image`, `image-2`, …).
   title?: string;
   // Set while an interactive PTY (htop, vim, etc.) is running full-tab on this agent tab.
   // Cleared when the process exits, restoring the transcript view.
   activePty?: string;
-  // The image-view payload, present only when `view === 'image'`.
-  image?: ImageView;
   // The bundled-plugin payload and server-only ownership record, present only for plugin tabs.
   plugin?: PluginTabRecord;
   // The page-view payload, present only when `view === 'page'`.

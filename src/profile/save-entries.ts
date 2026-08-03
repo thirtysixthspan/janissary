@@ -4,7 +4,7 @@ import { SYNC_WORKSPACE_NAME } from '../git-sync.js';
 import type { Tab } from '../tab/types.js';
 import type {
   ProfileAgentTabFile, ProfileEditorTabFile, ProfileFilesTabFile, ProfileHarnessTabFile,
-  ProfileImageTabFile, ProfileMarkdownTabFile, ProfilePageTabFile, ProfileSshTabFile,
+  ProfileMarkdownTabFile, ProfilePageTabFile, ProfilePluginTabFile, ProfileSshTabFile,
   ProfileTabPresentation,
 } from './types.js';
 import type { TreeSelection } from '../file-navigator/selection-request.js';
@@ -108,9 +108,14 @@ export function writeFilesEntry(
   };
 }
 
-export function writeImageEntry(tab: Tab, managers: Managers): ProfileImageTabFile | undefined {
-  if (!tab.image) return undefined;
-  return { type: 'image', path: portablePath(tab.image.path, managers), ...presentation(tab, managers) };
+// A bundled-plugin tab. Its instance key is the file the plugin opened, which is all a relaunch
+// needs: `open <path>` routes back to the same plugin through the opener registry.
+export function writePluginEntry(tab: Tab, managers: Managers): ProfilePluginTabFile | undefined {
+  if (!tab.plugin) return undefined;
+  return {
+    type: 'plugin', id: tab.plugin.id, path: portablePath(tab.plugin.instanceKey, managers),
+    ...presentation(tab, managers),
+  };
 }
 
 export function writeMarkdownEntry(tab: Tab, managers: Managers): ProfileMarkdownTabFile | undefined {

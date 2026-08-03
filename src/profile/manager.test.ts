@@ -92,12 +92,15 @@ describe('ProfileManager.run', () => {
     expect(appended).toEqual([{ input: 'profile launch none', output: 'Profile "none" has no tabs.' }]);
   });
 
-  it('launches a profile holding only an editor entry rather than calling it empty', () => {
+  // The launch itself is asynchronous — a plugin tab opens through its plugin's activation — so the
+  // summary lands a microtask after `run` returns.
+  it('launches a profile holding only an editor entry rather than calling it empty', async () => {
     writeProfile('editor-only', JSON.stringify({ tabs: [{ type: 'editor', path: '$root/notes.md' }] }));
 
     const janus = makeTab('janus', 'red');
     const { managers, appended } = makeManagers(janus);
     new ProfileManager(managers).run('profile launch editor-only', 'janus');
+    await vi.waitFor(() => expect(appended).not.toHaveLength(0));
 
     expect(appended[0].output).not.toContain('has no tabs.');
   });

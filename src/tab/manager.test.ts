@@ -140,22 +140,11 @@ describe('TabManager queue', () => {
     expect(tm.tabs.length).toBe(3); // janus + a.ts + b.ts
   });
 
-  it('openImageTab deduplicates by path and focuses the existing tab', () => {
+  it('openPluginTab creates a new tab when the instance key differs', () => {
     const tm = makeTabManager();
-    const path = '/test/photo.png';
-    tm.openImageTab({ name: 'photo.png', path, size: '1 KB', url: '/open/1' });
-    const countAfterFirst = tm.tabs.length;
-    const firstActive = tm.activeTab;
-
-    tm.openImageTab({ name: 'photo.png', path, size: '1 KB', url: '/open/2' });
-    expect(tm.tabs.length).toBe(countAfterFirst);
-    expect(tm.activeTab).toBe(firstActive);
-  });
-
-  it('openImageTab creates a new tab when the path differs', () => {
-    const tm = makeTabManager();
-    tm.openImageTab({ name: 'a.png', path: '/test/a.png', size: '1 KB', url: '/open/1' });
-    tm.openImageTab({ name: 'b.png', path: '/test/b.png', size: '1 KB', url: '/open/2' });
+    const payload = (path: string) => ({ title: path, payload: { path } });
+    tm.openPluginTab('image', 'image', '/test/a.png', 1, 'janus', () => payload('/test/a.png'));
+    tm.openPluginTab('image', 'image', '/test/b.png', 1, 'janus', () => payload('/test/b.png'));
     expect(tm.tabs.length).toBe(3); // janus + a.png + b.png
   });
 

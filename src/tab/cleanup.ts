@@ -36,10 +36,6 @@ export function closeTabResources(
   managers.database.forgetTab(tab.label);
   if (tabsLength <= 1) managers.database.closeAll();
   messageBus.emit('transcript', { type: 'tab:removed', tabLabel: tab.label });
-  if (tab.image) {
-    const id = tab.image.url.replace(/^\/open\//, '');
-    openFiles.delete(id);
-  }
   if (tab.markdown) {
     const id = tab.markdown.url.replace(/^\/open\//, '');
     openFiles.delete(id);

@@ -40,6 +40,7 @@ describe('validateProfile', () => {
         { type: 'files', dock: 'left' },
         { type: 'notifications', dock: 'right', focus: true },
         { type: 'schedules', dock: 'right' },
+        { type: 'plugin', id: 'image', path: 'a.png' },
         { type: 'image', path: 'a.png' },
         { type: 'markdown', path: 'readme.md' },
         { type: 'page', url: 'https://example.com' },
@@ -64,7 +65,7 @@ describe('validateProfile', () => {
   it('reports a missing or unrecognized tab type, naming every valid one', () => {
     writeJson('bad-type', { tabs: [{ name: 'a' }, { type: 'terminal' }] });
     const problems = validateProfile('bad-type');
-    const expected = 'type must be one of agent, harness, editor, files, notifications, schedules, image, markdown, page, ssh';
+    const expected = 'type must be one of agent, harness, editor, files, notifications, schedules, plugin, image, markdown, page, ssh';
     expect(problems).toEqual([`tabs[0]: ${expected}`, `tabs[1]: ${expected}`]);
   });
 
@@ -75,6 +76,7 @@ describe('validateProfile', () => {
         { type: 'editor' },
         { type: 'page' },
         { type: 'ssh' },
+        { type: 'plugin', path: 'a.png' },
       ],
     });
     const problems = validateProfile('missing');
@@ -82,6 +84,7 @@ describe('validateProfile', () => {
     expect(problems).toContain('tabs[1]: path is required');
     expect(problems).toContain('tabs[2]: url is required');
     expect(problems).toContain('tabs[3]: destination is required');
+    expect(problems).toContain('tabs[4]: id is required');
   });
 
   it('locates a bad presentation field at the entry root, not under a tab object', () => {

@@ -1,4 +1,4 @@
-import type { LogEntry, Tab, ImageView, PluginTabRecord, MarkdownView, EditorView, PageView, HarnessView, FileNavigatorView } from './types.js';
+import type { LogEntry, Tab, PluginTabRecord, MarkdownView, EditorView, PageView, HarnessView, FileNavigatorView } from './types.js';
 export { expandTabs, wordWrap, flattenBuffer } from './formatting.js';
 export { distinctColor, dotColors } from './colors.js';
 export { stripComments, renumberTabs, canMoveTab, swapTabsLeft, swapTabsRight, insertTabInGroup, uniqueLabel } from './utils.js';
@@ -17,15 +17,9 @@ export const makeTab = (label: string, dotColor: string, number: number = 1, com
   workspaceDir: workspaceDirectory,
 });
 
-// An image view tab (opened via `open <image>`). It carries no transcript/history/shell — just the
-// image payload — and is always titled `image` while keeping a unique `label` so several can coexist.
-export const makeImageTab = (label: string, dotColor: string, number: number, group: number, groupColor: string, image: ImageView): Tab => ({
-  ...makeTab(label, dotColor, number, [], [], undefined, group, groupColor),
-  view: 'image',
-  title: 'image',
-  image,
-});
-
+// A bundled-plugin view tab (opened via `open <image>`, `open <video>`, or a plugin's own command).
+// It carries no transcript/history/shell — just the plugin's payload — and keeps a unique `label`
+// derived from the plugin's label prefix so several can coexist.
 export const makePluginTab = (
   label: string, dotColor: string, number: number, group: number, groupColor: string,
   title: string, plugin: PluginTabRecord,

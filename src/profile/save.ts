@@ -10,7 +10,7 @@ export type SaveSummary = {
   agents: number;
   harnesses: number;
   editors: number;
-  images: number;
+  plugins: number;
   markdown: number;
   pages: number;
   ssh: number;
@@ -53,7 +53,7 @@ export async function saveProfile(name: string, managers: Managers): Promise<Sav
     agents: state.agents,
     harnesses: state.harnesses,
     editors: state.editors,
-    images: state.images,
+    plugins: state.plugins,
     markdown: state.markdown,
     pages: state.pages,
     ssh: state.ssh,
@@ -79,7 +79,7 @@ export function formatSaveSummary(name: string, summary: SaveSummary): string {
     ...countPart(summary.agents, 'agent'),
     ...harnesses,
     ...countPart(summary.editors, 'editor tab'),
-    ...countPart(summary.images, 'image tab'),
+    ...countPart(summary.plugins, 'plugin tab'),
     ...countPart(summary.markdown, 'markdown tab'),
     ...countPart(summary.pages, 'page tab'),
     ...countPart(summary.ssh, 'ssh tab'),

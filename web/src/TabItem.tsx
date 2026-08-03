@@ -40,7 +40,7 @@ export function TabItem({
   // even though `active` flips true (via onSelect) before the browser's dblclick event fires.
   const gestureStartedInactiveRef = useRef(false);
 
-  const fullName = tab.editor?.name ?? tab.markdown?.name ?? tab.image?.name ?? tab.title ?? tab.label;
+  const fullName = tab.editor?.name ?? tab.markdown?.name ?? tab.title ?? tab.label;
   const displayName = truncateTabLabel(fullName, active ? activeTabNameMaxLength : tabNameMaxLength);
   const startEdit = () => { cancelledRef.current = false; setDraft(fullName); setEditing(true); };
 

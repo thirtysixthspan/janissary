@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { IMAGE_PAYLOAD_SCHEMA_VERSION } from '@shared/plugins/image/shared';
 import { VIDEO_PAYLOAD_SCHEMA_VERSION } from '@shared/plugins/video/shared';
 import { clientPluginLoaders, clientPluginRegistry } from './registry';
 
@@ -7,6 +8,7 @@ import { clientPluginLoaders, clientPluginRegistry } from './registry';
 // which is this file's whole job — a test never ships to the browser, so it may import freely.
 describe('client plugin registry', () => {
   it('pins every registered schema literal to its plugin\'s own constant', () => {
+    expect(clientPluginRegistry.get('image')?.schemaVersion).toBe(IMAGE_PAYLOAD_SCHEMA_VERSION);
     expect(clientPluginRegistry.get('video')?.schemaVersion).toBe(VIDEO_PAYLOAD_SCHEMA_VERSION);
   });
 

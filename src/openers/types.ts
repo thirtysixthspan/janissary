@@ -1,4 +1,4 @@
-import type { ImageView, MarkdownView, EditorView, PageView } from '../tab/types.js';
+import type { MarkdownView, EditorView, PageView } from '../tab/types.js';
 
 // Capabilities an opener may use, supplied by the dispatcher (the Controller). Kept deliberately
 // narrow so an opener can only use its declared presentation capabilities and never reaches into
@@ -7,8 +7,6 @@ import type { ImageView, MarkdownView, EditorView, PageView } from '../tab/types
 export type OpenContext = {
   // Append a confirmation/error line to the originating tab's transcript.
   note: (text: string) => void;
-  // Create and focus an in-app image view tab.
-  openImageTab: (image: ImageView) => void;
   // Create and focus an in-app markdown view tab.
   openMarkdownTab: (view: MarkdownView) => void;
   // Create and focus an in-app plain-text editor tab.
@@ -30,7 +28,7 @@ export type OpenContext = {
 // An opener handles one family of file types. Supporting a new type means registering one new
 // opener (in `src/openers/index.ts`) — nothing else changes.
 export interface Opener {
-  // Identifier for the opener (e.g. 'image').
+  // Identifier for the opener (e.g. 'markdown').
   name: string;
   // The file extensions this opener claims, lowercased and dot-prefixed (e.g. '.png').
   extensions: string[];
