@@ -8,6 +8,8 @@
 
 * move the scheduling tab into a plugin
 
+* autoplay a movie when the movie tab is opened.
+
 ## development
 
 ## deferred
