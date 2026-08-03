@@ -2,15 +2,11 @@ import path from 'node:path';
 import { containedPath } from './batch-paths.js';
 import { parentPath } from './index.js';
 import type { FilesTabState } from './state.js';
+import type { BasePort } from './port.js';
 
 // The narrow slice of `FileNavigatorManager` internals this module needs, handed over as bound closures
 // so the tab-state map and watcher plumbing stay private to the manager (see `navPort()` there).
-export interface NavPort {
-  states: Map<string, FilesTabState>;
-  watchDir(label: string, absDir: string, relPath: string): void;
-  unwatchDir(state: FilesTabState, relPath: string): void;
-  rebuild(label: string): void;
-  refreshGit(label: string): void;
+export interface NavPort extends BasePort {
   setCwd(label: string, dir: string): void;
   hasTab(label: string): boolean;
 }
