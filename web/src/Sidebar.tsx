@@ -4,6 +4,7 @@ import type { JanusClient } from './ws';
 import { FileNavigatorTab } from './FileNavigatorTab';
 import { NotificationsTab } from './NotificationsTab';
 import { SchedulesTab } from './SchedulesTab';
+import { DockedPluginBody } from './plugins/DockedPluginBody';
 import { TabStrip } from './TabStrip';
 import { ResizeButton } from './ResizeButton';
 import { beginResizeDrag } from './drag-resize';
@@ -43,7 +44,9 @@ export function Sidebar({
   // `useLayoutState.ts`.
   focusView?: 'files' | 'notifications' | 'schedules';
 }) {
-  const [selectedView, setSelectedView] = useState<'files' | 'notifications' | 'schedules'>('files');
+  // Keyed by label rather than by view kind: the built-in dockable views are one per kind, but a
+  // plugin tab is not — two tabs from the same plugin, or from different ones, can share a sidebar.
+  const [selectedLabel, setSelectedLabel] = useState<string | null>(null);
   const previousLabelsRef = useRef<Set<string>>(new Set());
 
   const onResize = useCallback((down: React.MouseEvent, move: MouseEvent) => {
@@ -74,19 +77,21 @@ export function Sidebar({
   // always makes the docked tab fully visible.
   useEffect(() => {
     const newlyDocked = entries.find((e) => !previousLabelsRef.current.has(e.tab.label));
-    if (newlyDocked) setSelectedView(newlyDocked.tab.view as 'files' | 'notifications' | 'schedules');
+    if (newlyDocked) setSelectedLabel(newlyDocked.tab.label);
     previousLabelsRef.current = new Set(entries.map((e) => e.tab.label));
   }, [entries]);
 
   // A profile's declared focus wins over the "newly docked" default above, whenever the target
   // view is actually docked here (it may arrive before or after the tab it names).
   useEffect(() => {
-    if (focusView && entries.some((e) => e.tab.view === focusView)) setSelectedView(focusView);
+    const focused = focusView && entries.find((e) => e.tab.view === focusView);
+    if (focused) setSelectedLabel(focused.tab.label);
   }, [focusView, entries]);
 
   if (entries.length === 0) return null;
-  const current = entries.find((e) => e.tab.view === selectedView) ?? entries[0];
+  const current = entries.find((e) => e.tab.label === selectedLabel) ?? entries[0];
   const activeIndex = entries.indexOf(current);
+  const plugins = entries.filter((e) => e.tab.view === 'plugin' && e.tab.plugin);
 
   return (
     <div className={`sidebar sidebar-${side}`} style={{ flex: `0 0 ${width}px` }} data-doc-shot={`sidebar-${side}`}>
@@ -95,7 +100,7 @@ export function Sidebar({
         <TabStrip
           tabs={entries.map((e) => e.tab)}
           activeTab={activeIndex}
-          onSelect={(i) => setSelectedView(entries[i].tab.view as 'files' | 'notifications' | 'schedules')}
+          onSelect={(i) => setSelectedLabel(entries[i].tab.label)}
           onClose={(i) => client.send({ method: 'closeTab', params: { index: entries[i].index } })}
           onRename={(i, title) => client.renameTab(entries[i].index, title)}
           onReorder={(from, to) => client.send({
@@ -122,6 +127,15 @@ export function Sidebar({
             dock={current.tab.dock} index={current.index}
           />
         )}
+        {plugins.map((e) => (
+          <DockedPluginBody
+            key={e.tab.label}
+            tab={e.tab}
+            index={e.index}
+            visible={e.tab.label === current.tab.label}
+            client={client}
+          />
+        ))}
       </div>
       {side === 'left' && divider}
     </div>

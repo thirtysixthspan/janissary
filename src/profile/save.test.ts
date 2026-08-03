@@ -250,6 +250,18 @@ describe('saveProfile', () => {
     expect(summary.skipped).toEqual([]);
   });
 
+  it('writes a docked plugin tab with its dock and no strip presentation', async () => {
+    const docked = { ...imagePluginTab('pic', '#111', 1, '/proj/a.png'), dock: 'left' as const };
+    const managers = makeManagers([docked], {}, [], '/proj');
+
+    const summary = await saveProfile('demo', managers);
+
+    expect(load('demo').views).toEqual([
+      { type: 'plugin', id: 'image', path: '$root/a.png', dock: 'left' },
+    ]);
+    expect(summary).toEqual(expect.objectContaining({ plugins: 1 }));
+  });
+
   it('writes an editor entry with flat presentation fields', async () => {
     const editor = makeEditorTab('notes', '#222', 1, 1, '#222', { name: 'notes.txt', path: '/notes.txt', size: '1KB', url: '/open/2' });
     const managers = makeManagers([editor]);

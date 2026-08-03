@@ -92,7 +92,7 @@ export function MountedViewLayers({
         ))}
       {tabs
         .map((t, index) => ({ t, index }))
-        .filter(({ t }) => t.view === 'plugin' && t.plugin)
+        .filter(({ t }) => t.view === 'plugin' && t.plugin && !t.dock)
         .map(({ t, index }) => (
           <PluginTabLayer
             key={t.label}

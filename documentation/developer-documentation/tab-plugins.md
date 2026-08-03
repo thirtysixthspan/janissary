@@ -117,6 +117,14 @@ An instance key you have no open tab for is a no-op, so you never have to track 
 
 You cannot register a new file to serve from an update, and you cannot change a tab's instance key: both are fixed when the tab opens.
 
+## Docking into a sidebar
+
+Your tab can be docked into either sidebar, by the `setDock` RPC behind the dock control the host renders for it, or by a profile entry carrying `dock`. You write no code for this: the host owns the sidebar frame exactly as it owns the centre one, and your component renders the same either way. Three consequences are worth knowing:
+
+- a docked tab leaves the tab strip, so it has no position, group, or focus there;
+- every docked plugin tab stays mounted while another entry in the same sidebar is showing, and `active` becomes "am I the selected entry in this sidebar"; and
+- a side displaces an existing occupant only when the same plugin owns it, so tabs from different plugins share a sidebar the way the file navigator and the notifications feed already do.
+
 ## Being told when host state changes
 
 `updateTab` covers what you already know. When the thing your view shows belongs to the host and moves on its own, declare a notification topic instead and the host will tell you:
@@ -199,7 +207,7 @@ The component receives `payload` only after the registry wrapper has validated i
 - `resourceUrl(reference)` for an authenticated `/open/` URL;
 - `intent<Result>(name, payload)` bound to this tab;
 - `splitAction`, a ready-rendered host action or `null`;
-- `active`, whether this tab is the visible one in its pane. Every v1 plugin tab stays mounted while hidden, so a component that binds a window-wide listener — the image plugin's zoom and pan keys, for instance — must gate it on this rather than assume it is on screen. Never infer it from the DOM: the host owns the frame; and
+- `active`, whether this tab is the visible one in its pane — or, when the tab is docked into a sidebar, whether it is the selected entry there. Every v1 plugin tab stays mounted while hidden, so a component that binds a window-wide listener — the image plugin's zoom and pan keys, for instance — must gate it on this rather than assume it is on screen. Never infer it from the DOM: the host owns the frame; and
 - `reportFailure(reason)` for an unrecoverable client-contract failure. Only the first report per plugin is sent, whichever tab or code path raises it, so calling it from your own component is safe alongside the failures the host detects for you.
 
 It never receives `JanusClient` or imports host UI internals. The host owns the `.tab-body`, focus border, visibility, split placement, loading fallback, and error boundary. Every v1 plugin tab remains mounted while hidden.

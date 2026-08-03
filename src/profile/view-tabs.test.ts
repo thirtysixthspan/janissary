@@ -63,6 +63,9 @@ function makeManagers(initial: Tab[]): {
       setActiveTab: vi.fn((index: number) => { activeTab = index; }),
       findIndex: (label: string) => tabs.findIndex((t) => t.label === label),
       closeTab: vi.fn((index: number) => { tabs = tabs.toSpliced(index, 1); }),
+      setDock: vi.fn((index: number, dock: 'left' | 'right' | null) => {
+        tabs[index].dock = dock ?? undefined;
+      }),
       cwdOf: () => '/cwd',
       launchDir: '/proj',
     },
@@ -176,6 +179,22 @@ describe('openProfileViewTabs', () => {
 
   // A plugin entry names its plugin in the note, so a saved image tab still reports the way it did
   // before the image view moved into a plugin.
+  // A docked plugin tab has no place in the strip, so it takes no group, number, focus, or pane —
+  // the shape a docked file navigator already has.
+  it('docks a plugin entry that asks for a sidebar, and gives it no strip position', async () => {
+    const { managers } = makeManagers([makeTab('janus', 'red', 1, [], [], undefined, 1, 'red')]);
+    const notes: string[] = [];
+
+    const opened = await openProfileViewTabs(
+      [{ type: 'plugin', id: 'image', path: '$root/a.png', dock: 'left' }],
+      managers, 'janus', 1, identityColor, notes,
+    );
+
+    expect(opened).toEqual([]);
+    expect(managers.tab.tabs.find((tab) => tab.plugin)?.dock).toBe('left');
+    expect(notes).toEqual(['Opened image tab.']);
+  });
+
   it('reports an entry that opened no tab and moves on', async () => {
     const { managers } = makeManagers([makeTab('janus', 'red', 1, [], [], undefined, 1, 'red')]);
     const notes: string[] = [];

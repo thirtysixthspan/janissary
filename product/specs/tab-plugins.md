@@ -37,6 +37,16 @@ The wire view identifies the plugin, the payload schema version, and an opaque p
 
 The client loads the declared chunk only when a matching plugin tab first exists. It validates the schema version and payload before rendering. Plugin components receive only authenticated resource URL construction, a tab-bound intent function, the host-rendered split action, whether their tab is the currently visible one, and failure reporting; they do not receive the WebSocket client. Because a hidden plugin tab stays mounted, the host is the only source of that visibility answer — a plugin that binds a window-wide key listener consults it rather than assuming it is on screen.
 
+### Docking a plugin tab
+
+A plugin tab can be docked into either sidebar and undocked back to the centre, exactly as the built-in dockable views can, and by the same means — the dock control shown on a docked tab, and a profile that asks for it. A docked plugin tab leaves the tab strip, so it has no position, group, or focus there; it appears instead in that sidebar's own tab switcher alongside whatever else is docked to the same side.
+
+Docking into a side already holding a docked tab displaces that tab back to the centre only when the two are the same kind — for plugin tabs, that means the same plugin. Two tabs from different plugins share a sidebar the way the file navigator and the notifications feed already do.
+
+Every docked plugin tab stays loaded while another entry in the same sidebar is showing, so switching between them preserves what each was displaying; only the one on screen is told it is visible. The sidebar frame, including the dock control, belongs to the application rather than to the plugin.
+
+A profile captures a docked plugin tab with the side it was docked to, and reopens it docked there.
+
 ### Changing what a tab shows
 
 A plugin may replace what one of its own tabs shows after it has opened, addressing the tab by the same identity it was opened with. The tab keeps everything else — its name in the strip unless the plugin supplies a new one, its place in the strip, its group, its pane, whether it is focused, and the files it already serves — so a view that updates never jumps, steals focus, or reopens. Supplying a new name replaces whatever the tab is currently called, including a name the user gave it by renaming the tab.

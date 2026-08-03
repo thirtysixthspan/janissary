@@ -94,7 +94,7 @@ export type ProfileSchedulesEntry = { dock?: 'left' | 'right' };
 // plus plugin id, url, destination) rather than by label. A legacy `image` or `markdown` element of
 // the on-disk `tabs` array loads as a `plugin` entry with that id.
 export type ProfileViewEntry = ProfileTabRuntime & (
-  | { type: 'plugin'; id: string; path: string }
+  | { type: 'plugin'; id: string; path: string; dock?: 'left' | 'right' }
   | { type: 'page'; url: string }
   | { type: 'ssh'; destination: string; options?: string[] }
 );
@@ -116,7 +116,8 @@ export type ProfileSchedulesTabFile = { type: 'schedules' } & ProfileSchedulesEn
 // A bundled-plugin tab: which plugin owns it and the file it was opened on. `profile save` writes
 // this for every plugin tab; `type: 'image'` and `type: 'markdown'` are the pre-plugin spellings of
 // those tabs and are still accepted on load.
-export type ProfilePluginTabFile = { type: 'plugin'; id: string; path: string } & ProfileTabPresentation;
+export type ProfilePluginTabFile = { type: 'plugin'; id: string; path: string; dock?: 'left' | 'right' }
+  & ProfileTabPresentation;
 export type ProfileImageTabFile = { type: 'image'; path: string } & ProfileTabPresentation;
 export type ProfileMarkdownTabFile = { type: 'markdown'; path: string } & ProfileTabPresentation;
 export type ProfilePageTabFile = { type: 'page'; url: string } & ProfileTabPresentation;

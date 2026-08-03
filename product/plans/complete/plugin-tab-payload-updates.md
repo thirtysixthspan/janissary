@@ -1,6 +1,6 @@
 # Host-pushed payload updates for a live plugin tab
 
-**Complexity: 5/10** — two mechanisms sharing one write path. The capability itself is small and mirrors the creation path; the notification side adds a declaration field, an activation hook, a host-owned bus subscription with its own delivery rules and budget, and a new low-frequency event at its source. No new wire surface and no client change, but the lazy-activation, fan-out, and failure rules all have to be got right.
+**Complexity: 6/10** — two mechanisms sharing one write path, plus the sidebar work that makes a plugin tab dockable. The capability itself is small and mirrors the creation path; the notification side adds a declaration field, an activation hook, a host-owned bus subscription with its own delivery rules and budget, and a new low-frequency event at its source. No new wire surface and no client change, but the lazy-activation, fan-out, and failure rules all have to be got right.
 
 A bundled tab plugin can open a tab and can answer intents about it, but it cannot change what that tab shows once the tab exists. The payload is produced by the factory `openOrFocusTab` runs at creation (`src/plugins/context.ts:63`, `openOrFocusTab`) and is never written again, so every plugin view is effectively frozen at open time. That is the single missing capability behind two blocked migrations: an embedded browser tab whose url, domain, and strip name change when the user navigates it, and any view whose contents move on after the tab opened. The audio-player plugin sitting in `product/backlog/features.md` under `## development` needs the same thing for its playlist.
 
@@ -127,12 +127,24 @@ Client, colocated as `web/src/plugins/*.test.tsx`:
 - **Changing a tab's instance key, schema version, plugin id, focus, position, or group** through an update.
 - **Queueing an update for a tab that might reopen later**, and replaying a missed notification to a plugin that activates afterwards.
 - **Extending or re-freezing `fixture-v1`**, and any change to `TAB_PLUGIN_API_VERSION`, the client capability object, or the wire protocol.
-- **Docking a plugin tab into a sidebar.** `web/src/Sidebar.tsx:110-121` renders docked bodies by hardcoded view kind (`files`, `notifications`, `schedules`), and the selection state at `:46` is typed to the same three and a plugin tab has no docked rendering path. The scheduling tab is a docked singleton, so it needs that as well as this plan — see Open questions.
 - **The two blocked migrations themselves** — the embedded browser tab and the scheduling tab each keep their own backlog issue and their own plan. This plan removes the contract obstacle in front of both; it does not perform either migration.
+
+## Docking, added after the plan was first written
+
+The plan originally deferred docking, leaving the scheduling-tab migration blocked on it. That was reversed deliberately: the migration's remaining obstacle was placement, not data, and it is small enough to land beside the mechanisms that solve the data half.
+
+The decisions, in the same spirit as the ones above:
+
+- **The sidebar selects by tab label, not view kind.** `web/src/Sidebar.tsx` keyed its visible entry on `'files' | 'notifications' | 'schedules'`, which works only because those views are one per side. Two plugin tabs — from one plugin or two — can share a sidebar, so the label is the only identity that holds.
+- **Every docked plugin tab stays mounted, hidden with `display: none`.** The built-in docked views render only the selected entry, but "a plugin tab stays mounted while hidden" is a contract promise, and `capabilities.active` exists because of it. A docked tab reports `active` when it is the selected entry in its sidebar.
+- **A docked plugin tab renders in the sidebar only.** `MountedViewLayers` renders every plugin tab for persistence, so it now skips docked ones; otherwise the plugin would mount twice.
+- **The dock control is host chrome above the plugin body**, in `web/src/plugins/DockedPluginBody.tsx`, reusing `DockCycleHeader`. A plugin may not render or import host chrome, and this needs no new client capability — the host already owns the frame.
+- **A side displaces an occupant only when the same plugin owns it.** `applyDock` compared `view`, which is `'plugin'` for every plugin tab, so one plugin's docked tab would have evicted an unrelated plugin's.
+- **A profile captures and restores the dock.** `writePluginEntry` writes `dock` and, like a docked navigator, no presentation keys; a docked `plugin` entry docks on launch and takes no strip position.
 
 ## Open questions
 
-- The scheduling tab is a docked singleton, and sidebar rendering still dispatches on a fixed set of view kinds (see Out of scope). That migration therefore needs a second enabling change — letting a plugin tab dock — which is a UI-shaped decision rather than a contract one and belongs in its own plan. Nothing in this plan is wasted on it: the schedules topic and `updateTab` are what that migration needs for its *data*, and docking is what it needs for its *placement*.
+- None. The scheduling-tab migration now has both halves it was waiting on: the `schedules` topic plus `updateTab` for its data, and docking for its placement. The migration itself remains its own backlog issue.
 
 ## Verification
 

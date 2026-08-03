@@ -60,7 +60,7 @@ The client entry default-exports a React component accepting `{ payload, capabil
 - `resourceUrl(reference)` adds current-session authentication to a served-file reference.
 - `intent<Result>(name, payload)` sends a request bound to this tab label.
 - `splitAction` is the host-rendered split control node or `null`.
-- `active` is whether this tab is the visible one in its pane. A plugin tab stays mounted while hidden, so a window-wide listener gates on this instead of assuming the tab is on screen; a plugin never reads visibility off the host's DOM.
+- `active` is whether this tab is the visible one in its pane — or, for a docked tab, the selected entry in its sidebar. A plugin tab stays mounted while hidden, so a window-wide listener gates on this instead of assuming the tab is on screen; a plugin never reads visibility off the host's DOM.
 - `reportFailure(reason)` sends one failure report for this plugin boundary.
 
 Never pass `JanusClient`, import a raw socket, or import host UI internals from a concrete plugin. Client-local state may hold playback, scroll, or overlay state; server-owned tab state must not be recomputed locally.
@@ -72,6 +72,10 @@ Never pass `JanusClient`, import a raw socket, or import host UI internals from 
 `pluginIntent` carries `{ tab, intent, payload }`. The envelope has no plugin id or schema version because the server resolves both from its own tab record, whose payload already carries the schema. The generic ingress validates `tab`, `intent`, and payload presence; the selected plugin validates its intent payload and authoritative tab payload. `pluginFailed` carries string `{ tab, reason }`; generic ingress validates it, then the server resolves the owning plugin from the tab. Malformed input returns an RPC error without disabling anything.
 
 Shared guards must reject arrays and `null` when an object is required and validate every required field. They stay hand-written and import-free.
+
+## Docking
+
+A plugin tab docks into either sidebar through the same mechanism the built-in dockable views use, and a profile may capture and restore the side it was docked to. The host owns the sidebar frame, including the dock-cycle control, exactly as it owns the centre frame: a plugin renders no chrome in either place. Every docked plugin tab stays mounted while another entry in that sidebar is showing, so `active` means "the selected entry here" rather than "the centre tab", and a docked tab is rendered by the sidebar alone — never also in the centre. A side displaces an existing occupant only when the same plugin owns it; tabs from different plugins share a sidebar.
 
 ## Host notifications
 

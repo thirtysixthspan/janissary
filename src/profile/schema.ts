@@ -161,7 +161,7 @@ function pathProblems(value: Record<string, unknown>, loc: string): string[] {
 
 // A plugin entry names the file it opens and the plugin that owns the resulting tab.
 function pluginProblems(value: Record<string, unknown>, loc: string): string[] {
-  return [...checkField(value, 'id', 'string', loc, true), ...pathProblems(value, loc)];
+  return [...checkField(value, 'id', 'string', loc, true), ...checkDock(value, loc), ...pathProblems(value, loc)];
 }
 
 function pageProblems(value: Record<string, unknown>, loc: string): string[] {

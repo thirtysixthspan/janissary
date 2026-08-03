@@ -4,7 +4,9 @@ import type { Tab } from './types.js';
 // center strip (`null`, which also makes it the active tab). Docking into a side that already
 // holds a tab of the *same view kind* displaces that occupant back to center (non-destructive —
 // nothing closes); a different-kind occupant (the file navigator and notifications tab share a
-// sidebar via the client's own tab-switcher) is left docked. Mutates `tab.dock`/`tab.hasUnread`
+// sidebar via the client's own tab-switcher) is left docked. Two plugin tabs count as the same kind
+// only when the same plugin owns both: `view` is `'plugin'` for every one of them, so comparing view
+// alone would let one plugin's docked tab displace an unrelated plugin's. Mutates `tab.dock`/`tab.hasUnread`
 // in place (matching the rest of TabManager's per-tab field mutation) and returns the active tab
 // index the caller should adopt. `recordLeavingActiveTab` is invoked exactly where the caller's
 // focus-history bookkeeping expects it — right before the active tab actually changes.
@@ -23,10 +25,15 @@ export function applyDock(
     tab.hasUnread = false;
     return index;
   }
-  const occupant = tabs.find((t, i) => i !== index && t.dock === dock && t.view === tab.view);
+  const occupant = tabs.find((t, i) => i !== index && t.dock === dock && sameDockKind(t, tab));
   if (occupant) occupant.dock = undefined;
   tab.dock = dock;
   return activeTab === index ? nearestNonDocked(tabs, activeTab, recordLeavingActiveTab) : activeTab;
+}
+
+function sameDockKind(candidate: Tab, tab: Tab): boolean {
+  if (candidate.view !== tab.view) return false;
+  return tab.view === 'plugin' ? candidate.plugin?.id === tab.plugin?.id : true;
 }
 
 function nearestNonDocked(tabs: Tab[], activeTab: number, recordLeavingActiveTab: (newIndex: number) => void): number {
