@@ -11,6 +11,7 @@ import type { useViewSearchState } from './useViewSearchState';
 import type { VisibleTaskRow } from './task-picker-keys';
 import type { VisibleProfileRow } from './profile-picker-keys';
 import { useStatusWindows } from './useStatusWindows';
+import { statusButton } from './status-button';
 import type { FuzzyMatchResult } from './fuzzy-match';
 import { tabBodyBorder } from './tab-body-border';
 
@@ -112,12 +113,7 @@ export function AgentTabBody({
           onLeave: statusWindows.connections.onButtonLeave,
           onClick: statusWindows.connections.onButtonClick,
         }}
-        scheduleButton={{
-          hasContent: current.schedule.length > 0,
-          onEnter: statusWindows.schedule.onButtonEnter,
-          onLeave: statusWindows.schedule.onButtonLeave,
-          onClick: statusWindows.schedule.onButtonClick,
-        }}
+        scheduleButton={statusButton(current.schedule.length > 0, statusWindows.schedule)}
         onSplit={onSplit}
       />
       <div className="main">

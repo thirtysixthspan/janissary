@@ -6,6 +6,7 @@ import { Transcript } from './Transcript';
 import { CommandInput } from './CommandInput';
 import { StatusPanels } from './StatusPanels';
 import { useStatusWindows } from './useStatusWindows';
+import { statusButton } from './status-button';
 import { tabBodyBorder } from './tab-body-border';
 
 export function InactiveAgentTabBody({
@@ -34,12 +35,7 @@ export function InactiveAgentTabBody({
           onLeave: statusWindows.connections.onButtonLeave,
           onClick: statusWindows.connections.onButtonClick,
         }}
-        scheduleButton={{
-          hasContent: tab.schedule.length > 0,
-          onEnter: statusWindows.schedule.onButtonEnter,
-          onLeave: statusWindows.schedule.onButtonLeave,
-          onClick: statusWindows.schedule.onButtonClick,
-        }}
+        scheduleButton={statusButton(tab.schedule.length > 0, statusWindows.schedule)}
         onSplit={onSplit}
       />
       <div className="main">
