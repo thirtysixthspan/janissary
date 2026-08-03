@@ -1,26 +1,15 @@
 import React, { useCallback, useRef, useState } from 'react';
 import type { TabView } from '@shared/protocol';
 import { TabStrip } from './TabStrip';
-import type { JanusClient } from './ws';
 import { ResizeButton } from './ResizeButton';
 import { beginResizeDrag } from './drag-resize';
 import type { TabEntry } from './useTabEntries';
+import type { BaseCenterActionAreaProps } from './CenterActionAreaProps';
 
 const MIN_PCT = 15;
 const MAX_PCT = 85;
 
-type Properties = {
-  entries: TabEntry[];
-  tabs: TabView[];
-  activeTab: number;
-  secondaryTab?: number;
-  client: JanusClient;
-  closeTab: (index: number) => void;
-  tabNameMaxLength: number;
-  activeTabNameMaxLength: number;
-  onFocusCommandBar: () => void;
-  onFocusEditor: (label: string) => void;
-  windowFocused: boolean;
+type Properties = BaseCenterActionAreaProps & {
   renderBody: (entry: TabEntry, focused: boolean) => React.ReactNode;
   persistentLayers: React.ReactNode;
 };
