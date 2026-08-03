@@ -74,17 +74,21 @@ describe('CaptureManager.run', () => {
     expect(managers.browser.runInteractive).toHaveBeenCalledWith('browser https://example.com', 'main', callback);
   });
 
-  it('executes a matched command and reports its logged output', () => {
+  it('executes a matched command and reports its logged output', async () => {
     const tab = makeTab('main', 'red');
+    let finish!: () => void;
     const managers = makeManagers({
       tab: {
         findIndex: vi.fn(() => 0),
         tabs: [tab],
       },
       command: {
-        executeCommand: vi.fn(() => {
-          tab.log.push({ input: 'close', output: 'closed tab' });
-        }),
+        executeCommand: vi.fn(() => new Promise<void>((resolve) => {
+          finish = () => {
+            tab.log.push({ input: 'close', output: 'closed tab' });
+            resolve();
+          };
+        })),
       },
     } as unknown as Partial<Managers>);
     const capture = new CaptureManager(managers);
@@ -93,7 +97,9 @@ describe('CaptureManager.run', () => {
     capture.run('main', 'close', callback);
 
     expect(managers.command.executeCommand).toHaveBeenCalledWith('close', 'close', 'main', 0);
-    expect(callback).toHaveBeenCalledWith('closed tab');
+    expect(callback).not.toHaveBeenCalled();
+    finish();
+    await vi.waitFor(() => { expect(callback).toHaveBeenCalledWith('closed tab'); });
   });
 
   it('falls back to routing an unknown command', () => {

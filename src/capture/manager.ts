@@ -20,7 +20,7 @@ export class CaptureManager {
 
     for (const c of commands) {
       if (c.match(trimmed)) {
-        this.dispatchMatchedCommand(c, trimmed, label, index, callback);
+        void this.dispatchMatchedCommand(c, trimmed, label, index, callback);
         return;
       }
     }
@@ -28,18 +28,18 @@ export class CaptureManager {
     routeUnknownCommand(text, trimmed, label, this.managers, (l, t, cb) => this.run(l, t, cb), callback);
   }
 
-  private dispatchMatchedCommand(
+  private async dispatchMatchedCommand(
     c: (typeof commands)[number],
     trimmed: string,
     label: string,
     index: number,
     callback: (out: string) => void,
-  ): void {
+  ): Promise<void> {
     if (c.name === 'acp') { this.managers.acp.run(label, trimmed, callback); return; }
     if (c.name === 'browser') { this.managers.browser.runInteractive(trimmed, label, callback); return; }
     const tab = this.managers.tab.tabs.find((t) => t.label === label);
     const before = tab?.log.length ?? 0;
-    this.managers.command.executeCommand(c.name, trimmed, label, index);
+    await this.managers.command.executeCommand(c.name, trimmed, label, index);
     const after = this.managers.tab.tabs.find((t) => t.label === label)?.log.length ?? 0;
     callback(after > before ? this.managers.tab.tabs.find((t) => t.label === label)!.log[after - 1].output : '');
   }

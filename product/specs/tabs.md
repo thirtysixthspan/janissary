@@ -180,4 +180,6 @@ Closes the current tab and all of its associated connections — its shell, ACP 
 
 ### View tabs
 
-Besides agent tabs, several **view tabs** render a non-transcript body in place of the command line: image (`open <image>`), embedded web page (`open <url>`), rendered markdown, the plain-text editor, the file navigator (see `file-navigator-tab.md`), the monitor reporting feed (see `monitoring.md`), and the notifications feed (see `notifications.md`). View tabs are **live, in-memory** — none are persisted to agent state or restored on `--relaunch`.
+Besides agent tabs, several **view tabs** render a non-transcript body in place of the command line: image (`open <image>`), embedded web page (`open <url>`), rendered markdown, the plain-text editor, bundled plugin views such as video, the file navigator (see `file-navigator-tab.md`), the monitor reporting feed (see `monitoring.md`), and the notifications feed (see `notifications.md`). View tabs are **live, in-memory** — none are persisted to agent state or restored on `--relaunch`.
+
+Every v1 plugin view remains mounted while inactive, just like editor, page, and harness views, so local UI state and media playback survive tab switches. The server owns its generic plugin envelope, group, color, pane, focus, and served-file references. If a plugin becomes disabled, all of that plugin's open tabs close and their references are released; unrelated view tabs remain open. See [[tab-plugins]].

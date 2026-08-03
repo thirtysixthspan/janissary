@@ -11,8 +11,8 @@ export function uniqueImageLabel(tabs: Tab[]): string {
   return uniqueLabel(new Set(tabs.map((t) => t.label)), 'image');
 }
 
-export function uniqueVideoLabel(tabs: Tab[]): string {
-  return uniqueLabel(new Set(tabs.map((t) => t.label)), 'video');
+export function uniquePluginLabel(tabs: Tab[], prefix: string): string {
+  return uniqueLabel(new Set(tabs.map((t) => t.label)), prefix);
 }
 
 export function uniqueMarkdownLabel(tabs: Tab[]): string {

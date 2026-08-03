@@ -1,6 +1,5 @@
 import { existsSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import type { Managers } from './managers.js';
 
 const PNG_DATA_URL_PREFIX = 'data:image/png;base64,';
 
@@ -17,16 +16,11 @@ export function nextShotName(dir: string, videoName: string): string {
   }
 }
 
-// Write one captured video frame beside its video file. `url` is the video tab's `/open/<id>` ref,
-// resolved through the open-file allow-list the same way `saveFile` does — so a capture can only
-// ever land next to a file the user explicitly opened, under a name chosen here rather than by the
-// caller. Returns the basename written. Throws on an unknown ref or a payload that is not a PNG
-// data URL; the RPC layer turns that into an error reply.
-export function saveVideoShot(managers: Managers, url: string, dataUrl: string): string {
-  const id = url.startsWith('/open/') ? url.slice('/open/'.length) : '';
-  const videoPath = id ? managers.tab.openFilePath(id) : undefined;
-  if (!videoPath) throw new Error(`captureVideoFrame: unknown file ref "${url}"`);
-  if (!dataUrl.startsWith(PNG_DATA_URL_PREFIX)) throw new Error('captureVideoFrame: expected a PNG data URL');
+// Write one captured frame beside the server-owned path in the video tab payload. The generic intent
+// router supplies that authoritative payload, so the client never chooses a destination or name.
+// Returns the basename written and rejects anything other than a PNG data URL.
+export function saveVideoShot(videoPath: string, dataUrl: string): string {
+  if (!dataUrl.startsWith(PNG_DATA_URL_PREFIX)) throw new Error('video capture expected a PNG data URL');
 
   const directory = path.dirname(videoPath);
   const name = nextShotName(directory, path.basename(videoPath));

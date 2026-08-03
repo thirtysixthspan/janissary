@@ -8,6 +8,7 @@ import reactHooks from 'eslint-plugin-react-hooks';
 import unicorn from 'eslint-plugin-unicorn';
 import sonarjs from 'eslint-plugin-sonarjs';
 import security from 'eslint-plugin-security';
+import { pluginBoundaries } from './eslint.plugin-boundaries.mjs';
 
 export default ts.config(
   js.configs.recommended,
@@ -139,6 +140,7 @@ export default ts.config(
       'import-x/extensions': ['error', 'never', { css: 'always' }],
     },
   },
+  ...pluginBoundaries,
   // React hooks correctness (web client only).
   {
     files: ['web/src/**/*.ts', 'web/src/**/*.tsx'],

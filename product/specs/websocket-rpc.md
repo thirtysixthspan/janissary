@@ -11,3 +11,25 @@ The server silently drops malformed JSON and JSON values that are not valid RPC 
 ### Dispatch errors
 
 If dispatching an accepted envelope throws synchronously, the server sends an `rpc-reply` with the request's `id` and the error message. Individual methods may also own a deferred or specialized reply instead of the generic `ok` result.
+
+### Tab-plugin methods
+
+`pluginIntent` sends a client action to the plugin that owns an open tab:
+
+```json
+{"t":"rpc","id":41,"method":"pluginIntent","params":{"tab":"video","intent":"capture-frame","payload":{"dataUrl":"data:image/png;base64,..."}}}
+```
+
+`tab` and `intent` must be strings and `payload` must be present (it may be any JSON value). The server uses `tab` only to find its own open-tab record; plugin identity, schema, authoritative tab payload, served-file references, and filesystem paths are never supplied by the client. A successful intent replies with its JSON result. Unknown or closed tabs, disabled plugins, invalid plugin payloads, handler failures, and timeouts reply with an RPC error.
+
+A plugin that refuses a request it considers malformed — an unrecognized intent name, a payload that fails its own validation — also replies with an RPC error, but stays enabled and keeps its tabs. Only the plugin itself breaking disables it. A client cannot disable a plugin by sending it wrong intents.
+
+`pluginFailed` reports a client loading or rendering failure:
+
+```json
+{"t":"rpc","id":42,"method":"pluginFailed","params":{"tab":"video","reason":"chunk rejected"}}
+```
+
+Both fields must be strings. A valid report is acknowledged with `"ok"`; the server disables the plugin found through its own tab record and performs normal plugin teardown. Method-specific malformed fields receive `Invalid pluginIntent params` or `Invalid pluginFailed params` and do not reach or disable a plugin.
+
+There is no video-specific frame-capture RPC. Video capture and external-open actions use `pluginIntent`.

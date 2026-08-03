@@ -1,6 +1,6 @@
 # Video Tab
 
-A **video tab** plays a single video opened with the `open` command (see Open → Video opener).
+A **video tab** is the persistent view contributed by the bundled video plugin. It plays a single video opened with `open <path>` or `video <path>` (see Open → Video plugin opener).
 It is a non-agent **view tab**: it shows the video and its metadata in place of the usual transcript
 and command bar, and is controlled by the player's own transport controls rather than a command line.
 
@@ -15,8 +15,7 @@ restored on `--relaunch`, and is not recorded in or reopened by a profile.
 
 ### Video tab data
 
-A video tab is distinguished from an ordinary tab by a **view kind** marking it as a video view.
-Alongside it the tab carries the data the view needs:
+A video tab uses the generic **plugin** view kind and an envelope identifying plugin `video` and payload schema version 1. Its versioned payload carries the data the view needs:
 
 - **name** — the file's name, which is also the tab's name in the tab strip.
 - **location** — the file's full path.
@@ -27,10 +26,12 @@ Alongside it the tab carries the data the view needs:
 
 ### Serving the video
 
-The video's bytes are served the same way an image tab's are: opening the file **registers** it,
+The video's bytes are served the same way an image tab's are: opening a new video tab **registers** it,
 which adds it to an allow-list and yields a reference the client can request, subject to the same
 origin and authentication checks as the rest of the app. Only files the user has explicitly opened
 are served; arbitrary paths are never reachable.
+
+The host checks the video's absolute path as a stable instance key before constructing the payload, so reopening the same file focuses its existing tab without registering a second reference. The reference is owned by that tab and is unregistered whenever the tab closes, including plugin-failure teardown.
 
 Video serving additionally honors **partial requests**. When the player asks for a specific byte
 range — which is how seeking works — the server answers just that window rather than the whole
@@ -88,7 +89,7 @@ ordinary image file that can be opened in the app like any other.
 The name that was written is shown briefly in the header as confirmation. Nothing else is reported,
 and the capture is not opened automatically.
 
-The user never chooses the destination. The file always lands in the directory the video was opened
+The user never chooses the destination. Capture is a tab-bound plugin intent, and the server derives the authoritative video path from its own tab record rather than from client input. The file always lands in the directory the video was opened
 from, under the name described above — there is no prompt, no format choice, and no setting. The
 control is offered only while the player is showing; there is nothing to capture from a video that
 could not be decoded, and none at all for a container that only ever opens in an external player.
@@ -102,6 +103,8 @@ configured player** (named on the button, or a generic "open externally" when no
 configured). Nothing launches on its own — the tab stays open and the user decides. Pressing the
 button runs the video opener's external presentation for that file, exactly as `open external`
 would.
+
+This decode fallback is a normal media outcome and does not disable the plugin. Neither does a capture or external-open request the plugin considers malformed: it is refused and the tab keeps working. By contrast, a rejected or timed-out plugin chunk, incompatible payload schema, render exception, or server plugin failure disables the video plugin, closes all video tabs, and reports the standard plugin failure message. See [[tab-plugins]].
 
 ### Tab strip, closing, reordering
 

@@ -67,6 +67,9 @@ describe('resolveCommand', () => {
     expect(resolveCommand('close')).toEqual({ kind: 'app', name: 'close', cmd: 'close' });
     expect(resolveCommand('quit')).toEqual({ kind: 'app', name: 'quit', cmd: 'quit' });
     expect(resolveCommand('exit')).toEqual({ kind: 'app', name: 'close', cmd: 'exit' });
+    expect(resolveCommand('video clip.mp4')).toEqual({
+      kind: 'app', name: 'video', cmd: 'video clip.mp4',
+    });
   });
 
   it('strips a leading slash to force the built-in dispatcher', () => {

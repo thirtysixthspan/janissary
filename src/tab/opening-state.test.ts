@@ -34,29 +34,56 @@ describe('TabOpeningState.openMarkdownTab', () => {
   });
 });
 
-describe('TabOpeningState.openVideoTab', () => {
-  const clip = { name: 'clip.mp4', path: '/tmp/clip.mp4', size: '1 KB', url: '/open/1', player: 'QuickTime Player' };
+describe('TabOpeningState.openPluginTab', () => {
+  const openClip = (tm: TabManager, factory = vi.fn((registerFile: (path: string) => string) => ({
+    title: 'clip.mp4',
+    payload: { path: '/tmp/clip.mp4', url: registerFile('/tmp/clip.mp4') },
+  }))) => {
+    tm.openPluginTab('video', 'video', '/tmp/clip.mp4', 1, 'janus', (resources) =>
+      factory(resources.registerFile));
+    return factory;
+  };
 
-  it('adds a new video tab and makes it active', () => {
+  it('adds a generic plugin tab and makes it active', () => {
     const tm = makeTabManager();
     const before = tm.tabs.length;
 
-    tm.openVideoTab(clip);
+    openClip(tm);
 
     expect(tm.tabs.length).toBe(before + 1);
     expect(tm.activeTab).toBe(tm.tabs.length - 1);
-    expect(tm.tabs[tm.activeTab].video?.path).toBe('/tmp/clip.mp4');
+    expect(tm.tabs[tm.activeTab].plugin).toMatchObject({
+      id: 'video', instanceKey: '/tmp/clip.mp4', schemaVersion: 1,
+      payload: { path: '/tmp/clip.mp4' }, sourceLabel: 'janus',
+    });
+    expect(tm.openFiles).toHaveLength(1);
   });
 
-  it('focuses the existing tab instead of opening the same video twice', () => {
+  it('deduplicates before running the payload factory or registering another file', () => {
     const tm = makeTabManager();
-    tm.openVideoTab(clip);
+    openClip(tm);
     const opened = tm.tabs.length;
     tm.setActiveTab(0);
+    const duplicateFactory = vi.fn(() => ({ title: 'wrong', payload: {} }));
 
-    tm.openVideoTab({ ...clip, url: '/open/2' });
+    openClip(tm, duplicateFactory);
 
     expect(tm.tabs.length).toBe(opened);
-    expect(tm.tabs[tm.activeTab].video?.path).toBe('/tmp/clip.mp4');
+    expect(tm.tabs[tm.activeTab].plugin?.instanceKey).toBe('/tmp/clip.mp4');
+    expect(duplicateFactory).not.toHaveBeenCalled();
+    expect(tm.openFiles).toHaveLength(1);
+  });
+
+  it('revokes a retained resource registrar after the synchronous factory returns', () => {
+    const tm = makeTabManager();
+    let registerFile: ((path: string) => string) | undefined;
+    tm.openPluginTab('fixture', 'fixture', 'one', 1, 'janus', (resources) => {
+      registerFile = resources.registerFile;
+      return { title: 'one', payload: {} };
+    });
+
+    expect(() => registerFile?.('/tmp/late.fixture'))
+      .toThrow('plugin tab resources are no longer available');
+    expect(tm.openFiles).toHaveLength(0);
   });
 });

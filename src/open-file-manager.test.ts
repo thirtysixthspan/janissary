@@ -4,6 +4,7 @@ import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { OpenFileManager } from './open-file-manager.js';
 import type { Managers } from './managers.js';
+import { TabPluginHost } from './plugins/host.js';
 
 const osOpen = vi.hoisted(() => ({ didOsOpen: vi.fn<(file: string, application?: string) => boolean>(() => true) }));
 
@@ -172,33 +173,129 @@ describe('OpenFileManager.run', () => {
     expect(opened[0].path).toBe(path.join(dir, 'readme.md'));
     expect(opened[0].name).toBe('readme.md');
   });
+
+  // A plugin's declared command reaches the same pipeline as `open`, but pinned to its own opener.
+  // Without that pin, `video notes.txt` would quietly open the plain-text editor.
+  it('refuses a file that resolves to a different opener when one is required', async () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'janus-require-'));
+    writeFileSync(path.join(dir, 'notes.txt'), 'text');
+    const notes: { input: string; output: string }[] = [];
+    const runOpener = vi.fn();
+    const managers = {
+      tab: {
+        cwdOf: () => dir, launchDir: dir, registerFile: vi.fn(),
+        append: (_label: string, entry: { input: string; output: string }) => { notes.push(entry); },
+      },
+      plugins: { runOpener },
+    } as unknown as Managers;
+
+    await new OpenFileManager(managers).runAs('open notes.txt', 'video notes.txt', 'janus', 'video');
+
+    expect(runOpener).not.toHaveBeenCalled();
+    expect(notes).toEqual([{
+      input: 'video notes.txt', output: `video: ${path.join(dir, 'notes.txt')}: not a video file`,
+    }]);
+  });
+
+  // The web branch resolves ahead of the opener registry, so the pin has to be applied before it.
+  // Both a URL scheme and a bare `page` keyword route there — `video page notes.txt` used to open a
+  // browser tab pointed at `https://notes.txt/`.
+  it.each([
+    ['video https://example.com', 'open https://example.com', 'https://example.com'],
+    ['video page notes.txt', 'open page notes.txt', 'notes.txt'],
+  ])('refuses %s rather than routing it to the web opener', async (display, parsed, target) => {
+    const notes: { input: string; output: string }[] = [];
+    const openPageTab = vi.fn();
+    const managers = {
+      tab: {
+        cwdOf: () => '/tmp', launchDir: '/tmp', registerFile: vi.fn(), openPageTab,
+        append: (_label: string, entry: { input: string; output: string }) => { notes.push(entry); },
+      },
+      plugins: { runOpener: vi.fn() },
+    } as unknown as Managers;
+
+    await new OpenFileManager(managers).runAs(parsed, display, 'janus', 'video');
+
+    expect(openPageTab).not.toHaveBeenCalled();
+    expect(notes).toEqual([{ input: display, output: `video: ${target}: not a video file` }]);
+  });
+
+  it('still opens a web target when no opener is pinned', async () => {
+    const openPageTab = vi.fn();
+    const managers = {
+      tab: {
+        cwdOf: () => '/tmp', launchDir: '/tmp', registerFile: vi.fn(), openPageTab, append: vi.fn(),
+      },
+    } as unknown as Managers;
+
+    await new OpenFileManager(managers).run('open https://example.com', 'janus');
+
+    expect(openPageTab).toHaveBeenCalledWith({ url: 'https://example.com/', domain: 'example.com' });
+  });
+
+  it('awaits async plugin openers in sorted order across a glob', async () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'janus-run-'));
+    for (const name of ['c.mp4', 'a.mp4', 'b.mp4']) writeFileSync(path.join(dir, name), 'video');
+    const order: string[] = [];
+    const managers = {
+      tab: {
+        cwdOf: () => dir, launchDir: dir, append: vi.fn(), registerFile: vi.fn(),
+      },
+      plugins: {
+        runOpener: vi.fn(async (_id: string, _mode: string, file: string) => {
+          order.push(`start:${path.basename(file)}`);
+          await Promise.resolve();
+          order.push(`end:${path.basename(file)}`);
+        }),
+      },
+    } as unknown as Managers;
+
+    await new OpenFileManager(managers).run('open *.mp4', 'janus');
+
+    expect(order).toEqual([
+      'start:a.mp4', 'end:a.mp4',
+      'start:b.mp4', 'end:b.mp4',
+      'start:c.mp4', 'end:c.mp4',
+    ]);
+  });
 });
 
 describe('OpenFileManager.run (video)', () => {
   type Note = { input: string; output: string };
 
-  const makeVideoManagers = (dir: string, opened: { path: string; player: string }[], notes: Note[]) => ({
-    tab: {
-      cwdOf: () => dir,
-      launchDir: dir,
-      append: (_label: string, entry: Note) => { notes.push(entry); },
-      openVideoTab: (view: { path: string; player: string }) => { opened.push(view); },
-      registerFile: (p: string) => `/open/test-${p.length}`,
-    },
-  } as unknown as Managers);
+  const makeVideoManagers = (dir: string, opened: { path: string; player: string }[], notes: Note[]) => {
+    const managers = {
+      tab: {
+        tabs: [{ label: 'janus' }],
+        cwdOf: () => dir,
+        launchDir: dir,
+        append: (_label: string, entry: Note) => { notes.push(entry); },
+        registerFile: (file: string) => `/open/test-${file.length}`,
+        openPluginTab: (
+          _id: string, _prefix: string, _key: string, _schema: number, _source: string,
+          factory: (resources: { registerFile(file: string): string }) => { payload: unknown },
+        ) => {
+          const created = factory({ registerFile: (file) => `/open/test-${file.length}` });
+          opened.push(created.payload as { path: string; player: string });
+        },
+      },
+    } as unknown as Managers;
+    managers.plugins = new TabPluginHost(managers);
+    return managers;
+  };
 
   beforeEach(() => {
     osOpen.didOsOpen.mockReset();
     osOpen.didOsOpen.mockReturnValue(true);
   });
 
-  it('opens a playable video inline in a video tab', () => {
+  it('opens a playable video inline in a generic plugin tab', async () => {
     const dir = mkdtempSync(path.join(tmpdir(), 'janus-video-'));
     writeFileSync(path.join(dir, 'clip.mp4'), Buffer.alloc(10));
     const opened: { path: string; player: string }[] = [];
     const mgr = new OpenFileManager(makeVideoManagers(dir, opened, []));
 
-    mgr.run('open clip.mp4', 'janus');
+    await mgr.run('open clip.mp4', 'janus');
 
     expect(opened).toHaveLength(1);
     expect(opened[0].path).toBe(path.join(dir, 'clip.mp4'));
@@ -206,14 +303,14 @@ describe('OpenFileManager.run (video)', () => {
     expect(osOpen.didOsOpen).not.toHaveBeenCalled();
   });
 
-  it('hands a video to the configured player on `open external`, opening no tab', () => {
+  it('hands a video to the configured player on `open external`, opening no tab', async () => {
     const dir = mkdtempSync(path.join(tmpdir(), 'janus-video-'));
     writeFileSync(path.join(dir, 'clip.mp4'), Buffer.alloc(10));
     const opened: { path: string; player: string }[] = [];
     const notes: Note[] = [];
     const mgr = new OpenFileManager(makeVideoManagers(dir, opened, notes));
 
-    mgr.run('open external clip.mp4', 'janus');
+    await mgr.run('open external clip.mp4', 'janus');
 
     expect(opened).toHaveLength(0);
     expect(osOpen.didOsOpen).toHaveBeenCalledWith(path.join(dir, 'clip.mp4'), 'QuickTime Player');

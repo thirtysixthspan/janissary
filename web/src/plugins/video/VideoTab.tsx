@@ -1,9 +1,8 @@
 import React, { useRef, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import type { VideoView } from '@shared/protocol';
-import type { JanusClient } from './ws';
-import { SplitTabButton } from './SplitTabButton';
-import { captureFrameIcon } from './icons';
+import { faCamera } from '@fortawesome/free-solid-svg-icons';
+import type { VideoPayload } from '@shared/plugins/video/shared';
+import type { TabPluginClientCapabilities } from '../api';
 import { useVideoShot } from './useVideoShot';
 
 // A video view tab body: the same compact metadata header the image tab uses (name, size, location)
@@ -14,13 +13,13 @@ import { useVideoShot } from './useVideoShot';
 // codec inside an `.mp4`, a corrupt file). That replaces the player with a short message and a
 // button handing the file to the configured external player. Nothing launches on its own.
 export function VideoTab({
-  video, client, onSplit,
-}: { video: VideoView; client: JanusClient; onSplit?: () => void }) {
+  payload: video,
+  capabilities,
+}: { payload: VideoPayload; capabilities: TabPluginClientCapabilities }) {
   const [failed, setFailed] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const { capture, saved, busy } = useVideoShot(videoRef, video, client);
-  const token = new URLSearchParams(location.search).get('token') ?? '';
-  const source = `${video.url}?token=${encodeURIComponent(token)}`;
+  const { capture, saved, busy } = useVideoShot(videoRef, capabilities);
+  const source = capabilities.resourceUrl(video.url);
   const openLabel = video.player ? `Open in ${video.player}` : 'Open externally';
 
   return (
@@ -40,10 +39,10 @@ export function VideoTab({
               disabled={busy}
               onClick={capture}
             >
-              <FontAwesomeIcon icon={captureFrameIcon} />
+              <FontAwesomeIcon icon={faCamera} />
             </button>
           )}
-          {onSplit && <SplitTabButton onClick={onSplit} />}
+          {capabilities.splitAction}
         </span>
       </div>
       <div className="image-stage">
@@ -53,7 +52,7 @@ export function VideoTab({
             <p className="video-unplayable-path">{video.path}</p>
             <button
               type="button"
-              onClick={() => client.send({ method: 'command', params: { text: `open external ${video.path}` } })}
+              onClick={() => { void capabilities.intent('open-external', {}); }}
             >
               {openLabel}
             </button>

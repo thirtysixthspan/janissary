@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { Controller } from '../controller.js';
 import { openNotificationsTab } from '../notifications-tab.js';
+import { TabPluginHost } from '../plugins/host.js';
 
 // The external-open path shells out to the OS image viewer; stub it so tests never launch an app.
 vi.mock('../openers/os-open.js', () => ({ didOsOpen: () => true }));
@@ -28,5 +29,26 @@ describe('createManagers question-pending wiring', () => {
     c.setActiveTab(c.view().findIndex((t) => t.label === 'janus'));
     void c.managers.questions.register({ tab: 'janus', kind: 'ask', question: 'ok?' });
     expect(feedText(c)).not.toContain('Question from janus');
+  });
+});
+
+describe('createManagers plugin host wiring', () => {
+  it('constructs the host before managers that consume plugin contributions', () => {
+    const c = makeController();
+    expect(c.managers.plugins).toBeInstanceOf(TabPluginHost);
+    expect(Object.keys(c.managers).indexOf('plugins'))
+      .toBeLessThan(Object.keys(c.managers).indexOf('openFile'));
+    c.shutdown();
+  });
+
+  it('disposes a later consumer before the plugin host during reverse shutdown', () => {
+    const c = makeController();
+    const disposed: string[] = [];
+    Object.assign(c.managers.openFile, { dispose: () => { disposed.push('openFile'); } });
+    Object.assign(c.managers.plugins, { dispose: () => { disposed.push('plugins'); } });
+
+    c.shutdown();
+
+    expect(disposed).toEqual(['openFile', 'plugins']);
   });
 });

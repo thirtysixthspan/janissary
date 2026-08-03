@@ -1,19 +1,21 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render } from '@testing-library/react';
+import { render, waitFor } from '@testing-library/react';
 import React from 'react';
 import type { TabView } from '@shared/protocol';
 import type { HarnessTabHandle } from './HarnessTab';
 import type { EditorTabHandle } from './EditorTab';
 import { MountedViewLayers } from './MountedViewLayers';
 
-// Deliberately kept out of `MountedViewLayers.test.tsx`, which mocks `VideoTab` away to a bare div:
-// these assertions are about the real `<video>` element surviving a tab switch, which is what keeps
-// a playing video playing while its tab is not the focused one.
+// Deliberately kept out of `MountedViewLayers.test.tsx`, which installs a fixture registration:
+// these assertions load the real video plugin and pin its DOM node across focus changes.
 
 function makeVideoTab(label: string): TabView {
   return {
-    label, view: 'video' as const, dotColor: '#ff0', groupColor: '#ccc',
-    video: { name: 'clip.mp4', path: '/a/clip.mp4', size: '1 MB', url: '/open/1', player: 'QuickTime Player' },
+    label, view: 'plugin' as const, dotColor: '#ff0', groupColor: '#ccc',
+    plugin: {
+      id: 'video', schemaVersion: 1,
+      payload: { name: 'clip.mp4', path: '/a/clip.mp4', size: '1 MB', url: '/open/1', player: 'QuickTime Player' },
+    },
     connections: [], schedule: [], bufferLines: [], cmdHistory: [],
   } as unknown as TabView;
 }
@@ -50,14 +52,15 @@ describe('video playback while the tab is not focused', () => {
   const video = makeVideoTab('vtab');
   const agent = makeAgentTab('janus');
   const props = (current: TabView) => ({
-    tabs: [video, agent], current, client: { send: vi.fn() } as never, closeTab: vi.fn(),
+    tabs: [video, agent], current,
+    client: { send: vi.fn(), request: vi.fn() } as never, closeTab: vi.fn(),
     ...makeHandles(),
   });
 
-  it('keeps the very same video element in the document when its tab loses focus', () => {
+  it('keeps the very same video element in the document when its tab loses focus', async () => {
     const { container, rerender } = render(React.createElement(MountedViewLayers, props(video)));
+    await waitFor(() => { expect(container.querySelector('video')).toBeTruthy(); });
     const element = container.querySelector('video');
-    expect(element).toBeTruthy();
 
     rerender(React.createElement(MountedViewLayers, props(agent)));
 
@@ -65,8 +68,9 @@ describe('video playback while the tab is not focused', () => {
     expect(element!.isConnected).toBe(true);
   });
 
-  it('hides the unfocused video tab without tearing the element down, and restores it on return', () => {
+  it('hides the unfocused video tab without tearing the element down, and restores it on return', async () => {
     const { container, rerender } = render(React.createElement(MountedViewLayers, props(video)));
+    await waitFor(() => { expect(container.querySelector('video')).toBeTruthy(); });
     const element = container.querySelector('video');
     const body = () => container.querySelector<HTMLElement>('.tab-body');
     expect(body()!.style.display).toBe('flex');
@@ -79,8 +83,9 @@ describe('video playback while the tab is not focused', () => {
     expect(container.querySelector('video')).toBe(element);
   });
 
-  it('never pauses the element when its tab loses focus', () => {
-    const { rerender } = render(React.createElement(MountedViewLayers, props(video)));
+  it('never pauses the element when its tab loses focus', async () => {
+    const { container, rerender } = render(React.createElement(MountedViewLayers, props(video)));
+    await waitFor(() => { expect(container.querySelector('video')).toBeTruthy(); });
 
     rerender(React.createElement(MountedViewLayers, props(agent)));
     rerender(React.createElement(MountedViewLayers, props(video)));
@@ -88,9 +93,10 @@ describe('video playback while the tab is not focused', () => {
     expect(pauseSpy).not.toHaveBeenCalled();
   });
 
-  it('does not reload the media when the tab loses focus, so playback position is not reset', () => {
+  it('does not reload the media when the tab loses focus, so playback position is not reset', async () => {
     const loadSpy = vi.spyOn(HTMLMediaElement.prototype, 'load').mockImplementation(() => {});
     const { rerender } = render(React.createElement(MountedViewLayers, props(video)));
+    await waitFor(() => { expect(document.querySelector('video')).toBeTruthy(); });
     loadSpy.mockClear();
 
     rerender(React.createElement(MountedViewLayers, props(agent)));

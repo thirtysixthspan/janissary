@@ -45,7 +45,8 @@ const makeController = () =>
     runSuggestion: vi.fn(),
     rateSuggestion: vi.fn(),
     saveFile: vi.fn(),
-    captureVideoFrame: vi.fn(() => 'clip.shot-1.png'),
+    pluginIntent: vi.fn(async () => ({ echoed: true })),
+    pluginFailed: vi.fn(),
     syncPageSnapshot: vi.fn(),
     fileNavigatorToggle: vi.fn(),
     fileNavigatorCollapseAll: vi.fn(),
@@ -214,13 +215,69 @@ describe('handle', () => {
     expect(controller.rateSuggestion).toHaveBeenCalledWith('s1', true);
   });
 
-  it('routes captureVideoFrame and replies with the name the server chose', () => {
+  it('routes a plugin intent and replies with the plugin result', async () => {
     const controller = makeController();
     const replies = dispatchCall(controller, 15, {
-      method: 'captureVideoFrame', params: { url: '/open/v1', dataUrl: 'data:image/png;base64,AA==' },
+      method: 'pluginIntent', params: { tab: 'video', intent: 'echo', payload: { value: 1 } },
     });
-    expect(controller.captureVideoFrame).toHaveBeenCalledWith('/open/v1', 'data:image/png;base64,AA==');
-    expect(replies).toEqual([{ t: 'rpc-reply', id: 15, result: { name: 'clip.shot-1.png' } }]);
+    expect(controller.pluginIntent).toHaveBeenCalledWith('video', 'echo', { value: 1 });
+    await vi.waitFor(() => {
+      expect(replies).toEqual([{ t: 'rpc-reply', id: 15, result: { echoed: true } }]);
+    });
+  });
+
+  it('returns plugin intent rejections as RPC errors', async () => {
+    const controller = makeController();
+    vi.mocked(controller.pluginIntent).mockRejectedValueOnce(new Error('plugin disabled'));
+    const replies = dispatchCall(controller, 16, {
+      method: 'pluginIntent', params: { tab: 'video', intent: 'echo', payload: null },
+    });
+    await vi.waitFor(() => {
+      expect(replies).toEqual([{ t: 'rpc-reply', id: 16, error: 'plugin disabled' }]);
+    });
+  });
+
+  it('rejects malformed plugin intent fields without calling the controller', () => {
+    const controller = makeController();
+    const replies: ServerEvent[] = [];
+    handle(controller, {
+      t: 'rpc', id: 17, method: 'pluginIntent',
+      params: { tab: 2, intent: 'echo', payload: {} },
+    } as unknown as ClientMessage, (event) => { replies.push(event); });
+    expect(controller.pluginIntent).not.toHaveBeenCalled();
+    expect(replies).toEqual([{ t: 'rpc-reply', id: 17, error: 'Invalid pluginIntent params' }]);
+  });
+
+  it('routes client plugin failure reports and acknowledges them', () => {
+    const controller = makeController();
+    const replies = dispatchCall(controller, 18, {
+      method: 'pluginFailed', params: { tab: 'video', reason: 'chunk rejected' },
+    });
+    expect(controller.pluginFailed).toHaveBeenCalledWith('video', 'chunk rejected');
+    expect(replies).toEqual([{ t: 'rpc-reply', id: 18, result: 'ok' }]);
+  });
+
+  it('returns closed plugin failure reports as RPC errors', () => {
+    const controller = makeController();
+    vi.mocked(controller.pluginFailed).mockImplementationOnce(() => {
+      throw new Error('Plugin tab "closed" not found');
+    });
+    const replies = dispatchCall(controller, 20, {
+      method: 'pluginFailed', params: { tab: 'closed', reason: 'late failure' },
+    });
+    expect(replies).toEqual([{
+      t: 'rpc-reply', id: 20, error: 'Plugin tab "closed" not found',
+    }]);
+  });
+
+  it('rejects malformed client plugin failure reports', () => {
+    const controller = makeController();
+    const replies: ServerEvent[] = [];
+    handle(controller, {
+      t: 'rpc', id: 19, method: 'pluginFailed', params: { tab: 'video', reason: [] },
+    } as unknown as ClientMessage, (event) => { replies.push(event); });
+    expect(controller.pluginFailed).not.toHaveBeenCalled();
+    expect(replies).toEqual([{ t: 'rpc-reply', id: 19, error: 'Invalid pluginFailed params' }]);
   });
 
   it('routes saveFile', () => {

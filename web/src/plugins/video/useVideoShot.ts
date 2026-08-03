@@ -1,16 +1,19 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { VideoView } from '@shared/protocol';
-import type { JanusClient } from './ws';
+import {
+  isCaptureFrameResult,
+} from '@shared/plugins/video/shared';
+import type { TabPluginClientCapabilities } from '../api';
 
 // How long the saved-file name stays in the video tab's header after a capture.
 const CONFIRMATION_MS = 4000;
 
 // Capture the frame currently on screen in a video tab and hand it to the server to write beside
 // the video file. The frame only exists in the browser's decoder, so the draw happens here; the
-// server owns the filename entirely (see `src/video-shot.ts`), which is why nothing but the tab's
-// own `/open/<id>` ref goes over the wire alongside the pixels.
+// server owns the filename and destination entirely (see `src/plugins/video/shot.ts`), so only the
+// decoded pixels cross the tab-bound intent boundary.
 export function useVideoShot(
-  videoRef: React.RefObject<HTMLVideoElement | null>, video: VideoView, client: JanusClient,
+  videoRef: React.RefObject<HTMLVideoElement | null>,
+  capabilities: TabPluginClientCapabilities,
 ) {
   const [saved, setSaved] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -31,16 +34,19 @@ export function useVideoShot(
     context.drawImage(element, 0, 0, canvas.width, canvas.height);
 
     setBusy(true);
-    void client.request<{ name: string }>({
-      method: 'captureVideoFrame', params: { url: video.url, dataUrl: canvas.toDataURL('image/png') },
+    void capabilities.intent<unknown>('capture-frame', {
+      dataUrl: canvas.toDataURL('image/png'),
     }).then((result) => {
       setBusy(false);
-      if (!result?.name) return;
+      if (!isCaptureFrameResult(result)) {
+        capabilities.reportFailure('invalid capture-frame result');
+        return;
+      }
       setSaved(result.name);
       if (timer.current) clearTimeout(timer.current);
       timer.current = setTimeout(() => { setSaved(null); }, CONFIRMATION_MS);
     }, () => { setBusy(false); });
-  }, [videoRef, video.url, client]);
+  }, [videoRef, capabilities]);
 
   return { capture, saved, busy };
 }
