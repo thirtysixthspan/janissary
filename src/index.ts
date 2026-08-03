@@ -10,6 +10,8 @@ import { buildStateEvent } from './state-event.js';
 import { isClientMessage } from './client-message.js';
 import { serveOpenFile } from './open-route.js';
 import { tabPluginCatalog } from './plugins/catalog.js';
+import { pluginContentTypes } from './plugins/opener-adapter.js';
+import { pluginOpeners } from './openers/index.js';
 
 // Applied to every HTTP response: defence-in-depth for the XSS path and token leak.
 const SECURITY_HEADERS = {
@@ -18,15 +20,16 @@ const SECURITY_HEADERS = {
 } as const;
 
 const MIME: Record<string, string> = {
+  // Plugin claims come first so every core entry below overrides them. Accepted plugin claims only
+  // prove that no core *opener* owns the extension, and this map also serves the web UI's own
+  // assets — so core precedence has to hold uniformly rather than by where a line happens to sit.
+  ...pluginContentTypes(tabPluginCatalog, pluginOpeners),
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css',
   '.json': 'application/json', '.svg': 'image/svg+xml', '.ico': 'image/x-icon',
   '.woff2': 'font/woff2', '.map': 'application/json',
   // Image types served via the `/open/<id>` route (opened files).
   '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.gif': 'image/gif',
   '.webp': 'image/webp', '.bmp': 'image/bmp', '.avif': 'image/avif',
-  ...Object.fromEntries(tabPluginCatalog.flatMap((plugin) =>
-    Object.entries(plugin.fileExtensions).flatMap(([extension, contentType]) =>
-      contentType === undefined ? [] : [[extension.toLowerCase(), contentType]]))),
   // Markdown files served via the `/open/<id>` route.
   '.md': 'text/markdown; charset=utf-8', '.markdown': 'text/markdown; charset=utf-8',
   // Text types with their own registered MIME, served via the `/open/<id>` route (editor opener).

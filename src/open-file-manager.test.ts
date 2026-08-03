@@ -197,6 +197,42 @@ describe('OpenFileManager.run', () => {
     }]);
   });
 
+  // The web branch resolves ahead of the opener registry, so the pin has to be applied before it.
+  // Both a URL scheme and a bare `page` keyword route there — `video page notes.txt` used to open a
+  // browser tab pointed at `https://notes.txt/`.
+  it.each([
+    ['video https://example.com', 'open https://example.com', 'https://example.com'],
+    ['video page notes.txt', 'open page notes.txt', 'notes.txt'],
+  ])('refuses %s rather than routing it to the web opener', async (display, parsed, target) => {
+    const notes: { input: string; output: string }[] = [];
+    const openPageTab = vi.fn();
+    const managers = {
+      tab: {
+        cwdOf: () => '/tmp', launchDir: '/tmp', registerFile: vi.fn(), openPageTab,
+        append: (_label: string, entry: { input: string; output: string }) => { notes.push(entry); },
+      },
+      plugins: { runOpener: vi.fn() },
+    } as unknown as Managers;
+
+    await new OpenFileManager(managers).runAs(parsed, display, 'janus', 'video');
+
+    expect(openPageTab).not.toHaveBeenCalled();
+    expect(notes).toEqual([{ input: display, output: `video: ${target}: not a video file` }]);
+  });
+
+  it('still opens a web target when no opener is pinned', async () => {
+    const openPageTab = vi.fn();
+    const managers = {
+      tab: {
+        cwdOf: () => '/tmp', launchDir: '/tmp', registerFile: vi.fn(), openPageTab, append: vi.fn(),
+      },
+    } as unknown as Managers;
+
+    await new OpenFileManager(managers).run('open https://example.com', 'janus');
+
+    expect(openPageTab).toHaveBeenCalledWith({ url: 'https://example.com/', domain: 'example.com' });
+  });
+
   it('awaits async plugin openers in sorted order across a glob', async () => {
     const dir = mkdtempSync(path.join(tmpdir(), 'janus-run-'));
     for (const name of ['c.mp4', 'a.mp4', 'b.mp4']) writeFileSync(path.join(dir, name), 'video');

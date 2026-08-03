@@ -7,7 +7,7 @@ import type { Opener } from '../openers/types.js';
 import type { TabPluginDeclaration } from './api.js';
 import { TAB_PLUGIN_API_VERSION } from './api.js';
 import { createPluginCommands } from './command-adapter.js';
-import { createPluginOpeners } from './opener-adapter.js';
+import { createPluginOpeners, pluginContentTypes } from './opener-adapter.js';
 import { clearContributionRejections, contributionRejection } from './rejections.js';
 
 // The rejection ledger is a module singleton the production registries populate at import time, so
@@ -54,6 +54,39 @@ describe('tab plugin opener adapter', () => {
     expect(built.map((opener) => opener.name)).toEqual(['first']);
     expect(contributionRejection('first')).toBeUndefined();
     expect(contributionRejection('second')).toBe('duplicate tab plugin extension claim ".same"');
+  });
+});
+
+describe('tab plugin content types', () => {
+  const core: Opener = {
+    name: 'image', extensions: ['.png'], inline: () => {}, external: () => {},
+  };
+
+  it('serves the content types of accepted claims, lowercased', () => {
+    const declarations = [manifest('fixture', {
+      fileExtensions: { '.FIXTURE': 'text/plain', '.external-only': undefined },
+    })];
+    expect(pluginContentTypes(declarations, createPluginOpeners(declarations, [])))
+      .toEqual({ '.fixture': 'text/plain' });
+  });
+
+  it('gives a rejected claim no content type, so it cannot overwrite core', () => {
+    const declarations = [manifest('impostor', { fileExtensions: { '.png': 'image/bogus' } })];
+    const accepted = createPluginOpeners(declarations, [core]);
+
+    expect(accepted).toEqual([]);
+    expect(pluginContentTypes(declarations, accepted)).toEqual({});
+  });
+
+  it('hands the content type to whichever duplicate claimant won the opener', () => {
+    const declarations = [
+      manifest('first', { fileExtensions: { '.same': 'type/first' } }),
+      manifest('second', { fileExtensions: { '.same': 'type/second' } }),
+    ];
+    const accepted = createPluginOpeners(declarations, []);
+
+    expect(accepted.map((opener) => opener.name)).toEqual(['first']);
+    expect(pluginContentTypes(declarations, accepted)).toEqual({ '.same': 'type/first' });
   });
 });
 

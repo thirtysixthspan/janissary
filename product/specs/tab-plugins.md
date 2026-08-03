@@ -11,7 +11,9 @@ A plugin activates only when one of its declared routes is used:
 - `open <file>` or `open external <file>` resolves a claimed extension; or
 - the first token matches the plugin's declared command, case-insensitively on a word boundary.
 
-Core openers and commands resolve before plugin contributions. An extension or command may have only one owner; the first plugin to claim a name keeps it, and duplicate claims and claims of reserved commands are refused. A plugin whose claim is refused contributes nothing and starts disabled with that reason; the application still starts normally and every other plugin is unaffected.
+Core openers and commands resolve before plugin contributions. An extension or command may have only one owner; the first plugin to claim a name keeps it, and duplicate claims and claims of reserved commands are refused. A plugin whose claim is refused contributes nothing and starts disabled with that reason; the application still starts normally and every other plugin is unaffected. A refused claim also contributes no content type, so it cannot affect how the server labels a file it does not own.
+
+A plugin's declared command is a second route into that plugin's own opener, never a second route into the registry. A target the command asks the host to open is refused unless it resolves to that plugin — including a web target, so `video https://example.com` and `video page notes.txt` report a non-video file rather than opening a browser tab.
 
 Server activation has a 1000 ms deadline. Each opener, command handler, or intent has a 5000 ms deadline, covering plugin work only — files a command asks the host to open are dispatched after the handler returns, so a large wildcard open is never charged to the plugin. Concurrent first uses share one activation, and later uses reuse it.
 

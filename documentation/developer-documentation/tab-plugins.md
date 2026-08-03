@@ -20,13 +20,16 @@ export const fixtureV1Manifest = {
   id: 'fixture-v1',
   version: '1.0.0',
   apiVersion: TAB_PLUGIN_API_VERSION,
-  payloadSchemaVersion: 1,
+  payloadSchemaVersion: FIXTURE_PAYLOAD_SCHEMA_VERSION,
   tabLabelPrefix: 'fixture',
   fileExtensions: { '.janissary-plugin-v1': 'text/plain; charset=utf-8' },
   command: 'fixture-v1',
-  capabilities: ['note', 'openOrFocusTab', 'reportFailure'],
+  capabilities: ['note', 'openOrFocusTab', 'rejectRequest', 'reportFailure'],
 } as const satisfies TabPluginDeclaration;
 ```
+
+`src/plugins/documentation.test.ts` pins this block, and the capability list below, to the real
+files — so neither can drift from what the repository ships.
 
 The server activation opens one resource-backed payload and echoes one intent. The client entry exports a payload guard beside its component. Compatibility tests open the tab, validate the payload in both projects, round-trip the echo intent, release the file reference, and dispose the activation.
 
@@ -107,7 +110,7 @@ command: (argument, capabilities) => {
 },
 ```
 
-That makes the command a second route into your own opener rather than a second behavior. Relative-path resolution, `~` expansion, wildcards, sorted processing, the ten-file limit, and missing-file errors are all the host's and stay identical to `open`. A file that resolves to somebody else's opener is refused, so `video notes.txt` reports a non-video file instead of opening the text editor.
+That makes the command a second route into your own opener rather than a second behavior. Relative-path resolution, `~` expansion, wildcards, sorted processing, the ten-file limit, and missing-file errors are all the host's and stay identical to `open`. A file that resolves to somebody else's opener is refused, so `video notes.txt` reports a non-video file instead of opening the text editor. The refusal covers web targets too, which `open` resolves before it ever consults the opener registry: `video https://example.com` and `video page notes.txt` are both refused rather than opening a browser tab.
 
 ## Rejecting versus failing
 

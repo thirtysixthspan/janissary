@@ -8,7 +8,7 @@ import { nextFreeName } from './editor/next-free-name.js';
 import { expandUserPath } from './paths.js';
 import { SHELL_NAME } from './shell-manager.js';
 import type { Managers } from './managers.js';
-import { runOpenCommand } from './open-file-command.js';
+import { runOpenCommand, pinnedOpenerRefusal } from './open-file-command.js';
 import { getConfig } from './config.js';
 import { humanSize } from './openers/size.js';
 import { messageBus } from './bus.js';
@@ -31,6 +31,7 @@ export class OpenFileManager {
       this.managers, parsedCommand, displayCommand, label,
       (c, l) => this.buildContext(c, l), (p, cwd) => this.expandGlob(p, cwd),
       (c, l, f, ext, ctx) => this.openOne(c, l, f, ext, ctx, requireOpener),
+      requireOpener,
     ));
   }
 
@@ -93,7 +94,7 @@ export class OpenFileManager {
     const opener = openerForExtension(path.extname(file));
     if (!opener) { this.managers.tab.append(label, { input: command, output: `No opener for "${path.extname(file) || '(none)'}" files.` }); return; }
     if (requireOpener !== undefined && opener.name !== requireOpener) {
-      this.managers.tab.append(label, { input: command, output: `${requireOpener}: ${file}: not a ${requireOpener} file` });
+      this.managers.tab.append(label, { input: command, output: pinnedOpenerRefusal(requireOpener, file) });
       return;
     }
     if (!external && opener.name === 'editor' && this.isSyncPath(file)) { this.openSynced(file, context); return; }

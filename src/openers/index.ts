@@ -14,9 +14,13 @@ const coreOpeners: Opener[] = [
   editor,
 ];
 
+// The plugin claims that survived conflict rejection. Exported on its own because MIME composition
+// must be built from these rather than from the catalog — see `pluginContentTypes`.
+export const pluginOpeners: Opener[] = createPluginOpeners(tabPluginCatalog, coreOpeners);
+
 export const openers: Opener[] = [
   ...coreOpeners,
-  ...createPluginOpeners(tabPluginCatalog, coreOpeners),
+  ...pluginOpeners,
 ];
 
 // Find the opener registered for a file extension (lowercased, dot-prefixed), or undefined.

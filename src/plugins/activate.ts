@@ -19,6 +19,11 @@ const CAPABILITIES: Record<TabPluginCapabilityName, true> = {
   reportFailure: true,
 };
 
+// The v1 capability set as data. Derived from the exhaustive record above rather than written out
+// again, so a capability can never be added to the union without appearing here — which is what
+// lets `documentation.test.ts` hold the published contract's prose to the real count.
+export const TAB_PLUGIN_CAPABILITY_NAMES = Object.keys(CAPABILITIES) as TabPluginCapabilityName[];
+
 function validateDeclaration(declaration: TabPluginDeclaration): void {
   if (declaration.apiVersion !== TAB_PLUGIN_API_VERSION) {
     throw new Error(

@@ -48,6 +48,12 @@ export function openPluginTab(
     messageBus.emit('state', { type: 'dirty' });
     return;
   }
+  // Every other opener runs synchronously inside its dispatch, so the active tab cannot move under
+  // it. A plugin's can: the first call awaits activation, and any handler may await before opening.
+  // The creating tab is the one whose transcript ran the command, so grouping resolves by
+  // `sourceLabel` rather than by whatever happens to be focused when the factory finally runs.
+  const sourceIndex = target.tabs.findIndex((tab) => tab.label === sourceLabel);
+  const creatorIndex = sourceIndex === -1 ? target.activeTab : sourceIndex;
   const fileRefs: string[] = [];
   let acceptingResources = true;
   let created: TabPluginPayload;
@@ -66,7 +72,7 @@ export function openPluginTab(
   } finally {
     acceptingResources = false;
   }
-  activate(target, addPluginTab(target.tabs, target.activeTab, labelPrefix, created.title, {
+  activate(target, addPluginTab(target.tabs, creatorIndex, labelPrefix, created.title, {
     id: pluginId,
     instanceKey,
     schemaVersion,

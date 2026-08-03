@@ -15,6 +15,12 @@ async function runAfter(pending: Promise<void>, action: () => void | Promise<voi
   await action();
 }
 
+// How a pinned command refuses a target that is not its own. Shared with `OpenFileManager.openOne`
+// so `video notes.txt` and `video https://example.com` report the same thing.
+export function pinnedOpenerRefusal(requireOpener: string, target: string): string {
+  return `${requireOpener}: ${target}: not a ${requireOpener} file`;
+}
+
 function runSequential(
   files: string[],
   action: (file: string) => void | Promise<void>,
@@ -38,6 +44,7 @@ export function runOpenCommand(
   openOne: (
     command: string, label: string, file: string, external: boolean, context: OpenContext,
   ) => void | Promise<void>,
+  requireOpener?: string,
 ): void | Promise<void> {
   const parsed = parseOpen(parsedCommand);
   if ('error' in parsed) { managers.tab.append(label, { input: displayCommand, output: parsed.error }); return; }
@@ -45,7 +52,14 @@ export function runOpenCommand(
   const context = buildContext(displayCommand, label);
   const target = expandUserPath(parsed.target, { root: managers.tab.launchDir });
 
+  // The web branch resolves ahead of the opener registry, so a pinned command has to be refused here
+  // rather than in `openOne` — which a web target never reaches. Both the `https://` scheme and a
+  // bare `page` keyword land here, so without this `video page notes.txt` would open a browser tab.
   if (parsed.web) {
+    if (requireOpener !== undefined) {
+      managers.tab.append(label, { input: displayCommand, output: pinnedOpenerRefusal(requireOpener, target) });
+      return;
+    }
     return parsed.external ? webOpener.external(target, context) : webOpener.inline(target, context);
   }
 
