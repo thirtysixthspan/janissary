@@ -66,11 +66,13 @@ export class ScheduleManager {
   // restore without re-persisting; the `schedule` command persists separately).
   set(label: string, entries: ScheduleEntry[]): void {
     this.schedules.set(label, entries);
+    this.announceChange();
   }
 
   // Forget a tab's schedule (on tab close).
   delete(label: string): void {
     this.schedules.delete(label);
+    this.announceChange();
   }
 
   // Remove one entry from a tab's schedule by id, after the client has confirmed the deletion.
@@ -84,6 +86,7 @@ export class ScheduleManager {
     const tab = this.managers.tab.tabs.find((t) => t.label === label);
     if (tab && tab.view !== 'harness') this.managers.tab.persist(this.managers.tab.buildAgentState(tab, { schedule: next }));
     messageBus.emit('state', { type: 'dirty' });
+    this.announceChange();
     return true;
   }
 
@@ -96,7 +99,7 @@ export class ScheduleManager {
       if (tab && tab.view !== 'harness') this.managers.tab.persist(this.managers.tab.buildAgentState(tab, { schedule: [] }));
       changed = true;
     }
-    if (changed) messageBus.emit('state', { type: 'dirty' });
+    if (changed) { messageBus.emit('state', { type: 'dirty' }); this.announceChange(); }
     return changed;
   }
 
@@ -127,7 +130,14 @@ export class ScheduleManager {
       changed = true;
       if (tab.view !== 'harness') this.managers.tab.persist(this.managers.tab.buildAgentState(tab, { schedule: this.get(label) }));
     }
-    if (changed) messageBus.emit('state', { type: 'dirty' });
+    if (changed) { messageBus.emit('state', { type: 'dirty' }); this.announceChange(); }
+  }
+
+  // The named, low-frequency signal a tab plugin may subscribe to: emitted wherever the scheduled
+  // command set itself changes, which is at most once a second from the tick and otherwise only on
+  // a user action. Separate from `state: dirty`, which fires on every mutation in the app.
+  private announceChange(): void {
+    messageBus.emit('schedules', { type: 'changed' });
   }
 
   // Fire one tab's due entries, returning the surviving schedule (recurring entries rescheduled,

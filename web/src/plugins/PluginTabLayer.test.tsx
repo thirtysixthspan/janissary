@@ -257,6 +257,34 @@ describe('PluginTabLayer lazy lifecycle', () => {
     expect(fixture.send).not.toHaveBeenCalled();
   });
 
+  // A payload the server replaced arrives on an ordinary state broadcast, so the body has to take it
+  // as a re-render. Remounting instead would throw away exactly what the persistent mount protects:
+  // a video's playback position, a document's scroll offset.
+  it('renders a replaced payload without remounting the plugin', async () => {
+    const mounts = vi.fn();
+    const Plugin = ({ payload }: { payload: unknown }) => {
+      React.useEffect(() => { mounts(); }, []);
+      return <div>{(payload as { text: string }).text}</div>;
+    };
+    registry.set('fixture', clientPlugin(
+      1,
+      async () => ({ default: Plugin, isPayload: acceptsAnyPayload }),
+    ));
+    const fixture = client();
+    const first = tab();
+    first.plugin!.payload = { text: 'before' };
+    const { rerender } = render(<PluginTabLayer {...properties(first, fixture.value)} />);
+    await waitFor(() => { expect(screen.getByText('before')).toBeInTheDocument(); });
+
+    const second = tab();
+    second.plugin!.payload = { text: 'after' };
+    rerender(<PluginTabLayer {...properties(second, fixture.value)} />);
+
+    await waitFor(() => { expect(screen.getByText('after')).toBeInTheDocument(); });
+    expect(mounts).toHaveBeenCalledOnce();
+    expect(fixture.send).not.toHaveBeenCalled();
+  });
+
   it('isolates one failed plugin from another plugin layer', async () => {
     const GoodPlugin = () => <div>good plugin</div>;
     registry.set('good', clientPlugin(

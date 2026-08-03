@@ -1,5 +1,5 @@
 import type { Tab, EditorView, PageView, FileNavigatorView } from './types.js';
-import type { TabPluginPayload, TabPluginResources } from '../plugins/api.js';
+import type { TabPluginPayload, TabPluginResources, TabPluginTabUpdate } from '../plugins/api.js';
 import type { Managers } from '../managers.js';
 import { TabQueueState } from './queue-state.js';
 import * as tabOpeners from './openers.js';
@@ -25,6 +25,10 @@ export abstract class TabOpeningState extends TabQueueState {
     );
   }
 
+
+  updatePluginTab(pluginId: string, instanceKey: string, factory: () => TabPluginTabUpdate): void {
+    tabOpeners.updatePluginTab(this, pluginId, instanceKey, factory);
+  }
 
   openEditorTab(view: EditorView): void {
     tabOpeners.openEditorTab(this, view, (label, path) => this.managers.editorWatch.watch(label, path));

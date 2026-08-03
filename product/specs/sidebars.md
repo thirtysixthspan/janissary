@@ -11,23 +11,26 @@ never participate in the center divider's 15–85% sizing.
 
 A tab can be **docked** into a sidebar instead of living in the central tab strip. Docking is a
 placement, not a separate kind of tab — a docked tab keeps everything else about it (its group,
-its transcript or view, its RPC identity) exactly as it was. Two tab kinds can dock: the file
-navigator (see `file-navigator-tab.md`) and the notifications tab (see `notifications.md`). They share
+its transcript or view, its RPC identity) exactly as it was. The kinds that can dock are the file
+navigator (see `file-navigator-tab.md`), the notifications tab (see `notifications.md`), the
+schedules tab (see `scheduling.md`), and any bundled-plugin tab (see `tab-plugins.md`). They share
 one docking mechanism and, being different kinds, can occupy the **same** sidebar at the same
 time — see "Sharing a sidebar" below — as well as different sidebars.
 
 Each sidebar holds **at most one docked tab of each kind at a time**. Docking a tab into a side
 that already holds a tab of the *same* kind **displaces** that occupant, which returns to the
 center tab strip — nothing is closed as a side effect of docking. Docking into a side that holds
-the *other* kind does not displace it; both stay docked, sharing the sidebar.
+another kind does not displace it; both stay docked, sharing the sidebar. Two plugin tabs count as
+the same kind only when the same plugin owns both, so tabs contributed by different plugins share a
+sidebar rather than displacing one another.
 
 ### Sharing a sidebar
 
-When both the file navigator and the notifications tab are docked to the same side, the sidebar's
+When more than one dockable tab is docked to the same side, the sidebar's
 tab strip shows one entry per docked tab, side by side — like the central tab strip — with the
 visible one highlighted; clicking an entry flips to it. There is no separate switcher above the
-strip. Docking a second kind into an already-occupied side brings it into view automatically. Which
-of the two is currently visible is ephemeral, client-side display state, like sidebar width (see
+strip. Docking another tab into an already-occupied side brings it into view automatically. Which
+of them is currently visible is ephemeral, client-side display state, like sidebar width (see
 "What's server-owned vs. client-owned" below) — it is never sent to the server and resets on
 relaunch.
 

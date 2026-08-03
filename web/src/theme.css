@@ -657,6 +657,19 @@ html, body, #root {
 .sidebar-left .sidebar-resize { border-right: 1px solid var(--border); }
 .sidebar-right .sidebar-resize { border-left: 1px solid var(--border); }
 .sidebar-body > .tabstrip { border-bottom: 1px solid var(--border); }
+/* A docked plugin tab: the host's own frame around a plugin body in a sidebar. Every docked plugin
+   tab stays mounted, so the hidden ones are display:none rather than unmounted. */
+.sidebar-plugin { flex: 1; min-height: 0; flex-direction: column; }
+.sidebar-plugin-header {
+  display: flex; align-items: center; justify-content: flex-end;
+  padding: 6px 12px; color: var(--muted); font-size: 12px; border-bottom: 1px solid var(--border);
+}
+.sidebar-plugin-actions { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
+.sidebar-plugin-dock-cycle {
+  background: transparent; border: none; color: var(--muted); cursor: pointer; font-size: 13px;
+  padding: 0 4px; line-height: 1;
+}
+.sidebar-plugin-dock-cycle:hover { color: var(--fg); }
 .resize-button {
   padding: 0 6px; border: none; background: transparent;
   color: var(--muted); cursor: grab; font-size: 12px; line-height: 1;

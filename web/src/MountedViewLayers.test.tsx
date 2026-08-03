@@ -410,6 +410,19 @@ describe('MountedViewLayers', () => {
     await waitFor(() => { expect(container.querySelector('[data-testid="plugin"]')).toBeTruthy(); });
   });
 
+  // A docked plugin tab is rendered by the sidebar instead; rendering it here too would mount the
+  // plugin twice and leave a stray body in the centre.
+  it('leaves a docked plugin tab to the sidebar', () => {
+    const docked = { ...makePluginTab('vtab', '/open/1'), dock: 'left' as const };
+    const { container } = render(
+      React.createElement(MountedViewLayers, {
+        tabs: [docked], current: docked, client: { send: vi.fn() } as never, closeTab: vi.fn(),
+        harnessHandles: makeHarnessHandles(), editorHandles: makeEditorHandles(),
+      }),
+    );
+    expect(container.querySelector('.tab-body')).toBeNull();
+  });
+
   it('hides a plugin tab when it is not visible', () => {
     const tabs = [makePluginTab('vtab', '/open/1')];
     const other = makePluginTab('other', '/open/2');

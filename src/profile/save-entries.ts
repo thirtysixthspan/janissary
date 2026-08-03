@@ -109,12 +109,15 @@ export function writeFilesEntry(
 }
 
 // A bundled-plugin tab. Its instance key is the file the plugin opened, which is all a relaunch
-// needs: `open <path>` routes back to the same plugin through the opener registry.
+// needs: `open <path>` routes back to the same plugin through the opener registry. A docked plugin
+// tab has no place in the tab strip, so — like a docked navigator — it keeps `dock` and gets no
+// presentation.
 export function writePluginEntry(tab: Tab, managers: Managers): ProfilePluginTabFile | undefined {
   if (!tab.plugin) return undefined;
   return {
     type: 'plugin', id: tab.plugin.id, path: portablePath(tab.plugin.instanceKey, managers),
-    ...presentation(tab, managers),
+    dock: tab.dock,
+    ...(!tab.dock && presentation(tab, managers)),
   };
 }
 

@@ -32,10 +32,11 @@ Declarations contain data, never executable predicates or top-level side effects
 
 ## Server contract
 
-`activate()` returns a `TabPluginActivation` with `isPayload`, `opener.inline`, `opener.external`, `intent`, an optional `command`, and optional idempotent `dispose`. A declaration that claims a command name must supply `command`; it receives everything after the first token. It does not receive `Managers`. Each opener, command, and intent receives a `TabPluginServerCapabilities` object with exactly seven functions:
+`activate()` returns a `TabPluginActivation` with `isPayload`, `opener.inline`, `opener.external`, `intent`, an optional `command`, and optional idempotent `dispose`. A declaration that claims a command name must supply `command`; it receives everything after the first token. It does not receive `Managers`. Each opener, command, intent, and notification receives a `TabPluginServerCapabilities` object with exactly eight functions:
 
 - `note(text)` appends to the originating transcript if it is still open.
 - `openOrFocusTab(instanceKey, factory)` focuses an existing tab or creates one.
+- `updateTab(instanceKey, factory)` replaces the payload, and optionally the title, of a tab this plugin already owns. The tab keeps its label, position, group, focus, instance key, schema version, and served files. An instance key with no open tab is a no-op; a result failing the plugin's own guard, the JSON check, or a supplied-but-empty title disables it. An update never registers a file and never changes an instance key: both are fixed at creation.
 - `openClaimedFiles(target)` asks the host to run its ordinary `open` pipeline for `target`, pinned to this plugin's own opener. This is how a declared command becomes a second route into one opener rather than a second behavior: path resolution, wildcard expansion, sorted processing, the ten-file limit, and missing-file errors all stay identical to `open`, and a file belonging to another opener is refused rather than silently handed over. The host queues these and runs them after the guarded call returns, so that work never counts against the plugin's own budget.
 - `configuredViewer()` reads `externalViewers[pluginId]`.
 - `openExternally(path, application?)` invokes the detached OS opener.
@@ -59,7 +60,7 @@ The client entry default-exports a React component accepting `{ payload, capabil
 - `resourceUrl(reference)` adds current-session authentication to a served-file reference.
 - `intent<Result>(name, payload)` sends a request bound to this tab label.
 - `splitAction` is the host-rendered split control node or `null`.
-- `active` is whether this tab is the visible one in its pane. A plugin tab stays mounted while hidden, so a window-wide listener gates on this instead of assuming the tab is on screen; a plugin never reads visibility off the host's DOM.
+- `active` is whether this tab is the visible one in its pane — or, for a docked tab, the selected entry in its sidebar. A plugin tab stays mounted while hidden, so a window-wide listener gates on this instead of assuming the tab is on screen; a plugin never reads visibility off the host's DOM.
 - `reportFailure(reason)` sends one failure report for this plugin boundary.
 
 Never pass `JanusClient`, import a raw socket, or import host UI internals from a concrete plugin. Client-local state may hold playback, scroll, or overlay state; server-owned tab state must not be recomputed locally.
@@ -71,6 +72,16 @@ Never pass `JanusClient`, import a raw socket, or import host UI internals from 
 `pluginIntent` carries `{ tab, intent, payload }`. The envelope has no plugin id or schema version because the server resolves both from its own tab record, whose payload already carries the schema. The generic ingress validates `tab`, `intent`, and payload presence; the selected plugin validates its intent payload and authoritative tab payload. `pluginFailed` carries string `{ tab, reason }`; generic ingress validates it, then the server resolves the owning plugin from the tab. Malformed input returns an RPC error without disabling anything.
 
 Shared guards must reject arrays and `null` when an object is required and validate every required field. They stay hand-written and import-free.
+
+## Docking
+
+A plugin tab docks into either sidebar through the same mechanism the built-in dockable views use, and a profile may capture and restore the side it was docked to. The host owns the sidebar frame, including the dock-cycle control, exactly as it owns the centre frame: a plugin renders no chrome in either place. Every docked plugin tab stays mounted while another entry in that sidebar is showing, so `active` means "the selected entry here" rather than "the centre tab", and a docked tab is rendered by the sidebar alone — never also in the centre. A side displaces an existing occupant only when the same plugin owns it; tabs from different plugins share a sidebar.
+
+## Host notifications
+
+A declaration may name host topics under `notifications`, and one that does must supply `notify` on its activation or it is disabled at activation — a notification has no caller and no transcript, so there is nothing for a rejection to answer into. v1 defines one topic, `schedules`, carrying the aggregated scheduled-command rows. A topic is always a named, already-coalesced signal; the raw state broadcast is never one, because it fires on essentially every mutation including per-keystroke shell output.
+
+Delivery reaches only a plugin that is already active and already owns at least one tab, so a notification never activates anything and a plugin with nothing on screen is never called. The event carries the topic, its data, and the instance keys of that plugin's own open tabs. Handlers are guarded at 1000 ms — tighter than the 5000 ms a user-initiated call gets — fan out concurrently with no ordering guarantee, and have their return value ignored: a notification cannot influence a host outcome, and a plugin acts on one by calling `updateTab`. `note` writes nowhere during a notification. A throw or timeout disables that plugin alone. The host owns the single subscription and releases it on dispose; no plugin holds a handle to revoke.
 
 ## Lazy lifecycle and budgets
 

@@ -96,6 +96,14 @@ export async function openProfileViewTabs(
       notes.push(typeof error === 'string' ? error : `Could not open ${target.kind} tab "${target.subject}".`);
       continue;
     }
+    // A docked entry leaves the strip entirely, so it takes no group, position, or focus — the same
+    // shape a docked file navigator has.
+    const dock = entry.type === 'plugin' ? entry.dock : undefined;
+    if (dock) {
+      managers.tab.setDock(managers.tab.findIndex(tab.label), dock);
+      notes.push(`Opened ${target.kind} tab.`);
+      continue;
+    }
     const group = entry.group ?? defaultGroup;
     relocateToGroup(managers, group, colorForGroup(group, tab.dotColor));
     opened.push({ label: tab.label, number: entry.number, focus: entry.focus, pane: entry.pane });
