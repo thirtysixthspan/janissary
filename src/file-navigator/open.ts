@@ -1,17 +1,12 @@
 import { statSync } from 'node:fs';
 import { buildRows } from './index.js';
 import type { Managers } from '../managers.js';
-import type { FilesTabState } from './state.js';
+import type { BasePort } from './port.js';
 
 // The narrow slice of `FileNavigatorManager` internals this module needs, handed over as bound closures
 // so the tab-state map and watcher plumbing stay private to the manager (see `openPort()` there).
-export interface OpenPort {
+export interface OpenPort extends BasePort {
   managers: Managers;
-  states: Map<string, FilesTabState>;
-  watchDir(label: string, absDir: string, relPath: string): void;
-  unwatchDir(state: FilesTabState, relPath: string): void;
-  rebuild(label: string): void;
-  refreshGit(label: string): void;
 }
 
 // Open a file navigator at `label`'s cwd (the metadata-row 📁 button). If a file-navigator tab is already
