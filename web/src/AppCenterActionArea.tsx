@@ -1,25 +1,14 @@
 import React from 'react';
 import type { TabView } from '@shared/protocol';
-import type { JanusClient } from './ws';
 import type { TabEntry } from './useTabEntries';
+import type { BaseCenterActionAreaProps } from './CenterActionAreaProps';
 import { CenterActionArea } from './CenterActionArea';
 import { ViewTabBody } from './ViewTabBody';
 import { InactiveAgentTabBody } from './InactiveAgentTabBody';
 import { ShellTabLayer } from './ShellTabLayer';
 import { MountedViewLayers } from './MountedViewLayers';
 
-type Properties = {
-  entries: TabEntry[];
-  tabs: TabView[];
-  activeTab: number;
-  secondaryTab?: number;
-  client: JanusClient;
-  closeTab: (index: number) => void;
-  tabNameMaxLength: number;
-  activeTabNameMaxLength: number;
-  onFocusCommandBar: () => void;
-  onFocusEditor: (label: string) => void;
-  windowFocused: boolean;
+type Properties = BaseCenterActionAreaProps & {
   current: TabView;
   focusedAgentBody: React.ReactNode;
   shellProps: Omit<React.ComponentProps<typeof ShellTabLayer>, 'tabs' | 'activeLabel' | 'visibleLabels' | 'client' | 'onSplit'>;
