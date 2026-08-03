@@ -1,6 +1,6 @@
 import React from 'react';
 import { act, fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { VideoPayload } from '@shared/plugins/video/shared';
 import type { TabPluginClientCapabilities } from '../api';
 import { VideoTab } from './VideoTab';
@@ -12,7 +12,7 @@ function makeVideo(overrides: Partial<VideoPayload> = {}): VideoPayload {
   };
 }
 
-function makeCapabilities(onSplit?: () => void) {
+function makeCapabilities(onSplit?: () => void, active = true) {
   const intent = vi.fn<(name: string, payload: unknown) => Promise<unknown>>(
     async () => ({ name: 'clip.shot-1.png' }),
   );
@@ -22,11 +22,24 @@ function makeCapabilities(onSplit?: () => void) {
     intent: async <Result,>(name: string, payload: unknown) =>
       intent(name, payload) as Promise<Result>,
     splitAction: onSplit ? <button type="button" className="tab-split" onClick={onSplit}>Split</button> : null,
-    active: true,
+    active,
     reportFailure,
   };
   return { capabilities, intent, reportFailure };
 }
+
+// jsdom implements no media pipeline, so `play()` is stubbed for every test here: the view calls it
+// on mount to start the video the user just opened.
+let play: ReturnType<typeof vi.fn>;
+
+beforeEach(() => {
+  play = vi.fn(async () => {});
+  vi.spyOn(HTMLMediaElement.prototype, 'play').mockImplementation(play as unknown as () => Promise<void>);
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 describe('VideoTab', () => {
   it('renders metadata and a native player using the resource capability', () => {
@@ -89,6 +102,41 @@ describe('VideoTab', () => {
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Capture frame' })); });
     expect(intent).toHaveBeenCalledWith('capture-frame', { dataUrl: 'data:image/png;base64,AAAA' });
     expect(screen.getByText('Saved clip.shot-1.png')).toBeInTheDocument();
-    vi.restoreAllMocks();
+  });
+
+  it('starts playing as soon as the tab it opened in is mounted', () => {
+    const { capabilities } = makeCapabilities();
+    render(<VideoTab payload={makeVideo()} capabilities={capabilities} />);
+    expect(play).toHaveBeenCalledOnce();
+  });
+
+  it('does not start a video whose tab is not the visible one', () => {
+    const { capabilities } = makeCapabilities(undefined, false);
+    render(<VideoTab payload={makeVideo()} capabilities={capabilities} />);
+    expect(play).not.toHaveBeenCalled();
+  });
+
+  it('does not restart the video when the view re-renders', () => {
+    const { capabilities } = makeCapabilities();
+    const { rerender } = render(<VideoTab payload={makeVideo()} capabilities={capabilities} />);
+    rerender(<VideoTab payload={makeVideo({ size: '13 MB' })} capabilities={capabilities} />);
+    expect(play).toHaveBeenCalledOnce();
+  });
+
+  it('survives an environment whose play() answers with nothing at all', () => {
+    play.mockReturnValue(undefined as unknown as Promise<void>);
+    const { capabilities, reportFailure } = makeCapabilities();
+    const { container } = render(<VideoTab payload={makeVideo()} capabilities={capabilities} />);
+    expect(container.querySelector('video')).toBeInTheDocument();
+    expect(reportFailure).not.toHaveBeenCalled();
+  });
+
+  it('leaves the player in place when the browser refuses to autoplay', async () => {
+    play.mockRejectedValue(new Error('NotAllowedError'));
+    const { capabilities, reportFailure } = makeCapabilities();
+    const { container } = render(<VideoTab payload={makeVideo()} capabilities={capabilities} />);
+    await act(async () => {});
+    expect(container.querySelector('video')).toBeInTheDocument();
+    expect(reportFailure).not.toHaveBeenCalled();
   });
 });

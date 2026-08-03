@@ -55,6 +55,15 @@ Playback uses the platform's **native video controls** — play/pause, the timel
 and fullscreen — shown on the player itself. There is no custom transport UI and no tab-level
 playback shortcuts; while the player has focus, the keyboard belongs to the native controls.
 
+A video **starts playing as soon as its tab opens**, without a click on the player. Only the tab the
+user is looking at starts this way: a video tab that is restored behind another tab when the web
+client reloads stays paused, so a session holding several videos never starts all of them at once.
+Switching to a video tab later never starts it either — a video the user paused stays paused.
+
+A browser may refuse to begin playback with sound under its own autoplay policy. That refusal is
+normal and silent: the video simply waits, paused, with its controls ready, exactly as it did before
+it started on open. Nothing is muted to get around the refusal, and no error is reported.
+
 ### Playback survives a tab switch
 
 Leaving a video tab does not disturb its player. Switching to another tab and back returns the video

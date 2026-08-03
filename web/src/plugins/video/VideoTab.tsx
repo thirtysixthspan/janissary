@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCamera } from '@fortawesome/free-solid-svg-icons';
 import type { VideoPayload } from '@shared/plugins/video/shared';
@@ -12,6 +12,11 @@ import { useVideoShot } from './useVideoShot';
 // The browser can still fail to decode a container this opener claims as playable (an unsupported
 // codec inside an `.mp4`, a corrupt file). That replaces the player with a short message and a
 // button handing the file to the configured external player. Nothing launches on its own.
+//
+// Opening the tab starts the video: the body mounts once per open, so a single mount-time `play()`
+// is the whole of that behavior. It is gated on the tab being the visible one, which keeps a reload
+// of the web page from starting every open video at once, and a refusal by the browser's autoplay
+// policy is a normal outcome — the video simply stays paused with its controls.
 export function VideoTab({
   payload: video,
   capabilities,
@@ -21,6 +26,17 @@ export function VideoTab({
   const { capture, saved, busy } = useVideoShot(videoRef, capabilities);
   const source = capabilities.resourceUrl(video.url);
   const openLabel = video.player ? `Open in ${video.player}` : 'Open externally';
+  const activeOnMount = useRef(capabilities.active);
+
+  useEffect(() => {
+    if (!activeOnMount.current) return;
+    // `play()` answers with a promise wherever the media pipeline is real, and with nothing where it
+    // is not, so the rejection handler is attached defensively rather than to the call itself.
+    const started: Promise<void> | undefined = videoRef.current?.play();
+    void started?.catch(() => {
+      // The browser's autoplay policy refused; the video waits on its own controls.
+    });
+  }, []);
 
   return (
     <div className="video-tab image-tab" data-doc-shot="video-view">

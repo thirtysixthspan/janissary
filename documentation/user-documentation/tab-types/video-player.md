@@ -27,6 +27,8 @@ Either way, opening a video does something useful. You'll see a note in the curr
 
 ## Playback controls
 
+The video starts playing as soon as the tab opens — you don't have to click play. If your browser blocks playback with sound, the video just waits paused instead, ready for the play button.
+
 Playback uses your platform's standard video controls, shown on the player itself: play and pause, the timeline scrubber, volume, and fullscreen. There are no separate app shortcuts for playback — while the player has focus, the keyboard belongs to those controls.
 
 ## Playing while you work in another tab
