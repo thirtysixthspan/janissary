@@ -1,4 +1,4 @@
-import type { LogEntry, Tab, PluginTabRecord, MarkdownView, EditorView, PageView, HarnessView, FileNavigatorView } from './types.js';
+import type { LogEntry, Tab, PluginTabRecord, EditorView, PageView, HarnessView, FileNavigatorView } from './types.js';
 export { expandTabs, wordWrap, flattenBuffer } from './formatting.js';
 export { distinctColor, dotColors } from './colors.js';
 export { stripComments, renumberTabs, canMoveTab, swapTabsLeft, swapTabsRight, insertTabInGroup, uniqueLabel } from './utils.js';
@@ -39,13 +39,6 @@ export const makePageTab = (label: string, dotColor: string, number: number, gro
   page,
 });
 
-// A markdown view tab (opened via `open <file>.md`). Renders the file as formatted Markdown.
-export const makeMarkdownTab = (label: string, dotColor: string, number: number, group: number, groupColor: string, markdown: MarkdownView): Tab => ({
-  ...makeTab(label, dotColor, number, [], [], undefined, group, groupColor),
-  view: 'markdown',
-  title: 'markdown',
-  markdown,
-});
 
 // An editor view tab (opened via `open <text file>` or `edit <file>`). Hosts the plain-text editor.
 export const makeEditorTab = (label: string, dotColor: string, number: number, group: number, groupColor: string, editor: EditorView): Tab => ({

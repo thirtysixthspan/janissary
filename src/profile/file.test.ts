@@ -139,7 +139,7 @@ describe('loadProfile', () => {
     expect(loaded.files).toEqual([{ dock: 'left', path: '$root' }]);
     expect(loaded.notifications).toEqual([{ dock: 'right', focus: true }]);
     expect(loaded.schedules).toEqual([{ dock: 'right' }]);
-    expect(loaded.views.map((v) => v.type)).toEqual(['plugin', 'markdown', 'page', 'ssh']);
+    expect(loaded.views.map((v) => v.type)).toEqual(['plugin', 'plugin', 'page', 'ssh']);
     expect(loaded.views[3]).toEqual(expect.objectContaining({ destination: 'host', options: ['-p', '2222'] }));
   });
 
@@ -150,6 +150,15 @@ describe('loadProfile', () => {
     const loaded = loadProfile('legacy-image') as LoadedProfile;
     expect(loaded.views).toEqual([
       expect.objectContaining({ type: 'plugin', id: 'image', path: 'a.png', group: 2 }),
+    ]);
+  });
+
+  // `markdown` is the pre-plugin spelling of a markdown preview tab, mapped the same way.
+  it('loads a legacy markdown entry as a plugin view entry', () => {
+    writeJson('legacy-markdown', { tabs: [{ type: 'markdown', path: 'readme.md', group: 2 }] });
+    const loaded = loadProfile('legacy-markdown') as LoadedProfile;
+    expect(loaded.views).toEqual([
+      expect.objectContaining({ type: 'plugin', id: 'markdown', path: 'readme.md', group: 2 }),
     ]);
   });
 

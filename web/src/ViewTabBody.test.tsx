@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, waitFor, screen } from '@testing-library/react';
+import { render } from '@testing-library/react';
 import React from 'react';
 import { ViewTabBody } from './ViewTabBody';
 import type { TabView } from '@shared/protocol';
@@ -10,12 +10,6 @@ vi.stubGlobal('ResizeObserver', class {
   unobserve() {}
   disconnect() {}
 });
-
-// MarkdownTab fetches its content on mount; stub fetch so that state update settles
-// synchronously with the assertions instead of firing after the test has finished.
-vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-  text: () => Promise.resolve('# Hello'),
-} as unknown as Response));
 
 function baseTab(overrides: Partial<TabView> = {}): TabView {
   return {
@@ -39,29 +33,17 @@ describe('ViewTabBody', () => {
     expect(container.innerHTML).toBe('');
   });
 
-  it('returns null when view is markdown but no markdown payload', () => {
-    const tab = baseTab({ view: 'markdown' });
-    const { container } = render(React.createElement(ViewTabBody, { tab, client: {} as never, index: 0 }));
-    expect(container.innerHTML).toBe('');
-  });
-
   it('returns null when view is files but no files payload', () => {
     const tab = baseTab({ view: 'files' });
     const { container } = render(React.createElement(ViewTabBody, { tab, client: {} as never, index: 0 }));
     expect(container.innerHTML).toBe('');
   });
 
-  it('renders MarkdownTab when view is markdown with payload', () => {
-    const tab = baseTab({ view: 'markdown', markdown: { name: 'a.md', path: '/a/a.md', size: '1 KB', url: '/open/1' } });
-    const { container } = render(React.createElement(ViewTabBody, { tab, client: {} as never, index: 0 }));
-    expect(container.querySelector('.tab-body')).toBeTruthy();
-  });
-
   it('greys the left border when the view is visible but unfocused', () => {
     const tab = baseTab({
       dotColor: '#123456',
-      view: 'markdown',
-      markdown: { name: 'a.md', path: '/a/a.md', size: '1 KB', url: '/open/1' },
+      view: 'files',
+      files: { root: '/', absoluteRoot: '/', rows: [] },
     });
     const { container } = render(React.createElement(ViewTabBody, {
       tab, client: {} as never, index: 0, active: false,
@@ -76,13 +58,6 @@ describe('ViewTabBody', () => {
     });
     const { container } = render(React.createElement(ViewTabBody, { tab, client: {} as never, index: 0 }));
     expect(container.innerHTML).toBe('');
-  });
-
-  it('renders MarkdownTab when view is markdown with payload', async () => {
-    const tab = baseTab({ view: 'markdown', markdown: { name: 'readme.md', path: '/a/readme.md', size: '2 KB', url: '/open/2' } });
-    const { container } = render(React.createElement(ViewTabBody, { tab, client: {} as never, index: 0 }));
-    expect(container.querySelector('.tab-body')).toBeTruthy();
-    await waitFor(() => screen.getByRole('heading', { level: 1 }));
   });
 
   it('renders FileNavigatorTab when view is files with payload', () => {

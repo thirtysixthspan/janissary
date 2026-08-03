@@ -77,15 +77,8 @@ export type PluginTabRecord = {
 // `number`: 1-based page number shown in the tab title (e.g. "1) slashdot.org").
 export type PageView = { url: string; domain: string; number: number };
 
-export type MarkdownView = {
-  name: string;
-  path: string;
-  size: string;
-  url: string;
-};
-
 // Plain-text editor view (opened via `open <file>` for text extensions, or `edit <file>` for any
-// file). Same shape as MarkdownView: metadata for the header plus the `/open/<id>` content ref.
+// file): metadata for the header plus the `/open/<id>` content ref.
 export type EditorView = {
   name: string;
   path: string;
@@ -195,7 +188,7 @@ export type Tab = {
   number: number;
   // The tab's body kind. Undefined/`'agent'` renders the normal transcript + command line; `'plugin'`
   // renders a bundled plugin's view (no command bar). View tabs are live and in-memory — not persisted.
-  view?: 'agent' | 'plugin' | 'page' | 'harness' | 'markdown' | 'editor' | 'monitor' | 'files' | 'notifications' | 'schedules';
+  view?: 'agent' | 'plugin' | 'page' | 'harness' | 'editor' | 'monitor' | 'files' | 'notifications' | 'schedules';
   // Display name shown in the tab strip when it differs from the (unique) internal `label` — e.g.
   // every image tab is titled with its file name while keeping a distinct label (`image`, `image-2`, …).
   title?: string;
@@ -208,8 +201,6 @@ export type Tab = {
   page?: PageView;
   // The harness-view payload, present only when `view === 'harness'`.
   harness?: HarnessView;
-  // The markdown-view payload, present only when `view === 'markdown'`.
-  markdown?: MarkdownView;
   // The editor-view payload, present only when `view === 'editor'`.
   editor?: EditorView;
   // Transient, unsaved buffer content synced from the client shortly after typing pauses

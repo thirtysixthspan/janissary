@@ -1,4 +1,4 @@
-import type { Tab, MarkdownView, EditorView, PageView, FileNavigatorView } from './types.js';
+import type { Tab, EditorView, PageView, FileNavigatorView } from './types.js';
 import type { TabPluginPayload, TabPluginResources } from '../plugins/api.js';
 import type { Managers } from '../managers.js';
 import { TabQueueState } from './queue-state.js';
@@ -25,9 +25,6 @@ export abstract class TabOpeningState extends TabQueueState {
     );
   }
 
-  openMarkdownTab(view: MarkdownView): void {
-    tabOpeners.openMarkdownTab(this, view);
-  }
 
   openEditorTab(view: EditorView): void {
     tabOpeners.openEditorTab(this, view, (label, path) => this.managers.editorWatch.watch(label, path));

@@ -71,7 +71,6 @@ export class OpenFileManager {
   private buildContext(command: string, label: string): OpenContext {
     return {
       note: (text) => this.managers.tab.append(label, { input: command, output: text }),
-      openMarkdownTab: (view) => this.managers.tab.openMarkdownTab(view),
       openEditorTab: (view) => this.managers.tab.openEditorTab(view),
       openPageTab: (view) => this.managers.tab.openPageTab(view),
       registerFile: (absPath) => this.managers.tab.registerFile(absPath),

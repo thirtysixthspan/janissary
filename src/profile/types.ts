@@ -88,14 +88,13 @@ export type ProfileNotificationsEntry = { dock?: 'left' | 'right'; focus?: boole
 // A profile-level schedules tab. `dock` docks the singleton schedules list into that sidebar.
 export type ProfileSchedulesEntry = { dock?: 'left' | 'right' };
 
-// A profile-level view tab — a bundled-plugin tab (an image, a video), markdown viewer, web page, or
-// ssh session. None of these authors a label: the tab's name is derived at open time exactly as the
+// A profile-level view tab — a bundled-plugin tab (an image, a markdown preview, a video), web page,
+// or ssh session. None of these authors a label: the tab's name is derived at open time exactly as the
 // `open`/`ssh` commands derive it, so a relaunch is matched against an open tab by identity (path
-// plus plugin id, url, destination) rather than by label. A legacy `image` element of the on-disk
-// `tabs` array loads as a `plugin` entry with id `image`.
+// plus plugin id, url, destination) rather than by label. A legacy `image` or `markdown` element of
+// the on-disk `tabs` array loads as a `plugin` entry with that id.
 export type ProfileViewEntry = ProfileTabRuntime & (
   | { type: 'plugin'; id: string; path: string }
-  | { type: 'markdown'; path: string }
   | { type: 'page'; url: string }
   | { type: 'ssh'; destination: string; options?: string[] }
 );
@@ -115,8 +114,8 @@ export type ProfileNotificationsTabFile = { type: 'notifications' } & ProfileNot
 export type ProfileSchedulesTabFile = { type: 'schedules' } & ProfileSchedulesEntry;
 
 // A bundled-plugin tab: which plugin owns it and the file it was opened on. `profile save` writes
-// this for every plugin tab; `type: 'image'` is the pre-plugin spelling of an image tab and is still
-// accepted on load.
+// this for every plugin tab; `type: 'image'` and `type: 'markdown'` are the pre-plugin spellings of
+// those tabs and are still accepted on load.
 export type ProfilePluginTabFile = { type: 'plugin'; id: string; path: string } & ProfileTabPresentation;
 export type ProfileImageTabFile = { type: 'image'; path: string } & ProfileTabPresentation;
 export type ProfileMarkdownTabFile = { type: 'markdown'; path: string } & ProfileTabPresentation;

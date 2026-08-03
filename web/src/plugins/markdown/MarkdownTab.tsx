@@ -1,21 +1,28 @@
 import React, { useEffect, useRef, useState } from 'react';
-import type { MarkdownView } from '@shared/protocol';
-import { renderMarkdown } from './markdown';
+import type { MarkdownPayload } from '@shared/plugins/markdown/shared';
+import type { TabPluginClientCapabilities } from '../api';
+import { renderMarkdown } from './render';
 import { onMarkdownKey } from './markdown-handlers';
-import { SplitTabButton } from './SplitTabButton';
 
+// A markdown view tab body: a compact metadata header (name, size, location) above the rendered
+// file, which fills and scrolls the remaining space. The text is fetched once, when the tab opens,
+// so the view is a snapshot rather than a live mirror of the file.
+//
+// A plugin tab stays mounted while its tab is hidden, so the scroll keys bind only while
+// `capabilities.active`: a markdown tab behind another tab, or in the other split pane, ignores them.
 export function MarkdownTab({
-  markdown, active = true, onSplit,
-}: { markdown: MarkdownView; active?: boolean; onSplit?: () => void }) {
+  payload: markdown, capabilities,
+}: { payload: MarkdownPayload; capabilities: TabPluginClientCapabilities }) {
   const [html, setHtml] = useState<string | undefined>(undefined);
   const stageRef = useRef<HTMLDivElement>(null);
-  const token = new URLSearchParams(location.search).get('token') ?? '';
+  const source = capabilities.resourceUrl(markdown.url);
+  const active = capabilities.active;
 
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
       try {
-        const r = await fetch(`${markdown.url}?token=${encodeURIComponent(token)}`);
+        const r = await fetch(source);
         const text = await r.text();
         if (!cancelled) setHtml(renderMarkdown(text) ?? text);
       } catch {
@@ -24,7 +31,7 @@ export function MarkdownTab({
     };
     void load();
     return () => { cancelled = true; };
-  }, [markdown.url, markdown.name, token]);
+  }, [source, markdown.name]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => onMarkdownKey(e, stageRef.current);
@@ -38,7 +45,7 @@ export function MarkdownTab({
         <span className="image-name">{markdown.name}</span>
         <span className="image-size">{markdown.size}</span>
         <span className="image-loc">{markdown.path}</span>
-        {onSplit && <span className="image-actions"><SplitTabButton onClick={onSplit} /></span>}
+        {capabilities.splitAction && <span className="image-actions">{capabilities.splitAction}</span>}
       </div>
       {html === undefined
         ? <div className="markdown-stage" ref={stageRef} />

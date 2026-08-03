@@ -11,9 +11,6 @@ export function uniquePluginLabel(tabs: Tab[], prefix: string): string {
   return uniqueLabel(new Set(tabs.map((t) => t.label)), prefix);
 }
 
-export function uniqueMarkdownLabel(tabs: Tab[]): string {
-  return uniqueLabel(new Set(tabs.map((t) => t.label)), 'markdown');
-}
 
 export function uniqueEditorLabel(tabs: Tab[]): string {
   return uniqueLabel(new Set(tabs.map((t) => t.label)), 'editor');

@@ -1,10 +1,11 @@
 import React from 'react';
 import { render, screen, act, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { MarkdownView } from '@shared/protocol';
+import type { MarkdownPayload } from '@shared/plugins/markdown/shared';
+import type { TabPluginClientCapabilities } from '../api';
 import { MarkdownTab } from './MarkdownTab';
 
-function makeMarkdown(overrides: Partial<MarkdownView> = {}): MarkdownView {
+function makeMarkdown(overrides: Partial<MarkdownPayload> = {}): MarkdownPayload {
   return {
     name: 'README.md',
     path: '/home/user/README.md',
@@ -12,6 +13,26 @@ function makeMarkdown(overrides: Partial<MarkdownView> = {}): MarkdownView {
     url: '/open/1',
     ...overrides,
   };
+}
+
+function makeCapabilities(
+  { active = true, onSplit }: { active?: boolean; onSplit?: () => void } = {},
+): TabPluginClientCapabilities {
+  return {
+    resourceUrl: (reference) => `${reference}?token=`,
+    intent: async <Result,>() => ({}) as Result,
+    splitAction: onSplit
+      ? <button type="button" className="tab-split" onClick={onSplit}>Split</button>
+      : null,
+    active,
+    reportFailure: vi.fn(),
+  };
+}
+
+function renderTab(options: { active?: boolean; onSplit?: () => void; markdown?: MarkdownPayload } = {}) {
+  return render(
+    <MarkdownTab payload={options.markdown ?? makeMarkdown()} capabilities={makeCapabilities(options)} />,
+  );
 }
 
 function fireKey(key: string) {
@@ -31,18 +52,22 @@ beforeEach(() => {
 
 describe('MarkdownTab', () => {
   it('renders the file metadata header', async () => {
-    render(<MarkdownTab markdown={makeMarkdown()} />);
+    renderTab();
     expect(screen.getByText('README.md')).toBeInTheDocument();
     expect(screen.getByText('2.1 KB')).toBeInTheDocument();
     expect(screen.getByText('/home/user/README.md')).toBeInTheDocument();
     await waitFor(() => screen.getByRole('heading', { level: 1 }));
   });
 
+  it('fetches the file through the host-supplied resource url', async () => {
+    renderTab();
+    await waitFor(() => screen.getByRole('heading', { level: 1 }));
+    expect(fetch).toHaveBeenCalledWith('/open/1?token=');
+  });
+
   it('offers Split and ignores global keys while its pane is inactive', async () => {
     const onSplit = vi.fn();
-    const { container } = render(
-      <MarkdownTab markdown={makeMarkdown()} active={false} onSplit={onSplit} />,
-    );
+    const { container } = renderTab({ active: false, onSplit });
     await waitFor(() => screen.getByRole('heading', { level: 1 }));
     fireEvent.click(screen.getByRole('button', { name: 'Split' }));
     expect(onSplit).toHaveBeenCalledOnce();
@@ -53,22 +78,35 @@ describe('MarkdownTab', () => {
   });
 
   it('places Split in the right-side metadata actions', async () => {
-    const { container } = render(<MarkdownTab markdown={makeMarkdown()} onSplit={() => {}} />);
+    const { container } = renderTab({ onSplit: () => {} });
     await waitFor(() => screen.getByRole('heading', { level: 1 }));
 
     expect(container.querySelector(':scope .image-actions .tab-split')).not.toBeNull();
   });
 
+  it('renders no actions when the host supplies no split control', async () => {
+    const { container } = renderTab();
+    await waitFor(() => screen.getByRole('heading', { level: 1 }));
+
+    expect(container.querySelector(':scope .image-actions')).toBeNull();
+  });
+
   it('renders markdown content as HTML after fetch', async () => {
-    render(<MarkdownTab markdown={makeMarkdown()} />);
+    renderTab();
     await waitFor(() => {
       expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument();
     });
     expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Hello');
   });
 
+  it('falls back to a failure line when the fetch rejects', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('offline')));
+    renderTab();
+    await waitFor(() => expect(screen.getByText('Failed to load README.md')).toBeInTheDocument());
+  });
+
   it('ArrowDown increases scrollTop', async () => {
-    const { container } = render(<MarkdownTab markdown={makeMarkdown()} />);
+    const { container } = renderTab();
     await waitFor(() => screen.getByRole('heading', { level: 1 }));
     const stage = container.querySelector('.markdown-stage')! as HTMLElement;
     stage.scrollTop = 0;
@@ -77,7 +115,7 @@ describe('MarkdownTab', () => {
   });
 
   it('ArrowUp decreases scrollTop', async () => {
-    const { container } = render(<MarkdownTab markdown={makeMarkdown()} />);
+    const { container } = renderTab();
     await waitFor(() => screen.getByRole('heading', { level: 1 }));
     const stage = container.querySelector('.markdown-stage')! as HTMLElement;
     stage.scrollTop = 100;
@@ -86,7 +124,7 @@ describe('MarkdownTab', () => {
   });
 
   it('PageDown increases scrollTop', async () => {
-    const { container } = render(<MarkdownTab markdown={makeMarkdown()} />);
+    const { container } = renderTab();
     await waitFor(() => screen.getByRole('heading', { level: 1 }));
     const stage = container.querySelector('.markdown-stage')! as HTMLElement;
     stage.scrollTop = 0;
@@ -96,14 +134,14 @@ describe('MarkdownTab', () => {
   });
 
   it('ArrowDown/Up call preventDefault', async () => {
-    render(<MarkdownTab markdown={makeMarkdown()} />);
+    renderTab();
     await waitFor(() => screen.getByRole('heading', { level: 1 }));
     expect(fireKey('ArrowDown').defaultPrevented).toBe(true);
     expect(fireKey('ArrowUp').defaultPrevented).toBe(true);
   });
 
   it('PageUp/PageDown call preventDefault', async () => {
-    render(<MarkdownTab markdown={makeMarkdown()} />);
+    renderTab();
     await waitFor(() => screen.getByRole('heading', { level: 1 }));
     expect(fireKey('PageUp').defaultPrevented).toBe(true);
     expect(fireKey('PageDown').defaultPrevented).toBe(true);

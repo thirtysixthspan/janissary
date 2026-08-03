@@ -8,7 +8,7 @@
 open README.md
 ```
 
-The file is rendered as a document page — white background, dark text — with GitHub-flavored Markdown support: headings, lists, tables, task lists, fenced code blocks, blockquotes, and links. A header shows the file's name, size, and location. In the strip the tab is labeled `markdown` and carries a × close button. Both `.md` and `.markdown` files are recognized, and a wildcard like `open docs/*.md` opens each match in its own tab (see [Opening files and pages](/user-documentation/tab-types/opening-files)).
+The file is rendered as a document page — white background, dark text — with GitHub-flavored Markdown support: headings, lists, tables, task lists, fenced code blocks, blockquotes, and links. A header shows the file's name, size, and location. In the strip the tab is named after the file and carries a × close button. Both `.md` and `.markdown` files are recognized, and a wildcard like `open docs/*.md` opens each match in its own tab. Opening a file you already have a preview of focuses that tab instead of opening a second one (see [Opening files and pages](/user-documentation/tab-types/opening-files)).
 
 ![A markdown tab rendering a document: headings, a list, a table, and a highlighted code block on a white page.](/screenshots/markdown-tab.png)
 

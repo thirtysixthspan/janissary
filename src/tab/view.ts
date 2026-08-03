@@ -71,7 +71,6 @@ export function buildTabView(
     } : undefined,
     page: tab.page,
     harness: tab.harness,
-    markdown: tab.markdown,
     editor: tab.editor ? { ...tab.editor, path: shorten(tab.editor.path) } : undefined,
     // Deliberately NOT spreading `tab.editorDraft` here: the transient unsaved buffer is
     // server-only and must never be broadcast back to clients (see editor-live-buffer-sync plan).

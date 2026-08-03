@@ -7,8 +7,8 @@ import type { ProfileViewEntry } from './types.js';
 import type { Tab } from '../tab/types.js';
 import type { MainAreaCandidate } from './focus.js';
 
-// Opens the four tab kinds that carry no authored label — a bundled-plugin tab, markdown, page, and
-// ssh — by issuing the same command a user would type, then placing the resulting tab into its
+// Opens the three tab kinds that carry no authored label — a bundled-plugin tab, page, and ssh —
+// by issuing the same command a user would type, then placing the resulting tab into its
 // authored group and position. Modeled on `openProfileEditors`, except that a plugin opener resolves
 // through activation: every open is awaited, so the tab is available to place once `run` settles.
 
@@ -60,20 +60,12 @@ function buildTarget(entry: ProfileViewEntry, managers: Managers, issuingLabel: 
       preClose: true, subject: entry.destination, kind: 'ssh', run: () => managers.ssh.run(command),
     };
   }
-  case 'plugin': {
+  default: {
     const file = resolvePath(managers, issuingLabel, entry.path);
     return {
       matches: (tab) => tab.plugin?.id === entry.id && tab.plugin.instanceKey === file,
       preClose: false, subject: entry.path, kind: entry.id,
       run: () => managers.openFile.run(`open ${entry.path}`, issuingLabel),
-    };
-  }
-  default: {
-    const file = resolvePath(managers, issuingLabel, entry.path);
-    return {
-      matches: (tab) => tab.markdown?.path === file, preClose: true, subject: entry.path,
-      kind: 'markdown',
-      run: () => { managers.openFile.run(`open ${entry.path}`, issuingLabel); },
     };
   }
   }

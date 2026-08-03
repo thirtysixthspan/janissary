@@ -27,8 +27,6 @@ const MIME: Record<string, string> = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css',
   '.json': 'application/json', '.svg': 'image/svg+xml', '.ico': 'image/x-icon',
   '.woff2': 'font/woff2', '.map': 'application/json',
-  // Markdown files served via the `/open/<id>` route.
-  '.md': 'text/markdown; charset=utf-8', '.markdown': 'text/markdown; charset=utf-8',
   // Text types with their own registered MIME, served via the `/open/<id>` route (editor opener).
   '.mjs': 'text/javascript', '.cjs': 'text/javascript', '.xml': 'application/xml',
   '.csv': 'text/csv; charset=utf-8',
