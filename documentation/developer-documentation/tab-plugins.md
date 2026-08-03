@@ -68,7 +68,7 @@ Literal imports make the modules visible to TypeScript, Vite, Knip, and tests wh
 | `fileExtensions` | yes | Dot-prefixed extension to MIME type; use `undefined` for external-only formats |
 | `editGesture` | no | `open external` for a file-navigator edit activation |
 | `command` | no | One case-insensitive first-token command |
-| `capabilities` | yes | Requested names from the v1 server capability set |
+| `capabilities` | yes | Requested names from the v1 server capability set; the host grants only these |
 
 Core openers and commands have priority. Claims are unique, and commands may not use a built-in or reserved route name. A refused claim does not throw: the first plugin to claim a name keeps it, the loser contributes nothing and starts disabled with the reason, and the app still starts. Only a claimed `open` route or command activates server behavior.
 
@@ -98,6 +98,8 @@ The host supplies seven capabilities:
 - `openExternally(path, application?)` asks the OS to open a file.
 - `rejectRequest(reason)` answers one bad request without disabling the plugin.
 - `reportFailure(reason)` exits through the guarded failure boundary and disables the plugin.
+
+Your declaration decides which of them you actually get. A name it omits is still present on the capability object — the type is the whole contract — but calling it throws `used capability "<name>" without declaring it`, which crosses the failure boundary and disables the plugin. Declaring a capability you never call is harmless; calling one you never declared is a bug in your manifest, caught the first time that line runs. Keep the list to what you use.
 
 ## Contributing a command
 

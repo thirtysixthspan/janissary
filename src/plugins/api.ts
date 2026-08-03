@@ -11,6 +11,26 @@ export type TabPluginCapabilityName =
   | 'rejectRequest'
   | 'reportFailure';
 
+// The v1 capability set as data. Keyed by the union rather than written out as an array, so adding
+// a name to `TabPluginCapabilityName` without listing it here is a compile error instead of a
+// capability the host would then refuse as unknown. Used twice: to reject a declaration naming a
+// capability v1 does not define, and to hold a plugin to the set its own manifest asked for.
+const CAPABILITIES: Record<TabPluginCapabilityName, true> = {
+  note: true,
+  openOrFocusTab: true,
+  openClaimedFiles: true,
+  configuredViewer: true,
+  openExternally: true,
+  rejectRequest: true,
+  reportFailure: true,
+};
+
+export const TAB_PLUGIN_CAPABILITY_NAMES = Object.keys(CAPABILITIES) as TabPluginCapabilityName[];
+
+export function isTabPluginCapability(name: string): name is TabPluginCapabilityName {
+  return Object.hasOwn(CAPABILITIES, name);
+}
+
 // Thrown by the `rejectRequest` capability. A rejection answers one bad request — a malformed intent
 // payload, an unknown intent name, a missing command argument — and leaves the plugin running. It is
 // deliberately distinct from `reportFailure`, which says the plugin itself can no longer be trusted

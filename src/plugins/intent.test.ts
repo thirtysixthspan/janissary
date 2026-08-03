@@ -6,7 +6,8 @@ import { TabPluginHost } from './host.js';
 
 const declaration: TabPluginDeclaration = {
   id: 'fixture', version: '1.0.0', apiVersion: TAB_PLUGIN_API_VERSION,
-  payloadSchemaVersion: 1, tabLabelPrefix: 'fixture', fileExtensions: {}, capabilities: [],
+  payloadSchemaVersion: 1, tabLabelPrefix: 'fixture', fileExtensions: {},
+  capabilities: ['rejectRequest', 'reportFailure'],
 };
 
 function setup(intentHandler?: TabPluginActivation['intent']) {

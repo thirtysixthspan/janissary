@@ -6,6 +6,8 @@ Janissary can ship bundled plugins that contribute persistent view tabs, file op
 
 At startup the server reads a static catalog of declarations. A declaration supplies the plugin identity and version, required tab-plugin API version, payload schema version, tab label prefix, claimed file extensions and content types, optional file-navigator edit gesture, optional command, and requested capabilities. Discovery does not import server behavior or fetch a client chunk.
 
+The requested capabilities bound what a plugin can do. A plugin that names a capability the API does not define never activates, and one that uses a capability it did not request is disabled the first time it tries — so the declaration is an accurate description of a plugin's reach rather than a claim nothing checks.
+
 A plugin activates only when one of its declared routes is used:
 
 - `open <file>` or `open external <file>` resolves a claimed extension; or

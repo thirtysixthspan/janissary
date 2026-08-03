@@ -1,6 +1,8 @@
 import type { Managers } from '../managers.js';
-import type {
-  TabPluginActivation, TabPluginDeclaration, TabPluginLoaders, TabPluginServerCapabilities,
+import {
+  TabPluginRejection,
+  type TabPluginActivation, type TabPluginDeclaration, type TabPluginLoaders,
+  type TabPluginServerCapabilities,
 } from './api.js';
 import { activatePlugin, disposePluginActivation } from './activate.js';
 import { tabPluginCatalog } from './catalog.js';
@@ -70,9 +72,15 @@ export class TabPluginHost {
 
   async runCommand(id: string, command: string, origin: PluginFailureOrigin): Promise<void> {
     const argument = command.trim().replace(/^\S+\s*/u, '');
-    await this.runGuarded(id, origin, (activation, capabilities) => activation.command
-      ? activation.command(argument, capabilities)
-      : capabilities.rejectRequest(`Tab plugin "${id}" claims a command but provides no handler`));
+    await this.runGuarded(id, origin, (activation, capabilities) => {
+      // The host's own rejection, thrown directly rather than through the plugin's `rejectRequest`.
+      // Routing it through the capability would attribute it to a plugin that may not have declared
+      // that capability, turning a plain "no handler" answer into a capability violation.
+      if (!activation.command) {
+        throw new TabPluginRejection(`Tab plugin "${id}" claims a command but provides no handler`);
+      }
+      return activation.command(argument, capabilities);
+    });
   }
 
   async intent(tabLabel: string, intent: string, payload: unknown): Promise<unknown> {

@@ -8,7 +8,7 @@ import type {
   TabPluginLoaders,
   TabPluginServerCapabilities,
 } from './api.js';
-import { TAB_PLUGIN_API_VERSION } from './api.js';
+import { TAB_PLUGIN_API_VERSION, TAB_PLUGIN_CAPABILITY_NAMES } from './api.js';
 import { tabPluginCatalog } from './catalog.js';
 import { TabPluginHost } from './host.js';
 import { tabPluginLoaders } from './loaders.js';
@@ -20,7 +20,9 @@ function declaration(overrides: Partial<TabPluginDeclaration> = {}): TabPluginDe
   return {
     id: 'fixture', version: '1.0.0', apiVersion: TAB_PLUGIN_API_VERSION,
     payloadSchemaVersion: 1, tabLabelPrefix: 'fixture', fileExtensions: { '.fixture': 'text/plain' },
-    capabilities: [], ...overrides,
+    // These cases exercise the host, not capability narrowing, so the default declaration grants
+    // everything. `context.test.ts` owns the enforcement of a narrower one.
+    capabilities: TAB_PLUGIN_CAPABILITY_NAMES, ...overrides,
   };
 }
 

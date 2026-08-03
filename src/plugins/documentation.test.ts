@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { TAB_PLUGIN_CAPABILITY_NAMES } from './activate.js';
+import { TAB_PLUGIN_CAPABILITY_NAMES } from './api.js';
 import { fixtureV1Manifest } from './fixture-v1/manifest.js';
 
 // `documentation/developer-documentation/tab-plugins.md` presents itself as the authoritative
