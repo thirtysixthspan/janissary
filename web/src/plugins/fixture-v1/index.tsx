@@ -3,13 +3,12 @@ import type { FixturePayload } from '@shared/plugins/fixture-v1/shared';
 import type { TabPluginClientCapabilities } from '../api';
 
 function FixtureV1({
-  payload,
+  payload: fixture,
   capabilities,
 }: {
-  payload: unknown;
+  payload: FixturePayload;
   capabilities: TabPluginClientCapabilities;
 }) {
-  const fixture = payload as FixturePayload;
   return <div data-resource={capabilities.resourceUrl(fixture.resource)}>{fixture.text}</div>;
 }
 

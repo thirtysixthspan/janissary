@@ -114,4 +114,46 @@ describe('TabPluginHost intent routing', () => {
     await expect(fixture.host.intent('fixture', 'echo', {}))
       .rejects.toThrow('Unknown tab plugin "ghost"');
   });
+
+  // An intent result is replied to a waiting client, so unlike an opener or a command an intent
+  // handler may not simply fall off its last line: `undefined` is not JSON. This is the one place
+  // where "return nothing" is a plugin bug rather than a plugin finishing quietly, which is why
+  // `plugins-tabs.md` and the API reference both say to return `null` instead.
+  it('treats an intent that returns nothing as an invalid result, not a quiet success', async () => {
+    // A handler that simply falls off its last line, which is exactly the mistake being pinned.
+    const fixture = setup(() => {});
+    await expect(fixture.host.intent('fixture', 'echo', {}))
+      .rejects.toThrow('Tab plugin "fixture" disabled: produced an invalid intent result.');
+    expect(fixture.host.statusFor('fixture')).toMatchObject({ state: 'disabled' });
+  });
+
+  it('accepts null as the answer of an intent with nothing to report', async () => {
+    const fixture = setup(() => null);
+    await expect(fixture.host.intent('fixture', 'open-external', {})).resolves.toBeNull();
+    expect(fixture.host.statusFor('fixture')).toMatchObject({ state: 'active' });
+  });
+
+  it('returns the recorded reason when activation itself failed', async () => {
+    const managers = {
+      tab: {
+        tabs: [
+          { label: 'janus', dotColor: '#fff', log: [] },
+          {
+            label: 'fixture', dotColor: '#123', log: [],
+            plugin: {
+              id: 'fixture', instanceKey: 'k', schemaVersion: 1, payload: {}, fileRefs: [],
+              sourceLabel: 'janus',
+            },
+          },
+        ],
+        append: vi.fn(), closeTab: vi.fn(),
+      },
+    } as unknown as Managers;
+    const host = new TabPluginHost(managers, [declaration], {
+      fixture: async () => { throw new Error('chunk missing'); },
+    });
+
+    await expect(host.intent('fixture', 'echo', {}))
+      .rejects.toThrow('Tab plugin "fixture" disabled: chunk missing.');
+  });
 });

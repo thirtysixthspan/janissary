@@ -46,11 +46,13 @@ Declarations contain data, never executable predicates or top-level side effects
 
 The stable instance key is checked synchronously before the payload factory runs. The factory is the only place to call `resources.registerFile(path)`. This ordering prevents reopening a tab from leaking a second allow-list reference and lets the host release every reference owned by a closing tab. A factory returns `{ title, payload }`; the title must be nonempty and the payload must pass the activation's guard and JSON-compatibility check.
 
-Resolution is first match by file extension or declared command token. Core entries precede plugin adapters. Each user-initiated invocation is awaited; separate invocations may overlap, while files within one wildcard open run sequentially in sorted order. Returning nothing means the handler completed without opening a tab and is not an error.
+Resolution is first match by file extension or declared command token. Core entries precede plugin adapters. Each user-initiated invocation is awaited; separate invocations may overlap, while files within one wildcard open run sequentially in sorted order.
+
+An opener or command that returns nothing completed without opening a tab, which is not an error. An intent is the exception: its result is sent to the waiting client, so it must return a JSON-compatible value. Returning `undefined` — which is what a handler that falls off its last line returns — is treated as a produced-invalid-result failure and disables the plugin. An intent with nothing to report returns `null`.
 
 ## Client contract
 
-The client entry default-exports a React component accepting `{ payload, capabilities }` and named-exports `isPayload`. The registry creates one `React.lazy` type at module scope; never create it during a render. The host checks the envelope schema and the entry guard before plugin behavior renders.
+The client entry default-exports a React component accepting `{ payload, capabilities }` and named-exports `isPayload`. Write that guard as a type predicate: the registry infers the payload type from it and hands the component a value already narrowed, so no plugin asserts a type its own guard has already proven. The registry creates one `React.lazy` type at module scope; never create it during a render. The host checks the envelope schema and the entry guard before plugin behavior renders.
 
 `TabPluginClientCapabilities` exposes exactly four things:
 

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import type { Managers } from '../managers.js';
+import type { Tab } from '../tab/types.js';
 import type {
   TabPluginActivation,
   TabPluginDeclaration,
@@ -271,6 +272,173 @@ describe('TabPluginHost activation', () => {
     await host.runOpener('fixture', 'inline', '/tmp/a.fixture', origin);
     host.dispose();
     host.dispose();
+    expect(dispose).toHaveBeenCalledOnce();
+  });
+
+  it('refuses a payload schema version that is not a positive integer', async () => {
+    const { append, managers } = makeManagers();
+    const host = new TabPluginHost(
+      managers, [declaration({ payloadSchemaVersion: 0 })],
+      { fixture: loader(activation()) } as TabPluginLoaders,
+    );
+    await host.runOpener('fixture', 'inline', '/tmp/a.fixture', origin);
+    expect(host.statusFor('fixture')).toMatchObject({
+      state: 'disabled', reason: 'payload schema version must be a positive integer',
+    });
+    expect(append).toHaveBeenCalledWith('janus', expect.objectContaining({
+      output: 'Tab plugin "fixture" disabled: payload schema version must be a positive integer.',
+    }));
+  });
+
+  // A declared plugin with no loader entry cannot happen in production — `loaders.ts` is checked
+  // against the catalog at compile time and again by the parity test above. It disables the plugin
+  // through the ordinary failure path anyway, so the compile-time check is not the only thing
+  // standing between a mistake here and an unexplained crash.
+  it('disables a declared plugin that has no loader rather than throwing', async () => {
+    const { managers } = makeManagers();
+    const host = new TabPluginHost(managers, [declaration()], {});
+    await host.runOpener('fixture', 'inline', '/tmp/a.fixture', origin);
+    expect(host.statusFor('fixture')).toMatchObject({
+      state: 'disabled', reason: 'has no server loader',
+    });
+  });
+
+  it('discards an activation that finishes after shutdown instead of enabling it', async () => {
+    const { managers } = makeManagers();
+    const dispose = vi.fn();
+    const release = Promise.withResolvers<void>();
+    const host = new TabPluginHost(managers, [declaration()], {
+      fixture: async () => {
+        await release.promise;
+        return { activate: () => activation({ dispose }) };
+      },
+    });
+
+    const running = host.runOpener('fixture', 'inline', '/tmp/a.fixture', origin);
+    host.dispose();
+    release.resolve();
+    await running;
+
+    expect(host.statusFor('fixture')).toMatchObject({ state: 'declared' });
+    expect(dispose).toHaveBeenCalledOnce();
+  });
+
+  it('reports the first reason when a second failure follows a disablement', async () => {
+    const { append, managers } = makeManagers();
+    const host = new TabPluginHost(managers, [declaration()], {
+      fixture: loader(activation({
+        opener: {
+          external: () => {},
+          inline: () => { throw new Error('first failure'); },
+        },
+      })),
+    });
+
+    await host.runOpener('fixture', 'inline', '/tmp/a.fixture', origin);
+    append.mockClear();
+    await host.runOpener('fixture', 'inline', '/tmp/b.fixture', origin);
+
+    expect(host.statusFor('fixture')).toMatchObject({ state: 'disabled', reason: 'first failure' });
+    expect(append).toHaveBeenCalledWith('janus', expect.objectContaining({
+      output: 'Tab plugin "fixture" disabled: first failure.',
+    }));
+  });
+
+  it('rejects a request naming a plugin the catalog never declared', async () => {
+    const { managers } = makeManagers();
+    const host = new TabPluginHost(managers, [declaration()], { fixture: loader(activation()) });
+    await expect(host.runOpener('ghost', 'inline', '/tmp/a.fixture', origin))
+      .rejects.toThrow('Unknown tab plugin "ghost"');
+    await expect(host.runCommand('ghost', 'ghost arg', origin))
+      .rejects.toThrow('Unknown tab plugin "ghost"');
+  });
+
+  it('answers a client failure report for a tab no plugin owns', () => {
+    const { managers } = makeManagers();
+    const host = new TabPluginHost(managers, [declaration()], { fixture: loader(activation()) });
+    expect(() => { host.clientFailed('janus', 'render exploded'); })
+      .toThrow('Plugin tab "janus" not found');
+    expect(() => { host.clientFailed('nowhere', 'render exploded'); })
+      .toThrow('Plugin tab "nowhere" not found');
+  });
+
+  it('answers a client failure report naming a plugin the catalog never declared', () => {
+    const { managers } = makeManagers();
+    managers.tab.tabs.push({
+      label: 'ghost-1', plugin: { id: 'ghost', sourceLabel: 'janus' },
+    } as unknown as Tab);
+    const host = new TabPluginHost(managers, [declaration()], { fixture: loader(activation()) });
+    expect(() => { host.clientFailed('ghost-1', 'render exploded'); })
+      .toThrow('Unknown tab plugin "ghost"');
+  });
+
+  // The queued open runs after the guarded call returns, which leaves a window: a shutdown in
+  // between must cancel it rather than start opening files for a host that is going away.
+  it('drops queued claimed opens when the host shuts down mid-call', async () => {
+    const { managers, runAs } = makeManagers();
+    const release = Promise.withResolvers<void>();
+    const host = new TabPluginHost(managers, [declaration({ command: 'fixture' })], {
+      fixture: loader(activation({
+        command: async (argument, capabilities) => {
+          capabilities.openClaimedFiles(argument);
+          if (argument === 'held.fixture') await release.promise;
+        },
+      })),
+    });
+
+    // Activate first, so the shutdown below lands after the guarded call rather than during
+    // activation — otherwise this would pass for the wrong reason.
+    await host.runCommand('fixture', 'fixture first.fixture', origin);
+    expect(runAs).toHaveBeenCalledOnce();
+
+    const running = host.runCommand('fixture', 'fixture held.fixture', origin);
+    host.dispose();
+    release.resolve();
+    await running;
+
+    expect(runAs).toHaveBeenCalledOnce();
+  });
+
+  it('drops a rejection whose originating transcript has already closed', async () => {
+    const { append, managers } = makeManagers();
+    const host = new TabPluginHost(managers, [declaration()], {
+      fixture: loader(activation({
+        opener: {
+          external: () => {},
+          inline: (_file, capabilities) => capabilities.rejectRequest('not a fixture file'),
+        },
+      })),
+    });
+
+    await host.runOpener('fixture', 'inline', '/tmp/a.fixture', { label: 'gone', command: 'open' });
+
+    expect(append).not.toHaveBeenCalled();
+    expect(host.statusFor('fixture')).toMatchObject({ state: 'active' });
+  });
+
+  // Two calls can be in flight against one plugin, so both can fail. The second must not overwrite
+  // the recorded reason, re-close tabs, or dispose an activation the first already released.
+  it('keeps the first reason when two in-flight calls fail together', async () => {
+    const { managers } = makeManagers();
+    const dispose = vi.fn();
+    let attempt = 0;
+    const host = new TabPluginHost(managers, [declaration()], {
+      fixture: loader(activation({
+        dispose,
+        opener: {
+          external: () => {},
+          inline: () => { throw new Error(`failure ${++attempt}`); },
+        },
+      })),
+    });
+
+    await Promise.all([
+      host.runOpener('fixture', 'inline', '/tmp/a.fixture', origin),
+      host.runOpener('fixture', 'inline', '/tmp/b.fixture', origin),
+    ]);
+
+    expect(attempt).toBe(2);
+    expect(host.statusFor('fixture')).toMatchObject({ state: 'disabled', reason: 'failure 1' });
     expect(dispose).toHaveBeenCalledOnce();
   });
 });

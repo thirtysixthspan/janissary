@@ -8,7 +8,7 @@ import {
   type TabPluginDeclaration,
   type TabPluginServerCapabilities,
 } from './api.js';
-import { createPluginContext } from './context.js';
+import { createPluginContext, isJsonCompatible } from './context.js';
 import { TabPluginHost } from './host.js';
 
 const origin = { label: 'janus', command: 'fixture' };
@@ -31,12 +31,16 @@ function makeManagers() {
   return { append, managers };
 }
 
-function contextFor(capabilities: readonly TabPluginCapabilityName[]): TabPluginServerCapabilities {
+function contextFor(
+  capabilities: readonly TabPluginCapabilityName[],
+  isEnabled: () => boolean = () => true,
+  openRequests: string[] = [],
+): TabPluginServerCapabilities {
   const activation: TabPluginActivation = {
     isPayload: () => true, intent: () => null, opener: { inline: () => {}, external: () => {} },
   };
   return createPluginContext(
-    makeManagers().managers, declaration(capabilities), activation, origin, () => true,
+    makeManagers().managers, declaration(capabilities), activation, origin, isEnabled, openRequests,
   );
 }
 
@@ -96,5 +100,136 @@ describe('declared capability enforcement', () => {
     expect(append).toHaveBeenCalledWith('janus', expect.objectContaining({
       output: 'Tab plugin "fixture" disabled: used capability "openOrFocusTab" without declaring it.',
     }));
+  });
+});
+
+// Everything a plugin produces — a tab payload, an intent result — is broadcast or replied to as
+// JSON. Values JavaScript is happy with but JSON is not would be silently rewritten in transit, so
+// the host refuses them at the boundary rather than letting a client receive something else.
+describe('isJsonCompatible', () => {
+  it('accepts the JSON value space, including nesting', () => {
+    expect(isJsonCompatible(null)).toBe(true);
+    expect(isJsonCompatible('text')).toBe(true);
+    expect(isJsonCompatible(false)).toBe(true);
+    expect(isJsonCompatible(0)).toBe(true);
+    expect(isJsonCompatible([1, 'two', { three: [true, null] }])).toBe(true);
+    expect(isJsonCompatible({ nested: { deeper: ['ok'] } })).toBe(true);
+  });
+
+  it('refuses numbers that JSON cannot round-trip', () => {
+    expect(isJsonCompatible(NaN)).toBe(false);
+    expect(isJsonCompatible(Infinity)).toBe(false);
+    expect(isJsonCompatible({ size: NaN })).toBe(false);
+    expect(isJsonCompatible([1, -Infinity])).toBe(false);
+  });
+
+  it('refuses values with no JSON representation at all', () => {
+    expect(isJsonCompatible(undefined)).toBe(false);
+    expect(isJsonCompatible(1n)).toBe(false);
+    expect(isJsonCompatible(() => {})).toBe(false);
+    expect(isJsonCompatible(Symbol('nope'))).toBe(false);
+  });
+
+  // Serializing one of these throws rather than producing wrong output, so the walk has to notice
+  // the cycle itself instead of recursing until the stack runs out.
+  it('refuses a cycle without recursing forever', () => {
+    const circular: Record<string, unknown> = { name: 'loop' };
+    circular.self = circular;
+    expect(isJsonCompatible(circular)).toBe(false);
+
+    const viaArray: unknown[] = ['first'];
+    viaArray.push(viaArray);
+    expect(isJsonCompatible(viaArray)).toBe(false);
+  });
+
+  it('accepts the same value appearing twice without calling it a cycle', () => {
+    const shared = { shared: true };
+    expect(isJsonCompatible({ left: shared, right: shared })).toBe(true);
+    expect(isJsonCompatible([shared, shared])).toBe(true);
+  });
+});
+
+// Capabilities are revoked the moment a plugin stops being the host's live plugin — after a timeout
+// it lost, after disablement, after shutdown. A handler that kept running does not get to keep
+// acting through the object it was handed.
+describe('capability revocation', () => {
+  it('turns side-effecting capabilities into no-ops once the plugin is no longer enabled', () => {
+    const { managers } = makeManagers();
+    const openRequests: string[] = [];
+    const revoked = createPluginContext(
+      managers,
+      declaration(TAB_PLUGIN_CAPABILITY_NAMES),
+      { isPayload: () => true, intent: () => null, opener: { inline: () => {}, external: () => {} } },
+      origin,
+      () => false,
+      openRequests,
+    );
+
+    revoked.note('too late');
+    revoked.openOrFocusTab('key', () => ({ title: 'late', payload: {} }));
+    revoked.openClaimedFiles('clip.fixture');
+
+    expect(managers.tab.append).not.toHaveBeenCalled();
+    expect(managers.tab.openPluginTab).not.toHaveBeenCalled();
+    expect(openRequests).toEqual([]);
+    expect(revoked.configuredViewer()).toBe('');
+    expect(revoked.openExternally('/tmp/clip.fixture')).toBe(false);
+  });
+
+  it('drops a note and a tab whose originating transcript has already closed', () => {
+    const { managers } = makeManagers();
+    managers.tab.tabs.length = 0;
+    const orphaned = createPluginContext(
+      managers,
+      declaration(TAB_PLUGIN_CAPABILITY_NAMES),
+      { isPayload: () => true, intent: () => null, opener: { inline: () => {}, external: () => {} } },
+      origin,
+      () => true,
+    );
+
+    orphaned.note('nobody is listening');
+    orphaned.openOrFocusTab('key', () => ({ title: 'orphan', payload: {} }));
+    expect(managers.tab.append).not.toHaveBeenCalled();
+    expect(managers.tab.openPluginTab).not.toHaveBeenCalled();
+  });
+
+  // The title is the tab's display identity, so an empty one would leave a tab the user cannot name
+  // in the strip. Both this and the payload guard run inside the factory wrapper, before the host
+  // has created anything — so the tab manager here has to actually call the factory to reach them.
+  it('refuses a tab title that is empty or only whitespace', () => {
+    const { managers } = makeManagers();
+    const openPluginTab = vi.fn((
+      _id: string, _prefix: string, _key: string, _schema: number, _source: string,
+      factory: (resources: { registerFile(file: string): string }) => unknown,
+    ) => { factory({ registerFile: () => '/open/ref' }); });
+    managers.tab.openPluginTab = openPluginTab as unknown as typeof managers.tab.openPluginTab;
+    const capabilities = createPluginContext(
+      managers,
+      declaration(TAB_PLUGIN_CAPABILITY_NAMES),
+      { isPayload: () => true, intent: () => null, opener: { inline: () => {}, external: () => {} } },
+      origin,
+      () => true,
+    );
+
+    expect(() => { capabilities.openOrFocusTab('key', () => ({ title: '', payload: {} })); })
+      .toThrow('produced an empty tab title');
+    expect(() => { capabilities.openOrFocusTab('key', () => ({ title: '\t\n ', payload: {} })); })
+      .toThrow('produced an empty tab title');
+    expect(() => { capabilities.openOrFocusTab('key', () => ({ title: 'fine', payload: {} })); })
+      .not.toThrow();
+  });
+
+  it('queues a claimed open for the host rather than running it inside the guarded call', () => {
+    const openRequests: string[] = [];
+    const capabilities = contextFor(TAB_PLUGIN_CAPABILITY_NAMES, () => true, openRequests);
+    capabilities.openClaimedFiles('~/clips/*.fixture');
+    expect(openRequests).toEqual(['~/clips/*.fixture']);
+  });
+
+  it('reports a thrown non-Error as a failure without losing what it said', () => {
+    const capabilities = contextFor(TAB_PLUGIN_CAPABILITY_NAMES);
+    expect(() => capabilities.reportFailure('plain string reason')).toThrow('plain string reason');
+    expect(() => capabilities.reportFailure(new Error('already an error')))
+      .toThrow('already an error');
   });
 });

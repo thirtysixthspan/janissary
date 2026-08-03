@@ -95,6 +95,9 @@ export type TabPluginActivation = {
   // Runs the plugin's declared command with everything after the first token. Required only when the
   // declaration claims a command name.
   command?(argument: string, capabilities: TabPluginServerCapabilities): void | Promise<void>;
+  // The result is sent to the waiting client, so it must be JSON-compatible. Unlike an opener or a
+  // command, an intent may not fall off its last line: `undefined` is not JSON, so the host treats it
+  // as an invalid produced result and disables the plugin. Return `null` when there is nothing to say.
   intent(request: TabPluginIntent, capabilities: TabPluginServerCapabilities): unknown | Promise<unknown>;
   isPayload(value: unknown): boolean;
   dispose?(): void | Promise<void>;
@@ -112,5 +115,7 @@ export type { PluginFailedRequest, PluginIntentRequest, PluginTabView } from '..
 // Resolution: core openers and commands resolve first, then one plugin contribution by exact
 // extension or case-insensitive first token. Ordering: duplicate claims are rejected, so array
 // position never breaks a tie. Async: each handler is awaited under its call budget and separate
-// invocations may overlap. An empty return means the handler completed without opening a tab.
-// Failure: a `rejectRequest` throw answers one bad request; anything else disables the plugin.
+// invocations may overlap. An empty return from an opener or a command means the handler completed
+// without opening a tab; an intent must return a JSON-compatible value instead, since its result is
+// sent to a waiting client. Failure: a `rejectRequest` throw answers one bad request; anything else
+// disables the plugin.

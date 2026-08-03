@@ -150,18 +150,22 @@ export { ExampleTab as default } from './ExampleTab';
 export { isExamplePayload as isPayload } from '@shared/plugins/example/shared';
 ```
 
-The component receives unknown `payload` only after the registry wrapper has validated it, plus:
+Write the shared guard as a type predicate — `(value: unknown): value is ExamplePayload` — because the registry infers your payload type from it. Your component then declares `payload: ExamplePayload` and receives it already validated, rather than taking `unknown` and asserting its way back to a type the guard had already proven.
+
+The component receives `payload` only after the registry wrapper has validated it, plus:
 
 - `resourceUrl(reference)` for an authenticated `/open/` URL;
 - `intent<Result>(name, payload)` bound to this tab;
 - `splitAction`, a ready-rendered host action or `null`; and
-- `reportFailure(reason)` for an unrecoverable client-contract failure.
+- `reportFailure(reason)` for an unrecoverable client-contract failure. Only the first report per plugin is sent, whichever tab or code path raises it, so calling it from your own component is safe alongside the failures the host detects for you.
 
 It never receives `JanusClient` or imports host UI internals. The host owns the `.tab-body`, focus border, visibility, split placement, loading fallback, and error boundary. Every v1 plugin tab remains mounted while hidden.
 
 ## Intents and validation
 
 `pluginIntent` sends `{ tab, intent, payload }`. The host looks up plugin identity and authoritative tab payload from the server's open-tab record, then calls the activated plugin. The request needs no schema field because the record already owns the versioned payload. Validate the intent payload and tab payload in the plugin before using either.
+
+Return a JSON-compatible value. An intent result travels back to a waiting client, so unlike an opener or a command it may not simply fall off the end of the handler: `undefined` is not JSON, and the host treats it as a produced-invalid-result failure that disables the plugin. Return `null` when the intent has nothing to report — this is what the video plugin's `open-external` does.
 
 `pluginFailed` sends `{ tab, reason }`. It is for load, schema, validation, timeout, and render failures that make the plugin unusable—not ordinary domain outcomes a component can render, such as an unsupported video codec.
 

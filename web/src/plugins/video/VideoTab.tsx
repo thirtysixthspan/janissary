@@ -13,10 +13,9 @@ import { useVideoShot } from './useVideoShot';
 // codec inside an `.mp4`, a corrupt file). That replaces the player with a short message and a
 // button handing the file to the configured external player. Nothing launches on its own.
 export function VideoTab({
-  payload,
+  payload: video,
   capabilities,
-}: { payload: unknown; capabilities: TabPluginClientCapabilities }) {
-  const video = payload as VideoPayload;
+}: { payload: VideoPayload; capabilities: TabPluginClientCapabilities }) {
   const [failed, setFailed] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const { capture, saved, busy } = useVideoShot(videoRef, capabilities);

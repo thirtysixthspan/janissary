@@ -1,6 +1,7 @@
 import React from 'react';
 import type { JanusClient } from '../ws';
 import { SplitTabButton } from '../SplitTabButton';
+import { disableClientPlugin } from './registry';
 
 export type TabPluginClientCapabilities = {
   resourceUrl(reference: string): string;
@@ -10,6 +11,7 @@ export type TabPluginClientCapabilities = {
 };
 
 export function createPluginClientCapabilities(
+  pluginId: string,
   label: string,
   client: JanusClient,
   onSplit?: () => void,
@@ -28,7 +30,13 @@ export function createPluginClientCapabilities(
       return result;
     },
     splitAction: onSplit ? React.createElement(SplitTabButton, { onClick: onSplit }) : null,
+    // The report is deduplicated here rather than in the layer above, so the one-report-per-plugin
+    // rule covers a plugin component reporting its own failure — a bad intent result, say — and not
+    // just the load, schema, timeout, and render failures the host detects for it. The first report
+    // disables the plugin for this session; the server then closes its tabs, and any later report
+    // from a component still finishing its work is dropped instead of racing the teardown.
     reportFailure: (reason) => {
+      if (!disableClientPlugin(pluginId, reason)) return;
       client.send({ method: 'pluginFailed', params: { tab: label, reason } });
     },
   };

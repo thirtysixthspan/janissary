@@ -86,4 +86,33 @@ describe('useVideoShot', () => {
     await act(async () => { result.current.capture(); });
     expect(capabilities.reportFailure).toHaveBeenCalledWith('invalid capture-frame result');
   });
+
+  // A browser that refuses a 2d context has nothing to draw the frame onto. That is a limitation of
+  // the page, not a broken plugin, so the capture stops silently rather than crossing the failure
+  // boundary and disabling video for the session.
+  it('gives up quietly when the canvas has no 2d context', async () => {
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
+    const { capabilities, intent, result } = setup(makeVideoElement(640, 480));
+    await act(async () => { result.current.capture(); });
+    expect(intent).not.toHaveBeenCalled();
+    expect(capabilities.reportFailure).not.toHaveBeenCalled();
+  });
+
+  it('restarts the confirmation window when a second capture lands inside the first', async () => {
+    vi.useFakeTimers();
+    const names = ['clip.shot-1.png', 'clip.shot-2.png'];
+    const intent = vi.fn(async () => ({ name: names.shift() }));
+    const { result } = setup(makeVideoElement(640, 480), intent);
+
+    await act(async () => { result.current.capture(); });
+    act(() => { vi.advanceTimersByTime(3000); });
+    await act(async () => { result.current.capture(); });
+    expect(result.current.saved).toBe('clip.shot-2.png');
+
+    // The first capture's timer would have fired here had the second not replaced it.
+    act(() => { vi.advanceTimersByTime(1500); });
+    expect(result.current.saved).toBe('clip.shot-2.png');
+    act(() => { vi.advanceTimersByTime(2500); });
+    expect(result.current.saved).toBeNull();
+  });
 });

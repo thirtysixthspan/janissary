@@ -88,6 +88,15 @@ describe('tab plugin content types', () => {
     expect(accepted.map((opener) => opener.name)).toEqual(['first']);
     expect(pluginContentTypes(declarations, accepted)).toEqual({ '.same': 'type/first' });
   });
+
+  // Composition walks accepted openers, and core's are accepted openers too. Only entries that trace
+  // back to a declaration may name a content type, so passing the whole registry cannot let a plugin
+  // table quietly claim `.png` on core's behalf.
+  it('ignores an accepted opener that no declaration owns', () => {
+    const declarations = [manifest('fixture', { fileExtensions: { '.fixture': 'text/plain' } })];
+    const accepted = [core, ...createPluginOpeners(declarations, [core])];
+    expect(pluginContentTypes(declarations, accepted)).toEqual({ '.fixture': 'text/plain' });
+  });
 });
 
 describe('tab plugin command adapter', () => {
@@ -123,5 +132,28 @@ describe('tab plugin command adapter', () => {
 
   it('does not register the frozen fixture in production', () => {
     expect(commands.map((command) => command.name)).not.toContain('fixture-v1');
+  });
+
+  // `command` is optional. A plugin that only claims extensions contributes an opener and nothing
+  // else, and must not reserve a name or land an unrunnable entry in the command registry.
+  it('contributes no command for a declaration that claims none', () => {
+    const built = createPluginCommands([
+      manifest('opener-only'),
+      manifest('with-command', { command: 'fixture' }),
+    ], []);
+    expect(built.map((command) => command.name)).toEqual(['fixture']);
+    expect(contributionRejection('opener-only')).toBeUndefined();
+  });
+});
+
+describe('rejection ledger', () => {
+  // The first conflict is the one a reader would hit and fix, so a plugin refused twice keeps
+  // reporting that one instead of whichever registry happened to be built last.
+  it('keeps the first reason recorded for a plugin', () => {
+    createPluginOpeners([manifest('both', { fileExtensions: { '.core': 'text/plain' } })], [{
+      name: 'core', extensions: ['.core'], inline: () => {}, external: () => {},
+    }]);
+    createPluginCommands([manifest('both', { command: 'help' })], []);
+    expect(contributionRejection('both')).toBe('duplicate tab plugin extension claim ".core"');
   });
 });

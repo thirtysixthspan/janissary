@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { FIXTURE_PAYLOAD_SCHEMA_VERSION } from '@shared/plugins/fixture-v1/shared';
 import type { TabPluginClientCapabilities } from '../api';
 import {
+  clientPlugin,
   clientPluginLoaders,
   clientPluginRegistry,
   createClientPluginRegistry,
@@ -44,10 +45,7 @@ describe('frozen client tab plugin API v1 fixture', () => {
   it('loads the fixture through the same stable lazy wrapper contract', async () => {
     const mounted = vi.fn();
     const registry = createClientPluginRegistry({
-      'fixture-v1': {
-        schemaVersion: FIXTURE_PAYLOAD_SCHEMA_VERSION,
-        loader: () => import('./index'),
-      },
+      'fixture-v1': clientPlugin(FIXTURE_PAYLOAD_SCHEMA_VERSION, () => import('./index')),
     });
     const Component = registry.get('fixture-v1')!.Component;
     render(

@@ -1,13 +1,13 @@
 import React from 'react';
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TabView } from '@shared/protocol';
 import type { JanusClient } from '../ws';
 import { PluginTabLayer } from './PluginTabLayer';
 import {
   clearClientPluginFailures,
+  clientPlugin,
   clientPluginRegistry,
-  createClientPluginRegistry,
   type ClientPluginLoader,
   type ClientPluginRegistration,
 } from './registry';
@@ -31,8 +31,13 @@ function client() {
 }
 
 function registration(loader: ClientPluginLoader): ClientPluginRegistration {
-  return createClientPluginRegistry({ fixture: { schemaVersion: 1, loader } }).get('fixture')!;
+  return clientPlugin(1, loader);
 }
+
+// The entry guard these cases are not exercising. A real one narrows to its plugin's payload type;
+// this one accepts every payload the host would actually hand it, so a test about chunk loading or
+// rendering fails for its own reason rather than for a payload the fixture never cared about.
+const acceptsAnyPayload = (value: unknown): value is unknown => value !== undefined;
 
 function properties(view: TabView, value: JanusClient, visible = true) {
   return { tab: view, index: 2, current: view, visible, client: value };
@@ -62,14 +67,14 @@ describe('PluginTabLayer lazy lifecycle', () => {
 
     release({
       default: () => <div>fixture mounted</div>,
-      isPayload: () => true,
+      isPayload: acceptsAnyPayload,
     });
     await waitFor(() => { expect(screen.getByText('fixture mounted')).toBeInTheDocument(); });
     expect(fixture.send).not.toHaveBeenCalled();
   });
 
   it('reports a schema mismatch once and never invokes the loader', async () => {
-    const load = vi.fn(async () => ({ default: () => <div />, isPayload: () => true }));
+    const load = vi.fn(async () => ({ default: () => <div />, isPayload: acceptsAnyPayload }));
     registry.set('fixture', registration(load));
     const fixture = client();
     const view = tab('fixture', 2);
@@ -132,7 +137,7 @@ describe('PluginTabLayer lazy lifecycle', () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
     const ThrowingPlugin = () => { throw new Error('render exploded'); };
     registry.set('fixture', registration(async () => ({
-      default: ThrowingPlugin, isPayload: () => true,
+      default: ThrowingPlugin, isPayload: acceptsAnyPayload,
     })));
     const fixture = client();
     render(<PluginTabLayer {...properties(tab(), fixture.value)} />);
@@ -142,14 +147,101 @@ describe('PluginTabLayer lazy lifecycle', () => {
     });
   });
 
+  // The entry guard is the last thing between a host-produced payload and plugin code that will
+  // index straight into it. A schema version can match while the payload behind it is still wrong —
+  // a plugin bug, or a manifest whose version was never bumped — so this path has to contain rather
+  // than let the component throw somewhere less specific.
+  it('contains a payload the entry guard rejects, without rendering the component', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const Plugin = vi.fn(() => <div>never rendered</div>);
+    registry.set('fixture', registration(async () => ({
+      default: Plugin, isPayload: (value): value is unknown => value === 'expected',
+    })));
+    const fixture = client();
+    const view = tab();
+    const rendered = render(<PluginTabLayer {...properties(view, fixture.value)} />);
+
+    await waitFor(() => { expect(fixture.send).toHaveBeenCalledOnce(); });
+    expect(fixture.send).toHaveBeenCalledWith({
+      method: 'pluginFailed', params: { tab: 'fixture', reason: 'invalid plugin payload' },
+    });
+    expect(Plugin).not.toHaveBeenCalled();
+    rendered.rerender(<PluginTabLayer {...properties(view, fixture.value)} />);
+    expect(fixture.send).toHaveBeenCalledOnce();
+  });
+
+  it('renders without a split action when the host offers no split', async () => {
+    registry.set('fixture', registration(async () => ({
+      default: ({ capabilities }) => <div>split:{String(capabilities.splitAction)}</div>,
+      isPayload: acceptsAnyPayload,
+    })));
+    const fixture = client();
+    render(<PluginTabLayer {...properties(tab(), fixture.value)} onSplit={undefined} />);
+    await waitFor(() => { expect(screen.getByText('split:null')).toBeInTheDocument(); });
+    expect(fixture.send).not.toHaveBeenCalled();
+  });
+
+  // The plugin renders the node but never owns the handler, and the layer rebuilds `onSplit` on
+  // every render — so the split must reach the current handler without the capability object
+  // changing identity underneath a mounted plugin.
+  it('hands through a split action that calls the host\'s current handler', async () => {
+    registry.set('fixture', registration(async () => ({
+      default: ({ capabilities }) => <div data-testid="body">{capabilities.splitAction}</div>,
+      isPayload: acceptsAnyPayload,
+    })));
+    const fixture = client();
+    const view = tab();
+    const first = vi.fn();
+    const second = vi.fn();
+    const rendered = render(
+      <PluginTabLayer {...properties(view, fixture.value)} onSplit={first} />,
+    );
+    await waitFor(() => { expect(screen.getByTitle('Split')).toBeInTheDocument(); });
+
+    rendered.rerender(<PluginTabLayer {...properties(view, fixture.value)} onSplit={second} />);
+    fireEvent.click(screen.getByTitle('Split'));
+
+    expect(first).not.toHaveBeenCalled();
+    expect(second).toHaveBeenCalledOnce();
+  });
+
+  // The deadline covers the chunk and the first mount together, so a plugin that mounted in time
+  // must not be disabled when the timer it shared with the chunk import finally fires.
+  it('lets the shared deadline pass quietly once the plugin has mounted', async () => {
+    const controller = new AbortController();
+    vi.spyOn(AbortSignal, 'timeout').mockReturnValue(controller.signal);
+    registry.set('fixture', registration(async () => ({
+      default: () => <div>fixture mounted</div>, isPayload: acceptsAnyPayload,
+    })));
+    const fixture = client();
+    render(<PluginTabLayer {...properties(tab(), fixture.value)} />);
+    await waitFor(() => { expect(screen.getByText('fixture mounted')).toBeInTheDocument(); });
+
+    act(() => { controller.abort(); });
+
+    expect(fixture.send).not.toHaveBeenCalled();
+    expect(screen.getByText('fixture mounted')).toBeInTheDocument();
+  });
+
+  // The layer still owns the frame for a tab whose envelope has not arrived: the element and its
+  // border stay put so nothing in the split grid reflows, and no plugin is blamed for the gap.
+  it('renders the host frame and nothing else for a tab with no envelope', () => {
+    const fixture = client();
+    const view: TabView = { ...tab(), plugin: undefined };
+    const { container } = render(<PluginTabLayer {...properties(view, fixture.value)} />);
+
+    const body = container.querySelector('.tab-body');
+    expect(body).toBeInTheDocument();
+    expect(body).toBeEmptyDOMElement();
+    expect(fixture.send).not.toHaveBeenCalled();
+  });
+
   it('isolates one failed plugin from another plugin layer', async () => {
     const GoodPlugin = () => <div>good plugin</div>;
-    registry.set('good', createClientPluginRegistry({
-      good: {
-        schemaVersion: 1,
-        loader: async () => ({ default: GoodPlugin, isPayload: () => true }),
-      },
-    }).get('good')!);
+    registry.set('good', clientPlugin(
+      1,
+      async () => ({ default: GoodPlugin, isPayload: acceptsAnyPayload }),
+    ));
     const fixture = client();
     const bad = tab('bad');
     const good = tab('good');

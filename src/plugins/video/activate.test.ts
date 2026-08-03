@@ -137,6 +137,24 @@ describe('video plugin intents', () => {
     expect(existsSync(path.join(dir, 'client-choice.shot-1.png'))).toBe(false);
   });
 
+  // The in-app player showing an undecodable container is a normal video outcome, not a failure, so
+  // the fallback is an explicit user action routed back through the plugin's own external handler —
+  // the server picks the player, and the intent answers `null` because there is nothing to report.
+  it('hands an unplayable video to the configured player on the external intent', () => {
+    const fixture = fakeCapabilities({ player: 'VLC' });
+    const tabPayload = {
+      name: 'clip.mp4', path: '/tmp/clip.mp4', size: '5 B', url: '/open/allowed', player: 'VLC',
+    };
+
+    const result = activate().intent(
+      { tab: 'video', intent: 'open-external', payload: {}, tabPayload }, fixture.capabilities,
+    );
+
+    expect(result).toBeNull();
+    expect(fixture.external).toHaveBeenCalledWith('/tmp/clip.mp4', 'VLC');
+    expect(fixture.notes).toEqual(['Opening clip.mp4 in VLC…']);
+  });
+
   it('answers malformed and unknown intents with a rejection, not a plugin failure', () => {
     const fixture = fakeCapabilities();
     const tabPayload = {
