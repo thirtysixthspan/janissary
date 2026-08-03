@@ -121,9 +121,14 @@ function undoCopyPaste(
     toStack.push({ mode: group.mode, pairs: successful });
     rebuild();
   }
+  return pasteReplayResult(group.pairs, failed);
+}
+
+// Shared tail of an undo/redo replay: reports how many pairs were replayed and which failed.
+function pasteReplayResult(pairs: PastePair[], failed: Set<PastePair>): UndoRedoResult {
   return {
-    total: group.pairs.length,
-    failedPaths: group.pairs.filter((pair) => failed.has(pair)).map((pair) => pair.to),
+    total: pairs.length,
+    failedPaths: pairs.filter((pair) => failed.has(pair)).map((pair) => pair.to),
   };
 }
 
@@ -195,8 +200,5 @@ export function applyStackPaste(
     toStack.push({ mode: group.mode, pairs: group.pairs.filter((pair) => successful.has(pair)) });
     rebuild();
   }
-  return {
-    total: group.pairs.length,
-    failedPaths: group.pairs.filter((pair) => failed.has(pair)).map((pair) => pair.to),
-  };
+  return pasteReplayResult(group.pairs, failed);
 }
