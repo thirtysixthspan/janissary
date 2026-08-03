@@ -1,13 +1,12 @@
 import React from 'react';
 import type { TabView } from '@shared/protocol';
 import type { JanusClient } from './ws';
-import { MarkdownTab } from './MarkdownTab';
 import { FileNavigatorTab } from './FileNavigatorTab';
 import { NotificationsTab } from './NotificationsTab';
 import { SchedulesTab } from './SchedulesTab';
 import { tabBodyBorder } from './tab-body-border';
 
-// Renders the body for markdown, file navigator, and notifications view tabs. Harness, editor,
+// Renders the body for file navigator, notifications, and schedules view tabs. Harness, editor,
 // page, and plugin tabs are rendered separately in App (via MountedViewLayers) because they must all stay
 // mounted simultaneously — for xterm state, editor buffer, embedded-page navigation, and video
 // playback preservation across tab switches; monitor tabs are reporting tabs, rendered in the
@@ -20,9 +19,6 @@ export function ViewTabBody({
   active?: boolean; onSplit?: () => void;
 }) {
   const border = { borderLeft: tabBodyBorder(tab.dotColor, active) };
-  if (tab.view === 'markdown' && tab.markdown) {
-    return <div className="tab-body" style={border}><MarkdownTab key={tab.markdown.url} markdown={tab.markdown} active={active} onSplit={onSplit} /></div>;
-  }
   if (tab.view === 'files' && tab.files) {
     return <div className="tab-body" style={border}><FileNavigatorTab files={tab.files} client={client} index={index} onSplit={onSplit} /></div>;
   }

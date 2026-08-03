@@ -21,19 +21,6 @@ function makeTabManager(): TabManager {
   return managers.tab;
 }
 
-describe('TabOpeningState.openMarkdownTab', () => {
-  it('adds a new markdown tab and makes it active', () => {
-    const tm = makeTabManager();
-    const before = tm.tabs.length;
-
-    tm.openMarkdownTab({ name: 'notes.md', path: '/tmp/notes.md', size: '1 KB', url: '/open/1' });
-
-    expect(tm.tabs.length).toBe(before + 1);
-    expect(tm.activeTab).toBe(tm.tabs.length - 1);
-    expect(tm.tabs[tm.activeTab].markdown?.path).toBe('/tmp/notes.md');
-  });
-});
-
 describe('TabOpeningState.openPluginTab', () => {
   const openClip = (tm: TabManager, factory = vi.fn((registerFile: (path: string) => string) => ({
     title: 'clip.mp4',

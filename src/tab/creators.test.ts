@@ -1,13 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { makeEditorTab, makeMarkdownTab, makePluginTab, makeTab } from './index.js';
+import { makeEditorTab, makePluginTab, makeTab } from './index.js';
 import {
-  addEditorTab, addMarkdownTab, addPluginTab,
-  uniqueEditorLabel, uniqueMarkdownLabel, uniquePluginLabel,
+  addEditorTab, addPluginTab,
+  uniqueEditorLabel, uniquePluginLabel,
 } from './creators.js';
-import type { EditorView, MarkdownView, PluginTabRecord } from './types.js';
+import type { EditorView, PluginTabRecord } from './types.js';
 
 const view: EditorView = { name: 'notes.txt', path: '/tmp/notes.txt', size: '5 B', url: '/open/1' };
-const markdownView: MarkdownView = { name: 'readme.md', path: '/tmp/readme.md', size: '5 B', url: '/open/1' };
 const plugin: PluginTabRecord = {
   id: 'video', instanceKey: '/tmp/clip.mp4', schemaVersion: 1,
   payload: { name: 'clip.mp4', url: '/open/1' }, fileRefs: ['1'], sourceLabel: 'janus',
@@ -67,34 +66,6 @@ describe('addEditorTab', () => {
     const long: EditorView = { name: 'very-long-config-file-name-that-is-too-long.json', path: '/tmp/long.json', size: '1 kB', url: '/open/2' };
     const tabs = [makeTab('janus', '#fff')];
     const result = addEditorTab(tabs, 0, long);
-    const added = result.tabs[result.activeTab];
-    expect(added.title).toBe(long.name);
-  });
-});
-
-describe('uniqueMarkdownLabel', () => {
-  it('suffixes the label when markdown tabs already exist', () => {
-    const tabs = [makeTab('janus', '#fff'), makeMarkdownTab('markdown', '#fff', 2, 1, '#fff', markdownView)];
-    expect(uniqueMarkdownLabel(tabs)).toBe('markdown-2');
-  });
-});
-
-describe('addMarkdownTab', () => {
-  it('adds the tab to the creator group and focuses it', () => {
-    const tabs = [makeTab('janus', '#fff')];
-    const result = addMarkdownTab(tabs, 0, markdownView);
-    expect(result.tabs).toHaveLength(2);
-    const added = result.tabs[result.activeTab];
-    expect(added.label).toBe('markdown');
-    expect(added.group).toBe(1);
-    expect(added.markdown).toEqual(markdownView);
-    expect(added.title).toBe('readme.md');
-  });
-
-  it('retains a long filename as the complete tab title', () => {
-    const long: MarkdownView = { name: 'very-long-config-file-name-that-is-too-long.md', path: '/tmp/long.md', size: '1 kB', url: '/open/2' };
-    const tabs = [makeTab('janus', '#fff')];
-    const result = addMarkdownTab(tabs, 0, long);
     const added = result.tabs[result.activeTab];
     expect(added.title).toBe(long.name);
   });

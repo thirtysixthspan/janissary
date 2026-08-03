@@ -152,26 +152,26 @@ describe('OpenFileManager.newDirectory', () => {
 });
 
 describe('OpenFileManager.run', () => {
-  it('opens a markdown file inline via the markdown opener', () => {
+  it('routes a markdown file inline to the markdown plugin opener', async () => {
     const dir = mkdtempSync(path.join(tmpdir(), 'janus-run-'));
     writeFileSync(path.join(dir, 'readme.md'), '# Hello', 'utf8');
-    const opened: { name: string; path: string }[] = [];
+    const runOpener = vi.fn();
     const managers = {
       tab: {
         cwdOf: () => dir,
         launchDir: dir,
         append: () => {},
-        openMarkdownTab: (view: { name: string; path: string }) => { opened.push(view); },
         registerFile: (p: string) => `/open/test-${p.length}`,
       },
+      plugins: { runOpener },
     } as unknown as Managers;
     const mgr = new OpenFileManager(managers);
 
-    mgr.run('open readme.md', 'janus');
+    await mgr.run('open readme.md', 'janus');
 
-    expect(opened).toHaveLength(1);
-    expect(opened[0].path).toBe(path.join(dir, 'readme.md'));
-    expect(opened[0].name).toBe('readme.md');
+    expect(runOpener).toHaveBeenCalledWith(
+      'markdown', 'inline', path.join(dir, 'readme.md'), { label: 'janus', command: 'open readme.md' },
+    );
   });
 
   // A plugin's declared command reaches the same pipeline as `open`, but pinned to its own opener.

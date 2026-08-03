@@ -4,7 +4,6 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { openerForExtension, openers } from './index.js';
 import { opener as editor, openInEditor, EDITOR_MAX_BYTES } from './editor.js';
-import { opener as markdown } from './markdown.js';
 import type { OpenContext } from './index.js';
 import type { EditorView } from '../tab/types.js';
 
@@ -13,7 +12,6 @@ function fakeContext(overrides: Partial<OpenContext> = {}) {
   const opened: EditorView[] = [];
   const context: OpenContext = {
     note: (t) => { notes.push(t); },
-    openMarkdownTab: () => {},
     openEditorTab: (v) => { opened.push(v); },
     openPageTab: () => {},
     registerFile: (p) => `/open/test-${p.length}`,
@@ -37,8 +35,8 @@ describe('opener registry', () => {
     expect(openerForExtension('.yaml')).toBe(editor);
   });
 
-  it('leaves markdown to the markdown opener', () => {
-    expect(openerForExtension('.md')).toBe(markdown);
+  it('leaves markdown to the markdown plugin opener', () => {
+    expect(openerForExtension('.md')?.name).toBe('markdown');
   });
 
   it('has the editor opener registered', () => {

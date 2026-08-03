@@ -1,4 +1,4 @@
-import type { MarkdownView, EditorView, PageView } from '../tab/types.js';
+import type { EditorView, PageView } from '../tab/types.js';
 
 // Capabilities an opener may use, supplied by the dispatcher (the Controller). Kept deliberately
 // narrow so an opener can only use its declared presentation capabilities and never reaches into
@@ -7,8 +7,6 @@ import type { MarkdownView, EditorView, PageView } from '../tab/types.js';
 export type OpenContext = {
   // Append a confirmation/error line to the originating tab's transcript.
   note: (text: string) => void;
-  // Create and focus an in-app markdown view tab.
-  openMarkdownTab: (view: MarkdownView) => void;
   // Create and focus an in-app plain-text editor tab.
   openEditorTab: (view: EditorView) => void;
   // Create and focus an in-app embedded web page tab.

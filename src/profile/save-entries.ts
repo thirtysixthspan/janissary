@@ -4,7 +4,7 @@ import { SYNC_WORKSPACE_NAME } from '../git-sync.js';
 import type { Tab } from '../tab/types.js';
 import type {
   ProfileAgentTabFile, ProfileEditorTabFile, ProfileFilesTabFile, ProfileHarnessTabFile,
-  ProfileMarkdownTabFile, ProfilePageTabFile, ProfilePluginTabFile, ProfileSshTabFile,
+  ProfilePageTabFile, ProfilePluginTabFile, ProfileSshTabFile,
   ProfileTabPresentation,
 } from './types.js';
 import type { TreeSelection } from '../file-navigator/selection-request.js';
@@ -116,11 +116,6 @@ export function writePluginEntry(tab: Tab, managers: Managers): ProfilePluginTab
     type: 'plugin', id: tab.plugin.id, path: portablePath(tab.plugin.instanceKey, managers),
     ...presentation(tab, managers),
   };
-}
-
-export function writeMarkdownEntry(tab: Tab, managers: Managers): ProfileMarkdownTabFile | undefined {
-  if (!tab.markdown) return undefined;
-  return { type: 'markdown', path: portablePath(tab.markdown.path, managers), ...presentation(tab, managers) };
 }
 
 export function writePageEntry(tab: Tab, managers: Managers): ProfilePageTabFile | undefined {

@@ -1,6 +1,6 @@
 # Open
 
-The `open` command is a **dispatcher** for handling targets — local files and web addresses: it inspects the target, picks the opener that handles it, and hands the target to it. Every type is handled by its own **opener**; the dispatcher itself knows only enough to tell a **web address** from a **file** and route each to its opener. Core openers handle Markdown, text files, and embedded web pages; bundled tab plugins contribute the rest, currently images and video.
+The `open` command is a **dispatcher** for handling targets — local files and web addresses: it inspects the target, picks the opener that handles it, and hands the target to it. Every type is handled by its own **opener**; the dispatcher itself knows only enough to tell a **web address** from a **file** and route each to its opener. Core openers handle text files and embedded web pages; bundled tab plugins contribute the rest, currently Markdown, images, and video.
 
 ### Open for extension, closed for modification
 
@@ -112,7 +112,7 @@ In a file navigator, the gesture that normally forces the plain-text editor is i
 
 ## Markdown opener
 
-The Markdown opener claims the `.md` and `.markdown` extensions (case-insensitive) and implements both presentations.
+The Markdown opener is contributed by the bundled markdown tab plugin (see [[tab-plugins]]). It claims the `.md` and `.markdown` extensions (case-insensitive) and implements both presentations.
 
 ### `open external <file>.md`
 
@@ -120,7 +120,7 @@ Hands the file to the operating system's default viewer, launched detached so it
 
 ### `open <file>.md` — markdown tab
 
-Opens the file in a **markdown tab**: a non-agent view tab that renders the file's text as formatted Markdown (headings, lists, tables, fenced code, blockquotes, links) colored by the active application theme, with no command bar. The new tab is created and focused like an agent tab (placed within the active tab's group, distinct dot color); it is a live, in-memory view and is not persisted or restored on `--relaunch`. The markdown tab — its layout, scrolling controls, the tab-strip name and close button, how it is closed, and how its text is served — is described in [[markdown-tab]].
+Opens the file in a **markdown tab**: a non-agent view tab that renders the file's text as formatted Markdown (headings, lists, tables, fenced code, blockquotes, links) colored by the active application theme, with no command bar. The new tab is created and focused like an agent tab (placed within the active tab's group, distinct dot color); it is a live, in-memory view and is not persisted or restored on `--relaunch`. Opening a file that already has a markdown tab focuses that tab rather than opening a second one. The markdown tab — its layout, scrolling controls, the tab-strip name and close button, how it is closed, and how its text is served — is described in [[markdown-tab]].
 
 ---
 

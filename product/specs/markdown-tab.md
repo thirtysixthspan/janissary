@@ -7,27 +7,35 @@ and command bar, and it is controlled by direct interaction (scrolling) rather t
 It behaves like an image tab (see Image Tab) — same lifecycle and tab-strip treatment — differing
 only in what fills the body and how that body is navigated.
 
+The markdown view is contributed by a **bundled tab plugin** rather than by the application core (see
+[[tab-plugins]]). Nothing about the view changes because of that: the same file types open the same
+way, and the plugin is present in every build.
+
 A markdown tab is created like an agent tab (see Tabs) — placed contiguously within the active
 tab's group, inheriting that group's number and bar color and taking a distinct dot color. Focus
 moves to the new markdown tab.
 
 Unlike an agent tab, a markdown tab has no shell, agent session, browser, transcript, or command
 history, and no persisted agent state. It is a **live, in-memory view** — like image tabs and
-browser windows (see Browser), it is not saved and is not restored on `--relaunch`. The rendered
+browser windows (see Browser), it is not saved and is not restored on `--relaunch`. A profile can
+still capture one and reopen it on launch (see [[profiles]]). The rendered
 content is a snapshot of the file as it was when opened; later edits to the file on disk are not
 reflected until it is opened again.
 
 ### Recognized files
 
-The Markdown opener claims the `.md` and `.markdown` extensions (case-insensitive). `open <file>.md`
+The Markdown plugin claims the `.md` and `.markdown` extensions (case-insensitive). `open <file>.md`
 mounts a markdown tab; `open external <file>.md` instead hands the file to the operating system's
 default viewer, with no tab created (see Open). A path that matches a wildcard opens each matching
-Markdown file in its own tab, subject to the shared `open` cap on the number of files.
+Markdown file in its own tab, subject to the shared `open` cap on the number of files. Opening a file
+that already has a markdown tab focuses that tab instead of opening a second one, as it does for
+every other plugin view.
 
 ### Markdown tab data
 
-A markdown tab is distinguished from an ordinary tab by a **view kind** marking it as a markdown
-view. Alongside it the tab carries the data the view needs:
+A markdown tab is distinguished from an ordinary tab by a **view kind** marking it as a plugin view,
+together with the identity of the plugin that owns it. Alongside it the tab carries the data the
+view needs:
 
 - **name** — the file's name.
 - **location** — the file's full path.
@@ -66,8 +74,8 @@ The markdown view shows, stacked top to bottom:
 The file's text is rendered the same way ACP replies are (see Markdown Rendering): parsed to HTML
 with `marked` (GitHub-flavored Markdown — tables, fenced code, task lists), then **sanitized** with
 `DOMPurify` before insertion so any active markup is stripped, and inserted as HTML. On a parse
-failure the body falls back to showing the file's plain text. This rendering path is shared with the
-transcript's Markdown so the two stay consistent.
+failure the body falls back to showing the file's plain text. The rendering matches the transcript's
+Markdown — same parser, same options, same sanitizing — so the two stay consistent.
 
 Relative links to other local files (for example an image referenced as `./diagram.png`) are not
 resolved — only the Markdown text itself is rendered.
@@ -88,7 +96,8 @@ rest of the app's chrome:
 The rendered Markdown scrolls within the tab body, with a visible scrollbar. Unlike an image tab,
 there is no zoom or panning — the view only scrolls vertically.
 
-**Scroll controls**, active while the markdown tab is showing:
+**Scroll controls**, active only while the markdown tab is the one on screen — a markdown tab hidden
+behind another tab, or in the other split pane, ignores them:
 
 - **↑ / ↓ arrows** — scroll up / down by a small step (a line).
 - **Page Up / Page Down** — scroll up / down by roughly one visible page.
@@ -102,9 +111,9 @@ not persisted or restored on `--relaunch`.
 In the tab strip a markdown tab reads exactly like an ordinary tab — same dot, group bar, active
 highlight, and ordering — with two differences:
 
-- **Name.** The tab's name is always `markdown` (the file name is shown in the tab's metadata
-  header, not in the strip). Per [[tab-label-no-markers]], no type or status marker is appended —
-  the name only.
+- **Name.** The tab's name is the file's name, while its internal label stays distinct (`markdown`,
+  `markdown-2`, …) so several markdown tabs can coexist. Per [[tab-label-no-markers]], no type or
+  status marker is appended — the name only.
 - **Close button.** A close control is shown right-aligned within the tab, immediately after the
   name. Clicking it removes that tab without first selecting it; the click does not also trigger tab
   selection. The close button is specific to view tabs (agent tabs continue to close via the

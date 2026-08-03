@@ -73,8 +73,8 @@ function harnessProblems(value: Record<string, unknown>, loc: string): string[] 
 }
 
 // The eleven kinds of tab a profile may declare. Listed once, so the dispatcher's default arm and
-// the message it produces cannot drift apart. `image` is the pre-plugin spelling of a `plugin`
-// entry with id `image` and stays accepted so a saved profile keeps launching.
+// the message it produces cannot drift apart. `image` and `markdown` are the pre-plugin spellings of
+// a `plugin` entry with that id and stay accepted so a saved profile keeps launching.
 const TAB_TYPES: string[] = [
   'agent', 'harness', 'editor', 'files', 'notifications', 'schedules', 'plugin', 'image', 'markdown', 'page', 'ssh',
 ];
@@ -154,7 +154,7 @@ function schedulesProblems(value: Record<string, unknown>, loc: string): string[
   return checkDock(value, loc);
 }
 
-// An image or markdown entry names the file it opens; neither authors a label.
+// A legacy image or markdown entry names the file it opens; neither authors a label.
 function pathProblems(value: Record<string, unknown>, loc: string): string[] {
   return checkField(value, 'path', 'string', loc, true);
 }

@@ -32,7 +32,7 @@ function makeManagers(): Managers {
 // Two tabs in two groups, focus left on the first. Returns the label of the group 1 tab, which is
 // the one an `open` command would have been typed into.
 function twoGroups(managers: Managers): string {
-  managers.tab.openMarkdownTab({ name: 'a.md', path: '/tmp/a.md', size: '1 KB', url: '/open/1' });
+  managers.tab.openEditorTab({ name: 'a.txt', path: '/tmp/a.txt', size: '1 KB', url: '/open/1' });
   managers.tab.tabs[1].group = 2;
   managers.tab.tabs[1].groupColor = '#222222';
   managers.tab.setActiveTab(0);
@@ -87,8 +87,8 @@ describe('plugin tab grouping', () => {
   it('falls back to the active tab when the originating tab has since closed', async () => {
     const managers = makeManagers();
     const originLabel = twoGroups(managers);
-    managers.tab.openMarkdownTab({ name: 'b.md', path: '/tmp/b.md', size: '1 KB', url: '/open/2' });
-    const survivor = managers.tab.tabs.find((tab) => tab.markdown?.path === '/tmp/b.md')!;
+    managers.tab.openEditorTab({ name: 'b.txt', path: '/tmp/b.txt', size: '1 KB', url: '/open/2' });
+    const survivor = managers.tab.tabs.find((tab) => tab.editor?.path === '/tmp/b.txt')!;
     survivor.group = 2;
     survivor.groupColor = '#222222';
 

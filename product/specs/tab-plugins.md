@@ -59,6 +59,10 @@ A disabled plugin owns no tabs. Failure before mount leaves no tab or served-fil
 
 Image is a bundled plugin like any other: it contributes the common raster and vector image extensions and their content types, and both presentations of `open`. It declares no command and no file-navigator edit gesture, so `open <image>` and `open external <image>` behave exactly as they always have and a shift-activated image row still opens in the text editor. It answers no intents; the view's zoom, pan, and orientation are entirely client-side. See [[image-tab]] and [[open]].
 
+### Bundled markdown plugin
+
+Markdown is a bundled plugin like any other: it contributes the `.md` and `.markdown` extensions and their content type, and both presentations of `open`. It declares no command and no file-navigator edit gesture, so `open <file>.md` and `open external <file>.md` behave as they always have and a plainly activated Markdown row still opens in the text editor. It answers no intents; the view's scroll position is entirely client-side. Reopening a file that already has a markdown tab focuses that tab, the same de-duplication every plugin view gets. See [[markdown-tab]] and [[open]].
+
 ### Bundled video plugin
 
 Video is the first production tab plugin. It contributes the common video extensions, the file-navigator external-open gesture, and `video <path>`. `video <path>` follows the same path parsing, wildcard expansion, existence checks, transcript provenance, deduplication, and playable-versus-external behavior as `open <video-file>`. See [[video-tab]] and [[open]].

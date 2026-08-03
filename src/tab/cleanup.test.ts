@@ -91,16 +91,6 @@ describe('closeTabResources', () => {
     emitSpy.mockRestore();
   });
 
-  it('drops a markdown tab\'s open-file entry', () => {
-    const managers = makeManagers();
-    const tab = { ...makeTab('markdown', 'red'), markdown: { name: 'readme.md', path: '/tmp/readme.md', size: '1 KB', url: '/open/xyz' } };
-    const openFiles = new Map([['xyz', '/tmp/readme.md']]);
-
-    closeTabResources(tab, managers, openFiles, new Map(), new Map(), 2);
-
-    expect(openFiles.has('xyz')).toBe(false);
-  });
-
   it('drops every plugin-owned reference and leaves unrelated references', () => {
     const managers = makeManagers();
     const tab = {

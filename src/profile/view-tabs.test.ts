@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { openProfileViewTabs } from './view-tabs.js';
-import { makeTab, makePluginTab, makeMarkdownTab, makePageTab, makeHarnessTab } from '../tab/index.js';
+import { makeTab, makePluginTab, makePageTab, makeHarnessTab } from '../tab/index.js';
 import type { Managers } from '../managers.js';
 import type { Tab } from '../tab/types.js';
 
@@ -11,6 +11,14 @@ function imageTab(label: string, number: number, path: string): Tab {
     id: 'image', instanceKey: path, schemaVersion: 1,
     payload: { name: 'a.png', path, size: '1KB', url: '/open/1' },
     fileRefs: ['1'], sourceLabel: 'janus',
+  });
+}
+
+function markdownTab(label: string, number: number, path: string): Tab {
+  return makePluginTab(label, 'blue', number, 1, 'blue', 'a.md', {
+    id: 'markdown', instanceKey: path, schemaVersion: 1,
+    payload: { name: 'a.md', path, size: '1KB', url: '/open/2' },
+    fileRefs: ['2'], sourceLabel: 'janus',
   });
 }
 
@@ -30,14 +38,14 @@ function makeManagers(initial: Tab[]): {
       append(makePageTab(`page-${tabs.length}`, 'blue', tabs.length + 1, 1, 'blue', { url: target, domain: 'example.com', number: 1 }));
       return;
     }
-    if (target.endsWith('.md')) {
-      append(makeMarkdownTab(`md-${tabs.length}`, 'blue', tabs.length + 1, 1, 'blue', { name: 'a.md', path: target, size: '1KB', url: '/open/1' }));
-      return;
-    }
     await Promise.resolve();
     if (target.endsWith('.missing')) return;
     const existing = tabs.find((t) => t.plugin?.instanceKey === target);
     if (existing) { activeTab = tabs.indexOf(existing); return; }
+    if (target.endsWith('.md')) {
+      append(markdownTab(`markdown-${tabs.length}`, tabs.length + 1, target));
+      return;
+    }
     append(imageTab(`image-${tabs.length}`, tabs.length + 1, target));
   });
   const ssh = vi.fn((command: string) => {
@@ -70,7 +78,7 @@ describe('openProfileViewTabs', () => {
 
     const opened = await openProfileViewTabs([
       { type: 'plugin', id: 'image', path: '$root/a.png' },
-      { type: 'markdown', path: '$root/a.md' },
+      { type: 'plugin', id: 'markdown', path: '$root/a.md' },
       { type: 'page', url: 'https://example.com/' },
       { type: 'ssh', destination: 'host', options: ['-p', '2222'] },
     ], managers, 'janus', 1, identityColor, []);
@@ -79,7 +87,7 @@ describe('openProfileViewTabs', () => {
     expect(open).toHaveBeenCalledWith('open $root/a.md', 'janus');
     expect(open).toHaveBeenCalledWith('open https://example.com/', 'janus');
     expect(ssh).toHaveBeenCalledWith('ssh host -p 2222');
-    expect(opened.map((c) => c.label)).toEqual(['image-1', 'md-2', 'page-3', 'ssh-4']);
+    expect(opened.map((c) => c.label)).toEqual(['image-1', 'markdown-2', 'page-3', 'ssh-4']);
   });
 
   it('carries the authored number, focus, and pane into the launch candidate', async () => {
@@ -112,26 +120,40 @@ describe('openProfileViewTabs', () => {
     ]);
   });
 
-  it('closes an already-open markdown, page, or ssh tab first, leaving exactly one of each', async () => {
+  it('closes an already-open page or ssh tab first, leaving exactly one of each', async () => {
     const janus = makeTab('janus', 'red', 1, [], [], undefined, 1, 'red');
-    const readme = makeMarkdownTab('readme', 'blue', 2, 1, 'blue', { name: 'a.md', path: '/proj/a.md', size: '1KB', url: '/open/1' });
     const site = makePageTab('site', 'blue', 3, 1, 'blue', { url: 'https://example.com/', domain: 'example.com', number: 1 });
     const server = makeHarnessTab('server', 'blue', 4, 1, 'blue', { name: 'ssh', program: 'ssh', ptyId: 'p', status: 'running', destination: 'host' });
-    const { managers } = makeManagers([janus, readme, site, server]);
+    const { managers } = makeManagers([janus, site, server]);
     const notes: string[] = [];
 
     await openProfileViewTabs([
-      { type: 'markdown', path: '$root/a.md' },
       { type: 'page', url: 'https://example.com/' },
       { type: 'ssh', destination: 'host' },
     ], managers, 'janus', 1, identityColor, notes);
 
-    expect(managers.tab.tabs.filter((t) => t.markdown)).toHaveLength(1);
     expect(managers.tab.tabs.filter((t) => t.page)).toHaveLength(1);
     expect(managers.tab.tabs.filter((t) => t.harness?.name === 'ssh')).toHaveLength(1);
-    expect(notes).toContain('Relaunched "readme".');
     expect(notes).toContain('Relaunched "site".');
     expect(notes).toContain('Relaunched "server".');
+  });
+
+  // A markdown preview tab is a plugin tab like any other: reopening the same file focuses the tab
+  // already showing it rather than closing and reopening it.
+  it('reuses an already-open markdown tab on the same path', async () => {
+    const janus = makeTab('janus', 'red', 1, [], [], undefined, 1, 'red');
+    const readme = markdownTab('readme', 2, '/proj/a.md');
+    const { managers } = makeManagers([janus, readme]);
+    const notes: string[] = [];
+
+    const opened = await openProfileViewTabs(
+      [{ type: 'plugin', id: 'markdown', path: '$root/a.md' }],
+      managers, 'janus', 1, identityColor, notes,
+    );
+
+    expect(managers.tab.tabs.filter((t) => t.plugin)).toHaveLength(1);
+    expect(opened.map((c) => c.label)).toEqual(['readme']);
+    expect(notes).not.toContain('Relaunched "readme".');
   });
 
   it('reuses an already-open plugin tab on the same path, and still places it in its authored group', async () => {

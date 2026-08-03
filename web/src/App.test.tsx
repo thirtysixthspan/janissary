@@ -509,7 +509,7 @@ describe('App search on Cmd+F', () => {
   it('does not open search on Cmd+F when the tab is a view tab', async () => {
     const { App } = await import('./App');
     const { container } = render(<App />);
-    act(() => { stateListener!([makeTab({ view: 'markdown' })], 0, null, 16, [], 'github-dark', 'dark', []); });
+    act(() => { stateListener!([makeTab({ view: 'files' })], 0, null, 16, [], 'github-dark', 'dark', []); });
     fireEvent.keyDown(globalThis as unknown as Window, { key: 'f', metaKey: true });
     expect(container.querySelector('.search-bar')).toBeNull();
   }, 15_000);

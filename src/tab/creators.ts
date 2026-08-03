@@ -1,15 +1,15 @@
-import type { Tab, PluginTabRecord, MarkdownView, EditorView, PageView, FileNavigatorView } from './types.js';
+import type { Tab, PluginTabRecord, EditorView, PageView, FileNavigatorView } from './types.js';
 import {
-  makePluginTab, makeMarkdownTab, makeEditorTab, makePageTab, makeFilesTab, makeNotificationsTab, makeSchedulesTab, distinctColor, insertTabInGroup,
+  makePluginTab, makeEditorTab, makePageTab, makeFilesTab, makeNotificationsTab, makeSchedulesTab, distinctColor, insertTabInGroup,
 } from './index.js';
 import { NOTIFICATIONS_LABEL } from '../notifications-tab.js';
 import { SCHEDULES_LABEL } from '../schedules-tab.js';
 import {
-  uniquePluginLabel, uniqueMarkdownLabel, uniqueEditorLabel, uniqueFilesLabel, uniquePageNumber,
+  uniquePluginLabel, uniqueEditorLabel, uniqueFilesLabel, uniquePageNumber,
 } from './unique-labels.js';
 
 export {
-  uniquePluginLabel, uniqueMarkdownLabel, uniqueEditorLabel, uniqueFilesLabel, uniquePageNumber,
+  uniquePluginLabel, uniqueEditorLabel, uniqueFilesLabel, uniquePageNumber,
 } from './unique-labels.js';
 
 type TabAndActive = { tabs: Tab[]; activeTab: number };
@@ -32,15 +32,6 @@ export function addPluginTab(
   return finalizeTab(tabs, tab, label, title);
 }
 
-export function addMarkdownTab(tabs: Tab[], activeTab: number, view: MarkdownView): TabAndActive {
-  const creator = tabs[activeTab];
-  const label = uniqueMarkdownLabel(tabs);
-  const dotColor = distinctColor(tabs.map((t) => t.dotColor));
-  const group = creator?.group ?? 1;
-  const groupColor = creator?.groupColor ?? dotColor;
-  const tab = makeMarkdownTab(label, dotColor, tabs.length + 1, group, groupColor, view);
-  return finalizeTab(tabs, tab, label, view.name);
-}
 
 export function addEditorTab(tabs: Tab[], activeTab: number, view: EditorView): TabAndActive {
   const creator = tabs[activeTab];

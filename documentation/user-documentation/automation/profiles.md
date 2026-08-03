@@ -64,7 +64,7 @@ Use an `editor` entry to open a file directly in the in-app editor when the prof
 
 Each has a required `path`, optional resolving tab `in`, and optional cursor `line`. `$root` resolves from the launch directory and `~` from home; another relative path resolves from `in` or the first newly opened profile tab. A missing file opens an empty buffer and is created only on save. Relaunching reuses an already-open editor tab for the same file and moves its cursor to the requested line.
 
-The `plugin`, `markdown`, `page`, and `ssh` types reopen the rest of a working session — a diagram or video, a spec you keep reading, a docs site, a remote box:
+The `plugin`, `page`, and `ssh` types reopen the rest of a working session — a diagram or video, a spec you keep reading, a docs site, a remote box:
 
 ```json
 { "type": "plugin", "id": "image", "path": "$root/docs/architecture.png", "number": 4 },
@@ -72,9 +72,9 @@ The `plugin`, `markdown`, `page`, and `ssh` types reopen the rest of a working s
 { "type": "ssh", "destination": "devbox", "options": ["-p", "2222"], "number": 6 }
 ```
 
-A `plugin` entry names the built-in viewer that owns the tab — `image` or `video` — plus the file it was opened on, and is what `profile save` writes for an open image or video tab. The older `{ "type": "image", "path": … }` spelling still launches exactly the same way, so profiles you saved before are unaffected.
+A `plugin` entry names the built-in viewer that owns the tab — `image`, `markdown`, or `video` — plus the file it was opened on, and is what `profile save` writes for an open image, markdown, or video tab. The older `{ "type": "image", "path": … }` and `{ "type": "markdown", "path": … }` spellings still launch exactly the same way, so profiles you saved before are unaffected.
 
-None of these needs a `name` — the label is derived the same way typing `open` or `ssh` derives it. Relaunching closes a markdown, page, or ssh tab already showing the same file, url, or destination before reopening it, so you end up with one of each rather than a duplicate; an already-open image or video is simply reused.
+None of these needs a `name` — the label is derived the same way typing `open` or `ssh` derives it. Relaunching closes a page or ssh tab already showing the same url or destination before reopening it, so you end up with one of each rather than a duplicate; an already-open image, markdown, or video tab is simply reused.
 
 A `files` entry opens a [file navigator](/user-documentation/tab-types/file-navigator), and can bring back the state of the tree itself — which directories were open, and which rows were selected:
 
@@ -106,7 +106,7 @@ Launching a profile that's already running resets it: any open tab whose label m
 
 Each agent is captured as a clean template: its name, working directory, and tab presentation only. Command history, transcript, and any queued commands are deliberately left out, so launching the saved profile always starts that agent from scratch, not from where you left off. Each harness is captured the same way, plus its `tool`, model, effort, and workspace/offline/auto-approve flags; its scheduled and one-shot commands are never captured, since they only ever lived in memory. Whichever tab is currently active is saved with `focus: true` so a relaunch lands you back in the same place. Every captured main-area entry also saves `pane` as `left` or `right`, preserving which side of a split it occupied; the exact divider position is screen-local and resets to the middle.
 
-Open images, markdown viewers, web pages, and SSH sessions are captured too — an SSH entry keeps the flags you connected with, so a relaunch reconnects the same way. Every file navigator is captured, docked or not, along with its tree view: which directories you had expanded, which row the cursor was on, and every row you had selected. Launching the profile puts the tree back the way you left it, quietly skipping anything that no longer exists. A navigator left in the center strip also remembers its group, order, and pane.
+Open images, markdown previews, videos, web pages, and SSH sessions are captured too — an SSH entry keeps the flags you connected with, so a relaunch reconnects the same way. Every file navigator is captured, docked or not, along with its tree view: which directories you had expanded, which row the cursor was on, and every row you had selected. Launching the profile puts the tree back the way you left it, quietly skipping anything that no longer exists. A navigator left in the center strip also remembers its group, order, and pane.
 
 The window size, sidebar widths, and reporting-area split are captured into the profile's layout as they currently look, along with any running monitors. The only thing left out and named in the command's report is a monitor's own reporting tab.
 

@@ -1,5 +1,5 @@
 import {
-  writeAgentEntry, writeEditorEntry, writeFilesEntry, writeHarnessEntry, writeMarkdownEntry,
+  writeAgentEntry, writeEditorEntry, writeFilesEntry, writeHarnessEntry,
   writePageEntry, writePluginEntry, writeSshEntry,
 } from './save-entries.js';
 import type { Managers } from '../managers.js';
@@ -17,7 +17,6 @@ export type CaptureState = {
   harnesses: number;
   editors: number;
   plugins: number;
-  markdown: number;
   pages: number;
   ssh: number;
   // File navigators, counted together whether docked or not — `dockedViews` covers only the
@@ -30,13 +29,13 @@ export type CaptureState = {
 
 export function newCaptureState(): CaptureState {
   return {
-    agents: 0, harnesses: 0, editors: 0, plugins: 0, markdown: 0, pages: 0, ssh: 0,
+    agents: 0, harnesses: 0, editors: 0, plugins: 0, pages: 0, ssh: 0,
     fileNavigators: 0, dockedViews: 0, skipped: [], tabEntries: [],
   };
 }
 
 type CaptureCount =
-  'agents' | 'harnesses' | 'editors' | 'plugins' | 'markdown' | 'pages' | 'ssh' | 'fileNavigators';
+  'agents' | 'harnesses' | 'editors' | 'plugins' | 'pages' | 'ssh' | 'fileNavigators';
 
 // Append an entry and bump its counter, when the writer produced one at all.
 function push(state: CaptureState, entry: ProfileTabFile | undefined, count: CaptureCount): void {
@@ -71,10 +70,6 @@ export function captureTab(
     }
     case 'plugin': {
       push(state, writePluginEntry(tab, managers), 'plugins');
-      return;
-    }
-    case 'markdown': {
-      push(state, writeMarkdownEntry(tab, managers), 'markdown');
       return;
     }
     case 'page': {

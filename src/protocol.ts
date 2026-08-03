@@ -1,12 +1,12 @@
 // Wire types shared between the Node server and the React web client.
 // The web client imports these directly via the @shared path alias — no mirror needed.
-import type { BufferLine, PageView, HarnessView, MarkdownView, EditorView, TerminalEntry, FileNavigatorView, FileNavigatorDetail, FileNavigatorRow, TaskRow } from './tab/types.js';
+import type { BufferLine, PageView, HarnessView, EditorView, TerminalEntry, FileNavigatorView, FileNavigatorDetail, FileNavigatorRow, TaskRow } from './tab/types.js';
 import type { CompletionResult } from './completion/types.js';
 import type { ProfileRow } from './profile/types.js';
 
 // Used locally in TabView below, so separate import + export is required.
 // eslint-disable-next-line unicorn/prefer-export-from
-export type { BufferLine, PageView, HarnessView, MarkdownView, EditorView, TerminalEntry, CompletionResult, FileNavigatorView, FileNavigatorDetail, FileNavigatorRow, TaskRow, ProfileRow };
+export type { BufferLine, PageView, HarnessView, EditorView, TerminalEntry, CompletionResult, FileNavigatorView, FileNavigatorDetail, FileNavigatorRow, TaskRow, ProfileRow };
 
 export type PluginTabView = {
   id: string;
@@ -104,7 +104,7 @@ export type TabView = {
   toolStepsExpanded: boolean;
   pendingQuestion?: PendingQuestionView;
   // Body kind: undefined/`'agent'` for a normal tab, or the named live view kind.
-  view?: 'agent' | 'plugin' | 'page' | 'harness' | 'markdown' | 'editor' | 'monitor' | 'files' | 'notifications' | 'schedules';
+  view?: 'agent' | 'plugin' | 'page' | 'harness' | 'editor' | 'monitor' | 'files' | 'notifications' | 'schedules';
   // Display name when it differs from `label` (a plugin tab is titled by its plugin).
   title?: string;
   // Bundled-plugin envelope, present only when `view === 'plugin'`.
@@ -113,8 +113,6 @@ export type TabView = {
   page?: PageView;
   // Harness-view payload, present only when `view === 'harness'`.
   harness?: HarnessView;
-  // Markdown-view payload, present only when `view === 'markdown'`.
-  markdown?: MarkdownView;
   // Editor-view payload, present only when `view === 'editor'`.
   editor?: EditorView;
   // Monitor-window payload, present only when `view === 'monitor'`: the suggestion feed, the
