@@ -3,19 +3,18 @@ import type { TabView } from '@shared/protocol';
 import type { JanusClient } from './ws';
 import { FileNavigatorTab } from './FileNavigatorTab';
 import { NotificationsTab } from './NotificationsTab';
-import { SchedulesTab } from './SchedulesTab';
 import { tabBodyBorder } from './tab-body-border';
 
-// Renders the body for file navigator, notifications, and schedules view tabs. Harness, editor,
-// page, and plugin tabs are rendered separately in App (via MountedViewLayers) because they must all stay
+// Renders the body for file navigator and notifications view tabs. Harness, editor, page, and
+// plugin tabs are rendered separately in App (via MountedViewLayers) because they must all stay
 // mounted simultaneously — for xterm state, editor buffer, embedded-page navigation, and video
 // playback preservation across tab switches; monitor tabs are reporting tabs, rendered in the
 // ReportingSection below the command bar. `client`/`index` are used by the files branch to send
 // its RPCs.
 export function ViewTabBody({
-  tab, client, index, tabs = [], active = true, onSplit,
+  tab, client, index, active = true, onSplit,
 }: {
-  tab: TabView; client: JanusClient; index: number; tabs?: TabView[];
+  tab: TabView; client: JanusClient; index: number;
   active?: boolean; onSplit?: () => void;
 }) {
   const border = { borderLeft: tabBodyBorder(tab.dotColor, active) };
@@ -24,9 +23,6 @@ export function ViewTabBody({
   }
   if (tab.view === 'notifications') {
     return <div className="tab-body" style={border}><NotificationsTab lines={tab.bufferLines} client={client} index={index} /></div>;
-  }
-  if (tab.view === 'schedules') {
-    return <div className="tab-body" style={border}><SchedulesTab entries={tab.aggregatedSchedules ?? []} tabs={tabs} client={client} index={index} onSplit={onSplit} /></div>;
   }
   return null;
 }

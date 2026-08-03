@@ -61,14 +61,38 @@ function buildTarget(entry: ProfileViewEntry, managers: Managers, issuingLabel: 
     };
   }
   default: {
-    const file = resolvePath(managers, issuingLabel, entry.path);
-    return {
-      matches: (tab) => tab.plugin?.id === entry.id && tab.plugin.instanceKey === file,
-      preClose: false, subject: entry.path, kind: entry.id,
-      run: () => managers.openFile.run(`open ${entry.path}`, issuingLabel),
-    };
+    return entry.path === undefined
+      ? commandTarget(entry.id, managers, issuingLabel)
+      : fileTarget(entry.id, entry.path, managers, issuingLabel);
   }
   }
+}
+
+function fileTarget(
+  id: string, authored: string, managers: Managers, issuingLabel: string,
+): ViewTarget {
+  const file = resolvePath(managers, issuingLabel, authored);
+  return {
+    matches: (tab) => tab.plugin?.id === id && tab.plugin.instanceKey === file,
+    preClose: false, subject: authored, kind: id,
+    run: () => managers.openFile.run(`open ${authored}`, issuingLabel),
+  };
+}
+
+// A plugin that opens on no file is reached by its declared command, so a relaunch reissues that
+// command and matches on the plugin id alone — such a plugin's tab is its only one.
+function commandTarget(id: string, managers: Managers, issuingLabel: string): ViewTarget {
+  const command = managers.plugins.declarations.find((entry) => entry.id === id)?.command;
+  return {
+    matches: (tab) => tab.plugin?.id === id,
+    preClose: false, subject: id, kind: id,
+    run: async () => {
+      if (!command) return `Could not open ${id} tab: the plugin declares no command.`;
+      // Straight through the plugin host rather than the command dispatcher: a relaunch should not
+      // add the command to the issuing tab's history the way typing it would.
+      await managers.plugins.runCommand(id, command, { label: issuingLabel, command });
+    },
+  };
 }
 
 // Relaunch semantics for a label-less tab: close the open tab holding the same identity first, so

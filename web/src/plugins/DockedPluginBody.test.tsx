@@ -28,11 +28,15 @@ function pluginTab(label: string, id: string): TabView {
 // keeps a docked video playing while another sidebar entry is showing.
 function registerCountingPlugin(id: string, mounts: () => void) {
   const Plugin = ({ payload, capabilities }: {
-    payload: unknown; capabilities: { active: boolean };
+    payload: unknown; capabilities: { active: boolean; dock: 'left' | 'right' | null };
   }) => {
     React.useEffect(() => { mounts(); }, []);
     return (
-      <div data-testid={`${id}-body`} data-active={String(capabilities.active)}>
+      <div
+        data-testid={`${id}-body`}
+        data-active={String(capabilities.active)}
+        data-dock={String(capabilities.dock)}
+      >
         {(payload as { text: string }).text}
       </div>
     );
@@ -114,6 +118,18 @@ describe('a plugin tab docked into a sidebar', () => {
     await waitFor(() => { expect(screen.getByTestId('second-body')).toBeInTheDocument(); });
     expect(screen.getByTestId('first-body')).toHaveAttribute('data-active', 'true');
     expect(screen.getByTestId('second-body')).toHaveAttribute('data-active', 'false');
+  });
+
+  // Placement is host-owned: a plugin that lays itself out for a narrow sidebar reads the side here
+  // rather than measuring the frame the host renders around it.
+  it('tells a docked plugin which sidebar it is in', async () => {
+    registerCountingPlugin('fixture', () => {});
+    const client = { send: vi.fn() } as unknown as JanusClient;
+
+    render(<Sidebar side="left" tabs={[pluginTab('fixture', 'fixture')]} client={client} />);
+
+    await waitFor(() => { expect(screen.getByTestId('fixture-body')).toBeInTheDocument(); });
+    expect(screen.getByTestId('fixture-body')).toHaveAttribute('data-dock', 'left');
   });
 
   it('offers the host dock-cycle control above the plugin body', async () => {

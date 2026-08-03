@@ -12,6 +12,10 @@ export type TabPluginClientCapabilities = {
   // so anything a plugin binds globally (a window key listener, say) has to consult this rather than
   // assume it is on screen. The host owns the answer; a plugin must never read it off the DOM.
   active: boolean;
+  // Which sidebar this tab is docked into, or `null` when it sits in the centre strip. Placement is
+  // host-owned, and a plugin that lays itself out differently in a narrow sidebar reads it here
+  // rather than measuring the host's frame or sniffing its DOM.
+  dock: 'left' | 'right' | null;
   reportFailure(reason: string): void;
 };
 
@@ -20,10 +24,12 @@ export function createPluginClientCapabilities(
   label: string,
   client: JanusClient,
   active: boolean,
+  dock: 'left' | 'right' | null,
   onSplit?: () => void,
 ): TabPluginClientCapabilities {
   return {
     active,
+    dock,
     resourceUrl: (reference) => {
       const token = new URLSearchParams(location.search).get('token') ?? '';
       return `${reference}?token=${encodeURIComponent(token)}`;

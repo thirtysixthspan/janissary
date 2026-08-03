@@ -2,9 +2,7 @@ import type { ClientMessage } from './protocol.js';
 
 const CLIENT_METHODS = {
   answerQuestion: true,
-  cancelSchedule: true,
   chooseRoute: true,
-  clearSchedules: true,
   closeEditorConnection: true,
   closeHarnessLaunch: true,
   closeScheduleLaunch: true,

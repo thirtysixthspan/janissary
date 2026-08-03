@@ -45,8 +45,4 @@ export abstract class TabOpeningState extends TabQueueState {
   openNotificationsTab(): void {
     tabOpeners.openNotificationsTab(this);
   }
-
-  openSchedulesTab(): void {
-    tabOpeners.openSchedulesTab(this);
-  }
 }

@@ -23,7 +23,9 @@ export function DockedPluginBody({
   return (
     <div className="sidebar-plugin" style={{ display: visible ? 'flex' : 'none' }}>
       <DockCycleHeader dock={tab.dock} client={client} index={index} classPrefix="sidebar-plugin" />
-      <PluginBody plugin={tab.plugin} label={tab.label} client={client} active={visible} />
+      <PluginBody
+        plugin={tab.plugin} label={tab.label} client={client} active={visible} dock={tab.dock ?? null}
+      />
     </div>
   );
 }

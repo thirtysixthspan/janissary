@@ -181,6 +181,17 @@ describe('PluginTabLayer lazy lifecycle', () => {
     expect(fixture.send).not.toHaveBeenCalled();
   });
 
+  // The centre strip is not a sidebar, so a plugin rendered here is told it is docked nowhere.
+  it('reports no dock for a tab in the centre strip', async () => {
+    registry.set('fixture', registration(async () => ({
+      default: ({ capabilities }) => <div>dock:{String(capabilities.dock)}</div>,
+      isPayload: acceptsAnyPayload,
+    })));
+    const fixture = client();
+    render(<PluginTabLayer {...properties(tab(), fixture.value)} />);
+    await waitFor(() => { expect(screen.getByText('dock:null')).toBeInTheDocument(); });
+  });
+
   // A hidden plugin tab stays mounted, so the layer is what tells its body whether it is the tab
   // the user is looking at.
   it('reports the tab as active only while it is the current one', async () => {

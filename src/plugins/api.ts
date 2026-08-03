@@ -8,7 +8,10 @@ export type TabPluginCapabilityName =
   | 'note'
   | 'openOrFocusTab'
   | 'updateTab'
+  | 'dockTab'
   | 'openClaimedFiles'
+  | 'topicData'
+  | 'topicAction'
   | 'configuredViewer'
   | 'openExternally'
   | 'rejectRequest'
@@ -22,7 +25,10 @@ const CAPABILITIES: Record<TabPluginCapabilityName, true> = {
   note: true,
   openOrFocusTab: true,
   updateTab: true,
+  dockTab: true,
   openClaimedFiles: true,
+  topicData: true,
+  topicAction: true,
   configuredViewer: true,
   openExternally: true,
   rejectRequest: true,
@@ -73,6 +79,17 @@ export type TabPluginNotification = {
   tabs: readonly string[];
 };
 
+// What a plugin may ask the host to do to a topic it declared an interest in. Deliberately tied to a
+// topic rather than offered as free-standing capabilities: a plugin may act only on state the host
+// already agreed to show it, which keeps the grant as narrow as the view that motivates it. Each
+// topic names its own actions, so adding a topic never widens what an existing one can do.
+export type TabPluginTopicAction =
+  | { topic: 'schedules'; action: 'cancel'; tab: string; id: string }
+  | { topic: 'schedules'; action: 'clear' }
+  // Focus the tab a row belongs to. Refused for a tab that owns no row in the topic's current data,
+  // so this stays "focus the owner of what I am showing" rather than a general focus-anything grant.
+  | { topic: 'schedules'; action: 'focusOwner'; tab: string };
+
 export type TabPluginDeclaration = {
   id: string;
   version: string;
@@ -113,6 +130,16 @@ export type TabPluginServerCapabilities = {
   // this plugin has no open tab for is a no-op, so a plugin never has to track which of its tabs
   // the user has since closed.
   updateTab(instanceKey: string, factory: () => TabPluginTabUpdate): void;
+  // Dock one of this plugin's own tabs into a sidebar, or `null` to undock it back to the centre
+  // strip and make it active. Addressed by instance key like `updateTab`, so a key with no open tab
+  // is a silent no-op and a plugin can never move another plugin's tab.
+  dockTab(instanceKey: string, dock: 'left' | 'right' | null): void;
+  // The data a declared topic carries, as of now. A notification says a topic changed; this is how a
+  // plugin building a tab for the first time learns what the topic currently holds. Asking for a
+  // topic this plugin did not declare is a plugin-authoring mistake and disables it.
+  topicData(topic: TabPluginNotificationTopic): TabPluginNotification['data'];
+  // Ask the host to perform one of the actions a declared topic defines.
+  topicAction(action: TabPluginTopicAction): void;
   // Ask the host to run its ordinary `open` pipeline for `target`, restricted to this plugin's own
   // claimed extensions. The host queues the request and runs it after the guarded call returns, so
   // glob expansion and per-file dispatch never count against the plugin's own call budget.

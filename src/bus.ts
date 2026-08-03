@@ -92,8 +92,8 @@ type LayoutEvent = {
   sidebarLeft?: number;
   sidebarRight?: number;
   tabAreaPct?: number;
-  focusLeft?: 'files' | 'notifications' | 'schedules';
-  focusRight?: 'files' | 'notifications' | 'schedules';
+  focusLeft?: 'files' | 'notifications';
+  focusRight?: 'files' | 'notifications';
 };
 // A one-shot request for every connected client's file-navigator selections, issued by
 // `profile save` (see src/file-navigator/selection-request.ts) and broadcast as `collect-tree-state`.

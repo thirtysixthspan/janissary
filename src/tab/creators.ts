@@ -1,9 +1,8 @@
 import type { Tab, PluginTabRecord, EditorView, PageView, FileNavigatorView } from './types.js';
 import {
-  makePluginTab, makeEditorTab, makePageTab, makeFilesTab, makeNotificationsTab, makeSchedulesTab, distinctColor, insertTabInGroup,
+  makePluginTab, makeEditorTab, makePageTab, makeFilesTab, makeNotificationsTab, distinctColor, insertTabInGroup,
 } from './index.js';
 import { NOTIFICATIONS_LABEL } from '../notifications-tab.js';
-import { SCHEDULES_LABEL } from '../schedules-tab.js';
 import {
   uniquePluginLabel, uniqueEditorLabel, uniqueFilesLabel, uniquePageNumber,
 } from './unique-labels.js';
@@ -70,11 +69,6 @@ function addStartTab(
 export function addNotificationsTab(tabs: Tab[], activeTab: number): TabAndActive {
   return addStartTab(tabs, activeTab, NOTIFICATIONS_LABEL, (dotColor, group, groupColor) =>
     makeNotificationsTab(NOTIFICATIONS_LABEL, dotColor, tabs.length + 1, group, groupColor));
-}
-
-export function addSchedulesTab(tabs: Tab[], activeTab: number): TabAndActive {
-  return addStartTab(tabs, activeTab, SCHEDULES_LABEL, (dotColor, group, groupColor) =>
-    makeSchedulesTab(SCHEDULES_LABEL, dotColor, tabs.length + 1, group, groupColor));
 }
 
 export function addPageTab(

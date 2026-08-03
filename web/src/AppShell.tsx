@@ -25,8 +25,8 @@ export function AppShell({
   onSidebarLeftWidthChange?: (width: number) => void;
   sidebarRightWidth?: number;
   onSidebarRightWidthChange?: (width: number) => void;
-  focusLeft?: 'files' | 'notifications' | 'schedules';
-  focusRight?: 'files' | 'notifications' | 'schedules';
+  focusLeft?: 'files' | 'notifications';
+  focusRight?: 'files' | 'notifications';
 }) {
   return (
     <div className="app">

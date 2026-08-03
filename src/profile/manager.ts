@@ -44,7 +44,7 @@ export class ProfileManager {
       return;
     }
     const tabCount = loaded.entries.length + loaded.editors.length + loaded.views.length
-      + loaded.files.length + loaded.notifications.length + loaded.schedules.length;
+      + loaded.files.length + loaded.notifications.length;
     if (tabCount === 0) {
       out(`Profile "${parsed.name}" has no tabs.`);
       return;

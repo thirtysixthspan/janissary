@@ -123,7 +123,7 @@ describe('single-file profiles', () => {
     expect(loaded.monitors).toEqual([{ name: 'assistant', persona: 'assistant', targets: ['group:1'] }]);
     expect(loaded.files).toEqual([{ dock: 'left', path: '$root' }]);
     expect(loaded.notifications).toEqual([{ dock: 'right', focus: true }]);
-    expect(loaded.schedules).toEqual([{ dock: 'right' }]);
+    expect(loaded.views).toEqual([{ type: 'plugin', id: 'schedules', dock: 'right' }]);
   });
 
   it('reads layout.sidebar into the flat internal fields', () => {

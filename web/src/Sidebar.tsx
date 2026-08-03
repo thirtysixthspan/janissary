@@ -3,7 +3,6 @@ import type { TabView } from '@shared/protocol';
 import type { JanusClient } from './ws';
 import { FileNavigatorTab } from './FileNavigatorTab';
 import { NotificationsTab } from './NotificationsTab';
-import { SchedulesTab } from './SchedulesTab';
 import { DockedPluginBody } from './plugins/DockedPluginBody';
 import { TabStrip } from './TabStrip';
 import { ResizeButton } from './ResizeButton';
@@ -42,7 +41,7 @@ export function Sidebar({
   // A profile's `notifications` `focus` field (or any future dock entry's), delivered over
   // the `layout` WS event. Overrides the "most recently docked tab wins" default below — see
   // `useLayoutState.ts`.
-  focusView?: 'files' | 'notifications' | 'schedules';
+  focusView?: 'files' | 'notifications';
 }) {
   // Keyed by label rather than by view kind: the built-in dockable views are one per kind, but a
   // plugin tab is not — two tabs from the same plugin, or from different ones, can share a sidebar.
@@ -120,12 +119,6 @@ export function Sidebar({
         )}
         {current.tab.view === 'notifications' && (
           <NotificationsTab lines={current.tab.bufferLines} client={client} index={current.index} dock={current.tab.dock} />
-        )}
-        {current.tab.view === 'schedules' && (
-          <SchedulesTab
-            entries={current.tab.aggregatedSchedules ?? []} tabs={tabs} client={client} compact
-            dock={current.tab.dock} index={current.index}
-          />
         )}
         {plugins.map((e) => (
           <DockedPluginBody

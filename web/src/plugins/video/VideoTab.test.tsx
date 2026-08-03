@@ -23,6 +23,7 @@ function makeCapabilities(onSplit?: () => void, active = true) {
       intent(name, payload) as Promise<Result>,
     splitAction: onSplit ? <button type="button" className="tab-split" onClick={onSplit}>Split</button> : null,
     active,
+    dock: null,
     reportFailure,
   };
   return { capabilities, intent, reportFailure };

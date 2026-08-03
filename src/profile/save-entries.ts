@@ -108,14 +108,20 @@ export function writeFilesEntry(
   };
 }
 
-// A bundled-plugin tab. Its instance key is the file the plugin opened, which is all a relaunch
-// needs: `open <path>` routes back to the same plugin through the opener registry. A docked plugin
-// tab has no place in the tab strip, so — like a docked navigator — it keeps `dock` and gets no
-// presentation.
+// A bundled-plugin tab. For a plugin that opens on files the instance key is the file it opened,
+// which is all a relaunch needs: `open <path>` routes back to the same plugin through the opener
+// registry. A plugin claiming no extensions was reached by its command instead and has no file to
+// name, so its entry omits `path` and relaunch reissues that command. Whether there is a file is a
+// property of the declaration, not a guess about the instance key. A docked plugin tab has no place
+// in the tab strip, so — like a docked navigator — it keeps `dock` and gets no presentation.
 export function writePluginEntry(tab: Tab, managers: Managers): ProfilePluginTabFile | undefined {
   if (!tab.plugin) return undefined;
+  const id = tab.plugin.id;
+  const declaration = managers.plugins.declarations.find((entry) => entry.id === id);
+  const opensFiles = Object.keys(declaration?.fileExtensions ?? {}).length > 0;
   return {
-    type: 'plugin', id: tab.plugin.id, path: portablePath(tab.plugin.instanceKey, managers),
+    type: 'plugin', id,
+    path: opensFiles ? portablePath(tab.plugin.instanceKey, managers) : undefined,
     dock: tab.dock,
     ...(!tab.dock && presentation(tab, managers)),
   };

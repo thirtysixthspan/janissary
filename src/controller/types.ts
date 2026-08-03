@@ -7,8 +7,8 @@ export type Sinks = {
     sidebarLeft?: number;
     sidebarRight?: number;
     tabAreaPct?: number;
-    focusLeft?: 'files' | 'notifications' | 'schedules';
-    focusRight?: 'files' | 'notifications' | 'schedules';
+    focusLeft?: 'files' | 'notifications';
+    focusRight?: 'files' | 'notifications';
   }) => void;
   sendCollectTreeState?: (event: { id: number }) => void;
 };

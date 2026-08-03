@@ -20,7 +20,7 @@ export type CaptureState = {
   pages: number;
   ssh: number;
   // File navigators, counted together whether docked or not — `dockedViews` covers only the
-  // notifications and schedules tabs now.
+  // notifications tab now.
   fileNavigators: number;
   dockedViews: number;
   skipped: string[];
@@ -82,10 +82,6 @@ export function captureTab(
     }
     case 'notifications': {
       if (tab.dock) { state.tabEntries.push({ type: 'notifications', dock: tab.dock }); state.dockedViews += 1; }
-      return;
-    }
-    case 'schedules': {
-      if (tab.dock) { state.tabEntries.push({ type: 'schedules', dock: tab.dock }); state.dockedViews += 1; }
       return;
     }
     case 'monitor': {

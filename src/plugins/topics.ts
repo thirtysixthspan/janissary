@@ -1,0 +1,63 @@
+import type { Managers } from '../managers.js';
+import { messageBus, type Subscription } from '../bus.js';
+import type {
+  TabPluginNotification,
+  TabPluginNotificationTopic,
+  TabPluginTopicAction,
+} from './api.js';
+
+// Where each host topic comes from, what it carries, and what a plugin may ask the host to do to it.
+// One entry per topic, so adding a topic is a data change here rather than a new branch anywhere
+// else — the notification dispatcher, the `topicData` capability, and the `topicAction` capability
+// all read this table.
+type TopicSource = {
+  subscribe(fire: () => void): Subscription;
+  read(managers: Managers): TabPluginNotification['data'];
+  act(managers: Managers, action: TabPluginTopicAction): void;
+};
+
+// Focus the tab a schedule row belongs to. Refused for a tab that owns no row, so the action stays
+// "focus the owner of something I am already showing" rather than a way to focus any tab at all.
+function focusScheduleOwner(managers: Managers, label: string): void {
+  if (managers.schedule.aggregatedView().every((row) => row.tab !== label)) return;
+  const index = managers.tab.findIndex(label);
+  if (index !== -1) managers.tab.setActiveTab(index);
+}
+
+function actOnSchedules(managers: Managers, action: TabPluginTopicAction): void {
+  switch (action.action) {
+    case 'cancel': {
+      managers.schedule.cancel(action.tab, action.id);
+      return;
+    }
+    case 'clear': {
+      managers.schedule.clearAll();
+      return;
+    }
+    case 'focusOwner': {
+      focusScheduleOwner(managers, action.tab);
+    }
+  }
+}
+
+const TOPIC_SOURCES: Record<TabPluginNotificationTopic, TopicSource> = {
+  schedules: {
+    subscribe: (fire) => messageBus.on('schedules', 'changed', fire),
+    read: (managers) => managers.schedule.aggregatedView(),
+    act: actOnSchedules,
+  },
+};
+
+export function subscribeTopic(topic: TabPluginNotificationTopic, fire: () => void): Subscription {
+  return TOPIC_SOURCES[topic].subscribe(fire);
+}
+
+export function readTopicData(
+  managers: Managers, topic: TabPluginNotificationTopic,
+): TabPluginNotification['data'] {
+  return TOPIC_SOURCES[topic].read(managers);
+}
+
+export function runTopicAction(managers: Managers, action: TabPluginTopicAction): void {
+  TOPIC_SOURCES[action.topic].act(managers, action);
+}

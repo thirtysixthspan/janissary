@@ -100,7 +100,6 @@ export class Controller implements TabControllerAdapter, MonitorControllerAdapte
       (l) => this.managers.connection.connectionsFor(l),
       (l) => this.managers.acp.label(l),
       (l) => this.managers.schedule.view(l),
-      this.managers.schedule.aggregatedView(),
     );
   }
 
@@ -118,8 +117,6 @@ export class Controller implements TabControllerAdapter, MonitorControllerAdapte
   closeHarnessLaunch(): void { this.managers.harness.closeLaunchDialog(); }
   scheduleLaunchView() { return this.managers.schedule.scheduleLaunchView(); }
   closeScheduleLaunch(): void { this.managers.schedule.closeScheduleLaunch(); }
-  cancelSchedule(tab: string, id: string): void { this.managers.schedule.cancel(tab, id); }
-  clearSchedules(): void { this.managers.schedule.clearAll(); }
 
   answerQuestion(tab: string, id: string, answer: string | null): void {
     if (!this.managers.questions.answer(tab, id, answer)) throw new Error('question not found');

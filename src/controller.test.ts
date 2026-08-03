@@ -1742,14 +1742,6 @@ describe('Controller direct RPC delegators', () => {
     expect(c.scheduleLaunchView()).toBeNull();
   });
 
-  it('cancelSchedule RPC removes a named entry from the target tab', () => {
-    const { c } = makeController();
-    c.dispatch('schedule fetch every 5m echo hi');
-    expect(c.view().find((t) => t.label === 'janus')?.schedule?.map((s) => s.id)).toContain('fetch');
-    c.cancelSchedule('janus', 'fetch');
-    expect(c.view().find((t) => t.label === 'janus')?.schedule?.map((s) => s.id)).not.toContain('fetch');
-  });
-
   it('syncEditorBuffer/syncPageSnapshot RPCs no-op for an unresolvable url', () => {
     const { c } = makeController();
     expect(() => c.syncEditorBuffer('/open/ghost', 'draft')).not.toThrow();

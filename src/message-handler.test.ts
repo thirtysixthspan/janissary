@@ -20,8 +20,6 @@ const makeController = () =>
       schedule: { clearAll: vi.fn() },
     },
     dispatch: vi.fn(),
-    cancelSchedule: vi.fn(),
-    clearSchedules: vi.fn(),
     answerQuestion: vi.fn(),
     launchAgentFor: vi.fn(),
     setActiveTab: vi.fn(),
@@ -492,18 +490,6 @@ describe('handle', () => {
     const controller = makeController();
     dispatchCall(controller, 33, { method: 'revealFileNavigatorItem', params: { index: 0, relPath: 'src/a.ts' } });
     expect(controller.revealFileNavigatorItem).toHaveBeenCalledWith(0, 'src/a.ts');
-  });
-
-  it('routes cancelSchedule', () => {
-    const controller = makeController();
-    dispatchCall(controller, 40, { method: 'cancelSchedule', params: { tab: 'janus', id: 'sched-1' } });
-    expect(controller.cancelSchedule).toHaveBeenCalledWith('janus', 'sched-1');
-  });
-
-  it('routes clearSchedules through the controller façade', () => {
-    const controller = makeController();
-    dispatchCall(controller, 41, { method: 'clearSchedules', params: {} });
-    expect(controller.clearSchedules).toHaveBeenCalled();
   });
 
   it('routes launchAgentFor', () => {

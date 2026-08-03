@@ -9,7 +9,7 @@ import type { LoadedProfile, ProfileFile, ProfileLayout, ProfileLayoutFile, Prof
 // on-disk `color`/`sidebar` names down to the flat runtime fields. Any structural fault returns
 // `{ error }`, which the launcher maps to the terse "malformed" message.
 
-type PartitionedTabs = Pick<LoadedProfile, 'entries' | 'files' | 'editors' | 'notifications' | 'schedules' | 'views'>;
+type PartitionedTabs = Pick<LoadedProfile, 'entries' | 'files' | 'editors' | 'notifications' | 'views'>;
 
 // The on-disk `color` is the runtime `dotColor`; every other presentation field keeps its name.
 function presentation(tab: ProfileTabPresentation): ProfileTabRuntime {
@@ -33,7 +33,7 @@ function stripFileKeys<T extends { type: string }>(tab: T): Omit<T, 'type' | 'co
 // one sorting last, and two unnumbered entries keeping their array order — the comparator returns
 // NaN for that pair, which a stable sort leaves in place).
 function partitionTabs(tabs: ProfileTabFile[]): PartitionedTabs {
-  const out: PartitionedTabs = { entries: [], files: [], editors: [], notifications: [], schedules: [], views: [] };
+  const out: PartitionedTabs = { entries: [], files: [], editors: [], notifications: [], views: [] };
   for (const tab of tabs) {
     switch (tab.type) {
     case 'agent': {
@@ -44,7 +44,10 @@ function partitionTabs(tabs: ProfileTabFile[]): PartitionedTabs {
     case 'editor': { out.editors.push({ ...stripFileKeys(tab), ...presentation(tab) }); break; }
     case 'files': { out.files.push({ ...stripFileKeys(tab), ...presentation(tab) }); break; }
     case 'notifications': { out.notifications.push(stripFileKeys(tab)); break; }
-    case 'schedules': { out.schedules.push(stripFileKeys(tab)); break; }
+    // The pre-plugin spelling of the aggregated schedules tab. It never took a place in the strip,
+    // so it carries only its dock — the plugin entry it becomes is the same shape a docked plugin
+    // tab saves as today.
+    case 'schedules': { out.views.push({ type: 'plugin', id: 'schedules', dock: tab.dock }); break; }
     case 'plugin': {
       out.views.push({ ...presentation(tab), type: 'plugin', id: tab.id, path: tab.path, dock: tab.dock });
       break;

@@ -38,6 +38,7 @@ function setup(
       intent(name, payload) as Promise<Result>,
     splitAction: null,
     active: true,
+    dock: null,
     reportFailure: vi.fn(),
   } as TabPluginClientCapabilities;
   const { result } = renderHook(() => useVideoShot({ current: element }, capabilities));

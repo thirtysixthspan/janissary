@@ -19,6 +19,7 @@ function capabilities(): TabPluginClientCapabilities {
     intent: async <Result,>() => ({ echoed: 'fixture round trip' }) as Result,
     splitAction: null,
     active: true,
+    dock: null,
     reportFailure: vi.fn(),
   };
 }

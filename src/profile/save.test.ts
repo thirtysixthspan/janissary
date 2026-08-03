@@ -9,8 +9,9 @@ import { setClientLayout } from '../client-layout.js';
 import { setWindowBoundsReader } from '../window-resizer.js';
 import {
   makeTab, makeHarnessTab, makePluginTab, makePageTab, makeEditorTab, makeFilesTab,
-  makeNotificationsTab, makeSchedulesTab,
+  makeNotificationsTab,
 } from '../tab/index.js';
+import { tabPluginCatalog } from '../plugins/catalog.js';
 import type { Managers } from '../managers.js';
 import type { FileNavigatorDetail, MonitorTarget, Tab } from '../tab/types.js';
 import type { LoadedProfile, ProfileFile } from './types.js';
@@ -43,6 +44,9 @@ function makeManagers(
   return {
     tab: { tabs, cwdOf: (label: string) => cwdByLabel[label], launchDir },
     monitor: { snapshot: () => monitors },
+    // Whether a plugin tab's entry carries a path is read off the declaration, so the real catalog
+    // stands in for the host here rather than a hand-written list that could drift from it.
+    plugins: { declarations: tabPluginCatalog },
     fileNavigator: {
       expandedPaths: (label: string) => expandedByLabel[label] ?? [],
       detailOf: (label: string) => detailByLabel[label] ?? 'name',
@@ -332,20 +336,36 @@ describe('saveProfile', () => {
     expect(summary.agents).toBe(2);
   });
 
-  it('captures docked file-navigator/notifications/schedules tabs, counting navigators on their own', async () => {
+  it('captures docked file-navigator and notifications tabs, counting navigators on their own', async () => {
     const dockedFiles = { ...makeFilesTab('nav', '#444', 1, 1, '#444', { root: '~', absoluteRoot: '/home/bob', rows: [] }), dock: 'left' as const };
     const notifications = { ...makeNotificationsTab('notifications', '#555', 1, 1, '#555'), dock: 'right' as const };
-    const schedules = { ...makeSchedulesTab('schedules', '#666', 1, 1, '#666'), dock: 'right' as const };
-    const managers = makeManagers([dockedFiles, notifications, schedules]);
+    const managers = makeManagers([dockedFiles, notifications]);
 
     const summary = await saveProfile('demo', managers);
 
-    expect(summary.dockedViews).toBe(2);
+    expect(summary.dockedViews).toBe(1);
     expect(summary.fileNavigators).toBe(1);
     const loaded = load('demo');
     expect(loaded.files).toEqual([{ dock: 'left', path: '/home/bob' }]);
     expect(loaded.notifications).toEqual([{ dock: 'right' }]);
-    expect(loaded.schedules).toEqual([{ dock: 'right' }]);
+  });
+
+  // A plugin that claims no file extensions was reached by its command, so there is no file to name
+  // and its entry carries no path — the relaunch reissues the command instead.
+  it('writes a docked schedules plugin tab with its dock and no path', async () => {
+    const schedules = {
+      ...makePluginTab('schedules', '#666', 1, 1, '#666', 'schedules', {
+        id: 'schedules', instanceKey: 'schedules', schemaVersion: 1,
+        payload: { entries: [] }, fileRefs: [], sourceLabel: 'janus',
+      }),
+      dock: 'right' as const,
+    };
+    const managers = makeManagers([schedules]);
+
+    const summary = await saveProfile('demo', managers);
+
+    expect(summary.plugins).toBe(1);
+    expect(load('demo').views).toEqual([{ type: 'plugin', id: 'schedules', dock: 'right' }]);
   });
 
   it('omits an empty tabs array and the monitors key while always keeping layout', async () => {

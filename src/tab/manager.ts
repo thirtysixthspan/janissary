@@ -1,7 +1,7 @@
 import path from 'node:path';
 import type { Tab, LogEntry, CenterPane } from './types.js';
 import type { AgentState } from '../agent/types.js';
-import type { AggregatedScheduleView, ConnectionView, ScheduleView, TabView } from '../protocol.js';
+import type { ConnectionView, ScheduleView, TabView } from '../protocol.js';
 import type { Managers } from '../managers.js';
 import { saveAgentState } from '../agent/state.js';
 import { abbreviatePath } from '../paths.js';
@@ -219,11 +219,10 @@ export class TabManager extends TabOpeningState {
     connectionsFor: (label: string) => ConnectionView[],
     acpLabel: (label: string) => string | undefined,
     scheduleView: (label: string) => ScheduleView[],
-    aggregatedSchedules: AggregatedScheduleView[],
   ): TabView[] {
     return viewOperations.viewTabs(
       this.tabs, this.managers,
-      connectionsFor, acpLabel, scheduleView, aggregatedSchedules,
+      connectionsFor, acpLabel, scheduleView,
       (p: string) => this.shorten(p),
     );
   }

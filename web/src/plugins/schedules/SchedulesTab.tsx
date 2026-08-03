@@ -1,39 +1,30 @@
 import React, { useEffect, useRef, useState } from 'react';
-import type { AggregatedScheduleView, TabView } from '@shared/protocol';
-import type { JanusClient } from './ws';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { clearSchedulesIcon } from './icons';
+import { faTrash } from '@fortawesome/free-solid-svg-icons';
+import type { ScheduleRow, SchedulesPayload } from '@shared/plugins/schedules/shared';
+import type { TabPluginClientCapabilities } from '../api';
 import { nextSelection } from './schedules-keys';
-import { DockCycleHeader } from './DockCycleHeader';
 import { DeleteScheduleDialog } from './DeleteScheduleDialog';
-import { SplitTabButton } from './SplitTabButton';
-
-type Properties = {
-  entries: AggregatedScheduleView[];
-  tabs: TabView[];
-  client: JanusClient;
-  // Compressed one-line-per-entry layout, used when the tab is docked into a sidebar.
-  compact?: boolean;
-  // The tab's current dock location (undefined means center). Drives the dock-cycle button,
-  // which is shown only while docked, matching FileNavigatorTab and NotificationsTab.
-  dock?: 'left' | 'right';
-  index: number;
-  onSplit?: () => void;
-};
 
 const NAV_KEYS = new Set(['ArrowDown', 'ArrowUp', 'Home', 'End']);
 
-// The aggregated schedules tab: every scheduled command across all tabs, ordered next-to-run
-// first. Read-only apart from selection: a single click selects a row, a double click (or Enter
-// on the selected row) focuses the tab that owns it via setActiveTab. Arrow Up/Down/Home/End move
-// the selection. Rendered full-width in the main area, or as a compressed one-line-per-entry list
-// when docked (`compact`); both layouts share the same selection and focus behavior.
+// The aggregated schedules list: every scheduled command across all tabs, ordered next-to-run
+// first. Read-only apart from selection: a single click selects a row, a double click (or Enter on
+// the selected row) focuses the tab that owns it. Arrow Up/Down/Home/End move the selection.
+// Rendered full-width in the main area, or as a compressed one-line-per-entry list when the host
+// reports the tab docked; both layouts share the same selection and focus behavior. The dock-cycle
+// control is host chrome and is deliberately absent here.
 export function SchedulesTab({
-  entries, tabs, client, compact = false, dock, index, onSplit,
-}: Properties) {
+  payload, capabilities,
+}: {
+  payload: SchedulesPayload;
+  capabilities: TabPluginClientCapabilities;
+}) {
+  const entries = payload.entries;
   const [selected, setSelected] = useState<number | null>(null);
-  const [pendingDelete, setPendingDelete] = useState<AggregatedScheduleView | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<ScheduleRow | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const compact = capabilities.dock !== null;
 
   useEffect(() => {
     if (selected === null) return;
@@ -44,10 +35,7 @@ export function SchedulesTab({
     if (selected !== null && selected >= entries.length) setSelected(entries.length === 0 ? null : entries.length - 1);
   }, [entries.length, selected]);
 
-  const focusOwner = (label: string) => {
-    const owningIndex = tabs.findIndex((t) => t.label === label);
-    if (owningIndex !== -1) client.send({ method: 'setActiveTab', params: { index: owningIndex } });
-  };
+  const focusOwner = (tab: string) => { void capabilities.intent('focus-owner', { tab }); };
 
   const onRowClick = (i: number) => {
     setSelected(i);
@@ -55,7 +43,7 @@ export function SchedulesTab({
   };
 
   const confirmDelete = () => {
-    if (pendingDelete) client.send({ method: 'cancelSchedule', params: { tab: pendingDelete.tab, id: pendingDelete.id } });
+    if (pendingDelete) void capabilities.intent('cancel', { tab: pendingDelete.tab, id: pendingDelete.id });
     setPendingDelete(null);
   };
 
@@ -87,18 +75,20 @@ export function SchedulesTab({
       onKeyDown={onKeyDown}
       data-doc-shot="schedules-tab"
     >
-      <DockCycleHeader dock={dock} client={client} index={index} classPrefix="schedules">
-        {!dock && onSplit && <SplitTabButton onClick={onSplit} />}
-        <button
-          type="button"
-          className="schedules-clear"
-          aria-label="Clear all schedules"
-          disabled={entries.length === 0}
-          onClick={() => client.send({ method: 'clearSchedules', params: {} })}
-        >
-          <FontAwesomeIcon icon={clearSchedulesIcon} />
-        </button>
-      </DockCycleHeader>
+      <div className="schedules-header">
+        <div className="schedules-actions">
+          {capabilities.splitAction}
+          <button
+            type="button"
+            className="schedules-clear"
+            aria-label="Clear all schedules"
+            disabled={entries.length === 0}
+            onClick={() => { void capabilities.intent('clear', {}); }}
+          >
+            <FontAwesomeIcon icon={faTrash} />
+          </button>
+        </div>
+      </div>
       {entries.length === 0 ? (
         <div className="schedules-empty">No scheduled commands.</div>
       ) : (
@@ -158,7 +148,7 @@ function CompactHeadings() {
   );
 }
 
-function FullRow({ entry }: { entry: AggregatedScheduleView }) {
+function FullRow({ entry }: { entry: ScheduleRow }) {
   return (
     <>
       <span className="schedules-owner">{entry.tab}</span>
@@ -170,7 +160,7 @@ function FullRow({ entry }: { entry: AggregatedScheduleView }) {
   );
 }
 
-function CompactRow({ entry }: { entry: AggregatedScheduleView }) {
+function CompactRow({ entry }: { entry: ScheduleRow }) {
   return (
     <>
       <span className="schedules-next">{entry.next.split(' ').pop()}</span>

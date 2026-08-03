@@ -26,8 +26,17 @@ function markdownTab(label: string, number: number, path: string): Tab {
 // openers issue their commands through. Each stub appends the tab that real command would create.
 // The image branch resolves asynchronously, as a real plugin opener does: its tab exists only once
 // the promise `open` returns has settled.
+// A plugin that opens on no file, reached by its own command — the shape the schedules plugin has.
+function schedulesTab(label: string, number: number): Tab {
+  return makePluginTab(label, 'blue', number, 1, 'blue', 'schedules', {
+    id: 'schedules', instanceKey: 'schedules', schemaVersion: 1,
+    payload: { entries: [] }, fileRefs: [], sourceLabel: 'janus',
+  });
+}
+
 function makeManagers(initial: Tab[]): {
   managers: Managers; open: ReturnType<typeof vi.fn>; ssh: ReturnType<typeof vi.fn>;
+  runCommand: ReturnType<typeof vi.fn>;
 } {
   let tabs = initial;
   let activeTab = 0;
@@ -47,6 +56,12 @@ function makeManagers(initial: Tab[]): {
       return;
     }
     append(imageTab(`image-${tabs.length}`, tabs.length + 1, target));
+  });
+  const runCommand = vi.fn(async () => {
+    await Promise.resolve();
+    if (tabs.every((t) => t.plugin?.id !== 'schedules')) {
+      append(schedulesTab(`schedules-${tabs.length}`, tabs.length + 1));
+    }
   });
   const ssh = vi.fn((command: string) => {
     const destination = command.split(/\s+/, 2)[1];
@@ -71,8 +86,15 @@ function makeManagers(initial: Tab[]): {
     },
     openFile: { run: open },
     ssh: { run: ssh },
+    plugins: {
+      declarations: [
+        { id: 'image', fileExtensions: { '.png': 'image/png' } },
+        { id: 'schedules', fileExtensions: {}, command: 'schedules' },
+      ],
+      runCommand,
+    },
   } as unknown as Managers;
-  return { managers, open, ssh };
+  return { managers, open, runCommand, ssh };
 }
 
 describe('openProfileViewTabs', () => {
@@ -193,6 +215,37 @@ describe('openProfileViewTabs', () => {
     expect(opened).toEqual([]);
     expect(managers.tab.tabs.find((tab) => tab.plugin)?.dock).toBe('left');
     expect(notes).toEqual(['Opened image tab.']);
+  });
+
+  // A plugin claiming no file extensions has no file to reopen from, so its entry carries no path
+  // and the relaunch reissues the command that opened it — straight through the plugin host, so it
+  // never lands in the issuing tab's command history.
+  it('reopens a path-less plugin entry by running the plugin\'s own command', async () => {
+    const { managers, open, runCommand } = makeManagers([makeTab('janus', 'red', 1, [], [], undefined, 1, 'red')]);
+    const notes: string[] = [];
+
+    const opened = await openProfileViewTabs(
+      [{ type: 'plugin', id: 'schedules', dock: 'right' }],
+      managers, 'janus', 1, identityColor, notes,
+    );
+
+    expect(runCommand).toHaveBeenCalledWith('schedules', 'schedules', { label: 'janus', command: 'schedules' });
+    expect(open).not.toHaveBeenCalled();
+    expect(opened).toEqual([]);
+    expect(managers.tab.tabs.find((tab) => tab.plugin?.id === 'schedules')?.dock).toBe('right');
+    expect(notes).toEqual(['Opened schedules tab.']);
+  });
+
+  it('reuses an already-open tab for a path-less plugin entry rather than opening a second', async () => {
+    const janus = makeTab('janus', 'red', 1, [], [], undefined, 1, 'red');
+    const { managers } = makeManagers([janus, schedulesTab('schedules', 2)]);
+    const notes: string[] = [];
+
+    await openProfileViewTabs(
+      [{ type: 'plugin', id: 'schedules' }], managers, 'janus', 1, identityColor, notes,
+    );
+
+    expect(managers.tab.tabs.filter((tab) => tab.plugin?.id === 'schedules')).toHaveLength(1);
   });
 
   it('reports an entry that opened no tab and moves on', async () => {

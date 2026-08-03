@@ -87,7 +87,7 @@ The tab is view-only — it has no command bar. Each row shows the owning tab, t
 
 Click a row to select it; double-click it, or press `Enter` with it selected, to jump straight to the tab that owns it. `↑`/`↓` move the selection one row at a time, and `Home`/`End` jump to the first or last row. Pressing `Backspace` or `Delete` on a selected row opens a confirmation dialog — `Delete schedule "<name>"?` with **Delete** and **Cancel** — and confirming cancels that timer in its owning tab, the same as `schedule cancel <name>` run there. Creating or editing a schedule still happens with the `schedule` command in the tab that owns it.
 
-Like the [notifications feed](/user-documentation/tab-types/notifications), the schedules tab can dock into either sidebar and shares that sidebar with other dockable tabs rather than displacing them; while docked, its header carries a button to cycle it to the other side.
+Like the [notifications feed](/user-documentation/tab-types/notifications), the schedules tab can dock into either sidebar and shares that sidebar with other dockable tabs rather than displacing them; while docked, a slim header above the list carries a button to cycle it to the other side.
 
 ## Scheduling from a dialog
 
