@@ -2,6 +2,102 @@
 
 All notable changes to this project are documented here.
 
+## [0.11.0] - 2026-08-03
+
+### Features
+
+- move the image tab into a bundled image plugin (#751)
+- add bundled tab plugin architecture (#750)
+- add a frame capture button to the video tab (#741)
+- add a video opener and video tab (#734)
+- add fuzzy line search to the editor tab (#733)
+- add declined state to standard backlogs (#718)
+- cycle row details through size, modified time, and permissions (#716)
+- refresh Git-synced trees (#714)
+- inherit workspace when launching an agent from the metadatabar (#710)
+
+### Bug Fixes
+
+- ignore nested .janissary and coverage directories
+- root profile navigators and editors at the issuing tab
+- keep video tabs mounted so playback survives a tab switch (#736)
+- validate websocket rpc envelopes (#723)
+- dispose registered managers on shutdown (#720)
+- keep sync detection safe before setup (#715)
+- show .git as an ordinary directory (#712)
+
+### Documentation
+
+- restore tab-plugin guideline to the parallel plan (#748)
+- parallel plan for tab plugin architecture (#747)
+- plan tab plugin architecture (#743)
+- add find-complex-code and tighten hygiene task handoff
+- add plugin architecture guidance
+- add a user documentation page for video tabs (#740)
+- document editor keyboard input and caret/scroll rules (#732)
+- document workspaced agent provisioning and cancellation (#731)
+- document file navigator row detail modes (#730)
+- document file navigator copy, cut, and paste (#728)
+- refresh documentation gap candidates
+- explain intentional hook dependency omissions (#726)
+- plan fuzzy line search in the editor buffer (#722)
+- plan the video opener and video tab (#719)
+- add file navigator detail modes plan (#713)
+- document GitHub repo and PAT setup for new projects (#711)
+
+### Refactoring
+
+- extract the file navigator Escape branch into a helper (#746)
+- extract launchSummary() from openProfileEntries (#745)
+- flatten moveToOtherPane restore fallback (#744)
+- resolve technical debt backlog (#742)
+- centralize harness PTY runtime cleanup (#737)
+- centralize file navigator path helpers (#729)
+- centralize file navigator state lookup (#727)
+- initialize monitor resources before registration (#725)
+- route client RPCs through Controller (#724)
+- share undo redo result contract (#721)
+
+### Chores
+
+- log complexity hotspots
+- defer blocked technical debt (#739)
+- record researched feature gaps
+- log new technical debt findings
+
+### Other
+
+- sync: issues.md
+- test(editor): remove target-line caret centering case
+- sync: technical-debt.md
+- sync: features.md
+- sync: features.md
+- sync: bugs.md
+- sync: bugs.md
+- test(ui): pin background video playback while a tab is unfocused (#738)
+- sync: issues.md
+- build: update @emnapi/runtime (#735)
+- sync: issues.md
+- sync: features.md
+- sync: features.md
+- sync: features.md
+- sync: features.md
+- sync: features.md
+- sync: technical-debt.md
+- sync: documentation.md
+- sync: technical-debt.md
+- sync: technical-debt.md
+- sync: features.md
+- sync: technical-debt.md
+- sync: issues.md
+- sync: features.md
+- sync: issues.md
+- revert(file-navigator): remove the Git-synced tree refresh control (#717)
+- sync: features.md
+- sync: issues.md
+- sync: features.md
+- sync: features.md
+
 ## [0.10.1] - 2026-07-31
 
 ### Features
