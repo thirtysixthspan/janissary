@@ -4,11 +4,11 @@ import type { JanusClient } from './ws';
 import type { HarnessTabHandle } from './HarnessTab';
 import { EditorTab, type EditorTabHandle, type EditorDropHandle } from './EditorTab';
 import { PageTab } from './PageTab';
-import { VideoTab } from './VideoTab';
 import { HarnessTabLayer } from './HarnessTabLayer';
 import type { PickerOverlayProps } from './picker-overlay-props';
 import { QuestionPanel, type QuestionPanelHandle } from './QuestionPanel';
 import { tabBodyBorder } from './tab-body-border';
+import { PluginTabLayer } from './plugins/PluginTabLayer';
 
 type Properties = {
   tabs: TabView[];
@@ -27,7 +27,7 @@ type Properties = {
   // agent-tab body uses.
 } & PickerOverlayProps;
 
-// Harness, editor, page, and video tabs stay mounted (hidden when inactive) so terminal/xterm
+// Harness, editor, page, and plugin tabs stay mounted (hidden when inactive) so terminal/xterm
 // state, editor buffers, undo stacks, cursor/scroll position, embedded-page navigation, and video
 // playback position survive tab switches. Split out of App.tsx to keep it under the file-size limit.
 export function MountedViewLayers({
@@ -92,24 +92,17 @@ export function MountedViewLayers({
         ))}
       {tabs
         .map((t, index) => ({ t, index }))
-        .filter(({ t }) => t.view === 'video' && t.video)
+        .filter(({ t }) => t.view === 'plugin' && t.plugin)
         .map(({ t, index }) => (
-          <div
+          <PluginTabLayer
             key={t.label}
-            className="tab-body"
-            data-pane-index={index}
-            style={{
-              borderLeft: tabBodyBorder(t.dotColor, t.label === current.label),
-              display: visibleLabels.includes(t.label) ? 'flex' : 'none',
-              gridColumn: t.pane === 'right' ? 2 : 1,
-              gridRow: 2,
-            }}
-          >
-            <VideoTab
-              video={t.video!} client={client}
-              onSplit={onSplit ? () => onSplit(index) : undefined}
-            />
-          </div>
+            tab={t}
+            index={index}
+            current={current}
+            visible={visibleLabels.includes(t.label)}
+            client={client}
+            onSplit={onSplit ? () => onSplit(index) : undefined}
+          />
         ))}
       {current.pendingQuestion && <QuestionPanel ref={questionPanelRef} question={current.pendingQuestion} client={client} />}
     </>

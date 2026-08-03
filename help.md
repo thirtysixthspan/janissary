@@ -19,6 +19,8 @@
 | `db` | Create, delete, query, or list SQLite databases |
 | `browser` | Drive a headless/headed web browser (open, goto, content, eval, shot) |
 | `open` | Open images/files in a tab, or web pages embedded (`open https://…` / `open page …`) — sites that refuse framing render too; `open external` uses the OS viewer/browser |
+| `video` | `video <path>` opens a video through the bundled video tab plugin; accepts the same paths and wildcards as `open` |
+| `plugins` | List bundled tab plugins with their API version, activation state and duration, or disabled reason |
 | `edit` | Open a file in the plain-text editor (`edit <file>` or `edit <file>:<line>` to jump to a line) |
 | `rename` | Rename the current tab's display name (`rename <name>`); bare `rename` clears the alias |
 | `connection` | List or close open connections (sqlite/shell/acp/browser/ssh) |

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { fireEvent, render } from '@testing-library/react';
+import { fireEvent, render, waitFor } from '@testing-library/react';
 import React from 'react';
 import type { TabView } from '@shared/protocol';
 import type { HarnessTabHandle } from './HarnessTab';
@@ -32,16 +32,27 @@ vi.mock('./EditorTab', () => {
   };
 });
 
-// VideoTab is mounted persistently so playback survives tab switches; the mount effect increments a
-// shared counter so tests can assert it was never torn down and recreated across a re-render.
-let videoMountCount = 0;
-vi.mock('./VideoTab', () => {
-  const { useEffect, createElement } = React;
+// The generic plugin layer owns persistence. This fake lazy registration lets the layout tests pin
+// both deferred loading and stable mounting without importing the production video chunk.
+let pluginLoadCount = 0;
+let pluginMountCount = 0;
+vi.mock('./plugins/registry', () => {
+  const { lazy, useEffect, createElement } = React;
+  const Component = lazy(async () => {
+    pluginLoadCount += 1;
+    const FixturePlugin = ({ onMounted }: { onMounted(): void }) => {
+      useEffect(() => { pluginMountCount += 1; }, []);
+      useEffect(onMounted, [onMounted]);
+      return createElement('div', { 'data-testid': 'plugin' });
+    };
+    return {
+      default: FixturePlugin,
+    };
+  });
   return {
-    VideoTab: () => {
-      useEffect(() => { videoMountCount += 1; }, []);
-      return createElement('div', { 'data-testid': 'video' });
-    },
+    clientPluginRegistry: new Map([['video', { schemaVersion: 1, Component }]]),
+    clientPluginFailure: () => {},
+    disableClientPlugin: () => true,
   };
 });
 
@@ -70,10 +81,13 @@ function makePageTab(label: string, url: string): TabView {
   } as unknown as TabView;
 }
 
-function makeVideoTab(label: string, url: string): TabView {
+function makePluginTab(label: string, url: string): TabView {
   return {
-    label, view: 'video' as const, dotColor: '#ff0', groupColor: '#ccc',
-    video: { name: 'clip.mp4', path: '/a/clip.mp4', size: '1 MB', url, player: 'QuickTime Player' },
+    label, view: 'plugin' as const, dotColor: '#ff0', groupColor: '#ccc',
+    plugin: {
+      id: 'video', schemaVersion: 1,
+      payload: { name: 'clip.mp4', path: '/a/clip.mp4', size: '1 MB', url, player: 'QuickTime Player' },
+    },
     connections: [], schedule: [], bufferLines: [], cmdHistory: [],
   } as unknown as TabView;
 }
@@ -372,8 +386,18 @@ describe('MountedViewLayers', () => {
     expect(container.querySelector('.tab-body')).toBeNull();
   });
 
-  it('renders video tabs', () => {
-    const tabs = [makeVideoTab('vtab', '/open/1')];
+  it('does not load a plugin chunk when no plugin tab exists', () => {
+    pluginLoadCount = 0;
+    const tabs = [makeEditorTab('etab', '/test.ts')];
+    render(React.createElement(MountedViewLayers, {
+      tabs, current: tabs[0], client: { send: vi.fn() } as never, closeTab: vi.fn(),
+      harnessHandles: makeHarnessHandles(), editorHandles: makeEditorHandles(),
+    }));
+    expect(pluginLoadCount).toBe(0);
+  });
+
+  it('renders plugin tabs through the lazy generic layer', async () => {
+    const tabs = [makePluginTab('vtab', '/open/1')];
     const harnessHandles = makeHarnessHandles();
     const editorHandles = makeEditorHandles();
     const { container } = render(
@@ -383,11 +407,12 @@ describe('MountedViewLayers', () => {
       }),
     );
     expect(container.querySelector('.tab-body')).toBeTruthy();
+    await waitFor(() => { expect(container.querySelector('[data-testid="plugin"]')).toBeTruthy(); });
   });
 
-  it('hides video tab when not current', () => {
-    const tabs = [makeVideoTab('vtab', '/open/1')];
-    const other = makeVideoTab('other', '/open/2');
+  it('hides a plugin tab when it is not visible', () => {
+    const tabs = [makePluginTab('vtab', '/open/1')];
+    const other = makePluginTab('other', '/open/2');
     const harnessHandles = makeHarnessHandles();
     const editorHandles = makeEditorHandles();
     const { container } = render(
@@ -400,8 +425,8 @@ describe('MountedViewLayers', () => {
     expect(el.style.display).toBe('none');
   });
 
-  it('renders video tab as flex when current', () => {
-    const tabs = [makeVideoTab('vtab', '/open/1')];
+  it('places a current plugin tab as a visible layer', () => {
+    const tabs = [makePluginTab('vtab', '/open/1')];
     const harnessHandles = makeHarnessHandles();
     const editorHandles = makeEditorHandles();
     const { container } = render(
@@ -414,12 +439,21 @@ describe('MountedViewLayers', () => {
     expect(el.style.display).toBe('flex');
   });
 
-  it('filters out tabs without video payload', () => {
+  it('places a split plugin tab in the right grid column', () => {
+    const tab = { ...makePluginTab('vtab', '/open/1'), pane: 'right' as const };
+    const { container } = render(React.createElement(MountedViewLayers, {
+      tabs: [tab], current: tab, client: { send: vi.fn() } as never, closeTab: vi.fn(),
+      harnessHandles: makeHarnessHandles(), editorHandles: makeEditorHandles(),
+    }));
+    expect(container.querySelector<HTMLElement>('.tab-body')?.style.gridColumn).toBe('2');
+  });
+
+  it('filters out plugin views without an envelope', () => {
     const harnessHandles = makeHarnessHandles();
     const editorHandles = makeEditorHandles();
     const { container } = render(
       React.createElement(MountedViewLayers, {
-        tabs: [{ label: 'a', view: 'video', dotColor: '#ff0', groupColor: '#ccc' }] as TabView[],
+        tabs: [{ label: 'a', view: 'plugin', dotColor: '#ff0', groupColor: '#ccc' }] as unknown as TabView[],
         current: { label: 'a' } as TabView,
         client: { send: vi.fn() } as never,
         closeTab: vi.fn(),
@@ -429,9 +463,9 @@ describe('MountedViewLayers', () => {
     expect(container.querySelector('.tab-body')).toBeNull();
   });
 
-  it('keeps the video tab mounted while it is not current, so playback state survives', () => {
-    videoMountCount = 0;
-    const tab = makeVideoTab('vtab', '/open/1');
+  it('keeps one plugin component mounted through focus changes', async () => {
+    pluginMountCount = 0;
+    const tab = makePluginTab('vtab', '/open/1');
     const other = makeEditorTab('etab', '/test.ts');
     const harnessHandles = makeHarnessHandles();
     const editorHandles = makeEditorHandles();
@@ -440,17 +474,17 @@ describe('MountedViewLayers', () => {
       harnessHandles, editorHandles,
     });
     const { rerender } = render(React.createElement(MountedViewLayers, props(tab)));
-    expect(videoMountCount).toBe(1);
+    await waitFor(() => { expect(pluginMountCount).toBe(1); });
 
     rerender(React.createElement(MountedViewLayers, props(other)));
     rerender(React.createElement(MountedViewLayers, props(tab)));
 
-    expect(videoMountCount).toBe(1);
+    expect(pluginMountCount).toBe(1);
   });
 
-  it('does not remount the video tab when only its payload url changes', () => {
-    videoMountCount = 0;
-    const tab = makeVideoTab('vtab', '/open/1');
+  it('does not remount a plugin when only its payload changes', async () => {
+    pluginMountCount = 0;
+    const tab = makePluginTab('vtab', '/open/1');
     const harnessHandles = makeHarnessHandles();
     const editorHandles = makeEditorHandles();
     const { rerender } = render(
@@ -459,16 +493,22 @@ describe('MountedViewLayers', () => {
         harnessHandles, editorHandles,
       }),
     );
-    expect(videoMountCount).toBe(1);
+    await waitFor(() => { expect(pluginMountCount).toBe(1); });
 
-    const refreshed: TabView = { ...tab, video: { ...tab.video!, url: '/open/2' } };
+    const refreshed: TabView = {
+      ...tab,
+      plugin: {
+        ...tab.plugin!,
+        payload: { ...(tab.plugin!.payload as Record<string, unknown>), url: '/open/2' },
+      },
+    };
     rerender(
       React.createElement(MountedViewLayers, {
         tabs: [refreshed], current: refreshed, client: { send: vi.fn() } as never, closeTab: vi.fn(),
         harnessHandles, editorHandles,
       }),
     );
-    expect(videoMountCount).toBe(1);
+    expect(pluginMountCount).toBe(1);
   });
 
   it('wires closeTab through with the tab\'s real index in the full tabs array', () => {

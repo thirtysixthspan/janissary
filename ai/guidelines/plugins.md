@@ -2,6 +2,8 @@
 
 How to design, build, and maintain plugins in this codebase. This document sets the design criteria and the rules. It deliberately does not specify a plugin API shape, a manifest schema, or a loader implementation. Those are design decisions for the change that introduces them, and they must satisfy everything below.
 
+For the concrete bundled tab-plugin contract, read [[plugins-tabs]].
+
 A plugin here means a unit of behavior that the host does not know about at build time, contributed through a published contract, loadable and disposable at runtime, and versioned separately from the code that hosts it. 
 
 ---

@@ -1,4 +1,5 @@
-import type { Tab, ImageView, VideoView, MarkdownView, EditorView, PageView, FileNavigatorView } from './types.js';
+import type { Tab, ImageView, MarkdownView, EditorView, PageView, FileNavigatorView } from './types.js';
+import type { TabPluginPayload, TabPluginResources } from '../plugins/api.js';
 import type { Managers } from '../managers.js';
 import { TabQueueState } from './queue-state.js';
 import * as tabOpeners from './openers.js';
@@ -8,6 +9,8 @@ export abstract class TabOpeningState extends TabQueueState {
   abstract activeTab: number;
   abstract setActiveTab(index: number): void;
   abstract applyOpenResult(result: { tabs: Tab[]; activeTab: number }): void;
+  abstract registerFile(path: string): string;
+  abstract get openFiles(): Map<string, string>;
 
   protected constructor(protected managers: Managers) {
     super();
@@ -17,8 +20,13 @@ export abstract class TabOpeningState extends TabQueueState {
     tabOpeners.openImageTab(this, image);
   }
 
-  openVideoTab(video: VideoView): void {
-    tabOpeners.openVideoTab(this, video);
+  openPluginTab(
+    pluginId: string, labelPrefix: string, instanceKey: string, schemaVersion: number,
+    sourceLabel: string, factory: (resources: TabPluginResources) => TabPluginPayload,
+  ): void {
+    tabOpeners.openPluginTab(
+      this, pluginId, labelPrefix, instanceKey, schemaVersion, sourceLabel, factory,
+    );
   }
 
   openMarkdownTab(view: MarkdownView): void {

@@ -161,7 +161,9 @@ All scripts in `scripts/` are considered trusted. Do not invoke them directly wi
 ## Project structure
 
 - `src/` — Server (Node.js, CLI, terminal UI); tests colocated as `src/**/*.test.ts` (vitest project `server`)
+- `src/plugins/` — Bundled tab-plugin manifests, shared contracts, lazy server activations, and host infrastructure
 - `web/src/` — Web UI (React, Vite); tests colocated as `web/src/**/*.test.ts(x)` (vitest project `client`)
+- `web/src/plugins/` — Lazy client entries and React bodies for bundled tab plugins
 - `bin/janus.mjs` — CLI entry point (`janus`)
 - `product/` — plans, specs, and backlogs for product work (see below)
 - `product/specs/` — functional specs, one file per feature; when a change alters behavior, update the matching spec

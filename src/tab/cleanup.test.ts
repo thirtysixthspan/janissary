@@ -111,6 +111,24 @@ describe('closeTabResources', () => {
     expect(openFiles.has('xyz')).toBe(false);
   });
 
+  it('drops every plugin-owned reference and leaves unrelated references', () => {
+    const managers = makeManagers();
+    const tab = {
+      ...makeTab('video', 'red'),
+      plugin: {
+        id: 'video', instanceKey: '/tmp/clip.mp4', schemaVersion: 1,
+        payload: {}, fileRefs: ['video', 'poster'], sourceLabel: 'main',
+      },
+    };
+    const openFiles = new Map([
+      ['video', '/tmp/clip.mp4'], ['poster', '/tmp/poster.png'], ['keep', '/tmp/keep.txt'],
+    ]);
+
+    closeTabResources(tab, managers, openFiles, new Map(), new Map(), 2);
+
+    expect([...openFiles]).toEqual([['keep', '/tmp/keep.txt']]);
+  });
+
   it('leaves unrelated open-file entries untouched for a plain agent tab', () => {
     const managers = makeManagers();
     const openFiles = new Map([['keep', '/tmp/keep.png']]);

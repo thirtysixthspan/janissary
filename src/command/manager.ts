@@ -90,7 +90,7 @@ export class CommandManager {
         resolveUnknownCommand(res.cmd, label, this.managers, (input, l, idx) => this.run(input, l, idx), (p) => { this.pendingRoute = p; });
         return;
       }
-      case 'app': { this.executeCommand(res.name, res.cmd, label, index); return;
+      case 'app': { void this.executeCommand(res.name, res.cmd, label, index); return;
       }
     }
   }
@@ -107,8 +107,14 @@ export class CommandManager {
     this.managers.pty.openInlinePty(label, command, program);
   }
 
-  executeCommand(name: string, command: string, label: string, index: number): void {
+  async executeCommand(name: string, command: string, label: string, index: number): Promise<void> {
     const cmd = commands.find((c) => c.name === name);
-    if (cmd) cmd.run(command, { label, index }, this.managers);
+    if (!cmd) return;
+    try {
+      await cmd.run(command, { label, index }, this.managers);
+    } catch (error) {
+      const output = error instanceof Error ? error.message : String(error);
+      this.managers.tab.append(label, { input: command, output });
+    }
   }
 }

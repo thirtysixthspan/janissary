@@ -3,7 +3,6 @@ import type { ClientMessage } from './protocol.js';
 const CLIENT_METHODS = {
   answerQuestion: true,
   cancelSchedule: true,
-  captureVideoFrame: true,
   chooseRoute: true,
   clearSchedules: true,
   closeEditorConnection: true,
@@ -44,6 +43,8 @@ const CLIENT_METHODS = {
   ptyInput: true,
   ptyKill: true,
   ptyResize: true,
+  pluginFailed: true,
+  pluginIntent: true,
   rateSuggestion: true,
   redoFileNavigatorItem: true,
   renameFileNavigatorItem: true,
@@ -66,6 +67,23 @@ const CLIENT_METHODS = {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+export function isPluginIntentParams(value: unknown): value is {
+  tab: string;
+  intent: string;
+  payload: unknown;
+} {
+  return isRecord(value)
+    && typeof value.tab === 'string'
+    && typeof value.intent === 'string'
+    && Object.hasOwn(value, 'payload');
+}
+
+export function isPluginFailedParams(value: unknown): value is { tab: string; reason: string } {
+  return isRecord(value)
+    && typeof value.tab === 'string'
+    && typeof value.reason === 'string';
 }
 
 function isClientMethod(value: unknown): value is ClientMessage['method'] {

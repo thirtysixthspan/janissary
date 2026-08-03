@@ -1,11 +1,17 @@
 import { describe, it, expect } from 'vitest';
-import { makeTab, makeEditorTab, makeMarkdownTab, makeVideoTab } from './index.js';
-import { uniqueEditorLabel, addEditorTab, uniqueMarkdownLabel, addMarkdownTab, addImageTab, uniqueVideoLabel, addVideoTab } from './creators.js';
-import type { EditorView, MarkdownView, ImageView, VideoView } from './types.js';
+import { makeEditorTab, makeMarkdownTab, makePluginTab, makeTab } from './index.js';
+import {
+  addEditorTab, addImageTab, addMarkdownTab, addPluginTab,
+  uniqueEditorLabel, uniqueMarkdownLabel, uniquePluginLabel,
+} from './creators.js';
+import type { EditorView, ImageView, MarkdownView, PluginTabRecord } from './types.js';
 
 const view: EditorView = { name: 'notes.txt', path: '/tmp/notes.txt', size: '5 B', url: '/open/1' };
 const markdownView: MarkdownView = { name: 'readme.md', path: '/tmp/readme.md', size: '5 B', url: '/open/1' };
-const videoView: VideoView = { name: 'clip.mp4', path: '/tmp/clip.mp4', size: '5 B', url: '/open/1', player: 'QuickTime Player' };
+const plugin: PluginTabRecord = {
+  id: 'video', instanceKey: '/tmp/clip.mp4', schemaVersion: 1,
+  payload: { name: 'clip.mp4', url: '/open/1' }, fileRefs: ['1'], sourceLabel: 'janus',
+};
 
 describe('addImageTab', () => {
   it('retains a long image filename as the complete tab title', () => {
@@ -15,24 +21,25 @@ describe('addImageTab', () => {
   });
 });
 
-describe('uniqueVideoLabel', () => {
-  it('suffixes the label when video tabs already exist', () => {
-    const tabs = [makeTab('janus', '#fff'), makeVideoTab('video', '#fff', 2, 1, '#fff', videoView)];
-    expect(uniqueVideoLabel(tabs)).toBe('video-2');
+describe('uniquePluginLabel', () => {
+  it('suffixes the declaration prefix when plugin tabs already exist', () => {
+    const tabs = [makeTab('janus', '#fff'), makePluginTab('video', '#123', 2, 1, '#fff', 'clip.mp4', plugin)];
+    expect(uniquePluginLabel(tabs, 'video')).toBe('video-2');
   });
 });
 
-describe('addVideoTab', () => {
-  it('adds the tab to the creator group with a distinct dot color and the file name as title', () => {
+describe('addPluginTab', () => {
+  it('inherits the creator group and uses the plugin title and envelope', () => {
     const tabs = [makeTab('janus', '#fff')];
-    const result = addVideoTab(tabs, 0, videoView);
+    const result = addPluginTab(tabs, 0, 'video', 'clip.mp4', plugin);
     expect(result.tabs).toHaveLength(2);
     const added = result.tabs[result.activeTab];
     expect(added.label).toBe('video');
     expect(added.group).toBe(1);
     expect(added.groupColor).toBe('#fff');
     expect(added.dotColor).not.toBe('#fff');
-    expect(added.video).toEqual(videoView);
+    expect(added.plugin).toEqual(plugin);
+    expect(added.view).toBe('plugin');
     expect(added.title).toBe('clip.mp4');
   });
 });

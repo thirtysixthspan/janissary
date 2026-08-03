@@ -7,7 +7,7 @@ import { spawn } from 'node:child_process';
 //
 // `application` names a specific macOS application to launch the file with (the `open -a` flag),
 // e.g. the player configured for the `video` opener. It is ignored on every other platform, where
-// there is no equivalent one-flag form; callers that care retry without it (see `openers/video.ts`).
+// there is no equivalent one-flag form; callers that care retry without it (see the video plugin).
 export function didOsOpen(path: string, application?: string): boolean {
   const command = process.platform === 'darwin' ? 'open'
     : process.platform === 'win32' ? 'start'

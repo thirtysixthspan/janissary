@@ -15,8 +15,9 @@ import { createTabControllerAdapter, type TabControllerAdapter } from './control
 import { createMonitorControllerAdapter, type MonitorControllerAdapter } from './controller/monitor-adapter.js';
 import { createEditorControllerAdapter, type EditorControllerAdapter } from './controller/editor-adapter.js';
 import { createFileNavigatorControllerAdapter, type FileNavigatorControllerAdapter } from './controller/file-navigator-adapter.js';
+import { createPluginControllerAdapter, type PluginControllerAdapter } from './controller/plugin-adapter.js';
 
-export class Controller implements TabControllerAdapter, MonitorControllerAdapter, EditorControllerAdapter, FileNavigatorControllerAdapter {
+export class Controller implements TabControllerAdapter, MonitorControllerAdapter, EditorControllerAdapter, FileNavigatorControllerAdapter, PluginControllerAdapter {
   managers: Managers = {} as Managers;
 
   declare setActiveTab: TabControllerAdapter['setActiveTab'];
@@ -40,7 +41,8 @@ export class Controller implements TabControllerAdapter, MonitorControllerAdapte
   declare resetMonitorContext: MonitorControllerAdapter['resetMonitorContext'];
   declare monitorContextSnapshot: MonitorControllerAdapter['monitorContextSnapshot'];
   declare saveFile: EditorControllerAdapter['saveFile'];
-  declare captureVideoFrame: EditorControllerAdapter['captureVideoFrame'];
+  declare pluginIntent: PluginControllerAdapter['pluginIntent'];
+  declare pluginFailed: PluginControllerAdapter['pluginFailed'];
   declare syncEditorBuffer: EditorControllerAdapter['syncEditorBuffer'];
   declare resyncEditorTab: EditorControllerAdapter['resyncEditorTab'];
   declare syncPageSnapshot: EditorControllerAdapter['syncPageSnapshot'];
@@ -80,6 +82,7 @@ export class Controller implements TabControllerAdapter, MonitorControllerAdapte
       createMonitorControllerAdapter(this.managers),
       createEditorControllerAdapter(this.managers),
       createFileNavigatorControllerAdapter(this.managers),
+      createPluginControllerAdapter(this.managers),
     );
     this.managers.schedule.start();
   }

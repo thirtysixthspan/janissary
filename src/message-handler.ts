@@ -1,6 +1,7 @@
 import type { Controller } from './controller.js';
 import type { ClientMessage, ServerEvent } from './protocol.js';
 import { handleFileNavigatorMessage } from './message-handler-file-navigator.js';
+import { isPluginFailedParams, isPluginIntentParams } from './client-message.js';
 
 export function handle(controller: Controller, message: ClientMessage, reply: (event: ServerEvent) => void): void {
   switch (message.method) {
@@ -68,8 +69,41 @@ export function handle(controller: Controller, message: ClientMessage, reply: (e
     }
     case 'saveFile': { controller.saveFile(message.params.url, message.params.content); break;
     }
-    case 'captureVideoFrame': {
-      reply({ t: 'rpc-reply', id: message.id, result: { name: controller.captureVideoFrame(message.params.url, message.params.dataUrl) } });
+    case 'pluginIntent': {
+      if (!isPluginIntentParams(message.params)) {
+        reply({ t: 'rpc-reply', id: message.id, error: 'Invalid pluginIntent params' });
+        return;
+      }
+      void controller.pluginIntent(
+        message.params.tab,
+        message.params.intent,
+        message.params.payload,
+      ).then(
+        (result) => { reply({ t: 'rpc-reply', id: message.id, result }); },
+        (error: unknown) => {
+          reply({
+            t: 'rpc-reply',
+            id: message.id,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        },
+      );
+      return;
+    }
+    case 'pluginFailed': {
+      if (!isPluginFailedParams(message.params)) {
+        reply({ t: 'rpc-reply', id: message.id, error: 'Invalid pluginFailed params' });
+        return;
+      }
+      try {
+        controller.pluginFailed(message.params.tab, message.params.reason);
+        reply({ t: 'rpc-reply', id: message.id, result: 'ok' });
+      } catch (error) {
+        reply({
+          t: 'rpc-reply', id: message.id,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
       return;
     }
     case 'editorSync': { controller.syncEditorBuffer(message.params.url, message.params.content); break;

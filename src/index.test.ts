@@ -112,6 +112,36 @@ describe('startServer (WS + RPC + security)', () => {
     expect(await get(`?token=${server.token}`)).toBe(404);
   });
 
+  it('serves plugin files with declaration-derived video MIME types', async () => {
+    const projectDir = mkdtempSync(path.join(tmpdir(), 'janus-video-mime-'));
+    writeFileSync(path.join(projectDir, 'clip.mp4'), Buffer.alloc(16));
+    server = await startServer({ webDir, projectDir });
+    const ws = new WebSocket(`ws://127.0.0.1:${server.port}/?token=${server.token}`);
+    const events: ServerEvent[] = [];
+    ws.on('message', (data) => { events.push(JSON.parse(data.toString())); });
+    await new Promise((resolve, reject) => { ws.on('open', resolve); ws.on('error', reject); });
+
+    ws.send(JSON.stringify({
+      t: 'rpc', id: 70, method: 'command', params: { text: 'open clip.mp4' },
+    }));
+    await waitFor(() => events.some((event) =>
+      event.t === 'state' && event.tabs.some((tab) => tab.plugin?.id === 'video')));
+    const state = events.findLast((event): event is Extract<ServerEvent, { t: 'state' }> =>
+      event.t === 'state' && event.tabs.some((tab) => tab.plugin?.id === 'video'))!;
+    const plugin = state.tabs.find((tab) => tab.plugin?.id === 'video')!.plugin!;
+    const reference = (plugin.payload as { url: string }).url;
+    const contentType = await new Promise<string | undefined>((resolve, reject) => {
+      const request = http.get(
+        `http://127.0.0.1:${server!.port}${reference}?token=${server!.token}`,
+        (response) => { response.resume(); resolve(response.headers['content-type']); },
+      );
+      request.on('error', reject);
+    });
+
+    expect(contentType).toBe('video/mp4');
+    ws.close();
+  });
+
   it('rejects a connection with a bad token', async () => {
     server = await startServer({ webDir: tmpdir() });
     const ws = new WebSocket(`ws://127.0.0.1:${server.port}/?token=wrong`);

@@ -24,6 +24,35 @@ function makeManagers(): { managers: Managers; recorder: string[] } {
   return { managers, recorder };
 }
 
+describe('CommandManager async commands', () => {
+  it('awaits a successful plugin command', async () => {
+    const { managers } = makeManagers();
+    const deferred = Promise.withResolvers<void>();
+    const runCommand = vi.fn(() => deferred.promise);
+    managers.plugins = { runCommand } as unknown as Managers['plugins'];
+
+    const completed = managers.command.executeCommand('video', 'video clip.mp4', 'janus', 0);
+    expect(runCommand).toHaveBeenCalledWith(
+      'video', 'video clip.mp4', { label: 'janus', command: 'video clip.mp4' },
+    );
+    deferred.resolve();
+    await completed;
+  });
+
+  it('turns an async command rejection into transcript output', async () => {
+    const { managers } = makeManagers();
+    managers.plugins = {
+      runCommand: vi.fn(async () => { throw new Error('async plugin rejected'); }),
+    } as unknown as Managers['plugins'];
+
+    await managers.command.executeCommand('video', 'video clip.mp4', 'janus', 0);
+
+    expect(managers.tab.cur().log.at(-1)).toEqual({
+      input: 'video clip.mp4', output: 'async plugin rejected',
+    });
+  });
+});
+
 
 describe('CommandManager queue gate', () => {
   it('runs directly when the tab is idle with an empty queue', () => {

@@ -139,6 +139,74 @@ export default ts.config(
       'import-x/extensions': ['error', 'never', { css: 'always' }],
     },
   },
+  // Concrete plugin implementations receive only their public host API, their own files, and
+  // external/Node modules. Video's pure size formatter is the single documented host utility.
+  {
+    files: ['src/plugins/*/**/*.ts', 'src/plugins/*/*.ts'],
+    ignores: ['**/*.test.ts', '**/*.test.tsx'],
+    rules: {
+      'no-restricted-imports': ['error', {
+        patterns: [{
+          regex: String.raw`^\.\./(?!(?:api\.js|\.\./openers/size\.js)$)`,
+          message: 'Server tab plugins must use src/plugins/api.ts capabilities instead of host internals.',
+        }],
+      }],
+    },
+  },
+  {
+    files: ['web/src/plugins/*/**/*.ts', 'web/src/plugins/*/**/*.tsx', 'web/src/plugins/*/*.ts', 'web/src/plugins/*/*.tsx'],
+    ignores: ['**/*.test.ts', '**/*.test.tsx'],
+    rules: {
+      'no-restricted-imports': ['error', {
+        patterns: [{
+          regex: String.raw`^(?:\.\./(?!api$)|@shared/(?!plugins/[^/]+/shared$))`,
+          message: 'Client tab plugins must use their client API and an import-free shared contract.',
+        }],
+      }],
+    },
+  },
+  // Core may know manifests and host infrastructure, but concrete behavior enters only through
+  // the literal lazy loader maps. This keeps behavior out of startup and the client entry chunk.
+  {
+    files: ['src/**/*.ts', 'src/**/*.tsx'],
+    ignores: ['src/plugins/**'],
+    rules: {
+      'no-restricted-imports': ['error', {
+        patterns: [{
+          regex: String.raw`plugins/[^/]+/activate\.js$`,
+          message: 'Load concrete server plugin behavior through src/plugins/loaders.ts.',
+        }],
+      }],
+    },
+  },
+  {
+    files: ['web/src/**/*.ts', 'web/src/**/*.tsx'],
+    ignores: ['web/src/plugins/**'],
+    rules: {
+      'no-restricted-imports': ['error', {
+        patterns: [{
+          regex: 'plugins/[^/]+/index$',
+          message: 'Load concrete client plugins through web/src/plugins/registry.tsx.',
+        }],
+      }],
+    },
+  },
+  // The client plugin host itself. It is reachable from the entry bundle, so a runtime import of any
+  // plugin's shared contract would ship that plugin's guards eagerly and defeat the lazy chunk.
+  // Type-only imports are fine — they are erased before the bundler ever sees them.
+  {
+    files: ['web/src/plugins/*.ts', 'web/src/plugins/*.tsx'],
+    ignores: ['**/*.test.ts', '**/*.test.tsx'],
+    rules: {
+      'no-restricted-imports': ['error', {
+        patterns: [{
+          regex: '^@shared/plugins/',
+          allowTypeImports: true,
+          message: 'The client plugin host must not pull a plugin shared contract into the entry bundle.',
+        }],
+      }],
+    },
+  },
   // React hooks correctness (web client only).
   {
     files: ['web/src/**/*.ts', 'web/src/**/*.tsx'],

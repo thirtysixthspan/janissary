@@ -1,16 +1,14 @@
-import type { ImageView, VideoView, MarkdownView, EditorView, PageView } from '../tab/types.js';
+import type { ImageView, MarkdownView, EditorView, PageView } from '../tab/types.js';
 
 // Capabilities an opener may use, supplied by the dispatcher (the Controller). Kept deliberately
-// narrow so an opener can only do the two things its surfaces promise — launch an external viewer
-// or mount an in-app view — and never reaches into controller internals. This is what keeps the
+// narrow so an opener can only use its declared presentation capabilities and never reaches into
+// controller internals. This is what keeps the
 // dispatcher closed for modification while the opener registry stays open for extension.
 export type OpenContext = {
   // Append a confirmation/error line to the originating tab's transcript.
   note: (text: string) => void;
   // Create and focus an in-app image view tab.
   openImageTab: (image: ImageView) => void;
-  // Create and focus an in-app video view tab.
-  openVideoTab: (video: VideoView) => void;
   // Create and focus an in-app markdown view tab.
   openMarkdownTab: (view: MarkdownView) => void;
   // Create and focus an in-app plain-text editor tab.
@@ -22,6 +20,11 @@ export type OpenContext = {
   // Hand a file to the operating system's default viewer (detached). Returns false when no viewer
   // could be launched on this platform.
   openExternally: (absPath: string) => boolean;
+  runPluginOpener: (
+    pluginId: string,
+    presentation: 'inline' | 'external',
+    file: string,
+  ) => Promise<void>;
 };
 
 // An opener handles one family of file types. Supporting a new type means registering one new
@@ -31,6 +34,7 @@ export interface Opener {
   name: string;
   // The file extensions this opener claims, lowercased and dot-prefixed (e.g. '.png').
   extensions: string[];
+  editGesture?: 'open external';
   // Hand the file to a program outside the app.
   external: (file: string, context: OpenContext) => void | Promise<void>;
   // Perform an in-app UI action for the file (e.g. open a tab).

@@ -17,11 +17,21 @@ import { isSyncedPath } from './sync-path-match.js';
 export class OpenFileManager {
   constructor(private managers: Managers) {}
 
-  run(command: string, label: string): void {
-    runOpenCommand(
-      this.managers, command, label,
-      (c, l) => this.buildContext(c, l), (p, cwd) => this.expandGlob(p, cwd), (c, l, f, ext, ctx) => this.openOne(c, l, f, ext, ctx),
-    );
+  run(command: string, label: string): Promise<void> {
+    return this.runAs(command, command, label);
+  }
+
+  // `requireOpener` pins dispatch to one opener by name. A tab plugin's declared command uses it so
+  // `video notes.txt` reports a non-video file instead of quietly opening the text editor — the
+  // command is a second route into that plugin's own opener, not a second route into the registry.
+  runAs(
+    parsedCommand: string, displayCommand: string, label: string, requireOpener?: string,
+  ): Promise<void> {
+    return Promise.resolve(runOpenCommand(
+      this.managers, parsedCommand, displayCommand, label,
+      (c, l) => this.buildContext(c, l), (p, cwd) => this.expandGlob(p, cwd),
+      (c, l, f, ext, ctx) => this.openOne(c, l, f, ext, ctx, requireOpener),
+    ));
   }
 
   // The `edit <file>` command: resolve the target like `open` does, but bypass the opener
@@ -61,21 +71,33 @@ export class OpenFileManager {
     return {
       note: (text) => this.managers.tab.append(label, { input: command, output: text }),
       openImageTab: (image) => this.managers.tab.openImageTab(image),
-      openVideoTab: (video) => this.managers.tab.openVideoTab(video),
       openMarkdownTab: (view) => this.managers.tab.openMarkdownTab(view),
       openEditorTab: (view) => this.managers.tab.openEditorTab(view),
       openPageTab: (view) => this.managers.tab.openPageTab(view),
       registerFile: (absPath) => this.managers.tab.registerFile(absPath),
       openExternally: (absPath) => didOsOpen(absPath),
+      runPluginOpener: (pluginId, presentation, file) => this.managers.plugins.runOpener(
+        pluginId,
+        presentation,
+        file,
+        { label, command },
+      ),
     };
   }
 
-  private openOne(command: string, label: string, file: string, external: boolean, context: OpenContext): void {
+  private openOne(
+    command: string, label: string, file: string, external: boolean, context: OpenContext,
+    requireOpener?: string,
+  ): void | Promise<void> {
     if (!existsSync(file)) { this.managers.tab.append(label, { input: command, output: `open: ${file}: no such file` }); return; }
     const opener = openerForExtension(path.extname(file));
     if (!opener) { this.managers.tab.append(label, { input: command, output: `No opener for "${path.extname(file) || '(none)'}" files.` }); return; }
+    if (requireOpener !== undefined && opener.name !== requireOpener) {
+      this.managers.tab.append(label, { input: command, output: `${requireOpener}: ${file}: not a ${requireOpener} file` });
+      return;
+    }
     if (!external && opener.name === 'editor' && this.isSyncPath(file)) { this.openSynced(file, context); return; }
-    void (external ? opener.external(file, context) : opener.inline(file, context));
+    return external ? opener.external(file, context) : opener.inline(file, context);
   }
 
   // Whether `file`'s project-relative path is config-listed for GitHub syncing — the sole gate for

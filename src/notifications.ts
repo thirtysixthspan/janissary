@@ -22,7 +22,8 @@ export type NotificationEventType =
   | 'editor-suggest'
   | 'question'
   | 'transcript-unavailable'
-  | 'file-operation';
+  | 'file-operation'
+  | 'plugin-failure';
 
 // Whether an event should be recorded, given the config and the active tab. Defensive against the
 // tab feeding itself. For the five ambient events, both the per-event opt-in toggle and focus
@@ -43,6 +44,7 @@ export function shouldNotify(
     case 'question':
     case 'transcript-unavailable':
     case 'file-operation': { return true; }
+    case 'plugin-failure': { return true; }
     default: { break; }
   }
   if (tabLabel === activeLabel) return false;
@@ -83,6 +85,7 @@ export function notificationText(event: NotificationEventType, tabLabel: string,
     case 'auto-approve':
     case 'editor-suggest':
     case 'file-operation': { return detail ?? ''; }
+    case 'plugin-failure': { return detail ?? ''; }
     case 'question': { return `Question from ${tabLabel}`; }
     case 'transcript-unavailable': { return 'no harness transcript found'; }
   }

@@ -20,6 +20,7 @@ import type { FileNavigatorManager } from './file-navigator/manager.js';
 import type { EditorWatchManager } from './editor/watch-manager.js';
 import type { EditorAcpManager } from './editor/acp-manager.js';
 import type { Questions } from './questions.js';
+import type { TabPluginHost } from './plugins/host.js';
 
 export type ManagerLifecycle = {
   dispose?(): void;
@@ -48,6 +49,7 @@ type ManagerRegistry = {
   editorWatch: EditorWatchManager;
   editorAcp: EditorAcpManager;
   questions: Questions;
+  plugins: TabPluginHost;
 };
 
 export type Managers = {

@@ -1,0 +1,94 @@
+import { beforeEach, describe, expect, it } from 'vitest';
+import { commands } from '../commands/index.js';
+import { coreAvailableCommands } from '../commands.js';
+import { openers } from '../openers/index.js';
+import type { Command } from '../commands/types.js';
+import type { Opener } from '../openers/types.js';
+import type { TabPluginDeclaration } from './api.js';
+import { TAB_PLUGIN_API_VERSION } from './api.js';
+import { createPluginCommands } from './command-adapter.js';
+import { createPluginOpeners } from './opener-adapter.js';
+import { clearContributionRejections, contributionRejection } from './rejections.js';
+
+// The rejection ledger is a module singleton the production registries populate at import time, so
+// each case starts from a clean one rather than reading a neighbour's conflict.
+beforeEach(() => { clearContributionRejections(); });
+
+function manifest(id: string, overrides: Partial<TabPluginDeclaration> = {}): TabPluginDeclaration {
+  return {
+    id, version: '1.0.0', apiVersion: TAB_PLUGIN_API_VERSION, payloadSchemaVersion: 1,
+    tabLabelPrefix: id, fileExtensions: { [`.${id}`]: 'text/plain' }, capabilities: [],
+    ...overrides,
+  };
+}
+
+describe('tab plugin opener adapter', () => {
+  const core: Opener = {
+    name: 'core', extensions: ['.core'], inline: () => {}, external: () => {},
+  };
+
+  it('normalizes claims, preserves edit gestures, and keeps production plugins after core', () => {
+    const [opener] = createPluginOpeners([
+      manifest('fixture', { fileExtensions: { '.FIXTURE': 'text/plain' }, editGesture: 'open external' }),
+    ], [core]);
+    expect(opener).toMatchObject({
+      name: 'fixture', extensions: ['.fixture'], editGesture: 'open external',
+    });
+    expect(openers.findIndex((item) => item.name === 'video'))
+      .toBeGreaterThan(openers.findIndex((item) => item.name === 'editor'));
+  });
+
+  it('drops a claim owned by core and records why, without throwing', () => {
+    const built = createPluginOpeners([
+      manifest('fixture', { fileExtensions: { '.CORE': undefined } }),
+    ], [core]);
+    expect(built).toEqual([]);
+    expect(contributionRejection('fixture')).toBe('duplicate tab plugin extension claim ".core"');
+  });
+
+  it('keeps the first plugin to claim an extension and drops the second', () => {
+    const built = createPluginOpeners([
+      manifest('first', { fileExtensions: { '.same': undefined } }),
+      manifest('second', { fileExtensions: { '.SAME': undefined } }),
+    ], []);
+    expect(built.map((opener) => opener.name)).toEqual(['first']);
+    expect(contributionRejection('first')).toBeUndefined();
+    expect(contributionRejection('second')).toBe('duplicate tab plugin extension claim ".same"');
+  });
+});
+
+describe('tab plugin command adapter', () => {
+  it('refuses every production reserved name without contributing a command', () => {
+    const reserved = new Set([
+      ...coreAvailableCommands,
+      ...commands.map((command) => command.name),
+      'schedule', 'harness', 'ssh', 'shell',
+    ]);
+    for (const name of reserved) {
+      clearContributionRejections();
+      expect(createPluginCommands([manifest('fixture', { command: name })], commands)).toEqual([]);
+      expect(contributionRejection('fixture'))
+        .toBe(`reserved tab plugin command claim "${name.toLowerCase()}"`);
+    }
+  });
+
+  it('keeps the first plugin to claim a command name and drops the second', () => {
+    const built = createPluginCommands([
+      manifest('first', { command: 'fixture' }),
+      manifest('second', { command: 'FIXTURE' }),
+    ], []);
+    expect(built.map((command) => command.name)).toEqual(['fixture']);
+    expect(contributionRejection('second')).toBe('duplicate tab plugin command claim "fixture"');
+  });
+
+  it('matches a case-insensitive first token on a word boundary', () => {
+    const core: Command[] = [];
+    const [command] = createPluginCommands([manifest('fixture', { command: 'fixture' })], core);
+    expect(command.match('FIXTURE path')).toBe(true);
+    expect(command.match('fixture-extra path')).toBe(false);
+  });
+
+  it('does not register the frozen fixture in production', () => {
+    expect(commands.map((command) => command.name)).not.toContain('fixture-v1');
+  });
+});

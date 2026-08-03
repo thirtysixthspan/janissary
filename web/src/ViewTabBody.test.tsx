@@ -75,10 +75,10 @@ describe('ViewTabBody', () => {
     expect(container.querySelector<HTMLElement>('.tab-body')?.style.borderLeft).toBe('4px solid var(--muted)');
   });
 
-  it('returns null when view is video (video tabs are rendered by MountedViewLayers)', () => {
+  it('returns null when view is plugin (plugin tabs are rendered by MountedViewLayers)', () => {
     const tab = baseTab({
-      view: 'video',
-      video: { name: 'clip.mp4', path: '/a/clip.mp4', size: '1 MB', url: '/open/3', player: 'QuickTime Player' },
+      view: 'plugin',
+      plugin: { id: 'video', schemaVersion: 1, payload: {} },
     });
     const { container } = render(React.createElement(ViewTabBody, { tab, client: {} as never, index: 0 }));
     expect(container.innerHTML).toBe('');

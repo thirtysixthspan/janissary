@@ -1,8 +1,9 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { tabPluginCatalog } from './plugins/catalog.js';
 
-export const availableCommands = [
+export const coreAvailableCommands = [
   'help',
   'state',
   'clear',
@@ -22,6 +23,14 @@ export const availableCommands = [
   'notifications',
   'notify',
   'syntax',
+];
+
+// `plugins` is a core command; every other addition here is contributed by a bundled tab plugin, so
+// it comes from the catalog rather than a second hand-maintained list that could drift from it.
+export const availableCommands = [
+  ...coreAvailableCommands,
+  'plugins',
+  ...tabPluginCatalog.flatMap((plugin) => plugin.command ?? []),
 ];
 
 let helpOutput: string | null = null;

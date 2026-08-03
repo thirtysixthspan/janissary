@@ -1,10 +1,10 @@
 # Open
 
-The `open` command is a **dispatcher** for handling targets — local files and web addresses: it inspects the target, picks the opener that handles it, and hands the target to it. Every type is handled by its own **opener**; the dispatcher itself knows only enough to tell a **web address** from a **file** and route each to its opener. Images and embedded web pages are the supported types.
+The `open` command is a **dispatcher** for handling targets — local files and web addresses: it inspects the target, picks the opener that handles it, and hands the target to it. Every type is handled by its own **opener**; the dispatcher itself knows only enough to tell a **web address** from a **file** and route each to its opener. Core openers handle images, Markdown, text files, and embedded web pages; bundled tab plugins may contribute more file types, beginning with video.
 
 ### Open for extension, closed for modification
 
-Opener selection is a lookup. The dispatcher first classifies the target: a **web address** goes to the web opener; otherwise the target is a **file**, and the dispatcher walks an ordered list of registered file openers and picks the first one whose declared extensions include the file's extension. Supporting a new file type is purely additive: register one new opener that declares the extensions it handles and how to display them. Nothing in the dispatcher or in any existing opener changes — the dispatcher is closed for modification, the registry open for extension.
+Opener selection is a lookup. The dispatcher first classifies the target: a **web address** goes to the web opener; otherwise the target is a **file**, and the dispatcher walks an ordered list of registered file openers and picks the first one whose declared extensions include the file's extension. Core openers precede adapters derived from static tab-plugin declarations, and duplicate claims are rejected instead of being decided silently by array position. Resolving a plugin claim activates that plugin lazily. Supporting a new file type is purely additive: register one new opener or plugin declaration that says which extensions it handles. Nothing in the dispatcher or in an existing opener changes — the dispatcher is closed for modification, the registry open for extension.
 
 ### Opener
 
@@ -44,7 +44,7 @@ The dispatcher resolves the opener and surfaces these errors; the opener owns ev
 
 When the path contains shell wildcard characters, it is treated as a pattern rather than a single file. The pattern is expanded **by the shell** — exactly as it would be on the command line — into the list of files it matches, resolved against the active tab's working directory. `open` then acts on each matched file in turn, applying the same presentation (inline or external) to every one.
 
-- A wildcard `open` acts on **at most 10 files**. When a pattern matches more than 10, only the first 10 (in the shell's match order) are opened and the rest are skipped, with a note reporting how many were matched.
+- A wildcard `open` acts on **at most 10 files**. Matches are deduplicated and sorted by path; when a pattern matches more than 10, only the first 10 are opened and the rest are skipped, with a note reporting how many were matched. Async plugin openers are awaited one at a time so this order is preserved.
 - A pattern that matches nothing reports that there were no matching files.
 - Each matched file is still dispatched individually, so the per-file rules above apply to each — an unsupported type among the matches is reported and skipped without stopping the others.
 
@@ -77,9 +77,9 @@ Opens the image in an **image tab**: a non-agent view tab that displays the imag
 
 ---
 
-## Video opener
+## Video plugin opener
 
-The video opener claims the common video containers (case-insensitive) and splits them into two groups:
+The bundled `video` tab plugin contributes an opener for common video containers (case-insensitive). Its static declaration is available at startup, but its behavior activates only on the first matching `open` or `video` command. It splits containers into two groups:
 
 - **Playable** — MP4, M4V, WebM, OGV, and MOV. These are the containers the app can play in a video tab.
 - **External only** — MKV, AVI, WMV, FLV, MPG, and MPEG. These are claimed so that opening one is never reported as an unsupported file type, but they cannot be played in-app; both of their presentations hand the file to an external player.
@@ -97,6 +97,12 @@ Hands the video to the configured player, launched detached so it never blocks t
 For a **playable** container, opens the video in a **video tab**: a non-agent view tab that plays the file with its metadata and no command bar. The new tab is created and focused like an agent tab (placed within the active tab's group, distinct dot color); it is a live, in-memory view and is not persisted or restored on `--relaunch`. If the video is already open in a video tab, that existing tab is focused instead of opening a duplicate. The video tab is described in [[video-tab]].
 
 For an **external-only** container, no tab opens: the file is handed to the configured player exactly as `open external` does. Opening a video therefore always does something useful, whatever the container.
+
+### `video <path>`
+
+The plugin also contributes `video <path>`. It is a second route into the same opener and has the same relative-path resolution, wildcard expansion, sorted processing, ten-file limit, missing-file errors, transcript attribution, external-only routing, and focus-existing behavior as `open <path>`. Bare `video` prints `Usage: video <path>`.
+
+Because it is a route into one opener rather than into the registry, `video` only opens videos: a file that exists but belongs to another opener is reported as not a video file rather than opened. `video notes.txt` therefore says so instead of opening the plain-text editor, which is what plain `open notes.txt` does. See [[tab-plugins]] for plugin activation and failure behavior.
 
 ### File navigator gesture
 

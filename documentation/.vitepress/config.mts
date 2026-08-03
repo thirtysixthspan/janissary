@@ -133,6 +133,7 @@ export default defineConfig({
           items: [
             { text: "Overview", link: "/developer-documentation/" },
             { text: "Contributing", link: "/developer-documentation/contributing" },
+            { text: "Tab plugins", link: "/developer-documentation/tab-plugins" },
             { text: "Documentation", link: "/developer-documentation/documentation" },
             { text: "Release process", link: "/developer-documentation/release-process" },
             { text: "Testing", link: "/developer-documentation/testing" },

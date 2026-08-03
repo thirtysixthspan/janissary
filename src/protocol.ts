@@ -1,12 +1,21 @@
 // Wire types shared between the Node server and the React web client.
 // The web client imports these directly via the @shared path alias — no mirror needed.
-import type { BufferLine, ImageView, VideoView, PageView, HarnessView, MarkdownView, EditorView, TerminalEntry, FileNavigatorView, FileNavigatorDetail, FileNavigatorRow, TaskRow } from './tab/types.js';
+import type { BufferLine, ImageView, PageView, HarnessView, MarkdownView, EditorView, TerminalEntry, FileNavigatorView, FileNavigatorDetail, FileNavigatorRow, TaskRow } from './tab/types.js';
 import type { CompletionResult } from './completion/types.js';
 import type { ProfileRow } from './profile/types.js';
 
 // Used locally in TabView below, so separate import + export is required.
 // eslint-disable-next-line unicorn/prefer-export-from
-export type { BufferLine, ImageView, VideoView, PageView, HarnessView, MarkdownView, EditorView, TerminalEntry, CompletionResult, FileNavigatorView, FileNavigatorDetail, FileNavigatorRow, TaskRow, ProfileRow };
+export type { BufferLine, ImageView, PageView, HarnessView, MarkdownView, EditorView, TerminalEntry, CompletionResult, FileNavigatorView, FileNavigatorDetail, FileNavigatorRow, TaskRow, ProfileRow };
+
+export type PluginTabView = {
+  id: string;
+  schemaVersion: number;
+  payload: unknown;
+};
+
+export type PluginIntentRequest = { tab: string; intent: string; payload: unknown };
+export type PluginFailedRequest = { tab: string; reason: string };
 
 // Identifies the ACP session behind a connections-panel row, for the `openAcpTranscript` RPC to
 // route on: the tab's own agent, a monitor session, or an editor-persona session.
@@ -33,8 +42,8 @@ export type RouteChooserView = { cmd: string; choices: string[] };
 export type FileOpenerChoice = { label: string; command: 'edit' | 'open external' };
 // How activating one file navigator row resolves (see the `fileNavigatorOpeners` RPC): either a
 // single command the client runs straight away, or the fallback options it renders as a chooser.
-// `open external` is the command a video row's edit gesture resolves to — a plain-text editor is
-// useless for a binary video, so the gesture hands the file to the configured player instead.
+// A declaration may replace the normal edit gesture with `open external`; video uses it because a
+// plain-text editor is useless for a binary container.
 export type FileOpenerResolution = { command?: 'open' | 'edit' | 'open external'; choices: FileOpenerChoice[] };
 export type BulkConflictPolicy = 'overwrite-all' | 'skip-conflicts';
 export type BatchResult = { total: number; failedPaths: string[] };
@@ -94,14 +103,14 @@ export type TabView = {
   commandQueue: string[];
   toolStepsExpanded: boolean;
   pendingQuestion?: PendingQuestionView;
-  // Body kind: undefined/`'agent'` for a normal tab, `'image'` for an image view, `'video'` for a video player, `'page'` for an embedded web page, `'harness'` for a full-tab AI harness terminal, `'markdown'` for a rendered Markdown file, `'monitor'` for the AI-monitor suggestion feed, `'files'` for a file navigator, `'notifications'` for the notification feed, `'schedules'` for the aggregated schedule list.
-  view?: 'agent' | 'image' | 'video' | 'page' | 'harness' | 'markdown' | 'editor' | 'monitor' | 'files' | 'notifications' | 'schedules';
+  // Body kind: undefined/`'agent'` for a normal tab, or the named live view kind.
+  view?: 'agent' | 'image' | 'plugin' | 'page' | 'harness' | 'markdown' | 'editor' | 'monitor' | 'files' | 'notifications' | 'schedules';
   // Display name when it differs from `label` (image tabs are all titled `image`).
   title?: string;
   // Image-view payload, present only when `view === 'image'`.
   image?: ImageView;
-  // Video-view payload, present only when `view === 'video'`.
-  video?: VideoView;
+  // Bundled-plugin envelope, present only when `view === 'plugin'`.
+  plugin?: PluginTabView;
   // Page-view payload, present only when `view === 'page'`.
   page?: PageView;
   // Harness-view payload, present only when `view === 'harness'`.
@@ -226,12 +235,8 @@ export type RpcCall =
   // Write an editor tab's buffer back to disk. `url` is the tab's `/open/<id>` ref — the server
   // resolves it through the open-file allow-list, so only explicitly opened files are writable.
   | { method: 'saveFile'; params: { url: string; content: string } }
-  // Write one frame captured from a video tab's player to a PNG beside the video file, replying
-  // (deferred) with `{ name }` — the basename the server chose. `url` identifies the owning video
-  // tab the same way saveFile's does, and is the only thing that determines where the file lands:
-  // the server resolves it through the open-file allow-list and names the output itself, so a
-  // caller can never choose the path. `dataUrl` must be a `data:image/png;base64,` payload.
-  | { method: 'captureVideoFrame'; params: { url: string; dataUrl: string } }
+  | { method: 'pluginIntent'; params: PluginIntentRequest }
+  | { method: 'pluginFailed'; params: PluginFailedRequest }
   // Sync an editor tab's in-progress (unsaved) buffer to the server as transient draft
   // state, debounced client-side after typing pauses. Never written to disk — see saveFile
   // for that. `url` identifies the tab the same way saveFile's does.

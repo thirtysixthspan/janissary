@@ -2,9 +2,10 @@ import { describe, it, expect } from 'vitest';
 import { openersForRow } from './openers-for-row.js';
 
 describe('openersForRow', () => {
-  it('resolves a video row to `open` on plain activation and `open external` on the edit gesture', () => {
+  it('uses the opener declaration edit gesture instead of a plugin-name special case', () => {
     expect(openersForRow('/root', 'media/clip.mp4', false)).toEqual({ command: 'open', choices: [] });
     expect(openersForRow('/root', 'media/clip.mp4', true)).toEqual({ command: 'open external', choices: [] });
+    expect(openersForRow('/root', 'media/clip.MOV', true)).toEqual({ command: 'open external', choices: [] });
   });
 
   it('routes a container the browser cannot decode the same way', () => {
