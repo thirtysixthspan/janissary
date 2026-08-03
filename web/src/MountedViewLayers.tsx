@@ -27,6 +27,25 @@ type Properties = {
   // agent-tab body uses.
 } & PickerOverlayProps;
 
+function TabBodyDiv({
+  tab, index, current, visibleLabels, children,
+}: { tab: TabView; index: number; current: TabView; visibleLabels: string[]; children: React.ReactNode }) {
+  return (
+    <div
+      className="tab-body"
+      data-pane-index={index}
+      style={{
+        borderLeft: tabBodyBorder(tab.dotColor, tab.label === current.label),
+        display: visibleLabels.includes(tab.label) ? 'flex' : 'none',
+        gridColumn: tab.pane === 'right' ? 2 : 1,
+        gridRow: 2,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
 // Harness, editor, page, and plugin tabs stay mounted (hidden when inactive) so terminal/xterm
 // state, editor buffers, undo stacks, cursor/scroll position, embedded-page navigation, and video
 // playback position survive tab switches. Split out of App.tsx to keep it under the file-size limit.
@@ -51,44 +70,24 @@ export function MountedViewLayers({
       ))}
 
       {tabs.map((t, index) => ({ t, index })).filter(({ t }) => t.view === 'editor' && t.editor).map(({ t, index }) => (
-        <div
-          key={t.label}
-          className="tab-body"
-          data-pane-index={index}
-          style={{
-            borderLeft: tabBodyBorder(t.dotColor, t.label === current.label),
-            display: visibleLabels.includes(t.label) ? 'flex' : 'none',
-            gridColumn: t.pane === 'right' ? 2 : 1,
-            gridRow: 2,
-          }}
-        >
+        <TabBodyDiv key={t.label} tab={t} index={index} current={current} visibleLabels={visibleLabels}>
           <EditorTab editor={t.editor!} tab={t} client={client} active={t.label === current.label} dropRef={editorDropRef}
             onSplit={onSplit ? () => onSplit(index) : undefined}
             ref={(h) => { if (h) editorHandles.current.set(t.label, h); else editorHandles.current.delete(t.label); }} />
-        </div>
+        </TabBodyDiv>
       ))}
 
       {tabs
         .map((t, index) => ({ t, index }))
         .filter(({ t }) => t.view === 'page' && t.page)
         .map(({ t, index }) => (
-          <div
-            key={t.page!.url}
-            className="tab-body"
-            data-pane-index={index}
-            style={{
-              borderLeft: tabBodyBorder(t.dotColor, t.label === current.label),
-              display: visibleLabels.includes(t.label) ? 'flex' : 'none',
-              gridColumn: t.pane === 'right' ? 2 : 1,
-              gridRow: 2,
-            }}
-          >
+          <TabBodyDiv key={t.page!.url} tab={t} index={index} current={current} visibleLabels={visibleLabels}>
             <PageTab
               page={t.page!} closeTab={closeTab} index={index} client={client}
               active={t.label === current.label}
               onSplit={onSplit ? () => onSplit(index) : undefined}
             />
-          </div>
+          </TabBodyDiv>
         ))}
       {tabs
         .map((t, index) => ({ t, index }))
