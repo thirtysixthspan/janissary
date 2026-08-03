@@ -35,7 +35,8 @@ describe('plugins command', () => {
     const fixture = run({ state: 'declared' });
     fixture.append.mockClear();
     command.run('plugins video', { label: 'janus', index: 0 }, fixture.managers);
-    expect(fixture.managers.plugins.statusFor).toHaveBeenCalledOnce();
+    // Only the first, argument-free run read status — once per catalog entry.
+    expect(fixture.managers.plugins.statusFor).toHaveBeenCalledTimes(tabPluginCatalog.length);
     expect(fixture.append).toHaveBeenCalledWith('janus', {
       input: 'plugins video', output: 'Usage: plugins',
     });

@@ -50,7 +50,7 @@ export class ProfileManager {
       return;
     }
 
-    openProfileEntries(loaded, this.managers, parsed.name, label, out);
+    void openProfileEntries(loaded, this.managers, parsed.name, label, out);
   }
 
   newAgent(command: string): void {

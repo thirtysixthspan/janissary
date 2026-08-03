@@ -43,6 +43,8 @@ describe('tab plugin developer documentation', () => {
   it('keeps the API changelog honest about the same count', () => {
     const word = COUNT_WORDS[TAB_PLUGIN_CAPABILITY_NAMES.length];
     // The changelog entry opens a sentence, so match the count word however it is capitalized.
-    expect(documentation.toLowerCase()).toContain(`${word} server and four client capabilities.`);
+    // The client count stays a literal: its capability object lives in the web project, which this
+    // server-side test cannot import without dragging the client entry into the server graph.
+    expect(documentation.toLowerCase()).toContain(`${word} server and five client capabilities.`);
   });
 });

@@ -1,30 +1,18 @@
-import type { Tab, ImageView, PluginTabRecord, MarkdownView, EditorView, PageView, FileNavigatorView } from './types.js';
+import type { Tab, PluginTabRecord, MarkdownView, EditorView, PageView, FileNavigatorView } from './types.js';
 import {
-  makeImageTab, makePluginTab, makeMarkdownTab, makeEditorTab, makePageTab, makeFilesTab, makeNotificationsTab, makeSchedulesTab, distinctColor, insertTabInGroup,
+  makePluginTab, makeMarkdownTab, makeEditorTab, makePageTab, makeFilesTab, makeNotificationsTab, makeSchedulesTab, distinctColor, insertTabInGroup,
 } from './index.js';
 import { NOTIFICATIONS_LABEL } from '../notifications-tab.js';
 import { SCHEDULES_LABEL } from '../schedules-tab.js';
 import {
-  uniqueImageLabel, uniquePluginLabel, uniqueMarkdownLabel, uniqueEditorLabel, uniqueFilesLabel, uniquePageNumber,
+  uniquePluginLabel, uniqueMarkdownLabel, uniqueEditorLabel, uniqueFilesLabel, uniquePageNumber,
 } from './unique-labels.js';
 
 export {
-  uniqueImageLabel, uniquePluginLabel, uniqueMarkdownLabel, uniqueEditorLabel, uniqueFilesLabel, uniquePageNumber,
+  uniquePluginLabel, uniqueMarkdownLabel, uniqueEditorLabel, uniqueFilesLabel, uniquePageNumber,
 } from './unique-labels.js';
 
 type TabAndActive = { tabs: Tab[]; activeTab: number };
-
-export function addImageTab(tabs: Tab[], activeTab: number, image: ImageView): TabAndActive {
-  const creator = tabs[activeTab];
-  const label = uniqueImageLabel(tabs);
-  const dotColor = distinctColor(tabs.map((t) => t.dotColor));
-  const group = creator?.group ?? 1;
-  const groupColor = creator?.groupColor ?? dotColor;
-  const tab = makeImageTab(label, dotColor, tabs.length + 1, group, groupColor, image);
-  tab.title = image.name;
-  const newTabs = insertTabInGroup(tabs, tab);
-  return { tabs: newTabs, activeTab: newTabs.findIndex((t) => t.label === label) };
-}
 
 function finalizeTab(tabs: Tab[], tab: Tab, label: string, title: string): TabAndActive {
   tab.title = title;

@@ -102,7 +102,7 @@ describe('TabStrip', () => {
   it('calls onClose and stops propagation when the close button is clicked', async () => {
     const onClose = vi.fn();
     const onSelect = vi.fn();
-    const tab = makeTab({ label: 'img', view: 'image' });
+    const tab = makeTab({ label: 'img', view: 'plugin' });
     render(<TabStrip tabs={[tab]} activeTab={0} onSelect={onSelect} onClose={onClose} onRename={vi.fn()} tabNameMaxLength={100} />);
     await userEvent.click(screen.getByRole('button', { name: /close/i }));
     expect(onClose).toHaveBeenCalledWith(0);

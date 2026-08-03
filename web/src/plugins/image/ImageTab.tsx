@@ -1,27 +1,33 @@
 import React, { useEffect, useRef, useState } from 'react';
-import type { ImageView } from '@shared/protocol';
+import type { ImagePayload } from '@shared/plugins/image/shared';
+import type { TabPluginClientCapabilities } from '../api';
 import { onImageKey, ZOOM_STEP } from './image-handlers';
-import { SplitTabButton } from './SplitTabButton';
 
 // An image view tab body: a compact metadata header (name, size, location) above the image, which
 // fills the remaining space. Orientation is intrinsic to the image and read once it loads: a
 // landscape image (wider than tall) spans the full width; a portrait image fills the full remaining
 // height beneath the header. CSS keeps either fit responsive to tab resizes.
+//
+// A plugin tab stays mounted while its tab is hidden, so zoom, pan, and the keyboard listeners all
+// key off `capabilities.active`: only the visible image tab answers the zoom/pan keys, and becoming
+// visible again returns the view to 100% with no offset.
 export function ImageTab({
-  image, active = true, onSplit,
-}: { image: ImageView; active?: boolean; onSplit?: () => void }) {
+  payload: image, capabilities,
+}: { payload: ImagePayload; capabilities: TabPluginClientCapabilities }) {
   const [orientation, setOrientation] = useState<'image-landscape' | 'image-portrait'>('image-landscape');
   const [zoom, setZoom] = useState(1);
   const stageRef = useRef<HTMLDivElement>(null);
   const dragStart = useRef<{ x: number; y: number; scrollLeft: number; scrollTop: number } | null>(null);
-  const token = new URLSearchParams(location.search).get('token') ?? '';
-  const source = `${image.url}?token=${encodeURIComponent(token)}`;
+  const active = capabilities.active;
+  const source = capabilities.resourceUrl(image.url);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => onImageKey(e, stageRef.current, setZoom);
     if (active) globalThis.addEventListener('keydown', onKey);
 
     const stage = stageRef.current;
+    if (active && stage) { stage.scrollTop = 0; stage.scrollLeft = 0; }
+    if (active) setZoom(1);
 
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
@@ -72,7 +78,7 @@ export function ImageTab({
         <span className="image-name">{image.name}</span>
         <span className="image-size">{image.size}</span>
         <span className="image-loc">{image.path}</span>
-        {onSplit && <span className="image-actions"><SplitTabButton onClick={onSplit} /></span>}
+        {capabilities.splitAction && <span className="image-actions">{capabilities.splitAction}</span>}
       </div>
       <div className="image-stage" ref={stageRef}>
         {zoom !== 1 && (

@@ -1,10 +1,11 @@
 import React from 'react';
 import { render, screen, act, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
-import type { ImageView } from '@shared/protocol';
+import type { ImagePayload } from '@shared/plugins/image/shared';
+import type { TabPluginClientCapabilities } from '../api';
 import { ImageTab } from './ImageTab';
 
-function makeImage(overrides: Partial<ImageView> = {}): ImageView {
+function makeImage(overrides: Partial<ImagePayload> = {}): ImagePayload {
   return {
     name: 'photo.png',
     path: '/home/user/photo.png',
@@ -12,6 +13,26 @@ function makeImage(overrides: Partial<ImageView> = {}): ImageView {
     url: '/open/1',
     ...overrides,
   };
+}
+
+function makeCapabilities(
+  { active = true, onSplit }: { active?: boolean; onSplit?: () => void } = {},
+): TabPluginClientCapabilities {
+  return {
+    resourceUrl: (reference) => `${reference}?token=`,
+    intent: async <Result,>() => ({}) as Result,
+    splitAction: onSplit
+      ? <button type="button" className="tab-split" onClick={onSplit}>Split</button>
+      : null,
+    active,
+    reportFailure: vi.fn(),
+  };
+}
+
+function renderTab(options: { active?: boolean; onSplit?: () => void; image?: ImagePayload } = {}) {
+  return render(
+    <ImageTab payload={options.image ?? makeImage()} capabilities={makeCapabilities(options)} />,
+  );
 }
 
 function fireKey(key: string) {
@@ -34,54 +55,64 @@ function fireWheel(stage: Element, deltaY: number) {
 
 describe('ImageTab', () => {
   it('renders the image metadata', () => {
-    render(<ImageTab image={makeImage()} />);
+    renderTab();
     expect(screen.getByText('photo.png')).toBeInTheDocument();
     expect(screen.getByText('1.2 MB')).toBeInTheDocument();
     expect(screen.getByText('/home/user/photo.png')).toBeInTheDocument();
   });
 
-  it('offers Split and ignores global keys while its pane is inactive', () => {
+  it('loads the image through the host-authenticated resource url', () => {
+    const { container } = renderTab();
+    expect(container.querySelector('img')?.getAttribute('src')).toBe('/open/1?token=');
+  });
+
+  it('offers the host split action and ignores global keys while its tab is inactive', () => {
     const onSplit = vi.fn();
-    render(<ImageTab image={makeImage()} active={false} onSplit={onSplit} />);
+    renderTab({ active: false, onSplit });
     fireEvent.click(screen.getByRole('button', { name: 'Split' }));
     expect(onSplit).toHaveBeenCalledOnce();
     expect(fireKey('PageUp').defaultPrevented).toBe(false);
     expect(screen.queryByText('110%')).not.toBeInTheDocument();
   });
 
-  it('places Split in the right-side metadata actions', () => {
-    const { container } = render(<ImageTab image={makeImage()} onSplit={() => {}} />);
+  it('places the split action in the right-side metadata actions', () => {
+    const { container } = renderTab({ onSplit: () => {} });
 
     expect(container.querySelector(':scope .image-actions .tab-split')).not.toBeNull();
   });
 
+  it('renders no actions area when the host offers no split action', () => {
+    const { container } = renderTab();
+    expect(container.querySelector('.image-actions')).toBeNull();
+  });
+
   it('hides the zoom badge at 100%', () => {
-    render(<ImageTab image={makeImage()} />);
+    renderTab();
     expect(screen.queryByText(/\d+%/)).not.toBeInTheDocument();
   });
 
   // --- Zoom: PageUp / PageDown ---
 
   it('PageUp zooms in and shows the badge', () => {
-    render(<ImageTab image={makeImage()} />);
+    renderTab();
     fireKey('PageUp');
     expect(screen.getByText('110%')).toBeInTheDocument();
   });
 
   it('PageDown zooms out and shows the badge', () => {
-    render(<ImageTab image={makeImage()} />);
+    renderTab();
     fireKey('PageDown');
     expect(screen.getByText('90%')).toBeInTheDocument();
   });
 
   it('PageUp and PageDown call preventDefault', () => {
-    render(<ImageTab image={makeImage()} />);
+    renderTab();
     expect(fireKey('PageUp').defaultPrevented).toBe(true);
     expect(fireKey('PageDown').defaultPrevented).toBe(true);
   });
 
   it('clamps zoom at 800%', () => {
-    render(<ImageTab image={makeImage()} />);
+    renderTab();
     act(() => { for (let i = 0; i < 80; i++) globalThis.dispatchEvent(new KeyboardEvent('keydown', { key: 'PageUp', bubbles: true, cancelable: true })); });
     expect(screen.getByText('800%')).toBeInTheDocument();
     act(() => { globalThis.dispatchEvent(new KeyboardEvent('keydown', { key: 'PageUp', bubbles: true, cancelable: true })); });
@@ -89,30 +120,24 @@ describe('ImageTab', () => {
   });
 
   it('clamps zoom at 10%', () => {
-    render(<ImageTab image={makeImage()} />);
+    renderTab();
     act(() => { for (let i = 0; i < 20; i++) globalThis.dispatchEvent(new KeyboardEvent('keydown', { key: 'PageDown', bubbles: true, cancelable: true })); });
     expect(screen.getByText('10%')).toBeInTheDocument();
     act(() => { globalThis.dispatchEvent(new KeyboardEvent('keydown', { key: 'PageDown', bubbles: true, cancelable: true })); });
     expect(screen.getByText('10%')).toBeInTheDocument();
   });
 
-  it('badge text shows rounded percent', () => {
-    render(<ImageTab image={makeImage()} />);
-    fireKey('PageUp');
-    expect(screen.getByText('110%')).toBeInTheDocument();
-  });
-
   // --- Wheel zooms ---
 
   it('wheel up zooms in', () => {
-    const { container } = render(<ImageTab image={makeImage()} />);
+    const { container } = renderTab();
     const stage = container.querySelector('.image-stage')!;
     fireWheel(stage, -100);
     expect(screen.getByText('110%')).toBeInTheDocument();
   });
 
   it('wheel down zooms out', () => {
-    const { container } = render(<ImageTab image={makeImage()} />);
+    const { container } = renderTab();
     const stage = container.querySelector('.image-stage')!;
     fireWheel(stage, 100);
     expect(screen.getByText('90%')).toBeInTheDocument();
@@ -121,7 +146,7 @@ describe('ImageTab', () => {
   // --- Escape resets ---
 
   it('Escape resets zoom to 100%, hides badge, and resets scroll', () => {
-    const { container } = render(<ImageTab image={makeImage()} />);
+    const { container } = renderTab();
     const stage = container.querySelector('.image-stage')! as HTMLElement;
     fireKey('PageUp');
     fireKey('PageUp');
@@ -138,7 +163,7 @@ describe('ImageTab', () => {
   // --- Arrow keys pan ---
 
   it('ArrowUp pans the stage up (decreases scrollTop)', () => {
-    const { container } = render(<ImageTab image={makeImage()} />);
+    const { container } = renderTab();
     const stage = container.querySelector('.image-stage')! as HTMLElement;
     stage.scrollTop = 100;
     const event = fireKey('ArrowUp');
@@ -147,7 +172,7 @@ describe('ImageTab', () => {
   });
 
   it('ArrowDown pans the stage down (increases scrollTop)', () => {
-    const { container } = render(<ImageTab image={makeImage()} />);
+    const { container } = renderTab();
     const stage = container.querySelector('.image-stage')! as HTMLElement;
     stage.scrollTop = 0;
     const event = fireKey('ArrowDown');
@@ -156,7 +181,7 @@ describe('ImageTab', () => {
   });
 
   it('ArrowLeft pans the stage left (decreases scrollLeft)', () => {
-    const { container } = render(<ImageTab image={makeImage()} />);
+    const { container } = renderTab();
     const stage = container.querySelector('.image-stage')! as HTMLElement;
     stage.scrollLeft = 100;
     const event = fireKey('ArrowLeft');
@@ -165,7 +190,7 @@ describe('ImageTab', () => {
   });
 
   it('ArrowRight pans the stage right (increases scrollLeft)', () => {
-    const { container } = render(<ImageTab image={makeImage()} />);
+    const { container } = renderTab();
     const stage = container.querySelector('.image-stage')! as HTMLElement;
     stage.scrollLeft = 0;
     const event = fireKey('ArrowRight');
@@ -174,7 +199,7 @@ describe('ImageTab', () => {
   });
 
   it('arrow keys do not change zoom', () => {
-    render(<ImageTab image={makeImage()} />);
+    renderTab();
     fireKey('ArrowUp');
     fireKey('ArrowDown');
     fireKey('ArrowLeft');
@@ -185,7 +210,7 @@ describe('ImageTab', () => {
   // --- Click-drag pans ---
 
   it('drag moves scroll in the direction of drag', () => {
-    const { container } = render(<ImageTab image={makeImage()} />);
+    const { container } = renderTab();
     const stage = container.querySelector('.image-stage')! as HTMLElement;
     stage.scrollLeft = 100;
     stage.scrollTop = 100;
@@ -198,7 +223,7 @@ describe('ImageTab', () => {
   });
 
   it('cursor becomes grabbing on mousedown and resets on mouseup', () => {
-    const { container } = render(<ImageTab image={makeImage()} />);
+    const { container } = renderTab();
     const stage = container.querySelector('.image-stage')! as HTMLElement;
 
     act(() => { stage.dispatchEvent(new MouseEvent('mousedown', { button: 0, clientX: 0, clientY: 0, bubbles: true, cancelable: true })); });
@@ -209,7 +234,7 @@ describe('ImageTab', () => {
   });
 
   it('non-primary button mousedown does not start drag', () => {
-    const { container } = render(<ImageTab image={makeImage()} />);
+    const { container } = renderTab();
     const stage = container.querySelector('.image-stage')! as HTMLElement;
 
     act(() => { stage.dispatchEvent(new MouseEvent('mousedown', { button: 2, clientX: 0, clientY: 0, bubbles: true })); });
@@ -219,7 +244,7 @@ describe('ImageTab', () => {
   // --- Orientation on load ---
 
   it('applies image-landscape when the loaded image is wider than tall', () => {
-    const { container } = render(<ImageTab image={makeImage()} />);
+    const { container } = renderTab();
     const img = container.querySelector('img')!;
     Object.defineProperties(img, {
       naturalWidth: { value: 200, configurable: true },
@@ -230,7 +255,7 @@ describe('ImageTab', () => {
   });
 
   it('applies image-portrait when the loaded image is taller than wide', () => {
-    const { container } = render(<ImageTab image={makeImage()} />);
+    const { container } = renderTab();
     const img = container.querySelector('img')!;
     Object.defineProperties(img, {
       naturalWidth: { value: 100, configurable: true },
@@ -240,14 +265,26 @@ describe('ImageTab', () => {
     expect(img).toHaveClass('image-portrait');
   });
 
-  // --- Zoom resets on image change ---
+  // --- Zoom and pan reset on becoming visible again ---
 
-  it('zoom resets when image url key changes (remount)', () => {
-    const { rerender } = render(<ImageTab key="/open/1" image={makeImage({ url: '/open/1' })} />);
+  // A plugin tab stays mounted while hidden, so switching away and back is a change of
+  // `capabilities.active` rather than a remount — and it still returns the view to 100% with no
+  // offset, the way switching between image tabs always has.
+  it('resets zoom and pan when the tab becomes active again', () => {
+    const image = makeImage();
+    const { container, rerender } = render(
+      <ImageTab payload={image} capabilities={makeCapabilities()} />,
+    );
+    const stage = container.querySelector('.image-stage')! as HTMLElement;
     fireKey('PageUp');
     fireKey('PageUp');
+    stage.scrollTop = 40;
     expect(screen.getByText('120%')).toBeInTheDocument();
-    rerender(<ImageTab key="/open/2" image={makeImage({ url: '/open/2', name: 'other.png' })} />);
+
+    rerender(<ImageTab payload={image} capabilities={makeCapabilities({ active: false })} />);
+    rerender(<ImageTab payload={image} capabilities={makeCapabilities()} />);
+
     expect(screen.queryByText(/\d+%/)).not.toBeInTheDocument();
+    expect(stage.scrollTop).toBe(0);
   });
 });

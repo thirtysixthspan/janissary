@@ -54,11 +54,12 @@ An opener or command that returns nothing completed without opening a tab, which
 
 The client entry default-exports a React component accepting `{ payload, capabilities }` and named-exports `isPayload`. Write that guard as a type predicate: the registry infers the payload type from it and hands the component a value already narrowed, so no plugin asserts a type its own guard has already proven. The registry creates one `React.lazy` type at module scope; never create it during a render. The host checks the envelope schema and the entry guard before plugin behavior renders.
 
-`TabPluginClientCapabilities` exposes exactly four things:
+`TabPluginClientCapabilities` exposes exactly five things:
 
 - `resourceUrl(reference)` adds current-session authentication to a served-file reference.
 - `intent<Result>(name, payload)` sends a request bound to this tab label.
 - `splitAction` is the host-rendered split control node or `null`.
+- `active` is whether this tab is the visible one in its pane. A plugin tab stays mounted while hidden, so a window-wide listener gates on this instead of assuming the tab is on screen; a plugin never reads visibility off the host's DOM.
 - `reportFailure(reason)` sends one failure report for this plugin boundary.
 
 Never pass `JanusClient`, import a raw socket, or import host UI internals from a concrete plugin. Client-local state may hold playback, scroll, or overlay state; server-owned tab state must not be recomputed locally.

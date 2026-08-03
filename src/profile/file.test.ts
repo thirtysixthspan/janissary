@@ -127,7 +127,7 @@ describe('loadProfile', () => {
         { type: 'files', dock: 'left', path: '$root' },
         { type: 'notifications', dock: 'right', focus: true },
         { type: 'schedules', dock: 'right' },
-        { type: 'image', path: 'a.png' },
+        { type: 'plugin', id: 'image', path: 'a.png' },
         { type: 'markdown', path: 'readme.md' },
         { type: 'page', url: 'https://example.com/' },
         { type: 'ssh', destination: 'host', options: ['-p', '2222'] },
@@ -139,8 +139,18 @@ describe('loadProfile', () => {
     expect(loaded.files).toEqual([{ dock: 'left', path: '$root' }]);
     expect(loaded.notifications).toEqual([{ dock: 'right', focus: true }]);
     expect(loaded.schedules).toEqual([{ dock: 'right' }]);
-    expect(loaded.views.map((v) => v.type)).toEqual(['image', 'markdown', 'page', 'ssh']);
+    expect(loaded.views.map((v) => v.type)).toEqual(['plugin', 'markdown', 'page', 'ssh']);
     expect(loaded.views[3]).toEqual(expect.objectContaining({ destination: 'host', options: ['-p', '2222'] }));
+  });
+
+  // `image` is the pre-plugin spelling of an image tab; a profile saved before the image view moved
+  // into a plugin still has to launch.
+  it('loads a legacy image entry as a plugin view entry', () => {
+    writeJson('legacy-image', { tabs: [{ type: 'image', path: 'a.png', group: 2 }] });
+    const loaded = loadProfile('legacy-image') as LoadedProfile;
+    expect(loaded.views).toEqual([
+      expect.objectContaining({ type: 'plugin', id: 'image', path: 'a.png', group: 2 }),
+    ]);
   });
 
   it('maps color to dotColor and leaves the other presentation fields flat', () => {

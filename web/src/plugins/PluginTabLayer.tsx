@@ -33,7 +33,10 @@ export function PluginTabLayer({
       }}
     >
       {tab.plugin && (
-        <PluginBody plugin={tab.plugin} label={tab.label} client={client} onSplit={onSplit} />
+        <PluginBody
+          plugin={tab.plugin} label={tab.label} client={client}
+          active={tab.label === current.label} onSplit={onSplit}
+        />
       )}
     </div>
   );

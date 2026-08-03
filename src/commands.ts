@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { tabPluginCatalog } from './plugins/catalog.js';
+import type { TabPluginDeclaration } from './plugins/api.js';
 
 export const coreAvailableCommands = [
   'help',
@@ -30,7 +31,9 @@ export const coreAvailableCommands = [
 export const availableCommands = [
   ...coreAvailableCommands,
   'plugins',
-  ...tabPluginCatalog.flatMap((plugin) => plugin.command ?? []),
+  // Typed as the declaration rather than the catalog's literal union: a plugin that claims no
+  // command has no `command` property at all, which the union would otherwise make unreadable.
+  ...tabPluginCatalog.flatMap((plugin: TabPluginDeclaration) => plugin.command ?? []),
 ];
 
 let helpOutput: string | null = null;

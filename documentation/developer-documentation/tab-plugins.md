@@ -156,7 +156,8 @@ The component receives `payload` only after the registry wrapper has validated i
 
 - `resourceUrl(reference)` for an authenticated `/open/` URL;
 - `intent<Result>(name, payload)` bound to this tab;
-- `splitAction`, a ready-rendered host action or `null`; and
+- `splitAction`, a ready-rendered host action or `null`;
+- `active`, whether this tab is the visible one in its pane. Every v1 plugin tab stays mounted while hidden, so a component that binds a window-wide listener — the image plugin's zoom and pan keys, for instance — must gate it on this rather than assume it is on screen. Never infer it from the DOM: the host owns the frame; and
 - `reportFailure(reason)` for an unrecoverable client-contract failure. Only the first report per plugin is sent, whichever tab or code path raises it, so calling it from your own component is safe alongside the failures the host detects for you.
 
 It never receives `JanusClient` or imports host UI internals. The host owns the `.tab-body`, focus border, visibility, split placement, loading fallback, and error boundary. Every v1 plugin tab remains mounted while hidden.
@@ -187,7 +188,7 @@ Add server tests for declaration claims, playable/external routes, payload valid
 
 - Initial bundled-only tab-view contract.
 - Static opener and command contributions, with a `command` handler on the activation.
-- Seven server and four client capabilities.
+- Seven server and five client capabilities.
 - Versioned generic tab payload plus `pluginIntent` and `pluginFailed` RPCs.
 - Two-level failure model: `rejectRequest` answers one bad request, `reportFailure` disables.
 

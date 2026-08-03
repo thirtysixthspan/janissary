@@ -64,7 +64,6 @@ export function buildTabView(
     pendingQuestion,
     view: tab.view,
     title: tab.title,
-    image: tab.image,
     plugin: tab.plugin ? {
       id: tab.plugin.id,
       schemaVersion: tab.plugin.schemaVersion,

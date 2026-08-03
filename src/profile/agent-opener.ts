@@ -36,13 +36,13 @@ function launchSummary(name: string, opened: string[], notes: string[], skipped:
   return parts.length > 0 ? parts.join(' ') : `Profile "${name}" has no tabs to open.`;
 }
 
-export function openProfileEntries(
+export async function openProfileEntries(
   loaded: LoadedProfile,
   managers: Managers,
   name: string,
   issuingLabel: string,
   out: (text: string) => void,
-): void {
+): Promise<void> {
   const entries = loaded.entries;
   const defaultGroup = Math.max(0, ...managers.tab.tabs.map((t) => t.group)) + 1;
   const colorForGroup = (group: number, fallbackDotColor: string): string =>
@@ -86,7 +86,9 @@ export function openProfileEntries(
   candidates.push(
     ...openProfileFiles(loaded.files, managers, rootLabel, notes, defaultGroup, colorForGroup),
     ...openProfileEditors(loaded.editors, managers, rootLabel, notes, defaultGroup, colorForGroup),
-    ...openProfileViewTabs(loaded.views, managers, issuingLabel, defaultGroup, colorForGroup, notes),
+    // A plugin tab opens through its plugin's activation, so this is the one opener pass that has to
+    // be awaited before the placement, reorder, and focus passes below can see its tabs.
+    ...await openProfileViewTabs(loaded.views, managers, issuingLabel, defaultGroup, colorForGroup, notes),
   );
   // Reorder each group touched by this launch so harness/agent entries and editor tabs sharing a
   // group read in ascending `number` order, instead of editors always trailing every entry (see

@@ -43,7 +43,7 @@ Your profiles live in the `profiles/` directory in your project: plain files mea
 }
 ```
 
-The ten types are `agent`, `harness`, `editor`, `files`, `notifications`, `schedules`, `image`, `markdown`, `page`, and `ssh`. An agent entry uses the same format as saved agent state — just a `name` is a valid start. A harness entry names which binary to launch with a `tool` field (`claude`, `opencode`, or `codex`) — `type` already means the kind of tab — and supports a few more fields:
+The eleven types are `agent`, `harness`, `editor`, `files`, `notifications`, `schedules`, `plugin`, `image`, `markdown`, `page`, and `ssh`. An agent entry uses the same format as saved agent state — just a `name` is a valid start. A harness entry names which binary to launch with a `tool` field (`claude`, `opencode`, or `codex`) — `type` already means the kind of tab — and supports a few more fields:
 
 - **`model`** — passed to the harness verbatim; an unknown model for that harness is reported and the entry skipped.
 - **`effort`** — an effort/thinking level, forwarded verbatim like `--effort` on the interactive `harness` command (translated to each harness's own flag: claude `--effort`, codex `-c model_reasoning_effort`, opencode has none). Not validated against any fixed set of levels.
@@ -64,15 +64,17 @@ Use an `editor` entry to open a file directly in the in-app editor when the prof
 
 Each has a required `path`, optional resolving tab `in`, and optional cursor `line`. `$root` resolves from the launch directory and `~` from home; another relative path resolves from `in` or the first newly opened profile tab. A missing file opens an empty buffer and is created only on save. Relaunching reuses an already-open editor tab for the same file and moves its cursor to the requested line.
 
-The `image`, `markdown`, `page`, and `ssh` types reopen the rest of a working session — a diagram, a spec you keep reading, a docs site, a remote box:
+The `plugin`, `markdown`, `page`, and `ssh` types reopen the rest of a working session — a diagram or video, a spec you keep reading, a docs site, a remote box:
 
 ```json
-{ "type": "image", "path": "$root/docs/architecture.png", "number": 4 },
+{ "type": "plugin", "id": "image", "path": "$root/docs/architecture.png", "number": 4 },
 { "type": "page", "url": "https://example.com/", "number": 5 },
 { "type": "ssh", "destination": "devbox", "options": ["-p", "2222"], "number": 6 }
 ```
 
-None of these needs a `name` — the label is derived the same way typing `open` or `ssh` derives it. Relaunching closes a markdown, page, or ssh tab already showing the same file, url, or destination before reopening it, so you end up with one of each rather than a duplicate; an already-open image is simply reused.
+A `plugin` entry names the built-in viewer that owns the tab — `image` or `video` — plus the file it was opened on, and is what `profile save` writes for an open image or video tab. The older `{ "type": "image", "path": … }` spelling still launches exactly the same way, so profiles you saved before are unaffected.
+
+None of these needs a `name` — the label is derived the same way typing `open` or `ssh` derives it. Relaunching closes a markdown, page, or ssh tab already showing the same file, url, or destination before reopening it, so you end up with one of each rather than a duplicate; an already-open image or video is simply reused.
 
 A `files` entry opens a [file navigator](/user-documentation/tab-types/file-navigator), and can bring back the state of the tree itself — which directories were open, and which rows were selected:
 

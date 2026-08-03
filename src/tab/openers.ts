@@ -1,8 +1,8 @@
-import type { Tab, ImageView, MarkdownView, EditorView, PageView, FileNavigatorView } from './types.js';
+import type { Tab, MarkdownView, EditorView, PageView, FileNavigatorView } from './types.js';
 import type { TabPluginPayload, TabPluginResources } from '../plugins/api.js';
 import { messageBus } from '../bus.js';
 import {
-  addImageTab, addPluginTab, addMarkdownTab, addEditorTab, addPageTab, addFilesTab, addNotificationsTab, addSchedulesTab,
+  addPluginTab, addMarkdownTab, addEditorTab, addPageTab, addFilesTab, addNotificationsTab, addSchedulesTab,
 } from './creators.js';
 
 // Minimal surface these openers need from the TabManager. Kept structural (rather than importing
@@ -19,16 +19,6 @@ interface OpenTarget {
 function activate(target: OpenTarget, result: { tabs: Tab[]; activeTab: number }): void {
   target.applyOpenResult(result);
   messageBus.emit('state', { type: 'dirty' });
-}
-
-export function openImageTab(target: OpenTarget, image: ImageView): void {
-  const existing = target.tabs.find((t) => t.image?.path === image.path);
-  if (existing) {
-    target.setActiveTab(target.tabs.indexOf(existing));
-    messageBus.emit('state', { type: 'dirty' });
-    return;
-  }
-  activate(target, addImageTab(target.tabs, target.activeTab, image));
 }
 
 export function openPluginTab(

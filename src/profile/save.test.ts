@@ -8,7 +8,7 @@ import { loadProfile } from './file.js';
 import { setClientLayout } from '../client-layout.js';
 import { setWindowBoundsReader } from '../window-resizer.js';
 import {
-  makeTab, makeHarnessTab, makeImageTab, makeMarkdownTab, makePageTab, makeEditorTab, makeFilesTab,
+  makeTab, makeHarnessTab, makePluginTab, makeMarkdownTab, makePageTab, makeEditorTab, makeFilesTab,
   makeNotificationsTab, makeSchedulesTab,
 } from '../tab/index.js';
 import type { Managers } from '../managers.js';
@@ -16,6 +16,16 @@ import type { FileNavigatorDetail, MonitorTarget, Tab } from '../tab/types.js';
 import type { LoadedProfile, ProfileFile } from './types.js';
 
 type Snapshot = { name: string; persona: string; targets: MonitorTarget[]; inline: boolean }[];
+
+// An image tab as the bundled image plugin opens one: the file it was opened on is the instance key
+// a saved `plugin` entry carries.
+function imagePluginTab(label: string, dotColor: string, number: number, file: string): Tab {
+  return makePluginTab(label, dotColor, number, 1, dotColor, 'a.png', {
+    id: 'image', instanceKey: file, schemaVersion: 1,
+    payload: { name: 'a.png', path: file, size: '1KB', url: '/open/1' },
+    fileRefs: ['1'], sourceLabel: 'janus',
+  });
+}
 
 function makeManagers(
   tabs: Tab[], cwdByLabel: Record<string, string> = {}, monitors: Snapshot = [], launchDir = '/proj',
@@ -155,8 +165,8 @@ describe('saveProfile', () => {
     expect(load('demo').entries).toEqual([expect.objectContaining({ cwd: '$root/src' })]);
   });
 
-  it('skips nothing now that image, ssh, and undocked navigator tabs are all captured', async () => {
-    const image = makeImageTab('pic', '#111', 1, 1, '#111', { name: 'a.png', path: '/a.png', size: '1KB', url: '/open/1' });
+  it('skips nothing now that plugin, ssh, and undocked navigator tabs are all captured', async () => {
+    const image = imagePluginTab('pic', '#111', 1, '/a.png');
     const ssh = makeHarnessTab('server', '#333', 1, 1, '#333', { name: 'ssh', program: 'ssh', ptyId: 'pty2', status: 'running', destination: 'host' });
     const undockedFiles = makeFilesTab('nav', '#444', 1, 1, '#444', { root: '~', absoluteRoot: '/home', rows: [] });
     const managers = makeManagers([image, ssh, undockedFiles]);
@@ -164,7 +174,7 @@ describe('saveProfile', () => {
     const summary = await saveProfile('demo', managers);
 
     expect(summary.skipped).toEqual([]);
-    expect(load('demo').views.map((v) => v.type)).toEqual(['image', 'ssh']);
+    expect(load('demo').views.map((v) => v.type)).toEqual(['plugin', 'ssh']);
     expect(summary.fileNavigators).toBe(1);
   });
 
@@ -211,8 +221,8 @@ describe('saveProfile', () => {
     expect(entry.selected).toBeUndefined();
   });
 
-  it('round-trips an image, markdown, page, and ssh tab through the views list', async () => {
-    const image = makeImageTab('pic', '#111', 1, 1, '#111', { name: 'a.png', path: '/proj/a.png', size: '1KB', url: '/open/1' });
+  it('round-trips a plugin, markdown, page, and ssh tab through the views list', async () => {
+    const image = imagePluginTab('pic', '#111', 1, '/proj/a.png');
     const readme = makeMarkdownTab('readme', '#222', 2, 1, '#111', { name: 'readme.md', path: '/proj/readme.md', size: '1KB', url: '/open/2' });
     const page = makePageTab('site', '#333', 3, 1, '#111', { url: 'https://example.com/', domain: 'example.com', number: 1 });
     const ssh = makeHarnessTab('server', '#444', 4, 1, '#111', {
@@ -223,12 +233,12 @@ describe('saveProfile', () => {
     const summary = await saveProfile('demo', managers);
 
     expect(load('demo').views).toEqual([
-      expect.objectContaining({ type: 'image', path: '$root/a.png', number: 1 }),
+      expect.objectContaining({ type: 'plugin', id: 'image', path: '$root/a.png', number: 1 }),
       expect.objectContaining({ type: 'markdown', path: '$root/readme.md', number: 2 }),
       expect.objectContaining({ type: 'page', url: 'https://example.com/', number: 3 }),
       expect.objectContaining({ type: 'ssh', destination: 'host', options: ['-p', '2222'], number: 4 }),
     ]);
-    expect(summary).toEqual(expect.objectContaining({ images: 1, markdown: 1, pages: 1, ssh: 1 }));
+    expect(summary).toEqual(expect.objectContaining({ plugins: 1, markdown: 1, pages: 1, ssh: 1 }));
     expect(summary.skipped).toEqual([]);
   });
 
@@ -383,7 +393,7 @@ describe('saveProfile', () => {
 describe('formatSaveSummary', () => {
   function makeSummary(overrides: Partial<SaveSummary> = {}): SaveSummary {
     return {
-      agents: 0, harnesses: 0, editors: 0, images: 0, markdown: 0, pages: 0, ssh: 0,
+      agents: 0, harnesses: 0, editors: 0, plugins: 0, markdown: 0, pages: 0, ssh: 0,
       fileNavigators: 0, monitors: 0, dockedViews: 0, skipped: [], notes: [], ...overrides,
     };
   }
@@ -394,24 +404,24 @@ describe('formatSaveSummary', () => {
 
   it('uses singular labels for a count of one', () => {
     const summary = makeSummary({
-      agents: 1, harnesses: 1, editors: 1, images: 1, markdown: 1, pages: 1, ssh: 1,
+      agents: 1, harnesses: 1, editors: 1, plugins: 1, markdown: 1, pages: 1, ssh: 1,
       fileNavigators: 1, monitors: 1, dockedViews: 1,
     });
 
     expect(formatSaveSummary('demo', summary)).toBe(
-      'Saved profile "demo": 1 agent, 1 harness, 1 editor tab, 1 image tab, 1 markdown tab, 1 page tab, '
+      'Saved profile "demo": 1 agent, 1 harness, 1 editor tab, 1 plugin tab, 1 markdown tab, 1 page tab, '
       + '1 ssh tab, 1 file navigator, layout, 1 monitor, 1 docked tab.',
     );
   });
 
   it('uses plural labels for counts greater than one', () => {
     const summary = makeSummary({
-      agents: 2, harnesses: 3, editors: 4, images: 2, markdown: 2, pages: 2, ssh: 2,
+      agents: 2, harnesses: 3, editors: 4, plugins: 2, markdown: 2, pages: 2, ssh: 2,
       fileNavigators: 2, monitors: 5, dockedViews: 6,
     });
 
     expect(formatSaveSummary('demo', summary)).toBe(
-      'Saved profile "demo": 2 agents, 3 harnesses, 4 editor tabs, 2 image tabs, 2 markdown tabs, '
+      'Saved profile "demo": 2 agents, 3 harnesses, 4 editor tabs, 2 plugin tabs, 2 markdown tabs, '
       + '2 page tabs, 2 ssh tabs, 2 file navigators, layout, 5 monitors, 6 docked tabs.',
     );
   });

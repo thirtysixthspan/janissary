@@ -181,6 +181,27 @@ describe('PluginTabLayer lazy lifecycle', () => {
     expect(fixture.send).not.toHaveBeenCalled();
   });
 
+  // A hidden plugin tab stays mounted, so the layer is what tells its body whether it is the tab
+  // the user is looking at.
+  it('reports the tab as active only while it is the current one', async () => {
+    registry.set('fixture', registration(async () => ({
+      default: ({ capabilities }) => <div>active:{String(capabilities.active)}</div>,
+      isPayload: acceptsAnyPayload,
+    })));
+    const fixture = client();
+    const view = tab();
+    const rendered = render(<PluginTabLayer {...properties(view, fixture.value)} />);
+    await waitFor(() => { expect(screen.getByText('active:true')).toBeInTheDocument(); });
+
+    rendered.rerender(
+      <PluginTabLayer
+        {...properties(view, fixture.value, false)} current={tab('fixture', 1, 'other')}
+      />,
+    );
+
+    expect(screen.getByText('active:false')).toBeInTheDocument();
+  });
+
   // The plugin renders the node but never owns the handler, and the layer rebuilds `onSplit` on
   // every render — so the split must reach the current handler without the capability object
   // changing identity underneath a mounted plugin.

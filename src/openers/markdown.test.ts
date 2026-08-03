@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { openerForExtension, openers } from './index.js';
 import { opener as markdown } from './markdown.js';
-import type { OpenContext, ImageView } from './index.js';
+import type { OpenContext } from './index.js';
 import type { MarkdownView } from '../tab/types.js';
 
 function fakeContext(overrides: Partial<OpenContext> = {}) {
@@ -12,7 +12,6 @@ function fakeContext(overrides: Partial<OpenContext> = {}) {
   const opened: MarkdownView[] = [];
   const context: OpenContext = {
     note: (t) => { notes.push(t); },
-    openImageTab: (_v: ImageView) => {},
     openMarkdownTab: (v) => { opened.push(v); },
     openEditorTab: () => {},
     registerFile: (p) => `/open/test-${p.length}`,

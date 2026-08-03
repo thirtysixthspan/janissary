@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { makeEditorTab, makeMarkdownTab, makePluginTab, makeTab } from './index.js';
 import {
-  addEditorTab, addImageTab, addMarkdownTab, addPluginTab,
+  addEditorTab, addMarkdownTab, addPluginTab,
   uniqueEditorLabel, uniqueMarkdownLabel, uniquePluginLabel,
 } from './creators.js';
-import type { EditorView, ImageView, MarkdownView, PluginTabRecord } from './types.js';
+import type { EditorView, MarkdownView, PluginTabRecord } from './types.js';
 
 const view: EditorView = { name: 'notes.txt', path: '/tmp/notes.txt', size: '5 B', url: '/open/1' };
 const markdownView: MarkdownView = { name: 'readme.md', path: '/tmp/readme.md', size: '5 B', url: '/open/1' };
@@ -12,14 +12,6 @@ const plugin: PluginTabRecord = {
   id: 'video', instanceKey: '/tmp/clip.mp4', schemaVersion: 1,
   payload: { name: 'clip.mp4', url: '/open/1' }, fileRefs: ['1'], sourceLabel: 'janus',
 };
-
-describe('addImageTab', () => {
-  it('retains a long image filename as the complete tab title', () => {
-    const image: ImageView = { name: 'very-long-reference-image-name.png', path: '/tmp/image.png', size: '1 kB', url: '/open/2' };
-    const result = addImageTab([makeTab('janus', '#fff')], 0, image);
-    expect(result.tabs[result.activeTab].title).toBe(image.name);
-  });
-});
 
 describe('uniquePluginLabel', () => {
   it('suffixes the declaration prefix when plugin tabs already exist', () => {
