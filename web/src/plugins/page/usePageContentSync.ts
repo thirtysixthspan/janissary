@@ -1,18 +1,19 @@
 import { useEffect } from 'react';
-import type { JanusClient } from '../ws';
+import type React from 'react';
 
 // The marker the bundled extension's content script tags its postMessage payloads with — must
 // match `chrome-extension/content-script.js`'s `SOURCE` constant.
 const SOURCE = 'janissary-page-content';
 
-// Relays the embedded page's visible-text snapshots (posted by the extension content script) to
-// the server as transient page state, so a monitor watching this page tab can see them. Only
-// messages whose `event.source` is this exact iframe's content window are accepted — an embedded
-// page is cross-origin and untrusted, so origin alone can't identify it, but the iframe's window
-// object can.
+// Relays the embedded page's visible-text snapshots (posted by the extension content script) to the
+// server through this tab's `sync` intent, so a monitor watching this page tab can see them, and so
+// the tab follows the address the page is actually on. Only messages whose `event.source` is this
+// exact iframe's content window are accepted — an embedded page is cross-origin and untrusted, so
+// origin alone can't identify it, but the iframe's window object can.
 export function usePageContentSync(
-  iframeRef: React.RefObject<HTMLIFrameElement | null>, url: string, client: JanusClient,
-  onNavigate?: (url: string) => void,
+  iframeRef: React.RefObject<HTMLIFrameElement | null>,
+  url: string,
+  sync: (url: string, text: string) => void,
 ): void {
   useEffect(() => {
     function handleMessage(event: MessageEvent): void {
@@ -21,10 +22,9 @@ export function usePageContentSync(
       if (!data || typeof data !== 'object') return;
       const { source, text, url: liveUrl } = data as { source?: unknown; text?: unknown; url?: unknown };
       if (source !== SOURCE || typeof text !== 'string') return;
-      client.pageSync(url, text);
-      if (onNavigate && typeof liveUrl === 'string' && liveUrl !== url) onNavigate(liveUrl);
+      sync(typeof liveUrl === 'string' ? liveUrl : url, text);
     }
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
-  }, [iframeRef, url, client, onNavigate]);
+  }, [iframeRef, url, sync]);
 }

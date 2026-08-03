@@ -198,6 +198,36 @@ describe('updateTab', () => {
     expect(emits.count()).toBe(0);
   });
 
+  // A tab whose identity is what it shows — an embedded page — moves that identity when it
+  // navigates, and the key has to move with it or `openOrFocusTab` starts pointing at the wrong tab.
+  it('re-keys the tab when the update names a free instance key', async () => {
+    const managers = makeManagers();
+    const host = hostFor(managers, () => ({ instanceKey: '/tmp/moved.fixture', payload: { text: 'moved' } }));
+    const tab = await openTab(host, managers);
+    const before = { label: tab.label, group: tab.group, fileRefs: [...tab.plugin!.fileRefs] };
+
+    await host.intent(tab.label, 'refresh', '/tmp/a.fixture');
+
+    expect(tab.plugin!.instanceKey).toBe('/tmp/moved.fixture');
+    expect(tab.plugin!.payload).toEqual({ text: 'moved' });
+    expect({ label: tab.label, group: tab.group, fileRefs: [...tab.plugin!.fileRefs] }).toEqual(before);
+  });
+
+  it('refuses a key another of the plugin\'s tabs holds, and still applies the payload', async () => {
+    const managers = makeManagers();
+    const host = hostFor(managers, () => ({ instanceKey: '/tmp/b.fixture', payload: { text: 'moved' } }));
+    const opened = await openTab(host, managers);
+    await openTab(host, managers, '/tmp/b.fixture');
+
+    await host.intent(opened.label, 'refresh', '/tmp/a.fixture');
+
+    // Re-read the tab: inserting the second one rebuilt the strip around the first.
+    const tab = managers.tab.tabs.find((candidate) => candidate.label === opened.label)!;
+    expect(tab.plugin!.instanceKey).toBe('/tmp/a.fixture');
+    expect(tab.plugin!.payload).toEqual({ text: 'moved' });
+    expect(managers.tab.tabs.filter((candidate) => candidate.plugin)).toHaveLength(2);
+  });
+
   it('applies from an opener as well as from an intent', async () => {
     const managers = makeManagers();
     const declarations = [manifest('fixture')];

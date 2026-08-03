@@ -127,6 +127,7 @@ export function Sidebar({
             index={e.index}
             visible={e.tab.label === current.tab.label}
             client={client}
+            onClose={() => client.send({ method: 'closeTab', params: { index: e.index } })}
           />
         ))}
       </div>

@@ -1,12 +1,12 @@
 // Wire types shared between the Node server and the React web client.
 // The web client imports these directly via the @shared path alias — no mirror needed.
-import type { BufferLine, PageView, HarnessView, EditorView, TerminalEntry, FileNavigatorView, FileNavigatorDetail, FileNavigatorRow, TaskRow } from './tab/types.js';
+import type { BufferLine, HarnessView, EditorView, TerminalEntry, FileNavigatorView, FileNavigatorDetail, FileNavigatorRow, TaskRow } from './tab/types.js';
 import type { CompletionResult } from './completion/types.js';
 import type { ProfileRow } from './profile/types.js';
 
 // Used locally in TabView below, so separate import + export is required.
 // eslint-disable-next-line unicorn/prefer-export-from
-export type { BufferLine, PageView, HarnessView, EditorView, TerminalEntry, CompletionResult, FileNavigatorView, FileNavigatorDetail, FileNavigatorRow, TaskRow, ProfileRow };
+export type { BufferLine, HarnessView, EditorView, TerminalEntry, CompletionResult, FileNavigatorView, FileNavigatorDetail, FileNavigatorRow, TaskRow, ProfileRow };
 
 export type PluginTabView = {
   id: string;
@@ -104,13 +104,11 @@ export type TabView = {
   toolStepsExpanded: boolean;
   pendingQuestion?: PendingQuestionView;
   // Body kind: undefined/`'agent'` for a normal tab, or the named live view kind.
-  view?: 'agent' | 'plugin' | 'page' | 'harness' | 'editor' | 'monitor' | 'files' | 'notifications';
+  view?: 'agent' | 'plugin' | 'harness' | 'editor' | 'monitor' | 'files' | 'notifications';
   // Display name when it differs from `label` (a plugin tab is titled by its plugin).
   title?: string;
   // Bundled-plugin envelope, present only when `view === 'plugin'`.
   plugin?: PluginTabView;
-  // Page-view payload, present only when `view === 'page'`.
-  page?: PageView;
   // Harness-view payload, present only when `view === 'harness'`.
   harness?: HarnessView;
   // Editor-view payload, present only when `view === 'editor'`.
@@ -191,9 +189,6 @@ export type RpcCall =
   | { method: 'focusTab'; params: { label: string } }
   | { method: 'closeTab'; params: { index: number } }
   | { method: 'renameTab'; params: { index: number; title: string } }
-  // Navigate an existing page tab to a new address in place, keeping its page number and
-  // identity. No-ops server-side when the index isn't a page tab or the URL is invalid.
-  | { method: 'navigatePage'; params: { index: number; url: string } }
   // Patch or remove one entry in the active tab's command queue (see `queue.md`). Index-based
   // against that tab's queue; no-ops server-side when the index is out of range.
   | { method: 'editQueuedCommand'; params: { index: number; text: string } }
@@ -243,10 +238,6 @@ export type RpcCall =
   // server always holds the latest values for `profile save` to read synchronously into a profile's
   // `layout` key. Client-only, no reply — the reverse of the server->client `layout` event.
   | { method: 'reportLayout'; params: { sidebarLeft: number; sidebarRight: number; tabAreaPct: number } }
-  // Sync a page tab's currently visible text, relayed by the bundled extension's content script
-  // through the app's message-listener. Never persisted or sent to any client — see `pageSnapshot`.
-  // `url` identifies the page tab the same way its `page.url` field does.
-  | { method: 'pageSync'; params: { url: string; text: string } }
   // Expand/collapse one directory row in a file navigator tab. `index` is the tab's position in the
   // server's full tab list (resolved to a label server-side); `path` is the row's tree-relative path.
   | { method: 'fileNavigatorToggle'; params: { index: number; path: string } }

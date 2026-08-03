@@ -5,7 +5,6 @@ import { TAB_RENAME_MAX_LENGTH } from '../config.js';
 import { messageBus } from '../bus.js';
 import { closeTabOp } from './close.js';
 import { renameTabOp } from './rename.js';
-import { navigatePageTab } from './navigate.js';
 import { applyDock } from './dock.js';
 import { insertTabInGroup } from './index.js';
 import { setActiveTabOp, moveTabOp, reorderTabOp, reorderTabToOp } from './navigation-commands.js';
@@ -113,12 +112,6 @@ export function closeTab(port: TabOperationsPort, index: number): void {
 
 export function renameTab(port: TabOperationsPort, index: number, title: string): void {
   renameTabOp(port.tabs, index, title, TAB_RENAME_MAX_LENGTH, (path) => port.registerFile(path), (label, path) => port.managerServices.editorWatch.watch(label, path), (state) => port.persist(state), (tab) => port.buildAgentState(tab));
-}
-
-export function navigatePage(port: TabOperationsPort, index: number, url: string): void {
-  const tab = port.tabs[index];
-  if (!tab || !navigatePageTab(tab, url)) return;
-  messageBus.emit('state', { type: 'dirty' });
 }
 
 export function toggleCollapse(port: TabOperationsPort): void {

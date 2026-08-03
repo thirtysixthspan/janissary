@@ -92,7 +92,7 @@ The alias is display-only. Messaging, scheduling, and every other feature that t
 ```
 close             close the current tab
 close bilal       close the tab named "bilal" (case-insensitive)
-close page 2      close the embedded web page numbered 2
+close page-2      close the second embedded web page by its name
 ```
 
 `exit` is an alias of `close`. Closing a tab tears down everything it owns — its shell, agent session, scheduled commands, and workspace clone if it has one — and focus moves to an adjacent tab.

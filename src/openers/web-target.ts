@@ -1,5 +1,9 @@
-import type { OpenContext } from './types.js';
-
+// What a web address is, as two pure functions: the normalization every `open <url>`, `open page
+// <address>`, and in-place navigation runs, and the root domain a page tab is named after. Kept in
+// core rather than inside the page plugin because core's profile relaunch has to resolve an authored
+// address to the same string the plugin's tab is keyed by, and a second copy of a scheme-rejecting
+// predicate is exactly the type drift `ai/guidelines/plugins.md` calls out. It is therefore the
+// second host utility a server plugin may import, beside `openers/size.ts`.
 export function normalizeWebUrl(target: string): { url: string } | { error: string } {
   let raw = target.trim();
   if (!raw) return { error: 'empty URL' };
@@ -28,18 +32,3 @@ export function rootDomain(hostname: string): string {
   const keep = SHORT_SLDS.has(second) ? 3 : 2;
   return labels.slice(-keep).join('.');
 }
-
-export const webOpener = {
-  name: 'page',
-  inline: (target: string, context: OpenContext): void => {
-    const n = normalizeWebUrl(target);
-    if ('error' in n) { context.note(`open: invalid URL "${target}"`); return; }
-    context.openPageTab({ url: n.url, domain: rootDomain(new URL(n.url).hostname) });
-  },
-  external: (target: string, context: OpenContext): void => {
-    const n = normalizeWebUrl(target);
-    if ('error' in n) { context.note(`open: invalid URL "${target}"`); return; }
-    const domain = rootDomain(new URL(n.url).hostname);
-    context.note(context.openExternally(n.url) ? `Opening ${domain} in your browser…` : `No browser available. The address is ${n.url}`);
-  },
-};

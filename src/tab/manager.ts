@@ -154,7 +154,6 @@ export class TabManager extends TabOpeningState {
 
   renameTab(index: number, title: string): void { tabOperations.renameTab(this, index, title); }
 
-  navigatePage(index: number, url: string): void { tabOperations.navigatePage(this, index, url); }
 
   toggleCollapse(): void { tabOperations.toggleCollapse(this); }
 

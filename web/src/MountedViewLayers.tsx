@@ -3,7 +3,6 @@ import type { TabView } from '@shared/protocol';
 import type { JanusClient } from './ws';
 import type { HarnessTabHandle } from './HarnessTab';
 import { EditorTab, type EditorTabHandle, type EditorDropHandle } from './EditorTab';
-import { PageTab } from './PageTab';
 import { HarnessTabLayer } from './HarnessTabLayer';
 import type { PickerOverlayProps } from './picker-overlay-props';
 import { QuestionPanel, type QuestionPanelHandle } from './QuestionPanel';
@@ -46,9 +45,9 @@ function TabBodyDiv({
   );
 }
 
-// Harness, editor, page, and plugin tabs stay mounted (hidden when inactive) so terminal/xterm
-// state, editor buffers, undo stacks, cursor/scroll position, embedded-page navigation, and video
-// playback position survive tab switches. Split out of App.tsx to keep it under the file-size limit.
+// Harness, editor, and plugin tabs stay mounted (hidden when inactive) so terminal/xterm state,
+// editor buffers, undo stacks, cursor/scroll position, embedded-page navigation, and video playback
+// position survive tab switches. Split out of App.tsx to keep it under the file-size limit.
 export function MountedViewLayers({
   tabs, current, client, closeTab, harnessHandles, editorHandles, editorDropRef, questionPanelRef,
   visibleLabels = [current.label], onSplit,
@@ -79,18 +78,6 @@ export function MountedViewLayers({
 
       {tabs
         .map((t, index) => ({ t, index }))
-        .filter(({ t }) => t.view === 'page' && t.page)
-        .map(({ t, index }) => (
-          <TabBodyDiv key={t.page!.url} tab={t} index={index} current={current} visibleLabels={visibleLabels}>
-            <PageTab
-              page={t.page!} closeTab={closeTab} index={index} client={client}
-              active={t.label === current.label}
-              onSplit={onSplit ? () => onSplit(index) : undefined}
-            />
-          </TabBodyDiv>
-        ))}
-      {tabs
-        .map((t, index) => ({ t, index }))
         .filter(({ t }) => t.view === 'plugin' && t.plugin && !t.dock)
         .map(({ t, index }) => (
           <PluginTabLayer
@@ -100,6 +87,7 @@ export function MountedViewLayers({
             current={current}
             visible={visibleLabels.includes(t.label)}
             client={client}
+            onClose={() => closeTab(index)}
             onSplit={onSplit ? () => onSplit(index) : undefined}
           />
         ))}

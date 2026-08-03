@@ -2,7 +2,6 @@
 
 ## ready
 
-* move embedded browser tab into a plugin
 
 ## development
 

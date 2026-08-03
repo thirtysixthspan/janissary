@@ -40,10 +40,14 @@ vi.mock('./plugins/registry', () => {
   const { lazy, useEffect, createElement } = React;
   const Component = lazy(async () => {
     pluginLoadCount += 1;
-    const FixturePlugin = ({ onMounted }: { onMounted(): void }) => {
+    const FixturePlugin = (
+      { onMounted, capabilities }: { onMounted(): void; capabilities: { close(): void } },
+    ) => {
       useEffect(() => { pluginMountCount += 1; }, []);
       useEffect(onMounted, [onMounted]);
-      return createElement('div', { 'data-testid': 'plugin' });
+      return createElement('button', {
+        type: 'button', 'data-testid': 'plugin', onClick: () => capabilities.close(),
+      });
     };
     return {
       default: FixturePlugin,
@@ -70,14 +74,6 @@ function makeHarnessTab(label: string, ptyId: string): TabView {
     harness: { ptyId, name: 'shell' },
     connections: [], schedule: [], bufferLines: [], cmdHistory: [],
     activePty: undefined,
-  } as unknown as TabView;
-}
-
-function makePageTab(label: string, url: string): TabView {
-  return {
-    label, view: 'page' as const, dotColor: '#00f', groupColor: '#ccc',
-    page: { url, domain: 'example.com', number: 1 },
-    connections: [], schedule: [], bufferLines: [], cmdHistory: [],
   } as unknown as TabView;
 }
 
@@ -329,63 +325,6 @@ describe('MountedViewLayers', () => {
     expect(container.querySelector('.tab-nav-picker')).toBeNull();
   });
 
-  it('renders page tabs', () => {
-    const tabs = [makePageTab('ptab', 'https://example.com')];
-    const harnessHandles = makeHarnessHandles();
-    const editorHandles = makeEditorHandles();
-    const { container } = render(
-      React.createElement(MountedViewLayers, {
-        tabs, current: tabs[0], client: { send: vi.fn() } as never, closeTab: vi.fn(),
-        harnessHandles, editorHandles,
-      }),
-    );
-    expect(container.querySelector('.tab-body')).toBeTruthy();
-  });
-
-  it('hides page tab when not current', () => {
-    const tabs = [makePageTab('ptab', 'https://example.com')];
-    const other = makePageTab('other', 'https://other.example.com');
-    const harnessHandles = makeHarnessHandles();
-    const editorHandles = makeEditorHandles();
-    const { container } = render(
-      React.createElement(MountedViewLayers, {
-        tabs, current: other, client: { send: vi.fn() } as never, closeTab: vi.fn(),
-        harnessHandles, editorHandles,
-      }),
-    );
-    const el = container.querySelector('.tab-body') as HTMLElement;
-    expect(el.style.display).toBe('none');
-  });
-
-  it('renders page tab as flex when current', () => {
-    const tabs = [makePageTab('ptab', 'https://example.com')];
-    const harnessHandles = makeHarnessHandles();
-    const editorHandles = makeEditorHandles();
-    const { container } = render(
-      React.createElement(MountedViewLayers, {
-        tabs, current: tabs[0], client: { send: vi.fn() } as never, closeTab: vi.fn(),
-        harnessHandles, editorHandles,
-      }),
-    );
-    const el = container.querySelector('.tab-body') as HTMLElement;
-    expect(el.style.display).toBe('flex');
-  });
-
-  it('filters out tabs without page payload', () => {
-    const harnessHandles = makeHarnessHandles();
-    const editorHandles = makeEditorHandles();
-    const { container } = render(
-      React.createElement(MountedViewLayers, {
-        tabs: [{ label: 'a', view: 'page', dotColor: '#00f', groupColor: '#ccc' }] as TabView[],
-        current: { label: 'a' } as TabView,
-        client: { send: vi.fn() } as never,
-        closeTab: vi.fn(),
-        harnessHandles, editorHandles,
-      }),
-    );
-    expect(container.querySelector('.tab-body')).toBeNull();
-  });
-
   it('does not load a plugin chunk when no plugin tab exists', () => {
     pluginLoadCount = 0;
     const tabs = [makeEditorTab('etab', '/test.ts')];
@@ -524,9 +463,9 @@ describe('MountedViewLayers', () => {
     expect(pluginMountCount).toBe(1);
   });
 
-  it('wires closeTab through with the tab\'s real index in the full tabs array', () => {
+  it('wires a plugin\'s close capability through with the tab\'s real index in the full tabs array', async () => {
     const closeTab = vi.fn();
-    const tabs = [makeHarnessTab('htab', 'pty1'), makePageTab('ptab', 'https://example.com')];
+    const tabs = [makeHarnessTab('htab', 'pty1'), makePluginTab('vtab', '/open/1')];
     const harnessHandles = makeHarnessHandles();
     const editorHandles = makeEditorHandles();
     const { container } = render(
@@ -535,7 +474,8 @@ describe('MountedViewLayers', () => {
         harnessHandles, editorHandles,
       }),
     );
-    fireEvent.click(container.querySelector('.page-close') as Element);
+    await waitFor(() => { expect(container.querySelector('[data-testid="plugin"]')).toBeTruthy(); });
+    fireEvent.click(container.querySelector('[data-testid="plugin"]') as Element);
     expect(closeTab).toHaveBeenCalledWith(1);
   });
 });

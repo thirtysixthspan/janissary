@@ -3,12 +3,15 @@
 The `open` command opens a web address **inside a tab**, embedding the live page in the app (see
 Open). A page tab is a passive viewer: the user browses the site within the tab and closes it
 manually. It is a non-agent **view tab**, modelled on the image tab (see [[image-tab]]) but
-showing a web page instead of an image file.
+showing a web page instead of an image file. It is contributed by a bundled plugin that claims web
+addresses rather than file types (see [[tab-plugins]]); nothing about the behavior below depends on
+that, but it is why a page tab is named, closed, and captured the way every other plugin tab is.
 
 Page viewing is intentionally minimal. The app does not script or read the contents of the
 embedded page, **except when the user has explicitly attached a monitor to that page tab** (see
 [[monitoring]]) — in that case, and only then, the app reads the text currently visible in the
-page's viewport so the monitor can see it. Whatever the embedded site allows the user to do
+page's viewport so the monitor can see it. That text stays on the server and is never sent to any
+client or persisted. Whatever the embedded site allows the user to do
 directly — click, scroll, type, follow links — happens inside the page itself. The one exception
 is navigation control: the metadata header's back, forward, and reload buttons (below) move the
 embedded page through its own history or reload it, and its address itself can be edited directly
@@ -45,12 +48,12 @@ Errors are surfaced in the active tab before any tab is created: a missing addre
 `open` usage message; an unviewable scheme or malformed address yields a message reporting the
 address is invalid.
 
-### Page number
+### Reopening an address already open
 
-Every page tab is assigned a **page number** — the smallest positive integer not currently used
-by an open page tab. Numbers are independent of a tab's position in the strip. When a page tab is
-closed its number becomes free again and is reused by the next page, so open page tabs are always
-numbered from `1` without gaps. The page number identifies the tab for `close page`.
+Opening an address a page tab is already showing focuses that tab rather than embedding the same
+site a second time — the same de-duplication opening a file that already has a view tab gets. A page
+that has navigated away from the address it was opened on is matched by where it is now, not by
+where it started.
 
 ### Root domain
 
@@ -70,20 +73,21 @@ taking a distinct dot color. Focus moves to the new page tab.
 
 Unlike an agent tab, a page tab has no shell, agent session, browser, transcript, or command
 history, and no persisted agent state. It is a **live, in-memory view** — like image tabs and
-browser windows, it is not saved and is not restored on `--relaunch`.
+browser windows, it is not saved and is not restored on `--relaunch`. A profile does capture one,
+by the address it is showing, and reopens it by issuing the same `open` a user would type (see
+[[profiles]]).
 
 ### Page tab data
 
-A page tab is distinguished from an ordinary tab by a **view kind** marking it as a page view.
+A page tab is distinguished from an ordinary tab by a **view kind** marking it as a plugin view.
 Alongside it the tab carries the data the view needs:
 
-- **number** — the page number.
-- **domain** — the root domain (for the label).
+- **domain** — the root domain (for the name shown in the tab strip).
 - **address** — the normalized `http`/`https` URL loaded into the view.
 
 ### Page tab layout
 
-A page tab's body has no command bar and no transcript. When the active tab is a page view, the
+A page tab's body has no command bar and no transcript. When the active tab is a page tab, the
 app renders the page view in place of the usual transcript-and-command-bar body; every other tab
 renders unchanged. Tab switching, scrolling, and the route/history overlays continue to key off
 the active tab as before.
@@ -98,7 +102,7 @@ The page view shows, stacked top to bottom:
    address opens it for editing in place; pressing Enter (or clicking away) loads the typed address
    into the same page tab, validated the same way `open`/`open page` validates one — an invalid
    scheme or malformed address is silently discarded, leaving the tab on its current address.
-   Escape cancels the edit without navigating. Navigating this way keeps the tab's page number,
+   Escape cancels the edit without navigating. Navigating this way keeps the tab's name in the strip,
    position, and group unchanged; only its address, root-domain label, and displayed title update.
    The address and label also follow the page automatically as the user navigates **inside** the
    embedded page (clicking links, etc.) — when the app's bundled browser extension is active, the
@@ -144,7 +148,7 @@ A page tab can be closed five ways, all equivalent in their teardown:
 - the tab's **close button** (the manual affordance),
 - the **metadata header's close button**, shown right-aligned above the embedded page,
 - the **`close`** command when the page tab is active,
-- **`close page <n>`** — close the page tab with page number `n` from any tab, and
+- **`close <name>`** — close the page tab by its name from any tab, and
 - **Cmd+W / Ctrl+W (Keyboard Navigation)** — close the page tab from anywhere, including while interacting with the embedded page.
 
 Closing performs the same teardown the `close` command does for a non-last tab: the tab is removed
@@ -155,13 +159,19 @@ served file, those teardown steps simply do
 nothing for it. Closing the last remaining tab quits the app, exactly as the `close` command does
 (see `tabs.md`).
 
-### `close page` command
+### Closing by name
 
-`close page <n>` — close the page tab numbered `n`.
+A page tab is named like every other view tab contributed by a plugin: the first is `page`, the next
+`page-2`, and so on, with a freed name reused by the next page opened. That name is what identifies
+the tab for `close`, and it tab-completes like any other.
 
 - `close` with no argument closes the **active** tab, unchanged (see Application Commands).
-- `close page <n>` closes the page tab whose page number is `n`, wherever it sits in the strip.
-- If no open page tab has number `n`, a message reports that there is no page numbered `n`.
+- `close page` closes the first page tab, `close page-2` the second, wherever either sits in the
+  strip.
+- If no open tab has that name, a message reports that there is no tab with it.
+
+The name is internal identity, not what is displayed: the tab strip shows the page's root domain
+(below).
 
 ### Reordering and grouping
 

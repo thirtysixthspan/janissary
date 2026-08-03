@@ -3,13 +3,12 @@ import React, { useRef } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { useCmdW } from './useCmdW';
 
-function TestComponent({ closeTab, active, quitOpen, pickerOpen, routeOpen, view }: {
+function TestComponent({ closeTab, active, quitOpen, pickerOpen, routeOpen }: {
   closeTab: (n: number) => void;
   active: number;
   quitOpen: boolean;
   pickerOpen: boolean;
   routeOpen: boolean;
-  view?: string;
 }) {
   const activeTabRef = useRef(active);
   activeTabRef.current = active;
@@ -19,18 +18,9 @@ function TestComponent({ closeTab, active, quitOpen, pickerOpen, routeOpen, view
   pickerOpenRef.current = pickerOpen;
   const routeRef = useRef(routeOpen ? {} : null);
   routeRef.current = routeOpen ? {} : null;
-  const activeViewRef = useRef(view);
-  activeViewRef.current = view;
-
-  useCmdW(closeTab, activeTabRef, quitConfirmOpenRef, pickerOpenRef, routeRef, activeViewRef);
+  useCmdW(closeTab, activeTabRef, quitConfirmOpenRef, pickerOpenRef, routeRef);
 
   return null;
-}
-
-function dispatchBeforeUnload() {
-  // beforeunload events are uncancelable by default, but we dispatch them with
-  // cancelable: true so the handler's preventDefault() can be exercised.
-  globalThis.dispatchEvent(new Event('beforeunload', { cancelable: true }));
 }
 
 function dispatchKey(key: string, opts: { metaKey?: boolean; ctrlKey?: boolean } = {}) {
@@ -120,37 +110,5 @@ describe('useCmdW', () => {
     render(<NullRefComponent />);
     dispatchKey('w', { metaKey: true });
     expect(closeTab).toHaveBeenCalledWith(0);
-  });
-
-  describe('beforeunload fallback (page tab / iframe)', () => {
-    it('calls closeTab on beforeunload when view is page', () => {
-      const closeTab = vi.fn();
-      render(<TestComponent closeTab={closeTab} active={1} quitOpen={false} pickerOpen={false} routeOpen={false} view="page" />);
-      dispatchBeforeUnload();
-      expect(closeTab).toHaveBeenCalledWith(1);
-    });
-
-    it('does nothing on beforeunload when view is not page', () => {
-      const closeTab = vi.fn();
-      render(<TestComponent closeTab={closeTab} active={1} quitOpen={false} pickerOpen={false} routeOpen={false} view="agent" />);
-      dispatchBeforeUnload();
-      expect(closeTab).not.toHaveBeenCalled();
-    });
-
-    it('does nothing on beforeunload when quit dialog is open', () => {
-      const closeTab = vi.fn();
-      render(<TestComponent closeTab={closeTab} active={1} quitOpen pickerOpen={false} routeOpen={false} view="page" />);
-      dispatchBeforeUnload();
-      expect(closeTab).not.toHaveBeenCalled();
-    });
-
-    it('does not loop on re-entry', () => {
-      const closeTab = vi.fn();
-      render(<TestComponent closeTab={closeTab} active={1} quitOpen={false} pickerOpen={false} routeOpen={false} view="page" />);
-      // Two beforeunload events in sequence: the second should be guarded by the re-entry flag.
-      dispatchBeforeUnload();
-      dispatchBeforeUnload();
-      expect(closeTab).toHaveBeenCalledTimes(1);
-    });
   });
 });

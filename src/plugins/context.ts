@@ -122,6 +122,16 @@ export function createPluginContext(
       );
       if (index !== -1) managers.tab.setDock(index, dock);
     },
+    // Server-only transient state, addressed like `updateTab`. It never reaches `buildTabView`, so
+    // writing it neither marks the view dirty nor sends anything to a client.
+    snapshotTab: (instanceKey, text) => {
+      if (!isEnabled()) return;
+      const tab = managers.tab.tabs.find(
+        (candidate) => candidate.plugin?.id === declaration.id
+          && candidate.plugin.instanceKey === instanceKey,
+      );
+      if (tab) tab.pageSnapshot = { text, capturedAt: Date.now() };
+    },
     openClaimedFiles: (target) => {
       if (!isEnabled()) return;
       openRequests.push(target);

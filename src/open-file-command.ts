@@ -1,7 +1,7 @@
 import path from 'node:path';
 import { isGlobPattern, parseOpen } from './commands/open.js';
 import { expandUserPath } from './paths.js';
-import { webOpener } from './openers/page.js';
+import { webClaimPluginId } from './openers/index.js';
 import type { OpenContext } from './openers/index.js';
 import type { Managers } from './managers.js';
 import { TabManager } from './tab/manager.js';
@@ -55,12 +55,18 @@ export function runOpenCommand(
   // The web branch resolves ahead of the opener registry, so a pinned command has to be refused here
   // rather than in `openOne` — which a web target never reaches. Both the `https://` scheme and a
   // bare `page` keyword land here, so without this `video page notes.txt` would open a browser tab.
+  // The target is handed to the claiming plugin verbatim: recognizing a web address is the host's
+  // job, deciding what one means is the plugin's.
   if (parsed.web) {
     if (requireOpener !== undefined) {
       managers.tab.append(label, { input: displayCommand, output: pinnedOpenerRefusal(requireOpener, target) });
       return;
     }
-    return parsed.external ? webOpener.external(target, context) : webOpener.inline(target, context);
+    if (!webClaimPluginId) {
+      managers.tab.append(label, { input: displayCommand, output: 'open: no viewer for web addresses' });
+      return;
+    }
+    return context.runPluginOpener(webClaimPluginId, parsed.external ? 'external' : 'inline', target);
   }
 
   if (isGlobPattern(target)) {

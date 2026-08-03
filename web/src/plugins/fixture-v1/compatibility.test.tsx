@@ -20,6 +20,7 @@ function capabilities(): TabPluginClientCapabilities {
     splitAction: null,
     active: true,
     dock: null,
+  close: vi.fn(),
     reportFailure: vi.fn(),
   };
 }

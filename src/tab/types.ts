@@ -72,11 +72,6 @@ export type PluginTabRecord = {
   sourceLabel: string;
 };
 
-// Embedded web page view (opened via `open https://…` or `open page …`); renders an iframe.
-// `url`: URL loaded in the iframe; `domain`: registrable domain for the display name;
-// `number`: 1-based page number shown in the tab title (e.g. "1) slashdot.org").
-export type PageView = { url: string; domain: string; number: number };
-
 // Plain-text editor view (opened via `open <file>` for text extensions, or `edit <file>` for any
 // file): metadata for the header plus the `/open/<id>` content ref.
 export type EditorView = {
@@ -188,7 +183,7 @@ export type Tab = {
   number: number;
   // The tab's body kind. Undefined/`'agent'` renders the normal transcript + command line; `'plugin'`
   // renders a bundled plugin's view (no command bar). View tabs are live and in-memory — not persisted.
-  view?: 'agent' | 'plugin' | 'page' | 'harness' | 'editor' | 'monitor' | 'files' | 'notifications';
+  view?: 'agent' | 'plugin' | 'harness' | 'editor' | 'monitor' | 'files' | 'notifications';
   // Display name shown in the tab strip when it differs from the (unique) internal `label` — e.g.
   // every image tab is titled with its file name while keeping a distinct label (`image`, `image-2`, …).
   title?: string;
@@ -197,8 +192,6 @@ export type Tab = {
   activePty?: string;
   // The bundled-plugin payload and server-only ownership record, present only for plugin tabs.
   plugin?: PluginTabRecord;
-  // The page-view payload, present only when `view === 'page'`.
-  page?: PageView;
   // The harness-view payload, present only when `view === 'harness'`.
   harness?: HarnessView;
   // The editor-view payload, present only when `view === 'editor'`.
@@ -207,10 +200,10 @@ export type Tab = {
   // (see editor-live-buffer-sync plan). In-memory only; never sent to any client (not part
   // of TabView) and never read when building persisted AgentState. Cleared on save.
   editorDraft?: { content: string; updatedAt: number };
-  // Transient cache of a page tab's visible-viewport text, kept fresh out of band by the bundled
-  // extension's content script via the `pageSync` RPC (see monitor-page-tab-content-feed plan).
-  // In-memory only; never sent to any client (not part of TabView) and never read when building
-  // persisted AgentState.
+  // Transient cache of the text visible in a plugin tab's view, written by the `snapshotTab`
+  // capability — the embedded page plugin relays its viewport here so a monitor watching that tab
+  // has something to feed on. In-memory only; never sent to any client (not part of TabView) and
+  // never read when building persisted AgentState.
   pageSnapshot?: { text: string; capturedAt: number };
   // The monitor-window payload, present only when `view === 'monitor'`: the suggestion feed,
   // the persona name, the monitored tabs/groups (pre-formatted), and the running total of bytes

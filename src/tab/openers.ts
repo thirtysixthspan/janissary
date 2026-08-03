@@ -1,8 +1,8 @@
-import type { Tab, EditorView, PageView, FileNavigatorView } from './types.js';
+import type { Tab, EditorView, FileNavigatorView } from './types.js';
 import type { TabPluginPayload, TabPluginResources, TabPluginTabUpdate } from '../plugins/api.js';
 import { messageBus } from '../bus.js';
 import {
-  addPluginTab, addEditorTab, addPageTab, addFilesTab, addNotificationsTab,
+  addPluginTab, addEditorTab, addFilesTab, addNotificationsTab,
 } from './creators.js';
 
 // Minimal surface these openers need from the TabManager. Kept structural (rather than importing
@@ -75,8 +75,10 @@ export function openPluginTab(
 
 // Replaces what an already-open plugin tab shows. The tab is addressed by its owning plugin plus the
 // instance key it was opened with, so a plugin can only ever write its own tab, and a key with no
-// open tab leaves everything untouched. Nothing about the tab's identity or placement moves: the
-// payload is replaced, the title only when the factory returned one.
+// open tab leaves everything untouched. Placement never moves: the payload is replaced, the title
+// only when the factory returned one, and the instance key only when the factory returned a free
+// one — a key another tab of the same plugin already holds would make two tabs indistinguishable to
+// every capability that addresses one, so it is refused while the rest of the update still applies.
 export function updatePluginTab(
   target: OpenTarget,
   pluginId: string,
@@ -88,7 +90,14 @@ export function updatePluginTab(
   );
   if (!tab?.plugin) return;
   const update = factory();
-  tab.plugin = { ...tab.plugin, payload: update.payload };
+  const rekeyed = update.instanceKey !== undefined && update.instanceKey !== instanceKey
+    && target.tabs.every((candidate) => candidate.plugin?.id !== pluginId
+      || candidate.plugin.instanceKey !== update.instanceKey);
+  tab.plugin = {
+    ...tab.plugin,
+    payload: update.payload,
+    ...(rekeyed && { instanceKey: update.instanceKey! }),
+  };
   if (update.title !== undefined) tab.title = update.title;
   messageBus.emit('state', { type: 'dirty' });
 }
@@ -107,10 +116,6 @@ export function openEditorTab(
   target.applyOpenResult(result);
   watch(result.tabs[result.activeTab].label, view.path);
   messageBus.emit('state', { type: 'dirty' });
-}
-
-export function openPageTab(target: OpenTarget, { url, domain }: Pick<PageView, 'url' | 'domain'>): void {
-  activate(target, addPageTab(target.tabs, target.activeTab, url, domain));
 }
 
 export function openFilesTab(target: OpenTarget, view: FileNavigatorView): void {

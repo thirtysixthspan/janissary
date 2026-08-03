@@ -21,8 +21,6 @@ export function handle(controller: Controller, message: ClientMessage, reply: (e
     }
     case 'renameTab': { controller.renameTab(message.params.index, message.params.title); break;
     }
-    case 'navigatePage': { controller.navigatePage(message.params.index, message.params.url); break;
-    }
     case 'editQueuedCommand': { controller.editQueuedCommand(message.params.index, message.params.text); break;
     }
     case 'deleteQueuedCommand': { controller.deleteQueuedCommand(message.params.index); break;
@@ -111,8 +109,6 @@ export function handle(controller: Controller, message: ClientMessage, reply: (e
     case 'resyncEditorTab': { controller.resyncEditorTab(message.params.url); break;
     }
     case 'reportLayout': { controller.reportLayout(message.params); break;
-    }
-    case 'pageSync': { controller.syncPageSnapshot(message.params.url, message.params.text); break;
     }
     case 'fileNavigatorToggle':
     case 'fileNavigatorCollapseAll':

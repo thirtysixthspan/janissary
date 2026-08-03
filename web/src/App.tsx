@@ -113,8 +113,8 @@ export function App() {
   const { unsavedQuitOpen, guardedOpenQuitConfirm, confirmUnsavedQuit, cancelUnsavedQuit } =
     useUnsavedQuitGuard(tabs, editorHandles, openQuitConfirm, runCommand);
   const guardRef = useRef<((index: number) => boolean) | null>(null);
-  const { activeTabRef, quitConfirmOpenRef, pickerOpenRef, routeRef, activeViewRef } = useCmdWRefs(
-    activeTab, quitConfirmOpen, unsavedQuitOpen, pickerOpen, queueOpen, taskPickerOpen, profilePickerOpen, route, current?.view,
+  const { activeTabRef, quitConfirmOpenRef, pickerOpenRef, routeRef } = useCmdWRefs(
+    activeTab, quitConfirmOpen, unsavedQuitOpen, pickerOpen, queueOpen, taskPickerOpen, profilePickerOpen, route,
   );
 
   const closeTab = useCallback((index: number) => {
@@ -137,7 +137,7 @@ export function App() {
 
   useSectionNav(tabs, () => focusCenterVisibleTab(currentRef.current, harnessHandles, shellHandles, inputReference));
 
-  useCmdW(closeTab, activeTabRef, quitConfirmOpenRef, pickerOpenRef, routeRef, activeViewRef);
+  useCmdW(closeTab, activeTabRef, quitConfirmOpenRef, pickerOpenRef, routeRef);
 
   // Live snapshot + callbacks read by the window key handler, so it never has to re-register.
   useAppWindowKeys(client, handleScrollKey, handleScrollKeyUp, {

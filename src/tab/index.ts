@@ -1,4 +1,4 @@
-import type { LogEntry, Tab, PluginTabRecord, EditorView, PageView, HarnessView, FileNavigatorView } from './types.js';
+import type { LogEntry, Tab, PluginTabRecord, EditorView, HarnessView, FileNavigatorView } from './types.js';
 export { expandTabs, wordWrap, flattenBuffer } from './formatting.js';
 export { distinctColor, dotColors } from './colors.js';
 export { stripComments, renumberTabs, canMoveTab, swapTabsLeft, swapTabsRight, insertTabInGroup, uniqueLabel } from './utils.js';
@@ -28,15 +28,6 @@ export const makePluginTab = (
   view: 'plugin',
   title,
   plugin,
-});
-
-// A page view tab (opened via `open https://…` or `open page …`). Renders an iframe; carries no
-// transcript/history/shell. The title shows the domain (e.g. "slashdot.org").
-export const makePageTab = (label: string, dotColor: string, number: number, group: number, groupColor: string, page: PageView): Tab => ({
-  ...makeTab(label, dotColor, number, [], [], undefined, group, groupColor),
-  view: 'page',
-  title: page.domain,
-  page,
 });
 
 

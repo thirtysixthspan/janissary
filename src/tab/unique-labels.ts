@@ -19,10 +19,3 @@ export function uniqueEditorLabel(tabs: Tab[]): string {
 export function uniqueFilesLabel(tabs: Tab[]): string {
   return uniqueLabel(new Set(tabs.map((t) => t.label)), 'navigator');
 }
-
-export function uniquePageNumber(tabs: Tab[]): number {
-  const used = new Set(tabs.filter((t) => t.page).map((t) => t.page!.number));
-  let n = 1;
-  while (used.has(n)) n++;
-  return n;
-}

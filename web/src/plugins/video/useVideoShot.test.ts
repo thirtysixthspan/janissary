@@ -39,6 +39,7 @@ function setup(
     splitAction: null,
     active: true,
     dock: null,
+    close: vi.fn(),
     reportFailure: vi.fn(),
   } as TabPluginClientCapabilities;
   const { result } = renderHook(() => useVideoShot({ current: element }, capabilities));

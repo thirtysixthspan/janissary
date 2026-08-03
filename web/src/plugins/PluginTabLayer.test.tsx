@@ -40,7 +40,7 @@ function registration(loader: ClientPluginLoader): ClientPluginRegistration {
 const acceptsAnyPayload = (value: unknown): value is unknown => value !== undefined;
 
 function properties(view: TabView, value: JanusClient, visible = true) {
-  return { tab: view, index: 2, current: view, visible, client: value };
+  return { tab: view, index: 2, current: view, visible, client: value, onClose: vi.fn() };
 }
 
 beforeEach(() => {

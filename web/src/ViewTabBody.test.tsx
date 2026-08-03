@@ -27,8 +27,8 @@ describe('ViewTabBody', () => {
     expect(container.innerHTML).toBe('');
   });
 
-  it('returns null when view is page (page tabs are rendered by MountedViewLayers)', () => {
-    const tab = baseTab({ view: 'page', page: { url: 'https://example.com', domain: 'example.com', number: 1 } });
+  it('returns null when view is plugin (plugin tabs are rendered by MountedViewLayers)', () => {
+    const tab = baseTab({ view: 'plugin', plugin: { id: 'page', schemaVersion: 1, payload: {} } });
     const { container } = render(React.createElement(ViewTabBody, { tab, client: {} as never, index: 0 }));
     expect(container.innerHTML).toBe('');
   });

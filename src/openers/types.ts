@@ -1,4 +1,4 @@
-import type { EditorView, PageView } from '../tab/types.js';
+import type { EditorView } from '../tab/types.js';
 
 // Capabilities an opener may use, supplied by the dispatcher (the Controller). Kept deliberately
 // narrow so an opener can only use its declared presentation capabilities and never reaches into
@@ -9,8 +9,6 @@ export type OpenContext = {
   note: (text: string) => void;
   // Create and focus an in-app plain-text editor tab.
   openEditorTab: (view: EditorView) => void;
-  // Create and focus an in-app embedded web page tab.
-  openPageTab: (view: Pick<PageView, 'url' | 'domain'>) => void;
   // Register a local file to be served to the web client; returns the app-relative ref to load it.
   registerFile: (absPath: string) => string;
   // Hand a file to the operating system's default viewer (detached). Returns false when no viewer
