@@ -2,9 +2,11 @@
 
 ## ready
 
-* move embedded browser tabs into a plugin
+* move embedded browser tab into a plugin
 
-* move markdown preview tabs into a plugin
+* move markdown preview tab into a plugin
+
+* move the scheduling tab into a plugin
 
 ## development
 
