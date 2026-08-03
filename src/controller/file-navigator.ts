@@ -87,11 +87,9 @@ export function undoFileNavigatorItem(
   overwrite?: boolean,
   skipConflicts?: boolean,
 ) {
-  const label = managers.tab.tabs[index]?.label;
-  if (!label) return {};
-  const result = managers.fileNavigator.undo(label, overwrite, skipConflicts);
-  reportHistoryFailure(managers, label, result);
-  return result;
+  return replayFileNavigatorHistory(managers, index, overwrite, skipConflicts, (label, o, s) =>
+    managers.fileNavigator.undo(label, o, s),
+  );
 }
 
 export function redoFileNavigatorItem(
@@ -100,9 +98,21 @@ export function redoFileNavigatorItem(
   overwrite?: boolean,
   skipConflicts?: boolean,
 ) {
+  return replayFileNavigatorHistory(managers, index, overwrite, skipConflicts, (label, o, s) =>
+    managers.fileNavigator.redo(label, o, s),
+  );
+}
+
+function replayFileNavigatorHistory(
+  managers: Managers,
+  index: number,
+  overwrite: boolean | undefined,
+  skipConflicts: boolean | undefined,
+  replay: (label: string, overwrite?: boolean, skipConflicts?: boolean) => { total?: number; failedPaths?: string[]; conflict?: unknown; conflicts?: unknown },
+) {
   const label = managers.tab.tabs[index]?.label;
   if (!label) return {};
-  const result = managers.fileNavigator.redo(label, overwrite, skipConflicts);
+  const result = replay(label, overwrite, skipConflicts);
   reportHistoryFailure(managers, label, result);
   return result;
 }
