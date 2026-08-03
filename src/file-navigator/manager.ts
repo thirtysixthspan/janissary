@@ -67,12 +67,18 @@ export class FileNavigatorManager {
   // The narrow set of manager internals `navigation.ts` operates through, passed as bound
   // closures so the tab-state map and watcher methods stay private to this class.
   private navPort(): NavPort {
-    return makeNavigationPort(
-      this.managers, this.tabs,
+    return makeNavigationPort(this.managers, this.tabs, ...this.portClosures());
+  }
+
+  // Bound closures shared by `navPort()` and `openPort()` for the watcher/rebuild plumbing both
+  // ports expose identically.
+  private portClosures(): [NavPort['watchDir'], NavPort['unwatchDir'], NavPort['rebuild'], NavPort['refreshGit']] {
+    return [
       (label, absDir, relPath) => this.watchDir(label, absDir, relPath),
       (state, relPath) => this.unwatchDir(state, relPath),
-      (label) => this.rebuild(label), (label) => this.refreshGit(label),
-    );
+      (label) => this.rebuild(label),
+      (label) => this.refreshGit(label),
+    ];
   }
 
   // Open a file navigator at `label`'s cwd (the metadata-row 📁 button). If a file-navigator tab is
@@ -86,12 +92,7 @@ export class FileNavigatorManager {
   // The narrow set of manager internals `file-navigator/open.ts` operates through, passed as bound
   // closures so the tab-state map and watcher methods stay private to this class.
   private openPort(): OpenPort {
-    return makeOpenPort(
-      this.managers, this.tabs,
-      (label, absDir, relPath) => this.watchDir(label, absDir, relPath),
-      (state, relPath) => this.unwatchDir(state, relPath), (label) => this.rebuild(label),
-      (label) => this.refreshGit(label),
-    );
+    return makeOpenPort(this.managers, this.tabs, ...this.portClosures());
   }
 
   // Move a file or directory into a different directory (drag-and-release in the tree). Rejects
