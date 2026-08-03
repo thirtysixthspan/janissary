@@ -3,7 +3,7 @@ import type { JanusClient } from './ws';
 import { DEFAULT_WIDTH_PX } from './Sidebar';
 import { DEFAULT_PCT } from './ReportingSection';
 
-type DockedView = 'files' | 'notifications' | 'schedules';
+type DockedView = 'files' | 'notifications';
 
 export type LayoutState = {
   sidebarLeftWidth: number;

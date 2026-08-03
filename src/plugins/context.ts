@@ -7,9 +7,11 @@ import {
   type TabPluginActivation,
   type TabPluginCapabilityName,
   type TabPluginDeclaration,
+  type TabPluginNotificationTopic,
   type TabPluginServerCapabilities,
 } from './api.js';
 import type { PluginFailureOrigin } from './failure.js';
+import { readTopicData, runTopicAction } from './topics.js';
 
 export function isJsonCompatible(value: unknown, seen = new Set<object>()): boolean {
   if (value === null || typeof value === 'string' || typeof value === 'boolean') return true;
@@ -57,6 +59,18 @@ function validateTabValue(
   }
 }
 
+// Reading or acting on a topic the manifest never named reaches past the declaration exactly as
+// using an undeclared capability does, so it fails the same way: an ordinary error across the
+// failure boundary rather than a rejection the caller could have avoided.
+function requireDeclaredTopic(
+  declaration: TabPluginDeclaration,
+  topic: TabPluginNotificationTopic,
+): void {
+  if (!(declaration.notifications ?? []).includes(topic)) {
+    throw new Error(`used topic "${topic}" without declaring it`);
+  }
+}
+
 export function createPluginContext(
   managers: Managers,
   declaration: TabPluginDeclaration,
@@ -99,9 +113,26 @@ export function createPluginContext(
         return update;
       });
     },
+    // Placement, addressed like `updateTab` so a plugin reaches only its own tab, and delegating to
+    // the same `setDock` the client's dock-cycle control uses — there is still one docking path.
+    dockTab: (instanceKey, dock) => {
+      if (!isEnabled()) return;
+      const index = managers.tab.tabs.findIndex(
+        (tab) => tab.plugin?.id === declaration.id && tab.plugin.instanceKey === instanceKey,
+      );
+      if (index !== -1) managers.tab.setDock(index, dock);
+    },
     openClaimedFiles: (target) => {
       if (!isEnabled()) return;
       openRequests.push(target);
+    },
+    topicData: (topic) => {
+      requireDeclaredTopic(declaration, topic);
+      return isEnabled() ? readTopicData(managers, topic) : [];
+    },
+    topicAction: (action) => {
+      requireDeclaredTopic(declaration, action.topic);
+      if (isEnabled()) runTopicAction(managers, action);
     },
     configuredViewer: () => isEnabled() ? getConfig().externalViewers?.[declaration.id] ?? '' : '',
     openExternally: (absPath, application) => isEnabled() && didOsOpen(absPath, application),

@@ -138,9 +138,10 @@ describe('loadProfile', () => {
     expect(loaded.editors).toEqual([expect.objectContaining({ path: 'notes.md' })]);
     expect(loaded.files).toEqual([{ dock: 'left', path: '$root' }]);
     expect(loaded.notifications).toEqual([{ dock: 'right', focus: true }]);
-    expect(loaded.schedules).toEqual([{ dock: 'right' }]);
-    expect(loaded.views.map((v) => v.type)).toEqual(['plugin', 'plugin', 'page', 'ssh']);
-    expect(loaded.views[3]).toEqual(expect.objectContaining({ destination: 'host', options: ['-p', '2222'] }));
+    // The legacy `schedules` element loads as the plugin entry `profile save` writes for it today.
+    expect(loaded.views.map((v) => v.type)).toEqual(['plugin', 'plugin', 'plugin', 'page', 'ssh']);
+    expect(loaded.views[0]).toEqual({ type: 'plugin', id: 'schedules', dock: 'right' });
+    expect(loaded.views[4]).toEqual(expect.objectContaining({ destination: 'host', options: ['-p', '2222'] }));
   });
 
   // `image` is the pre-plugin spelling of an image tab; a profile saved before the image view moved

@@ -1,5 +1,5 @@
 import type { Tab } from './types.js';
-import type { AggregatedScheduleView, ConnectionView, PendingQuestionView, ScheduleView, TabView } from '../protocol.js';
+import type { ConnectionView, PendingQuestionView, ScheduleView, TabView } from '../protocol.js';
 import type { Managers } from '../managers.js';
 import { flattenBuffer } from './index.js';
 
@@ -9,7 +9,6 @@ export function buildTabViews(
   connectionsFor: (label: string) => ConnectionView[],
   acpLabel: (label: string) => string | undefined,
   scheduleView: (label: string) => ScheduleView[],
-  aggregatedSchedules: AggregatedScheduleView[],
   shorten: (path: string) => string,
 ): TabView[] {
   return tabs.map((tab) => buildTabView(
@@ -21,7 +20,6 @@ export function buildTabViews(
     scheduleView(tab.label),
     tab.runtime?.queue ?? [],
     shorten,
-    aggregatedSchedules,
     managers.questions.pendingFor(tab.label),
   ));
 }
@@ -37,7 +35,6 @@ export function buildTabView(
   schedule: ScheduleView[],
   commandQueue: string[],
   shorten: (path: string) => string,
-  aggregated: AggregatedScheduleView[],
   pendingQuestion?: PendingQuestionView,
 ): TabView {
   return {
@@ -79,7 +76,6 @@ export function buildTabView(
 
     monitor: tab.monitor,
     files: tab.files ? { ...tab.files, root: shorten(tab.files.root), absoluteRoot: tab.files.root } : undefined,
-    aggregatedSchedules: tab.view === 'schedules' ? aggregated : undefined,
     activePty: tab.activePty,
     dock: tab.dock,
     pane: tab.pane,

@@ -159,9 +159,15 @@ function pathProblems(value: Record<string, unknown>, loc: string): string[] {
   return checkField(value, 'path', 'string', loc, true);
 }
 
-// A plugin entry names the file it opens and the plugin that owns the resulting tab.
+// A plugin entry names the plugin that owns the resulting tab, and the file it opens when there is
+// one: a plugin claiming no file extensions is reached by its command instead, so its entry carries
+// no path and relaunch reissues that command.
 function pluginProblems(value: Record<string, unknown>, loc: string): string[] {
-  return [...checkField(value, 'id', 'string', loc, true), ...checkDock(value, loc), ...pathProblems(value, loc)];
+  return [
+    ...checkField(value, 'id', 'string', loc, true),
+    ...checkDock(value, loc),
+    ...checkField(value, 'path', 'string', loc),
+  ];
 }
 
 function pageProblems(value: Record<string, unknown>, loc: string): string[] {

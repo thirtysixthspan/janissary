@@ -133,11 +133,7 @@ export function handle(controller: Controller, message: ClientMessage, reply: (e
       handleFileNavigatorMessage(controller, message, reply);
       return;
     }
-    case 'cancelSchedule': { controller.cancelSchedule(message.params.tab, message.params.id); break;
-    }
-    case 'clearSchedules': { controller.clearSchedules(); break;
-    }
-    case 'setDock': { controller.setDock(message.params.index, message.params.dock); break;
+      case 'setDock': { controller.setDock(message.params.index, message.params.dock); break;
     }
     case 'openFileNavigatorFor': { controller.openFileNavigatorFor(message.params.label); break;
     }

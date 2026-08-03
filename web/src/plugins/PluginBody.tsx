@@ -115,12 +115,14 @@ export function PluginBody({
   label,
   client,
   active,
+  dock = null,
   onSplit,
 }: {
   plugin: NonNullable<TabView['plugin']>;
   label: string;
   client: JanusClient;
   active: boolean;
+  dock?: 'left' | 'right' | null;
   onSplit?: () => void;
 }) {
   const [failed, setFailed] = useState(false);
@@ -132,8 +134,8 @@ export function PluginBody({
   const splittable = onSplit !== undefined;
   const split = useCallback(() => { onSplitRef.current?.(); }, []);
   const capabilities = useMemo(
-    () => createPluginClientCapabilities(pluginId, label, client, active, splittable ? split : undefined),
-    [active, client, label, pluginId, split, splittable],
+    () => createPluginClientCapabilities(pluginId, label, client, active, dock, splittable ? split : undefined),
+    [active, client, dock, label, pluginId, split, splittable],
   );
   const capabilitiesRef = useRef(capabilities);
   capabilitiesRef.current = capabilities;

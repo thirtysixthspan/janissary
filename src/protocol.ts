@@ -104,7 +104,7 @@ export type TabView = {
   toolStepsExpanded: boolean;
   pendingQuestion?: PendingQuestionView;
   // Body kind: undefined/`'agent'` for a normal tab, or the named live view kind.
-  view?: 'agent' | 'plugin' | 'page' | 'harness' | 'editor' | 'monitor' | 'files' | 'notifications' | 'schedules';
+  view?: 'agent' | 'plugin' | 'page' | 'harness' | 'editor' | 'monitor' | 'files' | 'notifications';
   // Display name when it differs from `label` (a plugin tab is titled by its plugin).
   title?: string;
   // Bundled-plugin envelope, present only when `view === 'plugin'`.
@@ -121,9 +121,6 @@ export type TabView = {
   monitor?: { suggestions: SuggestionView[]; persona: string; targets: string; contextBytes: number };
   // File-navigator payload, present only when `view === 'files'`.
   files?: FileNavigatorView;
-  // Aggregated schedule rows across all tabs, sorted next-to-run first. Present only when
-  // `view === 'schedules'`.
-  aggregatedSchedules?: AggregatedScheduleView[];
   // Set while a full-tab interactive PTY (htop, vim, etc.) is running on this agent tab.
   // Cleared on exit; the client hides the transcript while this is set.
   activePty?: string;
@@ -166,8 +163,8 @@ export type LayoutEvent = {
   sidebarLeft?: number;
   sidebarRight?: number;
   tabAreaPct?: number;
-  focusLeft?: 'files' | 'notifications' | 'schedules';
-  focusRight?: 'files' | 'notifications' | 'schedules';
+  focusLeft?: 'files' | 'notifications';
+  focusRight?: 'files' | 'notifications';
 };
 // Asks every connected client to report its file navigators' cursor/anchor/selection, which live
 // only in client state. Issued by `profile save`, which waits briefly for the matching
@@ -306,10 +303,6 @@ export type RpcCall =
   // tagged with the request `id` so a late reply to an earlier `profile save` is discarded.
   // Fire-and-forget — the server sends no reply of its own.
   | { method: 'reportFileNavigatorSelection'; params: { id: number; navigators: FileNavigatorSelectionRecord[] } }
-  // Remove one scheduled entry, identified by its owning tab label and timer id, after the client
-  // has confirmed with the user (Backspace/Delete on a selected row in the aggregated schedules tab).
-  | { method: 'cancelSchedule'; params: { tab: string; id: string } }
-  | { method: 'clearSchedules'; params: Record<string, never> }
   // Undo/redo the most recent move in a file navigator tab's per-tab undo/redo stack. `overwrite`
   // retries a pending entry after the client has confirmed an overwrite of a conflicting
   // destination; the reply's `result` carries `{ conflict }` when one is found instead.

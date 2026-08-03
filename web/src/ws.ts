@@ -14,8 +14,8 @@ type LayoutListener = (event: {
   sidebarLeft?: number;
   sidebarRight?: number;
   tabAreaPct?: number;
-  focusLeft?: 'files' | 'notifications' | 'schedules';
-  focusRight?: 'files' | 'notifications' | 'schedules';
+  focusLeft?: 'files' | 'notifications';
+  focusRight?: 'files' | 'notifications';
 }) => void;
 
 // Thin WebSocket client. State snapshots fan out to subscribers; PTY output is routed per-id to

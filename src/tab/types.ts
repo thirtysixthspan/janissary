@@ -188,7 +188,7 @@ export type Tab = {
   number: number;
   // The tab's body kind. Undefined/`'agent'` renders the normal transcript + command line; `'plugin'`
   // renders a bundled plugin's view (no command bar). View tabs are live and in-memory — not persisted.
-  view?: 'agent' | 'plugin' | 'page' | 'harness' | 'editor' | 'monitor' | 'files' | 'notifications' | 'schedules';
+  view?: 'agent' | 'plugin' | 'page' | 'harness' | 'editor' | 'monitor' | 'files' | 'notifications';
   // Display name shown in the tab strip when it differs from the (unique) internal `label` — e.g.
   // every image tab is titled with its file name while keeping a distinct label (`image`, `image-2`, …).
   title?: string;

@@ -12,7 +12,10 @@ const documentation = readFileSync(
   new URL('../../documentation/developer-documentation/tab-plugins.md', import.meta.url), 'utf8',
 );
 
-const COUNT_WORDS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine'];
+const COUNT_WORDS = [
+  'zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven',
+  'twelve',
+];
 
 describe('tab plugin developer documentation', () => {
   it('shows the fixture manifest the repository actually ships', () => {
@@ -45,6 +48,6 @@ describe('tab plugin developer documentation', () => {
     // The changelog entry opens a sentence, so match the count word however it is capitalized.
     // The client count stays a literal: its capability object lives in the web project, which this
     // server-side test cannot import without dragging the client entry into the server graph.
-    expect(documentation.toLowerCase()).toContain(`${word} server and five client capabilities.`);
+    expect(documentation.toLowerCase()).toContain(`${word} server and six client capabilities.`);
   });
 });

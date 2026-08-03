@@ -85,16 +85,13 @@ export type ProfileEditorsEntry = ProfileTabRuntime & { path: string; in?: strin
 // internal tab-switcher, overriding the default "most recently docked tab wins" behavior.
 export type ProfileNotificationsEntry = { dock?: 'left' | 'right'; focus?: boolean };
 
-// A profile-level schedules tab. `dock` docks the singleton schedules list into that sidebar.
-export type ProfileSchedulesEntry = { dock?: 'left' | 'right' };
-
 // A profile-level view tab — a bundled-plugin tab (an image, a markdown preview, a video), web page,
 // or ssh session. None of these authors a label: the tab's name is derived at open time exactly as the
 // `open`/`ssh` commands derive it, so a relaunch is matched against an open tab by identity (path
 // plus plugin id, url, destination) rather than by label. A legacy `image` or `markdown` element of
 // the on-disk `tabs` array loads as a `plugin` entry with that id.
 export type ProfileViewEntry = ProfileTabRuntime & (
-  | { type: 'plugin'; id: string; path: string; dock?: 'left' | 'right' }
+  | { type: 'plugin'; id: string; path?: string; dock?: 'left' | 'right' }
   | { type: 'page'; url: string }
   | { type: 'ssh'; destination: string; options?: string[] }
 );
@@ -111,12 +108,16 @@ export type ProfileEditorTabFile = { type: 'editor'; path: string; in?: string; 
 export type ProfileFilesTabFile = { type: 'files' }
   & Omit<ProfileFilesEntry, keyof ProfileTabRuntime> & ProfileTabPresentation;
 export type ProfileNotificationsTabFile = { type: 'notifications' } & ProfileNotificationsEntry;
-export type ProfileSchedulesTabFile = { type: 'schedules' } & ProfileSchedulesEntry;
+// The pre-plugin spelling of the aggregated schedules tab, still accepted on load and mapped to a
+// `plugin` entry with id `schedules`.
+export type ProfileSchedulesTabFile = { type: 'schedules'; dock?: 'left' | 'right' };
 
-// A bundled-plugin tab: which plugin owns it and the file it was opened on. `profile save` writes
-// this for every plugin tab; `type: 'image'` and `type: 'markdown'` are the pre-plugin spellings of
-// those tabs and are still accepted on load.
-export type ProfilePluginTabFile = { type: 'plugin'; id: string; path: string; dock?: 'left' | 'right' }
+// A bundled-plugin tab: which plugin owns it and, for a plugin that opens on files, the file it was
+// opened on. A plugin claiming no extensions has no such file, so its entry omits `path` and
+// relaunch reissues the plugin's declared command. `profile save` writes this for every plugin tab;
+// `type: 'image'`, `type: 'markdown'`, and `type: 'schedules'` are the pre-plugin spellings of those
+// tabs and are still accepted on load.
+export type ProfilePluginTabFile = { type: 'plugin'; id: string; path?: string; dock?: 'left' | 'right' }
   & ProfileTabPresentation;
 export type ProfileImageTabFile = { type: 'image'; path: string } & ProfileTabPresentation;
 export type ProfileMarkdownTabFile = { type: 'markdown'; path: string } & ProfileTabPresentation;
@@ -188,7 +189,6 @@ export type LoadedProfile = {
   files: ProfileFilesEntry[];
   editors: ProfileEditorsEntry[];
   notifications: ProfileNotificationsEntry[];
-  schedules: ProfileSchedulesEntry[];
   views: ProfileViewEntry[];
   layout: ProfileLayout | null;
 };

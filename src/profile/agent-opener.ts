@@ -5,7 +5,6 @@ import { openProfileEditors } from './editors.js';
 import { openProfileViewTabs } from './view-tabs.js';
 import { focusedMainAreaLabel, type MainAreaCandidate } from './focus.js';
 import { openProfileNotifications } from './notifications.js';
-import { openProfileSchedules } from './schedules.js';
 import { applyProfileLayout } from './layout.js';
 import { openAgentEntry, openHarnessEntry } from './entry-openers.js';
 import type { Managers } from '../managers.js';
@@ -106,8 +105,6 @@ export async function openProfileEntries(
   if (focusLabel !== undefined) managers.tab.setActiveTab(managers.tab.findIndex(focusLabel));
   // Profile-level notifications tab opens next, docked per the profile's `notifications` key.
   openProfileNotifications(loaded.notifications, managers, notes);
-  // Profile-level schedules tab opens next, docked per the profile's `schedules` key.
-  openProfileSchedules(loaded.schedules, managers, notes);
   // Profile-level layout (window/sidebar/tab-area sizing) applies per the profile's `layout` key.
   applyProfileLayout(loaded.layout, managers, notes);
   // Profile-level monitors start after every entry is open, owned by the issuing tab, so their

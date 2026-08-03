@@ -1,11 +1,12 @@
 import type { Managers } from '../managers.js';
-import { messageBus, type Subscription } from '../bus.js';
+import type { Subscription } from '../bus.js';
 import type {
   TabPluginActivation,
   TabPluginNotification,
   TabPluginNotificationTopic,
   TabPluginServerCapabilities,
 } from './api.js';
+import { readTopicData, subscribeTopic } from './topics.js';
 import type { PluginFailureOrigin } from './failure.js';
 import type { PluginCallOutcome } from './invoke.js';
 import type { PluginRecord } from './status.js';
@@ -18,20 +19,6 @@ export const TAB_PLUGIN_NOTIFY_TIMEOUT_MS = 1000;
 // empty label is what stops a notification from appending to a transcript the user never pointed at
 // this plugin (see `createPluginContext`).
 const BACKGROUND_ORIGIN: PluginFailureOrigin = { label: '', command: '' };
-
-// Where each topic comes from and what it carries. One entry per topic, so adding a topic is a data
-// change here rather than a new branch in the dispatch below.
-type TopicSource = {
-  subscribe(fire: () => void): Subscription;
-  read(managers: Managers): TabPluginNotification['data'];
-};
-
-const TOPIC_SOURCES: Record<TabPluginNotificationTopic, TopicSource> = {
-  schedules: {
-    subscribe: (fire) => messageBus.on('schedules', 'changed', fire),
-    read: (managers) => managers.schedule.aggregatedView(),
-  },
-};
 
 // What the dispatcher needs from the host: its plugin records, the guarded-call path, and the way it
 // disables a plugin. Passing these as functions keeps the delivery policy here and leaves the host
@@ -92,7 +79,7 @@ function dispatch(port: TabPluginNotificationPort, topic: TabPluginNotificationT
     (record) => ownedTabs(port.managers, record.declaration.id).length > 0,
   );
   if (records.length === 0) return;
-  const data = TOPIC_SOURCES[topic].read(port.managers);
+  const data = readTopicData(port.managers, topic);
   for (const record of records) {
     void deliver(port, record, {
       topic,
@@ -110,5 +97,5 @@ export function subscribeTabPluginNotifications(
   topics: Iterable<TabPluginNotificationTopic>,
 ): Subscription[] {
   return [...new Set(topics)].map((topic) =>
-    TOPIC_SOURCES[topic].subscribe(() => { dispatch(port, topic); }));
+    subscribeTopic(topic, () => { dispatch(port, topic); }));
 }

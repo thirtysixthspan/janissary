@@ -25,6 +25,7 @@ function makeCapabilities(
       ? <button type="button" className="tab-split" onClick={onSplit}>Split</button>
       : null,
     active,
+    dock: null,
     reportFailure: vi.fn(),
   };
 }

@@ -39,13 +39,13 @@ The client loads the declared chunk only when a matching plugin tab first exists
 
 ### Docking a plugin tab
 
-A plugin tab can be docked into either sidebar and undocked back to the centre, exactly as the built-in dockable views can, and by the same means — the dock control shown on a docked tab, and a profile that asks for it. A docked plugin tab leaves the tab strip, so it has no position, group, or focus there; it appears instead in that sidebar's own tab switcher alongside whatever else is docked to the same side.
+A plugin tab can be docked into either sidebar and undocked back to the centre, exactly as the built-in dockable views can, and by the same means — the dock control shown on a docked tab, a profile that asks for it, and the plugin itself (see Placing its own tab). A docked plugin tab leaves the tab strip, so it has no position, group, or focus there; it appears instead in that sidebar's own tab switcher alongside whatever else is docked to the same side.
 
 Docking into a side already holding a docked tab displaces that tab back to the centre only when the two are the same kind — for plugin tabs, that means the same plugin. Two tabs from different plugins share a sidebar the way the file navigator and the notifications feed already do.
 
-Every docked plugin tab stays loaded while another entry in the same sidebar is showing, so switching between them preserves what each was displaying; only the one on screen is told it is visible. The sidebar frame, including the dock control, belongs to the application rather than to the plugin.
+Every docked plugin tab stays loaded while another entry in the same sidebar is showing, so switching between them preserves what each was displaying; only the one on screen is told it is visible. The sidebar frame, including the dock control, belongs to the application rather than to the plugin. A plugin is told which side it is docked to, so a view can lay itself out for a narrow sidebar without measuring the frame around it.
 
-A profile captures a docked plugin tab with the side it was docked to, and reopens it docked there.
+A profile captures a docked plugin tab with the side it was docked to, and reopens it docked there. A plugin tab opened on a file is reopened by opening that file again; one opened by a plugin's own command — a plugin that claims no file types at all — is reopened by reissuing that command.
 
 ### Changing what a tab shows
 
@@ -58,6 +58,12 @@ An update aimed at a tab that is no longer open, or one belonging to a different
 A plugin may declare that it wants to be told when a named kind of host state changes, so a view can keep up with something the plugin does not own. The only such kind in this version is the set of scheduled commands, and what the plugin receives is the same aggregated list of schedules the application shows in its own schedules tab.
 
 These announcements are deliberately narrow. One is sent only to a plugin that is already running and already has at least one tab open — a plugin nobody has used is never started by one, and a plugin with nothing on screen is never told about anything. The plugin is told which of its own tabs are open, so it does not have to track them itself, and it responds by changing what those tabs show. Nothing waits on the plugin, so a slow or broken one delays neither the application nor any other plugin: exceeding its deadline or failing disables that plugin alone, and a plugin cannot write to a transcript while handling one, since nobody asked it for anything.
+
+An announcement says only that something changed, so a plugin may also ask for that state directly — which is what a view opening for the first time needs, before anything has changed. It may likewise act on that state, through the small set of actions each kind defines: for the scheduled commands, those are cancelling one entry, clearing them all, and switching to the tab an entry belongs to. Both are limited to the kinds of state the plugin declared an interest in, so a plugin can only ever read or change something the application already agreed to show it, and asking about anything else disables it like any other broken plugin.
+
+### Placing its own tab
+
+A plugin may dock one of its own tabs into either sidebar, or move it back to the centre strip, which is how a command like `schedules left` puts a view where it was asked to go. It addresses the tab the same way it does when changing what a tab shows, so it can never move another plugin's tab, and naming a tab that is no longer open does nothing. Docking a tab that is not the one on screen leaves the current tab alone; moving a tab back to the centre makes it active, exactly as the application's own dock control does.
 
 ### Intents and resources
 
@@ -86,6 +92,10 @@ Image is a bundled plugin like any other: it contributes the common raster and v
 ### Bundled markdown plugin
 
 Markdown is a bundled plugin like any other: it contributes the `.md` and `.markdown` extensions and their content type, and both presentations of `open`. It declares no command and no file-navigator edit gesture, so `open <file>.md` and `open external <file>.md` behave as they always have and a plainly activated Markdown row still opens in the text editor. It answers no intents; the view's scroll position is entirely client-side. Reopening a file that already has a markdown tab focuses that tab, the same de-duplication every plugin view gets. See [[markdown-tab]] and [[open]].
+
+### Bundled schedules plugin
+
+Schedules is the first bundled plugin that opens on no file. It claims no extensions and contributes only the `schedules` command, so it is reached solely that way and costs nothing until someone asks for it. It is told when the set of scheduled commands changes and redraws its list from that, reads the current entries when the tab first opens, and cancels an entry, clears them all, or switches to an owning tab through the actions that state defines. Everything the user sees — the command grammar, the singleton tab, both layouts, the selection keys, the confirmation before a delete, and profile capture and restore — is unchanged by its being a plugin, except that a docked list now shows the application's dock control in its own slim header above the list. See [[scheduling]].
 
 ### Bundled video plugin
 

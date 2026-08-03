@@ -2,7 +2,7 @@ import type { Tab, EditorView, PageView, FileNavigatorView } from './types.js';
 import type { TabPluginPayload, TabPluginResources, TabPluginTabUpdate } from '../plugins/api.js';
 import { messageBus } from '../bus.js';
 import {
-  addPluginTab, addEditorTab, addPageTab, addFilesTab, addNotificationsTab, addSchedulesTab,
+  addPluginTab, addEditorTab, addPageTab, addFilesTab, addNotificationsTab,
 } from './creators.js';
 
 // Minimal surface these openers need from the TabManager. Kept structural (rather than importing
@@ -119,8 +119,4 @@ export function openFilesTab(target: OpenTarget, view: FileNavigatorView): void 
 
 export function openNotificationsTab(target: OpenTarget): void {
   activate(target, addNotificationsTab(target.tabs, target.activeTab));
-}
-
-export function openSchedulesTab(target: OpenTarget): void {
-  activate(target, addSchedulesTab(target.tabs, target.activeTab));
 }

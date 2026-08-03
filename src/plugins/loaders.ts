@@ -4,5 +4,6 @@ import type { ProductionTabPluginId } from './catalog.js';
 export const tabPluginLoaders = {
   image: () => import('./image/activate.js'),
   markdown: () => import('./markdown/activate.js'),
+  schedules: () => import('./schedules/activate.js'),
   video: () => import('./video/activate.js'),
 } satisfies Record<ProductionTabPluginId, TabPluginLoader>;

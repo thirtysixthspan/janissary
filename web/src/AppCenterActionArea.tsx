@@ -43,7 +43,7 @@ export function AppCenterActionArea({
     if (tab.view) {
       return (
         <ViewTabBody
-          tab={tab} client={client} index={entry.index} tabs={tabs}
+          tab={tab} client={client} index={entry.index}
           active={focused} onSplit={tab.view === 'notifications' ? undefined : onSplit}
         />
       );

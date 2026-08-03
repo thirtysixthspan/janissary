@@ -90,12 +90,15 @@ type TabPluginActivation = {
 };
 ```
 
-The host supplies eight capabilities:
+The host supplies eleven capabilities:
 
 - `note(text)` writes to the originating transcript.
 - `openOrFocusTab(instanceKey, factory)` focuses or creates a plugin tab.
 - `updateTab(instanceKey, factory)` replaces what one of your own tabs already shows.
+- `dockTab(instanceKey, dock)` docks one of your own tabs into `'left'` or `'right'`, or undocks it back to the centre strip with `null`.
 - `openClaimedFiles(target)` runs the host's `open` pipeline for `target`, pinned to your opener.
+- `topicData(topic)` reads what a topic you declared carries right now.
+- `topicAction(action)` asks the host to perform one of the actions that topic defines.
 - `configuredViewer()` reads the viewer configured for this plugin id.
 - `openExternally(path, application?)` asks the OS to open a file.
 - `rejectRequest(reason)` answers one bad request without disabling the plugin.
@@ -142,6 +145,14 @@ notify: (event, capabilities) => {
 ```
 
 v1 defines one topic, `schedules`, whose data is the aggregated scheduled-command rows. A topic is always a named, already-coalesced signal — never the raw state broadcast, which fires on essentially every mutation including per-keystroke shell output.
+
+A notification tells you a topic changed, which leaves two gaps a view has to fill on its own. `topicData(topic)` closes the first: it reads what the topic carries right now, which is what you need when you are building a tab for the first time and no notification has fired yet. `topicAction(action)` closes the second: it is how you act on what you are showing. Each topic names its own actions — `schedules` defines `cancel` (drop one row), `clear` (drop them all), and `focusOwner` (focus the tab a row belongs to, refused for a tab that owns no row):
+
+```ts
+capabilities.topicAction({ topic: 'schedules', action: 'cancel', tab, id });
+```
+
+Both are scoped to topics your manifest declared. Reaching for one it did not name throws `used topic "<name>" without declaring it` and disables the plugin, exactly as an undeclared capability does — a plugin may act only on state the host already agreed to show it.
 
 The delivery rules are narrow on purpose:
 
@@ -207,6 +218,7 @@ The component receives `payload` only after the registry wrapper has validated i
 - `resourceUrl(reference)` for an authenticated `/open/` URL;
 - `intent<Result>(name, payload)` bound to this tab;
 - `splitAction`, a ready-rendered host action or `null`;
+- `dock`, which sidebar this tab is docked into (`'left'`, `'right'`, or `null` for the centre strip). Placement is host-owned, so a plugin that lays itself out differently in a narrow sidebar — the schedules plugin's compressed one-line rows, for instance — reads it here rather than measuring the frame around it;
 - `active`, whether this tab is the visible one in its pane — or, when the tab is docked into a sidebar, whether it is the selected entry there. Every v1 plugin tab stays mounted while hidden, so a component that binds a window-wide listener — the image plugin's zoom and pan keys, for instance — must gate it on this rather than assume it is on screen. Never infer it from the DOM: the host owns the frame; and
 - `reportFailure(reason)` for an unrecoverable client-contract failure. Only the first report per plugin is sent, whichever tab or code path raises it, so calling it from your own component is safe alongside the failures the host detects for you.
 
@@ -238,7 +250,7 @@ Add server tests for declaration claims, playable/external routes, payload valid
 
 - Initial bundled-only tab-view contract.
 - Static opener, command, and notification contributions, with `command` and `notify` handlers on the activation.
-- Eight server and five client capabilities.
+- Eleven server and six client capabilities.
 - Versioned generic tab payload plus `pluginIntent` and `pluginFailed` RPCs.
 - Two-level failure model: `rejectRequest` answers one bad request, `reportFailure` disables.
 
