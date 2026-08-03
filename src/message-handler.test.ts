@@ -27,7 +27,6 @@ const makeController = () =>
     moveTabToOtherPane: vi.fn(),
     closeTab: vi.fn(),
     renameTab: vi.fn(),
-    navigatePage: vi.fn(),
     editQueuedCommand: vi.fn(),
     deleteQueuedCommand: vi.fn(),
     moveTab: vi.fn(),
@@ -45,7 +44,6 @@ const makeController = () =>
     saveFile: vi.fn(),
     pluginIntent: vi.fn(async () => ({ echoed: true })),
     pluginFailed: vi.fn(),
-    syncPageSnapshot: vi.fn(),
     fileNavigatorToggle: vi.fn(),
     fileNavigatorCollapseAll: vi.fn(),
     fileNavigatorReroot: vi.fn(),
@@ -121,12 +119,6 @@ describe('handle', () => {
     const controller = makeController();
     dispatchCall(controller, 3, { method: 'renameTab', params: { index: 1, title: 'bob' } });
     expect(controller.renameTab).toHaveBeenCalledWith(1, 'bob');
-  });
-
-  it('routes navigatePage', () => {
-    const controller = makeController();
-    dispatchCall(controller, 3, { method: 'navigatePage', params: { index: 1, url: 'https://example.com/' } });
-    expect(controller.navigatePage).toHaveBeenCalledWith(1, 'https://example.com/');
   });
 
   it('routes editQueuedCommand', () => {
@@ -282,12 +274,6 @@ describe('handle', () => {
     const controller = makeController();
     dispatchCall(controller, 14, { method: 'saveFile', params: { url: 'file:///a.ts', content: 'x' } });
     expect(controller.saveFile).toHaveBeenCalledWith('file:///a.ts', 'x');
-  });
-
-  it('routes pageSync', () => {
-    const controller = makeController();
-    dispatchCall(controller, 21, { method: 'pageSync', params: { url: 'https://example.org', text: 'visible text' } });
-    expect(controller.syncPageSnapshot).toHaveBeenCalledWith('https://example.org', 'visible text');
   });
 
   it('routes fileNavigatorToggle', () => {

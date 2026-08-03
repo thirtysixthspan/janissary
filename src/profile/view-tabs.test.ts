@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { openProfileViewTabs } from './view-tabs.js';
-import { makeTab, makePluginTab, makePageTab, makeHarnessTab } from '../tab/index.js';
+import { makeTab, makePluginTab, makeHarnessTab } from '../tab/index.js';
 import type { Managers } from '../managers.js';
 import type { Tab } from '../tab/types.js';
 
@@ -26,6 +26,15 @@ function markdownTab(label: string, number: number, path: string): Tab {
 // openers issue their commands through. Each stub appends the tab that real command would create.
 // The image branch resolves asynchronously, as a real plugin opener does: its tab exists only once
 // the promise `open` returns has settled.
+// A plugin that opens on web addresses, keyed by the address it shows — the shape the page plugin
+// has. Its entry names that address rather than a path, and relaunch reissues `open page <address>`.
+function pageTab(label: string, number: number, url: string): Tab {
+  return makePluginTab(label, 'blue', number, 1, 'blue', 'example.com', {
+    id: 'page', instanceKey: url, schemaVersion: 1,
+    payload: { url, domain: 'example.com' }, fileRefs: [], sourceLabel: 'janus',
+  });
+}
+
 // A plugin that opens on no file, reached by its own command — the shape the schedules plugin has.
 function schedulesTab(label: string, number: number): Tab {
   return makePluginTab(label, 'blue', number, 1, 'blue', 'schedules', {
@@ -42,13 +51,17 @@ function makeManagers(initial: Tab[]): {
   let activeTab = 0;
   const append = (tab: Tab) => { tabs = [...tabs, tab]; activeTab = tabs.length - 1; };
   const open = vi.fn(async (command: string) => {
-    const target = command.replace(/^open\s+/, '').replace('$root', '/proj');
-    if (target.startsWith('https://')) {
-      append(makePageTab(`page-${tabs.length}`, 'blue', tabs.length + 1, 1, 'blue', { url: target, domain: 'example.com', number: 1 }));
-      return;
-    }
+    const web = command.startsWith('open page ');
+    const target = command.replace(/^open (?:page )?/, '').replace('$root', '/proj');
     await Promise.resolve();
     if (target.endsWith('.missing')) return;
+    if (web) {
+      const url = target.startsWith('https://') ? target : `https://${target}/`;
+      const open = tabs.find((t) => t.plugin?.instanceKey === url);
+      if (open) { activeTab = tabs.indexOf(open); return; }
+      append(pageTab(`page-${tabs.length}`, tabs.length + 1, url));
+      return;
+    }
     const existing = tabs.find((t) => t.plugin?.instanceKey === target);
     if (existing) { activeTab = tabs.indexOf(existing); return; }
     if (target.endsWith('.md')) {
@@ -89,6 +102,7 @@ function makeManagers(initial: Tab[]): {
     plugins: {
       declarations: [
         { id: 'image', fileExtensions: { '.png': 'image/png' } },
+        { id: 'page', fileExtensions: {}, webTargets: true },
         { id: 'schedules', fileExtensions: {}, command: 'schedules' },
       ],
       runCommand,
@@ -104,13 +118,13 @@ describe('openProfileViewTabs', () => {
     const opened = await openProfileViewTabs([
       { type: 'plugin', id: 'image', path: '$root/a.png' },
       { type: 'plugin', id: 'markdown', path: '$root/a.md' },
-      { type: 'page', url: 'https://example.com/' },
+      { type: 'plugin', id: 'page', path: 'https://example.com/' },
       { type: 'ssh', destination: 'host', options: ['-p', '2222'] },
     ], managers, 'janus', 1, identityColor, []);
 
     expect(open).toHaveBeenCalledWith('open $root/a.png', 'janus');
     expect(open).toHaveBeenCalledWith('open $root/a.md', 'janus');
-    expect(open).toHaveBeenCalledWith('open https://example.com/', 'janus');
+    expect(open).toHaveBeenCalledWith('open page https://example.com/', 'janus');
     expect(ssh).toHaveBeenCalledWith('ssh host -p 2222');
     expect(opened.map((c) => c.label)).toEqual(['image-1', 'markdown-2', 'page-3', 'ssh-4']);
   });
@@ -145,22 +159,37 @@ describe('openProfileViewTabs', () => {
     ]);
   });
 
-  it('closes an already-open page or ssh tab first, leaving exactly one of each', async () => {
+  it('closes an already-open ssh tab first, leaving exactly one', async () => {
     const janus = makeTab('janus', 'red', 1, [], [], undefined, 1, 'red');
-    const site = makePageTab('site', 'blue', 3, 1, 'blue', { url: 'https://example.com/', domain: 'example.com', number: 1 });
     const server = makeHarnessTab('server', 'blue', 4, 1, 'blue', { name: 'ssh', program: 'ssh', ptyId: 'p', status: 'running', destination: 'host' });
-    const { managers } = makeManagers([janus, site, server]);
+    const { managers } = makeManagers([janus, server]);
     const notes: string[] = [];
 
     await openProfileViewTabs([
-      { type: 'page', url: 'https://example.com/' },
       { type: 'ssh', destination: 'host' },
     ], managers, 'janus', 1, identityColor, notes);
 
-    expect(managers.tab.tabs.filter((t) => t.page)).toHaveLength(1);
     expect(managers.tab.tabs.filter((t) => t.harness?.name === 'ssh')).toHaveLength(1);
-    expect(notes).toContain('Relaunched "site".');
     expect(notes).toContain('Relaunched "server".');
+  });
+
+  // A page tab is a plugin tab, so it is reused in place like every other one rather than closed and
+  // reopened, and a bare authored address still matches the normalized one the plugin keys it with.
+  it('reuses an already-open page tab on the same address, authored bare', async () => {
+    const janus = makeTab('janus', 'red', 1, [], [], undefined, 1, 'red');
+    const site = pageTab('site', 2, 'https://example.com/');
+    const { managers, open } = makeManagers([janus, site]);
+    const notes: string[] = [];
+
+    const opened = await openProfileViewTabs(
+      [{ type: 'plugin', id: 'page', path: 'example.com' }],
+      managers, 'janus', 1, identityColor, notes,
+    );
+
+    expect(open).toHaveBeenCalledWith('open page example.com', 'janus');
+    expect(managers.tab.tabs.filter((t) => t.plugin)).toHaveLength(1);
+    expect(opened.map((c) => c.label)).toEqual(['site']);
+    expect(notes).not.toContain('Relaunched "site".');
   });
 
   // A markdown preview tab is a plugin tab like any other: reopening the same file focuses the tab

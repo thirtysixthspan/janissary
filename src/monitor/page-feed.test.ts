@@ -8,7 +8,13 @@ function makeManagers(tabs: Tab[]): Managers {
 }
 
 function pageTab(label: string, domain = 'example.org', group = 1): Tab {
-  return { label, view: 'page', group, page: { url: `https://${domain}`, domain, number: 1 } } as unknown as Tab;
+  return {
+    label, view: 'plugin', group, title: domain,
+    plugin: {
+      id: 'page', instanceKey: `https://${domain}/`, schemaVersion: 1,
+      payload: { url: `https://${domain}/`, domain }, fileRefs: [], sourceLabel: 'janus',
+    },
+  } as unknown as Tab;
 }
 
 describe('pageFeedEntries', () => {
@@ -53,13 +59,24 @@ describe('pageFeedEntries', () => {
     expect(entries[0].entry.output).toMatch(/… diff truncated \(\d+ bytes total\)$/);
   });
 
+  it('names the diff after the tab\'s title', () => {
+    const tab = pageTab('site', 'slashdot.org');
+    tab.pageSnapshot = { text: 'original', capturedAt: Date.now() };
+    const managers = makeManagers([tab]);
+    const seen = new Map<string, string>();
+    pageFeedEntries(managers, [{ kind: 'tab', label: 'site' }], seen);
+    tab.pageSnapshot = { text: 'changed', capturedAt: Date.now() };
+    expect(pageFeedEntries(managers, [{ kind: 'tab', label: 'site' }], seen)[0].entry.output)
+      .toContain('slashdot.org');
+  });
+
   it('emits nothing for a page tab whose content script has not reported yet', () => {
     const tab = pageTab('site');
     const managers = makeManagers([tab]);
     expect(pageFeedEntries(managers, [{ kind: 'tab', label: 'site' }], new Map())).toHaveLength(0);
   });
 
-  it('ignores a non-page target', () => {
+  it('ignores a target that has volunteered no snapshot', () => {
     const managers = makeManagers([{ label: 'claude', view: 'harness', group: 1 } as unknown as Tab]);
     expect(pageFeedEntries(managers, [{ kind: 'tab', label: 'claude' }], new Map())).toEqual([]);
   });

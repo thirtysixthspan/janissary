@@ -1,14 +1,14 @@
-import type { Tab, PluginTabRecord, EditorView, PageView, FileNavigatorView } from './types.js';
+import type { Tab, PluginTabRecord, EditorView, FileNavigatorView } from './types.js';
 import {
-  makePluginTab, makeEditorTab, makePageTab, makeFilesTab, makeNotificationsTab, distinctColor, insertTabInGroup,
+  makePluginTab, makeEditorTab, makeFilesTab, makeNotificationsTab, distinctColor, insertTabInGroup,
 } from './index.js';
 import { NOTIFICATIONS_LABEL } from '../notifications-tab.js';
 import {
-  uniquePluginLabel, uniqueEditorLabel, uniqueFilesLabel, uniquePageNumber,
+  uniquePluginLabel, uniqueEditorLabel, uniqueFilesLabel,
 } from './unique-labels.js';
 
 export {
-  uniquePluginLabel, uniqueEditorLabel, uniqueFilesLabel, uniquePageNumber,
+  uniquePluginLabel, uniqueEditorLabel, uniqueFilesLabel,
 } from './unique-labels.js';
 
 type TabAndActive = { tabs: Tab[]; activeTab: number };
@@ -69,19 +69,4 @@ function addStartTab(
 export function addNotificationsTab(tabs: Tab[], activeTab: number): TabAndActive {
   return addStartTab(tabs, activeTab, NOTIFICATIONS_LABEL, (dotColor, group, groupColor) =>
     makeNotificationsTab(NOTIFICATIONS_LABEL, dotColor, tabs.length + 1, group, groupColor));
-}
-
-export function addPageTab(
-  tabs: Tab[], activeTab: number, url: string, domain: string,
-): TabAndActive {
-  const creator = tabs[activeTab];
-  const number = uniquePageNumber(tabs);
-  const label = `page-${number}`;
-  const dotColor = distinctColor(tabs.map((t) => t.dotColor));
-  const group = creator?.group ?? 1;
-  const groupColor = creator?.groupColor ?? dotColor;
-  const page: PageView = { url, domain, number };
-  const tab = makePageTab(label, dotColor, tabs.length + 1, group, groupColor, page);
-  const newTabs = insertTabInGroup(tabs, tab);
-  return { tabs: newTabs, activeTab: newTabs.findIndex((t) => t.label === label) };
 }

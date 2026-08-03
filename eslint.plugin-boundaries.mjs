@@ -12,14 +12,16 @@
 // maps are the only sanctioned way in, and everything else is closed.
 export const pluginBoundaries = [
   // Concrete plugin implementations receive only their public host API, their own files, and
-  // external/Node modules. The pure size formatter is the single documented host utility.
+  // external/Node modules. The two documented host utilities are pure functions with a caller on
+  // each side of the boundary: the size formatter, and the web-target normalizer that core's profile
+  // relaunch and the page plugin must agree on to the character.
   {
     files: ['src/plugins/*/**/*.ts', 'src/plugins/*/*.ts'],
     ignores: ['**/*.test.ts', '**/*.test.tsx'],
     rules: {
       'no-restricted-imports': ['error', {
         patterns: [{
-          regex: String.raw`^\.\./(?!(?:api\.js|\.\./openers/size\.js)$)`,
+          regex: String.raw`^\.\./(?!(?:api\.js|\.\./openers/(?:size|web-target)\.js)$)`,
           message: 'Server tab plugins must use src/plugins/api.ts capabilities instead of host internals.',
         }],
       }],

@@ -116,6 +116,7 @@ export function PluginBody({
   client,
   active,
   dock = null,
+  onClose,
   onSplit,
 }: {
   plugin: NonNullable<TabView['plugin']>;
@@ -123,6 +124,7 @@ export function PluginBody({
   client: JanusClient;
   active: boolean;
   dock?: 'left' | 'right' | null;
+  onClose: () => void;
   onSplit?: () => void;
 }) {
   const [failed, setFailed] = useState(false);
@@ -133,9 +135,16 @@ export function PluginBody({
   onSplitRef.current = onSplit;
   const splittable = onSplit !== undefined;
   const split = useCallback(() => { onSplitRef.current?.(); }, []);
+  // Same ref treatment as `onSplit`, and for the same reason: the caller closes over a tab index
+  // that changes, so calling through a ref is what keeps the capability object stable.
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+  const close = useCallback(() => { onCloseRef.current(); }, []);
   const capabilities = useMemo(
-    () => createPluginClientCapabilities(pluginId, label, client, active, dock, splittable ? split : undefined),
-    [active, client, dock, label, pluginId, split, splittable],
+    () => createPluginClientCapabilities(
+      pluginId, label, client, active, dock, close, splittable ? split : undefined,
+    ),
+    [active, client, close, dock, label, pluginId, split, splittable],
   );
   const capabilitiesRef = useRef(capabilities);
   capabilitiesRef.current = capabilities;

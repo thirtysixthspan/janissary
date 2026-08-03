@@ -126,7 +126,7 @@ Opens the file in a **markdown tab**: a non-agent view tab that renders the file
 
 ## Web opener
 
-The web opener handles **web addresses** (`http`/`https`) rather than a file extension, and implements both presentations. The address is normalized first: an explicit `http`/`https` scheme is kept; a bare address (only possible via the `page` keyword) is given a default `https://`; any other scheme is rejected as invalid.
+Web addresses (`http`/`https`) resolve by their own claim rather than by a file extension, and reach whichever bundled plugin claims them — the page plugin (see [[tab-plugins]]). Both presentations are implemented there, as is normalization: an explicit `http`/`https` scheme is kept; a bare address (only possible via the `page` keyword) is given a default `https://`; any other scheme is rejected as invalid. If nothing claims web addresses, `open` reports that there is no viewer for them.
 
 ### `open external <url>` — OS browser
 
@@ -134,4 +134,4 @@ Hands the address to the operating system's default browser, launched detached s
 
 ### `open <url>` / `open page <address>` — page tab
 
-Opens the address in an embedded **page tab**: a non-agent view tab showing the live web page, with no command bar. The new tab is created and focused exactly like an image tab (placed within the active tab's group, distinct dot color); it is a live, in-memory view and is not persisted or restored on `--relaunch`. The page tab — its numbered `<n>) <domain>` label, what renders, and how it is closed — is described in [[embedded-web-page]].
+Opens the address in an embedded **page tab**: a non-agent view tab showing the live web page, with no command bar. The new tab is created and focused exactly like an image tab (placed within the active tab's group, distinct dot color); it is a live, in-memory view and is not persisted or restored on `--relaunch`. Opening an address that a page tab is already showing focuses that tab instead of embedding the same site twice, the same de-duplication every plugin view gets. The page tab — its domain name, what renders, and how it is closed — is described in [[embedded-web-page]].

@@ -72,7 +72,6 @@ export class OpenFileManager {
     return {
       note: (text) => this.managers.tab.append(label, { input: command, output: text }),
       openEditorTab: (view) => this.managers.tab.openEditorTab(view),
-      openPageTab: (view) => this.managers.tab.openPageTab(view),
       registerFile: (absPath) => this.managers.tab.registerFile(absPath),
       openExternally: (absPath) => didOsOpen(absPath),
       runPluginOpener: (pluginId, presentation, file) => this.managers.plugins.runOpener(

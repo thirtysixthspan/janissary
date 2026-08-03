@@ -9,6 +9,7 @@ export type TabPluginCapabilityName =
   | 'openOrFocusTab'
   | 'updateTab'
   | 'dockTab'
+  | 'snapshotTab'
   | 'openClaimedFiles'
   | 'topicData'
   | 'topicAction'
@@ -26,6 +27,7 @@ const CAPABILITIES: Record<TabPluginCapabilityName, true> = {
   openOrFocusTab: true,
   updateTab: true,
   dockTab: true,
+  snapshotTab: true,
   openClaimedFiles: true,
   topicData: true,
   topicAction: true,
@@ -97,6 +99,10 @@ export type TabPluginDeclaration = {
   payloadSchemaVersion: number;
   tabLabelPrefix: string;
   fileExtensions: Readonly<Record<string, string | undefined>>;
+  // Claims the `open` command's web branch — a target carrying an http/https scheme, or preceded by
+  // the `page` keyword. The host decides what looks like a web address; the plugin decides what one
+  // means, so the claim carries no normalization. First claimant wins, exactly as for an extension.
+  webTargets?: boolean;
   editGesture?: 'open external';
   command?: string;
   // Host topics this plugin wants to hear about. A declaration naming one must supply `notify`.
@@ -118,6 +124,11 @@ export type TabPluginPayload = {
 // strip alone, and there are no `TabPluginResources` because an update cannot register a new file.
 export type TabPluginTabUpdate = {
   title?: string;
+  // A new instance key, for a tab whose identity is what it shows and whose subject has moved — an
+  // embedded page navigating to another address. Omit it and the key stays as it was. A key another
+  // open tab of the same plugin already holds is refused; the payload still applies, so a plugin
+  // never has to handle half an update.
+  instanceKey?: string;
   payload: unknown;
 };
 
@@ -134,6 +145,11 @@ export type TabPluginServerCapabilities = {
   // strip and make it active. Addressed by instance key like `updateTab`, so a key with no open tab
   // is a silent no-op and a plugin can never move another plugin's tab.
   dockTab(instanceKey: string, dock: 'left' | 'right' | null): void;
+  // Cache the text currently visible in one of this plugin's own tabs, so a monitor watching that
+  // tab has something to feed on. The cache is server-only and is never broadcast to any client.
+  // Addressed by instance key like `updateTab`, so a key with no open tab is a silent no-op and a
+  // plugin can never write another plugin's snapshot.
+  snapshotTab(instanceKey: string, text: string): void;
   // The data a declared topic carries, as of now. A notification says a topic changed; this is how a
   // plugin building a tab for the first time learns what the topic currently holds. Asking for a
   // topic this plugin did not declare is a plugin-authoring mistake and disables it.

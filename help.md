@@ -6,7 +6,7 @@
 | `state` | Show agent state fields (truncated) |
 | `clear` | Clear the output log |
 | `quit` | Exit the application (asks for confirmation) |
-| `close` | Close the current tab (exits if last); `close page #` closes a numbered page tab; `close <tabname>` closes a tab by its label. `exit` is an alias |
+| `close` | Close the current tab (exits if last); `close <tabname>` closes a tab by its label (`page`, `page-2`, `image`, …). `exit` is an alias |
 | `agent` | Create a new agent tab (add `--workspace` / `-w` to clone the repo, isolated by default — see Workspace; add `--offline` to also deny network access) |
 | `next` | Switch to the next tab |
 | `hist` | Open command history picker |

@@ -156,14 +156,6 @@ describe('JanusClient', () => {
     );
   });
 
-  it('pageSync sends a pageSync RPC', () => {
-    const client = new JanusClient();
-    client.pageSync('https://example.org', 'visible text');
-    expect(inst.send).toHaveBeenCalledWith(
-      expect.stringContaining('"method":"pageSync"'),
-    );
-  });
-
   it('collect-tree-state answers with every registered navigator selection, carrying the request id', () => {
     publishNavigatorSelection(2, { cursor: 'src/a.ts', anchor: 'src', selected: new Set(['src', 'src/a.ts']) });
     new JanusClient();

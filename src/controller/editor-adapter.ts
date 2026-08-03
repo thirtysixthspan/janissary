@@ -5,14 +5,12 @@ import { resyncEditorTab } from '../editor/resync.js';
 import { syncEditorBuffer } from '../editor/sync.js';
 import { listPersonas } from '../personas.js';
 import { projectFilesFor } from '../project-files.js';
-import { syncPageSnapshot } from '../page/sync.js';
 import type { Managers } from '../managers.js';
 
 export type EditorControllerAdapter = {
   saveFile(url: string, content: string): void;
   syncEditorBuffer(url: string, content: string): void;
   resyncEditorTab(url: string): void;
-  syncPageSnapshot(url: string, text: string): void;
   projectFiles(): Promise<{ root: string; paths: string[] }>;
   projectFilesFallback(): { root: string; paths: string[] };
   editorPersonas(): string[];
@@ -25,7 +23,6 @@ export function createEditorControllerAdapter(managers: Managers): EditorControl
     saveFile: (url, content) => saveFile(managers, url, content),
     syncEditorBuffer: (url, content) => syncEditorBuffer(managers, url, content),
     resyncEditorTab: (url) => { void resyncEditorTab(managers, url); },
-    syncPageSnapshot: (url, text) => syncPageSnapshot(managers, url, text),
     projectFiles: () => projectFilesFor(managers),
     projectFilesFallback: () => ({ root: managers.tab.launchDir, paths: [] }),
     editorPersonas: () => listPersonas('editor'),

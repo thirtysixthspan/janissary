@@ -203,34 +203,39 @@ describe('OpenFileManager.run', () => {
   it.each([
     ['video https://example.com', 'open https://example.com', 'https://example.com'],
     ['video page notes.txt', 'open page notes.txt', 'notes.txt'],
-  ])('refuses %s rather than routing it to the web opener', async (display, parsed, target) => {
+  ])('refuses %s rather than routing it to the web claimant', async (display, parsed, target) => {
     const notes: { input: string; output: string }[] = [];
-    const openPageTab = vi.fn();
+    const runOpener = vi.fn();
     const managers = {
       tab: {
-        cwdOf: () => '/tmp', launchDir: '/tmp', registerFile: vi.fn(), openPageTab,
+        cwdOf: () => '/tmp', launchDir: '/tmp', registerFile: vi.fn(),
         append: (_label: string, entry: { input: string; output: string }) => { notes.push(entry); },
       },
-      plugins: { runOpener: vi.fn() },
+      plugins: { runOpener },
     } as unknown as Managers;
 
     await new OpenFileManager(managers).runAs(parsed, display, 'janus', 'video');
 
-    expect(openPageTab).not.toHaveBeenCalled();
+    expect(runOpener).not.toHaveBeenCalled();
     expect(notes).toEqual([{ input: display, output: `video: ${target}: not a video file` }]);
   });
 
-  it('still opens a web target when no opener is pinned', async () => {
-    const openPageTab = vi.fn();
+  // A web address has no extension to resolve an opener by, so it goes straight to whichever plugin
+  // claimed the kind — verbatim, since normalizing one is the claimant's job, not the dispatcher's.
+  it.each([
+    ['open https://example.com', 'inline', 'https://example.com'],
+    ['open page example.com', 'inline', 'example.com'],
+    ['open external https://example.com', 'external', 'https://example.com'],
+  ])('routes %s to the web claimant', async (command, presentation, target) => {
+    const runOpener = vi.fn();
     const managers = {
-      tab: {
-        cwdOf: () => '/tmp', launchDir: '/tmp', registerFile: vi.fn(), openPageTab, append: vi.fn(),
-      },
+      tab: { cwdOf: () => '/tmp', launchDir: '/tmp', registerFile: vi.fn(), append: vi.fn() },
+      plugins: { runOpener },
     } as unknown as Managers;
 
-    await new OpenFileManager(managers).run('open https://example.com', 'janus');
+    await new OpenFileManager(managers).run(command, 'janus');
 
-    expect(openPageTab).toHaveBeenCalledWith({ url: 'https://example.com/', domain: 'example.com' });
+    expect(runOpener).toHaveBeenCalledWith('page', presentation, target, { label: 'janus', command });
   });
 
   it('awaits async plugin openers in sorted order across a glob', async () => {

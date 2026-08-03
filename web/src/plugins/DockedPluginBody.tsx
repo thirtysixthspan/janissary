@@ -13,11 +13,13 @@ export function DockedPluginBody({
   index,
   visible,
   client,
+  onClose,
 }: {
   tab: TabView;
   index: number;
   visible: boolean;
   client: JanusClient;
+  onClose: () => void;
 }) {
   if (!tab.plugin) return null;
   return (
@@ -25,6 +27,7 @@ export function DockedPluginBody({
       <DockCycleHeader dock={tab.dock} client={client} index={index} classPrefix="sidebar-plugin" />
       <PluginBody
         plugin={tab.plugin} label={tab.label} client={client} active={visible} dock={tab.dock ?? null}
+        onClose={onClose}
       />
     </div>
   );

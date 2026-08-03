@@ -32,6 +32,7 @@ export type ClientPluginLoader<Payload = unknown> = () => Promise<ClientPluginMo
 export const clientPluginLoaders = {
   image: () => import('./image/index'),
   markdown: () => import('./markdown/index'),
+  page: () => import('./page/index'),
   schedules: () => import('./schedules/index'),
   video: () => import('./video/index'),
 } satisfies Record<ProductionTabPluginId, () => Promise<unknown>>;
@@ -69,6 +70,7 @@ export function createClientPluginRegistry(
 export const clientPluginRegistry = createClientPluginRegistry({
   image: clientPlugin(1, clientPluginLoaders.image),
   markdown: clientPlugin(1, clientPluginLoaders.markdown),
+  page: clientPlugin(1, clientPluginLoaders.page),
   schedules: clientPlugin(1, clientPluginLoaders.schedules),
   video: clientPlugin(1, clientPluginLoaders.video),
 } satisfies Record<ProductionTabPluginId, ClientPluginRegistration>);

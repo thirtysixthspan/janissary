@@ -93,9 +93,9 @@ describe('TabStrip', () => {
   });
 
   it('shows a close button for page tabs and renders the title', () => {
-    const tab = makeTab({ label: 'page-1', view: 'page', title: '1) slashdot.org' });
+    const tab = makeTab({ label: 'page', view: 'plugin', title: 'slashdot.org' });
     render(<TabStrip tabs={[tab]} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()} onRename={vi.fn()} tabNameMaxLength={100} />);
-    expect(screen.getByText('1) slashdot.org')).toBeInTheDocument();
+    expect(screen.getByText('slashdot.org')).toBeInTheDocument();
     expect(screen.queryAllByRole('button', { name: /close/i })).toHaveLength(1);
   });
 

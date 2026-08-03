@@ -117,7 +117,6 @@ export class JanusClient {
 
   renameTab(index: number, title: string): void { this.send({ method: 'renameTab', params: { index, title } }); }
 
-  navigatePage(index: number, url: string): void { this.send({ method: 'navigatePage', params: { index, url } }); }
 
   // Sync an editor tab's in-progress buffer to the server as transient draft state. Fire-and-forget:
   // no reply is awaited, and a sync lost to a closed socket is simply dropped (see send()).
@@ -131,7 +130,6 @@ export class JanusClient {
 
   // Sync a page tab's currently visible text (from the extension content script) to the server as
   // transient snapshot state. Fire-and-forget, same as editorSync.
-  pageSync(url: string, text: string): void { this.send({ method: 'pageSync', params: { url, text } }); }
 
   // Write an editor buffer back to disk. Resolves with the server's error message, or undefined
   // on success (including when the socket is down, which surfaces as a generic failure).

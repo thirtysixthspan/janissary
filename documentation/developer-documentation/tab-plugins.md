@@ -66,6 +66,7 @@ Literal imports make the modules visible to TypeScript, Vite, Knip, and tests wh
 | `payloadSchemaVersion` | yes | Positive integer for this plugin's tab payload |
 | `tabLabelPrefix` | yes | Prefix for host-allocated unique labels |
 | `fileExtensions` | yes | Dot-prefixed extension to MIME type; use `undefined` for external-only formats |
+| `webTargets` | no | Claims the `open` command's web branch: an `http`/`https` address, or any address preceded by the `page` keyword |
 | `editGesture` | no | `open external` for a file-navigator edit activation |
 | `command` | no | One case-insensitive first-token command |
 | `notifications` | no | Host topics to be told about; a declaration naming one must supply `notify` |
@@ -90,12 +91,13 @@ type TabPluginActivation = {
 };
 ```
 
-The host supplies eleven capabilities:
+The host supplies twelve capabilities:
 
 - `note(text)` writes to the originating transcript.
 - `openOrFocusTab(instanceKey, factory)` focuses or creates a plugin tab.
 - `updateTab(instanceKey, factory)` replaces what one of your own tabs already shows.
 - `dockTab(instanceKey, dock)` docks one of your own tabs into `'left'` or `'right'`, or undocks it back to the centre strip with `null`.
+- `snapshotTab(instanceKey, text)` caches the text currently visible in one of your own tabs, so a monitor watching it has something to feed on.
 - `openClaimedFiles(target)` runs the host's `open` pipeline for `target`, pinned to your opener.
 - `topicData(topic)` reads what a topic you declared carries right now.
 - `topicAction(action)` asks the host to perform one of the actions that topic defines.
@@ -118,7 +120,15 @@ The tab keeps everything else: its label, position, group, focus, instance key, 
 
 An instance key you have no open tab for is a no-op, so you never have to track which of your tabs the user has since closed. The result is validated exactly as a created payload is — your own `isPayload` guard, JSON compatibility, and a nonempty title when one is supplied — and failing that check disables the plugin, because a payload your own contract rejects means the plugin is broken.
 
-You cannot register a new file to serve from an update, and you cannot change a tab's instance key: both are fixed when the tab opens.
+You cannot register a new file to serve from an update. You can change the instance key, but only when the key *is* what the tab shows and that has moved — an embedded page navigating to another address. Return the new key alongside the payload:
+
+```ts
+capabilities.updateTab(current.url, () => ({
+  instanceKey: next.url, title: next.domain, payload: next,
+}));
+```
+
+A key another of your open tabs already holds is refused, because two tabs answering to one key would make every capability that addresses one ambiguous; the payload and title still apply. If your tab's identity does not move — a file, a singleton list — leave the field alone and the key stays as it was.
 
 ## Docking into a sidebar
 
@@ -219,7 +229,8 @@ The component receives `payload` only after the registry wrapper has validated i
 - `intent<Result>(name, payload)` bound to this tab;
 - `splitAction`, a ready-rendered host action or `null`;
 - `dock`, which sidebar this tab is docked into (`'left'`, `'right'`, or `null` for the centre strip). Placement is host-owned, so a plugin that lays itself out differently in a narrow sidebar — the schedules plugin's compressed one-line rows, for instance — reads it here rather than measuring the frame around it;
-- `active`, whether this tab is the visible one in its pane — or, when the tab is docked into a sidebar, whether it is the selected entry there. Every v1 plugin tab stays mounted while hidden, so a component that binds a window-wide listener — the image plugin's zoom and pan keys, for instance — must gate it on this rather than assume it is on screen. Never infer it from the DOM: the host owns the frame; and
+- `active`, whether this tab is the visible one in its pane — or, when the tab is docked into a sidebar, whether it is the selected entry there. Every v1 plugin tab stays mounted while hidden, so a component that binds a window-wide listener — the image plugin's zoom and pan keys, for instance — must gate it on this rather than assume it is on screen. Never infer it from the DOM: the host owns the frame;
+- `close()`, which closes this tab. Use it for a close affordance inside your own body, and for the case that makes it a callback rather than a rendered control: a body hosting a cross-origin surface never sees the host's Cmd+W at all, so the page plugin answers for the browser-level close itself; and
 - `reportFailure(reason)` for an unrecoverable client-contract failure. Only the first report per plugin is sent, whichever tab or code path raises it, so calling it from your own component is safe alongside the failures the host detects for you.
 
 It never receives `JanusClient` or imports host UI internals. The host owns the `.tab-body`, focus border, visibility, split placement, loading fallback, and error boundary. Every v1 plugin tab remains mounted while hidden.
@@ -249,8 +260,8 @@ Add server tests for declaration claims, playable/external routes, payload valid
 ### v1
 
 - Initial bundled-only tab-view contract.
-- Static opener, command, and notification contributions, with `command` and `notify` handlers on the activation.
-- Eleven server and six client capabilities.
+- Static opener, web-target, command, and notification contributions, with `command` and `notify` handlers on the activation.
+- Twelve server and seven client capabilities.
 - Versioned generic tab payload plus `pluginIntent` and `pluginFailed` RPCs.
 - Two-level failure model: `rejectRequest` answers one bad request, `reportFailure` disables.
 

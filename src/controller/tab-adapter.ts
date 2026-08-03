@@ -9,7 +9,6 @@ export type TabControllerAdapter = {
   reorderTabTo(from: number, to: number): void;
   closeTab(index: number): void;
   renameTab(index: number, title: string): void;
-  navigatePage(index: number, url: string): void;
   editQueuedCommand(index: number, text: string): void;
   deleteQueuedCommand(index: number): void;
   toggleCollapse(): void;
@@ -29,7 +28,6 @@ export function createTabControllerAdapter(managers: Managers): TabControllerAda
     reorderTabTo: (from, to) => managers.tab.reorderTabTo(from, to),
     closeTab: (index) => managers.tab.closeTab(index),
     renameTab: (index, title) => managers.tab.renameTab(index, title),
-    navigatePage: (index, url) => managers.tab.navigatePage(index, url),
     editQueuedCommand: (index, text) => managers.tab.editQueued(managers.tab.cur().label, index, text),
     deleteQueuedCommand: (index) => managers.tab.deleteQueued(managers.tab.cur().label, index),
     toggleCollapse: () => managers.tab.toggleCollapse(),

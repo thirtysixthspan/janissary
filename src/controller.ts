@@ -28,7 +28,6 @@ export class Controller implements TabControllerAdapter, MonitorControllerAdapte
   declare reorderTabTo: TabControllerAdapter['reorderTabTo'];
   declare closeTab: TabControllerAdapter['closeTab'];
   declare renameTab: TabControllerAdapter['renameTab'];
-  declare navigatePage: TabControllerAdapter['navigatePage'];
   declare editQueuedCommand: TabControllerAdapter['editQueuedCommand'];
   declare deleteQueuedCommand: TabControllerAdapter['deleteQueuedCommand'];
   declare toggleCollapse: TabControllerAdapter['toggleCollapse'];
@@ -45,7 +44,6 @@ export class Controller implements TabControllerAdapter, MonitorControllerAdapte
   declare pluginFailed: PluginControllerAdapter['pluginFailed'];
   declare syncEditorBuffer: EditorControllerAdapter['syncEditorBuffer'];
   declare resyncEditorTab: EditorControllerAdapter['resyncEditorTab'];
-  declare syncPageSnapshot: EditorControllerAdapter['syncPageSnapshot'];
   declare projectFiles: EditorControllerAdapter['projectFiles'];
   declare projectFilesFallback: EditorControllerAdapter['projectFilesFallback'];
   declare editorPersonas: EditorControllerAdapter['editorPersonas'];

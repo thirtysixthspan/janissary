@@ -660,52 +660,62 @@ describe('Controller open command', () => {
 });
 
 describe('Controller page tabs', () => {
-  it('open https URL creates a page tab with view:page and correct title', () => {
+  // The embedded page is a bundled tab plugin, so `open <url>` resolves through that plugin's
+  // activation: the tab appears a turn of the event loop after `dispatch` returns.
+  const pageTabs = (c: ReturnType<typeof makeController>['c']) =>
+    c.view().filter((t) => t.view === 'plugin' && t.plugin?.id === 'page');
+
+  it('open https URL creates a page tab titled with its root domain', async () => {
     const { c } = makeController();
     c.dispatch('open https://slashdot.org');
-    const pages = c.view().filter((t) => t.view === 'page');
-    expect(pages).toHaveLength(1);
-    expect(pages[0].title).toBe('slashdot.org');
-    expect(pages[0].page?.url).toContain('slashdot.org');
+    await vi.waitFor(() => expect(pageTabs(c)).toHaveLength(1));
+    const [page] = pageTabs(c);
+    expect(page.title).toBe('slashdot.org');
+    expect(page.plugin?.payload).toMatchObject({ url: 'https://slashdot.org/', domain: 'slashdot.org' });
   });
 
-  it('open page <domain> creates a page tab (page keyword + bare domain)', () => {
+  it('open page <domain> creates a page tab (page keyword + bare domain)', async () => {
     const { c } = makeController();
     c.dispatch('open page slashdot.org');
-    const pages = c.view().filter((t) => t.view === 'page');
-    expect(pages).toHaveLength(1);
-    expect(pages[0].title).toBe('slashdot.org');
+    await vi.waitFor(() => expect(pageTabs(c)).toHaveLength(1));
+    expect(pageTabs(c)[0].title).toBe('slashdot.org');
   });
 
-  it('second page tab gets number 2', () => {
+  it('opens a second page tab for a second address, under its own label', async () => {
     const { c } = makeController();
     c.dispatch('open https://slashdot.org');
     c.dispatch('open https://example.com');
-    const pages = c.view().filter((t) => t.view === 'page');
-    expect(pages).toHaveLength(2);
-    const titles = pages.map((t) => t.title).toSorted((a, b) => String(a).localeCompare(String(b)));
-    expect(titles).toEqual(['example.com', 'slashdot.org']);
+    await vi.waitFor(() => expect(pageTabs(c)).toHaveLength(2));
+    const pages = pageTabs(c);
+    expect(new Set(pages.map((t) => t.label)).size).toBe(2);
+    expect(pages.map((t) => t.title).toSorted((a, b) => String(a).localeCompare(String(b))))
+      .toEqual(['example.com', 'slashdot.org']);
   });
 
-  it('open external https URL confirms in transcript without creating a tab', () => {
-    const { c } = makeController();
-    c.dispatch('open external https://x.com');
-    expect(c.view()).toHaveLength(1);
-    expect(allText(c)).toMatch(/x\.com/);
-  });
-
-  it('close page <n> closes the numbered page tab', () => {
+  // An address already open is the plugin's own instance key, so a second `open` focuses that tab
+  // rather than embedding the same site twice.
+  it('focuses the open tab when the same address is opened again', async () => {
     const { c } = makeController();
     c.dispatch('open https://slashdot.org');
-    expect(c.view().filter((t) => t.view === 'page')).toHaveLength(1);
-    c.dispatch('close page 1');
-    expect(c.view().filter((t) => t.view === 'page')).toHaveLength(0);
+    await vi.waitFor(() => expect(pageTabs(c)).toHaveLength(1));
+    c.dispatch('open https://slashdot.org');
+    await vi.waitFor(() => expect(c.managers.tab.activeTab).toBe(1));
+    expect(pageTabs(c)).toHaveLength(1);
   });
 
-  it('close page <n> reports an error for an unknown page number', () => {
+  it('open external https URL confirms in transcript without creating a tab', async () => {
     const { c } = makeController();
-    c.dispatch('close page 99');
-    expect(allText(c)).toContain('No page numbered 99');
+    c.dispatch('open external https://x.com');
+    await vi.waitFor(() => expect(allText(c)).toMatch(/x\.com/));
+    expect(c.view()).toHaveLength(1);
+  });
+
+  it('close <label> closes the page tab from any tab', async () => {
+    const { c } = makeController();
+    c.dispatch('open https://slashdot.org');
+    await vi.waitFor(() => expect(pageTabs(c)).toHaveLength(1));
+    c.dispatch(`close ${pageTabs(c)[0].label}`);
+    expect(pageTabs(c)).toHaveLength(0);
   });
 
   it('close <tabname> closes the named tab', () => {
@@ -736,21 +746,25 @@ describe('Controller page tabs', () => {
     expect(c.view().map((t) => t.label)).toEqual(['janus']);
   });
 
-  it('page numbers are reused after close', () => {
+  // Plugin tab labels are reused as they free up, so the label a closed page released is the one the
+  // next page takes — the property the old page numbering had.
+  it('reuses a freed page label for the next page', async () => {
     const { c } = makeController();
     c.dispatch('open https://slashdot.org');
-    c.dispatch('close page 1');
+    await vi.waitFor(() => expect(pageTabs(c)).toHaveLength(1));
+    const first = pageTabs(c)[0].label;
+    c.dispatch(`close ${first}`);
     c.dispatch('open https://example.com');
-    const pages = c.view().filter((t) => t.view === 'page');
-    expect(pages).toHaveLength(1);
-    expect(pages[0].title).toBe('example.com');
+    await vi.waitFor(() => expect(pageTabs(c)).toHaveLength(1));
+    expect(pageTabs(c)[0].label).toBe(first);
+    expect(pageTabs(c)[0].title).toBe('example.com');
   });
 
-  it('open page with an invalid scheme reports an error', () => {
+  it('open page with an invalid scheme reports an error', async () => {
     const { c } = makeController();
     c.dispatch('open page javascript:alert(1)');
-    expect(c.view().filter((t) => t.view === 'page')).toHaveLength(0);
-    expect(allText(c)).toContain('invalid URL');
+    await vi.waitFor(() => expect(allText(c)).toContain('invalid URL'));
+    expect(pageTabs(c)).toHaveLength(0);
   });
 });
 
@@ -1742,10 +1756,9 @@ describe('Controller direct RPC delegators', () => {
     expect(c.scheduleLaunchView()).toBeNull();
   });
 
-  it('syncEditorBuffer/syncPageSnapshot RPCs no-op for an unresolvable url', () => {
+  it('syncEditorBuffer RPC no-ops for an unresolvable url', () => {
     const { c } = makeController();
     expect(() => c.syncEditorBuffer('/open/ghost', 'draft')).not.toThrow();
-    expect(() => c.syncPageSnapshot('/open/ghost', 'text')).not.toThrow();
   });
 
   it('resyncEditorTab RPC no-ops for an unresolvable url', () => {
@@ -1757,11 +1770,6 @@ describe('Controller direct RPC delegators', () => {
     const { c } = makeController();
     expect(() => c.resetMonitorContext('ghost')).not.toThrow();
     expect(() => c.monitorContextSnapshot('ghost')).not.toThrow();
-  });
-
-  it('navigatePage RPC no-ops against a tab that is not a page tab', () => {
-    const { c } = makeController();
-    expect(() => c.navigatePage(0, 'https://example.com')).not.toThrow();
   });
 
   it('undoFileNavigatorItem RPC on an empty undo stack returns no conflict', () => {

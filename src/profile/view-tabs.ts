@@ -1,13 +1,13 @@
 import path from 'node:path';
 import { expandUserPath } from '../paths.js';
-import { normalizeWebUrl } from '../openers/page.js';
+import { normalizeWebUrl } from '../openers/web-target.js';
 import { relocateToGroup } from './editors.js';
 import type { Managers } from '../managers.js';
 import type { ProfileViewEntry } from './types.js';
 import type { Tab } from '../tab/types.js';
 import type { MainAreaCandidate } from './focus.js';
 
-// Opens the three tab kinds that carry no authored label — a bundled-plugin tab, page, and ssh —
+// Opens the two tab kinds that carry no authored label — a bundled-plugin tab and ssh —
 // by issuing the same command a user would type, then placing the resulting tab into its
 // authored group and position. Modeled on `openProfileEditors`, except that a plugin opener resolves
 // through activation: every open is awaited, so the tab is available to place once `run` settles.
@@ -46,13 +46,6 @@ function pageUrl(authored: string): string {
 
 function buildTarget(entry: ProfileViewEntry, managers: Managers, issuingLabel: string): ViewTarget {
   switch (entry.type) {
-  case 'page': {
-    const url = pageUrl(entry.url);
-    return {
-      matches: (tab) => tab.page?.url === url, preClose: true, subject: entry.url, kind: 'page',
-      run: () => { managers.openFile.run(`open ${entry.url}`, issuingLabel); },
-    };
-  }
   case 'ssh': {
     const command = [`ssh ${entry.destination}`, ...(entry.options ?? [])].join(' ');
     return {
@@ -61,11 +54,16 @@ function buildTarget(entry: ProfileViewEntry, managers: Managers, issuingLabel: 
     };
   }
   default: {
-    return entry.path === undefined
-      ? commandTarget(entry.id, managers, issuingLabel)
+    if (entry.path === undefined) return commandTarget(entry.id, managers, issuingLabel);
+    return claimsWebTargets(managers, entry.id)
+      ? webTarget(entry.id, entry.path, managers, issuingLabel)
       : fileTarget(entry.id, entry.path, managers, issuingLabel);
   }
   }
+}
+
+function claimsWebTargets(managers: Managers, id: string): boolean {
+  return managers.plugins.declarations.find((entry) => entry.id === id)?.webTargets === true;
 }
 
 function fileTarget(
@@ -76,6 +74,21 @@ function fileTarget(
     matches: (tab) => tab.plugin?.id === id && tab.plugin.instanceKey === file,
     preClose: false, subject: authored, kind: id,
     run: () => managers.openFile.run(`open ${authored}`, issuingLabel),
+  };
+}
+
+// A plugin that opens on web addresses is reached by `open`, like a file plugin, but its entry names
+// an address rather than a path. The `page` keyword is what forces web interpretation, so a
+// hand-authored bare address (`slashdot.org`) reopens the same way `profile save`'s normalized one
+// does, and both match the tab by the address the plugin keys it with.
+function webTarget(
+  id: string, authored: string, managers: Managers, issuingLabel: string,
+): ViewTarget {
+  const url = pageUrl(authored);
+  return {
+    matches: (tab) => tab.plugin?.id === id && tab.plugin.instanceKey === url,
+    preClose: false, subject: authored, kind: id,
+    run: () => { managers.openFile.run(`open page ${authored}`, issuingLabel); },
   };
 }
 

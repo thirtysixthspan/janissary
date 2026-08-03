@@ -16,6 +16,10 @@ export type TabPluginClientCapabilities = {
   // host-owned, and a plugin that lays itself out differently in a narrow sidebar reads it here
   // rather than measuring the host's frame or sniffing its DOM.
   dock: 'left' | 'right' | null;
+  // Close this tab. Unlike `splitAction` this is a callback rather than a host-rendered control,
+  // because a plugin may need to close on something other than a click of its own button — an
+  // embedded cross-origin page swallows the host's Cmd+W and has to answer for it itself.
+  close(): void;
   reportFailure(reason: string): void;
 };
 
@@ -25,11 +29,13 @@ export function createPluginClientCapabilities(
   client: JanusClient,
   active: boolean,
   dock: 'left' | 'right' | null,
+  onClose: () => void,
   onSplit?: () => void,
 ): TabPluginClientCapabilities {
   return {
     active,
     dock,
+    close: onClose,
     resourceUrl: (reference) => {
       const token = new URLSearchParams(location.search).get('token') ?? '';
       return `${reference}?token=${encodeURIComponent(token)}`;

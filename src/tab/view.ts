@@ -66,13 +66,12 @@ export function buildTabView(
       schemaVersion: tab.plugin.schemaVersion,
       payload: tab.plugin.payload,
     } : undefined,
-    page: tab.page,
     harness: tab.harness,
     editor: tab.editor ? { ...tab.editor, path: shorten(tab.editor.path) } : undefined,
     // Deliberately NOT spreading `tab.editorDraft` here: the transient unsaved buffer is
     // server-only and must never be broadcast back to clients (see editor-live-buffer-sync plan).
-    // Same for `tab.pageSnapshot`: the visible-text cache is server-only, read by monitor page
-    // feeds, and must never be broadcast back to clients (see monitor-page-tab-content-feed plan).
+    // Same for `tab.pageSnapshot`: the visible-text cache a plugin writes through `snapshotTab` is
+    // server-only, read by monitor page feeds, and must never be broadcast back to clients.
 
     monitor: tab.monitor,
     files: tab.files ? { ...tab.files, root: shorten(tab.files.root), absoluteRoot: tab.files.root } : undefined,

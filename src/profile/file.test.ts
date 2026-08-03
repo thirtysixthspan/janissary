@@ -139,8 +139,10 @@ describe('loadProfile', () => {
     expect(loaded.files).toEqual([{ dock: 'left', path: '$root' }]);
     expect(loaded.notifications).toEqual([{ dock: 'right', focus: true }]);
     // The legacy `schedules` element loads as the plugin entry `profile save` writes for it today.
-    expect(loaded.views.map((v) => v.type)).toEqual(['plugin', 'plugin', 'plugin', 'page', 'ssh']);
+    expect(loaded.views.map((v) => v.type)).toEqual(['plugin', 'plugin', 'plugin', 'plugin', 'ssh']);
     expect(loaded.views[0]).toEqual({ type: 'plugin', id: 'schedules', dock: 'right' });
+    // The legacy `page` element loads the same way, keyed by the address the page plugin uses.
+    expect(loaded.views[3]).toEqual({ type: 'plugin', id: 'page', path: 'https://example.com/' });
     expect(loaded.views[4]).toEqual(expect.objectContaining({ destination: 'host', options: ['-p', '2222'] }));
   });
 

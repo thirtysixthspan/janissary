@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { normalizeWebUrl, rootDomain } from './page.js';
+import { normalizeWebUrl, rootDomain } from './web-target.js';
 
 describe('normalizeWebUrl', () => {
   it('keeps an https URL verbatim (normalized form)', () => {

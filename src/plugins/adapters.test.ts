@@ -8,6 +8,7 @@ import type { TabPluginDeclaration } from './api.js';
 import { TAB_PLUGIN_API_VERSION } from './api.js';
 import { createPluginCommands } from './command-adapter.js';
 import { createPluginOpeners, pluginContentTypes } from './opener-adapter.js';
+import { resolveWebClaim } from './web-adapter.js';
 import { clearContributionRejections, contributionRejection } from './rejections.js';
 
 // The rejection ledger is a module singleton the production registries populate at import time, so
@@ -96,6 +97,26 @@ describe('tab plugin content types', () => {
     const declarations = [manifest('fixture', { fileExtensions: { '.fixture': 'text/plain' } })];
     const accepted = [core, ...createPluginOpeners(declarations, [core])];
     expect(pluginContentTypes(declarations, accepted)).toEqual({ '.fixture': 'text/plain' });
+  });
+});
+
+describe('tab plugin web claim', () => {
+  it('resolves to nothing when no declaration claims web targets', () => {
+    expect(resolveWebClaim([manifest('fixture')])).toBeUndefined();
+  });
+
+  it('resolves to the claiming plugin', () => {
+    expect(resolveWebClaim([manifest('fixture'), manifest('page', { webTargets: true })])).toBe('page');
+  });
+
+  it('keeps the first claimant and records why the second contributes nothing', () => {
+    const declarations = [
+      manifest('page', { webTargets: true }),
+      manifest('other', { webTargets: true }),
+    ];
+    expect(resolveWebClaim(declarations)).toBe('page');
+    expect(contributionRejection('other')).toBe('duplicate tab plugin web target claim');
+    expect(contributionRejection('page')).toBeUndefined();
   });
 });
 

@@ -12,6 +12,7 @@ export function PluginTabLayer({
   current,
   visible,
   client,
+  onClose,
   onSplit,
 }: {
   tab: TabView;
@@ -19,6 +20,7 @@ export function PluginTabLayer({
   current: TabView;
   visible: boolean;
   client: JanusClient;
+  onClose: () => void;
   onSplit?: () => void;
 }) {
   return (
@@ -35,7 +37,7 @@ export function PluginTabLayer({
       {tab.plugin && (
         <PluginBody
           plugin={tab.plugin} label={tab.label} client={client}
-          active={tab.label === current.label} onSplit={onSplit}
+          active={tab.label === current.label} onClose={onClose} onSplit={onSplit}
         />
       )}
     </div>

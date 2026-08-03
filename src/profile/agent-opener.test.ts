@@ -63,6 +63,7 @@ function makeManagers(tabs: Tab[]): { managers: Managers; harnessOpen: ReturnTyp
     monitor: { stop: vi.fn(() => true), start: vi.fn(() => null) },
     fileNavigator: { open: fileNavigatorOpen },
     openFile: { edit, run },
+    plugins: { declarations: [{ id: 'image', fileExtensions: { '.png': 'image/png' } }] },
   } as unknown as Managers;
   return { managers, harnessOpen, fileNavigatorOpen, edit };
 }

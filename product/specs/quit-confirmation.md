@@ -10,7 +10,7 @@ Typing `close` (or its alias `exit`) when only a single tab is open triggers the
 
 ### `exit` is not `quit`
 
-`exit` is an alias of `close` (closes the current tab, or `exit page <n>` for a numbered page tab) — while more than one tab is open it does not exit the application and does not show this dialog. Only `quit`, or closing the last remaining tab, exits the app.
+`exit` is an alias of `close` (closes the current tab, or `exit <name>` for a named one) — while more than one tab is open it does not exit the application and does not show this dialog. Only `quit`, or closing the last remaining tab, exits the app.
 
 ### Selection and confirming/cancelling
 

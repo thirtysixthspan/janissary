@@ -63,7 +63,7 @@ A profile may declare three further tab kinds, each opened by issuing the same c
 
 `"type": "image"` and `"type": "markdown"` are the older spellings of a plugin entry from before those views became bundled plugins. Both are still accepted and launch identically to `{"type": "plugin", "id": "image"}` and `{"type": "plugin", "id": "markdown"}`; `profile save` writes the `plugin` form.
 
-Relaunching matches these tabs by identity rather than by label: a page tab at the same url and an ssh tab to the same destination are closed first and reported as relaunched, so exactly one tab per entry is left. A plugin tab opened by the same plugin on the same path is instead reused in place, and still moves into its authored group and position. An entry that opens no tab — a path that does not exist, an ssh invocation that does not parse — is reported and skipped while the rest of the launch continues; a plugin entry reports the plugin by name (`Could not open image tab "…"`).
+Relaunching matches these tabs by identity rather than by label: an ssh tab to the same destination is closed first and reported as relaunched, so exactly one tab per entry is left. A plugin tab opened by the same plugin on the same subject — the same file, or the same web address — is instead reused in place, and still moves into its authored group and position. An entry that opens no tab — a path that does not exist, an ssh invocation that does not parse — is reported and skipped while the rest of the launch continues; a plugin entry reports the plugin by name (`Could not open image tab "…"`).
 
 ### Profile-level notifications tab
 
@@ -123,7 +123,7 @@ Any running monitors are captured too, into the `monitors` key by name, persona,
 
 Tabs with no equivalent in a profile — only a monitor's own reporting tab — are left out of the saved profile and listed by name in the command's output, so it's clear what wasn't captured.
 
-Saving over an existing profile name replaces it outright: the single file is rewritten from the current session, with no confirmation prompt (and a stale same-named directory left over from the old multi-file format is removed). On success, the command reports what was captured — counts per tab type (agents, harnesses, editor tabs, plugin tabs, page tabs, ssh tabs, file navigators), the layout, monitors, and docked tabs — followed by the list of any tabs that were skipped. The docked-tab count now covers only the notifications tab, since navigators and plugin tabs have their own.
+Saving over an existing profile name replaces it outright: the single file is rewritten from the current session, with no confirmation prompt (and a stale same-named directory left over from the old multi-file format is removed). On success, the command reports what was captured — counts per tab type (agents, harnesses, editor tabs, plugin tabs, ssh tabs, file navigators), the layout, monitors, and docked tabs — followed by the list of any tabs that were skipped. The docked-tab count now covers only the notifications tab, since navigators and plugin tabs have their own.
 
 ### `profile` command
 

@@ -36,16 +36,18 @@ describe('parseClose', () => {
     expect(parseClose('close')).toEqual({ target: 'active' });
   });
 
-  it('returns page + number for "close page n"', () => {
-    expect(parseClose('close page 3')).toEqual({ target: 'page', number: 3 });
-  });
-
-  it('is case-insensitive on keywords', () => {
-    expect(parseClose('CLOSE PAGE 5')).toEqual({ target: 'page', number: 5 });
-  });
-
-  it('returns tabname target for "close page" with no number', () => {
+  // A page tab is a plugin tab now, named `page`, `page-2`, … like every other plugin tab, so it is
+  // closed by that label rather than by a page number the app no longer assigns.
+  it('returns tabname target for "close page"', () => {
     expect(parseClose('close page')).toEqual({ target: 'tabname', name: 'page' });
+  });
+
+  it('returns tabname target for "close page-2"', () => {
+    expect(parseClose('close page-2')).toEqual({ target: 'tabname', name: 'page-2' });
+  });
+
+  it('is case-insensitive on the close keyword', () => {
+    expect(parseClose('CLOSE page-2')).toEqual({ target: 'tabname', name: 'page-2' });
   });
 
   it('returns tabname target for "close page abc"', () => {
@@ -66,6 +68,6 @@ describe('parseClose', () => {
 
   it('treats "exit" as an alias of "close"', () => {
     expect(parseClose('exit')).toEqual({ target: 'active' });
-    expect(parseClose('EXIT PAGE 2')).toEqual({ target: 'page', number: 2 });
+    expect(parseClose('EXIT page-2')).toEqual({ target: 'tabname', name: 'page-2' });
   });
 });

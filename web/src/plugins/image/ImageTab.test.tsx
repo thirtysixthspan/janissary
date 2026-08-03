@@ -26,6 +26,7 @@ function makeCapabilities(
       : null,
     active,
     dock: null,
+    close: vi.fn(),
     reportFailure: vi.fn(),
   };
 }

@@ -27,7 +27,7 @@ export function AppCenterActionArea({
   const visibleLabels = [current.label, ...(secondary ? [secondary.label] : [])];
   const renderBody = (entry: TabEntry, focused: boolean) => {
     const tab = entry.tab;
-    if (tab.activePty || ['harness', 'editor', 'page', 'plugin'].includes(tab.view ?? '')) return null;
+    if (tab.activePty || ['harness', 'editor', 'plugin'].includes(tab.view ?? '')) return null;
     const onSplit = () => splitTab(entry.index);
     if (tab.view) {
       return (

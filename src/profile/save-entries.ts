@@ -4,9 +4,10 @@ import { SYNC_WORKSPACE_NAME } from '../git-sync.js';
 import type { Tab } from '../tab/types.js';
 import type {
   ProfileAgentTabFile, ProfileEditorTabFile, ProfileFilesTabFile, ProfileHarnessTabFile,
-  ProfilePageTabFile, ProfilePluginTabFile, ProfileSshTabFile,
+  ProfilePluginTabFile, ProfileSshTabFile,
   ProfileTabPresentation,
 } from './types.js';
+import type { TabPluginDeclaration } from '../plugins/api.js';
 import type { TreeSelection } from '../file-navigator/selection-request.js';
 import type { Managers } from '../managers.js';
 import { centerPane } from '../tab/split.js';
@@ -108,28 +109,34 @@ export function writeFilesEntry(
   };
 }
 
+// What a plugin tab's instance key names, which decides how its entry is written and how a relaunch
+// reopens it. Read off the declaration rather than guessed from the key: whether a plugin opens on
+// files, on web addresses, or on neither is something it declared.
+function instanceKeyKind(
+  declaration: TabPluginDeclaration | undefined,
+): 'file' | 'web' | 'none' {
+  if (Object.keys(declaration?.fileExtensions ?? {}).length > 0) return 'file';
+  return declaration?.webTargets ? 'web' : 'none';
+}
+
 // A bundled-plugin tab. For a plugin that opens on files the instance key is the file it opened,
 // which is all a relaunch needs: `open <path>` routes back to the same plugin through the opener
-// registry. A plugin claiming no extensions was reached by its command instead and has no file to
-// name, so its entry omits `path` and relaunch reissues that command. Whether there is a file is a
-// property of the declaration, not a guess about the instance key. A docked plugin tab has no place
-// in the tab strip, so — like a docked navigator — it keeps `dock` and gets no presentation.
+// registry. For one that opens on web addresses the key is the address, written verbatim — an
+// address is not a path and must not be abbreviated against the project root. A plugin claiming
+// neither was reached by its command and has nothing to name, so its entry omits `path` and relaunch
+// reissues that command. A docked plugin tab has no place in the tab strip, so — like a docked
+// navigator — it keeps `dock` and gets no presentation.
 export function writePluginEntry(tab: Tab, managers: Managers): ProfilePluginTabFile | undefined {
   if (!tab.plugin) return undefined;
   const id = tab.plugin.id;
-  const declaration = managers.plugins.declarations.find((entry) => entry.id === id);
-  const opensFiles = Object.keys(declaration?.fileExtensions ?? {}).length > 0;
+  const key = tab.plugin.instanceKey;
+  const kind = instanceKeyKind(managers.plugins.declarations.find((entry) => entry.id === id));
   return {
     type: 'plugin', id,
-    path: opensFiles ? portablePath(tab.plugin.instanceKey, managers) : undefined,
+    path: kind === 'file' ? portablePath(key, managers) : (kind === 'web' ? key : undefined),
     dock: tab.dock,
     ...(!tab.dock && presentation(tab, managers)),
   };
-}
-
-export function writePageEntry(tab: Tab, managers: Managers): ProfilePageTabFile | undefined {
-  if (!tab.page) return undefined;
-  return { type: 'page', url: tab.page.url, ...presentation(tab, managers) };
 }
 
 export function writeSshEntry(tab: Tab, managers: Managers): ProfileSshTabFile | undefined {

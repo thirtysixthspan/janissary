@@ -57,7 +57,9 @@ function partitionTabs(tabs: ProfileTabFile[]): PartitionedTabs {
     case 'image': { out.views.push({ ...presentation(tab), type: 'plugin', id: 'image', path: tab.path }); break; }
     // The pre-plugin spelling of a markdown preview tab, mapped the same way.
     case 'markdown': { out.views.push({ ...presentation(tab), type: 'plugin', id: 'markdown', path: tab.path }); break; }
-    case 'page': { out.views.push({ ...presentation(tab), type: 'page', url: tab.url }); break; }
+    // The pre-plugin spelling of an embedded web page tab. Its address is what the page plugin
+    // keys its tab by, so it becomes that plugin's `path` exactly as an image file does.
+    case 'page': { out.views.push({ ...presentation(tab), type: 'plugin', id: 'page', path: tab.url }); break; }
     default: {
       out.views.push({ ...presentation(tab), type: 'ssh', destination: tab.destination, options: tab.options });
     }

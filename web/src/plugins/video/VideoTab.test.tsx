@@ -24,6 +24,7 @@ function makeCapabilities(onSplit?: () => void, active = true) {
     splitAction: onSplit ? <button type="button" className="tab-split" onClick={onSplit}>Split</button> : null,
     active,
     dock: null,
+    close: vi.fn(),
     reportFailure,
   };
   return { capabilities, intent, reportFailure };

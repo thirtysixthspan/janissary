@@ -21,11 +21,11 @@ A page tab only displays the site. The app doesn't script or read the embedded p
 
 Many sites send headers refusing to be embedded. When the app runs in its own managed browser window, those framing restrictions are lifted and such sites render anyway; if the app fell back to your system browser at startup, a site that refuses framing may show a blocked or blank area instead.
 
-## Page numbers and labels
+## Names and labels
 
 <img class="agent-float left" src="/agents/ekrem-south-east.png" alt="" />
 
-Each page tab is numbered `1`, `2`, `3`, … — always the smallest free number, so open pages count up from 1 without gaps, and a closed page's number is reused. That number isn't shown in the strip; it's only how `close page <n>` identifies a page tab. The strip label itself is just the root domain, with any `www.` dropped (`docs.example.com` labels as `example.com`). The label and the address shown in the metadata header follow you as you navigate inside the embedded page — click through to another page on the same site (or a different one) and both update to match, as long as the app is running in its own managed browser.
+Each page tab carries a name — `page`, then `page-2`, `page-3`, … — always the shortest free one, so a closed page's name is reused by the next one you open. The name isn't shown in the strip; it's how `close` identifies a page tab from elsewhere. The strip label itself is just the root domain, with any `www.` dropped (`docs.example.com` labels as `example.com`). The label and the address shown in the metadata header follow you as you navigate inside the embedded page — click through to another page on the same site (or a different one) and both update to match, as long as the app is running in its own managed browser.
 
 ## Closing
 
@@ -33,7 +33,7 @@ Four routes, same result:
 
 - the tab's **× button**,
 - `close` while the page tab is active,
-- `close page <n>` from any tab — `close page 2` closes page 2 wherever it sits; if there's no page `n`, that's reported,
+- `close <name>` from any tab — `close page-2` closes that page wherever it sits; if there's no tab with that name, that's reported,
 - `Cmd+W` / `Ctrl+W`, which works even while your focus is inside the embedded page.
 
-Page tabs are live views: not restored by `janus --relaunch`. To open an address in your OS browser instead, use `open external <url>` (see [Opening files and pages](/user-documentation/tab-types/opening-files)).
+Opening an address a page tab is already showing focuses that tab rather than embedding the site twice. Page tabs are live views: not restored by `janus --relaunch`. To open an address in your OS browser instead, use `open external <url>` (see [Opening files and pages](/user-documentation/tab-types/opening-files)).
