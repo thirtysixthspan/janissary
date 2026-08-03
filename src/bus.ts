@@ -98,8 +98,12 @@ type LayoutEvent = {
 // A one-shot request for every connected client's file-navigator selections, issued by
 // `profile save` (see src/file-navigator/selection-request.ts) and broadcast as `collect-tree-state`.
 type FileNavigatorEvent = { type: 'collect'; id: number };
+// The scheduled-command set changed. Deliberately its own channel rather than a reason carried on
+// `state: dirty`, which fires on essentially every mutation: this one is a named, low-frequency
+// signal a tab plugin may subscribe to (see src/plugins/notifications.ts).
+type ScheduleEvent = { type: 'changed' };
 export type BusChannels = {
   transcript: BusEvent; state: StateEvent; app: AppEvent; pty: PtyEvent; layout: LayoutEvent;
-  fileNavigator: FileNavigatorEvent;
+  fileNavigator: FileNavigatorEvent; schedules: ScheduleEvent;
 };
 export const messageBus = new MessageBus<BusChannels>();

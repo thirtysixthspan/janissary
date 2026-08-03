@@ -44,6 +44,19 @@ function restrictToDeclared(
   return restricted;
 }
 
+// The checks a plugin-produced tab value must pass, shared by the creation and update paths so a
+// payload can never enter a tab through one route under weaker rules than the other. A title is
+// checked only when there is one: creation always supplies it, an update may leave it alone.
+function validateTabValue(
+  activation: TabPluginActivation,
+  value: { title?: string; payload: unknown },
+): void {
+  if (value.title !== undefined && !value.title.trim()) throw new Error('produced an empty tab title');
+  if (!activation.isPayload(value.payload) || !isJsonCompatible(value.payload)) {
+    throw new Error('produced an invalid tab payload');
+  }
+}
+
 export function createPluginContext(
   managers: Managers,
   declaration: TabPluginDeclaration,
@@ -71,13 +84,20 @@ export function createPluginContext(
         origin.label,
         (resources) => {
           const created = factory(resources);
-          if (!created.title.trim()) throw new Error('produced an empty tab title');
-          if (!activation.isPayload(created.payload) || !isJsonCompatible(created.payload)) {
-            throw new Error('produced an invalid tab payload');
-          }
+          validateTabValue(activation, created);
           return created;
         },
       );
+    },
+    // Unlike `openOrFocusTab`, this does not require the originating tab to still exist: the target
+    // is the plugin's own tab, not the transcript that asked for the change.
+    updateTab: (instanceKey, factory) => {
+      if (!isEnabled()) return;
+      managers.tab.updatePluginTab(declaration.id, instanceKey, () => {
+        const update = factory();
+        validateTabValue(activation, update);
+        return update;
+      });
     },
     openClaimedFiles: (target) => {
       if (!isEnabled()) return;

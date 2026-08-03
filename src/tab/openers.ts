@@ -1,5 +1,5 @@
 import type { Tab, EditorView, PageView, FileNavigatorView } from './types.js';
-import type { TabPluginPayload, TabPluginResources } from '../plugins/api.js';
+import type { TabPluginPayload, TabPluginResources, TabPluginTabUpdate } from '../plugins/api.js';
 import { messageBus } from '../bus.js';
 import {
   addPluginTab, addEditorTab, addPageTab, addFilesTab, addNotificationsTab, addSchedulesTab,
@@ -72,6 +72,26 @@ export function openPluginTab(
   }));
 }
 
+
+// Replaces what an already-open plugin tab shows. The tab is addressed by its owning plugin plus the
+// instance key it was opened with, so a plugin can only ever write its own tab, and a key with no
+// open tab leaves everything untouched. Nothing about the tab's identity or placement moves: the
+// payload is replaced, the title only when the factory returned one.
+export function updatePluginTab(
+  target: OpenTarget,
+  pluginId: string,
+  instanceKey: string,
+  factory: () => TabPluginTabUpdate,
+): void {
+  const tab = target.tabs.find(
+    (candidate) => candidate.plugin?.id === pluginId && candidate.plugin.instanceKey === instanceKey,
+  );
+  if (!tab?.plugin) return;
+  const update = factory();
+  tab.plugin = { ...tab.plugin, payload: update.payload };
+  if (update.title !== undefined) tab.title = update.title;
+  messageBus.emit('state', { type: 'dirty' });
+}
 
 export function openEditorTab(
   target: OpenTarget, view: EditorView, watch: (label: string, path: string) => void,

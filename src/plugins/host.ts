@@ -6,12 +6,14 @@ import {
 } from './api.js';
 import { activatePlugin, disposePluginActivation } from './activate.js';
 import { tabPluginCatalog } from './catalog.js';
-import { isJsonCompatible } from './context.js';
 import {
-  pluginFailureMessage, pluginFailureReason, reportPluginFailure, type PluginFailureOrigin,
+  pluginFailureReason, reportPluginFailure, type PluginFailureOrigin,
 } from './failure.js';
 import { invokePlugin, type PluginCallOutcome } from './invoke.js';
 import { tabPluginLoaders } from './loaders.js';
+import { subscribeTabPluginNotifications, TAB_PLUGIN_NOTIFY_TIMEOUT_MS } from './notifications.js';
+import { closedTabReason, reportClientFailure, runPluginIntent, type PluginRequestPort } from './requests.js';
+import type { Subscription } from '../bus.js';
 import { contributionRejection } from './rejections.js';
 import { recordStatus, type PluginRecord, type TabPluginStatus } from './status.js';
 import { closePluginTabs } from './teardown.js';
@@ -21,6 +23,7 @@ export type { TabPluginStatus } from './status.js';
 export type TabPluginHostOptions = {
   activationTimeoutMs?: number;
   handlerTimeoutMs?: number;
+  notifyTimeoutMs?: number;
 };
 
 export class TabPluginHost {
@@ -28,6 +31,7 @@ export class TabPluginHost {
   private readonly disabledTabPlugins = new Map<string, string>();
   private readonly activationTimeoutMs: number;
   private readonly handlerTimeoutMs: number;
+  private readonly notifications: Subscription[];
   private disposed = false;
 
   constructor(
@@ -49,6 +53,16 @@ export class TabPluginHost {
         ? { declaration, state: 'declared' }
         : { declaration, state: 'disabled', reason: rejection });
     }
+    this.notifications = subscribeTabPluginNotifications({
+      managers,
+      records: () => [...this.records.values()],
+      timeoutMs: options.notifyTimeoutMs ?? TAB_PLUGIN_NOTIFY_TIMEOUT_MS,
+      invoke: (record, activation, origin, call, timeoutMs) => invokePlugin(
+        managers, record.declaration, activation, origin,
+        () => record.state === 'active' && !this.disposed, timeoutMs, call,
+      ),
+      disable: (record, error, origin) => { this.disable(record, error, origin); },
+    }, declarations.flatMap((declaration) => declaration.notifications ?? []));
   }
 
   get declarations(): readonly TabPluginDeclaration[] {
@@ -83,40 +97,29 @@ export class TabPluginHost {
     });
   }
 
-  async intent(tabLabel: string, intent: string, payload: unknown): Promise<unknown> {
-    const tab = this.managers.tab.tabs.find((candidate) => candidate.label === tabLabel);
-    if (!tab?.plugin) throw new Error(this.closedTabReason(tabLabel));
-    const record = this.records.get(tab.plugin.id);
-    if (!record) throw new Error(`Unknown tab plugin "${tab.plugin.id}"`);
-    if (record.state === 'disabled') {
-      throw new Error(pluginFailureMessage(record.declaration.id, record.reason));
-    }
-    const origin = { label: tab.plugin.sourceLabel, command: '' };
-    const activation = await this.ensureActive(record, origin);
-    if (!activation) throw new Error(pluginFailureMessage(record.declaration.id, record.reason));
-
-    const outcome = await this.invoke(record, activation, origin, (capabilities) => activation.intent(
-      { tab: tabLabel, intent, payload, tabPayload: tab.plugin?.payload }, capabilities,
-    ));
-    if (outcome.status === 'rejected') throw new Error(outcome.reason);
-    if (outcome.status === 'failed') {
-      throw new Error(this.disable(record, outcome.error, origin), { cause: outcome.error });
-    }
-    if (isJsonCompatible(outcome.value)) return outcome.value;
-    throw new Error(this.disable(record, new Error('produced an invalid intent result'), origin));
+  intent(tabLabel: string, intent: string, payload: unknown): Promise<unknown> {
+    return runPluginIntent(this.requestPort(), tabLabel, intent, payload);
   }
 
   clientFailed(tabLabel: string, reason: string): void {
-    const tab = this.managers.tab.tabs.find((candidate) => candidate.label === tabLabel);
-    if (!tab?.plugin) throw new Error(`Plugin tab "${tabLabel}" not found`);
-    const record = this.records.get(tab.plugin.id);
-    if (!record) throw new Error(`Unknown tab plugin "${tab.plugin.id}"`);
-    this.disable(record, reason, { label: tab.plugin.sourceLabel, command: '' });
+    reportClientFailure(this.requestPort(), tabLabel, reason);
+  }
+
+  private requestPort(): PluginRequestPort {
+    return {
+      managers: this.managers,
+      record: (id) => this.records.get(id),
+      closedTabReason: (tabLabel) => closedTabReason(this.records, this.disabledTabPlugins, tabLabel),
+      ensureActive: (record, origin) => this.ensureActive(record, origin),
+      invoke: (record, activation, origin, call) => this.invoke(record, activation, origin, call),
+      disable: (record, error, origin) => this.disable(record, error, origin),
+    };
   }
 
   dispose(): void {
     if (this.disposed) return;
     this.disposed = true;
+    for (const subscription of this.notifications) subscription.unsubscribe();
     for (const record of this.records.values()) this.disposeActivation(record);
   }
 
@@ -155,14 +158,6 @@ export class TabPluginHost {
     if (this.managers.tab.tabs.some((tab) => tab.label === origin.label)) {
       this.managers.tab.append(origin.label, { input: origin.command, output });
     }
-  }
-
-  private closedTabReason(tabLabel: string): string {
-    const disabledId = this.disabledTabPlugins.get(tabLabel);
-    const disabled = disabledId ? this.records.get(disabledId) : undefined;
-    return disabled?.state === 'disabled'
-      ? pluginFailureMessage(disabled.declaration.id, disabled.reason)
-      : `Plugin tab "${tabLabel}" not found`;
   }
 
   private async ensureActive(

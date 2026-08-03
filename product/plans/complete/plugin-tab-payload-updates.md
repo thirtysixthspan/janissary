@@ -46,7 +46,7 @@ The two are deliberately asymmetric. A capability is how a plugin pushes what it
 
 17. **Declaring a topic without supplying `notify` disables the plugin at activation.** A command claim with no handler is answered as a rejection because a command has a caller and a transcript to answer into; a notification has neither, so the mismatch is caught the first time the host holds the activation object and recorded as a reason the `plugins` command reports.
 
-18. **No debouncing in v1, because every source is already coarse.** The `schedules` topic fires where the schedule manager already marks state dirty — add, remove, clear, and a tick that actually changed something (`src/schedule/manager.ts:23`, `:29`, `:86`, `:99`, `:130`) — and that tick runs at most once a second (`src/schedule/manager.ts:46`, `setInterval(… , 1000)`). The ceiling is therefore about one notification per topic per second, and it is deliberate: a future topic that can fire faster must coalesce at its own source rather than pushing that job into the dispatcher.
+18. **No debouncing in v1, because every source is already coarse.** The `schedules` topic fires wherever the scheduled-command set itself changes — `set`, `delete`, `cancel`, `clearAll`, and a tick that actually fired something — and that tick runs at most once a second (`src/schedule/manager.ts`, `setInterval(… , 1000)`). Those are the map mutations, not the `state: dirty` emits: two of those emits are the launch dialog opening and closing, which change no schedule, and `set`/`delete` change the set without emitting dirty at all. The ceiling is therefore about one notification per topic per second, and it is deliberate: a future topic that can fire faster must coalesce at its own source rather than pushing that job into the dispatcher.
 
 19. **The host holds the subscription, not the plugin.** One bus subscription serves every plugin, taken when the host is constructed and only if some declaration names a topic, and released in the host's existing `dispose`. This is what makes a plugin-held update handle unnecessary: there is no plugin-side object to revoke when a tab closes or a plugin is disabled.
 
@@ -65,7 +65,7 @@ The two are deliberately asymmetric. A capability is how a plugin pushes what it
 | A tab whose title and payload already change together in place | `src/tab/navigate.ts:9` `navigatePageTab` |
 | Building a host from a test-local manifest and loader map | `src/plugins/grouping.test.ts`, `src/plugins/teardown.test.ts` |
 | A typed pub/sub bus with per-listener error isolation and unsubscribe | `src/bus.ts` `MessageBus`, `BusChannels`, `messageBus` |
-| The points at which the schedule set is already known to have changed | `src/schedule/manager.ts:23`, `:29`, `:86`, `:99`, `:130` (each already emitting `state: dirty`) |
+| The points at which the schedule set is already known to have changed | `src/schedule/manager.ts` — `set`, `delete`, `cancel`, `clearAll`, and the tick's fired-something branch |
 | The aggregated schedule rows a `schedules` topic would carry | `src/schedule/views.ts:19` `aggregatedScheduleView`, `src/schedule/manager.ts:110` `aggregatedView()` |
 | Re-exporting a wire type through the plugin API rather than letting a plugin import `../protocol.js` | `src/plugins/api.ts:113` (`PluginFailedRequest`, `PluginIntentRequest`, `PluginTabView`) |
 | Recording why a plugin is disabled and reporting it to the user | `src/plugins/status.ts` `recordStatus`, `src/commands/plugins.ts` |

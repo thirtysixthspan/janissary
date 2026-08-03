@@ -68,6 +68,7 @@ Literal imports make the modules visible to TypeScript, Vite, Knip, and tests wh
 | `fileExtensions` | yes | Dot-prefixed extension to MIME type; use `undefined` for external-only formats |
 | `editGesture` | no | `open external` for a file-navigator edit activation |
 | `command` | no | One case-insensitive first-token command |
+| `notifications` | no | Host topics to be told about; a declaration naming one must supply `notify` |
 | `capabilities` | yes | Requested names from the v1 server capability set; the host grants only these |
 
 Core openers and commands have priority. Claims are unique, and commands may not use a built-in or reserved route name. A refused claim does not throw: the first plugin to claim a name keeps it, the loser contributes nothing and starts disabled with the reason, and the app still starts. Only a claimed `open` route or command activates server behavior.
@@ -89,10 +90,11 @@ type TabPluginActivation = {
 };
 ```
 
-The host supplies seven capabilities:
+The host supplies eight capabilities:
 
 - `note(text)` writes to the originating transcript.
 - `openOrFocusTab(instanceKey, factory)` focuses or creates a plugin tab.
+- `updateTab(instanceKey, factory)` replaces what one of your own tabs already shows.
 - `openClaimedFiles(target)` runs the host's `open` pipeline for `target`, pinned to your opener.
 - `configuredViewer()` reads the viewer configured for this plugin id.
 - `openExternally(path, application?)` asks the OS to open a file.
@@ -100,6 +102,46 @@ The host supplies seven capabilities:
 - `reportFailure(reason)` exits through the guarded failure boundary and disables the plugin.
 
 Your declaration decides which of them you actually get. A name it omits is still present on the capability object — the type is the whole contract — but calling it throws `used capability "<name>" without declaring it`, which crosses the failure boundary and disables the plugin. Declaring a capability you never call is harmless; calling one you never declared is a bug in your manifest, caught the first time that line runs. Keep the list to what you use.
+
+## Updating a tab you already opened
+
+A tab's payload is produced once, by the factory `openOrFocusTab` runs. `updateTab` is how it changes afterwards: name the instance key the tab was opened with, and return the new payload — and a title, when the name in the tab strip should change with it.
+
+```ts
+capabilities.updateTab(file, () => ({ title: basename(file), payload: { …next } }));
+```
+
+The tab keeps everything else: its label, position, group, focus, instance key, schema version, and the files it already serves. A factory that returns no title leaves the current title alone, so a plugin with nothing to say about naming never overwrites a name the user chose; a factory that returns one replaces whatever is there, including that rename.
+
+An instance key you have no open tab for is a no-op, so you never have to track which of your tabs the user has since closed. The result is validated exactly as a created payload is — your own `isPayload` guard, JSON compatibility, and a nonempty title when one is supplied — and failing that check disables the plugin, because a payload your own contract rejects means the plugin is broken.
+
+You cannot register a new file to serve from an update, and you cannot change a tab's instance key: both are fixed when the tab opens.
+
+## Being told when host state changes
+
+`updateTab` covers what you already know. When the thing your view shows belongs to the host and moves on its own, declare a notification topic instead and the host will tell you:
+
+```ts
+notifications: ['schedules'],
+```
+
+A declaration naming a topic must supply a `notify` handler, or the plugin is disabled the moment it activates. The handler receives the topic, the current data for it, and the instance keys of your own open tabs, and acts by calling `updateTab`:
+
+```ts
+notify: (event, capabilities) => {
+  for (const key of event.tabs) capabilities.updateTab(key, () => ({ payload: { rows: event.data } }));
+},
+```
+
+v1 defines one topic, `schedules`, whose data is the aggregated scheduled-command rows. A topic is always a named, already-coalesced signal — never the raw state broadcast, which fires on essentially every mutation including per-keystroke shell output.
+
+The delivery rules are narrow on purpose:
+
+- a notification never activates a plugin, and never reaches one with no open tab, so a plugin nobody has used costs nothing;
+- handlers run guarded with a 1000 ms budget, tighter than the 5000 ms a user-initiated call gets, and fan out concurrently with no ordering guarantee between plugins;
+- the return value is ignored: a notification reports that something happened and cannot influence any host outcome;
+- `note` writes nowhere during one, since background work has no originating transcript; and
+- a throw or a timeout disables that plugin alone, exactly as any other guarded call does.
 
 ## Contributing a command
 
@@ -187,8 +229,8 @@ Add server tests for declaration claims, playable/external routes, payload valid
 ### v1
 
 - Initial bundled-only tab-view contract.
-- Static opener and command contributions, with a `command` handler on the activation.
-- Seven server and five client capabilities.
+- Static opener, command, and notification contributions, with `command` and `notify` handlers on the activation.
+- Eight server and five client capabilities.
 - Versioned generic tab payload plus `pluginIntent` and `pluginFailed` RPCs.
 - Two-level failure model: `rejectRequest` answers one bad request, `reportFailure` disables.
 

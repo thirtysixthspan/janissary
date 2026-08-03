@@ -4,7 +4,7 @@ Janissary can ship bundled plugins that contribute persistent view tabs, file op
 
 ### Discovery and activation
 
-At startup the server reads a static catalog of declarations. A declaration supplies the plugin identity and version, required tab-plugin API version, payload schema version, tab label prefix, claimed file extensions and content types, optional file-navigator edit gesture, optional command, and requested capabilities. Discovery does not import server behavior or fetch a client chunk.
+At startup the server reads a static catalog of declarations. A declaration supplies the plugin identity and version, required tab-plugin API version, payload schema version, tab label prefix, claimed file extensions and content types, optional file-navigator edit gesture, optional command, optional host state to be told about, and requested capabilities. Discovery does not import server behavior or fetch a client chunk.
 
 The requested capabilities bound what a plugin can do. A plugin that names a capability the API does not define never activates, and one that uses a capability it did not request is disabled the first time it tries — so the declaration is an accurate description of a plugin's reach rather than a claim nothing checks.
 
@@ -17,7 +17,9 @@ Core openers and commands resolve before plugin contributions. An extension or c
 
 A plugin's declared command is a second route into that plugin's own opener, never a second route into the registry. A target the command asks the host to open is refused unless it resolves to that plugin — including a web target, so `video https://example.com` and `video page notes.txt` report a non-video file rather than opening a browser tab.
 
-Server activation has a 1000 ms deadline. Each opener, command handler, or intent has a 5000 ms deadline, covering plugin work only — files a command asks the host to open are dispatched after the handler returns, so a large wildcard open is never charged to the plugin. Concurrent first uses share one activation, and later uses reuse it.
+A plugin that asks to be told when host state changes but supplies no handler for it never activates successfully, and is reported as disabled with that reason.
+
+Server activation has a 1000 ms deadline, as does handling one announcement of changed host state. Each opener, command handler, or intent has a 5000 ms deadline, covering plugin work only — files a command asks the host to open are dispatched after the handler returns, so a large wildcard open is never charged to the plugin. Concurrent first uses share one activation, and later uses reuse it.
 
 ### `plugins` command
 
@@ -34,6 +36,18 @@ Every v1 plugin tab is a live, in-memory view tab. It inherits the creating tab'
 The wire view identifies the plugin, the payload schema version, and an opaque payload. Instance keys, source-tab ownership, and served-file reference ownership remain server-only. The host checks a stable instance key before asking the plugin to construct a payload, so reopening the same resource focuses the existing tab and registers no duplicate served file.
 
 The client loads the declared chunk only when a matching plugin tab first exists. It validates the schema version and payload before rendering. Plugin components receive only authenticated resource URL construction, a tab-bound intent function, the host-rendered split action, whether their tab is the currently visible one, and failure reporting; they do not receive the WebSocket client. Because a hidden plugin tab stays mounted, the host is the only source of that visibility answer — a plugin that binds a window-wide key listener consults it rather than assuming it is on screen.
+
+### Changing what a tab shows
+
+A plugin may replace what one of its own tabs shows after it has opened, addressing the tab by the same identity it was opened with. The tab keeps everything else — its name in the strip unless the plugin supplies a new one, its place in the strip, its group, its pane, whether it is focused, and the files it already serves — so a view that updates never jumps, steals focus, or reopens. Supplying a new name replaces whatever the tab is currently called, including a name the user gave it by renaming the tab.
+
+An update aimed at a tab that is no longer open, or one belonging to a different plugin, does nothing at all: no view changes, nothing is reported, and the plugin keeps running. A plugin that produces a replacement its own contract rejects is disabled like any other broken plugin. A plugin cannot begin serving a new file, or change a tab's identity, through an update.
+
+### Being told when host state changes
+
+A plugin may declare that it wants to be told when a named kind of host state changes, so a view can keep up with something the plugin does not own. The only such kind in this version is the set of scheduled commands, and what the plugin receives is the same aggregated list of schedules the application shows in its own schedules tab.
+
+These announcements are deliberately narrow. One is sent only to a plugin that is already running and already has at least one tab open — a plugin nobody has used is never started by one, and a plugin with nothing on screen is never told about anything. The plugin is told which of its own tabs are open, so it does not have to track them itself, and it responds by changing what those tabs show. Nothing waits on the plugin, so a slow or broken one delays neither the application nor any other plugin: exceeding its deadline or failing disables that plugin alone, and a plugin cannot write to a transcript while handling one, since nobody asked it for anything.
 
 ### Intents and resources
 

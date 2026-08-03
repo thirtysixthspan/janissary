@@ -1,6 +1,7 @@
 import {
   TAB_PLUGIN_API_VERSION,
   isTabPluginCapability,
+  isTabPluginNotificationTopic,
   type TabPluginActivation,
   type TabPluginDeclaration,
   type TabPluginLoader,
@@ -18,6 +19,24 @@ function validateDeclaration(declaration: TabPluginDeclaration): void {
   for (const capability of declaration.capabilities) {
     if (isTabPluginCapability(capability)) continue;
     throw new Error(`requests unknown capability "${capability}"`);
+  }
+  const topics = declaration.notifications ?? [];
+  for (const topic of topics) {
+    if (isTabPluginNotificationTopic(topic)) continue;
+    throw new Error(`subscribes to unknown notification topic "${topic}"`);
+  }
+}
+
+// A command claim with no handler is answered as a rejection when the command runs, because it has a
+// caller and a transcript to answer into. A notification has neither, so a declaration naming a topic
+// with nothing to deliver it to is caught here — the first moment the host holds the activation.
+function validateActivation(
+  declaration: TabPluginDeclaration,
+  activation: TabPluginActivation,
+): void {
+  const topics = declaration.notifications ?? [];
+  if (topics.length > 0 && !activation.notify) {
+    throw new Error(`subscribes to "${topics.join('", "')}" but provides no notify handler`);
   }
 }
 
@@ -54,6 +73,7 @@ export async function activatePlugin(
 
   try {
     const activation = await Promise.race([loading, timeout]);
+    validateActivation(declaration, activation);
     return {
       activation,
       durationMs: Math.max(0, Math.round(performance.now() - started)),
