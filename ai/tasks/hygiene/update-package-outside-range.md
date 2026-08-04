@@ -1,6 +1,8 @@
 # Update a Package Outside Its Declared Range (one package per run)
 
-Your job: take **one** named package, move it to a target version its current `package.json` range does **not** allow, widen the range to match, change whatever code the new major requires, and prove that the application still behaves exactly as `product/specs/` says it does — with no new security exposure. Do exactly one package, then verify. Follow the steps **in order, exactly as written** — do not skip a step or combine steps.
+Your job: take **one** named package, move it to a target version its current `package.json` range does **not** allow, widen the range to match, change whatever code the new major requires, prove that the application still behaves exactly as `product/specs/` says it does — with no new security exposure — and **open a pull request for a human to review and merge**. Do exactly one package, then verify. Follow the steps **in order, exactly as written** — do not skip a step or combine steps.
+
+**This task never merges its own work.** A breaking upgrade pulls new third-party code into the product, and whether that code is worth adopting is a human's call, informed by what you found. You open the PR (Step 11); someone else merges it.
 
 This is the companion to [`find-packages-to-update.md`](../research/find-packages-to-update.md), which does the research and files the entry, and the deliberate exception to the rule the other dependency tasks live by. [`update-packages-with-patches.md`](update-packages-with-patches.md) may change no code and no range. [`update-package.md`](update-package.md) may change code but never the range. This task may change both — which is why it is the only one of the three that is never run speculatively, and the only one that carries the verification burden below.
 
@@ -125,7 +127,7 @@ npm run lint 2>&1
 npm test 2>&1
 ```
 
-**All three green →** go to Step 6. Do not skip ahead to the merge; green is the start of the verification, not the end.
+**All three green →** go to Step 6. Do not skip ahead to the pull request; green is the start of the verification, not the end.
 
 **Not all green →** fix, within these bounds, for at most **3 attempts**:
 
@@ -181,9 +183,30 @@ A new major can change this project's exposure in ways that have nothing to do w
 2. **The dependency tree.** Read the `package-lock.json` diff for what came in with the upgrade: new transitive dependencies, new packages with install scripts, packages that were previously deduped and now are not. New install scripts are the highest-risk finding here — this project deliberately installs with `--ignore-scripts` (see `ai/tasks/workspace/prepare-workspace.md`) and any new lifecycle script must be named in the report.
 3. **Ownership and provenance.** If the research in Step 2 showed the package changed maintainers, was transferred, or was rewritten by a new author between the installed and target versions, say so in the report explicitly. It does not block the upgrade on its own; it does mean a human should look.
 4. **The security-relevant behavior itself.** If the package does sanitization, escaping, validation, authentication, crypto, shell invocation, PTY handling, or network work, re-check its configuration at every call site against the new version's documented defaults. Majors in this class routinely change what is allowed through. A sanitizer whose allow-list widened, a validator that now coerces instead of rejecting, a client that now follows redirects by default — each is a real exposure change that produces no error and no failing test.
-5. **Your own diff.** Re-read every code change you made in Steps 5 and 6 with one question: does any of it weaken a check, broaden an input, swallow an error, or move a validation later? Adapting to a new API is a common place to lose a guard by accident.
+5. **The upstream code diff — required, not optional.** You are adopting someone else's new code, and the changelog is their summary of it, not the code itself. Examine what actually changed in the package between the installed version and the target:
+
+   ```bash
+   npm pack <package>@<old-version> --pack-destination ./temp
+   npm pack <package>@<target-version> --pack-destination ./temp
+   ```
+
+   Unpack both into `./temp` and diff the **shipped** files (`tar xzf`, then `diff -r`), and read the upstream repository's compare view (`https://github.com/<owner>/<repo>/compare/<old-tag>...<new-tag>`) via `WebFetch` for the source behind it. Where the shipped files are minified bundles, diff the source in the repository compare view instead and treat the bundle diff as a size/shape check only. Do not `grep`/`tail` a slow command's output repeatedly — capture once and read it (see [`CLAUDE.md`](../../../CLAUDE.md)).
+
+   Read the diff for these specifically, and record what you find either way:
+   - New or widened **network** access — new fetch/XHR/WebSocket/DNS calls, new endpoints, new telemetry or analytics, a client that now follows redirects or sends credentials cross-origin.
+   - New **filesystem, process, or shell** access — `child_process`, `exec`, `spawn`, reading or writing paths outside the package, new environment-variable reads (especially tokens, `NODE_OPTIONS`, `PATH`).
+   - New **dynamic code execution** — `eval`, `new Function`, `vm`, dynamic `import()` of a computed path, prototype writes, or newly obfuscated/unreadable code where readable code used to be.
+   - Changed **input handling** — sanitization, escaping, encoding, path normalization, URL or regex parsing. A new or widened regex is also a ReDoS question; check it against the input this project actually feeds the package.
+   - New **lifecycle scripts** in the package's own `package.json` (`preinstall`, `install`, `postinstall`), new binaries, or new bundled dependencies.
+   - Removed **hardening** — a bounds check, a length limit, a validation branch, or a deny-list entry that is gone in the new version.
+
+   A large diff is not an excuse to skip this. When it is genuinely too large to read line by line, say so in the report, and still read every hunk that touches the categories above — find them by searching the diff for those constructs rather than by reading start to finish.
+
+6. **Your own diff.** Re-read every code change you made in Steps 5 and 6 with one question: does any of it weaken a check, broaden an input, swallow an error, or move a validation later? Adapting to a new API is a common place to lose a guard by accident.
 
 If any finding here is a genuine exposure increase you cannot neutralize at the call site, go to Step 9 and revert.
+
+**Every security finding — from any of the six checks above — goes into the PR body in Step 11, explicitly and in plain language.** That includes findings you judged acceptable and neutralized: a reviewer decides for themselves whether they agree with your judgment, and they can only do that if the finding is stated. Never bury a finding in a "no issues" summary, and never let "the tests pass" stand in for it. If the six checks genuinely produced nothing, say that as a finding of its own, naming what you checked.
 
 ---
 
@@ -203,10 +226,11 @@ If you reached this step from Step 6 or Step 8, say so plainly in the report and
 
 ## Step 10 — Clean up and confirm the change is exactly what you intend
 
-Delete the backups:
+Delete the backups, and the tarballs and unpacked trees Step 8 left in `./temp/`:
 
 ```bash
 rm package.json.bak package-lock.json.bak
+rm -rf ./temp/*.tgz ./temp/package
 ```
 
 Then read `git status` and `git diff` and confirm:
@@ -221,11 +245,35 @@ If anything else changed on disk, revert it before continuing.
 
 ---
 
-## Step 11 — Merge the change to master
+## Step 11 — Open a pull request for review (do not merge)
 
-Execute `ai/tasks/workspace/merge-change-to-master.md` in full. That document owns the merge workflow — follow its steps without deviation. Use commit type `build`, and name the package and both versions in the subject, e.g. `build: upgrade @xterm/xterm to 6.0.0`. The body must cover the widened range, the breaking changes adapted to, every behavior pinned back in Step 6, the tests added in Step 7, and the security findings from Step 8 — this is the record a reviewer reads before trusting the upgrade.
+A breaking upgrade adopts new third-party code into the product, so a human approves it before it lands. Execute `ai/tasks/workspace/open-feature-pull-request.md` in full. That document owns the PR workflow — follow its steps without deviation, and **do not merge the PR**. Use commit type `build`, and name the package and both versions in the subject, e.g. `build: upgrade @xterm/xterm to 6.0.0`.
 
-*(When [`resolve-technical-debt.md`](../resolve-technical-debt.md) triggers this task, it owns the merge — skip this step.)*
+The PR body is the deliverable a reviewer reads before trusting the upgrade, so it replaces that document's feature-shaped sections with the ones below, in this order. Write it to `./temp/pr-body.md` as that document directs, using natural line breaks.
+
+### What changed in the package
+
+The heart of the description: **what the new version of the package actually does differently**, from the release history in Step 2 and the code diff in Step 8 — not a version-number announcement and not a paraphrase of the changelog headings. Cover the breaking changes and which of them reach this project, the behavioral changes that reach it silently, and anything the diff showed that the changelog did not mention. Say plainly how large the diff was and how much of it you read.
+
+### Security
+
+**Its own section, always present, never folded into the summary above.** Report all six checks from Step 8 — advisories before and after, the dependency tree, ownership and provenance, security-relevant behavior at the call sites, the upstream code diff, and your own diff — and state the result of each.
+
+Any security issue must be **flagged explicitly**: name it, say where it is, say what an attacker would have to do to reach it, and say what you did about it. This applies to issues you neutralized as much as to ones you merely accepted; the reviewer, not you, decides whether the mitigation is enough. Lead the section with the issues when there are any — do not open with reassurance and mention them afterwards. When a check found nothing, say what you checked and that it was clean, rather than saying nothing at all.
+
+### What changed in this project
+
+The widened range and the coordinated set, every code change you made in Steps 5 and 6, and every behavior you pinned back — each with the file and the reason it was needed.
+
+### Verification
+
+The behavior contract from Step 3 and how each statement was confirmed, the tests added in Step 7 and what they pin, the compiler/lint/test results with the test count before and after, and anything you could **not** verify automatically — an untested surface is a thing the reviewer needs to know about, not a thing to leave out.
+
+### Files changed
+
+A concise summary of every file touched, grouped by area, with a one-line description of what changed in each.
+
+*(When [`resolve-technical-debt.md`](../resolve-technical-debt.md) triggers this task, it owns shipping the change — skip this step, and hand it the Step 8 security findings and the Step 2/Step 8 summary of what changed in the package so they reach the pull request it opens.)*
 
 ---
 
@@ -239,12 +287,15 @@ Code changes:   <files touched to adapt to the new API, or "none needed">
 Behavior:       <silent changes checked: <count>; pinned back: <file — what was pinned>, … or "none reached this project">
 Specs verified: <spec file(s) whose statements were re-checked, or "none applicable">
 Tests added:    <count> across <files>, covering <what>
-Security:       advisories <before> -> <after>; new transitive deps <count>; new install scripts <names or "none">; <other findings, or "no exposure change">
+Upstream diff:  <how much of the version-to-version diff you read, and what it showed>
+Security:       advisories <before> -> <after>; new transitive deps <count>; new install scripts <names or "none">; <each flagged issue and what you did about it, or "no exposure change found across all six checks">
 Compiler:       green
 Lint:           green
 Tests:          green (<count> tests)
 PR:             <url> (#<number>)
-Status:         merged
+Status:         open — awaiting review
 ```
+
+Flag any security issue in this report too, in the same words the PR body uses. A finding that appears only in the PR body is a finding the person reading this report will miss.
 
 If you stopped early (no target named, target not a dependency, release too fresh, coordinated set too large, or a revert at Step 9), report that in two or three sentences: what you were attempting, which step stopped you, and the specific finding. Keep it brief. Done.
