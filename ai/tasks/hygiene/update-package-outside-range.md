@@ -94,7 +94,22 @@ Keep this contract list. Steps 6, 7, and 8 all work from it.
 
 ## Step 4 — Widen the range and install
 
-Back up the manifest and lock file (this step rewrites both):
+**Gate first — never skip this.** Before any command that writes to `node_modules/`, check the target — and every member of the coordinated set from Step 2 — against the known-malicious package list:
+
+```bash
+./scripts/run.mjs check-malicious-package <package>@<target-version> <peer>@<version> ...
+```
+
+Act on the exit code:
+
+- **0** — clean. Continue with the install below.
+- **2 (BLOCKED)** — the exact target version is a known-malicious release. **Do not install it.** This task targets a specific version, so there is no next candidate to fall back to: **stop** and report the block, naming the package, the version, and the campaign the check printed.
+- **3 (QUARANTINED)** — the package comes from an account compromised in a supply-chain campaign, even though this version is not itself known-bad. These campaigns propagate by publishing fresh version bumps, so treat it exactly like BLOCKED: **stop** and report.
+- **1** — the check itself failed (for example the list is unreadable). **Stop and tell the user.** Never treat a failed check as permission to install.
+
+This gate is especially load-bearing here: crossing a major boundary is exactly when an update reaches a version published after a maintainer account was compromised.
+
+Once the gate returns 0, back up the manifest and lock file (this step rewrites both):
 
 ```bash
 cp package.json package.json.bak

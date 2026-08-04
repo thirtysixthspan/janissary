@@ -74,6 +74,14 @@ A non-zero exit from either is normal when they list rows — it is not a failur
 
 From `npm audit`, note any advisory that names one of these packages, and whether the fix requires a major bump. A dependency with an open advisory whose only fix is out of range is the strongest candidate this task can find.
 
+Now screen the surviving rows against the known-malicious package list, each at the `Latest` version you would be recommending:
+
+```bash
+./scripts/run.mjs check-malicious-package <package-1>@<Latest-1> <package-2>@<Latest-2> ...
+```
+
+This is read-only and installs nothing, so it is safe to run here. **Drop every package the check reports as BLOCKED or QUARANTINED** — do not carry it into the report. Recommending such an upgrade would hand a downstream hygiene task a target it is required to refuse, so the recommendation would be dead on arrival. Instead, list the dropped packages in a short "excluded — supply-chain quarantine" note at the end of the report, with the campaign id the check printed, so the exclusion is visible rather than silent. If the check exits 1, say so in the report and treat the screening as not done.
+
 Record for every surviving row: package name, `Current`, `Wanted`, `Latest`, whether it is a `dependency` or `devDependency`, the declared range from `package.json`, and any advisory against it.
 
 ---

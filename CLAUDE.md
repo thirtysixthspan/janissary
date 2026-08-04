@@ -103,6 +103,19 @@ mkdir -p ./temp && npm run coverage > ./temp/coverage.txt 2>&1; echo done
 npm run coverage 2>&1
 ```
 
+## Package updates
+
+**Never run `npm install` or `npm update` on a package without checking it against the supply-chain blocklist first.** The list lives in [`security/known-malicious-packages.json`](security/known-malicious-packages.json) and is enforced by:
+
+```bash
+./scripts/run.mjs check-malicious-package <pkg>@<version> ...   # gate install targets
+./scripts/run.mjs check-malicious-package --audit               # scan package-lock.json
+```
+
+Exit codes: `0` clean, `2` BLOCKED (an exact known-malicious release), `3` QUARANTINED (a package or scope from a compromised maintainer account, at a version not yet known to be bad), `1` the check itself failed. **Only `0` permits an install** — a failed check is never permission to proceed. Treat `3` as seriously as `2`: these campaigns spread by publishing fresh version bumps, so "not yet on the list" is not the same as safe.
+
+Every package-update playbook in `ai/tasks/` runs this gate before touching `node_modules/`. When a new incident is disclosed, add a campaign object to the JSON rather than editing the script.
+
 ## Plan and task formatting
 
 When writing implementation plans or creating tasks, use natural line breaks only — do not artificially wrap lines at a fixed column width. Let long lines flow naturally so content remains readable in any viewport.
@@ -174,5 +187,6 @@ All scripts in `scripts/` are considered trusted. Do not invoke them directly wi
 - `scripts/` — project scripts; invoke only via `./scripts/run.mjs` (see [Running scripts](#running-scripts))
 - `profiles/` — harness profiles (see `product/specs/profiles.md`)
 - `skills/` — project-provided agent skills
+- `security/` — `known-malicious-packages.json`, the supply-chain blocklist (see [Package updates](#package-updates))
 - `fta/` — FTA code-quality baselines (regenerate with `npm run quality:snapshot`)
 - `temp/` — scratch space for captured command output; gitignored
