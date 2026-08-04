@@ -14,9 +14,9 @@ import { useFileNavigatorPaste } from './useFileNavigatorPaste';
 import { setClipboard } from './file-navigator-clipboard';
 import { normalizeOperationPaths, useFileNavigatorSelection } from './useFileNavigatorSelection';
 import { FileNavigatorOverlays } from './FileNavigatorOverlays';
+import { useFileNavigatorRowEvents } from './use-file-navigator-row-events';
+import type { FileNavigatorMenuActions } from './file-navigator-menu-items';
 import type { FileNavigatorTabProperties as Properties } from './file-navigator-tab-types';
-
-const MARKDOWN_EXTENSION = /\.(md|markdown)$/i;
 
 export function FileNavigatorTab({
   files, client, index, dock, autoFocus = true, dropRef, editorDropRef,
@@ -25,7 +25,6 @@ export function FileNavigatorTab({
   const selection = useFileNavigatorSelection(files.rows, files.absoluteRoot, index, files.restore);
   const [pendingNewDir, setPendingNewDir] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const pointerHandledRef = useRef<string | null>(null);
   const treeId = useId();
   const drag = useFileNavigatorDrag(
     files.rows, client, index, files.absoluteRoot, files.root, targetCwd, dropRef, editorDropRef,
@@ -77,33 +76,25 @@ export function FileNavigatorTab({
     client.send({ method: 'command', params: { text: newDirectoryCommand(targetDir) } });
   };
 
-  const onRowMouseDown = (row: FileNavigatorRow, event: React.MouseEvent) => {
-    if (event.button !== 0) return;
-    if (event.target instanceof HTMLElement && event.target.closest('.files-rename-input')) return;
-    pointerHandledRef.current = row.path;
-    const modified = event.shiftKey || event.metaKey || event.ctrlKey;
-    const keepSelection = !modified && selection.selected.has(row.path) && row.path !== '..';
-    const next = keepSelection
-      ? selection
-      : selection.pointer(row.path, event.shiftKey, event.metaKey || event.ctrlKey);
-    const sourcePaths = files.rows.map((candidate) => candidate.path)
-      .filter((path) => path !== '..' && next.selected.has(path));
-    drag.onRowMouseDown(row, event, sourcePaths, normalizeOperationPaths(files.rows, next.selected));
-    containerRef.current?.focus();
-  };
-  const onRowClick = (row: FileNavigatorRow) => {
-    if (pointerHandledRef.current === row.path) pointerHandledRef.current = null;
-    else selection.replace(row.path);
-    containerRef.current?.focus();
-  };
-
-  const onRowDoubleClick = (row: FileNavigatorRow, shiftKey: boolean) => {
-    if (row.path === '..') reroot();
-    else if (row.dir) toggle(row.path);
-    else openFile(row.path, MARKDOWN_EXTENSION.test(row.path) !== shiftKey);
-  };
+  const rowEvents = useFileNavigatorRowEvents({
+    rows: files.rows,
+    selection,
+    drag,
+    containerRef,
+    actions: { reroot, toggle, openFile },
+  });
   const beginRename = (row: FileNavigatorRow) => rename.begin(row.path, row.name);
   const clipboardPaths = () => selection.operationPaths.map((relPath) => `${files.absoluteRoot}/${relPath}`);
+  const menuActions: FileNavigatorMenuActions = {
+    open: (row) => rowEvents.onRowDoubleClick(row, false),
+    openWith: (row) => opener.openWith(row.path),
+    copy: (row) => setClipboard('copy', [`${files.absoluteRoot}/${row.path}`]),
+    paste: (row) => paste.paste(files.rows, row.path),
+    rename: beginRename,
+    remove: (row) => deletion.request(normalizeOperationPaths(files.rows, new Set([row.path]))),
+    newFile: createNewFile,
+    newDirectory: createNewDirectory,
+  };
 
   const onKeyDown = useFileNavigatorKeyDown({
     rows: files.rows,
@@ -120,6 +111,7 @@ export function FileNavigatorTab({
       copySelection: () => setClipboard('copy', clipboardPaths()),
       cutSelection: () => setClipboard('cut', clipboardPaths()),
       paste: () => paste.paste(files.rows, selection.cursor),
+      selectSiblings: selection.selectSiblings,
     },
     actions: { reroot, rerootTo, toggle, openFile, editFile },
   });
@@ -167,9 +159,10 @@ export function FileNavigatorTab({
             onDraftChange={rename.setDraft}
             onCommit={rename.commit}
             onCancel={rename.cancel}
-            onClick={() => onRowClick(row)}
-            onDoubleClick={(shiftKey) => onRowDoubleClick(row, shiftKey)}
-            onMouseDown={(event) => onRowMouseDown(row, event)}
+            onClick={() => rowEvents.onRowClick(row)}
+            onDoubleClick={(shiftKey) => rowEvents.onRowDoubleClick(row, shiftKey)}
+            onMouseDown={(event) => rowEvents.onRowMouseDown(row, event)}
+            onContextMenu={(event) => rowEvents.onRowContextMenu(row, event)}
           />
         ))}
       </div>
@@ -180,6 +173,9 @@ export function FileNavigatorTab({
         paste={paste}
         search={search}
         opener={opener}
+        menu={rowEvents.menu}
+        menuActions={menuActions}
+        onCloseMenu={rowEvents.closeMenu}
         focusTree={() => containerRef.current?.focus()}
       />
     </div>

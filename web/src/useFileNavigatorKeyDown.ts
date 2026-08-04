@@ -1,7 +1,7 @@
 import { useRef, type RefObject } from 'react';
 import type React from 'react';
 import type { FileNavigatorRow } from '@shared/protocol';
-import { handleFileNavigatorKey, typeAheadMatch } from './file-navigator-keys';
+import { handleFileNavigatorKey, typeAheadMatch, type FileNavigatorKeyOutcome } from './file-navigator-keys';
 import { handleTreeChord, type ChordHandlers } from './file-navigator-chords';
 import { runFileNavigatorAction } from './file-navigator-actions';
 import { clearClipboard, getClipboardSnapshot } from './file-navigator-clipboard';
@@ -52,6 +52,20 @@ function clearSelectionAndClipboard(
   clearClipboard();
 }
 
+// Route a navigation outcome to the selection transition it asks for: a shifted arrow extends the
+// range from the anchor, one that has run out of rows leaves the selection alone, and every other
+// navigation key collapses the selection onto its new cursor.
+function applyNavigationSelection(
+  selection: Params['selection'], result: FileNavigatorKeyOutcome,
+): void {
+  if (result.apply === 'keep') return;
+  if (result.apply === 'extend' && result.selection !== null) {
+    selection.extend(result.selection);
+    return;
+  }
+  selection.replace(result.selection);
+}
+
 // The file navigator tree's own `onKeyDown` handler, extracted from `FileNavigatorTab.tsx` so that
 // component stays under the file-size limit. Owns the rename-field bypass, the ctrl/meta chord
 // dispatch, delete, arrow/paging navigation, and type-ahead.
@@ -87,7 +101,7 @@ export function useFileNavigatorKeyDown({
       e.stopPropagation();
       const pageSize = Math.max(1, Math.floor((containerRef.current?.clientHeight ?? ROW_HEIGHT_PX * 10) / ROW_HEIGHT_PX));
       const result = handleFileNavigatorKey(rows, selection.cursor, e.key, e.shiftKey, pageSize);
-      selection.replace(result.selection);
+      applyNavigationSelection(selection, result);
       runFileNavigatorAction(result.action, {
         reroot: (path) => { if (path === '..') actions.reroot(); else actions.rerootTo(path); },
         toggle: actions.toggle,

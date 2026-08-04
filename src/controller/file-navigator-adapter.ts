@@ -17,7 +17,7 @@ export type FileNavigatorControllerAdapter = {
   renameFileNavigatorItem(index: number, relPath: string, newName: string): void;
   fileNavigatorSearch(index: number): Promise<string[]>;
   revealFileNavigatorItem(index: number, relPath: string): void;
-  fileNavigatorOpeners(index: number, relPath: string, edit: boolean): FileOpenerResolution;
+  fileNavigatorOpeners(index: number, relPath: string, edit: boolean, all?: boolean): FileOpenerResolution;
   reportFileNavigatorSelection(id: number, navigators: FileNavigatorSelectionRecord[]): void;
   undoFileNavigatorItem(index: number, overwrite?: boolean, skipConflicts?: boolean): ReturnType<typeof fileNavigatorRpc.undoFileNavigatorItem>;
   redoFileNavigatorItem(index: number, overwrite?: boolean, skipConflicts?: boolean): ReturnType<typeof fileNavigatorRpc.redoFileNavigatorItem>;
@@ -40,7 +40,7 @@ export function createFileNavigatorControllerAdapter(managers: Managers): FileNa
     renameFileNavigatorItem: (index, relPath, newName) => fileNavigatorRpc.renameFileNavigatorItem(managers, index, relPath, newName),
     fileNavigatorSearch: (index) => fileNavigatorRpc.fileNavigatorSearch(managers, index),
     revealFileNavigatorItem: (index, relPath) => fileNavigatorRpc.revealFileNavigatorItem(managers, index, relPath),
-    fileNavigatorOpeners: (index, relPath, edit) => fileNavigatorRpc.fileNavigatorOpeners(managers, index, relPath, edit),
+    fileNavigatorOpeners: (index, relPath, edit, all) => fileNavigatorRpc.fileNavigatorOpeners(managers, index, relPath, edit, all),
     reportFileNavigatorSelection: (id, navigators) => resolveTreeSelections(id, navigators),
     undoFileNavigatorItem: (index, overwrite, skipConflicts) => fileNavigatorRpc.undoFileNavigatorItem(managers, index, overwrite, skipConflicts),
     redoFileNavigatorItem: (index, overwrite, skipConflicts) => fileNavigatorRpc.redoFileNavigatorItem(managers, index, overwrite, skipConflicts),

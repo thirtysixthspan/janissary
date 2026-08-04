@@ -9,6 +9,10 @@ import type { useFileNavigatorDelete } from './useFileNavigatorDelete';
 import type { useFileNavigatorPaste } from './useFileNavigatorPaste';
 import type { useFileNavigatorSearch } from './useFileNavigatorSearch';
 import type { useFileNavigatorOpener } from './useFileNavigatorOpener';
+import type { PendingContextMenu } from './use-file-navigator-row-events';
+import { ContextMenu } from './ContextMenu';
+import { fileNavigatorMenuItems, type FileNavigatorMenuActions } from './file-navigator-menu-items';
+import { getClipboardSnapshot } from './file-navigator-clipboard';
 import { basename } from './rel-path';
 
 type Properties = {
@@ -18,6 +22,9 @@ type Properties = {
   paste: ReturnType<typeof useFileNavigatorPaste>;
   search: ReturnType<typeof useFileNavigatorSearch>;
   opener: ReturnType<typeof useFileNavigatorOpener>;
+  menu: PendingContextMenu | null;
+  menuActions: FileNavigatorMenuActions;
+  onCloseMenu: () => void;
   focusTree: () => void;
 };
 
@@ -28,6 +35,9 @@ export function FileNavigatorOverlays({
   paste,
   search,
   opener,
+  menu,
+  menuActions,
+  onCloseMenu,
   focusTree,
 }: Properties) {
   return (
@@ -76,6 +86,14 @@ export function FileNavigatorOverlays({
       )}
       {opener.pending && (
         <FileNavigatorOpenerOverlay pending={opener.pending} onPick={opener.choose} />
+      )}
+      {menu && (
+        <ContextMenu
+          groups={fileNavigatorMenuItems(menu.row, getClipboardSnapshot() !== null, menuActions)}
+          x={menu.x}
+          y={menu.y}
+          onClose={() => { onCloseMenu(); focusTree(); }}
+        />
       )}
       {search.searchOpen && (
         <FileSearchPopup

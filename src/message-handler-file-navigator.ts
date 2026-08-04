@@ -83,7 +83,7 @@ export function handleFileNavigatorMessage(controller: Controller, message: File
     case 'reportFileNavigatorSelection': { controller.reportFileNavigatorSelection(message.params.id, message.params.navigators); break;
     }
     case 'fileNavigatorOpeners': {
-      reply({ t: 'rpc-reply', id: message.id, result: controller.fileNavigatorOpeners(message.params.index, message.params.relPath, message.params.edit) });
+      reply({ t: 'rpc-reply', id: message.id, result: controller.fileNavigatorOpeners(message.params.index, message.params.relPath, message.params.edit, message.params.all) });
       return;
     }
     case 'undoFileNavigatorItem': {

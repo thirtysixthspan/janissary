@@ -8,6 +8,7 @@ import type { useFileNavigatorDelete } from './useFileNavigatorDelete';
 import type { useFileNavigatorPaste } from './useFileNavigatorPaste';
 import type { useFileNavigatorSearch } from './useFileNavigatorSearch';
 import type { useFileNavigatorOpener } from './useFileNavigatorOpener';
+import type { FileNavigatorMenuActions } from './file-navigator-menu-items';
 
 type Drag = ReturnType<typeof useFileNavigatorDrag>;
 type Rename = ReturnType<typeof useFileNavigatorRename>;
@@ -90,9 +91,23 @@ function makeOpener(overrides: Partial<Opener> = {}): Opener {
   return {
     pending: null,
     open: () => {},
+    openWith: () => {},
     choose: () => {},
     onKeyDown: () => false,
     ...overrides,
+  };
+}
+
+function makeMenuActions(): FileNavigatorMenuActions {
+  return {
+    open: () => {},
+    openWith: () => {},
+    copy: () => {},
+    paste: () => {},
+    rename: () => {},
+    remove: () => {},
+    newFile: () => {},
+    newDirectory: () => {},
   };
 }
 
@@ -106,6 +121,9 @@ describe('FileNavigatorOverlays', () => {
         paste={makePaste()}
         search={makeSearch()}
         opener={makeOpener()}
+        menu={null}
+        menuActions={makeMenuActions()}
+        onCloseMenu={() => {}}
         focusTree={() => {}}
       />,
     );
@@ -123,6 +141,9 @@ describe('FileNavigatorOverlays', () => {
         paste={makePaste()}
         search={makeSearch()}
         opener={makeOpener()}
+        menu={null}
+        menuActions={makeMenuActions()}
+        onCloseMenu={() => {}}
         focusTree={focusTree}
       />,
     );
@@ -142,6 +163,9 @@ describe('FileNavigatorOverlays', () => {
         paste={makePaste()}
         search={makeSearch()}
         opener={makeOpener()}
+        menu={null}
+        menuActions={makeMenuActions()}
+        onCloseMenu={() => {}}
         focusTree={focusTree}
       />,
     );
@@ -159,6 +183,9 @@ describe('FileNavigatorOverlays', () => {
         paste={makePaste({ pendingConflict: { sources: ['/a/b.txt'], destinationPath: 'dest', mode: 'copy', title: 'conflict!' } })}
         search={makeSearch()}
         opener={makeOpener()}
+        menu={null}
+        menuActions={makeMenuActions()}
+        onCloseMenu={() => {}}
         focusTree={() => {}}
       />,
     );
@@ -179,6 +206,9 @@ describe('FileNavigatorOverlays', () => {
         })}
         search={makeSearch()}
         opener={makeOpener()}
+        menu={null}
+        menuActions={makeMenuActions()}
+        onCloseMenu={() => {}}
         focusTree={() => {}}
       />,
     );

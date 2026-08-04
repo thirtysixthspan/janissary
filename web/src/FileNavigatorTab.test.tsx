@@ -1182,6 +1182,133 @@ describe('FileNavigatorTab', () => {
       expect(screen.queryByPlaceholderText('Find file…')).not.toBeInTheDocument();
     });
   });
+
+  describe('multi-row keyboard selection', () => {
+    it('Shift+ArrowDown extends the selection and Shift+ArrowUp shrinks it back', () => {
+      const client = { send: vi.fn() } as unknown as JanusClient;
+      const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
+      const tree = container.querySelector('[role="tree"]')!;
+      fireEvent.mouseDown(screen.getByText('src'), { button: 0 });
+      fireEvent.keyDown(tree, { key: 'ArrowDown', shiftKey: true });
+      expect(container.querySelectorAll('[aria-selected="true"]')).toHaveLength(2);
+      fireEvent.keyDown(tree, { key: 'ArrowDown', shiftKey: true });
+      expect(container.querySelectorAll('[aria-selected="true"]')).toHaveLength(3);
+      fireEvent.keyDown(tree, { key: 'ArrowUp', shiftKey: true });
+      expect(container.querySelectorAll('[aria-selected="true"]')).toHaveLength(2);
+    });
+
+    it('Shift+ArrowUp at the top row changes nothing', () => {
+      const client = { send: vi.fn() } as unknown as JanusClient;
+      const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
+      const tree = container.querySelector('[role="tree"]')!;
+      fireEvent.mouseDown(screen.getByText('src'), { button: 0 });
+      fireEvent.keyDown(tree, { key: 'ArrowUp', shiftKey: true });
+      expect(container.querySelectorAll('[aria-selected="true"]')).toHaveLength(1);
+      expect(screen.getByText('src').closest('[role="treeitem"]')!.getAttribute('aria-selected')).toBe('true');
+    });
+
+    it('Cmd+A selects the cursor row\'s siblings without the expanded subtree', () => {
+      const client = { send: vi.fn() } as unknown as JanusClient;
+      const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
+      const tree = container.querySelector('[role="tree"]')!;
+      fireEvent.mouseDown(screen.getByText('README.md'), { button: 0 });
+      fireEvent.keyDown(tree, { key: 'a', metaKey: true });
+      const selected = [...container.querySelectorAll('[aria-selected="true"]')].map((row) => row.textContent);
+      expect(selected).toEqual(['src', 'README.md']);
+    });
+
+    it('Cmd+A with no cursor selects nothing', () => {
+      const client = { send: vi.fn() } as unknown as JanusClient;
+      const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
+      const tree = container.querySelector('[role="tree"]')!;
+      fireEvent.keyDown(tree, { key: 'a', metaKey: true });
+      expect(container.querySelectorAll('[aria-selected="true"]')).toHaveLength(0);
+    });
+  });
+
+  describe('row context menu', () => {
+    afterEach(() => {
+      clearClipboard();
+    });
+
+    it('opens for the right-clicked row and leaves the selection untouched', () => {
+      const client = { send: vi.fn() } as unknown as JanusClient;
+      const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
+      fireEvent.mouseDown(screen.getByText('src'), { button: 0 });
+      fireEvent.contextMenu(screen.getByText('README.md'));
+      expect(screen.getByRole('menu')).toBeInTheDocument();
+      const selected = [...container.querySelectorAll('[aria-selected="true"]')].map((row) => row.textContent);
+      expect(selected).toEqual(['src']);
+    });
+
+    it('omits Paste until something is on the clipboard', () => {
+      const client = { send: vi.fn() } as unknown as JanusClient;
+      render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
+      fireEvent.contextMenu(screen.getByText('README.md'));
+      expect(screen.queryByText('Paste')).not.toBeInTheDocument();
+      fireEvent.keyDown(screen.getByRole('menu'), { key: 'Escape' });
+      act(() => { setClipboard('copy', ['/home/user/project/README.md']); });
+      fireEvent.contextMenu(screen.getByText('src'));
+      expect(screen.getByText('Paste')).toBeInTheDocument();
+    });
+
+    it('omits Open, Open with, and Rename on the ".." row', () => {
+      const client = { send: vi.fn() } as unknown as JanusClient;
+      const files = makeFiles({ rows: [{ path: '..', name: '..', depth: 0, dir: true }] });
+      render(<FileNavigatorTab files={files} client={client} index={0} />);
+      fireEvent.contextMenu(screen.getByText('..'));
+      expect(screen.queryByText('Open')).not.toBeInTheDocument();
+      expect(screen.queryByText('Open with')).not.toBeInTheDocument();
+      expect(screen.queryByText('Rename')).not.toBeInTheDocument();
+      expect(screen.getByText('Delete')).toBeInTheDocument();
+    });
+
+    it('choosing Delete opens the ordinary delete confirmation', () => {
+      const client = { send: vi.fn() } as unknown as JanusClient;
+      render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
+      fireEvent.contextMenu(screen.getByText('README.md'));
+      fireEvent.click(screen.getByText('Delete'));
+      expect(screen.getByText('Delete "README.md"?')).toBeInTheDocument();
+    });
+
+    it('choosing Copy arms the clipboard with the clicked row', () => {
+      const client = { send: vi.fn() } as unknown as JanusClient;
+      render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
+      fireEvent.contextMenu(screen.getByText('README.md'));
+      fireEvent.click(screen.getByText('Copy'));
+      expect(getClipboardSnapshot()).toEqual({ mode: 'copy', paths: ['/home/user/project/README.md'] });
+    });
+
+    it('choosing Open with shows the chooser for a file a registered opener claims', async () => {
+      const request = vi.fn().mockResolvedValue({
+        choices: [
+          { label: 'Open as markdown', command: 'open' },
+          { label: 'Edit as text', command: 'edit' },
+          { label: 'Open externally', command: 'open external' },
+        ],
+      });
+      const client = { send: vi.fn(), request } as unknown as JanusClient;
+      render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
+      fireEvent.contextMenu(screen.getByText('README.md'));
+      await act(async () => { fireEvent.click(screen.getByText('Open with')); });
+      expect(request).toHaveBeenCalledWith({
+        method: 'fileNavigatorOpeners',
+        params: { index: 0, relPath: 'README.md', edit: false, all: true },
+      });
+      expect(screen.getByText('Open README.md with')).toBeInTheDocument();
+      expect(screen.getByText('Open as markdown')).toBeInTheDocument();
+    });
+
+    it('returns keyboard focus to the tree when it closes', () => {
+      const client = { send: vi.fn() } as unknown as JanusClient;
+      const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
+      fireEvent.contextMenu(screen.getByText('README.md'));
+      expect(document.activeElement).toBe(screen.getByRole('menu'));
+      fireEvent.keyDown(screen.getByRole('menu'), { key: 'Escape' });
+      expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+      expect(document.activeElement).toBe(container.querySelector('[role="tree"]'));
+    });
+  });
 });
 
 // `Promise.withResolvers` (ES2024) predates this project's `lib` target; a small typed shim keeps

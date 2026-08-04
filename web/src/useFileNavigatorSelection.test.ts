@@ -30,6 +30,29 @@ describe('file navigator selection transitions', () => {
     expect([...rangeSelection(replaceSelection('a'), rows(['..', 'a', 'b']), '..').selected]).toEqual(['..']);
   });
 
+  it('extend grows a range from the anchor and shrinks it when the direction reverses', () => {
+    const visible = rows(['a', 'b', 'c', 'd']);
+    const { result } = renderHook(() => useFileNavigatorSelection(visible, '/root'));
+    act(() => { result.current.replace('a'); });
+    act(() => { result.current.extend('b'); });
+    expect([...result.current.selected]).toEqual(['a', 'b']);
+    act(() => { result.current.extend('c'); });
+    expect([...result.current.selected]).toEqual(['a', 'b', 'c']);
+    act(() => { result.current.extend('b'); });
+    expect([...result.current.selected]).toEqual(['a', 'b']);
+    expect(result.current.anchor).toBe('a');
+    expect(result.current.cursor).toBe('b');
+  });
+
+  it('extend anchors on the top row from an empty selection and omits ".."', () => {
+    const visible = rows(['..', 'a', 'b']);
+    const { result } = renderHook(() => useFileNavigatorSelection(visible, '/root'));
+    act(() => { result.current.extend('a'); });
+    expect([...result.current.selected]).toEqual(['a']);
+    act(() => { result.current.extend('b'); });
+    expect([...result.current.selected]).toEqual(['a', 'b']);
+  });
+
   it('normalizes in visible order, removing duplicates and selected descendants', () => {
     const visible = rows(['..', 'dir', 'dir/a.txt', 'z.txt']);
     expect(normalizeOperationPaths(visible, new Set(['z.txt', 'dir/a.txt', 'dir', '..']))).toEqual(['dir', 'z.txt']);

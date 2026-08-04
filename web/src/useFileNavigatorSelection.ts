@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { FileNavigatorRow } from '@shared/protocol';
 import { clearNavigatorSelection, publishNavigatorSelection } from './file-navigator-selection-registry';
+import { siblingSelection } from './file-navigator-siblings';
 import { dirname } from './rel-path';
 
 export type FileNavigatorSelection = {
@@ -169,6 +170,20 @@ export function useFileNavigatorSelection(
   }, [index]);
 
   const replace = useCallback((path: string | null) => setState(replaceSelection(path)), []);
+  // Shift+Arrow's counterpart to a Shift-click: the range math stays in `rangeSelection`, and an
+  // empty selection anchors on the top row so the first shifted arrow behaves like a plain one.
+  const extend = useCallback((path: string) => {
+    setState((current) => rangeSelection(
+      current.anchor === null && current.cursor === null
+        ? { ...current, cursor: rows[0]?.path ?? null }
+        : current,
+      rows,
+      path,
+    ));
+  }, [rows]);
+  const selectSiblings = useCallback(() => {
+    setState((current) => siblingSelection(current, rows));
+  }, [rows]);
   const pointer = useCallback((
     path: string,
     shiftKey: boolean,
@@ -185,6 +200,8 @@ export function useFileNavigatorSelection(
   return {
     ...state,
     replace,
+    extend,
+    selectSiblings,
     pointer,
     rename,
     operationPaths: normalizeOperationPaths(rows, state.selected),

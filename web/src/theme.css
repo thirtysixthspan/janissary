@@ -506,6 +506,17 @@ html, body, #root {
 .picker-row.selected:hover { background: var(--accent); color: var(--bg); }
 .picker-chevron { flex: none; width: 1em; color: var(--muted); font-size: 10px; }
 
+/* Right-click context menu — the picker's visual language, but placed at the pointer instead of
+   pinned across the bottom of the pane. Its left/top come from the component's own placement. */
+.context-menu {
+  position: fixed; right: auto; bottom: auto;
+  min-width: 180px; max-height: none;
+  border: 1px solid var(--border); border-radius: 4px;
+  box-shadow: 0 6px 24px rgb(0 0 0 / 40%);
+  outline: none; z-index: 60;
+}
+.context-menu-separator { height: 1px; margin: 4px 0; background: var(--border); }
+
 /* Tab navigator overlay (Ctrl+G / nav) */
 .tab-nav-picker .picker-row .dot { font-size: 10px; margin-right: 4px; }
 .tab-nav-picker .picker-row mark { background: var(--accent); color: var(--bg); border-radius: 2px; }

@@ -25,4 +25,32 @@ describe('openersForRow', () => {
       { label: 'Open externally', command: 'open external' },
     ]);
   });
+
+  it('forces a claimed row into a three-choice chooser led by its own opener', () => {
+    const result = openersForRow('/root', 'docs/readme.md', false, true);
+    expect(result.command).toBeUndefined();
+    expect(result.choices).toEqual([
+      { label: 'Open as markdown', command: 'open' },
+      { label: 'Edit as text', command: 'edit' },
+      { label: 'Open externally', command: 'open external' },
+    ]);
+  });
+
+  it('gives an inverted edit gesture the same uniform forced chooser', () => {
+    const result = openersForRow('/root', 'media/clip.mp4', true, true);
+    expect(result.command).toBeUndefined();
+    expect(result.choices[0]).toEqual({ label: 'Open as video', command: 'open' });
+    expect(result.choices).toHaveLength(3);
+  });
+
+  it('leaves an unclaimed row unchanged when the chooser is forced', () => {
+    expect(openersForRow('/root', 'archive.tar.gz', false, true))
+      .toEqual(openersForRow('/root', 'archive.tar.gz', false));
+  });
+
+  it('leaves every resolution unchanged with the flag clear', () => {
+    expect(openersForRow('/root', 'docs/readme.md', false, false)).toEqual({ command: 'open', choices: [] });
+    expect(openersForRow('/root', 'docs/readme.md', true, false)).toEqual({ command: 'edit', choices: [] });
+    expect(openersForRow('/root', 'media/clip.mp4', true, false)).toEqual({ command: 'open external', choices: [] });
+  });
 });

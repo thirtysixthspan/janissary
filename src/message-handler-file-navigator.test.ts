@@ -59,7 +59,7 @@ describe('handleFileNavigatorMessage', () => {
       method: 'fileNavigatorOpeners',
       params: { index: 0, relPath: 'src/a.ts', edit: true },
     });
-    expect(controller.fileNavigatorOpeners).toHaveBeenCalledWith(0, 'src/a.ts', true);
+    expect(controller.fileNavigatorOpeners).toHaveBeenCalledWith(0, 'src/a.ts', true, undefined);
     expect(replies).toEqual([{ t: 'rpc-reply', id: 2, result: { command: 'edit', choices: [] } }]);
   });
 });
