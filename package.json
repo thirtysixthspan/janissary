@@ -80,6 +80,14 @@
     "keyv": "4.5.4",
     "flat-cache": "4.0.1",
     "file-entry-cache": "8.0.0",
+    "@keyv/serialize": "1.1.1",
+    "@keyv/bigmap": "1.3.1",
+    "hashery": "1.5.1",
+    "hookified": "1.15.1",
+    "qified": {
+      ".": "0.10.1",
+      "hookified": "2.2.0"
+    },
     "stylelint": {
       "file-entry-cache": "11.1.5",
       "flat-cache": "6.1.23",
