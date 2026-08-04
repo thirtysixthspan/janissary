@@ -8,6 +8,8 @@
 
 * The shell transcript (`product/specs/shell.md`, `product/specs/transcript.md`) is line-oriented and can rerun a prompt by double-click, but it does not expose command-level duration, exit status, or a selectable command-plus-output block; iTerm2's shell integration supplies command selection and an info panel with duration, status, resend, copy, share, and named marks. Closing this gap would track command boundaries and completion metadata, then add block selection with copy/rerun/bookmark actions and a compact command-info view. Complexity: medium.
 
+* bring in or duplicate https://github.com/unlayer/react-image-editor for the image tab.
+
 ## development
 
 * add an audio player tab implemented as a new plugin. opening an audio file will trigger the audio player tab to open, and begin playing the audio. clicking on another audio file will cause the already open player to begin playing the new audio song. selecting multiple files in the file navigator and opening them will trigger the audio player to queue up all the songs in a playlist. The playlist should be shown in the audio tab. items should be able to be added or removed from the playlist. there should be an easy way to advance forward and backward through the playlist as well as fast forward and backward in the song. there should be buttons and key bindings. 
