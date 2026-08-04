@@ -36,6 +36,34 @@ describe('handleFileNavigatorKey — selection movement', () => {
     expect(handleFileNavigatorKey(rows, 'src', 'ArrowUp', false, 10).selection).toBe('src');
   });
 
+  it('Shift+ArrowDown extends the range onto the next row', () => {
+    const result = handleFileNavigatorKey(rows, 'src', 'ArrowDown', true, 10);
+    expect(result).toEqual({ selection: 'src/nested', apply: 'extend' });
+  });
+
+  it('Shift+ArrowUp extends the range onto the previous row', () => {
+    const result = handleFileNavigatorKey(rows, 'src/index.ts', 'ArrowUp', true, 10);
+    expect(result).toEqual({ selection: 'src/nested', apply: 'extend' });
+  });
+
+  it('Shift+ArrowDown from no cursor extends onto the second row', () => {
+    expect(handleFileNavigatorKey(rows, null, 'ArrowDown', true, 10))
+      .toEqual({ selection: 'src/nested', apply: 'extend' });
+  });
+
+  it('Shift+ArrowUp at the first row leaves the selection alone', () => {
+    expect(handleFileNavigatorKey(rows, 'src', 'ArrowUp', true, 10).apply).toBe('keep');
+  });
+
+  it('Shift+ArrowDown at the last row leaves the selection alone', () => {
+    expect(handleFileNavigatorKey(rows, 'README.md', 'ArrowDown', true, 10).apply).toBe('keep');
+  });
+
+  it('unshifted arrows still collapse the selection onto the new cursor', () => {
+    expect(handleFileNavigatorKey(rows, 'src', 'ArrowDown', false, 10).apply).toBeUndefined();
+    expect(handleFileNavigatorKey(rows, 'src', 'ArrowUp', false, 10).apply).toBeUndefined();
+  });
+
   it('Home selects the first row', () => {
     expect(handleFileNavigatorKey(rows, 'README.md', 'Home', false, 10).selection).toBe('src');
   });

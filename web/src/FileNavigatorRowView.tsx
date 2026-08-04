@@ -20,11 +20,12 @@ type Properties = {
   onClick: () => void;
   onDoubleClick: (shiftKey: boolean) => void;
   onMouseDown: (e: React.MouseEvent) => void;
+  onContextMenu: (e: React.MouseEvent) => void;
 };
 
 // One row of the file navigator — kept out of `FileNavigatorTab.tsx` to stay under the file-size limit.
 export function FileNavigatorRowView({
-  row, details, id, selected, cursor, rowClass, editing, draft, onDraftChange, onCommit, onCancel, onClick, onDoubleClick, onMouseDown,
+  row, details, id, selected, cursor, rowClass, editing, draft, onDraftChange, onCommit, onCancel, onClick, onDoubleClick, onMouseDown, onContextMenu,
 }: Properties) {
   const detail = rowDetail(row, details);
   return (
@@ -40,6 +41,7 @@ export function FileNavigatorRowView({
       onClick={onClick}
       onDoubleClick={(e) => onDoubleClick(e.shiftKey)}
       onMouseDown={onMouseDown}
+      onContextMenu={onContextMenu}
     >
       {row.dir && row.expanded !== undefined && <span className="files-chevron"><FontAwesomeIcon icon={row.expanded ? expandedIcon : collapsedIcon} /></span>}
       {editing ? (

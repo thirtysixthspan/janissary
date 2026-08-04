@@ -190,8 +190,8 @@ export class FileNavigatorManager {
     revealPath(this.navPort(), label, relPath);
   }
 
-  openers(label: string, relPath: string, edit: boolean): FileOpenerResolution {
-    return this.withState(label, { choices: [] }, (state) => openersForRow(state.root, relPath, edit));
+  openers(label: string, relPath: string, edit: boolean, all?: boolean): FileOpenerResolution {
+    return this.withState(label, { choices: [] }, (state) => openersForRow(state.root, relPath, edit, all));
   }
 
   // This tab's expanded directories and detail mode, both for `profile save`.

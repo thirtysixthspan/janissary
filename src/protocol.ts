@@ -39,11 +39,14 @@ export type ScheduleView = { id: string; spec: string; next: string; recurring: 
 export type AggregatedScheduleView = ScheduleView & { tab: string; command: string };
 // A pending route chooser: the unprefixed command plus the option labels to pick from.
 export type RouteChooserView = { cmd: string; choices: string[] };
-export type FileOpenerChoice = { label: string; command: 'edit' | 'open external' };
+export type FileOpenerChoice = { label: string; command: 'open' | 'edit' | 'open external' };
 // How activating one file navigator row resolves (see the `fileNavigatorOpeners` RPC): either a
 // single command the client runs straight away, or the fallback options it renders as a chooser.
 // A declaration may replace the normal edit gesture with `open external`; video uses it because a
 // plain-text editor is useless for a binary container.
+// A third case is the forced chooser the RPC's `all` flag asks for ("Open with" in the row's
+// context menu): the single-command shortcut is suppressed even for a claimed extension, and the
+// registered opener's own action is offered as a choice alongside the two fallbacks.
 export type FileOpenerResolution = { command?: 'open' | 'edit' | 'open external'; choices: FileOpenerChoice[] };
 export type BulkConflictPolicy = 'overwrite-all' | 'skip-conflicts';
 export type BatchResult = { total: number; failedPaths: string[] };
@@ -289,7 +292,9 @@ export type RpcCall =
   // watching, rebuilding); the client separately selects and scrolls to it once the resulting
   // rows arrive. The search pop-up's Enter action.
   | { method: 'revealFileNavigatorItem'; params: { index: number; relPath: string } }
-  | { method: 'fileNavigatorOpeners'; params: { index: number; relPath: string; edit: boolean } }
+  // `all` suppresses the single-command shortcut so the reply always carries the full choice list,
+  // which is what the row context menu's "Open with" entry needs to force the chooser open.
+  | { method: 'fileNavigatorOpeners'; params: { index: number; relPath: string; edit: boolean; all?: boolean } }
   // Answer to a `collect-tree-state` event: every mounted file navigator's cursor/anchor/selection,
   // tagged with the request `id` so a late reply to an earlier `profile save` is discarded.
   // Fire-and-forget — the server sends no reply of its own.

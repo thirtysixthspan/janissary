@@ -144,7 +144,7 @@ export function revealFileNavigatorItem(managers: Managers, index: number, relPa
   if (label) managers.fileNavigator.reveal(label, relPath);
 }
 
-export function fileNavigatorOpeners(managers: Managers, index: number, relPath: string, edit: boolean): FileOpenerResolution {
+export function fileNavigatorOpeners(managers: Managers, index: number, relPath: string, edit: boolean, all?: boolean): FileOpenerResolution {
   const label = managers.tab.tabs[index]?.label;
-  return label ? managers.fileNavigator.openers(label, relPath, edit) : { choices: [] };
+  return label ? managers.fileNavigator.openers(label, relPath, edit, all) : { choices: [] };
 }

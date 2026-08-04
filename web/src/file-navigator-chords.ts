@@ -8,6 +8,7 @@ export type ChordHandlers = {
   copySelection: () => void;
   cutSelection: () => void;
   paste: () => void;
+  selectSiblings: () => void;
 };
 
 // The file navigator's own Ctrl/Cmd chords — undo/redo, new file, and rename — dispatched here so
@@ -28,5 +29,7 @@ export function handleTreeChord(
   if (lower === 'c') { handlers.copySelection(); return true; }
   if (lower === 'x') { handlers.cutSelection(); return true; }
   if (lower === 'v') { handlers.paste(); return true; }
+  // Claimed from the window's task-picker binding while the tree has focus.
+  if (lower === 'a') { handlers.selectSiblings(); return true; }
   return false;
 }

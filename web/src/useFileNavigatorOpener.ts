@@ -21,6 +21,21 @@ export function useFileNavigatorOpener(client: JanusClient, index: number, root:
     });
   };
 
+  // The row context menu's "Open with": always show the chooser, even for a file whose extension a
+  // registered opener claims and would normally open straight away. A client with no request
+  // support has no chooser to show, so it falls back to the plain open command the way `open` does.
+  const openWith = (path: string) => {
+    if (typeof client.request !== 'function') {
+      client.send({ method: 'command', params: { text: `open ${root}/${path}` } });
+      return;
+    }
+    void client.request<FileOpenerResolution>({
+      method: 'fileNavigatorOpeners', params: { index, relPath: path, edit: false, all: true },
+    }).then((result) => {
+      if (result?.choices.length) setPending({ path, choices: result.choices, selected: 0 });
+    });
+  };
+
   const choose = (choiceIndex: number) => {
     if (!pending) return;
     const choice = pending.choices[choiceIndex];
@@ -40,5 +55,5 @@ export function useFileNavigatorOpener(client: JanusClient, index: number, root:
     return true;
   };
 
-  return { pending, open, choose, onKeyDown };
+  return { pending, open, openWith, choose, onKeyDown };
 }

@@ -160,7 +160,7 @@ stops refreshing automatically and can be refreshed manually by collapsing and r
 | Click a row | Replace the selection with that row, make it the keyboard cursor and range anchor, and give the tree keyboard focus |
 | Shift-click a row | Replace the selection with the visible range from the anchor to that row; `..` is omitted from ranges |
 | Cmd-click / Ctrl-click a row | Add or remove that row, then make it the keyboard cursor and range anchor |
-| Double-click a file row | Select it and open it (with `open`) — for Markdown files, this opens the plain-text editor instead (with `edit`) |
+| Double-click a file row | Select it and open it (with `open`) — for Markdown files, this opens the plain-text editor instead (with `edit`); the context menu's **Open with** offers the other routes |
 | Double-click a directory row | Select it and toggle expand/collapse |
 | Double-click the `..` row | Navigate the tree up one directory |
 | Shift+double-click a file row | Select it and open it in the plain-text editor (with `edit`), even for files whose normal opener is a viewer (images) — for Markdown files, this instead opens the rendered preview (with `open`), and for video files it hands the file to the configured external player (with `open external`), since a binary video has nothing to edit as text |
@@ -168,6 +168,7 @@ stops refreshing automatically and can be refreshed manually by collapsing and r
 | Double-clicking any row | Does not select the row's text |
 | Header collapse-all button | Collapse every expanded directory back to just the root |
 | Scroll wheel / trackpad | Scrolls the row list |
+| Right-click a row | Open that row's context menu at the pointer, leaving the selection exactly as it was |
 | Click-drag a row and release it over a directory row, or any file inside that directory | Moves the dragged file or directory into that directory on disk |
 
 Opening or editing a file from the tree uses the same `open`/`edit` commands available at any
@@ -177,6 +178,36 @@ tab.
 
 If a file has no registered opener, double-clicking it presents a chooser with **Edit as text** and
 **Open externally**. Selecting an option runs that action for the file; Escape closes the chooser.
+
+**Open with** in a row's context menu forces that chooser open even for a file type that does have
+a registered opener and would otherwise open straight away. For such a file the chooser lists three
+options: the registered opener's own action first (**Open as markdown**, **Open as image**, and so
+on, named after the opener), then **Edit as text** and **Open externally**. For a file no opener
+claims, **Open with** shows the same two options double-clicking already offers.
+
+### Row context menu
+
+Right-clicking a row opens a menu at the pointer instead of the browser's own. The menu belongs to
+the row that was clicked and its entries act on that row alone, whether or not it is part of the
+current selection — right-clicking never changes what is selected, so an existing multi-row
+highlight stays visible underneath the menu.
+
+The menu holds up to eight entries in four groups, separated in this order: **Open** and **Open
+with**; **Copy** and **Paste**; **Rename** and **Delete**; **New file** and **New folder**. Open
+does what double-clicking the row does. Copy, Paste, Rename, Delete, New file, and New folder run
+the same flows their keyboard chords and header buttons do, including every confirmation and
+name-conflict dialog.
+
+Entries that do not apply are left out rather than shown greyed, so the menu's height varies with
+context: **Paste** is absent when nothing has been copied or cut, and **Open**, **Open with**, and
+**Rename** are absent on the `..` row.
+
+The menu is keyboard-navigable — `↑` and `↓` move the highlight and `Enter` activates the
+highlighted entry. Escape, clicking outside it, or choosing an entry closes it, and closing returns
+keyboard focus to the tree so the arrow keys move the cursor again immediately.
+
+If the menu would run past the right or bottom edge of the window, it shifts back inside rather
+than being clipped.
 
 ### Moving files by drag-and-drop
 
@@ -353,7 +384,8 @@ re-applies it. Undoing a copy-paste deletes exactly the items that paste created
 confirmation; undoing a cut-paste moves them back to where they came from, even when that source
 lay in a different navigator's tree entirely. Redo re-applies either.
 
-Copying, cutting, and pasting have no route through the mouse or a menu — keyboard only.
+Copy and Paste also appear in a row's context menu. Cut has no menu or mouse route — `Cmd+X` /
+`Ctrl+X` remains the only way to cut, since drag-and-drop already moves files with the mouse.
 
 ### Keyboard interactions
 
@@ -363,6 +395,7 @@ A focused file navigator tab captures its own keys, following the ARIA treeview 
 | Key | Behavior |
 |---|---|
 | `↑` / `↓` | Move the keyboard cursor to the previous / next visible row and collapse selection to it |
+| `Shift+↑` / `Shift+↓` | Move the cursor one visible row and select every row between the anchor and it; at the first / last row, nothing changes |
 | `→` | Collapsed directory: expand. Expanded directory: reroot. File: open. `..`: no-op |
 | `←` | Expanded directory: collapse. Otherwise: move selection to the parent directory |
 | `Enter` / `Space` | File: open. Directory: toggle expand/collapse. `..`: navigate to parent directory |
@@ -379,16 +412,30 @@ A focused file navigator tab captures its own keys, following the ARIA treeview 
 | `Cmd+C` / `Ctrl+C` | Copy the normalized selection onto the clipboard |
 | `Cmd+X` / `Ctrl+X` | Cut the normalized selection onto the clipboard |
 | `Cmd+V` / `Ctrl+V` | Paste the clipboard into the directory the cursor implies |
+| `Cmd+A` / `Ctrl+A` | Select every visible row sharing the cursor row's parent directory |
 
 Chords carrying Ctrl or Cmd (tab switching, tab reordering, closing the tab, etc.) are not
 captured by the tree and reach the normal window-level bindings instead, except for the
-undo/redo chords, `Cmd+N`/`Ctrl+N`, `Cmd+R`/`Ctrl+R`, and `Cmd+C`/`Cmd+X`/`Cmd+V`
+undo/redo chords, `Cmd+N`/`Ctrl+N`, `Cmd+R`/`Ctrl+R`, `Cmd+A`/`Ctrl+A`, and `Cmd+C`/`Cmd+X`/`Cmd+V`
 (`Ctrl+C`/`Ctrl+X`/`Ctrl+V`) above, which the tree captures for itself — the same way an editor tab
 captures its own `Cmd+Z`/`Cmd+Shift+Z` for text undo/redo.
 
 Keyboard navigation, type-ahead, search reveal, and new-directory auto-selection collapse the
-selection to their resulting cursor. Shift+Arrow range extension and Cmd/Ctrl+A are not supported.
-Open, expand/collapse, reroot, New file, New directory, and rename act only on the cursor.
+selection to their resulting cursor. Open, expand/collapse, reroot, New file, New directory, and
+rename act only on the cursor.
+
+`Shift+↑` and `Shift+↓` are the keyboard's route to a multi-row selection, building exactly the
+range a Shift-click builds: the cursor moves one visible row and the selection becomes every row
+between the fixed anchor and the new cursor, so reversing direction shrinks the range instead of
+growing it, and `..` is omitted. From a cleared tree the anchor falls on the top row, so `Shift+↓`
+selects the first two rows. At the first row `Shift+↑` does nothing and at the last row `Shift+↓`
+does nothing — neither wraps, and neither clears what is already selected. `Shift` combined with
+`Home`, `End`, `Page Up`, or `Page Down` still collapses the selection to the cursor.
+
+`Cmd+A` / `Ctrl+A` selects the cursor row's siblings: every visible row sharing its parent
+directory, leaving the cursor and anchor where they are. A sibling directory that happens to be
+expanded contributes only its own row, not its contents. With no cursor, or with the cursor on the
+`..` row, the chord selects nothing and clears nothing.
 
 Escape clears cursor, anchor, and every selected row at once, the same empty state the tab starts
 in — a cleared tree resumes navigating from the top row, exactly as one that has never been
