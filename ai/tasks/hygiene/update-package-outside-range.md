@@ -273,7 +273,7 @@ The behavior contract from Step 3 and how each statement was confirmed, the test
 
 A concise summary of every file touched, grouped by area, with a one-line description of what changed in each.
 
-*(When [`resolve-technical-debt.md`](../resolve-technical-debt.md) triggers this task, it owns shipping the change — skip this step, and hand it the Step 8 security findings and the Step 2/Step 8 summary of what changed in the package so they reach the pull request it opens.)*
+*(When [`resolve-technical-debt.md`](../resolve-technical-debt.md) triggers this task, this step still runs and still opens a PR rather than merging — that task's Step 8 defers to the shipping choice made here. It runs it late, though: it stops at this step, finishes its own spec check and backlog edits first so they are in the working tree, and then comes back and runs it. The backlog edits and any deferrals ride in the same pull request, and its report carries the security findings from Step 8 forward.)*
 
 ---
 

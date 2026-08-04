@@ -1,8 +1,8 @@
 # Resolve Technical Debt (first resolvable backlog item, if simple enough)
 
-Your job: walk `./product/backlog/technical-debt.md` from the top, rating each item's complexity in order, and **resolve the first one that does not exceed a complexity threshold of 7**: develop a plan, implement the fix, update functional specs, update `help.md` and public documentation where the fix changes behavior they already document, record the plan in `./product/plans/complete/`, remove the item from the technical-debt file, and merge the change to master.
+Your job: walk `./product/backlog/technical-debt.md` from the top, rating each item's complexity in order, and **resolve the first one that does not exceed a complexity threshold of 7**: develop a plan, implement the fix, update functional specs, update `help.md` and public documentation where the fix changes behavior they already document, record the plan in `./product/plans/complete/`, remove the item from the technical-debt file, and ship the change — merging it to master, or leaving it in an open pull request when the hygiene playbook that resolved it says so (Step 8).
 
-A few items are not resolved by a plan you write at all — they **name** one of the hygiene task playbooks in `ai/tasks/hygiene/` and the target to run it against. For those, and only for those, you **trigger the named hygiene task against the backlog item** instead of planning the fix yourself; see Step 2A. An item that merely sounds like hygiene work but names no playbook is planned and fixed here, like any other. Any item you rate **above** the threshold while walking the list — including the eventual pick's rejected predecessors — gets moved into the file's `## deferred` section with a note of its rated complexity, instead of being resolved; you never implement an over-threshold item, you only defer it and move on to the next one. All deferrals and the eventual fix (if any) merge to master together in one change. You change source code, tests, spec files, `help.md`, `documentation/user-documentation/`, the technical-debt file, and the plan file's location — nothing else.
+A few items are not resolved by a plan you write at all — they **name** one of the hygiene task playbooks in `ai/tasks/hygiene/` and the target to run it against. For those, and only for those, you **trigger the named hygiene task against the backlog item** instead of planning the fix yourself; see Step 2A. An item that merely sounds like hygiene work but names no playbook is planned and fixed here, like any other. Any item you rate **above** the threshold while walking the list — including the eventual pick's rejected predecessors — gets moved into the file's `## deferred` section with a note of its rated complexity, instead of being resolved; you never implement an over-threshold item, you only defer it and move on to the next one. All deferrals and the eventual fix (if any) ship together in one change. You change source code, tests, spec files, `help.md`, `documentation/user-documentation/`, the technical-debt file, and the plan file's location — nothing else.
 
 **Project `./product/` directory.** Every `./product/...` path in this task refers to the product directory in the current working directory — the project being worked on — never to the Janissary codebase's own `product/` directory, even when this task file was launched from an absolute path inside the Janissary installation.
 
@@ -18,7 +18,7 @@ This overrides CLAUDE.md's "Capturing command output" guidance (write the output
 
 ### Allowed — do it automatically, never ask
 
-Read any file in the repo. Edit source, tests, CSS, and spec files as the fix requires. Update `help.md` and files under `documentation/user-documentation/` when the fix changes behavior they already document. Write a plan file to `./product/plans/complete/`. Execute a hygiene playbook under `ai/tasks/hygiene/` when — and only when — the item names it (Step 2A). Remove the resolved item from `./product/backlog/technical-debt.md`, and move any over-threshold item(s) encountered along the way into its `## deferred` section with a complexity note. Run `./scripts/run.mjs check-diff` after each change. Execute the full merge workflow via `ai/tasks/workspace/merge-change-to-master.md` once, at the end, covering every deferral plus the fix (if any).
+Read any file in the repo. Edit source, tests, CSS, and spec files as the fix requires. Update `help.md` and files under `documentation/user-documentation/` when the fix changes behavior they already document. Write a plan file to `./product/plans/complete/`. Execute a hygiene playbook under `ai/tasks/hygiene/` when — and only when — the item names it (Step 2A). Remove the resolved item from `./product/backlog/technical-debt.md`, and move any over-threshold item(s) encountered along the way into its `## deferred` section with a complexity note. Run `./scripts/run.mjs check-diff` after each change. Ship the work once, at the end, covering every deferral plus the fix (if any) — through `ai/tasks/workspace/merge-change-to-master.md`, or through the triggered playbook's own shipping step when one resolved the item (Step 8).
 
 ### Forbidden — no exceptions
 
@@ -27,7 +27,7 @@ Read any file in the repo. Edit source, tests, CSS, and spec files as the fix re
 3. **Skipping tests.** Every fix needs tests that cover the changed behavior. Verify with `./scripts/run.mjs check-diff`.
 4. **Resolving an item whose complexity exceeds the threshold.** If an item rates above 7/10, do not attempt to implement it — defer it and move to the next item instead (Step 1).
 5. **Editing `./product/backlog/technical-debt.md` beyond the entries in play.** Only remove the line for the item you resolved, and move the line(s) for the item(s) you deferred into `## deferred` with a note (its complexity rating, or the playbook that blocked it per Step 2A) — do not reorder, rephrase, or otherwise modify any other entry.
-6. **Merging before all checks pass.** The `ai/tasks/workspace/merge-change-to-master.md` workflow handles merge; do not bypass it.
+6. **Shipping before all checks pass, or shipping it yourself.** Step 8 names the one workflow that ships the change — `ai/tasks/workspace/merge-change-to-master.md`, or the triggered playbook's own shipping step. Do not bypass it, and do not merge a pull request a playbook deliberately left open for review.
 7. **Hand-resolving an item that names a hygiene playbook.** If the item names one, run it against the target the item gives — do not write your own plan for the same work, and do not reimplement what the playbook already automates.
 8. **Triggering a hygiene playbook an item does not name.** Inferring one from an item's description is forbidden, however closely the description matches what a playbook does. Plan those items yourself (Step 2A).
 
@@ -50,7 +50,7 @@ Execute `ai/tasks/workspace/prepare-workspace.md` in full before doing anything 
       ```
       Then move on to the **next** item in the list and repeat from 2.1.
    3. **If the rating is 7 or lower**: stop walking. This is your pick — state it and its rating, then route it: check whether the item **names** a hygiene playbook, per Step 2A's single test. If it does, say which and go to **Step 2A**. If it does not — which is the common case — go to **Step 2** and plan the fix yourself.
-3. If you reach the end of the list without finding an item rated 7 or lower, every item you passed over is now deferred with its complexity note. Skip Step 2 through Step 7 and go straight to **Step 8** to merge the backlog changes, then report per the all-deferred shape in Step 9.
+3. If you reach the end of the list without finding an item rated 7 or lower, every item you passed over is now deferred with its complexity note. Skip Step 2 through Step 7 and go straight to **Step 8**, which merges the backlog changes (no playbook ran, so there is no other shipping step to honor), then report per the all-deferred shape in Step 9.
 
 Keep a running list of every item you deferred along the way (text + rating) — you need it for the Step 9 report regardless of which path you end up on.
 
@@ -78,9 +78,10 @@ An entry from `find-complex-code.md` may flag its target as risk-sensitive (`src
 
 1. State which playbook you are triggering and what target the backlog item names (the prefix, file, function, module, or package and version).
 2. Execute `ai/tasks/hygiene/<task>.md` in full, **against the target the backlog item names** — the item, not the playbook, chooses the target. Every hygiene playbook documents this handoff under its own "The work item" section and accepts a target the same way a user-named one arrives; it skips its candidate-selection step and applies every other step as written.
-3. **Three parts of the playbook do not run here**, because this task already owns them: its workspace-preparation step (done in Step 0), any merge or pull-request step it ends with (done in Step 8), and its own final report (folded into Step 9's report instead). Everything between them — its verification gates, its undo rules, its file-by-file recipe — you follow exactly as written.
-4. If the playbook's own blocked-work rules rule the target out (a name collision, a change that would need a logic edit, a config file hard-coding a path, and so on), do **not** substitute a different target of your own and do not fall back to hand-resolving the item. Move the item into the `## deferred` section of `./product/backlog/technical-debt.md` with a one-sentence note naming the playbook and why it blocked, then return to Step 1 and continue walking from the next item.
-5. Run `./scripts/run.mjs check-diff` and confirm it is clean before leaving this step.
+3. **Two parts of the playbook do not run here**, because this task already owns them: its workspace-preparation step (done in Step 0) and its own final report (folded into Step 9's report instead). Everything else — its verification gates, its undo rules, its file-by-file recipe — you follow exactly as written.
+4. **Its shipping step is the playbook's call, and you run it — later.** Whether that work merges to master or waits in an open pull request is a decision each playbook makes for itself, and it is not this task's to override: a playbook that ends by opening a PR for review has a reason for wanting a human's eyes on that class of change. Do not run that step yet, though — stop at it, carry on through Step 5 to Step 7 so the spec check and the backlog edits are already in the working tree, and then run it at **Step 8**, which is where a hygiene-triggered run finishes. That ordering matters: the shipping step commits the whole working tree, so a backlog edit made after it would be stranded, uncommitted, outside the change.
+5. If the playbook's own blocked-work rules rule the target out (a name collision, a change that would need a logic edit, a config file hard-coding a path, and so on), do **not** substitute a different target of your own and do not fall back to hand-resolving the item. Move the item into the `## deferred` section of `./product/backlog/technical-debt.md` with a one-sentence note naming the playbook and why it blocked, then return to Step 1 and continue walking from the next item.
+6. Run `./scripts/run.mjs check-diff` and confirm it is clean before leaving this step.
 
 A hygiene-triggered run produces **no plan file** — the playbook is the plan. Skip Step 2, Step 3, Step 4, and the plan-promotion half of Step 7; continue at **Step 5**.
 
@@ -155,9 +156,17 @@ The fix only needs a documentation update if it changes behavior that `help.md` 
 
 ---
 
-## Step 8 — Merge the change to master
+## Step 8 — Ship the change
 
-Execute `ai/tasks/workspace/merge-change-to-master.md` in full. That document owns the merge workflow — follow its steps without deviation.
+How the change ships depends on who resolved the item.
+
+**You planned and fixed it yourself (Step 2), or every item was deferred (Step 1.3).** Execute `ai/tasks/workspace/merge-change-to-master.md` in full. That document owns the merge workflow — follow its steps without deviation.
+
+**A hygiene playbook resolved it (Step 2A).** Run the shipping step you stopped at in Step 2A — the playbook's own final merge or pull-request step — exactly as that playbook writes it, and let its choice stand. Some merge to master; others open a pull request and leave the merge to a human, which is a deliberate decision about that class of change. Do not second-guess it, do not merge a pull request a playbook chose to leave open, and do **not** also run `ai/tasks/workspace/merge-change-to-master.md` — one shipping step per run, never two.
+
+Several hygiene playbooks end without a shipping step at all, because they expect their caller to ship. When the playbook you ran has none, execute `ai/tasks/workspace/merge-change-to-master.md` in full, exactly as the own-plan path above does. Read the playbook to find out which kind it is rather than assuming — "no shipping step" means you looked and there was none, not that you did not check.
+
+Either way, the deferrals from Step 1, the fix, the spec and documentation updates, and the backlog edits all ride in that single change. Whatever the playbook hands back — a merged commit or an open PR with its URL — is what Step 9 reports.
 
 ---
 
@@ -176,8 +185,10 @@ Tests:          <count> new tests across <files>
 Spec:           <spec file(s) created or updated, with one-line description of change>
 Docs:           <help.md/user-documentation file(s) updated, or "none needed">
 PR:             <url> (#<number>)
-Status:         merged
+Status:         merged, or "open — awaiting review" when the playbook that shipped it opens a PR instead of merging
 ```
+
+When the run ends in an open pull request, say so in the `Status:` line and nowhere else — do not describe the work as done, finished, or landed anywhere in the report. It is waiting on a reviewer, and a hygiene playbook that leaves it open usually has security or behavior findings in the PR body that a human still has to weigh. Surface those findings here too, in a line or two under the report, rather than leaving them to be discovered in the PR.
 
 If Step 1 reached the end of the list without finding a resolvable item, report instead:
 
