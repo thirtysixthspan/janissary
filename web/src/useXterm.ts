@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import type { JanusClient } from './ws';
+import { altArrowSequence, isMacPlatform, shiftEnterSequence } from './terminal-keys';
 
 type UseXtermOptions = {
   ptyId: string;
@@ -42,15 +43,22 @@ export function useXterm({ ptyId, client, containerRef, keyFilter, onMount }: Us
 
     const detach = client.attachPty(ptyId, (data) => term.write(data));
     const onInput = term.onData((data) => client.send({ method: 'ptyInput', params: { id: ptyId, data } }));
+    const sendKey = (data: string) => client.send({ method: 'ptyInput', params: { id: ptyId, data } });
+    const isMac = isMacPlatform();
     term.attachCustomKeyEventHandler((e) => {
       if (e.type !== 'keydown') return true;
-      // Shift+Enter inserts a newline rather than submitting: send ESC+CR (the Alt+Enter
-      // sequence), which harnesses like Claude Code read as a line continuation.
-      if (e.key === 'Enter' && e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey) {
-        client.send({ method: 'ptyInput', params: { id: ptyId, data: '\u{1B}\r' } });
+      const shiftEnter = shiftEnterSequence(e);
+      if (shiftEnter !== null) {
+        sendKey(shiftEnter);
         return false;
       }
-      return keyFilterRef.current ? keyFilterRef.current(e) : true;
+      if (keyFilterRef.current && !keyFilterRef.current(e)) return false;
+      const wordMotion = altArrowSequence(e, isMac);
+      if (wordMotion !== null) {
+        sendKey(wordMotion);
+        return false;
+      }
+      return true;
     });
 
     const ro = new ResizeObserver(() => syncSize());
