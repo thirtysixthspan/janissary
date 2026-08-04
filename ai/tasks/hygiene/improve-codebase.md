@@ -15,6 +15,7 @@ The improvement work itself follows one of these existing single-purpose task pl
 | `npm audit` / security tooling reports a patchable advisory | [`improve-security.md`](improve-security.md) |
 | stylelint reports a CSS issue | [`improve-style.md`](improve-style.md) |
 | `npm outdated` lists a safe-looking package update | [`update-package.md`](update-package.md) |
+| `npm outdated` lists several patch-level updates | [`update-packages-with-patches.md`](update-packages-with-patches.md) |
 
 **Run autonomously.** This task runs unattended — do not ask the user questions or wait for feedback at any step. Make the best judgment call yourself, using the rules in this document, and keep going. The only reasons to stop early are the ones listed in "When to stop" below.
 
