@@ -155,6 +155,35 @@ describe('HarnessTab', () => {
     expect(capturedKeyHandler!(makeKeyEvent({ key: 'ArrowUp' }))).toBe(true);
   });
 
+  it('sends ESC + CR to the PTY for Shift+Enter instead of passing it to the terminal', () => {
+    render(<HarnessTab harness={makeHarness({ ptyId: 'pty-7' })} client={mockClient} label="claude" />);
+    vi.mocked(mockClient.send as ReturnType<typeof vi.fn>).mockClear();
+    expect(capturedKeyHandler!(makeKeyEvent({ key: 'Enter', shiftKey: true }))).toBe(false);
+    expect(vi.mocked(mockClient.send as ReturnType<typeof vi.fn>)).toHaveBeenCalledWith({
+      method: 'ptyInput',
+      params: { id: 'pty-7', data: '\u{1B}\r' },
+    });
+  });
+
+  it('sends the word-motion sequence to the PTY for Alt+ArrowLeft', () => {
+    const platform = vi.spyOn(navigator, 'platform', 'get').mockReturnValue('Linux x86_64');
+    render(<HarnessTab harness={makeHarness({ ptyId: 'pty-7' })} client={mockClient} label="claude" />);
+    vi.mocked(mockClient.send as ReturnType<typeof vi.fn>).mockClear();
+    expect(capturedKeyHandler!(makeKeyEvent({ key: 'ArrowLeft', altKey: true }))).toBe(false);
+    expect(vi.mocked(mockClient.send as ReturnType<typeof vi.fn>)).toHaveBeenCalledWith({
+      method: 'ptyInput',
+      params: { id: 'pty-7', data: '\u{1B}[1;5D' },
+    });
+    platform.mockRestore();
+  });
+
+  it('bubbles Alt+ArrowLeft without sending to the PTY while a picker is open', () => {
+    render(<HarnessTab harness={makeHarness({ ptyId: 'pty-7' })} client={mockClient} label="claude" taskPickerOpen />);
+    vi.mocked(mockClient.send as ReturnType<typeof vi.fn>).mockClear();
+    expect(capturedKeyHandler!(makeKeyEvent({ key: 'ArrowLeft', altKey: true }))).toBe(false);
+    expect(vi.mocked(mockClient.send as ReturnType<typeof vi.fn>)).not.toHaveBeenCalled();
+  });
+
   it('shows an exited banner when status is exited', () => {
     const { getByText } = render(
       <HarnessTab harness={makeHarness({ status: 'exited', exitCode: 1 })} client={mockClient} label="claude" />,
