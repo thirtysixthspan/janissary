@@ -69,7 +69,22 @@ State your pick in one line: `<package> <Current> -> <Wanted>`.
 
 ## Step 4 — Install the update
 
-Back up the manifest and lock file (this step rewrites both):
+**Gate first — never skip this.** Before any command that writes to `node_modules/`, check the target against the known-malicious package list:
+
+```bash
+./scripts/run.mjs check-malicious-package <package>@<Wanted-version>
+```
+
+Act on the exit code:
+
+- **0** — clean. Continue with the install below.
+- **2 (BLOCKED)** — the exact target version is a known-malicious release. **Do not install it.** Record the package as tried, go back to Step 3, and take the next row.
+- **3 (QUARANTINED)** — the package comes from an account compromised in a supply-chain campaign, even though this version is not itself known-bad. These campaigns propagate by publishing fresh version bumps, so treat it exactly like BLOCKED: do not install, go back to Step 3, take the next row.
+- **1** — the check itself failed (for example the list is unreadable). **Stop and tell the user.** Never treat a failed check as permission to install.
+
+A skip under 2 or 3 does **not** count against the two-revert budget in Step 6 — nothing was installed. Note it in the Step 8 report.
+
+Once the gate returns 0, back up the manifest and lock file (this step rewrites both):
 
 ```bash
 cp package.json package.json.bak

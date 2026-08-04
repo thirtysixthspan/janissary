@@ -71,7 +71,21 @@ List the batch, one line per package: `<package> <Current> -> <Wanted>`.
 
 ## Step 4 — Install the batch
 
-Back up the manifest and lock file (this step rewrites both):
+**Gate first — never skip this.** Before any command that writes to `node_modules/`, check **every** package in the batch against the known-malicious package list, each at the `Wanted` version Step 3 selected:
+
+```bash
+./scripts/run.mjs check-malicious-package <package-1>@<Wanted-1> <package-2>@<Wanted-2> ... <package-n>@<Wanted-n>
+```
+
+The command reports every target and exits with the worst result found. Act on the exit code:
+
+- **0** — every package in the batch is clean. Continue with the install below.
+- **2 (BLOCKED)** or **3 (QUARANTINED)** — **drop the flagged packages from the batch** and re-run the gate on what remains. Do not install a flagged package, and do not abandon the whole batch for one bad member. If the batch ends up empty, report which packages were dropped and why, and stop.
+- **1** — the check itself failed (for example the list is unreadable). **Stop and tell the user.** Never treat a failed check as permission to install.
+
+Because a batch install is a single command, one flagged package would otherwise be installed alongside the others — the gate must run over the whole batch, not a sample of it.
+
+Once the gate returns 0 for the final batch, back up the manifest and lock file (this step rewrites both):
 
 ```bash
 cp package.json package.json.bak

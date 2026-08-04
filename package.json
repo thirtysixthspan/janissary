@@ -109,7 +109,8 @@
     "agent-names.json",
     "harness-models.json",
     "help.md",
-    "scripts"
+    "scripts",
+    "security"
   ],
   "type": "module",
   "dependencies": {
