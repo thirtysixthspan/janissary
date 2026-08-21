@@ -15,6 +15,7 @@ import { subscribeTabPluginNotifications, TAB_PLUGIN_NOTIFY_TIMEOUT_MS } from '.
 import { closedTabReason, reportClientFailure, runPluginIntent, type PluginRequestPort } from './requests.js';
 import type { Subscription } from '../bus.js';
 import { contributionRejection } from './rejections.js';
+import { runPluginSelectionAction } from './selection.js';
 import { recordStatus, type PluginRecord, type TabPluginStatus } from './status.js';
 import { closePluginTabs } from './teardown.js';
 
@@ -95,6 +96,10 @@ export class TabPluginHost {
       }
       return activation.command(argument, capabilities);
     });
+  }
+
+  runSelectionAction(id: string, action: string, paths: readonly string[], origin: PluginFailureOrigin): Promise<void> {
+    return runPluginSelectionAction(this.requestPort(), id, action, paths, origin);
   }
 
   intent(tabLabel: string, intent: string, payload: unknown): Promise<unknown> {

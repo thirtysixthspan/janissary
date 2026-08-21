@@ -4,7 +4,7 @@ Janissary can ship bundled plugins that contribute persistent view tabs, file op
 
 ### Discovery and activation
 
-At startup the server reads a static catalog of declarations. A declaration supplies the plugin identity and version, required tab-plugin API version, payload schema version, tab label prefix, claimed file extensions and content types, an optional claim on web addresses, optional file-navigator edit gesture, optional command, optional host state to be told about, and requested capabilities. Discovery does not import server behavior or fetch a client chunk.
+At startup the server reads a static catalog of declarations. A declaration supplies the plugin identity and version, required tab-plugin API version, payload schema version, tab label prefix, claimed file extensions and content types, an optional claim on web addresses, optional file-navigator edit gesture, optional command, optional host state to be told about, an optional entry contributed for a file navigator selection, and requested capabilities. Discovery does not import server behavior or fetch a client chunk.
 
 The requested capabilities bound what a plugin can do. A plugin that names a capability the API does not define never activates, and one that uses a capability it did not request is disabled the first time it tries — so the declaration is an accurate description of a plugin's reach rather than a claim nothing checks.
 
@@ -52,7 +52,9 @@ A profile captures a docked plugin tab with the side it was docked to, and reope
 
 A plugin may replace what one of its own tabs shows after it has opened, addressing the tab by the same identity it was opened with. The tab keeps everything else — its name in the strip unless the plugin supplies a new one, its place in the strip, its group, its pane, whether it is focused, and the files it already serves — so a view that updates never jumps, steals focus, or reopens. Supplying a new name replaces whatever the tab is currently called, including a name the user gave it by renaming the tab.
 
-An update aimed at a tab that is no longer open, or one belonging to a different plugin, does nothing at all: no view changes, nothing is reported, and the plugin keeps running. A plugin that produces a replacement its own contract rejects is disabled like any other broken plugin. A plugin cannot begin serving a new file through an update.
+An update aimed at a tab that is no longer open, or one belonging to a different plugin, does nothing at all: no view changes, nothing is reported, and the plugin keeps running. A plugin that produces a replacement its own contract rejects is disabled like any other broken plugin.
+
+An update may begin serving a file the tab did not hold before, which is what lets a view grow — the audio plugin's playlist gaining a track. A file registered this way belongs to the tab being updated exactly as one registered when it opened does, so closing the tab releases everything it ever served and nothing else.
 
 A plugin whose tab identity *is* what the tab shows may move that identity with an update — an embedded page navigating to another address is the one case in this version. The tab keeps its place, name, and served files; only what reopening it now refers to changes. An identity another of the same plugin's open tabs already holds is refused, and the rest of the update still applies.
 
@@ -76,7 +78,23 @@ A plugin may dock one of its own tabs into either sidebar, or move it back to th
 
 Plugin client actions use the generic `pluginIntent` RPC with a tab label, intent name, and payload. The server finds the plugin identity and authoritative tab payload from its own open-tab record. A client cannot choose another plugin, filesystem path, or served-file identity by adding fields to an intent.
 
-A plugin payload factory can register files through the host's existing `/open/<id>` allow-list. The host records every reference owned by that tab. Closing the tab deletes those references while leaving unrelated registrations intact.
+A plugin payload factory can register files through the host's existing `/open/<id>` allow-list, both when a tab opens and when one is updated. The host records every reference owned by that tab. Closing the tab deletes those references while leaving unrelated registrations intact.
+
+### Reporting a line to the notifications feed
+
+A plugin may report one line of its own to the notifications feed, attributed to the tab it was invoked from. The grant is deliberately narrow: the plugin supplies text and nothing else — not the kind of event, not the tab it is attributed to, and not any link on the line — so a plugin can say that something happened without being able to dress it up as anything else. This is distinct from the failure line the application itself writes when a plugin breaks; a plugin can never report that about itself or about another.
+
+The line obeys every rule the feed already has. It is dropped when no notifications feed is open, because plugin activity must never conjure the feed into existence. It is never suppressed for being about the tab the user is looking at, which is the case that matters most — a plugin reporting on the very view being watched. Like every capability it is gated by the declaration: a plugin that did not ask for it and reports anyway is disabled. See [[notifications]].
+
+### Contributing an action for a file navigator selection
+
+A declaration may contribute one entry for a **selection** of file navigator rows: a label to draw and an action name. It is the only route by which a plugin acts on more than one file at once, and the only navigator entry that acts on the selection rather than on the clicked row.
+
+The application decides entirely when the entry is offered. It appears in a row's context menu only when the menu was raised on a row inside a multi-row selection, every selected row is a file whose type that one plugin claims, and the plugin contributes such an entry. Resolving this never activates the plugin — opening a menu is not a use of it. Activating it does: the application re-resolves the selected rows against that navigator's own root, refuses anything that is not a file inside it, and hands the plugin only absolute paths it already owns. The client never names a plugin or an action the application did not just offer it.
+
+A declaration that contributes an entry but supplies nothing to run it never activates successfully, and is reported as disabled with that reason — a label the application would otherwise draw for a user before anything could discover it does not work. An action name the declaration does not carry is refused as one bad request and leaves the plugin running.
+
+The file navigator itself learns nothing about what kind of files it is showing: the label comes from the declaration, and everything else the plugin does is its own.
 
 ### Failure and teardown
 
@@ -111,3 +129,9 @@ Schedules is the first bundled plugin that opens on no file. It claims no extens
 ### Bundled video plugin
 
 Video is the first production tab plugin. It contributes the common video extensions, the file-navigator external-open gesture, and `video <path>`. `video <path>` follows the same path parsing, wildcard expansion, existence checks, transcript provenance, deduplication, and playable-versus-external behavior as `open <video-file>`. See [[video-tab]] and [[open]].
+
+### Bundled audio plugin
+
+Audio is the bundled plugin whose tab owns a **playlist** rather than a file. It contributes the common audio extensions, the file-navigator external-open gesture, `audio <path>`, and an **Add to playlist** entry for a selection of audio rows. `audio <path>` follows the same path parsing, wildcard expansion, existence checks, transcript provenance, and playable-versus-external behavior as `open <audio-file>`.
+
+It is the first plugin whose tab is a singleton by design: it opens under one fixed identity, so a second open finds the tab already there and appends to it through an update that begins serving the new track. It answers two intents — make a queued entry current, and drop one — and derives everything else from those: a track ending is the client asking for the next entry, stopping on the last track is the client asking for nothing, and a track the browser cannot decode is a drop carrying a flag that additionally reports the file to the notifications feed. The queue is the server's; a client can only ever name an entry the server already holds. See [[audio-tab]] and [[open]].

@@ -110,6 +110,41 @@ In a file navigator, the gesture that normally forces the plain-text editor is i
 
 ---
 
+## Audio plugin opener
+
+The bundled `audio` tab plugin contributes an opener for common audio file types (case-insensitive). Its static declaration is available at startup, but its behavior activates only on the first matching `open` or `audio` command. It splits them into two groups:
+
+- **Playable** — MP3, M4A, AAC, WAV, FLAC, OGG, OGA, Opus, and AIFF. These are the file types the app can play in an audio tab.
+- **External only** — WMA. Claimed so that opening one is never reported as an unsupported file type, but it cannot be played in-app; both of its presentations hand the file to an external player.
+
+### The configured player
+
+Which application receives an audio file is set by the **external viewers** setting (see [[application-config]]), a map keyed by opener name whose `audio` entry names the application to launch. Clearing the entry means "use the operating system's default handler for the file type". The setting is edited by hand; there is no command to change it.
+
+### `open external <audio>`
+
+Hands the file to the configured player, launched detached so it never blocks the app, and confirms in the active tab which player was used. When no player is configured — or the app cannot launch one by name on this platform — the file goes to the operating system's default handler instead, with a correspondingly generic confirmation. If neither can be launched, the file's path is reported instead.
+
+### `open <audio>` — audio tab
+
+For a **playable** file type, opens the file in the **audio tab**: a non-agent view tab holding a playlist, a player, and the playing track's metadata, with no command bar. Unlike every other view tab there is only ever one of them. If no audio tab is open, one is created and focused like an agent tab (placed within the active tab's group, distinct dot color). If one is already open, the file is appended to the end of its playlist and becomes the playing track — a second `open` never produces a second player. Opening a file the playlist already holds jumps to it rather than queueing it twice. The audio tab is a live, in-memory view and is not persisted or restored on `--relaunch`. It is described in [[audio-tab]].
+
+For an **external-only** file type, no tab opens and nothing is queued: the file is handed to the configured player exactly as `open external` does. Opening an audio file therefore always does something useful, whatever the file type.
+
+### `audio <path>`
+
+The plugin also contributes `audio <path>`. It is a second route into the same opener and has the same relative-path resolution, wildcard expansion, sorted processing, ten-file limit, missing-file errors, transcript attribution, and external-only routing as `open <path>`. Bare `audio` prints `Usage: audio <path>`. Several tracks are queued from the command line with a wildcard rather than with several space-separated paths — a path with no wildcard character is a single literal target.
+
+Because it is a route into one opener rather than into the registry, `audio` only opens audio files: a file that exists but belongs to another opener is reported as not an audio file rather than opened. See [[tab-plugins]] for plugin activation and failure behavior.
+
+### File navigator gestures
+
+In a file navigator, the gesture that normally forces the plain-text editor is inverted for an audio row: because a binary audio file has nothing to edit as text, that gesture runs the external presentation and hands the file to the configured player. Plain activation queues the file in the app as usual.
+
+The plugin also contributes an **Add to playlist** entry to the row context menu for a multi-row selection of audio files, which queues every selected file in order through this same opener. See [[file-navigator-tab]].
+
+---
+
 ## Markdown opener
 
 The Markdown opener is contributed by the bundled markdown tab plugin (see [[tab-plugins]]). It claims the `.md` and `.markdown` extensions (case-insensitive) and implements both presentations.

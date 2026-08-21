@@ -91,9 +91,10 @@ type TabPluginActivation = {
 };
 ```
 
-The host supplies twelve capabilities:
+The host supplies thirteen capabilities:
 
 - `note(text)` writes to the originating transcript.
+- `notifyUser(text)` reports one line to the notifications feed. Text only — you say that something happened; the host chooses the event type, the attribution, and whether the feed is open to receive it at all.
 - `openOrFocusTab(instanceKey, factory)` focuses or creates a plugin tab.
 - `updateTab(instanceKey, factory)` replaces what one of your own tabs already shows.
 - `dockTab(instanceKey, dock)` docks one of your own tabs into `'left'` or `'right'`, or undocks it back to the centre strip with `null`.
@@ -113,14 +114,16 @@ Your declaration decides which of them you actually get. A name it omits is stil
 A tab's payload is produced once, by the factory `openOrFocusTab` runs. `updateTab` is how it changes afterwards: name the instance key the tab was opened with, and return the new payload — and a title, when the name in the tab strip should change with it.
 
 ```ts
-capabilities.updateTab(file, () => ({ title: basename(file), payload: { …next } }));
+capabilities.updateTab(file, (resources) => ({ title: basename(file), payload: { …next } }));
 ```
 
 The tab keeps everything else: its label, position, group, focus, instance key, schema version, and the files it already serves. A factory that returns no title leaves the current title alone, so a plugin with nothing to say about naming never overwrites a name the user chose; a factory that returns one replaces whatever is there, including that rename.
 
 An instance key you have no open tab for is a no-op, so you never have to track which of your tabs the user has since closed. The result is validated exactly as a created payload is — your own `isPayload` guard, JSON compatibility, and a nonempty title when one is supplied — and failing that check disables the plugin, because a payload your own contract rejects means the plugin is broken.
 
-You cannot register a new file to serve from an update. You can change the instance key, but only when the key *is* what the tab shows and that has moved — an embedded page navigating to another address. Return the new key alongside the payload:
+The factory receives the same `TabPluginResources` the `openOrFocusTab` one does, so an update may begin serving a file the tab did not hold before — the audio plugin's playlist gaining a track. Every reference it registers is recorded against the tab being updated, so closing that tab releases what an update served exactly as it releases what the open served.
+
+You can change the instance key, but only when the key *is* what the tab shows and that has moved — an embedded page navigating to another address. Return the new key alongside the payload:
 
 ```ts
 capabilities.updateTab(current.url, () => ({
@@ -261,7 +264,7 @@ Add server tests for declaration claims, playable/external routes, payload valid
 
 - Initial bundled-only tab-view contract.
 - Static opener, web-target, command, and notification contributions, with `command` and `notify` handlers on the activation.
-- Twelve server and seven client capabilities.
+- Thirteen server and seven client capabilities.
 - Versioned generic tab payload plus `pluginIntent` and `pluginFailed` RPCs.
 - Two-level failure model: `rejectRequest` answers one bad request, `reportFailure` disables.
 

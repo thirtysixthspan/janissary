@@ -1,5 +1,6 @@
 import type { Managers } from '../managers.js';
 import { getConfig } from '../config.js';
+import { notify } from '../notifications.js';
 import { didOsOpen } from '../openers/os-open.js';
 import {
   TAB_PLUGIN_CAPABILITY_NAMES,
@@ -87,6 +88,12 @@ export function createPluginContext(
         managers.tab.append(origin.label, { input: origin.command, output: text });
       }
     },
+    // The plugin's own line into the notifications feed, kept distinct from the host's failure path
+    // by its own event type: a plugin says something happened, it never says a plugin broke.
+    notifyUser: (text) => {
+      if (!isEnabled()) return;
+      notify(managers, 'plugin-note', origin.label, text);
+    },
     openOrFocusTab: (instanceKey, factory) => {
       if (!isEnabled()) return;
       if (managers.tab.tabs.every((tab) => tab.label !== origin.label)) return;
@@ -107,8 +114,8 @@ export function createPluginContext(
     // is the plugin's own tab, not the transcript that asked for the change.
     updateTab: (instanceKey, factory) => {
       if (!isEnabled()) return;
-      managers.tab.updatePluginTab(declaration.id, instanceKey, () => {
-        const update = factory();
+      managers.tab.updatePluginTab(declaration.id, instanceKey, (resources) => {
+        const update = factory(resources);
         validateTabValue(activation, update);
         return update;
       });

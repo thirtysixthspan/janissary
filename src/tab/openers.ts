@@ -21,6 +21,35 @@ function activate(target: OpenTarget, result: { tabs: Tab[]; activeTab: number }
   messageBus.emit('state', { type: 'dirty' });
 }
 
+// Runs a plugin factory with a registration window open around it, and reports back every reference
+// it registered. The window closes as soon as the factory returns, so a plugin that stashed the
+// resources object cannot keep serving files from outside the call the host granted them for, and a
+// factory that throws leaves nothing served. Shared by the open and update paths so a reference
+// registered through one is scoped and released exactly as one registered through the other.
+function withResources<Result>(
+  target: OpenTarget,
+  factory: (resources: TabPluginResources) => Result,
+): { result: Result; fileRefs: string[] } {
+  const fileRefs: string[] = [];
+  let acceptingResources = true;
+  try {
+    const result = factory({
+      registerFile: (path) => {
+        if (!acceptingResources) throw new Error('plugin tab resources are no longer available');
+        const reference = target.registerFile(path);
+        fileRefs.push(reference.replace(/^\/open\//, ''));
+        return reference;
+      },
+    });
+    return { result, fileRefs };
+  } catch (error) {
+    for (const reference of fileRefs) target.openFiles.delete(reference);
+    throw error;
+  } finally {
+    acceptingResources = false;
+  }
+}
+
 export function openPluginTab(
   target: OpenTarget,
   pluginId: string,
@@ -44,24 +73,7 @@ export function openPluginTab(
   // `sourceLabel` rather than by whatever happens to be focused when the factory finally runs.
   const sourceIndex = target.tabs.findIndex((tab) => tab.label === sourceLabel);
   const creatorIndex = sourceIndex === -1 ? target.activeTab : sourceIndex;
-  const fileRefs: string[] = [];
-  let acceptingResources = true;
-  let created: TabPluginPayload;
-  try {
-    created = factory({
-      registerFile: (path) => {
-        if (!acceptingResources) throw new Error('plugin tab resources are no longer available');
-        const reference = target.registerFile(path);
-        fileRefs.push(reference.replace(/^\/open\//, ''));
-        return reference;
-      },
-    });
-  } catch (error) {
-    for (const reference of fileRefs) target.openFiles.delete(reference);
-    throw error;
-  } finally {
-    acceptingResources = false;
-  }
+  const { result: created, fileRefs } = withResources(target, factory);
   activate(target, addPluginTab(target.tabs, creatorIndex, labelPrefix, created.title, {
     id: pluginId,
     instanceKey,
@@ -79,23 +91,26 @@ export function openPluginTab(
 // only when the factory returned one, and the instance key only when the factory returned a free
 // one — a key another tab of the same plugin already holds would make two tabs indistinguishable to
 // every capability that addresses one, so it is refused while the rest of the update still applies.
+// An update may also begin serving a file the tab did not hold before; those references join the
+// tab's own `fileRefs`, so closing it releases them along with everything it opened with.
 export function updatePluginTab(
   target: OpenTarget,
   pluginId: string,
   instanceKey: string,
-  factory: () => TabPluginTabUpdate,
+  factory: (resources: TabPluginResources) => TabPluginTabUpdate,
 ): void {
   const tab = target.tabs.find(
     (candidate) => candidate.plugin?.id === pluginId && candidate.plugin.instanceKey === instanceKey,
   );
   if (!tab?.plugin) return;
-  const update = factory();
+  const { result: update, fileRefs } = withResources(target, factory);
   const rekeyed = update.instanceKey !== undefined && update.instanceKey !== instanceKey
     && target.tabs.every((candidate) => candidate.plugin?.id !== pluginId
       || candidate.plugin.instanceKey !== update.instanceKey);
   tab.plugin = {
     ...tab.plugin,
     payload: update.payload,
+    fileRefs: [...tab.plugin.fileRefs, ...fileRefs],
     ...(rekeyed && { instanceKey: update.instanceKey! }),
   };
   if (update.title !== undefined) tab.title = update.title;

@@ -6,6 +6,7 @@ export const TAB_PLUGIN_API_VERSION = 1;
 // or observable ordering change increments it and is a breaking change.
 export type TabPluginCapabilityName =
   | 'note'
+  | 'notifyUser'
   | 'openOrFocusTab'
   | 'updateTab'
   | 'dockTab'
@@ -24,6 +25,7 @@ export type TabPluginCapabilityName =
 // capability v1 does not define, and to hold a plugin to the set its own manifest asked for.
 const CAPABILITIES: Record<TabPluginCapabilityName, true> = {
   note: true,
+  notifyUser: true,
   openOrFocusTab: true,
   updateTab: true,
   dockTab: true,
@@ -107,6 +109,9 @@ export type TabPluginDeclaration = {
   command?: string;
   // Host topics this plugin wants to hear about. A declaration naming one must supply `notify`.
   notifications?: readonly TabPluginNotificationTopic[];
+  // An entry the file navigator offers for a multi-row selection of this plugin's own file types.
+  // A declaration carrying one must supply a `selectionAction` handler.
+  selectionAction?: TabPluginSelectionAction;
   capabilities: readonly TabPluginCapabilityName[];
 };
 
@@ -121,7 +126,7 @@ export type TabPluginPayload = {
 
 // What an `updateTab` factory returns. Deliberately not `TabPluginPayload`: the title is optional
 // here, because a plugin changing only what a tab shows must be able to leave the name in the tab
-// strip alone, and there are no `TabPluginResources` because an update cannot register a new file.
+// strip alone.
 export type TabPluginTabUpdate = {
   title?: string;
   // A new instance key, for a tab whose identity is what it shows and whose subject has moved — an
@@ -132,15 +137,34 @@ export type TabPluginTabUpdate = {
   payload: unknown;
 };
 
+// What a plugin contributes for a whole selection of file navigator rows. The navigator offers it
+// only when every selected row is a file whose extension this one declaration claims, so a plugin
+// never sees a path it does not own. Deliberately a label and an action name and nothing else: the
+// plugin describes the entry, the host decides when it is offered and resolves the paths.
+export type TabPluginSelectionAction = {
+  label: string;
+  action: string;
+};
+
 export type TabPluginServerCapabilities = {
   note(text: string): void;
+  // Report one line to the notifications feed, attributed to the tab the plugin was invoked from.
+  // Deliberately text-only: a plugin may say that something happened and may not choose the event
+  // type, the originating tab, or a deep link. The line is dropped when no notifications feed is
+  // open, exactly as every other event is — plugin activity never conjures the feed into existence.
+  notifyUser(text: string): void;
   openOrFocusTab(instanceKey: string, factory: (resources: TabPluginResources) => TabPluginPayload): void;
   // Replace what one of this plugin's own tabs shows, addressed by the instance key it was opened
-  // with. The tab keeps its label, position, group, focus, instance key, schema version, and served
-  // files; only the payload, and the title when the factory returns one, change. An instance key
-  // this plugin has no open tab for is a no-op, so a plugin never has to track which of its tabs
-  // the user has since closed.
-  updateTab(instanceKey: string, factory: () => TabPluginTabUpdate): void;
+  // with. The tab keeps its label, position, group, focus, instance key, schema version, and the
+  // files it is already serving; only the payload, and the title when the factory returns one,
+  // change. An instance key this plugin has no open tab for is a no-op, so a plugin never has to
+  // track which of its tabs the user has since closed.
+  //
+  // The factory receives the same `TabPluginResources` the `openOrFocusTab` one does, so an update
+  // may begin serving a file the tab did not hold before — a playlist gaining a track. Every
+  // reference it registers is recorded against the tab being updated, so closing that tab releases
+  // what the update served exactly as it releases what the open served.
+  updateTab(instanceKey: string, factory: (resources: TabPluginResources) => TabPluginTabUpdate): void;
   // Dock one of this plugin's own tabs into a sidebar, or `null` to undock it back to the centre
   // strip and make it active. Addressed by instance key like `updateTab`, so a key with no open tab
   // is a silent no-op and a plugin can never move another plugin's tab.
@@ -193,6 +217,12 @@ export type TabPluginActivation = {
   // value is ignored — a notification reports that something happened and cannot influence any host
   // outcome; a plugin acts on it by calling `updateTab`.
   notify?(event: TabPluginNotification, capabilities: TabPluginServerCapabilities): void | Promise<void>;
+  // Runs the entry the declaration contributed for a file navigator selection. Required only when
+  // the declaration carries one. `paths` are absolute and were resolved by the host against the
+  // navigator's own root, so a client can never name a file outside the tree it is browsing.
+  selectionAction?(
+    paths: readonly string[], capabilities: TabPluginServerCapabilities,
+  ): void | Promise<void>;
   isPayload(value: unknown): boolean;
   dispose?(): void | Promise<void>;
 };

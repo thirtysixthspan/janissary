@@ -46,7 +46,7 @@ the sidebar's own strip (see `sidebars.md`).
 
 ### Events that notify
 
-Eleven event types can produce a notification line:
+Twelve event types can produce a notification line:
 
 - **`state-change`** — an agent tab's busy flag clears (busy → idle), e.g. an ACP turn finishes or
   errors.
@@ -76,21 +76,29 @@ Eleven event types can produce a notification line:
   for one or more of the items it acted on (see `file-navigator-tab.md`). The line reads
   `Could not <verb> <failed> of <total> items: <names>`, naming the failing items in selection
   order and truncating past three names with `… and N more`.
+- **`plugin-note`** — a tab plugin reports one line of its own, through the narrow capability the
+  host grants for it (see [[tab-plugins]]). The line is the plugin's own text; the plugin chooses
+  neither the event type, nor the tab it is attributed to, nor any link on the line. The bundled
+  audio plugin uses it to name a track it had to drop from a playlist because the browser could not
+  decode it (see [[audio-tab]]).
 
 The five ambient events (`state-change`, `incoming-message`, `schedule-fire`, `agent-start`,
 `rate-limited`) are each **independently togglable and default off** — opt in by editing
 `.janissary/config.json` (see `application-config.md`). The `manual`, `auto-approve`,
-`editor-suggest`, `question`, `transcript-unavailable`, and `file-operation` events have no toggle.
-A `question` event fires only for a background tab.
+`editor-suggest`, `question`, `transcript-unavailable`, `file-operation`, and `plugin-note` events
+have no toggle. A `question` event fires only for a background tab.
 
 ### Focus suppression
 
 An ambient event on the **currently active** tab never produces a notification — only background
 tabs feed the notifications tab. The notifications tab itself is a view tab that produces no such
 events, so it never notifies about itself. The `manual`, `auto-approve`, `editor-suggest`,
-`transcript-unavailable`, and `file-operation` events **bypass focus suppression**: they still
-record a line even when their tab is active, because they report an explicit, user-armed action or
-a capability degrading rather than ambient background activity. A `question` is also an
+`transcript-unavailable`, `file-operation`, and `plugin-note` events **bypass focus suppression**: they still
+record a line even when their tab is active, because they report an explicit, user-armed action, a
+capability degrading, or a plugin's own deliberate report, rather than ambient background activity.
+For `plugin-note` this is the case that matters most: a plugin reporting on the very tab the user is
+watching — a playlist shedding a track — is exactly the line that must not be discarded. A
+`question` is also an
 explicit event with no configuration toggle, but it is emitted only when its owning tab is in the
 background.
 

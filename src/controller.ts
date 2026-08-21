@@ -62,6 +62,8 @@ export class Controller implements TabControllerAdapter, MonitorControllerAdapte
   declare fileNavigatorSearch: FileNavigatorControllerAdapter['fileNavigatorSearch'];
   declare revealFileNavigatorItem: FileNavigatorControllerAdapter['revealFileNavigatorItem'];
   declare fileNavigatorOpeners: FileNavigatorControllerAdapter['fileNavigatorOpeners'];
+  declare fileNavigatorSelectionAction: FileNavigatorControllerAdapter['fileNavigatorSelectionAction'];
+  declare runFileNavigatorSelectionAction: FileNavigatorControllerAdapter['runFileNavigatorSelectionAction'];
   declare reportFileNavigatorSelection: FileNavigatorControllerAdapter['reportFileNavigatorSelection'];
   declare undoFileNavigatorItem: FileNavigatorControllerAdapter['undoFileNavigatorItem'];
   declare redoFileNavigatorItem: FileNavigatorControllerAdapter['redoFileNavigatorItem'];

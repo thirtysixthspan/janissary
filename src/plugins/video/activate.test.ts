@@ -37,7 +37,7 @@ describe('video opener registration', () => {
     expect(openerForExtension('.mp4')?.name).toBe('video');
     expect(openerForExtension('.MOV')?.name).toBe('video');
     expect(openerForExtension('.MKV')?.name).toBe('video');
-    expect(openerForExtension('.mp3')).toBeUndefined();
+    expect(openerForExtension('.mp3')?.name).not.toBe('video');
   });
 });
 

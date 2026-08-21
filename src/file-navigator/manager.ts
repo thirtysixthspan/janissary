@@ -194,6 +194,12 @@ export class FileNavigatorManager {
     return this.withState(label, { choices: [] }, (state) => openersForRow(state.root, relPath, edit, all));
   }
 
+  // This tab's own root, for the selection-action RPCs: the client sends tree-relative rows, and the
+  // server resolves them against the root it holds rather than any path the client could name.
+  rootOf(label: string): string | undefined {
+    return this.withState(label, undefined, (state) => state.root);
+  }
+
   // This tab's expanded directories and detail mode, both for `profile save`.
   expandedPaths(label: string): string[] {
     return expandedPathsOf(this.tabs, label);

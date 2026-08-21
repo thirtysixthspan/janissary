@@ -2,8 +2,9 @@
 // delegate to `FileNavigatorManager`. Extracted from `controller.ts` to keep it under the file-size
 // limit — see `ai/guidelines/code-guidelines.md`.
 import { reportOperationFailure } from '../file-navigator/operation-report.js';
+import { selectionActionFor } from '../file-navigator/selection-action.js';
 import type { Managers } from '../managers.js';
-import type { BatchResult, BulkConflictPolicy, BulkMoveResult, FileNavigatorDetail, FileOpenerResolution } from '../protocol.js';
+import type { BatchResult, BulkConflictPolicy, BulkMoveResult, FileNavigatorDetail, FileOpenerResolution, FileSelectionAction } from '../protocol.js';
 
 export function fileNavigatorToggle(managers: Managers, index: number, path: string): void {
   const label = managers.tab.tabs[index]?.label;
@@ -147,4 +148,34 @@ export function revealFileNavigatorItem(managers: Managers, index: number, relPa
 export function fileNavigatorOpeners(managers: Managers, index: number, relPath: string, edit: boolean, all?: boolean): FileOpenerResolution {
   const label = managers.tab.tabs[index]?.label;
   return label ? managers.fileNavigator.openers(label, relPath, edit, all) : { choices: [] };
+}
+
+// The two selection-action RPCs, both thin: the matching rule lives beside the per-row one it
+// mirrors, in `file-navigator/selection-action.ts`. They differ in what they may do — resolving only
+// reads declarations, running activates the owning plugin — which is why they are two methods and
+// not one, and why neither is folded into `fileNavigatorOpeners`.
+function matchSelectionAction(managers: Managers, index: number, paths: string[]) {
+  const label = managers.tab.tabs[index]?.label;
+  const root = label === undefined ? undefined : managers.fileNavigator.rootOf(label);
+  if (label === undefined || root === undefined) return null;
+  const match = selectionActionFor(managers.plugins.declarations, root, paths);
+  return match && { label, match };
+}
+
+export function fileNavigatorSelectionAction(
+  managers: Managers, index: number, paths: string[],
+): FileSelectionAction | null {
+  const resolved = matchSelectionAction(managers, index, paths);
+  return resolved ? { label: resolved.match.label, action: resolved.match.action } : null;
+}
+
+export function runFileNavigatorSelectionAction(
+  managers: Managers, index: number, paths: string[], action: string,
+): void {
+  const resolved = matchSelectionAction(managers, index, paths);
+  if (!resolved) return;
+  void managers.plugins.runSelectionAction(
+    resolved.match.plugin, action, resolved.match.paths,
+    { label: resolved.label, command: resolved.match.label },
+  );
 }

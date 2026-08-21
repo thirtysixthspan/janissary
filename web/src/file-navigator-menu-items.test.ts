@@ -31,6 +31,31 @@ describe('fileNavigatorMenuItems', () => {
     ]);
   });
 
+  it('draws a contributed selection entry in its own group above Copy', () => {
+    const onActivate = vi.fn();
+    const groups = fileNavigatorMenuItems(fileRow, true, makeActions(), {
+      label: 'Add to playlist', onActivate,
+    });
+    expect(labels(groups)).toEqual([
+      ['Open', 'Open with'],
+      ['Add to playlist'],
+      ['Copy', 'Paste'],
+      ['Rename', 'Delete'],
+      ['New file', 'New folder'],
+    ]);
+    groups[1][0].onActivate();
+    expect(onActivate).toHaveBeenCalledTimes(1);
+  });
+
+  it('leaves the single-row entries alone whether or not one is contributed', () => {
+    const contributed = fileNavigatorMenuItems(fileRow, true, makeActions(), {
+      label: 'Add to playlist', onActivate: vi.fn(),
+    });
+    const plain = fileNavigatorMenuItems(fileRow, true, makeActions(), null);
+    expect(labels(contributed).filter((group) => group[0] !== 'Add to playlist'))
+      .toEqual(labels(plain));
+  });
+
   it('omits Paste when the clipboard is empty', () => {
     expect(labels(fileNavigatorMenuItems(fileRow, false, makeActions()))[1]).toEqual(['Copy']);
   });

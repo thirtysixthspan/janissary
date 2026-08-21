@@ -26,7 +26,10 @@ export abstract class TabOpeningState extends TabQueueState {
   }
 
 
-  updatePluginTab(pluginId: string, instanceKey: string, factory: () => TabPluginTabUpdate): void {
+  updatePluginTab(
+    pluginId: string, instanceKey: string,
+    factory: (resources: TabPluginResources) => TabPluginTabUpdate,
+  ): void {
     tabOpeners.updatePluginTab(this, pluginId, instanceKey, factory);
   }
 

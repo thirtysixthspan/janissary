@@ -6,7 +6,8 @@ type FileNavigatorMessage = Extract<ClientMessage, {
     | 'fileNavigatorSetDetail' | 'fileNavigatorReroot' | 'moveFileNavigatorItem'
     | 'moveFileNavigatorItems' | 'deleteFileNavigatorItem' | 'deleteFileNavigatorItems'
     | 'renameFileNavigatorItem' | 'fileNavigatorSearch' | 'revealFileNavigatorItem'
-    | 'fileNavigatorOpeners' | 'undoFileNavigatorItem' | 'redoFileNavigatorItem'
+    | 'fileNavigatorOpeners' | 'fileNavigatorSelectionAction' | 'runFileNavigatorSelectionAction'
+    | 'undoFileNavigatorItem' | 'redoFileNavigatorItem'
     | 'reportFileNavigatorSelection' | 'pasteFileNavigatorItems';
 }>;
 
@@ -85,6 +86,13 @@ export function handleFileNavigatorMessage(controller: Controller, message: File
     case 'fileNavigatorOpeners': {
       reply({ t: 'rpc-reply', id: message.id, result: controller.fileNavigatorOpeners(message.params.index, message.params.relPath, message.params.edit, message.params.all) });
       return;
+    }
+    case 'fileNavigatorSelectionAction': {
+      reply({ t: 'rpc-reply', id: message.id, result: controller.fileNavigatorSelectionAction(message.params.index, message.params.paths) });
+      return;
+    }
+    // Fire-and-forget: what the action produces is the plugin's own tab, not a reply.
+    case 'runFileNavigatorSelectionAction': { controller.runFileNavigatorSelectionAction(message.params.index, message.params.paths, message.params.action); break;
     }
     case 'undoFileNavigatorItem': {
       reply({
