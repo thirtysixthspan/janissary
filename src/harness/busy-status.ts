@@ -1,6 +1,6 @@
 import type { ScreenCapture } from './screen.js';
 import { detectPermissionGate, type HarnessAutoApprover } from './auto-approve.js';
-import { BUSY_TABLE, classifyBusy } from './busy-classify.js';
+import { BUSY_TABLE, classifyBusy, endsWithRecap } from './busy-classify.js';
 import { messageBus } from '../bus.js';
 import type { Managers } from '../managers.js';
 
@@ -23,9 +23,12 @@ function dotSnapshot(managers: Managers, label: string): string {
 // not flicker the dot off; ready→busy is applied immediately. Once a busy→ready transition
 // commits, the tab is also badged unread — the harness finished its current run, same as hitting
 // an unanswered permission gate. `markUnread` itself only badges a hidden (backgrounded, undocked)
-// tab, so a visible tab going ready is unaffected. Whenever a capture flips the busy flag or the
-// unread badge, `state: dirty` is emitted so clients see the change immediately — without it, a
-// backgrounded tab's dot would sit stale until the next unrelated state push.
+// tab, so a visible tab going ready is unaffected. The one exception: for claude, if the last thing
+// printed before its own prompt was a `recap:`-prefixed summary line, the badge is skipped — the
+// busy dot still clears, but a recap alone is not new information worth flagging. Whenever a capture
+// flips the busy flag or the unread badge, `state: dirty` is emitted so clients see the change
+// immediately — without it, a backgrounded tab's dot would sit stale until the next unrelated state
+// push.
 export function busyStatusHandler(
   name: string, label: string, managers: Managers, approver: HarnessAutoApprover | undefined,
 ): ((capture: ScreenCapture) => void) | undefined {
@@ -45,8 +48,10 @@ export function busyStatusHandler(
       managers.tab.addBusy(label);
       return;
     }
-    if (pendingReady) { managers.tab.deleteBusy(label); managers.tab.markUnread(label); }
-    else pendingReady = true;
+    if (pendingReady) {
+      managers.tab.deleteBusy(label);
+      if (name !== 'claude' || !endsWithRecap(capture.text)) managers.tab.markUnread(label);
+    } else pendingReady = true;
   };
   return (capture) => {
     const before = dotSnapshot(managers, label);

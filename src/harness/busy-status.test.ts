@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { classifyBusy, busyStatusHandler } from './busy-status.js';
+import { endsWithRecap } from './busy-classify.js';
 import type { ScreenCapture } from './screen.js';
 import type { Managers } from '../managers.js';
 import { messageBus, type Subscription } from '../bus.js';
@@ -109,6 +110,33 @@ describe('classifyBusy — unknown harness', () => {
   });
 });
 
+const CLAUDE_RECAP_PROMPT_BOX = [
+  ' recap: fixed the thing',
+  '',
+  ' ❯',
+  '',
+  ' ? for shortcuts',
+].join('\n');
+
+describe('endsWithRecap', () => {
+  it('is true when the last content line above the prompt is recap:-prefixed', () => {
+    expect(endsWithRecap(CLAUDE_RECAP_PROMPT_BOX)).toBe(true);
+  });
+
+  it('is true case-insensitively', () => {
+    expect(endsWithRecap(' Recap: done\n\n ❯\n')).toBe(true);
+    expect(endsWithRecap(' RECAP: done\n\n ❯\n')).toBe(true);
+  });
+
+  it('is false when the last content line is ordinary completion text', () => {
+    expect(endsWithRecap(CLAUDE_PROMPT_BOX)).toBe(false);
+  });
+
+  it('is false for a generating frame with no prompt box present', () => {
+    expect(endsWithRecap(CLAUDE_GENERATING)).toBe(false);
+  });
+});
+
 describe('busyStatusHandler debounce', () => {
   function make(name: string) {
     const busy = new Set<string>();
@@ -161,6 +189,32 @@ describe('busyStatusHandler debounce', () => {
   it('returns undefined for a harness with no table entry', () => {
     const tab = { addBusy: vi.fn(), deleteBusy: vi.fn(), markUnread: vi.fn() };
     expect(busyStatusHandler('mystery', 'mystery', { tab } as unknown as Managers, undefined)).toBeUndefined();
+  });
+
+  it('claude: does not badge the tab unread when the ready transition\'s last line is a recap', () => {
+    const { tab, handler } = make('claude');
+    handler(capture('anything', CLAUDE_BUSY_TITLE));
+    handler(capture(CLAUDE_RECAP_PROMPT_BOX));
+    handler(capture(CLAUDE_RECAP_PROMPT_BOX));
+    expect(tab.deleteBusy).toHaveBeenCalledTimes(1);
+    expect(tab.markUnread).not.toHaveBeenCalled();
+  });
+
+  it('claude: still badges unread for an ordinary (non-recap) ready transition', () => {
+    const { tab, handler } = make('claude');
+    handler(capture('anything', CLAUDE_BUSY_TITLE));
+    handler(capture(CLAUDE_PROMPT_BOX));
+    handler(capture(CLAUDE_PROMPT_BOX));
+    expect(tab.markUnread).toHaveBeenCalledTimes(1);
+  });
+
+  it('codex/opencode: a recap-shaped last line does not suppress markUnread (claude-only exemption)', () => {
+    const opencodeRecap = capture('recap: fixed the thing\n > \n');
+    const { tab, handler } = make('opencode');
+    handler(capture(OPENCODE_PROGRESS));
+    handler(opencodeRecap);
+    handler(opencodeRecap);
+    expect(tab.markUnread).toHaveBeenCalledTimes(1);
   });
 });
 
