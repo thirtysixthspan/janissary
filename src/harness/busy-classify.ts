@@ -18,16 +18,36 @@ function classifyTitle(title: string | undefined): BusyState | undefined {
   return leadsWithBraille(trimmed) ? 'busy' : 'ready';
 }
 
+// claude's own live input caret — the `❯` prompt of its input box, as distinct from a permission
+// gate's highlighted `❯ 1. Yes` option (which starts with `1.`). Shared by the prompt-box busy
+// check below and by `endsWithRecap`, which needs to know where claude's own prompt starts in
+// order to look at what it printed just above it.
+function isInputCaretLine(line: string): boolean {
+  const trimmed = line.trim();
+  return trimmed.startsWith('❯') && !trimmed.slice('❯'.length).trimStart().startsWith('1.');
+}
+
 // claude's rendered-screen fallback for when no title is present: an `esc to interrupt` footer
 // means it is still generating; otherwise a live input prompt box (a `❯` caret line that is not
 // the permission gate's `❯ 1. Yes` option) means it is sitting at its own prompt.
 function classifyClaudeScreen(text: string): BusyState {
   if (text.includes('esc to interrupt')) return 'busy';
-  const promptBox = text.split('\n').some((line) => {
-    const trimmed = line.trim();
-    return trimmed.startsWith('❯') && !trimmed.slice('❯'.length).trimStart().startsWith('1.');
-  });
+  const promptBox = text.split('\n').some((line) => isInputCaretLine(line));
   return promptBox ? 'ready' : 'busy';
+}
+
+// Whether the last thing claude printed before returning to its own prompt was a `recap:`-prefixed
+// summary line rather than substantive new output. Used to exempt a completed turn from badging a
+// hidden tab unread — a recap is not new information worth interrupting the user for.
+export function endsWithRecap(text: string): boolean {
+  const lines = text.split('\n');
+  const caretIndex = lines.findIndex((line) => isInputCaretLine(line));
+  const before = caretIndex === -1 ? lines : lines.slice(0, caretIndex);
+  for (let i = before.length - 1; i >= 0; i--) {
+    const trimmed = before[i].trim();
+    if (trimmed) return /^recap:/i.test(trimmed);
+  }
+  return false;
 }
 
 // opencode has no OSC-title state signal (its title is a static app/session name), so busy is

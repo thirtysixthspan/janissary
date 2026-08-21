@@ -279,7 +279,10 @@ switching to the tab first.
 Once a hidden (backgrounded, undocked) harness tab's working→idle transition commits, the tab is
 marked with the unread badge to call attention to it — the harness has either finished its current
 run or is otherwise waiting, and the badge is what surfaces that without switching to the tab
-first. A visible tab going idle is unaffected; only a hidden one is badged.
+first. A visible tab going idle is unaffected; only a hidden one is badged. One exception: for
+claude, if the last thing it printed before returning to its own prompt was a `recap:`-prefixed
+summary line, the transition is exempted from the badge — the busy dot still stops blinking, but a
+recap alone is not treated as new information worth flagging.
 
 When claude or codex shows a recognized permission prompt, the dot stops blinking immediately — the
 harness is waiting on the user, not working — and if nothing is going to answer the prompt (the tab
