@@ -1,6 +1,6 @@
 // Mouse selection for the editor: click to place the caret, drag to extend, double-click for
-// word selection, gutter click/drag for whole-line selection. Window-level move/up listeners are
-// attached only for the duration of a drag.
+// word selection, triple-click for whole-line selection (same as gutter click/drag). Window-level
+// move/up listeners are attached only for the duration of a drag.
 
 import { useRef } from 'react';
 import type { EditorApi } from './useEditor';
@@ -75,6 +75,11 @@ export function useEditorMouse(api: EditorApi, bodyRef: React.RefObject<HTMLDivE
     e.preventDefault();
     api.sealUndo();
     if (hit.inGutter) {
+      api.setState(linesSelection(s, hit.line, hit.line));
+      beginDrag({ anchor: { line: hit.line, col: 0 }, lineMode: true, anchorLine: hit.line });
+      return;
+    }
+    if (e.detail >= 3) {
       api.setState(linesSelection(s, hit.line, hit.line));
       beginDrag({ anchor: { line: hit.line, col: 0 }, lineMode: true, anchorLine: hit.line });
       return;

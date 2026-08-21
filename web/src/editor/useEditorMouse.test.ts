@@ -113,6 +113,52 @@ describe('useEditorMouse', () => {
     body.remove();
   });
 
+  it('selects whole line on triple click', () => {
+    const state = makeState(['hello', 'world']);
+    const api = makeApi(state);
+    const body = makeEditorBody(2);
+    const bodyRef = { current: body } as React.RefObject<HTMLDivElement | null>;
+    const focus = vi.fn();
+    const { result } = renderHook(() => useEditorMouse(api, bodyRef, focus));
+
+    const content = body.querySelector('.editor-content') as HTMLElement;
+    const event = { preventDefault: vi.fn(), target: content, clientX: 10, clientY: 10, detail: 3, shiftKey: false } as unknown as React.MouseEvent;
+    act(() => { result.current.onMouseDown(event); });
+
+    expect(api.setState).toHaveBeenCalled();
+    const newState = (api.setState as ReturnType<typeof vi.fn>).mock.calls[0][0] as EditorState;
+    expect(newState.anchor).toEqual({ line: 0, col: 0 });
+    expect(newState.cursor).toEqual({ line: 1, col: 0 });
+    body.remove();
+  });
+
+  it('extends line selection on triple-click drag', () => {
+    const state = makeState(['hello', 'world', 'third']);
+    const api = makeApi(state);
+    const body = makeEditorBody(3);
+    const bodyRef = { current: body } as React.RefObject<HTMLDivElement | null>;
+    const focus = vi.fn();
+    const { result } = renderHook(() => useEditorMouse(api, bodyRef, focus));
+
+    const content = body.querySelector('.editor-content') as HTMLElement;
+    const downEvent = { preventDefault: vi.fn(), target: content, clientX: 10, clientY: 10, detail: 3, shiftKey: false } as unknown as React.MouseEvent;
+    act(() => { result.current.onMouseDown(downEvent); });
+
+    const thirdRow = body.querySelectorAll('[data-editor-line]')[2] as HTMLElement;
+    const moveEvent = new MouseEvent('mousemove', { clientX: 5, clientY: 50 });
+    (document.elementFromPoint as ReturnType<typeof vi.fn>).mockReturnValue(thirdRow);
+    act(() => { globalThis.dispatchEvent(moveEvent); });
+
+    const upEvent = new MouseEvent('mouseup');
+    act(() => { globalThis.dispatchEvent(upEvent); });
+
+    expect(api.setState).toHaveBeenCalledTimes(2);
+    const extended = (api.setState as ReturnType<typeof vi.fn>).mock.calls[1][0] as EditorState;
+    expect(extended.anchor).toEqual({ line: 0, col: 0 });
+    expect(extended.cursor).toEqual({ line: 2, col: 'third'.length });
+    body.remove();
+  });
+
   it('extends selection on shift-click', () => {
     const state: EditorState = { lines: ['hello', 'world'], cursor: { line: 0, col: 2 }, anchor: { line: 0, col: 0 } };
     const api = makeApi(state);
