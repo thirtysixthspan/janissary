@@ -101,7 +101,7 @@ to cross as it has visual rows, matching how the line actually appears on screen
 reaches the wrapped line's first or last visual row, the next ↑/↓ press continues into the
 neighboring line, same as for unwrapped lines.
 
-Clicking anywhere in the editor body — including empty space below the last line — keeps the textarea focused so keyboard input continues to work. Clicks on text lines move the cursor; clicks on empty space do not change cursor position but do not disarm the editor.
+Clicking anywhere in the editor body — including empty space below the last line — keeps the textarea focused so keyboard input continues to work. Clicks on text lines move the cursor; clicks on empty space do not change cursor position but do not disarm the editor. A double click selects the word under the pointer; a triple click selects the entire line, the same whole-line selection a gutter click produces, and dragging after either a gutter click or a triple click extends the selection a full line at a time.
 
 During IME composition, key events are deferred to the compositing text input and are not processed
 as editor actions until composition ends.
