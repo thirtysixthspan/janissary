@@ -2,7 +2,7 @@ import * as fileNavigatorRpc from './file-navigator.js';
 import { resolveTreeSelections } from '../file-navigator/selection-request.js';
 import type { FileNavigatorDetail } from '../tab/types.js';
 import type { Managers } from '../managers.js';
-import type { BatchResult, BulkConflictPolicy, BulkMoveResult, FileOpenerResolution, FileNavigatorSelectionRecord } from '../protocol.js';
+import type { BatchResult, BulkConflictPolicy, BulkMoveResult, FileOpenerResolution, FileSelectionAction, FileNavigatorSelectionRecord } from '../protocol.js';
 
 export type FileNavigatorControllerAdapter = {
   fileNavigatorToggle(index: number, path: string): void;
@@ -18,6 +18,8 @@ export type FileNavigatorControllerAdapter = {
   fileNavigatorSearch(index: number): Promise<string[]>;
   revealFileNavigatorItem(index: number, relPath: string): void;
   fileNavigatorOpeners(index: number, relPath: string, edit: boolean, all?: boolean): FileOpenerResolution;
+  fileNavigatorSelectionAction(index: number, paths: string[]): FileSelectionAction | null;
+  runFileNavigatorSelectionAction(index: number, paths: string[], action: string): void;
   reportFileNavigatorSelection(id: number, navigators: FileNavigatorSelectionRecord[]): void;
   undoFileNavigatorItem(index: number, overwrite?: boolean, skipConflicts?: boolean): ReturnType<typeof fileNavigatorRpc.undoFileNavigatorItem>;
   redoFileNavigatorItem(index: number, overwrite?: boolean, skipConflicts?: boolean): ReturnType<typeof fileNavigatorRpc.redoFileNavigatorItem>;
@@ -41,6 +43,8 @@ export function createFileNavigatorControllerAdapter(managers: Managers): FileNa
     fileNavigatorSearch: (index) => fileNavigatorRpc.fileNavigatorSearch(managers, index),
     revealFileNavigatorItem: (index, relPath) => fileNavigatorRpc.revealFileNavigatorItem(managers, index, relPath),
     fileNavigatorOpeners: (index, relPath, edit, all) => fileNavigatorRpc.fileNavigatorOpeners(managers, index, relPath, edit, all),
+    fileNavigatorSelectionAction: (index, paths) => fileNavigatorRpc.fileNavigatorSelectionAction(managers, index, paths),
+    runFileNavigatorSelectionAction: (index, paths, action) => fileNavigatorRpc.runFileNavigatorSelectionAction(managers, index, paths, action),
     reportFileNavigatorSelection: (id, navigators) => resolveTreeSelections(id, navigators),
     undoFileNavigatorItem: (index, overwrite, skipConflicts) => fileNavigatorRpc.undoFileNavigatorItem(managers, index, overwrite, skipConflicts),
     redoFileNavigatorItem: (index, overwrite, skipConflicts) => fileNavigatorRpc.redoFileNavigatorItem(managers, index, overwrite, skipConflicts),

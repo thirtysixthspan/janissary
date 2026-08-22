@@ -124,6 +124,8 @@ export function handle(controller: Controller, message: ClientMessage, reply: (e
     case 'fileNavigatorSearch':
     case 'revealFileNavigatorItem':
     case 'fileNavigatorOpeners':
+    case 'fileNavigatorSelectionAction':
+    case 'runFileNavigatorSelectionAction':
     case 'undoFileNavigatorItem':
     case 'redoFileNavigatorItem': {
       handleFileNavigatorMessage(controller, message, reply);

@@ -9,8 +9,10 @@ import { NOTIFICATIONS_LABEL, notificationsTab, appendNotification } from './not
 // failure or empty reply, `question` is an agent waiting for a human answer,
 // `transcript-unavailable` reports that a harness tab's session record could not be found, so the
 // tab is limited to screen snapshots, and `file-operation` reports a failed file-navigator copy,
-// paste, move, delete, or undo/redo replay. Explicit events are always eligible and bypass focus
-// suppression.
+// paste, move, delete, or undo/redo replay. `plugin-note` is a line a tab plugin reported through
+// its own `notifyUser` capability — a track a playlist had to drop, say — as opposed to
+// `plugin-failure`, which the host reports when a plugin breaks. Explicit events are always
+// eligible and bypass focus suppression.
 export type NotificationEventType =
   | 'state-change'
   | 'incoming-message'
@@ -23,7 +25,8 @@ export type NotificationEventType =
   | 'question'
   | 'transcript-unavailable'
   | 'file-operation'
-  | 'plugin-failure';
+  | 'plugin-failure'
+  | 'plugin-note';
 
 // Whether an event should be recorded, given the config and the active tab. Defensive against the
 // tab feeding itself. For the five ambient events, both the per-event opt-in toggle and focus
@@ -44,7 +47,11 @@ export function shouldNotify(
     case 'question':
     case 'transcript-unavailable':
     case 'file-operation': { return true; }
-    case 'plugin-failure': { return true; }
+    // `plugin-note` is explicit rather than ambient so focus suppression cannot swallow it: the
+    // case that matters most — a plugin reporting on the very tab the user is watching — is the one
+    // the ambient rule would have discarded.
+    case 'plugin-failure':
+    case 'plugin-note': { return true; }
     default: { break; }
   }
   if (tabLabel === activeLabel) return false;
@@ -85,7 +92,8 @@ export function notificationText(event: NotificationEventType, tabLabel: string,
     case 'auto-approve':
     case 'editor-suggest':
     case 'file-operation': { return detail ?? ''; }
-    case 'plugin-failure': { return detail ?? ''; }
+    case 'plugin-failure':
+    case 'plugin-note': { return detail ?? ''; }
     case 'question': { return `Question from ${tabLabel}`; }
     case 'transcript-unavailable': { return 'no harness transcript found'; }
   }

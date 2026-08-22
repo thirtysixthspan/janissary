@@ -24,6 +24,9 @@ type Properties = {
   opener: ReturnType<typeof useFileNavigatorOpener>;
   menu: PendingContextMenu | null;
   menuActions: FileNavigatorMenuActions;
+  // The plugin-contributed selection entry for the open menu, already bound to the selection it acts
+  // on, or nothing when the selection resolves to no such entry.
+  selectionEntry?: { label: string; onActivate: () => void } | null;
   onCloseMenu: () => void;
   focusTree: () => void;
 };
@@ -37,6 +40,7 @@ export function FileNavigatorOverlays({
   opener,
   menu,
   menuActions,
+  selectionEntry,
   onCloseMenu,
   focusTree,
 }: Properties) {
@@ -89,7 +93,9 @@ export function FileNavigatorOverlays({
       )}
       {menu && (
         <ContextMenu
-          groups={fileNavigatorMenuItems(menu.row, getClipboardSnapshot() !== null, menuActions)}
+          groups={fileNavigatorMenuItems(
+            menu.row, getClipboardSnapshot() !== null, menuActions, selectionEntry,
+          )}
           x={menu.x}
           y={menu.y}
           onClose={() => { onCloseMenu(); focusTree(); }}

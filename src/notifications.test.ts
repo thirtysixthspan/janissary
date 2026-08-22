@@ -123,6 +123,28 @@ describe('shouldNotify — file-operation event', () => {
   });
 });
 
+describe('shouldNotify — plugin-note event', () => {
+  // The case a dropped track hits most often: the audio tab reporting while the user is watching it.
+  // An ambient event would be discarded here, which is exactly why this one is explicit.
+  it('fires while the reporting plugin\'s own tab is the active one', () => {
+    expect(shouldNotify(allOn, 'plugin-note', 'audio', 'audio')).toBe(true);
+  });
+
+  it('fires regardless of the per-event toggles and with no config at all', () => {
+    expect(shouldNotify(allOff, 'plugin-note', 'audio', 'janus')).toBe(true);
+    expect(shouldNotify(undefined, 'plugin-note', 'audio', 'janus')).toBe(true);
+  });
+
+  it('still never targets the notifications tab itself', () => {
+    expect(shouldNotify(allOn, 'plugin-note', NOTIFICATIONS_LABEL, 'janus')).toBe(false);
+  });
+
+  it('returns the plugin\'s bare line (the label lives in the header)', () => {
+    expect(notificationText('plugin-note', 'audio', 'Dropped a.mp3 — it could not be played.'))
+      .toBe('Dropped a.mp3 — it could not be played.');
+  });
+});
+
 describe('shouldNotify — question event', () => {
   it('fires regardless of notification config', () => {
     expect(shouldNotify(undefined, 'question', 'build', 'janus')).toBe(true);
@@ -218,6 +240,17 @@ describe('notify — line composition', () => {
     notify(makeManagers(append), 'auto-approve', 'janus', 'Auto-approved a permission prompt');
     const [, entry] = append.mock.calls[0];
     expect(entry.openFile).toBeUndefined();
+  });
+
+  // Plugin activity must never conjure the feed into existence, exactly as a plugin failure does not.
+  it('drops a plugin note entirely when no notifications feed is open', () => {
+    const append = vi.fn();
+    const janus = { label: 'janus', dotColor: '#abc', log: [] };
+    const managers = { tab: { tabs: [janus], cur: () => janus, append } } as unknown as Managers;
+
+    notify(managers, 'plugin-note', 'janus', 'Dropped a.mp3 — it could not be played.');
+
+    expect(append).not.toHaveBeenCalled();
   });
 
   it('threads an owning-tab link onto a question notification', () => {

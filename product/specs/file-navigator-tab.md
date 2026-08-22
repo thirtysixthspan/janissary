@@ -202,6 +202,19 @@ Entries that do not apply are left out rather than shown greyed, so the menu's h
 context: **Paste** is absent when nothing has been copied or cut, and **Open**, **Open with**, and
 **Rename** are absent on the `..` row.
 
+One further entry can appear, and it is the only one that acts on the whole selection rather than on
+the clicked row: a **tab plugin's contributed selection entry**, drawn in a group of its own between
+the Open group and the Copy group. It is offered only when the menu was raised on a row inside a
+multi-row selection, every selected row is a file whose type one and the same plugin claims, and that
+plugin contributes such an entry. The bundled audio plugin contributes **Add to playlist**, which
+queues every selected audio file in order (see [[audio-tab]]). A mixed selection, a selection
+containing a directory, or a single row is offered nothing, and no request is made on its behalf.
+The label comes from the plugin; the navigator itself knows nothing about what kind of files it is
+looking at. Activating the entry re-resolves the selection against the tree's own root before the
+plugin ever sees it, so the paths a plugin acts on are always inside the tree being browsed.
+
+The `Enter` key and double-click gestures are unaffected: they keep opening the cursor row alone.
+
 The menu is keyboard-navigable — `↑` and `↓` move the highlight and `Enter` activates the
 highlighted entry. Escape, clicking outside it, or choosing an entry closes it, and closing returns
 keyboard focus to the tree so the arrow keys move the cursor again immediately.

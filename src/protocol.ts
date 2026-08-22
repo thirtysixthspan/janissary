@@ -48,6 +48,13 @@ export type FileOpenerChoice = { label: string; command: 'open' | 'edit' | 'open
 // context menu): the single-command shortcut is suppressed even for a claimed extension, and the
 // registered opener's own action is offered as a choice alongside the two fallbacks.
 export type FileOpenerResolution = { command?: 'open' | 'edit' | 'open external'; choices: FileOpenerChoice[] };
+// What a tab plugin contributes for a whole file navigator selection (see the
+// `fileNavigatorSelectionAction` RPC): the label to draw in the row context menu, and the action
+// name to send back when it is activated. `null` when the selection resolves to no such entry —
+// empty, mixed, containing a directory, or owned by a plugin contributing nothing for a selection.
+// Deliberately carries no plugin identity: the run RPC re-resolves the paths server-side, so the
+// client can only ever ask for the entry it was just offered.
+export type FileSelectionAction = { label: string; action: string };
 export type BulkConflictPolicy = 'overwrite-all' | 'skip-conflicts';
 export type BatchResult = { total: number; failedPaths: string[] };
 export type BulkMoveResult = BatchResult | { conflictPaths: string[] };
@@ -295,6 +302,15 @@ export type RpcCall =
   // `all` suppresses the single-command shortcut so the reply always carries the full choice list,
   // which is what the row context menu's "Open with" entry needs to force the chooser open.
   | { method: 'fileNavigatorOpeners'; params: { index: number; relPath: string; edit: boolean; all?: boolean } }
+  // What a tab plugin contributes for a whole selection of rows, for the row context menu. Replies
+  // with a `FileSelectionAction` when every selected path is a file of one plugin's own claimed
+  // types and that plugin contributes an entry, and with `null` otherwise. Resolving never activates
+  // the plugin — opening a menu is not a use of it.
+  | { method: 'fileNavigatorSelectionAction'; params: { index: number; paths: string[] } }
+  // Run the entry the RPC above just offered. The server re-resolves `paths` against the navigator's
+  // own root and re-derives the owning plugin, so the client names neither a plugin nor an action
+  // the server did not offer it. Fire-and-forget; the plugin's own tab is the result.
+  | { method: 'runFileNavigatorSelectionAction'; params: { index: number; paths: string[]; action: string } }
   // Answer to a `collect-tree-state` event: every mounted file navigator's cursor/anchor/selection,
   // tagged with the request `id` so a late reply to an earlier `profile save` is discarded.
   // Fire-and-forget — the server sends no reply of its own.

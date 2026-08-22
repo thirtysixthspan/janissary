@@ -215,4 +215,39 @@ describe('FileNavigatorOverlays', () => {
     fireEvent.click(screen.getByRole('button', { name: /skip/i }));
     expect(skipConflicts).toHaveBeenCalledTimes(1);
   });
+
+  const menuRow = { path: 'a.mp3', name: 'a.mp3', depth: 0, dir: false };
+
+  function renderMenu(selectionEntry?: { label: string; onActivate: () => void } | null) {
+    return render(
+      <FileNavigatorOverlays
+        drag={makeDrag()}
+        rename={makeRename()}
+        deletion={makeDeletion()}
+        paste={makePaste()}
+        search={makeSearch()}
+        opener={makeOpener()}
+        menu={{ row: menuRow, x: 10, y: 10 }}
+        menuActions={makeMenuActions()}
+        selectionEntry={selectionEntry}
+        onCloseMenu={() => {}}
+        focusTree={() => {}}
+      />,
+    );
+  }
+
+  it('renders a contributed selection entry in the row menu and activates it', () => {
+    const onActivate = vi.fn();
+    renderMenu({ label: 'Add to playlist', onActivate });
+    fireEvent.click(screen.getByText('Add to playlist'));
+    expect(onActivate).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders the ordinary row entries unchanged when nothing is contributed', () => {
+    renderMenu(null);
+    expect(screen.queryByText('Add to playlist')).toBeNull();
+    for (const label of ['Open', 'Open with', 'Copy', 'Delete', 'New file']) {
+      expect(screen.getByText(label)).toBeInTheDocument();
+    }
+  });
 });

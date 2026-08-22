@@ -18,8 +18,16 @@ export type FileNavigatorMenuActions = {
 // An entry that doesn't apply is omitted rather than shown greyed out, so the menu's height varies
 // with context: the ".." row has nowhere to open, open-with, or rename to, and Paste only exists
 // once something is on the clipboard. Pure, so the visibility rules are testable without rendering.
+//
+// `contributed` is the one entry that acts on the whole selection rather than the clicked row: a tab
+// plugin's own, offered when every selected row is a file of its claimed types. It is drawn in a
+// group of its own above Copy, labelled with whatever the plugin declared, and this function knows
+// nothing else about it — the navigator never learns what kind of files it is looking at.
 export function fileNavigatorMenuItems(
-  row: FileNavigatorRow, clipboardArmed: boolean, actions: FileNavigatorMenuActions,
+  row: FileNavigatorRow,
+  clipboardArmed: boolean,
+  actions: FileNavigatorMenuActions,
+  contributed?: { label: string; onActivate: () => void } | null,
 ): ContextMenuItem[][] {
   const parentRow = row.path === '..';
   const openGroup: ContextMenuItem[][] = parentRow ? [] : [[
@@ -33,8 +41,11 @@ export function fileNavigatorMenuItems(
     ? []
     : [{ label: 'Rename', onActivate: () => actions.rename(row) }];
 
+  const contributedGroup: ContextMenuItem[][] = contributed ? [[contributed]] : [];
+
   return [
     ...openGroup,
+    ...contributedGroup,
     [{ label: 'Copy', onActivate: () => actions.copy(row) }, ...pasteEntry],
     [...renameEntry, { label: 'Delete', onActivate: () => actions.remove(row) }],
     [

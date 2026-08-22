@@ -30,6 +30,9 @@ function validateDeclaration(declaration: TabPluginDeclaration): void {
 // A command claim with no handler is answered as a rejection when the command runs, because it has a
 // caller and a transcript to answer into. A notification has neither, so a declaration naming a topic
 // with nothing to deliver it to is caught here — the first moment the host holds the activation.
+// A contributed selection action is caught in the same place and for the same reason: the navigator
+// renders its label from the declaration alone, so an entry with nothing behind it would be offered
+// to the user before anything could discover it does not run.
 function validateActivation(
   declaration: TabPluginDeclaration,
   activation: TabPluginActivation,
@@ -37,6 +40,10 @@ function validateActivation(
   const topics = declaration.notifications ?? [];
   if (topics.length > 0 && !activation.notify) {
     throw new Error(`subscribes to "${topics.join('", "')}" but provides no notify handler`);
+  }
+  const selection = declaration.selectionAction;
+  if (selection && !activation.selectionAction) {
+    throw new Error(`contributes "${selection.label}" but provides no selectionAction handler`);
   }
 }
 

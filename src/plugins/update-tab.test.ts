@@ -6,6 +6,7 @@ import {
   TAB_PLUGIN_API_VERSION,
   type TabPluginCapabilityName,
   type TabPluginDeclaration,
+  type TabPluginResources,
   type TabPluginTabUpdate,
 } from './api.js';
 import { TabPluginHost } from './host.js';
@@ -44,7 +45,7 @@ function makeManagers(): Managers {
 // can produce a payload its own guard refuses.
 function hostFor(
   managers: Managers,
-  update: () => TabPluginTabUpdate,
+  update: (resources: TabPluginResources) => TabPluginTabUpdate,
   declarations: TabPluginDeclaration[] = [manifest('fixture')],
 ): TabPluginHost {
   const loaders = Object.fromEntries(declarations.map((declaration) => [declaration.id, async () => ({
@@ -226,6 +227,60 @@ describe('updateTab', () => {
     expect(tab.plugin!.instanceKey).toBe('/tmp/a.fixture');
     expect(tab.plugin!.payload).toEqual({ text: 'moved' });
     expect(managers.tab.tabs.filter((candidate) => candidate.plugin)).toHaveLength(2);
+  });
+
+  // An update may begin serving a file the tab did not hold before — a playlist gaining a track.
+  // The reference belongs to the tab that was updated, so its lifetime is that tab's and no other.
+  it('serves a file an update registers, owned by the updated tab', async () => {
+    const managers = makeManagers();
+    const host = hostFor(managers, (resources) => ({
+      payload: { text: 'second', url: resources.registerFile('/tmp/queued.fixture') },
+    }));
+    const tab = await openTab(host, managers);
+    const before = [...tab.plugin!.fileRefs];
+
+    await host.intent(tab.label, 'refresh', '/tmp/a.fixture');
+
+    const added = tab.plugin!.fileRefs.filter((reference) => !before.includes(reference));
+    expect(added).toHaveLength(1);
+    expect(managers.tab.openFiles.get(added[0])).toBe('/tmp/queued.fixture');
+    expect(tab.plugin!.fileRefs).toEqual([...before, ...added]);
+  });
+
+  it('releases what an update served when that tab closes, and nothing else', async () => {
+    const managers = makeManagers();
+    const host = hostFor(managers, (resources) => ({
+      payload: { text: 'second', url: resources.registerFile('/tmp/queued.fixture') },
+    }));
+    const opened = await openTab(host, managers);
+    await openTab(host, managers, '/tmp/b.fixture');
+    await host.intent(opened.label, 'refresh', '/tmp/a.fixture');
+    // Re-read both tabs: inserting the second one rebuilt the strip around the first, and
+    // `openTab` answers with whichever plugin tab comes first in it.
+    const byKey = (key: string) => managers.tab.tabs
+      .find((candidate) => candidate.plugin?.instanceKey === key)!;
+    const tab = byKey('/tmp/a.fixture');
+    const other = byKey('/tmp/b.fixture');
+    const served = [...tab.plugin!.fileRefs];
+    const survivors = [...other.plugin!.fileRefs];
+
+    managers.tab.closeTab(managers.tab.tabs.indexOf(tab));
+
+    for (const reference of served) expect(managers.tab.openFiles.has(reference)).toBe(false);
+    for (const reference of survivors) expect(managers.tab.openFiles.has(reference)).toBe(true);
+  });
+
+  it('serves nothing when the factory registers a file and then throws', async () => {
+    const managers = makeManagers();
+    const host = hostFor(managers, (resources) => {
+      resources.registerFile('/tmp/queued.fixture');
+      return { payload: { text: 42 } } as unknown as TabPluginTabUpdate;
+    });
+    const tab = await openTab(host, managers);
+
+    await expect(host.intent(tab.label, 'refresh', '/tmp/a.fixture')).rejects.toThrow();
+
+    expect([...managers.tab.openFiles.values()]).not.toContain('/tmp/queued.fixture');
   });
 
   it('applies from an opener as well as from an intent', async () => {

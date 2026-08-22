@@ -14,6 +14,7 @@ import { useFileNavigatorPaste } from './useFileNavigatorPaste';
 import { setClipboard } from './file-navigator-clipboard';
 import { normalizeOperationPaths, useFileNavigatorSelection } from './useFileNavigatorSelection';
 import { FileNavigatorOverlays } from './FileNavigatorOverlays';
+import { useSelectionAction } from './useSelectionAction';
 import { useFileNavigatorRowEvents } from './use-file-navigator-row-events';
 import type { FileNavigatorMenuActions } from './file-navigator-menu-items';
 import type { FileNavigatorTabProperties as Properties } from './file-navigator-tab-types';
@@ -38,6 +39,7 @@ export function FileNavigatorTab({
   const opener = useFileNavigatorOpener(client, index, files.absoluteRoot);
   const deletion = useFileNavigatorDelete(client, index);
   const paste = useFileNavigatorPaste(client, index, files.absoluteRoot);
+  const selectionAction = useSelectionAction(client, index);
 
   useEffect(() => { if (autoFocus) containerRef.current?.focus(); }, [autoFocus]);
 
@@ -162,7 +164,14 @@ export function FileNavigatorTab({
             onClick={() => rowEvents.onRowClick(row)}
             onDoubleClick={(shiftKey) => rowEvents.onRowDoubleClick(row, shiftKey)}
             onMouseDown={(event) => rowEvents.onRowMouseDown(row, event)}
-            onContextMenu={(event) => rowEvents.onRowContextMenu(row, event)}
+            onContextMenu={(event) => {
+              // Only a menu raised on a row inside a multi-row selection can carry an entry that
+              // acts on the whole selection; every other menu asks nothing and shows none.
+              selectionAction.query(
+                selection.selected.has(row.path) ? selection.operationPaths : [],
+              );
+              rowEvents.onRowContextMenu(row, event);
+            }}
           />
         ))}
       </div>
@@ -175,6 +184,10 @@ export function FileNavigatorTab({
         opener={opener}
         menu={rowEvents.menu}
         menuActions={menuActions}
+        selectionEntry={selectionAction.entry && {
+          label: selectionAction.entry.label,
+          onActivate: () => { selectionAction.run(selection.operationPaths); },
+        }}
         onCloseMenu={rowEvents.closeMenu}
         focusTree={() => containerRef.current?.focus()}
       />
