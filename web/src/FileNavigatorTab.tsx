@@ -89,7 +89,10 @@ export function FileNavigatorTab({
   const clipboardPaths = () => selection.operationPaths.map((relPath) => `${files.absoluteRoot}/${relPath}`);
   const menuActions: FileNavigatorMenuActions = {
     open: (row) => rowEvents.onRowDoubleClick(row, false),
-    openWith: (row) => opener.openWith(row.path),
+    openWith: (row) => opener.openWith(
+      row.path,
+      selection.selected.has(row.path) ? selection.operationPaths : [row.path],
+    ),
     copy: (row) => setClipboard('copy', [`${files.absoluteRoot}/${row.path}`]),
     paste: (row) => paste.paste(files.rows, row.path),
     rename: beginRename,

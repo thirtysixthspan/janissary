@@ -1315,6 +1315,30 @@ describe('FileNavigatorTab', () => {
       expect(screen.getByText('Open as markdown')).toBeInTheDocument();
     });
 
+    it('edits every selected file when choosing Edit as text', async () => {
+      const send = vi.fn();
+      const request = vi.fn().mockResolvedValue({
+        choices: [
+          { label: 'Open as markdown', command: 'open' },
+          { label: 'Edit as text', command: 'edit' },
+          { label: 'Open externally', command: 'open external' },
+        ],
+      });
+      const client = { send, request } as unknown as JanusClient;
+      render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
+      fireEvent.mouseDown(screen.getByText('src'), { button: 0 });
+      fireEvent.mouseDown(screen.getByText('README.md'), { button: 0, metaKey: true });
+      fireEvent.contextMenu(screen.getByText('README.md'));
+      await act(async () => { fireEvent.click(screen.getByText('Open with')); });
+      fireEvent.click(screen.getByText('Edit as text'));
+      expect(send).toHaveBeenNthCalledWith(1, {
+        method: 'command', params: { text: 'edit /home/user/project/src' },
+      });
+      expect(send).toHaveBeenNthCalledWith(2, {
+        method: 'command', params: { text: 'edit /home/user/project/README.md' },
+      });
+    });
+
     it('returns keyboard focus to the tree when it closes', () => {
       const client = { send: vi.fn() } as unknown as JanusClient;
       const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
