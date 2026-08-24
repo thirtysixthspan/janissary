@@ -3,12 +3,11 @@ import path from 'node:path';
 import type {
   TabPluginActivation,
   TabPluginServerCapabilities,
-  TabPluginTabUpdate,
 } from '../api.js';
 import { humanSize } from '../../openers/size.js';
 import { audioManifest } from './manifest.js';
 import {
-  appendTrack, currentTrack, emptyPlaylist, removeTrack, selectTrack, trackIndex,
+  appendTrack, emptyPlaylist, removeTrack, selectTrack, trackIndex,
 } from './playlist.js';
 import {
   AUDIO_TAB_KEY,
@@ -48,18 +47,6 @@ function openExternal(file: string, capabilities: TabPluginServerCapabilities): 
   capabilities.note(`No audio player available. The file is at ${file}`);
 }
 
-function titleOf(playlist: AudioPayload): string | undefined {
-  return currentTrack(playlist)?.name;
-}
-
-// A tab update whose title follows the playing track, so the tab strip names whatever is playing. An
-// emptied playlist leaves the title alone: the tab that just shed its last entry keeps the name of
-// the track it was playing rather than reverting to something anonymous.
-function tabUpdate(playlist: AudioPayload): TabPluginTabUpdate {
-  const title = titleOf(playlist);
-  return { ...(title !== undefined && { title }), payload: playlist };
-}
-
 export function activate(): TabPluginActivation {
   // The plugin's own record of the singleton tab's queue, so an `open` that appends knows what it is
   // appending to — an `updateTab` factory is handed no current payload. It is refreshed from the
@@ -75,12 +62,12 @@ export function activate(): TabPluginActivation {
     capabilities.openOrFocusTab(AUDIO_TAB_KEY, (resources) => {
       created = true;
       playlist = appendTrack(emptyPlaylist(), track(resources.registerFile(file)), size);
-      return { title: name, payload: playlist };
+      return { title: 'audio', payload: playlist };
     });
     if (created) return;
     capabilities.updateTab(AUDIO_TAB_KEY, (resources) => {
       playlist = appendTrack(playlist, track(resources.registerFile(file)), size);
-      return tabUpdate(playlist);
+      return { payload: playlist };
     });
   };
 
@@ -88,7 +75,7 @@ export function activate(): TabPluginActivation {
     next: AudioPayload, capabilities: TabPluginServerCapabilities,
   ): null => {
     playlist = next;
-    capabilities.updateTab(AUDIO_TAB_KEY, () => tabUpdate(next));
+    capabilities.updateTab(AUDIO_TAB_KEY, () => ({ payload: next }));
     return null;
   };
 
