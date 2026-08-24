@@ -93,7 +93,11 @@ export function FileNavigatorTab({
     copy: (row) => setClipboard('copy', [`${files.absoluteRoot}/${row.path}`]),
     paste: (row) => paste.paste(files.rows, row.path),
     rename: beginRename,
-    remove: (row) => deletion.request(normalizeOperationPaths(files.rows, new Set([row.path]))),
+    remove: (row) => deletion.request(
+      selection.selected.has(row.path)
+        ? selection.operationPaths
+        : normalizeOperationPaths(files.rows, new Set([row.path])),
+    ),
     newFile: createNewFile,
     newDirectory: createNewDirectory,
   };

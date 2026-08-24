@@ -1271,6 +1271,22 @@ describe('FileNavigatorTab', () => {
       expect(screen.getByText('Delete "README.md"?')).toBeInTheDocument();
     });
 
+    it('choosing Delete on a row inside a multi-selection deletes the whole selection', () => {
+      const send = vi.fn();
+      const client = { send } as unknown as JanusClient;
+      render(<FileNavigatorTab files={makeFiles()} client={client} index={3} />);
+      fireEvent.mouseDown(screen.getByText('src'), { button: 0 });
+      fireEvent.mouseDown(screen.getByText('README.md'), { button: 0, metaKey: true });
+      fireEvent.contextMenu(screen.getByText('README.md'));
+      fireEvent.click(screen.getByText('Delete'));
+      expect(screen.getByText('Delete 2 items?')).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: /delete/i }));
+      expect(send).toHaveBeenCalledWith({
+        method: 'deleteFileNavigatorItems',
+        params: { index: 3, paths: ['src', 'README.md'] },
+      });
+    });
+
     it('choosing Copy arms the clipboard with the clicked row', () => {
       const client = { send: vi.fn() } as unknown as JanusClient;
       render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);

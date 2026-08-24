@@ -188,9 +188,11 @@ claims, **Open with** shows the same two options double-clicking already offers.
 ### Row context menu
 
 Right-clicking a row opens a menu at the pointer instead of the browser's own. The menu belongs to
-the row that was clicked and its entries act on that row alone, whether or not it is part of the
-current selection — right-clicking never changes what is selected, so an existing multi-row
-highlight stays visible underneath the menu.
+the row that was clicked and most of its entries act on that row alone, whether or not it is part
+of the current selection — right-clicking never changes what is selected, so an existing multi-row
+highlight stays visible underneath the menu. **Delete** is the one exception: choosing it deletes
+the whole current selection when the clicked row is part of it, and just the clicked row otherwise,
+so right-clicking any row inside a multi-row highlight and deleting removes every highlighted row.
 
 The menu holds up to eight entries in four groups, separated in this order: **Open** and **Open
 with**; **Copy** and **Paste**; **Rename** and **Delete**; **New file** and **New folder**. Open
