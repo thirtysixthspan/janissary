@@ -2,7 +2,9 @@ import type { FileNavigatorRow } from '@shared/protocol';
 import type { ContextMenuItem } from './ContextMenu';
 
 // What the file navigator's context menu can do. Every action takes the right-clicked row rather
-// than the selection, because right-clicking deliberately leaves the selection alone.
+// than the selection, because right-clicking deliberately leaves the selection alone — except
+// Delete, which acts on the whole selection when the clicked row is part of it, matching the
+// Finder/Explorer convention for a destructive multi-file action.
 export type FileNavigatorMenuActions = {
   open: (row: FileNavigatorRow) => void;
   openWith: (row: FileNavigatorRow) => void;
