@@ -3,7 +3,7 @@ import type React from 'react';
 import type { FileOpenerChoice, FileOpenerResolution } from '@shared/protocol';
 import type { JanusClient } from './ws';
 
-export type PendingOpeners = { path: string; choices: FileOpenerChoice[]; selected: number };
+export type PendingOpeners = { path: string; paths: string[]; choices: FileOpenerChoice[]; selected: number };
 
 export function useFileNavigatorOpener(client: JanusClient, index: number, root: string) {
   const [pending, setPending] = useState<PendingOpeners | null>(null);
@@ -17,14 +17,14 @@ export function useFileNavigatorOpener(client: JanusClient, index: number, root:
       method: 'fileNavigatorOpeners', params: { index, relPath: path, edit },
     }).then((result) => {
       if (result?.command) client.send({ method: 'command', params: { text: `${result.command} ${root}/${path}` } });
-      else if (result?.choices.length) setPending({ path, choices: result.choices, selected: 0 });
+      else if (result?.choices.length) setPending({ path, paths: [path], choices: result.choices, selected: 0 });
     });
   };
 
   // The row context menu's "Open with": always show the chooser, even for a file whose extension a
   // registered opener claims and would normally open straight away. A client with no request
   // support has no chooser to show, so it falls back to the plain open command the way `open` does.
-  const openWith = (path: string) => {
+  const openWith = (path: string, paths = [path]) => {
     if (typeof client.request !== 'function') {
       client.send({ method: 'command', params: { text: `open ${root}/${path}` } });
       return;
@@ -32,14 +32,16 @@ export function useFileNavigatorOpener(client: JanusClient, index: number, root:
     void client.request<FileOpenerResolution>({
       method: 'fileNavigatorOpeners', params: { index, relPath: path, edit: false, all: true },
     }).then((result) => {
-      if (result?.choices.length) setPending({ path, choices: result.choices, selected: 0 });
+      if (result?.choices.length) setPending({ path, paths, choices: result.choices, selected: 0 });
     });
   };
 
   const choose = (choiceIndex: number) => {
     if (!pending) return;
     const choice = pending.choices[choiceIndex];
-    if (choice) client.send({ method: 'command', params: { text: `${choice.command} ${root}/${pending.path}` } });
+    if (choice?.command === 'edit') {
+      for (const path of pending.paths) client.send({ method: 'command', params: { text: `edit ${root}/${path}` } });
+    } else if (choice) client.send({ method: 'command', params: { text: `${choice.command} ${root}/${pending.path}` } });
     setPending(null);
   };
 
