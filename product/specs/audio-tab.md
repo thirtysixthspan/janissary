@@ -50,7 +50,7 @@ The playlist **plays straight through and stops on the last track**. When the fi
 
 **Removing the playing track advances to the next one**: the entry disappears and the following track starts playing. Removing an entry that is not playing never disturbs playback. Removing the last remaining entry stops playback and leaves the tab open on an empty playlist, reading `No tracks queued` where the player was — the tab is never closed on the user's behalf, since a queue is easy to refill.
 
-The tab is **named after the playing track** and follows it as playback advances. A user-supplied rename is therefore replaced at the next track change.
+The tab is always labeled **audio**, regardless of which track is playing.
 
 ### Playback survives a tab switch
 
@@ -68,4 +68,4 @@ A decode failure is a normal media outcome and does not disable the plugin. Neit
 
 ### Tab strip, closing, reordering
 
-In the tab strip an audio tab reads like any other view tab: same dot, group bar, active highlight, and ordering, named after the playing track, with a close control right-aligned within the tab. Closing, reordering, and grouping behave exactly as they do for a video tab (see [[video-tab]]) — closing drops the queue and unregisters every file it served, and the tab can never be moved out of the group it was opened from.
+In the tab strip an audio tab reads like any other view tab: same dot, group bar, active highlight, and ordering, labeled **audio**, with a close control right-aligned within the tab. Closing, reordering, and grouping behave exactly as they do for a video tab (see [[video-tab]]) — closing drops the queue and unregisters every file it served, and the tab can never be moved out of the group it was opened from.

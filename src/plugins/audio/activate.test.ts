@@ -107,7 +107,7 @@ describe('audio plugin opener', () => {
     activate().opener.inline(file, fixture.capabilities);
 
     expect(fixture.opened).toHaveLength(1);
-    expect(fixture.opened[0].title).toBe('one.mp3');
+    expect(fixture.opened[0].title).toBe('audio');
     expect(payloadOf(fixture.opened[0])).toMatchObject({ current: 0, size: '1.5 KB' });
     expect(payloadOf(fixture.opened[0]).tracks).toEqual([
       { name: 'one.mp3', path: file, url: '/open/ref-1' },
@@ -127,7 +127,7 @@ describe('audio plugin opener', () => {
     expect(fixture.opened).toHaveLength(1);
     expect(fixture.updates).toHaveLength(1);
     expect(fixture.registered).toEqual([first, second]);
-    expect(fixture.updates[0].title).toBe('two.mp3');
+    expect(fixture.updates[0].title).toBeUndefined();
     const playlist = payloadOf(fixture.updates[0]);
     expect(playlist.tracks.map((entry) => entry.name)).toEqual(['one.mp3', 'two.mp3']);
     expect(playlist.current).toBe(1);
@@ -204,7 +204,7 @@ describe('audio plugin command and selection action', () => {
 });
 
 describe('audio plugin intents', () => {
-  it('makes a queued track current and retitles the tab after it', () => {
+  it('makes a queued track current without retitling the tab', () => {
     const fixture = fakeCapabilities({ open: true });
     const result = activate().intent({
       tab: 'audio', intent: 'select-track', payload: { path: '/music/b.mp3' },
@@ -212,18 +212,18 @@ describe('audio plugin intents', () => {
     }, fixture.capabilities);
 
     expect(result).toBeNull();
-    expect(fixture.updates[0].title).toBe('b.mp3');
+    expect(fixture.updates[0].title).toBeUndefined();
     expect(payloadOf(fixture.updates[0]).current).toBe(1);
   });
 
-  it('drops a track and advances, retitling the tab after what now plays', () => {
+  it('drops a track and advances without retitling the tab', () => {
     const fixture = fakeCapabilities({ open: true });
     activate().intent({
       tab: 'audio', intent: 'remove-track', payload: { path: '/music/a.mp3' },
       tabPayload: tabPayload('a.mp3', 'b.mp3'),
     }, fixture.capabilities);
 
-    expect(fixture.updates[0].title).toBe('b.mp3');
+    expect(fixture.updates[0].title).toBeUndefined();
     expect(payloadOf(fixture.updates[0]).tracks.map((entry) => entry.name)).toEqual(['b.mp3']);
     expect(fixture.notices).toEqual([]);
   });
