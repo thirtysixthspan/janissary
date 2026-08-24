@@ -823,3 +823,39 @@ describe('HarnessManager workspace provisioning', () => {
     expect(tabs.at(-1)!.harness).toMatchObject({ ptyId: 'pty-1', status: 'running' });
   });
 });
+
+// The tab-creation options travel as one object, so each of these pins a field that shares a type
+// with its neighbour — the pairs a positional argument list could once have transposed silently.
+describe('HarnessManager spawn options', () => {
+  it('keeps offline and autoApprove apart when only offline is given', () => {
+    const { managers, tabs } = makeManagers();
+    const manager = new HarnessManager(managers);
+    expect(manager.run('harness claude -w --offline')).toBeUndefined();
+    expect(tabs.at(-1)).toMatchObject({ offline: true, autoApprove: false });
+  });
+
+  it('keeps offline and autoApprove apart when only autoApprove is given', () => {
+    const { managers, tabs } = makeManagers();
+    const manager = new HarnessManager(managers);
+    expect(manager.run('harness claude -w -y')).toBeUndefined();
+    expect(tabs.at(-1)).toMatchObject({ offline: false, autoApprove: true });
+  });
+
+  it('does not swap a profile entry\'s model and effort', () => {
+    const { managers, tabs } = makeManagers();
+    const manager = new HarnessManager(managers);
+    expect(manager.openFromProfile(
+      { name: 'claude', tool: 'claude', model: 'opus', effort: 'high' }, 'claude', 2, '#fff',
+    )).toBeUndefined();
+    expect(tabs.at(-1)!.harness).toMatchObject({ model: 'opus', effort: 'high' });
+  });
+
+  it('lands a profile launch\'s group, group color, and dot color on their own tab fields', () => {
+    const { managers, tabs } = makeManagers();
+    const manager = new HarnessManager(managers);
+    expect(manager.openFromProfile(
+      { name: 'claude', tool: 'claude', dotColor: '#abcdef' }, 'claude', 7, '#123456',
+    )).toBeUndefined();
+    expect(tabs.at(-1)).toMatchObject({ group: 7, groupColor: '#123456', dotColor: '#abcdef' });
+  });
+});

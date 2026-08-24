@@ -8,6 +8,7 @@ import { HarnessRecorder } from './recorder.js';
 import { type HarnessAutoApprover, autoApproveWithoutWorkspaceWarning } from './auto-approve.js';
 import { buildAutoApprover } from './auto-approve-wire.js';
 import { HarnessRuntime } from './runtime.js';
+import type { SpawnTabOptions } from './spawn-options.js';
 import { busyStatusHandler } from './busy-status.js';
 import { captureSubcommand, transcriptSubcommand } from './subcommands.js';
 import { HarnessTranscriptTailer } from './transcript/tailer.js';
@@ -124,7 +125,7 @@ export class HarnessManager {
     const dotColor = distinctColor(this.managers.tab.tabs.map((t) => t.dotColor));
     const group = creator?.group ?? 1;
     const groupColor = creator?.groupColor ?? dotColor;
-    this.spawnTab(name, label, cwd, workspaceDir, offline, group, groupColor, dotColor, autoApprove, model, effort, ready);
+    this.spawnTab({ name, label, cwd, workspaceDir, offline, group, groupColor, dotColor, autoApprove, model, effort, ready });
     if (prompt) this.managers.schedule.set(label, [oneShotRunEntry('run-1', prompt)]);
     return undefined;
   }
@@ -140,7 +141,11 @@ export class HarnessManager {
     if (typeof dir === 'string') return dir;
     const { cwd, workspaceDir, ready } = dir;
     const dotColor = distinctColor(this.managers.tab.tabs.map((t) => t.dotColor), entry.dotColor);
-    this.spawnTab(entry.tool, unique, cwd, workspaceDir, entry.offline ?? false, group, groupColor, dotColor, entry.autoApprove ?? false, entry.model, entry.effort, ready);
+    this.spawnTab({
+      name: entry.tool, label: unique, cwd, workspaceDir, offline: entry.offline ?? false,
+      group, groupColor, dotColor, autoApprove: entry.autoApprove ?? false,
+      model: entry.model, effort: entry.effort, ready,
+    });
     return undefined;
   }
 
@@ -151,11 +156,8 @@ export class HarnessManager {
   // is deferred until `ready` resolves (see `finishSpawn`/`failSpawn`), so the tab never blocks on
   // the clone. `model`/`effort`, when given, are passed to the harness binary via
   // `buildHarnessCommand`.
-  private spawnTab(
-    name: string, label: string, cwd: string, workspaceDir: string | undefined, offline: boolean,
-    group: number, groupColor: string, dotColor: string, autoApprove: boolean, model?: string, effort?: string,
-    ready?: Promise<void>,
-  ): void {
+  private spawnTab(options: SpawnTabOptions): void {
+    const { name, label, cwd, workspaceDir, offline, group, groupColor, dotColor, autoApprove, model, effort, ready } = options;
     const harness: HarnessView = { name, program: HARNESS_COMMANDS[name], ptyId: '', status: ready ? 'provisioning' : 'running' };
     if (model !== undefined) harness.model = model;
     if (effort !== undefined) harness.effort = effort;
@@ -168,7 +170,7 @@ export class HarnessManager {
     this.managers.tab.setActiveTab(this.managers.tab.findIndex(tab.label));
 
     if (!ready) {
-      this.finishSpawn(name, label, cwd, workspaceDir, offline, autoApprove, model, effort);
+      this.finishSpawn(options);
       return;
     }
     // Broadcast the placeholder now — its PTY isn't ready yet, but the tab itself is, and the
@@ -178,17 +180,14 @@ export class HarnessManager {
       label,
       ready,
       (l) => this.managers.tab.tabs.some((t) => t.label === l),
-      () => this.finishSpawn(name, label, cwd, workspaceDir, offline, autoApprove, model, effort),
+      () => this.finishSpawn(options),
       (message) => this.failSpawn(label, message),
     );
   }
 
   // Spawn the PTY and wire up its screen reader/recorder — the part of tab creation that actually
   // depends on `cwd` existing on disk, so it can't run until a `-w` launch's clone has finished.
-  private finishSpawn(
-    name: string, label: string, cwd: string, workspaceDir: string | undefined, offline: boolean,
-    autoApprove: boolean, model?: string, effort?: string,
-  ): void {
+  private finishSpawn({ name, label, cwd, workspaceDir, offline, autoApprove, model, effort }: SpawnTabOptions): void {
     const program = HARNESS_COMMANDS[name];
     const extraEnv: NodeJS.ProcessEnv | undefined = name === 'claude'
       ? { CLAUDE_CODE_TMPDIR: claudeTmpDir(cwd), DISABLE_AUTOUPDATER: '1' }
