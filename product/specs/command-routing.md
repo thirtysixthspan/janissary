@@ -57,7 +57,7 @@ can be aimed at a specific connection).
 
 - **Wire shape.** The chooser rides on the `state` event as `route: { cmd, choices } | null` (the
   option **labels**, in order); `null` means no chooser is open. Only one chooser exists at a time
-  (the active tab's command line). See `RouteChooserView` in `src/server/protocol.ts`.
+  (the active tab's command line). See `RouteChooserView` in `src/protocol/tab.ts`.
 - **Client overlay.** `web/src/RouteChooser.tsx` floats above the command line listing the command and
   its options. It is **modal**: the command input is disabled while it is open. **Up/Down** move the
   selection, **Return** picks, **Escape** cancels (a row can also be clicked). The overlay closes
