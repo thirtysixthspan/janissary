@@ -2,8 +2,6 @@
 
 ## ready
 
-* create a janissary server that can be launched on a remote system. the remote server will act as conduit for agents and harnesses to execute on the remote system. The remote server will only be capable of creating workspaced agents and harnesses using the repository of the project root. the remote server should execute within the context of a ssh session and communicate only over the ssh channel. agent and harness command should be augmented to support launching on a remote by providing an address. Authentication via SSH key will be the default, but password, if required should be enterable after the command is launched. The remote harness and session should appear no different that that run on the local machine other than the hostname added to the metadata row.
-
 ## development
 
 * The Markdown view (`product/specs/markdown-tab.md`, `product/specs/markdown-rendering.md`) is a read-only snapshot that must be reopened after a file changes, while Obsidian offers an editable Live Preview/Source mode toggle for the same Markdown note. Closing this gap would turn the Markdown tab into an editable note view with source/live-preview switching, debounced saves, dirty-file protection, and external-change handling while retaining the existing sanitized renderer. Complexity: medium-high.
