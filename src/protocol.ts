@@ -1,368 +1,66 @@
 // Wire types shared between the Node server and the React web client.
 // The web client imports these directly via the @shared path alias — no mirror needed.
-import type { BufferLine, HarnessView, EditorView, TerminalEntry, FileNavigatorView, FileNavigatorDetail, FileNavigatorRow, TaskRow } from './tab/types.js';
-import type { CompletionResult } from './completion/types.js';
-import type { ProfileRow } from './profile/types.js';
+//
+// The declarations themselves live in per-domain modules under ./protocol/, so a feature adding an
+// RPC edits its own domain's file instead of colliding with every other feature in this one. This
+// module is the wire boundary: it composes the cross-domain `RpcCall`/`ClientMessage` unions and
+// re-exports the domain types, so every consumer keeps importing from `./protocol.js`
+// (`@shared/protocol` on the client).
+import type { CoreRpcCall } from './protocol/core-rpc.js';
+import type { FileNavigatorRpcCall } from './protocol/file-navigator.js';
+import type { EditorRpcCall } from './protocol/editor.js';
+import type { MonitorRpcCall } from './protocol/monitor.js';
+import type { ScheduleRpcCall } from './protocol/schedule.js';
+import type { PluginRpcCall } from './protocol/plugin.js';
 
-// Used locally in TabView below, so separate import + export is required.
-// eslint-disable-next-line unicorn/prefer-export-from
-export type { BufferLine, HarnessView, EditorView, TerminalEntry, CompletionResult, FileNavigatorView, FileNavigatorDetail, FileNavigatorRow, TaskRow, ProfileRow };
+export type { BufferLine, HarnessView, EditorView, TerminalEntry, FileNavigatorView, FileNavigatorDetail, FileNavigatorRow, TaskRow } from './tab/types.js';
+export type { CompletionResult } from './completion/types.js';
+export type { ProfileRow } from './profile/types.js';
 
-export type PluginTabView = {
-  id: string;
-  schemaVersion: number;
-  payload: unknown;
-};
+export type { PluginTabView, PluginIntentRequest, PluginFailedRequest, PluginRpcCall } from './protocol/plugin.js';
+export type { ScheduleView, AggregatedScheduleView, ScheduleLaunchView, ScheduleRpcCall } from './protocol/schedule.js';
+export type { SuggestionView, MonitorRpcCall } from './protocol/monitor.js';
+export type { SuggestHunk, EditorRpcCall } from './protocol/editor.js';
+export type {
+  FileOpenerChoice,
+  FileOpenerResolution,
+  FileSelectionAction,
+  BulkConflictPolicy,
+  BatchResult,
+  BulkMoveResult,
+  MoveConflict,
+  UndoRedoResult,
+  FileNavigatorSelectionRecord,
+  FileNavigatorRpcCall,
+} from './protocol/file-navigator.js';
+export type {
+  AcpRef,
+  ConnectionView,
+  RouteChooserView,
+  HarnessLaunchView,
+  QuestionKind,
+  PendingQuestionView,
+  TabView,
+} from './protocol/tab.js';
+export type {
+  StateEvent,
+  PtyDataEvent,
+  PtyExitEvent,
+  RpcReply,
+  ByeEvent,
+  LayoutEvent,
+  CollectTreeStateEvent,
+  ServerEvent,
+} from './protocol/events.js';
 
-export type PluginIntentRequest = { tab: string; intent: string; payload: unknown };
-export type PluginFailedRequest = { tab: string; reason: string };
-
-// Identifies the ACP session behind a connections-panel row, for the `openAcpTranscript` RPC to
-// route on: the tab's own agent, a monitor session, or an editor-persona session.
-export type AcpRef =
-  | { scope: 'tab'; label: string }
-  | { scope: 'monitor'; name: string }
-  | { scope: 'editor'; label: string; persona: string };
-
-// One row in the floating "connections" panel (shell / acp / terminal card / sqlite). `acpRef` is
-// set on every `kind: 'acp'` row, identifying which session the row's transcript button opens.
-export type ConnectionView = { text: string; kind: 'shell' | 'acp' | 'browser' | 'terminal' | 'sqlite' | 'ssh'; acpRef?: AcpRef };
-
-// One proposed edit from an in-editor persona-suggestion query (see editorSuggest below): the
-// exact existing text to replace (empty means append at the end of the file) and its replacement
-// (empty means delete the anchor text with nothing).
-export type SuggestHunk = { anchor: string; replacement: string };
-// One row in the floating "schedule" panel.
-export type ScheduleView = { id: string; spec: string; next: string; recurring: boolean };
-// One row in the aggregated "schedules" tab: a ScheduleView plus its owning tab label and the
-// command to run (the per-tab ScheduleView omits the command; the aggregate needs it).
-export type AggregatedScheduleView = ScheduleView & { tab: string; command: string };
-// A pending route chooser: the unprefixed command plus the option labels to pick from.
-export type RouteChooserView = { cmd: string; choices: string[] };
-export type FileOpenerChoice = { label: string; command: 'open' | 'edit' | 'open external' };
-// How activating one file navigator row resolves (see the `fileNavigatorOpeners` RPC): either a
-// single command the client runs straight away, or the fallback options it renders as a chooser.
-// A declaration may replace the normal edit gesture with `open external`; video uses it because a
-// plain-text editor is useless for a binary container.
-// A third case is the forced chooser the RPC's `all` flag asks for ("Open with" in the row's
-// context menu): the single-command shortcut is suppressed even for a claimed extension, and the
-// registered opener's own action is offered as a choice alongside the two fallbacks.
-export type FileOpenerResolution = { command?: 'open' | 'edit' | 'open external'; choices: FileOpenerChoice[] };
-// What a tab plugin contributes for a whole file navigator selection (see the
-// `fileNavigatorSelectionAction` RPC): the label to draw in the row context menu, and the action
-// name to send back when it is activated. `null` when the selection resolves to no such entry —
-// empty, mixed, containing a directory, or owned by a plugin contributing nothing for a selection.
-// Deliberately carries no plugin identity: the run RPC re-resolves the paths server-side, so the
-// client can only ever ask for the entry it was just offered.
-export type FileSelectionAction = { label: string; action: string };
-export type BulkConflictPolicy = 'overwrite-all' | 'skip-conflicts';
-export type BatchResult = { total: number; failedPaths: string[] };
-export type BulkMoveResult = BatchResult | { conflictPaths: string[] };
-export type MoveConflict = { fromRelPath: string; toRelPath: string };
-export type UndoRedoResult = Partial<BatchResult> & {
-  conflict?: MoveConflict;
-  conflicts?: MoveConflict[];
-};
-// The open "New harness" launch dialog's data: the ordered harness names and each harness's known
-// model catalog (empty for a harness with no catalog). Null in the snapshot when the dialog is closed.
-export type HarnessLaunchView = { names: string[]; models: Record<string, string[]> };
-// The open "New schedule" dialog's data: the eligible target-tab labels (agent + harness tabs)
-// and the default (active tab) label. Null in the snapshot when the dialog is closed.
-export type ScheduleLaunchView = { targets: string[]; active: string };
-export type QuestionKind = 'ask' | 'approve';
-export type PendingQuestionView = {
-  id: string;
-  tab: string;
-  kind: QuestionKind;
-  question: string;
-  options?: string[];
-};
-
-// One AI-monitor suggestion in the monitor window's feed: which persona produced it, which
-// tab's activity it is about, and the optional one-click command.
-export type SuggestionView = {
-  id: string;
-  text: string;
-  command?: string;
-  timestamp: number;
-  persona: string;
-  about: string;
-};
-
-// A tab as the client renders it: presentation metadata plus the already-flattened transcript
-// lines (the server owns `flattenBuffer`, so the client never needs it).
-export type TabView = {
-  label: string;
-  number: number;
-  dotColor: string;
-  group: number;
-  groupColor: string;
-  busy: boolean;
-  // True when the tab has unseen output (see Tab.hasUnread). Drives the tab-strip badge.
-  hasUnread: boolean;
-  cwd: string;
-  // Identifiers of this tab's currently-active flags (e.g. 'workspaced', 'autoApprove'), for the
-  // metadata row's flag-emoji display. Empty when none are active.
-  flags?: string[];
-  // provider/model of a connected ACP agent on this tab, if any.
-  acp?: string;
-  connections: ConnectionView[];
-  schedule: ScheduleView[];
-  bufferLines: BufferLine[];
-  cmdHistory: string[];
-  commandQueue: string[];
-  toolStepsExpanded: boolean;
-  pendingQuestion?: PendingQuestionView;
-  // Body kind: undefined/`'agent'` for a normal tab, or the named live view kind.
-  view?: 'agent' | 'plugin' | 'harness' | 'editor' | 'monitor' | 'files' | 'notifications';
-  // Display name when it differs from `label` (a plugin tab is titled by its plugin).
-  title?: string;
-  // Bundled-plugin envelope, present only when `view === 'plugin'`.
-  plugin?: PluginTabView;
-  // Harness-view payload, present only when `view === 'harness'`.
-  harness?: HarnessView;
-  // Editor-view payload, present only when `view === 'editor'`.
-  editor?: EditorView;
-  // Monitor-window payload, present only when `view === 'monitor'`: the suggestion feed, the
-  // persona name, the monitored tabs/groups (pre-formatted), and the running total of bytes
-  // sent/received on the monitor's dedicated ACP session.
-  monitor?: { suggestions: SuggestionView[]; persona: string; targets: string; contextBytes: number };
-  // File-navigator payload, present only when `view === 'files'`.
-  files?: FileNavigatorView;
-  // Set while a full-tab interactive PTY (htop, vim, etc.) is running on this agent tab.
-  // Cleared on exit; the client hides the transcript while this is set.
-  activePty?: string;
-  // Set when this tab is docked into a sidebar instead of living in the central tab strip.
-  // Absent means center. A docked tab is never the active tab. See product/specs/sidebars.md.
-  dock?: 'left' | 'right';
-  pane?: 'right';
-};
-
-export type StateEvent = {
-  t: 'state'; tabs: TabView[]; activeTab: number; secondaryTab?: number; route: RouteChooserView | null;
-  // The open "New harness" launch dialog, or null when it is closed.
-  harnessLaunch: HarnessLaunchView | null;
-  // The open "New schedule" dialog, or null when it is closed.
-  scheduleLaunch: ScheduleLaunchView | null;
-  tabNameMaxLength: number;
-  activeTabNameMaxLength: number;
-  globalHistory: string[];
-  syntaxTheme: string;
-  theme: string;
-  tasks: TaskRow[];
-  // Absolute path of the Janissary install's `ai/tasks` directory, used to build the `execute`
-  // command for a built-in (Janissary-source) task row.
-  janissaryTasksDir: string;
-  profiles: ProfileRow[];
-  // Absolute path of the project directory the server was started against. Drives the titlebar.
-  projectDir: string;
-  // App version (semver only, e.g. "0.5.4"). Drives the titlebar.
-  version: string;
-};
-export type PtyDataEvent = { t: 'pty'; id: string; data: string };
-export type PtyExitEvent = { t: 'pty-exit'; id: string; exitCode: number };
-export type RpcReply = { t: 'rpc-reply'; id: number; result?: unknown; error?: string };
-// Tells the client to close its window; the server then stops (the `quit`/`exit` command).
-export type ByeEvent = { t: 'bye' };
-// A profile's `layout` sidebar/tab-area sizes, applied on `profile launch`. Window sizing is
-// applied directly over CDP and never reaches the client — see product/specs/profiles.md.
-export type LayoutEvent = {
-  t: 'layout';
-  sidebarLeft?: number;
-  sidebarRight?: number;
-  tabAreaPct?: number;
-  focusLeft?: 'files' | 'notifications';
-  focusRight?: 'files' | 'notifications';
-};
-// Asks every connected client to report its file navigators' cursor/anchor/selection, which live
-// only in client state. Issued by `profile save`, which waits briefly for the matching
-// `reportFileNavigatorSelection` reply before writing the file — see src/file-navigator/selection-request.ts.
-export type CollectTreeStateEvent = { t: 'collect-tree-state'; id: number };
-export type ServerEvent =
-  StateEvent | PtyDataEvent | PtyExitEvent | RpcReply | ByeEvent | LayoutEvent | CollectTreeStateEvent;
-
-// One navigator's client-side selection, keyed by the tab `index` every other `fileNavigator*` RPC
-// uses. Paths are relative to that tree's root, matching the server's own `expanded` vocabulary.
-export type FileNavigatorSelectionRecord = {
-  index: number;
-  cursor?: string;
-  anchor?: string;
-  selected: string[];
-};
-
-// Client -> server requests. Tab creation/closing flow through `command` (`agent`, `close`);
-// `setActiveTab`/`moveTab`/`toggleCollapse` are pure-UI shortcuts.
+// Client -> server requests: every domain's slice of the protocol, joined into the one union the
+// server's message handler and the client's RPC helper both switch on.
 export type RpcCall =
-  | { method: 'init'; params: Record<string, never> }
-  | { method: 'command'; params: { text: string } }
-  | { method: 'setActiveTab'; params: { index: number } }
-  | { method: 'focusTab'; params: { label: string } }
-  | { method: 'closeTab'; params: { index: number } }
-  | { method: 'renameTab'; params: { index: number; title: string } }
-  // Patch or remove one entry in the active tab's command queue (see `queue.md`). Index-based
-  // against that tab's queue; no-ops server-side when the index is out of range.
-  | { method: 'editQueuedCommand'; params: { index: number; text: string } }
-  | { method: 'deleteQueuedCommand'; params: { index: number } }
-  | { method: 'moveTab'; params: { dir: -1 | 1 } }
-  | { method: 'moveTabToOtherPane'; params: { index: number } }
-  | { method: 'reorderTab'; params: { dir: -1 | 1 } }
-  | { method: 'reorderTabTo'; params: { from: number; to: number } }
-  | { method: 'toggleCollapse'; params: Record<string, never> }
-  | { method: 'chooseRoute'; params: { index: number } }
-  // Close the "New harness" launch dialog without launching (Cancel/Escape).
-  | { method: 'closeHarnessLaunch'; params: Record<string, never> }
-  // Close the "New schedule" dialog without scheduling (Cancel/Escape, or after a submit).
-  | { method: 'closeScheduleLaunch'; params: Record<string, never> }
-  | { method: 'answerQuestion'; params: { tab: string; id: string; answer: string | null } }
-  | { method: 'complete'; params: { text: string; cursor: number } }
-  | { method: 'resize'; params: { cols: number; rows: number } }
-  | { method: 'ptyInput'; params: { id: string; data: string } }
-  | { method: 'ptyResize'; params: { id: string; cols: number; rows: number } }
-  | { method: 'ptyKill'; params: { id: string } }
-  // Run a monitor suggestion's command in the tab the suggestion is about. The
-  // suggestion stays in the feed.
-  | { method: 'runSuggestion'; params: { id: string } }
-  // Rate a suggestion 👍/👎; feedback reaches the monitoring AI on its next batch and
-  // the suggestion is removed from the feed (either direction).
-  | { method: 'rateSuggestion'; params: { id: string; up: boolean } }
-  // Reset a monitor's reporting tab to just its persona context (discards accumulated
-  // conversation on its dedicated ACP session).
-  | { method: 'resetMonitorContext'; params: { name: string } }
-  // Open a point-in-time snapshot of a monitor's accumulated ACP context in an editor tab.
-  | { method: 'monitorContextSnapshot'; params: { name: string } }
-  // Write an editor tab's buffer back to disk. `url` is the tab's `/open/<id>` ref — the server
-  // resolves it through the open-file allow-list, so only explicitly opened files are writable.
-  | { method: 'saveFile'; params: { url: string; content: string } }
-  | { method: 'pluginIntent'; params: PluginIntentRequest }
-  | { method: 'pluginFailed'; params: PluginFailedRequest }
-  // Sync an editor tab's in-progress (unsaved) buffer to the server as transient draft
-  // state, debounced client-side after typing pauses. Never written to disk — see saveFile
-  // for that. `url` identifies the tab the same way saveFile's does.
-  | { method: 'editorSync'; params: { url: string; content: string } }
-  // Manually re-pull a GitHub-synced editor tab's shared workspace from origin/master (the sync
-  // status icon's click action). Fire-and-forget: the result surfaces via the tab's `sync` field
-  // over the next `state` broadcast(s), the same as the save-triggered sync cycle. `url` identifies
-  // the tab the same way saveFile's does.
-  | { method: 'resyncEditorTab'; params: { url: string } }
-  // Report the client's current sidebar/tab-area sizes after a manual resize completes, so the
-  // server always holds the latest values for `profile save` to read synchronously into a profile's
-  // `layout` key. Client-only, no reply — the reverse of the server->client `layout` event.
-  | { method: 'reportLayout'; params: { sidebarLeft: number; sidebarRight: number; tabAreaPct: number } }
-  // Expand/collapse one directory row in a file navigator tab. `index` is the tab's position in the
-  // server's full tab list (resolved to a label server-side); `path` is the row's tree-relative path.
-  | { method: 'fileNavigatorToggle'; params: { index: number; path: string } }
-  // Collapse every expanded directory in a file navigator tab back to just its root.
-  | { method: 'fileNavigatorCollapseAll'; params: { index: number } }
-  // Switch which per-row detail a file navigator tab shows (its header's detail button).
-  | { method: 'fileNavigatorSetDetail'; params: { index: number; details: FileNavigatorDetail } }
-  // Re-root a file navigator tab to the parent directory.
-  | { method: 'fileNavigatorReroot'; params: { index: number; path?: string } }
-  // Move a file or directory in a file navigator tab into a different directory (drag-and-release).
-  // `fromRelPath` is the dragged item's tree-relative path; `toRelPath` is the destination
-  // directory's tree-relative path.
-  | { method: 'moveFileNavigatorItem'; params: { index: number; fromRelPath: string; toRelPath: string } }
-  | {
-      method: 'moveFileNavigatorItems';
-      params: {
-        index: number;
-        sourcePaths: string[];
-        destinationPath: string;
-        policy?: BulkConflictPolicy;
-      };
-    }
-  // Copy- or cut-paste the clipboard's absolute source paths into a file navigator tab.
-  // `destinationPath` is tree-relative to the pasting tab's own root; `sources` are absolute, since
-  // the app-wide clipboard's items may live outside that root.
-  | {
-      method: 'pasteFileNavigatorItems';
-      params: {
-        index: number;
-        sources: string[];
-        destinationPath: string;
-        mode: 'copy' | 'cut';
-        policy?: BulkConflictPolicy;
-      };
-    }
-  // Delete a file or directory (recursively) from a file navigator tab, after the client has already
-  // confirmed with the user. `relPath` is the tree-relative path of the row being removed.
-  | { method: 'deleteFileNavigatorItem'; params: { index: number; relPath: string } }
-  | { method: 'deleteFileNavigatorItems'; params: { index: number; paths: string[] } }
-  // Rename a file or directory in place within a file navigator tab (in-directory only — the client has
-  // already confirmed an overwrite with the user, if the new name collides with a sibling).
-  // `relPath` is the tree-relative path of the row being renamed; `newName` is the bare new name
-  // (no path separators).
-  | { method: 'renameFileNavigatorItem'; params: { index: number; relPath: string; newName: string } }
-  // List every gitignore-aware file under a file navigator tab's own root, for its Search-files
-  // pop-up. Replies (deferred) with `{ paths }` — root-relative, matching the tree's own rows.
-  | { method: 'fileNavigatorSearch'; params: { index: number } }
-  // Expand every ancestor directory of `relPath` in a file navigator tab (adding to `expanded`,
-  // watching, rebuilding); the client separately selects and scrolls to it once the resulting
-  // rows arrive. The search pop-up's Enter action.
-  | { method: 'revealFileNavigatorItem'; params: { index: number; relPath: string } }
-  // `all` suppresses the single-command shortcut so the reply always carries the full choice list,
-  // which is what the row context menu's "Open with" entry needs to force the chooser open.
-  | { method: 'fileNavigatorOpeners'; params: { index: number; relPath: string; edit: boolean; all?: boolean } }
-  // What a tab plugin contributes for a whole selection of rows, for the row context menu. Replies
-  // with a `FileSelectionAction` when every selected path is a file of one plugin's own claimed
-  // types and that plugin contributes an entry, and with `null` otherwise. Resolving never activates
-  // the plugin — opening a menu is not a use of it.
-  | { method: 'fileNavigatorSelectionAction'; params: { index: number; paths: string[] } }
-  // Run the entry the RPC above just offered. The server re-resolves `paths` against the navigator's
-  // own root and re-derives the owning plugin, so the client names neither a plugin nor an action
-  // the server did not offer it. Fire-and-forget; the plugin's own tab is the result.
-  | { method: 'runFileNavigatorSelectionAction'; params: { index: number; paths: string[]; action: string } }
-  // Answer to a `collect-tree-state` event: every mounted file navigator's cursor/anchor/selection,
-  // tagged with the request `id` so a late reply to an earlier `profile save` is discarded.
-  // Fire-and-forget — the server sends no reply of its own.
-  | { method: 'reportFileNavigatorSelection'; params: { id: number; navigators: FileNavigatorSelectionRecord[] } }
-  // Undo/redo the most recent move in a file navigator tab's per-tab undo/redo stack. `overwrite`
-  // retries a pending entry after the client has confirmed an overwrite of a conflicting
-  // destination; the reply's `result` carries `{ conflict }` when one is found instead.
-  | { method: 'undoFileNavigatorItem'; params: { index: number; overwrite?: boolean; skipConflicts?: boolean } }
-  | { method: 'redoFileNavigatorItem'; params: { index: number; overwrite?: boolean; skipConflicts?: boolean } }
-  // Dock a dockable tab (file navigator or notifications) into a sidebar (`'left'` | `'right'`), or
-  // undock it back to the center tab strip (`null`). Explicit set, not "cycle" — the cycle order
-  // lives client-side. The handler is generic, so both dockable tab kinds share this one RPC.
-  | { method: 'setDock'; params: { index: number; dock: 'left' | 'right' | null } }
-  // Open a file navigator rooted at the named tab's cwd, triggered by the 📁 button in a
-  // harness/agent tab's metadata row. If a file navigator tab is already open, its root is retargeted
-  // to that cwd in place; otherwise a fresh one opens docked in the left sidebar. Either way the
-  // resulting file navigator tab is focused. `label` is the requesting tab's own label.
-  | { method: 'openFileNavigatorFor'; params: { label: string } }
-  // Launch a new agent tab whose working directory is the named tab's cwd, triggered by the ➕
-  // button in a harness/agent tab's metadata row. The new agent is auto-named from the pool, joins
-  // the source tab's group, and is focused. `label` is the requesting tab's own label.
-  | { method: 'launchAgentFor'; params: { label: string } }
-  // Write the named agent tab's full transcript to a plain-text file and open it in an editor
-  // tab, triggered by the clipboard button in an agent tab's metadata row. No-ops when the tab
-  // is missing or its log is empty. `label` is the requesting tab's own label.
-  | { method: 'openTranscriptFor'; params: { label: string } }
-  // Open the named harness tab's session transcript file (the same file `harness transcript`
-  // opens) in an editor tab, triggered by the clipboard button in a harness tab's metadata row.
-  // No-ops when the tab has no transcript tailer or no transcript file yet. `label` is the
-  // requesting harness tab's own label.
-  | { method: 'openHarnessTranscriptFor'; params: { label: string } }
-  // Write the ACP session identified by `acpRef` to a plain-text capture file and open it in a
-  // read-only editor tab, triggered by the clipboard button on a connections-panel ACP row. An
-  // empty exchange substitutes a `No transcript yet.` placeholder rather than no-opping.
-  | { method: 'openAcpTranscript'; params: { acpRef: AcpRef } }
-  // List every gitignore-aware file under the project/launch directory, for the Cmd+P quick-open
-  // overlay. Replies (deferred) with `{ root, paths }` — `root` is the absolute launch directory,
-  // `paths` are its root-relative paths — so the client can join them into an absolute path for
-  // the `edit` command regardless of the active tab's own cwd.
-  | { method: 'projectFiles'; params: Record<string, never> }
-  // List the persona names available to an editor tab's `>`-led suggestion requests, for
-  // Tab-completion after `>` (see product/specs/editor-tab.md). Replies (deferred) with `{ names }`.
-  | { method: 'editorPersonas'; params: Record<string, never> }
-  // Fire a single-shot in-editor persona-suggestion query: prime the named persona with the
-  // editor's live buffer content (including unsaved edits) and the request prompt, and reply
-  // (deferred) with `{ hunks }` — the parsed edit hunks the persona proposed (empty when the
-  // persona is unknown, the query fails, or it has nothing to suggest; a notification is posted
-  // in each of those cases). `url` identifies the owning editor tab the same way saveFile's does.
-  | { method: 'editorSuggest'; params: { url: string; persona: string; content: string; prompt: string } }
-  // Close one of an editor tab's open persona ACP connections (the connections window's close
-  // control). Fire-and-forget: the row disappears via the next `state` broadcast, so no reply
-  // payload is needed. `url` identifies the owning editor tab the same way saveFile's does.
-  | { method: 'closeEditorConnection'; params: { url: string; persona: string } };
+  | CoreRpcCall
+  | FileNavigatorRpcCall
+  | EditorRpcCall
+  | MonitorRpcCall
+  | ScheduleRpcCall
+  | PluginRpcCall;
 
 export type ClientMessage = { t: 'rpc'; id: number } & RpcCall;

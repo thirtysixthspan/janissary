@@ -16,6 +16,17 @@ describe('isClientMessage', () => {
   });
 
   it.each([
+    ['core-rpc', 'command', { text: 'help' }],
+    ['file-navigator', 'fileNavigatorCollapseAll', { index: 0 }],
+    ['editor', 'editorSync', { url: '/open/1', content: 'x' }],
+    ['monitor', 'runSuggestion', { id: 's1' }],
+    ['schedule', 'closeScheduleLaunch', {}],
+    ['plugin', 'pluginIntent', { tab: 'fixture', intent: 'echo', payload: {} }],
+  ])('accepts a %s method, so that domain stays wired into the RpcCall union', (_domain, method, params) => {
+    expect(isClientMessage({ t: 'rpc', id: 1, method, params })).toBe(true);
+  });
+
+  it.each([
     null,
     [],
     'rpc',
