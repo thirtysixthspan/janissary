@@ -72,7 +72,7 @@ As you type, the editor also keeps a transient, unsaved copy of your buffer sync
 
 <img class="agent-float" src="/agents/orhan-south-west.png" alt="" />
 
-Markdown, JavaScript, TypeScript, and JSON files are colored by syntax, chosen by file extension; anything else renders as plain text. Highlighting keeps up with your edits without slowing typing down, and is skipped for very large buffers (over 10,000 lines or 1 MB) so they stay responsive.
+Markdown, JavaScript, TypeScript, and JSON files are colored by syntax, chosen by file extension; anything else renders as plain text. Highlighting keeps up with your edits without slowing typing down — including when several editor tabs are open on files of the same language, since each tab highlights on its own — and is skipped for very large buffers (over 10,000 lines or 1 MB) so they stay responsive.
 
 One theme applies to every editor tab at once. Switch it with `syntax theme <name>`, or run bare `syntax theme` for a picker — the choice persists across restarts. See [Application commands](/user-documentation/command-bar/commands).
 

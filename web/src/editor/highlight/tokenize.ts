@@ -50,26 +50,33 @@ function sameTokens(a: TokenRange[] | undefined, b: TokenRange[] | undefined): b
   return a.every((range, index) => range.from === b[index].from && range.to === b[index].to && range.scope === b[index].scope);
 }
 
-let previousLanguage: string | null = null;
-let previousLines: string[] = [];
-let previousTokens: TokenRange[][] = [];
-
 // Tokenize the full document and split it into per-line token-range arrays. When a line's text and
 // freshly computed tokens both match the previous run, its previous array object is reused
 // (referentially), so `EditorLine`'s default `React.memo` still skips re-rendering unchanged lines.
-export function tokenizeDocument(text: string, language: string): TokenRange[][] {
-  const lines = text.split('\n');
-  if (language !== previousLanguage) {
-    previousLanguage = language;
-    previousLines = [];
-    previousTokens = [];
-  }
-  const fresh = computeTokens(text, language);
-  const result = lines.map((line, index) => {
-    if (previousLines[index] === line && sameTokens(previousTokens[index], fresh[index])) return previousTokens[index];
-    return fresh[index];
-  });
-  previousLines = lines;
-  previousTokens = result;
-  return result;
+export type Tokenizer = (text: string, language: string) => TokenRange[][];
+
+// One tokenizer per editor tab. The memo below is per-instance on purpose: a single shared cache
+// would have every open tab overwriting the previous document with its own, so no line would ever
+// match and the referential reuse would be lost for all of them.
+export function createTokenizer(): Tokenizer {
+  let previousLanguage: string | null = null;
+  let previousLines: string[] = [];
+  let previousTokens: TokenRange[][] = [];
+
+  return (text: string, language: string): TokenRange[][] => {
+    const lines = text.split('\n');
+    if (language !== previousLanguage) {
+      previousLanguage = language;
+      previousLines = [];
+      previousTokens = [];
+    }
+    const fresh = computeTokens(text, language);
+    const result = lines.map((line, index) => {
+      if (previousLines[index] === line && sameTokens(previousTokens[index], fresh[index])) return previousTokens[index];
+      return fresh[index];
+    });
+    previousLines = lines;
+    previousTokens = result;
+    return result;
+  };
 }
