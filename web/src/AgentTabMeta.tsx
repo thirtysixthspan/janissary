@@ -4,8 +4,7 @@ import { tabFlagDisplay } from './tab-flag-display';
 import { openFilesIcon, newTabIcon, viewCaptureIcon, connectionsWindowIcon, scheduleWindowIcon } from './icons';
 import { StatusWindowButton } from './StatusWindowButton';
 import { SplitTabButton } from './SplitTabButton';
-
-export type StatusWindowButtonProps = { hasContent: boolean; onEnter: () => void; onLeave: () => void; onClick: () => void };
+import type { StatusWindowButtonProps } from './status-button';
 
 type Properties = {
   cwd?: string; flags?: string[]; model?: string; effort?: string;

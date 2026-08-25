@@ -2,6 +2,7 @@ import { renderHook } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type { TabView } from '@shared/protocol';
 import type { JanusClient } from '../ws';
+import type { StatusWindowButtonProps } from '../status-button';
 import { useEditorConnections } from './useEditorConnections';
 
 function makeTab(overrides: Partial<TabView> = {}): TabView {
@@ -23,6 +24,18 @@ describe('useEditorConnections', () => {
 
     rerender({ tab: makeTab({ connections: [{ text: 'reviewer (acp)', kind: 'acp' }] }) });
     expect(result.current.connectionsButton.hasContent).toBe(true);
+  });
+
+  it('builds a connections button matching the shared StatusWindowButtonProps contract', () => {
+    const client = { send: vi.fn() } as unknown as JanusClient;
+    const { result } = renderHook(() => useEditorConnections(client, makeTab()));
+
+    const button: StatusWindowButtonProps = result.current.connectionsButton;
+
+    expect(Object.keys(button).toSorted((a, b) => a.localeCompare(b))).toEqual(['hasContent', 'onClick', 'onEnter', 'onLeave']);
+    expect(typeof button.onEnter).toBe('function');
+    expect(typeof button.onLeave).toBe('function');
+    expect(typeof button.onClick).toBe('function');
   });
 
   it('closeRow strips the " (acp)" suffix and sends closeEditorConnection with the tab\'s url', () => {

@@ -1,8 +1,8 @@
 import React from 'react';
 import type { EditorView } from '@shared/protocol';
-import { EditorSaveButton } from '../EditorSaveButton';
+import { EditorSaveButton } from './EditorSaveButton';
 import { StatusWindowButton } from '../StatusWindowButton';
-import type { StatusWindowButtonProps } from '../AgentTabMeta';
+import type { StatusWindowButtonProps } from '../status-button';
 import { connectionsWindowIcon } from '../icons';
 import { EditorSyncIcon } from './EditorSyncIcon';
 import { SplitTabButton } from '../SplitTabButton';

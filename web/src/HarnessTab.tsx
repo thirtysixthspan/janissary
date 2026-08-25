@@ -2,7 +2,8 @@ import React, { forwardRef, useImperativeHandle, useRef } from 'react';
 import type { JanusClient } from './ws';
 import type { HarnessView } from '@shared/protocol';
 import { useXterm } from './useXterm';
-import { AgentTabMeta, type StatusWindowButtonProps } from './AgentTabMeta';
+import { AgentTabMeta } from './AgentTabMeta';
+import type { StatusWindowButtonProps } from './status-button';
 
 type Properties = {
   harness: HarnessView; client: JanusClient; taskPickerOpen?: boolean; navOpen?: boolean; cwd?: string; flags?: string[]; label: string;
