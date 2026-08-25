@@ -3,7 +3,7 @@ import type { EditorState } from './model';
 import { toText } from './model';
 import { hljs } from './highlight/hljs';
 import { languageForFile } from './highlight/registry';
-import { tokenizeDocument, type TokenRange } from './highlight/tokenize';
+import { createTokenizer, type TokenRange } from './highlight/tokenize';
 
 // Pathological files skip highlighting entirely (plain text) so typing never gets sluggish.
 const MAX_LINES = 10_000;
@@ -17,6 +17,7 @@ export function useSyntaxHighlight(state: EditorState | null, fileName: string):
   const [tokens, setTokens] = useState<TokenRange[][]>([]);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const loadedRef = useRef(false);
+  const tokenize = useRef(createTokenizer()).current;
 
   useEffect(() => {
     if (!state) { setTokens([]); return; }
@@ -25,7 +26,7 @@ export function useSyntaxHighlight(state: EditorState | null, fileName: string):
     const text = toText(state);
     if (state.lines.length > MAX_LINES || text.length > MAX_CHARS) { setTokens([]); return; }
 
-    const recompute = () => setTokens(tokenizeDocument(text, language));
+    const recompute = () => setTokens(tokenize(text, language));
 
     if (!loadedRef.current) {
       loadedRef.current = true;
@@ -35,7 +36,9 @@ export function useSyntaxHighlight(state: EditorState | null, fileName: string):
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(recompute, DEBOUNCE_MS);
     return () => { if (timerRef.current) clearTimeout(timerRef.current); };
-  }, [state, fileName]);
+    // `tokenize` is this tab's own instance, created once and stable for its lifetime, so listing
+    // it here never re-runs the effect — it just satisfies the exhaustive-deps rule honestly.
+  }, [state, fileName, tokenize]);
 
   return tokens;
 }

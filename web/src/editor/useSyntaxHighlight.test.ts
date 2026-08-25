@@ -42,4 +42,22 @@ describe('useSyntaxHighlight', () => {
     act(() => { vi.advanceTimersByTime(200); });
     expect(result.current.length).toBeGreaterThan(0);
   });
+
+  it('keeps one tab\'s line reuse intact while another tab edits the same language', () => {
+    const renderTab = (text: string) => renderHook(
+      ({ state }: { state: EditorState }) => useSyntaxHighlight(state, 'test.ts'),
+      { initialProps: { state: makeState(text) } },
+    );
+    const first = renderTab('const x = 1;\nconst y = 2;');
+    const second = renderTab('const a = 9;\nconst b = 8;');
+    const before = first.result.current[0];
+
+    // The other tab recomputes in between, as two open editor tabs do on every keystroke.
+    second.rerender({ state: makeState('const a = 9;\nconst c = 7;') });
+    act(() => { vi.advanceTimersByTime(200); });
+    first.rerender({ state: makeState('const x = 1;\nconst z = 2;') });
+    act(() => { vi.advanceTimersByTime(200); });
+
+    expect(first.result.current[0]).toBe(before);
+  });
 });

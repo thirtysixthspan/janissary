@@ -178,6 +178,8 @@ The editor colors text by its syntactic role — keywords, strings, comments, an
 
 Highlighting recomputes immediately when a file finishes loading, and shortly after each edit (a brief pause after typing stops, so keystrokes are never slowed down by it). Highlighting is skipped — the file renders as plain text — for buffers larger than 10,000 lines or 1 MB, so opening a very large file never becomes sluggish.
 
+Each editor tab highlights independently: a tab only redraws the lines its own edit changed, and editing in one tab never costs anything in another, including when several open tabs hold files of the same language.
+
 One theme is active at a time, shared by every open editor tab. `syntax theme <name>` switches it; `syntax theme` alone opens a picker overlay listing every available theme, with the active one marked by a checkmark. Arrow keys move the selection, Return picks the highlighted theme, Escape closes the picker without changing anything, and clicking a row picks it directly. The chosen theme persists across restarts (see Application Config).
 
 Highlighting composes with the existing caret and selection rendering: a token under the caret or inside a selection still shows the caret bar / selection background exactly as it would in unhighlighted text.
