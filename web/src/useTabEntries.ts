@@ -1,9 +1,7 @@
 import { useMemo } from 'react';
 import type { TabView } from '@shared/protocol';
-import { isReportingTab } from './ReportingSection';
+import { isReportingTab, type TabEntry } from './tab-entries';
 import type { JanusClient } from './ws';
-
-export type TabEntry = { tab: TabView; index: number };
 
 export function reorderTabEntries(
   client: JanusClient, entries: TabEntry[], from: number, to: number,

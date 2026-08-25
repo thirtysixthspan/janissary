@@ -1,6 +1,6 @@
 import type { TabView } from '@shared/protocol';
 import type { JanusClient } from './ws';
-import type { TabEntry } from './useTabEntries';
+import type { TabEntry } from './tab-entries';
 
 export type BaseCenterActionAreaProps = {
   entries: TabEntry[];

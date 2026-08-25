@@ -1,6 +1,6 @@
 import React from 'react';
 import type { TabView } from '@shared/protocol';
-import type { TabEntry } from './useTabEntries';
+import type { TabEntry } from './tab-entries';
 import type { BaseCenterActionAreaProps } from './CenterActionAreaProps';
 import { CenterActionArea } from './CenterActionArea';
 import { ViewTabBody } from './ViewTabBody';

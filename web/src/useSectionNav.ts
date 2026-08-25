@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import type { TabView } from '@shared/protocol';
-import { isReportingTab } from './ReportingSection';
+import { isReportingTab } from './tab-entries';
 
 export type Section = 'left' | 'center' | 'right' | 'reporting';
 

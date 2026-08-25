@@ -2,8 +2,7 @@ import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { TabView } from '@shared/protocol';
 import { statusDotIcon } from './icons';
-import { isReportingTab } from './ReportingSection';
-import type { TabEntry } from './useTabEntries';
+import { isReportingTab, type TabEntry } from './tab-entries';
 
 export type TabNavEntry = TabEntry;
 

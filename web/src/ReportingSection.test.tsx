@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, fireEvent } from '@testing-library/react';
 import React, { useState } from 'react';
-import { ReportingSection, isReportingTab, DEFAULT_PCT, type ReportingEntry } from './ReportingSection';
+import { ReportingSection, DEFAULT_PCT, type ReportingEntry } from './ReportingSection';
 
 // A drag needs the heightPct prop to actually move the rendered flex value, so the drag-clamp
 // tests wrap ReportingSection in a small controlled harness — mirroring how `App` owns it in
@@ -24,16 +24,6 @@ function makeEntry(label: string, index: number, suggestions: { id: string; text
     index,
   };
 }
-
-describe('isReportingTab', () => {
-  it('returns true for monitor tabs', () => {
-    expect(isReportingTab({ view: 'monitor' } as never)).toBe(true);
-  });
-
-  it('returns false for non-monitor tabs', () => {
-    expect(isReportingTab({ view: 'agent' } as never)).toBe(false);
-  });
-});
 
 describe('ReportingSection', () => {
   it('returns null when entries is empty', () => {

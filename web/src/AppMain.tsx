@@ -10,7 +10,7 @@ import { ScheduleDialog } from './ScheduleDialog';
 import { QuitDialog } from './QuitDialog/QuitDialog';
 import { UnsavedQuitDialog } from './UnsavedQuitDialog';
 import { CloseSaveGuard } from './CloseSaveGuard';
-import type { TabEntry } from './useTabEntries';
+import type { TabEntry } from './tab-entries';
 import type { LayoutState } from './useLayoutState';
 import type { HarnessTabHandle } from './HarnessTab';
 import type { ShellTabHandle } from './ShellTab';
