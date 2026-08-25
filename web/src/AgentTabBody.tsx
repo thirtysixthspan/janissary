@@ -14,6 +14,7 @@ import { useStatusWindows } from './useStatusWindows';
 import { statusButton } from './status-button';
 import type { FuzzyMatchResult } from './fuzzy-match';
 import { tabBodyBorder } from './tab-body-border';
+import { agentTabIntents } from './agent-tab-intents';
 
 type Properties = {
   current: TabView;
@@ -91,6 +92,7 @@ export function AgentTabBody({
   recallReference, onEditQueued, onDeleteQueued, dropRef, onSplit,
 }: Properties) {
   const statusWindows = useStatusWindows(current.label, current.connections.length > 0, current.schedule.length > 0);
+  const intents = agentTabIntents(client, current.label);
   return (
     <div
       className="tab-body"
@@ -104,9 +106,9 @@ export function AgentTabBody({
       <AgentTabMeta
         cwd={current.cwd}
         flags={current.flags}
-        onOpenFileNavigator={() => client.send({ method: 'openFileNavigatorFor', params: { label: current.label } })}
-        onLaunchAgentHere={current.cwd === undefined ? undefined : () => client.send({ method: 'launchAgentFor', params: { label: current.label } })}
-        onOpenTranscript={() => client.send({ method: 'openTranscriptFor', params: { label: current.label } })}
+        onOpenFileNavigator={intents.onOpenFileNavigator}
+        onLaunchAgentHere={current.cwd === undefined ? undefined : intents.onLaunchAgentHere}
+        onOpenTranscript={intents.onOpenTranscript}
         connectionsButton={{
           hasContent: current.connections.length > 0,
           onEnter: statusWindows.connections.onButtonEnter,
@@ -120,7 +122,7 @@ export function AgentTabBody({
         <Transcript
           lines={lines}
           client={client}
-          onToggleCollapse={() => client.send({ method: 'toggleCollapse', params: {} })}
+          onToggleCollapse={intents.onToggleCollapse}
           onPromptClick={(text) => runCommand(text)}
           scrollRef={transcriptReference}
           highlight={highlight}
@@ -130,7 +132,7 @@ export function AgentTabBody({
           connections={statusWindows.connections}
           schedule={statusWindows.schedule}
           interactive
-          onOpenAcpTranscript={(acpRef) => client.send({ method: 'openAcpTranscript', params: { acpRef } })}
+          onOpenAcpTranscript={intents.onOpenAcpTranscript}
         />
         <PickerOverlays
           route={route} routeIndex={routeIndex} onPickRoute={chooseRoute}
