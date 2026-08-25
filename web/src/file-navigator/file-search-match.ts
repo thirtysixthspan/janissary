@@ -1,4 +1,4 @@
-import { basename } from './rel-path';
+import { basename } from '../rel-path';
 
 // Rank a single candidate path against the lowercase query on its basename: `0` for a
 // filename-prefix match (ranked highest), `1` for any other substring match, `undefined` for no
