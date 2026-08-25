@@ -19,6 +19,8 @@ const SECURITY_HEADERS = {
   'Content-Security-Policy': "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self'; frame-src https: http:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'",
 } as const;
 
+const CLIENT_RECONNECT_GRACE_MS = 1000;
+
 const MIME: Record<string, string> = {
   // Plugin claims come first so every core entry below overrides them. Accepted plugin claims only
   // prove that no core *opener* owns the extension, and this map also serves the web UI's own
@@ -105,6 +107,10 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
   });
 
   wss.on('connection', (ws: WebSocket) => {
+    if (exitTimer) {
+      clearTimeout(exitTimer);
+      exitTimer = undefined;
+    }
     clients.add(ws);
     ws.on('message', (raw) => {
       let message: unknown;
@@ -120,7 +126,10 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
       clients.delete(ws);
       if (clients.size === 0 && !closed) {
         broadcast({ t: 'bye' });
-        exitTimer = setTimeout(() => { void close().then(() => process.exit(0)); }, 100);
+        exitTimer = setTimeout(() => {
+          exitTimer = undefined;
+          void close().then(() => process.exit(0));
+        }, CLIENT_RECONNECT_GRACE_MS);
       }
     });
   });

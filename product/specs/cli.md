@@ -74,11 +74,11 @@ Because the server is detached, Ctrl+C on the launcher no longer stops it (the l
 Shutdown is triggered by any of:
 - SIGINT or SIGTERM
 - The `quit` command from a connected client
-- Closing the last browser window or tab (all WebSocket clients disconnect)
+- Closing the last browser window or tab (all WebSocket clients disconnect and none reconnect during the one-second grace period)
 
 A window releases its own connection as it goes away rather than leaving the browser to tear the socket down incidentally, so the disconnect that triggers shutdown is prompt and does not vary with how a given browser unloads a page.
 
-The server broadcasts a `bye` event to all connected browser windows (telling them to close), waits 100 ms for them to shut down, then closes the HTTP server and WebSocket connections, and exits. On exit, the Chrome app window is killed and the instance lock is released.
+When the last client disconnects, the server waits one second before beginning shutdown so a browser history restore can reconnect without losing the running session. A new client during that grace period cancels the pending shutdown. Once shutdown begins, the server broadcasts a `bye` event to all connected browser windows (telling them to close), waits 100 ms for them to shut down, then closes the HTTP server and WebSocket connections, and exits. On exit, the Chrome app window is killed and the instance lock is released.
 
 ### Stopping a running instance
 

@@ -98,6 +98,24 @@ describe('startServer (WS + RPC + security)', () => {
     exitSpy.mockRestore();
   });
 
+  it('keeps serving when a client reconnects after the last connection closes', async () => {
+    server = await startServer({ webDir: tmpdir() });
+    const first = new WebSocket(`ws://127.0.0.1:${server.port}/?token=${server.token}`);
+    await new Promise((res, rej) => { first.on('open', res); first.on('error', rej); });
+    first.close();
+    await new Promise((res) => first.on('close', res));
+
+    const second = new WebSocket(`ws://127.0.0.1:${server.port}/?token=${server.token}`);
+    const events: ServerEvent[] = [];
+    second.on('message', (data) => { events.push(JSON.parse(data.toString())); });
+    await new Promise((res, rej) => { second.on('open', res); second.on('error', rej); });
+    await new Promise((res) => setTimeout(res, 150));
+
+    second.send(JSON.stringify({ t: 'rpc', id: 1, method: 'init', params: {} }));
+    await waitFor(() => events.some((event) => event.t === 'state'));
+    second.close();
+  });
+
   it('rejects an /open/ request with no token, and 404s an unregistered id with one', async () => {
     server = await startServer({ webDir });
     const get = (query: string) => new Promise<number>((res, rej) => {
