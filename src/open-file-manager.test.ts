@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { OpenFileManager } from './open-file-manager.js';
 import type { Managers } from './managers.js';
 import { TabPluginHost } from './plugins/host.js';
+import { openerForExtension } from './openers/index.js';
 
 const osOpen = vi.hoisted(() => ({ didOsOpen: vi.fn<(file: string, application?: string) => boolean>(() => true) }));
 
@@ -68,6 +69,69 @@ describe('OpenFileManager.edit', () => {
 
     expect(opened).toHaveLength(1);
     expect(opened[0].line).toBe(42);
+  });
+});
+
+describe('OpenFileManager.edit (dispatch by file type)', () => {
+  const makeEditManagers = (opened: string[], runOpener: ReturnType<typeof vi.fn>) => ({
+    tab: {
+      cwdOf: () => '/working',
+      append: () => {},
+      openEditorTab: (view: { path: string }) => { opened.push(view.path); },
+      registerFile: (p: string) => `/open/test-${p.length}`,
+    },
+    plugins: { runOpener },
+  } as unknown as Managers);
+
+  it('routes an image to the image plugin edit presentation instead of the text editor', () => {
+    const opened: string[] = [];
+    const runOpener = vi.fn();
+
+    new OpenFileManager(makeEditManagers(opened, runOpener)).edit('edit photo.png', 'photo.png', 'janus');
+
+    expect(opened).toHaveLength(0);
+    expect(runOpener).toHaveBeenCalledWith(
+      'image', 'edit', path.resolve('/working', 'photo.png'), { label: 'janus', command: 'edit photo.png' },
+    );
+  });
+
+  // The line number still parses for any file; the image editor simply has no use for one.
+  it('opens the image editor for a path carrying a line suffix and discards the line', () => {
+    const opened: string[] = [];
+    const runOpener = vi.fn();
+
+    new OpenFileManager(makeEditManagers(opened, runOpener))
+      .edit('edit photo.png:42', 'photo.png', 'janus', 42);
+
+    expect(runOpener).toHaveBeenCalledWith(
+      'image', 'edit', path.resolve('/working', 'photo.png'),
+      { label: 'janus', command: 'edit photo.png:42' },
+    );
+  });
+
+  it.each([
+    ['a source file', 'src/index.ts'],
+    ['an extensionless file', 'Makefile'],
+    ['a markdown file', 'readme.md'],
+  ])('still reaches the plain-text editor for %s', (_label, target) => {
+    const opened: string[] = [];
+    const runOpener = vi.fn();
+
+    new OpenFileManager(makeEditManagers(opened, runOpener)).edit(`edit ${target}`, target, 'janus');
+
+    expect(runOpener).not.toHaveBeenCalled();
+    expect(opened).toEqual([path.resolve('/working', target)]);
+  });
+
+  // Resolution reads the opener registry, which is built from declarations alone — asking whether a
+  // plugin owns the verb must never be what activates it. Running the presentation is what does.
+  it('resolves the claim from the registry without activating the plugin', () => {
+    const managers = { tab: {} } as unknown as Managers;
+    const host = new TabPluginHost(managers);
+
+    expect(openerForExtension('.png')?.editsOwnFiles).toBe(true);
+    expect(openerForExtension('.ts')?.editsOwnFiles).toBeUndefined();
+    expect(host.statusFor('image')?.state).toBe('declared');
   });
 });
 

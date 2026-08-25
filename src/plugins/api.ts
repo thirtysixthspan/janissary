@@ -105,6 +105,10 @@ export type TabPluginDeclaration = {
   // the `page` keyword. The host decides what looks like a web address; the plugin decides what one
   // means, so the claim carries no normalization. First claimant wins, exactly as for an extension.
   webTargets?: boolean;
+  // Claims the `edit` command for the file types this plugin already claims, so `edit photo.png`
+  // reaches the plugin's own editing presentation instead of the plain-text editor. A declaration
+  // carrying it must supply an `edit` opener presentation.
+  editsOwnFiles?: boolean;
   editGesture?: 'open external';
   command?: string;
   // Host topics this plugin wants to hear about. A declaration naming one must supply `notify`.
@@ -193,7 +197,12 @@ export type TabPluginServerCapabilities = {
 export type TabPluginOpener = {
   inline(file: string, capabilities: TabPluginServerCapabilities): void | Promise<void>;
   external(file: string, capabilities: TabPluginServerCapabilities): void | Promise<void>;
+  // The `edit` presentation: the same file, opened for modification rather than for viewing.
+  // Required only when the declaration sets `editsOwnFiles`.
+  edit?(file: string, capabilities: TabPluginServerCapabilities): void | Promise<void>;
 };
+
+export type TabPluginPresentation = keyof TabPluginOpener;
 
 // The plugin-facing shape of one tab-scoped intent. Deliberately its own type rather than the wire
 // request, so widening `pluginIntent` on the socket never silently widens the plugin contract.

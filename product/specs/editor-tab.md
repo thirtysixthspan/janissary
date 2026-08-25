@@ -1,7 +1,9 @@
 # Editor Tab
 
 An **editor tab** displays a plain-text file opened with the `edit` or `open` command, using the
-editor opener (see Open). It is a non-agent **view tab**: the file's text is shown as an editable
+editor opener (see Open). `edit` opens the plain-text editor for every file type except those a
+plugin claims the verb for — an image opens its own editor instead (see [[open]] and [[image-tab]]).
+It is a non-agent **view tab**: the file's text is shown as an editable
 buffer in place of the usual transcript and command bar, controlled by direct keyboard input and
 mouse selection. It behaves like a markdown tab — same lifecycle and tab-strip treatment — differing
 in the editable content and keyboard handling.
@@ -143,7 +145,9 @@ Closing an editor tab that has unsaved changes triggers a confirmation dialog: "
 
 Like the quit dialog, the save dialog is modal — all keyboard and click input is trapped until a choice is made. A click outside the dialog does nothing.
 
-Typing `quit`, or closing the last remaining tab, does not go through this per-tab dialog — see `quit-confirmation.md` for the whole-app unsaved-changes prompt shown in that case. Closing the actual browser tab or window (not through the app itself) shows the browser's own native "leave site?" confirmation instead, if any editor tab has unsaved changes.
+Typing `quit`, or closing the last remaining tab, does not go through this per-tab dialog — see `quit-confirmation.md` for the whole-app unsaved-changes prompt shown in that case. Closing the actual browser tab or window (not through the app itself) shows the browser's own native "leave site?" confirmation instead, if any tab has unsaved changes.
+
+This dialog is not the editor tab's alone. Any tab that registers unsaved work with the application reaches it on the same three close paths, with the same three buttons and the same wording; an image tab with unsaved edits is the first such tab, and there **Save** writes a new numbered file (see [[image-tab]]). Nothing about the editor tab's own behavior changes because of that: it gains no tab-strip marker, and its dialog, its guard, and everything described above stay exactly as they are.
 
 ### Live reload of external changes
 

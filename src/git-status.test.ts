@@ -5,8 +5,10 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { changedPaths, currentBranch, remoteUrl } from './git-status.js';
 
+// The initial branch name comes from the machine's `init.defaultBranch`, so a test that checks a
+// branch out by name can only rely on one the repo was told to create.
 function initRepo(root: string): void {
-  execSync('git init', { cwd: root, stdio: 'pipe' });
+  execSync('git init -b master', { cwd: root, stdio: 'pipe' });
   execSync('git config user.email test@test.com', { cwd: root, stdio: 'pipe' });
   execSync('git config user.name test', { cwd: root, stdio: 'pipe' });
 }

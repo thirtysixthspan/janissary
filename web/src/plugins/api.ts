@@ -3,6 +3,16 @@ import type { JanusClient } from '../ws';
 import { SplitTabButton } from '../SplitTabButton';
 import { disableClientPlugin } from './registry';
 
+// A plugin tab's unsaved work, in the shape the host's close guard already reasons about (see
+// `EditorTabHandle`). A plugin may not refuse a host-initiated close itself, render its own modal
+// over the app, or choose a host dialog's wording — it supplies these three answers and the host
+// decides when to ask, which dialog to draw, and what each button does.
+export type TabDirtyHandle = {
+  isDirty(): boolean;
+  save(): Promise<void>;
+  focus(): void;
+};
+
 export type TabPluginClientCapabilities = {
   resourceUrl(reference: string): string;
   intent<Result>(name: string, payload: unknown): Promise<Result>;
@@ -20,6 +30,11 @@ export type TabPluginClientCapabilities = {
   // because a plugin may need to close on something other than a click of its own button — an
   // embedded cross-origin page swallows the host's Cmd+W and has to answer for it itself.
   close(): void;
+  // Register this tab's unsaved work with the host, or `null` to drop it. Optional so a plugin that
+  // has nothing to save behaves exactly as it did before this existed. Call it again whenever the
+  // answer to `isDirty` changes: re-registering is how the host learns, and it is what puts the
+  // unsaved marker in the tab strip beside this tab's name.
+  registerDirtyHandle?(handle: TabDirtyHandle | null): void;
   reportFailure(reason: string): void;
 };
 
@@ -31,11 +46,13 @@ export function createPluginClientCapabilities(
   dock: 'left' | 'right' | null,
   onClose: () => void,
   onSplit?: () => void,
+  onDirtyHandle?: (handle: TabDirtyHandle | null) => void,
 ): TabPluginClientCapabilities {
   return {
     active,
     dock,
     close: onClose,
+    registerDirtyHandle: onDirtyHandle,
     resourceUrl: (reference) => {
       const token = new URLSearchParams(location.search).get('token') ?? '';
       return `${reference}?token=${encodeURIComponent(token)}`;

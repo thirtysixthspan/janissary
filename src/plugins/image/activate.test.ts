@@ -7,12 +7,13 @@ import {
 } from '../api.js';
 import { openerForExtension } from '../../openers/index.js';
 import { activate } from './activate.js';
-import { isImagePayload } from './shared.js';
+import { isImagePath, isImagePayload } from './shared.js';
 
 function fakeCapabilities(options: { openExternally?: (file: string) => boolean } = {}) {
   const notes: string[] = [];
   const opened: TabPluginPayload[] = [];
   const keys: string[] = [];
+  const updated: { key: string; payload: unknown }[] = [];
   const external = vi.fn(options.openExternally ?? (() => true));
   const capabilities: TabPluginServerCapabilities = {
     note: (text) => { notes.push(text); },
@@ -20,13 +21,19 @@ function fakeCapabilities(options: { openExternally?: (file: string) => boolean 
       keys.push(key);
       opened.push(factory({ registerFile: (file) => `/open/ref-${file.length}` }));
     },
+    updateTab: (key, factory) => {
+      updated.push({
+        key,
+        payload: factory({ registerFile: (file) => `/open/ref-${file.length}` }).payload,
+      });
+    },
     openClaimedFiles: () => { throw new Error('image declares no command'); },
     configuredViewer: () => { throw new Error('image declares no configured viewer'); },
     openExternally: external,
     rejectRequest: (reason): never => { throw new TabPluginRejection(reason); },
     reportFailure: (reason): never => { throw new Error(String(reason)); },
   };
-  return { capabilities, external, keys, notes, opened };
+  return { capabilities, external, keys, notes, opened, updated };
 }
 
 function temporaryImage(name: string, bytes: number): string {
@@ -82,11 +89,73 @@ describe('image plugin opener', () => {
   });
 });
 
+describe('image plugin edit presentation', () => {
+  const opener = activate().opener;
+
+  it('opens the tab in edit mode under the file-path instance key', () => {
+    const file = temporaryImage('diagram.png', 1500);
+    const fixture = fakeCapabilities();
+
+    opener.edit!(file, fixture.capabilities);
+
+    expect(fixture.keys).toEqual([file]);
+    expect(fixture.opened[0].payload).toMatchObject({ name: 'diagram.png', mode: 'edit' });
+  });
+
+  // The same file already open as a viewer is the same tab: `edit` focuses it and flips it through
+  // `updateTab` rather than opening a second tab for one image.
+  it('carries the mode across to an already-open viewer through updateTab', () => {
+    const file = temporaryImage('diagram.png', 1500);
+    const fixture = fakeCapabilities();
+
+    opener.edit!(file, fixture.capabilities);
+
+    expect(fixture.updated).toHaveLength(1);
+    expect(fixture.updated[0].key).toBe(file);
+    expect(fixture.updated[0].payload).toMatchObject({ mode: 'edit' });
+  });
+
+  it('leaves the viewer presentation free of a mode and of any tab update', () => {
+    const file = temporaryImage('diagram.png', 1500);
+    const fixture = fakeCapabilities();
+
+    opener.inline(file, fixture.capabilities);
+
+    expect(fixture.updated).toHaveLength(0);
+    expect(Object.hasOwn(fixture.opened[0].payload as object, 'mode')).toBe(false);
+  });
+});
+
 describe('image plugin intents', () => {
   const intent = activate().intent;
   const payload = { name: 'pic.png', path: '/tmp/pic.png', size: '1 KB', url: '/open/1' };
 
-  it('rejects every intent, since the view answers none', () => {
+  it('writes an edit and returns the name the server chose', () => {
+    const file = temporaryImage('pic.png', 8);
+    const fixture = fakeCapabilities();
+
+    const result = intent(
+      {
+        tab: 'image',
+        intent: 'save-edit',
+        payload: { dataUrl: `data:image/png;base64,${Buffer.alloc(4).toString('base64')}` },
+        tabPayload: { ...payload, path: file },
+      },
+      fixture.capabilities,
+    );
+
+    expect(result).toEqual({ name: 'pic.png' });
+  });
+
+  it('rejects a malformed save-edit payload without disabling the plugin', () => {
+    const fixture = fakeCapabilities();
+    expect(() => intent(
+      { tab: 'image', intent: 'save-edit', payload: { dataUrl: 42 }, tabPayload: payload },
+      fixture.capabilities,
+    )).toThrow(TabPluginRejection);
+  });
+
+  it('rejects an unknown intent name', () => {
     const fixture = fakeCapabilities();
     expect(() => intent(
       { tab: 'image', intent: 'capture-frame', payload: {}, tabPayload: payload },
@@ -120,5 +189,19 @@ describe('isImagePayload', () => {
     for (const key of Object.keys(payload)) {
       expect(isImagePayload({ ...payload, [key]: undefined })).toBe(false);
     }
+  });
+
+  it('accepts the optional edit mode and rejects any other value for it', () => {
+    expect(isImagePayload({ ...payload, mode: 'edit' })).toBe(true);
+    expect(isImagePayload({ ...payload, mode: 'view' })).toBe(false);
+    expect(isImagePayload({ ...payload, mode: 1 })).toBe(false);
+  });
+});
+
+describe('isImagePath', () => {
+  it('recognizes the image extensions the plugin owns, case-insensitively', () => {
+    expect(isImagePath('photo.PNG')).toBe(true);
+    expect(isImagePath('nested/cover.avif')).toBe(true);
+    expect(isImagePath('notes.txt')).toBe(false);
   });
 });

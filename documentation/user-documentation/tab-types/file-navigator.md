@@ -91,6 +91,7 @@ Inside a git repository, a file's name is colored by its git status: **green** f
 | `Shift`+double-click a file | Edit it (same as `edit`), even if its normal opener is a viewer |
 | Double-click a directory | Expand or collapse it |
 | Double-click the `..` row | Re-root the tree one directory up |
+| Right-click a row | Open its context menu without changing the selection |
 | Header ⊟ button | Collapse everything back to the root |
 | Header ⇄ button | Cycle location: left sidebar → center tab strip → right sidebar → left sidebar |
 | Header × button | Shown while docked; closes the tree (a docked tree has no strip × of its own) |
@@ -106,6 +107,14 @@ including while the tree is docked to a sidebar; opened files still land in that
 
 If a file type has no built-in opener, double-clicking the file shows a picker with **Edit as text**
 and **Open externally**. Choose the action you want, or press `Escape` to close the picker.
+
+Right-click a file for **Open**, **Edit**, and **Open with**, followed by the usual file actions.
+**Edit** runs the same `edit` command as the command bar: ordinary files open in the text editor,
+while images open directly in the image editor. With multiple images selected, right-clicking one
+of them makes **Open** or **Edit** apply to every selected image. Otherwise, each action affects
+only the row you right-clicked, and **Edit** is not shown for directories. **Open with** lets you choose the registered viewer, text editor, or
+external application instead. The menu also provides Copy, Paste (when the clipboard is armed),
+Rename, Delete, New file, and New folder; the `..` row omits actions that cannot apply to it.
 
 ## Moving files by drag-and-drop
 
@@ -169,7 +178,8 @@ Pasting a copy back into its own directory duplicates it, using the same `-2` na
 
 A paste is one step on the tab's undo/redo stack: `Cmd+Z` reverses it and `Cmd+Shift+Z` re-applies it. Undoing a copy-paste deletes what it created; undoing a cut-paste moves the items back to where they came from.
 
-Copying, cutting, and pasting are keyboard-only — there's no mouse or menu route.
+Copy and Paste are also available from a row's context menu. Cut remains keyboard-only; dragging is
+the mouse route for moving files and directories.
 
 ## Keyboard
 

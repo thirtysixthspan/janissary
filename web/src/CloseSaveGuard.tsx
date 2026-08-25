@@ -7,12 +7,12 @@ import { SaveChangesDialog } from './SaveChangesDialog/SaveChangesDialog';
 
 type Properties = {
   tabs: TabView[];
-  editorHandles: React.RefObject<Map<string, EditorTabHandle>>;
+  tabHandles: React.RefObject<Map<string, EditorTabHandle>>;
   client: JanusClient;
   guardRef: React.RefObject<((index: number) => boolean) | null>;
 };
 
-export function CloseSaveGuard({ tabs, editorHandles, client, guardRef }: Properties) {
+export function CloseSaveGuard({ tabs, tabHandles, client, guardRef }: Properties) {
   const { saveConfirmOpen, openSaveConfirm, closeSaveConfirm, indexRef } = useSaveConfirm();
   const tabsRef = useRef(tabs);
   tabsRef.current = tabs;
@@ -21,11 +21,11 @@ export function CloseSaveGuard({ tabs, editorHandles, client, guardRef }: Proper
     guardRef.current = (index: number) => {
       const tab = tabsRef.current[index];
       if (!tab) return false;
-      const handle = editorHandles.current.get(tab.label);
+      const handle = tabHandles.current.get(tab.label);
       if (handle?.isDirty()) { openSaveConfirm(index); return true; }
       return false;
     };
-  }, [editorHandles, openSaveConfirm, guardRef]);
+  }, [tabHandles, openSaveConfirm, guardRef]);
 
   if (!saveConfirmOpen) return null;
 
@@ -34,7 +34,7 @@ export function CloseSaveGuard({ tabs, editorHandles, client, guardRef }: Proper
       onSave={async () => {
         const idx = indexRef.current;
         const tab = tabsRef.current[idx];
-        const handle = tab ? editorHandles.current.get(tab.label) : undefined;
+        const handle = tab ? tabHandles.current.get(tab.label) : undefined;
         if (handle) await handle.save();
         closeSaveConfirm();
         client.send({ method: 'closeTab', params: { index: idx } });
@@ -47,7 +47,7 @@ export function CloseSaveGuard({ tabs, editorHandles, client, guardRef }: Proper
       onCancel={() => {
         const idx = indexRef.current;
         const tab = tabsRef.current[idx];
-        const handle = tab ? editorHandles.current.get(tab.label) : undefined;
+        const handle = tab ? tabHandles.current.get(tab.label) : undefined;
         closeSaveConfirm();
         handle?.focus();
       }}

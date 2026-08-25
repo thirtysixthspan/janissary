@@ -15,7 +15,7 @@ type Properties = TabItemActions & {
 
 export function TabStrip({
   tabs, activeTab, onSelect, onClose, onRename, tabNameMaxLength, activeTabNameMaxLength = 50,
-  onFocusCommandBar, onFocusEditor, windowFocused, startControl, endControl,
+  onFocusCommandBar, onFocusEditor, windowFocused, dirtyTabs, startControl, endControl,
   onReorder, className,
 }: Properties) {
   const reorder = useTabReorder(tabs, onReorder);
@@ -36,6 +36,7 @@ export function TabStrip({
           onFocusCommandBar={onFocusCommandBar}
           onFocusEditor={onFocusEditor}
           windowFocused={windowFocused}
+          dirtyTabs={dirtyTabs}
           dragTransform={reorder.transformFor(index)}
           onReorderMouseDown={(event) => reorder.begin(index, event)}
         />

@@ -14,4 +14,6 @@ export type BaseCenterActionAreaProps = {
   onFocusCommandBar: () => void;
   onFocusEditor: (label: string) => void;
   windowFocused: boolean;
+  // Labels of tabs holding unsaved work, marked in the strip beside the file name.
+  dirtyTabs?: ReadonlySet<string>;
 };

@@ -29,8 +29,10 @@ type AppMainProps = Omit<React.ComponentProps<typeof AgentTabBody>, 'onSplit'> &
   harnessHandles: React.RefObject<Map<string, HarnessTabHandle>>;
   shellHandles: React.RefObject<Map<string, ShellTabHandle>>;
   questionPanelRef: React.RefObject<QuestionPanelHandle | null>;
-  editorHandles: React.RefObject<Map<string, EditorTabHandle>>;
+  tabHandles: React.RefObject<Map<string, EditorTabHandle>>;
   editorDropReference: React.RefObject<EditorDropHandle | null>;
+  dirtyPluginTabs: ReadonlySet<string>;
+  onPluginDirty: (label: string, dirty: boolean) => void;
   harnessLaunch: HarnessLaunchView | null;
   scheduleLaunch: ScheduleLaunchView | null;
   confirmQuit: () => void;
@@ -58,7 +60,8 @@ export function AppMain({
   tabNameMaxLength, activeTabNameMaxLength,
   sidebarLeftWidth, setSidebarLeftWidth, sidebarRightWidth, setSidebarRightWidth,
   reportingHeightPct, setReportingHeightPct, focusLeft, focusRight,
-  harnessHandles, shellHandles, questionPanelRef, editorHandles, editorDropReference,
+  harnessHandles, shellHandles, questionPanelRef, tabHandles, editorDropReference,
+  dirtyPluginTabs, onPluginDirty,
   harnessLaunch, scheduleLaunch, confirmQuit, cancelQuit, confirmUnsavedQuit, cancelUnsavedQuit,
   guardRef,
 }: AppMainProps) {
@@ -99,8 +102,9 @@ export function AppMain({
         client={client} closeTab={closeTab} tabNameMaxLength={tabNameMaxLength}
         activeTabNameMaxLength={activeTabNameMaxLength}
         onFocusCommandBar={() => inputReference.current?.focus()}
-        onFocusEditor={(label) => editorHandles.current.get(label)?.focus()}
+        onFocusEditor={(label) => tabHandles.current.get(label)?.focus()}
         windowFocused={windowFocused} current={current} focusedAgentBody={focusedAgentBody}
+        dirtyTabs={dirtyPluginTabs}
         shellProps={{
           onHandle: (id, handle) => {
             if (handle) shellHandles.current.set(id, handle);
@@ -108,7 +112,8 @@ export function AppMain({
           },
         }}
         mountedProps={{
-          harnessHandles, editorHandles, editorDropRef: editorDropReference, questionPanelRef,
+          harnessHandles, tabHandles, editorDropRef: editorDropReference, questionPanelRef,
+          onPluginDirty,
           taskPickerOpen, taskRows: visibleTasks, taskPickerIndex, onPickTask: pickTask,
           onToggleTaskDir: toggleTaskDir, navOpen, navQuery, navIndex, onPickTab: selectNavTab,
         }}
@@ -119,7 +124,7 @@ export function AppMain({
       {scheduleLaunch && <ScheduleDialog view={scheduleLaunch} client={client} />}
       {quitConfirmOpen && <QuitDialog onConfirm={confirmQuit} onCancel={cancelQuit} />}
       {unsavedQuitOpen && <UnsavedQuitDialog onConfirm={confirmUnsavedQuit} onCancel={cancelUnsavedQuit} />}
-      <CloseSaveGuard tabs={tabs} editorHandles={editorHandles} client={client} guardRef={guardRef} />
+      <CloseSaveGuard tabs={tabs} tabHandles={tabHandles} client={client} guardRef={guardRef} />
     </AppShell>
   );
 }

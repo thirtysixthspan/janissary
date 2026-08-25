@@ -3,11 +3,13 @@ import type { FileNavigatorRow } from '@shared/protocol';
 import { fileNavigatorMenuItems, type FileNavigatorMenuActions } from './file-navigator-menu-items';
 
 const fileRow: FileNavigatorRow = { path: 'src/index.ts', name: 'index.ts', depth: 1, dir: false };
+const directoryRow: FileNavigatorRow = { path: 'src', name: 'src', depth: 0, dir: true };
 const parentRow: FileNavigatorRow = { path: '..', name: '..', depth: 0, dir: true };
 
 function makeActions(): FileNavigatorMenuActions {
   return {
     open: vi.fn(),
+    edit: vi.fn(),
     openWith: vi.fn(),
     copy: vi.fn(),
     paste: vi.fn(),
@@ -22,9 +24,9 @@ const labels = (groups: { label: string }[][]): string[][] =>
   groups.map((group) => group.map((item) => item.label));
 
 describe('fileNavigatorMenuItems', () => {
-  it('lists eight entries in four groups for an ordinary file row', () => {
+  it('lists nine entries in four groups for an ordinary file row', () => {
     expect(labels(fileNavigatorMenuItems(fileRow, true, makeActions()))).toEqual([
-      ['Open', 'Open with'],
+      ['Open', 'Edit', 'Open with'],
       ['Copy', 'Paste'],
       ['Rename', 'Delete'],
       ['New file', 'New folder'],
@@ -37,7 +39,7 @@ describe('fileNavigatorMenuItems', () => {
       label: 'Add to playlist', onActivate,
     });
     expect(labels(groups)).toEqual([
-      ['Open', 'Open with'],
+      ['Open', 'Edit', 'Open with'],
       ['Add to playlist'],
       ['Copy', 'Paste'],
       ['Rename', 'Delete'],
@@ -60,7 +62,12 @@ describe('fileNavigatorMenuItems', () => {
     expect(labels(fileNavigatorMenuItems(fileRow, false, makeActions()))[1]).toEqual(['Copy']);
   });
 
-  it('omits Open, Open with, and Rename on the ".." row', () => {
+  it('omits Edit on directories', () => {
+    expect(labels(fileNavigatorMenuItems(directoryRow, true, makeActions()))[0])
+      .toEqual(['Open', 'Open with']);
+  });
+
+  it('omits Open, Edit, Open with, and Rename on the ".." row', () => {
     expect(labels(fileNavigatorMenuItems(parentRow, true, makeActions()))).toEqual([
       ['Copy', 'Paste'],
       ['Delete'],
@@ -74,6 +81,7 @@ describe('fileNavigatorMenuItems', () => {
       for (const item of group) item.onActivate();
     }
     expect(actions.open).toHaveBeenCalledWith(fileRow);
+    expect(actions.edit).toHaveBeenCalledWith(fileRow);
     expect(actions.openWith).toHaveBeenCalledWith(fileRow);
     expect(actions.copy).toHaveBeenCalledWith(fileRow);
     expect(actions.paste).toHaveBeenCalledWith(fileRow);

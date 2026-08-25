@@ -65,7 +65,7 @@ describe('ImageTab', () => {
 
   it('loads the image through the host-authenticated resource url', () => {
     const { container } = renderTab();
-    expect(container.querySelector('img')?.getAttribute('src')).toBe('/open/1?token=');
+    expect(container.querySelector(':scope .image-stage img')?.getAttribute('src')).toBe('/open/1?token=');
   });
 
   it('offers the host split action and ignores global keys while its tab is inactive', () => {
@@ -83,9 +83,14 @@ describe('ImageTab', () => {
     expect(container.querySelector(':scope .image-actions .tab-split')).not.toBeNull();
   });
 
-  it('renders no actions area when the host offers no split action', () => {
+  it('offers an icon-only Edit image control in the actions area even with no split action', () => {
     const { container } = renderTab();
-    expect(container.querySelector('.image-actions')).toBeNull();
+    expect(container.querySelector('.image-actions')).not.toBeNull();
+    const editButton = screen.getByRole('button', { name: 'Edit image' });
+    expect(editButton).toHaveAttribute('title', 'Edit image');
+    expect(editButton).toHaveTextContent('');
+    expect(editButton.querySelector('svg[data-icon="pen"]')).not.toBeNull();
+    expect(container.querySelector(':scope .image-actions .tab-split')).toBeNull();
   });
 
   it('hides the zoom badge at 100%', () => {
@@ -247,7 +252,7 @@ describe('ImageTab', () => {
 
   it('applies image-landscape when the loaded image is wider than tall', () => {
     const { container } = renderTab();
-    const img = container.querySelector('img')!;
+    const img = container.querySelector(':scope .image-stage img')!;
     Object.defineProperties(img, {
       naturalWidth: { value: 200, configurable: true },
       naturalHeight: { value: 100, configurable: true },
@@ -258,7 +263,7 @@ describe('ImageTab', () => {
 
   it('applies image-portrait when the loaded image is taller than wide', () => {
     const { container } = renderTab();
-    const img = container.querySelector('img')!;
+    const img = container.querySelector(':scope .image-stage img')!;
     Object.defineProperties(img, {
       naturalWidth: { value: 100, configurable: true },
       naturalHeight: { value: 200, configurable: true },
@@ -288,5 +293,67 @@ describe('ImageTab', () => {
 
     expect(screen.queryByText(/\d+%/)).not.toBeInTheDocument();
     expect(stage.scrollTop).toBe(0);
+  });
+
+  // --- The two modes ---
+
+  it('renders the viewer with no toolbar for a payload carrying no mode', () => {
+    const { container } = renderTab();
+    expect(container.querySelector('.image-edit-toolbar')).toBeNull();
+    expect(container.querySelector(':scope .image-stage img')).not.toBeNull();
+  });
+
+  it('renders the editor for an edit-mode payload', () => {
+    const { container } = renderTab({ image: makeImage({ mode: 'edit' }) });
+    expect(container.querySelector('.image-edit-toolbar')).not.toBeNull();
+    expect(container.querySelector('.image-edit-canvas')).not.toBeNull();
+    expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument();
+  });
+
+  it('the Edit and Done controls move between the two modes', () => {
+    const { container } = renderTab();
+    fireEvent.click(screen.getByRole('button', { name: 'Edit image' }));
+    expect(container.querySelector('.image-edit-toolbar')).not.toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Done' }));
+    expect(container.querySelector('.image-edit-toolbar')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Edit image' })).toBeInTheDocument();
+  });
+
+  // The server flips an already-open viewer by replacing the payload, which arrives as a re-render.
+  it('flips an open viewer into edit mode when the payload gains one', () => {
+    const capabilities = makeCapabilities();
+    const { container, rerender } = render(
+      <ImageTab payload={makeImage()} capabilities={capabilities} />,
+    );
+    expect(container.querySelector('.image-edit-toolbar')).toBeNull();
+
+    rerender(<ImageTab payload={makeImage({ mode: 'edit' })} capabilities={capabilities} />);
+
+    expect(container.querySelector('.image-edit-toolbar')).not.toBeNull();
+  });
+
+  // Viewer mode must make one request: its visible image also supplies the pixels and dimensions
+  // the editor needs. The editor mounts a hidden source only while no visible image exists.
+  it('shares one image source between viewer and editor modes', () => {
+    const { container } = renderTab();
+    const viewerImage = container.querySelector(':scope .image-stage img')!;
+    expect(container.querySelectorAll(':scope .image-tab img')).toHaveLength(1);
+    expect(container.querySelector('.image-edit-source')).toBeNull();
+    Object.defineProperties(viewerImage, {
+      naturalWidth: { value: 320, configurable: true },
+      naturalHeight: { value: 200, configurable: true },
+    });
+    fireEvent.load(viewerImage);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit image' }));
+    expect(container.querySelector('.image-edit-source')).not.toBeNull();
+    expect(container.querySelectorAll(':scope .image-tab img')).toHaveLength(1);
+    expect(screen.getByText('320 × 200')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Done' }));
+    expect(container.querySelector('.image-edit-source')).toBeNull();
+    expect(container.querySelector(':scope .image-stage img')).not.toBeNull();
+    expect(container.querySelectorAll(':scope .image-tab img')).toHaveLength(1);
   });
 });

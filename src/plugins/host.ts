@@ -2,7 +2,7 @@ import type { Managers } from '../managers.js';
 import {
   TabPluginRejection,
   type TabPluginActivation, type TabPluginDeclaration, type TabPluginLoaders,
-  type TabPluginServerCapabilities,
+  type TabPluginPresentation, type TabPluginServerCapabilities,
 } from './api.js';
 import { activatePlugin, disposePluginActivation } from './activate.js';
 import { tabPluginCatalog } from './catalog.js';
@@ -10,6 +10,7 @@ import {
   pluginFailureReason, reportPluginFailure, type PluginFailureOrigin,
 } from './failure.js';
 import { invokePlugin, type PluginCallOutcome } from './invoke.js';
+import { openerPresentation } from './presentation.js';
 import { tabPluginLoaders } from './loaders.js';
 import { subscribeTabPluginNotifications, TAB_PLUGIN_NOTIFY_TIMEOUT_MS } from './notifications.js';
 import { closedTabReason, reportClientFailure, runPluginIntent, type PluginRequestPort } from './requests.js';
@@ -76,13 +77,10 @@ export class TabPluginHost {
   }
 
   async runOpener(
-    id: string,
-    presentation: 'inline' | 'external',
-    file: string,
-    origin: PluginFailureOrigin,
+    id: string, presentation: TabPluginPresentation, file: string, origin: PluginFailureOrigin,
   ): Promise<void> {
     await this.runGuarded(id, origin, (activation, capabilities) =>
-      activation.opener[presentation](file, capabilities));
+      openerPresentation(id, activation, presentation)(file, capabilities));
   }
 
   async runCommand(id: string, command: string, origin: PluginFailureOrigin): Promise<void> {

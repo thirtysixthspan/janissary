@@ -34,7 +34,7 @@ function makeHandles() {
   (editor as { current: Map<string, EditorTabHandle> | null }).current = new Map();
   return {
     harnessHandles: harness as React.RefObject<Map<string, HarnessTabHandle>>,
-    editorHandles: editor as React.RefObject<Map<string, EditorTabHandle>>,
+    tabHandles: editor as React.RefObject<Map<string, EditorTabHandle>>,
   };
 }
 

@@ -1,5 +1,6 @@
 import React, { useEffect, useId, useRef, useState } from 'react';
 import type { FileNavigatorRow } from '@shared/protocol';
+import { isImagePath } from '@shared/plugins/image/shared';
 import { useFileNavigatorDrag } from './useFileNavigatorDrag';
 import { useFileNavigatorRename } from './useFileNavigatorRename';
 import { FileNavigatorRowView } from './FileNavigatorRowView';
@@ -40,7 +41,6 @@ export function FileNavigatorTab({
   const deletion = useFileNavigatorDelete(client, index);
   const paste = useFileNavigatorPaste(client, index, files.absoluteRoot);
   const selectionAction = useSelectionAction(client, index);
-
   useEffect(() => { if (autoFocus) containerRef.current?.focus(); }, [autoFocus]);
 
   // Scroll the selected row into view (nearest block alignment avoids unnecessary scroll
@@ -85,10 +85,21 @@ export function FileNavigatorTab({
     containerRef,
     actions: { reroot, toggle, openFile },
   });
+  const selectedImages = selection.operationPaths.length > 1
+    && selection.operationPaths.every(isImagePath)
+    ? selection.operationPaths
+    : null;
   const beginRename = (row: FileNavigatorRow) => rename.begin(row.path, row.name);
   const clipboardPaths = () => selection.operationPaths.map((relPath) => `${files.absoluteRoot}/${relPath}`);
   const menuActions: FileNavigatorMenuActions = {
-    open: (row) => rowEvents.onRowDoubleClick(row, false),
+    open: (row) => {
+      if (selectedImages?.includes(row.path)) for (const path of selectedImages) openFile(path, false);
+      else rowEvents.onRowDoubleClick(row, false);
+    },
+    edit: (row) => {
+      if (selectedImages?.includes(row.path)) for (const path of selectedImages) editFile(path);
+      else editFile(row.path);
+    },
     openWith: (row) => opener.openWith(
       row.path,
       selection.selected.has(row.path) ? selection.operationPaths : [row.path],

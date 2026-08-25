@@ -22,6 +22,7 @@ export function createPluginOpeners(
     openers.push({
       name: declaration.id,
       extensions,
+      editsOwnFiles: declaration.editsOwnFiles,
       editGesture: declaration.editGesture,
       inline: (file, context) => context.runPluginOpener(declaration.id, 'inline', file),
       external: (file, context) => context.runPluginOpener(declaration.id, 'external', file),

@@ -15,11 +15,14 @@ type Properties = {
   client: JanusClient;
   closeTab: (index: number) => void;
   harnessHandles: React.RefObject<Map<string, HarnessTabHandle>>;
-  editorHandles: React.RefObject<Map<string, EditorTabHandle>>;
+  tabHandles: React.RefObject<Map<string, EditorTabHandle>>;
   editorDropRef?: React.RefObject<EditorDropHandle | null>;
   questionPanelRef?: React.RefObject<QuestionPanelHandle | null>;
   visibleLabels?: string[];
   onSplit?: (index: number) => void;
+  // Told when a plugin tab's unsaved state changes, so the tab strip can mark it. The handle itself
+  // goes into `tabHandles` beside the editor tabs'; this is only the signal that it moved.
+  onPluginDirty?: (label: string, dirty: boolean) => void;
   // Ctrl+A and Ctrl+G open the task picker and tab navigator from a focused harness tab (see
   // `HarnessTab.harnessKeyFilter`); they're the only pickers/choosers those chords ever let bubble
   // there, so this renders just those two overlays rather than the full `PickerOverlays` stack the
@@ -49,8 +52,8 @@ function TabBodyDiv({
 // editor buffers, undo stacks, cursor/scroll position, embedded-page navigation, and video playback
 // position survive tab switches. Split out of App.tsx to keep it under the file-size limit.
 export function MountedViewLayers({
-  tabs, current, client, closeTab, harnessHandles, editorHandles, editorDropRef, questionPanelRef,
-  visibleLabels = [current.label], onSplit,
+  tabs, current, client, closeTab, harnessHandles, tabHandles, editorDropRef, questionPanelRef,
+  visibleLabels = [current.label], onSplit, onPluginDirty,
   taskPickerOpen, taskRows, taskPickerIndex, onPickTask, onToggleTaskDir,
   navOpen, navQuery, navIndex, onPickTab,
 }: Properties) {
@@ -72,7 +75,7 @@ export function MountedViewLayers({
         <TabBodyDiv key={t.label} tab={t} index={index} current={current} visibleLabels={visibleLabels}>
           <EditorTab editor={t.editor!} tab={t} client={client} active={t.label === current.label} dropRef={editorDropRef}
             onSplit={onSplit ? () => onSplit(index) : undefined}
-            ref={(h) => { if (h) editorHandles.current.set(t.label, h); else editorHandles.current.delete(t.label); }} />
+            ref={(h) => { if (h) tabHandles.current.set(t.label, h); else tabHandles.current.delete(t.label); }} />
         </TabBodyDiv>
       ))}
 
@@ -89,6 +92,11 @@ export function MountedViewLayers({
             client={client}
             onClose={() => closeTab(index)}
             onSplit={onSplit ? () => onSplit(index) : undefined}
+            onDirtyHandle={(handle) => {
+              if (handle) tabHandles.current.set(t.label, handle);
+              else tabHandles.current.delete(t.label);
+              onPluginDirty?.(t.label, handle?.isDirty() ?? false);
+            }}
           />
         ))}
       {current.pendingQuestion && <QuestionPanel ref={questionPanelRef} question={current.pendingQuestion} client={client} />}

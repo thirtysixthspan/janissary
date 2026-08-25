@@ -12,16 +12,17 @@
 // maps are the only sanctioned way in, and everything else is closed.
 export const pluginBoundaries = [
   // Concrete plugin implementations receive only their public host API, their own files, and
-  // external/Node modules. The two documented host utilities are pure functions with a caller on
-  // each side of the boundary: the size formatter, and the web-target normalizer that core's profile
-  // relaunch and the page plugin must agree on to the character.
+  // external/Node modules. The documented host utilities are pure functions with a caller on each
+  // side of the boundary: the size formatter, the web-target normalizer that core's profile relaunch
+  // and the page plugin must agree on to the character, and the numbered-sibling writer the video and
+  // image plugins share so "a numbered PNG beside an original" has one rule rather than two.
   {
     files: ['src/plugins/*/**/*.ts', 'src/plugins/*/*.ts'],
     ignores: ['**/*.test.ts', '**/*.test.tsx'],
     rules: {
       'no-restricted-imports': ['error', {
         patterns: [{
-          regex: String.raw`^\.\./(?!(?:api\.js|\.\./openers/(?:size|web-target)\.js)$)`,
+          regex: String.raw`^\.\./(?!(?:api\.js|\.\./openers/(?:size|web-target|numbered-sibling)\.js)$)`,
           message: 'Server tab plugins must use src/plugins/api.ts capabilities instead of host internals.',
         }],
       }],

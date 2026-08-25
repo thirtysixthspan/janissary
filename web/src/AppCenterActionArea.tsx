@@ -17,7 +17,7 @@ type Properties = BaseCenterActionAreaProps & {
 
 export function AppCenterActionArea({
   entries, tabs, activeTab, secondaryTab, client, closeTab, tabNameMaxLength,
-  activeTabNameMaxLength, onFocusCommandBar, onFocusEditor, windowFocused, current,
+  activeTabNameMaxLength, onFocusCommandBar, onFocusEditor, windowFocused, dirtyTabs, current,
   focusedAgentBody, shellProps, mountedProps,
 }: Properties) {
   const splitTab = (index: number) => {
@@ -48,7 +48,7 @@ export function AppCenterActionArea({
       client={client} closeTab={closeTab} tabNameMaxLength={tabNameMaxLength}
       activeTabNameMaxLength={activeTabNameMaxLength}
       onFocusCommandBar={onFocusCommandBar} onFocusEditor={onFocusEditor}
-      windowFocused={windowFocused} renderBody={renderBody}
+      windowFocused={windowFocused} dirtyTabs={dirtyTabs} renderBody={renderBody}
       persistentLayers={<>
         <ShellTabLayer
           tabs={tabs} activeLabel={current.label} visibleLabels={visibleLabels}
