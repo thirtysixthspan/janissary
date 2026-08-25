@@ -1,7 +1,7 @@
 import React from 'react';
 import type { TabView, RouteChooserView, BufferLine } from '@shared/protocol';
 import type { JanusClient } from './ws';
-import { Transcript } from './Transcript';
+import { Transcript } from './transcript/Transcript';
 import { StatusPanels } from './StatusPanels';
 import { PickerOverlays } from './PickerOverlays';
 import { CommandArea } from './CommandArea';

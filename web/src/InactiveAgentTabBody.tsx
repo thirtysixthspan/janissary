@@ -2,7 +2,7 @@ import React, { useRef } from 'react';
 import type { TabView } from '@shared/protocol';
 import type { JanusClient } from './ws';
 import { AgentTabMeta } from './AgentTabMeta';
-import { Transcript } from './Transcript';
+import { Transcript } from './transcript/Transcript';
 import { CommandInput } from './CommandInput';
 import { StatusPanels } from './StatusPanels';
 import { useStatusWindows } from './useStatusWindows';
