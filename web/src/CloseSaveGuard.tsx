@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import type { TabView } from '@shared/protocol';
 import type { JanusClient } from './ws';
-import type { EditorTabHandle } from './EditorTab';
+import type { EditorTabHandle } from './editor/EditorTab';
 import { useSaveConfirm } from './SaveChangesDialog/useSaveConfirm';
 import { SaveChangesDialog } from './SaveChangesDialog/SaveChangesDialog';
 

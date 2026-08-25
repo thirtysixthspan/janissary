@@ -3,8 +3,8 @@ import { render, screen, waitFor, fireEvent, act } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { EditorView, TabView } from '@shared/protocol';
 import { EditorTab, type EditorTabHandle } from './EditorTab';
-import type { EditorDropHandle } from './drop-handles';
-import type { JanusClient } from './ws';
+import type { EditorDropHandle } from '../drop-handles';
+import type { JanusClient } from '../ws';
 
 function makeView(overrides: Partial<EditorView> = {}): EditorView {
   return { name: 'notes.txt', path: '/home/user/notes.txt', size: '12 B', url: '/open/1', ...overrides };

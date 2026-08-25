@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
-import { useDialogKeyboard } from './useDialogKeyboard';
-import { ModalDialog } from './ModalDialog';
+import { useDialogKeyboard } from '../useDialogKeyboard';
+import { ModalDialog } from '../ModalDialog';
 
 type Action = 'save' | 'cancel';
 

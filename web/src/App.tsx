@@ -3,7 +3,7 @@ import { JanusClient } from './ws';
 import type { TabView, RouteChooserView, HarnessLaunchView, ScheduleLaunchView, TaskRow, ProfileRow } from '@shared/protocol';
 import { AppMain } from './AppMain';
 import type { CommandInputDropHandle, EditorDropHandle } from './drop-handles';
-import type { EditorTabHandle } from './EditorTab';
+import type { EditorTabHandle } from './editor/EditorTab';
 import { useTabHandles } from './useTabHandles';
 import { useTabNav } from './useTabNav';
 import { useQuickOpen } from './useQuickOpen';
