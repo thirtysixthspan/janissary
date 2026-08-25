@@ -137,6 +137,15 @@ Follow the conventions in [`ai/guidelines/code-guidelines.md`](ai/guidelines/cod
 file-size limit and how to respond to it (extract code into a new module — never compact
 code, strip comments, or delete spacing to get under the limit).
 
+## React code organization
+
+When adding or restructuring anything in `web/src/`, follow
+[`ai/guidelines/react-code-organization.md`](ai/guidelines/react-code-organization.md). It covers
+feature-based directories over type-named buckets, colocation and when to promote to shared, the
+one-way `shared → feature → app` dependency flow with no cross-feature imports, and the
+pure module / service / hook / component layering that keeps components thin and logic testable
+without a render.
+
 ## Plugin architecture
 
 When designing or building anything loaded at runtime through a published contract, follow
