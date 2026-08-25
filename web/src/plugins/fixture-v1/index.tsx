@@ -1,6 +1,7 @@
 import React from 'react';
 import type { FixturePayload } from '@shared/plugins/fixture-v1/shared';
 import type { TabPluginClientCapabilities } from '../api';
+import './fixture-v1.css';
 
 function FixtureV1({
   payload: fixture,

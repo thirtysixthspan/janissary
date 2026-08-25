@@ -74,7 +74,7 @@ export function ImageViewer({
       : { height: `${zoom * 100}%`, width: 'auto' };
 
   return (
-    <div className="image-stage" ref={stageRef}>
+    <div className="plugin-stage" ref={stageRef}>
       {zoom !== 1 && (
         <div className="image-zoom-badge">{Math.round(zoom * 100)}%</div>
       )}

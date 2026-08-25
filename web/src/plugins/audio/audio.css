@@ -1,0 +1,29 @@
+/* Audio player tab: the shared plugin metadata header (see ../shared.css) carrying a transport row,
+   a native player, and the playlist filling the remaining space. Docked into a narrow sidebar the
+   header wraps to its own lines and the location is dropped, so the transport row stays reachable at
+   any width. */
+.audio-transport { display: flex; align-items: center; gap: 4px; }
+.audio-transport button {
+  background: transparent; border: none; color: var(--muted);
+  padding: 2px 4px; font-size: 14px; line-height: 1; cursor: pointer;
+}
+.audio-transport button:hover { color: var(--fg); }
+.audio-tab .audio-player { width: 100%; flex-shrink: 0; }
+.audio-tab .audio-empty { color: var(--muted); padding: 12px 0; text-align: center; }
+.audio-playlist { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; }
+.audio-track { display: flex; align-items: center; gap: 8px; padding: 2px 4px; border-radius: 4px; }
+.audio-track:hover { background: var(--bg-soft); }
+.audio-track-current { background: var(--bg-soft); }
+.audio-track-current .audio-track-name { color: var(--fg); font-weight: 600; }
+.audio-track-name {
+  flex: 1; min-width: 0; text-align: left; overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap; background: transparent; border: none; color: var(--muted);
+  font: inherit; padding: 2px 0; cursor: pointer;
+}
+.audio-track-remove {
+  background: transparent; border: none; color: var(--muted);
+  padding: 0 4px; font-size: 12px; line-height: 1; cursor: pointer;
+}
+.audio-track-remove:hover { color: var(--fg); }
+.audio-tab-docked .plugin-meta { gap: 4px 8px; }
+.audio-tab-docked .plugin-loc { display: none; }

@@ -28,14 +28,18 @@ export const pluginBoundaries = [
       }],
     },
   },
+  // `../shared.css` is the one other thing a client plugin may reach for: the stylesheet holding the
+  // rules more than one plugin renders and no host component does. It is part of the plugin layer,
+  // not host internals, and it carries no behavior — a stylesheet cannot reach back into the host.
+  // Each plugin loads it from its own entry so the shared plugin look stays inside the lazy chunk.
   {
     files: ['web/src/plugins/*/**/*.ts', 'web/src/plugins/*/**/*.tsx', 'web/src/plugins/*/*.ts', 'web/src/plugins/*/*.tsx'],
     ignores: ['**/*.test.ts', '**/*.test.tsx'],
     rules: {
       'no-restricted-imports': ['error', {
         patterns: [{
-          regex: String.raw`^(?:\.\./(?!api$)|@shared/(?!plugins/[^/]+/shared$))`,
-          message: 'Client tab plugins must use their client API and an import-free shared contract.',
+          regex: String.raw`^(?:\.\./(?!(?:api|shared\.css)$)|@shared/(?!plugins/[^/]+/shared$))`,
+          message: 'Client tab plugins must use their client API, an import-free shared contract, and the shared plugin stylesheet.',
         }],
       }],
     },

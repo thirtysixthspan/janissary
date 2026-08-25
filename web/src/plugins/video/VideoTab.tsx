@@ -39,13 +39,13 @@ export function VideoTab({
   }, []);
 
   return (
-    <div className="video-tab image-tab" data-doc-shot="video-view">
-      <div className="image-meta">
-        <span className="image-name">{video.name}</span>
+    <div className="video-tab plugin-tab" data-doc-shot="video-view">
+      <div className="plugin-meta">
+        <span className="plugin-name">{video.name}</span>
         <span className="image-size">{video.size}</span>
-        <span className="image-loc">{video.path}</span>
+        <span className="plugin-loc">{video.path}</span>
         {saved && <span className="video-shot-saved">Saved {saved}</span>}
-        <span className="image-actions">
+        <span className="plugin-actions">
           {!failed && (
             <button
               type="button"
@@ -61,7 +61,7 @@ export function VideoTab({
           {capabilities.splitAction}
         </span>
       </div>
-      <div className="image-stage">
+      <div className="plugin-stage">
         {failed ? (
           <div className="video-unplayable">
             <p>This video cannot be played in the app.</p>

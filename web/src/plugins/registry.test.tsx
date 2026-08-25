@@ -20,4 +20,16 @@ describe('client plugin registry', () => {
     expect([...clientPluginRegistry.keys()].toSorted((a, b) => a.localeCompare(b)))
       .toEqual(Object.keys(clientPluginLoaders).toSorted((a, b) => a.localeCompare(b)));
   });
+
+  // Each entry now imports its own stylesheet, so a stylesheet that is missing, misnamed, or reaches
+  // for a path the plugin import boundary rejects breaks that plugin's loader rather than showing up
+  // as a silently unstyled tab the first time somebody opens it.
+  it('loads every plugin entry with its stylesheet imports resolved', async () => {
+    for (const [id, load] of Object.entries(clientPluginLoaders)) {
+      const module = await load();
+
+      expect(module.default, id).toBeTypeOf('function');
+      expect(module.isPayload, id).toBeTypeOf('function');
+    }
+  });
 });

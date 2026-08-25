@@ -54,13 +54,13 @@ export function AudioTab({
 
   return (
     <div
-      className={capabilities.dock ? 'audio-tab image-tab audio-tab-docked' : 'audio-tab image-tab'}
+      className={capabilities.dock ? 'audio-tab plugin-tab audio-tab-docked' : 'audio-tab plugin-tab'}
       data-doc-shot="audio-view"
     >
-      <div className="image-meta">
-        <span className="image-name">{track?.name ?? 'No tracks queued'}</span>
+      <div className="plugin-meta">
+        <span className="plugin-name">{track?.name ?? 'No tracks queued'}</span>
         {track && <span className="image-size">{audio.size}</span>}
-        {track && <span className="image-loc">{track.path}</span>}
+        {track && <span className="plugin-loc">{track.path}</span>}
         <span className="audio-transport">
           <button type="button" title="Previous track" aria-label="Previous track" onClick={transport.previous}>⏮</button>
           <button type="button" title="Back 10 seconds" aria-label="Back 10 seconds" onClick={transport.seekBackward}>⏪</button>
@@ -68,7 +68,7 @@ export function AudioTab({
           <button type="button" title="Forward 10 seconds" aria-label="Forward 10 seconds" onClick={transport.seekForward}>⏩</button>
           <button type="button" title="Next track" aria-label="Next track" onClick={transport.next}>⏭</button>
         </span>
-        <span className="image-actions">{capabilities.splitAction}</span>
+        <span className="plugin-actions">{capabilities.splitAction}</span>
       </div>
       {track ? (
         <audio
