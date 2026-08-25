@@ -8,6 +8,7 @@ import { StatusPanels } from './StatusPanels';
 import { useStatusWindows } from './useStatusWindows';
 import { statusButton } from './status-button';
 import { tabBodyBorder } from './tab-body-border';
+import { agentTabIntents } from './agent-tab-intents';
 
 export function InactiveAgentTabBody({
   tab, client, onSplit,
@@ -15,6 +16,7 @@ export function InactiveAgentTabBody({
   const transcriptReference = useRef<HTMLDivElement>(null);
   const inputReference = useRef<HTMLTextAreaElement>(null);
   const statusWindows = useStatusWindows(tab.label, tab.connections.length > 0, tab.schedule.length > 0);
+  const intents = agentTabIntents(client, tab.label);
   return (
     <div
       className="tab-body"
@@ -26,9 +28,9 @@ export function InactiveAgentTabBody({
       <AgentTabMeta
         cwd={tab.cwd}
         flags={tab.flags}
-        onOpenFileNavigator={() => client.send({ method: 'openFileNavigatorFor', params: { label: tab.label } })}
-        onLaunchAgentHere={tab.cwd === undefined ? undefined : () => client.send({ method: 'launchAgentFor', params: { label: tab.label } })}
-        onOpenTranscript={() => client.send({ method: 'openTranscriptFor', params: { label: tab.label } })}
+        onOpenFileNavigator={intents.onOpenFileNavigator}
+        onLaunchAgentHere={tab.cwd === undefined ? undefined : intents.onLaunchAgentHere}
+        onOpenTranscript={intents.onOpenTranscript}
         connectionsButton={{
           hasContent: tab.connections.length > 0,
           onEnter: statusWindows.connections.onButtonEnter,
@@ -42,7 +44,7 @@ export function InactiveAgentTabBody({
         <Transcript
           lines={tab.bufferLines}
           client={client}
-          onToggleCollapse={() => client.send({ method: 'toggleCollapse', params: {} })}
+          onToggleCollapse={intents.onToggleCollapse}
           onPromptClick={(text) => client.send({ method: 'command', params: { text } })}
           scrollRef={transcriptReference}
         />
@@ -51,7 +53,7 @@ export function InactiveAgentTabBody({
           connections={statusWindows.connections}
           schedule={statusWindows.schedule}
           interactive
-          onOpenAcpTranscript={(acpRef) => client.send({ method: 'openAcpTranscript', params: { acpRef } })}
+          onOpenAcpTranscript={intents.onOpenAcpTranscript}
         />
       </div>
       <CommandInput
