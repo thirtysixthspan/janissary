@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { handleRouteChooserKey, handlePickerKey, handleTabNavKey, handleQueueKey } from './keyboard-handlers';
 import type { RouteChooserView, TabView } from '@shared/protocol';
-import type { TabNavEntry } from './TabNavPicker';
+import type { TabNavEntry } from './tab-nav-match';
 
 function fakeEvent(key: string, opts: { ctrlKey?: boolean; metaKey?: boolean } = {}): KeyboardEvent {
   return new KeyboardEvent('keydown', { key, ctrlKey: opts.ctrlKey ?? false, metaKey: opts.metaKey ?? false });
