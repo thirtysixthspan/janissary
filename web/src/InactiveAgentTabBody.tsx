@@ -31,12 +31,7 @@ export function InactiveAgentTabBody({
         onOpenFileNavigator={intents.onOpenFileNavigator}
         onLaunchAgentHere={tab.cwd === undefined ? undefined : intents.onLaunchAgentHere}
         onOpenTranscript={intents.onOpenTranscript}
-        connectionsButton={{
-          hasContent: tab.connections.length > 0,
-          onEnter: statusWindows.connections.onButtonEnter,
-          onLeave: statusWindows.connections.onButtonLeave,
-          onClick: statusWindows.connections.onButtonClick,
-        }}
+        connectionsButton={statusButton(tab.connections.length > 0, statusWindows.connections)}
         scheduleButton={statusButton(tab.schedule.length > 0, statusWindows.schedule)}
         onSplit={onSplit}
       />

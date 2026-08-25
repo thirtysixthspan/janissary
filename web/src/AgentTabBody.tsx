@@ -109,12 +109,7 @@ export function AgentTabBody({
         onOpenFileNavigator={intents.onOpenFileNavigator}
         onLaunchAgentHere={current.cwd === undefined ? undefined : intents.onLaunchAgentHere}
         onOpenTranscript={intents.onOpenTranscript}
-        connectionsButton={{
-          hasContent: current.connections.length > 0,
-          onEnter: statusWindows.connections.onButtonEnter,
-          onLeave: statusWindows.connections.onButtonLeave,
-          onClick: statusWindows.connections.onButtonClick,
-        }}
+        connectionsButton={statusButton(current.connections.length > 0, statusWindows.connections)}
         scheduleButton={statusButton(current.schedule.length > 0, statusWindows.schedule)}
         onSplit={onSplit}
       />
