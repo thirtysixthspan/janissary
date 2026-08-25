@@ -4,7 +4,7 @@ import type { JanusClient } from './ws';
 import { Transcript } from './transcript/Transcript';
 import { StatusPanels } from './StatusPanels';
 import { PickerOverlays } from './PickerOverlays';
-import { CommandArea } from './CommandArea';
+import { CommandArea } from './command-input/CommandArea';
 import type { CommandInputDropHandle } from './drop-handles';
 import { AgentTabMeta } from './AgentTabMeta';
 import type { useViewSearchState } from './useViewSearchState';

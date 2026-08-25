@@ -1,13 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { CompletionResult } from '@shared/protocol';
-import { statusDotIcon, promptIcon } from './icons';
+import { statusDotIcon, promptIcon } from '../icons';
 import { handleTabCompletion } from './command-completion';
 import { findGhostSuggestion } from './ghost-suggestion';
 import { isCaretOnFirstLine, isCaretOnLastLine } from './command-caret-lines';
 import { spliceIntoTextarea } from './textarea-splice';
 import { useCommandHistoryRecall } from './useCommandHistoryRecall';
-import type { CommandInputDropHandle } from './drop-handles';
+import type { CommandInputDropHandle } from '../drop-handles';
 
 export type CommandInputProperties = {
   dotColor: string;
