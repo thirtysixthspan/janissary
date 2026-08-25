@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type React from 'react';
 import type { FileOpenerChoice, FileOpenerResolution } from '@shared/protocol';
-import type { JanusClient } from './ws';
+import type { JanusClient } from '../ws';
 
 export type PendingOpeners = { path: string; paths: string[]; choices: FileOpenerChoice[]; selected: number };
 

@@ -1,5 +1,5 @@
 import type { FileNavigatorRow } from '@shared/protocol';
-import type { ContextMenuItem } from './ContextMenu';
+import type { ContextMenuItem } from '../ContextMenu';
 
 // What the file navigator's context menu can do. Every action takes the right-clicked row rather
 // than the selection, because right-clicking deliberately leaves the selection alone — except

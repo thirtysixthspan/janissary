@@ -1,12 +1,12 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { FileNavigatorDetail } from '@shared/protocol';
-import type { JanusClient } from './ws';
-import { nextDock, dockTooltip } from './dock-cycle';
+import type { JanusClient } from '../ws';
+import { nextDock, dockTooltip } from '../dock-cycle';
 import { nextDetail, detailTooltip } from './file-navigator-detail';
-import { dockSwapIcon, fileDetailIcon, newDirectoryIcon, newFileIcon, searchFilesIcon } from './icons';
+import { dockSwapIcon, fileDetailIcon, newDirectoryIcon, newFileIcon, searchFilesIcon } from '../icons';
 import { FileNavigatorGithubButton } from './FileNavigatorGithubButton';
-import { SplitTabButton } from './SplitTabButton';
+import { SplitTabButton } from '../SplitTabButton';
 
 type Properties = {
   root: string;

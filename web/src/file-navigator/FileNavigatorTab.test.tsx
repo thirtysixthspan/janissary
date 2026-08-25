@@ -3,10 +3,10 @@ import { render, screen, fireEvent, act, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeAll, afterEach } from 'vitest';
 import type { FileNavigatorView, TabView } from '@shared/protocol';
-import type { JanusClient } from './ws';
+import type { JanusClient } from '../ws';
 import { FileNavigatorTab } from './FileNavigatorTab';
-import { Sidebar } from './Sidebar';
-import type { CommandInputDropHandle } from './CommandInput';
+import { Sidebar } from '../Sidebar';
+import type { CommandInputDropHandle } from '../CommandInput';
 import { clearClipboard, getClipboardSnapshot, setClipboard } from './file-navigator-clipboard';
 
 beforeAll(() => {

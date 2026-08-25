@@ -1,9 +1,9 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { FileNavigatorDetail, FileNavigatorRow } from '@shared/protocol';
-import { expandedIcon, collapsedIcon } from './icons';
+import { expandedIcon, collapsedIcon } from '../icons';
 import { rowDetail } from './file-navigator-detail';
-import { InlineEditInput } from './InlineEditInput';
+import { InlineEditInput } from '../InlineEditInput';
 
 type Properties = {
   row: FileNavigatorRow;

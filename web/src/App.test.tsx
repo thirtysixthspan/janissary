@@ -5,7 +5,7 @@ import type {
   HarnessLaunchView, ProfileRow, RouteChooserView, ScheduleLaunchView, TabView, TaskRow,
 } from '@shared/protocol';
 import userEvent from '@testing-library/user-event';
-import { collectNavigatorSelections } from './file-navigator-selection-registry';
+import { collectNavigatorSelections } from './file-navigator/file-navigator-selection-registry';
 
 const sendMock = vi.fn();
 const renameTabMock = vi.fn();

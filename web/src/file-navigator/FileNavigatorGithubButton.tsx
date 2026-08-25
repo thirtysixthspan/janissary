@@ -1,5 +1,5 @@
 import React from 'react';
-import type { JanusClient } from './ws';
+import type { JanusClient } from '../ws';
 
 type Properties = {
   githubUrl: string;

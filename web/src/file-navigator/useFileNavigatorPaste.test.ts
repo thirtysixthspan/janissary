@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import type { FileNavigatorRow } from '@shared/protocol';
-import type { JanusClient } from './ws';
+import type { JanusClient } from '../ws';
 import { useFileNavigatorPaste } from './useFileNavigatorPaste';
 import { clearClipboard, getClipboardSnapshot, setClipboard } from './file-navigator-clipboard';
 

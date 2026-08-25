@@ -1,5 +1,5 @@
 import type { FileNavigatorRow } from '@shared/protocol';
-import { dirname } from './rel-path';
+import { dirname } from '../rel-path';
 
 // The directory row matching a pending new-directory creation's guessed path, or undefined if it
 // hasn't shown up yet (or a name collision meant the guess never matches — see
