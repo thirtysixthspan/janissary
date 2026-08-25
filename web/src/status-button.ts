@@ -1,9 +1,11 @@
 import type { StatusWindowHandlers } from './useStatusWindows';
 
+export type StatusWindowButtonProps = { hasContent: boolean; onEnter: () => void; onLeave: () => void; onClick: () => void };
+
 export function statusButton(
   hasContent: boolean,
   window: StatusWindowHandlers,
-): { hasContent: boolean; onEnter: () => void; onLeave: () => void; onClick: () => void } {
+): StatusWindowButtonProps {
   return {
     hasContent,
     onEnter: window.onButtonEnter,

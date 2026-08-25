@@ -1,6 +1,6 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { saveIcon } from './icons';
+import { saveIcon } from '../icons';
 
 type Properties = {
   dirty: boolean;
