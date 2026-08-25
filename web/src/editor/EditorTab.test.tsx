@@ -2,8 +2,9 @@ import React, { createRef } from 'react';
 import { render, screen, waitFor, fireEvent, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { EditorView, TabView } from '@shared/protocol';
-import { EditorTab, type EditorTabHandle } from './EditorTab';
+import { EditorTab } from './EditorTab';
 import type { EditorDropHandle } from '../drop-handles';
+import type { DirtyTabHandle } from '../tab-handles';
 import type { JanusClient } from '../ws';
 
 function makeView(overrides: Partial<EditorView> = {}): EditorView {
@@ -243,7 +244,7 @@ describe('EditorTab', () => {
 
   it('exposes isDirty() returning false after load and true after edit', async () => {
     const { client } = makeClient();
-    const ref = createRef<EditorTabHandle>();
+    const ref = createRef<DirtyTabHandle>();
     render(<EditorTab editor={makeView()} tab={makeTab()} client={client} active ref={ref} />);
     await waitFor(() => expect(screen.getByText('line one')).toBeInTheDocument());
     expect(ref.current?.isDirty()).toBe(false);
@@ -253,7 +254,7 @@ describe('EditorTab', () => {
 
   it('exposes save() that calls saveFile and marks clean', async () => {
     const { client, saveFile } = makeClient();
-    const ref = createRef<EditorTabHandle>();
+    const ref = createRef<DirtyTabHandle>();
     render(<EditorTab editor={makeView()} tab={makeTab()} client={client} active ref={ref} />);
     await waitFor(() => expect(screen.getByText('line one')).toBeInTheDocument());
     type('x');

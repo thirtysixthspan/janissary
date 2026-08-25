@@ -11,3 +11,6 @@ export type ShellTabHandle = { focus(): void };
 // Exposed by the question dialog so a tab switch lands on its cancel button rather than the body
 // behind it.
 export type QuestionPanelHandle = { focusCancel(): void };
+
+// Exposed by any tab with unsaved changes so shared close and quit guards can save or focus it.
+export type DirtyTabHandle = { isDirty(): boolean; save(): Promise<void>; focus(): void };

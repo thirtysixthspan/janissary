@@ -3,7 +3,7 @@ import type { JanusClient } from './ws';
 import type { TabView, RouteChooserView, HarnessLaunchView, ScheduleLaunchView, TaskRow, ProfileRow } from '@shared/protocol';
 import { AppMain } from './AppMain';
 import type { CommandInputDropHandle, EditorDropHandle } from './drop-handles';
-import type { EditorTabHandle } from './editor/EditorTab';
+import type { DirtyTabHandle } from './tab-handles';
 import { useTabHandles } from './useTabHandles';
 import { useTabNav } from './useTabNav';
 import { useQuickOpen } from './useQuickOpen';
@@ -108,7 +108,7 @@ export function App({ client }: { client: JanusClient }) {
   const { quitConfirmOpen, openQuitConfirm, confirmQuit, cancelQuit } = useQuitConfirm(runCommand, inputReference);
   // Every dirty-capable tab handle, editor and plugin alike, keyed by tab label. The close guard,
   // the quit guard, and the editor focus path all reach a tab through this one map.
-  const tabHandles = useRef<Map<string, EditorTabHandle>>(new Map());
+  const tabHandles = useRef<Map<string, DirtyTabHandle>>(new Map());
   // The labels of plugin tabs holding unsaved work. A ref cannot drive a render, so the strip's
   // marker reads this instead — a plugin re-registers its handle whenever its answer changes.
   const [dirtyPluginTabs, setDirtyPluginTabs] = useState<ReadonlySet<string>>(new Set());

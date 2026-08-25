@@ -3,7 +3,7 @@ import { render, waitFor } from '@testing-library/react';
 import React from 'react';
 import type { TabView } from '@shared/protocol';
 import type { HarnessTabHandle } from './tab-handles';
-import type { EditorTabHandle } from './editor/EditorTab';
+import type { DirtyTabHandle } from './tab-handles';
 import { MountedViewLayers } from './MountedViewLayers';
 
 // Deliberately kept out of `MountedViewLayers.test.tsx`, which installs a fixture registration:
@@ -30,11 +30,11 @@ function makeAgentTab(label: string): TabView {
 function makeHandles() {
   const harness = React.createRef<Map<string, HarnessTabHandle>>();
   (harness as { current: Map<string, HarnessTabHandle> | null }).current = new Map();
-  const editor = React.createRef<Map<string, EditorTabHandle>>();
-  (editor as { current: Map<string, EditorTabHandle> | null }).current = new Map();
+  const editor = React.createRef<Map<string, DirtyTabHandle>>();
+  (editor as { current: Map<string, DirtyTabHandle> | null }).current = new Map();
   return {
     harnessHandles: harness as React.RefObject<Map<string, HarnessTabHandle>>,
-    tabHandles: editor as React.RefObject<Map<string, EditorTabHandle>>,
+    tabHandles: editor as React.RefObject<Map<string, DirtyTabHandle>>,
   };
 }
 

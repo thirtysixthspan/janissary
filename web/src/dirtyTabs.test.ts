@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type React from 'react';
 import type { TabView } from '@shared/protocol';
-import type { EditorTabHandle } from './editor/EditorTab';
+import type { DirtyTabHandle } from './tab-handles';
 import { anyDirtyTab } from './dirtyTabs';
 
 function makeTab(label: string, hasEditor: boolean): TabView {
@@ -20,8 +20,8 @@ function makePluginTab(label: string): TabView {
   } as unknown as TabView;
 }
 
-function makeHandles(dirty: Record<string, boolean>): React.RefObject<Map<string, EditorTabHandle>> {
-  const map = new Map<string, EditorTabHandle>();
+function makeHandles(dirty: Record<string, boolean>): React.RefObject<Map<string, DirtyTabHandle>> {
+  const map = new Map<string, DirtyTabHandle>();
   for (const [label, isDirty] of Object.entries(dirty)) {
     map.set(label, { isDirty: () => isDirty, save: async () => {}, focus: () => {} });
   }

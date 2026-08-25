@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import type React from 'react';
 import type { TabView } from '@shared/protocol';
-import type { EditorTabHandle } from './editor/EditorTab';
+import type { DirtyTabHandle } from './tab-handles';
 import { anyDirtyTab } from './dirtyTabs';
 
 // `quit` and closing the last tab both go straight to the quit dialog, bypassing CloseSaveGuard's
@@ -13,7 +13,7 @@ import { anyDirtyTab } from './dirtyTabs';
 // is still required to trigger the prompt at all.
 export function useUnsavedQuitGuard(
   tabs: TabView[],
-  tabHandles: React.RefObject<Map<string, EditorTabHandle>>,
+  tabHandles: React.RefObject<Map<string, DirtyTabHandle>>,
   openQuitConfirm: () => void,
   runCommand: (text: string) => void,
 ) {

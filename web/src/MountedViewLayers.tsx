@@ -1,8 +1,8 @@
 import React from 'react';
 import type { TabView } from '@shared/protocol';
 import type { JanusClient } from './ws';
-import type { HarnessTabHandle } from './tab-handles';
-import { EditorTab, type EditorTabHandle } from './editor/EditorTab';
+import type { DirtyTabHandle, HarnessTabHandle } from './tab-handles';
+import { EditorTab } from './editor/EditorTab';
 import type { EditorDropHandle } from './drop-handles';
 import { HarnessTabLayer } from './HarnessTabLayer';
 import type { PickerOverlayProps } from './picker-overlay-props';
@@ -17,7 +17,7 @@ type Properties = {
   client: JanusClient;
   closeTab: (index: number) => void;
   harnessHandles: React.RefObject<Map<string, HarnessTabHandle>>;
-  tabHandles: React.RefObject<Map<string, EditorTabHandle>>;
+  tabHandles: React.RefObject<Map<string, DirtyTabHandle>>;
   editorDropRef?: React.RefObject<EditorDropHandle | null>;
   questionPanelRef?: React.RefObject<QuestionPanelHandle | null>;
   visibleLabels?: string[];

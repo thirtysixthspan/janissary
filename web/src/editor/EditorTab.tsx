@@ -21,12 +21,11 @@ import { PendingSuggestPanel } from './PendingSuggestPanel';
 import { OverwriteConflictDialog } from './OverwriteConflictDialog';
 import { EditorMetaRow } from './EditorMetaRow';
 import type { EditorDropHandle } from '../drop-handles';
-
-export type EditorTabHandle = { isDirty(): boolean; save(): Promise<void>; focus(): void };
+import type { DirtyTabHandle } from '../tab-handles';
 
 // The plain-text editor tab. Mounted persistently by App (like harness tabs) so the buffer, undo
 // stacks, cursor, and scroll position survive tab switches; `active` gates focus and the caret.
-export const EditorTab = forwardRef<EditorTabHandle, {
+export const EditorTab = forwardRef<DirtyTabHandle, {
   editor: EditorView;
   tab: TabView;
   client: JanusClient;
