@@ -107,7 +107,14 @@ describe('createPluginClientCapabilities', () => {
   it('offers no split action when the host did not supply one', () => {
     const { client } = makeClient();
     expect(createPluginClientCapabilities('video', 'video', client, true, null, vi.fn()).splitAction).toBeNull();
-    expect(createPluginClientCapabilities('video', 'video', client, true, null, vi.fn(), () => {}).splitAction)
-      .not.toBeNull();
+  });
+
+  // The host builds the control; this module only carries it. Passing a plain sentinel rather than
+  // an element is the point — the contract is exercised here without React in the room at all.
+  it('carries the host\'s split action through untouched', () => {
+    const { client } = makeClient();
+    const action = 'a control the host rendered';
+    expect(createPluginClientCapabilities('video', 'video', client, true, null, vi.fn(), action).splitAction)
+      .toBe(action);
   });
 });
