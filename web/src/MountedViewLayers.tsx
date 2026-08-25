@@ -1,12 +1,13 @@
 import React from 'react';
 import type { TabView } from '@shared/protocol';
 import type { JanusClient } from './ws';
-import type { HarnessTabHandle } from './HarnessTab';
+import type { HarnessTabHandle } from './tab-handles';
 import { EditorTab, type EditorTabHandle } from './editor/EditorTab';
 import type { EditorDropHandle } from './drop-handles';
 import { HarnessTabLayer } from './HarnessTabLayer';
 import type { PickerOverlayProps } from './picker-overlay-props';
-import { QuestionPanel, type QuestionPanelHandle } from './QuestionPanel';
+import { QuestionPanel } from './QuestionPanel';
+import type { QuestionPanelHandle } from './tab-handles';
 import { tabBodyBorder } from './tab-body-border';
 import { PluginTabLayer } from './plugins/PluginTabLayer';
 

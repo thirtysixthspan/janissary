@@ -2,11 +2,11 @@ import React, { forwardRef, useImperativeHandle, useRef } from 'react';
 import type { JanusClient } from './ws';
 import { useXterm } from './useXterm';
 import { AgentTabMeta } from './AgentTabMeta';
+import type { ShellTabHandle } from './tab-handles';
 
 type Properties = {
   ptyId: string; client: JanusClient; cwd?: string; flags?: string[]; onSplit?: () => void;
 };
-export type ShellTabHandle = { focus(): void };
 
 // Only the tab-switch chords (Shift+←/→ and Cmd+Shift+[/]) bubble to the window; everything
 // else — including Ctrl+C, Ctrl+D, Ctrl+Z — goes to the PTY so interactive programs receive it.

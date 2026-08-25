@@ -4,7 +4,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { ShellTabLayer } from './ShellTabLayer';
 import type { JanusClient } from './ws';
 import type { TabView } from '@shared/protocol';
-import type { ShellTabHandle } from './ShellTab';
+import type { ShellTabHandle } from './tab-handles';
 
 vi.mock('./ShellTab', () => ({
   ShellTab: forwardRef<ShellTabHandle, { ptyId: string }>(function ShellTab({ ptyId }, ref) {

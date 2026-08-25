@@ -1,9 +1,7 @@
 import { renderHook } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import type { TabView } from '@shared/protocol';
-import type { HarnessTabHandle } from './HarnessTab';
-import type { ShellTabHandle } from './ShellTab';
-import type { QuestionPanelHandle } from './QuestionPanel';
+import type { HarnessTabHandle, ShellTabHandle, QuestionPanelHandle } from './tab-handles';
 import { useFocusOnTabSwitch } from './useFocusOnTabSwitch';
 
 function refOf<T>(value: T): React.RefObject<T> {

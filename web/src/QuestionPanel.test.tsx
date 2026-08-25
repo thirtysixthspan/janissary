@@ -4,7 +4,8 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import type { PendingQuestionView } from '@shared/protocol';
 import type { JanusClient } from './ws';
-import { QuestionPanel, type QuestionPanelHandle } from './QuestionPanel';
+import { QuestionPanel } from './QuestionPanel';
+import type { QuestionPanelHandle } from './tab-handles';
 
 function client() {
   const send = vi.fn();

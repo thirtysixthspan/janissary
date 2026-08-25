@@ -1,7 +1,8 @@
 import React from 'react';
 import type { TabView } from '@shared/protocol';
 import type { JanusClient } from './ws';
-import { HarnessTab, type HarnessTabHandle } from './HarnessTab';
+import { HarnessTab } from './HarnessTab';
+import type { HarnessTabHandle } from './tab-handles';
 import { StatusPanels } from './StatusPanels';
 import { TaskPicker } from './TaskPicker';
 import { TabNavPicker } from './TabNavPicker';

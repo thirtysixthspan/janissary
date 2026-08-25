@@ -1,9 +1,7 @@
 import { useEffect } from 'react';
 import type React from 'react';
 import type { TabView } from '@shared/protocol';
-import type { HarnessTabHandle } from './HarnessTab';
-import type { ShellTabHandle } from './ShellTab';
-import type { QuestionPanelHandle } from './QuestionPanel';
+import type { HarnessTabHandle, ShellTabHandle, QuestionPanelHandle } from './tab-handles';
 
 // Focuses the harness/shell PTY tab's terminal, or the command line for everything else — the
 // center section's "visible tab" target, shared by tab-switch and by section navigation

@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, waitFor } from '@testing-library/react';
 import React from 'react';
 import type { TabView } from '@shared/protocol';
-import type { HarnessTabHandle } from './HarnessTab';
+import type { HarnessTabHandle } from './tab-handles';
 import type { EditorTabHandle } from './editor/EditorTab';
 import { MountedViewLayers } from './MountedViewLayers';
 

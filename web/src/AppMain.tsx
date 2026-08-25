@@ -12,9 +12,7 @@ import { UnsavedQuitDialog } from './UnsavedQuitDialog';
 import { CloseSaveGuard } from './CloseSaveGuard';
 import type { TabEntry } from './tab-entries';
 import type { LayoutState } from './useLayoutState';
-import type { HarnessTabHandle } from './HarnessTab';
-import type { ShellTabHandle } from './ShellTab';
-import type { QuestionPanelHandle } from './QuestionPanel';
+import type { HarnessTabHandle, ShellTabHandle, QuestionPanelHandle } from './tab-handles';
 import type { EditorTabHandle } from './editor/EditorTab';
 import type { EditorDropHandle } from './drop-handles';
 
