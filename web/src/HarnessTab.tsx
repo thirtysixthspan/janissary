@@ -4,13 +4,13 @@ import type { HarnessView } from '@shared/protocol';
 import { useXterm } from './useXterm';
 import { AgentTabMeta } from './AgentTabMeta';
 import type { StatusWindowButtonProps } from './status-button';
+import type { HarnessTabHandle } from './tab-handles';
 
 type Properties = {
   harness: HarnessView; client: JanusClient; taskPickerOpen?: boolean; navOpen?: boolean; cwd?: string; flags?: string[]; label: string;
   connectionsButton?: StatusWindowButtonProps; scheduleButton?: StatusWindowButtonProps;
   onSplit?: () => void;
 };
-export type HarnessTabHandle = { focus(): void };
 
 // Returns true to send to PTY, false to bubble (switch tabs, open task/nav picker, drive whichever
 // picker overlay is open over this tab).

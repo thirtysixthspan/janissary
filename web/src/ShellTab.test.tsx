@@ -1,7 +1,8 @@
 import { render } from '@testing-library/react';
 import React, { createRef } from 'react';
 import { describe, it, expect, vi } from 'vitest';
-import { ShellTab, type ShellTabHandle } from './ShellTab';
+import { ShellTab } from './ShellTab';
+import type { ShellTabHandle } from './tab-handles';
 import type { JanusClient } from './ws';
 
 vi.mock('./useXterm', () => ({

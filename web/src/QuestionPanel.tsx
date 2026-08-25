@@ -3,8 +3,7 @@ import type { PendingQuestionView } from '@shared/protocol';
 import type { JanusClient } from './ws';
 import { ModalDialog } from './ModalDialog';
 import { useAnswerButtons } from './useAnswerButtons';
-
-export type QuestionPanelHandle = { focusCancel(): void };
+import type { QuestionPanelHandle } from './tab-handles';
 
 export const QuestionPanel = forwardRef<QuestionPanelHandle, {
   question: PendingQuestionView;
