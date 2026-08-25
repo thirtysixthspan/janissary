@@ -28,7 +28,15 @@ function makeClient(saveError?: string) {
   // inert unless a test opts in.
   const request = vi.fn().mockResolvedValue({ names: [], hunks: [] });
   const send = vi.fn();
-  return { client: { saveFile, editorSync, request, send } as unknown as JanusClient, saveFile, request, send };
+  // The tab's load and watched reload both go through the client now. Mirror the real method's
+  // shape — fetch, throw on a non-ok response, return the body — so the cases below keep driving
+  // the read by stubbing global `fetch`.
+  const readFile = vi.fn(async (url: string) => {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return response.text();
+  });
+  return { client: { saveFile, editorSync, request, send, readFile } as unknown as JanusClient, saveFile, request, send };
 }
 
 async function renderLoaded(client: JanusClient, view = makeView(), tab = makeTab({ editor: view })) {

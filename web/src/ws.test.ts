@@ -131,6 +131,32 @@ describe('JanusClient', () => {
     await expect(client.saveFile('/file.txt', 'content')).resolves.toBe('not connected');
   });
 
+  it('resourceUrl appends the page\'s session token, percent-encoded', () => {
+    history.replaceState(null, '', '/?token=s3cr3t%2Ftoken');
+    expect(new JanusClient().resourceUrl('/open/abc')).toBe('/open/abc?token=s3cr3t%2Ftoken');
+  });
+
+  it('resourceUrl sends an empty token when the page has none, rather than omitting the parameter', () => {
+    history.replaceState(null, '', '/');
+    expect(new JanusClient().resourceUrl('/open/abc')).toBe('/open/abc?token=');
+  });
+
+  it('readFile resolves with the body text, fetching the URL resourceUrl builds', async () => {
+    history.replaceState(null, '', '/?token=abc');
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, text: () => Promise.resolve('line one\n') });
+    vi.stubGlobal('fetch', fetchMock);
+    const client = new JanusClient();
+
+    await expect(client.readFile('/open/1')).resolves.toBe('line one\n');
+    expect(fetchMock).toHaveBeenCalledWith('/open/1?token=abc');
+  });
+
+  it('readFile throws with the status when the response is not ok', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 404, text: () => Promise.resolve('') }));
+    const client = new JanusClient();
+    await expect(client.readFile('/open/missing')).rejects.toThrow('HTTP 404');
+  });
+
   it('bye event closes the window', () => {
     const closeSpy = vi.spyOn(globalThis, 'close').mockImplementation(() => {});
     new JanusClient();

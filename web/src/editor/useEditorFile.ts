@@ -47,12 +47,6 @@ export function useEditorFile(client: JanusClient, editor: EditorView, api: Edit
     await writeToDisk(toText(s));
   };
 
-  const fetchContent = async (token: string) => {
-    const r = await fetch(`${editor.url}?token=${encodeURIComponent(token)}`);
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    return r.text();
-  };
-
   useEffect(() => {
     // A synced tab opens immediately, before its shared workspace clone exists; loading here would
     // fetch a not-yet-real file and get stuck. Wait for `sync` to leave 'provisioning' — the same
@@ -60,10 +54,9 @@ export function useEditorFile(client: JanusClient, editor: EditorView, api: Edit
     if (editor.sync === 'provisioning') return;
     if (api.stateRef.current !== null) return;
     let cancelled = false;
-    const token = new URLSearchParams(location.search).get('token') ?? '';
     const load = async () => {
       try {
-        const text = await fetchContent(token);
+        const text = await client.readFile(editor.url);
         if (!cancelled) { api.load(text, editor.line === undefined ? undefined : editor.line - 1); setLastSaved(text); }
       } catch {
         if (!cancelled) setLoadError(`Failed to load ${editor.name}`);
@@ -79,7 +72,7 @@ export function useEditorFile(client: JanusClient, editor: EditorView, api: Edit
     [api.state, lastSaved],
   );
 
-  useEditorWatchReload(editor.mtimeMs, dirty, conflictPendingRef, api, setLastSaved, fetchContent);
+  useEditorWatchReload(editor.mtimeMs, dirty, conflictPendingRef, api, setLastSaved, client, editor.url);
 
   return {
     dirty,
