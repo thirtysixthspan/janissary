@@ -6,7 +6,7 @@ import { APP_THEMES } from '@shared/app-themes';
 import { handleRouteChooserKey, handlePickerKey, handleTabNavKey, handleQueueKey } from './keyboard-handlers';
 import { dispatchTaskPickerKey, type VisibleTaskRow } from './task-picker-keys';
 import { dispatchProfilePickerKey, type VisibleProfileRow } from './profile-picker-keys';
-import type { TabNavEntry } from './TabNavPicker';
+import type { TabNavEntry } from './tab-nav-match';
 
 export type StateSnapshot = {
   pickerOpen: boolean;

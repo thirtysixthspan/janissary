@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import type { TabView } from '@shared/protocol';
 import type { JanusClient } from './ws';
-import { filterTabs } from './TabNavPicker';
+import { filterTabs } from './tab-nav-match';
 
 // State and handlers for the Ctrl+G / `nav` tab-navigator picker (mirrors the `hist` picker's
 // shape in App, split out to keep App.tsx under the file-size limit).
