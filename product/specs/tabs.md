@@ -112,6 +112,13 @@ followed by an icon for each of the tab's currently-active flags. A flag with no
 contributes no icon — there is no "disabled" indicator — and the row always renders, showing at
 least the working directory, even when a tab has zero active flags.
 
+A tab whose process runs on another host (see `remote-server.md`) shows one extra element: a host
+chip at the **left** of the row, ahead of the working directory, so the row reads "where, then what
+path there". The chip shows the bare host and carries the full destination in its tooltip
+("Remote: admin@devbox:/srv/proj"); the working directory beside it is the remote workspace path. It
+uses the same chip styling as the model and effort chips. A tab with no remote host renders the row
+exactly as before.
+
 Text content in metadata rows and headers throughout the application is selectable with the mouse,
 including paths, names, sizes, branches, addresses, monitor details, and agent settings. Native
 selection is preserved so the selected text can be copied.
@@ -120,7 +127,7 @@ The tab strip's own labels are not selectable with the mouse — clicking and dr
 tab's name behaves like clicking any other UI control rather than highlighting text.
 
 Today there are two possible flags: **workspaced** (a box icon), shown when the tab has its own isolated
-git clone, and **auto-permitting** (a bolt icon), shown when harness auto-approval is enabled (harness tabs
+git clone (including a remote tab, whose clone lives on the other host), and **auto-permitting** (a bolt icon), shown when harness auto-approval is enabled (harness tabs
 only — see Auto-approve permissions in `harness.md`). Hovering a flag's icon shows a tooltip naming
 it ("Workspaced", "Auto-permitting"). More flags of the same kind are expected in the future.
 

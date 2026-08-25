@@ -7,8 +7,27 @@ import { expandUserPath } from '../paths.js';
 import type { Managers } from '../managers.js';
 import type { AgentState } from '../agent/types.js';
 import type { ProfileHarnessEntry } from './types.js';
+import { parseRemoteAddress } from '../remote/address.js';
+import { startRemoteAgent } from './remote-agent.js';
+import { notify } from '../notifications.js';
 
-export function openAgentEntry(state: AgentState, managers: Managers, group: number, groupColor: string, dotColor: string): void {
+// Open an agent entry. Returns an error to report and skip on (only a remote entry can produce
+// one — its address is re-validated at launch, since a profile file is authored by hand), or
+// undefined once the tab is set up. A remote entry reconnects to the same host and lets the remote
+// server resolve a fresh workspace, so it carries no `cwd`, `log`, or `context` to restore.
+export function openAgentEntry(
+  state: AgentState, managers: Managers, group: number, groupColor: string, dotColor: string,
+): string | undefined {
+  if (state.remote !== undefined) {
+    const address = parseRemoteAddress(state.remote);
+    if ('error' in address) return address.error;
+    startRemoteAgent(managers, {
+      resolved: state.name, address, offline: state.offline ?? false,
+      cwd: managers.tab.launchDir, presentation: { dotColor, group, groupColor },
+      out: (text) => { notify(managers, 'manual', state.name, text); },
+    });
+    return undefined;
+  }
   const log = state.log ?? [];
   const tab = makeTab(state.name, dotColor, managers.tab.tabs.length + 1, state.cmdHistory ?? [],
     log, state.workspaceDir, group, groupColor);
@@ -18,6 +37,7 @@ export function openAgentEntry(state: AgentState, managers: Managers, group: num
   if (state.context) managers.tab.setContext(state.name, state.context);
   if (state.schedule) managers.schedule.set(state.name, state.schedule);
   managers.tab.persist(managers.tab.buildAgentState(tab, { schedule: state.schedule }));
+  return undefined;
 }
 
 // Validate and open a harness entry. Returns an error to report and skip on, or undefined once

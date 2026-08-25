@@ -17,6 +17,7 @@ export function buildAgentStateFromTab(tab: Tab, extra?: Partial<AgentState>): A
     commandQueue: runtime?.queue,
     title: tab.title,
     offline: tab.offline,
+    remote: tab.remote?.address,
     ...extra,
   };
 }

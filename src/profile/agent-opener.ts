@@ -63,12 +63,10 @@ export async function openProfileEntries(
     used.add(dotColor);
     const group = typeof entry.group === 'number' ? entry.group : defaultGroup;
     const groupColor = colorForGroup(group, dotColor);
-    if (isHarnessEntry(entry)) {
-      const error = openHarnessEntry(entry, managers, group, groupColor, issuingCwd, notes);
-      if (error) { skipped.push(`${label} (${error})`); continue; }
-    } else {
-      openAgentEntry(entry, managers, group, groupColor, dotColor);
-    }
+    const error = isHarnessEntry(entry)
+      ? openHarnessEntry(entry, managers, group, groupColor, issuingCwd, notes)
+      : openAgentEntry(entry, managers, group, groupColor, dotColor);
+    if (error) { skipped.push(`${label} (${error})`); continue; }
     opened.push(label);
     candidates.push({ label, number: entry.number, focus: entry.focus, pane: entry.pane });
   }

@@ -186,6 +186,46 @@ describe('saveProfile', () => {
     expect(load('demo').entries).toEqual([expect.objectContaining({ cwd: '$root/src' })]);
   });
 
+  // A remote workspace path is neither under the local root nor meaningful on this machine, so a
+  // remote entry omits `cwd` entirely and lets the remote server resolve one afresh at launch.
+  it('writes a remote harness entry with its address, workspace true, and no cwd', async () => {
+    const claude = makeHarnessTab('claude', '#ccc', 1, 1, '#ccc', {
+      name: 'claude', program: 'claude', ptyId: 'rpty1', status: 'running',
+    });
+    claude.remote = { address: 'admin@devbox:/srv/proj', host: 'devbox' };
+    const managers = makeManagers([claude], { claude: '/srv/proj/.janissary/workspace/claude' }, [], '/proj');
+
+    await saveProfile('demo', managers);
+
+    const entry = load('demo').entries[0] as Record<string, unknown>;
+    expect(entry).toMatchObject({ tool: 'claude', remote: 'admin@devbox:/srv/proj', workspace: true });
+    expect(entry.cwd).toBeUndefined();
+  });
+
+  it('writes a remote agent entry with its address and no cwd', async () => {
+    const bekir = makeTab('bekir', '#aaa');
+    bekir.remote = { address: 'devbox', host: 'devbox' };
+    const managers = makeManagers([bekir], { bekir: '/srv/proj/.janissary/workspace/bekir' }, [], '/proj');
+
+    await saveProfile('demo', managers);
+
+    const entry = load('demo').entries[0] as Record<string, unknown>;
+    expect(entry).toMatchObject({ name: 'bekir', remote: 'devbox' });
+    expect(entry.cwd).toBeUndefined();
+  });
+
+  it('round-trips a saved remote entry through the schema validator', async () => {
+    const claude = makeHarnessTab('claude', '#ccc', 1, 1, '#ccc', {
+      name: 'claude', program: 'claude', ptyId: 'rpty1', status: 'running',
+    });
+    claude.remote = { address: 'admin@devbox:/srv/proj', host: 'devbox' };
+
+    await saveProfile('demo', makeManagers([claude]));
+
+    // `load` throws when the validator reports any structural problem.
+    expect(load('demo').entries).toHaveLength(1);
+  });
+
   it('skips nothing now that plugin, ssh, and undocked navigator tabs are all captured', async () => {
     const image = imagePluginTab('pic', '#111', 1, '/a.png');
     const ssh = makeHarnessTab('server', '#333', 1, 1, '#333', { name: 'ssh', program: 'ssh', ptyId: 'pty2', status: 'running', destination: 'host' });

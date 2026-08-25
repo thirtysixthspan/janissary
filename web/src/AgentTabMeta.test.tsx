@@ -154,4 +154,43 @@ describe('AgentTabMeta', () => {
     );
     expect(getByTitle('no active schedules')).toBeDisabled();
   });
+
+  describe('remote host chip', () => {
+    const remote = { address: 'admin@devbox:/srv/proj', host: 'devbox' };
+
+    it('shows the bare host, with the full destination as its tooltip', () => {
+      const { getByLabelText } = render(<AgentTabMeta cwd="/srv/proj" remote={remote} />);
+      const chip = getByLabelText('Remote');
+      expect(chip).toHaveTextContent('devbox');
+      expect(chip).toHaveAttribute('title', 'Remote: admin@devbox:/srv/proj');
+    });
+
+    it('reuses the metadata chip styling', () => {
+      const { getByLabelText } = render(<AgentTabMeta cwd="/srv/proj" remote={remote} />);
+      expect(getByLabelText('Remote')).toHaveClass('tab-meta-chip');
+    });
+
+    // The row reads "where, then what path there".
+    it('places the chip before the working directory', () => {
+      const { container, getByLabelText } = render(<AgentTabMeta cwd="/srv/proj" remote={remote} />);
+      const cwd = container.querySelector('.tab-cwd')!;
+      const position = getByLabelText('Remote').compareDocumentPosition(cwd);
+      expect(position & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+
+    it('renders the row exactly as before for a tab with no remote', () => {
+      const { queryByLabelText, container } = render(<AgentTabMeta cwd="~/project" />);
+      expect(queryByLabelText('Remote')).toBeNull();
+      expect(container.querySelector('.tab-cwd')).toHaveTextContent('~/project');
+    });
+
+    it('sits alongside the model and effort chips', () => {
+      const { getByLabelText } = render(
+        <AgentTabMeta cwd="/srv/proj" remote={remote} model="opus" effort="high" />,
+      );
+      expect(getByLabelText('Remote')).toHaveTextContent('devbox');
+      expect(getByLabelText('Model')).toHaveTextContent('opus');
+      expect(getByLabelText('Effort')).toHaveTextContent('high');
+    });
+  });
 });

@@ -22,6 +22,9 @@ export class ConnectionManager {
     if (tab?.harness?.name === 'ssh' && tab.harness.destination) {
       rows.push({ text: `ssh:${tab.harness.destination}`, kind: 'ssh' });
     } else {
+      // A remote tab lists its transport alongside its processes: the ssh session it runs over is a
+      // connection in its own right, and closing it closes the tab.
+      if (tab?.remote) rows.push({ text: `ssh:${tab.remote.address}`, kind: 'ssh' });
       for (const program of this.managers.pty.terminalsFor(label)) rows.push({ text: `terminal:${program}`, kind: 'terminal' });
     }
     for (const n of this.managers.database.openDbs(label)) rows.push({ text: `sqlite:${n}`, kind: 'sqlite' });

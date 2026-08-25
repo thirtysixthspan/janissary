@@ -43,6 +43,28 @@ describe('buildTabView', () => {
     expect(view.flags).toContain('workspaced');
   });
 
+  // A remote tab is workspaced too — its clone just lives on the other host, so it deliberately
+  // carries no local `workspaceDir` for the flag to be derived from.
+  it('includes \'workspaced\' in flags for a remote tab with no workspaceDir', () => {
+    const tab = makeTab('claude', '#fff');
+    tab.remote = { address: 'admin@devbox:/srv/proj', host: 'devbox' };
+    const view = buildTabView(tab, false, '/srv/proj', undefined, [], [], [], (p) => p);
+    expect(tab.workspaceDir).toBeUndefined();
+    expect(view.flags).toContain('workspaced');
+  });
+
+  it('carries the remote destination onto the wire so the client can render the host chip', () => {
+    const tab = makeTab('claude', '#fff');
+    tab.remote = { address: 'admin@devbox:/srv/proj', host: 'devbox' };
+    const view = buildTabView(tab, false, '/srv/proj', undefined, [], [], [], (p) => p);
+    expect(view.remote).toEqual({ address: 'admin@devbox:/srv/proj', host: 'devbox' });
+  });
+
+  it('leaves remote unset on the wire for an ordinary tab', () => {
+    const view = buildTabView(makeTab('agent-1', '#fff'), false, '/tmp', undefined, [], [], [], (p) => p);
+    expect(view.remote).toBeUndefined();
+  });
+
   it('includes \'autoApprove\' in flags when the tab has autoApprove set', () => {
     const tab = makeTab('agent-1', '#fff');
     tab.autoApprove = true;

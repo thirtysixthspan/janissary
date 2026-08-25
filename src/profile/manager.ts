@@ -1,4 +1,3 @@
-import { makeTab, distinctColor } from '../tab/index.js';
 import { listProfiles, profileExists } from '../profiles.js';
 import { parseProfileCommand } from './command.js';
 import { loadProfile } from './file.js';
@@ -10,9 +9,9 @@ import { notify } from '../notifications.js';
 import { sandboxNotice } from '../sandbox/index.js';
 import { wireProvisioning, PROVISION_FAILURE_CLOSE_DELAY_MS } from '../workspace/provision-wire.js';
 import { messageBus } from '../bus.js';
-import type { Tab } from '../tab/types.js';
 import type { Managers } from '../managers.js';
 import { newAgentOp } from './new-agent.js';
+import { placeAgent } from './place-agent.js';
 
 export class ProfileManager {
   constructor(private managers: Managers) {}
@@ -54,10 +53,7 @@ export class ProfileManager {
   }
 
   newAgent(command: string): void {
-    newAgentOp(
-      this.managers, command,
-      (resolved, creator, cwd, workspaceDir, offline, busy) => this.placeAgent(resolved, creator, cwd, workspaceDir, offline, busy),
-    );
+    newAgentOp(this.managers, command);
   }
 
   // Launch a bare, auto-named agent tab rooted at the named source tab's cwd, joining its group —
@@ -72,7 +68,7 @@ export class ProfileManager {
     const cwd = this.managers.tab.cwdOf(label) ?? process.cwd();
 
     if (creator.workspaceDir === undefined) {
-      this.placeAgent(resolved, creator, cwd, undefined, false);
+      placeAgent(this.managers, { resolved, creator, cwd, offline: false });
       return;
     }
 
@@ -80,7 +76,9 @@ export class ProfileManager {
     // same clone/busy/provisioning flow as `agent --workspace` (see `newAgentOp`).
     const result = this.managers.workspace.create(resolved);
     if ('error' in result) { notify(this.managers, 'manual', label, result.error); return; }
-    this.placeAgent(resolved, creator, result.dir, result.dir, false, true);
+    placeAgent(this.managers, {
+      resolved, creator, cwd: result.dir, workspaceDir: result.dir, offline: false, busy: true,
+    });
     wireProvisioning(
       resolved,
       result.ready,
@@ -102,22 +100,4 @@ export class ProfileManager {
     );
   }
 
-  // Build the agent tab, insert it into its creator's group, set its cwd, focus it, and persist —
-  // the creation body shared by `newAgent` (active tab as creator) and `newAgentAt` (a label-resolved
-  // source tab that may be docked and not active). `busy`, when true, marks the tab busy on creation
-  // (a `--workspace` launch still waiting on its clone) — everything typed in the meantime queues
-  // through the ordinary busy-tab command queue.
-  private placeAgent(resolved: string, creator: Tab | undefined, cwd: string, workspaceDir: string | undefined, offline: boolean, busy = false): void {
-    const dotColor = distinctColor(this.managers.tab.tabs.map((t) => t.dotColor));
-    const group = creator?.group ?? 1;
-    const groupColor = creator?.groupColor ?? dotColor;
-    const tab = makeTab(resolved, dotColor, this.managers.tab.tabs.length + 1, [], [], workspaceDir, group, groupColor);
-    tab.toolStepsExpanded = false;
-    tab.offline = offline;
-    this.managers.tab.insertTabInGroup(tab);
-    this.managers.tab.setCwd(resolved, cwd);
-    if (busy) this.managers.tab.addBusy(resolved);
-    this.managers.tab.setActiveTab(this.managers.tab.findIndex(resolved));
-    this.managers.tab.persist(this.managers.tab.buildAgentState(tab));
-  }
 }

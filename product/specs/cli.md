@@ -14,6 +14,7 @@
 | ------- | ----------- |
 | `janus stop [<project-dir>]` | Stop the running instance for a directory. See "Stopping a running instance" below. |
 | `janus init [<project-dir>]` | Scaffold the `ai/` and `product/` directory tree in a directory. See "Scaffolding a new project" below. |
+| `janus remote-serve [<project-dir>]` | Serve this machine to a remote janissary over an ssh session. See "Serving a remote janissary" below. |
 
 ### Flags
 
@@ -87,6 +88,21 @@ When the last client disconnects, the server waits one second before beginning s
 ### Scaffolding a new project
 
 `janus init [<project-dir>]` runs attached, printing straight to the terminal, the same as `stop`. It creates the standard `ai/` and `product/` directory tree (`ai/guidelines`, `ai/personas`, `ai/tasks`, `product/backlog`, `product/plans/draft`, `product/plans/ready`, `product/plans/complete`, `product/plans/deferred`, `product/specs`) in the target directory (current directory by default), creating parent directories as needed. `product/backlog/` is seeded with the six standard backlog files (`bugs.md`, `chores.md`, `documentation.md`, `features.md`, `issues.md`, `technical-debt.md`), each containing the standard `ready`/`development`/`deferred`/`declined` section structure with empty sections. It installs the standard `.codex/` and `.claude/` configuration files; those standard files are overwritten on every run, while unrelated custom files in those directories are preserved. Every directory that is still empty once the tree and backlog files exist gets a `.gitkeep` file so git tracks it. Running `init` again against a directory that already has some or all of the scaffold in place is safe — existing directories and backlog files are left alone, apart from refreshing the standard configuration files. It prints the list of directories created and exits 0.
+
+### Serving a remote janissary
+
+`janus remote-serve [<project-dir>]` runs attached, like `stop` and `init`, but for a different
+reason: it *is* the session. It is started by another janissary over ssh, and its stdin and stdout
+are the channel that janissary drives it over — so it is never detached and its output is never
+redirected to a log file. It takes no instance lock, starts no HTTP server, opens no window, writes
+no `.janissary/log/server.log`, and is not addressable by `janus stop`; it lives and dies with its
+ssh session.
+
+With a directory argument it is rooted exactly there, with no upward walk; without one it walks up
+from the ssh login directory looking for a git repository. Either way the root must be a git
+repository with an `origin` remote, and a root that is not reports the problem back to the janissary
+that started it and exits non-zero. Running it by hand from a terminal is not useful. See
+`product/specs/remote-server.md`.
 
 ### Project directory scope
 

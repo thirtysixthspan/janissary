@@ -106,6 +106,7 @@ export function AgentTabBody({
       <AgentTabMeta
         cwd={current.cwd}
         flags={current.flags}
+        remote={current.remote}
         onOpenFileNavigator={intents.onOpenFileNavigator}
         onLaunchAgentHere={current.cwd === undefined ? undefined : intents.onLaunchAgentHere}
         onOpenTranscript={intents.onOpenTranscript}

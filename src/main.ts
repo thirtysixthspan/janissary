@@ -10,6 +10,7 @@ import { initHarnessTranscriptDirectory, clearHarnessTranscriptDirectory } from 
 import { acquireLock, releaseLock } from './instance-lock.js';
 import { stopInstance } from './stop-instance.js';
 import { scaffoldProject } from './project-init.js';
+import { runRemoteServer } from './remote/serve.js';
 import { initGlobalHistory } from './global-history.js';
 import { TranscriptLogger } from './transcript/logger.js';
 import { TranscriptStore } from './transcript/store.js';
@@ -150,6 +151,11 @@ export async function boot(argv = process.argv.slice(2)): Promise<void> {
     process.stdout.write(`${appVersion()}\n`);
     return;
   }
+
+  // The remote half of an `on <address>` launch: it runs attached inside an ssh session, speaks the
+  // frame protocol over stdin/stdout, and takes no instance lock, opens no window, and starts no
+  // HTTP server — so it returns before any of the boot below.
+  if (args.remoteServe) { runRemoteServer(args.remoteServePath); return; }
 
   const cwd = args.projectDir ?? process.cwd();
   if (args.stop) { stopInstance(cwd); return; }

@@ -50,7 +50,7 @@ export function HarnessTabLayer({
         gridRow: 2,
       }}
     >
-      <HarnessTab harness={t.harness!} client={client} cwd={t.cwd} flags={t.flags} label={t.label}
+      <HarnessTab harness={t.harness!} client={client} cwd={t.cwd} flags={t.flags} remote={t.remote} label={t.label}
         taskPickerOpen={!!taskPickerOpen && isActive}
         navOpen={!!navOpen && isActive}
         connectionsButton={scheduleOnly ? undefined : statusButton(t.connections.length > 0, statusWindows.connections)}

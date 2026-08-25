@@ -12,6 +12,12 @@ export interface CliArgs {
   noOpen: boolean;
   stop: boolean;
   init: boolean;
+  // `janus remote-serve [<project-dir>]`: run as the far end of a remote janissary session (see
+  // product/specs/remote-server.md). Its directory argument names a path on *this* machine but is
+  // deliberately not validated here — an unusable path is reported to the local side as a
+  // workspace-failed frame, not as a CLI usage error.
+  remoteServe: boolean;
+  remoteServePath: string | undefined;
   port: number | undefined;
   projectDir: string | undefined;
 }
@@ -47,12 +53,12 @@ export function parseCliArgs(argv: string[]): CliArgs {
     throw new CliUsageError(`invalid --port value: ${values.port}`);
   }
 
-  // `stop` and `init` are positional subcommands, not a project directory: `janus stop
-  // [<project-dir>]` and `janus init [<project-dir>]` each take their own optional directory
-  // argument after the keyword.
+  // `stop`, `init`, and `remote-serve` are positional subcommands, not a project directory: each
+  // takes its own optional directory argument after the keyword.
   const stop = positionals[0] === 'stop';
   const init = positionals[0] === 'init';
-  const projectDir = parseProjectDir(stop || init ? positionals.slice(1) : positionals);
+  const remoteServe = positionals[0] === 'remote-serve';
+  const projectDir = remoteServe ? undefined : parseProjectDir(stop || init ? positionals.slice(1) : positionals);
 
   return {
     help: Boolean(values.help),
@@ -61,6 +67,8 @@ export function parseCliArgs(argv: string[]): CliArgs {
     noOpen: Boolean(values['no-open']),
     stop,
     init,
+    remoteServe,
+    remoteServePath: remoteServe ? positionals[1] : undefined,
     port,
     projectDir,
   };

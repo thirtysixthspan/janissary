@@ -56,6 +56,71 @@ describe('parseHarnessCommand — launch form', () => {
   });
 });
 
+describe('parseHarnessCommand — on <address> clause', () => {
+  it('parses the address into its destination, bare host, and path', () => {
+    expect(parseHarnessCommand('harness claude on admin@devbox:/srv/proj')).toMatchObject({
+      remote: { address: 'admin@devbox:/srv/proj', destination: 'admin@devbox', host: 'devbox', path: '/srv/proj' },
+    });
+  });
+
+  // The remote server's only job is to provision a clone from its project root, so a remote launch
+  // without a workspace has no meaning — the clause turns it on rather than erroring.
+  it('forces workspace true without -w', () => {
+    expect(parseHarnessCommand('harness claude on devbox')).toMatchObject({ workspace: true });
+  });
+
+  it('accepts -w alongside it, meaning the same thing', () => {
+    expect(parseHarnessCommand('harness claude -w on devbox')).toMatchObject({ workspace: true });
+  });
+
+  it('is case-insensitive on the clause keyword', () => {
+    expect(parseHarnessCommand('harness claude ON devbox')).toMatchObject({ remote: { host: 'devbox' } });
+  });
+
+  it('parses from any position among the other flags', () => {
+    expect(parseHarnessCommand('harness codex on devbox --effort low as bot -y --model gpt-5')).toMatchObject({
+      name: 'codex', autoApprove: true, model: 'gpt-5', effort: 'low', label: 'bot',
+      workspace: true, remote: { host: 'devbox' },
+    });
+  });
+
+  it('parses the same options in any other order', () => {
+    expect(parseHarnessCommand('harness codex --model gpt-5 as bot --effort low on admin@devbox -y')).toMatchObject({
+      name: 'codex', autoApprove: true, model: 'gpt-5', effort: 'low', label: 'bot',
+      remote: { destination: 'admin@devbox' },
+    });
+  });
+
+  it('leaves remote unset when there is no clause', () => {
+    expect(parseHarnessCommand('harness claude -w')).toMatchObject({ remote: undefined });
+  });
+
+  it('errors when on has no following address', () => {
+    expect(parseHarnessCommand('harness claude on')).toEqual({ error: expect.stringContaining('Usage: on') });
+  });
+
+  it('errors on an address carrying a shell metacharacter', () => {
+    expect(parseHarnessCommand('harness claude on devbox;id')).toEqual({
+      error: expect.stringContaining('devbox;id'),
+    });
+  });
+
+  // `splitWithClause` peels the prompt off before any option scanning, so an `on` inside prompt text
+  // is never read as a clause.
+  it('leaves an on inside a with <prompt> clause as prompt text', () => {
+    expect(parseHarnessCommand('harness claude with turn it on devbox')).toEqual({
+      name: 'claude', workspace: false, offline: false, autoApprove: false,
+      prompt: 'turn it on devbox',
+    });
+  });
+
+  it('parses a real clause to the left of a prompt containing the word on', () => {
+    expect(parseHarnessCommand('harness claude on devbox with switch it on')).toMatchObject({
+      workspace: true, remote: { host: 'devbox' }, prompt: 'switch it on',
+    });
+  });
+});
+
 describe('parseHarnessCommand — with <prompt> clause', () => {
   it('captures the prompt and keeps it out of option parsing', () => {
     expect(parseHarnessCommand('harness claude with fix the -w flag')).toEqual({

@@ -32,13 +32,22 @@ function portablePath(target: string, managers: Managers): string {
   return abbreviatePath(target, { root: managers.tab.launchDir });
 }
 
-export function writeAgentEntry(tab: Tab, managers: Managers): ProfileAgentTabFile {
+// A remote tab's working directory is a path on another machine: neither under the local project
+// root (so `portablePath` cannot make it portable) nor meaningful here. Such an entry omits `cwd`
+// entirely and lets the remote server resolve a fresh workspace at launch.
+function entryCwd(tab: Tab, managers: Managers): string | undefined {
+  if (tab.remote) return undefined;
   const cwd = managers.tab.cwdOf(tab.label);
+  return cwd ? portablePath(cwd, managers) : cwd;
+}
+
+export function writeAgentEntry(tab: Tab, managers: Managers): ProfileAgentTabFile {
   return {
     type: 'agent',
     name: tab.label,
     active: false,
-    cwd: cwd ? portablePath(cwd, managers) : cwd,
+    remote: tab.remote?.address,
+    cwd: entryCwd(tab, managers),
     ...presentation(tab, managers),
   };
 }
@@ -68,17 +77,19 @@ function syncedSourcePath(editor: NonNullable<Tab['editor']>, launchDir: string)
 export function writeHarnessEntry(tab: Tab, managers: Managers): ProfileHarnessTabFile | undefined {
   const harness = tab.harness;
   if (!harness) return undefined;
-  const cwd = managers.tab.cwdOf(tab.label);
   return {
     type: 'harness',
     name: tab.label,
     tool: harness.name,
     model: harness.model,
     effort: harness.effort,
-    workspace: tab.workspaceDir !== undefined,
+    remote: tab.remote?.address,
+    // A remote tab leaves `workspaceDir` unset on purpose (its clone is the remote's), so the flag
+    // is derived from either field — `on <address>` always launches workspaced.
+    workspace: tab.workspaceDir !== undefined || tab.remote !== undefined,
     offline: tab.offline,
     autoApprove: tab.autoApprove,
-    cwd: cwd ? portablePath(cwd, managers) : cwd,
+    cwd: entryCwd(tab, managers),
     ...presentation(tab, managers),
   };
 }

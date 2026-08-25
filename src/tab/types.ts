@@ -63,6 +63,16 @@ export type HarnessView = {
   provisionError?: string;
 };
 
+// A tab whose harness or agent runs on another host, reached over one ssh session (see
+// `product/specs/remote-server.md`). `address` is the `on <address>` token exactly as typed — the
+// metadata chip's tooltip, and the form a profile entry round-trips; `host` is its bare host, which
+// is what the chip itself shows. Distinct from `HarnessView.destination`: that marks a tab that
+// *is* an ssh session, this marks a tab that *runs over* one.
+export type RemoteTarget = {
+  address: string;
+  host: string;
+};
+
 export type PluginTabRecord = {
   id: string;
   instanceKey: string;
@@ -223,6 +233,10 @@ export type Tab = {
   scrollOffset: number;
   runtime?: TabRuntime;
   workspaceDir?: string;
+  // Set when this tab's process runs on another host. Its workspace clone lives on that host and is
+  // removed by the remote server, so `workspaceDir` deliberately stays undefined — `src/tab/cleanup.ts`
+  // reads that field to schedule a recursive delete against the **local** filesystem.
+  remote?: RemoteTarget;
   // `--offline` on the tab's creating `agent`/`harness` command: adds a network-deny rule to the
   // tab's sandbox profile (only meaningful alongside `workspaceDir`). Kept so a relaunch restores it.
   offline?: boolean;

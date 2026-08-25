@@ -64,6 +64,38 @@ describe('closeTabResources', () => {
     expect(managers.workspace.cancel).toHaveBeenCalledWith('ws');
   });
 
+  // The regression this guards: a remote tab's clone lives on the other host, so storing its path
+  // in `workspaceDir` would point a local recursive delete at a path that means something else
+  // entirely on this machine. A remote tab leaves that field unset, and closing it must delete
+  // nothing locally.
+  it('schedules no local workspace removal when closing a remote tab', async () => {
+    const managers = makeManagers();
+    const remote = {
+      ...makeTab('claude', 'red'),
+      label: 'claude',
+      remote: { address: 'devbox:/srv/proj', host: 'devbox' },
+    };
+
+    closeTabResources(remote, managers, new Map(), new Map(), new Map(), 2);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(managers.workspace.remove).not.toHaveBeenCalled();
+    expect(managers.workspace.cancel).not.toHaveBeenCalled();
+  });
+
+  it('still removes a local workspaced tab\'s clone alongside remote tabs', async () => {
+    const managers = makeManagers();
+    const remote = { ...makeTab('claude', 'red'), remote: { address: 'devbox', host: 'devbox' } };
+    const local = { ...makeTab('ws', 'red'), workspaceDir: '/tmp/ws-local' };
+
+    closeTabResources(remote, managers, new Map(), new Map(), new Map(), 3);
+    closeTabResources(local, managers, new Map(), new Map(), new Map(), 3);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(managers.workspace.remove).toHaveBeenCalledTimes(1);
+    expect(managers.workspace.remove).toHaveBeenCalledWith('/tmp/ws-local');
+  });
+
   it('does not cancel anything for a tab with no workspace', () => {
     const managers = makeManagers();
 

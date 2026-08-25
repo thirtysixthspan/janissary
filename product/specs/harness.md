@@ -9,7 +9,7 @@ row, and the one place its behavior differs (the connections panel is shown, not
 ## Command
 
 ```
-harness <name> [as <label>] [-w] [-y] [--model <name>] [--effort <level>] [with <prompt>]
+harness <name> [as <label>] [on <address>] [-w] [-y] [--model <name>] [--effort <level>] [with <prompt>]
 ```
 
 Valid names: `claude`, `opencode`, `codex`. The binary must be on `PATH`; if it is not found, the
@@ -102,6 +102,24 @@ its own shortly after — see [Harness tab data](#harness-tab-data).
 
 On macOS, the harness process is additionally confined to the workspace by a Seatbelt sandbox — see
 [[sandbox]] and [[workspaced-agent]].
+
+### Remote host (`on <address>`)
+
+Adding `on <address>` runs the harness on another host over one ssh session, in a workspace that
+host provisions from its own project root:
+
+```
+harness claude on devbox                  → tab "claude" running on devbox
+harness claude as build on admin@devbox:/srv/proj
+```
+
+The clause implies `-w`, so `harness claude on devbox` and `harness claude -w on devbox` are the same
+command, and no local clone is made. The tab opens immediately showing the live ssh session, so
+authentication prompts are answered by typing into it; once the remote workspace is ready the harness
+takes the terminal over and the tab behaves exactly like a local one, apart from a host chip at the
+left of its metadata row. A remote tab's clone lives on the remote and is removed there, and if the
+ssh session ends the tab closes. See [[remote-server]] for the address grammar, the bootstrap
+requirement, the failure set, and the connections rows.
 
 ### Auto-approve permissions (`-y` / `--yes`)
 

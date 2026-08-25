@@ -1,13 +1,13 @@
 import React, { forwardRef, useImperativeHandle, useRef } from 'react';
 import type { JanusClient } from './ws';
-import type { HarnessView } from '@shared/protocol';
+import type { HarnessView, RemoteTarget } from '@shared/protocol';
 import { useXterm } from './useXterm';
 import { AgentTabMeta } from './AgentTabMeta';
 import type { StatusWindowButtonProps } from './status-button';
 import type { HarnessTabHandle } from './tab-handles';
 
 type Properties = {
-  harness: HarnessView; client: JanusClient; taskPickerOpen?: boolean; navOpen?: boolean; cwd?: string; flags?: string[]; label: string;
+  harness: HarnessView; client: JanusClient; taskPickerOpen?: boolean; navOpen?: boolean; cwd?: string; flags?: string[]; remote?: RemoteTarget; label: string;
   connectionsButton?: StatusWindowButtonProps; scheduleButton?: StatusWindowButtonProps;
   onSplit?: () => void;
 };
@@ -30,7 +30,7 @@ function harnessKeyFilter(e: KeyboardEvent, taskPickerOpen: boolean, navOpen: bo
 // over this tab (Up/Down/Left/Right/Enter/Escape must reach the picker instead of the PTY), which
 // all bubble to the window handler.
 export const HarnessTab = forwardRef<HarnessTabHandle, Properties>(function HarnessTab({
-  harness, client, taskPickerOpen, navOpen, cwd, flags, label, connectionsButton, scheduleButton,
+  harness, client, taskPickerOpen, navOpen, cwd, flags, remote, label, connectionsButton, scheduleButton,
   onSplit,
 }, ref) {
   const hostReference = useRef<HTMLDivElement>(null);
@@ -50,6 +50,7 @@ export const HarnessTab = forwardRef<HarnessTabHandle, Properties>(function Harn
       <AgentTabMeta
         cwd={cwd}
         flags={flags}
+        remote={remote}
         model={harness.model}
         effort={harness.effort}
         onOpenFileNavigator={() => client.send({ method: 'openFileNavigatorFor', params: { label } })}

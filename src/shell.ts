@@ -1,6 +1,12 @@
 import { spawn, type ChildProcess } from 'node:child_process';
 import { sandboxSpawn, type SandboxOptions } from './sandbox/index.js';
 
+// The subset of `ChildProcess` that shell execution actually touches: `stdin`'s writability and
+// `write`, `stdout`/`stderr` as `'data'` emitters, and `kill()`. Narrow enough that a process
+// running on another machine can satisfy it (see `src/remote/shell-session.ts`) without pretending
+// to be a real local child.
+export type ShellProcess = Pick<ChildProcess, 'stdin' | 'stdout' | 'stderr' | 'kill'>;
+
 // `sandbox`, when given a `workspaceDir`, confines the shell (and everything it spawns) to that
 // workspace (see src/sandbox/index.ts); omitted or workspaceDir-less, the shell runs exactly as before.
 export function spawnShell(
@@ -22,7 +28,7 @@ export function spawnShell(
 }
 
 export function executeShellCmd(
-  shell: ChildProcess,
+  shell: ShellProcess,
   command: string,
   tabIndex: number,
   onProgress: (outputBuffer: string) => void,
@@ -54,7 +60,7 @@ export function executeShellCmd(
 }
 
 export function queryShellPwd(
-  shell: ChildProcess,
+  shell: ShellProcess,
   tabIndex: number,
   onResult: (pwd: string) => void,
 ): void {

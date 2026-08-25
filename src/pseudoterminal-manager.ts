@@ -1,6 +1,8 @@
 import { spawnPty, type PtySession } from './pty.js';
 import { messageBus } from './bus.js';
 import { getGithubToken } from './github-token.js';
+import { createRemotePtySession, type RemotePtyOptions } from './remote/pty-session.js';
+import type { RemoteChannel } from './remote/channel.js';
 import type { Managers } from './managers.js';
 
 // Owns the live PTY sessions (keyed by their id) backing harness tabs, full-tab interactive command
@@ -8,9 +10,10 @@ import type { Managers } from './managers.js';
 // owns the tabs these PTYs belong to; this module owns the sessions and their I/O, handing
 // tab-affecting events back through the host.
 export class PseudoterminalManager {
-  private ptys = new Map<string, { session: PtySession; tabLabel: string }>();
+  private ptys = new Map<string, { session: PtySession; tabLabel: string; transport?: boolean }>();
   private cols = 80;
   private rows = 24;
+  private remoteCounter = 0;
 
   constructor(private managers: Managers) {}
 
@@ -29,6 +32,39 @@ export class PseudoterminalManager {
     }, this.cols, this.rows, { workspaceDir, offline, githubToken: workspaceDir ? getGithubToken() : undefined }, extraEnv);
     this.ptys.set(session.id, { session, tabLabel: label });
     return session.id;
+  }
+
+  // Spawn a PTY whose bytes are handed to `handlers.onData` instead of being published on the bus —
+  // a remote channel's `ssh -t … janus remote-serve` session, whose output is a framed transport
+  // rather than a terminal stream once its handshake lands. It is registered like any other PTY so
+  // client keystrokes (`input`), `closeTab`, and `closeAll` all reach it, but marked as a transport
+  // so it is never listed as one of the tab's `terminal:` connections.
+  spawnTransport(
+    label: string, program: string, command: string, cwd: string,
+    handlers: { onData: (data: string) => void; onExit: () => void },
+  ): PtySession {
+    const session = spawnPty(program, command, cwd, {
+      onData: (_id, data) => handlers.onData(data),
+      onExit: (id, exitCode) => { this.handleExit(id, exitCode); handlers.onExit(); },
+    }, this.cols, this.rows);
+    this.ptys.set(session.id, { session, tabLabel: label, transport: true });
+    return session;
+  }
+
+  // Register a process running on another machine as one of this tab's PTYs. The session satisfies
+  // `PtySession`, so `input`, `resizeOne`, `kill`, `terminalsFor`, `closeTab`, and `closeAll` reach
+  // it unchanged; an inbound exit frame is routed into the same private `handleExit` a local PTY's
+  // own exit handler calls, so the exit bus event, the `activePty` clear, and the inline-card status
+  // update all happen identically.
+  registerRemotePty(label: string, channel: RemoteChannel, options: Omit<RemotePtyOptions, 'id' | 'cols' | 'rows'>): string {
+    const id = `rpty${++this.remoteCounter}`;
+    const session = createRemotePtySession(
+      channel,
+      { ...options, id, cols: this.cols, rows: this.rows },
+      (exitCode) => this.handleExit(id, exitCode),
+    );
+    this.ptys.set(id, { session, tabLabel: label });
+    return id;
   }
 
   // Forward client keystrokes to a PTY.
@@ -52,20 +88,30 @@ export class PseudoterminalManager {
   // The dimensions new PTYs spawn at, for observers that mirror a PTY's screen.
   spawnDimensions(): { cols: number; rows: number } { return { cols: this.cols, rows: this.rows }; }
 
-  // The program names of a tab's live PTYs, for the connections panel and completion (`terminal:<program>`).
+  // The program names of a tab's live PTYs, for the connections panel and completion
+  // (`terminal:<program>`). A remote tab's ssh transport is skipped: it is listed as that tab's
+  // `ssh:<destination>` row instead of masquerading as one of its processes.
   terminalsFor(label: string): string[] {
     const programs: string[] = [];
-    for (const [, entry] of this.ptys) if (entry.tabLabel === label) programs.push(entry.session.program);
+    for (const [, entry] of this.ptys) {
+      if (entry.tabLabel === label && !entry.transport) programs.push(entry.session.program);
+    }
     return programs;
   }
 
   // Create an inline terminal card: spawn a PTY running `command` in the tab's cwd and attach its
   // id to `tab.activePty` so the client renders a terminal widget in the transcript. A workspaced
   // tab's own `workspaceDir`/`offline` carry over to inline PTYs (e.g. `shell vim` inside it).
+  // A remote tab has no local `workspaceDir`/`offline` to confine an inline PTY with, so it asks
+  // that tab's channel for one instead and lets the remote server apply its own sandbox — the
+  // confinement decision belongs to the machine the process runs on.
   openInlinePty(label: string, command: string, program: string): void {
     const cwd = this.managers.tab.cwdOf(label) ?? process.cwd();
     const tab = this.managers.tab.tabs.find((t) => t.label === label);
-    const id = this.spawn(label, program, command, cwd, tab?.workspaceDir, tab?.offline);
+    const channel = tab?.remote ? this.managers.remote.get(label) : undefined;
+    const id = channel
+      ? this.registerRemotePty(label, channel, { program, command })
+      : this.spawn(label, program, command, cwd, tab?.workspaceDir, tab?.offline);
     for (const t of this.managers.tab.tabs) {
       if (t.label === label) { t.activePty = id; break; }
     }

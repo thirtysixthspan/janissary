@@ -1,5 +1,6 @@
 import { HarnessManager } from '../harness/manager.js';
 import { SshManager } from '../ssh-manager.js';
+import { RemoteManager } from '../remote/manager.js';
 import { DatabaseManager } from '../database/manager.js';
 import { AcpManager } from '../acp/manager.js';
 import { ShellManager } from '../shell-manager.js';
@@ -53,6 +54,7 @@ export function createManagers(managers: Managers, projectDir?: string): void {
   managers.shell = new ShellManager(managers);
   managers.harness = new HarnessManager(managers);
   managers.ssh = new SshManager(managers);
+  managers.remote = new RemoteManager(managers);
   managers.profile = new ProfileManager(managers);
   managers.connection = new ConnectionManager(managers);
   managers.communication = new AgentCommunicationManager(managers);

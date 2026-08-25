@@ -46,10 +46,13 @@ export function buildTabView(
     busy,
     hasUnread: !!tab.hasUnread,
     cwd: shorten(cwd),
+    // A remote tab is workspaced too — its clone just lives on the other host, so the flag is
+    // derived from either field rather than from `workspaceDir` alone.
     flags: [
-      ...(tab.workspaceDir ? ['workspaced'] : []),
+      ...(tab.workspaceDir || tab.remote ? ['workspaced'] : []),
       ...(tab.autoApprove ? ['autoApprove'] : []),
     ],
+    remote: tab.remote,
     acp,
     connections,
     schedule,

@@ -26,7 +26,11 @@ if (existsSync(compiled)) {
   commandArguments = ['tsx', source, ...arguments_];
 }
 
-const isForeground = arguments_[0] === 'stop' || arguments_[0] === 'init' || arguments_.includes('--help') || arguments_.includes('--version');
+// `remote-serve` runs attached like `stop`/`init`, but for a different reason: it *is* the session —
+// its stdin and stdout are the framed channel the local janissary drives it over, so detaching it
+// (or redirecting its output to a log file) would cut the connection it exists to serve.
+const foregroundCommands = new Set(['stop', 'init', 'remote-serve']);
+const isForeground = foregroundCommands.has(arguments_[0]) || arguments_.includes('--help') || arguments_.includes('--version');
 
 if (isForeground) {
   const result = spawnSync(command, commandArguments, { stdio: 'inherit' });

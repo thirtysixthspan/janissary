@@ -1,15 +1,14 @@
 import { makeHarnessTab, distinctColor, uniqueLabel } from '../tab/index.js';
 import { parseHarnessCommand, HARNESS_COMMANDS, HARNESS_NAMES, buildHarnessCommand } from './index.js';
-import { claudeTmpDir } from './scratch-dir.js';
+import { harnessEnv } from './scratch-dir.js';
 import { isKnownModel, modelsFor } from './models.js';
 import type { HarnessLaunchView } from '../protocol.js';
 import { HarnessScreenReader, type ScreenCapture } from './screen.js';
 import { HarnessRecorder } from './recorder.js';
-import { type HarnessAutoApprover, autoApproveWithoutWorkspaceWarning } from './auto-approve.js';
-import { buildAutoApprover } from './auto-approve-wire.js';
+import { autoApproveWithoutWorkspaceWarning } from './auto-approve.js';
+import { captureWiring } from './capture-wire.js';
 import { HarnessRuntime } from './runtime.js';
 import type { SpawnTabOptions } from './spawn-options.js';
-import { busyStatusHandler } from './busy-status.js';
 import { captureSubcommand, transcriptSubcommand } from './subcommands.js';
 import { HarnessTranscriptTailer } from './transcript/tailer.js';
 import { createTranscriptSource } from './transcript/sources.js';
@@ -21,6 +20,8 @@ import { sandboxNotice } from '../sandbox/index.js';
 import { oneShotRunEntry } from '../profile/harness-schedule.js';
 import { wireProvisioning, PROVISION_FAILURE_CLOSE_DELAY_MS } from '../workspace/provision-wire.js';
 import type { ProvisioningWorkspace } from '../workspace/manager.js';
+import { startRemoteTab } from './remote-launch.js';
+import { parseRemoteAddress, type RemoteAddress } from '../remote/address.js';
 import type { Managers } from '../managers.js';
 
 // Owns harness command handling: launching a harness `<name>` as a PTY-backed tab (optionally in a
@@ -84,7 +85,7 @@ export class HarnessManager {
     if (parsed.model && !isKnownModel(parsed.name, parsed.model)) {
       return `Unknown model "${parsed.model}" for harness "${parsed.name}" — add it to harness-models.json.`;
     }
-    return this.open(parsed.name, parsed.workspace, parsed.offline, parsed.autoApprove, parsed.label, parsed.model, parsed.effort, parsed.prompt);
+    return this.open(parsed.name, parsed.workspace, parsed.offline, parsed.autoApprove, parsed.label, parsed.model, parsed.effort, parsed.prompt, parsed.remote);
   }
 
   // Open the "New harness" launch dialog (bare `harness`). Held as a flag, mirroring
@@ -111,21 +112,23 @@ export class HarnessManager {
 
   // Open (and focus) a harness tab running `name`, labeled `label` if given (otherwise `name`).
   // With `workspace`, the harness starts in a fresh clone of the `origin` remote of the repo
-  // detected from cwd; otherwise it inherits the creator's cwd.
+  // detected from cwd; otherwise it inherits the creator's cwd. With `remote`, no local clone is
+  // made at all — the clone is provisioned by `janus remote-serve` on the named host.
   private open(
     name: string, workspace: boolean, offline: boolean, autoApprove: boolean, label_?: string,
-    model?: string, effort?: string, prompt?: string,
+    model?: string, effort?: string, prompt?: string, remote?: RemoteAddress,
   ): string | undefined {
     const creator = this.managers.tab.cur();
     const label = uniqueLabel(this.managers.tab.tabs, label_ ?? name);
+    const fallbackCwd = this.managers.tab.cwdOf(creator.label) ?? process.cwd();
 
-    const dir = this.parseDir(this.resolveCwd(workspace, label, this.managers.tab.cwdOf(creator.label) ?? process.cwd()));
+    const dir = this.parseDir(this.resolveCwd(workspace && !remote, label, fallbackCwd));
     if (typeof dir === 'string') return dir;
     const { cwd, workspaceDir, ready } = dir;
     const dotColor = distinctColor(this.managers.tab.tabs.map((t) => t.dotColor));
     const group = creator?.group ?? 1;
     const groupColor = creator?.groupColor ?? dotColor;
-    this.spawnTab({ name, label, cwd, workspaceDir, offline, group, groupColor, dotColor, autoApprove, model, effort, ready });
+    this.spawnTab({ name, label, cwd, workspaceDir, offline, group, groupColor, dotColor, autoApprove, model, effort, ready, remote });
     if (prompt) this.managers.schedule.set(label, [oneShotRunEntry('run-1', prompt)]);
     return undefined;
   }
@@ -137,14 +140,16 @@ export class HarnessManager {
   // tabs have no agent state.
   openFromProfile(entry: ProfileHarnessEntry, label: string, group: number, groupColor: string): string | undefined {
     const unique = uniqueLabel(this.managers.tab.tabs, label);
-    const dir = this.parseDir(this.resolveCwd(!!entry.workspace, unique, entry.cwd ?? process.cwd()));
+    const remote = entry.remote === undefined ? undefined : parseRemoteAddress(entry.remote);
+    if (remote && 'error' in remote) return remote.error;
+    const dir = this.parseDir(this.resolveCwd(!!entry.workspace && !remote, unique, entry.cwd ?? process.cwd()));
     if (typeof dir === 'string') return dir;
     const { cwd, workspaceDir, ready } = dir;
     const dotColor = distinctColor(this.managers.tab.tabs.map((t) => t.dotColor), entry.dotColor);
     this.spawnTab({
       name: entry.tool, label: unique, cwd, workspaceDir, offline: entry.offline ?? false,
       group, groupColor, dotColor, autoApprove: entry.autoApprove ?? false,
-      model: entry.model, effort: entry.effort, ready,
+      model: entry.model, effort: entry.effort, ready, remote,
     });
     return undefined;
   }
@@ -157,18 +162,31 @@ export class HarnessManager {
   // the clone. `model`/`effort`, when given, are passed to the harness binary via
   // `buildHarnessCommand`.
   private spawnTab(options: SpawnTabOptions): void {
-    const { name, label, cwd, workspaceDir, offline, group, groupColor, dotColor, autoApprove, model, effort, ready } = options;
-    const harness: HarnessView = { name, program: HARNESS_COMMANDS[name], ptyId: '', status: ready ? 'provisioning' : 'running' };
+    const { name, label, cwd, workspaceDir, offline, group, groupColor, dotColor, autoApprove, model, effort, remote } = options;
+    const provisioning = options.ready !== undefined || remote !== undefined;
+    const harness: HarnessView = { name, program: HARNESS_COMMANDS[name], ptyId: '', status: provisioning ? 'provisioning' : 'running' };
     if (model !== undefined) harness.model = model;
     if (effort !== undefined) harness.effort = effort;
     const tab = makeHarnessTab(label, dotColor, this.managers.tab.tabs.length + 1, group, groupColor, harness, workspaceDir);
     tab.offline = offline;
     tab.autoApprove = autoApprove;
+    // Deliberately left with no `workspaceDir`: a remote tab's clone lives on the other host, and
+    // `src/tab/cleanup.ts` reads that field to schedule a recursive delete of the *local* path.
+    if (remote) tab.remote = { address: remote.address, host: remote.host };
     this.managers.tab.insertTabInGroup(tab);
     this.managers.tab.setCwd(label, cwd);
     this.managers.tab.addBusy(label);
     this.managers.tab.setActiveTab(this.managers.tab.findIndex(tab.label));
 
+    if (remote) {
+      startRemoteTab(
+        this.managers, options, remote,
+        (remoteCwd, notice) => this.finishSpawn({ ...options, cwd: remoteCwd }, notice),
+        (message) => this.failSpawn(label, message),
+      );
+      return;
+    }
+    const ready = options.ready;
     if (!ready) {
       this.finishSpawn(options);
       return;
@@ -187,17 +205,23 @@ export class HarnessManager {
 
   // Spawn the PTY and wire up its screen reader/recorder — the part of tab creation that actually
   // depends on `cwd` existing on disk, so it can't run until a `-w` launch's clone has finished.
-  private finishSpawn({ name, label, cwd, workspaceDir, offline, autoApprove, model, effort }: SpawnTabOptions): void {
+  // For a remote tab the PTY is a session on the other host and `remoteNotice` is that host's own
+  // isolation notice; everything downstream of the spawn is identical either way.
+  private finishSpawn(
+    { name, label, cwd, workspaceDir, offline, autoApprove, model, effort, remote }: SpawnTabOptions,
+    remoteNotice?: string,
+  ): void {
     const program = HARNESS_COMMANDS[name];
-    const extraEnv: NodeJS.ProcessEnv | undefined = name === 'claude'
-      ? { CLAUDE_CODE_TMPDIR: claudeTmpDir(cwd), DISABLE_AUTOUPDATER: '1' }
-      : undefined;
-    const id = this.managers.pty.spawn(label, program, buildHarnessCommand(name, model, effort), cwd, workspaceDir, offline, extraEnv);
+    const command = buildHarnessCommand(name, model, effort);
+    const channel = remote ? this.managers.remote.get(label) : undefined;
+    const id = channel
+      ? this.managers.pty.registerRemotePty(label, channel, { program, command, harness: name, offline })
+      : this.managers.pty.spawn(label, program, command, cwd, workspaceDir, offline, harnessEnv(name, cwd));
     const dims = this.managers.pty.spawnDimensions();
-    const capture = this.captureHandler(name, label, id, autoApprove);
+    const capture = captureWiring(this.managers, name, label, id, autoApprove);
     const reader = new HarnessScreenReader(id, dims.cols, dims.rows, capture.handler);
     const recorder = new HarnessRecorder(id, label, program, dims.cols, dims.rows);
-    const source = createTranscriptSource(name, cwd, Date.now());
+    const source = channel ? this.managers.remote.transcriptSource(label) : createTranscriptSource(name, cwd, Date.now());
     const tailer = source
       ? new HarnessTranscriptTailer(label, source, () => { notify(this.managers, 'transcript-unavailable', label); })
       : undefined;
@@ -207,7 +231,8 @@ export class HarnessManager {
       liveTab.harness.ptyId = id;
       liveTab.harness.status = 'running';
     }
-    const notice = workspaceDir ? sandboxNotice() : autoApproveWithoutWorkspaceWarning(autoApprove);
+    if (remote) this.managers.tab.setCwd(label, cwd);
+    const notice = remote ? remoteNotice : (workspaceDir ? sandboxNotice() : autoApproveWithoutWorkspaceWarning(autoApprove));
     if (notice) this.managers.tab.append(label, { input: '', output: notice });
     messageBus.emit('state', { type: 'dirty' });
   }
@@ -223,26 +248,6 @@ export class HarnessManager {
       const index = this.managers.tab.findIndex(label);
       if (index !== -1) this.managers.tab.closeTab(index);
     }, PROVISION_FAILURE_CLOSE_DELAY_MS);
-  }
-
-  // Build the screen-reader callback that feeds each fresh capture to whichever consumers apply:
-  // the auto-approver (when `autoApprove` is on) and the busy/ready status handler (when the
-  // harness has a detector). The approver runs first so the busy handler reads its stuck state as
-  // of the same capture. Returns undefined when neither applies, so the reader runs exactly as it
-  // would with no consumers.
-  private captureHandler(
-    name: string, label: string, id: string, autoApprove: boolean,
-  ): { handler: ((capture: ScreenCapture) => void) | undefined; autoApprover: HarnessAutoApprover | undefined } {
-    const approver = autoApprove ? buildAutoApprover(this.managers, name, label, id) : undefined;
-    const busyHandler = busyStatusHandler(name, label, this.managers, approver);
-    if (!approver && !busyHandler) return { handler: undefined, autoApprover: undefined };
-    return {
-      autoApprover: approver,
-      handler: (capture) => {
-      approver?.onCapture(capture);
-      busyHandler?.(capture);
-      },
-    };
   }
 
   // Parse `resolveCwd`'s result into a clean `{ cwd, workspaceDir, ready }` or return the error

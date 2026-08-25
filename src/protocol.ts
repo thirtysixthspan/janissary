@@ -13,7 +13,7 @@ import type { MonitorRpcCall } from './protocol/monitor.js';
 import type { ScheduleRpcCall } from './protocol/schedule.js';
 import type { PluginRpcCall } from './protocol/plugin.js';
 
-export type { BufferLine, HarnessView, EditorView, TerminalEntry, FileNavigatorView, FileNavigatorDetail, FileNavigatorRow, TaskRow } from './tab/types.js';
+export type { BufferLine, HarnessView, EditorView, RemoteTarget, TerminalEntry, FileNavigatorView, FileNavigatorDetail, FileNavigatorRow, TaskRow } from './tab/types.js';
 export type { CompletionResult } from './completion/types.js';
 export type { ProfileRow } from './profile/types.js';
 

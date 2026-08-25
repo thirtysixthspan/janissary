@@ -122,12 +122,40 @@ describe('closeConnection', () => {
   });
 
   it('reports when there is no matching ssh connection', () => {
-    const managers = makeManagers({ tab: { tabs: [] } } as unknown as Partial<Managers>);
+    const managers = makeManagers({ tab: { tabs: [] }, remote: { close: vi.fn(() => false) } } as unknown as Partial<Managers>);
     const out = vi.fn();
 
     closeConnection('ssh', 'unknown-host', managers, 'main', out);
 
     expect(out).toHaveBeenCalledWith('No open connection ssh:unknown-host.');
+  });
+
+  // A remote tab's `ssh:` row names the channel it runs over, not an ssh tab — killing that channel
+  // is what closes the tab.
+  it('closes a remote tab\'s channel found by tab label', () => {
+    const tab = makeTab('claude', 'red');
+    tab.remote = { address: 'admin@devbox:/srv/proj', host: 'devbox' };
+    const close = vi.fn(() => true);
+    const managers = makeManagers({ tab: { tabs: [tab] }, remote: { close } } as unknown as Partial<Managers>);
+    const out = vi.fn();
+
+    closeConnection('ssh', 'claude', managers, 'main', out);
+
+    expect(close).toHaveBeenCalledWith('claude');
+    expect(out).toHaveBeenCalledWith('Closed connection ssh:claude.');
+  });
+
+  it('closes a remote tab\'s channel found by the address it was launched with', () => {
+    const tab = makeTab('claude', 'red');
+    tab.remote = { address: 'admin@devbox:/srv/proj', host: 'devbox' };
+    const close = vi.fn(() => true);
+    const managers = makeManagers({ tab: { tabs: [tab] }, remote: { close } } as unknown as Partial<Managers>);
+    const out = vi.fn();
+
+    closeConnection('ssh', 'admin@devbox:/srv/proj', managers, 'main', out);
+
+    expect(close).toHaveBeenCalledWith('claude');
+    expect(out).toHaveBeenCalledWith('Closed connection ssh:admin@devbox:/srv/proj.');
   });
 
   it('reports the web UI limitation for an unhandled kind', () => {

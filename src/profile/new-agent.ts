@@ -2,26 +2,31 @@ import { parseAgentCommand, resolveAgentName } from '../agent/commands.js';
 import { sandboxNotice } from '../sandbox/index.js';
 import { wireProvisioning, PROVISION_FAILURE_CLOSE_DELAY_MS } from '../workspace/provision-wire.js';
 import { messageBus } from '../bus.js';
-import type { Tab } from '../tab/types.js';
+import { placeAgent } from './place-agent.js';
+import { startRemoteAgent } from './remote-agent.js';
 import type { Managers } from '../managers.js';
 
-// ProfileManager.newAgent, extracted whole: resolves a unique agent name, then either places the
-// tab immediately (no `--workspace`) or places it busy and wires up the clone's ready/fail
-// callbacks. `placeAgent` stays the caller's — it's shared with `newAgentAt`.
-export function newAgentOp(
-  managers: Managers, command: string,
-  placeAgent: (resolved: string, creator: Tab | undefined, cwd: string, workspaceDir: string | undefined, offline: boolean, busy?: boolean) => void,
-): void {
+// ProfileManager.newAgent, extracted whole: resolves a unique agent name, then places the tab
+// immediately (no `--workspace`), hands it to the remote launch path (`on <address>`), or places it
+// busy and wires up the clone's ready/fail callbacks. `placeAgent` is shared with `newAgentAt`.
+export function newAgentOp(managers: Managers, command: string): void {
   const parsed = parseAgentCommand(command);
   const existing = managers.tab.allLabels();
   const creator = managers.tab.cur();
   const resolved = parsed.name || resolveAgentName(`agent ${parsed.name}`, existing);
   const out = (text: string) => managers.tab.append(creator.label, { input: command, output: text });
+  if (parsed.remoteError) { out(parsed.remoteError); return; }
   if (resolved === null) { out('All agent names are in use.'); return; }
   if (existing.some((l) => l.toLowerCase() === resolved.toLowerCase())) { out(`Agent "${resolved}" is already active.`); return; }
 
+  if (parsed.remote) {
+    const cwd = managers.tab.cwdOf(creator.label) ?? process.cwd();
+    startRemoteAgent(managers, { resolved, creator, address: parsed.remote, offline: parsed.offline, cwd, out });
+    return;
+  }
+
   if (!parsed.workspace) {
-    placeAgent(resolved, creator, process.cwd(), undefined, parsed.offline);
+    placeAgent(managers, { resolved, creator, cwd: process.cwd(), offline: parsed.offline });
     out(`Agent "${resolved}" ready.`);
     return;
   }
@@ -31,7 +36,9 @@ export function newAgentOp(
   // The tab is created immediately, busy, with the clone's target directory already known — the
   // "ready" message and sandbox notice fire once the clone actually resolves, not before, so the
   // tab isn't announced ready while it's still empty.
-  placeAgent(resolved, creator, result.dir, result.dir, parsed.offline, true);
+  placeAgent(managers, {
+    resolved, creator, cwd: result.dir, workspaceDir: result.dir, offline: parsed.offline, busy: true,
+  });
   wireProvisioning(
     resolved,
     result.ready,

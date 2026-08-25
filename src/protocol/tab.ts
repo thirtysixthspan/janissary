@@ -1,5 +1,5 @@
 // Tab-presentation wire types, composed into the shared contract by ../protocol.ts.
-import type { BufferLine, HarnessView, EditorView, FileNavigatorView } from '../tab/types.js';
+import type { BufferLine, HarnessView, EditorView, FileNavigatorView, RemoteTarget } from '../tab/types.js';
 import type { PluginTabView } from './plugin.js';
 import type { ScheduleView } from './schedule.js';
 import type { SuggestionView } from './monitor.js';
@@ -46,6 +46,8 @@ export type TabView = {
   // Identifiers of this tab's currently-active flags (e.g. 'workspaced', 'autoApprove'), for the
   // metadata row's flag-emoji display. Empty when none are active.
   flags?: string[];
+  // Set when this tab's process runs on another host: the metadata row's leading host chip.
+  remote?: RemoteTarget;
   // provider/model of a connected ACP agent on this tab, if any.
   acp?: string;
   connections: ConnectionView[];
