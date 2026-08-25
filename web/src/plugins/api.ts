@@ -1,6 +1,5 @@
-import React from 'react';
+import type { ReactNode } from 'react';
 import type { JanusClient } from '../ws';
-import { SplitTabButton } from '../SplitTabButton';
 import { disableClientPlugin } from './registry';
 
 // A plugin tab's unsaved work, in the shape the host's close guard already reasons about (see
@@ -16,7 +15,10 @@ export type TabDirtyHandle = {
 export type TabPluginClientCapabilities = {
   resourceUrl(reference: string): string;
   intent<Result>(name: string, payload: unknown): Promise<Result>;
-  splitAction: React.ReactNode;
+  // A control the host rendered and this module only carries. The node is built one layer up, in the
+  // component that already renders around the plugin, so this contract never imports a component of
+  // its own — see `PluginBody`.
+  splitAction: ReactNode;
   // Whether this plugin's tab is the visible one in its pane. A plugin tab stays mounted while
   // hidden — that is what preserves video playback and editor-style view state across tab switches —
   // so anything a plugin binds globally (a window key listener, say) has to consult this rather than
@@ -45,7 +47,7 @@ export function createPluginClientCapabilities(
   active: boolean,
   dock: 'left' | 'right' | null,
   onClose: () => void,
-  onSplit?: () => void,
+  splitAction?: ReactNode,
   onDirtyHandle?: (handle: TabDirtyHandle | null) => void,
 ): TabPluginClientCapabilities {
   return {
@@ -65,7 +67,7 @@ export function createPluginClientCapabilities(
       if (result === undefined) throw new Error(`Plugin intent "${name}" failed`);
       return result;
     },
-    splitAction: onSplit ? React.createElement(SplitTabButton, { onClick: onSplit }) : null,
+    splitAction: splitAction ?? null,
     // The report is deduplicated here rather than in the layer above, so the one-report-per-plugin
     // rule covers a plugin component reporting its own failure — a bad intent result, say — and not
     // just the load, schema, timeout, and render failures the host detects for it. The first report

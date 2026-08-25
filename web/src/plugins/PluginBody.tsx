@@ -9,6 +9,7 @@ import React, {
 } from 'react';
 import type { TabView } from '@shared/protocol';
 import type { JanusClient } from '../ws';
+import { SplitTabButton } from '../SplitTabButton';
 import { createPluginClientCapabilities, type TabDirtyHandle } from './api';
 import { clientPluginFailure, clientPluginRegistry, type ClientPluginRegistration } from './registry';
 
@@ -149,11 +150,18 @@ export function PluginBody({
   const registerDirty = useCallback((handle: TabDirtyHandle | null) => {
     onDirtyHandleRef.current?.(handle);
   }, []);
+  // The host builds the control and the capability object only carries it, so the plugin contract
+  // never has to import a component. Memoized on the same two stable values the capability object
+  // is, or a fresh element every render would churn it underneath a mounted plugin.
+  const splitAction = useMemo(
+    () => (splittable ? <SplitTabButton onClick={split} /> : null),
+    [split, splittable],
+  );
   const capabilities = useMemo(
     () => createPluginClientCapabilities(
-      pluginId, label, client, active, dock, close, splittable ? split : undefined, registerDirty,
+      pluginId, label, client, active, dock, close, splitAction, registerDirty,
     ),
-    [active, client, close, dock, label, pluginId, registerDirty, split, splittable],
+    [active, client, close, dock, label, pluginId, registerDirty, splitAction],
   );
   const capabilitiesRef = useRef(capabilities);
   capabilitiesRef.current = capabilities;
