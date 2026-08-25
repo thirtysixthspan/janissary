@@ -17,7 +17,7 @@ import { useTabEntries } from './useTabEntries';
 import { useViewSearchState } from './useViewSearchState';
 import { getRecentHistory } from './history';
 import { useCmdW } from './useCmdW';
-import { useTranscriptScroll } from './useTranscriptScroll';
+import { useTranscriptScroll } from './transcript/useTranscriptScroll';
 import { useQuitConfirm } from './QuitDialog/useQuitConfirm';
 import { useAppWindowKeys } from './useAppWindowKeys';
 import { useThemePicker } from './useThemePicker';

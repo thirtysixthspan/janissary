@@ -4,7 +4,7 @@ ACP agent replies are written in Markdown and rendered as formatted Markdown in 
 (headings, lists, tables, fenced code, blockquotes, links). Every other transcript line — shell
 output, command echoes, inter-agent messages — stays plain text; only entries explicitly flagged as
 Markdown are interpreted. The request lives in `src/controller.ts` (`runAcp`), the buffer model in
-`src/types.ts` / `src/tab.ts`, and the rendering in `web/src/Transcript.tsx`.
+`src/types.ts` / `src/tab.ts`, and the rendering in `web/src/transcript/Transcript.tsx`.
 
 ### Requesting Markdown
 
