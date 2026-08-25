@@ -1,17 +1,9 @@
 import React, { useCallback, useState } from 'react';
-import type { TabView } from '@shared/protocol';
 import { MonitorTab } from './MonitorTab';
 import { ResizeButton } from './ResizeButton';
 import { beginResizeDrag } from './drag-resize';
 import { TabStrip } from './TabStrip';
-import type { TabEntry } from './useTabEntries';
-
-// Reporting tabs are a separate class from action tabs: they report, they never take
-// commands. A tab is a reporting tab when its view kind is in this set (currently just
-// the monitor window).
-export function isReportingTab(tab: TabView): boolean {
-  return tab.view === 'monitor';
-}
+import type { TabEntry } from './tab-entries';
 
 // One reporting tab plus its index in the server's full tab list (close RPCs need it).
 export type ReportingEntry = TabEntry;

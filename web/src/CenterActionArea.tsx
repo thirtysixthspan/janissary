@@ -3,7 +3,7 @@ import type { TabView } from '@shared/protocol';
 import { TabStrip } from './TabStrip';
 import { ResizeButton } from './ResizeButton';
 import { beginResizeDrag } from './drag-resize';
-import type { TabEntry } from './useTabEntries';
+import type { TabEntry } from './tab-entries';
 import type { BaseCenterActionAreaProps } from './CenterActionAreaProps';
 
 const MIN_PCT = 15;
