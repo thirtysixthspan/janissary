@@ -65,7 +65,7 @@ describe('ImageTab', () => {
 
   it('loads the image through the host-authenticated resource url', () => {
     const { container } = renderTab();
-    expect(container.querySelector(':scope .image-stage img')?.getAttribute('src')).toBe('/open/1?token=');
+    expect(container.querySelector(':scope .plugin-stage img')?.getAttribute('src')).toBe('/open/1?token=');
   });
 
   it('offers the host split action and ignores global keys while its tab is inactive', () => {
@@ -80,17 +80,17 @@ describe('ImageTab', () => {
   it('places the split action in the right-side metadata actions', () => {
     const { container } = renderTab({ onSplit: () => {} });
 
-    expect(container.querySelector(':scope .image-actions .tab-split')).not.toBeNull();
+    expect(container.querySelector(':scope .plugin-actions .tab-split')).not.toBeNull();
   });
 
   it('offers an icon-only Edit image control in the actions area even with no split action', () => {
     const { container } = renderTab();
-    expect(container.querySelector('.image-actions')).not.toBeNull();
+    expect(container.querySelector('.plugin-actions')).not.toBeNull();
     const editButton = screen.getByRole('button', { name: 'Edit image' });
     expect(editButton).toHaveAttribute('title', 'Edit image');
     expect(editButton).toHaveTextContent('');
     expect(editButton.querySelector('svg[data-icon="pen"]')).not.toBeNull();
-    expect(container.querySelector(':scope .image-actions .tab-split')).toBeNull();
+    expect(container.querySelector(':scope .plugin-actions .tab-split')).toBeNull();
   });
 
   it('hides the zoom badge at 100%', () => {
@@ -138,14 +138,14 @@ describe('ImageTab', () => {
 
   it('wheel up zooms in', () => {
     const { container } = renderTab();
-    const stage = container.querySelector('.image-stage')!;
+    const stage = container.querySelector('.plugin-stage')!;
     fireWheel(stage, -100);
     expect(screen.getByText('110%')).toBeInTheDocument();
   });
 
   it('wheel down zooms out', () => {
     const { container } = renderTab();
-    const stage = container.querySelector('.image-stage')!;
+    const stage = container.querySelector('.plugin-stage')!;
     fireWheel(stage, 100);
     expect(screen.getByText('90%')).toBeInTheDocument();
   });
@@ -154,7 +154,7 @@ describe('ImageTab', () => {
 
   it('Escape resets zoom to 100%, hides badge, and resets scroll', () => {
     const { container } = renderTab();
-    const stage = container.querySelector('.image-stage')! as HTMLElement;
+    const stage = container.querySelector('.plugin-stage')! as HTMLElement;
     fireKey('PageUp');
     fireKey('PageUp');
     expect(screen.getByText('120%')).toBeInTheDocument();
@@ -171,7 +171,7 @@ describe('ImageTab', () => {
 
   it('ArrowUp pans the stage up (decreases scrollTop)', () => {
     const { container } = renderTab();
-    const stage = container.querySelector('.image-stage')! as HTMLElement;
+    const stage = container.querySelector('.plugin-stage')! as HTMLElement;
     stage.scrollTop = 100;
     const event = fireKey('ArrowUp');
     expect(stage.scrollTop).toBe(70);
@@ -180,7 +180,7 @@ describe('ImageTab', () => {
 
   it('ArrowDown pans the stage down (increases scrollTop)', () => {
     const { container } = renderTab();
-    const stage = container.querySelector('.image-stage')! as HTMLElement;
+    const stage = container.querySelector('.plugin-stage')! as HTMLElement;
     stage.scrollTop = 0;
     const event = fireKey('ArrowDown');
     expect(stage.scrollTop).toBe(30);
@@ -189,7 +189,7 @@ describe('ImageTab', () => {
 
   it('ArrowLeft pans the stage left (decreases scrollLeft)', () => {
     const { container } = renderTab();
-    const stage = container.querySelector('.image-stage')! as HTMLElement;
+    const stage = container.querySelector('.plugin-stage')! as HTMLElement;
     stage.scrollLeft = 100;
     const event = fireKey('ArrowLeft');
     expect(stage.scrollLeft).toBe(70);
@@ -198,7 +198,7 @@ describe('ImageTab', () => {
 
   it('ArrowRight pans the stage right (increases scrollLeft)', () => {
     const { container } = renderTab();
-    const stage = container.querySelector('.image-stage')! as HTMLElement;
+    const stage = container.querySelector('.plugin-stage')! as HTMLElement;
     stage.scrollLeft = 0;
     const event = fireKey('ArrowRight');
     expect(stage.scrollLeft).toBe(30);
@@ -218,7 +218,7 @@ describe('ImageTab', () => {
 
   it('drag moves scroll in the direction of drag', () => {
     const { container } = renderTab();
-    const stage = container.querySelector('.image-stage')! as HTMLElement;
+    const stage = container.querySelector('.plugin-stage')! as HTMLElement;
     stage.scrollLeft = 100;
     stage.scrollTop = 100;
 
@@ -231,7 +231,7 @@ describe('ImageTab', () => {
 
   it('cursor becomes grabbing on mousedown and resets on mouseup', () => {
     const { container } = renderTab();
-    const stage = container.querySelector('.image-stage')! as HTMLElement;
+    const stage = container.querySelector('.plugin-stage')! as HTMLElement;
 
     act(() => { stage.dispatchEvent(new MouseEvent('mousedown', { button: 0, clientX: 0, clientY: 0, bubbles: true, cancelable: true })); });
     expect(stage.style.cursor).toBe('grabbing');
@@ -242,7 +242,7 @@ describe('ImageTab', () => {
 
   it('non-primary button mousedown does not start drag', () => {
     const { container } = renderTab();
-    const stage = container.querySelector('.image-stage')! as HTMLElement;
+    const stage = container.querySelector('.plugin-stage')! as HTMLElement;
 
     act(() => { stage.dispatchEvent(new MouseEvent('mousedown', { button: 2, clientX: 0, clientY: 0, bubbles: true })); });
     expect(stage.style.cursor).not.toBe('grabbing');
@@ -252,7 +252,7 @@ describe('ImageTab', () => {
 
   it('applies image-landscape when the loaded image is wider than tall', () => {
     const { container } = renderTab();
-    const img = container.querySelector(':scope .image-stage img')!;
+    const img = container.querySelector(':scope .plugin-stage img')!;
     Object.defineProperties(img, {
       naturalWidth: { value: 200, configurable: true },
       naturalHeight: { value: 100, configurable: true },
@@ -263,7 +263,7 @@ describe('ImageTab', () => {
 
   it('applies image-portrait when the loaded image is taller than wide', () => {
     const { container } = renderTab();
-    const img = container.querySelector(':scope .image-stage img')!;
+    const img = container.querySelector(':scope .plugin-stage img')!;
     Object.defineProperties(img, {
       naturalWidth: { value: 100, configurable: true },
       naturalHeight: { value: 200, configurable: true },
@@ -282,7 +282,7 @@ describe('ImageTab', () => {
     const { container, rerender } = render(
       <ImageTab payload={image} capabilities={makeCapabilities()} />,
     );
-    const stage = container.querySelector('.image-stage')! as HTMLElement;
+    const stage = container.querySelector('.plugin-stage')! as HTMLElement;
     fireKey('PageUp');
     fireKey('PageUp');
     stage.scrollTop = 40;
@@ -300,7 +300,7 @@ describe('ImageTab', () => {
   it('renders the viewer with no toolbar for a payload carrying no mode', () => {
     const { container } = renderTab();
     expect(container.querySelector('.image-edit-toolbar')).toBeNull();
-    expect(container.querySelector(':scope .image-stage img')).not.toBeNull();
+    expect(container.querySelector(':scope .plugin-stage img')).not.toBeNull();
   });
 
   it('renders the editor for an edit-mode payload', () => {
@@ -337,8 +337,8 @@ describe('ImageTab', () => {
   // the editor needs. The editor mounts a hidden source only while no visible image exists.
   it('shares one image source between viewer and editor modes', () => {
     const { container } = renderTab();
-    const viewerImage = container.querySelector(':scope .image-stage img')!;
-    expect(container.querySelectorAll(':scope .image-tab img')).toHaveLength(1);
+    const viewerImage = container.querySelector(':scope .plugin-stage img')!;
+    expect(container.querySelectorAll(':scope .plugin-tab img')).toHaveLength(1);
     expect(container.querySelector('.image-edit-source')).toBeNull();
     Object.defineProperties(viewerImage, {
       naturalWidth: { value: 320, configurable: true },
@@ -348,12 +348,12 @@ describe('ImageTab', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Edit image' }));
     expect(container.querySelector('.image-edit-source')).not.toBeNull();
-    expect(container.querySelectorAll(':scope .image-tab img')).toHaveLength(1);
+    expect(container.querySelectorAll(':scope .plugin-tab img')).toHaveLength(1);
     expect(screen.getByText('320 × 200')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Done' }));
     expect(container.querySelector('.image-edit-source')).toBeNull();
-    expect(container.querySelector(':scope .image-stage img')).not.toBeNull();
-    expect(container.querySelectorAll(':scope .image-tab img')).toHaveLength(1);
+    expect(container.querySelector(':scope .plugin-stage img')).not.toBeNull();
+    expect(container.querySelectorAll(':scope .plugin-tab img')).toHaveLength(1);
   });
 });

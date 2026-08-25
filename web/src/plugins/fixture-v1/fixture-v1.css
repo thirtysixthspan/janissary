@@ -1,0 +1,3 @@
+/* The frozen compatibility fixture's stylesheet. It is deliberately rule-free: the fixture renders
+   unstyled markup, and this file exists to show the shape every client plugin follows — a
+   stylesheet beside the entry module, imported by that entry so it loads with the lazy chunk. */

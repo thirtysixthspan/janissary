@@ -48,16 +48,16 @@ export function ImageTab({
   }, [capabilities.active, editing, save]);
 
   return (
-    <div className="image-tab" data-doc-shot="image-view">
-      <div className="image-meta">
-        <span className="image-name">{image.name}</span>
+    <div className="plugin-tab" data-doc-shot="image-view">
+      <div className="plugin-meta">
+        <span className="plugin-name">{image.name}</span>
         <span className="image-size">{image.size}</span>
-        <span className="image-loc">{image.path}</span>
+        <span className="plugin-loc">{image.path}</span>
         {editing && edit.dimensions && (
           <span className="image-dimensions">{edit.dimensions.width} × {edit.dimensions.height}</span>
         )}
         {edit.saved && <span className="image-edit-saved">Saved {edit.saved}</span>}
-        <span className="image-actions">
+        <span className="plugin-actions">
           {editing ? (
             <>
               <button type="button" disabled={edit.busy || !edit.dirty} onClick={() => { void edit.save(); }}>

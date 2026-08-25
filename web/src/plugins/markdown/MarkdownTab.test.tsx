@@ -83,14 +83,14 @@ describe('MarkdownTab', () => {
     const { container } = renderTab({ onSplit: () => {} });
     await waitFor(() => screen.getByRole('heading', { level: 1 }));
 
-    expect(container.querySelector(':scope .image-actions .tab-split')).not.toBeNull();
+    expect(container.querySelector(':scope .plugin-actions .tab-split')).not.toBeNull();
   });
 
   it('renders no actions when the host supplies no split control', async () => {
     const { container } = renderTab();
     await waitFor(() => screen.getByRole('heading', { level: 1 }));
 
-    expect(container.querySelector(':scope .image-actions')).toBeNull();
+    expect(container.querySelector(':scope .plugin-actions')).toBeNull();
   });
 
   it('renders markdown content as HTML after fetch', async () => {

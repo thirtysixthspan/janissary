@@ -40,12 +40,12 @@ export function MarkdownTab({
   }, [active]);
 
   return (
-    <div className="image-tab" data-doc-shot="markdown-view">
-      <div className="image-meta">
-        <span className="image-name">{markdown.name}</span>
+    <div className="plugin-tab" data-doc-shot="markdown-view">
+      <div className="plugin-meta">
+        <span className="plugin-name">{markdown.name}</span>
         <span className="image-size">{markdown.size}</span>
-        <span className="image-loc">{markdown.path}</span>
-        {capabilities.splitAction && <span className="image-actions">{capabilities.splitAction}</span>}
+        <span className="plugin-loc">{markdown.path}</span>
+        {capabilities.splitAction && <span className="plugin-actions">{capabilities.splitAction}</span>}
       </div>
       {html === undefined
         ? <div className="markdown-stage" ref={stageRef} />

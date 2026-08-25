@@ -42,6 +42,14 @@ The wire view identifies the plugin, the payload schema version, and an opaque p
 
 The client loads the declared chunk only when a matching plugin tab first exists. It validates the schema version and payload before rendering. Plugin components receive only authenticated resource URL construction, a tab-bound intent function, the host-rendered split action, which sidebar their tab is docked into, whether their tab is the currently visible one, a way to close their own tab, and failure reporting; they do not receive the WebSocket client. Because a hidden plugin tab stays mounted, the host is the only source of that visibility answer — a plugin that binds a window-wide key listener consults it rather than assuming it is on screen.
 
+### How a plugin tab is styled
+
+A plugin owns its own appearance, and that appearance arrives with the plugin rather than with the application. A plugin's styling loads on the same occasion its behavior does — the first time one of its tabs exists — so a plugin nobody opens costs nothing to look at, and a plugin whose tab is open looks the same whether it was the first tab opened or the twentieth.
+
+Plugin views that present the same shape share one plugin-wide look rather than each restating it: the metadata header above a body, the header's name and location, its right-aligned action group, and the centering, scrollable stage the image and video views fill. Sharing it means those views stay consistent with each other as that look changes, and it loads once for however many of them are open. Anything one plugin alone draws — the image editor's crop overlay, the audio playlist, the markdown document area, the schedule list's columns — belongs to that plugin alone.
+
+The application keeps the styling of everything it draws itself, including the frames it wraps around a plugin tab, the tab strip, the sidebars, and the split control it renders into a plugin's header. Every theme reaches plugin views the same way it always has, so switching themes recolors a plugin tab exactly as it recolors an application tab.
+
 ### Docking a plugin tab
 
 A plugin tab can be docked into either sidebar and undocked back to the centre, exactly as the built-in dockable views can, and by the same means — the dock control shown on a docked tab, a profile that asks for it, and the plugin itself (see Placing its own tab). A docked plugin tab leaves the tab strip, so it has no position, group, or focus there; it appears instead in that sidebar's own tab switcher alongside whatever else is docked to the same side.

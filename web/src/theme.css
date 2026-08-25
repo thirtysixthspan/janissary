@@ -182,123 +182,36 @@ html, body, #root {
   color: var(--muted); font-size: 14px; line-height: 1;
 }
 .tab .tab-close:hover { color: var(--fg); }
-.tab-split, .image-edit-toggle {
+.tab-split {
   border: none; background: none; color: var(--muted); cursor: pointer; padding: 2px 4px;
 }
-.tab-split:hover, .image-edit-toggle:hover { color: var(--fg); }
-.page-focus-catcher { position: absolute; inset: 0; z-index: 10; background: transparent; }
+.tab-split:hover { color: var(--fg); }
 /* Inline tab-rename input: matches the label's font so it reads as an in-place edit. */
 .tab-rename-input {
   font: inherit; color: inherit; background: transparent; border: none; outline: none;
   padding: 0; margin: 0;
 }
 
-/* Image view tab: a metadata header above the image, which fills the remaining space. */
-.image-tab { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 8px 12px; gap: 8px; }
-.image-meta { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; color: var(--muted); }
-.image-meta .image-name { color: var(--fg); font-weight: 600; }
-.image-meta .image-loc { font-size: 12px; word-break: break-all; }
-/* Editor tab: same layout as the image tab, under its own class names (it isn't an image).
+/* Editor tab: same layout as the shared plugin tab frame, under its own class names.
    `position: relative` makes it the positioning context for the find overlay (.editor-find), which
    would otherwise span the whole pane grid in a split. */
 .editor-tab { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 8px 12px; gap: 8px; }
 .editor-meta { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; color: var(--muted); }
 .editor-meta .editor-name { color: var(--fg); font-weight: 600; }
 .editor-meta .editor-loc { font-size: 12px; word-break: break-all; }
-.image-stage { flex: 1; min-height: 0; position: relative; display: flex; align-items: safe center; justify-content: safe center; overflow: auto; cursor: grab; scrollbar-width: none; }
-.image-stage::-webkit-scrollbar { display: none; }
-/* Landscape: span the full width. Portrait: fill the full remaining height. Aspect ratio preserved.
-   flex-shrink: 0 prevents the flex algorithm from compressing a zoomed image back into the container
-   (which would suppress overflow and break arrow-key / drag panning). */
-.image-stage .image-landscape { width: 100%; height: auto; flex-shrink: 0; }
-.image-stage .image-portrait { height: 100%; width: auto; flex-shrink: 0; }
-.image-zoom-badge { position: absolute; top: 8px; right: 8px; padding: 2px 6px; border-radius: 4px; background: rgb(0 0 0 / 45%); color: var(--fg); font-size: 12px; pointer-events: none; }
-/* Video view tab: reuses the image tab's metadata header and stage. The stage's grab cursor belongs
-   to image panning, which a video has no equivalent for, and the player fits the stage rather than
-   spanning it, so a portrait clip is not stretched. */
-.video-tab .image-stage { cursor: default; }
-.image-stage .video-player { max-width: 100%; max-height: 100%; }
-.video-unplayable { display: flex; flex-direction: column; align-items: center; gap: 8px; color: var(--muted); text-align: center; }
-.video-unplayable .video-unplayable-path { font-size: 12px; word-break: break-all; }
-.image-meta .video-shot-saved { color: var(--fg); font-size: 12px; }
-/* Image editor: the second half of the image tab. The toolbar sits between the metadata header and
-   a canvas stage; the source image stays in the DOM as the canvas's pixel source and is never shown.
-   The crop overlay lies over the canvas at the same size, so a rectangle in percentage terms is a
-   rectangle in image pixels whatever the stage is scaled to. */
-.image-edit-source { display: none; }
-.image-meta .image-dimensions, .image-meta .image-edit-saved { color: var(--fg); font-size: 12px; }
-.image-edit-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
-.image-edit-toolbar button { padding: 2px 8px; border-radius: 4px; border: 1px solid var(--border); background: transparent; color: var(--fg); cursor: pointer; }
-.image-edit-toolbar button:disabled { opacity: 0.45; cursor: default; }
-.image-edit-toolbar button.active { border-color: var(--accent, var(--fg)); }
-.image-edit-toolbar .image-edit-gesture-actions, .image-edit-toolbar .image-edit-history { display: flex; gap: 4px; margin-left: auto; }
-/* The canvas is bounded by the stage's own box through container units rather than by percentages
-   of its wrapper. A percentage max-height on the canvas would resolve against the wrapper's
-   content-derived height and so bound nothing, letting a tall image run past a wrapper that its own
-   max-height had already clipped to the stage — and the overlay, which is the wrapper's box, would
-   then cover only the visible slice of the image instead of all of it. Sizing against the stage
-   makes the whole image fit, and leaves the wrapper shrink-wrapped to the canvas. */
-.image-edit-stage { cursor: default; container-type: size; }
-.image-edit-surface { position: relative; }
-.image-edit-canvas { display: block; max-width: 100cqw; max-height: 100cqh; }
-.image-crop-overlay { position: absolute; inset: 0; cursor: crosshair; touch-action: none; }
-.image-crop-rect { position: absolute; border: 1px dashed var(--accent, var(--fg)); box-shadow: 0 0 0 9999px rgb(0 0 0 / 35%); }
-.image-crop-handle { position: absolute; width: 8px; height: 8px; background: var(--accent, var(--fg)); }
-.image-crop-handle-nw { left: -4px; top: -4px; cursor: nwse-resize; }
-.image-crop-handle-n { left: calc(50% - 4px); top: -4px; cursor: ns-resize; }
-.image-crop-handle-ne { right: -4px; top: -4px; cursor: nesw-resize; }
-.image-crop-handle-w { left: -4px; top: calc(50% - 4px); cursor: ew-resize; }
-.image-crop-handle-e { right: -4px; top: calc(50% - 4px); cursor: ew-resize; }
-.image-crop-handle-sw { left: -4px; bottom: -4px; cursor: nesw-resize; }
-.image-crop-handle-s { left: calc(50% - 4px); bottom: -4px; cursor: ns-resize; }
-.image-crop-handle-se { right: -4px; bottom: -4px; cursor: nwse-resize; }
-.image-crop-readout { position: absolute; left: 0; bottom: -20px; padding: 1px 5px; border-radius: 4px; background: rgb(0 0 0 / 55%); color: var(--fg); font-size: 12px; white-space: nowrap; pointer-events: none; }
-/* Audio player tab: the image tab's metadata header carrying a transport row, a native player, and
-   the playlist filling the remaining space. Docked into a narrow sidebar the header wraps to its own
-   lines and the location is dropped, so the transport row stays reachable at any width. */
-.audio-transport { display: flex; align-items: center; gap: 4px; }
-.audio-transport button {
-  background: transparent; border: none; color: var(--muted);
-  padding: 2px 4px; font-size: 14px; line-height: 1; cursor: pointer;
-}
-.audio-transport button:hover { color: var(--fg); }
-.audio-tab .audio-player { width: 100%; flex-shrink: 0; }
-.audio-tab .audio-empty { color: var(--muted); padding: 12px 0; text-align: center; }
-.audio-playlist { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; }
-.audio-track { display: flex; align-items: center; gap: 8px; padding: 2px 4px; border-radius: 4px; }
-.audio-track:hover { background: var(--bg-soft); }
-.audio-track-current { background: var(--bg-soft); }
-.audio-track-current .audio-track-name { color: var(--fg); font-weight: 600; }
-.audio-track-name {
-  flex: 1; min-width: 0; text-align: left; overflow: hidden; text-overflow: ellipsis;
-  white-space: nowrap; background: transparent; border: none; color: var(--muted);
-  font: inherit; padding: 2px 0; cursor: pointer;
-}
-.audio-track-remove {
-  background: transparent; border: none; color: var(--muted);
-  padding: 0 4px; font-size: 12px; line-height: 1; cursor: pointer;
-}
-.audio-track-remove:hover { color: var(--fg); }
-.audio-tab-docked .image-meta { gap: 4px 8px; }
-.audio-tab-docked .image-loc { display: none; }
-/* Page view tab: full-height iframe with no chrome. */
-.page-tab { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; }
-.page-header {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 6px 12px; color: var(--muted); font-size: 12px; border-bottom: 1px solid var(--border);
-}
-.page-meta { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; flex: 1; min-width: 0; }
 .tab-meta {
   display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px;
   padding: 6px 12px; color: var(--muted); font-size: 12px; border-bottom: 1px solid var(--border);
 }
-.image-meta, .page-meta, .tab-meta, .monitor-meta, .files-meta, .editor-meta {
+/* Host metadata headers. The plugin ones carry the same treatment from the plugin stylesheets that
+   own them (web/src/plugins/shared.css and web/src/plugins/page/page.css). */
+.tab-meta, .monitor-meta, .files-meta, .editor-meta {
   user-select: text;
 }
-.image-actions, .tab-meta-actions, .page-actions, .monitor-actions, .editor-actions, .files-actions {
+.tab-meta-actions, .monitor-actions, .editor-actions, .files-actions {
   margin-left: auto;
 }
-.image-actions, .tab-meta-actions, .editor-actions {
+.tab-meta-actions, .editor-actions {
   display: flex; align-items: center; gap: 2px; flex-shrink: 0;
 }
 .tab-cwd { word-break: break-all; }
@@ -343,57 +256,6 @@ html, body, #root {
 .editor-sync-icon--clickable { cursor: pointer; }
 .editor-sync-icon--provisioning svg, .editor-sync-icon--syncing svg { animation: editor-sync-spin 1s linear infinite; }
 @keyframes editor-sync-spin { to { transform: rotate(360deg); } }
-.page-domain { color: var(--fg); font-weight: 600; } /* deprecated — kept for back-compat */
-.page-url { font-size: 12px; word-break: break-all; }
-.page-url-input {
-  font: inherit; color: inherit; background: transparent; border: none; outline: none;
-  padding: 0; margin: 0; width: 100%; min-width: 20em; font-size: 12px;
-}
-.page-actions { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
-.page-close { background: transparent; border: none; color: var(--muted); cursor: pointer; font-size: 13px; padding: 0 4px; line-height: 1; }
-.page-close:hover { color: var(--fg); }
-.page-nav { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
-.page-back, .page-forward, .page-reload {
-  background: transparent; border: none; color: var(--muted); cursor: pointer; font-size: 13px;
-  padding: 0 4px; line-height: 1;
-}
-.page-back:hover, .page-forward:hover, .page-reload:hover { color: var(--fg); }
-.page-frame { flex: 1; width: 100%; height: 100%; border: 0; background: #fff; }
-
-/* Markdown view tab: scrollable document area, colored by the active application theme. */
-.markdown-stage {
-  flex: 1; min-height: 0; overflow: auto;
-  background: var(--bg); color: var(--fg); padding: 16px 20px;
-}
-.markdown-stage ::selection { background: var(--editor-selection); }
-.markdown-stage h1, .markdown-stage h2, .markdown-stage h3,
-.markdown-stage h4, .markdown-stage h5, .markdown-stage h6 {
-  margin: 0.6em 0 0.3em; line-height: 1.3; font-weight: 600; color: var(--fg);
-}
-.markdown-stage h1 { font-size: 1.6em; }
-.markdown-stage h2 { font-size: 1.35em; }
-.markdown-stage h3 { font-size: 1.15em; }
-.markdown-stage p { margin: 0.5em 0; }
-.markdown-stage a { color: var(--accent); }
-.markdown-stage ul, .markdown-stage ol { margin: 0.4em 0; padding-left: 1.5em; }
-.markdown-stage li { margin: 0.15em 0; }
-.markdown-stage code {
-  font-family: var(--mono); font-size: 0.92em;
-  background: var(--bg-soft); padding: 0.1em 0.35em; border-radius: 4px; color: var(--fg);
-}
-.markdown-stage pre {
-  background: var(--bg-soft); padding: 8px 12px; border-radius: 6px;
-  overflow-x: auto; margin: 0.5em 0;
-}
-.markdown-stage pre code { background: none; padding: 0; font-size: 0.9em; }
-.markdown-stage blockquote {
-  margin: 0.5em 0; padding: 0.1em 0.9em; color: var(--muted);
-  border-left: 3px solid var(--border);
-}
-.markdown-stage hr { border: none; border-top: 1px solid var(--border); margin: 0.8em 0; }
-.markdown-stage table { border-collapse: collapse; margin: 0.5em 0; }
-.markdown-stage th, .markdown-stage td { border: 1px solid var(--border); padding: 4px 10px; text-align: left; }
-.markdown-stage th { background: var(--bg-soft); font-weight: 600; }
 
 /* While the agent is busy, blink the dot fully on/off (600ms each), mirroring the Ink tab strip. */
 .tab .dot.busy { animation: dot-blink 1.2s step-end infinite; }
@@ -934,45 +796,3 @@ html, body, #root {
   padding: 0 4px; line-height: 1;
 }
 .notifications-dock-cycle:hover { color: var(--fg); }
-
-/* Schedules tab: the aggregated, next-to-run-ordered schedule list. A scrollable flex column of
-   numbered, tabular rows with column headings; the compact variant tightens each row to a single
-   sidebar-width line with fewer columns. */
-.schedules-tab { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; padding: 4px 0; outline: none; }
-.schedules-empty { padding: 8px 12px; color: var(--muted); }
-.schedules-header {
-  display: flex; align-items: center; justify-content: flex-end;
-  padding: 6px 12px; color: var(--muted); font-size: 12px; border-bottom: 1px solid var(--border);
-}
-.schedules-actions { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
-.schedules-dock-cycle {
-  background: transparent; border: none; color: var(--muted); cursor: pointer; font-size: 13px;
-  padding: 0 4px; line-height: 1;
-}
-.schedules-dock-cycle:hover { color: var(--fg); }
-.schedules-clear, .schedules-clear:disabled {
-  background: transparent; border: none; color: var(--muted); cursor: pointer; font-size: 13px;
-  padding: 0 4px; line-height: 1;
-}
-.schedules-clear:disabled { color: var(--faint); cursor: default; }
-.schedules-headings, .schedules-row {
-  display: grid; grid-template-columns: 2em 1fr 1fr 1fr 1fr 2fr;
-  gap: 12px; align-items: baseline; width: 100%; text-align: left;
-  padding: 4px 12px; white-space: nowrap;
-}
-.schedules-headings { color: var(--muted); font-size: 12px; border-bottom: 1px solid var(--border); }
-.schedules-row {
-  background: transparent; color: var(--fg); cursor: pointer; font: inherit;
-}
-.schedules-row:hover { background: var(--border); }
-.schedules-row.selected { background: var(--bg-soft); }
-.schedules-row.recurring { color: var(--accent); }
-.schedules-num { color: var(--muted); flex-shrink: 0; }
-.schedules-owner { color: var(--muted); flex-shrink: 0; }
-.schedules-id { flex-shrink: 0; }
-.schedules-next { flex-shrink: 0; }
-.schedules-spec { color: var(--muted); flex-shrink: 0; }
-.schedules-command { overflow: hidden; text-overflow: ellipsis; }
-.schedules-compact .schedules-headings, .schedules-compact .schedules-row {
-  grid-template-columns: 1.5em 1fr 1fr 1fr; gap: 8px; font-size: 12px;
-}

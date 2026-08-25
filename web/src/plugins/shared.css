@@ -1,0 +1,16 @@
+/* Rules shared by more than one client tab plugin and by no host component. Loaded from the plugin
+   entries that use them, so the shared plugin look still arrives with the lazy chunk rather than
+   with the application entry. Anything a host component also renders stays in theme.css. */
+
+/* The plugin view frame: a metadata header above a body that fills the remaining space. Audio,
+   image, markdown, and video all render it. */
+.plugin-tab { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 8px 12px; gap: 8px; }
+.plugin-meta { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; color: var(--muted); user-select: text; }
+.plugin-meta .plugin-name { color: var(--fg); font-weight: 600; }
+.plugin-meta .plugin-loc { font-size: 12px; word-break: break-all; }
+.plugin-actions { margin-left: auto; display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
+
+/* The plugin body stage: a scrollable, centering box the image and video plugins fill. Its grab
+   cursor belongs to image panning; the video plugin overrides it. */
+.plugin-stage { flex: 1; min-height: 0; position: relative; display: flex; align-items: safe center; justify-content: safe center; overflow: auto; cursor: grab; scrollbar-width: none; }
+.plugin-stage::-webkit-scrollbar { display: none; }

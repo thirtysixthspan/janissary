@@ -47,7 +47,7 @@ export function ImageEditor({ edit }: { edit: ReturnType<typeof useImageEdit> })
         onUndo={edit.undo}
         onRedo={edit.redo}
       />
-      <div className="image-stage image-edit-stage">
+      <div className="plugin-stage image-edit-stage">
         <div className="image-edit-surface">
           <canvas className="image-edit-canvas" ref={edit.canvasRef} tabIndex={-1} />
           {cropping && edit.dimensions && (

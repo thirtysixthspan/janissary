@@ -60,7 +60,7 @@ describe('VideoTab', () => {
     const { container } = render(<VideoTab payload={makeVideo()} capabilities={capabilities} />);
     fireEvent.click(screen.getByRole('button', { name: 'Split' }));
     expect(onSplit).toHaveBeenCalledOnce();
-    expect(container.querySelector(':scope .image-actions .tab-split')).not.toBeNull();
+    expect(container.querySelector(':scope .plugin-actions .tab-split')).not.toBeNull();
   });
 
   it('shows a named external fallback after a decode error', async () => {
