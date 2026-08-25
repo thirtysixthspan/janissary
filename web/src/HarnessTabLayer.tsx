@@ -9,6 +9,7 @@ import { TabNavPicker } from './TabNavPicker';
 import { useStatusWindows } from './useStatusWindows';
 import type { PickerOverlayProps } from './picker-overlay-props';
 import { tabBodyBorder } from './tab-body-border';
+import { statusButton } from './status-button';
 
 type Properties = {
   t: TabView;
@@ -52,18 +53,8 @@ export function HarnessTabLayer({
       <HarnessTab harness={t.harness!} client={client} cwd={t.cwd} flags={t.flags} label={t.label}
         taskPickerOpen={!!taskPickerOpen && isActive}
         navOpen={!!navOpen && isActive}
-        connectionsButton={scheduleOnly ? undefined : {
-          hasContent: t.connections.length > 0,
-          onEnter: statusWindows.connections.onButtonEnter,
-          onLeave: statusWindows.connections.onButtonLeave,
-          onClick: statusWindows.connections.onButtonClick,
-        }}
-        scheduleButton={{
-          hasContent: t.schedule.length > 0,
-          onEnter: statusWindows.schedule.onButtonEnter,
-          onLeave: statusWindows.schedule.onButtonLeave,
-          onClick: statusWindows.schedule.onButtonClick,
-        }}
+        connectionsButton={scheduleOnly ? undefined : statusButton(t.connections.length > 0, statusWindows.connections)}
+        scheduleButton={statusButton(t.schedule.length > 0, statusWindows.schedule)}
         onSplit={onSplit}
         ref={(h) => { if (h) harnessHandles.current.set(t.harness!.ptyId, h); else harnessHandles.current.delete(t.harness!.ptyId); }} />
       <StatusPanels tab={t} scheduleOnly={scheduleOnly} connections={statusWindows.connections} schedule={statusWindows.schedule} />

@@ -5,7 +5,7 @@
 
 import type { TabView, ConnectionView, AcpRef } from '@shared/protocol';
 import type { JanusClient } from '../ws';
-import type { StatusWindowButtonProps } from '../status-button';
+import { statusButton, type StatusWindowButtonProps } from '../status-button';
 import { useStatusWindows } from '../useStatusWindows';
 
 export type EditorConnectionsApi = ReturnType<typeof useStatusWindows> & {
@@ -26,12 +26,7 @@ export function useEditorConnections(client: JanusClient, tab: TabView): EditorC
     client.send({ method: 'openAcpTranscript', params: { acpRef } });
   };
 
-  const connectionsButton: StatusWindowButtonProps = {
-    hasContent: tab.connections.length > 0,
-    onEnter: windows.connections.onButtonEnter,
-    onLeave: windows.connections.onButtonLeave,
-    onClick: windows.connections.onButtonClick,
-  };
+  const connectionsButton = statusButton(tab.connections.length > 0, windows.connections);
 
   return { ...windows, connectionsButton, closeRow, openAcpTranscript };
 }
