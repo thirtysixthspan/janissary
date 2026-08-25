@@ -9,7 +9,7 @@ import { useTabNav } from './useTabNav';
 import { useQuickOpen } from './useQuickOpen';
 import { useQueuePicker } from './useQueuePicker';
 import { usePopulatePickers } from './usePopulatePickers';
-import { useCommandBarSubmit } from './useCommandBarSubmit';
+import { useCommandBarSubmit } from './command-input/useCommandBarSubmit';
 import { useUnsavedQuitGuard } from './useUnsavedQuitGuard';
 import { useFocusOnTabSwitch, focusCenterVisibleTab } from './useFocusOnTabSwitch';
 import { useSectionNav } from './useSectionNav';

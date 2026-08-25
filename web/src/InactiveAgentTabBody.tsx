@@ -3,7 +3,7 @@ import type { TabView } from '@shared/protocol';
 import type { JanusClient } from './ws';
 import { AgentTabMeta } from './AgentTabMeta';
 import { Transcript } from './transcript/Transcript';
-import { CommandInput } from './CommandInput';
+import { CommandInput } from './command-input/CommandInput';
 import { StatusPanels } from './StatusPanels';
 import { useStatusWindows } from './useStatusWindows';
 import { statusButton } from './status-button';
