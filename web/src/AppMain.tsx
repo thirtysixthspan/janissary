@@ -15,7 +15,7 @@ import type { LayoutState } from './useLayoutState';
 import type { HarnessTabHandle } from './HarnessTab';
 import type { ShellTabHandle } from './ShellTab';
 import type { QuestionPanelHandle } from './QuestionPanel';
-import type { EditorTabHandle } from './EditorTab';
+import type { EditorTabHandle } from './editor/EditorTab';
 import type { EditorDropHandle } from './drop-handles';
 
 type AppMainProps = Omit<React.ComponentProps<typeof AgentTabBody>, 'onSplit'> & LayoutState & {

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, fireEvent, act } from '@testing-library/react';
 import React from 'react';
-import type { EditorTabHandle } from './EditorTab';
+import type { EditorTabHandle } from './editor/EditorTab';
 import { CloseSaveGuard } from './CloseSaveGuard';
 
 const makeTab = (label: string) =>

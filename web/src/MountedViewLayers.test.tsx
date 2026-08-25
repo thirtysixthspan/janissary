@@ -3,7 +3,7 @@ import { fireEvent, render, waitFor } from '@testing-library/react';
 import React from 'react';
 import type { TabView } from '@shared/protocol';
 import type { HarnessTabHandle } from './HarnessTab';
-import type { EditorTabHandle } from './EditorTab';
+import type { EditorTabHandle } from './editor/EditorTab';
 import { MountedViewLayers } from './MountedViewLayers';
 
 vi.mock('./HarnessTab', () => {
@@ -21,7 +21,7 @@ vi.mock('./HarnessTab', () => {
 // effect also increments a shared counter so tests can assert the component was (or wasn't)
 // torn down and recreated across a re-render.
 let editorMountCount = 0;
-vi.mock('./EditorTab', () => {
+vi.mock('./editor/EditorTab', () => {
   const { forwardRef, useImperativeHandle, useEffect, createElement } = React;
   return {
     EditorTab: forwardRef((_props, ref) => {

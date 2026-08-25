@@ -1,6 +1,6 @@
 import type React from 'react';
 import type { TabView } from '@shared/protocol';
-import type { EditorTabHandle } from './EditorTab';
+import type { EditorTabHandle } from './editor/EditorTab';
 
 // True when any open tab with a registered dirty handle has unsaved changes. Editor tabs register
 // one from their own ref; a plugin tab registers one through its client capabilities, so an image

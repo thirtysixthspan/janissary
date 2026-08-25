@@ -2,7 +2,7 @@ import React from 'react';
 import type { TabView } from '@shared/protocol';
 import type { JanusClient } from './ws';
 import type { HarnessTabHandle } from './HarnessTab';
-import { EditorTab, type EditorTabHandle } from './EditorTab';
+import { EditorTab, type EditorTabHandle } from './editor/EditorTab';
 import type { EditorDropHandle } from './drop-handles';
 import { HarnessTabLayer } from './HarnessTabLayer';
 import type { PickerOverlayProps } from './picker-overlay-props';
