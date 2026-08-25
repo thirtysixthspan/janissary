@@ -4,6 +4,9 @@ import type { CompletionResult } from '@shared/protocol';
 import { statusDotIcon, promptIcon } from './icons';
 import { handleTabCompletion } from './command-completion';
 import { findGhostSuggestion } from './ghost-suggestion';
+import { isCaretOnFirstLine, isCaretOnLastLine } from './command-caret-lines';
+import { spliceIntoTextarea } from './textarea-splice';
+import { useCommandHistoryRecall } from './useCommandHistoryRecall';
 
 // Exposed via `dropRef` so a file-navigator drag can insert a dropped path and highlight the command
 // bar as a valid drop target, mirroring `recallRef`'s imperative-escape-hatch pattern.
@@ -39,8 +42,6 @@ export function CommandInput({
 }: CommandInputProperties) {
   const [value, setValue] = useState('');
   const [completions, setCompletions] = useState<string[]>([]);
-  const histIndex = useRef(-1);
-  const draftBeforeHistory = useRef('');
   const rootRef = useRef<HTMLDivElement>(null);
   const ghost = findGhostSuggestion(ghostHistory, value);
 
@@ -60,24 +61,15 @@ export function CommandInput({
   };
   if (recallRef) recallRef.current = recall;
 
-  // Splice `text` into the textarea at the current caret (or over the current selection),
-  // mirroring `insertNewline` below but generalized to arbitrary inserted text. Focuses the
-  // textarea first: unlike a keyboard-driven insert, the caller is a file-navigator drag release, so
-  // the textarea is never already the focused/selected element.
+  const { recallOlder, recallNewer, reset: resetHistoryWalk } = useCommandHistoryRecall(history, recall);
+
+  // Focuses the textarea before splicing: unlike a keyboard-driven insert, the caller is a
+  // file-navigator drag release, so the textarea is never already the focused/selected element.
   const insertAtCaret = (text: string) => {
     const element = inputRef.current;
     if (!element) return;
     element.focus();
-    const start = element.selectionStart ?? value.length;
-    const end = element.selectionEnd ?? value.length;
-    if (typeof document.execCommand === 'function') {
-      element.setSelectionRange(start, end);
-      document.execCommand('insertText', false, text);
-      return;
-    }
-    element.value = `${value.slice(0, start)}${text}${value.slice(end)}`;
-    element.selectionStart = element.selectionEnd = start + text.length;
-    element.dispatchEvent(new Event('input', { bubbles: true }));
+    spliceIntoTextarea(element, value, text);
   };
 
   if (dropRef) {
@@ -94,57 +86,28 @@ export function CommandInput({
     // that write must win over this clear rather than being stomped by it.
     setValue('');
     setCompletions([]);
-    histIndex.current = -1;
-    draftBeforeHistory.current = '';
+    resetHistoryWalk();
     if (text) onSubmit(text);
   };
 
-  const recallOlder = () => {
-    if (history.length === 0) return;
-    if (histIndex.current === -1) draftBeforeHistory.current = value;
-    histIndex.current = histIndex.current === -1 ? history.length - 1 : Math.max(0, histIndex.current - 1);
-    recall(history[histIndex.current]);
-  };
-
-  const recallNewer = () => {
-    if (histIndex.current === -1) return;
-    histIndex.current += 1;
-    if (histIndex.current >= history.length) { histIndex.current = -1; recall(draftBeforeHistory.current); }
-    else recall(history[histIndex.current]);
-  };
-
-  // Insert a newline at the caret. Prefers `execCommand` — it mutates the DOM directly, fires a
-  // real `input` event, and keeps a normal undo entry — falling back to manually mutating the
-  // element and dispatching `input` ourselves where it's unavailable (jsdom doesn't implement it
-  // at all). Either way the caret lands right after the inserted newline, synchronously — no
-  // `requestAnimationFrame` round-trip, so a fast typist's next keystroke lands in the right spot.
   const insertNewline = () => {
-    if (typeof document.execCommand === 'function') { document.execCommand('insertText', false, '\n'); return; }
     const element = inputRef.current;
     if (!element) return;
-    const start = element.selectionStart ?? value.length;
-    const end = element.selectionEnd ?? value.length;
-    element.value = `${value.slice(0, start)}\n${value.slice(end)}`;
-    element.selectionStart = element.selectionEnd = start + 1;
-    element.dispatchEvent(new Event('input', { bubbles: true }));
+    spliceIntoTextarea(element, value, '\n');
   };
 
-  // ArrowUp/ArrowDown recall history only when the caret sits on the input's first/last visual
-  // line respectively — otherwise the native caret movement across a multi-line value wins.
   const handleArrowUpKey = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    const element = inputRef.current;
-    const onFirstLine = !value.includes('\n') || element?.selectionStart == null
-      || value.lastIndexOf('\n', element.selectionStart - 1) === -1;
-    if (onFirstLine) { e.preventDefault(); recallOlder(); }
-    // else: native ArrowUp moves the caret up one line.
+    // Off the first line, native ArrowUp moves the caret up one line instead.
+    if (!isCaretOnFirstLine(value, inputRef.current?.selectionStart)) return;
+    e.preventDefault();
+    recallOlder(value);
   };
 
   const handleArrowDownKey = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    const element = inputRef.current;
-    const onLastLine = !value.includes('\n') || element?.selectionStart == null
-      || !value.includes('\n', element.selectionStart);
-    if (onLastLine) { e.preventDefault(); recallNewer(); }
-    // else: native ArrowDown moves the caret down one line.
+    // Off the last line, native ArrowDown moves the caret down one line instead.
+    if (!isCaretOnLastLine(value, inputRef.current?.selectionStart)) return;
+    e.preventDefault();
+    recallNewer();
   };
 
   // While the queue popup is open: Enter/ArrowUp/ArrowDown are owned by the window handler
