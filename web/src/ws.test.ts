@@ -219,6 +219,73 @@ describe('JanusClient', () => {
     );
   });
 
+  it('dispose closes the socket', () => {
+    const client = new JanusClient();
+    client.dispose();
+    expect(inst.close).toHaveBeenCalled();
+  });
+
+  it('dispose stops state listeners being called for a later state event', () => {
+    const client = new JanusClient();
+    const listener = vi.fn();
+    client.onState(listener);
+
+    client.dispose();
+    messageHandler!({
+      data: JSON.stringify({
+        t: 'state', tabs: [], activeTab: 0, route: null, tabNameMaxLength: 20,
+        globalHistory: [], syntaxTheme: 'monokai', theme: 'dark', tasks: [],
+        profiles: [], projectDir: '/tmp', version: '1.2.3',
+      }),
+    });
+
+    expect(listener).not.toHaveBeenCalled();
+  });
+
+  it('dispose stops layout listeners being called for a later layout event', () => {
+    const client = new JanusClient();
+    const listener = vi.fn();
+    client.onLayout(listener);
+
+    client.dispose();
+    messageHandler!({ data: JSON.stringify({ t: 'layout', sidebarLeft: 320 }) });
+
+    expect(listener).not.toHaveBeenCalled();
+  });
+
+  it('dispose stops pty-exit listeners being called for a later exit event', () => {
+    const client = new JanusClient();
+    const listener = vi.fn();
+    client.onPtyExit(listener);
+
+    client.dispose();
+    messageHandler!({ data: JSON.stringify({ t: 'pty-exit', id: 'tab-1', exitCode: 0 }) });
+
+    expect(listener).not.toHaveBeenCalled();
+  });
+
+  it('dispose stops routing pty output to an attached handler', () => {
+    const client = new JanusClient();
+    const handler = vi.fn();
+    client.attachPty('tab-1', handler);
+
+    client.dispose();
+    messageHandler!({ data: JSON.stringify({ t: 'pty', id: 'tab-1', data: 'live' }) });
+
+    expect(handler).not.toHaveBeenCalled();
+  });
+
+  it('dispose drops buffered early output, so a handler attached afterwards is flushed nothing', () => {
+    const client = new JanusClient();
+    messageHandler!({ data: JSON.stringify({ t: 'pty', id: 'tab-1', data: 'hello' }) });
+
+    client.dispose();
+    const handler = vi.fn();
+    client.attachPty('tab-1', handler);
+
+    expect(handler).not.toHaveBeenCalled();
+  });
+
   it('registering the same collector name again replaces the previous collector', () => {
     const client = new JanusClient();
     const first = vi.fn().mockReturnValue([{ index: 0, selected: ['first'] }]);

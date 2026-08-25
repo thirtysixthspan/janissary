@@ -76,6 +76,8 @@ Shutdown is triggered by any of:
 - The `quit` command from a connected client
 - Closing the last browser window or tab (all WebSocket clients disconnect)
 
+A window releases its own connection as it goes away rather than leaving the browser to tear the socket down incidentally, so the disconnect that triggers shutdown is prompt and does not vary with how a given browser unloads a page.
+
 The server broadcasts a `bye` event to all connected browser windows (telling them to close), waits 100 ms for them to shut down, then closes the HTTP server and WebSocket connections, and exits. On exit, the Chrome app window is killed and the instance lock is released.
 
 ### Stopping a running instance

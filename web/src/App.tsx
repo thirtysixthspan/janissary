@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { JanusClient } from './ws';
+import type { JanusClient } from './ws';
 import type { TabView, RouteChooserView, HarnessLaunchView, ScheduleLaunchView, TaskRow, ProfileRow } from '@shared/protocol';
 import { AppMain } from './AppMain';
 import type { CommandInputDropHandle, EditorDropHandle } from './drop-handles';
@@ -30,11 +30,7 @@ import { useWindowFocus } from './useWindowFocus';
 import { useCmdWRefs } from './useCmdWRefs';
 import { collectNavigatorSelections } from './file-navigator/file-navigator-selection-registry';
 
-export function App() {
-  const clientReference = useRef<JanusClient | null>(null);
-  clientReference.current ??= new JanusClient();
-  const client = clientReference.current;
-
+export function App({ client }: { client: JanusClient }) {
   const [tabs, setTabs] = useState<TabView[]>([]);
   const [activeTab, setActiveTab] = useState(0);
   const [secondaryTab, setSecondaryTab] = useState<number>();
