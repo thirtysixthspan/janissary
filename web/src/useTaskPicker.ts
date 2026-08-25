@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import type { TaskRow } from '@shared/protocol';
 import type { JanusClient } from './ws';
-import type { CommandInputDropHandle } from './CommandInput';
+import type { CommandInputDropHandle } from './drop-handles';
 import { flattenVisibleTaskRows, firstSelectableIndex } from './task-picker-keys';
 import { insertIntoCommandLine } from './populate-command-line';
 

@@ -2,8 +2,7 @@ import React from 'react';
 import type { TabView } from '@shared/protocol';
 import type { JanusClient } from './ws';
 import { Sidebar } from './Sidebar';
-import type { CommandInputDropHandle } from './CommandInput';
-import type { EditorDropHandle } from './EditorTab';
+import type { CommandInputDropHandle, EditorDropHandle } from './drop-handles';
 
 // The root layout: left sidebar / center column (everything App renders today) / right sidebar.
 // Split out of App.tsx to keep it under the file-size limit.

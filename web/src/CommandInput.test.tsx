@@ -2,7 +2,8 @@ import React, { createRef } from 'react';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
-import { CommandInput, type CommandInputDropHandle } from './CommandInput';
+import { CommandInput } from './CommandInput';
+import type { CommandInputDropHandle } from './drop-handles';
 
 function renderCommandInput(overrides: { history?: string[]; ghostHistory?: string[]; busy?: boolean } = {}) {
   const inputRef = createRef<HTMLTextAreaElement>();

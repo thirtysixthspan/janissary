@@ -5,7 +5,7 @@ import { Transcript } from './Transcript';
 import { StatusPanels } from './StatusPanels';
 import { PickerOverlays } from './PickerOverlays';
 import { CommandArea } from './CommandArea';
-import type { CommandInputDropHandle } from './CommandInput';
+import type { CommandInputDropHandle } from './drop-handles';
 import { AgentTabMeta } from './AgentTabMeta';
 import type { useViewSearchState } from './useViewSearchState';
 import type { VisibleTaskRow } from './task-picker-keys';

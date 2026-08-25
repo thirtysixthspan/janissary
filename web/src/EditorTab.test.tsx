@@ -2,7 +2,8 @@ import React, { createRef } from 'react';
 import { render, screen, waitFor, fireEvent, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { EditorView, TabView } from '@shared/protocol';
-import { EditorTab, type EditorTabHandle, type EditorDropHandle } from './EditorTab';
+import { EditorTab, type EditorTabHandle } from './EditorTab';
+import type { EditorDropHandle } from './drop-handles';
 import type { JanusClient } from './ws';
 
 function makeView(overrides: Partial<EditorView> = {}): EditorView {

@@ -7,8 +7,7 @@ import { DockedPluginBody } from './plugins/DockedPluginBody';
 import { TabStrip } from './TabStrip';
 import { ResizeButton } from './ResizeButton';
 import { beginResizeDrag } from './drag-resize';
-import type { CommandInputDropHandle } from './CommandInput';
-import type { EditorDropHandle } from './EditorTab';
+import type { CommandInputDropHandle, EditorDropHandle } from './drop-handles';
 
 const MIN_WIDTH_PX = 180;
 const MAX_WIDTH_PCT = 50;

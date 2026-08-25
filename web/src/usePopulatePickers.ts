@@ -1,6 +1,6 @@
 import type { ProfileRow, TaskRow } from '@shared/protocol';
 import type { JanusClient } from './ws';
-import type { CommandInputDropHandle } from './CommandInput';
+import type { CommandInputDropHandle } from './drop-handles';
 import { useTaskPicker } from './useTaskPicker';
 import { useProfilePicker } from './useProfilePicker';
 
