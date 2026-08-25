@@ -1,13 +1,13 @@
 import React, { useEffect, useRef } from 'react';
 import type { TabView } from '@shared/protocol';
 import type { JanusClient } from './ws';
-import type { EditorTabHandle } from './editor/EditorTab';
+import type { DirtyTabHandle } from './tab-handles';
 import { useSaveConfirm } from './SaveChangesDialog/useSaveConfirm';
 import { SaveChangesDialog } from './SaveChangesDialog/SaveChangesDialog';
 
 type Properties = {
   tabs: TabView[];
-  tabHandles: React.RefObject<Map<string, EditorTabHandle>>;
+  tabHandles: React.RefObject<Map<string, DirtyTabHandle>>;
   client: JanusClient;
   guardRef: React.RefObject<((index: number) => boolean) | null>;
 };

@@ -3,7 +3,7 @@ import { fireEvent, render, waitFor } from '@testing-library/react';
 import React from 'react';
 import type { TabView } from '@shared/protocol';
 import type { HarnessTabHandle } from './tab-handles';
-import type { EditorTabHandle } from './editor/EditorTab';
+import type { DirtyTabHandle } from './tab-handles';
 import { MountedViewLayers } from './MountedViewLayers';
 
 vi.mock('./HarnessTab', () => {
@@ -95,9 +95,9 @@ function makeHarnessHandles() {
 }
 
 function makeEditorHandles() {
-  const ref = React.createRef<Map<string, EditorTabHandle>>();
-  (ref as { current: Map<string, EditorTabHandle> | null }).current = new Map();
-  return ref as React.RefObject<Map<string, EditorTabHandle>>;
+  const ref = React.createRef<Map<string, DirtyTabHandle>>();
+  (ref as { current: Map<string, DirtyTabHandle> | null }).current = new Map();
+  return ref as React.RefObject<Map<string, DirtyTabHandle>>;
 }
 
 describe('MountedViewLayers', () => {

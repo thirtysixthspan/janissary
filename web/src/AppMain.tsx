@@ -12,8 +12,7 @@ import { UnsavedQuitDialog } from './UnsavedQuitDialog';
 import { CloseSaveGuard } from './CloseSaveGuard';
 import type { TabEntry } from './tab-entries';
 import type { LayoutState } from './useLayoutState';
-import type { HarnessTabHandle, ShellTabHandle, QuestionPanelHandle } from './tab-handles';
-import type { EditorTabHandle } from './editor/EditorTab';
+import type { DirtyTabHandle, HarnessTabHandle, ShellTabHandle, QuestionPanelHandle } from './tab-handles';
 import type { EditorDropHandle } from './drop-handles';
 
 type AppMainProps = Omit<React.ComponentProps<typeof AgentTabBody>, 'onSplit'> & LayoutState & {
@@ -28,7 +27,7 @@ type AppMainProps = Omit<React.ComponentProps<typeof AgentTabBody>, 'onSplit'> &
   harnessHandles: React.RefObject<Map<string, HarnessTabHandle>>;
   shellHandles: React.RefObject<Map<string, ShellTabHandle>>;
   questionPanelRef: React.RefObject<QuestionPanelHandle | null>;
-  tabHandles: React.RefObject<Map<string, EditorTabHandle>>;
+  tabHandles: React.RefObject<Map<string, DirtyTabHandle>>;
   editorDropReference: React.RefObject<EditorDropHandle | null>;
   dirtyPluginTabs: ReadonlySet<string>;
   onPluginDirty: (label: string, dirty: boolean) => void;

@@ -1,22 +1,22 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, fireEvent, act } from '@testing-library/react';
 import React from 'react';
-import type { EditorTabHandle } from './editor/EditorTab';
+import type { DirtyTabHandle } from './tab-handles';
 import { CloseSaveGuard } from './CloseSaveGuard';
 
 const makeTab = (label: string) =>
   ({ label, dotColor: '#ff0', groupColor: '#fff' }) as never;
 
 function makeHandles() {
-  const ref = React.createRef<Map<string, EditorTabHandle>>();
-  (ref as { current: Map<string, EditorTabHandle> | null }).current = new Map();
-  return ref as React.RefObject<Map<string, EditorTabHandle>>;
+  const ref = React.createRef<Map<string, DirtyTabHandle>>();
+  (ref as { current: Map<string, DirtyTabHandle> | null }).current = new Map();
+  return ref as React.RefObject<Map<string, DirtyTabHandle>>;
 }
 
-function makeHandlesWith(label: string, handle: EditorTabHandle) {
-  const ref = React.createRef<Map<string, EditorTabHandle>>();
-  (ref as { current: Map<string, EditorTabHandle> | null }).current = new Map([[label, handle]]);
-  return ref as React.RefObject<Map<string, EditorTabHandle>>;
+function makeHandlesWith(label: string, handle: DirtyTabHandle) {
+  const ref = React.createRef<Map<string, DirtyTabHandle>>();
+  (ref as { current: Map<string, DirtyTabHandle> | null }).current = new Map([[label, handle]]);
+  return ref as React.RefObject<Map<string, DirtyTabHandle>>;
 }
 
 function makeGuardRef() {
@@ -40,7 +40,7 @@ describe('CloseSaveGuard', () => {
 
   it('guard function returns false for a clean editor', () => {
     const guardRef = makeGuardRef();
-    const handle = { isDirty: () => false, save: vi.fn(), focus: vi.fn() } as unknown as EditorTabHandle;
+    const handle = { isDirty: () => false, save: vi.fn(), focus: vi.fn() } as unknown as DirtyTabHandle;
     const tabHandles = makeHandlesWith('tab1', handle);
     render(
       React.createElement(CloseSaveGuard, {
@@ -59,7 +59,7 @@ describe('CloseSaveGuard', () => {
 
   it('guard function returns true and opens dialog for a dirty editor', () => {
     const guardRef = makeGuardRef();
-    const handle = { isDirty: () => true, save: vi.fn(), focus: vi.fn() } as unknown as EditorTabHandle;
+    const handle = { isDirty: () => true, save: vi.fn(), focus: vi.fn() } as unknown as DirtyTabHandle;
     const tabHandles = makeHandlesWith('tab1', handle);
     const { getByText } = render(
       React.createElement(CloseSaveGuard, {
@@ -96,7 +96,7 @@ describe('CloseSaveGuard', () => {
   it('onSave button saves, closes dialog, and sends closeTab', async () => {
     const guardRef = makeGuardRef();
     const save = vi.fn().mockResolvedValue(undefined);
-    const handle = { isDirty: () => true, save } as unknown as EditorTabHandle;
+    const handle = { isDirty: () => true, save } as unknown as DirtyTabHandle;
     const tabHandles = makeHandlesWith('tab1', handle);
     const client = { send: vi.fn() };
     const { getByText, queryByText } = render(
@@ -121,7 +121,7 @@ describe('CloseSaveGuard', () => {
   it('onDiscard button closes dialog and sends closeTab without saving', () => {
     const guardRef = makeGuardRef();
     const save = vi.fn();
-    const handle = { isDirty: () => true, save } as unknown as EditorTabHandle;
+    const handle = { isDirty: () => true, save } as unknown as DirtyTabHandle;
     const tabHandles = makeHandlesWith('tab1', handle);
     const client = { send: vi.fn() };
     const { getByText, queryByText } = render(
@@ -143,7 +143,7 @@ describe('CloseSaveGuard', () => {
 
   it('onCancel button closes dialog without sending closeTab', () => {
     const guardRef = makeGuardRef();
-    const handle = { isDirty: () => true, save: vi.fn(), focus: vi.fn() } as unknown as EditorTabHandle;
+    const handle = { isDirty: () => true, save: vi.fn(), focus: vi.fn() } as unknown as DirtyTabHandle;
     const tabHandles = makeHandlesWith('tab1', handle);
     const client = { send: vi.fn() };
     const { getByText, queryByText } = render(
@@ -169,7 +169,7 @@ describe('CloseSaveGuard', () => {
 describe('CloseSaveGuard over a plugin tab', () => {
   const pluginTab = () => makeTab('image-1');
 
-  function renderGuard(handle?: EditorTabHandle) {
+  function renderGuard(handle?: DirtyTabHandle) {
     const guardRef = makeGuardRef();
     const client = { send: vi.fn() };
     const tabHandles = handle ? makeHandlesWith('image-1', handle) : makeHandles();
@@ -182,7 +182,7 @@ describe('CloseSaveGuard over a plugin tab', () => {
   }
 
   it('raises the dialog for a plugin tab whose handle reports unsaved work', () => {
-    const handle = { isDirty: () => true, save: vi.fn(), focus: vi.fn() } as unknown as EditorTabHandle;
+    const handle = { isDirty: () => true, save: vi.fn(), focus: vi.fn() } as unknown as DirtyTabHandle;
     const { getByText, guardRef } = renderGuard(handle);
 
     let result: boolean | undefined;
@@ -194,7 +194,7 @@ describe('CloseSaveGuard over a plugin tab', () => {
 
   it('Save writes through the plugin handle and then closes the tab', async () => {
     const save = vi.fn().mockResolvedValue(undefined);
-    const handle = { isDirty: () => true, save, focus: vi.fn() } as unknown as EditorTabHandle;
+    const handle = { isDirty: () => true, save, focus: vi.fn() } as unknown as DirtyTabHandle;
     const { getByText, client, guardRef } = renderGuard(handle);
     act(() => { guardRef.current!(0); });
 
@@ -207,7 +207,7 @@ describe('CloseSaveGuard over a plugin tab', () => {
   it("Don't Save closes without saving and Cancel closes nothing", () => {
     const save = vi.fn();
     const focus = vi.fn();
-    const handle = { isDirty: () => true, save, focus } as unknown as EditorTabHandle;
+    const handle = { isDirty: () => true, save, focus } as unknown as DirtyTabHandle;
     const discard = renderGuard(handle);
     act(() => { discard.guardRef.current!(0); });
     fireEvent.click(discard.getByText("Don't Save (n)"));
@@ -222,7 +222,7 @@ describe('CloseSaveGuard over a plugin tab', () => {
   });
 
   it.each([
-    ['a handle reporting clean', { isDirty: () => false, save: vi.fn(), focus: vi.fn() } as unknown as EditorTabHandle],
+    ['a handle reporting clean', { isDirty: () => false, save: vi.fn(), focus: vi.fn() } as unknown as DirtyTabHandle],
     ['no registered handle', undefined],
   ])('closes a plugin tab with %s immediately', (_label, handle) => {
     const { guardRef } = renderGuard(handle);

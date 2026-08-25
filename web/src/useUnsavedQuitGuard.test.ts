@@ -1,7 +1,7 @@
 import { act, renderHook } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import type { TabView } from '@shared/protocol';
-import type { EditorTabHandle } from './editor/EditorTab';
+import type { DirtyTabHandle } from './tab-handles';
 import { useUnsavedQuitGuard } from './useUnsavedQuitGuard';
 
 function makeTab(label: string): TabView {
@@ -21,7 +21,7 @@ function makePluginTab(label: string): TabView {
   } as unknown as TabView;
 }
 
-function tabHandles(dirty: boolean): React.RefObject<Map<string, EditorTabHandle>> {
+function tabHandles(dirty: boolean): React.RefObject<Map<string, DirtyTabHandle>> {
   return { current: new Map([['a', { isDirty: () => dirty, save: async () => {}, focus: () => {} }]]) };
 }
 

@@ -3,7 +3,7 @@ import type { JanusClient } from '../ws';
 import { disableClientPlugin } from './registry';
 
 // A plugin tab's unsaved work, in the shape the host's close guard already reasons about (see
-// `EditorTabHandle`). A plugin may not refuse a host-initiated close itself, render its own modal
+// `DirtyTabHandle`). A plugin may not refuse a host-initiated close itself, render its own modal
 // over the app, or choose a host dialog's wording — it supplies these three answers and the host
 // decides when to ask, which dialog to draw, and what each button does.
 export type TabDirtyHandle = {
