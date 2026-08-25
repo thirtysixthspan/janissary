@@ -1,4 +1,5 @@
 import { useEffect, useRef, type RefObject } from 'react';
+import type { JanusClient } from '../ws';
 import type { EditorApi } from './useEditor';
 
 // Live-reload from disk when another process changes the file, as long as the user hasn't
@@ -10,7 +11,8 @@ export function useEditorWatchReload(
   conflictPendingRef: RefObject<boolean>,
   api: EditorApi,
   setLastSaved: (text: string) => void,
-  fetchContent: (token: string) => Promise<string>,
+  client: JanusClient,
+  url: string,
 ): void {
   const dirtyForWatchRef = useRef(dirty);
   dirtyForWatchRef.current = dirty;
@@ -19,10 +21,9 @@ export function useEditorWatchReload(
     if (mtimeMs === undefined || mtimeMs === seenMtimeRef.current) return;
     seenMtimeRef.current = mtimeMs;
     if (dirtyForWatchRef.current) { conflictPendingRef.current = true; return; }
-    const token = new URLSearchParams(location.search).get('token') ?? '';
     void (async () => {
       try {
-        const text = await fetchContent(token);
+        const text = await client.readFile(url);
         const line = api.stateRef.current?.cursor.line;
         api.load(text, line);
         setLastSaved(text);

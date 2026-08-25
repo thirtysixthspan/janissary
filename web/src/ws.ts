@@ -143,6 +143,23 @@ export class JanusClient {
     });
   }
 
+  // The session token travels in the query string, so anything served over HTTP rather than the
+  // socket has to carry it. This is where that rule lives — callers that must hand a URL to
+  // something else (an `<img src>`, a plugin's own fetch) build it here rather than repeating it.
+  resourceUrl(reference: string): string {
+    const token = new URLSearchParams(location.search).get('token') ?? '';
+    return `${reference}?token=${encodeURIComponent(token)}`;
+  }
+
+  // Read a file's contents over HTTP. Throws on a non-ok response rather than resolving with an
+  // error message the way `saveFile` does: both callers already treat a failed read as their own
+  // concern — one shows "failed to load", the other retries on the next change.
+  async readFile(url: string): Promise<string> {
+    const response = await fetch(this.resourceUrl(url));
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return response.text();
+  }
+
   // Register the function that answers a server request for client-only state. Returns the
   // unregister, like every other subscription here, so an effect can hand it straight back.
   registerStateCollector<K extends keyof ClientStateCollectors>(
