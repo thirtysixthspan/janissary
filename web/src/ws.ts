@@ -1,5 +1,5 @@
 import type { ServerEvent, RpcCall, RouteChooserView, HarnessLaunchView, ScheduleLaunchView, TabView, TaskRow, ProfileRow } from '@shared/protocol';
-import { collectNavigatorSelections } from './file-navigator-selection-registry';
+import type { ClientStateCollectors } from './client-state-collectors';
 
 type StateListener = (
   tabs: TabView[], activeTab: number, secondaryTab: number | undefined,
@@ -29,6 +29,7 @@ export class JanusClient {
   private ptyHandlers = new Map<string, (data: string) => void>();
   private ptyBuffers = new Map<string, string[]>();
   private pending = new Map<number, (result: unknown, error?: string) => void>();
+  private stateCollectors: Partial<ClientStateCollectors> = {};
 
   constructor() {
     const token = new URLSearchParams(location.search).get('token') ?? '';
@@ -77,10 +78,10 @@ export class JanusClient {
     }
     case 'collect-tree-state': {
       // `profile save` is asking for the tree selections only this client knows about. Answer with
-      // every mounted navigator's, or an empty list when none are open.
+      // whatever the registered collector reports, or an empty list when nothing has registered one.
       this.send({
         method: 'reportFileNavigatorSelection',
-        params: { id: event.id, navigators: collectNavigatorSelections() },
+        params: { id: event.id, navigators: this.stateCollectors.fileNavigatorSelections?.() ?? [] },
       });
 
     break;
@@ -140,6 +141,15 @@ export class JanusClient {
       this.pending.set(id, (_result, error) => resolve(error));
       this.ws.send(JSON.stringify({ t: 'rpc', id, method: 'saveFile', params: { url, content } }));
     });
+  }
+
+  // Register the function that answers a server request for client-only state. Returns the
+  // unregister, like every other subscription here, so an effect can hand it straight back.
+  registerStateCollector<K extends keyof ClientStateCollectors>(
+    name: K, collect: ClientStateCollectors[K],
+  ): () => void {
+    this.stateCollectors[name] = collect;
+    return () => { delete this.stateCollectors[name]; };
   }
 
   onState(l: StateListener): () => void { this.stateListeners.add(l); return () => this.stateListeners.delete(l); }

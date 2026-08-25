@@ -5,9 +5,12 @@ import type {
   HarnessLaunchView, ProfileRow, RouteChooserView, ScheduleLaunchView, TabView, TaskRow,
 } from '@shared/protocol';
 import userEvent from '@testing-library/user-event';
+import { collectNavigatorSelections } from './file-navigator-selection-registry';
 
 const sendMock = vi.fn();
 const renameTabMock = vi.fn();
+const unregisterStateCollectorMock = vi.fn();
+const registerStateCollectorMock = vi.fn(() => unregisterStateCollectorMock);
 const requestMock = vi.fn().mockResolvedValue({ newInput: '', newCursor: 0, matches: [] });
 type StateListener = (
   tabs: TabView[], activeTab: number, route: RouteChooserView | null, tabNameMaxLength: number, globalHistory: string[],
@@ -47,6 +50,7 @@ vi.mock('./ws', () => {
     onLayout(l: LayoutListener) { layoutListener = l; return () => {}; }
     attachPty() { return () => {}; }
     renameTab = renameTabMock;
+    registerStateCollector = registerStateCollectorMock;
     saveFile() { return Promise.resolve(undefined); }
   }
   return { JanusClient };
@@ -618,5 +622,28 @@ describe('App reporting section callbacks', () => {
     act(() => { stateListener!([monitorTab], 0, null, 16, [], 'github-dark', 'dark', []); });
     await userEvent.click(screen.getByTitle('Open context snapshot'));
     expect(sendMock).toHaveBeenCalledWith({ method: 'monitorContextSnapshot', params: { name: 'janus' } });
+  }, 15_000);
+});
+
+describe('App client state collectors', () => {
+  beforeEach(() => {
+    registerStateCollectorMock.mockClear();
+    unregisterStateCollectorMock.mockClear();
+    stateListener = null;
+  });
+
+  it('registers the file-navigator selection collector on the client', async () => {
+    const { App } = await import('./App');
+    render(<App />);
+    expect(registerStateCollectorMock).toHaveBeenCalledWith(
+      'fileNavigatorSelections', collectNavigatorSelections,
+    );
+  }, 15_000);
+
+  it('unregisters the collector when the app unmounts', async () => {
+    const { App } = await import('./App');
+    const { unmount } = render(<App />);
+    unmount();
+    expect(unregisterStateCollectorMock).toHaveBeenCalled();
   }, 15_000);
 });
