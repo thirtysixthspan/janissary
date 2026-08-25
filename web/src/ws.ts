@@ -1,7 +1,7 @@
 import type { ServerEvent, RpcCall, RouteChooserView, HarnessLaunchView, ScheduleLaunchView, TabView, TaskRow, ProfileRow } from '@shared/protocol';
 import type { ClientStateCollectors } from './client-state-collectors';
 
-type StateListener = (
+export type StateListener = (
   tabs: TabView[], activeTab: number, secondaryTab: number | undefined,
   route: RouteChooserView | null, tabNameMaxLength: number, globalHistory: string[],
   syntaxTheme: string, theme: string, tasks: TaskRow[], janissaryTasksDir: string,
@@ -10,7 +10,7 @@ type StateListener = (
   activeTabNameMaxLength?: number,
 ) => void;
 type ExitListener = (id: string, exitCode: number) => void;
-type LayoutListener = (event: {
+export type LayoutListener = (event: {
   sidebarLeft?: number;
   sidebarRight?: number;
   tabAreaPct?: number;
@@ -179,5 +179,19 @@ export class JanusClient {
     if (buffered) { for (const d of buffered) onData(d); this.ptyBuffers.delete(id); }
     this.ptyHandlers.set(id, onData);
     return () => this.ptyHandlers.delete(id);
+  }
+
+  // Release everything the constructor and the subscription methods acquired. In-flight
+  // `request()`/`saveFile()` promises are abandoned rather than settled: every caller is an effect
+  // on a page that is going away, so there is nobody left to observe a resolution.
+  dispose(): void {
+    this.ws.close();
+    this.stateListeners.clear();
+    this.exitListeners.clear();
+    this.layoutListeners.clear();
+    this.ptyHandlers.clear();
+    this.ptyBuffers.clear();
+    this.pending.clear();
+    this.stateCollectors = {};
   }
 }
