@@ -28,6 +28,7 @@ import { useLayoutState } from './useLayoutState';
 import { applySyntaxTheme } from './editor/highlight/themes';
 import { useWindowFocus } from './useWindowFocus';
 import { useCmdWRefs } from './useCmdWRefs';
+import { collectNavigatorSelections } from './file-navigator-selection-registry';
 
 export function App() {
   const clientReference = useRef<JanusClient | null>(null);
@@ -145,6 +146,13 @@ export function App() {
   });
 
   useEffect(() => { applySyntaxTheme(syntaxTheme); }, [syntaxTheme]);
+
+  // The file navigator's selections are client-only React state, so the app shell — not the
+  // protocol client — is what tells the client where to read them from when the server asks.
+  useEffect(
+    () => client.registerStateCollector('fileNavigatorSelections', collectNavigatorSelections),
+    [client],
+  );
 
   useFocusOnTabSwitch(activeTab, currentRef, harnessHandles, shellHandles, inputReference, questionPanelRef);
 

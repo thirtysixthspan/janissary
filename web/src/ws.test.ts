@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { JanusClient } from './ws';
-import { clearNavigatorSelection, publishNavigatorSelection } from './file-navigator-selection-registry';
 
 describe('JanusClient', () => {
   let messageHandler: ((event: { data: string }) => void) | undefined;
@@ -156,9 +155,11 @@ describe('JanusClient', () => {
     );
   });
 
-  it('collect-tree-state answers with every registered navigator selection, carrying the request id', () => {
-    publishNavigatorSelection(2, { cursor: 'src/a.ts', anchor: 'src', selected: new Set(['src', 'src/a.ts']) });
-    new JanusClient();
+  it('collect-tree-state answers with the registered collector records, carrying the request id', () => {
+    const client = new JanusClient();
+    client.registerStateCollector('fileNavigatorSelections', () => [
+      { index: 2, cursor: 'src/a.ts', anchor: 'src', selected: ['src', 'src/a.ts'] },
+    ]);
 
     messageHandler!({ data: JSON.stringify({ t: 'collect-tree-state', id: 9 }) });
 
@@ -166,16 +167,43 @@ describe('JanusClient', () => {
       t: 'rpc', id: 1, method: 'reportFileNavigatorSelection',
       params: { id: 9, navigators: [{ index: 2, cursor: 'src/a.ts', anchor: 'src', selected: ['src', 'src/a.ts'] }] },
     }));
-    clearNavigatorSelection(2);
   });
 
-  it('collect-tree-state replies with no records when no navigator is mounted', () => {
+  it('collect-tree-state replies with no records when no collector is registered', () => {
     new JanusClient();
 
     messageHandler!({ data: JSON.stringify({ t: 'collect-tree-state', id: 4 }) });
 
     expect(inst.send).toHaveBeenCalledWith(
       expect.stringContaining('"params":{"id":4,"navigators":[]}'),
+    );
+  });
+
+  it('registerStateCollector returns an unregister that stops the collector being consulted', () => {
+    const client = new JanusClient();
+    const collect = vi.fn().mockReturnValue([{ index: 0, selected: ['src'] }]);
+    const unregister = client.registerStateCollector('fileNavigatorSelections', collect);
+
+    unregister();
+    messageHandler!({ data: JSON.stringify({ t: 'collect-tree-state', id: 7 }) });
+
+    expect(collect).not.toHaveBeenCalled();
+    expect(inst.send).toHaveBeenCalledWith(
+      expect.stringContaining('"params":{"id":7,"navigators":[]}'),
+    );
+  });
+
+  it('registering the same collector name again replaces the previous collector', () => {
+    const client = new JanusClient();
+    const first = vi.fn().mockReturnValue([{ index: 0, selected: ['first'] }]);
+    client.registerStateCollector('fileNavigatorSelections', first);
+    client.registerStateCollector('fileNavigatorSelections', () => [{ index: 1, selected: ['second'] }]);
+
+    messageHandler!({ data: JSON.stringify({ t: 'collect-tree-state', id: 8 }) });
+
+    expect(first).not.toHaveBeenCalled();
+    expect(inst.send).toHaveBeenCalledWith(
+      expect.stringContaining('"navigators":[{"index":1,"selected":["second"]}]'),
     );
   });
 });
