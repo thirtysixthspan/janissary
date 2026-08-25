@@ -38,11 +38,18 @@ export class OpenFileManager {
   // The `edit <file>` command: resolve the target like `open` does, but bypass the opener
   // registry and hand the file straight to the editor — this is how markdown and extensionless
   // files (Makefile, .gitignore) get edited.
+  //
+  // An opener that declares it edits its own files is the one exception: `edit photo.png` reaches
+  // the image plugin's own editing presentation. Resolution reads the registry only, so a plugin is
+  // never activated just to find out whether it owns the verb. A `:line` suffix still parses, and
+  // the presentation simply has no use for it — an image has no lines.
   edit(command: string, target: string, label: string, line?: number): void {
     const cwd = this.managers.tab.cwdOf(label) ?? process.cwd();
     const expanded = expandUserPath(target, { root: this.managers.tab.launchDir });
     const file = path.isAbsolute(expanded) ? expanded : path.resolve(cwd, expanded);
     const context = this.buildContext(command, label);
+    const opener = openerForExtension(path.extname(file));
+    if (opener?.editsOwnFiles) { void context.runPluginOpener(opener.name, 'edit', file); return; }
     if (this.isSyncPath(file)) { this.openSynced(file, context, line); return; }
     openInEditor(file, context, line);
   }

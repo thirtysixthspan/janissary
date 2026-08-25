@@ -21,9 +21,11 @@ export const imageManifest = {
     '.avif': 'image/avif',
     '.ico': 'image/x-icon',
   },
+  editsOwnFiles: true,
   capabilities: [
     'note',
     'openOrFocusTab',
+    'updateTab',
     'openExternally',
     'rejectRequest',
     'reportFailure',

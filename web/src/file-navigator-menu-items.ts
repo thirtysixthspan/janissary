@@ -7,6 +7,7 @@ import type { ContextMenuItem } from './ContextMenu';
 // Finder/Explorer convention for a destructive multi-file action.
 export type FileNavigatorMenuActions = {
   open: (row: FileNavigatorRow) => void;
+  edit: (row: FileNavigatorRow) => void;
   openWith: (row: FileNavigatorRow) => void;
   copy: (row: FileNavigatorRow) => void;
   paste: (row: FileNavigatorRow) => void;
@@ -32,8 +33,12 @@ export function fileNavigatorMenuItems(
   contributed?: { label: string; onActivate: () => void } | null,
 ): ContextMenuItem[][] {
   const parentRow = row.path === '..';
+  const editEntry: ContextMenuItem[] = row.dir
+    ? []
+    : [{ label: 'Edit', onActivate: () => actions.edit(row) }];
   const openGroup: ContextMenuItem[][] = parentRow ? [] : [[
     { label: 'Open', onActivate: () => actions.open(row) },
+    ...editEntry,
     { label: 'Open with', onActivate: () => actions.openWith(row) },
   ]];
   const pasteEntry: ContextMenuItem[] = clipboardArmed

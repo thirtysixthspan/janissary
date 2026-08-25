@@ -16,6 +16,10 @@ export type TabItemActions = {
   activeTabNameMaxLength?: number;
   onFocusCommandBar?: () => void;
   onFocusEditor?: (label: string) => void;
+  // Labels of tabs holding unsaved work. A knowing exception to the "no markers in a tab label"
+  // rule: with several image tabs open, unsaved work in one that is not on screen is otherwise
+  // invisible. It means unsaved changes only — never the tab's type.
+  dirtyTabs?: ReadonlySet<string>;
 };
 
 type Properties = TabItemActions & {
@@ -30,7 +34,7 @@ type Properties = TabItemActions & {
 export function TabItem({
   tab, index, active, onSelect, onClose, onRename, tabNameMaxLength,
   activeTabNameMaxLength = 50, onFocusCommandBar, onFocusEditor, windowFocused = true,
-  dragTransform, onReorderMouseDown,
+  dirtyTabs, dragTransform, onReorderMouseDown,
 }: Properties) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState('');
@@ -91,6 +95,7 @@ export function TabItem({
         }}
         >{displayName}</span>
       )}
+      {dirtyTabs?.has(tab.label) && <span className="tab-dirty" role="img" aria-label="unsaved changes">•</span>}
       {tab.hasUnread && <span className="tab-badge" role="img" aria-label="unread"><FontAwesomeIcon icon={unreadIcon} /></span>}
       <button
         type="button"

@@ -77,6 +77,8 @@
 | `↑` / `↓` / `←` / `→` | Pan the image |
 | Click and drag | Pan freely |
 | `Escape` | Reset zoom to 100% and center the view |
+| `Cmd+S` / `Ctrl+S` (while editing) | Save image edits |
+| `Escape` (while editing) | End edit mode and return to the viewer |
 
 **Markdown tab controls** (active only while a markdown tab is focused):
 

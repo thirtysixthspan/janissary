@@ -101,6 +101,7 @@ function makeOpener(overrides: Partial<Opener> = {}): Opener {
 function makeMenuActions(): FileNavigatorMenuActions {
   return {
     open: () => {},
+    edit: () => {},
     openWith: () => {},
     copy: () => {},
     paste: () => {},
@@ -246,7 +247,7 @@ describe('FileNavigatorOverlays', () => {
   it('renders the ordinary row entries unchanged when nothing is contributed', () => {
     renderMenu(null);
     expect(screen.queryByText('Add to playlist')).toBeNull();
-    for (const label of ['Open', 'Open with', 'Copy', 'Delete', 'New file']) {
+    for (const label of ['Open', 'Edit', 'Open with', 'Copy', 'Delete', 'New file']) {
       expect(screen.getByText(label)).toBeInTheDocument();
     }
   });

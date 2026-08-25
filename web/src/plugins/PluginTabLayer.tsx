@@ -1,6 +1,7 @@
 import type { TabView } from '@shared/protocol';
 import type { JanusClient } from '../ws';
 import { tabBodyBorder } from '../tab-body-border';
+import type { TabDirtyHandle } from './api';
 import { PluginBody } from './PluginBody';
 
 // The host-owned frame around one plugin tab: the `.tab-body` element, its focus border, its split
@@ -14,6 +15,7 @@ export function PluginTabLayer({
   client,
   onClose,
   onSplit,
+  onDirtyHandle,
 }: {
   tab: TabView;
   index: number;
@@ -22,6 +24,7 @@ export function PluginTabLayer({
   client: JanusClient;
   onClose: () => void;
   onSplit?: () => void;
+  onDirtyHandle?: (handle: TabDirtyHandle | null) => void;
 }) {
   return (
     <div
@@ -38,6 +41,7 @@ export function PluginTabLayer({
         <PluginBody
           plugin={tab.plugin} label={tab.label} client={client}
           active={tab.label === current.label} onClose={onClose} onSplit={onSplit}
+          onDirtyHandle={onDirtyHandle}
         />
       )}
     </div>

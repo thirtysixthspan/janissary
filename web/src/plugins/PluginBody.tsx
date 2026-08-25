@@ -9,7 +9,7 @@ import React, {
 } from 'react';
 import type { TabView } from '@shared/protocol';
 import type { JanusClient } from '../ws';
-import { createPluginClientCapabilities } from './api';
+import { createPluginClientCapabilities, type TabDirtyHandle } from './api';
 import { clientPluginFailure, clientPluginRegistry, type ClientPluginRegistration } from './registry';
 
 const CLIENT_ACTIVATION_MS = 5000;
@@ -118,6 +118,7 @@ export function PluginBody({
   dock = null,
   onClose,
   onSplit,
+  onDirtyHandle,
 }: {
   plugin: NonNullable<TabView['plugin']>;
   label: string;
@@ -126,6 +127,7 @@ export function PluginBody({
   dock?: 'left' | 'right' | null;
   onClose: () => void;
   onSplit?: () => void;
+  onDirtyHandle?: (handle: TabDirtyHandle | null) => void;
 }) {
   const [failed, setFailed] = useState(false);
   const pluginId = plugin.id;
@@ -140,11 +142,18 @@ export function PluginBody({
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
   const close = useCallback(() => { onCloseRef.current(); }, []);
+  // Same ref treatment again: the handle registration must survive the capability object staying
+  // stable, or a plugin would drop its dirty state every time the host rebuilt this callback.
+  const onDirtyHandleRef = useRef(onDirtyHandle);
+  onDirtyHandleRef.current = onDirtyHandle;
+  const registerDirty = useCallback((handle: TabDirtyHandle | null) => {
+    onDirtyHandleRef.current?.(handle);
+  }, []);
   const capabilities = useMemo(
     () => createPluginClientCapabilities(
-      pluginId, label, client, active, dock, close, splittable ? split : undefined,
+      pluginId, label, client, active, dock, close, splittable ? split : undefined, registerDirty,
     ),
-    [active, client, close, dock, label, pluginId, split, splittable],
+    [active, client, close, dock, label, pluginId, registerDirty, split, splittable],
   );
   const capabilitiesRef = useRef(capabilities);
   capabilitiesRef.current = capabilities;

@@ -16,7 +16,7 @@ export type OpenContext = {
   openExternally: (absPath: string) => boolean;
   runPluginOpener: (
     pluginId: string,
-    presentation: 'inline' | 'external',
+    presentation: 'inline' | 'external' | 'edit',
     file: string,
   ) => Promise<void>;
 };
@@ -28,6 +28,9 @@ export interface Opener {
   name: string;
   // The file extensions this opener claims, lowercased and dot-prefixed (e.g. '.png').
   extensions: string[];
+  // Whether `edit <file>` belongs to this opener rather than to the plain-text editor. Read from the
+  // registry alone, so resolving it never activates the plugin behind a claim.
+  editsOwnFiles?: boolean;
   editGesture?: 'open external';
   // Hand the file to a program outside the app.
   external: (file: string, context: OpenContext) => void | Promise<void>;

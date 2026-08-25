@@ -163,7 +163,7 @@ stops refreshing automatically and can be refreshed manually by collapsing and r
 | Double-click a file row | Select it and open it (with `open`) — for Markdown files, this opens the plain-text editor instead (with `edit`); the context menu's **Open with** offers the other routes |
 | Double-click a directory row | Select it and toggle expand/collapse |
 | Double-click the `..` row | Navigate the tree up one directory |
-| Shift+double-click a file row | Select it and open it in the plain-text editor (with `edit`), even for files whose normal opener is a viewer (images) — for Markdown files, this instead opens the rendered preview (with `open`), and for video files it hands the file to the configured external player (with `open external`), since a binary video has nothing to edit as text |
+| Shift+double-click a file row | Select it and edit it (with `edit`) — the plain-text editor for most files, and the image editor for an image, since `edit` dispatches by file type (see [[open]]); for Markdown files this instead opens the rendered preview (with `open`), and for video files it hands the file to the configured external player (with `open external`), since a binary video has nothing to edit as text |
 | Chevron (a caret icon, pointing right when collapsed and down when expanded) | Visual affordance only — the whole row is the click target |
 | Double-clicking any row | Does not select the row's text |
 | Header collapse-all button | Collapse every expanded directory back to just the root |
@@ -197,15 +197,20 @@ Choosing **Edit as text** from that row's **Open with** chooser is another: it o
 file when the clicked row belongs to the selection. The chooser's other options still act on the
 clicked row alone.
 
-The menu holds up to eight entries in four groups, separated in this order: **Open** and **Open
-with**; **Copy** and **Paste**; **Rename** and **Delete**; **New file** and **New folder**. Open
-does what double-clicking the row does. Copy, Paste, Rename, Delete, New file, and New folder run
-the same flows their keyboard chords and header buttons do, including every confirmation and
-name-conflict dialog.
+The menu holds up to nine entries in four groups, separated in this order: **Open**, **Edit**, and
+**Open with**; **Copy** and **Paste**; **Rename** and **Delete**; **New file** and **New folder**.
+Open does what double-clicking the row does. Edit is offered only for a file and sends
+`edit <absolute-path>` for the right-clicked row: ordinary files reach the plain-text editor and
+images reach the image editor because the `edit` command dispatches by file type (see [[open]]).
+When the clicked row is part of a multi-row selection containing only images, **Open** and **Edit**
+each apply to every selected image in selection order instead; mixed selections keep the normal
+right-clicked-row behavior.
+Copy, Paste, Rename, Delete, New file, and New folder run the same flows their keyboard chords and
+header buttons do, including every confirmation and name-conflict dialog.
 
 Entries that do not apply are left out rather than shown greyed, so the menu's height varies with
-context: **Paste** is absent when nothing has been copied or cut, and **Open**, **Open with**, and
-**Rename** are absent on the `..` row.
+context: **Paste** is absent when nothing has been copied or cut, **Edit** is absent for directories,
+and **Open**, **Edit**, **Open with**, and **Rename** are absent on the `..` row.
 
 One further entry can appear, and it is the only one that acts on the whole selection rather than on
 the clicked row: a **tab plugin's contributed selection entry**, drawn in a group of its own between
@@ -417,7 +422,7 @@ A focused file navigator tab captures its own keys, following the ARIA treeview 
 | `→` | Collapsed directory: expand. Expanded directory: reroot. File: open. `..`: no-op |
 | `←` | Expanded directory: collapse. Otherwise: move selection to the parent directory |
 | `Enter` / `Space` | File: open. Directory: toggle expand/collapse. `..`: navigate to parent directory |
-| `Shift+Enter` | File: open in the plain-text editor (mirrors Shift+double-click, including its Markdown and video exceptions) |
+| `Shift+Enter` | File: edit it (mirrors Shift+double-click, including its image, Markdown, and video destinations) |
 | `Home` / `End` | Move the cursor to the first / last visible row and collapse selection to it |
 | `Page Up` / `Page Down` | Move the cursor by one viewport of rows and collapse selection to it |
 | `Backspace` / `Delete` | Delete the normalized selection after one confirmation |

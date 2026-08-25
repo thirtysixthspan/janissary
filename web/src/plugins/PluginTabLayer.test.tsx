@@ -9,6 +9,7 @@ import {
   clientPlugin,
   clientPluginRegistry,
   type ClientPluginLoader,
+  type ClientPluginProperties,
   type ClientPluginRegistration,
 } from './registry';
 
@@ -294,6 +295,46 @@ describe('PluginTabLayer lazy lifecycle', () => {
     await waitFor(() => { expect(screen.getByText('after')).toBeInTheDocument(); });
     expect(mounts).toHaveBeenCalledOnce();
     expect(fixture.send).not.toHaveBeenCalled();
+  });
+
+  // The host owns the registration: the plugin supplies a handle, the layer hands it up, and a
+  // closed or remounted tab must never leave stale dirty state behind in the host's map.
+  it('hands a registered dirty handle up to the host and drops it on unmount', async () => {
+    const handle = { isDirty: () => true, save: async () => {}, focus: () => {} };
+    const DirtyPlugin = ({ capabilities }: ClientPluginProperties) => {
+      React.useEffect(() => {
+        capabilities.registerDirtyHandle?.(handle);
+        return () => capabilities.registerDirtyHandle?.(null);
+      }, [capabilities]);
+      return <div>fixture mounted</div>;
+    };
+    registry.set('fixture', registration(async () => ({
+      default: DirtyPlugin, isPayload: acceptsAnyPayload,
+    })));
+    const fixture = client();
+    const onDirtyHandle = vi.fn();
+    const { unmount } = render(
+      <PluginTabLayer {...properties(tab(), fixture.value)} onDirtyHandle={onDirtyHandle} />,
+    );
+    await waitFor(() => { expect(screen.getByText('fixture mounted')).toBeInTheDocument(); });
+    expect(onDirtyHandle).toHaveBeenCalledWith(handle);
+
+    unmount();
+
+    expect(onDirtyHandle).toHaveBeenLastCalledWith(null);
+  });
+
+  // A plugin with nothing to save registers nothing, and the host is never told about it.
+  it('tells the host nothing for a plugin that registers no handle', async () => {
+    registry.set('fixture', registration(async () => ({
+      default: () => <div>fixture mounted</div>, isPayload: acceptsAnyPayload,
+    })));
+    const fixture = client();
+    const onDirtyHandle = vi.fn();
+    render(<PluginTabLayer {...properties(tab(), fixture.value)} onDirtyHandle={onDirtyHandle} />);
+    await waitFor(() => { expect(screen.getByText('fixture mounted')).toBeInTheDocument(); });
+
+    expect(onDirtyHandle).not.toHaveBeenCalled();
   });
 
   it('isolates one failed plugin from another plugin layer', async () => {

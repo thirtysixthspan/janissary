@@ -1252,15 +1252,68 @@ describe('FileNavigatorTab', () => {
       expect(screen.getByText('Paste')).toBeInTheDocument();
     });
 
-    it('omits Open, Open with, and Rename on the ".." row', () => {
+    it('omits Open, Edit, Open with, and Rename on the ".." row', () => {
       const client = { send: vi.fn() } as unknown as JanusClient;
       const files = makeFiles({ rows: [{ path: '..', name: '..', depth: 0, dir: true }] });
       render(<FileNavigatorTab files={files} client={client} index={0} />);
       fireEvent.contextMenu(screen.getByText('..'));
       expect(screen.queryByText('Open')).not.toBeInTheDocument();
+      expect(screen.queryByText('Edit')).not.toBeInTheDocument();
       expect(screen.queryByText('Open with')).not.toBeInTheDocument();
       expect(screen.queryByText('Rename')).not.toBeInTheDocument();
       expect(screen.getByText('Delete')).toBeInTheDocument();
+    });
+
+    it('omits Edit on a directory row', () => {
+      const client = { send: vi.fn() } as unknown as JanusClient;
+      const files = makeFiles({ rows: [{ path: 'src', name: 'src', depth: 0, dir: true }] });
+      render(<FileNavigatorTab files={files} client={client} index={0} />);
+      fireEvent.contextMenu(screen.getByText('src'));
+      expect(screen.queryByText('Edit')).not.toBeInTheDocument();
+    });
+
+    it.each(['notes.txt', 'photo.png'])('choosing Edit for %s sends its absolute edit command', (name) => {
+      const send = vi.fn();
+      const client = { send } as unknown as JanusClient;
+      const files = makeFiles({ rows: [{ path: name, name, depth: 0, dir: false }] });
+      render(<FileNavigatorTab files={files} client={client} index={0} />);
+      fireEvent.contextMenu(screen.getByText(name));
+      fireEvent.click(screen.getByText('Edit'));
+      expect(send).toHaveBeenCalledWith({
+        method: 'command', params: { text: `edit /home/user/project/${name}` },
+      });
+    });
+
+    it('opens every selected image from a selected image row', () => {
+      const send = vi.fn();
+      const client = { send } as unknown as JanusClient;
+      const files = makeFiles({ rows: [
+        { path: 'first.png', name: 'first.png', depth: 0, dir: false },
+        { path: 'second.jpg', name: 'second.jpg', depth: 0, dir: false },
+      ] });
+      render(<FileNavigatorTab files={files} client={client} index={0} />);
+      fireEvent.mouseDown(screen.getByText('first.png'), { button: 0 });
+      fireEvent.mouseDown(screen.getByText('second.jpg'), { button: 0, metaKey: true });
+      fireEvent.contextMenu(screen.getByText('second.jpg'));
+      fireEvent.click(screen.getByText('Open'));
+      expect(send).toHaveBeenNthCalledWith(1, { method: 'command', params: { text: 'open /home/user/project/first.png' } });
+      expect(send).toHaveBeenNthCalledWith(2, { method: 'command', params: { text: 'open /home/user/project/second.jpg' } });
+    });
+
+    it('edits every selected image from a selected image row', () => {
+      const send = vi.fn();
+      const client = { send } as unknown as JanusClient;
+      const files = makeFiles({ rows: [
+        { path: 'first.png', name: 'first.png', depth: 0, dir: false },
+        { path: 'second.jpg', name: 'second.jpg', depth: 0, dir: false },
+      ] });
+      render(<FileNavigatorTab files={files} client={client} index={0} />);
+      fireEvent.mouseDown(screen.getByText('first.png'), { button: 0 });
+      fireEvent.mouseDown(screen.getByText('second.jpg'), { button: 0, metaKey: true });
+      fireEvent.contextMenu(screen.getByText('second.jpg'));
+      fireEvent.click(screen.getByText('Edit'));
+      expect(send).toHaveBeenNthCalledWith(1, { method: 'command', params: { text: 'edit /home/user/project/first.png' } });
+      expect(send).toHaveBeenNthCalledWith(2, { method: 'command', params: { text: 'edit /home/user/project/second.jpg' } });
     });
 
     it('choosing Delete opens the ordinary delete confirmation', () => {

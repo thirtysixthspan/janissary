@@ -29,6 +29,14 @@ Before dispatch the target is classified as a web address or a file:
 
 The chosen presentation of the selected opener is then invoked.
 
+### `edit` dispatches by file type
+
+`edit <file>` normally bypasses the opener registry entirely and hands the file to the plain-text editor — that bypass is how markdown and extensionless files (`Makefile`, `.gitignore`) get edited. One check runs first: an opener may declare that it edits its own files, and for those extensions `edit` reaches that opener's **edit presentation** instead. The image opener is the only one that does so today, so `edit photo.png` opens the image editor while `edit src/index.ts` and `edit Makefile` still open the plain-text editor.
+
+Resolution reads the opener registry, which is built from static declarations, so asking whether a plugin owns the verb never activates it. One consequence is accepted rather than worked around: **`edit photo.png` can no longer open a PNG as raw text**, and there is no escape hatch for that. A `:line` suffix still parses as it does for any file; an image has no lines, so the editor discards it and the path still opens.
+
+Every existing sender of `edit <path>` reaches the same place without changing: the command line, the quick-open picker, a transcript file link, the transcript line's own open control, and Shift-activation of a row in the file navigator.
+
 Error handling, surfaced in the active tab before any opener runs:
 
 - **No opener for the extension** — when opened from the file navigator, a chooser offers editing
@@ -65,7 +73,7 @@ Malformed invocations return a usage message; an unrecognized file type reports 
 
 ## Image plugin opener
 
-The bundled `image` tab plugin contributes an opener for all common image types — including PNG, JPEG, GIF, WebP, BMP, SVG, AVIF, and ICO (case-insensitive) — and implements both presentations. Its static declaration is available at startup; its behavior activates only on the first matching `open`. It claims no command of its own, so `open` is the only route to it.
+The bundled `image` tab plugin contributes an opener for all common image types — including PNG, JPEG, GIF, WebP, BMP, SVG, AVIF, and ICO (case-insensitive) — and implements all three presentations. Its static declaration is available at startup; its behavior activates only on the first matching `open` or `edit`. It claims no command of its own, so `open` and `edit` are the only routes to it.
 
 ### `open external <image>`
 
@@ -74,6 +82,10 @@ Hands the image to the operating system's image viewer (on macOS, Preview), laun
 ### `open <image>` — image tab
 
 Opens the image in an **image tab**: a non-agent view tab that displays the image with its metadata and no command bar. The new tab is created and focused like an agent tab (placed within the active tab's group, distinct dot color); it is a live, in-memory view and is not persisted or restored on `--relaunch`. If the image is already open in an image tab, that existing tab is focused instead of opening a duplicate. The image tab — its layout, sizing and zoom, the tab-strip name and close button, how it is closed, and how its bytes are served — is described in [[image-tab]].
+
+### `edit <image>` — image editor
+
+Opens the same image tab, already flipped to its **editor**: a canvas and a geometry toolbar in place of the zoom-and-pan stage. The tab is keyed on the file path exactly as the viewer is, so `edit` on an image that is already open focuses that tab and flips it rather than opening a second one. Saving replaces the original file with the edited PNG. See [[image-tab]].
 
 ---
 

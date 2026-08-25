@@ -20,7 +20,7 @@ function paneOf(tab: TabView): 'left' | 'right' {
 
 export function CenterActionArea({
   entries, tabs, activeTab, secondaryTab, client, closeTab, tabNameMaxLength,
-  activeTabNameMaxLength, onFocusCommandBar, onFocusEditor, windowFocused,
+  activeTabNameMaxLength, onFocusCommandBar, onFocusEditor, windowFocused, dirtyTabs,
   renderBody, persistentLayers,
 }: Properties) {
   const [leftPct, setLeftPct] = useState(50);
@@ -66,6 +66,7 @@ export function CenterActionArea({
           onFocusCommandBar={onFocusCommandBar}
           onFocusEditor={onFocusEditor}
           windowFocused={windowFocused}
+          dirtyTabs={dirtyTabs}
           endControl={pane === 'left' && split
             ? <ResizeButton direction="horizontal" label="Resize split panes" onResize={onResize} />
             : undefined}

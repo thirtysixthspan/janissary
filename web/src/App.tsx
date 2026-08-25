@@ -109,9 +109,22 @@ export function App() {
   );
 
   const { quitConfirmOpen, openQuitConfirm, confirmQuit, cancelQuit } = useQuitConfirm(runCommand, inputReference);
-  const editorHandles = useRef<Map<string, EditorTabHandle>>(new Map());
+  // Every dirty-capable tab handle, editor and plugin alike, keyed by tab label. The close guard,
+  // the quit guard, and the editor focus path all reach a tab through this one map.
+  const tabHandles = useRef<Map<string, EditorTabHandle>>(new Map());
+  // The labels of plugin tabs holding unsaved work. A ref cannot drive a render, so the strip's
+  // marker reads this instead — a plugin re-registers its handle whenever its answer changes.
+  const [dirtyPluginTabs, setDirtyPluginTabs] = useState<ReadonlySet<string>>(new Set());
+  const onPluginDirty = useCallback((label: string, dirty: boolean) => {
+    setDirtyPluginTabs((previous) => {
+      if (previous.has(label) === dirty) return previous;
+      const next = new Set(previous);
+      if (dirty) next.add(label); else next.delete(label);
+      return next;
+    });
+  }, []);
   const { unsavedQuitOpen, guardedOpenQuitConfirm, confirmUnsavedQuit, cancelUnsavedQuit } =
-    useUnsavedQuitGuard(tabs, editorHandles, openQuitConfirm, runCommand);
+    useUnsavedQuitGuard(tabs, tabHandles, openQuitConfirm, runCommand);
   const guardRef = useRef<((index: number) => boolean) | null>(null);
   const { activeTabRef, quitConfirmOpenRef, pickerOpenRef, routeRef } = useCmdWRefs(
     activeTab, quitConfirmOpen, unsavedQuitOpen, pickerOpen, queueOpen, taskPickerOpen, profilePickerOpen, route,
@@ -189,7 +202,8 @@ export function App() {
       reportingHeightPct={reportingHeightPct} setReportingHeightPct={setReportingHeightPct}
       focusLeft={focusLeft} focusRight={focusRight}
       harnessHandles={harnessHandles} shellHandles={shellHandles} questionPanelRef={questionPanelRef}
-      editorHandles={editorHandles} editorDropReference={editorDropReference}
+      tabHandles={tabHandles} editorDropReference={editorDropReference}
+      dirtyPluginTabs={dirtyPluginTabs} onPluginDirty={onPluginDirty}
       harnessLaunch={harnessLaunch} scheduleLaunch={scheduleLaunch}
       confirmQuit={confirmQuit} cancelQuit={cancelQuit}
       confirmUnsavedQuit={confirmUnsavedQuit} cancelUnsavedQuit={cancelUnsavedQuit}

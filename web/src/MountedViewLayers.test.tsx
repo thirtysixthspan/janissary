@@ -104,11 +104,11 @@ describe('MountedViewLayers', () => {
   it('renders editor tabs', () => {
     const tabs = [makeEditorTab('etab', '/test.ts')];
     const harnessHandles = makeHarnessHandles();
-    const editorHandles = makeEditorHandles();
+    const tabHandles = makeEditorHandles();
     const { container } = render(
       React.createElement(MountedViewLayers, {
         tabs, current: tabs[0], client: { send: vi.fn() } as never, closeTab: vi.fn(),
-        harnessHandles, editorHandles,
+        harnessHandles, tabHandles,
       }),
     );
     expect(container.querySelector('.tab-body')).toBeTruthy();
@@ -118,11 +118,11 @@ describe('MountedViewLayers', () => {
     const tabs = [makeEditorTab('etab', '/test.ts')];
     const other = makeEditorTab('other', '/other.ts');
     const harnessHandles = makeHarnessHandles();
-    const editorHandles = makeEditorHandles();
+    const tabHandles = makeEditorHandles();
     const { container } = render(
       React.createElement(MountedViewLayers, {
         tabs, current: other, client: { send: vi.fn() } as never, closeTab: vi.fn(),
-        harnessHandles, editorHandles,
+        harnessHandles, tabHandles,
       }),
     );
     const el = container.querySelector('.tab-body') as HTMLElement;
@@ -132,11 +132,11 @@ describe('MountedViewLayers', () => {
   it('renders editor tab as flex when current', () => {
     const tabs = [makeEditorTab('etab', '/test.ts')];
     const harnessHandles = makeHarnessHandles();
-    const editorHandles = makeEditorHandles();
+    const tabHandles = makeEditorHandles();
     const { container } = render(
       React.createElement(MountedViewLayers, {
         tabs, current: tabs[0], client: { send: vi.fn() } as never, closeTab: vi.fn(),
-        harnessHandles, editorHandles,
+        harnessHandles, tabHandles,
       }),
     );
     const el = container.querySelector('.tab-body') as HTMLElement;
@@ -147,11 +147,11 @@ describe('MountedViewLayers', () => {
     editorMountCount = 0;
     const tab = makeEditorTab('etab', '/open/1');
     const harnessHandles = makeHarnessHandles();
-    const editorHandles = makeEditorHandles();
+    const tabHandles = makeEditorHandles();
     const { rerender } = render(
       React.createElement(MountedViewLayers, {
         tabs: [tab], current: tab, client: { send: vi.fn() } as never, closeTab: vi.fn(),
-        harnessHandles, editorHandles,
+        harnessHandles, tabHandles,
       }),
     );
     expect(editorMountCount).toBe(1);
@@ -163,7 +163,7 @@ describe('MountedViewLayers', () => {
     rerender(
       React.createElement(MountedViewLayers, {
         tabs: [renamed], current: renamed, client: { send: vi.fn() } as never, closeTab: vi.fn(),
-        harnessHandles, editorHandles,
+        harnessHandles, tabHandles,
       }),
     );
     expect(editorMountCount).toBe(1);
@@ -171,14 +171,14 @@ describe('MountedViewLayers', () => {
 
   it('filters out tabs without editor payload', () => {
     const harnessHandles = makeHarnessHandles();
-    const editorHandles = makeEditorHandles();
+    const tabHandles = makeEditorHandles();
     const { container } = render(
       React.createElement(MountedViewLayers, {
         tabs: [{ label: 'a', view: 'editor', dotColor: '#0f0', groupColor: '#ccc' }] as TabView[],
         current: { label: 'a' } as TabView,
         client: { send: vi.fn() } as never,
         closeTab: vi.fn(),
-        harnessHandles, editorHandles,
+        harnessHandles, tabHandles,
       }),
     );
     expect(container.querySelector('.tab-body')).toBeNull();
@@ -187,11 +187,11 @@ describe('MountedViewLayers', () => {
   it('renders harness tabs', () => {
     const tabs = [makeHarnessTab('htab', 'pty1')];
     const harnessHandles = makeHarnessHandles();
-    const editorHandles = makeEditorHandles();
+    const tabHandles = makeEditorHandles();
     const { container } = render(
       React.createElement(MountedViewLayers, {
         tabs, current: tabs[0], client: { send: vi.fn() } as never, closeTab: vi.fn(),
-        harnessHandles, editorHandles,
+        harnessHandles, tabHandles,
       }),
     );
     expect(container.querySelector('.tab-body')).toBeTruthy();
@@ -201,11 +201,11 @@ describe('MountedViewLayers', () => {
     const tabs = [makeHarnessTab('htab', 'pty1')];
     const other = makeHarnessTab('other', 'pty2');
     const harnessHandles = makeHarnessHandles();
-    const editorHandles = makeEditorHandles();
+    const tabHandles = makeEditorHandles();
     const { container } = render(
       React.createElement(MountedViewLayers, {
         tabs, current: other, client: { send: vi.fn() } as never, closeTab: vi.fn(),
-        harnessHandles, editorHandles,
+        harnessHandles, tabHandles,
       }),
     );
     const el = container.querySelector('.tab-body') as HTMLElement;
@@ -215,11 +215,11 @@ describe('MountedViewLayers', () => {
   it('renders harness tab as flex when current', () => {
     const tabs = [makeHarnessTab('htab', 'pty1')];
     const harnessHandles = makeHarnessHandles();
-    const editorHandles = makeEditorHandles();
+    const tabHandles = makeEditorHandles();
     const { container } = render(
       React.createElement(MountedViewLayers, {
         tabs, current: tabs[0], client: { send: vi.fn() } as never, closeTab: vi.fn(),
-        harnessHandles, editorHandles,
+        harnessHandles, tabHandles,
       }),
     );
     const el = container.querySelector('.tab-body') as HTMLElement;
@@ -228,14 +228,14 @@ describe('MountedViewLayers', () => {
 
   it('filters out tabs without harness payload', () => {
     const harnessHandles = makeHarnessHandles();
-    const editorHandles = makeEditorHandles();
+    const tabHandles = makeEditorHandles();
     const { container } = render(
       React.createElement(MountedViewLayers, {
         tabs: [{ label: 'a', view: 'harness', dotColor: '#f00', groupColor: '#ccc' }] as TabView[],
         current: { label: 'a' } as TabView,
         client: { send: vi.fn() } as never,
         closeTab: vi.fn(),
-        harnessHandles, editorHandles,
+        harnessHandles, tabHandles,
       }),
     );
     expect(container.querySelector('.tab-body')).toBeNull();
@@ -244,11 +244,11 @@ describe('MountedViewLayers', () => {
   it('renders the task picker inside the current harness tab when taskPickerOpen is true', () => {
     const tabs = [makeHarnessTab('htab', 'pty1')];
     const harnessHandles = makeHarnessHandles();
-    const editorHandles = makeEditorHandles();
+    const tabHandles = makeEditorHandles();
     const { container } = render(
       React.createElement(MountedViewLayers, {
         tabs, current: tabs[0], client: { send: vi.fn() } as never, closeTab: vi.fn(),
-        harnessHandles, editorHandles,
+        harnessHandles, tabHandles,
         taskPickerOpen: true, taskRows: [], taskPickerIndex: 0, onPickTask: vi.fn(), onToggleTaskDir: vi.fn(),
       }),
     );
@@ -259,11 +259,11 @@ describe('MountedViewLayers', () => {
     const tabs = [makeHarnessTab('htab', 'pty1')];
     const other = makeHarnessTab('other', 'pty2');
     const harnessHandles = makeHarnessHandles();
-    const editorHandles = makeEditorHandles();
+    const tabHandles = makeEditorHandles();
     const { container } = render(
       React.createElement(MountedViewLayers, {
         tabs, current: other, client: { send: vi.fn() } as never, closeTab: vi.fn(),
-        harnessHandles, editorHandles,
+        harnessHandles, tabHandles,
         taskPickerOpen: true, taskRows: [], taskPickerIndex: 0, onPickTask: vi.fn(), onToggleTaskDir: vi.fn(),
       }),
     );
@@ -273,11 +273,11 @@ describe('MountedViewLayers', () => {
   it('does not render the task picker when taskPickerOpen is false', () => {
     const tabs = [makeHarnessTab('htab', 'pty1')];
     const harnessHandles = makeHarnessHandles();
-    const editorHandles = makeEditorHandles();
+    const tabHandles = makeEditorHandles();
     const { container } = render(
       React.createElement(MountedViewLayers, {
         tabs, current: tabs[0], client: { send: vi.fn() } as never, closeTab: vi.fn(),
-        harnessHandles, editorHandles,
+        harnessHandles, tabHandles,
       }),
     );
     expect(container.querySelector('.picker')).toBeNull();
@@ -286,11 +286,11 @@ describe('MountedViewLayers', () => {
   it('renders the tab navigator inside the current harness tab when navOpen is true', () => {
     const tabs = [makeHarnessTab('htab', 'pty1')];
     const harnessHandles = makeHarnessHandles();
-    const editorHandles = makeEditorHandles();
+    const tabHandles = makeEditorHandles();
     const { container } = render(
       React.createElement(MountedViewLayers, {
         tabs, current: tabs[0], client: { send: vi.fn() } as never, closeTab: vi.fn(),
-        harnessHandles, editorHandles,
+        harnessHandles, tabHandles,
         navOpen: true, navQuery: '', navIndex: 0, onPickTab: vi.fn(),
       }),
     );
@@ -301,11 +301,11 @@ describe('MountedViewLayers', () => {
     const tabs = [makeHarnessTab('htab', 'pty1')];
     const other = makeHarnessTab('other', 'pty2');
     const harnessHandles = makeHarnessHandles();
-    const editorHandles = makeEditorHandles();
+    const tabHandles = makeEditorHandles();
     const { container } = render(
       React.createElement(MountedViewLayers, {
         tabs, current: other, client: { send: vi.fn() } as never, closeTab: vi.fn(),
-        harnessHandles, editorHandles,
+        harnessHandles, tabHandles,
         navOpen: true, navQuery: '', navIndex: 0, onPickTab: vi.fn(),
       }),
     );
@@ -315,11 +315,11 @@ describe('MountedViewLayers', () => {
   it('does not render the tab navigator when navOpen is false', () => {
     const tabs = [makeHarnessTab('htab', 'pty1')];
     const harnessHandles = makeHarnessHandles();
-    const editorHandles = makeEditorHandles();
+    const tabHandles = makeEditorHandles();
     const { container } = render(
       React.createElement(MountedViewLayers, {
         tabs, current: tabs[0], client: { send: vi.fn() } as never, closeTab: vi.fn(),
-        harnessHandles, editorHandles,
+        harnessHandles, tabHandles,
       }),
     );
     expect(container.querySelector('.tab-nav-picker')).toBeNull();
@@ -330,7 +330,7 @@ describe('MountedViewLayers', () => {
     const tabs = [makeEditorTab('etab', '/test.ts')];
     render(React.createElement(MountedViewLayers, {
       tabs, current: tabs[0], client: { send: vi.fn() } as never, closeTab: vi.fn(),
-      harnessHandles: makeHarnessHandles(), editorHandles: makeEditorHandles(),
+      harnessHandles: makeHarnessHandles(), tabHandles: makeEditorHandles(),
     }));
     expect(pluginLoadCount).toBe(0);
   });
@@ -338,11 +338,11 @@ describe('MountedViewLayers', () => {
   it('renders plugin tabs through the lazy generic layer', async () => {
     const tabs = [makePluginTab('vtab', '/open/1')];
     const harnessHandles = makeHarnessHandles();
-    const editorHandles = makeEditorHandles();
+    const tabHandles = makeEditorHandles();
     const { container } = render(
       React.createElement(MountedViewLayers, {
         tabs, current: tabs[0], client: { send: vi.fn() } as never, closeTab: vi.fn(),
-        harnessHandles, editorHandles,
+        harnessHandles, tabHandles,
       }),
     );
     expect(container.querySelector('.tab-body')).toBeTruthy();
@@ -356,7 +356,7 @@ describe('MountedViewLayers', () => {
     const { container } = render(
       React.createElement(MountedViewLayers, {
         tabs: [docked], current: docked, client: { send: vi.fn() } as never, closeTab: vi.fn(),
-        harnessHandles: makeHarnessHandles(), editorHandles: makeEditorHandles(),
+        harnessHandles: makeHarnessHandles(), tabHandles: makeEditorHandles(),
       }),
     );
     expect(container.querySelector('.tab-body')).toBeNull();
@@ -366,11 +366,11 @@ describe('MountedViewLayers', () => {
     const tabs = [makePluginTab('vtab', '/open/1')];
     const other = makePluginTab('other', '/open/2');
     const harnessHandles = makeHarnessHandles();
-    const editorHandles = makeEditorHandles();
+    const tabHandles = makeEditorHandles();
     const { container } = render(
       React.createElement(MountedViewLayers, {
         tabs, current: other, client: { send: vi.fn() } as never, closeTab: vi.fn(),
-        harnessHandles, editorHandles,
+        harnessHandles, tabHandles,
       }),
     );
     const el = container.querySelector('.tab-body') as HTMLElement;
@@ -380,11 +380,11 @@ describe('MountedViewLayers', () => {
   it('places a current plugin tab as a visible layer', () => {
     const tabs = [makePluginTab('vtab', '/open/1')];
     const harnessHandles = makeHarnessHandles();
-    const editorHandles = makeEditorHandles();
+    const tabHandles = makeEditorHandles();
     const { container } = render(
       React.createElement(MountedViewLayers, {
         tabs, current: tabs[0], client: { send: vi.fn() } as never, closeTab: vi.fn(),
-        harnessHandles, editorHandles,
+        harnessHandles, tabHandles,
       }),
     );
     const el = container.querySelector('.tab-body') as HTMLElement;
@@ -395,21 +395,21 @@ describe('MountedViewLayers', () => {
     const tab = { ...makePluginTab('vtab', '/open/1'), pane: 'right' as const };
     const { container } = render(React.createElement(MountedViewLayers, {
       tabs: [tab], current: tab, client: { send: vi.fn() } as never, closeTab: vi.fn(),
-      harnessHandles: makeHarnessHandles(), editorHandles: makeEditorHandles(),
+      harnessHandles: makeHarnessHandles(), tabHandles: makeEditorHandles(),
     }));
     expect(container.querySelector<HTMLElement>('.tab-body')?.style.gridColumn).toBe('2');
   });
 
   it('filters out plugin views without an envelope', () => {
     const harnessHandles = makeHarnessHandles();
-    const editorHandles = makeEditorHandles();
+    const tabHandles = makeEditorHandles();
     const { container } = render(
       React.createElement(MountedViewLayers, {
         tabs: [{ label: 'a', view: 'plugin', dotColor: '#ff0', groupColor: '#ccc' }] as unknown as TabView[],
         current: { label: 'a' } as TabView,
         client: { send: vi.fn() } as never,
         closeTab: vi.fn(),
-        harnessHandles, editorHandles,
+        harnessHandles, tabHandles,
       }),
     );
     expect(container.querySelector('.tab-body')).toBeNull();
@@ -420,10 +420,10 @@ describe('MountedViewLayers', () => {
     const tab = makePluginTab('vtab', '/open/1');
     const other = makeEditorTab('etab', '/test.ts');
     const harnessHandles = makeHarnessHandles();
-    const editorHandles = makeEditorHandles();
+    const tabHandles = makeEditorHandles();
     const props = (current: TabView) => ({
       tabs: [tab, other], current, client: { send: vi.fn() } as never, closeTab: vi.fn(),
-      harnessHandles, editorHandles,
+      harnessHandles, tabHandles,
     });
     const { rerender } = render(React.createElement(MountedViewLayers, props(tab)));
     await waitFor(() => { expect(pluginMountCount).toBe(1); });
@@ -438,11 +438,11 @@ describe('MountedViewLayers', () => {
     pluginMountCount = 0;
     const tab = makePluginTab('vtab', '/open/1');
     const harnessHandles = makeHarnessHandles();
-    const editorHandles = makeEditorHandles();
+    const tabHandles = makeEditorHandles();
     const { rerender } = render(
       React.createElement(MountedViewLayers, {
         tabs: [tab], current: tab, client: { send: vi.fn() } as never, closeTab: vi.fn(),
-        harnessHandles, editorHandles,
+        harnessHandles, tabHandles,
       }),
     );
     await waitFor(() => { expect(pluginMountCount).toBe(1); });
@@ -457,7 +457,7 @@ describe('MountedViewLayers', () => {
     rerender(
       React.createElement(MountedViewLayers, {
         tabs: [refreshed], current: refreshed, client: { send: vi.fn() } as never, closeTab: vi.fn(),
-        harnessHandles, editorHandles,
+        harnessHandles, tabHandles,
       }),
     );
     expect(pluginMountCount).toBe(1);
@@ -467,11 +467,11 @@ describe('MountedViewLayers', () => {
     const closeTab = vi.fn();
     const tabs = [makeHarnessTab('htab', 'pty1'), makePluginTab('vtab', '/open/1')];
     const harnessHandles = makeHarnessHandles();
-    const editorHandles = makeEditorHandles();
+    const tabHandles = makeEditorHandles();
     const { container } = render(
       React.createElement(MountedViewLayers, {
         tabs, current: tabs[1], client: { send: vi.fn() } as never, closeTab,
-        harnessHandles, editorHandles,
+        harnessHandles, tabHandles,
       }),
     );
     await waitFor(() => { expect(container.querySelector('[data-testid="plugin"]')).toBeTruthy(); });

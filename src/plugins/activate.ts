@@ -45,6 +45,12 @@ function validateActivation(
   if (selection && !activation.selectionAction) {
     throw new Error(`contributes "${selection.label}" but provides no selectionAction handler`);
   }
+  // Same rule and same moment as the selection action above: `edit` dispatches by declaration alone,
+  // so a plugin claiming the verb with nothing behind it would swallow the command before anything
+  // could discover there is no handler — and the plain-text fallback would already be gone.
+  if (declaration.editsOwnFiles && !activation.opener.edit) {
+    throw new Error('contributes "edit" but provides no edit handler');
+  }
 }
 
 export function disposePluginActivation(activation: TabPluginActivation): void {
