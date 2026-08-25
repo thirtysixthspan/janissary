@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback } from 'react';
 import type { TabView } from '@shared/protocol';
 import type { JanusClient } from './ws';
 import { FileNavigatorTab } from './file-navigator/FileNavigatorTab';
@@ -8,6 +8,7 @@ import { TabStrip } from './TabStrip';
 import { ResizeButton } from './ResizeButton';
 import { beginResizeDrag } from './drag-resize';
 import type { CommandInputDropHandle, EditorDropHandle } from './drop-handles';
+import { useSidebarSelection } from './useSidebarSelection';
 
 const MIN_WIDTH_PX = 180;
 const MAX_WIDTH_PCT = 50;
@@ -42,11 +43,6 @@ export function Sidebar({
   // `useLayoutState.ts`.
   focusView?: 'files' | 'notifications';
 }) {
-  // Keyed by label rather than by view kind: the built-in dockable views are one per kind, but a
-  // plugin tab is not — two tabs from the same plugin, or from different ones, can share a sidebar.
-  const [selectedLabel, setSelectedLabel] = useState<string | null>(null);
-  const previousLabelsRef = useRef<Set<string>>(new Set());
-
   const onResize = useCallback((down: React.MouseEvent, move: MouseEvent) => {
     const delta = side === 'left' ? move.clientX - down.clientX : down.clientX - move.clientX;
     const maxWidth = globalThis.innerWidth * (MAX_WIDTH_PCT / 100);
@@ -69,27 +65,9 @@ export function Sidebar({
     />
   );
 
-  const entries = tabs.map((tab, index) => ({ tab, index })).filter((e) => e.tab.dock === side);
-
-  // Bring a newly-docked tab into view within the sidebar, mirroring the app's rule that docking
-  // always makes the docked tab fully visible.
-  useEffect(() => {
-    const newlyDocked = entries.find((e) => !previousLabelsRef.current.has(e.tab.label));
-    if (newlyDocked) setSelectedLabel(newlyDocked.tab.label);
-    previousLabelsRef.current = new Set(entries.map((e) => e.tab.label));
-  }, [entries]);
-
-  // A profile's declared focus wins over the "newly docked" default above, whenever the target
-  // view is actually docked here (it may arrive before or after the tab it names).
-  useEffect(() => {
-    const focused = focusView && entries.find((e) => e.tab.view === focusView);
-    if (focused) setSelectedLabel(focused.tab.label);
-  }, [focusView, entries]);
+  const { entries, setSelectedLabel, current, activeIndex, plugins } = useSidebarSelection(tabs, side, focusView);
 
   if (entries.length === 0) return null;
-  const current = entries.find((e) => e.tab.label === selectedLabel) ?? entries[0];
-  const activeIndex = entries.indexOf(current);
-  const plugins = entries.filter((e) => e.tab.view === 'plugin' && e.tab.plugin);
 
   return (
     <div className={`sidebar sidebar-${side}`} style={{ flex: `0 0 ${width}px` }} data-doc-shot={`sidebar-${side}`}>
