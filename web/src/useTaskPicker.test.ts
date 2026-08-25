@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { useTaskPicker } from './useTaskPicker';
 import type { TaskRow } from '@shared/protocol';
 import type { JanusClient } from './ws';
-import type { CommandInputDropHandle } from './CommandInput';
+import type { CommandInputDropHandle } from './drop-handles';
 
 function fileRow(path: string, depth = 0, source: TaskRow['source'] = 'project'): TaskRow {
   return { path, name: path.split('/').pop()!, depth, dir: false, source };

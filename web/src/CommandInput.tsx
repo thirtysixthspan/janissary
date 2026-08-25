@@ -7,13 +7,7 @@ import { findGhostSuggestion } from './ghost-suggestion';
 import { isCaretOnFirstLine, isCaretOnLastLine } from './command-caret-lines';
 import { spliceIntoTextarea } from './textarea-splice';
 import { useCommandHistoryRecall } from './useCommandHistoryRecall';
-
-// Exposed via `dropRef` so a file-navigator drag can insert a dropped path and highlight the command
-// bar as a valid drop target, mirroring `recallRef`'s imperative-escape-hatch pattern.
-export type CommandInputDropHandle = {
-  insertAtCaret: (text: string) => void;
-  setDropHighlighted: (active: boolean) => void;
-};
+import type { CommandInputDropHandle } from './drop-handles';
 
 export type CommandInputProperties = {
   dotColor: string;

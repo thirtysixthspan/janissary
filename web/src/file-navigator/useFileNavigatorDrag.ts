@@ -4,8 +4,7 @@ import type { JanusClient } from '../ws';
 import { parentPath, resolveDropTarget, type DropTarget } from './file-navigator-drag';
 import { joinCommandPaths } from './file-navigator-relative-path';
 import { useFileNavigatorMoveOperations } from './useFileNavigatorMoveOperations';
-import type { CommandInputDropHandle } from '../CommandInput';
-import type { EditorDropHandle } from '../EditorTab';
+import type { CommandInputDropHandle, EditorDropHandle } from '../drop-handles';
 
 const DRAG_THRESHOLD_PX = 4;
 
