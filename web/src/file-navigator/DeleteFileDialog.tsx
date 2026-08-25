@@ -1,5 +1,5 @@
 import React from 'react';
-import { ConfirmDialogShell } from './ConfirmDialogShell';
+import { ConfirmDialogShell } from '../ConfirmDialogShell';
 
 // Shown when Backspace/Delete is pressed on a selected file-navigator row, before the file or
 // directory is actually removed from disk.

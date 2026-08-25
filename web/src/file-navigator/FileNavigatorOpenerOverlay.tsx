@@ -1,5 +1,5 @@
 import React from 'react';
-import { FileOpenerPicker } from '../FileOpenerPicker';
+import { FileOpenerPicker } from './FileOpenerPicker';
 import type { PendingOpeners } from './useFileNavigatorOpener';
 import { basename } from '../rel-path';
 

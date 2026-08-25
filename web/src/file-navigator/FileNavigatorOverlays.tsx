@@ -1,7 +1,7 @@
 import React from 'react';
-import { MoveConflictDialog } from '../MoveConflictDialog/MoveConflictDialog';
-import { DeleteFileDialog } from '../DeleteFileDialog';
-import { FileSearchPopup } from '../FileSearchPopup';
+import { MoveConflictDialog } from './MoveConflictDialog';
+import { DeleteFileDialog } from './DeleteFileDialog';
+import { FileSearchPopup } from './FileSearchPopup';
 import { FileNavigatorOpenerOverlay } from './FileNavigatorOpenerOverlay';
 import type { useFileNavigatorDrag } from './useFileNavigatorDrag';
 import type { useFileNavigatorRename } from './useFileNavigatorRename';
