@@ -1,5 +1,13 @@
 import React from 'react';
-import type { JanusClient } from './ws';
+import type { TranscriptIntents } from './transcript-intents';
+
+// Whether an already-extracted href names a file and a line (`src/foo.ts:42`), which opens in an
+// editor tab, rather than a URL or a bare path, which goes through `open`.
+const FILE_LINE_LINK = /[\\/][^:]*:\d+$/;
+
+export function isFileLineLink(href: string): boolean {
+  return FILE_LINE_LINK.test(href);
+}
 
 export type FileLinkSegment =
   | { type: 'text'; content: string }
@@ -109,14 +117,13 @@ export function linkifyMarkdown(text: string): string {
 
 export function renderFileLinkSegments(
   segments: FileLinkSegment[],
-  client: JanusClient,
+  intents: TranscriptIntents,
 ): React.ReactNode[] {
   return segments.map((seg, i) => {
     if (seg.type === 'text') {
       return seg.content || null;
     }
     const isUrl = seg.type === 'url';
-    const cmd = isUrl ? `open ${seg.url}` : `edit ${seg.path}:${seg.line}`;
     return React.createElement(
       'span',
       {
@@ -125,7 +132,8 @@ export function renderFileLinkSegments(
         title: `${seg.fullMatch} — click to open`,
         onClick: (e: React.MouseEvent) => {
           e.stopPropagation();
-          client.send({ method: 'command', params: { text: cmd } });
+          if (isUrl) intents.onOpenFile(seg.url);
+          else intents.onEditFile(`${seg.path}:${seg.line}`);
         },
       },
       seg.fullMatch,
