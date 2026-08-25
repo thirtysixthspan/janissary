@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
-import type { JanusClient } from './ws';
+import type { JanusClient } from '../ws';
 import { FileNavigatorGithubButton } from './FileNavigatorGithubButton';
 
 describe('FileNavigatorGithubButton', () => {

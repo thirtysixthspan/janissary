@@ -1,5 +1,5 @@
 import type { FileNavigatorRow } from '@shared/protocol';
-import { basename, dirname } from './rel-path';
+import { basename, dirname } from '../rel-path';
 
 export type DropTarget = { path: string; conflict: boolean } | null;
 

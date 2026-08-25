@@ -1,11 +1,11 @@
 import { useRef, useState, type RefObject } from 'react';
 import type { FileNavigatorRow } from '@shared/protocol';
-import type { JanusClient } from './ws';
+import type { JanusClient } from '../ws';
 import { parentPath, resolveDropTarget, type DropTarget } from './file-navigator-drag';
 import { joinCommandPaths } from './file-navigator-relative-path';
 import { useFileNavigatorMoveOperations } from './useFileNavigatorMoveOperations';
-import type { CommandInputDropHandle } from './CommandInput';
-import type { EditorDropHandle } from './EditorTab';
+import type { CommandInputDropHandle } from '../CommandInput';
+import type { EditorDropHandle } from '../EditorTab';
 
 const DRAG_THRESHOLD_PX = 4;
 

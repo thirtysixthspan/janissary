@@ -15,7 +15,7 @@ import { useFileNavigatorPaste } from './useFileNavigatorPaste';
 import { setClipboard } from './file-navigator-clipboard';
 import { normalizeOperationPaths, useFileNavigatorSelection } from './useFileNavigatorSelection';
 import { FileNavigatorOverlays } from './FileNavigatorOverlays';
-import { useSelectionAction } from './useSelectionAction';
+import { useSelectionAction } from '../useSelectionAction';
 import { useFileNavigatorRowEvents } from './use-file-navigator-row-events';
 import type { FileNavigatorMenuActions } from './file-navigator-menu-items';
 import type { FileNavigatorTabProperties as Properties } from './file-navigator-tab-types';

@@ -1,7 +1,7 @@
 import React from 'react';
-import { MoveConflictDialog } from './MoveConflictDialog/MoveConflictDialog';
-import { DeleteFileDialog } from './DeleteFileDialog';
-import { FileSearchPopup } from './FileSearchPopup';
+import { MoveConflictDialog } from '../MoveConflictDialog/MoveConflictDialog';
+import { DeleteFileDialog } from '../DeleteFileDialog';
+import { FileSearchPopup } from '../FileSearchPopup';
 import { FileNavigatorOpenerOverlay } from './FileNavigatorOpenerOverlay';
 import type { useFileNavigatorDrag } from './useFileNavigatorDrag';
 import type { useFileNavigatorRename } from './useFileNavigatorRename';
@@ -10,10 +10,10 @@ import type { useFileNavigatorPaste } from './useFileNavigatorPaste';
 import type { useFileNavigatorSearch } from './useFileNavigatorSearch';
 import type { useFileNavigatorOpener } from './useFileNavigatorOpener';
 import type { PendingContextMenu } from './use-file-navigator-row-events';
-import { ContextMenu } from './ContextMenu';
+import { ContextMenu } from '../ContextMenu';
 import { fileNavigatorMenuItems, type FileNavigatorMenuActions } from './file-navigator-menu-items';
 import { getClipboardSnapshot } from './file-navigator-clipboard';
-import { basename } from './rel-path';
+import { basename } from '../rel-path';
 
 type Properties = {
   drag: ReturnType<typeof useFileNavigatorDrag>;

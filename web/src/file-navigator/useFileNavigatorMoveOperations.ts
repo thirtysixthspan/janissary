@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { BulkConflictPolicy, BulkMoveResult, UndoRedoResult } from '@shared/protocol';
-import type { JanusClient } from './ws';
-import { basename } from './rel-path';
+import type { JanusClient } from '../ws';
+import { basename } from '../rel-path';
 
 type Method = 'undoFileNavigatorItem' | 'redoFileNavigatorItem';
 type PendingConflict =

@@ -1,9 +1,9 @@
 import { useState, useSyncExternalStore } from 'react';
 import type { BulkConflictPolicy, BulkMoveResult, FileNavigatorRow } from '@shared/protocol';
-import type { JanusClient } from './ws';
+import type { JanusClient } from '../ws';
 import { newFileTargetDir } from './file-navigator-new-file';
 import { clearClipboard, getClipboardSnapshot, pendingClipboardMode, subscribeClipboard, type ClipboardMode } from './file-navigator-clipboard';
-import { basename } from './rel-path';
+import { basename } from '../rel-path';
 
 type PendingPasteConflict = {
   sources: string[];
