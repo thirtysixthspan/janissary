@@ -1,7 +1,9 @@
-import React, { useCallback, useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import type { JanusClient } from './ws';
 import type { BufferLine } from '@shared/protocol';
 import { renderLine, type LineHighlight } from './transcript-line';
+import { transcriptIntents } from './transcript-intents';
+import { TerminalCard } from './TerminalCard';
 
 type Properties = {
   lines: BufferLine[];
@@ -24,6 +26,10 @@ type Properties = {
 export function Transcript({ lines, client, onToggleCollapse, onPromptClick, scrollRef, highlight, showEmptyHint = true, pinToBottom = true }: Properties) {
   const stick = useRef(true);
   const contentReference = useRef<HTMLDivElement>(null);
+
+  // Memoized because the markdown line's click handler feeds a useCallback dependency array — a
+  // fresh intents object each render would rebuild that callback for every line.
+  const intents = useMemo(() => transcriptIntents(client), [client]);
 
   const pin = useCallback(() => {
     if (!pinToBottom) return;
@@ -63,7 +69,9 @@ export function Transcript({ lines, client, onToggleCollapse, onPromptClick, scr
       {showEmptyHint && lines.length === 0 && (
         <div className="line empty-state">Type "help" for available commands.</div>
       )}
-      {lines.map((line, index) => renderLine(line, index, client, onToggleCollapse, onPromptClick, highlight))}
+      {lines.map((line, index) => (line.type === 'terminal' && line.terminal
+        ? <TerminalCard key={line.terminal.ptyId} entry={line.terminal} client={client} />
+        : renderLine(line, index, intents, onToggleCollapse, onPromptClick, highlight)))}
       </div>
     </div>
   );

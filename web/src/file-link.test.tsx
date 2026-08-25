@@ -2,8 +2,12 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi } from 'vitest';
-import type { JanusClient } from './ws';
-import { fileLineSegments, linkifyMarkdown, renderFileLinkSegments } from './file-link';
+import type { TranscriptIntents } from './transcript-intents';
+import { fileLineSegments, isFileLineLink, linkifyMarkdown, renderFileLinkSegments } from './file-link';
+
+function fakeIntents() {
+  return { onOpenFile: vi.fn(), onEditFile: vi.fn(), onFocusTab: vi.fn() } satisfies TranscriptIntents;
+}
 
 describe('fileLineSegments', () => {
   it('returns a plain text segment when no file:line pattern is found', () => {
@@ -183,32 +187,53 @@ describe('linkifyMarkdown', () => {
   });
 });
 
+describe('isFileLineLink', () => {
+  it('accepts a relative path with a line number', () => {
+    expect(isFileLineLink('src/foo.ts:42')).toBe(true);
+  });
+
+  it('accepts an absolute path with a line number', () => {
+    expect(isFileLineLink('/abs/path.ts:1')).toBe(true);
+  });
+
+  it('rejects an http url', () => {
+    expect(isFileLineLink('https://example.com')).toBe(false);
+  });
+
+  it('rejects a bare word with a line number', () => {
+    expect(isFileLineLink('word:42')).toBe(false);
+  });
+
+  it('rejects a path with no line number', () => {
+    expect(isFileLineLink('src/foo.ts')).toBe(false);
+  });
+});
+
 describe('renderFileLinkSegments', () => {
   const linkSegment = { type: 'link' as const, fullMatch: 'src/foo.ts:42', path: 'src/foo.ts', line: 42 };
 
-  it('sends an edit command when a file:line link is clicked', async () => {
-    const send = vi.fn();
-    const client = { send } as unknown as JanusClient;
+  it('asks to edit the file and line when a file:line link is clicked', async () => {
+    const intents = fakeIntents();
     const segments = [{ type: 'text' as const, content: 'Error in ' }, linkSegment];
-    render(<>{renderFileLinkSegments(segments, client)}</>);
+    render(<>{renderFileLinkSegments(segments, intents)}</>);
     await userEvent.click(screen.getByText('src/foo.ts:42'));
-    expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'edit src/foo.ts:42' } });
+    expect(intents.onEditFile).toHaveBeenCalledWith('src/foo.ts:42');
+    expect(intents.onOpenFile).not.toHaveBeenCalled();
   });
 
   it('renders plain text segments without click handlers', () => {
-    const send = vi.fn();
-    const client = { send } as unknown as JanusClient;
+    const intents = fakeIntents();
     const segments = [{ type: 'text' as const, content: 'just text' }];
-    render(<>{renderFileLinkSegments(segments, client)}</>);
+    render(<>{renderFileLinkSegments(segments, intents)}</>);
     expect(screen.getByText('just text')).toBeDefined();
   });
 
-  it('sends an open command when a url segment is clicked', async () => {
-    const send = vi.fn();
-    const client = { send } as unknown as JanusClient;
+  it('asks to open the url when a url segment is clicked', async () => {
+    const intents = fakeIntents();
     const segments = [{ type: 'text' as const, content: 'Visit ' }, { type: 'url' as const, fullMatch: 'https://example.com', url: 'https://example.com' }];
-    render(<>{renderFileLinkSegments(segments, client)}</>);
+    render(<>{renderFileLinkSegments(segments, intents)}</>);
     await userEvent.click(screen.getByText('https://example.com'));
-    expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'open https://example.com' } });
+    expect(intents.onOpenFile).toHaveBeenCalledWith('https://example.com');
+    expect(intents.onEditFile).not.toHaveBeenCalled();
   });
 });
