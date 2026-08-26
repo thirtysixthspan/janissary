@@ -29,6 +29,8 @@ For an agent or harness launched on another machine with `on <address>`, Janissa
 
 The token reaches the workspace whether or not isolation is actually active on the machine running the tab. Isolation needs macOS, so a Linux remote runs without it — the tab says so when it opens — but pushing from that workspace still works the same way, through the same token.
 
+Both machines need a Janissary recent enough to forward a token. If one of them is older, the launch stops with a message naming both protocol versions and telling you to update — rather than opening a tab that runs perfectly and quietly can't push. When the tab does open, it tells you if the forwarded token isn't the one being used: you'll see a line about the token if the remote fell back to its own, or if neither machine had one. No such line means the token you configured here is what the remote workspace is running on.
+
 Create a [fine-grained personal access token](https://github.com/settings/personal-access-tokens/new) scoped to just the repositories the agent should reach, with **Contents: Read and write**, **Pull requests: Read and write**, and **Metadata: Read-only** permissions — nothing broader. Save the token value to `.janissary/github-token` (already gitignored; janissary only ever reads this file, never writes to it).
 
 Pushing from inside a workspace never touches your own git config or an ambient GitHub credential cached elsewhere on your machine, such as an old keychain-stored login — only the token in `.janissary/github-token` is used. That keeps a stale cached credential from intercepting the push and failing with `Write access to repository not granted` even though your token is valid.

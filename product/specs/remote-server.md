@@ -87,6 +87,14 @@ local workspace clone does:
   versions and says to update janissary so the hosts match.
 - The ssh session ends before the workspace is ready.
 
+The protocol version covers what the frames carry, not only their shape. A field one end fills in
+and the other is expected to honor is as much a part of the contract as a new frame type, because an
+end that merely ignores it looks healthy while doing the wrong thing. Forwarding the initiating
+project's GitHub token is such a field: an installation predating it accepts the provisioning
+request, drops the token, provisions the workspace, and runs the harness — leaving a tab that works
+in every visible way and cannot push. That installation is therefore refused at the handshake as a
+version mismatch, which is the whole reason the version moved when the field was added.
+
 ### Lifecycle and cleanup
 
 A remote tab's lifetime is its channel's lifetime. If the ssh session ends for any reason the tab
@@ -120,6 +128,14 @@ remote's own isolation state — a remote where the sandbox is inactive, which i
 remote, still receives the token in its workspaced processes. If the local project has no token, the
 remote project's own `.janissary/github-token` remains the fallback. The initial clone uses whatever
 transport the *remote* repository's `origin` already has.
+
+Which credential the remote workspace ended up with is reported the same way its isolation state is,
+and for the same reason: only the remote knows, and the difference is otherwise invisible until a
+much later `git push` fails. The notice is silent when the forwarded token is the one in use — the
+ordinary case, with nothing to say — and speaks when it is not: once for a workspace running on the
+remote project's own token because nothing was forwarded, and once for a workspace where neither
+machine had a token to inject. When the remote has both an isolation notice and a credential notice,
+the tab shows them on one line, separated by `; `.
 
 ### Appearance
 

@@ -96,6 +96,28 @@ describe('RemoteServer', () => {
     server.shutdown(0);
   });
 
+  // The credential the remote workspace ends up with is invisible until a much later `git push`
+  // fails, so the provisioning answer says when it is not the forwarded one. Both assertions look
+  // for the clause rather than the whole notice, since the isolation half depends on the machine
+  // running the test.
+  it('says nothing about the token when the forwarded one is in use', async () => {
+    const { server, frames } = makeServer();
+    server.receive(`${encodeFrame({ type: 'provision', label: 'claude-forwarded', githubToken: 'github_pat_forwarded' })}\n`);
+    await vi.waitFor(() => expect(frames.some((f) => f.type === 'workspace-ready')).toBe(true));
+
+    expect(frames.find((f) => f.type === 'workspace-ready')?.notice ?? '').not.toContain('github token:');
+    server.shutdown(0);
+  });
+
+  it('reports a workspace left with no token at all', async () => {
+    const { server, frames } = makeServer();
+    server.receive(`${encodeFrame({ type: 'provision', label: 'claude-tokenless' })}\n`);
+    await vi.waitFor(() => expect(frames.some((f) => f.type === 'workspace-ready')).toBe(true));
+
+    expect(frames.find((f) => f.type === 'workspace-ready')?.notice).toContain('github token:');
+    server.shutdown(0);
+  });
+
   it('removes the clone when the session ends', async () => {
     const { server, frames, exit } = makeServer();
     server.receive(`${encodeFrame({ type: 'provision', label: 'claude-cleanup' })}\n`);
