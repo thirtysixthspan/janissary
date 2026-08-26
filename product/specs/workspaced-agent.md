@@ -51,6 +51,8 @@ For `git push` specifically, the token reaches git through a credential helper t
 
 A codex harness needs one thing more. Codex filters the environment it hands to every command it runs, and its own default policy drops any variable whose name looks credential-shaped — `GH_TOKEN` among them — so the injected token is stripped again before `git push` or `gh` can use it. The project's standard codex configuration (`.codex/config.toml`, installed by `janus init` — see [[cli]]) therefore marks `GH_TOKEN` and `GITHUB_TOKEN` as included in that policy, leaving the rest of codex's default exclusions in force. Without those entries a workspaced codex tab fails exactly as though no token were configured at all, even though one was injected. Codex reads a project's configuration only once that project is trusted in the user's own codex settings; until then the entries have no effect.
 
+That requirement is codex's alone. The claude and opencode harnesses hand their own environment to the commands they run unchanged, so the injected `GH_TOKEN` reaches `git` and `gh` from those tabs with no configuration of any kind — opencode has no environment-filtering setting to configure, and janissary ships no opencode configuration.
+
 ### Workspace lifecycle
 
 Workspace directories are ephemeral:
