@@ -115,7 +115,9 @@ inactive otherwise; the remote's own isolation notice — not this machine's —
 tab. `--offline` is likewise only meaningful where the remote's sandbox is active. The local
 project's scoped `.janissary/github-token`, when configured, is forwarded in the encrypted SSH
 channel's provisioning frame and injected as `GH_TOKEN` only into that remote tab's workspaced
-processes; it is never written to the remote filesystem. If the local project has no token, the
+processes; it is never written to the remote filesystem. That injection is independent of the
+remote's own isolation state — a remote where the sandbox is inactive, which is every non-macOS
+remote, still receives the token in its workspaced processes. If the local project has no token, the
 remote project's own `.janissary/github-token` remains the fallback. The initial clone uses whatever
 transport the *remote* repository's `origin` already has.
 

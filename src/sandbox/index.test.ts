@@ -1,10 +1,19 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync, realpathSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { loadConfig } from '../config.js';
 import { sandboxAvailable, sandboxSpawn } from './index.js';
 import { SANDBOX_PROFILE, SANDBOX_PROFILE_OFFLINE } from './profile.js';
+
+// A project whose config turns workspace isolation off — the same unconfined path a non-darwin
+// remote takes, reachable from any platform the suite runs on.
+function configureUnconfined(): void {
+  const dir = mkdtempSync(path.join(tmpdir(), 'sandbox-cfg-off-'));
+  mkdirSync(path.join(dir, '.janissary'), { recursive: true });
+  writeFileSync(path.join(dir, '.janissary', 'config.json'), JSON.stringify({ sandboxWorkspaces: false }));
+  loadConfig(dir);
+}
 
 function parenDepth(text: string): number {
   let depth = 0;
@@ -40,13 +49,43 @@ describe('sandboxSpawn', () => {
   });
 
   it('returns the input unchanged when sandboxWorkspaces is configured off', () => {
-    const dir = mkdtempSync(path.join(tmpdir(), 'sandbox-cfg-off-'));
-    mkdirSync(path.join(dir, '.janissary'), { recursive: true });
-    writeFileSync(path.join(dir, '.janissary', 'config.json'), JSON.stringify({ sandboxWorkspaces: false }));
-    loadConfig(dir);
+    configureUnconfined();
     const env = { PATH: '/usr/bin' };
     const result = sandboxSpawn({ workspaceDir: '/tmp/whatever' }, 'bash', ['-lc', 'echo hi'], env);
     expect(result).toEqual({ command: 'bash', args: ['-lc', 'echo hi'], env });
+  });
+
+  // A non-darwin remote and a host with the toggle off take the same unconfined path, and a
+  // workspaced tab on either still pushes over HTTPS with `gh auth git-credential` — so the
+  // credential has to arrive there too, even though nothing is being sandboxed.
+  it('still injects the GitHub credential for a workspaced spawn when nothing is confined', () => {
+    configureUnconfined();
+    const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
+    mkdirSync(`${workspaceDir}.tmp`, { recursive: true });
+    const result = sandboxSpawn({ workspaceDir, githubToken: 'scoped-token' }, 'bash', [], { PATH: '/usr/bin' });
+    expect(result.command).toBe('bash');
+    expect(result.env.GH_TOKEN).toBe('scoped-token');
+    expect(result.env.GH_CONFIG_DIR).toBe(path.join(realpathSync(`${workspaceDir}.tmp`), 'gh-config'));
+    rmSync(`${workspaceDir}.tmp`, { recursive: true, force: true });
+    rmSync(workspaceDir, { recursive: true, force: true });
+  });
+
+  it('leaves the rest of an unconfined environment alone rather than scrubbing it', () => {
+    configureUnconfined();
+    const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
+    const env = { PATH: '/usr/bin', SSH_AUTH_SOCK: '/tmp/agent.sock', NPM_TOKEN: 'ambient' };
+    const result = sandboxSpawn({ workspaceDir, githubToken: 'scoped-token' }, 'bash', [], env);
+    expect(result.env.SSH_AUTH_SOCK).toBe('/tmp/agent.sock');
+    expect(result.env.NPM_TOKEN).toBe('ambient');
+    expect(result.env.PATH).toBe('/usr/bin');
+    rmSync(workspaceDir, { recursive: true, force: true });
+  });
+
+  it('sets no GitHub credential on an unconfined spawn that has no workspaceDir', () => {
+    configureUnconfined();
+    const env = { PATH: '/usr/bin' };
+    const result = sandboxSpawn({ githubToken: 'scoped-token' }, 'bash', [], env);
+    expect(result).toEqual({ command: 'bash', args: [], env });
   });
 
   it('wraps the command in sandbox-exec when a workspaceDir is given and sandboxing is available', () => {

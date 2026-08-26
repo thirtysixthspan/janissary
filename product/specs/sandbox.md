@@ -100,7 +100,11 @@ fresh `gh-config` directory under the workspace's private temp dir: `gh` reads
 treats the sandbox's deny on that file (`SECRET_DENY_PATHS` above) as a fatal error rather than
 falling back to `GH_TOKEN` — `gh auth status`/`gh api`/etc. refuse to run at all otherwise.
 Redirecting `GH_CONFIG_DIR` gives `gh` a directory with a genuinely absent `hosts.yml` (real ENOENT,
-no denial involved), which it handles by falling through to `GH_TOKEN` normally. (Seatbelt's
+no denial involved), which it handles by falling through to `GH_TOKEN` normally. Those two variables
+are the one part of this section that is *not* conditional on isolation being active: a workspaced
+tab needs its scoped credential to push whether or not the machine can confine it (see
+[[workspaced-agent]]), so `GH_TOKEN` and `GH_CONFIG_DIR` are added on the pass-through path too —
+where nothing else about the environment is changed and nothing is scrubbed. (Seatbelt's
 `(with errno ...)` deny qualifier looks like a more surgical fix, but only takes effect when it's the
 *sole* matching deny for that operation+path — any other unqualified deny or allow on the same path,
 in either direction, wins over it regardless of rule ordering, and `hosts.yml` already falls under
