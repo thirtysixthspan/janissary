@@ -151,11 +151,11 @@ describe('ProfileManager.newAgent', () => {
     const { managers, appended } = makeManagers(janus);
     const manager = new ProfileManager(managers);
 
-    manager.newAgent('agent bob');
+    manager.newAgent('agent bob --no-workspace');
 
     expect(managers.workspace.create).not.toHaveBeenCalled();
     expect(managers.tab.addBusy).not.toHaveBeenCalled();
-    expect(appended).toEqual([{ input: 'agent bob', output: 'Agent "bob" ready.' }]);
+    expect(appended).toEqual([{ input: 'agent bob --no-workspace', output: 'Agent "bob" ready.' }]);
   });
 
   it('reports a workspace-creation error and never creates the tab', () => {

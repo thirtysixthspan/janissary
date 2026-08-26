@@ -7,7 +7,7 @@
 ```
 harness claude
 harness opencode as quality        custom tab label
-harness claude -w                  in a disposable workspace clone
+harness claude --no-workspace      opt out of the default workspace
 ```
 
 The harness takes over the whole tab: no transcript, no command bar — you're talking straight to the harness's own interface, exactly as you would in a terminal. The binary must be installed and on your `PATH`; if it isn't, the tab closes as soon as it opens (the launch is still recorded in the tab you ran the command from).
@@ -37,7 +37,7 @@ harness opencode as quality        → tab "quality-2"
 
 ## New harness dialog
 
-Typing `harness` with no arguments opens a **New harness** dialog instead of erroring: a form with a harness selector, a **Label** field, **Workspace** and **Offline** toggles, an **Auto-approve** toggle, and **Model** and **Effort** dropdowns.
+Typing `harness` with no arguments opens a **New harness** dialog instead of erroring: a form with a harness selector, a **Label** field, **Workspace** and **Offline** toggles, an **Auto-approve** toggle, and **Model** and **Effort** dropdowns. **Workspace** starts checked. **Auto-approve** starts checked for claude and codex and disabled for opencode.
 
 ![The New harness dialog, with fields for harness, label, workspace, offline, auto-approve, model, and effort.](/screenshots/harness-launch-dialog.png)
 
@@ -46,7 +46,7 @@ Typing `harness` with no arguments opens a **New harness** dialog instead of err
 ## Choosing a model and effort level
 
 ```
-harness <name> [as <label>] [-w] [-y] [--model <name>] [--effort <level>]
+harness <name> [as <label>] [--no-workspace] [--no-auto-approve] [--model <name>] [--effort <level>]
 ```
 
 `--model <name>` picks a model, passed to the harness binary's `--model` flag verbatim. It's checked against that harness's known model catalog first — an unknown model errors with `Unknown model "<model>" for harness "<name>" — add it to harness-models.json.` and no tab opens (today only opencode's and claude's catalogs are populated).
@@ -66,17 +66,17 @@ Whichever of `--model` and `--effort` you set show up as small chips in the harn
 
 ## Workspaces
 
-`-w` / `--workspace` starts the harness inside a disposable clone of your repository instead of the project itself — the same isolation agents get. See [Workspaced agents](/user-documentation/advanced-agents/workspaced-agent) for how the clone, sandboxing, and GitHub authentication work.
+Harnesses start inside a disposable clone by default — the same isolation agents get. `-w`/`--workspace` explicitly confirms the default, and `--no-workspace` opts out. See [Workspaced agents](/user-documentation/advanced-agents/workspaced-agent) for how the clone, sandboxing, and GitHub authentication work.
 
 ## Auto-approving permission prompts
 
-`-y` / `--yes` lets a claude or codex harness run unattended: when the harness raises its own permission prompt, the app answers it automatically instead of waiting for you, and records an `Auto-approved a permission prompt` notification with a link to what was approved. For codex, the app recognizes its approval overlay and confirms the highlighted one-time approval choice — never a persistent "always allow" option. It's supported for claude and codex:
+Claude and codex harnesses auto-approve permission prompts by default. `-y`/`--yes` explicitly confirms the default; `--no-auto-approve` opts out. When active, the app answers a harness permission prompt automatically instead of waiting for you, and records an `Auto-approved a permission prompt` notification with a link to what was approved. For codex, the app recognizes its approval overlay and confirms the highlighted one-time approval choice — never a persistent "always allow" option. Opencode remains unsupported:
 
 - `harness opencode -y` (or any harness without a recognized permission prompt): `-y/--yes is only supported for the claude and codex harnesses.`
 
-`-y` doesn't require `-w`/`--workspace`. Launching without a workspace still works, but since there's no disposable clone (or sandbox) confining the harness, the new tab's terminal shows a security warning that prompts will be approved unattended against your real files.
+Auto-approval doesn't require a workspace. Launching with `--no-workspace` still works, but unless you also pass `--no-auto-approve`, the new tab's terminal shows a security warning that prompts will be approved unattended against your real files.
 
-A harness launched with `-y` shows the auto-permitting flag icon in its metadata row.
+A harness with auto-approval active shows the auto-permitting flag icon in its metadata row.
 
 ## Starting with a prompt
 

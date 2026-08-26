@@ -8,11 +8,11 @@ A project can supply its own `.janissary/agent-names.json` (a JSON array of name
 
 ### `agent` command
 
-Creates a new agent tab with a random unused name from the pool. See the Tabs section.
+Creates a new workspaced agent tab with a random unused name from the pool. See the Tabs section.
 
 ### `agent <name>` command
 
-Creates a new agent tab with the specified name. See the Tabs section. Add `--workspace` (or `-w`) to clone the root repo into a disposable workspace at `.janissary/workspace/<name>/`.
+Creates a new workspaced agent tab with the specified name. See the Tabs section. `--workspace` (or `-w`) explicitly confirms the default; `--no-workspace` starts the agent in the project checkout instead.
 
 ### `on <address>` clause
 

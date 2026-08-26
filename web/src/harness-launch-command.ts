@@ -21,9 +21,9 @@ export function buildHarnessLaunchCommand(fields: HarnessLaunchFields): string {
   const parts = ['harness', fields.name];
   const label = fields.label.trim();
   if (label) parts.push('as', label);
-  if (fields.workspace) parts.push('-w');
+  if (!fields.workspace) parts.push('--no-workspace');
   if (fields.offline) parts.push('--offline');
-  if (fields.autoApprove) parts.push('-y');
+  if (!fields.autoApprove) parts.push('--no-auto-approve');
   if (fields.model) parts.push('--model', fields.model);
   const effort = fields.effort.trim();
   if (effort) parts.push('--effort', effort);

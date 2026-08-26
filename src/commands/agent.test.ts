@@ -59,14 +59,26 @@ describe('resolveAgentName', () => {
 });
 
 describe('parseAgentCommand', () => {
-  it('extracts name from bare agent command', () => {
+  it('defaults a bare agent command to a workspace', () => {
     const result = parseAgentCommand('agent');
-    expect(result).toEqual({ name: '', workspace: false, offline: false });
+    expect(result).toEqual({ name: '', workspace: true, offline: false });
   });
 
-  it('extracts name from agent <name>', () => {
+  it('defaults a named agent to a workspace', () => {
     const result = parseAgentCommand('agent bilal');
-    expect(result).toEqual({ name: 'bilal', workspace: false, offline: false });
+    expect(result).toEqual({ name: 'bilal', workspace: true, offline: false });
+  });
+
+  it('accepts --no-workspace as an opt-out', () => {
+    expect(parseAgentCommand('agent bilal --no-workspace')).toEqual({
+      name: 'bilal', workspace: false, offline: false,
+    });
+  });
+
+  it('lets --no-workspace override a positive workspace flag', () => {
+    expect(parseAgentCommand('agent bilal --no-workspace -w')).toEqual({
+      name: 'bilal', workspace: false, offline: false,
+    });
   });
 
   it('extracts name and workspace flag from agent <name> --workspace', () => {
@@ -96,7 +108,7 @@ describe('parseAgentCommand', () => {
 
   it('truncates the name to the configured max length', () => {
     const result = parseAgentCommand('agent abcdefghijklmnopqrstuvwxyz');
-    expect(result).toEqual({ name: 'abcdefghijklmnop', workspace: false, offline: false }); // 16 chars
+    expect(result).toEqual({ name: 'abcdefghijklmnop', workspace: true, offline: false }); // 16 chars
   });
 
   it('extracts the offline flag', () => {
@@ -132,7 +144,7 @@ describe('parseAgentCommand — on <address> clause', () => {
   });
 
   it('leaves a name merely starting with "on" alone', () => {
-    expect(parseAgentCommand('agent onyx')).toMatchObject({ name: 'onyx', workspace: false, remote: undefined });
+    expect(parseAgentCommand('agent onyx')).toMatchObject({ name: 'onyx', workspace: true, remote: undefined });
   });
 
   it('reports the address\'s own error rather than launching locally', () => {

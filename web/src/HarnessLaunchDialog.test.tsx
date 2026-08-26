@@ -24,6 +24,12 @@ function renderDialog() {
 beforeEach(() => resetHarnessLaunchDialogMemory());
 
 describe('HarnessLaunchDialog', () => {
+  it('defaults workspace and supported auto-approve on', () => {
+    const { getByLabelText } = renderDialog();
+    expect((getByLabelText(/Workspace/) as HTMLInputElement).checked).toBe(true);
+    expect((getByLabelText(/Auto-approve/) as HTMLInputElement).checked).toBe(true);
+  });
+
   it('renders a harness option per delivered name', () => {
     const { container } = renderDialog();
     const options = [...container.querySelectorAll('select')][0].querySelectorAll('option');
@@ -33,7 +39,7 @@ describe('HarnessLaunchDialog', () => {
   it('enables Auto-approve for claude regardless of the Workspace toggle', () => {
     const { getByLabelText } = renderDialog();
     const auto = getByLabelText(/Auto-approve/) as HTMLInputElement;
-    expect(auto.disabled).toBe(false); // claude, workspace off
+    expect(auto.disabled).toBe(false);
     fireEvent.click(getByLabelText(/Workspace/));
     expect((getByLabelText(/Auto-approve/) as HTMLInputElement).disabled).toBe(false);
   });
@@ -48,7 +54,6 @@ describe('HarnessLaunchDialog', () => {
 
   it('keeps Auto-approve checked when switching between claude and codex', () => {
     const { getByLabelText, container } = renderDialog();
-    fireEvent.click(getByLabelText(/Auto-approve/));
     expect((getByLabelText(/Auto-approve/) as HTMLInputElement).checked).toBe(true);
     fireEvent.change(container.querySelector('select')!, { target: { value: 'codex' } });
     expect((getByLabelText(/Auto-approve/) as HTMLInputElement).checked).toBe(true);
@@ -71,12 +76,14 @@ describe('HarnessLaunchDialog', () => {
     expect(getByText(/Auto-approve \(-y\) — claude and codex only/)).toBeTruthy();
   });
 
-  it('submits `harness codex -y` for codex with auto-approve', () => {
+  it('submits an explicit opt-out when codex auto-approve is unchecked', () => {
     const { getByText, getByLabelText, container, send } = renderDialog();
     fireEvent.change(container.querySelector('select')!, { target: { value: 'codex' } });
     fireEvent.click(getByLabelText(/Auto-approve/));
     fireEvent.click(getByText('Create'));
-    expect(send).toHaveBeenNthCalledWith(1, { method: 'command', params: { text: 'harness codex -y' } });
+    expect(send).toHaveBeenNthCalledWith(1, {
+      method: 'command', params: { text: 'harness codex --no-auto-approve' },
+    });
   });
 
   it('disables the Model dropdown for a harness with an empty catalog (codex)', () => {
@@ -94,7 +101,10 @@ describe('HarnessLaunchDialog', () => {
     fireEvent.click(getByLabelText(/Auto-approve/));
     fireEvent.change([...container.querySelectorAll('select')][1], { target: { value: 'sonnet' } });
     fireEvent.click(getByText('Create'));
-    expect(send).toHaveBeenNthCalledWith(1, { method: 'command', params: { text: 'harness claude -w -y --model sonnet' } });
+    expect(send).toHaveBeenNthCalledWith(1, {
+      method: 'command',
+      params: { text: 'harness claude --no-workspace --no-auto-approve --model sonnet' },
+    });
     expect(send).toHaveBeenNthCalledWith(2, { method: 'closeHarnessLaunch', params: {} });
   });
 
@@ -120,7 +130,7 @@ describe('HarnessLaunchDialog', () => {
 
     const second = renderDialog();
     expect((second.container.querySelector('select') as HTMLSelectElement).value).toBe('opencode');
-    expect((second.getByLabelText(/Workspace/) as HTMLInputElement).checked).toBe(true);
+    expect((second.getByLabelText(/Workspace/) as HTMLInputElement).checked).toBe(false);
   });
 
   it('does not focus the Create button on a fresh dialog with no remembered settings', () => {

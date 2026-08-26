@@ -47,7 +47,7 @@ function splitWithClause(rest: string): { left: string; prompt?: string } | { er
   return { left: rest.slice(0, withMatch.index).trim(), prompt };
 }
 
-// Parse the option flags following the harness name: -w/--workspace, --offline, -y/--yes,
+// Parse the option flags following the harness name: workspace and auto-approve opt-ins/outs, --offline,
 // --model <name>, --effort <level>, `on <address>`, and a trailing `as <label>`. Split out of
 // `parseHarnessCommand` so that function's own branching stays under the complexity limit.
 // A present `on` forces `workspace` true, so no caller has to remember the implication: the remote
@@ -61,12 +61,15 @@ function parseHarnessFlags(
 } | { error: string } {
   const remote = findRemoteClause(tokens);
   if (remote !== undefined && 'error' in remote) return remote;
-  const workspace = remote !== undefined || tokens.some((t) => t === '-w' || t === '--workspace');
+  const noWorkspace = tokens.some((t) => t.toLowerCase() === '--no-workspace');
+  const workspace = remote !== undefined || !noWorkspace;
   const offline = tokens.some((t) => t.toLowerCase() === '--offline');
-  const autoApprove = tokens.some((t) => t === '-y' || t === '--yes');
+  const noAutoApprove = tokens.some((t) => t.toLowerCase() === '--no-auto-approve');
+  const requestedAutoApprove = tokens.some((t) => t === '-y' || t === '--yes');
+  const autoApprove = supportsHarnessAutoApprove(name) && !noAutoApprove;
   // The supported-harness check comes first: adding -w would not make `harness opencode -y` valid,
   // so pointing at -w would misdirect — the harness choice is the real blocker.
-  if (autoApprove && !supportsHarnessAutoApprove(name)) {
+  if (requestedAutoApprove && !noAutoApprove && !supportsHarnessAutoApprove(name)) {
     return { error: '-y/--yes is only supported for the claude and codex harnesses.' };
   }
   const model = findFlagValue(tokens, '--model');

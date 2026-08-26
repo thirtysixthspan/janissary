@@ -8,7 +8,7 @@ A workspaced agent is an agent tab with its own cloned workspace. This workspace
 
 ### Workspace agent tab
 
-`agent <name> --workspace` (or `-w`) creates a tab with a cloned workspace — a `git clone` of the root repository's `origin` remote, detected from the current directory. The workspace is created at `.janissary/workspace/<name>/` and the agent's shell spawns there. Bare `agent --workspace` picks a random unused name with a workspace.
+`agent <name>` creates a tab with a cloned workspace by default — a `git clone` of the root repository's `origin` remote, detected from the current directory. The workspace is created at `.janissary/workspace/<name>/` and the agent's shell spawns there. `-w`/`--workspace` explicitly confirms the default. `--no-workspace` opts out and starts the agent in the project checkout instead. If both forms are present, `--no-workspace` wins.
 
 If no git repository is found from the current directory, or the repository has no `origin` remote, an error is shown and no tab is created.
 
@@ -18,10 +18,11 @@ The "New agent here" button (➕) in a tab's metadata row creates a new agent ta
 
 ### Workspace harness tab
 
-`harness <name> -w` (or `--workspace`) creates a harness tab with a cloned workspace using the same
+`harness <name>` creates a harness tab with a cloned workspace by default using the same
 mechanism. The workspace is named after the harness tab's unique label (e.g. `claude`, `claude-2`)
-and the harness PTY starts there. Otherwise identical to an agent workspace: `git clone` of `origin`,
-stored at `.janissary/workspace/<label>/`, removed when the tab is closed.
+and the harness PTY starts there. `-w`/`--workspace` explicitly confirms the default;
+`--no-workspace` opts out, and wins if both forms are present. Otherwise identical to an agent
+workspace: `git clone` of `origin`, stored at `.janissary/workspace/<label>/`, removed when the tab is closed.
 
 ### Remote workspaces
 
@@ -57,4 +58,3 @@ Workspace directories are ephemeral:
   cancels it right away, the same as any other close.
 - **Tab close**: The workspace directory is removed when the tab is closed. The tab closes immediately and the clone is deleted in the background, so removing a large workspace never freezes the UI. If the app exits before a background deletion finishes, that clone is still cleaned up as part of shutdown.
 - **`--relaunch`**: Workspace directories are not recreated; restore falls back to the tab's last known working directory.
-

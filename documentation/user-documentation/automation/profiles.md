@@ -47,7 +47,8 @@ The eleven types are `agent`, `harness`, `editor`, `files`, `notifications`, `sc
 
 - **`model`** — passed to the harness verbatim; an unknown model for that harness is reported and the entry skipped.
 - **`effort`** — an effort/thinking level, forwarded verbatim like `--effort` on the interactive `harness` command (translated to each harness's own flag: claude `--effort`, codex `-c model_reasoning_effort`, opencode has none). Not validated against any fixed set of levels.
-- **`workspace`** — launch in a fresh [workspace clone](/user-documentation/advanced-agents/workspaced-agent), like `-w`.
+- **`workspace`** — launch in a fresh [workspace clone](/user-documentation/advanced-agents/workspaced-agent). It defaults to `true`; set it to `false` to opt out.
+- **`autoApprove`** — auto-approve permission prompts. It defaults to `true` for claude and codex and `false` for opencode; explicitly setting it to `true` for opencode reports an unsupported setting and skips that entry.
 - **`cwd`** — starting directory. `$root` resolves to the project's launch directory and `~` to home, so you can write a portable path instead of an absolute one — a `profile save`d entry captures its `cwd` this way automatically when it's under the project root.
 - **`run`** — commands typed into the harness once, shortly after launch.
 - **`schedule`** — timers in the [`schedule` grammar](/user-documentation/automation/scheduling), minus the leading `schedule` keyword and any `in <tab>` clause (each line belongs to this tab). A line that doesn't parse is reported at launch and skipped.

@@ -1,14 +1,15 @@
 # Workspaced agents
 
-Add `--workspace` to give an agent its own disposable clone of the repository:
+Agents and harnesses use disposable clones by default:
 
 ```
-agent emrah --workspace      agent "emrah" in a fresh clone
-agent -w                     random name, same thing
-harness claude -w            a harness in a clone (see Harness tabs)
+agent emrah                  agent "emrah" in a fresh clone
+agent                        random name, same thing
+harness claude               a harness in a clone (see Harness tabs)
+agent emrah --no-workspace   opt out and use the project checkout
 ```
 
-The clone is made from your repository's `origin` remote and lands at `$root/workspace/<name>`; the agent's shell starts inside it, so everything the agent does happens in the clone, not your checkout. Why you'd want that — and exactly what the isolation allows and blocks — is covered in [Workspacing](/user-documentation/advanced-agents/workspacing).
+The clone is made from your repository's `origin` remote and lands at `$root/workspace/<name>`; the agent's shell starts inside it, so everything the agent does happens in the clone, not your checkout. `-w`/`--workspace` explicitly confirms the default. `--no-workspace` opts out. Why you'd want a workspace — and exactly what the isolation allows and blocks — is covered in [Workspacing](/user-documentation/advanced-agents/workspacing).
 
 Running the command from a directory that isn't in a git repository, or in a repo without an `origin` remote, shows an error and creates no tab.
 

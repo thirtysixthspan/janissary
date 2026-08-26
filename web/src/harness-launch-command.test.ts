@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { buildHarnessLaunchCommand, type HarnessLaunchFields } from './harness-launch-command';
 
 function fields(overrides: Partial<HarnessLaunchFields> = {}): HarnessLaunchFields {
-  return { name: 'claude', label: '', workspace: false, offline: false, autoApprove: false, model: '', effort: '', ...overrides };
+  return { name: 'claude', label: '', workspace: true, offline: false, autoApprove: true, model: '', effort: '', ...overrides };
 }
 
 describe('buildHarnessLaunchCommand', () => {
@@ -18,16 +18,16 @@ describe('buildHarnessLaunchCommand', () => {
     expect(buildHarnessLaunchCommand(fields({ label: ' '.repeat(3) }))).toBe('harness claude');
   });
 
-  it('adds -w for workspace', () => {
-    expect(buildHarnessLaunchCommand(fields({ workspace: true }))).toBe('harness claude -w');
+  it('adds --no-workspace when workspace is disabled', () => {
+    expect(buildHarnessLaunchCommand(fields({ workspace: false }))).toBe('harness claude --no-workspace');
   });
 
   it('adds --offline for offline', () => {
     expect(buildHarnessLaunchCommand(fields({ offline: true }))).toBe('harness claude --offline');
   });
 
-  it('adds -y for autoApprove', () => {
-    expect(buildHarnessLaunchCommand(fields({ autoApprove: true }))).toBe('harness claude -y');
+  it('adds --no-auto-approve when autoApprove is disabled', () => {
+    expect(buildHarnessLaunchCommand(fields({ autoApprove: false }))).toBe('harness claude --no-auto-approve');
   });
 
   it('adds --model with the value verbatim (not quoted, so it round-trips through the parser)', () => {
@@ -42,10 +42,12 @@ describe('buildHarnessLaunchCommand', () => {
     const command = buildHarnessLaunchCommand(fields({
       name: 'claude', label: 'quality', workspace: true, offline: true, autoApprove: true, model: '', effort: 'high',
     }));
-    expect(command).toBe('harness claude as quality -w --offline -y --effort high');
+    expect(command).toBe('harness claude as quality --offline --effort high');
   });
 
-  it('combines -w and -y in the fixed flag order', () => {
-    expect(buildHarnessLaunchCommand(fields({ workspace: true, autoApprove: true }))).toBe('harness claude -w -y');
+  it('combines both opt-outs in the fixed flag order', () => {
+    expect(buildHarnessLaunchCommand(fields({ workspace: false, autoApprove: false }))).toBe(
+      'harness claude --no-workspace --no-auto-approve',
+    );
   });
 });

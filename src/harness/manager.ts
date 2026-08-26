@@ -5,7 +5,7 @@ import { isKnownModel, modelsFor } from './models.js';
 import type { HarnessLaunchView } from '../protocol.js';
 import { HarnessScreenReader, type ScreenCapture } from './screen.js';
 import { HarnessRecorder } from './recorder.js';
-import { autoApproveWithoutWorkspaceWarning } from './auto-approve.js';
+import { autoApproveWithoutWorkspaceWarning, supportsHarnessAutoApprove } from './auto-approve.js';
 import { captureWiring } from './capture-wire.js';
 import { HarnessRuntime } from './runtime.js';
 import type { SpawnTabOptions } from './spawn-options.js';
@@ -142,13 +142,13 @@ export class HarnessManager {
     const unique = uniqueLabel(this.managers.tab.tabs, label);
     const remote = entry.remote === undefined ? undefined : parseRemoteAddress(entry.remote);
     if (remote && 'error' in remote) return remote.error;
-    const dir = this.parseDir(this.resolveCwd(!!entry.workspace && !remote, unique, entry.cwd ?? process.cwd()));
+    const dir = this.parseDir(this.resolveCwd((entry.workspace ?? true) && !remote, unique, entry.cwd ?? process.cwd()));
     if (typeof dir === 'string') return dir;
     const { cwd, workspaceDir, ready } = dir;
     const dotColor = distinctColor(this.managers.tab.tabs.map((t) => t.dotColor), entry.dotColor);
     this.spawnTab({
       name: entry.tool, label: unique, cwd, workspaceDir, offline: entry.offline ?? false,
-      group, groupColor, dotColor, autoApprove: entry.autoApprove ?? false,
+      group, groupColor, dotColor, autoApprove: entry.autoApprove ?? supportsHarnessAutoApprove(entry.tool),
       model: entry.model, effort: entry.effort, ready, remote,
     });
     return undefined;

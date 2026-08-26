@@ -3,7 +3,7 @@ import { agentNames } from './names.js';
 import { getConfig } from '../config.js';
 import { parseRemoteAddress } from '../remote/address.js';
 
-const FLAGS = new Set(['-w', '--workspace', '--offline']);
+const FLAGS = new Set(['-w', '--workspace', '--no-workspace', '--offline']);
 
 // What "everything after `agent`" is left with once its clauses are lifted out. `on <address>` has
 // to come out here alongside the flags or the address becomes part of the tab name
@@ -12,7 +12,7 @@ const FLAGS = new Set(['-w', '--workspace', '--offline']);
 // keeps the `on <address>` shape (a keyword plus one following token) unambiguous.
 type AgentClauses = {
   words: string[];
-  workspace: boolean;
+  noWorkspace: boolean;
   offline: boolean;
   // The token after `on`, or undefined when there is no clause. `clause` distinguishes "no `on`"
   // from "`on` with nothing after it", which is a usage error rather than a plain local launch.
@@ -23,12 +23,13 @@ type AgentClauses = {
 function splitAgentClauses(input: string): AgentClauses {
   const tokens = input.trim().split(/\s+/).filter(Boolean);
   const words: string[] = [];
-  const clauses: AgentClauses = { words, workspace: false, offline: false, clause: false };
+  const clauses: AgentClauses = { words, noWorkspace: false, offline: false, clause: false };
   for (let index = 0; index < tokens.length; index++) {
     const token = tokens[index];
     const lower = token.toLowerCase();
     if (FLAGS.has(lower)) {
-      if (lower === '--offline') clauses.offline = true; else clauses.workspace = true;
+      if (lower === '--offline') clauses.offline = true;
+      else if (lower === '--no-workspace') clauses.noWorkspace = true;
       continue;
     }
     if (lower === 'on' && index > 0) {
@@ -68,7 +69,7 @@ export function parseAgentCommand(input: string): AgentCommand {
     name: nameFrom(clauses.words),
     // `on` implies a workspace: the remote server's only job is to provision a clone from its own
     // project root, so a remote launch without one has no meaning.
-    workspace: clauses.workspace || clauses.clause,
+    workspace: clauses.clause || !clauses.noWorkspace,
     offline: clauses.offline,
     remote: remote && !('error' in remote) ? remote : undefined,
     remoteError: remote && 'error' in remote ? remote.error : undefined,

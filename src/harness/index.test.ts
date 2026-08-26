@@ -92,9 +92,9 @@ describe('parseHarnessCommand', () => {
     expect('workspace' in result && (result as { workspace: boolean }).workspace).toBe(true);
   });
 
-  it('sets workspace false when no flag is given', () => {
+  it('sets workspace true when no flag is given', () => {
     const result = parseHarnessCommand('harness claude');
-    expect('workspace' in result && (result as { workspace: boolean }).workspace).toBe(false);
+    expect('workspace' in result && (result as { workspace: boolean }).workspace).toBe(true);
   });
 
   it('sets offline true with --offline flag', () => {
@@ -140,15 +140,15 @@ describe('parseHarnessCommand', () => {
     expect('autoApprove' in result && (result as { autoApprove: boolean }).autoApprove).toBe(true);
   });
 
-  it('sets autoApprove false for a plain workspaced launch', () => {
+  it('sets autoApprove true for a plain workspaced launch', () => {
     const result = parseHarnessCommand('harness claude -w');
-    expect('autoApprove' in result && (result as { autoApprove: boolean }).autoApprove).toBe(false);
+    expect('autoApprove' in result && (result as { autoApprove: boolean }).autoApprove).toBe(true);
   });
 
   it('sets autoApprove true with -y and no -w', () => {
     const result = parseHarnessCommand('harness claude -y');
     expect('autoApprove' in result && (result as { autoApprove: boolean }).autoApprove).toBe(true);
-    expect('workspace' in result && (result as { workspace: boolean }).workspace).toBe(false);
+    expect('workspace' in result && (result as { workspace: boolean }).workspace).toBe(true);
   });
 
   it('sets autoApprove true with -y for codex', () => {
@@ -248,7 +248,7 @@ describe('parseHarnessCommand', () => {
 
   it('does not scan options that appear inside the prompt', () => {
     const result = parseHarnessCommand('harness claude with add a -w flag as needed');
-    expect('workspace' in result && (result as { workspace: boolean }).workspace).toBe(false);
+    expect('workspace' in result && (result as { workspace: boolean }).workspace).toBe(true);
     expect('name' in result && result.label).toBeUndefined();
     expect('prompt' in result && result.prompt).toBe('add a -w flag as needed');
   });

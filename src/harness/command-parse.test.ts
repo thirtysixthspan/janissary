@@ -5,12 +5,28 @@ import { parseHarnessCommand } from './command-parse.js';
 // module-private, so every branch is reached through the exported entry point.
 
 describe('parseHarnessCommand — launch form', () => {
-  it('parses a bare harness name with all flags off', () => {
+  it('defaults a supported harness to workspace and auto-approve', () => {
     expect(parseHarnessCommand('harness claude')).toEqual({
       name: 'claude',
-      workspace: false,
+      workspace: true,
       offline: false,
-      autoApprove: false,
+      autoApprove: true,
+    });
+  });
+
+  it('defaults an unsupported harness to workspace without auto-approve', () => {
+    expect(parseHarnessCommand('harness opencode')).toMatchObject({ workspace: true, autoApprove: false });
+  });
+
+  it('accepts workspace and auto-approve opt-outs', () => {
+    expect(parseHarnessCommand('harness claude --no-workspace --no-auto-approve')).toMatchObject({
+      workspace: false, autoApprove: false,
+    });
+  });
+
+  it('lets negative flags override positive flags', () => {
+    expect(parseHarnessCommand('harness claude -w --no-workspace -y --no-auto-approve')).toMatchObject({
+      workspace: false, autoApprove: false,
     });
   });
 
@@ -109,7 +125,7 @@ describe('parseHarnessCommand — on <address> clause', () => {
   // is never read as a clause.
   it('leaves an on inside a with <prompt> clause as prompt text', () => {
     expect(parseHarnessCommand('harness claude with turn it on devbox')).toEqual({
-      name: 'claude', workspace: false, offline: false, autoApprove: false,
+      name: 'claude', workspace: true, offline: false, autoApprove: true,
       prompt: 'turn it on devbox',
     });
   });
@@ -125,9 +141,9 @@ describe('parseHarnessCommand — with <prompt> clause', () => {
   it('captures the prompt and keeps it out of option parsing', () => {
     expect(parseHarnessCommand('harness claude with fix the -w flag')).toEqual({
       name: 'claude',
-      workspace: false,
+      workspace: true,
       offline: false,
-      autoApprove: false,
+      autoApprove: true,
       prompt: 'fix the -w flag',
     });
   });
