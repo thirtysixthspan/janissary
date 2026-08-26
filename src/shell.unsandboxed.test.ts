@@ -8,6 +8,7 @@ import type { ChildProcess } from 'node:child_process';
 import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import { tmpdir } from 'node:os';
+import { shellStartupArgs } from './shell-startup.js';
 
 function runCommand(
   shell: ChildProcess,
@@ -46,7 +47,8 @@ describe('persistent shell', () => {
   });
 
   it('cd persists so ls shows the new directory contents', async () => {
-    const shell = spawn(process.env.SHELL || 'bash', ['--norc', '--noprofile'], {
+    const shellPath = process.env.SHELL || 'bash';
+    const shell = spawn(shellPath, shellStartupArgs(shellPath), {
       stdio: ['pipe', 'pipe', 'pipe'],
     });
     shell.stdout!.setEncoding('utf8');

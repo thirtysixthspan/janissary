@@ -2,6 +2,10 @@
 
 Each tab has its own persistent shell process (spawned via `child_process.spawn`) that runs in the background for the lifetime of the tab. Shell processes are spawned lazily on the first shell command (the `shell` keyword) and kept alive until the tab is closed or the application exits.
 
+### Shell startup files
+
+A tab's shell is the user's login shell (`$SHELL`, falling back to `bash`), started with its startup files suppressed so an interactive rc file cannot leak banners, prompts, or traps into captured command output. Each supported shell is given the flags that shell actually accepts: `bash` starts with `--norc --noprofile`, and `zsh` with `--no-rcs` — zsh rejects bash's spelling outright and would otherwise exit immediately instead of producing a working tab shell. A login shell that is neither starts with no startup flags at all and reads its own startup files, which is preferable to failing to launch on an option it does not recognize.
+
 ### Shell command execution
 
 Shell commands (the `shell` keyword, stripped) are written to the tab's persistent shell via stdin. The command is wrapped in a subshell with stderr redirected to stdout: `(${cmd}) 2>&1`. A unique delimiter (`echo "__JS_END_<tab>_<timestamp>__"`) is written after the command to mark the end of output.

@@ -38,6 +38,7 @@ vi.mock('./sandbox/index.js', () => ({
 }));
 
 import { spawnShell, executeShellCmd, queryShellPwd } from './shell.js';
+import { shellStartupArgs } from './shell-startup.js';
 
 beforeEach(() => {
   mockSpawn.mockReset();
@@ -50,8 +51,21 @@ describe('spawnShell', () => {
     expect(mockSpawn).toHaveBeenCalledOnce();
     const call = mockSpawn.mock.calls[0];
     expect(call[0]).toBe(process.env.SHELL || 'bash');
-    expect(call[1]).toEqual(['--norc', '--noprofile']);
+    expect(call[1]).toEqual(shellStartupArgs(process.env.SHELL || 'bash'));
     expect(call[2]).toMatchObject({ stdio: ['pipe', 'pipe', 'pipe'] });
+  });
+
+  it('passes zsh the startup flags zsh accepts', () => {
+    const previousShell = process.env.SHELL;
+    process.env.SHELL = '/bin/zsh';
+    try {
+      spawnShell(0);
+      const call = mockSpawn.mock.calls[0];
+      expect(call[0]).toBe('/bin/zsh');
+      expect(call[1]).toEqual(['--no-rcs']);
+    } finally {
+      if (previousShell === undefined) delete process.env.SHELL; else process.env.SHELL = previousShell;
+    }
   });
 
   it('merges extraEnvironment into env', () => {
