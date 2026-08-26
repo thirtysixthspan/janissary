@@ -1,5 +1,6 @@
 import { spawn, type ChildProcess } from 'node:child_process';
 import { sandboxSpawn, type SandboxOptions } from './sandbox/index.js';
+import { shellStartupArgs } from './shell-startup.js';
 
 // The subset of `ChildProcess` that shell execution actually touches: `stdin`'s writability and
 // `write`, `stdout`/`stderr` as `'data'` emitters, and `kill()`. Narrow enough that a process
@@ -15,7 +16,8 @@ export function spawnShell(
   sandbox?: SandboxOptions,
 ): ChildProcess {
   const baseEnv = { ...process.env, ...extraEnvironment };
-  const { command, args, env } = sandboxSpawn(sandbox ?? {}, process.env.SHELL || 'bash', ['--norc', '--noprofile'], baseEnv);
+  const shellPath = process.env.SHELL || 'bash';
+  const { command, args, env } = sandboxSpawn(sandbox ?? {}, shellPath, shellStartupArgs(shellPath), baseEnv);
   const shell = spawn(command, args, {
     stdio: ['pipe', 'pipe', 'pipe'],
     env,
