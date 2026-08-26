@@ -25,6 +25,8 @@ Inside the workspace, day-to-day git works without any setup: commit, fetch, pul
 
 That credential is a scoped GitHub token placed in `.janissary/github-token` in your project. With it, `git push` and `gh` (creating and merging PRs) work from inside the workspace. Without it they fail; local development is unaffected either way.
 
+For an agent or harness launched on another machine with `on <address>`, Janissary forwards this token through the SSH connection and uses it only for that remote workspace's processes. You don't need to copy the token file to the remote machine, and Janissary doesn't save the forwarded token there. If the local project has no token, a token configured in the remote project's own `.janissary/github-token` is used instead.
+
 Create a [fine-grained personal access token](https://github.com/settings/personal-access-tokens/new) scoped to just the repositories the agent should reach, with **Contents: Read and write**, **Pull requests: Read and write**, and **Metadata: Read-only** permissions — nothing broader. Save the token value to `.janissary/github-token` (already gitignored; janissary only ever reads this file, never writes to it).
 
 Pushing from inside a workspace never touches your own git config or an ambient GitHub credential cached elsewhere on your machine, such as an old keychain-stored login — only the token in `.janissary/github-token` is used. That keeps a stale cached credential from intercepting the push and failing with `Write access to repository not granted` even though your token is valid.
