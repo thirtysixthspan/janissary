@@ -23,6 +23,16 @@ mechanism. The workspace is named after the harness tab's unique label (e.g. `cl
 and the harness PTY starts there. Otherwise identical to an agent workspace: `git clone` of `origin`,
 stored at `.janissary/workspace/<label>/`, removed when the tab is closed.
 
+### Remote workspaces
+
+`agent <name> on <address>` and `harness <name> on <address>` create a workspaced tab the same way,
+except the workspace lives under the **remote** host's project root rather than this machine's, and
+is governed entirely by that host: its sandbox policy (so isolation is active where the remote is
+macOS and inactive otherwise, and the notice shown in the tab is the remote's), its own
+`.janissary/github-token`, and its own repository's `origin` transport. Nothing is forwarded from
+here. A remote tab records no local workspace directory, so closing it deletes nothing locally; the
+remote server removes the clone when its ssh session ends. See [[remote-server]].
+
 ### Isolation
 
 On macOS, a workspaced tab's processes (shell, harness PTY, or ACP session, and anything they

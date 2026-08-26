@@ -1,5 +1,5 @@
-import type { ChildProcess } from 'node:child_process';
-import { spawnShell, executeShellCmd as executeShellCommand, queryShellPwd } from './shell.js';
+import { spawnShell, executeShellCmd as executeShellCommand, queryShellPwd, type ShellProcess } from './shell.js';
+import { createRemoteShell } from './remote/shell-session.js';
 import { getConfig } from './config.js';
 import { getGithubToken } from './github-token.js';
 import { messageBus } from './bus.js';
@@ -23,7 +23,10 @@ type RunHandlers = {
 // that preserves working directory and environment across commands; the manager spawns them lazily,
 // runs commands with streaming output, and tears them down.
 export class ShellManager {
-  private shells = new Map<string, ChildProcess>();
+  private shells = new Map<string, ShellProcess>();
+  // Distinguishes a remote tab's shell ids from the local `pty…` ids, so both can key the same
+  // remote channel without colliding.
+  private remoteShellCounter = 0;
   // Serializes each tab's shell interactions (a command's execution, then its trailing pwd query)
   // so at most one stdin write / stdout listener pair is ever live on a given shell at a time.
   // Without this, a rapid-fire queued command (dispatched the instant the previous one goes idle)
@@ -43,19 +46,31 @@ export class ShellManager {
   // stdin no longer writable). A freshly spawned shell is `cd`'d into `cwd` so it starts in the tab's
   // working directory — the workspace clone for a workspaced agent, or the saved cwd for a
   // `--relaunch`'d tab. A nullish `cwd` leaves the shell in its default directory.
-  private getShell(label: string, cwd: string | undefined): ChildProcess {
-    let shell = this.shells.get(label);
-    if (!shell || !shell.stdin?.writable) {
-      const tab = this.managers.tab.tabs.find((t) => t.label === label);
-      shell = spawnShell(0, { JANUS_AGENT_NAME: label }, {
-        workspaceDir: tab?.workspaceDir,
-        offline: tab?.offline,
-        githubToken: tab?.workspaceDir ? getGithubToken() : undefined,
-      });
-      this.shells.set(label, shell);
-      this.shellQueues.delete(label);
-      if (cwd) shell.stdin!.write(`cd "${cwd}"\n`);
+  private getShell(label: string, cwd: string | undefined): ShellProcess {
+    const existing = this.shells.get(label);
+    if (existing?.stdin?.writable) return existing;
+    const shell = this.spawnFor(label, cwd);
+    this.shells.set(label, shell);
+    this.shellQueues.delete(label);
+    return shell;
+  }
+
+  // A remote tab's shell is just another remote process: the channel spawns the login shell in the
+  // remote workspace and the adapter wears the shape `executeShellCmd` already consumes. No `cd`
+  // is written for it — the remote server has already started it in the workspace — and no local
+  // sandbox options apply, since the confinement decision belongs to the machine it runs on.
+  private spawnFor(label: string, cwd: string | undefined): ShellProcess {
+    const tab = this.managers.tab.tabs.find((t) => t.label === label);
+    const channel = tab?.remote ? this.managers.remote.get(label) : undefined;
+    if (channel) {
+      return createRemoteShell(channel, `rsh${++this.remoteShellCounter}`, SHELL_NAME, SHELL_NAME);
     }
+    const shell = spawnShell(0, { JANUS_AGENT_NAME: label }, {
+      workspaceDir: tab?.workspaceDir,
+      offline: tab?.offline,
+      githubToken: tab?.workspaceDir ? getGithubToken() : undefined,
+    });
+    if (cwd) shell.stdin?.write(`cd "${cwd}"\n`);
     return shell;
   }
 

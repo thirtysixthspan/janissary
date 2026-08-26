@@ -92,7 +92,11 @@ export class TabManager extends TabOpeningState {
     return this.tabs.findIndex((t) => t.label === label);
   }
 
+  // A remote agent tab is live and in-memory: restoring one would resurrect a tab whose workspace
+  // was deleted when its channel died and whose cwd does not exist locally. Guarded here rather than
+  // filtered at each call site, since this is the single write path into the state directory.
   persist(state: AgentState): void {
+    if (state.remote !== undefined) return;
     try {
       saveAgentState(state);
     } catch { /* ignore */ }

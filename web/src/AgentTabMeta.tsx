@@ -5,9 +5,10 @@ import { openFilesIcon, newTabIcon, viewCaptureIcon, connectionsWindowIcon, sche
 import { StatusWindowButton } from './StatusWindowButton';
 import { SplitTabButton } from './SplitTabButton';
 import type { StatusWindowButtonProps } from './status-button';
+import type { RemoteTarget } from '@shared/protocol';
 
 type Properties = {
-  cwd?: string; flags?: string[]; model?: string; effort?: string;
+  cwd?: string; flags?: string[]; model?: string; effort?: string; remote?: RemoteTarget;
   onOpenFileNavigator?: () => void; onLaunchAgentHere?: () => void; onOpenTranscript?: () => void;
   connectionsButton?: StatusWindowButtonProps; scheduleButton?: StatusWindowButtonProps;
   onSplit?: () => void;
@@ -21,12 +22,24 @@ function MetaChip({ label, value }: { label: string; value: string }) {
   );
 }
 
+// The host a remote tab's harness or shell actually runs on, at the left of the row, ahead of the
+// working directory — so the row reads "where, then what path there". Same chip styling as the
+// model/effort chips; the full destination (user, host, and remote project path) is the tooltip.
+function RemoteChip({ remote }: { remote: RemoteTarget }) {
+  return (
+    <span className="tab-meta-chip tab-remote-chip" aria-label="Remote" title={`Remote: ${remote.address}`}>
+      {remote.host}
+    </span>
+  );
+}
+
 export function AgentTabMeta({
-  cwd, flags, model, effort, onOpenFileNavigator, onLaunchAgentHere, onOpenTranscript,
+  cwd, flags, model, effort, remote, onOpenFileNavigator, onLaunchAgentHere, onOpenTranscript,
   connectionsButton, scheduleButton, onSplit,
 }: Properties) {
   return (
     <div className="tab-meta">
+      {remote !== undefined && <RemoteChip remote={remote} />}
       <span className="tab-cwd">{cwd}</span>
       {model !== undefined && <MetaChip label="Model" value={model} />}
       {effort !== undefined && <MetaChip label="Effort" value={effort} />}

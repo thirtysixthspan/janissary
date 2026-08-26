@@ -1,11 +1,15 @@
 import { HARNESS_COMMANDS, HARNESS_NAMES } from './index.js';
 import { supportsHarnessAutoApprove } from './auto-approve.js';
+import { parseRemoteAddress, type RemoteAddress } from '../remote/address.js';
 
 // The `harness` command's parsing, split out of index.ts: a distinct concern from the
 // shell-command-string building (shellQuote/buildHarnessCommand) that remains there.
 
 export type HarnessParsed =
-  | { name: string; workspace: boolean; offline: boolean; autoApprove: boolean; label?: string; model?: string; effort?: string; prompt?: string }
+  | {
+    name: string; workspace: boolean; offline: boolean; autoApprove: boolean;
+    label?: string; model?: string; effort?: string; prompt?: string; remote?: RemoteAddress;
+  }
   | { capture: true; label: string }
   | { transcript: true; label: string }
   | { error: string };
@@ -18,6 +22,17 @@ function findFlagValue(tokens: string[], flag: string): string | undefined | { e
   const value = tokens[index + 1];
   if (!value) return { error: `Usage: harness <${HARNESS_NAMES.join('|')}> ${flag} <value>.` };
   return value;
+}
+
+// Find an `on <address>` clause among `tokens` and parse the address that follows it. Returns
+// undefined when the clause is absent, or an `{ error }` when it is present with no address or with
+// an address outside the allowed character set. Kept beside `findFlagValue` rather than inlined into
+// `parseHarnessFlags`, which already carries five flags plus `as` and sits near the cognitive
+// complexity limit the file was previously split to respect.
+function findRemoteClause(tokens: string[]): RemoteAddress | undefined | { error: string } {
+  const index = tokens.findIndex((t) => t.toLowerCase() === 'on');
+  if (index === -1) return undefined;
+  return parseRemoteAddress(tokens[index + 1]);
 }
 
 // Split a trailing `with <prompt>` clause off the harness command's argument string, before any
@@ -33,13 +48,20 @@ function splitWithClause(rest: string): { left: string; prompt?: string } | { er
 }
 
 // Parse the option flags following the harness name: -w/--workspace, --offline, -y/--yes,
-// --model <name>, --effort <level>, and a trailing `as <label>`. Split out of
+// --model <name>, --effort <level>, `on <address>`, and a trailing `as <label>`. Split out of
 // `parseHarnessCommand` so that function's own branching stays under the complexity limit.
+// A present `on` forces `workspace` true, so no caller has to remember the implication: the remote
+// server does nothing but workspaced launches, so a remote launch without one has no meaning.
 function parseHarnessFlags(
   tokens: string[],
   name: string,
-): { workspace: boolean; offline: boolean; autoApprove: boolean; model?: string; effort?: string; label?: string } | { error: string } {
-  const workspace = tokens.some((t) => t === '-w' || t === '--workspace');
+): {
+  workspace: boolean; offline: boolean; autoApprove: boolean;
+  model?: string; effort?: string; label?: string; remote?: RemoteAddress;
+} | { error: string } {
+  const remote = findRemoteClause(tokens);
+  if (remote !== undefined && 'error' in remote) return remote;
+  const workspace = remote !== undefined || tokens.some((t) => t === '-w' || t === '--workspace');
   const offline = tokens.some((t) => t.toLowerCase() === '--offline');
   const autoApprove = tokens.some((t) => t === '-y' || t === '--yes');
   // The supported-harness check comes first: adding -w would not make `harness opencode -y` valid,
@@ -52,10 +74,10 @@ function parseHarnessFlags(
   const effort = findFlagValue(tokens, '--effort');
   if (effort !== undefined && typeof effort !== 'string') return effort;
   const asIndex = tokens.findIndex((t) => t.toLowerCase() === 'as');
-  if (asIndex === -1) return { workspace, offline, autoApprove, model, effort };
+  if (asIndex === -1) return { workspace, offline, autoApprove, model, effort, remote };
   const label = tokens[asIndex + 1];
   if (!label) return { error: `Usage: harness <${HARNESS_NAMES.join('|')}> as <label>.` };
-  return { workspace, offline, autoApprove, model, effort, label };
+  return { workspace, offline, autoApprove, model, effort, label, remote };
 }
 
 // The `harness <subcommand> <label>` forms, which target an existing harness tab instead of
@@ -71,8 +93,11 @@ function parseLabelSubcommand(tokens: string[]): HarnessParsed | undefined {
 }
 
 /**
- * Parse a `harness <name> [as <label>] [-w|--workspace] [--offline] [-y|--yes] [--model <name>]
- * [--effort <level>]` command, validating the harness name against the known set. `as <label>`
+ * Parse a `harness <name> [as <label>] [on <address>] [-w|--workspace] [--offline] [-y|--yes]
+ * [--model <name>] [--effort <level>]` command, validating the harness name against the known set.
+ * `on <address>` runs the harness on another host over one ssh session and implies `-w`, since the
+ * remote server does nothing but workspaced launches (see `product/specs/remote-server.md`).
+ * `as <label>`
  * gives the new tab a custom label instead of the harness name (still de-duplicated against
  * existing tab labels). `--offline` adds a network-deny rule to the tab's sandbox profile (only
  * meaningful alongside `-w`/`--workspace`). `-y`/`--yes` auto-approves the harness's own permission

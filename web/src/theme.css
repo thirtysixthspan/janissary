@@ -222,6 +222,9 @@ html, body, #root {
   white-space: nowrap; vertical-align: bottom; cursor: default;
   padding: 0 6px; border: 1px solid var(--border); border-radius: 4px; color: var(--fg);
 }
+/* The host chip leads the metadata row, ahead of the working directory, so a remote tab reads
+   "where, then what path there". The row's own 16px column gap is wider than this pairing wants. */
+.tab-remote-chip { order: -1; margin-right: -10px; }
 .tab-open-files {
   background: transparent; border: none; color: var(--muted); cursor: pointer;
   font-size: 13px; padding: 0 4px; line-height: 1;

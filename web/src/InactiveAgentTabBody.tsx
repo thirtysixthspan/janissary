@@ -28,6 +28,7 @@ export function InactiveAgentTabBody({
       <AgentTabMeta
         cwd={tab.cwd}
         flags={tab.flags}
+        remote={tab.remote}
         onOpenFileNavigator={intents.onOpenFileNavigator}
         onLaunchAgentHere={tab.cwd === undefined ? undefined : intents.onLaunchAgentHere}
         onOpenTranscript={intents.onOpenTranscript}

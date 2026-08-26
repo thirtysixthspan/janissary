@@ -14,8 +14,11 @@ export function listLines(managers: Managers, label: string): string[] {
   const b = managers.browser.info(label);
   if (b) for (const id of b.ids) lines.push(`browser:${id}`);
   for (const program of managers.pty.terminalsFor(label)) lines.push(`terminal:${program}`);
+  // A remote tab contributes both rows: `ssh:` for the transport it runs over, and `terminal:` for
+  // the process on the far side — each visible and separately closable.
   for (const t of managers.tab.tabs) {
     if (t.harness?.name === 'ssh' && t.harness.destination) lines.push(`ssh:${t.harness.destination}`);
+    else if (t.remote) lines.push(`ssh:${t.remote.address}`);
   }
   for (const n of managers.database.listOpen()) lines.push(`sqlite:${n}`);
   return lines;
@@ -29,7 +32,7 @@ export function listCompletionConnections(managers: Managers, label: string): st
   if (b) for (const id of b.ids) out.push(`browser:${id}`);
   for (const n of managers.database.listOpen()) out.push(`sqlite:${n}`);
   for (const t of managers.tab.tabs) {
-    if (t.harness?.name === 'ssh') out.push(`ssh:${t.label}`);
+    if (t.harness?.name === 'ssh' || t.remote) out.push(`ssh:${t.label}`);
   }
   return out;
 }

@@ -104,3 +104,62 @@ describe('parseAgentCommand', () => {
     expect(result).toEqual({ name: 'bilal', workspace: true, offline: true });
   });
 });
+
+describe('parseAgentCommand — on <address> clause', () => {
+  // Missing this is the most likely way to end up with a tab labelled `bekir on devbox`.
+  it('keeps the address out of the tab name', () => {
+    expect(parseAgentCommand('agent bekir on devbox')).toMatchObject({
+      name: 'bekir', workspace: true, remote: { address: 'devbox', host: 'devbox' },
+    });
+  });
+
+  it('parses a user, a host, and a remote path', () => {
+    expect(parseAgentCommand('agent bekir on admin@devbox:/srv/proj')).toMatchObject({
+      name: 'bekir',
+      remote: { destination: 'admin@devbox', host: 'devbox', path: '/srv/proj' },
+    });
+  });
+
+  it('forces workspace true without -w, and accepts -w alongside', () => {
+    expect(parseAgentCommand('agent bekir on devbox')).toMatchObject({ workspace: true });
+    expect(parseAgentCommand('agent bekir -w on devbox')).toMatchObject({ workspace: true });
+  });
+
+  it('keeps the offline flag apart from the clause', () => {
+    expect(parseAgentCommand('agent bekir on devbox --offline')).toMatchObject({
+      name: 'bekir', offline: true, remote: { host: 'devbox' },
+    });
+  });
+
+  it('leaves a name merely starting with "on" alone', () => {
+    expect(parseAgentCommand('agent onyx')).toMatchObject({ name: 'onyx', workspace: false, remote: undefined });
+  });
+
+  it('reports the address\'s own error rather than launching locally', () => {
+    const result = parseAgentCommand('agent bekir on devbox;id');
+    expect(result.remote).toBeUndefined();
+    expect(result.remoteError).toContain('devbox;id');
+  });
+
+  it('reports a usage error when on has no following address', () => {
+    expect(parseAgentCommand('agent bekir on').remoteError).toContain('Usage: on');
+  });
+
+  it('leaves remote unset for an ordinary launch', () => {
+    expect(parseAgentCommand('agent bekir -w')).toMatchObject({ remote: undefined, remoteError: undefined });
+  });
+});
+
+describe('resolveAgentName — on <address> clause', () => {
+  // `resolveAgentName` runs the *unstripped* input through the same "everything after `agent`"
+  // match, so it needs the clause removed too.
+  it('resolves the name without the address', () => {
+    expect(resolveAgentName('agent bekir on devbox', ['janus'])).toBe('bekir');
+  });
+
+  it('still picks a pool name when the clause is all there is', () => {
+    const name = resolveAgentName('agent on devbox', ['janus']);
+    expect(name).not.toBeNull();
+    expect(name).not.toContain('devbox');
+  });
+});

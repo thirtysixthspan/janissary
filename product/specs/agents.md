@@ -13,3 +13,12 @@ Creates a new agent tab with a random unused name from the pool. See the Tabs se
 ### `agent <name>` command
 
 Creates a new agent tab with the specified name. See the Tabs section. Add `--workspace` (or `-w`) to clone the root repo into a disposable workspace at `.janissary/workspace/<name>/`.
+
+### `on <address>` clause
+
+`agent <name> on <address>` runs the agent's shell on another host over one ssh session, in a
+workspace the remote provisions from its own project root. The clause implies `--workspace`, so
+`agent bekir on devbox` and `agent bekir -w on devbox` are the same command. The address never
+becomes part of the tab name — `agent bekir on devbox` opens a tab called `bekir` — and a bare
+`agent on devbox` still picks a random unused name from the pool. See `remote-server.md` for the
+address grammar, the authentication flow, and the failure set.

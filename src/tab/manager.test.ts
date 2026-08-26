@@ -111,6 +111,50 @@ describe('TabManager queue', () => {
     listSpy.mockRestore();
   });
 
+  // A remote agent tab is live and in-memory. Restoring one would resurrect a tab whose workspace
+  // was deleted when its channel died and whose cwd does not exist on this machine, so it never
+  // reaches the state directory in the first place.
+  it('persist writes nothing for a state carrying a remote destination', () => {
+    const tm = makeTabManager();
+    const saveSpy = vi.spyOn(agentState, 'saveAgentState').mockImplementation(() => {});
+
+    tm.persist({ name: 'bekir', dotColor: '#fff', active: false, remote: 'devbox:/srv/proj' });
+    expect(saveSpy).not.toHaveBeenCalled();
+
+    tm.persist({ name: 'local', dotColor: '#fff', active: false });
+    expect(saveSpy).toHaveBeenCalledTimes(1);
+
+    saveSpy.mockRestore();
+  });
+
+  it('buildAgentState carries a remote tab\'s address, which is what persist guards on', () => {
+    const tm = makeTabManager();
+    const tab = tm.cur();
+    tab.remote = { address: 'admin@devbox:/srv/proj', host: 'devbox' };
+    expect(tm.buildAgentState(tab).remote).toBe('admin@devbox:/srv/proj');
+  });
+
+  it('rehydrate sees no remote tab, because none was ever written', () => {
+    const saveSpy = vi.spyOn(agentState, 'saveAgentState').mockImplementation(() => {});
+    const written: AgentState[] = [];
+    saveSpy.mockImplementation((state: AgentState) => { written.push(state); });
+
+    const tm = makeTabManager();
+    const tab = tm.cur();
+    tab.remote = { address: 'devbox', host: 'devbox' };
+    tm.persist(tm.buildAgentState(tab));
+
+    const listSpy = vi.spyOn(agentState, 'listAgentStates').mockReturnValue(written);
+    const managers = {} as Managers;
+    managers.tab = new TabManager(managers);
+    managers.tab.rehydrate(() => [], () => {});
+
+    expect(managers.tab.tabs.some((t) => t.remote !== undefined)).toBe(false);
+
+    listSpy.mockRestore();
+    saveSpy.mockRestore();
+  });
+
   it('openEditorTab deduplicates by path and focuses the existing tab', () => {
     const tm = makeTabManager();
     const path = '/test/file.ts';

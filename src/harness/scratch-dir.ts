@@ -9,3 +9,11 @@ export function claudeTmpDir(cwd: string): string {
   mkdirSync(dir, { recursive: true });
   return dir;
 }
+
+// The environment overrides a harness binary is spawned with, on the machine it runs on. It names
+// paths that exist only there, so a remote launch builds its own copy of this on the far side
+// rather than being handed one over the wire (see `src/remote/serve-processes.ts`).
+export function harnessEnv(name: string, cwd: string): NodeJS.ProcessEnv | undefined {
+  if (name !== 'claude') return undefined;
+  return { CLAUDE_CODE_TMPDIR: claudeTmpDir(cwd), DISABLE_AUTOUPDATER: '1' };
+}

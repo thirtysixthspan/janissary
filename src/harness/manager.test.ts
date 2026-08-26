@@ -13,6 +13,9 @@ vi.mock('./capture-file.js', () => ({
 
 vi.mock('./scratch-dir.js', () => ({
   claudeTmpDir: vi.fn((cwd: string) => `${cwd}/.janissary/temp`),
+  harnessEnv: vi.fn((name: string, cwd: string) => (name === 'claude'
+    ? { CLAUDE_CODE_TMPDIR: `${cwd}/.janissary/temp`, DISABLE_AUTOUPDATER: '1' }
+    : undefined)),
 }));
 
 vi.mock('../notifications.js', () => ({ notify: vi.fn() }));
@@ -857,5 +860,175 @@ describe('HarnessManager spawn options', () => {
       { name: 'claude', tool: 'claude', dotColor: '#abcdef' }, 'claude', 7, '#123456',
     )).toBeUndefined();
     expect(tabs.at(-1)).toMatchObject({ group: 7, groupColor: '#123456', dotColor: '#abcdef' });
+  });
+});
+
+// A remote launch: no local clone is created at all, the tab opens immediately attached to the ssh
+// session's PTY (so ssh's own prompts are answerable in it), and the harness process is registered
+// as a remote `PtySession` once the far side reports its workspace ready.
+type RemoteHandlers = {
+  onReady: (dir: string, notice?: string) => void;
+  onFailed: (message: string) => void;
+  onClosed: () => void;
+};
+
+function remoteLaunch(): {
+  managers: Managers; tabs: Tab[]; append: ReturnType<typeof vi.fn>;
+  createWorkspace: ReturnType<typeof vi.fn>; registerRemotePty: ReturnType<typeof vi.fn>;
+  ready: (dir: string, notice?: string) => void; fail: (message: string) => void; drop: () => void;
+} {
+  const { managers, tabs } = makeManagers();
+  const channel = { ptyId: 'ssh-pty-1', attached: true, send: vi.fn() };
+  let handlers: RemoteHandlers | undefined;
+  const createWorkspace = vi.fn(() => ({ dir: '/workspace/claude', ready: Promise.resolve() }));
+  const registerRemotePty = vi.fn(() => 'rpty1');
+  const append = vi.fn();
+  (managers.workspace as unknown as { create: unknown }).create = createWorkspace;
+  (managers.pty as unknown as { registerRemotePty: unknown }).registerRemotePty = registerRemotePty;
+  (managers.tab as unknown as { append: unknown }).append = append;
+  (managers as unknown as { remote: unknown }).remote = {
+    open: vi.fn((_label: string, _address: unknown, _cwd: string, h: RemoteHandlers) => { handlers = h; return channel; }),
+    get: vi.fn(() => channel),
+    transcriptSource: vi.fn(() => ({ poll: () => [], resolved: () => false })),
+  };
+  return {
+    managers, tabs, append, createWorkspace, registerRemotePty,
+    ready: (dir, notice) => handlers!.onReady(dir, notice),
+    fail: (message) => handlers!.onFailed(message),
+    drop: () => handlers!.onClosed(),
+  };
+}
+
+describe('HarnessManager remote launch', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    recorderMock.instances.length = 0;
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.clearAllMocks();
+  });
+
+  it('inserts a provisioning placeholder immediately, with no local workspace created', () => {
+    const { managers, tabs, createWorkspace } = remoteLaunch();
+    const manager = new HarnessManager(managers);
+
+    expect(manager.run('harness claude on admin@devbox:/srv/proj')).toBeUndefined();
+
+    expect(createWorkspace).not.toHaveBeenCalled();
+    expect(managers.pty.spawn).not.toHaveBeenCalled();
+    expect(tabs.at(-1)!.harness).toMatchObject({ status: 'provisioning', ptyId: 'ssh-pty-1' });
+  });
+
+  it('marks the tab remote and leaves workspaceDir unset, so nothing local is ever deleted', () => {
+    const { managers, tabs } = remoteLaunch();
+    const manager = new HarnessManager(managers);
+
+    expect(manager.run('harness claude on admin@devbox:/srv/proj')).toBeUndefined();
+
+    expect(tabs.at(-1)).toMatchObject({
+      remote: { address: 'admin@devbox:/srv/proj', host: 'devbox' },
+      workspaceDir: undefined,
+    });
+  });
+
+  it('promotes the tab to running with a remote PtySession once the workspace is ready', async () => {
+    const { managers, tabs, ready, registerRemotePty } = remoteLaunch();
+    const manager = new HarnessManager(managers);
+    expect(manager.run('harness claude on devbox')).toBeUndefined();
+
+    ready('/srv/proj/.janissary/workspace/claude');
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(registerRemotePty).toHaveBeenCalledWith('claude', expect.anything(), expect.objectContaining({
+      program: 'claude', harness: 'claude',
+    }));
+    expect(managers.pty.spawn).not.toHaveBeenCalled();
+    expect(tabs.at(-1)!.harness).toMatchObject({ ptyId: 'rpty1', status: 'running' });
+  });
+
+  it('shows the remote host\'s own isolation notice rather than this machine\'s', async () => {
+    const { managers, ready, append } = remoteLaunch();
+    const manager = new HarnessManager(managers);
+    expect(manager.run('harness claude on devbox')).toBeUndefined();
+
+    ready('/srv/ws', 'workspace isolation off: sandbox-exec unavailable');
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(append).toHaveBeenCalledWith('claude', {
+      input: '', output: 'workspace isolation off: sandbox-exec unavailable',
+    });
+  });
+
+  it('appends nothing when the remote reports no notice', async () => {
+    const { managers, ready, append } = remoteLaunch();
+    const manager = new HarnessManager(managers);
+    expect(manager.run('harness claude on devbox')).toBeUndefined();
+
+    ready('/srv/ws');
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(append).not.toHaveBeenCalled();
+  });
+
+  it('sets provisionError and closes the tab after the existing delay when provisioning fails', async () => {
+    const { managers, tabs, fail } = remoteLaunch();
+    const manager = new HarnessManager(managers);
+    expect(manager.run('harness claude on devbox')).toBeUndefined();
+
+    fail('/srv/proj is not a git repository.');
+    await vi.advanceTimersByTimeAsync(0);
+    expect(tabs.at(-1)!.harness?.provisionError).toBe('/srv/proj is not a git repository.');
+    expect(managers.tab.closeTab).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(3000);
+    expect(managers.tab.closeTab).toHaveBeenCalledTimes(1);
+  });
+
+  it('closes the tab when the channel drops before the workspace is ready', async () => {
+    const { managers, tabs, drop } = remoteLaunch();
+    const manager = new HarnessManager(managers);
+    expect(manager.run('harness claude on devbox')).toBeUndefined();
+
+    drop();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(tabs.at(-1)!.harness?.provisionError).toContain('devbox');
+
+    await vi.advanceTimersByTimeAsync(3000);
+    expect(managers.tab.closeTab).toHaveBeenCalledTimes(1);
+  });
+
+  it('closes the tab when the channel drops after the harness is running', async () => {
+    const { managers, ready, drop } = remoteLaunch();
+    const manager = new HarnessManager(managers);
+    expect(manager.run('harness claude on devbox')).toBeUndefined();
+    ready('/srv/ws');
+    await vi.advanceTimersByTimeAsync(0);
+
+    drop();
+
+    expect(managers.tab.closeTab).toHaveBeenCalledTimes(1);
+  });
+
+  it('opens a profile entry\'s remote tab against the same host', () => {
+    const { managers, tabs, createWorkspace } = remoteLaunch();
+    const manager = new HarnessManager(managers);
+
+    expect(manager.openFromProfile(
+      { name: 'claude', tool: 'claude', workspace: true, remote: 'admin@devbox:/srv/proj' }, 'claude', 2, '#fff',
+    )).toBeUndefined();
+
+    expect(createWorkspace).not.toHaveBeenCalled();
+    expect(tabs.at(-1)).toMatchObject({ remote: { host: 'devbox' }, workspaceDir: undefined });
+  });
+
+  it('reports and skips a profile entry whose remote address is unusable', () => {
+    const { managers } = remoteLaunch();
+    const manager = new HarnessManager(managers);
+
+    expect(manager.openFromProfile(
+      { name: 'claude', tool: 'claude', remote: 'devbox;id' }, 'claude', 2, '#fff',
+    )).toContain('devbox;id');
   });
 });

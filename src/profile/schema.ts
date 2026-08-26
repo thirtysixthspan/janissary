@@ -54,7 +54,10 @@ function presentationProblems(value: Record<string, unknown>, loc: string): stri
 }
 
 function agentProblems(value: Record<string, unknown>, loc: string): string[] {
-  return checkField(value, 'name', 'string', loc, true);
+  return [
+    ...checkField(value, 'name', 'string', loc, true),
+    ...checkField(value, 'remote', 'string', loc),
+  ];
 }
 
 function harnessProblems(value: Record<string, unknown>, loc: string): string[] {
@@ -64,6 +67,7 @@ function harnessProblems(value: Record<string, unknown>, loc: string): string[] 
     ...checkField(value, 'model', 'string', loc),
     ...checkField(value, 'effort', 'string', loc),
     ...checkField(value, 'cwd', 'string', loc),
+    ...checkField(value, 'remote', 'string', loc),
     ...checkField(value, 'workspace', 'boolean', loc),
     ...checkField(value, 'autoApprove', 'boolean', loc),
     ...checkField(value, 'offline', 'boolean', loc),
