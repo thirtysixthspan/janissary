@@ -46,6 +46,14 @@ describe('scaffoldProject', () => {
     }
   });
 
+  it('installs a Codex configuration that keeps the GitHub token visible to codex', () => {
+    scaffoldProject(projectDir);
+    const config = readFileSync(path.join(projectDir, '.codex/config.toml'), 'utf8');
+    expect(config).toContain('[shell_environment_policy.filters]');
+    expect(config).toContain('GH_TOKEN = "include"');
+    expect(config).toContain('GITHUB_TOKEN = "include"');
+  });
+
   it('refreshes standard configuration while preserving custom files', () => {
     const codexRules = path.join(projectDir, '.codex', 'rules');
     mkdirSync(codexRules, { recursive: true });
