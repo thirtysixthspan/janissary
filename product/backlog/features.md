@@ -6,7 +6,9 @@
 
 * define how new agent and file navigator buttons should work on remote machines.
 
-* pass harness and github credentials through connection to remote machine and have them recognized on the remote machine.
+* github credentials through connection to remote machine and have them recognized on the remote machine.
+
+* pass harness credentials through connection to remote machine and have them recognized on the remote machine.
 
 ## development
 
