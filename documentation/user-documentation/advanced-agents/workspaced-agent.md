@@ -31,6 +31,8 @@ Create a [fine-grained personal access token](https://github.com/settings/person
 
 Pushing from inside a workspace never touches your own git config or an ambient GitHub credential cached elsewhere on your machine, such as an old keychain-stored login — only the token in `.janissary/github-token` is used. That keeps a stale cached credential from intercepting the push and failing with `Write access to repository not granted` even though your token is valid.
 
+A codex harness needs one extra thing. Codex hides credential-looking variables from the commands it runs, and the GitHub token looks exactly like one — so a push from a codex tab fails as if you had never set a token up. The standard `.codex/config.toml` that `janus init` writes tells codex to keep it. If you scaffolded the project with `janus init` and trusted the project the first time you opened codex in it, this is already handled.
+
 ## Lifecycle
 
 <img class="agent-float left" src="/agents/demir-south-east.png" alt="" />

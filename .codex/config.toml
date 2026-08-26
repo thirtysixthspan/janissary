@@ -1,3 +1,14 @@
 approval_policy = "on-request"
 sandbox_mode = "danger-full-access"
 sandbox_permissions = []
+
+# Codex filters the environment it hands to every command it runs, and its default
+# exclusion set drops any credential-shaped variable name (`*KEY*`, `*SECRET*`,
+# `*TOKEN*`). That takes the GitHub token with it — Janissary injects `GH_TOKEN` into a
+# workspaced tab so `git push` and `gh` can authenticate from inside the sandbox, and
+# without these entries codex strips it back out again before those commands ever see it.
+# `filters` is the per-variable override: `include` re-admits just these two names and
+# leaves the rest of the default exclusion set in force.
+[shell_environment_policy.filters]
+GH_TOKEN = "include"
+GITHUB_TOKEN = "include"
