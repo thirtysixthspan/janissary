@@ -4,7 +4,14 @@
 // handshake, plus the codec — newline-delimited JSON with base64 payloads, which is
 // `JSON.parse`/`JSON.stringify` and `Buffer`, so it needs no module of its own.
 
-export const REMOTE_PROTOCOL_VERSION = 1;
+// The contract's version, checked at the handshake. It covers what the frames *carry*, not only
+// their shape: a field one end fills in and the other is expected to honor is as much a contract
+// as a new frame type, because an end that merely ignores it looks healthy while doing the wrong
+// thing. Version 1 was the contract before `provision` carried a `githubToken`; version 2 is the
+// contract in which the remote must use the forwarded token. Refusing a version-1 remote is the
+// whole point — it would otherwise provision, run, and quietly leave the workspace with no
+// credential to push with.
+export const REMOTE_PROTOCOL_VERSION = 2;
 
 // The single line that flips the channel from a raw terminal to a framed transport. Chosen so it
 // cannot occur in ordinary ssh banner, motd, or authentication output.
@@ -35,8 +42,10 @@ export type ClientFrame =
 // Remote → local: the process family's output/exit, the provisioning answer, and the transcript
 // blocks the remote's own `createTranscriptSource` yields.
 export type ServerFrame =
-  // `notice` is the remote's own workspace-isolation notice, when it has one: whether processes are
-  // actually confined is a fact about the machine they run on, so it is reported from there.
+  // `notice` is what the remote knows about the workspace it just made and the local side cannot
+  // work out for itself: whether its processes are actually confined, and which GitHub credential
+  // it ended up with. Both are facts about the machine they hold on, so they are reported from
+  // there; `serve-notice.ts` composes them into this one string.
   | { type: 'workspace-ready'; dir: string; notice?: string }
   | { type: 'workspace-failed'; message: string }
   | { type: 'output'; id: string; data: string }

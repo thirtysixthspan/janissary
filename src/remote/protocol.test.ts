@@ -89,6 +89,15 @@ describe('handshake', () => {
     expect('error' in parsed && parsed.error).toContain(String(REMOTE_PROTOCOL_VERSION));
   });
 
+  // Version 1 is every installation predating token forwarding. Such a remote decodes the provision
+  // frame happily and ignores its `githubToken`, so accepting it would mean a workspace that runs
+  // fine and cannot push — refusing it at the handshake is the point of the bump to 2.
+  it('rejects a remote too old to honor the forwarded GitHub token', () => {
+    const parsed = parseHandshake(`${HANDSHAKE_SENTINEL} ${JSON.stringify({ version: 1, root: '/srv/proj' })}`);
+    expect(parsed).toEqual({ error: expect.stringContaining('Update janissary') });
+    expect('error' in parsed && parsed.error).toContain(String(REMOTE_PROTOCOL_VERSION));
+  });
+
   it('rejects a malformed handshake payload', () => {
     expect(parseHandshake(`${HANDSHAKE_SENTINEL} {oops`)).toEqual({
       error: expect.stringContaining('Malformed remote handshake'),

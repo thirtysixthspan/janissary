@@ -8,6 +8,7 @@ import type { TranscriptSource } from '../harness/transcript/source.js';
 import { decodeFrame, encodeFrame, encodeHandshake, type ClientFrame, type ServerFrame } from './protocol.js';
 import { resolveRemoteRoot } from './serve-root.js';
 import { RemoteProcesses } from './serve-processes.js';
+import { githubTokenNotice, workspaceReadyNotice } from './serve-notice.js';
 
 // `janus remote-serve [<project-dir>]`: the far end of a remote janissary session. It runs attached
 // inside an ordinary ssh session, takes no instance lock, starts no HTTP server, opens no window,
@@ -107,13 +108,18 @@ export class RemoteServer {
       return;
     }
     this.workspaceDir = result.dir;
+    const ownGithubToken = getGithubToken();
     this.processes = new RemoteProcesses(
       (frame) => this.emit(frame),
       result.dir,
       label,
-      forwardedGithubToken ?? getGithubToken(),
+      forwardedGithubToken ?? ownGithubToken,
     );
-    this.emit({ type: 'workspace-ready', dir: result.dir, notice: sandboxNotice() });
+    this.emit({
+      type: 'workspace-ready',
+      dir: result.dir,
+      notice: workspaceReadyNotice(sandboxNotice(), githubTokenNotice(forwardedGithubToken, ownGithubToken)),
+    });
   }
 
   private spawn(frame: Extract<ClientFrame, { type: 'spawn' }>): void {
