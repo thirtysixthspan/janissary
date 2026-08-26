@@ -4,7 +4,7 @@
 
 A workspace is a disposable, isolated clone of your repository that an agent or harness works in instead of the project itself. It exists so you can let an AI agent loose on your code without betting the repo — or your machine — on its judgment: the agent gets a full, real checkout it can build, test, and commit in, while the workspace boundary decides what it can't touch.
 
-Ask for one with `--workspace` (or `-w`) when creating an [agent](/user-documentation/advanced-agents/workspaced-agent) or a [harness](/user-documentation/advanced-agents/harness). Two properties define it — disposability and isolation.
+Agents and harnesses get a workspace by default. Use `--no-workspace` when you deliberately want one to work in the project checkout instead; `--workspace` (or `-w`) explicitly confirms the default. Two properties define a workspace — disposability and isolation.
 
 **Disposable.** The workspace is a fresh `git clone`, created when the tab opens and deleted when the tab closes. Nothing in it outlives the tab except what was pushed or merged out deliberately. Relaunching the app doesn't bring workspaces back. That makes a workspace cheap to abandon: if an experiment goes sideways, close the tab.
 

@@ -436,7 +436,7 @@ describe('HarnessManager auto-approve', () => {
   it('never injects into a gate when -y is not given', async () => {
     const { managers } = makeManagers();
     const manager = new HarnessManager(managers);
-    expect(manager.run('harness claude -w')).toBeUndefined();
+    expect(manager.run('harness claude -w --no-auto-approve')).toBeUndefined();
     messageBus.emit('pty', { type: 'data', id: 'pty-1', data: GATE });
     await vi.advanceTimersByTimeAsync(1001);
     expect(managers.pty.input).not.toHaveBeenCalled();
@@ -536,7 +536,7 @@ describe('HarnessManager model/effort', () => {
   it('passes a valid --model through and drops effort for opencode in the spawned command', () => {
     const { managers } = makeManagers();
     const manager = new HarnessManager(managers);
-    expect(manager.run('harness opencode --model opencode-go/glm-5.2 --effort high')).toBeUndefined();
+    expect(manager.run('harness opencode --no-workspace --model opencode-go/glm-5.2 --effort high')).toBeUndefined();
     expect(managers.pty.spawn).toHaveBeenCalledWith(
       'opencode', 'opencode', "opencode --model 'opencode-go/glm-5.2'",
       '/project', undefined, false, undefined,
@@ -546,7 +546,7 @@ describe('HarnessManager model/effort', () => {
   it('passes --effort through without --model when only --effort is given', () => {
     const { managers } = makeManagers();
     const manager = new HarnessManager(managers);
-    expect(manager.run('harness claude --effort high')).toBeUndefined();
+    expect(manager.run('harness claude --no-workspace --no-auto-approve --effort high')).toBeUndefined();
     expect(managers.pty.spawn).toHaveBeenCalledWith(
       'claude', 'claude', "claude --effort 'high'", '/project', undefined, false,
       { CLAUDE_CODE_TMPDIR: '/project/.janissary/temp', DISABLE_AUTOUPDATER: '1' },
@@ -556,7 +556,7 @@ describe('HarnessManager model/effort', () => {
   it('disables Claude Code autoupdates for a plain Claude launch', () => {
     const { managers } = makeManagers();
     const manager = new HarnessManager(managers);
-    expect(manager.run('harness claude')).toBeUndefined();
+    expect(manager.run('harness claude --no-workspace --no-auto-approve')).toBeUndefined();
     expect(managers.pty.spawn).toHaveBeenCalledWith(
       'claude', 'claude', 'claude', '/project', undefined, false,
       { CLAUDE_CODE_TMPDIR: '/project/.janissary/temp', DISABLE_AUTOUPDATER: '1' },
@@ -567,7 +567,7 @@ describe('HarnessManager model/effort', () => {
     const { managers } = makeManagers();
     const manager = new HarnessManager(managers);
     expect(manager.openFromProfile(
-      { name: 'claude', tool: 'claude', effort: 'high' }, 'claude', 2, '#fff',
+      { name: 'claude', tool: 'claude', effort: 'high', workspace: false }, 'claude', 2, '#fff',
     )).toBeUndefined();
     expect(managers.pty.spawn).toHaveBeenCalledWith(
       'claude', 'claude', "claude --effort 'high'", expect.any(String), undefined, false,
@@ -585,7 +585,7 @@ describe('HarnessManager model/effort', () => {
   it('leaves model and effort undefined on the payload when neither is given', () => {
     const { managers, tabs } = makeManagers();
     const manager = new HarnessManager(managers);
-    expect(manager.run('harness claude')).toBeUndefined();
+    expect(manager.run('harness claude --no-workspace --no-auto-approve')).toBeUndefined();
     const { harness } = tabs.at(-1)!;
     expect(harness!.model).toBeUndefined();
     expect(harness!.effort).toBeUndefined();
@@ -633,7 +633,7 @@ describe('HarnessManager busy/ready status', () => {
   it('clears busy and marks unread when a gate shows without auto-approve', async () => {
     const { managers } = makeManagers();
     const manager = new HarnessManager(managers);
-    expect(manager.run('harness claude')).toBeUndefined();
+    expect(manager.run('harness claude --no-workspace --no-auto-approve')).toBeUndefined();
     vi.clearAllMocks();
     await settle(GATE);
     expect(managers.tab.deleteBusy).toHaveBeenCalledWith('claude');
@@ -830,10 +830,28 @@ describe('HarnessManager workspace provisioning', () => {
 // The tab-creation options travel as one object, so each of these pins a field that shares a type
 // with its neighbour — the pairs a positional argument list could once have transposed silently.
 describe('HarnessManager spawn options', () => {
+  it('defaults omitted profile booleans to workspace and supported auto-approve', () => {
+    const { managers, tabs } = makeManagers();
+    const manager = new HarnessManager(managers);
+    expect(manager.openFromProfile(
+      { name: 'claude', tool: 'claude' }, 'claude', 2, '#fff',
+    )).toBeUndefined();
+    expect(tabs.at(-1)).toMatchObject({ workspaceDir: '/workspace/claude', autoApprove: true });
+  });
+
+  it('preserves explicit false profile booleans', () => {
+    const { managers, tabs } = makeManagers();
+    const manager = new HarnessManager(managers);
+    expect(manager.openFromProfile(
+      { name: 'claude', tool: 'claude', workspace: false, autoApprove: false }, 'claude', 2, '#fff',
+    )).toBeUndefined();
+    expect(tabs.at(-1)).toMatchObject({ workspaceDir: undefined, autoApprove: false });
+  });
+
   it('keeps offline and autoApprove apart when only offline is given', () => {
     const { managers, tabs } = makeManagers();
     const manager = new HarnessManager(managers);
-    expect(manager.run('harness claude -w --offline')).toBeUndefined();
+    expect(manager.run('harness claude -w --offline --no-auto-approve')).toBeUndefined();
     expect(tabs.at(-1)).toMatchObject({ offline: true, autoApprove: false });
   });
 

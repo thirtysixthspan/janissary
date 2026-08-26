@@ -76,9 +76,9 @@ harness opencode as quality -w
 
 - `harness claude as` (no label after `as`) — error: `Usage: harness <claude|opencode|codex> as <label>.`
 
-### Workspace flag (`-w` / `--workspace`)
+### Workspace default and opt-out
 
-Adding `-w` (or `--workspace`) clones the root repository (detected from the current directory) into
+Harnesses clone the root repository (detected from the current directory) into
 a disposable workspace named after the harness tab's unique label, identically to `agent --workspace`:
 
 ```
@@ -86,7 +86,8 @@ harness claude -w    → tab "claude"   with workspace at .janissary/workspace/c
 harness claude -w    → tab "claude-2" with workspace at .janissary/workspace/claude-2/
 ```
 
-The harness PTY starts in the workspace directory. The workspace is removed when the tab is closed —
+`-w`/`--workspace` explicitly confirms this default. `--no-workspace` starts in the current project
+checkout instead and wins if both forms are present. The harness PTY starts in the workspace directory. The workspace is removed when the tab is closed —
 the tab closes immediately and the clone is deleted in the background, so closing a harness tab with
 a large workspace never freezes the UI. If no git repository is found from the current directory, an
 error is shown and no tab is created.
@@ -123,7 +124,8 @@ requirement, the failure set, and the connections rows.
 
 ### Auto-approve permissions (`-y` / `--yes`)
 
-Adding `-y` (or `--yes`) lets a workspaced harness run unattended: when its own CLI raises a
+Claude and codex harnesses auto-approve permission prompts by default. `-y`/`--yes` explicitly
+confirms that default, while `--no-auto-approve` opts out and wins if both forms are present. When auto-approval is active and the harness raises a
 blocking permission prompt, the app recognizes the prompt and answers it automatically instead of
 waiting for the user. Because the harness is confined to a disposable workspace clone (and, on
 macOS, a sandbox), auto-approving its prompts stays low-risk — see [[workspaced-agent]].
@@ -132,7 +134,7 @@ The flag is supported for **claude and codex**:
 
 - `harness opencode -y` (or any harness without a recognized permission prompt) — error: `-y/--yes is only supported for the claude and codex harnesses.`
 
-`-y` does **not** require `-w`/`--workspace`. Launching `harness claude -y` without a workspace
+Auto-approval does **not** require a workspace. Launching `harness claude --no-workspace` without also opting out of auto-approval
 succeeds, but since there is then no disposable clone (and, on macOS, no sandbox) confining the
 harness, a security warning line appears in the new tab's terminal: `auto-approve is on without a
 workspace: prompts are approved unattended against your real files, with no sandbox confining the

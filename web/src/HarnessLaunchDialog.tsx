@@ -7,7 +7,8 @@ import { buildHarnessLaunchCommand, type HarnessLaunchFields } from './harness-l
 type Properties = { view: HarnessLaunchView; client: JanusClient };
 
 function initialFields(names: string[]): HarnessLaunchFields {
-  return { name: names[0] ?? 'claude', label: '', workspace: false, offline: false, autoApprove: false, model: '', effort: '' };
+  const name = names[0] ?? 'claude';
+  return { name, label: '', workspace: true, offline: false, autoApprove: autoApproveSupported(name), model: '', effort: '' };
 }
 
 const EFFORT_LEVELS = ['low', 'medium', 'high', 'xhigh', 'max'];
@@ -42,6 +43,7 @@ export function HarnessLaunchDialog({ view, client }: Properties) {
       const next = { ...prev, ...patch };
       if (!(view.models[next.name] ?? []).includes(next.model)) next.model = '';
       if (!autoApproveSupported(next.name)) next.autoApprove = false;
+      else if (patch.name !== undefined && !autoApproveSupported(prev.name)) next.autoApprove = true;
       remembered = next;
       return next;
     });

@@ -3,9 +3,9 @@
 An agent is what lives in an ordinary tab: a transcript, a command bar, a persistent shell, and a name other tabs can address. The `agent` command creates them.
 
 ```
-agent                     new agent, random unused name
-agent bilal               new agent named "bilal"
-agent bilal --workspace   new agent with a disposable clone of the repo
+agent                              new workspaced agent, random unused name
+agent bilal                        new workspaced agent named "bilal"
+agent bilal --no-workspace         new agent in the project checkout
 ```
 
 The new tab is focused as soon as it's created. See [Tabs](/user-documentation/getting-started/tabs) for how agent tabs behave in the strip — dot colors, the busy blink, unread badges, renaming, and closing.
@@ -20,4 +20,4 @@ Bare `agent` draws a random unused name from a preset pool of 52 lowercase names
 
 ## Workspaced agents
 
-`agent <name> --workspace` (or `-w`) gives the agent its own disposable clone of your repository instead of working in the project directly, isolated from the rest of your machine. That changes enough — where the clone lives, what the isolation blocks, how GitHub authentication works — that it has its own page: see [Workspaced agents](/user-documentation/advanced-agents/workspaced-agent).
+Agents get their own disposable clone by default, isolated from the rest of your machine. `--workspace` (or `-w`) explicitly confirms that choice; `--no-workspace` starts in the project checkout instead. If you provide both, `--no-workspace` wins. Workspaces change enough — where the clone lives, what the isolation blocks, how GitHub authentication works — that they have their own page: see [Workspaced agents](/user-documentation/advanced-agents/workspaced-agent).

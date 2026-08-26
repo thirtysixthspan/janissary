@@ -66,7 +66,7 @@ describe('Controller', () => {
 
   it('creates a named agent tab and switches focus to it', () => {
     const { c } = makeController();
-    c.dispatch('agent bob');
+    c.dispatch('agent bob --no-workspace');
     expect(c.view().map((t) => t.label)).toContain('bob');
     // Focus switches to the new agent tab.
     expect(c.view()[c.managers.tab.activeTab].label).toBe('bob');
@@ -74,7 +74,7 @@ describe('Controller', () => {
 
   it('draws a random pool name for a bare agent command', () => {
     const { c } = makeController();
-    c.dispatch('agent');
+    c.dispatch('agent --no-workspace');
     const created = c.view().map((t) => t.label).filter((l) => l !== 'janus');
     expect(created).toHaveLength(1);
     expect(agentNames).toContain(created[0]);
@@ -82,15 +82,15 @@ describe('Controller', () => {
 
   it('reports when an agent name is already active', () => {
     const { c } = makeController();
-    c.dispatch('agent bob');
-    c.dispatch('agent bob');
+    c.dispatch('agent bob --no-workspace');
+    c.dispatch('agent bob --no-workspace');
     expect(allText(c)).toContain('already active');
     expect(c.view().filter((t) => t.label === 'bob')).toHaveLength(1);
   });
 
   it('a child agent inherits the creator group and bar color', () => {
     const { c } = makeController();
-    c.dispatch('agent bob');
+    c.dispatch('agent bob --no-workspace');
     const janus = c.view().find((t) => t.label === 'janus')!;
     const bob = c.view().find((t) => t.label === 'bob')!;
     expect(bob.group).toBe(janus.group);
@@ -143,7 +143,7 @@ describe('Controller', () => {
   it('attributes a SQLite connection only to the tab that opened it', () => {
     initDbDir(mkdtempSync(path.join(tmpdir(), 'janus-db-')));
     const { c } = makeController();
-    c.dispatch('agent bob'); // focus moves to bob
+    c.dispatch('agent bob --no-workspace'); // focus moves to bob
     c.setActiveTab(0);
     c.dispatch('db sqlite create panel_db'); // runs on the active tab (janus)
     try {
@@ -233,7 +233,7 @@ describe('Controller', () => {
   it('records an info message in the recipient context[] and persists it', () => {
     initAgentStateDirectory(mkdtempSync(path.join(tmpdir(), 'janus-ctx-')));
     const { c } = makeController();
-    c.dispatch('agent bob');
+    c.dispatch('agent bob --no-workspace');
     c.setActiveTab(0);
     c.dispatch('msg bob info hello there');
     expect(loadAgentState('bob')?.context).toContain('janus: hello there');
@@ -302,7 +302,7 @@ describe('Controller', () => {
   it('exit is an alias of close — with other tabs open it closes the tab, not the host', () => {
     let isExited = false;
     const c = new Controller({ emitState() {}, sendPty() {}, sendPtyExit() {}, exit() { isExited = true; } });
-    c.dispatch('agent bob');
+    c.dispatch('agent bob --no-workspace');
     c.setActiveTab(1);
     c.dispatch('exit');
     expect(isExited).toBe(false);
@@ -311,7 +311,7 @@ describe('Controller', () => {
 
   it('close removes the active tab and its connections', () => {
     const { c } = makeController();
-    c.dispatch('agent bob');
+    c.dispatch('agent bob --no-workspace');
     c.setActiveTab(1);
     c.dispatch('close');
     expect(c.view().map((t) => t.label)).toEqual(['janus']);
@@ -364,7 +364,7 @@ describe('Controller', () => {
 
   it('tab-completes a msg recipient against agent names', () => {
     const { c } = makeController();
-    c.dispatch('agent bob');
+    c.dispatch('agent bob --no-workspace');
     const res = c.complete('msg b', 5);
     expect(res.newInput).toBe('msg bob ');
     expect(res.matches).toEqual(['bob']);
@@ -378,7 +378,7 @@ describe('Controller', () => {
 
   it('cycles and toggles via UI shortcuts', () => {
     const { c } = makeController();
-    c.dispatch('agent bob');
+    c.dispatch('agent bob --no-workspace');
     c.setActiveTab(0);
     expect(c.managers.tab.activeTab).toBe(0);
     c.moveTab(1);
@@ -389,8 +389,8 @@ describe('Controller', () => {
 
   it('reorders the active tab within its group, renumbering and following the move', () => {
     const { c } = makeController();
-    c.dispatch('agent bob');
-    c.dispatch('agent carol'); // all three share group 1; order: janus, bob, carol
+    c.dispatch('agent bob --no-workspace');
+    c.dispatch('agent carol --no-workspace'); // all three share group 1; order: janus, bob, carol
     c.setActiveTab(2); // carol
     c.reorderTab(-1);
     expect(c.view().map((t) => t.label)).toEqual(['janus', 'carol', 'bob']);
@@ -400,7 +400,7 @@ describe('Controller', () => {
 
   it('is a no-op when reordering past the strip edge', () => {
     const { c } = makeController();
-    c.dispatch('agent bob');
+    c.dispatch('agent bob --no-workspace');
     c.setActiveTab(0);
     c.reorderTab(-1); // janus is already leftmost
     expect(c.view().map((t) => t.label)).toEqual(['janus', 'bob']);
@@ -420,8 +420,8 @@ describe('Controller', () => {
 
   it('reorders a non-active tab to an absolute position and follows it', () => {
     const { c } = makeController();
-    c.dispatch('agent bob');
-    c.dispatch('agent carol');
+    c.dispatch('agent bob --no-workspace');
+    c.dispatch('agent carol --no-workspace');
     openMonitorTab(c.managers, 'reviewer', '#fff');
     c.reorderTabTo(1, 0);
     expect(c.view().map((tab) => tab.label)).toEqual(['bob', 'janus', 'carol', 'reviewer']);
@@ -434,7 +434,7 @@ describe('Controller', () => {
     initAgentStateDirectory(root);
     mkdirSync(path.join(root, '.janissary', 'state'), { recursive: true });
     const { c } = makeController();
-    c.dispatch('agent bob');
+    c.dispatch('agent bob --no-workspace');
     const activeLabel = c.view()[c.managers.tab.activeTab].label;
     openMonitorTab(c.managers, 'reviewer', '#fff');
     openMonitorTab(c.managers, 'security', '#fff');
@@ -466,7 +466,7 @@ describe('Controller', () => {
 
   it('delivers an info message to another agent', () => {
     const { c } = makeController();
-    c.dispatch('agent bob');
+    c.dispatch('agent bob --no-workspace');
     c.setActiveTab(0);
     c.dispatch('msg bob info hello there');
     const bob = c.view().find((t) => t.label === 'bob')!;
@@ -476,7 +476,7 @@ describe('Controller', () => {
 
   it('delivers a message to an agent addressed by its display alias', () => {
     const { c } = makeController();
-    c.dispatch('agent bob');
+    c.dispatch('agent bob --no-workspace');
     c.setActiveTab(c.view().findIndex((t) => t.label === 'bob'));
     c.dispatch('rename buddy'); // bob now displays as "buddy"
     c.setActiveTab(c.view().findIndex((t) => t.label === 'janus'));
@@ -488,8 +488,8 @@ describe('Controller', () => {
 
   it('broadcasts info to all other agents', () => {
     const { c } = makeController();
-    c.dispatch('agent bob');
-    c.dispatch('agent carol');
+    c.dispatch('agent bob --no-workspace');
+    c.dispatch('agent carol --no-workspace');
     c.setActiveTab(0);
     c.dispatch('broadcast all info ping');
     for (const label of ['bob', 'carol']) {
@@ -720,7 +720,7 @@ describe('Controller page tabs', () => {
 
   it('close <tabname> closes the named tab', () => {
     const { c } = makeController();
-    c.dispatch('agent bob');
+    c.dispatch('agent bob --no-workspace');
     expect(c.view().map((t) => t.label)).toContain('bob');
     c.dispatch('close bob');
     expect(c.view().map((t) => t.label)).toEqual(['janus']);
@@ -728,7 +728,7 @@ describe('Controller page tabs', () => {
 
   it('exit <tabname> closes the named tab (alias)', () => {
     const { c } = makeController();
-    c.dispatch('agent bob');
+    c.dispatch('agent bob --no-workspace');
     c.dispatch('exit bob');
     expect(c.view().map((t) => t.label)).toEqual(['janus']);
   });
@@ -741,7 +741,7 @@ describe('Controller page tabs', () => {
 
   it('close <tabname> is case-insensitive', () => {
     const { c } = makeController();
-    c.dispatch('agent bob');
+    c.dispatch('agent bob --no-workspace');
     c.dispatch('close BOB');
     expect(c.view().map((t) => t.label)).toEqual(['janus']);
   });
@@ -784,7 +784,7 @@ describe('Controller harness view', () => {
 
   it('harness claude opens a harness view tab with view, title, status, and ptyId', () => {
     const { c } = makeController();
-    c.dispatch('harness claude');
+    c.dispatch('harness claude --no-workspace --no-auto-approve');
     const tab = c.view().find((t) => t.label === 'claude');
     expect(tab).toBeDefined();
     expect(tab!.view).toBe('harness');
@@ -795,13 +795,13 @@ describe('Controller harness view', () => {
 
   it('focuses the new harness tab', () => {
     const { c } = makeController();
-    c.dispatch('harness claude');
+    c.dispatch('harness claude --no-workspace --no-auto-approve');
     expect(c.view()[c.managers.tab.activeTab].label).toBe('claude');
   });
 
   it('harness opencode as quality opens a tab labeled quality running opencode', () => {
     const { c } = makeController();
-    c.dispatch('harness opencode as quality');
+    c.dispatch('harness opencode as quality --no-workspace');
     const tab = c.view().find((t) => t.label === 'quality');
     expect(tab).toBeDefined();
     expect(tab!.title).toBe('quality');
@@ -818,8 +818,8 @@ describe('Controller harness view', () => {
         return { id: 'mock-pty-2', program, write: vi.fn(), resize: vi.fn(), kill: vi.fn() };
       });
     const { c } = makeController();
-    c.dispatch('harness claude');
-    c.dispatch('harness claude');
+    c.dispatch('harness claude --no-workspace --no-auto-approve');
+    c.dispatch('harness claude --no-workspace --no-auto-approve');
     const labels = c.view().map((t) => t.label);
     expect(labels).toContain('claude');
     expect(labels).toContain('claude-2');
@@ -827,7 +827,7 @@ describe('Controller harness view', () => {
 
   it('PTY exit closes the harness tab', () => {
     const { c } = makeController();
-    c.dispatch('harness claude');
+    c.dispatch('harness claude --no-workspace --no-auto-approve');
     expect(capturedHandlers).not.toBeNull();
     capturedHandlers!.onExit('mock-pty-1', 0);
     expect(c.view().map((t) => t.label)).not.toContain('claude');
@@ -835,7 +835,7 @@ describe('Controller harness view', () => {
 
   it('closing a harness tab kills its PTY', () => {
     const { c } = makeController();
-    c.dispatch('harness claude');
+    c.dispatch('harness claude --no-workspace --no-auto-approve');
     const index = c.view().findIndex((t) => t.label === 'claude');
     c.closeTab(index);
     expect(capturedKill).toHaveBeenCalled();
@@ -844,14 +844,14 @@ describe('Controller harness view', () => {
 
   it('harness claude opens with the tab marked busy', () => {
     const { c } = makeController();
-    c.dispatch('harness claude');
+    c.dispatch('harness claude --no-workspace --no-auto-approve');
     const tab = c.view().find((t) => t.label === 'claude');
     expect(tab!.busy).toBe(true);
   });
 
   it('closing a harness tab clears its busy flag', () => {
     const { c } = makeController();
-    c.dispatch('harness claude');
+    c.dispatch('harness claude --no-workspace --no-auto-approve');
     const index = c.view().findIndex((t) => t.label === 'claude');
     c.closeTab(index);
     expect(c.managers.tab.isBusy('claude')).toBe(false);
@@ -867,7 +867,7 @@ describe('Controller harness view', () => {
 
   it('harness tab appears in the connections panel as terminal:<name>', () => {
     const { c } = makeController();
-    c.dispatch('harness claude');
+    c.dispatch('harness claude --no-workspace --no-auto-approve');
     const tab = c.view().find((t) => t.label === 'claude');
     expect(tab!.connections.some((r) => r.kind === 'terminal' && r.text.includes('claude'))).toBe(true);
   });
@@ -879,7 +879,7 @@ describe('Controller harness view', () => {
       capturedHandlers = handlers;
       return { id: 'mock-pty-1', program, write: vi.fn(), resize: vi.fn(), kill: vi.fn() };
     });
-    c.dispatch('harness claude');
+    c.dispatch('harness claude --no-workspace --no-auto-approve');
     expect(allText(c)).toContain('harness claude');
   });
 });
@@ -999,7 +999,7 @@ describe('Controller send command', () => {
 
   it('delivers text to a harness tab as raw PTY input, followed by a separate Enter', async () => {
     const { c } = makeController();
-    c.dispatch('harness claude');
+    c.dispatch('harness claude --no-workspace --no-auto-approve');
     c.dispatch('send claude /standup');
     const pty = vi.mocked(spawnPty).mock.results[0].value as { write: ReturnType<typeof vi.fn> };
     expect(pty.write).toHaveBeenCalledWith('/standup');
@@ -1008,7 +1008,7 @@ describe('Controller send command', () => {
 
   it('delivers text to an agent tab by dispatching it as a command', () => {
     const { c } = makeController();
-    c.dispatch('agent worker');
+    c.dispatch('agent worker --no-workspace');
     c.dispatch('send worker state');
     expect(c.view().find((t) => t.label === 'worker')!.cmdHistory).toContain('state');
   });
@@ -1021,7 +1021,7 @@ describe('Controller send command', () => {
 
   it('delivers text to a tab addressed by its display alias', () => {
     const { c } = makeController();
-    c.dispatch('agent worker');
+    c.dispatch('agent worker --no-workspace');
     c.setActiveTab(c.view().findIndex((t) => t.label === 'worker'));
     c.dispatch('rename reviewer'); // worker now displays as "reviewer"
     c.setActiveTab(c.view().findIndex((t) => t.label === 'janus'));
@@ -1031,7 +1031,7 @@ describe('Controller send command', () => {
 
   it('errors when the target harness has exited', () => {
     const { c } = makeController();
-    c.dispatch('harness claude');
+    c.dispatch('harness claude --no-workspace --no-auto-approve');
     const tab = c.view().find((t) => t.label === 'claude')!;
     tab.harness!.status = 'exited';
     c.dispatch('send claude /standup');
@@ -1043,7 +1043,7 @@ describe('Controller send command', () => {
     try {
       initAgentStateDirectory(mkdtempSync(path.join(tmpdir(), 'janus-sched-send-')));
       const { c } = makeController();
-      c.dispatch('harness claude');
+      c.dispatch('harness claude --no-workspace --no-auto-approve');
       c.managers.tab.setActiveTab(0); // schedule owned by janus, not the harness tab it targets
       c.dispatch('schedule s1 every 1m send claude /standup');
       vi.advanceTimersByTime(61_050);
@@ -1067,7 +1067,7 @@ describe('Controller schedule in another tab', () => {
   it('an `in <tab>` entry shows in the target tab view, not the issuing tab', () => {
     initAgentStateDirectory(mkdtempSync(path.join(tmpdir(), 'janus-sched-in-')));
     const { c } = makeController();
-    c.dispatch('agent worker');
+    c.dispatch('agent worker --no-workspace');
     c.setActiveTab(0);
     c.dispatch('schedule sweep in worker every 1h db vacuum');
     expect(c.view().find((t) => t.label === 'worker')!.schedule.map((s) => s.id)).toContain('sweep');
@@ -1080,7 +1080,7 @@ describe('Controller schedule in another tab', () => {
     try {
       initAgentStateDirectory(mkdtempSync(path.join(tmpdir(), 'janus-sched-harness-')));
       const { c } = makeController();
-      c.dispatch('harness claude');
+      c.dispatch('harness claude --no-workspace --no-auto-approve');
       c.managers.tab.setActiveTab(0);
       c.dispatch('schedule standup in claude every 1m /standup');
       expect(c.view().find((t) => t.label === 'claude')!.schedule.map((s) => s.id)).toContain('standup');
@@ -1132,7 +1132,7 @@ describe('Controller messageBus', () => {
 
   it('emits tab:removed when closeTab is called', () => {
     const { c } = makeController();
-    c.dispatch('agent bob');
+    c.dispatch('agent bob --no-workspace');
     const events = collect();
     const index = c.view().findIndex((t) => t.label === 'bob');
     c.closeTab(index);
@@ -1147,16 +1147,16 @@ describe('Controller messageBus', () => {
       loadConfig(root);
       const { c } = makeController();
       // `agent fooN` appended to the creator tab (janus) each time
-      c.dispatch('agent foo1');
+      c.dispatch('agent foo1 --no-workspace');
       c.setActiveTab(0);
-      c.dispatch('agent foo2');
+      c.dispatch('agent foo2 --no-workspace');
       c.setActiveTab(0);
-      c.dispatch('agent foo3');
+      c.dispatch('agent foo3 --no-workspace');
       c.setActiveTab(0);
       const events: BusEvent[] = [];
       messageBus.on('transcript', ['entry:appended', 'entries:trimmed'], (e) => { events.push(e); });
       // 4th dispatch exceeds cap=3, triggering entries:trimmed then entry:appended
-      c.dispatch('agent foo4');
+      c.dispatch('agent foo4 --no-workspace');
       const trimIdx = events.findIndex((e) => e.type === 'entries:trimmed');
       const appendIdx = events.findIndex((e) => e.type === 'entry:appended');
       expect(trimIdx).toBeGreaterThanOrEqual(0);
@@ -1177,7 +1177,7 @@ describe('Controller messageBus', () => {
 describe('Controller unread badge', () => {
   it('append to a non-active tab sets hasUnread', () => {
     const { c } = makeController();
-    c.dispatch('agent bob');
+    c.dispatch('agent bob --no-workspace');
     c.setActiveTab(0);
     const bobIndex = c.view().findIndex((t) => t.label === 'bob');
     expect(c.managers.tab.activeTab).not.toBe(bobIndex);
@@ -1193,7 +1193,7 @@ describe('Controller unread badge', () => {
 
   it('setActiveTab clears hasUnread on the newly active tab', () => {
     const { c } = makeController();
-    c.dispatch('agent bob');
+    c.dispatch('agent bob --no-workspace');
     c.setActiveTab(0);
     c.managers.tab.append('bob', { input: 'hello', output: 'world' });
     expect(c.view().find((t) => t.label === 'bob')!.hasUnread).toBe(true);
@@ -1204,7 +1204,7 @@ describe('Controller unread badge', () => {
 
   it('finishRunning to a non-active tab sets hasUnread', () => {
     const { c } = makeController();
-    c.dispatch('agent bob');
+    c.dispatch('agent bob --no-workspace');
     c.setActiveTab(0);
     c.managers.tab.startRunning('bob', 'sleep 1');
     c.managers.tab.finishRunning('bob', 'done');
@@ -1225,7 +1225,7 @@ describe('Controller profile launch (harness entries)', () => {
   const writeHarnessEntry = (root: string, profile: string, filename: string, entry: Record<string, unknown>) => {
     mkdirSync(path.join(root, 'profiles'), { recursive: true });
     const { harness = 'opencode', ...rest } = entry;
-    const tabs = [{ type: 'harness', name: filename, tool: harness, ...rest }];
+    const tabs = [{ type: 'harness', name: filename, tool: harness, workspace: false, autoApprove: false, ...rest }];
     writeFileSync(path.join(root, 'profiles', `${profile}.json`), JSON.stringify({ tabs }));
   };
 
@@ -1558,7 +1558,7 @@ describe('Controller notifications feed', () => {
     withConfig({ incomingMessage: true, stateChange: false, scheduleFire: false, agentStart: false });
     try {
       const { c } = makeController();
-      c.dispatch('agent bob');
+      c.dispatch('agent bob --no-workspace');
       openNotificationsTab(c.managers);
       c.setActiveTab(c.view().findIndex((t) => t.label === 'janus')); // janus active; bob is a background tab
       c.dispatch('msg bob info hello there');
@@ -1572,7 +1572,7 @@ describe('Controller notifications feed', () => {
     withConfig({ incomingMessage: true, stateChange: false, scheduleFire: false, agentStart: false });
     try {
       const { c } = makeController();
-      c.dispatch('agent bob');
+      c.dispatch('agent bob --no-workspace');
       const bobColor = c.view().find((t) => t.label === 'bob')!.dotColor;
       openNotificationsTab(c.managers);
       c.setActiveTab(c.view().findIndex((t) => t.label === 'janus')); // janus active; bob is a background tab
@@ -1589,7 +1589,7 @@ describe('Controller notifications feed', () => {
     withConfig({ incomingMessage: true, stateChange: false, scheduleFire: false, agentStart: false });
     try {
       const { c } = makeController();
-      c.dispatch('agent bob');
+      c.dispatch('agent bob --no-workspace');
       openNotificationsTab(c.managers);
       c.setActiveTab(c.view().findIndex((t) => t.label === 'janus'));
       c.dispatch('msg bob info hello there');
@@ -1605,7 +1605,7 @@ describe('Controller notifications feed', () => {
     withConfig({ incomingMessage: true, stateChange: false, scheduleFire: false, agentStart: false });
     try {
       const { c } = makeController();
-      c.dispatch('agent bob');
+      c.dispatch('agent bob --no-workspace');
       c.setActiveTab(0);
       c.dispatch('msg bob info hello there');
       expect(c.view().some((t) => t.view === 'notifications')).toBe(false);
