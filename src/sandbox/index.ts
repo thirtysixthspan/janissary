@@ -21,9 +21,9 @@ export type SandboxOptions = {
   // `command` when omitted (already the real program — e.g. the ACP agent spawn, which runs the
   // binary directly with no shell wrapper).
   selfBinaryHint?: string;
-  // A scoped GitHub token to inject as `GH_TOKEN` for this spawn (see the injection site below) —
-  // the one deliberate exception to "a scrubbed env var never comes back": it isn't the ambient
-  // value `scrubEnv` just stripped, it's a fresh one we chose to hand this specific workspaced spawn.
+  // A scoped GitHub token to hand this spawn as `GH_TOKEN`, alongside the `GH_CONFIG_DIR` redirect
+  // that keeps `gh` off the machine's ambient login — see `githubCredentialEnv` below. Applied for
+  // any workspaced spawn, whether or not this machine can actually confine it.
   githubToken?: string;
 };
 
@@ -188,12 +188,37 @@ function homeDParams(home: string, relPaths: string[], params: { literal: string
   return args;
 }
 
+// The two variables that hand a workspaced spawn its scoped GitHub credential. `GH_TOKEN` is the
+// one deliberate exception to "a scrubbed env var never comes back": it isn't the ambient value
+// `scrubEnv` just stripped, it's a fresh one chosen for this spawn. `GH_CONFIG_DIR` points at an
+// empty, workspace-private directory because `gh` reads `~/.config/gh/hosts.yml` on every
+// invocation regardless of `GH_TOKEN`, and its config loader treats the sandbox's EPERM deny on
+// that file (see SECRET_DENY_PATHS in paths.ts) as fatal, refusing to run at all; a genuinely
+// absent hosts.yml (real ENOENT) it handles by falling through to `GH_TOKEN` normally. Where the
+// sandbox is inactive there is no deny to work around, but the redirect still keeps that machine's
+// own ambient `gh` login out of the workspace, which is the same guarantee an isolated tab gets.
+function githubCredentialEnv(tmpDir: string, token: string): NodeJS.ProcessEnv {
+  return { GH_TOKEN: token, GH_CONFIG_DIR: path.join(tmpDir, 'gh-config') };
+}
+
+// Handing a workspaced tab its scoped credential is a provisioning concern, not an isolation one:
+// the clone's `origin` is HTTPS and its `credential.helper` is `!gh auth git-credential` on every
+// host (see src/workspace/index.ts), so `git push` and `gh` need `GH_TOKEN` whether or not Seatbelt
+// is confining the process. This is the unconfined path's share of that — a non-darwin remote, or a
+// host with `sandboxWorkspaces` off, would otherwise get a workspace it cannot push from. Without a
+// token, or outside a workspace, the caller's own environment object is returned untouched.
+function withGithubCredentials(env: NodeJS.ProcessEnv, options: SandboxOptions): NodeJS.ProcessEnv {
+  if (!options.workspaceDir || !options.githubToken) return env;
+  return { ...env, ...githubCredentialEnv(resolvePath(`${options.workspaceDir}.tmp`), options.githubToken) };
+}
+
 // Wrap a spawn invocation (`command` + `args` — the same shape `child_process.spawn`/node-pty's
-// `spawn` take) for a workspaced tab. Returns the input unchanged when there's nothing to
-// sandbox: no `workspaceDir`, the `sandboxWorkspaces` config toggle is off, or `sandbox-exec`
-// isn't available (e.g. non-darwin). Otherwise returns `sandbox-exec -p <profile> -D … -- <command>
-// <args>` plus a credential-scrubbed environment with `TMPDIR` set to the workspace's private
-// temp dir.
+// `spawn` take) for a workspaced tab. Returns the command and args unchanged when there's nothing
+// to sandbox: no `workspaceDir`, the `sandboxWorkspaces` config toggle is off, or `sandbox-exec`
+// isn't available (e.g. non-darwin) — the environment still picks up the workspace's GitHub
+// credential in that case, which is not a sandbox concern (see `withGithubCredentials`). Otherwise
+// returns `sandbox-exec -p <profile> -D … -- <command> <args>` plus a credential-scrubbed
+// environment with `TMPDIR` set to the workspace's private temp dir.
 export function sandboxSpawn(
   options: SandboxOptions,
   command: string,
@@ -201,7 +226,7 @@ export function sandboxSpawn(
   env: NodeJS.ProcessEnv = process.env,
 ): SandboxResult {
   if (!options.workspaceDir || !getConfig().sandboxWorkspaces || !sandboxAvailable()) {
-    return { command, args, env };
+    return { command, args, env: withGithubCredentials(env, options) };
   }
 
   const workspaceDir = resolvePath(options.workspaceDir);
@@ -216,15 +241,7 @@ export function sandboxSpawn(
   const scrubbed = scrubEnv(env);
   scrubbed.TMPDIR = tmpDir;
   scrubbed.JANISSARY_NODE = process.execPath;
-  if (options.githubToken) {
-    scrubbed.GH_TOKEN = options.githubToken;
-    // `gh` reads `~/.config/gh/hosts.yml` on every invocation regardless of `GH_TOKEN`, and its
-    // config loader treats the sandbox's EPERM deny on that file (see SECRET_DENY_PATHS in
-    // paths.ts) as fatal, refusing to run at all. Pointing `GH_CONFIG_DIR` at an empty,
-    // workspace-private directory instead gives `gh` a genuinely absent hosts.yml (real ENOENT),
-    // which it handles by falling through to `GH_TOKEN` normally.
-    scrubbed.GH_CONFIG_DIR = path.join(tmpDir, 'gh-config');
-  }
+  if (options.githubToken) Object.assign(scrubbed, githubCredentialEnv(tmpDir, options.githubToken));
 
   const profile = options.offline ? SANDBOX_PROFILE_OFFLINE : SANDBOX_PROFILE;
   const dParams = [
