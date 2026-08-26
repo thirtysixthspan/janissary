@@ -117,7 +117,8 @@ chip at the **left** of the row, ahead of the working directory, so the row read
 path there". The chip shows the bare host and carries the full destination in its tooltip
 ("Remote: admin@devbox:/srv/proj"); the working directory beside it is the remote workspace path. It
 uses the same chip styling as the model and effort chips. A tab with no remote host renders the row
-exactly as before.
+exactly as before. When an interactive command takes over a remote agent tab, its shell metadata
+row keeps the same host chip and remote working directory for the lifetime of the PTY.
 
 Text content in metadata rows and headers throughout the application is selectable with the mouse,
 including paths, names, sizes, branches, addresses, monitor details, and agent settings. Native

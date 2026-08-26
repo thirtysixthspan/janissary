@@ -33,7 +33,7 @@ export function ShellTabLayer({
             gridRow: 2,
           }}
         >
-          <ShellTab ptyId={t.activePty!} client={client} cwd={t.cwd} flags={t.flags}
+          <ShellTab ptyId={t.activePty!} client={client} cwd={t.cwd} flags={t.flags} remote={t.remote}
             onSplit={onSplit ? () => onSplit(index) : undefined}
             ref={(h) => onHandle(t.activePty!, h)} />
         </div>

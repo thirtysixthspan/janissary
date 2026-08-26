@@ -7,9 +7,9 @@ import type { TabView } from '@shared/protocol';
 import type { ShellTabHandle } from './tab-handles';
 
 vi.mock('./ShellTab', () => ({
-  ShellTab: forwardRef<ShellTabHandle, { ptyId: string }>(function ShellTab({ ptyId }, ref) {
+  ShellTab: forwardRef<ShellTabHandle, { ptyId: string; remote?: TabView['remote'] }>(function ShellTab({ ptyId, remote }, ref) {
     useImperativeHandle(ref, () => ({ focus: () => {} }), []);
-    return <div data-ptyid={ptyId}>shell</div>;
+    return <div data-ptyid={ptyId} data-remote={remote?.address}>shell</div>;
   }),
 }));
 
@@ -113,6 +113,15 @@ describe('ShellTabLayer', () => {
       <ShellTabLayer tabs={tabs} activeLabel="a" client={client} onHandle={() => {}} />,
     );
     expect(screen.getByText('shell')).toBeInTheDocument();
+  });
+
+  it('passes the tab remote to ShellTab', () => {
+    const remote = { address: 'admin@devbox:/srv/proj', host: 'devbox' };
+    const tabs = [makeTab({ label: 'a', activePty: 'pty1', remote })];
+    render(
+      <ShellTabLayer tabs={tabs} activeLabel="a" client={fakeClient()} onHandle={() => {}} />,
+    );
+    expect(screen.getByText('shell')).toHaveAttribute('data-remote', remote.address);
   });
 
   it('calls onHandle with ptyId when ShellTab mounts', () => {

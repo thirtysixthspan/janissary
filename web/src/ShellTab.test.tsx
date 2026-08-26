@@ -91,6 +91,16 @@ describe('ShellTab', () => {
     expect(getByText('~/project')).toBeInTheDocument();
   });
 
+  it('shows the remote host in the metadata row', () => {
+    const client = fakeClient();
+    const remote = { address: 'admin@devbox:/srv/proj', host: 'devbox' };
+    const { getByLabelText } = render(
+      <ShellTab ptyId="pty1" client={client} cwd="/srv/proj" remote={remote} />,
+    );
+    expect(getByLabelText('Remote')).toHaveTextContent('devbox');
+    expect(getByLabelText('Remote')).toHaveAttribute('title', 'Remote: admin@devbox:/srv/proj');
+  });
+
   it('renders the workspaced emoji with a tooltip when flags includes workspaced', () => {
     const client = fakeClient();
     const { getByRole } = render(<ShellTab ptyId="pty1" client={client} flags={['workspaced']} />);
