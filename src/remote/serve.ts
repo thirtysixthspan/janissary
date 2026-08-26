@@ -1,5 +1,5 @@
 import { loadConfig } from '../config.js';
-import { loadGithubToken } from '../github-token.js';
+import { getGithubToken, loadGithubToken } from '../github-token.js';
 import { initWorkspaceDir } from '../workspace/index.js';
 import { sandboxNotice } from '../sandbox/index.js';
 import { WorkspaceManager } from '../workspace/manager.js';
@@ -86,7 +86,7 @@ export class RemoteServer {
     const frame = decodeFrame(line);
     if ('error' in frame) { this.refuse(frame.error); return; }
     switch (frame.type) {
-    case 'provision': { void this.provision(frame.label); return; }
+    case 'provision': { void this.provision(frame.label, frame.githubToken); return; }
     case 'spawn': { this.spawn(frame); return; }
     case 'input': { this.processes?.input(frame.id, frame.data); return; }
     case 'resize': { this.processes?.resize(frame.id, frame.cols, frame.rows); return; }
@@ -97,7 +97,7 @@ export class RemoteServer {
 
   // Clone the project root's `origin` into `.janissary/workspace/<label>` under this root, using the
   // very same `WorkspaceManager` the local server uses for a `-w` launch.
-  private async provision(label: string): Promise<void> {
+  private async provision(label: string, forwardedGithubToken?: string): Promise<void> {
     const result = this.workspaces.create(label);
     if ('error' in result) { this.refuse(result.error); return; }
     try {
@@ -107,7 +107,12 @@ export class RemoteServer {
       return;
     }
     this.workspaceDir = result.dir;
-    this.processes = new RemoteProcesses((frame) => this.emit(frame), result.dir, label);
+    this.processes = new RemoteProcesses(
+      (frame) => this.emit(frame),
+      result.dir,
+      label,
+      forwardedGithubToken ?? getGithubToken(),
+    );
     this.emit({ type: 'workspace-ready', dir: result.dir, notice: sandboxNotice() });
   }
 

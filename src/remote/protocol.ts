@@ -16,7 +16,7 @@ export type RemoteHandshake = { version: number; root: string };
 // agent tabs' persistent shells, PTY takeover, and inline terminal cards alike; `provision` is the
 // only other thing the local side ever asks for.
 export type ClientFrame =
-  | { type: 'provision'; label: string }
+  | { type: 'provision'; label: string; githubToken?: string }
   | {
     type: 'spawn'; id: string; program: string; command: string;
     // How the remote runs it: `pty` for anything a terminal renders (the harness itself, a PTY

@@ -12,7 +12,7 @@ function roundTrip(frame: RemoteFrame): RemoteFrame | { error: string } {
 describe('frame codec', () => {
   it('round-trips every client frame', () => {
     const frames: RemoteFrame[] = [
-      { type: 'provision', label: 'claude' },
+      { type: 'provision', label: 'claude', githubToken: 'github_pat_scoped' },
       { type: 'spawn', id: 'r1', program: 'claude', command: 'claude', mode: 'pty', harness: 'claude', cols: 100, rows: 40 },
       { type: 'input', id: 'r1', data: 'hello' },
       { type: 'resize', id: 'r1', cols: 120, rows: 50 },

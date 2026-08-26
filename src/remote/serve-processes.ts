@@ -1,7 +1,6 @@
 import { spawnPty } from '../pty.js';
 import { spawnShell } from '../shell.js';
 import { harnessEnv } from '../harness/scratch-dir.js';
-import { getGithubToken } from '../github-token.js';
 import type { ClientFrame, ServerFrame } from './protocol.js';
 
 // The remote server's process table. Every remote harness tab, every remote agent tab's persistent
@@ -21,6 +20,7 @@ export class RemoteProcesses {
     private send: (frame: ServerFrame) => void,
     private workspaceDir: string,
     private label: string,
+    private githubToken?: string,
   ) {}
 
   spawn(frame: Extract<ClientFrame, { type: 'spawn' }>): void {
@@ -54,7 +54,7 @@ export class RemoteProcesses {
       },
       frame.cols,
       frame.rows,
-      { workspaceDir: this.workspaceDir, offline: frame.offline, githubToken: getGithubToken() },
+      { workspaceDir: this.workspaceDir, offline: frame.offline, githubToken: this.githubToken },
       frame.harness === undefined ? undefined : harnessEnv(frame.harness, this.workspaceDir),
     );
     this.writers.set(frame.id, (data) => session.write(data));
@@ -65,7 +65,7 @@ export class RemoteProcesses {
   private spawnPipe(id: string): Entry {
     const shell = spawnShell(0, { JANUS_AGENT_NAME: this.label }, {
       workspaceDir: this.workspaceDir,
-      githubToken: getGithubToken(),
+      githubToken: this.githubToken,
     });
     const onChunk = (chunk: string) => this.send({ type: 'output', id, data: chunk });
     shell.stdout?.on('data', onChunk);

@@ -109,12 +109,15 @@ and the busy dot behaves exactly as it does for a local harness. `harness transc
 exception: its source is the harness binary's own session record, which lives in the remote's dot
 directory, so the remote reads it and pushes the rendered blocks across.
 
-Isolation and credentials are the remote's own. `remote-serve` applies the same workspace sandbox
+Isolation is the remote's own. `remote-serve` applies the same workspace sandbox
 policy the local server applies, which means isolation is active when the remote is macOS and
 inactive otherwise; the remote's own isolation notice — not this machine's — is what appears in the
-tab. `--offline` is likewise only meaningful where the remote's sandbox is active. No credentials are
-forwarded: the remote's own `.janissary/github-token` is what a remote workspace uses, and the
-initial clone uses whatever transport the *remote* repository's `origin` already has.
+tab. `--offline` is likewise only meaningful where the remote's sandbox is active. The local
+project's scoped `.janissary/github-token`, when configured, is forwarded in the encrypted SSH
+channel's provisioning frame and injected as `GH_TOKEN` only into that remote tab's workspaced
+processes; it is never written to the remote filesystem. If the local project has no token, the
+remote project's own `.janissary/github-token` remains the fallback. The initial clone uses whatever
+transport the *remote* repository's `origin` already has.
 
 ### Appearance
 
