@@ -48,6 +48,12 @@ The remote must already have `janus` on its PATH. Nothing is shipped over the wi
 upload, no `npx` fetch. The remote is a peer installation, not a payload. A missing binary fails the
 launch with ssh's own message in the tab's terminal.
 
+The remote command runs through the remote user's **own interactive shell**, so that user's shell
+startup file is read before `janus` is looked up. A `janus` installed by a version manager such as
+nvm — whose PATH setup lives in the interactive startup file and is skipped when ssh runs a bare
+command — is found for the same reason it is found when the user ssh's in and types the command by
+hand. The shell is whichever one the remote account is configured with, not a fixed choice.
+
 ### Authentication
 
 Each remote tab owns one ssh session and one `remote-serve` process. There is no multiplexing and no

@@ -17,12 +17,21 @@ export type RemoteLaunchHandlers = {
 
 type Entry = { channel: RemoteChannel; transcript: RemoteTranscriptSource; address: RemoteAddress };
 
-// The local side runs `ssh -t <destination> janus remote-serve [<path>]`. Nothing is shipped over
-// the wire: the remote must already have `janus` on its PATH, and a missing binary fails the launch
-// with ssh's own message in the tab's terminal. `-t` forces a real tty so ssh's authentication
-// prompts render there.
+// The local side runs `ssh -t <destination> '$SHELL -ic "janus remote-serve [<path>]"'`. Nothing is
+// shipped over the wire: the remote must already have `janus` on its PATH, and a missing binary
+// fails the launch with ssh's own message in the tab's terminal. `-t` forces a real tty so ssh's
+// authentication prompts render there.
+//
+// The `$SHELL -ic` wrapper is what puts `janus` on that PATH. ssh runs a bare command through a
+// non-interactive shell, which skips `~/.bashrc` — and that is exactly where nvm and its kind
+// install their PATH setup, so a version-managed `janus` would be missing. `$SHELL` expands on the
+// remote (sshd sets it from the user's passwd entry) so the wrapper follows whatever shell that
+// user configured; the single quotes keep the local `$SHELL -lc` from expanding it first and hold
+// the wrapper together as one ssh argument. Both halves of the address are metacharacter-free by
+// `parseRemoteAddress`, so nesting them a quoting level deeper stays safe.
 export function remoteServeCommand(address: RemoteAddress): string {
-  return `ssh -t ${address.destination} janus remote-serve${address.path ? ` ${address.path}` : ''}`;
+  const serve = `janus remote-serve${address.path ? ` ${address.path}` : ''}`;
+  return `ssh -t ${address.destination} '$SHELL -ic "${serve}"'`;
 }
 
 // One ssh session and one `remote-serve` process per remote tab — no multiplexing, no shared
