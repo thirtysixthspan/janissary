@@ -11,6 +11,12 @@ function makeClient(reply?: unknown) {
   return { client: { request, send } as unknown as JanusClient, request, send };
 }
 
+function deferred<T>() {
+  const state = { resolve: undefined as unknown as (value: T) => void };
+  const promise = new Promise<T>((resolve) => { state.resolve = resolve; });
+  return { promise, resolve: state.resolve };
+}
+
 describe('useSelectionAction', () => {
   it('queries for a menu opened on a row inside a multi-row selection', async () => {
     const { client, request } = makeClient();
@@ -39,6 +45,39 @@ describe('useSelectionAction', () => {
     const { result } = renderHook(() => useSelectionAction(client, 0));
 
     await act(async () => { result.current.query(['a.mp3', 'cover.png']); });
+
+    expect(result.current.entry).toBeNull();
+  });
+
+  it('ignores an older reply that resolves after the current query', async () => {
+    const first = deferred<typeof OFFERED>();
+    const second = deferred<typeof OFFERED>();
+    const request = vi.fn()
+      .mockReturnValueOnce(first.promise)
+      .mockReturnValueOnce(second.promise);
+    const client = { request, send: vi.fn() } as unknown as JanusClient;
+    const { result } = renderHook(() => useSelectionAction(client, 0));
+
+    act(() => {
+      result.current.query(['first.mp3', 'second.mp3']);
+      result.current.query(['third.mp3', 'fourth.mp3']);
+    });
+    await act(async () => { second.resolve({ label: 'Current action', action: 'current' }); });
+    await act(async () => { first.resolve({ label: 'Stale action', action: 'stale' }); });
+
+    expect(result.current.entry).toEqual({ label: 'Current action', action: 'current' });
+  });
+
+  it('ignores a pending reply after the menu action is cleared', async () => {
+    const pending = deferred<typeof OFFERED>();
+    const client = { request: vi.fn(() => pending.promise), send: vi.fn() } as unknown as JanusClient;
+    const { result } = renderHook(() => useSelectionAction(client, 0));
+
+    act(() => {
+      result.current.query(['first.mp3', 'second.mp3']);
+      result.current.clear();
+    });
+    await act(async () => { pending.resolve(OFFERED); });
 
     expect(result.current.entry).toBeNull();
   });

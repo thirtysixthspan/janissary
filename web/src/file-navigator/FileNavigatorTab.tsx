@@ -206,7 +206,7 @@ export function FileNavigatorTab({
           label: selectionAction.entry.label,
           onActivate: () => { selectionAction.run(selection.operationPaths); },
         }}
-        onCloseMenu={rowEvents.closeMenu}
+        onCloseMenu={() => { selectionAction.clear(); rowEvents.closeMenu(); }}
         focusTree={() => containerRef.current?.focus()}
       />
     </div>
