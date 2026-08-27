@@ -114,7 +114,7 @@ but the file it names is unreadable inside the sandbox whenever it sits under `$
 carve-in, and its default location under `~/.config/gcloud` is an explicit secret deny. Widening that
 deny to fix it would hand a workspaced agent a Google credential file, which is what the list exists
 to prevent, so a Vertex-configured harness has no working route into a workspace. If a scoped GitHub token is configured for the project
-(`.janissary/github-token`, loaded by `src/github-token.ts`), `GH_TOKEN` is re-added after the scrub
+(`.janissary/github-token`, loaded by `src/project-tokens.ts`), `GH_TOKEN` is re-added after the scrub
 with that value — the one deliberate exception to "a scrubbed var never comes back": it's not the
 ambient value just stripped, it's a fresh, narrowly-scoped one chosen for this workspaced spawn (see
 [[workspaced-agent]]'s "GitHub authentication"). In the same case, `GH_CONFIG_DIR` is also set, to a
@@ -132,7 +132,7 @@ where nothing else about the environment is changed and nothing is scrubbed. (Se
 *sole* matching deny for that operation+path — any other unqualified deny or allow on the same path,
 in either direction, wins over it regardless of rule ordering, and `hosts.yml` already falls under
 the broader `$HOME`-wide read deny.) If a Claude Code subscription token is configured for the
-project (`.janissary/claude-token`, loaded by `src/claude-token.ts`), `CLAUDE_CODE_OAUTH_TOKEN` is
+project (`.janissary/claude-token`, loaded by `src/project-tokens.ts`), `CLAUDE_CODE_OAUTH_TOKEN` is
 set to it for every workspaced spawn, on the confined and pass-through paths alike and for the same
 reason the GitHub variables are — see [[workspaced-agent]]'s "Harness authentication". This one is
 *not* a scrub exception, because it was never scrubbed: it is an LLM provider credential, and the
@@ -140,11 +140,11 @@ list deliberately exempts those. An ambient `CLAUDE_CODE_OAUTH_TOKEN` therefore 
 always has, and a configured token simply takes precedence over it. It needs no companion variable of
 the `GH_CONFIG_DIR` kind either — the harness reads its configuration from `~/.claude`, which is
 already carved in. An OpenCode API key configured at `.janissary/opencode-token` (loaded by
-`src/opencode-token.ts`) is set as `OPENCODE_API_KEY` on exactly the same terms, for the same
+`src/project-tokens.ts`) is set as `OPENCODE_API_KEY` on exactly the same terms, for the same
 reasons: the variable the OpenCode Zen and OpenCode Go providers declare, off the scrub list as a
 provider credential, and needing no companion because opencode reads its own configuration from
 `~/.local/share/opencode`, likewise already carved in. A Google AI key configured at
-`.janissary/gemini-token` (loaded by `src/gemini-token.ts`) is set as `GEMINI_API_KEY` on the same
+`.janissary/gemini-token` (loaded by `src/project-tokens.ts`) is set as `GEMINI_API_KEY` on the same
 terms again. It exists because the Google provider's key lives in opencode's own credential store,
 which is a denied secret path, so without it that provider has no route into a workspace other than
 the ambient environment. `TMPDIR` is overridden to the workspace's private temp dir

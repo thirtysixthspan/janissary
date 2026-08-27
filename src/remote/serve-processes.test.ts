@@ -39,8 +39,7 @@ describe('RemoteProcesses forwarded credentials', () => {
     });
 
     expect(vi.mocked(spawnPty).mock.calls[0]?.[6]).toEqual({
-      workspaceDir: '/remote/workspace', offline: undefined,
-      githubToken: TOKEN, claudeToken: CLAUDE_TOKEN, opencodeToken: OPENCODE_TOKEN, geminiToken: GEMINI_TOKEN,
+      workspaceDir: '/remote/workspace', offline: undefined, tokens: CREDENTIALS,
     });
   });
 
@@ -51,8 +50,7 @@ describe('RemoteProcesses forwarded credentials', () => {
     });
 
     expect(vi.mocked(spawnShell)).toHaveBeenCalledWith(0, { JANUS_AGENT_NAME: 'agent' }, {
-      workspaceDir: '/remote/workspace',
-      githubToken: TOKEN, claudeToken: CLAUDE_TOKEN, opencodeToken: OPENCODE_TOKEN, geminiToken: GEMINI_TOKEN,
+      workspaceDir: '/remote/workspace', tokens: CREDENTIALS,
     });
   });
 
@@ -65,8 +63,7 @@ describe('RemoteProcesses forwarded credentials', () => {
     });
 
     expect(vi.mocked(spawnPty).mock.calls[0]?.[6]).toEqual({
-      workspaceDir: '/remote/workspace', offline: undefined,
-      githubToken: undefined, claudeToken: CLAUDE_TOKEN, opencodeToken: undefined, geminiToken: undefined,
+      workspaceDir: '/remote/workspace', offline: undefined, tokens: { claude: CLAUDE_TOKEN },
     });
   });
 
@@ -77,8 +74,7 @@ describe('RemoteProcesses forwarded credentials', () => {
     });
 
     expect(vi.mocked(spawnPty).mock.calls[0]?.[6]).toEqual({
-      workspaceDir: '/remote/workspace', offline: undefined,
-      githubToken: undefined, claudeToken: undefined, opencodeToken: OPENCODE_TOKEN, geminiToken: undefined,
+      workspaceDir: '/remote/workspace', offline: undefined, tokens: { opencode: OPENCODE_TOKEN },
     });
   });
 });

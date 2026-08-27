@@ -9,6 +9,7 @@ import {
   ENV_SCRUB_PATTERNS,
 } from './paths.js';
 import { getConfig } from '../config.js';
+import { PROJECT_TOKENS, type ProjectTokens } from '../project-tokens.js';
 
 export type SandboxOptions = {
   // Undefined for a non-workspaced tab — callers pass it through unconditionally and
@@ -21,23 +22,12 @@ export type SandboxOptions = {
   // `command` when omitted (already the real program — e.g. the ACP agent spawn, which runs the
   // binary directly with no shell wrapper).
   selfBinaryHint?: string;
-  // A scoped GitHub token to hand this spawn as `GH_TOKEN`, alongside the `GH_CONFIG_DIR` redirect
-  // that keeps `gh` off the machine's ambient login — see `githubCredentialEnv` below. Applied for
-  // any workspaced spawn, whether or not this machine can actually confine it.
-  githubToken?: string;
-  // A long-lived Claude Code subscription token to hand this spawn as `CLAUDE_CODE_OAUTH_TOKEN`
-  // (see `claude-token.ts`). Applied for any workspaced spawn, not just a `claude` harness tab —
-  // an agent tab's plain shell can invoke `claude` too. Same isolation-independence as the GitHub
-  // token: a host that cannot confine anything still needs its harness authenticated.
-  claudeToken?: string;
-  // An OpenCode API key to hand this spawn as `OPENCODE_API_KEY` (see `opencode-token.ts`), the
-  // variable the OpenCode Zen and OpenCode Go providers declare. Same terms as the Claude token:
-  // any workspaced spawn, confined or not.
-  opencodeToken?: string;
-  // A Google AI API key to hand this spawn as `GEMINI_API_KEY` (see `gemini-token.ts`). The Google
-  // provider's route into a workspace, since opencode's own credential store is a denied secret
-  // path. Same terms as the other provider tokens: any workspaced spawn, confined or not.
-  geminiToken?: string;
+  // The project's configured credentials (see `project-tokens.ts`), each becoming the environment
+  // variable its table row names. Applied for any workspaced spawn — not just a harness tab, since
+  // an agent tab's plain shell can invoke the same CLIs — and whether or not this machine can
+  // actually confine the process, because a host that cannot confine anything still needs its
+  // harness authenticated and its pushes credentialed.
+  tokens?: ProjectTokens;
 };
 
 export type SandboxResult = {
@@ -201,32 +191,29 @@ function homeDParams(home: string, relPaths: string[], params: { literal: string
   return args;
 }
 
-// The two variables that hand a workspaced spawn its scoped GitHub credential. `GH_TOKEN` is the
-// one deliberate exception to "a scrubbed env var never comes back": it isn't the ambient value
-// `scrubEnv` just stripped, it's a fresh one chosen for this spawn. `GH_CONFIG_DIR` points at an
-// empty, workspace-private directory because `gh` reads `~/.config/gh/hosts.yml` on every
-// invocation regardless of `GH_TOKEN`, and its config loader treats the sandbox's EPERM deny on
-// that file (see SECRET_DENY_PATHS in paths.ts) as fatal, refusing to run at all; a genuinely
-// absent hosts.yml (real ENOENT) it handles by falling through to `GH_TOKEN` normally. Where the
-// sandbox is inactive there is no deny to work around, but the redirect still keeps that machine's
-// own ambient `gh` login out of the workspace, which is the same guarantee an isolated tab gets.
-function githubCredentialEnv(tmpDir: string, token: string): NodeJS.ProcessEnv {
-  return { GH_TOKEN: token, GH_CONFIG_DIR: path.join(tmpDir, 'gh-config') };
-}
-
-// Every credential this spawn is deliberately handed, for whichever of the four tokens the caller
-// supplied. Only the GitHub one needs a `GH_CONFIG_DIR`-style companion: `gh` reads a config file
-// the sandbox denies, while the provider keys are self-contained values. None of the three provider
-// variables is on `ENV_SCRUB_PATTERNS` either, unlike `GH_TOKEN` — they are LLM provider
-// credentials, and the scrub list deliberately exempts those (see paths.ts), so an ambient value
-// survives and a configured token simply takes precedence over it here.
-function workspaceCredentialEnv(tmpDir: string, options: SandboxOptions): NodeJS.ProcessEnv {
-  return {
-    ...(options.githubToken && githubCredentialEnv(tmpDir, options.githubToken)),
-    ...(options.claudeToken && { CLAUDE_CODE_OAUTH_TOKEN: options.claudeToken }),
-    ...(options.opencodeToken && { OPENCODE_API_KEY: options.opencodeToken }),
-    ...(options.geminiToken && { GEMINI_API_KEY: options.geminiToken }),
-  };
+// Every credential this spawn is deliberately handed: one variable per configured token, named by
+// its row in `PROJECT_TOKENS`. `GH_TOKEN` is the one deliberate exception to "a scrubbed env var
+// never comes back" — it isn't the ambient value `scrubEnv` just stripped, it's a fresh one chosen
+// for this spawn. The provider keys are not on `ENV_SCRUB_PATTERNS` at all (the scrub deliberately
+// exempts LLM provider credentials, see paths.ts), so an ambient value survives and a configured
+// token simply takes precedence over it here.
+//
+// The GitHub row is also the only one needing a second variable, so it gets a guarded line rather
+// than a table column three rows would carry and never use. `GH_CONFIG_DIR` points at an empty,
+// workspace-private directory because `gh` reads `~/.config/gh/hosts.yml` on every invocation
+// regardless of `GH_TOKEN`, and its config loader treats the sandbox's EPERM deny on that file (see
+// SECRET_DENY_PATHS) as fatal, refusing to run at all; a genuinely absent hosts.yml (real ENOENT) it
+// handles by falling through to `GH_TOKEN` normally. Where the sandbox is inactive there is no deny
+// to work around, but the redirect still keeps that machine's own ambient `gh` login out of the
+// workspace, which is the same guarantee an isolated tab gets.
+function workspaceCredentialEnv(tmpDir: string, tokens: ProjectTokens): NodeJS.ProcessEnv {
+  const credentials: NodeJS.ProcessEnv = {};
+  for (const { name, env } of PROJECT_TOKENS) {
+    const value = tokens[name];
+    if (value) credentials[env] = value;
+  }
+  if (tokens.github) credentials.GH_CONFIG_DIR = path.join(tmpDir, 'gh-config');
+  return credentials;
 }
 
 // Handing a workspaced tab its scoped credentials is a provisioning concern, not an isolation one:
@@ -238,7 +225,8 @@ function workspaceCredentialEnv(tmpDir: string, options: SandboxOptions): NodeJS
 // token, or outside a workspace, the caller's own environment object is returned untouched.
 function withWorkspaceCredentials(env: NodeJS.ProcessEnv, options: SandboxOptions): NodeJS.ProcessEnv {
   if (!options.workspaceDir) return env;
-  const credentials = workspaceCredentialEnv(resolvePath(`${options.workspaceDir}.tmp`), options);
+  const tmpDir = resolvePath(`${options.workspaceDir}.tmp`);
+  const credentials = workspaceCredentialEnv(tmpDir, options.tokens ?? {});
   return Object.keys(credentials).length === 0 ? env : { ...env, ...credentials };
 }
 
@@ -271,7 +259,7 @@ export function sandboxSpawn(
   const scrubbed = scrubEnv(env);
   scrubbed.TMPDIR = tmpDir;
   scrubbed.JANISSARY_NODE = process.execPath;
-  Object.assign(scrubbed, workspaceCredentialEnv(tmpDir, options));
+  Object.assign(scrubbed, workspaceCredentialEnv(tmpDir, options.tokens ?? {}));
 
   const profile = options.offline ? SANDBOX_PROFILE_OFFLINE : SANDBOX_PROFILE;
   const dParams = [

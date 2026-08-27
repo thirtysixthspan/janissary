@@ -3,7 +3,7 @@ import { promisify } from 'node:util';
 import path from 'node:path';
 import type { WorkspaceManager } from './workspace/manager.js';
 import { workspacePath } from './workspace/index.js';
-import { getGithubToken } from './github-token.js';
+import { getProjectTokens } from './project-tokens.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -75,7 +75,7 @@ export class GitSync {
 // processes, not the server's own direct git calls — git-sync's pull/push must pass it explicitly
 // so the `gh auth git-credential` helper set up by `finishProvisioning` can authenticate.
 function githubEnv(): NodeJS.ProcessEnv {
-  return { ...process.env, GH_TOKEN: getGithubToken() };
+  return { ...process.env, GH_TOKEN: getProjectTokens().github };
 }
 
 async function commitIfChanged(dir: string, filename: string): Promise<void> {

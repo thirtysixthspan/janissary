@@ -1,8 +1,5 @@
 import { loadConfig } from '../config.js';
-import { getGithubToken, loadGithubToken } from '../github-token.js';
-import { getClaudeToken, loadClaudeToken } from '../claude-token.js';
-import { getOpencodeToken, loadOpencodeToken } from '../opencode-token.js';
-import { getGeminiToken, loadGeminiToken } from '../gemini-token.js';
+import { getProjectTokens, loadProjectTokens, type ProjectTokens } from '../project-tokens.js';
 import { initWorkspaceDir } from '../workspace/index.js';
 import { sandboxNotice } from '../sandbox/index.js';
 import { WorkspaceManager } from '../workspace/manager.js';
@@ -90,12 +87,7 @@ export class RemoteServer {
     const frame = decodeFrame(line);
     if ('error' in frame) { this.refuse(frame.error); return; }
     switch (frame.type) {
-    case 'provision': {
-      void this.provision(
-        frame.label, frame.githubToken, frame.claudeToken, frame.opencodeToken, frame.geminiToken,
-      );
-      return;
-    }
+    case 'provision': { void this.provision(frame.label, frame.tokens ?? {}); return; }
     case 'spawn': { this.spawn(frame); return; }
     case 'input': { this.processes?.input(frame.id, frame.data); return; }
     case 'resize': { this.processes?.resize(frame.id, frame.cols, frame.rows); return; }
@@ -106,13 +98,7 @@ export class RemoteServer {
 
   // Clone the project root's `origin` into `.janissary/workspace/<label>` under this root, using the
   // very same `WorkspaceManager` the local server uses for a `-w` launch.
-  private async provision(
-    label: string,
-    forwardedGithubToken?: string,
-    forwardedClaudeToken?: string,
-    forwardedOpencodeToken?: string,
-    forwardedGeminiToken?: string,
-  ): Promise<void> {
+  private async provision(label: string, forwarded: ProjectTokens): Promise<void> {
     const result = this.workspaces.create(label);
     if ('error' in result) { this.refuse(result.error); return; }
     try {
@@ -122,26 +108,25 @@ export class RemoteServer {
       return;
     }
     this.workspaceDir = result.dir;
-    const ownGithubToken = getGithubToken();
-    // No notice for either harness token, unlike the GitHub one: a missing harness credential
-    // announces itself in that harness's own output the moment it starts, and most remote launches
-    // have none configured on either machine and are working as intended, so a mirrored notice would
-    // speak on the ordinary case rather than warn about anything.
+    const own = getProjectTokens();
+    // Per token, a forwarded value wins and this machine's own file is the fallback — spreading own
+    // first and forwarded over it says exactly that, since `loadProjectTokens` omits absent
+    // credentials rather than storing them as undefined.
+    //
+    // Only the GitHub credential gets a notice. A missing harness credential announces itself in
+    // that harness's own output the moment it starts, and most remote launches have none configured
+    // on either machine and are working as intended, so a mirrored notice would speak on the
+    // ordinary case rather than warn about anything.
     this.processes = new RemoteProcesses(
       (frame) => this.emit(frame),
       result.dir,
       label,
-      {
-        github: forwardedGithubToken ?? ownGithubToken,
-        claude: forwardedClaudeToken ?? getClaudeToken(),
-        opencode: forwardedOpencodeToken ?? getOpencodeToken(),
-        gemini: forwardedGeminiToken ?? getGeminiToken(),
-      },
+      { ...own, ...forwarded },
     );
     this.emit({
       type: 'workspace-ready',
       dir: result.dir,
-      notice: workspaceReadyNotice(sandboxNotice(), githubTokenNotice(forwardedGithubToken, ownGithubToken)),
+      notice: workspaceReadyNotice(sandboxNotice(), githubTokenNotice(forwarded.github, own.github)),
     });
   }
 
@@ -181,10 +166,7 @@ export function runRemoteServer(pathArgument: string | undefined): void {
     process.exit(1);
   }
   loadConfig(resolved.root);
-  loadGithubToken(resolved.root);
-  loadClaudeToken(resolved.root);
-  loadOpencodeToken(resolved.root);
-  loadGeminiToken(resolved.root);
+  loadProjectTokens(resolved.root);
   initWorkspaceDir(resolved.root);
   // Raw mode so the remote tty's line discipline neither echoes the framed input nor rewrites it.
   if (process.stdin.isTTY) process.stdin.setRawMode(true);

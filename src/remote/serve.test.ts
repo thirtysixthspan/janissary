@@ -4,9 +4,7 @@ import { execSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { initWorkspaceDir } from '../workspace/index.js';
-import { loadClaudeToken } from '../claude-token.js';
-import { loadOpencodeToken } from '../opencode-token.js';
-import { loadGeminiToken } from '../gemini-token.js';
+import { loadProjectTokens } from '../project-tokens.js';
 import { spawnPty } from '../pty.js';
 import { resolveRemoteRoot } from './serve-root.js';
 import { RemoteServer, wireShutdown, CHANNEL_SIGNALS } from './serve.js';
@@ -120,7 +118,7 @@ describe('RemoteServer', () => {
   // running the test.
   it('says nothing about the token when the forwarded one is in use', async () => {
     const { server, frames } = makeServer();
-    server.receive(`${encodeFrame({ type: 'provision', label: 'claude-forwarded', githubToken: 'github_pat_forwarded' })}\n`);
+    server.receive(`${encodeFrame({ type: 'provision', label: 'claude-forwarded', tokens: { github: 'github_pat_forwarded' } })}\n`);
     await vi.waitFor(() => expect(frames.some((f) => f.type === 'workspace-ready')).toBe(true));
 
     expect(frames.find((f) => f.type === 'workspace-ready')?.notice ?? '').not.toContain('github token:');
@@ -140,33 +138,33 @@ describe('RemoteServer', () => {
   // own output immediately, and most remote launches have none configured and are working as meant.
   it('hands a remote workspace the forwarded Claude token and says nothing about it', async () => {
     const { server, frames } = makeServer();
-    server.receive(`${encodeFrame({ type: 'provision', label: 'claude-oauth', claudeToken: 'sk-ant-oat01-forwarded' })}\n`);
+    server.receive(`${encodeFrame({ type: 'provision', label: 'claude-oauth', tokens: { claude: 'sk-ant-oat01-forwarded' } })}\n`);
     await vi.waitFor(() => expect(frames.some((f) => f.type === 'workspace-ready')).toBe(true));
     server.receive(`${encodeFrame(SPAWN_FRAME)}\n`);
 
-    expect(vi.mocked(spawnPty).mock.calls[0]?.[6]).toMatchObject({ claudeToken: 'sk-ant-oat01-forwarded' });
+    expect(vi.mocked(spawnPty).mock.calls[0]?.[6]).toMatchObject({ tokens: { claude: 'sk-ant-oat01-forwarded' } });
     expect(frames.find((f) => f.type === 'workspace-ready')?.notice ?? '').not.toContain('claude token');
     server.shutdown(0);
   });
 
   it('hands a remote workspace the forwarded OpenCode key and says nothing about it', async () => {
     const { server, frames } = makeServer();
-    server.receive(`${encodeFrame({ type: 'provision', label: 'opencode-key', opencodeToken: 'oc_live_forwarded' })}\n`);
+    server.receive(`${encodeFrame({ type: 'provision', label: 'opencode-key', tokens: { opencode: 'oc_live_forwarded' } })}\n`);
     await vi.waitFor(() => expect(frames.some((f) => f.type === 'workspace-ready')).toBe(true));
     server.receive(`${encodeFrame(SPAWN_FRAME)}\n`);
 
-    expect(vi.mocked(spawnPty).mock.calls[0]?.[6]).toMatchObject({ opencodeToken: 'oc_live_forwarded' });
+    expect(vi.mocked(spawnPty).mock.calls[0]?.[6]).toMatchObject({ tokens: { opencode: 'oc_live_forwarded' } });
     expect(frames.find((f) => f.type === 'workspace-ready')?.notice ?? '').not.toContain('opencode');
     server.shutdown(0);
   });
 
   it('hands a remote workspace the forwarded Gemini key and says nothing about it', async () => {
     const { server, frames } = makeServer();
-    server.receive(`${encodeFrame({ type: 'provision', label: 'gemini-key', geminiToken: 'AIzaSyForwarded' })}\n`);
+    server.receive(`${encodeFrame({ type: 'provision', label: 'gemini-key', tokens: { gemini: 'AIzaSyForwarded' } })}\n`);
     await vi.waitFor(() => expect(frames.some((f) => f.type === 'workspace-ready')).toBe(true));
     server.receive(`${encodeFrame(SPAWN_FRAME)}\n`);
 
-    expect(vi.mocked(spawnPty).mock.calls[0]?.[6]).toMatchObject({ geminiToken: 'AIzaSyForwarded' });
+    expect(vi.mocked(spawnPty).mock.calls[0]?.[6]).toMatchObject({ tokens: { gemini: 'AIzaSyForwarded' } });
     expect(frames.find((f) => f.type === 'workspace-ready')?.notice ?? '').not.toContain('gemini');
     server.shutdown(0);
   });
@@ -174,54 +172,54 @@ describe('RemoteServer', () => {
   it('falls back to the remote\'s own Gemini key when none is forwarded', async () => {
     const tokenPath = path.join(repoDir, '.janissary', 'gemini-token');
     writeFileSync(tokenPath, 'AIzaSyRemoteOwn\n');
-    loadGeminiToken(repoDir);
+    loadProjectTokens(repoDir);
     try {
       const { server, frames } = makeServer();
       server.receive(`${encodeFrame({ type: 'provision', label: 'gemini-own-key' })}\n`);
       await vi.waitFor(() => expect(frames.some((f) => f.type === 'workspace-ready')).toBe(true));
       server.receive(`${encodeFrame(SPAWN_FRAME)}\n`);
 
-      expect(vi.mocked(spawnPty).mock.calls[0]?.[6]).toMatchObject({ geminiToken: 'AIzaSyRemoteOwn' });
+      expect(vi.mocked(spawnPty).mock.calls[0]?.[6]).toMatchObject({ tokens: { gemini: 'AIzaSyRemoteOwn' } });
       server.shutdown(0);
     } finally {
       rmSync(tokenPath, { force: true });
-      loadGeminiToken(repoDir);
+      loadProjectTokens(repoDir);
     }
   });
 
   it('falls back to the remote\'s own OpenCode key when none is forwarded', async () => {
     const tokenPath = path.join(repoDir, '.janissary', 'opencode-token');
     writeFileSync(tokenPath, 'oc_live_remote_own\n');
-    loadOpencodeToken(repoDir);
+    loadProjectTokens(repoDir);
     try {
       const { server, frames } = makeServer();
       server.receive(`${encodeFrame({ type: 'provision', label: 'opencode-own-key' })}\n`);
       await vi.waitFor(() => expect(frames.some((f) => f.type === 'workspace-ready')).toBe(true));
       server.receive(`${encodeFrame(SPAWN_FRAME)}\n`);
 
-      expect(vi.mocked(spawnPty).mock.calls[0]?.[6]).toMatchObject({ opencodeToken: 'oc_live_remote_own' });
+      expect(vi.mocked(spawnPty).mock.calls[0]?.[6]).toMatchObject({ tokens: { opencode: 'oc_live_remote_own' } });
       server.shutdown(0);
     } finally {
       rmSync(tokenPath, { force: true });
-      loadOpencodeToken(repoDir);
+      loadProjectTokens(repoDir);
     }
   });
 
   it('falls back to the remote\'s own Claude token when none is forwarded', async () => {
     const tokenPath = path.join(repoDir, '.janissary', 'claude-token');
     writeFileSync(tokenPath, 'sk-ant-oat01-remote-own\n');
-    loadClaudeToken(repoDir);
+    loadProjectTokens(repoDir);
     try {
       const { server, frames } = makeServer();
       server.receive(`${encodeFrame({ type: 'provision', label: 'claude-own-token' })}\n`);
       await vi.waitFor(() => expect(frames.some((f) => f.type === 'workspace-ready')).toBe(true));
       server.receive(`${encodeFrame(SPAWN_FRAME)}\n`);
 
-      expect(vi.mocked(spawnPty).mock.calls[0]?.[6]).toMatchObject({ claudeToken: 'sk-ant-oat01-remote-own' });
+      expect(vi.mocked(spawnPty).mock.calls[0]?.[6]).toMatchObject({ tokens: { claude: 'sk-ant-oat01-remote-own' } });
       server.shutdown(0);
     } finally {
       rmSync(tokenPath, { force: true });
-      loadClaudeToken(repoDir);
+      loadProjectTokens(repoDir);
     }
   });
 

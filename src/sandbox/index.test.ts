@@ -62,7 +62,7 @@ describe('sandboxSpawn', () => {
     configureUnconfined();
     const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
     mkdirSync(`${workspaceDir}.tmp`, { recursive: true });
-    const result = sandboxSpawn({ workspaceDir, githubToken: 'scoped-token' }, 'bash', [], { PATH: '/usr/bin' });
+    const result = sandboxSpawn({ workspaceDir, tokens: { github: 'scoped-token' } }, 'bash', [], { PATH: '/usr/bin' });
     expect(result.command).toBe('bash');
     expect(result.env.GH_TOKEN).toBe('scoped-token');
     expect(result.env.GH_CONFIG_DIR).toBe(path.join(realpathSync(`${workspaceDir}.tmp`), 'gh-config'));
@@ -74,7 +74,7 @@ describe('sandboxSpawn', () => {
     configureUnconfined();
     const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
     const env = { PATH: '/usr/bin', SSH_AUTH_SOCK: '/tmp/agent.sock', NPM_TOKEN: 'ambient' };
-    const result = sandboxSpawn({ workspaceDir, githubToken: 'scoped-token' }, 'bash', [], env);
+    const result = sandboxSpawn({ workspaceDir, tokens: { github: 'scoped-token' } }, 'bash', [], env);
     expect(result.env.SSH_AUTH_SOCK).toBe('/tmp/agent.sock');
     expect(result.env.NPM_TOKEN).toBe('ambient');
     expect(result.env.PATH).toBe('/usr/bin');
@@ -84,7 +84,7 @@ describe('sandboxSpawn', () => {
   it('sets no GitHub credential on an unconfined spawn that has no workspaceDir', () => {
     configureUnconfined();
     const env = { PATH: '/usr/bin' };
-    const result = sandboxSpawn({ githubToken: 'scoped-token' }, 'bash', [], env);
+    const result = sandboxSpawn({ tokens: { github: 'scoped-token' } }, 'bash', [], env);
     expect(result).toEqual({ command: 'bash', args: [], env });
   });
 
@@ -94,7 +94,7 @@ describe('sandboxSpawn', () => {
   it('still injects the Claude credential for a workspaced spawn when nothing is confined', () => {
     configureUnconfined();
     const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
-    const result = sandboxSpawn({ workspaceDir, claudeToken: 'subscription-token' }, 'bash', [], { PATH: '/usr/bin' });
+    const result = sandboxSpawn({ workspaceDir, tokens: { claude: 'subscription-token' } }, 'bash', [], { PATH: '/usr/bin' });
     expect(result.command).toBe('bash');
     expect(result.env.CLAUDE_CODE_OAUTH_TOKEN).toBe('subscription-token');
     rmSync(workspaceDir, { recursive: true, force: true });
@@ -103,7 +103,7 @@ describe('sandboxSpawn', () => {
   it('sets no Claude credential on an unconfined spawn that has no workspaceDir', () => {
     configureUnconfined();
     const env = { PATH: '/usr/bin' };
-    const result = sandboxSpawn({ claudeToken: 'subscription-token' }, 'bash', [], env);
+    const result = sandboxSpawn({ tokens: { claude: 'subscription-token' } }, 'bash', [], env);
     expect(result).toEqual({ command: 'bash', args: [], env });
   });
 
@@ -180,16 +180,16 @@ describe('sandboxSpawn', () => {
     rmSync(workspaceDir, { recursive: true, force: true });
   });
 
-  it('injects GH_TOKEN when githubToken is given, overriding the scrub', () => {
+  it('injects GH_TOKEN when a github token is configured, overriding the scrub', () => {
     if (!sandboxAvailable()) return;
     const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
     const env = { PATH: '/usr/bin', GH_TOKEN: 'ambient-token' };
-    const result = sandboxSpawn({ workspaceDir, githubToken: 'scoped-token' }, 'bash', [], env);
+    const result = sandboxSpawn({ workspaceDir, tokens: { github: 'scoped-token' } }, 'bash', [], env);
     expect(result.env.GH_TOKEN).toBe('scoped-token');
     rmSync(workspaceDir, { recursive: true, force: true });
   });
 
-  it('does not set GH_TOKEN when githubToken is omitted, even if the ambient env has one', () => {
+  it('does not set GH_TOKEN when no github token is configured, even if the ambient env has one', () => {
     if (!sandboxAvailable()) return;
     const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
     const env = { PATH: '/usr/bin', GH_TOKEN: 'ambient-token' };
@@ -198,10 +198,10 @@ describe('sandboxSpawn', () => {
     rmSync(workspaceDir, { recursive: true, force: true });
   });
 
-  it('injects CLAUDE_CODE_OAUTH_TOKEN when claudeToken is given', () => {
+  it('injects CLAUDE_CODE_OAUTH_TOKEN when a claude token is configured', () => {
     if (!sandboxAvailable()) return;
     const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
-    const result = sandboxSpawn({ workspaceDir, claudeToken: 'subscription-token' }, 'bash', [], { PATH: '/usr/bin' });
+    const result = sandboxSpawn({ workspaceDir, tokens: { claude: 'subscription-token' } }, 'bash', [], { PATH: '/usr/bin' });
     expect(result.env.CLAUDE_CODE_OAUTH_TOKEN).toBe('subscription-token');
     rmSync(workspaceDir, { recursive: true, force: true });
   });
@@ -209,7 +209,7 @@ describe('sandboxSpawn', () => {
   // Unlike GH_TOKEN, this one is deliberately absent from ENV_SCRUB_PATTERNS: it is an LLM provider
   // credential, and the scrub exempts those so a harness can authenticate with its own. A user who
   // exports it themselves and configures no token file keeps working exactly as before.
-  it('leaves an ambient CLAUDE_CODE_OAUTH_TOKEN in place when claudeToken is omitted', () => {
+  it('leaves an ambient CLAUDE_CODE_OAUTH_TOKEN in place when no claude token is configured', () => {
     if (!sandboxAvailable()) return;
     const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
     const env = { PATH: '/usr/bin', CLAUDE_CODE_OAUTH_TOKEN: 'ambient-token' };
@@ -218,26 +218,26 @@ describe('sandboxSpawn', () => {
     rmSync(workspaceDir, { recursive: true, force: true });
   });
 
-  it('prefers a configured claudeToken over an ambient CLAUDE_CODE_OAUTH_TOKEN', () => {
+  it('prefers a configured claude token over an ambient CLAUDE_CODE_OAUTH_TOKEN', () => {
     if (!sandboxAvailable()) return;
     const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
     const env = { PATH: '/usr/bin', CLAUDE_CODE_OAUTH_TOKEN: 'ambient-token' };
-    const result = sandboxSpawn({ workspaceDir, claudeToken: 'configured-token' }, 'bash', [], env);
+    const result = sandboxSpawn({ workspaceDir, tokens: { claude: 'configured-token' } }, 'bash', [], env);
     expect(result.env.CLAUDE_CODE_OAUTH_TOKEN).toBe('configured-token');
     rmSync(workspaceDir, { recursive: true, force: true });
   });
 
-  it('injects OPENCODE_API_KEY when opencodeToken is given', () => {
+  it('injects OPENCODE_API_KEY when an opencode token is configured', () => {
     if (!sandboxAvailable()) return;
     const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
-    const result = sandboxSpawn({ workspaceDir, opencodeToken: 'oc_live_key' }, 'bash', [], { PATH: '/usr/bin' });
+    const result = sandboxSpawn({ workspaceDir, tokens: { opencode: 'oc_live_key' } }, 'bash', [], { PATH: '/usr/bin' });
     expect(result.env.OPENCODE_API_KEY).toBe('oc_live_key');
     rmSync(workspaceDir, { recursive: true, force: true });
   });
 
   // Off ENV_SCRUB_PATTERNS for the same reason the Claude token is: an LLM provider key, which the
   // scrub deliberately exempts so a harness can use its own.
-  it('leaves an ambient OPENCODE_API_KEY in place when opencodeToken is omitted', () => {
+  it('leaves an ambient OPENCODE_API_KEY in place when no opencode token is configured', () => {
     if (!sandboxAvailable()) return;
     const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
     const env = { PATH: '/usr/bin', OPENCODE_API_KEY: 'ambient-key' };
@@ -249,23 +249,23 @@ describe('sandboxSpawn', () => {
   it('still injects the OpenCode credential for a workspaced spawn when nothing is confined', () => {
     configureUnconfined();
     const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
-    const result = sandboxSpawn({ workspaceDir, opencodeToken: 'oc_live_key' }, 'bash', [], { PATH: '/usr/bin' });
+    const result = sandboxSpawn({ workspaceDir, tokens: { opencode: 'oc_live_key' } }, 'bash', [], { PATH: '/usr/bin' });
     expect(result.command).toBe('bash');
     expect(result.env.OPENCODE_API_KEY).toBe('oc_live_key');
     rmSync(workspaceDir, { recursive: true, force: true });
   });
 
-  it('injects GEMINI_API_KEY when geminiToken is given', () => {
+  it('injects GEMINI_API_KEY when a gemini token is configured', () => {
     if (!sandboxAvailable()) return;
     const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
-    const result = sandboxSpawn({ workspaceDir, geminiToken: 'AIzaSyExample' }, 'bash', [], { PATH: '/usr/bin' });
+    const result = sandboxSpawn({ workspaceDir, tokens: { gemini: 'AIzaSyExample' } }, 'bash', [], { PATH: '/usr/bin' });
     expect(result.env.GEMINI_API_KEY).toBe('AIzaSyExample');
     rmSync(workspaceDir, { recursive: true, force: true });
   });
 
   // Off ENV_SCRUB_PATTERNS like the other two provider keys, so someone who exports it themselves
   // keeps working when no token file is configured.
-  it('leaves an ambient GEMINI_API_KEY in place when geminiToken is omitted', () => {
+  it('leaves an ambient GEMINI_API_KEY in place when no gemini token is configured', () => {
     if (!sandboxAvailable()) return;
     const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
     const env = { PATH: '/usr/bin', GEMINI_API_KEY: 'ambient-key' };
@@ -277,7 +277,7 @@ describe('sandboxSpawn', () => {
   it('still injects the Gemini credential for a workspaced spawn when nothing is confined', () => {
     configureUnconfined();
     const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
-    const result = sandboxSpawn({ workspaceDir, geminiToken: 'AIzaSyExample' }, 'bash', [], { PATH: '/usr/bin' });
+    const result = sandboxSpawn({ workspaceDir, tokens: { gemini: 'AIzaSyExample' } }, 'bash', [], { PATH: '/usr/bin' });
     expect(result.command).toBe('bash');
     expect(result.env.GEMINI_API_KEY).toBe('AIzaSyExample');
     rmSync(workspaceDir, { recursive: true, force: true });
@@ -290,10 +290,12 @@ describe('sandboxSpawn', () => {
     const result = sandboxSpawn(
       {
         workspaceDir,
-        githubToken: 'scoped-token',
-        claudeToken: 'subscription-token',
-        opencodeToken: 'oc_live_key',
-        geminiToken: 'AIzaSyExample',
+        tokens: {
+          github: 'scoped-token',
+          claude: 'subscription-token',
+          opencode: 'oc_live_key',
+          gemini: 'AIzaSyExample',
+        },
       },
       'bash', [], { PATH: '/usr/bin' },
     );
