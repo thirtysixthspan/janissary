@@ -4,8 +4,6 @@
 
 ## development
 
-* Validate and transactionally update `.janissary/config.json` in `src/config.ts`: `loadConfig` casts arbitrary parsed JSON to `Partial<Config>` and shallowly merges it, so wrong types such as a string `syncPaths` can crash consumers and partial nested notification settings silently discard defaults, while `updateConfig` mutates the live config before its write succeeds. Add runtime shape validation with nested default merging, and publish the new in-memory value only after an atomic write succeeds. Severity: **high**.
-
 * Validate every method's parameter shape before treating websocket input as `ClientMessage` in `src/client-message.ts`: `isClientMessage` currently checks only the envelope, known method name, and that `params` is an object, then `src/message-handler.ts` dereferences method-specific fields under a type guard that has not established them; only the two plugin calls receive real parameter validation. Give the discriminated RPC union a matching runtime decoder so malformed authenticated client messages are rejected consistently before controller dispatch. Severity: **medium**.
 
 * Preserve `/open` resource failures as HTTP errors across `src/open-route.ts` and `web/src/plugins/markdown/MarkdownTab.tsx`: a failed stat/read currently becomes a successful 200 response with an empty body, and the Markdown plugin also renders non-OK response bodies without checking `response.ok`, so a deleted or unreadable editor file can look like a legitimate empty document while a Markdown error page can look like file content. Return an appropriate non-2xx status on read failures and make every fetch-based consumer reject non-OK responses. Severity: **high**.
