@@ -22,13 +22,19 @@ function makeClient(readFile = vi.fn().mockResolvedValue('changed elsewhere')) {
   return { client: { readFile } as unknown as JanusClient, readFile };
 }
 
+function deferred<T>() {
+  const state = { resolve: undefined as unknown as (value: T) => void };
+  const promise = new Promise<T>((resolve) => { state.resolve = resolve; });
+  return { promise, resolve: state.resolve };
+}
+
 function renderWatch(mtimeMs: number | undefined, dirty: boolean, api: EditorApi, client: JanusClient) {
   const conflictPendingRef = { current: false };
   const setLastSaved = vi.fn();
-  const view = renderHook(
-    ({ m }: { m: number | undefined }) =>
-      useEditorWatchReload(m, dirty, conflictPendingRef, api, setLastSaved, client, '/open/1'),
-    { initialProps: { m: mtimeMs } },
+  const view = renderHook<void, { m: number | undefined; isDirty?: boolean }>(
+    ({ m, isDirty }: { m: number | undefined; isDirty?: boolean }) =>
+      useEditorWatchReload(m, isDirty ?? dirty, conflictPendingRef, api, setLastSaved, client, '/open/1'),
+    { initialProps: { m: mtimeMs, isDirty: undefined } },
   );
   return { ...view, conflictPendingRef, setLastSaved };
 }
@@ -106,5 +112,44 @@ describe('useEditorWatchReload', () => {
     await act(async () => { await Promise.resolve(); });
     expect(api.load).not.toHaveBeenCalled();
     expect(setLastSaved).not.toHaveBeenCalled();
+  });
+
+  it('preserves input made while a reload is pending and records a conflict', async () => {
+    const pending = deferred<string>();
+    const { client } = makeClient(vi.fn(() => pending.promise));
+    const api = makeApi();
+    const { rerender, conflictPendingRef, setLastSaved } = renderWatch(1, false, api, client);
+
+    rerender({ m: 2 });
+    rerender({ m: 2, isDirty: true });
+    pending.resolve('changed elsewhere');
+
+    await act(async () => { await Promise.resolve(); });
+    expect(api.load).not.toHaveBeenCalled();
+    expect(setLastSaved).not.toHaveBeenCalled();
+    expect(conflictPendingRef.current).toBe(true);
+  });
+
+  it('ignores an older reload that resolves after a newer reload', async () => {
+    const reads: ReturnType<typeof deferred<string>>[] = [];
+    const readFile = vi.fn(() => {
+      const pending = deferred<string>();
+      reads.push(pending);
+      return pending.promise;
+    });
+    const { client } = makeClient(readFile);
+    const api = makeApi();
+    const { rerender, setLastSaved } = renderWatch(1, false, api, client);
+
+    rerender({ m: 2 });
+    rerender({ m: 3 });
+    reads[1]?.resolve('newest content');
+    await waitFor(() => expect(api.load).toHaveBeenCalledWith('newest content', 0));
+    reads[0]?.resolve('older content');
+    await act(async () => { await Promise.resolve(); });
+
+    expect(api.load).toHaveBeenCalledTimes(1);
+    expect(setLastSaved).toHaveBeenCalledTimes(1);
+    expect(setLastSaved).toHaveBeenCalledWith('newest content');
   });
 });

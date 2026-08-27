@@ -167,6 +167,9 @@ If the buffer has unsaved changes when an external change is detected, the buffe
 the user's in-progress edits are never overwritten silently. Instead, the next time the user tries
 to save (Ctrl+S / Cmd+S, or via the close-tab save prompt), a dialog appears: "This file changed on
 disk. Overwrite it with your changes?" with two options — Overwrite and Cancel.
+This protection also applies when the user starts editing while an automatic reload is still
+reading the file. When several external changes arrive close together, only the newest completed
+reload can update a clean buffer.
 
 - **Overwrite (y):** writes the buffer to disk, replacing the external change.
 - **Cancel (Esc):** dismisses the dialog and leaves the buffer as-is, still unsaved. The next save

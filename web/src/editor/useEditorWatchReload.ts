@@ -17,13 +17,18 @@ export function useEditorWatchReload(
   const dirtyForWatchRef = useRef(dirty);
   dirtyForWatchRef.current = dirty;
   const seenMtimeRef = useRef<number | undefined>(mtimeMs);
+  const reloadSequenceRef = useRef(0);
   useEffect(() => {
     if (mtimeMs === undefined || mtimeMs === seenMtimeRef.current) return;
     seenMtimeRef.current = mtimeMs;
+    reloadSequenceRef.current += 1;
     if (dirtyForWatchRef.current) { conflictPendingRef.current = true; return; }
+    const sequence = reloadSequenceRef.current;
     void (async () => {
       try {
         const text = await client.readFile(url);
+        if (sequence !== reloadSequenceRef.current) return;
+        if (dirtyForWatchRef.current) { conflictPendingRef.current = true; return; }
         const line = api.stateRef.current?.cursor.line;
         api.load(text, line);
         setLastSaved(text);
