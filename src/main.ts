@@ -22,6 +22,7 @@ import { loadAgentNames } from './agent/names.js';
 import { loadHarnessModels } from './harness/models.js';
 import { loadGithubToken } from './github-token.js';
 import { loadClaudeToken } from './claude-token.js';
+import { loadOpencodeToken } from './opencode-token.js';
 import { parseCliArgs, usageText, appVersion, CliUsageError } from './cli-args.js';
 import { explainStartupError, formatFatal, maybeStack } from './startup-errors.js';
 import { loadFrameEnablerExtension } from './chrome-extension-loader.js';
@@ -183,6 +184,7 @@ export async function boot(argv = process.argv.slice(2)): Promise<void> {
   loadHarnessModels(cwd);
   loadGithubToken(cwd);
   loadClaudeToken(cwd);
+  loadOpencodeToken(cwd);
   if (!args.relaunch) { clearStateDirectory(); TranscriptStore.clear(); clearWorkspaceDir(); clearCaptureDirectory(); clearHarnessRecordingDirectory(); clearHarnessTranscriptDirectory(); }
 
   const webDir = path.join(import.meta.dirname, '..', 'web', 'dist');

@@ -8,7 +8,8 @@ vi.mock('../shell.js');
 
 const TOKEN = 'github_pat_forwarded';
 const CLAUDE_TOKEN = 'sk-ant-oat01-forwarded';
-const CREDENTIALS = { github: TOKEN, claude: CLAUDE_TOKEN };
+const OPENCODE_TOKEN = 'oc_live_forwarded';
+const CREDENTIALS = { github: TOKEN, claude: CLAUDE_TOKEN, opencode: OPENCODE_TOKEN };
 
 function fakeShell() {
   return {
@@ -28,25 +29,27 @@ describe('RemoteProcesses forwarded credentials', () => {
     vi.mocked(spawnShell).mockReset().mockReturnValue(fakeShell() as never);
   });
 
-  it('passes both forwarded tokens to a remote PTY workspace', () => {
+  it('passes every forwarded token to a remote PTY workspace', () => {
     const processes = new RemoteProcesses(vi.fn(), '/remote/workspace', 'claude', CREDENTIALS);
     processes.spawn({
       type: 'spawn', id: 'r1', program: 'claude', command: 'claude', mode: 'pty', cols: 80, rows: 24,
     });
 
     expect(vi.mocked(spawnPty).mock.calls[0]?.[6]).toEqual({
-      workspaceDir: '/remote/workspace', offline: undefined, githubToken: TOKEN, claudeToken: CLAUDE_TOKEN,
+      workspaceDir: '/remote/workspace', offline: undefined,
+      githubToken: TOKEN, claudeToken: CLAUDE_TOKEN, opencodeToken: OPENCODE_TOKEN,
     });
   });
 
-  it('passes both forwarded tokens to a remote persistent shell', () => {
+  it('passes every forwarded token to a remote persistent shell', () => {
     const processes = new RemoteProcesses(vi.fn(), '/remote/workspace', 'agent', CREDENTIALS);
     processes.spawn({
       type: 'spawn', id: 'r1', program: 'bash', command: 'bash', mode: 'pipe', cols: 80, rows: 24,
     });
 
     expect(vi.mocked(spawnShell)).toHaveBeenCalledWith(0, { JANUS_AGENT_NAME: 'agent' }, {
-      workspaceDir: '/remote/workspace', githubToken: TOKEN, claudeToken: CLAUDE_TOKEN,
+      workspaceDir: '/remote/workspace',
+      githubToken: TOKEN, claudeToken: CLAUDE_TOKEN, opencodeToken: OPENCODE_TOKEN,
     });
   });
 
@@ -59,7 +62,20 @@ describe('RemoteProcesses forwarded credentials', () => {
     });
 
     expect(vi.mocked(spawnPty).mock.calls[0]?.[6]).toEqual({
-      workspaceDir: '/remote/workspace', offline: undefined, githubToken: undefined, claudeToken: CLAUDE_TOKEN,
+      workspaceDir: '/remote/workspace', offline: undefined,
+      githubToken: undefined, claudeToken: CLAUDE_TOKEN, opencodeToken: undefined,
+    });
+  });
+
+  it('forwards an OpenCode key on its own when no other token is configured', () => {
+    const processes = new RemoteProcesses(vi.fn(), '/remote/workspace', 'opencode', { opencode: OPENCODE_TOKEN });
+    processes.spawn({
+      type: 'spawn', id: 'r1', program: 'opencode', command: 'opencode', mode: 'pty', cols: 80, rows: 24,
+    });
+
+    expect(vi.mocked(spawnPty).mock.calls[0]?.[6]).toEqual({
+      workspaceDir: '/remote/workspace', offline: undefined,
+      githubToken: undefined, claudeToken: undefined, opencodeToken: OPENCODE_TOKEN,
     });
   });
 });

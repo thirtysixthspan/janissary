@@ -1,6 +1,7 @@
 import { loadConfig } from '../config.js';
 import { getGithubToken, loadGithubToken } from '../github-token.js';
 import { getClaudeToken, loadClaudeToken } from '../claude-token.js';
+import { getOpencodeToken, loadOpencodeToken } from '../opencode-token.js';
 import { initWorkspaceDir } from '../workspace/index.js';
 import { sandboxNotice } from '../sandbox/index.js';
 import { WorkspaceManager } from '../workspace/manager.js';
@@ -88,7 +89,10 @@ export class RemoteServer {
     const frame = decodeFrame(line);
     if ('error' in frame) { this.refuse(frame.error); return; }
     switch (frame.type) {
-    case 'provision': { void this.provision(frame.label, frame.githubToken, frame.claudeToken); return; }
+    case 'provision': {
+      void this.provision(frame.label, frame.githubToken, frame.claudeToken, frame.opencodeToken);
+      return;
+    }
     case 'spawn': { this.spawn(frame); return; }
     case 'input': { this.processes?.input(frame.id, frame.data); return; }
     case 'resize': { this.processes?.resize(frame.id, frame.cols, frame.rows); return; }
@@ -103,6 +107,7 @@ export class RemoteServer {
     label: string,
     forwardedGithubToken?: string,
     forwardedClaudeToken?: string,
+    forwardedOpencodeToken?: string,
   ): Promise<void> {
     const result = this.workspaces.create(label);
     if ('error' in result) { this.refuse(result.error); return; }
@@ -114,10 +119,10 @@ export class RemoteServer {
     }
     this.workspaceDir = result.dir;
     const ownGithubToken = getGithubToken();
-    // No notice for the Claude token, unlike the GitHub one: a missing Claude credential announces
-    // itself in the harness's own output the moment it starts, and most remote launches have none
-    // configured on either machine and are working as intended, so a mirrored notice would speak on
-    // the ordinary case rather than warn about anything.
+    // No notice for either harness token, unlike the GitHub one: a missing harness credential
+    // announces itself in that harness's own output the moment it starts, and most remote launches
+    // have none configured on either machine and are working as intended, so a mirrored notice would
+    // speak on the ordinary case rather than warn about anything.
     this.processes = new RemoteProcesses(
       (frame) => this.emit(frame),
       result.dir,
@@ -125,6 +130,7 @@ export class RemoteServer {
       {
         github: forwardedGithubToken ?? ownGithubToken,
         claude: forwardedClaudeToken ?? getClaudeToken(),
+        opencode: forwardedOpencodeToken ?? getOpencodeToken(),
       },
     );
     this.emit({
@@ -172,6 +178,7 @@ export function runRemoteServer(pathArgument: string | undefined): void {
   loadConfig(resolved.root);
   loadGithubToken(resolved.root);
   loadClaudeToken(resolved.root);
+  loadOpencodeToken(resolved.root);
   initWorkspaceDir(resolved.root);
   // Raw mode so the remote tty's line discipline neither echoes the framed input nor rewrites it.
   if (process.stdin.isTTY) process.stdin.setRawMode(true);

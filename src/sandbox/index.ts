@@ -30,6 +30,10 @@ export type SandboxOptions = {
   // an agent tab's plain shell can invoke `claude` too. Same isolation-independence as the GitHub
   // token: a host that cannot confine anything still needs its harness authenticated.
   claudeToken?: string;
+  // An OpenCode API key to hand this spawn as `OPENCODE_API_KEY` (see `opencode-token.ts`), the
+  // variable the OpenCode Zen and OpenCode Go providers declare. Same terms as the Claude token:
+  // any workspaced spawn, confined or not.
+  opencodeToken?: string;
 };
 
 export type SandboxResult = {
@@ -206,16 +210,17 @@ function githubCredentialEnv(tmpDir: string, token: string): NodeJS.ProcessEnv {
   return { GH_TOKEN: token, GH_CONFIG_DIR: path.join(tmpDir, 'gh-config') };
 }
 
-// Every credential this spawn is deliberately handed, for whichever of the two tokens the caller
-// supplied. `CLAUDE_CODE_OAUTH_TOKEN` needs no `GH_CONFIG_DIR`-style companion: unlike `gh`, the
-// harness reads its config from `~/.claude`, which is already carved in. It is also, unlike
-// `GH_TOKEN`, not on `ENV_SCRUB_PATTERNS` — it is an LLM provider credential, and the scrub list
-// deliberately exempts those (see paths.ts), so an ambient value survives and a configured token
-// simply takes precedence over it.
+// Every credential this spawn is deliberately handed, for whichever of the three tokens the caller
+// supplied. Neither harness token needs a `GH_CONFIG_DIR`-style companion: unlike `gh`, each reads
+// its config from a directory already carved in (`~/.claude`, `~/.local/share/opencode`). Neither is
+// on `ENV_SCRUB_PATTERNS` either, unlike `GH_TOKEN` — they are LLM provider credentials, and the
+// scrub list deliberately exempts those (see paths.ts), so an ambient value survives and a
+// configured token simply takes precedence over it here.
 function workspaceCredentialEnv(tmpDir: string, options: SandboxOptions): NodeJS.ProcessEnv {
   return {
     ...(options.githubToken && githubCredentialEnv(tmpDir, options.githubToken)),
     ...(options.claudeToken && { CLAUDE_CODE_OAUTH_TOKEN: options.claudeToken }),
+    ...(options.opencodeToken && { OPENCODE_API_KEY: options.opencodeToken }),
   };
 }
 

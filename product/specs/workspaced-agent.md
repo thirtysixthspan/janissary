@@ -30,9 +30,10 @@ workspace: `git clone` of `origin`, stored at `.janissary/workspace/<label>/`, r
 except the workspace lives under the **remote** host's project root rather than this machine's, and
 is governed entirely by that host: its sandbox policy (so isolation is active where the remote is
 macOS and inactive otherwise, and the notice shown in the tab is the remote's) and its own
-repository's `origin` transport. The two credentials are the exception: this project's
-`.janissary/github-token` and `.janissary/claude-token` are both forwarded on the provisioning
-frame, each falling back to the remote project's own file when nothing is sent. A remote tab records
+repository's `origin` transport. The credentials are the exception: this project's
+`.janissary/github-token`, `.janissary/claude-token`, and `.janissary/opencode-token` are all
+forwarded on the provisioning frame, each falling back to the remote project's own file when nothing
+is sent. A remote tab records
 no local workspace directory, so closing it deletes nothing locally; the remote server removes the
 clone when its ssh session ends. See [[remote-server]].
 
@@ -90,6 +91,16 @@ reason the GitHub token's does not. Unlike `GH_TOKEN`, an ambient `CLAUDE_CODE_O
 environment janissary itself was started with is not stripped — provider credentials are deliberately
 exempt from the environment scrub — so a user who exports the variable themselves keeps working
 unchanged, and a configured token file takes precedence over it.
+
+An `opencode` harness has the same file, `.janissary/opencode-token`, injected as `OPENCODE_API_KEY`
+— the variable the OpenCode Zen and OpenCode Go providers declare — under every rule above: any
+workspaced spawn, isolation-independent, off the scrub list, forwarded to a remote with the remote's
+own file as the fallback. What differs is how much it is needed. opencode keeps its credentials in
+`~/.local/share/opencode`, which is a sandbox read *and* write carve-out, so a workspaced opencode
+tab on a machine where someone has signed in already works without this file. It is a machine with no
+opencode login of its own that has nothing to fall back to, which on a remote launch is the ordinary
+case. The credential itself is a static API key with no refresh and no expiry, so unlike the Claude
+token there is nothing to re-mint on a schedule.
 
 On a remote launch the token is forwarded on the provisioning frame exactly as the GitHub token is,
 injected only into that remote tab's workspaced processes and never written to the remote

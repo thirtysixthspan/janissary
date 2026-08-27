@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { initWorkspaceDir } from '../workspace/index.js';
 import { loadClaudeToken } from '../claude-token.js';
+import { loadOpencodeToken } from '../opencode-token.js';
 import { spawnPty } from '../pty.js';
 import { resolveRemoteRoot } from './serve-root.js';
 import { RemoteServer, wireShutdown, CHANNEL_SIGNALS } from './serve.js';
@@ -145,6 +146,35 @@ describe('RemoteServer', () => {
     expect(vi.mocked(spawnPty).mock.calls[0]?.[6]).toMatchObject({ claudeToken: 'sk-ant-oat01-forwarded' });
     expect(frames.find((f) => f.type === 'workspace-ready')?.notice ?? '').not.toContain('claude token');
     server.shutdown(0);
+  });
+
+  it('hands a remote workspace the forwarded OpenCode key and says nothing about it', async () => {
+    const { server, frames } = makeServer();
+    server.receive(`${encodeFrame({ type: 'provision', label: 'opencode-key', opencodeToken: 'oc_live_forwarded' })}\n`);
+    await vi.waitFor(() => expect(frames.some((f) => f.type === 'workspace-ready')).toBe(true));
+    server.receive(`${encodeFrame(SPAWN_FRAME)}\n`);
+
+    expect(vi.mocked(spawnPty).mock.calls[0]?.[6]).toMatchObject({ opencodeToken: 'oc_live_forwarded' });
+    expect(frames.find((f) => f.type === 'workspace-ready')?.notice ?? '').not.toContain('opencode');
+    server.shutdown(0);
+  });
+
+  it('falls back to the remote\'s own OpenCode key when none is forwarded', async () => {
+    const tokenPath = path.join(repoDir, '.janissary', 'opencode-token');
+    writeFileSync(tokenPath, 'oc_live_remote_own\n');
+    loadOpencodeToken(repoDir);
+    try {
+      const { server, frames } = makeServer();
+      server.receive(`${encodeFrame({ type: 'provision', label: 'opencode-own-key' })}\n`);
+      await vi.waitFor(() => expect(frames.some((f) => f.type === 'workspace-ready')).toBe(true));
+      server.receive(`${encodeFrame(SPAWN_FRAME)}\n`);
+
+      expect(vi.mocked(spawnPty).mock.calls[0]?.[6]).toMatchObject({ opencodeToken: 'oc_live_remote_own' });
+      server.shutdown(0);
+    } finally {
+      rmSync(tokenPath, { force: true });
+      loadOpencodeToken(repoDir);
+    }
   });
 
   it('falls back to the remote\'s own Claude token when none is forwarded', async () => {

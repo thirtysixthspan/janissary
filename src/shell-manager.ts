@@ -3,6 +3,7 @@ import { createRemoteShell } from './remote/shell-session.js';
 import { getConfig } from './config.js';
 import { getGithubToken } from './github-token.js';
 import { getClaudeToken } from './claude-token.js';
+import { getOpencodeToken } from './opencode-token.js';
 import { messageBus } from './bus.js';
 import type { Managers } from './managers.js';
 
@@ -71,6 +72,7 @@ export class ShellManager {
       offline: tab?.offline,
       githubToken: tab?.workspaceDir ? getGithubToken() : undefined,
       claudeToken: tab?.workspaceDir ? getClaudeToken() : undefined,
+      opencodeToken: tab?.workspaceDir ? getOpencodeToken() : undefined,
     });
     if (cwd) shell.stdin?.write(`cd "${cwd}"\n`);
     return shell;
