@@ -13,7 +13,7 @@ Agents and harnesses get a workspace by default. Use `--no-workspace` when you d
 - Normal development works: `git commit`, `fetch`, `pull`, `npm install`, builds, virtualenvs, and running a harness that needs its stored login all behave as usual.
 - Writing outside the workspace doesn't: no global installs, no editing files elsewhere on disk.
 - Reading other projects, sibling workspaces, and your dotfiles is blocked (a handful of harmless ones, like `.gitconfig`, stay readable).
-- Credentials and secrets — `.ssh`, `.aws`, cloud CLI credentials, browser profiles, shell history — are invisible, not just unreadable.
+- Credentials and secrets — `.ssh`, `.aws`, cloud CLI credentials, browser profiles, shell history, and the files your AI harnesses keep their own provider keys in — are invisible, not just unreadable. An agent can't read them and can't overwrite them. Harnesses get their credentials from [tokens you configure](/user-documentation/advanced-agents/tokens) instead.
 - Credential-shaped environment variables (`AWS_*`, `GITHUB_TOKEN`, `NPM_TOKEN`, `SSH_AUTH_SOCK`, and similar) are stripped from the process too, so a tool that needs one fails inside the workspace even though the file it would otherwise read is also blocked.
 - SSH doesn't work from inside, which is why pushing to GitHub needs a token — see [Workspaced agents](/user-documentation/advanced-agents/workspaced-agent).
 

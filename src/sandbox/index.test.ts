@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync, realpathSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { tmpdir, homedir } from 'node:os';
 import path from 'node:path';
 import { loadConfig } from '../config.js';
 import { sandboxAvailable, sandboxSpawn } from './index.js';
@@ -127,6 +127,20 @@ describe('sandboxSpawn', () => {
     for (const required of ['WORKSPACE', 'TMPDIR', 'HOME', 'GIT_OBJECTS']) {
       expect(dNames).toContain(required);
     }
+    rmSync(workspaceDir, { recursive: true, force: true });
+  });
+
+  // The one secret-deny entry that overrides a carve-in rather than backing up a denial the tables
+  // already imply: `.local/share/opencode` is a write carve-out (and so a read carve-in), and the
+  // credential file inside it has to lose anyway. Both halves are asserted here — the deny reaches
+  // the profile, and denying it did not deny the directory the harness writes its database to.
+  it('binds a secret-deny param to opencode\'s credential file without denying its directory', () => {
+    if (!sandboxAvailable()) return;
+    const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
+    const result = sandboxSpawn({ workspaceDir }, 'bash', []);
+    const dValues = result.args.filter((_, i) => result.args[i - 1] === '-D').map((v) => v.slice(v.indexOf('=') + 1));
+    expect(dValues).toContain(path.join(realpathSync(homedir()), '.local/share/opencode/auth.json'));
+    expect(dValues).toContain(path.join(realpathSync(homedir()), '.local/share/opencode'));
     rmSync(workspaceDir, { recursive: true, force: true });
   });
 

@@ -107,7 +107,9 @@ export const HOME_READ_LISTING_DIRS = ['.claude'];
 // (`<UUID>/keychain-2.db`) is ever in play, its own write deny will surface separately in the log.
 export const HOME_WRITE_PREFIX_CARVEOUTS = ['.claude/settings.json', 'Library/Keychains/login.keychain-db'];
 
-// Secret paths denied last, even inside a carve-in.
+// Secret paths denied last, even inside a carve-in — for writes as well as reads (see the
+// `file-write*` deny in profile.ts), so a credential file that happens to sit inside a write
+// carve-out can be neither read nor overwritten by a sandboxed process.
 //
 // `Library/Keychains` is deliberately NOT here: reads are carved in (HOME_READ_CARVEINS) and one
 // narrow write is carved in (HOME_WRITE_PREFIX_CARVEOUTS covers `login.keychain-db` and its
@@ -133,6 +135,15 @@ export const SECRET_DENY_PATHS = [
   // OAuth token in plaintext. Already outside every carve-in above, but denied explicitly so a
   // future widening of the `.claude/` entries can't silently expose it.
   '.claude/.credentials.json',
+  // opencode's credential store, holding every provider key it has been given in plaintext. Unlike
+  // every other entry here, this one sits *inside* a carve-in — `.local/share/opencode` is a write
+  // carve-out above, and therefore a read carve-in too — so this deny is what actually does the
+  // work rather than backing up a denial the tables already imply. Denying it only became possible
+  // once a workspaced opencode harness had another way in: `.janissary/opencode-token`, injected as
+  // `OPENCODE_API_KEY` (see `opencode-token.ts`). That variable is what the OpenCode Zen and
+  // OpenCode Go providers read; opencode's other providers each read their own key from the
+  // environment, which the scrub deliberately exempts.
+  '.local/share/opencode/auth.json',
   '.ssh', '.aws', '.gnupg', '.kube', '.netrc', '.config/gh/hosts.yml', '.docker',
   '.config/gcloud', '.azure', '.cargo/credentials', '.cargo/credentials.toml',
   '.pypirc', '.m2/settings.xml', '.terraform.d',

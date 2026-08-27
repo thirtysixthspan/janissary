@@ -38,9 +38,9 @@ The token goes to every workspaced tab, not only harness tabs, so an agent whose
 
 Sign in at OpenCode, copy your API key, and save it to `.janissary/opencode-token`. It's a static key, so there's nothing to refresh and no expiry to plan around.
 
-Most of the time you won't need this one. An `opencode` harness reads the credentials already on the machine it runs on, and a workspace can reach them, so a tab on your own laptop works as soon as you've run `opencode auth login` once. The file matters on a machine that has never been signed in, which is usually a remote host.
+A workspaced `opencode` harness needs this file. It can't read the credentials `opencode auth login` saved on your machine, because a workspace is blocked from that file on purpose — it holds every provider key opencode has, and a disposable clone has no business reading them. That applies on your own laptop, not just on a remote host.
 
-The key covers the OpenCode Zen and OpenCode Go providers. If you point opencode at Anthropic or OpenAI directly instead, that provider reads its own variable from your environment and this file doesn't apply.
+The key covers the OpenCode Zen and OpenCode Go providers. If you point opencode at Anthropic, Google, or OpenAI instead, this file doesn't help: set that provider's own variable (`ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, `OPENAI_API_KEY`) in the environment you start Janissary from, and it reaches the workspace untouched.
 
 ## How a token reaches a workspace
 

@@ -95,12 +95,23 @@ unchanged, and a configured token file takes precedence over it.
 An `opencode` harness has the same file, `.janissary/opencode-token`, injected as `OPENCODE_API_KEY`
 — the variable the OpenCode Zen and OpenCode Go providers declare — under every rule above: any
 workspaced spawn, isolation-independent, off the scrub list, forwarded to a remote with the remote's
-own file as the fallback. What differs is how much it is needed. opencode keeps its credentials in
-`~/.local/share/opencode`, which is a sandbox read *and* write carve-out, so a workspaced opencode
-tab on a machine where someone has signed in already works without this file. It is a machine with no
-opencode login of its own that has nothing to fall back to, which on a remote launch is the ordinary
-case. The credential itself is a static API key with no refresh and no expiry, so unlike the Claude
-token there is nothing to re-mint on a schedule.
+own file as the fallback. The credential itself is a static API key with no refresh and no expiry, so
+unlike the Claude token there is nothing to re-mint on a schedule.
+
+For opencode the token file is not optional inside a workspace. opencode keeps its credentials in
+`~/.local/share/opencode/auth.json`, and that file is a denied secret path (see [[sandbox]]) — a
+workspaced tab cannot read it or write it, even though the directory around it stays writable for the
+session database and logs. So a workspaced opencode harness authenticates from
+`.janissary/opencode-token` or from the environment, never from the machine's own opencode login,
+whether the tab is local or remote. This is deliberate: the file holds every provider key opencode
+has been given, and a disposable workspace has no business reading them.
+
+The consequence is worth stating rather than discovering. `OPENCODE_API_KEY` is what the OpenCode Zen
+and OpenCode Go providers read, and nothing else. An opencode configured by `opencode auth login`
+against Anthropic, Google, or OpenAI has that key in the denied file, and the token file does not
+replace it; that provider works inside a workspace only if its own variable
+(`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`/`GOOGLE_*`) is present in the environment
+janissary was started with, which the scrub passes through untouched.
 
 On a remote launch the token is forwarded on the provisioning frame exactly as the GitHub token is,
 injected only into that remote tab's workspaced processes and never written to the remote
