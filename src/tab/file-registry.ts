@@ -15,9 +15,22 @@ export class FileRegistry {
     return this.files.get(id);
   }
 
-  // Exposes the backing map directly for `closeTabResources`, which deletes a closing tab's
-  // entries in place rather than going through `register`/`get`.
+  release(reference: string): void {
+    releaseFileReference(this.files, reference);
+  }
+
+  replace(reference: string, absPath: string): string {
+    this.release(reference);
+    return this.register(absPath);
+  }
+
+  // Exposes the backing map for plugin resource cleanup, whose tracked references are raw IDs.
   get map(): Map<string, string> {
     return this.files;
   }
+}
+
+export function releaseFileReference(files: Map<string, string>, reference: string): void {
+  const id = reference.startsWith('/open/') ? reference.slice('/open/'.length) : undefined;
+  if (id) files.delete(id);
 }

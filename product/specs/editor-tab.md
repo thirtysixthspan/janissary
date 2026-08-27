@@ -27,6 +27,10 @@ Unlike an agent tab, an editor tab has no shell, agent session, browser, transcr
 history, and no persisted agent state. It is a live, in-memory view — like markdown tabs and image
 tabs, it is not saved and is not restored on `--relaunch`.
 
+The file-content reference used by an editor is valid only while that editor owns the current file.
+Opening an already-open file does not leave an additional reference behind, changing the editor's
+target invalidates its previous reference, and closing the tab invalidates its final reference.
+
 ### Scrubbing
 
 The editor buffer follows the same scrubbing rules as the terminal input (see CLI → Scrubbing):

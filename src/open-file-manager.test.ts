@@ -141,7 +141,7 @@ describe('OpenFileManager.newFile', () => {
       cwdOf: () => dir,
       append: () => {},
       openEditorTab: (view: { path: string }) => { opened.push(view.path); },
-      registerFile: (p: string) => `/open/test-${p.length}`,
+      registerFile: vi.fn((p: string) => `/open/test-${p.length}`),
     },
   } as unknown as Managers);
 
@@ -410,7 +410,7 @@ describe('OpenFileManager.edit (synced path)', () => {
       openEditorTab: (view: { name: string; path: string; size: string; url: string; sync?: string }) => {
         tabs.push({ label: 'janus', editor: view });
       },
-      registerFile: (p: string) => `/open/test-${p.length}`,
+      registerFile: vi.fn((p: string) => `/open/test-${p.length}`),
       tabs,
     },
     gitSync: {
@@ -434,9 +434,12 @@ describe('OpenFileManager.edit (synced path)', () => {
 
     expect(tabs).toHaveLength(1);
     expect(tabs[0].editor?.sync).toBe('provisioning');
+    const placeholderUrl = tabs[0].editor?.url;
 
     await vi.waitFor(() => expect(tabs[0].editor?.sync).toBe('synced'));
 
+    expect(tabs[0].editor?.url).toBe(placeholderUrl);
+    expect(managers.tab.registerFile).toHaveBeenCalledOnce();
     expect(managers.editorWatch.watch).toHaveBeenCalledWith('janus', path.join('/workspace', 'synced/foo.md'));
   });
 

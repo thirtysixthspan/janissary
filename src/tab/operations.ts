@@ -25,6 +25,7 @@ export type TabOperationsPort = {
   persist(state: AgentState): void;
   buildAgentState(tab: Tab): AgentState;
   registerFile(path: string): string;
+  replaceFile(reference: string, path: string): string;
 };
 
 export function setActiveTab(port: TabOperationsPort, index: number): void {
@@ -111,7 +112,7 @@ export function closeTab(port: TabOperationsPort, index: number): void {
 }
 
 export function renameTab(port: TabOperationsPort, index: number, title: string): void {
-  renameTabOp(port.tabs, index, title, TAB_RENAME_MAX_LENGTH, (path) => port.registerFile(path), (label, path) => port.managerServices.editorWatch.watch(label, path), (state) => port.persist(state), (tab) => port.buildAgentState(tab));
+  renameTabOp(port.tabs, index, title, TAB_RENAME_MAX_LENGTH, (reference, path) => port.replaceFile(reference, path), (label, path) => port.managerServices.editorWatch.watch(label, path), (state) => port.persist(state), (tab) => port.buildAgentState(tab));
 }
 
 export function toggleCollapse(port: TabOperationsPort): void {

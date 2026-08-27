@@ -74,3 +74,19 @@ describe('TabOpeningState.openPluginTab', () => {
     expect(tm.openFiles).toHaveLength(0);
   });
 });
+
+describe('TabOpeningState.openEditorTab', () => {
+  it('releases a duplicate open registration and retains the existing editor reference', () => {
+    const tm = makeTabManager();
+    const path = '/tmp/notes.txt';
+    const existingUrl = tm.registerFile(path);
+    tm.openEditorTab({ name: 'notes.txt', path, size: '1 B', url: existingUrl });
+    const duplicateUrl = tm.registerFile(path);
+
+    tm.openEditorTab({ name: 'notes.txt', path, size: '1 B', url: duplicateUrl });
+
+    expect(tm.openFiles).toHaveLength(1);
+    expect(tm.openFilePath(existingUrl.slice('/open/'.length))).toBe(path);
+    expect(tm.openFilePath(duplicateUrl.slice('/open/'.length))).toBeUndefined();
+  });
+});

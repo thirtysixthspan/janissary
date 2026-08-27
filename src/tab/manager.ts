@@ -1,4 +1,3 @@
-import path from 'node:path';
 import type { Tab, LogEntry, CenterPane } from './types.js';
 import type { AgentState } from '../agent/types.js';
 import type { ConnectionView, ScheduleView, TabView } from '../protocol.js';
@@ -20,6 +19,7 @@ import * as transcriptOperations from './transcript-operations.js';
 import * as viewOperations from './view-operations.js';
 import { applyOpenResult as applyOpenResultOp } from './open-result.js';
 import { makeRootTab } from './root.js';
+import { retargetEditorTab as retargetEditorTabOp } from './retarget-editor.js';
 
 export class TabManager extends TabOpeningState {
   tabs: Tab[] = [];
@@ -164,14 +164,12 @@ export class TabManager extends TabOpeningState {
   insertTabInGroup(tab: Tab): void { tabOperations.insertTab(this, tab); }
 
   retargetEditorTab(oldAbsPath: string, newAbsPath: string): void {
-    const tab = this.tabs.find((t) => t.editor?.path === oldAbsPath);
-    if (!tab?.editor) return;
-    const name = path.basename(newAbsPath);
-    tab.editor = { ...tab.editor, path: newAbsPath, name, url: this.registerFile(newAbsPath) };
-    tab.title = name;
-    this.persist(this.buildAgentState(tab));
-    this.managers.editorWatch.watch(tab.label, newAbsPath);
-    messageBus.emit('state', { type: 'dirty' });
+    retargetEditorTabOp(
+      this.tabs, oldAbsPath, newAbsPath,
+      (reference, filePath) => this.replaceFile(reference, filePath),
+      (state) => this.persist(state), (tab) => this.buildAgentState(tab),
+      (label, filePath) => this.managers.editorWatch.watch(label, filePath),
+    );
   }
 
   startRunning(label: string, input: string): void {
@@ -212,6 +210,10 @@ export class TabManager extends TabOpeningState {
 
   registerFile(absPath: string): string {
     return this.fileRegistry.register(absPath);
+  }
+
+  replaceFile(reference: string, absPath: string): string {
+    return this.fileRegistry.replace(reference, absPath);
   }
 
   openFilePath(id: string): string | undefined {

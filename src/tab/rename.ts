@@ -11,7 +11,7 @@ export function renameTabOp(
   index: number,
   title: string,
   maxLength: number,
-  registerFile: (absPath: string) => string,
+  replaceFile: (reference: string, absPath: string) => string,
   watchEditor: (label: string, filePath: string) => void,
   persist: (state: AgentState) => void,
   buildAgentState: (tab: Tab) => AgentState,
@@ -19,7 +19,7 @@ export function renameTabOp(
   const tab = tabs[index];
   if (!tab) return;
   if (tab.editor) {
-    renameEditorTab(tab, title, maxLength, registerFile, watchEditor);
+    renameEditorTab(tab, title, maxLength, replaceFile, watchEditor);
     persist(buildAgentState(tab));
     messageBus.emit('state', { type: 'dirty' });
     return;
