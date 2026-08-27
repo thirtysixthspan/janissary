@@ -157,6 +157,48 @@ describe.skipIf(!sandboxAvailable())('sandboxSpawn — live sandbox-exec integra
     }
   });
 
+  // opencode's credential store is the one secret path that sits inside a write carve-out
+  // (`.local/share/opencode`, which its session database and logs need), so unlike every other
+  // entry in SECRET_DENY_PATHS these two denies are doing real work against an allow that would
+  // otherwise match. Both probes are non-destructive: the read is a `cat`, and the write is a
+  // `touch`, which changes only mtime even in the failure case where the deny does not hold.
+  const opencodeAuth = path.join(homedir(), '.local/share/opencode/auth.json');
+
+  it.skipIf(!existsSync(opencodeAuth))('reports opencode\'s credential file as absent, not denied', () => {
+    const scriptPath = path.join(workspaceDir, 'run.sh');
+    writeFileSync(scriptPath, `#!/bin/sh\ncat "${opencodeAuth}"\n`, { mode: 0o755 });
+    const { command, args, env } = sandboxSpawn({ workspaceDir }, scriptPath, []);
+    try {
+      execFileSync(command, args, { cwd: workspaceDir, env: env as NodeJS.ProcessEnv, stdio: 'pipe' });
+      expect.unreachable('expected the credential read to be denied');
+    } catch (error) {
+      const stderr = (error as { stderr?: Buffer }).stderr?.toString() ?? '';
+      expect(stderr).toContain('No such file or directory');
+      expect(stderr).not.toContain('Operation not permitted');
+    }
+  });
+
+  it.skipIf(!existsSync(opencodeAuth))('denies writing opencode\'s credential file while its directory stays writable', () => {
+    const sibling = path.join(homedir(), '.local/share/opencode', `sandbox-test-${Date.now()}.tmp`);
+    const scriptPath = path.join(workspaceDir, 'run.sh');
+    writeFileSync(scriptPath, `#!/bin/sh\ntouch "${sibling}" || exit 3\ntouch "${opencodeAuth}"\n`, { mode: 0o755 });
+    const { command, args, env } = sandboxSpawn({ workspaceDir }, scriptPath, []);
+    try {
+      execFileSync(command, args, { cwd: workspaceDir, env: env as NodeJS.ProcessEnv, stdio: 'pipe' });
+      expect.unreachable('expected the credential write to be denied');
+    } catch (error) {
+      const stderr = (error as { stderr?: Buffer }).stderr?.toString() ?? '';
+      // Two ways this could pass without proving anything, both explicitly excluded: the profile
+      // failing to apply at all (nesting sandbox-exec inside an already-sandboxed process), and the
+      // sibling write failing, which would mean the carve-out broke rather than the deny working.
+      expect(stderr).not.toContain('sandbox_apply');
+      expect((error as { status?: number }).status).not.toBe(3);
+      expect(stderr).toContain('Operation not permitted');
+    } finally {
+      rmSync(sibling, { force: true });
+    }
+  });
+
   it('denies exec of a script copied to /tmp', () => {
     const tmpScript = path.join('/tmp', `sandbox-exec-test-${Date.now()}.sh`);
     writeFileSync(tmpScript, '#!/bin/sh\necho ran\n', { mode: 0o755 });

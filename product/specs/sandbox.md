@@ -45,11 +45,25 @@ carve-in allows → secret denies last (so a secret path stays denied even insid
   path but a `read`/`open` that follows it against the resolved target, so every carve-in/deny table
   entry is expanded into **both** a literal and a fully realpath-resolved `-D` param
   (`dualParams` in `sandbox-profile.ts`) — carving in only one leaves the other operation denied.
-- **Secrets** (`SECRET_DENY_PATHS`) are denied last, with the full `file-read*` operation (including
-  metadata, so their existence isn't observable either), even inside a carve-in: `.ssh`, `.aws`,
+- **Secrets** (`SECRET_DENY_PATHS`) are denied last, for writes as well as reads, even inside a
+  carve-in: `.claude/.credentials.json`, `.local/share/opencode/auth.json`, `.ssh`, `.aws`,
   `.gnupg`, `.kube`, `.netrc`, `.config/gh/hosts.yml`, `.docker`, `.config/gcloud`, `.azure`,
   `.cargo/credentials(.toml)`, `.pypirc`, `.m2/settings.xml`, `.terraform.d`, shell/Python/Node REPL
   history files, and browser profile directories (Chrome, Firefox, Brave, Safari).
+- **`.local/share/opencode/auth.json`** is the one entry whose deny does real work rather than
+  backing up a denial the tables already imply. Every other entry sits outside every carve-in, so the
+  top-level defaults would deny it anyway; this one is inside `.local/share/opencode`, a write
+  carve-out that opencode's session database and logs need. It holds every provider credential
+  opencode has been given, in plaintext, and denying it only became possible once a workspaced
+  opencode harness had another route to a credential — `OPENCODE_API_KEY`, injected from
+  `.janissary/opencode-token` (see [[workspaced-agent]]). The write deny exists for the same entry:
+  with the read reporting `ENOENT`, a process that decided to write the file would see no
+  credentials and overwrite the real ones on the host, so denying the write turns a silent clobber
+  into an ordinary failure. Consequence worth stating plainly: an opencode provider configured by
+  `opencode auth login` rather than by an environment variable stops working inside a workspace, and
+  `.janissary/opencode-token` does not substitute for it — that file supplies `OPENCODE_API_KEY`,
+  which is what the OpenCode Zen and OpenCode Go providers read and nothing else. Every other
+  provider reads its own key from the environment, which the scrub deliberately exempts.
 - **`~/Library/Keychains`** is a read carve-in, not a secret deny, despite being far more sensitive
   in principle than the other carve-ins — see [Known OS quirks](#known-os-quirks-and-their-carve-ins).
 - A harness's own executable directory (`SELF_DIR_L`/`SELF_DIR_R`, resolved from `PATH` at spawn

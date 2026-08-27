@@ -69,6 +69,16 @@ function buildProfile(networkClause: string): string {
 ${writeCarveClauses}
 ${writePrefixClauses}
 ${keychainWriteClause})
+; Secret paths lose their write access last, the same way they lose their read access below. For
+; every entry that sits outside the carve-outs above this is a no-op — the top-level deny already
+; covers them — and it exists for the one that does not: opencode's credential store lives inside
+; the .local/share/opencode write carve-out its session database and logs need. Denying only the
+; read there would make things worse, not better: the read reports ENOENT, so a process that then
+; decided to write the file (an "opencode auth login" run inside the workspace) would see no
+; credentials and overwrite the real ones on the host. Denying the write turns a silent clobber of
+; the user's own credentials into an ordinary failure.
+(deny file-write*
+${secretDenyClauses})
 (allow file-read-data file-write-data
   (literal "/dev/null")
   (regex #"^/dev/tty")
