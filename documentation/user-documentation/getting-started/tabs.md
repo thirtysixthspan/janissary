@@ -97,7 +97,7 @@ close page-2      close the second embedded web page by its name
 
 `exit` is an alias of `close`. Closing a tab tears down everything it owns — its shell, agent session, scheduled commands, and workspace clone if it has one — and focus moves to an adjacent tab.
 
-Closing the **last** remaining tab quits the app. If you type `close` (or `exit`) on the last tab, the quit confirmation dialog appears first, exactly as if you'd typed `quit`; closing it via the tab strip's × button quits directly. If no tab matches the name you gave, an error is reported.
+Closing the **last** remaining tab quits the app, so it always asks first. `close`, `exit`, the tab strip's × button, `Cmd+W`/`Ctrl+W`, and a view tab's own × all bring up the quit confirmation dialog there, exactly as if you'd typed `quit`. A docked sidebar tab doesn't count as one of your remaining tabs. The only thing that quits without asking is the tab's own process exiting on its own. If no tab matches the name you gave, an error is reported.
 
 ## How paths are shown: `$root`
 

@@ -39,7 +39,17 @@ Embedded web pages and ANSI-colored shell output are deliberately outside the th
 
 `quit` is the only command that exits the whole app, and it always asks first: a dialog reading "Are you sure you want to quit?" with **Quit (y)** and **Cancel (n)** buttons. **Cancel** is selected by default, so a stray `Enter` is safe. Press `y` to confirm or `n` / `Escape` to cancel; `←`/`→` move the selection. While the dialog is open it traps all other input — clicks outside it and other keys do nothing.
 
-Don't reach for `exit` to leave the app: `exit` is an alias of `close` and closes the current *tab*. The one overlap is the last tab — closing it exits the app, so typing `close` or `exit` there shows the same confirmation dialog (see [Tabs](/user-documentation/getting-started/tabs)).
+Don't reach for `exit` to leave the app: `exit` is an alias of `close` and closes the current *tab*. The one overlap is the last tab — closing it exits the app, so `close`, `exit`, the tab strip's × and `Cmd+W`/`Ctrl+W` all show the same confirmation dialog there (see [Tabs](/user-documentation/getting-started/tabs)).
+
+### Quitting with unsaved work
+
+If any tab has unsaved changes when you quit, you get a different dialog instead: "You have unsaved changes. Close anyway?" with **Close anyway (y)** and **Cancel (n)**. It answers to the same keys as the ordinary quit dialog, with **Cancel** selected by default.
+
+Confirming quits straight away and throws those edits away. There's no per-file save prompt on this path, so save what you want to keep before you confirm. Cancelling leaves every tab open with its edits intact.
+
+Unsaved work means an [editor tab](/user-documentation/tab-types/editor) holding a buffer you haven't written, or an [image tab](/user-documentation/tab-types/image-viewer) holding edits you haven't saved. Both raise this dialog. This is a different thing from the save prompt you get when closing one tab while others remain — that one offers to save the file first.
+
+Closing the browser window or reloading the page while work is unsaved gets you the browser's own "leave site?" prompt, which is the one close path the app can't put a dialog in front of.
 
 ## `notifications` and `notify`
 
