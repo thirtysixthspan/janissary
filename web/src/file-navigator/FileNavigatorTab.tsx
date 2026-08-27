@@ -3,8 +3,6 @@ import type { FileNavigatorRow } from '@shared/protocol';
 import { isImagePath } from '@shared/plugins/image/shared';
 import { useFileNavigatorDrag } from './useFileNavigatorDrag';
 import { useFileNavigatorRename } from './useFileNavigatorRename';
-import { FileNavigatorRowView } from './FileNavigatorRowView';
-import { fileNavigatorRowClass } from './file-navigator-row-class';
 import { newFileTargetDir, newFileCommand, newDirectoryCommand, newDirectoryTargetPath, findPendingNewDir } from './file-navigator-new-file';
 import { useFileNavigatorSearch } from './useFileNavigatorSearch';
 import { FileNavigatorHeader } from './FileNavigatorHeader';
@@ -19,11 +17,15 @@ import { useSelectionAction } from '../useSelectionAction';
 import { useFileNavigatorRowEvents } from './use-file-navigator-row-events';
 import type { FileNavigatorMenuActions } from './file-navigator-menu-items';
 import type { FileNavigatorTabProperties as Properties } from './file-navigator-tab-types';
+import { useFileNavigatorIntents } from './useFileNavigatorIntents';
+import { nextDock } from '../dock-cycle';
+import { FileNavigatorRows } from './FileNavigatorRows';
 
 export function FileNavigatorTab({
   files, client, index, dock, autoFocus = true, dropRef, editorDropRef,
   targetCwd = files.absoluteRoot, onSplit,
 }: Properties) {
+  const intents = useFileNavigatorIntents(client, index);
   const selection = useFileNavigatorSelection(files.rows, files.absoluteRoot, index, files.restore);
   const [pendingNewDir, setPendingNewDir] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -63,19 +65,19 @@ export function FileNavigatorTab({
     setPendingNewDir(null);
   }, [files.rows, pendingNewDir]); // eslint-disable-line react-hooks/exhaustive-deps -- `rename` is fresh each render
 
-  const toggle = (path: string) => client.send({ method: 'fileNavigatorToggle', params: { index, path } });
+  const toggle = intents.toggle;
   const openFile = (path: string, edit: boolean) => opener.open(path, edit);
-  const editFile = (path: string) => client.send({ method: 'command', params: { text: `edit ${files.absoluteRoot}/${path}` } });
-  const reroot = () => client.send({ method: 'fileNavigatorReroot', params: { index } });
-  const rerootTo = (path: string) => client.send({ method: 'fileNavigatorReroot', params: { index, path } });
+  const editFile = (path: string) => intents.sendCommand(`edit ${files.absoluteRoot}/${path}`);
+  const reroot = intents.reroot;
+  const rerootTo = intents.rerootTo;
   const createNewFile = () => {
     const text = newFileCommand(files.absoluteRoot, newFileTargetDir(files.rows, selection.cursor));
-    client.send({ method: 'command', params: { text } });
+    intents.sendCommand(text);
   };
   const createNewDirectory = () => {
     const targetDir = newFileTargetDir(files.rows, selection.cursor);
     setPendingNewDir(newDirectoryTargetPath(targetDir));
-    client.send({ method: 'command', params: { text: newDirectoryCommand(files.absoluteRoot, targetDir) } });
+    intents.sendCommand(newDirectoryCommand(files.absoluteRoot, targetDir));
   };
 
   const rowEvents = useFileNavigatorRowEvents({
@@ -151,48 +153,17 @@ export function FileNavigatorTab({
     >
       <FileNavigatorHeader
         root={files.root} branch={files.branch} githubUrl={files.githubUrl}
-        client={client} index={index} dock={dock} details={files.details}
+        dock={dock} details={files.details}
+        onOpenGithub={intents.openGithub}
+        onCycleDock={dock === undefined ? undefined : () => intents.setDock(nextDock(dock))}
+        onSetDetail={intents.setDetail} onCollapseAll={intents.collapseAll}
         onSearch={search.openSearch} onNewFile={createNewFile} onNewDirectory={createNewDirectory}
         onSplit={onSplit}
       />
-      {files.waitingFor !== undefined && (
-        <div className="files-waiting">Looking for {files.waitingFor}…</div>
-      )}
-      <div className="files-rows">
-        {files.rows.map((row, rowIndex) => (
-          <FileNavigatorRowView
-            key={row.path}
-            id={`${treeId}-row-${rowIndex}`}
-            row={row}
-            details={files.details}
-            selected={selection.selected.has(row.path)}
-            cursor={selection.cursor === row.path}
-            rowClass={fileNavigatorRowClass(
-              row,
-              selection.selected.has(row.path),
-              selection.cursor === row.path,
-              drag.dropTarget?.path,
-              paste.clipboardMark(row.path),
-            )}
-            editing={rename.editing === row.path}
-            draft={rename.draft}
-            onDraftChange={rename.setDraft}
-            onCommit={rename.commit}
-            onCancel={rename.cancel}
-            onClick={() => rowEvents.onRowClick(row)}
-            onDoubleClick={(shiftKey) => rowEvents.onRowDoubleClick(row, shiftKey)}
-            onMouseDown={(event) => rowEvents.onRowMouseDown(row, event)}
-            onContextMenu={(event) => {
-              // Only a menu raised on a row inside a multi-row selection can carry an entry that
-              // acts on the whole selection; every other menu asks nothing and shows none.
-              selectionAction.query(
-                selection.selected.has(row.path) ? selection.operationPaths : [],
-              );
-              rowEvents.onRowContextMenu(row, event);
-            }}
-          />
-        ))}
-      </div>
+      <FileNavigatorRows
+        files={files} treeId={treeId} selection={selection} drag={drag} paste={paste}
+        rename={rename} rowEvents={rowEvents} selectionAction={selectionAction}
+      />
       <FileNavigatorOverlays
         drag={drag}
         rename={rename}

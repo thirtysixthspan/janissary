@@ -1,19 +1,16 @@
 import React from 'react';
-import type { JanusClient } from '../ws';
-
 type Properties = {
-  githubUrl: string;
-  client: JanusClient;
+  onClick: () => void;
 };
 
 // The file navigator header's GitHub button: opens the repository's commits page for the current
 // branch (see `github-url.ts`) as an in-app page tab, via the same `open <url>` command
 // `FileNavigatorTab`'s other header actions already use — never a native OS browser tab.
-export function FileNavigatorGithubButton({ githubUrl, client }: Properties) {
+export function FileNavigatorGithubButton({ onClick }: Properties) {
   return (
     <button
       type="button" className="files-github" title="Open on GitHub"
-      onClick={() => client.send({ method: 'command', params: { text: `open ${githubUrl}` } })}
+      onClick={onClick}
     >
       <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor" aria-hidden="true">
         <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38

@@ -1,7 +1,6 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { FileNavigatorDetail } from '@shared/protocol';
-import type { JanusClient } from '../ws';
 import { nextDock, dockTooltip } from '../dock-cycle';
 import { nextDetail, detailTooltip } from './file-navigator-detail';
 import { dockSwapIcon, fileDetailIcon, newDirectoryIcon, newFileIcon, searchFilesIcon } from '../icons';
@@ -12,10 +11,12 @@ type Properties = {
   root: string;
   branch?: string;
   githubUrl?: string;
-  client: JanusClient;
-  index: number;
   dock?: 'left' | 'right';
   details?: FileNavigatorDetail;
+  onOpenGithub: (githubUrl: string) => void;
+  onCycleDock?: () => void;
+  onSetDetail: (details: FileNavigatorDetail) => void;
+  onCollapseAll: () => void;
   onSearch: () => void;
   onNewFile: () => void;
   onNewDirectory: () => void;
@@ -26,7 +27,8 @@ type Properties = {
 // new items, dock cycle, collapse all) on the right. Split out of `FileNavigatorTab` to keep it under
 // the file-size limit.
 export function FileNavigatorHeader({
-  root, branch, githubUrl, client, index, dock, details, onSearch, onNewFile, onNewDirectory, onSplit,
+  root, branch, githubUrl, dock, details, onOpenGithub, onCycleDock, onSetDetail, onCollapseAll,
+  onSearch, onNewFile, onNewDirectory, onSplit,
 }: Properties) {
   const following = nextDetail(details);
   return (
@@ -36,7 +38,7 @@ export function FileNavigatorHeader({
         {branch && <span className="files-branch">{branch}</span>}
       </div>
       <div className="files-actions">
-        {githubUrl && <FileNavigatorGithubButton githubUrl={githubUrl} client={client} />}
+        {githubUrl && <FileNavigatorGithubButton onClick={() => onOpenGithub(githubUrl)} />}
         <button type="button" className="files-search" title="Search files" onClick={onSearch}>
           <FontAwesomeIcon icon={searchFilesIcon} />
         </button>
@@ -51,7 +53,7 @@ export function FileNavigatorHeader({
             type="button"
             className="files-dock-cycle"
             title={dockTooltip(nextDock(dock))}
-            onClick={() => client.send({ method: 'setDock', params: { index, dock: nextDock(dock) } })}
+            onClick={onCycleDock}
           >
             <FontAwesomeIcon icon={dockSwapIcon} />
           </button>
@@ -60,7 +62,7 @@ export function FileNavigatorHeader({
           type="button"
           className="files-detail-cycle"
           title={detailTooltip(following)}
-          onClick={() => client.send({ method: 'fileNavigatorSetDetail', params: { index, details: following } })}
+          onClick={() => onSetDetail(following)}
         >
           <FontAwesomeIcon icon={fileDetailIcon} />
         </button>
@@ -69,7 +71,7 @@ export function FileNavigatorHeader({
           type="button"
           className="files-collapse-all"
           title="Collapse all"
-          onClick={() => client.send({ method: 'fileNavigatorCollapseAll', params: { index } })}
+          onClick={onCollapseAll}
         >
           ⊟
         </button>
