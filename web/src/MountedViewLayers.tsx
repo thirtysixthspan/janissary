@@ -4,7 +4,7 @@ import type { JanusClient } from './ws';
 import type { DirtyTabHandle, HarnessTabHandle } from './tab-handles';
 import { EditorTab } from './editor/EditorTab';
 import type { EditorDropHandle } from './drop-handles';
-import { HarnessTabLayer } from './HarnessTabLayer';
+import { HarnessTabLayer } from './harness/HarnessTabLayer';
 import type { PickerOverlayProps } from './picker-overlay-props';
 import { QuestionPanel } from './QuestionPanel';
 import type { QuestionPanelHandle } from './tab-handles';

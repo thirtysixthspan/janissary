@@ -5,7 +5,7 @@ import { AgentTabBody } from './agent-tabs/AgentTabBody';
 import { AppShell } from './AppShell';
 import { AppCenterActionArea } from './AppCenterActionArea';
 import { AppReportingSection } from './AppReportingSection';
-import { HarnessLaunchDialog } from './HarnessLaunchDialog';
+import { HarnessLaunchDialog } from './harness/HarnessLaunchDialog';
 import { ScheduleDialog } from './ScheduleDialog';
 import { QuitDialog } from './QuitDialog/QuitDialog';
 import { UnsavedQuitDialog } from './UnsavedQuitDialog';

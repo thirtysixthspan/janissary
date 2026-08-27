@@ -2,7 +2,7 @@ import React from 'react';
 import { render, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { HarnessLaunchView } from '@shared/protocol';
-import type { JanusClient } from './ws';
+import type { JanusClient } from '../ws';
 import { HarnessLaunchDialog, resetHarnessLaunchDialogMemory } from './HarnessLaunchDialog';
 
 const view: HarnessLaunchView = {
