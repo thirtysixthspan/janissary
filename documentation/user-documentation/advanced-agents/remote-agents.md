@@ -72,7 +72,7 @@ Janissary forwards your project's GitHub token through the encrypted connection 
 
 The tab tells you when the token in use isn't the one you forwarded. You'll see `github token: none forwarded from the initiating project, using this machine's own` when the remote fell back to its own token, and `github token: none configured on either machine, so none was injected for git push or gh` when neither had one. No line about the token means yours is what the workspace is running on.
 
-Your Claude and OpenCode tokens are forwarded the same way, which is what keeps a harness signed in on a machine that can't sign itself in. A Linux host has no keychain for `claude`, and a host nobody has run `opencode auth login` on has nothing for `opencode`, so without the forwarded tokens those tabs start up logged out. Neither reports anything when it works or when it doesn't, because the harness itself says whether it's signed in.
+Your Claude, OpenCode, and Gemini tokens are forwarded the same way, which is what keeps a harness signed in on a machine that can't sign itself in. A Linux host has no keychain for `claude`, and a host nobody has run `opencode auth login` on has nothing for `opencode` or for its Google provider, so without the forwarded tokens those tabs start up logged out. None of the three reports anything when it works or when it doesn't, because the harness itself says whether it's signed in.
 
 ## Find the connections
 

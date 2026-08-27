@@ -9,7 +9,10 @@ vi.mock('../shell.js');
 const TOKEN = 'github_pat_forwarded';
 const CLAUDE_TOKEN = 'sk-ant-oat01-forwarded';
 const OPENCODE_TOKEN = 'oc_live_forwarded';
-const CREDENTIALS = { github: TOKEN, claude: CLAUDE_TOKEN, opencode: OPENCODE_TOKEN };
+const GEMINI_TOKEN = 'AIzaSyForwarded';
+const CREDENTIALS = {
+  github: TOKEN, claude: CLAUDE_TOKEN, opencode: OPENCODE_TOKEN, gemini: GEMINI_TOKEN,
+};
 
 function fakeShell() {
   return {
@@ -37,7 +40,7 @@ describe('RemoteProcesses forwarded credentials', () => {
 
     expect(vi.mocked(spawnPty).mock.calls[0]?.[6]).toEqual({
       workspaceDir: '/remote/workspace', offline: undefined,
-      githubToken: TOKEN, claudeToken: CLAUDE_TOKEN, opencodeToken: OPENCODE_TOKEN,
+      githubToken: TOKEN, claudeToken: CLAUDE_TOKEN, opencodeToken: OPENCODE_TOKEN, geminiToken: GEMINI_TOKEN,
     });
   });
 
@@ -49,7 +52,7 @@ describe('RemoteProcesses forwarded credentials', () => {
 
     expect(vi.mocked(spawnShell)).toHaveBeenCalledWith(0, { JANUS_AGENT_NAME: 'agent' }, {
       workspaceDir: '/remote/workspace',
-      githubToken: TOKEN, claudeToken: CLAUDE_TOKEN, opencodeToken: OPENCODE_TOKEN,
+      githubToken: TOKEN, claudeToken: CLAUDE_TOKEN, opencodeToken: OPENCODE_TOKEN, geminiToken: GEMINI_TOKEN,
     });
   });
 
@@ -63,7 +66,7 @@ describe('RemoteProcesses forwarded credentials', () => {
 
     expect(vi.mocked(spawnPty).mock.calls[0]?.[6]).toEqual({
       workspaceDir: '/remote/workspace', offline: undefined,
-      githubToken: undefined, claudeToken: CLAUDE_TOKEN, opencodeToken: undefined,
+      githubToken: undefined, claudeToken: CLAUDE_TOKEN, opencodeToken: undefined, geminiToken: undefined,
     });
   });
 
@@ -75,7 +78,7 @@ describe('RemoteProcesses forwarded credentials', () => {
 
     expect(vi.mocked(spawnPty).mock.calls[0]?.[6]).toEqual({
       workspaceDir: '/remote/workspace', offline: undefined,
-      githubToken: undefined, claudeToken: undefined, opencodeToken: OPENCODE_TOKEN,
+      githubToken: undefined, claudeToken: undefined, opencodeToken: OPENCODE_TOKEN, geminiToken: undefined,
     });
   });
 });

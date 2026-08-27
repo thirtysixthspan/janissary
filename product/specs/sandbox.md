@@ -143,7 +143,11 @@ already carved in. An OpenCode API key configured at `.janissary/opencode-token`
 `src/opencode-token.ts`) is set as `OPENCODE_API_KEY` on exactly the same terms, for the same
 reasons: the variable the OpenCode Zen and OpenCode Go providers declare, off the scrub list as a
 provider credential, and needing no companion because opencode reads its own configuration from
-`~/.local/share/opencode`, likewise already carved in. `TMPDIR` is overridden to the workspace's private temp dir
+`~/.local/share/opencode`, likewise already carved in. A Google AI key configured at
+`.janissary/gemini-token` (loaded by `src/gemini-token.ts`) is set as `GEMINI_API_KEY` on the same
+terms again. It exists because the Google provider's key lives in opencode's own credential store,
+which is a denied secret path, so without it that provider has no route into a workspace other than
+the ambient environment. `TMPDIR` is overridden to the workspace's private temp dir
 (`<workspace>.tmp`) regardless of what the caller passed in. `JANISSARY_NODE` is added, set to
 `process.execPath` — the absolute path of the Node binary running the janissary server itself —
 so a script inside the sandbox (e.g. a project's own `.claude/settings.json` hook) can invoke a

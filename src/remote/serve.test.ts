@@ -6,6 +6,7 @@ import path from 'node:path';
 import { initWorkspaceDir } from '../workspace/index.js';
 import { loadClaudeToken } from '../claude-token.js';
 import { loadOpencodeToken } from '../opencode-token.js';
+import { loadGeminiToken } from '../gemini-token.js';
 import { spawnPty } from '../pty.js';
 import { resolveRemoteRoot } from './serve-root.js';
 import { RemoteServer, wireShutdown, CHANNEL_SIGNALS } from './serve.js';
@@ -157,6 +158,35 @@ describe('RemoteServer', () => {
     expect(vi.mocked(spawnPty).mock.calls[0]?.[6]).toMatchObject({ opencodeToken: 'oc_live_forwarded' });
     expect(frames.find((f) => f.type === 'workspace-ready')?.notice ?? '').not.toContain('opencode');
     server.shutdown(0);
+  });
+
+  it('hands a remote workspace the forwarded Gemini key and says nothing about it', async () => {
+    const { server, frames } = makeServer();
+    server.receive(`${encodeFrame({ type: 'provision', label: 'gemini-key', geminiToken: 'AIzaSyForwarded' })}\n`);
+    await vi.waitFor(() => expect(frames.some((f) => f.type === 'workspace-ready')).toBe(true));
+    server.receive(`${encodeFrame(SPAWN_FRAME)}\n`);
+
+    expect(vi.mocked(spawnPty).mock.calls[0]?.[6]).toMatchObject({ geminiToken: 'AIzaSyForwarded' });
+    expect(frames.find((f) => f.type === 'workspace-ready')?.notice ?? '').not.toContain('gemini');
+    server.shutdown(0);
+  });
+
+  it('falls back to the remote\'s own Gemini key when none is forwarded', async () => {
+    const tokenPath = path.join(repoDir, '.janissary', 'gemini-token');
+    writeFileSync(tokenPath, 'AIzaSyRemoteOwn\n');
+    loadGeminiToken(repoDir);
+    try {
+      const { server, frames } = makeServer();
+      server.receive(`${encodeFrame({ type: 'provision', label: 'gemini-own-key' })}\n`);
+      await vi.waitFor(() => expect(frames.some((f) => f.type === 'workspace-ready')).toBe(true));
+      server.receive(`${encodeFrame(SPAWN_FRAME)}\n`);
+
+      expect(vi.mocked(spawnPty).mock.calls[0]?.[6]).toMatchObject({ geminiToken: 'AIzaSyRemoteOwn' });
+      server.shutdown(0);
+    } finally {
+      rmSync(tokenPath, { force: true });
+      loadGeminiToken(repoDir);
+    }
   });
 
   it('falls back to the remote\'s own OpenCode key when none is forwarded', async () => {

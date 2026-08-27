@@ -15,6 +15,7 @@ describe('frame codec', () => {
       {
         type: 'provision', label: 'claude', githubToken: 'github_pat_scoped',
         claudeToken: 'sk-ant-oat01-scoped', opencodeToken: 'oc_live_scoped',
+        geminiToken: 'AIzaSyScoped',
       },
       { type: 'spawn', id: 'r1', program: 'claude', command: 'claude', mode: 'pty', harness: 'claude', cols: 100, rows: 40 },
       { type: 'input', id: 'r1', data: 'hello' },
@@ -114,6 +115,14 @@ describe('handshake', () => {
   // a host with no login of its own with nothing to authenticate with. Third field, same refusal.
   it('rejects a remote too old to honor the forwarded OpenCode key', () => {
     const parsed = parseHandshake(`${HANDSHAKE_SENTINEL} ${JSON.stringify({ version: 3, root: '/srv/proj' })}`);
+    expect(parsed).toEqual({ error: expect.stringContaining('Update janissary') });
+    expect('error' in parsed && parsed.error).toContain(String(REMOTE_PROTOCOL_VERSION));
+  });
+
+  // Version 4 honors the first three tokens and drops `geminiToken`, so a workspace whose Google
+  // provider is the one that matters provisions and cannot authenticate. Fourth field, same refusal.
+  it('rejects a remote too old to honor the forwarded Gemini key', () => {
+    const parsed = parseHandshake(`${HANDSHAKE_SENTINEL} ${JSON.stringify({ version: 4, root: '/srv/proj' })}`);
     expect(parsed).toEqual({ error: expect.stringContaining('Update janissary') });
     expect('error' in parsed && parsed.error).toContain(String(REMOTE_PROTOCOL_VERSION));
   });

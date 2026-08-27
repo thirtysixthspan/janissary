@@ -11,6 +11,7 @@ import { sandboxSpawn } from '../sandbox/index.js';
 import { getGithubToken } from '../github-token.js';
 import { getClaudeToken } from '../claude-token.js';
 import { getOpencodeToken } from '../opencode-token.js';
+import { getGeminiToken } from '../gemini-token.js';
 import { decidePermission } from './tools.js';
 
 /**
@@ -35,6 +36,7 @@ export function connectAcp(options: AcpOptions): AcpSession {
       githubToken: options.workspaceDir ? getGithubToken() : undefined,
       claudeToken: options.workspaceDir ? getClaudeToken() : undefined,
       opencodeToken: options.workspaceDir ? getOpencodeToken() : undefined,
+      geminiToken: options.workspaceDir ? getGeminiToken() : undefined,
     },
     options.command, options.args, baseEnv,
   );
