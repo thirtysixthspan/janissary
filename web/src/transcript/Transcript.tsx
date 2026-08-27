@@ -3,7 +3,7 @@ import type { JanusClient } from '../ws';
 import type { BufferLine } from '@shared/protocol';
 import { renderLine, type LineHighlight } from './transcript-line';
 import { transcriptIntents } from './transcript-intents';
-import { TerminalCard } from '../TerminalCard';
+import { TerminalCard } from './TerminalCard';
 
 type Properties = {
   lines: BufferLine[];
