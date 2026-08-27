@@ -40,7 +40,7 @@ Saving a synced file writes and confirms the save exactly like an ordinary save 
 2. The shared workspace pulls the latest `origin/master`.
 3. The commit is pushed.
 
-If pulling `origin/master` turns up a conflicting change, the remote version always wins automatically — there's no merge-conflict prompt to resolve, so a sync never blocks you waiting on a decision. Opening a synced file, or another synced file finishing a save, also refreshes the shared workspace from `origin/master`; any other open, unmodified synced tab whose file changed as a result reloads automatically, the same as any external change to a file you have open (see [Editor](/user-documentation/tab-types/editor)). A synced tab with unsaved changes is left alone, same as always.
+If pulling `origin/master` fails, including because the same content changed remotely, your local save and its commit stay intact and nothing is pushed. The status icon changes to error and the notification gives the git failure; after you address the problem, clicking the icon retries the update. Janissary never silently replaces the saved content with the remote version. Opening a synced file, or another synced file finishing a save, also refreshes the shared workspace from `origin/master`; any other open, unmodified synced tab whose file changed as a result reloads automatically, the same as any external change to a file you have open (see [Editor](/user-documentation/tab-types/editor)). A synced tab with unsaved changes is left alone, same as always.
 
 ## Checking sync status, and resyncing manually
 

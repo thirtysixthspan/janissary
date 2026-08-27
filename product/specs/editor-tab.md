@@ -269,8 +269,10 @@ file changed as a result refreshes automatically, exactly like an ordinary exter
 Saving a synced file writes and confirms the save exactly as an ordinary save does — the "Saved"
 flash is not delayed by anything that happens next. After that, the change is committed with the
 message `sync: <filename>` (the saved file's name), the shared workspace is brought up to date with
-`origin/master`, and the commit is pushed. If updating with `origin/master` finds a conflicting
-change, the remote version always wins automatically; there is no merge-conflict prompt to resolve.
+`origin/master`, and the commit is pushed. If updating with `origin/master` fails, including because
+of a conflicting remote change, the local save and its commit remain in the shared workspace, the
+push is skipped, and the sync enters its error state. A later manual resync retries the update
+without silently replacing the saved content with the remote version.
 
 The metadata header's connections-status button area also shows a status icon for a synced file,
 reflecting whether that file's sync is currently being provisioned, syncing, synced, or has hit an
@@ -282,8 +284,7 @@ While the icon shows synced or error, clicking it manually pulls the latest `ori
 the shared workspace again, the same pull an open or a save-triggered sync already runs, showing
 syncing while that's in flight. If the pull brings in a change and the tab has no unsaved edits, the
 fresh content loads automatically; if it does have unsaved edits, the change is remembered and
-surfaces as the usual overwrite-confirmation prompt the next time the tab is saved, on the same
-remote-always-wins terms as any other conflicting sync. Clicking the icon while it shows
+surfaces as the usual overwrite-confirmation prompt the next time the tab is saved. Clicking the icon while it shows
 provisioning or syncing does nothing, since either state means no pull can start yet.
 
 ### In-editor persona suggestions

@@ -105,14 +105,17 @@ describe('GitSync', () => {
     expect(commands).toContain('push');
   });
 
-  it('resolves a rebase conflict by taking the remote content', async () => {
-    failPatterns = [['pull', '--rebase', 'origin', 'master']];
+  it('preserves the local commit and reports an error when a save pull fails', async () => {
+    failPatterns = [['diff', '--cached', '--quiet'], ['pull', '--rebase', 'origin', 'master']];
     const sync = new GitSync(makeWorkspace());
-    await sync.openSync();
+    const result = await sync.saveSync('bugs.md');
     const commands = argLists().map((a) => a.join(' '));
+    expect(result).toEqual({ error: expect.stringContaining('pull') });
+    expect(commands.some((command) => command.startsWith('commit'))).toBe(true);
     expect(commands).toContain('rebase --abort');
-    expect(commands).toContain('fetch origin master');
-    expect(commands).toContain('reset --hard origin/master');
+    expect(commands.some((command) => command.startsWith('fetch'))).toBe(false);
+    expect(commands.some((command) => command.startsWith('reset'))).toBe(false);
+    expect(commands.some((command) => command.startsWith('push'))).toBe(false);
   });
 
   it('surfaces a push failure as an error result', async () => {
