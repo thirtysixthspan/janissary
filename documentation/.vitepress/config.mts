@@ -107,6 +107,7 @@ export default defineConfig({
             { text: "Workspacing", link: "/user-documentation/advanced-agents/workspacing" },
             { text: "Workspaced agents", link: "/user-documentation/advanced-agents/workspaced-agent" },
             { text: "Remote agents", link: "/user-documentation/advanced-agents/remote-agents" },
+            { text: "Tokens for agents", link: "/user-documentation/advanced-agents/tokens" },
             { text: "ACP agents", link: "/user-documentation/advanced-agents/acp-agent" },
             { text: "Markdown rendering", link: "/user-documentation/advanced-agents/markdown-rendering" },
             { text: "Agent questions", link: "/user-documentation/advanced-agents/agent-questions" },
