@@ -2,8 +2,6 @@
 
 ## ready
 
-* remote agents and remote harnesses
-
 * how to obtain and where to put github-token and claude-token and how they are propagated to remote agents and harnesses. 
 
 ## development
@@ -14,6 +12,7 @@
 
 ## resolved
 
+* remote-agents — documented in documentation/user-documentation/advanced-agents/remote-agents.md, help.md (removed 2026-08-27)
 * editor-tab — documented in documentation/user-documentation/tab-types/editor.md (removed 2026-08-02)
 * workspaced-agent — documented in documentation/user-documentation/advanced-agents/workspaced-agent.md (removed 2026-08-02)
 * file-navigator-detail-modes — documented in documentation/user-documentation/tab-types/file-navigator.md, help.md (removed 2026-08-02)

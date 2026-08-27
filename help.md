@@ -7,7 +7,7 @@
 | `clear` | Clear the output log |
 | `quit` | Exit the application (asks for confirmation) |
 | `close` | Close the current tab (exits if last); `close <tabname>` closes a tab by its label (`page`, `page-2`, `image`, …). `exit` is an alias |
-| `agent` | Create a new agent tab in a disposable workspace by default (`--no-workspace` opts out; add `--offline` to also deny network access) |
+| `agent` | Create a new agent tab in a disposable workspace by default (`--no-workspace` opts out; add `--offline` to also deny network access; `on <[user@]host[:path]>` runs it on another machine) |
 | `next` | Switch to the next tab |
 | `hist` | Open command history picker |
 | `tasks` | Open the task picker listing executable `ai/*.md` task files (Ctrl+A) |
@@ -27,7 +27,7 @@
 | `schedule` | Run a command later — once or on a recurring schedule |
 | `schedules` | Open the aggregated, view-only tab listing every scheduled command across all tabs, through the bundled schedules tab plugin (`schedules left`/`right` to dock it) |
 | `profile` | `profile launch <name>` launches a project or built-in Janissary profile (bare `profile launch` opens a source-labeled picker); `profile save <name>` captures the running session in the project; `profile list` lists profiles; `profile validate [name]` checks a profile's structure |
-| `harness` | Open an AI coding harness in a disposable workspace; claude and codex auto-approve prompts by default (`--no-workspace` and `--no-auto-approve` opt out; opencode does not auto-approve); `harness capture <name>` snapshots a harness tab's screen into an editor tab |
+| `harness` | Open an AI coding harness in a disposable workspace; claude and codex auto-approve prompts by default (`--no-workspace` and `--no-auto-approve` opt out; opencode does not auto-approve); `harness capture <name>` snapshots a harness tab's screen into an editor tab; `on <[user@]host[:path]>` runs it on another machine |
 | `ssh` | Open an SSH session to a remote host in a full-tab terminal |
 | `search` | `search transcript <pattern>` searches the current tab's transcript with a regex (Cmd+F opens it empty) |
 | `files` | `files [path]` opens a file navigator tab rooted at the issuing tab's cwd, or at `path`; add `with <name\|size\|modified\|permissions>` to show that detail column beside each row |
