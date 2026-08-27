@@ -18,6 +18,8 @@ profile validate writing-code
 
 Bare `profile launch`, with no name, opens a picker with a **Project** section followed by a **Janissary** section for the profiles bundled with the app. `↑`/`↓` move the selection and skip the section labels. `Enter` or a click fills the command line with `profile launch <name>` without submitting it, so you can review or edit it first. `Escape` closes the picker without picking anything.
 
+The bundled ones are `debugging`, `features`, `multitasking`, `planning`, and `product-review`. Launch any of them by name without setting anything up, and read one as a worked example of the format below. `profile list` shows them alongside your own.
+
 ## Writing a profile
 
 <img class="agent-float left" src="/agents/dogan-south-east.png" alt="" />
@@ -73,7 +75,7 @@ The `plugin`, `page`, and `ssh` types reopen the rest of a working session — a
 { "type": "ssh", "destination": "devbox", "options": ["-p", "2222"], "number": 6 }
 ```
 
-A `plugin` entry names the built-in viewer that owns the tab — `image`, `markdown`, or `video` — plus the file it was opened on, and is what `profile save` writes for an open image, markdown, or video tab. The older `{ "type": "image", "path": … }` and `{ "type": "markdown", "path": … }` spellings still launch exactly the same way, so profiles you saved before are unaffected.
+A `plugin` entry names the [bundled plugin](/user-documentation/command-bar/plugins) that owns the tab, and is what `profile save` writes for any plugin tab you have open. For one that opens on a file — `image`, `markdown`, `video` — it carries that file's path, and a launch reopens it by opening the file again. A plugin reached only by its own command, such as the `schedules` list, carries no path; a launch reissues the command instead. The older `{ "type": "image", "path": … }` and `{ "type": "markdown", "path": … }` spellings still launch exactly the same way, so profiles you saved before are unaffected.
 
 None of these needs a `name` — the label is derived the same way typing `open` or `ssh` derives it. Relaunching closes a page or ssh tab already showing the same url or destination before reopening it, so you end up with one of each rather than a duplicate; an already-open image, markdown, or video tab is simply reused.
 
