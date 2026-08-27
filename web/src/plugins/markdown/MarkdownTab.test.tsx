@@ -48,6 +48,7 @@ function fireKey(key: string) {
 
 beforeEach(() => {
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+    ok: true,
     text: () => Promise.resolve('# Hello\n\nSome **bold** text.'),
   } as unknown as Response));
 });
@@ -105,6 +106,19 @@ describe('MarkdownTab', () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('offline')));
     renderTab();
     await waitFor(() => expect(screen.getByText('Failed to load README.md')).toBeInTheDocument());
+  });
+
+  it('falls back to a failure line when the response is not ok', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: false,
+      status: 404,
+      text: () => Promise.resolve('# Not found'),
+    } as unknown as Response));
+
+    renderTab();
+
+    await waitFor(() => expect(screen.getByText('Failed to load README.md')).toBeInTheDocument());
+    expect(screen.queryByRole('heading', { name: 'Not found' })).not.toBeInTheDocument();
   });
 
   it('ArrowDown increases scrollTop', async () => {

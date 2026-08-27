@@ -16,9 +16,9 @@ afterEach(() => { server?.close(); server = null; });
 type Fetched = { status: number; headers: http.IncomingMessage['headers']; body: string };
 
 // Serve the one fixture file through the route under test and issue a single request against it.
-async function fetchRange(range?: string): Promise<Fetched> {
+async function fetchRange(range?: string, filePath = file): Promise<Fetched> {
   server = createServer((request, res) => {
-    void serveOpenFile(request, res, file, { 'content-type': 'video/mp4' });
+    void serveOpenFile(request, res, filePath, { 'content-type': 'video/mp4' });
   });
   const port = await new Promise<number>((resolve) => {
     server!.listen(0, '127.0.0.1', () => {
@@ -106,5 +106,11 @@ describe('serveOpenFile', () => {
     const response = await fetchRange('items=0-1');
     expect(response.status).toBe(200);
     expect(response.body).toBe('abcdefghij');
+  });
+
+  it('answers 404 when the registered file no longer exists', async () => {
+    const response = await fetchRange(undefined, path.join(dir, 'missing.mp4'));
+    expect(response.status).toBe(404);
+    expect(response.body).toBe('');
   });
 });
