@@ -108,7 +108,15 @@ where nothing else about the environment is changed and nothing is scrubbed. (Se
 `(with errno ...)` deny qualifier looks like a more surgical fix, but only takes effect when it's the
 *sole* matching deny for that operation+path — any other unqualified deny or allow on the same path,
 in either direction, wins over it regardless of rule ordering, and `hosts.yml` already falls under
-the broader `$HOME`-wide read deny.) `TMPDIR` is overridden to the workspace's private temp dir
+the broader `$HOME`-wide read deny.) If a Claude Code subscription token is configured for the
+project (`.janissary/claude-token`, loaded by `src/claude-token.ts`), `CLAUDE_CODE_OAUTH_TOKEN` is
+set to it for every workspaced spawn, on the confined and pass-through paths alike and for the same
+reason the GitHub variables are — see [[workspaced-agent]]'s "Harness authentication". This one is
+*not* a scrub exception, because it was never scrubbed: it is an LLM provider credential, and the
+list deliberately exempts those. An ambient `CLAUDE_CODE_OAUTH_TOKEN` therefore passes through as it
+always has, and a configured token simply takes precedence over it. It needs no companion variable of
+the `GH_CONFIG_DIR` kind either — the harness reads its configuration from `~/.claude`, which is
+already carved in. `TMPDIR` is overridden to the workspace's private temp dir
 (`<workspace>.tmp`) regardless of what the caller passed in. `JANISSARY_NODE` is added, set to
 `process.execPath` — the absolute path of the Node binary running the janissary server itself —
 so a script inside the sandbox (e.g. a project's own `.claude/settings.json` hook) can invoke a

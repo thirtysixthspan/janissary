@@ -2,6 +2,7 @@ import { spawnShell, executeShellCmd as executeShellCommand, queryShellPwd, type
 import { createRemoteShell } from './remote/shell-session.js';
 import { getConfig } from './config.js';
 import { getGithubToken } from './github-token.js';
+import { getClaudeToken } from './claude-token.js';
 import { messageBus } from './bus.js';
 import type { Managers } from './managers.js';
 
@@ -69,6 +70,7 @@ export class ShellManager {
       workspaceDir: tab?.workspaceDir,
       offline: tab?.offline,
       githubToken: tab?.workspaceDir ? getGithubToken() : undefined,
+      claudeToken: tab?.workspaceDir ? getClaudeToken() : undefined,
     });
     if (cwd) shell.stdin?.write(`cd "${cwd}"\n`);
     return shell;

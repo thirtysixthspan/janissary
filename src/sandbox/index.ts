@@ -25,6 +25,11 @@ export type SandboxOptions = {
   // that keeps `gh` off the machine's ambient login — see `githubCredentialEnv` below. Applied for
   // any workspaced spawn, whether or not this machine can actually confine it.
   githubToken?: string;
+  // A long-lived Claude Code subscription token to hand this spawn as `CLAUDE_CODE_OAUTH_TOKEN`
+  // (see `claude-token.ts`). Applied for any workspaced spawn, not just a `claude` harness tab —
+  // an agent tab's plain shell can invoke `claude` too. Same isolation-independence as the GitHub
+  // token: a host that cannot confine anything still needs its harness authenticated.
+  claudeToken?: string;
 };
 
 export type SandboxResult = {
@@ -201,22 +206,37 @@ function githubCredentialEnv(tmpDir: string, token: string): NodeJS.ProcessEnv {
   return { GH_TOKEN: token, GH_CONFIG_DIR: path.join(tmpDir, 'gh-config') };
 }
 
-// Handing a workspaced tab its scoped credential is a provisioning concern, not an isolation one:
+// Every credential this spawn is deliberately handed, for whichever of the two tokens the caller
+// supplied. `CLAUDE_CODE_OAUTH_TOKEN` needs no `GH_CONFIG_DIR`-style companion: unlike `gh`, the
+// harness reads its config from `~/.claude`, which is already carved in. It is also, unlike
+// `GH_TOKEN`, not on `ENV_SCRUB_PATTERNS` — it is an LLM provider credential, and the scrub list
+// deliberately exempts those (see paths.ts), so an ambient value survives and a configured token
+// simply takes precedence over it.
+function workspaceCredentialEnv(tmpDir: string, options: SandboxOptions): NodeJS.ProcessEnv {
+  return {
+    ...(options.githubToken && githubCredentialEnv(tmpDir, options.githubToken)),
+    ...(options.claudeToken && { CLAUDE_CODE_OAUTH_TOKEN: options.claudeToken }),
+  };
+}
+
+// Handing a workspaced tab its scoped credentials is a provisioning concern, not an isolation one:
 // the clone's `origin` is HTTPS and its `credential.helper` is `!gh auth git-credential` on every
 // host (see src/workspace/index.ts), so `git push` and `gh` need `GH_TOKEN` whether or not Seatbelt
-// is confining the process. This is the unconfined path's share of that — a non-darwin remote, or a
-// host with `sandboxWorkspaces` off, would otherwise get a workspace it cannot push from. Without a
+// is confining the process, and a harness needs its own token on exactly the same terms. This is the
+// unconfined path's share of that — a non-darwin remote, or a host with `sandboxWorkspaces` off,
+// would otherwise get a workspace it cannot push from or authenticate a harness in. Without a
 // token, or outside a workspace, the caller's own environment object is returned untouched.
-function withGithubCredentials(env: NodeJS.ProcessEnv, options: SandboxOptions): NodeJS.ProcessEnv {
-  if (!options.workspaceDir || !options.githubToken) return env;
-  return { ...env, ...githubCredentialEnv(resolvePath(`${options.workspaceDir}.tmp`), options.githubToken) };
+function withWorkspaceCredentials(env: NodeJS.ProcessEnv, options: SandboxOptions): NodeJS.ProcessEnv {
+  if (!options.workspaceDir) return env;
+  const credentials = workspaceCredentialEnv(resolvePath(`${options.workspaceDir}.tmp`), options);
+  return Object.keys(credentials).length === 0 ? env : { ...env, ...credentials };
 }
 
 // Wrap a spawn invocation (`command` + `args` — the same shape `child_process.spawn`/node-pty's
 // `spawn` take) for a workspaced tab. Returns the command and args unchanged when there's nothing
 // to sandbox: no `workspaceDir`, the `sandboxWorkspaces` config toggle is off, or `sandbox-exec`
-// isn't available (e.g. non-darwin) — the environment still picks up the workspace's GitHub
-// credential in that case, which is not a sandbox concern (see `withGithubCredentials`). Otherwise
+// isn't available (e.g. non-darwin) — the environment still picks up the workspace's credentials
+// in that case, which is not a sandbox concern (see `withWorkspaceCredentials`). Otherwise
 // returns `sandbox-exec -p <profile> -D … -- <command> <args>` plus a credential-scrubbed
 // environment with `TMPDIR` set to the workspace's private temp dir.
 export function sandboxSpawn(
@@ -226,7 +246,7 @@ export function sandboxSpawn(
   env: NodeJS.ProcessEnv = process.env,
 ): SandboxResult {
   if (!options.workspaceDir || !getConfig().sandboxWorkspaces || !sandboxAvailable()) {
-    return { command, args, env: withGithubCredentials(env, options) };
+    return { command, args, env: withWorkspaceCredentials(env, options) };
   }
 
   const workspaceDir = resolvePath(options.workspaceDir);
@@ -241,7 +261,7 @@ export function sandboxSpawn(
   const scrubbed = scrubEnv(env);
   scrubbed.TMPDIR = tmpDir;
   scrubbed.JANISSARY_NODE = process.execPath;
-  if (options.githubToken) Object.assign(scrubbed, githubCredentialEnv(tmpDir, options.githubToken));
+  Object.assign(scrubbed, workspaceCredentialEnv(tmpDir, options));
 
   const profile = options.offline ? SANDBOX_PROFILE_OFFLINE : SANDBOX_PROFILE;
   const dParams = [
