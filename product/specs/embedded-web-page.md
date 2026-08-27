@@ -128,6 +128,8 @@ above (see [[monitoring]]).
 
 This relaxation is scoped to embedded pages and to the app's managed browser. If the app falls back
 to the system default browser, a site that refuses framing may instead show a blank or blocked area.
+Managed-browser extension setup remains reliable when window layout work happens at the same time;
+the two operations cannot consume each other's results.
 
 ### Tab strip: name and close button
 

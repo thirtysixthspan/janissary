@@ -119,6 +119,8 @@ A starting directory or editor file path under the project root is captured rela
 Live group and dot-color assignments are captured exactly as they appear on screen. Since `profile launch` places each entry into its own authored `group` (see Relaunching above), a session with agents split across several groups round-trips: relaunching the saved profile reopens each agent into the same group split it was saved from.
 
 The window size, sidebar widths, and the split between the tab area and the reporting area are captured into the profile's layout, matching whatever the window and sidebars currently look like. When the server was started with `--no-open` (no application window), the window-size portion is skipped — the sidebar/tab-area sizes are still captured — and the command's output notes that the window size wasn't captured.
+Window-size capture and restoration remain reliable while the managed browser is still completing
+other startup work.
 
 Any running monitors are captured too, into the `monitors` key by name, persona, and their monitored tabs/groups; an inline monitor (one with no separate reporting tab) is captured the same way. A monitor started without an explicit name (from the interactive `monitor` command) is captured with its name defaulting to its persona. A docked notifications tab is captured by which sidebar it's docked to, and so is a docked plugin tab — including the schedules list. Which docked tab is currently visible in a sidebar's internal tab-switcher is not captured, and neither is a file navigator's association with the tab it was opened from — reopening the saved profile roots each captured file navigator directly at the path it was saved with.
 

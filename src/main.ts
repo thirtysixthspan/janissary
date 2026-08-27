@@ -25,12 +25,14 @@ import { parseCliArgs, usageText, appVersion, CliUsageError } from './cli-args.j
 import { explainStartupError, formatFatal, maybeStack } from './startup-errors.js';
 import { loadFrameEnablerExtension } from './chrome-extension-loader.js';
 import { resizeAppWindow, getAppWindowBounds } from './cdp-window-resize.js';
+import { CdpPipe } from './cdp-pipe.js';
 import { setWindowResizer, setWindowBoundsReader } from './window-resizer.js';
 import type { ChildProcess } from 'node:child_process';
 import type { Readable, Writable } from 'node:stream';
 
 // The Chrome "app" window we launched, so we can close it on shutdown (quit/exit/Ctrl+C).
 let appChild: ChildProcess | undefined;
+let appCdp: CdpPipe | undefined;
 
 // Set once the target directory is resolved in boot(), so the exit handler can release its lock.
 let lockedDir: string | undefined;
@@ -40,6 +42,10 @@ let lockedDir: string | undefined;
 let parsedPort: number | undefined;
 
 function killApp(): void {
+  appCdp?.dispose();
+  appCdp = undefined;
+  setWindowResizer(undefined);
+  setWindowBoundsReader(undefined);
   if (appChild?.pid) {
     // Chrome is spawned detached (its own process group), so kill the group to take down its
     // renderers too. Fall back to a direct kill (e.g. on Windows where group kill isn't available).
@@ -128,9 +134,11 @@ function openApp(url: string, projectDir: string): void {
   const writePipe = child.stdio[3] as Writable | null;
   const readPipe = child.stdio[4] as Readable | null;
   if (writePipe && readPipe) {
-    void loadFrameEnablerExtension(writePipe, readPipe, extDir);
-    setWindowResizer((width, height) => resizeAppWindow(writePipe, readPipe, width, height));
-    setWindowBoundsReader(() => getAppWindowBounds(writePipe, readPipe));
+    const cdp = new CdpPipe(writePipe, readPipe);
+    appCdp = cdp;
+    void loadFrameEnablerExtension(cdp, extDir);
+    setWindowResizer((width, height) => resizeAppWindow(cdp, width, height));
+    setWindowBoundsReader(() => getAppWindowBounds(cdp));
   } else {
     process.stderr.write(
       'warning: Chrome frame-enabler extension failed to load (fd 3/4 pipes unavailable) — sites that block iframing may not render in page tabs\n',
