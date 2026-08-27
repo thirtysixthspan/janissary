@@ -105,7 +105,9 @@
 | `→` | Collapsed directory: expand. Expanded directory: move to its first child. File: no-op |
 | `←` | Expanded directory: collapse. Otherwise: move selection to the parent directory |
 | `Enter` / `Space` | File: open. Directory: toggle expand/collapse |
-| `Alt+Enter` | File: open in the plain-text editor (mirrors Alt+click) |
+| `Shift+Enter` | File: edit it (mirrors Shift+double-click) |
+| `Shift+↑` / `Shift+↓` | Extend the selection one row from the anchor (does not wrap) |
+| `Cmd+A` / `Ctrl+A` | Select the current row's siblings (every visible row in the same directory) |
 | `Home` / `End` | Select the first / last visible row |
 | `Page Up` / `Page Down` | Move selection by one viewport of rows |
 | Printable characters | Type-ahead: jump to the next visible row whose name starts with what's typed |
