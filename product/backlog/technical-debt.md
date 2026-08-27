@@ -4,8 +4,6 @@
 
 ## development
 
-* Make `TranscriptStore` persistence atomic and observable in `src/transcript/store.ts`: every transcript event overwrites the preferred relaunch transcript in place and silently ignores write failures, so a partial write can corrupt it and a failed write can leave a valid-but-stale file that takes precedence over the newer log already stored in agent state. Use the shared atomic writer for saves and clears, retain the last valid transcript, and report bounded persistence failures instead of masking stale relaunch data. Severity: **high**.
-
 * Preserve global command history across interrupted or failed writes in `src/global-history.ts`: the store overwrites `~/.janissary/history.json` in place, silently resets to an empty in-memory history when the file is malformed, and swallows every persistence failure, so one partial write can discard the user's cross-session history without a diagnostic. Use atomic replacement and surface a bounded warning while keeping the last valid file intact. Severity: **medium**.
 
 * Give asynchronous profile actions an explicit failure path in `src/profile/manager.ts`: both `saveProfile(...).then(...)` and `openProfileEntries(...)` are launched with `void` and no rejection handler, so filesystem, client-state collection, CDP, or plugin activation failures escape the command without finalizing its transcript entry and may become unhandled promise rejections. Await through a shared command wrapper that converts failures into one user-visible result while preserving successful summaries. Severity: **high**.
