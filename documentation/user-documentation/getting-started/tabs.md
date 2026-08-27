@@ -85,7 +85,9 @@ Text in metadata rows and headers can be selected with the mouse and copied, inc
 
 `rename <newname>` gives the current tab a display alias — a name shown in the strip in place of its real label. Bare `rename` clears the alias. You can also double-click the label of the active tab and type a new name in place; Enter commits, Escape cancels.
 
-The alias is display-only. Messaging, scheduling, and every other feature that targets a tab by name keeps using the original label, and the confirmation message reminds you of that. Aliases survive `--relaunch`.
+An alias changes what you see, not what you can type: commands that target a tab by name take either one. `msg`, `broadcast`, [`send`](/user-documentation/command-bar/send), `queue`, `close`/`exit`, `schedule … in <tab>`, and monitor targets all match the alias or the original label, ignoring case. The rename confirmation says routing still uses the label, and internally it does — that's the name a message is delivered under, the one a transcript records, and the one `state` shows — but you don't have to remember it to address the tab.
+
+One place still shows you the original: pressing `Tab` to complete a target offers labels, never aliases. Aliases survive `--relaunch`.
 
 ## Closing tabs
 
