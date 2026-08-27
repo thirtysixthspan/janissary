@@ -22,6 +22,8 @@ You can also land in an editor by clicking a `file.ts:42`-style link in any tran
 
 Click anywhere in the editor body, including the empty space below the last line, and typing keeps working. Clicking on a line of text moves the cursor there; clicking on empty space doesn't move the cursor, but doesn't take focus away either.
 
+Double-click a word to select it. Triple-click, or click the line number in the gutter, to select the whole line; dragging after either extends the selection a line at a time. `Shift`-click extends the selection from where it already starts.
+
 A plain click on the header (the file name, size, or location) puts focus straight back in the buffer once you release the mouse, so your cursor and typing pick up right where they were. If you drag to select header text instead, for example to copy the file's path, focus stays in the header so the selection sticks.
 
 ## Keyboard input
@@ -39,6 +41,27 @@ The blinking caret marks where text will be inserted, and is only visible while 
 Moving the cursor, whether by typing, arrow keys, a click, or paging, always scrolls it into view; staying in place doesn't re-scroll. At the very top or bottom of the visible area, `↑`/`↓` still moves the cursor by exactly one line and scrolls just enough to keep it in sight, rather than jumping to the start or end of the file.
 
 Switching to another tab and back leaves your scroll position exactly where you left it, even if the cursor itself is out of view — only an actual cursor move while the tab is active pulls the view back to it.
+
+## Find a line
+
+Press `Cmd+F` to search the file you're editing. A small input labeled `Search buffer` opens at the bottom of the tab:
+
+```
+Search buffer
+ 171  ### Syntax highlighting
+ 173  The editor colors text by its syntactic role…
+ 179  Highlighting composes with the caret and selection…
+```
+
+Type any fragment of the line you're after — the characters have to appear in order, but not next to each other, so `synhi` finds `### Syntax highlighting`. The ten best-matching lines are listed with their line numbers, matched characters picked out.
+
+`↑`/`↓` move down the list and the buffer jumps to each line as you go, so you read the match in its surroundings rather than committing blind. There's nothing to confirm: `Return` does nothing because the jump already happened, and `Escape` closes the overlay leaving the cursor on the last line you looked at, ready to type. Clicking a row does the same jump.
+
+A query that matches nothing shows `No matching lines`. Clearing it brings back the `type to search` hint.
+
+The search runs over the buffer as it stands, so it finds edits you haven't saved. It only ever searches the file in front of you — not other tabs, not other files on disk — and it finds without replacing. Jumping doesn't count as an edit, so `Cmd+Z` still undoes your last real change. Switching tabs closes the overlay; `Cmd+F` opens a fresh, empty one.
+
+`Ctrl+F` is not the same key here: it stays the Emacs-style "move the cursor right". In an agent tab, `Cmd+F` still opens that tab's own transcript search instead.
 
 ## Saving
 
