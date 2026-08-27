@@ -1,6 +1,7 @@
-import { mkdirSync, writeFileSync, readFileSync, existsSync } from 'node:fs';
+import { mkdirSync, readFileSync, existsSync } from 'node:fs';
 import { homedir } from 'node:os';
 import path from 'node:path';
+import { atomicWriteFile } from './atomic-write.js';
 
 type HistoryEntry = { command: string; tab: string; timestamp: number };
 
@@ -8,6 +9,24 @@ const MAX_ENTRIES = 1000;
 
 let historyPath = '';
 let entries: HistoryEntry[] = [];
+let failureReported = false;
+
+function reportFailure(message: string): void {
+  if (failureReported) return;
+  failureReported = true;
+  process.stderr.write(`warning: global command history unavailable: ${message}\n`);
+}
+
+function writeEntries(): boolean {
+  try {
+    atomicWriteFile(historyPath, JSON.stringify(entries, null, 2));
+    failureReported = false;
+    return true;
+  } catch (error) {
+    reportFailure(error instanceof Error ? error.message : String(error));
+    return false;
+  }
+}
 
 function isHistoryEntry(x: unknown): x is HistoryEntry {
   return (
@@ -25,14 +44,18 @@ export function initGlobalHistory(home?: string): void {
   historyPath = path.join(dir, 'history.json');
   if (!existsSync(historyPath)) {
     entries = [];
-    writeFileSync(historyPath, '[]');
+    writeEntries();
     return;
   }
   try {
     const parsed: unknown = JSON.parse(readFileSync(historyPath, 'utf8'));
-    entries = Array.isArray(parsed) ? parsed.filter(isHistoryEntry) : [];
-  } catch {
+    if (!Array.isArray(parsed)) throw new Error('history.json must contain an array');
+    entries = parsed.filter(isHistoryEntry);
+    failureReported = false;
+  } catch (error) {
     entries = [];
+    const message = error instanceof Error ? error.message : String(error);
+    reportFailure(`could not read history.json (${message})`);
   }
 }
 
@@ -40,11 +63,7 @@ export function recordGlobalHistory(command: string, tab: string): void {
   if (!historyPath) return;
   if (entries.at(-1)?.command === command) return;
   entries = [...entries, { command, tab, timestamp: Date.now() }].slice(-MAX_ENTRIES);
-  try {
-    writeFileSync(historyPath, JSON.stringify(entries, null, 2));
-  } catch {
-    // persistence failure is non-fatal; in-memory buffer still works
-  }
+  writeEntries();
 }
 
 export function globalCommands(): string[] {

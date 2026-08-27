@@ -4,8 +4,6 @@
 
 ## development
 
-* Preserve global command history across interrupted or failed writes in `src/global-history.ts`: the store overwrites `~/.janissary/history.json` in place, silently resets to an empty in-memory history when the file is malformed, and swallows every persistence failure, so one partial write can discard the user's cross-session history without a diagnostic. Use atomic replacement and surface a bounded warning while keeping the last valid file intact. Severity: **medium**.
-
 * Give asynchronous profile actions an explicit failure path in `src/profile/manager.ts`: both `saveProfile(...).then(...)` and `openProfileEntries(...)` are launched with `void` and no rejection handler, so filesystem, client-state collection, CDP, or plugin activation failures escape the command without finalizing its transcript entry and may become unhandled promise rejections. Await through a shared command wrapper that converts failures into one user-visible result while preserving successful summaries. Severity: **high**.
 
 * Stop inferring profile editor success from whichever tab is active in `src/profile/editors.ts` and `src/open-file-manager.ts`: `openProfileEditors` always appends an "Opened editor tab" note and adds the active tab as a placement/focus candidate even when `edit` refused an oversized file or otherwise opened nothing, so a failed profile entry can relocate or focus an unrelated tab and still be reported as successful. Return a concrete open/reuse result from the editor path and add candidates and notes only for the editor that result identifies. Severity: **medium**.
