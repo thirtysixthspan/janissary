@@ -2,6 +2,10 @@
 
 ## ready
 
+* remote agents and remote harnesses
+
+* how to obtain and where to put github-token and claude-token and how they are propagated to remote agents and harnesses. 
+
 ## development
 
 ## deferred
