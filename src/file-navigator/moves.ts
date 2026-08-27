@@ -8,11 +8,8 @@ import type { BulkConflictPolicy, UndoRedoResult } from '../protocol.js';
 export type MoveEntry = { from: string; to: string };
 export type MoveGroup = { entries: MoveEntry[] };
 
-// A paste (copy or cut) as one undo/redo history step, alongside `MoveGroup`. Its pairs are
-// absolute paths, since the clipboard's sources may lie outside the pasting tab's root — a
-// cross-root cut-paste undoes exactly like a same-root one, with no special case. Distinguished
-// from `MoveGroup` structurally (by the `mode` field) rather than a tag, so `MoveGroup` itself
-// stays untouched.
+// Paste history uses absolute paths because clipboard sources may cross roots. The structural
+// `mode` field distinguishes it from `MoveGroup` without changing `MoveGroup`.
 export type PasteGroup = { mode: 'copy' | 'cut'; pairs: PastePair[] };
 export type HistoryStep = MoveGroup | PasteGroup;
 
@@ -47,13 +44,22 @@ function tryMove(source: string, destination: string, overwrite: boolean): boole
   }
 }
 
+function performMoveReplay(
+  root: string, ordered: MoveEntry[], direction: 'undo' | 'redo', policy: BulkConflictPolicy | undefined,
+  conflictSources: Set<string>,
+): { successful: Set<MoveEntry>; failed: Set<MoveEntry> } {
+  const attempted = ordered.filter((entry) =>
+    policy !== 'skip-conflicts' || !conflictSources.has(replayPaths(root, entry, direction).sourceRel));
+  const successful = new Set(attempted.filter((entry) => {
+    const replay = replayPaths(root, entry, direction);
+    return tryMove(replay.source, replay.destination, policy === 'overwrite-all');
+  }));
+  return { successful, failed: new Set(attempted.filter((entry) => !successful.has(entry))) };
+}
+
 export function applyStackMove(
-  root: string,
-  group: MoveGroup,
-  direction: 'undo' | 'redo',
-  fromStack: HistoryStep[],
-  toStack: HistoryStep[],
-  policy: BulkConflictPolicy | undefined,
+  root: string, group: MoveGroup, direction: 'undo' | 'redo',
+  fromStack: HistoryStep[], toStack: HistoryStep[], policy: BulkConflictPolicy | undefined,
   rebuild: () => void,
 ): UndoRedoResult {
   const ordered = direction === 'undo' ? group.entries.toReversed() : group.entries;
@@ -66,17 +72,8 @@ export function applyStackMove(
       ? { total: group.entries.length, failedPaths: [], conflict: conflicts[0] }
       : { total: group.entries.length, failedPaths: [], conflicts };
   }
-
   const conflictSources = new Set(conflicts.map((conflict) => conflict.fromRelPath));
-  const successful = new Set<MoveEntry>();
-  const failed = new Set<MoveEntry>();
-  for (const entry of ordered) {
-    const replay = replayPaths(root, entry, direction);
-    if (policy === 'skip-conflicts' && conflictSources.has(replay.sourceRel)) continue;
-    if (tryMove(replay.source, replay.destination, policy === 'overwrite-all')) successful.add(entry);
-    else failed.add(entry);
-  }
-
+  const { successful, failed } = performMoveReplay(root, ordered, direction, policy, conflictSources);
   if (successful.size > 0) {
     fromStack.pop();
     const remaining = group.entries.filter((entry) => !successful.has(entry));
@@ -86,9 +83,7 @@ export function applyStackMove(
   }
   return {
     total: group.entries.length,
-    failedPaths: group.entries
-      .filter((entry) => failed.has(entry))
-      .map((entry) => replayPaths(root, entry, direction).sourceRel),
+    failedPaths: group.entries.filter((entry) => failed.has(entry)).map((entry) => replayPaths(root, entry, direction).sourceRel),
   };
 }
 
@@ -101,8 +96,7 @@ function removeAbsolute(absolute: string): boolean {
   }
 }
 
-// Undo of a copy-paste: delete what it created. A delete never collides with an occupied
-// destination the way a move does, so this needs no conflict preflight.
+// Undoing a copy deletes what it created, so it needs no move-style conflict preflight.
 function undoCopyPaste(
   group: PasteGroup,
   fromStack: HistoryStep[],
@@ -140,8 +134,7 @@ function pasteReplayLegs(group: PasteGroup, isUndo: boolean): PasteReplayLeg[] {
     : { source: pair.from, destination: pair.to, pair }));
 }
 
-// Performs each replay leg (skipping a conflict under `skip-conflicts`), returning the pairs that
-// succeeded and failed.
+// Perform each replay leg, skipping conflicts when requested, and classify the results.
 function performPasteReplay(
   replay: PasteReplayLeg[],
   isCopy: boolean,
@@ -163,10 +156,7 @@ function performPasteReplay(
   return { successful, failed };
 }
 
-// Undo/redo replay for a paste step. Undoing a copy just deletes what the paste created (see
-// `undoCopyPaste`); every other case (redo of either mode, or undo of a cut) is a move or copy
-// back over the same pair, replaying through the same conflict-preflight shape `applyStackMove`
-// uses.
+// Copy undo deletes its output; every other replay uses the same conflict preflight as a stack move.
 export function applyStackPaste(
   group: PasteGroup,
   direction: 'undo' | 'redo',
