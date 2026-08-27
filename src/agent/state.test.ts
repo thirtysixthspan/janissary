@@ -80,7 +80,7 @@ describe('agent-state', () => {
     expect(result).toBeUndefined();
   });
 
-  it('saveAgentState writes file with state data', () => {
+  it('saveAgentState atomically renames complete state data over the destination', () => {
     mockFs.mkdirSync.mockImplementation(() => {});
     mockFs.writeFileSync.mockImplementation(() => {});
     initAgentStateDirectory('/test');
@@ -89,6 +89,9 @@ describe('agent-state', () => {
     expect(mockFs.writeFileSync).toHaveBeenCalled();
     const call = mockFs.writeFileSync.mock.calls[0];
     expect(call[1]).toContain('agent2');
+    const temporary = call[0] as string;
+    expect(temporary).toMatch(/agent2\.json\..+\.tmp$/);
+    expect(mockFs.renameSync).toHaveBeenCalledWith(temporary, '/test/.janissary/state/agent2.json');
   });
 
   it('clearStateDirectory removes state directory', () => {
