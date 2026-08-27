@@ -88,18 +88,17 @@ async function commitIfChanged(dir: string, filename: string): Promise<void> {
   }
 }
 
-// `git pull --rebase` against `origin/master`. On any conflict, the remote always wins — abort the
-// rebase and hard-reset to `origin/master` rather than surfacing merge-conflict UI of any kind.
+// `git pull --rebase` against `origin/master`. If it fails after starting a rebase, restore the
+// branch to its pre-rebase state while preserving its local commits, then surface the pull error.
 async function pullRebase(dir: string): Promise<void> {
   const env = githubEnv();
   try {
     await execFileAsync('git', ['pull', '--rebase', 'origin', 'master'], { cwd: dir, env });
-  } catch {
+  } catch (error) {
     try {
       await execFileAsync('git', ['rebase', '--abort'], { cwd: dir });
     } catch { /* no rebase was in progress to abort */ }
-    await execFileAsync('git', ['fetch', 'origin', 'master'], { cwd: dir, env });
-    await execFileAsync('git', ['reset', '--hard', 'origin/master'], { cwd: dir });
+    throw error;
   }
 }
 

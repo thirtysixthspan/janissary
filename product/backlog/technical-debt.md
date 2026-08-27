@@ -4,8 +4,6 @@
 
 ## development
 
-* Preserve local editor saves when git synchronization cannot rebase in `src/git-sync.ts`: `saveSync` commits the user's change, but `pullRebase` handles every pull failure by aborting and hard-resetting the shared workspace to `origin/master`, erasing that commit before the following push can report success. Distinguish conflicts from transient failures, keep the local commit and worktree intact, and surface a recoverable conflict or error instead of unconditionally choosing the remote. Severity: **high**.
-
 * Allow git-sync provisioning to recover after a failed clone in `src/git-sync.ts`: `ensureWorkspace` permanently caches the first `ProvisioningWorkspace`, including a rejected `ready` promise, so every later open or save retry immediately repeats the same failure until the server restarts. Clear and recreate the cached handle after provisioning fails while retaining concurrent-call deduplication. Severity: **medium**.
 
 * Give editor file registrations explicit ownership and revocation across `src/tab/file-registry.ts`, `src/tab/openers.ts`, `src/tab/cleanup.ts`, `src/tab/rename-editor.ts`, and `src/open-file-manager.ts`: editors allocate a new `/open/<id>` before deduplication and on rename or sync transitions, but close cleanup releases only plugin `fileRefs`, so the registry grows and authenticated stale URLs keep serving files after the editor no longer owns them. Reuse or replace registrations transactionally and revoke them on dedupe, retarget, and close. Severity: **high**.
