@@ -51,6 +51,8 @@ request. The server answers that reference, subject to the same origin/authentic
 rest of the app, by streaming the bytes of that one registered file as text. Only files the user
 has explicitly opened are served; arbitrary paths are never reachable, so this adds no
 filesystem-traversal surface. A file's registration is dropped when its markdown tab is closed.
+If the registered file is missing or unreadable by the time the client fetches it, the server
+answers with an error and the tab shows `Failed to load <name>` instead of rendering that response.
 
 Keeping the file out of the application state (the client fetches it once by reference, rather than
 the text riding inside every state broadcast) mirrors how image bytes are served and keeps state

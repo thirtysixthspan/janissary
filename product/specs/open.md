@@ -48,6 +48,11 @@ Error handling, surfaced in the active tab before any opener runs:
 
 The dispatcher resolves the opener and surfaces these errors; the opener owns everything past that point.
 
+An inline view or editor fetches a file through its authenticated registered reference. If that file
+is deleted or becomes unreadable after the tab opens, the reference answers with an HTTP error
+rather than a successful empty document, so the consuming view can report a load failure without
+mistaking missing bytes for real content.
+
 ### Wildcards
 
 When the path contains shell wildcard characters, it is treated as a pattern rather than a single file. The pattern is expanded **by the shell** — exactly as it would be on the command line — into the list of files it matches, resolved against the active tab's working directory. `open` then acts on each matched file in turn, applying the same presentation (inline or external) to every one.

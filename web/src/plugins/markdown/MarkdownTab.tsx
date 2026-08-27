@@ -23,6 +23,7 @@ export function MarkdownTab({
     const load = async () => {
       try {
         const r = await fetch(source);
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
         const text = await r.text();
         if (!cancelled) setHtml(renderMarkdown(text) ?? text);
       } catch {

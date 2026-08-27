@@ -31,20 +31,23 @@ export function parseByteRange(header: string | undefined, size: number): ByteRa
 export async function serveOpenFile(
   request: IncomingMessage, res: ServerResponse, filePath: string, headers: Record<string, string>,
 ): Promise<void> {
-  let size: number | undefined;
+  let size: number;
   try {
     const stats = await stat(filePath);
     size = stats.size;
-  } catch { size = undefined; }
-
-  const range = size === undefined ? undefined : parseByteRange(request.headers.range, size);
-
-  if (range === 'unsatisfiable') {
-    res.writeHead(416, { ...headers, 'accept-ranges': 'bytes', 'content-range': `bytes */${size ?? 0}` }).end();
+  } catch {
+    res.writeHead(404, { ...headers, 'accept-ranges': 'bytes' }).end();
     return;
   }
 
-  if (range && size !== undefined) {
+  const range = parseByteRange(request.headers.range, size);
+
+  if (range === 'unsatisfiable') {
+    res.writeHead(416, { ...headers, 'accept-ranges': 'bytes', 'content-range': `bytes */${size}` }).end();
+    return;
+  }
+
+  if (range) {
     res.writeHead(206, {
       ...headers,
       'accept-ranges': 'bytes',
@@ -57,7 +60,10 @@ export async function serveOpenFile(
 
   let bytes: Buffer;
   try { bytes = await readFile(filePath); }
-  catch { bytes = Buffer.alloc(0); }
+  catch {
+    res.writeHead(500, { ...headers, 'accept-ranges': 'bytes' }).end();
+    return;
+  }
   res.writeHead(200, { ...headers, 'accept-ranges': 'bytes' });
   res.end(bytes);
 }
