@@ -1,6 +1,6 @@
 import React from 'react';
 import type { EditorState } from './model';
-import { selectionRange } from './model';
+import { selectionBounds, selectionRange } from './model';
 import type { TokenRange } from './highlight/tokenize';
 import type { SuggestPill } from './suggest-request';
 
@@ -14,6 +14,31 @@ export function lineSelection(state: EditorState, line: number): [number, number
   return [from, to];
 }
 
+// The selections other than the primary that touch this line, and their carets, as compact strings
+// ("3:6 10:13" and "6 13") rather than arrays: EditorLine's React.memo compares props shallowly, and
+// a freshly allocated array per line per render would defeat it on every keystroke in a large file.
+// Both are empty for every line of an ordinary single-caret buffer, which is every line today.
+export function lineExtras(state: EditorState, line: number): { spans: string; carets: string } {
+  const extras = state.extraSelections ?? [];
+  const spans: string[] = [];
+  const carets: string[] = [];
+  for (const sel of extras) {
+    const { start, end } = selectionBounds(sel);
+    if (sel.cursor.line === line) carets.push(String(sel.cursor.col));
+    if (line < start.line || line > end.line) continue;
+    const from = line === start.line ? start.col : 0;
+    const to = line === end.line ? end.col : state.lines[line].length;
+    if (from !== to) spans.push(`${from}:${to}`);
+  }
+  return { spans: spans.join(' '), carets: carets.join(' ') };
+}
+
+const parseSpans = (encoded: string): [number, number][] => (
+  encoded ? encoded.split(' ').map((span) => span.split(':').map(Number) as [number, number]) : []
+);
+
+const parseCarets = (encoded: string): number[] => (encoded ? encoded.split(' ').map(Number) : []);
+
 type LineProps = {
   text: string;
   line: number;
@@ -25,6 +50,10 @@ type LineProps = {
   // Caret column, or -1 when the caret is not on this line.
   caretCol: number;
   caretRef: React.Ref<HTMLSpanElement> | null;
+  // Encoded spans and caret columns of the non-primary selections on this line (see lineExtras);
+  // empty strings whenever the editor has the one caret it normally has.
+  extraSpans?: string;
+  extraCarets?: string;
   // Syntax-highlighting token ranges for this line; empty when highlighting is off.
   tokens: TokenRange[];
   // The in-editor persona-suggestion status pill for this line, when it is a `>`-led request line.
@@ -47,24 +76,34 @@ type LineProps = {
 // at the cursor column, so it sits exactly at (line, col) with no measurement code. Token
 // boundaries fold into the same bounds set as selection/caret, so a token span never needs to
 // nest around a selection — everything flattens to one list of column-bounded segments.
-function contentSegments({ text, selFrom, selTo, caretCol, caretRef, tokens }: LineProps): React.ReactNode[] {
+function contentSegments(props: LineProps): React.ReactNode[] {
+  const { text, selFrom, selTo, caretCol, caretRef, tokens } = props;
+  const spans = parseSpans(props.extraSpans ?? '');
+  const caretCols = new Set([caretCol, ...parseCarets(props.extraCarets ?? '')]);
   const tokenBounds = tokens.flatMap((t) => [t.from, t.to]);
-  const bounds = [...new Set([0, selFrom, selTo, caretCol, text.length, ...tokenBounds])]
+  const bounds = [...new Set([0, selFrom, selTo, text.length, ...caretCols, ...tokenBounds, ...spans.flat()])]
     .filter((b) => b >= 0 && b <= text.length)
     .toSorted((a, b) => a - b);
+  // Only the primary caret takes the ref: it is the one EditorTab scrolls into view and measures
+  // wrapped-line movement from, and there is exactly one of it.
+  const caret = (col: number) => <span key={`c${col}`} className="editor-caret" ref={col === caretCol ? caretRef : null} />;
+  const selected = (from: number, to: number) => (selFrom >= 0 && from >= selFrom && to <= selTo)
+    || spans.some(([spanFrom, spanTo]) => from >= spanFrom && to <= spanTo);
+
   const nodes: React.ReactNode[] = [];
   for (let index = 0; index < bounds.length - 1; index++) {
     const [from, to] = [bounds[index], bounds[index + 1]];
-    if (caretCol === from) nodes.push(<span key={`c${from}`} className="editor-caret" ref={caretRef} />);
-    const selected = selFrom >= 0 && from >= selFrom && to <= selTo;
+    if (caretCols.has(from)) nodes.push(caret(from));
     const token = tokens.find((t) => from >= t.from && to <= t.to);
-    const className = [token?.scope, selected ? 'editor-sel' : undefined].filter(Boolean).join(' ');
+    const className = [token?.scope, selected(from, to) ? 'editor-sel' : undefined].filter(Boolean).join(' ');
     nodes.push(<span key={from} className={className || undefined}>{text.slice(from, to)}</span>);
   }
-  if (caretCol === text.length && (text.length > 0 || bounds.length === 1)) {
+  if (caretCols.has(text.length) && (text.length > 0 || bounds.length === 1)) {
     // Zero-width space gives the inline span text content so the browser establishes a line box
     // height even on empty lines; without it, height:100% on ::after computes to zero.
-    nodes.push(<span key="cend" className="editor-caret" ref={caretRef}>{'\u{200B}'}</span>);
+    nodes.push(
+      <span key="cend" className="editor-caret" ref={text.length === caretCol ? caretRef : null}>{'\u{200B}'}</span>,
+    );
   }
   return nodes;
 }

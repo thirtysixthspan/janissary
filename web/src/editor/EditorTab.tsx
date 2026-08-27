@@ -1,7 +1,7 @@
 import React, { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
 import type { EditorView, TabView } from '@shared/protocol';
 import type { JanusClient } from '../ws';
-import { insertText } from './model';
+import { collapseSelection, hasMultipleSelections, insertText } from './model';
 import { actionForKey, yieldsToPlugins } from './keys';
 import { visualVerticalHit } from './mouse';
 import { useEditor } from './useEditor';
@@ -126,11 +126,15 @@ export const EditorTab = forwardRef<DirtyTabHandle, {
     // Nothing typed in the editor may reach App's global bindings (Ctrl+T, Ctrl+R, Ctrl+arrows).
     e.stopPropagation();
     if (handleSuggestKeyDown(e, api, suggest, pageLines())) return;
-    // The two chords the core table delegates (Tab with a block selected, Shift+Tab) go to plugins
-    // first. If none claims one — a disabled plugin, say — the core action below still runs, so Tab
-    // keeps inserting a tab character rather than becoming dead.
-    const spansLines = state !== null && state.anchor !== null && state.anchor.line !== state.cursor.line;
-    if (yieldsToPlugins(e, spansLines) && pluginKey(e)) { e.preventDefault(); return; }
+    // The chords the core table delegates (Tab with a block selected, Shift+Tab, Escape while there
+    // are several selections) go to plugins first. If none claims one — a disabled plugin, say —
+    // the core action below still runs, so Tab keeps inserting a tab character rather than becoming
+    // dead and Escape still collapses.
+    const context = {
+      selectionSpansLines: state !== null && state.anchor !== null && state.anchor.line !== state.cursor.line,
+      multipleSelections: state !== null && hasMultipleSelections(state),
+    };
+    if (yieldsToPlugins(e, context) && pluginKey(e)) { e.preventDefault(); return; }
     const action = actionForKey(e);
     // Core bindings always win: an editor plugin is only offered a chord the table above left
     // unbound, so nothing can shadow Cmd+S or the Emacs subset. preventDefault() is this branch's
@@ -140,7 +144,13 @@ export const EditorTab = forwardRef<DirtyTabHandle, {
       return;
     }
     e.preventDefault();
-    if (action.kind === 'find') { find.open(); return; }
+    // Opening the overlay drops any extra carets: its ↑/↓ preview moves the one cursor around the
+    // buffer, which a selection set has no meaning alongside.
+    if (action.kind === 'find') {
+      if (state && hasMultipleSelections(state)) { api.sealUndo(); api.setState(collapseSelection(state)); }
+      find.open();
+      return;
+    }
     api.apply(action, pageLines(), resolveVertical);
   };
 

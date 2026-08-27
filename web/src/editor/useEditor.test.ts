@@ -11,7 +11,9 @@ vi.mock('./model', () => ({
   killToLineEnd: vi.fn((s) => ({ state: s, killed: null })),
   collapseSelection: vi.fn((s) => s),
   selectAll: vi.fn((s) => s),
-  selectedText: vi.fn(() => 'selected'),
+  selectionsText: vi.fn(() => 'selected'),
+  hasMultipleSelections: vi.fn(() => false),
+  allSelections: vi.fn(() => [{ anchor: null, cursor: { line: 0, col: 0 } }]),
 }));
 
 import { killToLineEnd as _killToLineEnd } from './model';

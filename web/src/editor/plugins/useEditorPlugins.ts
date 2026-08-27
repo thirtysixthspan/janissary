@@ -6,7 +6,7 @@ import { useEffect } from 'react';
 import type { JanusClient } from '../../ws';
 import type { KeyLike } from '../keys';
 import type { EditorState } from '../model';
-import { selectionRange } from '../model';
+import { allSelections, selectionRange } from '../model';
 import type { EditorApi } from '../useEditor';
 import type { BoundBinding, EditorPluginRequest, EditorRange } from './api';
 import { applyPluginResult } from './apply-edits';
@@ -48,7 +48,7 @@ function requestFor(
   return {
     command: binding.command,
     file,
-    selection: { anchor: state.anchor, cursor: state.cursor },
+    selections: allSelections(state).map(({ anchor, cursor }) => ({ anchor, cursor })),
     range,
     lines: state.lines.slice(range.start.line, range.end.line + 1),
   };

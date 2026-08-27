@@ -2,7 +2,7 @@
 // language, produce the edits and where to leave the selection. Pure — every rule commenting has
 // lives here and in the two strategy modules beside it.
 
-import type { EditorPluginRequest, EditorPluginResult } from '../api';
+import { primarySelection, type EditorPluginRequest, type EditorPluginResult } from '../api';
 import { toggleBlockComment } from './block-comment';
 import { toggleLineComments } from './line-comment';
 import type { CommentSyntax } from './syntax';
@@ -12,15 +12,16 @@ import type { CommentSyntax } from './syntax';
 // the width of what was inserted or removed on it.
 function selectionFor(
   request: EditorPluginRequest, lastLine: number, lastLineWidth: number, caretShift: number,
-): EditorPluginResult['selection'] {
-  if (request.selection.anchor === null) {
-    const { line, col } = request.selection.cursor;
-    return { anchor: null, cursor: { line, col: Math.max(0, Math.min(col + caretShift, lastLineWidth)) } };
+): EditorPluginResult['selections'] {
+  const selection = primarySelection(request);
+  if (selection.anchor === null) {
+    const { line, col } = selection.cursor;
+    return [{ anchor: null, cursor: { line, col: Math.max(0, Math.min(col + caretShift, lastLineWidth)) } }];
   }
-  return {
+  return [{
     anchor: { line: request.range.start.line, col: 0 },
     cursor: { line: lastLine, col: lastLineWidth },
-  };
+  }];
 }
 
 export function toggleComments(
@@ -37,9 +38,9 @@ export function toggleComments(
 
   if (toggled.edits.length === 0) return null;
 
+  const caret = primarySelection(request).cursor;
   const onCaretLine = toggled.edits.filter(
-    (edit) => edit.start.line === request.selection.cursor.line
-      && edit.start.col <= request.selection.cursor.col,
+    (edit) => edit.start.line === caret.line && edit.start.col <= caret.col,
   );
   const caretShift = onCaretLine.reduce(
     (total, edit) => total + edit.text.length - (edit.end.col - edit.start.col), 0,
@@ -47,6 +48,6 @@ export function toggleComments(
 
   return {
     edits: toggled.edits,
-    selection: selectionFor(request, lastLine, toggled.lastLineWidth, caretShift),
+    selections: selectionFor(request, lastLine, toggled.lastLineWidth, caretShift),
   };
 }

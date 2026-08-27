@@ -14,7 +14,7 @@ function request(text: string, from: number, to: number): EditorPluginRequest {
   return {
     command: 'indent',
     file: 'a.ts',
-    selection: { anchor: { line: from, col: 0 }, cursor: { line: to, col: lines[to].length } },
+    selections: [{ anchor: { line: from, col: 0 }, cursor: { line: to, col: lines[to].length } }],
     range: { start: { line: from, col: 0 }, end: { line: to, col: lines[to].length } },
     lines: lines.slice(from, to + 1),
   };
@@ -25,7 +25,7 @@ function caretRequest(text: string, line: number, col: number): EditorPluginRequ
   return {
     command: 'indent',
     file: 'a.ts',
-    selection: { anchor: null, cursor: { line, col } },
+    selections: [{ anchor: null, cursor: { line, col } }],
     range: { start: { line, col: 0 }, end: { line, col: lines[line].length } },
     lines: [lines[line]],
   };

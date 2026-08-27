@@ -64,30 +64,42 @@ describe('actionForKey', () => {
 });
 
 describe('yieldsToPlugins', () => {
+  // The two conditions a yield can depend on, as the four contexts they make.
+  const context = (selectionSpansLines: boolean, multipleSelections = false) => (
+    { selectionSpansLines, multipleSelections }
+  );
+
   it('yields Tab only while the selection spans more than one line', () => {
-    expect(yieldsToPlugins(key('Tab'), true)).toBe(true);
-    expect(yieldsToPlugins(key('Tab'), false)).toBe(false);
+    expect(yieldsToPlugins(key('Tab'), context(true))).toBe(true);
+    expect(yieldsToPlugins(key('Tab'), context(false))).toBe(false);
   });
 
   it('yields Shift+Tab in every context', () => {
-    expect(yieldsToPlugins(key('Tab', { shiftKey: true }), true)).toBe(true);
-    expect(yieldsToPlugins(key('Tab', { shiftKey: true }), false)).toBe(true);
+    expect(yieldsToPlugins(key('Tab', { shiftKey: true }), context(true))).toBe(true);
+    expect(yieldsToPlugins(key('Tab', { shiftKey: true }), context(false))).toBe(true);
+  });
+
+  it('yields Escape only while there are several selections', () => {
+    expect(yieldsToPlugins(key('Escape'), context(false, true))).toBe(true);
+    expect(yieldsToPlugins(key('Escape'), context(true, true))).toBe(true);
+    expect(yieldsToPlugins(key('Escape'), context(false))).toBe(false);
+    // Shift+Escape is a different chord, and no plugin is offered it.
+    expect(yieldsToPlugins(key('Escape', { shiftKey: true }), context(false, true))).toBe(false);
   });
 
   it('yields nothing else, whatever the selection is', () => {
     for (const spans of [true, false]) {
-      expect(yieldsToPlugins(key('s', { metaKey: true }), spans)).toBe(false);
-      expect(yieldsToPlugins(key('z', { metaKey: true }), spans)).toBe(false);
-      expect(yieldsToPlugins(key('Enter'), spans)).toBe(false);
-      expect(yieldsToPlugins(key('a'), spans)).toBe(false);
-      expect(yieldsToPlugins(key('Escape'), spans)).toBe(false);
+      expect(yieldsToPlugins(key('s', { metaKey: true }), context(spans, true))).toBe(false);
+      expect(yieldsToPlugins(key('z', { metaKey: true }), context(spans, true))).toBe(false);
+      expect(yieldsToPlugins(key('Enter'), context(spans, true))).toBe(false);
+      expect(yieldsToPlugins(key('a'), context(spans, true))).toBe(false);
     }
   });
 
   it('does not yield a modified Tab, which is a different chord entirely', () => {
-    expect(yieldsToPlugins(key('Tab', { metaKey: true }), true)).toBe(false);
-    expect(yieldsToPlugins(key('Tab', { ctrlKey: true }), true)).toBe(false);
-    expect(yieldsToPlugins(key('Tab', { altKey: true }), true)).toBe(false);
+    expect(yieldsToPlugins(key('Tab', { metaKey: true }), context(true))).toBe(false);
+    expect(yieldsToPlugins(key('Tab', { ctrlKey: true }), context(true))).toBe(false);
+    expect(yieldsToPlugins(key('Tab', { altKey: true }), context(true))).toBe(false);
   });
 
   it('leaves the core table answering for Tab, so an unclaimed yield still inserts', () => {

@@ -15,7 +15,7 @@ function request(command: string, text: string, from: number, to: number): Edito
   return {
     command,
     file: 'a.ts',
-    selection: { anchor: { line: from, col: 0 }, cursor: { line: to, col: lines[to].length } },
+    selections: [{ anchor: { line: from, col: 0 }, cursor: { line: to, col: lines[to].length } }],
     range: { start: { line: from, col: 0 }, end: { line: to, col: lines[to].length } },
     lines: lines.slice(from, to + 1),
   };
@@ -25,7 +25,7 @@ function caretRequest(command: string, text: string, col: number): EditorPluginR
   return {
     command,
     file: 'a.ts',
-    selection: { anchor: null, cursor: { line: 0, col } },
+    selections: [{ anchor: null, cursor: { line: 0, col } }],
     range: { start: { line: 0, col: 0 }, end: { line: 0, col: text.length } },
     lines: [text],
   };
@@ -36,7 +36,7 @@ describe('the indenting handler', () => {
     const result = shift(caretRequest('indent', 'a', 1));
     expect(result).toEqual({
       edits: [{ start: { line: 0, col: 0 }, end: { line: 0, col: 0 }, text: '  ' }],
-      selection: { anchor: null, cursor: { line: 0, col: 3 } },
+      selections: [{ anchor: null, cursor: { line: 0, col: 3 } }],
     });
   });
 
@@ -44,7 +44,7 @@ describe('the indenting handler', () => {
     const result = shift(caretRequest('outdent', '    a', 5));
     expect(result).toEqual({
       edits: [{ start: { line: 0, col: 0 }, end: { line: 0, col: 4 }, text: '  ' }],
-      selection: { anchor: null, cursor: { line: 0, col: 3 } },
+      selections: [{ anchor: null, cursor: { line: 0, col: 3 } }],
     });
   });
 
@@ -58,21 +58,21 @@ describe('the indenting handler', () => {
 
   it('leaves a range selection covering the same whole lines', () => {
     const result = shift(request('indent', '  a\n  b', 0, 1));
-    expect(result?.selection).toEqual({
+    expect(result?.selections).toEqual([{
       anchor: { line: 0, col: 0 },
       cursor: { line: 1, col: 5 },
-    });
+    }]);
   });
 
   it('keeps a bare caret on the same character of its line', () => {
     // The caret sits after `b` at column 3; indenting its line carries it to column 5.
-    expect(shift(caretRequest('indent', '  b', 3))?.selection)
-      .toEqual({ anchor: null, cursor: { line: 0, col: 5 } });
+    expect(shift(caretRequest('indent', '  b', 3))?.selections)
+      .toEqual([{ anchor: null, cursor: { line: 0, col: 5 } }]);
   });
 
   it('never moves a bare caret past the start of its outdented line', () => {
-    expect(shift(caretRequest('outdent', '  a', 1))?.selection)
-      .toEqual({ anchor: null, cursor: { line: 0, col: 0 } });
+    expect(shift(caretRequest('outdent', '  a', 1))?.selections)
+      .toEqual([{ anchor: null, cursor: { line: 0, col: 0 } }]);
   });
 
   it('ignores the file name, so an extension with no comment syntax still indents', () => {

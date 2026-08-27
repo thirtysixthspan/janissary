@@ -7,7 +7,7 @@ function request(file: string, line = 'value'): EditorPluginRequest {
   return {
     command: 'toggle-comment',
     file,
-    selection: { anchor: null, cursor: { line: 0, col: 0 } },
+    selections: [{ anchor: null, cursor: { line: 0, col: 0 } }],
     range: { start: { line: 0, col: 0 }, end: { line: 0, col: line.length } },
     lines: [line],
   };

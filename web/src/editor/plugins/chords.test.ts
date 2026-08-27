@@ -76,5 +76,15 @@ describe('claimedByCore', () => {
   it('leaves the yielded chords free, since the core table delegates rather than keeps them', () => {
     expect(claimedByCore({ key: 'Tab' })).toBe(false);
     expect(claimedByCore({ key: 'Tab', shift: true })).toBe(false);
+    // Escape is yielded while several selections are active, which is enough to make it declarable.
+    expect(claimedByCore({ key: 'Escape' })).toBe(false);
+    expect(claimedByCore({ key: 'Escape', shift: true })).toBe(true);
+  });
+
+  it('leaves Cmd+D and Cmd+U free, the chords multiselect claims', () => {
+    expect(claimedByCore({ key: 'd', meta: true })).toBe(false);
+    expect(claimedByCore({ key: 'u', meta: true })).toBe(false);
+    // Ctrl+D is the Emacs-style delete-forward, and stays the editor's own.
+    expect(claimedByCore({ key: 'd', ctrl: true })).toBe(true);
   });
 });

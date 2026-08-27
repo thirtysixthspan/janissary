@@ -76,7 +76,7 @@ describe('useEditorPlugins', () => {
     const request = run.mock.calls[0][1];
     expect(request.lines).toEqual(['two']);
     expect(request.range).toEqual({ start: { line: 1, col: 0 }, end: { line: 1, col: 3 } });
-    expect(request.selection).toEqual({ anchor: null, cursor: { line: 1, col: 2 } });
+    expect(request.selections).toEqual([{ anchor: null, cursor: { line: 1, col: 2 } }]);
     expect(request.file).toBe('a.ts');
     expect(request.command).toBe('toggle-comment');
   });

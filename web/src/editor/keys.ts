@@ -88,14 +88,22 @@ function plainAction(e: KeyLike): KeyAction | null {
   }
 }
 
-// The two chords the table above claims but is willing to hand to an editor plugin, and the only
+// The editing context a yield decision depends on. A record rather than a bare flag because there
+// are now two conditions, each belonging to a different yielded chord.
+export type YieldContext = { selectionSpansLines: boolean; multipleSelections: boolean };
+
+// The three chords the table above claims but is willing to hand to an editor plugin, and the only
 // ones: Tab with a block selected means "shift this block" in every editor a user is likely to come
-// from, and Shift+Tab has no competing meaning at all. Every other binding here is the editor's own
-// and is never offered. A yielded chord is still bound — if no plugin claims it, EditorTab falls
-// through to `actionForKey` below, so Tab keeps inserting a tab character.
-export function yieldsToPlugins(e: KeyLike, selectionSpansLines: boolean): boolean {
-  if (e.key !== 'Tab' || e.metaKey || e.ctrlKey || e.altKey) return false;
-  return e.shiftKey || selectionSpansLines;
+// from, Shift+Tab has no competing meaning at all, and Escape means "drop the extra carets" only
+// once there are extra carets — which is a thing only the plugin that created them can define.
+// Every other binding here is the editor's own and is never offered. A yielded chord is still
+// bound — if no plugin claims it, EditorTab falls through to `actionForKey` below, so Tab keeps
+// inserting a tab character and Escape keeps collapsing the selection.
+export function yieldsToPlugins(e: KeyLike, context: YieldContext): boolean {
+  if (e.metaKey || e.ctrlKey || e.altKey || e.shiftKey && e.key === 'Escape') return false;
+  if (e.key === 'Escape') return context.multipleSelections;
+  if (e.key !== 'Tab') return false;
+  return e.shiftKey || context.selectionSpansLines;
 }
 
 // The action bound to a keydown, or null when the key is not an editor binding (printable

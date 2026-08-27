@@ -1,11 +1,13 @@
 // The editor-plugin contract. An editor plugin binds a keyboard chord in the editor tab and answers
-// with the edits to make and where to leave the selection — that is the whole extension point. It
+// with the edits to make and where to leave the selections — that is the whole extension point. It
 // runs entirely in the client: declarations are static data in ./registry.ts and implementations are
 // lazily imported modules, so nothing about an editor plugin reaches the server.
 
 import type { Pos } from '../model';
 
-export const EDITOR_PLUGIN_API_VERSION = 1;
+// Version 2 replaced the single `selection` on a request and a result with the whole selection set,
+// so a command can create, drop, or collapse carets rather than only move one.
+export const EDITOR_PLUGIN_API_VERSION = 2;
 
 // A chord is only ever matched against a keydown the core editor table left unbound (see
 // ./chords.ts), so `key` is the raw `KeyboardEvent.key` and every modifier defaults to "must be up".
@@ -50,17 +52,25 @@ export type EditorSelection = { anchor: Pos | null; cursor: Pos };
 export type EditorPluginRequest = {
   command: string;
   file: string;
-  selection: EditorSelection;
+  // Every selection in creation order, the primary — the most recently created caret — last. Never
+  // empty: an editor always has at least one caret.
+  selections: readonly EditorSelection[];
   range: EditorRange;
   lines: readonly string[];
 };
 
+// The primary selection — the most recently created caret, and the one a command that thinks in
+// terms of a single selection (commenting, indenting) acts on.
+export const primarySelection = (request: EditorPluginRequest): EditorSelection => request.selections.at(-1)!;
+
 // One range replacement, in absolute document coordinates regardless of which slice was requested.
 export type EditorPluginEdit = { start: Pos; end: Pos; text: string };
 
+// `selections` omitted leaves the editor's set alone; a list replaces it whole, in creation order
+// with the new primary last. An explicitly empty list is refused — see ./apply-edits.ts.
 export type EditorPluginResult = {
   edits: readonly EditorPluginEdit[];
-  selection?: EditorSelection;
+  selections?: readonly EditorSelection[];
 };
 
 export type EditorPluginHandler = (

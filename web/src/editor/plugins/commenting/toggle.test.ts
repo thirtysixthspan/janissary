@@ -18,7 +18,7 @@ function request(text: string, from: number, to: number, file = 'a.ts'): EditorP
   return {
     command: 'toggle-comment',
     file,
-    selection: { anchor: { line: from, col: 0 }, cursor: { line: to, col: lines[to].length } },
+    selections: [{ anchor: { line: from, col: 0 }, cursor: { line: to, col: lines[to].length } }],
     range: { start: { line: from, col: 0 }, end: { line: to, col: lines[to].length } },
     lines: lines.slice(from, to + 1),
   };
@@ -29,7 +29,7 @@ function caretRequest(text: string, line: number, col: number, file = 'a.ts'): E
   return {
     command: 'toggle-comment',
     file,
-    selection: { anchor: null, cursor: { line, col } },
+    selections: [{ anchor: null, cursor: { line, col } }],
     range: { start: { line, col: 0 }, end: { line, col: lines[line].length } },
     lines: [lines[line]],
   };
@@ -101,16 +101,16 @@ describe('toggleComments — line languages', () => {
   it('returns a selection covering the same whole lines', () => {
     const text = 'const a = 1;\nconst b = 2;';
     const result = toggleComments(request(text, 0, 1), SLASHES);
-    expect(result?.selection).toEqual({
+    expect(result?.selections).toEqual([{
       anchor: { line: 0, col: 0 },
       cursor: { line: 1, col: '// const b = 2;'.length },
-    });
+    }]);
   });
 
   it('leaves a bare caret on its line, shifted by the marker width', () => {
     const text = 'const a = 1;';
     const result = toggleComments(caretRequest(text, 0, 6), SLASHES);
-    expect(result?.selection).toEqual({ anchor: null, cursor: { line: 0, col: 9 } });
+    expect(result?.selections).toEqual([{ anchor: null, cursor: { line: 0, col: 9 } }]);
   });
 
   it('emits absolute document coordinates for a range that does not start at line 0', () => {
@@ -145,10 +145,10 @@ describe('toggleComments — block languages', () => {
   it('keeps the wrapped range selected so the second press is the exact inverse', () => {
     const text = 'one\ntwo';
     const result = toggleComments(request(text, 0, 1, 'a.md'), HTML_BLOCK);
-    expect(result?.selection).toEqual({
+    expect(result?.selections).toEqual([{
       anchor: { line: 0, col: 0 },
       cursor: { line: 1, col: 'two -->'.length },
-    });
+    }]);
   });
 });
 

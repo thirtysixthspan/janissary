@@ -32,6 +32,18 @@ export const editorPluginDeclarations = [
       { command: 'outdent', chord: { key: 'Tab', shift: true }, needs: 'selection' },
     ],
   },
+  {
+    id: 'multiselect',
+    version: '1.0.0',
+    apiVersion: EDITOR_PLUGIN_API_VERSION,
+    // Cmd+D and Cmd+U are chords the core table never binds; Escape is one it binds and yields,
+    // but only while a selection set exists to collapse (see ../keys.ts `yieldsToPlugins`).
+    bindings: [
+      { command: 'select-next-occurrence', chord: { key: 'd', meta: true }, needs: 'buffer' },
+      { command: 'drop-last-selection', chord: { key: 'u', meta: true }, needs: 'selection' },
+      { command: 'collapse-selections', chord: { key: 'Escape' }, needs: 'selection' },
+    ],
+  },
 ] as const satisfies readonly EditorPluginDeclaration[];
 
 export type ProductionEditorPluginId = (typeof editorPluginDeclarations)[number]['id'];
@@ -39,6 +51,7 @@ export type ProductionEditorPluginId = (typeof editorPluginDeclarations)[number]
 export const editorPluginLoaders = {
   commenting: () => import('./commenting/index'),
   indenting: () => import('./indenting/index'),
+  multiselect: () => import('./multiselect/index'),
 } satisfies Record<ProductionEditorPluginId, EditorPluginLoader>;
 
 export type DeclarationRejection = { id: string; reason: string };
