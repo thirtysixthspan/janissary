@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdtempSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { saveFile } from './save.js';
@@ -15,7 +15,7 @@ function setup(content = 'original') {
   writeFileSync(file, content);
   const url = managers.tab.registerFile(file);
   managers.tab.openEditorTab({ name: 'notes.txt', path: file, size: '8 B', url });
-  return { managers, file, url };
+  return { managers, dir, file, url };
 }
 
 describe('saveFile', () => {
@@ -23,6 +23,23 @@ describe('saveFile', () => {
     const { managers, file, url } = setup();
     saveFile(managers, url, 'updated content');
     expect(readFileSync(file, 'utf8')).toBe('updated content');
+  });
+
+  it('preserves the existing file permission bits', () => {
+    const { managers, file, url } = setup();
+    chmodSync(file, 0o640);
+
+    saveFile(managers, url, 'updated content');
+
+    expect(statSync(file).mode & 0o777).toBe(0o640);
+  });
+
+  it('leaves no temporary sibling after a successful save', () => {
+    const { managers, dir, url } = setup();
+
+    saveFile(managers, url, 'updated content');
+
+    expect(readdirSync(dir)).toEqual(['notes.txt']);
   });
 
   it('updates the owning tab displayed size after a save', () => {

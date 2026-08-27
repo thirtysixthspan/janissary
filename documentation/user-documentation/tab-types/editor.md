@@ -46,7 +46,8 @@ Switching to another tab and back leaves your scroll position exactly where you 
 
 Click the save button or press `Ctrl+S` / `Cmd+S` to write the buffer to disk. On success a brief
 "Saved" flash appears in the header; on failure the error is shown there and the save button stays
-enabled.
+enabled. The save atomically replaces the file while keeping its existing permissions, so a failed
+write leaves the previous on-disk file and your unsaved editor state intact.
 
 If the path didn't exist when you ran `edit`, the file shows a size of "unknown" and isn't created until your first save. Opening that same not-yet-existing path again doesn't focus the first tab the way opening an existing file would; each open gets its own independent, unsaved tab, since none of them has a real file to converge on yet. If you save one of those tabs without renaming it, and another tab already saved a file under that name in the meantime, your save doesn't overwrite it: it picks the next free name in the same folder instead, such as `untitled.md` becoming `untitled-2.md`, and updates the tab to match.
 

@@ -1,9 +1,10 @@
-import { statSync, writeFileSync, existsSync } from 'node:fs';
+import { statSync, existsSync } from 'node:fs';
 import path from 'node:path';
 import { humanSize } from '../openers/size.js';
 import { messageBus } from '../bus.js';
 import type { Managers } from '../managers.js';
 import { nextFreeName } from './next-free-name.js';
+import { atomicWriteFile } from '../atomic-write.js';
 
 // Write an editor tab's buffer back to disk. `url` is the tab's `/open/<id>` ref, resolved
 // through the open-file allow-list — the client can only ever write to files the user explicitly
@@ -22,7 +23,7 @@ export function saveFile(managers: Managers, url: string, content: string): void
   const isFirstNewFileSave = wasNewFile && existsSync(filePath);
   const targetPath = isFirstNewFileSave ? path.join(path.dirname(filePath), nextFreeName(path.dirname(filePath), path.basename(filePath))) : filePath;
 
-  writeFileSync(targetPath, content, 'utf8');
+  atomicWriteFile(targetPath, content);
   // Refresh the owning tab's displayed size from the file's new on-disk size.
   const stat = statSync(targetPath);
   if (tab?.editor) {

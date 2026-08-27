@@ -114,8 +114,11 @@ editor's key bindings.
 ### Saving
 
 The editor saves with the metadata header's save button or Ctrl+S / Cmd+S. The save writes the
-current buffer content to disk at the file's path. On success a "Saved" flash appears in the
-metadata header; on failure the server error message is shown and the save button remains enabled.
+current buffer content to a same-directory temporary file and atomically replaces the file at its
+path, preserving an existing file's permission bits. The live tab, draft, watcher, and sync state
+advance only after replacement succeeds, so a failed save leaves the prior file and editor state
+intact. On success a "Saved" flash appears in the metadata header; on failure the server error
+message is shown and the save button remains enabled.
 
 ### Live draft sync
 
