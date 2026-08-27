@@ -1,5 +1,5 @@
 import type { AcpRef } from '@shared/protocol';
-import type { JanusClient } from './ws';
+import type { JanusClient } from '../ws';
 
 export type AgentTabIntents = {
   onOpenFileNavigator: () => void;

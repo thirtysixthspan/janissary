@@ -4,7 +4,7 @@ import type { TabEntry } from './tab-entries';
 import type { BaseCenterActionAreaProps } from './CenterActionAreaProps';
 import { CenterActionArea } from './CenterActionArea';
 import { ViewTabBody } from './ViewTabBody';
-import { InactiveAgentTabBody } from './InactiveAgentTabBody';
+import { InactiveAgentTabBody } from './agent-tabs/InactiveAgentTabBody';
 import { ShellTabLayer } from './ShellTabLayer';
 import { MountedViewLayers } from './MountedViewLayers';
 

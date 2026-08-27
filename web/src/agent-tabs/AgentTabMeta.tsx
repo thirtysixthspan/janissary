@@ -1,10 +1,10 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { tabFlagDisplay } from './tab-flag-display';
-import { openFilesIcon, newTabIcon, viewCaptureIcon, connectionsWindowIcon, scheduleWindowIcon } from './icons';
-import { StatusWindowButton } from './StatusWindowButton';
-import { SplitTabButton } from './SplitTabButton';
-import type { StatusWindowButtonProps } from './status-button';
+import { tabFlagDisplay } from '../tab-flag-display';
+import { openFilesIcon, newTabIcon, viewCaptureIcon, connectionsWindowIcon, scheduleWindowIcon } from '../icons';
+import { StatusWindowButton } from '../StatusWindowButton';
+import { SplitTabButton } from '../SplitTabButton';
+import type { StatusWindowButtonProps } from '../status-button';
 import type { RemoteTarget } from '@shared/protocol';
 
 type Properties = {
