@@ -37,6 +37,12 @@ const writePrefixClauses = prefixClausesFor(WRITE_PREFIX_PARAMS);
 const keychainWriteClause =
   String.raw`  (require-all (subpath (param "HOME")) (regex #"/Library/Keychains/[^/]+/keychain-2\.db"))`;
 
+// Janissary updates `.claude.json` by writing a UUID-named sibling and atomically renaming it over
+// the original. The base file is already a write carve-out; this permits only that temporary shape,
+// not arbitrary siblings or the rest of HOME.
+const claudeConfigWriteClause =
+  String.raw`  (require-all (subpath (param "HOME")) (regex #"/\.claude\.json\.[0-9a-f-]+\.tmp$"))`;
+
 function buildProfile(networkClause: string): string {
   return String.raw`(version 1)
 (deny default)
@@ -68,6 +74,7 @@ function buildProfile(networkClause: string): string {
   (subpath (param "CLAUDE_SCRATCH_DIR"))
 ${writeCarveClauses}
 ${writePrefixClauses}
+${claudeConfigWriteClause}
 ${keychainWriteClause})
 ; Secret paths lose their write access last, the same way they lose their read access below. For
 ; every entry that sits outside the carve-outs above this is a no-op — the top-level deny already

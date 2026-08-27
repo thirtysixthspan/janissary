@@ -47,7 +47,7 @@ beforeAll(() => {
   mkdirSync(originlessDir, { recursive: true });
   execSync('git init', { cwd: originlessDir, stdio: 'pipe' });
 
-  initWorkspaceDir(repoDir);
+  initWorkspaceDir(repoDir, path.join(tmpDir, '.claude.json'));
 });
 
 afterAll(() => {
