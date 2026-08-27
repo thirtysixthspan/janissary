@@ -1,6 +1,7 @@
 import { messageBus } from '../bus.js';
 import { getGithubToken } from '../github-token.js';
 import { getClaudeToken } from '../claude-token.js';
+import { getOpencodeToken } from '../opencode-token.js';
 import type { Managers } from '../managers.js';
 import type { PtySession } from '../pty.js';
 import type { RemoteAddress } from './address.js';
@@ -64,7 +65,11 @@ export class RemoteManager {
       {
         onTerminalData: (data) => messageBus.emit('pty', { type: 'data', id: deferred.session?.id ?? '', data }),
         onAttached: () => deferred.channel?.send({
-          type: 'provision', label, githubToken: getGithubToken(), claudeToken: getClaudeToken(),
+          type: 'provision',
+          label,
+          githubToken: getGithubToken(),
+          claudeToken: getClaudeToken(),
+          opencodeToken: getOpencodeToken(),
         }),
         onFrame: (frame) => {
           switch (frame.type) {

@@ -202,17 +202,51 @@ describe('sandboxSpawn', () => {
     rmSync(workspaceDir, { recursive: true, force: true });
   });
 
-  it('injects both credentials when a GitHub and a Claude token are given', () => {
+  it('injects OPENCODE_API_KEY when opencodeToken is given', () => {
+    if (!sandboxAvailable()) return;
+    const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
+    const result = sandboxSpawn({ workspaceDir, opencodeToken: 'oc_live_key' }, 'bash', [], { PATH: '/usr/bin' });
+    expect(result.env.OPENCODE_API_KEY).toBe('oc_live_key');
+    rmSync(workspaceDir, { recursive: true, force: true });
+  });
+
+  // Off ENV_SCRUB_PATTERNS for the same reason the Claude token is: an LLM provider key, which the
+  // scrub deliberately exempts so a harness can use its own.
+  it('leaves an ambient OPENCODE_API_KEY in place when opencodeToken is omitted', () => {
+    if (!sandboxAvailable()) return;
+    const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
+    const env = { PATH: '/usr/bin', OPENCODE_API_KEY: 'ambient-key' };
+    const result = sandboxSpawn({ workspaceDir }, 'bash', [], env);
+    expect(result.env.OPENCODE_API_KEY).toBe('ambient-key');
+    rmSync(workspaceDir, { recursive: true, force: true });
+  });
+
+  it('still injects the OpenCode credential for a workspaced spawn when nothing is confined', () => {
+    configureUnconfined();
+    const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
+    const result = sandboxSpawn({ workspaceDir, opencodeToken: 'oc_live_key' }, 'bash', [], { PATH: '/usr/bin' });
+    expect(result.command).toBe('bash');
+    expect(result.env.OPENCODE_API_KEY).toBe('oc_live_key');
+    rmSync(workspaceDir, { recursive: true, force: true });
+  });
+
+  it('injects every credential when all three tokens are given', () => {
     if (!sandboxAvailable()) return;
     const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
     mkdirSync(`${workspaceDir}.tmp`, { recursive: true });
     const result = sandboxSpawn(
-      { workspaceDir, githubToken: 'scoped-token', claudeToken: 'subscription-token' },
+      {
+        workspaceDir,
+        githubToken: 'scoped-token',
+        claudeToken: 'subscription-token',
+        opencodeToken: 'oc_live_key',
+      },
       'bash', [], { PATH: '/usr/bin' },
     );
     expect(result.env.GH_TOKEN).toBe('scoped-token');
     expect(result.env.GH_CONFIG_DIR).toBe(path.join(realpathSync(`${workspaceDir}.tmp`), 'gh-config'));
     expect(result.env.CLAUDE_CODE_OAUTH_TOKEN).toBe('subscription-token');
+    expect(result.env.OPENCODE_API_KEY).toBe('oc_live_key');
     rmSync(`${workspaceDir}.tmp`, { recursive: true, force: true });
     rmSync(workspaceDir, { recursive: true, force: true });
   });

@@ -12,7 +12,10 @@ function roundTrip(frame: RemoteFrame): RemoteFrame | { error: string } {
 describe('frame codec', () => {
   it('round-trips every client frame', () => {
     const frames: RemoteFrame[] = [
-      { type: 'provision', label: 'claude', githubToken: 'github_pat_scoped', claudeToken: 'sk-ant-oat01-scoped' },
+      {
+        type: 'provision', label: 'claude', githubToken: 'github_pat_scoped',
+        claudeToken: 'sk-ant-oat01-scoped', opencodeToken: 'oc_live_scoped',
+      },
       { type: 'spawn', id: 'r1', program: 'claude', command: 'claude', mode: 'pty', harness: 'claude', cols: 100, rows: 40 },
       { type: 'input', id: 'r1', data: 'hello' },
       { type: 'resize', id: 'r1', cols: 120, rows: 50 },
@@ -103,6 +106,14 @@ describe('handshake', () => {
   // refusal — the bump to 3 is what makes it visible at the handshake instead of at first use.
   it('rejects a remote too old to honor the forwarded Claude token', () => {
     const parsed = parseHandshake(`${HANDSHAKE_SENTINEL} ${JSON.stringify({ version: 2, root: '/srv/proj' })}`);
+    expect(parsed).toEqual({ error: expect.stringContaining('Update janissary') });
+    expect('error' in parsed && parsed.error).toContain(String(REMOTE_PROTOCOL_VERSION));
+  });
+
+  // Version 3 honors both earlier tokens and drops `opencodeToken`, leaving an opencode harness on
+  // a host with no login of its own with nothing to authenticate with. Third field, same refusal.
+  it('rejects a remote too old to honor the forwarded OpenCode key', () => {
+    const parsed = parseHandshake(`${HANDSHAKE_SENTINEL} ${JSON.stringify({ version: 3, root: '/srv/proj' })}`);
     expect(parsed).toEqual({ error: expect.stringContaining('Update janissary') });
     expect('error' in parsed && parsed.error).toContain(String(REMOTE_PROTOCOL_VERSION));
   });

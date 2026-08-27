@@ -97,8 +97,9 @@ version mismatch, which is the whole reason the version moved when the field was
 
 The forwarded Claude token is the second such field and moved the version again, for the same
 reason: an installation that honors the GitHub token but not this one provisions and runs a harness
-that cannot authenticate. Both ends therefore have to be updated together, and a remote that is
-behind is refused before a tab is provisioned rather than after the harness fails to sign in.
+that cannot authenticate. The forwarded OpenCode key is the third and moved it once more. Both ends
+therefore have to be updated together, and a remote that is behind is refused before a tab is
+provisioned rather than after the harness fails to sign in.
 
 ### Lifecycle and cleanup
 
@@ -134,18 +135,18 @@ remote, still receives the token in its workspaced processes. If the local proje
 remote project's own `.janissary/github-token` remains the fallback. The initial clone uses whatever
 transport the *remote* repository's `origin` already has.
 
-The local project's `.janissary/claude-token` travels the same way, on the same frame, and is
-injected as `CLAUDE_CODE_OAUTH_TOKEN` into the same processes, with the remote project's own
-`.janissary/claude-token` as the same fallback. It matters most on exactly the hosts the GitHub
+The local project's `.janissary/claude-token` and `.janissary/opencode-token` travel the same way, on
+the same frame, and are injected as `CLAUDE_CODE_OAUTH_TOKEN` and `OPENCODE_API_KEY` into the same
+processes, each with the remote project's own matching file as the same fallback. It matters most on exactly the hosts the GitHub
 token's isolation-independence describes: a Keychain and the sandbox both need macOS, so on a Linux
 remote the harness has no credential store to fall back on and its own credentials file is denied,
 which without a forwarded token leaves it reporting itself logged out.
 
-Unlike the GitHub token, it carries no notice. A workspace with no GitHub credential is invisible
-until a much later `git push` fails, which is the whole reason that notice exists; a harness with no
-Claude credential says so in its own output as soon as it starts. Most remote launches also have no
-Claude token configured on either machine and are working exactly as intended, so a mirrored notice
-would speak on the ordinary case rather than warn about anything.
+Unlike the GitHub token, neither harness credential carries a notice. A workspace with no GitHub
+credential is invisible until a much later `git push` fails, which is the whole reason that notice
+exists; a harness with no credential of its own says so in its own output as soon as it starts. Most
+remote launches also have neither harness token configured on either machine and are working exactly
+as intended, so a mirrored notice would speak on the ordinary case rather than warn about anything.
 
 Which credential the remote workspace ended up with is reported the same way its isolation state is,
 and for the same reason: only the remote knows, and the difference is otherwise invisible until a
