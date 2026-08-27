@@ -40,9 +40,29 @@ Each tab has its own shell process that lives as long as the tab does. State acc
 
 Closing a tab kills its shell; quitting the app kills them all.
 
+## Your startup files don't run
+
+<img class="agent-float left" src="/agents/hakim-south.png" alt="" />
+
+A tab's shell is your login shell, started with its startup files skipped. Your `.bashrc`, `.zshrc`, and `.profile` are not read, so the aliases, functions, prompt, and `PATH` edits you keep in them are not there. That's deliberate: an interactive startup file prints banners and sets traps, and all of it would land in the middle of the output the app captures.
+
+What you do get is the environment `janus` itself was launched with. Export something in the terminal before you start the app and every tab shell sees it.
+
+If you need one of your aliases, the ways to get it are to run it through your shell yourself, to source the file first, or to open an interactive shell in the tab:
+
+```
+zsh -ic "myalias"
+source ~/.zshrc && myalias
+shell --pty
+```
+
+Interactive programs are the exception to all of this. They run through a login shell, so anything on the tab's own terminal, including a bare `shell --pty`, sees your startup files as usual.
+
+Only `bash` and `zsh` are given the flags to skip startup files. Any other login shell reads its own, since refusing to launch on a flag it doesn't recognize would be worse.
+
 ## Interactive programs take over the tab
 
-<img class="agent-float left" src="/agents/bilal-south.png" alt="" />
+<img class="agent-float" src="/agents/bilal-south.png" alt="" />
 
 Full-screen and interactive programs — `htop`, `vim`, `less`, `man`, `python` and other REPLs — can't run through the ordinary transcript. When you run one, the tab switches into a full-tab terminal: the transcript and command bar disappear and the program gets the whole tab, with every keystroke — including `Ctrl+C`, `Ctrl+D`, and `Ctrl+Z` — forwarded to it. Only `Shift+←`/`Shift+→` still switch tabs, and you can keep several tabs' interactive programs running at once; each keeps its screen state while you're elsewhere.
 
