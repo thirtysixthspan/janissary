@@ -25,7 +25,7 @@ const { GitSync, SYNC_WORKSPACE_NAME } = await import('./git-sync.js');
 
 function makeWorkspace(dir = '/repo/.janissary/workspace/git-sync', ready: Promise<void> = Promise.resolve()) {
   const create = vi.fn().mockReturnValue({ dir, ready });
-  return { create } as unknown as WorkspaceManager;
+  return { create, remove: vi.fn() } as unknown as WorkspaceManager;
 }
 
 function argLists(): string[][] {
@@ -52,17 +52,33 @@ describe('GitSync', () => {
     expect(b).toEqual(a);
   });
 
-  it('surfaces a workspace provisioning error without touching git', async () => {
-    const workspace = { create: vi.fn().mockReturnValue({ error: 'no repo' }) } as unknown as WorkspaceManager;
+  it('retries a synchronous workspace creation error', async () => {
+    const create = vi.fn()
+      .mockReturnValueOnce({ error: 'no repo' })
+      .mockReturnValue({ dir: '/repo/.janissary/workspace/git-sync', ready: Promise.resolve() });
+    const workspace = { create, remove: vi.fn() } as unknown as WorkspaceManager;
     const sync = new GitSync(workspace);
     expect(await sync.openSync()).toEqual({ error: 'no repo' });
     expect(calls).toHaveLength(0);
+    expect(await sync.openSync()).toEqual({ dir: '/repo/.janissary/workspace/git-sync' });
+    expect(create).toHaveBeenCalledTimes(2);
   });
 
-  it('surfaces a clone failure', async () => {
-    const workspace = makeWorkspace('/repo/.janissary/workspace/git-sync', Promise.reject(new Error('clone failed')));
+  it('cleans up a shared clone failure once and provisions again on retry', async () => {
+    const dir = '/repo/.janissary/workspace/git-sync';
+    const create = vi.fn()
+      .mockReturnValueOnce({ dir, ready: Promise.reject(new Error('clone failed')) })
+      .mockReturnValue({ dir, ready: Promise.resolve() });
+    const remove = vi.fn();
+    const workspace = { create, remove } as unknown as WorkspaceManager;
     const sync = new GitSync(workspace);
-    expect(await sync.openSync()).toEqual({ error: 'clone failed' });
+    const results = await Promise.all([sync.openSync(), sync.openSync()]);
+    expect(results).toEqual([{ error: 'clone failed' }, { error: 'clone failed' }]);
+    expect(create).toHaveBeenCalledTimes(1);
+    expect(remove).toHaveBeenCalledOnce();
+    expect(remove).toHaveBeenCalledWith(dir);
+    expect(await sync.openSync()).toEqual({ dir });
+    expect(create).toHaveBeenCalledTimes(2);
   });
 
   it('the pull-only cycle pulls/rebases without committing or pushing', async () => {

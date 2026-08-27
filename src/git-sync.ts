@@ -24,7 +24,7 @@ function toMessage(error: unknown): string {
 // triggering a second `git clone` (`WorkspaceManager.create` itself has no such dedup). Never call
 // `WorkspaceManager.remove` on its directory — it's torn down only via `removeAll()` at shutdown.
 export class GitSync {
-  private handle: ProvisioningWorkspace | { error: string } | undefined;
+  private handle: ProvisioningWorkspace | undefined;
 
   constructor(private workspace: WorkspaceManager) {}
 
@@ -36,8 +36,22 @@ export class GitSync {
   }
 
   private ensureWorkspace(): ProvisioningWorkspace | { error: string } {
-    this.handle ??= this.workspace.create(SYNC_WORKSPACE_NAME);
-    return this.handle;
+    if (this.handle) return this.handle;
+    const created = this.workspace.create(SYNC_WORKSPACE_NAME);
+    if (!('error' in created)) this.handle = created;
+    return created;
+  }
+
+  private async waitForWorkspace(handle: ProvisioningWorkspace): Promise<void> {
+    try {
+      await handle.ready;
+    } catch (error) {
+      if (this.handle === handle) {
+        this.handle = undefined;
+        this.workspace.remove(handle.dir);
+      }
+      throw error;
+    }
   }
 
   // Pull-only cycle: used when a synced tab opens (or another synced tab's save completes).
@@ -46,7 +60,7 @@ export class GitSync {
     const handle = this.ensureWorkspace();
     if ('error' in handle) return handle;
     try {
-      await handle.ready;
+      await this.waitForWorkspace(handle);
       await pullRebase(handle.dir);
       return { dir: handle.dir };
     } catch (error) {
@@ -60,7 +74,7 @@ export class GitSync {
     const handle = this.ensureWorkspace();
     if ('error' in handle) return handle;
     try {
-      await handle.ready;
+      await this.waitForWorkspace(handle);
       await commitIfChanged(handle.dir, filename);
       await pullRebase(handle.dir);
       await push(handle.dir);
