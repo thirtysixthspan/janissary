@@ -40,7 +40,15 @@ Sign in at OpenCode, copy your API key, and save it to `.janissary/opencode-toke
 
 A workspaced `opencode` harness needs this file. It can't read the credentials `opencode auth login` saved on your machine, because a workspace is blocked from that file on purpose — it holds every provider key opencode has, and a disposable clone has no business reading them. That applies on your own laptop, not just on a remote host.
 
-The key covers the OpenCode Zen and OpenCode Go providers. If you point opencode at Anthropic, Google, or OpenAI instead, this file doesn't help: set that provider's own variable (`ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, `OPENAI_API_KEY`) in the environment you start Janissary from, and it reaches the workspace untouched.
+The key covers the OpenCode Zen and OpenCode Go providers. If you point opencode at Anthropic, Google, or OpenAI instead, this file doesn't help. Set that provider's own variable in the environment you start Janissary from and it reaches the workspace untouched:
+
+| Provider | Variable |
+| --- | --- |
+| Anthropic | `ANTHROPIC_API_KEY` |
+| OpenAI | `OPENAI_API_KEY` |
+| Google | `GOOGLE_API_KEY`, `GOOGLE_GENERATIVE_AI_API_KEY`, or `GEMINI_API_KEY` |
+
+Google Vertex is the one that can't work. It authenticates with `GOOGLE_APPLICATION_CREDENTIALS`, which holds a path to a credentials file rather than a key. The variable reaches the workspace fine, so everything looks set up, but the file it points at stays blocked. Use one of the API-key providers above from a workspaced tab.
 
 ## How a token reaches a workspace
 

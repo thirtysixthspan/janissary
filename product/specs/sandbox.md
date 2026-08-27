@@ -102,9 +102,18 @@ the spawned process's environment before wrapping it — vectors that would othe
 file-read denies above entirely (e.g. `SSH_AUTH_SOCK` lets a process use the user's SSH keys without
 ever reading `~/.ssh`): `AWS_*`, `GITHUB_TOKEN`, `GH_TOKEN`, `NPM_TOKEN`, `DOCKER_*`, `KUBECONFIG`,
 anything ending `_SECRET`/`_PASSWORD`, `SSH_AUTH_SOCK`, `GPG_AGENT_INFO`, `GNUPGHOME`,
-`GIT_ASKPASS`, `GIT_CREDENTIAL_HELPER`, `KRB5CCNAME`. LLM provider keys (`ANTHROPIC_*`, `OPENAI_*`,
-`GEMINI_*`/`GOOGLE_*`) are deliberately **not** matched — the harnesses and the ACP agent need their
-own credentials to function. If a scoped GitHub token is configured for the project
+`GIT_ASKPASS`, `GIT_CREDENTIAL_HELPER`, `KRB5CCNAME`. LLM provider keys are deliberately **not**
+matched — the harnesses and the ACP agent need their own credentials to function, and since
+`.local/share/opencode/auth.json` became a denied secret path this is the only route a non-OpenCode
+opencode provider has into a workspace. The ones that matter are `ANTHROPIC_API_KEY`,
+`OPENAI_API_KEY`, and for Google `GOOGLE_API_KEY`, `GOOGLE_GENERATIVE_AI_API_KEY`, or
+`GEMINI_API_KEY`. A variable carrying the credential *itself* crosses intact; one carrying a
+*filename* does not help. `GOOGLE_APPLICATION_CREDENTIALS`, which the Vertex providers read, passes
+the scrub like any other variable — so a Vertex setup looks configured from the environment's side —
+but the file it names is unreadable inside the sandbox whenever it sits under `$HOME` outside a
+carve-in, and its default location under `~/.config/gcloud` is an explicit secret deny. Widening that
+deny to fix it would hand a workspaced agent a Google credential file, which is what the list exists
+to prevent, so a Vertex-configured harness has no working route into a workspace. If a scoped GitHub token is configured for the project
 (`.janissary/github-token`, loaded by `src/github-token.ts`), `GH_TOKEN` is re-added after the scrub
 with that value — the one deliberate exception to "a scrubbed var never comes back": it's not the
 ambient value just stripped, it's a fresh, narrowly-scoped one chosen for this workspaced spawn (see

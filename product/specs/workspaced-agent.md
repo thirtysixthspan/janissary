@@ -110,8 +110,15 @@ The consequence is worth stating rather than discovering. `OPENCODE_API_KEY` is 
 and OpenCode Go providers read, and nothing else. An opencode configured by `opencode auth login`
 against Anthropic, Google, or OpenAI has that key in the denied file, and the token file does not
 replace it; that provider works inside a workspace only if its own variable
-(`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`/`GOOGLE_*`) is present in the environment
+(`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, or for Google `GOOGLE_API_KEY`,
+`GOOGLE_GENERATIVE_AI_API_KEY`, or `GEMINI_API_KEY`) is present in the environment
 janissary was started with, which the scrub passes through untouched.
+
+The Vertex providers are the exception with no answer. They authenticate from
+`GOOGLE_APPLICATION_CREDENTIALS`, which names a file rather than carrying a key: the variable
+survives the scrub, so the setup looks configured, but the file it points at is denied inside the
+workspace (see [[sandbox]]). A Vertex-configured opencode cannot authenticate from a workspaced tab,
+and the way out is an API-key provider rather than a wider sandbox.
 
 On a remote launch the token is forwarded on the provisioning frame exactly as the GitHub token is,
 injected only into that remote tab's workspaced processes and never written to the remote

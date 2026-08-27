@@ -153,6 +153,8 @@ describe('sandboxSpawn', () => {
       DOCKER_HOST: 'x', KUBECONFIG: 'x', SOME_SECRET: 'x', SOME_PASSWORD: 'x',
       SSH_AUTH_SOCK: 'x', GPG_AGENT_INFO: 'x', GIT_ASKPASS: 'x', GIT_CREDENTIAL_HELPER: 'x', KRB5CCNAME: 'x',
       ANTHROPIC_API_KEY: 'keep-me', OPENAI_API_KEY: 'keep-me', GOOGLE_API_KEY: 'keep-me',
+      GEMINI_API_KEY: 'keep-me', GOOGLE_GENERATIVE_AI_API_KEY: 'keep-me', GOOGLE_VERTEX_PROJECT: 'keep-me',
+      GOOGLE_APPLICATION_CREDENTIALS: 'keep-me',
     };
     const result = sandboxSpawn({ workspaceDir }, 'bash', [], env);
     for (const dropped of [
@@ -162,9 +164,18 @@ describe('sandboxSpawn', () => {
     ]) {
       expect(result.env[dropped]).toBeUndefined();
     }
-    expect(result.env.ANTHROPIC_API_KEY).toBe('keep-me');
-    expect(result.env.OPENAI_API_KEY).toBe('keep-me');
-    expect(result.env.GOOGLE_API_KEY).toBe('keep-me');
+    // Since opencode's credential file became a denied secret path, these are the only route a
+    // non-OpenCode provider has into a workspace, so a future scrub pattern swallowing one would
+    // break authentication silently. GOOGLE_APPLICATION_CREDENTIALS is asserted for the opposite
+    // reason: it survives too, which is exactly why a vertex setup looks configured and still
+    // cannot authenticate — the file it names stays denied (see paths.ts).
+    for (const kept of [
+      'ANTHROPIC_API_KEY', 'OPENAI_API_KEY', 'GOOGLE_API_KEY',
+      'GEMINI_API_KEY', 'GOOGLE_GENERATIVE_AI_API_KEY', 'GOOGLE_VERTEX_PROJECT',
+      'GOOGLE_APPLICATION_CREDENTIALS',
+    ]) {
+      expect(result.env[kept]).toBe('keep-me');
+    }
     expect(result.env.PATH).toBe('/usr/bin');
     rmSync(workspaceDir, { recursive: true, force: true });
   });
