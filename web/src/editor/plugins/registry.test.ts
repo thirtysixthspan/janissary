@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { EDITOR_PLUGIN_API_VERSION, type EditorPluginDeclaration } from './api';
-import { hasModifier } from './chords';
+import { chordId, claimedByCore } from './chords';
 import { editorPluginDeclarations, editorPluginLoaders, validateDeclarations } from './registry';
 
 function declaration(overrides: Partial<EditorPluginDeclaration> = {}): EditorPluginDeclaration {
@@ -33,10 +33,15 @@ describe('the shipped registry', () => {
     expect(accepted).toHaveLength(editorPluginDeclarations.length);
   });
 
-  it('declares only chords carrying Cmd or Ctrl', () => {
+  it('declares only chords the core editor table does not keep for itself', () => {
     for (const entry of editorPluginDeclarations) {
-      for (const binding of entry.bindings) expect(hasModifier(binding.chord), binding.command).toBe(true);
+      for (const binding of entry.bindings) expect(claimedByCore(binding.chord), binding.command).toBe(false);
     }
+  });
+
+  it('declares no chord twice, so no shipped plugin can shadow another', () => {
+    const chords = editorPluginDeclarations.flatMap((entry) => entry.bindings.map((b) => chordId(b.chord)));
+    expect(new Set(chords).size).toBe(chords.length);
   });
 
   // The registry is reachable from the entry bundle, so a static import of an implementation would
@@ -97,11 +102,14 @@ describe('validateDeclarations', () => {
     expect(rejections[0].reason).toBe('declares no bindings');
   });
 
-  it('rejects a chord carrying neither Cmd nor Ctrl', () => {
-    const { rejections } = validateDeclarations([declaration({
-      bindings: [{ command: 'do-it', chord: { key: 'j', shift: true }, needs: 'selection' }],
+  // A chord that could never fire is refused by `claimedByCore` at host construction, not here —
+  // one rule, so an unmodified key the core table leaves alone is a legitimate declaration.
+  it('accepts an unmodified chord the core editor table does not claim', () => {
+    const { accepted, rejections } = validateDeclarations([declaration({
+      bindings: [{ command: 'do-it', chord: { key: 'Tab', shift: true }, needs: 'selection' }],
     })]);
-    expect(rejections[0].reason).toContain('neither Cmd nor Ctrl');
+    expect(rejections).toEqual([]);
+    expect(accepted).toHaveLength(1);
   });
 
   it('lets the first claimant of a chord keep it and rejects the second', () => {

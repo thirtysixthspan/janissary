@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { KeyLike } from '../keys';
 import type { BoundBinding } from './api';
-import { chordId, claimedByCore, eventChordId, hasModifier, matchBinding } from './chords';
+import { chordId, claimedByCore, eventChordId, matchBinding } from './chords';
 
 const press = (key: string, modifiers: Partial<KeyLike> = {}): KeyLike => ({
   key, ctrlKey: false, metaKey: false, shiftKey: false, altKey: false, ...modifiers,
@@ -38,16 +38,6 @@ describe('chordId', () => {
   });
 });
 
-describe('hasModifier', () => {
-  it('accepts Cmd or Ctrl and rejects everything else', () => {
-    expect(hasModifier({ key: '/', meta: true })).toBe(true);
-    expect(hasModifier({ key: '/', ctrl: true })).toBe(true);
-    expect(hasModifier({ key: '/', shift: true })).toBe(false);
-    expect(hasModifier({ key: '/', alt: true })).toBe(false);
-    expect(hasModifier({ key: '/' })).toBe(false);
-  });
-});
-
 describe('matchBinding', () => {
   const table = [TOGGLE_COMMENT];
 
@@ -81,5 +71,10 @@ describe('claimedByCore', () => {
 
   it('identifies a bare printable key, which the core table turns into an insert', () => {
     expect(claimedByCore({ key: '/' })).toBe(true);
+  });
+
+  it('leaves the yielded chords free, since the core table delegates rather than keeps them', () => {
+    expect(claimedByCore({ key: 'Tab' })).toBe(false);
+    expect(claimedByCore({ key: 'Tab', shift: true })).toBe(false);
   });
 });
