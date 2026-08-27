@@ -41,12 +41,11 @@ function HunkControls({ onAccept, onDecline }: { onAccept: () => void; onDecline
 export function EditorLines({ state, tokens, suggest, active, gutterCh, caretRef }: EditorLinesProps) {
   const pending = suggest.pending;
   const queryLine = suggest.queryLine;
-  const previews: HunkPreview[] = pending
-    ? pending.hunks
-      .map((hunk, index) => ({ index, diff: pending.resolved[index] ? null : suggestDiffPreview(state.lines, hunk) }))
-      .filter((p): p is HunkPreview => p.diff !== null)
-      .toSorted((a, b) => a.diff.startLine - b.diff.startLine)
-    : [];
+  const hunks = pending?.hunks ?? [];
+  const previews: HunkPreview[] = hunks
+    .map((hunk, index) => ({ index, diff: pending?.resolved.at(index) ? null : suggestDiffPreview(state.lines, hunk) }))
+    .filter((p): p is HunkPreview => p.diff !== null)
+    .toSorted((a, b) => a.diff.startLine - b.diff.startLine);
 
   const renderLine = (index: number, removed: boolean) => {
     const [selFrom, selTo] = lineSelection(state, index);
