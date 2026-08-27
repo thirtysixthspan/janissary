@@ -157,8 +157,19 @@ export const SECRET_DENY_PATHS = [
 // Env vars scrubbed from a workspaced process's environment: credential-shaped vars and
 // agent-socket / credential-helper escape vectors that bypass the file-read denies above (e.g.
 // `SSH_AUTH_SOCK` lets a process use the user's SSH keys without ever reading `~/.ssh`). LLM
-// provider keys (`ANTHROPIC_*`, `OPENAI_*`, `GEMINI_*`/`GOOGLE_*`) are deliberately NOT matched —
-// the harnesses and the ACP agent need their own credentials to function.
+// provider keys are deliberately NOT matched — the harnesses and the ACP agent need their own
+// credentials to function, and since `.local/share/opencode/auth.json` became a denied secret path
+// this is the only route a non-OpenCode opencode provider has into a workspace. The ones that
+// matter: `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, and for Google `GOOGLE_API_KEY`,
+// `GOOGLE_GENERATIVE_AI_API_KEY`, or `GEMINI_API_KEY`.
+//
+// A variable carrying the credential *itself* crosses intact; one carrying a *filename* does not
+// help. `GOOGLE_APPLICATION_CREDENTIALS` (what the vertex providers read) passes the scrub like any
+// other, so a vertex setup looks configured from the environment's side, but the file it names is
+// unreadable inside the sandbox whenever it sits under `$HOME` outside a carve-in — and its default
+// location, `~/.config/gcloud/…`, is an explicit SECRET_DENY_PATHS entry above. Widening that deny
+// to fix it would hand a workspaced agent a Google credential file, which is the thing the list
+// exists to prevent, so a vertex-configured harness has no working route into a workspace.
 export const ENV_SCRUB_PATTERNS: RegExp[] = [
   /^AWS_/, /^GITHUB_TOKEN$/, /^GH_TOKEN$/, /^NPM_TOKEN$/, /^DOCKER_/, /^KUBECONFIG$/,
   /_SECRET$/, /_PASSWORD$/,
