@@ -9,6 +9,7 @@ import {
 import type { PromptHandlers, AcpSession, AcpOptions } from './types.js';
 import { sandboxSpawn } from '../sandbox/index.js';
 import { getGithubToken } from '../github-token.js';
+import { getClaudeToken } from '../claude-token.js';
 import { decidePermission } from './tools.js';
 
 /**
@@ -31,6 +32,7 @@ export function connectAcp(options: AcpOptions): AcpSession {
       workspaceDir: options.workspaceDir,
       offline: options.offline,
       githubToken: options.workspaceDir ? getGithubToken() : undefined,
+      claudeToken: options.workspaceDir ? getClaudeToken() : undefined,
     },
     options.command, options.args, baseEnv,
   );

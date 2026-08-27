@@ -1,6 +1,7 @@
 import { spawnPty, type PtySession } from './pty.js';
 import { messageBus } from './bus.js';
 import { getGithubToken } from './github-token.js';
+import { getClaudeToken } from './claude-token.js';
 import { createRemotePtySession, type RemotePtyOptions } from './remote/pty-session.js';
 import type { RemoteChannel } from './remote/channel.js';
 import type { Managers } from './managers.js';
@@ -29,7 +30,12 @@ export class PseudoterminalManager {
     const session = spawnPty(program, command, cwd, {
       onData: (id, data) => messageBus.emit('pty', { type: 'data', id, data }),
       onExit: (id, exitCode) => this.handleExit(id, exitCode),
-    }, this.cols, this.rows, { workspaceDir, offline, githubToken: workspaceDir ? getGithubToken() : undefined }, extraEnv);
+    }, this.cols, this.rows, {
+      workspaceDir,
+      offline,
+      githubToken: workspaceDir ? getGithubToken() : undefined,
+      claudeToken: workspaceDir ? getClaudeToken() : undefined,
+    }, extraEnv);
     this.ptys.set(session.id, { session, tabLabel: label });
     return session.id;
   }

@@ -66,6 +66,33 @@ A codex harness needs one thing more. Codex filters the environment it hands to 
 
 That requirement is codex's alone. The claude and opencode harnesses hand their own environment to the commands they run unchanged, so the injected `GH_TOKEN` reaches `git` and `gh` from those tabs with no configuration of any kind — opencode has no environment-filtering setting to configure, and janissary ships no opencode configuration.
 
+### Harness authentication
+
+A workspaced `claude` harness authenticates to Anthropic with whatever credential it can reach from
+inside the workspace, and on a machine without a usable Keychain there is none: the credentials file
+the CLI falls back to (`~/.claude/.credentials.json`) is one of the sandbox's explicitly denied secret
+paths (see [[sandbox]]), so the harness starts and reports itself logged out. macOS tabs are unaffected
+— Keychain reads, and the one narrow write that lets a refreshed token persist, are carved in.
+
+A long-lived subscription token placed in `.janissary/claude-token` closes that gap. When the file is
+present, its contents are injected into every workspaced tab's environment as
+`CLAUDE_CODE_OAUTH_TOKEN`, and the harness authenticates with it instead of reaching for the
+machine's credential store. The file is read once at startup, trimmed of surrounding whitespace, and
+treated as absent when empty; janissary only ever reads it, never writes to it. Without it, nothing
+changes from before — a workspaced harness behaves exactly as it always has, which on macOS is
+generally fine and elsewhere is not.
+
+The token is injected for every workspaced spawn, not only a harness tab's: an agent tab's shell can
+invoke `claude` just as directly. Injection does not depend on isolation being active, for the same
+reason the GitHub token's does not. Unlike `GH_TOKEN`, an ambient `CLAUDE_CODE_OAUTH_TOKEN` in the
+environment janissary itself was started with is not stripped — provider credentials are deliberately
+exempt from the environment scrub — so a user who exports the variable themselves keeps working
+unchanged, and a configured token file takes precedence over it.
+
+Unlike the GitHub token, this one is not forwarded to a remote workspace: a tab launched with
+`on <address>` authenticates its harness however that machine's own environment and configuration
+allow.
+
 ### Workspace lifecycle
 
 Workspace directories are ephemeral:

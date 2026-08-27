@@ -88,6 +88,25 @@ describe('sandboxSpawn', () => {
     expect(result).toEqual({ command: 'bash', args: [], env });
   });
 
+  // A workspaced claude harness on a host that cannot confine anything — a Linux remote, most
+  // commonly — is exactly the case the token file exists for: no Keychain, and its own credentials
+  // file denied. The credential has to reach it there too.
+  it('still injects the Claude credential for a workspaced spawn when nothing is confined', () => {
+    configureUnconfined();
+    const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
+    const result = sandboxSpawn({ workspaceDir, claudeToken: 'subscription-token' }, 'bash', [], { PATH: '/usr/bin' });
+    expect(result.command).toBe('bash');
+    expect(result.env.CLAUDE_CODE_OAUTH_TOKEN).toBe('subscription-token');
+    rmSync(workspaceDir, { recursive: true, force: true });
+  });
+
+  it('sets no Claude credential on an unconfined spawn that has no workspaceDir', () => {
+    configureUnconfined();
+    const env = { PATH: '/usr/bin' };
+    const result = sandboxSpawn({ claudeToken: 'subscription-token' }, 'bash', [], env);
+    expect(result).toEqual({ command: 'bash', args: [], env });
+  });
+
   it('wraps the command in sandbox-exec when a workspaceDir is given and sandboxing is available', () => {
     if (!sandboxAvailable()) return; // covered by the identity-passthrough case elsewhere
     const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
@@ -151,6 +170,50 @@ describe('sandboxSpawn', () => {
     const env = { PATH: '/usr/bin', GH_TOKEN: 'ambient-token' };
     const result = sandboxSpawn({ workspaceDir }, 'bash', [], env);
     expect(result.env.GH_TOKEN).toBeUndefined();
+    rmSync(workspaceDir, { recursive: true, force: true });
+  });
+
+  it('injects CLAUDE_CODE_OAUTH_TOKEN when claudeToken is given', () => {
+    if (!sandboxAvailable()) return;
+    const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
+    const result = sandboxSpawn({ workspaceDir, claudeToken: 'subscription-token' }, 'bash', [], { PATH: '/usr/bin' });
+    expect(result.env.CLAUDE_CODE_OAUTH_TOKEN).toBe('subscription-token');
+    rmSync(workspaceDir, { recursive: true, force: true });
+  });
+
+  // Unlike GH_TOKEN, this one is deliberately absent from ENV_SCRUB_PATTERNS: it is an LLM provider
+  // credential, and the scrub exempts those so a harness can authenticate with its own. A user who
+  // exports it themselves and configures no token file keeps working exactly as before.
+  it('leaves an ambient CLAUDE_CODE_OAUTH_TOKEN in place when claudeToken is omitted', () => {
+    if (!sandboxAvailable()) return;
+    const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
+    const env = { PATH: '/usr/bin', CLAUDE_CODE_OAUTH_TOKEN: 'ambient-token' };
+    const result = sandboxSpawn({ workspaceDir }, 'bash', [], env);
+    expect(result.env.CLAUDE_CODE_OAUTH_TOKEN).toBe('ambient-token');
+    rmSync(workspaceDir, { recursive: true, force: true });
+  });
+
+  it('prefers a configured claudeToken over an ambient CLAUDE_CODE_OAUTH_TOKEN', () => {
+    if (!sandboxAvailable()) return;
+    const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
+    const env = { PATH: '/usr/bin', CLAUDE_CODE_OAUTH_TOKEN: 'ambient-token' };
+    const result = sandboxSpawn({ workspaceDir, claudeToken: 'configured-token' }, 'bash', [], env);
+    expect(result.env.CLAUDE_CODE_OAUTH_TOKEN).toBe('configured-token');
+    rmSync(workspaceDir, { recursive: true, force: true });
+  });
+
+  it('injects both credentials when a GitHub and a Claude token are given', () => {
+    if (!sandboxAvailable()) return;
+    const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
+    mkdirSync(`${workspaceDir}.tmp`, { recursive: true });
+    const result = sandboxSpawn(
+      { workspaceDir, githubToken: 'scoped-token', claudeToken: 'subscription-token' },
+      'bash', [], { PATH: '/usr/bin' },
+    );
+    expect(result.env.GH_TOKEN).toBe('scoped-token');
+    expect(result.env.GH_CONFIG_DIR).toBe(path.join(realpathSync(`${workspaceDir}.tmp`), 'gh-config'));
+    expect(result.env.CLAUDE_CODE_OAUTH_TOKEN).toBe('subscription-token');
+    rmSync(`${workspaceDir}.tmp`, { recursive: true, force: true });
     rmSync(workspaceDir, { recursive: true, force: true });
   });
 
