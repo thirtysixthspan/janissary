@@ -12,6 +12,7 @@ import { useEditorSync } from './useEditorSync';
 import { useEditorSuggest } from './useEditorSuggest';
 import { useEditorConnections } from './useEditorConnections';
 import { useEditorFind } from './useEditorFind';
+import { useEditorPlugins } from './plugins/useEditorPlugins';
 import { EditorConnectionsPanel } from './EditorConnectionsPanel';
 import { EditorFind } from './EditorFind';
 import { handleSuggestKeyDown } from './handleSuggestKeyDown';
@@ -52,6 +53,7 @@ export const EditorTab = forwardRef<DirtyTabHandle, {
   const file = useEditorFile(client, editor, api);
   saveRef.current = file.save;
   const find = useEditorFind(state?.lines ?? null, active);
+  const pluginKey = useEditorPlugins(client, editor.url, api, editor.name);
 
   // Every open editor tab stays mounted at once (see the top-of-file comment), so only the
   // currently active one may claim the shared drop handle — otherwise whichever tab rendered last
@@ -125,7 +127,13 @@ export const EditorTab = forwardRef<DirtyTabHandle, {
     e.stopPropagation();
     if (handleSuggestKeyDown(e, api, suggest, pageLines())) return;
     const action = actionForKey(e);
-    if (!action) return;
+    // Core bindings always win: an editor plugin is only offered a chord the table above left
+    // unbound, so nothing can shadow Cmd+S or the Emacs subset. preventDefault() is this branch's
+    // own job, since the early return below deliberately does not call it.
+    if (!action) {
+      if (pluginKey(e)) e.preventDefault();
+      return;
+    }
     e.preventDefault();
     if (action.kind === 'find') { find.open(); return; }
     api.apply(action, pageLines(), resolveVertical);

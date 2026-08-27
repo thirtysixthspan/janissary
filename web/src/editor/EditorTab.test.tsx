@@ -1062,4 +1062,70 @@ describe('EditorTab', () => {
       expect(dropRef.current).toBeNull();
     });
   });
+
+  // End-to-end through the real registry, the real lazily-imported commenting plugin, and the real
+  // edit applier — the fixture's notes.txt is a `#` language.
+  describe('editor plugin bindings', () => {
+    const rowText = (container: HTMLElement) => [
+      ...container.querySelectorAll(':scope .editor-row:not(.editor-row-query) .editor-content'),
+    ].map((row) => (row.textContent ?? '').replaceAll('\u{200B}', ''));
+
+    it('comments the caret\'s line with Cmd+/', async () => {
+      const { client } = makeClient();
+      const { container } = await renderLoaded(client);
+
+      fireEvent.keyDown(textarea(), { key: '/', metaKey: true });
+
+      await waitFor(() => expect(rowText(container)[0]).toBe('# line one'));
+      expect(rowText(container)[1]).toBe('line two');
+    });
+
+    it('undoes the whole toggle in one step', async () => {
+      const { client } = makeClient();
+      const { container } = await renderLoaded(client);
+
+      fireEvent.keyDown(textarea(), { key: '/', metaKey: true });
+      await waitFor(() => expect(rowText(container)[0]).toBe('# line one'));
+
+      fireEvent.keyDown(textarea(), { key: 'z', metaKey: true });
+      await waitFor(() => expect(rowText(container)[0]).toBe('line one'));
+    });
+
+    it('is a silent no-op in a file with no comment syntax', async () => {
+      const { client } = makeClient();
+      const view = makeView({ name: 'server.log', path: '/home/user/server.log' });
+      const { container } = await renderLoaded(client, view, makeTab({ editor: view }));
+
+      fireEvent.keyDown(screen.getByLabelText('Edit server.log'), { key: '/', metaKey: true });
+
+      await act(async () => { await Promise.resolve(); });
+      expect(rowText(container)[0]).toBe('line one');
+    });
+
+    it('leaves a chord no plugin claims alone', async () => {
+      const { client } = makeClient();
+      const { container } = await renderLoaded(client);
+
+      const handled = fireEvent.keyDown(textarea(), { key: 'j', metaKey: true });
+
+      // fireEvent returns false only when preventDefault() ran, so an unclaimed chord staying
+      // "true" is the assertion that the editor did not swallow it.
+      expect(handled).toBe(true);
+      await act(async () => { await Promise.resolve(); });
+      expect(rowText(container)[0]).toBe('line one');
+    });
+
+    it('keeps Cmd+S saving and Cmd+Z undoing with a plugin binding registered', async () => {
+      const { client, saveFile } = makeClient();
+      const { container } = await renderLoaded(client);
+
+      type('x');
+      await waitFor(() => expect(hasEnabledSaveButton(container)).toBe(true));
+      fireEvent.keyDown(textarea(), { key: 's', metaKey: true });
+      await waitFor(() => expect(saveFile).toHaveBeenCalled());
+
+      fireEvent.keyDown(textarea(), { key: 'z', metaKey: true });
+      await waitFor(() => expect(rowText(container)[0]).toBe('line one'));
+    });
+  });
 });

@@ -17,6 +17,7 @@ function makeApi(state: EditorState | null): EditorApi {
     setState: vi.fn((s: EditorState) => { stateRef.current = s; }),
     insert: vi.fn(),
     apply: vi.fn(),
+    replace: vi.fn(),
     sealUndo: vi.fn(),
   };
 }

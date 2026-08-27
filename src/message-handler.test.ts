@@ -74,6 +74,7 @@ const makeController = () =>
     editorPersonas: vi.fn(() => []),
     editorSuggest: vi.fn(),
     closeEditorConnection: vi.fn(),
+    editorPluginFailed: vi.fn(),
   }) as unknown as Controller;
 
 const dispatchCall = (controller: Controller, id: number, call: RpcCall) => {
@@ -512,5 +513,29 @@ describe('handle', () => {
     });
     expect(controller.closeEditorConnection).toHaveBeenCalledWith('file:///a.ts', 'reviewer');
     expect(replies).toEqual([{ t: 'rpc-reply', id: 47, result: 'ok' }]);
+  });
+
+  it('routes an editor plugin failure report through the controller façade', () => {
+    const controller = makeController();
+    const replies = dispatchCall(controller, 48, {
+      method: 'editorPluginFailed',
+      params: { url: 'file:///a.ts', plugin: 'commenting', reason: 'exports no handler' },
+    });
+    expect(controller.editorPluginFailed)
+      .toHaveBeenCalledWith('file:///a.ts', 'commenting', 'exports no handler');
+    expect(replies).toEqual([{ t: 'rpc-reply', id: 48, result: 'ok' }]);
+  });
+
+  it('rejects malformed editor plugin failure reports without calling the controller', () => {
+    const controller = makeController();
+    const replies: ServerEvent[] = [];
+    handle(controller, {
+      t: 'rpc', id: 49, method: 'editorPluginFailed',
+      params: { url: 'file:///a.ts', plugin: 7, reason: 'nope' },
+    } as unknown as ClientMessage, (event) => { replies.push(event); });
+    expect(controller.editorPluginFailed).not.toHaveBeenCalled();
+    expect(replies).toEqual([{
+      t: 'rpc-reply', id: 49, error: 'Invalid editorPluginFailed params',
+    }]);
   });
 });

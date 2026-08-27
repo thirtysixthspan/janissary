@@ -1,0 +1,83 @@
+// The editor-plugin contract. An editor plugin binds a keyboard chord in the editor tab and answers
+// with the edits to make and where to leave the selection — that is the whole extension point. It
+// runs entirely in the client: declarations are static data in ./registry.ts and implementations are
+// lazily imported modules, so nothing about an editor plugin reaches the server.
+
+import type { Pos } from '../model';
+
+export const EDITOR_PLUGIN_API_VERSION = 1;
+
+// A chord is only ever matched against a keydown the core editor table left unbound (see
+// ./chords.ts), so `key` is the raw `KeyboardEvent.key` and every modifier defaults to "must be up".
+export type EditorChord = {
+  key: string;
+  meta?: boolean;
+  ctrl?: boolean;
+  shift?: boolean;
+  alt?: boolean;
+};
+
+// How much of the buffer a binding's handler is given. `selection` passes the whole lines the
+// selection covers (the caret's line when nothing is selected); `buffer` passes the whole document.
+// Declared rather than inferred so a reader can see a plugin's reach from its declaration alone.
+export type EditorPluginSlice = 'selection' | 'buffer';
+
+export type EditorPluginBinding = {
+  command: string;
+  chord: EditorChord;
+  needs: EditorPluginSlice;
+};
+
+export type EditorPluginDeclaration = {
+  id: string;
+  version: string;
+  apiVersion: number;
+  bindings: readonly EditorPluginBinding[];
+};
+
+// One binding paired with the plugin that declared it, which is what chord matching resolves to.
+export type BoundBinding = EditorPluginBinding & { plugin: string };
+
+export type EditorRange = { start: Pos; end: Pos };
+
+// Mirrors the editor's own cursor/anchor pair (see ../model.ts): `anchor` is null when nothing is
+// selected, and the selection spans anchor..cursor in either order.
+export type EditorSelection = { anchor: Pos | null; cursor: Pos };
+
+// `range` is the document range `lines` was taken from, always whole lines, so a handler can turn a
+// slice-relative index into an absolute position by adding `range.start.line`. `file` is the tab's
+// file name, which is how a plugin branches on language — the declaration carries no language field.
+export type EditorPluginRequest = {
+  command: string;
+  file: string;
+  selection: EditorSelection;
+  range: EditorRange;
+  lines: readonly string[];
+};
+
+// One range replacement, in absolute document coordinates regardless of which slice was requested.
+export type EditorPluginEdit = { start: Pos; end: Pos; text: string };
+
+export type EditorPluginResult = {
+  edits: readonly EditorPluginEdit[];
+  selection?: EditorSelection;
+};
+
+export type EditorPluginHandler = (
+  request: EditorPluginRequest,
+) => EditorPluginResult | null | Promise<EditorPluginResult | null>;
+
+// What a lazily-imported implementation module must default-export.
+export type EditorPluginModule = { default: EditorPluginHandler };
+
+export type EditorPluginLoader = () => Promise<EditorPluginModule>;
+
+// Resolution: first match by exact chord, with duplicate chords refused when the registry is
+// validated, so array position never breaks a tie beyond that first-wins rule. Ordering: a plugin
+// chord is only ever consulted for a keydown the core table left unbound, so core bindings always
+// win and no plugin can shadow Cmd+S. Async: the handler may return a promise and is raced against a
+// per-call budget; a handler that blocks synchronously cannot be interrupted, and because this runs
+// on the UI thread it would hang the window — bundled plugins are trusted code and that is not
+// defended against. Empty return: `null` means the plugin chose to do nothing, which is
+// indistinguishable in effect from no plugin claiming the chord — the buffer, selection, and undo
+// stack are all left untouched.

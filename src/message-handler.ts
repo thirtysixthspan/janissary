@@ -1,7 +1,9 @@
 import type { Controller } from './controller.js';
 import type { ClientMessage, ServerEvent } from './protocol.js';
 import { handleFileNavigatorMessage } from './message-handler-file-navigator.js';
-import { isPluginFailedParams, isPluginIntentParams } from './client-message.js';
+import {
+  isEditorPluginFailedParams, isPluginFailedParams, isPluginIntentParams,
+} from './client-message.js';
 
 export function handle(controller: Controller, message: ClientMessage, reply: (event: ServerEvent) => void): void {
   switch (message.method) {
@@ -171,6 +173,19 @@ export function handle(controller: Controller, message: ClientMessage, reply: (e
     // closed row, not on this reply, so `out` is a no-op (an editor tab has no transcript).
     case 'closeEditorConnection': {
       controller.closeEditorConnection(message.params.url, message.params.persona);
+      reply({ t: 'rpc-reply', id: message.id, result: 'ok' });
+      return;
+    }
+    // Fire-and-forget: the client has already stopped resolving the plugin's chords, so it needs
+    // nothing back — this only posts the notification line the failure would otherwise never get.
+    case 'editorPluginFailed': {
+      if (!isEditorPluginFailedParams(message.params)) {
+        reply({ t: 'rpc-reply', id: message.id, error: 'Invalid editorPluginFailed params' });
+        return;
+      }
+      controller.editorPluginFailed(
+        message.params.url, message.params.plugin, message.params.reason,
+      );
       reply({ t: 'rpc-reply', id: message.id, result: 'ok' });
       return;
     }

@@ -30,4 +30,10 @@ export type EditorRpcCall =
   // Close one of an editor tab's open persona ACP connections (the connections window's close
   // control). Fire-and-forget: the row disappears via the next `state` broadcast, so no reply
   // payload is needed. `url` identifies the owning editor tab the same way saveFile's does.
-  | { method: 'closeEditorConnection'; params: { url: string; persona: string } };
+  | { method: 'closeEditorConnection'; params: { url: string; persona: string } }
+  // Report that a client-side editor plugin (see product/specs/editor-plugins.md) has been disabled.
+  // Editor plugins run entirely in the browser, so a failure has to reach server-owned state to be
+  // seen at all — this posts the one notification line naming the plugin and the reason.
+  // Fire-and-forget: the client has already stopped resolving that plugin's chords and needs no
+  // answer. `url` identifies the editor tab the chord was pressed in, the same way saveFile's does.
+  | { method: 'editorPluginFailed'; params: { url: string; plugin: string; reason: string } };

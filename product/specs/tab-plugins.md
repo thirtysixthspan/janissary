@@ -2,6 +2,8 @@
 
 Janissary can ship bundled plugins that contribute persistent view tabs, file openers, and one command. Plugins are part of the Janissary build; there is no installation, marketplace, filesystem discovery, or third-party loading.
 
+Tab plugins are one of two plugin families. The other, described in [[editor-plugins]], contributes keyboard-bound editing commands to the editor tab and runs entirely in the client; the two share no declarations, no catalog, and no API version.
+
 ### Discovery and activation
 
 At startup the server reads a static catalog of declarations. A declaration supplies the plugin identity and version, required tab-plugin API version, payload schema version, tab label prefix, claimed file extensions and content types, an optional claim on web addresses, an optional claim on the `edit` command for the file types it already claims, optional file-navigator edit gesture, optional command, optional host state to be told about, an optional entry contributed for a file navigator selection, and requested capabilities. Discovery does not import server behavior or fetch a client chunk.
