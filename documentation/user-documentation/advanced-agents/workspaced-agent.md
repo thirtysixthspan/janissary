@@ -15,6 +15,14 @@ Running the command from a directory that isn't in a git repository, or in a rep
 
 The tab appears right away, marked busy, while the clone runs in the background — anything you type into it joins its [command queue](/user-documentation/command-bar/queue) and runs once the clone finishes. A ready confirmation (and the isolation notice, if isolation isn't actually active) posts to the tab once the clone completes; if the clone fails instead, the tab reports the failure and closes on its own shortly after.
 
+## If every workspace suddenly fails to start
+
+<img class="agent-float left" src="/agents/yusuf-south.png" alt="" />
+
+Setting up a clone also marks it as trusted in Claude's own configuration file, `~/.claude.json`, so a claude harness doesn't stop to ask about the new directory. If you don't have that file yet, one is created; if you do, everything already in it is kept.
+
+If the file can't be read, isn't valid JSON, or holds something other than what Claude writes there, setting up the workspace stops and the file is left exactly as it was. Nothing repairs it for you, so every workspaced tab fails to start until you fix or delete `~/.claude.json` — which is the symptom to recognize, since the failure has nothing to do with your own repository. Working with `--no-workspace` is unaffected.
+
 ![The connections panel of a workspaced agent, showing its shell running in the workspace clone's directory.](/screenshots/workspaced-agent.png)
 
 ## Pushing to GitHub needs a token
