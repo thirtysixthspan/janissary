@@ -2,6 +2,8 @@
 
 ## ready
 
+* in the editor, bind cmd+/ to comment out the selected code using language specific commenting. Commenting style should be governed by the file extension. this functionality should be implemented as a plugin. implement commenting support for major file types including javascript, markdown, typescript, ruby, shell, text. 
+
 * add ACP support to remote agents.
 
 * define how new agent and file navigator buttons should work on remote machines.
