@@ -1,5 +1,6 @@
-import { rmSync, writeFileSync } from 'node:fs';
+import { rmSync } from 'node:fs';
 import { profilePath } from '../profiles.js';
+import { atomicWriteFile } from '../atomic-write.js';
 import { captureTab, newCaptureState } from './save-route.js';
 import { buildMonitors, buildLayout } from './save-reserved.js';
 import { requestTreeSelections } from '../file-navigator/selection-request.js';
@@ -25,10 +26,6 @@ export type SaveSummary = {
 // overwrites unconditionally; a stale same-named directory from the old multi-file format is removed.
 export async function saveProfile(name: string, managers: Managers): Promise<SaveSummary> {
   const file = profilePath(name);
-  // Overwrite any existing single file, and defensively remove a stale same-named directory left
-  // over from the old multi-file format (`profiles/<name>/`).
-  rmSync(file, { recursive: true, force: true });
-  rmSync(file.replace(/\.json$/, ''), { recursive: true, force: true });
 
   // Every navigator's cursor/anchor/selection lives in the web client, so ask for it before
   // routing tabs — the same shape as awaiting `buildLayout`'s window-bounds read below. A save
@@ -45,7 +42,8 @@ export async function saveProfile(name: string, managers: Managers): Promise<Sav
   if (state.tabEntries.length > 0) root.tabs = state.tabEntries;
   if (monitors.length > 0) root.monitors = monitors;
   root.layout = layout;
-  writeFileSync(file, JSON.stringify(root, null, 2));
+  atomicWriteFile(file, JSON.stringify(root, null, 2));
+  rmSync(file.replace(/\.json$/, ''), { recursive: true, force: true });
 
   return {
     agents: state.agents,

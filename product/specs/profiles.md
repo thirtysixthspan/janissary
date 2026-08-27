@@ -126,7 +126,7 @@ Any running monitors are captured too, into the `monitors` key by name, persona,
 
 Tabs with no equivalent in a profile — only a monitor's own reporting tab — are left out of the saved profile and listed by name in the command's output, so it's clear what wasn't captured.
 
-Saving over an existing profile name replaces it outright: the single file is rewritten from the current session, with no confirmation prompt (and a stale same-named directory left over from the old multi-file format is removed). On success, the command reports what was captured — counts per tab type (agents, harnesses, editor tabs, plugin tabs, ssh tabs, file navigators), the layout, monitors, and docked tabs — followed by the list of any tabs that were skipped. The docked-tab count now covers only the notifications tab, since navigators and plugin tabs have their own.
+Saving over an existing profile name replaces it outright: the complete current-session snapshot is atomically installed with no confirmation prompt, then a stale same-named directory left over from the old multi-file format is removed. Until that replacement succeeds, the previous profile file and legacy directory remain untouched, so a capture or write failure preserves the last valid profile. On success, the command reports what was captured — counts per tab type (agents, harnesses, editor tabs, plugin tabs, ssh tabs, file navigators), the layout, monitors, and docked tabs — followed by the list of any tabs that were skipped. The docked-tab count now covers only the notifications tab, since navigators and plugin tabs have their own.
 
 ### `profile` command
 

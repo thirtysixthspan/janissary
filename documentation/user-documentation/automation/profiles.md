@@ -111,7 +111,7 @@ Open images, markdown previews, videos, web pages, and SSH sessions are captured
 
 The window size, sidebar widths, and reporting-area split are captured into the profile's layout as they currently look, along with any running monitors. The only thing left out and named in the command's report is a monitor's own reporting tab.
 
-Saving over an existing profile name replaces it outright, with no confirmation prompt. The command reports what it captured: counts per tab type, plus monitors and docked tabs, followed by the list of anything skipped.
+Saving over an existing profile name atomically replaces it outright, with no confirmation prompt. Janissary keeps the previous file until the complete replacement is ready, so a capture or write failure leaves your last valid profile intact. The command reports what it captured: counts per tab type, plus monitors and docked tabs, followed by the list of anything skipped.
 
 ## Checking a profile without launching it
 

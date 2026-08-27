@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, afterAll } from 'vitest';
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, statSync, rmSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, statSync, rmSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { saveProfile, formatSaveSummary, type SaveSummary } from './save.js';
@@ -453,6 +453,23 @@ describe('saveProfile', () => {
     expect(existsSync(staleDir)).toBe(false);
     expect(statSync(profilePath('demo')).isFile()).toBe(true);
     expect(load('demo').entries.map((e) => e.name)).toEqual(['bob']);
+    expect(readdirSync(path.join(root, 'profiles'))).toEqual(['demo.json']);
+  });
+
+  it('preserves the existing profile and legacy directory when capture fails', async () => {
+    const existing = '{"tabs":[{"type":"agent","name":"existing"}]}';
+    writeFileSync(profilePath('demo'), existing);
+    const staleDir = path.join(root, 'profiles', 'demo');
+    mkdirSync(staleDir);
+    writeFileSync(path.join(staleDir, 'stale.json'), '{}');
+    setWindowBoundsReader(async () => { throw new Error('window unavailable'); });
+
+    await expect(saveProfile('demo', makeManagers([makeTab('replacement', '#aaa')]))).rejects.toThrow(
+      'window unavailable',
+    );
+
+    expect(readFileSync(profilePath('demo'), 'utf8')).toBe(existing);
+    expect(readFileSync(path.join(staleDir, 'stale.json'), 'utf8')).toBe('{}');
   });
 
   it('captures sidebar/tab-area sizes and window bounds when a reader is registered', async () => {

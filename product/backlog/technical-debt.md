@@ -4,8 +4,6 @@
 
 ## development
 
-* Make profile replacement non-destructive in `src/profile/save.ts`: `saveProfile` removes the existing profile file before awaiting client selections, collecting tabs, and reading layout, then writes the replacement directly, so any intervening failure loses the user's last valid profile and an interrupted write can leave invalid JSON. Build the complete snapshot first and atomically replace the old file only after serialization succeeds, removing only the stale legacy directory as part of the successful commit path. Severity: **high**.
-
 * Save editor buffers atomically in `src/editor/save.ts`: `saveFile` writes directly over the user's source file with `writeFileSync`, so a process interruption, disk-full condition, or partial filesystem failure can truncate the only copy before the RPC reports an error. Write a same-directory temporary file with the target's permissions and rename it into place before updating tab and watcher state. Severity: **high**.
 
 ## deferred
