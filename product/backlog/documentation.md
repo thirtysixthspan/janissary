@@ -4,14 +4,13 @@
 
 ## development
 
-* open (3/10) — `documentation/user-documentation/tab-types/opening-files.md` is accurate and complete on dispatch, wildcards, and errors, so about 2 of 18 facts are missing and none are wrong. Missing: audio, which the page's example list and its links to the per-type pages both predate — `open track.mp3` now opens an audio tab covered by `documentation/user-documentation/tab-types/audio-player.md`, and this page is the hub a reader starts from; and that `edit` dispatches by file type, so `edit photo.png` opens the image editor while `edit Makefile` and `edit src/index.ts` still open the plain-text editor, with the accepted consequence that a PNG can no longer be opened as raw text. Both are small cross-reference gaps rather than undocumented behavior, but this page is where a reader looks to find out which file types do what. Note `product/specs/open.md` is itself stale in its opening paragraph, which lists the bundled openers as "Markdown, images, and video" and omits audio. Ground truth is `product/specs/open.md`, `src/open-route.ts`, and `src/plugins/catalog.ts`. Fix by adding an audio example and link to `opening-files.md` and a sentence on `edit` dispatch there.
-
 ## deferred
 
 ## declined
 
 ## resolved
 
+* open — documented in documentation/user-documentation/tab-types/opening-files.md (removed 2026-08-27)
 * workspaced-agent — documented in documentation/user-documentation/advanced-agents/workspaced-agent.md (removed 2026-08-27)
 * video-tab — documented in documentation/user-documentation/tab-types/video-player.md (removed 2026-08-27)
 * tabs — documented in documentation/user-documentation/getting-started/tabs.md (removed 2026-08-27)
