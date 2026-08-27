@@ -33,8 +33,8 @@ export abstract class TabOpeningState extends TabQueueState {
     tabOpeners.updatePluginTab(this, pluginId, instanceKey, factory);
   }
 
-  openEditorTab(view: EditorView): void {
-    tabOpeners.openEditorTab(this, view, (label, path) => this.managers.editorWatch.watch(label, path));
+  openEditorTab(view: EditorView): string {
+    return tabOpeners.openEditorTab(this, view, (label, path) => this.managers.editorWatch.watch(label, path));
   }
 
   openFilesTab(view: FileNavigatorView): void {

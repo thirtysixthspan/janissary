@@ -28,17 +28,16 @@ export function openProfileEditors(
   const opened: MainAreaCandidate[] = [];
   for (const entry of editors) {
     const label = entry.in ?? defaultLabel;
-    const before = managers.tab.tabs.length;
-    managers.openFile.edit(`edit ${entry.path}`, entry.path, label, entry.line);
-    if (managers.tab.tabs.length > before) {
-      const targetGroup = entry.group ?? defaultGroup;
-      const dotColor = managers.tab.tabs[managers.tab.activeTab]?.dotColor ?? '';
+    const result = managers.openFile.edit(`edit ${entry.path}`, entry.path, label, entry.line);
+    if (!result) continue;
+    const targetGroup = entry.group ?? defaultGroup;
+    const editor = managers.tab.tabs.find((tab) => tab.label === result.label);
+    const dotColor = editor?.dotColor ?? '';
+    if (editor && editor.group !== targetGroup) {
+      managers.tab.setActiveTab(managers.tab.findIndex(result.label));
       relocateToGroup(managers, targetGroup, colorForGroup(targetGroup, dotColor));
     }
-    const editorLabel = managers.tab.tabs[managers.tab.activeTab]?.label;
-    if (editorLabel) {
-      opened.push({ label: editorLabel, number: entry.number, focus: entry.focus, pane: entry.pane });
-    }
+    opened.push({ label: result.label, number: entry.number, focus: entry.focus, pane: entry.pane });
     notes.push('Opened editor tab.');
   }
   return opened;

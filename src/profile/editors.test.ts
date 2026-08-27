@@ -7,7 +7,7 @@ import type { Tab } from '../tab/types.js';
 const identityColor = (_group: number, fallbackDotColor: string): string => fallbackDotColor;
 
 function makeManagers(): { managers: Managers; edit: ReturnType<typeof vi.fn> } {
-  const edit = vi.fn();
+  const edit = vi.fn(() => ({ label: 'editor' }));
   const managers = {
     openFile: { edit },
     tab: { tabs: [{ label: 'editor', group: 1, dotColor: 'green' }], activeTab: 0, setActiveTab: vi.fn(), findIndex: vi.fn() },
@@ -25,6 +25,7 @@ function makeMutableManagers(tabs: Tab[]): { managers: Managers; edit: ReturnTyp
     const groupColor = creator?.groupColor ?? 'green';
     tabs = [...tabs, makeTab('editor', 'green', tabs.length + 1, [], [], undefined, group, groupColor)];
     activeTab = tabs.length - 1;
+    return { label: 'editor' };
   });
   const managers = {
     openFile: { edit },
@@ -69,6 +70,21 @@ describe('openProfileEditors', () => {
     const { managers, edit } = makeManagers();
     openProfileEditors([{ path: './missing.txt' }], managers, 'agent', [], 1, identityColor);
     expect(edit).toHaveBeenCalledWith('edit ./missing.txt', './missing.txt', 'agent', undefined);
+  });
+
+  it('does not report or place an editor when edit returns no result', () => {
+    const { managers, edit } = makeManagers();
+    edit.mockReturnValueOnce(undefined);
+    const notes: string[] = [];
+
+    const opened = openProfileEditors(
+      [{ path: './large.txt', group: 2, focus: true }], managers, 'agent', notes, 1, identityColor,
+    );
+
+    expect(opened).toEqual([]);
+    expect(notes).toEqual([]);
+    expect(managers.tab.tabs).toEqual([{ label: 'editor', group: 1, dotColor: 'green' }]);
+    expect(managers.tab.setActiveTab).not.toHaveBeenCalled();
   });
 
   it('leaves an editor in its inherited group when that already matches the default group', () => {
