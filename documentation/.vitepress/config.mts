@@ -91,6 +91,7 @@ export default defineConfig({
             { text: "Opening files and pages", link: "/user-documentation/tab-types/opening-files" },
             { text: "Image viewer", link: "/user-documentation/tab-types/image-viewer" },
             { text: "Video player", link: "/user-documentation/tab-types/video-player" },
+            { text: "Audio player", link: "/user-documentation/tab-types/audio-player" },
             { text: "Markdown preview", link: "/user-documentation/tab-types/markdown-preview" },
             { text: "Embedded web pages", link: "/user-documentation/tab-types/web-pages" },
             { text: "Editor", link: "/user-documentation/tab-types/editor" },

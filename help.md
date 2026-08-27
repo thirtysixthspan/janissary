@@ -20,6 +20,7 @@
 | `browser` | Drive a headless/headed web browser (open, goto, content, eval, shot) |
 | `open` | Open images/files in a tab, or web pages embedded (`open https://…` / `open page …`) — sites that refuse framing render too; `open external` uses the OS viewer/browser |
 | `video` | `video <path>` opens a video through the bundled video tab plugin; accepts the same paths and wildcards as `open` |
+| `audio` | `audio <path>` queues audio into the single audio tab through the bundled audio plugin; accepts the same paths and wildcards as `open` |
 | `plugins` | List bundled tab plugins with their API version, activation state and duration, or disabled reason |
 | `edit` | Open a file in the plain-text editor (`edit <file>` or `edit <file>:<line>` to jump to a line) |
 | `rename` | Rename the current tab's display name (`rename <name>`); bare `rename` clears the alias |
@@ -87,6 +88,14 @@
 | `↑` / `↓` | Scroll up / down by a line |
 | `Page Up` / `Page Down` | Scroll up / down by a page |
 | Mouse wheel | Scroll up / down |
+
+**Audio tab controls** (active only while an audio tab is the visible one):
+
+| Key | Action |
+| --- | ------ |
+| `Space` | Play / pause |
+| `←` / `→` | Seek back / forward ten seconds (clamped to the current track) |
+| `Shift+←` / `Shift+→` | Previous / next track |
 
 **File navigator controls** (active only while a file navigator is focused):
 
