@@ -16,6 +16,18 @@ import { placeAgent } from './place-agent.js';
 export class ProfileManager {
   constructor(private managers: Managers) {}
 
+  private finish(action: Promise<void>, out: (text: string) => void): void {
+    void action.catch((error: unknown) => {
+      const reason = error instanceof Error ? error.message : String(error);
+      out(`Profile command failed: ${reason.replace(/[.\s]+$/, '')}.`);
+    });
+  }
+
+  private async save(name: string, out: (text: string) => void): Promise<void> {
+    const summary = await saveProfile(name, this.managers);
+    out(formatSaveSummary(name, summary));
+  }
+
   run(command: string, label: string): void {
     const parsed = parseProfileCommand(command);
     const out = (text: string) => this.managers.tab.append(label, { input: command, output: text });
@@ -26,7 +38,7 @@ export class ProfileManager {
       return;
     }
     if (parsed.action === 'save') {
-      void saveProfile(parsed.name, this.managers).then((summary) => out(formatSaveSummary(parsed.name, summary)));
+      this.finish(this.save(parsed.name, out), out);
       return;
     }
     if (parsed.action === 'validate') {
@@ -49,7 +61,7 @@ export class ProfileManager {
       return;
     }
 
-    void openProfileEntries(loaded, this.managers, parsed.name, label, out);
+    this.finish(openProfileEntries(loaded, this.managers, parsed.name, label, out), out);
   }
 
   newAgent(command: string): void {

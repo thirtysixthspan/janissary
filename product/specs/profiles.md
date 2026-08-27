@@ -133,3 +133,5 @@ Saving over an existing profile name replaces it outright: the complete current-
 ### `profile` command
 
 `profile` launches a saved set of agents and harnesses. See the Profiles section. `profile launch <name>` opens a tab for each entry in the named profile (restoring agent state, or launching a harness), closing and reopening any tab that collides with a relaunch; `profile list` lists the available profiles; `profile save <name>` captures the running session into a new or overwritten profile; `profile validate [<name>]` checks one or every profile file against the schema. Malformed invocations return a `Usage:` message.
+If an asynchronous save or launch fails, its issuing transcript receives one
+`Profile command failed: <reason>.` result instead of leaving the command unfinished.
