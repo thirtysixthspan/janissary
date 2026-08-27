@@ -1,19 +1,19 @@
 import React from 'react';
 import type { TabView, RouteChooserView, BufferLine } from '@shared/protocol';
-import type { JanusClient } from './ws';
-import { Transcript } from './transcript/Transcript';
-import { StatusPanels } from './StatusPanels';
-import { PickerOverlays } from './PickerOverlays';
-import { CommandArea } from './command-input/CommandArea';
-import type { CommandInputDropHandle } from './drop-handles';
+import type { JanusClient } from '../ws';
+import { Transcript } from '../transcript/Transcript';
+import { StatusPanels } from '../StatusPanels';
+import { PickerOverlays } from '../PickerOverlays';
+import { CommandArea } from '../command-input/CommandArea';
+import type { CommandInputDropHandle } from '../drop-handles';
 import { AgentTabMeta } from './AgentTabMeta';
-import type { useViewSearchState } from './useViewSearchState';
-import type { VisibleTaskRow } from './task-picker-keys';
-import type { VisibleProfileRow } from './profile-picker-keys';
-import { useStatusWindows } from './useStatusWindows';
-import { statusButton } from './status-button';
-import type { FuzzyMatchResult } from './fuzzy-match';
-import { tabBodyBorder } from './tab-body-border';
+import type { useViewSearchState } from '../useViewSearchState';
+import type { VisibleTaskRow } from '../task-picker-keys';
+import type { VisibleProfileRow } from '../profile-picker-keys';
+import { useStatusWindows } from '../useStatusWindows';
+import { statusButton } from '../status-button';
+import type { FuzzyMatchResult } from '../fuzzy-match';
+import { tabBodyBorder } from '../tab-body-border';
 import { agentTabIntents } from './agent-tab-intents';
 
 type Properties = {

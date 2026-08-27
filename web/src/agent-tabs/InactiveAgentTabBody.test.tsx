@@ -2,7 +2,7 @@ import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type { TabView } from '@shared/protocol';
-import type { JanusClient } from './ws';
+import type { JanusClient } from '../ws';
 import { InactiveAgentTabBody } from './InactiveAgentTabBody';
 
 vi.stubGlobal('ResizeObserver', class {

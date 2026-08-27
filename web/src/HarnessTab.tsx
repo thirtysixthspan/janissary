@@ -2,7 +2,7 @@ import React, { forwardRef, useImperativeHandle, useRef } from 'react';
 import type { JanusClient } from './ws';
 import type { HarnessView, RemoteTarget } from '@shared/protocol';
 import { useXterm } from './useXterm';
-import { AgentTabMeta } from './AgentTabMeta';
+import { AgentTabMeta } from './agent-tabs/AgentTabMeta';
 import type { StatusWindowButtonProps } from './status-button';
 import type { HarnessTabHandle } from './tab-handles';
 

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { JanusClient } from './ws';
+import type { JanusClient } from '../ws';
 import { agentTabIntents } from './agent-tab-intents';
 
 function fakeClient() {

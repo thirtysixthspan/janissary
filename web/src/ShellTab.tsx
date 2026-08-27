@@ -1,7 +1,7 @@
 import React, { forwardRef, useImperativeHandle, useRef } from 'react';
 import type { JanusClient } from './ws';
 import { useXterm } from './useXterm';
-import { AgentTabMeta } from './AgentTabMeta';
+import { AgentTabMeta } from './agent-tabs/AgentTabMeta';
 import type { ShellTabHandle } from './tab-handles';
 import type { RemoteTarget } from '@shared/protocol';
 
