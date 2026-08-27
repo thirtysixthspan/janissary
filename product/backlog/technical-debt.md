@@ -4,8 +4,6 @@
 
 ## development
 
-* Centralize Chrome DevTools Protocol traffic from `src/chrome-extension-loader.ts` and `src/cdp-window-resize.ts` behind one connection-level dispatcher: both modules attach independent readers to the same pipe and reuse request id `1`, so overlapping extension loading, profile window resizing, or bounds capture can consume the same response and resolve with another command's payload. Give every command a unique id, parse the byte stream once, route replies through a pending-request map, and reject all pending work when the pipe closes. Severity: **high**.
-
 * Prevent an in-flight external-change reload from overwriting newer editor input in `web/src/editor/useEditorWatchReload.ts`: cleanliness is checked only before `readFile` starts, so typing while that request is pending still lets its eventual response call `api.load`, and multiple mtime reads can resolve out of order. Track the latest reload request, re-check dirty state before applying its result, and turn a change that became unsafe mid-read into the existing pending conflict instead of replacing the buffer. Severity: **high**.
 
 * Make `TranscriptStore` persistence atomic and observable in `src/transcript/store.ts`: every transcript event overwrites the preferred relaunch transcript in place and silently ignores write failures, so a partial write can corrupt it and a failed write can leave a valid-but-stale file that takes precedence over the newer log already stored in agent state. Use the shared atomic writer for saves and clears, retain the last valid transcript, and report bounded persistence failures instead of masking stale relaunch data. Severity: **high**.

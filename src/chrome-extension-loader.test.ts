@@ -1,6 +1,7 @@
 import { PassThrough } from 'node:stream';
 import { describe, it, expect, vi } from 'vitest';
 import { loadFrameEnablerExtension } from './chrome-extension-loader.js';
+import { CdpPipe } from './cdp-pipe.js';
 
 describe('loadFrameEnablerExtension', () => {
   it('sends Extensions.loadUnpacked over the pipe and resolves on a matching response', async () => {
@@ -9,7 +10,7 @@ describe('loadFrameEnablerExtension', () => {
     const written: string[] = [];
     writePipe.on('data', (chunk: Buffer) => { written.push(chunk.toString('utf8')); });
 
-    const promise = loadFrameEnablerExtension(writePipe, readPipe, '/path/to/chrome-extension');
+    const promise = loadFrameEnablerExtension(new CdpPipe(writePipe, readPipe), '/path/to/chrome-extension');
     readPipe.write(`${JSON.stringify({ id: 1, result: {} })}\0`);
     await promise;
 
@@ -30,7 +31,7 @@ describe('loadFrameEnablerExtension', () => {
     const readPipe = new PassThrough();
     const writeSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
 
-    const promise = loadFrameEnablerExtension(writePipe, readPipe, '/path/to/chrome-extension');
+    const promise = loadFrameEnablerExtension(new CdpPipe(writePipe, readPipe), '/path/to/chrome-extension');
     readPipe.write(`${JSON.stringify({ id: 1, error: { message: 'extensions domain disabled' } })}\0`);
     await promise;
 
@@ -47,7 +48,7 @@ describe('loadFrameEnablerExtension', () => {
     const readPipe = new PassThrough();
     const writeSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
 
-    const promise = loadFrameEnablerExtension(writePipe, readPipe, '/path/to/chrome-extension');
+    const promise = loadFrameEnablerExtension(new CdpPipe(writePipe, readPipe), '/path/to/chrome-extension');
     await vi.advanceTimersByTimeAsync(20_000);
     await promise;
 
