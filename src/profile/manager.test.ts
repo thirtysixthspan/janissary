@@ -13,6 +13,7 @@ import { makeTab } from '../tab/index.js';
 import { agentNames } from '../agent/names.js';
 import type { Managers } from '../managers.js';
 import type { Tab } from '../tab/types.js';
+import { setWindowBoundsReader } from '../window-resizer.js';
 
 function makeManagers(creator: Tab, tabs: Tab[] = [creator]): { managers: Managers; appended: { input: string; output: string }[] } {
   const appended: { input: string; output: string }[] = [];
@@ -54,6 +55,7 @@ describe('ProfileManager.run', () => {
     root = mkdtempSync(path.join(tmpdir(), 'janus-profmgr-'));
     initProfileDir(root);
     mkdirSync(path.join(root, 'profiles'), { recursive: true });
+    setWindowBoundsReader(undefined);
   });
 
   afterAll(() => {
@@ -142,6 +144,35 @@ describe('ProfileManager.run', () => {
 
     expect(appended[0].output).toBe('Profile "good" is valid.');
     expect(appended[1].output).toContain('Profile "bad" is not valid:');
+  });
+
+  it('reports a rejected profile save in the issuing transcript', async () => {
+    const janus = makeTab('janus', 'red');
+    const { managers, appended } = makeManagers(janus);
+    setWindowBoundsReader(async () => { throw new Error('window unavailable'); });
+
+    new ProfileManager(managers).run('profile save demo', 'janus');
+
+    await vi.waitFor(() => expect(appended).toHaveLength(1));
+    expect(appended).toEqual([{
+      input: 'profile save demo',
+      output: 'Profile command failed: window unavailable.',
+    }]);
+  });
+
+  it('reports a rejected profile launch in the issuing transcript', async () => {
+    writeProfile('editor-only', JSON.stringify({ tabs: [{ type: 'editor', path: '$root/notes.md' }] }));
+    const janus = makeTab('janus', 'red');
+    const { managers, appended } = makeManagers(janus);
+    vi.mocked(managers.openFile.edit).mockImplementation(() => { throw new Error('editor unavailable'); });
+
+    new ProfileManager(managers).run('profile launch editor-only', 'janus');
+
+    await vi.waitFor(() => expect(appended).toHaveLength(1));
+    expect(appended).toEqual([{
+      input: 'profile launch editor-only',
+      output: 'Profile command failed: editor unavailable.',
+    }]);
   });
 });
 

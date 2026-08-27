@@ -4,8 +4,6 @@
 
 ## development
 
-* Give asynchronous profile actions an explicit failure path in `src/profile/manager.ts`: both `saveProfile(...).then(...)` and `openProfileEntries(...)` are launched with `void` and no rejection handler, so filesystem, client-state collection, CDP, or plugin activation failures escape the command without finalizing its transcript entry and may become unhandled promise rejections. Await through a shared command wrapper that converts failures into one user-visible result while preserving successful summaries. Severity: **high**.
-
 * Stop inferring profile editor success from whichever tab is active in `src/profile/editors.ts` and `src/open-file-manager.ts`: `openProfileEditors` always appends an "Opened editor tab" note and adds the active tab as a placement/focus candidate even when `edit` refused an oversized file or otherwise opened nothing, so a failed profile entry can relocate or focus an unrelated tab and still be reported as successful. Return a concrete open/reuse result from the editor path and add candidates and notes only for the editor that result identifies. Severity: **medium**.
 
 * Serialize overlapping profile saves in `src/profile/manager.ts`, `src/profile/save.ts`, and `src/file-navigator/selection-request.ts`: starting a second save calls `requestTreeSelections`, which deliberately settles the first save's pending selection request with an empty map, so rapid saves can silently omit navigator cursor and selection state from the earlier profile even though both commands report success. Queue or independently correlate save operations so one command cannot cancel another command's capture. Severity: **medium**.
