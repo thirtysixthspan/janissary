@@ -30,6 +30,7 @@ The command bar accepts the shortcuts below while an agent tab is active. `Ctrl+
 | `Ctrl+G` | Open the fuzzy tab navigator, or close it if it is open |
 | `Ctrl+E` | Open the queue picker |
 | `Ctrl+T` | Expand or collapse the current tab's agent tool steps |
+| `Cmd+F` | Search the current tab's transcript |
 | `Cmd+P` | Open the Quick Open file finder |
 | `Cmd+T` | Open a new agent tab |
 | `Tab` | Complete a file path, agent name, connection, browser subcommand, or window ID |

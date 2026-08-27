@@ -79,6 +79,7 @@ export default defineConfig({
             { text: "Databases", link: "/user-documentation/command-bar/database" },
             { text: "Connections", link: "/user-documentation/command-bar/connections" },
             { text: "Command history", link: "/user-documentation/command-bar/history" },
+            { text: "Searching a transcript", link: "/user-documentation/command-bar/transcript-search" },
             { text: "Command queue", link: "/user-documentation/command-bar/queue" },
             { text: "Send input to a tab", link: "/user-documentation/command-bar/send" },
             { text: "Messaging", link: "/user-documentation/command-bar/messaging" },
