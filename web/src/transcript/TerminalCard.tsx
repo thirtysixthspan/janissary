@@ -1,9 +1,9 @@
 import React, { useRef, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import type { JanusClient } from './ws';
+import type { JanusClient } from '../ws';
 import type { TerminalEntry } from '@shared/protocol';
-import { useXterm } from './useXterm';
-import { collapsedIcon } from './icons';
+import { useXterm } from '../useXterm';
+import { collapsedIcon } from '../icons';
 
 type Properties = { entry: TerminalEntry; client: JanusClient };
 

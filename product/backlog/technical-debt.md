@@ -4,8 +4,6 @@
 
 ## development
 
-* Move `web/src/TerminalCard.tsx` and its sole supporting hook `web/src/useXterm.ts` into `web/src/transcript/` with their tests: `web/src/transcript/Transcript.tsx` is the only production consumer of `TerminalCard`, and `TerminalCard` is the only consumer of `useXterm`, so leaving both in the shared app root violates §2 (colocate; promote to shared only on the second consumer) and makes terminal-line behavior look reusable while splitting transcript changes across two areas. Relocate the component and hook beside `Transcript.tsx` and update its one direct production import; no other feature import is affected. Severity: **medium**.
-
 ## deferred
 
 * Colocate schedule creation with the schedules feature by moving `web/src/ScheduleDialog.tsx` and `web/src/schedule-command.ts` (plus their tests) into `web/src/plugins/schedules/`: the dialog and its command-building rules implement the same scheduling capability as `web/src/plugins/schedules/SchedulesTab.tsx` but are separated into the flat app root, violating §1 (organize by feature, not by file type), so changes to schedule forms and schedule display require surveying two unrelated-looking areas. Update the direct import in `web/src/AppMain.tsx`; the dialog has one production consumer, while the bundled schedules tab remains loaded through `web/src/plugins/registry.tsx`. Severity: **medium**. — deferred: complexity 8/10, the plugin boundary forbids the schedule dialog's host protocol, `JanusClient`, and launch-dialog imports, so colocation requires redesigning the host/plugin contract rather than moving files.
