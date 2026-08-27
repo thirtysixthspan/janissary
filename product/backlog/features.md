@@ -6,6 +6,8 @@
 
 * in the editor tab, bind cmd+d to multiselect the next instance of the text that is currently selected. this feature should act similar to that in ms visual studio code.
 
+* there needs to be a way to execute a shell command in an agent so that it can handle interactive programs that aren't automatically recognized, like htop. for example prefixing the command with i! and stripping othe that prefix before it goes to shell.
+
 * add ACP support to remote agents.
 
 * define how new agent and file navigator buttons should work on remote machines.
