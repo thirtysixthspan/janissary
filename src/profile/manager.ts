@@ -14,6 +14,8 @@ import { newAgentOp } from './new-agent.js';
 import { placeAgent } from './place-agent.js';
 
 export class ProfileManager {
+  private saveQueue: Promise<void> = Promise.resolve();
+
   constructor(private managers: Managers) {}
 
   private finish(action: Promise<void>, out: (text: string) => void): void {
@@ -28,6 +30,23 @@ export class ProfileManager {
     out(formatSaveSummary(name, summary));
   }
 
+  private queueSave(name: string, out: (text: string) => void): void {
+    const action = this.runQueuedSave(this.saveQueue, name, out);
+    this.saveQueue = this.ignoreFailure(action);
+    this.finish(action, out);
+  }
+
+  private async runQueuedSave(
+    previous: Promise<void>, name: string, out: (text: string) => void,
+  ): Promise<void> {
+    try { await previous; } catch { /* the next save still runs */ }
+    await this.save(name, out);
+  }
+
+  private async ignoreFailure(action: Promise<void>): Promise<void> {
+    try { await action; } catch { /* failures are reported by finish */ }
+  }
+
   run(command: string, label: string): void {
     const parsed = parseProfileCommand(command);
     const out = (text: string) => this.managers.tab.append(label, { input: command, output: text });
@@ -38,7 +57,7 @@ export class ProfileManager {
       return;
     }
     if (parsed.action === 'save') {
-      this.finish(this.save(parsed.name, out), out);
+      this.queueSave(parsed.name, out);
       return;
     }
     if (parsed.action === 'validate') {
