@@ -22,7 +22,7 @@
 | `video` | `video <path>` opens a video through the bundled video tab plugin; accepts the same paths and wildcards as `open` |
 | `audio` | `audio <path>` queues audio into the single audio tab through the bundled audio plugin; accepts the same paths and wildcards as `open` |
 | `plugins` | List bundled tab plugins with their API version, activation state and duration, or disabled reason |
-| `edit` | Open a file in the plain-text editor (`edit <file>` or `edit <file>:<line>` to jump to a line) |
+| `edit` | Open a file for editing (`edit <file>` or `edit <file>:<line>` to jump to a line) — the plain-text editor for most files, the image editor for an image |
 | `rename` | Rename the current tab's display name (`rename <name>`); bare `rename` clears the alias |
 | `connection` | List or close open connections (sqlite/shell/acp/browser/ssh) |
 | `schedule` | Run a command later — once or on a recurring schedule |
