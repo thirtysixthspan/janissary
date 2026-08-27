@@ -2,7 +2,7 @@ import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { EditorState } from './model';
 import { toText } from './model';
-import { EditorLine, DiffAddedLine, lineSelection } from './render';
+import { EditorLine, DiffAddedLine, lineExtras, lineSelection } from './render';
 import type { EditorSuggestApi } from './useEditorSuggest';
 import { suggestPillLabel } from './suggest-request';
 import { suggestDiffPreview, type SuggestDiffPreview } from './suggestDiff';
@@ -49,6 +49,7 @@ export function EditorLines({ state, tokens, suggest, active, gutterCh, caretRef
 
   const renderLine = (index: number, removed: boolean) => {
     const [selFrom, selTo] = lineSelection(state, index);
+    const extras = lineExtras(state, index);
     const onCursorLine = index === state.cursor.line;
     // A row after an open query line's anchor reads as if the anchor's line were not counted, so
     // the query renders as an insertion between two lines rather than a replacement of one.
@@ -64,6 +65,8 @@ export function EditorLines({ state, tokens, suggest, active, gutterCh, caretRef
         selTo={selTo}
         caretCol={onCursorLine && active && suggest.focusTarget === 'buffer' ? state.cursor.col : -1}
         caretRef={onCursorLine ? caretRef : null}
+        extraSpans={extras.spans}
+        extraCarets={active && suggest.focusTarget === 'buffer' ? extras.carets : ''}
         tokens={tokens[index] ?? []}
         removed={removed}
         gutterNumber={gutterNumber}

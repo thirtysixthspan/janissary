@@ -23,7 +23,7 @@ function loaderFor(handler: EditorPluginHandler): EditorPluginLoader {
 const REQUEST: EditorPluginRequest = {
   command: 'do-it',
   file: 'a.ts',
-  selection: { anchor: null, cursor: { line: 0, col: 0 } },
+  selections: [{ anchor: null, cursor: { line: 0, col: 0 } }],
   range: { start: { line: 0, col: 0 }, end: { line: 0, col: 1 } },
   lines: ['a'],
 };

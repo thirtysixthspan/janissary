@@ -1248,4 +1248,129 @@ describe('EditorTab', () => {
       expect(queryRowText(container)).toBe('>');
     });
   });
+
+  // Cmd+D drives the whole path end to end: the plugin finds the occurrences, the core editor holds
+  // the set, renders it, and types into every caret of it.
+  describe('multiple selections', () => {
+    const rowText = (container: HTMLElement) => [
+      ...container.querySelectorAll(':scope .editor-row:not(.editor-row-query) .editor-content'),
+    ].map((row) => (row.textContent ?? '').replaceAll('\u{200B}', ''));
+
+    const selectedSpans = (container: HTMLElement) => [
+      ...container.querySelectorAll(':scope .editor-content .editor-sel'),
+    ].map((span) => span.textContent);
+
+    async function renderFoos(client: JanusClient) {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+        ok: true, text: () => Promise.resolve('foo bar\nfoo baz'),
+      } as unknown as Response));
+      const result = render(<EditorTab editor={makeView()} tab={makeTab()} client={client} active />);
+      await waitFor(() => expect(screen.getByText('bar', { exact: false })).toBeInTheDocument());
+      return result;
+    }
+
+    // The caret starts at the top of the buffer, so the first press expands the word under it.
+    const pressCmdD = () => fireEvent.keyDown(textarea(), { key: 'd', metaKey: true });
+
+    it('selects the word under the caret, then adds the next occurrence', async () => {
+      const { client } = makeClient();
+      const { container } = await renderFoos(client);
+
+      pressCmdD();
+      await waitFor(() => expect(selectedSpans(container)).toEqual(['foo']));
+
+      pressCmdD();
+      await waitFor(() => expect(selectedSpans(container)).toEqual(['foo', 'foo']));
+    });
+
+    it('types into every selection at once, and undoes all of it in one step', async () => {
+      const { client } = makeClient();
+      const { container } = await renderFoos(client);
+
+      pressCmdD();
+      await waitFor(() => expect(selectedSpans(container)).toEqual(['foo']));
+      pressCmdD();
+      await waitFor(() => expect(selectedSpans(container)).toEqual(['foo', 'foo']));
+
+      type('qux');
+      await waitFor(() => expect(rowText(container)[0]).toBe('qux bar'));
+      expect(rowText(container)[1]).toBe('qux baz');
+
+      fireEvent.keyDown(textarea(), { key: 'z', metaKey: true });
+      await waitFor(() => expect(rowText(container)[0]).toBe('foo bar'));
+      expect(rowText(container)[1]).toBe('foo baz');
+    });
+
+    it('does nothing once every occurrence is selected', async () => {
+      const { client } = makeClient();
+      const { container } = await renderFoos(client);
+
+      pressCmdD();
+      await waitFor(() => expect(selectedSpans(container)).toEqual(['foo']));
+      pressCmdD();
+      await waitFor(() => expect(selectedSpans(container)).toEqual(['foo', 'foo']));
+
+      pressCmdD();
+      await act(async () => { await Promise.resolve(); });
+      expect(selectedSpans(container)).toEqual(['foo', 'foo']);
+    });
+
+    it('steps back one selection with Cmd+U', async () => {
+      const { client } = makeClient();
+      const { container } = await renderFoos(client);
+
+      pressCmdD();
+      await waitFor(() => expect(selectedSpans(container)).toEqual(['foo']));
+      pressCmdD();
+      await waitFor(() => expect(selectedSpans(container)).toEqual(['foo', 'foo']));
+
+      fireEvent.keyDown(textarea(), { key: 'u', metaKey: true });
+      await waitFor(() => expect(selectedSpans(container)).toEqual(['foo']));
+    });
+
+    it('collapses to one caret on Escape', async () => {
+      const { client } = makeClient();
+      const { container } = await renderFoos(client);
+
+      pressCmdD();
+      await waitFor(() => expect(selectedSpans(container)).toEqual(['foo']));
+      pressCmdD();
+      await waitFor(() => expect(selectedSpans(container)).toEqual(['foo', 'foo']));
+
+      fireEvent.keyDown(textarea(), { key: 'Escape' });
+      await waitFor(() => expect(selectedSpans(container)).toEqual(['foo']));
+
+      // A second Escape is the editor's own again: it drops the remaining selection.
+      fireEvent.keyDown(textarea(), { key: 'Escape' });
+      await waitFor(() => expect(selectedSpans(container)).toEqual([]));
+    });
+
+    it('collapses to one caret when the find overlay opens', async () => {
+      const { client } = makeClient();
+      const { container } = await renderFoos(client);
+
+      pressCmdD();
+      await waitFor(() => expect(selectedSpans(container)).toEqual(['foo']));
+      pressCmdD();
+      await waitFor(() => expect(selectedSpans(container)).toEqual(['foo', 'foo']));
+
+      fireEvent.keyDown(textarea(), { key: 'f', metaKey: true });
+      await waitFor(() => expect(screen.getByPlaceholderText('Search buffer')).toBeInTheDocument());
+      expect(selectedSpans(container)).toEqual([]);
+    });
+
+    it('collapses to one caret on save', async () => {
+      const { client, saveFile } = makeClient();
+      const { container } = await renderFoos(client);
+
+      pressCmdD();
+      await waitFor(() => expect(selectedSpans(container)).toEqual(['foo']));
+      pressCmdD();
+      await waitFor(() => expect(selectedSpans(container)).toEqual(['foo', 'foo']));
+
+      fireEvent.keyDown(textarea(), { key: 's', metaKey: true });
+      await waitFor(() => expect(saveFile).toHaveBeenCalled());
+      expect(selectedSpans(container)).toEqual([]);
+    });
+  });
 });

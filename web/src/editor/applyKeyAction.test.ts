@@ -100,3 +100,139 @@ describe('applyKeyAction', () => {
     expect(setState).not.toHaveBeenCalled();
   });
 });
+
+// Three selections over the three `foo`s of 'foo foo foo', the middle one primary-last so the
+// creation order the editor keeps is exercised alongside document order.
+const threeFoos = (): EditorState => ({
+  lines: ['foo foo foo'],
+  cursor: { line: 0, col: 11 },
+  anchor: { line: 0, col: 8 },
+  extraSelections: [
+    { anchor: { line: 0, col: 0 }, cursor: { line: 0, col: 3 } },
+    { anchor: { line: 0, col: 4 }, cursor: { line: 0, col: 7 } },
+  ],
+});
+
+describe('applyKeyAction — several selections', () => {
+  it('types at every selection as one undo step', () => {
+    const surface = makeSurface(threeFoos());
+    applyKeyAction(surface, { kind: 'insert', text: 'q' }, 20);
+    expect(surface.get().lines).toEqual(['q q q']);
+    applyKeyAction(surface, { kind: 'undo' }, 20);
+    expect(surface.get().lines).toEqual(['foo foo foo']);
+  });
+
+  it('deletes backward at every selection', () => {
+    const surface = makeSurface(threeFoos());
+    applyKeyAction(surface, { kind: 'deleteBackward' }, 20);
+    expect(surface.get().lines).toEqual(['  ']);
+  });
+
+  it('deletes forward one character at every bare caret', () => {
+    const surface = makeSurface({
+      lines: ['abc'],
+      cursor: { line: 0, col: 2 },
+      anchor: null,
+      extraSelections: [{ anchor: null, cursor: { line: 0, col: 0 } }],
+    });
+    applyKeyAction(surface, { kind: 'deleteForward' }, 20);
+    expect(surface.get().lines).toEqual(['b']);
+  });
+
+  it('copies every selection joined by newlines, in document order', () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal('navigator', { clipboard: { writeText } });
+    applyKeyAction(makeSurface(threeFoos()), { kind: 'copy' }, 20);
+    expect(writeText).toHaveBeenCalledWith('foo\nfoo\nfoo');
+    vi.unstubAllGlobals();
+  });
+
+  it('cuts every selection, writing the same text it would have copied', () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal('navigator', { clipboard: { writeText } });
+    const surface = makeSurface(threeFoos());
+    applyKeyAction(surface, { kind: 'cut' }, 20);
+    expect(writeText).toHaveBeenCalledWith('foo\nfoo\nfoo');
+    expect(surface.get().lines).toEqual(['  ']);
+    vi.unstubAllGlobals();
+  });
+
+  it('distributes a paste whose line count matches the selection count', () => {
+    const surface = makeSurface(threeFoos());
+    applyKeyAction(surface, { kind: 'insert', text: 'one\ntwo\nthree' }, 20);
+    expect(surface.get().lines).toEqual(['one two three']);
+  });
+
+  it('pastes text whose line count does not match into every selection whole', () => {
+    const surface = makeSurface(threeFoos());
+    applyKeyAction(surface, { kind: 'insert', text: 'x\ny' }, 20);
+    expect(surface.get().lines).toEqual(['x', 'y x', 'y x', 'y']);
+  });
+
+  it('inserts a line break at every caret rather than distributing Enter', () => {
+    const surface = makeSurface({
+      lines: ['ab'],
+      cursor: { line: 0, col: 2 },
+      anchor: null,
+      extraSelections: [{ anchor: null, cursor: { line: 0, col: 1 } }],
+    });
+    applyKeyAction(surface, { kind: 'insert', text: '\n' }, 20);
+    expect(surface.get().lines).toEqual(['a', 'b', '']);
+  });
+
+  it('moves every caret independently, keeping the set alive', () => {
+    const surface = makeSurface(threeFoos());
+    // → collapses each selection to its own right edge, exactly as it does for one selection.
+    applyKeyAction(surface, { kind: 'move', dir: 'right', extend: false }, 20);
+    expect(surface.get().extraSelections).toEqual([
+      { anchor: null, cursor: { line: 0, col: 3 }, goalCol: undefined },
+      { anchor: null, cursor: { line: 0, col: 7 }, goalCol: undefined },
+    ]);
+    expect(surface.get().cursor).toEqual({ line: 0, col: 11 });
+
+    applyKeyAction(surface, { kind: 'move', dir: 'right', extend: true }, 20);
+    expect(surface.get().extraSelections).toEqual([
+      { anchor: { line: 0, col: 3 }, cursor: { line: 0, col: 4 }, goalCol: undefined },
+      { anchor: { line: 0, col: 7 }, cursor: { line: 0, col: 8 }, goalCol: undefined },
+    ]);
+  });
+
+  it('ignores the measured vertical target, which only the primary caret has', () => {
+    const surface = makeSurface({
+      lines: ['abc', 'def'],
+      cursor: { line: 0, col: 2 },
+      anchor: null,
+      extraSelections: [{ anchor: null, cursor: { line: 0, col: 0 } }],
+    });
+    const resolveVertical = vi.fn().mockReturnValue({ line: 1, col: 0 });
+    applyKeyAction(surface, { kind: 'move', dir: 'down', extend: false }, 20, resolveVertical);
+    expect(resolveVertical).not.toHaveBeenCalled();
+    expect(surface.get().cursor).toEqual({ line: 1, col: 2 });
+    expect(surface.get().extraSelections).toEqual([{ anchor: null, cursor: { line: 1, col: 0 }, goalCol: 0 }]);
+  });
+
+  it('collapses the set before saving', () => {
+    const onSave = vi.fn();
+    const surface = makeSurface(threeFoos(), onSave);
+    applyKeyAction(surface, { kind: 'save' }, 20);
+    expect(onSave).toHaveBeenCalled();
+    expect(surface.get().extraSelections).toBeUndefined();
+    expect(surface.get().lines).toEqual(['foo foo foo']);
+  });
+
+  it('collapses the set on Escape and on select-all', () => {
+    const escaped = makeSurface(threeFoos());
+    applyKeyAction(escaped, { kind: 'escape' }, 20);
+    expect(escaped.get().extraSelections).toBeUndefined();
+
+    const all = makeSurface(threeFoos());
+    applyKeyAction(all, { kind: 'selectAll' }, 20);
+    expect(all.get().extraSelections).toBeUndefined();
+  });
+
+  it('leaves an empty set behaving exactly as one selection does today', () => {
+    const surface = makeSurface({ ...st('abc', 0), extraSelections: [] });
+    applyKeyAction(surface, { kind: 'insert', text: 'x' }, 20);
+    expect(surface.get().lines).toEqual(['xabc']);
+  });
+});

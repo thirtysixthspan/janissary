@@ -48,6 +48,6 @@ export function claimedByCore(chord: EditorChord): boolean {
     shiftKey: chord.shift === true,
     altKey: chord.alt === true,
   };
-  if (yieldsToPlugins(event, true)) return false;
+  if (yieldsToPlugins(event, { selectionSpansLines: true, multipleSelections: true })) return false;
   return actionForKey(event) !== null;
 }

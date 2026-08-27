@@ -248,23 +248,56 @@ and no message. However many lines a press changed, one undo restores all of the
 Indentation here is not language-aware: the amount is always two spaces, whatever the file type,
 and nothing indents automatically as you type.
 
+### Multiple selections
+
+Cmd+D selects the next occurrence of the selected text in addition to the one already selected. With
+nothing selected, the first press selects the word under the caret — the same word a double click
+picks — and the press after that starts adding occurrences. Matching is exact and case-sensitive:
+with `foo` selected, `foobar` is an occurrence and `Foo` is not. A selection spanning several lines
+is a valid search term and finds its next multi-line occurrence.
+
+The search runs forward from the most recently added selection and continues from the top of the
+file once it passes the end, skipping anything already selected. Once every occurrence in the buffer
+is selected, a further press does nothing at all: no change, no undo step, no message.
+
+Every selection is highlighted and shows its own caret. Typing, Backspace, Delete, and paste apply
+at every selection at once, and however many the buffer has, one undo restores all of them together.
+Arrow keys, Home/End, and shift-extension move each caret independently, keeping the set alive; two
+carets that land in the same place become one. Vertical movement with several carets moves each by a
+whole line rather than by a visual row, which is the one place a wrapped line behaves differently
+than it does with a single caret. Nothing counts the selections on screen — the highlights are the
+only indication that there are several.
+
+Cmd+C copies each selection's text joined by newlines, in the order the selections appear in the
+file, and Cmd+X does the same and then deletes at every one of them. Cmd+V distributes: pasting text
+whose line count matches the number of selections gives each selection its own line, and pasting
+anything else puts the whole text at every selection.
+
+Cmd+U drops the most recently added selection, one press at a time. Escape drops all of them at once,
+leaving the most recently added as the only caret; a second Escape then clears that selection the way
+Escape always has. Clicking anywhere in the buffer, opening the find overlay, saving, and an
+automatic reload of an external change each collapse back to a single caret as well. Switching to
+another tab and back does not — the selections are still there, like the cursor and the scroll
+position.
+
 ### Editor plugin bindings
 
-Commenting and indenting are contributed by editor plugins rather than built into the editor (see
-[[editor-plugins]]). Other chords may be contributed the same way.
+Commenting, indenting, and multi-selection are contributed by editor plugins rather than built into
+the editor (see [[editor-plugins]]). Other chords may be contributed the same way.
 
-The editor's own key bindings win, apart from the two it explicitly hands over: a plugin is
+The editor's own key bindings win, apart from the three it explicitly hands over: a plugin is
 otherwise offered a chord only where the editor itself has none, so nothing a plugin does can shadow
-saving, undo, find, or any other built-in editing key. The two handed over are Tab, while the
-selection spans more than one line, and Shift+Tab; if no plugin claims one of them, the editor's own
-action for it runs instead, so Tab keeps inserting a tab character even when the plugin bound to it
+saving, undo, find, or any other built-in editing key. The three handed over are Tab, while the
+selection spans more than one line; Shift+Tab; and Escape, while more than one selection is active.
+If no plugin claims one of them, the editor's own action for it runs instead, so Tab keeps inserting
+a tab character and Escape keeps collapsing the selection even when the plugin bound to it
 has stopped responding. A plugin chord does nothing while a persona suggestion is pending review,
 and nothing while the ephemeral agent query line holds focus — where Tab still completes a persona
 name — exactly like every other keystroke in those states.
 
-A plugin may change the buffer's text and the selection, and nothing else — it cannot save, scroll,
+A plugin may change the buffer's text and the selections, and nothing else — it cannot save, scroll,
 rename, close, or open anything. Its change lands as a single undo step. If a plugin answers with
-something that does not fit the buffer, nothing is applied at all: the text, the selection, and the
+something that does not fit the buffer, nothing is applied at all: the text, the selections, and the
 undo history are left exactly as they were, that plugin stops responding for the rest of the
 session, and one line naming it and the reason appears in the notifications tab.
 

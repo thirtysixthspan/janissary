@@ -2,7 +2,10 @@
 // edits and where to leave the selection. Pure — every rule indenting has lives here, and none of
 // them looks at the file's name, because indentation is not a language feature in this editor.
 
-import type { EditorPluginEdit, EditorPluginRequest, EditorPluginResult } from '../api';
+import {
+  primarySelection,
+  type EditorPluginEdit, type EditorPluginRequest, type EditorPluginResult,
+} from '../api';
 
 export type ShiftDirection = 'indent' | 'outdent';
 
@@ -43,15 +46,16 @@ function editFor(line: string, lineNumber: number, direction: ShiftDirection): E
 // however much that line's own indentation moved.
 function selectionFor(
   request: EditorPluginRequest, lastLine: number, lastLineWidth: number, caretShift: number,
-): EditorPluginResult['selection'] {
-  if (request.selection.anchor === null) {
-    const { line, col } = request.selection.cursor;
-    return { anchor: null, cursor: { line, col: Math.max(0, Math.min(col + caretShift, lastLineWidth)) } };
+): EditorPluginResult['selections'] {
+  const selection = primarySelection(request);
+  if (selection.anchor === null) {
+    const { line, col } = selection.cursor;
+    return [{ anchor: null, cursor: { line, col: Math.max(0, Math.min(col + caretShift, lastLineWidth)) } }];
   }
-  return {
+  return [{
     anchor: { line: request.range.start.line, col: 0 },
     cursor: { line: lastLine, col: lastLineWidth },
-  };
+  }];
 }
 
 export function shiftLines(
@@ -73,10 +77,10 @@ export function shiftLines(
     edits.push(edit);
     const delta = edit.text.length - edit.end.col;
     if (offset === lines.length - 1) lastLineWidth = line.length + delta;
-    if (lineNumber === request.selection.cursor.line) caretShift = delta;
+    if (lineNumber === primarySelection(request).cursor.line) caretShift = delta;
   }
 
   if (edits.length === 0) return null;
 
-  return { edits, selection: selectionFor(request, lastLine, lastLineWidth, caretShift) };
+  return { edits, selections: selectionFor(request, lastLine, lastLineWidth, caretShift) };
 }

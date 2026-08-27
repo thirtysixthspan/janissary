@@ -2,7 +2,8 @@ import { describe, it, expect } from 'vitest';
 import {
   fromText, toText, clampPos, selectionRange, selectedText, insertText,
   deleteBackward, deleteForward, killToLineEnd, setSelection, collapseSelection, selectAll,
-  wordRangeAt, type EditorState,
+  wordRangeAt, allSelections, orderedSelections, mergeSelections, withSelections,
+  hasMultipleSelections, selectionsText, selectionBounds, type EditorState,
 } from './model';
 import { moveCursor, movePage, moveLineEdge, moveDocumentEdge, moveToVisualTarget } from './motion';
 
@@ -136,6 +137,66 @@ describe('selection', () => {
     const s = setSelection(state('ab'), { line: 9, col: 9 }, { line: 0, col: 9 });
     expect(s.anchor).toEqual({ line: 0, col: 2 });
     expect(s.cursor).toEqual({ line: 0, col: 2 });
+  });
+});
+
+describe('the selection set', () => {
+  // Two extra selections in creation order, with the primary on the last `foo`.
+  const set = (): EditorState => ({
+    lines: ['foo foo foo'],
+    cursor: { line: 0, col: 11 },
+    anchor: { line: 0, col: 8 },
+    extraSelections: [
+      { anchor: { line: 0, col: 4 }, cursor: { line: 0, col: 7 } },
+      { anchor: { line: 0, col: 0 }, cursor: { line: 0, col: 3 } },
+    ],
+  });
+
+  it('is empty for a freshly loaded buffer', () => {
+    expect(fromText('a\nb').extraSelections).toBeUndefined();
+    expect(hasMultipleSelections(fromText('a\nb'))).toBe(false);
+  });
+
+  it('reads in creation order with the primary last', () => {
+    expect(allSelections(set()).at(-1)).toEqual({
+      anchor: { line: 0, col: 8 }, cursor: { line: 0, col: 11 }, goalCol: undefined,
+    });
+    expect(allSelections(set())).toHaveLength(3);
+  });
+
+  it('orders by document position independently of creation order', () => {
+    expect(orderedSelections(set()).map((sel) => selectionBounds(sel).start.col)).toEqual([0, 4, 8]);
+  });
+
+  it('merges selections covering the same range, keeping the primary', () => {
+    const duplicate = { anchor: null, cursor: { line: 0, col: 1 } };
+    const merged = mergeSelections([duplicate, { anchor: null, cursor: { line: 0, col: 5 } }, duplicate]);
+    expect(merged).toEqual([{ anchor: null, cursor: { line: 0, col: 5 } }, duplicate]);
+  });
+
+  it('takes the last entry of a replacement list as the primary', () => {
+    const next = withSelections(state('foo foo'), [
+      { anchor: null, cursor: { line: 0, col: 0 } },
+      { anchor: null, cursor: { line: 0, col: 4 } },
+    ]);
+    expect(next.cursor).toEqual({ line: 0, col: 4 });
+    expect(next.extraSelections).toEqual([{ anchor: null, cursor: { line: 0, col: 0 } }]);
+  });
+
+  it('reads every selection\'s text in document order, joined by newlines', () => {
+    expect(selectionsText(set())).toBe('foo\nfoo\nfoo');
+  });
+
+  it('reads one selection exactly as selectedText does', () => {
+    const one = state('abc', { line: 0, col: 3 }, { line: 0, col: 1 });
+    expect(selectionsText(one)).toBe(selectedText(one));
+    expect(selectionsText(state('abc'))).toBe('');
+  });
+
+  it('is dropped by every collapse the editor already had', () => {
+    expect(collapseSelection(set()).extraSelections).toBeUndefined();
+    expect(selectAll(set()).extraSelections).toBeUndefined();
+    expect(setSelection(set(), { line: 0, col: 0 }, { line: 0, col: 1 }).extraSelections).toBeUndefined();
   });
 });
 

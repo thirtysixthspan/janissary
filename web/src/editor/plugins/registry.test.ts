@@ -97,6 +97,25 @@ describe('validateDeclarations', () => {
     expect(rejections[0].reason).toContain('requires editor plugin API 99');
   });
 
+  it('rejects a plugin written against version 1, whose answer shape the host no longer accepts', () => {
+    const { rejections } = validateDeclarations([declaration({ apiVersion: 1 })]);
+    expect(rejections[0].reason)
+      .toBe(`requires editor plugin API 1; host provides ${EDITOR_PLUGIN_API_VERSION}`);
+  });
+
+  it('refuses a latecomer claiming a chord a shipped plugin already has', () => {
+    const { rejections } = validateDeclarations([
+      ...editorPluginDeclarations,
+      declaration({
+        id: 'latecomer',
+        bindings: [{ command: 'steal', chord: { key: 'd', meta: true }, needs: 'selection' }],
+      }),
+    ]);
+    expect(rejections).toEqual([
+      { id: 'latecomer', reason: 'chord for "steal" is already claimed by "multiselect"' },
+    ]);
+  });
+
   it('rejects a declaration with no bindings', () => {
     const { rejections } = validateDeclarations([declaration({ bindings: [] })]);
     expect(rejections[0].reason).toBe('declares no bindings');

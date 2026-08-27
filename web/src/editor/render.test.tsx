@@ -69,6 +69,55 @@ describe('EditorLine token segments', () => {
   });
 });
 
+describe('EditorLine with several selections', () => {
+  it('renders one editor-sel segment per selected span on the line', () => {
+    const { container } = render(
+      <EditorLine
+        text="foo foo foo" line={0} gutterCh={2} isCurrent selFrom={8} selTo={11} caretCol={11}
+        caretRef={null} tokens={[]} extraSpans="0:3 4:7" extraCarets="3 7"
+      />,
+    );
+    const selected = [...container.querySelectorAll(':scope .editor-content .editor-sel')];
+    expect(selected.map((span) => span.textContent)).toEqual(['foo', 'foo', 'foo']);
+  });
+
+  it('gives the ref to the primary caret only, and still draws the others', () => {
+    const caretRef = createRef<HTMLSpanElement>();
+    const { container } = render(
+      <EditorLine
+        text="foo foo" line={0} gutterCh={2} isCurrent selFrom={-1} selTo={-1} caretCol={0}
+        caretRef={caretRef} tokens={[]} extraSpans="" extraCarets="4"
+      />,
+    );
+    const carets = [...container.querySelectorAll(':scope .editor-content .editor-caret')];
+    expect(carets).toHaveLength(2);
+    expect(caretRef.current).toBe(carets[0]);
+  });
+
+  it('draws an extra caret sitting at the end of the line', () => {
+    const { container } = render(
+      <EditorLine
+        text="abc" line={0} gutterCh={2} isCurrent={false} selFrom={-1} selTo={-1} caretCol={-1}
+        caretRef={null} tokens={[]} extraSpans="" extraCarets="3"
+      />,
+    );
+    expect(container.querySelectorAll(':scope .editor-content .editor-caret')).toHaveLength(1);
+  });
+
+  it('renders exactly as before when the extras are empty', () => {
+    const withEmpty = render(
+      <EditorLine
+        text="const x" line={0} gutterCh={2} isCurrent selFrom={0} selTo={5} caretCol={5}
+        caretRef={null} tokens={[]} extraSpans="" extraCarets=""
+      />,
+    ).container.innerHTML;
+    const without = render(
+      <EditorLine text="const x" line={0} gutterCh={2} isCurrent selFrom={0} selTo={5} caretCol={5} caretRef={null} tokens={[]} />,
+    ).container.innerHTML;
+    expect(withEmpty).toBe(without);
+  });
+});
+
 describe('EditorLine suggestion pill', () => {
   const pill: SuggestPill = { text: 'run', runnable: true };
 

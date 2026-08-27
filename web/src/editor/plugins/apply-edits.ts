@@ -4,7 +4,7 @@
 // telling anyone. On any violation nothing is applied at all and the caller disables the plugin.
 
 import type { EditorState, Pos } from '../model';
-import { posBefore, samePos } from '../model';
+import { posBefore, samePos, selectionBounds, withSelections } from '../model';
 import type { EditorPluginEdit, EditorPluginResult, EditorSelection } from './api';
 
 export type ApplyOutcome =
@@ -34,11 +34,34 @@ function editFault(lines: readonly string[], edit: EditorPluginEdit, index: numb
   return null;
 }
 
-function selectionFault(lines: readonly string[], selection: EditorSelection): string | null {
-  const cursor = positionFault(lines, selection.cursor, 'selection cursor');
+function selectionFault(lines: readonly string[], selection: EditorSelection, index: number): string | null {
+  const cursor = positionFault(lines, selection.cursor, `selection ${index} cursor`);
   if (cursor !== null) return cursor;
   if (selection.anchor === null) return null;
-  return positionFault(lines, selection.anchor, 'selection anchor');
+  return positionFault(lines, selection.anchor, `selection ${index} anchor`);
+}
+
+// Two selections sharing any interior would each replace the same text on the next multi-caret
+// edit, so a set naming them is as unapplicable as two overlapping edits.
+function selectionOverlapFault(selections: readonly EditorSelection[]): string | null {
+  const sorted = selections
+    .map((selection) => selectionBounds(selection))
+    .toSorted((a, b) => a.start.line - b.start.line || a.start.col - b.start.col);
+  for (let index = 1; index < sorted.length; index += 1) {
+    if (posBefore(sorted[index].start, sorted[index - 1].end)) return 'two selections cover overlapping ranges';
+  }
+  return null;
+}
+
+// Checked against the edited lines, not the original: a returned selection describes where a caret
+// should sit *after* the edits, which is routinely past the old line's end.
+function selectionsFault(lines: readonly string[], selections: readonly EditorSelection[]): string | null {
+  if (selections.length === 0) return 'answer names an empty selection set';
+  for (const [index, selection] of selections.entries()) {
+    const fault = selectionFault(lines, selection, index);
+    if (fault !== null) return fault;
+  }
+  return selectionOverlapFault(selections);
 }
 
 // Ranges that merely touch at a boundary are fine; ranges that share any interior are not.
@@ -76,21 +99,14 @@ export function applyPluginResult(state: EditorState, result: EditorPluginResult
   for (const edit of sorted.toReversed()) lines = replaceRange(lines, edit);
 
   const next: EditorState = { ...state, lines: [...lines] };
-  if (!result.selection) return { ok: true, state: next };
+  if (!result.selections) return { ok: true, state: next };
 
-  // Checked against the edited lines, not the original: a returned selection describes where the
-  // caret should sit *after* the edits, which is routinely past the old line's end.
-  const fault = selectionFault(next.lines, result.selection);
+  const fault = selectionsFault(next.lines, result.selections);
   if (fault !== null) return { ok: false, reason: fault };
 
-  const { anchor, cursor } = result.selection;
-  return {
-    ok: true,
-    state: {
-      ...next,
-      cursor,
-      anchor: anchor !== null && !samePos(anchor, cursor) ? anchor : null,
-      goalCol: undefined,
-    },
-  };
+  const placed = result.selections.map(({ anchor, cursor }) => ({
+    anchor: anchor !== null && !samePos(anchor, cursor) ? anchor : null,
+    cursor,
+  }));
+  return { ok: true, state: withSelections(next, placed) };
 }

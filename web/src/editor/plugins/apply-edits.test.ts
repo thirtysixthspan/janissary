@@ -58,7 +58,7 @@ describe('applyPluginResult — applying', () => {
     const state = stateOf('one\ntwo');
     const outcome = applyPluginResult(state, {
       edits: [],
-      selection: { anchor: { line: 0, col: 0 }, cursor: { line: 1, col: 3 } },
+      selections: [{ anchor: { line: 0, col: 0 }, cursor: { line: 1, col: 3 } }],
     });
     expect(outcome.ok && outcome.state.lines).toEqual(['one', 'two']);
     expect(outcome.ok && outcome.state.anchor).toEqual({ line: 0, col: 0 });
@@ -69,16 +69,32 @@ describe('applyPluginResult — applying', () => {
     const state = stateOf('a');
     const outcome = applyPluginResult(state, {
       edits: [insertAt(0, 0, '// ')],
-      selection: { anchor: null, cursor: { line: 0, col: 4 } },
+      selections: [{ anchor: null, cursor: { line: 0, col: 4 } }],
     });
     expect(outcome.ok && outcome.state.cursor).toEqual({ line: 0, col: 4 });
+  });
+
+  it('applies a whole selection set, leaving the last entry primary', () => {
+    const state = stateOf('foo foo foo');
+    const outcome = applyPluginResult(state, {
+      edits: [],
+      selections: [
+        { anchor: { line: 0, col: 0 }, cursor: { line: 0, col: 3 } },
+        { anchor: { line: 0, col: 4 }, cursor: { line: 0, col: 7 } },
+      ],
+    });
+    expect(outcome.ok && outcome.state.extraSelections).toEqual([
+      { anchor: { line: 0, col: 0 }, cursor: { line: 0, col: 3 } },
+    ]);
+    expect(outcome.ok && outcome.state.cursor).toEqual({ line: 0, col: 7 });
+    expect(outcome.ok && outcome.state.anchor).toEqual({ line: 0, col: 4 });
   });
 
   it('collapses an anchor equal to the cursor to no selection', () => {
     const state = stateOf('one');
     const outcome = applyPluginResult(state, {
       edits: [],
-      selection: { anchor: { line: 0, col: 2 }, cursor: { line: 0, col: 2 } },
+      selections: [{ anchor: { line: 0, col: 2 }, cursor: { line: 0, col: 2 } }],
     });
     expect(outcome.ok && outcome.state.anchor).toBeNull();
   });
@@ -131,14 +147,38 @@ describe('applyPluginResult — refusing', () => {
   it('refuses a selection the edited buffer cannot hold', () => {
     expect(refuses({
       edits: [],
-      selection: { anchor: null, cursor: { line: 5, col: 0 } },
-    })).toContain('selection cursor');
+      selections: [{ anchor: null, cursor: { line: 5, col: 0 } }],
+    })).toContain('selection 0 cursor');
   });
 
   it('refuses an out-of-range anchor', () => {
     expect(refuses({
       edits: [],
-      selection: { anchor: { line: 5, col: 0 }, cursor: { line: 0, col: 0 } },
-    })).toContain('selection anchor');
+      selections: [{ anchor: { line: 5, col: 0 }, cursor: { line: 0, col: 0 } }],
+    })).toContain('selection 0 anchor');
+  });
+
+  it('names the offending selection by its position in the set', () => {
+    expect(refuses({
+      edits: [],
+      selections: [
+        { anchor: null, cursor: { line: 0, col: 0 } },
+        { anchor: null, cursor: { line: 5, col: 0 } },
+      ],
+    })).toContain('selection 1 cursor');
+  });
+
+  it('refuses an explicitly empty selection set', () => {
+    expect(refuses({ edits: [], selections: [] })).toContain('empty selection set');
+  });
+
+  it('refuses two overlapping selections', () => {
+    expect(refuses({
+      edits: [],
+      selections: [
+        { anchor: { line: 0, col: 0 }, cursor: { line: 0, col: 3 } },
+        { anchor: { line: 0, col: 1 }, cursor: { line: 0, col: 2 } },
+      ],
+    })).toContain('two selections cover overlapping ranges');
   });
 });
