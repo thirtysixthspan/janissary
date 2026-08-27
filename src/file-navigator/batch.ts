@@ -23,6 +23,12 @@ function sourceInfo(root: string, rel: string): Source {
   }
 }
 
+function canMoveSource(source: Source, duplicates: Set<string>, destinationPath: string): boolean {
+  return source.valid
+    && !duplicates.has(path.basename(source.rel))
+    && !(source.dir && isSameOrDescendantPath(destinationPath, source.rel));
+}
+
 export function normalizeBatchSources(root: string, paths: string[]): Source[] {
   const unique = paths.filter((candidate, index) => paths.indexOf(candidate) === index);
   const sources = unique.map((candidate) => sourceInfo(root, candidate));
@@ -46,23 +52,15 @@ export function moveBatch(
   if (!destination) return { total, failedPaths: attempted.map((source) => source.rel), moved: [], mutated: false };
 
   const duplicate = duplicateNames(attempted);
-  const eligible = attempted.filter((source) =>
-    source.valid
-    && !duplicate.has(path.basename(source.rel))
-    && !(source.dir && isSameOrDescendantPath(destinationPath, source.rel)));
+  const eligible = attempted.filter((source) => canMoveSource(source, duplicate, destinationPath));
   const conflicts = eligible.filter((source) => exists(path.join(destination, path.basename(source.rel))));
   if (conflicts.length > 0 && policy === undefined) {
     return { conflictPaths: conflicts.map((source) => source.rel) };
   }
 
   const moved: MovePair[] = [];
-  const failed = new Set(
-    attempted
-      .filter((source) => !source.valid
-        || duplicate.has(path.basename(source.rel))
-        || (source.dir && isSameOrDescendantPath(destinationPath, source.rel)))
-      .map((source) => source.rel),
-  );
+  const eligibleSet = new Set(eligible);
+  const failed = new Set(attempted.filter((source) => !eligibleSet.has(source)).map((source) => source.rel));
   const conflictSet = new Set(conflicts.map((source) => source.rel));
   for (const source of eligible) {
     if (policy === 'skip-conflicts' && conflictSet.has(source.rel)) continue;
