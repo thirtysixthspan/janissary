@@ -4,8 +4,6 @@
 
 ## development
 
-* application-config (3/10) — The configuration reference table in `documentation/user-documentation/getting-started/startup.md` lists seven of the eight settings the app reads, so 1 of about 12 facts is missing and none are wrong. Missing from the table: `externalViewers`, the object mapping each opener name to the macOS application that receives the file (defaulting to `{ "video": "QuickTime Player" }`, with an empty or missing entry handing the file to the OS default handler, and a user-supplied map replacing the default wholesale rather than merging with it). The key is documented in `documentation/user-documentation/tab-types/video-player.md`, so this is a completeness gap in the reference table rather than an undocumented feature — but a reference table a reader consults to see every available setting has to be exhaustive. Note also that `product/specs/application-config.md` is itself stale in the other direction: it omits `sandboxWorkspaces`, which the app does read and which the docs do list. Ground truth is `src/config.ts`. Fix by adding one `externalViewers` row to the config table in `startup.md`, cross-linking the video page for the worked example.
-
 * profiles (3/10) — `documentation/user-documentation/automation/profiles.md` is detailed and accurate, with 2 of roughly 30 facts missing or stale and none outright wrong. Stale: the page says a `plugin` entry's `id` names "the built-in viewer that owns the tab — `image`, `markdown`, or `video`", but `profile save` also writes a `plugin` entry for the schedules list, so `schedules` belongs in that set; `product/specs/profiles.md` carries the same omission, and the audio tab is correctly excluded because its playlist is never captured. Missing: the page says Janissary "includes built-in profiles" without naming them, so a reader has no way to know `debugging`, `features`, `multitasking`, `planning`, and `product-review` exist short of running bare `profile launch` for the picker. Ground truth is `profiles/`, `product/specs/profiles.md`, and `src/profile/`. Fix by correcting the plugin `id` list and adding a short list of the shipped profile names to the "Writing a profile" or "Picking a profile to launch" section of `profiles.md`.
 
 * harness — flagged by a `feat|fix` commit touching `src/` with no matching documentation commit in the same period (unread-badge suppression for a trailing recap line); not yet evaluated (over this run's limit)
@@ -20,6 +18,7 @@
 
 ## resolved
 
+* application-config — documented in documentation/user-documentation/getting-started/startup.md, tab-types/video-player.md, tab-types/audio-player.md (removed 2026-08-27)
 * editor-tab — documented in documentation/user-documentation/tab-types/editor.md, help.md (removed 2026-08-27)
 * shell — documented in documentation/user-documentation/command-bar/shell.md (removed 2026-08-27)
 * cli — documented in documentation/user-documentation/getting-started/startup.md (removed 2026-08-27)
