@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { actionForKey, type KeyLike } from './keys';
+import { actionForKey, yieldsToPlugins, type KeyLike } from './keys';
 
 const key = (k: string, mods: Partial<KeyLike> = {}): KeyLike =>
   ({ key: k, ctrlKey: false, metaKey: false, shiftKey: false, altKey: false, ...mods });
@@ -60,5 +60,38 @@ describe('actionForKey', () => {
     // Cmd+F opens the find overlay without shadowing the Emacs-style Ctrl+F, and Alt+F is nothing.
     expect(actionForKey(key('f', { ctrlKey: true }))).toEqual({ kind: 'move', dir: 'right', extend: false });
     expect(actionForKey(key('f', { altKey: true }))).toBeNull();
+  });
+});
+
+describe('yieldsToPlugins', () => {
+  it('yields Tab only while the selection spans more than one line', () => {
+    expect(yieldsToPlugins(key('Tab'), true)).toBe(true);
+    expect(yieldsToPlugins(key('Tab'), false)).toBe(false);
+  });
+
+  it('yields Shift+Tab in every context', () => {
+    expect(yieldsToPlugins(key('Tab', { shiftKey: true }), true)).toBe(true);
+    expect(yieldsToPlugins(key('Tab', { shiftKey: true }), false)).toBe(true);
+  });
+
+  it('yields nothing else, whatever the selection is', () => {
+    for (const spans of [true, false]) {
+      expect(yieldsToPlugins(key('s', { metaKey: true }), spans)).toBe(false);
+      expect(yieldsToPlugins(key('z', { metaKey: true }), spans)).toBe(false);
+      expect(yieldsToPlugins(key('Enter'), spans)).toBe(false);
+      expect(yieldsToPlugins(key('a'), spans)).toBe(false);
+      expect(yieldsToPlugins(key('Escape'), spans)).toBe(false);
+    }
+  });
+
+  it('does not yield a modified Tab, which is a different chord entirely', () => {
+    expect(yieldsToPlugins(key('Tab', { metaKey: true }), true)).toBe(false);
+    expect(yieldsToPlugins(key('Tab', { ctrlKey: true }), true)).toBe(false);
+    expect(yieldsToPlugins(key('Tab', { altKey: true }), true)).toBe(false);
+  });
+
+  it('leaves the core table answering for Tab, so an unclaimed yield still inserts', () => {
+    expect(actionForKey(key('Tab'))).toEqual({ kind: 'insert', text: '\t' });
+    expect(actionForKey(key('Tab', { shiftKey: true }))).toEqual({ kind: 'insert', text: '\t' });
   });
 });

@@ -93,7 +93,8 @@ saves on that tab overwrite it normally, exactly like any other editor tab.
 ### Keyboard input
 
 Printable characters (letters, digits, symbols, and space) and special keys (arrows, page up/down,
-home, end, enter, tab, backspace, delete, escape) are handled by the editor. Pressing and holding
+home, end, enter, tab, backspace, delete, escape) are handled by the editor — tab inserts a tab
+character except where it indents a selection, see Indenting. Pressing and holding
 a printable key repeats the character — the key press is applied directly to the buffer on each
 repeat event. Shift+←/→ extends the selection horizontally, exactly like Shift+↑/↓ extends it
 vertically; switching tabs while the editor has focus uses Cmd+Shift+[ / Cmd+Shift+] instead (see
@@ -221,15 +222,45 @@ the toggle — a selected range keeps covering the same whole lines and a bare c
 position relative to the text — so a second press is the exact inverse of the first. However many
 lines a press changed, one undo restores all of them at once.
 
+### Indenting
+
+Cmd+] indents and Cmd+[ outdents by two spaces. Both act on the whole lines the selection covers, or
+on the caret's line when nothing is selected. Tab and Shift+Tab reach the same two commands: Tab
+indents whenever the selection spans more than one line, and Shift+Tab outdents in every case. A
+selection inside a single line is still replaced by a tab character on Tab, and Tab with nothing
+selected still inserts one, both exactly as before.
+
+Indenting adds two spaces to every line in the range. Outdenting removes what each line has, up to
+two spaces: a line with one leading space loses that space, and a line with none is left alone while
+its neighbours still move, so a ragged block shifts as far left as it can. Blank and whitespace-only
+lines are skipped in both directions and keep their exact contents, so indenting never leaves
+trailing whitespace behind.
+
+On any line a shift touches, each tab in the line's leading whitespace becomes two spaces before the
+shift applies; tabs after the first non-whitespace character are never touched, and neither is a
+line the shift skips. Nothing else in the file is reindented.
+
+The selection follows the shift — a selected range keeps covering the same whole lines, so repeated
+presses keep moving the same block, and a bare caret keeps its position relative to the text.
+Outdenting a range with no leading whitespace to remove does nothing at all: no edit, no undo step,
+and no message. However many lines a press changed, one undo restores all of them at once.
+
+Indentation here is not language-aware: the amount is always two spaces, whatever the file type,
+and nothing indents automatically as you type.
+
 ### Editor plugin bindings
 
-Commenting is contributed by an editor plugin rather than built into the editor (see
+Commenting and indenting are contributed by editor plugins rather than built into the editor (see
 [[editor-plugins]]). Other chords may be contributed the same way.
 
-The editor's own key bindings always win: a plugin is offered a chord only where the editor itself
-has none, so nothing a plugin does can shadow saving, undo, find, or any other built-in editing key.
-A plugin chord does nothing while a persona suggestion is pending review, and nothing while the
-ephemeral agent query line holds focus, exactly like every other keystroke in those states.
+The editor's own key bindings win, apart from the two it explicitly hands over: a plugin is
+otherwise offered a chord only where the editor itself has none, so nothing a plugin does can shadow
+saving, undo, find, or any other built-in editing key. The two handed over are Tab, while the
+selection spans more than one line, and Shift+Tab; if no plugin claims one of them, the editor's own
+action for it runs instead, so Tab keeps inserting a tab character even when the plugin bound to it
+has stopped responding. A plugin chord does nothing while a persona suggestion is pending review,
+and nothing while the ephemeral agent query line holds focus — where Tab still completes a persona
+name — exactly like every other keystroke in those states.
 
 A plugin may change the buffer's text and the selection, and nothing else — it cannot save, scroll,
 rename, close, or open anything. Its change lands as a single undo step. If a plugin answers with

@@ -62,16 +62,18 @@ Each binding carries:
 | Field | Meaning |
 |---|---|
 | `command` | The name the handler is invoked with, so one plugin can serve several chords |
-| `chord` | `key` plus optional `meta`, `ctrl`, `shift`, `alt`. Must carry `meta` or `ctrl` |
+| `chord` | `key` plus optional `meta`, `ctrl`, `shift`, `alt`. Must be a chord the core editor table does not keep for itself |
 | `needs` | `'selection'` or `'buffer'` — how much of the document the handler is given |
 
-A declaration is validated once. An API version mismatch, an empty `bindings`, a chord carrying neither Cmd nor Ctrl, or a chord another plugin already claimed all disable that plugin with the recorded reason, without throwing and without affecting any other plugin.
+A declaration is validated once. An API version mismatch, an empty `bindings`, or a chord another plugin already claimed disables that plugin with the recorded reason, without throwing and without affecting any other plugin. A chord the core editor table keeps for itself is refused the same way, when the host builds its chord table.
 
-The Cmd-or-Ctrl rule exists because an unmodified printable key is turned into an insert by the core editor table, so a bare chord could never reach a plugin at all.
+That last rule is the only one governing which chords are declarable, and it is exactly the "could this chord ever fire?" question. An unmodified printable key is turned into an insert by the core table, so it is refused; so is Cmd+S. A key the core table binds to nothing — or one it explicitly yields, below — is declarable.
 
 ## Chord resolution
 
-Core editor bindings always win. The plugin table is consulted only for a keydown that `web/src/editor/keys.ts` leaves unbound, so nothing can shadow Cmd+S, Cmd+Z, Cmd+F, or the Emacs subset. A binding that claims a chord the core table already owns could never fire, so it is reported and its plugin disabled rather than left silently dead.
+Core editor bindings win, except for the two the core table explicitly yields. The plugin table is consulted for a keydown that `web/src/editor/keys.ts` leaves unbound, so nothing can shadow Cmd+S, Cmd+Z, Cmd+F, or the Emacs subset. A binding that claims a chord the core table owns and never yields could never fire, so it is reported and its plugin disabled rather than left silently dead.
+
+The yielded chords are Tab, but only while the selection spans more than one line, and Shift+Tab, always — see `yieldsToPlugins` in `web/src/editor/keys.ts`. They are offered to plugins first; if no plugin claims one, the core action runs anyway, so Tab keeps inserting a tab character when the plugin that binds it is disabled. The list is a hard-coded two-entry table in the core key file: a plugin cannot add to it, because delegating a core binding is a decision the editor makes about itself.
 
 Resolution is first match by exact chord. Because duplicate claims are refused at validation, array position never breaks a tie beyond that first-wins rule.
 

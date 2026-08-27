@@ -14,11 +14,13 @@ A static declaration supplies the plugin identity and version, the required edit
 
 Reading the declaration table loads no plugin behavior, so the set of chords the editor answers to is known before anything is fetched. A plugin's implementation is fetched the first time one of its chords is pressed and reused for every press afterwards; a session that never presses a plugin chord never downloads it.
 
-A declaration is checked once. One that requires a different API version, declares no bindings, or declares a chord carrying neither Cmd nor Ctrl is refused, and that plugin contributes nothing and starts disabled with the reason. A chord with no modifier is refused because an unmodified printable key types a character and could therefore never reach a plugin at all.
+A declaration is checked once. One that requires a different API version, declares no bindings, or declares a chord the editor keeps for itself is refused, and that plugin contributes nothing and starts disabled with the reason. Only one rule governs which chords may be declared, and it asks only whether the chord could ever fire: an unmodified printable key is refused because it types a character instead, and so is a chord the editor has its own binding for.
 
 ### Chord resolution
 
-The editor's own key bindings always win. A plugin chord is offered only a keydown the editor itself leaves unbound, so no plugin can shadow saving, undo, find, or any other built-in editing key. A binding that claims a chord the editor already uses could never fire, so it is reported and that plugin is disabled rather than left silently dead.
+The editor's own key bindings win, apart from the two the editor explicitly hands over. A plugin chord is otherwise offered only a keydown the editor itself leaves unbound, so no plugin can shadow saving, undo, find, or any other built-in editing key. A binding that claims a chord the editor uses and never hands over could never fire, so it is reported and that plugin is disabled rather than left silently dead.
+
+The editor hands over exactly two chords: Tab while the selection spans more than one line, and Shift+Tab always. Both are offered to plugins first, and if no plugin claims one the editor's own action for it runs instead — so Tab still inserts a tab character when the plugin bound to it is disabled, rather than doing nothing. Which chords are handed over is the editor's decision, not something a plugin can ask for.
 
 A chord may be claimed by only one plugin. The first claimant keeps it and any later one contributes nothing and starts disabled with that reason; the editor still works normally and every other plugin is unaffected.
 
@@ -53,3 +55,7 @@ Disabling lasts for the session only. Reloading the page starts every plugin fre
 ### Bundled commenting plugin
 
 The commenting plugin binds Cmd+/ to toggling comments over the selection, or over the caret's line when nothing is selected. See [[editor-tab]] for what the command does to the text.
+
+### Bundled indenting plugin
+
+The indenting plugin contributes two commands, indent and outdent, over the same slice: the whole lines the selection covers, or the caret's line when nothing is selected. Indent is bound to Cmd+] and to Tab, outdent to Cmd+[ and to Shift+Tab — the two chords the editor hands over. See [[editor-tab]] for what the commands do to the text.

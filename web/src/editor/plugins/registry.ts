@@ -10,7 +10,7 @@ import {
   type EditorPluginDeclaration,
   type EditorPluginLoader,
 } from './api';
-import { chordId, hasModifier } from './chords';
+import { chordId } from './chords';
 
 export const editorPluginDeclarations = [
   {
@@ -19,12 +19,26 @@ export const editorPluginDeclarations = [
     apiVersion: EDITOR_PLUGIN_API_VERSION,
     bindings: [{ command: 'toggle-comment', chord: { key: '/', meta: true }, needs: 'selection' }],
   },
+  {
+    id: 'indenting',
+    version: '1.0.0',
+    apiVersion: EDITOR_PLUGIN_API_VERSION,
+    // Two commands on four chords: the Cmd pair works in any context, while Tab and Shift+Tab reach
+    // the same commands only where the core table yields them (see ../keys.ts `yieldsToPlugins`).
+    bindings: [
+      { command: 'indent', chord: { key: ']', meta: true }, needs: 'selection' },
+      { command: 'indent', chord: { key: 'Tab' }, needs: 'selection' },
+      { command: 'outdent', chord: { key: '[', meta: true }, needs: 'selection' },
+      { command: 'outdent', chord: { key: 'Tab', shift: true }, needs: 'selection' },
+    ],
+  },
 ] as const satisfies readonly EditorPluginDeclaration[];
 
 export type ProductionEditorPluginId = (typeof editorPluginDeclarations)[number]['id'];
 
 export const editorPluginLoaders = {
   commenting: () => import('./commenting/index'),
+  indenting: () => import('./indenting/index'),
 } satisfies Record<ProductionEditorPluginId, EditorPluginLoader>;
 
 export type DeclarationRejection = { id: string; reason: string };
@@ -39,10 +53,6 @@ function declarationFault(declaration: EditorPluginDeclaration): string | null {
     return `requires editor plugin API ${declaration.apiVersion}; host provides ${EDITOR_PLUGIN_API_VERSION}`;
   }
   if (declaration.bindings.length === 0) return 'declares no bindings';
-  const bare = declaration.bindings.find((binding) => !hasModifier(binding.chord));
-  // A chord with no Cmd or Ctrl could never fire: an unmodified printable key is turned into an
-  // insert by the core table, which then never falls through to the plugin path at all.
-  if (bare) return `binding "${bare.command}" declares a chord with neither Cmd nor Ctrl`;
   return null;
 }
 

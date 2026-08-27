@@ -4,8 +4,28 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { EditorView, TabView } from '@shared/protocol';
 import { EditorTab } from './EditorTab';
 import type { EditorDropHandle } from '../drop-handles';
+import type { KeyLike } from './keys';
+import type { useEditorPlugins } from './plugins/useEditorPlugins';
+
+type EditorPluginsModule = { useEditorPlugins: typeof useEditorPlugins };
 import type { DirtyTabHandle } from '../tab-handles';
 import type { JanusClient } from '../ws';
+
+// A disabled plugin stops claiming its chords (plugins/host.ts filters them out of `bindings()`),
+// which is the only way a yielded chord goes unclaimed. Flipping this flag simulates that without
+// mocking the registry, which would disable the real plugins every other test here drives.
+const mocks = vi.hoisted(() => ({ pluginsDisabled: { value: false } }));
+
+vi.mock('./plugins/useEditorPlugins', async (importOriginal) => {
+  const actual = await importOriginal<EditorPluginsModule>();
+  return {
+    ...actual,
+    useEditorPlugins: (...args: Parameters<typeof actual.useEditorPlugins>) => {
+      const handle = actual.useEditorPlugins(...args);
+      return (event: KeyLike) => (mocks.pluginsDisabled.value ? false : handle(event));
+    },
+  };
+});
 
 function makeView(overrides: Partial<EditorView> = {}): EditorView {
   return { name: 'notes.txt', path: '/home/user/notes.txt', size: '12 B', url: '/open/1', ...overrides };
@@ -72,6 +92,7 @@ function type(text: string) {
 }
 
 beforeEach(() => {
+  mocks.pluginsDisabled.value = false;
   Element.prototype.scrollIntoView = vi.fn();
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
     ok: true,
@@ -1126,6 +1147,105 @@ describe('EditorTab', () => {
 
       fireEvent.keyDown(textarea(), { key: 'z', metaKey: true });
       await waitFor(() => expect(rowText(container)[0]).toBe('line one'));
+    });
+
+    // The indenting plugin's Cmd pair fires like any other plugin chord; its Tab pair only fires
+    // where the core key table yields (keys.ts `yieldsToPlugins`), which is what these pin.
+    it('indents the caret\'s line with Cmd+] and takes it back with Cmd+[', async () => {
+      const { client } = makeClient();
+      const { container } = await renderLoaded(client);
+
+      fireEvent.keyDown(textarea(), { key: ']', metaKey: true });
+      await waitFor(() => expect(rowText(container)[0]).toBe('  line one'));
+      expect(rowText(container)[1]).toBe('line two');
+
+      fireEvent.keyDown(textarea(), { key: '[', metaKey: true });
+      await waitFor(() => expect(rowText(container)[0]).toBe('line one'));
+    });
+
+    it('indents every line of a selection spanning two lines with Tab', async () => {
+      const { client } = makeClient();
+      const { container } = await renderLoaded(client);
+
+      fireEvent.keyDown(textarea(), { key: 'ArrowDown', shiftKey: true });
+      fireEvent.keyDown(textarea(), { key: 'Tab' });
+
+      await waitFor(() => expect(rowText(container)[0]).toBe('  line one'));
+      expect(rowText(container)[1]).toBe('  line two');
+    });
+
+    it('outdents a selection spanning two lines with Shift+Tab', async () => {
+      const { client } = makeClient();
+      const { container } = await renderLoaded(client);
+
+      fireEvent.keyDown(textarea(), { key: 'ArrowDown', shiftKey: true });
+      fireEvent.keyDown(textarea(), { key: 'Tab' });
+      await waitFor(() => expect(rowText(container)[0]).toBe('  line one'));
+
+      fireEvent.keyDown(textarea(), { key: 'Tab', shiftKey: true });
+      await waitFor(() => expect(rowText(container)[0]).toBe('line one'));
+      expect(rowText(container)[1]).toBe('line two');
+    });
+
+    it('replaces a selection inside one line with a tab character, as before', async () => {
+      const { client } = makeClient();
+      const { container } = await renderLoaded(client);
+
+      fireEvent.keyDown(textarea(), { key: 'ArrowRight', shiftKey: true });
+      fireEvent.keyDown(textarea(), { key: 'Tab' });
+
+      await act(async () => { await Promise.resolve(); });
+      expect(rowText(container)[0]).toBe('\tine one');
+    });
+
+    it('still inserts a tab character on Tab with a bare caret', async () => {
+      const { client } = makeClient();
+      const { container } = await renderLoaded(client);
+
+      fireEvent.keyDown(textarea(), { key: 'Tab' });
+
+      await act(async () => { await Promise.resolve(); });
+      expect(rowText(container)[0]).toBe('\tline one');
+    });
+
+    it('outdents the caret\'s line on Shift+Tab with nothing selected', async () => {
+      const { client } = makeClient();
+      const { container } = await renderLoaded(client);
+
+      fireEvent.keyDown(textarea(), { key: ']', metaKey: true });
+      await waitFor(() => expect(rowText(container)[0]).toBe('  line one'));
+
+      fireEvent.keyDown(textarea(), { key: 'Tab', shiftKey: true });
+      await waitFor(() => expect(rowText(container)[0]).toBe('line one'));
+    });
+
+    it('falls back to inserting a tab when no plugin claims the yielded chord', async () => {
+      const { client } = makeClient();
+      mocks.pluginsDisabled.value = true;
+      const { container } = await renderLoaded(client);
+
+      fireEvent.keyDown(textarea(), { key: 'ArrowDown', shiftKey: true });
+      fireEvent.keyDown(textarea(), { key: 'Tab' });
+
+      await act(async () => { await Promise.resolve(); });
+      // The selection spanned both lines, so the core insert replaces it — Tab is never dead.
+      expect(rowText(container)[0]).toBe('\tline two');
+    });
+
+    it('leaves Tab to the query line, which completes rather than indents', async () => {
+      const { client } = makeClient();
+      // The query line only opens on an empty line, so this fixture ends with one.
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+        ok: true, text: () => Promise.resolve('line one\n'),
+      } as unknown as Response));
+      const { container } = await renderLoaded(client, makeView({ line: 2 }));
+      fireEvent.keyDown(textarea(), { key: '>' });
+
+      fireEvent.keyDown(textarea(), { key: 'Tab' });
+
+      await act(async () => { await Promise.resolve(); });
+      expect(rowText(container)[0]).toBe('line one');
+      expect(queryRowText(container)).toBe('>');
     });
   });
 });
