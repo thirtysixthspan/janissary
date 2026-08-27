@@ -23,6 +23,8 @@ This step is optional. [Workspaced agents](/user-documentation/advanced-agents/w
 
 To set one up: create a fine-grained personal access token at [github.com/settings/tokens](https://github.com/settings/tokens), scoped to this repository, with **Contents** (write), **Pull requests** (write), and **Metadata** (read) permissions. Save it to `.janissary/github-token` in the project's root directory — a plain text file containing just the token. `.janissary/` is gitignored by default, so the token is never committed.
 
+[Tokens for agents](/user-documentation/advanced-agents/tokens) covers this token in more detail, along with the separate one that keeps a `claude` harness signed in inside a workspace.
+
 ## Scaffold the project
 
 <img class="agent-float left" src="/agents/idris-south-east.png" alt="" />

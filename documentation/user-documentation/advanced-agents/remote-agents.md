@@ -68,9 +68,11 @@ Isolation belongs to the remote too. It needs macOS, so a Linux host runs withou
 
 <img class="agent-float" src="/agents/fariz-south.png" alt="" />
 
-Janissary forwards your project's GitHub token through the encrypted connection and uses it only for that remote workspace's processes, so you don't need to copy the token file to the other machine. [Workspaced agents](/user-documentation/advanced-agents/workspaced-agent) covers how to create the token and where to put it.
+Janissary forwards your project's GitHub token through the encrypted connection and uses it only for that remote workspace's processes, so you don't need to copy the token file to the other machine. [Tokens for agents](/user-documentation/advanced-agents/tokens) covers how to create the token and where to put it.
 
 The tab tells you when the token in use isn't the one you forwarded. You'll see `github token: none forwarded from the initiating project, using this machine's own` when the remote fell back to its own token, and `github token: none configured on either machine, so none was injected for git push or gh` when neither had one. No line about the token means yours is what the workspace is running on.
+
+The Claude token works differently. It isn't forwarded, and the remote doesn't read one of its own either, so a remote `claude` harness signs in with whatever that machine already gives it: its own keychain, or a `CLAUDE_CODE_OAUTH_TOKEN` exported in the remote account's environment.
 
 ## Find the connections
 
