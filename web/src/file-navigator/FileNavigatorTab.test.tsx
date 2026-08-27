@@ -878,7 +878,7 @@ describe('FileNavigatorTab', () => {
       render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
       fireEvent.click(screen.getByText('src'));
       fireEvent.click(screen.getByTitle('New file'));
-      expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'newfile src/untitled.md' } });
+      expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'newfile /home/user/project/src/untitled.md' } });
     });
 
     it('clicking New file with a file row selected dispatches newfile in its containing directory', () => {
@@ -887,7 +887,7 @@ describe('FileNavigatorTab', () => {
       render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
       fireEvent.click(screen.getByText('index.ts'));
       fireEvent.click(screen.getByTitle('New file'));
-      expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'newfile src/untitled.md' } });
+      expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'newfile /home/user/project/src/untitled.md' } });
     });
 
     it('clicking New file with no row selected dispatches newfile at the tree root', () => {
@@ -895,7 +895,17 @@ describe('FileNavigatorTab', () => {
       const client = { send } as unknown as JanusClient;
       render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
       fireEvent.click(screen.getByTitle('New file'));
-      expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'newfile untitled.md' } });
+      expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'newfile /home/user/project/untitled.md' } });
+    });
+
+    it('dispatches under the tree root when the navigator is rooted somewhere else', () => {
+      const send = vi.fn();
+      const client = { send } as unknown as JanusClient;
+      const files = makeFiles({ root: '/Users/ash/dev/bctci', absoluteRoot: '/Users/ash/dev/bctci' });
+      render(<FileNavigatorTab files={files} client={client} index={0} />);
+      fireEvent.click(screen.getByText('src'));
+      fireEvent.click(screen.getByTitle('New file'));
+      expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'newfile /Users/ash/dev/bctci/src/untitled.md' } });
     });
 
     it('Cmd+N while focused dispatches the same new-file command', () => {
@@ -904,7 +914,7 @@ describe('FileNavigatorTab', () => {
       const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
       const tree = container.querySelector('[role="tree"]')!;
       fireEvent.keyDown(tree, { key: 'n', metaKey: true });
-      expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'newfile untitled.md' } });
+      expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'newfile /home/user/project/untitled.md' } });
     });
 
     it('Ctrl+N while focused dispatches the same new-file command', () => {
@@ -913,7 +923,7 @@ describe('FileNavigatorTab', () => {
       const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
       const tree = container.querySelector('[role="tree"]')!;
       fireEvent.keyDown(tree, { key: 'n', ctrlKey: true });
-      expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'newfile untitled.md' } });
+      expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'newfile /home/user/project/untitled.md' } });
     });
 
     it('Cmd+N does not fall through to the window handler', () => {
@@ -939,7 +949,7 @@ describe('FileNavigatorTab', () => {
       render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
       fireEvent.click(screen.getByText('src'));
       fireEvent.click(screen.getByTitle('New directory'));
-      expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'newdir src/untitled' } });
+      expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'newdir /home/user/project/src/untitled' } });
     });
 
     it("creates in a selected file's containing directory", () => {
@@ -948,7 +958,7 @@ describe('FileNavigatorTab', () => {
       render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
       fireEvent.click(screen.getByText('index.ts'));
       fireEvent.click(screen.getByTitle('New directory'));
-      expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'newdir src/untitled' } });
+      expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'newdir /home/user/project/src/untitled' } });
     });
 
     it('creates at the tree root when nothing is selected', () => {
@@ -956,7 +966,16 @@ describe('FileNavigatorTab', () => {
       const client = { send } as unknown as JanusClient;
       render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
       fireEvent.click(screen.getByTitle('New directory'));
-      expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'newdir untitled' } });
+      expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'newdir /home/user/project/untitled' } });
+    });
+
+    it('dispatches under the tree root when the navigator is rooted somewhere else', () => {
+      const send = vi.fn();
+      const client = { send } as unknown as JanusClient;
+      const files = makeFiles({ root: '/Users/ash/dev/bctci', absoluteRoot: '/Users/ash/dev/bctci' });
+      render(<FileNavigatorTab files={files} client={client} index={0} />);
+      fireEvent.click(screen.getByTitle('New directory'));
+      expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'newdir /Users/ash/dev/bctci/untitled' } });
     });
 
     it('selects and opens the rename field once the created directory appears in files.rows', () => {

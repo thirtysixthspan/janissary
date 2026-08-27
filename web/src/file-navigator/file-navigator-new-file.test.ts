@@ -43,25 +43,47 @@ describe('newFileTargetDir', () => {
 
 describe('newFileCommand', () => {
   it('builds the newfile command at the tree root when the target directory is null', () => {
-    expect(newFileCommand(null)).toBe('newfile untitled.md');
+    expect(newFileCommand('/home/user/project', null)).toBe('newfile /home/user/project/untitled.md');
   });
 
   it('builds the newfile command inside the target directory', () => {
-    expect(newFileCommand('src')).toBe('newfile src/untitled.md');
+    expect(newFileCommand('/home/user/project', 'src')).toBe('newfile /home/user/project/src/untitled.md');
+  });
+
+  it('roots the target at the navigator tree, not wherever a command would otherwise resolve', () => {
+    expect(newFileCommand('/Users/ash/dev/bctci', 'src')).toBe('newfile /Users/ash/dev/bctci/src/untitled.md');
+  });
+
+  it('does not double the separator when the root ends with a slash', () => {
+    expect(newFileCommand('/', null)).toBe('newfile /untitled.md');
+    expect(newFileCommand('/home/user/project/', 'src')).toBe('newfile /home/user/project/src/untitled.md');
   });
 });
 
 describe('newDirectoryCommand', () => {
   it('builds the newdir command at the tree root when the target directory is null', () => {
-    expect(newDirectoryCommand(null)).toBe('newdir untitled');
+    expect(newDirectoryCommand('/home/user/project', null)).toBe('newdir /home/user/project/untitled');
   });
 
   it('builds the newdir command inside the target directory', () => {
-    expect(newDirectoryCommand('src')).toBe('newdir src/untitled');
+    expect(newDirectoryCommand('/home/user/project', 'src')).toBe('newdir /home/user/project/src/untitled');
+  });
+
+  it('roots the target at the navigator tree, not wherever a command would otherwise resolve', () => {
+    expect(newDirectoryCommand('/Users/ash/dev/bctci', 'src')).toBe('newdir /Users/ash/dev/bctci/src/untitled');
+  });
+
+  it('does not double the separator when the root ends with a slash', () => {
+    expect(newDirectoryCommand('/', null)).toBe('newdir /untitled');
   });
 });
 
 describe('newDirectoryTargetPath', () => {
+  it('stays tree-relative so it can be matched against row paths', () => {
+    expect(newDirectoryTargetPath('src')).toBe('src/untitled');
+    expect(newDirectoryTargetPath(null)).toBe('untitled');
+  });
+
   it('guesses the root-level path when the target directory is null', () => {
     expect(newDirectoryTargetPath(null)).toBe('untitled');
   });

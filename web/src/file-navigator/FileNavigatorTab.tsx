@@ -69,13 +69,13 @@ export function FileNavigatorTab({
   const reroot = () => client.send({ method: 'fileNavigatorReroot', params: { index } });
   const rerootTo = (path: string) => client.send({ method: 'fileNavigatorReroot', params: { index, path } });
   const createNewFile = () => {
-    const text = newFileCommand(newFileTargetDir(files.rows, selection.cursor));
+    const text = newFileCommand(files.absoluteRoot, newFileTargetDir(files.rows, selection.cursor));
     client.send({ method: 'command', params: { text } });
   };
   const createNewDirectory = () => {
     const targetDir = newFileTargetDir(files.rows, selection.cursor);
     setPendingNewDir(newDirectoryTargetPath(targetDir));
-    client.send({ method: 'command', params: { text: newDirectoryCommand(targetDir) } });
+    client.send({ method: 'command', params: { text: newDirectoryCommand(files.absoluteRoot, targetDir) } });
   };
 
   const rowEvents = useFileNavigatorRowEvents({
