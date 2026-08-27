@@ -35,6 +35,11 @@ describe('sandbox-profile constants', () => {
     expect(SANDBOX_PROFILE).not.toContain('(deny network*)');
     expect(SANDBOX_PROFILE_OFFLINE).toContain('(deny network*)');
   });
+
+  it('allows only UUID-shaped temporary siblings for atomic Claude configuration writes', () => {
+    expect(SANDBOX_PROFILE).toContain(String.raw`(regex #"/\.claude\.json\.[0-9a-f-]+\.tmp$")`);
+    expect(SANDBOX_PROFILE).not.toContain('(prefix (param "W');
+  });
 });
 
 describe('sandboxSpawn', () => {

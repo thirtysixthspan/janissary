@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { execSync } from 'node:child_process';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { findRepoRoot, initWorkspaceDir, provisionWorkspace, removeWorkspace, clearWorkspaceDir, workspaceTempPath, getRemoteUrl, toHttpsUrl } from './index.js';
+import { findRepoRoot, initWorkspaceDir, provisionWorkspace, removeWorkspace, clearWorkspaceDir, workspaceTempPath, getRemoteUrl, toHttpsUrl, trustWorkspace } from './index.js';
 
 let tmpDir: string;
 let repoDir: string;
@@ -31,7 +31,7 @@ beforeAll(() => {
   execSync('git add . && git commit -m "init"', { cwd: repoDir, stdio: 'pipe' });
   execSync(`git remote add origin "${originDir}"`, { cwd: repoDir, stdio: 'pipe' });
   execSync('git push origin HEAD', { cwd: repoDir, stdio: 'pipe' });
-  initWorkspaceDir(tmpDir);
+  initWorkspaceDir(tmpDir, path.join(tmpDir, '.claude.json'));
 });
 
 afterAll(() => {
@@ -53,6 +53,44 @@ describe('findRepoRoot', () => {
   // it assumes os.tmpdir() has no .git ancestor, which is false whenever the test runner itself
   // is executing inside a sandboxed workspace (TMPDIR is overridden to a path nested inside the
   // parent repo's own git tree).
+});
+
+describe('trustWorkspace', () => {
+  it('creates a missing configuration with the workspace trusted', () => {
+    const config = path.join(tmpDir, 'missing-claude.json');
+    trustWorkspace('/workspace/new', config);
+    expect(JSON.parse(readFileSync(config, 'utf8'))).toEqual({
+      projects: { '/workspace/new': { hasTrustDialogAccepted: true } },
+    });
+  });
+
+  it('preserves unrelated fields and existing workspace settings', () => {
+    const config = path.join(tmpDir, 'valid-claude.json');
+    writeFileSync(config, JSON.stringify({ theme: 'dark', projects: { '/workspace/new': { model: 'opus' } } }));
+    trustWorkspace('/workspace/new', config);
+    expect(JSON.parse(readFileSync(config, 'utf8'))).toEqual({
+      theme: 'dark',
+      projects: { '/workspace/new': { model: 'opus', hasTrustDialogAccepted: true } },
+    });
+  });
+
+  it('leaves malformed JSON byte-for-byte unchanged', () => {
+    const config = path.join(tmpDir, 'malformed-claude.json');
+    const original = '{broken';
+    writeFileSync(config, original);
+    expect(() => trustWorkspace('/workspace/new', config)).toThrow('Failed to parse Claude configuration');
+    expect(readFileSync(config, 'utf8')).toBe(original);
+  });
+
+  it.each([
+    ['root', '[]'],
+    ['projects', JSON.stringify({ projects: [] })],
+  ])('leaves an invalid %s shape unchanged', (_case, original) => {
+    const config = path.join(tmpDir, `invalid-${_case}-claude.json`);
+    writeFileSync(config, original);
+    expect(() => trustWorkspace('/workspace/new', config)).toThrow('not an object');
+    expect(readFileSync(config, 'utf8')).toBe(original);
+  });
 });
 
 describe('createWorkspace', () => {

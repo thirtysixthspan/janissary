@@ -1,4 +1,5 @@
-import { existsSync, mkdirSync, rmSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, renameSync, rmSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import { homedir } from 'node:os';
 import { execSync, execFile, spawn, type ChildProcess } from 'node:child_process';
@@ -7,9 +8,14 @@ import { promisify } from 'node:util';
 const execFileAsync = promisify(execFile);
 
 let workspaceBaseDir = '';
+let workspaceClaudeConfig = '';
 
-export function initWorkspaceDir(projectDir: string): void {
+export function initWorkspaceDir(
+  projectDir: string,
+  claudeJson: string = path.join(homedir(), '.claude.json'),
+): void {
   workspaceBaseDir = path.join(projectDir, '.janissary', 'workspace');
+  workspaceClaudeConfig = claudeJson;
 }
 
 export function ensureWorkspaceDir(): void {
@@ -31,16 +37,55 @@ export function findRepoRoot(from: string): string | undefined {
   }
 }
 
-export function trustWorkspace(workspaceDir: string): void {
-  const claudeJson = path.join(homedir(), '.claude.json');
-  let data: Record<string, unknown> = {};
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function readClaudeConfig(claudeJson: string): Record<string, unknown> {
+  let raw: string;
   try {
-    data = JSON.parse(readFileSync(claudeJson, 'utf8')) as Record<string, unknown>;
-  } catch { /* file absent or unparseable — start fresh */ }
-  const projects = (data['projects'] ?? {}) as Record<string, Record<string, unknown>>;
-  projects[workspaceDir] = { ...projects[workspaceDir], hasTrustDialogAccepted: true };
+    raw = readFileSync(claudeJson, 'utf8');
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return {};
+    throw error;
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (error) {
+    throw new Error(`Failed to parse Claude configuration at ${claudeJson}.`, { cause: error });
+  }
+  if (!isRecord(parsed)) throw new Error(`Claude configuration at ${claudeJson} is not an object.`);
+  return parsed;
+}
+
+function writeJsonAtomically(file: string, data: Record<string, unknown>): void {
+  const temporary = `${file}.${randomUUID()}.tmp`;
+  try {
+    writeFileSync(temporary, `${JSON.stringify(data, null, 2)}\n`, { encoding: 'utf8', mode: 0o600 });
+    renameSync(temporary, file);
+  } finally {
+    rmSync(temporary, { force: true });
+  }
+}
+
+export function trustWorkspace(
+  workspaceDir: string,
+  claudeJson: string = path.join(homedir(), '.claude.json'),
+): void {
+  const data = readClaudeConfig(claudeJson);
+  const existingProjects = data['projects'];
+  if (existingProjects !== undefined && !isRecord(existingProjects)) {
+    throw new Error(`Claude configuration projects at ${claudeJson} is not an object.`);
+  }
+  const projects = existingProjects ?? {};
+  const existingWorkspace = projects[workspaceDir];
+  if (existingWorkspace !== undefined && !isRecord(existingWorkspace)) {
+    throw new Error(`Claude configuration project ${workspaceDir} is not an object.`);
+  }
+  projects[workspaceDir] = { ...existingWorkspace, hasTrustDialogAccepted: true };
   data['projects'] = projects;
-  writeFileSync(claudeJson, JSON.stringify(data, null, 2) + '\n', 'utf8');
+  writeJsonAtomically(claudeJson, data);
 }
 
 // The workspace's private scratch dir, a sibling of the clone (`<name>.tmp`) — exported as
@@ -130,7 +175,7 @@ async function finishProvisioning(name: string, target: string, remoteUrl: strin
   // the local scope's own entries, leaving the inherited ones ahead of us.
   await execFileAsync('git', ['config', '--local', '--replace-all', 'credential.helper', ''], { cwd: target });
   await execFileAsync('git', ['config', '--local', '--add', 'credential.helper', '!gh auth git-credential'], { cwd: target });
-  trustWorkspace(target);
+  trustWorkspace(target, workspaceClaudeConfig);
   mkdirSync(workspaceTempPath(name), { recursive: true });
 }
 
