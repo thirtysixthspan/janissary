@@ -452,7 +452,8 @@ describe('TabManager renameTab for editor tabs', () => {
     const filePath = path.join(dir, 'existing.ts');
     writeFileSync(filePath, 'content');
     const tm = makeTabManager();
-    tm.openEditorTab({ name: 'existing.ts', path: filePath, size: '7 B', url: '/open/1' });
+    const originalUrl = tm.registerFile(filePath);
+    tm.openEditorTab({ name: 'existing.ts', path: filePath, size: '7 B', url: originalUrl });
     const index = tm.activeTab;
 
     tm.renameTab(index, 'aliased');
@@ -464,6 +465,8 @@ describe('TabManager renameTab for editor tabs', () => {
     expect(tab.editor?.path).toBe(newPath);
     expect(tab.editor?.name).toBe('aliased');
     expect(tab.title).toBe('aliased');
+    expect(tm.openFilePath(originalUrl.slice('/open/'.length))).toBeUndefined();
+    expect(tm.openFilePath(tab.editor!.url.slice('/open/'.length))).toBe(newPath);
   });
 
   it('renaming an agent tab still sets an alias only', () => {
@@ -503,7 +506,8 @@ describe('TabManager retargetEditorTab', () => {
 
   it('updates the matching editor tab\'s path, name, url, and title, and rewatches at the new path', () => {
     const { tm, managers } = makeTabManagerWithManagers();
-    tm.openEditorTab({ name: 'notes.txt', path: '/tree/notes.txt', size: '2 B', url: '/open/1' });
+    const originalUrl = tm.registerFile('/tree/notes.txt');
+    tm.openEditorTab({ name: 'notes.txt', path: '/tree/notes.txt', size: '2 B', url: originalUrl });
     const index = tm.activeTab;
     const label = tm.tabs[index].label;
 
@@ -512,6 +516,7 @@ describe('TabManager retargetEditorTab', () => {
     const tab = tm.tabs[index];
     expect(tab.editor?.path).toBe('/tree/renamed.txt');
     expect(tab.editor?.name).toBe('renamed.txt');
+    expect(tm.openFilePath(originalUrl.slice('/open/'.length))).toBeUndefined();
     expect(tm.openFilePath(tab.editor!.url.slice('/open/'.length))).toBe('/tree/renamed.txt');
     expect(tab.title).toBe('renamed.txt');
     expect(managers.editorWatch.watch).toHaveBeenCalledWith(label, '/tree/renamed.txt');

@@ -124,10 +124,10 @@ export class OpenFileManager {
     context.openEditorTab({
       name: path.basename(target), path: target, size: 'unknown', url: context.registerFile(target), line, sync: 'provisioning',
     });
-    void this.finishOpenSynced(target, context);
+    void this.finishOpenSynced(target);
   }
 
-  private async finishOpenSynced(target: string, context: OpenContext): Promise<void> {
+  private async finishOpenSynced(target: string): Promise<void> {
     const result = await this.managers.gitSync.openSync();
     const tab = this.managers.tab.tabs.find((t) => t.editor?.path === target);
     if (!tab?.editor) return;
@@ -138,7 +138,7 @@ export class OpenFileManager {
     }
     let size = 'unknown';
     try { size = humanSize(statSync(target).size); } catch { /* not yet created on disk */ }
-    tab.editor = { ...tab.editor, size, url: context.registerFile(target), sync: 'synced' };
+    tab.editor = { ...tab.editor, size, sync: 'synced' };
     this.managers.editorWatch.watch(tab.label, target);
     messageBus.emit('state', { type: 'dirty' });
   }

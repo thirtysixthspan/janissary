@@ -1,6 +1,7 @@
 import { messageBus } from '../bus.js';
 import type { Tab } from './types.js';
 import type { Managers } from '../managers.js';
+import { releaseFileReference } from './file-registry.js';
 
 export function closeTabResources(
   tab: Tab,
@@ -39,6 +40,7 @@ export function closeTabResources(
   if (tab.plugin) {
     for (const id of tab.plugin.fileRefs) openFiles.delete(id);
   }
+  if (tab.editor) releaseFileReference(openFiles, tab.editor.url);
   if (typeof contextOrTabsLength !== 'number') contextOrTabsLength.delete(tab.label);
   queue?.delete(tab.label);
 }

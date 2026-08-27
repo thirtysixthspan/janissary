@@ -11,7 +11,7 @@ export function renameEditorTab(
   tab: Tab,
   title: string,
   maxLength: number,
-  registerFile: (absPath: string) => string,
+  replaceFile: (reference: string, absPath: string) => string,
   rewatch: (label: string, filePath: string) => void,
 ): void {
   const editor = tab.editor;
@@ -20,7 +20,7 @@ export function renameEditorTab(
   if (!trimmed || trimmed === editor.name) return;
   const newPath = path.join(path.dirname(editor.path), trimmed);
   if (existsSync(editor.path)) renameSync(editor.path, newPath);
-  tab.editor = { ...editor, path: newPath, name: trimmed, url: registerFile(newPath) };
+  tab.editor = { ...editor, path: newPath, name: trimmed, url: replaceFile(editor.url, newPath) };
   tab.title = trimmed;
   rewatch(tab.label, newPath);
 }

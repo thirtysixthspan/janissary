@@ -4,6 +4,7 @@ import { messageBus } from '../bus.js';
 import {
   addPluginTab, addEditorTab, addFilesTab, addNotificationsTab,
 } from './creators.js';
+import { releaseFileReference } from './file-registry.js';
 
 // Minimal surface these openers need from the TabManager. Kept structural (rather than importing
 // the TabManager type) so this module has no import cycle back to tab-manager.ts.
@@ -122,6 +123,7 @@ export function openEditorTab(
 ): void {
   const existing = view.newFile ? undefined : target.tabs.find((t) => t.editor?.path === view.path);
   if (existing) {
+    releaseFileReference(target.openFiles, view.url);
     if (view.line !== undefined) existing.editor!.line = view.line;
     target.setActiveTab(target.tabs.indexOf(existing));
     messageBus.emit('state', { type: 'dirty' });

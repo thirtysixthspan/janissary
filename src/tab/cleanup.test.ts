@@ -150,6 +150,19 @@ describe('closeTabResources', () => {
     expect(openFiles.has('keep')).toBe(true);
   });
 
+  it('drops an editor-owned reference and leaves unrelated references', () => {
+    const managers = makeManagers();
+    const tab = {
+      ...makeTab('notes.txt', 'red'),
+      editor: { name: 'notes.txt', path: '/tmp/notes.txt', size: '1 B', url: '/open/editor' },
+    };
+    const openFiles = new Map([['editor', '/tmp/notes.txt'], ['keep', '/tmp/keep.txt']]);
+
+    closeTabResources(tab, managers, openFiles, new Map(), new Map(), 2);
+
+    expect([...openFiles]).toEqual([['keep', '/tmp/keep.txt']]);
+  });
+
   it('removes the tab\'s context entry', () => {
     const managers = makeManagers();
     const context = new Map([['main', ['some context']]]);
