@@ -68,7 +68,7 @@ By default that's **QuickTime Player**. To use a different one, set the `video` 
 }
 ```
 
-Use the application's name as it appears on your system. Setting it to an empty string hands videos to whatever your operating system opens them with. The app reads this at startup, so restart after changing it.
+Use the application's name as it appears on your system. Setting it to an empty string hands videos to whatever your operating system opens them with. The map you write replaces the built-in one rather than adding to it, so list every viewer you want to set in the one object. The app reads this at startup, so restart after changing it.
 
 If no player can be launched at all, the app reports the file's path so you can open it yourself.
 

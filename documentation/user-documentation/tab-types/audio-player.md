@@ -89,7 +89,7 @@ By default that's whatever your operating system opens audio with. To name a pla
 }
 ```
 
-Use the application's name as it appears on your system. The app reads this at startup, so restart after changing it. If no player can be launched at all, the app reports the file's path so you can open it yourself.
+Use the application's name as it appears on your system. The map you write replaces the built-in one rather than adding to it, so keep the `video` entry alongside it if you had one. The app reads this at startup, so restart after changing it. If no player can be launched at all, the app reports the file's path so you can open it yourself.
 
 Holding `Shift` while you double-click an audio row in the file navigator sends it to that player too.
 
