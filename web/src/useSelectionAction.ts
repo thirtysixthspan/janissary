@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import type { FileSelectionAction } from '@shared/protocol';
 import type { JanusClient } from './ws';
 
@@ -9,13 +9,22 @@ import type { JanusClient } from './ws';
 // is willing to run — the client sends back the same paths and that action name, never a plugin.
 export function useSelectionAction(client: JanusClient, index: number) {
   const [entry, setEntry] = useState<FileSelectionAction | null>(null);
+  const generation = useRef(0);
+
+  const clear = () => {
+    generation.current += 1;
+    setEntry(null);
+  };
 
   const query = (paths: string[]) => {
-    setEntry(null);
+    clear();
     if (paths.length < 2 || typeof client.request !== 'function') return;
+    const queryGeneration = generation.current;
     void client.request<FileSelectionAction | null>({
       method: 'fileNavigatorSelectionAction', params: { index, paths },
-    }).then((result) => { setEntry(result ?? null); });
+    }).then((result) => {
+      if (generation.current === queryGeneration) setEntry(result ?? null);
+    });
   };
 
   const run = (paths: string[]) => {
@@ -25,5 +34,5 @@ export function useSelectionAction(client: JanusClient, index: number) {
     });
   };
 
-  return { entry, query, run };
+  return { entry, query, run, clear };
 }

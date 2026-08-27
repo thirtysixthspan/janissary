@@ -222,6 +222,8 @@ containing a directory, or a single row is offered nothing, and no request is ma
 The label comes from the plugin; the navigator itself knows nothing about what kind of files it is
 looking at. Activating the entry re-resolves the selection against the tree's own root before the
 plugin ever sees it, so the paths a plugin acts on are always inside the tree being browsed.
+If another menu opens or the current menu closes before the plugin replies, that pending reply is
+discarded and cannot add an entry to a later menu.
 
 The `Enter` key and double-click gestures are unaffected: they keep opening the cursor row alone.
 
