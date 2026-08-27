@@ -549,6 +549,10 @@ a file named `untitled.md` on disk, the next free name is opened instead (`untit
 `untitled-3.md`, …), so New file always opens a fresh, uncreated file rather than reopening an
 existing one.
 
+The target is resolved against the navigator's own tree root, not against the working directory of
+whichever tab happens to be active. A navigator rooted at one project therefore creates the file in
+that project even while a workspaced agent, whose shell runs inside a separate clone, holds focus.
+
 The user names the file by editing the new editor tab's label — the typed text becomes the
 filename literally, with no extension appended (see Editor Tab → "New files"). On save, if the
 directory already contains a file with that name because the tab was never renamed and another
@@ -563,7 +567,8 @@ same target rule as New file: a selected directory row creates inside that direc
 file row creates in its containing directory, and no selection (or the `..` row) creates at the
 tree root. If `untitled` already exists at the target, the new directory uses the next free name
 (`untitled-2`, `untitled-3`, …). The tree refreshes to show the created directory. New directory
-has no keyboard shortcut.
+has no keyboard shortcut. Like New file, it resolves its target against the navigator's own tree
+root rather than the active tab's working directory.
 
 When the new directory (named exactly `untitled`, with no collision) appears in the tree, it is
 selected automatically and its rename field opens immediately, pre-filled with `untitled`, so the
