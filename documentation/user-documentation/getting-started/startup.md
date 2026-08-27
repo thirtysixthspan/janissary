@@ -51,6 +51,8 @@ It shuts down the instance running against the current directory. Pass a directo
 
 `janus stop` runs attached and prints straight to the terminal. It signals the running server to shut down gracefully, closing every open browser window before it exits. If nothing is running there, it prints `no running janus instance for <dir>` and exits without error — there being nothing to stop isn't a failure.
 
+Closing the app window stops it too. When the last window or browser tab showing the app goes away, the server waits one second and then shuts down, the same as `janus stop`. The pause is there so a page reload or a browser back-and-forward can reconnect without losing your session; if a window comes back within that second, the shutdown is cancelled. If you have the app open in two windows, closing one changes nothing.
+
 ## Resuming a session with `--relaunch`
 
 ```
@@ -66,10 +68,20 @@ janus --relaunch
 
 Since a normal launch doesn't print to the terminal, check `.janissary/log/server.log` for anything the server would otherwise have shown — it's cleared at the start of each normal launch and kept (with new output appended) across `--relaunch`.
 
-If startup fails, the error names the app and version, says what went wrong, and suggests what to do next. The two you're most likely to see:
+If startup fails, the error names the app and version, says what went wrong, and suggests what to do next. The ones you're most likely to see:
 
 - **The port is already in use** — something else is listening on the port you asked for. Pick another with `--port=<n>`, or drop `--port` entirely and let the app choose a free one.
 - **Another instance is already running here** — a second `janus` launched against the same directory as a still-running instance is rejected with the live process's ID. Run `janus <dir>` to start a second instance against a different directory.
+- **Permission denied binding to the port** — ports below 1024 need elevated privileges. Pick one above 1024 with `--port=<n>`.
+- **The web UI bundle is missing** — you're running from a source checkout whose web assets were never built. Run `npm run build:web`, or `npm start`, which builds first.
+
+If the server never reports itself ready within 20 seconds, the launcher stops waiting, kills it, and tells you it timed out.
+
+For a failure you can't place from the message alone, set `JANUS_DEBUG=1` and launch again. The full stack trace is printed after the message, in the terminal and in the log:
+
+```
+JANUS_DEBUG=1 janus
+```
 
 ## Configuration
 
