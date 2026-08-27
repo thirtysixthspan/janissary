@@ -18,6 +18,9 @@ export type EditorApi = {
   setState: (s: EditorState) => void;
   insert: (text: string) => void;
   apply: (action: KeyAction, pageLines: number, resolveVertical?: ResolveVertical) => void;
+  // Swap the whole state for one an outside transform produced (see ./plugins/), recorded as a
+  // single discrete undo step however many lines it changed.
+  replace: (next: EditorState) => void;
   sealUndo: () => void;
 };
 
@@ -37,5 +40,12 @@ export function useEditor(onSave: () => void): EditorApi {
     applyKeyAction(surface, action, pageLines, resolveVertical);
   };
 
-  return { state, stateRef, load, setState, insert, apply, sealUndo: () => undo.seal() };
+  const replace = (next: EditorState) => {
+    const current = stateRef.current;
+    if (!current) return;
+    undo.record(current, 'other');
+    setState(next);
+  };
+
+  return { state, stateRef, load, setState, insert, apply, replace, sealUndo: () => undo.seal() };
 }

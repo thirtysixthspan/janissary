@@ -3,6 +3,7 @@ import { editorSuggest, ownerLabel, type EditorSuggestParams, type EditorSuggest
 import { saveFile } from '../editor/save.js';
 import { resyncEditorTab } from '../editor/resync.js';
 import { syncEditorBuffer } from '../editor/sync.js';
+import { notify } from '../notifications.js';
 import { listPersonas } from '../personas.js';
 import { projectFilesFor } from '../project-files.js';
 import type { Managers } from '../managers.js';
@@ -16,6 +17,7 @@ export type EditorControllerAdapter = {
   editorPersonas(): string[];
   editorSuggest(params: EditorSuggestParams, callback: (result: EditorSuggestResult) => void): void;
   closeEditorConnection(url: string, persona: string): void;
+  editorPluginFailed(url: string, plugin: string, reason: string): void;
 };
 
 export function createEditorControllerAdapter(managers: Managers): EditorControllerAdapter {
@@ -28,5 +30,11 @@ export function createEditorControllerAdapter(managers: Managers): EditorControl
     editorPersonas: () => listPersonas('editor'),
     editorSuggest: (params, callback) => editorSuggest(managers, params, callback),
     closeEditorConnection: (url, persona) => closeConnection('acp', persona, managers, ownerLabel(managers, url), () => { /* no-op */ }),
+    editorPluginFailed: (url, plugin, reason) => {
+      notify(
+        managers, 'plugin-failure', ownerLabel(managers, url),
+        `Editor plugin "${plugin}" disabled: ${reason}.`,
+      );
+    },
   };
 }

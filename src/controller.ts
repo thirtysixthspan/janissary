@@ -49,6 +49,7 @@ export class Controller implements TabControllerAdapter, MonitorControllerAdapte
   declare editorPersonas: EditorControllerAdapter['editorPersonas'];
   declare editorSuggest: EditorControllerAdapter['editorSuggest'];
   declare closeEditorConnection: EditorControllerAdapter['closeEditorConnection'];
+  declare editorPluginFailed: EditorControllerAdapter['editorPluginFailed'];
   declare fileNavigatorToggle: FileNavigatorControllerAdapter['fileNavigatorToggle'];
   declare fileNavigatorCollapseAll: FileNavigatorControllerAdapter['fileNavigatorCollapseAll'];
   declare fileNavigatorSetDetail: FileNavigatorControllerAdapter['fileNavigatorSetDetail'];

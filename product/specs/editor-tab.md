@@ -194,6 +194,49 @@ One theme is active at a time, shared by every open editor tab. `syntax theme <n
 
 Highlighting composes with the existing caret and selection rendering: a token under the caret or inside a selection still shows the caret bar / selection background exactly as it would in unhighlighted text.
 
+### Commenting
+
+Cmd+/ comments and uncomments code. It acts on the whole lines the selection covers, or on the
+caret's line when nothing is selected. The comment style comes from the file's extension: `//` for
+JavaScript, TypeScript, and JSON; `#` for Ruby, shell, Python, YAML, and plain text; `<!-- -->` for
+Markdown and HTML; and `/* */` for CSS. A file with any other extension, or none, is left alone —
+Cmd+/ does nothing at all there, records no undo step, and shows no message, the same quiet
+treatment a file the editor cannot syntax-highlight already gets.
+
+For a language with a line comment, each line in the range gains the marker followed by one space.
+The marker goes at the first non-whitespace column of the least-indented line in the range, and
+every line receives it at that same column, so code keeps its relative indentation and the markers
+line up. Blank lines inside the range are commented too, so the block reads as contiguous. For
+Markdown, HTML, and CSS — which have no line comment — the whole range is wrapped in one
+open/close pair instead.
+
+The toggle uncomments only when every non-blank line in the range already carries the marker; blank
+lines do not count against that test, so a commented block with a blank line in it still uncomments.
+Otherwise it comments, including lines that were already commented, which end up with two markers.
+Pressing Cmd+/ twice therefore always returns the text to exactly what it was.
+
+Uncommenting removes one marker and one following space if there is one, and finds the marker
+wherever it sits on the line, so a hand-edited block still uncomments cleanly. The selection follows
+the toggle — a selected range keeps covering the same whole lines and a bare caret keeps its
+position relative to the text — so a second press is the exact inverse of the first. However many
+lines a press changed, one undo restores all of them at once.
+
+### Editor plugin bindings
+
+Commenting is contributed by an editor plugin rather than built into the editor (see
+[[editor-plugins]]). Other chords may be contributed the same way.
+
+The editor's own key bindings always win: a plugin is offered a chord only where the editor itself
+has none, so nothing a plugin does can shadow saving, undo, find, or any other built-in editing key.
+A plugin chord does nothing while a persona suggestion is pending review, and nothing while the
+ephemeral agent query line holds focus, exactly like every other keystroke in those states.
+
+A plugin may change the buffer's text and the selection, and nothing else — it cannot save, scroll,
+rename, close, or open anything. Its change lands as a single undo step. If a plugin answers with
+something that does not fit the buffer, nothing is applied at all: the text, the selection, and the
+undo history are left exactly as they were, that plugin stops responding for the rest of the
+session, and one line naming it and the reason appears in the notifications tab.
+
 ### Scrolling
 
 The editor body scrolls vertically within the tab. After typing, the scroll position stays where it

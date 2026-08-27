@@ -14,6 +14,7 @@ const CLIENT_METHODS = {
   deleteQueuedCommand: true,
   editQueuedCommand: true,
   editorPersonas: true,
+  editorPluginFailed: true,
   editorSuggest: true,
   editorSync: true,
   fileNavigatorCollapseAll: true,
@@ -81,6 +82,15 @@ export function isPluginIntentParams(value: unknown): value is {
 export function isPluginFailedParams(value: unknown): value is { tab: string; reason: string } {
   return isRecord(value)
     && typeof value.tab === 'string'
+    && typeof value.reason === 'string';
+}
+
+export function isEditorPluginFailedParams(
+  value: unknown,
+): value is { url: string; plugin: string; reason: string } {
+  return isRecord(value)
+    && typeof value.url === 'string'
+    && typeof value.plugin === 'string'
     && typeof value.reason === 'string';
 }
 
