@@ -24,6 +24,7 @@ export const HANDSHAKE_SENTINEL = '__JANUS_REMOTE__';
 export type RemoteHandshake = { version: number; root: string };
 
 import type { ProjectTokens } from '../project-tokens.js';
+import { decodeKnownFrame } from './frame-decode.js';
 
 // Local → remote. One process family (spawn/input/resize/kill) backs remote harness tabs, remote
 // agent tabs' persistent shells, PTY takeover, and inline terminal cards alike; `provision` is the
@@ -67,10 +68,6 @@ function encodeText(text: string): string {
   return Buffer.from(text, 'utf8').toString('base64');
 }
 
-function decodeText(payload: unknown): string {
-  return typeof payload === 'string' ? Buffer.from(payload, 'base64').toString('utf8') : '';
-}
-
 // Terminal bytes and rendered transcript blocks travel base64-encoded so no control byte, escape
 // sequence, or embedded newline in a payload can ever be mistaken for framing.
 function toWire(frame: RemoteFrame): Record<string, unknown> {
@@ -101,12 +98,7 @@ export function decodeFrame(line: string): RemoteFrame | { error: string } {
   if (typeof type !== 'string' || !(CLIENT_TYPES.has(type) || SERVER_TYPES.has(type))) {
     return { error: `Unknown remote frame type "${String(type)}".` };
   }
-  if (type === 'input' || type === 'output') return { ...record, data: decodeText(record.data) } as RemoteFrame;
-  if (type === 'transcript') {
-    const blocks = Array.isArray(record.blocks) ? record.blocks.map((block) => decodeText(block)) : [];
-    return { type: 'transcript', blocks };
-  }
-  return record as RemoteFrame;
+  return decodeKnownFrame(type, record);
 }
 
 export function encodeHandshake(root: string): string {

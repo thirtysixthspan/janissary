@@ -4,8 +4,6 @@
 
 ## development
 
-* Validate every remote frame's required fields in `src/remote/protocol.ts` before returning it: `decodeFrame` currently checks only the `type` discriminator and then casts the rest of an arbitrary JSON object to `RemoteFrame`, so malformed `spawn`, `resize`, `provision`, and process-control frames cross the SSH boundary with missing or wrong-typed values and reach `src/remote/serve.ts` as trusted commands. Replace the cast with per-frame runtime decoding that rejects invalid identifiers, dimensions, commands, labels, and token maps before dispatch. Severity: **high**.
-
 * Give RPC failures and connection loss an explicit result path in `web/src/ws.ts`: `JanusClient.request` ignores the `error` carried by `rpc-reply`, resolves `undefined as T` when the socket is not open, and leaves every pending promise unsettled if the socket closes, while callers such as `web/src/useQuickOpen.ts`, `web/src/file-navigator/useFileNavigatorSearch.ts`, and `web/src/file-navigator/useFileNavigatorMoveOperations.ts` immediately dereference the declared result. Reject or return a typed result on server errors and disconnection, settle pending calls on close/dispose, and make callers handle that shared failure contract. Severity: **high**.
 
 * Protect user edits made after a copy-paste before undo deletes its destination in `src/file-navigator/moves.ts`: `undoCopyPaste` records only absolute source and destination paths and unconditionally removes each destination, so editing or replacing a copied file before pressing undo silently deletes the newer content. Record enough identity or content metadata with each copy history entry to detect divergence and surface a conflict instead of removing a changed destination. Severity: **high**.

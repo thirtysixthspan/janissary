@@ -76,6 +76,42 @@ describe('frame codec', () => {
   it('rejects a line that is JSON but not an object', () => {
     expect(decodeFrame('[1,2,3]')).toEqual({ error: expect.stringContaining('Malformed remote frame') });
   });
+
+  it.each([
+    ['provision without a label', { type: 'provision' }],
+    ['provision with an unknown token', { type: 'provision', label: 'agent', tokens: { other: 'secret' } }],
+    ['provision with a non-string token', { type: 'provision', label: 'agent', tokens: { github: 42 } }],
+    ['spawn without an id', { type: 'spawn', program: 'bash', command: 'bash', mode: 'pty', cols: 80, rows: 24 }],
+    ['spawn with an empty program', { type: 'spawn', id: 'r1', program: '', command: 'bash', mode: 'pty', cols: 80, rows: 24 }],
+    ['spawn with a non-string command', { type: 'spawn', id: 'r1', program: 'bash', command: 1, mode: 'pty', cols: 80, rows: 24 }],
+    ['spawn with an unknown mode', { type: 'spawn', id: 'r1', program: 'bash', command: 'bash', mode: 'tty', cols: 80, rows: 24 }],
+    ['spawn with a non-boolean offline flag', { type: 'spawn', id: 'r1', program: 'bash', command: 'bash', mode: 'pty', cols: 80, rows: 24, offline: 'yes' }],
+    ['input without string data', { type: 'input', id: 'r1', data: 1 }],
+    ['resize with a zero column count', { type: 'resize', id: 'r1', cols: 0, rows: 24 }],
+    ['resize with a fractional row count', { type: 'resize', id: 'r1', cols: 80, rows: 2.5 }],
+    ['kill without a string id', { type: 'kill', id: 1 }],
+    ['workspace-ready without a directory', { type: 'workspace-ready' }],
+    ['workspace-ready with a non-string notice', { type: 'workspace-ready', dir: '/srv/ws', notice: false }],
+    ['workspace-failed without a message', { type: 'workspace-failed' }],
+    ['output without string data', { type: 'output', id: 'r1', data: [] }],
+    ['exit with a fractional code', { type: 'exit', id: 'r1', exitCode: 1.5 }],
+    ['transcript with a non-string block', { type: 'transcript', blocks: ['b25l', 2] }],
+  ])('rejects %s', (_case, frame) => {
+    expect(decodeFrame(JSON.stringify(frame))).toEqual({
+      error: expect.stringContaining(`Malformed remote frame "${String(frame.type)}"`),
+    });
+  });
+
+  it('preserves valid optional fields and drops undeclared properties', () => {
+    const encoded = JSON.stringify({
+      type: 'spawn', id: 'r1', program: 'bash', command: 'bash', mode: 'pipe',
+      harness: 'claude', cols: 80, rows: 24, offline: false, extra: 'ignored',
+    });
+    expect(decodeFrame(encoded)).toEqual({
+      type: 'spawn', id: 'r1', program: 'bash', command: 'bash', mode: 'pipe',
+      harness: 'claude', cols: 80, rows: 24, offline: false,
+    });
+  });
 });
 
 describe('handshake', () => {

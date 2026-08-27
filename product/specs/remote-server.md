@@ -108,6 +108,14 @@ none of the fields it reads and would provision a workspace with no credentials 
 credential no longer touches the contract at all, so this is expected to be the last version move on
 the tokens' account.
 
+After the handshake, every frame is validated before dispatch. Process and workspace identifiers
+must be nonempty strings; terminal dimensions must be positive integers; spawn modes and optional
+flags must use their declared values; exit codes must be integers; transcript blocks must all be
+strings; and the provisioning token map accepts only known token names with nonempty string values.
+An invalid known frame is refused as `Malformed remote frame "<type>".` and an unknown frame type is
+refused by name. Undeclared properties are discarded rather than forwarded to process or workspace
+handlers.
+
 ### Lifecycle and cleanup
 
 A remote tab's lifetime is its channel's lifetime. If the ssh session ends for any reason the tab
