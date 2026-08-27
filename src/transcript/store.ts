@@ -1,7 +1,8 @@
-import { mkdirSync, writeFileSync, readFileSync, existsSync, rmSync } from 'node:fs';
+import { mkdirSync, readFileSync, existsSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import type { LogEntry } from '../tab/types.js';
 import { messageBus } from '../bus.js';
+import { atomicWriteFile } from '../atomic-write.js';
 
 const VALID_NAME = /^[\w-]+$/;
 
@@ -11,6 +12,8 @@ let transcriptDir = '';
 // cleared. tab:removed keeps the file for history. In-place edits (streaming, runShell completion)
 // are persisted by direct calls to save() from the controller since there is no bus event for them.
 export class TranscriptStore {
+  private static failed = new Set<string>();
+
   private static path(label: string): string {
     if (!VALID_NAME.test(label)) throw new Error(`Invalid transcript label: "${label}"`);
     return path.join(transcriptDir, `${label}.json`);
@@ -28,24 +31,31 @@ export class TranscriptStore {
   }
 
   static save(label: string, log: readonly LogEntry[]): void {
-    if (!transcriptDir) return;
-    try {
-      mkdirSync(transcriptDir, { recursive: true });
-      writeFileSync(this.path(label), JSON.stringify(log));
-    } catch { /* ignore */ }
+    this.persist(label, JSON.stringify(log));
   }
 
   static clearTab(label: string): void {
+    this.persist(label, '[]');
+  }
+
+  private static persist(label: string, content: string): void {
     if (!transcriptDir) return;
     try {
       mkdirSync(transcriptDir, { recursive: true });
-      writeFileSync(this.path(label), '[]');
-    } catch { /* ignore */ }
+      atomicWriteFile(this.path(label), content);
+      this.failed.delete(label);
+    } catch (error) {
+      if (this.failed.has(label)) return;
+      this.failed.add(label);
+      const message = error instanceof Error ? error.message : String(error);
+      process.stderr.write(`warning: failed to persist transcript for ${label}: ${message}\n`);
+    }
   }
 
   static clear(): void {
     if (!transcriptDir) return;
     try { rmSync(transcriptDir, { recursive: true, force: true }); } catch { /* ignore */ }
+    this.failed.clear();
   }
 
   constructor(projectDir?: string) {

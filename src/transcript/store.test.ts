@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -6,6 +6,7 @@ import { TranscriptStore } from './store.js';
 import { messageBus } from '../bus.js';
 import type { LogEntry } from '../tab/types.js';
 import type { Tab } from '../tab/types.js';
+import * as atomicWrite from '../atomic-write.js';
 
 const entry = (input: string, output: string): LogEntry => ({ input, output });
 const tabWith = (label: string, log: LogEntry[]): Readonly<Tab> => ({ label, log }) as Readonly<Tab>;
@@ -23,6 +24,10 @@ describe('TranscriptStore I/O', () => {
   beforeEach(() => {
     dir = mkdtempSync(path.join(tmpdir(), 'janus-transcript-'));
     new TranscriptStore(dir);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it('load returns undefined when no file exists', () => {
@@ -52,6 +57,41 @@ describe('TranscriptStore I/O', () => {
     TranscriptStore.save('janus', [entry('a', 'b')]);
     TranscriptStore.clear();
     expect(TranscriptStore.load('janus')).toBeUndefined();
+  });
+
+  it('uses atomic replacement for saves and per-tab clears', () => {
+    const writer = vi.spyOn(atomicWrite, 'atomicWriteFile');
+
+    TranscriptStore.save('janus', [entry('a', 'b')]);
+    TranscriptStore.clearTab('janus');
+
+    expect(writer).toHaveBeenNthCalledWith(1, expect.stringMatching(/janus\.json$/), '[{"input":"a","output":"b"}]');
+    expect(writer).toHaveBeenNthCalledWith(2, expect.stringMatching(/janus\.json$/), '[]');
+  });
+
+  it('retains the last valid transcript and bounds warnings across failed writes', () => {
+    const originalWriter = atomicWrite.atomicWriteFile;
+    const writer = vi.spyOn(atomicWrite, 'atomicWriteFile');
+    const warning = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    const oldLog = [entry('old', 'valid')];
+    const newLog = [entry('new', 'content')];
+    TranscriptStore.save('janus', oldLog);
+    writer.mockImplementation(() => { throw new Error('disk full'); });
+
+    TranscriptStore.save('janus', newLog);
+    TranscriptStore.save('janus', newLog);
+
+    expect(TranscriptStore.load('janus')).toEqual(oldLog);
+    expect(warning).toHaveBeenCalledTimes(1);
+    expect(warning).toHaveBeenCalledWith(expect.stringContaining('failed to persist transcript for janus: disk full'));
+
+    writer.mockImplementation(originalWriter);
+    TranscriptStore.save('janus', newLog);
+    writer.mockImplementation(() => { throw new Error('read only'); });
+    TranscriptStore.clearTab('janus');
+
+    expect(TranscriptStore.load('janus')).toEqual(newLog);
+    expect(warning).toHaveBeenCalledTimes(2);
   });
 });
 
