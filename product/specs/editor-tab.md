@@ -261,7 +261,9 @@ stays open.
 If the shared workspace does not exist yet when a synced file is opened, its editor tab opens
 immediately showing a loading state instead of content, and only loads the file's real content once
 the workspace is ready. While the tab shows this loading state, its sync status icon spins to
-communicate that syncing is in progress. Opening a synced file — or another synced file finishing a save — also pulls
+communicate that syncing is in progress. If provisioning fails, the failed workspace is discarded;
+the next open, save, or manual resync starts a fresh provisioning attempt without requiring an
+application restart. Opening a synced file — or another synced file finishing a save — also pulls
 the latest `origin/master` into the shared workspace; any other open, unmodified synced tab whose
 file changed as a result refreshes automatically, exactly like an ordinary external file change (see
 "Live reload of external changes"). A synced tab with unsaved changes is left alone, same as always.
@@ -281,7 +283,8 @@ default branch is not literally named `master`) never blocks editing or shows a 
 changes the status icon and is otherwise reported through the notifications tab.
 
 While the icon shows synced or error, clicking it manually pulls the latest `origin/master` into
-the shared workspace again, the same pull an open or a save-triggered sync already runs, showing
+the shared workspace again, or reprovisions the workspace if its initial clone failed. This is the
+same sync an open or a save-triggered cycle already runs, showing
 syncing while that's in flight. If the pull brings in a change and the tab has no unsaved edits, the
 fresh content loads automatically; if it does have unsaved edits, the change is remembered and
 surfaces as the usual overwrite-confirmation prompt the next time the tab is saved. Clicking the icon while it shows

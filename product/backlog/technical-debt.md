@@ -4,8 +4,6 @@
 
 ## development
 
-* Allow git-sync provisioning to recover after a failed clone in `src/git-sync.ts`: `ensureWorkspace` permanently caches the first `ProvisioningWorkspace`, including a rejected `ready` promise, so every later open or save retry immediately repeats the same failure until the server restarts. Clear and recreate the cached handle after provisioning fails while retaining concurrent-call deduplication. Severity: **medium**.
-
 * Give editor file registrations explicit ownership and revocation across `src/tab/file-registry.ts`, `src/tab/openers.ts`, `src/tab/cleanup.ts`, `src/tab/rename-editor.ts`, and `src/open-file-manager.ts`: editors allocate a new `/open/<id>` before deduplication and on rename or sync transitions, but close cleanup releases only plugin `fileRefs`, so the registry grows and authenticated stale URLs keep serving files after the editor no longer owns them. Reuse or replace registrations transactionally and revoke them on dedupe, retarget, and close. Severity: **high**.
 
 * Make agent-state persistence atomic and observable across `src/agent/state.ts` and `src/tab/manager.ts`: frequent saves overwrite JSON files in place and `TabManager.persist` swallows every write error, while malformed files are silently skipped during rehydration, so an interrupted or failed write can erase a tab's last relaunch state without warning. Use the shared atomic writer, retain the last valid file, and surface a bounded persistence warning. Severity: **high**.
