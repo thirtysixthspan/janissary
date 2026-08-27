@@ -3,7 +3,7 @@ import { render } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Terminal } from '@xterm/xterm';
 import type { HarnessView } from '@shared/protocol';
-import type { JanusClient } from './ws';
+import type { JanusClient } from '../ws';
 import { HarnessTab } from './HarnessTab';
 
 // ---- xterm stubs -----------------------------------------------------------

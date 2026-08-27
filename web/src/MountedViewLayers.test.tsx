@@ -6,7 +6,7 @@ import type { HarnessTabHandle } from './tab-handles';
 import type { DirtyTabHandle } from './tab-handles';
 import { MountedViewLayers } from './MountedViewLayers';
 
-vi.mock('./HarnessTab', () => {
+vi.mock('./harness/HarnessTab', () => {
   const { forwardRef, useImperativeHandle, createElement } = React;
   return {
     HarnessTab: forwardRef((_props, ref) => {

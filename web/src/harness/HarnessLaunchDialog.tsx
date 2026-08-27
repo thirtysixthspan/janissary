@@ -1,7 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import type { HarnessLaunchView } from '@shared/protocol';
-import type { JanusClient } from './ws';
-import { useLaunchDialog } from './use-launch-dialog';
+import type { JanusClient } from '../ws';
+import { useLaunchDialog } from '../use-launch-dialog';
 import { buildHarnessLaunchCommand, type HarnessLaunchFields } from './harness-launch-command';
 
 type Properties = { view: HarnessLaunchView; client: JanusClient };

@@ -1,15 +1,15 @@
 import React from 'react';
 import type { TabView } from '@shared/protocol';
-import type { JanusClient } from './ws';
+import type { JanusClient } from '../ws';
 import { HarnessTab } from './HarnessTab';
-import type { HarnessTabHandle } from './tab-handles';
-import { StatusPanels } from './StatusPanels';
-import { TaskPicker } from './TaskPicker';
-import { TabNavPicker } from './TabNavPicker';
-import { useStatusWindows } from './useStatusWindows';
-import type { PickerOverlayProps } from './picker-overlay-props';
-import { tabBodyBorder } from './tab-body-border';
-import { statusButton } from './status-button';
+import type { HarnessTabHandle } from '../tab-handles';
+import { StatusPanels } from '../StatusPanels';
+import { TaskPicker } from '../TaskPicker';
+import { TabNavPicker } from '../TabNavPicker';
+import { useStatusWindows } from '../useStatusWindows';
+import type { PickerOverlayProps } from '../picker-overlay-props';
+import { tabBodyBorder } from '../tab-body-border';
+import { statusButton } from '../status-button';
 
 type Properties = {
   t: TabView;
