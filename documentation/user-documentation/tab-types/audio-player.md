@@ -101,6 +101,6 @@ The drop is reported to the [notifications](/user-documentation/tab-types/notifi
 
 ## Lifecycle
 
-An audio tab is a live view, not saved state. The playlist belongs to the open tab, not to the files: close it and open the same track again and you start a fresh queue from the beginning. Audio tabs are not restored by `janus --relaunch`, and `profile save` doesn't record them.
+An audio tab is a live view, not saved state. The playlist belongs to the open tab, not to the files: close it and open the same track again and you start a fresh queue from the beginning. Audio tabs are not restored by `janus --relaunch`.
 
 Closing the tab stops playback and releases every file it was serving. Only files you've explicitly opened are ever served to the player.
