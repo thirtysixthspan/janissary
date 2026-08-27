@@ -97,10 +97,8 @@ Inside a git repository, a file's name is colored by its git status: **green** f
 | Header × button | Shown while docked; closes the tree (a docked tree has no strip × of its own) |
 | Press a row, drag, and release over a directory (or any file inside it) | Moves the dragged file or directory into that directory on disk |
 
-Click a row to replace the selection. Hold `Shift` while you click to select the visible range from
-the current anchor to that row. Hold `Cmd` on macOS, or `Ctrl` on other platforms, to add or remove
-one row. A click also makes that row the keyboard cursor and the new range anchor. The `..` row is
-not included in a range.
+Click a row to replace the selection, and see [Selecting more than one row](#selecting-more-than-one-row)
+below for building a bigger one.
 
 Files opened from the tree land in the same [group](/user-documentation/getting-started/groups) as the tree tab —
 including while the tree is docked to a sidebar; opened files still land in that group.
@@ -115,6 +113,27 @@ of them makes **Open** or **Edit** apply to every selected image. Otherwise, eac
 only the row you right-clicked, and **Edit** is not shown for directories. **Open with** lets you choose the registered viewer, text editor, or
 external application instead. The menu also provides Copy, Paste (when the clipboard is armed),
 Rename, Delete, New file, and New folder; the `..` row omits actions that cannot apply to it.
+
+## Selecting more than one row
+
+Delete, copy, cut, paste, and drag-and-drop all act on the whole selection, so building one is
+usually the first half of the job.
+
+With the mouse: hold `Shift` while you click to select the visible range from the current anchor to
+that row, or hold `Cmd` (`Ctrl` on other platforms) to add or remove a single row. A click also
+makes that row the keyboard cursor and the new range anchor.
+
+From the keyboard: `Shift+↑` and `Shift+↓` build the same range a `Shift`-click builds. Each press
+moves the cursor one visible row and selects everything between the anchor and the new cursor, so
+reversing direction shrinks the range rather than growing it. At the top or bottom row nothing
+happens: the range never wraps, and what you already selected stays selected. `Shift` with `Home`,
+`End`, `Page Up`, or `Page Down` collapses back to a single row instead.
+
+`Cmd+A` (`Ctrl+A`) selects the current row's siblings: every visible row in the same directory,
+leaving the cursor where it is. A sibling directory that happens to be expanded contributes only its
+own row, not its contents. On the `..` row it does nothing.
+
+The `..` row is never part of a selection.
 
 ## Moving files by drag-and-drop
 
@@ -188,6 +207,7 @@ A focused tree captures these keys for itself (tab-switching and other `Ctrl`/`C
 | Key | Behavior |
 |---|---|
 | `↑` / `↓` | Move the selection |
+| `Shift+↑` / `Shift+↓` | Extend the selection by one row (see "Selecting more than one row" above) |
 | `→` | Expand a collapsed directory; from an expanded one, re-root the tree there; open a file |
 | `←` | Collapse an expanded directory; otherwise jump to the parent |
 | `Enter` / `Space` | Open a file, toggle a directory, or (on `..`) go up |
@@ -200,6 +220,7 @@ A focused tree captures these keys for itself (tab-switching and other `Ctrl`/`C
 | `Cmd+Shift+Z` / `Ctrl+Shift+Z` | Redo the most recently undone move |
 | `Cmd+N` / `Ctrl+N` | Create a new file (see "Creating a new file" above) |
 | `Cmd+R` / `Ctrl+R` | Rename the selected file or directory in place (see "Renaming a file or directory" above) |
+| `Cmd+A` / `Ctrl+A` | Select the current row's siblings (see "Selecting more than one row" above) |
 | `Cmd+C` / `Ctrl+C` | Copy the selection onto the clipboard |
 | `Cmd+X` / `Ctrl+X` | Cut the selection onto the clipboard |
 | `Cmd+V` / `Ctrl+V` | Paste the clipboard into the directory the selection implies |
