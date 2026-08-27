@@ -16,8 +16,10 @@ function makeManagers(tabs: Tab[]): { managers: Managers; harnessOpen: ReturnTyp
     const creator = tabs.find((t) => t.label === label);
     const group = creator?.group ?? 1;
     const groupColor = creator?.groupColor ?? 'green';
-    tabs = [...tabs, makeTab(`editor-${tabs.length}`, 'green', tabs.length + 1, [], [], undefined, group, groupColor)];
+    const editorLabel = `editor-${tabs.length}`;
+    tabs = [...tabs, makeTab(editorLabel, 'green', tabs.length + 1, [], [], undefined, group, groupColor)];
     activeTab = tabs.length - 1;
+    return { label: editorLabel };
   });
   // `open <image>` in this mock produces an image plugin tab whose instance key is the resolved
   // path, which is the identity `openProfileViewTabs` matches on. It resolves asynchronously, the

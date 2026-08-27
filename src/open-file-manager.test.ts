@@ -6,6 +6,7 @@ import { OpenFileManager } from './open-file-manager.js';
 import type { Managers } from './managers.js';
 import { TabPluginHost } from './plugins/host.js';
 import { openerForExtension } from './openers/index.js';
+import { EDITOR_MAX_BYTES } from './openers/editor.js';
 
 const osOpen = vi.hoisted(() => ({ didOsOpen: vi.fn<(file: string, application?: string) => boolean>(() => true) }));
 
@@ -22,16 +23,17 @@ describe('OpenFileManager.edit', () => {
       tab: {
         cwdOf: () => '/working',
         append: (_label: string, _entry: unknown) => { appended.push(JSON.stringify(_entry)); },
-        openEditorTab: (view: { path: string }) => { opened.push(view.path); },
+        openEditorTab: (view: { path: string }) => { opened.push(view.path); return 'editor'; },
         registerFile: (p: string) => `/open/test-${p.length}`,
       },
     } as unknown as Managers;
     const mgr = new OpenFileManager(managers);
 
-    mgr.edit('edit newfile.txt', 'newfile.txt', 'janus');
+    const result = mgr.edit('edit newfile.txt', 'newfile.txt', 'janus');
 
     expect(opened).toHaveLength(1);
     expect(opened[0]).toBe(path.resolve('/working', 'newfile.txt'));
+    expect(result).toEqual({ label: 'editor' });
     expect(appended).toHaveLength(0);
   });
 
@@ -41,7 +43,7 @@ describe('OpenFileManager.edit', () => {
       tab: {
         cwdOf: () => '/working',
         append: () => {},
-        openEditorTab: (view: { path: string }) => { opened.push(view.path); },
+        openEditorTab: (view: { path: string }) => { opened.push(view.path); return 'editor'; },
         registerFile: (p: string) => `/open/test-${p.length}`,
       },
     } as unknown as Managers;
@@ -59,7 +61,7 @@ describe('OpenFileManager.edit', () => {
       tab: {
         cwdOf: () => '/working',
         append: () => {},
-        openEditorTab: (view: { path: string; line?: number }) => { opened.push(view); },
+        openEditorTab: (view: { path: string; line?: number }) => { opened.push(view); return 'editor'; },
         registerFile: (p: string) => `/open/test-${p.length}`,
       },
     } as unknown as Managers;
@@ -70,6 +72,28 @@ describe('OpenFileManager.edit', () => {
     expect(opened).toHaveLength(1);
     expect(opened[0].line).toBe(42);
   });
+
+  it('returns no editor result when an oversized file is refused', () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'janus-large-edit-'));
+    const file = path.join(dir, 'large.txt');
+    writeFileSync(file, Buffer.alloc(EDITOR_MAX_BYTES + 1));
+    const notes: unknown[] = [];
+    const managers = {
+      tab: {
+        cwdOf: () => dir,
+        launchDir: dir,
+        append: (_label: string, entry: unknown) => { notes.push(entry); },
+        openEditorTab: vi.fn(() => 'editor'),
+        registerFile: vi.fn(),
+      },
+    } as unknown as Managers;
+
+    const result = new OpenFileManager(managers).edit('edit large.txt', 'large.txt', 'janus');
+
+    expect(result).toBeUndefined();
+    expect(managers.tab.openEditorTab).not.toHaveBeenCalled();
+    expect(notes).toHaveLength(1);
+  });
 });
 
 describe('OpenFileManager.edit (dispatch by file type)', () => {
@@ -77,7 +101,7 @@ describe('OpenFileManager.edit (dispatch by file type)', () => {
     tab: {
       cwdOf: () => '/working',
       append: () => {},
-      openEditorTab: (view: { path: string }) => { opened.push(view.path); },
+      openEditorTab: (view: { path: string }) => { opened.push(view.path); return 'editor'; },
       registerFile: (p: string) => `/open/test-${p.length}`,
     },
     plugins: { runOpener },
@@ -409,6 +433,7 @@ describe('OpenFileManager.edit (synced path)', () => {
       append: () => {},
       openEditorTab: (view: { name: string; path: string; size: string; url: string; sync?: string }) => {
         tabs.push({ label: 'janus', editor: view });
+        return 'janus';
       },
       registerFile: vi.fn((p: string) => `/open/test-${p.length}`),
       tabs,
@@ -430,10 +455,11 @@ describe('OpenFileManager.edit (synced path)', () => {
     const managers = makeSyncedManagers(dir, tabs, async () => ({ dir: '/workspace' }));
     const mgr = new OpenFileManager(managers);
 
-    mgr.edit('edit synced/foo.md', 'synced/foo.md', 'janus');
+    const result = mgr.edit('edit synced/foo.md', 'synced/foo.md', 'janus');
 
     expect(tabs).toHaveLength(1);
     expect(tabs[0].editor?.sync).toBe('provisioning');
+    expect(result).toEqual({ label: 'janus' });
     const placeholderUrl = tabs[0].editor?.url;
 
     await vi.waitFor(() => expect(tabs[0].editor?.sync).toBe('synced'));

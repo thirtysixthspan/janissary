@@ -120,19 +120,20 @@ export function updatePluginTab(
 
 export function openEditorTab(
   target: OpenTarget, view: EditorView, watch: (label: string, path: string) => void,
-): void {
+): string {
   const existing = view.newFile ? undefined : target.tabs.find((t) => t.editor?.path === view.path);
   if (existing) {
     releaseFileReference(target.openFiles, view.url);
     if (view.line !== undefined) existing.editor!.line = view.line;
     target.setActiveTab(target.tabs.indexOf(existing));
     messageBus.emit('state', { type: 'dirty' });
-    return;
+    return existing.label;
   }
   const result = addEditorTab(target.tabs, target.activeTab, view);
   target.applyOpenResult(result);
   watch(result.tabs[result.activeTab].label, view.path);
   messageBus.emit('state', { type: 'dirty' });
+  return result.tabs[result.activeTab].label;
 }
 
 export function openFilesTab(target: OpenTarget, view: FileNavigatorView): void {

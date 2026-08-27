@@ -14,6 +14,8 @@ import { humanSize } from './openers/size.js';
 import { messageBus } from './bus.js';
 import { isSyncedPath } from './sync-path-match.js';
 
+export type EditResult = { label: string };
+
 export class OpenFileManager {
   constructor(private managers: Managers) {}
 
@@ -43,15 +45,16 @@ export class OpenFileManager {
   // the image plugin's own editing presentation. Resolution reads the registry only, so a plugin is
   // never activated just to find out whether it owns the verb. A `:line` suffix still parses, and
   // the presentation simply has no use for it — an image has no lines.
-  edit(command: string, target: string, label: string, line?: number): void {
+  edit(command: string, target: string, label: string, line?: number): EditResult | undefined {
     const cwd = this.managers.tab.cwdOf(label) ?? process.cwd();
     const expanded = expandUserPath(target, { root: this.managers.tab.launchDir });
     const file = path.isAbsolute(expanded) ? expanded : path.resolve(cwd, expanded);
     const context = this.buildContext(command, label);
     const opener = openerForExtension(path.extname(file));
-    if (opener?.editsOwnFiles) { void context.runPluginOpener(opener.name, 'edit', file); return; }
-    if (this.isSyncPath(file)) { this.openSynced(file, context, line); return; }
-    openInEditor(file, context, line);
+    if (opener?.editsOwnFiles) { void context.runPluginOpener(opener.name, 'edit', file); return undefined; }
+    if (this.isSyncPath(file)) return this.openSynced(file, context, line);
+    const editorLabel = openInEditor(file, context, line);
+    return editorLabel === undefined ? undefined : { label: editorLabel };
   }
 
   // The file navigator's "New file" button / Cmd+N: like `edit`, but resolves to the next free
@@ -118,13 +121,14 @@ export class OpenFileManager {
   // pattern: the tab opens right away, targeting the file's eventual location inside the shared
   // sync workspace, showing `sync: 'provisioning'` until that workspace (and an initial pull) is
   // ready — at which point the real size/content become available and the tab is filled in.
-  private openSynced(file: string, context: OpenContext, line?: number): void {
+  private openSynced(file: string, context: OpenContext, line?: number): EditResult | undefined {
     const relative = path.relative(this.managers.tab.launchDir, file).split(path.sep).join('/');
     const target = this.managers.gitSync.workspaceFilePath(relative);
-    context.openEditorTab({
+    const label = context.openEditorTab({
       name: path.basename(target), path: target, size: 'unknown', url: context.registerFile(target), line, sync: 'provisioning',
     });
     void this.finishOpenSynced(target);
+    return { label };
   }
 
   private async finishOpenSynced(target: string): Promise<void> {

@@ -8,7 +8,7 @@ export type OpenContext = {
   // Append a confirmation/error line to the originating tab's transcript.
   note: (text: string) => void;
   // Create and focus an in-app plain-text editor tab.
-  openEditorTab: (view: EditorView) => void;
+  openEditorTab: (view: EditorView) => string;
   // Register a local file to be served to the web client; returns the app-relative ref to load it.
   registerFile: (absPath: string) => string;
   // Hand a file to the operating system's default viewer (detached). Returns false when no viewer
