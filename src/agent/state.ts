@@ -1,6 +1,7 @@
-import { mkdirSync, writeFileSync, existsSync, readFileSync, readdirSync, rmSync } from 'node:fs';
+import { mkdirSync, existsSync, readFileSync, readdirSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import type { AgentState } from './types.js';
+import { atomicWriteFile } from '../atomic-write.js';
 
 let stateDirectory = '';
 
@@ -41,7 +42,7 @@ export function loadAgentState(name: string): AgentState | undefined {
 
 export function saveAgentState(state: AgentState): void {
   ensureStateDirectory();
-  writeFileSync(agentStatePath(state.name), JSON.stringify(state, null, 2) + '\n');
+  atomicWriteFile(agentStatePath(state.name), JSON.stringify(state, null, 2) + '\n');
 }
 
 export function clearStateDirectory(): void {

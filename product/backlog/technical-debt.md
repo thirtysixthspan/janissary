@@ -4,8 +4,6 @@
 
 ## development
 
-* Make agent-state persistence atomic and observable across `src/agent/state.ts` and `src/tab/manager.ts`: frequent saves overwrite JSON files in place and `TabManager.persist` swallows every write error, while malformed files are silently skipped during rehydration, so an interrupted or failed write can erase a tab's last relaunch state without warning. Use the shared atomic writer, retain the last valid file, and surface a bounded persistence warning. Severity: **high**.
-
 ## deferred
 
 * Validate every method's parameter shape before treating websocket input as `ClientMessage` in `src/client-message.ts`: `isClientMessage` currently checks only the envelope, known method name, and that `params` is an object, then `src/message-handler.ts` dereferences method-specific fields under a type guard that has not established them; only the two plugin calls receive real parameter validation. Give the discriminated RPC union a matching runtime decoder so malformed authenticated client messages are rejected consistently before controller dispatch. Severity: **medium**. — deferred: complexity 8/10, requires a shared runtime decoder for more than fifty method-specific RPC parameter shapes and broad protocol coverage.

@@ -2,7 +2,6 @@ import type { Tab, LogEntry, CenterPane } from './types.js';
 import type { AgentState } from '../agent/types.js';
 import type { ConnectionView, ScheduleView, TabView } from '../protocol.js';
 import type { Managers } from '../managers.js';
-import { saveAgentState } from '../agent/state.js';
 import { abbreviatePath } from '../paths.js';
 import { getConfig } from '../config.js';
 import { messageBus } from '../bus.js';
@@ -20,6 +19,7 @@ import * as viewOperations from './view-operations.js';
 import { applyOpenResult as applyOpenResultOp } from './open-result.js';
 import { makeRootTab } from './root.js';
 import { retargetEditorTab as retargetEditorTabOp } from './retarget-editor.js';
+import { AgentStatePersistence } from './persistence.js';
 
 export class TabManager extends TabOpeningState {
   tabs: Tab[] = [];
@@ -27,6 +27,7 @@ export class TabManager extends TabOpeningState {
   secondaryTabLabel?: string;
   private onIdle: ((label: string) => void) | null = null;
   private fileRegistry = new FileRegistry();
+  private persistence = new AgentStatePersistence();
   // Labels of tabs that were previously active, most-recent-last. Closing the active tab pops
   // this to restore focus to whatever was focused right before it, rather than just clamping to
   // the nearest surviving index.
@@ -96,10 +97,7 @@ export class TabManager extends TabOpeningState {
   // was deleted when its channel died and whose cwd does not exist locally. Guarded here rather than
   // filtered at each call site, since this is the single write path into the state directory.
   persist(state: AgentState): void {
-    if (state.remote !== undefined) return;
-    try {
-      saveAgentState(state);
-    } catch { /* ignore */ }
+    this.persistence.save(state);
   }
   buildAgentState(tab: Tab, extra?: Partial<AgentState>): AgentState {
     return buildAgentStateFromTab(

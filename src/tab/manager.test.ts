@@ -127,6 +127,33 @@ describe('TabManager queue', () => {
     saveSpy.mockRestore();
   });
 
+  it('bounds persistence warnings per agent until a save recovers', () => {
+    let failing = true;
+    const saveSpy = vi.spyOn(agentState, 'saveAgentState').mockImplementation(() => {
+      if (failing) throw new Error('disk full');
+    });
+    const warningSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    const tm = makeTabManager();
+    const alpha = { name: 'alpha', dotColor: '#fff', active: false };
+    const beta = { name: 'beta', dotColor: '#fff', active: false };
+
+    tm.persist(alpha);
+    tm.persist(alpha);
+    tm.persist(beta);
+    expect(warningSpy).toHaveBeenCalledTimes(2);
+    expect(warningSpy.mock.calls[0][0]).toContain('failed to persist agent state for alpha: disk full');
+    expect(warningSpy.mock.calls[1][0]).toContain('failed to persist agent state for beta: disk full');
+
+    failing = false;
+    tm.persist(alpha);
+    failing = true;
+    tm.persist(alpha);
+    expect(warningSpy).toHaveBeenCalledTimes(3);
+
+    warningSpy.mockRestore();
+    saveSpy.mockRestore();
+  });
+
   it('buildAgentState carries a remote tab\'s address, which is what persist guards on', () => {
     const tm = makeTabManager();
     const tab = tm.cur();

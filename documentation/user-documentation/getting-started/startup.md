@@ -68,6 +68,8 @@ janus --relaunch
 
 Since a normal launch doesn't print to the terminal, check `.janissary/log/server.log` for anything the server would otherwise have shown — it's cleared at the start of each normal launch and kept (with new output appended) across `--relaunch`.
 
+If saving an agent's relaunch state fails, Janissary keeps the last valid state file and writes one warning for that agent to the server log. It suppresses repeated warnings while the same failure continues, then reports again if persistence recovers and later fails anew.
+
 If startup fails, the error names the app and version, says what went wrong, and suggests what to do next. The ones you're most likely to see:
 
 - **The port is already in use** — something else is listening on the port you asked for. Pick another with `--port=<n>`, or drop `--port` entirely and let the app choose a free one.
