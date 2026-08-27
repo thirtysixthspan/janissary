@@ -23,7 +23,7 @@ export class RemoteProcesses {
     private send: (frame: ServerFrame) => void,
     private workspaceDir: string,
     private label: string,
-    private credentials: { github?: string; claude?: string; opencode?: string } = {},
+    private credentials: { github?: string; claude?: string; opencode?: string; gemini?: string } = {},
   ) {}
 
   spawn(frame: Extract<ClientFrame, { type: 'spawn' }>): void {
@@ -63,6 +63,7 @@ export class RemoteProcesses {
         githubToken: this.credentials.github,
         claudeToken: this.credentials.claude,
         opencodeToken: this.credentials.opencode,
+        geminiToken: this.credentials.gemini,
       },
       frame.harness === undefined ? undefined : harnessEnv(frame.harness, this.workspaceDir),
     );
@@ -77,6 +78,7 @@ export class RemoteProcesses {
       githubToken: this.credentials.github,
       claudeToken: this.credentials.claude,
       opencodeToken: this.credentials.opencode,
+      geminiToken: this.credentials.gemini,
     });
     const onChunk = (chunk: string) => this.send({ type: 'output', id, data: chunk });
     shell.stdout?.on('data', onChunk);

@@ -255,7 +255,35 @@ describe('sandboxSpawn', () => {
     rmSync(workspaceDir, { recursive: true, force: true });
   });
 
-  it('injects every credential when all three tokens are given', () => {
+  it('injects GEMINI_API_KEY when geminiToken is given', () => {
+    if (!sandboxAvailable()) return;
+    const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
+    const result = sandboxSpawn({ workspaceDir, geminiToken: 'AIzaSyExample' }, 'bash', [], { PATH: '/usr/bin' });
+    expect(result.env.GEMINI_API_KEY).toBe('AIzaSyExample');
+    rmSync(workspaceDir, { recursive: true, force: true });
+  });
+
+  // Off ENV_SCRUB_PATTERNS like the other two provider keys, so someone who exports it themselves
+  // keeps working when no token file is configured.
+  it('leaves an ambient GEMINI_API_KEY in place when geminiToken is omitted', () => {
+    if (!sandboxAvailable()) return;
+    const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
+    const env = { PATH: '/usr/bin', GEMINI_API_KEY: 'ambient-key' };
+    const result = sandboxSpawn({ workspaceDir }, 'bash', [], env);
+    expect(result.env.GEMINI_API_KEY).toBe('ambient-key');
+    rmSync(workspaceDir, { recursive: true, force: true });
+  });
+
+  it('still injects the Gemini credential for a workspaced spawn when nothing is confined', () => {
+    configureUnconfined();
+    const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
+    const result = sandboxSpawn({ workspaceDir, geminiToken: 'AIzaSyExample' }, 'bash', [], { PATH: '/usr/bin' });
+    expect(result.command).toBe('bash');
+    expect(result.env.GEMINI_API_KEY).toBe('AIzaSyExample');
+    rmSync(workspaceDir, { recursive: true, force: true });
+  });
+
+  it('injects every credential when all four tokens are given', () => {
     if (!sandboxAvailable()) return;
     const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
     mkdirSync(`${workspaceDir}.tmp`, { recursive: true });
@@ -265,6 +293,7 @@ describe('sandboxSpawn', () => {
         githubToken: 'scoped-token',
         claudeToken: 'subscription-token',
         opencodeToken: 'oc_live_key',
+        geminiToken: 'AIzaSyExample',
       },
       'bash', [], { PATH: '/usr/bin' },
     );
@@ -272,6 +301,7 @@ describe('sandboxSpawn', () => {
     expect(result.env.GH_CONFIG_DIR).toBe(path.join(realpathSync(`${workspaceDir}.tmp`), 'gh-config'));
     expect(result.env.CLAUDE_CODE_OAUTH_TOKEN).toBe('subscription-token');
     expect(result.env.OPENCODE_API_KEY).toBe('oc_live_key');
+    expect(result.env.GEMINI_API_KEY).toBe('AIzaSyExample');
     rmSync(`${workspaceDir}.tmp`, { recursive: true, force: true });
     rmSync(workspaceDir, { recursive: true, force: true });
   });

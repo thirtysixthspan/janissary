@@ -3,6 +3,7 @@ import { messageBus } from './bus.js';
 import { getGithubToken } from './github-token.js';
 import { getClaudeToken } from './claude-token.js';
 import { getOpencodeToken } from './opencode-token.js';
+import { getGeminiToken } from './gemini-token.js';
 import { createRemotePtySession, type RemotePtyOptions } from './remote/pty-session.js';
 import type { RemoteChannel } from './remote/channel.js';
 import type { Managers } from './managers.js';
@@ -37,6 +38,7 @@ export class PseudoterminalManager {
       githubToken: workspaceDir ? getGithubToken() : undefined,
       claudeToken: workspaceDir ? getClaudeToken() : undefined,
       opencodeToken: workspaceDir ? getOpencodeToken() : undefined,
+      geminiToken: workspaceDir ? getGeminiToken() : undefined,
     }, extraEnv);
     this.ptys.set(session.id, { session, tabLabel: label });
     return session.id;

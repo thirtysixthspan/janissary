@@ -7,6 +7,7 @@ Janissary reads three optional token files from your project's `.janissary/` dir
 | `.janissary/github-token` | working `git push` and `gh` | you want to push or open pull requests from inside a workspace |
 | `.janissary/claude-token` | a signed-in `claude` harness | the machine running the tab has no usable keychain |
 | `.janissary/opencode-token` | a signed-in `opencode` harness | the machine running the tab has never run `opencode auth login` |
+| `.janissary/gemini-token` | a working Google provider | your harness talks to Gemini |
 
 None of them is required. Without them, workspaces still clone, run, commit, fetch, and pull.
 
@@ -40,13 +41,23 @@ Sign in at OpenCode, copy your API key, and save it to `.janissary/opencode-toke
 
 A workspaced `opencode` harness needs this file. It can't read the credentials `opencode auth login` saved on your machine, because a workspace is blocked from that file on purpose — it holds every provider key opencode has, and a disposable clone has no business reading them. That applies on your own laptop, not just on a remote host.
 
-The key covers the OpenCode Zen and OpenCode Go providers. If you point opencode at Anthropic, Google, or OpenAI instead, this file doesn't help. Set that provider's own variable in the environment you start Janissary from and it reaches the workspace untouched:
+The key covers the OpenCode Zen and OpenCode Go providers only.
+
+## Get a Gemini key
+
+Create an API key in Google AI Studio and save it to `.janissary/gemini-token`. Janissary hands it to workspaced tabs as `GEMINI_API_KEY`, so a harness pointed at a Google model works from a workspace without you exporting anything.
+
+You need this for the same reason as the OpenCode key: a workspace can't read the credentials `opencode auth login` saved, so the key has to arrive by a route the workspace is allowed to use.
+
+## Other providers
+
+Anthropic and OpenAI have no token file. Set the provider's own variable in the environment you start Janissary from and it reaches the workspace untouched:
 
 | Provider | Variable |
 | --- | --- |
 | Anthropic | `ANTHROPIC_API_KEY` |
 | OpenAI | `OPENAI_API_KEY` |
-| Google | `GOOGLE_API_KEY`, `GOOGLE_GENERATIVE_AI_API_KEY`, or `GEMINI_API_KEY` |
+| Google | `.janissary/gemini-token`, or `GOOGLE_API_KEY` / `GOOGLE_GENERATIVE_AI_API_KEY` / `GEMINI_API_KEY` |
 
 Google Vertex is the one that can't work. It authenticates with `GOOGLE_APPLICATION_CREDENTIALS`, which holds a path to a credentials file rather than a key. The variable reaches the workspace fine, so everything looks set up, but the file it points at stays blocked. Use one of the API-key providers above from a workspaced tab.
 
@@ -62,7 +73,7 @@ A token reaches the tab whether or not isolation is actually active on that mach
 
 <img class="agent-float" src="/agents/hakim-south.png" alt="" />
 
-All three tokens travel to a [remote agent or harness](/user-documentation/advanced-agents/remote-agents) the same way. Janissary sends them through the encrypted SSH connection when it asks the remote for a workspace, and injects them only into that workspace's processes. None is written to the remote filesystem, so you don't need to copy any of these files to the other machine. If your project has no token, the remote falls back to the matching file in its own project.
+All four tokens travel to a [remote agent or harness](/user-documentation/advanced-agents/remote-agents) the same way. Janissary sends them through the encrypted SSH connection when it asks the remote for a workspace, and injects them only into that workspace's processes. None is written to the remote filesystem, so you don't need to copy any of these files to the other machine. If your project has no token, the remote falls back to the matching file in its own project.
 
 Forwarding is what makes a remote work at all for a harness. A Linux host has no keychain for `claude`, and a host nobody has signed into has nothing for `opencode`, so without your tokens those tabs open logged out.
 

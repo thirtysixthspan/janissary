@@ -2,6 +2,7 @@ import { loadConfig } from '../config.js';
 import { getGithubToken, loadGithubToken } from '../github-token.js';
 import { getClaudeToken, loadClaudeToken } from '../claude-token.js';
 import { getOpencodeToken, loadOpencodeToken } from '../opencode-token.js';
+import { getGeminiToken, loadGeminiToken } from '../gemini-token.js';
 import { initWorkspaceDir } from '../workspace/index.js';
 import { sandboxNotice } from '../sandbox/index.js';
 import { WorkspaceManager } from '../workspace/manager.js';
@@ -90,7 +91,9 @@ export class RemoteServer {
     if ('error' in frame) { this.refuse(frame.error); return; }
     switch (frame.type) {
     case 'provision': {
-      void this.provision(frame.label, frame.githubToken, frame.claudeToken, frame.opencodeToken);
+      void this.provision(
+        frame.label, frame.githubToken, frame.claudeToken, frame.opencodeToken, frame.geminiToken,
+      );
       return;
     }
     case 'spawn': { this.spawn(frame); return; }
@@ -108,6 +111,7 @@ export class RemoteServer {
     forwardedGithubToken?: string,
     forwardedClaudeToken?: string,
     forwardedOpencodeToken?: string,
+    forwardedGeminiToken?: string,
   ): Promise<void> {
     const result = this.workspaces.create(label);
     if ('error' in result) { this.refuse(result.error); return; }
@@ -131,6 +135,7 @@ export class RemoteServer {
         github: forwardedGithubToken ?? ownGithubToken,
         claude: forwardedClaudeToken ?? getClaudeToken(),
         opencode: forwardedOpencodeToken ?? getOpencodeToken(),
+        gemini: forwardedGeminiToken ?? getGeminiToken(),
       },
     );
     this.emit({
@@ -179,6 +184,7 @@ export function runRemoteServer(pathArgument: string | undefined): void {
   loadGithubToken(resolved.root);
   loadClaudeToken(resolved.root);
   loadOpencodeToken(resolved.root);
+  loadGeminiToken(resolved.root);
   initWorkspaceDir(resolved.root);
   // Raw mode so the remote tty's line discipline neither echoes the framed input nor rewrites it.
   if (process.stdin.isTTY) process.stdin.setRawMode(true);

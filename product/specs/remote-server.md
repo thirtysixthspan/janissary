@@ -97,9 +97,9 @@ version mismatch, which is the whole reason the version moved when the field was
 
 The forwarded Claude token is the second such field and moved the version again, for the same
 reason: an installation that honors the GitHub token but not this one provisions and runs a harness
-that cannot authenticate. The forwarded OpenCode key is the third and moved it once more. Both ends
-therefore have to be updated together, and a remote that is behind is refused before a tab is
-provisioned rather than after the harness fails to sign in.
+that cannot authenticate. The forwarded OpenCode key is the third and the forwarded Gemini key the
+fourth, each moving it once more. Both ends therefore have to be updated together, and a remote that
+is behind is refused before a tab is provisioned rather than after the harness fails to sign in.
 
 ### Lifecycle and cleanup
 
@@ -135,9 +135,10 @@ remote, still receives the token in its workspaced processes. If the local proje
 remote project's own `.janissary/github-token` remains the fallback. The initial clone uses whatever
 transport the *remote* repository's `origin` already has.
 
-The local project's `.janissary/claude-token` and `.janissary/opencode-token` travel the same way, on
-the same frame, and are injected as `CLAUDE_CODE_OAUTH_TOKEN` and `OPENCODE_API_KEY` into the same
-processes, each with the remote project's own matching file as the same fallback. It matters most on exactly the hosts the GitHub
+The local project's `.janissary/claude-token`, `.janissary/opencode-token`, and
+`.janissary/gemini-token` travel the same way, on the same frame, and are injected as
+`CLAUDE_CODE_OAUTH_TOKEN`, `OPENCODE_API_KEY`, and `GEMINI_API_KEY` into the same processes, each
+with the remote project's own matching file as the same fallback. It matters most on exactly the hosts the GitHub
 token's isolation-independence describes: a Keychain and the sandbox both need macOS, so on a Linux
 remote the harness has no credential store to fall back on and its own credentials file is denied,
 which without a forwarded token leaves it reporting itself logged out.

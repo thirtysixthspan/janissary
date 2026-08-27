@@ -34,6 +34,10 @@ export type SandboxOptions = {
   // variable the OpenCode Zen and OpenCode Go providers declare. Same terms as the Claude token:
   // any workspaced spawn, confined or not.
   opencodeToken?: string;
+  // A Google AI API key to hand this spawn as `GEMINI_API_KEY` (see `gemini-token.ts`). The Google
+  // provider's route into a workspace, since opencode's own credential store is a denied secret
+  // path. Same terms as the other provider tokens: any workspaced spawn, confined or not.
+  geminiToken?: string;
 };
 
 export type SandboxResult = {
@@ -210,17 +214,18 @@ function githubCredentialEnv(tmpDir: string, token: string): NodeJS.ProcessEnv {
   return { GH_TOKEN: token, GH_CONFIG_DIR: path.join(tmpDir, 'gh-config') };
 }
 
-// Every credential this spawn is deliberately handed, for whichever of the three tokens the caller
-// supplied. Neither harness token needs a `GH_CONFIG_DIR`-style companion: unlike `gh`, each reads
-// its config from a directory already carved in (`~/.claude`, `~/.local/share/opencode`). Neither is
-// on `ENV_SCRUB_PATTERNS` either, unlike `GH_TOKEN` — they are LLM provider credentials, and the
-// scrub list deliberately exempts those (see paths.ts), so an ambient value survives and a
-// configured token simply takes precedence over it here.
+// Every credential this spawn is deliberately handed, for whichever of the four tokens the caller
+// supplied. Only the GitHub one needs a `GH_CONFIG_DIR`-style companion: `gh` reads a config file
+// the sandbox denies, while the provider keys are self-contained values. None of the three provider
+// variables is on `ENV_SCRUB_PATTERNS` either, unlike `GH_TOKEN` — they are LLM provider
+// credentials, and the scrub list deliberately exempts those (see paths.ts), so an ambient value
+// survives and a configured token simply takes precedence over it here.
 function workspaceCredentialEnv(tmpDir: string, options: SandboxOptions): NodeJS.ProcessEnv {
   return {
     ...(options.githubToken && githubCredentialEnv(tmpDir, options.githubToken)),
     ...(options.claudeToken && { CLAUDE_CODE_OAUTH_TOKEN: options.claudeToken }),
     ...(options.opencodeToken && { OPENCODE_API_KEY: options.opencodeToken }),
+    ...(options.geminiToken && { GEMINI_API_KEY: options.geminiToken }),
   };
 }
 

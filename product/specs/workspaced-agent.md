@@ -114,6 +114,13 @@ replace it; that provider works inside a workspace only if its own variable
 `GOOGLE_GENERATIVE_AI_API_KEY`, or `GEMINI_API_KEY`) is present in the environment
 janissary was started with, which the scrub passes through untouched.
 
+The Google provider has a token file of its own, `.janissary/gemini-token`, injected as
+`GEMINI_API_KEY` under every rule above and forwarded to a remote the same way. It carries the same
+credential the denied `auth.json` holds, by the route a workspace is allowed to use, so a Google
+provider works from a workspaced tab without anything being exported by hand. `GOOGLE_API_KEY` and
+`GOOGLE_GENERATIVE_AI_API_KEY` are equivalent to the provider and still pass the scrub, so someone
+who prefers to export one of those is unaffected; janissary injects only `GEMINI_API_KEY`.
+
 The Vertex providers are the exception with no answer. They authenticate from
 `GOOGLE_APPLICATION_CREDENTIALS`, which names a file rather than carrying a key: the variable
 survives the scrub, so the setup looks configured, but the file it points at is denied inside the
