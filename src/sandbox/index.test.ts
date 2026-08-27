@@ -255,11 +255,15 @@ describe('sandboxSpawn', () => {
     rmSync(workspaceDir, { recursive: true, force: true });
   });
 
-  it('injects GEMINI_API_KEY when a gemini token is configured', () => {
+  // Both names, because opencode detects its Google provider from one and loads the key from the
+  // other: with only GEMINI_API_KEY set, the provider looked configured and the first prompt failed
+  // reporting GOOGLE_GENERATIVE_AI_API_KEY missing.
+  it('injects GEMINI_API_KEY and GOOGLE_GENERATIVE_AI_API_KEY when a gemini token is configured', () => {
     if (!sandboxAvailable()) return;
     const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
     const result = sandboxSpawn({ workspaceDir, tokens: { gemini: 'AIzaSyExample' } }, 'bash', [], { PATH: '/usr/bin' });
     expect(result.env.GEMINI_API_KEY).toBe('AIzaSyExample');
+    expect(result.env.GOOGLE_GENERATIVE_AI_API_KEY).toBe('AIzaSyExample');
     rmSync(workspaceDir, { recursive: true, force: true });
   });
 
@@ -274,12 +278,22 @@ describe('sandboxSpawn', () => {
     rmSync(workspaceDir, { recursive: true, force: true });
   });
 
-  it('still injects the Gemini credential for a workspaced spawn when nothing is confined', () => {
+  it('leaves an ambient GOOGLE_GENERATIVE_AI_API_KEY in place when no gemini token is configured', () => {
+    if (!sandboxAvailable()) return;
+    const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
+    const env = { PATH: '/usr/bin', GOOGLE_GENERATIVE_AI_API_KEY: 'ambient-key' };
+    const result = sandboxSpawn({ workspaceDir }, 'bash', [], env);
+    expect(result.env.GOOGLE_GENERATIVE_AI_API_KEY).toBe('ambient-key');
+    rmSync(workspaceDir, { recursive: true, force: true });
+  });
+
+  it('still injects both Gemini variables for a workspaced spawn when nothing is confined', () => {
     configureUnconfined();
     const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
     const result = sandboxSpawn({ workspaceDir, tokens: { gemini: 'AIzaSyExample' } }, 'bash', [], { PATH: '/usr/bin' });
     expect(result.command).toBe('bash');
     expect(result.env.GEMINI_API_KEY).toBe('AIzaSyExample');
+    expect(result.env.GOOGLE_GENERATIVE_AI_API_KEY).toBe('AIzaSyExample');
     rmSync(workspaceDir, { recursive: true, force: true });
   });
 
@@ -304,6 +318,7 @@ describe('sandboxSpawn', () => {
     expect(result.env.CLAUDE_CODE_OAUTH_TOKEN).toBe('subscription-token');
     expect(result.env.OPENCODE_API_KEY).toBe('oc_live_key');
     expect(result.env.GEMINI_API_KEY).toBe('AIzaSyExample');
+    expect(result.env.GOOGLE_GENERATIVE_AI_API_KEY).toBe('AIzaSyExample');
     rmSync(`${workspaceDir}.tmp`, { recursive: true, force: true });
     rmSync(workspaceDir, { recursive: true, force: true });
   });

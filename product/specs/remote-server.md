@@ -144,7 +144,8 @@ transport the *remote* repository's `origin` already has.
 
 The local project's `.janissary/claude-token`, `.janissary/opencode-token`, and
 `.janissary/gemini-token` travel the same way, in the same map on the same frame, and are injected as
-`CLAUDE_CODE_OAUTH_TOKEN`, `OPENCODE_API_KEY`, and `GEMINI_API_KEY` into the same processes, each
+`CLAUDE_CODE_OAUTH_TOKEN`, `OPENCODE_API_KEY`, and — for the Gemini key, both variables opencode
+reads — `GEMINI_API_KEY` and `GOOGLE_GENERATIVE_AI_API_KEY` into the same processes, each
 with the remote project's own matching file as the same fallback. It matters most on exactly the hosts the GitHub
 token's isolation-independence describes: a Keychain and the sandbox both need macOS, so on a Linux
 remote the harness has no credential store to fall back on and its own credentials file is denied,

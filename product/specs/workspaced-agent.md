@@ -109,17 +109,22 @@ has been given, and a disposable workspace has no business reading them.
 The consequence is worth stating rather than discovering. `OPENCODE_API_KEY` is what the OpenCode Zen
 and OpenCode Go providers read, and nothing else. An opencode configured by `opencode auth login`
 against Anthropic, Google, or OpenAI has that key in the denied file, and the token file does not
-replace it; that provider works inside a workspace only if its own variable
-(`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, or for Google `GOOGLE_API_KEY`,
-`GOOGLE_GENERATIVE_AI_API_KEY`, or `GEMINI_API_KEY`) is present in the environment
-janissary was started with, which the scrub passes through untouched.
+replace it; that provider works inside a workspace only if its own variable (`ANTHROPIC_API_KEY`,
+`OPENAI_API_KEY`, or for Google `GOOGLE_GENERATIVE_AI_API_KEY`) is present in the environment
+janissary was started with, which the scrub passes through untouched. For Google that variable and no
+other: `GOOGLE_API_KEY` and `GEMINI_API_KEY` are enough for opencode to recognize the provider as
+configured, and a request then fails reporting `GOOGLE_GENERATIVE_AI_API_KEY` missing.
 
-The Google provider has a token file of its own, `.janissary/gemini-token`, injected as
-`GEMINI_API_KEY` under every rule above and forwarded to a remote the same way. It carries the same
-credential the denied `auth.json` holds, by the route a workspace is allowed to use, so a Google
-provider works from a workspaced tab without anything being exported by hand. `GOOGLE_API_KEY` and
-`GOOGLE_GENERATIVE_AI_API_KEY` are equivalent to the provider and still pass the scrub, so someone
-who prefers to export one of those is unaffected; janissary injects only `GEMINI_API_KEY`.
+The Google provider has a token file of its own, `.janissary/gemini-token`, injected under every rule
+above and forwarded to a remote the same way. It carries the same credential the denied `auth.json`
+holds, by the route a workspace is allowed to use, so a Google provider works from a workspaced tab
+without anything being exported by hand. The key is injected under two variables, `GEMINI_API_KEY`
+and `GOOGLE_GENERATIVE_AI_API_KEY`, because opencode reads them at different moments: either one is
+enough for it to treat the provider as configured, but the request itself reads only
+`GOOGLE_GENERATIVE_AI_API_KEY`, and a tab given only the first reported a missing key at its first
+prompt. `GOOGLE_API_KEY` is a third spelling opencode accepts when recognizing the provider and never
+reads on a request; it is not injected, and it still passes the scrub, so someone who exports it
+themselves is unaffected.
 
 The Vertex providers are the exception with no answer. They authenticate from
 `GOOGLE_APPLICATION_CREDENTIALS`, which names a file rather than carrying a key: the variable

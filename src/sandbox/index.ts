@@ -191,16 +191,18 @@ function homeDParams(home: string, relPaths: string[], params: { literal: string
   return args;
 }
 
-// Every credential this spawn is deliberately handed: one variable per configured token, named by
-// its row in `PROJECT_TOKENS`. `GH_TOKEN` is the one deliberate exception to "a scrubbed env var
-// never comes back" — it isn't the ambient value `scrubEnv` just stripped, it's a fresh one chosen
-// for this spawn. The provider keys are not on `ENV_SCRUB_PATTERNS` at all (the scrub deliberately
-// exempts LLM provider credentials, see paths.ts), so an ambient value survives and a configured
-// token simply takes precedence over it here.
+// Every credential this spawn is deliberately handed: each configured token under every variable its
+// row in `PROJECT_TOKENS` names. Most rows name one; the gemini row names two, because opencode
+// detects its Google provider from one variable and loads the key from another. `GH_TOKEN` is the
+// one deliberate exception to "a scrubbed env var never comes back" — it isn't the ambient value
+// `scrubEnv` just stripped, it's a fresh one chosen for this spawn. The provider keys are not on
+// `ENV_SCRUB_PATTERNS` at all (the scrub deliberately exempts LLM provider credentials, see
+// paths.ts), so an ambient value survives and a configured token simply takes precedence over it
+// here.
 //
-// The GitHub row is also the only one needing a second variable, so it gets a guarded line rather
-// than a table column three rows would carry and never use. `GH_CONFIG_DIR` points at an empty,
-// workspace-private directory because `gh` reads `~/.config/gh/hosts.yml` on every invocation
+// `GH_CONFIG_DIR` stays a guarded line rather than a fifth entry in the GitHub row's list, because
+// the list is the same credential under other names and this carries a path instead. It points at an
+// empty, workspace-private directory because `gh` reads `~/.config/gh/hosts.yml` on every invocation
 // regardless of `GH_TOKEN`, and its config loader treats the sandbox's EPERM deny on that file (see
 // SECRET_DENY_PATHS) as fatal, refusing to run at all; a genuinely absent hosts.yml (real ENOENT) it
 // handles by falling through to `GH_TOKEN` normally. Where the sandbox is inactive there is no deny
@@ -210,7 +212,8 @@ function workspaceCredentialEnv(tmpDir: string, tokens: ProjectTokens): NodeJS.P
   const credentials: NodeJS.ProcessEnv = {};
   for (const { name, env } of PROJECT_TOKENS) {
     const value = tokens[name];
-    if (value) credentials[env] = value;
+    if (!value) continue;
+    for (const variable of env) credentials[variable] = value;
   }
   if (tokens.github) credentials.GH_CONFIG_DIR = path.join(tmpDir, 'gh-config');
   return credentials;

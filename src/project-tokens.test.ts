@@ -61,3 +61,18 @@ describe('loadProjectTokens', () => {
     expect(getProjectTokens()).toEqual({ gemini: 'AIzaSySecond' });
   });
 });
+
+// The `env` column carries a list so one credential can be set under every name its consumer reads —
+// the gemini row sets two. These pin what a list must not become.
+describe('PROJECT_TOKENS', () => {
+  // A row with no variable is a credential that gets read and then handed to nothing.
+  it.each(PROJECT_TOKENS)('names at least one environment variable for $name', ({ env }) => {
+    expect(env.length).toBeGreaterThan(0);
+  });
+
+  // Two rows naming one variable means whichever is written last silently wins.
+  it('names each environment variable on exactly one row', () => {
+    const variables = PROJECT_TOKENS.flatMap(({ env }) => [...env]);
+    expect(new Set(variables).size).toBe(variables.length);
+  });
+});

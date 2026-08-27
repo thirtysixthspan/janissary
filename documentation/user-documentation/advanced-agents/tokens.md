@@ -45,7 +45,7 @@ The key covers the OpenCode Zen and OpenCode Go providers only.
 
 ## Get a Gemini key
 
-Create an API key in Google AI Studio and save it to `.janissary/gemini-token`. Janissary hands it to workspaced tabs as `GEMINI_API_KEY`, so a harness pointed at a Google model works from a workspace without you exporting anything.
+Create an API key in Google AI Studio and save it to `.janissary/gemini-token`. Janissary hands it to workspaced tabs as both `GEMINI_API_KEY` and `GOOGLE_GENERATIVE_AI_API_KEY` — opencode looks for the first when deciding whether the provider is set up and reads the second when it actually sends a request — so a harness pointed at a Google model works from a workspace without you exporting anything.
 
 You need this for the same reason as the OpenCode key: a workspace can't read the credentials `opencode auth login` saved, so the key has to arrive by a route the workspace is allowed to use.
 
@@ -57,7 +57,9 @@ Anthropic and OpenAI have no token file. Set the provider's own variable in the 
 | --- | --- |
 | Anthropic | `ANTHROPIC_API_KEY` |
 | OpenAI | `OPENAI_API_KEY` |
-| Google | `.janissary/gemini-token`, or `GOOGLE_API_KEY` / `GOOGLE_GENERATIVE_AI_API_KEY` / `GEMINI_API_KEY` |
+| Google | `.janissary/gemini-token`, or `GOOGLE_GENERATIVE_AI_API_KEY` |
+
+Google is the one to watch if you export the key yourself: `GOOGLE_API_KEY` and `GEMINI_API_KEY` are enough for opencode to list the provider as configured, but a request reads `GOOGLE_GENERATIVE_AI_API_KEY` and fails saying it's missing. Export that one, or use the token file, which sets both.
 
 Google Vertex is the one that can't work. It authenticates with `GOOGLE_APPLICATION_CREDENTIALS`, which holds a path to a credentials file rather than a key. The variable reaches the workspace fine, so everything looks set up, but the file it points at stays blocked. Use one of the API-key providers above from a workspaced tab.
 
