@@ -4,8 +4,6 @@
 
 ## development
 
-* Reduce the cognitive complexity of the `schedule` command's `run()` in `src/commands/schedule.ts` (line 29), measured at 15 against the allowed 15, in a file scoring 42.10 FTA across 50 lines. The handler parses the command, resolves the target tab, then branches through the add, cancel, and clear arms, each doing its own precondition check, its own early-return failure message, and its own success-message construction before falling through to one shared persist-and-append tail. Each arm is a candidate for a local helper returning the next entries and message. This target is risk-sensitive: lint does not flag it at the project's configured limit of 15, so it was found by measuring below the threshold rather than from a reported warning. The file is a quiet corner — its last substantive change predates the current module layout — so nothing is on fire here. Resolve by running the `ai/tasks/hygiene/reduce-complexity.md` task against `run()` in `src/commands/schedule.ts`. Severity: **low**.
-
 ## deferred
 
 * Validate every method's parameter shape before treating websocket input as `ClientMessage` in `src/client-message.ts`: `isClientMessage` currently checks only the envelope, known method name, and that `params` is an object, then `src/message-handler.ts` dereferences method-specific fields under a type guard that has not established them; only the two plugin calls receive real parameter validation. Give the discriminated RPC union a matching runtime decoder so malformed authenticated client messages are rejected consistently before controller dispatch. Severity: **medium**. — deferred: complexity 8/10, requires a shared runtime decoder for more than fifty method-specific RPC parameter shapes and broad protocol coverage.

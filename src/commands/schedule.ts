@@ -1,5 +1,5 @@
 import type { Command, CommandManagers } from './types.js';
-import type { ScheduleEntry } from '../schedule/types.js';
+import type { ScheduleEntry, ScheduleParseResult } from '../schedule/types.js';
 import type { Tab } from '../tab/types.js';
 import { parseScheduleCommand, formatSchedule } from '../schedule/index.js';
 
@@ -23,6 +23,22 @@ function persistSchedule(tab: Tab, managers: CommandManagers): void {
   managers.tab.persist(managers.tab.buildAgentState(tab, { schedule: managers.schedule.get(tab.label) }));
 }
 
+function scheduleChange(parsed: Exclude<ScheduleParseResult, { error: string }>, current: ScheduleEntry[], suffix: string) {
+  if (parsed.action === 'list') return { message: formatSchedule(current) };
+  if (parsed.action === 'add') {
+    if (current.some((entry) => entry.id === parsed.name)) return { message: `A scheduled command named "${parsed.name}" already exists${suffix}.` };
+    const entry: ScheduleEntry = { ...parsed.entry, id: parsed.name };
+    return { next: [...current, entry], message: `Scheduled ${entry.id}${suffix}: ${entry.spec} — ${entry.command}` };
+  }
+  if (parsed.action === 'cancel') {
+    const next = current.filter((entry) => entry.id !== parsed.id);
+    if (next.length === current.length) return { message: `No scheduled command "${parsed.id}"${suffix}.` };
+    return { next, message: `Cancelled ${parsed.id}${suffix}.` };
+  }
+  if (current.length === 0) return { message: `No scheduled commands${suffix}.` };
+  return { next: [], message: `Cleared ${current.length} scheduled command${current.length === 1 ? '' : 's'}${suffix}.` };
+}
+
 export const command: Command = {
   name: 'schedule',
   match: (command_) => /^schedule\b/i.test(command_),
@@ -34,25 +50,9 @@ export const command: Command = {
     if ('error' in target) { append(target.error); return; }
     const suffix = target.label === tab.label ? '' : ` in ${target.label}`;
     const current = managers.schedule.get(target.label) ?? [];
-    if (parsed.action === 'list') { append(formatSchedule(current)); return; }
-    let next: ScheduleEntry[];
-    let message: string;
-    if (parsed.action === 'add') {
-      if (current.some((e) => e.id === parsed.name)) { append(`A scheduled command named "${parsed.name}" already exists${suffix}.`); return; }
-      const entry: ScheduleEntry = { ...parsed.entry, id: parsed.name };
-      next = [...current, entry];
-      message = `Scheduled ${entry.id}${suffix}: ${entry.spec} — ${entry.command}`;
-    } else if (parsed.action === 'cancel') {
-      next = current.filter((e) => e.id !== parsed.id);
-      if (next.length === current.length) { append(`No scheduled command "${parsed.id}"${suffix}.`); return; }
-      message = `Cancelled ${parsed.id}${suffix}.`;
-    } else {
-      if (current.length === 0) { append(`No scheduled commands${suffix}.`); return; }
-      next = [];
-      message = `Cleared ${current.length} scheduled command${current.length === 1 ? '' : 's'}${suffix}.`;
-    }
-    managers.schedule.set(target.label, next);
-    persistSchedule(target, managers);
+    const { next, message } = scheduleChange(parsed, current, suffix);
+    if (!next) { append(message); return; }
+    managers.schedule.set(target.label, next); persistSchedule(target, managers);
     append(message);
   },
 };
