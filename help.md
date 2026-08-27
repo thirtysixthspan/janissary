@@ -30,7 +30,7 @@
 | `profile` | `profile launch <name>` launches a project or built-in Janissary profile (bare `profile launch` opens a source-labeled picker); `profile save <name>` captures the running session in the project; `profile list` lists profiles; `profile validate [name]` checks a profile's structure |
 | `harness` | Open an AI coding harness in a disposable workspace; claude and codex auto-approve prompts by default (`--no-workspace` and `--no-auto-approve` opt out; opencode does not auto-approve); `harness capture <name>` snapshots a harness tab's screen into an editor tab; `on <[user@]host[:path]>` runs it on another machine |
 | `ssh` | Open an SSH session to a remote host in a full-tab terminal |
-| `search` | `search transcript <pattern>` searches the current tab's transcript with a regex (Cmd+F opens it empty) |
+| `search` | `search transcript <pattern>` searches the current tab's transcript with a case-insensitive regex (Cmd+F opens it empty); `↑`/`↓` step older/newer, Escape closes |
 | `files` | `files [path]` opens a file navigator tab rooted at the issuing tab's cwd, or at `path`; add `with <name\|size\|modified\|permissions>` to show that detail column beside each row |
 | `notifications` | `notifications [left\|right]` opens (or docks) the notifications tab — a feed of background-tab events (see `.janissary/config.json` to enable events) |
 | `notify` | `notify <message>` pushes a custom line into the notifications feed (dropped if the tab is closed) |
