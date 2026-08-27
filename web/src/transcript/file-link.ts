@@ -32,6 +32,16 @@ function slurpLineNumber(text: string, start: number): { line: number; col?: num
   return { line, col, length: pos - start };
 }
 
+function findPathStart(text: string, start: number, colonIdx: number): number {
+  let pathStart = colonIdx;
+  while (pathStart > start) {
+    const prev = text[pathStart - 1];
+    if (prev === '\n' || ' "\'`()[]{}<>'.includes(prev)) break;
+    pathStart--;
+  }
+  return pathStart;
+}
+
 function fileLineSegmentsCore(text: string, start: number, end: number): FileLinkSegment[] {
   const segments: FileLinkSegment[] = [];
   let pos = start;
@@ -51,29 +61,10 @@ function fileLineSegmentsCore(text: string, start: number, end: number): FileLin
   while (pos < end) {
     const colonIdx = text.indexOf(':', pos);
     if (colonIdx === -1 || colonIdx >= end) break;
-
-    if (colonIdx + 1 >= end || !/\d/.test(text[colonIdx + 1])) {
-      emitText(colonIdx + 1);
-      pos = colonIdx + 1;
-      continue;
-    }
-
-    let pathStart = colonIdx;
-    while (pathStart > pos) {
-      const prev = text[pathStart - 1];
-      if (prev === '\n' || ' "\'`()[]{}<>'.includes(prev)) break;
-      pathStart--;
-    }
-
+    const pathStart = findPathStart(text, pos, colonIdx);
     const path = text.slice(pathStart, colonIdx);
-    if (!(path.includes('/') || path.includes('\\')) || path.length < 2) {
-      emitText(colonIdx + 1);
-      pos = colonIdx + 1;
-      continue;
-    }
-
     const parsed = slurpLineNumber(text, colonIdx + 1);
-    if (!parsed) {
+    if (!parsed || path.length < 2 || !(path.includes('/') || path.includes('\\'))) {
       emitText(colonIdx + 1);
       pos = colonIdx + 1;
       continue;
