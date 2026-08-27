@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { mkdirSync, writeFileSync, rmSync, existsSync, readFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync, rmSync, existsSync, readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { tmpdir } from 'node:os';
 import { mkdtempSync } from 'node:fs';
@@ -67,6 +67,26 @@ describe('loadConfig', () => {
     expect(config.transcriptMaxLines).toBe(DEFAULT_TRANSCRIPT_MAX_LINES);
   });
 
+  it('falls back independently for invalid scalar, list, and map fields', () => {
+    const configDir = path.join(tmpDir, '.janissary');
+    mkdirSync(configDir, { recursive: true });
+    writeFileSync(path.join(configDir, 'config.json'), JSON.stringify({
+      transcriptMaxLines: 'many',
+      tabNameMaxLength: 8,
+      sandboxWorkspaces: 'yes',
+      syncPaths: 'product/',
+      externalViewers: { video: 42 },
+    }));
+
+    const config = loadConfig(tmpDir);
+
+    expect(config.transcriptMaxLines).toBe(DEFAULT_TRANSCRIPT_MAX_LINES);
+    expect(config.tabNameMaxLength).toBe(8);
+    expect(config.sandboxWorkspaces).toBe(true);
+    expect(config.syncPaths).toEqual(['product/backlog/', 'product/plans/']);
+    expect(config.externalViewers).toEqual({ video: 'QuickTime Player' });
+  });
+
   it('falls back to defaults on parse error', () => {
     const configDir = path.join(tmpDir, '.janissary');
     mkdirSync(configDir, { recursive: true });
@@ -118,6 +138,24 @@ describe('loadConfig', () => {
 
     const config = loadConfig(tmpDir);
     expect(config.notifications?.events.incomingMessage).toBe(true);
+  });
+
+  it('fills omitted and invalid notification toggles from defaults', () => {
+    const configDir = path.join(tmpDir, '.janissary');
+    mkdirSync(configDir, { recursive: true });
+    writeFileSync(path.join(configDir, 'config.json'), JSON.stringify({
+      notifications: { events: { incomingMessage: true, stateChange: 'yes' } },
+    }));
+
+    expect(loadConfig(tmpDir).notifications).toEqual({
+      events: {
+        stateChange: false,
+        incomingMessage: true,
+        scheduleFire: false,
+        agentStart: false,
+        rateLimited: false,
+      },
+    });
   });
 
   it('defaults syncPaths to product/backlog/ and product/plans/', () => {
@@ -236,6 +274,15 @@ describe('updateConfig', () => {
     rmSync(path.join(tmpDir, '.janissary'), { recursive: true, force: true });
     const ok = updateConfig({ syntaxTheme: 'nord' });
     expect(ok).toBe(false);
+    expect(getConfig().syntaxTheme).toBe(DEFAULT_SYNTAX_THEME);
+  });
+
+  it('leaves no temporary sibling after a successful update', () => {
+    loadConfig(tmpDir);
+
+    expect(updateConfig({ syntaxTheme: 'nord' })).toBe(true);
+
+    expect(readdirSync(path.join(tmpDir, '.janissary'))).toEqual(['config.json']);
   });
 
   it('round-trips syncPaths like other settings', () => {

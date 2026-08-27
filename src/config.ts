@@ -1,7 +1,9 @@
-import { mkdirSync, writeFileSync, existsSync, readFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync, existsSync, readFileSync, renameSync, rmSync } from 'node:fs';
+import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import { DEFAULT_SYNTAX_THEME } from './syntax-themes.js';
 import { DEFAULT_APP_THEME } from './app-themes.js';
+import { configRecord, decodeConfig } from './config-decode.js';
 
 // Per-event opt-in toggles for the notifications tab (see `notifications.ts`). Each defaults to
 // false; the user enables an event by editing `.janissary/config.json` directly. There is
@@ -75,6 +77,17 @@ const DEFAULT_CONFIG: Config = {
 let config: Config = { ...DEFAULT_CONFIG };
 let storedConfigPath: string | null = null;
 
+function writeConfig(configPath: string, value: unknown): void {
+  const temporary = `${configPath}.${randomUUID()}.tmp`;
+  try {
+    writeFileSync(temporary, JSON.stringify(value, undefined, 2) + '\n');
+    renameSync(temporary, configPath);
+  } catch (error) {
+    try { rmSync(temporary, { force: true }); } catch { /* best-effort cleanup */ }
+    throw error;
+  }
+}
+
 export function loadConfig(projectDirectory: string): Config {
   const configDirectory = path.join(projectDirectory, '.janissary');
   const configPath = path.join(configDirectory, 'config.json');
@@ -82,14 +95,14 @@ export function loadConfig(projectDirectory: string): Config {
 
   if (!existsSync(configPath)) {
     mkdirSync(configDirectory, { recursive: true });
-    writeFileSync(configPath, JSON.stringify(DEFAULT_CONFIG, undefined, 2) + '\n');
-    config = { ...DEFAULT_CONFIG };
+    writeConfig(configPath, DEFAULT_CONFIG);
+    config = decodeConfig(DEFAULT_CONFIG, DEFAULT_CONFIG);
     return config;
   }
 
   try {
-    const parsed = JSON.parse(readFileSync(configPath, 'utf8')) as Partial<Config>;
-    config = { ...DEFAULT_CONFIG, ...parsed };
+    const parsed: unknown = JSON.parse(readFileSync(configPath, 'utf8'));
+    config = decodeConfig(parsed, DEFAULT_CONFIG);
     return config;
   } catch {
     process.stderr.write('warning: .janissary/config.json is invalid JSON — using defaults (file left untouched)\n');
@@ -107,12 +120,15 @@ export function getConfig(): Config {
 // keys a user added by hand survive the round trip. Returns false (without throwing) on failure,
 // so the caller can report it to the transcript instead.
 export function updateConfig(partial: Partial<Config>): boolean {
-  config = { ...config, ...partial };
   if (!storedConfigPath) return false;
   try {
-    const raw = existsSync(storedConfigPath) ? (JSON.parse(readFileSync(storedConfigPath, 'utf8')) as Record<string, unknown>) : {};
+    const parsed: unknown = existsSync(storedConfigPath) ? JSON.parse(readFileSync(storedConfigPath, 'utf8')) : {};
+    const raw = configRecord(parsed);
+    if (!raw) return false;
     const merged = { ...raw, ...partial };
-    writeFileSync(storedConfigPath, JSON.stringify(merged, undefined, 2) + '\n');
+    const next = decodeConfig({ ...config, ...partial }, DEFAULT_CONFIG);
+    writeConfig(storedConfigPath, merged);
+    config = next;
     return true;
   } catch {
     return false;
