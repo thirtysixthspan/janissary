@@ -78,6 +78,18 @@ Auto-approval doesn't require a workspace. Launching with `--no-workspace` still
 
 A harness with auto-approval active shows the auto-permitting flag icon in its metadata row.
 
+## Knowing when a harness needs you
+
+A harness tab's blinking dot follows what the harness is doing, not just whether its process is alive: it blinks while the harness is generating or running tools, and settles once the harness is back at its own prompt. That works from the strip, so you can start something and go elsewhere without checking back.
+
+A new harness tab starts busy until the app has had a look at it. Going idle takes two readings in a row before the dot settles, so a pause mid-answer doesn't make it flicker; going busy again is immediate. Either way the strip updates live, whether or not you're on the tab.
+
+When a harness that isn't on screen finishes and goes idle, its tab picks up the unread flag — that's what tells you to come back. A tab you're already looking at doesn't get flagged, since you can see it. One exception: for claude, a turn that ends with nothing but a `recap:` summary line is left unflagged. The dot still settles; a recap on its own isn't news.
+
+A permission prompt is treated as idle, because the harness is waiting on you rather than working. If nothing is going to answer it — you launched without `-y`, or [auto-approval](#auto-approving-permission-prompts) hit a prompt it couldn't clear — the tab is flagged straight away instead of waiting out the usual two readings. Opencode is the exception again: its prompts aren't recognized as prompts, so a stuck opencode tab is still flagged, just on the ordinary timing.
+
+See [Tabs](/user-documentation/getting-started/tabs) for what the dot and the flag mean everywhere else.
+
 ## Starting with a prompt
 
 A trailing `with <prompt>` clause gives the new harness something to do as soon as it's ready, so the launch and its first instruction happen in one command:
