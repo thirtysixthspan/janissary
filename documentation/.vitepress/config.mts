@@ -72,6 +72,7 @@ export default defineConfig({
           text: "Command Bar",
           items: [
             { text: "Application commands", link: "/user-documentation/command-bar/commands" },
+            { text: "Bundled plugins", link: "/user-documentation/command-bar/plugins" },
             { text: "Tab completion", link: "/user-documentation/command-bar/tab-completion" },
             { text: "Shell commands", link: "/user-documentation/command-bar/shell" },
             { text: "Browser automation", link: "/user-documentation/command-bar/browser" },

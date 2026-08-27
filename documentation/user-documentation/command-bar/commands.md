@@ -14,6 +14,7 @@ These commands manage the app itself — the current tab's transcript and name, 
 | `syntax theme [name]` | Switch the editor syntax theme; bare form opens a picker |
 | `notifications [left\|right]` | Open the [notifications](/user-documentation/tab-types/notifications) feed, optionally docked in a sidebar |
 | `notify <message>` | Push a custom line into the [notifications](/user-documentation/tab-types/notifications) feed |
+| `plugins` | List the [bundled tab plugins](/user-documentation/command-bar/plugins) with their version and state |
 | `quit` | Exit the application, after confirmation |
 
 ## `theme`
