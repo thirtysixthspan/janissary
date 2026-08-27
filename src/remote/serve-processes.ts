@@ -16,11 +16,14 @@ type Entry = { kill: () => void };
 export class RemoteProcesses {
   private entries = new Map<string, Entry>();
 
+  // The two tokens travel as one object rather than two trailing optional strings: both are
+  // `string | undefined`, so a positional pair transposes without a type error and each credential
+  // silently goes where the other belongs. Same naming `SandboxOptions` already uses for them.
   constructor(
     private send: (frame: ServerFrame) => void,
     private workspaceDir: string,
     private label: string,
-    private githubToken?: string,
+    private credentials: { github?: string; claude?: string } = {},
   ) {}
 
   spawn(frame: Extract<ClientFrame, { type: 'spawn' }>): void {
@@ -54,7 +57,12 @@ export class RemoteProcesses {
       },
       frame.cols,
       frame.rows,
-      { workspaceDir: this.workspaceDir, offline: frame.offline, githubToken: this.githubToken },
+      {
+        workspaceDir: this.workspaceDir,
+        offline: frame.offline,
+        githubToken: this.credentials.github,
+        claudeToken: this.credentials.claude,
+      },
       frame.harness === undefined ? undefined : harnessEnv(frame.harness, this.workspaceDir),
     );
     this.writers.set(frame.id, (data) => session.write(data));
@@ -65,7 +73,8 @@ export class RemoteProcesses {
   private spawnPipe(id: string): Entry {
     const shell = spawnShell(0, { JANUS_AGENT_NAME: this.label }, {
       workspaceDir: this.workspaceDir,
-      githubToken: this.githubToken,
+      githubToken: this.credentials.github,
+      claudeToken: this.credentials.claude,
     });
     const onChunk = (chunk: string) => this.send({ type: 'output', id, data: chunk });
     shell.stdout?.on('data', onChunk);

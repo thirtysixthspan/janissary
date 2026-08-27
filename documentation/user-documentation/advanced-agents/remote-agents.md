@@ -72,7 +72,7 @@ Janissary forwards your project's GitHub token through the encrypted connection 
 
 The tab tells you when the token in use isn't the one you forwarded. You'll see `github token: none forwarded from the initiating project, using this machine's own` when the remote fell back to its own token, and `github token: none configured on either machine, so none was injected for git push or gh` when neither had one. No line about the token means yours is what the workspace is running on.
 
-The Claude token works differently. It isn't forwarded, and the remote doesn't read one of its own either, so a remote `claude` harness signs in with whatever that machine already gives it: its own keychain, or a `CLAUDE_CODE_OAUTH_TOKEN` exported in the remote account's environment.
+Your Claude token is forwarded the same way, which is what keeps a `claude` harness signed in on a Linux host. That machine has no keychain, and the harness can't reach its own saved credentials from inside the workspace, so without the forwarded token it starts up logged out. This one reports nothing when it works or when it doesn't, because the harness itself says whether it's signed in.
 
 ## Find the connections
 
@@ -89,7 +89,7 @@ SSH's own text shows up verbatim when it can't connect or authentication fails, 
 - `<root> has no "origin" remote.`
 - `Remote janissary speaks protocol version <n>; this one speaks <m>. Update janissary so both hosts match.`
 
-The version check is stricter than it looks, and deliberately so. It covers what the two sides put in each message, not just the shape of the messages, so an older install that would quietly drop your forwarded token is refused at the handshake rather than opening a tab that runs perfectly and can't push.
+The version check is stricter than it looks, and deliberately so. It covers what the two sides put in each message, not just the shape of the messages, so an older install that would quietly drop a forwarded token is refused at the handshake rather than opening a tab that runs perfectly and can't push or can't sign in.
 
 You'll also see a failure if `janus` isn't on the remote's `PATH`, if no git repository is found above your login directory, or if the session ends before the workspace is ready.
 

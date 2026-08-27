@@ -8,10 +8,11 @@
 // their shape: a field one end fills in and the other is expected to honor is as much a contract
 // as a new frame type, because an end that merely ignores it looks healthy while doing the wrong
 // thing. Version 1 was the contract before `provision` carried a `githubToken`; version 2 is the
-// contract in which the remote must use the forwarded token. Refusing a version-1 remote is the
-// whole point — it would otherwise provision, run, and quietly leave the workspace with no
-// credential to push with.
-export const REMOTE_PROTOCOL_VERSION = 2;
+// contract in which the remote must use the forwarded token; version 3 adds the same obligation for
+// `claudeToken`. Refusing an older remote is the whole point — it would otherwise provision, run,
+// and quietly leave the workspace with no credential to push with, or a harness that reports itself
+// logged out on a host with no Keychain to fall back to.
+export const REMOTE_PROTOCOL_VERSION = 3;
 
 // The single line that flips the channel from a raw terminal to a framed transport. Chosen so it
 // cannot occur in ordinary ssh banner, motd, or authentication output.
@@ -23,7 +24,7 @@ export type RemoteHandshake = { version: number; root: string };
 // agent tabs' persistent shells, PTY takeover, and inline terminal cards alike; `provision` is the
 // only other thing the local side ever asks for.
 export type ClientFrame =
-  | { type: 'provision'; label: string; githubToken?: string }
+  | { type: 'provision'; label: string; githubToken?: string; claudeToken?: string }
   | {
     type: 'spawn'; id: string; program: string; command: string;
     // How the remote runs it: `pty` for anything a terminal renders (the harness itself, a PTY
