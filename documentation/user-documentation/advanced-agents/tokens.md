@@ -43,8 +43,12 @@ A token reaches the tab whether or not isolation is actually active on that mach
 
 ## How tokens reach a remote
 
-The two tokens behave differently on a [remote agent or harness](/user-documentation/advanced-agents/remote-agents), so this is the part worth reading twice.
+<img class="agent-float" src="/agents/hakim-south.png" alt="" />
 
-**The GitHub token is forwarded.** Janissary sends your project's token through the encrypted SSH connection and injects it only into that remote workspace's processes. It's never written to the remote filesystem, so you don't need to copy the file to the other machine. If your project has no token, the remote falls back to a `.janissary/github-token` in its own project. Both installations need to be recent enough to forward one, and a launch against an older install stops with a version message rather than opening a tab that quietly can't push. When the tab opens, a line about the token means the forwarded one isn't what's in use.
+Both tokens travel to a [remote agent or harness](/user-documentation/advanced-agents/remote-agents) the same way. Janissary sends them through the encrypted SSH connection when it asks the remote for a workspace, and injects them only into that workspace's processes. Neither is written to the remote filesystem, so you don't need to copy either file to the other machine. If your project has no token, the remote falls back to the matching file in its own project.
 
-**The Claude token is not forwarded.** The remote doesn't read a `.janissary/claude-token` of its own either. A remote `claude` harness signs in with whatever that machine already gives it: its own keychain, or a `CLAUDE_CODE_OAUTH_TOKEN` exported in the remote account's environment. If you need a remote harness authenticated, set that variable in the remote user's shell startup file.
+Forwarding is what makes a Linux remote work at all for a `claude` harness. That host has no keychain, and the harness's own credentials file is blocked inside the workspace, so without your token it starts up logged out.
+
+Both machines need a Janissary recent enough to forward the tokens. A launch against an older install stops with a message naming both protocol versions instead of opening a tab that runs but can't push or can't sign in. Update both ends together.
+
+Only the GitHub token reports back. When a remote tab opens, a line about the token means the forwarded one isn't what's in use. Silence means yours is. The Claude token says nothing either way, because a harness with no credential tells you so in its own output as soon as it starts.

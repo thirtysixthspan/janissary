@@ -29,10 +29,12 @@ workspace: `git clone` of `origin`, stored at `.janissary/workspace/<label>/`, r
 `agent <name> on <address>` and `harness <name> on <address>` create a workspaced tab the same way,
 except the workspace lives under the **remote** host's project root rather than this machine's, and
 is governed entirely by that host: its sandbox policy (so isolation is active where the remote is
-macOS and inactive otherwise, and the notice shown in the tab is the remote's), its own
-`.janissary/github-token`, and its own repository's `origin` transport. Nothing is forwarded from
-here. A remote tab records no local workspace directory, so closing it deletes nothing locally; the
-remote server removes the clone when its ssh session ends. See [[remote-server]].
+macOS and inactive otherwise, and the notice shown in the tab is the remote's) and its own
+repository's `origin` transport. The two credentials are the exception: this project's
+`.janissary/github-token` and `.janissary/claude-token` are both forwarded on the provisioning
+frame, each falling back to the remote project's own file when nothing is sent. A remote tab records
+no local workspace directory, so closing it deletes nothing locally; the remote server removes the
+clone when its ssh session ends. See [[remote-server]].
 
 ### Isolation
 
@@ -89,9 +91,14 @@ environment janissary itself was started with is not stripped — provider crede
 exempt from the environment scrub — so a user who exports the variable themselves keeps working
 unchanged, and a configured token file takes precedence over it.
 
-Unlike the GitHub token, this one is not forwarded to a remote workspace: a tab launched with
-`on <address>` authenticates its harness however that machine's own environment and configuration
-allow.
+On a remote launch the token is forwarded on the provisioning frame exactly as the GitHub token is,
+injected only into that remote tab's workspaced processes and never written to the remote
+filesystem, with the remote project's own `.janissary/claude-token` as the fallback when nothing is
+sent. It carries no notice of its own, unlike the GitHub token: a harness with no credential reports
+itself logged out immediately rather than failing much later, and most remote launches legitimately
+have no Claude token on either machine. A remote installation too old to honor the forwarded token is
+refused at the handshake, the same way one too old to honor the GitHub token is. See
+[[remote-server]].
 
 ### Workspace lifecycle
 

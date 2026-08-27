@@ -1,13 +1,23 @@
-import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, vi, beforeAll, beforeEach, afterAll } from 'vitest';
 import { existsSync, mkdirSync, mkdtempSync, writeFileSync, rmSync } from 'node:fs';
 import { execSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { initWorkspaceDir } from '../workspace/index.js';
+import { loadClaudeToken } from '../claude-token.js';
+import { spawnPty } from '../pty.js';
 import { resolveRemoteRoot } from './serve-root.js';
 import { RemoteServer, wireShutdown, CHANNEL_SIGNALS } from './serve.js';
 import { encodeFrame } from './protocol.js';
 import type { ServerFrame } from './protocol.js';
+
+// Only the process spawners are faked: every other part of this file drives the real server against
+// a real clone, and the credential a spawn is handed is the one thing that has no other observable.
+vi.mock('../pty.js');
+
+const SPAWN_FRAME = {
+  type: 'spawn', id: 'r1', program: 'claude', command: 'claude', mode: 'pty', cols: 80, rows: 24,
+} as const;
 
 let tmpDir: string;
 let repoDir: string;
@@ -85,6 +95,12 @@ function makeServer() {
 }
 
 describe('RemoteServer', () => {
+  beforeEach(() => {
+    vi.mocked(spawnPty).mockReset().mockReturnValue({
+      id: 'pty1', program: 'claude', write: vi.fn(), resize: vi.fn(), kill: vi.fn(),
+    });
+  });
+
   it('clones the root\'s origin on a provision request and answers workspace-ready', async () => {
     const { server, frames } = makeServer();
     server.receive(`${encodeFrame({ type: 'provision', label: 'claude-ready' })}\n`);
@@ -116,6 +132,37 @@ describe('RemoteServer', () => {
 
     expect(frames.find((f) => f.type === 'workspace-ready')?.notice).toContain('github token:');
     server.shutdown(0);
+  });
+
+  // The Claude token deliberately gets no notice of its own: a missing one shows up in the harness's
+  // own output immediately, and most remote launches have none configured and are working as meant.
+  it('hands a remote workspace the forwarded Claude token and says nothing about it', async () => {
+    const { server, frames } = makeServer();
+    server.receive(`${encodeFrame({ type: 'provision', label: 'claude-oauth', claudeToken: 'sk-ant-oat01-forwarded' })}\n`);
+    await vi.waitFor(() => expect(frames.some((f) => f.type === 'workspace-ready')).toBe(true));
+    server.receive(`${encodeFrame(SPAWN_FRAME)}\n`);
+
+    expect(vi.mocked(spawnPty).mock.calls[0]?.[6]).toMatchObject({ claudeToken: 'sk-ant-oat01-forwarded' });
+    expect(frames.find((f) => f.type === 'workspace-ready')?.notice ?? '').not.toContain('claude token');
+    server.shutdown(0);
+  });
+
+  it('falls back to the remote\'s own Claude token when none is forwarded', async () => {
+    const tokenPath = path.join(repoDir, '.janissary', 'claude-token');
+    writeFileSync(tokenPath, 'sk-ant-oat01-remote-own\n');
+    loadClaudeToken(repoDir);
+    try {
+      const { server, frames } = makeServer();
+      server.receive(`${encodeFrame({ type: 'provision', label: 'claude-own-token' })}\n`);
+      await vi.waitFor(() => expect(frames.some((f) => f.type === 'workspace-ready')).toBe(true));
+      server.receive(`${encodeFrame(SPAWN_FRAME)}\n`);
+
+      expect(vi.mocked(spawnPty).mock.calls[0]?.[6]).toMatchObject({ claudeToken: 'sk-ant-oat01-remote-own' });
+      server.shutdown(0);
+    } finally {
+      rmSync(tokenPath, { force: true });
+      loadClaudeToken(repoDir);
+    }
   });
 
   it('removes the clone when the session ends', async () => {
