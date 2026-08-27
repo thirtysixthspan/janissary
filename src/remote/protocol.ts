@@ -5,15 +5,17 @@
 // `JSON.parse`/`JSON.stringify` and `Buffer`, so it needs no module of its own.
 
 // The contract's version, checked at the handshake. It covers what the frames *carry*, not only
-// their shape: a field one end fills in and the other is expected to honor is as much a contract
-// as a new frame type, because an end that merely ignores it looks healthy while doing the wrong
-// thing. Version 1 was the contract before `provision` carried a `githubToken`; version 2 is the
-// contract in which the remote must use the forwarded token; version 3 adds the same obligation for
-// `claudeToken`, version 4 for `opencodeToken`, and version 5 for `geminiToken`. Refusing an older
-// remote is the whole point — it would otherwise provision, run, and quietly leave the workspace
-// with no credential to push with, or a harness that reports itself logged out on a host with no
-// credential store to fall back to.
-export const REMOTE_PROTOCOL_VERSION = 5;
+// their shape: a field one end fills in and the other is expected to honor is as much a contract as
+// a new frame type, because an end that merely ignores it looks healthy while doing the wrong thing.
+// That is why every credential added to `provision` moved it — versions 1 through 5 were the
+// contract before any token, then one per token as `githubToken`, `claudeToken`, `opencodeToken`,
+// and `geminiToken` arrived as their own fields.
+//
+// Version 6 replaces those four fields with a single `tokens` map (see `project-tokens.ts`), so
+// adding a credential no longer touches this file at all. It is also the one bump so far that
+// changes a frame's shape rather than adding to it: a version-5 remote finds none of the fields it
+// reads and provisions a workspace with no credentials whatsoever, which the same refusal covers.
+export const REMOTE_PROTOCOL_VERSION = 6;
 
 // The single line that flips the channel from a raw terminal to a framed transport. Chosen so it
 // cannot occur in ordinary ssh banner, motd, or authentication output.
@@ -21,14 +23,13 @@ export const HANDSHAKE_SENTINEL = '__JANUS_REMOTE__';
 
 export type RemoteHandshake = { version: number; root: string };
 
+import type { ProjectTokens } from '../project-tokens.js';
+
 // Local → remote. One process family (spawn/input/resize/kill) backs remote harness tabs, remote
 // agent tabs' persistent shells, PTY takeover, and inline terminal cards alike; `provision` is the
 // only other thing the local side ever asks for.
 export type ClientFrame =
-  | {
-    type: 'provision'; label: string;
-    githubToken?: string; claudeToken?: string; opencodeToken?: string; geminiToken?: string;
-  }
+  | { type: 'provision'; label: string; tokens?: ProjectTokens }
   | {
     type: 'spawn'; id: string; program: string; command: string;
     // How the remote runs it: `pty` for anything a terminal renders (the harness itself, a PTY

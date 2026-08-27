@@ -1,10 +1,7 @@
 import { spawnShell, executeShellCmd as executeShellCommand, queryShellPwd, type ShellProcess } from './shell.js';
 import { createRemoteShell } from './remote/shell-session.js';
 import { getConfig } from './config.js';
-import { getGithubToken } from './github-token.js';
-import { getClaudeToken } from './claude-token.js';
-import { getOpencodeToken } from './opencode-token.js';
-import { getGeminiToken } from './gemini-token.js';
+import { getProjectTokens } from './project-tokens.js';
 import { messageBus } from './bus.js';
 import type { Managers } from './managers.js';
 
@@ -71,10 +68,7 @@ export class ShellManager {
     const shell = spawnShell(0, { JANUS_AGENT_NAME: label }, {
       workspaceDir: tab?.workspaceDir,
       offline: tab?.offline,
-      githubToken: tab?.workspaceDir ? getGithubToken() : undefined,
-      claudeToken: tab?.workspaceDir ? getClaudeToken() : undefined,
-      opencodeToken: tab?.workspaceDir ? getOpencodeToken() : undefined,
-      geminiToken: tab?.workspaceDir ? getGeminiToken() : undefined,
+      tokens: tab?.workspaceDir ? getProjectTokens() : undefined,
     });
     if (cwd) shell.stdin?.write(`cd "${cwd}"\n`);
     return shell;

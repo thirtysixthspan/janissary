@@ -1,6 +1,7 @@
 import { spawnPty } from '../pty.js';
 import { spawnShell } from '../shell.js';
 import { harnessEnv } from '../harness/scratch-dir.js';
+import type { ProjectTokens } from '../project-tokens.js';
 import type { ClientFrame, ServerFrame } from './protocol.js';
 
 // The remote server's process table. Every remote harness tab, every remote agent tab's persistent
@@ -16,14 +17,11 @@ type Entry = { kill: () => void };
 export class RemoteProcesses {
   private entries = new Map<string, Entry>();
 
-  // The tokens travel as one object rather than trailing optional strings: all are
-  // `string | undefined`, so a positional run of them transposes without a type error and each
-  // credential silently goes where another belongs. Same naming `SandboxOptions` already uses.
   constructor(
     private send: (frame: ServerFrame) => void,
     private workspaceDir: string,
     private label: string,
-    private credentials: { github?: string; claude?: string; opencode?: string; gemini?: string } = {},
+    private tokens: ProjectTokens = {},
   ) {}
 
   spawn(frame: Extract<ClientFrame, { type: 'spawn' }>): void {
@@ -57,14 +55,7 @@ export class RemoteProcesses {
       },
       frame.cols,
       frame.rows,
-      {
-        workspaceDir: this.workspaceDir,
-        offline: frame.offline,
-        githubToken: this.credentials.github,
-        claudeToken: this.credentials.claude,
-        opencodeToken: this.credentials.opencode,
-        geminiToken: this.credentials.gemini,
-      },
+      { workspaceDir: this.workspaceDir, offline: frame.offline, tokens: this.tokens },
       frame.harness === undefined ? undefined : harnessEnv(frame.harness, this.workspaceDir),
     );
     this.writers.set(frame.id, (data) => session.write(data));
@@ -75,10 +66,7 @@ export class RemoteProcesses {
   private spawnPipe(id: string): Entry {
     const shell = spawnShell(0, { JANUS_AGENT_NAME: this.label }, {
       workspaceDir: this.workspaceDir,
-      githubToken: this.credentials.github,
-      claudeToken: this.credentials.claude,
-      opencodeToken: this.credentials.opencode,
-      geminiToken: this.credentials.gemini,
+      tokens: this.tokens,
     });
     const onChunk = (chunk: string) => this.send({ type: 'output', id, data: chunk });
     shell.stdout?.on('data', onChunk);

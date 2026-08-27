@@ -101,6 +101,13 @@ that cannot authenticate. The forwarded OpenCode key is the third and the forwar
 fourth, each moving it once more. Both ends therefore have to be updated together, and a remote that
 is behind is refused before a tab is provisioned rather than after the harness fails to sign in.
 
+The provisioning frame now carries the credentials as a single map keyed by token name rather than
+one named field per credential, which is what moved the version a fifth time. That bump is the one
+that changes a frame's shape rather than adding to it: an installation on any earlier version finds
+none of the fields it reads and would provision a workspace with no credentials whatsoever. Adding a
+credential no longer touches the contract at all, so this is expected to be the last version move on
+the tokens' account.
+
 ### Lifecycle and cleanup
 
 A remote tab's lifetime is its channel's lifetime. If the ssh session ends for any reason the tab
@@ -136,7 +143,7 @@ remote project's own `.janissary/github-token` remains the fallback. The initial
 transport the *remote* repository's `origin` already has.
 
 The local project's `.janissary/claude-token`, `.janissary/opencode-token`, and
-`.janissary/gemini-token` travel the same way, on the same frame, and are injected as
+`.janissary/gemini-token` travel the same way, in the same map on the same frame, and are injected as
 `CLAUDE_CODE_OAUTH_TOKEN`, `OPENCODE_API_KEY`, and `GEMINI_API_KEY` into the same processes, each
 with the remote project's own matching file as the same fallback. It matters most on exactly the hosts the GitHub
 token's isolation-independence describes: a Keychain and the sandbox both need macOS, so on a Linux
