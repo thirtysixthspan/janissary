@@ -106,8 +106,10 @@ anything ending `_SECRET`/`_PASSWORD`, `SSH_AUTH_SOCK`, `GPG_AGENT_INFO`, `GNUPG
 matched — the harnesses and the ACP agent need their own credentials to function, and since
 `.local/share/opencode/auth.json` became a denied secret path this is the only route a non-OpenCode
 opencode provider has into a workspace. The ones that matter are `ANTHROPIC_API_KEY`,
-`OPENAI_API_KEY`, and for Google `GOOGLE_API_KEY`, `GOOGLE_GENERATIVE_AI_API_KEY`, or
-`GEMINI_API_KEY`. A variable carrying the credential *itself* crosses intact; one carrying a
+`OPENAI_API_KEY`, and for Google `GOOGLE_GENERATIVE_AI_API_KEY` — the Google spellings
+`GOOGLE_API_KEY` and `GEMINI_API_KEY` pass the scrub too, but opencode reads them only when
+recognizing the provider, never on a request, so neither works alone. A variable carrying the
+credential *itself* crosses intact; one carrying a
 *filename* does not help. `GOOGLE_APPLICATION_CREDENTIALS`, which the Vertex providers read, passes
 the scrub like any other variable — so a Vertex setup looks configured from the environment's side —
 but the file it names is unreadable inside the sandbox whenever it sits under `$HOME` outside a
@@ -144,10 +146,14 @@ already carved in. An OpenCode API key configured at `.janissary/opencode-token`
 reasons: the variable the OpenCode Zen and OpenCode Go providers declare, off the scrub list as a
 provider credential, and needing no companion because opencode reads its own configuration from
 `~/.local/share/opencode`, likewise already carved in. A Google AI key configured at
-`.janissary/gemini-token` (loaded by `src/project-tokens.ts`) is set as `GEMINI_API_KEY` on the same
-terms again. It exists because the Google provider's key lives in opencode's own credential store,
-which is a denied secret path, so without it that provider has no route into a workspace other than
-the ambient environment. `TMPDIR` is overridden to the workspace's private temp dir
+`.janissary/gemini-token` (loaded by `src/project-tokens.ts`) is set on the same terms again, under
+two variables rather than one: `GEMINI_API_KEY` and `GOOGLE_GENERATIVE_AI_API_KEY`, both carrying the
+same key. opencode reads the two at different moments — it recognizes a configured Google provider
+from either, but the request itself loads the key from `GOOGLE_GENERATIVE_AI_API_KEY` alone, so a
+workspace given only the first saw the provider accepted and then the first prompt fail. The token
+exists at all because the Google provider's key lives in opencode's own credential store, which is a
+denied secret path, so without it that provider has no route into a workspace other than the ambient
+environment. `TMPDIR` is overridden to the workspace's private temp dir
 (`<workspace>.tmp`) regardless of what the caller passed in. `JANISSARY_NODE` is added, set to
 `process.execPath` — the absolute path of the Node binary running the janissary server itself —
 so a script inside the sandbox (e.g. a project's own `.claude/settings.json` hook) can invoke a

@@ -7,6 +7,9 @@ import path from 'node:path';
 // one at a time. Same property `sandbox/paths.ts` has for its path lists, for the same reason: four
 // credentials arrived by hand-editing nine files each before this existed.
 //
+// `env` is a list because a credential is set under every variable its consumer reads, not under one
+// canonical name — see the gemini row, where the difference is the whole reason the column is a list.
+//
 // Every file is user-provisioned and read-only to janissary: absent by default, and absent means no
 // injection and a workspace that behaves exactly as it did before the file existed.
 export const PROJECT_TOKENS = [
@@ -16,7 +19,7 @@ export const PROJECT_TOKENS = [
     // A narrowly-scoped GitHub fine-grained PAT (Contents + Pull requests write, Metadata read).
     // The only row whose variable is not self-sufficient: `gh` also reads a config file the sandbox
     // denies, so `workspaceCredentialEnv` pairs this one with a `GH_CONFIG_DIR` redirect.
-    env: 'GH_TOKEN',
+    env: ['GH_TOKEN'],
   },
   {
     name: 'claude',
@@ -24,7 +27,7 @@ export const PROJECT_TOKENS = [
     // A long-lived Claude Code subscription token (`claude setup-token`). Needed where the machine
     // has no usable Keychain, because the credentials file the CLI falls back to is a denied secret
     // path — so on Linux a workspaced harness has nothing else to authenticate with.
-    env: 'CLAUDE_CODE_OAUTH_TOKEN',
+    env: ['CLAUDE_CODE_OAUTH_TOKEN'],
   },
   {
     name: 'opencode',
@@ -32,16 +35,20 @@ export const PROJECT_TOKENS = [
     // An OpenCode API key, the variable the OpenCode Zen and OpenCode Go providers declare. Static:
     // no refresh, no expiry. Required inside a workspace rather than optional, since opencode's own
     // credential store is a denied secret path.
-    env: 'OPENCODE_API_KEY',
+    env: ['OPENCODE_API_KEY'],
   },
   {
     name: 'gemini',
     file: 'gemini-token',
     // A Google AI API key. The Google provider's route into a workspace, for the same reason: its
-    // key lives in opencode's denied store. The provider accepts `GOOGLE_API_KEY` and
-    // `GOOGLE_GENERATIVE_AI_API_KEY` equally and both still pass the environment scrub, so anyone
-    // exporting one of those is unaffected; janissary injects this one.
-    env: 'GEMINI_API_KEY',
+    // key lives in opencode's denied store. Two variables because opencode reads two different ones
+    // at two different moments: it *detects* a configured Google provider from any of
+    // `GOOGLE_API_KEY`, `GOOGLE_GENERATIVE_AI_API_KEY`, or `GEMINI_API_KEY`, but the request itself
+    // loads the key from `GOOGLE_GENERATIVE_AI_API_KEY` alone. Setting only the file's namesake made
+    // the provider look configured and then fail at the first prompt with that variable reported
+    // missing. `GOOGLE_API_KEY` is not set: it is a third spelling for detection, never read on a
+    // request. All three pass the environment scrub, so anyone exporting one is still unaffected.
+    env: ['GEMINI_API_KEY', 'GOOGLE_GENERATIVE_AI_API_KEY'],
   },
 ] as const;
 
