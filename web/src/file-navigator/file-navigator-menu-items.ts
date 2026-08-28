@@ -11,6 +11,7 @@ export type FileNavigatorMenuActions = {
   openWith: (row: FileNavigatorRow) => void;
   copy: (row: FileNavigatorRow) => void;
   paste: (row: FileNavigatorRow) => void;
+  duplicate: (row: FileNavigatorRow) => void;
   rename: (row: FileNavigatorRow) => void;
   remove: (row: FileNavigatorRow) => void;
   newFile: () => void;
@@ -19,7 +20,7 @@ export type FileNavigatorMenuActions = {
 
 // The menu's entries for one row, grouped as the caller draws them (a separator between groups).
 // An entry that doesn't apply is omitted rather than shown greyed out, so the menu's height varies
-// with context: the ".." row has nowhere to open, open-with, or rename to, and Paste only exists
+// with context: the ".." row has nowhere to open, open-with, rename, or duplicate to, and Paste only exists
 // once something is on the clipboard. Pure, so the visibility rules are testable without rendering.
 //
 // `contributed` is the one entry that acts on the whole selection rather than the clicked row: a tab
@@ -47,13 +48,18 @@ export function fileNavigatorMenuItems(
   const renameEntry: ContextMenuItem[] = parentRow
     ? []
     : [{ label: 'Rename', onActivate: () => actions.rename(row) }];
+  // Duplicate sits with Copy and Paste because it is a copy, but unlike Paste it never depends on
+  // the clipboard. The ".." row has no place in this tree to duplicate into.
+  const duplicateEntry: ContextMenuItem[] = parentRow
+    ? []
+    : [{ label: 'Duplicate', onActivate: () => actions.duplicate(row) }];
 
   const contributedGroup: ContextMenuItem[][] = contributed ? [[contributed]] : [];
 
   return [
     ...openGroup,
     ...contributedGroup,
-    [{ label: 'Copy', onActivate: () => actions.copy(row) }, ...pasteEntry],
+    [{ label: 'Copy', onActivate: () => actions.copy(row) }, ...pasteEntry, ...duplicateEntry],
     [...renameEntry, { label: 'Delete', onActivate: () => actions.remove(row) }],
     [
       { label: 'New file', onActivate: actions.newFile },

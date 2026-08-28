@@ -197,8 +197,9 @@ Choosing **Edit as text** from that row's **Open with** chooser is another: it o
 file when the clicked row belongs to the selection. The chooser's other options still act on the
 clicked row alone.
 
-The menu holds up to nine entries in four groups, separated in this order: **Open**, **Edit**, and
-**Open with**; **Copy** and **Paste**; **Rename** and **Delete**; **New file** and **New folder**.
+The menu holds up to ten entries in four groups, separated in this order: **Open**, **Edit**, and
+**Open with**; **Copy**, **Paste**, and **Duplicate**; **Rename** and **Delete**; **New file** and
+**New folder**.
 Open does what double-clicking the row does. Edit is offered only for a file and sends
 `edit <absolute-path>` for the right-clicked row: ordinary files reach the plain-text editor and
 images reach the image editor because the `edit` command dispatches by file type (see [[open]]).
@@ -206,11 +207,18 @@ When the clicked row is part of a multi-row selection containing only images, **
 each apply to every selected image in selection order instead; mixed selections keep the normal
 right-clicked-row behavior.
 Copy, Paste, Rename, Delete, New file, and New folder run the same flows their keyboard chords and
-header buttons do, including every confirmation and name-conflict dialog.
+header buttons do, including every confirmation and name-conflict dialog. **Duplicate** copies the
+right-clicked file or directory — a directory with everything inside it — into the directory it
+already lives in, under the next free `-2` name, exactly as pasting a copy into its own source
+directory does. It has no keyboard chord of its own and is the one entry with no dialog to raise:
+it never prompts and never overwrites, since a name is always available. The copy it creates lands
+on the tab's undo/redo stack like any other paste. Duplicate neither reads nor disturbs the
+clipboard, so it is offered whether or not anything has been copied, and a pending copy or cut
+survives it untouched.
 
 Entries that do not apply are left out rather than shown greyed, so the menu's height varies with
 context: **Paste** is absent when nothing has been copied or cut, **Edit** is absent for directories,
-and **Open**, **Edit**, **Open with**, and **Rename** are absent on the `..` row.
+and **Open**, **Edit**, **Open with**, **Duplicate**, and **Rename** are absent on the `..` row.
 
 One further entry can appear, and it is the only one that acts on the whole selection rather than on
 the clicked row: a **tab plugin's contributed selection entry**, drawn in a group of its own between
@@ -409,8 +417,10 @@ re-applies it. Undoing a copy-paste deletes exactly the items that paste created
 confirmation; undoing a cut-paste moves them back to where they came from, even when that source
 lay in a different navigator's tree entirely. Redo re-applies either.
 
-Copy and Paste also appear in a row's context menu. Cut has no menu or mouse route — `Cmd+X` /
-`Ctrl+X` remains the only way to cut, since drag-and-drop already moves files with the mouse.
+Copy and Paste also appear in a row's context menu, alongside **Duplicate**, which performs this
+in-place copy on the right-clicked row in one step without going through the clipboard at all. Cut
+has no menu or mouse route — `Cmd+X` / `Ctrl+X` remains the only way to cut, since drag-and-drop
+already moves files with the mouse.
 
 ### Keyboard interactions
 

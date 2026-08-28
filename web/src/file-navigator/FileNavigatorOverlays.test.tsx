@@ -65,6 +65,7 @@ function makePaste(overrides: Partial<Paste> = {}): Paste {
   return {
     pendingConflict: null,
     paste: () => {},
+    duplicate: () => {},
     confirmOverwrite: () => {},
     skipConflicts: () => {},
     cancelConflict: () => {},
@@ -105,6 +106,7 @@ function makeMenuActions(): FileNavigatorMenuActions {
     openWith: () => {},
     copy: () => {},
     paste: () => {},
+    duplicate: () => {},
     rename: () => {},
     remove: () => {},
     newFile: () => {},

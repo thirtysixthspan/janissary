@@ -13,6 +13,7 @@ function makeActions(): FileNavigatorMenuActions {
     openWith: vi.fn(),
     copy: vi.fn(),
     paste: vi.fn(),
+    duplicate: vi.fn(),
     rename: vi.fn(),
     remove: vi.fn(),
     newFile: vi.fn(),
@@ -24,10 +25,10 @@ const labels = (groups: { label: string }[][]): string[][] =>
   groups.map((group) => group.map((item) => item.label));
 
 describe('fileNavigatorMenuItems', () => {
-  it('lists nine entries in four groups for an ordinary file row', () => {
+  it('lists ten entries in four groups for an ordinary file row', () => {
     expect(labels(fileNavigatorMenuItems(fileRow, true, makeActions()))).toEqual([
       ['Open', 'Edit', 'Open with'],
-      ['Copy', 'Paste'],
+      ['Copy', 'Paste', 'Duplicate'],
       ['Rename', 'Delete'],
       ['New file', 'New folder'],
     ]);
@@ -41,7 +42,7 @@ describe('fileNavigatorMenuItems', () => {
     expect(labels(groups)).toEqual([
       ['Open', 'Edit', 'Open with'],
       ['Add to playlist'],
-      ['Copy', 'Paste'],
+      ['Copy', 'Paste', 'Duplicate'],
       ['Rename', 'Delete'],
       ['New file', 'New folder'],
     ]);
@@ -58,8 +59,9 @@ describe('fileNavigatorMenuItems', () => {
       .toEqual(labels(plain));
   });
 
-  it('omits Paste when the clipboard is empty', () => {
-    expect(labels(fileNavigatorMenuItems(fileRow, false, makeActions()))[1]).toEqual(['Copy']);
+  it('omits Paste when the clipboard is empty, but keeps Duplicate', () => {
+    expect(labels(fileNavigatorMenuItems(fileRow, false, makeActions()))[1])
+      .toEqual(['Copy', 'Duplicate']);
   });
 
   it('omits Edit on directories', () => {
@@ -67,7 +69,7 @@ describe('fileNavigatorMenuItems', () => {
       .toEqual(['Open', 'Open with']);
   });
 
-  it('omits Open, Edit, Open with, and Rename on the ".." row', () => {
+  it('omits Open, Edit, Open with, Duplicate, and Rename on the ".." row', () => {
     expect(labels(fileNavigatorMenuItems(parentRow, true, makeActions()))).toEqual([
       ['Copy', 'Paste'],
       ['Delete'],
@@ -85,6 +87,7 @@ describe('fileNavigatorMenuItems', () => {
     expect(actions.openWith).toHaveBeenCalledWith(fileRow);
     expect(actions.copy).toHaveBeenCalledWith(fileRow);
     expect(actions.paste).toHaveBeenCalledWith(fileRow);
+    expect(actions.duplicate).toHaveBeenCalledWith(fileRow);
     expect(actions.rename).toHaveBeenCalledWith(fileRow);
     expect(actions.remove).toHaveBeenCalledWith(fileRow);
     expect(actions.newFile).toHaveBeenCalled();

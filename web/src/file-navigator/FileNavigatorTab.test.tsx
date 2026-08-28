@@ -1367,6 +1367,25 @@ describe('FileNavigatorTab', () => {
       expect(getClipboardSnapshot()).toEqual({ mode: 'copy', paths: ['/home/user/project/README.md'] });
     });
 
+    it('choosing Duplicate copies the clicked row into its own directory', () => {
+      const request = vi.fn().mockResolvedValue({ total: 1, failedPaths: [] });
+      const client = { send: vi.fn(), request } as unknown as JanusClient;
+      render(<FileNavigatorTab files={makeFiles()} client={client} index={3} />);
+      fireEvent.contextMenu(screen.getByText('index.ts'));
+      fireEvent.click(screen.getByText('Duplicate'));
+      expect(request).toHaveBeenCalledWith({
+        method: 'pasteFileNavigatorItems',
+        params: {
+          index: 3,
+          sources: ['/home/user/project/src/index.ts'],
+          destinationPath: 'src',
+          mode: 'copy',
+          policy: undefined,
+        },
+      });
+      expect(getClipboardSnapshot()).toBeNull();
+    });
+
     it('choosing Open with shows the chooser for a file a registered opener claims', async () => {
       const request = vi.fn().mockResolvedValue({
         choices: [
