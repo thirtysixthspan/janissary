@@ -324,6 +324,42 @@ describe('EditorTab', () => {
     delete (document as unknown as { caretPositionFromPoint?: unknown }).caretPositionFromPoint;
   });
 
+  it('ArrowDown at the bottom edge scrolls one screen row instead of crossing a whole buffer line', async () => {
+    const { client } = makeClient();
+    const { container } = await renderLoaded(client);
+    const body = container.querySelector('.editor-body') as HTMLElement;
+    const firstContent = container.querySelector(':scope .editor-row .editor-content')!;
+    const firstText = firstContent.lastChild!.firstChild!;
+    const caret = container.querySelector('.editor-caret')!;
+
+    // A two-row-tall viewport with the caret on its last row, so the row it would move onto is not
+    // painted until the body scrolls. The caret's box tracks scrollTop, as it does in a browser.
+    vi.spyOn(body, 'getBoundingClientRect').mockReturnValue(
+      { top: 0, bottom: 28, left: 0, right: 80, width: 80, height: 28, x: 0, y: 0, toJSON: () => ({}) },
+    );
+    vi.spyOn(caret, 'getBoundingClientRect').mockImplementation(() => (
+      { top: 14 - body.scrollTop, bottom: 28 - body.scrollTop, left: 3, right: 3, width: 0, height: 14, x: 3, y: 14 - body.scrollTop, toJSON: () => ({}) }
+    ));
+    // The revealed row is a wrapped continuation of the same buffer line, so the visual hit stays
+    // on line one — a fall back to logical movement would land on line two instead.
+    (document as unknown as { elementFromPoint: (x: number, y: number) => Element | null }).elementFromPoint =
+      vi.fn().mockReturnValue(firstContent as Element);
+    (document as unknown as { caretPositionFromPoint: (x: number, y: number) => { offsetNode: Node; offset: number } }).caretPositionFromPoint =
+      vi.fn().mockReturnValue({ offsetNode: firstText, offset: 5 });
+
+    fireEvent.keyDown(textarea(), { key: 'ArrowDown' });
+
+    await waitFor(() => {
+      const current = container.querySelector(':scope .editor-row-current .editor-content');
+      expect(current?.textContent).toBe('line one');
+    });
+    expect(body.scrollTop).toBe(14);
+
+    vi.restoreAllMocks();
+    delete (document as unknown as { elementFromPoint?: unknown }).elementFromPoint;
+    delete (document as unknown as { caretPositionFromPoint?: unknown }).caretPositionFromPoint;
+  });
+
   it('consumes Shift+ArrowLeft/Right locally instead of letting them reach the window-level tab-switch shortcut', async () => {
     const { client } = makeClient();
     await renderLoaded(client);

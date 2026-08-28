@@ -312,9 +312,17 @@ scroll; staying in position does not.
 
 Keyboard cursor movement keeps this scrolling smooth at the edges of the view. When the caret sits
 on the first or last visible row, or has been scrolled out of view entirely (for example with the
-mouse wheel), pressing ↑/↓ moves the cursor a single line from where it was and the view scrolls to
-bring the caret back into sight — the cursor never jumps to the start or end of the document from
-an arrow press.
+mouse wheel), pressing ↑/↓ moves the cursor a single visual row from where it was and the view
+scrolls by that same single row to bring the caret back into sight — the cursor never jumps to the
+start or end of the document from an arrow press. Scrolling this way advances by screen rows, not
+by whole buffer lines: a soft-wrapped line at the edge of the view is crossed one row per press,
+exactly as it is in the middle of the view, so holding ↓ through a wrapped paragraph scrolls it
+smoothly rather than a whole wrapped line at a time. Only when there is nothing left to scroll —
+the view is already at the top or bottom of the document — does the press fall back to moving a
+whole line.
+
+PageUp/PageDown still move a viewport's worth of buffer lines rather than screen rows, so a page
+through heavily wrapped text covers more than one screen.
 
 Switching away from an editor tab and back leaves its scroll position exactly as it was, even if the
 cursor is outside the visible viewport when the tab was left. Returning to the tab does not snap the
