@@ -1,20 +1,17 @@
-import { statSync } from 'node:fs';
 import path from 'node:path';
 import type {
   TabPluginActivation,
   TabPluginResources,
   TabPluginServerCapabilities,
 } from '../api.js';
-import { humanSize } from '../../openers/size.js';
+import { fileSize, openFileExternally } from '../files.js';
 import { saveImageEdit } from './edit.js';
 import {
   isImagePayload, isSaveEditPayload, type ImageMode, type ImagePayload,
 } from './shared.js';
 
 function openExternal(file: string, capabilities: TabPluginServerCapabilities): void {
-  const name = path.basename(file);
-  if (capabilities.openExternally(file)) capabilities.note(`Opening ${name} in your image viewer…`);
-  else capabilities.note(`No image viewer available. The file is at ${file}`);
+  openFileExternally(file, capabilities, 'image viewer');
 }
 
 // `mode` is omitted rather than set to `undefined` for the viewer: a tab payload has to be
@@ -22,16 +19,10 @@ function openExternal(file: string, capabilities: TabPluginServerCapabilities): 
 function imagePayload(
   file: string, resources: TabPluginResources, mode?: ImageMode,
 ): ImagePayload {
-  let size = 'unknown';
-  try {
-    size = humanSize(statSync(file).size);
-  } catch {
-    // The dispatcher checks existence first; a race with deletion still yields a usable tab.
-  }
   const payload: ImagePayload = {
     name: path.basename(file),
     path: file,
-    size,
+    size: fileSize(file),
     url: resources.registerFile(file),
   };
   return mode ? { ...payload, mode } : payload;
