@@ -15,6 +15,8 @@ Each opener declares:
 
 Both presentations receive the resolved target and whatever application context they need to launch a program or create a tab. An opener can do only these two things, so the effect of opening any target is predictable: it either launches an external program or mounts an in-app view.
 
+Every file opener's external presentation confirms the same way. When the file goes to an application the user configured, the confirmation names that application. When it goes to the operating system's handler instead — because none is configured, or the named one could not be launched — the confirmation says the file was opened in the **default** viewer or player for its kind. When nothing can be launched at all, the file's path is reported in place of a confirmation. An opener with no configurable application skips the first case and starts at the second.
+
 ### Dispatch
 
 The command takes optional `external` and `page` keywords and a target:
@@ -82,7 +84,7 @@ The bundled `image` tab plugin contributes an opener for all common image types 
 
 ### `open external <image>`
 
-Hands the image to the operating system's image viewer (on macOS, Preview), launched detached so it never blocks the app. A failure to launch (e.g. no viewer available) is swallowed rather than crashing the app, and a short confirmation is shown in the active tab. On platforms without a known viewer, the file path is reported instead.
+Hands the image to the operating system's default image viewer (on macOS, Preview), launched detached so it never blocks the app. The image opener has no configurable application of its own, so the confirmation shown in the active tab always names the default viewer. A failure to launch (e.g. no viewer available) is swallowed rather than crashing the app; on platforms without a known viewer, the file path is reported instead.
 
 ### `open <image>` — image tab
 

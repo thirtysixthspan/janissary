@@ -78,7 +78,7 @@ describe('image plugin opener', () => {
     const fixture = fakeCapabilities();
     opener.external('/tmp/pic.png', fixture.capabilities);
     expect(fixture.external).toHaveBeenCalledWith('/tmp/pic.png');
-    expect(fixture.notes).toEqual(['Opening pic.png in your image viewer…']);
+    expect(fixture.notes).toEqual(['Opening pic.png in your default image viewer…']);
     expect(fixture.opened).toHaveLength(0);
   });
 

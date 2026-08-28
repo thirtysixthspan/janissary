@@ -1,10 +1,9 @@
-import { statSync } from 'node:fs';
 import path from 'node:path';
 import type {
   TabPluginActivation,
   TabPluginServerCapabilities,
 } from '../api.js';
-import { humanSize } from '../../openers/size.js';
+import { fileSize, openFileInConfiguredViewer, servesContentType } from '../files.js';
 import { videoManifest } from './manifest.js';
 import {
   isCaptureFramePayload,
@@ -13,24 +12,8 @@ import {
 } from './shared.js';
 import { saveVideoShot } from './shot.js';
 
-function isPlayable(file: string): boolean {
-  const extension = path.extname(file).toLowerCase();
-  return videoManifest.fileExtensions[extension as keyof typeof videoManifest.fileExtensions]
-    !== undefined;
-}
-
 function openExternal(file: string, capabilities: TabPluginServerCapabilities): void {
-  const name = path.basename(file);
-  const player = capabilities.configuredViewer();
-  if (player && capabilities.openExternally(file, player)) {
-    capabilities.note(`Opening ${name} in ${player}…`);
-    return;
-  }
-  if (capabilities.openExternally(file)) {
-    capabilities.note(`Opening ${name} in your default video player…`);
-    return;
-  }
-  capabilities.note(`No video player available. The file is at ${file}`);
+  openFileInConfiguredViewer(file, capabilities, 'video player');
 }
 
 export function activate(): TabPluginActivation {
@@ -46,28 +29,20 @@ export function activate(): TabPluginActivation {
     opener: {
       external: openExternal,
       inline: (file, capabilities) => {
-        if (!isPlayable(file)) {
+        if (!servesContentType(videoManifest, file)) {
           openExternal(file, capabilities);
           return;
         }
-        capabilities.openOrFocusTab(file, (resources) => {
-          let size = 'unknown';
-          try {
-            size = humanSize(statSync(file).size);
-          } catch {
-            // The dispatcher checks existence first; a race with deletion still yields a usable tab.
-          }
-          return {
-            title: path.basename(file),
-            payload: {
-              name: path.basename(file),
-              path: file,
-              size,
-              url: resources.registerFile(file),
-              player: capabilities.configuredViewer(),
-            },
-          };
-        });
+        capabilities.openOrFocusTab(file, (resources) => ({
+          title: path.basename(file),
+          payload: {
+            name: path.basename(file),
+            path: file,
+            size: fileSize(file),
+            url: resources.registerFile(file),
+            player: capabilities.configuredViewer(),
+          },
+        }));
       },
     },
     intent: (request, capabilities) => {

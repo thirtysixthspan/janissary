@@ -1,16 +1,13 @@
-import { statSync } from 'node:fs';
 import path from 'node:path';
 import type {
   TabPluginActivation,
   TabPluginServerCapabilities,
 } from '../api.js';
-import { humanSize } from '../../openers/size.js';
+import { fileSize, openFileExternally } from '../files.js';
 import { isMarkdownPayload } from './shared.js';
 
 function openExternal(file: string, capabilities: TabPluginServerCapabilities): void {
-  const name = path.basename(file);
-  if (capabilities.openExternally(file)) capabilities.note(`Opening ${name} in your default viewer…`);
-  else capabilities.note(`No viewer available. The file is at ${file}`);
+  openFileExternally(file, capabilities, 'viewer');
 }
 
 export function activate(): TabPluginActivation {
@@ -19,23 +16,15 @@ export function activate(): TabPluginActivation {
     opener: {
       external: openExternal,
       inline: (file, capabilities) => {
-        capabilities.openOrFocusTab(file, (resources) => {
-          let size = 'unknown';
-          try {
-            size = humanSize(statSync(file).size);
-          } catch {
-            // The dispatcher checks existence first; a race with deletion still yields a usable tab.
-          }
-          return {
-            title: path.basename(file),
-            payload: {
-              name: path.basename(file),
-              path: file,
-              size,
-              url: resources.registerFile(file),
-            },
-          };
-        });
+        capabilities.openOrFocusTab(file, (resources) => ({
+          title: path.basename(file),
+          payload: {
+            name: path.basename(file),
+            path: file,
+            size: fileSize(file),
+            url: resources.registerFile(file),
+          },
+        }));
       },
     },
     // The markdown view answers no intents: it renders a snapshot of the file and its scroll

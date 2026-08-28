@@ -1,10 +1,9 @@
-import { statSync } from 'node:fs';
 import path from 'node:path';
 import type {
   TabPluginActivation,
   TabPluginServerCapabilities,
 } from '../api.js';
-import { humanSize } from '../../openers/size.js';
+import { fileSize, openFileInConfiguredViewer, servesContentType } from '../files.js';
 import { audioManifest } from './manifest.js';
 import {
   appendTrack, emptyPlaylist, removeTrack, selectTrack, trackIndex,
@@ -18,33 +17,8 @@ import {
   type AudioTrack,
 } from './shared.js';
 
-function isPlayable(file: string): boolean {
-  const extension = path.extname(file).toLowerCase();
-  return audioManifest.fileExtensions[extension as keyof typeof audioManifest.fileExtensions]
-    !== undefined;
-}
-
-function sizeOf(file: string): string {
-  try {
-    return humanSize(statSync(file).size);
-  } catch {
-    // The dispatcher checks existence first; a race with deletion still yields a usable playlist.
-    return 'unknown';
-  }
-}
-
 function openExternal(file: string, capabilities: TabPluginServerCapabilities): void {
-  const name = path.basename(file);
-  const player = capabilities.configuredViewer();
-  if (player && capabilities.openExternally(file, player)) {
-    capabilities.note(`Opening ${name} in ${player}…`);
-    return;
-  }
-  if (capabilities.openExternally(file)) {
-    capabilities.note(`Opening ${name} in your default audio player…`);
-    return;
-  }
-  capabilities.note(`No audio player available. The file is at ${file}`);
+  openFileInConfiguredViewer(file, capabilities, 'audio player');
 }
 
 export function activate(): TabPluginActivation {
@@ -56,7 +30,7 @@ export function activate(): TabPluginActivation {
 
   const queue = (file: string, capabilities: TabPluginServerCapabilities): void => {
     const name = path.basename(file);
-    const size = sizeOf(file);
+    const size = fileSize(file);
     const track = (url: string): AudioTrack => ({ name, path: file, url });
     let created = false;
     capabilities.openOrFocusTab(AUDIO_TAB_KEY, (resources) => {
@@ -96,7 +70,7 @@ export function activate(): TabPluginActivation {
     opener: {
       external: openExternal,
       inline: (file, capabilities) => {
-        if (isPlayable(file)) queue(file, capabilities);
+        if (servesContentType(audioManifest, file)) queue(file, capabilities);
         else openExternal(file, capabilities);
       },
     },
@@ -113,7 +87,7 @@ export function activate(): TabPluginActivation {
         }
         const index = trackIndex(tabPayload, request.payload.path);
         if (index === -1) return capabilities.rejectRequest('select-track names no queued track');
-        return push(selectTrack(tabPayload, index, sizeOf(tabPayload.tracks[index].path)), capabilities);
+        return push(selectTrack(tabPayload, index, fileSize(tabPayload.tracks[index].path)), capabilities);
       }
       if (request.intent === 'remove-track') {
         const payload = request.payload;
@@ -128,7 +102,7 @@ export function activate(): TabPluginActivation {
         if (payload.unplayable) {
           capabilities.notifyUser(`Dropped ${tabPayload.tracks[index].name} — it could not be played.`);
         }
-        return push(removeTrack(tabPayload, index, (track) => sizeOf(track.path)), capabilities);
+        return push(removeTrack(tabPayload, index, (track) => fileSize(track.path)), capabilities);
       }
       return capabilities.rejectRequest(`unknown audio intent "${request.intent}"`);
     },

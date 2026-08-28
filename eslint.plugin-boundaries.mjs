@@ -13,16 +13,19 @@
 export const pluginBoundaries = [
   // Concrete plugin implementations receive only their public host API, their own files, and
   // external/Node modules. The documented host utilities are pure functions with a caller on each
-  // side of the boundary: the size formatter, the web-target normalizer that core's profile relaunch
-  // and the page plugin must agree on to the character, and the numbered-sibling writer the video and
-  // image plugins share so "a numbered PNG beside an original" has one rule rather than two.
+  // side of the boundary: the file operations every file-backed plugin composes out of the capability
+  // primitives — external open and size lookup — the web-target normalizer that core's profile
+  // relaunch and the page plugin must agree on to the character, and the numbered-sibling writer the
+  // video and image plugins share so "a numbered PNG beside an original" has one rule rather than two.
+  // The size formatter is deliberately absent: it reaches a plugin through `files.js`, so a plugin
+  // spelling out its own stat-and-format block again would be caught here.
   {
     files: ['src/plugins/*/**/*.ts', 'src/plugins/*/*.ts'],
     ignores: ['**/*.test.ts', '**/*.test.tsx'],
     rules: {
       'no-restricted-imports': ['error', {
         patterns: [{
-          regex: String.raw`^\.\./(?!(?:api\.js|\.\./openers/(?:size|web-target|numbered-sibling)\.js)$)`,
+          regex: String.raw`^\.\./(?!(?:api\.js|files\.js|\.\./openers/(?:web-target|numbered-sibling)\.js)$)`,
           message: 'Server tab plugins must use src/plugins/api.ts capabilities instead of host internals.',
         }],
       }],
