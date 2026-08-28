@@ -112,7 +112,8 @@ while images open directly in the image editor. With multiple images selected, r
 of them makes **Open** or **Edit** apply to every selected image. Otherwise, each action affects
 only the row you right-clicked, and **Edit** is not shown for directories. **Open with** lets you choose the registered viewer, text editor, or
 external application instead. The menu also provides Copy, Paste (when the clipboard is armed),
-Rename, Delete, New file, and New folder; the `..` row omits actions that cannot apply to it.
+Duplicate, Rename, Delete, New file, and New folder; the `..` row omits actions that cannot apply to
+it.
 
 ## Selecting more than one row
 
@@ -197,8 +198,12 @@ Pasting a copy back into its own directory duplicates it, using the same `-2` na
 
 A paste is one step on the tab's undo/redo stack: `Cmd+Z` reverses it and `Cmd+Shift+Z` re-applies it. Undoing a copy-paste deletes what it created; undoing a cut-paste moves the items back to where they came from.
 
-Copy and Paste are also available from a row's context menu. Cut remains keyboard-only; dragging is
-the mouse route for moving files and directories.
+Copy and Paste are also available from a row's context menu, along with **Duplicate**, which makes
+that in-place copy in one step: right-click a file or directory, choose Duplicate, and the copy
+appears beside it under the next free `-2` name — a directory brings everything inside it. Duplicate
+never asks and never overwrites, undoes with `Cmd+Z` like any other paste, and leaves whatever is on
+your clipboard alone. Cut remains keyboard-only; dragging is the mouse route for moving files and
+directories.
 
 ## Keyboard
 

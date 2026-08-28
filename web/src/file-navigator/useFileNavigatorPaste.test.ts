@@ -86,6 +86,50 @@ describe('useFileNavigatorPaste', () => {
     expect(getClipboardSnapshot()).toBeNull();
   });
 
+  it('duplicate copies a nested row into its own parent directory', () => {
+    const request = vi.fn().mockResolvedValue({ total: 1, failedPaths: [] });
+    const client = { request } as unknown as JanusClient;
+    const { result } = renderHook(() => useFileNavigatorPaste(client, 4, '/root'));
+
+    act(() => { result.current.duplicate({ path: 'src/index.ts', name: 'index.ts', depth: 1, dir: false }); });
+
+    expect(request).toHaveBeenCalledWith({
+      method: 'pasteFileNavigatorItems',
+      params: { index: 4, sources: ['/root/src/index.ts'], destinationPath: 'src', mode: 'copy', policy: undefined },
+    });
+  });
+
+  it('duplicate targets the tree root for a top-level row', () => {
+    const request = vi.fn().mockResolvedValue({ total: 1, failedPaths: [] });
+    const client = { request } as unknown as JanusClient;
+    const { result } = renderHook(() => useFileNavigatorPaste(client, 0, '/root'));
+
+    act(() => { result.current.duplicate({ path: 'dest', name: 'dest', depth: 0, dir: true }); });
+
+    expect(request).toHaveBeenCalledWith({
+      method: 'pasteFileNavigatorItems',
+      params: { index: 0, sources: ['/root/dest'], destinationPath: '', mode: 'copy', policy: undefined },
+    });
+  });
+
+  it('duplicate ignores the clipboard and leaves it as it was', async () => {
+    setClipboard('cut', ['/other/a.txt']);
+    const request = vi.fn().mockResolvedValue({ total: 1, failedPaths: [] });
+    const client = { request } as unknown as JanusClient;
+    const { result } = renderHook(() => useFileNavigatorPaste(client, 0, '/root'));
+
+    await act(async () => {
+      result.current.duplicate({ path: 'notes.txt', name: 'notes.txt', depth: 0, dir: false });
+      await Promise.resolve();
+    });
+
+    expect(request).toHaveBeenCalledWith({
+      method: 'pasteFileNavigatorItems',
+      params: { index: 0, sources: ['/root/notes.txt'], destinationPath: '', mode: 'copy', policy: undefined },
+    });
+    expect(getClipboardSnapshot()).toEqual({ mode: 'cut', paths: ['/other/a.txt'] });
+  });
+
   it('a successful copy-paste leaves the clipboard intact', async () => {
     setClipboard('copy', ['/other/b.txt']);
     const request = vi.fn().mockResolvedValue({ total: 1, failedPaths: [] });

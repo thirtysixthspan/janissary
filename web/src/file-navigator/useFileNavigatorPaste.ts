@@ -3,7 +3,7 @@ import type { BulkConflictPolicy, BulkMoveResult, FileNavigatorRow } from '@shar
 import type { JanusClient } from '../ws';
 import { newFileTargetDir } from './file-navigator-new-file';
 import { clearClipboard, getClipboardSnapshot, pendingClipboardMode, subscribeClipboard, type ClipboardMode } from './file-navigator-clipboard';
-import { basename } from '../rel-path';
+import { basename, dirname } from '../rel-path';
 
 type PendingPasteConflict = {
   sources: string[];
@@ -52,6 +52,13 @@ export function useFileNavigatorPaste(client: JanusClient, index: number, absolu
     void sendPaste(snapshot.paths, newFileTargetDir(rows, cursor) ?? '', snapshot.mode);
   };
 
+  // Duplicate is a copy-paste of one row back into its own directory, which the server resolves
+  // through `nextFreeName` instead of raising a conflict. It bypasses the clipboard entirely — it
+  // neither needs something on it nor disturbs what is.
+  const duplicate = (row: FileNavigatorRow) => {
+    void sendPaste([`${absoluteRoot}/${row.path}`], dirname(row.path), 'copy');
+  };
+
   const retry = (policy: BulkConflictPolicy) => {
     if (!pendingConflict) return;
     void sendPaste(pendingConflict.sources, pendingConflict.destinationPath, pendingConflict.mode, policy);
@@ -60,6 +67,7 @@ export function useFileNavigatorPaste(client: JanusClient, index: number, absolu
   return {
     pendingConflict,
     paste,
+    duplicate,
     confirmOverwrite: () => retry('overwrite-all'),
     skipConflicts: () => retry('skip-conflicts'),
     cancelConflict: () => setPendingConflict(null),

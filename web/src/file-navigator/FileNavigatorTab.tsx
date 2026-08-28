@@ -108,6 +108,7 @@ export function FileNavigatorTab({
     ),
     copy: (row) => setClipboard('copy', [`${files.absoluteRoot}/${row.path}`]),
     paste: (row) => paste.paste(files.rows, row.path),
+    duplicate: (row) => paste.duplicate(row),
     rename: beginRename,
     remove: (row) => deletion.request(
       selection.selected.has(row.path)
