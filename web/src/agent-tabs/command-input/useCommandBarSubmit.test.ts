@@ -3,7 +3,7 @@ import { render } from '@testing-library/react';
 import React from 'react';
 import { useCommandBarSubmit } from './useCommandBarSubmit';
 import type { BufferLine, TabView } from '@shared/protocol';
-import type { useTranscriptSearch } from '../useTranscriptSearch';
+import type { useTranscriptSearch } from '../../useTranscriptSearch';
 
 function makeSearch(): ReturnType<typeof useTranscriptSearch> {
   return {

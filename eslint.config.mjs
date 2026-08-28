@@ -10,6 +10,29 @@ import sonarjs from 'eslint-plugin-sonarjs';
 import security from 'eslint-plugin-security';
 import { pluginBoundaries } from './eslint.plugin-boundaries.mjs';
 
+const clientFeatureDirectories = [
+  'agent-tabs',
+  'editor',
+  'file-navigator',
+  'harness',
+  'QuitDialog',
+  'SaveChangesDialog',
+];
+const clientFeatureZones = [
+  ...clientFeatureDirectories.flatMap((target) => clientFeatureDirectories
+    .filter((source) => source !== target)
+    .map((source) => ({
+      target: `./web/src/${target}`,
+      from: `./web/src/${source}`,
+      message: 'Features must import shared modules or coordinate through the app shell, not import a sibling feature.',
+    }))),
+  {
+    target: './web/src/shared',
+    from: clientFeatureDirectories.map((source) => `./web/src/${source}`),
+    message: 'Shared modules must not import a feature.',
+  },
+];
+
 export default ts.config(
   js.configs.recommended,
   ...ts.configs.recommended,
@@ -136,8 +159,12 @@ export default ts.config(
   {
     files: ['web/src/**/*.ts', 'web/src/**/*.tsx'],
     plugins: { 'import-x': importX },
+    settings: {
+      'import-x/resolver-next': [createTypeScriptImportResolver({ project: 'web/tsconfig.json' })],
+    },
     rules: {
       'import-x/extensions': ['error', 'never', { css: 'always' }],
+      'import-x/no-restricted-paths': ['error', { zones: clientFeatureZones }],
     },
   },
   ...pluginBoundaries,

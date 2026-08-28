@@ -2,10 +2,10 @@ import React from 'react';
 import { fireEvent, render } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type { BufferLine } from '@shared/protocol';
-import type { JanusClient } from '../ws';
+import type { JanusClient } from '../../ws';
 import { Transcript } from './Transcript';
 
-vi.mock('../useXterm', () => ({
+vi.mock('../../useXterm', () => ({
   useXterm: vi.fn(() => () => {}),
 }));
 

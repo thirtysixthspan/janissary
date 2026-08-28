@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef } from 'react';
-import type { JanusClient } from '../ws';
+import type { JanusClient } from '../../ws';
 import type { BufferLine } from '@shared/protocol';
 import { renderLine, type LineHighlight } from './transcript-line';
 import { transcriptIntents } from './transcript-intents';

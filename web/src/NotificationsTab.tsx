@@ -1,7 +1,7 @@
 import React, { useRef } from 'react';
 import type { BufferLine } from '@shared/protocol';
 import type { JanusClient } from './ws';
-import { Transcript } from './transcript/Transcript';
+import { Transcript } from './shared/transcript/Transcript';
 import { DockCycleHeader } from './DockCycleHeader';
 import { onNotificationsKey } from './notifications-handlers';
 
