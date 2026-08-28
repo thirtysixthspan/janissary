@@ -104,6 +104,19 @@ describe('handle', () => {
     expect(replies).toEqual([{ t: 'rpc-reply', id: 1, result: 'ok' }]);
   });
 
+  it('returns synchronous result failures as RPC errors', () => {
+    const controller = makeController();
+    vi.mocked(controller.complete).mockImplementationOnce(() => {
+      throw new Error('completion failed');
+    });
+
+    const replies = dispatchCall(controller, 50, {
+      method: 'complete', params: { text: 'op', cursor: 2 },
+    });
+
+    expect(replies).toEqual([{ t: 'rpc-reply', id: 50, error: 'completion failed' }]);
+  });
+
   it('focuses a tab through the controller façade', () => {
     const controller = makeController();
     dispatchCall(controller, 32, { method: 'focusTab', params: { label: 'build' } });
