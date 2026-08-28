@@ -21,6 +21,10 @@ export type CoreRpcCall =
   | { method: 'reorderTab'; params: { dir: -1 | 1 } }
   | { method: 'reorderTabTo'; params: { from: number; to: number } }
   | { method: 'toggleCollapse'; params: Record<string, never> }
+  // Move the active tab's running shell command into a full-tab terminal, for a program that needs
+  // one but never announced it (a password prompt, a bare REPL). No-ops when nothing is running or
+  // the tab's shell is not pty-backed.
+  | { method: 'promoteToTerminal'; params: Record<string, never> }
   | { method: 'chooseRoute'; params: { index: number } }
   // Close the "New harness" launch dialog without launching (Cancel/Escape).
   | { method: 'closeHarnessLaunch'; params: Record<string, never> }

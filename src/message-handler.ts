@@ -38,6 +38,8 @@ function dispatch(controller: Controller, message: ClientMessage, send: Reply): 
     }
     case 'renameTab': { controller.renameTab(message.params.index, message.params.title); break;
     }
+    case 'promoteToTerminal': { controller.promoteToTerminal(); break;
+    }
     case 'editQueuedCommand': { controller.editQueuedCommand(message.params.index, message.params.text); break;
     }
     case 'deleteQueuedCommand': { controller.deleteQueuedCommand(message.params.index); break;

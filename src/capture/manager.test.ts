@@ -27,7 +27,7 @@ describe('CaptureManager.run', () => {
 
     capture.run('main', 'shell echo hi', callback);
 
-    expect(managers.shell.run).toHaveBeenCalledWith('main', 'echo hi', { onComplete: expect.any(Function) });
+    expect(managers.shell.run).toHaveBeenCalledWith('main', 'echo hi', { onComplete: expect.any(Function), detect: false });
     const options = (managers.shell.run as ReturnType<typeof vi.fn>).mock.calls[0][2];
     options.onComplete('hi');
     expect(callback).toHaveBeenCalledWith('hi');

@@ -87,6 +87,30 @@ describe('loadConfig', () => {
     expect(config.externalViewers).toEqual({ video: 'QuickTime Player' });
   });
 
+  it('enables interactive shell detection by default, including for a config that predates it', () => {
+    const configDir = path.join(tmpDir, '.janissary');
+    mkdirSync(configDir, { recursive: true });
+    writeFileSync(path.join(configDir, 'config.json'), JSON.stringify({ tabNameMaxLength: 8 }));
+
+    const config = loadConfig(tmpDir);
+
+    expect(config.interactiveShellDetection).toBe(true);
+    expect(config.tabNameMaxLength).toBe(8);
+  });
+
+  it('honors interactive shell detection turned off, and ignores a non-boolean value', () => {
+    const configDir = path.join(tmpDir, '.janissary');
+    mkdirSync(configDir, { recursive: true });
+
+    writeFileSync(path.join(configDir, 'config.json'), JSON.stringify({ interactiveShellDetection: false }));
+    expect(loadConfig(tmpDir).interactiveShellDetection).toBe(false);
+
+    writeFileSync(path.join(configDir, 'config.json'), JSON.stringify({ interactiveShellDetection: 'off', tabNameMaxLength: 8 }));
+    const config = loadConfig(tmpDir);
+    expect(config.interactiveShellDetection).toBe(true);
+    expect(config.tabNameMaxLength).toBe(8);
+  });
+
   it('falls back to defaults on parse error', () => {
     const configDir = path.join(tmpDir, '.janissary');
     mkdirSync(configDir, { recursive: true });

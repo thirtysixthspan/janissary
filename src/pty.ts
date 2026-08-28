@@ -25,6 +25,8 @@ let counter = 0;
  * rather than written to the real stdout, so many can run concurrently across tabs.
  * `sandbox`, when given a `workspaceDir`, confines the process to that workspace (see src/sandbox/index.ts);
  * omitted or workspaceDir-less, the command runs exactly as before.
+ * `shellArgs` replaces the default `-lc <command>` argv for callers that need the shell itself rather
+ * than one command run through it — a tab's own PTY-backed shell, which must skip its startup files.
  */
 export function spawnPty(
   program: string,
@@ -35,10 +37,11 @@ export function spawnPty(
   rows = 24,
   sandbox?: SandboxOptions,
   extraEnv?: NodeJS.ProcessEnv,
+  shellArgs?: string[],
 ): PtySession {
   const id = `pty${++counter}`;
   const shell = process.env.SHELL || 'bash';
-  const { command: file, args, env } = sandboxSpawn({ ...sandbox, selfBinaryHint: program }, shell, ['-lc', command]);
+  const { command: file, args, env } = sandboxSpawn({ ...sandbox, selfBinaryHint: program }, shell, shellArgs ?? ['-lc', command]);
   const proc = pty.spawn(file, args, {
     name: 'xterm-256color',
     cols: Math.max(1, cols),

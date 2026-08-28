@@ -33,6 +33,7 @@ const makeController = () =>
     reorderTab: vi.fn(),
     reorderTabTo: vi.fn(),
     toggleCollapse: vi.fn(),
+    promoteToTerminal: vi.fn(),
     chooseRoute: vi.fn(),
     complete: vi.fn(() => ({ suggestions: [] })),
     resize: vi.fn(),
@@ -175,6 +176,12 @@ describe('handle', () => {
     const controller = makeController();
     dispatchCall(controller, 6, { method: 'toggleCollapse', params: {} });
     expect(controller.toggleCollapse).toHaveBeenCalled();
+  });
+
+  it('routes promoteToTerminal', () => {
+    const controller = makeController();
+    dispatchCall(controller, 7, { method: 'promoteToTerminal', params: {} });
+    expect(controller.promoteToTerminal).toHaveBeenCalled();
   });
 
   it('routes chooseRoute', () => {

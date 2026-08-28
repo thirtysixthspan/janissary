@@ -24,6 +24,7 @@
 | Cmd+P | Open the Quick Open file finder from any focused tab |
 | Cmd+T | Open a new workspaced agent tab (same as typing `agent`) |
 | Ctrl+T | Expand / collapse the current tab's agent tool-step runs |
+| Ctrl+O | Move the running shell command into a full-tab terminal (no-op when nothing is running) |
 | PageUp | Scroll transcript up by half terminal height |
 | PageDown | Scroll transcript down by half terminal height |
 | Escape | Reset scroll to bottom |

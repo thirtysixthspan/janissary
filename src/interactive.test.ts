@@ -1,5 +1,9 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
+import path from 'node:path';
+import { tmpdir } from 'node:os';
 import { isInteractive } from './interactive.js';
+import { loadLearnedCommands, recordLearnedCommand } from './interactive-learned.js';
 
 describe('isInteractive', () => {
   it('detects pagers and editors', () => {
@@ -34,5 +38,41 @@ describe('isInteractive', () => {
   it('handles empty input', () => {
     expect(isInteractive('')).toBe(false);
     expect(isInteractive(' '.repeat(3))).toBe(false);
+  });
+});
+
+describe('isInteractive with learned commands', () => {
+  let tmpDir: string;
+
+  beforeEach(() => {
+    tmpDir = mkdtempSync(path.join(tmpdir(), 'interactive-test-'));
+    mkdirSync(path.join(tmpDir, '.janissary'), { recursive: true });
+    loadLearnedCommands(tmpDir);
+  });
+
+  afterEach(() => {
+    rmSync(tmpDir, { recursive: true, force: true });
+    loadLearnedCommands(tmpDir);
+  });
+
+  it('matches a learned program name, wrappers and arguments included', () => {
+    expect(isInteractive('mytui')).toBe(false);
+    recordLearnedCommand('mytui');
+    expect(isInteractive('mytui')).toBe(true);
+    expect(isInteractive('mytui --watch')).toBe(true);
+    expect(isInteractive('sudo mytui')).toBe(true);
+  });
+
+  it('matches a learned subcommand without capturing the whole program', () => {
+    recordLearnedCommand('git log');
+    expect(isInteractive('git log')).toBe(true);
+    expect(isInteractive('git log --oneline')).toBe(true);
+    expect(isInteractive('git status')).toBe(false);
+    expect(isInteractive('git')).toBe(false);
+  });
+
+  it('keeps matching the built-in list when nothing has been learned', () => {
+    expect(isInteractive('htop')).toBe(true);
+    expect(isInteractive('ls')).toBe(false);
   });
 });

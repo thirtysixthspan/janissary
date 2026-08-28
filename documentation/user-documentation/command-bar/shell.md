@@ -77,3 +77,15 @@ shell --pty ./some-interactive-script.sh
 ```
 
 A bare `shell --pty`, with no command after it, opens your login shell directly in the tab — a plain interactive shell prompt.
+
+## Programs that aren't on the list
+
+The names above are a fixed list, and it can't cover everything — your own TUI, or a program under a name Janissary doesn't know, isn't on it. Those still work, because commands run with a real terminal attached: when a program takes over the screen, the tab switches into a full-tab terminal mid-command and the screen it had already drawn is carried over intact. When the command finishes you're back in the transcript, and its entry reads `(ran in terminal)`.
+
+Janissary remembers what it caught. The next time you run that program it opens a terminal straight away, with no transcript entry and no pause — so a program costs you one detection, ever. What's remembered lives in `.janissary/interactive-commands.json`, a plain list you can edit: delete a line to forget a program, or delete the file to start fresh. `git log` is remembered as `git log`, not as `git`, so `git status` keeps behaving normally.
+
+Some programs need a terminal without ever saying so — a `sudo` password prompt, a `read`, a bare REPL. Those just sit there waiting. Click **open in terminal** on the running line, or press `Ctrl+O`, and the command moves into a terminal where you can type. Doing it by hand is a one-off and isn't remembered.
+
+A real terminal also means commands behave the way they do in one: output comes back in color, and `git log` or `git diff` open a pager instead of printing everything at once.
+
+If you'd rather have none of this, set `interactiveShellDetection` to `false` in `.janissary/config.json`. Commands then run through plain pipes and only the built-in list of interactive programs applies — though anything already remembered still opens a terminal.

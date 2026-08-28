@@ -38,20 +38,23 @@ export class CommandManager {
     this.dispatchOrRun(trimmed, this.managers.tab.cur().label, this.managers.tab.activeTab);
   }
 
-  dispatchTo(label: string, text: string): void {
+  // `detect: false` marks a command nobody is watching interactively — a scheduled firing — so a
+  // program that takes over the screen never steals the tab. A command that queues behind a busy
+  // agent loses the flag, since the queue holds plain strings; accepted, and noted in the spec.
+  dispatchTo(label: string, text: string, options?: { detect?: boolean }): void {
     const index = this.managers.tab.findIndex(label);
     if (index === -1) return;
     const trimmed = this.managers.tab.recordHistory(index, text);
     if (trimmed) recordGlobalHistory(trimmed, label);
-    this.dispatchOrRun(trimmed, label, index);
+    this.dispatchOrRun(trimmed, label, index, options?.detect);
   }
 
   // Gate seam: agent tabs queue while busy (or while idle with entries already waiting, to
   // preserve FIFO) instead of running immediately. Non-agent tabs and empty input bypass the gate.
-  private dispatchOrRun(trimmed: string, label: string, index: number): void {
+  private dispatchOrRun(trimmed: string, label: string, index: number, detect?: boolean): void {
     dispatchOrRunOp(
       this.managers, trimmed, label, index,
-      (i, l, idx) => this.run(i, l, idx), (l) => this.drainQueue(l),
+      (i, l, idx) => this.run(i, l, idx, detect), (l) => this.drainQueue(l),
     );
   }
 
@@ -61,7 +64,7 @@ export class CommandManager {
     drainQueueOp(this.managers, label, () => this.pendingRoute !== null, (i, l, idx) => this.run(i, l, idx));
   }
 
-  private run(input: string, label: string, index: number): void {
+  private run(input: string, label: string, index: number, detect?: boolean): void {
     if (input.trim().toLowerCase() === 'schedule') { this.managers.schedule.openScheduleLaunch(); return; }
     if (/^harness\b/i.test(input)) {
       // Bare `harness` (no args) opens the launch dialog instead of erroring; no transcript line is
@@ -82,7 +85,7 @@ export class CommandManager {
     switch (res.kind) {
       case 'empty': { return;
       }
-      case 'shell': { this.runShell(res, label); return;
+      case 'shell': { this.runShell(res, label, detect); return;
       }
       case 'output': { this.managers.tab.append(label, { input, output: res.output, markdown: true }); return;
       }
@@ -98,8 +101,8 @@ export class CommandManager {
   // Routes a `shell` resolution to either the piped shell or a PTY: auto-detected interactive
   // commands and any `--pty`-flagged command (including a bare `shell --pty`, which falls back
   // to the user's login shell) go to the PTY; everything else runs in the tab's piped shell.
-  private runShell(res: Extract<Resolution, { kind: 'shell' }>, label: string): void {
-    if (!res.pty && !(res.cmd && isInteractive(res.cmd))) { this.managers.shell.run(label, res.cmd); return;
+  private runShell(res: Extract<Resolution, { kind: 'shell' }>, label: string, detect?: boolean): void {
+    if (!res.pty && !(res.cmd && isInteractive(res.cmd))) { this.managers.shell.run(label, res.cmd, { detect }); return;
     }
     const fallbackShell = process.env.SHELL || 'bash';
     const command = res.cmd || fallbackShell;

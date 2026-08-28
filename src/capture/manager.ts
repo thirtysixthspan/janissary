@@ -10,7 +10,9 @@ export class CaptureManager {
     if (/^shell\b/i.test(text)) {
       const command = text.replace(/^shell\b\s*/i, '');
       if (command && isInteractive(command)) { callback(`Cannot run interactive command remotely: ${command}`); return; }
-      this.managers.shell.run(label, command, { onComplete: callback });
+      // Never promoted: a messaged command has to return captured text to the agent that sent it,
+      // and a command that took over a terminal has none to give.
+      this.managers.shell.run(label, command, { onComplete: callback, detect: false });
       return;
     }
 

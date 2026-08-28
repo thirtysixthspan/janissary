@@ -25,6 +25,10 @@ export type Config = {
   // Isolate workspaced tabs (`agent --workspace`, `harness --workspace`) to their workspace clone
   // via a Seatbelt sandbox (macOS only). Default true; the escape hatch for when it causes trouble.
   sandboxWorkspaces: boolean;
+  // Run each tab's persistent shell inside a PTY and watch its output for programs that take over
+  // the screen, promoting them to a full-tab terminal mid-command (see `interactive-signals.ts`).
+  // Default true; with it off, shells are piped and only the name list (`interactive.ts`) applies.
+  interactiveShellDetection: boolean;
   // The active syntax-highlighting theme name for editor tabs (see `syntax-themes.ts`), applied
   // globally across every open editor tab.
   syntaxTheme: string;
@@ -59,6 +63,7 @@ const DEFAULT_CONFIG: Config = {
   tabNameMaxLength: DEFAULT_TAB_NAME_MAX_LENGTH,
   activeTabNameMaxLength: DEFAULT_ACTIVE_TAB_NAME_MAX_LENGTH,
   sandboxWorkspaces: true,
+  interactiveShellDetection: true,
   syntaxTheme: DEFAULT_SYNTAX_THEME,
   theme: DEFAULT_APP_THEME,
   notifications: {

@@ -10,6 +10,8 @@ A tab's shell is the user's login shell (`$SHELL`, falling back to `bash`), star
 
 Shell commands (the `shell` keyword, stripped) are written to the tab's persistent shell via stdin. The command is wrapped in a subshell with stderr redirected to stdout: `(${cmd}) 2>&1`. A unique delimiter (`echo "__JS_END_<tab>_<timestamp>__"`) is written after the command to mark the end of output.
 
+A local tab's shell runs inside a pseudo-terminal, so every command it runs has a real terminal attached (see Interactive detection below). One consequence is visible immediately: programs that adapt to a terminal now behave as they would in one — tools emit color, and commands that page their own output, such as `git log` and `git diff`, open a pager rather than dumping plain text. The environment is otherwise left alone. Before any command runs, the shell is put into a quiet state — echo off, empty prompts — so the terminal's own echo cannot appear in captured output. Remote tabs' shells, and every tab's shell when interactive detection is turned off, are plain pipes as before.
+
 ### Shell output streaming
 
 Output from the shell's stdout and stderr is captured via `data` event listeners. As chunks arrive, the tab's log entry is updated progressively, displaying output line by line as it is produced. When the delimiter is detected, the log entry is finalized (marked not running) and the listeners are removed.
@@ -40,6 +42,26 @@ When the program exits, the tab returns to the normal transcript view exactly as
 
 While in PTY takeover mode, the tab shows the same metadata row (working directory and active-flag
 icons) as the underlying agent tab — see Metadata row in `tabs.md`.
+
+## Interactive detection
+
+The list of interactive programs cannot cover everything — a locally built TUI, or a program under a name the list does not know, would otherwise run in the transcript where it errors, warns that it has no terminal, or waits for input the user cannot type. Because a local tab's shell runs inside a pseudo-terminal, such a program behaves normally and announces itself, and Janissary watches for that.
+
+**Recognition comes first.** A command whose program is on the interactive list opens a terminal *before it runs*, exactly as it always has, with no transcript entry and no detection involved. Detection applies only to what the list does not cover.
+
+**What counts as evidence.** A command is promoted when its output shows the program taking the screen: entering the alternate screen, or repeatedly addressing the cursor at absolute positions. Hiding the cursor is deliberately not evidence, because ordinary tools do it for spinners and progress bars — a routine install or test run is never promoted.
+
+**What promotion looks like.** The tab switches to a full-tab terminal mid-command, and the output already produced is replayed into it so the program's first screen is intact. Keys go to the program exactly as in any other terminal takeover. The command's transcript entry stays in place, still marked running; when the command finishes, the tab returns to the transcript and that entry reads `(ran in terminal)`. The captured fragment is dropped rather than shown, because it is half of a redrawn screen. The tab returns to the transcript when the *command* ends, not when the program exits — the tab's shell outlives it.
+
+A promotion in a background tab happens where it is: the tab is marked unread, and focus stays where the user put it.
+
+**Forcing it by hand.** A running command's transcript entry carries an **open in terminal** action, and `Ctrl+O` does the same for the active tab's running command. This covers a program that needs a terminal but never announces it — a password prompt, a `read`, a bare REPL — which would otherwise sit waiting. Forcing a terminal this way is a one-off and is not remembered.
+
+**Remembering what was detected.** When detection promotes a command, its program is remembered in `.janissary/interactive-commands.json`, which is read at startup and merged with the built-in list. The next run of that program is recognized before it starts, so detection costs at most one run per program. What is remembered is the program name, or the program and its subcommand where the argument distinguishes a mode — `git log` is remembered without making every `git` command interactive. A command made of several piped or chained segments is not remembered, since its output cannot say which segment took the screen. The file is a plain list, hand-editable: delete an entry to forget it, or delete the file to start over. It survives ordinary launches, and a malformed file is ignored rather than repaired.
+
+Commands delivered by `msg`/`broadcast` and commands fired by a schedule run in the same shell but are never promoted: the first must return captured text to the agent that asked, and nobody is watching the second. A scheduled command that queues behind a busy agent loses that marking and is treated as if typed.
+
+**Turning it off.** The `interactiveShellDetection` setting in `.janissary/config.json` (default on) governs all of the above. With it off, shells are plain pipes, nothing is detected or promoted, and only the interactive-program list applies — but anything already remembered still counts, since the learned list is read either way.
 
 ### Forcing PTY mode with `--pty`
 

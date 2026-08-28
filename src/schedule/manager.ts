@@ -168,7 +168,7 @@ export class ScheduleManager {
       notify(this.managers, 'schedule-fire', tab.label, e.command);
       return true;
     }
-    this.managers.command.dispatchTo(tab.label, `${e.command} ## scheduled ##`);
+    this.managers.command.dispatchTo(tab.label, `${e.command} ## scheduled ##`, { detect: false });
     notify(this.managers, 'schedule-fire', tab.label, e.command);
     return true;
   }
