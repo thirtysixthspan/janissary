@@ -1,10 +1,12 @@
-import React, { useCallback, useState } from 'react';
-import type { ScheduleLaunchView } from '@shared/protocol';
-import type { JanusClient } from './ws';
-import { useLaunchDialog } from './use-launch-dialog';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { buildScheduleCommand, type ScheduleFields, type ScheduleType } from './schedule-command';
 
-type Properties = { view: ScheduleLaunchView; client: JanusClient };
+type Properties = {
+  targets: string[];
+  activeTarget: string;
+  onSubmit(text: string): void;
+  onCancel(): void;
+};
 
 const SCHEDULE_TYPES: { value: ScheduleType; label: string }[] = [
   { value: 'at', label: 'At a time (today/next day)' },
@@ -50,8 +52,8 @@ function isValid(fields: ScheduleFields): boolean {
 // The "New schedule" dialog (opened by typing bare `schedule`). A small form over the five
 // schedule forms: it assembles the equivalent `schedule …` string and submits it through the
 // normal command path, so the server's existing parsing/validation/firing runs unchanged.
-export function ScheduleDialog({ view, client }: Properties) {
-  const [fields, setFields] = useState<ScheduleFields>(() => remembered ?? initialFields(view.active));
+export function ScheduleDialog({ targets, activeTarget, onSubmit, onCancel }: Properties) {
+  const [fields, setFields] = useState<ScheduleFields>(() => remembered ?? initialFields(activeTarget));
   const [hadRemembered] = useState(() => remembered !== null);
 
   const update = useCallback((patch: Partial<ScheduleFields>) => {
@@ -62,8 +64,8 @@ export function ScheduleDialog({ view, client }: Properties) {
     });
   }, []);
 
-  const { dialogRef, submitButtonRef, cancel, create } = useLaunchDialog(
-    client, 'closeScheduleLaunch', fields, buildScheduleCommand, hadRemembered, isValid,
+  const { dialogRef, submitButtonRef, create } = useScheduleDialogLifecycle(
+    fields, hadRemembered, onSubmit, onCancel,
   );
 
   return (
@@ -76,7 +78,7 @@ export function ScheduleDialog({ view, client }: Properties) {
           </label>
           <label>Target tab
             <select value={fields.target} onChange={(e) => update({ target: e.target.value })}>
-              {view.targets.map((label) => <option key={label} value={label}>{label}</option>)}
+              {targets.map((label) => <option key={label} value={label}>{label}</option>)}
             </select>
           </label>
           <label>Schedule type
@@ -112,9 +114,55 @@ export function ScheduleDialog({ view, client }: Properties) {
         </div>
         <div className="modal-actions">
           <button ref={submitButtonRef} className="modal-button" disabled={!isValid(fields)} onClick={create}>Schedule</button>
-          <button className="modal-button" onClick={cancel}>Cancel</button>
+          <button className="modal-button" onClick={onCancel}>Cancel</button>
         </div>
       </div>
     </div>
   );
+}
+
+function useScheduleDialogLifecycle(
+  fields: ScheduleFields,
+  hadRemembered: boolean,
+  onSubmit: (text: string) => void,
+  onCancel: () => void,
+) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const submitButtonRef = useRef<HTMLButtonElement>(null);
+  const create = useCallback(() => {
+    onSubmit(buildScheduleCommand(fields));
+    onCancel();
+  }, [fields, onSubmit, onCancel]);
+  const onKeyDownRef = useRef<(event: KeyboardEvent) => void>(() => { /* replaced below */ });
+  onKeyDownRef.current = (event) => {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      onCancel();
+    } else if (event.key === 'Enter') {
+      event.preventDefault();
+      if (isValid(fields)) create();
+    }
+  };
+
+  useEffect(() => {
+    dialogRef.current?.focus();
+    const handleKeyDown = (event: KeyboardEvent) => onKeyDownRef.current(event);
+    const handleOutsideClick = (event: MouseEvent) => {
+      if (dialogRef.current?.contains(event.target as Node)) return;
+      event.preventDefault();
+      event.stopPropagation();
+    };
+    globalThis.addEventListener('keydown', handleKeyDown, { capture: true });
+    globalThis.addEventListener('click', handleOutsideClick, { capture: true });
+    return () => {
+      globalThis.removeEventListener('keydown', handleKeyDown, { capture: true });
+      globalThis.removeEventListener('click', handleOutsideClick, { capture: true });
+    };
+  }, []);
+
+  useEffect(() => {
+    if (hadRemembered) submitButtonRef.current?.focus();
+  }, [hadRemembered]);
+
+  return { dialogRef, submitButtonRef, create };
 }

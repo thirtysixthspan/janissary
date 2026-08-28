@@ -6,7 +6,7 @@ import { AppShell } from './AppShell';
 import { AppCenterActionArea } from './AppCenterActionArea';
 import { AppReportingSection } from './AppReportingSection';
 import { HarnessLaunchDialog } from './harness/HarnessLaunchDialog';
-import { ScheduleDialog } from './ScheduleDialog';
+import { ScheduleDialog } from './plugins/schedules/ScheduleDialog';
 import { QuitDialog } from './QuitDialog/QuitDialog';
 import { UnsavedQuitDialog } from './UnsavedQuitDialog';
 import { CloseSaveGuard } from './CloseSaveGuard';
@@ -119,7 +119,14 @@ export function AppMain({
       <AppReportingSection entries={reportingEntries} client={client} onClose={closeTab}
         heightPct={reportingHeightPct} onHeightPctChange={setReportingHeightPct} />
       {harnessLaunch && <HarnessLaunchDialog view={harnessLaunch} client={client} />}
-      {scheduleLaunch && <ScheduleDialog view={scheduleLaunch} client={client} />}
+      {scheduleLaunch && (
+        <ScheduleDialog
+          targets={scheduleLaunch.targets}
+          activeTarget={scheduleLaunch.active}
+          onSubmit={(text) => client.send({ method: 'command', params: { text } })}
+          onCancel={() => client.send({ method: 'closeScheduleLaunch', params: {} })}
+        />
+      )}
       {quitConfirmOpen && <QuitDialog onConfirm={confirmQuit} onCancel={cancelQuit} />}
       {unsavedQuitOpen && <UnsavedQuitDialog onConfirm={confirmUnsavedQuit} onCancel={cancelUnsavedQuit} />}
       <CloseSaveGuard tabs={tabs} tabHandles={tabHandles} client={client} guardRef={guardRef} />
