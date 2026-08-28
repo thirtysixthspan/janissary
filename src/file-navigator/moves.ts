@@ -1,8 +1,8 @@
-import { lstatSync } from 'node:fs';
 import path from 'node:path';
 import { copyItem, moveReplacingDestination, removePath, renamePath } from './filesystem.js';
-import { failureReasons, type FileOperationResult } from './file-operation-result.js';
+import { type FileOperationResult } from './file-operation-result.js';
 import { parentPath } from './index.js';
+import { applyReplayProtocol, type ReplayLeg } from './replay-protocol.js';
 import type { PastePair } from './paste.js';
 import type { BulkConflictPolicy, UndoRedoResult } from '../protocol.js';
 
@@ -18,43 +18,23 @@ export function isPasteGroup(step: HistoryStep): step is PasteGroup {
   return 'mode' in step;
 }
 
-function exists(absolute: string): boolean {
-  try {
-    lstatSync(absolute);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-function replayPaths(root: string, entry: MoveEntry, direction: 'undo' | 'redo') {
+function moveReplayLeg(root: string, entry: MoveEntry, direction: 'undo' | 'redo'): ReplayLeg<MoveEntry> {
   const sourceRel = entry[direction === 'undo' ? 'to' : 'from'];
   const destinationPath = parentPath(entry[direction === 'undo' ? 'from' : 'to']);
   const source = path.join(root, sourceRel);
   const destination = path.join(root, destinationPath, path.basename(source));
-  return { sourceRel, destinationPath, source, destination };
+  return {
+    item: entry,
+    source,
+    destination,
+    conflict: { fromRelPath: sourceRel, toRelPath: destinationPath },
+    failurePath: sourceRel,
+  };
 }
 
 function tryMove(source: string, destination: string, overwrite: boolean): FileOperationResult {
   if (overwrite) return moveReplacingDestination(source, destination);
   return renamePath(source, destination);
-}
-
-function performMoveReplay(
-  root: string, ordered: MoveEntry[], direction: 'undo' | 'redo', policy: BulkConflictPolicy | undefined,
-  conflictSources: Set<string>,
-): { successful: Set<MoveEntry>; failed: Map<MoveEntry, string> } {
-  const attempted = ordered.filter((entry) =>
-    policy !== 'skip-conflicts' || !conflictSources.has(replayPaths(root, entry, direction).sourceRel));
-  const successful = new Set<MoveEntry>();
-  const failed = new Map<MoveEntry, string>();
-  for (const entry of attempted) {
-    const replay = replayPaths(root, entry, direction);
-    const result = tryMove(replay.source, replay.destination, policy === 'overwrite-all');
-    if (result.ok) successful.add(entry);
-    else failed.set(entry, result.reason);
-  }
-  return { successful, failed };
 }
 
 export function applyStackMove(
@@ -63,100 +43,39 @@ export function applyStackMove(
   rebuild: () => void,
 ): UndoRedoResult {
   const ordered = direction === 'undo' ? group.entries.toReversed() : group.entries;
-  const conflicts = ordered
-    .map((entry) => replayPaths(root, entry, direction))
-    .filter(({ source, destination }) => source !== destination && exists(destination))
-    .map(({ sourceRel, destinationPath }) => ({ fromRelPath: sourceRel, toRelPath: destinationPath }));
-  if (conflicts.length > 0 && policy === undefined) {
-    return group.entries.length === 1
-      ? { total: group.entries.length, failedPaths: [], conflict: conflicts[0] }
-      : { total: group.entries.length, failedPaths: [], conflicts };
-  }
-  const conflictSources = new Set(conflicts.map((conflict) => conflict.fromRelPath));
-  const { successful, failed } = performMoveReplay(root, ordered, direction, policy, conflictSources);
-  if (successful.size > 0) {
-    fromStack.pop();
-    const remaining = group.entries.filter((entry) => !successful.has(entry));
-    if (remaining.length > 0) fromStack.push({ entries: remaining });
-    toStack.push({ entries: group.entries.filter((entry) => successful.has(entry)) });
-    rebuild();
-  }
-  const failedPaths = group.entries
-    .filter((entry) => failed.has(entry))
-    .map((entry) => replayPaths(root, entry, direction).sourceRel);
-  const reasons = new Map(group.entries
-    .filter((entry) => failed.has(entry))
-    .map((entry) => [replayPaths(root, entry, direction).sourceRel, failed.get(entry)!]));
+  return applyReplayProtocol<MoveEntry, HistoryStep>({
+    groupItems: group.entries,
+    replayItems: ordered,
+    fromStack,
+    toStack,
+    policy,
+    rebuild,
+    makeStep: (entries) => ({ entries }),
+    leg: (entry) => moveReplayLeg(root, entry, direction),
+    apply: ({ source, destination }, overwrite) => tryMove(source, destination, overwrite),
+  });
+}
+
+function pasteReplayLeg(pair: PastePair, isUndo: boolean): ReplayLeg<PastePair> {
   return {
-    total: group.entries.length,
-    failedPaths,
-    ...failureReasons(reasons),
+    item: pair,
+    source: isUndo ? pair.to : pair.from,
+    destination: isUndo ? pair.from : pair.to,
+    conflict: { fromRelPath: pair.from, toRelPath: pair.to },
+    failurePath: pair.to,
   };
 }
 
-// Undoing a copy deletes what it created, so it needs no move-style conflict preflight.
-function undoCopyPaste(
-  group: PasteGroup,
-  fromStack: HistoryStep[],
-  toStack: HistoryStep[],
-  rebuild: () => void,
-): UndoRedoResult {
-  const failed = new Map<PastePair, string>();
-  for (const pair of group.pairs) {
-    const result = removePath(pair.to);
-    if (!result.ok) failed.set(pair, result.reason);
-  }
-  const successful = group.pairs.filter((pair) => !failed.has(pair));
-  if (successful.length > 0) {
-    fromStack.pop();
-    const remaining = group.pairs.filter((pair) => failed.has(pair));
-    if (remaining.length > 0) fromStack.push({ mode: group.mode, pairs: remaining });
-    toStack.push({ mode: group.mode, pairs: successful });
-    rebuild();
-  }
-  return pasteReplayResult(group.pairs, failed);
-}
-
-// Shared tail of an undo/redo replay: reports how many pairs were replayed and which failed.
-function pasteReplayResult(pairs: PastePair[], failed: Map<PastePair, string>): UndoRedoResult {
-  const reasons = new Map(pairs
-    .filter((pair) => failed.has(pair))
-    .map((pair) => [pair.to, failed.get(pair)!]));
-  return {
-    total: pairs.length,
-    failedPaths: pairs.filter((pair) => failed.has(pair)).map((pair) => pair.to),
-    ...failureReasons(reasons),
-  };
-}
-
-type PasteReplayLeg = { source: string; destination: string; pair: PastePair };
-
-function pasteReplayLegs(group: PasteGroup, isUndo: boolean): PasteReplayLeg[] {
-  return group.pairs.map((pair) => (isUndo
-    ? { source: pair.to, destination: pair.from, pair }
-    : { source: pair.from, destination: pair.to, pair }));
-}
-
-// Perform each replay leg, skipping conflicts when requested, and classify the results.
-function performPasteReplay(
-  replay: PasteReplayLeg[],
+function applyPasteLeg(
+  current: ReplayLeg<PastePair>,
   isCopy: boolean,
   isUndo: boolean,
-  policy: BulkConflictPolicy | undefined,
-  conflictSources: Set<string>,
-): { successful: Set<PastePair>; failed: Map<PastePair, string> } {
-  const successful = new Set<PastePair>();
-  const failed = new Map<PastePair, string>();
-  for (const { source, destination, pair } of replay) {
-    if (policy === 'skip-conflicts' && conflictSources.has(pair.from)) continue;
-    const overwrite = policy === 'overwrite-all';
-    const didApply = isCopy && !isUndo
-      ? copyItem(source, destination, overwrite)
-      : tryMove(source, destination, overwrite);
-    if (didApply.ok) successful.add(pair);
-    else failed.set(pair, didApply.reason);
-  }
-  return { successful, failed };
+  overwrite: boolean,
+): FileOperationResult {
+  if (isCopy && isUndo) return removePath(current.source);
+  return isCopy
+    ? copyItem(current.source, current.destination, overwrite)
+    : tryMove(current.source, current.destination, overwrite);
 }
 
 // Copy undo deletes its output; every other replay uses the same conflict preflight as a stack move.
@@ -170,28 +89,16 @@ export function applyStackPaste(
 ): UndoRedoResult {
   const isUndo = direction === 'undo';
   const isCopy = group.mode === 'copy';
-
-  if (isUndo && isCopy) return undoCopyPaste(group, fromStack, toStack, rebuild);
-
-  const replay = pasteReplayLegs(group, isUndo);
-  const conflicts = replay
-    .filter(({ source, destination }) => source !== destination && exists(destination))
-    .map(({ pair }) => ({ fromRelPath: pair.from, toRelPath: pair.to }));
-  if (conflicts.length > 0 && policy === undefined) {
-    return group.pairs.length === 1
-      ? { total: group.pairs.length, failedPaths: [], conflict: conflicts[0] }
-      : { total: group.pairs.length, failedPaths: [], conflicts };
-  }
-
-  const conflictSources = new Set(conflicts.map((conflict) => conflict.fromRelPath));
-  const { successful, failed } = performPasteReplay(replay, isCopy, isUndo, policy, conflictSources);
-
-  if (successful.size > 0) {
-    fromStack.pop();
-    const remaining = group.pairs.filter((pair) => !successful.has(pair));
-    if (remaining.length > 0) fromStack.push({ mode: group.mode, pairs: remaining });
-    toStack.push({ mode: group.mode, pairs: group.pairs.filter((pair) => successful.has(pair)) });
-    rebuild();
-  }
-  return pasteReplayResult(group.pairs, failed);
+  return applyReplayProtocol<PastePair, HistoryStep>({
+    groupItems: group.pairs,
+    replayItems: group.pairs,
+    fromStack,
+    toStack,
+    policy,
+    rebuild,
+    makeStep: (pairs) => ({ mode: group.mode, pairs }),
+    leg: (pair) => pasteReplayLeg(pair, isUndo),
+    apply: (current, overwrite) => applyPasteLeg(current, isCopy, isUndo, overwrite),
+    preflight: !(isUndo && isCopy),
+  });
 }
