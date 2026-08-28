@@ -2,7 +2,7 @@
 
 ## ready
 
-* define how new agent and file navigator buttons should work on remote machines.
+* define how new agent and file navigator buttons should work on remote agent tabs and remote harnesses. if an agent is local or remote, the file navigator should open to the agent's working directory, which may be a workpace, and may be on another machine. The file navigator should be extended to operate over the remote channel of the agent/harness. It will show the location in the metadatabar similar to how it is indicated for harnesses and agents. As the file navigator is tied to the harness or agent, closing the agent or harness will result in the file navigator also closing. creating a new agent from the agent or harness tab via the new agent button, should create a new agent that is connected to the same workspace on the same machine as the launching tab. In this way, an agent can work within the workspace of a harness and more than one agent can share a workspace. the workspace should only be removed once all associated agents and harnesses have been closed. the tooltips of buttons in the agent and harness metadata should make it clear that the new agent or file navigator will be created in the existing workspace.   
 
 ## development
 
