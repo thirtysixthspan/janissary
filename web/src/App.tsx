@@ -7,8 +7,8 @@ import type { DirtyTabHandle } from './tab-handles';
 import { useTabHandles } from './useTabHandles';
 import { useTabNav } from './useTabNav';
 import { useQuickOpen } from './useQuickOpen';
-import { useQueuePicker } from './useQueuePicker';
-import { usePopulatePickers } from './usePopulatePickers';
+import { useQueuePicker } from './pickers/useQueuePicker';
+import { usePopulatePickers } from './pickers/usePopulatePickers';
 import { useCommandBarSubmit } from './agent-tabs/command-input/useCommandBarSubmit';
 import { useUnsavedQuitGuard } from './useUnsavedQuitGuard';
 import { useFocusOnTabSwitch, focusCenterVisibleTab } from './useFocusOnTabSwitch';
@@ -20,9 +20,9 @@ import { useCmdW } from './useCmdW';
 import { useTranscriptScroll } from './shared/transcript/useTranscriptScroll';
 import { useQuitConfirm } from './QuitDialog/useQuitConfirm';
 import { useAppWindowKeys } from './useAppWindowKeys';
-import { useThemePicker } from './useThemePicker';
-import { useAppThemePicker } from './useAppThemePicker';
-import { useHistPicker } from './useHistPicker';
+import { useThemePicker } from './pickers/useThemePicker';
+import { useAppThemePicker } from './pickers/useAppThemePicker';
+import { useHistPicker } from './pickers/useHistPicker';
 import { useServerState, useTabNameLimits } from './useServerState';
 import { useLayoutState } from './useLayoutState';
 import { applySyntaxTheme } from './editor/highlight/themes';
@@ -183,17 +183,17 @@ export function App({ client }: { client: JanusClient }) {
     <AppMain
       current={current} client={client} lines={lines} runCommand={runCommand}
       transcriptReference={transcriptReference} highlight={highlight} inputReference={inputReference}
-      route={route} routeIndex={routeIndex} chooseRoute={chooseRoute}
-      syntaxTheme={syntaxTheme} themePickerOpen={themePickerOpen} themePickerIndex={themePickerIndex} pickTheme={pickTheme}
-      theme={theme} appThemePickerOpen={appThemePickerOpen} appThemePickerIndex={appThemePickerIndex} pickAppTheme={pickAppTheme}
-      pickerOpen={pickerOpen} recent={recent} pickerIndex={pickerIndex} pick={pick}
-      navOpen={navOpen} navQuery={navQuery} navIndex={navIndex} tabs={tabs} selectNavTab={selectNavTab}
-      queueOpen={queueOpen} queueIndex={queueIndex} selectQueueIndex={selectQueueIndex}
-      taskPickerOpen={taskPickerOpen} visibleTasks={visibleTasks} taskPickerIndex={taskPickerIndex} pickTask={pickTask} toggleTaskDir={toggleTaskDir}
-      profilePickerOpen={profilePickerOpen} profiles={visibleProfiles} profilePickerIndex={profilePickerIndex} pickProfile={pickProfile}
-      quickOpenOpen={quickOpenOpen} quickOpenQuery={quickOpenQuery} setQuickOpenQuery={setQuickOpenQuery}
-      quickOpenResults={quickOpenResults} quickOpenIndex={quickOpenIndex} setQuickOpenIndex={setQuickOpenIndex}
-      quickOpenLoading={quickOpenLoading} pickQuickOpenFile={pickQuickOpenFile} closeQuickOpen={closeQuickOpen}
+      route={route} routeIndex={routeIndex} onPickRoute={chooseRoute}
+      syntaxTheme={syntaxTheme} themePickerOpen={themePickerOpen} themePickerIndex={themePickerIndex} onPickTheme={pickTheme}
+      theme={theme} appThemePickerOpen={appThemePickerOpen} appThemePickerIndex={appThemePickerIndex} onPickAppTheme={pickAppTheme}
+      pickerOpen={pickerOpen} recent={recent} pickerIndex={pickerIndex} onPickHistory={pick}
+      navOpen={navOpen} navQuery={navQuery} navIndex={navIndex} tabs={tabs} onPickTab={selectNavTab}
+      queueOpen={queueOpen} queueIndex={queueIndex} onSelectQueue={selectQueueIndex}
+      taskPickerOpen={taskPickerOpen} taskRows={visibleTasks} taskPickerIndex={taskPickerIndex} onPickTask={pickTask} onToggleTaskDir={toggleTaskDir}
+      profilePickerOpen={profilePickerOpen} profiles={visibleProfiles} profilePickerIndex={profilePickerIndex} onPickProfile={pickProfile}
+      quickOpenOpen={quickOpenOpen} quickOpenQuery={quickOpenQuery} onChangeQuickOpenQuery={setQuickOpenQuery}
+      quickOpenResults={quickOpenResults} quickOpenIndex={quickOpenIndex} onChangeQuickOpenIndex={setQuickOpenIndex}
+      quickOpenLoading={quickOpenLoading} onPickQuickOpen={pickQuickOpenFile} onCloseQuickOpen={closeQuickOpen}
       search={search} globalHistory={globalHistory} onCommandBarSubmit={onCommandBarSubmit}
       quitConfirmOpen={quitConfirmOpen} unsavedQuitOpen={unsavedQuitOpen}
       recallReference={recallReference} onEditQueued={onEditQueued} onDeleteQueued={onDeleteQueued}

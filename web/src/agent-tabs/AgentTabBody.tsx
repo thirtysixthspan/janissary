@@ -1,18 +1,14 @@
 import React from 'react';
-import type { TabView, RouteChooserView, BufferLine } from '@shared/protocol';
+import type { TabView, BufferLine } from '@shared/protocol';
 import type { JanusClient } from '../ws';
 import { Transcript } from '../shared/transcript/Transcript';
 import { StatusPanels } from '../StatusPanels';
-import { PickerOverlays } from '../PickerOverlays';
 import { CommandArea } from './command-input/CommandArea';
 import type { CommandInputDropHandle } from '../drop-handles';
 import { AgentTabMeta } from '../shared/AgentTabMeta';
 import type { useViewSearchState } from '../useViewSearchState';
-import type { VisibleTaskRow } from '../task-picker-keys';
-import type { VisibleProfileRow } from '../profile-picker-keys';
 import { useStatusWindows } from '../useStatusWindows';
 import { statusButton } from '../status-button';
-import type { FuzzyMatchResult } from '../fuzzy-match';
 import { tabBodyBorder } from '../tab-body-border';
 import { agentTabIntents } from './agent-tab-intents';
 
@@ -24,47 +20,9 @@ type Properties = {
   transcriptReference: React.RefObject<HTMLDivElement | null>;
   highlight: ReturnType<typeof useViewSearchState>['highlight'];
   inputReference: React.RefObject<HTMLTextAreaElement | null>;
-  route: RouteChooserView | null;
-  routeIndex: number;
-  chooseRoute: (index: number) => void;
-  syntaxTheme: string;
-  themePickerOpen: boolean;
-  themePickerIndex: number;
-  pickTheme: (theme: string) => void;
-  theme: string;
-  appThemePickerOpen: boolean;
-  appThemePickerIndex: number;
-  pickAppTheme: (theme: string) => void;
-  pickerOpen: boolean;
-  recent: string[];
-  pickerIndex: number;
-  pick: (text: string) => void;
-  navOpen: boolean;
-  navQuery: string;
-  navIndex: number;
-  tabs: TabView[];
-  selectNavTab: (index: number) => void;
+  pickerOverlays: React.ReactNode;
+  blockingOverlayOpen: boolean;
   queueOpen: boolean;
-  queueIndex: number;
-  selectQueueIndex: (index: number) => void;
-  taskPickerOpen: boolean;
-  visibleTasks: VisibleTaskRow[];
-  taskPickerIndex: number;
-  pickTask: (path: string) => void;
-  toggleTaskDir: (path: string) => void;
-  profilePickerOpen: boolean;
-  profiles: VisibleProfileRow[];
-  profilePickerIndex: number;
-  pickProfile: (name: string) => void;
-  quickOpenOpen: boolean;
-  quickOpenQuery: string;
-  setQuickOpenQuery: (query: string) => void;
-  quickOpenResults: FuzzyMatchResult[];
-  quickOpenIndex: number;
-  setQuickOpenIndex: (index: number) => void;
-  quickOpenLoading: boolean;
-  pickQuickOpenFile: (relPath: string) => void;
-  closeQuickOpen: () => void;
   search: ReturnType<typeof useViewSearchState>['search'];
   globalHistory: string[];
   onCommandBarSubmit: React.ComponentProps<typeof CommandArea>['onSubmit'];
@@ -81,13 +39,7 @@ type Properties = {
 // Split out of App.tsx to keep it under the file-size limit.
 export function AgentTabBody({
   current, client, lines, runCommand, transcriptReference, highlight, inputReference,
-  route, routeIndex, chooseRoute, syntaxTheme, themePickerOpen, themePickerIndex, pickTheme,
-  theme, appThemePickerOpen, appThemePickerIndex, pickAppTheme, pickerOpen, recent, pickerIndex, pick,
-  navOpen, navQuery, navIndex, tabs, selectNavTab, queueOpen, queueIndex, selectQueueIndex,
-  taskPickerOpen, visibleTasks, taskPickerIndex, pickTask, toggleTaskDir,
-  profilePickerOpen, profiles, profilePickerIndex, pickProfile,
-  quickOpenOpen, quickOpenQuery, setQuickOpenQuery, quickOpenResults, quickOpenIndex, setQuickOpenIndex,
-  quickOpenLoading, pickQuickOpenFile, closeQuickOpen,
+  pickerOverlays, blockingOverlayOpen, queueOpen,
   search, globalHistory, onCommandBarSubmit, quitConfirmOpen, unsavedQuitOpen,
   recallReference, onEditQueued, onDeleteQueued, dropRef, onSplit,
 }: Properties) {
@@ -130,19 +82,7 @@ export function AgentTabBody({
           interactive
           onOpenAcpTranscript={intents.onOpenAcpTranscript}
         />
-        <PickerOverlays
-          route={route} routeIndex={routeIndex} onPickRoute={chooseRoute}
-          syntaxTheme={syntaxTheme} themePickerOpen={themePickerOpen} themePickerIndex={themePickerIndex} onPickTheme={pickTheme}
-          theme={theme} appThemePickerOpen={appThemePickerOpen} appThemePickerIndex={appThemePickerIndex} onPickAppTheme={pickAppTheme}
-          pickerOpen={pickerOpen} recent={recent} pickerIndex={pickerIndex} onPickHistory={pick}
-          navOpen={navOpen} navQuery={navQuery} navIndex={navIndex} tabs={tabs} onPickTab={selectNavTab}
-          queueOpen={queueOpen} queueItems={current.commandQueue} queueIndex={queueIndex} onSelectQueue={selectQueueIndex}
-          taskPickerOpen={taskPickerOpen} taskRows={visibleTasks} taskPickerIndex={taskPickerIndex} onPickTask={pickTask} onToggleTaskDir={toggleTaskDir}
-          profilePickerOpen={profilePickerOpen} profiles={profiles} profilePickerIndex={profilePickerIndex} onPickProfile={pickProfile}
-          quickOpenOpen={quickOpenOpen} quickOpenQuery={quickOpenQuery} onChangeQuickOpenQuery={setQuickOpenQuery}
-          quickOpenResults={quickOpenResults} quickOpenIndex={quickOpenIndex} onChangeQuickOpenIndex={setQuickOpenIndex}
-          quickOpenLoading={quickOpenLoading} onPickQuickOpen={pickQuickOpenFile} onCloseQuickOpen={closeQuickOpen}
-          commandInputRef={inputReference} />
+        {pickerOverlays}
       </div>
       <CommandArea
         search={search}
@@ -153,7 +93,7 @@ export function AgentTabBody({
         onSubmit={onCommandBarSubmit}
         inputRef={inputReference}
         complete={(text, cursor) => client.request({ method: 'complete', params: { text, cursor } })}
-        pickerOpen={pickerOpen || route !== null || quitConfirmOpen || unsavedQuitOpen || themePickerOpen || appThemePickerOpen || navOpen || taskPickerOpen || profilePickerOpen}
+        pickerOpen={blockingOverlayOpen || quitConfirmOpen || unsavedQuitOpen}
         busy={current.busy}
         queueOpen={queueOpen}
         recallRef={recallReference}

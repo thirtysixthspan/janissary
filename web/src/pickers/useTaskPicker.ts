@@ -1,9 +1,9 @@
 import { useCallback, useMemo, useState } from 'react';
 import type { TaskRow } from '@shared/protocol';
-import type { JanusClient } from './ws';
-import type { CommandInputDropHandle } from './drop-handles';
+import type { JanusClient } from '../ws';
+import type { CommandInputDropHandle } from '../drop-handles';
 import { flattenVisibleTaskRows, firstSelectableIndex } from './task-picker-keys';
-import { insertIntoCommandLine } from './populate-command-line';
+import { insertIntoCommandLine } from '../populate-command-line';
 
 // State and handlers for the Ctrl+A / `tasks` picker. Selecting a task inserts an `execute …`
 // command at the command line's current cursor (via the shared drop handle's `insertAtCaret`),

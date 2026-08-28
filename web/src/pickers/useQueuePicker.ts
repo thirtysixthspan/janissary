@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { JanusClient } from './ws';
+import type { JanusClient } from '../ws';
 import type { TabView } from '@shared/protocol';
 
 // State and handlers for the Ctrl+E / `queue` command-queue picker (mirrors the `hist` picker's

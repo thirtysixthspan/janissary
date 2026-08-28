@@ -5,7 +5,9 @@ import type { DirtyTabHandle, HarnessTabHandle } from './tab-handles';
 import { EditorTab } from './editor/EditorTab';
 import type { EditorDropHandle } from './drop-handles';
 import { HarnessTabLayer } from './harness/HarnessTabLayer';
-import type { PickerOverlayProps } from './picker-overlay-props';
+import type { PickerOverlayProps } from './pickers/picker-overlay-props';
+import { TaskPicker } from './pickers/TaskPicker';
+import { TabNavPicker } from './pickers/TabNavPicker';
 import { QuestionPanel } from './QuestionPanel';
 import type { QuestionPanelHandle } from './tab-handles';
 import { tabBodyBorder } from './tab-body-border';
@@ -64,12 +66,20 @@ export function MountedViewLayers({
       {tabs.map((t, index) => ({ t, index })).filter(({ t }) => t.view === 'harness' && t.harness).map(({ t, index }) => (
         <HarnessTabLayer
           key={t.harness!.ptyId}
-          t={t} current={current} tabs={tabs} client={client} harnessHandles={harnessHandles}
+          t={t} current={current} client={client} harnessHandles={harnessHandles}
           visible={visibleLabels.includes(t.label)} index={index}
           onSplit={onSplit ? () => onSplit(index) : undefined}
-          taskPickerOpen={taskPickerOpen} taskRows={taskRows} taskPickerIndex={taskPickerIndex}
-          onPickTask={onPickTask} onToggleTaskDir={onToggleTaskDir}
-          navOpen={navOpen} navQuery={navQuery} navIndex={navIndex} onPickTab={onPickTab}
+          taskPickerOpen={taskPickerOpen} navOpen={navOpen}
+          pickerOverlays={t.label === current.label && (
+            <>
+              {taskPickerOpen && onPickTask && onToggleTaskDir && (
+                <TaskPicker rows={taskRows ?? []} selected={taskPickerIndex ?? 0} onPick={onPickTask} onToggleDir={onToggleTaskDir} />
+              )}
+              {navOpen && onPickTab && (
+                <TabNavPicker tabs={tabs} query={navQuery ?? ''} selected={navIndex ?? 0} onPick={onPickTab} />
+              )}
+            </>
+          )}
         />
       ))}
 

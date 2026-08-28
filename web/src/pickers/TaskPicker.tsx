@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { VisibleTaskRow } from './task-picker-keys';
-import { expandedIcon, collapsedIcon } from './icons';
+import { expandedIcon, collapsedIcon } from '../icons';
 
 // The Ctrl+A / `tasks` overlay listing the executable `ai/tasks/*.md` task files, recursively
 // including any subdirectory's tasks (collapsed by default). Up/Down move the selection, Left/Right
