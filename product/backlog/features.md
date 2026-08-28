@@ -8,17 +8,16 @@
 
 * define how new agent and file navigator buttons should work on remote machines.
 
-## development
-
-* The Markdown view (`product/specs/markdown-tab.md`, `product/specs/markdown-rendering.md`) is a read-only snapshot that must be reopened after a file changes, while Obsidian offers an editable Live Preview/Source mode toggle for the same Markdown note. Closing this gap would turn the Markdown tab into an editable note view with source/live-preview switching, debounced saves, dirty-file protection, and external-change handling while retaining the existing sanitized renderer. Complexity: medium-high.
-
 * The ssh tab (`product/specs/ssh-tab.md`) has no session logging to disk, the way iTerm2's per-profile "Automatically Log Session Input to Files" setting captures a session's raw I/O for later audit, independent of on-demand scrollback. Janissary's spec states plainly that ssh tabs "get no screen reader either" and are excluded from the automatic harness-recording that named-harness tabs get (`product/specs/harness-recording.md`) — a remote session's output is gone the moment its tab closes, with no way to review what happened on a host after the fact. Extending the existing asciicast recording mechanism to ssh tabs (the same lazy-file, PTY-lifetime-scoped approach harness tabs already use) would close this without a new recording format. Complexity: low-medium — the recording plumbing already exists for harness tabs; this is mostly widening its scope.
 
-* The shell transcript (`product/specs/shell.md`, `product/specs/transcript.md`) is line-oriented and can rerun a prompt by double-click, but it does not expose command-level duration, exit status, or a selectable command-plus-output block; iTerm2's shell integration supplies command selection and an info panel with duration, status, resend, copy, share, and named marks. Closing this gap would track command boundaries and completion metadata, then add block selection with copy/rerun/bookmark actions and a compact command-info view. Complexity: medium. 
+## development
 
 * Split the app-shell orchestration in `web/src/App.tsx` into cohesive feature controllers: the component exceeds the project's 200-line limit while owning nearly every picker, layout, quit guard, tab handle, search path, window-key snapshot, server-state subscription, and the correspondingly oversized `AppMain` prop handoff, so adding a client feature expands one high-churn integration point and its tests. Extract related state and callbacks behind small hooks or controller objects and pass grouped feature interfaces into `AppMain`. Severity: **medium**. — deferred: complexity 8/10, requires designing multiple controller boundaries, reshaping the AppMain interface, and coordinating broad app-shell integration coverage.
 
 ## deferred
+
+
+* The Markdown view (`product/specs/markdown-tab.md`, `product/specs/markdown-rendering.md`) is a read-only snapshot that must be reopened after a file changes, while Obsidian offers an editable Live Preview/Source mode toggle for the same Markdown note. Closing this gap would turn the Markdown tab into an editable note view with source/live-preview switching, debounced saves, dirty-file protection, and external-change handling while retaining the existing sanitized renderer. Complexity: medium-high.
 
 * long term durable transcripts - send trascripts off to seperate github repo? other durable storage options? 
 
@@ -64,3 +63,4 @@
 
 * The browser automation feature (`product/specs/browser.md`) exposes goto, rendered content, eval, and screenshots but does not retain an inspectable action history or browser diagnostics; Playwright Trace Viewer provides a timeline with DOM snapshots, screenshots, console messages, network requests, and action details. Closing this gap would add an opt-in per-window trace/inspection mode with a replayable timeline and links from each action to its DOM, console, network, and screenshot evidence. Complexity: high. Determination: low value at this point in time.
 
+* The shell transcript (`product/specs/shell.md`, `product/specs/transcript.md`) is line-oriented and can rerun a prompt by double-click, but it does not expose command-level duration, exit status, or a selectable command-plus-output block; iTerm2's shell integration supplies command selection and an info panel with duration, status, resend, copy, share, and named marks. Closing this gap would track command boundaries and completion metadata, then add block selection with copy/rerun/bookmark actions and a compact command-info view. Complexity: medium. 
