@@ -84,7 +84,7 @@ The names above are a fixed list, and it can't cover everything — your own TUI
 
 Janissary remembers what it caught. The next time you run that program it opens a terminal straight away, with no transcript entry and no pause — so a program costs you one detection, ever. What's remembered lives in `.janissary/interactive-commands.json`, a plain list you can edit: delete a line to forget a program, or delete the file to start fresh. `git log` is remembered as `git log`, not as `git`, so `git status` keeps behaving normally.
 
-Some programs need a terminal without ever saying so — a `sudo` password prompt, a `read`, a bare REPL. Those just sit there waiting. Click **open in terminal** on the running line, or press `Ctrl+O`, and the command moves into a terminal where you can type. Doing it by hand is a one-off and isn't remembered.
+Some programs need a terminal without ever saying so — a `sudo` password prompt, a `read`, a bare REPL. Those just sit there waiting. Click **open in terminal** on the running line, or press `Ctrl+O`, and the command moves into a terminal where you can type. It ends like any other: when the command finishes, the terminal closes, the transcript comes back with its entry reading `(ran in terminal)`, and the agent is free for your next command. Doing it by hand is a one-off and isn't remembered.
 
 A real terminal also means commands behave the way they do in one: output comes back in color, and `git log` or `git diff` open a pager instead of printing everything at once.
 

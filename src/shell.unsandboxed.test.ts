@@ -9,32 +9,26 @@ import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import { tmpdir } from 'node:os';
 import { shellStartupArgs } from './shell-startup.js';
+import { executeShellCmd } from './shell.js';
 
-function runCommand(
-  shell: ChildProcess,
-  command: string,
-  delimiter: string,
-): Promise<string> {
+// Drives the real `executeShellCmd` rather than re-implementing what it writes, so the format the
+// shell actually receives is the one under test.
+function runCommand(shell: ChildProcess, command: string, tabIndex: number): Promise<string> {
   return new Promise((resolve, reject) => {
     const timeout = setTimeout(() => reject(new Error('Timed out')), 10_000);
-    let buffer = '';
-
-    const onData = (chunk: string) => {
-      buffer += chunk;
-      const endIndex = buffer.indexOf(delimiter);
-      if (endIndex !== -1) {
-        clearTimeout(timeout);
-        shell.stdout!.removeListener('data', onData);
-        shell.stderr!.removeListener('data', onData);
-        resolve(buffer.slice(0, Math.max(0, endIndex)).trim());
-      }
-    };
-
-    shell.stdout!.on('data', onData);
-    shell.stderr!.on('data', onData);
-
-    shell.stdin!.write(`${command} 2>&1\necho "${delimiter}"\n`);
+    executeShellCmd(shell, command, tabIndex, () => {}, (result) => {
+      clearTimeout(timeout);
+      resolve(result);
+    });
   });
+}
+
+function spawnRealShell(): ChildProcess {
+  const shellPath = process.env.SHELL || 'bash';
+  const shell = spawn(shellPath, shellStartupArgs(shellPath), { stdio: ['pipe', 'pipe', 'pipe'] });
+  shell.stdout!.setEncoding('utf8');
+  shell.stderr!.setEncoding('utf8');
+  return shell;
 }
 
 describe('persistent shell', () => {
@@ -47,19 +41,30 @@ describe('persistent shell', () => {
   });
 
   it('cd persists so ls shows the new directory contents', async () => {
-    const shellPath = process.env.SHELL || 'bash';
-    const shell = spawn(shellPath, shellStartupArgs(shellPath), {
-      stdio: ['pipe', 'pipe', 'pipe'],
-    });
-    shell.stdout!.setEncoding('utf8');
-    shell.stderr!.setEncoding('utf8');
+    const shell = spawnRealShell();
 
     try {
-      const result1 = await runCommand(shell, `cd "${tmpDir}"`, '__TEST_CD_DONE__');
+      const result1 = await runCommand(shell, `cd "${tmpDir}"`, 1);
       expect(result1).toBe('');
 
-      const result2 = await runCommand(shell, 'ls', '__TEST_LS_DONE__');
+      const result2 = await runCommand(shell, 'ls', 2);
       expect(result2).toContain(markerFile);
+    } finally {
+      shell.kill();
+    }
+  }, 15_000);
+
+  // The regression this file exists to catch: a command that reads its own stdin used to consume the
+  // delimiter line written after it, so the command never completed and its agent stayed busy — the
+  // hang seen when such a command was promoted to a terminal.
+  it('completes a command that reads its own stdin', async () => {
+    const shell = spawnRealShell();
+
+    try {
+      const pending = runCommand(shell, 'read -r LINE; echo "read=[$LINE]"', 3);
+      shell.stdin!.write('typed by the user\n');
+
+      expect(await pending).toBe('read=[typed by the user]');
     } finally {
       shell.kill();
     }

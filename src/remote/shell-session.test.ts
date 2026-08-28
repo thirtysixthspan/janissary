@@ -65,7 +65,7 @@ describe('createRemoteShell', () => {
     executeShellCmd(shell, 'ls -la', 7, (buffer) => { chunks.push(buffer); }, done);
 
     const input = writtenInput(sent);
-    expect(input).toContain('ls -la 2>&1\n');
+    expect(input).toContain('{ :; ls -la\n} 2>&1;');
     const sentinel = sentinelFrom(input);
 
     reply('rsh1', 'total 8\n');
