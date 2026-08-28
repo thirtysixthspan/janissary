@@ -25,6 +25,12 @@ type Properties = {
 
 export function Transcript({ lines, client, onToggleCollapse, onPromptClick, scrollRef, highlight, showEmptyHint = true, pinToBottom = true }: Properties) {
   const stick = useRef(true);
+  // The scroll position auto-scroll has already accounted for. Scroll events are delivered
+  // asynchronously, so the event a pin triggers can land after newer output has grown the content:
+  // at that moment the viewport measures far from the bottom although the user never moved it.
+  // Comparing against this value tells the two apart — only a position we did not write ourselves
+  // counts as the user scrolling away.
+  const lastTop = useRef(0);
   const contentReference = useRef<HTMLDivElement>(null);
 
   // Memoized because the markdown line's click handler feeds a useCallback dependency array — a
@@ -34,7 +40,9 @@ export function Transcript({ lines, client, onToggleCollapse, onPromptClick, scr
   const pin = useCallback(() => {
     if (!pinToBottom) return;
     const element = scrollRef.current;
-    if (element && stick.current && !highlight) element.scrollTop = element.scrollHeight;
+    if (!element || !stick.current || highlight) return;
+    element.scrollTop = element.scrollHeight;
+    lastTop.current = element.scrollTop;
   }, [scrollRef, highlight, pinToBottom]);
 
   useEffect(() => { pin(); }, [lines, pin]);
@@ -60,7 +68,9 @@ export function Transcript({ lines, client, onToggleCollapse, onPromptClick, scr
 
   const onScroll = () => {
     const element = scrollRef.current;
-    if (element) stick.current = element.scrollHeight - element.scrollTop - element.clientHeight < 40;
+    if (!element || Math.abs(element.scrollTop - lastTop.current) < 1) return;
+    lastTop.current = element.scrollTop;
+    stick.current = element.scrollHeight - element.scrollTop - element.clientHeight < 40;
   };
 
   return (

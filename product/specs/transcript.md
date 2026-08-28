@@ -20,6 +20,8 @@ When an interactive program (htop, vim, less, etc.) is running in full-tab PTY m
 
 New output resets scroll offset to 0 (bottom), showing the latest lines.
 
+The transcript follows output for as long as it keeps arriving: a command that prints hundreds of lines leaves the view resting on the last line of that output, not partway through it. Following stops only when the user scrolls away from the bottom themselves; output growing beneath the view is never mistaken for that. Scrolling back to within a line or two of the bottom resumes following, as does jumping to the bottom with `Escape`.
+
 ### Scroll up
 
 `Ctrl+↑` (or `Shift+ArrowUp`) increments scroll offset with acceleration (see below). `Ctrl+P` increments by exactly one line (no acceleration). The plain ↑/↓ arrows are reserved for command-history navigation; the mouse scroll wheel also scrolls the transcript (one line per tick).
