@@ -4,6 +4,7 @@ import type { JanusClient } from '../ws';
 import { collapseSelection, hasMultipleSelections, insertText } from './model';
 import { actionForKey, yieldsToPlugins } from './keys';
 import { visualVerticalHit } from './mouse';
+import { revealVerticalProbe } from './scroll';
 import { useEditor } from './useEditor';
 import { useEditorFile } from './useEditorFile';
 import { useEditorMouse } from './useEditorMouse';
@@ -99,12 +100,15 @@ export const EditorTab = forwardRef<DirtyTabHandle, {
     return Math.max(1, Math.floor(body.clientHeight / lineHeight) - 1);
   };
 
-  // Wrapped-line-aware ArrowUp/ArrowDown: resolve one visual row from the caret's screen
-  // position, falling back to logical-line movement when there's no real layout (e.g. jsdom).
+  // Wrapped-line-aware ArrowUp/ArrowDown: resolve one visual row from the caret's screen position.
+  // Scrolling the target row into view first keeps that working at the edges of the body, so the
+  // fallback to logical-line movement is left for a row that genuinely cannot be reached — no real
+  // layout (e.g. jsdom), or nothing left to scroll at the document's ends.
   const resolveVertical = (dir: 'up' | 'down') => {
     const body = bodyRef.current;
     const caret = caretRef.current;
     if (!body || !caret) return null;
+    revealVerticalProbe(body, caret, dir);
     const hit = visualVerticalHit(body, caret, dir);
     return hit ? { line: hit.line, col: hit.col } : null;
   };
