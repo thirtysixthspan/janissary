@@ -15,6 +15,7 @@ const clientFeatureDirectories = [
   'editor',
   'file-navigator',
   'harness',
+  'pickers',
   'QuitDialog',
   'SaveChangesDialog',
 ];

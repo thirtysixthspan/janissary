@@ -2,7 +2,7 @@ import React from 'react';
 import type { RouteChooserView, TabView } from '@shared/protocol';
 import { HistoryPicker } from './HistoryPicker';
 import { ThemePicker } from './ThemePicker';
-import { RouteChooser } from './RouteChooser';
+import { RouteChooser } from '../RouteChooser';
 import { TabNavPicker } from './TabNavPicker';
 import { QueuePicker } from './QueuePicker';
 import { TaskPicker } from './TaskPicker';
@@ -12,8 +12,8 @@ import type { VisibleProfileRow } from './profile-picker-keys';
 import { SYNTAX_THEMES } from '@shared/syntax-themes';
 import { APP_THEMES } from '@shared/app-themes';
 import { AppThemePicker } from './AppThemePicker';
-import { QuickOpen } from './QuickOpen';
-import type { FuzzyMatchResult } from './fuzzy-match';
+import { QuickOpen } from '../QuickOpen';
+import type { FuzzyMatchResult } from '../fuzzy-match';
 
 // The mutually-exclusive stack of modal overlays that can float above the command bar: route
 // chooser takes priority, then the syntax-theme picker, then whichever of `hist`/`nav` is open.

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import type { ProfileRow } from '@shared/protocol';
-import type { JanusClient } from './ws';
-import { populateCommandLine } from './populate-command-line';
+import type { JanusClient } from '../ws';
+import { populateCommandLine } from '../populate-command-line';
 import { firstProfileIndex, profilePickerRows } from './profile-picker-keys';
 
 // State and handlers for the `profile launch` picker (mirrors the `hist` picker's shape) — unlike

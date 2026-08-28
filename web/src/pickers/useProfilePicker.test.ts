@@ -2,7 +2,7 @@ import { act, render } from '@testing-library/react';
 import React, { useRef } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { useProfilePicker } from './useProfilePicker';
-import type { JanusClient } from './ws';
+import type { JanusClient } from '../ws';
 
 const mockClient = { send: vi.fn(), request: vi.fn() } as unknown as JanusClient;
 const profiles = [{ name: 'writing', source: 'project' as const }];
