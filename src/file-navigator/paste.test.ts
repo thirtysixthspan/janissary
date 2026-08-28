@@ -118,24 +118,28 @@ describe('pasteBatch — failures', () => {
     const directory = root();
     mkdirSync(path.join(directory, 'dest'));
     const result = pasteBatch(directory, [path.join(directory, 'missing.txt')], 'dest', 'copy');
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       total: 1,
       failedPaths: [path.join(directory, 'missing.txt')],
       pairs: [],
       mutated: false,
     });
+    expect('failureReasons' in result && result.failureReasons?.[path.join(directory, 'missing.txt')])
+      .toContain('no longer exists');
   });
 
   it('a destination inside the copied directory itself is a failure', () => {
     const directory = root();
     mkdirSync(path.join(directory, 'src', 'inner'), { recursive: true });
     const result = pasteBatch(directory, [path.join(directory, 'src')], 'src/inner', 'copy');
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       total: 1,
       failedPaths: [path.join(directory, 'src')],
       pairs: [],
       mutated: false,
     });
+    expect('failureReasons' in result && result.failureReasons?.[path.join(directory, 'src')])
+      .toContain('inside itself');
   });
 
   it('a source outside the tree root is accepted while a destination outside it is not', () => {
@@ -143,12 +147,15 @@ describe('pasteBatch — failures', () => {
     const outside = root();
     writeFileSync(path.join(outside, 'a.txt'), 'a');
     const missingDestination = pasteBatch(directory, [path.join(outside, 'a.txt')], '../escape', 'copy');
-    expect(missingDestination).toEqual({
+    expect(missingDestination).toMatchObject({
       total: 1,
       failedPaths: [path.join(outside, 'a.txt')],
       pairs: [],
       mutated: false,
     });
+    expect('failureReasons' in missingDestination
+      && missingDestination.failureReasons?.[path.join(outside, 'a.txt')])
+      .toContain('destination is unavailable');
     const result = pasteBatch(directory, [path.join(outside, 'a.txt')], '', 'copy');
     expect(result).toMatchObject({ total: 1, failedPaths: [] });
     expect(existsSync(path.join(directory, 'a.txt'))).toBe(true);

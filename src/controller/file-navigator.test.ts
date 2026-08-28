@@ -198,9 +198,27 @@ describe('controller-file-navigator', () => {
 
   it('renameFileNavigatorItem delegates to FileNavigatorManager.rename when the tab exists', () => {
     const calls: unknown[] = [];
-    const managers = makeManagers('agent', { rename: (...args: unknown[]) => { calls.push(args); } });
+    const managers = makeManagers('agent', {
+      rename: (...args: unknown[]) => { calls.push(args); return { total: 1, failedPaths: [] }; },
+    });
     renameFileNavigatorItem(managers, 0, 'src/foo.ts', 'bar.ts');
     expect(calls).toEqual([['agent', 'src/foo.ts', 'bar.ts']]);
+  });
+
+  it('renameFileNavigatorItem posts one notification with the failure reason', () => {
+    const append = vi.fn();
+    const managers = makeManagersWithNotifications('agent', {
+      rename: () => ({
+        total: 1,
+        failedPaths: ['src/foo.ts'],
+        failureReasons: { 'src/foo.ts': 'Permission denied; check permissions, then try again' },
+      }),
+    }, append);
+    renameFileNavigatorItem(managers, 0, 'src/foo.ts', 'bar.ts');
+    expect(append).toHaveBeenCalledWith(
+      NOTIFICATIONS_LABEL,
+      expect.objectContaining({ output: expect.stringContaining('Permission denied') }),
+    );
   });
 
   it('renameFileNavigatorItem is a no-op when the tab index has no label', () => {

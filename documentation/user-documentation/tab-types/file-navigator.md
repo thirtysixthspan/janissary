@@ -157,7 +157,8 @@ all destinations first. If any conflict exists, the dialog says `Some items alre
 and offers **Overwrite all**, **Skip conflicts**, and **Cancel**. Other items still move when an
 individual item fails; failures are reported as one line in the notifications feed instead of a
 dialog: `Could not move <failed> of <total> items: <names>`, naming up to three failed items and
-truncating the rest with `… and N more`.
+truncating the rest with `… and N more`. The line also tells you why the operation failed and what
+to try next. If items failed for different reasons, each shown name is paired with its own reason.
 
 You can also drag selected rows onto the command bar of the active tab to insert their paths at the
 caret without moving anything. The paths are relative to the active tab's working directory,
@@ -183,6 +184,8 @@ Click the adjacent **New directory** button to create a folder using the same se
 ## Renaming a file or directory
 
 Press `Cmd+R` (`Ctrl+R`) while a row other than `..` is selected to turn its name into an editable field, pre-filled with the current name. Edit it and press Enter to rename the file or directory on disk in place — an unchanged or empty name is a no-op that just closes the field. Escape, or clicking elsewhere, cancels without changing anything. If the new name collides with a sibling already in that directory, the same Overwrite/Cancel dialog used for drag-and-drop moves appears. A rename doesn't join the undo/redo history described below.
+
+If the filesystem refuses the rename, the item stays in place. The notifications feed names the item, explains the cause, and suggests what to try next.
 
 If the renamed file is already open in an editor tab, that tab's name and path update automatically, with unsaved content and cursor position preserved.
 
@@ -235,8 +238,8 @@ Multiple items ask `Delete <count> items?`.
 Both dialogs offer **Delete** and **Cancel**. A confirmed bulk delete continues after individual
 failures, reported as one line in the notifications feed instead of a dialog:
 `Could not delete <failed> of <total> items: <names>`, naming up to three failed items and
-truncating the rest with `… and N more`. Deletion is recursive for directories and cannot be
-undone.
+truncating the rest with `… and N more`. The line also gives the cause and what to try next.
+Deletion is recursive for directories and cannot be undone.
 
 Undo and redo only apply to moves. Each tree keeps its own undo/redo history in memory for as long
 as it stays open; closing it clears that history. One bulk move is one history step. Undo reverses

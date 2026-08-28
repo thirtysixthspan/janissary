@@ -4,6 +4,11 @@ import { refreshGit } from './git-refresh.js';
 import { openOrRetarget, type OpenPort } from './open.js';
 import { openFilesCommand } from './open-command.js';
 import { deleteItem, moveItem, renameItem } from './filesystem.js';
+import {
+  DESCENDANT_DESTINATION_REASON,
+  failureReasons,
+  SOURCE_UNAVAILABLE_REASON,
+} from './file-operation-result.js';
 import { replayHistory } from './manager-history.js';
 import { deleteMany, moveMany, pasteMany } from './manager-batch.js';
 import { toggleDir, collapseAllDirs, rerootTree, revealPath, type NavPort } from './navigation.js';
@@ -21,6 +26,10 @@ import type { Managers } from '../managers.js';
 import type { BatchResult, BulkConflictPolicy, BulkMoveResult, FileOpenerResolution, UndoRedoResult } from '../protocol.js';
 
 const DEBOUNCE_MS = 100;
+
+function failedOperation(path: string, reason: string): BatchResult {
+  return { total: 1, failedPaths: [path], ...failureReasons(new Map([[path, reason]])) };
+}
 
 // Owns file navigator tabs: opening/focusing them, their `expanded` directory sets, and one
 // non-recursive `fs.watch` per visible directory. Any watch event schedules a single per-tab
@@ -102,11 +111,13 @@ export class FileNavigatorManager {
   // mirroring the editor's own "any new edit invalidates the redo stack" rule. Rebuilds so the
   // tree reflects the change immediately, without waiting on the directory watcher's own debounce.
   move(label: string, fromRelPath: string, toRelPath: string): BatchResult {
-    return this.withState(label, { total: 1, failedPaths: [fromRelPath] }, (state) => {
-      if (isSameOrDescendantPath(toRelPath, fromRelPath)) return { total: 1, failedPaths: [fromRelPath] };
-      const entry = moveItem(state.root, fromRelPath, toRelPath);
-      if (!entry) return { total: 1, failedPaths: [fromRelPath] };
-      state.undoStack.push({ entries: [entry] });
+    return this.withState(label, failedOperation(fromRelPath, SOURCE_UNAVAILABLE_REASON), (state) => {
+      if (isSameOrDescendantPath(toRelPath, fromRelPath)) {
+        return failedOperation(fromRelPath, DESCENDANT_DESTINATION_REASON);
+      }
+      const moved = moveItem(state.root, fromRelPath, toRelPath);
+      if (!moved.ok) return failedOperation(fromRelPath, moved.reason);
+      state.undoStack.push({ entries: [moved.value] });
       state.redoStack = [];
       this.rebuild(label);
       return { total: 1, failedPaths: [] };
@@ -156,13 +167,14 @@ export class FileNavigatorManager {
   // client has already confirmed an overwrite with the user if `newName` collides with a sibling.
   // If an editor tab is already open on the renamed file, it is retargeted to the new path so it
   // doesn't go stale. Rebuilds so the tree reflects the new name immediately.
-  rename(label: string, relPath: string, newName: string): void {
-    this.withState(label, undefined, (state) => {
+  rename(label: string, relPath: string, newName: string): BatchResult {
+    return this.withState(label, failedOperation(relPath, SOURCE_UNAVAILABLE_REASON), (state) => {
       const renamed = renameItem(state.root, relPath, newName);
-      if (!renamed) return;
-      const [oldAbs, newAbs] = renamed;
+      if (!renamed.ok) return failedOperation(relPath, renamed.reason);
+      const [oldAbs, newAbs] = renamed.value;
       this.managers.tab.retargetEditorTab(oldAbs, newAbs);
       this.rebuild(label);
+      return { total: 1, failedPaths: [] };
     });
   }
 
@@ -170,8 +182,9 @@ export class FileNavigatorManager {
   // the user before sending this. Rebuilds so the tree reflects the removal immediately, without
   // waiting on the directory watcher's own debounce.
   delete(label: string, relPath: string): BatchResult {
-    return this.withState(label, { total: 1, failedPaths: [relPath] }, (state) => {
-      if (!deleteItem(state.root, relPath)) return { total: 1, failedPaths: [relPath] };
+    return this.withState(label, failedOperation(relPath, SOURCE_UNAVAILABLE_REASON), (state) => {
+      const deleted = deleteItem(state.root, relPath);
+      if (!deleted.ok) return failedOperation(relPath, deleted.reason);
       this.rebuild(label);
       return { total: 1, failedPaths: [] };
     });

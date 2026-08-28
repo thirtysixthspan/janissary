@@ -268,7 +268,9 @@ preflights every destination before moving anything. If conflicts exist, one dia
 failures. Other per-item failures do not stop the batch. Rather than a dialog, any failures are
 reported as one line in the notifications feed: `Could not move <failed> of <total> items:
 <names>`, naming the failing items in selection order and truncating past three names with
-`… and N more`.
+`… and N more`. The line then gives the filesystem cause and a recovery action. One cause shared
+by every named item appears once after the names; different causes use `Reasons: <name>: <reason>
+| <name>: <reason>` for the named items.
 
 If the window loses focus while a drag is in progress — switching to another application or
 virtual desktop with the mouse button still held — the drag is cancelled outright: the drag label
@@ -353,7 +355,7 @@ opens `Delete "<name>"?`; multiple paths open `Delete <count> items?`. Both dial
 **Delete** and **Cancel**. A confirmed bulk delete continues after individual failures; rather than
 a dialog, any failures are reported as one line in the notifications feed: `Could not delete
 <failed> of <total> items: <names>`, naming the failing items in selection order and truncating
-past three names with `… and N more`.
+past three names with `… and N more`, followed by the shared or per-item cause and recovery action.
 The tree already watches every visible directory, so the removed row disappears automatically once
 the watcher picks up the change, the same as any other on-disk change made outside the app. If the
 selected row was the one removed, selection moves to the nearest surviving row rather than pointing
@@ -374,7 +376,9 @@ directory). Escape, or the field losing focus, cancels and restores the original
 on-disk change. If the new name collides with a sibling already in the same directory, the same
 Overwrite/Cancel confirmation dialog used for a drag-and-drop move appears; Overwrite replaces the
 existing entry and completes the rename, Cancel returns to the still-open edit field. A rename is
-not added to the tab's move undo/redo stack and cannot be reversed with Cmd+Z.
+not added to the tab's move undo/redo stack and cannot be reversed with Cmd+Z. If the filesystem
+refuses the rename, the item stays in place and a `Could not rename 1 of 1 items: <name>. <reason>.`
+line in the notifications feed gives the cause and recovery action.
 
 If the renamed file is already open in an editor tab, that tab updates to the new name and path
 automatically — its unsaved content, dirty state, cursor, and undo history are preserved exactly as
@@ -410,7 +414,8 @@ its own directory is a silent no-op. Every other name collision — one item or 
 navigator or across two — raises the same Overwrite/Cancel or Overwrite all/Skip conflicts/Cancel
 dialogs a drag-and-drop move already uses. A paste whose source has vanished, or whose destination
 lies inside the very directory being copied, counts as a failure the same way a move or delete
-failure does — reported through the notifications feed, never a dialog.
+failure does — reported through the notifications feed with its cause and recovery action, never a
+dialog.
 
 A paste is one step on the tab's own undo/redo stack, so `Cmd+Z` reverses it and `Cmd+Shift+Z`
 re-applies it. Undoing a copy-paste deletes exactly the items that paste created, with no

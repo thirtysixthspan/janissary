@@ -56,7 +56,9 @@ describe('moveMany', () => {
     const current = state(directory);
     let rebuilt = 0;
     const result = moveMany(current, ['missing.txt'], 'dest', undefined, () => { rebuilt += 1; });
-    expect(result).toEqual({ total: 1, failedPaths: ['missing.txt'] });
+    expect(result).toMatchObject({ total: 1, failedPaths: ['missing.txt'] });
+    expect('failureReasons' in result && result.failureReasons?.['missing.txt'])
+      .toContain('destination is unavailable');
     expect(current.undoStack).toEqual([]);
     expect(rebuilt).toBe(0);
   });
@@ -79,7 +81,8 @@ describe('deleteMany', () => {
     const current = state(directory);
     let rebuilt = 0;
     const result = deleteMany(current, ['missing.txt'], () => { rebuilt += 1; });
-    expect(result).toEqual({ total: 1, failedPaths: ['missing.txt'] });
+    expect(result).toMatchObject({ total: 1, failedPaths: ['missing.txt'] });
+    expect(result.failureReasons?.['missing.txt']).toContain('no longer exists');
     expect(rebuilt).toBe(0);
   });
 });
@@ -110,7 +113,10 @@ describe('pasteMany', () => {
     const result = pasteMany(
       current, [path.join(directory, 'missing.txt')], '', 'copy', undefined, () => { rebuilt += 1; },
     );
-    expect(result).toEqual({ total: 1, failedPaths: [path.join(directory, 'missing.txt')] });
+    expect(result).toMatchObject({ total: 1, failedPaths: [path.join(directory, 'missing.txt')] });
+    expect('failureReasons' in result
+      && result.failureReasons?.[path.join(directory, 'missing.txt')])
+      .toContain('no longer exists');
     expect(current.undoStack).toEqual([]);
     expect(rebuilt).toBe(0);
   });

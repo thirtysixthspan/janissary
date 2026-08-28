@@ -18,7 +18,11 @@ export type FileOpenerResolution = { command?: 'open' | 'edit' | 'open external'
 // client can only ever ask for the entry it was just offered.
 export type FileSelectionAction = { label: string; action: string };
 export type BulkConflictPolicy = 'overwrite-all' | 'skip-conflicts';
-export type BatchResult = { total: number; failedPaths: string[] };
+export type BatchResult = {
+  total: number;
+  failedPaths: string[];
+  failureReasons?: Record<string, string>;
+};
 export type BulkMoveResult = BatchResult | { conflictPaths: string[] };
 export type MoveConflict = { fromRelPath: string; toRelPath: string };
 export type UndoRedoResult = Partial<BatchResult> & {

@@ -1,7 +1,14 @@
-import { lstatSync, renameSync } from 'node:fs';
+import { lstatSync } from 'node:fs';
 import path from 'node:path';
 import { exists, realDirectory } from './batch-paths.js';
-import { copyItem, moveReplacingDestination } from './filesystem.js';
+import { copyItem, moveReplacingDestination, renamePath } from './filesystem.js';
+import {
+  DESCENDANT_DESTINATION_REASON,
+  DESTINATION_UNAVAILABLE_REASON,
+  failureReasons,
+  fileOperationReason,
+  SOURCE_UNAVAILABLE_REASON,
+} from './file-operation-result.js';
 import { nextFreeName } from '../editor/next-free-name.js';
 import type { BatchResult, BulkConflictPolicy } from '../protocol.js';
 
@@ -10,13 +17,13 @@ export type PasteManyResult =
   | { conflictPaths: string[] }
   | (BatchResult & { pairs: PastePair[]; mutated: boolean });
 
-type Source = { abs: string; valid: boolean; dir: boolean };
+type Source = { abs: string; valid: boolean; dir: boolean; reason?: string };
 
 function sourceInfo(abs: string): Source {
   try {
     return { abs, valid: true, dir: lstatSync(abs).isDirectory() };
-  } catch {
-    return { abs, valid: false, dir: false };
+  } catch (error) {
+    return { abs, valid: false, dir: false, reason: fileOperationReason(error) };
   }
 }
 
@@ -38,15 +45,6 @@ function normalizeSources(sources: string[]): Source[] {
     || !ancestor.valid
     || !ancestor.dir
     || !isSameOrDescendantAbsolute(source.abs, ancestor.abs)));
-}
-
-function tryRename(source: string, destination: string): boolean {
-  try {
-    renameSync(source, destination);
-    return true;
-  } catch {
-    return false;
-  }
 }
 
 type Classified = { attempted: Source[]; eligible: Source[]; rejected: Set<string>; renamed: Map<string, string> };
@@ -89,19 +87,19 @@ function performPastes(
   policy: BulkConflictPolicy | undefined,
   renamed: Map<string, string>,
   conflictSet: Set<string>,
-): { pairs: PastePair[]; failed: Set<string> } {
+): { pairs: PastePair[]; failed: Map<string, string> } {
   const pairs: PastePair[] = [];
-  const failed = new Set<string>();
+  const failed = new Map<string, string>();
   for (const source of eligible) {
     if (policy === 'skip-conflicts' && conflictSet.has(source.abs)) continue;
     const name = renamed.get(source.abs) ?? path.basename(source.abs);
     const target = path.join(destination, name);
     const overwrite = policy === 'overwrite-all' && conflictSet.has(source.abs);
-    const ok = mode === 'copy'
+    const result = mode === 'copy'
       ? copyItem(source.abs, target, overwrite)
-      : (overwrite ? moveReplacingDestination(source.abs, target) : tryRename(source.abs, target));
-    if (ok) pairs.push({ from: source.abs, to: target });
-    else failed.add(source.abs);
+      : (overwrite ? moveReplacingDestination(source.abs, target) : renamePath(source.abs, target));
+    if (result.ok) pairs.push({ from: source.abs, to: target });
+    else failed.set(source.abs, result.reason);
   }
   return { pairs, failed };
 }
@@ -118,7 +116,14 @@ export function pasteBatch(
   const destination = realDirectory(root, destinationPath);
   const normalized = normalizeSources(sources);
   if (!destination) {
-    return { total: normalized.length, failedPaths: normalized.map((source) => source.abs), pairs: [], mutated: false };
+    const reasons = new Map(normalized.map((source) => [source.abs, DESTINATION_UNAVAILABLE_REASON]));
+    return {
+      total: normalized.length,
+      failedPaths: normalized.map((source) => source.abs),
+      ...failureReasons(reasons),
+      pairs: [],
+      mutated: false,
+    };
   }
 
   const { attempted, eligible, rejected, renamed } = classifySources(normalized, destination, mode);
@@ -129,12 +134,19 @@ export function pasteBatch(
 
   const conflictSet = new Set(conflicts.map((source) => source.abs));
   const { pairs, failed: failedPastes } = performPastes(eligible, destination, mode, policy, renamed, conflictSet);
-  const failed = new Set(rejected);
-  for (const abs of failedPastes) failed.add(abs);
+  const failed = new Map(failedPastes);
+  for (const source of attempted) {
+    if (!rejected.has(source.abs)) continue;
+    failed.set(
+      source.abs,
+      source.reason ?? (source.dir ? DESCENDANT_DESTINATION_REASON : SOURCE_UNAVAILABLE_REASON),
+    );
+  }
 
   return {
     total: attempted.length,
     failedPaths: attempted.filter((source) => failed.has(source.abs)).map((source) => source.abs),
+    ...failureReasons(failed),
     pairs,
     mutated: pairs.length > 0,
   };

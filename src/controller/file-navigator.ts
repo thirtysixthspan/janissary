@@ -79,7 +79,9 @@ export function deleteFileNavigatorItems(managers: Managers, index: number, path
 
 export function renameFileNavigatorItem(managers: Managers, index: number, relPath: string, newName: string): void {
   const label = managers.tab.tabs[index]?.label;
-  if (label) managers.fileNavigator.rename(label, relPath, newName);
+  if (!label) return;
+  const result = managers.fileNavigator.rename(label, relPath, newName);
+  reportOperationFailure(managers, label, 'rename', result);
 }
 
 export function undoFileNavigatorItem(
@@ -109,7 +111,13 @@ function replayFileNavigatorHistory(
   index: number,
   overwrite: boolean | undefined,
   skipConflicts: boolean | undefined,
-  replay: (label: string, overwrite?: boolean, skipConflicts?: boolean) => { total?: number; failedPaths?: string[]; conflict?: unknown; conflicts?: unknown },
+  replay: (label: string, overwrite?: boolean, skipConflicts?: boolean) => {
+    total?: number;
+    failedPaths?: string[];
+    failureReasons?: Record<string, string>;
+    conflict?: unknown;
+    conflicts?: unknown;
+  },
 ) {
   const label = managers.tab.tabs[index]?.label;
   if (!label) return {};
@@ -124,11 +132,21 @@ function replayFileNavigatorHistory(
 function reportHistoryFailure(
   managers: Managers,
   label: string,
-  result: { total?: number; failedPaths?: string[]; conflict?: unknown; conflicts?: unknown },
+  result: {
+    total?: number;
+    failedPaths?: string[];
+    failureReasons?: Record<string, string>;
+    conflict?: unknown;
+    conflicts?: unknown;
+  },
 ): void {
   if (result.conflict || result.conflicts) return;
   if (result.total === undefined || !result.failedPaths) return;
-  reportOperationFailure(managers, label, 'move', { total: result.total, failedPaths: result.failedPaths });
+  reportOperationFailure(managers, label, 'move', {
+    total: result.total,
+    failedPaths: result.failedPaths,
+    ...(result.failureReasons && { failureReasons: result.failureReasons }),
+  });
 }
 
 export function openFileNavigatorFor(managers: Managers, label: string): void {
