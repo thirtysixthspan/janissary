@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import { ESLint } from 'eslint';
 import path from 'node:path';
 
@@ -13,6 +13,14 @@ async function boundaryMessages(source: string, filePath: string) {
 }
 
 describe('client feature boundaries', () => {
+  // ESLint loads eslint.config.mjs lazily on the first lint, so the whole config — typescript-eslint,
+  // four plugins, the TypeScript import resolver — would otherwise be billed to whichever case runs
+  // first and blow the default 5s test timeout on a loaded CI runner. The server project allows 30s
+  // for hooks, so pay the cold start here.
+  beforeAll(async () => {
+    await boundaryMessages('export {};', 'web/src/harness/HarnessTab.tsx');
+  });
+
   it('rejects an import from a sibling feature', async () => {
     const messages = await boundaryMessages(
       "import { AgentTabBody } from '../agent-tabs/AgentTabBody'; void AgentTabBody;",
