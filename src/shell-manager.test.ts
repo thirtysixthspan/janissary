@@ -250,4 +250,42 @@ describe('ShellManager — promotion to a terminal', () => {
     completeCommand('');
     expect(learnedCommands().has('othertui')).toBe(false);
   });
+
+  it('streams post-promotion chunks to the bus as deltas in order', async () => {
+    shellManager.run(label, 'mytui');
+    await vi.waitFor(() => { expect(executeShellCmdMock).toHaveBeenCalledTimes(1); });
+    streamOutput(['starting', `${ESC}[?1049h`]);
+    expect(ptyEvents).toEqual([{ type: 'data', id: 'pty1', data: `starting${ESC}[?1049h` }]);
+
+    streamOutput([`starting${ESC}[?1049hframe one`, 'frame two']);
+
+    expect(ptyEvents).toEqual([
+      { type: 'data', id: 'pty1', data: `starting${ESC}[?1049h` },
+      { type: 'data', id: 'pty1', data: 'frame one' },
+      { type: 'data', id: 'pty1', data: 'frame two' },
+    ]);
+  });
+
+  it('emits no PTY data before the command is promoted', async () => {
+    shellManager.run(label, 'sudo -S true');
+    await vi.waitFor(() => { expect(executeShellCmdMock).toHaveBeenCalledTimes(1); });
+    streamOutput(['Password:', 'Password:prompt ack']);
+    expect(ptyEvents).toEqual([]);
+  });
+
+  it('streams deltas after a manual promotion too', async () => {
+    shellManager.run(label, 'sudo -S true');
+    await vi.waitFor(() => { expect(executeShellCmdMock).toHaveBeenCalledTimes(1); });
+    streamOutput(['Password:']);
+    shellManager.promoteRunning(label);
+    expect(ptyEvents).toEqual([{ type: 'data', id: 'pty1', data: 'Password:' }]);
+
+    streamOutput(['Password:prompt ack', 'done']);
+
+    expect(ptyEvents).toEqual([
+      { type: 'data', id: 'pty1', data: 'Password:' },
+      { type: 'data', id: 'pty1', data: 'prompt ack' },
+      { type: 'data', id: 'pty1', data: 'done' },
+    ]);
+  });
 });

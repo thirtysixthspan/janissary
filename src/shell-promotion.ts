@@ -34,6 +34,9 @@ export function createShellPromotion(
 ): ShellPromotion {
   let promoted = false;
   let latest = '';
+  // How much of `latest` is already on the wire once the takeover replay has been sent: deltas
+  // after promotion are the suffix beyond this offset, so nothing pre-promotion is re-sent.
+  let emitted = 0;
 
   // `learn` separates the two ways a takeover starts: detection teaches the learned list, a user
   // forcing one with the button or chord does not — forcing a terminal is often a one-off intent.
@@ -44,6 +47,7 @@ export function createShellPromotion(
     const tab = managers.tab.tabs.find((t) => t.label === label);
     if (tab) tab.activePty = ptyId;
     const replay = latest.length > REPLAY_MAX_BYTES ? latest.slice(-REPLAY_MAX_BYTES) : latest;
+    emitted = latest.length;
     if (replay) messageBus.emit('pty', { type: 'data', id: ptyId, data: replay });
     managers.tab.markUnread(label);
     if (learn) recordLearnedCommand(command);
@@ -53,8 +57,16 @@ export function createShellPromotion(
   return {
     observe: (output) => {
       latest = output;
-      if (!detect || promoted) return;
-      if (showsTerminalTakeover(output)) takeOver(true);
+      if (!promoted) {
+        if (!detect) return;
+        if (showsTerminalTakeover(output)) takeOver(true);
+        return;
+      }
+      const delta = output.slice(emitted);
+      if (!delta) return;
+      emitted = output.length;
+      const ptyId = ptyIdOf();
+      if (ptyId) messageBus.emit('pty', { type: 'data', id: ptyId, data: delta });
     },
     promote: () => takeOver(false),
     isPromoted: () => promoted,
