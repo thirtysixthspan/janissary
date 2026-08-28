@@ -29,6 +29,23 @@ export function spawnShell(
   return shell;
 }
 
+// What is written to a shell to run one command and mark the end of its output.
+//
+// It is deliberately a *single logical line*: a brace group the shell has to read all the way to its
+// closing `}` — and past the `; echo` that follows on the same line — before it can run anything.
+// Written as two lines instead, the delimiter's `echo` would still be sitting unread in the shell's
+// input when the command starts, and a shell hands that input straight to the command it runs. A
+// command that reads its own stdin — a password prompt, a `read`, a REPL, anything promoted to a
+// terminal — then consumes the delimiter as its own input, so the delimiter never arrives and the
+// command never ends.
+//
+// The group runs in the current shell, so `cd`, variable assignments, and exit status are unchanged.
+// The leading `:` guards the empty and comment-only cases, which would otherwise make the group a
+// syntax error and take the delimiter's `echo` down with it.
+export function shellCommandInput(command: string, delimiter: string): string {
+  return `{ :; ${command}\n} 2>&1; echo "${delimiter}"\n`;
+}
+
 export function executeShellCmd(
   shell: ShellProcess,
   command: string,
@@ -58,7 +75,7 @@ export function executeShellCmd(
 
   shell.stdout!.on('data', onChunk);
   shell.stderr!.on('data', onChunk);
-  if (shell.stdin?.writable) shell.stdin.write(`${command} 2>&1\necho "${prompt}"\n`);
+  if (shell.stdin?.writable) shell.stdin.write(shellCommandInput(command, prompt));
 }
 
 export function queryShellPwd(

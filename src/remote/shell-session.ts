@@ -7,8 +7,8 @@ import type { RemoteChannel } from './channel.js';
  * already consume. No second frame family is needed for it: spawning a program, writing to its
  * stdin, streaming its output, and reporting its exit is exactly what the process frames do.
  *
- * Two facts keep this an adapter rather than a shim. `executeShellCmd` appends `2>&1` to every
- * command, so stderr is merged *by the remote shell* and the protocol never has to separate streams
+ * Two facts keep this an adapter rather than a shim. `executeShellCmd` runs every command inside a
+ * `2>&1` group, so stderr is merged *by the remote shell* and the protocol never has to separate streams
  * or carry an exit code — `stderr` here is a `PassThrough` that nothing is ever routed to. And the
  * members actually touched are a tiny subset: `stdin.writable`/`stdin.write`, `stdout`/`stderr` as
  * `'data'` emitters of utf8 strings, and `kill()`.

@@ -37,7 +37,7 @@ vi.mock('./sandbox/index.js', () => ({
   sandboxSpawn: vi.fn((_options, command, args, env) => ({ command, args, env })),
 }));
 
-import { spawnShell, executeShellCmd, queryShellPwd } from './shell.js';
+import { spawnShell, executeShellCmd, queryShellPwd, shellCommandInput } from './shell.js';
 import { shellStartupArgs } from './shell-startup.js';
 
 beforeEach(() => {
@@ -81,6 +81,29 @@ describe('spawnShell', () => {
   });
 });
 
+describe('shellCommandInput', () => {
+  it('leaves nothing after the command for the command itself to read', () => {
+    const input = shellCommandInput('read -r LINE', '__JS_END_1_1000__');
+
+    const lines = input.split('\n');
+    expect(lines[0]).toBe('{ :; read -r LINE');
+    expect(lines[1]).toBe('} 2>&1; echo "__JS_END_1_1000__"');
+    expect(lines[2]).toBe('');
+  });
+
+  it('still ends in the delimiter when the command is empty', () => {
+    const input = shellCommandInput('', '__JS_END_1_1000__');
+
+    expect(input).toBe('{ :; \n} 2>&1; echo "__JS_END_1_1000__"\n');
+  });
+
+  it('still ends in the delimiter when the command is only a comment', () => {
+    const input = shellCommandInput('# nothing to do', '__JS_END_1_1000__');
+
+    expect(input).toBe('{ :; # nothing to do\n} 2>&1; echo "__JS_END_1_1000__"\n');
+  });
+});
+
 describe('executeShellCmd', () => {
   it('calls onProgress with partial output', () => {
     const shell = mockChildProcess();
@@ -115,7 +138,7 @@ describe('executeShellCmd', () => {
     executeShellCmd(shell, 'ls -la', 2, onProgress, onComplete);
 
     const writeArg = (shell.stdin.write as ReturnType<typeof vi.fn>).mock.calls[0][0] as string;
-    expect(writeArg).toMatch(/^ls -la 2>&1\n/);
+    expect(writeArg).toMatch(/^\{ :; ls -la\n/);
     expect(writeArg).toContain('__JS_END_2_');
   });
 
