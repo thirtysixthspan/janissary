@@ -1,21 +1,22 @@
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { ScheduleLaunchView } from '@shared/protocol';
-import type { JanusClient } from './ws';
 import { ScheduleDialog, resetScheduleDialogMemory } from './ScheduleDialog';
 
-const view: ScheduleLaunchView = { targets: ['janus', 'claude'], active: 'janus' };
+const view = { targets: ['janus', 'claude'], active: 'janus' };
 
-function makeClient() {
-  const send = vi.fn();
-  return { client: { send } as unknown as JanusClient, send };
-}
-
-function renderDialog(customView: ScheduleLaunchView = view) {
-  const { client, send } = makeClient();
-  const utils = render(<ScheduleDialog view={customView} client={client} />);
-  return { ...utils, send };
+function renderDialog(customView: { targets: string[]; active: string } = view) {
+  const onSubmit = vi.fn();
+  const onCancel = vi.fn();
+  const utils = render(
+    <ScheduleDialog
+      targets={customView.targets}
+      activeTarget={customView.active}
+      onSubmit={onSubmit}
+      onCancel={onCancel}
+    />,
+  );
+  return { ...utils, onSubmit, onCancel };
 }
 
 beforeEach(() => resetScheduleDialogMemory());
@@ -61,37 +62,45 @@ describe('ScheduleDialog', () => {
   });
 
   it('Schedule submits the composed command and closes the dialog', () => {
-    const { getByText, getByLabelText, send } = renderDialog();
+    const { getByText, getByLabelText, onSubmit, onCancel } = renderDialog();
     fireEvent.change(getByLabelText('Name'), { target: { value: 'fetch' } });
     fireEvent.change(getByLabelText('Command'), { target: { value: 'echo hi' } });
     fireEvent.change(getByLabelText(/Time/), { target: { value: '3pm' } });
     fireEvent.click(getByText('Schedule'));
-    expect(send).toHaveBeenNthCalledWith(1, { method: 'command', params: { text: 'schedule fetch at 3pm echo hi' } });
-    expect(send).toHaveBeenNthCalledWith(2, { method: 'closeScheduleLaunch', params: {} });
+    expect(onSubmit).toHaveBeenCalledWith('schedule fetch at 3pm echo hi');
+    expect(onCancel).toHaveBeenCalledOnce();
+    expect(onSubmit.mock.invocationCallOrder[0]).toBeLessThan(onCancel.mock.invocationCallOrder[0]);
   });
 
   it('assembles an `in TAB` clause when a non-active target is chosen', () => {
-    const { getByText, getByLabelText, send } = renderDialog();
+    const { getByText, getByLabelText, onSubmit } = renderDialog();
     fireEvent.change(getByLabelText('Name'), { target: { value: 'fetch' } });
     fireEvent.change(getByLabelText('Command'), { target: { value: 'echo hi' } });
     fireEvent.change(getByLabelText(/Time/), { target: { value: '3pm' } });
     fireEvent.change(getByLabelText(/Target tab/), { target: { value: 'claude' } });
     fireEvent.click(getByText('Schedule'));
-    expect(send).toHaveBeenNthCalledWith(1, { method: 'command', params: { text: 'schedule fetch in claude at 3pm echo hi' } });
+    expect(onSubmit).toHaveBeenCalledWith('schedule fetch in claude at 3pm echo hi');
   });
 
   it('Cancel closes the dialog without submitting a command', () => {
-    const { getByText, send } = renderDialog();
+    const { getByText, onSubmit, onCancel } = renderDialog();
     fireEvent.click(getByText('Cancel'));
-    expect(send).toHaveBeenCalledTimes(1);
-    expect(send).toHaveBeenCalledWith({ method: 'closeScheduleLaunch', params: {} });
+    expect(onCancel).toHaveBeenCalledOnce();
+    expect(onSubmit).not.toHaveBeenCalled();
   });
 
   it('Escape closes the dialog without submitting a command', () => {
-    const { send } = renderDialog();
+    const { onSubmit, onCancel } = renderDialog();
     fireEvent.keyDown(document, { key: 'Escape' });
-    expect(send).toHaveBeenCalledWith({ method: 'closeScheduleLaunch', params: {} });
-    expect(send).not.toHaveBeenCalledWith(expect.objectContaining({ method: 'command' }));
+    expect(onCancel).toHaveBeenCalledOnce();
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it('keeps the dialog open when the user clicks outside it', () => {
+    const { onSubmit, onCancel } = renderDialog();
+    fireEvent.click(document.body);
+    expect(onCancel).not.toHaveBeenCalled();
+    expect(onSubmit).not.toHaveBeenCalled();
   });
 
   it('restores the previous selections when reopened within the run', () => {
