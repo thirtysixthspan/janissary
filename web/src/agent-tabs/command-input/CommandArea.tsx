@@ -1,8 +1,8 @@
 import React from 'react';
 import type { BufferLine } from '@shared/protocol';
 import { CommandInput, type CommandInputProperties } from './CommandInput';
-import { SearchBar } from '../SearchBar';
-import type { useTranscriptSearch } from '../useTranscriptSearch';
+import { SearchBar } from '../../SearchBar';
+import type { useTranscriptSearch } from '../../useTranscriptSearch';
 
 type Properties = {
   search: ReturnType<typeof useTranscriptSearch>;

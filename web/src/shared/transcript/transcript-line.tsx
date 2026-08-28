@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { viewCaptureIcon, promptIcon, collapsedIcon } from '../icons';
+import { viewCaptureIcon, promptIcon, collapsedIcon } from '../../icons';
 import type { BufferLine } from '@shared/protocol';
 import { matchRange } from '@shared/search-matches';
 import { renderMarkdown } from './markdown';

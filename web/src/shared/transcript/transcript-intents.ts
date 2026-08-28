@@ -1,4 +1,4 @@
-import type { JanusClient } from '../ws';
+import type { JanusClient } from '../../ws';
 
 // What a transcript line can ask the app to do. The renderers take these callbacks instead of the
 // protocol client, so they stay presentational and the command strings below are the only place

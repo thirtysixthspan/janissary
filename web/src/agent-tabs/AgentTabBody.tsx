@@ -1,12 +1,12 @@
 import React from 'react';
 import type { TabView, RouteChooserView, BufferLine } from '@shared/protocol';
 import type { JanusClient } from '../ws';
-import { Transcript } from '../transcript/Transcript';
+import { Transcript } from '../shared/transcript/Transcript';
 import { StatusPanels } from '../StatusPanels';
 import { PickerOverlays } from '../PickerOverlays';
-import { CommandArea } from '../command-input/CommandArea';
+import { CommandArea } from './command-input/CommandArea';
 import type { CommandInputDropHandle } from '../drop-handles';
-import { AgentTabMeta } from './AgentTabMeta';
+import { AgentTabMeta } from '../shared/AgentTabMeta';
 import type { useViewSearchState } from '../useViewSearchState';
 import type { VisibleTaskRow } from '../task-picker-keys';
 import type { VisibleProfileRow } from '../profile-picker-keys';

@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import type { BufferLine, TabView } from '@shared/protocol';
 import { resolveSearchInterception } from './command-interceptions';
-import type { useTranscriptSearch } from '../useTranscriptSearch';
+import type { useTranscriptSearch } from '../../useTranscriptSearch';
 
 type Params = {
   canSearch: boolean;

@@ -3,10 +3,10 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import type { BufferLine } from '@shared/protocol';
-import type { JanusClient } from '../ws';
+import type { JanusClient } from '../../ws';
 import { Transcript } from './Transcript';
 
-vi.mock('../useXterm', () => ({
+vi.mock('../../useXterm', () => ({
   useXterm: vi.fn(() => () => {}),
 }));
 
