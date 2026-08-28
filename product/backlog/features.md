@@ -2,8 +2,6 @@
 
 ## ready
 
-* add ACP support to remote agents.
-
 * define how new agent and file navigator buttons should work on remote machines.
 
 ## development
