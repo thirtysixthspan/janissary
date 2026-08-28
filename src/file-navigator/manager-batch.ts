@@ -9,6 +9,14 @@ type BatchState = {
   redoStack: HistoryStep[];
 };
 
+function publicResult(result: BatchResult): BatchResult {
+  return {
+    total: result.total,
+    failedPaths: result.failedPaths,
+    ...(result.failureReasons && { failureReasons: result.failureReasons }),
+  };
+}
+
 export function moveMany(
   state: BatchState,
   sourcePaths: string[],
@@ -23,7 +31,7 @@ export function moveMany(
     state.redoStack = [];
   }
   if (result.mutated) rebuild();
-  return { total: result.total, failedPaths: result.failedPaths };
+  return publicResult(result);
 }
 
 export function deleteMany(
@@ -33,7 +41,7 @@ export function deleteMany(
 ): BatchResult {
   const result = deleteBatch(state.root, sourcePaths);
   if (result.mutated) rebuild();
-  return { total: result.total, failedPaths: result.failedPaths };
+  return publicResult(result);
 }
 
 export function pasteMany(
@@ -51,5 +59,5 @@ export function pasteMany(
     state.redoStack = [];
   }
   if (result.mutated) rebuild();
-  return { total: result.total, failedPaths: result.failedPaths };
+  return publicResult(result);
 }

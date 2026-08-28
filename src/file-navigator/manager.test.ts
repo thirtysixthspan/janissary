@@ -736,6 +736,23 @@ describe('FileNavigatorManager', () => {
     expect(existsSync(path.join(root, 'dest', 'b.txt'))).toBe(true);
   });
 
+  it('keeps a vanished source reason through grouped undo bookkeeping', () => {
+    mkdirSync(path.join(root, 'dest'));
+    writeFileSync(path.join(root, 'a.txt'), 'a');
+    writeFileSync(path.join(root, 'b.txt'), 'b');
+    const manager = run();
+    manager.open('files', 'janus');
+    const label = tabs.find((tab) => tab.label.startsWith('navigator'))!.label;
+    manager.moveMany(label, ['a.txt', 'b.txt'], 'dest');
+    rmSync(path.join(root, 'dest', 'b.txt'));
+
+    const result = manager.undo(label);
+
+    expect(result).toMatchObject({ total: 2, failedPaths: ['dest/b.txt'] });
+    expect(result.failureReasons?.['dest/b.txt']).toContain('no longer exists');
+    expect(existsSync(path.join(root, 'a.txt'))).toBe(true);
+  });
+
   it('preflights all grouped undo conflicts before moving anything', () => {
     mkdirSync(path.join(root, 'dest'));
     writeFileSync(path.join(root, 'a.txt'), 'a');
@@ -788,6 +805,24 @@ describe('FileNavigatorManager', () => {
     expect(manager.undo(label)).toEqual({ total: 1, failedPaths: [] });
     expect(existsSync(path.join(root, 'dest', 'a.txt'))).toBe(false);
     expect(existsSync(path.join(root, 'a.txt'))).toBe(true);
+  });
+
+  it('keeps a vanished copy destination reason through undo bookkeeping', () => {
+    mkdirSync(path.join(root, 'dest'));
+    writeFileSync(path.join(root, 'a.txt'), 'a');
+    writeFileSync(path.join(root, 'b.txt'), 'b');
+    const manager = run();
+    manager.open('files', 'janus');
+    const label = tabs.find((tab) => tab.label.startsWith('navigator'))!.label;
+    manager.paste(label, [path.join(root, 'a.txt'), path.join(root, 'b.txt')], 'dest', 'copy');
+    const missing = path.join(root, 'dest', 'b.txt');
+    rmSync(missing);
+
+    const result = manager.undo(label);
+
+    expect(result).toMatchObject({ total: 2, failedPaths: [missing] });
+    expect(result.failureReasons?.[missing]).toContain('no longer exists');
+    expect(existsSync(path.join(root, 'dest', 'a.txt'))).toBe(false);
   });
 
   it('paste (cut) moves the item and undo restores it, including across two different roots', () => {

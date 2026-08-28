@@ -31,12 +31,14 @@ describe('file navigator batches', () => {
     const directory = root();
     mkdirSync(path.join(directory, 'dest'));
     const result = moveBatch(directory, ['', '.', '..', '/tmp/a', '../a', 'missing'], 'dest');
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       total: 6,
       failedPaths: ['', '.', '..', '/tmp/a', '../a', 'missing'],
       moved: [],
       mutated: false,
     });
+    expect('failureReasons' in result && result.failureReasons?.missing)
+      .toContain('no longer exists');
   });
 
   it('removes same-parent no-ops from the total', () => {
@@ -115,11 +117,13 @@ describe('file navigator batches', () => {
     const directory = root();
     writeFileSync(path.join(directory, 'a.txt'), 'a');
     writeFileSync(path.join(directory, 'b.txt'), 'b');
-    expect(deleteBatch(directory, ['missing-a', 'a.txt', 'missing-b', 'b.txt'])).toEqual({
+    const result = deleteBatch(directory, ['missing-a', 'a.txt', 'missing-b', 'b.txt']);
+    expect(result).toMatchObject({
       total: 4,
       failedPaths: ['missing-a', 'missing-b'],
       mutated: true,
     });
+    expect(result.failureReasons?.['missing-a']).toContain('no longer exists');
     expect(existsSync(path.join(directory, 'a.txt'))).toBe(false);
     expect(existsSync(path.join(directory, 'b.txt'))).toBe(false);
   });

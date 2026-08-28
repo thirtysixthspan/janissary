@@ -1,6 +1,7 @@
-import { lstatSync, renameSync, rmSync } from 'node:fs';
+import { lstatSync } from 'node:fs';
 import path from 'node:path';
-import { copyItem, moveReplacingDestination } from './filesystem.js';
+import { copyItem, moveReplacingDestination, removePath, renamePath } from './filesystem.js';
+import { failureReasons, type FileOperationResult } from './file-operation-result.js';
 import { parentPath } from './index.js';
 import type { PastePair } from './paste.js';
 import type { BulkConflictPolicy, UndoRedoResult } from '../protocol.js';
@@ -34,27 +35,26 @@ function replayPaths(root: string, entry: MoveEntry, direction: 'undo' | 'redo')
   return { sourceRel, destinationPath, source, destination };
 }
 
-function tryMove(source: string, destination: string, overwrite: boolean): boolean {
+function tryMove(source: string, destination: string, overwrite: boolean): FileOperationResult {
   if (overwrite) return moveReplacingDestination(source, destination);
-  try {
-    renameSync(source, destination);
-    return true;
-  } catch {
-    return false;
-  }
+  return renamePath(source, destination);
 }
 
 function performMoveReplay(
   root: string, ordered: MoveEntry[], direction: 'undo' | 'redo', policy: BulkConflictPolicy | undefined,
   conflictSources: Set<string>,
-): { successful: Set<MoveEntry>; failed: Set<MoveEntry> } {
+): { successful: Set<MoveEntry>; failed: Map<MoveEntry, string> } {
   const attempted = ordered.filter((entry) =>
     policy !== 'skip-conflicts' || !conflictSources.has(replayPaths(root, entry, direction).sourceRel));
-  const successful = new Set(attempted.filter((entry) => {
+  const successful = new Set<MoveEntry>();
+  const failed = new Map<MoveEntry, string>();
+  for (const entry of attempted) {
     const replay = replayPaths(root, entry, direction);
-    return tryMove(replay.source, replay.destination, policy === 'overwrite-all');
-  }));
-  return { successful, failed: new Set(attempted.filter((entry) => !successful.has(entry))) };
+    const result = tryMove(replay.source, replay.destination, policy === 'overwrite-all');
+    if (result.ok) successful.add(entry);
+    else failed.set(entry, result.reason);
+  }
+  return { successful, failed };
 }
 
 export function applyStackMove(
@@ -81,19 +81,17 @@ export function applyStackMove(
     toStack.push({ entries: group.entries.filter((entry) => successful.has(entry)) });
     rebuild();
   }
+  const failedPaths = group.entries
+    .filter((entry) => failed.has(entry))
+    .map((entry) => replayPaths(root, entry, direction).sourceRel);
+  const reasons = new Map(group.entries
+    .filter((entry) => failed.has(entry))
+    .map((entry) => [replayPaths(root, entry, direction).sourceRel, failed.get(entry)!]));
   return {
     total: group.entries.length,
-    failedPaths: group.entries.filter((entry) => failed.has(entry)).map((entry) => replayPaths(root, entry, direction).sourceRel),
+    failedPaths,
+    ...failureReasons(reasons),
   };
-}
-
-function removeAbsolute(absolute: string): boolean {
-  try {
-    rmSync(absolute, { recursive: true });
-    return true;
-  } catch {
-    return false;
-  }
 }
 
 // Undoing a copy deletes what it created, so it needs no move-style conflict preflight.
@@ -103,9 +101,10 @@ function undoCopyPaste(
   toStack: HistoryStep[],
   rebuild: () => void,
 ): UndoRedoResult {
-  const failed = new Set<PastePair>();
+  const failed = new Map<PastePair, string>();
   for (const pair of group.pairs) {
-    if (!removeAbsolute(pair.to)) failed.add(pair);
+    const result = removePath(pair.to);
+    if (!result.ok) failed.set(pair, result.reason);
   }
   const successful = group.pairs.filter((pair) => !failed.has(pair));
   if (successful.length > 0) {
@@ -119,10 +118,14 @@ function undoCopyPaste(
 }
 
 // Shared tail of an undo/redo replay: reports how many pairs were replayed and which failed.
-function pasteReplayResult(pairs: PastePair[], failed: Set<PastePair>): UndoRedoResult {
+function pasteReplayResult(pairs: PastePair[], failed: Map<PastePair, string>): UndoRedoResult {
+  const reasons = new Map(pairs
+    .filter((pair) => failed.has(pair))
+    .map((pair) => [pair.to, failed.get(pair)!]));
   return {
     total: pairs.length,
     failedPaths: pairs.filter((pair) => failed.has(pair)).map((pair) => pair.to),
+    ...failureReasons(reasons),
   };
 }
 
@@ -141,17 +144,17 @@ function performPasteReplay(
   isUndo: boolean,
   policy: BulkConflictPolicy | undefined,
   conflictSources: Set<string>,
-): { successful: Set<PastePair>; failed: Set<PastePair> } {
+): { successful: Set<PastePair>; failed: Map<PastePair, string> } {
   const successful = new Set<PastePair>();
-  const failed = new Set<PastePair>();
+  const failed = new Map<PastePair, string>();
   for (const { source, destination, pair } of replay) {
     if (policy === 'skip-conflicts' && conflictSources.has(pair.from)) continue;
     const overwrite = policy === 'overwrite-all';
     const didApply = isCopy && !isUndo
       ? copyItem(source, destination, overwrite)
       : tryMove(source, destination, overwrite);
-    if (didApply) successful.add(pair);
-    else failed.add(pair);
+    if (didApply.ok) successful.add(pair);
+    else failed.set(pair, didApply.reason);
   }
   return { successful, failed };
 }
