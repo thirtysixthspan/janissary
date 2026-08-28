@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+  CLIENT_METHOD_CONTRACTS,
+  clientReplyMode,
   isClientMessage,
   isPluginFailedParams,
   isPluginIntentParams,
@@ -39,6 +41,33 @@ describe('isClientMessage', () => {
     { t: 'rpc', id: 1, method: 'command', params: 'help' },
   ])('rejects an invalid envelope %#', (value) => {
     expect(isClientMessage(value)).toBe(false);
+  });
+
+  it('declares the complete result and deferred reply method sets', () => {
+    const methodsByMode = Object.groupBy(
+      Object.entries(CLIENT_METHOD_CONTRACTS),
+      ([, mode]) => mode,
+    );
+
+    expect(methodsByMode.result?.map(([method]) => method)).toEqual([
+      'complete',
+      'deleteFileNavigatorItems',
+      'editorPersonas',
+      'fileNavigatorOpeners',
+      'fileNavigatorSelectionAction',
+      'moveFileNavigatorItems',
+      'pasteFileNavigatorItems',
+      'redoFileNavigatorItem',
+      'undoFileNavigatorItem',
+    ]);
+    expect(methodsByMode.deferred?.map(([method]) => method)).toEqual([
+      'editorSuggest',
+      'fileNavigatorSearch',
+      'projectFiles',
+      'pluginIntent',
+    ]);
+    expect(clientReplyMode('command')).toBe('ack');
+    expect(clientReplyMode('unknown')).toBeUndefined();
   });
 });
 

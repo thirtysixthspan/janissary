@@ -1,23 +1,38 @@
 import type { Controller } from './controller.js';
 import type { ClientMessage, ServerEvent } from './protocol.js';
-import { handleFileNavigatorMessage } from './message-handler-file-navigator.js';
+import { dispatchFileNavigatorMessage } from './message-handler-file-navigator.js';
 import {
-  isEditorPluginFailedParams, isPluginFailedParams, isPluginIntentParams,
+  clientReplyMode, isEditorPluginFailedParams, isPluginFailedParams, isPluginIntentParams,
 } from './client-message.js';
 
-export function handle(controller: Controller, message: ClientMessage, reply: (event: ServerEvent) => void): void {
+type Reply = (event: ServerEvent) => void;
+type DeferredCallback = (resolve: (value: unknown) => void) => void;
+
+function errorText(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+function isDeferredCallback(value: unknown): value is DeferredCallback {
+  return typeof value === 'function';
+}
+
+async function projectFiles(controller: Controller): Promise<unknown> {
+  try {
+    return await controller.projectFiles();
+  } catch {
+    return controller.projectFilesFallback();
+  }
+}
+
+function dispatch(controller: Controller, message: ClientMessage, send: Reply): unknown {
   switch (message.method) {
-    case 'init': {
-      reply(controller.stateEvent());
-      break;
+    case 'init': { send(controller.stateEvent()); break;
     }
     case 'command': { controller.dispatch(message.params.text); break;
     }
     case 'setActiveTab': { controller.setActiveTab(message.params.index); break;
     }
-    case 'focusTab': {
-      controller.focusTab(message.params.label);
-      break;
+    case 'focusTab': { controller.focusTab(message.params.label); break;
     }
     case 'closeTab': { controller.closeTab(message.params.index); break;
     }
@@ -47,9 +62,7 @@ export function handle(controller: Controller, message: ClientMessage, reply: (e
       controller.answerQuestion(message.params.tab, message.params.id, message.params.answer);
       break;
     }
-    case 'complete': {
-      reply({ t: 'rpc-reply', id: message.id, result: controller.complete(message.params.text, message.params.cursor) });
-      return;
+    case 'complete': { return controller.complete(message.params.text, message.params.cursor);
     }
     case 'resize': { controller.resize(message.params.cols, message.params.rows); break;
     }
@@ -70,41 +83,17 @@ export function handle(controller: Controller, message: ClientMessage, reply: (e
     case 'saveFile': { controller.saveFile(message.params.url, message.params.content); break;
     }
     case 'pluginIntent': {
-      if (!isPluginIntentParams(message.params)) {
-        reply({ t: 'rpc-reply', id: message.id, error: 'Invalid pluginIntent params' });
-        return;
-      }
-      void controller.pluginIntent(
+      if (!isPluginIntentParams(message.params)) throw new Error('Invalid pluginIntent params');
+      return controller.pluginIntent(
         message.params.tab,
         message.params.intent,
         message.params.payload,
-      ).then(
-        (result) => { reply({ t: 'rpc-reply', id: message.id, result }); },
-        (error: unknown) => {
-          reply({
-            t: 'rpc-reply',
-            id: message.id,
-            error: error instanceof Error ? error.message : String(error),
-          });
-        },
       );
-      return;
     }
     case 'pluginFailed': {
-      if (!isPluginFailedParams(message.params)) {
-        reply({ t: 'rpc-reply', id: message.id, error: 'Invalid pluginFailed params' });
-        return;
-      }
-      try {
-        controller.pluginFailed(message.params.tab, message.params.reason);
-        reply({ t: 'rpc-reply', id: message.id, result: 'ok' });
-      } catch (error) {
-        reply({
-          t: 'rpc-reply', id: message.id,
-          error: error instanceof Error ? error.message : String(error),
-        });
-      }
-      return;
+      if (!isPluginFailedParams(message.params)) throw new Error('Invalid pluginFailed params');
+      controller.pluginFailed(message.params.tab, message.params.reason);
+      break;
     }
     case 'editorSync': { controller.syncEditorBuffer(message.params.url, message.params.content); break;
     }
@@ -130,10 +119,9 @@ export function handle(controller: Controller, message: ClientMessage, reply: (e
     case 'runFileNavigatorSelectionAction':
     case 'undoFileNavigatorItem':
     case 'redoFileNavigatorItem': {
-      handleFileNavigatorMessage(controller, message, reply);
-      return;
+      return dispatchFileNavigatorMessage(controller, message);
     }
-      case 'setDock': { controller.setDock(message.params.index, message.params.dock); break;
+    case 'setDock': { controller.setDock(message.params.index, message.params.dock); break;
     }
     case 'openFileNavigatorFor': { controller.openFileNavigatorFor(message.params.label); break;
     }
@@ -145,53 +133,55 @@ export function handle(controller: Controller, message: ClientMessage, reply: (e
     }
     case 'openAcpTranscript': { controller.openAcpTranscript(message.params.acpRef); break;
     }
-    // Deferred reply: the listing is async (never blocks the event loop), so the reply fires from
-    // the `.then()`/`.catch()` below, not inline — see project-files.ts and protocol.ts.
     case 'projectFiles': {
-      void (async () => {
-        try {
-          reply({ t: 'rpc-reply', id: message.id, result: await controller.projectFiles() });
-        } catch {
-          reply({ t: 'rpc-reply', id: message.id, result: controller.projectFilesFallback() });
-        }
-      })();
-      return;
+      return projectFiles(controller);
     }
-    case 'editorPersonas': {
-      reply({ t: 'rpc-reply', id: message.id, result: { names: controller.editorPersonas() } });
-      return;
+    case 'editorPersonas': { return { names: controller.editorPersonas() };
     }
-    // Deferred reply: the query spawns and awaits a one-shot ACP session, so the reply fires from
-    // editorSuggest's callback, not inline.
     case 'editorSuggest': {
-      controller.editorSuggest(message.params, (result) => {
-        reply({ t: 'rpc-reply', id: message.id, result });
-      });
-      return;
+      return (resolve: (value: unknown) => void) => {
+        controller.editorSuggest(message.params, resolve);
+      };
     }
-    // Fire-and-forget: the connections window relies on the next `state` broadcast to drop the
-    // closed row, not on this reply, so `out` is a no-op (an editor tab has no transcript).
     case 'closeEditorConnection': {
       controller.closeEditorConnection(message.params.url, message.params.persona);
-      reply({ t: 'rpc-reply', id: message.id, result: 'ok' });
-      return;
+      break;
     }
-    // Fire-and-forget: the client has already stopped resolving the plugin's chords, so it needs
-    // nothing back — this only posts the notification line the failure would otherwise never get.
     case 'editorPluginFailed': {
       if (!isEditorPluginFailedParams(message.params)) {
-        reply({ t: 'rpc-reply', id: message.id, error: 'Invalid editorPluginFailed params' });
-        return;
+        throw new Error('Invalid editorPluginFailed params');
       }
       controller.editorPluginFailed(
         message.params.url, message.params.plugin, message.params.reason,
       );
-      reply({ t: 'rpc-reply', id: message.id, result: 'ok' });
-      return;
-    }
-    default: {
-      return;
+      break;
     }
   }
-  reply({ t: 'rpc-reply', id: message.id, result: 'ok' });
+}
+
+export function handle(controller: Controller, message: ClientMessage, reply: Reply): void {
+  const mode = clientReplyMode(message.method);
+  if (!mode) return;
+  try {
+    const result = dispatch(controller, message, reply);
+    if (mode === 'deferred') {
+      const resolve = (value: unknown) => {
+        reply({ t: 'rpc-reply', id: message.id, result: value });
+      };
+      if (isDeferredCallback(result)) result(resolve);
+      else {
+        void Promise.resolve(result).then(resolve, (error: unknown) => {
+          reply({ t: 'rpc-reply', id: message.id, error: errorText(error) });
+        });
+      }
+      return;
+    }
+    reply({
+      t: 'rpc-reply',
+      id: message.id,
+      result: mode === 'ack' ? 'ok' : result,
+    });
+  } catch (error) {
+    reply({ t: 'rpc-reply', id: message.id, error: errorText(error) });
+  }
 }

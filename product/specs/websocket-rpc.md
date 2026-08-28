@@ -8,13 +8,19 @@ When the browser restores the app from its back/forward cache, the previously re
 
 Client requests are JSON objects with `t: "rpc"`, a numeric `id`, a recognized `method`, and an object-valued `params`. Methods with no arguments still send `params: {}`. Accepted requests are dispatched once, and replies that a method produces carry the request's `id`.
 
+### Reply contracts
+
+Every recognized method has one reply mode. Acknowledgement methods reply with `"ok"` after their action runs. Result methods reply with the value their action produces. Deferred methods reply when their promise or callback settles. The dispatcher sends that one declared reply, so a method never receives both a result and a trailing acknowledgement.
+
+An action that throws or a deferred action that rejects replies with the request id and the error message. A method may deliberately replace a failure with a documented fallback result, as project-file and file-navigator searches do.
+
 ### Invalid frames
 
 The server silently drops malformed JSON and JSON values that are not valid RPC envelopes. This includes unknown methods and requests with missing, null, array, or primitive `params`. Dropped frames are neither dispatched nor acknowledged, and they do not close the WebSocket; a later valid request on the same connection is handled normally.
 
 ### Dispatch errors
 
-If dispatching an accepted envelope throws synchronously, the server sends an `rpc-reply` with the request's `id` and the error message. Individual methods may also own a deferred or specialized reply instead of the generic `ok` result.
+If dispatching an accepted envelope fails, the server sends an `rpc-reply` with the request's `id` and the error message. This applies to synchronous failures and rejected deferred work.
 
 ### Tab-plugin methods
 
