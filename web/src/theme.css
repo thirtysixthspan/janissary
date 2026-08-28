@@ -317,6 +317,19 @@ html, body, #root {
 .line.output .file-link { color: var(--accent); cursor: pointer; text-decoration: underline; }
 .line.output .file-link:hover { color: var(--fg); }
 .line.output.running { color: var(--running); }
+.open-in-terminal {
+  margin-left: 0.75em;
+  padding: 0 0.4em;
+  border: 1px solid var(--running);
+  border-radius: 3px;
+  background: transparent;
+  color: var(--running);
+  font: inherit;
+  font-size: 0.85em;
+  cursor: pointer;
+  opacity: 0.7;
+}
+.open-in-terminal:hover { opacity: 1; }
 /* ANSI SGR colors from shell command output (16-color palette, matching common terminal defaults).
    ansi-fg-0/8 use the theme's own muted tones instead of literal black/gray for readability
    against this app's fixed dark background. */

@@ -51,6 +51,7 @@ export function decodeConfig(value: unknown, defaults: Config): Config {
     tabNameMaxLength: numberValue(record.tabNameMaxLength, defaults.tabNameMaxLength),
     activeTabNameMaxLength: numberValue(record.activeTabNameMaxLength, defaults.activeTabNameMaxLength),
     sandboxWorkspaces: booleanValue(record.sandboxWorkspaces, defaults.sandboxWorkspaces),
+    interactiveShellDetection: booleanValue(record.interactiveShellDetection, defaults.interactiveShellDetection),
     syntaxTheme: stringValue(record.syntaxTheme, defaults.syntaxTheme),
     theme: stringValue(record.theme, defaults.theme),
     notifications: defaultNotifications && notifications(record.notifications, defaultNotifications),

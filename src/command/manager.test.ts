@@ -168,6 +168,35 @@ describe('CommandManager shell --pty flag', () => {
   });
 });
 
+describe('CommandManager interactive-program name list', () => {
+  it('sends a listed program straight to a terminal, never to the shell that would detect it', () => {
+    const { managers } = makeManagers();
+
+    managers.command.dispatch('shell htop');
+
+    expect(managers.pty.openInlinePty).toHaveBeenCalledWith('janus', 'htop', 'htop');
+    expect(managers.shell.run).not.toHaveBeenCalled();
+  });
+
+  it('still looks past a wrapper to find the listed program', () => {
+    const { managers } = makeManagers();
+
+    managers.command.dispatch('shell sudo htop');
+
+    expect(managers.pty.openInlinePty).toHaveBeenCalledWith('janus', 'sudo htop', 'sudo');
+    expect(managers.shell.run).not.toHaveBeenCalled();
+  });
+
+  it('sends an unlisted command to the shell, where detection can watch it', () => {
+    const { managers } = makeManagers();
+
+    managers.command.dispatch('shell mytui');
+
+    expect(managers.shell.run).toHaveBeenCalledWith('janus', 'mytui', { detect: undefined });
+    expect(managers.pty.openInlinePty).not.toHaveBeenCalled();
+  });
+});
+
 describe('CommandManager bare-harness launch dialog', () => {
   it('opens the launch dialog for bare `harness` and records no transcript line', () => {
     const { managers } = makeManagers();

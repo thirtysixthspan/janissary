@@ -6,6 +6,8 @@
 - **request** — the recipient executes the command through the full dispatch pipeline (app commands, shell, ACP, browser, probabilistic routing — everything the user could type), displaying it in the recipient's transcript as if they entered it themselves, and returns the captured output to the sender as a **response** message. A response renders as a `● response from <responder>` header followed by the output on its own lines, every line bordered in the responder's color, and is appended to the sender's `context[]`.
 - **command** — shown in the recipient's transcript as `● <from>: sent command: <text>` (dot and left border in the sender's color), then dispatched through the full command pipeline (same as `request`, but no response is sent back to the sender).
 
+A messaged command is never moved into a terminal: an interactive program is refused outright with `Cannot run interactive command remotely: <cmd>`, and a program that would otherwise be detected mid-run (see `shell.md`) simply runs without taking over the tab. Both follow from the same requirement — the sender is owed captured text, and a command that took the screen has none to give.
+
 On the sender's side, the sent message is entered into the sender's transcript as `→ <to> (<kind>): <text>`, so the sender has a record of what they sent.
 
 `broadcast <all|agent[,agent...]> <info|request|command> <text>` sends the same message to multiple agents at once. `all` (or `*`) targets every other agent; a comma-separated list targets a specific set. The sender is always excluded, and the result reports which recipients were reached and any unknown names. The kind accepts the same `i`/`r`/`c` aliases as `msg`.

@@ -31,6 +31,7 @@ export class Controller implements TabControllerAdapter, MonitorControllerAdapte
   declare editQueuedCommand: TabControllerAdapter['editQueuedCommand'];
   declare deleteQueuedCommand: TabControllerAdapter['deleteQueuedCommand'];
   declare toggleCollapse: TabControllerAdapter['toggleCollapse'];
+  declare promoteToTerminal: TabControllerAdapter['promoteToTerminal'];
   declare ptyInput: TabControllerAdapter['ptyInput'];
   declare ptyResize: TabControllerAdapter['ptyResize'];
   declare ptyKill: TabControllerAdapter['ptyKill'];

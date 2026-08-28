@@ -6,7 +6,7 @@ import type { TranscriptIntents } from './transcript-intents';
 import { fileLineSegments, isFileLineLink, linkifyMarkdown, renderFileLinkSegments } from './file-link';
 
 function fakeIntents() {
-  return { onOpenFile: vi.fn(), onEditFile: vi.fn(), onFocusTab: vi.fn() } satisfies TranscriptIntents;
+  return { onOpenFile: vi.fn(), onEditFile: vi.fn(), onFocusTab: vi.fn(), onPromoteToTerminal: vi.fn() } satisfies TranscriptIntents;
 }
 
 describe('fileLineSegments', () => {

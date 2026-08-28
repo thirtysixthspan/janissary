@@ -1,4 +1,5 @@
 import { spawnPty, type PtySession } from './pty.js';
+import type { SandboxOptions } from './sandbox/index.js';
 import { messageBus } from './bus.js';
 import { getProjectTokens } from './project-tokens.js';
 import { createRemotePtySession, type RemotePtyOptions } from './remote/pty-session.js';
@@ -46,11 +47,12 @@ export class PseudoterminalManager {
   spawnTransport(
     label: string, program: string, command: string, cwd: string,
     handlers: { onData: (data: string) => void; onExit: () => void },
+    options?: { sandbox?: SandboxOptions; shellArgs?: string[] },
   ): PtySession {
     const session = spawnPty(program, command, cwd, {
       onData: (_id, data) => handlers.onData(data),
       onExit: (id, exitCode) => { this.handleExit(id, exitCode); handlers.onExit(); },
-    }, this.cols, this.rows);
+    }, this.cols, this.rows, options?.sandbox, undefined, options?.shellArgs);
     this.ptys.set(session.id, { session, tabLabel: label, transport: true });
     return session;
   }

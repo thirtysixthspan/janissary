@@ -274,6 +274,31 @@ describe('useWindowKeys', () => {
     expect(sendMock).toHaveBeenCalledWith({ method: 'toggleCollapse', params: {} });
   });
 
+  it('Ctrl+O asks the server to open the running command in a terminal', () => {
+    const sendMock = vi.fn();
+    const client = { send: sendMock } as never;
+    function C() {
+      const stateRef = useRef({
+        pickerOpen: false, pickerIdx: 0, recent: [], route: null, routeIdx: 0, canSearch: true, searchOpen: false,
+        themePickerOpen: false, themePickerIdx: 0, navOpen: false, navQuery: '', navIdx: 0, navTabs: [],
+        queueOpen: false, queueIdx: 0, queueItems: [],
+      });
+      const cb = {
+        setRouteIndex: vi.fn(), chooseRoute: vi.fn(), runCommand: vi.fn(), setPickerIndex: vi.fn(), setPickerOpen: vi.fn(),
+        openPicker: vi.fn(), openSearch: vi.fn(), setThemePickerIndex: vi.fn(), setThemePickerOpen: vi.fn(), pickTheme: vi.fn(),
+        setNavIndex: vi.fn(), setNavQuery: vi.fn(), selectNavTab: vi.fn(), setNavOpen: vi.fn(), openTabNav: vi.fn(),
+        setQueueIndex: vi.fn(), setQueueOpen: vi.fn(), openQueue: vi.fn(),
+      };
+      const cbRef = useRef(cb);
+      cbRef.current = cb;
+      useWindowKeys(client, stateRef as never, cbRef as never, vi.fn(() => false), vi.fn());
+      return null;
+    }
+    render(React.createElement(C));
+    dispatchKey('o', { ctrlKey: true });
+    expect(sendMock).toHaveBeenCalledWith({ method: 'promoteToTerminal', params: {} });
+  });
+
   it('routes keys to the queue popup when open', () => {
     const setQueueIndex = vi.fn();
     render(React.createElement(TestComponent, { queueOpen: true, callbacks: { setQueueIndex } }));

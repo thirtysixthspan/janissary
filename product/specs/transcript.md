@@ -62,6 +62,10 @@ suppressed. A collapsed agent tool-steps summary line is a separate case: a sing
 `Ctrl+T`) expands it instead (see "Collapsed agent tool steps" above) and does not re-run
 anything.
 
+### A command that moved into a terminal
+
+While a shell command is running, its entry carries an **open in terminal** action that hands the command a full-tab terminal (see `shell.md`). If a command ends up in a terminal — whether the user asked or Janissary detected it — its transcript entry reads `(ran in terminal)` once it finishes, rather than the partial screen it had captured.
+
 ### ANSI-colored output
 
 Shell command output — whether run directly or by an agent — is interpreted for ANSI color and

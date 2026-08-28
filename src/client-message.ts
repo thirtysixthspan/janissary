@@ -40,6 +40,7 @@ export const CLIENT_METHOD_CONTRACTS = {
   openTranscriptFor: 'ack',
   pasteFileNavigatorItems: 'result',
   projectFiles: 'deferred',
+  promoteToTerminal: 'ack',
   ptyInput: 'ack',
   ptyKill: 'ack',
   ptyResize: 'ack',

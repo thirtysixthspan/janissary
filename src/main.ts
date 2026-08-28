@@ -18,6 +18,7 @@ import { initDbDir } from './connections.js';
 import { initProfileDir } from './profiles.js';
 import { initWorkspaceDir, clearWorkspaceDir } from './workspace/index.js';
 import { loadConfig } from './config.js';
+import { loadLearnedCommands } from './interactive-learned.js';
 import { loadAgentNames } from './agent/names.js';
 import { loadHarnessModels } from './harness/models.js';
 import { loadProjectTokens } from './project-tokens.js';
@@ -186,6 +187,7 @@ export async function boot(argv = process.argv.slice(2)): Promise<void> {
   new TranscriptLogger(cwd); // append-only transcript log under .janissary/log/ (never cleared)
   new TranscriptStore(cwd);
   loadConfig(cwd);
+  loadLearnedCommands(cwd);
   loadAgentNames(cwd);
   loadHarnessModels(cwd);
   loadProjectTokens(cwd);

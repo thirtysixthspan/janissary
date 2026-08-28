@@ -114,8 +114,8 @@ function dispatchModalKey(e: KeyboardEvent, snap: StateSnapshot, cb: Callbacks):
   return false;
 }
 
-// Ctrl/Shift+Arrow tab reorder/move shortcuts and Ctrl+T tool-step collapse — the tail of the key
-// handler once no picker/chooser/search state intercepts the key.
+// Ctrl/Shift+Arrow tab reorder/move shortcuts, Ctrl+T tool-step collapse, and Ctrl+O open-in-terminal
+// — the tail of the key handler once no picker/chooser/search state intercepts the key.
 function handleTabShortcuts(e: KeyboardEvent, client: JanusClient): void {
   if (e.ctrlKey && !e.shiftKey && e.key === 'ArrowLeft') { e.preventDefault(); client.send({ method: 'reorderTab', params: { dir: -1 } }); }
   else if (e.ctrlKey && !e.shiftKey && e.key === 'ArrowRight') { e.preventDefault(); client.send({ method: 'reorderTab', params: { dir: 1 } }); }
@@ -126,7 +126,17 @@ function handleTabShortcuts(e: KeyboardEvent, client: JanusClient): void {
   // US layout ('{'/'}' rather than '['/']'), so both forms are accepted.
   else if (e.metaKey && e.shiftKey && (e.key === '[' || e.key === '{')) { e.preventDefault(); client.send({ method: 'moveTab', params: { dir: -1 } }); }
   else if (e.metaKey && e.shiftKey && (e.key === ']' || e.key === '}')) { e.preventDefault(); client.send({ method: 'moveTab', params: { dir: 1 } }); }
-  else if (e.ctrlKey && e.key.toLowerCase() === 't') { e.preventDefault(); client.send({ method: 'toggleCollapse', params: {} }); }
+  else if (e.ctrlKey) { ctrlLetterShortcut(e, client); }
+}
+
+// The plain Ctrl+letter sends (Ctrl+T tool-step collapse, Ctrl+O open-in-terminal), split out of
+// `handleTabShortcuts` to keep its cognitive complexity under the file's lint threshold. Both go
+// out unconditionally: the server already no-ops when the action does not apply, so gating them
+// here would duplicate a decision the server owns.
+function ctrlLetterShortcut(e: KeyboardEvent, client: JanusClient): void {
+  const key = e.key.toLowerCase();
+  if (key === 't') { e.preventDefault(); client.send({ method: 'toggleCollapse', params: {} }); }
+  else if (key === 'o') { e.preventDefault(); client.send({ method: 'promoteToTerminal', params: {} }); }
 }
 
 // The Ctrl-key picker openers (Ctrl+R history, Ctrl+G nav, Ctrl+E queue, Ctrl+A tasks), keyed by

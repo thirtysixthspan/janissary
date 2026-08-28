@@ -1,8 +1,11 @@
 import { spawnShell, executeShellCmd as executeShellCommand, queryShellPwd, type ShellProcess } from './shell.js';
 import { createRemoteShell } from './remote/shell-session.js';
+import { createPtyShell, ptyShellArgs } from './shell-pty-session.js';
+import { createShellPromotion, TERMINAL_ENTRY_NOTE, type ShellPromotion } from './shell-promotion.js';
 import { getConfig } from './config.js';
 import { getProjectTokens } from './project-tokens.js';
 import { messageBus } from './bus.js';
+import type { SandboxOptions } from './sandbox/index.js';
 import type { Managers } from './managers.js';
 
 // The base name of the user's login shell (`bash`, `zsh`, …), used both to launch tab shells and to
@@ -34,6 +37,12 @@ export class ShellManager {
   // waiting on the same stdout stream — Node delivers that chunk to both listeners, leaking the
   // pwd query's cwd line and its `__PWD_...__` marker into the next command's output.
   private shellQueues = new Map<string, Promise<void>>();
+  // The pty id backing each tab's shell, for the promotion path to point `activePty` at. Absent for
+  // a piped or remote shell, which is what makes those tabs unpromotable.
+  private shellPtyIds = new Map<string, string>();
+  // The promotion state of each tab's currently-running command, so the manual `open in terminal`
+  // intent has something to act on.
+  private promotions = new Map<string, ShellPromotion>();
 
   constructor(private managers: Managers) {}
 
@@ -59,18 +68,42 @@ export class ShellManager {
   // remote workspace and the adapter wears the shape `executeShellCmd` already consumes. No `cd`
   // is written for it — the remote server has already started it in the workspace — and no local
   // sandbox options apply, since the confinement decision belongs to the machine it runs on.
+  //
+  // A local tab's shell runs inside a pty when `interactiveShellDetection` is on, so a program that
+  // takes over the screen can be spotted and promoted mid-command; with it off, the shell is piped
+  // exactly as before. Remote tabs stay piped either way.
   private spawnFor(label: string, cwd: string | undefined): ShellProcess {
     const tab = this.managers.tab.tabs.find((t) => t.label === label);
     const channel = tab?.remote ? this.managers.remote.get(label) : undefined;
     if (channel) {
       return createRemoteShell(channel, `rsh${++this.remoteShellCounter}`, SHELL_NAME, SHELL_NAME);
     }
-    const shell = spawnShell(0, { JANUS_AGENT_NAME: label }, {
+    const sandbox = {
       workspaceDir: tab?.workspaceDir,
       offline: tab?.offline,
       tokens: tab?.workspaceDir ? getProjectTokens() : undefined,
-    });
+    };
+    if (getConfig().interactiveShellDetection) return this.spawnPtyShellFor(label, cwd, sandbox);
+    const shell = spawnShell(0, { JANUS_AGENT_NAME: label }, sandbox);
     if (cwd) shell.stdin?.write(`cd "${cwd}"\n`);
+    return shell;
+  }
+
+  // The pty-backed variant: registered as a transport so the manager reaps it with the tab and never
+  // lists it among the tab's `terminal:` connections, while its bytes come back here to be scraped
+  // rather than being published straight to the client.
+  private spawnPtyShellFor(label: string, cwd: string | undefined, sandbox: SandboxOptions): ShellProcess {
+    let onData: (data: string) => void = () => {};
+    const { shell, ptyId } = createPtyShell((handler) => {
+      onData = handler;
+      const session = this.managers.pty.spawnTransport(
+        label, SHELL_NAME, SHELL_NAME, cwd ?? process.cwd(),
+        { onData: (data) => onData(data), onExit: () => this.shellPtyIds.delete(label) },
+        { sandbox, shellArgs: ptyShellArgs() },
+      );
+      return { write: (data) => session.write(data), kill: () => session.kill(), id: session.id };
+    });
+    this.shellPtyIds.set(label, ptyId);
     return shell;
   }
 
@@ -78,7 +111,7 @@ export class ShellManager {
   // entry point for shell execution: it creates a running transcript entry, streams output as it
   // arrives, finalizes the entry on completion, and persists the tab. Accepts an optional callback
   // for when the full output is captured.
-  run(label: string, command: string, options?: { onComplete?: (out: string) => void }): void {
+  run(label: string, command: string, options?: { onComplete?: (out: string) => void; detect?: boolean }): void {
     const index = Math.max(0, this.managers.tab.findIndex(label));
     const cwd = this.managers.tab.cwdOf(label) ?? process.cwd();
     const tab = this.managers.tab.tabs.find((t) => t.label === label);
@@ -107,13 +140,27 @@ export class ShellManager {
       messageBus.emit('state', { type: 'dirty' });
     };
 
+    const promotion = createShellPromotion(
+      this.managers, label, command, () => this.shellPtyIds.get(label),
+      options?.detect !== false && getConfig().interactiveShellDetection,
+    );
+    this.promotions.set(label, promotion);
+
     this.execute(label, command, index, this.managers.tab.cwdOf(label), {
-      onChunk: (buffer) => update(buffer, true),
+      onChunk: (buffer) => {
+        promotion.observe(buffer);
+        // Once the terminal has the screen, the entry stops collecting bytes: what would land in it
+        // is half a repaint, and the finished entry reads as a note instead.
+        if (!promotion.isPromoted()) update(buffer, true);
+      },
       onDone: (result) => {
-        update(result, false);
+        const promoted = promotion.isPromoted();
+        promotion.finish();
+        this.promotions.delete(label);
+        update(promoted ? TERMINAL_ENTRY_NOTE : result, false);
         this.managers.tab.markUnread(label);
-        if (result && tab) messageBus.emit('transcript', { type: 'entry:appended', tabLabel: label, entry: { input: '', output: result }, tab });
-        options?.onComplete?.(result);
+        if (result && !promoted && tab) messageBus.emit('transcript', { type: 'entry:appended', tabLabel: label, entry: { input: '', output: result }, tab });
+        options?.onComplete?.(promoted ? '' : result);
       },
       onPwd: (pwd) => { this.managers.tab.setCwd(label, pwd); messageBus.emit('state', { type: 'dirty' }); },
     });
@@ -142,6 +189,13 @@ export class ShellManager {
     this.shellQueues.set(label, next);
   }
 
+  // Promote the tab's running command into a full-tab terminal, as the `open in terminal` action and
+  // its chord ask for. A no-op when nothing is running, when the tab's shell is not pty-backed, or
+  // when the command has already been promoted.
+  promoteRunning(label: string): void {
+    this.promotions.get(label)?.promote();
+  }
+
   // Kill and forget a tab's shell. Returns whether a shell was actually open (drives the
   // `connection close shell` result message). On `connection close shell` and tab close.
   close(label: string): boolean {
@@ -150,6 +204,8 @@ export class ShellManager {
     shell.kill();
     this.shells.delete(label);
     this.shellQueues.delete(label);
+    this.shellPtyIds.delete(label);
+    this.promotions.delete(label);
     return true;
   }
 
@@ -158,6 +214,8 @@ export class ShellManager {
     for (const [, shell] of this.shells) shell.kill();
     this.shells.clear();
     this.shellQueues.clear();
+    this.shellPtyIds.clear();
+    this.promotions.clear();
   }
 
   dispose(): void {

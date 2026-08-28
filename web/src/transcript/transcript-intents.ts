@@ -7,6 +7,7 @@ export type TranscriptIntents = {
   onOpenFile: (target: string) => void;
   onEditFile: (target: string) => void;
   onFocusTab: (label: string) => void;
+  onPromoteToTerminal: () => void;
 };
 
 export function transcriptIntents(client: JanusClient): TranscriptIntents {
@@ -14,5 +15,6 @@ export function transcriptIntents(client: JanusClient): TranscriptIntents {
     onOpenFile: (target) => client.send({ method: 'command', params: { text: `open ${target}` } }),
     onEditFile: (target) => client.send({ method: 'command', params: { text: `edit ${target}` } }),
     onFocusTab: (label) => client.send({ method: 'focusTab', params: { label } }),
+    onPromoteToTerminal: () => client.send({ method: 'promoteToTerminal', params: {} }),
   };
 }

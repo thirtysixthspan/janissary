@@ -7,6 +7,7 @@ import { renderMarkdown } from './markdown';
 import { fileLineSegments, isFileLineLink, linkifyMarkdown, renderFileLinkSegments } from './file-link';
 import type { TranscriptIntents } from './transcript-intents';
 import { hasAnsiCodes, parseAnsi } from './ansi';
+import { RunningLine } from './running-line';
 
 // The current search match's line index and pattern, for substring highlighting. `null`/`undefined`
 // when search mode is closed or no match is current.
@@ -201,7 +202,11 @@ export function renderLine(
     );
   }
   if (line.running) {
-    return <div key={index} className="line output running" {...hitProps}>{renderOutputText(line.text, highlight, index)}</div>;
+    return (
+      <RunningLine key={index} hitProps={hitProps} onPromote={intents.onPromoteToTerminal}>
+        {renderOutputText(line.text, highlight, index)}
+      </RunningLine>
+    );
   }
   if (line.acp) {
     return (
