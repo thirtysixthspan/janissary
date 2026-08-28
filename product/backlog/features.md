@@ -16,6 +16,8 @@
 
 * The shell transcript (`product/specs/shell.md`, `product/specs/transcript.md`) is line-oriented and can rerun a prompt by double-click, but it does not expose command-level duration, exit status, or a selectable command-plus-output block; iTerm2's shell integration supplies command selection and an info panel with duration, status, resend, copy, share, and named marks. Closing this gap would track command boundaries and completion metadata, then add block selection with copy/rerun/bookmark actions and a compact command-info view. Complexity: medium. 
 
+* Split the app-shell orchestration in `web/src/App.tsx` into cohesive feature controllers: the component exceeds the project's 200-line limit while owning nearly every picker, layout, quit guard, tab handle, search path, window-key snapshot, server-state subscription, and the correspondingly oversized `AppMain` prop handoff, so adding a client feature expands one high-churn integration point and its tests. Extract related state and callbacks behind small hooks or controller objects and pass grouped feature interfaces into `AppMain`. Severity: **medium**. — deferred: complexity 8/10, requires designing multiple controller boundaries, reshaping the AppMain interface, and coordinating broad app-shell integration coverage.
+
 ## deferred
 
 * long term durable transcripts - send trascripts off to seperate github repo? other durable storage options? 
