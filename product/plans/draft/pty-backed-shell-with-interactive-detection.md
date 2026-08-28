@@ -1,0 +1,143 @@
+# PTY-backed shell with interactive detection
+
+**Complexity: 6/10** — replaces the tab's shell transport with a PTY-backed session that must suppress echo and prompts to keep the existing delimiter scraping correct, and adds a mid-command promotion path with new lifecycle reasoning (delimiter-driven return rather than PTY exit), plus a config switch, one RPC, a chord, and a client affordance. Held down from higher by how much is reuse: the shell contract, the transport-PTY registration, takeover rendering, and key forwarding all already exist, and detection collapses to a pure predicate over output the streaming path already hands over whole.
+
+## Summary
+
+Janissary decides whether a command needs a real terminal by matching its name against a fixed list (`INTERACTIVE_PROGRAMS` in `src/interactive.ts`). Anything not on that list runs through the tab's persistent piped shell, where a TUI either errors out, prints a "not a terminal" warning, or hangs waiting on input the user cannot type. The list cannot be complete — a locally-built TUI, a Go/Rust binary, or a script that shells out to a pager will always be missed.
+
+This feature replaces the guess with observation. Each tab's persistent shell runs **inside a PTY**, so every command gets a real TTY and programs behave the way they would in a terminal. Output still streams into the transcript as it does today, while the server watches the byte stream for the sequences a program only emits when it wants the whole screen. When those appear, the tab is **promoted** to full-tab terminal takeover mid-command, with the buffered bytes replayed so the program's first frame is intact. When they don't, the command finishes as an ordinary transcript entry and nothing about the current experience changes.
+
+The whole behavior sits behind a new `interactiveShellDetection` setting in `.janissary/config.json`, enabled by default. Turning it off restores exactly today's piped-shell execution and name-list detection.
+
+## Design decisions
+
+1. **The tab's shell keeps its state: one long-lived shell per tab, now running inside a PTY.** The alternative — a fresh PTY per command — would drop exported variables, shell functions, and background jobs between commands, which the current piped shell preserves. The persistent model is kept; only the transport changes.
+2. **The PTY-backed shell satisfies the existing `ShellProcess` shape, so the execution layer is untouched.** `ShellProcess` (`src/shell.ts:5-9`) is already a narrow duck-type — `stdin`/`stdout`/`stderr`/`kill` — and `createRemoteShell` (`src/remote/shell-session.ts`) is already a second implementation of it that is not a real child process. The PTY-backed shell is the third. `executeShellCmd`'s delimiter scraping and `queryShellPwd` keep working unchanged against it.
+3. **Echo and prompt suppression are load-bearing, not cosmetic — the codebase already knows this failure mode.** A shell whose stdin is a TTY runs interactively: it echoes every line it is fed and prints `PS1`. Echo alone would break `executeShellCmd` outright — it searches for the *first* occurrence of `__JS_END_<tab>_<ts>__` (`src/shell.ts:49`), which with echo on is the echoed `echo "__JS_END…"` command line, so every command would appear to finish before producing any output. This is not a hypothetical: `createRemoteShell`'s header comment states that the remote shell is spawned in `pipe` mode rather than `tty` mode for exactly this reason — "a tty's echo would feed each written command — including the sentinel `echo` — straight back into the output buffer, matching the sentinel before the command had run" (`src/remote/shell-session.ts:16-18`). This plan takes the tty path the remote shell declined, so it must neutralize what that comment warns about: the PTY-backed shell is seeded, before any user command, with echo disabled and empty `PS1`/`PS2`, and the seed's own output is swallowed rather than streamed. Startup files stay suppressed exactly as today via `shellStartupArgs` (`src/shell-startup.ts`), so no rc banner or prompt leaks in. Treat this as the highest-risk part of the change and write its test first.
+4. **The environment is otherwise left untouched — a TTY behaves like a TTY.** No `PAGER`/`GIT_PAGER` neutralizing and no color suppression. Tools switch on color, which the transcript already renders (`product/specs/transcript.md:65-74`), and `git log`/`git diff` page through `less`, which promotes the tab to a terminal — exactly what happens in a real terminal. This is a deliberate, visible behavior change for paging commands, and it is the point of the feature rather than a side effect.
+5. **Promotion triggers on alternate-screen entry or repeated absolute cursor positioning.** Alternate-screen entry (`ESC[?1049h`, and the legacy `ESC[?47h`) is the strong signal — `less`, `vim`, `htop`, `top`, `fzf`, and `lazygit` all send it. Repeated absolute cursor positioning (`ESC[<n>;<m>H`) catches inline-drawing TUIs that never switch screens. Cursor-hide (`ESC[?25l`) is deliberately **not** a signal: npm, vitest, and docker all hide the cursor for spinners, and including it would promote a routine `npm install`.
+   - The positioning signal fires at **three or more** absolute-positioning sequences within a single command's output. The threshold exists to separate a TUI's repaint loop from a one-off cursor move; three is a starting value, not a measured one, and the upgrade path if it proves wrong is to raise it or to require the sequences within a time window rather than within the whole command.
+6. **A promoted command keeps its transcript entry, which ends up showing only a note.** The entry is not deleted on promotion — the transcript must record that the command ran. When the command finishes, its captured pre-promotion bytes are discarded and the entry is finalized reading `(ran in terminal)`. Those bytes are the truncated first fragment of a full-screen repaint, so keeping them in the transcript would show a torn frame rather than useful output; the terminal itself already showed the user everything.
+7. **Return to the transcript is driven by the delimiter, not by PTY exit.** This is the lifecycle difference from today's takeover, where `onPtyExit` clears `activePty`: the shell PTY *outlives* the promoted program, so its exit is not the signal. Promotion ends when `executeShellCmd`'s `__JS_END_…__` marker arrives — the shell has returned to its own prompt — at which point `activePty` is cleared, the transcript is restored, and the entry is finalized per decision 6. Alternate-screen *exit* (`ESC[?1049l`) is explicitly not used: a program may leave and re-enter the alternate screen while still running.
+8. **Promotion in a background tab happens in place and marks the tab unread.** The tab switches into takeover where it is and the unread indicator fires — reusing `markUnread`, which the shell path already calls on completion (`src/shell-manager.ts:114`). Focus is not stolen. The existing takeover model already keeps every tab's terminal mounted and stateful across switches, so a promoted background tab is intact when the user reaches it.
+9. **The user can force promotion at any time, by button or chord.** A running transcript entry carries an action labeled **open in terminal**; **Ctrl+O** does the same for the running command in the active tab.
+   - Correction to the chord chosen during planning: `Ctrl+T` is **not** free — `web/src/useWindowKeys.ts:129` binds it to `toggleCollapse` (tool-step collapse), and `Cmd+T` is taken too (`:168`, new agent tab). `Ctrl+Shift+T` is unusable as a distinct chord because that binding has no shift guard. The Ctrl chord family is `r`/`g`/`e`/`a` (`ctrlChordOpener`, `:134-141`), so `Ctrl+O` — **o** for *open in terminal* — is free, mnemonic, and slots into that same switch.
+   - This is the safety net for a program that needs a TTY but emits no detectable signal — a `sudo` password prompt, `read -p`, a bare REPL — which under decision 5 will otherwise sit silently waiting. Both routes are client intents that resolve server-side, per architecture principle 1, so a new RPC carries them.
+10. **`interactiveShellDetection`, a boolean defaulting to `true`, is the master switch.** It follows `sandboxWorkspaces` exactly: a field on `Config` (`src/config.ts:21-45`), a default in `DEFAULT_CONFIG`, and a `booleanValue` line in `decodeConfig` (`src/config-decode.ts:53`). Because `decodeConfig` falls back to the default for a missing key, **every existing `.janissary/config.json` gets the feature enabled without being edited**; the implementer additionally writes the explicit key into the project's own `.janissary/config.json` so it is visible and toggleable. That file is gitignored (`.gitignore:6`, `.janissary/`), so this is a local edit, not a committed one.
+11. **With the setting off, nothing changes.** The tab's shell is the piped `spawnShell` as today, no detection runs, and no promotion is possible — including the manual one, which has nothing to promote to. The name-list check (`isInteractive`) and the explicit `shell --pty` / `i!` spellings keep working in **both** modes.
+12. **The name-list check survives even when detection is on.** It is not made redundant: matching `htop` by name promotes *before* the program runs, so the tab never briefly shows a transcript entry that then vanishes into a takeover. Detection is the safety net for what the list misses, not its replacement.
+13. **Messaged and scheduled commands run in the PTY shell but are never promoted.** The literal reading of "stay on the piped path" would mean a second shell process per tab, which would fork cwd and environment state between the two — a worse outcome than the goal. Instead these commands run through the tab's one shell with detection suppressed: they stream and capture exactly as today, and can never take over a tab. `CaptureManager` (which needs clean captured text to return to the sending agent) passes the suppression flag directly; the scheduler passes it through `dispatchTo`.
+    - Known corner: a scheduled command that arrives while the tab is busy is stored in the agent command queue, which holds plain strings (`commandQueue: string[]`, `src/protocol/tab.ts:57`). A queued scheduled command therefore loses its origin and is treated like a typed one. Accepted for this version; the upgrade path is to store `{ text, detect }` objects in the queue, which also touches `AgentState` persistence.
+
+## What already exists (reuse, don't rebuild)
+
+| Need | Existing mechanism | Location |
+| --- | --- | --- |
+| Spawn a process in a PTY with sandbox and env handling | `spawnPty`, returning a `PtySession` (`write`/`resize`/`kill`) — needs the argv override from change 2 | `src/pty.ts:29-64` |
+| Register a PTY whose bytes go to a callback rather than the bus, excluded from `terminal:` listings | `PseudoterminalManager.spawnTransport` | `src/pseudoterminal-manager.ts:46-56` |
+| Route keystrokes and resizes to a registered PTY; reap it on tab close | `input` / `resizeOne` / `closeTab` / `closeAll` | `src/pseudoterminal-manager.ts:74-90,126-134` |
+| A non-child-process implementation of the shell contract, with the exact stream shapes to copy | `createRemoteShell` — `Writable` stdin, `PassThrough` stdout, unused `PassThrough` stderr | `src/remote/shell-session.ts:20-57`, contract at `src/shell.ts:5-9` |
+| Prior art on why a tty shell breaks the sentinel, and what it costs to fix | `createRemoteShell`'s `pipe`-mode rationale | `src/remote/shell-session.ts:16-18` |
+| Command framing and completion detection, unchanged | `executeShellCmd`'s `__JS_END_<tab>_<ts>__` delimiter; `queryShellPwd` | `src/shell.ts:32-85` |
+| Suppressed startup files per shell flavor | `shellStartupArgs` (`--norc --noprofile` / `--no-rcs`) | `src/shell-startup.ts` |
+| Full-tab takeover rendering, key forwarding, multi-tab persistence | `tab.activePty` + PTY takeover | `product/specs/shell.md` "Interactive PTY takeover" |
+| Streaming a running command into the transcript and finalizing it | `ShellManager.run`'s `update(output, running)` closure | `src/shell-manager.ts:98-119` |
+| Unread marking on background activity | `markUnread` | `src/shell-manager.ts:114` |
+| ANSI color rendering and control-sequence suppression in the transcript | already specified behavior | `product/specs/transcript.md:65-74` |
+| Boolean config setting, default true, decoded field by field | `sandboxWorkspaces` | `src/config.ts:27,61`, `src/config-decode.ts:53` |
+| Thin client intent → RPC → controller delegate | `renameTab` / `toggleCollapse` pattern | `src/protocol.ts`, `src/message-handler.ts`, `src/controller.ts` |
+
+## Proposed changes
+
+Land them in the order below; each step keeps typecheck and tests green on its own.
+
+### 1. Config setting
+
+Add `interactiveShellDetection: boolean` to `Config` with a comment describing it as the master switch, `true` in `DEFAULT_CONFIG`, and a `booleanValue` line in `decodeConfig` — three edits mirroring `sandboxWorkspaces` line for line. No new decoder shape and no validation beyond the type fallback the decoder already provides. The implementer also adds the explicit key to the project's own gitignored `.janissary/config.json`.
+
+### 2. The PTY-backed shell session
+
+A new module — `src/shell-pty-session.ts`, built directly on `src/remote/shell-session.ts`'s construction — exports a factory returning an object satisfying `ShellProcess` plus the PTY's id. Copy that module's stream shapes rather than inventing new ones: `stdin` is a `Writable` whose `write` forwards to the PTY session's `write`; `stdout` is a utf8 `PassThrough` fed by the PTY's data callback; `stderr` is a `PassThrough` nothing is ever routed to (a PTY merges both streams by construction, and `executeShellCmd` attaches the same handler to both anyway — the remote shell already relies on this, `src/remote/shell-session.ts:26-29`); `kill` forwards to the session's `kill`. It performs the seed step from decision 3 and does not report ready until the seed's own output has been consumed, so no seed bytes can reach a command's output buffer.
+
+**`spawnPty` needs one small extension first.** It hardcodes the child's argv as `['-lc', command]` (`src/pty.ts:41`), which is right for "run this one command in a terminal" but wrong here: passing the shell path as `command` would nest a shell inside a login shell and the outer `-l` would read the startup files decision 3 requires suppressed. Add an optional argv override parameter so the caller can pass `shellStartupArgs(shellPath)` instead, leaving the existing two call sites and all the sandbox/env handling in `sandboxSpawn` untouched. Do not bypass `spawnPty` with a direct `pty.spawn` — that would fork the sandbox wiring.
+
+Register the shell's PTY through **`spawnTransport`** (`src/pseudoterminal-manager.ts:46-56`), not `spawn`: it is already the variant that hands bytes to a caller-supplied callback instead of publishing them on the `pty` bus, and it already marks the session so it is not listed among the tab's `terminal:` connections — both exactly what a shell-backing PTY needs. Registration also means `input`, `resizeOne`, `closeTab`, and `closeAll` reach it like any other PTY, so teardown stays symmetric (principle 6) with no new bookkeeping. While a command is promoted, the same callback additionally publishes the bytes as `pty` data events so the mounted xterm stays live; when not promoted, the bytes go only to the scraper.
+
+`ShellManager.spawnFor` (`src/shell-manager.ts:62-75`) then chooses between three shells rather than two: remote channel → `createRemoteShell` as today; local with the setting on → the PTY-backed session; local with the setting off → `spawnShell` as today. The sandbox options it already computes (`workspaceDir`, `offline`, `tokens`) pass straight through, since `spawnPty` takes the same `SandboxOptions` shape `spawnShell` does, so workspaced and offline confinement carries over unchanged.
+
+### 3. The detection scanner
+
+**Verified fact that shapes this: streaming already delivers the whole accumulated output, not deltas.** `executeShellCmd` accumulates into `outputBuffer` and calls `onProgress(outputBuffer)` with the entire buffer on every chunk (`src/shell.ts:47-51`), and `ShellManager.run` treats it that way — `onChunk: (buffer) => update(buffer, true)` *replaces* the entry's output (`src/shell-manager.ts:111`). Two consequences, both simplifying:
+
+- A control sequence can never be observed half-arrived, so no tail buffer and no chunk-boundary handling is needed.
+- A stateful, incrementally-fed scanner would be wrong here: fed the cumulative buffer repeatedly it would re-count the same positioning sequences and cross the threshold early.
+
+So the scanner is a **pure function over the accumulated output string**, not an object with `feed`. A new module `src/interactive-signals.ts`, beside `src/interactive.ts` and mirroring `isInteractive`'s shape (one exported predicate, no I/O, no state), answers: does this output show alternate-screen entry, or at least three absolute-positioning sequences? It is called on each progress update for a detection-eligible command and stops being called once the command promotes.
+
+Regex note for the implementer: the control-sequence patterns must not be vulnerable to catastrophic backtracking — `security/detect-unsafe-regex` is enabled for `src/` (see `CLAUDE.md`). Anchored, character-class-based patterns over a bounded numeric range keep this trivial.
+
+### 4. Promotion in `ShellManager`
+
+`run` gains an options field for suppressing detection (decision 13). When detection is active it calls the predicate on each progress update. The bytes to replay on promotion are the accumulated buffer already being handed to `onChunk` — no separate retention is needed — trimmed to its trailing **64 KB** before replay. A full-screen program's first frame is what matters, and 64 KB comfortably exceeds a repainted 80×24 screen with escape sequences while bounding what a long-running command can force through the socket. If a program's opening frame is ever found truncated, the ceiling is one constant to raise. When the predicate reports a signal:
+
+- the tab's `activePty` is pointed at the shell's PTY id, which is what makes the client render the takeover;
+- the trimmed buffer is emitted as a `pty` data event so the newly-mounted xterm shows the frame that was already drawn;
+- `markUnread` fires (decision 8);
+- the transcript entry stays as it is, still marked running.
+
+When the delimiter arrives for a promoted command, `activePty` is cleared and the entry is finalized with the note text (decisions 6 and 7). Keystroke forwarding while promoted needs no work: the client's existing takeover already routes keys through the `input` RPC to `activePty`.
+
+Two behaviors fall out of existing machinery and should be stated in the spec rather than built: a promoted command holds the tab **busy** until its delimiter arrives, so anything dispatched meanwhile queues behind it exactly as it would for a long-running command; and `shellQueues` (`src/shell-manager.ts:36`) already guarantees only one command owns the shell at a time, so a promotion can never interleave with another command's scraping on the same tab.
+
+Because `ShellManager` is at 166 lines, the per-command promotion state belongs in a small collaborator module rather than as more fields on the manager — extract, per the file-size guidance, rather than growing the class.
+
+### 5. Manual promotion: RPC, button, chord
+
+Add one member to the `RpcCall` union modeled on `renameTab`, carrying no parameters and acting on the active tab's running command; a `message-handler.ts` case; and a thin `Controller` delegate that asks `ShellManager` to promote, no-opping when the tab has no running command or the setting is off. The client sends an intent and the server decides — there is no client-side promotion state (principle 1).
+
+On the web side:
+
+- The running line already has its own render branch and class — `web/src/transcript/transcript-line.tsx:203-204` returns `<div className="line output running">` — which is where the **open in terminal** action attaches. Route its click through `web/src/transcript/transcript-intents.ts`, the existing seam that turns transcript clicks into client sends (`onOpenFile`, `onEditFile`, `onFocusTab`), by adding one intent beside them rather than reaching for the client directly from the component.
+- `Ctrl+O` is one new `case 'o':` in `ctrlChordOpener`'s switch (`web/src/useWindowKeys.ts:134-141`). It sends unconditionally — deliberately **not** gated by a new `StateSnapshot` field the way `Cmd+F` gates on `canSearch`, because the server already no-ops when there is no running command, and adding client state purely to avoid sending a harmless intent would duplicate a decision the server owns (principle 1). The chord preventing its default also covers the Windows/Linux browser "open file" binding on Ctrl+O; on macOS, which the app targets, that binding is Cmd+O and does not collide.
+
+### 6. Specs and documentation
+
+- `product/specs/shell.md`: rewrite "Shell command execution" and "Interactive PTY takeover" to describe the PTY-backed shell, the detection signals and threshold, promotion and its transcript note, delimiter-driven return, the background-tab rule, the manual escape, and the setting that governs all of it.
+- `product/specs/application-config.md`: a row for `interactiveShellDetection` in the settings table. While there, add the missing `sandboxWorkspaces` row — it exists in `Config` and in the decoder but never made it into the table, and this change puts a second boolean beside it (stale-spec fix, per architecture principle 10).
+- `product/specs/keyboard-navigation.md`: a `Ctrl+O` row in the chord table.
+- `product/specs/transcript.md`: one sentence on the `(ran in terminal)` entry.
+- `product/specs/scheduling.md` and `product/specs/messaging.md`: one sentence each recording that these commands never promote, including the queued-scheduled-command corner from decision 13.
+- `documentation/user-documentation/command-bar/shell.md`: how-to framing — interactive programs now just work, `git log` opens a pager, the button and `Ctrl+O`, and how to turn the setting off.
+
+## Tests
+
+Server tests colocated as `src/**/*.test.ts` (vitest project `server`), client as `web/src/**/*.test.tsx` (project `client`), matching where each touched module's tests already live.
+
+| Area | File | Coverage |
+| --- | --- | --- |
+| Detection predicate | `src/interactive-signals.test.ts` (new) | Alt-screen enter fires; legacy `ESC[?47h` fires; positioning fires only at the third occurrence and not at the second; re-calling with a growing cumulative buffer does not inflate the count; a spinner stream (`ESC[?25l` plus carriage returns) never fires; plain output never fires |
+| PTY shell adapter | `src/shell-pty-session.test.ts` (new) | Satisfies `ShellProcess`; seed output never reaches a command's buffer; with echo suppressed a command's delimiter is seen exactly once, so `executeShellCmd` completes on the real output rather than the echoed command line; `kill` tears down the session |
+| Shell selection | `src/shell-manager.test.ts` | Setting on + local tab → PTY-backed shell; setting off → `spawnShell`; remote tab → `createRemoteShell` regardless of the setting; sandbox options reach the PTY spawn |
+| Promotion | `src/shell-manager.test.ts` | A signal sets `activePty`, replays the retained buffer, marks unread, and leaves the entry running; the delimiter then clears `activePty` and finalizes the entry as `(ran in terminal)`; a suppressed (`msg`/scheduled) command never promotes and still returns captured output; the retained buffer respects its cap |
+| Config | `src/config.test.ts` | Defaults to `true`; a missing key in an existing file decodes to `true`; a non-boolean value falls back to the default without disturbing neighbors |
+| RPC | `src/message-handler.test.ts` | The new call reaches the controller delegate; no-ops with no running command |
+| Client | `web/src/…` transcript-entry and `useWindowKeys` tests | The running entry renders the **open in terminal** action and sends the RPC on click; `Ctrl+O` sends it; both no-op with no running command |
+
+## Out of scope
+
+- **Remote tabs.** `agent on <host>` tabs keep `createRemoteShell` and today's piped remote execution; detection is local-only in this version.
+- **Automatic promotion for `msg`/`broadcast` and scheduled commands** — they run in the PTY shell but never take over (decision 13).
+- **Changing the explicit paths.** `i!` and `shell --pty` continue to go straight to takeover with no detection phase.
+- **Time-based promotion.** A command that goes quiet without emitting a signal is never promoted automatically; the manual escape covers it.
+- **Neutralizing pagers or color** (decision 4), and any change to how the transcript renders ANSI.
+- **Replaying the terminal session into the transcript** after a promoted command exits.
+
+## Open questions
+
+None.
+
+## Verification
+
+- `./scripts/run.mjs check-diff` after each step.
+- Manual check, with the setting at its default: run `ls` and confirm ordinary output still lands in the transcript, now colored. Run a TUI that is *not* on the name list (a locally-built one, or `fzf`) and confirm the tab promotes mid-command, the first frame is intact, keys reach the program, and on exit the transcript returns with the entry reading `(ran in terminal)`. Run `git log` and confirm it pages through `less` and promotes. Run `npm install` in a project with a spinner and confirm it does **not** promote. Run `cd /tmp` then `pwd` and confirm the working directory persisted across commands, then set a variable in one command and echo it in the next to confirm shell state persists. Start a `sudo` command, confirm it sits waiting, press `Ctrl+O`, and confirm the terminal opens and accepts the password. Trigger a promotion in a background tab and confirm focus does not move and the tab shows unread. Finally set `"interactiveShellDetection": false` in `.janissary/config.json`, relaunch, and confirm `htop` still takes over via the name list while an unlisted TUI once again misbehaves in the transcript.
