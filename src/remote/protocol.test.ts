@@ -22,10 +22,21 @@ describe('frame codec', () => {
           gemini: 'AIzaSyScoped',
         },
       },
-      { type: 'spawn', id: 'r1', program: 'claude', command: 'claude', mode: 'pty', harness: 'claude', cols: 100, rows: 40 },
+      { type: 'spawn', id: 'r1', program: 'claude', command: 'claude', mode: 'pty', harness: 'claude', cols: 100, rows: 40, agentName: 'joined' },
       { type: 'input', id: 'r1', data: 'hello' },
       { type: 'resize', id: 'r1', cols: 120, rows: 50 },
       { type: 'kill', id: 'r1' },
+      { type: 'filesystem-open', session: 'files1' },
+      { type: 'filesystem-close', session: 'files1' },
+      { type: 'filesystem-request', session: 'files1', request: 'q1', operation: 'read-directory', args: { path: 'src' } },
+      { type: 'filesystem-request', session: 'files1', request: 'q2', operation: 'write-file', args: { path: 'notes.txt', content: 'héllo\nworld' } },
+      {
+        type: 'filesystem-request', session: 'files1', request: 'q3', operation: 'replay',
+        args: {
+          undoStack: [{ entries: [{ from: 'a', to: 'dest/a' }] }], redoStack: [],
+          direction: 'undo', overwrite: false, skipConflicts: false,
+        },
+      },
     ];
     for (const frame of frames) expect(roundTrip(frame)).toEqual(frame);
   });
@@ -37,6 +48,9 @@ describe('frame codec', () => {
       { type: 'output', id: 'r1', data: 'done' },
       { type: 'exit', id: 'r1', exitCode: 0 },
       { type: 'transcript', blocks: ['first', 'second'] },
+      { type: 'filesystem-reply', session: 'files1', request: 'q1', result: { entries: [] } },
+      { type: 'filesystem-reply', session: 'files1', request: 'q2', result: { content: 'héllo\nworld' } },
+      { type: 'filesystem-event', session: 'files1', path: 'src' },
     ];
     for (const frame of frames) expect(roundTrip(frame)).toEqual(frame);
   });
@@ -96,6 +110,9 @@ describe('frame codec', () => {
     ['output without string data', { type: 'output', id: 'r1', data: [] }],
     ['exit with a fractional code', { type: 'exit', id: 'r1', exitCode: 1.5 }],
     ['transcript with a non-string block', { type: 'transcript', blocks: ['b25l', 2] }],
+    ['filesystem request with an unknown operation', { type: 'filesystem-request', session: 'f1', request: 'q1', operation: 'unknown', args: {} }],
+    ['filesystem request without a request id', { type: 'filesystem-request', session: 'f1', operation: 'search', args: {} }],
+    ['filesystem request with malformed arguments', { type: 'filesystem-request', session: 'f1', request: 'q1', operation: 'rename', args: { path: 'a' } }],
   ])('rejects %s', (_case, frame) => {
     expect(decodeFrame(JSON.stringify(frame))).toEqual({
       error: expect.stringContaining(`Malformed remote frame "${String(frame.type)}"`),
@@ -110,6 +127,16 @@ describe('frame codec', () => {
     expect(decodeFrame(encoded)).toEqual({
       type: 'spawn', id: 'r1', program: 'bash', command: 'bash', mode: 'pipe',
       harness: 'claude', cols: 80, rows: 24, offline: false,
+    });
+  });
+
+  it('drops undeclared filesystem arguments after validating the operation', () => {
+    expect(decodeFrame(JSON.stringify({
+      type: 'filesystem-request', session: 'files1', request: 'q1',
+      operation: 'read-file', args: { path: 'src/a.txt', extra: 'ignored' },
+    }))).toEqual({
+      type: 'filesystem-request', session: 'files1', request: 'q1',
+      operation: 'read-file', args: { path: 'src/a.txt' },
     });
   });
 });
@@ -138,7 +165,7 @@ describe('handshake', () => {
   // all of them with a `tokens` map. A remote speaking any of them decodes the frame happily and
   // finds none of the fields it reads, so it would provision a workspace with no credentials at all
   // — which is what refusing at the handshake exists to prevent, for every one of them.
-  it.each([1, 2, 3, 4, 5])('rejects a remote speaking older protocol version %i', (version) => {
+  it.each([1, 2, 3, 4, 5, 6])('rejects a remote speaking older protocol version %i', (version) => {
     const parsed = parseHandshake(`${HANDSHAKE_SENTINEL} ${JSON.stringify({ version, root: '/srv/proj' })}`);
     expect(parsed).toEqual({ error: expect.stringContaining('Update janissary') });
     expect('error' in parsed && parsed.error).toContain(String(REMOTE_PROTOCOL_VERSION));

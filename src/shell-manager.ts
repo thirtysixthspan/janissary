@@ -76,7 +76,7 @@ export class ShellManager {
     const tab = this.managers.tab.tabs.find((t) => t.label === label);
     const channel = tab?.remote ? this.managers.remote.get(label) : undefined;
     if (channel) {
-      return createRemoteShell(channel, `rsh${++this.remoteShellCounter}`, SHELL_NAME, SHELL_NAME);
+      return createRemoteShell(channel, `rsh${++this.remoteShellCounter}`, SHELL_NAME, SHELL_NAME, label);
     }
     const sandbox = {
       workspaceDir: tab?.workspaceDir,

@@ -26,7 +26,7 @@ export class RemoteProcesses {
 
   spawn(frame: Extract<ClientFrame, { type: 'spawn' }>): void {
     if (this.entries.has(frame.id)) return;
-    const entry = frame.mode === 'pipe' ? this.spawnPipe(frame.id) : this.spawnPty(frame);
+    const entry = frame.mode === 'pipe' ? this.spawnPipe(frame.id, frame.agentName) : this.spawnPty(frame);
     this.entries.set(frame.id, entry);
   }
 
@@ -63,8 +63,8 @@ export class RemoteProcesses {
     return { kill: () => session.kill() };
   }
 
-  private spawnPipe(id: string): Entry {
-    const shell = spawnShell(0, { JANUS_AGENT_NAME: this.label }, {
+  private spawnPipe(id: string, agentName?: string): Entry {
+    const shell = spawnShell(0, { JANUS_AGENT_NAME: agentName ?? this.label }, {
       workspaceDir: this.workspaceDir,
       tokens: this.tokens,
     });

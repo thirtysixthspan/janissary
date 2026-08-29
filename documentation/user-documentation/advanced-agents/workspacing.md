@@ -6,7 +6,7 @@ A workspace is a disposable, isolated clone of your repository that an agent or 
 
 Agents and harnesses get a workspace by default. Use `--no-workspace` when you deliberately want one to work in the project checkout instead; `--workspace` (or `-w`) explicitly confirms the default. Two properties define a workspace — disposability and isolation.
 
-**Disposable.** The workspace is a fresh `git clone`, created when the tab opens and deleted when the tab closes. Nothing in it outlives the tab except what was pushed or merged out deliberately. Relaunching the app doesn't bring workspaces back. That makes a workspace cheap to abandon: if an experiment goes sideways, close the tab.
+**Disposable.** The workspace is a fresh `git clone`, created when its first tab opens and deleted when the last tab sharing it closes. A workspaced tab's ➕ button joins another agent to that same clone, so closing the creator leaves the clone available to the joined tabs. Nothing in it outlives its last user except what was pushed or merged out deliberately. Relaunching the app doesn't bring workspaces back. That makes a workspace cheap to abandon: if an experiment goes sideways, close its tabs.
 
 **Isolated.** On macOS, everything running in a workspaced tab — the shell, the harness, and anything they spawn — is confined by a kernel-enforced sandbox. In practice, from inside the workspace:
 

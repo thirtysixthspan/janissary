@@ -54,6 +54,16 @@ describe('RemoteProcesses forwarded credentials', () => {
     });
   });
 
+  it('uses a joined tab\'s spawn name for its persistent shell', () => {
+    const processes = new RemoteProcesses(vi.fn(), '/remote/workspace', 'creator', CREDENTIALS);
+    processes.spawn({
+      type: 'spawn', id: 'r1', program: 'bash', command: 'bash', mode: 'pipe', cols: 80, rows: 24,
+      agentName: 'joined',
+    });
+
+    expect(vi.mocked(spawnShell).mock.calls[0]?.[1]).toEqual({ JANUS_AGENT_NAME: 'joined' });
+  });
+
   // Each token stands on its own: a project that configures only one must not have the other's
   // absence suppress it.
   it('forwards a Claude token on its own when no GitHub token is configured', () => {

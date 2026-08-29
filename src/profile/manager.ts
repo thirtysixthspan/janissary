@@ -6,12 +6,10 @@ import { openProfileEntries } from './agent-opener.js';
 import { reportValidation } from './validate.js';
 import { saveProfile, formatSaveSummary } from './save.js';
 import { notify } from '../notifications.js';
-import { sandboxNotice } from '../sandbox/index.js';
-import { wireProvisioning, PROVISION_FAILURE_CLOSE_DELAY_MS } from '../workspace/provision-wire.js';
-import { messageBus } from '../bus.js';
 import type { Managers } from '../managers.js';
 import { newAgentOp } from './new-agent.js';
 import { placeAgent } from './place-agent.js';
+import { messageBus } from '../bus.js';
 
 export class ProfileManager {
   private saveQueue: Promise<void> = Promise.resolve();
@@ -98,37 +96,46 @@ export class ProfileManager {
     if (resolved === null) { notify(this.managers, 'manual', label, 'All agent names are in use.'); return; }
     const cwd = this.managers.tab.cwdOf(label) ?? process.cwd();
 
+    if (creator.remote) {
+      if (!this.managers.remote.attach(resolved, label)) {
+        notify(this.managers, 'manual', label, 'The remote workspace is no longer available.');
+        return;
+      }
+      const workspace = this.managers.remote.workspaceOf(label);
+      placeAgent(this.managers, {
+        resolved, creator,
+        cwd: workspace ?? cwd,
+        offline: false,
+        remote: creator.remote,
+        busy: workspace === undefined,
+      });
+      if (workspace === undefined) this.waitForRemoteWorkspace(resolved, label);
+      return;
+    }
+
     if (creator.workspaceDir === undefined) {
       placeAgent(this.managers, { resolved, creator, cwd, offline: false });
       return;
     }
 
-    // Creator tab is workspaced — the new agent inherits its own cloned workspace, following the
-    // same clone/busy/provisioning flow as `agent --workspace` (see `newAgentOp`).
-    const result = this.managers.workspace.create(resolved);
-    if ('error' in result) { notify(this.managers, 'manual', label, result.error); return; }
+    this.managers.workspace.retain(creator.workspaceDir);
     placeAgent(this.managers, {
-      resolved, creator, cwd: result.dir, workspaceDir: result.dir, offline: false, busy: true,
+      resolved, creator, cwd: creator.workspaceDir, workspaceDir: creator.workspaceDir, offline: false,
     });
-    wireProvisioning(
-      resolved,
-      result.ready,
-      (l) => this.managers.tab.tabs.some((t) => t.label === l),
-      () => {
-        this.managers.tab.deleteBusy(resolved);
-        messageBus.emit('state', { type: 'dirty' });
-        const notice = sandboxNotice();
-        notify(this.managers, 'manual', label, `Agent "${resolved}" ready. (workspace: ${this.managers.tab.shorten(result.dir)})`);
-        if (notice) notify(this.managers, 'manual', label, notice);
-      },
-      (message) => {
-        notify(this.managers, 'manual', label, `Failed to create workspace for "${resolved}": ${message}`);
-        setTimeout(() => {
-          const index = this.managers.tab.findIndex(resolved);
-          if (index !== -1) this.managers.tab.closeTab(index);
-        }, PROVISION_FAILURE_CLOSE_DELAY_MS);
-      },
-    );
+  }
+
+  private waitForRemoteWorkspace(joinedLabel: string, sourceLabel: string): void {
+    const ready = this.managers.remote.readyOf(sourceLabel);
+    if (!ready) return;
+    void ready.then((dir) => {
+      if (this.managers.tab.findIndex(joinedLabel) === -1) return;
+      this.managers.tab.setCwd(joinedLabel, dir);
+      this.managers.tab.deleteBusy(joinedLabel);
+      messageBus.emit('state', { type: 'dirty' });
+    }, () => {
+      const index = this.managers.tab.findIndex(joinedLabel);
+      if (index !== -1) this.managers.tab.closeTab(index);
+    });
   }
 
 }

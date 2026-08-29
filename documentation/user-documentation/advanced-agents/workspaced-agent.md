@@ -15,6 +15,8 @@ Running the command from a directory that isn't in a git repository, or in a rep
 
 The tab appears right away, marked busy, while the clone runs in the background — anything you type into it joins its [command queue](/user-documentation/command-bar/queue) and runs once the clone finishes. A ready confirmation (and the isolation notice, if isolation isn't actually active) posts to the tab once the clone completes; if the clone fails instead, the tab reports the failure and closes on its own shortly after.
 
+Once a workspace exists, the ➕ button in that tab's metadata row creates another agent **inside the same clone**. It does not make a sibling clone. Both tabs see each other's files immediately, and closing the tab that created the workspace does not interrupt the joined agent. The command forms `agent` and `harness` still create fresh workspaces; sharing is the metadata button's job.
+
 ## If every workspace suddenly fails to start
 
 <img class="agent-float left" src="/agents/yusuf-south.png" alt="" />
@@ -45,11 +47,13 @@ A codex harness needs one extra thing. Codex hides credential-looking variables 
 
 <img class="agent-float left" src="/agents/demir-south-east.png" alt="" />
 
-A workspace lasts exactly as long as its tab:
+A workspace lasts exactly as long as the tabs sharing it:
 
 - **Created** when the tab opens — always a fresh clone.
 - **Cancelled** if you close the tab, or quit the app, while the clone is still running — it stops right away instead of finishing in the background.
-- **Removed** when the tab closes, along with everything in it that wasn't pushed.
+- **Shared** when you use a workspaced tab's ➕ button; every joined tab works in the same directory.
+- **Kept** when one sharing tab closes and another still uses it.
+- **Removed** when the last sharing tab closes, along with everything in it that wasn't pushed.
 - **Not restored**: `janus --relaunch` brings the agent tab back, but not its workspace — the restored tab starts in its last known working directory. Fresh app launches also clear any workspace directories left behind.
 
 Treat a workspace as scratch space: anything worth keeping should leave through git.

@@ -13,6 +13,7 @@ export type RemotePtyOptions = {
   offline?: boolean;
   cols: number;
   rows: number;
+  agentName?: string;
 };
 
 /**
@@ -28,12 +29,15 @@ export function createRemotePtySession(
   options: RemotePtyOptions,
   onExit: (exitCode: number) => void,
 ): PtySession {
-  const { id, program, command, harness, offline, cols, rows } = options;
+  const { id, program, command, harness, offline, cols, rows, agentName } = options;
   channel.attach(id, {
     onOutput: (data) => messageBus.emit('pty', { type: 'data', id, data }),
     onExit,
   });
-  channel.send({ type: 'spawn', id, program, command, mode: 'pty', harness, cols, rows, offline });
+  channel.send({
+    type: 'spawn', id, program, command, mode: 'pty', harness, cols, rows, offline,
+    ...(agentName && { agentName }),
+  });
   return {
     id,
     program,

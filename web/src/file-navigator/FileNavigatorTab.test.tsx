@@ -811,6 +811,30 @@ describe('FileNavigatorTab', () => {
       expect(send).toHaveBeenCalledWith({ method: 'moveFileNavigatorItem', params: { index: 2, fromRelPath: 'README.md', toRelPath: 'src' } });
     });
 
+    it('shows no drop target when a remote row is dragged over a local tree', () => {
+      const send = vi.fn();
+      const client = { send } as unknown as JanusClient;
+      const { container } = render(<>
+        <FileNavigatorTab
+          files={makeFiles({ remote: { host: 'devbox', address: 'devbox' } })}
+          client={client}
+          index={0}
+        />
+        <FileNavigatorTab files={makeFiles()} client={client} index={1} />
+      </>);
+      const trees = container.querySelectorAll('.files-tab');
+      const dragged = trees[0].querySelector('[data-path="README.md"]') as HTMLElement;
+      const destination = trees[1].querySelector('[data-path="src"]') as HTMLElement;
+      document.elementFromPoint = vi.fn().mockReturnValue(destination);
+
+      fireEvent.mouseDown(dragged, { clientX: 0, clientY: 0 });
+      act(() => { globalThis.dispatchEvent(new MouseEvent('mousemove', { clientX: 20, clientY: 20 })); });
+
+      expect(trees[0].querySelector('.drop-target')).toBeNull();
+      act(() => { globalThis.dispatchEvent(new MouseEvent('mouseup')); });
+      expect(send).not.toHaveBeenCalled();
+    });
+
     it('drop on a conflicting name renders MoveConflictDialog instead of sending immediately', () => {
       const send = vi.fn();
       const client = { send } as unknown as JanusClient;

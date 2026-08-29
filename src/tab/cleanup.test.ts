@@ -6,7 +6,7 @@ import type { Managers } from '../managers.js';
 
 function makeManagers(): Managers {
   return {
-    workspace: { remove: vi.fn(), cancel: vi.fn() },
+    workspace: { release: vi.fn(), cancel: vi.fn() },
     shell: { close: vi.fn() },
     acp: { close: vi.fn() },
     browser: { closeTab: vi.fn() },
@@ -48,11 +48,11 @@ describe('closeTabResources', () => {
     const workspaced = { ...makeTab('ws', 'red'), workspaceDir: '/tmp/ws-main' };
     closeTabResources(workspaced, managers, new Map(), new Map(), new Map(), 2);
     // Deferred off the synchronous close path so the rmSync of the clone can't freeze the UI.
-    expect(managers.workspace.remove).not.toHaveBeenCalled();
+    expect(managers.workspace.release).not.toHaveBeenCalled();
 
     await new Promise((resolve) => setTimeout(resolve, 0));
-    expect(managers.workspace.remove).toHaveBeenCalledTimes(1);
-    expect(managers.workspace.remove).toHaveBeenCalledWith('/tmp/ws-main');
+    expect(managers.workspace.release).toHaveBeenCalledTimes(1);
+    expect(managers.workspace.release).toHaveBeenCalledWith('/tmp/ws-main');
   });
 
   it('cancels an in-flight clone immediately when closing a still-provisioning tab', () => {
@@ -79,7 +79,7 @@ describe('closeTabResources', () => {
     closeTabResources(remote, managers, new Map(), new Map(), new Map(), 2);
     await new Promise((resolve) => setTimeout(resolve, 0));
 
-    expect(managers.workspace.remove).not.toHaveBeenCalled();
+    expect(managers.workspace.release).not.toHaveBeenCalled();
     expect(managers.workspace.cancel).not.toHaveBeenCalled();
   });
 
@@ -92,8 +92,8 @@ describe('closeTabResources', () => {
     closeTabResources(local, managers, new Map(), new Map(), new Map(), 3);
     await new Promise((resolve) => setTimeout(resolve, 0));
 
-    expect(managers.workspace.remove).toHaveBeenCalledTimes(1);
-    expect(managers.workspace.remove).toHaveBeenCalledWith('/tmp/ws-local');
+    expect(managers.workspace.release).toHaveBeenCalledTimes(1);
+    expect(managers.workspace.release).toHaveBeenCalledWith('/tmp/ws-local');
   });
 
   it('does not cancel anything for a tab with no workspace', () => {

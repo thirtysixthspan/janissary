@@ -20,6 +20,11 @@ describe('file-navigator-clipboard', () => {
     expect(getClipboardSnapshot()).toBeNull();
   });
 
+  it('records the source host for a remote clipboard', () => {
+    setClipboard('copy', ['/remote/ws/a.txt'], 'devbox');
+    expect(getClipboardSnapshot()).toEqual({ mode: 'copy', paths: ['/remote/ws/a.txt'], host: 'devbox' });
+  });
+
   it('setting with an empty path list is a no-op', () => {
     setClipboard('cut', ['/root/a.txt']);
     setClipboard('copy', []);

@@ -95,6 +95,23 @@ describe('FileNavigatorManager', () => {
 
   const run = (): FileNavigatorManagerInstance => new FileNavigatorManager(managers as never);
 
+  function installRemoteWorkspace() {
+    const source = tabs.find((tab) => tab.label === 'other')!;
+    source.remote = { host: 'devbox', address: 'devbox:/srv/project' };
+    const channel = {
+      attachNavigator: vi.fn(), detachNavigator: vi.fn(), send: vi.fn(),
+    };
+    const remote = {
+      get: vi.fn(() => channel),
+      readyOf: vi.fn(() => Promise.resolve('/remote/ws')),
+      workspaceOf: vi.fn(() => '/remote/ws'),
+      attach: vi.fn(() => true),
+      release: vi.fn(),
+    };
+    (managers as { remote: typeof remote }).remote = remote;
+    return { channel, remote, source };
+  }
+
   it('opens a files tab rooted at the issuing tab cwd and watches the root', () => {
     const manager = run();
     manager.open('files', 'janus');
@@ -102,6 +119,26 @@ describe('FileNavigatorManager', () => {
     expect(tab).toBeDefined();
     expect(tab!.files!.root).toBe(root);
     expect(watchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('opens files in a remote label over that label\'s existing workspace channel', () => {
+    const { remote, source } = installRemoteWorkspace();
+    const manager = run();
+    manager.open('files in other', 'janus');
+    const tab = tabs.find((candidate) => candidate.label.startsWith('navigator'))!;
+    expect(tab.files).toMatchObject({ root: '/remote/ws', remote: source.remote });
+    expect(remote.attach).toHaveBeenCalledWith(tab.label, 'other');
+  });
+
+  it('opens the metadata-row navigator remotely and keeps focus on its source tab', () => {
+    const { remote, source } = installRemoteWorkspace();
+    const manager = run();
+    manager.openOrRetarget('other');
+    const tab = tabs.find((candidate) => candidate.label.startsWith('navigator'))!;
+    expect(tab.files).toMatchObject({ root: '/remote/ws', remote: source.remote });
+    expect(tab.dock).toBe('left');
+    expect(remote.attach).toHaveBeenCalledWith(tab.label, 'other');
+    expect(tabs[activeTab].label).toBe('other');
   });
 
   it('resolves a relative path against cwd', () => {

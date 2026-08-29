@@ -24,6 +24,12 @@ export type SessionListener = {
   onExit: (exitCode: number) => void;
 };
 
+export type NavigatorListener = {
+  onReply: (frame: Extract<ServerFrame, { type: 'filesystem-reply' }>) => void;
+  onEvent: (path: string) => void;
+  onClose?: () => void;
+};
+
 // The frames that are not addressed to a single process: the provisioning answer and the transcript
 // pushes. Everything else inbound is routed to a `SessionListener` instead.
 export type ChannelFrame = Extract<ServerFrame, { type: 'workspace-ready' | 'workspace-failed' | 'transcript' }>;
@@ -44,6 +50,7 @@ export class RemoteChannel {
   private state: ChannelState = 'authenticating';
   private buffer = '';
   private sessions = new Map<string, SessionListener>();
+  private navigators = new Map<string, NavigatorListener>();
   private notifiedClose = false;
 
   constructor(private transport: ChannelTransport, private handlers: RemoteChannelHandlers) {}
@@ -58,6 +65,12 @@ export class RemoteChannel {
   attach(id: string, listener: SessionListener): void { this.sessions.set(id, listener); }
 
   detach(id: string): void { this.sessions.delete(id); }
+
+  attachNavigator(id: string, listener: NavigatorListener): void {
+    this.navigators.set(id, listener);
+  }
+
+  detachNavigator(id: string): void { this.navigators.delete(id); }
 
   send(frame: ClientFrame): void {
     if (this.state !== 'attached') return;
@@ -88,6 +101,8 @@ export class RemoteChannel {
     this.notifiedClose = true;
     this.state = 'closed';
     this.sessions.clear();
+    for (const listener of this.navigators.values()) listener.onClose?.();
+    this.navigators.clear();
     this.handlers.onClose();
   }
 
@@ -129,12 +144,20 @@ export class RemoteChannel {
 
   private dispatch(line: string): void {
     const frame = decodeFrame(line);
-    if ('error' in frame) { this.fail(frame.error); return; }
+    if (!('type' in frame)) { this.fail(frame.error); return; }
     if (frame.type === 'output') { this.sessions.get(frame.id)?.onOutput(frame.data); return; }
     if (frame.type === 'exit') {
       const listener = this.sessions.get(frame.id);
       this.sessions.delete(frame.id);
       listener?.onExit(frame.exitCode);
+      return;
+    }
+    if (frame.type === 'filesystem-reply') {
+      this.navigators.get(frame.session)?.onReply(frame);
+      return;
+    }
+    if (frame.type === 'filesystem-event') {
+      this.navigators.get(frame.session)?.onEvent(frame.path);
       return;
     }
     switch (frame.type) {

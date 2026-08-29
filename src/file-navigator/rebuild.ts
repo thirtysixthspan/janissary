@@ -1,27 +1,10 @@
-import { statSync, type FSWatcher } from 'node:fs';
-import path from 'node:path';
-import { buildRows, markGitStatus } from './index.js';
-import { markStats, type RowStat } from './stats.js';
-import { unwatchDir } from './watch.js';
-import type { FileNavigatorDetail, FileNavigatorRow } from '../tab/types.js';
-import type { GitFileStatus } from '../git-status.js';
-
-type RebuildableState = {
-  root: string;
-  expanded: Set<string>;
-  gitStatuses?: Map<string, GitFileStatus>;
-  watchers: Map<string, FSWatcher>;
-  details: FileNavigatorDetail;
-  stats: Map<string, RowStat | null>;
-};
+import { markGitStatus } from './index.js';
+import { pruneCachedRows } from './filesystem-cache.js';
+import type { FilesTabState } from './state.js';
+import type { FileNavigatorRow } from '../tab/types.js';
 
 // Prunes expanded directories that no longer exist on disk (closing their watchers) and returns
 // the current visible row list for `state.root`, with git status and detail stats marked.
-export function pruneAndBuildRows(state: RebuildableState): FileNavigatorRow[] {
-  for (const relPath of state.expanded) {
-    let stillDir: boolean;
-    try { stillDir = statSync(path.join(state.root, relPath)).isDirectory(); } catch { stillDir = false; }
-    if (!stillDir) { state.expanded.delete(relPath); unwatchDir(state, relPath); }
-  }
-  return markStats(state, markGitStatus(buildRows(state.root, state.expanded), state.gitStatuses ?? new Map()));
+export function pruneAndBuildRows(state: FilesTabState, onReady: () => void): FileNavigatorRow[] {
+  return markGitStatus(pruneCachedRows(state, onReady), state.gitStatuses ?? new Map());
 }

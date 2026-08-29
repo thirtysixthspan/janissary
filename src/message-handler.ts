@@ -16,6 +16,10 @@ function isDeferredCallback(value: unknown): value is DeferredCallback {
   return typeof value === 'function';
 }
 
+function isPromise(value: unknown): value is Promise<unknown> {
+  return value instanceof Promise;
+}
+
 async function projectFiles(controller: Controller): Promise<unknown> {
   try {
     return await controller.projectFiles();
@@ -82,8 +86,7 @@ function dispatch(controller: Controller, message: ClientMessage, send: Reply): 
     }
     case 'monitorContextSnapshot': { controller.monitorContextSnapshot(message.params.name); break;
     }
-    case 'saveFile': { controller.saveFile(message.params.url, message.params.content); break;
-    }
+    case 'saveFile': { return controller.saveFile(message.params.url, message.params.content); }
     case 'pluginIntent': {
       if (!isPluginIntentParams(message.params)) throw new Error('Invalid pluginIntent params');
       return controller.pluginIntent(
@@ -117,6 +120,9 @@ function dispatch(controller: Controller, message: ClientMessage, send: Reply): 
     case 'fileNavigatorSearch':
     case 'revealFileNavigatorItem':
     case 'fileNavigatorOpeners':
+    case 'fileNavigatorOpen':
+    case 'fileNavigatorCreateFile':
+    case 'fileNavigatorCreateDirectory':
     case 'fileNavigatorSelectionAction':
     case 'runFileNavigatorSelectionAction':
     case 'undoFileNavigatorItem':
@@ -176,6 +182,13 @@ export function handle(controller: Controller, message: ClientMessage, reply: Re
           reply({ t: 'rpc-reply', id: message.id, error: errorText(error) });
         });
       }
+      return;
+    }
+    if (isPromise(result)) {
+      void result.then(
+        (value) => reply({ t: 'rpc-reply', id: message.id, result: mode === 'ack' ? 'ok' : value }),
+        (error: unknown) => reply({ t: 'rpc-reply', id: message.id, error: errorText(error) }),
+      );
       return;
     }
     reply({

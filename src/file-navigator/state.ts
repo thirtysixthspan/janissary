@@ -1,9 +1,10 @@
-import type { FSWatcher } from 'node:fs';
 import type { GitFileStatus } from '../git-status.js';
-import type { FileNavigatorDetail } from '../tab/types.js';
+import type { FileNavigatorDetail, RemoteTarget } from '../tab/types.js';
 import type { HistoryStep } from './moves.js';
 import type { TreeRestoreHint } from './restore.js';
 import type { RowStat } from './stats.js';
+import type { FileNavigatorEntry } from './index.js';
+import type { FileSystemPort, WatchHandle } from './filesystem-port.js';
 
 // Per files-tab state, keyed by the tab's label. `watchers` is keyed by each visible directory's
 // tree-relative path ('' for the root itself). `undoStack`/`redoStack` are purely in-memory and
@@ -11,8 +12,15 @@ import type { RowStat } from './stats.js';
 // half-dozen modules the manager delegates to can name it without importing the manager itself.
 export type FilesTabState = {
   root: string;
+  filesystem: FileSystemPort;
+  remote?: RemoteTarget;
+  remoteRoot?: string;
+  ownerLabel?: string;
   expanded: Set<string>;
-  watchers: Map<string, FSWatcher>;
+  watchers: Map<string, WatchHandle>;
+  listings: Map<string, FileNavigatorEntry[]>;
+  listingLoads: Set<string>;
+  statLoads: Set<string>;
   debounce?: ReturnType<typeof setTimeout>;
   // Set while the tab is waiting for its root to be created (see `pollForCreation`); cleared once
   // the directory appears.

@@ -19,6 +19,15 @@ export function joinCommandPaths(
   absoluteRoot: string,
   sourcePaths: string[],
   targetCwd: string,
+  remoteHost?: string,
 ): string {
+  if (remoteHost) {
+    return sourcePaths.map((path) => remoteNavigatorPath(remoteHost, absoluteRoot, path)).join(' ');
+  }
   return sourcePaths.map((path) => relativeNavigatorPath(absoluteRoot, path, targetCwd)).join(' ');
+}
+
+export function remoteNavigatorPath(host: string, absoluteRoot: string, sourcePath: string): string {
+  const root = absoluteRoot.endsWith('/') ? absoluteRoot.slice(0, -1) : absoluteRoot;
+  return `${host}:${root}/${sourcePath}`;
 }

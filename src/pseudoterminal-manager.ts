@@ -66,7 +66,7 @@ export class PseudoterminalManager {
     const id = `rpty${++this.remoteCounter}`;
     const session = createRemotePtySession(
       channel,
-      { ...options, id, cols: this.cols, rows: this.rows },
+      { ...options, id, cols: this.cols, rows: this.rows, agentName: label },
       (exitCode) => this.handleExit(id, exitCode),
     );
     this.ptys.set(id, { session, tabLabel: label });
@@ -103,6 +103,15 @@ export class PseudoterminalManager {
       if (entry.tabLabel === label && !entry.transport) programs.push(entry.session.program);
     }
     return programs;
+  }
+
+  // A shared remote channel's ssh transport is not owned by its launching tab anymore. Before
+  // that tab closes, move only the transport record to another label using the channel so ordinary
+  // per-tab PTY cleanup can still reap the tab's remote processes without killing the connection.
+  reassignTransports(fromLabel: string, toLabel: string): void {
+    for (const entry of this.ptys.values()) {
+      if (entry.tabLabel === fromLabel && entry.transport) entry.tabLabel = toLabel;
+    }
   }
 
   // Create an inline terminal card: spawn a PTY running `command` in the tab's cwd and attach its

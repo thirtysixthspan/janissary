@@ -17,6 +17,7 @@ import { TranscriptStore } from './transcript/store.js';
 import { initDbDir } from './connections.js';
 import { initProfileDir } from './profiles.js';
 import { initWorkspaceDir, clearWorkspaceDir } from './workspace/index.js';
+import { clearRemoteFileCache, initRemoteFileCache } from './file-navigator/remote-file-cache.js';
 import { loadConfig } from './config.js';
 import { loadLearnedCommands } from './interactive-learned.js';
 import { loadAgentNames } from './agent/names.js';
@@ -184,6 +185,7 @@ export async function boot(argv = process.argv.slice(2)): Promise<void> {
   initDbDir(cwd);
   initProfileDir(cwd, path.join(import.meta.dirname, '..'));
   initWorkspaceDir(cwd);
+  initRemoteFileCache(cwd);
   new TranscriptLogger(cwd); // append-only transcript log under .janissary/log/ (never cleared)
   new TranscriptStore(cwd);
   loadConfig(cwd);
@@ -191,6 +193,7 @@ export async function boot(argv = process.argv.slice(2)): Promise<void> {
   loadAgentNames(cwd);
   loadHarnessModels(cwd);
   loadProjectTokens(cwd);
+  clearRemoteFileCache();
   if (!args.relaunch) { clearStateDirectory(); TranscriptStore.clear(); clearWorkspaceDir(); clearCaptureDirectory(); clearHarnessRecordingDirectory(); clearHarnessTranscriptDirectory(); }
 
   const webDir = path.join(import.meta.dirname, '..', 'web', 'dist');

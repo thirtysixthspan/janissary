@@ -12,22 +12,23 @@ export function closeTabResources(
   legacyTabsLength?: number,
 ): void {
   const tabsLength = typeof contextOrTabsLength === 'number' ? contextOrTabsLength : legacyTabsLength ?? 0;
-  // Remove the workspace clone in the background: it is a recursive rmSync of a full git clone,
+  // Release the workspace clone in the background: its final release recursively removes a full git clone,
   // slow enough to freeze the UI if run inline (the tab can't visibly close until it finishes).
   // Deferring it lets the tab close and the state broadcast reach the client first. The clone stays
-  // tracked until `remove` runs, so a shutdown before this fires still cleans it up via removeAll().
+  // tracked until `release` runs, so a shutdown before this fires still cleans it up via removeAll().
   if (tab.workspaceDir) {
     const workspaceDir = tab.workspaceDir;
     // If the clone is still being provisioned (the tab was closed before it finished), cancel it
     // immediately — a no-op once nothing is pending for this label — so the tab closes right away
     // instead of leaving an orphaned `git clone` running for a tab that no longer exists.
     managers.workspace.cancel(tab.label);
-    setTimeout(() => managers.workspace.remove(workspaceDir), 0);
+    setTimeout(() => managers.workspace.release(workspaceDir), 0);
   }
   managers.shell.close(tab.label);
   managers.acp.close(tab.label);
   managers.editorAcp.closeTab(tab.label);
   managers.browser.closeTab(tab.label);
+  if (tab.remote) managers.remote?.release(tab.label);
   managers.pty.closeTab(tab.label);
   managers.tab.deleteBusy(tab.label);
   managers.fileNavigator.closeTab(tab.label);

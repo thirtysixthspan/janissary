@@ -73,6 +73,7 @@ export type FileNavigatorRpcCall =
         destinationPath: string;
         mode: 'copy' | 'cut';
         policy?: BulkConflictPolicy;
+        sourceHost?: string;
       };
     }
   // Delete a file or directory (recursively) from a file navigator tab, after the client has already
@@ -94,6 +95,12 @@ export type FileNavigatorRpcCall =
   // `all` suppresses the single-command shortcut so the reply always carries the full choice list,
   // which is what the row context menu's "Open with" entry needs to force the chooser open.
   | { method: 'fileNavigatorOpeners'; params: { index: number; relPath: string; edit: boolean; all?: boolean } }
+  | {
+      method: 'fileNavigatorOpen';
+      params: { index: number; relPath: string; command: FileOpenerChoice['command'] };
+    }
+  | { method: 'fileNavigatorCreateFile'; params: { index: number; destination: string } }
+  | { method: 'fileNavigatorCreateDirectory'; params: { index: number; destination: string } }
   // What a tab plugin contributes for a whole selection of rows, for the row context menu. Replies
   // with a `FileSelectionAction` when every selected path is a file of one plugin's own claimed
   // types and that plugin contributes an entry, and with `null` otherwise. Resolving never activates

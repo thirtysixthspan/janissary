@@ -12,7 +12,8 @@ export function closeTabState(tabs: Map<string, FilesTabState>, label: string): 
   if (!state) return;
   if (state.debounce) clearTimeout(state.debounce);
   stopPolling(state);
-  for (const watcher of state.watchers.values()) { try { watcher.close(); } catch { /* already gone */ } }
+  for (const watcher of state.watchers.values()) watcher.stop();
+  state.filesystem.dispose();
   tabs.delete(label);
 }
 

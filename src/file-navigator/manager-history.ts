@@ -1,10 +1,12 @@
 import { applyStackMove, applyStackPaste, isPasteGroup, type HistoryStep } from './moves.js';
 import type { UndoRedoResult } from '../protocol.js';
+import { mapMaybe, type FileSystemPort, type MaybePromise } from './filesystem-port.js';
 
 type HistoryState = {
   root: string;
   undoStack: HistoryStep[];
   redoStack: HistoryStep[];
+  filesystem?: FileSystemPort;
 };
 
 export function replayHistory(
@@ -13,7 +15,17 @@ export function replayHistory(
   overwrite: boolean,
   skipConflicts: boolean,
   rebuild: () => void,
-): UndoRedoResult {
+): MaybePromise<UndoRedoResult> {
+  if (state.filesystem) {
+    return mapMaybe(state.filesystem.replay(
+      state.root, state.undoStack, state.redoStack, direction, overwrite, skipConflicts,
+    ), (replayed) => {
+      state.undoStack = replayed.undoStack;
+      state.redoStack = replayed.redoStack;
+      if (replayed.mutated) rebuild();
+      return replayed.result;
+    });
+  }
   const fromStack = direction === 'undo' ? state.undoStack : state.redoStack;
   const toStack = direction === 'undo' ? state.redoStack : state.undoStack;
   const step = fromStack.at(-1);

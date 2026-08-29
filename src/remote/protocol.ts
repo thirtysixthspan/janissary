@@ -15,13 +15,37 @@
 // adding a credential no longer touches this file at all. It is also the one bump so far that
 // changes a frame's shape rather than adding to it: a version-5 remote finds none of the fields it
 // reads and provisions a workspace with no credentials whatsoever, which the same refusal covers.
-export const REMOTE_PROTOCOL_VERSION = 6;
+// Version 7 adds workspace filesystem sessions and a per-spawn agent name.
+export const REMOTE_PROTOCOL_VERSION = 7;
 
 // The single line that flips the channel from a raw terminal to a framed transport. Chosen so it
 // cannot occur in ordinary ssh banner, motd, or authentication output.
 export const HANDSHAKE_SENTINEL = '__JANUS_REMOTE__';
 
 export type RemoteHandshake = { version: number; root: string };
+
+export type RemoteFilesystemOperation =
+  | 'read-directory' | 'stat' | 'watch' | 'unwatch' | 'git' | 'search' | 'read-file' | 'write-file'
+  | 'move' | 'move-many' | 'delete' | 'delete-many' | 'rename' | 'paste'
+  | 'create-file' | 'create-directory' | 'replay';
+
+export type RemoteFilesystemArguments = {
+  path?: string;
+  paths?: string[];
+  content?: string;
+  from?: string;
+  to?: string;
+  sources?: string[];
+  destination?: string;
+  policy?: 'overwrite-all' | 'skip-conflicts';
+  name?: string;
+  mode?: 'copy' | 'cut';
+  undoStack?: unknown[];
+  redoStack?: unknown[];
+  direction?: 'undo' | 'redo';
+  overwrite?: boolean;
+  skipConflicts?: boolean;
+};
 
 import type { ProjectTokens } from '../project-tokens.js';
 import { decodeKnownFrame } from './frame-decode.js';
@@ -40,11 +64,17 @@ export type ClientFrame =
     // The harness name, when this process *is* the tab's harness: the remote uses it to build the
     // harness-specific environment and to start the transcript source for the tab.
     harness?: string;
-    cols: number; rows: number; offline?: boolean;
+    cols: number; rows: number; offline?: boolean; agentName?: string;
   }
   | { type: 'input'; id: string; data: string }
   | { type: 'resize'; id: string; cols: number; rows: number }
-  | { type: 'kill'; id: string };
+  | { type: 'kill'; id: string }
+  | { type: 'filesystem-open'; session: string }
+  | { type: 'filesystem-close'; session: string }
+  | {
+    type: 'filesystem-request'; session: string; request: string;
+    operation: RemoteFilesystemOperation; args: RemoteFilesystemArguments;
+  };
 
 // Remote → local: the process family's output/exit, the provisioning answer, and the transcript
 // blocks the remote's own `createTranscriptSource` yields.
@@ -57,12 +87,20 @@ export type ServerFrame =
   | { type: 'workspace-failed'; message: string }
   | { type: 'output'; id: string; data: string }
   | { type: 'exit'; id: string; exitCode: number }
-  | { type: 'transcript'; blocks: string[] };
+  | { type: 'transcript'; blocks: string[] }
+  | { type: 'filesystem-reply'; session: string; request: string; result?: unknown; error?: string }
+  | { type: 'filesystem-event'; session: string; path: string };
 
 export type RemoteFrame = ClientFrame | ServerFrame;
 
-const CLIENT_TYPES = new Set(['provision', 'spawn', 'input', 'resize', 'kill']);
-const SERVER_TYPES = new Set(['workspace-ready', 'workspace-failed', 'output', 'exit', 'transcript']);
+const CLIENT_TYPES = new Set([
+  'provision', 'spawn', 'input', 'resize', 'kill',
+  'filesystem-open', 'filesystem-close', 'filesystem-request',
+]);
+const SERVER_TYPES = new Set([
+  'workspace-ready', 'workspace-failed', 'output', 'exit', 'transcript',
+  'filesystem-reply', 'filesystem-event',
+]);
 
 function encodeText(text: string): string {
   return Buffer.from(text, 'utf8').toString('base64');
@@ -73,7 +111,18 @@ function encodeText(text: string): string {
 function toWire(frame: RemoteFrame): Record<string, unknown> {
   if (frame.type === 'input' || frame.type === 'output') return { ...frame, data: encodeText(frame.data) };
   if (frame.type === 'transcript') return { ...frame, blocks: frame.blocks.map((block) => encodeText(block)) };
+  if (frame.type === 'filesystem-request' && frame.operation === 'write-file') {
+    return { ...frame, args: { ...frame.args, content: encodeText(frame.args.content ?? '') } };
+  }
+  if (frame.type === 'filesystem-reply' && isContentResult(frame.result)) {
+    return { ...frame, result: { ...frame.result, content: encodeText(frame.result.content) } };
+  }
   return { ...frame };
+}
+
+function isContentResult(value: unknown): value is { content: string } & Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+    && typeof (value as Record<string, unknown>).content === 'string';
 }
 
 export function encodeFrame(frame: RemoteFrame): string {
