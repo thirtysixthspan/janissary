@@ -9,6 +9,7 @@ import { ResizeButton } from './ResizeButton';
 import { beginResizeDrag } from './drag-resize';
 import type { CommandInputDropHandle, EditorDropHandle } from './drop-handles';
 import { useSidebarSelection } from './useSidebarSelection';
+import { multiOpenablePaths } from './multi-open';
 
 const MIN_WIDTH_PX = 180;
 const MAX_WIDTH_PCT = 50;
@@ -92,6 +93,7 @@ export function Sidebar({
           <FileNavigatorTab
             files={current.tab.files} client={client} index={current.index} dock={current.tab.dock} autoFocus={false}
             dropRef={dropRef} editorDropRef={editorDropRef} targetCwd={targetCwd ?? current.tab.cwd}
+            multiOpen={multiOpenablePaths}
           />
         )}
         {current.tab.view === 'notifications' && (

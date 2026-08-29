@@ -1,6 +1,5 @@
 import React, { useEffect, useId, useRef, useState } from 'react';
 import type { FileNavigatorRow } from '@shared/protocol';
-import { isImagePath } from '@shared/plugins/image/shared';
 import { useFileNavigatorDrag } from './useFileNavigatorDrag';
 import { useFileNavigatorRename } from './useFileNavigatorRename';
 import { newFileTargetDir, newFileCommand, newDirectoryCommand, newDirectoryTargetPath, findPendingNewDir } from './file-navigator-new-file';
@@ -23,7 +22,7 @@ import { FileNavigatorRows } from './FileNavigatorRows';
 
 export function FileNavigatorTab({
   files, client, index, dock, autoFocus = true, dropRef, editorDropRef,
-  targetCwd = files.absoluteRoot, onSplit,
+  targetCwd = files.absoluteRoot, onSplit, multiOpen,
 }: Properties) {
   const intents = useFileNavigatorIntents(client, index);
   const selection = useFileNavigatorSelection(files.rows, files.absoluteRoot, index, files.restore);
@@ -87,19 +86,16 @@ export function FileNavigatorTab({
     containerRef,
     actions: { reroot, toggle, openFile },
   });
-  const selectedImages = selection.operationPaths.length > 1
-    && selection.operationPaths.every(isImagePath)
-    ? selection.operationPaths
-    : null;
+  const multiOpenSelection = multiOpen?.(selection.operationPaths) ?? null;
   const beginRename = (row: FileNavigatorRow) => rename.begin(row.path, row.name);
   const clipboardPaths = () => selection.operationPaths.map((relPath) => `${files.absoluteRoot}/${relPath}`);
   const menuActions: FileNavigatorMenuActions = {
     open: (row) => {
-      if (selectedImages?.includes(row.path)) for (const path of selectedImages) openFile(path, false);
+      if (multiOpenSelection?.includes(row.path)) for (const path of multiOpenSelection) openFile(path, false);
       else rowEvents.onRowDoubleClick(row, false);
     },
     edit: (row) => {
-      if (selectedImages?.includes(row.path)) for (const path of selectedImages) editFile(path);
+      if (multiOpenSelection?.includes(row.path)) for (const path of multiOpenSelection) editFile(path);
       else editFile(row.path);
     },
     openWith: (row) => opener.openWith(

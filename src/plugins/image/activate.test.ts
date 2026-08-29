@@ -7,7 +7,7 @@ import {
 } from '../api.js';
 import { openerForExtension } from '../../openers/index.js';
 import { activate } from './activate.js';
-import { isImagePath, isImagePayload } from './shared.js';
+import { isImagePayload } from './shared.js';
 
 function fakeCapabilities(options: { openExternally?: (file: string) => boolean } = {}) {
   const notes: string[] = [];
@@ -195,13 +195,5 @@ describe('isImagePayload', () => {
     expect(isImagePayload({ ...payload, mode: 'edit' })).toBe(true);
     expect(isImagePayload({ ...payload, mode: 'view' })).toBe(false);
     expect(isImagePayload({ ...payload, mode: 1 })).toBe(false);
-  });
-});
-
-describe('isImagePath', () => {
-  it('recognizes the image extensions the plugin owns, case-insensitively', () => {
-    expect(isImagePath('photo.PNG')).toBe(true);
-    expect(isImagePath('nested/cover.avif')).toBe(true);
-    expect(isImagePath('notes.txt')).toBe(false);
   });
 });

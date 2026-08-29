@@ -24,4 +24,8 @@ export type FileNavigatorTabProperties = {
   editorDropRef?: React.RefObject<EditorDropHandle | null>;
   targetCwd?: string;
   onSplit?: () => void;
+  // Classifier for the whole-selection Open/Edit fan-out: which paths, if any, Open and Edit
+  // apply to when the clicked row belongs to the multi-row selection. Owned by the app shell,
+  // so the navigator never names which plugin or file kind qualifies.
+  multiOpen?: (paths: string[]) => string[] | null;
 };
