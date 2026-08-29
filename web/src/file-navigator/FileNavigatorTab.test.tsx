@@ -6,6 +6,7 @@ import type { FileNavigatorView, TabView } from '@shared/protocol';
 import type { JanusClient } from '../ws';
 import { FileNavigatorTab } from './FileNavigatorTab';
 import { Sidebar } from '../Sidebar';
+import { multiOpenablePaths } from '../multi-open';
 import type { CommandInputDropHandle } from '../drop-handles';
 import { clearClipboard, getClipboardSnapshot, setClipboard } from './file-navigator-clipboard';
 
@@ -1310,7 +1311,7 @@ describe('FileNavigatorTab', () => {
         { path: 'first.png', name: 'first.png', depth: 0, dir: false },
         { path: 'second.jpg', name: 'second.jpg', depth: 0, dir: false },
       ] });
-      render(<FileNavigatorTab files={files} client={client} index={0} />);
+      render(<FileNavigatorTab files={files} client={client} index={0} multiOpen={multiOpenablePaths} />);
       fireEvent.mouseDown(screen.getByText('first.png'), { button: 0 });
       fireEvent.mouseDown(screen.getByText('second.jpg'), { button: 0, metaKey: true });
       fireEvent.contextMenu(screen.getByText('second.jpg'));
@@ -1326,7 +1327,7 @@ describe('FileNavigatorTab', () => {
         { path: 'first.png', name: 'first.png', depth: 0, dir: false },
         { path: 'second.jpg', name: 'second.jpg', depth: 0, dir: false },
       ] });
-      render(<FileNavigatorTab files={files} client={client} index={0} />);
+      render(<FileNavigatorTab files={files} client={client} index={0} multiOpen={multiOpenablePaths} />);
       fireEvent.mouseDown(screen.getByText('first.png'), { button: 0 });
       fireEvent.mouseDown(screen.getByText('second.jpg'), { button: 0, metaKey: true });
       fireEvent.contextMenu(screen.getByText('second.jpg'));

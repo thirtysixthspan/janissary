@@ -18,10 +18,6 @@ export type ImagePayload = {
 export type SaveEditPayload = { dataUrl: string };
 export type SaveEditResult = { name: string };
 
-const IMAGE_EXTENSIONS = new Set([
-  '.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp', '.svg', '.avif', '.ico',
-]);
-
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -41,8 +37,4 @@ export function isSaveEditPayload(value: unknown): value is SaveEditPayload {
 
 export function isSaveEditResult(value: unknown): value is SaveEditResult {
   return isRecord(value) && typeof value.name === 'string';
-}
-
-export function isImagePath(value: string): boolean {
-  return IMAGE_EXTENSIONS.has(value.slice(value.lastIndexOf('.')).toLowerCase());
 }
