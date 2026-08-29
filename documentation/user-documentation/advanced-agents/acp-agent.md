@@ -48,3 +48,11 @@ Running `acp` with no prompt prints `Usage: acp <prompt>.`.
 ## In a workspaced tab
 
 If the tab is a [workspaced agent](/user-documentation/advanced-agents/workspaced-agent), the ACP agent is confined by the same sandbox as the tab's shell. See [Workspacing](/user-documentation/advanced-agents/workspacing) for what the sandbox allows and blocks.
+
+## In a remote agent tab
+
+`acp` works in a [remote agent tab](/user-documentation/advanced-agents/remote-agents) too, and the agent runs on the remote host, inside that host's workspace — so it reads and reasons about the files the tab is actually working on, not copies of them on your machine. Nothing about the tab looks different: replies stream in the same way, the busy dot behaves the same, and the status popup shows the same model.
+
+One thing to know, because it's easy to trip over: the `db` and `browser` commands the agent runs still act on **the machine janissary is running on**. Ask a remote agent to query a database and it queries your local database file, not one on the remote host.
+
+If you type `acp` before the tab has finished connecting — while SSH is still asking for a password, say — you'll see `ACP: the remote session is still connecting.` Answer the prompt, then run it again.

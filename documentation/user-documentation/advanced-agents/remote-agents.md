@@ -114,3 +114,9 @@ The remote deletes its workspace clone when the session's last user closes, incl
 Screen captures, recordings, and busy detection are worked out on your machine from the terminal output streaming back, so `harness capture` writes a capture file locally and the busy dot behaves as usual. `harness transcript` is the exception. It reads the harness's own session record, which lives on the remote, so the remote reads it and sends the rendered result across.
 
 A remote tab still can't launch its own remote tab. There is no `files on <address>` form without an existing tab on that host, and files cannot be copied between machines or handed to `open external` from a remote tree.
+
+## Asking the remote agent
+
+`acp <prompt>` works in a remote agent tab, and the agent runs on the remote host against that host's workspace — see [ACP agents](/user-documentation/advanced-agents/acp-agent). The `db` and `browser` commands it runs on its own still act on your machine, not the remote.
+
+For this to work, `opencode` has to be installed and authenticated on the remote — or an OpenCode or Gemini API key configured in your local project, which is forwarded across the connection the same way the other credentials are.

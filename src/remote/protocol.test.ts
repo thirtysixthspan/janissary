@@ -37,6 +37,12 @@ describe('frame codec', () => {
           direction: 'undo', overwrite: false, skipConflicts: false,
         },
       },
+      {
+        type: 'acp-open', id: 'racp1', command: 'opencode', args: ['acp'],
+        env: { OPENCODE_CONFIG_CONTENT: '{"model":"google/gemini-3.1-flash-lite"}' }, offline: false,
+      },
+      { type: 'acp-prompt', id: 'racp1', text: 'summarize this project' },
+      { type: 'acp-close', id: 'racp1' },
     ];
     for (const frame of frames) expect(roundTrip(frame)).toEqual(frame);
   });
@@ -51,8 +57,32 @@ describe('frame codec', () => {
       { type: 'filesystem-reply', session: 'files1', request: 'q1', result: { entries: [] } },
       { type: 'filesystem-reply', session: 'files1', request: 'q2', result: { content: 'héllo\nworld' } },
       { type: 'filesystem-event', session: 'files1', path: 'src' },
+      { type: 'acp-ready', id: 'racp1' },
+      { type: 'acp-chunk', id: 'racp1', text: 'partial reply' },
+      { type: 'acp-end', id: 'racp1', stopReason: 'end_turn' },
+      { type: 'acp-error', id: 'racp1', message: 'rate limited', fatal: false },
+      { type: 'acp-error', id: 'racp1', message: 'ACP agent exited.', fatal: true },
     ];
     for (const frame of frames) expect(roundTrip(frame)).toEqual(frame);
+  });
+
+  it('carries a prompt and a reply chunk through the base64 path intact', () => {
+    const text = '# heading\n\n```js\nconst x = `tick`;\n```\n\nnaïve — 🌍\n{"type":"kill"}';
+    expect(roundTrip({ type: 'acp-prompt', id: 'racp1', text })).toEqual({ type: 'acp-prompt', id: 'racp1', text });
+    expect(roundTrip({ type: 'acp-chunk', id: 'racp1', text })).toEqual({ type: 'acp-chunk', id: 'racp1', text });
+    expect(encodeFrame({ type: 'acp-chunk', id: 'racp1', text })).not.toContain('\n');
+  });
+
+  // Ordinary, not a fault: an agent can stream an empty chunk, and refusing one would fail the
+  // channel over nothing. An empty *prompt* never reaches the wire — `AcpManager.run` refuses it.
+  it('accepts an empty reply chunk', () => {
+    expect(roundTrip({ type: 'acp-chunk', id: 'racp1', text: '' }))
+      .toEqual({ type: 'acp-chunk', id: 'racp1', text: '' });
+  });
+
+  it('accepts an acp-open carrying no env and no offline flag', () => {
+    const frame: RemoteFrame = { type: 'acp-open', id: 'racp1', command: 'opencode', args: [] };
+    expect(roundTrip(frame)).toEqual(frame);
   });
 
   // Base64 is the whole reason the payload can't be mistaken for framing.
@@ -113,6 +143,25 @@ describe('frame codec', () => {
     ['filesystem request with an unknown operation', { type: 'filesystem-request', session: 'f1', request: 'q1', operation: 'unknown', args: {} }],
     ['filesystem request without a request id', { type: 'filesystem-request', session: 'f1', operation: 'search', args: {} }],
     ['filesystem request with malformed arguments', { type: 'filesystem-request', session: 'f1', request: 'q1', operation: 'rename', args: { path: 'a' } }],
+    ['acp-open without an id', { type: 'acp-open', command: 'opencode', args: [] }],
+    ['acp-open with an empty id', { type: 'acp-open', id: '', command: 'opencode', args: [] }],
+    ['acp-open with an empty command', { type: 'acp-open', id: 'racp1', command: '', args: [] }],
+    ['acp-open with a non-array args list', { type: 'acp-open', id: 'racp1', command: 'opencode', args: 'acp' }],
+    ['acp-open with a non-string arg', { type: 'acp-open', id: 'racp1', command: 'opencode', args: ['acp', 7] }],
+    ['acp-open with an array env', { type: 'acp-open', id: 'racp1', command: 'opencode', args: [], env: ['A=1'] }],
+    ['acp-open with a null env', { type: 'acp-open', id: 'racp1', command: 'opencode', args: [], env: null }],
+    ['acp-open with a non-string env value', { type: 'acp-open', id: 'racp1', command: 'opencode', args: [], env: { A: 1 } }],
+    ['acp-open with a non-boolean offline flag', { type: 'acp-open', id: 'racp1', command: 'opencode', args: [], offline: 'yes' }],
+    ['acp-prompt without an id', { type: 'acp-prompt', text: 'aGk=' }],
+    ['acp-prompt without string text', { type: 'acp-prompt', id: 'racp1', text: 7 }],
+    ['acp-close without an id', { type: 'acp-close' }],
+    ['acp-ready without an id', { type: 'acp-ready' }],
+    ['acp-chunk without string text', { type: 'acp-chunk', id: 'racp1', text: null }],
+    ['acp-end without a stop reason', { type: 'acp-end', id: 'racp1' }],
+    ['acp-end with an empty stop reason', { type: 'acp-end', id: 'racp1', stopReason: '' }],
+    ['acp-error without a message', { type: 'acp-error', id: 'racp1', fatal: true }],
+    ['acp-error without a fatal flag', { type: 'acp-error', id: 'racp1', message: 'gone' }],
+    ['acp-error with a non-boolean fatal flag', { type: 'acp-error', id: 'racp1', message: 'gone', fatal: 'yes' }],
   ])('rejects %s', (_case, frame) => {
     expect(decodeFrame(JSON.stringify(frame))).toEqual({
       error: expect.stringContaining(`Malformed remote frame "${String(frame.type)}"`),
@@ -138,6 +187,13 @@ describe('frame codec', () => {
       type: 'filesystem-request', session: 'files1', request: 'q1',
       operation: 'read-file', args: { path: 'src/a.txt' },
     });
+  });
+
+  it('drops undeclared properties from an acp-open rather than forwarding them', () => {
+    const encoded = JSON.stringify({
+      type: 'acp-open', id: 'racp1', command: 'opencode', args: ['acp'], cwd: '/somewhere/else', extra: 1,
+    });
+    expect(decodeFrame(encoded)).toEqual({ type: 'acp-open', id: 'racp1', command: 'opencode', args: ['acp'] });
   });
 });
 
@@ -165,7 +221,10 @@ describe('handshake', () => {
   // all of them with a `tokens` map. A remote speaking any of them decodes the frame happily and
   // finds none of the fields it reads, so it would provision a workspace with no credentials at all
   // — which is what refusing at the handshake exists to prevent, for every one of them.
-  it.each([1, 2, 3, 4, 5, 6])('rejects a remote speaking older protocol version %i', (version) => {
+  // Version 7 added workspace filesystem sessions and knows none of the ACP frames: it would refuse
+  // each as unknown while the local tab sat waiting on a reply that never comes — accepting prompts
+  // and answering nothing.
+  it.each([1, 2, 3, 4, 5, 6, 7])('rejects a remote speaking older protocol version %i', (version) => {
     const parsed = parseHandshake(`${HANDSHAKE_SENTINEL} ${JSON.stringify({ version, root: '/srv/proj' })}`);
     expect(parsed).toEqual({ error: expect.stringContaining('Update janissary') });
     expect('error' in parsed && parsed.error).toContain(String(REMOTE_PROTOCOL_VERSION));

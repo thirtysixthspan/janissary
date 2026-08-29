@@ -30,7 +30,7 @@ export function connectAcp(options: AcpOptions): AcpSession {
     {
       workspaceDir: options.workspaceDir,
       offline: options.offline,
-      tokens: options.workspaceDir ? getProjectTokens() : undefined,
+      tokens: options.workspaceDir ? (options.tokens ?? getProjectTokens()) : undefined,
     },
     options.command, options.args, baseEnv,
   );
@@ -39,7 +39,13 @@ export function connectAcp(options: AcpOptions): AcpSession {
     stdio: ['pipe', 'pipe', 'pipe'],
     env,
   });
+  // Set by `kill()` before the subprocess is signalled, so a deliberate close reports nothing.
+  let killed = false;
   proc.on('error', (error) => options.onError(`failed to start ACP agent: ${error.message}`));
+  // Without this, an agent that dies after a successful spawn leaves a session whose next prompt
+  // writes into a closed stdin and never returns. The connection-level channel already means "this
+  // session is gone", so the caller can drop it and start a fresh one.
+  proc.on('exit', () => { if (!killed) options.onError('ACP agent exited.'); });
 
   // The current in-flight prompt's handlers; session updates are routed here.
   let current: PromptHandlers | undefined;
@@ -96,6 +102,7 @@ export function connectAcp(options: AcpOptions): AcpSession {
       })();
     },
     kill: () => {
+      killed = true;
       try { proc.kill(); } catch { /* already gone */ }
     },
   };

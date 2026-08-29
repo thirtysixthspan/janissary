@@ -1,3 +1,5 @@
+import type { ProjectTokens } from '../project-tokens.js';
+
 export type PromptHandlers = {
   onChunk: (text: string) => void;
   onEnd: (stopReason: string) => void;
@@ -26,6 +28,10 @@ export type AcpOptions = {
   // via a Seatbelt sandbox (see src/sandbox/index.ts). Monitor sessions never set this.
   workspaceDir?: string;
   offline?: boolean;
+  // The credentials to inject; defaults to this project's own. The remote server supplies the
+  // forwarded-over-own map it already computed, so a credential forwarded from the local machine is
+  // not dropped in favour of the remote's own file.
+  tokens?: ProjectTokens;
   // Tool ids the connection's permission handler may approve (see acp-tools.ts). Undefined/empty
   // (every non-monitor caller and every tool-less persona) means deny every tool request.
   allowedTools?: string[];

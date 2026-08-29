@@ -181,6 +181,83 @@ describe('RemoteChannel — attached', () => {
   });
 });
 
+describe('RemoteChannel — ACP session routing', () => {
+  function acpHarness() {
+    const h = harness();
+    h.channel.receive(`${encodeHandshake('/srv/proj')}\n`);
+    const listener = { onReady: vi.fn(), onChunk: vi.fn(), onEnd: vi.fn(), onError: vi.fn() };
+    return { ...h, listener };
+  }
+
+  it('routes ready, chunk, and end frames to the listener that owns the id', () => {
+    const h = acpHarness();
+    h.channel.attachAcp('racp1', h.listener);
+
+    h.channel.receive(`${encodeFrame({ type: 'acp-ready', id: 'racp1' })}\n`);
+    h.channel.receive(`${encodeFrame({ type: 'acp-chunk', id: 'racp1', text: 'partial' })}\n`);
+    h.channel.receive(`${encodeFrame({ type: 'acp-end', id: 'racp1', stopReason: 'end_turn' })}\n`);
+
+    expect(h.listener.onReady).toHaveBeenCalledTimes(1);
+    expect(h.listener.onChunk).toHaveBeenCalledWith('partial');
+    expect(h.listener.onEnd).toHaveBeenCalledWith('end_turn');
+    expect(h.frames).toEqual([]);
+  });
+
+  // An ACP-level error is not a channel-level fault: `fail` kills the transport, and killing the
+  // transport closes the tab. An agent that failed to spawn must not take the whole session with it.
+  it('delivers an error frame to the listener without faulting the channel', () => {
+    const h = acpHarness();
+    h.channel.attachAcp('racp1', h.listener);
+
+    h.channel.receive(`${encodeFrame({ type: 'acp-error', id: 'racp1', message: 'gone', fatal: true })}\n`);
+
+    expect(h.listener.onError).toHaveBeenCalledWith('gone', true);
+    expect(h.errors).toEqual([]);
+    expect(h.kill).not.toHaveBeenCalled();
+    expect(h.channel.attached).toBe(true);
+  });
+
+  it('carries the fatal flag through unchanged for a recoverable error', () => {
+    const h = acpHarness();
+    h.channel.attachAcp('racp1', h.listener);
+
+    h.channel.receive(`${encodeFrame({ type: 'acp-error', id: 'racp1', message: 'rate limited', fatal: false })}\n`);
+
+    expect(h.listener.onError).toHaveBeenCalledWith('rate limited', false);
+  });
+
+  // What makes a chunk still in flight from a session `acp reset` disposed land nowhere instead of
+  // in its successor's transcript entry.
+  it('drops frames for an id with no attached listener, without faulting the channel', () => {
+    const h = acpHarness();
+    h.channel.attachAcp('racp1', h.listener);
+    h.channel.detachAcp('racp1');
+
+    h.channel.receive(`${encodeFrame({ type: 'acp-chunk', id: 'racp1', text: 'stale' })}\n`);
+    h.channel.receive(`${encodeFrame({ type: 'acp-chunk', id: 'racp2', text: 'never attached' })}\n`);
+
+    expect(h.listener.onChunk).not.toHaveBeenCalled();
+    expect(h.errors).toEqual([]);
+    expect(h.kill).not.toHaveBeenCalled();
+  });
+
+  it('clears the ACP listeners when the session closes', () => {
+    const h = acpHarness();
+    h.channel.attachAcp('racp1', h.listener);
+
+    h.channel.closed();
+    h.channel.receive(`${encodeFrame({ type: 'acp-chunk', id: 'racp1', text: 'late' })}\n`);
+
+    expect(h.listener.onChunk).not.toHaveBeenCalled();
+  });
+
+  it('still fails the channel on an ACP frame only the local side may send', () => {
+    const h = acpHarness();
+    h.channel.receive(`${encodeFrame({ type: 'acp-close', id: 'racp1' })}\n`);
+    expect(h.errors[0]).toContain('Unexpected remote frame "acp-close"');
+  });
+});
+
 describe('RemoteChannel — closing', () => {
   it('notifies and clears attached navigators', () => {
     const h = harness();

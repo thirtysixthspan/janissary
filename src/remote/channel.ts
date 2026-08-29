@@ -1,6 +1,6 @@
 import {
   HANDSHAKE_SENTINEL, decodeFrame, encodeFrame, heldBackLength, parseHandshake,
-  type ClientFrame, type RemoteHandshake, type ServerFrame,
+  type ClientFrame, type RemoteFrame, type RemoteHandshake, type ServerFrame,
 } from './protocol.js';
 
 // One ssh session's lifetime and its state machine. Until `remote-serve` announces itself the
@@ -30,6 +30,17 @@ export type NavigatorListener = {
   onClose?: () => void;
 };
 
+// What one remote ACP session id wants from the inbound stream. Registered by the local ACP
+// adapter, which is the only shape that consumes these frames.
+export type AcpSessionListener = {
+  onReady: () => void;
+  onChunk: (text: string) => void;
+  onEnd: (stopReason: string) => void;
+  // `fatal` says whether the session itself is gone (a failed spawn, a dead agent) or only this
+  // prompt failed (a rate limit). The adapter routes the two to different places.
+  onError: (message: string, fatal: boolean) => void;
+};
+
 // The frames that are not addressed to a single process: the provisioning answer and the transcript
 // pushes. Everything else inbound is routed to a `SessionListener` instead.
 export type ChannelFrame = Extract<ServerFrame, { type: 'workspace-ready' | 'workspace-failed' | 'transcript' }>;
@@ -51,6 +62,7 @@ export class RemoteChannel {
   private buffer = '';
   private sessions = new Map<string, SessionListener>();
   private navigators = new Map<string, NavigatorListener>();
+  private acpSessions = new Map<string, AcpSessionListener>();
   private notifiedClose = false;
 
   constructor(private transport: ChannelTransport, private handlers: RemoteChannelHandlers) {}
@@ -71,6 +83,12 @@ export class RemoteChannel {
   }
 
   detachNavigator(id: string): void { this.navigators.delete(id); }
+
+  // The same routing for an ACP session id, kept in its own map because an ACP session is not a
+  // process: it has no output or exit frames, and its errors must not fault the channel.
+  attachAcp(id: string, listener: AcpSessionListener): void { this.acpSessions.set(id, listener); }
+
+  detachAcp(id: string): void { this.acpSessions.delete(id); }
 
   send(frame: ClientFrame): void {
     if (this.state !== 'attached') return;
@@ -103,6 +121,7 @@ export class RemoteChannel {
     this.sessions.clear();
     for (const listener of this.navigators.values()) listener.onClose?.();
     this.navigators.clear();
+    this.acpSessions.clear();
     this.handlers.onClose();
   }
 
@@ -160,11 +179,27 @@ export class RemoteChannel {
       this.navigators.get(frame.session)?.onEvent(frame.path);
       return;
     }
+    if (this.dispatchAcp(frame)) return;
     switch (frame.type) {
     case 'workspace-ready':
     case 'workspace-failed':
     case 'transcript': { this.handlers.onFrame(frame); return; }
     default: { this.fail(`Unexpected remote frame "${frame.type}".`); }
+    }
+  }
+
+  // Routed by id before the switch that ends in `fail`, so an agent that fails to spawn or errors
+  // mid-prompt never kills the transport — killing the transport closes the tab, and an ACP-level
+  // error is not a channel-level fault. A frame whose id has no listener is dropped, which is what
+  // stops a chunk still in flight from a session disposed by `acp reset` landing in its successor.
+  // Returns whether the frame was an ACP one at all.
+  private dispatchAcp(frame: RemoteFrame): boolean {
+    switch (frame.type) {
+    case 'acp-ready': { this.acpSessions.get(frame.id)?.onReady(); return true; }
+    case 'acp-chunk': { this.acpSessions.get(frame.id)?.onChunk(frame.text); return true; }
+    case 'acp-end': { this.acpSessions.get(frame.id)?.onEnd(frame.stopReason); return true; }
+    case 'acp-error': { this.acpSessions.get(frame.id)?.onError(frame.message, frame.fatal); return true; }
+    default: { return false; }
     }
   }
 
