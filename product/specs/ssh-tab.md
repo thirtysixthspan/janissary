@@ -75,7 +75,28 @@ open ssh tab.
   or the binary/host being unreachable), or via the tab strip's × / `close` command (which kills
   the PTY first), or `connection close ssh:<id>` from any tab. If the ssh tab is the last
   remaining tab, closing it quits the app (see `tabs.md`). ssh's own error output (auth failure,
-  unreachable host) dies with the tab — it is not echoed back to the creator's transcript.
+  unreachable host) dies with the tab — it is not echoed back to the creator's transcript. It does,
+  however, land in the session recording: ssh prints those errors before the process exits, so they
+  are captured like any other output.
+
+## Session recording
+
+Every ssh session is recorded, automatically, from spawn to exit — there is no flag, command, or
+setting to turn it on or off. The recording is a replayable asciicast file under
+`.janissary/recordings/`, named after the tab label and the start time, alongside harness recordings
+and governed by the same rules (see [[harness-recording]]).
+
+Only what the remote host printed is saved. **Keystrokes are never recorded**, so a passphrase or a
+remote `sudo` password typed into an ssh tab does not land on disk. Terminal resizes are recorded, so
+a replay reflows the way the session did.
+
+The file is created **lazily, on the first output** — a session that never connects leaves no empty
+file — and closed when the ssh process exits. Recordings are **cleared at a fresh launch** and
+**preserved across `--relaunch`**, so a run's recordings are bounded to that run.
+
+There is no in-app viewer: recordings are replayed externally with `asciinema play` or any asciicast
+web player. If a recording cannot be written, the ssh session is unaffected and one
+`ssh recording failed` line appears in the notifications feed for that tab.
 
 ## Delivery
 

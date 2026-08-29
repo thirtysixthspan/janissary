@@ -11,6 +11,10 @@ const TERM = 'xterm-256color';
 // it, is owned/disposed by `HarnessManager`. The file is created lazily on the first `data` event —
 // a harness that exits before producing output leaves no empty file. Uses a single long-lived
 // append stream (not per-event `appendFileSync`) so a burst of PTY output never blocks `bus.emit`.
+//
+// `command` is what the asciicast header reports the session ran: a bare program name (`claude`)
+// for a named harness, the whole verbatim `ssh …` invocation for an ssh tab. `onFailure`, when
+// given, fires at most once if recording is abandoned; callers that omit it fail silently.
 export class HarnessRecorder {
   private subscription: Subscription;
   private stream: WriteStream | undefined;
@@ -21,9 +25,10 @@ export class HarnessRecorder {
   constructor(
     private id: string,
     private label: string,
-    private program: string,
+    private command: string,
     private cols: number,
     private rows: number,
+    private onFailure?: () => void,
   ) {
     this.subscription = messageBus.on('pty', ['data', 'exit', 'resize'], (event) => {
       if (event.id !== this.id) return;
@@ -56,24 +61,42 @@ export class HarnessRecorder {
     this.writeEvent('r', `${cols}x${rows}`);
   }
 
-  // Lazily open the append stream and write the asciicast v2 header line.
+  // Lazily open the append stream and write the asciicast v2 header line. A synchronous throw here
+  // (an `EACCES` on the project directory, say) would otherwise be swallowed by the bus's
+  // per-listener try/catch, leaving the recorder to retry the open on every subsequent chunk for the
+  // life of the session while never writing anything — so it disables the recorder instead.
   private open(): void {
-    ensureRecordingDirectory();
-    const stream = createWriteStream(harnessRecordingPath(this.label, this.startedAt), { flags: 'a' });
-    // A Node stream's async `'error'` event escapes the bus's per-listener try/catch and would
-    // crash the process if unhandled — disable the recorder instead.
-    stream.on('error', () => { this.failed = true; });
-    this.stream = stream;
-    const header = {
+    try {
+      ensureRecordingDirectory();
+      const stream = createWriteStream(harnessRecordingPath(this.label, this.startedAt), { flags: 'a' });
+      // A Node stream's async `'error'` event escapes the bus's per-listener try/catch and would
+      // crash the process if unhandled — disable the recorder instead.
+      stream.on('error', () => { this.abandon(); });
+      this.stream = stream;
+      stream.write(JSON.stringify(this.header()) + '\n');
+    } catch {
+      this.abandon();
+    }
+  }
+
+  private header(): Record<string, unknown> {
+    return {
       version: 2,
       width: this.cols,
       height: this.rows,
       timestamp: Math.floor(this.startedAt / 1000),
-      command: this.program,
+      command: this.command,
       title: this.label,
       env: { TERM },
     };
-    stream.write(JSON.stringify(header) + '\n');
+  }
+
+  // Stop recording for good, reporting it once. Both failure paths land here, so a caller with a
+  // failure callback hears about a write error and an open error alike, and hears about it once.
+  private abandon(): void {
+    if (this.failed) return;
+    this.failed = true;
+    this.onFailure?.();
   }
 
   private writeEvent(code: 'o' | 'r', data: string): void {
