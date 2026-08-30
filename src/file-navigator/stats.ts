@@ -16,7 +16,7 @@ type StattableState = {
 
 // `lstat`, not `stat`: the tree renders a symlink as a leaf file, so a link's own size and mode are
 // what the row describes, and a broken link caches as a miss instead of throwing.
-function readStat(absPath: string): RowStat | null {
+export function readRowStat(absPath: string): RowStat | null {
   try {
     const stat = lstatSync(absPath);
     return { size: stat.size, modified: stat.mtimeMs, mode: stat.mode };
@@ -34,7 +34,7 @@ export function markStats(state: StattableState, rows: FileNavigatorRow[]): File
     if (row.path === '..') return row;
     let stat = state.stats.get(row.path);
     if (stat === undefined) {
-      stat = readStat(path.join(state.root, row.path));
+      stat = readRowStat(path.join(state.root, row.path));
       state.stats.set(row.path, stat);
     }
     if (!stat) return row;

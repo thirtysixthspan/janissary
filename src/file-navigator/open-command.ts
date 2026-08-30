@@ -1,38 +1,96 @@
 import { statSync } from 'node:fs';
 import path from 'node:path';
-import { buildRows } from './index.js';
-import { markStats } from './stats.js';
 import { parseFileNavigatorArgs } from './args.js';
 import { expandUserPath } from '../paths.js';
 import { resolveTarget } from '../commands/resolve-target.js';
 import type { Managers } from '../managers.js';
-import type { FileNavigatorDetail } from '../tab/types.js';
+import type { FileNavigatorDetail, RemoteTarget } from '../tab/types.js';
 import type { FilesTabState } from './state.js';
+import { LocalFileSystemPort, type FileSystemPort } from './filesystem-port.js';
+import { buildCachedRows } from './filesystem-cache.js';
+import { RemoteFileSystemPort } from './remote-port.js';
+import { clearFilesystemCache } from './filesystem-cache.js';
+
+type CwdTarget = { cwd: string; sourceLabel?: string; remote?: RemoteTarget };
 
 // The directory a `files` command roots its tree at: the issuing tab's cwd, or — with an `in
 // <label>` clause — the named tab's. Undefined when the named tab doesn't exist, which
 // `resolveTarget` has already reported.
 function resolveCwd(
   managers: Managers, label: string, inLabel: string | undefined, out: (text: string) => void,
-): string | undefined {
-  if (inLabel === undefined) return managers.tab.cwdOf(label) ?? process.cwd();
+): CwdTarget | undefined {
+  if (inLabel === undefined) return { cwd: managers.tab.cwdOf(label) ?? process.cwd() };
   const sourceTab = resolveTarget(inLabel, managers, out);
   if (!sourceTab) return undefined;
-  return managers.tab.cwdOf(sourceTab.label) ?? process.cwd();
+  return {
+    cwd: managers.remote?.workspaceOf(sourceTab.label) ?? managers.tab.cwdOf(sourceTab.label) ?? process.cwd(),
+    sourceLabel: sourceTab.label,
+    remote: sourceTab.remote,
+  };
 }
 
 // A fresh per-tab state record for a tree rooted at `root`, starting in `details` mode.
-function freshState(root: string, details: FileNavigatorDetail): FilesTabState {
+function freshState(
+  root: string, details: FileNavigatorDetail,
+  filesystem: FileSystemPort = new LocalFileSystemPort(), remote?: RemoteTarget, ownerLabel?: string,
+): FilesTabState {
   return {
     root,
+    filesystem,
+    remote,
+    ownerLabel,
     expanded: new Set<string>(),
     watchers: new Map(),
+    listings: new Map(),
+    listingLoads: new Set(),
+    statLoads: new Set(),
     undoStack: [],
     redoStack: [],
     gitStatuses: new Map(),
     details,
     stats: new Map(),
   };
+}
+
+function openRemoteTree(
+  managers: Managers, tabs: Map<string, FilesTabState>, sourceLabel: string, remote: RemoteTarget,
+  root: string, details: FileNavigatorDetail, dock: 'left' | 'right' | null,
+  watchDir: (label: string, absDir: string, relPath: string) => void,
+  refreshGit: (label: string) => void,
+  rebuild: (label: string) => void,
+  rootAfterReady: (workspace: string) => string,
+): string | undefined {
+  const channel = managers.remote.get(sourceLabel);
+  const ready = managers.remote.readyOf(sourceLabel);
+  if (!channel || !ready) return undefined;
+  managers.tab.openFilesTab({ root, absoluteRoot: root, rows: [], waitingFor: root, details, remote });
+  const label = managers.tab.cur().label;
+  if (!managers.remote.attach(label, sourceLabel)) return undefined;
+  const state = freshState(root, details, new RemoteFileSystemPort(channel, label, ready), remote, sourceLabel);
+  state.remoteRoot = managers.remote.workspaceOf(sourceLabel);
+  managers.tab.setCwd(label, root);
+  tabs.set(label, state);
+  watchDir(label, root, '');
+  refreshGit(label);
+  void ready.then((workspace) => {
+    const current = tabs.get(label);
+    if (current !== state) return;
+    current.remoteRoot = workspace;
+    const nextRoot = rootAfterReady(workspace);
+    if (current.root !== nextRoot) {
+      for (const watcher of current.watchers.values()) watcher.stop();
+      current.watchers.clear();
+      current.root = nextRoot;
+      clearFilesystemCache(current);
+      current.listingLoads.clear();
+      current.statLoads.clear();
+      managers.tab.setCwd(label, nextRoot);
+      watchDir(label, nextRoot, '');
+    }
+    if (managers.tab.findIndex(label) !== -1) rebuild(label);
+  }, () => {});
+  if (dock) managers.tab.setDock(managers.tab.findIndex(label), dock);
+  return label;
 }
 
 // A tree already open on this root is focused or redocked rather than duplicated, so a `with
@@ -75,7 +133,7 @@ function openTree(
   watchDir: (label: string, absDir: string, relPath: string) => void,
   refreshGit: (label: string) => void,
 ): string {
-  const rows = markStats(state, buildRows(root, state.expanded));
+  const rows = buildCachedRows(state, () => {});
   managers.tab.openFilesTab({ root, absoluteRoot: root, rows, details: state.details });
   const newLabel = managers.tab.cur().label;
   managers.tab.setCwd(newLabel, root);
@@ -101,11 +159,26 @@ export function openFilesCommand(
   const { inLabel, dock, details, target } = parseFileNavigatorArgs(rest);
   const out = (text: string) => managers.tab.append(label, { input: command, output: text });
 
-  const cwd = resolveCwd(managers, label, inLabel, out);
-  if (cwd === undefined) return undefined;
+  const resolved = resolveCwd(managers, label, inLabel, out);
+  if (resolved === undefined) return undefined;
+  const { cwd } = resolved;
 
   const expandedPath = target ? expandUserPath(target, { root: managers.tab.launchDir }) : '';
   const root = target ? (path.isAbsolute(expandedPath) ? expandedPath : path.resolve(cwd, expandedPath)) : cwd;
+
+  if (resolved.remote && resolved.sourceLabel) {
+    const existing = managers.tab.tabs.find(
+      (tab) => tab.files?.root === root && tab.files.remote?.address === resolved.remote?.address,
+    );
+    if (existing) return focusExisting(managers, tabs, existing.label, dock, details, rebuild);
+    return openRemoteTree(
+      managers, tabs, resolved.sourceLabel, resolved.remote, root, details ?? 'name', dock, watchDir,
+      refreshGit, rebuild,
+      (workspace) => target
+        ? (path.isAbsolute(expandedPath) ? expandedPath : path.resolve(workspace, expandedPath))
+        : workspace,
+    );
+  }
 
   let stat;
   let exists = true;

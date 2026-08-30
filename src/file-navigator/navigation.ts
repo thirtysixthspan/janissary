@@ -3,6 +3,7 @@ import { containedPath } from './batch-paths.js';
 import { parentPath } from './index.js';
 import type { FilesTabState } from './state.js';
 import type { BasePort } from './port.js';
+import { clearFilesystemCache } from './filesystem-cache.js';
 
 // The narrow slice of `FileNavigatorManager` internals this module needs, handed over as bound closures
 // so the tab-state map and watcher plumbing stay private to the manager (see `navPort()` there).
@@ -46,6 +47,7 @@ export function rerootTree(port: NavPort, label: string, relPath?: string): void
       ? state.root
       : containedPath(state.root, relPath);
   if (!target) return;
+  if (state.remoteRoot && !containedPath(state.remoteRoot, path.relative(state.remoteRoot, target))) return;
   if (target === state.root) return;
   for (const relPath2 of state.expanded) port.unwatchDir(state, relPath2);
   state.expanded.clear();
@@ -53,7 +55,9 @@ export function rerootTree(port: NavPort, label: string, relPath?: string): void
   state.root = target;
   state.gitStatuses = new Map();
   state.branch = undefined;
-  state.stats.clear();
+  clearFilesystemCache(state);
+  state.listingLoads.clear();
+  state.statLoads.clear();
   port.watchDir(label, target, '');
   if (port.hasTab(label)) port.setCwd(label, target);
   port.rebuild(label);

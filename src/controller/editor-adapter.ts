@@ -7,9 +7,10 @@ import { notify } from '../notifications.js';
 import { listPersonas } from '../personas.js';
 import { projectFilesFor } from '../project-files.js';
 import type { Managers } from '../managers.js';
+import type { MaybePromise } from '../file-navigator/filesystem-port.js';
 
 export type EditorControllerAdapter = {
-  saveFile(url: string, content: string): void;
+  saveFile(url: string, content: string): MaybePromise<void>;
   syncEditorBuffer(url: string, content: string): void;
   resyncEditorTab(url: string): void;
   projectFiles(): Promise<{ root: string; paths: string[] }>;

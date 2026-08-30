@@ -5,12 +5,15 @@ import { messageBus } from '../bus.js';
 import type { Managers } from '../managers.js';
 import { nextFreeName } from './next-free-name.js';
 import { atomicWriteFile } from '../atomic-write.js';
+import { remoteFileFor } from '../file-navigator/remote-file-cache.js';
+import { notify } from '../notifications.js';
+import type { MaybePromise } from '../file-navigator/filesystem-port.js';
 
 // Write an editor tab's buffer back to disk. `url` is the tab's `/open/<id>` ref, resolved
 // through the open-file allow-list — the client can only ever write to files the user explicitly
 // opened. Throws on an unknown ref or a write failure; the RPC layer turns that into an error
 // reply for the client's save feedback.
-export function saveFile(managers: Managers, url: string, content: string): void {
+export function saveFile(managers: Managers, url: string, content: string): MaybePromise<void> {
   const id = url.startsWith('/open/') ? url.slice('/open/'.length) : '';
   const filePath = id ? managers.tab.openFilePath(id) : undefined;
   if (!filePath) throw new Error(`saveFile: unknown file ref "${url}"`);
@@ -20,10 +23,21 @@ export function saveFile(managers: Managers, url: string, content: string): void
   // A new-file editor's first save silently auto-suffixes instead of overwriting a same-named
   // file that another untitled tab already saved. Only the first save is eligible — `newFile`
   // clears below once the write lands, so later saves on this tab overwrite normally.
-  const isFirstNewFileSave = wasNewFile && existsSync(filePath);
+  const remote = remoteFileFor(filePath);
+  const isFirstNewFileSave = wasNewFile && existsSync(filePath) && !remote;
   const targetPath = isFirstNewFileSave ? path.join(path.dirname(filePath), nextFreeName(path.dirname(filePath), path.basename(filePath))) : filePath;
 
   atomicWriteFile(targetPath, content);
+  if (remote) return saveRemote(managers, remote, content, () => finishSave(
+    managers, url, targetPath, filePath, wasNewFile,
+  ));
+  finishSave(managers, url, targetPath, filePath, wasNewFile);
+}
+
+function finishSave(
+  managers: Managers, url: string, targetPath: string, filePath: string, wasNewFile: boolean,
+): void {
+  const tab = managers.tab.tabs.find((item) => item.editor?.url === url);
   // Refresh the owning tab's displayed size from the file's new on-disk size.
   const stat = statSync(targetPath);
   if (tab?.editor) {
@@ -53,6 +67,23 @@ export function saveFile(managers: Managers, url: string, content: string): void
     void syncAfterSave(managers, tab.label, tab.editor.name);
   }
   messageBus.emit('state', { type: 'dirty' });
+}
+
+async function saveRemote(
+  managers: Managers,
+  remote: NonNullable<ReturnType<typeof remoteFileFor>>,
+  content: string,
+  finish: () => void,
+): Promise<void> {
+  try {
+    const result = await remote.filesystem.writeFile(remote.root, remote.relPath, Buffer.from(content));
+    if (!result.ok) throw new Error(result.reason);
+    finish();
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    notify(managers, 'file-operation', remote.label, `Could not save remote file: ${reason}`);
+    throw error;
+  }
 }
 
 async function syncAfterSave(managers: Managers, label: string, filename: string): Promise<void> {

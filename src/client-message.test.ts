@@ -62,6 +62,9 @@ describe('isClientMessage', () => {
     ]);
     expect(methodsByMode.deferred?.map(([method]) => method)).toEqual([
       'editorSuggest',
+      'fileNavigatorOpen',
+      'fileNavigatorCreateFile',
+      'fileNavigatorCreateDirectory',
       'fileNavigatorSearch',
       'projectFiles',
       'pluginIntent',

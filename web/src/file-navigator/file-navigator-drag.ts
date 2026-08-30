@@ -32,7 +32,10 @@ export function resolveDropTarget(
   rows: FileNavigatorRow[],
   draggedPaths: string | string[],
   hoveredPath: string | null,
+  sourceHost?: string,
+  destinationHost?: string,
 ): DropTarget {
+  if (sourceHost !== destinationHost) return null;
   if (hoveredPath === null || hoveredPath === '..') return null;
   const sources = typeof draggedPaths === 'string' ? [draggedPaths] : draggedPaths;
   const hovered = rows.find((r) => r.path === hoveredPath);

@@ -360,7 +360,12 @@ describe('ProfileManager.newAgentAt', () => {
         buildAgentState: vi.fn(() => ({})),
         shorten: (p: string) => p,
       },
-      workspace: { create: vi.fn() },
+      workspace: { create: vi.fn(), retain: vi.fn() },
+      remote: {
+        attach: vi.fn(() => true),
+        workspaceOf: vi.fn(() => '/remote/ws'),
+        readyOf: vi.fn(() => Promise.resolve('/remote/ws')),
+      },
     } as unknown as Managers;
   }
 
@@ -408,46 +413,52 @@ describe('ProfileManager.newAgentAt', () => {
     expect(managers.tab.addBusy).not.toHaveBeenCalled();
   });
 
-  it('creates a workspace for the new agent when the creator tab is workspaced', () => {
+  it('shares the creator workspace without cloning when the creator tab is workspaced', () => {
     const source = makeTab('claude', 'red', 1, [], [], '/janus-workspaces/claude');
     const managers = makeAtManagers([source], { claude: '/janus-workspaces/claude' });
-    const { promise } = Promise.withResolvers<void>();
-    vi.mocked(managers.workspace.create).mockReturnValue({ dir: '/janus-workspaces/bob', ready: promise });
 
     new ProfileManager(managers).newAgentAt('claude');
 
-    expect(managers.workspace.create).toHaveBeenCalledWith(expect.any(String));
+    expect(managers.workspace.create).not.toHaveBeenCalled();
+    expect(managers.workspace.retain).toHaveBeenCalledWith('/janus-workspaces/claude');
     expect(managers.tab.insertTabInGroup).toHaveBeenCalledWith(
-      expect.objectContaining({ workspaceDir: '/janus-workspaces/bob' }),
+      expect.objectContaining({ workspaceDir: '/janus-workspaces/claude' }),
     );
-    expect(managers.tab.setCwd).toHaveBeenCalledWith(expect.any(String), '/janus-workspaces/bob');
-    expect(managers.tab.addBusy).toHaveBeenCalled();
+    expect(managers.tab.setCwd).toHaveBeenCalledWith(expect.any(String), '/janus-workspaces/claude');
+    expect(managers.tab.addBusy).not.toHaveBeenCalled();
   });
 
-  it('reports the workspace error via notify and creates no tab when cloning fails for a workspaced creator', () => {
-    const source = makeTab('claude', 'red', 1, [], [], '/janus-workspaces/claude');
-    const managers = makeAtManagers([source], { claude: '/janus-workspaces/claude' });
-    vi.mocked(managers.workspace.create).mockReturnValue({ error: 'Failed to create workspace: not a git repo' });
+  it('joins a remote creator\'s existing channel and workspace', () => {
+    const source = makeTab('claude', 'red');
+    source.remote = { host: 'devbox', address: 'devbox:/srv/project' };
+    const managers = makeAtManagers([source], { claude: '/remote/ws' });
 
     new ProfileManager(managers).newAgentAt('claude');
 
-    expect(managers.tab.insertTabInGroup).not.toHaveBeenCalled();
-    expect(mocks.notify).toHaveBeenCalledWith(managers, 'manual', 'claude', 'Failed to create workspace: not a git repo');
+    expect(managers.remote.attach).toHaveBeenCalledWith(expect.any(String), 'claude');
+    expect(managers.tab.insertTabInGroup).toHaveBeenCalledWith(
+      expect.objectContaining({ remote: source.remote, workspaceDir: undefined }),
+    );
+    expect(managers.tab.setCwd).toHaveBeenCalledWith(expect.any(String), '/remote/ws');
+    expect(managers.workspace.create).not.toHaveBeenCalled();
   });
 
-  it('clears busy and notifies ready with the workspace path once the clone resolves for a workspaced creator', async () => {
-    const source = makeTab('claude', 'red', 1, [], [], '/janus-workspaces/claude');
-    const managers = makeAtManagers([source], { claude: '/janus-workspaces/claude' });
-    const { promise, resolve } = Promise.withResolvers<void>();
-    vi.mocked(managers.workspace.create).mockReturnValue({ dir: '/janus-workspaces/bob', ready: promise });
+  it('keeps a joined remote agent busy until the creator workspace is ready', async () => {
+    const source = makeTab('claude', 'red');
+    source.remote = { host: 'devbox', address: 'devbox:/srv/project' };
+    const managers = makeAtManagers([source], { claude: '/remote/project' });
+    const { promise, resolve } = Promise.withResolvers<string>();
+    vi.mocked(managers.remote.workspaceOf).mockReturnValue(undefined);
+    vi.mocked(managers.remote.readyOf).mockReturnValue(promise);
 
     new ProfileManager(managers).newAgentAt('claude');
-    resolve();
-    await new Promise((r) => setTimeout(r, 0));
 
-    expect(managers.tab.deleteBusy).toHaveBeenCalled();
-    expect(mocks.notify).toHaveBeenCalledWith(
-      managers, 'manual', 'claude', expect.stringContaining('workspace: /janus-workspaces/bob'),
-    );
+    expect(managers.tab.addBusy).toHaveBeenCalledWith(expect.any(String));
+    resolve('/remote/ws');
+    await promise;
+    await new Promise((done) => setTimeout(done, 0));
+    expect(managers.tab.setCwd).toHaveBeenLastCalledWith(expect.any(String), '/remote/ws');
+    expect(managers.tab.deleteBusy).toHaveBeenCalledWith(expect.any(String));
   });
+
 });

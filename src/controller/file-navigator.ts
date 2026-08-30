@@ -2,9 +2,18 @@
 // delegate to `FileNavigatorManager`. Extracted from `controller.ts` to keep it under the file-size
 // limit — see `ai/guidelines/code-guidelines.md`.
 import { reportOperationFailure } from '../file-navigator/operation-report.js';
-import { selectionActionFor } from '../file-navigator/selection-action.js';
 import type { Managers } from '../managers.js';
-import type { BatchResult, BulkConflictPolicy, BulkMoveResult, FileNavigatorDetail, FileOpenerResolution, FileSelectionAction } from '../protocol.js';
+import type { BatchResult, BulkConflictPolicy, BulkMoveResult, FileNavigatorDetail, FileOpenerChoice, FileOpenerResolution } from '../protocol.js';
+export { fileNavigatorSelectionAction, runFileNavigatorSelectionAction } from './file-navigator-selection.js';
+import { mapMaybe, type MaybePromise } from '../file-navigator/filesystem-port.js';
+
+type HistoryReplayResult = {
+  total?: number;
+  failedPaths?: string[];
+  failureReasons?: Record<string, string>;
+  conflict?: unknown;
+  conflicts?: unknown;
+};
 
 export function fileNavigatorToggle(managers: Managers, index: number, path: string): void {
   const label = managers.tab.tabs[index]?.label;
@@ -26,18 +35,24 @@ export function fileNavigatorReroot(managers: Managers, index: number, relPath?:
   if (label) managers.fileNavigator.reroot(label, relPath);
 }
 
-export function moveFileNavigatorItem(managers: Managers, index: number, fromRelPath: string, toRelPath: string): void {
+export function moveFileNavigatorItem(
+  managers: Managers, index: number, fromRelPath: string, toRelPath: string,
+): MaybePromise<void> {
   const label = managers.tab.tabs[index]?.label;
   if (!label) return;
-  const result = managers.fileNavigator.move(label, fromRelPath, toRelPath);
-  reportOperationFailure(managers, label, 'move', result);
+  return mapMaybe(managers.fileNavigator.move(label, fromRelPath, toRelPath), (result) => {
+    reportOperationFailure(managers, label, 'move', result);
+  });
 }
 
-export function deleteFileNavigatorItem(managers: Managers, index: number, relPath: string): void {
+export function deleteFileNavigatorItem(
+  managers: Managers, index: number, relPath: string,
+): MaybePromise<void> {
   const label = managers.tab.tabs[index]?.label;
   if (!label) return;
-  const result = managers.fileNavigator.delete(label, relPath);
-  reportOperationFailure(managers, label, 'delete', result);
+  return mapMaybe(managers.fileNavigator.delete(label, relPath), (result) => {
+    reportOperationFailure(managers, label, 'delete', result);
+  });
 }
 
 export function moveFileNavigatorItems(
@@ -46,12 +61,13 @@ export function moveFileNavigatorItems(
   sourcePaths: string[],
   destinationPath: string,
   policy?: BulkConflictPolicy,
-): BulkMoveResult {
+): MaybePromise<BulkMoveResult> {
   const label = managers.tab.tabs[index]?.label;
   if (!label) return { total: 0, failedPaths: [] };
-  const result = managers.fileNavigator.moveMany(label, sourcePaths, destinationPath, policy);
-  if (!('conflictPaths' in result)) reportOperationFailure(managers, label, 'move', result);
-  return result;
+  return mapMaybe(managers.fileNavigator.moveMany(label, sourcePaths, destinationPath, policy), (result) => {
+    if (!('conflictPaths' in result)) reportOperationFailure(managers, label, 'move', result);
+    return result;
+  });
 }
 
 export function pasteFileNavigatorItems(
@@ -61,27 +77,37 @@ export function pasteFileNavigatorItems(
   destinationPath: string,
   mode: 'copy' | 'cut',
   policy?: BulkConflictPolicy,
-): BulkMoveResult {
+  sourceHost?: string,
+): MaybePromise<BulkMoveResult> {
   const label = managers.tab.tabs[index]?.label;
   if (!label) return { total: 0, failedPaths: [] };
-  const result = managers.fileNavigator.paste(label, sources, destinationPath, mode, policy);
-  if (!('conflictPaths' in result)) reportOperationFailure(managers, label, mode === 'copy' ? 'copy' : 'move', result);
-  return result;
+  return mapMaybe(managers.fileNavigator.paste(label, sources, destinationPath, mode, policy, sourceHost), (result) => {
+    if (!('conflictPaths' in result)) {
+      reportOperationFailure(managers, label, mode === 'copy' ? 'copy' : 'move', result);
+    }
+    return result;
+  });
 }
 
-export function deleteFileNavigatorItems(managers: Managers, index: number, paths: string[]): BatchResult {
+export function deleteFileNavigatorItems(
+  managers: Managers, index: number, paths: string[],
+): MaybePromise<BatchResult> {
   const label = managers.tab.tabs[index]?.label;
   if (!label) return { total: 0, failedPaths: [] };
-  const result = managers.fileNavigator.deleteMany(label, paths);
-  reportOperationFailure(managers, label, 'delete', result);
-  return result;
+  return mapMaybe(managers.fileNavigator.deleteMany(label, paths), (result) => {
+    reportOperationFailure(managers, label, 'delete', result);
+    return result;
+  });
 }
 
-export function renameFileNavigatorItem(managers: Managers, index: number, relPath: string, newName: string): void {
+export function renameFileNavigatorItem(
+  managers: Managers, index: number, relPath: string, newName: string,
+): MaybePromise<void> {
   const label = managers.tab.tabs[index]?.label;
   if (!label) return;
-  const result = managers.fileNavigator.rename(label, relPath, newName);
-  reportOperationFailure(managers, label, 'rename', result);
+  return mapMaybe(managers.fileNavigator.rename(label, relPath, newName), (result) => {
+    reportOperationFailure(managers, label, 'rename', result);
+  });
 }
 
 export function undoFileNavigatorItem(
@@ -111,19 +137,16 @@ function replayFileNavigatorHistory(
   index: number,
   overwrite: boolean | undefined,
   skipConflicts: boolean | undefined,
-  replay: (label: string, overwrite?: boolean, skipConflicts?: boolean) => {
-    total?: number;
-    failedPaths?: string[];
-    failureReasons?: Record<string, string>;
-    conflict?: unknown;
-    conflicts?: unknown;
-  },
+  replay: (
+    label: string, overwrite?: boolean, skipConflicts?: boolean,
+  ) => MaybePromise<HistoryReplayResult>,
 ) {
   const label = managers.tab.tabs[index]?.label;
   if (!label) return {};
-  const result = replay(label, overwrite, skipConflicts);
-  reportHistoryFailure(managers, label, result);
-  return result;
+  return mapMaybe(replay(label, overwrite, skipConflicts), (result) => {
+    reportHistoryFailure(managers, label, result);
+    return result;
+  });
 }
 
 // Shared by undo/redo: reports a replay's failures as one `file-operation` notification when the
@@ -132,13 +155,7 @@ function replayFileNavigatorHistory(
 function reportHistoryFailure(
   managers: Managers,
   label: string,
-  result: {
-    total?: number;
-    failedPaths?: string[];
-    failureReasons?: Record<string, string>;
-    conflict?: unknown;
-    conflicts?: unknown;
-  },
+  result: HistoryReplayResult,
 ): void {
   if (result.conflict || result.conflicts) return;
   if (result.total === undefined || !result.failedPaths) return;
@@ -168,32 +185,23 @@ export function fileNavigatorOpeners(managers: Managers, index: number, relPath:
   return label ? managers.fileNavigator.openers(label, relPath, edit, all) : { choices: [] };
 }
 
-// The two selection-action RPCs, both thin: the matching rule lives beside the per-row one it
-// mirrors, in `file-navigator/selection-action.ts`. They differ in what they may do — resolving only
-// reads declarations, running activates the owning plugin — which is why they are two methods and
-// not one, and why neither is folded into `fileNavigatorOpeners`.
-function matchSelectionAction(managers: Managers, index: number, paths: string[]) {
+export function fileNavigatorOpen(
+  managers: Managers, index: number, relPath: string, command: FileOpenerChoice['command'],
+): MaybePromise<void> {
   const label = managers.tab.tabs[index]?.label;
-  const root = label === undefined ? undefined : managers.fileNavigator.rootOf(label);
-  if (label === undefined || root === undefined) return null;
-  const match = selectionActionFor(managers.plugins.declarations, root, paths);
-  return match && { label, match };
+  return label ? managers.fileNavigator.openFile(label, relPath, command) : undefined;
 }
 
-export function fileNavigatorSelectionAction(
-  managers: Managers, index: number, paths: string[],
-): FileSelectionAction | null {
-  const resolved = matchSelectionAction(managers, index, paths);
-  return resolved ? { label: resolved.match.label, action: resolved.match.action } : null;
+export function fileNavigatorCreateFile(
+  managers: Managers, index: number, destination: string,
+): MaybePromise<void> {
+  const label = managers.tab.tabs[index]?.label;
+  return label ? managers.fileNavigator.createFile(label, destination) : undefined;
 }
 
-export function runFileNavigatorSelectionAction(
-  managers: Managers, index: number, paths: string[], action: string,
-): void {
-  const resolved = matchSelectionAction(managers, index, paths);
-  if (!resolved) return;
-  void managers.plugins.runSelectionAction(
-    resolved.match.plugin, action, resolved.match.paths,
-    { label: resolved.label, command: resolved.match.label },
-  );
+export function fileNavigatorCreateDirectory(
+  managers: Managers, index: number, destination: string,
+): MaybePromise<string | undefined> {
+  const label = managers.tab.tabs[index]?.label;
+  return label ? managers.fileNavigator.createDirectory(label, destination) : undefined;
 }

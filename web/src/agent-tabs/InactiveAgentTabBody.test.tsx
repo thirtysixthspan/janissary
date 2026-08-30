@@ -42,8 +42,8 @@ describe('InactiveAgentTabBody', () => {
 
   it('shows the same agent metadata actions and targets the visible tab', () => {
     const { send, onSplit } = setup();
-    fireEvent.click(screen.getByTitle('Open file navigator here'));
-    fireEvent.click(screen.getByTitle('New agent here'));
+    fireEvent.click(screen.getByTitle('Open file navigator in this workspace'));
+    fireEvent.click(screen.getByTitle('New agent in this workspace'));
     fireEvent.click(screen.getByRole('button', { name: 'Open transcript' }));
     fireEvent.click(screen.getByRole('button', { name: 'Split' }));
     expect(send).toHaveBeenCalledWith({ method: 'openFileNavigatorFor', params: { label: 'agent2' } });

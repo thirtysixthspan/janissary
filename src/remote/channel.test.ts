@@ -118,6 +118,28 @@ describe('RemoteChannel — attached', () => {
     expect(onOutput).not.toHaveBeenCalled();
   });
 
+  it('routes filesystem replies and events only to the attached navigator', () => {
+    const h = attachedChannel();
+    const onReply = vi.fn();
+    const onEvent = vi.fn();
+    h.channel.attachNavigator('files1', { onReply, onEvent });
+    h.channel.receive(`${encodeFrame({ type: 'filesystem-reply', session: 'files1', request: 'q1', result: [] })}\n`);
+    h.channel.receive(`${encodeFrame({ type: 'filesystem-event', session: 'files1', path: 'src' })}\n`);
+    expect(onReply).toHaveBeenCalledWith({ type: 'filesystem-reply', session: 'files1', request: 'q1', result: [] });
+    expect(onEvent).toHaveBeenCalledWith('src');
+    expect(h.frames).toEqual([]);
+  });
+
+  it('drops replies for a detached navigator without failing the transport', () => {
+    const h = attachedChannel();
+    const onReply = vi.fn();
+    h.channel.attachNavigator('files1', { onReply, onEvent: vi.fn() });
+    h.channel.detachNavigator('files1');
+    h.channel.receive(`${encodeFrame({ type: 'filesystem-reply', session: 'files1', request: 'q1', error: 'denied' })}\n`);
+    expect(onReply).not.toHaveBeenCalled();
+    expect(h.kill).not.toHaveBeenCalled();
+  });
+
   it('buffers a frame split across two data events and parses it once complete', () => {
     const h = attachedChannel();
     const line = encodeFrame({ type: 'workspace-ready', dir: '/srv/ws' });
@@ -160,6 +182,17 @@ describe('RemoteChannel — attached', () => {
 });
 
 describe('RemoteChannel — closing', () => {
+  it('notifies and clears attached navigators', () => {
+    const h = harness();
+    const onClose = vi.fn();
+    const onReply = vi.fn();
+    h.channel.attachNavigator('files1', { onReply, onEvent: vi.fn(), onClose });
+    h.channel.closed();
+    expect(onClose).toHaveBeenCalledOnce();
+    h.channel.receive(`${encodeFrame({ type: 'filesystem-reply', session: 'files1', request: 'q1', result: [] })}\n`);
+    expect(onReply).not.toHaveBeenCalled();
+  });
+
   it('notifies the owner exactly once however many times it is told', () => {
     const h = harness();
     h.channel.closed();

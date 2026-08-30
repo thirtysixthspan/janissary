@@ -5,7 +5,7 @@ import type { JanusClient } from '../ws';
 
 export type PendingOpeners = { path: string; paths: string[]; choices: FileOpenerChoice[]; selected: number };
 
-export function useFileNavigatorOpener(client: JanusClient, index: number, root: string) {
+export function useFileNavigatorOpener(client: JanusClient, index: number, root: string, remote = false) {
   const [pending, setPending] = useState<PendingOpeners | null>(null);
 
   const open = (path: string, edit: boolean) => {
@@ -16,7 +16,7 @@ export function useFileNavigatorOpener(client: JanusClient, index: number, root:
     void client.request<FileOpenerResolution>({
       method: 'fileNavigatorOpeners', params: { index, relPath: path, edit },
     }).then((result) => {
-      if (result?.command) client.send({ method: 'command', params: { text: `${result.command} ${root}/${path}` } });
+      if (result?.command) sendOpen(client, index, root, path, result.command, remote);
       else if (result?.choices.length) setPending({ path, paths: [path], choices: result.choices, selected: 0 });
     });
   };
@@ -40,8 +40,8 @@ export function useFileNavigatorOpener(client: JanusClient, index: number, root:
     if (!pending) return;
     const choice = pending.choices[choiceIndex];
     if (choice?.command === 'edit') {
-      for (const path of pending.paths) client.send({ method: 'command', params: { text: `edit ${root}/${path}` } });
-    } else if (choice) client.send({ method: 'command', params: { text: `${choice.command} ${root}/${pending.path}` } });
+      for (const path of pending.paths) sendOpen(client, index, root, path, 'edit', remote);
+    } else if (choice) sendOpen(client, index, root, pending.path, choice.command, remote);
     setPending(null);
   };
 
@@ -58,4 +58,12 @@ export function useFileNavigatorOpener(client: JanusClient, index: number, root:
   };
 
   return { pending, open, openWith, choose, onKeyDown };
+}
+
+function sendOpen(
+  client: JanusClient, index: number, root: string, path: string,
+  command: 'open' | 'edit' | 'open external', remote: boolean,
+): void {
+  if (remote) { client.send({ method: 'fileNavigatorOpen', params: { index, relPath: path, command } }); return; }
+  client.send({ method: 'command', params: { text: `${command} ${root}/${path}` } });
 }

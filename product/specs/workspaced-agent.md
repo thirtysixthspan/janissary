@@ -20,7 +20,7 @@ cannot be read, contains malformed JSON, or has an invalid root, projects, or ma
 shape, provisioning fails without changing the file. Successful updates replace the configuration
 atomically so an interrupted write cannot leave a partial document.
 
-The "New agent here" button (➕) in a tab's metadata row creates a new agent tab rooted at that tab's directory. When the source tab is itself workspaced, the new agent tab gets its own cloned workspace too, following the same immediate-tab/busy/clone/ready flow described above — the ready confirmation, any sandbox notice, and clone failures are reported as notifications rather than into a transcript, since the source tab may be a harness with no transcript of its own.
+The "New agent here" button (➕) in a tab's metadata row creates a new agent tab rooted at that tab's directory. When the source tab is workspaced, the new agent joins that exact workspace instead of cloning another one. Its `cwd` and workspace directory are the source tab's existing clone, it is immediately ready, and both tabs hold a reference to the clone. On a remote source it also joins the source's existing ssh channel and runs in the same remote workspace without another authentication prompt. The `agent` and `harness` command forms remain fresh-clone operations; the metadata button is the only route that joins an existing workspace.
 
 ### Workspace harness tab
 
@@ -154,5 +154,11 @@ Workspace directories are ephemeral:
 - **Tab creation**: The tab (agent or harness) appears immediately; the clone runs in the
   background and never blocks the rest of the app. Closing the tab before the clone finishes
   cancels it right away, the same as any other close.
-- **Tab close**: The workspace directory is removed when the tab is closed. The tab closes immediately and the clone is deleted in the background, so removing a large workspace never freezes the UI. If the app exits before a background deletion finishes, that clone is still cleaned up as part of shutdown.
+- **Shared references**: A clone starts with one reference. Each agent joined through the source
+  tab's ➕ button retains another reference, locally or remotely. Closing the tab that originally
+  created the clone does not cancel or remove a workspace another tab is already using.
+- **Last tab close**: Each tab close releases one reference. The clone is removed in the background
+  only when the last referencing tab closes, so deleting a large workspace never freezes the UI. If
+  the app exits before a background deletion finishes, that clone is still cleaned up as part of
+  shutdown.
 - **`--relaunch`**: Workspace directories are not recreated; restore falls back to the tab's last known working directory.

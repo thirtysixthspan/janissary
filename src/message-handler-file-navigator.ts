@@ -7,6 +7,7 @@ type FileNavigatorMessage = Extract<ClientMessage, {
     | 'moveFileNavigatorItems' | 'deleteFileNavigatorItem' | 'deleteFileNavigatorItems'
     | 'renameFileNavigatorItem' | 'fileNavigatorSearch' | 'revealFileNavigatorItem'
     | 'fileNavigatorOpeners' | 'fileNavigatorSelectionAction' | 'runFileNavigatorSelectionAction'
+    | 'fileNavigatorOpen' | 'fileNavigatorCreateFile' | 'fileNavigatorCreateDirectory'
     | 'undoFileNavigatorItem' | 'redoFileNavigatorItem'
     | 'reportFileNavigatorSelection' | 'pasteFileNavigatorItems';
 }>;
@@ -30,7 +31,8 @@ export function dispatchFileNavigatorMessage(controller: Controller, message: Fi
     }
     case 'fileNavigatorReroot': { controller.fileNavigatorReroot(message.params.index, message.params.path); break;
     }
-    case 'moveFileNavigatorItem': { controller.moveFileNavigatorItem(message.params.index, message.params.fromRelPath, message.params.toRelPath); break;
+    case 'moveFileNavigatorItem': {
+      return controller.moveFileNavigatorItem(message.params.index, message.params.fromRelPath, message.params.toRelPath);
     }
     case 'moveFileNavigatorItems': {
       return controller.moveFileNavigatorItems(
@@ -41,20 +43,29 @@ export function dispatchFileNavigatorMessage(controller: Controller, message: Fi
       );
     }
     case 'pasteFileNavigatorItems': {
+      if (message.params.sourceHost === undefined) {
+        return controller.pasteFileNavigatorItems(
+          message.params.index, message.params.sources, message.params.destinationPath,
+          message.params.mode, message.params.policy,
+        );
+      }
       return controller.pasteFileNavigatorItems(
         message.params.index,
         message.params.sources,
         message.params.destinationPath,
         message.params.mode,
         message.params.policy,
+        message.params.sourceHost,
       );
     }
-    case 'deleteFileNavigatorItem': { controller.deleteFileNavigatorItem(message.params.index, message.params.relPath); break;
+    case 'deleteFileNavigatorItem': {
+      return controller.deleteFileNavigatorItem(message.params.index, message.params.relPath);
     }
     case 'deleteFileNavigatorItems': {
       return controller.deleteFileNavigatorItems(message.params.index, message.params.paths);
     }
-    case 'renameFileNavigatorItem': { controller.renameFileNavigatorItem(message.params.index, message.params.relPath, message.params.newName); break;
+    case 'renameFileNavigatorItem': {
+      return controller.renameFileNavigatorItem(message.params.index, message.params.relPath, message.params.newName);
     }
     case 'fileNavigatorSearch': {
       return fileNavigatorSearch(controller, message.params.index);
@@ -67,6 +78,17 @@ export function dispatchFileNavigatorMessage(controller: Controller, message: Fi
     }
     case 'fileNavigatorOpeners': {
       return controller.fileNavigatorOpeners(message.params.index, message.params.relPath, message.params.edit, message.params.all);
+    }
+    case 'fileNavigatorOpen': {
+      return controller.fileNavigatorOpen(
+        message.params.index, message.params.relPath, message.params.command,
+      );
+    }
+    case 'fileNavigatorCreateFile': {
+      return controller.fileNavigatorCreateFile(message.params.index, message.params.destination);
+    }
+    case 'fileNavigatorCreateDirectory': {
+      return controller.fileNavigatorCreateDirectory(message.params.index, message.params.destination);
     }
     case 'fileNavigatorSelectionAction': {
       return controller.fileNavigatorSelectionAction(message.params.index, message.params.paths);

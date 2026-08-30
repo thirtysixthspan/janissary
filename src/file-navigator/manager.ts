@@ -1,35 +1,30 @@
 import { messageBus } from '../bus.js';
-import { isSameOrDescendantPath } from './index.js';
 import { refreshGit } from './git-refresh.js';
 import { openOrRetarget, type OpenPort } from './open.js';
 import { openFilesCommand } from './open-command.js';
-import { deleteItem, moveItem, renameItem } from './filesystem.js';
-import {
-  DESCENDANT_DESTINATION_REASON,
-  failureReasons,
-  SOURCE_UNAVAILABLE_REASON,
-} from './file-operation-result.js';
 import { replayHistory } from './manager-history.js';
 import { deleteMany, moveMany, pasteMany } from './manager-batch.js';
 import { toggleDir, collapseAllDirs, rerootTree, revealPath, type NavPort } from './navigation.js';
 import { watchDir, unwatchDir } from './watch.js';
 import { pollForDir } from './poll.js';
 import { writeCreatedPayload, writeRebuiltPayload } from './manager-payload.js';
-import { closeTabState, detailOfTab, expandedPathsOf, setTabDetail } from './manager-profile.js';
-import { listProjectFiles } from './search.js';
+import { detailOfTab, expandedPathsOf, setTabDetail } from './manager-profile.js';
 import { makeNavigationPort, makeOpenPort } from './manager-ports.js';
 import { openersForRow } from './openers-for-row.js';
 import { restoreTreeView, type SavedTreeView } from './restore.js';
 import type { FilesTabState } from './state.js';
 import type { FileNavigatorDetail } from '../tab/types.js';
 import type { Managers } from '../managers.js';
+import { clearFilesystemCache, invalidateDirectory } from './filesystem-cache.js';
+import { deleteOne, moveOne, renameOne, unavailable } from './manager-item-operations.js';
+import { closeFileNavigatorTabs } from './manager-close.js';
 import type { BatchResult, BulkConflictPolicy, BulkMoveResult, FileOpenerResolution, UndoRedoResult } from '../protocol.js';
+import type { MaybePromise } from './filesystem-port.js';
+import { createNavigatorDirectory, createNavigatorFile, openNavigatorFile } from './manager-files.js';
+import type { FileOpenerChoice } from '../protocol.js';
+import { findOpenFilesTab, withFilesState } from './manager-state.js';
 
 const DEBOUNCE_MS = 100;
-
-function failedOperation(path: string, reason: string): BatchResult {
-  return { total: 1, failedPaths: [path], ...failureReasons(new Map([[path, reason]])) };
-}
 
 // Owns file navigator tabs: opening/focusing them, their `expanded` directory sets, and one
 // non-recursive `fs.watch` per visible directory. Any watch event schedules a single per-tab
@@ -110,18 +105,11 @@ export class FileNavigatorManager {
   // before sending this). Pushes the move onto the tab's undo stack and clears its redo stack —
   // mirroring the editor's own "any new edit invalidates the redo stack" rule. Rebuilds so the
   // tree reflects the change immediately, without waiting on the directory watcher's own debounce.
-  move(label: string, fromRelPath: string, toRelPath: string): BatchResult {
-    return this.withState(label, failedOperation(fromRelPath, SOURCE_UNAVAILABLE_REASON), (state) => {
-      if (isSameOrDescendantPath(toRelPath, fromRelPath)) {
-        return failedOperation(fromRelPath, DESCENDANT_DESTINATION_REASON);
-      }
-      const moved = moveItem(state.root, fromRelPath, toRelPath);
-      if (!moved.ok) return failedOperation(fromRelPath, moved.reason);
-      state.undoStack.push({ entries: [moved.value] });
-      state.redoStack = [];
-      this.rebuild(label);
-      return { total: 1, failedPaths: [] };
-    });
+  move(label: string, fromRelPath: string, toRelPath: string): MaybePromise<BatchResult> {
+    return withFilesState(this.tabs, label, unavailable(fromRelPath), (state) => moveOne(
+      state, fromRelPath, toRelPath,
+      () => { clearFilesystemCache(state); this.rebuild(label); },
+    ));
   }
 
   moveMany(
@@ -129,12 +117,17 @@ export class FileNavigatorManager {
     sourcePaths: string[],
     destinationPath: string,
     policy?: BulkConflictPolicy,
-  ): BulkMoveResult {
-    return this.withState(label, { total: 0, failedPaths: [] }, (state) => moveMany(state, sourcePaths, destinationPath, policy, () => this.rebuild(label)));
+  ): MaybePromise<BulkMoveResult> {
+    return withFilesState(this.tabs, label, { total: 0, failedPaths: [] }, (state) => moveMany(
+      state, sourcePaths, destinationPath, policy,
+      () => { clearFilesystemCache(state); this.rebuild(label); },
+    ));
   }
 
-  deleteMany(label: string, sourcePaths: string[]): BatchResult {
-    return this.withState(label, { total: 0, failedPaths: [] }, (state) => deleteMany(state, sourcePaths, () => this.rebuild(label)));
+  deleteMany(label: string, sourcePaths: string[]): MaybePromise<BatchResult> {
+    return withFilesState(this.tabs, label, { total: 0, failedPaths: [] }, (state) => deleteMany(
+      state, sourcePaths, () => { clearFilesystemCache(state); this.rebuild(label); },
+    ));
   }
 
   // Copy- or cut-paste a clipboard's absolute source paths into this tab's tree.
@@ -144,22 +137,33 @@ export class FileNavigatorManager {
     destinationPath: string,
     mode: 'copy' | 'cut',
     policy?: BulkConflictPolicy,
-  ): BulkMoveResult {
-    return this.withState(label, { total: 0, failedPaths: [] }, (state) => pasteMany(state, sources, destinationPath, mode, policy, () => this.rebuild(label)));
+    sourceHost?: string,
+  ): MaybePromise<BulkMoveResult> {
+    return withFilesState(this.tabs, label, { total: 0, failedPaths: [] }, (state) => pasteMany(
+      state, sources, destinationPath, mode, policy,
+      () => { clearFilesystemCache(state); this.rebuild(label); },
+      sourceHost,
+    ));
   }
 
   // Undo the most recent move: moves the item back from `to` to `from`'s original directory. A
   // conflict at the destination is reported back without mutating either stack, so a caller-driven
   // overwrite (passing `overwrite: true`) can retry the same pending entry. An empty undo stack is
   // a silent no-op.
-  undo(label: string, overwrite = false, skipConflicts = false): UndoRedoResult {
-    return this.withState(label, {}, (state) => replayHistory(state, 'undo', overwrite, skipConflicts, () => this.rebuild(label)));
+  undo(label: string, overwrite = false, skipConflicts = false): MaybePromise<UndoRedoResult> {
+    return withFilesState(this.tabs, label, {}, (state) => replayHistory(
+      state, 'undo', overwrite, skipConflicts,
+      () => { clearFilesystemCache(state); this.rebuild(label); },
+    ));
   }
 
   // Redo the most recently undone move: re-applies it from `from` to `to`'s original directory.
   // Same conflict-reporting and no-op behavior as `undo`.
-  redo(label: string, overwrite = false, skipConflicts = false): UndoRedoResult {
-    return this.withState(label, {}, (state) => replayHistory(state, 'redo', overwrite, skipConflicts, () => this.rebuild(label)));
+  redo(label: string, overwrite = false, skipConflicts = false): MaybePromise<UndoRedoResult> {
+    return withFilesState(this.tabs, label, {}, (state) => replayHistory(
+      state, 'redo', overwrite, skipConflicts,
+      () => { clearFilesystemCache(state); this.rebuild(label); },
+    ));
   }
 
   // Rename a file or directory in place (same directory only — `newName` may not contain a path
@@ -167,33 +171,26 @@ export class FileNavigatorManager {
   // client has already confirmed an overwrite with the user if `newName` collides with a sibling.
   // If an editor tab is already open on the renamed file, it is retargeted to the new path so it
   // doesn't go stale. Rebuilds so the tree reflects the new name immediately.
-  rename(label: string, relPath: string, newName: string): BatchResult {
-    return this.withState(label, failedOperation(relPath, SOURCE_UNAVAILABLE_REASON), (state) => {
-      const renamed = renameItem(state.root, relPath, newName);
-      if (!renamed.ok) return failedOperation(relPath, renamed.reason);
-      const [oldAbs, newAbs] = renamed.value;
-      this.managers.tab.retargetEditorTab(oldAbs, newAbs);
-      this.rebuild(label);
-      return { total: 1, failedPaths: [] };
-    });
+  rename(label: string, relPath: string, newName: string): MaybePromise<BatchResult> {
+    return withFilesState(this.tabs, label, unavailable(relPath), (state) => renameOne(
+      this.managers, state, relPath, newName,
+      () => { clearFilesystemCache(state); this.rebuild(label); },
+    ));
   }
 
   // Delete a file or directory (recursively) from disk — the client has already confirmed with
   // the user before sending this. Rebuilds so the tree reflects the removal immediately, without
   // waiting on the directory watcher's own debounce.
-  delete(label: string, relPath: string): BatchResult {
-    return this.withState(label, failedOperation(relPath, SOURCE_UNAVAILABLE_REASON), (state) => {
-      const deleted = deleteItem(state.root, relPath);
-      if (!deleted.ok) return failedOperation(relPath, deleted.reason);
-      this.rebuild(label);
-      return { total: 1, failedPaths: [] };
-    });
+  delete(label: string, relPath: string): MaybePromise<BatchResult> {
+    return withFilesState(this.tabs, label, unavailable(relPath), (state) => deleteOne(
+      state, relPath, () => { clearFilesystemCache(state); this.rebuild(label); },
+    ));
   }
 
   // The gitignore-aware candidate list for the tab's own Search-files pop-up (async, off the event
   // loop — see `search.ts`), for the deferred `fileNavigatorSearch` RPC.
   async search(label: string): Promise<string[]> {
-    return this.withState(label, Promise.resolve([] as string[]), (state) => listProjectFiles(state.root));
+    return withFilesState(this.tabs, label, Promise.resolve([] as string[]), (state) => state.filesystem.search(state.root));
   }
 
   // Expand every ancestor directory of `relPath` not already expanded (adding to `expanded`,
@@ -204,13 +201,28 @@ export class FileNavigatorManager {
   }
 
   openers(label: string, relPath: string, edit: boolean, all?: boolean): FileOpenerResolution {
-    return this.withState(label, { choices: [] }, (state) => openersForRow(state.root, relPath, edit, all));
+    return withFilesState(this.tabs, label, { choices: [] }, (state) => openersForRow(state.root, relPath, edit, all));
+  }
+
+  openFile(label: string, relPath: string, command: FileOpenerChoice['command']): MaybePromise<void> {
+    return withFilesState(this.tabs, label, undefined, (state) => openNavigatorFile(this.managers, state, label, relPath, command));
+  }
+
+  createFile(label: string, destination: string): MaybePromise<void> {
+    return withFilesState(this.tabs, label, undefined, (state) => createNavigatorFile(this.managers, state, label, destination));
+  }
+
+  createDirectory(label: string, destination: string): MaybePromise<string | undefined> {
+    return withFilesState(this.tabs, label, undefined, (state) => createNavigatorDirectory(
+      this.managers, state, label, destination,
+      () => { clearFilesystemCache(state); this.rebuild(label); },
+    ));
   }
 
   // This tab's own root, for the selection-action RPCs: the client sends tree-relative rows, and the
   // server resolves them against the root it holds rather than any path the client could name.
   rootOf(label: string): string | undefined {
-    return this.withState(label, undefined, (state) => state.root);
+    return withFilesState(this.tabs, label, undefined, (state) => state.root);
   }
 
   // This tab's expanded directories and detail mode, both for `profile save`.
@@ -236,7 +248,7 @@ export class FileNavigatorManager {
 
   // Tear down one tab's watchers and debounce timer (on tab close).
   closeTab(label: string): void {
-    closeTabState(this.tabs, label);
+    closeFileNavigatorTabs(this.managers, this.tabs, label);
   }
 
   // Tear down every tab's watchers (app shutdown).
@@ -245,7 +257,7 @@ export class FileNavigatorManager {
   }
 
   private watchDir(label: string, absDir: string, relPath: string): void {
-    watchDir(this.tabs, label, absDir, relPath, () => this.scheduleRebuild(label));
+    watchDir(this.tabs, label, absDir, relPath, () => this.scheduleRebuild(label, relPath));
   }
 
   // Poll a not-yet-existing root until it's created, then build the tree for real and start
@@ -255,10 +267,10 @@ export class FileNavigatorManager {
   }
 
   private onDirCreated(label: string, absDir: string): void {
-    const found = this.findOpenFilesTab(label);
+    const found = findOpenFilesTab(this.managers, this.tabs, label);
     if (!found) return;
     const { state, tab } = found;
-    writeCreatedPayload(tab, state, absDir);
+    writeCreatedPayload(tab, state, absDir, () => this.rebuild(label));
     this.watchDir(label, absDir, '');
     this.refreshGit(label);
     messageBus.emit('state', { type: 'dirty' });
@@ -268,12 +280,12 @@ export class FileNavigatorManager {
     unwatchDir(state, relPath);
   }
 
-  private scheduleRebuild(label: string): void {
-    this.withState(label, undefined, (state) => {
+  private scheduleRebuild(label: string, relPath = ''): void {
+    withFilesState(this.tabs, label, undefined, (state) => {
       if (state.debounce) clearTimeout(state.debounce);
       // The watcher fired, so every cached stat is suspect — empty the cache and let the rebuild
       // re-read only the rows that are actually visible.
-      state.stats.clear();
+      invalidateDirectory(state, relPath);
       state.debounce = setTimeout(() => { this.rebuild(label); this.refreshGit(label); }, DEBOUNCE_MS);
     });
   }
@@ -285,25 +297,11 @@ export class FileNavigatorManager {
   // Rebuild the visible row list (pruning expanded directories that no longer exist) and write it
   // onto the tab's payload.
   private rebuild(label: string): void {
-    const found = this.findOpenFilesTab(label);
+    const found = findOpenFilesTab(this.managers, this.tabs, label);
     if (!found) return;
     const { state, tab } = found;
-    writeRebuiltPayload(tab, state);
+    writeRebuiltPayload(tab, state, () => this.rebuild(label));
     messageBus.emit('state', { type: 'dirty' });
   }
 
-  // Looks up a tab's file-navigator state and its open `files` payload together — both `onDirCreated`
-  // and `rebuild` bail out the same way if either is missing.
-  private findOpenFilesTab(label: string) {
-    return this.withState(label, undefined, (state) => {
-      const tab = this.managers.tab.tabs.find((t) => t.label === label);
-      if (!tab?.files) return;
-      return { state, tab };
-    });
-  }
-
-  private withState<T>(label: string, missing: T, use: (state: FilesTabState) => T): T {
-    const state = this.tabs.get(label);
-    return state ? use(state) : missing;
-  }
 }

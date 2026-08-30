@@ -19,9 +19,19 @@ If a tree is already open on the same root, `files` focuses it rather than openi
 
 ## Opening from a tab's metadata row
 
-Every agent tab and harness tab has a 📁 button on the right of its metadata row (tooltip "Open file navigator here"). Clicking it opens a file navigator rooted at that tab's own working directory — a one-click alternative to typing `files in <label>`. Shell tabs don't have this button.
+Every agent tab and harness tab has a 📁 button on the right of its metadata row. Its tooltip is "Open file navigator in this workspace" on a workspaced tab and "Open file navigator here" otherwise. Clicking it opens a file navigator rooted at that tab's own working directory — a one-click alternative to typing `files in <label>`. Shell tabs don't have this button.
 
 Unlike the bare `files` command, which opens into the center tab strip, a navigator opened from the button — when none is open yet — opens **docked in the left sidebar** by default. If a navigator is already open, clicking the button doesn't open a second one: it **retargets the existing navigator** (the most recently focused one, if you have more than one) to the clicked tab's working directory, leaving it exactly where it sits — docked or not. Either way, focus moves to the navigator.
+
+## Remote workspaces
+
+The 📁 button on a remote agent or harness opens that tab's workspace **on the remote host**, using its existing SSH connection. `files in <label>` does the same when the label belongs to a remote tab. There is no `files on <address>` form: start an agent or harness on the host first, then navigate through that tab. The tree's header shows the host chip before its remote path and branch; hover over the chip for the full destination.
+
+A remote tree has the same browsing and editing tools as a local one: directory watches, file search, branch and git-status details, open and edit, new file and folder, rename, delete, drag-to-move, copy/cut/paste, and undo/redo. The work happens inside the remote workspace. Opened files use their ordinary viewer or editor, and an editor save writes back to the remote host. If the write fails, the editor stays marked as changed and the notifications feed explains why. Choosing **Open externally** is refused because it runs outside that save route; plugin-added file actions are unavailable for the same reason.
+
+Moves and copies stay on one machine. A drag onto a tree on another host has no drop highlight, and a cross-host paste is refused without changing anything or clearing the clipboard marks. Dragging a remote row into a command bar or editor inserts a host-qualified absolute path such as `devbox:/srv/project/src/index.ts`; local rows still insert relative paths.
+
+A navigator opened from a remote tab's 📁 button closes when that tab closes, even if another joined agent keeps using the shared connection. Retargeting the navigator to a local directory removes that tie. A dropped or explicitly closed SSH connection closes every tree and tab using it. Remote trees are not restored by a profile or `janus --relaunch`.
 
 ## Docking to a sidebar
 
@@ -161,7 +171,8 @@ truncating the rest with `… and N more`. The line also tells you why the opera
 to try next. If items failed for different reasons, each shown name is paired with its own reason.
 
 You can also drag selected rows onto the command bar of the active tab to insert their paths at the
-caret without moving anything. The paths are relative to the active tab's working directory,
+caret without moving anything. Local paths are relative to the active tab's working directory;
+remote paths use `<host>:<absolute path on that host>`,
 separated by single spaces, and replace any selected command text. This works when the navigator
 is docked and a plain tab is active in the center. It does not work for a view tab, harness tab,
 the file tree itself, or transcript search. Paths are inserted exactly as computed, without quotes,
@@ -193,7 +204,7 @@ If the renamed file is already open in an editor tab, that tab's name and path u
 
 `Cmd+C` (`Ctrl+C`) copies the selected files and directories onto an app-wide clipboard. `Cmd+X` (`Ctrl+X`) cuts them instead, marking them to move rather than duplicate. `Cmd+V` (`Ctrl+V`) pastes into the directory your selection implies — a selected directory pastes inside it, a selected file pastes into its containing directory, and no selection (or the `..` row) pastes at the tree root.
 
-The clipboard is shared across the whole app, so you can copy in one navigator and paste into any other, even one rooted at a different path. Copying with nothing selected leaves the clipboard untouched, and pasting an empty clipboard does nothing.
+The clipboard is shared across the whole app, so you can copy in one navigator and paste into any other path **on the same host**. A paste onto a different host is refused in the notifications feed, moves nothing, and leaves the clipboard marks in place. Copying with nothing selected leaves the clipboard untouched, and pasting an empty clipboard does nothing.
 
 Rows on the clipboard are marked in every open navigator that shows them, until you paste, copy or cut something else, or press `Escape` to clear it. A cut shows its rows dimmed with a dashed outline; a copy shows its rows at full strength with a dashed outline, since the originals aren't going anywhere. Pasting a cut selection empties the clipboard, so pasting again does nothing; pasting a copy leaves the clipboard as-is, so you can paste the same selection again elsewhere.
 
@@ -249,4 +260,4 @@ destinations now contain conflicts. Failed and skipped items stay available for 
 
 Like other view tabs, a file navigator is a live view — closed with its × button or `close`, and not restored by `janus --relaunch`.
 
-A [profile](/user-documentation/automation/profiles) is the one thing that does bring a tree back the way you left it. `profile save` records which directories you had expanded, where the cursor was, and every row you had selected; `profile launch` puts them back, silently skipping anything that has since been deleted. The undo/redo history is not part of that — it stays in memory and dies with the tab.
+A [profile](/user-documentation/automation/profiles) brings a **local** tree back the way you left it. `profile save` records which directories you had expanded, where the cursor was, and every row you had selected; `profile launch` puts them back, silently skipping anything that has since been deleted. Remote trees are omitted because their workspace and signed-in SSH session no longer exist. The undo/redo history is not part of a profile — it stays in memory and dies with the tab.

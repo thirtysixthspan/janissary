@@ -12,8 +12,8 @@ export type ProvisioningWorkspace = { dir: string; ready: Promise<void> };
 // closes or at shutdown, and tracks in-flight clones (keyed by the same `name` used to create
 // them — the owning tab's label) so one can be cancelled if its tab closes before it finishes.
 export class WorkspaceManager {
-  private dirs = new Set<string>();
-  private pending = new Map<string, () => void>();
+  private refs = new Map<string, number>();
+  private pending = new Map<string, { cancel: () => void; dir: string }>();
   private projectDir: string;
 
   constructor(projectDir?: string) {
@@ -35,8 +35,8 @@ export class WorkspaceManager {
       return { error: `Failed to create workspace: ${error instanceof Error ? error.message : String(error)}` };
     }
     const handle = provisionWorkspace(name, remoteUrl);
-    this.dirs.add(handle.dir);
-    this.pending.set(name, handle.cancel);
+    this.refs.set(handle.dir, 1);
+    this.pending.set(name, { cancel: handle.cancel, dir: handle.dir });
     return { dir: handle.dir, ready: this.trackReady(name, handle.ready) };
   }
 
@@ -49,24 +49,41 @@ export class WorkspaceManager {
   }
 
   // Cancel an in-flight clone still provisioning under `name` (the owning tab's label). A no-op
-  // once nothing is pending for that name — safe to call unconditionally on tab close.
+  // once nothing is pending for that name, or once another tab has retained the clone. In the
+  // latter case the clone must finish for the surviving tab even if its creator closes first.
   cancel(name: string): void {
-    this.pending.get(name)?.();
+    const pending = this.pending.get(name);
+    if (!pending || (this.refs.get(pending.dir) ?? 0) > 1) return;
+    pending.cancel();
     this.pending.delete(name);
   }
 
-  // Remove a workspace clone and stop tracking it (on tab close).
-  remove(dir: string): void {
+  retain(dir: string): void {
+    const count = this.refs.get(dir);
+    if (count !== undefined) this.refs.set(dir, count + 1);
+  }
+
+  release(dir: string): void {
+    const count = this.refs.get(dir);
+    if (count === undefined) return;
+    if (count > 1) {
+      this.refs.set(dir, count - 1);
+      return;
+    }
+    this.refs.delete(dir);
     removeWorkspace(dir);
-    this.dirs.delete(dir);
+  }
+
+  remove(dir: string): void {
+    this.release(dir);
   }
 
   // Remove every workspace clone (app shutdown), cancelling any still in flight first.
   removeAll(): void {
-    for (const cancel of this.pending.values()) cancel();
+    for (const pending of this.pending.values()) pending.cancel();
     this.pending.clear();
-    for (const dir of this.dirs) removeWorkspace(dir);
-    this.dirs.clear();
+    for (const dir of this.refs.keys()) removeWorkspace(dir);
+    this.refs.clear();
   }
 
   dispose(): void {

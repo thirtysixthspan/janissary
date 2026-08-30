@@ -87,17 +87,39 @@ describe('WorkspaceManager', () => {
       const manager = new WorkspaceManager();
       expect(() => manager.cancel('nothing-pending')).not.toThrow();
     });
+
+    it('lets a retained clone finish when its creator closes during provisioning', () => {
+      findRepoRootMock.mockReturnValue('/repo');
+      getRemoteUrlMock.mockReturnValue('https://example.com/repo.git');
+      const cancel = vi.fn();
+      const dir = '/repo/.janissary/workspace/agent-1';
+      provisionWorkspaceMock.mockReturnValue(handle(dir, cancel));
+      const manager = new WorkspaceManager();
+      manager.create('agent-1');
+      manager.retain(dir);
+      manager.cancel('agent-1');
+      expect(cancel).not.toHaveBeenCalled();
+    });
   });
 
-  describe('remove', () => {
-    it('removes a tracked workspace directory', () => {
+  describe('references', () => {
+    it('keeps a retained workspace until the last release', () => {
       findRepoRootMock.mockReturnValue('/repo');
       getRemoteUrlMock.mockReturnValue('https://example.com/repo.git');
       provisionWorkspaceMock.mockReturnValue(handle('/repo/.janissary/workspace/agent-1'));
       const manager = new WorkspaceManager();
       manager.create('agent-1');
-      manager.remove('/repo/.janissary/workspace/agent-1');
+      manager.retain('/repo/.janissary/workspace/agent-1');
+      manager.release('/repo/.janissary/workspace/agent-1');
+      expect(removeWorkspaceMock).not.toHaveBeenCalled();
+      manager.release('/repo/.janissary/workspace/agent-1');
       expect(removeWorkspaceMock).toHaveBeenCalledWith('/repo/.janissary/workspace/agent-1');
+    });
+
+    it('does nothing when releasing an untracked directory', () => {
+      const manager = new WorkspaceManager();
+      manager.release('/repo/.janissary/workspace/missing');
+      expect(removeWorkspaceMock).not.toHaveBeenCalled();
     });
   });
 
@@ -131,6 +153,18 @@ describe('WorkspaceManager', () => {
       manager.removeAll();
       expect(cancelA).toHaveBeenCalled();
       expect(cancelB).toHaveBeenCalled();
+    });
+
+    it('removes a multiply retained workspace once', () => {
+      findRepoRootMock.mockReturnValue('/repo');
+      getRemoteUrlMock.mockReturnValue('https://example.com/repo.git');
+      provisionWorkspaceMock.mockReturnValue(handle('/repo/.janissary/workspace/a'));
+      const manager = new WorkspaceManager();
+      manager.create('a');
+      manager.retain('/repo/.janissary/workspace/a');
+      manager.removeAll();
+      expect(removeWorkspaceMock).toHaveBeenCalledWith('/repo/.janissary/workspace/a');
+      expect(removeWorkspaceMock).toHaveBeenCalledTimes(1);
     });
 
     it('does nothing when no workspaces are tracked', () => {

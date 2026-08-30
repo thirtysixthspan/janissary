@@ -9,6 +9,7 @@ import { decodeFrame, encodeFrame, encodeHandshake, type ClientFrame, type Serve
 import { resolveRemoteRoot } from './serve-root.js';
 import { RemoteProcesses } from './serve-processes.js';
 import { githubTokenNotice, workspaceReadyNotice } from './serve-notice.js';
+import { RemoteFileNavigators } from './serve-file-navigator.js';
 
 // `janus remote-serve [<project-dir>]`: the far end of a remote janissary session. It runs attached
 // inside an ordinary ssh session, takes no instance lock, starts no HTTP server, opens no window,
@@ -32,6 +33,7 @@ function writeFrame(frame: ServerFrame): void {
 export class RemoteServer {
   private workspaces: WorkspaceManager;
   private processes: RemoteProcesses | undefined;
+  private files: RemoteFileNavigators | undefined;
   private workspaceDir: string | undefined;
   private transcript: TranscriptSource | undefined;
   private transcriptTimer: NodeJS.Timeout | undefined;
@@ -72,6 +74,7 @@ export class RemoteServer {
     if (this.stopping) return;
     this.stopping = true;
     if (this.transcriptTimer) clearInterval(this.transcriptTimer);
+    this.files?.dispose();
     this.processes?.killAll();
     this.workspaces.removeAll();
     this.exit(code);
@@ -85,13 +88,24 @@ export class RemoteServer {
 
   private dispatch(line: string): void {
     const frame = decodeFrame(line);
-    if ('error' in frame) { this.refuse(frame.error); return; }
+    if (!('type' in frame)) { this.refuse(frame.error); return; }
     switch (frame.type) {
     case 'provision': { void this.provision(frame.label, frame.tokens ?? {}); return; }
     case 'spawn': { this.spawn(frame); return; }
     case 'input': { this.processes?.input(frame.id, frame.data); return; }
     case 'resize': { this.processes?.resize(frame.id, frame.cols, frame.rows); return; }
     case 'kill': { this.processes?.kill(frame.id); return; }
+    case 'filesystem-open': {
+      if (!this.files) { this.refuse('No remote workspace has been provisioned.'); return; }
+      this.files.open(frame.session);
+      return;
+    }
+    case 'filesystem-close': { this.files?.close(frame.session); return; }
+    case 'filesystem-request': {
+      if (!this.files) { this.refuse('No remote workspace has been provisioned.'); return; }
+      this.files.request(frame);
+      return;
+    }
     default: { this.refuse(`Unexpected remote frame "${frame.type}".`); }
     }
   }
@@ -123,6 +137,7 @@ export class RemoteServer {
       label,
       { ...own, ...forwarded },
     );
+    this.files = new RemoteFileNavigators((frame) => this.emit(frame), result.dir);
     this.emit({
       type: 'workspace-ready',
       dir: result.dir,

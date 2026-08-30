@@ -3,7 +3,7 @@
 // even one rooted at an unrelated path. Holds a mode and an ordered list of absolute paths.
 
 export type ClipboardMode = 'copy' | 'cut';
-export type ClipboardSnapshot = { mode: ClipboardMode; paths: string[] } | null;
+export type ClipboardSnapshot = { mode: ClipboardMode; paths: string[]; host?: string } | null;
 
 let snapshot: ClipboardSnapshot = null;
 const listeners = new Set<() => void>();
@@ -12,9 +12,9 @@ function notify(): void {
   for (const listener of listeners) listener();
 }
 
-export function setClipboard(mode: ClipboardMode, paths: string[]): void {
+export function setClipboard(mode: ClipboardMode, paths: string[], host?: string): void {
   if (paths.length === 0) return;
-  snapshot = { mode, paths };
+  snapshot = { mode, paths, ...(host && { host }) };
   notify();
 }
 

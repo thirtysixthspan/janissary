@@ -132,13 +132,16 @@ git clone (including a remote tab, whose clone lives on the other host), and **a
 only — see Auto-approve permissions in `harness.md`). Hovering a flag's icon shows a tooltip naming
 it ("Workspaced", "Auto-permitting"). More flags of the same kind are expected in the future.
 
-Agent tabs and harness tabs also show a file-navigator button (a folder icon, tooltip "Open file
-navigator here") in an action group at the right edge of the metadata row. Every other metadata button joins that same right-aligned group regardless of which optional buttons are present. Clicking the file-navigator button opens a file navigator rooted at that
+Agent tabs and harness tabs also show a file-navigator button (a folder icon) in an action group at
+the right edge of the metadata row. Its tooltip is "Open file navigator in this workspace" when the
+tab is workspaced and "Open file navigator here" otherwise. Every other metadata button joins that
+same right-aligned group regardless of which optional buttons are present. Clicking the file-navigator button opens a file navigator rooted at that
 tab's own working directory; shell (PTY-takeover) tabs do not show this button. See "Opening from a
 tab's metadata row" in `file-navigator-tab.md` for how it opens or retargets the navigator.
 
-Beside the file-navigator button, agent tabs and harness tabs also show a launch-agent button (a plus icon,
-tooltip "New agent here"). Clicking it immediately creates a new, auto-named agent tab whose working
+Beside the file-navigator button, agent tabs and harness tabs also show a launch-agent button (a plus
+icon). Its tooltip is "New agent in this workspace" when the tab is workspaced and "New agent here"
+otherwise. Clicking it immediately creates a new, auto-named agent tab whose working
 directory is that tab's own working directory — the one-click equivalent of the `agent` command,
 except the new agent starts where this tab is rather than in the server's own directory. The new tab
 joins the source tab's group and is focused right away; there is no dialog or name prompt. The button

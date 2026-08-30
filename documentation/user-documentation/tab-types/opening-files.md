@@ -15,6 +15,8 @@ open page example.com         same, for a bare address
 
 Full form: `open [external] [page] <target>`. Relative paths resolve against the tab's working directory. What kind of tab you get depends on the file type — see [Image viewer](/user-documentation/tab-types/image-viewer), [Video player](/user-documentation/tab-types/video-player), [Audio player](/user-documentation/tab-types/audio-player), [Markdown preview](/user-documentation/tab-types/markdown-preview), and [Embedded web pages](/user-documentation/tab-types/web-pages). Every tab it opens joins the current tab's [group](/user-documentation/getting-started/groups) and can be closed from the strip with its × button.
 
+Files opened from a remote [file navigator](/user-documentation/tab-types/file-navigator) use the same viewer or editor as local files. Janissary reads the remote content into its session cache first; saving an editor tab writes the change back to the remote host. If that write fails, the editor remains marked as changed and the notifications feed reports the failure.
+
 Targets with an `http://` or `https://` scheme are treated as web addresses; the `page` keyword forces web interpretation and assumes `https://` for a bare address like `example.com`. Anything else is a file path. Only `http` and `https` pages can be opened — other schemes are rejected as invalid.
 
 ## Opening outside the app: `open external`
@@ -28,6 +30,8 @@ open external https://example.com the OS default browser
 ```
 
 A few formats can only be opened this way — `open clip.mkv` and `open track.wma` go straight to an external player with no tab. Which application gets a video or an audio file is yours to set; see [Video player](/user-documentation/tab-types/video-player) and [Audio player](/user-documentation/tab-types/audio-player).
+
+`open external` is refused for a remote file. An external application could change only the local cached copy, with no way to write that change back to the remote host.
 
 ## Opening a file to change it: `edit`
 

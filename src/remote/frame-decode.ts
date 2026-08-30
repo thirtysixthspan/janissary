@@ -1,5 +1,6 @@
 import { PROJECT_TOKENS, type ProjectTokens } from '../project-tokens.js';
 import type { RemoteFrame } from './protocol.js';
+import { decodeFilesystemFrame } from './frame-decode-filesystem.js';
 
 type DecodeResult = RemoteFrame | { error: string };
 
@@ -41,15 +42,17 @@ function decodeProvision(record: Record<string, unknown>): DecodeResult {
 }
 
 function decodeSpawn(record: Record<string, unknown>): DecodeResult {
-  const { id, program, command, mode, harness, cols, rows, offline } = record;
+  const { id, program, command, mode, harness, cols, rows, offline, agentName } = record;
   if (!nonEmptyString(id) || !nonEmptyString(program) || !nonEmptyString(command)
     || !(mode === 'pty' || mode === 'pipe') || !optionalNonEmptyString(harness)
     || !positiveInteger(cols) || !positiveInteger(rows)
-    || !(offline === undefined || typeof offline === 'boolean')) return malformed('spawn');
+    || !(offline === undefined || typeof offline === 'boolean')
+    || !optionalNonEmptyString(agentName)) return malformed('spawn');
   return {
     type: 'spawn', id, program, command, mode, cols, rows,
     ...(harness !== undefined && { harness }),
     ...(offline !== undefined && { offline }),
+    ...(agentName !== undefined && { agentName }),
   };
 }
 
@@ -108,6 +111,11 @@ export function decodeKnownFrame(type: string, record: Record<string, unknown>):
   case 'output': { return decodeAddressedData(type, record); }
   case 'exit': { return decodeExit(record); }
   case 'transcript': { return decodeTranscript(record); }
+  case 'filesystem-open':
+  case 'filesystem-close':
+  case 'filesystem-request':
+  case 'filesystem-reply':
+  case 'filesystem-event': { return decodeFilesystemFrame(type, record); }
   default: { return { error: `Unknown remote frame type "${type}".` }; }
   }
 }

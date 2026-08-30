@@ -22,6 +22,7 @@ export function createRemoteShell(
   id: string,
   program: string,
   command: string,
+  agentName?: string,
 ): ShellProcess {
   const stdout = new PassThrough();
   const stderr = new PassThrough();
@@ -40,7 +41,10 @@ export function createRemoteShell(
     onOutput: (data) => { stdout.write(data); },
     onExit: () => { live = false; stdin.end(); stdout.end(); },
   });
-  channel.send({ type: 'spawn', id, program, command, mode: 'pipe', cols: 80, rows: 24 });
+  channel.send({
+    type: 'spawn', id, program, command, mode: 'pipe', cols: 80, rows: 24,
+    ...(agentName && { agentName }),
+  });
 
   return {
     stdin,

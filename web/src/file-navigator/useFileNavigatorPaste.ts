@@ -9,6 +9,7 @@ type PendingPasteConflict = {
   sources: string[];
   destinationPath: string;
   mode: ClipboardMode;
+  sourceHost?: string;
   title: string;
 };
 
@@ -24,7 +25,7 @@ function conflictTitle(sources: string[], destinationPath: string): string {
 // Owns the paste flow (`Ctrl+V`), mirroring `useFileNavigatorMoveOperations`'s conflict/retry
 // shape. Subscribes to the app-wide clipboard so the tree re-renders when it changes elsewhere
 // (a copy/cut in another navigator, or this one), which is what keeps the cut-row dimming live.
-export function useFileNavigatorPaste(client: JanusClient, index: number, absoluteRoot: string) {
+export function useFileNavigatorPaste(client: JanusClient, index: number, absoluteRoot: string, host?: string) {
   useSyncExternalStore(subscribeClipboard, getClipboardSnapshot, getClipboardSnapshot);
   const [pendingConflict, setPendingConflict] = useState<PendingPasteConflict | null>(null);
 
@@ -33,13 +34,16 @@ export function useFileNavigatorPaste(client: JanusClient, index: number, absolu
     destinationPath: string,
     mode: ClipboardMode,
     policy?: BulkConflictPolicy,
+    sourceHost?: string,
   ) => {
     const result = await client.request<BulkMoveResult>({
       method: 'pasteFileNavigatorItems',
-      params: { index, sources, destinationPath, mode, policy },
+      params: { index, sources, destinationPath, mode, policy, sourceHost },
     });
     if ('conflictPaths' in result) {
-      setPendingConflict({ sources, destinationPath, mode, title: conflictTitle(sources, destinationPath) });
+      setPendingConflict({
+        sources, destinationPath, mode, sourceHost, title: conflictTitle(sources, destinationPath),
+      });
       return;
     }
     setPendingConflict(null);
@@ -49,19 +53,22 @@ export function useFileNavigatorPaste(client: JanusClient, index: number, absolu
   const paste = (rows: FileNavigatorRow[], cursor: string | null) => {
     const snapshot = getClipboardSnapshot();
     if (!snapshot) return;
-    void sendPaste(snapshot.paths, newFileTargetDir(rows, cursor) ?? '', snapshot.mode);
+    void sendPaste(snapshot.paths, newFileTargetDir(rows, cursor) ?? '', snapshot.mode, undefined, snapshot.host);
   };
 
   // Duplicate is a copy-paste of one row back into its own directory, which the server resolves
   // through `nextFreeName` instead of raising a conflict. It bypasses the clipboard entirely — it
   // neither needs something on it nor disturbs what is.
   const duplicate = (row: FileNavigatorRow) => {
-    void sendPaste([`${absoluteRoot}/${row.path}`], dirname(row.path), 'copy');
+    void sendPaste([`${absoluteRoot}/${row.path}`], dirname(row.path), 'copy', undefined, host);
   };
 
   const retry = (policy: BulkConflictPolicy) => {
     if (!pendingConflict) return;
-    void sendPaste(pendingConflict.sources, pendingConflict.destinationPath, pendingConflict.mode, policy);
+    void sendPaste(
+      pendingConflict.sources, pendingConflict.destinationPath, pendingConflict.mode,
+      policy, pendingConflict.sourceHost,
+    );
   };
 
   return {

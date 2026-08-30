@@ -30,7 +30,7 @@ export function FileNavigatorTab({
   const containerRef = useRef<HTMLDivElement>(null);
   const treeId = useId();
   const drag = useFileNavigatorDrag(
-    files.rows, client, index, files.absoluteRoot, files.root, targetCwd, dropRef, editorDropRef,
+    files.rows, client, index, files.absoluteRoot, files.root, targetCwd, dropRef, editorDropRef, files.remote?.host,
   );
   const rename = useFileNavigatorRename(
     files.rows, client, index, selection.rename, () => containerRef.current?.focus(),
@@ -38,9 +38,9 @@ export function FileNavigatorTab({
   const search = useFileNavigatorSearch(
     client, index, files.rows, selection.replace, () => containerRef.current?.focus(),
   );
-  const opener = useFileNavigatorOpener(client, index, files.absoluteRoot);
+  const opener = useFileNavigatorOpener(client, index, files.absoluteRoot, files.remote !== undefined);
   const deletion = useFileNavigatorDelete(client, index);
-  const paste = useFileNavigatorPaste(client, index, files.absoluteRoot);
+  const paste = useFileNavigatorPaste(client, index, files.absoluteRoot, files.remote?.host);
   const selectionAction = useSelectionAction(client, index);
   useEffect(() => { if (autoFocus) containerRef.current?.focus(); }, [autoFocus]);
 
@@ -66,16 +66,27 @@ export function FileNavigatorTab({
 
   const toggle = intents.toggle;
   const openFile = (path: string, edit: boolean) => opener.open(path, edit);
-  const editFile = (path: string) => intents.sendCommand(`edit ${files.absoluteRoot}/${path}`);
+  const editFile = (path: string) => files.remote
+    ? client.send({ method: 'fileNavigatorOpen', params: { index, relPath: path, command: 'edit' } })
+    : intents.sendCommand(`edit ${files.absoluteRoot}/${path}`);
   const reroot = intents.reroot;
   const rerootTo = intents.rerootTo;
   const createNewFile = () => {
-    const text = newFileCommand(files.absoluteRoot, newFileTargetDir(files.rows, selection.cursor));
+    const destination = newFileTargetDir(files.rows, selection.cursor) ?? '';
+    if (files.remote) {
+      client.send({ method: 'fileNavigatorCreateFile', params: { index, destination } });
+      return;
+    }
+    const text = newFileCommand(files.absoluteRoot, destination || null);
     intents.sendCommand(text);
   };
   const createNewDirectory = () => {
     const targetDir = newFileTargetDir(files.rows, selection.cursor);
     setPendingNewDir(newDirectoryTargetPath(targetDir));
+    if (files.remote) {
+      client.send({ method: 'fileNavigatorCreateDirectory', params: { index, destination: targetDir ?? '' } });
+      return;
+    }
     intents.sendCommand(newDirectoryCommand(files.absoluteRoot, targetDir));
   };
 
@@ -102,7 +113,7 @@ export function FileNavigatorTab({
       row.path,
       selection.selected.has(row.path) ? selection.operationPaths : [row.path],
     ),
-    copy: (row) => setClipboard('copy', [`${files.absoluteRoot}/${row.path}`]),
+    copy: (row) => setClipboard('copy', [`${files.absoluteRoot}/${row.path}`], files.remote?.host),
     paste: (row) => paste.paste(files.rows, row.path),
     duplicate: (row) => paste.duplicate(row),
     rename: beginRename,
@@ -127,8 +138,8 @@ export function FileNavigatorTab({
       sendRedo: () => void drag.sendRedo(),
       createNewFile,
       beginRename,
-      copySelection: () => setClipboard('copy', clipboardPaths()),
-      cutSelection: () => setClipboard('cut', clipboardPaths()),
+      copySelection: () => setClipboard('copy', clipboardPaths(), files.remote?.host),
+      cutSelection: () => setClipboard('cut', clipboardPaths(), files.remote?.host),
       paste: () => paste.paste(files.rows, selection.cursor),
       selectSiblings: selection.selectSiblings,
     },
@@ -139,6 +150,8 @@ export function FileNavigatorTab({
     <div
       className="files-tab"
       data-doc-shot="file-navigator-view"
+      data-files-host={files.remote?.host ?? ''}
+      data-files-root={files.absoluteRoot}
       ref={containerRef}
       tabIndex={0}
       role="tree"
@@ -149,7 +162,7 @@ export function FileNavigatorTab({
       onKeyDown={onKeyDown}
     >
       <FileNavigatorHeader
-        root={files.root} branch={files.branch} githubUrl={files.githubUrl}
+        root={files.root} remote={files.remote} branch={files.branch} githubUrl={files.githubUrl}
         dock={dock} details={files.details}
         onOpenGithub={intents.openGithub}
         onCycleDock={dock === undefined ? undefined : () => intents.setDock(nextDock(dock))}
@@ -170,10 +183,10 @@ export function FileNavigatorTab({
         opener={opener}
         menu={rowEvents.menu}
         menuActions={menuActions}
-        selectionEntry={selectionAction.entry && {
+        selectionEntry={!files.remote && selectionAction.entry ? {
           label: selectionAction.entry.label,
           onActivate: () => { selectionAction.run(selection.operationPaths); },
-        }}
+        } : undefined}
         onCloseMenu={() => { selectionAction.clear(); rowEvents.closeMenu(); }}
         focusTree={() => containerRef.current?.focus()}
       />

@@ -88,6 +88,17 @@ describe('deleteMany', () => {
 });
 
 describe('pasteMany', () => {
+  it('refuses clipboard sources from a different host without touching the filesystem', () => {
+    const directory = root();
+    const current = { ...state(directory), remote: { host: 'devbox', address: 'devbox' } };
+    const result = pasteMany(
+      current, ['/other/a.txt'], '', 'copy', undefined, () => {}, 'other',
+    );
+    expect(result).toMatchObject({ total: 1, failedPaths: ['/other/a.txt'] });
+    expect('failureReasons' in result && result.failureReasons?.['/other/a.txt'])
+      .toContain('different host');
+  });
+
   it('pushes one history step, clears redo, and rebuilds when something changed', () => {
     const directory = root();
     mkdirSync(path.join(directory, 'dest'));

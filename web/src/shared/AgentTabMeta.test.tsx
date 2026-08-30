@@ -49,6 +49,27 @@ describe('AgentTabMeta', () => {
     expect(onLaunch).toHaveBeenCalledTimes(1);
   });
 
+  it('names the workspace in both action tooltips for a workspaced tab', () => {
+    const { getByTitle } = render(
+      <AgentTabMeta
+        cwd="~/project"
+        flags={['workspaced']}
+        onOpenFileNavigator={() => {}}
+        onLaunchAgentHere={() => {}}
+      />,
+    );
+    expect(getByTitle('Open file navigator in this workspace')).toBeInTheDocument();
+    expect(getByTitle('New agent in this workspace')).toBeInTheDocument();
+  });
+
+  it('keeps both here tooltips for a plain tab', () => {
+    const { getByTitle } = render(
+      <AgentTabMeta cwd="~/project" onOpenFileNavigator={() => {}} onLaunchAgentHere={() => {}} />,
+    );
+    expect(getByTitle('Open file navigator here')).toBeInTheDocument();
+    expect(getByTitle('New agent here')).toBeInTheDocument();
+  });
+
   it('renders the transcript button only when onOpenTranscript is provided', () => {
     const { getByTitle } = render(<AgentTabMeta cwd="~/project" onOpenTranscript={() => {}} />);
     expect(getByTitle('Open transcript')).toBeInTheDocument();

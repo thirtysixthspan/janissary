@@ -54,7 +54,7 @@ Two things, both set up ahead of time:
 
 The tab opens right away, before anything is checked, and shows the live SSH session as its body. Whatever SSH asks for appears there: a password, a key passphrase, host key verification, a 2FA code. Answer by typing into the tab. There's no dialog and nothing is asked in the tab you launched from.
 
-Each remote tab owns its own session, so a [profile](/user-documentation/automation/profiles) that opens several remote tabs asks you several times.
+Each independent remote launch opens its own session, so a [profile](/user-documentation/automation/profiles) that opens several remote tabs asks you several times. Agents created with a remote tab's ➕ button share that tab's existing workspace and session, so they do not ask you to sign in again.
 
 Once the far side answers, the tab stops showing raw terminal output and starts running the agent or harness. Until then the tab counts as still provisioning, so anything sent to it with `send` or by a schedule waits in the queue instead of being typed into a password prompt.
 
@@ -76,7 +76,15 @@ Your Claude, OpenCode, and Gemini tokens are forwarded the same way, which is wh
 
 ## Find the connections
 
-A remote tab lists two connections: `ssh:<address>` for the transport, and `terminal:<program>` for the process on the far side, so a remote claude harness shows `terminal:claude` exactly as a local one does. Both are closable on their own, and closing the SSH connection closes the tab with it. See [Connections](/user-documentation/command-bar/connections).
+A remote tab lists two connections: `ssh:<address>` for the transport, and `terminal:<program>` for the process on the far side, so a remote claude harness shows `terminal:claude` exactly as a local one does. Both are closable on their own. Closing a shared SSH connection closes every agent and file navigator using it. See [Connections](/user-documentation/command-bar/connections).
+
+## Browse and edit remote files
+
+Click the 📁 button in a remote agent or harness tab to open a [file navigator](/user-documentation/tab-types/file-navigator) rooted in that tab's remote workspace. It uses the SSH connection that is already open, shows the host chip ahead of its path, and has the same search, git status, create, rename, delete, move, copy, paste, undo, and redo tools as a local tree. `files in <label>` does the same when `<label>` names a remote tab.
+
+Open and edit remote files normally from that tree. Janissary keeps the working copy it needs locally and writes editor saves back to the remote host. If a save fails, the editor stays marked as changed and the notifications feed explains the failure. **Open externally** is unavailable for remote files because an outside application could not send its changes back.
+
+File moves and clipboard pastes stay on one machine. Dropping between hosts is not offered; pasting onto a different host is refused without clearing your clipboard. Dragging a remote row into a command bar or editor inserts a path such as `devbox:/srv/project/src/index.ts`, so the host is never ambiguous.
 
 ## When a launch fails
 
@@ -95,14 +103,14 @@ You'll also see a failure if `janus` isn't on the remote's `PATH`, if no git rep
 
 ## Lifecycle
 
-A remote tab lasts as long as its SSH session. If the session ends the tab closes, the way a harness tab closes when its process exits. There's no reconnect and no reattach, so a new launch starts a fresh session.
+A remote workspace and its SSH session last until their final user closes. The launching tab, agents joined with ➕, and its file navigator can all share that session. Closing the launching tab leaves joined agents running; a navigator opened from that tab's 📁 button closes with it. If the connection itself drops or you explicitly close `ssh:<address>`, every tab and navigator using it closes. There's no reconnect and no reattach, so a new launch starts a fresh session.
 
-The remote deletes its workspace clone when the session ends, including when the connection drops, so a lost connection never leaves a clone behind. Closing the tab or closing its `ssh:` connection does the same thing. Nothing is deleted on your machine, because the workspace was never there.
+The remote deletes its workspace clone when the session's last user closes, including when the connection drops, so a lost connection never leaves a clone behind. Remote files opened for viewing or editing are cached locally only for that session and cleared at startup or when its last user closes.
 
-`janus --relaunch` doesn't bring a remote agent tab back.
+`janus --relaunch` doesn't bring a remote agent tab or remote file navigator back, and profiles do not restore remote navigators.
 
 ## What stays local
 
 Screen captures, recordings, and busy detection are worked out on your machine from the terminal output streaming back, so `harness capture` writes a capture file locally and the busy dot behaves as usual. `harness transcript` is the exception. It reads the harness's own session record, which lives on the remote, so the remote reads it and sends the rendered result across.
 
-File navigator, `open`, and editor tabs stay local only. A remote tab also can't launch its own remote tab.
+A remote tab still can't launch its own remote tab. There is no `files on <address>` form without an existing tab on that host, and files cannot be copied between machines or handed to `open external` from a remote tree.

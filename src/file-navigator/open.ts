@@ -1,62 +1,131 @@
 import { statSync } from 'node:fs';
-import { buildRows } from './index.js';
+import { buildCachedRows, clearFilesystemCache } from './filesystem-cache.js';
+import { LocalFileSystemPort, type FileSystemPort } from './filesystem-port.js';
+import { RemoteFileSystemPort } from './remote-port.js';
 import type { Managers } from '../managers.js';
+import type { RemoteTarget } from '../tab/types.js';
 import type { BasePort } from './port.js';
+import type { FilesTabState } from './state.js';
 
-// The narrow slice of `FileNavigatorManager` internals this module needs, handed over as bound closures
-// so the tab-state map and watcher plumbing stay private to the manager (see `openPort()` there).
-export interface OpenPort extends BasePort {
-  managers: Managers;
+export interface OpenPort extends BasePort { managers: Managers }
+
+function freshState(
+  root: string, filesystem: FileSystemPort, remote?: RemoteTarget, ownerLabel?: string,
+): FilesTabState {
+  return {
+    root, filesystem, remote, ownerLabel, expanded: new Set(), watchers: new Map(),
+    listings: new Map(), listingLoads: new Set(), statLoads: new Set(),
+    undoStack: [], redoStack: [], details: 'name', stats: new Map(),
+  };
 }
 
-// Open a file navigator at `label`'s cwd (the metadata-row 📁 button). If a file-navigator tab is already
-// open, retarget the most-recently-focused one to that cwd in place — preserving its identity, dock
-// placement, and strip position; otherwise open a fresh tree docked in the left sidebar. Either way,
-// focus stays on the tab whose button was clicked — opening or retargeting the navigator must not
-// steal focus.
+// The metadata-row folder button preserves the existing fresh-open/most-recent-retarget rule. A
+// remote source swaps in a channel-backed port and ties the navigator to that source tab.
 export function openOrRetarget(port: OpenPort, label: string): void {
+  const source = port.managers.tab.tabs.find((tab) => tab.label === label);
+  if (!source) return;
   const cwd = port.managers.tab.cwdOf(label) ?? process.cwd();
-  let stat;
-  try { stat = statSync(cwd); } catch { stat = undefined; }
-  if (!stat?.isDirectory()) return;
-
   const existing = port.managers.tab.mostRecentFileNavigatorLabel();
-  if (existing) retarget(port, existing, cwd);
-  else openFresh(port, cwd);
+  if (source.remote) openRemote(port, label, source.remote, cwd, existing);
+  else if (localDirectory(cwd)) openLocal(port, cwd, existing);
   port.managers.tab.setActiveTab(port.managers.tab.findIndex(label));
 }
 
-// Open a fresh tree rooted at `root`, docked left by default (unlike the bare `files` command's
-// center-strip default). Mirrors `FileNavigatorManager.open()`'s create-and-watch sequence.
-function openFresh(port: OpenPort, root: string): void {
-  const expanded = new Set<string>();
-  port.managers.tab.openFilesTab({ root, absoluteRoot: root, rows: buildRows(root, expanded) });
-  const newLabel = port.managers.tab.cur().label;
-  port.managers.tab.setCwd(newLabel, root);
-  port.states.set(newLabel, {
-    root, expanded, watchers: new Map(), undoStack: [], redoStack: [], details: 'name', stats: new Map(),
-  });
-  port.watchDir(newLabel, root, '');
-  port.refreshGit(newLabel);
-  port.managers.tab.setDock(port.managers.tab.findIndex(newLabel), 'left');
+function localDirectory(root: string): boolean {
+  try { return statSync(root).isDirectory(); } catch { return false; }
 }
 
-// Retarget an existing file-navigator tab's root to an arbitrary absolute directory in place. Reuses
-// `reroot()`'s clear-expanded/unwatch/rewatch/rebuild sequence, but — unlike `reroot()` — also
-// clears the undo/redo stacks, since jumping to an unrelated directory leaves their relative paths
-// meaningless at the new root.
-function retarget(port: OpenPort, label: string, root: string): void {
+function openLocal(port: OpenPort, root: string, existing?: string): void {
+  if (existing) {
+    releaseRemote(port, existing);
+    retarget(port, existing, root, new LocalFileSystemPort());
+    return;
+  }
+  const state = freshState(root, new LocalFileSystemPort());
+  port.managers.tab.openFilesTab({ root, absoluteRoot: root, rows: buildCachedRows(state, () => {}) });
+  const label = port.managers.tab.cur().label;
+  port.managers.tab.setCwd(label, root);
+  port.states.set(label, state);
+  port.watchDir(label, root, '');
+  port.refreshGit(label);
+  port.managers.tab.setDock(port.managers.tab.findIndex(label), 'left');
+}
+
+function openRemote(
+  port: OpenPort, ownerLabel: string, remote: RemoteTarget, fallbackRoot: string, existing?: string,
+): void {
+  const ready = port.managers.remote.readyOf(ownerLabel);
+  const channel = port.managers.remote.get(ownerLabel);
+  if (!ready || !channel) return;
+  const root = port.managers.remote.workspaceOf(ownerLabel) ?? fallbackRoot;
+  if (existing) {
+    if (port.states.get(existing)?.ownerLabel === ownerLabel) return;
+    releaseRemote(port, existing);
+    if (!port.managers.remote.attach(existing, ownerLabel)) return;
+    const filesystem = new RemoteFileSystemPort(channel, existing, ready);
+    retarget(port, existing, root, filesystem, remote, ownerLabel);
+    updateRemoteRoot(port, existing, ready);
+    return;
+  }
+  port.managers.tab.openFilesTab({ root, absoluteRoot: root, rows: [], waitingFor: root, remote });
+  const label = port.managers.tab.cur().label;
+  if (!port.managers.remote.attach(label, ownerLabel)) return;
+  const state = freshState(root, new RemoteFileSystemPort(channel, label, ready), remote, ownerLabel);
+  port.managers.tab.setCwd(label, root);
+  port.states.set(label, state);
+  port.watchDir(label, root, '');
+  port.refreshGit(label);
+  port.managers.tab.setDock(port.managers.tab.findIndex(label), 'left');
+  updateRemoteRoot(port, label, ready);
+}
+
+function updateRemoteRoot(port: OpenPort, label: string, ready: Promise<string>): void {
+  void ready.then((root) => {
+    const state = port.states.get(label);
+    if (!state?.remote) return;
+    state.remoteRoot = root;
+    if (state.root !== root) {
+      port.unwatchDir(state, '');
+      state.root = root;
+      clearFilesystemCache(state);
+      state.listingLoads.clear();
+      state.statLoads.clear();
+      port.watchDir(label, root, '');
+    }
+    if (port.managers.tab.tabs.some((tab) => tab.label === label)) port.managers.tab.setCwd(label, root);
+    port.rebuild(label);
+  }, () => {});
+}
+
+function releaseRemote(port: OpenPort, label: string): void {
   const state = port.states.get(label);
-  if (!state || root === state.root) return;
+  if (!state?.remote) return;
+  state.filesystem.dispose();
+  port.managers.remote.release(label);
+}
+
+function retarget(
+  port: OpenPort, label: string, root: string, filesystem: FileSystemPort,
+  remote?: RemoteTarget, ownerLabel?: string,
+): void {
+  const state = port.states.get(label);
+  if (!state) return;
   for (const relPath of state.expanded) port.unwatchDir(state, relPath);
   state.expanded.clear();
   port.unwatchDir(state, '');
+  if (!state.remote) state.filesystem.dispose();
   state.root = root;
+  state.filesystem = filesystem;
+  state.remote = remote;
+  state.ownerLabel = ownerLabel;
   state.undoStack = [];
   state.redoStack = [];
+  state.listings.clear();
+  state.listingLoads.clear();
+  state.statLoads.clear();
   state.stats.clear();
   port.watchDir(label, root, '');
   port.refreshGit(label);
-  if (port.managers.tab.tabs.some((t) => t.label === label)) port.managers.tab.setCwd(label, root);
+  if (port.managers.tab.tabs.some((tab) => tab.label === label)) port.managers.tab.setCwd(label, root);
   port.rebuild(label);
 }

@@ -56,9 +56,11 @@ hand. The shell is whichever one the remote account is configured with, not a fi
 
 ### Authentication
 
-Each remote tab owns one ssh session and one `remote-serve` process. There is no multiplexing and no
-shared channel, so authentication happens once per launch — and a profile of several remote tabs
-raises several prompts.
+Each independent remote launch opens one ssh session and one `remote-serve` process, so
+authentication happens once for that launch. Tabs created from its metadata-row ➕ button and a file
+navigator opened over that workspace join the existing channel without another prompt. Separate
+`on <address>` launches remain separate sessions even when their addresses match, and a profile of
+several independent remote tabs still raises several prompts.
 
 The tab opens **immediately**, before anything is validated, showing the live ssh session as its
 body. ssh's own prompts — password, key passphrase, host-key verification, keyboard-interactive/2FA
@@ -108,27 +110,40 @@ none of the fields it reads and would provision a workspace with no credentials 
 credential no longer touches the contract at all, so this is expected to be the last version move on
 the tokens' account.
 
+Remote filesystem sessions and the per-spawn agent name extend the contract again, moving
+`REMOTE_PROTOCOL_VERSION` to 7. A version-6 remote would ignore navigator requests and stamp a
+joined process with the provisioning tab's identity, so it is refused during the handshake before
+either behavior can fail silently.
+
 After the handshake, every frame is validated before dispatch. Process and workspace identifiers
 must be nonempty strings; terminal dimensions must be positive integers; spawn modes and optional
 flags must use their declared values; exit codes must be integers; transcript blocks must all be
 strings; and the provisioning token map accepts only known token names with nonempty string values.
+Filesystem frames additionally require nonempty session and request ids, an operation from the
+declared closed set, and the exact argument shape for that operation; paths and history entries are
+validated before the workspace holder sees them.
 An invalid known frame is refused as `Malformed remote frame "<type>".` and an unknown frame type is
 refused by name. Undeclared properties are discarded rather than forwarded to process or workspace
 handlers.
 
 ### Lifecycle and cleanup
 
-A remote tab's lifetime is its channel's lifetime. If the ssh session ends for any reason the tab
-closes, the way a harness tab closes when its process exits. There is no reconnect, no resume, and no
-reattach; a new launch starts a fresh session.
+A remote channel's lifetime is its last user's lifetime. The launching tab, every agent joined from
+it through ➕, and each navigator using its workspace hold a reference. Closing one tab releases its
+reference without closing the surviving tabs or ending their ssh session. The session ends only
+after the last reference is released. If the ssh session drops for any reason, every tab and
+navigator using it closes and the notifications feed reports the ended connection once. There is no
+reconnect, no resume, and no reattach; a new launch starts a fresh session.
 
 On the remote side the workspace clone is removed when `remote-serve` exits — including on the
 hangup it receives when the channel drops — so a dropped connection never leaves a clone behind.
-Closing the tab locally, or closing its `ssh:` connection, ends the session and triggers the same
-cleanup.
+Closing the last user locally ends the session and triggers the same cleanup. Explicitly closing its
+`ssh:` connection is a force-close: it ends the shared channel and closes every tab and navigator
+using it.
 
-Nothing is deleted locally when a remote tab closes: its workspace lives on the other host, so the
-tab deliberately records no local workspace directory.
+Nothing from the remote workspace is deleted locally when a remote tab closes. Files opened from a
+remote navigator are materialized in the local `.janissary/remote-files/` cache; that cache is
+cleared at launch and when the channel's last reference is released.
 
 ### What is computed where
 
@@ -137,6 +152,12 @@ streamed terminal bytes, so `harness capture` writes a local capture file holdin
 and the busy dot behaves exactly as it does for a local harness. `harness transcript` is the
 exception: its source is the harness binary's own session record, which lives in the remote's dot
 directory, so the remote reads it and pushes the rendered blocks across.
+
+The file navigator's tree state, expanded rows, selection, undo/redo history, and rendering remain
+local. Directory listings, row stats, watches, search candidates, git metadata, file reads and
+writes, and every mutation execute on the remote against the provisioned workspace. Every accepted
+path is resolved within that workspace; an escaping path is refused. Remote file content travels to
+the local cache for ordinary openers, and editor saves travel back over the same channel.
 
 Isolation is the remote's own. `remote-serve` applies the same workspace sandbox
 policy the local server applies, which means isolation is active when the remote is macOS and
@@ -203,18 +224,23 @@ from the ssh login directory looking for a git repository. Either way the root m
 repository with an `origin` remote.
 
 Its capability surface is deliberately closed: it provisions one workspace clone, runs processes
-inside it, tails a harness transcript, and removes the clone on exit. It will not open tabs, serve
-files, run anything outside the workspace, or accept a message outside its protocol.
+inside it, tails a harness transcript, reads and watches files inside that workspace, applies the
+navigator's filesystem mutations there, and removes the clone on exit. It will not open tabs, serve
+paths outside the provisioned workspace, run anything outside that workspace, or accept a message
+outside its protocol.
 
 ### Out of scope
 
 - Non-workspaced remote launches — `on <address>` always implies a workspace clone.
 - Reconnect, resume, or reattach after a dropped channel.
-- A shared or multiplexed connection per host.
+- Multiplexing independent workspaces or independent `on <address>` launches onto one connection.
 - Shipping or installing janissary on the remote.
 - ssh options on the clause.
 - A saved directory of remotes or completion over previously used hosts.
-- Remote file navigator, `open`, and editor tabs — these stay local-only.
+- `files on <address>` without an existing remote agent or harness tab.
+- Cross-host file transfer, remote `open external`, and plugin-contributed selection actions in a
+  remote tree.
 - An alternative confinement mechanism where the remote platform has no sandbox.
 - Nested remoting: a remote tab cannot itself launch `on <another-host>`.
 - Restoring a remote agent tab on `--relaunch`.
+- Restoring a remote file navigator through a profile or `--relaunch`.

@@ -55,6 +55,9 @@ form (`files ./left`).
 `files in <label>` opens (or focuses/redocks) a tree rooted at the cwd of the tab named `<label>`
 instead of the issuing tab's own cwd. If no tab has that label, an error (`No tab named
 "<label>".`) is appended to the issuing tab's transcript and no tree is opened or moved.
+When `<label>` names a remote agent or harness, the tree is rooted in that tab's workspace on the
+remote host and uses that tab's existing ssh channel. There is no `files on <address>` form: a
+remote tree can only be opened through a tab that already owns a workspace and connection there.
 
 `files with <mode>` opens (or retargets) the tree showing a per-row detail beside each name, where
 `<mode>` is `name`, `size`, `modified`, or `permissions` — see "Row detail modes" below. Like `in`
@@ -85,6 +88,39 @@ its identity, its position, and its dock placement (a docked navigator stays doc
 its expanded directories, and its move undo/redo history, are cleared, since they no longer apply to
 the new root. Either way — fresh open or retarget — focus stays on the tab whose button was clicked;
 opening or retargeting the navigator does not steal focus.
+
+On a remote tab the same button opens or retargets the navigator to that tab's remote workspace over
+its existing ssh channel. That navigator is tied to the remote tab whose button was clicked and
+closes when that tab closes. Retargeting it to a local root removes the tie; retargeting any
+navigator to a remote root transfers the tie to that remote tab. A navigator opened from a local
+tab keeps its independent lifetime.
+
+### Remote trees
+
+A tree rooted in a remote workspace has the same rows, detail modes, branch and git-status metadata,
+search, watches, open/edit actions, creation, rename, delete, move, clipboard actions, and undo/redo
+as a local tree. Every filesystem operation runs on the remote host and is contained within the
+workspace provisioned for the channel. The header shows the same host chip as the owning tab,
+ahead of the root path and branch; its text is the bare host and its tooltip is the full remote
+destination.
+
+Opening or editing a remote file reads it into the local remote-file cache and then uses the normal
+opener for its type. Saving a cached editor file writes the content back over the channel. A failed
+write is reported in the notifications feed and leaves the editor dirty. `open external` is not
+allowed for a remote row: choosing it is refused in the notifications feed because an external
+application has no route to save its changes back.
+Plugin-contributed selection actions are likewise not offered for remote rows.
+
+Clipboard and tree-to-tree drag operations may cross navigator roots only when both roots are on
+the same host. A cross-host drag has no drop target. A cross-host paste is refused in the
+notifications feed without changing the filesystem or clearing the clipboard marks. Dragging a
+remote row into a command bar or editor inserts `<host>:<absolute-remote-path>`; local rows retain
+their relative-path behavior.
+
+Remote trees are live views only. They are omitted by `profile save`, are not restored by
+`profile launch` or `--relaunch`, and close if their channel drops. The connection-ended failure is
+reported once through the notifications feed; a refused individual filesystem operation is reported
+as an operation failure and does not close the channel.
 
 ### Tree contents
 
@@ -285,7 +321,8 @@ The same click-drag-release gesture used to move a file also has a second possib
 the command bar of whichever tab is active. Releasing there inserts every selected visible path
 at the current caret position, separated by single spaces and replacing any active text selection,
 without moving anything on disk. Each inserted path is relative to the active tab's own working
-directory, not the tree's root. While the drag is over the command
+directory, not the tree's root. A remote tree instead inserts each path as
+`<host>:<absolute-remote-path>`. While the drag is over the command
 bar, it is highlighted the same way a valid directory drop target is; releasing over it never
 triggers the file-move flow, and no move confirmation or conflict dialog can appear for it.
 
@@ -306,6 +343,9 @@ Releasing a selection over an open plain-text editor inserts every selected visi
 path at the editor's current cursor position, separated by newlines and recorded as one editor undo
 step, without moving anything on disk. Unlike dropping onto the command bar, the editor body shows
 no highlight while a drag passes over it.
+
+For a remote tree, each inserted editor path uses the same `<host>:<absolute-remote-path>` form as a
+command-bar drop rather than a tree-relative path.
 
 An editor tab is only a valid drop target while it is the active tab and actually visible — in
 practice this means the file navigator is docked into a sidebar while an editor tab is active in
@@ -347,6 +387,9 @@ the directories that still exist, reopening the tree in its saved detail mode, a
 the saved rows with the cursor row scrolled into view. Anything that no
 longer exists is dropped silently, and restoring a selection never moves keyboard focus. See
 Profiles for the full rules.
+
+Remote trees are excluded from saved profiles and are never restored, because their workspace and
+authenticated channel do not survive a launch.
 
 ### Deleting a file or directory
 
@@ -416,6 +459,10 @@ dialogs a drag-and-drop move already uses. A paste whose source has vanished, or
 lies inside the very directory being copied, counts as a failure the same way a move or delete
 failure does — reported through the notifications feed with its cause and recovery action, never a
 dialog.
+
+A clipboard remains app-wide across local and remote trees, but its contents may only be pasted on
+the host they came from. A cross-host paste is refused with a notifications-feed reason, changes
+nothing, and leaves the clipboard and its visible row marks armed.
 
 A paste is one step on the tab's own undo/redo stack, so `Cmd+Z` reverses it and `Cmd+Shift+Z`
 re-applies it. Undoing a copy-paste deletes exactly the items that paste created, with no
@@ -522,6 +569,10 @@ close button — while docked, the sidebar's own strip (see `sidebars.md`) shows
 the close affordance, so a docked tree is closed from there (`close files` by label still works as
 a fallback).
 
+A remote tree's header begins with a host chip ahead of the root path and branch. It shows the bare
+host and uses the full remote destination as its tooltip, matching the chip in the owning tab's
+metadata row.
+
 When the tree is rooted inside a git repository whose `origin` remote points at GitHub, the header
 also carries a **GitHub** button, shown before Search files. Clicking it opens that repository's
 commits page for the currently checked-out branch (for example
@@ -608,6 +659,11 @@ Closing a file navigator tab (via its close button, the `close` command, or app 
 watcher it opened. Because a file navigator tab owns no shell, agent session, browser, or workspace,
 the rest of ordinary tab teardown simply does nothing for it. Closing the last remaining tab quits
 the app, exactly as the `close` command does elsewhere (see `tabs.md`).
+
+A remote navigator additionally releases its reference to the shared ssh channel. Its local file
+cache is removed when that channel's last user closes. A navigator opened from a remote tab's metadata button closes when that owning tab
+closes; one opened locally remains independent. A dropped remote channel closes all navigators
+using it.
 
 ### Reordering and grouping
 

@@ -1,14 +1,16 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import type { FileNavigatorDetail } from '@shared/protocol';
+import type { FileNavigatorDetail, RemoteTarget } from '@shared/protocol';
 import { nextDock, dockTooltip } from '../dock-cycle';
 import { nextDetail, detailTooltip } from './file-navigator-detail';
 import { dockSwapIcon, fileDetailIcon, newDirectoryIcon, newFileIcon, searchFilesIcon } from '../icons';
 import { FileNavigatorGithubButton } from './FileNavigatorGithubButton';
 import { SplitTabButton } from '../SplitTabButton';
+import { RemoteChip } from '../shared/RemoteChip';
 
 type Properties = {
   root: string;
+  remote?: RemoteTarget;
   branch?: string;
   githubUrl?: string;
   dock?: 'left' | 'right';
@@ -27,13 +29,14 @@ type Properties = {
 // new items, dock cycle, collapse all) on the right. Split out of `FileNavigatorTab` to keep it under
 // the file-size limit.
 export function FileNavigatorHeader({
-  root, branch, githubUrl, dock, details, onOpenGithub, onCycleDock, onSetDetail, onCollapseAll,
+  root, remote, branch, githubUrl, dock, details, onOpenGithub, onCycleDock, onSetDetail, onCollapseAll,
   onSearch, onNewFile, onNewDirectory, onSplit,
 }: Properties) {
   const following = nextDetail(details);
   return (
     <div className="files-header">
       <div className="files-meta">
+        {remote && <RemoteChip remote={remote} />}
         <span className="files-loc">{root}</span>
         {branch && <span className="files-branch">{branch}</span>}
       </div>

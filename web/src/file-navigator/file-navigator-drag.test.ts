@@ -92,4 +92,10 @@ describe('resolveDropTarget', () => {
       conflict: false,
     });
   });
+
+  it('refuses a drop across hosts and allows one on the same host', () => {
+    expect(resolveDropTarget(makeRows(), 'src/index.ts', 'dest', 'devbox', 'other')).toBeNull();
+    expect(resolveDropTarget(makeRows(), 'src/index.ts', 'dest', 'devbox', 'devbox'))
+      .toEqual({ path: 'dest', conflict: true });
+  });
 });

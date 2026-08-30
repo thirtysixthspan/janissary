@@ -2,7 +2,7 @@ import { useRef, useState, type RefObject } from 'react';
 import type { FileNavigatorRow } from '@shared/protocol';
 import type { JanusClient } from '../ws';
 import { parentPath, resolveDropTarget, type DropTarget } from './file-navigator-drag';
-import { joinCommandPaths } from './file-navigator-relative-path';
+import { joinCommandPaths, remoteNavigatorPath } from './file-navigator-relative-path';
 import { useFileNavigatorMoveOperations } from './useFileNavigatorMoveOperations';
 import type { CommandInputDropHandle, EditorDropHandle } from '../drop-handles';
 
@@ -26,6 +26,7 @@ export function useFileNavigatorDrag(
   targetCwd = '',
   providedDropRef?: RefObject<CommandInputDropHandle | null>,
   providedEditorDropRef?: RefObject<EditorDropHandle | null>,
+  remoteHost?: string,
 ) {
   const legacy = typeof absoluteRootOrDropRef !== 'string' || typeof displayRootOrEditorRef !== 'string';
   const absoluteRoot = legacy ? '' : absoluteRootOrDropRef;
@@ -53,9 +54,15 @@ export function useFileNavigatorDrag(
     const element = document.elementFromPoint(x, y);
     return element instanceof Element ? element.closest(selector) : null;
   };
-  const hoveredRowPath = (x: number, y: number): string | null => {
+  const hoveredRowInfo = (
+    x: number, y: number,
+  ): { path: string | null; host?: string; root?: string } => {
     const row = hovered(x, y, '[data-path]');
-    return row instanceof HTMLElement ? (row.dataset.path ?? null) : null;
+    if (!(row instanceof HTMLElement)) return { path: null };
+    const tree = row.closest('.files-tab');
+    const host = tree instanceof HTMLElement ? tree.dataset.filesHost || undefined : undefined;
+    const root = tree instanceof HTMLElement ? tree.dataset.filesRoot : undefined;
+    return { path: row.dataset.path ?? null, host, root };
   };
   const setCommandBarHighlighted = (active: boolean) => {
     overCommandBarRef.current = active;
@@ -73,12 +80,16 @@ export function useFileNavigatorDrag(
   const drop = () => {
     const gesture = gestureRef.current;
     if (gesture?.started && overCommandBarRef.current) {
-      dropRef?.current?.insertAtCaret(joinCommandPaths(absoluteRoot, gesture.sourcePaths, targetCwd));
+      dropRef?.current?.insertAtCaret(joinCommandPaths(absoluteRoot, gesture.sourcePaths, targetCwd, remoteHost));
       resetGestureState();
       return;
     }
     if (gesture?.started && overEditorRef.current) {
-      editorDropRef?.current?.insertAtCaret(gesture.sourcePaths.join('\n'));
+      editorDropRef?.current?.insertAtCaret(
+        remoteHost
+          ? gesture.sourcePaths.map((path) => remoteNavigatorPath(remoteHost, absoluteRoot, path)).join('\n')
+          : gesture.sourcePaths.join('\n'),
+      );
       resetGestureState();
       return;
     }
@@ -114,10 +125,10 @@ export function useFileNavigatorDrag(
     if (overBar !== overCommandBarRef.current) setCommandBarHighlighted(overBar);
     const overEditor = !overBar && hovered(event.clientX, event.clientY, '[data-editor-drop]') !== null;
     overEditorRef.current = overEditor;
-    setDropTarget(overBar || overEditor ? null : resolveDropTarget(
-      rowsRef.current,
-      gesture.operationPaths,
-      hoveredRowPath(event.clientX, event.clientY),
+    const row = hoveredRowInfo(event.clientX, event.clientY);
+    const otherRoot = row.root !== undefined && row.root !== absoluteRoot;
+    setDropTarget(overBar || overEditor || otherRoot ? null : resolveDropTarget(
+      rowsRef.current, gesture.operationPaths, row.path, remoteHost, row.host,
     ));
   };
   const onWindowUp = () => {

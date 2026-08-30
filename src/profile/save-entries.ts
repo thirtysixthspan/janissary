@@ -103,7 +103,7 @@ export function writeHarnessEntry(tab: Tab, managers: Managers): ProfileHarnessT
 export function writeFilesEntry(
   tab: Tab, managers: Managers, selection: TreeSelection | undefined,
 ): ProfileFilesTabFile | undefined {
-  if (!tab.files) return undefined;
+  if (!tab.files || tab.files.remote) return undefined;
   const expanded = managers.fileNavigator.expandedPaths(tab.label);
   const selected = selection?.selected ?? [];
   const details = managers.fileNavigator.detailOf(tab.label);
