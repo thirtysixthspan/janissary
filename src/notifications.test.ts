@@ -123,6 +123,21 @@ describe('shouldNotify — ssh-recording-failed event', () => {
   });
 });
 
+describe('shouldNotify — harness-recording-failed event', () => {
+  it('fires regardless of the per-event toggles, like the other explicit events', () => {
+    expect(shouldNotify(allOff, 'harness-recording-failed', 'claude', 'janus')).toBe(true);
+    expect(shouldNotify(undefined, 'harness-recording-failed', 'claude', 'janus')).toBe(true);
+  });
+
+  it('fires even when the harness tab is the active one', () => {
+    expect(shouldNotify(allOn, 'harness-recording-failed', 'claude', 'claude')).toBe(true);
+  });
+
+  it('renders the fixed body, with the label supplied by the line header', () => {
+    expect(notificationText('harness-recording-failed', 'claude')).toBe('harness recording failed');
+  });
+});
+
 describe('shouldNotify — file-operation event', () => {
   it('fires regardless of notification config', () => {
     expect(shouldNotify(undefined, 'file-operation', 'build', 'janus')).toBe(true);

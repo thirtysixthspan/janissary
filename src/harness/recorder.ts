@@ -13,8 +13,9 @@ const TERM = 'xterm-256color';
 // append stream (not per-event `appendFileSync`) so a burst of PTY output never blocks `bus.emit`.
 //
 // `command` is what the asciicast header reports the session ran: a bare program name (`claude`)
-// for a named harness, the whole verbatim `ssh …` invocation for an ssh tab. `onFailure`, when
-// given, fires at most once if recording is abandoned; callers that omit it fail silently.
+// for a named harness, the whole verbatim `ssh …` invocation for an ssh tab. `onFailure` fires at
+// most once if recording is abandoned, and is required rather than optional so that a new spawn
+// path cannot leave an abandoned recording unreported by simply not passing it.
 export class HarnessRecorder {
   private subscription: Subscription;
   private stream: WriteStream | undefined;
@@ -28,7 +29,7 @@ export class HarnessRecorder {
     private command: string,
     private cols: number,
     private rows: number,
-    private onFailure?: () => void,
+    private onFailure: () => void,
   ) {
     this.subscription = messageBus.on('pty', ['data', 'exit', 'resize'], (event) => {
       if (event.id !== this.id) return;
@@ -91,12 +92,12 @@ export class HarnessRecorder {
     };
   }
 
-  // Stop recording for good, reporting it once. Both failure paths land here, so a caller with a
-  // failure callback hears about a write error and an open error alike, and hears about it once.
+  // Stop recording for good, reporting it once. Both failure paths land here, so a caller hears
+  // about a write error and an open error alike, and hears about it once.
   private abandon(): void {
     if (this.failed) return;
     this.failed = true;
-    this.onFailure?.();
+    this.onFailure();
   }
 
   private writeEvent(code: 'o' | 'r', data: string): void {
