@@ -2,8 +2,6 @@
 
 ## ready
 
-* Move editor interaction rules out of `web/src/editor/EditorTab.tsx`: the 226-line component owns viewport-page calculation, wrapped-row vertical resolution, find-result selection, the full keyboard decision tree, and textarea/IME flushing before it renders JSX, violating §5 (components render, they do not decide), so each input change must be tested through the large rendered editor suite and keeps growing the component that changed repeatedly in recent editor work. Extract those rules into a focused `useEditorInteractions` hook with pure helpers while keeping `EditorTab`'s public props and imperative handle unchanged; one production file imports `EditorTab`, so the extraction stays internal. Resolve by running the `ai/tasks/hygiene/improve-modularity.md` task against `web/src/editor/EditorTab.tsx`. Severity: **medium**.
-
 ## development
 
 ## deferred

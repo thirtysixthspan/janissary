@@ -1,10 +1,6 @@
 import React, { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
 import type { EditorView, TabView } from '@shared/protocol';
 import type { JanusClient } from '../ws';
-import { collapseSelection, hasMultipleSelections, insertText } from './model';
-import { actionForKey, yieldsToPlugins } from './keys';
-import { visualVerticalHit } from './mouse';
-import { revealVerticalProbe } from './scroll';
 import { useEditor } from './useEditor';
 import { useEditorFile } from './useEditorFile';
 import { useEditorMouse } from './useEditorMouse';
@@ -14,9 +10,9 @@ import { useEditorSuggest } from './useEditorSuggest';
 import { useEditorConnections } from './useEditorConnections';
 import { useEditorFind } from './useEditorFind';
 import { useEditorPlugins } from './plugins/useEditorPlugins';
+import { useEditorInteractions } from './useEditorInteractions';
 import { EditorConnectionsPanel } from './EditorConnectionsPanel';
 import { EditorFind } from './EditorFind';
-import { handleSuggestKeyDown } from './handleSuggestKeyDown';
 import { handleSuggestPillClick } from './handleSuggestPillClick';
 import { EditorLines } from './EditorLines';
 import { PendingSuggestPanel } from './PendingSuggestPanel';
@@ -38,7 +34,6 @@ export const EditorTab = forwardRef<DirtyTabHandle, {
   const bodyRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const caretRef = useRef<HTMLSpanElement>(null);
-  const composingRef = useRef(false);
   // The save entry point lives on the file hook, which needs the editor state hook that in turn
   // takes the save callback — so both callbacks reach it through this ref, filled in below.
   const saveRef = useRef<() => Promise<void>>(async () => {});
@@ -55,6 +50,7 @@ export const EditorTab = forwardRef<DirtyTabHandle, {
   saveRef.current = file.save;
   const find = useEditorFind(state?.lines ?? null, active);
   const pluginKey = useEditorPlugins(client, editor.url, api, editor.name);
+  const interactions = useEditorInteractions({ bodyRef, caretRef, textareaRef, api, suggest, find, pluginKey });
 
   // Every open editor tab stays mounted at once (see the top-of-file comment), so only the
   // currently active one may claim the shared drop handle — otherwise whichever tab rendered last
@@ -92,84 +88,6 @@ export const EditorTab = forwardRef<DirtyTabHandle, {
     focus: () => textareaRef.current?.focus(),
   }));
 
-  // A viewport's worth of logical lines for PageUp/PageDown, from the measured row line-height.
-  const pageLines = () => {
-    const body = bodyRef.current;
-    if (!body) return 20;
-    const lineHeight = Number(getComputedStyle(body).lineHeight.replace('px', '')) || 18;
-    return Math.max(1, Math.floor(body.clientHeight / lineHeight) - 1);
-  };
-
-  // Wrapped-line-aware ArrowUp/ArrowDown: resolve one visual row from the caret's screen position.
-  // Scrolling the target row into view first keeps that working at the edges of the body, so the
-  // fallback to logical-line movement is left for a row that genuinely cannot be reached — no real
-  // layout (e.g. jsdom), or nothing left to scroll at the document's ends.
-  const resolveVertical = (dir: 'up' | 'down') => {
-    const body = bodyRef.current;
-    const caret = caretRef.current;
-    if (!body || !caret) return null;
-    revealVerticalProbe(body, caret, dir);
-    const hit = visualVerticalHit(body, caret, dir);
-    return hit ? { line: hit.line, col: hit.col } : null;
-  };
-
-  // Highlighting a find result previews it immediately: the caret moves to that line, which the
-  // caret effect above then scrolls into view behind the overlay. A cursor-only move is never an
-  // undo step, so it seals the coalescing group instead of recording one (like applyKeyAction).
-  const selectFindResult = (row: number) => {
-    find.setSelected(row);
-    const result = find.results[row];
-    const current = api.stateRef.current;
-    if (!result || !current) return;
-    api.sealUndo();
-    api.setState({ ...current, cursor: { line: result.index, col: 0 }, anchor: null });
-  };
-
-  const onKeyDown = (e: React.KeyboardEvent) => {
-    if (e.nativeEvent.isComposing) return;
-    // Nothing typed in the editor may reach App's global bindings (Ctrl+T, Ctrl+R, Ctrl+arrows).
-    e.stopPropagation();
-    if (handleSuggestKeyDown(e, api, suggest, pageLines())) return;
-    // The chords the core table delegates (Tab with a block selected, Shift+Tab, Escape while there
-    // are several selections) go to plugins first. If none claims one — a disabled plugin, say —
-    // the core action below still runs, so Tab keeps inserting a tab character rather than becoming
-    // dead and Escape still collapses.
-    const context = {
-      selectionSpansLines: state !== null && state.anchor !== null && state.anchor.line !== state.cursor.line,
-      multipleSelections: state !== null && hasMultipleSelections(state),
-    };
-    if (yieldsToPlugins(e, context) && pluginKey(e)) { e.preventDefault(); return; }
-    const action = actionForKey(e);
-    // Core bindings always win: an editor plugin is only offered a chord the table above left
-    // unbound, so nothing can shadow Cmd+S or the Emacs subset. preventDefault() is this branch's
-    // own job, since the early return below deliberately does not call it.
-    if (!action) {
-      if (pluginKey(e)) e.preventDefault();
-      return;
-    }
-    e.preventDefault();
-    // Opening the overlay drops any extra carets: its ↑/↓ preview moves the one cursor around the
-    // buffer, which a selection set has no meaning alongside.
-    if (action.kind === 'find') {
-      if (state && hasMultipleSelections(state)) { api.sealUndo(); api.setState(collapseSelection(state)); }
-      find.open();
-      return;
-    }
-    api.apply(action, pageLines(), resolveVertical);
-  };
-
-  // Typed text and paste both arrive through the hidden textarea (keeps IME composition working).
-  // While the agent query line holds focus, route the value into its text instead of the buffer —
-  // the keydown path (handleSuggestKeyDown) covers ordinary typing, but paste and IME composition
-  // bypass it entirely.
-  const flushTextarea = () => {
-    const textarea = textareaRef.current;
-    if (!textarea || composingRef.current || !textarea.value) return;
-    if (suggest.queryLine && suggest.focusTarget === 'query') suggest.setQueryLineState(insertText(suggest.queryLine.state, textarea.value));
-    else api.insert(textarea.value);
-    textarea.value = '';
-  };
-
   const gutterCh = state ? String(state.lines.length).length + 1 : 2;
   const onMetaMouseUp = () => { if (!globalThis.getSelection()?.toString()) textareaRef.current?.focus(); };
 
@@ -194,10 +112,10 @@ export const EditorTab = forwardRef<DirtyTabHandle, {
           ref={textareaRef}
           className="editor-textarea"
           aria-label={`Edit ${editor.name}`}
-          onKeyDown={onKeyDown}
-          onInput={flushTextarea}
-          onCompositionStart={() => { composingRef.current = true; }}
-          onCompositionEnd={() => { composingRef.current = false; flushTextarea(); }}
+          onKeyDown={interactions.onKeyDown}
+          onInput={interactions.flushTextarea}
+          onCompositionStart={interactions.startComposition}
+          onCompositionEnd={interactions.endComposition}
         />
         {state && (
           <EditorLines
@@ -217,7 +135,7 @@ export const EditorTab = forwardRef<DirtyTabHandle, {
         <EditorFind
           query={find.query} onChangeQuery={find.setQuery}
           results={find.results} selected={find.selected}
-          onChangeSelected={selectFindResult}
+          onChangeSelected={interactions.selectFindResult}
           onClose={() => { find.close(); textareaRef.current?.focus(); }}
         />
       )}
