@@ -25,6 +25,7 @@ import { loadHarnessModels } from './harness/models.js';
 import { loadProjectTokens } from './project-tokens.js';
 import { parseCliArgs, usageText, appVersion, CliUsageError } from './cli-args.js';
 import { explainStartupError, formatFatal, maybeStack } from './startup-errors.js';
+import { errorText } from './error-text.js';
 import { loadFrameEnablerExtension } from './chrome-extension-loader.js';
 import { resizeAppWindow, getAppWindowBounds } from './cdp-window-resize.js';
 import { CdpPipe } from './cdp-pipe.js';
@@ -223,7 +224,7 @@ try {
     process.exit(2);
   }
   const explained = explainStartupError(error, { port: parsedPort });
-  const message = explained ?? (error instanceof Error ? error.message : String(error));
+  const message = explained ?? errorText(error);
   process.stderr.write(`${formatFatal(message)}\n${maybeStack(error)}`);
   process.exit(1);
 }

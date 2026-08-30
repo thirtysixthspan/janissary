@@ -2,6 +2,7 @@ import { mkdirSync, readFileSync, existsSync } from 'node:fs';
 import { homedir } from 'node:os';
 import path from 'node:path';
 import { atomicWriteFile } from './atomic-write.js';
+import { errorText } from './error-text.js';
 
 type HistoryEntry = { command: string; tab: string; timestamp: number };
 
@@ -23,7 +24,7 @@ function writeEntries(): boolean {
     failureReported = false;
     return true;
   } catch (error) {
-    reportFailure(error instanceof Error ? error.message : String(error));
+    reportFailure(errorText(error));
     return false;
   }
 }
@@ -54,7 +55,7 @@ export function initGlobalHistory(home?: string): void {
     failureReported = false;
   } catch (error) {
     entries = [];
-    const message = error instanceof Error ? error.message : String(error);
+    const message = errorText(error);
     reportFailure(`could not read history.json (${message})`);
   }
 }

@@ -20,6 +20,7 @@ import { notify } from '../notifications.js';
 import { isRateLimitError } from '../acp/rate-limit.js';
 import { buildSuggestion, formatInlineSuggestion } from './suggestion.js';
 import { subscribeMonitor } from './subscriptions.js';
+import { errorText } from '../error-text.js';
 
 export { SUGGESTION_PREFIX } from './suggestion.js';
 
@@ -95,7 +96,7 @@ export class MonitorManager {
     try {
       persona = loadPersona(personaName, 'monitor');
     } catch (error) {
-      return error instanceof Error ? error.message : String(error);
+      return errorText(error);
     }
 
     const setup: MonitorSubSetup = {

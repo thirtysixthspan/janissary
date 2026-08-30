@@ -8,11 +8,8 @@ import {
 import { parseDatabaseCommand } from './parsing.js';
 export { parseDatabaseCommand } from './parsing.js';
 import { queryDatabase } from './query.js';
+import { errorText } from '../error-text.js';
 export { DB_PRIMER, extractDatabaseCommand } from './primer.js';
-
-function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
 
 function createDatabase(name: string): string {
   const isExisted = databaseFileExists(name);
@@ -20,7 +17,7 @@ function createDatabase(name: string): string {
     getConnection(name);
     return isExisted ? `Database "${name}" already exists.` : `Created sqlite database "${name}".`;
   } catch (error) {
-    return `Failed to create database "${name}": ${errorMessage(error)}`;
+    return `Failed to create database "${name}": ${errorText(error)}`;
   }
 }
 
@@ -31,7 +28,7 @@ function deleteDatabase(name: string): string {
     removeDatabaseFile(name);
     return `Deleted sqlite database "${name}".`;
   } catch (error) {
-    return `Failed to delete database "${name}": ${errorMessage(error)}`;
+    return `Failed to delete database "${name}": ${errorText(error)}`;
   }
 }
 

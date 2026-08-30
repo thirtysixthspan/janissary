@@ -1,10 +1,11 @@
 import type { Managers } from '../managers.js';
 import { notify } from '../notifications.js';
+import { errorText } from '../error-text.js';
 
 export type PluginFailureOrigin = { label: string; command: string };
 
 export function pluginFailureReason(error: unknown): string {
-  const message = error instanceof Error ? error.message : String(error);
+  const message = errorText(error);
   const firstLine = message.split(/\r?\n/, 1)[0].trim().replace(/[.!?;:]+$/u, '').trim();
   return firstLine || 'Unknown failure';
 }

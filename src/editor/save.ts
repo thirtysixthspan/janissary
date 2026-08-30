@@ -8,6 +8,7 @@ import { atomicWriteFile } from '../atomic-write.js';
 import { remoteFileFor } from '../file-navigator/remote-file-cache.js';
 import { notify } from '../notifications.js';
 import type { MaybePromise } from '../file-navigator/filesystem-port.js';
+import { errorText } from '../error-text.js';
 
 // Write an editor tab's buffer back to disk. `url` is the tab's `/open/<id>` ref, resolved
 // through the open-file allow-list — the client can only ever write to files the user explicitly
@@ -80,7 +81,7 @@ async function saveRemote(
     if (!result.ok) throw new Error(result.reason);
     finish();
   } catch (error) {
-    const reason = error instanceof Error ? error.message : String(error);
+    const reason = errorText(error);
     notify(managers, 'file-operation', remote.label, `Could not save remote file: ${reason}`);
     throw error;
   }

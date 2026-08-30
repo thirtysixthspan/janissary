@@ -10,6 +10,7 @@ import {
   runShot,
 } from './tab-helpers.js';
 import type { Entry } from './tab-helpers.js';
+import { errorText } from '../error-text.js';
 
 export class BrowserManager {
   private browsers = new Map<string, Entry>();
@@ -89,7 +90,7 @@ export class BrowserManager {
         }
       }
     } catch (error) {
-      return `Browser error: ${error instanceof Error ? error.message : String(error)}`;
+      return `Browser error: ${errorText(error)}`;
     }
     return '';
   }
@@ -99,7 +100,7 @@ export class BrowserManager {
     void this.run(label, command)
       .then((out) => { this.managers.tab.finishRunning(label, out); onDone?.(out); })
       .catch((error) => {
-        const message = `Browser error: ${error instanceof Error ? error.message : String(error)}`;
+        const message = `Browser error: ${errorText(error)}`;
         this.managers.tab.finishRunning(label, message);
         onDone?.(message);
       });

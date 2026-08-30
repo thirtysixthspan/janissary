@@ -1,4 +1,5 @@
 import { findRepoRoot, getRemoteUrl, provisionWorkspace, removeWorkspace } from './index.js';
+import { errorText } from '../error-text.js';
 
 const NO_REPO = 'No git repository found. Cannot create workspace.';
 
@@ -32,7 +33,7 @@ export class WorkspaceManager {
     try {
       remoteUrl = getRemoteUrl(root);
     } catch (error) {
-      return { error: `Failed to create workspace: ${error instanceof Error ? error.message : String(error)}` };
+      return { error: `Failed to create workspace: ${errorText(error)}` };
     }
     const handle = provisionWorkspace(name, remoteUrl);
     this.refs.set(handle.dir, 1);

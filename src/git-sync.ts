@@ -4,6 +4,7 @@ import path from 'node:path';
 import type { WorkspaceManager } from './workspace/manager.js';
 import { workspacePath } from './workspace/index.js';
 import { getProjectTokens } from './project-tokens.js';
+import { errorText } from './error-text.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -13,10 +14,6 @@ export const SYNC_WORKSPACE_NAME = 'git-sync';
 
 type ProvisioningWorkspace = { dir: string; ready: Promise<void> };
 type SyncResult = { ok: true } | { error: string };
-
-function toMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
 
 // Owns the single shared git-sync workspace clone end to end. Lazily provisions it once, no matter
 // how many synced files are opened concurrently — `ensureWorkspace` caches the handle synchronously
@@ -64,7 +61,7 @@ export class GitSync {
       await pullRebase(handle.dir);
       return { dir: handle.dir };
     } catch (error) {
-      return { error: toMessage(error) };
+      return { error: errorText(error) };
     }
   }
 
@@ -80,7 +77,7 @@ export class GitSync {
       await push(handle.dir);
       return { ok: true };
     } catch (error) {
-      return { error: toMessage(error) };
+      return { error: errorText(error) };
     }
   }
 }

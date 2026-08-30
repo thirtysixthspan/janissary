@@ -1,4 +1,5 @@
 import type { CdpPipe } from './cdp-pipe.js';
+import { errorText } from './error-text.js';
 
 // Loads the bundled Frame Enabler extension into an already-launched, branded Chrome over the
 // CDP `--remote-debugging-pipe` file descriptors (`Extensions.loadUnpacked`) — the sanctioned
@@ -14,7 +15,7 @@ export async function loadFrameEnablerExtension(
   try {
     await cdp.send('Extensions.loadUnpacked', { path: extDir });
   } catch (error) {
-    const reason = error instanceof Error ? error.message : String(error);
+    const reason = errorText(error);
     process.stderr.write(
       `warning: Chrome frame-enabler extension failed to load (${reason}) — sites that block iframing may not render in page tabs\n`,
     );

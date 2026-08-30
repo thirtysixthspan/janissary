@@ -8,6 +8,7 @@ import { resolveUnknownCommand } from './router.js';
 import { recordGlobalHistory } from '../global-history.js';
 import type { Managers } from '../managers.js';
 import { dispatchOrRunOp, drainQueueOp } from './queue.js';
+import { errorText } from '../error-text.js';
 
 export class CommandManager {
   private pendingRoute: { label: string; cmd: string; choices: RouteChoice[] } | null = null;
@@ -116,7 +117,7 @@ export class CommandManager {
     try {
       await cmd.run(command, { label, index }, this.managers);
     } catch (error) {
-      const output = error instanceof Error ? error.message : String(error);
+      const output = errorText(error);
       this.managers.tab.append(label, { input: command, output });
     }
   }

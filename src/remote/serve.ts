@@ -10,6 +10,7 @@ import { resolveRemoteRoot } from './serve-root.js';
 import { RemoteProcesses } from './serve-processes.js';
 import { githubTokenNotice, workspaceReadyNotice } from './serve-notice.js';
 import { RemoteFileNavigators } from './serve-file-navigator.js';
+import { errorText } from '../error-text.js';
 
 // `janus remote-serve [<project-dir>]`: the far end of a remote janissary session. It runs attached
 // inside an ordinary ssh session, takes no instance lock, starts no HTTP server, opens no window,
@@ -118,7 +119,7 @@ export class RemoteServer {
     try {
       await result.ready;
     } catch (error) {
-      this.refuse(error instanceof Error ? error.message : String(error));
+      this.refuse(errorText(error));
       return;
     }
     this.workspaceDir = result.dir;

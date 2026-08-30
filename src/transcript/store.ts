@@ -3,6 +3,7 @@ import path from 'node:path';
 import type { LogEntry } from '../tab/types.js';
 import { messageBus } from '../bus.js';
 import { atomicWriteFile } from '../atomic-write.js';
+import { errorText } from '../error-text.js';
 
 const VALID_NAME = /^[\w-]+$/;
 
@@ -47,7 +48,7 @@ export class TranscriptStore {
     } catch (error) {
       if (this.failed.has(label)) return;
       this.failed.add(label);
-      const message = error instanceof Error ? error.message : String(error);
+      const message = errorText(error);
       process.stderr.write(`warning: failed to persist transcript for ${label}: ${message}\n`);
     }
   }
