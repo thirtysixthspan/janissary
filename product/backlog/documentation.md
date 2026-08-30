@@ -2,8 +2,6 @@
 
 ## ready
 
-* history (5/10) — `documentation/user-documentation/command-bar/history.md` and `help.md` leave 1 of 11 documentable facts missing and contain 1 wrong fact. The page says clicking a past prompt line executes it, but the app requires a double-click and deliberately ignores the gesture when text is selected. It also omits that global-history writes atomically preserve the last valid file on failure and emit one warning until a successful read or write resets warning suppression. The ground truth is `product/specs/history.md`, `web/src/shared/transcript/transcript-line.tsx`, and `src/global-history.ts`. Fix the prompt gesture and add the storage-failure behavior to `documentation/user-documentation/command-bar/history.md`; the `hist` row in `help.md` is already accurate.
-
 * profiles (5/10) — `documentation/user-documentation/automation/profiles.md` and `help.md` leave 9 of 29 documentable facts missing and contain no wrong facts. The page does not explain how to author harness `offline` and agent/harness `remote` entries, the `monitors` object schema and relaunch replacement rule, file-navigator `in` and `details` fields, or notification docking and focus. It also omits synced-editor source paths and refused-editor placement, `--no-open` layout handling, ordered serialization of overlapping `profile save` commands, and the `Profile command failed: <reason>.` result for asynchronous save or launch failures. The ground truth is `product/specs/profiles.md`, `src/profile/manager.ts`, `src/profile/editors.ts`, and `src/profile/save.ts`. Fix by expanding the relevant authoring, launch, and save sections of `documentation/user-documentation/automation/profiles.md`; the summary row in `help.md` remains accurate.
 
 ## development
@@ -14,6 +12,7 @@
 
 ## resolved
 
+* history — documented in documentation/user-documentation/command-bar/history.md (removed 2026-08-30)
 * editor-tab — documented in documentation/user-documentation/tab-types/editor.md, help.md (removed 2026-08-30)
 * open — documented in documentation/user-documentation/tab-types/opening-files.md (removed 2026-08-27)
 * workspaced-agent — documented in documentation/user-documentation/advanced-agents/workspaced-agent.md (removed 2026-08-27)
