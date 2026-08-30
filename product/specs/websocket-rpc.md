@@ -22,6 +22,8 @@ The server silently drops malformed JSON and JSON values that are not valid RPC 
 
 If dispatching an accepted envelope fails, the server sends an `rpc-reply` with the request's `id` and the error message. This applies to synchronous failures and rejected deferred work.
 
+A recognized method that reaches the dispatcher with no handler behind it is reported the same way — an error naming the method — rather than being answered with a successful acknowledgement for an action that never ran. A client is never told a request succeeded unless it did.
+
 ### Tab-plugin methods
 
 `pluginIntent` sends a client action to the plugin that owns an open tab:

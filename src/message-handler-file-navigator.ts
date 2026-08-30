@@ -1,5 +1,6 @@
 import type { Controller } from './controller.js';
 import type { ClientMessage } from './protocol.js';
+import { unhandledClientMethod } from './client-message.js';
 
 type FileNavigatorMessage = Extract<ClientMessage, {
   method: 'fileNavigatorToggle' | 'fileNavigatorCollapseAll'
@@ -109,6 +110,8 @@ export function dispatchFileNavigatorMessage(controller: Controller, message: Fi
         message.params.overwrite,
         message.params.skipConflicts,
       );
+    }
+    default: { return unhandledClientMethod(message);
     }
   }
 }

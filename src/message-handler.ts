@@ -3,6 +3,7 @@ import type { ClientMessage, ServerEvent } from './protocol.js';
 import { dispatchFileNavigatorMessage } from './message-handler-file-navigator.js';
 import {
   clientReplyMode, isEditorPluginFailedParams, isPluginFailedParams, isPluginIntentParams,
+  unhandledClientMethod,
 } from './client-message.js';
 import { errorText } from './error-text.js';
 
@@ -160,6 +161,8 @@ function dispatch(controller: Controller, message: ClientMessage, send: Reply): 
         message.params.url, message.params.plugin, message.params.reason,
       );
       break;
+    }
+    default: { return unhandledClientMethod(message);
     }
   }
 }
