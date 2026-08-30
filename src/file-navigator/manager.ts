@@ -2,8 +2,10 @@ import { messageBus } from '../bus.js';
 import { refreshGit } from './git-refresh.js';
 import { openOrRetarget, type OpenPort } from './open.js';
 import { openFilesCommand } from './open-command.js';
-import { replayHistory } from './manager-history.js';
-import { deleteMany, moveMany, pasteMany } from './manager-batch.js';
+import {
+  createDirectoryIn, deleteItem, deleteItems, moveItem, moveItems, pasteItems, renameItem,
+  replayMutation, type MutationContext,
+} from './manager-mutations.js';
 import { toggleDir, collapseAllDirs, rerootTree, revealPath, type NavPort } from './navigation.js';
 import { watchDir, unwatchDir } from './watch.js';
 import { pollForDir } from './poll.js';
@@ -15,12 +17,11 @@ import { restoreTreeView, type SavedTreeView } from './restore.js';
 import type { FilesTabState } from './state.js';
 import type { FileNavigatorDetail } from '../tab/types.js';
 import type { Managers } from '../managers.js';
-import { clearFilesystemCache, invalidateDirectory } from './filesystem-cache.js';
-import { deleteOne, moveOne, renameOne, unavailable } from './manager-item-operations.js';
+import { invalidateDirectory } from './filesystem-cache.js';
 import { closeFileNavigatorTabs } from './manager-close.js';
 import type { BatchResult, BulkConflictPolicy, BulkMoveResult, FileOpenerResolution, UndoRedoResult } from '../protocol.js';
 import type { MaybePromise } from './filesystem-port.js';
-import { createNavigatorDirectory, createNavigatorFile, openNavigatorFile } from './manager-files.js';
+import { createNavigatorFile, openNavigatorFile } from './manager-files.js';
 import type { FileOpenerChoice } from '../protocol.js';
 import { findOpenFilesTab, withFilesState } from './manager-state.js';
 
@@ -85,6 +86,13 @@ export class FileNavigatorManager {
     ];
   }
 
+  // The manager internals `manager-mutations.ts` operates through, passed the same way the
+  // navigation and open ports are — as one value carrying a bound `rebuild`, so the tab-state map
+  // and the redraw stay private to this class.
+  private mutationContext(): MutationContext {
+    return { managers: this.managers, tabs: this.tabs, rebuild: (label) => this.rebuild(label) };
+  }
+
   // Open a file navigator at `label`'s cwd (the metadata-row 📁 button). If a file-navigator tab is
   // already open, retarget the most-recently-focused one to that cwd in place — preserving its
   // identity, dock placement, and strip position; otherwise open a fresh tree docked in the left
@@ -106,10 +114,7 @@ export class FileNavigatorManager {
   // mirroring the editor's own "any new edit invalidates the redo stack" rule. Rebuilds so the
   // tree reflects the change immediately, without waiting on the directory watcher's own debounce.
   move(label: string, fromRelPath: string, toRelPath: string): MaybePromise<BatchResult> {
-    return withFilesState(this.tabs, label, unavailable(fromRelPath), (state) => moveOne(
-      state, fromRelPath, toRelPath,
-      () => { clearFilesystemCache(state); this.rebuild(label); },
-    ));
+    return moveItem(this.mutationContext(), label, fromRelPath, toRelPath);
   }
 
   moveMany(
@@ -118,16 +123,11 @@ export class FileNavigatorManager {
     destinationPath: string,
     policy?: BulkConflictPolicy,
   ): MaybePromise<BulkMoveResult> {
-    return withFilesState(this.tabs, label, { total: 0, failedPaths: [] }, (state) => moveMany(
-      state, sourcePaths, destinationPath, policy,
-      () => { clearFilesystemCache(state); this.rebuild(label); },
-    ));
+    return moveItems(this.mutationContext(), label, sourcePaths, destinationPath, policy);
   }
 
   deleteMany(label: string, sourcePaths: string[]): MaybePromise<BatchResult> {
-    return withFilesState(this.tabs, label, { total: 0, failedPaths: [] }, (state) => deleteMany(
-      state, sourcePaths, () => { clearFilesystemCache(state); this.rebuild(label); },
-    ));
+    return deleteItems(this.mutationContext(), label, sourcePaths);
   }
 
   // Copy- or cut-paste a clipboard's absolute source paths into this tab's tree.
@@ -139,11 +139,7 @@ export class FileNavigatorManager {
     policy?: BulkConflictPolicy,
     sourceHost?: string,
   ): MaybePromise<BulkMoveResult> {
-    return withFilesState(this.tabs, label, { total: 0, failedPaths: [] }, (state) => pasteMany(
-      state, sources, destinationPath, mode, policy,
-      () => { clearFilesystemCache(state); this.rebuild(label); },
-      sourceHost,
-    ));
+    return pasteItems(this.mutationContext(), label, sources, destinationPath, mode, policy, sourceHost);
   }
 
   // Undo the most recent move: moves the item back from `to` to `from`'s original directory. A
@@ -151,19 +147,13 @@ export class FileNavigatorManager {
   // overwrite (passing `overwrite: true`) can retry the same pending entry. An empty undo stack is
   // a silent no-op.
   undo(label: string, overwrite = false, skipConflicts = false): MaybePromise<UndoRedoResult> {
-    return withFilesState(this.tabs, label, {}, (state) => replayHistory(
-      state, 'undo', overwrite, skipConflicts,
-      () => { clearFilesystemCache(state); this.rebuild(label); },
-    ));
+    return replayMutation(this.mutationContext(), label, 'undo', overwrite, skipConflicts);
   }
 
   // Redo the most recently undone move: re-applies it from `from` to `to`'s original directory.
   // Same conflict-reporting and no-op behavior as `undo`.
   redo(label: string, overwrite = false, skipConflicts = false): MaybePromise<UndoRedoResult> {
-    return withFilesState(this.tabs, label, {}, (state) => replayHistory(
-      state, 'redo', overwrite, skipConflicts,
-      () => { clearFilesystemCache(state); this.rebuild(label); },
-    ));
+    return replayMutation(this.mutationContext(), label, 'redo', overwrite, skipConflicts);
   }
 
   // Rename a file or directory in place (same directory only — `newName` may not contain a path
@@ -172,19 +162,14 @@ export class FileNavigatorManager {
   // If an editor tab is already open on the renamed file, it is retargeted to the new path so it
   // doesn't go stale. Rebuilds so the tree reflects the new name immediately.
   rename(label: string, relPath: string, newName: string): MaybePromise<BatchResult> {
-    return withFilesState(this.tabs, label, unavailable(relPath), (state) => renameOne(
-      this.managers, state, relPath, newName,
-      () => { clearFilesystemCache(state); this.rebuild(label); },
-    ));
+    return renameItem(this.mutationContext(), label, relPath, newName);
   }
 
   // Delete a file or directory (recursively) from disk — the client has already confirmed with
   // the user before sending this. Rebuilds so the tree reflects the removal immediately, without
   // waiting on the directory watcher's own debounce.
   delete(label: string, relPath: string): MaybePromise<BatchResult> {
-    return withFilesState(this.tabs, label, unavailable(relPath), (state) => deleteOne(
-      state, relPath, () => { clearFilesystemCache(state); this.rebuild(label); },
-    ));
+    return deleteItem(this.mutationContext(), label, relPath);
   }
 
   // The gitignore-aware candidate list for the tab's own Search-files pop-up (async, off the event
@@ -213,10 +198,7 @@ export class FileNavigatorManager {
   }
 
   createDirectory(label: string, destination: string): MaybePromise<string | undefined> {
-    return withFilesState(this.tabs, label, undefined, (state) => createNavigatorDirectory(
-      this.managers, state, label, destination,
-      () => { clearFilesystemCache(state); this.rebuild(label); },
-    ));
+    return createDirectoryIn(this.mutationContext(), label, destination);
   }
 
   // This tab's own root, for the selection-action RPCs: the client sends tree-relative rows, and the
