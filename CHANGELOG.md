@@ -2,6 +2,306 @@
 
 All notable changes to this project are documented here.
 
+## [0.12.0] - 2026-08-30
+
+### ⚠ Breaking Changes
+
+- refactor(tokens)!: collapse the four token modules into one registry (#834)
+- feat(workspace)!: pass a Gemini API key to local and remote workspaced tabs (#833)
+- feat(sandbox)!: deny a workspaced tab access to opencode's credential file (#831)
+- feat(workspace)!: pass an OpenCode API key to local and remote workspaced tabs (#830)
+- feat(remote)!: forward the Claude token to remote workspaces (#829)
+
+### Features
+
+- run acp agents on the remote host for remote agent tabs (#918)
+- add shared remote file navigation (#917)
+- record every ssh tab session to a replayable .cast file (#916)
+- run tab shells in a pty and detect programs that need a terminal (#901)
+- duplicate a file or directory from the row context menu (#892)
+- select the next occurrence with cmd+d and edit every selection at once (#891)
+- indent and outdent by two spaces via an editor plugin (#889)
+- comment code with Cmd+/ via a new editor-plugin family (#881)
+- pass a Gemini API key to local and remote workspaced tabs (#833)
+- deny a workspaced tab access to opencode's credential file (#831)
+- pass an OpenCode API key to local and remote workspaced tabs (#830)
+- forward the Claude token to remote workspaces (#829)
+- pass a Claude Code subscription token to workspaced tabs (#826)
+- default agents to safe launches (#820)
+- run agents and harnesses on another host with `on <address>` (#816)
+- add react organization debt research task
+- edit images in the image tab (#789)
+- work issues on prs
+- add the bundled audio player tab plugin (#782)
+- block package updates from installing known-malicious releases (#776)
+- add Shift+Arrow, Cmd/Ctrl+A, and a row context menu to the file navigator (#768)
+- move the embedded page tab into a bundled page plugin (#767)
+- move the scheduling tab into a bundled schedules plugin (#763)
+- let a plugin change what one of its tabs shows, and dock it (#760)
+- start playback when a video tab opens (#754)
+- move the markdown preview tab into a bundled markdown plugin (#753)
+
+### Bug Fixes
+
+- report a failed harness recording in the notifications feed (#925)
+- report filesystem failure reasons (#905)
+- follow long output all the way to its last line (#904)
+- end a command that reads its own stdin (#903)
+- stream live output to a promoted full-tab terminal (#902)
+- scroll by screen rows at the edges of the view instead of whole buffer lines (#894)
+- serialize profile saves (#877)
+- place only opened profile editors (#872)
+- report asynchronous profile failures (#871)
+- create new files and folders under the tree root (#870)
+- preserve global history on write failure (#869)
+- persist transcripts atomically (#868)
+- protect editor input during reload (#867)
+- centralize Chrome pipe dispatch (#864)
+- persist agent state atomically (#857)
+- revoke stale file references (#856)
+- retry failed workspace provisioning (#855)
+- preserve saves on pull failure (#854)
+- save files atomically (#843)
+- replace saved profiles atomically (#842)
+- report resource read failures (#841)
+- validate and atomically persist settings (#840)
+- ignore stale selection actions (#838)
+- preserve unreadable Claude config (#837)
+- validate frame fields before dispatch (#836)
+- set GOOGLE_GENERATIVE_AI_API_KEY from the gemini token (#835)
+- name the provider variables that actually reach a workspace (#832)
+- refuse a remote too old to honor the forwarded GitHub token (#825)
+- inject the GitHub token where isolation is inactive (#824)
+- keep the GitHub token in codex's shell environment (#822)
+- forward GitHub token to workspaces (#821)
+- show remote in interactive metadata (#819)
+- start tab shells with startup flags the shell accepts (#818)
+- launch remote-serve through the remote's interactive shell (#817)
+- reconnect after bfcache restoration (#815)
+- give each editor tab its own syntax-highlight memo (#801)
+- edit selected files from menu (#791)
+- delete the whole selection from the row context menu (#784)
+- keep the audio tab labeled 'audio' (#783)
+- triple click selects the whole line (#778)
+- don't badge a claude tab unread for a trailing recap line (#777)
+
+### Documentation
+
+- complete profile authoring reference (#923)
+- correct prompt rerun and storage recovery (#922)
+- document bundled editing shortcuts (#921)
+- refresh documentation gap candidates
+- add a workspace task that clears conflicts on an open PR (#919)
+- plan remote file navigation and shared workspaces (#914)
+- plan ACP support for remote agents (#911)
+- plan ssh tab session recording (#907)
+- remember detected takeovers in a learned command list (#900)
+- keep the interactive-program list ahead of PTY detection (#899)
+- draft plan for a PTY-backed shell with interactive detection (#897)
+- draft plan for forcing an interactive terminal with an i! prefix (#896)
+- multi-selection editing with cmd+d in the editor tab (#890)
+- indent and outdent by two spaces via an editor plugin (#888)
+- implement editor plugins on the client (#876)
+- make editor plugins a keybinding-to-edit contract (#875)
+- make commenting a new editor-plugin family (#874)
+- draft the editor commenting plan (#873)
+- add audio and the edit dispatch to the opening-files hub (#866)
+- explain the Claude trust step that can block every workspace (#865)
+- correct the profile claim and document how autoplay is gated (#863)
+- correct what a rename alias can be used for (#862)
+- explain the busy dot and the unread flag on a harness tab (#861)
+- document the ACP transcript button and editor persona connections (#860)
+- document editing an image in the image tab (#859)
+- document searching a tab's transcript (#858)
+- refresh documentation gap candidates
+- correct the plugin entry description and name the bundled profiles (#853)
+- record technical debt findings
+- document externalViewers in the settings table (#852)
+- document the buffer line search and click selection (#851)
+- explain that a tab shell skips your startup files (#850)
+- document window-close shutdown and the remaining startup failures (#849)
+- document the keyboard selection chords and fix the stale Alt+Enter row (#848)
+- correct the last-tab close paths and document quitting with unsaved work (#847)
+- document the send command (#846)
+- document the bundled tab plugins and the plugins command (#845)
+- document the audio player tab (#844)
+- refresh documentation gap candidates
+- document the GitHub and Claude token files (#828)
+- document remote agents and harnesses (#827)
+- record that opencode needs no GitHub token config (#823)
+- plan colocated plugin styles (#790)
+- draft the image tab editor plan (#785)
+- promote the audio player tab plugin plan to ready (#781)
+- settle the audio player plan's open questions (#780)
+- draft the audio player tab plugin plan (#779)
+- let a triggered hygiene playbook decide whether its work merges or waits in a PR (#772)
+- end out-of-range package upgrades in an open PR with an upstream diff review (#771)
+- add out-of-range package upgrade research and hygiene tasks
+- add batch patch-level package update task
+- add host notification topics to the payload-update plan (#758)
+- plan host-pushed payload updates for a live plugin tab (#756)
+- draft file navigator selection and context menu plan (#752)
+
+### Refactoring
+
+- share one errorText helper across server and web (#924)
+- extract interaction hook (#920)
+- take multi-open classification from the app shell (#915)
+- share external-open and size helpers across file plugins (#913)
+- colocate picker overlays (#910)
+- enforce feature boundaries (#909)
+- unify replay protocol (#908)
+- declare per-method reply contracts (#898)
+- colocate schedule creation (#895)
+- colocate terminal card (#887)
+- add intent boundary (#886)
+- gather harness feature (#885)
+- gather agent tab feature (#884)
+- simplify schedule command actions (#883)
+- simplify file line scanning (#882)
+- simplify stack move replay (#880)
+- simplify batch move eligibility (#879)
+- simplify editor preview selection (#878)
+- collapse the four token modules into one registry (#834)
+- reuse status button helper (#814)
+- extract protocol intents (#813)
+- gather client feature (#812)
+- share dirty tab handle contract (#811)
+- extract selection hook (#810)
+- gather feature files (#809)
+- construct JanusClient at the app boundary and give it a teardown (#808)
+- declare the three tab focus handles in a shared contract module (#807)
+- move the tab-nav matching rules into a pure tab-nav-match module (#806)
+- move TabEntry and isReportingTab into a pure tab-entries module (#805)
+- delete the duplicate useLiveRef latest-value ref hook (#804)
+- move the editor tab and its conflict dialog into web/src/editor/ (#803)
+- move the file-navigator's four overlays into its directory (#802)
+- read editor files through JanusClient instead of fetch (#800)
+- declare the two drop-handle contracts in a shared module (#799)
+- give the command line's recall and splice rules their own modules (#798)
+- give the transcript renderers intents instead of the protocol client (#797)
+- gather the file-navigator feature into web/src/file-navigator/ (#796)
+- break the editor feature's boundary with the agent tab (#795)
+- take the split action as a host-built node instead of constructing it (#794)
+- register client state collectors instead of importing the navigator registry (#793)
+- colocate plugin CSS with the plugins that render it (#792)
+- pass spawnTab a SpawnTabOptions object (#788)
+- split protocol.ts into per-domain modules (#786)
+- extract statusButton helper to deduplicate scheduleButton prop (#766)
+- extract BaseCenterActionAreaProps to deduplicate component props (#765)
+- extract BasePort interface to deduplicate file-navigator port members (#764)
+- extract TabBodyDiv to deduplicate tab-body wrapper div (#762)
+- derive viewTabs signature from buildTabViews (#761)
+- extract portClosures helper (#759)
+- extract pasteReplayResult helper (#757)
+- extract replayFileNavigatorHistory helper (#755)
+
+### Chores
+
+- log new technical debt findings
+- promote plan
+- promote plan
+- log react organization debt
+- log new technical debt findings
+- defer schedules colocation debt (#893)
+- log react organization debt
+- log complexity hotspots
+- log new technical debt findings
+- log new technical debt findings
+- defer app shell controller split (#839)
+- log new technical debt findings
+- config change for latest codex
+- promote plan
+- record bfcache reconnect debt
+- add tech debt
+- promote tech debt work items
+- log react organization debt
+- log react organization debt
+- log react organization debt
+- promote plan
+- add plan
+- promote plan
+- log out-of-range package upgrade opportunities
+- promote plan
+- log new technical debt findings
+
+### Other
+
+- sync: features.md
+- sync: technical-debt.md
+- sync: documentation.md
+- sync: features.md
+- test(lint-boundaries): pay the ESLint cold start in a hook (#912)
+- test(file-navigator): cover paste replay branches (#906)
+- sync: issues.md
+- sync: issues.md
+- sync: issues.md
+- sync: technical-debt.md
+- sync: technical-debt.md
+- sync: issues.md
+- sync: issues.md
+- sync: features.md
+- sync: features.md
+- sync: technical-debt.md
+- sync: technical-debt.md
+- sync: technical-debt.md
+- sync: bugs.md
+- sync: features.md
+- sync: features.md
+- sync: features.md
+- sync: features.md
+- sync: features.md
+- sync: issues.md
+- sync: features.md
+- sync: issues.md
+- sync: documentation.md
+- sync: issues.md
+- sync: issues.md
+- sync: issues.md
+- sync: issues.md
+- sync: issues.md
+- sync: features.md
+- sync: features.md
+- sync: issues.md
+- sync: features.md
+- sync: issues.md
+- sync: features.md
+- sync: features.md
+- sync: issues.md
+- sync: issues.md
+- sync: issues.md
+- sync: technical-debt.md
+- sync: technical-debt.md
+- sync: technical-debt.md
+- sync: issues.md
+- sync: issues.md
+- sync: issues.md
+- sync: bugs.md
+- sync: issues.md
+- sync: features.md
+- sync: features.md
+- test(harness): cover parseHarnessCommand and its helpers (#787)
+- sync: technical-debt.md
+- sync: technical-debt.md
+- sync: issues.md
+- sync: issues.md
+- sync: features.md
+- sync: issues.md
+- sync: features.md
+- build: pin remaining packages from the compromised keyv maintainer account (#775)
+- build: pin keyv and cacheable dependencies against active supply-chain compromise (#774)
+- build: upgrade @agentclientprotocol/sdk to 1.3.0 (#773)
+- sync: technical-debt.md
+- build: upgrade @xterm/xterm to 6.0.0 (#770)
+- sync: technical-debt.md
+- sync: technical-debt.md
+- sync: issues.md
+- build: apply patch-level dependency updates (#769)
+- sync: features.md
+- sync: issues.md
+- sync: issues.md
+- sync: issues.md
+
 ## [0.11.0] - 2026-08-03
 
 ### Features
