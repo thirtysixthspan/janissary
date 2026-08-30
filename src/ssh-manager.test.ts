@@ -17,7 +17,7 @@ function makeManagers(): { managers: Managers; tabs: Tab[] } {
       findIndex: (label: string) => tabs.findIndex((t) => t.label === label),
     },
     pty: { spawn: vi.fn(() => 'pty-1') },
-    harness: { registerScreenReader: vi.fn() },
+    harness: { registerSshObservers: vi.fn() },
   } as unknown as Managers;
   return { managers, tabs };
 }
@@ -47,5 +47,24 @@ describe('SshManager.run', () => {
 
     expect(new SshManager(managers).run('ssh')).toMatch(/Usage/i);
     expect(tabs).toHaveLength(1);
+  });
+
+  it('registers the ssh observers with the PTY id, the tab label, and the verbatim invocation', () => {
+    const { managers } = makeManagers();
+
+    new SshManager(managers).run('ssh admin@host -p 2222');
+
+    expect(managers.harness.registerSshObservers).toHaveBeenCalledWith('pty-1', 'host', 'ssh admin@host -p 2222');
+  });
+
+  it('gives a second session to the same destination its own label, so recordings cannot collide', () => {
+    const { managers } = makeManagers();
+    const manager = new SshManager(managers);
+
+    manager.run('ssh devbox');
+    manager.run('ssh devbox');
+
+    expect(managers.harness.registerSshObservers).toHaveBeenNthCalledWith(1, 'pty-1', 'devbox', 'ssh devbox');
+    expect(managers.harness.registerSshObservers).toHaveBeenNthCalledWith(2, 'pty-1', 'devbox-2', 'ssh devbox');
   });
 });

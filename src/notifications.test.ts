@@ -108,6 +108,21 @@ describe('shouldNotify — transcript-unavailable event', () => {
   });
 });
 
+describe('shouldNotify — ssh-recording-failed event', () => {
+  it('fires regardless of the per-event toggles, like the other explicit events', () => {
+    expect(shouldNotify(allOff, 'ssh-recording-failed', 'devbox', 'janus')).toBe(true);
+    expect(shouldNotify(undefined, 'ssh-recording-failed', 'devbox', 'janus')).toBe(true);
+  });
+
+  it('fires even when the ssh tab is the active one', () => {
+    expect(shouldNotify(allOn, 'ssh-recording-failed', 'devbox', 'devbox')).toBe(true);
+  });
+
+  it('renders the fixed body, with the label supplied by the line header', () => {
+    expect(notificationText('ssh-recording-failed', 'devbox')).toBe('ssh recording failed');
+  });
+});
+
 describe('shouldNotify — file-operation event', () => {
   it('fires regardless of notification config', () => {
     expect(shouldNotify(undefined, 'file-operation', 'build', 'janus')).toBe(true);

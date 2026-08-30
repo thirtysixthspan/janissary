@@ -72,6 +72,11 @@ Twelve event types can produce a notification line:
 - **`transcript-unavailable`** — a harness tab's session record could not be found, so the tab is
   limited to screen snapshots and has no transcript file (see [[harness-recording]]). The line reads
   `no harness transcript found` and is recorded once per tab, never repeated.
+- **`ssh-recording-failed`** — an ssh tab's session recording could not be written, so the session is
+  no longer being recorded (see [[harness-recording]]). The line reads `ssh recording failed` and is
+  recorded once per tab, never repeated. Like the explicit events, it fires even while the ssh tab is
+  the active one — the tab whose recording just failed is very often the one being watched. The ssh
+  session itself is unaffected. A harness tab's recording failure produces no notification.
 - **`file-operation`** — a file navigator copy, cut/paste, move, delete, or undo/redo replay fails
   for one or more of the items it acted on (see `file-navigator-tab.md`). The line reads
   `Could not <verb> <failed> of <total> items: <names>`, naming the failing items in selection

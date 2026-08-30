@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { HarnessManager } from './manager.js';
 import { HarnessScreenReader } from './screen.js';
+import { HarnessRecorder } from './recorder.js';
 import { writeCaptureFile } from './capture-file.js';
 import { notify } from '../notifications.js';
 import { messageBus } from '../bus.js';
@@ -352,7 +353,7 @@ describe('HarnessManager.latestScreenText', () => {
   });
 });
 
-describe('HarnessManager.registerScreenReader', () => {
+describe('HarnessManager.registerSshObservers', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     recorderMock.instances.length = 0;
@@ -368,10 +369,46 @@ describe('HarnessManager.registerScreenReader', () => {
     const { managers, tabs } = makeManagers();
     const manager = new HarnessManager(managers);
     tabs.push({ label: 'ssh', harness: { name: 'ssh', program: 'ssh', ptyId: 'pty-1', status: 'running' } } as unknown as Tab);
-    manager.registerScreenReader('pty-1');
+    manager.registerSshObservers('pty-1', 'ssh', 'ssh host');
     messageBus.emit('pty', { type: 'data', id: 'pty-1', data: 'ssh screen' });
     await vi.advanceTimersByTimeAsync(1001);
     expect(manager.latestScreenText('ssh')?.text).toBe('ssh screen');
+  });
+
+  it('records the session, passing the label and the verbatim invocation to the recorder', () => {
+    const { managers, tabs } = makeManagers();
+    const manager = new HarnessManager(managers);
+    tabs.push({ label: 'devbox', harness: { name: 'ssh', program: 'ssh', ptyId: 'pty-1', status: 'running' } } as unknown as Tab);
+
+    manager.registerSshObservers('pty-1', 'devbox', 'ssh -p 2222 admin@host');
+
+    expect(recorderMock.instances).toHaveLength(1);
+    expect(vi.mocked(HarnessRecorder).mock.calls[0].slice(0, 5))
+      .toEqual(['pty-1', 'devbox', 'ssh -p 2222 admin@host', 80, 24]);
+  });
+
+  it('disposes both observers and drops the runtime when the ssh PTY exits', async () => {
+    const { managers, tabs } = makeManagers();
+    const manager = new HarnessManager(managers);
+    tabs.push({ label: 'devbox', harness: { name: 'ssh', program: 'ssh', ptyId: 'pty-1', status: 'running' } } as unknown as Tab);
+    manager.registerSshObservers('pty-1', 'devbox', 'ssh devbox');
+    messageBus.emit('pty', { type: 'data', id: 'pty-1', data: 'ssh screen' });
+    await vi.advanceTimersByTimeAsync(1001);
+
+    messageBus.emit('pty', { type: 'exit', id: 'pty-1', exitCode: 0 });
+
+    expect(recorderMock.instances[0].dispose).toHaveBeenCalled();
+    expect(manager.latestScreenText('devbox')).toBeUndefined();
+  });
+
+  it('creates no transcript tailer, so an ssh tab stays distinguishable from a harness tab', () => {
+    const { managers, tabs } = makeManagers();
+    const manager = new HarnessManager(managers);
+    tabs.push({ label: 'devbox', harness: { name: 'ssh', program: 'ssh', ptyId: 'pty-1', status: 'running' } } as unknown as Tab);
+
+    manager.registerSshObservers('pty-1', 'devbox', 'ssh devbox');
+
+    expect(manager.transcriptTailer('devbox')).toBeUndefined();
   });
 });
 

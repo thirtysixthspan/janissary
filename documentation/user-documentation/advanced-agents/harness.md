@@ -126,7 +126,7 @@ Replay a recording with [asciinema](https://asciinema.org):
 asciinema play .janissary/recordings/claude-2026-07-10T18-30-05-123Z.cast
 ```
 
-The files are standard [asciicast v2](https://docs.asciinema.org/manual/asciicast/v2/), so they also drop into any asciicast web player. Recordings from the current run are cleared the next time you start `janus` normally; a `janus --relaunch` keeps them. SSH sessions are not recorded.
+The files are standard [asciicast v2](https://docs.asciinema.org/manual/asciicast/v2/), so they also drop into any asciicast web player. Recordings from the current run are cleared the next time you start `janus` normally; a `janus --relaunch` keeps them. SSH sessions are recorded the same way and land in the same directory (see [SSH sessions](#ssh-sessions) below).
 
 ## Capturing a harness's screen
 
@@ -191,6 +191,20 @@ the global SSH rows.
 - `ssh` with no destination: `Usage: ssh <destination> [ssh options].`
 
 Before the tab opens, the `ssh <destination> […]` command itself is recorded in the transcript of the tab you ran it from. That happens first, so the launch stays visible even if the connection fails immediately — an unreachable host or a rejected login closes the new tab right away, and its error output goes with it rather than echoing back to the tab you launched from.
+
+### Recording an SSH session
+
+Every SSH session is recorded automatically, exactly like a harness session, to a `.cast` file under `.janissary/recordings/` named after the tab label. Only what the remote host printed is saved — nothing you type is ever written, so a passphrase or a remote `sudo` password never lands on disk. The recording's header carries the full invocation you typed, so a stray file still names the host it came from. Two sessions to the same destination get separate files, matching their `devbox` / `devbox-2` labels.
+
+That error output a failed connection takes with it does reach the recording: `ssh` prints it before exiting, so it's captured before the tab closes.
+
+Replay it the same way as any other recording:
+
+```
+asciinema play .janissary/recordings/devbox-2026-07-10T18-30-05-123Z.cast
+```
+
+If the recording can't be written — an unwritable `.janissary/recordings/`, say — the SSH session itself carries on unaffected, and a single `ssh recording failed` line appears in the [notifications](/user-documentation/tab-types/notifications) tab for that session.
 
 The ssh tab closes as soon as the `ssh` process exits, whether that's a normal logout, a dropped connection, or an immediate failure. Closing the [last remaining tab](/user-documentation/getting-started/tabs#closing-tabs) quits the app, same as any other tab.
 

@@ -3,19 +3,16 @@ import { parseHarnessCommand, HARNESS_COMMANDS, HARNESS_NAMES, buildHarnessComma
 import { harnessEnv } from './scratch-dir.js';
 import { isKnownModel, modelsFor } from './models.js';
 import type { HarnessLaunchView } from '../protocol.js';
-import { HarnessScreenReader, type ScreenCapture } from './screen.js';
-import { HarnessRecorder } from './recorder.js';
+import type { ScreenCapture } from './screen.js';
 import { autoApproveWithoutWorkspaceWarning, supportsHarnessAutoApprove } from './auto-approve.js';
-import { captureWiring } from './capture-wire.js';
-import { HarnessRuntime } from './runtime.js';
+import { harnessRuntime, sshRuntime } from './observers.js';
+import type { HarnessRuntime } from './runtime.js';
 import type { SpawnTabOptions } from './spawn-options.js';
 import { captureSubcommand, transcriptSubcommand } from './subcommands.js';
-import { HarnessTranscriptTailer } from './transcript/tailer.js';
-import { createTranscriptSource } from './transcript/sources.js';
+import type { HarnessTranscriptTailer } from './transcript/tailer.js';
 import type { HarnessView } from '../tab/types.js';
 import type { ProfileHarnessEntry } from '../profile/types.js';
 import { messageBus, type Subscription } from '../bus.js';
-import { notify } from '../notifications.js';
 import { sandboxNotice } from '../sandbox/index.js';
 import { oneShotRunEntry } from '../profile/harness-schedule.js';
 import { wireProvisioning, PROVISION_FAILURE_CLOSE_DELAY_MS } from '../workspace/provision-wire.js';
@@ -66,12 +63,12 @@ export class HarnessManager {
     return this.runtimes.get(tab.harness.ptyId)?.tailer;
   }
 
-  // Register a screen reader for a PTY this manager did not spawn itself (currently: ssh tabs,
-  // which reuse the harness-view tab shape but spawn their PTY directly via SshManager). No
-  // capture handler — auto-approve and busy detection are harness-specific and don't apply.
-  registerScreenReader(id: string): void {
-    const dims = this.managers.pty.spawnDimensions();
-    this.runtimes.set(id, new HarnessRuntime(new HarnessScreenReader(id, dims.cols, dims.rows)));
+  // Register the observer pair for a PTY this manager did not spawn itself (currently: ssh tabs,
+  // which reuse the harness-view tab shape but spawn their PTY directly via SshManager): a screen
+  // reader, so the tab is monitorable, and a recorder, so the session is replayable after the tab
+  // closes. `command` is the verbatim `ssh …` invocation, which the recording's header carries.
+  registerSshObservers(id: string, label: string, command: string): void {
+    this.runtimes.set(id, sshRuntime(this.managers, id, label, command));
   }
 
   // Handle a `harness <name> [as <label>] [-w] [--offline] [--model <name>] [--effort <level>]`
@@ -217,15 +214,7 @@ export class HarnessManager {
     const id = channel
       ? this.managers.pty.registerRemotePty(label, channel, { program, command, harness: name, offline })
       : this.managers.pty.spawn(label, program, command, cwd, workspaceDir, offline, harnessEnv(name, cwd));
-    const dims = this.managers.pty.spawnDimensions();
-    const capture = captureWiring(this.managers, name, label, id, autoApprove);
-    const reader = new HarnessScreenReader(id, dims.cols, dims.rows, capture.handler);
-    const recorder = new HarnessRecorder(id, label, program, dims.cols, dims.rows);
-    const source = channel ? this.managers.remote.transcriptSource(label) : createTranscriptSource(name, cwd, Date.now());
-    const tailer = source
-      ? new HarnessTranscriptTailer(label, source, () => { notify(this.managers, 'transcript-unavailable', label); })
-      : undefined;
-    this.runtimes.set(id, new HarnessRuntime(reader, recorder, tailer, capture.autoApprover));
+    this.runtimes.set(id, harnessRuntime({ managers: this.managers, name, label, id, cwd, autoApprove, channel }));
     const liveTab = this.managers.tab.tabs.find((t) => t.label === label);
     if (liveTab?.harness) {
       liveTab.harness.ptyId = id;

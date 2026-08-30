@@ -58,10 +58,11 @@ shape but run no harness.
 
 ### Scope
 
-Only the named-harness tabs opened through `harness <name>` are recorded — the same scope that gets
-a server-side screen reader. **SSH tabs** (`ssh <destination>`) and inline / full-tab interactive
-PTYs (e.g. `shell vim`) are **not** recorded: they get no screen reader either, keeping the two
-observers symmetric.
+Named-harness tabs opened through `harness <name>` and **ssh tabs** (`ssh <destination>`, see
+[[ssh-tab]]) are recorded — the same scope that gets a server-side screen reader, keeping the two
+observers symmetric. Recording is automatic for an ssh session too: there is no flag, command, or
+setting, and every session records from spawn to exit. Inline / full-tab interactive PTYs (e.g.
+`shell vim`) get neither observer and are **not** recorded.
 
 ### File format
 
@@ -71,7 +72,10 @@ The file is asciicast v2. The first line is a JSON header object:
 - `width` / `height`: the terminal dimensions the PTY was spawned at (updated by a resize that
   arrives before any output)
 - `timestamp`: the session start time as an integer Unix epoch (seconds)
-- `command`: the harness program name (e.g. `claude`)
+- `command`: what the session ran — a named harness writes the bare program name (e.g. `claude`), an
+  ssh tab writes its whole verbatim invocation (e.g. `ssh -p 2222 admin@host`), so a stray recording
+  names the host it came from. An invocation carrying a secret in a flag value therefore puts that
+  secret in the header.
 - `title`: the tab label
 - `env`: `{ "TERM": "xterm-256color" }`, matching the PTY's terminal name
 
@@ -100,6 +104,17 @@ exits or the application shuts down.
 The recordings directory is **cleared at a fresh launch** and **preserved across `--relaunch`**,
 matching `.janissary/captures/` — a run's recordings are bounded to that run, and a relaunch handoff
 keeps them.
+
+Harness and ssh recordings share one directory, so telling them apart means reading a file's header
+`command` field or recognizing the tab label in its name. Two concurrent sessions to the same ssh
+destination are labeled `devbox` and `devbox-2`, so their recordings never collide.
+
+If a recording cannot be written at all — an unwritable recordings directory, say — the session
+itself is never affected; it simply stops being recorded. For an **ssh tab** a single
+`ssh recording failed` line is recorded in the notifications feed for that tab (see
+[[notifications]]), never repeated, and it appears even while that tab is the active one. This is
+distinct from `no harness transcript found`, which is about a missing session record and never fires
+for an ssh tab. A harness tab's recording failure is silent.
 
 ### Retrieval
 

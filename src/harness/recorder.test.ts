@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { mkdtempSync, rmSync, existsSync, readdirSync, readFileSync } from 'node:fs';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { chmodSync, mkdirSync, mkdtempSync, rmSync, existsSync, readdirSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { messageBus } from '../bus.js';
@@ -28,15 +28,25 @@ async function waitForCastLines(minLines: number): Promise<string[]> {
   throw new Error('cast file did not reach the expected line count');
 }
 
+// Directories a test made unwritable, restored before the temp tree is removed so cleanup can
+// descend into them.
+const locked: string[] = [];
+
+async function waitFor(condition: () => boolean): Promise<void> {
+  for (let i = 0; i < 200 && !condition(); i++) await new Promise((r) => setTimeout(r, 5));
+}
+
 beforeEach(() => {
   projectDir = mkdtempSync(path.join(tmpdir(), 'harness-rec-'));
   recordingsDir = path.join(projectDir, '.janissary', 'recordings');
   initHarnessRecordingDirectory(projectDir);
   recorder = undefined;
+  locked.length = 0;
 });
 
 afterEach(() => {
   recorder?.dispose();
+  for (const dir of locked) chmodSync(dir, 0o700);
   rmSync(projectDir, { recursive: true, force: true });
 });
 
@@ -118,5 +128,72 @@ describe('HarnessRecorder', () => {
     emit({ type: 'exit', id: 'pty-1', exitCode: 0 });
     const lines = await waitForCastLines(2);
     expect(JSON.parse(lines[1])[2]).toBe('bye');
+  });
+
+  it('carries the command it was given verbatim into the header, ssh invocation and all', async () => {
+    recorder = new HarnessRecorder('pty-1', 'devbox', 'ssh -p 2222 admin@host', 80, 24);
+    emit({ type: 'data', id: 'pty-1', data: 'motd' });
+    recorder.dispose();
+    const lines = await waitForCastLines(2);
+    const header = JSON.parse(lines[0]);
+    expect(header.command).toBe('ssh -p 2222 admin@host');
+    expect(header.title).toBe('devbox');
+  });
+});
+
+// The recorder never lets a recording problem reach the session, so a caller that cares (the ssh
+// path, which reports one notification) learns about it only through the failure callback.
+describe('HarnessRecorder failure handling', () => {
+  it('reports a stream error once and stops recording', async () => {
+    // A read-only recordings directory lets `ensureRecordingDirectory` succeed and fails the stream
+    // asynchronously instead — the `'error'` event path.
+    mkdirSync(recordingsDir, { recursive: true });
+    chmodSync(recordingsDir, 0o500);
+    locked.push(recordingsDir);
+    const onFailure = vi.fn();
+
+    recorder = new HarnessRecorder('pty-1', 'devbox', 'ssh devbox', 80, 24, onFailure);
+    emit({ type: 'data', id: 'pty-1', data: 'first' });
+    await waitFor(() => onFailure.mock.calls.length > 0);
+    emit({ type: 'data', id: 'pty-1', data: 'second' });
+    emit({ type: 'resize', id: 'pty-1', cols: 100, rows: 40 });
+
+    expect(onFailure).toHaveBeenCalledTimes(1);
+    expect(readdirSync(recordingsDir)).toEqual([]);
+  });
+
+  it('reports an open failure once and does not retry the open on later output', async () => {
+    // An unwritable parent makes `ensureRecordingDirectory` throw synchronously — the path that used
+    // to be swallowed by the bus, leaving the recorder retrying the open on every chunk.
+    const lockedParent = path.join(projectDir, 'locked');
+    mkdirSync(lockedParent);
+    chmodSync(lockedParent, 0o500);
+    locked.push(lockedParent);
+    initHarnessRecordingDirectory(path.join(lockedParent, 'project'));
+    const onFailure = vi.fn();
+
+    recorder = new HarnessRecorder('pty-1', 'devbox', 'ssh devbox', 80, 24, onFailure);
+    emit({ type: 'data', id: 'pty-1', data: 'first' });
+    expect(onFailure).toHaveBeenCalledTimes(1);
+
+    // Reopening the door proves the recorder gave up rather than retrying: still no file.
+    chmodSync(lockedParent, 0o700);
+    emit({ type: 'data', id: 'pty-1', data: 'second' });
+    await new Promise((r) => setTimeout(r, 25));
+
+    expect(onFailure).toHaveBeenCalledTimes(1);
+    expect(existsSync(path.join(lockedParent, 'project'))).toBe(false);
+  });
+
+  it('leaves a caller that passed no callback failing silently', async () => {
+    mkdirSync(recordingsDir, { recursive: true });
+    chmodSync(recordingsDir, 0o500);
+    locked.push(recordingsDir);
+
+    recorder = new HarnessRecorder('pty-1', 'claude', 'claude', 80, 24);
+    expect(() => { emit({ type: 'data', id: 'pty-1', data: 'x' }); }).not.toThrow();
+    await new Promise((r) => setTimeout(r, 25));
+
+    expect(readdirSync(recordingsDir)).toEqual([]);
   });
 });

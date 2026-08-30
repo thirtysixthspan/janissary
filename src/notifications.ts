@@ -8,8 +8,10 @@ import { NOTIFICATIONS_LABEL, notificationsTab, appendNotification } from './not
 // auto-approved permission gate, `editor-suggest` is an in-editor persona-suggestion query's
 // failure or empty reply, `question` is an agent waiting for a human answer,
 // `transcript-unavailable` reports that a harness tab's session record could not be found, so the
-// tab is limited to screen snapshots, and `file-operation` reports a failed file-navigator copy,
-// paste, move, delete, or undo/redo replay. `plugin-note` is a line a tab plugin reported through
+// tab is limited to screen snapshots, `ssh-recording-failed` reports that an ssh tab's session
+// recording was abandoned, so nothing more of that session lands on disk, and `file-operation`
+// reports a failed file-navigator copy, paste, move, delete, or undo/redo replay.
+// `plugin-note` is a line a tab plugin reported through
 // its own `notifyUser` capability — a track a playlist had to drop, say — as opposed to
 // `plugin-failure`, which the host reports when a plugin breaks. Explicit events are always
 // eligible and bypass focus suppression.
@@ -24,6 +26,7 @@ export type NotificationEventType =
   | 'editor-suggest'
   | 'question'
   | 'transcript-unavailable'
+  | 'ssh-recording-failed'
   | 'file-operation'
   | 'plugin-failure'
   | 'plugin-note';
@@ -32,7 +35,9 @@ export type NotificationEventType =
 // tab feeding itself. For the five ambient events, both the per-event opt-in toggle and focus
 // suppression (the active tab never notifies about its own activity) apply; `manual`,
 // `auto-approve`, `editor-suggest`, and `question` bypass both — an explicit trigger always fires (subject
-// only to the tab being open, enforced in `notify`).
+// only to the tab being open, enforced in `notify`). `ssh-recording-failed` bypasses them for the
+// same reason `plugin-note` does: the tab whose recording just failed is very often the tab the user
+// is watching, which is exactly the case focus suppression would discard.
 export function shouldNotify(
   config: NotificationConfig | undefined,
   event: NotificationEventType,
@@ -46,6 +51,7 @@ export function shouldNotify(
     case 'editor-suggest':
     case 'question':
     case 'transcript-unavailable':
+    case 'ssh-recording-failed':
     case 'file-operation': { return true; }
     // `plugin-note` is explicit rather than ambient so focus suppression cannot swallow it: the
     // case that matters most — a plugin reporting on the very tab the user is watching — is the one
@@ -96,6 +102,7 @@ export function notificationText(event: NotificationEventType, tabLabel: string,
     case 'plugin-note': { return detail ?? ''; }
     case 'question': { return `Question from ${tabLabel}`; }
     case 'transcript-unavailable': { return 'no harness transcript found'; }
+    case 'ssh-recording-failed': { return 'ssh recording failed'; }
   }
 }
 

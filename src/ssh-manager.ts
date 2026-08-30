@@ -35,7 +35,7 @@ export class SshManager {
     this.managers.tab.insertTabInGroup(tab);
     this.managers.tab.setActiveTab(this.managers.tab.findIndex(tab.label));
     const id = this.managers.pty.spawn(label, 'ssh', command, cwd);
-    this.managers.harness.registerScreenReader(id);
+    this.managers.harness.registerSshObservers(id, label, command);
     const liveTab = this.managers.tab.tabs.find((t) => t.label === label);
     if (liveTab?.harness) liveTab.harness.ptyId = id;
     messageBus.emit('state', { type: 'dirty' });
