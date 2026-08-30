@@ -2,7 +2,7 @@
 
 <img class="agent-float" src="/agents/ahmed-south.png" alt="" />
 
-Every command you run is remembered, and there are three ways back to one: the `↑`/`↓` arrows, ghost-text suggestions as you type, and the `Ctrl+R` picker. You can also click any past prompt line (`❯ <command>`) in the transcript to run it again immediately — drag-selecting its text still just copies.
+Every command you run is remembered, and there are three ways back to one: the `↑`/`↓` arrows, ghost-text suggestions as you type, and the `Ctrl+R` picker. You can also [double-click a past prompt line](/user-documentation/getting-started/tabs#reading-the-transcript) (`❯ <command>`) to run it again. A single click does nothing, and drag-selecting its text still just copies.
 
 ## Arrow-key recall
 
@@ -31,3 +31,5 @@ Press `→` or `End` at the end of your typed text to accept the whole suggestio
 History is per-tab: each tab records its own commands (up to 100; older entries fall off), and that's what arrow-key recall and the picker show. Running the same command twice in a row stores it once. Per-tab history persists with the agent's state, so it survives `janus --relaunch`.
 
 There's also a global history spanning all tabs and all runs, capped at 1000 entries and stored in your home directory — that's what ghost text draws from. The split is deliberate: recall and the picker answer "what was I doing *in this tab*," while ghost text answers "how did I last type this command *anywhere*."
+
+Global-history updates replace the stored file atomically, so an interrupted or failed write leaves the previous valid history available. If the file is malformed or cannot be read or written, the server log reports `warning: global command history unavailable: <reason>` once. Repeated failures stay quiet until a read or write succeeds; a later failure can then report a fresh warning.
