@@ -70,6 +70,15 @@ export const CLIENT_METHOD_CONTRACTS = {
   undoFileNavigatorItem: 'result',
 } as const satisfies Record<ClientMessage['method'], ClientReplyMode>;
 
+// The `default` branch of every switch that dispatches a `ClientMessage`. The `never` parameter is
+// the point: the call only typechecks while every method in that switch's union has a case, so a
+// method added to the protocol and to the table above but not to the dispatcher fails the build
+// rather than answering the client with a successful reply for work that never ran. The throw is
+// the runtime backstop — `handle` turns it into an RPC error naming the method.
+export function unhandledClientMethod(message: never): never {
+  throw new Error(`Unhandled client RPC method: ${(message as ClientMessage).method}`);
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
