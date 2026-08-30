@@ -79,13 +79,27 @@ describe('RemoteAcp — opening a session', () => {
     expect(acpMock.options[0].tokens).toEqual({ github: 'remote-own', opencode: 'oc_live_forwarded' });
   });
 
-  it('ignores an open for a session that is already live', () => {
+  it('ignores a duplicate open for an id that is already live', () => {
     const { acp } = makeAcp();
 
     acp.open(OPEN);
-    acp.open({ ...OPEN, id: 'racp2' });
+    acp.open(OPEN);
 
     expect(acpMock.options).toHaveLength(1);
+  });
+
+  // One `remote-serve` serves every tab sharing its channel — the launching tab and each agent
+  // joined from it through ➕ — so their sessions arrive here together and must not displace one
+  // another. Each carries its own id, minted by the local side.
+  it('holds one session per id, so tabs sharing a channel each get their own agent', () => {
+    const { acp, frames } = makeAcp();
+
+    acp.open(OPEN);
+    acp.open({ ...OPEN, id: 'racp2' });
+    acpMock.options[1].onConnect?.({ provider: 'opencode', model: 'Build' });
+
+    expect(acpMock.options).toHaveLength(2);
+    expect(frames).toEqual([{ type: 'acp-ready', id: 'racp2' }]);
   });
 });
 
@@ -135,13 +149,27 @@ describe('RemoteAcp — prompting', () => {
     expect(acpMock.prompt).not.toHaveBeenCalled();
   });
 
-  it('emits a fatal error for a prompt addressed to a different live session', () => {
+  it('emits a fatal error for a prompt addressed to an id that was closed', () => {
     const { acp, frames } = makeAcp();
     acp.open(OPEN);
+    acp.close('racp1');
+
+    acp.prompt({ type: 'acp-prompt', id: 'racp1', text: 'hi' });
+
+    expect(frames.at(-1)).toEqual({ type: 'acp-error', id: 'racp1', message: 'No remote ACP session is open.', fatal: true });
+  });
+
+  // Two tabs sharing one channel: each prompt reaches its own agent, and each reply carries the id
+  // that routes it back to the tab that asked.
+  it('routes a prompt to the session its id names', () => {
+    const { acp, frames } = makeAcp();
+    acp.open(OPEN);
+    acp.open({ ...OPEN, id: 'racp2' });
 
     acp.prompt({ type: 'acp-prompt', id: 'racp2', text: 'hi' });
+    lastHandlers().onEnd('end_turn');
 
-    expect(frames.at(-1)).toEqual({ type: 'acp-error', id: 'racp2', message: 'No remote ACP session is open.', fatal: true });
+    expect(frames).toEqual([{ type: 'acp-end', id: 'racp2', stopReason: 'end_turn' }]);
   });
 });
 
@@ -175,6 +203,17 @@ describe('RemoteAcp — closing', () => {
 
     expect(acpMock.kill).toHaveBeenCalledTimes(1);
     expect(frames).toEqual([]);
+  });
+
+  // Shutdown takes every tab's agent with it, not only the first one opened.
+  it('disposes every live session', () => {
+    const { acp } = makeAcp();
+    acp.open(OPEN);
+    acp.open({ ...OPEN, id: 'racp2' });
+
+    acp.dispose();
+
+    expect(acpMock.kill).toHaveBeenCalledTimes(2);
   });
 
   it('accepts a fresh open after the previous session was closed', () => {

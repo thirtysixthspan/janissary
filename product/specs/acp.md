@@ -51,6 +51,8 @@ The ACP client itself is hosted by the remote, so what crosses the ssh channel i
 
 A prompt issued before the remote session is established — while ssh is still authenticating, for instance — is refused rather than queued, with the single line `ACP: the remote session is still connecting.` and no busy state. Retyping it once the tab has finished connecting works. The same refusal is what an inter-agent `msg <tab> request …` addressed to a still-connecting remote tab receives as its answer.
 
+Each tab gets its own agent, including tabs that share one ssh channel and one workspace clone — the launching tab and every agent joined from it through ➕. Their sessions are told apart by an id the local side mints per tab, so a reply always reaches the tab that asked for it, and closing one tab's session leaves the others running.
+
 A dead remote session is reported and forgotten exactly as a local one is, so the next prompt reconnects. A dropped ssh channel closes the whole tab (see [[remote-server]] § Lifecycle and cleanup), taking the session with it; a prompt in flight when that happens surfaces the ordinary `ACP:` error first, and nothing separate is reported for the session itself.
 
 `acp` in a **remote harness** tab is not supported — a harness tab is already driving its own agent binary in a terminal. That is a documented follow-up, not an oversight.

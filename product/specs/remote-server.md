@@ -248,11 +248,12 @@ from the ssh login directory looking for a git repository. Either way the root m
 repository with an `origin` remote.
 
 Its capability surface is deliberately closed: it provisions one workspace clone, runs processes
-inside it, drives one ACP agent in it, tails a harness transcript, reads and watches files inside
+inside it, drives one ACP agent per tab sharing its channel, tails a harness transcript, reads and watches files inside
 that workspace, applies the navigator's filesystem mutations there, and removes the clone on exit. It
 will not open tabs, serve paths outside the provisioned workspace, run anything outside that
 workspace, or accept a message outside its protocol. The ACP agent is killed before the clone is
-removed, so the clone is never taken out from under a live agent.
+removed, so the clone is never taken out from under a live agent, and every one of them is killed —
+a shared channel's server holds one agent per tab using it.
 
 ### Out of scope
 

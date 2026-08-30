@@ -3,16 +3,20 @@ import type { AcpSession } from '../acp/types.js';
 import type { ProjectTokens } from '../project-tokens.js';
 import type { ClientFrame, ServerFrame } from './protocol.js';
 
-// The remote server's ACP holder: at most one live agent session, driven by the ACP frames. The
-// JSON-RPC never leaves this machine — the local side sends prompts and gets reply text back — so
-// nothing `opencode` writes to stderr can land mid-frame in a stream that must be strictly
+// The remote server's ACP holder: one live agent session per session id, driven by the ACP frames.
+// The JSON-RPC never leaves this machine — the local side sends prompts and gets reply text back —
+// so nothing `opencode` writes to stderr can land mid-frame in a stream that must be strictly
 // newline-delimited JSON.
+//
+// Keyed by id rather than holding a single session, because one `remote-serve` serves every tab
+// sharing its channel: the launching tab and each agent joined from it through ➕ provision no second
+// clone and open no second connection, so their `acp` sessions arrive here together. Each tab still
+// gets exactly one, which is the limit the local side enforces.
 //
 // The local side chooses which agent and model run and names them on the open frame; this class runs
 // what it is told, in the workspace it was provisioned with, exactly as `RemoteProcesses` does.
 export class RemoteAcp {
-  private id: string | undefined;
-  private session: AcpSession | undefined;
+  private sessions = new Map<string, AcpSession>();
 
   constructor(
     private send: (frame: ServerFrame) => void,
@@ -21,10 +25,9 @@ export class RemoteAcp {
   ) {}
 
   open(frame: Extract<ClientFrame, { type: 'acp-open' }>): void {
-    if (this.id !== undefined) return;
     const id = frame.id;
-    this.id = id;
-    this.session = connectAcp({
+    if (this.sessions.has(id)) return;
+    const session = connectAcp({
       command: frame.command,
       args: frame.args,
       // Both, so the subprocess is confined to the clone exactly as this server's other workspaced
@@ -39,15 +42,17 @@ export class RemoteAcp {
       onError: (message) => { this.send({ type: 'acp-error', id, message, fatal: true }); },
       onConnect: () => { this.send({ type: 'acp-ready', id }); },
     });
+    this.sessions.set(id, session);
   }
 
   prompt(frame: Extract<ClientFrame, { type: 'acp-prompt' }>): void {
     const id = frame.id;
-    if (!this.session || this.id !== id) {
+    const session = this.sessions.get(id);
+    if (!session) {
       this.send({ type: 'acp-error', id, message: 'No remote ACP session is open.', fatal: true });
       return;
     }
-    this.session.prompt(frame.text, {
+    session.prompt(frame.text, {
       onChunk: (text) => { this.send({ type: 'acp-chunk', id, text }); },
       onEnd: (stopReason) => { this.send({ type: 'acp-end', id, stopReason }); },
       // The prompt failed, not the session. A rate limit clears on its own, and killing the session
@@ -57,15 +62,15 @@ export class RemoteAcp {
   }
 
   close(id: string): void {
-    if (this.id !== id) return;
-    this.dispose();
+    this.sessions.get(id)?.kill();
+    this.sessions.delete(id);
   }
 
-  // `connectAcp`'s `kill()` suppresses its own exit reporting, so neither path produces a spurious
-  // fatal error frame for a session that was closed deliberately.
+  // Every session this server holds, for shutdown. `connectAcp`'s `kill()` suppresses its own exit
+  // reporting, so neither path produces a spurious fatal error frame for a session that was closed
+  // deliberately.
   dispose(): void {
-    this.session?.kill();
-    this.session = undefined;
-    this.id = undefined;
+    for (const session of this.sessions.values()) session.kill();
+    this.sessions.clear();
   }
 }
