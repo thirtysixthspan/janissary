@@ -2,10 +2,7 @@ import { type DatabaseSync } from 'node:sqlite';
 import {
   databaseFileExists, getConnection, isConnectionOpen,
 } from '../connections.js';
-
-function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
+import { errorText } from '../error-text.js';
 
 function formatRows(rows: Record<string, unknown>[]): string {
   if (rows.length === 0) return '(0 rows)';
@@ -30,7 +27,7 @@ export function queryDatabase(name: string, query: string): string {
   try {
     database = getConnection(name);
   } catch (error) {
-    return `Failed to open database "${name}": ${errorMessage(error)}`;
+    return `Failed to open database "${name}": ${errorText(error)}`;
   }
   try {
     if (READ_QUERY.test(query)) {
@@ -40,6 +37,6 @@ export function queryDatabase(name: string, query: string): string {
     database.exec(query);
     return 'OK.';
   } catch (error) {
-    return `Query error: ${errorMessage(error)}`;
+    return `Query error: ${errorText(error)}`;
   }
 }

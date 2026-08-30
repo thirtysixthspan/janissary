@@ -10,6 +10,7 @@ import type { Managers } from '../managers.js';
 import { newAgentOp } from './new-agent.js';
 import { placeAgent } from './place-agent.js';
 import { messageBus } from '../bus.js';
+import { errorText } from '../error-text.js';
 
 export class ProfileManager {
   private saveQueue: Promise<void> = Promise.resolve();
@@ -18,7 +19,7 @@ export class ProfileManager {
 
   private finish(action: Promise<void>, out: (text: string) => void): void {
     void action.catch((error: unknown) => {
-      const reason = error instanceof Error ? error.message : String(error);
+      const reason = errorText(error);
       out(`Profile command failed: ${reason.replace(/[.\s]+$/, '')}.`);
     });
   }

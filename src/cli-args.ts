@@ -1,6 +1,7 @@
 import { parseArgs } from 'node:util';
 import { existsSync, statSync } from 'node:fs';
 import path from 'node:path';
+import { errorText } from './error-text.js';
 export { usageText, appVersion, appVersionNumber } from './cli-info.js';
 
 export class CliUsageError extends Error {}
@@ -41,7 +42,7 @@ export function parseCliArgs(argv: string[]): CliArgs {
   } catch (error) {
     const code = (error as NodeJS.ErrnoException).code;
     if (typeof code === 'string' && code.startsWith('ERR_PARSE_ARGS')) {
-      const raw = error instanceof Error ? error.message : String(error);
+      const raw = errorText(error);
       const cleaned = raw.replace(/^TypeError \[[^\]]+]: /, '');
       throw new CliUsageError(cleaned);
     }

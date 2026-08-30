@@ -1,5 +1,6 @@
 import path from 'node:path';
 import { containedPath } from '../file-navigator/batch-paths.js';
+import { errorText } from '../error-text.js';
 import {
   LocalFileSystemPort,
   type FileSystemPort,
@@ -65,10 +66,10 @@ export class RemoteFileNavigators {
       const result = this.dispatch(frame);
       void Promise.resolve(result).then(
         (value) => this.reply(frame, value),
-        (error: unknown) => this.reply(frame, undefined, this.errorText(error)),
+        (error: unknown) => this.reply(frame, undefined, errorText(error)),
       );
     } catch (error) {
-      this.reply(frame, undefined, this.errorText(error));
+      this.reply(frame, undefined, errorText(error));
     }
   }
 
@@ -175,9 +176,5 @@ export class RemoteFileNavigators {
     this.emit(error === undefined
       ? { type: 'filesystem-reply', session: frame.session, request: frame.request, result }
       : { type: 'filesystem-reply', session: frame.session, request: frame.request, error });
-  }
-
-  private errorText(error: unknown): string {
-    return error instanceof Error ? error.message : String(error);
   }
 }

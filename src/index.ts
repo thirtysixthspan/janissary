@@ -12,6 +12,7 @@ import { serveOpenFile } from './open-route.js';
 import { tabPluginCatalog } from './plugins/catalog.js';
 import { pluginContentTypes } from './plugins/opener-adapter.js';
 import { pluginOpeners } from './openers/index.js';
+import { errorText } from './error-text.js';
 
 // Applied to every HTTP response: defence-in-depth for the XSS path and token leak.
 const SECURITY_HEADERS = {
@@ -119,7 +120,7 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
       try {
         handle(controller, message, (event) => ws.send(JSON.stringify(event)));
       } catch (error) {
-        ws.send(JSON.stringify({ t: 'rpc-reply', id: message.id, error: error instanceof Error ? error.message : String(error) }));
+        ws.send(JSON.stringify({ t: 'rpc-reply', id: message.id, error: errorText(error) }));
       }
     });
     ws.on('close', () => {

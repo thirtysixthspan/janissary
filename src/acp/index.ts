@@ -10,6 +10,7 @@ import type { PromptHandlers, AcpSession, AcpOptions } from './types.js';
 import { sandboxSpawn } from '../sandbox/index.js';
 import { getProjectTokens } from '../project-tokens.js';
 import { decidePermission } from './tools.js';
+import { errorText } from '../error-text.js';
 
 /**
  * Connect to an arbitrary ACP agent launched as a subprocess and drive it as an ACP
@@ -89,7 +90,7 @@ export function connectAcp(options: AcpOptions): AcpSession {
           const response = await conn.prompt({ sessionId: sessionId!, prompt: [{ type: 'text', text }] });
           handlers.onEnd(response.stopReason);
         } catch (error) {
-          handlers.onError(error instanceof Error ? error.message : String(error));
+          handlers.onError(errorText(error));
         } finally {
           if (current === handlers) current = undefined;
         }

@@ -3,6 +3,7 @@
 // a failed chunk fetch, or a budget overrun disables that one plugin and leaves the editor and every
 // other plugin running.
 
+import { errorText } from '@shared/error-text';
 import type {
   BoundBinding, EditorPluginHandler, EditorPluginLoader, EditorPluginRequest, EditorPluginResult,
 } from './api';
@@ -29,7 +30,7 @@ export type EditorPluginHostOptions = {
 };
 
 function failureReason(error: unknown): string {
-  const message = error instanceof Error ? error.message : String(error);
+  const message = errorText(error);
   const firstLine = message.split(/\r?\n/, 1)[0].trim().replace(/[.!?;:]+$/u, '').trim();
   return firstLine || 'Unknown failure';
 }

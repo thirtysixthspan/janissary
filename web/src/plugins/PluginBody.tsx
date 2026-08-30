@@ -8,16 +8,13 @@ import React, {
   useState,
 } from 'react';
 import type { TabView } from '@shared/protocol';
+import { errorText } from '@shared/error-text';
 import type { JanusClient } from '../ws';
 import { SplitTabButton } from '../SplitTabButton';
 import { createPluginClientCapabilities, type TabDirtyHandle } from './api';
 import { clientPluginFailure, clientPluginRegistry, type ClientPluginRegistration } from './registry';
 
 const CLIENT_ACTIVATION_MS = 5000;
-
-function reasonFor(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
 
 class PluginErrorBoundary extends Component<{
   children: React.ReactNode;
@@ -168,7 +165,7 @@ export function PluginBody({
   // `reportFailure` deduplicates per plugin id, so a second boundary failure sends nothing.
   const fail = useCallback((error: unknown) => {
     setFailed(true);
-    capabilitiesRef.current.reportFailure(reasonFor(error));
+    capabilitiesRef.current.reportFailure(errorText(error));
   }, []);
 
   if (failed || clientPluginFailure(pluginId) !== undefined) return null;

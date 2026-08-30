@@ -4,13 +4,10 @@ import { dispatchFileNavigatorMessage } from './message-handler-file-navigator.j
 import {
   clientReplyMode, isEditorPluginFailedParams, isPluginFailedParams, isPluginIntentParams,
 } from './client-message.js';
+import { errorText } from './error-text.js';
 
 type Reply = (event: ServerEvent) => void;
 type DeferredCallback = (resolve: (value: unknown) => void) => void;
-
-function errorText(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
 
 function isDeferredCallback(value: unknown): value is DeferredCallback {
   return typeof value === 'function';

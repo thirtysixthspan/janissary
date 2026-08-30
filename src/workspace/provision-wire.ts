@@ -1,3 +1,5 @@
+import { errorText } from '../error-text.js';
+
 // How long a tab whose workspace clone failed stays open (showing the error) before it's closed
 // automatically — long enough to read a one-line error, short enough not to leave a dead tab
 // sitting around. Shared by the harness and agent `--workspace` failure paths.
@@ -22,7 +24,7 @@ export function wireProvisioning(
       await ready;
       if (tabExists(label)) onReady();
     } catch (error) {
-      if (tabExists(label)) onFailed(error instanceof Error ? error.message : String(error));
+      if (tabExists(label)) onFailed(errorText(error));
     }
   }
   void settle();
