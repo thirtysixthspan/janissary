@@ -60,6 +60,42 @@ describe('RemoteFileSystemPort', () => {
       .toMatchObject({ operation: 'unwatch', args: { path: 'src' } }));
   });
 
+  it('hands a refusal to the caller as a failure result rather than rejecting', async () => {
+    const h = harness();
+    const write = h.port.writeFile('/remote/ws', '../outside', Buffer.from(''));
+    await vi.waitFor(() => expect(h.sent.some((frame) => frame.type === 'filesystem-request')).toBe(true));
+
+    h.reply({ ok: false, reason: 'The path is outside this file navigator; choose an item inside the tree' });
+
+    await expect(write).resolves.toMatchObject({ ok: false, reason: expect.stringContaining('outside this file navigator') });
+  });
+
+  it('hands a refused batch to the caller as a per-path failure report', async () => {
+    const h = harness();
+    const pending = h.port.deleteMany('/remote/ws', ['../outside']);
+    await vi.waitFor(() => expect(h.sent.some((frame) => frame.type === 'filesystem-request')).toBe(true));
+
+    h.reply({
+      total: 1, failedPaths: ['../outside'], mutated: false,
+      failureReasons: { '../outside': 'The path is outside this file navigator; choose an item inside the tree' },
+    });
+
+    await expect(pending).resolves.toMatchObject({
+      total: 1, mutated: false,
+      failureReasons: { '../outside': expect.stringContaining('outside this file navigator') },
+    });
+  });
+
+  it('still rejects when the reply carries a transport error', async () => {
+    const h = harness();
+    const pending = h.port.writeFile('/remote/ws', 'notes.txt', Buffer.from(''));
+    await vi.waitFor(() => expect(h.sent.some((frame) => frame.type === 'filesystem-request')).toBe(true));
+
+    h.reply(undefined, 'The remote file navigator session is not open.');
+
+    await expect(pending).rejects.toThrow('session is not open');
+  });
+
   it('rejects in-flight work when the channel closes', async () => {
     const h = harness();
     const pending = h.port.search('/remote/ws');

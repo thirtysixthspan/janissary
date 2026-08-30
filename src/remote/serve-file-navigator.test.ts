@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { RemoteFileNavigators } from './serve-file-navigator.js';
@@ -51,22 +51,85 @@ describe('RemoteFileNavigators', () => {
 
   it.each([
     ['read-file', { path: '../outside' }],
-    ['write-file', { path: '../outside', content: '' }],
     ['watch', { path: '../outside' }],
+    ['read-directory', { path: '../outside' }],
+    ['stat', { paths: ['../outside'] }],
+  ] as const)('refuses escaping paths as an error for %s, which has no failure channel', async (operation, args) => {
+    const reply = await request(operation, args);
+    expect(reply).toMatchObject({ error: expect.stringContaining('outside this file navigator') });
+    expect(reply).not.toHaveProperty('result');
+  });
+
+  it.each([
+    ['write-file', { path: '../outside', content: '' }],
     ['move', { from: '../outside', to: '' }],
-    ['move-many', { sources: ['../outside'], destination: '' }],
     ['delete', { path: '../outside' }],
-    ['delete-many', { paths: ['../outside'] }],
     ['rename', { path: '../outside', name: 'x' }],
-    ['paste', { sources: [path.join(tmpdir(), 'outside')], destination: '', mode: 'copy' }],
     ['create-file', { destination: '../outside' }],
     ['create-directory', { destination: '../outside' }],
-    ['replay', {
-      undoStack: [{ entries: [{ from: '../outside', to: 'inside' }] }], redoStack: [],
-      direction: 'undo', overwrite: false, skipConflicts: false,
-    }],
-  ] as const)('refuses escaping paths for %s', async (operation, args) => {
-    expect(await request(operation, args)).toMatchObject({ error: expect.stringContaining('outside this file navigator') });
+  ] as const)('refuses escaping paths as a failure result for %s', async (operation, args) => {
+    const reply = await request(operation, args);
+    expect(reply).toMatchObject({
+      result: { ok: false, reason: expect.stringContaining('outside this file navigator') },
+    });
+    expect(reply).not.toHaveProperty('error');
+  });
+
+  it.each([
+    ['move-many', { sources: ['../outside'], destination: '' }, ['../outside', '']],
+    ['delete-many', { paths: ['../outside'] }, ['../outside']],
+    ['paste', { sources: [path.join(tmpdir(), 'outside')], destination: '', mode: 'copy' }, [path.join(tmpdir(), 'outside'), '']],
+  ] as const)('refuses escaping paths as a batch report for %s', async (operation, args, attempted) => {
+    const reply = await request(operation, args);
+
+    expect(reply).toMatchObject({
+      result: {
+        total: attempted.length,
+        failedPaths: [...attempted],
+        mutated: false,
+        failureReasons: Object.fromEntries(attempted.map((item) => [
+          item, expect.stringContaining('outside this file navigator'),
+        ])),
+      },
+    });
+    expect(reply).not.toHaveProperty('error');
+  });
+
+  it('refuses an escaping replay as a result carrying the stacks back untouched', async () => {
+    const undoStack = [{ entries: [{ from: '../outside', to: 'inside' }] }];
+    const reply = await request('replay', {
+      undoStack, redoStack: [], direction: 'undo', overwrite: false, skipConflicts: false,
+    });
+
+    expect(reply).toMatchObject({
+      result: {
+        result: { failedPaths: ['../outside', 'inside'], mutated: false },
+        undoStack, redoStack: [], mutated: false,
+      },
+    });
+    expect(reply).not.toHaveProperty('error');
+  });
+
+  it('names every path of a refused batch, not only the escaping one', async () => {
+    writeFileSync(path.join(root, 'inside.txt'), 'keep');
+
+    const reply = await request('delete-many', { paths: ['inside.txt', '../outside'] });
+
+    expect(reply).toMatchObject({
+      result: { total: 2, failedPaths: ['inside.txt', '../outside'], mutated: false },
+    });
+    expect(readFileSync(path.join(root, 'inside.txt'), 'utf8')).toBe('keep');
+  });
+
+  it('runs nothing at all when a paste source escapes but the destination is inside', async () => {
+    mkdirSync(path.join(root, 'dest'));
+
+    const reply = await request('paste', {
+      sources: [path.join(tmpdir(), 'outside')], destination: 'dest', mode: 'copy',
+    });
+
+    expect(reply).toMatchObject({ result: { mutated: false, pairs: [] } });
+    expect(existsSync(path.join(root, 'dest', 'outside'))).toBe(false);
   });
 
   it('stops every watcher on close and dispose', async () => {

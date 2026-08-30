@@ -37,6 +37,20 @@ export type ReplayResult = {
   mutated: boolean;
 };
 
+// One tree's view of a filesystem, implemented once for a local root and once over a remote
+// workspace channel. Both implementations answer a refusal the same way, and which way that is
+// follows from the method's own return type:
+//
+//   - A method whose result can express failure — `FileOperationResult`, `MoveManyResult`,
+//     `DeleteManyResult`, `PasteManyResult`, `ReplayResult` — reports every refusal it can classify
+//     **as a value** and never rejects for one. A path outside the tree comes back as
+//     `{ ok: false, reason }`, or as a `failedPaths`/`failureReasons` report for a batch.
+//   - A method that returns raw data with nowhere to put a reason — `readDirectory`, `statRows`,
+//     `watch`, `gitMetadata`, `search`, `readFile` — has only rejection available and uses it.
+//
+// Callers branch on the result; a rejection from the first group is a bug in the implementation,
+// not a refusal, because it would reach the client as a bare transport error where the same action
+// on a local tree produces a per-path report the navigator can render.
 export interface FileSystemPort {
   dispose(): void;
   readDirectory(root: string, relPath: string): MaybePromise<FileNavigatorEntry[]>;

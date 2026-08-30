@@ -117,6 +117,13 @@ notifications feed without changing the filesystem or clearing the clipboard mar
 remote row into a command bar or editor inserts `<host>:<absolute-remote-path>`; local rows retain
 their relative-path behavior.
 
+An action naming a path outside the workspace is refused on the remote host, and nothing it named
+runs — including the parts of a multi-item action whose own paths were inside the tree. The refusal
+reads exactly as it does on a local tree: the same message, attached to the same item, and for a
+multi-item action a per-item report rather than a single failure for the whole action. Refusals a
+remote tree cannot describe that way — reading a directory, a file, or row details, where there is
+no per-item result to carry the message — are still reported, as an operation failure.
+
 Remote trees are live views only. They are omitted by `profile save`, are not restored by
 `profile launch` or `--relaunch`, and close if their channel drops. The connection-ended failure is
 reported once through the notifications feed; a refused individual filesystem operation is reported
