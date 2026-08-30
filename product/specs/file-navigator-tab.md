@@ -173,6 +173,11 @@ read, the same quiet degradation the tree applies when git status cannot be dete
 describes itself rather than what it points at, matching the way the tree already renders it as a
 leaf file.
 
+The values are always current for what is on screen. Any action that changes the tree — moving,
+copying, pasting, renaming, deleting, creating a directory, and undoing or redoing any of those —
+re-reads the detail of every visible row as part of the redraw it triggers, so a tree never shows
+the size, timestamp, or permissions a file had before the change.
+
 The mode belongs to one tree: switching it in one navigator leaves every other open navigator
 alone. The filename always takes precedence over the value: when a row cannot fit both — a long
 name, a squeezed sidebar — the name keeps its full width and the value gives way, shrinking and

@@ -1077,6 +1077,116 @@ describe('FileNavigatorManager', () => {
     });
   });
 
+  describe('post-mutation cache invalidation', () => {
+    const navTab = () => tabs.find((t) => t.label.startsWith('navigator'))!;
+    const navLabel = () => navTab().label;
+    const bystanderSize = () => navTab().files!.rows.find((r) => r.path === 'bystander.txt')!.size;
+
+    // A tree opened in `size` mode over a shared fixture, with `bystander.txt`'s five-byte size
+    // already read into the tab's stat cache — the stale value a redraw would repaint if the
+    // mutation about to run failed to empty the cache first.
+    function openPrimedTree(): FileNavigatorManagerInstance {
+      mkdirSync(path.join(root, 'dest'));
+      writeFileSync(path.join(root, 'bystander.txt'), 'hello');
+      writeFileSync(path.join(root, 'a.txt'), 'a');
+      writeFileSync(path.join(root, 'b.txt'), 'b');
+      const manager = run();
+      manager.open('files with size', 'janus');
+      expect(bystanderSize()).toBe(5);
+      return manager;
+    }
+
+    // Grow the bystander behind the navigator's back: nothing tells the tab about this, so only a
+    // mutation that drops the cache can make the next payload report the new size.
+    function goStale(): void {
+      writeFileSync(path.join(root, 'bystander.txt'), 'hello again');
+    }
+
+    it('move re-reads cached stats before redrawing', () => {
+      const manager = openPrimedTree();
+      goStale();
+
+      manager.move(navLabel(), 'a.txt', 'dest');
+
+      expect(bystanderSize()).toBe(11);
+    });
+
+    it('moveMany re-reads cached stats before redrawing', () => {
+      const manager = openPrimedTree();
+      goStale();
+
+      manager.moveMany(navLabel(), ['a.txt', 'b.txt'], 'dest');
+
+      expect(bystanderSize()).toBe(11);
+    });
+
+    it('deleteMany re-reads cached stats before redrawing', () => {
+      const manager = openPrimedTree();
+      goStale();
+
+      manager.deleteMany(navLabel(), ['a.txt']);
+
+      expect(bystanderSize()).toBe(11);
+    });
+
+    it('paste re-reads cached stats before redrawing', () => {
+      const manager = openPrimedTree();
+      goStale();
+
+      manager.paste(navLabel(), [path.join(root, 'a.txt')], 'dest', 'copy');
+
+      expect(bystanderSize()).toBe(11);
+    });
+
+    it('undo re-reads cached stats before redrawing', () => {
+      const manager = openPrimedTree();
+      manager.move(navLabel(), 'a.txt', 'dest');
+      goStale();
+
+      manager.undo(navLabel());
+
+      expect(bystanderSize()).toBe(11);
+    });
+
+    it('redo re-reads cached stats before redrawing', () => {
+      const manager = openPrimedTree();
+      manager.move(navLabel(), 'a.txt', 'dest');
+      manager.undo(navLabel());
+      goStale();
+
+      manager.redo(navLabel());
+
+      expect(bystanderSize()).toBe(11);
+    });
+
+    it('rename re-reads cached stats before redrawing', () => {
+      const manager = openPrimedTree();
+      goStale();
+
+      manager.rename(navLabel(), 'a.txt', 'renamed.txt');
+
+      expect(bystanderSize()).toBe(11);
+    });
+
+    it('delete re-reads cached stats before redrawing', () => {
+      const manager = openPrimedTree();
+      goStale();
+
+      manager.delete(navLabel(), 'a.txt');
+
+      expect(bystanderSize()).toBe(11);
+    });
+
+    it('createDirectory re-reads cached stats before redrawing', () => {
+      const manager = openPrimedTree();
+      goStale();
+
+      manager.createDirectory(navLabel(), '');
+
+      expect(bystanderSize()).toBe(11);
+    });
+  });
+
   describe('profile capture and restore', () => {
     const navLabel = () => tabs.find((t) => t.label.startsWith('navigator'))!.label;
 
