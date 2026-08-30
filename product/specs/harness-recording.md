@@ -110,11 +110,12 @@ Harness and ssh recordings share one directory, so telling them apart means read
 destination are labeled `devbox` and `devbox-2`, so their recordings never collide.
 
 If a recording cannot be written at all — an unwritable recordings directory, say — the session
-itself is never affected; it simply stops being recorded. For an **ssh tab** a single
-`ssh recording failed` line is recorded in the notifications feed for that tab (see
-[[notifications]]), never repeated, and it appears even while that tab is the active one. This is
-distinct from `no harness transcript found`, which is about a missing session record and never fires
-for an ssh tab. A harness tab's recording failure is silent.
+itself is never affected; it simply stops being recorded. Either kind of session reports the gap
+once in the notifications feed for its own tab (see [[notifications]]): an **ssh tab** records a
+single `ssh recording failed` line, and a **harness tab** a single `harness recording failed` line.
+Neither is ever repeated, and both appear even while that tab is the active one. This is distinct
+from `no harness transcript found`, which is about a missing session record and never fires for an
+ssh tab.
 
 ### Retrieval
 

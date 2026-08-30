@@ -27,13 +27,17 @@ export type HarnessObserverOptions = {
 // The full observer set for a named harness tab: capture wiring (auto-approve plus busy status), a
 // screen reader feeding it, an asciicast recorder, and — when the harness has a session record to
 // tail — a transcript tailer. A remote tab reads its transcript from the other host's channel
-// instead of a local dot directory; everything else is identical.
+// instead of a local dot directory; everything else is identical. A recording failure is reported
+// once in the notifications feed, for the same reason an ssh tab's is: a silent gap would defeat
+// the point of an audit recording.
 export function harnessRuntime(options: HarnessObserverOptions): HarnessRuntime {
   const { managers, name, label, id, cwd, autoApprove, channel } = options;
   const dims = managers.pty.spawnDimensions();
   const capture = captureWiring(managers, name, label, id, autoApprove);
   const reader = new HarnessScreenReader(id, dims.cols, dims.rows, capture.handler);
-  const recorder = new HarnessRecorder(id, label, HARNESS_COMMANDS[name], dims.cols, dims.rows);
+  const recorder = new HarnessRecorder(id, label, HARNESS_COMMANDS[name], dims.cols, dims.rows, () => {
+    notify(managers, 'harness-recording-failed', label);
+  });
   const source = channel ? managers.remote.transcriptSource(label) : createTranscriptSource(name, cwd, Date.now());
   const tailer = source
     ? new HarnessTranscriptTailer(label, source, () => { notify(managers, 'transcript-unavailable', label); })

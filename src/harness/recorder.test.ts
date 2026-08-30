@@ -52,7 +52,7 @@ afterEach(() => {
 
 describe('HarnessRecorder', () => {
   it('writes an asciicast v2 header on the first data event with the spawn dimensions', async () => {
-    recorder = new HarnessRecorder('pty-1', 'claude', 'claude', 80, 24);
+    recorder = new HarnessRecorder('pty-1', 'claude', 'claude', 80, 24, vi.fn());
     emit({ type: 'data', id: 'pty-1', data: 'hello' });
     recorder.dispose();
     const lines = await waitForCastLines(2);
@@ -71,7 +71,7 @@ describe('HarnessRecorder', () => {
   });
 
   it('creates no file when only a resize (or nothing) arrives before dispose', async () => {
-    recorder = new HarnessRecorder('pty-1', 'claude', 'claude', 80, 24);
+    recorder = new HarnessRecorder('pty-1', 'claude', 'claude', 80, 24, vi.fn());
     emit({ type: 'resize', id: 'pty-1', cols: 100, rows: 40 });
     recorder.dispose();
     await new Promise((r) => setTimeout(r, 25));
@@ -79,7 +79,7 @@ describe('HarnessRecorder', () => {
   });
 
   it('records data chunks as "o" lines with non-decreasing elapsed times and round-trips ESC bytes', async () => {
-    recorder = new HarnessRecorder('pty-1', 'claude', 'claude', 80, 24);
+    recorder = new HarnessRecorder('pty-1', 'claude', 'claude', 80, 24, vi.fn());
     const esc = String.fromCodePoint(27);
     const ansi = `${esc}[31mred${esc}[0m`;
     emit({ type: 'data', id: 'pty-1', data: ansi });
@@ -94,7 +94,7 @@ describe('HarnessRecorder', () => {
   });
 
   it('a resize before output sets header dims; a resize after output emits an "r" line', async () => {
-    recorder = new HarnessRecorder('pty-1', 'claude', 'claude', 80, 24);
+    recorder = new HarnessRecorder('pty-1', 'claude', 'claude', 80, 24, vi.fn());
     emit({ type: 'resize', id: 'pty-1', cols: 100, rows: 40 });
     emit({ type: 'data', id: 'pty-1', data: 'x' });
     emit({ type: 'resize', id: 'pty-1', cols: 120, rows: 50 });
@@ -109,7 +109,7 @@ describe('HarnessRecorder', () => {
   });
 
   it('ignores events for a different PTY id', async () => {
-    recorder = new HarnessRecorder('pty-1', 'claude', 'claude', 80, 24);
+    recorder = new HarnessRecorder('pty-1', 'claude', 'claude', 80, 24, vi.fn());
     emit({ type: 'data', id: 'pty-other', data: 'noise' });
     recorder.dispose();
     await new Promise((r) => setTimeout(r, 25));
@@ -117,13 +117,13 @@ describe('HarnessRecorder', () => {
   });
 
   it('dispose is idempotent', () => {
-    recorder = new HarnessRecorder('pty-1', 'claude', 'claude', 80, 24);
+    recorder = new HarnessRecorder('pty-1', 'claude', 'claude', 80, 24, vi.fn());
     emit({ type: 'data', id: 'pty-1', data: 'x' });
     expect(() => { recorder!.dispose(); recorder!.dispose(); }).not.toThrow();
   });
 
   it('an exit event closes the recording', async () => {
-    recorder = new HarnessRecorder('pty-1', 'claude', 'claude', 80, 24);
+    recorder = new HarnessRecorder('pty-1', 'claude', 'claude', 80, 24, vi.fn());
     emit({ type: 'data', id: 'pty-1', data: 'bye' });
     emit({ type: 'exit', id: 'pty-1', exitCode: 0 });
     const lines = await waitForCastLines(2);
@@ -131,7 +131,7 @@ describe('HarnessRecorder', () => {
   });
 
   it('carries the command it was given verbatim into the header, ssh invocation and all', async () => {
-    recorder = new HarnessRecorder('pty-1', 'devbox', 'ssh -p 2222 admin@host', 80, 24);
+    recorder = new HarnessRecorder('pty-1', 'devbox', 'ssh -p 2222 admin@host', 80, 24, vi.fn());
     emit({ type: 'data', id: 'pty-1', data: 'motd' });
     recorder.dispose();
     const lines = await waitForCastLines(2);
@@ -141,8 +141,9 @@ describe('HarnessRecorder', () => {
   });
 });
 
-// The recorder never lets a recording problem reach the session, so a caller that cares (the ssh
-// path, which reports one notification) learns about it only through the failure callback.
+// The recorder never lets a recording problem reach the session, so a caller learns about it only
+// through the failure callback. Both spawn paths pass one — the callback is a required constructor
+// argument precisely so a new path cannot leave an abandoned recording unreported.
 describe('HarnessRecorder failure handling', () => {
   it('reports a stream error once and stops recording', async () => {
     // A read-only recordings directory lets `ensureRecordingDirectory` succeed and fails the stream
@@ -185,15 +186,17 @@ describe('HarnessRecorder failure handling', () => {
     expect(existsSync(path.join(lockedParent, 'project'))).toBe(false);
   });
 
-  it('leaves a caller that passed no callback failing silently', async () => {
+  it('never lets a recording problem reach the session', async () => {
     mkdirSync(recordingsDir, { recursive: true });
     chmodSync(recordingsDir, 0o500);
     locked.push(recordingsDir);
+    const onFailure = vi.fn();
 
-    recorder = new HarnessRecorder('pty-1', 'claude', 'claude', 80, 24);
+    recorder = new HarnessRecorder('pty-1', 'claude', 'claude', 80, 24, onFailure);
     expect(() => { emit({ type: 'data', id: 'pty-1', data: 'x' }); }).not.toThrow();
-    await new Promise((r) => setTimeout(r, 25));
+    await waitFor(() => onFailure.mock.calls.length > 0);
 
+    expect(onFailure).toHaveBeenCalledTimes(1);
     expect(readdirSync(recordingsDir)).toEqual([]);
   });
 });

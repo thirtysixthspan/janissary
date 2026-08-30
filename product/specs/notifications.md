@@ -76,7 +76,10 @@ Twelve event types can produce a notification line:
   no longer being recorded (see [[harness-recording]]). The line reads `ssh recording failed` and is
   recorded once per tab, never repeated. Like the explicit events, it fires even while the ssh tab is
   the active one — the tab whose recording just failed is very often the one being watched. The ssh
-  session itself is unaffected. A harness tab's recording failure produces no notification.
+  session itself is unaffected.
+- **`harness-recording-failed`** — the same event for a harness tab, on the same terms: the line
+  reads `harness recording failed`, is recorded once per tab and never repeated, fires even while
+  that tab is the active one, and leaves the harness session itself unaffected.
 - **`file-operation`** — a file navigator copy, cut/paste, move, delete, or undo/redo replay fails
   for one or more of the items it acted on (see `file-navigator-tab.md`). The line reads
   `Could not <verb> <failed> of <total> items: <names>`, naming the failing items in selection
