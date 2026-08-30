@@ -97,6 +97,17 @@
 | `←` / `→` | Seek back / forward ten seconds (clamped to the current track) |
 | `Shift+←` / `Shift+→` | Previous / next track |
 
+**Editor tab controls** (active only while an editor tab is focused):
+
+| Key | Action |
+| --- | ------ |
+| `Cmd+/` | Comment or uncomment the selected lines, or the caret's line |
+| `Cmd+]` / `Cmd+[` | Indent / outdent the selected lines by two spaces |
+| `Tab` / `Shift+Tab` | Indent a multiline selection / outdent the selected lines |
+| `Cmd+D` | Select the word under the caret, then add its next exact occurrence |
+| `Cmd+U` | Drop the most recently added selection |
+| `Escape` (with multiple selections) | Collapse to the most recently added selection |
+
 **File navigator controls** (active only while a file navigator is focused):
 
 | Key | Action |

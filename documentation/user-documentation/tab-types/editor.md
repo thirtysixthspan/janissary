@@ -34,6 +34,32 @@ A long line wraps across several visual rows instead of scrolling horizontally. 
 
 Typing with an IME — composing characters from several keystrokes, as Japanese or Chinese input methods do — works normally: the editor waits for composition to finish before applying what you typed.
 
+## Comment and uncomment code
+
+Press `Cmd+/` to comment the lines your selection covers. With no selection, it comments the line under the caret. Press `Cmd+/` again to remove the same comment, and use `Cmd+Z` to undo the whole change in one step.
+
+JavaScript, TypeScript, and JSON use `//`. Ruby, shell scripts, Python, YAML, and plain text use `#`. Markdown and HTML wrap the selected lines in `<!-- -->`, while CSS uses `/* */`. A file with an unknown extension, or no extension, is left unchanged.
+
+Line comments align at the least-indented selected line, so the block keeps its relative indentation. Blank lines in the selection are included. If the selection mixes commented and uncommented lines, the shortcut adds one comment marker to every line; the next press removes that one marker again.
+
+## Indent and outdent lines
+
+Press `Cmd+]` to indent and `Cmd+[` to outdent the selected lines by two spaces. With no selection, the shortcut acts on the caret's line. `Tab` also indents a selection that spans more than one line, and `Shift+Tab` outdents in every case. A single-line selection or bare caret still inserts a tab character when you press `Tab`.
+
+Outdent removes up to two leading spaces from each line, so a line with only one leading space can still move left. Blank lines keep their exact contents. Leading tab characters become two spaces on lines the shortcut changes, but tabs inside the text are untouched. The behavior is the same for every file type, and one `Cmd+Z` undoes the whole block.
+
+## Edit repeated text at once
+
+Put the caret inside a word and press `Cmd+D` to select it. Press `Cmd+D` again to add the next exact occurrence, then type once to replace every selection together. For example, two selected instances of `oldName` both become `newName` when you type the replacement.
+
+Matching is case-sensitive and can find a selected fragment inside a longer word. It searches forward, wraps at the end of the file, and stops changing the selection once every occurrence is selected. You can also select text across several lines before pressing `Cmd+D`.
+
+Each selection has its own caret. Typing, `Backspace`, `Delete`, and paste apply at every caret as one undoable edit. Copy and cut join the selected texts with newlines in document order. If pasted text has one line per selection, each caret receives its corresponding line; otherwise every caret receives the full pasted text.
+
+Press `Cmd+U` to drop the most recently added selection. Press `Escape` to collapse all of them to the most recent one. A click in the buffer, `Cmd+F`, saving, or an automatic reload also returns to one caret. Switching tabs and back keeps the selections. Arrow keys and selection-extension keys move every caret independently, though vertical movement uses whole document lines when several carets are active.
+
+These editing shortcuts are bundled with the editor. If one fails, its attempted change is discarded and every shortcut supplied by that editing feature stops responding for the rest of the browser session. The notifications feed reports `Editor plugin "<plugin>" disabled: <reason>.` Other editing features keep working, and reloading the page gives the failed one a fresh start.
+
 ## Caret and scroll
 
 The blinking caret marks where text will be inserted, and is only visible while the editor tab is active — switching away hides it.
@@ -87,6 +113,8 @@ Closing a dirty editor tab — × button, `Cmd+W`/`Ctrl+W`, or `close` — asks 
 ## When the file changes outside the editor
 
 Janissary watches the file behind an open editor tab for changes made by anything else, another process, a git checkout, another tool. If your buffer has no unsaved changes, the new content loads automatically and your cursor stays on the same line.
+
+Your typing always wins if you start editing while Janissary is still reading an external change. The in-progress reload cannot replace your new text. If several external changes arrive close together, only the newest completed read can update a clean buffer.
 
 If you do have unsaved changes, your edits are left alone. The next time you try to save, a dialog appears instead: "This file changed on disk. Overwrite it with your changes?" with **Overwrite** and **Cancel**. Overwrite writes your buffer over the external change; Cancel leaves your buffer as it is, still unsaved, and shows the same prompt again on your next save attempt.
 
