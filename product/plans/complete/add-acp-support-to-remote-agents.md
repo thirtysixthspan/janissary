@@ -203,6 +203,14 @@ Server tests only (vitest project `server`), colocated as `src/**/*.test.ts`. No
 - Restoring a remote agent tab's ACP session on `--relaunch`; remote agent tabs are already not restored at all.
 - Any `web/src/` or `src/protocol.ts` change.
 
+## Adaptation on rebase
+
+Two things this plan assumed changed on `master` while the branch was open, and the implementation follows `master`'s shape rather than the wording above.
+
+**`REMOTE_PROTOCOL_VERSION` is 8, not 7.** Remote file navigation (#917) took the contract to 7 first, for workspace filesystem sessions and the per-spawn agent name. Decision 13's reasoning is unchanged — a new frame family the far end must honor is a contract change, and an installation that ignored it would accept prompts and answer nothing — so the ACP family takes it one further, to 8. The refused-version list and the version-history comments in `src/remote/protocol.ts` and `product/specs/remote-server.md` name both bumps.
+
+**`RemoteAcp` holds one session per id, not one per server.** The plan wrote the far side as "at most one live ACP session for the server" because one tab meant one channel and one `remote-serve`. #917 made the ➕ button *join* the source tab's existing workspace over its existing channel instead of provisioning a second clone, so a launching tab and every agent joined from it now reach the same server. A single-session holder would drop the second tab's open frame and answer its prompts `No remote ACP session is open.` — the plan's goal, `acp` working in a remote agent tab, silently failing for a joined one. The holder therefore keys its sessions by the id decision 11 already mints per tab: the duplicate-open guard becomes per-id, `close` kills only the id it names, and `dispose` kills every live session before the clone is removed. Nothing else moves — the ids, the frames, and the one-session-per-tab limit are exactly as designed, and "multiple concurrent ACP sessions per remote tab" stays out of scope.
+
 ## Open questions
 
 None.

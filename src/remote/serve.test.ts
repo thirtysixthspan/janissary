@@ -15,8 +15,33 @@ import type { ServerFrame } from './protocol.js';
 // a real clone, and the credential a spawn is handed is the one thing that has no other observable.
 vi.mock('../pty.js');
 
+// The ACP agent is faked for the same reason, plus one of its own: `shutdown` must kill it *before*
+// the clone is removed, and that ordering is only observable from inside the kill.
+const acpMock = vi.hoisted(() => ({
+  options: [] as { cwd: string; workspaceDir?: string }[],
+  prompt: vi.fn(),
+  kill: vi.fn(),
+  killedBeforeCloneRemoved: false,
+}));
+vi.mock('../acp/index.js', () => ({
+  connectAcp: vi.fn((options: { cwd: string; workspaceDir?: string }) => {
+    acpMock.options.push(options);
+    return {
+      prompt: acpMock.prompt,
+      kill: () => {
+        acpMock.killedBeforeCloneRemoved = existsSync(options.cwd);
+        acpMock.kill();
+      },
+    };
+  }),
+}));
+
 const SPAWN_FRAME = {
   type: 'spawn', id: 'r1', program: 'claude', command: 'claude', mode: 'pty', cols: 80, rows: 24,
+} as const;
+
+const ACP_OPEN_FRAME = {
+  type: 'acp-open', id: 'racp1', command: 'opencode', args: ['acp'],
 } as const;
 
 let tmpDir: string;
@@ -99,6 +124,10 @@ describe('RemoteServer', () => {
     vi.mocked(spawnPty).mockReset().mockReturnValue({
       id: 'pty1', program: 'claude', write: vi.fn(), resize: vi.fn(), kill: vi.fn(),
     });
+    acpMock.options.length = 0;
+    acpMock.prompt.mockReset();
+    acpMock.kill.mockReset();
+    acpMock.killedBeforeCloneRemoved = false;
   });
 
   it('clones the root\'s origin on a provision request and answers workspace-ready', async () => {
@@ -223,16 +252,47 @@ describe('RemoteServer', () => {
     }
   });
 
-  it('removes the clone when the session ends', async () => {
+  it('removes the clone when the session ends, after disposing the ACP agent that lives in it', async () => {
     const { server, frames, exit } = makeServer();
     server.receive(`${encodeFrame({ type: 'provision', label: 'claude-cleanup' })}\n`);
     await vi.waitFor(() => expect(frames.some((f) => f.type === 'workspace-ready')).toBe(true));
     const dir = frames.find((f) => f.type === 'workspace-ready')!.dir;
+    server.receive(`${encodeFrame(ACP_OPEN_FRAME)}\n`);
 
     server.shutdown(0);
 
+    // Ordered: the clone must never be removed out from under a live agent.
+    expect(acpMock.killedBeforeCloneRemoved).toBe(true);
     expect(existsSync(dir)).toBe(false);
     expect(exit).toHaveBeenCalledWith(0);
+  });
+
+  it('refuses an ACP frame that arrives before a workspace exists', () => {
+    const { server, frames } = makeServer();
+
+    server.receive(`${encodeFrame(ACP_OPEN_FRAME)}\n`);
+    server.receive(`${encodeFrame({ type: 'acp-prompt', id: 'racp1', text: 'hi' })}\n`);
+
+    expect(frames).toEqual([
+      { type: 'workspace-failed', message: 'No remote workspace has been provisioned.' },
+      { type: 'workspace-failed', message: 'No remote workspace has been provisioned.' },
+    ]);
+  });
+
+  it('drives the ACP holder once a workspace has been provisioned', async () => {
+    const { server, frames } = makeServer();
+    server.receive(`${encodeFrame({ type: 'provision', label: 'acp-driven' })}\n`);
+    await vi.waitFor(() => expect(frames.some((f) => f.type === 'workspace-ready')).toBe(true));
+    const dir = frames.find((f) => f.type === 'workspace-ready')!.dir;
+
+    server.receive(`${encodeFrame(ACP_OPEN_FRAME)}\n`);
+    server.receive(`${encodeFrame({ type: 'acp-prompt', id: 'racp1', text: 'summarize this' })}\n`);
+    server.receive(`${encodeFrame({ type: 'acp-close', id: 'racp1' })}\n`);
+
+    expect(acpMock.options[0]).toMatchObject({ command: 'opencode', args: ['acp'], cwd: dir, workspaceDir: dir });
+    expect(acpMock.prompt.mock.calls[0][0]).toBe('summarize this');
+    expect(acpMock.kill).toHaveBeenCalledTimes(1);
+    server.shutdown(0);
   });
 
   it('shuts down only once however many signals arrive', () => {

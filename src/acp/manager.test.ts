@@ -311,3 +311,174 @@ describe('AcpManager.close', () => {
     expect(acp.has('tab1')).toBe(false);
   });
 });
+
+// A remote agent tab runs its agent on the far side, inside the workspace clone that host
+// provisioned. Only where the session comes from changes; the tool loop and everything built on it
+// never learn that it is remote.
+describe('AcpManager — remote agent tabs', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  function remoteSetup(options: { attached?: boolean; channel?: boolean } = {}) {
+    const base = setup();
+    const managers = base.managers as unknown as {
+      tab: { tabs: unknown[] };
+      remote: { get: (label: string) => unknown };
+    };
+    managers.tab.tabs.push({ label: 'tab1', remote: { address: 'devbox', host: 'devbox' } });
+    const channel = {
+      attached: options.attached ?? true,
+      send: vi.fn(),
+      attachAcp: vi.fn(),
+      detachAcp: vi.fn(),
+    };
+    managers.remote = { get: vi.fn(() => (options.channel === false ? undefined : channel)) };
+    return { ...base, channel };
+  }
+
+  // The listener the adapter registered for its session id — the callbacks the remote's frames feed.
+  function acpListener(channel: { attachAcp: ReturnType<typeof vi.fn> }) {
+    return channel.attachAcp.mock.calls[0][1] as {
+      onReady: () => void;
+      onChunk: (text: string) => void;
+      onEnd: (stopReason: string) => void;
+      onError: (message: string, fatal: boolean) => void;
+    };
+  }
+
+  it('backs the session with the channel and never spawns an agent locally', () => {
+    const { acp, channel } = remoteSetup();
+
+    acp.run('tab1', 'acp hello');
+
+    expect(mocks.connectAcp).not.toHaveBeenCalled();
+    expect(channel.attachAcp).toHaveBeenCalledOnce();
+    expect(channel.send).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'acp-open', command: 'opencode', args: ['acp'],
+    }));
+    expect(mocks.runAcpToolLoop).toHaveBeenCalledOnce();
+    expect(acp.has('tab1')).toBe(true);
+  });
+
+  // The model is chosen here and sent across, so a remote session cannot silently disagree with a
+  // local one about which model it is running.
+  it('sends the locally chosen model across on the open frame', () => {
+    const { acp, channel } = remoteSetup();
+
+    acp.run('tab1', 'acp hello');
+
+    const open = channel.send.mock.calls[0][0] as { env: Record<string, string> };
+    expect(JSON.parse(open.env.OPENCODE_CONFIG_CONTENT)).toEqual({ model: 'google/gemini-3.1-flash-lite' });
+  });
+
+  // What the agent reports as its "model" is really the session's current mode name, so the popup
+  // keeps reading the constant the local side chose — on both paths.
+  it('reports the configured model in the connection label, not a mode name', () => {
+    const { acp, channel } = remoteSetup();
+    acp.run('tab1', 'acp hello');
+
+    acpListener(channel).onReady();
+
+    expect(acp.label('tab1')).toBe('google/gemini-3.1-flash-lite');
+    expect(mocks.messageBusEmit).toHaveBeenCalledWith('state', { type: 'dirty' });
+  });
+
+  // The channel entry exists well before ssh has authenticated, and `send` drops every frame until
+  // then — so a prompt now would hang forever with the busy dot lit and nothing to show for it.
+  it('refuses a prompt while the channel is still connecting, starting nothing', () => {
+    const { acp, append, addBusy, channel } = remoteSetup({ attached: false });
+    const onDone = vi.fn();
+
+    acp.run('tab1', 'acp hello', onDone);
+
+    expect(append).toHaveBeenCalledWith('tab1', {
+      input: 'acp hello', output: 'ACP: the remote session is still connecting.',
+    });
+    expect(onDone).toHaveBeenCalledWith('ACP: the remote session is still connecting.');
+    expect(addBusy).not.toHaveBeenCalled();
+    expect(mocks.runAcpToolLoop).not.toHaveBeenCalled();
+    expect(channel.attachAcp).not.toHaveBeenCalled();
+    expect(acp.has('tab1')).toBe(false);
+  });
+
+  it('retrying once the channel has attached then works', () => {
+    const { acp, channel } = remoteSetup({ attached: false });
+    acp.run('tab1', 'acp hello');
+
+    channel.attached = true;
+    acp.run('tab1', 'acp hello');
+
+    expect(channel.attachAcp).toHaveBeenCalledOnce();
+    expect(mocks.runAcpToolLoop).toHaveBeenCalledOnce();
+  });
+
+  it('falls back to a local session for a remote tab with no channel at all', () => {
+    const { acp } = remoteSetup({ channel: false });
+
+    expect(() => { acp.run('tab1', 'acp hello'); }).not.toThrow();
+    expect(mocks.connectAcp).toHaveBeenCalledOnce();
+  });
+
+  it('leaves a local tab entirely unchanged', () => {
+    const { acp } = setup();
+
+    acp.run('tab1', 'acp hello');
+
+    expect(mocks.connectAcp).toHaveBeenCalledOnce();
+    expect(mocks.connectAcp.mock.calls[0][0]).toMatchObject({ cwd: '/cwd', command: 'opencode' });
+  });
+
+  // A dead session is reported and forgotten, so the next prompt spawns a fresh one rather than
+  // writing into a corpse. A prompt that merely failed leaves the conversation intact.
+  it('forgets the session on a fatal error and builds a fresh one for the next prompt', () => {
+    const { acp, append, channel } = remoteSetup();
+    acp.run('tab1', 'acp hello');
+
+    acpListener(channel).onError('ACP agent exited.', true);
+
+    expect(append).toHaveBeenCalledWith('tab1', { input: '', output: 'ACP: ACP agent exited.' });
+    expect(acp.has('tab1')).toBe(false);
+    expect(channel.send).toHaveBeenCalledWith({ type: 'acp-close', id: 'racp1' });
+
+    acp.run('tab1', 'acp again');
+    expect(channel.attachAcp).toHaveBeenCalledTimes(2);
+    expect(channel.attachAcp.mock.calls[1][0]).toBe('racp2');
+  });
+
+  it('keeps the session alive on a non-fatal error, reporting it through the running prompt only', () => {
+    const { acp, channel } = remoteSetup();
+    acp.run('tab1', 'acp hello');
+    const promptHandlers = { onChunk: vi.fn(), onEnd: vi.fn(), onError: vi.fn() };
+    acp.session('tab1', '/cwd', { onError: vi.fn(), onConnect: vi.fn() }).prompt('hi', promptHandlers);
+
+    acpListener(channel).onError('rate limited', false);
+
+    expect(promptHandlers.onError).toHaveBeenCalledWith('rate limited');
+    expect(acp.has('tab1')).toBe(true);
+  });
+
+  it('streams chunks and the stop reason to the in-flight prompt', () => {
+    const { acp, channel } = remoteSetup();
+    acp.run('tab1', 'acp hello');
+    const promptHandlers = { onChunk: vi.fn(), onEnd: vi.fn(), onError: vi.fn() };
+    acp.session('tab1', '/cwd', { onError: vi.fn(), onConnect: vi.fn() }).prompt('hi', promptHandlers);
+
+    acpListener(channel).onChunk('partial ');
+    acpListener(channel).onEnd('end_turn');
+
+    expect(channel.send).toHaveBeenCalledWith({ type: 'acp-prompt', id: 'racp1', text: 'hi' });
+    expect(promptHandlers.onChunk).toHaveBeenCalledWith('partial ');
+    expect(promptHandlers.onEnd).toHaveBeenCalledWith('end_turn');
+  });
+
+  it('closing the tab\'s session sends the close frame and detaches the listener', () => {
+    const { acp, channel } = remoteSetup();
+    acp.run('tab1', 'acp hello');
+
+    expect(acp.close('tab1')).toBe(true);
+
+    expect(channel.send).toHaveBeenCalledWith({ type: 'acp-close', id: 'racp1' });
+    expect(channel.detachAcp).toHaveBeenCalledWith('racp1');
+  });
+});

@@ -64,6 +64,32 @@ describe('CaptureManager.run', () => {
     expect(managers.acp.run).toHaveBeenCalledWith('main', 'acp hello', callback);
   });
 
+  // `msg <tab> request …` is the second entry point into `AcpManager.run`. It needs no change to
+  // reach a remote agent: a request addressed to one starts a remote ACP session on the same path.
+  it('routes a request to a remote agent tab through the same acp manager call', () => {
+    const managers = makeManagers();
+    const capture = new CaptureManager(managers);
+    const callback = vi.fn();
+
+    capture.run('main', 'acp what is in this workspace', callback);
+
+    expect(managers.acp.run).toHaveBeenCalledWith('main', 'acp what is in this workspace', callback);
+  });
+
+  // The still-connecting refusal arrives as the request's answer rather than the requester hanging.
+  it('answers a request with whatever the acp manager reports, including a refusal', () => {
+    const managers = makeManagers();
+    (managers.acp.run as ReturnType<typeof vi.fn>).mockImplementation(
+      (_label: string, _command: string, done: (out: string) => void) => { done('ACP: the remote session is still connecting.'); },
+    );
+    const capture = new CaptureManager(managers);
+    const callback = vi.fn();
+
+    capture.run('main', 'acp hello', callback);
+
+    expect(callback).toHaveBeenCalledWith('ACP: the remote session is still connecting.');
+  });
+
   it('routes a browser command directly to the browser manager', () => {
     const managers = makeManagers();
     const capture = new CaptureManager(managers);

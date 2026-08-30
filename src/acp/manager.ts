@@ -1,5 +1,6 @@
 import type { AcpSession, AcpInfo } from './types.js';
 import { connectAcp } from './index.js';
+import { createRemoteAcpSession } from '../remote/acp-session.js';
 import { runAcpToolLoop } from './loop.js';
 import { extractBrowserCommand, BROWSER_PRIMER } from '../browser/command.js';
 import { messageBus } from '../bus.js';
@@ -14,6 +15,22 @@ import { extractQuestionCommand, QUESTION_PRIMER, runQuestionCommand } from '../
 const ACP_COMMAND = 'opencode';
 const ACP_ARGS = ['acp'];
 const ACP_MODEL = 'google/gemini-3.1-flash-lite';
+
+// Refused rather than queued: `RemoteChannel.send` silently drops every frame until ssh has
+// authenticated and the handshake has landed, so a prompt typed into a provisioning tab would hang
+// forever with the busy dot lit. `send` and `schedule` queue because something else delivers them to
+// a tab; `acp` is typed by a person, who can retype it.
+const STILL_CONNECTING = 'ACP: the remote session is still connecting.';
+
+// Which agent and model run — decided here on both paths, and sent across for a remote tab, so one
+// definition holds and the two installations cannot silently disagree about the model.
+function acpLaunch(): { command: string; args: string[]; env: Record<string, string> } {
+  return {
+    command: ACP_COMMAND,
+    args: ACP_ARGS,
+    env: { OPENCODE_CONFIG_CONTENT: JSON.stringify({ model: ACP_MODEL }) },
+  };
+}
 
 // Split a `provider/model` config string into its parts; a bare `model` with no slash has no
 // provider. Drives the connections-panel label.
@@ -37,6 +54,9 @@ type ConnectHooks = {
 export class AcpManager {
   private sessions = new Map<string, AcpSession>();
   private info = new Map<string, AcpInfo>();
+  // Minted locally, like every other remote process id: routing by id makes a chunk still in flight
+  // from a session `acp reset` disposed land on a detached listener rather than in its successor.
+  private remoteCounter = 0;
 
   constructor(private managers: Managers) {}
 
@@ -53,22 +73,29 @@ export class AcpManager {
     return info.provider ? `${info.provider}/${info.model ?? ''}` : info.model;
   }
 
-  // The tab's ACP session, connecting one on first use and reusing it thereafter. The agent runs in
-  // `cwd`; `hooks.onConnect` fires after the handshake, by which point the session's model info is
-  // recorded (so `label` resolves).
+  // The tab's ACP session, connecting one on first use and reusing it thereafter. A local tab's
+  // agent runs in `cwd`; a remote tab's runs on the other machine, inside the workspace clone that
+  // host provisioned, so `cwd` does not apply to it. `hooks.onConnect` fires after the handshake, by
+  // which point the session's model info is recorded (so `label` resolves).
   session(label: string, cwd: string, hooks: ConnectHooks): AcpSession {
     let session = this.sessions.get(label);
     if (!session) {
       const info = parseModel(ACP_MODEL);
       const tab = this.managers.tab.tabs.find((t) => t.label === label);
-      session = connectAcp({
-        command: ACP_COMMAND, args: ACP_ARGS, cwd,
+      const connect: ConnectHooks = {
         onError: hooks.onError,
         onConnect: () => { this.info.set(label, info); hooks.onConnect(); },
-        env: { OPENCODE_CONFIG_CONTENT: JSON.stringify({ model: ACP_MODEL }) },
-        workspaceDir: tab?.workspaceDir,
-        offline: tab?.offline,
-      });
+      };
+      const channel = tab?.remote ? this.managers.remote.get(label) : undefined;
+      session = channel
+        ? createRemoteAcpSession(channel, { ...acpLaunch(), id: `racp${++this.remoteCounter}`, offline: tab?.offline }, connect)
+        : connectAcp({
+          ...acpLaunch(), cwd,
+          onError: connect.onError,
+          onConnect: connect.onConnect,
+          workspaceDir: tab?.workspaceDir,
+          offline: tab?.offline,
+        });
       this.sessions.set(label, session);
     }
     return session;
@@ -96,12 +123,33 @@ export class AcpManager {
     this.closeAll();
   }
 
+  // A remote tab whose ssh channel has not finished authenticating yet. Its channel entry exists
+  // well before the handshake lands, so a prompt sent now would be dropped on the floor.
+  private stillConnecting(label: string): boolean {
+    const tab = this.managers.tab.tabs.find((t) => t.label === label);
+    if (!tab?.remote) return false;
+    const channel = this.managers.remote.get(label);
+    return channel !== undefined && !channel.attached;
+  }
+
   run(label: string, command: string, onDone?: (output: string) => void): void {
     const prompt = command.replace(/^acp\b\s*/i, '').trim();
     if (!prompt) { this.managers.tab.append(label, { input: command, output: 'Usage: acp <prompt>.' }); return; }
+    if (this.stillConnecting(label)) {
+      this.managers.tab.append(label, { input: command, output: STILL_CONNECTING });
+      onDone?.(STILL_CONNECTING);
+      return;
+    }
 
     const session = this.session(label, this.managers.tab.cwdOf(label) ?? process.cwd(), {
-      onError: (m) => this.managers.tab.append(label, { input: '', output: `ACP: ${m}` }),
+      // A connection-level error means the session no longer exists, so it is forgotten as well as
+      // reported: the next `acp` prompt spawns a fresh one rather than writing into a corpse. The
+      // loop's own prompt-level errors (a rate limit, most importantly) deliberately do not come
+      // here, so a session that merely failed a prompt keeps its accumulated conversation.
+      onError: (m) => {
+        this.managers.tab.append(label, { input: '', output: `ACP: ${m}` });
+        this.close(label);
+      },
       onConnect: () => messageBus.emit('state', { type: 'dirty' }),
     });
 

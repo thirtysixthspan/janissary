@@ -123,4 +123,19 @@ describe('spawnMonitorSession', () => {
     spawnMonitorSession(makePersona('claude'), '/tmp', { onError: vi.fn() });
     expect(mocks.connectAcp).toHaveBeenCalledWith(expect.objectContaining({ allowedTools: [] }));
   });
+
+  // `connectAcp` now reports a dead agent process through its connection-level `onError`. A monitor
+  // hands its own hook straight through, so a monitor agent that exits surfaces there rather than
+  // going quiet — previously nothing watched for the child exiting at all.
+  it.each(['opencode', 'claude'] as const)('surfaces an agent exit through the %s monitor\'s onError', (harness) => {
+    const onError = vi.fn();
+    mocks.connectAcp.mockImplementation((options: { onError: (message: string) => void }) => {
+      options.onError('ACP agent exited.');
+      return makeSession();
+    });
+
+    spawnMonitorSession(makePersona(harness), '/tmp', { onError });
+
+    expect(onError).toHaveBeenCalledWith('ACP agent exited.');
+  });
 });

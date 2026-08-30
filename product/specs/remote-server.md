@@ -115,16 +115,31 @@ Remote filesystem sessions and the per-spawn agent name extend the contract agai
 joined process with the provisioning tab's identity, so it is refused during the handshake before
 either behavior can fail silently.
 
-After the handshake, every frame is validated before dispatch. Process and workspace identifiers
-must be nonempty strings; terminal dimensions must be positive integers; spawn modes and optional
-flags must use their declared values; exit codes must be integers; transcript blocks must all be
-strings; and the provisioning token map accepts only known token names with nonempty string values.
-Filesystem frames additionally require nonempty session and request ids, an operation from the
-declared closed set, and the exact argument shape for that operation; paths and history entries are
-validated before the workspace holder sees them.
+Hosting a remote agent tab's ACP agent moves it to 8, and this bump adds frame types rather than
+fields: prompts and reply chunks now cross the channel in both directions. An installation predating
+them recognizes none of them and would refuse each one while the local tab sat waiting — a tab that
+accepts prompts and answers nothing, which is exactly the failure this check exists to prevent. Both
+ends must therefore be updated together, and a stale remote is refused at the handshake before any
+tab is provisioned.
+
+After the handshake, every frame is validated before dispatch. Process, workspace, and ACP session
+identifiers must be nonempty strings; terminal dimensions must be positive integers; spawn modes and
+optional flags must use their declared values; exit codes must be integers; transcript blocks must
+all be strings; and the provisioning token map accepts only known token names with nonempty string
+values. Filesystem frames additionally require nonempty session and request ids, an operation from
+the declared closed set, and the exact argument shape for that operation; paths and history entries
+are validated before the workspace holder sees them. An ACP frame's agent command must be a nonempty
+string, its argument list an array of strings (possibly empty), and its environment overrides a plain
+object of string values — an array or a null is refused. A reply chunk may be empty, since an agent
+can legitimately stream one; a stop reason and an error message may not. An error frame's fatal flag
+is required rather than optional, because an absent flag would default a dead session to recoverable.
 An invalid known frame is refused as `Malformed remote frame "<type>".` and an unknown frame type is
-refused by name. Undeclared properties are discarded rather than forwarded to process or workspace
-handlers.
+refused by name. Undeclared properties are discarded rather than forwarded to process, workspace, or
+ACP handlers.
+
+An ACP-level failure is not a channel-level fault. An agent that fails to spawn or errors mid-prompt
+is reported on its own error frame and routed to the session that owns it; only a malformed or
+unknown frame closes the channel, and therefore the tab.
 
 ### Lifecycle and cleanup
 
@@ -158,6 +173,15 @@ local. Directory listings, row stats, watches, search candidates, git metadata, 
 writes, and every mutation execute on the remote against the provisioned workspace. Every accepted
 path is resolved within that workspace; an escaping path is refused. Remote file content travels to
 the local cache for ordinary openers, and editor saves travel back over the same channel.
+
+A remote agent tab's `acp` agent is a further exception, and it splits three ways. The **agent
+process** runs on the remote, in the workspace clone, so it sees the files the tab is working on; the
+remote hosts the ACP client too, so what crosses the channel is prompt text and reply chunks rather
+than JSON-RPC. The **autonomous tool loop** stays local — a remote agent's `db`, `browser`, and
+`question` commands execute on the machine janissary is running on, against local files and a local
+browser, not the remote workspace's. And **which agent and model run** is decided locally and sent
+across on the frame that opens the session, so one definition holds and the two installations cannot
+silently disagree about the model. See [[acp]].
 
 Isolation is the remote's own. `remote-serve` applies the same workspace sandbox
 policy the local server applies, which means isolation is active when the remote is macOS and
@@ -224,10 +248,12 @@ from the ssh login directory looking for a git repository. Either way the root m
 repository with an `origin` remote.
 
 Its capability surface is deliberately closed: it provisions one workspace clone, runs processes
-inside it, tails a harness transcript, reads and watches files inside that workspace, applies the
-navigator's filesystem mutations there, and removes the clone on exit. It will not open tabs, serve
-paths outside the provisioned workspace, run anything outside that workspace, or accept a message
-outside its protocol.
+inside it, drives one ACP agent per tab sharing its channel, tails a harness transcript, reads and watches files inside
+that workspace, applies the navigator's filesystem mutations there, and removes the clone on exit. It
+will not open tabs, serve paths outside the provisioned workspace, run anything outside that
+workspace, or accept a message outside its protocol. The ACP agent is killed before the clone is
+removed, so the clone is never taken out from under a live agent, and every one of them is killed —
+a shared channel's server holds one agent per tab using it.
 
 ### Out of scope
 
@@ -244,3 +270,7 @@ outside its protocol.
 - Nested remoting: a remote tab cannot itself launch `on <another-host>`.
 - Restoring a remote agent tab on `--relaunch`.
 - Restoring a remote file navigator through a profile or `--relaunch`.
+- `acp` in a remote **harness** tab — it is already driving its own agent binary in a terminal.
+- Running an ACP agent's `db`, `browser`, and `question` commands on the remote host; the tool loop
+  stays local.
+- More than one ACP session per remote tab, and multiplexing one remote agent across tabs.

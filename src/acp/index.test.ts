@@ -1,9 +1,26 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { connectAcp } from './index.js';
+import { getProjectTokens } from '../project-tokens.js';
+import type * as SandboxModule from '../sandbox/index.js';
+import type { SandboxOptions } from '../sandbox/index.js';
 import type { AcpInfo, AcpSession } from './types.js';
+
+// The sandbox is left real — these tests drive actual subprocesses — but every call's options are
+// recorded, so what `connectAcp` decides to inject can be asserted without mocking the spawn itself.
+const sandboxCalls = vi.hoisted(() => ({ options: [] as SandboxOptions[] }));
+vi.mock('../sandbox/index.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof SandboxModule>();
+  return {
+    ...actual,
+    sandboxSpawn: (options: SandboxOptions, command: string, args: string[], env: NodeJS.ProcessEnv) => {
+      sandboxCalls.options.push(options);
+      return actual.sandboxSpawn(options, command, args, env);
+    },
+  };
+});
 
 // A dependency-free ACP agent that speaks the wire protocol by hand, spawned as a real subprocess.
 // These tests drive the SDK's stdio transport end to end (rather than mocking `connectAcp`), so a
@@ -88,6 +105,8 @@ function handle(message) {
   chunk('protocol=' + negotiated + ' sessions=' + sessions + ' ');
   chunk(mode === 'split' ? 'héllo wörld 🌍' : 'hello');
   write({ jsonrpc: '2.0', id: message.id, result: { stopReason: 'end_turn' } });
+  // Walks off after answering, standing in for an agent that crashes mid-session.
+  if (mode === 'exit') setTimeout(() => process.exit(0), 10);
 }
 
 process.stdin.on('data', (data) => {
@@ -198,5 +217,61 @@ describe('connectAcp', () => {
     const reply = await prompt(session, 'fetch something');
 
     expect(reply.text).toBe('outcome={"outcome":"selected","optionId":"once"}');
+  });
+});
+
+// A crashed agent used to leave a session whose next prompt wrote into a closed stdin and never
+// returned. The connection-level channel is what tells the caller the session is gone.
+describe('connectAcp — the agent process ending', () => {
+  it('reports an exit through onError exactly once', async () => {
+    const { session, errors } = connect('exit');
+    await prompt(session, 'hi');
+
+    for (let i = 0; i < 100 && errors.length === 0; i++) await new Promise((r) => setTimeout(r, 10));
+    await new Promise((r) => setTimeout(r, 50));
+
+    expect(errors).toEqual(['ACP agent exited.']);
+  });
+
+  it('reports nothing when the exit follows a deliberate kill', async () => {
+    const { session, errors } = connect('basic');
+    await prompt(session, 'hi');
+
+    session.kill();
+    await new Promise((r) => setTimeout(r, 150));
+
+    expect(errors).toEqual([]);
+  });
+});
+
+// The credentials a workspaced session injects. A remote session's are the forwarded-over-own map
+// its server computed, which would be lost if `connectAcp` always read this machine's own file.
+describe('connectAcp — credentials', () => {
+  function connectWorkspaced(tokens?: Record<string, string>): void {
+    const session = connectAcp({
+      command: process.execPath,
+      args: [agentScript(), 'basic'],
+      cwd: os.tmpdir(),
+      workspaceDir: path.join(os.tmpdir(), 'janissary-acp-workspace'),
+      onError: () => {},
+      ...(tokens && { tokens }),
+    });
+    sessions.push(session);
+  }
+
+  it('passes an explicit token map straight through to the sandbox options', () => {
+    sandboxCalls.options.length = 0;
+
+    connectWorkspaced({ github: 'forwarded-token' });
+
+    expect(sandboxCalls.options.at(-1)?.tokens).toEqual({ github: 'forwarded-token' });
+  });
+
+  it('falls back to this project\'s own tokens when none are given', () => {
+    sandboxCalls.options.length = 0;
+
+    connectWorkspaced();
+
+    expect(sandboxCalls.options.at(-1)?.tokens).toEqual(getProjectTokens());
   });
 });

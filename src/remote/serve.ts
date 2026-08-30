@@ -8,6 +8,7 @@ import type { TranscriptSource } from '../harness/transcript/source.js';
 import { decodeFrame, encodeFrame, encodeHandshake, type ClientFrame, type ServerFrame } from './protocol.js';
 import { resolveRemoteRoot } from './serve-root.js';
 import { RemoteProcesses } from './serve-processes.js';
+import { RemoteAcp } from './serve-acp.js';
 import { githubTokenNotice, workspaceReadyNotice } from './serve-notice.js';
 import { RemoteFileNavigators } from './serve-file-navigator.js';
 import { errorText } from '../error-text.js';
@@ -35,6 +36,7 @@ export class RemoteServer {
   private workspaces: WorkspaceManager;
   private processes: RemoteProcesses | undefined;
   private files: RemoteFileNavigators | undefined;
+  private acp: RemoteAcp | undefined;
   private workspaceDir: string | undefined;
   private transcript: TranscriptSource | undefined;
   private transcriptTimer: NodeJS.Timeout | undefined;
@@ -77,6 +79,8 @@ export class RemoteServer {
     if (this.transcriptTimer) clearInterval(this.transcriptTimer);
     this.files?.dispose();
     this.processes?.killAll();
+    // Before the clone goes, so it is never removed out from under a live agent.
+    this.acp?.dispose();
     this.workspaces.removeAll();
     this.exit(code);
   }
@@ -107,6 +111,9 @@ export class RemoteServer {
       this.files.request(frame);
       return;
     }
+    case 'acp-open': { if (this.requireWorkspace()) this.acp?.open(frame); return; }
+    case 'acp-prompt': { if (this.requireWorkspace()) this.acp?.prompt(frame); return; }
+    case 'acp-close': { this.acp?.close(frame.id); return; }
     default: { this.refuse(`Unexpected remote frame "${frame.type}".`); }
     }
   }
@@ -132,13 +139,10 @@ export class RemoteServer {
     // that harness's own output the moment it starts, and most remote launches have none configured
     // on either machine and are working as intended, so a mirrored notice would speak on the
     // ordinary case rather than warn about anything.
-    this.processes = new RemoteProcesses(
-      (frame) => this.emit(frame),
-      result.dir,
-      label,
-      { ...own, ...forwarded },
-    );
+    const tokens = { ...own, ...forwarded };
+    this.processes = new RemoteProcesses((frame) => this.emit(frame), result.dir, label, tokens);
     this.files = new RemoteFileNavigators((frame) => this.emit(frame), result.dir);
+    this.acp = new RemoteAcp((frame) => this.emit(frame), result.dir, tokens);
     this.emit({
       type: 'workspace-ready',
       dir: result.dir,
@@ -147,9 +151,17 @@ export class RemoteServer {
   }
 
   private spawn(frame: Extract<ClientFrame, { type: 'spawn' }>): void {
-    if (!this.processes) { this.refuse('No remote workspace has been provisioned.'); return; }
-    this.processes.spawn(frame);
+    if (!this.requireWorkspace()) return;
+    this.processes?.spawn(frame);
     if (frame.harness !== undefined) this.followTranscript(frame.harness);
+  }
+
+  // Nothing this server runs exists outside the clone it provisioned, so every frame that starts
+  // work shares one refusal rather than inventing a second wording for the same fault.
+  private requireWorkspace(): boolean {
+    if (this.processes) return true;
+    this.refuse('No remote workspace has been provisioned.');
+    return false;
   }
 
   // The harness's session record lives in this machine's dot directory, so the ordinary source

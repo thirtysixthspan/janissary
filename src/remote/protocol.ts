@@ -16,7 +16,13 @@
 // changes a frame's shape rather than adding to it: a version-5 remote finds none of the fields it
 // reads and provisions a workspace with no credentials whatsoever, which the same refusal covers.
 // Version 7 adds workspace filesystem sessions and a per-spawn agent name.
-export const REMOTE_PROTOCOL_VERSION = 7;
+//
+// Version 8 adds the ACP family (`acp-open`/`acp-prompt`/`acp-close` out, `acp-ready`/`acp-chunk`/
+// `acp-end`/`acp-error` back), which moves a remote agent tab's ACP client onto the far side. A
+// version-7 remote recognizes none of them: it would refuse each one as an unknown frame while the
+// local tab sat waiting, accepting prompts and answering nothing — precisely the "looks healthy
+// while doing the wrong thing" failure this check exists to prevent.
+export const REMOTE_PROTOCOL_VERSION = 8;
 
 // The single line that flips the channel from a raw terminal to a framed transport. Chosen so it
 // cannot occur in ordinary ssh banner, motd, or authentication output.
@@ -74,7 +80,16 @@ export type ClientFrame =
   | {
     type: 'filesystem-request'; session: string; request: string;
     operation: RemoteFilesystemOperation; args: RemoteFilesystemArguments;
-  };
+  }
+  // The ACP family: a remote agent tab's ACP client is hosted by the far side, so what crosses here
+  // is prompts and reply text, never JSON-RPC. The local side still chooses which agent and model
+  // run, which is why the open frame names the command rather than the remote deciding for itself.
+  | {
+    type: 'acp-open'; id: string; command: string; args: string[];
+    env?: Record<string, string>; offline?: boolean;
+  }
+  | { type: 'acp-prompt'; id: string; text: string }
+  | { type: 'acp-close'; id: string };
 
 // Remote → local: the process family's output/exit, the provisioning answer, and the transcript
 // blocks the remote's own `createTranscriptSource` yields.
@@ -89,17 +104,30 @@ export type ServerFrame =
   | { type: 'exit'; id: string; exitCode: number }
   | { type: 'transcript'; blocks: string[] }
   | { type: 'filesystem-reply'; session: string; request: string; result?: unknown; error?: string }
-  | { type: 'filesystem-event'; session: string; path: string };
+  | { type: 'filesystem-event'; session: string; path: string }
+  // `acp-ready` carries the id alone: its only job is to say the handshake completed. What the agent
+  // reports as its "model" is really the session's current mode name, and the local side already
+  // knows the model it asked for, so there is nothing else worth sending back.
+  | { type: 'acp-ready'; id: string }
+  | { type: 'acp-chunk'; id: string; text: string }
+  | { type: 'acp-end'; id: string; stopReason: string }
+  // `fatal` distinguishes a session that no longer exists (a failed spawn, a dead agent) from a
+  // prompt that merely failed (a rate limit). Only the remote can tell which, and the two must not
+  // be collapsed: dropping a live session throws away its conversation, and keeping a dead one
+  // means the next prompt writes into a corpse.
+  | { type: 'acp-error'; id: string; message: string; fatal: boolean };
 
 export type RemoteFrame = ClientFrame | ServerFrame;
 
 const CLIENT_TYPES = new Set([
   'provision', 'spawn', 'input', 'resize', 'kill',
   'filesystem-open', 'filesystem-close', 'filesystem-request',
+  'acp-open', 'acp-prompt', 'acp-close',
 ]);
 const SERVER_TYPES = new Set([
   'workspace-ready', 'workspace-failed', 'output', 'exit', 'transcript',
   'filesystem-reply', 'filesystem-event',
+  'acp-ready', 'acp-chunk', 'acp-end', 'acp-error',
 ]);
 
 function encodeText(text: string): string {
@@ -117,6 +145,7 @@ function toWire(frame: RemoteFrame): Record<string, unknown> {
   if (frame.type === 'filesystem-reply' && isContentResult(frame.result)) {
     return { ...frame, result: { ...frame.result, content: encodeText(frame.result.content) } };
   }
+  if (frame.type === 'acp-prompt' || frame.type === 'acp-chunk') return { ...frame, text: encodeText(frame.text) };
   return { ...frame };
 }
 
