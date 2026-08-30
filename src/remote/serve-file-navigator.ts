@@ -8,9 +8,9 @@ import {
   type WatchHandle,
 } from '../file-navigator/filesystem-port.js';
 import { refusalFor, refusedPaths } from './filesystem-refusal.js';
+import { operationDescriptor, type OperationContext } from './filesystem-operations.js';
 import { OUTSIDE_ROOT_REASON } from '../file-navigator/file-operation-result.js';
 import type { ClientFrame, RemoteFilesystemArguments, ServerFrame } from './protocol.js';
-import type { HistoryStep } from '../file-navigator/moves.js';
 
 type RequestFrame = Extract<ClientFrame, { type: 'filesystem-request' }>;
 
@@ -56,39 +56,21 @@ export class RemoteFileNavigators {
   }
 
   private dispatch(frame: RequestFrame): MaybePromise<unknown> {
-    const { operation, args, session } = frame;
-    switch (operation) {
-    case 'read-directory': { return this.filesystem.readDirectory(this.root, args.path ?? ''); }
-    case 'stat': { return this.filesystem.statRows(this.root, args.paths ?? []); }
-    case 'watch': { return this.watch(session, args.path ?? ''); }
-    case 'unwatch': { return this.unwatch(session, args.path ?? ''); }
-    case 'git': { return this.git(); }
-    case 'search': { return this.filesystem.search(this.root); }
-    case 'read-file': { return this.readFile(args.path ?? ''); }
-    case 'write-file': {
-      return this.filesystem.writeFile(this.root, args.path ?? '', Buffer.from(args.content ?? '', 'base64'));
-    }
-    case 'move': { return this.filesystem.move(this.root, args.from ?? '', args.to ?? ''); }
-    case 'move-many': {
-      return this.filesystem.moveMany(this.root, args.sources ?? [], args.destination ?? '', args.policy);
-    }
-    case 'delete': { return this.filesystem.delete(this.root, args.path ?? ''); }
-    case 'delete-many': { return this.filesystem.deleteMany(this.root, args.paths ?? []); }
-    case 'rename': { return this.filesystem.rename(this.root, args.path ?? '', args.name ?? ''); }
-    case 'paste': {
-      return this.filesystem.paste(
-        this.root, this.pasteSources(args), args.destination ?? '', args.mode ?? 'copy', args.policy,
-      );
-    }
-    case 'create-file': { return this.filesystem.createFile(this.root, args.destination ?? ''); }
-    case 'create-directory': { return this.filesystem.createDirectory(this.root, args.destination ?? ''); }
-    case 'replay': {
-      return this.filesystem.replay(
-        this.root, args.undoStack as HistoryStep[], args.redoStack as HistoryStep[],
-        args.direction ?? 'undo', args.overwrite ?? false, args.skipConflicts ?? false,
-      );
-    }
-    }
+    return operationDescriptor(frame.operation).run(this.context(frame.session), frame.args);
+  }
+
+  // The session-scoped half of what an operation runs against, bound per request: the watcher map
+  // and the emit callback stay private to this class, and the operation table stays plain data.
+  private context(session: string): OperationContext {
+    return {
+      root: this.root,
+      filesystem: this.filesystem,
+      watch: (relPath) => this.watch(session, relPath),
+      unwatch: (relPath) => this.unwatch(session, relPath),
+      git: () => this.git(),
+      readFile: (relPath) => this.readFile(relPath),
+      pasteSources: (args) => this.pasteSources(args),
+    };
   }
 
   private watch(session: string, relPath: string): MaybePromise<Record<string, never>> {
