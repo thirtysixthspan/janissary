@@ -7,34 +7,12 @@ import {
   type MaybePromise,
   type WatchHandle,
 } from '../file-navigator/filesystem-port.js';
+import { refusalFor, refusedPaths } from './filesystem-refusal.js';
+import { OUTSIDE_ROOT_REASON } from '../file-navigator/file-operation-result.js';
 import type { ClientFrame, RemoteFilesystemArguments, ServerFrame } from './protocol.js';
 import type { HistoryStep } from '../file-navigator/moves.js';
 
 type RequestFrame = Extract<ClientFrame, { type: 'filesystem-request' }>;
-const ROOT_DESTINATION_OPERATIONS = new Set<RequestFrame['operation']>([
-  'read-directory', 'watch', 'unwatch', 'move', 'move-many', 'paste', 'create-file', 'create-directory',
-]);
-
-function requestPaths(frame: RequestFrame): string[] {
-  const { operation, args } = frame;
-  switch (operation) {
-  case 'stat':
-  case 'delete-many': { return args.paths ?? []; }
-  case 'move-many': { return [...(args.sources ?? []), args.destination ?? '']; }
-  case 'paste': { return [args.destination ?? '']; }
-  case 'move': { return [args.from ?? '', args.to ?? '']; }
-  case 'git':
-  case 'search': { return []; }
-  case 'replay': { return historyPaths([...(args.undoStack ?? []), ...(args.redoStack ?? [])] as HistoryStep[]); }
-  default: { return [args.path ?? args.destination ?? '']; }
-  }
-}
-
-function historyPaths(steps: HistoryStep[]): string[] {
-  return steps.flatMap((step) => 'entries' in step
-    ? step.entries.flatMap((entry) => [entry.from, entry.to])
-    : step.pairs.flatMap((pair) => [pair.from, pair.to]));
-}
 
 export class RemoteFileNavigators {
   private sessions = new Map<string, Map<string, WatchHandle>>();
@@ -61,8 +39,8 @@ export class RemoteFileNavigators {
       this.reply(frame, undefined, 'The remote file navigator session is not open.');
       return;
     }
+    if (this.refuse(frame)) return;
     try {
-      this.validatePaths(frame);
       const result = this.dispatch(frame);
       void Promise.resolve(result).then(
         (value) => this.reply(frame, value),
@@ -158,18 +136,16 @@ export class RemoteFileNavigators {
     });
   }
 
-  private validatePaths(frame: RequestFrame): void {
-    for (const candidate of requestPaths(frame)) {
-      if (candidate === '' && this.rootDestination(frame.operation)) continue;
-      const relative = path.isAbsolute(candidate) ? path.relative(this.root, candidate) : candidate;
-      if (!containedPath(this.root, relative)) {
-        throw new Error('The path is outside this file navigator; choose an item inside the tree');
-      }
-    }
-  }
-
-  private rootDestination(operation: RequestFrame['operation']): boolean {
-    return ROOT_DESTINATION_OPERATIONS.has(operation);
+  // The workspace-containment gate: a request naming any path outside the root runs nothing at all.
+  // Answers in the operation's own result shape when that shape can carry a reason, so the client
+  // reports the refusal the way it reports a local one, and falls back to an error reply for the
+  // operations whose result has nowhere to put it. Returns whether the request was refused.
+  private refuse(frame: RequestFrame): boolean {
+    if (refusedPaths(frame, this.root).length === 0) return false;
+    const refusal = refusalFor(frame);
+    if (refusal.classified) this.reply(frame, refusal.value);
+    else this.reply(frame, undefined, OUTSIDE_ROOT_REASON);
+    return true;
   }
 
   private reply(frame: RequestFrame, result?: unknown, error?: string): void {
