@@ -51,13 +51,30 @@ The eleven types are `agent`, `harness`, `editor`, `files`, `notifications`, `sc
 - **`effort`** — an effort/thinking level, forwarded verbatim like `--effort` on the interactive `harness` command (translated to each harness's own flag: claude `--effort`, codex `-c model_reasoning_effort`, opencode has none). Not validated against any fixed set of levels.
 - **`workspace`** — launch in a fresh [workspace clone](/user-documentation/advanced-agents/workspaced-agent). It defaults to `true`; set it to `false` to opt out.
 - **`autoApprove`** — auto-approve permission prompts. It defaults to `true` for claude and codex and `false` for opencode; explicitly setting it to `true` for opencode reports an unsupported setting and skips that entry.
+- **`offline`**: deny network access inside the workspace sandbox. It is only meaningful when `workspace` is enabled.
+- **`remote`**: launch on another machine, using the address you would put after `on` in a harness command, such as `"dev@example.com:project"`. It implies `workspace`, omits `cwd`, and asks for authentication once for each remote tab the profile opens.
 - **`cwd`** — starting directory. `$root` resolves to the project's launch directory and `~` to home, so you can write a portable path instead of an absolute one — a `profile save`d entry captures its `cwd` this way automatically when it's under the project root.
 - **`run`** — commands typed into the harness once, shortly after launch.
 - **`schedule`** — timers in the [`schedule` grammar](/user-documentation/automation/scheduling), minus the leading `schedule` keyword and any `in <tab>` clause (each line belongs to this tab). A line that doesn't parse is reported at launch and skipped.
 
+An agent entry may use the same `remote` field. It reconnects that agent on the named host but restores no transcript, history, or context. A remote agent or harness always gets a fresh workspace on its host.
+
 Every entry that takes a place in the tab strip carries its presentation as plain keys alongside `type`: `color` (the dot color), `number` (tab order), `group`, `groupColor`, `pane`, and `focus`. Set `pane` to `left` or `right` to reopen that entry in a two-pane center layout; omitting it means left. Any main-area entry with `focus: true` can claim keyboard focus after launch; the lowest-numbered focused entry wins, while the other pane keeps one of its own tabs visible. Without one, the first newly opened profile tab stays active.
 
-Two profile-level keys sit outside `tabs`, because neither is a tab: `monitors` and `layout`. The `layout` key groups the sidebar widths under a nested `sidebar` object, e.g. `"layout": { "sidebar": { "left": 300, "right": 280 }, "tabAreaPct": 75, "window": { "width": 1280, "height": 800 } }`. It applies on every launch, including a relaunch, and always wins over anything you resized by hand: any dimension the key doesn't mention resets to the app's own default rather than staying at whatever it currently is.
+Two profile-level keys sit outside `tabs`, because neither is a tab: `monitors` and `layout`. A monitor entry names its persona and targets:
+
+```json
+{
+  "monitors": [
+    { "name": "review-watch", "persona": "reviewer", "targets": ["group:2", "builder"] },
+    { "persona": "triage", "targets": [] }
+  ]
+}
+```
+
+`persona` is required. `targets` is a list of tab labels or `group:<number>` targets from the [`monitor` command](/user-documentation/automation/monitoring); an empty list creates an inline monitor. `name` is optional and defaults to `persona`. Monitors start after every profile tab is open, owned by the tab that issued `profile launch`, so closing the profile tabs does not stop them. Relaunching first stops an existing monitor with the same owner and name, then starts its replacement. The launch report includes the result for each monitor.
+
+The `layout` key groups the sidebar widths under a nested `sidebar` object, e.g. `"layout": { "sidebar": { "left": 300, "right": 280 }, "tabAreaPct": 75, "window": { "width": 1280, "height": 800 } }`. It applies on every launch, including a relaunch, and always wins over anything you resized by hand: any dimension the key doesn't mention resets to the app's own default rather than staying at whatever it currently is. When Janissary starts with `--no-open`, the window size is ignored, while the sidebar widths and tab-area split still apply to a connected browser.
 
 Use an `editor` entry to open a file directly in the in-app editor when the profile launches:
 
@@ -66,6 +83,8 @@ Use an `editor` entry to open a file directly in the in-app editor when the prof
 ```
 
 Each has a required `path`, optional resolving tab `in`, and optional cursor `line`. `$root` resolves from the launch directory and `~` from home; another relative path resolves from `in` or the first newly opened profile tab. A missing file opens an empty buffer and is created only on save. Relaunching reuses an already-open editor tab for the same file and moves its cursor to the requested line.
+
+For a file covered by GitHub syncing, author the original project-relative source path, not its temporary path inside the sync workspace. `profile save` records that source path automatically, so launching the profile provisions or reuses the shared workspace and opens the real content. If the editor refuses a path, for example because the file exceeds its size limit, that entry is skipped without moving or focusing any other tab.
 
 The `plugin`, `page`, and `ssh` types reopen the rest of a working session — a diagram or video, a spec you keep reading, a docs site, a remote box:
 
@@ -79,6 +98,12 @@ A `plugin` entry names the [bundled plugin](/user-documentation/command-bar/plug
 
 None of these needs a `name` — the label is derived the same way typing `open` or `ssh` derives it. Relaunching closes a page or ssh tab already showing the same url or destination before reopening it, so you end up with one of each rather than a duplicate; an already-open image, markdown, or video tab is simply reused.
 
+A notifications entry opens the singleton feed. Add `dock` to put it in a sidebar, and use `focus: true` with `dock` when the feed should be the visible docked tab even if the profile also docks another view on that side:
+
+```json
+{ "type": "notifications", "dock": "right", "focus": true }
+```
+
 A `files` entry opens a [file navigator](/user-documentation/tab-types/file-navigator), and can bring back the state of the tree itself — which directories were open, and which rows were selected:
 
 ```json
@@ -86,13 +111,16 @@ A `files` entry opens a [file navigator](/user-documentation/tab-types/file-navi
   "type": "files",
   "dock": "left",
   "path": "$root",
+  "details": "modified",
   "expanded": ["src", "src/file-navigator"],
   "cursor": "src/file-navigator/manager.ts",
   "selected": ["src/file-navigator/manager.ts"]
 }
 ```
 
-Every path is relative to the tree's root. Restoring is quiet and forgiving: a directory or row that no longer exists is dropped without a word, and a restored selection never steals keyboard focus — the profile's own `focus` still decides where you land. Leave off `dock` and the tree opens in the center strip instead, where it takes `number`, `group`, and `pane` like any other tab.
+Use `in` with a tab label to root the tree at that tab's working directory. With no `in` or `path`, the navigator uses the first new profile tab, or the issuing tab if nothing new opened. A literal `path` sets the root directly; `$root` always means the profile launch directory. `details` selects the row detail mode: `name`, `size`, `modified`, or `permissions`. Omit it for the default `name` mode.
+
+Every saved view path is relative to the tree's root. Restoring is quiet and forgiving: a directory or row that no longer exists is dropped without a word, and a restored selection never steals keyboard focus. The profile's own `focus` still decides where you land. Leave off `dock` and the tree opens in the center strip instead, where it takes `number`, `group`, and `pane` like any other tab.
 
 A harness entry's `run` and `schedule` live in memory only — closing the tab or quitting ends them. That's the point of the profile: the file is the source of truth, and every launch rebuilds the setup from it.
 
@@ -111,9 +139,11 @@ Each agent is captured as a clean template: its name, working directory, and tab
 
 Open images, markdown previews, videos, web pages, and SSH sessions are captured too — an SSH entry keeps the flags you connected with, so a relaunch reconnects the same way. Every file navigator is captured, docked or not, along with its tree view: which directories you had expanded, which row the cursor was on, and every row you had selected. Launching the profile puts the tree back the way you left it, quietly skipping anything that no longer exists. A navigator left in the center strip also remembers its group, order, and pane.
 
-The window size, sidebar widths, and reporting-area split are captured into the profile's layout as they currently look, along with any running monitors. The only thing left out and named in the command's report is a monitor's own reporting tab.
+The window size, sidebar widths, and reporting-area split are captured into the profile's layout as they currently look, along with any running monitors. Under `--no-open`, the window size is omitted and the command reports that omission, while the sidebar and tab-area sizes are still captured. The only thing left out and named in the command's report is a monitor's own reporting tab.
 
 Saving over an existing profile name atomically replaces it outright, with no confirmation prompt. Janissary keeps the previous file until the complete replacement is ready, so a capture or write failure leaves your last valid profile intact. The command reports what it captured: counts per tab type, plus monitors and docked tabs, followed by the list of anything skipped.
+
+If several `profile save` commands arrive close together, they run in command order. Each finishes capturing file-navigator selections before the next starts, and a failed save does not block the saves behind it. If an asynchronous save or launch fails, the issuing transcript receives `Profile command failed: <reason>.` so the command does not appear unfinished.
 
 ## Checking a profile without launching it
 

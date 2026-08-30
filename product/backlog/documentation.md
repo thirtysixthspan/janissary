@@ -2,8 +2,6 @@
 
 ## ready
 
-* profiles (5/10) — `documentation/user-documentation/automation/profiles.md` and `help.md` leave 9 of 29 documentable facts missing and contain no wrong facts. The page does not explain how to author harness `offline` and agent/harness `remote` entries, the `monitors` object schema and relaunch replacement rule, file-navigator `in` and `details` fields, or notification docking and focus. It also omits synced-editor source paths and refused-editor placement, `--no-open` layout handling, ordered serialization of overlapping `profile save` commands, and the `Profile command failed: <reason>.` result for asynchronous save or launch failures. The ground truth is `product/specs/profiles.md`, `src/profile/manager.ts`, `src/profile/editors.ts`, and `src/profile/save.ts`. Fix by expanding the relevant authoring, launch, and save sections of `documentation/user-documentation/automation/profiles.md`; the summary row in `help.md` remains accurate.
-
 ## development
 
 ## deferred
@@ -12,6 +10,7 @@
 
 ## resolved
 
+* profiles — documented in documentation/user-documentation/automation/profiles.md (removed 2026-08-30)
 * history — documented in documentation/user-documentation/command-bar/history.md (removed 2026-08-30)
 * editor-tab — documented in documentation/user-documentation/tab-types/editor.md, help.md (removed 2026-08-30)
 * open — documented in documentation/user-documentation/tab-types/opening-files.md (removed 2026-08-27)
