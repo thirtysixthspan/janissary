@@ -25,7 +25,7 @@ The `db` grammar (`DB_PRIMER` in `src/db.ts`) and the `browser` grammar (`BROWSE
 The `acp` handler then drives an autonomous loop (`runAcpToolLoop` in `src/acp-loop.ts`, wired with rendering/execution callbacks in `src/cli.tsx`):
 
 1. The agent's reply streams into a transcript entry (the first turn shows the user's prompt; continuation turns have no prompt line).
-2. On completion, the reply is scanned bottom-up (tolerating a code fence or a `$ `/`> ` prefix) for a command: `extractBrowserCommand` first, then `extractDbCommand` (a `browser` command takes precedence when present).
+2. On completion, the reply is scanned bottom-up (tolerating a code fence or a `$ `/`> ` prefix) for a command. The tools are consulted in one fixed order — browser, then question, then database — and the first one that finds a command in the reply wins. The same order decides which tool runs an emitted command, with the database tool last so it takes anything the others do not claim. In practice the three recognize disjoint command words, so the order settles nothing a reply actually depends on.
 3. If a command is found, it is executed immediately — `runBrowserInTab` for `browser` (async), `runDbInTab`/`runDbCommand` for `db` (sync) — shown in the transcript as its own command entry (input = the command, output = the result), and the output is sent back to the agent as a follow-up prompt asking it to continue or give a final answer. The loop is async-capable: `runCommand` may return a `Promise`, which the loop awaits (a sync command still completes in the same tick).
 4. The loop repeats until the agent replies with no command, or a cap of 8 tool steps is reached (a `(stopped after 8 tool steps)` notice is logged in that case).
 
