@@ -2,7 +2,7 @@ import path from 'node:path';
 import type { Managers } from '../managers.js';
 import { notify } from '../notifications.js';
 import type { FileOpenerChoice } from '../protocol.js';
-import { mapMaybe, type MaybePromise } from './filesystem-port.js';
+import { mapMaybe, type MaybePromise } from '../maybe-promise.js';
 import { materializeRemoteFile } from './remote-file-cache.js';
 import type { FilesTabState } from './state.js';
 

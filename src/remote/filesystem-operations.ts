@@ -5,7 +5,8 @@ import {
   refusedDeleteMany, refusedItem, refusedMoveMany, refusedPaste, refusedReplay,
 } from './filesystem-refusal-shapes.js';
 import type { RemoteFilesystemArguments, RemoteFilesystemOperation } from './protocol.js';
-import type { FileSystemPort, MaybePromise } from '../file-navigator/filesystem-port.js';
+import type { FileSystemPort } from '../file-navigator/filesystem-port.js';
+import type { MaybePromise } from '../maybe-promise.js';
 import type { HistoryStep } from '../file-navigator/moves.js';
 
 // What an operation's `run` reaches, handed over as one value so the table stays a plain data

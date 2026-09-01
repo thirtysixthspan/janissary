@@ -5,7 +5,7 @@ import { reportOperationFailure } from '../file-navigator/operation-report.js';
 import type { Managers } from '../managers.js';
 import type { BatchResult, BulkConflictPolicy, BulkMoveResult, FileNavigatorDetail, FileOpenerChoice, FileOpenerResolution } from '../protocol.js';
 export { fileNavigatorSelectionAction, runFileNavigatorSelectionAction } from './file-navigator-selection.js';
-import { mapMaybe, type MaybePromise } from '../file-navigator/filesystem-port.js';
+import { mapMaybe, type MaybePromise } from '../maybe-promise.js';
 
 type HistoryReplayResult = {
   total?: number;

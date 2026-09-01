@@ -4,9 +4,9 @@ import { errorText } from '../error-text.js';
 import {
   LocalFileSystemPort,
   type FileSystemPort,
-  type MaybePromise,
   type WatchHandle,
 } from '../file-navigator/filesystem-port.js';
+import type { MaybePromise } from '../maybe-promise.js';
 import { refusalFor, refusedPaths } from './filesystem-refusal.js';
 import { operationDescriptor, type OperationContext } from './filesystem-operations.js';
 import { OUTSIDE_ROOT_REASON } from '../file-navigator/file-operation-result.js';
