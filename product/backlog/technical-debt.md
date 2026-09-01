@@ -2,16 +2,6 @@
 
 ## ready
 
-* Derive the remote wire protocol's frame-type lists and its decoder switch from the frame union itself, so a new frame type fails the build instead of being refused at runtime.
-
-Existing Debt: The remote frame union is mirrored by hand in three unlinked places — two `Set<string>` literals naming all twenty-two frame types and a decoder switching on a plain `string` with a catch-all default — so nothing ties the declared contract to the code that admits it, even though this repo already established the compile-time idiom for exactly this problem in two other protocol modules. Severity: 6/10
-
-Existing Risk: 6/10 - A frame type added to the union typechecks, encodes, and ships, and is then silently rejected by the receiving end as unknown, surfacing as a remote feature that quietly does nothing or a channel that tears itself down rather than as a build failure.
-
-Proposal Risk: 2/10 - The type lists become compiler-checked, but each frame's field validation stays hand-written per type, so a field added to an existing frame is still dropped silently by that frame's decoder.
-
-Proposal: `src/remote/protocol.ts` declares `ClientFrame` (eleven members: `provision`, `spawn`, `input`, `resize`, `kill`, `filesystem-open`, `filesystem-close`, `filesystem-request`, `acp-open`, `acp-prompt`, `acp-close`) and `ServerFrame` (eleven members: `workspace-ready`, `workspace-failed`, `output`, `exit`, `transcript`, `filesystem-reply`, `filesystem-event`, `acp-ready`, `acp-chunk`, `acp-end`, `acp-error`), then re-lists every one of those names as string literals in the `CLIENT_TYPES` and `SERVER_TYPES` sets that `decodeFrame` gates on. Replace both sets with objects typed `Record<ClientFrame['type'], true>` and `Record<ServerFrame['type'], true>` and derive the sets from `Object.keys`, copying the idiom `CAPABILITIES` in `src/plugins/api.ts` already uses and explains ("adding a name to the union without listing it here is a compile error"). Then narrow `decodeKnownFrame` in `src/remote/frame-decode.ts` to take `type: RemoteFrame['type']` rather than `string` — `decodeFrame` has already checked membership before calling it — and replace its `default` arm's `{ error }` return with a call to a `never`-parameter helper modelled on `unhandledClientMethod` in `src/client-message.ts`, so an unhandled frame type is a type error with a runtime throw as the backstop. Keep `decodeFrame`'s own unknown-type `{ error }` path untouched: that is what answers a genuinely foreign frame from a mismatched remote, and it is a different case from a frame this build knows but forgot to decode. `src/remote/protocol.test.ts` pins the encode/decode round trip and the unknown-type rejection, and `src/remote/channel.test.ts` pins how a decode error reaches the channel; both must keep passing.
-
 * Give the tab record real narrowing for its view-specific payloads, so the seven view kinds stop being asserted into existence at every consumer that renders one.
 
 Existing Debt: The tab record documents in prose that its `harness`, `editor`, `files`, `plugin`, and `monitor` payloads are "present only when `view === '<kind>'`" but declares all five as independent optional fields, so the invariant is unenforceable and roughly a dozen call sites across the server and the web client recover it with a non-null assertion instead. Severity: 6/10

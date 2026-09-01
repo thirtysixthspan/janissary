@@ -119,16 +119,26 @@ export type ServerFrame =
 
 export type RemoteFrame = ClientFrame | ServerFrame;
 
-const CLIENT_TYPES = new Set([
-  'provision', 'spawn', 'input', 'resize', 'kill',
-  'filesystem-open', 'filesystem-close', 'filesystem-request',
-  'acp-open', 'acp-prompt', 'acp-close',
-]);
-const SERVER_TYPES = new Set([
-  'workspace-ready', 'workspace-failed', 'output', 'exit', 'transcript',
-  'filesystem-reply', 'filesystem-event',
-  'acp-ready', 'acp-chunk', 'acp-end', 'acp-error',
-]);
+// The admitted frame types as data, keyed by the unions above rather than re-listed as strings —
+// the idiom `CAPABILITIES` in `src/plugins/api.ts` uses and explains: adding a name to `ClientFrame`
+// or `ServerFrame` without an entry here is a compile error, instead of a frame type that encodes,
+// ships, and is then silently refused by the receiving end as unknown.
+export const CLIENT_FRAME_TYPES: Record<ClientFrame['type'], true> = {
+  provision: true, spawn: true, input: true, resize: true, kill: true,
+  'filesystem-open': true, 'filesystem-close': true, 'filesystem-request': true,
+  'acp-open': true, 'acp-prompt': true, 'acp-close': true,
+};
+export const SERVER_FRAME_TYPES: Record<ServerFrame['type'], true> = {
+  'workspace-ready': true, 'workspace-failed': true, output: true, exit: true, transcript: true,
+  'filesystem-reply': true, 'filesystem-event': true,
+  'acp-ready': true, 'acp-chunk': true, 'acp-end': true, 'acp-error': true,
+};
+
+// A predicate rather than a bare membership test, so the narrowed type reaches `decodeKnownFrame`
+// and its switch can be exhaustive over the union instead of over `string`.
+function isRemoteFrameType(type: string): type is RemoteFrame['type'] {
+  return Object.hasOwn(CLIENT_FRAME_TYPES, type) || Object.hasOwn(SERVER_FRAME_TYPES, type);
+}
 
 function encodeText(text: string): string {
   return Buffer.from(text, 'utf8').toString('base64');
@@ -173,7 +183,7 @@ export function decodeFrame(line: string): RemoteFrame | { error: string } {
   }
   const record = parsed as Record<string, unknown>;
   const type = record.type;
-  if (typeof type !== 'string' || !(CLIENT_TYPES.has(type) || SERVER_TYPES.has(type))) {
+  if (typeof type !== 'string' || !isRemoteFrameType(type)) {
     return { error: `Unknown remote frame type "${String(type)}".` };
   }
   return decodeKnownFrame(type, record);

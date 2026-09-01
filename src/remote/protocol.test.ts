@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   REMOTE_PROTOCOL_VERSION, HANDSHAKE_SENTINEL,
+  CLIENT_FRAME_TYPES, SERVER_FRAME_TYPES,
   encodeFrame, decodeFrame, encodeHandshake, parseHandshake, heldBackLength,
   type RemoteFrame,
 } from './protocol.js';
@@ -194,6 +195,43 @@ describe('frame codec', () => {
       type: 'acp-open', id: 'racp1', command: 'opencode', args: ['acp'], cwd: '/somewhere/else', extra: 1,
     });
     expect(decodeFrame(encoded)).toEqual({ type: 'acp-open', id: 'racp1', command: 'opencode', args: ['acp'] });
+  });
+});
+
+// The records are keyed by the frame unions, so the compiler already refuses an entry the union does
+// not declare and demands one for every member it does. The edit it cannot see is a member and its
+// entry deleted together — the contract silently shrinking — which is what these pin.
+describe('admitted frame types', () => {
+  it('admits exactly the declared client frame types', () => {
+    expect(Object.keys(CLIENT_FRAME_TYPES).toSorted((a, b) => a.localeCompare(b))).toEqual([
+      'acp-close', 'acp-open', 'acp-prompt',
+      'filesystem-close', 'filesystem-open', 'filesystem-request',
+      'input', 'kill', 'provision', 'resize', 'spawn',
+    ]);
+  });
+
+  it('admits exactly the declared server frame types', () => {
+    expect(Object.keys(SERVER_FRAME_TYPES).toSorted((a, b) => a.localeCompare(b))).toEqual([
+      'acp-chunk', 'acp-end', 'acp-error', 'acp-ready',
+      'exit', 'filesystem-event', 'filesystem-reply', 'output',
+      'transcript', 'workspace-failed', 'workspace-ready',
+    ]);
+  });
+
+  it('keeps the two directions disjoint', () => {
+    const client = Object.keys(CLIENT_FRAME_TYPES);
+    expect(client.filter((type) => Object.hasOwn(SERVER_FRAME_TYPES, type))).toEqual([]);
+  });
+
+  it('decodes every admitted type rather than refusing one as unknown', () => {
+    const admitted = [...Object.keys(CLIENT_FRAME_TYPES), ...Object.keys(SERVER_FRAME_TYPES)];
+    // Each is sent with no fields, so every decoder rejects it as malformed — the point is that
+    // none comes back as *unknown*, which is what an admitted-but-undecoded type would produce.
+    for (const type of admitted) {
+      expect(decodeFrame(JSON.stringify({ type }))).toEqual({
+        error: expect.stringContaining(`Malformed remote frame "${type}"`),
+      });
+    }
   });
 });
 

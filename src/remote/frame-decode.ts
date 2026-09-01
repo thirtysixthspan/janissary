@@ -149,7 +149,17 @@ function decodeAcpError(record: Record<string, unknown>): DecodeResult {
   return { type: 'acp-error', id, message, fatal };
 }
 
-export function decodeKnownFrame(type: string, record: Record<string, unknown>): DecodeResult {
+// The `default` branch of the switch below. The `never` parameter is the point: the call only
+// typechecks while every frame type in the union has a case, so a type added to `RemoteFrame` but
+// not to this dispatcher fails the build rather than being refused at runtime as if it were a frame
+// from a mismatched remote. The throw is the runtime backstop.
+function unhandledRemoteFrame(type: never): never {
+  throw new Error(`Unhandled remote frame type: ${String(type)}`);
+}
+
+// `type` is already known to be one of the declared frame types — `decodeFrame` checks membership
+// before calling — so the switch is exhaustive over the union rather than open over `string`.
+export function decodeKnownFrame(type: RemoteFrame['type'], record: Record<string, unknown>): DecodeResult {
   switch (type) {
   case 'provision': { return decodeProvision(record); }
   case 'spawn': { return decodeSpawn(record); }
@@ -173,6 +183,6 @@ export function decodeKnownFrame(type: string, record: Record<string, unknown>):
   case 'acp-ready': { return decodeAcpAddressed(type, record); }
   case 'acp-end': { return decodeAcpEnd(record); }
   case 'acp-error': { return decodeAcpError(record); }
-  default: { return { error: `Unknown remote frame type "${type}".` }; }
+  default: { return unhandledRemoteFrame(type); }
   }
 }
