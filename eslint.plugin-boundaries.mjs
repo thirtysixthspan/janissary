@@ -1,10 +1,15 @@
-// The tab-plugin architecture's import boundaries, as lint rules.
+// The plugin architecture's import boundaries, as lint rules.
 //
-// Four layers, each with its own rule because each has a different neighbour it must not reach:
-// a concrete plugin (server and client), the host's plugin infrastructure, and core. Together they
-// enforce the two architectural promises `ai/guidelines/plugins.md` makes — plugins depend only on
-// a published contract, and concrete behavior is reachable only through a lazy loader map, never a
-// static import that would drag it into startup or the client entry chunk.
+// Five layers, each with its own rule because each has a different neighbour it must not reach: a
+// concrete tab plugin (server and client), the host's plugin infrastructure, core, a concrete editor
+// plugin, and the client plugin host. Together they enforce the two architectural promises
+// `ai/guidelines/plugins.md` makes — plugins depend only on a published contract, and concrete
+// behavior is reachable only through a lazy loader map, never a static import that would drag it
+// into startup or the client entry chunk.
+//
+// Every block below is exercised by `src/eslint-plugin-boundaries.test.ts`, with a rejected and an
+// allowed case each: a regex that stops matching disables its rule silently, and the first symptom
+// would otherwise be a plugin's chunk folded into the entry bundle.
 //
 // A note on `import()`: `no-restricted-imports` inspects static import declarations only, so the
 // literal `import('./video/activate.js')` in `loaders.ts` and `import('./video/index')` in
