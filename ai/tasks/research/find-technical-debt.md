@@ -93,6 +93,8 @@ Proposal: <the detailed plan, with code references an agent can act on>
 
 The `*` bullet is the entry's identity line — it is what a reader scans, and what other tasks quote when they list, defer, or resolve the item — so it has to stand on its own without the paragraphs beneath it. Those paragraphs belong to it: an entry begins at its `*` bullet and runs through its `Proposal` paragraph, and the next `*` bullet begins the next entry.
 
+Separate one entry from the next with **two** blank lines, not one. A single blank line separates an entry's own parts, so the wider gap is what makes the boundary between entries visible when scanning a long section — without it, a `Proposal` paragraph and the `*` bullet that follows it read as one run of text.
+
 ### The five parts
 
 - **The summary bullet.** One sentence summarizing the whole proposal, readable at a glance: what would be done and roughly how much of the codebase it reaches. It carries no label. Write it as a change, not as a complaint. Keep it free of paths — the scope belongs in words ("across the picker overlays", "in the websocket client layer") and the file references belong in the `Proposal` paragraph.
@@ -148,7 +150,7 @@ Before moving on, verify:
 1. `git status` shows `product/backlog/technical-debt.md` as the **only** changed file.
 2. `git diff` shows the only changes are new lines appended inside `## development` — nothing removed, nothing changed elsewhere in the file.
 3. Every new entry carries all five parts, in order — the `*` summary bullet, then `Existing Debt`, `Existing Risk`, `Proposal Risk`, and `Proposal` — each unindented, each separated by a blank line, with all three scores present.
-   A blank line also separates the last entry's `Proposal` paragraph from the next entry's `*` bullet, so each entry reads as one block running from its bullet to its plan.
+   Two blank lines separate each entry's `Proposal` paragraph from the next entry's `*` bullet, so each entry reads as one block running from its bullet to its plan and the boundary between blocks is wider than the gaps inside them.
 4. None of the new entries duplicate an item from Step 1's dedupe set.
 
 If anything else changed on disk, revert it (`git checkout -- <file>`) before committing.
