@@ -12,6 +12,7 @@ import { QuestionPanel } from './QuestionPanel';
 import type { QuestionPanelHandle } from './tab-handles';
 import { tabBodyBorder } from './tab-body-border';
 import { PluginTabLayer } from './plugins/PluginTabLayer';
+import { indexedTabs, isHarnessTabView, isEditorTabView, isPluginTabView } from './shared/tab-view-guards';
 
 type Properties = {
   tabs: TabView[];
@@ -63,9 +64,9 @@ export function MountedViewLayers({
 }: Properties) {
   return (
     <>
-      {tabs.map((t, index) => ({ t, index })).filter(({ t }) => t.view === 'harness' && t.harness).map(({ t, index }) => (
+      {indexedTabs(tabs, isHarnessTabView).map(({ t, index }) => (
         <HarnessTabLayer
-          key={t.harness!.ptyId}
+          key={t.harness.ptyId}
           t={t} current={current} client={client} harnessHandles={harnessHandles}
           visible={visibleLabels.includes(t.label)} index={index}
           onSplit={onSplit ? () => onSplit(index) : undefined}
@@ -83,17 +84,16 @@ export function MountedViewLayers({
         />
       ))}
 
-      {tabs.map((t, index) => ({ t, index })).filter(({ t }) => t.view === 'editor' && t.editor).map(({ t, index }) => (
+      {indexedTabs(tabs, isEditorTabView).map(({ t, index }) => (
         <TabBodyDiv key={t.label} tab={t} index={index} current={current} visibleLabels={visibleLabels}>
-          <EditorTab editor={t.editor!} tab={t} client={client} active={t.label === current.label} dropRef={editorDropRef}
+          <EditorTab editor={t.editor} tab={t} client={client} active={t.label === current.label} dropRef={editorDropRef}
             onSplit={onSplit ? () => onSplit(index) : undefined}
             ref={(h) => { if (h) tabHandles.current.set(t.label, h); else tabHandles.current.delete(t.label); }} />
         </TabBodyDiv>
       ))}
 
-      {tabs
-        .map((t, index) => ({ t, index }))
-        .filter(({ t }) => t.view === 'plugin' && t.plugin && !t.dock)
+      {indexedTabs(tabs, isPluginTabView)
+        .filter(({ t }) => !t.dock)
         .map(({ t, index }) => (
           <PluginTabLayer
             key={t.label}

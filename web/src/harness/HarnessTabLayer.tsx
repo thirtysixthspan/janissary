@@ -1,5 +1,6 @@
 import React from 'react';
 import type { TabView } from '@shared/protocol';
+import type { HarnessTabView } from '../shared/tab-view-guards';
 import type { JanusClient } from '../ws';
 import { HarnessTab } from './HarnessTab';
 import type { HarnessTabHandle } from '../tab-handles';
@@ -9,7 +10,9 @@ import { tabBodyBorder } from '../tab-body-border';
 import { statusButton } from '../status-button';
 
 type Properties = {
-  t: TabView;
+  // Narrowed by the caller's guard, so the harness payload is read without asserting: a harness tab
+  // caught without one is never rendered rather than throwing here.
+  t: HarnessTabView;
   current: TabView;
   client: JanusClient;
   harnessHandles: React.RefObject<Map<string, HarnessTabHandle>>;
@@ -31,7 +34,7 @@ export function HarnessTabLayer({
   taskPickerOpen, navOpen, pickerOverlays,
 }: Properties) {
   const isActive = t.label === current.label;
-  const scheduleOnly = t.harness!.name !== 'ssh';
+  const scheduleOnly = t.harness.name !== 'ssh';
   const statusWindows = useStatusWindows(
     current.label,
     isActive && !scheduleOnly && t.connections.length > 0,
@@ -48,13 +51,13 @@ export function HarnessTabLayer({
         gridRow: 2,
       }}
     >
-      <HarnessTab harness={t.harness!} client={client} cwd={t.cwd} flags={t.flags} remote={t.remote} label={t.label}
+      <HarnessTab harness={t.harness} client={client} cwd={t.cwd} flags={t.flags} remote={t.remote} label={t.label}
         taskPickerOpen={!!taskPickerOpen && isActive}
         navOpen={!!navOpen && isActive}
         connectionsButton={scheduleOnly ? undefined : statusButton(t.connections.length > 0, statusWindows.connections)}
         scheduleButton={statusButton(t.schedule.length > 0, statusWindows.schedule)}
         onSplit={onSplit}
-        ref={(h) => { if (h) harnessHandles.current.set(t.harness!.ptyId, h); else harnessHandles.current.delete(t.harness!.ptyId); }} />
+        ref={(h) => { if (h) harnessHandles.current.set(t.harness.ptyId, h); else harnessHandles.current.delete(t.harness.ptyId); }} />
       <StatusPanels tab={t} scheduleOnly={scheduleOnly} connections={statusWindows.connections} schedule={statusWindows.schedule} />
       {pickerOverlays}
     </div>
